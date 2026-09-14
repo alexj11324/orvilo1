@@ -1,0 +1,21 @@
+{
+  "name": "@orvilo/builtin-tool-auv",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./client/executor": "./src/client/executor/index.ts"
+  },
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@orvilo/shared-tool-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "lucide-react": "*",
+    "react": "*"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@orvilo/builtin-tool-local-system",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./client/executor": "./src/client/executor/index.ts"
+  },
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@orvilo/electron-client-ipc": "workspace:*",
+    "@orvilo/shared-tool-ui": "workspace:*",
+    "@orvilo/tool-runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@lobehub/ui": "^5",
+    "antd": "^6",
+    "antd-style": "*",
+    "lucide-react": "*",
+    "path-browserify-esm": "*",
+    "react": "*",
+    "react-i18next": "*"
+  }
+}

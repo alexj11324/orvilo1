@@ -1,0 +1,27 @@
+{
+  "name": "@orvilo/builtin-tool-page-agent",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./client/executor": "./src/client/executor/index.ts",
+    "./executionRuntime": "./src/ExecutionRuntime/index.ts"
+  },
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@orvilo/editor-runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@lobehub/ui": "^5",
+    "antd-style": "*",
+    "debug": "*",
+    "lucide-react": "*",
+    "polished": "*",
+    "react": "*",
+    "react-i18next": "*"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@orvilo/builtin-tool-agent-management",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./executor": "./src/executor.ts"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@orvilo/agent-manager-runtime": "workspace:*",
+    "@orvilo/builtin-tool-agent-builder": "workspace:*",
+    "@orvilo/const": "workspace:*",
+    "@orvilo/heterogeneous-agents": "workspace:*",
+    "lucide-react": "^1.22.0",
+    "react-router": "^8.1.0"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  }
+}

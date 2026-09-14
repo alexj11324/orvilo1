@@ -1,0 +1,29 @@
+{
+  "name": "@orvilo/builtin-tool-memory",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./executor": "./src/executor/index.ts",
+    "./executionRuntime": "./src/ExecutionRuntime/index.ts"
+  },
+  "main": "./src/index.ts",
+  "scripts": {},
+  "dependencies": {
+    "@orvilo/memory-user-memory": "workspace:*",
+    "@orvilo/prompts": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*",
+    "@types/json-schema": "^7.0.15"
+  },
+  "peerDependencies": {
+    "@lobehub/ui": "^5",
+    "antd-style": "*",
+    "lucide-react": "*",
+    "react": "*",
+    "react-i18next": "*"
+  }
+}

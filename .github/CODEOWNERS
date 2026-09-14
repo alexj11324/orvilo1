@@ -1,0 +1,3 @@
+# Database migrations require approval from core maintainers
+
+/packages/database/migrations/ @alexj11324

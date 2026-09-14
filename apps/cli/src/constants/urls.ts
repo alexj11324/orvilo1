@@ -1,0 +1,6 @@
+import { OFFICIAL_DEVICE_GATEWAY_URL, OFFICIAL_URL } from '@orvilo/const';
+
+export { OFFICIAL_AGENT_GATEWAY_URL } from '@orvilo/const';
+
+export const OFFICIAL_SERVER_URL = OFFICIAL_URL;
+export const OFFICIAL_GATEWAY_URL = OFFICIAL_DEVICE_GATEWAY_URL;

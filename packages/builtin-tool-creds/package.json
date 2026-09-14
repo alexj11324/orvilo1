@@ -1,0 +1,17 @@
+{
+  "name": "@orvilo/builtin-tool-creds",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./executionRuntime": "./src/ExecutionRuntime/index.ts",
+    "./executor": "./src/executor/index.ts"
+  },
+  "main": "./src/index.ts",
+  "dependencies": {},
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  }
+}

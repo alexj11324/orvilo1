@@ -1,0 +1,35 @@
+{
+  "name": "@orvilo/trpc",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:coverage": "vitest --coverage --silent='passed-only'"
+  },
+  "dependencies": {
+    "@orvilo/const": "workspace:*",
+    "@orvilo/database": "workspace:*",
+    "@orvilo/desktop-bridge": "workspace:*",
+    "@orvilo/env": "workspace:*",
+    "@orvilo/observability-otel": "workspace:*",
+    "@orvilo/types": "workspace:*",
+    "@orvilo/utils": "workspace:*",
+    "@trpc/client": "^11.18.0",
+    "@trpc/react-query": "^11.18.0",
+    "@trpc/server": "^11.18.0",
+    "cookie": "^1.1.1",
+    "debug": "^4.4.3",
+    "jose": "^6.2.3",
+    "model-bank": "workspace:*",
+    "superjson": "^2.2.6"
+  },
+  "devDependencies": {
+    "vite-tsconfig-paths": "^6.1.1"
+  },
+  "peerDependencies": {
+    "next": "^16.3.0"
+  }
+}

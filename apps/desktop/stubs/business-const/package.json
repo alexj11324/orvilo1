@@ -1,0 +1,9 @@
+{
+  "name": "@orvilo/business-const",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "main": "./src/index.ts"
+}

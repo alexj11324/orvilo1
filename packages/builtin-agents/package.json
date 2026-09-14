@@ -1,0 +1,34 @@
+{
+  "name": "@orvilo/builtin-agents",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest",
+    "test:coverage": "vitest --coverage --silent='passed-only'",
+    "test:update": "vitest -u"
+  },
+  "dependencies": {
+    "@orvilo/builtin-tool-agent-builder": "workspace:*",
+    "@orvilo/builtin-tool-agent-documents": "workspace:*",
+    "@orvilo/builtin-tool-agent-management": "workspace:*",
+    "@orvilo/builtin-tool-group-agent-builder": "workspace:*",
+    "@orvilo/builtin-tool-group-management": "workspace:*",
+    "@orvilo/builtin-tool-notebook": "workspace:*",
+    "@orvilo/builtin-tool-task": "workspace:*",
+    "@orvilo/builtin-tool-user-interaction": "workspace:*",
+    "@orvilo/builtin-tool-verify": "workspace:*",
+    "@orvilo/business-const": "workspace:*",
+    "@orvilo/const": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  }
+}

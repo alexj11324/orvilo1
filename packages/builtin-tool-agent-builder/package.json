@@ -1,0 +1,29 @@
+{
+  "name": "@orvilo/builtin-tool-agent-builder",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./executor": "./src/executor.ts"
+  },
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@orvilo/agent-manager-runtime": "workspace:*",
+    "@orvilo/const": "workspace:*",
+    "@orvilo/prompts": "workspace:*",
+    "@orvilo/utils": "workspace:*",
+    "type-fest": "^4.41.0"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@lobehub/ui": "^5",
+    "antd": "^6",
+    "lucide-react": "*",
+    "next": "*",
+    "react": "*",
+    "react-i18next": "*"
+  }
+}

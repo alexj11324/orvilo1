@@ -1,0 +1,21 @@
+{
+  "name": "@orvilo/mecha",
+  "version": "0.0.1",
+  "description": "Host-agnostic Mecha layer: resolving an agent's effective run configuration and the context it runs on",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest",
+    "test:coverage": "vitest --coverage --silent='passed-only'"
+  },
+  "dependencies": {
+    "@orvilo/builtin-agents": "workspace:*",
+    "@orvilo/builtin-tool-local-system": "workspace:*",
+    "@orvilo/builtin-tool-page-agent": "workspace:*",
+    "@orvilo/builtin-tool-task": "workspace:*",
+    "@orvilo/context-engine": "workspace:*",
+    "@orvilo/prompts": "workspace:*",
+    "@orvilo/types": "workspace:*",
+    "debug": "^4.4.3",
+    "immer": "^10.1.3"
+  }
+}

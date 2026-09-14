@@ -1,0 +1,25 @@
+{
+  "name": "@orvilo/builtin-tool-claude-code",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./client/displayControls": "./src/client/Render/displayControls.ts",
+    "./client/labels": "./src/client/labels.ts"
+  },
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@orvilo/shared-tool-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@lobehub/ui": "^5",
+    "antd-style": "*",
+    "lucide-react": "*",
+    "path-browserify-esm": "*",
+    "react": "*"
+  }
+}

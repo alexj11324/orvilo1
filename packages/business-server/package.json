@@ -1,0 +1,16 @@
+{
+  "name": "@orvilo/business-server",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@orvilo/agent-gateway-client": "workspace:*",
+    "@orvilo/const": "workspace:*",
+    "@orvilo/database": "workspace:*",
+    "@orvilo/model-runtime": "workspace:*",
+    "@orvilo/trpc": "workspace:*",
+    "@orvilo/types": "workspace:*"
+  }
+}

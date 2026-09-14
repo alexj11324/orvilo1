@@ -1,0 +1,26 @@
+{
+  "name": "@orvilo/builtin-tool-skills",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./executor": "./src/executor/index.ts",
+    "./executionRuntime": "./src/ExecutionRuntime/index.ts"
+  },
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@orvilo/const": "workspace:*",
+    "@orvilo/prompts": "workspace:*",
+    "@orvilo/shared-tool-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@lobehub/ui": "^5",
+    "antd-style": "*",
+    "react": "*",
+    "react-i18next": "*"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@orvilo/builtin-skills",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./manifests": "./src/manifests.ts"
+  },
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@orvilo/artifact-template": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  }
+}

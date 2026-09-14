@@ -1,0 +1,27 @@
+'use client';
+
+import { Block, Markdown } from '@lobehub/ui';
+import type { BuiltinStreamingProps } from '@orvilo/types';
+import { memo } from 'react';
+
+import type { UpdateAgentPromptParams } from '../../../types';
+
+export const UpdateAgentPromptStreaming = memo<BuiltinStreamingProps<UpdateAgentPromptParams>>(
+  ({ args }) => {
+    const { prompt } = args || {};
+
+    if (!prompt) return null;
+
+    return (
+      <Block paddingBlock={8} paddingInline={12} variant={'outlined'} width="100%">
+        <Markdown animated variant={'chat'}>
+          {prompt}
+        </Markdown>
+      </Block>
+    );
+  },
+);
+
+UpdateAgentPromptStreaming.displayName = 'UpdateAgentPromptStreaming';
+
+export default UpdateAgentPromptStreaming;

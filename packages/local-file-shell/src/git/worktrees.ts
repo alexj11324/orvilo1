@@ -170,24 +170,36 @@ export const removeGitWorktree = async (payload: {
 /**
  * Add a linked worktree checked out on a fresh branch, mirroring the branch
  * switcher's "create branch" flow (`git worktree add -b <branch> <path>`). The
- * new branch forks from the repo's current HEAD; the caller supplies the target
- * directory (an absolute sibling path the renderer derives from the source
- * repo). Returns the created path on success so the UI can switch into it.
+ * new branch forks from `ref` (default: the repo's current HEAD); the caller
+ * supplies the target directory (an absolute sibling path the renderer derives
+ * from the source repo). `detach` instead checks `ref` out detached — how a
+ * system-owned integration worktree sits on a base branch that is already
+ * checked out elsewhere. Returns the created path on success so the UI can
+ * switch into it.
  */
 export const addGitWorktree = async (payload: {
   branch: string;
+  /** Check `ref` out detached instead of forking a fresh branch. */
+  detach?: boolean;
   path: string;
+  /** Start point the new branch forks from / the detached checkout target. */
+  ref?: string;
   worktreePath: string;
 }): Promise<GitAddWorktreeResult> => {
-  const { path: dirPath, branch, worktreePath } = payload;
+  const { path: dirPath, branch, worktreePath, ref, detach } = payload;
   if (!dirPath?.trim()) return { error: 'Working directory is required', success: false };
-  if (!branch?.trim()) return { error: 'Branch name is required', success: false };
+  if (!detach && !branch?.trim()) return { error: 'Branch name is required', success: false };
   if (!worktreePath?.trim()) return { error: 'Worktree path is required', success: false };
-  if (isInvalidBranchRef(branch))
+  if (!detach && isInvalidBranchRef(branch))
     return { error: `Invalid branch name: ${branch}`, success: false };
+  if (ref && (/[\s~^:?*[\\]/.test(ref) || ref.startsWith('-') || ref.includes('..')))
+    return { error: `Invalid start ref: ${ref}`, success: false };
 
+  const args = detach
+    ? ['worktree', 'add', '--detach', worktreePath, ref ?? 'HEAD']
+    : ['worktree', 'add', '-b', branch, worktreePath, ...(ref ? [ref] : [])];
   try {
-    await execFileAsync('git', ['worktree', 'add', '-b', branch, worktreePath], {
+    await execFileAsync('git', args, {
       cwd: dirPath,
       timeout: 30_000,
     });

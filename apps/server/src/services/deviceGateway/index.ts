@@ -24,7 +24,9 @@ import type {
   DeviceGitCheckoutResult,
   DeviceGitDeleteBranchResult,
   DeviceGitFileRevertResult,
+  DeviceGitFinalizeMergeResult,
   DeviceGitLinkedPullRequestResult,
+  DeviceGitMergeResult,
   DeviceGitRemoteBranchListItem,
   DeviceGitRemoveWorktreeResult,
   DeviceGitRenameBranchResult,
@@ -755,21 +757,33 @@ export class DeviceGateway {
    */
   async addGitWorktree(params: {
     branch: string;
+    detach?: boolean;
     deviceId: string;
     path: string;
+    ref?: string;
     timeout?: number;
     userId: string;
     workspaceId?: string;
     worktreePath: string;
   }): Promise<DeviceGitAddWorktreeResult> {
-    const { userId, deviceId, branch, path, worktreePath, workspaceId, timeout = 30_000 } = params;
+    const {
+      userId,
+      deviceId,
+      branch,
+      path,
+      worktreePath,
+      workspaceId,
+      detach,
+      ref,
+      timeout = 30_000,
+    } = params;
     const client = this.getClient();
     if (!client) return { error: 'Device gateway not configured', success: false };
 
     try {
       const result = await client.invokeRpc<DeviceGitAddWorktreeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'addGitWorktree', params: { branch, path, worktreePath } },
+        { method: 'addGitWorktree', params: { branch, detach, path, ref, worktreePath } },
       );
 
       if (!result.success || !result.data) {
@@ -821,21 +835,111 @@ export class DeviceGateway {
    * Push the current branch of a directory on a remote device via the
    * `pushGitBranch` device RPC.
    */
-  async pushGitBranch(params: {
+  /**
+   * Merge a branch into the current HEAD of a directory on a remote device via
+   * the `mergeGitBranch` device RPC. Conflicts stay in progress and report the
+   * unmerged paths back.
+   */
+  async mergeGitBranch(params: {
+    baseRef?: string;
+    branch: string;
     deviceId: string;
     path: string;
     timeout?: number;
     userId: string;
     workspaceId?: string;
+  }): Promise<DeviceGitMergeResult> {
+    const { userId, deviceId, branch, path, baseRef, timeout = 150_000, workspaceId } = params;
+    const client = this.getClient();
+    if (!client)
+      return { error: 'Device gateway not configured', state: 'conflict', success: false };
+
+    try {
+      const result = await client.invokeRpc<DeviceGitMergeResult>(
+        { deviceId, timeout, userId, workspaceId },
+        { method: 'mergeGitBranch', params: { baseRef, branch, path } },
+      );
+
+      if (!result.success || !result.data) {
+        log('mergeGitBranch: failed for deviceId=%s — %s', deviceId, result.error);
+        return { error: result.error || 'Merge failed', state: 'conflict', success: false };
+      }
+
+      return result.data;
+    } catch (error) {
+      log('mergeGitBranch: error for deviceId=%s — %O', deviceId, error);
+      return {
+        error: (error as Error)?.message || 'Merge failed',
+        state: 'conflict',
+        success: false,
+      };
+    }
+  }
+
+  /**
+   * Check / land a merge in progress inside a directory on a remote device via
+   * the `finalizeGitMerge` device RPC — used after a corrective run resolved
+   * the conflicts an earlier `mergeGitBranch` reported.
+   */
+  async finalizeGitMerge(params: {
+    deviceId: string;
+    path: string;
+    timeout?: number;
+    userId: string;
+    workspaceId?: string;
+  }): Promise<DeviceGitFinalizeMergeResult> {
+    const { userId, deviceId, path, timeout = 30_000, workspaceId } = params;
+    const client = this.getClient();
+    if (!client) {
+      return { error: 'Device gateway not configured', state: 'conflict', success: false };
+    }
+
+    try {
+      const result = await client.invokeRpc<DeviceGitFinalizeMergeResult>(
+        { deviceId, timeout, userId, workspaceId },
+        { method: 'finalizeGitMerge', params: { path } },
+      );
+
+      if (!result.success || !result.data) {
+        log('finalizeGitMerge: failed for deviceId=%s — %s', deviceId, result.error);
+        return {
+          error: result.error || 'Finalize merge failed',
+          state: 'conflict',
+          success: false,
+        };
+      }
+
+      return result.data;
+    } catch (error) {
+      log('finalizeGitMerge: error for deviceId=%s — %O', deviceId, error);
+      return {
+        error: (error as Error)?.message || 'Finalize merge failed',
+        state: 'conflict',
+        success: false,
+      };
+    }
+  }
+
+  /**
+   * Push the current branch of a directory on a remote device via the
+   * `pushGitBranch` device RPC.
+   */
+  async pushGitBranch(params: {
+    deviceId: string;
+    path: string;
+    remoteBranch?: string;
+    timeout?: number;
+    userId: string;
+    workspaceId?: string;
   }): Promise<DeviceGitSyncResult> {
-    const { userId, deviceId, path, timeout = 65_000, workspaceId } = params;
+    const { userId, deviceId, path, remoteBranch, timeout = 65_000, workspaceId } = params;
     const client = this.getClient();
     if (!client) return { error: 'Device gateway not configured', success: false };
 
     try {
       const result = await client.invokeRpc<DeviceGitSyncResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'pushGitBranch', params: { path } },
+        { method: 'pushGitBranch', params: { path, remoteBranch } },
       );
 
       if (!result.success || !result.data) {

@@ -44,6 +44,7 @@ import type { LobeChatDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { SystemAgentService } from '@/server/services/systemAgent';
+import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { createTaskSchedulerModule } from '@/server/services/taskScheduler';
 
@@ -186,6 +187,28 @@ export class TaskLifecycleService {
         } catch (e) {
           console.warn('[TaskLifecycle] persisting run last message failed:', e);
         }
+      }
+
+      // 2c. Workspace-integration gate (CAID merge-back): a provisioned run's
+      //    task branch must land on its base before the task may settle. A
+      //    merge conflict holds the transition open (task stays 'running')
+      //    while a corrective run resolves it in the integration worktree;
+      //    exhausted attempts park the task 'paused'. Unprovisioned runs pass
+      //    straight through.
+      if (topicId && currentTask) {
+        const integrationOutcome = await new TaskIntegrationService(
+          this.db,
+          this.userId,
+          this.workspaceId,
+        ).integrateOnComplete({ task: currentTask, taskTopicId: topicId });
+
+        if (integrationOutcome === 'blocked') {
+          await this.taskModel.updateStatus(taskId, 'paused', {
+            error: 'Workspace merge could not be completed',
+          });
+          return;
+        }
+        if (integrationOutcome === 'hold') return;
       }
 
       // 3. Delivery acceptance now runs through Verify: the verify

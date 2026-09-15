@@ -9,17 +9,17 @@
     "csv",
     "xlsx",
     "jsonl",
-    "lobehub"
+    "orvilo"
   ],
-  "homepage": "https://github.com/lobehub/lobehub/tree/master/packages/eval-dataset-parser",
+  "homepage": "https://github.com/alexj11324/orvilo1/tree/main/packages/eval-dataset-parser",
   "bugs": {
-    "url": "https://github.com/lobehub/lobehub/issues/new"
+    "url": "https://github.com/alexj11324/orvilo1/issues/new/choose"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lobehub/lobehub.git"
+    "url": "https://github.com/alexj11324/orvilo1.git"
   },
-  "author": "LobeHub <i@lobehub.com>",
+  "author": "Orvilo",
   "sideEffects": false,
   "main": "./src/index.ts",
   "scripts": {

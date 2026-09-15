@@ -1,7 +1,7 @@
 {
-  "name": "@lobehub/lobehub",
+  "name": "orvilo",
   "version": "2.2.17",
-  "description": "LobeHub - an open-source,comprehensive AI Agent framework that supports speech synthesis, multimodal, and extensible Function Call plugin system. Supports one-click free deployment of your private ChatGPT/LLM web application.",
+  "description": "Orvilo is a work-and-lifestyle space to find, build, and collaborate with agent teams that grow with you.",
   "keywords": [
     "framework",
     "chatbot",
@@ -14,16 +14,16 @@
     "tts",
     "stt"
   ],
-  "homepage": "https://github.com/lobehub/lobehub",
+  "homepage": "https://orvilo.aspectlylabs.com",
   "bugs": {
-    "url": "https://github.com/lobehub/lobehub/issues/new/choose"
+    "url": "https://github.com/alexj11324/orvilo1/issues/new/choose"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lobehub/lobehub.git"
+    "url": "https://github.com/alexj11324/orvilo1.git"
   },
-  "license": "MIT",
-  "author": "LobeHub <i@lobehub.com>",
+  "license": "Apache-2.0",
+  "author": "Orvilo",
   "sideEffects": [
     "./src/initialize.ts",
     "./src/libs/providerIcon.ts",

@@ -2,9 +2,9 @@
   "name": "@lobehub/sdk",
   "version": "1.0.0",
   "private": true,
-  "description": "Official TypeScript SDK for the LobeHub REST API, generated from the OpenAPI spec",
-  "homepage": "https://github.com/lobehub/lobehub/tree/canary/packages/sdk",
-  "license": "MIT",
+  "description": "Official TypeScript SDK for the Orvilo REST API, generated from the OpenAPI spec",
+  "homepage": "https://github.com/alexj11324/orvilo1/tree/main/packages/sdk",
+  "license": "Apache-2.0",
   "exports": {
     ".": "./src/index.ts",
     "./types": "./src/generated/types.gen.ts"

@@ -66,6 +66,13 @@ vi.mock('@/server/services/task', () => ({
   TaskService: vi.fn(),
 }));
 
+// TaskIntegrationService's transitive deps (taskRunner → aiAgent →
+// agentRuntime → toolExecution/builtin → serverRuntimes/index) cycle back
+// onto this module mid-load; a stubbed class keeps the graph shallow.
+vi.mock('@/server/services/taskIntegration', () => ({
+  TaskIntegrationService: vi.fn(() => ({ cleanupTaskWorktrees: vi.fn() })),
+}));
+
 vi.mock('@/server/services/verify/planGenerator', () => ({
   VerifyPlanGeneratorService: vi.fn().mockImplementation(function () {
     return verifyMocks;

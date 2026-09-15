@@ -490,4 +490,85 @@ describe('TaskIntegrationService', () => {
       );
     });
   });
+
+  describe('cleanupTaskWorktrees', () => {
+    it('removes a stale task worktree and flags the record cleaned', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceId: 'dev-1',
+          path: '/repos/orvilo',
+          worktreePath: '/repos/orvilo-task-T-1',
+        }),
+      );
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith('task_1', 'topic_1', {
+        worktreeCleaned: true,
+      });
+    });
+
+    it('never removes the shared integration worktree', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([
+        // The task row knows the integration worktree once a merge started…
+        asTopic(
+          seedRecord({
+            integrationWorktreePath: '/repos/orvilo-integration-main',
+            state: 'conflict',
+          }),
+        ),
+        // …and the corrective row aliases it under `worktreePath`.
+        {
+          integration: seedRecord({
+            integrationWorktreePath: '/repos/orvilo-integration-main',
+            role: 'integrate',
+            state: 'merging',
+            worktreePath: '/repos/orvilo-integration-main',
+          }),
+          topicId: 'topic_2',
+        } as TaskTopicItem,
+      ]);
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledTimes(1);
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ worktreePath: '/repos/orvilo-task-T-1' }),
+      );
+    });
+
+    it('skips remote records — the sandbox clone never touched a device', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(remoteRecord())]);
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(mockTaskTopicModel.updateIntegration).not.toHaveBeenCalled();
+    });
+
+    it('skips records whose worktree was already cleaned', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([
+        asTopic(seedRecord({ state: 'integrated', worktreeCleaned: true })),
+      ]);
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('leaves worktreeCleaned false when the removal RPC fails', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
+      vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({
+        error: 'device offline',
+        success: false,
+      });
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith('task_1', 'topic_1', {
+        worktreeCleaned: false,
+      });
+    });
+  });
 });

@@ -2247,6 +2247,7 @@ export default {
   'taskList.kanban.emptyColumn': 'No tasks',
   'taskList.kanban.hiddenColumns': 'Hidden columns',
   'taskList.kanban.hideColumn': 'Hide column',
+  'taskList.kanban.loadMore': 'Load more ({{shown}}/{{total}})',
   'taskList.kanban.needsInput': 'Pending review',
   'taskList.kanban.running': 'In progress',
   'taskList.kanban.showColumn': 'Show column',

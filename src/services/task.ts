@@ -3,6 +3,7 @@ import type {
   TaskAutomationMode,
   TaskInstructionSynthesis,
   TaskIntentAnalysis,
+  TaskMoveScope,
   TaskStatus,
 } from '@orvilo/types';
 
@@ -38,6 +39,8 @@ class TaskService {
     automated?: boolean;
     excludeStatuses?: TaskStatus[];
     groupBy?: 'assignee' | 'member' | 'priority';
+    /** Per-column page sizes keyed by group key (dynamic groupings only). */
+    groupLimits?: Record<string, number>;
     groups?: Array<{
       key: string;
       limit?: number;
@@ -128,10 +131,17 @@ class TaskService {
        * caller can use that agent before recording it.
        */
       actorAgentId?: string;
+      /**
+       * Kanban drop anchors — the cards framing the drop slot (id or
+       * identifier). The server computes the fractional position from the
+       * live rows.
+       */
+      afterId?: string | null;
       assigneeAgentId?: string | null;
       assigneeUserId?: string | null;
       // Automation mode; null = no automation
       automationMode?: TaskAutomationMode | null;
+      beforeId?: string | null;
       config?: Record<string, unknown>;
       context?: Record<string, unknown>;
       description?: string;
@@ -141,13 +151,28 @@ class TaskService {
       // heartbeatTimeout: watchdog timeout threshold (seconds), used to detect if a running task is stuck
       heartbeatTimeout?: number | null;
       instruction?: string;
+      /**
+       * The dropped column's membership fields — lets the server find the
+       * true neighbour past the loaded page edge and respace collapsed
+       * fractional positions. Sent alongside `afterId`/`beforeId`.
+       */
+      moveScope?: TaskMoveScope;
       name?: string;
       parentTaskId?: string | null;
+      /** Explicit board ordering key; anchors take precedence server-side. */
+      position?: number;
       priority?: number;
       // schedulePattern: cron expression for scheduled automation (e.g. '0 9 * * *')
       schedulePattern?: string | null;
       // scheduleTimezone: IANA timezone for the cron expression (e.g. 'Asia/Shanghai')
       scheduleTimezone?: string | null;
+      /**
+       * Status transition. Routed through `taskService.updateStatus` in the
+       * same transaction server-side, so board drops write status and
+       * position atomically. Cascade semantics for completed/canceled stay
+       * with `updateStatusCascade` — callers check subtasks first.
+       */
+      status?: TaskStatus;
     },
   ) => lambdaClient.task.update.mutate({ id, ...data });
 
@@ -168,8 +193,21 @@ class TaskService {
       status,
     });
 
-  updateStatusCascade = async (id: string, status: 'canceled' | 'completed') =>
-    lambdaClient.task.updateStatusCascade.mutate({ id, status });
+  updateStatusCascade = async (
+    id: string,
+    status: 'canceled' | 'completed',
+    /**
+     * Kanban drop geometry — the parent stamps the resolved `position` inside
+     * the cascade's transaction, so a board drop stays atomic with the
+     * family status write.
+     */
+    move?: {
+      afterId?: string | null;
+      beforeId?: string | null;
+      moveScope?: TaskMoveScope;
+      position?: number;
+    },
+  ) => lambdaClient.task.updateStatusCascade.mutate({ id, status, ...move });
 
   run = async (id: string, params?: { continueTopicId?: string; prompt?: string }) =>
     lambdaClient.task.run.mutate({ id, ...params });

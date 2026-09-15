@@ -1,49 +1,68 @@
 import {
   DndContext,
   type DragEndEvent,
+  type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
-  pointerWithin,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Center, Empty, Flexbox } from '@lobehub/ui';
+import { toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
+import { taskService } from '@/services/task';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
+import { KANBAN_GROUP_PAGE_SIZE, kanbanGroupLimitCap } from '@/store/task/slices/list/action';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
 import { createTaskModal } from '../CreateTaskModal';
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
 import AgentTaskItem from '../features/AgentTaskItem';
-import { useTaskStatusChange } from '../features/useTaskStatusChange';
+import { createTaskStatusCascadeModal } from '../features/TaskStatusCascadeModal';
+import { getOpenSubtasks } from '../features/useTaskStatusChange';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import HiddenColumnsPanel from './HiddenColumnsPanel';
 import {
+  buildKanbanColumnMap,
   buildKanbanColumns,
   buildKanbanGroupQuery,
   canDropTaskIntoKanbanColumn,
+  computeKanbanPosition,
+  effectiveTaskPosition,
+  findKanbanColumn,
   getKanbanAssigneeUpdate,
+  getKanbanMoveAnchors,
   getKanbanTaskPatch,
-  moveTaskBetweenKanbanGroups,
+  type KanbanColumnDefinition,
+  kanbanColumnMoveScope,
+  kanbanStatusColumnsExcludedBy,
+  makeKanbanCollision,
   normalizeKanbanGroupBy,
+  placeKanbanCardInColumn,
+  preserveKanbanColumnOrder,
+  resolveKanbanDropColumn,
+  taskMatchesKanbanColumn,
 } from './kanbanBoardModel';
 import KanbanColumn, { COLUMN_I18N_KEYS, COLUMN_STATUS_ICON, COLUMN_WIDTH } from './KanbanColumn';
 import type { TaskListViewOptions } from './listViewOptions';
 import { HIDDEN_WHEN_COMPLETED_STATUSES } from './listViewOptions';
+import { useKanbanBoardPan } from './useKanbanBoardPan';
+import { useKanbanDragSettle } from './useKanbanDragSettle';
 
-const styles = createStaticStyles(({ css }) => ({
+const styles = createStaticStyles(({ css, cssVar }) => ({
   board: css`
     overflow-x: auto;
     display: flex;
@@ -52,6 +71,42 @@ const styles = createStaticStyles(({ css }) => ({
 
     padding-block: 0 16px;
     padding-inline: 12px;
+  `,
+  loadMore: css`
+    cursor: pointer;
+
+    width: 100%;
+    margin-block-start: 2px;
+    padding-block: 8px;
+    padding-inline: 8px;
+    border: none;
+    border-radius: ${cssVar.borderRadius};
+
+    font-family: inherit;
+    font-size: 12px;
+    color: ${cssVar.colorTextTertiary};
+    text-align: center;
+
+    background: transparent;
+
+    transition:
+      color 0.2s,
+      background 0.2s;
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: -2px;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+
+    &:hover:not(:disabled) {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillTertiary};
+    }
   `,
 }));
 
@@ -99,95 +154,87 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     [isQueryScopeCurrent, taskGroups],
   );
   const updateTask = useTaskStore((s) => s.updateTask);
-  const changeTaskStatus = useTaskStatusChange();
+  const loadMoreTaskGroup = useTaskStore((s) => s.loadMoreTaskGroup);
+  const boardGroupLimits = useTaskStore((s) => s.boardGroupLimits);
+  const refreshTaskGroupList = useTaskStore((s) => s.refreshTaskGroupList);
+  const internalRefreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
 
   const hiddenColumns = useGlobalStore(systemStatusSelectors.taskKanbanHiddenColumns);
   const hiddenPanelCollapsed = useGlobalStore(systemStatusSelectors.taskKanbanHiddenPanelCollapsed);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
   const [activeTask, setActiveTask] = useState<TaskListItem | null>(null);
-  const columns = useMemo(
-    () => buildKanbanColumns(currentTaskGroups, groupBy),
-    [currentTaskGroups, groupBy],
+  /**
+   * Optimistic field patches keyed by task identifier. The mirror (below)
+   * only moves identifiers between columns; a status/assignee/priority drop
+   * also needs the rendered card to show its TARGET values for the settle
+   * window — `TaskStatusTag`/`TaskPriorityTag`/assignee read the task object.
+   * Cleared when the post-settle resync lands the server's truth.
+   */
+  const [cardOverrides, setCardOverrides] = useState<Record<string, Partial<TaskListItem>>>({});
+
+  const allColumns = useMemo(() => {
+    const filteredOut = kanbanStatusColumnsExcludedBy(
+      groupBy === 'status' ? excludeStatuses : undefined,
+    );
+    return buildKanbanColumns(currentTaskGroups, groupBy).filter(
+      (column) => !filteredOut.has(column.key),
+    );
+  }, [currentTaskGroups, excludeStatuses, groupBy]);
+  const columnDefMap = useMemo(
+    () => new Map(allColumns.map((column) => [column.key, column])),
+    [allColumns],
   );
+  const columnKeys = useMemo(() => allColumns.map((column) => column.key), [allColumns]);
+  const columnKeySet = useMemo(() => new Set(columnKeys), [columnKeys]);
+  const collisionDetection = useMemo(() => makeKanbanCollision(columnKeySet), [columnKeySet]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor),
-  );
+  // ── Drag mirror ────────────────────────────────────────────────
+  // Local `columnKey -> ordered task ids` map. Between drags it follows the
+  // store's taskGroups; while a pointer is down (or a move is settling) it is
+  // frozen so a mid-flight refetch cannot clobber the optimistic placement.
+  const {
+    beginSettle,
+    columns,
+    columnsRef,
+    isDraggingRef,
+    isSettlingRef,
+    recentlyMovedRef,
+    setColumns,
+    settleVersion,
+  } = useKanbanDragSettle(() => buildKanbanColumnMap(columnKeys, currentTaskGroups));
 
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      if (!canEditTask) return;
-      const task = event.active.data.current?.task as TaskListItem | undefined;
-      setActiveTask(task ?? null);
-    },
-    [canEditTask],
-  );
+  const taskMap = useMemo(() => {
+    const map = new Map<string, TaskListItem>();
+    for (const group of currentTaskGroups) {
+      for (const task of group.tasks as TaskListItem[]) map.set(task.identifier, task);
+    }
+    return map;
+  }, [currentTaskGroups]);
 
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      setActiveTask(null);
-      if (!canEditTask) return;
+  // The drag reads task fields (membership, neighbour positions) from the
+  // PRE-DRAG snapshot — the mirror moves ids, but the task objects must keep
+  // saying where each card started until the drop commits.
+  const taskMapRef = useRef(taskMap);
+  if (!isDraggingRef.current && !isSettlingRef.current) taskMapRef.current = taskMap;
 
-      const { active, over } = event;
-      if (!over) return;
+  const resetColumns = useCallback(() => {
+    setColumns(
+      preserveKanbanColumnOrder(
+        columnsRef.current,
+        buildKanbanColumnMap(columnKeys, useTaskStore.getState().taskGroups),
+      ),
+    );
+  }, [columnKeys, columnsRef, setColumns]);
 
-      const targetColumnKey = over.id as string;
-      const column = columns.find((item) => item.key === targetColumnKey);
-
-      const task = active.data.current?.task as TaskListItem | undefined;
-      if (!task) return;
-      if (!column || !canDropTaskIntoKanbanColumn(task, groupBy, column)) return;
-
-      const patch = getKanbanTaskPatch(groupBy, column);
-      if (!patch) return;
-      const assigneeUpdate =
-        groupBy === 'assignee' || groupBy === 'member'
-          ? getKanbanAssigneeUpdate(task, patch)
-          : undefined;
-      if (groupBy === 'status' && task.status === patch.status) return;
-      if ((groupBy === 'assignee' || groupBy === 'member') && !assigneeUpdate) return;
-      if (groupBy === 'priority' && (task.priority ?? 0) === (patch.priority ?? 0)) return;
-
-      const prevGroups = useTaskStore.getState().taskGroups;
-      const nextGroups = moveTaskBetweenKanbanGroups(prevGroups, task, targetColumnKey, patch);
-      useTaskStore.setState({ taskGroups: nextGroups }, false, 'kanban/optimisticMove');
-
-      try {
-        if (groupBy === 'status' && column.targetStatus) {
-          const changed = await changeTaskStatus(task.identifier, column.targetStatus);
-          if (!changed) {
-            useTaskStore.setState({ taskGroups: prevGroups }, false, 'kanban/cancelMove');
-          }
-        } else if ((groupBy === 'assignee' || groupBy === 'member') && assigneeUpdate) {
-          await updateTask(task.identifier, assigneeUpdate);
-        } else if (groupBy === 'priority') {
-          await updateTask(task.identifier, { priority: patch.priority ?? 0 });
-        }
-      } catch {
-        useTaskStore.setState({ taskGroups: prevGroups }, false, 'kanban/revertMove');
-      }
-    },
-    [canEditTask, changeTaskStatus, columns, groupBy, updateTask],
-  );
-
-  const handleDragCancel = useCallback(() => {
-    setActiveTask(null);
-  }, []);
-
-  const handleCreateTask = useCallback(() => {
-    if (!canEditTask) return;
-    createTaskModal({
-      agentId,
-      lockAssignee: !!agentId,
-      projectId,
-      onCreated: (task) => {
-        navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
-      },
-      showInlineToggle: false,
-    });
-  }, [agentId, canEditTask, navigate, projectId]);
+  // Resync the mirror whenever store truth lands outside a drag/settle.
+  useEffect(() => {
+    if (isDraggingRef.current || isSettlingRef.current) return;
+    resetColumns();
+    setCardOverrides((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+    // `settleVersion` forces one resync after the settle lock releases even
+    // when taskGroups itself did not change in the meantime.
+  }, [currentTaskGroups, isDraggingRef, isSettlingRef, resetColumns, settleVersion]);
 
   const handleHideColumn = useCallback(
     (columnKey: string) => {
@@ -212,26 +259,332 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     [updateSystemStatus],
   );
 
+  // ── Drop commit ────────────────────────────────────────────────
+
+  /**
+   * Persist one drop. Returns false when the user cancelled a confirmation
+   * (the completed/canceled cascade modal) so the caller reverts the mirror.
+   * Everything else resolves true or throws — the caller owns rollback.
+   */
+  const commitMove = useCallback(
+    async (
+      task: TaskListItem,
+      column: KanbanColumnDefinition,
+      move: { afterId: string | null; beforeId: string | null; position: number },
+    ): Promise<boolean> => {
+      // The column's membership fields ride with the anchors so the server can
+      // find the true neighbour past the loaded page and respace the column
+      // when fractional positions collapse.
+      const moveScope = kanbanColumnMoveScope(groupBy, column);
+      const anchors = {
+        afterId: move.afterId,
+        beforeId: move.beforeId,
+        moveScope,
+        position: move.position,
+      };
+      const memberAlready = taskMatchesKanbanColumn(task, groupBy, column.key);
+
+      if (groupBy === 'status') {
+        const targetStatus = column.targetStatus;
+        // The column writes no status (running), or the task already buckets
+        // inside it (a `failed` card in `needsInput`) → pure reorder.
+        if (!targetStatus || memberAlready) {
+          await updateTask(task.identifier, anchors);
+          return true;
+        }
+        if (targetStatus === 'completed' || targetStatus === 'canceled') {
+          // Same contract as the detail header: completing/canceling a parent
+          // with open subtasks asks whether to cascade first.
+          let openSubtasks;
+          try {
+            const result = await taskService.getSubtasks(task.identifier);
+            openSubtasks = getOpenSubtasks(result.data);
+          } catch (loadError) {
+            console.error('[KanbanBoard] Failed to inspect subtasks:', loadError);
+            toast.error(t('taskDetail.statusCascade.loadFailed'));
+            throw loadError;
+          }
+          if (openSubtasks.length > 0) {
+            return createTaskStatusCascadeModal({
+              subtasks: openSubtasks,
+              targetStatus,
+              onApply: async (includeSubtasks) => {
+                if (includeSubtasks) {
+                  // The cascade endpoint owns the subtree transition AND stamps
+                  // the drop position in the same transaction — the move can
+                  // never persist its status without its slot.
+                  await taskService.updateStatusCascade(task.identifier, targetStatus, anchors);
+                  await internalRefreshTaskDetail(task.identifier).catch(() => {});
+                  return;
+                }
+                await updateTask(task.identifier, { ...anchors, status: targetStatus });
+              },
+            });
+          }
+        }
+        await updateTask(task.identifier, { ...anchors, status: targetStatus });
+        return true;
+      }
+
+      if (groupBy === 'assignee' || groupBy === 'member') {
+        const patch = getKanbanTaskPatch(groupBy, column) ?? {};
+        const assigneeUpdate = getKanbanAssigneeUpdate(task, patch);
+        // `undefined` means the task already carries the target assignee —
+        // the drop is a position-only move inside that column.
+        await updateTask(task.identifier, { ...assigneeUpdate, ...anchors });
+        return true;
+      }
+
+      const patch = getKanbanTaskPatch(groupBy, column);
+      await updateTask(task.identifier, { ...anchors, priority: patch?.priority ?? 0 });
+      return true;
+    },
+    [groupBy, internalRefreshTaskDetail, t, updateTask],
+  );
+
+  // ── Drag handlers ──────────────────────────────────────────────
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      if (!canEditTask) return;
+      isDraggingRef.current = true;
+      const task = event.active.data.current?.task as TaskListItem | undefined;
+      setActiveTask(task ?? null);
+    },
+    [canEditTask, isDraggingRef],
+  );
+
+  // Cross-column preview: moving a card over another column relocates its id
+  // in the mirror immediately, so sortable insertion feedback shows the slot
+  // it would take. Same-column reordering is left to the sortable transform.
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { active, over } = event;
+      if (!over || recentlyMovedRef.current) return;
+      const activeId = String(active.id);
+      const overId = String(over.id);
+      if (columnKeySet.has(activeId) || activeId === overId) return;
+      const task = active.data.current?.task as TaskListItem | undefined;
+      if (!task) return;
+
+      setColumns((prev) => {
+        const activeCol = findKanbanColumn(prev, activeId, columnKeySet);
+        const overCol = findKanbanColumn(prev, overId, columnKeySet);
+        if (!activeCol || !overCol || activeCol === overCol) return prev;
+        const overDef = columnDefMap.get(overCol);
+        if (!overDef?.droppable || !canDropTaskIntoKanbanColumn(task, groupBy, overDef)) {
+          return prev;
+        }
+        recentlyMovedRef.current = true;
+        const nextSource = (prev[activeCol] ?? []).filter((id) => id !== activeId);
+        const nextTarget = [...(prev[overCol] ?? [])];
+        const overIndex = nextTarget.indexOf(overId);
+        nextTarget.splice(overIndex >= 0 ? overIndex : nextTarget.length, 0, activeId);
+        return { ...prev, [activeCol]: nextSource, [overCol]: nextTarget };
+      });
+    },
+    [columnDefMap, columnKeySet, groupBy, recentlyMovedRef, setColumns],
+  );
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      isDraggingRef.current = false;
+      setActiveTask(null);
+      if (!canEditTask) return;
+
+      const activeId = String(active.id);
+      if (!over || columnKeySet.has(activeId)) {
+        resetColumns();
+        return;
+      }
+      const overId = String(over.id);
+      const task = active.data.current?.task as TaskListItem | undefined;
+      if (!task) {
+        resetColumns();
+        return;
+      }
+
+      const currentColumns = columnsRef.current;
+      // Membership + neighbour positions read the pre-drag task snapshot.
+      const frozenTask = taskMapRef.current.get(activeId) ?? task;
+
+      // The RELEASE column decides the target, not the mirror's parked slot —
+      // a rejected drag-over can leave the card previewed onto an earlier
+      // valid column, so committing the preview would write the wrong column.
+      // `droppable: false` only bars cross-column entry: a same-column reorder
+      // inside `running` stays legal (it writes position, not status).
+      const overCol = resolveKanbanDropColumn(
+        frozenTask,
+        groupBy,
+        currentColumns,
+        overId,
+        columnKeySet,
+        columnDefMap,
+      );
+      if (!overCol) {
+        resetColumns();
+        return;
+      }
+      const finalDef = columnDefMap.get(overCol)!;
+      const sameColumn = taskMatchesKanbanColumn(frozenTask, groupBy, overCol);
+
+      // Order the release column the way the pointer left it: a same-column
+      // sort sits at its old index until moved to the released-on card, and a
+      // cross-column preview may have parked at an earlier slot than the
+      // pointer's final position. `placeKanbanCardInColumn` also strips the id
+      // from any stale preview column so the card cannot render twice.
+      const finalColumns = placeKanbanCardInColumn(currentColumns, overCol, activeId, overId);
+      setColumns(finalColumns);
+
+      const finalIds = finalColumns[overCol] ?? [];
+      const position = computeKanbanPosition(finalIds, activeId, taskMapRef.current);
+      const anchors = getKanbanMoveAnchors(finalIds, activeId);
+      if (sameColumn && effectiveTaskPosition(frozenTask) === position) {
+        // Nothing moved: same column, same effective slot.
+        resetColumns();
+        return;
+      }
+
+      const patch = getKanbanTaskPatch(groupBy, finalDef) ?? {};
+      const assigneeUpdate =
+        groupBy === 'assignee' || groupBy === 'member'
+          ? getKanbanAssigneeUpdate(frozenTask, patch)
+          : undefined;
+      setCardOverrides((prev) => ({
+        ...prev,
+        [activeId]: { ...patch, ...assigneeUpdate, position },
+      }));
+
+      // Dropping onto a hidden column reveals it — the user just put a card
+      // there; hiding it now would make the drop look like a delete. Re-hide
+      // if the write fails or is cancelled.
+      const wasHidden = hiddenColumns.includes(overCol);
+      if (wasHidden) handleRestoreColumn(overCol);
+
+      const revert = () => {
+        setCardOverrides((prev) => {
+          const next = { ...prev };
+          delete next[activeId];
+          return next;
+        });
+        if (wasHidden) handleHideColumn(overCol);
+        resetColumns();
+      };
+
+      const release = beginSettle();
+      let applied: boolean;
+      try {
+        applied = await commitMove(frozenTask, finalDef, { ...anchors, position });
+      } catch {
+        // The write may have half-landed (e.g. a cascade's position step after
+        // the status commit): reconcile from the server before rolling the
+        // mirror back so a persisted move is never displayed as reverted.
+        revert();
+        release();
+        await refreshTaskGroupList().catch(() => {});
+        return;
+      }
+      if (!applied) {
+        revert();
+        release();
+        return;
+      }
+      try {
+        // Land the reconciled order before releasing the lock so the resync
+        // renders server truth, not a stale intermediate page.
+        await refreshTaskGroupList();
+        release();
+      } catch {
+        // The move persisted but the reconcile failed — keep the optimistic
+        // placement (reverting would lie about a write the server accepted)
+        // and retry the refetch in the background.
+        release({ resync: false });
+        void refreshTaskGroupList().catch(() => {});
+      }
+    },
+    [
+      beginSettle,
+      canEditTask,
+      columnDefMap,
+      columnKeySet,
+      columnsRef,
+      commitMove,
+      groupBy,
+      handleHideColumn,
+      handleRestoreColumn,
+      hiddenColumns,
+      isDraggingRef,
+      refreshTaskGroupList,
+      resetColumns,
+      setColumns,
+    ],
+  );
+
+  const handleDragCancel = useCallback(() => {
+    isDraggingRef.current = false;
+    setActiveTask(null);
+    resetColumns();
+  }, [isDraggingRef, resetColumns]);
+
+  const handleCreateTask = useCallback(() => {
+    if (!canEditTask) return;
+    createTaskModal({
+      agentId,
+      lockAssignee: !!agentId,
+      projectId,
+      onCreated: (task) => {
+        navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
+      },
+      showInlineToggle: false,
+    });
+  }, [agentId, canEditTask, navigate, projectId]);
+
+  // ── Derived layout ─────────────────────────────────────────────
+
   const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
 
   const visibleColumns = useMemo(
     () =>
-      groupBy === 'status' ? columns.filter((column) => !hiddenColumnSet.has(column.key)) : columns,
-    [columns, groupBy, hiddenColumnSet],
+      groupBy === 'status'
+        ? allColumns.filter((column) => !hiddenColumnSet.has(column.key))
+        : allColumns,
+    [allColumns, groupBy, hiddenColumnSet],
   );
 
   const hiddenColumnEntries = useMemo(
     () =>
-      columns
+      allColumns
         .filter((col) => hiddenColumnSet.has(col.key))
         .map((col) => ({
           columnKey: col.key,
+          droppable: canEditTask && col.droppable,
           label: t(COLUMN_I18N_KEYS[col.key] as any),
           statusIcon: COLUMN_STATUS_ICON[col.key],
           total: currentTaskGroups.find((group) => group.key === col.key)?.total ?? 0,
         })),
-    [columns, currentTaskGroups, hiddenColumnSet, t],
+    [allColumns, canEditTask, currentTaskGroups, hiddenColumnSet, t],
   );
+
+  const resolveColumnTasks = useCallback(
+    (columnKey: string): TaskListItem[] =>
+      (columns[columnKey] ?? [])
+        .map((id) => {
+          const task = taskMap.get(id);
+          if (!task) return undefined;
+          const override = cardOverrides[id];
+          return override ? ({ ...task, ...override } as TaskListItem) : task;
+        })
+        .filter((task): task is TaskListItem => !!task),
+    [cardOverrides, columns, taskMap],
+  );
+
+  const boardPan = useKanbanBoardPan<HTMLDivElement>();
 
   const totalTasks = currentTaskGroups.reduce((sum, group) => sum + group.total, 0);
   const skeletonColumns =
@@ -269,15 +622,25 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
 
   const board = (
     <DndContext
-      collisionDetection={pointerWithin}
+      collisionDetection={collisionDetection}
       sensors={canEditTask ? sensors : []}
       onDragCancel={handleDragCancel}
       onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
       onDragStart={handleDragStart}
     >
-      <Flexbox horizontal className={styles.board}>
+      <div
+        className={styles.board}
+        ref={boardPan.ref}
+        onLostPointerCapture={boardPan.onLostPointerCapture}
+        onPointerCancel={boardPan.onPointerCancel}
+        onPointerDown={boardPan.onPointerDown}
+        onPointerMove={boardPan.onPointerMove}
+        onPointerUp={boardPan.onPointerUp}
+      >
         {visibleColumns.map((col) => {
           const group = currentTaskGroups.find((item) => item.key === col.key);
+          const columnTasks = resolveColumnTasks(col.key);
           const droppable =
             canEditTask &&
             col.droppable &&
@@ -290,8 +653,27 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
               groupMeta={col.groupMeta}
               key={col.key}
               routeScope={routeScope}
-              tasks={(group?.tasks ?? []) as TaskListItem[]}
+              tasks={columnTasks}
               total={group?.total ?? 0}
+              footer={
+                group?.hasMore ? (
+                  <button
+                    data-no-board-pan
+                    className={styles.loadMore}
+                    type="button"
+                    disabled={
+                      (boardGroupLimits[col.key] ?? KANBAN_GROUP_PAGE_SIZE) >=
+                      kanbanGroupLimitCap(groupBy)
+                    }
+                    onClick={() => loadMoreTaskGroup(col.key)}
+                  >
+                    {t('taskList.kanban.loadMore', {
+                      shown: columnTasks.length,
+                      total: group.total,
+                    })}
+                  </button>
+                ) : undefined
+              }
               onHide={groupBy === 'status' ? () => handleHideColumn(col.key) : undefined}
               onCreate={
                 // "My tasks" offers no create entry (its list view has none
@@ -307,13 +689,15 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         })}
         {groupBy === 'status' && (
           <HiddenColumnsPanel
-            collapsed={hiddenPanelCollapsed}
+            // A drag force-expands the rail so its hidden-column rows mount
+            // and register as drop targets; collapsed keeps them unmounted.
+            collapsed={hiddenPanelCollapsed && !activeTask}
             columns={hiddenColumnEntries}
             onRestore={handleRestoreColumn}
             onToggleCollapsed={handleToggleHiddenPanel}
           />
         )}
-      </Flexbox>
+      </div>
       <DragOverlay dropAnimation={null}>
         {activeTask ? (
           <div

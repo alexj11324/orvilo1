@@ -1,3 +1,4 @@
+import { useDroppable } from '@dnd-kit/core';
 import { Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
@@ -33,6 +34,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     &:hover {
       border-color: ${cssVar.colorPrimaryBorder};
     }
+  `,
+  cardDropOver: css`
+    border-color: ${cssVar.colorPrimary};
+    background: ${cssVar.colorPrimaryBg};
+    box-shadow: 0 0 0 1px ${cssVar.colorPrimary};
   `,
   collapsedHeader: css`
     cursor: pointer;
@@ -93,6 +99,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 interface HiddenColumn {
   columnKey: string;
+  /** Hidden columns stay valid drop targets unless the view filters them out. */
+  droppable?: boolean;
   label: string;
   statusIcon?: TaskStatus;
   total: number;
@@ -105,6 +113,35 @@ interface HiddenColumnsPanelProps {
   onToggleCollapsed: (next: boolean) => void;
 }
 
+const HiddenColumnRow = memo<{
+  column: HiddenColumn;
+  onRestore: (columnKey: string) => void;
+}>(({ column, onRestore }) => {
+  const { t } = useTranslation('chat');
+  const { isOver, setNodeRef } = useDroppable({
+    disabled: column.droppable === false,
+    id: column.columnKey,
+  });
+
+  return (
+    <div
+      className={cx(styles.card, isOver && styles.cardDropOver)}
+      data-hidden-column-drop-over={isOver || undefined}
+      data-hidden-column-drop-target={column.columnKey}
+      key={column.columnKey}
+      ref={setNodeRef}
+      title={t('taskList.kanban.showColumn')}
+      onClick={() => onRestore(column.columnKey)}
+    >
+      {column.statusIcon && <TaskStatusIcon size={16} status={column.statusIcon} />}
+      <Text fontSize={13}>{column.label}</Text>
+      <Text className={styles.count} fontSize={12}>
+        {column.total}
+      </Text>
+    </div>
+  );
+});
+
 const HiddenColumnsPanel = memo<HiddenColumnsPanelProps>(
   ({ collapsed, columns, onRestore, onToggleCollapsed }) => {
     const { t } = useTranslation('chat');
@@ -116,6 +153,7 @@ const HiddenColumnsPanel = memo<HiddenColumnsPanelProps>(
     if (collapsed) {
       return (
         <div
+          data-no-board-pan
           className={styles.panel}
           style={{ width: HIDDEN_PANEL_WIDTH.collapsed }}
           onClick={() => onToggleCollapsed(false)}
@@ -133,7 +171,11 @@ const HiddenColumnsPanel = memo<HiddenColumnsPanelProps>(
     }
 
     return (
-      <div className={styles.panel} style={{ width: HIDDEN_PANEL_WIDTH.expanded }}>
+      <div
+        data-no-board-pan
+        className={styles.panel}
+        style={{ width: HIDDEN_PANEL_WIDTH.expanded }}
+      >
         <div className={styles.header} onClick={() => onToggleCollapsed(true)}>
           <Text fontSize={13} weight={500}>
             {title}
@@ -145,18 +187,7 @@ const HiddenColumnsPanel = memo<HiddenColumnsPanelProps>(
         </div>
         <div className={styles.list}>
           {columns.map((column) => (
-            <div
-              className={cx(styles.card)}
-              key={column.columnKey}
-              title={t('taskList.kanban.showColumn')}
-              onClick={() => onRestore(column.columnKey)}
-            >
-              {column.statusIcon && <TaskStatusIcon size={16} status={column.statusIcon} />}
-              <Text fontSize={13}>{column.label}</Text>
-              <Text className={styles.count} fontSize={12}>
-                {column.total}
-              </Text>
-            </div>
+            <HiddenColumnRow column={column} key={column.columnKey} onRestore={onRestore} />
           ))}
         </div>
       </div>

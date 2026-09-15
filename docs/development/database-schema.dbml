@@ -3373,6 +3373,7 @@ table tasks {
   status text [not null, default: 'backlog']
   priority integer [default: 0]
   sort_order integer [default: 0]
+  position "double precision"
   automation_mode text
   heartbeat_interval integer
   heartbeat_timeout integer

@@ -6,6 +6,7 @@ import type {
 } from '@orvilo/types';
 import { isNotNull, isNull } from 'drizzle-orm';
 import {
+  doublePrecision,
   foreignKey,
   index,
   integer,
@@ -72,6 +73,14 @@ export const tasks = pgTable(
     status: text('status').notNull().default('backlog'),
     priority: integer('priority').default(0), // 'no' | 'urgent' | 'high' | 'normal' | 'low'
     sortOrder: integer('sort_order').default(0), // manual sort within parent, lower = higher
+    /**
+     * Kanban board ordering key (fractional indexing, like Linear): lower
+     * values render earlier in a column. NULL means "never dragged" — board
+     * reads fall back to `-extract(epoch from created_at)` so untouched rows
+     * keep the legacy newest-first order. Distinct from `sortOrder`, which
+     * orders subtasks within their parent only.
+     */
+    position: doublePrecision('position'),
 
     // Automation mode (mutually exclusive with each other; null = no automation)
     automationMode: text('automation_mode').$type<'heartbeat' | 'schedule'>(),

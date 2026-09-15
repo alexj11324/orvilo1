@@ -6,6 +6,7 @@ import type {
   TaskAutomationMode,
   TaskAutomationSnapshot,
   TaskItem,
+  TaskMoveScope,
   TaskSubtaskProgress,
   TaskVerifyConfig,
   WorkspaceData,
@@ -177,6 +178,26 @@ const RUNNABLE_AUTOMATION = and(
     and(eq(tasks.automationMode, 'heartbeat'), gt(tasks.heartbeatInterval, 0)),
   ),
 )!;
+
+/**
+ * Kanban ordering key for grouped reads. Rows that were never dragged carry
+ * `position = NULL` and fall back to `-epoch(created_at)`, preserving the
+ * legacy newest-first order while letting a dropped card hold an explicit
+ * slot between its neighbours. `createdAt`/`seq` tiebreaks keep the order
+ * total when two rows share one key.
+ */
+const taskEffectivePosition = sql`coalesce(${tasks.position}, -extract(epoch from ${tasks.createdAt}))`;
+const TASK_BOARD_ORDER = [
+  sql`${taskEffectivePosition} asc`,
+  desc(tasks.createdAt),
+  desc(tasks.seq),
+];
+/**
+ * Fixed stride a collapsed kanban column is respaced to. Small magnitudes
+ * (multiples of 1024) keep midpoint halving inside double precision for far
+ * longer than the legacy `-epoch(created_at)` fallback scale ever could.
+ */
+const MOVE_REBALANCE_STEP = 1024;
 
 interface TaskListFilterOptions {
   assigneeAgentId?: string;
@@ -671,6 +692,13 @@ export class TaskModel {
     options: TaskListFilterOptions & {
       excludeStatuses?: string[];
       groupBy?: 'agent' | 'assignee' | 'member' | 'priority';
+      /**
+       * Per-column page sizes for the dynamic groupings (agent/assignee/
+       * member/priority), keyed by group key — the board bumps one column's
+       * entry on "load more" without disturbing the others. The status path
+       * already carries per-group limits inside `groups`, so it ignores this.
+       */
+      groupLimits?: Record<string, number>;
       groups?: Array<{
         key: string;
         limit?: number;
@@ -691,11 +719,20 @@ export class TaskModel {
       total: number;
     }>
   > {
-    const { assigneeAgentId, excludeStatuses, groupBy, groups } = options;
+    const { assigneeAgentId, excludeStatuses, groupBy, groupLimits, groups } = options;
 
     if ((!groups || groups.length === 0) && !groupBy) {
       throw new Error('Task groups or a grouping dimension are required');
     }
+
+    const DEFAULT_GROUP_LIMIT = 50;
+    /**
+     * The ranked-window paths fetch per partition in one pass, so the row cap
+     * is uniform; per-key limits are applied by truncating each group's rows
+     * afterwards. `hasMore` still compares against the true `total`.
+     */
+    const groupLimitFor = (key: string) => groupLimits?.[key] ?? DEFAULT_GROUP_LIMIT;
+    const maxGroupLimit = Math.max(DEFAULT_GROUP_LIMIT, ...Object.values(groupLimits ?? {}));
 
     const baseConditions = this.buildListConditions(options);
     if (excludeStatuses?.length) {
@@ -717,7 +754,6 @@ export class TaskModel {
     let groupQueries: GroupQuery[];
 
     if (groupBy === 'assignee') {
-      const limit = 50;
       const assigneeGroupKey = sql<string>`case
         when ${tasks.assigneeAgentId} is not null then 'assignee:' || ${tasks.assigneeAgentId}
         when ${tasks.assigneeUserId} is not null then 'assignee:user:' || ${tasks.assigneeUserId}
@@ -728,7 +764,7 @@ export class TaskModel {
           ...getTableColumns(tasks),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
-            sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
+            sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
               'group_rank',
             ),
         })
@@ -747,7 +783,7 @@ export class TaskModel {
         this.db
           .select()
           .from(rankedTasks)
-          .where(sql`${rankedTasks.groupRank} <= ${limit}`)
+          .where(sql`${rankedTasks.groupRank} <= ${maxGroupLimit}`)
           .orderBy(rankedTasks.assigneeGroupKey, rankedTasks.groupRank),
       ]);
       const assigneeCounts = new Map(
@@ -794,14 +830,13 @@ export class TaskModel {
           assigneeUserId: groupAssigneeUserId,
           conditions,
           key,
-          limit,
+          limit: groupLimitFor(key),
           offset: 0,
-          prefetchedTasks: tasksByAssignee.get(key) ?? [],
+          prefetchedTasks: (tasksByAssignee.get(key) ?? []).slice(0, groupLimitFor(key)),
           total,
         };
       });
     } else if (groupBy === 'agent' || groupBy === 'member') {
-      const limit = 50;
       const groupColumn = groupBy === 'agent' ? tasks.assigneeAgentId : tasks.assigneeUserId;
       const groupPrefix = groupBy === 'agent' ? 'assignee:' : 'member:';
       const unassignedKey = `${groupPrefix}unassigned`;
@@ -814,7 +849,7 @@ export class TaskModel {
           ...getTableColumns(tasks),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
-            sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
+            sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
               'group_rank',
             ),
         })
@@ -833,7 +868,7 @@ export class TaskModel {
         this.db
           .select()
           .from(rankedTasks)
-          .where(sql`${rankedTasks.groupRank} <= ${limit}`)
+          .where(sql`${rankedTasks.groupRank} <= ${maxGroupLimit}`)
           .orderBy(rankedTasks.assigneeGroupKey, rankedTasks.groupRank),
       ]);
       const assigneeCounts = new Map(
@@ -869,9 +904,9 @@ export class TaskModel {
           assigneeUserId: groupAssigneeUserId,
           conditions,
           key,
-          limit,
+          limit: groupLimitFor(key),
           offset: 0,
-          prefetchedTasks: tasksByAssignee.get(key) ?? [],
+          prefetchedTasks: (tasksByAssignee.get(key) ?? []).slice(0, groupLimitFor(key)),
           total,
         };
       });
@@ -888,13 +923,14 @@ export class TaskModel {
             ? or(eq(tasks.priority, priority), isNull(tasks.priority))!
             : eq(tasks.priority, priority),
         ];
-        const limit = 50;
+        const key = `priority:${priority}`;
+        const limit = groupLimitFor(key);
         const offset = 0;
         const prefetchedTasks = await this.db
           .select()
           .from(tasks)
           .where(and(...baseConditions, ...conditions))
-          .orderBy(desc(tasks.createdAt), desc(tasks.seq))
+          .orderBy(...TASK_BOARD_ORDER)
           .limit(limit)
           .offset(offset);
 
@@ -943,7 +979,7 @@ export class TaskModel {
           .select()
           .from(tasks)
           .where(and(...baseConditions, ...conditions))
-          .orderBy(desc(tasks.createdAt), desc(tasks.seq))
+          .orderBy(...TASK_BOARD_ORDER)
           .limit(limit)
           .offset(offset);
 
@@ -977,7 +1013,7 @@ export class TaskModel {
             .select()
             .from(tasks)
             .where(and(...baseConditions, ...group.conditions))
-            .orderBy(desc(tasks.createdAt), desc(tasks.seq))
+            .orderBy(...TASK_BOARD_ORDER)
             .limit(group.limit)
             .offset(group.offset));
 
@@ -1148,6 +1184,183 @@ export class TaskModel {
         .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
         .where(and(eq(tasks.id, item.id), this.ownership()));
     }
+  }
+
+  /**
+   * The position a kanban drop lands on, computed from the two cards framing
+   * the drop slot (`beforeId` is the card above, `afterId` the card below —
+   * either may be an `id` or an `identifier`). Rows without an explicit
+   * `position` use the same `-epoch(created_at)` fallback the board ordering
+   * applies, so an untouched column and a dragged card interleave correctly.
+   * Returns null when both anchors are gone — the write then leaves the
+   * position untouched instead of guessing.
+   *
+   * `scope` is the dropped column's membership (status set, assignee, or
+   * priority). A missing anchor means the drop hit the loaded page's edge —
+   * but the column can continue past it, so the true in-scope neighbour is
+   * fetched instead of stepping blindly past unseen rows. When repeated
+   * midpoint halving exhausts double precision the column is respaced once.
+   */
+  async computeMovePosition(
+    anchors: { afterId?: string | null; beforeId?: string | null },
+    scope?: TaskMoveScope,
+    excludeId?: string,
+  ): Promise<number | null> {
+    const ids = [anchors.beforeId, anchors.afterId].filter(
+      (id): id is string => typeof id === 'string' && id.length > 0,
+    );
+    if (ids.length === 0) return null;
+
+    const rows = await this.resolveMany(ids);
+    const find = (id?: string | null) =>
+      id ? rows.find((row) => row.id === id || row.identifier === id.toUpperCase()) : undefined;
+    const before = find(anchors.beforeId);
+    const after = find(anchors.afterId);
+    if (!before && !after) return null;
+
+    const effectivePosition = (task: TaskItem) =>
+      task.position ?? -new Date(task.createdAt).getTime() / 1000;
+
+    // The rows framing the slot: the resolved anchor on one side, the true
+    // in-scope neighbour on the side the loaded page never reached. A real
+    // column edge (no neighbour in scope) falls back to one step past the
+    // boundary, preserving the legacy no-scope behaviour.
+    const lo =
+      before ??
+      (scope && after ? await this.moveScopeNeighbour(after, scope, 'prev', excludeId) : undefined);
+    const hi =
+      after ??
+      (scope && before
+        ? await this.moveScopeNeighbour(before, scope, 'next', excludeId)
+        : undefined);
+    if (!lo && !hi) return null;
+    if (!lo) return effectivePosition(hi!) - 1;
+    if (!hi) return effectivePosition(lo) + 1;
+
+    const loPos = effectivePosition(lo);
+    const hiPos = effectivePosition(hi);
+    const mid = (loPos + hiPos) / 2;
+    if (mid > loPos && mid < hiPos) return mid;
+
+    // The gap collapsed to an endpoint — repeated midpoint halving ran out of
+    // double precision (or the anchors tie). Respace the whole column and take
+    // the reopened midpoint. Without a scope there is no column to respace;
+    // the degenerate midpoint keeps the write a harmless reorder.
+    if (!scope) return mid;
+    const [freshLo, freshHi] = await this.rebalanceMoveScope(scope, [lo.id, hi.id]);
+    const reopened = (freshLo + freshHi) / 2;
+    return reopened > freshLo && reopened < freshHi ? reopened : freshLo;
+  }
+
+  /**
+   * The membership filters of a kanban drop scope. Each present key
+   * constrains the column — a `null` assignee means the unassigned column,
+   * not "no constraint", and the `priority:0` column also holds NULL
+   * priorities (its key matches `taskPriorityGroupKey`).
+   */
+  private moveScopeConditions(scope: TaskMoveScope): SQL[] {
+    const conditions: SQL[] = [];
+    if (scope.statuses?.length) conditions.push(inArray(tasks.status, scope.statuses));
+    if ('assigneeAgentId' in scope) {
+      conditions.push(
+        scope.assigneeAgentId == null
+          ? isNull(tasks.assigneeAgentId)
+          : eq(tasks.assigneeAgentId, scope.assigneeAgentId),
+      );
+    }
+    if ('assigneeUserId' in scope) {
+      conditions.push(
+        scope.assigneeUserId == null
+          ? isNull(tasks.assigneeUserId)
+          : eq(tasks.assigneeUserId, scope.assigneeUserId),
+      );
+    }
+    if (scope.priority !== undefined) {
+      conditions.push(
+        scope.priority === 0
+          ? (or(eq(tasks.priority, 0), isNull(tasks.priority)) as SQL)
+          : eq(tasks.priority, scope.priority),
+      );
+    }
+    return conditions;
+  }
+
+  /**
+   * The row immediately before/after `boundary` inside the dropped column's
+   * scope, in board order (`position` fallback, then `createdAt`/`seq`
+   * tiebreaks). Finds the card the loaded page never rendered, so a drop at
+   * a paginated edge lands against the true successor instead of past it.
+   */
+  private async moveScopeNeighbour(
+    boundary: TaskItem,
+    scope: TaskMoveScope,
+    direction: 'next' | 'prev',
+    excludeId?: string,
+  ): Promise<TaskItem | undefined> {
+    const bound = boundary.position ?? -new Date(boundary.createdAt).getTime() / 1000;
+    const boundaryCreatedAt = boundary.createdAt;
+    const boundarySeq = boundary.seq;
+    const next = direction === 'next';
+    // "Past the boundary" in board order (effPos asc, createdAt desc, seq
+    // desc): strictly later means a bigger key, or a tie broken by an older
+    // createdAt / smaller seq. 'prev' mirrors the comparison.
+    const past = sql`(${taskEffectivePosition} > ${bound}
+      or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} < ${boundaryCreatedAt})
+      or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} = ${boundaryCreatedAt} and ${tasks.seq} < ${boundarySeq}))`;
+    const earlier = sql`(${taskEffectivePosition} < ${bound}
+      or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} > ${boundaryCreatedAt})
+      or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} = ${boundaryCreatedAt} and ${tasks.seq} > ${boundarySeq}))`;
+    const rows = await this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          this.ownership(),
+          ...this.moveScopeConditions(scope),
+          next ? past : earlier,
+          excludeId ? ne(tasks.id, excludeId) : undefined,
+        ),
+      )
+      .orderBy(
+        next ? sql`${taskEffectivePosition} asc` : sql`${taskEffectivePosition} desc`,
+        next ? desc(tasks.createdAt) : sql`${tasks.createdAt} asc`,
+        next ? desc(tasks.seq) : sql`${tasks.seq} asc`,
+      )
+      .limit(1);
+    return rows[0];
+  }
+
+  /**
+   * Respaces a column whose fractional positions collapsed. Every in-scope
+   * row gets a fixed-step slot in current board order, reopening the gap the
+   * drop needs; returns the boundary rows' fresh positions.
+   */
+  private async rebalanceMoveScope(
+    scope: TaskMoveScope,
+    boundaryIds: [string, string],
+  ): Promise<[number, number]> {
+    const conditions = and(this.ownership(), ...this.moveScopeConditions(scope));
+    await this.db.execute(sql`
+      update ${tasks}
+      set position = sub.rn * ${MOVE_REBALANCE_STEP}
+      from (
+        select ${tasks.id} as id,
+               row_number() over (
+                 order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc
+               ) as rn
+        from ${tasks}
+        where ${conditions ?? sql`true`}
+      ) sub
+      where ${tasks.id} = sub.id
+    `);
+    const [loId, hiId] = boundaryIds;
+    const fresh = await this.db
+      .select({ id: tasks.id, position: tasks.position })
+      .from(tasks)
+      .where(and(inArray(tasks.id, [loId, hiId]), this.ownership()));
+    const positionOf = (id: string, fallback: number) =>
+      fresh.find((row) => row.id === id)?.position ?? fallback;
+    return [positionOf(loId, 0), positionOf(hiId, MOVE_REBALANCE_STEP)];
   }
 
   async findSubtasks(parentTaskId: string): Promise<TaskItem[]> {

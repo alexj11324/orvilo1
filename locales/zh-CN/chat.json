@@ -1884,6 +1884,7 @@
   "taskList.kanban.emptyColumn": "暂无任务",
   "taskList.kanban.hiddenColumns": "隐藏的分组",
   "taskList.kanban.hideColumn": "隐藏分组",
+  "taskList.kanban.loadMore": "加载更多（{{shown}}/{{total}}）",
   "taskList.kanban.needsInput": "待审阅",
   "taskList.kanban.running": "进行中",
   "taskList.kanban.showColumn": "显示分组",

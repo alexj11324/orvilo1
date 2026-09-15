@@ -107,9 +107,17 @@ const createSchema = z.object({
 });
 
 const updateSchema = z.object({
+  /**
+   * Kanban drop anchors: the cards immediately above (`beforeId`) and below
+   * (`afterId`) the drop slot, by id or identifier. The server computes the
+   * fractional `position` between them — the client sends drop geometry, not
+   * a number it had to guess.
+   */
+  afterId: z.string().nullish(),
   assigneeAgentId: z.string().nullish(),
   assigneeUserId: z.string().nullish(),
   automationMode: z.enum(['heartbeat', 'schedule']).nullish(),
+  beforeId: z.string().nullish(),
   config: z.record(z.string(), z.unknown()).optional(),
   context: z.record(z.string(), z.unknown()).optional(),
   description: z.string().optional(),
@@ -126,8 +134,25 @@ const updateSchema = z.object({
     .optional(),
   heartbeatTimeout: z.number().min(1).nullish(),
   instruction: z.string().optional(),
+  /**
+   * The dropped column's membership fields, sent with the drop anchors. The
+   * loaded page ends at the visible anchor; the scope lets the server find
+   * the true in-scope neighbour past the page edge and respace the column
+   * when fractional positions collapse. `null` assignee = the unassigned
+   * column, not "no constraint".
+   */
+  moveScope: z
+    .object({
+      assigneeAgentId: z.string().nullish(),
+      assigneeUserId: z.string().nullish(),
+      priority: z.number().min(0).max(4).optional(),
+      statuses: z.array(z.enum(TASK_STATUSES)).max(10).optional(),
+    })
+    .optional(),
   name: z.string().optional(),
   parentTaskId: z.string().nullish(),
+  /** Explicit board ordering key; `beforeId`/`afterId` anchors take precedence. */
+  position: z.number().optional(),
   priority: z.number().min(0).max(4).optional(),
   schedulePattern: z.string().nullish(),
   scheduleTimezone: z.string().nullish(),
@@ -168,6 +193,12 @@ const groupListSchema = z
     automated: z.boolean().optional(),
     excludeStatuses: z.array(z.enum(TASK_STATUSES)).max(10).optional(),
     groupBy: z.enum(['agent', 'assignee', 'member', 'priority']).optional(),
+    /**
+     * Per-column page sizes for the dynamic groupings, keyed by group key.
+     * The status path ignores it — its `groups[]` entries carry `limit`
+     * already. Lets a board grow one column without redefining the group set.
+     */
+    groupLimits: z.record(z.string(), z.number().int().min(1).max(500)).optional(),
     groups: z
       .array(
         z.object({
@@ -1457,7 +1488,8 @@ export const taskRouter = router({
   update: taskProcedureWrite
     .input(idInput.merge(updateSchema).extend({ actorAgentId: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
-      const { actorAgentId, id, parentTaskId, status, ...data } = input;
+      const { actorAgentId, afterId, beforeId, id, moveScope, parentTaskId, status, ...data } =
+        input;
       try {
         const model = ctx.taskModel;
         const actor = await resolveActivityActor(ctx, actorAgentId);
@@ -1524,6 +1556,23 @@ export const taskRouter = router({
           updateData.instruction !== undefined && updateData.editorData === undefined
             ? { ...updateData, editorData: null }
             : updateData;
+
+        // Kanban drop anchors resolve to a fractional position against the
+        // live rows (the board may have shifted while the drag was in flight).
+        // When both anchors vanished mid-drag the write keeps its explicit
+        // `position` (or none) rather than failing the whole update.
+        const movePosition =
+          beforeId || afterId
+            ? await model.computeMovePosition(
+                { afterId, beforeId },
+                moveScope ?? undefined,
+                resolved.id,
+              )
+            : null;
+        const finalUpdateData =
+          movePosition === null
+            ? normalizedUpdateData
+            : { ...normalizedUpdateData, position: movePosition };
         // Agent attribution comes from `resolveActivityActor` above. The
         // assignment activity is written inside this update's own transaction
         // (see `TaskModel.updateWithLog`), so a concurrent reassignment cannot
@@ -1533,7 +1582,7 @@ export const taskRouter = router({
               const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
               const updated = await taskService.updateTaskWithAssigneeLock(
                 resolved.id,
-                normalizedUpdateData,
+                finalUpdateData,
                 actor,
               );
               if (!updated) return null;
@@ -1541,11 +1590,7 @@ export const taskRouter = router({
               const result = await taskService.updateStatus({ id: resolved.id, status }, actor);
               return result.task;
             })
-          : await ctx.taskService.updateTaskWithAssigneeLock(
-              resolved.id,
-              normalizedUpdateData,
-              actor,
-            );
+          : await ctx.taskService.updateTaskWithAssigneeLock(resolved.id, finalUpdateData, actor);
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         // Only an actual assignee change notifies — re-saving the same assignee
         // stays silent (self-assignment is filtered inside the helper).
@@ -1804,14 +1849,46 @@ export const taskRouter = router({
   updateStatusCascade: taskProcedureWrite
     .input(
       z.object({
+        /** Kanban drop anchors — same contract as `task.update`. */
+        afterId: z.string().nullish(),
+        beforeId: z.string().nullish(),
         id: z.string(),
+        /** Dropped column's membership scope — see `update`. */
+        moveScope: z
+          .object({
+            assigneeAgentId: z.string().nullish(),
+            assigneeUserId: z.string().nullish(),
+            priority: z.number().min(0).max(4).optional(),
+            statuses: z.array(z.enum(TASK_STATUSES)).max(10).optional(),
+          })
+          .optional(),
+        /** Explicit ordering key fallback; anchors take precedence. */
+        position: z.number().optional(),
         status: z.enum(['canceled', 'completed']),
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const { afterId, beforeId, moveScope, position } = input;
       try {
+        // Resolve once so the anchor computation can exclude the moving task —
+        // the service re-resolves inside its own transaction anyway.
+        const resolved = await resolveOrThrow(ctx.taskModel, input.id);
+        // Compute the drop position up-front so it rides the cascade's single
+        // transaction — status and position commit or fail together.
+        const movePosition =
+          beforeId || afterId
+            ? await ctx.taskModel.computeMovePosition(
+                { afterId, beforeId },
+                moveScope ?? undefined,
+                resolved.id,
+              )
+            : null;
         const result = await ctx.taskService.updateStatusCascade(
-          input,
+          {
+            id: input.id,
+            position: movePosition ?? position,
+            status: input.status,
+          },
           await resolveActivityActor(ctx),
         );
         return { data: result, message: `Task family ${input.status}`, success: true };

@@ -3,14 +3,28 @@ import { describe, expect, it } from 'vitest';
 import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import {
+  buildKanbanColumnMap,
   buildKanbanColumns,
   buildKanbanGroupQuery,
   canDropTaskIntoKanbanColumn,
+  computeKanbanPosition,
+  effectiveTaskPosition,
+  findKanbanColumn,
   getKanbanAssigneeUpdate,
   getKanbanColumnHeaderVariant,
+  getKanbanMoveAnchors,
   getKanbanTaskPatch,
-  moveTaskBetweenKanbanGroups,
+  KANBAN_STATUS_COLUMN_KEY,
+  type KanbanColumnDefinition,
+  kanbanColumnMoveScope,
+  kanbanStatusColumnsExcludedBy,
   normalizeKanbanGroupBy,
+  placeKanbanCardInColumn,
+  preserveKanbanColumnOrder,
+  resolveKanbanDropColumn,
+  STATUS_KANBAN_COLUMNS,
+  taskKanbanColumnKey,
+  taskMatchesKanbanColumn,
 } from './kanbanBoardModel';
 
 const task = (
@@ -23,9 +37,11 @@ const task = (
     assigneeAgentId,
     assigneeUserId,
     automationMode: null,
+    createdAt: '2024-01-01T00:00:00.000Z',
     createdByUserId: 'creator-1',
     id,
     identifier: `T-${id}`,
+    position: null,
     priority: 0,
     status: 'backlog',
     visibility: 'public',
@@ -48,6 +64,8 @@ const group = (
     tasks,
     total: tasks.length,
   }) as TaskGroupItem;
+
+const taskMapOf = (tasks: TaskListItem[]) => new Map(tasks.map((item) => [item.identifier, item]));
 
 describe('kanbanBoardModel', () => {
   it('uses assignee, member and priority as board dimensions and falls back from no grouping', () => {
@@ -110,13 +128,10 @@ describe('kanbanBoardModel', () => {
     )!;
     const patch = getKanbanTaskPatch('assignee', targetColumn)!;
 
-    const next = moveTaskBetweenKanbanGroups(groups, assignedTask, targetColumn.key, patch);
-
-    expect(next.find((item) => item.key === 'assignee:agent-1')?.total).toBe(0);
-    const unassigned = next.find((item) => item.key === 'assignee:unassigned');
-    expect(unassigned?.total).toBe(1);
-    expect(unassigned?.tasks[0].assigneeAgentId).toBeNull();
-    expect(unassigned?.tasks[0].assigneeUserId).toBe('user-1');
+    expect(patch).toEqual({ assigneeAgentId: null });
+    // The update only carries the dimension that changes — the member
+    // assignee stays untouched.
+    expect(getKanbanAssigneeUpdate(assignedTask, patch)).toEqual({ assigneeAgentId: null });
   });
 
   it('patches only the member when moving between member columns', () => {
@@ -128,13 +143,11 @@ describe('kanbanBoardModel', () => {
     const targetColumn = buildKanbanColumns(groups, 'member').find(
       (column) => column.key === 'member:unassigned',
     )!;
-    const patch = getKanbanTaskPatch('member', targetColumn)!;
 
-    expect(patch).toEqual({ assigneeUserId: null });
-    const next = moveTaskBetweenKanbanGroups(groups, assignedTask, targetColumn.key, patch);
-    const moved = next.find((item) => item.key === 'member:unassigned')?.tasks[0];
-    expect(moved?.assigneeAgentId).toBe('agent-1');
-    expect(moved?.assigneeUserId).toBeNull();
+    expect(getKanbanTaskPatch('member', targetColumn)).toEqual({ assigneeUserId: null });
+    expect(
+      getKanbanAssigneeUpdate(assignedTask, getKanbanTaskPatch('member', targetColumn)!),
+    ).toEqual({ assigneeUserId: null });
   });
 
   it('persists only the assignment dimension that changed', () => {
@@ -181,19 +194,165 @@ describe('kanbanBoardModel', () => {
     expect(canDropTaskIntoKanbanColumn(privateTask, 'member', otherMemberColumn)).toBe(false);
   });
 
-  it('preserves paginated group totals during an optimistic move', () => {
-    const assignedTask = task('1', 'agent-1');
-    const groups = [
-      { ...group('assignee:agent-1', [assignedTask], 'agent-1'), total: 75 },
-      { ...group('assignee:agent-2', [], 'agent-2'), total: 63 },
-    ];
-
-    const next = moveTaskBetweenKanbanGroups(groups, assignedTask, 'assignee:agent-2', {
-      assigneeAgentId: 'agent-2',
+  describe('status columns', () => {
+    it('maps every task status into one of the five merged columns', () => {
+      expect(KANBAN_STATUS_COLUMN_KEY.failed).toBe('needsInput');
+      expect(KANBAN_STATUS_COLUMN_KEY.paused).toBe('needsInput');
+      expect(KANBAN_STATUS_COLUMN_KEY.scheduled).toBe('running');
+      expect(KANBAN_STATUS_COLUMN_KEY.completed).toBe('done');
+      expect(taskKanbanColumnKey(task('1', null, null, { status: 'failed' }), 'status')).toBe(
+        'needsInput',
+      );
     });
 
-    expect(next.map(({ total }) => total)).toEqual([74, 64]);
+    it('marks running non-droppable and writes paused for needsInput drops', () => {
+      const running = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'running')!;
+      const needsInput = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'needsInput')!;
+
+      expect(running.droppable).toBe(false);
+      expect(running.targetStatus).toBeNull();
+      expect(needsInput.droppable).toBe(true);
+      expect(needsInput.targetStatus).toBe('paused');
+    });
+
+    it('treats a failed task dropped back on needsInput as already inside — no status rewrite', () => {
+      const failedTask = task('1', null, null, { status: 'failed' });
+
+      expect(taskMatchesKanbanColumn(failedTask, 'status', 'needsInput')).toBe(true);
+      expect(taskMatchesKanbanColumn(failedTask, 'status', 'backlog')).toBe(false);
+    });
+
+    it('excludes a column only when every member status is filtered out', () => {
+      expect(kanbanStatusColumnsExcludedBy(['completed', 'canceled'])).toEqual(
+        new Set(['done', 'canceled']),
+      );
+      // needsInput survives a partial exclusion (failed still shows).
+      expect(kanbanStatusColumnsExcludedBy(['paused'])).toEqual(new Set());
+      expect(kanbanStatusColumnsExcludedBy(undefined)).toEqual(new Set());
+    });
   });
+
+  describe('drag mirror', () => {
+    it('builds a column map that keeps empty columns as drop targets', () => {
+      const columns = buildKanbanColumnMap(
+        ['backlog', 'done', 'canceled'],
+        [group('backlog', [task('1'), task('2')])],
+      );
+
+      expect(columns).toEqual({ backlog: ['T-1', 'T-2'], canceled: [], done: [] });
+    });
+
+    it('finds the column of a card id or a column key', () => {
+      const columns = { backlog: ['T-1'], done: ['T-2'] };
+      const keys = new Set(['backlog', 'done']);
+
+      expect(findKanbanColumn(columns, 'T-1', keys)).toBe('backlog');
+      expect(findKanbanColumn(columns, 'done', keys)).toBe('done');
+      expect(findKanbanColumn(columns, 'T-missing', keys)).toBeNull();
+    });
+
+    it('moves a card across columns and derives anchors + position for the drop', () => {
+      // Simulates the board's handleDragOver: T-3 leaves backlog for the
+      // middle of done.
+      const a = task('1', null, null, { position: 10 });
+      const b = task('2', null, null, { position: 20 });
+      const moving = task('3', null, null, { position: 30 });
+      const map = taskMapOf([a, b, moving]);
+      const columns = { backlog: ['T-3'], done: ['T-1', 'T-2'] };
+      const keys = new Set(['backlog', 'done']);
+
+      const nextDone = [...columns.done];
+      nextDone.splice(1, 0, 'T-3');
+      const next = { ...columns, backlog: [], done: nextDone };
+
+      expect(findKanbanColumn(next, 'T-3', keys)).toBe('done');
+      expect(getKanbanMoveAnchors(next.done, 'T-3')).toEqual({
+        afterId: 'T-2',
+        beforeId: 'T-1',
+      });
+      expect(computeKanbanPosition(next.done, 'T-3', map)).toBe(15);
+    });
+
+    it('computes edge positions off the neighbouring card only', () => {
+      const map = taskMapOf([
+        task('1', null, null, { position: 10 }),
+        task('2', null, null, { position: 20 }),
+      ]);
+
+      expect(computeKanbanPosition(['T-9', 'T-1', 'T-2'], 'T-9', map)).toBe(9);
+      expect(computeKanbanPosition(['T-1', 'T-2', 'T-9'], 'T-9', map)).toBe(21);
+      // Alone in a column it keeps its own effective position — a same-slot
+      // drop is a no-op.
+      expect(computeKanbanPosition(['T-1'], 'T-1', map)).toBe(10);
+    });
+
+    it('falls back to -epoch(createdAt) for rows that were never dragged', () => {
+      const untouched = task('1');
+      const dragged = task('2', null, null, { position: 5 });
+
+      expect(effectiveTaskPosition(dragged)).toBe(5);
+      expect(effectiveTaskPosition(untouched)).toBe(
+        -new Date('2024-01-01T00:00:00.000Z').getTime() / 1000,
+      );
+      // An untouched row sorts as if its position were the creation fallback.
+      const map = taskMapOf([untouched]);
+      expect(computeKanbanPosition(['T-9', 'T-1'], 'T-9', map)).toBe(
+        effectiveTaskPosition(untouched) - 1,
+      );
+    });
+
+    it('derives anchors for the first, middle and last slots', () => {
+      const ids = ['A', 'B', 'C'];
+
+      expect(getKanbanMoveAnchors(ids, 'A')).toEqual({ afterId: 'B', beforeId: null });
+      expect(getKanbanMoveAnchors(ids, 'B')).toEqual({ afterId: 'C', beforeId: 'A' });
+      expect(getKanbanMoveAnchors(ids, 'C')).toEqual({ afterId: null, beforeId: 'B' });
+      expect(getKanbanMoveAnchors(['A'], 'A')).toEqual({ afterId: null, beforeId: null });
+    });
+
+    it('preserves the rendered column order on resync and drops vanished keys', () => {
+      const previous = { backlog: ['T-1'], done: [], running: ['T-2'] };
+      const refreshed = { backlog: ['T-2'], done: ['T-1'], needsInput: ['T-3'] };
+
+      expect(preserveKanbanColumnOrder(previous, refreshed)).toEqual({
+        backlog: ['T-2'],
+        done: ['T-1'],
+        needsInput: ['T-3'],
+      });
+    });
+
+    describe('placeKanbanCardInColumn', () => {
+      it('removes the card from a stale preview column when released elsewhere', () => {
+        // Regression: the drag-over preview parked T-1 in `done`, but the
+        // pointer released over `canceled`. Without the sweep the id stays in
+        // `done` too and the card renders twice while the move settles.
+        const next = placeKanbanCardInColumn(
+          { backlog: ['T-9'], canceled: ['T-2'], done: ['T-1', 'T-3'] },
+          'canceled',
+          'T-1',
+          'T-2',
+        );
+
+        expect(next.done).toEqual(['T-3']);
+        expect(next.canceled).toEqual(['T-1', 'T-2']);
+        expect(next.backlog).toEqual(['T-9']);
+      });
+
+      it('reorders inside the same column when already parked there', () => {
+        const next = placeKanbanCardInColumn({ col: ['A', 'B', 'C'] }, 'col', 'A', 'C');
+
+        expect(next.col).toEqual(['B', 'C', 'A']);
+      });
+
+      it('appends to the column end when released over the column itself', () => {
+        const next = placeKanbanCardInColumn({ a: ['T-1'], b: ['T-2', 'T-3'] }, 'b', 'T-1', 'b');
+
+        expect(next.a).toEqual([]);
+        expect(next.b).toEqual(['T-2', 'T-3', 'T-1']);
+      });
+    });
+  });
+
   describe('buildKanbanGroupQuery', () => {
     it('sends no automation filter on the "My tasks" board', () => {
       // Regression: the board pinned `automated: false` while the My tasks list
@@ -246,6 +405,93 @@ describe('kanbanBoardModel', () => {
       expect(buildKanbanGroupQuery({ excludeStatuses, groupBy: 'status' })).toMatchObject({
         excludeStatuses,
       });
+    });
+  });
+
+  describe('resolveKanbanDropColumn', () => {
+    const defs = new Map(STATUS_KANBAN_COLUMNS.map((column) => [column.key, column]));
+    const keys = new Set(STATUS_KANBAN_COLUMNS.map((column) => column.key));
+
+    it('commits to the release column, not the mirror’s parked preview slot', () => {
+      // Regression: the card previewed onto `done`, then the pointer moved to
+      // `backlog` — the drop must write `backlog`, not the stale preview.
+      const columns = { backlog: [], done: ['T-1'], running: [] };
+      expect(resolveKanbanDropColumn(task('1'), 'status', columns, 'backlog', keys, defs)).toBe(
+        'backlog',
+      );
+    });
+
+    it('rejects a release over a non-droppable column even when the card is parked there', () => {
+      // The preview moved the id into `running` before the last over was
+      // rejected — the release column is still the truth.
+      const columns = { backlog: [], done: [], running: ['T-1'] };
+      expect(
+        resolveKanbanDropColumn(task('1'), 'status', columns, 'running', keys, defs),
+      ).toBeNull();
+    });
+
+    it('keeps a same-column reorder inside `running` legal', () => {
+      // `running` is closed to incoming status writes, but reordering a member
+      // writes position only — membership is checked before the droppable gate.
+      const columns = { running: ['T-1', 'T-2'] };
+      expect(
+        resolveKanbanDropColumn(
+          task('1', undefined, undefined, { status: 'running' }),
+          'status',
+          columns,
+          'T-2',
+          keys,
+          defs,
+        ),
+      ).toBe('running');
+    });
+
+    it('returns null when the release is outside every column', () => {
+      const columns = { backlog: ['T-1'] };
+      expect(resolveKanbanDropColumn(task('1'), 'status', columns, 'bogus', keys, defs)).toBeNull();
+    });
+  });
+
+  describe('kanbanColumnMoveScope', () => {
+    it('scopes a merged status column by its member statuses', () => {
+      const column = STATUS_KANBAN_COLUMNS.find((c) => c.key === 'needsInput')!;
+      expect(kanbanColumnMoveScope('status', column)).toEqual({
+        statuses: ['paused', 'failed'],
+      });
+    });
+
+    it('scopes an assignee column by agent, member column by user', () => {
+      const groups = [
+        group('assignee:agent-1', [], 'agent-1'),
+        group('assignee:unassigned', [], null),
+      ];
+      const columns = buildKanbanColumns(groups, 'assignee');
+      const byKey = new Map<string, KanbanColumnDefinition>(
+        columns.map((column) => [column.key, column]),
+      );
+
+      expect(kanbanColumnMoveScope('assignee', byKey.get('assignee:agent-1')!)).toEqual({
+        assigneeAgentId: 'agent-1',
+      });
+      expect(kanbanColumnMoveScope('assignee', byKey.get('assignee:unassigned')!)).toEqual({
+        assigneeAgentId: null,
+        assigneeUserId: null,
+      });
+    });
+
+    it('scopes member and priority columns by their membership field', () => {
+      const memberColumns = buildKanbanColumns([group('member:u-1', [], null, 'u-1')], 'member');
+      expect(kanbanColumnMoveScope('member', memberColumns[0]!)).toEqual({
+        assigneeUserId: 'u-1',
+      });
+
+      const priorityColumn: KanbanColumnDefinition = {
+        droppable: true,
+        groupMeta: { groupBy: 'priority', key: 'priority:4', label: '', priority: 4 },
+        key: 'priority:4',
+        targetStatus: null,
+      };
+      expect(kanbanColumnMoveScope('priority', priorityColumn)).toEqual({ priority: 4 });
     });
   });
 });

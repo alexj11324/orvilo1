@@ -347,6 +347,13 @@ export interface TaskItem {
   maxTopics: number | null;
   name: string | null;
   parentTaskId: string | null;
+  /**
+   * Kanban board ordering key (fractional indexing): lower renders earlier in
+   * a column. NULL means "never dragged" — board reads fall back to
+   * `-epoch(createdAt)`. Distinct from `sortOrder`, which orders subtasks
+   * within their parent.
+   */
+  position: number | null;
   priority: number | null;
   projectId: string | null;
   schedulePattern: string | null;
@@ -372,6 +379,21 @@ export type TaskListItem = TaskItem & {
   participants: TaskParticipant[];
 };
 
+/**
+ * The membership fields pinning a kanban drop to its target column, sent with
+ * `task.update` anchors so the server can find the card's true neighbour past
+ * the loaded page edge. Every present key constrains the column scope — a
+ * `null` assignee means "the unassigned column", not "no constraint".
+ */
+export interface TaskMoveScope {
+  assigneeAgentId?: string | null;
+  assigneeUserId?: string | null;
+  /** The column's priority value; the `priority:0` column also holds NULLs. */
+  priority?: number;
+  /** The merged status column's member statuses (needsInput → paused+failed). */
+  statuses?: TaskStatus[];
+}
+
 export interface NewTask {
   accessedAt?: Date;
   assigneeAgentId?: string | null;
@@ -396,6 +418,7 @@ export interface NewTask {
   maxTopics?: number | null;
   name?: string | null;
   parentTaskId?: string | null;
+  position?: number | null;
   priority?: number | null;
   projectId?: string | null;
   schedulePattern?: string | null;

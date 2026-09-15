@@ -514,6 +514,26 @@ describe('TaskDetailSliceAction', () => {
       expect(refreshTaskList).toHaveBeenCalled();
     });
 
+    it('should refresh the list and detail after changing status', async () => {
+      const { mutate } = await import('@/libs/swr');
+      const refreshTaskList = vi.fn().mockResolvedValue(undefined);
+      useTaskStore.setState({
+        activeTaskId: 'T-1',
+        refreshTaskList,
+        taskDetailMap: {
+          'T-1': { identifier: 'T-1', instruction: 'Test', status: 'backlog' },
+        },
+      } as any);
+      vi.mocked(taskService.update).mockResolvedValue({ success: true } as any);
+
+      await useTaskStore.getState().updateTask('T-1', { status: 'completed' });
+
+      // The server also stamps completedAt + a status activity row, so the
+      // cached detail must reconcile — not just the board list.
+      expect(refreshTaskList).toHaveBeenCalled();
+      expect(mutate).toHaveBeenCalledWith(['task:detail', 'T-1']);
+    });
+
     it('should refresh the parent that was patched even if activeTaskId changes mid-flight', async () => {
       const { mutate } = await import('@/libs/swr');
       useTaskStore.setState({

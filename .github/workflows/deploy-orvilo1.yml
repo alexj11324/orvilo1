@@ -96,12 +96,19 @@ jobs:
       - name: Deploy
         env:
           SSH_HOST: ${{ secrets.ORACLE_HOST }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          # Pin the deploy to the image this run built, not to :main. Two runs
+          # can overlap, and :main would then point at whichever build finished
+          # last -- so the host could end up serving an image this run never
+          # verified. The sha tag is immutable, so pull-then-up is safe even if
+          # another build is pushing :main at the same time.
+          IMAGE_TAG="ghcr.io/${{ github.repository }}:sha-${SHA}"
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             "cd $COMPOSE_DIR && \
-             sudo docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull lobe && \
-             sudo docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d"
+             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull lobe && \
+             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d"
 
       - name: Verify
         env:

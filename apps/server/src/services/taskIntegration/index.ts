@@ -9,6 +9,7 @@ import { deviceGateway } from '@/server/services/deviceGateway';
 import {
   findBranchPr,
   isBranchMergedInto,
+  parseGithubRepo,
   resolveGithubAccessToken,
 } from '@/server/services/githubRepo';
 import { TaskRunnerService } from '@/server/services/taskRunner';
@@ -191,6 +192,16 @@ export class TaskIntegrationService {
     topicId: string,
     record: TaskTopicIntegration,
   ): Promise<IntegrationOutcome> {
+    if (!parseGithubRepo(record.repo!)) {
+      // An unparseable coordinate can never verify or merge — block now rather
+      // than burning corrective runs on it.
+      await this.taskTopicModel.updateIntegration(task.id, topicId, {
+        lastError: `Integration repo is not a GitHub coordinate: ${record.repo}`,
+        state: 'blocked',
+      });
+      return 'blocked';
+    }
+
     const check = await this.verifyRemoteMerge(record);
     if (check.prUrl) {
       await this.taskTopicModel.updateIntegration(task.id, topicId, { prUrl: check.prUrl });

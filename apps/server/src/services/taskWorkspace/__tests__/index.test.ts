@@ -32,10 +32,14 @@ vi.mock('@/server/services/deviceGateway', () => ({
   },
 }));
 
-vi.mock('@/server/services/githubRepo', () => ({
-  getRepoDefaultBranch: vi.fn(),
-  resolveGithubAccessToken: vi.fn(),
-}));
+vi.mock('@/server/services/githubRepo', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    getRepoDefaultBranch: vi.fn(),
+    resolveGithubAccessToken: vi.fn(),
+  };
+});
 
 const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
   ({
@@ -308,6 +312,15 @@ describe('TaskWorkspaceService', () => {
       expect(deviceGateway.addGitWorktree).toHaveBeenCalled();
       expect(result?.repos).toBeUndefined();
       expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1');
+    });
+
+    it('runs unprovisioned when the repo coordinate is unparseable', async () => {
+      const task = baseTask({
+        config: { workspace: { provider: 'git', repo: 'not-a-repo' } },
+      });
+      const result = await service.provision({ seq: 1, task });
+      expect(result).toBeUndefined();
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
 
     it('treats a binding with neither repoPath nor repo as absent', async () => {

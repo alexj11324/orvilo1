@@ -57,11 +57,15 @@ vi.mock('@/server/services/deviceGateway', () => ({
   },
 }));
 
-vi.mock('@/server/services/githubRepo', () => ({
-  findBranchPr: vi.fn(),
-  isBranchMergedInto: vi.fn(),
-  resolveGithubAccessToken: vi.fn(),
-}));
+vi.mock('@/server/services/githubRepo', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    findBranchPr: vi.fn(),
+    isBranchMergedInto: vi.fn(),
+    resolveGithubAccessToken: vi.fn(),
+  };
+});
 
 const baseTask = (): TaskItem =>
   ({ id: 'task_1', identifier: 'T-1', status: 'running' }) as TaskItem;
@@ -433,6 +437,25 @@ describe('TaskIntegrationService', () => {
         expect.objectContaining({
           integrationSeed: expect.objectContaining({ attempts: 2, state: 'merging' }),
         }),
+      );
+    });
+
+    it('blocks immediately on an unparseable repo coordinate', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(remoteRecord({ repo: 'not-a-repo' })),
+      );
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('blocked');
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ state: 'blocked' }),
       );
     });
 

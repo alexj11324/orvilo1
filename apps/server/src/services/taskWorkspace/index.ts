@@ -14,7 +14,11 @@ import { TaskModel } from '@/database/models/task';
 import type { LobeChatDatabase } from '@/database/type';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { deviceGateway } from '@/server/services/deviceGateway';
-import { getRepoDefaultBranch, resolveGithubAccessToken } from '@/server/services/githubRepo';
+import {
+  getRepoDefaultBranch,
+  parseGithubRepo,
+  resolveGithubAccessToken,
+} from '@/server/services/githubRepo';
 
 const log = debug('task-workspace');
 
@@ -122,8 +126,14 @@ export class TaskWorkspaceService {
 
     // Follow where the run actually executes: a sandbox-resolved run takes the
     // remote contract (a bound device is irrelevant to it), everything else
-    // falls back to the device worktree path.
-    if (config.repo && runsInSandbox(agent?.agencyConfig ?? undefined)) {
+    // falls back to the device worktree path. A `repo` that doesn't parse as a
+    // GitHub coordinate can only produce a broken contract — treat it like no
+    // provisionable target rather than emitting bad instructions.
+    if (
+      config.repo &&
+      parseGithubRepo(config.repo) &&
+      runsInSandbox(agent?.agencyConfig ?? undefined)
+    ) {
       return this.provisionOnRemote({ config, seq, task });
     }
 

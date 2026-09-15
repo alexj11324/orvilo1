@@ -46,11 +46,16 @@ export interface RunTaskParams {
    */
   trigger?: TaskRunTrigger;
   /**
-   * Pin the run's topic working directory directly, bypassing workspace
-   * provisioning — used by TaskIntegrationService to run a corrective merge
-   * inside the shared integration worktree.
+   * Pin the run's topic workspace directly, bypassing workspace provisioning —
+   * used by TaskIntegrationService to run a corrective merge inside the shared
+   * integration worktree (device) or against a remote clone (sandbox).
    */
   workspaceOverride?: {
+    /**
+     * GitHub repos the topic must carry for the cloud sandbox to pre-clone
+     * (sandbox-contract integrator runs only).
+     */
+    repos?: string[];
     workingDirectory: string;
     workingDirectoryConfig: WorkingDirConfig;
   };
@@ -164,6 +169,27 @@ export class TaskRunnerService {
         }
       }
 
+      // Workspace provisioning (CAID isolation): a fresh run on a
+      // workspace-bound task gets its own git worktree on the bound device —
+      // or, when no device exists and the run resolves to the cloud sandbox,
+      // the remote contract (pre-cloned repo + task branch + push/PR). A
+      // `workspaceOverride` (corrective merge runs) skips provisioning — the
+      // caller already owns the workspace description. Runs before prompt
+      // building so the contract can ride into the prompt via extraPrompt.
+      let provisioned;
+      if (!workspaceOverride && !continueTopicId) {
+        try {
+          provisioned = await this.taskWorkspace.provision({
+            seq: (task.totalTopics || 0) + 1,
+            task,
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Workspace provisioning failed';
+          await this.taskModel.updateStatus(task.id, 'paused', { error: message });
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message });
+        }
+      }
+
       const {
         acceptanceEnabled,
         fileIds: attachmentFileIds,
@@ -178,7 +204,7 @@ export class TaskRunnerService {
           userId: this.userId,
           workspaceId: this.workspaceId,
         },
-        extraPrompt,
+        [extraPrompt, provisioned?.prompt].filter(Boolean).join('\n\n') || undefined,
       );
 
       if (task.status !== 'running') {
@@ -227,31 +253,11 @@ export class TaskRunnerService {
 
       const taskConfig = (task.config ?? {}) as Record<string, unknown>;
 
-      // Workspace provisioning (CAID isolation): a fresh run on a
-      // workspace-bound task gets its own git worktree on the bound device,
-      // pinned onto the new topic via initialTopicMetadata. A
-      // `workspaceOverride` (corrective merge runs) skips provisioning — the
-      // caller already owns the directory.
-      let provisioned;
-      if (workspaceOverride) {
-        provisioned = undefined;
-      } else if (!continueTopicId) {
-        try {
-          provisioned = await this.taskWorkspace.provision({
-            seq: (task.totalTopics || 0) + 1,
-            task,
-          });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Workspace provisioning failed';
-          await this.taskModel.updateStatus(task.id, 'paused', { error: message });
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message });
-        }
-      }
-
       const initialWorkingDirectory =
         workspaceOverride?.workingDirectory ?? provisioned?.workingDirectory;
       const initialWorkingDirectoryConfig =
         workspaceOverride?.workingDirectoryConfig ?? provisioned?.workingDirectoryConfig;
+      const initialRepos = workspaceOverride?.repos ?? provisioned?.repos;
       const runIntegration = integrationSeed ?? provisioned?.integration;
 
       // Backfill model snapshot for tasks created before the snapshot logic
@@ -308,11 +314,15 @@ export class TaskRunnerService {
         title: extraPrompt ? extraPrompt.slice(0, 100) : task.name || task.identifier,
         trigger: TopicTrigger.RunTask,
         userInterventionConfig: { approvalMode: 'headless' },
-        ...(continueTopicId || initialWorkingDirectory || initialWorkingDirectoryConfig
+        ...(continueTopicId ||
+        initialWorkingDirectory ||
+        initialWorkingDirectoryConfig ||
+        initialRepos?.length
           ? {
               appContext: {
                 ...(continueTopicId ? { topicId: continueTopicId } : {}),
                 initialTopicMetadata: {
+                  ...(initialRepos?.length ? { repos: initialRepos } : {}),
                   ...(initialWorkingDirectory ? { workingDirectory: initialWorkingDirectory } : {}),
                   ...(initialWorkingDirectoryConfig
                     ? { workingDirectoryConfig: initialWorkingDirectoryConfig }

@@ -39,6 +39,7 @@ import { hookDispatcher } from '@/server/services/agentRuntime/hooks';
 import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
+import { resolveGithubAccessToken } from '@/server/services/githubRepo';
 import { HeterogeneousAgentService } from '@/server/services/heterogeneousAgent';
 import type { ConversationHistoryEntry } from '@/server/services/heterogeneousAgent/cloudHeteroContext';
 import { buildCloudHeteroContext } from '@/server/services/heterogeneousAgent/cloudHeteroContext';
@@ -392,26 +393,15 @@ export const dispatchHeteroAgent = async (
   // git / gh CLI even when no repos are pre-selected. Falls back to the
   // standard 'github' key (LobeHub OAuth connector default); agent config can
   // override via GITHUB_CRED_KEY.
-  let githubToken: string | undefined;
-  const githubCredKey =
-    agentConfig.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY ?? 'github';
-  try {
-    const marketService = await deps.getMarketService();
-    // Inside a workspace, the GitHub cred must come from the workspace's shared
-    // organization credentials, not the operator's personal creds.
-    const credsAccessor = deps.workspaceId
-      ? marketService.market.organizations.creds({ workspaceId: deps.workspaceId })
-      : marketService.market.creds;
-    const list = await credsAccessor.list();
-    const cred = list.data?.find((c: { key: string }) => c.key === githubCredKey);
-    if (cred) {
-      const full = await credsAccessor.get(cred.id, { decrypt: true });
-      const vals = (full as any).plaintext ?? (full as any).values ?? {};
-      githubToken = vals.access_token ?? vals.token;
-    }
-  } catch (err) {
-    log('execAgent: failed to resolve GitHub token: %O', err);
-  }
+  const githubToken = await resolveGithubAccessToken({
+    credKey: agentConfig.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY ?? 'github',
+    db: deps.db,
+    // A failing getMarketService must not kill the run — the helper tolerates
+    // a missing one and falls back to its own construction.
+    marketService: await deps.getMarketService().catch(() => undefined),
+    userId: deps.userId,
+    workspaceId: deps.workspaceId,
+  });
 
   // Recovery history is reserved for the CLI's retry without native resume.
   // The primary resumed attempt already has native history and must not get

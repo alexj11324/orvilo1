@@ -301,6 +301,18 @@ export const findKanbanColumn = (
 };
 
 /**
+ * The task behind a drag event. `active.data.current.task` reads empty once
+ * the mirror parks the card on an unmounted (hidden) column — dnd-kit clears
+ * the ref when the sortable node unmounts — so fall back to the pre-drag
+ * snapshot map, which keeps every row's identity regardless of mounts.
+ */
+export const resolveKanbanDragTask = (
+  active: { data: { current?: Record<string, unknown> }; id: unknown },
+  taskMap: ReadonlyMap<string, TaskListItem>,
+): TaskListItem | undefined =>
+  (active.data.current?.task as TaskListItem | undefined) ?? taskMap.get(String(active.id));
+
+/**
  * The column a drop actually commits to — the RELEASE column, not wherever
  * the mirror's last accepted preview left the card. A rejected drag-over can
  * park the card on an earlier valid column, so the preview is only a hint.

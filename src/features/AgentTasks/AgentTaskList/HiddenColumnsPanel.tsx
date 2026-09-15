@@ -85,9 +85,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     max-height: 100%;
     margin-inline-start: auto;
     padding-inline: 8px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: ${cssVar.borderRadiusLG};
 
-    background: ${cssVar.colorFillQuaternary};
+    background: ${cssVar.colorBgContainer};
   `,
   verticalLabel: css`
     writing-mode: vertical-rl;

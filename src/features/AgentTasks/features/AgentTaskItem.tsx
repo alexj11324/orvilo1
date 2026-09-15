@@ -30,10 +30,7 @@ export type TaskItemRouteScope = 'agent' | 'global';
 interface TaskItemProps {
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
-  variant?: 'compact' | 'default';
 }
-
-const FLEX_MIN_WIDTH_0 = { minWidth: 0 };
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
   'backlog',
@@ -48,7 +45,7 @@ const TASK_STATUS_SET = new Set<TaskStatus>([
 const toTaskStatus = (status: string): TaskStatus =>
   TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
-const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent', variant = 'default' }) => {
+const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
@@ -241,47 +238,12 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent', variant
     <Text
       align={'right'}
       fontSize={12}
-      style={{ whiteSpace: 'nowrap', width: variant === 'compact' ? undefined : 48 }}
+      style={{ whiteSpace: 'nowrap', width: 48 }}
       type={'secondary'}
     >
       {time}
     </Text>
   ) : null;
-
-  if (variant === 'compact') {
-    return (
-      <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
-        <Block clickable gap={8} padding={12} variant={'borderless'} onClick={handleClick}>
-          <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-            <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
-              {task.identifier}
-            </Text>
-            {assigneeNode}
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-            <TaskStatusTag status={status} taskIdentifier={task.identifier} />
-            <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-              {hasName ? task.name : task.identifier}
-            </Text>
-            {scheduledBadge}
-            <TaskSubtaskProgressTag
-              currentIdentifier={task.identifier}
-              progress={task.subtaskProgress}
-              subtasks={taskDetail?.subtasks}
-              onRequestSubtasks={handleRequestSubtasks}
-              onSubtaskClick={handleSubtaskClick}
-            />
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8} style={FLEX_MIN_WIDTH_0}>
-            <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
-            {scheduleNode}
-            {openRunNode}
-            {timeNode}
-          </Flexbox>
-        </Block>
-      </ContextMenuTrigger>
-    );
-  }
 
   return (
     <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>

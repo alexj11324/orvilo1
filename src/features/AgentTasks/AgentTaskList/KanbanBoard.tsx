@@ -30,7 +30,6 @@ import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
 import { createTaskModal } from '../CreateTaskModal';
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
-import AgentTaskItem from '../features/AgentTaskItem';
 import { createTaskStatusCascadeModal } from '../features/TaskStatusCascadeModal';
 import { getOpenSubtasks } from '../features/useTaskStatusChange';
 import { taskDetailPath } from '../shared/taskDetailPath';
@@ -53,12 +52,14 @@ import {
   normalizeKanbanGroupBy,
   placeKanbanCardInColumn,
   preserveKanbanColumnOrder,
+  resolveKanbanDragTask,
   resolveKanbanDropColumn,
   taskMatchesKanbanColumn,
 } from './kanbanBoardModel';
 import KanbanColumn, { COLUMN_I18N_KEYS, COLUMN_STATUS_ICON, COLUMN_WIDTH } from './KanbanColumn';
 import type { TaskListViewOptions } from './listViewOptions';
 import { HIDDEN_WHEN_COMPLETED_STATUSES } from './listViewOptions';
+import TaskBoardCard from './TaskBoardCard';
 import { useKanbanBoardPan } from './useKanbanBoardPan';
 import { useKanbanDragSettle } from './useKanbanDragSettle';
 
@@ -67,9 +68,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     overflow-x: auto;
     display: flex;
     flex: 1;
-    gap: 8px;
+    gap: 12px;
+    align-items: stretch;
 
-    padding-block: 0 16px;
+    padding-block: 4px 16px;
     padding-inline: 12px;
   `,
   loadMore: css`
@@ -369,7 +371,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       const activeId = String(active.id);
       const overId = String(over.id);
       if (columnKeySet.has(activeId) || activeId === overId) return;
-      const task = active.data.current?.task as TaskListItem | undefined;
+      const task = resolveKanbanDragTask(active, taskMapRef.current);
       if (!task) return;
 
       setColumns((prev) => {
@@ -404,7 +406,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         return;
       }
       const overId = String(over.id);
-      const task = active.data.current?.task as TaskListItem | undefined;
+      const task = resolveKanbanDragTask(active, taskMapRef.current);
       if (!task) {
         resetColumns();
         return;
@@ -702,15 +704,12 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         {activeTask ? (
           <div
             style={{
-              background: 'var(--lobe-color-bg-container, #fff)',
-              border: '1px solid var(--lobe-color-border-secondary, #f0f0f0)',
-              borderRadius: 8,
               boxShadow: '0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12)',
               cursor: 'grabbing',
-              width: COLUMN_WIDTH - 8,
+              width: COLUMN_WIDTH - 16,
             }}
           >
-            <AgentTaskItem routeScope={routeScope} task={activeTask} variant="compact" />
+            <TaskBoardCard overlay routeScope={routeScope} task={activeTask} />
           </div>
         ) : null}
       </DragOverlay>

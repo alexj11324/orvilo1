@@ -7,6 +7,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { TaskTopicItem } from '@/database/schemas/task';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { TaskRunnerService } from '@/server/services/taskRunner';
+import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 import { TaskIntegrationService } from '../index';
 
@@ -21,6 +22,9 @@ const mockTaskTopicModel = {
 const mockRunner = {
   runTask: vi.fn(),
 };
+const mockWorkspaceService = {
+  resolveWorkspaceConfig: vi.fn(),
+};
 
 vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(),
@@ -32,6 +36,10 @@ vi.mock('@/database/models/taskTopic', () => ({
 
 vi.mock('@/server/services/taskRunner', () => ({
   TaskRunnerService: vi.fn(),
+}));
+
+vi.mock('@/server/services/taskWorkspace', () => ({
+  TaskWorkspaceService: vi.fn(),
 }));
 
 vi.mock('@/server/services/deviceGateway', () => ({
@@ -76,12 +84,27 @@ describe('TaskIntegrationService', () => {
     (TaskRunnerService as any).mockImplementation(function () {
       return mockRunner;
     });
+    (TaskWorkspaceService as any).mockImplementation(function () {
+      return mockWorkspaceService;
+    });
+    mockWorkspaceService.resolveWorkspaceConfig.mockResolvedValue({
+      provider: 'git',
+      repoPath: '/repos/orvilo',
+    });
     service = new TaskIntegrationService({} as any, 'user-1', 'ws-1');
     vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({ success: true });
     vi.mocked(deviceGateway.pushGitBranch).mockResolvedValue({ success: true });
     vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({ success: true });
     mockTaskTopicModel.findByTaskId.mockResolvedValue([]);
     mockRunner.runTask.mockResolvedValue({ success: true, topicId: 'topic_2' });
+  });
+
+  it('settles without touching task_topics when the task has no workspace binding', async () => {
+    mockWorkspaceService.resolveWorkspaceConfig.mockResolvedValue(undefined);
+    expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
+      'settled',
+    );
+    expect(mockTaskTopicModel.findByTopicId).not.toHaveBeenCalled();
   });
 
   it('settles immediately for a run with no integration record', async () => {

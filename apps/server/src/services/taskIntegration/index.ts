@@ -7,6 +7,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { LobeChatDatabase } from '@/database/type';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { TaskRunnerService } from '@/server/services/taskRunner';
+import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 const log = debug('task-integration');
 
@@ -41,6 +42,7 @@ export class TaskIntegrationService {
   private taskTopicModel: TaskTopicModel;
   private userId: string;
   private workspaceId?: string;
+  private workspaceService: TaskWorkspaceService;
 
   constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
     this.db = db;
@@ -48,6 +50,7 @@ export class TaskIntegrationService {
     this.workspaceId = workspaceId;
     this.taskModel = new TaskModel(db, userId, workspaceId);
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
+    this.workspaceService = new TaskWorkspaceService(db, userId, workspaceId);
   }
 
   /**
@@ -60,19 +63,32 @@ export class TaskIntegrationService {
   }): Promise<IntegrationOutcome> {
     const { task, taskTopicId } = params;
 
-    const taskTopic = await this.taskTopicModel.findByTopicId(taskTopicId);
-    const record = taskTopic?.integration;
-    if (
-      !record ||
-      !taskTopic?.topicId ||
-      (record.role === 'task' && record.state !== 'pending' && record.state !== 'conflict')
-    ) {
+    // Cheap bail: only workspace-bound tasks can have anything to integrate,
+    // so unbound runs skip the topic read entirely. Resolution failure is
+    // fail-open — a pending record left behind is recoverable, pausing a
+    // completed run on a transient read error is not.
+    let workspace;
+    try {
+      workspace = await this.workspaceService.resolveWorkspaceConfig(task);
+    } catch (error) {
+      log('integrateOnComplete: workspace resolution failed for %s — %O', task.identifier, error);
       return 'settled';
     }
-    if (record.role === 'integrate' && record.state !== 'merging') return 'settled';
+    if (!workspace) return 'settled';
 
-    const topicId = taskTopic.topicId;
     try {
+      const taskTopic = await this.taskTopicModel.findByTopicId(taskTopicId);
+      const record = taskTopic?.integration;
+      if (
+        !record ||
+        !taskTopic?.topicId ||
+        (record.role === 'task' && record.state !== 'pending' && record.state !== 'conflict')
+      ) {
+        return 'settled';
+      }
+      if (record.role === 'integrate' && record.state !== 'merging') return 'settled';
+
+      const topicId = taskTopic.topicId;
       if (record.role === 'task') {
         return await this.integrateTaskRun(task, topicId, record);
       }

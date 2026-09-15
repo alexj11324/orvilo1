@@ -9,6 +9,7 @@ import debug from 'debug';
 import { TopicTrigger } from '@/const/topic';
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
+import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { LobeChatDatabase } from '@/database/type';
@@ -20,6 +21,13 @@ import { buildTaskPrompt } from './buildTaskPrompt';
 const log = debug('task-runner');
 
 export interface RunTaskParams {
+  /**
+   * Anchor for a `suppressUserMessage` continuation: the already-persisted
+   * user message this turn answers (a steer/follow-up row written into the
+   * topic before the run was (re)started). Requires `continueTopicId`; the
+   * turn runs off existing history instead of persisting a duplicate row.
+   */
+  continueFromMessageId?: string;
   continueTopicId?: string;
   extraPrompt?: string;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
@@ -71,6 +79,7 @@ export class TaskRunnerService {
   async runTask(params: RunTaskParams): Promise<RunTaskResult> {
     const {
       taskId: idOrIdentifier,
+      continueFromMessageId,
       continueTopicId,
       extraPrompt,
       maxSteps,
@@ -111,6 +120,29 @@ export class TaskRunnerService {
       }
 
       const existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+
+      // A `continueFromMessageId` continuation answers a user row that is
+      // already persisted in the target topic — validate the anchor before
+      // anything else writes state.
+      let continueAnchorContent: string | undefined;
+      if (continueFromMessageId) {
+        if (!continueTopicId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'continueFromMessageId requires continueTopicId.',
+          });
+        }
+        const anchor = await new MessageModel(this.db, this.userId, this.workspaceId).findById(
+          continueFromMessageId,
+        );
+        if (!anchor || anchor.topicId !== continueTopicId || anchor.role !== 'user') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'continueFromMessageId must reference a user message in the continued topic.',
+          });
+        }
+        continueAnchorContent = anchor.content ?? '';
+      }
 
       if (continueTopicId) {
         const target = existingTopics.find((t) => t.topicId === continueTopicId);
@@ -218,6 +250,12 @@ export class TaskRunnerService {
       const result = await aiAgentService.execAgent({
         ...(isSlug ? { slug: agentRef } : { agentId: agentRef }),
         additionalPluginIds: pluginIds,
+        // A steer continuation answers a user row already persisted in the
+        // topic — run off history instead of writing a duplicate user turn.
+        ...(continueFromMessageId && {
+          parentMessageId: continueFromMessageId,
+          suppressUserMessage: true,
+        }),
         ...(typeof taskConfig.model === 'string' && { model: taskConfig.model }),
         ...(typeof taskConfig.provider === 'string' && { provider: taskConfig.provider }),
         hooks: [
@@ -250,9 +288,13 @@ export class TaskRunnerService {
         ],
         ...(attachmentFileIds.length > 0 ? { fileIds: attachmentFileIds } : {}),
         ...(maxSteps ? { maxSteps } : {}),
-        prompt,
+        prompt: continueFromMessageId ? continueAnchorContent! : prompt,
         taskId: task.id,
-        title: extraPrompt ? extraPrompt.slice(0, 100) : task.name || task.identifier,
+        title: continueFromMessageId
+          ? (continueAnchorContent ?? '').slice(0, 100)
+          : extraPrompt
+            ? extraPrompt.slice(0, 100)
+            : task.name || task.identifier,
         trigger: TopicTrigger.RunTask,
         userInterventionConfig: { approvalMode: 'headless' },
         ...(continueTopicId && { appContext: { topicId: continueTopicId } }),

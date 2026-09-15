@@ -400,6 +400,7 @@ describe('WorkspaceMemberModel', () => {
           id: 'wm-task-departing-member',
           identifier: 'WM-1',
           instruction: 'Assigned to the departing member',
+          reviewerUserId: memberId,
           seq: 1,
           workspaceId,
         },
@@ -428,6 +429,9 @@ describe('WorkspaceMemberModel', () => {
       const taskRows = await serverDB.select().from(tasks);
       expect(
         taskRows.find((task) => task.id === 'wm-task-departing-member')?.assigneeUserId,
+      ).toBeNull();
+      expect(
+        taskRows.find((task) => task.id === 'wm-task-departing-member')?.reviewerUserId,
       ).toBeNull();
       expect(taskRows.find((task) => task.id === 'wm-task-other-member')?.assigneeUserId).toBe(
         otherUserId,
@@ -472,6 +476,7 @@ describe('WorkspaceMemberModel', () => {
         id: 'wm-task-role-downgrade',
         identifier: 'WM-ROLE-1',
         instruction: 'Assigned before the role downgrade',
+        reviewerUserId: memberId,
         seq: 1,
         workspaceId,
       });
@@ -483,6 +488,7 @@ describe('WorkspaceMemberModel', () => {
         .from(tasks)
         .where(eq(tasks.id, 'wm-task-role-downgrade'));
       expect(task.assigneeUserId).toBeNull();
+      expect(task.reviewerUserId).toBeNull();
     });
 
     it('preserves task assignments when a member changes to another eligible role', async () => {
@@ -494,6 +500,7 @@ describe('WorkspaceMemberModel', () => {
         id: 'wm-task-eligible-role',
         identifier: 'WM-ROLE-2',
         instruction: 'Assigned before the eligible role change',
+        reviewerUserId: memberId,
         seq: 1,
         workspaceId,
       });
@@ -505,6 +512,7 @@ describe('WorkspaceMemberModel', () => {
         .from(tasks)
         .where(eq(tasks.id, 'wm-task-eligible-role'));
       expect(task.assigneeUserId).toBe(memberId);
+      expect(task.reviewerUserId).toBe(memberId);
     });
   });
 

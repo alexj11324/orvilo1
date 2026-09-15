@@ -130,6 +130,7 @@ const TopicChatDrawer = memo(() => {
   const [expanded, setExpanded] = useState(false);
   const topicId = useTaskStore(taskDetailSelectors.activeTopicDrawerTopicId);
   const activeTaskId = useTaskStore((s) => s.activeTaskId);
+  const drawerTaskId = useTaskStore((s) => s.activeTopicDrawerTaskId);
   const agentId = useTaskStore(taskDetailSelectors.topicDrawerAgentId);
   const drawerTitle = useTaskStore(taskDetailSelectors.topicDrawerTitle);
   const activity = useTaskStore(taskActivitySelectors.activeDrawerTopicActivity);
@@ -142,7 +143,9 @@ const TopicChatDrawer = memo(() => {
 
   // Hydrate task detail when the drawer is opened outside of TaskDetailPage
   // (e.g. from a brief on home) so the header has agentId / status / seq.
-  useFetchTaskDetail(topicId ? activeTaskId : undefined);
+  // A kanban-opened run names its owning task via activeTopicDrawerTaskId —
+  // fetch that detail, not whatever task is active on screen.
+  useFetchTaskDetail(topicId ? (drawerTaskId ?? activeTaskId) : undefined);
 
   const open = !!topicId && !!agentId;
 

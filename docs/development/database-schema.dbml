@@ -3365,6 +3365,7 @@ table tasks {
   created_by_agent_id text
   assignee_user_id text
   assignee_agent_id text
+  reviewer_user_id text
   parent_task_id text
   name text
   description varchar(255)

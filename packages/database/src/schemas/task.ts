@@ -55,6 +55,10 @@ export const tasks = pgTable(
     assigneeAgentId: text('assignee_agent_id').references(() => agents.id, {
       onDelete: 'set null',
     }),
+    // Reviewer — the human accountable while the task sits in 'paused'
+    // ("pending review"). Stamped when a run finishes and hands off for
+    // review; the assignees above stay the executors.
+    reviewerUserId: text('reviewer_user_id').references(() => users.id, { onDelete: 'set null' }),
 
     // Tree structure (self-referencing, no depth limit)
     parentTaskId: text('parent_task_id'),

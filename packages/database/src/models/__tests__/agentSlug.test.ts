@@ -82,7 +82,7 @@ describe('AgentModel.updateSlug', () => {
     await serverDB.insert(agents).values({
       id: 'agent-inbox',
       slug: BUILTIN_AGENT_SLUGS.inbox,
-      title: 'Lobe AI',
+      title: 'Orvilo AI',
       userId,
     });
 
@@ -105,7 +105,7 @@ describe('AgentModel.updateSlug', () => {
     await serverDB.insert(agents).values({
       id: 'agent-inbox-noop',
       slug: BUILTIN_AGENT_SLUGS.inbox,
-      title: 'Lobe AI',
+      title: 'Orvilo AI',
       userId,
     });
 

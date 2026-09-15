@@ -9,9 +9,9 @@ export const buildTaskManagerDefaultsBlock = ({
 
   return [
     '<task_manager_defaults>',
-    `Default Lobe AI agent id: ${defaultAssigneeAgentId}`,
-    'Use this id as assigneeAgentId when you decide a task should be assigned to the default Lobe AI assistant.',
-    "Do not use it as a listTasks filter unless the user asks for Lobe AI's tasks.",
+    `Default Orvilo AI agent id: ${defaultAssigneeAgentId}`,
+    'Use this id as assigneeAgentId when you decide a task should be assigned to the default Orvilo AI assistant.',
+    "Do not use it as a listTasks filter unless the user asks for Orvilo AI's tasks.",
     '</task_manager_defaults>',
     '',
   ];

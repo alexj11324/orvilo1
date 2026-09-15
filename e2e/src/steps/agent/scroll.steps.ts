@@ -129,7 +129,7 @@ async function waitForAssistantMessageToSettle(
 ): Promise<void> {
   const assistantMessage = world.page
     .locator('.message-wrapper')
-    .filter({ has: world.page.locator('text=Lobe AI') })
+    .filter({ has: world.page.locator('text=Orvilo AI') })
     .last();
 
   await expect(assistantMessage).toBeVisible({ timeout: 15_000 });
@@ -270,7 +270,7 @@ When('用户发送长文消息并等待回复完成', { timeout: 45_000 }, async
 
   const assistantMessage = this.page
     .locator('.message-wrapper')
-    .filter({ has: this.page.locator('text=Lobe AI') })
+    .filter({ has: this.page.locator('text=Orvilo AI') })
     .last();
   await expect(assistantMessage).toBeVisible({ timeout: 15_000 });
 

@@ -18,7 +18,11 @@ import { candidateDeltaVersions, generateZstdPatch, pairRendererFiles } from './
 const PACK_COMPRESSION_LEVEL = 9;
 const MAX_DELTA_PACK_RATIO = 0.8;
 const PACK_METADATA_ENTRY = 'meta.json';
-const ZIP_EPOCH = new Date('1980-01-01T00:00:00.000Z');
+// Fixed rather than "now" so the pack is byte-reproducible. Noon UTC rather
+// than midnight on purpose: ZIP stores the timestamp in local time and fflate
+// rejects anything outside 1980-2099, so midnight UTC becomes 1979 for every
+// developer west of Greenwich and zipSync throws "date not in range".
+const ZIP_EPOCH = new Date('1980-01-01T12:00:00.000Z');
 
 export function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;

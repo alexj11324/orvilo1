@@ -1,0 +1,122 @@
+name: Build and deploy orvilo1
+
+# 这个仓库是 LobeHub 的 fork。上游那一批 workflow 依赖 LobeHub 自己的
+# secrets（DOCKER_REGISTRY_*、LOBEHUB_CLOUD_TOKEN、Apple 证书等），在本仓库
+# 一律跑不通，需要单独清理。本文件是 orvilo1 自己的发布管线。
+#
+# 构建与部署分开是有意的：
+#   - push 到 main 就构建并推镜像 —— 快，且能立刻发现构建坏了
+#   - 部署默认不自动跑，要手动 dispatch 时勾 deploy
+# 生产主机是共享的（同机还有 20+ 个其他产品的容器），而当前还没有测试门禁
+# 挡在构建前面，所以不该让每次提交都直接上生产。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: '构建完成后部署到生产主机'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  COMPOSE_DIR: /var/lib/orvilo1/docker-compose/deploy
+
+jobs:
+  build:
+    # 部署目标是 aarch64，这里用 GitHub 的 arm64 runner 原生构建，
+    # 不走 QEMU —— 那会让一次 Next.js 生产构建慢到不可接受。
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:main
+            ${{ env.IMAGE }}:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "### 镜像已推送"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| 镜像 | \`${IMAGE}:main\` |"
+            echo "| 提交 | \`${SHA}\` |"
+            echo "| digest | \`${DIGEST}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          SSH_HOST: ${{ secrets.ORACLE_HOST }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy
+        env:
+          SSH_HOST: ${{ secrets.ORACLE_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            "cd $COMPOSE_DIR && \
+             sudo docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull lobe && \
+             sudo docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d"
+
+      - name: Verify
+        env:
+          SSH_HOST: ${{ secrets.ORACLE_HOST }}
+        run: |
+          set -euo pipefail
+          # 迁移在容器启动时跑，失败会 exit 1，所以要等日志里出现通过标记
+          for i in $(seq 1 30); do
+            if ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+                 'sudo docker logs orvilo 2>&1 | tail -60' | grep -q 'migration pass'; then
+              echo "migration 通过"
+              break
+            fi
+            [ "$i" = 30 ] && { echo "超时：未看到 migration pass"; exit 1; }
+            sleep 6
+          done
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            'curl -fsS --max-time 20 http://127.0.0.1:3210/api/version'

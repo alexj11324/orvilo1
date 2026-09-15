@@ -35,6 +35,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 import { isForbiddenError } from '@/utils/forbiddenError';
 
 import { styles } from '../shared/style';
+import RunIntegrationTag from './RunIntegrationTag';
 import RunReplyEditor from './RunReplyEditor';
 import RunVerifyDetail from './RunVerifyDetail';
 import RunVerifyTag from './RunVerifyTag';
@@ -350,6 +351,9 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           {/* The verdict rides the header only while the run is folded; once
               open it moves down to sit on the checklist that justifies it. */}
           {!verifyDetailOpen && <RunVerifyTag verify={activity.verify} />}
+          {/* Where the run's branch stands on its way back onto the base —
+              nothing renders for runs that never provisioned a worktree. */}
+          <RunIntegrationTag integration={activity.integration} />
         </Flexbox>
 
         <Flexbox horizontal align={'center'} flex={'none'} gap={8}>

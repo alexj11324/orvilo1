@@ -1178,6 +1178,9 @@ export class TaskService {
           // the synthesized summary on the run card.
           content: handoff?.content,
           id: t.topicId ?? undefined,
+          // The run's workspace-integration record (merge state, branch, PR) —
+          // null for runs that never provisioned an isolated worktree.
+          integration: t.integration ?? null,
           operationId: t.operationId ?? null,
           runningOperation: t.metadata?.runningOperation ?? null,
           seq: t.seq,

@@ -3,6 +3,7 @@ import type {
   TaskAutomationMode,
   TaskInstructionSynthesis,
   TaskIntentAnalysis,
+  TaskMoveScope,
   TaskStatus,
 } from '@orvilo/types';
 
@@ -150,6 +151,12 @@ class TaskService {
       // heartbeatTimeout: watchdog timeout threshold (seconds), used to detect if a running task is stuck
       heartbeatTimeout?: number | null;
       instruction?: string;
+      /**
+       * The dropped column's membership fields — lets the server find the
+       * true neighbour past the loaded page edge and respace collapsed
+       * fractional positions. Sent alongside `afterId`/`beforeId`.
+       */
+      moveScope?: TaskMoveScope;
       name?: string;
       parentTaskId?: string | null;
       /** Explicit board ordering key; anchors take precedence server-side. */
@@ -186,8 +193,21 @@ class TaskService {
       status,
     });
 
-  updateStatusCascade = async (id: string, status: 'canceled' | 'completed') =>
-    lambdaClient.task.updateStatusCascade.mutate({ id, status });
+  updateStatusCascade = async (
+    id: string,
+    status: 'canceled' | 'completed',
+    /**
+     * Kanban drop geometry — the parent stamps the resolved `position` inside
+     * the cascade's transaction, so a board drop stays atomic with the
+     * family status write.
+     */
+    move?: {
+      afterId?: string | null;
+      beforeId?: string | null;
+      moveScope?: TaskMoveScope;
+      position?: number;
+    },
+  ) => lambdaClient.task.updateStatusCascade.mutate({ id, status, ...move });
 
   run = async (id: string, params?: { continueTopicId?: string; prompt?: string }) =>
     lambdaClient.task.run.mutate({ id, ...params });

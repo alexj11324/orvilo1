@@ -582,10 +582,16 @@ export class TaskService {
    * database transaction. Completion side effects run only after the whole
    * family has reached the target status, so dependency edges cannot start a
    * sibling in the middle of the cascade.
+   *
+   * `position` is the parent's kanban drop slot: stamping it inside the same
+   * transaction keeps a board cascade atomic — the status cannot land while
+   * the card's position update fails (or vice versa).
    */
   async updateStatusCascade(
     input: {
       id: string;
+      /** Kanban drop ordering key to stamp on the parent inside the cascade transaction. */
+      position?: number;
       status: 'canceled' | 'completed';
     },
     /** The person confirming "include subtasks"; absent for system callers. */
@@ -644,6 +650,16 @@ export class TaskService {
       // the dialog and this write is logged as it really was.
       const locked = actor ? await taskModel.lockForStatusChange(targetIds) : [];
       updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, { completedAt });
+
+      // The board's drop slot for the parent, stamped in the same commit as
+      // the family status — a cascade drop never lands its status without
+      // the position it was dropped into.
+      if (input.position !== undefined) {
+        const stamped = await taskModel.update(resolved.id, { position: input.position });
+        if (stamped) {
+          updatedTasks = updatedTasks.map((task) => (task.id === resolved.id ? stamped : task));
+        }
+      }
 
       // A person confirmed this for the whole family, so every member that
       // moved gets its own row — one INSERT, not one per task.

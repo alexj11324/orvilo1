@@ -15,9 +15,12 @@ import {
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
   KANBAN_STATUS_COLUMN_KEY,
+  type KanbanColumnDefinition,
+  kanbanColumnMoveScope,
   kanbanStatusColumnsExcludedBy,
   normalizeKanbanGroupBy,
   preserveKanbanColumnOrder,
+  resolveKanbanDropColumn,
   STATUS_KANBAN_COLUMNS,
   taskKanbanColumnKey,
   taskMatchesKanbanColumn,
@@ -370,6 +373,93 @@ describe('kanbanBoardModel', () => {
       expect(buildKanbanGroupQuery({ excludeStatuses, groupBy: 'status' })).toMatchObject({
         excludeStatuses,
       });
+    });
+  });
+
+  describe('resolveKanbanDropColumn', () => {
+    const defs = new Map(STATUS_KANBAN_COLUMNS.map((column) => [column.key, column]));
+    const keys = new Set(STATUS_KANBAN_COLUMNS.map((column) => column.key));
+
+    it('commits to the release column, not the mirror’s parked preview slot', () => {
+      // Regression: the card previewed onto `done`, then the pointer moved to
+      // `backlog` — the drop must write `backlog`, not the stale preview.
+      const columns = { backlog: [], done: ['T-1'], running: [] };
+      expect(resolveKanbanDropColumn(task('1'), 'status', columns, 'backlog', keys, defs)).toBe(
+        'backlog',
+      );
+    });
+
+    it('rejects a release over a non-droppable column even when the card is parked there', () => {
+      // The preview moved the id into `running` before the last over was
+      // rejected — the release column is still the truth.
+      const columns = { backlog: [], done: [], running: ['T-1'] };
+      expect(
+        resolveKanbanDropColumn(task('1'), 'status', columns, 'running', keys, defs),
+      ).toBeNull();
+    });
+
+    it('keeps a same-column reorder inside `running` legal', () => {
+      // `running` is closed to incoming status writes, but reordering a member
+      // writes position only — membership is checked before the droppable gate.
+      const columns = { running: ['T-1', 'T-2'] };
+      expect(
+        resolveKanbanDropColumn(
+          task('1', undefined, undefined, { status: 'running' }),
+          'status',
+          columns,
+          'T-2',
+          keys,
+          defs,
+        ),
+      ).toBe('running');
+    });
+
+    it('returns null when the release is outside every column', () => {
+      const columns = { backlog: ['T-1'] };
+      expect(resolveKanbanDropColumn(task('1'), 'status', columns, 'bogus', keys, defs)).toBeNull();
+    });
+  });
+
+  describe('kanbanColumnMoveScope', () => {
+    it('scopes a merged status column by its member statuses', () => {
+      const column = STATUS_KANBAN_COLUMNS.find((c) => c.key === 'needsInput')!;
+      expect(kanbanColumnMoveScope('status', column)).toEqual({
+        statuses: ['paused', 'failed'],
+      });
+    });
+
+    it('scopes an assignee column by agent, member column by user', () => {
+      const groups = [
+        group('assignee:agent-1', [], 'agent-1'),
+        group('assignee:unassigned', [], null),
+      ];
+      const columns = buildKanbanColumns(groups, 'assignee');
+      const byKey = new Map<string, KanbanColumnDefinition>(
+        columns.map((column) => [column.key, column]),
+      );
+
+      expect(kanbanColumnMoveScope('assignee', byKey.get('assignee:agent-1')!)).toEqual({
+        assigneeAgentId: 'agent-1',
+      });
+      expect(kanbanColumnMoveScope('assignee', byKey.get('assignee:unassigned')!)).toEqual({
+        assigneeAgentId: null,
+        assigneeUserId: null,
+      });
+    });
+
+    it('scopes member and priority columns by their membership field', () => {
+      const memberColumns = buildKanbanColumns([group('member:u-1', [], null, 'u-1')], 'member');
+      expect(kanbanColumnMoveScope('member', memberColumns[0]!)).toEqual({
+        assigneeUserId: 'u-1',
+      });
+
+      const priorityColumn: KanbanColumnDefinition = {
+        droppable: true,
+        groupMeta: { groupBy: 'priority', key: 'priority:4', label: '', priority: 4 },
+        key: 'priority:4',
+        targetStatus: null,
+      };
+      expect(kanbanColumnMoveScope('priority', priorityColumn)).toEqual({ priority: 4 });
     });
   });
 });

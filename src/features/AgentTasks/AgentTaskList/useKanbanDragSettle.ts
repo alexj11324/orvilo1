@@ -47,6 +47,12 @@ export const useKanbanDragSettle = (initialColumns: () => Record<string, string[
   const isSettlingRef = useRef(false);
   // Throttles onDragOver: set true after a local move, cleared one frame later.
   const recentlyMovedRef = useRef(false);
+  // Overlapping drops each hold one pending settle: the lock must outlive the
+  // LAST release, not the first. `resyncOnRelease` OR-accumulates — a drop
+  // keeping its optimistic placement releases with `resync: false`, but a
+  // sibling's successful reconcile still resyncs the shared mirror.
+  const pendingSettlesRef = useRef(0);
+  const resyncOnReleaseRef = useRef(false);
   const [settleVersion, setSettleVersion] = useState(0);
 
   const [columns, setColumnsState] = useState<Record<string, string[]>>(initialColumns);
@@ -74,14 +80,26 @@ export const useKanbanDragSettle = (initialColumns: () => Record<string, string[
   }, [columns]);
 
   /**
-   * Engage the settle lock and return the callback that releases it and
-   * triggers a single resync from the (now reconciled) store groups.
+   * Engage the settle lock and return the callback that releases it. The lock
+   * releases and a resync fires only after the LAST overlapping drop
+   * releases; `release({ resync: false })` opts this drop out of the resync
+   * (used when the optimistic placement stays in place pending a retry).
    */
   const beginSettle = useCallback(() => {
+    pendingSettlesRef.current += 1;
     isSettlingRef.current = true;
-    return () => {
+    let released = false;
+    return (options?: { resync?: boolean }) => {
+      if (released) return;
+      released = true;
+      if (options?.resync !== false) resyncOnReleaseRef.current = true;
+      pendingSettlesRef.current -= 1;
+      if (pendingSettlesRef.current > 0) return;
       isSettlingRef.current = false;
-      setSettleVersion((v) => v + 1);
+      if (resyncOnReleaseRef.current) {
+        resyncOnReleaseRef.current = false;
+        setSettleVersion((v) => v + 1);
+      }
     };
   }, []);
 

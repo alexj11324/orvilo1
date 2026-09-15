@@ -1,5 +1,5 @@
 import { closestCenter, type CollisionDetection, pointerWithin } from '@dnd-kit/core';
-import type { TaskStatus } from '@orvilo/types';
+import type { TaskMoveScope, TaskStatus } from '@orvilo/types';
 
 import type {
   TaskGroupItem,
@@ -199,6 +199,35 @@ export const canDropTaskIntoKanbanColumn = (
   return task.visibility !== 'private' || task.createdByUserId === targetAssigneeUserId;
 };
 
+/**
+ * The membership fields pinning `column`'s scope, sent with a drop as
+ * `moveScope` so the server can find the true neighbour past the loaded page
+ * edge and respace the column when fractional positions collapse. Present
+ * keys constrain; `null` means the unassigned column, not "no constraint".
+ */
+export const kanbanColumnMoveScope = (
+  groupBy: TaskKanbanGroupBy,
+  column: KanbanColumnDefinition,
+): TaskMoveScope | undefined => {
+  if (groupBy === 'status') {
+    const statuses = KANBAN_COLUMN_STATUSES[column.key];
+    return statuses ? { statuses } : undefined;
+  }
+  const meta = column.groupMeta;
+  if (!meta) return undefined;
+  if (groupBy === 'assignee') {
+    if (meta.assigneeId) return { assigneeAgentId: meta.assigneeId };
+    if (meta.assigneeUserId) {
+      // A user-assignee column matches the server's `assignee:user:<id>` key —
+      // no agent assignee, only the member one.
+      return { assigneeAgentId: null, assigneeUserId: meta.assigneeUserId };
+    }
+    return { assigneeAgentId: null, assigneeUserId: null };
+  }
+  if (groupBy === 'member') return { assigneeUserId: meta.assigneeUserId ?? null };
+  return { priority: meta.priority ?? 0 };
+};
+
 // ── Drag & drop ──────────────────────────────────────────────────
 
 /**
@@ -268,6 +297,31 @@ export const findKanbanColumn = (
     if (ids.includes(id)) return columnKey;
   }
   return null;
+};
+
+/**
+ * The column a drop actually commits to — the RELEASE column, not wherever
+ * the mirror's last accepted preview left the card. A rejected drag-over can
+ * park the card on an earlier valid column, so the preview is only a hint.
+ *
+ * `droppable: false` bars cross-column entry only: a same-column reorder
+ * stays legal in columns that accept no status write (`running`), so
+ * membership is checked before the droppable gate.
+ */
+export const resolveKanbanDropColumn = (
+  task: TaskListItem,
+  groupBy: TaskKanbanGroupBy,
+  columns: Record<string, string[]>,
+  overId: string,
+  columnKeys: ReadonlySet<string>,
+  columnDefs: ReadonlyMap<string, KanbanColumnDefinition>,
+): string | null => {
+  const overCol = findKanbanColumn(columns, overId, columnKeys);
+  const def = overCol ? columnDefs.get(overCol) : undefined;
+  if (!overCol || !def) return null;
+  if (taskMatchesKanbanColumn(task, groupBy, overCol)) return overCol;
+  if (!def.droppable || !canDropTaskIntoKanbanColumn(task, groupBy, def)) return null;
+  return overCol;
 };
 
 /**

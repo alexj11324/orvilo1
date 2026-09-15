@@ -20,6 +20,7 @@ vi.mock('@/libs/swr', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   useTaskStore.setState({
+    boardGroupLimits: {},
     groupListQueryAutomated: undefined,
     isTaskGroupListInit: false,
     isTaskListInit: false,
@@ -197,6 +198,24 @@ describe('TaskListSliceAction', () => {
         listGroupBy: 'assignee',
         taskGroups: [],
       });
+    });
+
+    it('clears per-column page sizes when the grouping dimension changes', () => {
+      // Regression: limits are keyed to the OLD grouping's columns — keeping
+      // them would send a `backlog`-keyed `groupLimits` map to an assignee
+      // query and over-fetch every group.
+      useTaskStore.setState({
+        boardGroupLimits: { backlog: 150 },
+        isTaskGroupListInit: true,
+        listAgentId: '__all__',
+        listGroupBy: 'status',
+      });
+
+      renderHook(() =>
+        useTaskStore.getState().useFetchTaskGroupList({ allAgents: true, groupBy: 'assignee' }),
+      );
+
+      expect(useTaskStore.getState().boardGroupLimits).toEqual({});
     });
   });
 
@@ -641,6 +660,34 @@ describe('TaskListSliceAction', () => {
       expect(taskServiceList).toHaveBeenCalledWith(
         expect.not.objectContaining({ limit: expect.anything() }),
       );
+    });
+  });
+
+  describe('loadMoreTaskGroup', () => {
+    it('grows a column by one page', async () => {
+      await useTaskStore.getState().loadMoreTaskGroup('backlog');
+
+      expect(useTaskStore.getState().boardGroupLimits).toEqual({ backlog: 100 });
+    });
+
+    it('clamps the status board at the schema cap instead of sending a rejected limit', async () => {
+      // `groups[].limit` tops out at 100 server-side — a third click must not
+      // grow it to 150 or the whole grouped request fails validation.
+      const { mutate } = await import('@/libs/swr');
+      useTaskStore.setState({ boardGroupLimits: { backlog: 100 }, listGroupBy: 'status' });
+
+      await useTaskStore.getState().loadMoreTaskGroup('backlog');
+
+      expect(useTaskStore.getState().boardGroupLimits.backlog).toBe(100);
+      expect(mutate).not.toHaveBeenCalled();
+    });
+
+    it('uses the looser dynamic cap on non-status boards', async () => {
+      useTaskStore.setState({ boardGroupLimits: { 'priority:4': 450 }, listGroupBy: 'priority' });
+
+      await useTaskStore.getState().loadMoreTaskGroup('priority:4');
+
+      expect(useTaskStore.getState().boardGroupLimits['priority:4']).toBe(500);
     });
   });
 });

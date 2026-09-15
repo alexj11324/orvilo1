@@ -6,6 +6,7 @@ import type {
   TaskAutomationMode,
   TaskAutomationSnapshot,
   TaskItem,
+  TaskMoveScope,
   TaskSubtaskProgress,
   TaskVerifyConfig,
   WorkspaceData,
@@ -191,6 +192,12 @@ const TASK_BOARD_ORDER = [
   desc(tasks.createdAt),
   desc(tasks.seq),
 ];
+/**
+ * Fixed stride a collapsed kanban column is respaced to. Small magnitudes
+ * (multiples of 1024) keep midpoint halving inside double precision for far
+ * longer than the legacy `-epoch(created_at)` fallback scale ever could.
+ */
+const MOVE_REBALANCE_STEP = 1024;
 
 interface TaskListFilterOptions {
   assigneeAgentId?: string;
@@ -1187,11 +1194,18 @@ export class TaskModel {
    * applies, so an untouched column and a dragged card interleave correctly.
    * Returns null when both anchors are gone — the write then leaves the
    * position untouched instead of guessing.
+   *
+   * `scope` is the dropped column's membership (status set, assignee, or
+   * priority). A missing anchor means the drop hit the loaded page's edge —
+   * but the column can continue past it, so the true in-scope neighbour is
+   * fetched instead of stepping blindly past unseen rows. When repeated
+   * midpoint halving exhausts double precision the column is respaced once.
    */
-  async computeMovePosition(anchors: {
-    afterId?: string | null;
-    beforeId?: string | null;
-  }): Promise<number | null> {
+  async computeMovePosition(
+    anchors: { afterId?: string | null; beforeId?: string | null },
+    scope?: TaskMoveScope,
+    excludeId?: string,
+  ): Promise<number | null> {
     const ids = [anchors.beforeId, anchors.afterId].filter(
       (id): id is string => typeof id === 'string' && id.length > 0,
     );
@@ -1207,9 +1221,146 @@ export class TaskModel {
     const effectivePosition = (task: TaskItem) =>
       task.position ?? -new Date(task.createdAt).getTime() / 1000;
 
-    if (before && after) return (effectivePosition(before) + effectivePosition(after)) / 2;
-    if (before) return effectivePosition(before) + 1;
-    return effectivePosition(after!) - 1;
+    // The rows framing the slot: the resolved anchor on one side, the true
+    // in-scope neighbour on the side the loaded page never reached. A real
+    // column edge (no neighbour in scope) falls back to one step past the
+    // boundary, preserving the legacy no-scope behaviour.
+    const lo =
+      before ??
+      (scope && after ? await this.moveScopeNeighbour(after, scope, 'prev', excludeId) : undefined);
+    const hi =
+      after ??
+      (scope && before
+        ? await this.moveScopeNeighbour(before, scope, 'next', excludeId)
+        : undefined);
+    if (!lo && !hi) return null;
+    if (!lo) return effectivePosition(hi!) - 1;
+    if (!hi) return effectivePosition(lo) + 1;
+
+    const loPos = effectivePosition(lo);
+    const hiPos = effectivePosition(hi);
+    const mid = (loPos + hiPos) / 2;
+    if (mid > loPos && mid < hiPos) return mid;
+
+    // The gap collapsed to an endpoint — repeated midpoint halving ran out of
+    // double precision (or the anchors tie). Respace the whole column and take
+    // the reopened midpoint. Without a scope there is no column to respace;
+    // the degenerate midpoint keeps the write a harmless reorder.
+    if (!scope) return mid;
+    const [freshLo, freshHi] = await this.rebalanceMoveScope(scope, [lo.id, hi.id]);
+    const reopened = (freshLo + freshHi) / 2;
+    return reopened > freshLo && reopened < freshHi ? reopened : freshLo;
+  }
+
+  /**
+   * The membership filters of a kanban drop scope. Each present key
+   * constrains the column — a `null` assignee means the unassigned column,
+   * not "no constraint", and the `priority:0` column also holds NULL
+   * priorities (its key matches `taskPriorityGroupKey`).
+   */
+  private moveScopeConditions(scope: TaskMoveScope): SQL[] {
+    const conditions: SQL[] = [];
+    if (scope.statuses?.length) conditions.push(inArray(tasks.status, scope.statuses));
+    if ('assigneeAgentId' in scope) {
+      conditions.push(
+        scope.assigneeAgentId == null
+          ? isNull(tasks.assigneeAgentId)
+          : eq(tasks.assigneeAgentId, scope.assigneeAgentId),
+      );
+    }
+    if ('assigneeUserId' in scope) {
+      conditions.push(
+        scope.assigneeUserId == null
+          ? isNull(tasks.assigneeUserId)
+          : eq(tasks.assigneeUserId, scope.assigneeUserId),
+      );
+    }
+    if (scope.priority !== undefined) {
+      conditions.push(
+        scope.priority === 0
+          ? (or(eq(tasks.priority, 0), isNull(tasks.priority)) as SQL)
+          : eq(tasks.priority, scope.priority),
+      );
+    }
+    return conditions;
+  }
+
+  /**
+   * The row immediately before/after `boundary` inside the dropped column's
+   * scope, in board order (`position` fallback, then `createdAt`/`seq`
+   * tiebreaks). Finds the card the loaded page never rendered, so a drop at
+   * a paginated edge lands against the true successor instead of past it.
+   */
+  private async moveScopeNeighbour(
+    boundary: TaskItem,
+    scope: TaskMoveScope,
+    direction: 'next' | 'prev',
+    excludeId?: string,
+  ): Promise<TaskItem | undefined> {
+    const bound = boundary.position ?? -new Date(boundary.createdAt).getTime() / 1000;
+    const boundaryCreatedAt = boundary.createdAt;
+    const boundarySeq = boundary.seq;
+    const next = direction === 'next';
+    // "Past the boundary" in board order (effPos asc, createdAt desc, seq
+    // desc): strictly later means a bigger key, or a tie broken by an older
+    // createdAt / smaller seq. 'prev' mirrors the comparison.
+    const past = sql`(${taskEffectivePosition} > ${bound}
+      or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} < ${boundaryCreatedAt})
+      or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} = ${boundaryCreatedAt} and ${tasks.seq} < ${boundarySeq}))`;
+    const earlier = sql`(${taskEffectivePosition} < ${bound}
+      or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} > ${boundaryCreatedAt})
+      or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} = ${boundaryCreatedAt} and ${tasks.seq} > ${boundarySeq}))`;
+    const rows = await this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          this.ownership(),
+          ...this.moveScopeConditions(scope),
+          next ? past : earlier,
+          excludeId ? ne(tasks.id, excludeId) : undefined,
+        ),
+      )
+      .orderBy(
+        next ? sql`${taskEffectivePosition} asc` : sql`${taskEffectivePosition} desc`,
+        next ? desc(tasks.createdAt) : sql`${tasks.createdAt} asc`,
+        next ? desc(tasks.seq) : sql`${tasks.seq} asc`,
+      )
+      .limit(1);
+    return rows[0];
+  }
+
+  /**
+   * Respaces a column whose fractional positions collapsed. Every in-scope
+   * row gets a fixed-step slot in current board order, reopening the gap the
+   * drop needs; returns the boundary rows' fresh positions.
+   */
+  private async rebalanceMoveScope(
+    scope: TaskMoveScope,
+    boundaryIds: [string, string],
+  ): Promise<[number, number]> {
+    const conditions = and(this.ownership(), ...this.moveScopeConditions(scope));
+    await this.db.execute(sql`
+      update ${tasks}
+      set position = sub.rn * ${MOVE_REBALANCE_STEP}
+      from (
+        select ${tasks.id} as id,
+               row_number() over (
+                 order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc
+               ) as rn
+        from ${tasks}
+        where ${conditions ?? sql`true`}
+      ) sub
+      where ${tasks.id} = sub.id
+    `);
+    const [loId, hiId] = boundaryIds;
+    const fresh = await this.db
+      .select({ id: tasks.id, position: tasks.position })
+      .from(tasks)
+      .where(and(inArray(tasks.id, [loId, hiId]), this.ownership()));
+    const positionOf = (id: string, fallback: number) =>
+      fresh.find((row) => row.id === id)?.position ?? fallback;
+    return [positionOf(loId, 0), positionOf(hiId, MOVE_REBALANCE_STEP)];
   }
 
   async findSubtasks(parentTaskId: string): Promise<TaskItem[]> {

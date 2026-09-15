@@ -3,6 +3,7 @@ import type {
   TaskDetailActivityAuthor,
   TaskDetailData,
   TaskDetailSubtask,
+  TaskMoveScope,
   TaskStatus,
 } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -47,6 +48,8 @@ export interface TaskUpdatePayload {
   description?: string;
   editorData?: unknown;
   instruction?: string;
+  /** The dropped column's membership fields — server-side scope geometry. */
+  moveScope?: TaskMoveScope;
   name?: string;
   parentTaskId?: string | null;
   /** Explicit board ordering key; anchors take precedence server-side. */
@@ -448,6 +451,7 @@ export class TaskDetailSliceActionImpl {
     // on the optimistic detail object.
     delete optimisticRest.afterId;
     delete optimisticRest.beforeId;
+    delete optimisticRest.moveScope;
     delete optimisticRest.parentTaskId;
     delete optimisticRest.position;
     // editTask may send only instruction while the detail store still holds old rich editorData.

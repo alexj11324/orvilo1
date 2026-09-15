@@ -69,6 +69,29 @@ const DEFAULT_KANBAN_GROUPS = [
 export const KANBAN_GROUP_PAGE_SIZE = 50;
 
 /**
+ * Server schema caps for the grouped query: the status path caps each
+ * `groups[].limit` at 100, the dynamic `groupBy` path caps `groupLimits`
+ * values at 500. The client must never send a larger limit — the request
+ * would fail validation and the column would stop loading entirely.
+ */
+export const KANBAN_STATUS_GROUP_LIMIT = 100;
+export const KANBAN_DYNAMIC_GROUP_LIMIT = 500;
+
+/** `groupBy`'s server limit cap — the status path validates tighter. */
+export const kanbanGroupLimitCap = (groupBy: TaskKanbanGroupBy): number =>
+  groupBy === 'status' ? KANBAN_STATUS_GROUP_LIMIT : KANBAN_DYNAMIC_GROUP_LIMIT;
+
+/** Next page size for a column after one "load more", clamped at the cap. */
+export const nextKanbanGroupLimit = (
+  current: number | undefined,
+  groupBy: TaskKanbanGroupBy,
+): number =>
+  Math.min(
+    (current ?? KANBAN_GROUP_PAGE_SIZE) + KANBAN_GROUP_PAGE_SIZE,
+    kanbanGroupLimitCap(groupBy),
+  );
+
+/**
  * Map the UI-side filter chip value to the server-side `visibility` enum.
  * 'all' has no server filter (undefined), 'workspace' translates to the DB
  * 'public' value, and 'private' passes through unchanged.
@@ -147,14 +170,18 @@ export class TaskListSliceActionImpl {
    * Grow one kanban column by a page and revalidate the grouped query. The
    * fetcher reads `boardGroupLimits` at fetch time, so a plain `mutate` on
    * the existing key is enough — the limits are not part of the cache key.
+   * The limit is clamped to the server cap so a column at the ceiling stops
+   * paging instead of firing a request the schema rejects.
    */
   loadMoreTaskGroup = async (columnKey: string): Promise<void> => {
-    const current = this.#get().boardGroupLimits;
+    const { boardGroupLimits: current, listGroupBy } = this.#get();
+    const next = nextKanbanGroupLimit(current[columnKey], listGroupBy);
+    if (next === (current[columnKey] ?? KANBAN_GROUP_PAGE_SIZE)) return;
     this.#set(
       {
         boardGroupLimits: {
           ...current,
-          [columnKey]: (current[columnKey] ?? KANBAN_GROUP_PAGE_SIZE) + KANBAN_GROUP_PAGE_SIZE,
+          [columnKey]: next,
         },
       },
       false,
@@ -316,6 +343,10 @@ export class TaskListSliceActionImpl {
               listGroupExcludeStatuses: excludeStatusesSignature,
             }
           : {
+              // A same-scope dimension switch (groupBy/status filter) still
+              // invalidates the per-column page sizes — they are keyed to the
+              // OLD grouping's columns and would over-fetch the new groups.
+              boardGroupLimits: {},
               isTaskGroupListInit: false,
               groupListQueryAutomated: automated,
               listGroupBy: groupBy,

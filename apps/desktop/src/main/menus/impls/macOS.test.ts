@@ -1,3 +1,4 @@
+import { GITHUB, OFFICIAL_SITE } from '@orvilo/const/url';
 import { app, Menu, shell } from 'electron';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -249,7 +250,7 @@ describe('MacOSMenu', () => {
 
       expect(visitWebsiteItem).toBeDefined();
       await visitWebsiteItem.click();
-      expect(shell.openExternal).toHaveBeenCalledWith('https://lobehub.com');
+      expect(shell.openExternal).toHaveBeenCalledWith(OFFICIAL_SITE);
     });
 
     it('should handle github repo click', async () => {
@@ -261,7 +262,7 @@ describe('MacOSMenu', () => {
 
       expect(githubItem).toBeDefined();
       await githubItem.click();
-      expect(shell.openExternal).toHaveBeenCalledWith('https://github.com/lobehub/lobe-chat');
+      expect(shell.openExternal).toHaveBeenCalledWith(GITHUB);
     });
 
     it('should handle open logs directory click', () => {

@@ -347,6 +347,13 @@ export interface TaskItem {
   maxTopics: number | null;
   name: string | null;
   parentTaskId: string | null;
+  /**
+   * Kanban board ordering key (fractional indexing): lower renders earlier in
+   * a column. NULL means "never dragged" — board reads fall back to
+   * `-epoch(createdAt)`. Distinct from `sortOrder`, which orders subtasks
+   * within their parent.
+   */
+  position: number | null;
   priority: number | null;
   projectId: string | null;
   schedulePattern: string | null;
@@ -396,6 +403,7 @@ export interface NewTask {
   maxTopics?: number | null;
   name?: string | null;
   parentTaskId?: string | null;
+  position?: number | null;
   priority?: number | null;
   projectId?: string | null;
   schedulePattern?: string | null;

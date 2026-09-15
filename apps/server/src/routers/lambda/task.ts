@@ -107,9 +107,17 @@ const createSchema = z.object({
 });
 
 const updateSchema = z.object({
+  /**
+   * Kanban drop anchors: the cards immediately above (`beforeId`) and below
+   * (`afterId`) the drop slot, by id or identifier. The server computes the
+   * fractional `position` between them — the client sends drop geometry, not
+   * a number it had to guess.
+   */
+  afterId: z.string().nullish(),
   assigneeAgentId: z.string().nullish(),
   assigneeUserId: z.string().nullish(),
   automationMode: z.enum(['heartbeat', 'schedule']).nullish(),
+  beforeId: z.string().nullish(),
   config: z.record(z.string(), z.unknown()).optional(),
   context: z.record(z.string(), z.unknown()).optional(),
   description: z.string().optional(),
@@ -128,6 +136,8 @@ const updateSchema = z.object({
   instruction: z.string().optional(),
   name: z.string().optional(),
   parentTaskId: z.string().nullish(),
+  /** Explicit board ordering key; `beforeId`/`afterId` anchors take precedence. */
+  position: z.number().optional(),
   priority: z.number().min(0).max(4).optional(),
   schedulePattern: z.string().nullish(),
   scheduleTimezone: z.string().nullish(),
@@ -168,6 +178,12 @@ const groupListSchema = z
     automated: z.boolean().optional(),
     excludeStatuses: z.array(z.enum(TASK_STATUSES)).max(10).optional(),
     groupBy: z.enum(['agent', 'assignee', 'member', 'priority']).optional(),
+    /**
+     * Per-column page sizes for the dynamic groupings, keyed by group key.
+     * The status path ignores it — its `groups[]` entries carry `limit`
+     * already. Lets a board grow one column without redefining the group set.
+     */
+    groupLimits: z.record(z.string(), z.number().int().min(1).max(500)).optional(),
     groups: z
       .array(
         z.object({
@@ -1457,7 +1473,7 @@ export const taskRouter = router({
   update: taskProcedureWrite
     .input(idInput.merge(updateSchema).extend({ actorAgentId: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
-      const { actorAgentId, id, parentTaskId, status, ...data } = input;
+      const { actorAgentId, afterId, beforeId, id, parentTaskId, status, ...data } = input;
       try {
         const model = ctx.taskModel;
         const actor = await resolveActivityActor(ctx, actorAgentId);
@@ -1524,6 +1540,17 @@ export const taskRouter = router({
           updateData.instruction !== undefined && updateData.editorData === undefined
             ? { ...updateData, editorData: null }
             : updateData;
+
+        // Kanban drop anchors resolve to a fractional position against the
+        // live rows (the board may have shifted while the drag was in flight).
+        // When both anchors vanished mid-drag the write keeps its explicit
+        // `position` (or none) rather than failing the whole update.
+        const movePosition =
+          beforeId || afterId ? await model.computeMovePosition({ afterId, beforeId }) : null;
+        const finalUpdateData =
+          movePosition === null
+            ? normalizedUpdateData
+            : { ...normalizedUpdateData, position: movePosition };
         // Agent attribution comes from `resolveActivityActor` above. The
         // assignment activity is written inside this update's own transaction
         // (see `TaskModel.updateWithLog`), so a concurrent reassignment cannot
@@ -1533,7 +1560,7 @@ export const taskRouter = router({
               const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
               const updated = await taskService.updateTaskWithAssigneeLock(
                 resolved.id,
-                normalizedUpdateData,
+                finalUpdateData,
                 actor,
               );
               if (!updated) return null;
@@ -1541,11 +1568,7 @@ export const taskRouter = router({
               const result = await taskService.updateStatus({ id: resolved.id, status }, actor);
               return result.task;
             })
-          : await ctx.taskService.updateTaskWithAssigneeLock(
-              resolved.id,
-              normalizedUpdateData,
-              actor,
-            );
+          : await ctx.taskService.updateTaskWithAssigneeLock(resolved.id, finalUpdateData, actor);
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         // Only an actual assignee change notifies — re-saving the same assignee
         // stays silent (self-assignment is filtered inside the helper).

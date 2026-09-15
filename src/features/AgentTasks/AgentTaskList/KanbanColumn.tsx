@@ -1,10 +1,12 @@
-import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core';
+import { useDndContext, useDroppable } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { type DropdownItem, DropdownMenu, Icon } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { EyeOff, MoreHorizontal, Plus } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { TaskKanbanGroupBy, TaskListItem } from '@/store/task/slices/list/initialState';
@@ -46,17 +48,22 @@ const cardStyles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-const DraggableTaskCard = memo<{ routeScope?: TaskItemRouteScope; task: TaskListItem }>(
+const SortableTaskCard = memo<{ routeScope?: TaskItemRouteScope; task: TaskListItem }>(
   ({ routeScope, task }) => {
-    const { attributes, isDragging, listeners, setNodeRef } = useDraggable({
+    const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
       data: { task },
       id: task.identifier,
     });
 
     return (
       <div
+        data-board-card
         className={cx(cardStyles.card, isDragging && cardStyles.dragging)}
         ref={setNodeRef}
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition: transition ?? undefined,
+        }}
         {...listeners}
         {...attributes}
       >
@@ -176,6 +183,8 @@ export const COLUMN_STATUS_ICON: Record<string, TaskStatus> = {
 interface KanbanColumnProps {
   columnKey: string;
   droppable: boolean;
+  /** Optional footer slot — the per-column "load more" affordance. */
+  footer?: ReactNode;
   groupBy: TaskKanbanGroupBy;
   groupMeta?: TaskGroupMeta;
   loading?: boolean;
@@ -190,6 +199,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
   ({
     columnKey,
     droppable,
+    footer,
     groupBy,
     groupMeta,
     loading,
@@ -297,9 +307,14 @@ const KanbanColumn = memo<KanbanColumnProps>(
               </div>
             ))
           ) : tasks.length > 0 ? (
-            tasks.map((task) => (
-              <DraggableTaskCard key={task.identifier} routeScope={routeScope} task={task} />
-            ))
+            <SortableContext
+              items={tasks.map((task) => task.identifier)}
+              strategy={verticalListSortingStrategy}
+            >
+              {tasks.map((task) => (
+                <SortableTaskCard key={task.identifier} routeScope={routeScope} task={task} />
+              ))}
+            </SortableContext>
           ) : onCreate ? (
             <div className={styles.addPill} title={t('taskList.kanban.addTask')} onClick={onCreate}>
               <Icon icon={Plus} size={16} />
@@ -307,6 +322,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
           ) : (
             <div className={styles.emptyText}>{t('taskList.kanban.emptyColumn')}</div>
           )}
+          {footer}
         </div>
       </div>
     );

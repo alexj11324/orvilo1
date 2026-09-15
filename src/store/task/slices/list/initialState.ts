@@ -16,6 +16,12 @@ export type TaskListVisibilityFilter = 'all' | 'private' | 'workspace';
 export type TaskKanbanGroupBy = 'assignee' | 'member' | 'priority' | 'status';
 
 export interface TaskListSliceState {
+  /**
+   * Per-column page sizes for the kanban board, keyed by group key. Columns
+   * start at the default page size; "load more" bumps one entry and the
+   * grouped query refetches with it. Reset together with the list scope.
+   */
+  boardGroupLimits: Record<string, number>;
   groupListQueryAutomated?: boolean;
   isTaskGroupListInit: boolean;
   isTaskListInit: boolean;
@@ -56,6 +62,7 @@ export interface TaskListSliceState {
 }
 
 export const initialTaskListSliceState: TaskListSliceState = {
+  boardGroupLimits: {},
   groupListQueryAutomated: undefined,
   isTaskGroupListInit: false,
   isTaskListInit: false,

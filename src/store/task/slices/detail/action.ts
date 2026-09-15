@@ -1,5 +1,10 @@
 import { toast } from '@lobehub/ui/base-ui';
-import type { TaskDetailActivityAuthor, TaskDetailData, TaskDetailSubtask } from '@orvilo/types';
+import type {
+  TaskDetailActivityAuthor,
+  TaskDetailData,
+  TaskDetailSubtask,
+  TaskStatus,
+} from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 
@@ -34,14 +39,25 @@ type DeletedTask = NonNullable<Awaited<ReturnType<typeof taskService.delete>>['d
 // - review goes through configSlice.updateReview
 // - heartbeat config will get a dedicated action once the upstream task scheduler infra is complete
 export interface TaskUpdatePayload {
+  /** Kanban drop anchors — the cards framing the drop slot, id or identifier. */
+  afterId?: string | null;
   assigneeAgentId?: string | null;
   assigneeUserId?: string | null;
+  beforeId?: string | null;
   description?: string;
   editorData?: unknown;
   instruction?: string;
   name?: string;
   parentTaskId?: string | null;
+  /** Explicit board ordering key; anchors take precedence server-side. */
+  position?: number;
   priority?: number;
+  /**
+   * Status transition — the board commits one through `update` so a drop
+   * writes status and position atomically. The lifecycle slice's own
+   * `updateTaskStatus` remains the path for standalone status changes.
+   */
+  status?: TaskStatus;
 }
 
 export interface TaskUpdateOptions {
@@ -428,7 +444,12 @@ export class TaskDetailSliceActionImpl {
   ): Promise<void> => {
     const { assigneeAgentId, assigneeUserId, ...rest } = data;
     const optimisticRest = { ...rest };
+    // Drop anchors are request geometry, not task fields — they must not land
+    // on the optimistic detail object.
+    delete optimisticRest.afterId;
+    delete optimisticRest.beforeId;
     delete optimisticRest.parentTaskId;
+    delete optimisticRest.position;
     // editTask may send only instruction while the detail store still holds old rich editorData.
     // Mirror the server normalization so the optimistic render cannot prefer stale JSON.
     if (optimisticRest.instruction !== undefined && optimisticRest.editorData === undefined) {

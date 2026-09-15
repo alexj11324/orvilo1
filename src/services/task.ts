@@ -38,6 +38,8 @@ class TaskService {
     automated?: boolean;
     excludeStatuses?: TaskStatus[];
     groupBy?: 'assignee' | 'member' | 'priority';
+    /** Per-column page sizes keyed by group key (dynamic groupings only). */
+    groupLimits?: Record<string, number>;
     groups?: Array<{
       key: string;
       limit?: number;
@@ -128,10 +130,17 @@ class TaskService {
        * caller can use that agent before recording it.
        */
       actorAgentId?: string;
+      /**
+       * Kanban drop anchors — the cards framing the drop slot (id or
+       * identifier). The server computes the fractional position from the
+       * live rows.
+       */
+      afterId?: string | null;
       assigneeAgentId?: string | null;
       assigneeUserId?: string | null;
       // Automation mode; null = no automation
       automationMode?: TaskAutomationMode | null;
+      beforeId?: string | null;
       config?: Record<string, unknown>;
       context?: Record<string, unknown>;
       description?: string;
@@ -143,11 +152,20 @@ class TaskService {
       instruction?: string;
       name?: string;
       parentTaskId?: string | null;
+      /** Explicit board ordering key; anchors take precedence server-side. */
+      position?: number;
       priority?: number;
       // schedulePattern: cron expression for scheduled automation (e.g. '0 9 * * *')
       schedulePattern?: string | null;
       // scheduleTimezone: IANA timezone for the cron expression (e.g. 'Asia/Shanghai')
       scheduleTimezone?: string | null;
+      /**
+       * Status transition. Routed through `taskService.updateStatus` in the
+       * same transaction server-side, so board drops write status and
+       * position atomically. Cascade semantics for completed/canceled stay
+       * with `updateStatusCascade` — callers check subtasks first.
+       */
+      status?: TaskStatus;
     },
   ) => lambdaClient.task.update.mutate({ id, ...data });
 

@@ -178,6 +178,20 @@ const RUNNABLE_AUTOMATION = and(
   ),
 )!;
 
+/**
+ * Kanban ordering key for grouped reads. Rows that were never dragged carry
+ * `position = NULL` and fall back to `-epoch(created_at)`, preserving the
+ * legacy newest-first order while letting a dropped card hold an explicit
+ * slot between its neighbours. `createdAt`/`seq` tiebreaks keep the order
+ * total when two rows share one key.
+ */
+const taskEffectivePosition = sql`coalesce(${tasks.position}, -extract(epoch from ${tasks.createdAt}))`;
+const TASK_BOARD_ORDER = [
+  sql`${taskEffectivePosition} asc`,
+  desc(tasks.createdAt),
+  desc(tasks.seq),
+];
+
 interface TaskListFilterOptions {
   assigneeAgentId?: string;
   /** Only tasks assigned to this workspace member. */
@@ -671,6 +685,13 @@ export class TaskModel {
     options: TaskListFilterOptions & {
       excludeStatuses?: string[];
       groupBy?: 'agent' | 'assignee' | 'member' | 'priority';
+      /**
+       * Per-column page sizes for the dynamic groupings (agent/assignee/
+       * member/priority), keyed by group key — the board bumps one column's
+       * entry on "load more" without disturbing the others. The status path
+       * already carries per-group limits inside `groups`, so it ignores this.
+       */
+      groupLimits?: Record<string, number>;
       groups?: Array<{
         key: string;
         limit?: number;
@@ -691,11 +712,20 @@ export class TaskModel {
       total: number;
     }>
   > {
-    const { assigneeAgentId, excludeStatuses, groupBy, groups } = options;
+    const { assigneeAgentId, excludeStatuses, groupBy, groupLimits, groups } = options;
 
     if ((!groups || groups.length === 0) && !groupBy) {
       throw new Error('Task groups or a grouping dimension are required');
     }
+
+    const DEFAULT_GROUP_LIMIT = 50;
+    /**
+     * The ranked-window paths fetch per partition in one pass, so the row cap
+     * is uniform; per-key limits are applied by truncating each group's rows
+     * afterwards. `hasMore` still compares against the true `total`.
+     */
+    const groupLimitFor = (key: string) => groupLimits?.[key] ?? DEFAULT_GROUP_LIMIT;
+    const maxGroupLimit = Math.max(DEFAULT_GROUP_LIMIT, ...Object.values(groupLimits ?? {}));
 
     const baseConditions = this.buildListConditions(options);
     if (excludeStatuses?.length) {
@@ -717,7 +747,6 @@ export class TaskModel {
     let groupQueries: GroupQuery[];
 
     if (groupBy === 'assignee') {
-      const limit = 50;
       const assigneeGroupKey = sql<string>`case
         when ${tasks.assigneeAgentId} is not null then 'assignee:' || ${tasks.assigneeAgentId}
         when ${tasks.assigneeUserId} is not null then 'assignee:user:' || ${tasks.assigneeUserId}
@@ -728,7 +757,7 @@ export class TaskModel {
           ...getTableColumns(tasks),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
-            sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
+            sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
               'group_rank',
             ),
         })
@@ -747,7 +776,7 @@ export class TaskModel {
         this.db
           .select()
           .from(rankedTasks)
-          .where(sql`${rankedTasks.groupRank} <= ${limit}`)
+          .where(sql`${rankedTasks.groupRank} <= ${maxGroupLimit}`)
           .orderBy(rankedTasks.assigneeGroupKey, rankedTasks.groupRank),
       ]);
       const assigneeCounts = new Map(
@@ -794,14 +823,13 @@ export class TaskModel {
           assigneeUserId: groupAssigneeUserId,
           conditions,
           key,
-          limit,
+          limit: groupLimitFor(key),
           offset: 0,
-          prefetchedTasks: tasksByAssignee.get(key) ?? [],
+          prefetchedTasks: (tasksByAssignee.get(key) ?? []).slice(0, groupLimitFor(key)),
           total,
         };
       });
     } else if (groupBy === 'agent' || groupBy === 'member') {
-      const limit = 50;
       const groupColumn = groupBy === 'agent' ? tasks.assigneeAgentId : tasks.assigneeUserId;
       const groupPrefix = groupBy === 'agent' ? 'assignee:' : 'member:';
       const unassignedKey = `${groupPrefix}unassigned`;
@@ -814,7 +842,7 @@ export class TaskModel {
           ...getTableColumns(tasks),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
-            sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
+            sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
               'group_rank',
             ),
         })
@@ -833,7 +861,7 @@ export class TaskModel {
         this.db
           .select()
           .from(rankedTasks)
-          .where(sql`${rankedTasks.groupRank} <= ${limit}`)
+          .where(sql`${rankedTasks.groupRank} <= ${maxGroupLimit}`)
           .orderBy(rankedTasks.assigneeGroupKey, rankedTasks.groupRank),
       ]);
       const assigneeCounts = new Map(
@@ -869,9 +897,9 @@ export class TaskModel {
           assigneeUserId: groupAssigneeUserId,
           conditions,
           key,
-          limit,
+          limit: groupLimitFor(key),
           offset: 0,
-          prefetchedTasks: tasksByAssignee.get(key) ?? [],
+          prefetchedTasks: (tasksByAssignee.get(key) ?? []).slice(0, groupLimitFor(key)),
           total,
         };
       });
@@ -888,13 +916,14 @@ export class TaskModel {
             ? or(eq(tasks.priority, priority), isNull(tasks.priority))!
             : eq(tasks.priority, priority),
         ];
-        const limit = 50;
+        const key = `priority:${priority}`;
+        const limit = groupLimitFor(key);
         const offset = 0;
         const prefetchedTasks = await this.db
           .select()
           .from(tasks)
           .where(and(...baseConditions, ...conditions))
-          .orderBy(desc(tasks.createdAt), desc(tasks.seq))
+          .orderBy(...TASK_BOARD_ORDER)
           .limit(limit)
           .offset(offset);
 
@@ -943,7 +972,7 @@ export class TaskModel {
           .select()
           .from(tasks)
           .where(and(...baseConditions, ...conditions))
-          .orderBy(desc(tasks.createdAt), desc(tasks.seq))
+          .orderBy(...TASK_BOARD_ORDER)
           .limit(limit)
           .offset(offset);
 
@@ -977,7 +1006,7 @@ export class TaskModel {
             .select()
             .from(tasks)
             .where(and(...baseConditions, ...group.conditions))
-            .orderBy(desc(tasks.createdAt), desc(tasks.seq))
+            .orderBy(...TASK_BOARD_ORDER)
             .limit(group.limit)
             .offset(group.offset));
 
@@ -1148,6 +1177,39 @@ export class TaskModel {
         .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
         .where(and(eq(tasks.id, item.id), this.ownership()));
     }
+  }
+
+  /**
+   * The position a kanban drop lands on, computed from the two cards framing
+   * the drop slot (`beforeId` is the card above, `afterId` the card below —
+   * either may be an `id` or an `identifier`). Rows without an explicit
+   * `position` use the same `-epoch(created_at)` fallback the board ordering
+   * applies, so an untouched column and a dragged card interleave correctly.
+   * Returns null when both anchors are gone — the write then leaves the
+   * position untouched instead of guessing.
+   */
+  async computeMovePosition(anchors: {
+    afterId?: string | null;
+    beforeId?: string | null;
+  }): Promise<number | null> {
+    const ids = [anchors.beforeId, anchors.afterId].filter(
+      (id): id is string => typeof id === 'string' && id.length > 0,
+    );
+    if (ids.length === 0) return null;
+
+    const rows = await this.resolveMany(ids);
+    const find = (id?: string | null) =>
+      id ? rows.find((row) => row.id === id || row.identifier === id.toUpperCase()) : undefined;
+    const before = find(anchors.beforeId);
+    const after = find(anchors.afterId);
+    if (!before && !after) return null;
+
+    const effectivePosition = (task: TaskItem) =>
+      task.position ?? -new Date(task.createdAt).getTime() / 1000;
+
+    if (before && after) return (effectivePosition(before) + effectivePosition(after)) / 2;
+    if (before) return effectivePosition(before) + 1;
+    return effectivePosition(after!) - 1;
   }
 
   async findSubtasks(parentTaskId: string): Promise<TaskItem[]> {

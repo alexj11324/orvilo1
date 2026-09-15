@@ -62,6 +62,13 @@ const DEFAULT_KANBAN_GROUPS = [
 ];
 
 /**
+ * First page each board column loads. "Load more" grows a column by another
+ * page (`boardGroupLimits`), so a column with 120 tasks tops out after two
+ * clicks instead of paging forever.
+ */
+export const KANBAN_GROUP_PAGE_SIZE = 50;
+
+/**
  * Map the UI-side filter chip value to the server-side `visibility` enum.
  * 'all' has no server filter (undefined), 'workspace' translates to the DB
  * 'public' value, and 'private' passes through unchanged.
@@ -90,6 +97,7 @@ export const COMPLETE_TASK_LIST_MAX_ITEMS = 1000;
  * the `/tasks` page briefly showing only the last-visited agent's tasks.
  */
 const scopeChangeResetState = {
+  boardGroupLimits: {} as Record<string, number>,
   isTaskGroupListInit: false,
   isTaskListInit: false,
   taskGroups: [] as TaskGroupItem[],
@@ -134,6 +142,26 @@ export class TaskListSliceActionImpl {
 
   fetchTaskList = async (params: Parameters<typeof taskService.list>[0]) =>
     taskService.list(params);
+
+  /**
+   * Grow one kanban column by a page and revalidate the grouped query. The
+   * fetcher reads `boardGroupLimits` at fetch time, so a plain `mutate` on
+   * the existing key is enough — the limits are not part of the cache key.
+   */
+  loadMoreTaskGroup = async (columnKey: string): Promise<void> => {
+    const current = this.#get().boardGroupLimits;
+    this.#set(
+      {
+        boardGroupLimits: {
+          ...current,
+          [columnKey]: (current[columnKey] ?? KANBAN_GROUP_PAGE_SIZE) + KANBAN_GROUP_PAGE_SIZE,
+        },
+      },
+      false,
+      'loadMoreTaskGroup',
+    );
+    await this.refreshTaskGroupList();
+  };
 
   /**
    * Every page of a list, merged, walked with a keyset cursor: each request
@@ -312,11 +340,22 @@ export class TaskListSliceActionImpl {
           )
         : null,
       async () => {
+        const groupLimits = this.#get().boardGroupLimits;
         return taskService.groupList({
           assigneeAgentId: allAgents || scope ? undefined : agentId,
           ...(automated === undefined ? {} : { automated }),
           excludeStatuses: excludeStatuses?.length ? [...excludeStatuses] : undefined,
-          ...(groupBy === 'status' ? { groups: DEFAULT_KANBAN_GROUPS } : { groupBy }),
+          ...(groupBy === 'status'
+            ? {
+                groups: DEFAULT_KANBAN_GROUPS.map((group) => ({
+                  ...group,
+                  limit: groupLimits[group.key] ?? KANBAN_GROUP_PAGE_SIZE,
+                })),
+              }
+            : {
+                groupBy,
+                ...(Object.keys(groupLimits).length > 0 ? { groupLimits } : {}),
+              }),
           projectId,
           scope,
           visibility: filterToServerVisibility(listVisibility),

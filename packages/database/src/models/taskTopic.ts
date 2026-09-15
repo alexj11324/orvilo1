@@ -516,10 +516,10 @@ export class TaskTopicModel {
 
     const rows = await this.db
       .select({
-        completed24h: sql<number>`count(*) filter (where ${taskTopics.status} = 'completed' and ${taskTopics.createdAt} >= now() - interval '24 hours')`,
-        completed7d: sql<number>`count(*) filter (where ${taskTopics.status} = 'completed')`,
-        failed24h: sql<number>`count(*) filter (where ${taskTopics.status} in ('failed', 'timeout') and ${taskTopics.createdAt} >= now() - interval '24 hours')`,
-        failed7d: sql<number>`count(*) filter (where ${taskTopics.status} in ('failed', 'timeout'))`,
+        completed24h: sql<number>`count(*) filter (where ${taskTopics.status} = 'completed' and ${taskTopics.createdAt} >= now() - interval '24 hours')::int`,
+        completed7d: sql<number>`count(*) filter (where ${taskTopics.status} = 'completed')::int`,
+        failed24h: sql<number>`count(*) filter (where ${taskTopics.status} in ('failed', 'timeout') and ${taskTopics.createdAt} >= now() - interval '24 hours')::int`,
+        failed7d: sql<number>`count(*) filter (where ${taskTopics.status} in ('failed', 'timeout'))::int`,
       })
       .from(taskTopics)
       .innerJoin(tasks, eq(taskTopics.taskId, tasks.id))

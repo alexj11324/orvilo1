@@ -1,4 +1,4 @@
-import { Block } from '@lobehub/ui';
+import { Block, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { TaskPriority, TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -169,30 +169,32 @@ const TaskProperties = memo(() => {
               )
             }
           >
-            <Block
-              clickable
-              horizontal
-              align="center"
-              className={styles.propertyItem}
-              gap={8}
-              variant={'borderless'}
-            >
-              {reviewerUserId ? (
-                <>
-                  <AssigneeUserAvatar size={16} userId={reviewerUserId} />
-                  <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-                    {reviewerMeta?.title}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <UnassignedAssigneeIcon kind={'human'} size={16} />
-                  <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
-                    {t('taskDetail.reviewer')}
-                  </Text>
-                </>
-              )}
-            </Block>
+            <Tooltip title={t('taskDetail.reviewer')}>
+              <Block
+                clickable
+                horizontal
+                align="center"
+                className={styles.propertyItem}
+                gap={8}
+                variant={'borderless'}
+              >
+                {reviewerUserId ? (
+                  <>
+                    <AssigneeUserAvatar size={16} userId={reviewerUserId} />
+                    <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+                      {reviewerMeta?.title}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <UnassignedAssigneeIcon kind={'human'} size={16} />
+                    <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                      {t('taskDetail.reviewer')}
+                    </Text>
+                  </>
+                )}
+              </Block>
+            </Tooltip>
           </AssigneeMemberSelector>
         )}
 

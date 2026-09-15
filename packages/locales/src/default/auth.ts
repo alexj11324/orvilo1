@@ -61,7 +61,7 @@ export default {
   'apikey.list.columns.name': 'Name',
   'apikey.list.columns.scopes': 'Scope',
   'apikey.list.columns.status': 'Enabled',
-  'apikey.list.desc': 'API Keys let external tools and scripts call the LobeHub API as you.',
+  'apikey.list.desc': 'API Keys let external tools and scripts call the Orvilo API as you.',
   'apikey.list.empty': 'No API Keys yet',
   'apikey.list.restrictedEmpty.desc':
     'Only workspace admins can create API Keys. Contact a workspace admin if you need one.',

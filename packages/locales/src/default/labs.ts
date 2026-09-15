@@ -29,7 +29,7 @@ export default {
   'features.evalCapture.title': 'Save a turn as an eval case',
   'features.heteroSessionImport.title': 'Local Agent Session Import',
   'features.imessage.desc':
-    'Connect agents to iMessage through the local LobeHub Desktop BlueBubbles bridge.',
+    'Connect agents to iMessage through the local Orvilo Desktop BlueBubbles bridge.',
   'features.imessage.title': 'iMessage Channel',
   'features.inAppBrowser.desc':
     'Show the Browser tab in the conversation side panel: an embedded browser that opens search results in place and lets agents browse visibly.',

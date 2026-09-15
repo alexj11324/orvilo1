@@ -1,4 +1,4 @@
-import type { BriefDecision, TaskTopicHandoff } from '@orvilo/types';
+import type { BriefDecision, TaskTopicHandoff, TaskTopicIntegration } from '@orvilo/types';
 import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 
 import type { TaskTopicItem } from '../schemas/task';
@@ -64,6 +64,7 @@ export class TaskTopicModel {
     taskId: string,
     topicId: string,
     params: {
+      integration?: TaskTopicIntegration;
       operationId?: string;
       seq: number;
       trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal';
@@ -73,6 +74,7 @@ export class TaskTopicModel {
     await this.db
       .insert(taskTopics)
       .values({
+        integration: params.integration,
         operationId: params.operationId,
         seq: params.seq,
         taskId,
@@ -83,6 +85,30 @@ export class TaskTopicModel {
         workspaceId: this.workspaceId ?? null,
       })
       .onConflictDoNothing();
+  }
+
+  /**
+   * Patch the run's workspace-integration record in place. Used by
+   * TaskIntegrationService as the merge state machine advances (pending →
+   * conflict → integrated/…).
+   */
+  async updateIntegration(
+    taskId: string,
+    topicId: string,
+    patch: Partial<TaskTopicIntegration>,
+  ): Promise<void> {
+    const current = await this.db
+      .select({ integration: taskTopics.integration })
+      .from(taskTopics)
+      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()))
+      .limit(1);
+    const record = current[0]?.integration;
+    if (!record) return;
+
+    await this.db
+      .update(taskTopics)
+      .set({ integration: { ...record, ...patch } })
+      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
   }
 
   async updateStatus(taskId: string, topicId: string, status: string): Promise<void> {

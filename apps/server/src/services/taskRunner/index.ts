@@ -2,7 +2,13 @@ import { TaskIdentifier as TaskSkillIdentifier } from '@orvilo/builtin-skills';
 import { AcceptanceEvidenceIdentifier } from '@orvilo/builtin-tool-acceptance-evidence';
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { INBOX_SESSION_ID } from '@orvilo/const';
-import type { ExecAgentResult, TaskItem, TaskRunTrigger } from '@orvilo/types';
+import type {
+  ExecAgentResult,
+  TaskItem,
+  TaskRunTrigger,
+  TaskTopicIntegration,
+  WorkingDirConfig,
+} from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
@@ -14,6 +20,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { LobeChatDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
+import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 import { buildTaskPrompt } from './buildTaskPrompt';
 
@@ -22,6 +29,12 @@ const log = debug('task-runner');
 export interface RunTaskParams {
   continueTopicId?: string;
   extraPrompt?: string;
+  /**
+   * Workspace-integration record persisted on this run's task_topics row —
+   * set by the workspace provisioner or by TaskIntegrationService when it
+   * dispatches a corrective merge run.
+   */
+  integrationSeed?: TaskTopicIntegration;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
   taskId: string;
@@ -32,6 +45,15 @@ export interface RunTaskParams {
    * from an automation tick ().
    */
   trigger?: TaskRunTrigger;
+  /**
+   * Pin the run's topic working directory directly, bypassing workspace
+   * provisioning — used by TaskIntegrationService to run a corrective merge
+   * inside the shared integration worktree.
+   */
+  workspaceOverride?: {
+    workingDirectory: string;
+    workingDirectoryConfig: WorkingDirConfig;
+  };
 }
 
 export interface RunTaskResult extends ExecAgentResult {
@@ -53,6 +75,7 @@ export class TaskRunnerService {
   private taskLifecycle: TaskLifecycleService;
   private taskModel: TaskModel;
   private taskTopicModel: TaskTopicModel;
+  private taskWorkspace: TaskWorkspaceService;
   private userId: string;
 
   private workspaceId?: string;
@@ -66,6 +89,7 @@ export class TaskRunnerService {
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.briefModel = new BriefModel(db, userId, workspaceId);
     this.taskLifecycle = new TaskLifecycleService(db, userId, workspaceId);
+    this.taskWorkspace = new TaskWorkspaceService(db, userId, workspaceId);
   }
 
   async runTask(params: RunTaskParams): Promise<RunTaskResult> {
@@ -73,8 +97,10 @@ export class TaskRunnerService {
       taskId: idOrIdentifier,
       continueTopicId,
       extraPrompt,
+      integrationSeed,
       maxSteps,
       trigger = 'manual',
+      workspaceOverride,
     } = params;
 
     const task = await this.taskModel.resolve(idOrIdentifier);
@@ -201,6 +227,33 @@ export class TaskRunnerService {
 
       const taskConfig = (task.config ?? {}) as Record<string, unknown>;
 
+      // Workspace provisioning (CAID isolation): a fresh run on a
+      // workspace-bound task gets its own git worktree on the bound device,
+      // pinned onto the new topic via initialTopicMetadata. A
+      // `workspaceOverride` (corrective merge runs) skips provisioning — the
+      // caller already owns the directory.
+      let provisioned;
+      if (workspaceOverride) {
+        provisioned = undefined;
+      } else if (!continueTopicId) {
+        try {
+          provisioned = await this.taskWorkspace.provision({
+            seq: (task.totalTopics || 0) + 1,
+            task,
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Workspace provisioning failed';
+          await this.taskModel.updateStatus(task.id, 'paused', { error: message });
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message });
+        }
+      }
+
+      const initialWorkingDirectory =
+        workspaceOverride?.workingDirectory ?? provisioned?.workingDirectory;
+      const initialWorkingDirectoryConfig =
+        workspaceOverride?.workingDirectoryConfig ?? provisioned?.workingDirectoryConfig;
+      const runIntegration = integrationSeed ?? provisioned?.integration;
+
       // Backfill model snapshot for tasks created before the snapshot logic
       // landed, or whose assignee was set after creation. Once written, the
       // task is pinned to this model regardless of later agent default changes.
@@ -255,7 +308,19 @@ export class TaskRunnerService {
         title: extraPrompt ? extraPrompt.slice(0, 100) : task.name || task.identifier,
         trigger: TopicTrigger.RunTask,
         userInterventionConfig: { approvalMode: 'headless' },
-        ...(continueTopicId && { appContext: { topicId: continueTopicId } }),
+        ...(continueTopicId || initialWorkingDirectory || initialWorkingDirectoryConfig
+          ? {
+              appContext: {
+                ...(continueTopicId ? { topicId: continueTopicId } : {}),
+                initialTopicMetadata: {
+                  ...(initialWorkingDirectory ? { workingDirectory: initialWorkingDirectory } : {}),
+                  ...(initialWorkingDirectoryConfig
+                    ? { workingDirectoryConfig: initialWorkingDirectoryConfig }
+                    : {}),
+                },
+              },
+            }
+          : {}),
       });
 
       if (!result.success) {
@@ -270,6 +335,7 @@ export class TaskRunnerService {
           await this.taskModel.incrementTopicCount(task.id);
           await this.taskModel.updateCurrentTopic(task.id, result.topicId);
           await this.taskTopicModel.add(task.id, result.topicId, {
+            integration: runIntegration,
             operationId: result.operationId,
             seq: (task.totalTopics || 0) + 1,
             trigger,
@@ -290,6 +356,7 @@ export class TaskRunnerService {
           await this.taskModel.incrementTopicCount(task.id);
           await this.taskModel.updateCurrentTopic(task.id, result.topicId);
           await this.taskTopicModel.add(task.id, result.topicId, {
+            integration: runIntegration,
             operationId: result.operationId,
             seq: (task.totalTopics || 0) + 1,
             trigger,

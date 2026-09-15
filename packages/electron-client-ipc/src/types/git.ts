@@ -258,6 +258,26 @@ export interface GitPushResult {
   success: boolean;
 }
 
+export interface GitMergeResult {
+  /** Repo-relative paths reported unmerged. Present for 'conflict'/'in-progress'. */
+  conflicts?: string[];
+  error?: string;
+  /** Resulting HEAD sha when the merge committed. */
+  sha?: string;
+  /** 'merged' | 'conflict' | 'in-progress' (an existing merge was left untouched). */
+  state: 'merged' | 'conflict' | 'in-progress';
+  success: boolean;
+}
+
+export interface GitFinalizeMergeResult {
+  conflicts?: string[];
+  error?: string;
+  sha?: string;
+  /** 'integrated' — merge commit landed; 'conflict' — unmerged paths remain. */
+  state: 'integrated' | 'conflict';
+  success: boolean;
+}
+
 export interface GitAheadBehind {
   /** Commits in HEAD not in upstream — push count */
   ahead: number;

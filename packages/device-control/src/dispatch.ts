@@ -3,6 +3,7 @@ import {
   addGitWorktree,
   checkoutGitBranch,
   deleteGitBranch,
+  finalizeGitMerge,
   getGitAheadBehind,
   getGitBranch,
   getGitBranchDiff,
@@ -13,6 +14,7 @@ import {
   listGitBranches,
   listGitRemoteBranches,
   listGitWorktrees,
+  mergeGitBranch,
   pullGitBranch,
   pushGitBranch,
   removeGitWorktree,
@@ -82,6 +84,8 @@ export const DEVICE_RPC_METHODS = [
   'deleteGitBranch',
   'removeGitWorktree',
   'addGitWorktree',
+  'mergeGitBranch',
+  'finalizeGitMerge',
   'pullGitBranch',
   'pushGitBranch',
   'revertGitFile',
@@ -251,7 +255,23 @@ export const executeDeviceRpc = async (
     }
 
     case 'addGitWorktree': {
-      return addGitWorktree(params as { branch: string; path: string; worktreePath: string });
+      return addGitWorktree(
+        params as {
+          branch: string;
+          detach?: boolean;
+          path: string;
+          ref?: string;
+          worktreePath: string;
+        },
+      );
+    }
+
+    case 'mergeGitBranch': {
+      return mergeGitBranch(params as { baseRef?: string; branch: string; path: string });
+    }
+
+    case 'finalizeGitMerge': {
+      return finalizeGitMerge(params as { path: string });
     }
 
     case 'pullGitBranch': {
@@ -259,7 +279,7 @@ export const executeDeviceRpc = async (
     }
 
     case 'pushGitBranch': {
-      return pushGitBranch(params as { path: string });
+      return pushGitBranch(params as { path: string; remoteBranch?: string });
     }
 
     case 'revertGitFile': {

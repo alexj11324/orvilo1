@@ -140,6 +140,12 @@ scripts/clerk-to-betterauth/prod/*.json
 *.ppt*
 *.doc*
 *.xls*
+# Exception: file-loaders' tests read real documents from fixtures/ directly and
+# there is no script that generates them, so the office/pdf rules above (which
+# exist to ignore user documents) must not swallow the test inputs. They were
+# missing from this repository entirely, which made the whole package fail in CI
+# with ENOENT rather than a real assertion failure.
+!packages/file-loaders/**/fixtures/**
 e2e/reports
 out
 i18n-unused-keys-report.json

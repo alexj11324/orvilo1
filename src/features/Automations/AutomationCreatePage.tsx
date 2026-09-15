@@ -18,7 +18,7 @@ import { useTaskStore } from '@/store/task';
 import AssigneeAgentSelector from '../AgentTasks/features/AssigneeAgentSelector';
 import AssigneeAvatar from '../AgentTasks/features/AssigneeAvatar';
 import { useAgentDisplayMeta } from '../AgentTasks/shared/useAgentDisplayMeta';
-import { AUTOMATION_TEMPLATES } from './automationTemplates';
+import { AUTOMATION_TEMPLATES, type AutomationTemplateId } from './automationTemplates';
 import AutomationTriggerDraft, { type TriggerDraft } from './AutomationTriggerDraft';
 import { automationDetailPath } from './shared';
 
@@ -30,7 +30,9 @@ const AutomationCreatePage = memo(() => {
 
   const template = useMemo(() => {
     const id = searchParams.get('template');
-    return id ? AUTOMATION_TEMPLATES[id] : undefined;
+    return id && id in AUTOMATION_TEMPLATES
+      ? AUTOMATION_TEMPLATES[id as AutomationTemplateId]
+      : undefined;
   }, [searchParams]);
 
   const [name, setName] = useState(() => (template ? t(`templates.${template.id}.title`) : ''));

@@ -1,4 +1,4 @@
-import { Flexbox, Icon } from '@lobehub/ui';
+import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import {
   ActionIcon,
   Button,
@@ -63,23 +63,23 @@ const ProjectSelect = memo(() => {
   );
 
   return (
-    <Select
-      disabled={!canEdit || !taskId}
-      options={options}
-      size={'small'}
-      style={{ maxWidth: 200 }}
-      title={canEdit ? undefined : reason}
-      value={projectId ?? ''}
-      onChange={(value: string) => {
-        if (!taskId) return;
-        void updateTask(taskId, { projectId: value || null });
-      }}
-    />
+    <Tooltip title={canEdit ? undefined : reason}>
+      <Select
+        disabled={!canEdit || !taskId}
+        options={options}
+        size={'small'}
+        style={{ maxWidth: 200 }}
+        value={projectId ?? ''}
+        onChange={(value) => {
+          if (!taskId || typeof value !== 'string') return;
+          void updateTask(taskId, { projectId: value || null });
+        }}
+      />
+    </Tooltip>
   );
 });
 
 const AutomationStatusSwitch = memo(() => {
-  const { t } = useTranslation('automation');
   const { allowed: canEdit, reason } = usePermission('create_content');
   const status = useTaskStore(taskDetailSelectors.activeTaskStatus);
   const taskId = useTaskStore(taskDetailSelectors.activeTaskId);

@@ -1,5 +1,5 @@
-import { Center, Flexbox, Icon, Input } from '@lobehub/ui';
-import { ActionIcon, Block, Button, DropdownMenu, Text } from '@lobehub/ui/base-ui';
+import { Block, Center, Flexbox, Icon, Input } from '@lobehub/ui';
+import { ActionIcon, Button, DropdownMenu, Text } from '@lobehub/ui/base-ui';
 import { Pagination } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -78,6 +78,7 @@ interface RunRow {
   agentId?: string | null;
   completedAt?: Date | string | null;
   createdAt?: Date | string | null;
+  operationId?: string | null;
   sourceTaskIdentifier?: string | null;
   sourceTaskName?: string | null;
   status?: string | null;
@@ -108,7 +109,8 @@ const StatCard = memo<{
 const AutomationRunsPage = memo(() => {
   const { t } = useTranslation('automation');
   const [searchParams, setSearchParams] = useSearchParams();
-  const statusFilter = searchParams.get('status') ?? '';
+  const statusFilter =
+    RUN_STATUS_FILTER_OPTIONS.find((status) => status === searchParams.get('status')) ?? '';
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -128,7 +130,7 @@ const AutomationRunsPage = memo(() => {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     search: debouncedSearch || undefined,
-    statuses: statusFilter ? (RUN_STATUS_TO_TOPIC_STATUSES[statusFilter] ?? undefined) : undefined,
+    statuses: statusFilter ? RUN_STATUS_TO_TOPIC_STATUSES[statusFilter] : undefined,
   });
 
   const runs = (data?.data?.runs ?? []) as RunRow[];
@@ -230,7 +232,7 @@ const AutomationRunsPage = memo(() => {
             </Flexbox>
           )}
           {error ? (
-            <AsyncError error={error} variant={'section'} onRetry={() => void mutate()} />
+            <AsyncError error={error} onRetry={() => void mutate()} />
           ) : isLoading && runs.length === 0 ? (
             <Flexbox padding={24}>
               <Text type={'secondary'}>{t('runs.title')}…</Text>

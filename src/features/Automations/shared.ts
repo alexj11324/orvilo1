@@ -29,14 +29,17 @@ export const automationStatusesFor = (
   filter === 'active' ? AUTOMATION_ACTIVE_STATUSES : filter === 'paused' ? ['paused'] : undefined;
 
 /** One-line trigger summary for a list row ("Every 10 min" / "Every day 09:00"). */
-export const automationTriggerSummary = (task: TaskListItem, t: TFunction): string => {
+export const automationTriggerSummary = (
+  task: TaskListItem,
+  t: TFunction<'automation'>,
+): string => {
+  const tChat = t as unknown as TFunction<'chat'>;
   if (task.automationMode === 'schedule' && task.schedulePattern) {
-    return formatScheduleDescription(task.schedulePattern, t as TFunction<'chat'>);
+    return formatScheduleDescription(task.schedulePattern, tChat);
   }
   if (task.automationMode === 'heartbeat' && task.heartbeatInterval) {
     return t('trigger.every', {
-      interval: formatIntervalLabel(task.heartbeatInterval, t as TFunction<'chat'>),
-      ns: 'automation',
+      interval: formatIntervalLabel(task.heartbeatInterval, tChat),
     });
   }
   return '—';
@@ -71,8 +74,11 @@ export const runDuration = (
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 };
 
+/** Run sources with `run_source.*` locale keys — the literal union keeps `t()` typed. */
+export type RunSource = 'goal' | 'heartbeat' | 'manual' | 'schedule';
+
 /** Label of what fired a run — falls back to "Manual" for API/goal sources. */
-export const runTriggerLabel = (trigger: TaskRunTrigger | string | null | undefined): string => {
+export const runTriggerLabel = (trigger: TaskRunTrigger | string | null | undefined): RunSource => {
   switch (trigger) {
     case 'schedule': {
       return 'schedule';
@@ -128,14 +134,17 @@ export const RUN_STATUS_TO_TOPIC_STATUSES: Record<RunStatus, string[]> = {
 export const automationDetailPath = (identifier: string) => `/automations/${identifier}`;
 
 /** Detail-page counterpart of `automationTriggerSummary` (TaskDetailData shape). */
-export const automationDetailTriggerSummary = (detail: TaskDetailData, t: TFunction): string => {
+export const automationDetailTriggerSummary = (
+  detail: TaskDetailData,
+  t: TFunction<'automation'>,
+): string => {
+  const tChat = t as unknown as TFunction<'chat'>;
   if (detail.automationMode === 'schedule' && detail.schedule?.pattern) {
-    return formatScheduleDescription(detail.schedule.pattern, t as TFunction<'chat'>);
+    return formatScheduleDescription(detail.schedule.pattern, tChat);
   }
   if (detail.automationMode === 'heartbeat' && detail.heartbeat?.interval) {
     return t('trigger.every', {
-      interval: formatIntervalLabel(detail.heartbeat.interval, t as TFunction<'chat'>),
-      ns: 'automation',
+      interval: formatIntervalLabel(detail.heartbeat.interval, tChat),
     });
   }
   return '';

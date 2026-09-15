@@ -150,10 +150,7 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
   return (
     <div className={styles.row} onClick={() => onOpen(task.identifier)}>
       <div onClick={(e) => e.stopPropagation()}>
-        <Checkbox
-          checked={checked}
-          onChange={(e) => onCheckedChange(task.identifier, e.target.checked)}
-        />
+        <Checkbox checked={checked} onChange={(next) => onCheckedChange(task.identifier, next)} />
       </div>
       <div className={styles.titleCell}>
         <span className={styles.titleText}>{task.name || task.identifier}</span>
@@ -330,16 +327,14 @@ const AutomationsPage = memo(() => {
       <Flexbox horizontal gap={2}>
         <Button
           size={'small'}
-          type={scope === 'all' ? 'primary' : 'text'}
-          variant={scope === 'all' ? 'filled' : undefined}
+          type={scope === 'all' ? 'fill' : 'text'}
           onClick={() => setScope('all')}
         >
           {t('overview.team')}
         </Button>
         <Button
           size={'small'}
-          type={scope === 'created' ? 'primary' : 'text'}
-          variant={scope === 'created' ? 'filled' : undefined}
+          type={scope === 'created' ? 'fill' : 'text'}
           onClick={() => setScope('created')}
         >
           {t('overview.mine')}
@@ -435,7 +430,7 @@ const AutomationsPage = memo(() => {
             />
           )}
           {error ? (
-            <AsyncError error={error} variant={'section'} onRetry={() => void mutate()} />
+            <AsyncError error={error} onRetry={() => void mutate()} />
           ) : isLoading && !hasSettled ? (
             <Flexbox padding={24}>
               <Text type={'secondary'}>{t('page.title')}…</Text>
@@ -449,9 +444,9 @@ const AutomationsPage = memo(() => {
                   <Checkbox
                     checked={allChecked}
                     indeterminate={selected.size > 0 && !allChecked}
-                    onChange={(e) =>
+                    onChange={(checkedAll) =>
                       setSelected(
-                        e.target.checked
+                        checkedAll
                           ? new Set(visibleTasks.map((task) => task.identifier))
                           : new Set(),
                       )

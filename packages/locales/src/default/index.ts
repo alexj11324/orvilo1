@@ -2,6 +2,7 @@ import agent from './agent';
 import agentGroup from './agentGroup';
 import auth from './auth';
 import authError from './authError';
+import automation from './automation';
 import changelog from './changelog';
 import chat from './chat';
 import color from './color';
@@ -57,6 +58,7 @@ const resources = {
   agentGroup,
   auth,
   authError,
+  automation,
   changelog,
   chat,
   color,

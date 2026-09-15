@@ -55,6 +55,8 @@ export interface TaskUpdatePayload {
   /** Explicit board ordering key; anchors take precedence server-side. */
   position?: number;
   priority?: number;
+  /** Owning project; `null` unassigns. */
+  projectId?: string | null;
   /**
    * Status transition — the board commits one through `update` so a drop
    * writes status and position atomically. The lifecycle slice's own
@@ -282,6 +284,8 @@ export class TaskDetailSliceActionImpl {
     createdByAgentId?: string;
     description?: string;
     editorData?: unknown;
+    /** Periodic-execution interval in seconds for `automationMode: 'heartbeat'`. */
+    heartbeatInterval?: number;
     /** Bind a goal entity (`goals` row) to the created task. */
     instruction: string;
     name?: string;

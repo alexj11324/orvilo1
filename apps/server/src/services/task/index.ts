@@ -1332,6 +1332,7 @@ export class TaskService {
       name: task.name,
       parent,
       priority: task.priority,
+      projectId: task.projectId,
       schedule:
         task.schedulePattern || task.scheduleTimezone || scheduleConfig.maxExecutions != null
           ? {

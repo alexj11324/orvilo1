@@ -646,6 +646,8 @@ export interface TaskDetailData {
   name?: string | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
   priority?: number | null;
+  /** Owning project; drives the automation detail's project picker. */
+  projectId?: string | null;
   schedule?: {
     maxExecutions?: number | null;
     pattern?: string | null;

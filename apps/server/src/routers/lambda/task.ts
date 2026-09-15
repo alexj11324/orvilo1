@@ -87,6 +87,16 @@ const createSchema = z.object({
   createdByAgentId: z.string().optional(),
   description: z.string().optional(),
   editorData: z.unknown().optional(),
+  // Periodic-execution interval in seconds for `automationMode: 'heartbeat'`.
+  // Same floor as `updateSchema.heartbeatInterval`: any positive value must be
+  // ≥600s (10 min) so a client cannot schedule sub-minute ticks.
+  heartbeatInterval: z
+    .number()
+    .int()
+    .refine((v) => v === 0 || v >= 600, {
+      message: 'heartbeatInterval must be 0 (disabled) or at least 600 seconds (10 minutes)',
+    })
+    .optional(),
   identifierPrefix: z.string().optional(),
   instruction: z.string().min(1),
   name: z.string().optional(),
@@ -154,6 +164,7 @@ const updateSchema = z.object({
   /** Explicit board ordering key; `beforeId`/`afterId` anchors take precedence. */
   position: z.number().optional(),
   priority: z.number().min(0).max(4).optional(),
+  projectId: z.string().nullish(),
   schedulePattern: z.string().nullish(),
   scheduleTimezone: z.string().nullish(),
   status: z.enum(TASK_STATUSES).optional(),
@@ -858,6 +869,49 @@ export const taskRouter = router({
       });
     }
   }),
+
+  /**
+   * Workspace-wide automation run history + summary counts, backing the
+   * Automations "All runs" surface. Read-level procedure (viewers may watch
+   * runs), scoped the same way as `list.scope`: 'created' narrows to
+   * automations the caller created (the "mine" tab).
+   */
+  automationRuns: taskProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+        scope: z.enum(['created']).optional(),
+        search: z.string().trim().min(1).max(200).optional(),
+        statuses: z.array(z.string()).min(1).max(10).optional(),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      try {
+        const createdByUserId = input.scope === 'created' ? ctx.userId : undefined;
+        const [page, stats] = await Promise.all([
+          ctx.taskTopicModel.findAutomationRuns({
+            createdByUserId,
+            limit: input.limit,
+            offset: input.offset,
+            search: input.search,
+            statuses: input.statuses,
+          }),
+          ctx.taskTopicModel.automationRunStats({ createdByUserId }),
+        ]);
+        return {
+          data: { runs: page.rows, stats, total: page.total },
+          success: true,
+        };
+      } catch (error) {
+        console.error('[task:automationRuns]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to list automation runs',
+        });
+      }
+    }),
 
   detail: taskProcedure.input(idInput).query(async ({ input, ctx }) => {
     try {

@@ -76,6 +76,19 @@ class TaskService {
 
   getVerifyConfig = async (id: string) => lambdaClient.task.getVerifyConfig.query({ id });
 
+  /**
+   * Workspace-wide automation run history + 24h/7d outcome counts — the data
+   * behind the Automations "All runs" page.
+   */
+  automationRuns = async (params?: {
+    limit?: number;
+    offset?: number;
+    /** 'created' → only automations the caller created (the "mine" tab). */
+    scope?: 'created';
+    search?: string;
+    statuses?: string[];
+  }) => lambdaClient.task.automationRuns.query(params ?? {});
+
   // ── Mutations ──
 
   /**
@@ -107,6 +120,8 @@ class TaskService {
     createdByAgentId?: string;
     description?: string;
     editorData?: unknown;
+    /** Periodic-execution interval in seconds for `automationMode: 'heartbeat'`. */
+    heartbeatInterval?: number;
     /** Bind a goal entity (`goals` row) to the created task. */
     identifierPrefix?: string;
     instruction: string;
@@ -162,6 +177,8 @@ class TaskService {
       /** Explicit board ordering key; anchors take precedence server-side. */
       position?: number;
       priority?: number;
+      /** Owning project; `null` unassigns the task from its project. */
+      projectId?: string | null;
       // schedulePattern: cron expression for scheduled automation (e.g. '0 9 * * *')
       schedulePattern?: string | null;
       // scheduleTimezone: IANA timezone for the cron expression (e.g. 'Asia/Shanghai')

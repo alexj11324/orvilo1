@@ -669,7 +669,7 @@ export default {
   'historySummary': 'Historical Message Summary',
   'inactive': 'Inactive',
   'inbox.desc': 'Collaborate in one Workspace and move ideas into outcomes.',
-  'inbox.title': 'Lobe AI',
+  'inbox.title': 'Orvilo AI',
   'input.addAi': 'Add an AI message',
   'input.addAiPrefillUnsupported':
     'The current model doesn’t support ending the conversation with an assistant message. Follow it with a user message before sending.',
@@ -870,12 +870,12 @@ export default {
   'createModal.skillSuggestion.actions.install': 'Add Skill',
   'createModal.skillSuggestion.actions.installing': 'Adding…',
   'createModal.skillSuggestion.actions.openSkills': 'View in Skills',
-  'createModal.skillSuggestion.actions.tryInLobeAI': 'Use in LobeAI',
+  'createModal.skillSuggestion.actions.tryInLobeAI': 'Use in Orvilo AI',
   'createModal.skillSuggestion.description':
     'This looks like a reusable workflow. Install the Skill once, then use it across Agents.',
   'createModal.skillSuggestion.installed.description':
-    'You can use this Skill in LobeAI or add it to any Agent.',
-  'createModal.skillSuggestion.installed.ready': 'Ready in LobeAI',
+    'You can use this Skill in Orvilo AI or add it to any Agent.',
+  'createModal.skillSuggestion.installed.ready': 'Ready in Orvilo AI',
   'createModal.skillSuggestion.installed.title': 'Skill added',
   'createModal.skillSuggestion.installError':
     "Skill wasn't added. Retry, or create an Agent anyway.",
@@ -2208,7 +2208,7 @@ export default {
     "Couldn't load sub-tasks. Click the progress badge to retry.",
   'taskList.title': 'Tasks',
   'taskList.unassigned': 'Unassigned',
-  'taskList.unassignedAgentHint': 'Lobe AI will run this task when no agent is selected',
+  'taskList.unassignedAgentHint': 'Orvilo AI will run this task when no agent is selected',
   'taskList.assignTo': 'Assign to',
   'taskList.assigneeSearch.agentEmpty': 'No matching agent',
   'taskList.assigneeSearch.agentPlaceholder': 'Search agent...',

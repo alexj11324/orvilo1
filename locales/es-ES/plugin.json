@@ -171,7 +171,7 @@
   "builtins.lobe-agent.apiName.vent.rejected": "No registrado",
   "builtins.lobe-agent.subAgent.stats.tokens": "{{count}} fichas",
   "builtins.lobe-agent.subAgent.stats.tools": "{{count}} herramientas",
-  "builtins.lobe-agent.title": "Agente Lobe",
+  "builtins.lobe-agent.title": "Agente Orvilo",
   "builtins.lobe-agent.todos.allDone": "Todas las tareas completadas",
   "builtins.lobe-agent.todos.completedStep": "Completado",
   "builtins.lobe-agent.todos.currentStep": "Paso actual",

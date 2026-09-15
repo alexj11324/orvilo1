@@ -1081,7 +1081,7 @@ export default {
 
   'skills.details.sidebar.agent.title': 'Send this prompt to your Agent to install this Skill',
 
-  'skills.details.sidebar.agent.useOnLobeAI': 'Use on LobeAI',
+  'skills.details.sidebar.agent.useOnLobeAI': 'Use on Orvilo AI',
 
   'skills.details.sidebar.directoryLayout': 'Directory Layout',
 

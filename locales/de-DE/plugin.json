@@ -171,7 +171,7 @@
   "builtins.lobe-agent.apiName.vent.rejected": "Nicht aufgezeichnet",
   "builtins.lobe-agent.subAgent.stats.tokens": "{{count}} Token",
   "builtins.lobe-agent.subAgent.stats.tools": "{{count}} Werkzeuge",
-  "builtins.lobe-agent.title": "Lobe-Agent",
+  "builtins.lobe-agent.title": "Orvilo-Agent",
   "builtins.lobe-agent.todos.allDone": "Alle Aufgaben abgeschlossen",
   "builtins.lobe-agent.todos.completedStep": "Abgeschlossen",
   "builtins.lobe-agent.todos.currentStep": "Aktueller Schritt",

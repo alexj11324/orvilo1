@@ -86,7 +86,7 @@ export default {
   'builtins.lobe-agent.apiName.callSubAgent': 'Call sub-agent',
   'builtins.lobe-agent.subAgent.stats.tokens': '{{count}} tokens',
   'builtins.lobe-agent.subAgent.stats.tools': '{{count}} tools',
-  'builtins.lobe-agent.title': 'Lobe Agent',
+  'builtins.lobe-agent.title': 'Orvilo Agent',
   'builtins.lobe-claude-code.agent.instruction': 'Instruction',
   'builtins.lobe-claude-code.agent.result': 'Result',
   'builtins.lobe-claude-code.askUserQuestion.noAnswer':

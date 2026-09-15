@@ -171,7 +171,7 @@
   "builtins.lobe-agent.apiName.vent.rejected": "Не е записано",
   "builtins.lobe-agent.subAgent.stats.tokens": "{{count}} токена",
   "builtins.lobe-agent.subAgent.stats.tools": "{{count}} инструмента",
-  "builtins.lobe-agent.title": "Lobe Агент",
+  "builtins.lobe-agent.title": "Orvilo Агент",
   "builtins.lobe-agent.todos.allDone": "Всички задачи са изпълнени",
   "builtins.lobe-agent.todos.completedStep": "Завършено",
   "builtins.lobe-agent.todos.currentStep": "Текуща стъпка",

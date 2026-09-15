@@ -135,7 +135,7 @@ export default {
   'artworkStudio.remove': 'Remove',
   'artworkStudio.style.anime': 'Anime',
   'artworkStudio.style.lineArt': 'Hand-drawn Lines',
-  'artworkStudio.style.lobe': 'Lobe Style',
+  'artworkStudio.style.lobe': 'Orvilo Style',
   'artworkStudio.style.painterly': 'Hand-painted',
   'artworkStudio.style.pixel': 'Pixel Art',
   'artworkStudio.style.title': 'Style',
@@ -1329,7 +1329,7 @@ export default {
   'settingSelfIteration.enabled.desc':
     'Allow this assistant to review recent signals and improve its own skills when the self-iteration workflow runs.',
   'settingSelfIteration.enabled.managedDesc':
-    'Always on for Lobe AI while Self-Iteration is available.',
+    'Always on for Orvilo AI while Self-Iteration is available.',
   'settingSelfIteration.enabled.title': 'Enable Self-Iteration',
   'settingSelfIteration.title': 'Self-Iteration',
   'settingsSearch.empty': 'No settings found for "{{keyword}}"',
@@ -1508,14 +1508,14 @@ When I am ___, I need ___
   'startConversation': 'Start Conversation',
   'storage.actions.transfer.button': 'Move to…',
   'storage.actions.transfer.desc':
-    'Move agents and their data to another Workspace or your personal account. The originals leave the current space. LobeAI cannot be moved; copy it instead.',
+    'Move agents and their data to another Workspace or your personal account. The originals leave the current space. Orvilo AI cannot be moved; copy it instead.',
   'storage.actions.transfer.title': 'Move Agents',
   'storage.actions.transferAgentGroups.button': 'Move to…',
   'storage.actions.transferAgentGroups.desc':
     'Move groups, member Agents, and group conversation data to another Workspace or your personal account.',
   'storage.actions.transferAgentGroups.title': 'Move Groups',
-  'storage.actions.copyLobeAI.button': 'Copy to…',
-  'storage.actions.copyLobeAI.desc':
+  'storage.actions.copyOrvilo AI.button': 'Copy to…',
+  'storage.actions.copyOrvilo AI.desc':
     'Keep the originals and create independent copies in another Workspace or your personal account. Topics and messages are optional.',
   'storage.actions.copyLobeAI.title': 'Copy Agents',
   'storage.actions.copyAgentGroups.button': 'Copy to…',
@@ -2547,7 +2547,7 @@ When I am ___, I need ___
   'workspace.create.title': 'Create a new workspace',
   'workspace.description.title': 'Description',
   'workspace.general.avatar.description':
-    "This is your workspace's avatar. Upload your own, or generate one in the Lobe official style.",
+    "This is your workspace's avatar. Upload your own, or generate one in the Orvilo official style.",
   'workspace.general.avatar.generating': 'Creating an avatar that matches this workspace…',
   'workspace.general.avatar.hint': 'An avatar is optional but strongly recommended.',
   'workspace.general.avatar.studio.diyHint':
@@ -2598,7 +2598,7 @@ When I am ___, I need ___
   'workspace.general.devReset.confirm.title': 'Rerun setup wizard?',
   'workspace.general.devReset.cta': 'Rerun setup',
   'workspace.general.devReset.description':
-    'Reopens the setup wizard so you can revise LobeAI, pick new scenarios, or invite more teammates. Your existing settings and data are kept.',
+    'Reopens the setup wizard so you can revise Orvilo AI, pick new scenarios, or invite more teammates. Your existing settings and data are kept.',
   'workspace.general.devReset.failed': 'Could not reopen setup wizard',
   'workspace.general.devReset.hint': '',
   'workspace.general.devReset.success': 'Setup wizard reopened',
@@ -2695,15 +2695,15 @@ When I am ___, I need ___
   'workspace.general.transferAgentGroups.modal.title': 'Move Agent Groups',
   'workspace.general.transferAgentGroups.modal.transfer': 'Move {{count}} agent group(s)',
   'workspace.general.transferAgentGroups.modal.untitledGroup': 'Untitled Agent Group',
-  'workspace.general.copyLobeAI.modal.back': 'Back',
-  'workspace.general.copyLobeAI.modal.continue': 'Continue',
-  'workspace.general.copyLobeAI.modal.copyOptions.config.desc':
+  'workspace.general.copyOrvilo AI.modal.back': 'Back',
+  'workspace.general.copyOrvilo AI.modal.continue': 'Continue',
+  'workspace.general.copyOrvilo AI.modal.copyOptions.config.desc':
     'Required. Copies the model, prompt, tools, and Agent profile into a new Agent.',
   'workspace.general.copyLobeAI.modal.copyOptions.config.title': 'Agent configuration',
   'workspace.general.copyLobeAI.modal.copyOptions.history.desc':
     'Optional. Copies selected Agents’ topics and messages into the new Agents.',
-  'workspace.general.copyLobeAI.modal.copyOptions.history.title': 'Topics and messages',
-  'workspace.general.copyLobeAI.modal.copyOptions.knowledgeBase.reason':
+  'workspace.general.copyOrvilo AI.modal.copyOptions.history.title': 'Topics and messages',
+  'workspace.general.copyOrvilo AI.modal.copyOptions.knowledgeBase.reason':
     'Not supported yet. Reconnect them in the target workspace or personal account after copying.',
   'workspace.general.copyLobeAI.modal.copyOptions.knowledgeBase.title': 'Knowledge bases and files',
   'workspace.general.copyLobeAI.modal.copyOptions.optional': 'Optional',
@@ -2711,28 +2711,29 @@ When I am ___, I need ___
   'workspace.general.copyLobeAI.modal.copyOptions.title': 'Copy options',
   'workspace.general.copyLobeAI.modal.copyOptions.unsupported': 'Unavailable',
   'workspace.general.copyLobeAI.modal.create': 'Copy {{count}} agent(s)',
-  'workspace.general.copyLobeAI.modal.defaultInboxTitle': 'LobeAI',
+  'workspace.general.copyLobeAI.modal.defaultInboxTitle': 'Orvilo AI',
   'workspace.general.copyLobeAI.modal.done': 'Done',
   'workspace.general.copyLobeAI.modal.failed': 'Failed to copy agents',
   'workspace.general.copyLobeAI.modal.goToTarget': 'Go to {{target}}',
   'workspace.general.copyLobeAI.modal.includeHistory': 'Copy topics and messages',
   'workspace.general.copyLobeAI.modal.includeHistoryDesc':
     'Optional. Copies selected Agents’ conversation history into the new Agents.',
-  'workspace.general.copyLobeAI.modal.loadFailed': 'Failed to load agents',
-  'workspace.general.copyLobeAI.modal.noAgents': 'No agents available to copy',
-  'workspace.general.copyLobeAI.modal.selected': 'selected',
-  'workspace.general.copyLobeAI.modal.selectedAgent':
+  'workspace.general.copyOrvilo AI.modal.loadFailed': 'Failed to load agents',
+  'workspace.general.copyOrvilo AI.modal.noAgents': 'No agents available to copy',
+  'workspace.general.copyOrvilo AI.modal.selected': 'selected',
+  'workspace.general.copyOrvilo AI.modal.selectedAgent':
     'This Agent will be copied. The original stays where it is.',
   'workspace.general.copyLobeAI.modal.selectAgents':
     'Select Agents to copy. Originals stay where they are.',
-  'workspace.general.copyLobeAI.modal.selectPlaceholder': 'Select workspace or personal account...',
-  'workspace.general.copyLobeAI.modal.selectTarget':
+  'workspace.general.copyOrvilo AI.modal.selectPlaceholder':
+    'Select workspace or personal account...',
+  'workspace.general.copyOrvilo AI.modal.selectTarget':
     'You can copy to personal or workspaces that have permission to create an agent.',
   'workspace.general.copyLobeAI.modal.success': '{{count}} agent(s) copied',
   'workspace.general.copyLobeAI.modal.backgroundCopy':
     'Chat history is large, so it keeps copying in the background. The agents are ready to use now; conversations light up one by one as they finish.',
-  'workspace.general.copyLobeAI.modal.title': 'Copy Agents',
-  'workspace.general.copyLobeAI.modal.untitledAgent': 'Untitled Agent',
+  'workspace.general.copyOrvilo AI.modal.title': 'Copy Agents',
+  'workspace.general.copyOrvilo AI.modal.untitledAgent': 'Untitled Agent',
   'workspace.general.copyAgentGroups.modal.back': 'Back',
   'workspace.general.copyAgentGroups.modal.backgroundCopy':
     'Chat history is large, so it keeps copying in the background. The agent group is ready to use now; conversations light up one by one as they finish.',
@@ -3242,22 +3243,22 @@ When I am ___, I need ___
   'workspace.onboarding.finish': 'Finish',
   'workspace.onboarding.skipConfirm.title': 'Skip workspace setup?',
   'workspace.onboarding.skipConfirm.description':
-    'You can always customize LobeAI and add agents later in Workspace settings.',
+    'You can always customize Orvilo AI and add agents later in Workspace settings.',
   'workspace.onboarding.skipConfirm.ok': 'Skip',
   'workspace.onboarding.skipConfirm.cancel': 'Continue setup',
   'workspace.onboarding.toast.saved': 'Saved',
   'workspace.onboarding.toast.failed': 'Could not save. Please try again.',
   'workspace.onboarding.toast.installAgentsFailed':
     "Couldn't add the selected agents. You can install them later from the marketplace.",
-  'workspace.onboarding.step1.heading': 'Personalize LobeAI',
+  'workspace.onboarding.step1.heading': 'Personalize Orvilo AI',
   'workspace.onboarding.step1.subtitle':
     'Give your workspace assistant an identity your team will recognize.',
   'workspace.onboarding.step1.avatarLabel': 'Avatar',
   'workspace.onboarding.step1.avatarHint': 'Pick an emoji or upload an image.',
   'workspace.onboarding.step1.avatarTooLarge': 'Avatar file must be smaller than 5MB.',
   'workspace.onboarding.step1.avatarUploadFailed': 'Failed to upload avatar',
-  'workspace.onboarding.step1.nameLabel': "LobeAI's name",
-  'workspace.onboarding.step1.namePlaceholder': 'e.g. LobeAI',
+  'workspace.onboarding.step1.nameLabel': "Orvilo AI's name",
+  'workspace.onboarding.step1.namePlaceholder': 'e.g. Orvilo AI',
   'workspace.onboarding.step1.suggestion.title': 'Need ideas? Pick one to start.',
   'workspace.onboarding.step1.suggestion.switch': 'Try another set',
   'workspace.onboarding.step1.guide.name.title': 'Give It a Name',
@@ -3270,7 +3271,7 @@ When I am ___, I need ___
   'workspace.onboarding.step1.guide.growTogether.desc':
     "Every conversation teaches me your team's vibe — the longer we work together, the better.",
   'workspace.onboarding.step1.footer':
-    "Set up your workspace's LobeAI assistant — it learns from every conversation and grows into your team's go-to teammate.",
+    "Set up your workspace's Orvilo AI assistant — it learns from every conversation and grows into your team's go-to teammate.",
   'workspace.onboarding.step1.sentence.1': "Ready? Let me be your team's go-to teammate.",
   'workspace.onboarding.step1.sentence.2': 'What role do you want me to play in this workspace?',
   'workspace.onboarding.step1.sentence.3': 'First, give me a name your team will love :)',
@@ -3457,8 +3458,8 @@ When I am ___, I need ___
   'tools.builtins.lobe-agent-management.description': 'Create, manage, and orchestrate AI agents',
   'tools.builtins.lobe-agent-management.title': 'Agent Management',
   'tools.builtins.lobe-agent.description':
-    'Built-in Lobe Agent capabilities: plan and todo management, sub-agent dispatch, and multimodal media analysis',
-  'tools.builtins.lobe-agent.title': 'Lobe Agent',
+    'Built-in Orvilo Agent capabilities: plan and todo management, sub-agent dispatch, and multimodal media analysis',
+  'tools.builtins.lobe-agent.title': 'Orvilo Agent',
   'tools.builtins.lobe-brief.description':
     'Report progress, deliver results, and request user decisions',
   'tools.builtins.lobe-brief.title': 'Brief Tools',

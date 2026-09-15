@@ -9,6 +9,8 @@ import type {
   GitCheckoutResult,
   GitDeleteBranchResult,
   GitFileRevertResult,
+  GitFinalizeMergeResult,
+  GitMergeResult,
   GitPullResult,
   GitPushResult,
   GitRemoteBranchListItem,
@@ -212,12 +214,21 @@ export const pullGitBranch = async (payload: { path: string }): Promise<GitPullR
 /**
  * Push the current branch to its same-named remote on `origin`. Uses
  * `git push -u origin HEAD` so the action works even when the local branch name
- * differs from the configured upstream.
+ * differs from the configured upstream. `remoteBranch` overrides the published
+ * ref (`git push -u origin HEAD:refs/heads/<remoteBranch>`) — how a detached
+ * integration worktree lands its merge result onto `origin/<base>`.
  */
-export const pushGitBranch = async (payload: { path: string }): Promise<GitPushResult> => {
-  const { path: dirPath } = payload;
+export const pushGitBranch = async (payload: {
+  path: string;
+  remoteBranch?: string;
+}): Promise<GitPushResult> => {
+  const { path: dirPath, remoteBranch } = payload;
+  if (remoteBranch && isInvalidBranchRef(remoteBranch)) {
+    return { error: `Invalid remote branch name: ${remoteBranch}`, success: false };
+  }
+  const refspec = remoteBranch ? `HEAD:refs/heads/${remoteBranch}` : 'HEAD';
   try {
-    const { stderr } = await execFileAsync('git', ['push', '-u', 'origin', 'HEAD'], {
+    const { stderr } = await execFileAsync('git', ['push', '-u', 'origin', refspec], {
       cwd: dirPath,
       timeout: 60_000,
     });
@@ -228,6 +239,136 @@ export const pushGitBranch = async (payload: { path: string }): Promise<GitPushR
     const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
     log.debug('[pushGitBranch] failed', { stderr });
     return { error: stderr || 'git push failed', success: false };
+  }
+};
+
+const readUnmergedPaths = async (dirPath: string): Promise<string[]> => {
+  const { stdout } = await execFileAsync('git', ['diff', '--name-only', '--diff-filter=U', '-z'], {
+    cwd: dirPath,
+    timeout: 10_000,
+  });
+  return stdout.split('\0').filter(Boolean);
+};
+
+const hasMergeInProgress = async (dirPath: string): Promise<boolean> => {
+  try {
+    await execFileAsync('git', ['rev-parse', '--verify', '--quiet', 'MERGE_HEAD'], {
+      cwd: dirPath,
+      timeout: 5000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const readHeadSha = async (dirPath: string): Promise<string | undefined> => {
+  try {
+    const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+      cwd: dirPath,
+      timeout: 5000,
+    });
+    return stdout.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * Merge `branch` into the current HEAD of the given working directory
+ * (`git merge --no-ff --no-edit`). Designed for a detached, system-owned
+ * integration worktree: `baseRef` re-baselines it first (`git reset --hard`)
+ * so repeated merges start from the latest base. A conflict leaves the merge
+ * in progress and reports the unmerged paths — the caller hands resolution to
+ * an engineer run rather than aborting. An already-running merge is reported
+ * as 'in-progress' and never touched.
+ */
+export const mergeGitBranch = async (payload: {
+  baseRef?: string;
+  branch: string;
+  path: string;
+}): Promise<GitMergeResult> => {
+  const { path: dirPath, branch, baseRef } = payload;
+  if (!dirPath?.trim())
+    return { error: 'Working directory is required', state: 'conflict', success: false };
+  if (!branch?.trim())
+    return { error: 'Branch name is required', state: 'conflict', success: false };
+  if (isInvalidBranchRef(branch)) {
+    return { error: `Invalid branch name: ${branch}`, state: 'conflict', success: false };
+  }
+  if (baseRef && isInvalidBranchRef(baseRef)) {
+    return { error: `Invalid base ref: ${baseRef}`, state: 'conflict', success: false };
+  }
+
+  try {
+    if (await hasMergeInProgress(dirPath)) {
+      return {
+        conflicts: await readUnmergedPaths(dirPath),
+        state: 'in-progress',
+        success: false,
+      };
+    }
+
+    if (baseRef) {
+      await execFileAsync('git', ['reset', '--hard', baseRef], {
+        cwd: dirPath,
+        timeout: 30_000,
+      });
+    }
+
+    try {
+      await execFileAsync('git', ['merge', '--no-ff', '--no-edit', branch], {
+        cwd: dirPath,
+        timeout: 120_000,
+      });
+      return { sha: await readHeadSha(dirPath), state: 'merged', success: true };
+    } catch (error: any) {
+      const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
+      if (await hasMergeInProgress(dirPath)) {
+        return {
+          conflicts: await readUnmergedPaths(dirPath),
+          error: stderr || undefined,
+          state: 'conflict',
+          success: false,
+        };
+      }
+      log.debug('[mergeGitBranch] failed', { branch, stderr });
+      return { error: stderr || 'git merge failed', state: 'conflict', success: false };
+    }
+  } catch (error: any) {
+    const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
+    log.debug('[mergeGitBranch] failed', { branch, stderr });
+    return { error: stderr || 'git merge failed', state: 'conflict', success: false };
+  }
+};
+
+/**
+ * Check / land a merge in progress inside the integration worktree after a
+ * corrective run returned. MERGE_HEAD absent means the engineer already
+ * committed the merge — report HEAD. Unmerged paths still present report as
+ * 'conflict'. All-resolved-but-uncommitted lands via `git commit --no-edit`.
+ */
+export const finalizeGitMerge = async (payload: {
+  path: string;
+}): Promise<GitFinalizeMergeResult> => {
+  const { path: dirPath } = payload;
+  if (!dirPath?.trim())
+    return { error: 'Working directory is required', state: 'conflict', success: false };
+
+  try {
+    if (!(await hasMergeInProgress(dirPath))) {
+      return { sha: await readHeadSha(dirPath), state: 'integrated', success: true };
+    }
+
+    const conflicts = await readUnmergedPaths(dirPath);
+    if (conflicts.length > 0) return { conflicts, state: 'conflict', success: false };
+
+    await execFileAsync('git', ['commit', '--no-edit'], { cwd: dirPath, timeout: 30_000 });
+    return { sha: await readHeadSha(dirPath), state: 'integrated', success: true };
+  } catch (error: any) {
+    const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
+    log.debug('[finalizeGitMerge] failed', { stderr });
+    return { error: stderr || 'git merge finalize failed', state: 'conflict', success: false };
   }
 };
 

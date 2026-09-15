@@ -624,6 +624,28 @@ export interface DeviceGitAddWorktreeResult {
   worktreePath?: string;
 }
 
+/** Result of the `mergeGitBranch` device RPC. Mirrors the desktop `GitMergeResult`. */
+export interface DeviceGitMergeResult {
+  /** Repo-relative paths reported unmerged. Present for 'conflict'/'in-progress'. */
+  conflicts?: string[];
+  error?: string;
+  /** Resulting HEAD sha when the merge committed. */
+  sha?: string;
+  /** 'merged' | 'conflict' | 'in-progress' (an existing merge was left untouched). */
+  state: 'merged' | 'conflict' | 'in-progress';
+  success: boolean;
+}
+
+/** Result of the `finalizeGitMerge` device RPC. Mirrors `GitFinalizeMergeResult`. */
+export interface DeviceGitFinalizeMergeResult {
+  conflicts?: string[];
+  error?: string;
+  sha?: string;
+  /** 'integrated' — merge commit landed; 'conflict' — unmerged paths remain. */
+  state: 'integrated' | 'conflict';
+  success: boolean;
+}
+
 /**
  * Repo-relative paths of dirty working-tree files for a directory on a remote
  * device, returned by the `getGitWorkingTreeFiles` device RPC. Powers the Files

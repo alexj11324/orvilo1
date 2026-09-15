@@ -140,6 +140,11 @@ scripts/clerk-to-betterauth/prod/*.json
 *.ppt*
 *.doc*
 *.xls*
+# "*.doc*" is meant for Word documents, but it also matches any config file whose
+# name happens to start with ".doc" — which is exactly .dockerignore. Without that
+# file Docker sends the entire working tree (node_modules, .git, .next) as the build
+# context, so it has to stay tracked. Same trap as the fixtures below.
+!.dockerignore
 # Exception: file-loaders' tests read real documents from fixtures/ directly and
 # there is no script that generates them, so the office/pdf rules above (which
 # exist to ignore user documents) must not swallow the test inputs. They were

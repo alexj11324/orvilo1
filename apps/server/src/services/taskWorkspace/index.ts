@@ -12,7 +12,8 @@ import debug from 'debug';
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
 import type { LobeChatDatabase } from '@/database/type';
-import { resolveExecutionTarget } from '@/helpers/executionTarget';
+import { resolveExecutionPlan } from '@/helpers/executionTarget';
+import { supportsCloudHeterogeneousSandbox } from '@/server/services/aiAgent/helpers/heteroErrors';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import {
   getRepoDefaultBranch,
@@ -116,12 +117,14 @@ export class TaskWorkspaceService {
 
     // The agent lookup is only needed for its bound-device fallback, or to
     // resolve the execution target when a remote (`repo`) binding exists —
-    // a device-pinned, repoPath-only binding needs neither.
+    // a device-pinned, repoPath-only binding needs neither. Not-found agents
+    // come back `null`; a real lookup failure propagates so the run pauses
+    // loudly instead of silently degrading to an unprovisioned run.
     const needsAgent = !config.deviceId || !!config.repo;
     const agent =
       needsAgent && task.assigneeAgentId
-        ? await this.agentModel.getAgentConfig(task.assigneeAgentId).catch(() => undefined)
-        : undefined;
+        ? await this.agentModel.getAgentConfig(task.assigneeAgentId)
+        : null;
     const deviceId = config.deviceId ?? agent?.agencyConfig?.boundDeviceId;
 
     // Follow where the run actually executes: a sandbox-resolved run takes the
@@ -132,9 +135,14 @@ export class TaskWorkspaceService {
     if (
       config.repo &&
       parseGithubRepo(config.repo) &&
-      runsInSandbox(agent?.agencyConfig ?? undefined)
+      runsInSandbox(agent?.agencyConfig ?? undefined, config.deviceId)
     ) {
-      return this.provisionOnRemote({ config, seq, task });
+      return this.provisionOnRemote({
+        config,
+        credKey: agent?.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY,
+        seq,
+        task,
+      });
     }
 
     if (config.repoPath && deviceId) {
@@ -215,6 +223,12 @@ export class TaskWorkspaceService {
    */
   private async provisionOnRemote(params: {
     config: TaskWorkspaceConfig;
+    /**
+     * Assignee's `env.GITHUB_CRED_KEY` override — the same credential the
+     * sandbox run pushes under, so the default-branch lookup queries the
+     * right account.
+     */
+    credKey?: string;
     seq: number;
     task: TaskItem;
   }): Promise<ProvisionedWorkspace> {
@@ -222,6 +236,7 @@ export class TaskWorkspaceService {
     const repo = config.repo!;
 
     const token = await resolveGithubAccessToken({
+      credKey: params.credKey,
       db: this.db,
       userId: this.userId,
       workspaceId: this.workspaceId,
@@ -318,17 +333,37 @@ const taskBranchName = (identifier: string, seq: number): string =>
   seq > 1 ? `task/${identifier}-r${seq}` : `task/${identifier}`;
 
 /**
- * Whether a run by this assignee resolves to the cloud sandbox — the only
- * target the remote contract can bind to. Mirrors the server-side resolution
- * in `toolDiscovery`/`heteroDispatch`: `clientExecutionAvailable` is the
- * device-gateway flag (a gateway tunnels a stored `local` target to a real
- * device, so only a gateway-less server coerces it to sandbox).
+ * Whether a run by this assignee lands in the cloud sandbox — the only place
+ * the remote contract can bind to. Reproduces the local-CLI hetero resolution
+ * in `dispatchHeteroAgent` rather than guessing from the stored target:
+ * `clientExecutionAvailable` is hardcoded `false` there (the server never
+ * counts itself as the client, so a stored `local`/`none`/`unset` coerces to
+ * sandbox exactly as it will at run time), the sandbox allowlist is
+ * `supportsCloudHeterogeneousSandbox` (claude-code/codex), and the task's
+ * `deviceId` pin plays the role of the request-level device override.
+ *
+ * Plain (non-hetero) agents never reach `spawnHeteroSandbox` — `repos`
+ * pre-cloning, `GITHUB_TOKEN` and the contract itself are hetero-only — so a
+ * non-hetero or sandbox-incapable assignee returns false here and the binding
+ * falls back to the device path or no provision. `canUseDevice` stays at its
+ * first-party default: server-initiated task runs are never denied senders.
  */
-const runsInSandbox = (agencyConfig: LobeAgentAgencyConfig | undefined): boolean =>
-  resolveExecutionTarget(agencyConfig, {
-    clientExecutionAvailable: deviceGateway.isConfigured,
-    isHetero: !!agencyConfig?.heterogeneousProvider,
-  }) === 'sandbox';
+const runsInSandbox = (
+  agencyConfig: LobeAgentAgencyConfig | undefined,
+  requestedDeviceId?: string,
+): boolean => {
+  const heteroType = agencyConfig?.heterogeneousProvider?.type;
+  if (!heteroType || !supportsCloudHeterogeneousSandbox(heteroType)) return false;
+  return (
+    resolveExecutionPlan({
+      agencyConfig,
+      clientExecutionAvailable: false,
+      isHetero: true,
+      requestedDeviceId,
+      sandboxExecutionAvailable: supportsCloudHeterogeneousSandbox(heteroType),
+    }).kind === 'sandbox'
+  );
+};
 
 /** Branch/push/PR contract appended to the task prompt for remote runs. */
 const buildRemoteContractPrompt = (params: {

@@ -2,6 +2,7 @@ import type { TaskItem, TaskTopicIntegration } from '@orvilo/types';
 import { cloudSandboxRepoPath, deriveWorktreePath } from '@orvilo/types';
 import debug from 'debug';
 
+import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { LobeChatDatabase } from '@/database/type';
@@ -202,9 +203,15 @@ export class TaskIntegrationService {
       return 'blocked';
     }
 
-    const check = await this.verifyRemoteMerge(record);
-    if (check.prUrl) {
-      await this.taskTopicModel.updateIntegration(task.id, topicId, { prUrl: check.prUrl });
+    const check = await this.verifyRemoteMerge(record, task);
+    const patch: Partial<TaskTopicIntegration> = {};
+    if (check.prUrl) patch.prUrl = check.prUrl;
+    // Record *why* a merge run is being dispatched — an unverifiable remote
+    // state (rate limit, outage, missing cred) spends an integrator run and
+    // must not be invisible.
+    if (check.error) patch.lastError = check.error;
+    if (Object.keys(patch).length > 0) {
+      await this.taskTopicModel.updateIntegration(task.id, topicId, patch);
     }
     if (check.merged) {
       await this.landRemoteMerge(task.id, topicId, record, check);
@@ -219,7 +226,7 @@ export class TaskIntegrationService {
     topicId: string,
     record: TaskTopicIntegration,
   ): Promise<IntegrationOutcome> {
-    const check = await this.verifyRemoteMerge(record);
+    const check = await this.verifyRemoteMerge(record, task);
     const patch: Partial<TaskTopicIntegration> = {};
     if (check.prUrl) patch.prUrl = check.prUrl;
     if (check.error) patch.lastError = check.error;
@@ -258,7 +265,10 @@ export class TaskIntegrationService {
    * ancestry), otherwise an ancestry compare decides. API failures report
    * `merged: false` + `error` — the caller treats them as "not landed yet".
    */
-  private async verifyRemoteMerge(record: TaskTopicIntegration): Promise<{
+  private async verifyRemoteMerge(
+    record: TaskTopicIntegration,
+    task: TaskItem,
+  ): Promise<{
     error?: string;
     merged: boolean;
     prUrl?: string;
@@ -266,7 +276,19 @@ export class TaskIntegrationService {
   }> {
     if (!record.repo) return { error: 'Remote record is missing its repo', merged: false };
 
+    // The assignee's `env.GITHUB_CRED_KEY` override must drive verify the same
+    // way it drives the sandbox run — verifying against the default 'github'
+    // cred while the run pushed under another account misreads private-repo
+    // merges as 'unknown' forever.
+    const credKey = task.assigneeAgentId
+      ? ((
+          await new AgentModel(this.db, this.userId, this.workspaceId)
+            .getAgentConfig(task.assigneeAgentId)
+            .catch(() => null)
+        )?.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY ?? 'github')
+      : 'github';
     const token = await resolveGithubAccessToken({
+      credKey,
       db: this.db,
       userId: this.userId,
       workspaceId: this.workspaceId,
@@ -303,9 +325,19 @@ export class TaskIntegrationService {
       pushedToRemote: true,
       state: 'integrated',
     };
-    await this.taskTopicModel.updateIntegration(taskId, topicId, patch);
-    if (record.runTopicId) {
-      await this.taskTopicModel.updateIntegration(taskId, record.runTopicId, patch);
+    // Multi-hop corrective chains (task → integrate → integrate → …) must all
+    // land — `runTopicId` alone only walks one hop back and would strand the
+    // original run's row at 'merging' after a 3+-hop chain. Fan out by branch
+    // like the device path's publish loop does.
+    const rows = await this.taskTopicModel.findByTaskId(taskId);
+    for (const row of rows) {
+      if (
+        row.topicId &&
+        row.integration?.branch === record.branch &&
+        row.integration.state !== 'blocked'
+      ) {
+        await this.taskTopicModel.updateIntegration(taskId, row.topicId, patch);
+      }
     }
   }
 

@@ -314,6 +314,40 @@ describe('TaskWorkspaceService', () => {
       expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1');
     });
 
+    it('emits the contract for a default (unset-target) hetero assignee even with the gateway configured', async () => {
+      // Dispatch resolves unset/`none` targets to the sandbox because it
+      // hardcodes clientExecutionAvailable=false — a gateway-configured server
+      // must not fool provisioning into the device path and lose the run's
+      // work to the ephemeral sandbox.
+      (deviceGateway as { isConfigured: boolean }).isConfigured = true;
+      try {
+        mockAgentModel.getAgentConfig.mockResolvedValue({
+          agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        });
+        const task = baseTask({ config: { workspace: remoteWorkspaceConfig } });
+
+        const result = await service.provision({ seq: 1, task });
+
+        expect(result?.repos).toEqual(['acme/widgets']);
+        expect(result?.workingDirectory).toBe('/workspace/widgets');
+      } finally {
+        (deviceGateway as { isConfigured: boolean }).isConfigured = false;
+      }
+    });
+
+    it('does not emit the contract for a non-hetero assignee', async () => {
+      // `repos` pre-clone + GITHUB_TOKEN only exist on the hetero sandbox path;
+      // a plain agent on 'sandbox' could never honour the contract.
+      mockAgentModel.getAgentConfig.mockResolvedValue({
+        agencyConfig: { executionTarget: 'sandbox' },
+      });
+      const task = baseTask({ config: { workspace: remoteWorkspaceConfig } });
+
+      const result = await service.provision({ seq: 1, task });
+
+      expect(result).toBeUndefined();
+    });
+
     it('runs unprovisioned when the repo coordinate is unparseable', async () => {
       const task = baseTask({
         config: { workspace: { provider: 'git', repo: 'not-a-repo' } },

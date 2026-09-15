@@ -164,3 +164,18 @@ GitHub remote for a later integrator run to land it.
     hand unfinished merges to a corrective **sandbox** run (`workspaceOverride.repos`),
     skipping all device RPCs; publish/cleanup stamps `pushedToRemote` on all rows
 - [ ] Phase D: cleanup + UI surface
+  - D1 (`feat/orchestrator-worktree-cleanup`, stacked on Phase C):
+    `TaskIntegrationService.cleanupTaskWorktrees` removes **task-scoped** device
+    worktrees for stale records (pending/merging/conflict or `worktreeCleaned`
+    false) and flags them so a failed removal retries on a later pass. Wired into
+    run cancel/remove, task terminal-status transitions (`canceled|completed|
+failed`), the cascade update, and both task-delete paths (router + agent
+    tool runtime). The shared per-(repo, base) integration worktree is never
+    removed by task-scoped cleanup — deleting it could destroy another task's
+    in-flight merge on the same base. Remote records skip device RPCs.
+  - D2 (`feat/orchestrator-integration-ui`, stacked on Phase C):
+    `TaskDetailActivity.integration` mirrors `task_topics.integration` through
+    `TaskTopicModel` + `TaskService`; `RunIntegrationTag` renders the run's
+    merge state chip (pending/merging/conflict/blocked/integrated/skipped) on
+    `TopicCard` + `TopicChatDrawer` with a tooltip carrying branch→base,
+    attempts, conflicts, lastError and the PR link. en-US + zh-CN keys.

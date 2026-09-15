@@ -322,6 +322,7 @@ describe('TaskIntegrationService', () => {
 
     it('settles a task run whose branch already landed on the remote', async () => {
       mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(remoteRecord()));
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(remoteRecord())]);
       vi.mocked(findBranchPr).mockResolvedValue({
         merged: true,
         sha: 'merge123',
@@ -396,6 +397,12 @@ describe('TaskIntegrationService', () => {
         state: 'merging',
       });
       mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
+      // Both rows tracking this branch land — the integrator's and the
+      // original run's.
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([
+        asTopic(record),
+        { integration: remoteRecord(), topicId: 'topic_0' } as TaskTopicItem,
+      ]);
       vi.mocked(isBranchMergedInto).mockResolvedValue('merged');
 
       const outcome = await service.integrateOnComplete({

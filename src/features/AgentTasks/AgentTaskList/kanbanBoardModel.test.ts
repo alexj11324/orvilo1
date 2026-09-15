@@ -19,6 +19,7 @@ import {
   kanbanColumnMoveScope,
   kanbanStatusColumnsExcludedBy,
   normalizeKanbanGroupBy,
+  placeKanbanCardInColumn,
   preserveKanbanColumnOrder,
   resolveKanbanDropColumn,
   STATUS_KANBAN_COLUMNS,
@@ -317,6 +318,37 @@ describe('kanbanBoardModel', () => {
         backlog: ['T-2'],
         done: ['T-1'],
         needsInput: ['T-3'],
+      });
+    });
+
+    describe('placeKanbanCardInColumn', () => {
+      it('removes the card from a stale preview column when released elsewhere', () => {
+        // Regression: the drag-over preview parked T-1 in `done`, but the
+        // pointer released over `canceled`. Without the sweep the id stays in
+        // `done` too and the card renders twice while the move settles.
+        const next = placeKanbanCardInColumn(
+          { backlog: ['T-9'], canceled: ['T-2'], done: ['T-1', 'T-3'] },
+          'canceled',
+          'T-1',
+          'T-2',
+        );
+
+        expect(next.done).toEqual(['T-3']);
+        expect(next.canceled).toEqual(['T-1', 'T-2']);
+        expect(next.backlog).toEqual(['T-9']);
+      });
+
+      it('reorders inside the same column when already parked there', () => {
+        const next = placeKanbanCardInColumn({ col: ['A', 'B', 'C'] }, 'col', 'A', 'C');
+
+        expect(next.col).toEqual(['B', 'C', 'A']);
+      });
+
+      it('appends to the column end when released over the column itself', () => {
+        const next = placeKanbanCardInColumn({ a: ['T-1'], b: ['T-2', 'T-3'] }, 'b', 'T-1', 'b');
+
+        expect(next.a).toEqual([]);
+        expect(next.b).toEqual(['T-2', 'T-3', 'T-1']);
       });
     });
   });

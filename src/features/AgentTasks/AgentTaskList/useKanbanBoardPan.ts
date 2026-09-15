@@ -137,11 +137,13 @@ export const useKanbanBoardPan = <T extends HTMLElement>() => {
       }
 
       // Horizontal axis only, driven by captured-pointer clientX deltas.
+      // `scrollBy` takes PHYSICAL coordinates — `left` scrolls toward the left
+      // edge regardless of writing direction, so RTL conventions (negative
+      // scrollLeft in Chrome/Firefox, positive-descending in Safari) never
+      // enter the math, and clamping at both edges is built in.
       const delta = event.clientX - lastXRef.current;
       lastXRef.current = event.clientX;
-      const maxScroll = el.scrollWidth - el.clientWidth;
-      const next = Math.min(Math.max(el.scrollLeft - delta, 0), Math.max(maxScroll, 0));
-      el.scrollLeft = next;
+      el.scrollBy({ behavior: 'instant', left: -delta });
       event.preventDefault();
     },
     [reset],

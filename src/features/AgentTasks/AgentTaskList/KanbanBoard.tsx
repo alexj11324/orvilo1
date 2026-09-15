@@ -9,7 +9,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
@@ -51,6 +51,7 @@ import {
   kanbanStatusColumnsExcludedBy,
   makeKanbanCollision,
   normalizeKanbanGroupBy,
+  placeKanbanCardInColumn,
   preserveKanbanColumnOrder,
   resolveKanbanDropColumn,
   taskMatchesKanbanColumn,
@@ -436,18 +437,12 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       // Order the release column the way the pointer left it: a same-column
       // sort sits at its old index until moved to the released-on card, and a
       // cross-column preview may have parked at an earlier slot than the
-      // pointer's final position.
-      let finalIds = [...(currentColumns[overCol] ?? [])];
-      const fromIndex = finalIds.indexOf(activeId);
-      const overIndex = finalIds.indexOf(overId); // -1 when `over` is the column itself
-      if (fromIndex === -1) {
-        finalIds.splice(overIndex >= 0 ? overIndex : finalIds.length, 0, activeId);
-      } else if (overIndex !== -1 && fromIndex !== overIndex) {
-        finalIds = arrayMove(finalIds, fromIndex, overIndex);
-      }
-      const finalColumns = { ...currentColumns, [overCol]: finalIds };
+      // pointer's final position. `placeKanbanCardInColumn` also strips the id
+      // from any stale preview column so the card cannot render twice.
+      const finalColumns = placeKanbanCardInColumn(currentColumns, overCol, activeId, overId);
       setColumns(finalColumns);
 
+      const finalIds = finalColumns[overCol] ?? [];
       const position = computeKanbanPosition(finalIds, activeId, taskMapRef.current);
       const anchors = getKanbanMoveAnchors(finalIds, activeId);
       if (sameColumn && effectiveTaskPosition(frozenTask) === position) {

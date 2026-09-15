@@ -555,7 +555,10 @@ export class TaskDetailSliceActionImpl {
       assigneeAgentId !== undefined ||
       assigneeUserId !== undefined ||
       data.parentTaskId !== undefined ||
-      data.priority !== undefined
+      data.priority !== undefined ||
+      // Status writes stamp `completedAt` and append a status activity row
+      // server-side — the cached detail has to reconcile, not just the list.
+      data.status !== undefined
     ) {
       await Promise.all([this.#get().refreshTaskList(), refreshPatchedTargets()]).catch(() => {});
     }

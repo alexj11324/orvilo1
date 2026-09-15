@@ -1,4 +1,5 @@
 import { closestCenter, type CollisionDetection, pointerWithin } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import type { TaskMoveScope, TaskStatus } from '@orvilo/types';
 
 import type {
@@ -369,6 +370,38 @@ export const getKanbanMoveAnchors = (
     afterId: index >= 0 && index < ids.length - 1 ? ids[index + 1]! : null,
     beforeId: index > 0 ? ids[index - 1]! : null,
   };
+};
+
+/**
+ * Settle `activeId` at the pointer's release position inside `columnKey`.
+ *
+ * The identifier is removed from every OTHER column first: a release over a
+ * column different from the last accepted drag-over preview would otherwise
+ * leave the card parked in both and render the task twice while the move
+ * settles — and a failed post-settle refetch could keep the duplicate.
+ */
+export const placeKanbanCardInColumn = (
+  columns: Record<string, string[]>,
+  columnKey: string,
+  activeId: string,
+  overId: string,
+): Record<string, string[]> => {
+  let finalIds = [...(columns[columnKey] ?? [])];
+  const fromIndex = finalIds.indexOf(activeId);
+  const overIndex = finalIds.indexOf(overId); // -1 when `over` is the column itself
+  if (fromIndex === -1) {
+    finalIds.splice(overIndex >= 0 ? overIndex : finalIds.length, 0, activeId);
+  } else if (overIndex !== -1 && fromIndex !== overIndex) {
+    finalIds = arrayMove(finalIds, fromIndex, overIndex);
+  }
+  const next = { ...columns };
+  for (const key of Object.keys(next)) {
+    if (key !== columnKey && next[key]!.includes(activeId)) {
+      next[key] = next[key]!.filter((id) => id !== activeId);
+    }
+  }
+  next[columnKey] = finalIds;
+  return next;
 };
 
 /**

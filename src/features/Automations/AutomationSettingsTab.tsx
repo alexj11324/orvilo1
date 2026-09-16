@@ -1,6 +1,5 @@
 import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -13,9 +12,6 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskInstruction from '../AgentTasks/AgentTaskDetail/TaskInstruction';
 import TaskScheduleConfig from '../AgentTasks/AgentTaskDetail/TaskScheduleConfig';
-import AssigneeAgentSelector from '../AgentTasks/features/AssigneeAgentSelector';
-import AssigneeAvatar from '../AgentTasks/features/AssigneeAvatar';
-import { useAgentDisplayMeta } from '../AgentTasks/shared/useAgentDisplayMeta';
 import { automationDetailNextRun, automationDetailTriggerSummary } from './shared';
 
 dayjs.extend(relativeTime);
@@ -42,42 +38,6 @@ const Section = ({ children, title }: { children: React.ReactNode; title: string
     {children}
   </Flexbox>
 );
-
-const AgentChip = memo(() => {
-  const { t } = useTranslation('automation');
-  const agentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
-  const taskIdentifier = useTaskStore(taskDetailSelectors.activeTaskId);
-  const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
-  const meta = useAgentDisplayMeta(agentId ?? undefined);
-
-  return (
-    <AssigneeAgentSelector
-      currentAgentId={agentId}
-      taskIdentifier={taskIdentifier ?? undefined}
-      taskVisibility={visibility}
-    >
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={8}
-        style={{
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: 8,
-          cursor: 'pointer',
-          paddingBlock: 6,
-          paddingInline: 10,
-          width: 'fit-content',
-        }}
-      >
-        <AssigneeAvatar agentId={agentId ?? undefined} size={20} />
-        <Text fontSize={13}>
-          {agentId && meta ? agentDisplayName(meta) : t('instructions.unassigned')}
-        </Text>
-        <Icon color={cssVar.colorTextTertiary} icon={ChevronRightIcon} size={14} />
-      </Flexbox>
-    </AssigneeAgentSelector>
-  );
-});
 
 const TriggerCard = memo(() => {
   const { t } = useTranslation('automation');
@@ -122,7 +82,6 @@ const AutomationSettingsTab = memo(() => {
         <TriggerCard />
       </Section>
       <Section title={t('instructions.section')}>
-        <AgentChip />
         <TaskInstruction />
       </Section>
     </Flexbox>

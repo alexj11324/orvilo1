@@ -10,9 +10,11 @@ import {
   Text,
   toast,
 } from '@lobehub/ui/base-ui';
+import { agentDisplayName } from '@orvilo/types';
+import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
+import { ChevronRightIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
@@ -33,6 +35,9 @@ import TaskDetailSkeleton from '../AgentTasks/AgentTaskDetail/TaskDetailSkeleton
 import TaskDetailTitleInput from '../AgentTasks/AgentTaskDetail/TaskDetailTitleInput';
 import TopicChatDrawer from '../AgentTasks/AgentTaskDetail/TopicChatDrawer';
 import { useActiveTaskDetail } from '../AgentTasks/AgentTaskDetail/useActiveTaskDetail';
+import AssigneeAgentSelector from '../AgentTasks/features/AssigneeAgentSelector';
+import AssigneeAvatar from '../AgentTasks/features/AssigneeAvatar';
+import { useAgentDisplayMeta } from '../AgentTasks/shared/useAgentDisplayMeta';
 import { useUserDisplayMeta } from '../AgentTasks/shared/useUserDisplayMeta';
 import AutomationBreadcrumb from './AutomationBreadcrumb';
 import AutomationRunList from './AutomationRunList';
@@ -99,6 +104,42 @@ const AutomationStatusSwitch = memo(() => {
       />
       {status ? <AutomationStatusBadge status={automationStatusOf(status)} /> : null}
     </Flexbox>
+  );
+});
+
+const AgentChip = memo(() => {
+  const { t } = useTranslation('automation');
+  const agentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
+  const taskIdentifier = useTaskStore(taskDetailSelectors.activeTaskId);
+  const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
+  const meta = useAgentDisplayMeta(agentId ?? undefined);
+
+  return (
+    <AssigneeAgentSelector
+      currentAgentId={agentId}
+      taskIdentifier={taskIdentifier ?? undefined}
+      taskVisibility={visibility}
+    >
+      <Flexbox
+        horizontal
+        align={'center'}
+        gap={8}
+        style={{
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: 8,
+          cursor: 'pointer',
+          paddingBlock: 6,
+          paddingInline: 10,
+          width: 'fit-content',
+        }}
+      >
+        <AssigneeAvatar agentId={agentId ?? undefined} size={20} />
+        <Text fontSize={13}>
+          {agentId && meta ? agentDisplayName(meta) : t('instructions.unassigned')}
+        </Text>
+        <Icon color={cssVar.colorTextTertiary} icon={ChevronRightIcon} size={14} />
+      </Flexbox>
+    </AssigneeAgentSelector>
   );
 });
 
@@ -240,6 +281,7 @@ const AutomationDetailPage = memo(() => {
               <TaskDetailTitleInput />
               <Flexbox horizontal align={'center'} gap={16} wrap={'wrap'}>
                 <AutomationStatusSwitch />
+                <AgentChip />
                 <ProjectSelect />
                 <CreatedByLabel />
               </Flexbox>

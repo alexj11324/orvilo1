@@ -46,10 +46,10 @@ const AutomationCreatePage = memo(() => {
   const [draft, setDraft] = useState<TriggerDraft | null>(() =>
     template
       ? {
-          kind: 'schedule',
-          pattern: template.pattern,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }
+        kind: 'schedule',
+        pattern: template.pattern,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }
       : null,
   );
   const [submitting, setSubmitting] = useState(false);
@@ -155,11 +155,7 @@ const AutomationCreatePage = memo(() => {
               variant={'borderless'}
               onChange={(e) => setNameOverride(e.target.value)}
             />
-            <AutomationTriggerDraft draft={draft} onChange={setDraft} />
-            <Flexbox gap={8}>
-              <Text fontSize={13} weight={600}>
-                {t('instructions.section')}
-              </Text>
+            <Flexbox horizontal>
               <AssigneeAgentSelector
                 currentAgentId={assigneeAgentId}
                 onChange={(agentId) => setAssigneeAgentId(agentId)}
@@ -183,8 +179,15 @@ const AutomationCreatePage = memo(() => {
                       ? agentDisplayName(assigneeMeta)
                       : t('instructions.agent_placeholder')}
                   </Text>
+                  <Icon color={cssVar.colorTextTertiary} icon={ChevronRight} size={14} />
                 </Flexbox>
               </AssigneeAgentSelector>
+            </Flexbox>
+            <AutomationTriggerDraft draft={draft} onChange={setDraft} />
+            <Flexbox gap={8}>
+              <Text fontSize={13} weight={600}>
+                {t('instructions.section')}
+              </Text>
               <TextArea
                 autoSize={{ minRows: 4 }}
                 placeholder={t('create.instructions_placeholder')}

@@ -1180,7 +1180,7 @@ describe('Task Router Integration', () => {
       });
     });
 
-    it('does not start a dependent sibling while completing the whole family', async () => {
+    it('rejects bulk completion when a sibling prerequisite is unfinished', async () => {
       const parent = await caller.create({ instruction: 'Parent' });
       const first = await caller.create({
         assigneeAgentId: testAgentId,
@@ -1195,11 +1195,13 @@ describe('Task Router Integration', () => {
       await caller.addDependency({ dependsOnId: first.data.id, taskId: dependent.data.id });
       mockExecAgent.mockClear();
 
-      await caller.updateStatusCascade({ id: parent.data.id, status: 'completed' });
+      await expect(
+        caller.updateStatusCascade({ id: parent.data.id, status: 'completed' }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
 
       expect(mockExecAgent).not.toHaveBeenCalled();
-      expect((await caller.find({ id: first.data.id })).data.status).toBe('completed');
-      expect((await caller.find({ id: dependent.data.id })).data.status).toBe('completed');
+      expect((await caller.find({ id: first.data.id })).data.status).toBe('backlog');
+      expect((await caller.find({ id: dependent.data.id })).data.status).toBe('backlog');
     });
 
     it('starts an external dependent unlocked by the family completion', async () => {
@@ -1362,7 +1364,7 @@ describe('Task Router Integration', () => {
       expect(result.data.cycles).toEqual([]);
     });
 
-    it('previewSubtaskLayers reports cycles instead of layering them', async () => {
+    it('rejects cycle creation and preserves the valid execution layers', async () => {
       const parent = await caller.create({ instruction: 'Cyclic' });
       const a = await caller.create({
         instruction: 'A',
@@ -1373,11 +1375,13 @@ describe('Task Router Integration', () => {
         parentTaskId: parent.data.id,
       });
       await caller.addDependency({ dependsOnId: a.data.id, taskId: b.data.id });
-      await caller.addDependency({ dependsOnId: b.data.id, taskId: a.data.id });
+      await expect(
+        caller.addDependency({ dependsOnId: b.data.id, taskId: a.data.id }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
 
       const result = await caller.previewSubtaskLayers({ id: parent.data.id });
-      expect(result.data.layers).toEqual([]);
-      expect(result.data.cycles.sort()).toEqual([a.data.identifier, b.data.identifier]);
+      expect(result.data.layers).toEqual([[a.data.identifier], [b.data.identifier]]);
+      expect(result.data.cycles).toEqual([]);
     });
 
     it('runReadySubtasks kicks off the first layer only', async () => {

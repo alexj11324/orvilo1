@@ -598,7 +598,11 @@ export class TaskDetailSliceActionImpl {
     // polling never starts — even once real data arrives.
     const shouldPoll = useTaskStore((s) => {
       const detail = taskId ? s.taskDetailMap[taskId] : undefined;
-      return hasInFlightActivity(detail);
+      // Even an idle dependent must refresh when an upstream completes or reopens.
+      return (
+        hasInFlightActivity(detail) ||
+        detail?.dependencies?.some((dep) => dep.type === 'blocks') === true
+      );
     });
 
     return useClientDataSWR(

@@ -130,6 +130,15 @@ export class TaskRunnerService {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
     }
 
+    // Preflight before assignment/provisioning; reserveRun repeats this check
+    // under the dependency graph lock so a concurrent edit cannot bypass it.
+    if (!(await this.taskModel.areAllDependenciesCompleted(task.id))) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Complete all prerequisite tasks before starting this task.',
+      });
+    }
+
     // The token is the only authority to release or roll back this dispatch.
     // A later generation replaces it, so a slow failure cannot pause that run.
     const reservationId = randomUUID();

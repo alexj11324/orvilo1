@@ -148,6 +148,8 @@ describe('TaskService', () => {
   };
 
   const mockTaskModel = {
+    areAllDependenciesCompleted: vi.fn().mockResolvedValue(true),
+    findBlockedTaskIds: vi.fn().mockResolvedValue([]),
     addActivities: vi.fn(),
     addActivity: vi.fn(),
     findSubtasks: vi.fn(),
@@ -203,6 +205,8 @@ describe('TaskService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTaskModel.areAllDependenciesCompleted.mockResolvedValue(true);
+    mockTaskModel.findBlockedTaskIds.mockResolvedValue([]);
     interruptTaskMock.mockReset().mockResolvedValue({ success: true });
     cancelScheduled.mockResolvedValue(undefined);
     scheduleNextTopic.mockResolvedValue('tick-new');
@@ -689,7 +693,9 @@ describe('TaskService', () => {
       };
 
       const dependencies = [{ dependsOnId: 'task_002', taskId: 'task_003', type: 'blocks' }];
-      const depTasks = [{ id: 'task_002', identifier: 'TASK-2', name: 'Task 2' }];
+      const depTasks = [
+        { id: 'task_002', identifier: 'TASK-2', name: 'Task 2', status: 'completed' },
+      ];
 
       mockTaskModel.resolve.mockResolvedValue(task);
       mockTaskModel.findAllDescendants.mockResolvedValue([]);
@@ -706,7 +712,13 @@ describe('TaskService', () => {
       const result = await service.getTaskDetail('TASK-3');
 
       expect(result?.dependencies).toEqual([
-        { dependsOn: 'TASK-2', name: 'Task 2', type: 'blocks' },
+        {
+          dependsOn: 'TASK-2',
+          id: 'task_002',
+          name: 'Task 2',
+          status: 'completed',
+          type: 'blocks',
+        },
       ]);
     });
 
@@ -747,7 +759,13 @@ describe('TaskService', () => {
       const result = await service.getTaskDetail('TASK-3');
 
       expect(result?.dependencies).toEqual([
-        { dependsOn: 'task_missing', name: undefined, type: 'blocks' },
+        {
+          dependsOn: 'task_missing',
+          id: 'task_missing',
+          name: undefined,
+          status: null,
+          type: 'blocks',
+        },
       ]);
     });
 
@@ -1542,6 +1560,31 @@ describe('TaskService', () => {
         expect(mockTaskTopicModel.cancelIfRunning).not.toHaveBeenCalled();
       },
     );
+  });
+
+  describe('prerequisite gating', () => {
+    it('rejects completion before interrupting a running operation', async () => {
+      mockTaskModel.resolve.mockResolvedValue({ id: 'task-1', status: 'running' });
+      mockTaskModel.areAllDependenciesCompleted.mockResolvedValueOnce(false);
+      const service = new TaskService(db, userId);
+      await expect(service.updateStatus({ id: 'T-1', status: 'completed' })).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+      });
+      expect(interruptTaskMock).not.toHaveBeenCalled();
+      expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it('rejects a blocked bulk completion before interrupting or writing', async () => {
+      mockTaskModel.resolve.mockResolvedValue({ id: 'task-1', status: 'running' });
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.findBlockedTaskIds.mockResolvedValueOnce(['task-1']);
+      const service = new TaskService(db, userId);
+      await expect(
+        service.updateStatusCascade({ id: 'T-1', status: 'completed' }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      expect(interruptTaskMock).not.toHaveBeenCalled();
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateStatus / scheduleStartedAt', () => {

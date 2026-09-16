@@ -101,9 +101,10 @@ describe('planSubtaskLayers', () => {
     expect(plan.cycles.sort()).toEqual(['A', 'B']);
   });
 
-  it('drops dependency edges to canceled upstreams (treated as already done)', () => {
+  it('does not satisfy dependencies with canceled upstreams', () => {
     const plan = planSubtaskLayers([node('T-1', 'canceled'), node('T-2', 'backlog', ['T-1'])]);
-    expect(plan.layers).toEqual([['T-2']]);
+    expect(plan.layers).toEqual([]);
+    expect(plan.blockedExternally).toEqual(['T-2']);
     expect(plan.alreadyDone).toEqual(['T-1']);
   });
 

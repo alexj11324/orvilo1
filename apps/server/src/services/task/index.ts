@@ -590,6 +590,15 @@ export class TaskService {
     }
 
     const resolved = await this.resolveOrThrow(id);
+    if (
+      (status === 'running' || status === 'completed') &&
+      !(await this.taskModel.areAllDependenciesCompleted(resolved.id))
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Complete all prerequisite tasks before starting or completing this task.',
+      });
+    }
 
     if (resolved.status === 'running' && status !== 'running') {
       const topics = await this.taskTopicModel.findByTaskId(resolved.id);
@@ -798,6 +807,15 @@ export class TaskService {
     // transitioned after the confirmation dialog is never rewritten.
     const targetTasks = [resolved, ...openSubtasks];
     const targetIds = targetTasks.map((task) => task.id);
+    if (
+      input.status === 'completed' &&
+      (await this.taskModel.findBlockedTaskIds(targetIds)).length > 0
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Complete prerequisite tasks first, then complete their dependents.',
+      });
+    }
 
     const aiAgentService = new AiAgentService(this.db, this.userId, {
       workspaceId: this.workspaceId,
@@ -1288,7 +1306,16 @@ export class TaskService {
     const depTaskIds = [...new Set(dependencies.map((d) => d.dependsOnId))];
     const depTasks = await this.taskModel.findByIds(depTaskIds);
     const depIdToInfo = new Map(
-      depTasks.map((t) => [t.id, { identifier: t.identifier, name: t.name }]),
+      depTasks
+        .filter((t) => !t.deletedAt && !t.isDeleted)
+        .map((t) => [
+          t.id,
+          {
+            identifier: t.identifier,
+            name: t.name,
+            status: t.status,
+          },
+        ]),
     );
 
     // Resolve parent
@@ -1527,7 +1554,9 @@ export class TaskService {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
           dependsOn: info?.identifier ?? d.dependsOnId,
+          id: d.dependsOnId,
           name: info?.name,
+          status: info?.status ?? null,
           type: d.type,
         };
       }),

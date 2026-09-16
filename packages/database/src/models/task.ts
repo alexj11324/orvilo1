@@ -56,6 +56,7 @@ import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
 import type { LobeChatDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { TaskDependencyError } from './taskDependency';
 
 /** Columns whose change is worth a line in the task activity feed. */
 const TRACKED_TASK_COLUMNS = [
@@ -353,6 +354,43 @@ export class TaskModel {
     return row[0]?.visibility ?? 'public';
   }
 
+  /** Only transaction-scoped models may hold this flag. Never set it on a shared model. */
+  private dependencyLockHeld = false;
+
+  /**
+   * Graph edits and status writes share one short transaction lock per workspace
+   * (or personal owner). This serializes cycle checks and closes add-vs-start
+   * races. Acquire it BEFORE task row locks to keep lock ordering consistent.
+   */
+  private async lockDependencyGraph(): Promise<void> {
+    const scope = this.workspaceId ? `workspace:${this.workspaceId}` : `user:${this.userId}`;
+    await this.db.execute(
+      sql`select pg_advisory_xact_lock(hashtext('task-prerequisites'), hashtext(${scope}))`,
+    );
+  }
+
+  private async withDependencyLock<T>(work: (model: TaskModel) => Promise<T>): Promise<T> {
+    if (this.dependencyLockHeld) return work(this);
+    return this.db.transaction(async (tx) => {
+      const model = new TaskModel(tx as LobeChatDatabase, this.userId, this.workspaceId);
+      await model.lockDependencyGraph();
+      model.dependencyLockHeld = true;
+      return work(model);
+    });
+  }
+
+  /** Guard every advancing writer; cancellation/pause remain available for recovery. */
+  private async assertDependenciesForStatus(ids: string[], status?: string): Promise<void> {
+    if (status !== 'running' && status !== 'completed') return;
+    const blocked = await this.findBlockedTaskIds(ids);
+    if (blocked.length > 0) {
+      throw new TaskDependencyError(
+        'Complete all prerequisite tasks before starting or completing this task.',
+        'PRECONDITION_FAILED',
+      );
+    }
+  }
+
   // ========== CRUD ==========
 
   async create(
@@ -481,6 +519,17 @@ export class TaskModel {
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
   ): Promise<TaskItem | null> {
     if (Object.keys(data).length === 0) return this.findById(id);
+    if (
+      !this.dependencyLockHeld &&
+      (data.status !== undefined ||
+        data.deletedAt !== undefined ||
+        data.isDeleted !== undefined ||
+        data.projectId !== undefined ||
+        data.visibility !== undefined)
+    ) {
+      return this.withDependencyLock((model) => model.update(id, data));
+    }
+    await this.assertDependenciesForStatus([id], data.status);
 
     const updated = await this.db
       .update(tasks)
@@ -502,6 +551,16 @@ export class TaskModel {
    * to render as "resource deleted" from its version snapshot. See.
    */
   async delete(id: string): Promise<boolean> {
+    if (!this.dependencyLockHeld) return this.withDependencyLock((model) => model.delete(id));
+    if (!(await this.findById(id))) return false;
+    const inbound = await this.db
+      .select({ id: taskDependencies.id })
+      .from(taskDependencies)
+      .where(and(eq(taskDependencies.dependsOnId, id), eq(taskDependencies.type, 'blocks')))
+      .limit(1);
+    if (inbound.length > 0) {
+      throw new TaskDependencyError('Remove blocking dependency links before deleting this task.');
+    }
     const deleted = await this.db
       .delete(tasks)
       .where(and(eq(tasks.id, id), this.ownership()))
@@ -535,6 +594,9 @@ export class TaskModel {
    * gate authorization (creator-only / admin) before invoking this.
    */
   async updateVisibility(id: string, visibility: 'private' | 'public'): Promise<TaskItem | null> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.updateVisibility(id, visibility));
+    }
     const root = await this.findById(id);
     if (!root) return null;
     if (root.visibility === visibility) return root;
@@ -1519,6 +1581,14 @@ export class TaskModel {
     status: string,
     extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
   ): Promise<TaskItem | null> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) =>
+        model.updateStatusIfCurrent(id, currentStatus, status, extra),
+      );
+    }
+    const current = await this.findById(id);
+    if (!current || current.status !== currentStatus) return null;
+    await this.assertDependenciesForStatus([id], status);
     const [task] = await this.db
       .update(tasks)
       .set({
@@ -1551,6 +1621,20 @@ export class TaskModel {
       startedAt?: Date;
     },
   ): Promise<TaskItem | null> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) =>
+        model.updateStatusIfReservation(id, reservationId, currentStatus, status, extra),
+      );
+    }
+    const current = await this.findById(id);
+    if (
+      !current ||
+      current.status !== currentStatus ||
+      current.runReservationId !== reservationId
+    ) {
+      return null;
+    }
+    await this.assertDependenciesForStatus([id], status);
     const [task] = await this.db
       .update(tasks)
       .set({
@@ -1624,6 +1708,12 @@ export class TaskModel {
     leaseMs = 30 * 60 * 1000,
     replaceReservationId?: string,
   ): Promise<boolean> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) =>
+        model.reserveRun(id, reservationId, now, leaseMs, replaceReservationId),
+      );
+    }
+    await this.assertDependenciesForStatus([id], 'running');
     const reserved = await this.db
       .update(tasks)
       .set({
@@ -1717,6 +1807,11 @@ export class TaskModel {
   }
 
   async batchUpdateStatus(ids: string[], status: string): Promise<number> {
+    if (ids.length === 0) return 0;
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.batchUpdateStatus(ids, status));
+    }
+    await this.assertDependenciesForStatus(ids, status);
     const result = await this.db
       .update(tasks)
       .set({ status, updatedAt: new Date(), ...TaskModel.reviewerBackfillSet(status) })
@@ -1744,6 +1839,10 @@ export class TaskModel {
     },
   ): Promise<TaskItem[]> {
     if (ids.length === 0) return [];
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.updateStatusForIds(ids, status, extra));
+    }
+    await this.assertDependenciesForStatus(ids, status);
     return this.db
       .update(tasks)
       .set({
@@ -1979,13 +2078,9 @@ export class TaskModel {
       .where(
         and(
           eq(tasks.status, 'running'),
-          options.createdByUserId
-            ? eq(tasks.createdByUserId, options.createdByUserId)
-            : undefined,
+          options.createdByUserId ? eq(tasks.createdByUserId, options.createdByUserId) : undefined,
           options.workspaceId ? eq(tasks.workspaceId, options.workspaceId) : undefined,
-          options.createdByUserId && !options.workspaceId
-            ? isNull(tasks.workspaceId)
-            : undefined,
+          options.createdByUserId && !options.workspaceId ? isNull(tasks.workspaceId) : undefined,
           isNotNull(tasks.lastHeartbeatAt),
           isNotNull(tasks.heartbeatTimeout),
           sql`${tasks.lastHeartbeatAt} < now() - make_interval(secs => ${tasks.heartbeatTimeout})`,
@@ -2013,15 +2108,58 @@ export class TaskModel {
     });
 
   async addDependency(taskId: string, dependsOnId: string, type: string = 'blocks'): Promise<void> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.addDependency(taskId, dependsOnId, type));
+    }
+    if (taskId === dependsOnId) throw new TaskDependencyError('A task cannot depend on itself.');
+    if (type !== 'blocks' && type !== 'relates')
+      throw new TaskDependencyError('Invalid dependency type.');
     const dependencyTasks = await this.findByIds([taskId, dependsOnId]);
     const task = dependencyTasks.find(({ id }) => id === taskId);
     const dependsOn = dependencyTasks.find(({ id }) => id === dependsOnId);
-    if (!task || !dependsOn) throw new Error('Task not found');
+    if (
+      !task ||
+      !dependsOn ||
+      task.deletedAt ||
+      task.isDeleted ||
+      dependsOn.deletedAt ||
+      dependsOn.isDeleted
+    ) {
+      throw new TaskDependencyError('Task not found or unavailable.');
+    }
     if (task.projectId !== dependsOn.projectId && (task.projectId || dependsOn.projectId)) {
-      throw new Error('Task dependencies cannot cross project boundaries');
+      throw new TaskDependencyError('Task dependencies cannot cross project boundaries.');
     }
 
-    const visibility = await this.getTaskVisibility(taskId);
+    const existing = (await this.getDependencies(taskId)).find(
+      (dep) => dep.dependsOnId === dependsOnId,
+    );
+    if (existing?.type === type) return;
+    if (type === 'blocks') {
+      // UNION (not UNION ALL) terminates even on a corrupt legacy graph. The
+      // graph walk is scope-wide, including hidden intermediate nodes, but its
+      // only observable output is a generic cycle rejection.
+      const scope = this.workspaceId
+        ? sql`d.workspace_id = ${this.workspaceId}`
+        : sql`d.workspace_id IS NULL AND d.user_id = ${this.userId}`;
+      const cycle = await this.db.execute(sql`
+        WITH RECURSIVE upstream(id) AS (
+          SELECT ${dependsOnId}::text
+          UNION
+          SELECT d.depends_on_id FROM task_dependencies d
+          JOIN upstream u ON d.task_id = u.id
+          WHERE d.type = 'blocks' AND ${scope}
+        ) SELECT id FROM upstream WHERE id = ${taskId} LIMIT 1
+      `);
+      if (cycle.rows.length > 0)
+        throw new TaskDependencyError('This dependency would create a cycle.');
+      if (['running', 'completed'].includes(task.status) && dependsOn.status !== 'completed') {
+        throw new TaskDependencyError(
+          'Pause or reopen this task before adding an unfinished prerequisite.',
+          'PRECONDITION_FAILED',
+        );
+      }
+    }
     await this.db
       .insert(taskDependencies)
       .values({
@@ -2029,13 +2167,20 @@ export class TaskModel {
         taskId,
         type,
         userId: this.userId,
-        visibility,
+        visibility: task.visibility,
         workspaceId: this.workspaceId ?? null,
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        set: { type },
+        target: [taskDependencies.taskId, taskDependencies.dependsOnId],
+      });
   }
 
   async removeDependency(taskId: string, dependsOnId: string): Promise<void> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.removeDependency(taskId, dependsOnId));
+    }
+    if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
     await this.db
       .delete(taskDependencies)
       .where(
@@ -2069,22 +2214,34 @@ export class TaskModel {
       .where(and(eq(taskDependencies.dependsOnId, taskId), this.depsOwnership()));
   }
 
-  // Check if every blocking dependency is terminal and no longer actionable.
-  async areAllDependenciesCompleted(taskId: string): Promise<boolean> {
-    const result = await this.db
-      .select({ count: sql<number>`count(*)` })
+  /** Missing, trashed, inaccessible, canceled and failed prerequisites all block. */
+  async findBlockedTaskIds(taskIds: string[]): Promise<string[]> {
+    if (taskIds.length === 0) return [];
+    const blocked = await this.db
+      .selectDistinct({ taskId: taskDependencies.taskId })
       .from(taskDependencies)
-      .innerJoin(tasks, eq(taskDependencies.dependsOnId, tasks.id))
+      .leftJoin(
+        tasks,
+        and(
+          eq(taskDependencies.dependsOnId, tasks.id),
+          this.ownership(),
+          isNull(tasks.deletedAt),
+          sql`${tasks.isDeleted} IS NOT TRUE`,
+        ),
+      )
       .where(
         and(
-          eq(taskDependencies.taskId, taskId),
+          inArray(taskDependencies.taskId, taskIds),
           eq(taskDependencies.type, 'blocks'),
-          notInArray(tasks.status, ['canceled', 'completed']),
+          or(isNull(tasks.id), ne(tasks.status, 'completed')),
           this.depsOwnership(),
         ),
       );
+    return blocked.map(({ taskId }) => taskId);
+  }
 
-    return Number(result[0].count) === 0;
+  async areAllDependenciesCompleted(taskId: string): Promise<boolean> {
+    return (await this.findBlockedTaskIds([taskId])).length === 0;
   }
 
   // Find tasks that are now unblocked after a dependency settles.
@@ -2114,20 +2271,7 @@ export class TaskModel {
     const dependentIds = [...new Set(dependents.map(({ taskId }) => taskId))];
     if (dependentIds.length === 0) return [];
 
-    // Of those, which still have at least one incomplete blocking dependency
-    const blocked = await this.db
-      .selectDistinct({ taskId: taskDependencies.taskId })
-      .from(taskDependencies)
-      .innerJoin(tasks, eq(taskDependencies.dependsOnId, tasks.id))
-      .where(
-        and(
-          inArray(taskDependencies.taskId, dependentIds),
-          eq(taskDependencies.type, 'blocks'),
-          notInArray(tasks.status, ['canceled', 'completed']),
-          this.depsOwnership(),
-        ),
-      );
-    const blockedIds = new Set(blocked.map(({ taskId }) => taskId));
+    const blockedIds = new Set(await this.findBlockedTaskIds(dependentIds));
     const unlockedIds = dependentIds.filter((id) => !blockedIds.has(id));
     if (unlockedIds.length === 0) return [];
 
@@ -2463,6 +2607,7 @@ export class TaskModel {
     ids: string[],
   ): Promise<{ id: string; status: string; visibility: 'private' | 'public' }[]> {
     if (ids.length === 0) return [];
+    await this.lockDependencyGraph();
     return this.db
       .select({ id: tasks.id, status: tasks.status, visibility: tasks.visibility })
       .from(tasks)
@@ -2500,6 +2645,9 @@ export class TaskModel {
 
     return this.db.transaction(async (tx) => {
       const runner = tx as LobeChatDatabase;
+      const scoped = new TaskModel(runner, this.userId, this.workspaceId);
+      await scoped.lockDependencyGraph();
+      scoped.dependencyLockHeld = true;
       const [before] = await runner
         .select({
           assigneeAgentId: tasks.assigneeAgentId,
@@ -2519,7 +2667,6 @@ export class TaskModel {
         .limit(1);
       if (!before) return null;
 
-      const scoped = new TaskModel(runner, this.userId, this.workspaceId);
       const updated = await scoped.update(id, data);
       if (!updated) return null;
 

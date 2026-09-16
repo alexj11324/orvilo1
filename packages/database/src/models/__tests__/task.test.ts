@@ -1261,7 +1261,7 @@ describe('TaskModel', () => {
       expect(unlocked[0].id).toBe(taskC.id);
     });
 
-    it('treats a canceled dependency as settled while failed still blocks', async () => {
+    it('requires canceled and failed dependencies to be completed', async () => {
       const model = new TaskModel(serverDB, userId);
       const canceled = await model.create({ instruction: 'Canceled dependency' });
       const failed = await model.create({ instruction: 'Failed dependency' });
@@ -1274,6 +1274,8 @@ describe('TaskModel', () => {
       await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
 
       await model.updateStatus(failed.id, 'completed');
+      await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
+      await model.updateStatus(canceled.id, 'completed');
       await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
       await expect(model.getUnlockedTasks(failed.id)).resolves.toEqual([
         expect.objectContaining({ id: dependent.id }),
@@ -1286,10 +1288,9 @@ describe('TaskModel', () => {
       const taskB = await model.create({ instruction: 'Task B' });
 
       await model.addDependency(taskB.id, taskA.id);
-      // Move B to running manually (not backlog)
-      await model.updateStatus(taskB.id, 'running', { startedAt: new Date() });
-
+      // A must complete before B can leave backlog.
       await model.updateStatus(taskA.id, 'completed');
+      await model.updateStatus(taskB.id, 'running', { startedAt: new Date() });
       const unlocked = await model.getUnlockedTasks(taskA.id);
       expect(unlocked).toHaveLength(0); // B is already running, not unlocked
     });

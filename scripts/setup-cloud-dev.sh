@@ -296,15 +296,20 @@ set_secret VERCEL_AUTOMATION_BYPASS_SECRET "$VERCEL_AUTOMATION_BYPASS_SECRET"
 # ── Stage 3 · 远程 ParadeDB ─────────────────────────────────────────────────
 stage "远程 ParadeDB（pgvector + pg_search）"
 say "普通 Neon/Supabase 不行 —— 需要 paradedb/paradedb 镜像（pg_search）。"
-step "选一个持久容器平台部署 paradedb/paradedb:latest-pg17："
-say "    Railway  → New Project → Deploy → Docker Image → paradedb/paradedb:latest-pg17"
-say "    Render   → New → Web Service → Existing Image → paradedb/paradedb:latest-pg17"
-say "    或者复用你已有的 Oracle 主机单独起一套 preview ParadeDB"
-step "启动命令必须带: postgres -c shared_preload_libraries=pg_search"
-step "设置 POSTGRES_PASSWORD，开启公网连接（TCP proxy / public hostname）"
-open_url "https://railway.com/new"
-pause "部署完成、拿到公网连接串后按 Enter"
-ask_secret PREVIEW_DB_ADMIN_URL "粘贴 admin 连接串（指到 postgres 库，如 postgresql://postgres:PASS@host:PORT/postgres?sslmode=require）："
+say "当前已 provision：OCI Always-Free 主机上独立容器 orvilo-preview-pg"
+say "（paradedb/paradedb:latest-pg17，公网端口 25432，SSL=on 自签证书）。"
+say "若要重建或迁到别的平台，参考命令："
+say "    docker run -d --name orvilo-preview-pg --restart always --memory 2g \\"
+say "      -p 25432:5432 -e POSTGRES_DB=orvilo_preview \\"
+say "      -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=<strong> \\"
+say "      -v orvilo-preview-pgdata:/var/lib/postgresql/data \\"
+say "      -v ~/orvilo-preview/pgssl:/pgssl:ro \\"
+say "      paradedb/paradedb:latest-pg17 \\"
+say "      -c ssl=on -c ssl_cert_file=/pgssl/server.crt \\"
+say "      -c ssl_key_file=/pgssl/server.key \\"
+say "      -c shared_buffers=256MB -c max_connections=50"
+note "记得同步开 NSG/安全组 + 主机防火墙对应端口"
+ask_secret PREVIEW_DB_ADMIN_URL "粘贴 admin 连接串（指到 postgres 库，如 postgresql://postgres:PASS@host:25432/postgres?sslmode=require）："
 
 say "创建 orvilo_preview / orvilo_production 两个数据库…"
 for db in orvilo_preview orvilo_production; do
@@ -338,16 +343,18 @@ else
   SKIPPED+=("db:migrate preview + production")
 fi
 
-# ── Stage 4 · Upstash Redis + QStash ────────────────────────────────────────
-stage "Upstash Redis + QStash"
-say "Upstash 一个 Redis 实例同时供 preview/production 用，靠 REDIS_PREFIX 隔离。"
-open_url "https://console.upstash.com/redis"
-step "Create Database → 复制 rediss:// 连接串（含密码）"
-ask_secret REDIS_URL "粘贴 Redis URL（rediss://…）："
-step "同一控制台 → QStash 标签页 → 复制 Token 和两个 Signing Key"
-ask_secret QSTASH_TOKEN "QSTASH_TOKEN："
-ask_secret QSTASH_CURRENT_SIGNING_KEY "QSTASH_CURRENT_SIGNING_KEY："
-ask_secret QSTASH_NEXT_SIGNING_KEY "QSTASH_NEXT_SIGNING_KEY（可留空）："
+# ── Stage 4 · Redis ─────────────────────────────────────────────────────────
+stage "Redis（与 ParadeDB 同机的独立容器）"
+say "当前已 provision：OCI 主机上 orvilo-preview-redis（redis:7-alpine，"
+say "公网端口 26379，--requirepass 强密码，AOF 持久化）。"
+say "应用用 ioredis 裸 TCP，REDIS_TLS 只能配 rejectUnauthorized=true ——"
+say "自签证书会拒连，所以 preview 用明文 + 强密码（仅存缓存类数据）。"
+say "重建命令："
+say "    docker run -d --name orvilo-preview-redis --restart always \\"
+say "      --memory 256m -p 26379:6379 -v orvilo-preview-redisdata:/data \\"
+say "      redis:7-alpine redis-server --requirepass <strong> --appendonly yes"
+ask_secret REDIS_URL "粘贴 Redis URL（redis://default:<pass>@<host>:26379）："
+note "QStash 已跳过 —— agent 异步运行时正迁往 Hatchet，不配 QStash 时步骤同步执行。"
 
 # ── Stage 5 · Cloudflare R2 ─────────────────────────────────────────────────
 stage "Cloudflare R2（替代 RustFS）"
@@ -386,7 +393,7 @@ for t in preview production; do
     vercel_env DATABASE_DRIVER node preview
     vercel_env REDIS_URL "$REDIS_URL" preview
     vercel_env REDIS_PREFIX orvilo-preview preview
-    vercel_env REDIS_TLS 1 preview
+    vercel_env REDIS_TLS 0 preview
     vercel_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID" preview
     vercel_env S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY" preview
     vercel_env S3_ENDPOINT "$S3_ENDPOINT" preview
@@ -396,15 +403,12 @@ for t in preview production; do
     vercel_env AUTH_SECRET "$PREVIEW_AUTH_SECRET" preview
     vercel_env KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET" preview
     [[ -n "$PREVIEW_JWKS_KEY" ]] && vercel_env JWKS_KEY "$PREVIEW_JWKS_KEY" preview
-    vercel_env QSTASH_TOKEN "$QSTASH_TOKEN" preview
-    vercel_env QSTASH_CURRENT_SIGNING_KEY "$QSTASH_CURRENT_SIGNING_KEY" preview
-    [[ -n "$QSTASH_NEXT_SIGNING_KEY" ]] && vercel_env QSTASH_NEXT_SIGNING_KEY "$QSTASH_NEXT_SIGNING_KEY" preview
   else
     vercel_env DATABASE_URL "$PRODUCTION_DATABASE_URL" production
     vercel_env DATABASE_DRIVER node production
     vercel_env REDIS_URL "$REDIS_URL" production
     vercel_env REDIS_PREFIX orvilo-prod production
-    vercel_env REDIS_TLS 1 production
+    vercel_env REDIS_TLS 0 production
     vercel_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID" production
     vercel_env S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY" production
     vercel_env S3_ENDPOINT "$S3_ENDPOINT" production
@@ -414,9 +418,6 @@ for t in preview production; do
     vercel_env AUTH_SECRET "$PROD_AUTH_SECRET" production
     vercel_env KEY_VAULTS_SECRET "$PROD_KEY_VAULTS_SECRET" production
     [[ -n "$PROD_JWKS_KEY" ]] && vercel_env JWKS_KEY "$PROD_JWKS_KEY" production
-    vercel_env QSTASH_TOKEN "$QSTASH_TOKEN" production
-    vercel_env QSTASH_CURRENT_SIGNING_KEY "$QSTASH_CURRENT_SIGNING_KEY" production
-    [[ -n "$QSTASH_NEXT_SIGNING_KEY" ]] && vercel_env QSTASH_NEXT_SIGNING_KEY "$QSTASH_NEXT_SIGNING_KEY" production
   fi
 done
 
@@ -451,7 +452,7 @@ if confirm "把 preview 的云端连接写进本地 .env（Mode A 云开发）�
   write_env DATABASE_DRIVER node
   write_env REDIS_URL "$REDIS_URL"
   write_env REDIS_PREFIX orvilo-preview
-  write_env REDIS_TLS 1
+  write_env REDIS_TLS 0
   write_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID"
   write_env S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY"
   write_env S3_ENDPOINT "$S3_ENDPOINT"

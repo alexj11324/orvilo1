@@ -24,7 +24,7 @@ Then(
     const created: TaskFixture[] = [];
     const suffix = randomUUID();
     let dependent: TaskFixture | undefined;
-    let primaryError: unknown;
+    let primaryFailure: { error: unknown } | undefined;
 
     const rpc = async <T>(method: string, input: Record<string, unknown>, query = false) => {
       const path = `/trpc/lambda/task.${method}`;
@@ -55,10 +55,12 @@ Then(
 
     try {
       for (const role of ['first', 'second', 'dependent']) {
-        created.push(await rpc<TaskFixture>('create', {
-          instruction: `Prerequisite acceptance ${role} ${suffix}`,
-          name: `Prerequisite acceptance ${role}`,
-        }));
+        created.push(
+          await rpc<TaskFixture>('create', {
+            instruction: `Prerequisite acceptance ${role} ${suffix}`,
+            name: `Prerequisite acceptance ${role}`,
+          }),
+        );
       }
       const [first, second, target] = created;
       dependent = target;
@@ -66,27 +68,31 @@ Then(
       await expect(empty).toBeVisible();
       await screenshot('empty');
 
-      // Change the server behind an idle mounted page, not the local store.
-      // This is the first-link invalidation regression from the review.
+      // Mutate behind an idle mounted page to exercise first-link invalidation.
       await rpc('addDependency', { dependsOnId: first.id, taskId: target.id });
-      await expect(this.page.getByRole('button', {
-        name: `Remove prerequisite ${first.identifier}`, exact: true,
-      })).toBeVisible({ timeout: 25_000 });
+      await expect(
+        this.page.getByRole('button', {
+          exact: true,
+          name: `Remove prerequisite ${first.identifier}`,
+        }),
+      ).toBeVisible({ timeout: 25_000 });
 
       const input = this.page.getByRole('textbox', { name: 'Prerequisite task identifier' });
       await input.fill(second.identifier);
       await input.press('Enter');
-      await expect(this.page.getByRole('button', {
-        name: `Remove prerequisite ${second.identifier}`, exact: true,
-      })).toBeVisible();
+      await expect(
+        this.page.getByRole('button', {
+          exact: true,
+          name: `Remove prerequisite ${second.identifier}`,
+        }),
+      ).toBeVisible();
       await expect(blocked).toBeVisible();
       await rejected('run', { id: target.id });
       await rejected('updateStatus', { id: target.id, status: 'completed' });
       expect((await rpc<TaskFixture>('find', { id: target.id }, true)).status).toBe('backlog');
       await screenshot('two-blockers');
 
-      // Do not dispatch real model work from acceptance fixtures. Readiness
-      // changes must not override a person's explicit pause.
+      // Avoid dispatching model work from fixtures; readiness must not override pause.
       await rpc('updateStatus', { id: target.id, status: 'paused' });
       await rpc('updateStatus', { id: first.id, status: 'completed' });
       await rejected('run', { id: target.id });
@@ -108,33 +114,44 @@ Then(
       await rejected('run', { id: target.id });
       await screenshot('reopened');
       await this.page.getByRole('button', {
-        name: `Remove prerequisite ${first.identifier}`, exact: true,
+        exact: true,
+        name: `Remove prerequisite ${first.identifier}`,
       }).click();
       await expect(ready).toBeVisible();
       await this.page.getByRole('button', {
-        name: `Remove prerequisite ${second.identifier}`, exact: true,
+        exact: true,
+        name: `Remove prerequisite ${second.identifier}`,
       }).click();
       await expect(empty).toBeVisible();
     } catch (error) {
-      primaryError = error;
-      throw error;
-    } finally {
-      const failures: unknown[] = [];
-      if (dependent) {
-        for (const upstream of created.filter(({ id }) => id !== dependent!.id)) {
-          try {
-            await rpc('removeDependency', { dependsOnId: upstream.id, taskId: dependent.id });
-          } catch (error) { failures.push(error); }
+      primaryFailure = { error };
+    }
+
+    // Always attempt every cleanup operation without masking the original assertion.
+    const failures: unknown[] = [];
+    if (dependent) {
+      for (const upstream of created.filter(({ id }) => id !== dependent!.id)) {
+        try {
+          await rpc('removeDependency', { dependsOnId: upstream.id, taskId: dependent.id });
+        } catch (error) {
+          failures.push(error);
         }
       }
-      for (const task of [...created].reverse()) {
-        try { await rpc('delete', { id: task.id }); }
-        catch (error) { failures.push(error); }
-      }
-      if (failures.length > 0) {
-        await this.attach(`Prerequisite fixture cleanup failed: ${failures.map(String).join('\n')}`, 'text/plain');
-        if (!primaryError) throw new AggregateError(failures, 'Prerequisite fixture cleanup failed');
+    }
+    for (const task of [...created].reverse()) {
+      try {
+        await rpc('delete', { id: task.id });
+      } catch (error) {
+        failures.push(error);
       }
     }
+    if (failures.length > 0) {
+      await this.attach(
+        `Prerequisite fixture cleanup failed: ${failures.map(String).join('\n')}`,
+        'text/plain',
+      );
+    }
+    if (primaryFailure) throw primaryFailure.error;
+    if (failures.length > 0) throw new AggregateError(failures, 'Prerequisite fixture cleanup failed');
   },
 );

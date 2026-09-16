@@ -6,11 +6,11 @@ import {
   type InputType,
   NonRetryableError,
 } from '@hatchet-dev/typescript-sdk/v1';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, lt, or } from 'drizzle-orm';
 import type { Context as HonoContext } from 'hono';
 import { z } from 'zod';
 
-import { hatchetDispatches } from '@/database/schemas';
+import { hatchetDispatches, hatchetWorkflowSteps } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
 import { botCallback } from '@/server/router-hono/agent/handlers/botCallback';
@@ -55,6 +55,8 @@ import {
   createWorkflowContext,
   WorkflowAbort,
   WorkflowNonRetryableError,
+  WorkflowStepInProgressError,
+  type WorkflowStepStore,
 } from '@/server/workflows/context';
 import { runExpertiseHistoryWorkflow } from '@/server/workflows/expertiseHistory';
 import { runExpertiseHistoryTopicWorkflow } from '@/server/workflows/expertiseHistory/topic';
@@ -84,9 +86,18 @@ interface StoredWorkflowInput {
   workflowRunId: string;
 }
 
-type WorkflowRunner = (input: StoredWorkflowInput) => Promise<unknown>;
+type WorkflowRunner = (
+  input: StoredWorkflowInput,
+  stepStore?: WorkflowStepStore,
+) => Promise<unknown>;
 
 const WORKFLOW_DISPATCH_RETRIES = 5;
+// A step lease outlives the task's 30-minute execution timeout. A retry can
+// reclaim it only after the previous worker has had enough time to terminate;
+// while the original worker is alive, its heartbeat keeps the lease fenced.
+const WORKFLOW_STEP_LEASE_MS = 45 * 60 * 1000;
+const WORKFLOW_COORDINATION_RETRY_DELAY_MS = 30_000;
+const WORKFLOW_STEP_GC_GRACE_MS = 5 * 60 * 1000;
 
 const runWorkflowFailureCompensation = async (path: HatchetWorkflowPath, body: unknown) => {
   switch (path) {
@@ -114,13 +125,12 @@ const runWorkflowFailureCompensation = async (path: HatchetWorkflowPath, body: u
 const invoke = async <THandler extends (context: never) => Promise<unknown>>(
   handler: THandler,
   input: StoredWorkflowInput,
+  stepStore?: WorkflowStepStore,
 ) =>
   handler(
-    createWorkflowContext(
-      input.body,
-      input.headers,
-      input.workflowRunId,
-    ) as Parameters<THandler>[0],
+    createWorkflowContext(input.body, input.headers, input.workflowRunId, {
+      stepStore,
+    }) as Parameters<THandler>[0],
   );
 
 const readResponseBody = async (response: Response): Promise<Record<string, unknown>> => {
@@ -153,21 +163,230 @@ export const invokeHonoHandler = async (
   return readResponseBody(response);
 };
 
+const createHatchetStepStore = (
+  db: Awaited<ReturnType<typeof getServerDB>>,
+  dispatchId: string,
+  ownerToken: string,
+): WorkflowStepStore => {
+  const findStep = async (stepName: string) => {
+    const [step] = await db
+      .select({
+        leaseExpiresAt: hatchetWorkflowSteps.leaseExpiresAt,
+        ownerToken: hatchetWorkflowSteps.ownerToken,
+        result: hatchetWorkflowSteps.result,
+        resultIsUndefined: hatchetWorkflowSteps.resultIsUndefined,
+        status: hatchetWorkflowSteps.status,
+      })
+      .from(hatchetWorkflowSteps)
+      .where(
+        and(
+          eq(hatchetWorkflowSteps.dispatchId, dispatchId),
+          eq(hatchetWorkflowSteps.stepName, stepName),
+        ),
+      )
+      .limit(1);
+
+    return step;
+  };
+
+  return {
+    ownerToken,
+    acquire: async (stepName, ownerToken) => {
+      const now = new Date();
+      const leaseExpiresAt = new Date(now.getTime() + WORKFLOW_STEP_LEASE_MS);
+      const [inserted] = await db
+        .insert(hatchetWorkflowSteps)
+        .values({ dispatchId, leaseExpiresAt, ownerToken, stepName })
+        .onConflictDoNothing()
+        .returning({ status: hatchetWorkflowSteps.status });
+      if (inserted) return { status: 'acquired' };
+
+      const existing = await findStep(stepName);
+      if (!existing) return { status: 'busy' };
+      if (existing.status === 'completed') return existing;
+      if (existing.leaseExpiresAt > now) return { status: 'busy' };
+
+      const [reclaimed] = await db
+        .update(hatchetWorkflowSteps)
+        .set({
+          completedAt: null,
+          leaseExpiresAt,
+          ownerToken,
+          result: null,
+          resultIsUndefined: false,
+          status: 'running',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(hatchetWorkflowSteps.dispatchId, dispatchId),
+            eq(hatchetWorkflowSteps.stepName, stepName),
+            eq(hatchetWorkflowSteps.status, 'running'),
+            lt(hatchetWorkflowSteps.leaseExpiresAt, now),
+          ),
+        )
+        .returning({ status: hatchetWorkflowSteps.status });
+
+      return reclaimed ? { status: 'acquired' } : { status: 'busy' };
+    },
+    complete: async (stepName, ownerToken, result) => {
+      const [completed] = await db
+        .update(hatchetWorkflowSteps)
+        .set({
+          completedAt: new Date(),
+          result: result === undefined ? null : result,
+          resultIsUndefined: result === undefined,
+          status: 'completed',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(hatchetWorkflowSteps.dispatchId, dispatchId),
+            eq(hatchetWorkflowSteps.stepName, stepName),
+            eq(hatchetWorkflowSteps.ownerToken, ownerToken),
+            eq(hatchetWorkflowSteps.status, 'running'),
+          ),
+        )
+        .returning({ status: hatchetWorkflowSteps.status });
+      if (completed) return;
+
+      const existing = await findStep(stepName);
+      if (existing?.status === 'completed') return;
+      throw new Error(`Hatchet workflow step ownership lost: ${stepName}`);
+    },
+    release: async (stepName, ownerToken) => {
+      await db
+        .delete(hatchetWorkflowSteps)
+        .where(
+          and(
+            eq(hatchetWorkflowSteps.dispatchId, dispatchId),
+            eq(hatchetWorkflowSteps.stepName, stepName),
+            eq(hatchetWorkflowSteps.ownerToken, ownerToken),
+            eq(hatchetWorkflowSteps.status, 'running'),
+          ),
+        );
+    },
+    renew: async (stepName, ownerToken) => {
+      const now = new Date();
+      const [renewed] = await db
+        .update(hatchetWorkflowSteps)
+        .set({
+          leaseExpiresAt: new Date(now.getTime() + WORKFLOW_STEP_LEASE_MS),
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(hatchetWorkflowSteps.dispatchId, dispatchId),
+            eq(hatchetWorkflowSteps.stepName, stepName),
+            eq(hatchetWorkflowSteps.ownerToken, ownerToken),
+            eq(hatchetWorkflowSteps.status, 'running'),
+          ),
+        )
+        .returning({ status: hatchetWorkflowSteps.status });
+
+      return Boolean(renewed);
+    },
+  };
+};
+
+const clearHatchetStepResults = async (
+  db: Awaited<ReturnType<typeof getServerDB>>,
+  dispatchId: string,
+) => {
+  try {
+    await db
+      .delete(hatchetWorkflowSteps)
+      .where(
+        and(
+          eq(hatchetWorkflowSteps.dispatchId, dispatchId),
+          eq(hatchetWorkflowSteps.status, 'completed'),
+        ),
+      );
+  } catch (error) {
+    // Step results are only a replay cache. A cleanup failure must not turn a
+    // completed business workflow into a retry, but it remains observable for
+    // the terminal reconciliation sweep to clean up later.
+    console.error('[hatchet] failed to clear workflow step results', { dispatchId, error });
+  }
+};
+
+export const completeHatchetDispatch = async (
+  db: Awaited<ReturnType<typeof getServerDB>>,
+  dispatchId: string,
+  clearStepResults: () => Promise<void>,
+) => {
+  const [completed] = await db
+    .update(hatchetDispatches)
+    .set({ error: null, status: 'completed', updatedAt: new Date() })
+    .where(and(eq(hatchetDispatches.id, dispatchId), eq(hatchetDispatches.status, 'running')))
+    .returning({ id: hatchetDispatches.id });
+
+  if (!completed) return false;
+  await clearStepResults();
+  return true;
+};
+
+const clearTerminalHatchetStepResults = async (
+  db: Awaited<ReturnType<typeof getServerDB>>,
+): Promise<number> => {
+  const cleanupCutoff = new Date(Date.now() - WORKFLOW_STEP_GC_GRACE_MS);
+  const terminal = await db
+    .selectDistinct({ id: hatchetDispatches.id })
+    .from(hatchetDispatches)
+    .innerJoin(hatchetWorkflowSteps, eq(hatchetWorkflowSteps.dispatchId, hatchetDispatches.id))
+    .where(
+      and(
+        inArray(hatchetDispatches.status, ['cancelled', 'completed', 'failed']),
+        or(
+          eq(hatchetWorkflowSteps.status, 'completed'),
+          and(
+            eq(hatchetWorkflowSteps.status, 'running'),
+            lt(hatchetWorkflowSteps.leaseExpiresAt, cleanupCutoff),
+          ),
+        ),
+      ),
+    )
+    .limit(1000);
+  if (terminal.length === 0) return 0;
+
+  const deleted = await db
+    .delete(hatchetWorkflowSteps)
+    .where(
+      and(
+        inArray(
+          hatchetWorkflowSteps.dispatchId,
+          terminal.map(({ id }) => id),
+        ),
+        or(
+          eq(hatchetWorkflowSteps.status, 'completed'),
+          and(
+            eq(hatchetWorkflowSteps.status, 'running'),
+            lt(hatchetWorkflowSteps.leaseExpiresAt, cleanupCutoff),
+          ),
+        ),
+      ),
+    )
+    .returning({ dispatchId: hatchetWorkflowSteps.dispatchId });
+  return deleted.length;
+};
+
 const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
-  '/api/workflows/agent-eval-run/execute-test-case': (input) =>
-    invoke(executeTestCaseHandler, input),
-  '/api/workflows/agent-eval-run/finalize-run': (input) => invoke(finalizeRunHandler, input),
-  '/api/workflows/agent-eval-run/paginate-test-cases': (input) =>
-    invoke(paginateTestCasesHandler, input),
-  '/api/workflows/agent-eval-run/resume-agent-trajectory': (input) =>
-    invoke(resumeAgentTrajectoryHandler, input),
-  '/api/workflows/agent-eval-run/resume-thread-trajectory': (input) =>
-    invoke(resumeThreadTrajectoryHandler, input),
-  '/api/workflows/agent-eval-run/run-agent-trajectory': (input) =>
-    invoke(runAgentTrajectoryHandler, input),
-  '/api/workflows/agent-eval-run/run-benchmark': (input) => invoke(runBenchmarkHandler, input),
-  '/api/workflows/agent-eval-run/run-thread-trajectory': (input) =>
-    invoke(runThreadTrajectoryHandler, input),
+  '/api/workflows/agent-eval-run/execute-test-case': (input, stepStore) =>
+    invoke(executeTestCaseHandler, input, stepStore),
+  '/api/workflows/agent-eval-run/finalize-run': (input, stepStore) =>
+    invoke(finalizeRunHandler, input, stepStore),
+  '/api/workflows/agent-eval-run/paginate-test-cases': (input, stepStore) =>
+    invoke(paginateTestCasesHandler, input, stepStore),
+  '/api/workflows/agent-eval-run/resume-agent-trajectory': (input, stepStore) =>
+    invoke(resumeAgentTrajectoryHandler, input, stepStore),
+  '/api/workflows/agent-eval-run/resume-thread-trajectory': (input, stepStore) =>
+    invoke(resumeThreadTrajectoryHandler, input, stepStore),
+  '/api/workflows/agent-eval-run/run-agent-trajectory': (input, stepStore) =>
+    invoke(runAgentTrajectoryHandler, input, stepStore),
+  '/api/workflows/agent-eval-run/run-benchmark': (input, stepStore) =>
+    invoke(runBenchmarkHandler, input, stepStore),
+  '/api/workflows/agent-eval-run/run-thread-trajectory': (input, stepStore) =>
+    invoke(runThreadTrajectoryHandler, input, stepStore),
   '/api/agent/webhooks/bot-callback': (input) => invokeHonoHandler(botCallback, input),
   '/api/agent/webhooks/group-member-callback': (input) =>
     invokeHonoHandler(groupMemberCallback, input),
@@ -176,45 +395,49 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
     invokeHonoHandler(onThreadComplete, input),
   '/api/workflows/agent-eval-run/on-trajectory-complete': (input) =>
     invokeHonoHandler(onTrajectoryComplete, input),
-  '/api/workflows/agent-signal/execute-nightly-review-user': (input) =>
-    invoke(executeNightlyReviewUser, input),
-  '/api/workflows/agent-signal/paginate-nightly-review-users': (input) =>
-    invoke(paginateNightlyReviewUsers, input),
-  '/api/workflows/agent-signal/run': (input) => invoke(runAgentSignalWorkflow, input),
-  '/api/workflows/expertise-history/run': (input) => invoke(runExpertiseHistoryWorkflow, input),
-  '/api/workflows/expertise-history/topic': (input) =>
-    invoke(runExpertiseHistoryTopicWorkflow, input),
-  '/api/workflows/memory-user-memory/call-cron-hourly-analysis': (input) =>
-    invoke(hourlyWorkflowHandler, input),
-  '/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic': (input) =>
-    invoke(processTopicHandler, input),
-  '/api/workflows/memory-user-memory/pipelines/chat-topic/process-topics': (input) =>
-    invoke(processTopicsHandler, input),
-  '/api/workflows/memory-user-memory/pipelines/chat-topic/process-user-topics': (input) =>
-    invoke(processUserTopicsHandler, input),
-  '/api/workflows/memory-user-memory/pipelines/chat-topic/process-users': (input) =>
-    invoke(processUsersHandler, input),
-  '/api/workflows/memory-user-memory/pipelines/persona/update-writing': (input) =>
-    invoke(personaUpdateHandler, input),
-  '/api/workflows/onboarding/task-recommendations/process': (input) =>
-    invoke(processOnboardingTaskRecommendations, input),
-  '/api/workflows/onboarding/understanding/process-collected': (input) =>
+  '/api/workflows/agent-signal/execute-nightly-review-user': (input, stepStore) =>
+    invoke(executeNightlyReviewUser, input, stepStore),
+  '/api/workflows/agent-signal/paginate-nightly-review-users': (input, stepStore) =>
+    invoke(paginateNightlyReviewUsers, input, stepStore),
+  '/api/workflows/agent-signal/run': (input, stepStore) =>
+    invoke(runAgentSignalWorkflow, input, stepStore),
+  '/api/workflows/expertise-history/run': (input, stepStore) =>
+    invoke(runExpertiseHistoryWorkflow, input, stepStore),
+  '/api/workflows/expertise-history/topic': (input, stepStore) =>
+    invoke(runExpertiseHistoryTopicWorkflow, input, stepStore),
+  '/api/workflows/memory-user-memory/call-cron-hourly-analysis': (input, stepStore) =>
+    invoke(hourlyWorkflowHandler, input, stepStore),
+  '/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic': (input, stepStore) =>
+    invoke(processTopicHandler, input, stepStore),
+  '/api/workflows/memory-user-memory/pipelines/chat-topic/process-topics': (input, stepStore) =>
+    invoke(processTopicsHandler, input, stepStore),
+  '/api/workflows/memory-user-memory/pipelines/chat-topic/process-user-topics': (
+    input,
+    stepStore,
+  ) => invoke(processUserTopicsHandler, input, stepStore),
+  '/api/workflows/memory-user-memory/pipelines/chat-topic/process-users': (input, stepStore) =>
+    invoke(processUsersHandler, input, stepStore),
+  '/api/workflows/memory-user-memory/pipelines/persona/update-writing': (input, stepStore) =>
+    invoke(personaUpdateHandler, input, stepStore),
+  '/api/workflows/onboarding/task-recommendations/process': (input, stepStore) =>
+    invoke(processOnboardingTaskRecommendations, input, stepStore),
+  '/api/workflows/onboarding/understanding/process-collected': (input, stepStore) =>
     processCollectedUnderstanding(
-      createWorkflowContext(input.body, input.headers, input.workflowRunId) as Parameters<
-        typeof processCollectedUnderstanding
-      >[0],
+      createWorkflowContext(input.body, input.headers, input.workflowRunId, {
+        stepStore,
+      }) as Parameters<typeof processCollectedUnderstanding>[0],
       {
         triggerDetailedPersona: (payload, options) =>
           OnboardingUnderstandingWorkflow.triggerDetailedPersona(payload, options),
       },
     ),
-  '/api/workflows/onboarding/understanding/process-detailed-persona': (input) =>
-    invoke(processDetailedUnderstandingPersona, input),
-  '/api/workflows/onboarding/understanding/process-providers': (input) =>
+  '/api/workflows/onboarding/understanding/process-detailed-persona': (input, stepStore) =>
+    invoke(processDetailedUnderstandingPersona, input, stepStore),
+  '/api/workflows/onboarding/understanding/process-providers': (input, stepStore) =>
     processUnderstandingProviders(
-      createWorkflowContext(input.body, input.headers, input.workflowRunId) as Parameters<
-        typeof processUnderstandingProviders
-      >[0],
+      createWorkflowContext(input.body, input.headers, input.workflowRunId, {
+        stepStore,
+      }) as Parameters<typeof processUnderstandingProviders>[0],
       {
         processCollectedWorkflow: {} as Parameters<
           typeof processUnderstandingProviders
@@ -227,8 +450,10 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
     ),
   '/api/workflows/task/on-creator-complete': (input) => invokeHonoHandler(onCreatorComplete, input),
   '/api/workflows/task/on-topic-complete': (input) => invokeHonoHandler(onTopicComplete, input),
-  '/api/workflows/topic-auto-summary/dispatch': (input) => invoke(dispatchTopicAutoSummary, input),
-  '/api/workflows/topic-auto-summary/execute': (input) => invoke(executeTopicAutoSummary, input),
+  '/api/workflows/topic-auto-summary/dispatch': (input, stepStore) =>
+    invoke(dispatchTopicAutoSummary, input, stepStore),
+  '/api/workflows/topic-auto-summary/execute': (input, stepStore) =>
+    invoke(executeTopicAutoSummary, input, stepStore),
   '/api/workflows/verify/on-evidence-complete': (input) =>
     invokeHonoHandler(onEvidenceComplete, input),
   '/api/workflows/verify/on-verifier-complete': (input) =>
@@ -236,10 +461,46 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
 };
 
 const workflowDispatchInput = z.object({
+  coordinationRetry: z.boolean().optional(),
   deduplicationKey: z.string().min(1),
   dispatchId: z.string().uuid(),
   laneKey: z.string().length(64),
 });
+
+export const scheduleWorkflowCoordinationRetry = (
+  input: z.infer<typeof workflowDispatchInput>,
+  retryCount: number,
+) =>
+  enqueueHatchetTask(
+    HATCHET_TASK_NAMES.workflowDispatch,
+    {
+      coordinationRetry: true,
+      deduplicationKey: `${input.deduplicationKey}:coordination:${retryCount}`,
+      dispatchId: input.dispatchId,
+      laneKey: input.laneKey,
+    },
+    { delayMs: WORKFLOW_COORDINATION_RETRY_DELAY_MS },
+  );
+
+export const markCoordinationRetryPending = async (
+  db: Awaited<ReturnType<typeof getServerDB>>,
+  dispatchId: string,
+  scheduleError: unknown,
+) => {
+  await db
+    .update(hatchetDispatches)
+    .set({
+      error: `Failed to reschedule an active Hatchet step: ${
+        scheduleError instanceof Error ? scheduleError.message : String(scheduleError)
+      }`,
+      // Let the minute sweep enqueue a fresh provider attempt after this
+      // exhausted coordination attempt exits. The step lease still fences
+      // the previous owner if it wakes up after the state transition.
+      status: 'pending',
+      updatedAt: new Date(),
+    })
+    .where(and(eq(hatchetDispatches.id, dispatchId), eq(hatchetDispatches.status, 'running')));
+};
 
 const isWorkflowPath = (path: string): path is HatchetWorkflowPath =>
   HATCHET_WORKFLOW_PATHS.includes(path as HatchetWorkflowPath);
@@ -306,7 +567,12 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
         .where(eq(hatchetDispatches.id, input.dispatchId))
         .limit(1);
       if (!dispatch) throw new Error(`Hatchet dispatch not found: ${input.dispatchId}`);
-      if (dispatch.status === 'cancelled' || dispatch.status === 'completed') {
+      if (
+        dispatch.status === 'cancelled' ||
+        dispatch.status === 'completed' ||
+        dispatch.status === 'failed'
+      ) {
+        await clearHatchetStepResults(db, dispatch.id);
         return { deduped: true, success: true };
       }
       if (!isWorkflowPath(dispatch.payload.path)) {
@@ -327,7 +593,9 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
       }
 
       const claimableStatuses: Array<'pending' | 'queued' | 'running'> =
-        retryCount > 0 ? ['pending', 'queued', 'running'] : ['pending', 'queued'];
+        retryCount > 0 || input.coordinationRetry
+          ? ['pending', 'queued', 'running']
+          : ['pending', 'queued'];
       const [claimed] = await db
         .update(hatchetDispatches)
         .set({ error: null, status: 'running', updatedAt: new Date() })
@@ -346,32 +614,53 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
         .where(eq(hatchetDispatches.id, dispatch.id))
         .limit(1);
       if (!claimedState || claimedState.status === 'cancelled') {
+        await clearHatchetStepResults(db, dispatch.id);
         return { cancelled: true, success: true };
       }
 
       try {
-        await runners[dispatch.payload.path]({
-          body: dispatch.payload.body,
-          headers: dispatch.payload.headers,
-          workflowRunId: dispatch.payload.workflowRunId,
-          dispatchId: dispatch.id,
-        });
-        await db
-          .update(hatchetDispatches)
-          .set({ error: null, status: 'completed', updatedAt: new Date() })
-          .where(
-            and(eq(hatchetDispatches.id, dispatch.id), eq(hatchetDispatches.status, 'running')),
-          );
+        const stepStore = createHatchetStepStore(
+          db,
+          dispatch.id,
+          `${hatchetContext.taskRunExternalId()}:${retryCount}`,
+        );
+        await runners[dispatch.payload.path](
+          {
+            body: dispatch.payload.body,
+            headers: dispatch.payload.headers,
+            workflowRunId: dispatch.payload.workflowRunId,
+            dispatchId: dispatch.id,
+          },
+          stepStore,
+        );
+        await completeHatchetDispatch(db, dispatch.id, () =>
+          clearHatchetStepResults(db, dispatch.id),
+        );
         return { success: true };
       } catch (error) {
         if (error instanceof WorkflowAbort) {
-          await db
-            .update(hatchetDispatches)
-            .set({ error: null, status: 'completed', updatedAt: new Date() })
-            .where(
-              and(eq(hatchetDispatches.id, dispatch.id), eq(hatchetDispatches.status, 'running')),
-            );
+          await completeHatchetDispatch(db, dispatch.id, () =>
+            clearHatchetStepResults(db, dispatch.id),
+          );
           return { aborted: true, success: true };
+        }
+
+        if (error instanceof WorkflowStepInProgressError) {
+          // Another Hatchet attempt still owns the step. Do not spend the
+          // business retry budget or run failure compensation while that
+          // owner is alive. A delayed successor also recovers a worker that
+          // disappeared after claiming the step and before completing it.
+          if (retryCount >= WORKFLOW_DISPATCH_RETRIES) {
+            try {
+              await scheduleWorkflowCoordinationRetry(input, retryCount);
+            } catch (scheduleError) {
+              await markCoordinationRetryPending(db, dispatch.id, scheduleError);
+              throw scheduleError;
+            }
+            return { deferred: true, success: true };
+          }
+
+          throw error;
         }
 
         const isTerminalFailure =
@@ -405,6 +694,7 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
           .where(
             and(eq(hatchetDispatches.id, dispatch.id), eq(hatchetDispatches.status, 'running')),
           );
+        if (isTerminalFailure) await clearHatchetStepResults(db, dispatch.id);
         if (error instanceof WorkflowNonRetryableError) {
           throw new NonRetryableError(error.message);
         }
@@ -426,6 +716,7 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
     executionTimeout: '15m',
     fn: async () => {
       const db = await getServerDB();
+      const cleaned = await clearTerminalHatchetStepResults(db);
       const pending = await db
         .select()
         .from(hatchetDispatches)
@@ -435,7 +726,7 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
       const results = await Promise.allSettled(pending.map(enqueueStoredDispatch));
       const failed = results.filter((result) => result.status === 'rejected').length;
       if (failed > 0) throw new Error(`Failed to enqueue ${failed} pending Hatchet dispatches`);
-      return { queued: pending.length, success: true };
+      return { cleaned, queued: pending.length, success: true };
     },
     onCrons: ['* * * * *'],
     retries: 3,

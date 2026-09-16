@@ -3,6 +3,7 @@ import type { TaskItem, TaskTopicIntegration } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { TaskTopicItem } from '@/database/schemas/task';
 import { deviceGateway } from '@/server/services/deviceGateway';
@@ -20,7 +21,11 @@ import { runVerifyOnCompletion } from '@/server/services/verify';
 import { TaskIntegrationService } from '../index';
 
 const mockTaskModel = {
+  findById: vi.fn(),
   updateStatus: vi.fn(),
+};
+const mockTaskDispatchModel = {
+  findById: vi.fn(),
 };
 const mockTaskTopicModel = {
   claimIntegration: vi.fn(),
@@ -42,6 +47,10 @@ const { mockAfter } = vi.hoisted(() => ({ mockAfter: vi.fn() }));
 
 vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(),
+}));
+
+vi.mock('@/database/models/taskDispatch', () => ({
+  TaskDispatchModel: vi.fn(),
 }));
 
 vi.mock('@/database/models/taskTopic', () => ({
@@ -84,8 +93,17 @@ vi.mock('@/server/services/githubRepo', async (importOriginal) => {
   };
 });
 
-const baseTask = (): TaskItem =>
-  ({ id: 'task_1', identifier: 'T-1', status: 'running' }) as TaskItem;
+const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
+  ({
+    domainRevision: 1,
+    executionGeneration: 1,
+    id: 'task_1',
+    identifier: 'T-1',
+    policyRevision: 1,
+    requirementRevision: 1,
+    status: 'running',
+    ...overrides,
+  }) as TaskItem;
 
 const seedRecord = (overrides: Partial<TaskTopicIntegration> = {}): TaskTopicIntegration => ({
   attempts: 0,
@@ -99,8 +117,18 @@ const seedRecord = (overrides: Partial<TaskTopicIntegration> = {}): TaskTopicInt
   ...overrides,
 });
 
-const asTopic = (integration: TaskTopicIntegration | null): TaskTopicItem =>
-  ({ integration, topicId: 'topic_1' }) as TaskTopicItem;
+const asTopic = (integration: TaskTopicIntegration | null, topicId = 'topic_1'): TaskTopicItem =>
+  ({
+    dispatchFence: 1,
+    dispatchId: 'dispatch-1',
+    executionGeneration: 1,
+    integration,
+    policyRevision: 1,
+    requirementRevision: 1,
+    taskId: 'task_1',
+    taskRevision: 1,
+    topicId,
+  }) as TaskTopicItem;
 
 const remoteRecord = (overrides: Partial<TaskTopicIntegration> = {}): TaskTopicIntegration => ({
   attempts: 0,
@@ -120,6 +148,9 @@ describe('TaskIntegrationService', () => {
     (TaskModel as any).mockImplementation(function () {
       return mockTaskModel;
     });
+    (TaskDispatchModel as any).mockImplementation(function () {
+      return mockTaskDispatchModel;
+    });
     (TaskTopicModel as any).mockImplementation(function () {
       return mockTaskTopicModel;
     });
@@ -132,6 +163,17 @@ describe('TaskIntegrationService', () => {
     mockWorkspaceService.resolveWorkspaceConfig.mockResolvedValue({
       provider: 'git',
       repoPath: '/repos/orvilo',
+    });
+    mockTaskModel.findById.mockResolvedValue(baseTask());
+    mockTaskDispatchModel.findById.mockResolvedValue({
+      fence: 1,
+      generation: 1,
+      id: 'dispatch-1',
+      phase: 'succeeded',
+      policyRevision: 1,
+      requirementRevision: 1,
+      taskId: 'task_1',
+      taskRevision: 1,
     });
     mockTaskTopicModel.updateIntegration.mockResolvedValue(true);
     service = new TaskIntegrationService({} as any, 'user-1', 'ws-1');
@@ -162,6 +204,46 @@ describe('TaskIntegrationService', () => {
       'settled',
     );
     expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+  });
+
+  it('archives a late old-generation integration result without merging or dispatching correction', async () => {
+    mockTaskModel.findById.mockResolvedValue(baseTask({ executionGeneration: 2 }));
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+
+    const outcome = await service.integrateOnComplete({
+      task: baseTask({ executionGeneration: 1 }),
+      taskTopicId: 'topic_1',
+    });
+
+    expect(outcome).toBe('stale');
+    expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+    expect(mockRunner.runTask).not.toHaveBeenCalled();
+    expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith('task_1', 'topic_1', {
+      lastError: 'Integration result is stale or no longer owns the task dispatch',
+      state: 'skipped',
+    });
+  });
+
+  it('integrates the authoritative current generation normally', async () => {
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+    vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+      sha: 'current123',
+      state: 'merged',
+      success: true,
+    });
+
+    const outcome = await service.integrateOnComplete({
+      task: baseTask({ executionGeneration: 1 }),
+      taskTopicId: 'topic_1',
+    });
+
+    expect(outcome).toBe('settled');
+    expect(deviceGateway.mergeGitBranch).toHaveBeenCalled();
+    expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+      'task_1',
+      'topic_1',
+      expect.objectContaining({ integratedSha: 'current123', state: 'integrated' }),
+    );
   });
 
   it('lets only one duplicate completion callback process an integration state', async () => {

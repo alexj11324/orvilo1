@@ -6,7 +6,9 @@ import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import type { TaskTopicItem } from '@/database/schemas/task';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { LobeChatDatabase } from '@/database/type';
 import { deviceGateway } from '@/server/services/deviceGateway';
@@ -38,7 +40,7 @@ const INTEGRATION_CLAIM_TTL_MS = 15 * 60 * 1000;
  * - 'blocked' — corrective attempts exhausted or the device path failed; the
  *   caller parks the task 'paused' with the recorded error.
  */
-export type IntegrationOutcome = 'settled' | 'hold' | 'blocked';
+export type IntegrationOutcome = 'settled' | 'hold' | 'blocked' | 'stale';
 
 /**
  * TaskIntegrationService — lands a provisioned run's task branch back onto its
@@ -54,6 +56,7 @@ export type IntegrationOutcome = 'settled' | 'hold' | 'blocked';
 export class TaskIntegrationService {
   private db: LobeChatDatabase;
   private taskModel: TaskModel;
+  private taskDispatchModel: TaskDispatchModel;
   private taskTopicModel: TaskTopicModel;
   private userId: string;
   private workspaceId?: string;
@@ -64,6 +67,7 @@ export class TaskIntegrationService {
     this.userId = userId;
     this.workspaceId = workspaceId;
     this.taskModel = new TaskModel(db, userId, workspaceId);
+    this.taskDispatchModel = new TaskDispatchModel(db, workspaceId);
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.workspaceService = new TaskWorkspaceService(db, userId, workspaceId);
   }
@@ -116,7 +120,34 @@ export class TaskIntegrationService {
     taskTopicId: string;
     verifyOperationId?: string;
   }): Promise<IntegrationOutcome> {
-    const { task, taskTopicId } = params;
+    const { taskTopicId } = params;
+
+    const initialTopic = await this.taskTopicModel.findByTopicId(taskTopicId);
+    const initialRecord = initialTopic?.integration;
+    if (
+      !initialRecord ||
+      !initialTopic?.topicId ||
+      (initialRecord.role === 'task' &&
+        initialRecord.state !== 'pending' &&
+        initialRecord.state !== 'conflict')
+    ) {
+      return 'settled';
+    }
+    if (initialRecord.role === 'integrate' && initialRecord.state !== 'merging') {
+      return 'settled';
+    }
+
+    // Completion callbacks may carry an old task snapshot. Re-read the task,
+    // topic and dispatch owner before any merge, remote check, or success fact.
+    const owner = await this.resolveCurrentOwner(params.task.id, taskTopicId, initialTopic);
+    if (!owner) {
+      await this.taskTopicModel.updateIntegration(params.task.id, taskTopicId, {
+        lastError: 'Integration result is stale or no longer owns the task dispatch',
+        state: 'skipped',
+      });
+      return 'stale';
+    }
+    const task = owner.task;
 
     // Cheap bail: only workspace-bound tasks can have anything to integrate,
     // so unbound runs skip the topic read entirely. Resolution failure is
@@ -132,7 +163,7 @@ export class TaskIntegrationService {
     if (!workspace) return 'settled';
 
     try {
-      const taskTopic = await this.taskTopicModel.findByTopicId(taskTopicId);
+      const taskTopic = owner.topic;
       const storedRecord = taskTopic?.integration;
       const record = storedRecord
         ? {
@@ -310,6 +341,36 @@ export class TaskIntegrationService {
       });
       return 'blocked';
     }
+  }
+
+  /** Resolve the task/topic dispatch owner before accepting an integration result. */
+  private async resolveCurrentOwner(
+    taskId: string,
+    topicId: string,
+    topicSnapshot?: TaskTopicItem | null,
+  ): Promise<{ task: TaskItem; topic: TaskTopicItem } | null> {
+    const topic = topicSnapshot ?? (await this.taskTopicModel.findByTopicId(topicId));
+    if (!topic || topic.taskId !== taskId || !topic.dispatchId) return null;
+
+    const [task, dispatch] = await Promise.all([
+      this.taskModel.findById(taskId),
+      this.taskDispatchModel.findById(topic.dispatchId),
+    ]);
+    if (!task || !dispatch || dispatch.taskId !== taskId) return null;
+
+    const ownsCurrentDispatch =
+      dispatch.phase === 'succeeded' &&
+      task.executionGeneration === dispatch.generation &&
+      topic.executionGeneration === dispatch.generation &&
+      topic.dispatchFence === dispatch.fence &&
+      topic.taskRevision === dispatch.taskRevision &&
+      topic.requirementRevision === dispatch.requirementRevision &&
+      topic.policyRevision === dispatch.policyRevision &&
+      task.domainRevision === dispatch.taskRevision &&
+      task.requirementRevision === dispatch.requirementRevision &&
+      task.policyRevision === dispatch.policyRevision;
+
+    return ownsCurrentDispatch ? { task, topic } : null;
   }
 
   private async blockRelated(taskId: string, branch: string): Promise<void> {

@@ -420,7 +420,7 @@ export class TaskLifecycleService {
             });
             return;
           }
-          if (integrationOutcome === 'hold') return;
+        if (integrationOutcome === 'hold' || integrationOutcome === 'stale') return;
         }
 
         // 3. Delivery acceptance now runs through Verify: the verify

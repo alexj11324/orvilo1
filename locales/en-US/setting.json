@@ -490,7 +490,7 @@
   "devices.visibilityTabs.private": "Private",
   "devices.visibilityTabs.workspace": "Workspace",
   "devices.workingDirectory": "Working dir: {{path}}",
-  "group.aiConfig": "Agent",
+  "group.aiConfig": "Agent & runtime",
   "group.common": "General",
   "group.developer": "Developer",
   "group.personal": "Personal",

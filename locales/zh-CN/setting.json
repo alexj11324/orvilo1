@@ -490,7 +490,7 @@
   "devices.visibilityTabs.private": "私人",
   "devices.visibilityTabs.workspace": "工作区",
   "devices.workingDirectory": "工作目录：{{path}}",
-  "group.aiConfig": "智能体",
+  "group.aiConfig": "执行环境与 Agent",
   "group.common": "通用",
   "group.developer": "开发者",
   "group.personal": "个人",

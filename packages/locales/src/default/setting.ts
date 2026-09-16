@@ -768,8 +768,9 @@ export default {
   'defaultAgent.model.desc': 'Model used when creating new agents',
   'defaultAgent.model.title': 'Model',
   'defaultAgent.title': 'New Agent',
-  'group.aiConfig': 'Agent',
+  'group.aiConfig': 'Agent & runtime',
   'group.common': 'General',
+
   'group.developer': 'Developer',
   'group.personal': 'Personal',
   'group.profile': 'Account',

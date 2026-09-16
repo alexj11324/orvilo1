@@ -16,13 +16,14 @@ import { useChatStore } from '@/store/chat';
 
 import type { AgentSignalReceiptView } from '../hooks/useAgentSignalReceipts';
 
+/**
+ * Only the preferences layer still has a page to open. The other four were
+ * browsing surfaces that have been retired, so a receipt for one of them has no
+ * destination and renders as a status card instead of an "Open".
+ */
 const MEMORY_ROUTE_BY_LAYER = {
-  [LayersEnum.Activity]: { idParam: 'activityId', path: '/memory/activities' },
-  [LayersEnum.Context]: { idParam: 'contextId', path: '/memory/contexts' },
-  [LayersEnum.Experience]: { idParam: 'experienceId', path: '/memory/experiences' },
-  [LayersEnum.Identity]: { idParam: 'identityId', path: '/memory/identities' },
   [LayersEnum.Preference]: { idParam: 'preferenceId', path: '/memory/preferences' },
-} satisfies Record<LayersEnum, { idParam: string; path: string }>;
+} satisfies Partial<Record<LayersEnum, { idParam: string; path: string }>>;
 
 const styles = createStaticStyles(({ css }) => ({
   list: css`
@@ -89,10 +90,10 @@ const getMemoryRoute = (target?: AgentSignalReceiptView['target']) => {
       ? LayersEnum.Preference
       : undefined);
 
-  if (!memoryLayer) return '/memory';
+  if (!memoryLayer) return;
 
   const route = MEMORY_ROUTE_BY_LAYER[memoryLayer];
-  if (!route) return '/memory';
+  if (!route) return;
 
   const layerSpecificId = hasLayerMetadata ? target.id : undefined;
 

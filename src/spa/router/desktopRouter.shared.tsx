@@ -742,72 +742,27 @@ export const sharedMainAreaChildren: RouteObject[] = [
   },
 
   // Memory routes
+  //
+  // The browsing layers — home, identities, contexts, experiences, activities —
+  // are retired. What survives is the manager the user needs in order to read,
+  // correct and delete what was remembered about them, so the index keeps that
+  // reachable instead of falling through to the catch-all.
   {
     children: [
       {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/(home)'),
-          'Desktop > Memory > Home',
-          { preloadId: 'memory' },
-        ),
-        handle: {
-          meta: routeMeta({
-            icon: BrainCircuit,
-            Skeleton: MemorySkeleton,
-            titleKey: 'navigation.memory',
-          }),
-        },
+        element: redirectElement('preferences'),
         index: true,
-      },
-      {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/identities'),
-          'Desktop > Memory > Identities',
-        ),
-        handle: {
-          meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memoryIdentities' }),
-        },
-        path: 'identities',
-      },
-      {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/contexts'),
-          'Desktop > Memory > Contexts',
-        ),
-        handle: {
-          meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memoryContexts' }),
-        },
-        path: 'contexts',
       },
       {
         element: dynamicElement(
           () => import('@/routes/(main)/memory/preferences'),
           'Desktop > Memory > Preferences',
-        ),
-        handle: {
-          meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memoryPreferences' }),
-        },
-        path: 'preferences',
-      },
-      {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/experiences'),
-          'Desktop > Memory > Experiences',
-        ),
-        handle: {
-          meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memoryExperiences' }),
-        },
-        path: 'experiences',
-      },
-      {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/activities'),
-          'Desktop > Memory > Activities',
+          { preloadId: 'memory' },
         ),
         handle: {
           meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memory' }),
         },
-        path: 'activities',
+        path: 'preferences',
       },
     ],
     element: dynamicLayout(
@@ -816,7 +771,9 @@ export const sharedMainAreaChildren: RouteObject[] = [
       { preloadId: 'memory' },
     ),
     errorElement: <ErrorBoundary />,
-    handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
+    // On the parent rather than the index child: the index only redirects, so
+    // this is the deepest meta `/memory` and `/memory/preferences` resolve to.
+    handle: { meta: routeMeta({ Skeleton: MemorySkeleton }) },
     path: 'memory',
   },
 

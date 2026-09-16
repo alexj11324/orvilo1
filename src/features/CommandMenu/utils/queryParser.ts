@@ -11,7 +11,8 @@ export interface ParsedQuery {
 
 // Valid types for search filtering
 // Note: 'pageContent' is excluded as it's not yet integrated in the backend
-const VALID_TYPES = [
+/** Exported so the parser's own test derives from it instead of restating it. */
+export const VALID_TYPES = [
   'agent',
   'chatGroup',
   'topic',

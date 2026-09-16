@@ -29,8 +29,16 @@ import WideScreenContainer from '@/features/WideScreenContainer';
  * goals, the daily brief and usage are neither fetched nor rendered — this page
  * has no rail for them to fall back to, so it is the main column or nothing.
  *
- * No `hide*` flags: every section the user has not hidden in their home-widget
- * preferences is shown.
+ * No `hide*` flags are passed, which is not the same as the page ignoring the
+ * home-widget preference. That preference still reaches exactly two blocks here —
+ * `suggestions` (through `useRecommendationsVisible`) and the `usage` business
+ * slot (`HomeInbox/index.tsx:206`) — and nothing else: the briefs, the daily
+ * brief, goals and the unread/running topics are gated by `inlineRail` and by the
+ * host's props. Worth knowing for two reasons. It is why this page cannot go
+ * blank no matter what was hidden, and on Web the preference has **no writer at
+ * all** — its only UI is `CustomizeButton`, which lives on the Electron-only
+ * `/home` route — so a stored value can suppress those two blocks here with no
+ * way to undo it. Severity and the options are in the rollout doc §2.2.
  */
 const InboxPage = memo(() => {
   const { t } = useTranslation('electron');

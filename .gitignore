@@ -188,3 +188,5 @@ apps/desktop/resources/sounds/
 
 # Agent working notes and local verification logs (not product code)
 tasks/
+.vercel
+.env*

@@ -522,6 +522,13 @@ import { imageRouter } from '@/server/routers/lambda/image';
 **应改为**：导航项**留在 `/automations`**，让 `/automations` 渲染同一个 scheduled 集合视图。
 这样「一个视图实现 + 一份数据 + 两个入口」成立，且高亮正确。
 
+> ⚠️ **顺序约束（做反会造成真实回退）**：
+> 必须**先把下面 5 项能力搬进 scheduled 集合，再切入口**。
+> 反过来先让 `/automations` 渲染 scheduled 集合，会让 active/paused 过滤、`scope=created`、
+> 搜索、批量操作、行内 pause/resume **当场消失** —— 这正是方案 §14 禁止的
+> 「先删，后面再补」的中间破损态。当前 `/automations` 仍是 `AutomationsPage`，
+> 功能完整，**不要提前动它**。
+
 **仍待搬运的能力**（Automations 有、scheduled 集合没有，方案 §7 要求逐项对照）：
 
 | 能力                        | Automations 位置                      | 待办                                                                                   |

@@ -1,5 +1,7 @@
 'use client';
 
+import BrandTextLoading from '@/components/Loading/BrandTextLoading';
+
 import DevSeedSignIn from './DevSeedSignIn';
 import { SignInEmailSentStep } from './SignInEmailSentStep';
 import { SignInEmailStep } from './SignInEmailStep';
@@ -8,6 +10,7 @@ import { useSignIn } from './useSignIn';
 
 const SignIn = () => {
   const {
+    autoSsoActive,
     disableEmailPassword,
     email,
     form,
@@ -30,6 +33,10 @@ const SignIn = () => {
     socialLoading,
     step,
   } = useSignIn();
+
+  // Single-SSO deployments hand the whole login surface to the hosted accounts
+  // site — show a loading state while the redirect is being prepared.
+  if (autoSsoActive) return <BrandTextLoading debugId="SignInAutoSso" />;
 
   if (step === 'emailSent' && sentInfo)
     return (

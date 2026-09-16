@@ -66,7 +66,7 @@ jobs:
         working-directory: e2e
         run: pnpm exec cucumber-js --config cucumber.config.js --tags '@smoke'
         env:
-          E2E_PARALLEL: '3'
+          E2E_PARALLEL: '1'
           HEADLESS: 'true'
 
       - name: Upload E2E test artifacts (on failure)

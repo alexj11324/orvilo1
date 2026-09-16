@@ -22,7 +22,10 @@ import { AiAgentService } from '@/server/services/aiAgent';
 import type { AgentShareGate } from '@/server/services/aiAgent/shareGate';
 import { FileService } from '@/server/services/file';
 
-import { assertAgentShareVisitorEnabled } from './_helpers/agentShareFeatureGate';
+import {
+  assertAgentShareVisitorEnabled,
+  assertAgentShareVisitorExecutionEnabled,
+} from './_helpers/agentShareFeatureGate';
 
 const log = debug('lobe-server:router:shareChat');
 
@@ -182,6 +185,10 @@ export const shareChatRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      // Before anything is resolved, spend-checked or written: visitor execution
+      // is retired, and this is the only entry point that can start a run.
+      assertAgentShareVisitorExecutionEnabled();
+
       const share = await resolveLinkShareOrThrow(ctx.serverDB, input.shareId, ctx.userId);
 
       // Spend admission runs FIRST, before any row is created: a run rejected

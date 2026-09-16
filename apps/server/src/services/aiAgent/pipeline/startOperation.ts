@@ -50,6 +50,7 @@ export interface StartOperationInput {
   queueRetries?: number;
   queueRetryDelay?: string;
   signal?: AbortSignal;
+  skipTaskVerification?: boolean;
   stream?: boolean;
   topicStartOwnerOperationId?: string;
   updateAbortedAssistantMessage: (errorMessage: string) => Promise<void>;
@@ -112,6 +113,7 @@ export const startOperation = async (
     queueRetries,
     queueRetryDelay,
     signal,
+    skipTaskVerification,
     stream,
     topicStartOwnerOperationId,
     updateAbortedAssistantMessage,
@@ -275,6 +277,7 @@ export const startOperation = async (
       operationId,
       parentOperationId,
       signal,
+      skipTaskVerification,
       queueRetries,
       queueRetryDelay,
       stream,

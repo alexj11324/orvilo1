@@ -43,6 +43,8 @@ export interface RecordOperationStartParams {
   operationId: string;
   parentOperationId?: string | null;
   provider?: string;
+  /** Do not instantiate a new task Verify plan for this internal operation. */
+  skipTaskVerification?: boolean;
   startedAt?: Date;
   taskId?: string | null;
   threadId?: string | null;

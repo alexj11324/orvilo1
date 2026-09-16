@@ -3,7 +3,7 @@ import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
 import type { Context } from 'hono';
 
-import { tasks } from '@/database/schemas';
+import { agentOperations, tasks, taskTopics } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 
@@ -44,8 +44,12 @@ export async function onTopicComplete(c: Context) {
       userId,
     } = body;
 
-    if (!taskId || !userId || !taskIdentifier || !operationId) {
+    if (!taskId || !userId || !taskIdentifier || !operationId || !topicId) {
       return c.json({ error: 'Missing required fields' }, 400);
+    }
+    const normalizedReason = reason === 'max_steps' || reason === 'cost_limit' ? 'done' : reason;
+    if (normalizedReason !== 'done' && normalizedReason !== 'error') {
+      return c.json({ error: 'Unsupported task completion reason' }, 400);
     }
 
     log(
@@ -57,25 +61,79 @@ export async function onTopicComplete(c: Context) {
     );
 
     const db = await getServerDB();
-    // System-level callback: derive workspace from the task row so the
-    // lifecycle service writes briefs / status into the correct workspace.
-    const [taskRow] = await db
-      .select({ workspaceId: tasks.workspaceId })
-      .from(tasks)
-      .where(and(eq(tasks.id, taskId), eq(tasks.createdByUserId, userId)))
+    // Resolve the authenticated callback through its durable operation. The
+    // executor may differ from the task creator in a shared workspace, and a
+    // request body must not be allowed to silently select another task/topic.
+    const [operation] = await db
+      .select({
+        taskId: agentOperations.taskId,
+        topicId: agentOperations.topicId,
+        userId: agentOperations.userId,
+        workspaceId: agentOperations.workspaceId,
+        status: agentOperations.status,
+      })
+      .from(agentOperations)
+      .where(eq(agentOperations.id, operationId))
       .limit(1);
-    const wsId = taskRow?.workspaceId ?? undefined;
-    const taskLifecycle = new TaskLifecycleService(db, userId, wsId);
+    if (
+      !operation ||
+      operation.taskId !== taskId ||
+      operation.userId !== userId ||
+      operation.topicId !== topicId ||
+      operation.status !== normalizedReason
+    ) {
+      return c.json({ error: 'Operation does not match the task callback' }, 409);
+    }
+
+    const [taskRow] = await db
+      .select({
+        currentTopicId: tasks.currentTopicId,
+        identifier: tasks.identifier,
+        status: tasks.status,
+        workspaceId: tasks.workspaceId,
+      })
+      .from(tasks)
+      .where(eq(tasks.id, operation.taskId))
+      .limit(1);
+    if (!taskRow || taskRow.workspaceId !== operation.workspaceId) {
+      return c.json({ error: 'Task workspace does not match the operation' }, 409);
+    }
+
+    // A very fast operation can publish its durable QStash callback before the
+    // dispatcher has registered task_topics/currentTopicId. Returning success
+    // there loses the only terminal delivery. Ask QStash to retry while this is
+    // still the active unregistered generation; acknowledge genuinely stale
+    // callbacks so they do not retry forever.
+    const [registeredTopic] = await db
+      .select({ operationId: taskTopics.operationId })
+      .from(taskTopics)
+      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId)))
+      .limit(1);
+    if (!registeredTopic) {
+      if (
+        taskRow.status === 'running' &&
+        (!taskRow.currentTopicId || taskRow.currentTopicId === topicId)
+      ) {
+        return c.json({ error: 'Task run registration is still in progress' }, 503);
+      }
+      return c.json({ ignored: true, success: true });
+    }
+    if (registeredTopic.operationId !== operationId || taskRow.currentTopicId !== topicId) {
+      return c.json({ ignored: true, success: true });
+    }
+
+    const wsId = operation.workspaceId ?? undefined;
+    const taskLifecycle = new TaskLifecycleService(db, operation.userId, wsId);
 
     await taskLifecycle.onTopicComplete({
       errorCode: errorType,
       errorMessage,
       lastAssistantContent,
       operationId,
-      reason: reason || 'done',
+      reason: normalizedReason,
       runTrigger,
       taskId,
-      taskIdentifier,
+      taskIdentifier: taskRow.identifier,
       topicId,
     });
 

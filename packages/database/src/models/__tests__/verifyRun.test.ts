@@ -237,6 +237,78 @@ describe('VerifyRunModel.findStuckVerifying', () => {
   });
 });
 
+describe('VerifyRunModel task-drive lease', () => {
+  it('releases only the current owner so a corrective callback can reclaim the drive', async () => {
+    const runId = await buildRun('op-task-drive-release');
+    const model = new VerifyRunModel(serverDB, userId);
+    const startedAt = new Date('2026-01-01T00:00:00.000Z');
+    const owner = await model.claimTaskDrive(runId, startedAt, 1_000);
+
+    await expect(model.releaseTaskDrive(runId, 'not-the-owner')).resolves.toBe(false);
+    await expect(model.releaseTaskDrive(runId, owner!)).resolves.toBe(true);
+    await expect(model.claimTaskDrive(runId, startedAt, 1_000)).resolves.toEqual(
+      expect.any(String),
+    );
+  });
+
+  it('renews only the current owner lease', async () => {
+    const runId = await buildRun('op-task-drive-renew');
+    const model = new VerifyRunModel(serverDB, userId);
+    const startedAt = new Date('2026-01-01T00:00:00.000Z');
+    const owner = await model.claimTaskDrive(runId, startedAt, 1_000);
+
+    await expect(
+      model.renewTaskDrive(runId, 'not-the-owner', new Date(startedAt.getTime() + 500), 2_000),
+    ).resolves.toBe(false);
+    await expect(
+      model.renewTaskDrive(runId, owner!, new Date(startedAt.getTime() + 500), 2_000),
+    ).resolves.toBe(true);
+    await expect(
+      model.completeTaskDrive(runId, owner!, new Date(startedAt.getTime() + 2_000)),
+    ).resolves.toBe(true);
+  });
+
+  it('does not let an owner complete after its lease expires', async () => {
+    const runId = await buildRun('op-task-drive-expired');
+    const model = new VerifyRunModel(serverDB, userId);
+    const startedAt = new Date('2026-01-01T00:00:00.000Z');
+    const owner = await model.claimTaskDrive(runId, startedAt, 1_000);
+
+    await expect(
+      model.completeTaskDrive(runId, owner!, new Date(startedAt.getTime() + 1_001)),
+    ).resolves.toBe(false);
+  });
+
+  it('fences an expired owner from completing a reclaimed drive', async () => {
+    const runId = await buildRun('op-task-drive-lease');
+    const model = new VerifyRunModel(serverDB, userId);
+    const startedAt = new Date('2026-01-01T00:00:00.000Z');
+
+    const firstOwner = await model.claimTaskDrive(runId, startedAt, 1_000);
+    expect(firstOwner).toEqual(expect.any(String));
+    await expect(model.claimTaskDrive(runId, startedAt, 1_000)).resolves.toBeNull();
+
+    const secondOwner = await model.claimTaskDrive(
+      runId,
+      new Date(startedAt.getTime() + 1_001),
+      1_000,
+    );
+    expect(secondOwner).toEqual(expect.any(String));
+    expect(secondOwner).not.toBe(firstOwner);
+
+    const secondCompletion = new Date(startedAt.getTime() + 1_500);
+    await expect(model.completeTaskDrive(runId, firstOwner!, secondCompletion)).resolves.toBe(
+      false,
+    );
+    await expect(model.completeTaskDrive(runId, secondOwner!, secondCompletion)).resolves.toBe(
+      true,
+    );
+    await expect(
+      model.claimTaskDrive(runId, new Date(startedAt.getTime() + 3_000), 1_000),
+    ).resolves.toBeNull();
+  });
+});
+
 describe('VerifyRunModel.foldIntoRound', () => {
   const model = () => new VerifyRunModel(serverDB, userId);
   const item = (id: string) => ({

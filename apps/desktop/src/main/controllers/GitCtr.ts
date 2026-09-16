@@ -171,7 +171,10 @@ export default class GitController extends ControllerModule {
   }
 
   @IpcMethod()
-  async finalizeGitMerge(payload: { path: string }): Promise<GitFinalizeMergeResult> {
+  async finalizeGitMerge(payload: {
+    expectedHead?: string;
+    path: string;
+  }): Promise<GitFinalizeMergeResult> {
     const { finalizeGitMerge: runFinalizeGitMerge } = await loadGit();
     return runFinalizeGitMerge(payload);
   }
@@ -183,7 +186,11 @@ export default class GitController extends ControllerModule {
   }
 
   @IpcMethod()
-  async pushGitBranch(payload: { path: string; remoteBranch?: string }): Promise<GitPushResult> {
+  async pushGitBranch(payload: {
+    path: string;
+    remoteBranch?: string;
+    sourceRef?: string;
+  }): Promise<GitPushResult> {
     const { pushGitBranch: runPushGitBranch } = await loadGit();
     return runPushGitBranch(payload);
   }

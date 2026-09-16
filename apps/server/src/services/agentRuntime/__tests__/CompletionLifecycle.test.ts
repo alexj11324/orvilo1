@@ -676,6 +676,21 @@ describe('CompletionLifecycle.dispatchHooks — verify plan race', () => {
 
     expect(instantiateSpy).not.toHaveBeenCalled();
   });
+
+  it('does not register a second verify plan for an internal corrective task run', async () => {
+    const lifecycle = buildLifecycle();
+    const instantiateSpy = vi
+      .spyOn(verifyServices, 'instantiateVerifyPlanOnStart')
+      .mockResolvedValue(undefined);
+
+    await lifecycle.recordStart({
+      operationId: 'op-corrective',
+      skipTaskVerification: true,
+      taskId: 'task-1',
+    } as any);
+
+    expect(instantiateSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('CompletionLifecycle.dispatchHooks — async-tool park', () => {

@@ -27,6 +27,7 @@ import { TaskIntentService } from '@/server/services/task/intent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskRunnerService } from '@/server/services/taskRunner';
+import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 import { AcceptanceService } from '@/server/services/verify/acceptanceService';
 import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
 import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
@@ -1098,40 +1099,17 @@ export const taskRouter = router({
 
   watchdog: taskProcedureWrite.mutation(async ({ ctx }) => {
     try {
-      const stuckTasks = await TaskModel.findStuckTasks(ctx.serverDB);
-      const failed: string[] = [];
-
-      for (const task of stuckTasks) {
-        const wsId = task.workspaceId ?? undefined;
-        const model = new TaskModel(ctx.serverDB, task.createdByUserId, wsId);
-        await model.updateStatus(task.id, 'failed', {
-          completedAt: new Date(),
-          error: 'Heartbeat timeout',
-        });
-
-        // Create error brief
-        const briefModel = new BriefModel(ctx.serverDB, task.createdByUserId, wsId);
-        await briefModel.create({
-          agentId: task.assigneeAgentId || undefined,
-          priority: 'urgent',
-          summary: `Task has been running without heartbeat update for more than ${task.heartbeatTimeout} seconds.`,
-          taskId: task.id,
-          title: `${task.identifier} heartbeat timeout`,
-          trigger: 'task',
-          type: 'error',
-        });
-
-        failed.push(task.identifier);
-      }
+      const result = await runTaskWatchdog(ctx.serverDB, {
+        createdByUserId: ctx.userId,
+        workspaceId: ctx.workspaceId ?? undefined,
+      });
 
       return {
-        checked: stuckTasks.length,
-        failed,
+        ...result,
         message:
-          failed.length > 0
-            ? `${failed.length} stuck tasks marked as failed`
+          result.failed.length > 0
+            ? `${result.failed.length} stuck tasks marked as failed`
             : 'No stuck tasks found',
-        success: true,
       };
     } catch (error) {
       console.error('[task:watchdog]', error);
@@ -1386,7 +1364,9 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateCheckpointConfig(resolved.id, checkpoint);
+        const task = await model.updateCheckpointConfig(resolved.id, checkpoint, {
+          invalidateRun: true,
+        });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return {
           data: model.getCheckpointConfig(task),
@@ -1454,7 +1434,7 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateReviewConfig(resolved.id, review);
+        const task = await model.updateReviewConfig(resolved.id, review, { invalidateRun: true });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return {
           data: model.getReviewConfig(task),
@@ -1874,7 +1854,7 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateTaskConfig(resolved.id, config);
+        const task = await model.updateTaskConfig(resolved.id, config, { invalidateRun: true });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return { data: task, message: 'Config updated', success: true };
       } catch (error) {

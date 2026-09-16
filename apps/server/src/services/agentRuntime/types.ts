@@ -549,6 +549,8 @@ export interface OperationCreationParams {
   searchDecision?: SearchDecision;
   /** Abort startup before the first step is scheduled */
   signal?: AbortSignal;
+  /** Server-authored: keep a corrective task run bound to the original Verify plan. */
+  skipTaskVerification?: boolean;
   /**
    * Whether the LLM call should use streaming.
    * Defaults to true. Set to false for non-streaming scenarios (e.g., bot integrations).

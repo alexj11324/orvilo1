@@ -250,6 +250,8 @@ export interface GitPushResult {
   error?: string;
   /** True when `git push` reported everything is already up-to-date */
   noop?: boolean;
+  /** Proves this client pushed the requested immutable source ref. */
+  pushedSourceRef?: string;
   success: boolean;
 }
 
@@ -257,6 +259,8 @@ export interface GitMergeResult {
   /** Repo-relative paths reported unmerged. Present for 'conflict'/'in-progress'. */
   conflicts?: string[];
   error?: string;
+  /** Immutable source commit the merge attempted to include. */
+  headSha?: string;
   /** Resulting HEAD sha when the merge committed. */
   sha?: string;
   /**
@@ -275,4 +279,6 @@ export interface GitFinalizeMergeResult {
   /** 'integrated' — merge commit landed; 'conflict' — unmerged paths remain. */
   state: 'integrated' | 'conflict';
   success: boolean;
+  /** Proves this client understood and enforced `expectedHead`. */
+  validatedExpectedHead?: boolean;
 }

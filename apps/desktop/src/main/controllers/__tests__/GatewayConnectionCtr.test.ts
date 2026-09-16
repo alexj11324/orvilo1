@@ -1276,12 +1276,15 @@ describe('GatewayConnectionCtr', () => {
         const mockChild = new EventEmitter() as any;
         mockChild.pid = 67900;
         capturedOnChildSpawned?.(mockChild);
-        await ctr['cancelHeteroTask']({ signal: 'SIGINT', taskId: 'op-orphan' });
+        const cancellation = ctr['cancelHeteroTask']({ signal: 'SIGINT', taskId: 'op-orphan' });
+        await vi.advanceTimersByTimeAsync(0);
 
         // The wrapper honors SIGINT, while process.kill(-pid, 0) still reports
         // that a detached descendant remains in the process group.
         mockChild.emit('exit', null, 'SIGINT');
         await vi.advanceTimersByTimeAsync(2_000);
+        await vi.advanceTimersByTimeAsync(3_000);
+        await cancellation;
 
         expect(killSpy).toHaveBeenCalledWith(-67900, 'SIGINT');
         expect(killSpy).toHaveBeenCalledWith(-67900, 'SIGKILL');

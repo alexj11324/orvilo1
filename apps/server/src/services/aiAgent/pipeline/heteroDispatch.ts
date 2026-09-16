@@ -269,6 +269,7 @@ export interface HeteroDispatchInput {
   runAttachments: { imageList?: Array<{ alt: string; id: string; url: string }> };
   /** Ids of the rows THIS turn just persisted (excluded from recovery history). */
   selfMessageIds: Set<string>;
+  skipTaskVerification?: boolean;
   topicStartOwnerOperationId?: string;
 }
 
@@ -320,6 +321,7 @@ export const dispatchHeteroAgent = async (
     requestedDeviceId,
     runAttachments,
     selfMessageIds,
+    skipTaskVerification,
     topicStartOwnerOperationId,
   } = input;
 
@@ -366,6 +368,7 @@ export const dispatchHeteroAgent = async (
     operationId,
     parentOperationId,
     provider: heteroType,
+    skipTaskVerification,
     taskId: operationTaskId ?? null,
     threadId: appContext?.threadId ?? null,
     topicId,

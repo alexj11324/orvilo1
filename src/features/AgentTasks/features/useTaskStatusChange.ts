@@ -38,8 +38,12 @@ export const useTaskStatusChange = () => {
 
       let openSubtasks: TaskStatusCascadeItem[];
       try {
-        const result = await taskService.getSubtasks(taskIdentifier);
-        openSubtasks = getOpenSubtasks(result.data);
+        const result = await taskService.getTaskTree(taskIdentifier);
+        const root = result.data.find(
+          (task) => task.id === taskIdentifier || task.identifier === taskIdentifier,
+        );
+        if (!root) throw new Error('Task tree did not include its requested root');
+        openSubtasks = getOpenSubtasks(result.data.filter((task) => task.id !== root.id));
       } catch (error) {
         console.error('[useTaskStatusChange] Failed to inspect subtasks:', error);
         toast.error(t('taskDetail.statusCascade.loadFailed'));

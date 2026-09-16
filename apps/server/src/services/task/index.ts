@@ -569,7 +569,17 @@ export class TaskService {
      * activity feed.
      */
     actor?: { agentId?: string | null; userId?: string | null },
-  ): Promise<UpdateStatusResult> {
+  ): Promise<UpdateStatusResult>;
+  async updateStatus(
+    input: { error?: string; id: string; status: TaskStatus },
+    actor: undefined,
+    guard: { currentStatus: TaskStatus; reservationId: string },
+  ): Promise<UpdateStatusResult | null>;
+  async updateStatus(
+    input: { error?: string; id: string; status: TaskStatus },
+    actor?: { agentId?: string | null; userId?: string | null },
+    guard?: { currentStatus: TaskStatus; reservationId: string },
+  ): Promise<UpdateStatusResult | null> {
     const { id, status, error: errorMsg } = input;
 
     if (errorMsg && status !== 'failed') {
@@ -609,16 +619,41 @@ export class TaskService {
       }
     }
 
-    const extra: Record<string, unknown> = {};
+    const extra: {
+      completedAt?: Date;
+      error?: string;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    } = {};
     if (status === 'running') extra.startedAt = new Date();
+    // A person changing state owns the generation boundary. Clear any dispatch
+    // or completion lease so a crashed callback cannot reclaim after their
+    // pause/restart. System-driven scheduled transitions keep the lease until
+    // lifecycle side effects (bridge/re-arm) finish.
+    if (status !== 'running' && (actor || status !== 'scheduled')) {
+      extra.runReservationExpiresAt = null;
+      extra.runReservationId = null;
+    }
     if (status === 'completed' || status === 'failed' || status === 'canceled')
       extra.completedAt = new Date();
     if (errorMsg) extra.error = errorMsg;
 
     const task = actor
       ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
-      : await this.taskModel.updateStatus(resolved.id, status, extra);
-    if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      : guard
+        ? await this.taskModel.updateStatusIfReservation(
+            resolved.id,
+            guard.reservationId,
+            guard.currentStatus,
+            status,
+            extra,
+          )
+        : await this.taskModel.updateStatus(resolved.id, status, extra);
+    if (!task) {
+      if (guard) return null;
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+    }
 
     // A terminal transition abandons the task's merge pipeline — tear down
     // any provisioned worktrees its runs left behind. Best-effort: cleanup
@@ -708,8 +743,8 @@ export class TaskService {
     let allSubtasksDone = false;
     let checkpointTriggered = false;
 
-    if (status === 'completed') {
-      if (task.parentTaskId) {
+    if (status === 'completed' || status === 'canceled') {
+      if (status === 'completed' && task.parentTaskId) {
         const parentTask = await this.taskModel.findById(task.parentTaskId);
         if (parentTask && this.taskModel.shouldPauseAfterComplete(parentTask, task.identifier)) {
           await this.taskModel.updateStatus(parentTask.id, 'paused');
@@ -735,7 +770,7 @@ export class TaskService {
   }
 
   /**
-   * Transition a parent and every currently unfinished direct subtask as one
+   * Transition a parent and every currently unfinished descendant as one
    * database transaction. Completion side effects run only after the whole
    * family has reached the target status, so dependency edges cannot start a
    * sibling in the middle of the cascade.
@@ -755,7 +790,7 @@ export class TaskService {
     actor?: { agentId?: string | null; userId?: string | null },
   ): Promise<UpdateStatusCascadeResult> {
     const resolved = await this.resolveOrThrow(input.id);
-    const subtasks = await this.taskModel.findSubtasks(resolved.id);
+    const subtasks = await this.taskModel.findAllDescendants(resolved.id);
     const unfinishedStatuses = new Set<string>(UNFINISHED_TASK_STATUSES);
     const openSubtasks = subtasks.filter((task) => unfinishedStatuses.has(task.status));
     // Freeze the cascade to this snapshot: both the interrupt pass and the
@@ -806,7 +841,11 @@ export class TaskService {
       // is leaving is read under the lock, so a collaborator's edit between
       // the dialog and this write is logged as it really was.
       const locked = actor ? await taskModel.lockForStatusChange(targetIds) : [];
-      updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, { completedAt });
+      updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, {
+        completedAt,
+        runReservationExpiresAt: null,
+        runReservationId: null,
+      });
 
       // The board's drop slot for the parent, stamped in the same commit as
       // the family status — a cascade drop never lands its status without
@@ -854,7 +893,7 @@ export class TaskService {
 
     const unlocked: string[] = [];
     const paused: string[] = [];
-    if (input.status === 'completed') {
+    if (input.status === 'completed' || input.status === 'canceled') {
       const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
       const cascade = await runner.cascadeOnCompletionMany(updatedTasks.map(({ id }) => id));
       unlocked.push(...cascade.started);
@@ -866,7 +905,7 @@ export class TaskService {
       task,
       unlocked,
       updatedSubtasks: updatedTasks
-        .filter(({ parentTaskId }) => parentTaskId === resolved.id)
+        .filter(({ id }) => id !== resolved.id)
         .map(({ identifier }) => identifier),
     };
   }
@@ -1038,8 +1077,19 @@ export class TaskService {
     data: Parameters<TaskModel['update']>[1],
     actor: { agentId?: string | null; userId?: string | null } = {},
   ): Promise<TaskItem | null> {
+    const invalidatesActiveRun = [
+      'automationMode',
+      'config',
+      'heartbeatInterval',
+      'schedulePattern',
+      'scheduleTimezone',
+    ].some((key) => Object.hasOwn(data, key));
+    const guardedData = invalidatesActiveRun
+      ? { ...data, runReservationExpiresAt: null, runReservationId: null }
+      : data;
+
     return this.withAssigneeUserLock(data.assigneeUserId, (db) =>
-      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(taskId, data, actor),
+      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(taskId, guardedData, actor),
     );
   }
 

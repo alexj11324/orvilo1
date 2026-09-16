@@ -544,13 +544,20 @@ export class VerifyRunModel {
    * UPDATE: the row is only stamped if nobody stamped it, and the loser learns
    * it lost from the empty result.
    *
-   * @returns true when this caller owns the drive, false when it was taken.
+   * @returns an owner token when this caller owns the drive, otherwise null.
    */
-  claimTaskDrive = async (runId: string): Promise<boolean> => {
+  claimTaskDrive = async (
+    runId: string,
+    now: Date = new Date(),
+    leaseMs = 30 * 60 * 1000,
+  ): Promise<string | null> => {
+    const claimedAt = now.toISOString();
+    const leaseExpiresAt = new Date(now.getTime() + leaseMs).toISOString();
+    const ownerToken = randomUUID();
     const claimed = await this.db
       .update(verifyRuns)
       .set({
-        metadata: sql`coalesce(${verifyRuns.metadata}, '{}'::jsonb) || jsonb_build_object('taskDrivenAt', ${new Date().toISOString()}::text)`,
+        metadata: sql`coalesce(${verifyRuns.metadata}, '{}'::jsonb) || jsonb_build_object('taskDriveClaimedAt', ${claimedAt}::text, 'taskDriveLeaseExpiresAt', ${leaseExpiresAt}::text, 'taskDriveOwnerToken', ${ownerToken}::text)`,
       })
       .where(
         and(
@@ -559,12 +566,83 @@ export class VerifyRunModel {
           // production engine down (XX000), so compare an extracted value
           // against a sentinel instead — see the jsonbNullTest guard.
           sql`coalesce(${verifyRuns.metadata} ->> 'taskDrivenAt', '') = ''`,
+          sql`coalesce((${verifyRuns.metadata} ->> 'taskDriveLeaseExpiresAt')::timestamptz, '-infinity'::timestamptz) <= ${claimedAt}::timestamptz`,
           this.ownership(),
         ),
       )
       .returning({ id: verifyRuns.id });
 
-    return claimed.length > 0;
+    return claimed.length > 0 ? ownerToken : null;
+  };
+
+  /** Extend the task-drive lease only while this worker still owns it. */
+  renewTaskDrive = async (
+    runId: string,
+    ownerToken: string,
+    now: Date = new Date(),
+    leaseMs = 30 * 60 * 1000,
+  ): Promise<boolean> => {
+    const leaseExpiresAt = new Date(now.getTime() + leaseMs).toISOString();
+    const renewed = await this.db
+      .update(verifyRuns)
+      .set({
+        metadata: sql`jsonb_set(coalesce(${verifyRuns.metadata}, '{}'::jsonb), '{taskDriveLeaseExpiresAt}', to_jsonb(${leaseExpiresAt}::text), true)`,
+      })
+      .where(
+        and(
+          eq(verifyRuns.id, runId),
+          sql`coalesce(${verifyRuns.metadata} ->> 'taskDrivenAt', '') = ''`,
+          sql`${verifyRuns.metadata} ->> 'taskDriveOwnerToken' = ${ownerToken}`,
+          this.ownership(),
+        ),
+      )
+      .returning({ id: verifyRuns.id });
+
+    return renewed.length > 0;
+  };
+
+  /** Release a deferred task drive so a corrective integration callback can reclaim it. */
+  releaseTaskDrive = async (runId: string, ownerToken: string): Promise<boolean> => {
+    const released = await this.db
+      .update(verifyRuns)
+      .set({
+        metadata: sql`coalesce(${verifyRuns.metadata}, '{}'::jsonb) - 'taskDriveLeaseExpiresAt' - 'taskDriveOwnerToken' - 'taskDriveClaimedAt'`,
+      })
+      .where(
+        and(
+          eq(verifyRuns.id, runId),
+          sql`coalesce(${verifyRuns.metadata} ->> 'taskDrivenAt', '') = ''`,
+          sql`${verifyRuns.metadata} ->> 'taskDriveOwnerToken' = ${ownerToken}`,
+          this.ownership(),
+        ),
+      )
+      .returning({ id: verifyRuns.id });
+
+    return released.length > 0;
+  };
+
+  /** Mark side effects complete only while this caller still owns the lease. */
+  completeTaskDrive = async (
+    runId: string,
+    ownerToken: string,
+    completedAt: Date = new Date(),
+  ): Promise<boolean> => {
+    const completed = await this.db
+      .update(verifyRuns)
+      .set({
+        metadata: sql`(coalesce(${verifyRuns.metadata}, '{}'::jsonb) - 'taskDriveLeaseExpiresAt' - 'taskDriveOwnerToken') || jsonb_build_object('taskDrivenAt', ${completedAt.toISOString()}::text)`,
+      })
+      .where(
+        and(
+          eq(verifyRuns.id, runId),
+          sql`${verifyRuns.metadata} ->> 'taskDriveOwnerToken' = ${ownerToken}`,
+          sql`(${verifyRuns.metadata} ->> 'taskDriveLeaseExpiresAt')::timestamptz > ${completedAt.toISOString()}::timestamptz`,
+          this.ownership(),
+        ),
+      )
+      .returning({ id: verifyRuns.id });
+
+    return completed.length > 0;
   };
 
   setMetadata = async (runId: string, metadata: Record<string, unknown>): Promise<void> => {

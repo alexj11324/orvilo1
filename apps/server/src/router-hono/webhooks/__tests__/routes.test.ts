@@ -13,6 +13,7 @@ import app from '../index';
  */
 vi.mock('../handlers/casdoor', () => ({ casdoorWebhook: vi.fn() }));
 vi.mock('../handlers/logto', () => ({ logtoWebhook: vi.fn() }));
+vi.mock('../handlers/linear', () => ({ linearWebhook: vi.fn() }));
 vi.mock('../handlers/memoryExtraction', () => ({ memoryExtractionWebhook: vi.fn() }));
 vi.mock('../handlers/memoryExtractionBenchmarkLocomo', () => ({
   memoryExtractionBenchmarkLocomo: vi.fn(),
@@ -31,6 +32,7 @@ describe('webhooks hono routes', () => {
 
     expect([...new Set(paths)].sort()).toEqual([
       '/api/webhooks/casdoor',
+      '/api/webhooks/linear/:workspaceId',
       '/api/webhooks/logto',
       '/api/webhooks/memory-extraction',
       '/api/webhooks/memory-extraction/benchmark-locomo',

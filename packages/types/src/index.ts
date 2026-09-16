@@ -35,6 +35,7 @@ export * from './home';
 export * from './hotkey';
 export * from './importer';
 export * from './knowledgeBase';
+export * from './linearSync';
 export * from './llm';
 export * from './message';
 export * from './meta';

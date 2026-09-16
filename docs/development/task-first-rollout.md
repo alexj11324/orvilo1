@@ -486,17 +486,17 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 ## 2. 工作包状态
 
-| 工作包                   | 实现状态     | 验证状态         | commit / 证据                                                     | 保留依赖 / 阻塞                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |     |     |
-| ------------------------ | ------------ | ---------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- |
-| S00 基线与依赖清单       | IMPLEMENTED  | NOT\_RUN         | 本文 §1.7                                                         | 清单已按功能域填齐（2026-09-16）；纯清单，无需运行时验证。S30.1 社区 / 文稿属范围外，见 §1.7.1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |     |     |
-| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de`                                  | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |     |     |
-| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6` `e2011272` `a538be19`                                  | **已完成**：默认看板、Web 落地任务列表、**Web 侧卸载 Home**、**收件箱薄路由 `/inbox`**（§2.2）、**首页画像移除**（`HomePortrait`/`PortraitBubble`/`GreetingLine` 与 `showHomePortrait` 偏好，§1.7.2）、**落点核对**（登录深链接优先已满足 NAV-07，§2.2.2）。**未完成，且四项都卡在产品决策或 S80，不卡工程**：①Electron 的登录与 Onboarding 仍落在聊天式首页，两条修法各有代价（§2.2.2）；②`/inbox` 只覆盖简报 / 活动，通知那一半仍在同名 modal，属方案「通知组件」条款未完成部分；③`TopicChatDrawer` 的重复宿主与 `AcceptancePortalDrawer` 的内容重复需真机确认只出现一层；④折叠几何与 Electron 开屏观感（S80） |     |     |
-| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` `cc3b9489`            | S30.5 的服务端收口已完成（可证完备的单一收口点）；agent 分享的访客页不在本仓，属云端侧。**`apps/share` 按 §6.5 L295 明文保留**（它只服务主题 / 页面 / 产物三类分享，目录内零 agent 分享面），见 §1.7.4 与 §2.5                                                                                                                                                                                                                                                                                                                                                                                                   |     |     |
-| S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`                                  | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3）                                                                                                                                                                                                                                                                                                                                                             |     |     |
-| S50 资源与产物归位       | IMPLEMENTED  | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` `263ebf78` `15d06a28` `ee076357` | 四项全部完成并在本机验证（PGlite + `bunx tsc`）；运行级追溯复用既有 `works.originTopicId`，**零新增表**，见 §2.6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |     |     |
-| S60 Goal 与规则下沉      | IMPLEMENTED  | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`                                  | Goal 与详情 / 对话关联两侧经审计均为**已满足**（非待办）；规则面已下沉，见 §2.7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |     |     |
-| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`                                             | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |     |     |
-| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                                                 | 覆盖全部                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |     |     |
+| 工作包                   | 实现状态     | 验证状态         | commit / 证据                                                     | 保留依赖 / 阻塞                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |     |     |
+| ------------------------ | ------------ | ---------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- |
+| S00 基线与依赖清单       | IMPLEMENTED  | NOT\_RUN         | 本文 §1.7                                                         | 清单已按功能域填齐（2026-09-16）；纯清单，无需运行时验证。S30.1 社区 / 文稿属范围外，见 §1.7.1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |     |     |
+| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de`                                  | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |     |     |
+| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6` `e2011272` `a538be19`                                  | **已完成**：默认看板、Web 落地任务列表、**Web 侧卸载 Home**、**收件箱薄路由 `/inbox`**（§2.2）、**首页画像移除**（`HomePortrait`/`PortraitBubble`/`GreetingLine` 与 `showHomePortrait` 偏好，§1.7.2）、**落点核对**（登录深链接优先已满足 NAV-07，§2.2.2）。**未完成，且四项都卡在产品决策或 S80，不卡工程**：①Electron 的登录与 Onboarding 仍落在聊天式首页，两条修法各有代价（§2.2.2）；②`/inbox` 只覆盖简报 / 活动，通知那一半仍在同名 modal，属方案「通知组件」条款未完成部分；③`TopicChatDrawer` 重复宿主**已按做法②修复**并有渲染计数证据，但真实界面只出现一层仍待真机；`AcceptancePortalDrawer` 的内容重复（它按 view type 开、无路由守卫）尚未修；④折叠几何与 Electron 开屏观感（S80） |     |     |
+| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` `cc3b9489`            | S30.5 的服务端收口已完成（可证完备的单一收口点）；agent 分享的访客页不在本仓，属云端侧。**`apps/share` 按 §6.5 L295 明文保留**（它只服务主题 / 页面 / 产物三类分享，目录内零 agent 分享面），见 §1.7.4 与 §2.5                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |     |     |
+| S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`                                  | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3）                                                                                                                                                                                                                                                                                                                                                                                                                                            |     |     |
+| S50 资源与产物归位       | IMPLEMENTED  | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` `263ebf78` `15d06a28` `ee076357` | 四项全部完成并在本机验证（PGlite + `bunx tsc`）；运行级追溯复用既有 `works.originTopicId`，**零新增表**，见 §2.6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |     |     |
+| S60 Goal 与规则下沉      | IMPLEMENTED  | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`                                  | Goal 与详情 / 对话关联两侧经审计均为**已满足**（非待办）；规则面已下沉，见 §2.7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |     |     |
+| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`                                             | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |     |     |
+| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                                                 | 覆盖全部                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |     |     |
 
 ---
 
@@ -745,20 +745,40 @@ Web 侧该 index 元素被 `createHomeElement: () => <WebHomeRedirect />` 取代
 
 **尚未做（已知，非回退）**
 
-- 每页「恰好一个宿主」：`TopicChatDrawer` 仍有 4 处页面级宿主
+- 每页「恰好一个宿主」：**已按做法②实现（2026-09-16）**。`TopicChatDrawer` 有 4 处页面级宿主
   （`Portal/TaskDetail/Body.tsx:51`、`Portal/TaskResult/Body.tsx:77`、
-  `AgentTaskDetail/TaskDetailPage.tsx:118`、`Automations/AutomationDetailPage.tsx:301`）。
-  它们**在改动前就与 Home 的宿主并存**，且因内容相同而完全重叠，所以不构成本次回退。
+  `AgentTaskDetail/TaskDetailPage.tsx:118`、`Automations/AutomationDetailPage.tsx:301`）
+  加上 `GlobalOverlays/index.tsx:55` 的全局宿主，共 5 处。它们**在改动前就并存**，
+  且因内容相同而完全重叠，所以不构成本次回退 —— 但它确实是「重复弹窗」，本次一并修掉。
 
-  ⚠️ **修法已经查清，且「直接删掉这 4 处」是错的。** `GlobalOverlays`（`src/features/GlobalOverlays/index.tsx:39`）
-  的注释写着「exactly one host is mounted for the whole app」，但它只在 **`(main)`** 两处布局里挂载
-  （`routes/(main)/_layout/index.tsx:68`、`index.desktop.tsx:98`）—— `(mobile)` 树有自己的 `_layout`，
-  **没有挂它**。因此这 4 处页面级宿主在移动端是**唯一**宿主，删掉它们会让移动端的任务会话抽屉彻底没有宿主。
-  两个平台各自成立，冲突只发生在 `(main)`：全局宿主一旦因首次打开而挂载就**常驻**（`topicMounted` 只置真），
-  此时再从任务列表点进任务详情页，页面级宿主与它读同一份 `activeTopicDrawerTopicId`，抽屉打开时会渲染两层。
-  正确做法二选一：①把宿主统一到 `GlobalOverlays` 并**先给移动端布局也挂上**，再删 4 处页面宿主；
-  ②让页面级宿主在全局宿主存在时渲染 `null`（需要一个「已被全局托管」的 context，移动端无 provider 故行为不变）。
-  两条都需要在真实 Web + 移动端上验证「抽屉只出现一层」，属 §13.1 的 S80。
+  **「直接删掉这 4 处」是错的**：`GlobalOverlays`（`index.tsx:39`，注释写着「exactly one host is
+  mounted for the whole app」）只在 **`(main)`** 两处布局里挂载 —— `(mobile)` 树有自己的 `_layout`，
+  **没有挂它**（已自行 grep 复核：全仓引用者只有 `routes/(main)/_layout/index.tsx:17`、
+  `index.desktop.tsx:30`，加 `authMount.test.ts` 里的 mock）。因此这 4 处在移动端是**唯一**宿主，
+  删掉会让移动端的任务会话抽屉彻底没有宿主。
+
+  **做法②的落地**：新增叶模块 `GlobalOverlays/globalHostContext.ts`（`createContext(false)`，
+  只 import react，故不与宿主 / 面板成环）；两个 `(main)` 布局把**整棵树**包进 `value={true}` ——
+  关键是 `<Outlet/>` 子树与 `<GlobalOverlays/>` **都在里面**；`TopicChatDrawer` 加
+  `asGlobalHost?: boolean`，并在**所有 hook 之后**加一句
+  `if (hostedByOverlay && !asGlobalHost) return null;`（已复核该 return 之后只剩注释、无 hook）；
+  `GlobalOverlays` 自己的实例传 `asGlobalHost`。4 处页面级调用点**一字未改**。
+
+  **默认值必须是 `false`，这是整个改动安全性的来源**：没有 provider 的树（移动端）上下文为 `false`，
+  页面级宿主照旧渲染，所以移动端**按构造成立**不可能被这次改动改坏。
+
+  **证据（渲染计数，可本机复核）**：新增 `GlobalOverlays/topicChatDrawerHost.test.tsx` 用**真实**
+  `TopicChatDrawer`（只 mock `FloatingPanel` 为可知的 `data-testid`）数面板数量；其中一条渲染
+  **真实 `(main)` web 布局**、让 `Outlet` 渲染一个页面级 `<TopicChatDrawer />`（与那 4 处声明方式相同），
+  断言面板数 = 1，并断言两个实例**确实同一次提交里都挂上了**。已自行反向验证：把
+  `useGlobalOverlayHost` 强制改成 `false` 后，「页面级不开面板」与「真实布局只有一个面板」两条**精确变红**，
+  后者报 `expected [<div>, <div>] to have a length of 1 but got 2` —— **修复前的两个面板被直接拍到**，
+  所以这个缺陷是实证而非推断。另外 2 条（无 provider 时照常开面板、global 实例自身）在两种状态下都通过，
+  正是应有的分布。
+
+  ⚠️ **仍需 S80 的**：本机给的是 vitest + happy-dom 的渲染计数，**不是真实界面**；
+  `index.desktop.tsx` 的包装与 web 变体相同且 `authMount.test.ts` 覆盖两个布局的元素树，
+  但**桌面布局树本身没有被渲染验证**；移动端也只在「默认值不变」这一层上成立，未在真实移动构建上看过。
 
   **独立复核（2026-09-16）**：共 **5 处**挂载点 = 上面 4 处页面级 + `GlobalOverlays/index.tsx:55`；
   全仓**不存在**任何抑制机制（对 `OverlayHost|HostedBy|alreadyHosted|GlobalOverlayContext|DrawerHostContext`
@@ -847,9 +867,25 @@ Web 侧该 index 元素被 `createHomeElement: () => <WebHomeRedirect />` 取代
 「某处能找到」与「不在 slot 内」互为前提，遍历一旦坏掉，前者必红。
 
 **由此得出一条可复用的判别法**：固定超时预算是**不可信信号**。看到 "撞满 N ms" 先量每个用例的耗时与整体构成
-（`--reporter=verbose`）；若 `tests` 占比很高，就把重活移出测试体（静态 import + 提升的 `vi.mock`，
-图只求值一次且落在收集阶段，不受 `testTimeout` 约束），而不是把预算调大 —— 调大只是把同样的随机性往后推。
-两处已按此法处理：banner 用例 13001 → 89ms，本次 25756 → 12ms。
+（`--reporter=verbose`），再问一句 **这份耗时由什么构成**：
+
+- **若是模块求值**（体内 `await import(...)` / `vi.resetModules()`），移到模块作用域即可 ——
+  静态 import + 提升的 `vi.mock`，图只求值一次且落在收集阶段，不受 `testTimeout` 约束。
+  两处已这么做：banner 用例 13001 → 89ms，本节 authMount 25756 → 12ms。
+- **若是测试体本身不可约的工作**，就只能把预算配到实测值，并写清为什么不可约。
+
+⚠️ **不要拿 `tests` 占比单独当判别**（这是本小节上一版的漏洞）：它只说明**整个 run 是否被收集主导**。
+本节的 run 是 `tests 95%`，而下面第三例是 `tests 6%`，**两个都出了超时**；
+真正要看的是**体内那份耗时能否搬到别的阶段**。
+
+**第三例（`TopicCard.test.tsx`，2026-09-16）属第二类**，因此是唯一一处用预算而非搬活来解决的：
+体内只有一次 `render` 加一次 `userEvent.click`，实测两次运行分别 3628ms 与 564ms，
+其中**首次 render**（2060 / 277ms）与**首次 `getByRole` 查询**（1079 / 124ms）占绝大部分 ——
+是渲染与无障碍机制的一次性预热，不是逐次工作；对着默认 5s 只剩约 1.4 倍余量。
+两条替代路线都关着：`userEvent` 不能换 `fireEvent`（这条断言的全部意义正是 " 尊重 `pointer-events` 的点击能穿过去 "，
+`fireEvent` 会忽略该规则，换掉等于削弱断言）；预热也不能像模块求值那样上提（它需要已挂载的 DOM，
+放进 `beforeAll` 只是把同样的负载敏感性搬进 hook 超时）。故只给该用例 20s 预算，
+实测值与这两条理由都写进了注释，供复核。
 
 ---
 

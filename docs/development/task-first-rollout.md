@@ -619,6 +619,34 @@ scheduled tab 改为 25 / 页后，总数落在 26–50 时第 2 页**存在却�
 **不需要动的**：`useFetchAutomationRuns` / `taskKeys.automationRuns` —— 它走 `task.automationRuns` **独立 procedure**（run 维度，不是 task 维度），与本次统一无关。
 `/automations/new`、`/automations/runs`、`/automations/:taskId` 按方案 §7 分别处理；`:taskId` 是 `T-<seq>` 可读标识符，服务端 `getTaskDetail` 双解析，**不需要转换 helper**。
 
+### 2.4 S70 部分实施记录（文案 + 无消费者标识）
+
+S70 的完整范围（方案 §10）还包括**设置重新分组**（账户 / 外观、工作区与成员、执行环境与 Agent、工具 / 技能 / 连接器、通知 / 渠道、用量 / 成本、安全 / 权限 / 审计、数据管理）—— 那部分尚未开始。本次完成的是其中可完全静态验证的两块：
+
+**(a) 定位文案（`75fde2ae`）**
+
+`work-and-lifestyle` 定位与「泛聊天」卖点已从产品文案移除，改为任务优先表述：
+
+| 文件                                                          | 说明                                 |
+| ------------------------------------------------------------- | ------------------------------------ |
+| `package.json:4`                                              | 描述改为任务优先（§0.2 的 E03 靶点） |
+| `packages/locales/src/default/metadata.ts`                    | `chat.description` 英文源            |
+| `locales/en-US/metadata.json` / `locales/zh-CN/metadata.json` | 分别手工同步                         |
+| `src/app/manifest.ts`                                         | PWA manifest 描述                    |
+| `src/libs/metadata/ld.ts`                                     | JSON-LD 描述                         |
+
+同一句话原本**内联在四处**（`package.json`、metadata 命名空间、manifest、JSON-LD），且已经开始漂移。后两处改为**读 metadata 命名空间并插值 `{{appName}}`**，于是 App 自身描述只有一个来源。
+
+> ⚠️ **不要顺手替换的字符串**：`locales/en-US/models.json:966` 与
+> `packages/model-bank/src/aiModels/infiniai.ts:332` 里的 "work and lifestyle" 是
+> **MiniMax-M2.1 这个第三方模型自己的简介**，不是我们的定位文案。按字符串全局替换会篡改厂商描述。
+
+**(b) 无消费者标识（`0a4f0b05`）**
+
+见 §5 表格第 4–7 行。要点：`electronKey` 在 `src/` / `apps/` / `packages/` 三处复核为零消费者后删除；两个死枚举同上；`showMarket` **决定保留**并说明理由。
+
+---
+
 ## 3. 旧路由映射（草案）
 
 | 旧路径                               | 目标行为                                                                       |
@@ -705,13 +733,13 @@ Electron 的 `RETIRED_PRODUCT_SEGMENTS` 改为从它派生 —— 否则同一�
 S10 的验收要求覆盖「入口、路由、命令、搜索、**持久化状态**」。下列各项经 review 确认不属于
 S10 的交付范围，但**必须挂到具体工作包**，否则会在「文档里提过」和「实际做了」之间消失。
 
-| #   | 项                                                                | 位置                                                                                                       | 归属                  | 为什么是那时做                                                                                                                                                                                                     |
-| --- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **桌面固定标签页无退役过滤**                                      | `src/features/Electron/titlebar/TabBar/storage.ts:25-45`；`src/store/electron/actions/tabPages.ts:579-585` | **S30**               | S10 里唯一未兜住的持久化路径。当前 `/image`、`/memory` 路由仍在，标签页尚可打开；**S30 删除路由后**被恢复的标签页会落在退役页上，那时才有真实后果。合并时把 `RETIRED_PRODUCT_SEGMENTS` 改为从 registry `tier` 派生 |
-| 2   | 「管理记忆」按钮仍跳退役页                                        | `src/features/Settings/memory/features/ManageMemoryButton.tsx:22`                                          | S30.3                 | 应用自己生成的入口，非旧深链接                                                                                                                                                                                     |
-| 3   | FTS 搜索结果跳退役页                                              | `src/features/CommandMenu/SearchResults.tsx:165`（另见 :209、:250）                                        | S30.3                 | 同上                                                                                                                                                                                                               |
-| 4   | 死字段 `NavigationRoute.electronKey`                              | `packages/app-config/src/routes/index.ts:35`，10 条目各填一次，定义外零读取                                | S70                   | 连带本分支新增的 `navigation.project` 文案目前只喂这个死字段。**注意 `navigation.*` 命名空间本身没死**（`AgentTasks/routeMeta.ts:15` 等仍在用）                                                                    |
-| 5   | 死枚举 `GroupKey.Community` / `GroupKey.Pages`                    | `src/features/HomeSidebar/Body/index.tsx:35,36`                                                            | S70                   | 零消费者                                                                                                                                                                                                           |
-| 6   | 死枚举 `SidebarTabKey.Community / Image / Memory / Pages / Video` | `src/store/global/initialState.ts`                                                                         | S70                   | 除定义外引用数均为 0                                                                                                                                                                                               |
-| 7   | 变死的 feature flag `showMarket`                                  | `packages/app-config/src/featureFlags/schema.ts:156`                                                       | S70（或随社区线清理） | 唯一 UI 消费者是 `useNavLayout` 与移动 NavBar，本分支删掉后全仓已无非测试消费者                                                                                                                                    |
-| 8   | `missingBottom` 分支不可达                                        | `src/store/global/selectors/systemStatus.ts`（`withAllKnownKeys` 内）                                      | 不清理                | `DEFAULT_BOTTOM_KEYS` 本身仍被 `normalizeSpacerPosition` 使用；已加注释说明「为未来 bottom 组默认值保留」                                                                                                          |
+| #   | 项                                                                | 位置                                                                                                       | 归属                  | 为什么是那时做                                                                                                                                                                                                                                                                                                                                                              |
+| --- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **桌面固定标签页无退役过滤**                                      | `src/features/Electron/titlebar/TabBar/storage.ts:25-45`；`src/store/electron/actions/tabPages.ts:579-585` | **S30**               | S10 里唯一未兜住的持久化路径。当前 `/image`、`/memory` 路由仍在，标签页尚可打开；**S30 删除路由后**被恢复的标签页会落在退役页上，那时才有真实后果。合并时把 `RETIRED_PRODUCT_SEGMENTS` 改为从 registry `tier` 派生                                                                                                                                                          |
+| 2   | 「管理记忆」按钮仍跳退役页                                        | `src/features/Settings/memory/features/ManageMemoryButton.tsx:22`                                          | S30.3                 | 应用自己生成的入口，非旧深链接                                                                                                                                                                                                                                                                                                                                              |
+| 3   | FTS 搜索结果跳退役页                                              | `src/features/CommandMenu/SearchResults.tsx:165`（另见 :209、:250）                                        | S30.3                 | 同上                                                                                                                                                                                                                                                                                                                                                                        |
+| 4   | 死字段 `NavigationRoute.electronKey`                              | `packages/app-config/src/routes/index.ts:35`，10 条目各填一次，定义外零读取                                | **已完成 `0a4f0b05`** | 连带本分支新增的 `navigation.project` 文案目前只喂这个死字段。**注意 `navigation.*` 命名空间本身没死**（`AgentTasks/routeMeta.ts:15` 等仍在用）                                                                                                                                                                                                                             |
+| 5   | 死枚举 `GroupKey.Community` / `GroupKey.Pages`                    | `src/features/HomeSidebar/Body/index.tsx:35,36`                                                            | **已完成 `0a4f0b05`** | 零消费者                                                                                                                                                                                                                                                                                                                                                                    |
+| 6   | 死枚举 `SidebarTabKey.Community / Image / Memory / Pages / Video` | `src/store/global/initialState.ts`                                                                         | **已完成 `0a4f0b05`** | 除定义外引用数均为 0；另确认全仓无 `Object.values(SidebarTabKey)` 一类动态读取                                                                                                                                                                                                                                                                                              |
+| 7   | 变死的 feature flag `showMarket`                                  | `packages/app-config/src/featureFlags/schema.ts:156`                                                       | **决定不删**          | ⚠️ 与 4–6 不同：它不是零消费者的死标识，而是 `evaluateFeatureFlag(config.market, userId)` 派生的**服务端配置契约**，且 `schema.test.ts` 把它当作「一个普通 flag」的样本用于测试通用覆盖机制 —— 删它需要改测试样本值，属于方案 §15 禁止的「为绿灯动测试」。保留成本是一个派生布尔。原「唯一 UI 消费者」判断： `useNavLayout` 与移动 NavBar，本分支删掉后全仓已无非测试消费者 |
+| 8   | `missingBottom` 分支不可达                                        | `src/store/global/selectors/systemStatus.ts`（`withAllKnownKeys` 内）                                      | 不清理                | `DEFAULT_BOTTOM_KEYS` 本身仍被 `normalizeSpacerPosition` 使用；已加注释说明「为未来 bottom 组默认值保留」                                                                                                                                                                                                                                                                   |

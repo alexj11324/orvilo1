@@ -47,7 +47,11 @@ import {
   type HatchetWorkflowPath,
 } from '@/server/services/hatchet/workflows';
 import { runAgentSignalWorkflow } from '@/server/workflows/agentSignal/run';
-import { createWorkflowContext, WorkflowNonRetryableError } from '@/server/workflows/context';
+import {
+  createWorkflowContext,
+  WorkflowAbort,
+  WorkflowNonRetryableError,
+} from '@/server/workflows/context';
 import { runExpertiseHistoryWorkflow } from '@/server/workflows/expertiseHistory';
 import { runExpertiseHistoryTopicWorkflow } from '@/server/workflows/expertiseHistory/topic';
 import { OnboardingTaskRecommendationWorkflow } from '@/server/workflows/onboardingTaskRecommendation';
@@ -223,6 +227,13 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
           .where(eq(hatchetDispatches.id, dispatch.id));
         return { success: true };
       } catch (error) {
+        if (error instanceof WorkflowAbort) {
+          await db
+            .update(hatchetDispatches)
+            .set({ error: null, status: 'completed', updatedAt: new Date() })
+            .where(eq(hatchetDispatches.id, dispatch.id));
+          return { aborted: true, success: true };
+        }
         await db
           .update(hatchetDispatches)
           .set({

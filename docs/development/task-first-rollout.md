@@ -388,8 +388,8 @@ import { imageRouter } from '@/server/routers/lambda/image';
 | S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` | S30.5（外部访客共享）未执行，见 §2.5                                     |
 | S40 自动化整合           | IN\_PROGRESS | CI\_PENDING      | `03d606a0`（数据层统一）+ 命名   | 数据层已统一、名称已改「自动化」；入口合并与 5 项能力搬运未做，见 §2.3   |
 | S50 资源与产物归位       | IN\_PROGRESS | CI\_PENDING      | `b017069b` `2957b55b`            | 客户端与项目资料面已完成；产物的**运行级**追溯与失败态在服务端，见 §2.6  |
-| S60 Goal 与规则下沉      | TODO         | NOT\_RUN         | —                                | 依赖 S20、S50                                                            |
-| S70 设置、文案与依赖清理 | TODO         | NOT\_RUN         | —                                | 依赖各功能工作包                                                         |
+| S60 Goal 与规则下沉      | IN\_PROGRESS | CI\_PENDING      | `23751be7` `7c565528`            | Goal 侧经审计为**已满足**；规则面已下沉，见 §2.7                         |
+| S70 设置、文案与依赖清理 | IN\_PROGRESS | CI\_PENDING      | `2d9ee3a6`                       | 文案与死代码已做；设置分组与 Onboarding 文案未做，见 §2.8                |
 | S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                | 覆盖全部                                                                 |
 
 ---
@@ -758,6 +758,73 @@ S70 的完整范围（方案 §10）还包括**设置重新分组**（账户 / �
 
 **结论**：S50 余项与 S30.5 同属一个执行位置 —— 方案 §13.1 的 S80。
 
+### 2.7 S60 实施记录
+
+**S60.1 Goal —— 审计结论是「已满足」，不是待办**
+
+方案 §9.1 说「顶层独立目标列表下沉」。审计发现**这个列表根本不存在**，所以没有可下沉的东西：
+
+| §9.1 的要求                                    | 实际                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------ |
+| 普通任务创建不再要求先建 Goal                  | ✅ `CreateTaskContent.tsx`（699 行主表单）grep `goal` 零命中       |
+| 服务端不接受经 task.create 建 goal             | ✅ `task.ts:820-828` 显式抛 `BAD_REQUEST`                          |
+| 顶层独立目标列表下沉                           | ✅ 不存在。只有 `/agent/:aid/goals` 与 `/project/:projectId/goals` |
+| 不删除协调器 / 依赖图 / 回溯 / 预算 / 终止规则 | ✅ 未动。20 个 goal procedure 全在，客户端实现全部只依赖 `goalId`  |
+| 旧 Goal 能查到关联才导航                       | ✅ 会话里的 GoalTaskCard 从 tool 结果解析 `goalId` 再链接          |
+
+`src/proxy.ts:47-48` 里预留了 `/goals` 白名单但 `src/routes/(main)/goals/` 不存在 —— 是空壳，不是断链。
+
+⚠️ **顺带发现两处残留错误注释**：`src/services/task.ts:125` 与
+`src/store/task/slices/detail/action.ts:296` 都写着 “Bind a goal entity (`goals` row) to the
+created task”，但所在参数根本没有 `goalId` 字段（`task.create` 也不接受）。已挂 §5 跟进项 15。
+
+**S60.2 自我进化 —— 已完成（`23751be7` + `7c565528`）**
+
+客户端一半，可本地验证。L0 从「成长画像」改成规则清单：
+
+- **删除**：判断句标题（老毛病 / 还不稳 / 已养成）、按等级分组的习惯清单、做对率与连续零错曲线、按层画像、「你教的」弧线、温习卡与其轮询（`GrowthCharts` / `TierBar` / `LayerProfile` / `WarmupCard` / `useHistoryWarmup` / `TaughtList`，共 668 行）。
+- **保留**：规则正文、作用范围（方向标签 + breadcrumb）、来源（详情页每条命中链回源 topic）、动作（纠正 / 看来源 / 停用）、人工教学入口，以及 `AnchorCard`（方向的 filter /canon/out-of-scope 就是「作用范围」）。
+- **补上**（方案要求「至少可辨认」但 UI 缺的两项）：**当前启用状态**与**可用的版本 / 更新时间**。两者都来自 `getLesson` 已经返回的字段，无服务端改动。
+
+⚠️ **成熟度曲线画的是死数据**：`expertise_domain_snapshots` 的 `fitComputedAt` / `pInf` / `maturity` / `plateauKind` **全仓没有任何写入者**（schema 注释声称有 6 小时定时作业回填，`vercel.json` 无 `crons`，索引 `expertise_domain_snapshots_pending_fit_idx` 也已建）。所以 `toMaturity` 恒返回 `reason: 'pending'`，GrowthCharts 的成熟度球恒空。删它不是审美取舍 —— 那套曲线背后没有生产者。
+
+**「用户禁用规则后不继续当作启用」在读取层已成立**：`listLessonsWithRecent` 按 `status = 'active'` 过滤（`packages/database/src/models/expertise.ts:166`），停用的规则根本不进列表。所以列表里只有一种状态，也不需要对状态分组 —— 详情页的状态标签只在**非 active** 时出现（旧深链接才会看到）。
+
+**规则注入路径与 UI 解耦，删 UI 不影响行为**：`aiAgent/index.ts:1119` → `operationPrep.ts:1008-1023` → `ContextEngineering` → `ExpertiseContextInjector`，唯一耦合点是 `enableSelfLearning` 这个 lab flag。本轮未动服务端一行，注入链保持兼容。
+
+**未执行 S60.3 —— 详情与对话关联**
+
+§9.3 要求「迁移的是组件的挂载职责，不是用一个 `mode` 参数把原先整个大页面藏在任务详情里」，并且「对话转任务」只能是**最小**实现（显式操作、明确标题 / 指令 / 范围、带来源引用、防重复提交），不能自动把旧聊天历史全变成任务。
+
+这一段要动的面（`TaskDetailSections` 的挂载职责、会话→任务的显式入口、防重复提交）都在**任务详情与会话**上，与 S60.1/S60.2 无耦合，但 §9.3 同时要求「不改变当前 Agent / Engine 选择、配置持久化、模型绑定或 resume 身份语义」—— 这是 §0.1 列为**保护对象**的两项之一（Orvilo 引擎 harness）。在不跑服务端、不跑类型检查的本轮约束下，我无法验证「改了挂载职责但没动 resume 身份」；猜错的后果是任务聊天串到另一个 Agent 的上下文。
+
+**结论**：与 S30.5、S50 余项同属 §13.1 的 S80 执行位置。
+
+### 2.8 S70 实施记录
+
+**已完成 —— 文案（`75fde2ae`）**：`package.json` 描述、`metadata.ts`、en-US / zh-CN `metadata.json`、
+`manifest.ts`、`ld.ts` 全部单源为 task-first 表述。LICENSE 与版权说明未动（§10 明确禁止）。
+
+**已完成 —— 无消费者标识（`0a4f0b05`）**：死字段 `NavigationRoute.electronKey`、死枚举
+`GroupKey.Community/Pages`、`SidebarTabKey` 的五个退役成员。变死的 lab flag `showMarket`
+**决定不删**并记录了理由（它是服务端配置契约，且是 `schema.test.ts` 的通用样本）。
+
+**已完成 —— 统计页的聊天排名与分享海报（`2d9ee3a6`）**
+
+§10 要求「移除独立聊天使用排名、分享海报和无关推广 UI；不凭聊天次数声称任务成功率」，同时
+「保留任务相关统计、额度、成本、账单与审计」。
+
+- 删：`AssistantsRank` / `ModelsRank` / `TopicsRank`（按聊天量给 agent / 模型 / 话题排名）+ 分享海报（`ShareModal` 生成并下载分享图，标题 “My AI Activity Index”）。
+- 留：四个总量卡、活跃热力图、以及整个 usage 段（按 model /provider/user 的 token 与花费）—— 那才是额度与成本面。
+- `TotalCard` 被四个总量共用，随目录被删会连带删掉，已上移到 `overview/`。
+- 三个排名的**web 客户端包装与 SWR key 一并删除**，但**服务端 procedure 保留**：`message.rankModels` 被 `apps/cli` 调用 —— 正是 §10 警告的「静态分析看不到的外部 CLI 消费者」。
+
+**未执行 —— 设置分组、Onboarding 文案、Coming Soon 卡**
+
+- **设置分组**：§10 要求整理为八组。现有 `useCategory.tsx` 的组织与之不同，重排是一次纯 IA 变更，会动到个人设置与工作区设置两条挂载路径。未做。
+- **Onboarding 文案**：本分支的 `src/features/Onboarding/` 未改（主工作区里那份 Onboarding 精简是**另一个 agent** 的在途改动，§0.3 已裁决不归本分支管）。
+- **Coming Soon 卡**：`channel.comingSoon*` 三处（`agent/channel/Header.tsx:279`、`detail/ComingSoon.tsx:66,68`、`list.tsx:266`）。§10 要区分「纯营销占位」与「真实能力不可用的解释」（需要桌面设备配置、权限不足、连接失效）。渠道平台的 coming-soon 属于前者，但删它要动渠道平台的**定义清单**（`platformDef.comingSoon`），影响到渠道列表本身 —— 需要先确认这些平台是否还有别的引用。已挂 §5 跟进项 16。
+
 ---
 
 ## 3. 旧路由映射（草案）
@@ -862,3 +929,8 @@ S10 的交付范围，但**必须挂到具体工作包**，否则会在「文档
 | 12  | **删除底层文档无引用保护**                                        | `src/services/resource/index.ts:264`（`deleteResource`）；`packages/database/src/schemas/task.ts:210-212`（cascade）   | **S80（服务端）**            | 从资源库删文档会 cascade 静默摘掉所有任务上的产物引用，全仓无引用计数、无二次确认。§8 要求「物理删除继续遵守既有权限和引用保护」                                                                                                                                                                                                                                                  |
 | 13  | 项目产物列表按协调者而非按项目过滤                                | `src/features/Projects/Workspace/ProjectDashboard.tsx:148-157`（`originAgentId`）                                      | S60 或独立小修               | 该处用 `workService.listByWorkspace({ originAgentId: coordinatorAgentId })` 取「最新产物」，与 `project_works` 表语义不一致 —— 项目没配协调者时这张卡片会空，而 `projectWorks` 里其实有数据                                                                                                                                                                                       |
 | 14  | `project_working_directories` 零消费者                            | `packages/database/src/schemas/project.ts:105`                                                                         | 不清理（观察）               | 表已建但只有 `topic.ts:43` 一个 FK 引用，无 model /router/service 写入。§12 的规矩是本轮不自动清库，故只记录；它也不在本分支新增                                                                                                                                                                                                                                                  |
+| 15  | 残留错误注释 “Bind a goal entity”                                 | `src/services/task.ts:125`；`src/store/task/slices/detail/action.ts:296`                                               | 可随手清理                   | 注释挂在一个没有 `goalId` 字段的参数上（`task.create` 也不接受 `goal`，见 §2.7）。纯注释，无行为影响，故未混进 S60 提交                                                                                                                                                                                                                                                           |
+| 16  | 渠道平台的 Coming Soon 卡                                         | `src/routes/(main)/agent/channel/{Header.tsx:279,detail/ComingSoon.tsx:66,68,list.tsx:266}`                            | S70 余项                     | 删它要动平台定义清单（`platformDef.comingSoon`），不是只删一个组件。需先确认这些平台是否还有别的引用                                                                                                                                                                                                                                                                              |
+| 17  | 设置分组未整理                                                    | `src/features/Settings/hooks/useCategory.tsx`                                                                          | S70 余项                     | §10 要八组；现有分组不同，且个人 / 工作区两条挂载路径都要同步                                                                                                                                                                                                                                                                                                                     |
+| 18  | Agent 配置里的「规则与经验」入口                                  | 候选落点 `src/features/AgentSetting/AgentSelfIteration/index.tsx`                                                      | S60 余项                     | §9.2 原话是「下沉到 Agent 配置中的『规则与经验』」。本轮把 `/agent/:aid/self-evolving` 从画像改成规则清单（已在 Agent 区），但**没有**在 Agent 设置 tab 里加入口 —— 加它要同时改 `Content.tsx`、`AgentCategory/useCategory.tsx`、`AgentSettingsContent.tsx` 三处，不同步就会有一个形态看不到该 tab                                                                                |
+| 19  | 服务端死能力（零消费者，勿在无服务端环境删）                      | `expertiseBindings.enabled`；`expertiseInsights`；`expertise.listLessons`；`actorsByDomain` / `listRuns`               | S80（仅记录）                | 与 §2.7 的成熟度死数据同源：schema 与索引齐备但无生产者。§10 要求「确认无消费者后才移除」，而这几处需要服务端与 CLI 侧一并核验                                                                                                                                                                                                                                                    |

@@ -815,9 +815,29 @@ PGlite 而非伪造 db，因为它验的正是那条 count 查询与它挡在前
 **已知边界（与邻居守卫共有，已在代码注释里写明）**：`deleteDocument` 还会递归删除子页面，而这里只检查调用者点名的 id，
 所以「父页面未被挂、子页面被挂」这种情况不会被拦住；更完整的版本可以用 `DocumentModel.collectSubtree`。
 
-**仍未做 —— 产物的运行级追溯**
+**仍未做 —— 产物的运行级追溯（诊断已更正：数据早就在库里）**
 
-1. **`task_documents` 无 run 级外键**。库里有 run 级关联的只有 `topic_documents`（`(documentId, topicId)`）与 `work_versions.rootOperationId`；前者只有 `createTopicDocument` 一个写入点，后者被 `goalGraphViewModel` 在视图层丢弃。§8 允许复用即不新增表，`context.topicId` 在 `emitDocumentOutcome` 里本来就可取 —— 所以生产者可复用既有表。但 `topic_documents` **目前没有任何读取者**（任务详情 UI 完全不读它），单独补生产者等于造一张没人读的表。要落地必须生产者 + 读取者 + UI 三件一起，且都在服务端。
+⚠️ **本节原先的诊断是错的，且基于它得出的方案会做错事。** 原文写「库里有 run 级关联的只有 `topic_documents` 与
+`work_versions.rootOperationId`」，并据此计划「在 `topic_documents` 上补一个生产者」。复核发现这条路不该走 ——
+关联已经在另一处、而且更完整：
+
+- `RegisterDocumentWorkParams` 同时接收 `documentId`、`topicId`、`rootOperationId`（`packages/types/src/work.ts:258-275`）；
+- 运行时的注册路径把 `topicId` 与 `rootOperationId` **都传了进去**（`apps/server/src/modules/AgentRuntime/executorHelpers.ts:120-165` 的注册上下文）；
+- 落库处 `works.originTopicId` 有独立索引（`packages/database/src/schemas/work.ts:83,131`）。
+
+也就是说「某个文档产物来自哪次运行」对一个文档类 Work 而言**已经落库**：`works.originTopicId` 是运行所在的会话，
+`work_versions.rootOperationId` 是同一次操作。按原计划去 `topic_documents` 补生产者，等于为已经记录的关系再造一套并行关联 ——
+而 `topic_documents` 至今零读取者。
+
+**所以剩下的不是「补数据」，是「把已有关系投影出来并显示」**：
+
+| 层       | 要做的事                                                                                                                                                                                 |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 服务端   | 任务详情的产物投影（`TaskDetailWorkspaceNode`）带上该产物 Work 的 `originTopicId` / `rootOperationId`。按 `documentId` 关联 `works`（`type='document'`）即可，**不新增表、不新增生产者** |
+| 客户端   | `TaskArtifacts` 渲染这一条并可点进那次会话                                                                                                                                               |
+| 产品决定 | 「哪一次运行」呈现成什么（会话标题、运行序号，还是可点进会话的链接）—— 这是决定，不是实现细节                                                                                            |
+
+这一项仍与 S80 同批：要动任务详情的服务端投影与客户端渲染，且需要真实运行中的任务来确认呈现效果。
 
 **为什么这一项仍停在这里**：不是「改不动」，而是三件必须一起落才不是造假面 —— 生产者（运行时已有 `context.topicId`，
 可复用 `topic_documents`）、读取者（该表至今**零读取者**）、UI（任务详情要显示「来自哪次运行」）。

@@ -296,7 +296,7 @@ export function createThreadHooks(
    *   - queue mode: in-memory handlers don't survive cross-process steps, so
    *     the serialized `webhook` config is delivered via QStash to
    *     `/api/agent/webhooks/subagent-callback`, which re-enters the same
-   *     bridge method. `delivery: 'qstash'` is required — a plain fetch would
+   *     bridge method. `delivery: 'hatchet'` is required — a plain fetch would
 
 
    *     be rejected by the endpoint's QStash signature auth.
@@ -330,7 +330,7 @@ export function createSubAgentBridgeHook(
     type: 'onComplete' as const,
     webhook: {
       body: { parentOperationId, threadId, toolMessageId },
-      delivery: 'qstash' as const,
+      delivery: 'hatchet' as const,
       // Keep the payload lean: the endpoint reloads the child's final state
       // from the coordinator, so everything beyond these ids is dead weight.
       // The default (all event fields) would ship the child's entire final
@@ -413,7 +413,7 @@ export function createGroupActionMemberBridgeHook(
         parentOperationId,
         threadId,
       },
-      delivery: 'qstash' as const,
+      delivery: 'hatchet' as const,
       eventFields: ['operationId', 'reason', 'status'],
       fallback: 'none' as const,
       url: '/api/agent/webhooks/group-member-callback',

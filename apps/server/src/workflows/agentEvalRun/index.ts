@@ -3,7 +3,7 @@ import debug from 'debug';
 
 import { AgentEvalRunTopicModel } from '@/database/models/agentEval';
 import type { LobeChatDatabase } from '@/database/type';
-import { workflowClient } from '@/libs/qstash';
+import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
 
 const log = debug('lobe-server:workflows:agent-eval-run');
 
@@ -126,15 +126,6 @@ export interface OnThreadCompletePayload {
 }
 
 /**
- * Get workflow URL using APP_URL
- */
-const getWorkflowUrl = (path: string): string => {
-  const baseUrl = process.env.APP_URL;
-  if (!baseUrl) throw new Error('APP_URL is required to trigger workflows');
-  return new URL(path, baseUrl).toString();
-};
-
-/**
  * Agent Eval Run Workflow
  *
  * Handles workflow triggering for agent evaluation run execution.
@@ -144,94 +135,90 @@ export class AgentEvalRunWorkflow {
    * Trigger workflow to run benchmark (entry point)
    */
   static triggerRunBenchmark(payload: RunBenchmarkPayload) {
-    const url = getWorkflowUrl(WORKFLOW_PATHS.runBenchmark);
     log('Triggering run-benchmark workflow for run: %s', payload.runId);
-    return workflowClient.trigger({ body: payload, url });
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.runBenchmark, payload, {
+      concurrencyKey: `agent-eval-run:${payload.runId}:benchmark`,
+    });
   }
 
   /**
    * Trigger workflow to paginate test cases
    */
   static triggerPaginateTestCases(payload: PaginateTestCasesPayload) {
-    const url = getWorkflowUrl(WORKFLOW_PATHS.paginateTestCases);
     log('Triggering paginate-test-cases workflow for run: %s', payload.runId);
-    return workflowClient.trigger({ body: payload, url });
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.paginateTestCases, payload);
   }
 
   /**
    * Trigger workflow to execute a test case K times
    */
   static triggerExecuteTestCase(payload: ExecuteTestCasePayload) {
-    const url = getWorkflowUrl(WORKFLOW_PATHS.executeTestCase);
     log(
       'Triggering execute-test-case workflow: run=%s, testCase=%s',
       payload.runId,
       payload.testCaseId,
     );
-    return workflowClient.trigger({ body: payload, url });
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.executeTestCase, payload);
   }
 
   /**
    * Trigger workflow to run a single agent trajectory
    */
   static triggerRunAgentTrajectory(payload: RunAgentTrajectoryPayload) {
-    const url = getWorkflowUrl(WORKFLOW_PATHS.runAgentTrajectory);
     log(
       'Triggering run-agent-trajectory workflow: run=%s, testCase=%s',
       payload.runId,
       payload.testCaseId,
     );
-    return workflowClient.trigger({ body: payload, url });
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.runAgentTrajectory, payload);
   }
 
   /**
    * Trigger workflow to resume a single agent trajectory
    */
   static triggerResumeAgentTrajectory(payload: ResumeAgentTrajectoryPayload) {
-    const url = getWorkflowUrl(WORKFLOW_PATHS.resumeAgentTrajectory);
     log(
       'Triggering resume-agent-trajectory workflow: run=%s, testCase=%s',
       payload.runId,
       payload.testCaseId,
     );
-    return workflowClient.trigger({ body: payload, url });
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.resumeAgentTrajectory, payload);
   }
 
   /**
    * Trigger workflow to run a single thread trajectory (for pass@k)
    */
   static triggerRunThreadTrajectory(payload: RunThreadTrajectoryPayload) {
-    const url = getWorkflowUrl(WORKFLOW_PATHS.runThreadTrajectory);
     log(
       'Triggering run-thread-trajectory workflow: run=%s, testCase=%s, thread=%s',
       payload.runId,
       payload.testCaseId,
       payload.threadId,
     );
-    return workflowClient.trigger({ body: payload, url });
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.runThreadTrajectory, payload);
   }
 
   /**
    * Trigger workflow to resume a single thread trajectory (for pass@k)
    */
   static triggerResumeThreadTrajectory(payload: ResumeThreadTrajectoryPayload) {
-    const url = getWorkflowUrl(WORKFLOW_PATHS.resumeThreadTrajectory);
     log(
       'Triggering resume-thread-trajectory workflow: run=%s, testCase=%s, thread=%s',
       payload.runId,
       payload.testCaseId,
       payload.threadId,
     );
-    return workflowClient.trigger({ body: payload, url });
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.resumeThreadTrajectory, payload);
   }
 
   /**
    * Trigger workflow to finalize run
    */
   static triggerFinalizeRun(payload: FinalizeRunPayload) {
-    const url = getWorkflowUrl(WORKFLOW_PATHS.finalizeRun);
     log('Triggering finalize-run workflow for run: %s', payload.runId);
-    return workflowClient.trigger({ body: payload, url });
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.finalizeRun, payload, {
+      concurrencyKey: `agent-eval-run:${payload.runId}:finalize`,
+    });
   }
 
   /**

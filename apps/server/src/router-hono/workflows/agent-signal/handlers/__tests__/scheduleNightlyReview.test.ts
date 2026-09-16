@@ -26,14 +26,14 @@ describe('scheduleNightlyReview', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-03T18:30:00.000Z'));
-    mocks.publishPaginateUsersEntry.mockResolvedValue({ messageId: 'nightly-message-1' });
+    mocks.publishPaginateUsersEntry.mockResolvedValue({ workflowRunId: 'nightly-message-1' });
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('uses bounded defaults when QStash sends an empty body', async () => {
+  it('uses bounded defaults when Hatchet invokes the schedule', async () => {
     /**
      * @example
      * expect(response.status).toBe(202);
@@ -44,9 +44,9 @@ describe('scheduleNightlyReview', () => {
 
     expect(response.status).toBe(202);
     await expect(response.json()).resolves.toEqual({
+      messageId: 'nightly-message-1',
       scheduled: true,
       success: true,
-      messageId: 'nightly-message-1',
     });
     expect(mocks.publishPaginateUsersEntry).toHaveBeenCalledWith({
       cursor: undefined,
@@ -75,9 +75,9 @@ describe('scheduleNightlyReview', () => {
 
     expect(response.status).toBe(202);
     await expect(response.json()).resolves.toEqual({
+      messageId: 'nightly-message-1',
       scheduled: true,
       success: true,
-      messageId: 'nightly-message-1',
     });
     expect(mocks.publishPaginateUsersEntry).toHaveBeenCalledWith({
       cursor: { createdAt: '2026-05-04T00:00:00.000Z', id: 'user-1' },
@@ -107,6 +107,7 @@ describe('scheduleNightlyReview', () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
       error: 'nightly review cron publish timed out after 10000ms',
+      success: false,
     });
   });
 });

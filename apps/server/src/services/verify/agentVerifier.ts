@@ -144,7 +144,7 @@ export const createVerifierAgentRunner = (params: {
         type: 'onComplete' as const,
         webhook: {
           body: terminalHookBody,
-          delivery: 'qstash' as const,
+          delivery: 'hatchet' as const,
           url: '/api/workflows/verify/on-verifier-complete',
         },
       },

@@ -44,6 +44,10 @@ type ProviderWorkflowContext = Pick<
 interface ProviderWorkflowDependencies {
   createService?: (userId: string) => Promise<ProviderService>;
   processCollectedWorkflow: InvokableWorkflow<ProcessCollectedUnderstandingPayload, unknown>;
+  triggerCollected?: (
+    input: ProcessCollectedUnderstandingPayload,
+    options: { workflowRunId: string },
+  ) => Promise<unknown>;
   triggerTaskRecommendations: (
     input: ProcessOnboardingTaskRecommendationPayload,
     options: {
@@ -166,18 +170,25 @@ export const processUnderstandingProviders = async (
           topicId: payload.topicId,
           userId: payload.userId,
         };
-        await context.invoke(`provider:${providerId}:write:${result.revision}`, {
-          body,
-          // Serialize writers for this session. The repository's fingerprint CAS then prevents a
-          // delayed failure callback for an older invocation from terminalizing newer writing.
-          flowControl: {
-            key: getUnderstandingWritingFlowControlKey(payload.sessionId),
-            parallelism: 1,
-          },
-          headers: getOnboardingUnderstandingTraceHeaders(),
-          workflow: dependencies.processCollectedWorkflow,
-          workflowRunId: collectedWorkflowRunId(payload.sessionId, result.sourceFingerprint),
-        });
+        const workflowRunId = collectedWorkflowRunId(payload.sessionId, result.sourceFingerprint);
+        if (dependencies.triggerCollected) {
+          await runStep(context, `provider:${providerId}:write:${result.revision}`, () =>
+            dependencies.triggerCollected!(body, { workflowRunId }),
+          );
+        } else {
+          await context.invoke(`provider:${providerId}:write:${result.revision}`, {
+            body,
+            // Serialize writers for this session. The fingerprint CAS prevents a delayed older
+            // invocation from terminalizing newer writing.
+            flowControl: {
+              key: getUnderstandingWritingFlowControlKey(payload.sessionId),
+              parallelism: 1,
+            },
+            headers: getOnboardingUnderstandingTraceHeaders(),
+            workflow: dependencies.processCollectedWorkflow,
+            workflowRunId,
+          });
+        }
         if (payload.triggerTaskRecommendations !== false) {
           await runStep(context, `provider:${providerId}:recommend:${result.revision}`, () =>
             // NOTICE:

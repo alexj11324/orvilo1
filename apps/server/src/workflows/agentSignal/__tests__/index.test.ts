@@ -30,10 +30,8 @@ vi.mock('@/libs/observability/traceparent', () => ({
   injectActiveTraceHeaders: mocks.injectActiveTraceHeaders,
 }));
 
-vi.mock('@/libs/qstash', () => ({
-  workflowClient: {
-    trigger: mocks.trigger,
-  },
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  triggerHatchetWorkflow: mocks.trigger,
 }));
 
 vi.mock('@/server/services/agentSignal/orchestrator', () => ({
@@ -169,7 +167,7 @@ describe('AgentSignalWorkflow', () => {
     );
   });
 
-  it('keeps using Upstash Workflow when queue runtime is enabled', async () => {
+  it('uses Hatchet dispatch when queue runtime is enabled', async () => {
     mocks.appEnv.enableQueueAgentRuntime = true;
 
     await expect(AgentSignalWorkflow.triggerRun(createPayload())).resolves.toEqual({

@@ -1317,7 +1317,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       type: 'onComplete' as const,
       webhook: {
         body: { taskId: 'task_x', taskIdentifier: 'T-X', userId: 'test-user-id' },
-        delivery: 'qstash' as const,
+        delivery: 'hatchet' as const,
         url: '/api/workflows/task/on-topic-complete',
       },
     };
@@ -1450,7 +1450,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
           id: 'task-on-complete',
           type: 'onComplete',
           webhook: expect.objectContaining({
-            delivery: 'qstash',
+            delivery: 'hatchet',
             url: '/api/workflows/task/on-topic-complete',
           }),
         }),

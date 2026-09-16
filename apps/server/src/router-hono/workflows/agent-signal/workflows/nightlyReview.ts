@@ -1,4 +1,3 @@
-import type { WorkflowContext } from '@upstash/workflow';
 import { chunk } from 'es-toolkit/compat';
 
 import { getServerDB } from '@/database/server';
@@ -11,6 +10,7 @@ import {
   type NightlyReviewWorkflowUser,
   type PaginateNightlyReviewUsersPayload,
 } from '@/server/workflows/agentSignal/nightlyReview';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 
 const DEFAULT_PAGE_SIZE = 50;

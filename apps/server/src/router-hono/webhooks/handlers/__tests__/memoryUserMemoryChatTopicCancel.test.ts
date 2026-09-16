@@ -10,12 +10,8 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
 }));
 
-vi.mock('@upstash/workflow', () => ({
-  Client: vi.fn(function () {
-    return {
-      cancel: mocks.cancel,
-    };
-  }),
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  cancelHatchetWorkflow: mocks.cancel,
 }));
 
 vi.mock('@/database/models/asyncTask', async (importOriginal) => {
@@ -77,8 +73,7 @@ const createRequest = (body: Record<string, unknown>) =>
 describe('memory extraction cancel route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv('QSTASH_TOKEN', 'test-qstash-token');
-    mocks.cancel.mockResolvedValue({ cancelled: 2 });
+    mocks.cancel.mockImplementation(async (id: string) => id.startsWith('hatchet-dispatch:'));
     mocks.update.mockResolvedValue(undefined);
   });
 
@@ -95,7 +90,9 @@ describe('memory extraction cancel route', () => {
       id: '00000000-0000-4000-8000-000000000001',
       metadata: {
         control: {
-          upstash: { workflowRunIds: ['root-run', 'child-run'] },
+          upstash: {
+            workflowRunIds: ['hatchet-dispatch:root-run', 'hatchet-dispatch:child-run'],
+          },
         },
         progress: {
           processedUsers: 0,
@@ -114,8 +111,8 @@ describe('memory extraction cancel route', () => {
       createRequest({
         reason: 'operator stop',
         taskId: '00000000-0000-4000-8000-000000000001',
-        workflowRunId: 'child-run',
-        workflowRunIds: ['late-run'],
+        workflowRunId: 'hatchet-dispatch:child-run',
+        workflowRunIds: ['legacy-run'],
       }),
     );
 
@@ -126,7 +123,10 @@ describe('memory extraction cancel route', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(mocks.cancel).toHaveBeenCalledWith({ ids: ['root-run', 'child-run', 'late-run'] });
+    expect(mocks.cancel).toHaveBeenCalledTimes(3);
+    expect(mocks.cancel).toHaveBeenCalledWith('hatchet-dispatch:root-run');
+    expect(mocks.cancel).toHaveBeenCalledWith('hatchet-dispatch:child-run');
+    expect(mocks.cancel).toHaveBeenCalledWith('legacy-run');
     expect(mocks.update).toHaveBeenCalledWith(
       '00000000-0000-4000-8000-000000000001',
       expect.objectContaining({
@@ -134,7 +134,13 @@ describe('memory extraction cancel route', () => {
           control: expect.objectContaining({
             cancelReason: 'operator stop',
             cancelledBy: 'webhook',
-            upstash: { workflowRunIds: ['root-run', 'child-run', 'late-run'] },
+            upstash: {
+              workflowRunIds: [
+                'hatchet-dispatch:root-run',
+                'hatchet-dispatch:child-run',
+                'legacy-run',
+              ],
+            },
           }),
           source: 'hourly_chat_topic',
         }),
@@ -152,7 +158,7 @@ describe('memory extraction cancel route', () => {
       id: '00000000-0000-4000-8000-000000000002',
       metadata: {
         control: {
-          upstash: { workflowRunIds: ['manual-run'] },
+          upstash: { workflowRunIds: ['hatchet-dispatch:manual-run'] },
         },
         progress: {
           completedTopics: 0,
@@ -174,20 +180,20 @@ describe('memory extraction cancel route', () => {
     );
 
     await expect(response.json()).resolves.toMatchObject({
-      cancelledWorkflowRuns: 2,
+      cancelledWorkflowRuns: 1,
       status: AsyncTaskStatus.Error,
       taskId: '00000000-0000-4000-8000-000000000002',
     });
 
     expect(response.status).toBe(200);
-    expect(mocks.cancel).toHaveBeenCalledWith({ ids: ['manual-run'] });
+    expect(mocks.cancel).toHaveBeenCalledWith('hatchet-dispatch:manual-run');
     expect(mocks.update).toHaveBeenCalledWith(
       '00000000-0000-4000-8000-000000000002',
       expect.objectContaining({
         metadata: expect.objectContaining({
           control: expect.objectContaining({
             cancelledBy: 'webhook',
-            upstash: { workflowRunIds: ['manual-run'] },
+            upstash: { workflowRunIds: ['hatchet-dispatch:manual-run'] },
           }),
           source: 'chat_topic',
         }),

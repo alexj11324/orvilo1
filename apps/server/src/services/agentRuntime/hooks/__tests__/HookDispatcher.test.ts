@@ -10,14 +10,11 @@ vi.mock('@/server/services/queue/impls', () => ({
   }), // Default: local mode
 }));
 
-const mockPublishJSON = vi.hoisted(() => vi.fn());
+const mockDeliverInternalWebhook = vi.hoisted(() => vi.fn());
 
-// Plain class (not vi.fn) so the file-level `vi.restoreAllMocks()` can't wipe
-// the implementation between tests.
-vi.mock('@upstash/qstash', () => ({
-  Client: class {
-    publishJSON = mockPublishJSON;
-  },
+vi.mock('../internalWebhook', () => ({
+  deliverInternalWebhook: mockDeliverInternalWebhook,
+  isInternalWebhookPath: (path: string) => path === '/api/agent/webhooks/bot-callback',
 }));
 
 const { isQueueAgentRuntimeEnabled } = await import('@/server/services/queue/impls');
@@ -271,48 +268,42 @@ describe('HookDispatcher', () => {
     });
   });
 
-  describe('deliverWebhook qstash fallback', () => {
-    const originalToken = process.env.QSTASH_TOKEN;
-
+  describe('deliverWebhook Hatchet callbacks', () => {
     beforeEach(() => {
       global.fetch = vi.fn().mockResolvedValue({ status: 200 });
-      mockPublishJSON.mockReset();
-      delete process.env.QSTASH_TOKEN;
+      mockDeliverInternalWebhook.mockReset().mockResolvedValue(undefined);
     });
 
     afterEach(() => {
-      if (originalToken === undefined) delete process.env.QSTASH_TOKEN;
-      else process.env.QSTASH_TOKEN = originalToken;
       vi.restoreAllMocks();
     });
 
-    it('falls back to plain fetch by default when the QStash token is missing', async () => {
-      await deliverWebhook({ delivery: 'qstash', url: 'https://example.com/hook' }, { a: 1 });
+    it('invokes an allowlisted internal callback without an HTTP hop', async () => {
+      await deliverWebhook(
+        { delivery: 'hatchet', url: '/api/agent/webhooks/bot-callback' },
+        { a: 1 },
+      );
 
-      expect(global.fetch).toHaveBeenCalled();
+      expect(mockDeliverInternalWebhook).toHaveBeenCalledWith('/api/agent/webhooks/bot-callback', {
+        a: 1,
+      });
+      expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it("throws instead of unsigned-fetching when fallback is 'none' and the token is missing", async () => {
+    it('rejects non-allowlisted destinations without sending the payload', async () => {
       await expect(
-        deliverWebhook(
-          { delivery: 'qstash', fallback: 'none', url: 'https://example.com/hook' },
-          { a: 1 },
-        ),
-      ).rejects.toThrow(/QSTASH_TOKEN not available/);
+        deliverWebhook({ delivery: 'hatchet', url: 'https://example.com/hook' }, { a: 1 }),
+      ).rejects.toThrow('Unsupported Hatchet internal webhook path');
 
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it("throws instead of unsigned-fetching when fallback is 'none' and the publish fails", async () => {
-      process.env.QSTASH_TOKEN = 'test-token';
-      mockPublishJSON.mockRejectedValue(new Error('qstash down'));
+    it('surfaces an internal callback failure', async () => {
+      mockDeliverInternalWebhook.mockRejectedValue(new Error('callback failed'));
 
       await expect(
-        deliverWebhook(
-          { delivery: 'qstash', fallback: 'none', url: 'https://example.com/hook' },
-          { a: 1 },
-        ),
-      ).rejects.toThrow('qstash down');
+        deliverWebhook({ delivery: 'hatchet', url: '/api/agent/webhooks/bot-callback' }, { a: 1 }),
+      ).rejects.toThrow('callback failed');
 
       expect(global.fetch).not.toHaveBeenCalled();
     });
@@ -320,13 +311,18 @@ describe('HookDispatcher', () => {
     it('dispatch rejects a no-fallback delivery failure after delivering other hooks', async () => {
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(true);
       const consoleError = vi.spyOn(console, 'error').mockImplementation(function () {});
+      mockDeliverInternalWebhook.mockRejectedValue(new Error('callback failed'));
 
       dispatcher.register(operationId, [
         {
           handler: vi.fn(),
           id: 'critical-hook',
           type: 'onComplete',
-          webhook: { delivery: 'qstash', fallback: 'none', url: 'https://example.com/critical' },
+          webhook: {
+            delivery: 'hatchet',
+            fallback: 'none',
+            url: '/api/agent/webhooks/bot-callback',
+          },
         },
         {
           handler: vi.fn(),

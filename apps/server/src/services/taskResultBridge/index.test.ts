@@ -296,7 +296,7 @@ describe('TaskResultBridgeService.deliver', () => {
     const hooks = execAgent.mock.calls[0][0].hooks;
     const botHook = hooks.find((hook: any) => hook.id === 'task-creator-completion');
     expect(botHook.webhook).toMatchObject({
-      delivery: 'qstash',
+      delivery: 'hatchet',
       fallback: 'none',
       url: '/api/workflows/task/on-creator-complete',
     });

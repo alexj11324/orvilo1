@@ -1,6 +1,5 @@
-import { appEnv } from '@/envs/app';
 import { injectActiveTraceHeaders } from '@/libs/observability/traceparent';
-import { workflowClient } from '@/libs/qstash';
+import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
 
 import {
   type ProcessCollectedUnderstandingPayload,
@@ -30,18 +29,16 @@ export class UnderstandingWorkflowUnavailableError extends Error {
 
 export class OnboardingUnderstandingWorkflow {
   static assertAvailable() {
-    const baseUrl = appEnv.INTERNAL_APP_URL || appEnv.APP_URL;
-    if (!process.env.QSTASH_TOKEN || !baseUrl) {
+    if (!process.env.HATCHET_CLIENT_TOKEN) {
       throw new UnderstandingWorkflowUnavailableError();
     }
-    return baseUrl;
   }
 
   static async triggerProviders(
     input: ProcessUnderstandingProvidersPayload,
     options?: { workflowRunId?: string },
   ) {
-    const baseUrl = this.assertAvailable();
+    this.assertAvailable();
     const parsed = ProcessUnderstandingProvidersPayloadSchema.parse(input);
     const payload = {
       ...parsed,
@@ -50,11 +47,10 @@ export class OnboardingUnderstandingWorkflow {
     const traceHeaders = new Headers();
     injectActiveTraceHeaders(traceHeaders);
 
-    return workflowClient.trigger({
-      body: payload,
+    return triggerHatchetWorkflow(PROCESS_PROVIDERS_PATH, payload, {
+      concurrencyKey: `onboarding-understanding.providers.${payload.sessionId}`,
       headers: Object.fromEntries(traceHeaders.entries()),
-      url: new URL(PROCESS_PROVIDERS_PATH, baseUrl).toString(),
-      ...(options?.workflowRunId ? { workflowRunId: options.workflowRunId } : {}),
+      workflowRunId: options?.workflowRunId,
     });
   }
 
@@ -62,16 +58,15 @@ export class OnboardingUnderstandingWorkflow {
     input: ProcessCollectedUnderstandingPayload,
     options?: { workflowRunId?: string },
   ) {
-    const baseUrl = this.assertAvailable();
+    this.assertAvailable();
     const payload = ProcessCollectedUnderstandingPayloadSchema.parse(input);
     const traceHeaders = new Headers();
     injectActiveTraceHeaders(traceHeaders);
 
-    return workflowClient.trigger({
-      body: payload,
+    return triggerHatchetWorkflow(PROCESS_COLLECTED_PATH, payload, {
+      concurrencyKey: `onboarding-understanding.writing.${payload.sessionId}`,
       headers: Object.fromEntries(traceHeaders.entries()),
-      url: new URL(PROCESS_COLLECTED_PATH, baseUrl).toString(),
-      ...(options?.workflowRunId ? { workflowRunId: options.workflowRunId } : {}),
+      workflowRunId: options?.workflowRunId,
     });
   }
 
@@ -79,16 +74,15 @@ export class OnboardingUnderstandingWorkflow {
     input: ProcessCollectedUnderstandingPayload,
     options?: { workflowRunId?: string },
   ) {
-    const baseUrl = this.assertAvailable();
+    this.assertAvailable();
     const payload = ProcessCollectedUnderstandingPayloadSchema.parse(input);
     const traceHeaders = new Headers();
     injectActiveTraceHeaders(traceHeaders);
 
-    return workflowClient.trigger({
-      body: payload,
+    return triggerHatchetWorkflow(PROCESS_DETAILED_PERSONA_PATH, payload, {
+      concurrencyKey: `onboarding-understanding.detailed.${payload.sessionId}`,
       headers: Object.fromEntries(traceHeaders.entries()),
-      url: new URL(PROCESS_DETAILED_PERSONA_PATH, baseUrl).toString(),
-      ...(options?.workflowRunId ? { workflowRunId: options.workflowRunId } : {}),
+      workflowRunId: options?.workflowRunId,
     });
   }
 }

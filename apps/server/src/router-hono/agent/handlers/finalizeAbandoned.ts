@@ -66,7 +66,7 @@ export async function finalizeAbandoned(c: Context): Promise<Response> {
       };
       if (process.env.QSTASH_TOKEN) {
         await deliverWebhook(
-          { delivery: 'qstash', fallback: 'none', url: '/api/agent/webhooks/subagent-callback' },
+          { delivery: 'hatchet', fallback: 'none', url: '/api/agent/webhooks/subagent-callback' },
           bridgeBody,
         );
         log('[%s] queued durable parent-resume for %s', operationId, parentOperationId);

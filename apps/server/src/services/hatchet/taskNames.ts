@@ -1,9 +1,15 @@
 export const HATCHET_TASK_NAMES = {
   agentStep: 'orvilo-agent-step',
+  agentSignalNightlySchedule: 'orvilo-agent-signal-nightly-schedule',
   botReplay: 'orvilo-bot-replay',
   goalAdvance: 'orvilo-goal-advance',
   goalSweep: 'orvilo-goal-sweep',
   taskHeartbeat: 'orvilo-task-heartbeat',
   taskScheduleDispatch: 'orvilo-task-schedule-dispatch',
   taskScheduleExecute: 'orvilo-task-schedule-execute',
+  taskScheduledTopicDispatch: 'orvilo-task-scheduled-topic-dispatch',
+  taskWatchdog: 'orvilo-task-watchdog',
+  verifySweep: 'orvilo-verify-sweep',
+  workflowDispatch: 'orvilo-workflow-dispatch',
+  workflowDispatchSweep: 'orvilo-workflow-dispatch-sweep',
 } as const;

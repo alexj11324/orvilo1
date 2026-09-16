@@ -10,8 +10,12 @@ import type { Context as HonoContext } from 'hono';
 import { z } from 'zod';
 
 import { runStep } from '@/server/router-hono/agent/handlers/runStep';
+import { runScheduleNightlyReview } from '@/server/router-hono/workflows/agent-signal/handlers/scheduleNightlyReview';
 import { runGoalSweep } from '@/server/router-hono/workflows/goal/handlers/sweep';
 import { runScheduleDispatch } from '@/server/router-hono/workflows/task/handlers/scheduleDispatch';
+import { scheduledTopicDispatch } from '@/server/router-hono/workflows/task/handlers/scheduledTopicDispatch';
+import { watchdog } from '@/server/router-hono/workflows/task/handlers/watchdog';
+import { sweep as verifySweepHandler } from '@/server/router-hono/workflows/verify/handlers/sweep';
 import { type DeferredReplayTarget, runDeferredReplay } from '@/server/services/bot/deferredReplay';
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
@@ -79,6 +83,16 @@ const createRunStepContext = (
     },
   }) as unknown as HonoContext;
 
+const runInternalHandler = async (handler: (context: HonoContext) => Promise<Response>) => {
+  const response = await handler({
+    json: (body: unknown, status = 200, headers?: HeadersInit) =>
+      Response.json(body, { headers, status }),
+    req: { json: async () => ({}) },
+  } as unknown as HonoContext);
+  if (!response.ok) throw new Error(await response.text());
+  return readResponseBody(response);
+};
+
 const readResponseBody = async (response: Response): Promise<JsonObject> => {
   const body = (await response.json()) as unknown;
   return body && typeof body === 'object' ? (body as JsonObject) : { body: String(body) };
@@ -131,6 +145,14 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     },
     inputValidator: agentStepInput,
     retries: 12,
+  });
+
+  const agentSignalNightlySchedule = hatchet.task({
+    name: HATCHET_TASK_NAMES.agentSignalNightlySchedule,
+    executionTimeout: '15m',
+    fn: async () => runScheduleNightlyReview(),
+    onCrons: ['0 * * * *'],
+    retries: 3,
   });
 
   const botReplay = hatchet.task({
@@ -205,6 +227,30 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     retries: 3,
   });
 
+  const taskScheduledTopicDispatch = hatchet.task({
+    name: HATCHET_TASK_NAMES.taskScheduledTopicDispatch,
+    executionTimeout: '15m',
+    fn: async () => runInternalHandler(scheduledTopicDispatch),
+    onCrons: ['*/10 * * * *'],
+    retries: 3,
+  });
+
+  const taskWatchdog = hatchet.task({
+    name: HATCHET_TASK_NAMES.taskWatchdog,
+    executionTimeout: '15m',
+    fn: async () => runInternalHandler(watchdog),
+    onCrons: ['*/5 * * * *'],
+    retries: 3,
+  });
+
+  const verifySweep = hatchet.task({
+    name: HATCHET_TASK_NAMES.verifySweep,
+    executionTimeout: '15m',
+    fn: async () => runInternalHandler(verifySweepHandler),
+    onCrons: ['*/5 * * * *'],
+    retries: 3,
+  });
+
   const goalSweep = hatchet.task({
     name: HATCHET_TASK_NAMES.goalSweep,
     executionTimeout: '15m',
@@ -215,11 +261,15 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
 
   return [
     agentStep,
+    agentSignalNightlySchedule,
     botReplay,
     goalAdvance,
     goalSweep,
     taskHeartbeat,
     taskScheduleDispatch,
     taskScheduleExecute,
+    taskScheduledTopicDispatch,
+    taskWatchdog,
+    verifySweep,
   ];
 };

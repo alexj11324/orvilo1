@@ -1,4 +1,4 @@
-import type { WorkflowContext } from '@upstash/workflow';
+import type { WorkflowContext } from '@/server/workflows/context';
 
 /**
  * A step result as it actually arrives on the consuming side of an Upstash Workflow step.
@@ -64,7 +64,7 @@ export const runStep = <TResult>(
   stepName: string,
   stepFunction: () => Promise<TResult> | TResult,
 ): Promise<WorkflowStepResult<TResult>> =>
-  context.run(stepName, stepFunction) as Promise<WorkflowStepResult<TResult>>;
+  context.run(stepName, async () => stepFunction()) as Promise<WorkflowStepResult<TResult>>;
 
 /**
  * Parses a timestamp that crossed a workflow boundary back into a `Date`.

@@ -26,7 +26,7 @@ export const createBotCompletionWebhook = ({
     workspaceId,
     ...body,
   },
-  delivery: 'qstash',
+  delivery: 'hatchet',
   fallback: 'none',
   url: BOT_CALLBACK_URL,
 });

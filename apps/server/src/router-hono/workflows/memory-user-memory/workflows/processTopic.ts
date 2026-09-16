@@ -5,8 +5,6 @@ import {
 } from '@orvilo/observability-otel/modules/upstash-workflow';
 import { LayersEnum, MemorySourceType } from '@orvilo/types';
 import { errorMessageFrom } from '@orvilo/utils';
-import { type WorkflowContext } from '@upstash/workflow';
-import { WorkflowAbort, WorkflowNonRetryableError } from '@upstash/workflow';
 
 import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { getServerDB } from '@/database/server';
@@ -15,6 +13,8 @@ import {
   MemoryExtractionExecutor,
   normalizeMemoryExtractionPayload,
 } from '@/server/services/memory/userMemory/extract';
+import type { WorkflowContext } from '@/server/workflows/context';
+import { WorkflowAbort, WorkflowNonRetryableError } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 import { checkGuard, ensureWorkflowStarted } from './runGuard';

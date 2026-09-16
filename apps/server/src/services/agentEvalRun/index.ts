@@ -366,28 +366,26 @@ export class AgentEvalRunService {
           };
         });
 
-        const messageRows = preparedMessages.map(
-          ({ createdAt, id, message, updatedAt }, index) => ({
-            agentId: null,
-            content: message.content,
-            createdAt: new Date(createdAt),
-            error: message.error ?? null,
-            id,
-            metadata: message.metadata ?? null,
-            model: message.model ?? null,
-            parentId: null,
-            provider: message.provider ?? null,
-            reasoning: message.reasoning ?? null,
-            role: message.role,
-            search: message.search ?? null,
-            tools: message.tools ?? null,
-            topicId,
-            traceId: message.traceId ?? null,
-            updatedAt: new Date(updatedAt),
-            userId: this.userId,
-            workspaceId: this.workspaceId ?? null,
-          }),
-        );
+        const messageRows = preparedMessages.map(({ createdAt, id, message, updatedAt }) => ({
+          agentId: null,
+          content: message.content,
+          createdAt: new Date(createdAt),
+          error: message.error ?? null,
+          id,
+          metadata: message.metadata ?? null,
+          model: message.model ?? null,
+          parentId: null,
+          provider: message.provider ?? null,
+          reasoning: message.reasoning ?? null,
+          role: message.role,
+          search: message.search ?? null,
+          tools: message.tools ?? null,
+          topicId,
+          traceId: message.traceId ?? null,
+          updatedAt: new Date(updatedAt),
+          userId: this.userId,
+          workspaceId: this.workspaceId ?? null,
+        }));
         const pluginRows = preparedMessages.flatMap(({ id, message }) => {
           if (
             !message.plugin &&
@@ -886,7 +884,7 @@ export class AgentEvalRunService {
             type: 'onComplete' as const,
             webhook: {
               body: { runId, testCaseId, userId },
-              delivery: 'qstash' as const,
+              delivery: 'hatchet' as const,
               url: webhookUrl,
             },
           },
@@ -1033,7 +1031,7 @@ export class AgentEvalRunService {
             type: 'onComplete' as const,
             webhook: {
               body: { runId, testCaseId, threadId, topicId, userId },
-              delivery: 'qstash' as const,
+              delivery: 'hatchet' as const,
               url: webhookUrl,
             },
           },
@@ -1353,7 +1351,7 @@ export class AgentEvalRunService {
             type: 'onComplete' as const,
             webhook: {
               body: { runId, testCaseId, userId },
-              delivery: 'qstash' as const,
+              delivery: 'hatchet' as const,
               url: webhookUrl,
             },
           },
@@ -1632,7 +1630,7 @@ export class AgentEvalRunService {
             type: 'onComplete' as const,
             webhook: {
               body: { runId, testCaseId, threadId, topicId, userId },
-              delivery: 'qstash' as const,
+              delivery: 'hatchet' as const,
               url: webhookUrl,
             },
           },

@@ -96,9 +96,13 @@ const readPayload = async (c: Context): Promise<ScheduleNightlyReviewPayload> =>
  *       -> executeNightlyReviewUser
  */
 export async function scheduleNightlyReview(c: Context) {
+  const result = await runScheduleNightlyReview(await readPayload(c));
+  return c.json(result, result.success ? 202 : 500);
+}
+
+export const runScheduleNightlyReview = async (payload: ScheduleNightlyReviewPayload = {}) => {
   return tracer.startActiveSpan(CRON_SPAN_NAME, async (span) => {
     try {
-      const payload = await readPayload(c);
       const options = {
         cursor: readCursor(payload.cursor),
         pageSize: readBoundedPositiveInteger(
@@ -133,11 +137,11 @@ export async function scheduleNightlyReview(c: Context) {
       span.setAttributes({
         'agent.signal.cron.publish_duration_ms': Date.now() - startedAt,
         'agent.signal.cron.success': true,
-        'agent.signal.cron.message_id': result.messageId,
+        'agent.signal.cron.message_id': result.workflowRunId,
       });
       span.setStatus({ code: SpanStatusCode.OK });
 
-      return c.json({ messageId: result.messageId, scheduled: true, success: true }, 202);
+      return { messageId: result.workflowRunId, scheduled: true, success: true } as const;
     } catch (error) {
       // This log is the only trace a failed tick leaves behind: a stalled publish used to be
       // killed by Cloudflare at 100s, which produced a 524 with no body and nothing on the server.
@@ -149,9 +153,12 @@ export async function scheduleNightlyReview(c: Context) {
       });
       span.recordException(error as Error);
 
-      return c.json({ error: error instanceof Error ? error.message : 'Internal error' }, 500);
+      return {
+        error: error instanceof Error ? error.message : 'Internal error',
+        success: false,
+      } as const;
     } finally {
       span.end();
     }
   });
-}
+};

@@ -322,7 +322,7 @@ export class TaskResultBridgeService {
           userId: this.userId,
           workspaceId: this.workspaceId,
         },
-        delivery: 'qstash',
+        delivery: 'hatchet',
         fallback: 'none',
         url: '/api/workflows/task/on-creator-complete',
       },

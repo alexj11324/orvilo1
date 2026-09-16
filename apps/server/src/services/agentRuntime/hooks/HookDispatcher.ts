@@ -3,9 +3,9 @@ import type { SerializedAgentHook } from '@orvilo/types';
 import debug from 'debug';
 import urlJoin from 'url-join';
 
-import { OtelQstashClient } from '@/libs/qstash';
 import { isQueueAgentRuntimeEnabled } from '@/server/services/queue/impls';
 
+import { deliverInternalWebhook, isInternalWebhookPath } from './internalWebhook';
 import type {
   AgentHook,
   AgentHookEvent,
@@ -29,53 +29,30 @@ export class CriticalHookDeliveryError extends Error {
 }
 
 /**
- * Delivers a webhook via HTTP POST (fetch or QStash)
+ * Delivers a webhook via explicit HTTP POST or a trusted in-worker callback.
  */
 export async function deliverWebhook(
   webhook: AgentHookWebhook,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  const { url, delivery = 'fetch', fallback = 'fetch' } = webhook;
+  const { url, delivery = 'fetch' } = webhook;
 
   // Resolve URL: relative paths joined with INTERNAL_APP_URL or APP_URL
   const resolvedUrl = url.startsWith('http')
     ? url
     : urlJoin(process.env.INTERNAL_APP_URL || process.env.APP_URL || '', url);
 
-  if (delivery === 'qstash') {
-    try {
-      const qstashToken = process.env.QSTASH_TOKEN;
-      if (!qstashToken) {
-        if (fallback === 'none') {
-          throw new Error(`QSTASH_TOKEN not available for qstash-only webhook: ${url}`);
-        }
-        log('QStash token not available, falling back to fetch delivery');
-        await fetchDeliver(resolvedUrl, payload);
-        return;
-      }
-      const client = new OtelQstashClient({ token: qstashToken });
-      await client.publishJSON({
-        body: payload,
-        headers: {
-          ...(process.env.VERCEL_AUTOMATION_BYPASS_SECRET && {
-            'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
-          }),
-        },
-        url: resolvedUrl,
-      });
-      log('Webhook delivered via QStash: %s', url);
-    } catch (error) {
-      // An unsigned fetch can never authenticate against a QStash-signed
-      // endpoint — falling back would just be a silently-dropped 401. Let
-      // the failure surface to the dispatcher instead.
-      if (fallback === 'none') throw error;
-
-      log('QStash delivery failed, falling back to fetch: %O', error);
-      await fetchDeliver(resolvedUrl, payload);
+  if (delivery === 'hatchet' || delivery === 'qstash') {
+    const path = new URL(resolvedUrl, 'http://orvilo.internal').pathname;
+    if (!isInternalWebhookPath(path)) {
+      throw new Error(`Unsupported Hatchet internal webhook path: ${path}`);
     }
-  } else {
-    await fetchDeliver(resolvedUrl, payload);
+    await deliverInternalWebhook(path, payload);
+    log('Webhook delivered inside Hatchet worker: %s', path);
+    return;
   }
+
+  await fetchDeliver(resolvedUrl, payload);
 }
 
 async function fetchDeliver(url: string, payload: Record<string, unknown>): Promise<void> {
@@ -115,7 +92,7 @@ function buildWebhookPayload(
  *
  * Local mode: hooks are stored in memory, handler functions called directly
  * Production mode: webhook configs persisted in AgentState.host.hooks,
- *   delivered via HTTP POST or QStash
+ *   delivered via HTTP POST or an in-worker callback
  */
 export class HookDispatcher {
   /**

@@ -119,7 +119,9 @@ export async function runTaskWatchdog(
       continue;
     }
 
-    await new TaskIntegrationService(db, task.createdByUserId, wsId).cleanupTaskWorktrees(task.id);
+    await new TaskIntegrationService(db, task.createdByUserId, wsId).cleanupTaskWorktrees(
+      task.id,
+    );
 
     const briefModel = new BriefModel(db, task.createdByUserId, wsId);
     await briefModel.create({

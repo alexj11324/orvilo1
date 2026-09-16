@@ -1668,7 +1668,10 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         },
       });
 
-      const result = await service.interruptTask({ operationId: 'operation-1', topicId: 'topic-1' });
+      const result = await service.interruptTask({
+        operationId: 'operation-1',
+        topicId: 'topic-1',
+      });
 
       expect(mockExecuteToolCall).toHaveBeenCalledWith(
         {

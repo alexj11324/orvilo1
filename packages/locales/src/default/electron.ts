@@ -50,7 +50,6 @@ export default {
   'navigation.task': 'Task',
   'navigation.tasks': 'Tasks',
   'navigation.goals': 'Goals',
-  'navigation.topics': 'Topics',
   'navigation.unpin': 'Unpin',
   'navigation.verifyReports': 'Verification Reports',
   'notification.finishChatGeneration': 'AI message generation completed',

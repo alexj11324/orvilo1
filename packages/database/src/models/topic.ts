@@ -271,12 +271,11 @@ interface QueryTopicParams {
    */
   triggers?: string[];
   /**
-   * When true, the SELECT also returns the heavier card-detail columns used
-   * by the per-agent Topics management page: `firstUserMessage` (subquery),
-   * `messageCount` (subquery), `description`, `trigger`. `cost` and
-   * `tokenUsage` are intentionally omitted until a dedicated schema migration
-   * adds real columns to back them. Defaults to false so sidebar paths stay
-   * cheap.
+   * When true, the SELECT also returns the heavier card-detail columns:
+   * `firstUserMessage` (subquery), `messageCount` (subquery), `description`,
+   * `trigger`. `cost` and `tokenUsage` are intentionally omitted until a
+   * dedicated schema migration adds real columns to back them. Defaults to
+   * false so sidebar paths stay cheap.
    */
   withDetails?: boolean;
 }
@@ -492,12 +491,11 @@ export class TopicModel {
     });
     const offset = current * pageSize;
 
-    // Heavier columns gated behind `withDetails` and used by the per-agent
-    // Topics management page: real aggregates from the `messages` table
-    // (firstUserMessage + messageCount), plus the `description` / `trigger`
-    // columns that sidebar paths don't consume. `cost` and `tokenUsage`
-    // intentionally stay undefined here — they need their own schema
-    // migration before they can be backed by real numbers.
+    // Heavier columns gated behind `withDetails`: real aggregates from the
+    // `messages` table (firstUserMessage + messageCount), plus the
+    // `description` / `trigger` columns that sidebar paths don't consume.
+    // `cost` and `tokenUsage` intentionally stay undefined here — they need
+    // their own schema migration before they can be backed by real numbers.
     //
     // The two correlated subqueries are built with Drizzle's query builder
     // (not a raw `sql` template) so the inner `eq(messages.topicId,

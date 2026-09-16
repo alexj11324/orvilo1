@@ -19,11 +19,11 @@ describe('createTabRouter', () => {
     expect(paths).toContain(':aid');
   });
 
-  it('matches a nested agent route for /agent/abc/topics', () => {
-    const paths = matchedPaths(createTabRouter('/agent/abc/topics'));
+  it('matches a nested agent route for /agent/abc/profile', () => {
+    const paths = matchedPaths(createTabRouter('/agent/abc/profile'));
 
     expect(paths).toContain(':aid');
-    expect(paths).toContain('topics');
+    expect(paths).toContain('profile');
   });
 
   it('matches the workspace-mirrored agent route for /my-team/agent/abc', () => {

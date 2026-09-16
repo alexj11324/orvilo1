@@ -19,7 +19,6 @@ import ResourceHomeSkeleton from '@/components/Skeleton/ResourceHome';
 import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
 import SettingsPageSkeleton from '@/components/Skeleton/Settings/Page';
 import TasksSkeleton from '@/components/Skeleton/Tasks';
-import TopicsSkeleton from '@/components/Skeleton/Topics';
 import TaskDetailSkeleton from '@/features/AgentTasks/AgentTaskDetail/TaskDetailSkeleton';
 import { WORKSPACE_SETTINGS_TABS } from '@/features/Workspace/workspaceAwarePath';
 import AppShellSkeleton from '@/spa/BootShell/AppShellSkeleton';
@@ -129,6 +128,18 @@ describe('desktop router shared definition', () => {
 
     expect(matches?.at(-1)?.route.path).toBe('stats');
   });
+
+  it.each(mainAreaVariants)(
+    '%s redirects legacy agent topics deep-links to the agent chat route',
+    (_, factory) => {
+      const matches = matchRoutes(createMainAreaRoutes(factory), '/agent/agent-1/topics');
+
+      expect(matches?.at(-1)?.route.path).toBe('topics');
+      expect(
+        (matches?.at(-1)?.route.element as ReactElement<{ to: string }> | undefined)?.props.to,
+      ).toBe('..');
+    },
+  );
 
   it.each(mainAreaVariants)(
     '%s serves the self-learning experience list and redirects legacy /rules links to it',
@@ -413,7 +424,6 @@ describe('desktop router shared definition', () => {
     ['Electron', (pathname: string) => createTabRouter(pathname).routes],
   ])('%s resolves specialized skeletons from the deepest route meta', (_, getRoutes) => {
     for (const [pathname, expectedSkeleton] of [
-      ['/agent/agent-1/topics', TopicsSkeleton],
       ['/agent/agent-1/tasks', TasksSkeleton],
       ['/agent/agent-1/task/task-1', TaskDetailSkeleton],
       ['/agent/agent-1/goals', GoalSkeleton],

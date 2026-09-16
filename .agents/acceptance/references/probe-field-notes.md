@@ -101,32 +101,30 @@
 - **Doesn't work**: scrolling any element to the bottom — with only 2 rows there is
   no scroll container (`scrollHeight <= clientHeight`), and virtua's sentinel never
   intersects.
-- **Works — two parts**:
-  1. **Force pagination with tiny seed data via HMR**: lower the component's page-size
-     const so a small dataset paginates. `AgentTopicManager` `PAGE_SIZE = 30` → `2`,
-     then an agent with 3 topics loads page-1 = 2, `hasMore = true`.
-  2. **Call the real store action directly** (bypasses the observer, but runs the real
+- **Works — two parts** (live target: `AllTopicsDrawer`, opened from the agent
+  sidebar's load-more entry; it pages through the generic `loadMoreTopics`):
+  1. **Force pagination with tiny seed data**: `loadMoreTopics` pages by
+     `useGlobalStore.getState().status.topicPageSize || 20` — set it to `2`
+     (`window.__LOBE_STORES.global().status.topicPageSize = 2`), then an agent
+     with 3 topics loads page-1 = 2, `hasMore = true`.
+  2. **Call the real store action directly** (bypasses the scroll gate, but runs the real
      fetch + real `catch`): `window.__LOBE_STORES.<store>` is a bound hook — CALL it to
      get live state + actions (`.getState`/`.setState` are NOT exposed, C1).
      ```js
      // agent-browser --session <s> eval
      var c = window.__LOBE_STORES.chat();
-     await c.loadMoreAgentTopicsView(); // hits the injected getTopics(current>0) throw
-     // → real catch sets agentTopicsViewMap[key].loadMoreError → inline AsyncError row renders
+     await c.loadMoreTopics(); // hits the injected getTopics(current>0) throw
+     // → real catch sets topicDataMap[key].loadMoreError → inline AsyncError row renders
      ```
   Pair the service injection (A4, throw only when `params.current > 0` so page-1 loads
-  and page-2 fails) with a **call counter** to prove the observer gate does NOT loop:
+  and page-2 fails) with a **call counter** to prove the scroll gate does NOT loop:
   `(globalThis).__loadMoreCalls = (…||0)+1` inside the throw; after the failure, wait a
   few seconds and assert `window.__loadMoreCalls` stays `1` (no runaway re-trigger).
 - **Caveat**: calling the action directly proves the render + the real error code path +
-  no-runaway, but NOT the observer's `!loadMoreError` gate under real scroll (the gate
-  lives in the component's IntersectionObserver callback). To exercise the gate live you
-  need a real scrollable list — seed `> PAGE_SIZE` visible-source topics on one agent.
-- **Gotcha — the manager view filters by source (`来源: 对话`) by default.** The store's default
-  filter is `triggers: ['chat']` (`src/features/AgentTopicManager/store.ts:49-51`; the code calls
-  it the **trigger** filter, the UI labels it 来源 /source), so topics with a non-chat trigger
-  show `0` even though the agent owns them in the DB; click **清空筛选 / Clear filters** (or
-  `setStatus('all')` + clear) to reveal them.
+  no-runaway, but NOT the drawer's `loadMoreError` / `fetchedCountRef` gate under real
+  scroll (the gate lives in `AllTopicsDrawer/Content.tsx`'s `VList.onScroll` handler).
+  To exercise the gate live you need a real scrollable list — seed `> topicPageSize`
+  visible-source topics on one agent.
 
 ---
 

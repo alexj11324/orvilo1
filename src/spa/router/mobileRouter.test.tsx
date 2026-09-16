@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { ReactElement } from 'react';
 import { matchRoutes } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
@@ -21,6 +22,17 @@ describe('mobileRouter agent share route', () => {
 
     expect(matches?.some((match) => match.route.path === ':aid')).toBe(true);
     expect(matches?.at(-1)?.params).toMatchObject({ aid: 'my-agent' });
+  });
+
+  it('redirects legacy agent topics deep-links to the agent chat route', () => {
+    const matches = matchRoutes(mobileRoutes, '/agent/my-agent/topics');
+
+    // Without the literal `topics` redirect, the URL would match `:topicId`
+    // and mount chat on a phantom `topics` topic.
+    expect(matches?.at(-1)?.route.path).toBe('topics');
+    expect(
+      (matches?.at(-1)?.route.element as ReactElement<{ to: string }> | undefined)?.props.to,
+    ).toBe('..');
   });
 });
 

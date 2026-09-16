@@ -44,6 +44,13 @@ export const sharedMainAreaChildren: RouteObject[] = [
             handle: { meta: agentRouteMeta },
             index: true,
           },
+          // Legacy `/agent/:aid/topics` URLs — the management page is gone,
+          // keep deep-links landing on the agent chat instead of a phantom
+          // `topics` topic. Same guard as the desktop router.
+          {
+            element: redirectElement('..'),
+            path: 'topics',
+          },
           {
             element: mobileChatElement,
             handle: { meta: agentRouteMeta },

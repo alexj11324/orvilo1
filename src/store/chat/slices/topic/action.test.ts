@@ -89,7 +89,6 @@ beforeEach(() => {
       activeAgentId: undefined,
       activeGroupId: undefined,
       activeTopicId: undefined,
-      agentTopicsViewMap: {},
       searchTopics: [],
       topicDataMap: {},
       topicDetailMap: {},
@@ -2063,11 +2062,10 @@ describe('topic action', () => {
       ];
 
       expect(options).toEqual({ revalidate: false });
-      // Only this container's list keys — the agent-view key and other
-      // containers keep their own cached pages.
+      // Only this container's list keys — other containers keep their own
+      // cached pages.
       expect(matcher(['topic:list', containerKey, { pageSize: 20 }])).toBe(true);
       expect(matcher(['topic:list', topicMapKey({ agentId: 'other-agent' }), {}])).toBe(false);
-      expect(matcher(['topic:agentView', containerKey, {}])).toBe(false);
 
       const cached = {
         items: [{ id: 'topic-1', status: 'running', title: 'Topic 1' }] as ChatTopic[],
@@ -2099,93 +2097,6 @@ describe('topic action', () => {
       expect(mutate).not.toHaveBeenCalled();
     });
   });
-  describe('loadMoreAgentTopicsView', () => {
-    it('records a pagination error without clearing existing topics or hasMore', async () => {
-      const { result } = renderHook(() => useChatStore());
-      const agentId = 'agent-1';
-      const key = topicMapKey({ agentId });
-      const topics = [
-        { id: 'topic-1', title: 'Topic 1' },
-        { id: 'topic-2', title: 'Topic 2' },
-      ] as ChatTopic[];
-      const error = new Error('load more failed');
-
-      act(() => {
-        useChatStore.setState({
-          activeAgentId: agentId,
-          agentTopicsViewMap: {
-            [key]: {
-              currentPage: 0,
-              hasMore: true,
-              isLoadingMore: false,
-              items: topics,
-              pageSize: 2,
-              total: 4,
-              withDetails: true,
-            },
-          },
-        });
-      });
-
-      (topicService.getTopics as Mock).mockRejectedValueOnce(error);
-
-      await act(async () => {
-        await result.current.loadMoreAgentTopicsView();
-      });
-
-      const topicData = useChatStore.getState().agentTopicsViewMap[key];
-      expect(topicService.getTopics).toHaveBeenCalledWith({
-        agentId,
-        current: 1,
-        pageSize: 2,
-        withDetails: true,
-      });
-      expect(topicData.items).toEqual(topics);
-      expect(topicData.hasMore).toBe(true);
-      expect(topicData.isLoadingMore).toBe(false);
-      expect(topicData.loadMoreError).toBe(error);
-    });
-
-    it('clears a stale pagination error after retry succeeds', async () => {
-      const { result } = renderHook(() => useChatStore());
-      const agentId = 'agent-1';
-      const key = topicMapKey({ agentId });
-
-      act(() => {
-        useChatStore.setState({
-          activeAgentId: agentId,
-          agentTopicsViewMap: {
-            [key]: {
-              currentPage: 0,
-              hasMore: true,
-              isLoadingMore: false,
-              items: [{ id: 'topic-1', title: 'Topic 1' } as ChatTopic],
-              loadMoreError: new Error('previous failure'),
-              pageSize: 1,
-              total: 2,
-            },
-          },
-        });
-      });
-
-      (topicService.getTopics as Mock).mockResolvedValueOnce({
-        items: [{ id: 'topic-2', title: 'Topic 2' }],
-        total: 2,
-      });
-
-      await act(async () => {
-        await result.current.loadMoreAgentTopicsView();
-      });
-
-      const topicData = useChatStore.getState().agentTopicsViewMap[key];
-      expect(topicData.items.map((item) => item.id)).toEqual(['topic-1', 'topic-2']);
-      expect(topicData.currentPage).toBe(1);
-      expect(topicData.hasMore).toBe(false);
-      expect(topicData.isLoadingMore).toBe(false);
-      expect(topicData.loadMoreError).toBeUndefined();
-    });
-  });
-
   describe('removeUnstarredTopic', () => {
     it('should remove unstarred topics and refresh the topic list', async () => {
       const { result } = renderHook(() => useChatStore());

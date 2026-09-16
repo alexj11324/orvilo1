@@ -16,21 +16,19 @@ import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
 
 import { useScrollActiveTopicIntoView } from '../../hooks/useScrollActiveTopicIntoView';
-import { useNavigateToAgentTopics } from '../../hooks/useTopicNavigation';
 import TopicItem from '../../List/Item';
 
 const FlatMode = memo(() => {
-  const { t } = useTranslation('chat');
-  const navigateToAgentTopics = useNavigateToAgentTopics();
+  const { t } = useTranslation('topic');
   const topicPageSize = useGlobalStore(systemStatusSelectors.topicPageSize);
   const topicSortBy = useUserStore(preferenceSelectors.topicSortBy);
   const topicIncludeCompleted = useUserStore(preferenceSelectors.topicIncludeCompleted);
 
-  const [hasMore, isExpandingPageSize, activeAgentId, activeTopicId] = useChatStore((s) => [
-    topicSelectors.hasMoreTopicsForSidebar(s),
+  const [isExpandingPageSize, activeTopicId, hasMore, openAllTopicsDrawer] = useChatStore((s) => [
     topicSelectors.isExpandingPageSize(s),
-    s.activeAgentId,
     s.activeTopicId,
+    topicSelectors.hasMoreTopicsForSidebar(s),
+    s.openAllTopicsDrawer,
   ]);
 
   const activeTopicList = useChatStore(
@@ -57,12 +55,8 @@ const FlatMode = memo(() => {
         />
       ))}
       {isExpandingPageSize && <SkeletonList rows={3} />}
-      {hasMore && !isExpandingPageSize && activeAgentId && (
-        <NavItem
-          icon={MoreHorizontal}
-          title={t('topic.viewAll')}
-          onClick={() => navigateToAgentTopics(activeAgentId)}
-        />
+      {hasMore && !isExpandingPageSize && (
+        <NavItem icon={MoreHorizontal} title={t('loadMore')} onClick={openAllTopicsDrawer} />
       )}
     </Flexbox>
   );

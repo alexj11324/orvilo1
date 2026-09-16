@@ -114,7 +114,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
       setStep('done');
     } catch (error) {
       console.error('[MoveTopics] move failed:', error);
-      toast.error(t('management.moveModal.error'));
+      toast.error(t('moveModal.error'));
       setStep('confirm');
     } finally {
       setCanDismissByClickOutside?.(true);
@@ -127,7 +127,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
         <input
           autoFocus
           className={styles.searchInput}
-          placeholder={t('management.bulk.moveSearchPlaceholder')}
+          placeholder={t('moveModal.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -136,7 +136,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
         ) : filteredAgents.length === 0 ? (
           <Flexbox align={'center'} justify={'center'} padding={24}>
             <Text fontSize={12} type={'secondary'}>
-              {t('management.bulk.moveEmpty')}
+              {t('moveModal.empty')}
             </Text>
           </Flexbox>
         ) : (
@@ -172,11 +172,11 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
   if (step === 'confirm') {
     return (
       <Flexbox gap={20} padding={24}>
-        <Text>{t('management.moveModal.confirmContent', { count, title: target?.title })}</Text>
+        <Text>{t('moveModal.confirmContent', { count, title: target?.title })}</Text>
         <Flexbox horizontal gap={8} justify={'flex-end'}>
-          <Button onClick={() => setStep('pick')}>{t('management.moveModal.back')}</Button>
+          <Button onClick={() => setStep('pick')}>{t('moveModal.back')}</Button>
           <Button type={'primary'} onClick={handleConfirm}>
-            {t('management.moveModal.confirmOk')}
+            {t('moveModal.confirmOk')}
           </Button>
         </Flexbox>
       </Flexbox>
@@ -187,7 +187,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
     return (
       <Flexbox align={'center'} gap={16} justify={'center'} padding={48}>
         <NeuralNetworkLoading size={48} />
-        <Text type={'secondary'}>{t('management.moveModal.moving')}</Text>
+        <Text type={'secondary'}>{t('moveModal.moving')}</Text>
       </Flexbox>
     );
   }
@@ -197,10 +197,10 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
     <Flexbox align={'center'} gap={20} justify={'center'} padding={48}>
       <Flexbox align={'center'} gap={12}>
         <Icon color={cssVar.colorSuccess} icon={CircleCheck} size={32} />
-        <Text weight={500}>{t('management.moveModal.done', { count })}</Text>
+        <Text weight={500}>{t('moveModal.done', { count })}</Text>
       </Flexbox>
       <Flexbox horizontal gap={8}>
-        <Button onClick={close}>{t('management.moveModal.doneOk')}</Button>
+        <Button onClick={close}>{t('moveModal.doneOk')}</Button>
         {target && (
           <Button
             type={'primary'}
@@ -209,7 +209,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
               close();
             }}
           >
-            {t('management.moveModal.goToTarget', { title: target.title })}
+            {t('moveModal.goToTarget', { title: target.title })}
           </Button>
         )}
       </Flexbox>

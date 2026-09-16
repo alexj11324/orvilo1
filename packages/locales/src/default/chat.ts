@@ -2388,7 +2388,6 @@ export default {
   'topic.defaultTitle': 'Untitled Topic',
   'topic.recent': 'Recent Topics',
   'topic.saveCurrentMessages': 'Save current conversation as topic',
-  'topic.viewAll': 'View All Topics',
   'topicComment.anchor': 'Original message',
   'topicComment.anchorDeletedTag': 'Deleted',
   'topicComment.anchorEmpty': 'Empty message',

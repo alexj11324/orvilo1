@@ -635,7 +635,7 @@ export const topicRouter = router({
         /**
          * When true, returns extra card-detail columns (firstUserMessage,
          * messageCount, cost, tokenUsage, description, trigger). Default false
-         * so the sidebar list stays cheap — only the management page opts in.
+         * so the sidebar list stays cheap.
          */
         withDetails: z.boolean().optional(),
       }),

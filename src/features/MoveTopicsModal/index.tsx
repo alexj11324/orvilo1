@@ -13,6 +13,6 @@ export const createMoveTopicsModal = (props: MoveTopicsContentProps): ModalInsta
     styles: {
       content: { overflow: 'hidden', padding: 0 },
     },
-    title: t('management.moveModal.title', { ns: 'topic' }),
+    title: t('moveModal.title', { ns: 'topic' }),
     width: 'min(90%, 420px)',
   });

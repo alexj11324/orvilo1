@@ -148,7 +148,8 @@ the partial page only. A per-dimension audit that greenlights the surface becaus
 the server" misses the four that don't — so check filter, sort, the counts, and bulk-scope
 _each_ against the full set, not just the search input.
 
-> ❌ **Agent topics** (`/agent/:aid/topics`) infinite-scrolls 30 rows/page but applies **all**
+> ❌ **Agent topics** (`/agent/:aid/topics`, page since removed — the citations below refer to
+> pre-removal code) infinite-scrolls 30 rows/page but applies **all**
 > of status/trigger/time/project filtering, `sortTopics`, grouping, and the per-status **count
 > badges** client-side over the loaded pages (`AgentTopicManager/index.tsx:99-140`,
 > `utils.ts:68`), while only **search** goes server-side (BM25, `useSearchTopics`). So sorting

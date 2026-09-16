@@ -1,7 +1,7 @@
 'use client';
 
 import { type FC } from 'react';
-import { Navigate, useParams } from 'react-router';
+import { Navigate, useLocation, useParams } from 'react-router';
 
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 
@@ -14,12 +14,20 @@ import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath
  * context has settled, so a store-derived slug would resolve to `undefined` and
  * send a workspace URL to the personal `/tasks`.
  *
+ * The query is carried across. Root-path links arrive with parameters attached —
+ * `?onboarding=task` is how the post-onboarding entry asks for the board, and an
+ * auth callback or invitation can sanitize down to `/` — and dropping them here
+ * would let the landing redirect silently steal a deep link.
+ *
  * Electron keeps its own `createHomeElement`, so this never runs there.
  */
 const WebHomeRedirect: FC = () => {
   const { workspaceSlug } = useParams();
+  const { search } = useLocation();
 
-  return <Navigate replace to={buildWorkspaceAwarePath('/tasks', workspaceSlug)} />;
+  return (
+    <Navigate replace to={{ pathname: buildWorkspaceAwarePath('/tasks', workspaceSlug), search }} />
+  );
 };
 
 export default WebHomeRedirect;

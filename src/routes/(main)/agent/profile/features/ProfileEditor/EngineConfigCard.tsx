@@ -62,7 +62,7 @@ import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
-import { agentSelectors } from '@/store/agent/selectors';
+import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useElectronStore } from '@/store/electron';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -224,7 +224,7 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
   const provider = config?.agencyConfig?.heterogeneousProvider;
-  const isWorkspaceAgent = !!config?.workspaceId;
+  const isWorkspaceAgent = useAgentStore(agentByIdSelectors.isWorkspaceAgentById(agentId));
   const {
     agencyConfig: effectiveAgencyConfig,
     isPreferenceLoading,

@@ -477,6 +477,10 @@ export default {
     'This tool can never be used in a shared run — visitor runs are blocked from your knowledge base and Agent files.',
   'share.settings.tools.title': 'Tools visitors can use',
   'share.settings.updateError': 'Could not save the change. Please try again.',
+  'share.unavailable.action': 'Back to the Agent',
+  'share.unavailable.desc':
+    'This deployment does not publish Agents for outside visitors, so there is nothing to configure on this page.',
+  'share.unavailable.title': 'Agent sharing is not available',
   'share.visitor.access.backHome': 'Back to home',
   'share.visitor.access.forbidden': "You don't have access to this shared agent.",
   'share.visitor.access.notFound': 'This share link is no longer available.',

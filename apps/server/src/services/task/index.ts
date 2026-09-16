@@ -1267,6 +1267,8 @@ export class TaskService {
           size: doc?.charCount,
           sourceTaskId: doc?.sourceTaskId,
           sourceTaskIdentifier: doc?.sourceTaskIdentifier,
+          sourceTopicId: doc?.sourceTopicId,
+          sourceTopicTitle: doc?.sourceTopicTitle,
           title: doc?.title,
         };
       });

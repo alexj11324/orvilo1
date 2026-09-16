@@ -107,7 +107,7 @@ const pagePageSize = (s: GlobalState): number => s.status.pagePageSize || 20;
 const taskListViewOptions = (s: GlobalState) =>
   s.status.taskListViewOptions || {
     groupBy: 'status',
-    hideCompleted: true,
+    hideCompleted: false,
     nestedSubTasks: true,
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
@@ -116,7 +116,7 @@ const taskListViewOptions = (s: GlobalState) =>
     subGroupBy: 'none',
   };
 
-const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'list';
+const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'kanban';
 
 // Default the inline composer to collapsed so a populated task list keeps the
 // records at the top of the fold; the empty-state hero still shows the full
@@ -124,7 +124,9 @@ const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'list'
 const taskCreateInlineCollapsed = (s: GlobalState): boolean =>
   s.status.taskCreateInlineCollapsed ?? true;
 
-export const DEFAULT_KANBAN_HIDDEN_COLUMNS: string[] = ['done', 'canceled'];
+/** `done` stays visible so finished work is part of the default picture;
+ * `canceled` starts folded away. A stored preference always wins. */
+export const DEFAULT_KANBAN_HIDDEN_COLUMNS: string[] = ['canceled'];
 
 const taskKanbanHiddenColumns = (s: GlobalState): string[] =>
   s.status.taskKanbanHiddenColumns ?? DEFAULT_KANBAN_HIDDEN_COLUMNS;

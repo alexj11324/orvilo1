@@ -519,7 +519,9 @@ export const INITIAL_STATUS = {
   recentPageSize: 5,
   taskListViewOptions: {
     groupBy: 'status',
-    hideCompleted: true,
+    // Completed work is part of the default picture now that the task board is
+    // the product's front door; only `canceled` starts folded away.
+    hideCompleted: false,
     nestedSubTasks: true,
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
@@ -527,8 +529,11 @@ export const INITIAL_STATUS = {
     showSubTasks: false,
     subGroupBy: 'none',
   },
-  taskListViewMode: 'list' as const,
-  taskKanbanHiddenColumns: ['done', 'canceled'],
+  // The board, not the list, is what a user without a stored preference lands on.
+  // An existing `'list'` value is left alone on purpose: it is indistinguishable
+  // from a deliberate choice, and the plan is explicit that we do not guess.
+  taskListViewMode: 'kanban' as const,
+  taskKanbanHiddenColumns: ['canceled'],
   taskKanbanHiddenPanelCollapsed: false,
   disabledModelProvidersSortType: 'default',
   disabledModelsSortType: 'default',

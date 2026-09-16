@@ -188,7 +188,7 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.taskListViewMode(s)).toBe('kanban');
     });
 
-    it('should default legacy status without a task view mode to list', () => {
+    it('should default status without a task view mode to the board', () => {
       const s: GlobalState = {
         ...initialState,
         status: {
@@ -197,7 +197,46 @@ describe('systemStatusSelectors', () => {
         },
       };
 
+      expect(systemStatusSelectors.taskListViewMode(s)).toBe('kanban');
+    });
+
+    it('keeps an explicitly stored list preference', () => {
+      // A stored `list` is indistinguishable from a deliberate choice, so it is
+      // preserved rather than migrated to the new default.
+      const s: GlobalState = {
+        ...initialState,
+        status: { ...initialState.status, taskListViewMode: 'list' },
+      };
+
       expect(systemStatusSelectors.taskListViewMode(s)).toBe('list');
+    });
+
+    it('seeds the board — and only canceled folded away — for a brand-new user', () => {
+      // The store seed, not the selector fallback, is what a new user actually
+      // gets. Defaults for this live in both layers, so changing one without the
+      // other would leave the default silently split between them.
+      expect(INITIAL_STATUS.taskListViewMode).toBe('kanban');
+      expect(INITIAL_STATUS.taskKanbanHiddenColumns).toEqual(['canceled']);
+    });
+  });
+
+  describe('taskKanbanHiddenColumns', () => {
+    it('shows the done column by default', () => {
+      const s: GlobalState = {
+        ...initialState,
+        status: { ...initialState.status, taskKanbanHiddenColumns: undefined },
+      };
+
+      expect(systemStatusSelectors.taskKanbanHiddenColumns(s)).toEqual(['canceled']);
+    });
+
+    it('keeps a stored hidden-column preference', () => {
+      const s: GlobalState = {
+        ...initialState,
+        status: { ...initialState.status, taskKanbanHiddenColumns: ['done', 'canceled'] },
+      };
+
+      expect(systemStatusSelectors.taskKanbanHiddenColumns(s)).toEqual(['done', 'canceled']);
     });
   });
 

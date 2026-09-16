@@ -4,6 +4,7 @@ import {
   tracer as upstashWorkflowTracer,
 } from '@orvilo/observability-otel/modules/upstash-workflow';
 import { LayersEnum, MemorySourceType } from '@orvilo/types';
+import type { WorkflowContext } from '@upstash/workflow';
 
 import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { getServerDB } from '@/database/server';
@@ -14,7 +15,6 @@ import {
   MemoryExtractionWorkflowService,
   normalizeMemoryExtractionPayload,
 } from '@/server/services/memory/userMemory/extract';
-import type { WorkflowContext } from '@/server/workflows/context';
 import { WorkflowAbort } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 

@@ -2,7 +2,7 @@
 export interface WorkflowContext<TPayload = Record<string, unknown>> {
   headers?: Headers;
   requestPayload: TPayload;
-  run: <TResult>(name: string, step: () => Promise<TResult>) => Promise<TResult | Promise<TResult>>;
+  run: <TResult>(name: string, step: () => TResult | Promise<TResult>) => Promise<TResult>;
   workflowRunId?: string;
 }
 

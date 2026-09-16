@@ -1,6 +1,7 @@
+import type { WorkflowContext } from '@upstash/workflow';
+
 import { TopicSummaryModel } from '@/database/models/topicSummary';
 import { getServerDB } from '@/database/server';
-import type { WorkflowContext } from '@/server/workflows/context';
 import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 import {
   type DispatchTopicAutoSummaryPayload,

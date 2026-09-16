@@ -1,5 +1,3 @@
-import type { WorkflowContext } from '@/server/workflows/context';
-
 /**
  * A step result as it actually arrives on the consuming side of an Upstash Workflow step.
  *
@@ -37,7 +35,9 @@ export type WorkflowStepResult<T> = T extends Date
  * `run` never references the context's payload generic, so picking it keeps this helper usable from
  * any `WorkflowContext<TPayload>` without threading that generic through every call site.
  */
-type WorkflowStepRunner = Pick<WorkflowContext<never>, 'run'>;
+type WorkflowStepRunner = {
+  run: <TResult>(name: string, step: () => Promise<TResult>) => Promise<TResult>;
+};
 
 /**
  * Runs a workflow step and types the result the way the workflow actually receives it.

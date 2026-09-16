@@ -1,3 +1,4 @@
+import type { WorkflowContext } from '@upstash/workflow';
 import { chunk } from 'es-toolkit/compat';
 
 import { AsyncTaskModel } from '@/database/models/asyncTask';
@@ -11,7 +12,6 @@ import {
   normalizeMemoryExtractionPayload,
   type UserPaginationResult,
 } from '@/server/services/memory/userMemory/extract';
-import type { WorkflowContext } from '@/server/workflows/context';
 import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 
 import { checkGuard, ensureWorkflowStarted } from './runGuard';

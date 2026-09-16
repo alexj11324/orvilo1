@@ -1,3 +1,4 @@
+import type { WorkflowContext } from '@upstash/workflow';
 import { z } from 'zod';
 
 import { getServerDB } from '@/database/server';
@@ -5,7 +6,6 @@ import {
   buildUserPersonaJobInput,
   UserPersonaService,
 } from '@/server/services/memory/userMemory/persona/service';
-import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 import { checkGuard, ensureWorkflowStarted } from './runGuard';

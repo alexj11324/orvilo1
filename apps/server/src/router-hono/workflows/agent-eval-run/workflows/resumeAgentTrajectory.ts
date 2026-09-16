@@ -1,10 +1,10 @@
+import type { WorkflowContext } from '@upstash/workflow';
 import debug from 'debug';
 
 import { getServerDB } from '@/database/server';
 import { AgentEvalRunService } from '@/server/services/agentEvalRun';
 import type { ResumeAgentTrajectoryPayload } from '@/server/workflows/agentEvalRun';
 import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/utils';
-import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 const log = debug('lobe-server:workflows:resume-agent-trajectory');

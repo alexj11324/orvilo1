@@ -150,7 +150,7 @@ export class TaskTopicModel {
             ? [sql`${taskTopics.integration}->>'state' = ${expectedState}`]
             : []),
           or(
-            sql`${taskTopics.integration}->>'processingToken' is null`,
+            sql`not coalesce(jsonb_exists(${taskTopics.integration}, 'processingToken'), false)`,
             sql`coalesce((${taskTopics.integration}->>'processingStartedAt')::timestamptz, '-infinity'::timestamptz) < ${staleBefore}`,
           ),
         ),

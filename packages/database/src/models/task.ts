@@ -1800,7 +1800,7 @@ export class TaskModel {
           eq(tasks.id, id),
           this.ownership(),
           or(
-            sql`${tasks.context}->'runKickoffClaim' is null`,
+            sql`not coalesce(jsonb_exists(${tasks.context}, 'runKickoffClaim'), false)`,
             sql`coalesce((${tasks.context}->'runKickoffClaim'->>'claimedAt')::timestamptz, '-infinity'::timestamptz) < ${staleBefore}`,
           ),
         ),

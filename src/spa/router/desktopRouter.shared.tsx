@@ -53,7 +53,11 @@ import {
   automationsRouteMeta,
 } from '@/features/Automations/routeMeta';
 import { pageRouteMeta } from '@/features/Pages/routeMeta';
-import { projectsRouteMeta } from '@/features/Projects/routeMeta';
+import {
+  projectLibraryRouteMeta,
+  projectResourcesRouteMeta,
+  projectsRouteMeta,
+} from '@/features/Projects/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
 import { workspaceHomeRouteMeta } from '@/features/Workspace/routeMeta';
 import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
@@ -831,6 +835,25 @@ export const sharedMainAreaChildren: RouteObject[] = [
         ),
         handle: { meta: goalsRouteMeta },
         path: 'goals',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/resources'),
+          'Desktop > Project Resources',
+        ),
+        handle: { meta: projectResourcesRouteMeta },
+        path: 'resources',
+      },
+      // A library opened from the project renders inside the project, so the
+      // reader keeps the project's sidebar. Registered here rather than only
+      // under `/resource` because `getProjectLibraryPath` builds this URL.
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/library/[id]'),
+          'Desktop > Project Library',
+        ),
+        handle: { meta: projectLibraryRouteMeta },
+        path: 'library/:id',
       },
       {
         children: [

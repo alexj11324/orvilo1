@@ -7,6 +7,7 @@ import {
   getProjectConversationStartPath,
   getProjectGoalsPath,
   getProjectLibraryPath,
+  getProjectResourcesPath,
   getProjectTasksPath,
 } from './navigation';
 
@@ -16,6 +17,7 @@ describe('project workspace navigation', () => {
     expect(getProjectLibraryPath('prj_1', 'kb_1')).toBe('/project/prj_1/library/kb_1');
     expect(getProjectTasksPath('prj_1')).toBe('/project/prj_1/tasks');
     expect(getProjectGoalsPath('prj_1')).toBe('/project/prj_1/goals');
+    expect(getProjectResourcesPath('prj_1')).toBe('/project/prj_1/resources');
     expect(getProjectAcceptancePath('prj_1')).toBe('/project/prj_1/acceptance');
   });
 

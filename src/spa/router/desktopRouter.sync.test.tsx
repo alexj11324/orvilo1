@@ -190,7 +190,7 @@ describe('desktop router shared definition', () => {
   });
 
   it.each(mainAreaVariants)(
-    '%s exposes project task, goal, and acceptance workspaces',
+    '%s exposes project task, goal, resource, and acceptance workspaces',
     (_, factory) => {
       const projectRoute = factory().find((route) => route.path === 'project/:projectId');
       const projectIndexRoute = projectRoute?.children?.find((route) => route.index);
@@ -198,12 +198,25 @@ describe('desktop router shared definition', () => {
         ?.map((route) => route.path)
         .filter((routePath): routePath is string => Boolean(routePath));
 
-      expect(projectPaths).toEqual(['tasks', 'goals', 'acceptance']);
+      expect(projectPaths).toEqual(['tasks', 'goals', 'resources', 'library/:id', 'acceptance']);
       expect(
         (projectIndexRoute?.element as ReactElement<{ to: string }> | undefined)?.props.to,
       ).toBe('tasks');
     },
   );
+
+  // The project's resources page links to `/project/:id/library/:id`, so that
+  // URL has to resolve — a route module existing under `src/routes` is not on
+  // its own reachable, which is how this one went unnoticed.
+  it.each(mainAreaVariants)('%s resolves a project resource and its library', (_, factory) => {
+    const resources = matchRoutes(createMainAreaRoutes(factory), '/project/prj_1/resources');
+    const library = matchRoutes(createMainAreaRoutes(factory), '/project/prj_1/library/kb_1');
+
+    expect(resources?.at(-1)?.route.path).toBe('resources');
+    expect(resources?.at(-1)?.route.handle).toMatchObject({ meta: expect.any(Object) });
+    expect(library?.at(-1)?.route.path).toBe('library/:id');
+    expect(library?.at(-1)?.params).toMatchObject({ id: 'kb_1', projectId: 'prj_1' });
+  });
 
   it.each(mainAreaVariants)('%s exposes the projects view-all route', (_, factory) => {
     const personalMatches = matchRoutes(createMainAreaRoutes(factory), '/projects');

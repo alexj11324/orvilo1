@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getLibraryListAsyncState } from './state';
+import { getLibraryListAsyncState } from './libraryListAsyncState';
 
 describe('getLibraryListAsyncState', () => {
   it('treats fallback empty data during validation as unsettled loading', () => {

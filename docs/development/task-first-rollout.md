@@ -664,11 +664,20 @@ OSS 默认返回 `undefined`、由云端覆盖）在本仓**唯一消费者就�
 
 | 文件                                         | 内容                                                                                             |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `src/features/HomeInbox/InboxPage.tsx`（新） | `NavHeader` + `WideScreenContainer` + `<HomeInbox variant={'main'} />`                           |
+| `src/features/HomeInbox/InboxPage.tsx`（新） | `NavHeader` + `WideScreenContainer` + `<HomeInbox inlineRail variant={'main'} emptyState={…} />` |
 | `src/features/HomeInbox/routeMeta.ts`（新）  | `inboxRouteMeta`：`InboxIcon` + `createSurfaceSkeleton('list')` + `titleKey: 'navigation.inbox'` |
 | `src/routes/(main)/inbox/index.tsx`（新）    | 薄段文件，只 re-export                                                                           |
 | `desktopRouter.shared.tsx`                   | 注册 `/inbox`（`preloadId: 'inbox'`），紧邻 `/tasks`                                             |
 | `navigation.inbox` 文案                      | 三处齐（源 + en-US + zh-CN）。注意 `titleKey` 走 `electron` 命名空间（`RouteMetaBridge.tsx:56`） |
+
+**⚠️ 这一页第一次上线时是坏的，`d65da04d` 修好了它 —— 记下来因为它是自检失效的典型。**
+首版写成 `<HomeInbox variant={'main'} />`，**漏了 `inlineRail`**。而
+`ownsRailSections = variant !== 'main' || Boolean(inlineRail)`，于是 goals / **每日简报** /usage
+三段既不取数也不渲染 —— 正是本次要恢复的「简报」，在修好之前**仍不可达**，且所有 prop 看上去都合理。
+**测试为什么没拦住**：它 mock 掉了 `HomeInbox`，只断言 `variant === 'main'` —— 恰好就是出 bug 的那组合，
+等于把缺陷钉成了期望行为。现已改为断言**真实谓词** `ownsRailSections(props)`，反向验证过：去掉 `inlineRail` 即精确变红。
+第二条同类问题：`HomeInbox` 在空主列时 `return null`（在首页合理，因为周围有输入区与推荐），
+在 `/inbox` 这条独立路由上就是「标题压空列」。故给 `HomeInbox` 加了可选 `emptyState`（仅主列用），本页传 `home:inbox.empty.*`。
 
 **仍未解决（明确记录，不是「以后再说」）**：`HomeInbox` 读 `systemStatusSelectors.hiddenHomeWidgets`，
 而唯一**写**它的 UI 是 `CustomizeButton`，只挂自 `routes/(main)/home/index.tsx` —— 在 Web 上不可达。

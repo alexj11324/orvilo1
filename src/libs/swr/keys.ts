@@ -397,6 +397,11 @@ export const taskKeys = {
       statuses ?? 'all',
     ],
   ),
+  dependencyCandidates: def('task:dependencyCandidates', (taskId: string, query: string) => [
+    'task:dependencyCandidates',
+    taskId,
+    query,
+  ]),
   detail: def('task:detail', (taskId: string) => ['task:detail', taskId]),
   groupList: def(
     'task:groupList',

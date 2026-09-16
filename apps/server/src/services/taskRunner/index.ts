@@ -21,6 +21,7 @@ import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { LobeChatDatabase } from '@/database/type';
+import { TaskDependencyError } from '@/database/utils/taskDependencyError';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
@@ -571,6 +572,9 @@ export class TaskRunnerService {
         }
       }
 
+      if (error instanceof TaskDependencyError) {
+        throw new TRPCError({ cause: error, code: 'PRECONDITION_FAILED', message: error.message });
+      }
       throw error;
     }
   }
@@ -623,7 +627,10 @@ export class TaskRunnerService {
         await this.runTask({ taskId: task.id });
         result.started.push(task.identifier);
       } catch (error) {
-        if (error instanceof TRPCError && error.code === 'CONFLICT') {
+        if (
+          error instanceof TRPCError &&
+          ['CONFLICT', 'PRECONDITION_FAILED'].includes(error.code)
+        ) {
           // Another cascade/manual request won the atomic run reservation.
           // Its task is live; the loser must not pause or relabel it.
           continue;

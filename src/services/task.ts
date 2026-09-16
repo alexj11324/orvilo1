@@ -257,6 +257,12 @@ class TaskService {
     type: 'blocks' | 'relates' = 'blocks',
   ) => lambdaClient.task.addDependency.mutate({ dependsOnId, taskId, type });
 
+  searchDependencyCandidates = async (id: string, query: string) =>
+    lambdaClient.task.searchDependencyCandidates.query({ id, query });
+
+  removeDependencyById = async (taskId: string, dependencyId: string) =>
+    lambdaClient.task.removeDependency.mutate({ dependencyId, taskId });
+
   removeDependency = async (taskId: string, dependsOnId: string) =>
     lambdaClient.task.removeDependency.mutate({ dependsOnId, taskId });
 

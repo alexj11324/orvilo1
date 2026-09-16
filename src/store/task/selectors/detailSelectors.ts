@@ -57,7 +57,19 @@ const activeTaskProvider = (s: TaskStoreState) =>
 
 const activeTaskSubtasks = (s: TaskStoreState) => activeTaskDetail(s)?.subtasks ?? [];
 
-const activeTaskDependencies = (s: TaskStoreState) => activeTaskDetail(s)?.dependencies ?? [];
+const EMPTY_DEPENDENCIES: NonNullable<TaskDetailData['dependencies']> = [];
+const activeTaskDependencies = (s: TaskStoreState) =>
+  activeTaskDetail(s)?.dependencies ?? EMPTY_DEPENDENCIES;
+
+const activeTaskHasUnmetDependencies = (s: TaskStoreState): boolean => {
+  const detail = activeTaskDetail(s);
+  if (detail?.dependenciesSatisfied !== undefined) return !detail.dependenciesSatisfied;
+  return (
+    detail?.dependencies?.some(
+      (dependency) => dependency.type === 'blocks' && dependency.status !== 'completed',
+    ) ?? false
+  );
+};
 
 const activeTaskParent = (s: TaskStoreState) => activeTaskDetail(s)?.parent;
 
@@ -98,7 +110,7 @@ const activeTaskTopicCount = (s: TaskStoreState) => activeTaskDetail(s)?.topicCo
 
 const canRunActiveTask = (s: TaskStoreState): boolean => {
   const detail = activeTaskDetail(s);
-  if (!detail) return false;
+  if (!detail || activeTaskHasUnmetDependencies(s)) return false;
   // 'scheduled' is intentionally excluded — automation owns the next run; the
   // user can only cancel, not force an immediate run.
   return ['backlog', 'failed', 'paused', 'completed'].includes(detail.status);
@@ -139,6 +151,7 @@ export const taskDetailSelectors = {
   activeTaskDatabaseId,
   activeTaskModel,
   activeTaskDependencies,
+  activeTaskHasUnmetDependencies,
   activeTaskDescription,
   activeTaskDetail,
   activeTaskEditorData,

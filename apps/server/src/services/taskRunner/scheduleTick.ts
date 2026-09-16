@@ -19,6 +19,7 @@ export type ScheduleTickOutcome =
   { ran: true; taskIdentifier: string } | { ran: false; reason: ScheduleTickSkipReason };
 
 export type ScheduleTickSkipReason =
+  | 'dependencies-blocked'
   | 'human-waiting'
   | 'in-flight'
   | 'max-executions-reached'
@@ -124,6 +125,9 @@ export async function runScheduleTick(
   try {
     await runner.runTask({ taskId, trigger: 'schedule' });
   } catch (e) {
+    if (e instanceof TRPCError && e.code === 'PRECONDITION_FAILED') {
+      return { ran: false, reason: 'dependencies-blocked' };
+    }
     // Concurrent tick / manual run already running this task — graceful skip.
     if (e instanceof TRPCError && e.code === 'CONFLICT') {
       log('skip task=%s reason=in-flight', taskId);

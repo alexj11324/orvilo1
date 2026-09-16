@@ -9,7 +9,7 @@ const mockDetail: TaskDetailData = {
   agentId: 'agt_1',
   checkpoint: { onAgentRequest: true },
   config: { model: 'gpt-4o', provider: 'openai' },
-  dependencies: [{ dependsOn: 'T-2', type: 'blocks' }],
+  dependencies: [{ dependsOn: 'T-2', status: 'completed', type: 'blocks' }],
   description: 'A test task',
   error: null,
   heartbeat: { interval: 300, timeout: null },
@@ -254,5 +254,49 @@ describe('taskDetailSelectors', () => {
       const state = createState({ taskDetailMap: {} });
       expect(taskDetailSelectors.taskDetailById('T-999')(state)).toBeUndefined();
     });
+  });
+});
+
+describe('prerequisite execution selectors', () => {
+  const stateWith = (patch: Partial<TaskDetailData>) =>
+    createState({
+      activeTaskId: 'T-1',
+      taskDetailMap: { 'T-1': { ...mockDetail, status: 'backlog', ...patch } },
+    });
+
+  it.each(['backlog', 'running', 'paused', 'failed', 'canceled', 'scheduled', undefined])(
+    'blocks when a prerequisite is %s',
+    (status) => {
+      const state = stateWith({ dependencies: [{ dependsOn: 'T-2', status, type: 'blocks' }] });
+      expect(taskDetailSelectors.canRunActiveTask(state)).toBe(false);
+      expect(taskDetailSelectors.activeTaskHasUnmetDependencies(state)).toBe(true);
+    },
+  );
+  it('requires every prerequisite, not just one', () => {
+    const state = stateWith({
+      dependencies: [
+        { dependsOn: 'T-2', status: 'completed', type: 'blocks' },
+        { dependsOn: 'T-3', status: 'backlog', type: 'blocks' },
+      ],
+    });
+    expect(taskDetailSelectors.canRunActiveTask(state)).toBe(false);
+  });
+  it('does not gate relates edges', () => {
+    const state = stateWith({
+      dependencies: [{ dependsOn: 'T-2', status: 'backlog', type: 'relates' }],
+    });
+    expect(taskDetailSelectors.canRunActiveTask(state)).toBe(true);
+  });
+  it('honors an authoritative blocked result even with stale completed metadata', () => {
+    expect(taskDetailSelectors.canRunActiveTask(stateWith({ dependenciesSatisfied: false }))).toBe(
+      false,
+    );
+  });
+  it('still permits stopping a running task', () => {
+    expect(
+      taskDetailSelectors.canPauseActiveTask(
+        stateWith({ status: 'running', dependenciesSatisfied: false }),
+      ),
+    ).toBe(true);
   });
 });

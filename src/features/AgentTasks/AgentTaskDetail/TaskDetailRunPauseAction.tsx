@@ -47,6 +47,7 @@ const TaskDetailRunPauseAction = memo(() => {
   const { allowed: canEditTask, reason } = usePermission('create_content');
   const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
   const canRun = useTaskStore(taskDetailSelectors.canRunActiveTask);
+  const isBlocked = useTaskStore(taskDetailSelectors.activeTaskHasUnmetDependencies);
   const canPause = useTaskStore(taskDetailSelectors.canPauseActiveTask);
   const status = useTaskStore(taskDetailSelectors.activeTaskStatus);
   const detail = useTaskStore(taskDetailSelectors.activeTaskDetail);
@@ -98,7 +99,7 @@ const TaskDetailRunPauseAction = memo(() => {
   ]);
 
   const handleRunNow = useCallback(async () => {
-    if (!canEditTask) return;
+    if (!canEditTask || isBlocked) return;
     if (!taskId) return;
     setIsRunningNow(true);
     try {
@@ -109,7 +110,16 @@ const TaskDetailRunPauseAction = memo(() => {
     } finally {
       setIsRunningNow(false);
     }
-  }, [canEditTask, taskId, assigneeAgentId, assigneeUserId, inboxAgentId, runTask, updateTask]);
+  }, [
+    canEditTask,
+    isBlocked,
+    taskId,
+    assigneeAgentId,
+    assigneeUserId,
+    inboxAgentId,
+    runTask,
+    updateTask,
+  ]);
 
   const handleCancelSchedule = useCallback(async () => {
     if (!canEditTask) return;
@@ -174,7 +184,7 @@ const TaskDetailRunPauseAction = memo(() => {
           <SplitButton.Menu
             items={[
               {
-                disabled: !canEditTask || isRunningNow || isCancellingSchedule,
+                disabled: !canEditTask || isBlocked || isRunningNow || isCancellingSchedule,
                 icon: PlayIcon,
                 key: 'runNow',
                 label: t('taskDetail.runNow'),
@@ -194,7 +204,7 @@ const TaskDetailRunPauseAction = memo(() => {
     );
   }
 
-  if (!canRun && !canPause && !isStarting) return null;
+  if (!canRun && !canPause && !isStarting && !isBlocked) return null;
 
   if (isStarting) {
     const pendingLabel = isRerun ? t('taskDetail.rerunTask') : t('taskDetail.runTask');
@@ -223,9 +233,9 @@ const TaskDetailRunPauseAction = memo(() => {
 
   return (
     <Button
-      disabled={!canEditTask}
+      disabled={!canEditTask || !canRun}
       icon={runIcon}
-      title={canEditTask ? undefined : reason}
+      title={!canEditTask ? reason : isBlocked ? t('taskDetail.prerequisites.blocked') : undefined}
       type={'primary'}
       onClick={handleRunOrPause}
     >

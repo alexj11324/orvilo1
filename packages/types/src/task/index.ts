@@ -745,7 +745,16 @@ export interface TaskDetailData {
   createdAt?: string;
   /** Creator of the task; used by the UI to gate creator-only actions (e.g. make private). */
   createdByUserId?: string | null;
-  dependencies?: Array<{ dependsOn: string; type: string }>;
+  dependencies?: Array<{
+    dependencyId?: string;
+    dependsOn: string;
+    inaccessible?: boolean;
+    name?: string | null;
+    status?: string;
+    type: string;
+  }>;
+  /** Server-authoritative; inaccessible prerequisites fail closed. */
+  dependenciesSatisfied?: boolean;
   description?: string | null;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;

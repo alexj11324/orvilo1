@@ -5,6 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { BriefModel } from '@/database/models/brief';
 import { tasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
+import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { setTaskSchedulerExecutionCallback } from '@/server/services/taskScheduler';
 
 import { TaskRunnerService } from './index';
@@ -18,6 +19,7 @@ export type HeartbeatTickOutcome =
   { ran: true; taskIdentifier: string } | { ran: false; reason: HeartbeatTickSkipReason };
 
 export type HeartbeatTickSkipReason =
+  | 'dependencies-blocked'
   | 'human-waiting'
   | 'in-flight'
   | 'mode-changed'
@@ -82,6 +84,13 @@ export async function runHeartbeatTick(
   try {
     await runner.runTask({ taskId, trigger: 'heartbeat' });
   } catch (e) {
+    if (e instanceof TRPCError && e.code === 'PRECONDITION_FAILED') {
+      await new TaskLifecycleService(db, userId, wsId).rearmHeartbeatAfterDependencyWait(
+        taskId,
+        tickToken,
+      );
+      return { ran: false, reason: 'dependencies-blocked' };
+    }
     // Concurrent tick / manual run already running this task — treat as a
     // graceful skip. runTask's own rollback only fires when *it* set running,
     // so the in-flight run keeps its 'running' status untouched.

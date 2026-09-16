@@ -832,6 +832,7 @@ export class TaskService {
     await this.db.transaction(async (tx) => {
       const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
       const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
+      await taskModel.lockDependencyGraph();
 
       // Cancel by the frozen id set rather than the pre-read topic list, so a
       // topic that started between the snapshot and this transaction is still
@@ -1288,7 +1289,7 @@ export class TaskService {
     const depTaskIds = [...new Set(dependencies.map((d) => d.dependsOnId))];
     const depTasks = await this.taskModel.findByIds(depTaskIds);
     const depIdToInfo = new Map(
-      depTasks.map((t) => [t.id, { identifier: t.identifier, name: t.name }]),
+      depTasks.map((t) => [t.id, { identifier: t.identifier, name: t.name, status: t.status }]),
     );
 
     // Resolve parent
@@ -1526,11 +1527,17 @@ export class TaskService {
       dependencies: dependencies.map((d) => {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
-          dependsOn: info?.identifier ?? d.dependsOnId,
+          dependencyId: d.id,
+          dependsOn: info?.identifier ?? '',
+          inaccessible: !info,
           name: info?.name,
+          status: info?.status,
           type: d.type,
         };
       }),
+      dependenciesSatisfied: dependencies.every(
+        (d) => d.type !== 'blocks' || depIdToInfo.get(d.dependsOnId)?.status === 'completed',
+      ),
       description: task.description,
       editorData: task.editorData ?? undefined,
       error: task.error,

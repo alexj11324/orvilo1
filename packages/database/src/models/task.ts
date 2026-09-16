@@ -20,6 +20,7 @@ import {
   getTableColumns,
   gt,
   gte,
+  ilike,
   inArray,
   isNotNull,
   isNull,
@@ -31,7 +32,7 @@ import {
   type SQL,
   sql,
 } from 'drizzle-orm';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { merge } from '@/utils/merge';
 
@@ -55,6 +56,7 @@ import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
 import type { LobeChatDatabase } from '../type';
+import { TaskDependencyError } from '../utils/taskDependencyError';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 /** Columns whose change is worth a line in the task activity feed. */
@@ -480,18 +482,20 @@ export class TaskModel {
     id: string,
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
   ): Promise<TaskItem | null> {
-    if (Object.keys(data).length === 0) return this.findById(id);
+    return this.guardDependencyProgress([id], data.status, async (db) => {
+      if (Object.keys(data).length === 0) return this.findById(id);
 
-    const updated = await this.db
-      .update(tasks)
-      .set({
-        ...data,
-        ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(tasks.id, id), this.ownership()))
-      .returning();
-    return updated[0] || null;
+      const updated = await db
+        .update(tasks)
+        .set({
+          ...data,
+          ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(tasks.id, id), this.ownership()))
+        .returning();
+      return updated[0] || null;
+    });
   }
 
   /**
@@ -1519,18 +1523,20 @@ export class TaskModel {
     status: string,
     extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
   ): Promise<TaskItem | null> {
-    const [task] = await this.db
-      .update(tasks)
-      .set({
-        status,
-        updatedAt: new Date(),
-        ...extra,
-        ...TaskModel.reviewerBackfillSet(status),
-      })
-      .where(and(eq(tasks.id, id), eq(tasks.status, currentStatus), this.ownership()))
-      .returning();
+    return this.guardDependencyProgress([id], status, async (db) => {
+      const [task] = await db
+        .update(tasks)
+        .set({
+          status,
+          updatedAt: new Date(),
+          ...extra,
+          ...TaskModel.reviewerBackfillSet(status),
+        })
+        .where(and(eq(tasks.id, id), eq(tasks.status, currentStatus), this.ownership()))
+        .returning();
 
-    return task ?? null;
+      return task ?? null;
+    });
   }
 
   /**
@@ -1551,25 +1557,27 @@ export class TaskModel {
       startedAt?: Date;
     },
   ): Promise<TaskItem | null> {
-    const [task] = await this.db
-      .update(tasks)
-      .set({
-        status,
-        updatedAt: new Date(),
-        ...extra,
-        ...TaskModel.reviewerBackfillSet(status),
-      })
-      .where(
-        and(
-          eq(tasks.id, id),
-          eq(tasks.runReservationId, reservationId),
-          eq(tasks.status, currentStatus),
-          this.ownership(),
-        ),
-      )
-      .returning();
+    return this.guardDependencyProgress([id], status, async (db) => {
+      const [task] = await db
+        .update(tasks)
+        .set({
+          status,
+          updatedAt: new Date(),
+          ...extra,
+          ...TaskModel.reviewerBackfillSet(status),
+        })
+        .where(
+          and(
+            eq(tasks.id, id),
+            eq(tasks.runReservationId, reservationId),
+            eq(tasks.status, currentStatus),
+            this.ownership(),
+          ),
+        )
+        .returning();
 
-    return task ?? null;
+      return task ?? null;
+    });
   }
 
   /** Merge task context only while the caller still owns the run generation. */
@@ -1624,47 +1632,54 @@ export class TaskModel {
     leaseMs = 30 * 60 * 1000,
     replaceReservationId?: string,
   ): Promise<boolean> {
-    const reserved = await this.db
-      .update(tasks)
-      .set({
-        error: null,
-        runReservationExpiresAt: new Date(now.getTime() + leaseMs),
-        runReservationId: reservationId,
-        startedAt: now,
-        status: 'running',
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(tasks.id, id),
-          or(
-            isNull(tasks.runReservationId),
-            lt(tasks.runReservationExpiresAt, now),
-            replaceReservationId ? eq(tasks.runReservationId, replaceReservationId) : undefined,
-          ),
-          notExists(
-            this.db
-              .select({ id: taskTopics.id })
-              .from(taskTopics)
-              .where(and(eq(taskTopics.taskId, id), eq(taskTopics.status, 'running'))),
-          ),
-          notExists(
-            this.db
-              .select({ id: agentOperations.id })
-              .from(agentOperations)
-              .where(
-                and(
-                  eq(agentOperations.taskId, id),
-                  notInArray(agentOperations.status, ['abandoned', 'done', 'error', 'interrupted']),
+    return this.guardDependencyProgress([id], 'running', async (db) => {
+      const reserved = await db
+        .update(tasks)
+        .set({
+          error: null,
+          runReservationExpiresAt: new Date(now.getTime() + leaseMs),
+          runReservationId: reservationId,
+          startedAt: now,
+          status: 'running',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(tasks.id, id),
+            or(
+              isNull(tasks.runReservationId),
+              lt(tasks.runReservationExpiresAt, now),
+              replaceReservationId ? eq(tasks.runReservationId, replaceReservationId) : undefined,
+            ),
+            notExists(
+              db
+                .select({ id: taskTopics.id })
+                .from(taskTopics)
+                .where(and(eq(taskTopics.taskId, id), eq(taskTopics.status, 'running'))),
+            ),
+            notExists(
+              db
+                .select({ id: agentOperations.id })
+                .from(agentOperations)
+                .where(
+                  and(
+                    eq(agentOperations.taskId, id),
+                    notInArray(agentOperations.status, [
+                      'abandoned',
+                      'done',
+                      'error',
+                      'interrupted',
+                    ]),
+                  ),
                 ),
-              ),
+            ),
+            this.ownership(),
           ),
-          this.ownership(),
-        ),
-      )
-      .returning({ id: tasks.id });
+        )
+        .returning({ id: tasks.id });
 
-    return reserved.length > 0;
+      return reserved.length > 0;
+    });
   }
 
   /** Extend a dispatch lease only while the caller still owns it. */
@@ -1717,13 +1732,15 @@ export class TaskModel {
   }
 
   async batchUpdateStatus(ids: string[], status: string): Promise<number> {
-    const result = await this.db
-      .update(tasks)
-      .set({ status, updatedAt: new Date(), ...TaskModel.reviewerBackfillSet(status) })
-      .where(and(inArray(tasks.id, ids), this.ownership()))
-      .returning();
+    return this.guardDependencyProgress(ids, status, async (db) => {
+      const result = await db
+        .update(tasks)
+        .set({ status, updatedAt: new Date(), ...TaskModel.reviewerBackfillSet(status) })
+        .where(and(inArray(tasks.id, ids), this.ownership()))
+        .returning();
 
-    return result.length;
+      return result.length;
+    });
   }
 
   /**
@@ -1743,17 +1760,19 @@ export class TaskModel {
       startedAt?: Date;
     },
   ): Promise<TaskItem[]> {
-    if (ids.length === 0) return [];
-    return this.db
-      .update(tasks)
-      .set({
-        status,
-        updatedAt: new Date(),
-        ...extra,
-        ...TaskModel.reviewerBackfillSet(status),
-      })
-      .where(and(inArray(tasks.id, ids), this.ownership()))
-      .returning();
+    return this.guardDependencyProgress(ids, status, async (db) => {
+      if (ids.length === 0) return [];
+      return db
+        .update(tasks)
+        .set({
+          status,
+          updatedAt: new Date(),
+          ...extra,
+          ...TaskModel.reviewerBackfillSet(status),
+        })
+        .where(and(inArray(tasks.id, ids), this.ownership()))
+        .returning();
+    });
   }
 
   // ========== Config ==========
@@ -1979,13 +1998,9 @@ export class TaskModel {
       .where(
         and(
           eq(tasks.status, 'running'),
-          options.createdByUserId
-            ? eq(tasks.createdByUserId, options.createdByUserId)
-            : undefined,
+          options.createdByUserId ? eq(tasks.createdByUserId, options.createdByUserId) : undefined,
           options.workspaceId ? eq(tasks.workspaceId, options.workspaceId) : undefined,
-          options.createdByUserId && !options.workspaceId
-            ? isNull(tasks.workspaceId)
-            : undefined,
+          options.createdByUserId && !options.workspaceId ? isNull(tasks.workspaceId) : undefined,
           isNotNull(tasks.lastHeartbeatAt),
           isNotNull(tasks.heartbeatTimeout),
           sql`${tasks.lastHeartbeatAt} < now() - make_interval(secs => ${tasks.heartbeatTimeout})`,
@@ -2012,39 +2027,219 @@ export class TaskModel {
       workspaceId: taskTopics.workspaceId,
     });
 
-  async addDependency(taskId: string, dependsOnId: string, type: string = 'blocks'): Promise<void> {
-    const dependencyTasks = await this.findByIds([taskId, dependsOnId]);
-    const task = dependencyTasks.find(({ id }) => id === taskId);
-    const dependsOn = dependencyTasks.find(({ id }) => id === dependsOnId);
-    if (!task || !dependsOn) throw new Error('Task not found');
-    if (task.projectId !== dependsOn.projectId && (task.projectId || dependsOn.projectId)) {
-      throw new Error('Task dependencies cannot cross project boundaries');
-    }
+  /** Serialize graph edits with starts/completions within one ownership scope. */
+  async lockDependencyGraph(): Promise<void> {
+    const scope = this.workspaceId ? `workspace:${this.workspaceId}` : `user:${this.userId}`;
+    await this.db.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`task-deps:${scope}`}, 0))`,
+    );
+  }
 
-    const visibility = await this.getTaskVisibility(taskId);
-    await this.db
-      .insert(taskDependencies)
-      .values({
-        dependsOnId,
-        taskId,
-        type,
-        userId: this.userId,
-        visibility,
-        workspaceId: this.workspaceId ?? null,
-      })
-      .onConflictDoNothing();
+  /** Unknown or inaccessible prerequisites fail closed; never reveal their metadata. */
+  private async blockedTaskIds(taskIds: string[], completingIds: string[] = []): Promise<string[]> {
+    if (taskIds.length === 0) return [];
+    const prerequisite = alias(tasks, 'prerequisite');
+    const prerequisiteScope = buildWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      {
+        userId: prerequisite.createdByUserId,
+        visibility: prerequisite.visibility,
+        workspaceId: prerequisite.workspaceId,
+      },
+    );
+    const rows = await this.db
+      .selectDistinct({ taskId: taskDependencies.taskId })
+      .from(taskDependencies)
+      .innerJoin(tasks, eq(tasks.id, taskDependencies.taskId))
+      .leftJoin(
+        prerequisite,
+        and(eq(prerequisite.id, taskDependencies.dependsOnId), prerequisiteScope),
+      )
+      .where(
+        and(
+          inArray(taskDependencies.taskId, taskIds),
+          eq(taskDependencies.type, 'blocks'),
+          this.ownership(),
+          or(isNull(prerequisite.id), ne(prerequisite.status, 'completed')),
+          completingIds.length > 0
+            ? notInArray(taskDependencies.dependsOnId, completingIds)
+            : undefined,
+        ),
+      );
+    return rows.map(({ taskId }) => taskId);
+  }
+
+  private async guardDependencyProgress<T>(
+    ids: string[],
+    status: string | undefined,
+    write: (db: LobeChatDatabase) => Promise<T>,
+  ): Promise<T> {
+    if (status === undefined) return write(this.db);
+    return this.db.transaction(async (tx) => {
+      const scoped = new TaskModel(tx, this.userId, this.workspaceId);
+      await scoped.lockDependencyGraph();
+      // A confirmed family completion may satisfy edges *within* that atomic
+      // write, but an incomplete prerequisite outside the family still blocks.
+      const completingIds =
+        status === 'completed' ? (await scoped.findByIds(ids)).map(({ id }) => id) : [];
+      if (
+        (status === 'running' || status === 'completed') &&
+        (await scoped.blockedTaskIds(ids, completingIds)).length > 0
+      ) {
+        throw new TaskDependencyError(
+          'blocked',
+          'Complete all prerequisite tasks before starting or completing this task.',
+        );
+      }
+      return write(tx);
+    });
+  }
+
+  async addDependency(taskId: string, dependsOnId: string, type: string = 'blocks'): Promise<void> {
+    if (!['blocks', 'relates'].includes(type)) {
+      throw new TaskDependencyError('invalid', 'Unsupported dependency type');
+    }
+    if (taskId === dependsOnId) {
+      throw new TaskDependencyError('invalid', 'A task cannot depend on itself');
+    }
+    await this.db.transaction(async (tx) => {
+      const scoped = new TaskModel(tx, this.userId, this.workspaceId);
+      await scoped.lockDependencyGraph();
+      const dependencyTasks = await tx
+        .select()
+        .from(tasks)
+        .where(and(inArray(tasks.id, [taskId, dependsOnId]), this.ownership()))
+        .orderBy(tasks.id)
+        .for('update');
+      const task = dependencyTasks.find(({ id }) => id === taskId);
+      const dependsOn = dependencyTasks.find(({ id }) => id === dependsOnId);
+      if (!task || !dependsOn) throw new TaskDependencyError('not-found', 'Task not found');
+      if (task.projectId !== dependsOn.projectId && (task.projectId || dependsOn.projectId)) {
+        throw new TaskDependencyError(
+          'invalid',
+          'Task dependencies cannot cross project boundaries',
+        );
+      }
+      if (this.workspaceId && task.visibility === 'public' && dependsOn.visibility === 'private') {
+        throw new TaskDependencyError('invalid', 'A shared task cannot depend on a private task');
+      }
+      const [existing] = await tx
+        .select()
+        .from(taskDependencies)
+        .where(
+          and(eq(taskDependencies.taskId, taskId), eq(taskDependencies.dependsOnId, dependsOnId)),
+        );
+      if (existing?.type === type) return;
+      if (type === 'blocks') {
+        if (task.status === 'running' || task.status === 'completed' || task.runReservationId) {
+          throw new TaskDependencyError(
+            'blocked',
+            'Pause or reopen the task before changing its prerequisites',
+          );
+        }
+        // UNION terminates even for a pre-existing corrupt cycle. Hidden
+        // intermediate nodes must not make a real cycle appear safe.
+        const scope = this.workspaceId
+          ? sql`d.workspace_id = ${this.workspaceId}`
+          : sql`d.workspace_id IS NULL AND d.user_id = ${this.userId}`;
+        const cycle = await tx.execute(sql`
+          WITH RECURSIVE upstream(id) AS (
+            SELECT ${dependsOnId}::text
+            UNION
+            SELECT d.depends_on_id FROM task_dependencies d
+              JOIN upstream u ON d.task_id = u.id
+              WHERE d.type = 'blocks' AND ${scope}
+          ) SELECT 1 FROM upstream WHERE id = ${taskId} LIMIT 1
+        `);
+        if (cycle.rows.length > 0) {
+          throw new TaskDependencyError(
+            'invalid',
+            'This prerequisite would create a dependency cycle',
+          );
+        }
+      }
+      // Upgrading an existing relates edge must not silently remain non-blocking.
+      await tx
+        .insert(taskDependencies)
+        .values({
+          dependsOnId,
+          taskId,
+          type,
+          userId: this.userId,
+          visibility: task.visibility,
+          workspaceId: this.workspaceId ?? null,
+        })
+        .onConflictDoUpdate({
+          target: [taskDependencies.taskId, taskDependencies.dependsOnId],
+          set: { type },
+        });
+    });
   }
 
   async removeDependency(taskId: string, dependsOnId: string): Promise<void> {
-    await this.db
-      .delete(taskDependencies)
+    await this.db.transaction(async (tx) => {
+      const scoped = new TaskModel(tx, this.userId, this.workspaceId);
+      await scoped.lockDependencyGraph();
+      if (!(await scoped.findById(taskId)))
+        throw new TaskDependencyError('not-found', 'Task not found');
+      await tx
+        .delete(taskDependencies)
+        .where(
+          and(
+            eq(taskDependencies.taskId, taskId),
+            eq(taskDependencies.dependsOnId, dependsOnId),
+            this.depsOwnership(),
+          ),
+        );
+    });
+  }
+
+  /** Remove a redacted edge without requiring access to the prerequisite itself. */
+  async removeDependencyById(taskId: string, dependencyId: string): Promise<void> {
+    const dependency = (await this.getDependencies(taskId)).find(({ id }) => id === dependencyId);
+    if (!dependency) throw new TaskDependencyError('not-found', 'Dependency not found');
+    await this.removeDependency(taskId, dependency.dependsOnId);
+  }
+
+  async searchDependencyCandidates(taskId: string, query: string, limit = 25) {
+    const task = await this.findById(taskId);
+    if (!task) throw new TaskDependencyError('not-found', 'Task not found');
+    const escaped = query.trim().replaceAll(/[\\%_]/g, '\\$&');
+    return this.db
+      .select({
+        id: tasks.id,
+        identifier: tasks.identifier,
+        name: tasks.name,
+        status: tasks.status,
+      })
+      .from(tasks)
       .where(
         and(
-          eq(taskDependencies.taskId, taskId),
-          eq(taskDependencies.dependsOnId, dependsOnId),
-          this.depsOwnership(),
+          this.ownership(),
+          ne(tasks.id, taskId),
+          task.projectId ? eq(tasks.projectId, task.projectId) : isNull(tasks.projectId),
+          this.workspaceId && task.visibility === 'public'
+            ? eq(tasks.visibility, 'public')
+            : undefined,
+          escaped
+            ? or(ilike(tasks.identifier, `%${escaped}%`), ilike(tasks.name, `%${escaped}%`))
+            : undefined,
+          notExists(
+            this.db
+              .select({ id: taskDependencies.id })
+              .from(taskDependencies)
+              .where(
+                and(
+                  eq(taskDependencies.taskId, taskId),
+                  eq(taskDependencies.dependsOnId, tasks.id),
+                  eq(taskDependencies.type, 'blocks'),
+                ),
+              ),
+          ),
         ),
-      );
+      )
+      .orderBy(desc(tasks.createdAt), desc(tasks.seq))
+      .limit(Math.min(50, Math.max(1, limit)));
   }
 
   async getDependencies(taskId: string) {
@@ -2069,22 +2264,9 @@ export class TaskModel {
       .where(and(eq(taskDependencies.dependsOnId, taskId), this.depsOwnership()));
   }
 
-  // Check if every blocking dependency is terminal and no longer actionable.
+  // Only successful completion satisfies a prerequisite; cancellation is not delivery.
   async areAllDependenciesCompleted(taskId: string): Promise<boolean> {
-    const result = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(taskDependencies)
-      .innerJoin(tasks, eq(taskDependencies.dependsOnId, tasks.id))
-      .where(
-        and(
-          eq(taskDependencies.taskId, taskId),
-          eq(taskDependencies.type, 'blocks'),
-          notInArray(tasks.status, ['canceled', 'completed']),
-          this.depsOwnership(),
-        ),
-      );
-
-    return Number(result[0].count) === 0;
+    return (await this.blockedTaskIds([taskId])).length === 0;
   }
 
   // Find tasks that are now unblocked after a dependency settles.
@@ -2115,19 +2297,7 @@ export class TaskModel {
     if (dependentIds.length === 0) return [];
 
     // Of those, which still have at least one incomplete blocking dependency
-    const blocked = await this.db
-      .selectDistinct({ taskId: taskDependencies.taskId })
-      .from(taskDependencies)
-      .innerJoin(tasks, eq(taskDependencies.dependsOnId, tasks.id))
-      .where(
-        and(
-          inArray(taskDependencies.taskId, dependentIds),
-          eq(taskDependencies.type, 'blocks'),
-          notInArray(tasks.status, ['canceled', 'completed']),
-          this.depsOwnership(),
-        ),
-      );
-    const blockedIds = new Set(blocked.map(({ taskId }) => taskId));
+    const blockedIds = new Set(await this.blockedTaskIds(dependentIds));
     const unlockedIds = dependentIds.filter((id) => !blockedIds.has(id));
     if (unlockedIds.length === 0) return [];
 
@@ -2463,6 +2633,7 @@ export class TaskModel {
     ids: string[],
   ): Promise<{ id: string; status: string; visibility: 'private' | 'public' }[]> {
     if (ids.length === 0) return [];
+    await this.lockDependencyGraph();
     return this.db
       .select({ id: tasks.id, status: tasks.status, visibility: tasks.visibility })
       .from(tasks)
@@ -2494,90 +2665,92 @@ export class TaskModel {
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
     actor: { agentId?: string | null; userId?: string | null },
   ): Promise<TaskItem | null> {
-    const touched = TRACKED_TASK_COLUMNS.some((col) => data[col] !== undefined);
-    // Nothing to diff against: an ordinary rename should not pay for a lock.
-    if (!touched) return this.update(id, data);
+    return this.guardDependencyProgress([id], data.status, async (db) => {
+      const touched = TRACKED_TASK_COLUMNS.some((col) => data[col] !== undefined);
+      // Nothing to diff against: an ordinary rename should not pay for a lock.
+      if (!touched) return this.update(id, data);
 
-    return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
-      const [before] = await runner
-        .select({
-          assigneeAgentId: tasks.assigneeAgentId,
-          assigneeUserId: tasks.assigneeUserId,
-          automationMode: tasks.automationMode,
-          config: tasks.config,
-          heartbeatInterval: tasks.heartbeatInterval,
-          priority: tasks.priority,
-          reviewerUserId: tasks.reviewerUserId,
-          schedulePattern: tasks.schedulePattern,
-          scheduleTimezone: tasks.scheduleTimezone,
-          status: tasks.status,
-        })
-        .from(tasks)
-        .where(and(eq(tasks.id, id), this.ownership()))
-        .for('update')
-        .limit(1);
-      if (!before) return null;
+      return db.transaction(async (tx) => {
+        const runner = tx as LobeChatDatabase;
+        const [before] = await runner
+          .select({
+            assigneeAgentId: tasks.assigneeAgentId,
+            assigneeUserId: tasks.assigneeUserId,
+            automationMode: tasks.automationMode,
+            config: tasks.config,
+            heartbeatInterval: tasks.heartbeatInterval,
+            priority: tasks.priority,
+            reviewerUserId: tasks.reviewerUserId,
+            schedulePattern: tasks.schedulePattern,
+            scheduleTimezone: tasks.scheduleTimezone,
+            status: tasks.status,
+          })
+          .from(tasks)
+          .where(and(eq(tasks.id, id), this.ownership()))
+          .for('update')
+          .limit(1);
+        if (!before) return null;
 
-      const scoped = new TaskModel(runner, this.userId, this.workspaceId);
-      const updated = await scoped.update(id, data);
-      if (!updated) return null;
+        const scoped = new TaskModel(runner, this.userId, this.workspaceId);
+        const updated = await scoped.update(id, data);
+        if (!updated) return null;
 
-      const events: { payload: TaskActivityLogPayload; type: TaskActivityLogType }[] = [];
+        const events: { payload: TaskActivityLogPayload; type: TaskActivityLogType }[] = [];
 
-      // The two assignee slots are independent — one edit can move both, and
-      // each gets its own row so the feed reads one change per line.
-      if (before.assigneeAgentId !== updated.assigneeAgentId) {
-        events.push({
-          payload: { fromId: before.assigneeAgentId, toId: updated.assigneeAgentId },
-          type: 'assignee_agent',
-        });
-      }
-      if (before.assigneeUserId !== updated.assigneeUserId) {
-        events.push({
-          payload: { fromId: before.assigneeUserId, toId: updated.assigneeUserId },
-          type: 'assignee_user',
-        });
-      }
-      // Only an explicit reviewer write earns a feed row — the COALESCE
-      // backfill stamped on a paused transition is the system's fallback
-      // choice, and attributing it to whoever paused would read as their
-      // deliberate pick.
-      if (data.reviewerUserId !== undefined && before.reviewerUserId !== updated.reviewerUserId) {
-        events.push({
-          payload: { fromId: before.reviewerUserId, toId: updated.reviewerUserId },
-          type: 'reviewer',
-        });
-      }
-      if (before.status !== updated.status) {
-        events.push({ payload: { from: before.status, to: updated.status }, type: 'status' });
-      }
-      if ((before.priority ?? null) !== (updated.priority ?? null)) {
-        events.push({
-          payload: { from: before.priority ?? null, to: updated.priority ?? null },
-          type: 'priority',
-        });
-      }
-      const automationBefore = snapshotAutomation(before);
-      const automationAfter = snapshotAutomation(updated);
-      if (JSON.stringify(automationBefore) !== JSON.stringify(automationAfter)) {
-        events.push({
-          payload: { from: automationBefore, to: automationAfter },
-          type: 'automation',
-        });
-      }
+        // The two assignee slots are independent — one edit can move both, and
+        // each gets its own row so the feed reads one change per line.
+        if (before.assigneeAgentId !== updated.assigneeAgentId) {
+          events.push({
+            payload: { fromId: before.assigneeAgentId, toId: updated.assigneeAgentId },
+            type: 'assignee_agent',
+          });
+        }
+        if (before.assigneeUserId !== updated.assigneeUserId) {
+          events.push({
+            payload: { fromId: before.assigneeUserId, toId: updated.assigneeUserId },
+            type: 'assignee_user',
+          });
+        }
+        // Only an explicit reviewer write earns a feed row — the COALESCE
+        // backfill stamped on a paused transition is the system's fallback
+        // choice, and attributing it to whoever paused would read as their
+        // deliberate pick.
+        if (data.reviewerUserId !== undefined && before.reviewerUserId !== updated.reviewerUserId) {
+          events.push({
+            payload: { fromId: before.reviewerUserId, toId: updated.reviewerUserId },
+            type: 'reviewer',
+          });
+        }
+        if (before.status !== updated.status) {
+          events.push({ payload: { from: before.status, to: updated.status }, type: 'status' });
+        }
+        if ((before.priority ?? null) !== (updated.priority ?? null)) {
+          events.push({
+            payload: { from: before.priority ?? null, to: updated.priority ?? null },
+            type: 'priority',
+          });
+        }
+        const automationBefore = snapshotAutomation(before);
+        const automationAfter = snapshotAutomation(updated);
+        if (JSON.stringify(automationBefore) !== JSON.stringify(automationAfter)) {
+          events.push({
+            payload: { from: automationBefore, to: automationAfter },
+            type: 'automation',
+          });
+        }
 
-      const { actorKind, ...actorColumns } = taskActivityActor(actor);
-      for (const event of events) {
-        await scoped.addActivity({
-          ...actorColumns,
-          payload: { ...event.payload, actorKind },
-          taskId: id,
-          type: event.type,
-        });
-      }
+        const { actorKind, ...actorColumns } = taskActivityActor(actor);
+        for (const event of events) {
+          await scoped.addActivity({
+            ...actorColumns,
+            payload: { ...event.payload, actorKind },
+            taskId: id,
+            type: event.type,
+          });
+        }
 
-      return updated;
+        return updated;
+      });
     });
   }
 

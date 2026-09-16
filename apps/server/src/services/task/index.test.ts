@@ -151,6 +151,7 @@ describe('TaskService', () => {
     addActivities: vi.fn(),
     addActivity: vi.fn(),
     findSubtasks: vi.fn(),
+    lockDependencyGraph: vi.fn().mockResolvedValue(undefined),
     lockForStatusChange: vi.fn<(...args: unknown[]) => unknown>(),
     updateStatusForIds: vi.fn<(...args: unknown[]) => unknown>(),
     updateWithLog: vi.fn(),
@@ -689,7 +690,9 @@ describe('TaskService', () => {
       };
 
       const dependencies = [{ dependsOnId: 'task_002', taskId: 'task_003', type: 'blocks' }];
-      const depTasks = [{ id: 'task_002', identifier: 'TASK-2', name: 'Task 2' }];
+      const depTasks = [
+        { id: 'task_002', identifier: 'TASK-2', name: 'Task 2', status: 'completed' },
+      ];
 
       mockTaskModel.resolve.mockResolvedValue(task);
       mockTaskModel.findAllDescendants.mockResolvedValue([]);
@@ -706,11 +709,18 @@ describe('TaskService', () => {
       const result = await service.getTaskDetail('TASK-3');
 
       expect(result?.dependencies).toEqual([
-        { dependsOn: 'TASK-2', name: 'Task 2', type: 'blocks' },
+        {
+          dependencyId: undefined,
+          dependsOn: 'TASK-2',
+          inaccessible: false,
+          name: 'Task 2',
+          status: 'completed',
+          type: 'blocks',
+        },
       ]);
     });
 
-    it('should fall back to raw dependsOnId when dep task is not found', async () => {
+    it('redacts inaccessible prerequisites and keeps the task blocked', async () => {
       const task = {
         assigneeAgentId: null,
         assigneeUserId: null,
@@ -747,8 +757,16 @@ describe('TaskService', () => {
       const result = await service.getTaskDetail('TASK-3');
 
       expect(result?.dependencies).toEqual([
-        { dependsOn: 'task_missing', name: undefined, type: 'blocks' },
+        {
+          dependencyId: undefined,
+          dependsOn: '',
+          inaccessible: true,
+          name: undefined,
+          status: undefined,
+          type: 'blocks',
+        },
       ]);
+      expect(result?.dependenciesSatisfied).toBe(false);
     });
 
     it('should build activities sorted by time ascending and exclude briefs', async () => {

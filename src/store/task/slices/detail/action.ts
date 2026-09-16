@@ -111,6 +111,9 @@ const hasInFlightSubtask = (subtasks: TaskDetailSubtask[] | undefined): boolean 
 const hasInFlightActivity = (detail: TaskDetailData | undefined): boolean => {
   if (!detail) return false;
   if (detail.status === 'running' || detail.status === 'pending') return true;
+  // Upstream completion can happen in another task or another client. A
+  // blocked detail must keep reconciling even though it has no active run.
+  if (detail.dependencies?.some((d) => d.type === 'blocks')) return true;
   if (hasInFlightSubtask(detail.subtasks)) return true;
   return (
     detail.activities?.some(
@@ -354,6 +357,11 @@ export class TaskDetailSliceActionImpl {
 
   pinDocument = async (taskId: string, documentId: string): Promise<void> => {
     await taskService.pinDocument(taskId, documentId);
+    await this.internal_refreshTaskDetail(taskId);
+  };
+
+  removeDependencyById = async (taskId: string, dependencyId: string): Promise<void> => {
+    await taskService.removeDependencyById(taskId, dependencyId);
     await this.internal_refreshTaskDetail(taskId);
   };
 

@@ -17,6 +17,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import type { LobeChatDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import { TaskDependencyError } from '@/database/utils/taskDependencyError';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
@@ -741,6 +742,18 @@ export const taskRouter = router({
         return { message: 'Dependency added', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({
+            cause: error,
+            code:
+              error.kind === 'not-found'
+                ? 'NOT_FOUND'
+                : error.kind === 'blocked'
+                  ? 'PRECONDITION_FAILED'
+                  : 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
         console.error('[task:addDependency]', error);
         if (error instanceof Error && error.message.includes('project boundaries')) {
           throw new TRPCError({ cause: error, code: 'BAD_REQUEST', message: error.message });
@@ -1247,6 +1260,18 @@ export const taskRouter = router({
         });
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({
+            cause: error,
+            code:
+              error.kind === 'not-found'
+                ? 'NOT_FOUND'
+                : error.kind === 'blocked'
+                  ? 'PRECONDITION_FAILED'
+                  : 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
         console.error('[task:run]', error);
         throw new TRPCError({
           cause: error,
@@ -1281,17 +1306,52 @@ export const taskRouter = router({
       }
     }),
 
+  searchDependencyCandidates: taskProcedure
+    .input(z.object({ id: z.string(), query: z.string().trim().max(200).default('') }))
+    .query(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      const candidates = await ctx.taskModel.searchDependencyCandidates(task.id, input.query, 26);
+      return { data: candidates.slice(0, 25), hasMore: candidates.length > 25 };
+    }),
+
   removeDependency: taskProcedureWrite
-    .input(z.object({ dependsOnId: z.string(), taskId: z.string() }))
+    .input(
+      z
+        .object({
+          dependsOnId: z.string().optional(),
+          dependencyId: z.string().uuid().optional(),
+          taskId: z.string(),
+        })
+        .refine(
+          (input) => Boolean(input.dependsOnId) !== Boolean(input.dependencyId),
+          'Provide exactly one dependency reference',
+        ),
+    )
     .mutation(async ({ input, ctx }) => {
       try {
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.taskId);
-        const dep = await resolveOrThrow(model, input.dependsOnId);
-        await model.removeDependency(task.id, dep.id);
+        if (input.dependencyId) {
+          await model.removeDependencyById(task.id, input.dependencyId);
+        } else {
+          const dep = await resolveOrThrow(model, input.dependsOnId!);
+          await model.removeDependency(task.id, dep.id);
+        }
         return { message: 'Dependency removed', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({
+            cause: error,
+            code:
+              error.kind === 'not-found'
+                ? 'NOT_FOUND'
+                : error.kind === 'blocked'
+                  ? 'PRECONDITION_FAILED'
+                  : 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
         console.error('[task:removeDependency]', error);
         throw new TRPCError({
           cause: error,
@@ -1669,6 +1729,11 @@ export const taskRouter = router({
         // interleave between reading the old assignee and recording it.
         const task = status
           ? await ctx.serverDB.transaction(async (tx) => {
+              await new TaskModel(
+                tx,
+                ctx.userId,
+                ctx.workspaceId ?? undefined,
+              ).lockDependencyGraph();
               const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
               const updated = await taskService.updateTaskWithAssigneeLock(
                 resolved.id,
@@ -1690,6 +1755,18 @@ export const taskRouter = router({
         return { data: task, message: 'Task updated', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({
+            cause: error,
+            code:
+              error.kind === 'not-found'
+                ? 'NOT_FOUND'
+                : error.kind === 'blocked'
+                  ? 'PRECONDITION_FAILED'
+                  : 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
         console.error('[task:update]', error);
         throw new TRPCError({
           cause: error,
@@ -1927,6 +2004,18 @@ export const taskRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({
+            cause: error,
+            code:
+              error.kind === 'not-found'
+                ? 'NOT_FOUND'
+                : error.kind === 'blocked'
+                  ? 'PRECONDITION_FAILED'
+                  : 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
         console.error('[task:updateStatus]', error);
         throw new TRPCError({
           cause: error,
@@ -1984,6 +2073,18 @@ export const taskRouter = router({
         return { data: result, message: `Task family ${input.status}`, success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({
+            cause: error,
+            code:
+              error.kind === 'not-found'
+                ? 'NOT_FOUND'
+                : error.kind === 'blocked'
+                  ? 'PRECONDITION_FAILED'
+                  : 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
         console.error('[task:updateStatusCascade]', error);
         throw new TRPCError({
           cause: error,

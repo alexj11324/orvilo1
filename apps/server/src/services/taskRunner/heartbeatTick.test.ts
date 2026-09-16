@@ -32,6 +32,12 @@ vi.mock('@/server/services/taskScheduler', () => ({
   setTaskSchedulerExecutionCallback: mockSetTaskSchedulerExecutionCallback,
 }));
 
+vi.mock('@/server/services/taskLifecycle', () => ({
+  TaskLifecycleService: vi.fn(function () {
+    return { rearmHeartbeatAfterDependencyWait: vi.fn().mockResolvedValue(undefined) };
+  }),
+}));
+
 vi.mock('./index', () => ({
   TaskRunnerService: vi.fn(),
 }));
@@ -65,6 +71,17 @@ describe('runHeartbeatTick', () => {
     });
     (TaskRunnerService as any).mockImplementation(function () {
       return mockRunner;
+    });
+  });
+
+  it('re-arms a blocked heartbeat without recording a failed run', async () => {
+    mockSelectTask.mockResolvedValue([baseTask()]);
+    mockRunner.runTask.mockRejectedValue(
+      new TRPCError({ code: 'PRECONDITION_FAILED', message: 'prerequisites' }),
+    );
+    await expect(runHeartbeatTick(taskId, userId)).resolves.toEqual({
+      ran: false,
+      reason: 'dependencies-blocked',
     });
   });
 

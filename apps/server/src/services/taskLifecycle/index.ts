@@ -1015,6 +1015,21 @@ export class TaskLifecycleService {
     }
   }
 
+  /** A blocked tick consumed its one-shot message, but did not execute a run. */
+  async rearmHeartbeatAfterDependencyWait(taskId: string, tickToken?: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const model = new TaskModel(tx, this.userId, this.workspaceId);
+      await model.lockDependencyGraph();
+      const task = await model.findById(taskId);
+      if (!task || task.status !== 'scheduled') return;
+      const currentToken = (task.context as { scheduler?: TaskSchedulerContext } | null)?.scheduler
+        ?.tickToken;
+      if (currentToken && currentToken !== tickToken) return;
+      const lifecycle = new TaskLifecycleService(tx, this.userId, this.workspaceId);
+      await lifecycle.maybeRearmHeartbeat(task, 'dependencies-blocked');
+    });
+  }
+
   /** Re-arm a Verify-bound heartbeat only after Verify releases its completion lease. */
   async rearmHeartbeatAfterVerify(taskId: string): Promise<void> {
     const task = await this.taskModel.findById(taskId);

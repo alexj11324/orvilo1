@@ -86,7 +86,10 @@ export class UserAuthActionImpl {
           clearUserDisplaySnapshot(signingOutUserId);
           // Use window.location.href to trigger a full page reload
           // This ensures all client-side state (React, Zustand, cache) is cleared
-          window.location.href = options?.redirectTo || '/signin';
+          // signed_out marks an explicit sign-out: the signin page must not
+          // auto-resume SSO (the IdP session may still be alive) or the user
+          // could never reach a signed-out state.
+          window.location.href = options?.redirectTo || '/signin?signed_out=1';
         },
       },
     });

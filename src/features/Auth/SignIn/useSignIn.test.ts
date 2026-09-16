@@ -68,6 +68,7 @@ vi.mock('@/business/client/hooks/useBusinessSignin', () => ({
 
 let mockEnableBusinessFeatures = false;
 let mockEnableMagicLink = false;
+const mockOAuthProviders = vi.hoisted(() => ({ value: ['google', 'github'] as string[] }));
 vi.mock('@/features/AuthShell/AuthServerConfigProvider', () => ({
   useAuthServerConfigStore: (selector: (s: any) => any) =>
     selector({
@@ -75,7 +76,7 @@ vi.mock('@/features/AuthShell/AuthServerConfigProvider', () => ({
         disableEmailPassword: false,
         enableBusinessFeatures: mockEnableBusinessFeatures,
         enableMagicLink: mockEnableMagicLink,
-        oAuthSSOProviders: ['google', 'github'],
+        oAuthSSOProviders: mockOAuthProviders.value,
       },
       serverConfigInit: true,
     }),
@@ -123,6 +124,7 @@ describe('useSignIn', () => {
     mockBusinessSignin.ssoProviders = [];
     mockBusinessSignin.getAdditionalData.mockResolvedValue({});
     mockBusinessSignin.preSocialSigninCheck.mockResolvedValue(true);
+    mockOAuthProviders.value = ['google', 'github'];
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...originalLocation, href: '', origin: originalLocation.origin },
@@ -505,6 +507,71 @@ describe('useSignIn', () => {
 
       expect(mockBusinessSignin.preSocialSigninCheck).toHaveBeenCalled();
       expect(mockSignInSocial).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('auto SSO start', () => {
+    it('auto-starts the single configured provider via oauth2', async () => {
+      mockOAuthProviders.value = ['generic-oidc'];
+      mockSignInOauth2.mockResolvedValue({ url: 'https://idp.example.com/auth' });
+
+      const { result } = renderHook(() => useSignIn());
+
+      // Armed immediately on the first render, before the effect fires
+      expect(result.current.autoSsoActive).toBe(true);
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockSignInOauth2).toHaveBeenCalledWith(
+        expect.objectContaining({ providerId: 'generic-oidc' }),
+      );
+    });
+
+    it('does not auto-start when multiple providers are configured', async () => {
+      renderHook(() => useSignIn());
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockSignInSocial).not.toHaveBeenCalled();
+      expect(mockSignInOauth2).not.toHaveBeenCalled();
+    });
+
+    it.each(['signed_out', 'error'])(
+      'does not auto-start when the %s param is present',
+      async (param) => {
+        mockOAuthProviders.value = ['generic-oidc'];
+        mockSearchParamsGet.mockImplementation((key: string) => (key === param ? '1' : null));
+
+        const { result } = renderHook(() => useSignIn());
+
+        await act(async () => {
+          await Promise.resolve();
+        });
+
+        expect(mockSignInOauth2).not.toHaveBeenCalled();
+        expect(result.current.autoSsoActive).toBe(false);
+      },
+    );
+
+    it('falls back to the form when the auto-start fails', async () => {
+      mockOAuthProviders.value = ['generic-oidc'];
+      mockSignInOauth2.mockResolvedValue({
+        error: { message: 'OIDC start failed', status: 500 },
+      });
+
+      const { result } = renderHook(() => useSignIn());
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockSignInOauth2).toHaveBeenCalledTimes(1);
+      expect(result.current.autoSsoActive).toBe(false);
+      expect(mockMessageError).toHaveBeenCalled();
     });
   });
 

@@ -398,7 +398,29 @@ export const useSignIn = () => {
       })
     : resolvedProviders;
 
+  // With exactly one SSO provider the hosted accounts site is the login surface:
+  // start the flow immediately instead of showing a local form. Suppressed after
+  // explicit sign-out or an auth error so the user isn't bounced straight back in
+  // (the IdP session may still be alive) and can see what went wrong.
+  const suppressAutoSso = Boolean(searchParams.get('signed_out') || searchParams.get('error'));
+  const autoSsoProvider =
+    !suppressAutoSso && resolvedProviders.length === 1 ? resolvedProviders[0] : null;
+  const [autoSsoAttempted, setAutoSsoAttempted] = useState(false);
+
+  useEffect(() => {
+    if (!autoSsoProvider || autoSsoAttempted) return;
+    setAutoSsoAttempted(true);
+    void handleSocialSignIn(autoSsoProvider);
+  }, [autoSsoProvider, autoSsoAttempted, handleSocialSignIn]);
+
+  // True while the auto-start is armed or in flight — callers render a loading
+  // state instead of the form. Turns false if the start fails so the form can
+  // serve as the fallback surface.
+  const autoSsoActive =
+    autoSsoProvider !== null && (!autoSsoAttempted || socialLoading === autoSsoProvider);
+
   return {
+    autoSsoActive,
     disableEmailPassword,
     email,
     form,

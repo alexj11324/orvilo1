@@ -24,6 +24,7 @@ import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
 import { TaskIntentService } from '@/server/services/task/intent';
+import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { AcceptanceService } from '@/server/services/verify/acceptanceService';
@@ -47,6 +48,7 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
       agentModel: new AgentModel(ctx.serverDB, ctx.userId, wsId),
       briefModel: new BriefModel(ctx.serverDB, ctx.userId, wsId),
       editLockService: new EditLockService(ctx.userId),
+      taskIntegration: new TaskIntegrationService(ctx.serverDB, ctx.userId, wsId),
       taskLifecycle: new TaskLifecycleService(ctx.serverDB, ctx.userId, wsId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, wsId),
       taskIntentService: new TaskIntentService(ctx.serverDB, ctx.userId, wsId),
@@ -861,6 +863,15 @@ export const taskRouter = router({
       // (per docs/usage/workspace-permissions: bulk actions only affect
       // caller-created content).
       const restrictToCreator = !!ctx.workspaceId;
+      // Worktree teardown must precede the delete: task_topics rows (and
+      // their integration records) cascade away with the task rows.
+      const { tasks: doomed } = await model.list({
+        createdByUserId: restrictToCreator ? ctx.userId : undefined,
+        limit: 10_000,
+      });
+      await Promise.allSettled(
+        doomed.map((task) => ctx.taskIntegration.cleanupTaskWorktrees(task.id)),
+      );
       const count = await model.deleteAll({ restrictToCreator });
       return { count, message: `${count} tasks deleted`, success: true };
     } catch (error) {
@@ -878,6 +889,9 @@ export const taskRouter = router({
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
+      // Tear down provisioned run worktrees before the task_topics rows
+      // cascade away with the task. Best-effort — never blocks the delete.
+      await ctx.taskIntegration.cleanupTaskWorktrees(task.id);
       await model.delete(task.id);
       return { data: task, message: 'Task deleted', success: true };
     } catch (error) {

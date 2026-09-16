@@ -96,14 +96,19 @@ export class TaskIntegrationService {
       if (record.role === 'integrate' && record.state !== 'merging') return 'settled';
 
       const topicId = taskTopic.topicId;
-      if (record.role === 'task') {
-        return record.repo
-          ? await this.integrateRemoteRun(task, topicId, record)
-          : await this.integrateTaskRun(task, topicId, record);
-      }
-      return record.repo
-        ? await this.finalizeRemoteCorrectiveRun(task, topicId, record)
-        : await this.finalizeCorrectiveRun(task, topicId, record);
+      const outcome =
+        record.role === 'task'
+          ? record.repo
+            ? await this.integrateRemoteRun(task, topicId, record)
+            : await this.integrateTaskRun(task, topicId, record)
+          : record.repo
+            ? await this.finalizeRemoteCorrectiveRun(task, topicId, record)
+            : await this.finalizeCorrectiveRun(task, topicId, record);
+      // A terminal 'blocked' abandons the merge pipeline: tear down the run's
+      // task worktree and the shared integration worktree so neither leaks on
+      // the device. Best-effort — cleanup never re-blocks a parked task.
+      if (outcome === 'blocked') await this.cleanupTaskWorktrees(task.id);
+      return outcome;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Integration failed';
       log('integrateOnComplete: %s failed — %s', task.identifier, message);
@@ -111,7 +116,99 @@ export class TaskIntegrationService {
         lastError: message,
         state: 'blocked',
       });
+      // An infra failure mid-merge can leave both worktrees behind — the same
+      // best-effort teardown as the explicit blocked paths applies.
+      await this.cleanupTaskWorktrees(task.id);
       return 'blocked';
+    }
+  }
+
+  /**
+   * Best-effort teardown of a task's leftover device worktrees — invoked when
+   * the task is canceled or deleted, and internally when a merge blocks.
+   *
+   * A `task_topics` row is a cleanup candidate when its integration record is
+   * device-bound and may still own an on-disk worktree: a non-terminal record
+   * (pending / merging / conflict) abandoned mid-pipeline, or a terminal one
+   * whose earlier cleanup never ran or failed (`worktreeCleaned !== true`).
+   * Each candidate contributes its `worktreePath` and recorded
+   * `integrationWorktreePath` to a deduped removal set — corrective rows alias
+   * the integration worktree under `worktreePath`, so the set prevents a
+   * double-removal.
+   *
+   * Remote records (`repo`, no device fields) never touch device RPCs — their
+   * clone lived inside an ephemeral sandbox. The detached integration
+   * worktree is never removed here either: it is shared per (repo, base)
+   * across tasks, so deleting it on one task's teardown could destroy
+   * another task's in-flight merge on the same base — it stays behind as
+   * deliberately retained infra, the same as after a successful merge.
+   * Only the task-scoped worktree (`role: 'task'` rows' `worktreePath`) is
+   * removed; on an 'integrate' row `worktreePath` aliases the shared one.
+   *
+   * Never throws — cleanup runs on cancel/delete paths where a failure must
+   * not break the primary operation. A removal that fails leaves
+   * `worktreeCleaned` false so a later pass can retry.
+   */
+  async cleanupTaskWorktrees(taskId: string): Promise<void> {
+    try {
+      const rows = await this.taskTopicModel.findByTaskId(taskId);
+      const candidates: { paths: string[]; topicId: string }[] = [];
+      const removals = new Map<string, { deviceId: string; repoPath: string }>();
+
+      for (const row of rows) {
+        const record = row.integration;
+        if (!row.topicId || !record || record.repo) continue;
+        if (!record.deviceId || !record.repoPath) continue;
+        const stale =
+          record.state === 'pending' ||
+          record.state === 'merging' ||
+          record.state === 'conflict' ||
+          record.worktreeCleaned !== true;
+        if (!stale) continue;
+
+        const paths = (record.role === 'task' ? [record.worktreePath] : []).filter(
+          (path): path is string => !!path && path !== record.repoPath,
+        );
+        if (paths.length === 0) continue;
+
+        candidates.push({ paths, topicId: row.topicId });
+        for (const worktreePath of paths) {
+          removals.set(worktreePath, { deviceId: record.deviceId, repoPath: record.repoPath });
+        }
+      }
+      if (candidates.length === 0) return;
+
+      const removed = new Map<string, boolean>();
+      for (const [worktreePath, target] of removals) {
+        const result = await deviceGateway.removeGitWorktree({
+          deviceId: target.deviceId,
+          path: target.repoPath,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+          worktreePath,
+        });
+        removed.set(worktreePath, result.success);
+        if (!result.success) {
+          log(
+            'cleanupTaskWorktrees: remove failed for task %s path %s — %s',
+            taskId,
+            worktreePath,
+            result.error,
+          );
+        }
+      }
+
+      for (const { paths, topicId } of candidates) {
+        await this.taskTopicModel
+          .updateIntegration(taskId, topicId, {
+            worktreeCleaned: paths.every((path) => removed.get(path) === true),
+          })
+          .catch((error) =>
+            log('cleanupTaskWorktrees: flag update failed for %s/%s — %O', taskId, topicId, error),
+          );
+      }
+    } catch (error) {
+      log('cleanupTaskWorktrees: failed for task %s — %O', taskId, error);
     }
   }
 
@@ -147,6 +244,13 @@ export class TaskIntegrationService {
       });
       return 'blocked';
     }
+
+    // Record the integration worktree as soon as it exists so a later
+    // blocked/cancel cleanup can find it — the merge-report branches below
+    // only persist it on conflict.
+    await this.taskTopicModel.updateIntegration(task.id, topicId, {
+      integrationWorktreePath,
+    });
 
     const merged = await deviceGateway.mergeGitBranch({
       baseRef: this.baseRef(record),
@@ -407,6 +511,12 @@ export class TaskIntegrationService {
    * Merge landed: push the result to `origin/<base>` when the repo has a
    * remote, then drop the task's worktree. Push failure doesn't undo the local
    * merge — it's recorded on the record for a human to re-push.
+   *
+   * The detached integration worktree is deliberately kept: it is shared per
+   * (repo, base) and reused by the next merge — `ensureIntegrationWorktree`
+   * tolerates a directory that already exists. {@link cleanupTaskWorktrees}
+   * never removes it either: it is shared infra across tasks, not owned by
+   * any single run.
    */
   private async landMerge(
     task: TaskItem,

@@ -41,6 +41,7 @@ import { AiAgentService } from '../aiAgent';
 import { extractFileIdsFromEditorData } from '../file/extractFileIdsFromEditorData';
 import { resolveAttachmentMetadata } from '../file/resolveAttachments';
 import { type SubtaskGraphPlan, TaskGraphService } from '../taskGraph';
+import { TaskIntegrationService } from '../taskIntegration';
 import { type ReviewResult, TaskReviewService } from '../taskReview';
 import { TaskRunnerService } from '../taskRunner';
 import { createTaskSchedulerModule } from '../taskScheduler';
@@ -49,6 +50,11 @@ import { collapseActivityLog } from './collapseActivityLog';
 
 const emptyWorkspace: WorkspaceData = { nodeMap: {}, tree: [] };
 const UNTITLED_TOPIC_TITLE = 'Untitled';
+/**
+ * Statuses at which the task's merge pipeline is abandoned for good — any
+ * provisioned run worktrees it left behind are torn down best-effort.
+ */
+const TERMINAL_TASK_STATUSES = new Set<TaskStatus>(['canceled', 'completed', 'failed']);
 const TASK_DETAIL_DIRECT_TOPIC_LIMIT = 100;
 /**
  * Newest raw activity rows read per detail fetch, before collapsing. The
@@ -336,6 +342,12 @@ export class TaskService {
 
     await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
     await this.taskModel.updateStatus(target.taskId, 'paused');
+
+    // The canceled run's provisioned worktrees are abandoned — tear them down
+    // best-effort; a cleanup failure must not break the cancel.
+    await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
+      target.taskId,
+    );
   }
 
   /**
@@ -472,6 +484,12 @@ export class TaskService {
       await this.interruptTaskOperation(aiAgentService, target.operationId);
     }
 
+    // The task_topics row is about to go — tear down the run's provisioned
+    // worktrees while its integration record still exists (best-effort).
+    await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
+      target.taskId,
+    );
+
     await this.taskTopicModel.remove(target.taskId, topicId);
     await this.topicModel.delete(topicId);
   }
@@ -601,6 +619,15 @@ export class TaskService {
       ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
       : await this.taskModel.updateStatus(resolved.id, status, extra);
     if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+
+    // A terminal transition abandons the task's merge pipeline — tear down
+    // any provisioned worktrees its runs left behind. Best-effort: cleanup
+    // must never break the status change itself.
+    if (TERMINAL_TASK_STATUSES.has(status)) {
+      await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
+        task.id,
+      );
+    }
 
     // Stamp the schedule run-count window each time the user (re)starts a
     // scheduled task. The cron dispatcher itself flips a task running →
@@ -816,6 +843,11 @@ export class TaskService {
         .filter((topic) => topic.operationId && !interruptedOperationIds.has(topic.operationId))
         .map((topic) => aiAgentService.interruptTask({ operationId: topic.operationId! })),
     );
+
+    // Every cascaded task reached a terminal status — its merge pipeline is
+    // abandoned, so tear down any provisioned worktrees it left behind.
+    const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
+    await Promise.allSettled(targetTasks.map((t) => integrationService.cleanupTaskWorktrees(t.id)));
 
     const task = updatedTasks.find(({ id }) => id === resolved.id);
     if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });

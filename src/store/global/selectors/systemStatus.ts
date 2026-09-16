@@ -180,15 +180,32 @@ const sidebarExpandedKeys =
  * determines where the sidebar pushes items to the bottom. */
 export const SIDEBAR_SPACER_ID = '__spacer__';
 
+/**
+ * The sidebar's default order, in one list split by the spacer sentinel into
+ * two groups: the primary working set above it, and secondary entries below.
+ *
+ * `resource` sits below the spacer on purpose (S50). It is a shared library,
+ * not a peer of Tasks and Automations, and in the top group it read as a third
+ * first-class destination competing with them. The registry already carries the
+ * same judgement — `resource` is the only `secondary` route in
+ * `NAVIGATION_ROUTES` — this is where that tier reaches the sidebar.
+ *
+ * Moving the key here only changes the default: `withAllKnownKeys` backfills
+ * missing defaults and never reorders, so a stored order keeps `resource` where
+ * its owner put it. That is deliberate — `reorderSidebarItems` exists so users
+ * can arrange this list, and a read-path re-anchor would silently undo their
+ * arrangement on every render. The default, the reset action and the unsaved
+ * baseline of the customizer all pick the new order up.
+ */
 export const DEFAULT_SIDEBAR_ITEMS: string[] = [
   'tasks',
   'automations',
-  'resource',
   'recents',
   'project',
   'private',
   'agent',
   SIDEBAR_SPACER_ID,
+  'resource',
 ];
 
 /**
@@ -295,10 +312,10 @@ const withAllKnownKeys = (order: string[]): string[] => {
   const missingBottom: string[] = [];
   for (const k of DEFAULT_SIDEBAR_ITEMS) {
     if (k === SIDEBAR_SPACER_ID || present.has(k)) continue;
-    // `missingBottom` is empty today — every entry below the spacer was retired,
-    // so `DEFAULT_BOTTOM_KEYS` is an empty set. The split is kept so a future
-    // bottom-group default lands below the spacer instead of silently appearing
-    // in the top group.
+    // The split keeps a bottom-group default landing below the spacer for a
+    // user who stored an order without it, instead of silently appearing in the
+    // top group and reading as primary. `resource` is the entry that exercises
+    // this today (S50 demoted it to the bottom group).
     (DEFAULT_BOTTOM_KEYS.has(k) ? missingBottom : missingTop).push(k);
   }
 

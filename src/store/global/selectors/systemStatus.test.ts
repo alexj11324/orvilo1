@@ -346,12 +346,12 @@ describe('systemStatusSelectors', () => {
       expect(items).toEqual([
         'tasks',
         'automations',
-        'resource',
         'private',
         'agent',
         'recents',
         'project',
         SIDEBAR_SPACER_ID,
+        'resource',
       ]);
       // accordion block is flush against the spacer, in stored order
       expect(items[spacerIdx - 3]).toBe('agent');
@@ -359,7 +359,10 @@ describe('systemStatusSelectors', () => {
       expect(items[spacerIdx - 1]).toBe('project');
       // missing defaults slot in just before the accordion
       expect(items.indexOf('tasks')).toBeLessThan(spacerIdx - 3);
-      expect(items.indexOf('resource')).toBeLessThan(spacerIdx - 3);
+      // ...except a bottom-group default, which backfills below the spacer so a
+      // user who never stored `resource` still gets it as a secondary entry
+      // rather than as a third peer of tasks and automations.
+      expect(items.indexOf('resource')).toBeGreaterThan(spacerIdx);
     });
 
     it('should migrate legacy `sidebarSectionOrder` accordion order into the default layout', () => {
@@ -375,12 +378,12 @@ describe('systemStatusSelectors', () => {
       expect(items).toEqual([
         'tasks',
         'automations',
-        'resource',
         'private',
         'agent',
         'recents',
         'project',
         SIDEBAR_SPACER_ID,
+        'resource',
       ]);
     });
 
@@ -394,12 +397,12 @@ describe('systemStatusSelectors', () => {
       expect(items).toEqual([
         'tasks',
         'automations',
-        'resource',
         'private',
         'recents',
         'project',
         'agent',
         SIDEBAR_SPACER_ID,
+        'resource',
       ]);
     });
 

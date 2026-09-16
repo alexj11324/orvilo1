@@ -540,6 +540,17 @@ import { imageRouter } from '@/server/routers/lambda/image';
 **建立薄路由或接入等价现有路由**」，并且特意警告「旧首页的 `news` 可能是执行简报，**不得仅凭名字当作新闻推荐删除**」。
 本轮 Web 首页改动完成了「默认进入任务页」，但没有完成这一步。
 
+**已排除一条看似便宜的错路（复核得出，写下来免得下一个人再试）**：
+「把 `(main)/home` 注册成 Web 可达路由，让旧页面复活」**结构性不可行**。
+`features/HomeLayout` 是**根路径专属布局**：`if (!hasActivated) return null;`，而
+`hasActivated` 只在 `pathname === '/' || '/{slug}'` 时为真（`HomeLayout/index.tsx:19-22,36`）。
+挂在 `/home` 会直接渲染 `null`。
+
+**但这同时说明「薄路由」是可行的**：`HomeLayout` **不提供任何 context**（`createContext` 计数为 0），
+而 `Home` 页面与 `HomeInbox` 都不依赖它 —— 所以 `HomeInbox` 可以挂在正常的 `(main)/_layout` 下，
+不需要那个根布局。按方案的措辞（「抽出可独立挂载的能力」而不是搬整个旧首页），应当只挂**收件箱这一项能力**，
+而不是把 Home 的其余区块（composer、定时任务、最近访问、画像）一并带回。
+
 **两条候选修法（都需在真实 Web 上验证，属 S80 或紧接着的 S20 收尾）**：
 
 | 选项              | 做法                                                                                                        | 代价 / 风险                                                                                                    |

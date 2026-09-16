@@ -114,9 +114,7 @@ const ScreenCaptureOverlay = memo(() => {
     window.electronAPI?.invoke?.('screenCapture.submit', {
       agentId: payload.agentId,
       captureIds: payload.captureIds,
-      modelId: payload.modelId,
       prompt: payload.prompt,
-      provider: payload.provider,
     });
   }, []);
 
@@ -493,8 +491,6 @@ const ScreenCaptureOverlay = memo(() => {
         agents={session?.agents}
         capturing={isCapturing}
         hidden={panelHidden}
-        modelId={session?.defaultModelId}
-        models={session?.models}
         placementResetKey={placementResetKey}
         selections={selections}
         theme={session?.theme}

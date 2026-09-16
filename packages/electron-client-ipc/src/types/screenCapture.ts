@@ -19,16 +19,6 @@ export interface ScreenCaptureAgentOption {
   title: string;
 }
 
-/**
- * Lightweight model descriptor for the overlay selector.
- * Populated by the renderer data layer (TRPC), not the IPC service.
- */
-export interface ScreenCaptureModelOption {
-  displayName?: string | null;
-  id: string;
-  provider: string;
-}
-
 export interface ScreenCaptureOverlayTheme {
   colorBgElevated: string;
   colorBorderSecondary: string;
@@ -52,11 +42,7 @@ export interface ScreenCaptureSession {
   /** Optional agent list; overlay may still render with empty list. */
   agents?: ScreenCaptureAgentOption[];
   defaultAgentId?: string;
-  defaultModelId?: string;
-  defaultProvider?: string;
   displayBounds: { height: number; width: number; x: number; y: number };
-  /** Optional model list. */
-  models?: ScreenCaptureModelOption[];
   scaleFactor: number;
   theme?: ScreenCaptureOverlayTheme;
   windows: ScreenCaptureWindowInfo[];
@@ -90,6 +76,10 @@ export interface CapturePreviewResult {
 }
 
 export interface ScreenCaptureSubmitParams {
+  /**
+   * The agent the dispatch targets. Model/provider resolve from this agent's
+   * stored config downstream — the overlay does not pick them.
+   */
   agentId?: string;
   /**
    * Identifiers of captures that were pre-uploaded during preview. The main
@@ -97,9 +87,7 @@ export interface ScreenCaptureSubmitParams {
    * dispatches `sendMessage` with the resolved files.
    */
   captureIds: string[];
-  modelId?: string;
   prompt: string;
-  provider?: string;
 }
 
 export type OverlayCaptureUploadStatus = 'uploading' | 'ready' | 'failed';

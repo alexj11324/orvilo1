@@ -6,7 +6,6 @@ import type {
   OverlayCaptureUploadStatus,
   OverlayCaptureUploadStatusPayload,
   ScreenCaptureAgentOption,
-  ScreenCaptureModelOption,
   ScreenCaptureOverlayTheme,
   ScreenCaptureSession,
   ScreenCaptureSubmitParams,
@@ -30,9 +29,6 @@ const HIDE_SETTLE_MS = 40;
 export interface OverlaySnapshotPayload {
   agents?: ScreenCaptureAgentOption[];
   defaultAgentId?: string;
-  defaultModelId?: string;
-  defaultProvider?: string;
-  models?: ScreenCaptureModelOption[];
   theme?: ScreenCaptureOverlayTheme;
 }
 
@@ -46,7 +42,7 @@ export class ScreenCaptureManager {
   private overlayWindow: BrowserWindow | null = null;
   private session: ScreenCaptureSession | null = null;
   /**
-   * Most recent agent/model snapshot published by the main renderer via
+   * Most recent agent snapshot published by the main renderer via
    * `screenCapture.publishOverlaySnapshot`. Populated asynchronously; the
    * overlay still opens with an empty selector list if the renderer has not
    * pushed yet.
@@ -247,7 +243,7 @@ export class ScreenCaptureManager {
 
   async handleSubmit(params: ScreenCaptureSubmitParams): Promise<void> {
     logger.info(
-      `Submit capture — promptLen=${params.prompt.length} captureIds=${params.captureIds.length} agentId=${params.agentId ?? '-'} modelId=${params.modelId ?? '-'}`,
+      `Submit capture — promptLen=${params.prompt.length} captureIds=${params.captureIds.length} agentId=${params.agentId ?? '-'}`,
     );
 
     // Close the overlay first so focus transfers cleanly to the main window.

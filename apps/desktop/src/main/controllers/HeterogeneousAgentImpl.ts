@@ -93,11 +93,14 @@ import {
   resolveHeteroSpawnCwd,
 } from '@orvilo/heterogeneous-agents/workingDirectory';
 import type {
+  BuiltinHeterogeneousAgentType,
   HeterogeneousAgentModelCatalog,
   HeterogeneousServerDefaultApiConfig,
   HeteroSessionImportMessage,
   ListHeterogeneousAgentModelsParams,
+  OrviloEngineKind,
 } from '@orvilo/types';
+import { resolveOrviloCliAgentType, resolveOrviloEngine } from '@orvilo/types';
 import { sleep } from '@orvilo/utils/sleep';
 import { app as electronApp, BrowserWindow } from 'electron';
 import { isPlainObject } from 'es-toolkit';
@@ -236,8 +239,13 @@ export const redactPromptArgs = (
 // ─── IPC types ───
 
 interface StartSessionParams {
-  /** Agent type key (e.g., 'claude-code'). Defaults to 'claude-code'. */
-  agentType?: HeterogeneousCliAgentType;
+  /**
+   * Agent type key (e.g., 'claude-code'). Defaults to 'claude-code'. May carry
+   * the builtin harness type `'orvilo'`; the session then resolves the
+   * engine's CLI family (`claude-code` / `codex`) for spawn/preflight while
+   * `orviloEngine` pins the managed transport.
+   */
+  agentType?: BuiltinHeterogeneousAgentType | HeterogeneousCliAgentType;
   /** Additional CLI arguments */
   args?: string[];
   /** Command to execute */
@@ -248,6 +256,13 @@ interface StartSessionParams {
   env?: Record<string, string>;
   /** Protocol-native model selected after session setup (TRAE ACP only). */
   initialModel?: string;
+  /**
+   * Builtin Orvilo engine selection. When set, the session MUST run on the
+   * managed transport for that engine — `claude-sdk` forces
+   * `sendPromptWithClaudeSdk`, `codex-app-server` forces
+   * `sendPromptWithCodexAppServer` — regardless of the Labs toggles.
+   */
+  orviloEngine?: OrviloEngineKind;
   /** Credential-free LobeHub Provider reference. Desktop main resolves its secrets. */
   providerBinding?: HeterogeneousProviderBindingReference;
   /** Session ID to resume (for multi-turn) */
@@ -356,6 +371,11 @@ export interface SessionInfo {
 
 interface AgentSession {
   agentSessionId?: string;
+  /**
+   * Resolved CLI family this session executes through. For the builtin
+   * `'orvilo'` harness this is the engine's family (`claude-code` / `codex`) —
+   * `orviloEngine` below then selects the managed transport.
+   */
   agentType: HeterogeneousCliAgentType;
   appServerSession?: CodexThreadSession;
   args: string[];
@@ -380,6 +400,11 @@ interface AgentSession {
   modelSource?: string;
   modelVerificationLastAttemptAt?: number;
   modelVerificationLastAttemptSessionId?: string;
+  /**
+   * Set only for builtin-Orvilo sessions: forces the engine's managed
+   * transport (Claude Agent SDK / Codex app-server) without the Labs toggles.
+   */
+  orviloEngine?: OrviloEngineKind;
   process?: ChildProcess;
   /**
    * Absolute CLI path resolved by spawn preflight detection. Used for spawn()
@@ -1355,7 +1380,20 @@ export default class HeterogeneousAgentCtr {
    */
   async startSession(params: StartSessionParams): Promise<StartSessionResult> {
     const sessionId = randomUUID();
-    const agentType = params.agentType || 'claude-code';
+    const declaredAgentType = params.agentType || 'claude-code';
+    // The builtin Orvilo harness declares itself as `agentType: 'orvilo'` (or
+    // implicitly via `orviloEngine`); it has no executable of its own. Resolve
+    // the engine's CLI family once so every downstream gate — driver, command
+    // resolution, provider bindings, preflight, error classification — works
+    // in family terms. `orviloEngine` on the session keeps the managed
+    // transport selection.
+    const orviloEngine =
+      declaredAgentType === 'orvilo' || params.orviloEngine !== undefined
+        ? resolveOrviloEngine(params.orviloEngine)
+        : undefined;
+    const agentType: HeterogeneousCliAgentType = orviloEngine
+      ? resolveOrviloCliAgentType(orviloEngine)
+      : (declaredAgentType as HeterogeneousCliAgentType);
     const driver = getHeterogeneousAgentDriver(agentType);
     let hostedProviderBinding: HostedProviderBinding | undefined;
 
@@ -1431,6 +1469,7 @@ export default class HeterogeneousAgentCtr {
           ? params.providerBinding.apiConfig
           : undefined,
       model: agentType === 'trae' && hostedProviderBinding ? undefined : params.initialModel,
+      orviloEngine,
       sessionId,
       resumeSessionId,
       useClaudeCodeSdk: params.useClaudeCodeSdk,
@@ -1548,7 +1587,9 @@ export default class HeterogeneousAgentCtr {
 
     if (
       session.agentType === 'claude-code' &&
-      (session.useClaudeCodeSdk || this.isClaudeCodeSdkLabEnabled)
+      (session.orviloEngine === 'claude-sdk' ||
+        session.useClaudeCodeSdk ||
+        this.isClaudeCodeSdkLabEnabled)
     ) {
       try {
         return await this.sendPromptWithClaudeSdk(params, session);
@@ -1559,11 +1600,18 @@ export default class HeterogeneousAgentCtr {
       }
     }
 
+    // Codex runs are non-interactive on every transport: the app-server thread
+    // starts with approvalPolicy 'never' (no AskUser/MCP intervention bridge,
+    // unlike the Claude SDK path) and the exec fallback is one-shot. An Orvilo
+    // agent on the codex engine therefore cannot ask the user mid-run or call
+    // the lobe_cc builtin tools — a known v1 asymmetry between the engines.
     if (
       session.agentType === 'codex' &&
       !session.hostedProviderBinding &&
       !session.codexAppServerFallback &&
-      (session.useCodexAppServer || this.isCodexAppServerLabEnabled)
+      (session.orviloEngine === 'codex-app-server' ||
+        session.useCodexAppServer ||
+        this.isCodexAppServerLabEnabled)
     ) {
       const unsupportedArgs = getCodexAppServerUnsupportedArgs(session.args, {
         resume: !!session.agentSessionId,
@@ -1799,33 +1847,83 @@ export default class HeterogeneousAgentCtr {
       return;
     }
 
-    const sdkSession = new ClaudeAgentSdkSession({
-      args: session.args,
-      commandPath,
-      cwd,
-      env: spawnEnv,
-      onEvents: async (events) => {
-        for (const event of events) {
-          this.broadcast('heteroAgentEvent', {
-            event,
-            sessionId: session.sessionId,
-          });
+    // Builtin-Orvilo sessions mount the `lobe_cc` builtin MCP server through
+    // the SDK's `mcpServers` option — the CLI-spawn path wires the same server
+    // via `--mcp-config`. The bridge's event pump has no child-process stdout
+    // queue to share, so it starts here and is torn down with the run.
+    const sdkIntervention =
+      session.orviloEngine === 'claude-sdk'
+        ? await this.setupInterventionForOp(params.operationId, 'claude-code', {
+            agentId: params.agentId,
+            topicId: params.topicId,
+          }).catch((err) => {
+            logger.warn(
+              'Failed to set up AskUserQuestion bridge for Orvilo SDK session — proceeding without it:',
+              err,
+            );
+            return undefined;
+          })
+        : undefined;
+    if (sdkIntervention) {
+      const pumpDone = (async () => {
+        for await (const event of sdkIntervention.bridge.events()) {
+          this.broadcast('heteroAgentEvent', { event, sessionId: session.sessionId });
         }
-      },
-      onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
-      onRuntimeStatus: (status) => {
-        this.broadcast('heteroAgentRuntimeStatus', status);
-      },
-      onSessionId: (agentSessionId) => {
-        if (agentSessionId !== session.agentSessionId) session.agentSessionId = agentSessionId;
-      },
-      onStderr: (data) => this.appendCliTraceFile(traceSession, 'stderr.log', data),
-      operationId: params.operationId,
-      resumeSessionId: session.agentSessionId,
-      sessionId: session.sessionId,
-      stdinPayload,
-      uploadImage: this.uploadResultImage,
-    });
+      })().catch((error) => {
+        logger.warn('Orvilo SDK AskUserQuestion bridge pump error:', error);
+      });
+      const slot = this.opIdToIntervention.get(params.operationId);
+      if (slot) slot.pumpDone = pumpDone;
+    }
+    const sdkMcpServers =
+      sdkIntervention && this.builtinMcpServer
+        ? {
+            lobe_cc: {
+              alwaysLoad: true,
+              type: 'http' as const,
+              url: this.builtinMcpServer.urlForOperation(params.operationId),
+            },
+          }
+        : undefined;
+
+    let sdkSession: ClaudeAgentSdkSession;
+    try {
+      sdkSession = new ClaudeAgentSdkSession({
+        args: session.args,
+        commandPath,
+        cwd,
+        env: spawnEnv,
+        ...(sdkMcpServers ? { mcpServers: sdkMcpServers } : {}),
+        onEvents: async (events) => {
+          for (const event of events) {
+            this.broadcast('heteroAgentEvent', {
+              event,
+              sessionId: session.sessionId,
+            });
+          }
+        },
+        onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+        onRuntimeStatus: (status) => {
+          this.broadcast('heteroAgentRuntimeStatus', status);
+        },
+        onSessionId: (agentSessionId) => {
+          if (agentSessionId !== session.agentSessionId) session.agentSessionId = agentSessionId;
+        },
+        onStderr: (data) => this.appendCliTraceFile(traceSession, 'stderr.log', data),
+        operationId: params.operationId,
+        resumeSessionId: session.agentSessionId,
+        sessionId: session.sessionId,
+        stdinPayload,
+        uploadImage: this.uploadResultImage,
+      });
+    } catch (error) {
+      // Construction failed before run() took over — the intervention bridge
+      // and its tmp config are not covered by the run's finally below.
+      await sdkIntervention?.cleanup().catch((cleanupError) => {
+        logger.warn('Orvilo SDK intervention cleanup failed:', cleanupError);
+      });
+      throw error;
+    }
 
     session.sdkSession = sdkSession;
 
@@ -1868,6 +1966,9 @@ export default class HeterogeneousAgentCtr {
         cause: error,
       });
     } finally {
+      await sdkIntervention?.cleanup().catch((cleanupError) => {
+        logger.warn('Orvilo SDK intervention cleanup failed:', cleanupError);
+      });
       await session.hostedProviderBinding?.cleanup();
     }
   }
@@ -1921,7 +2022,9 @@ export default class HeterogeneousAgentCtr {
     }
 
     const clientOptions = {
-      args: appServerArgs.slice(0, -1),
+      // `buildCodexAppServerArgs` ends with the 'app-server' subcommand, which
+      // the client re-appends itself — strip it here.
+      args: appServerArgs.filter((arg) => arg !== 'app-server'),
       clientVersion: electronApp.getVersion(),
       commandPath,
       cwd,

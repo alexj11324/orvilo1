@@ -1,4 +1,5 @@
 import { isDesktop } from '@orvilo/const';
+import { resolveHeteroCliAgentType } from '@orvilo/types';
 import urlJoin from 'url-join';
 
 import { useQueryRoute } from '@/hooks/useQueryRoute';
@@ -21,8 +22,11 @@ export const useHeteroAgentCloudConfig = (agentId: string): HeteroAgentCloudConf
     (s) => agentByIdSelectors.getAgencyConfigById(agentId)(s)?.heterogeneousProvider,
   );
 
-  // Only claude-code agents require a cloud credential — codex and other providers do not use this key
-  const isClaudeCode = heterogeneousProvider?.type === 'claude-code';
+  // Only claude-code-family agents require a cloud credential — codex and
+  // other providers do not use this key. The builtin Orvilo harness resolves
+  // to its engine's family, so an orvilo + claude-sdk agent needs the same
+  // CLAUDE_CODE_OAUTH_TOKEN a claude-code agent does.
+  const isClaudeCode = resolveHeteroCliAgentType(heterogeneousProvider) === 'claude-code';
   const needsCredCheck = !isDesktop && isClaudeCode;
 
   // Only fetch credentials when actually needed

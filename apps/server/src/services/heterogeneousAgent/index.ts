@@ -3,6 +3,7 @@ import { type ISnapshotStore, parseOperationId } from '@orvilo/agent-tracing';
 import type { LobeChatDatabase } from '@orvilo/database';
 import {
   classifyHeteroProcessFailure,
+  getNativeHeteroSessionBindingKey,
   isHeteroStatusGuideErrorData,
   type LocalHeterogeneousAgentType,
 } from '@orvilo/heterogeneous-agents';
@@ -195,7 +196,13 @@ export class HeterogeneousAgentService {
     // events that already landed are skipped via the handler's idempotency
     // map keyed on (stepIndex, type, timestamp).
     try {
-      await this.persistenceHandler.ingest({ assistantMessageId, events, operationId, topicId });
+      await this.persistenceHandler.ingest({
+        agentType,
+        assistantMessageId,
+        events,
+        operationId,
+        topicId,
+      });
     } catch (err) {
       if (err instanceof StaleHeteroOperationError) {
         log(
@@ -369,9 +376,16 @@ export class HeterogeneousAgentService {
     }
 
     const resumeBindingUpdate = sessionId
-      ? { heteroSessionId: sessionId }
+      ? {
+          // Bind the saved native session to the CLI family that produced it
+          // (`agentType` is already engine-normalized by `lh hetero exec`) so a
+          // later turn running under a different family/engine can't silently
+          // resume it — mirrors the renderer's binding-key tracking.
+          heteroSessionBindingKey: getNativeHeteroSessionBindingKey(agentType),
+          heteroSessionId: sessionId,
+        }
       : result === 'error' && resumeSessionInvalidated
-        ? { heteroSessionId: undefined }
+        ? { heteroSessionBindingKey: undefined, heteroSessionId: undefined }
         : undefined;
     if (resumeBindingUpdate) {
       try {
@@ -581,10 +595,31 @@ export class HeterogeneousAgentService {
    *
    * Reads the same `topic.metadata.heteroSessionId` the desktop renderer
    * writes, so resume state is shared between desktop and cloud paths.
+   *
+   * `expectedBindingKey` is the caller's native binding identity (the engine's
+   * CLI family for Orvilo). A saved session carrying a *different* binding key
+   * — e.g. a Codex-family session while this turn runs the Claude engine — is
+   * refused so the next run cannot resume across engines. Sessions saved before
+   * binding tracking (no key) are grandfathered, matching the renderer.
    */
-  async getHeterogeneousResumeSessionId(topicId: string): Promise<string | undefined> {
+  async getHeterogeneousResumeSessionId(
+    topicId: string,
+    expectedBindingKey?: string,
+  ): Promise<string | undefined> {
     const topic = await this.topicModel.findById(topicId);
-    return topic?.metadata?.heteroSessionId;
+    const sessionId = topic?.metadata?.heteroSessionId;
+    if (!sessionId) return undefined;
+    const savedBindingKey = topic?.metadata?.heteroSessionBindingKey;
+    if (savedBindingKey && expectedBindingKey && savedBindingKey !== expectedBindingKey) {
+      log(
+        'getHeterogeneousResumeSessionId: binding mismatch topic=%s saved=%s expected=%s — skipping resume',
+        topicId,
+        savedBindingKey,
+        expectedBindingKey,
+      );
+      return undefined;
+    }
+    return sessionId;
   }
 }
 

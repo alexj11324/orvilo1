@@ -8,6 +8,7 @@ import {
   type HeterogeneousAgentRuntimeStatus,
   useWatchBroadcast,
 } from '@orvilo/electron-client-ipc';
+import { resolveHeteroCliAgentType } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ActivityIcon, CircleAlertIcon, RadioTowerIcon, TimerResetIcon } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -160,9 +161,13 @@ const HeteroControlBar = memo(() => {
   // samples quota through the gateway; `auto` has no concrete device to ask
   // and the cloud sandbox has no sampler, so both stay quota-less.
   const quotaDeviceId = executionTarget === 'device' ? agencyConfig?.boundDeviceId : undefined;
+  // The builtin Orvilo harness executes through its engine's CLI family, so
+  // quota/runtime badges gate on the resolved family rather than the declared
+  // provider type — an orvilo claude-sdk session is a Claude subscription run.
+  const heteroCliType = resolveHeteroCliAgentType(heteroProvider);
   const shouldShowClaudeQuota =
     isSubscriptionAuth &&
-    heteroProvider?.type === 'claude-code' &&
+    heteroCliType === 'claude-code' &&
     (isLocalHeteroExecution || !!quotaDeviceId);
 
   if (isAccessLoading) return null;
@@ -222,9 +227,9 @@ const HeteroControlBar = memo(() => {
   // desktop-local; the SDK runtime badge likewise reports this desktop's own
   // in-process runtime, not a remote device's.
   const shouldShowCodexQuota =
-    isSubscriptionAuth && heteroProvider?.type === 'codex' && isLocalHeteroExecution;
+    isSubscriptionAuth && heteroCliType === 'codex' && isLocalHeteroExecution;
   const shouldShowSdkRuntime =
-    heteroProvider?.type === 'claude-code' &&
+    heteroCliType === 'claude-code' &&
     isLocalHeteroExecution &&
     runtimeStatus?.transport === 'claude-sdk' &&
     visibleSdkRuntimeStates.has(runtimeStatus.state);

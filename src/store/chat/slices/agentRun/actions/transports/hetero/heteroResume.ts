@@ -1,4 +1,6 @@
-import type { ChatTopicMetadata } from '@orvilo/types';
+import { getNativeHeteroSessionBindingKey } from '@orvilo/heterogeneous-agents';
+import type { ChatTopicMetadata, HeterogeneousProviderConfig } from '@orvilo/types';
+import { resolveHeteroCliAgentType } from '@orvilo/types';
 
 import {
   getHeteroSessionBindingKeyForWorkingDirectory,
@@ -18,8 +20,18 @@ export interface HeteroResumeDecision {
   resumeSessionId: string | undefined;
 }
 
-export const getNativeHeteroSessionBindingKey = (agentType: string): string =>
-  `native:v1:${agentType}`;
+export { getNativeHeteroSessionBindingKey };
+
+/**
+ * Binding identity for a provider config. The builtin Orvilo harness resolves
+ * to its engine's CLI family (`claude-code` / `codex`), so the saved session
+ * can never be resumed across engines — and an Orvilo run CAN reuse a session
+ * originally created by the matching native CLI, since they share the same
+ * on-disk session store.
+ */
+export const getHeteroProviderSessionBindingKey = (
+  provider: Pick<HeterogeneousProviderConfig, 'engine' | 'type'>,
+): string => getNativeHeteroSessionBindingKey(resolveHeteroCliAgentType(provider) ?? provider.type);
 
 /**
  * Decide whether we can safely resume a prior heterogeneous-agent session for

@@ -18,6 +18,7 @@ import type {
 } from '@orvilo/heterogeneous-agents';
 import {
   createMainAgentRunState,
+  getNativeHeteroSessionBindingKey,
   isHeteroStatusGuideErrorData,
   reduceMainAgent,
   rehydrateSubagentRunsState,
@@ -126,6 +127,12 @@ interface AssistantMessageDbLike {
  */
 interface OperationState {
   agentId: string | null;
+  /**
+   * CLI family reported by the producer (engine-normalized for Orvilo runs).
+   * Bound to the persisted `heteroSessionId` so a later turn under a different
+   * family can't silently resume this session.
+   */
+  agentType?: string;
   /**
    * CC-native session id this run is producing, captured off the stream_start
    * event stream and stamped on every persisted message's
@@ -357,6 +364,7 @@ export class HeterogeneousPersistenceHandler {
    * the dedupe map, so the retry only re-runs the failed event onward.
    */
   async ingest(params: {
+    agentType?: string;
     assistantMessageId?: string;
     events: AgentStreamEvent[];
     operationId: string;
@@ -367,6 +375,7 @@ export class HeterogeneousPersistenceHandler {
       params.topicId,
       params.assistantMessageId,
     );
+    if (params.agentType) state.agentType = params.agentType;
     const batchMaxStepIndex = Math.max(...params.events.map((event) => event.stepIndex));
 
     // A different Lambda may have already processed `stream_start { newStep }`
@@ -497,12 +506,17 @@ export class HeterogeneousPersistenceHandler {
    * `TopicModel.updateMetadata` merges into existing JSONB so this does NOT
    * clobber `runningOperation` / `workingDirectory` / other peer fields.
    */
-  private async persistSessionId(topicId: string, sessionId: string): Promise<void> {
+  private async persistSessionId(state: OperationState, sessionId: string): Promise<void> {
     try {
-      await this.deps.topicModel.updateMetadata(topicId, { heteroSessionId: sessionId });
-      log('persisted sessionId topic=%s sessionId=%s', topicId, sessionId);
+      await this.deps.topicModel.updateMetadata(state.topicId, {
+        ...(state.agentType
+          ? { heteroSessionBindingKey: getNativeHeteroSessionBindingKey(state.agentType) }
+          : {}),
+        heteroSessionId: sessionId,
+      });
+      log('persisted sessionId topic=%s sessionId=%s', state.topicId, sessionId);
     } catch (err) {
-      log('persistSessionId failed topic=%s err=%O', topicId, err);
+      log('persistSessionId failed topic=%s err=%O', state.topicId, err);
     }
   }
 
@@ -1061,7 +1075,7 @@ export class HeterogeneousPersistenceHandler {
         // next turn to spawn a fresh CC session and drop all `--resume` history.
         // Writing it here makes resume survive abandon. The terminal service
         // path may still overwrite it after verifying topic ownership.
-        await this.persistSessionId(state.topicId, sid);
+        await this.persistSessionId(state, sid);
       }
     }
 

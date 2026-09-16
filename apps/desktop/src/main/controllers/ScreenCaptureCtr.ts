@@ -64,15 +64,13 @@ export default class ScreenCaptureCtr extends ControllerModule {
   }
 
   /**
-   * Renderer-driven snapshot of agents/models for the overlay selector. The
+   * Renderer-driven snapshot of agents for the overlay selector. The
    * main renderer pushes this whenever its data layer (TRPC stores) reports
    * a change; main process only caches and forwards — it does not fetch.
    */
   @IpcMethod()
   async publishOverlaySnapshot(payload: OverlaySnapshotPayload): Promise<void> {
-    logger.debug(
-      `publishOverlaySnapshot — agents=${payload.agents?.length ?? 0} models=${payload.models?.length ?? 0}`,
-    );
+    logger.debug(`publishOverlaySnapshot — agents=${payload.agents?.length ?? 0}`);
     this.app.screenCaptureManager.publishOverlaySnapshot(payload);
   }
 }

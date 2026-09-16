@@ -42,6 +42,9 @@ import {
   buildHeteroSpawnArgs,
   HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
   normalizeHeterogeneousProviderConfig,
+  resolveHeteroAgentSystemContext,
+  resolveOrviloCliAgentType,
+  resolveOrviloEngine,
   ThreadStatus,
   ThreadType,
   unwrapServerDefaultHeterogeneousModel,
@@ -214,6 +217,12 @@ const isRecoverableResumeError = (
 };
 
 export interface HeterogeneousAgentExecutorParams {
+  /**
+   * The agent's `systemRole` persona. Injected into the run's system context
+   * only for the builtin Orvilo harness — external CLI harnesses keep their
+   * own identity.
+   */
+  agentSystemRole?: string | null;
   assistantMessageId: string;
   context: ConversationContext;
   contextSelections?: ContextSelection[];
@@ -474,7 +483,16 @@ export const executeHeterogeneousAgent = async (
   const heterogeneousProvider = normalizeHeterogeneousProviderConfig(
     persistedHeterogeneousProvider,
   );
-  const adapterType = heterogeneousProvider.type;
+  // The builtin Orvilo harness has no adapter or executable of its own — the
+  // selected engine's CLI family owns adapters, auth/error classification,
+  // quota accounting, command resolution, and the resume binding identity.
+  const orviloEngine =
+    heterogeneousProvider.type === 'orvilo'
+      ? resolveOrviloEngine(heterogeneousProvider.engine)
+      : undefined;
+  const adapterType = orviloEngine
+    ? resolveOrviloCliAgentType(orviloEngine)
+    : heterogeneousProvider.type;
   const serverDefaultConfiguredModel =
     heterogeneousProvider.authMode === 'api' &&
     heterogeneousProvider.apiConfig?.source === 'server-default'
@@ -1943,6 +1961,7 @@ export const executeHeterogeneousAgent = async (
         heterogeneousProvider.model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION
           ? heterogeneousProvider.model
           : undefined,
+      orviloEngine,
       providerBinding,
       resumeSessionId,
       useClaudeCodeSdk: labPreferSelectors.enableClaudeCodeSdk(useUserStore.getState()),
@@ -2460,7 +2479,10 @@ export const executeHeterogeneousAgent = async (
     });
 
     const systemContext = buildLocalHeterogeneousSystemContext({
-      agentSystemContext: heterogeneousProvider.systemContext,
+      agentSystemContext: resolveHeteroAgentSystemContext(
+        heterogeneousProvider,
+        params.agentSystemRole,
+      ),
       contextSelections,
       pageSelections,
     });

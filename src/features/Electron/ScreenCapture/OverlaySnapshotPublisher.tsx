@@ -2,17 +2,15 @@
 
 import type {
   ScreenCaptureAgentOption,
-  ScreenCaptureModelOption,
   ScreenCaptureOverlayTheme,
 } from '@orvilo/electron-client-ipc';
 import { useTheme } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useMemo, useRef } from 'react';
 
-import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
+import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/slices/agentList/selectors';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
@@ -23,16 +21,16 @@ const PANEL_SHADOW_DARK = '0 4px 4px color-mix(in srgb, #000 40%, transparent)';
 const PANEL_SHADOW_LIGHT = '0 4px 4px color-mix(in srgb, #000 4%, transparent)';
 
 /**
- * Mirrors the main renderer's current agent/model lists into the electron main
- * process so the screen-capture overlay selector can render them. Data flow is
- * one-directional: renderer → main (cache) → overlay on open.
+ * Mirrors the main renderer's current agent list into the electron main
+ * process so the screen-capture overlay selector can render it. Data flow is
+ * one-directional: renderer → main (cache) → overlay on open. The overlay no
+ * longer picks a model — the submitted agent's stored config supplies it.
  */
 const OverlaySnapshotPublisher = memo(() => {
   useFetchAgentList();
 
   const allAgents = useHomeStore(homeAgentListSelectors.allAgents, isEqual);
   const theme = useTheme();
-  const enabledChatModels = useEnabledChatModels();
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const inboxMeta = useAgentStore((s) =>
@@ -58,25 +56,6 @@ const OverlaySnapshotPublisher = memo(() => {
         inboxAgentId,
       }),
     [activeAgentId, agentOptions, inboxAgentId],
-  );
-
-  const modelOptions = useMemo<ScreenCaptureModelOption[]>(
-    () =>
-      enabledChatModels.flatMap((provider) =>
-        provider.children.map((model) => ({
-          displayName: model.displayName ?? model.id,
-          id: model.id,
-          provider: provider.id,
-        })),
-      ),
-    [enabledChatModels],
-  );
-
-  const defaultModel = useAgentStore((s) =>
-    defaultAgentId ? agentByIdSelectors.getAgentModelById(defaultAgentId)(s) : undefined,
-  );
-  const defaultProvider = useAgentStore((s) =>
-    defaultAgentId ? agentByIdSelectors.getAgentModelProviderById(defaultAgentId)(s) : undefined,
   );
 
   const overlayTheme = useMemo<ScreenCaptureOverlayTheme>(
@@ -123,9 +102,6 @@ const OverlaySnapshotPublisher = memo(() => {
     const payload = {
       agents: agentOptions,
       defaultAgentId,
-      defaultModelId: defaultModel,
-      defaultProvider,
-      models: modelOptions,
       theme: overlayTheme,
     };
     const signature = JSON.stringify(payload);
@@ -138,7 +114,7 @@ const OverlaySnapshotPublisher = memo(() => {
       // Preload bridge not mounted (e.g. web build) — publisher is a no-op.
       console.warn('[OverlaySnapshotPublisher] publish failed:', error);
     }
-  }, [agentOptions, modelOptions, defaultAgentId, defaultModel, defaultProvider, overlayTheme]);
+  }, [agentOptions, defaultAgentId, overlayTheme]);
 
   return null;
 });

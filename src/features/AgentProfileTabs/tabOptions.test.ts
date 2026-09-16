@@ -18,6 +18,7 @@ describe('supportsMessageChannels', () => {
     expect(supportsMessageChannels()).toBe(true);
     expect(supportsMessageChannels('claude-code')).toBe(true);
     expect(supportsMessageChannels('codex')).toBe(true);
+    expect(supportsMessageChannels('orvilo')).toBe(true);
   });
 
   it('rejects device-only heterogeneous agents', () => {

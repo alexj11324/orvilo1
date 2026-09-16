@@ -36,7 +36,7 @@ import {
   parseSelectedToolsFromEditorData,
 } from '@/store/chat/slices/agentRun/actions/entries/commandBus';
 import {
-  getNativeHeteroSessionBindingKey,
+  getHeteroProviderSessionBindingKey,
   resolveHeteroResume,
 } from '@/store/chat/slices/agentRun/actions/transports/hetero/heteroResume';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
@@ -213,7 +213,7 @@ const resolveHeteroRunContext = (
     {
       currentBindingKey:
         heterogeneousProvider && !providerBinding
-          ? getNativeHeteroSessionBindingKey(heterogeneousProvider.type)
+          ? getHeteroProviderSessionBindingKey(heterogeneousProvider)
           : undefined,
       providerBinding,
     },
@@ -292,6 +292,9 @@ const runHeterogeneousFromExistingMessage = async (
   const { executeHeterogeneousAgent } =
     await import('@/store/chat/slices/agentRun/actions/transports/hetero/heterogeneousAgentExecutor');
   await executeHeterogeneousAgent(() => useChatStore.getState(), {
+    // The builtin Orvilo harness injects the agent's persona into the run's
+    // system context — without it a regenerated/continued turn runs identity-less.
+    agentSystemRole: agentSelectors.getAgentConfigById(agentId)(getAgentStoreState())?.systemRole,
     assistantMessageId: assistantMsg.id,
     context,
     heterogeneousProvider: effectiveHeterogeneousProvider,

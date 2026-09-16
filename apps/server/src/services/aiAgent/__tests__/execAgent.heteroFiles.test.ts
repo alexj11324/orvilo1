@@ -491,6 +491,35 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     );
   });
 
+  it('applies an Orvilo topic pin before resolving the CLI family for sandbox dispatch', async () => {
+    heteroAgentConfig.agencyConfig = {
+      heterogeneousProvider: {
+        engine: 'claude-sdk',
+        model: 'agent-model',
+        type: 'orvilo',
+      },
+    } as any;
+    topicMock.findById.mockResolvedValue({
+      id: 'topic-existing',
+      metadata: undefined,
+      model: 'topic-model',
+      provider: 'orvilo',
+    });
+
+    await service.execAgent({
+      agentId: 'agent-1',
+      appContext: { topicId: 'topic-existing' },
+      prompt: 'Continue with the Orvilo topic model',
+    } as any);
+
+    expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentType: 'claude-code',
+        args: ['--model', 'topic-model'],
+      }),
+    );
+  });
+
   it('should pin the runtime type of a remote platform agent on a server-created topic', async () => {
     heteroAgentConfig.agencyConfig = { heterogeneousProvider: { type: 'openclaw' } } as any;
     heteroAgentConfig.provider = 'lobehub';

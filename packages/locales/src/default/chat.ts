@@ -1193,6 +1193,7 @@ export default {
   'connectAgent.providerDesc.amp': 'Sourcegraph coding agent CLI',
   'connectAgent.providerDesc.kimi-code': 'Moonshot AI coding agent CLI',
   'connectAgent.providerDesc.opencode': 'Open-source coding agent CLI',
+  'connectAgent.providerDesc.orvilo': 'Orvilo managed agent engine',
   'connectAgent.providerDesc.pi': 'Minimal coding agent CLI',
   'connectAgent.providerDesc.qoder': 'Qoder coding agent CLI',
   'connectAgent.providerDesc.trae': 'TRAE Enterprise coding agent CLI',

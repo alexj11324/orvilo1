@@ -1,8 +1,6 @@
 import type { HeterogeneousAgentMode, HeterogeneousReasoningEffort } from '@orvilo/types';
 import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 
-import { MODEL_LABELS } from './modelOptions';
-
 const EFFORT_LABEL_KEYS = {
   [HETEROGENEOUS_AGENT_DEFAULT_SELECTION]: 'heteroAgent.modelSelector.default',
   high: 'heteroAgent.modelSelector.reasoning.high',
@@ -40,57 +38,3 @@ export const getEffortLabelKeys = (
   type === 'codex' ? CODEX_EFFORT_LABEL_KEYS : EFFORT_LABEL_KEYS;
 
 export const getModeLabelKey = (mode: HeterogeneousAgentMode) => MODE_LABEL_KEYS[mode];
-
-export const getModelLabel = (model: string, defaultLabel: string) => {
-  if (model === HETEROGENEOUS_AGENT_DEFAULT_SELECTION) return defaultLabel;
-
-  const aliasLabel = MODEL_LABELS[model];
-  if (aliasLabel) return aliasLabel;
-
-  const match = /^claude-(opus|sonnet|haiku)-(\d+)-(\d+)/.exec(model);
-  if (!match) return model;
-
-  const [, family, major, minor] = match;
-  return `${family[0].toUpperCase()}${family.slice(1)} ${major}.${minor}`;
-};
-
-/**
- * The two halves of the composer chip: the model (ellipsised when long) and
- * the reasoning effort (never truncated). Collapses to a single "Default
- * config" label when nothing is overridden.
- */
-export interface TriggerLabel {
-  secondaryText?: string;
-  text: string;
-}
-
-export const getTriggerLabel = ({
-  defaultConfigLabel,
-  defaultModelLabel,
-  defaultReasoningLabel,
-  effort,
-  effortLabel,
-  model,
-  modelLabel,
-}: {
-  defaultConfigLabel: string;
-  defaultModelLabel: string;
-  defaultReasoningLabel: string;
-  effort?: HeterogeneousReasoningEffort;
-  effortLabel?: string;
-  model: string;
-  modelLabel: string;
-}): TriggerLabel => {
-  const isDefaultModel = model === HETEROGENEOUS_AGENT_DEFAULT_SELECTION;
-  const resolvedModelLabel = isDefaultModel ? defaultModelLabel : modelLabel;
-
-  if (!effort) return { text: isDefaultModel ? defaultConfigLabel : resolvedModelLabel };
-
-  const isDefaultEffort = effort === HETEROGENEOUS_AGENT_DEFAULT_SELECTION;
-  if (isDefaultModel && isDefaultEffort) return { text: defaultConfigLabel };
-
-  return {
-    secondaryText: isDefaultEffort ? defaultReasoningLabel : effortLabel,
-    text: resolvedModelLabel,
-  };
-};

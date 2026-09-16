@@ -238,6 +238,7 @@
   "connectAgent.providerDesc.kimi-code": "Moonshot AI 编码助理 CLI",
   "connectAgent.providerDesc.openclaw": "个人助理平台",
   "connectAgent.providerDesc.opencode": "开源编码助理 CLI",
+  "connectAgent.providerDesc.orvilo": "Orvilo 托管助理引擎",
   "connectAgent.providerDesc.pi": "轻量编码助理 CLI",
   "connectAgent.providerDesc.qoder": "Qoder 编码助理 CLI",
   "connectAgent.providerDesc.trae": "TRAE 企业版编码助理 CLI",

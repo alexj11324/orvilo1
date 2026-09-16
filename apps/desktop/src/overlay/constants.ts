@@ -13,8 +13,6 @@ export const OVERLAY_COPY = {
   hintSelectWindow: 'Select active window',
   idlePlaceholder: 'Select a window or drag a region to start asking…',
   latestSelectionLabel: 'Latest',
-  modelSelectLabel: 'Model',
-  modelSelectPlaceholder: 'Default model',
   multipleSelectedPlaceholder: 'Ask about these screenshots…',
   newlineHint: 'New line',
   removeSelectionLabel: 'Remove selection',

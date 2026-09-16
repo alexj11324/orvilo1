@@ -190,6 +190,7 @@ describe('heterogeneous agent config', () => {
       'kimi-code': 'Kimi Code',
       'openclaw': 'OpenClaw',
       'opencode': 'OpenCode',
+      'orvilo': 'Orvilo',
       'pi': 'Pi',
       'qoder': 'Qoder',
       'trae': 'TRAE CLI',

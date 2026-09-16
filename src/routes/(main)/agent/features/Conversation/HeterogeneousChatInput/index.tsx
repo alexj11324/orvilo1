@@ -4,7 +4,6 @@ import { type ChatInputActionsProps } from '@lobehub/editor/react';
 import { Flexbox } from '@lobehub/ui';
 import { Alert, Button } from '@lobehub/ui/base-ui';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
-import { isHeteroSelectorAvailable } from '@orvilo/types';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,7 +11,6 @@ import { useHeteroAgentCloudConfig } from '@/business/client/hooks/useHeteroAgen
 import { isDesktop } from '@/const/version';
 import { type ActionKeys } from '@/features/ChatInput';
 import HeteroControlBar from '@/features/ChatInput/ControlBar/HeteroControlBar';
-import HeteroModel from '@/features/ChatInput/ControlBar/HeteroModel';
 import { ChatInput } from '@/features/Conversation';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import { useProviderBindingValidation } from '@/features/HeterogeneousAgent/hooks/useProviderBinding';
@@ -27,18 +25,18 @@ import { useRemoteAgentDeviceGuard } from '@/hooks/useRemoteAgentDeviceGuard';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import { useChatStore } from '@/store/chat';
 
-import ApiModeModelBar from './ApiModeModelBar';
 import HeteroPlus from './HeteroPlus';
 import ScheduledSendChip from './ScheduledSendChip';
-import { shouldShowHeteroModelSelector } from './shouldShowHeteroModelSelector';
 
 // Heterogeneous agents (e.g. Claude Code) bring their own toolchain and memory,
 // so most LobeHub-side pickers don't apply — no built-in left action fits, and
 // the bar is composed entirely from `extraActionItems`: a hetero-only `+` menu
-// (formatting toolbar + "Send later"), then the CLI model + thinking-effort
-// selector. Both sit in the input's bottom-left corner, where the agent composer
-// puts its `+` and model picker, rather than off in the control-bar strip below.
+// (formatting toolbar + "Send later") in the input's bottom-left corner.
+// Model + thinking effort are Engine config on the agent now, so the composer
+// carries the same agent chip as the standard input (next to Send) instead of
+// the CLI model selector.
 const leftActions: ActionKeys[] = [];
+const rightActions: ActionKeys[] = ['agent'];
 
 /**
  * GuardBanner
@@ -120,16 +118,6 @@ const HeterogeneousChatInput = memo(() => {
     !isHeterogeneousSandboxExecutionAvailable(providerType) &&
     executionTarget === 'none';
 
-  const showHeteroModel =
-    !isApiAuth &&
-    isHeteroSelectorAvailable(providerType) &&
-    shouldShowHeteroModelSelector({
-      boundDeviceId: agencyConfig?.boundDeviceId,
-      executionTarget,
-      isDesktopClient: isDesktop,
-      providerType,
-    });
-  const showApiModeModel = !!agentId && isApiAuth && executionTarget === 'local';
   const apiModeTargetUnsupported = isApiAuth && executionTarget !== 'local';
   const validateProviderBinding =
     (apiConfigMissing || !!providerApiConfig) && executionTarget === 'local';
@@ -147,19 +135,6 @@ const HeterogeneousChatInput = memo(() => {
       { alwaysDisplay: true, children: <ScheduledSendChip />, key: 'scheduledSendChip' },
     ],
     [],
-  );
-
-  // The model selector rides in the send-area prefix rather than the
-  // (left-aligned) action bar, so it sits right next to Send — it qualifies the
-  // run the send button is about to commit.
-  const sendAreaPrefix = useMemo(
-    () =>
-      showApiModeModel ? (
-        <ApiModeModelBar agentId={agentId} />
-      ) : showHeteroModel ? (
-        <HeteroModel />
-      ) : undefined,
-    [agentId, showApiModeModel, showHeteroModel],
   );
 
   // A run goes to an `lh connect` device when its execution target resolves to a
@@ -323,7 +298,7 @@ const HeterogeneousChatInput = memo(() => {
         controlBarSlot={<HeteroControlBar />}
         extraActionItems={extraActionItems}
         leftActions={leftActions}
-        sendAreaPrefix={sendAreaPrefix}
+        rightActions={rightActions}
         sendButtonProps={{ disabled: inputDisabled, shape: 'round' }}
         skipScrollMarginWithList={!hasGuard}
         onEditorReady={(instance) => {

@@ -177,9 +177,9 @@ describe('hetero exec command', () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
-  it('supports exactly the local agent descriptor types', () => {
+  it('supports the local agent descriptor types plus the builtin orvilo harness', () => {
     expect([...SUPPORTED_AGENT_TYPES].toSorted()).toEqual(
-      HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type).toSorted(),
+      [...HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type), 'orvilo'].toSorted(),
     );
   });
 
@@ -224,6 +224,64 @@ describe('hetero exec command', () => {
     });
     // operationId auto-generated when omitted (uuid v4 shape)
     expect(call.operationId).toMatch(/^[0-9a-f-]{36}$/i);
+  });
+
+  it('resolves --type orvilo to the claude-code family by default', async () => {
+    mockSpawnAgent.mockReturnValue(createFakeHandle());
+
+    await runCmd(['hetero', 'exec', '--type', 'orvilo', '--prompt', 'hi']);
+
+    expect(mockResolveHeteroSpawnCommand).toHaveBeenCalledWith('claude-code', undefined);
+    expect(mockSpawnAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ agentType: 'claude-code' }),
+    );
+  });
+
+  it('resolves --type orvilo --engine codex-app-server to the codex family', async () => {
+    mockSpawnAgent.mockReturnValue(createFakeHandle());
+
+    await runCmd([
+      'hetero',
+      'exec',
+      '--type',
+      'orvilo',
+      '--engine',
+      'codex-app-server',
+      '--prompt',
+      'hi',
+    ]);
+
+    expect(mockResolveHeteroSpawnCommand).toHaveBeenCalledWith('codex', undefined);
+    expect(mockSpawnAgent).toHaveBeenCalledWith(expect.objectContaining({ agentType: 'codex' }));
+  });
+
+  it('honours --command overrides on the resolved orvilo family', async () => {
+    mockSpawnAgent.mockReturnValue(createFakeHandle());
+    mockResolveHeteroSpawnCommand.mockResolvedValue({ command: '/opt/codex' });
+
+    await runCmd([
+      'hetero',
+      'exec',
+      '--type',
+      'orvilo',
+      '--engine',
+      'codex-app-server',
+      '--command',
+      '/opt/codex',
+      '--prompt',
+      'hi',
+    ]);
+
+    expect(mockResolveHeteroSpawnCommand).toHaveBeenCalledWith('codex', '/opt/codex');
+    expect(mockSpawnAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ agentType: 'codex', command: '/opt/codex' }),
+    );
+  });
+
+  it('rejects an unknown --engine via process.exit(2)', async () => {
+    await runCmd(['hetero', 'exec', '--type', 'orvilo', '--engine', 'bogus', '--prompt', 'hi']);
+    expect(exitSpy).toHaveBeenCalledWith(2);
+    expect(mockSpawnAgent).not.toHaveBeenCalled();
   });
 
   it('keeps the agent in the detached wrapper process group when requested by dispatch', async () => {

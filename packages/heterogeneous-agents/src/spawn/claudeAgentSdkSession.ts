@@ -1,4 +1,5 @@
 import type {
+  McpServerConfig,
   Options as ClaudeAgentSdkOptions,
   Query as ClaudeAgentSdkQuery,
   SDKMessage,
@@ -133,6 +134,12 @@ export interface ClaudeAgentSdkSessionOptions {
   commandPath: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
+  /**
+   * Extra MCP servers handed to the SDK `query` — used to mount the builtin
+   * `lobe_cc` server (AskUserQuestion bridge + browser tools), which the CLI
+   * spawn path wires through `--mcp-config` instead.
+   */
+  mcpServers?: Record<string, McpServerConfig>;
   onEvents: (events: AgentStreamEvent[]) => Promise<void> | void;
   onRawMessage: (line: string) => Promise<void> | void;
   onRuntimeStatus: (status: HeterogeneousAgentRuntimeStatus) => void;
@@ -234,6 +241,7 @@ export class ClaudeAgentSdkSession {
       disallowedTools: [...CLAUDE_SDK_DISALLOWED_TOOLS],
       env: this.options.env,
       includePartialMessages: true,
+      ...(this.options.mcpServers ? { mcpServers: this.options.mcpServers } : {}),
       pathToClaudeCodeExecutable: this.options.commandPath,
       permissionMode: 'bypassPermissions',
       ...(this.options.resumeSessionId ? { resume: this.options.resumeSessionId } : {}),

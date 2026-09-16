@@ -1,5 +1,6 @@
 import VoiceDictation from '../Dictation';
 import VoiceMessage from '../VoiceMessage';
+import Agent from './Agent';
 import AgentMode from './AgentMode';
 import Clear from './Clear';
 import History from './History';
@@ -16,6 +17,7 @@ import Typo from './Typo';
 import Upload from './Upload';
 
 export const actionMap = {
+  agent: Agent,
   agentMode: AgentMode,
   clear: Clear,
   contextWindow: ContextWindow,

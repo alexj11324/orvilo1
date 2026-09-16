@@ -7,6 +7,7 @@ import path from 'node:path';
 
 import {
   HETEROGENEOUS_AGENT_CONFIGS,
+  isBuiltinHeterogeneousType,
   isLocalHeterogeneousType,
   LOCAL_HETEROGENEOUS_AGENT_TYPES,
 } from '@orvilo/heterogeneous-agents';
@@ -27,6 +28,7 @@ import {
   isHeteroStatusGuideErrorData,
   spawnAgent,
 } from '@orvilo/heterogeneous-agents/spawn';
+import { isOrviloEngineKind, ORVILO_ENGINE_KINDS, resolveOrviloCliAgentType } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import type { Command } from 'commander';
 
@@ -39,7 +41,12 @@ import { createOperationTokenRenewal } from '../utils/OperationTokenRenewal';
 import { createLocalTraceStore } from '../utils/traceStore';
 import { TrpcIngestSink } from '../utils/TrpcIngestSink';
 
-export const SUPPORTED_AGENT_TYPES = new Set<string>(LOCAL_HETEROGENEOUS_AGENT_TYPES);
+// `orvilo` is the builtin managed harness — there is no `orvilo` binary; the
+// `--engine` option selects which CLI family (`claude` / `codex`) executes.
+export const SUPPORTED_AGENT_TYPES = new Set<string>([
+  ...LOCAL_HETEROGENEOUS_AGENT_TYPES,
+  'orvilo',
+]);
 const SUPPORTED_AGENT_TITLES = HETEROGENEOUS_AGENT_CONFIGS.map(({ title }) => title).join(' / ');
 const SUPPORTED_AGENT_COMMANDS = HETEROGENEOUS_AGENT_CONFIGS.map(
   ({ defaultCommand }) => `\`${defaultCommand}\``,
@@ -93,6 +100,11 @@ interface ExecOptions {
   command?: string;
   cwd?: string;
   effort?: string;
+  /**
+   * Builtin Orvilo engine selection (`--type orvilo` only): `claude-sdk` or
+   * `codex-app-server`. Resolves to the engine's CLI family for this exec.
+   */
+  engine?: string;
   image?: string[];
   inputJson?: string;
   /** Amp agent mode, forwarded as the native `--mode` flag. */
@@ -382,9 +394,19 @@ class RawStreamDump {
 }
 
 const exec = async (options: ExecOptions): Promise<void> => {
-  if (!isLocalHeterogeneousType(options.type)) {
+  if (!isLocalHeterogeneousType(options.type) && !isBuiltinHeterogeneousType(options.type)) {
     log.error(
       `Unsupported --type "${options.type}". Supported: ${[...SUPPORTED_AGENT_TYPES].join(', ')}`,
+    );
+    process.exit(2);
+  }
+  if (
+    isBuiltinHeterogeneousType(options.type) &&
+    options.engine !== undefined &&
+    !isOrviloEngineKind(options.engine)
+  ) {
+    log.error(
+      `Unsupported --engine "${options.engine}". Supported: ${ORVILO_ENGINE_KINDS.join(', ')}`,
     );
     process.exit(2);
   }
@@ -446,7 +468,14 @@ const exec = async (options: ExecOptions): Promise<void> => {
   // Build the ingest sink — no-op for standalone mode, real tRPC sink for
   // server-ingest mode.  The tRPC client reads LOBEHUB_JWT (operation-scoped
   // JWT injected by the server) for authentication.
-  const agentType = options.type;
+  // Every downstream consumer (ingest sink, AskUser bridge, spawn, error
+  // classification) works in CLI-family terms. The builtin `orvilo` harness
+  // resolves to the selected engine's family (`claude-code` / `codex`) — there
+  // is no `orvilo` executable — while the declared type stays on the trace /
+  // raw-dump metadata recorded above.
+  const agentType = isBuiltinHeterogeneousType(options.type)
+    ? resolveOrviloCliAgentType(options.engine)
+    : options.type;
   let sink: TrpcIngestSink | undefined;
   let serverIngester: CoalescingBatchIngester | undefined;
   // Uploader for tool_result images (CC `Read` on an image file). Reuses the
@@ -887,7 +916,9 @@ const exec = async (options: ExecOptions): Promise<void> => {
 
   const interceptResume = !!options.resume;
   const extraArgs = [
-    ...(buildExtraArgs(options) ?? []),
+    // Selector args (model/effort/speed) translate against the CLI family — for
+    // orvilo the engine already resolved `agentType` to `claude-code`/`codex`.
+    ...(buildExtraArgs({ ...options, type: agentType }) ?? []),
     // Point the supported CLI at the lobe_cc AskUserQuestion MCP server we just mounted.
     ...(askMcpConfigPath ? ['--mcp-config', askMcpConfigPath] : []),
   ];
@@ -901,11 +932,11 @@ const exec = async (options: ExecOptions): Promise<void> => {
   // Devin ACP's `--permission-mode` is a global flag; default to bypass so
   // headless connected-device runs do not block on permission prompts. The mode
   // response must not overwrite the model selected by `initialModel`.
-  const permissionMode = options.type === 'devin' ? 'bypass' : undefined;
+  const permissionMode = agentType === 'devin' ? 'bypass' : undefined;
 
   const first = await runOneAgent(
     {
-      agentType: options.type,
+      agentType,
       askUserBridge: askBridge,
       command: resolvedCommand.command,
       cwd: options.cwd || process.cwd(),
@@ -917,9 +948,9 @@ const exec = async (options: ExecOptions): Promise<void> => {
       // stream as native server agents. Ask Claude Code for content-block
       // deltas so the current conversation receives text while the process is
       // running instead of seeing only the terminal assistant snapshot.
-      includePartialMessages: options.type === 'claude-code',
+      includePartialMessages: agentType === 'claude-code',
       initialModel:
-        options.type === 'droid' || options.type === 'devin' || options.type === 'trae'
+        agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
           ? options.model
           : undefined,
       operationId,
@@ -949,16 +980,16 @@ const exec = async (options: ExecOptions): Promise<void> => {
     log.info('Resume failed (session not found or context overflow) — retrying without --resume');
     result = await runOneAgent(
       {
-        agentType: options.type,
+        agentType,
         askUserBridge: askBridge,
         command: resolvedCommand.command,
         cwd: options.cwd || process.cwd(),
         detached: process.env[HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV] !== '1',
         env: commandEnv,
         extraArgs,
-        includePartialMessages: options.type === 'claude-code',
+        includePartialMessages: agentType === 'claude-code',
         initialModel:
-          options.type === 'droid' || options.type === 'devin' || options.type === 'trae'
+          agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
             ? options.model
             : undefined,
         operationId,
@@ -1096,6 +1127,10 @@ export function registerHeteroCommand(program: Command) {
     )
     .option('-r, --resume <sessionId>', 'Resume an existing agent session by its native id')
     .option('-d, --cwd <path>', 'Working directory for the spawned agent (default: process.cwd())')
+    .option(
+      '--engine <engine>',
+      `Builtin Orvilo engine (--type orvilo only): ${ORVILO_ENGINE_KINDS.join(' | ')}. Selects which CLI family executes.`,
+    )
     .option('--mode <mode>', 'Forward a resolved Amp agent mode selection to the agent CLI')
     .option('--model <model>', 'Forward a resolved model selection to the agent CLI')
     .option('--effort <level>', 'Forward a resolved reasoning effort selection to the agent CLI')

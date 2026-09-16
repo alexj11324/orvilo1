@@ -125,6 +125,13 @@ const HETERO_PROFILES: Record<HeteroType, HeteroTypeProfile> = {
     displayName: 'OpenClaw',
     kind: 'remote',
   },
+  'orvilo': {
+    capabilities: CODING_CAPABILITIES,
+    description:
+      "Orvilo — LobeHub's builtin managed agent harness. It runs a managed local session through the configured engine (Claude Agent SDK by default, or the Codex app-server) with the app's builtin tools and MCP integrations: it can read, edit and write files, run shell commands, and complete multi-step software-engineering tasks autonomously. It does NOT use the chat `plugins`/`model` settings — the selected engine runs its own toolset and model.",
+    displayName: 'Orvilo',
+    kind: 'cli',
+  },
   'pi': {
     capabilities: CODING_CAPABILITIES,
     description:

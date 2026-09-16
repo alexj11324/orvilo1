@@ -505,6 +505,8 @@ export default {
 
   // Heterogeneous agent — Desktop tab
   'heterogeneousStatus.desktop.tabLabel': 'Desktop',
+  'heterogeneousStatus.desktop.webOnly':
+    'Local CLI status and launch options are configured in the Orvilo desktop app.',
 
   // Connected agent profile config panel (openclaw / hermes)
   'platformAgentConfig.title': 'Connection',
@@ -521,6 +523,25 @@ export default {
   'platformAgentConfig.changeDevice': 'Change Device',
   'platformAgentConfig.redetect': 'Re-detect',
   'platformAgentConfig.selectDevice': 'Select a device',
+
+  // Agent engine settings (harness / builtin engine / model / effort / target)
+  'agentEngine.title': 'Engine',
+  'agentEngine.harness.label': 'Harness',
+  'agentEngine.harness.localGroup': 'Local CLI',
+  'agentEngine.harness.remoteGroup': 'Platform agent',
+  'agentEngine.engine.label': 'Engine',
+  'agentEngine.engine.claudeSdk': 'Claude Agent SDK',
+  'agentEngine.engine.codexAppServer': 'Codex',
+  'agentEngine.model.label': 'Model',
+  'agentEngine.model.catalogPending':
+    'Models load from the selected machine once an execution target is set.',
+  'agentEngine.model.catalogError': 'Could not load models from the selected machine.',
+  'agentEngine.effort.label': 'Reasoning effort',
+  'agentEngine.mode.label': 'Mode',
+  'agentEngine.speed.label': 'Speed',
+  'agentEngine.target.label': 'Run on',
+  'agentEngine.target.orviloHint':
+    'Orvilo runs the engine CLI on the selected machine — the target must have it installed.',
 
   'checking': 'Checking...',
 

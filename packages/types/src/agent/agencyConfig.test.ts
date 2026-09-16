@@ -14,7 +14,11 @@ import {
   resolveAgencyConfig,
   resolveAgentAgencyConfig,
   resolveAgentTopicSharePolicy,
+  resolveHeteroAgentSystemContext,
+  resolveHeteroCliAgentType,
   resolveHeterogeneousProviderTopicModel,
+  resolveOrviloCliAgentType,
+  resolveOrviloEngine,
   unwrapServerDefaultHeterogeneousModel,
 } from './agencyConfig';
 import {
@@ -157,6 +161,23 @@ describe('heterogeneous topic models', () => {
     });
   });
 
+  it('snapshots an Orvilo model with its resolved CLI family identity', () => {
+    expect(
+      resolveHeterogeneousProviderTopicModel({
+        engine: 'claude-sdk',
+        model: 'claude-sonnet',
+        type: 'orvilo',
+      }),
+    ).toEqual({ model: 'claude-sonnet', provider: 'claude-code' });
+    expect(
+      resolveHeterogeneousProviderTopicModel({
+        engine: 'codex-app-server',
+        model: 'gpt-5.5',
+        type: 'orvilo',
+      }),
+    ).toEqual({ model: 'gpt-5.5', provider: 'codex' });
+  });
+
   it('keeps server-default API models Agent-scoped and ignores stale topic bindings', () => {
     const config = {
       apiConfig: { model: 'server-model', source: 'server-default' },
@@ -221,6 +242,53 @@ describe('heterogeneous topic models', () => {
         provider: 'codex',
       }),
     ).toBe(config);
+  });
+
+  it('applies a pin when its Orvilo CLI family matches the current engine', () => {
+    const config = {
+      engine: 'codex-app-server',
+      model: 'agent-model',
+      type: 'orvilo',
+    } as const;
+
+    expect(
+      applyTopicModelToHeterogeneousProvider(config, {
+        model: 'gpt-5.5',
+        provider: 'codex',
+      }),
+    ).toMatchObject({ engine: 'codex-app-server', model: 'gpt-5.5', type: 'orvilo' });
+  });
+
+  it('rejects a model and effort pin from a different Orvilo engine', () => {
+    const config = {
+      effort: 'high',
+      engine: 'codex-app-server',
+      model: 'agent-model',
+      type: 'orvilo',
+    } as const;
+
+    expect(
+      applyTopicModelToHeterogeneousProvider(config, {
+        effort: 'ultra',
+        model: 'claude-sonnet',
+        provider: 'claude-code',
+      }),
+    ).toBe(config);
+  });
+
+  it('keeps legacy Orvilo pins on the default Claude engine only', () => {
+    const legacyPin = { model: 'legacy-claude-model', provider: 'orvilo' } as const;
+    const claudeConfig = { engine: 'claude-sdk', model: 'agent-model', type: 'orvilo' } as const;
+    const codexConfig = {
+      engine: 'codex-app-server',
+      model: 'agent-model',
+      type: 'orvilo',
+    } as const;
+
+    expect(applyTopicModelToHeterogeneousProvider(claudeConfig, legacyPin)).toMatchObject({
+      model: 'legacy-claude-model',
+    });
+    expect(applyTopicModelToHeterogeneousProvider(codexConfig, legacyPin)).toBe(codexConfig);
   });
 });
 
@@ -1209,5 +1277,123 @@ describe('applyTopicModelToHeterogeneousProvider - effort pin', () => {
     const config = { model: 'global-model', type: 'cursor' } as const;
 
     expect(applyTopicModelToHeterogeneousProvider(config, { effort: 'high' })).toBe(config);
+  });
+});
+
+describe('orvilo engine helpers', () => {
+  it('defaults a missing or unknown engine to claude-sdk', () => {
+    expect(resolveOrviloEngine(undefined)).toBe('claude-sdk');
+    expect(resolveOrviloEngine(null)).toBe('claude-sdk');
+    expect(resolveOrviloEngine('bogus')).toBe('claude-sdk');
+    expect(resolveOrviloEngine('codex-app-server')).toBe('codex-app-server');
+  });
+
+  it('maps engines to their CLI family', () => {
+    expect(resolveOrviloCliAgentType('claude-sdk')).toBe('claude-code');
+    expect(resolveOrviloCliAgentType('codex-app-server')).toBe('codex');
+    expect(resolveOrviloCliAgentType(undefined)).toBe('claude-code');
+  });
+
+  it('resolves the execution family for any provider config', () => {
+    expect(resolveHeteroCliAgentType({ type: 'orvilo' })).toBe('claude-code');
+    expect(resolveHeteroCliAgentType({ engine: 'codex-app-server', type: 'orvilo' })).toBe('codex');
+    expect(resolveHeteroCliAgentType({ type: 'claude-code' })).toBe('claude-code');
+    expect(resolveHeteroCliAgentType({ type: 'openclaw' })).toBe('openclaw');
+    expect(resolveHeteroCliAgentType(undefined)).toBeUndefined();
+  });
+
+  it('accepts orvilo as a declared provider type', () => {
+    expect(normalizeHeterogeneousProviderConfig({ type: 'orvilo' }).type).toBe('orvilo');
+  });
+});
+
+describe('resolveHeteroAgentSystemContext', () => {
+  it('prepends the persona for the builtin orvilo harness', () => {
+    expect(
+      resolveHeteroAgentSystemContext(
+        { systemContext: 'Always run tests.', type: 'orvilo' },
+        'You are a careful reviewer.',
+      ),
+    ).toBe('You are a careful reviewer.\n\nAlways run tests.');
+  });
+
+  it('keeps external CLI harnesses free of the agent persona', () => {
+    expect(
+      resolveHeteroAgentSystemContext(
+        { systemContext: 'Always run tests.', type: 'claude-code' },
+        'You are a careful reviewer.',
+      ),
+    ).toBe('Always run tests.');
+    expect(resolveHeteroAgentSystemContext({ type: 'claude-code' }, 'persona')).toBeUndefined();
+  });
+
+  it('handles missing pieces', () => {
+    expect(resolveHeteroAgentSystemContext({ type: 'orvilo' }, 'persona')).toBe('persona');
+    expect(resolveHeteroAgentSystemContext({ type: 'orvilo' })).toBeUndefined();
+    expect(resolveHeteroAgentSystemContext(undefined, 'persona')).toBeUndefined();
+    expect(
+      resolveHeteroAgentSystemContext({ systemContext: '  ', type: 'orvilo' }, ' '),
+    ).toBeUndefined();
+  });
+});
+
+describe('orvilo spawn args', () => {
+  it('delegates model/effort to the claude-sdk engine family', () => {
+    expect(buildHeteroSpawnArgs({ effort: 'high', model: 'opus', type: 'orvilo' })).toEqual([
+      '--model',
+      'opus',
+      '--effort',
+      'high',
+    ]);
+  });
+
+  it('delegates selector fields to the codex-app-server engine family', () => {
+    const args = buildHeteroSpawnArgs({
+      engine: 'codex-app-server',
+      model: 'gpt-5.5',
+      type: 'orvilo',
+    });
+    expect(args?.join(' ')).toContain('gpt-5.5');
+    expect(args).not.toContain('--engine');
+  });
+
+  it('skips selector flags the user already spelled out in args', () => {
+    expect(
+      buildHeteroSpawnArgs({ args: ['--model', 'sonnet'], model: 'opus', type: 'orvilo' }),
+    ).toEqual(['--model', 'sonnet']);
+    expect(buildHeteroSpawnArgs({ args: ['--verbose'], model: 'opus', type: 'orvilo' })).toEqual([
+      '--verbose',
+      '--model',
+      'opus',
+    ]);
+  });
+});
+
+describe('orvilo exec args', () => {
+  it('preserves the resolved engine through wrapper-level --engine', () => {
+    expect(buildHeteroExecArgs({ type: 'orvilo' })).toEqual(['--engine', 'claude-sdk']);
+    expect(buildHeteroExecArgs({ engine: 'codex-app-server', type: 'orvilo' })).toEqual([
+      '--engine',
+      'codex-app-server',
+    ]);
+  });
+
+  it('emits --engine first, then the family-encoded selector args', () => {
+    expect(buildHeteroExecArgs({ model: 'opus', type: 'orvilo' })).toEqual([
+      '--engine',
+      'claude-sdk',
+      '--model',
+      'opus',
+    ]);
+  });
+
+  it('never emits --engine for non-orvilo providers', () => {
+    expect(buildHeteroExecArgs({ model: 'opus', type: 'claude-code' })).toEqual([
+      '--model',
+      'opus',
+    ]);
+    expect(buildHeteroExecArgs({ model: 'gpt-5.5', type: 'codex' })?.join(' ')).not.toContain(
+      '--engine',
+    );
   });
 });

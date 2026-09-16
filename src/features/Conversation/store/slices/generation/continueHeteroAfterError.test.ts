@@ -29,6 +29,7 @@ vi.mock('@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher', () => (
 }));
 
 let mockResumeSessionId: string | undefined = 'sess-1';
+let mockAgentSystemRole: string | undefined;
 let mockAgentVisibility: 'private' | 'public' = 'public';
 let mockIsWorkspaceAgent = false;
 let mockSharedExecutionTarget: 'device' | 'local' = 'local';
@@ -88,6 +89,7 @@ vi.mock('@/store/agent/selectors', () => ({
           'workspace-device': '/workspace/project',
         },
       },
+      systemRole: mockAgentSystemRole,
     }),
   },
 }));
@@ -172,6 +174,7 @@ const executorParams = () => mockExecuteHeterogeneousAgent.mock.calls[0][1];
 describe('continueHeteroAfterError', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAgentSystemRole = undefined;
     mockAgentVisibility = 'public';
     mockResumeSessionId = 'sess-1';
     mockIsWorkspaceAgent = false;
@@ -206,6 +209,20 @@ describe('continueHeteroAfterError', () => {
     });
     expect(executorParams().message).toContain('Continue the task from where it stopped');
     expect(executorParams().message).not.toBe(USER_MESSAGE.content);
+  });
+
+  it('forwards the agent persona to the executor so builtin-Orvilo runs keep it on continue', async () => {
+    mockAgentSystemRole = 'You are a careful reviewer.';
+    const store = buildGroupStore([
+      { content: 'looking', id: 'step-1', tools: [{ id: 'call-1' }] },
+      { content: '', error: HETERO_RATE_LIMIT, id: 'step-2' },
+    ]);
+
+    await act(async () => {
+      await store.getState().continueHeteroAfterError('step-1');
+    });
+
+    expect(executorParams().agentSystemRole).toBe('You are a careful reviewer.');
   });
 
   it('continues with the topic-pinned heterogeneous model', async () => {

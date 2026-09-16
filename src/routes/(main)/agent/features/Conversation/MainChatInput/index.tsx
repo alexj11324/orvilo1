@@ -15,9 +15,9 @@ import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import AgentConfigError from './AgentConfigError';
 import { useSendMenuItems } from './useSendMenuItems';
 
-const contextWindowRightActions: ActionKeys[] = ['model', 'voiceMessage', 'contextWindow'];
+const contextWindowRightActions: ActionKeys[] = ['agent', 'voiceMessage', 'contextWindow'];
 const promptTransformRightActions: ActionKeys[] = [
-  'model',
+  'agent',
   'promptTransform',
   'voiceMessage',
   'contextWindow',
@@ -44,7 +44,7 @@ const MainChatInput = memo(() => {
     ? promptTransformRightActions
     : contextWindowRightActions;
 
-  // The model chip lives on the right, next to Send (see rightActions); the
+  // The agent chip lives on the right, next to Send (see rightActions); the
   // left bar keeps the "+" menu, dictation and the expand toggle.
   const leftActions: ActionKeys[] = useMemo(() => ['plus', 'voiceDictation'], []);
 

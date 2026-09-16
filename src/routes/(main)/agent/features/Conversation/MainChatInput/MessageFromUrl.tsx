@@ -10,7 +10,7 @@ import { canConsumePendingOverlayDispatch } from '@/features/Electron/ScreenCapt
 import { useOverlayDispatchStore } from '@/features/Electron/ScreenCapture/overlayDispatchStore';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
+import { agentSelectors } from '@/store/agent/selectors';
 import type { UploadFileItem } from '@/types/files/upload';
 
 /**
@@ -30,7 +30,6 @@ const MessageFromUrl = () => {
   const location = useLocation();
   const isAgentConfigLoading = useAgentStore(agentSelectors.isAgentConfigLoading);
   const { allowed: canCreate } = usePermission('create_content');
-  const { allowed: canEdit } = usePermission('edit_own_content');
   // Per-resource General access: view-only members must not auto-send into a
   // shared agent, whatever the URL says. Wait for the settled value — the
   // permissive loading default would otherwise let the send race through.
@@ -134,24 +133,13 @@ const MessageFromUrl = () => {
       return;
     }
 
-    const { captureIds, modelId, prompt, provider } = pendingDispatch;
+    const { captureIds, prompt } = pendingDispatch;
     const captureEntries = captureIds
       .map((id) => ({ entry: overlayCaptureUploadPool.get(id), id }))
       .filter((x): x is { entry: NonNullable<typeof x.entry>; id: string } => !!x.entry);
 
     void (async () => {
       try {
-        if (canEdit && modelId && provider) {
-          const agentState = useAgentStore.getState();
-          const currentModel = agentByIdSelectors.getAgentModelById(agentId!)(agentState);
-          const currentProvider = agentByIdSelectors.getAgentModelProviderById(agentId!)(
-            agentState,
-          );
-          if (currentModel !== modelId || currentProvider !== provider) {
-            await agentState.updateAgentConfigById(agentId!, { model: modelId, provider });
-          }
-        }
-
         const resolved = await Promise.all(captureEntries.map(({ entry }) => entry.promise));
         const overlayFiles = resolved.filter((item): item is UploadFileItem => !!item);
 
@@ -166,7 +154,6 @@ const MessageFromUrl = () => {
   }, [
     agentId,
     canCreate,
-    canEdit,
     canUseResource,
     clearPendingDispatch,
     context.topicId,

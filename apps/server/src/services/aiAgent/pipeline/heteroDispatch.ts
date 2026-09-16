@@ -2,6 +2,7 @@ import { LOADING_FLAT } from '@orvilo/const';
 import type { LobeChatDatabase } from '@orvilo/database';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
+  getNativeHeteroSessionBindingKey,
   HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
   isLocalHeterogeneousType,
   isRemoteHeterogeneousType,
@@ -20,6 +21,8 @@ import {
   buildHeteroExecArgs,
   ChatErrorType,
   getWorkingDirEffectivePath,
+  resolveHeteroAgentSystemContext,
+  resolveOrviloCliAgentType,
 } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
@@ -321,6 +324,14 @@ export const dispatchHeteroAgent = async (
   } = input;
 
   const isRemoteHetero = isRemoteHeterogeneousType(heteroType);
+  // Builtin Orvilo harness: `heteroType` keeps the declared identity for
+  // metadata and hooks, but every CLI-family concern — `lh hetero exec --type`,
+  // adapter/error classification, sandbox support, resume binding — resolves to
+  // the selected engine's family. There is no `orvilo` executable or ingest
+  // schema entry, so anything reaching a device or sandbox must carry the
+  // family type and family-encoded args.
+  const heteroCliAgentType =
+    heteroType === 'orvilo' ? resolveOrviloCliAgentType(heterogeneousProvider?.engine) : heteroType;
   // Same structured shape as the built-in path (`op_{ts}_{agentId}_{topicId}_{rand}`)
   // so hetero ops aren't visually distinct bare nanoids in the trace/op tables.
   const operationId = `op_${Date.now()}_${resolvedAgentId}_${topicId}_${nanoid(8)}`;
@@ -369,7 +380,10 @@ export const dispatchHeteroAgent = async (
   const heteroService = new HeterogeneousAgentService(deps.db, deps.userId, {
     workspaceId: deps.workspaceId,
   });
-  const resumeSessionId = await heteroService.getHeterogeneousResumeSessionId(topicId);
+  const resumeSessionId = await heteroService.getHeterogeneousResumeSessionId(
+    topicId,
+    getNativeHeteroSessionBindingKey(heteroCliAgentType),
+  );
   // Sign an operation-scoped JWT so the CLI can authenticate against
   // heteroIngest / heteroFinish without full user credentials.
   let operationJwt: string;
@@ -441,8 +455,14 @@ export const dispatchHeteroAgent = async (
   // Build the primary context without conversation history. If native resume
   // fails, the CLI switches to the complete fallback prompt on its fresh
   // retry; successful same-session runs never consume the duplicate history.
+  // For the builtin Orvilo harness the agent's `systemRole` persona leads the
+  // injected context — external CLI harnesses keep their own identity.
+  const agentSystemContext = resolveHeteroAgentSystemContext(
+    heterogeneousProvider,
+    agentConfig.systemRole,
+  );
   const systemContext = buildCloudHeteroContext({
-    agentSystemContext: agentConfig.agencyConfig?.heterogeneousProvider?.systemContext,
+    agentSystemContext,
     conversationHistory: resumeSessionId ? undefined : conversationHistory,
     githubToken,
     repos: topicRepos,
@@ -450,7 +470,7 @@ export const dispatchHeteroAgent = async (
   const resumeFallbackSystemContext =
     resumeSessionId && conversationHistory
       ? buildCloudHeteroContext({
-          agentSystemContext: agentConfig.agencyConfig?.heterogeneousProvider?.systemContext,
+          agentSystemContext,
           conversationHistory,
           githubToken,
           repos: topicRepos,
@@ -465,19 +485,22 @@ export const dispatchHeteroAgent = async (
     runAttachments.imageList && runAttachments.imageList.length > 0
       ? runAttachments.imageList.map((image) => ({ id: image.id, url: image.url }))
       : undefined;
-  const heteroExecArgs = isLocalHeterogeneousType(heteroType)
+  const effectiveHeterogeneousProvider =
+    heterogeneousProvider?.type === heteroType
+      ? applyTopicModelToHeterogeneousProvider(heterogeneousProvider, pinnedHeterogeneousTopicModel)
+      : undefined;
+  const heteroExecArgs = isLocalHeterogeneousType(heteroCliAgentType)
     ? buildHeteroExecArgs(
-        heterogeneousProvider?.type === heteroType
-          ? applyTopicModelToHeterogeneousProvider(
-              heterogeneousProvider,
-              pinnedHeterogeneousTopicModel,
-            )
-          : { type: heteroType },
+        effectiveHeterogeneousProvider
+          ? { ...effectiveHeterogeneousProvider, type: heteroCliAgentType }
+          : { type: heteroCliAgentType },
       )
     : undefined;
 
   const heteroParams = {
-    agentType: heteroType,
+    // Devices and sandboxes receive the CLI family — their `lh hetero exec`
+    // may predate `--type orvilo` support.
+    agentType: heteroCliAgentType,
     assistantMessageId,
     githubToken,
     imageList: heteroImageList,
@@ -533,7 +556,10 @@ export const dispatchHeteroAgent = async (
         isHetero: true,
         clientExecutionAvailable: false,
         requestedDeviceId,
-        sandboxExecutionAvailable: supportsCloudHeterogeneousSandbox(heteroType),
+        sandboxExecutionAvailable: supportsCloudHeterogeneousSandbox(
+          heteroType,
+          heterogeneousProvider?.engine,
+        ),
         trigger: requestTrigger,
       })
     : undefined;
@@ -891,7 +917,7 @@ export const dispatchHeteroAgent = async (
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,
           assistantMessageId,
-          detail: !supportsCloudHeterogeneousSandbox(heteroType)
+          detail: !supportsCloudHeterogeneousSandbox(heteroType, heterogeneousProvider?.engine)
             ? 'No device bound. Pick a local or connected device in the Execution Device switcher.'
             : 'No device bound. Pick a device in the Execution Device switcher, or switch to Cloud sandbox.',
           message: 'No bound device for hetero agent',
@@ -951,13 +977,13 @@ export const dispatchHeteroAgent = async (
       // (which describes an ephemeral /workspace + pre-cloned repos and would mislead
       // the agent). The spawned CLI already receives deviceCwd as its actual cwd.
       const deviceSystemContext = buildRemoteDeviceHeteroContext({
-        agentSystemContext: agentConfig.agencyConfig?.heterogeneousProvider?.systemContext,
+        agentSystemContext,
         conversationHistory: resumeSessionId ? undefined : conversationHistory,
       });
       const deviceResumeFallbackSystemContext =
         resumeSessionId && conversationHistory
           ? buildRemoteDeviceHeteroContext({
-              agentSystemContext: agentConfig.agencyConfig?.heterogeneousProvider?.systemContext,
+              agentSystemContext,
               conversationHistory,
             })
           : undefined;
@@ -1034,7 +1060,7 @@ export const dispatchHeteroAgent = async (
         log('execAgent: failed to patch runningOperation with device info: %O', err);
       }
     } else {
-      if (!supportsCloudHeterogeneousSandbox(heteroType)) {
+      if (!supportsCloudHeterogeneousSandbox(heteroType, heterogeneousProvider?.engine)) {
         const message = `${getHeterogeneousAgentTitle(heteroType)} requires a local or connected device; cloud sandbox execution is not supported.`;
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,
@@ -1080,7 +1106,7 @@ export const dispatchHeteroAgent = async (
       const sandboxJwt = await signUserJWT(deps.userId, '4h');
       spawnHeteroSandbox({
         ...heteroParams,
-        agentType: heteroType as 'claude-code' | 'codex',
+        agentType: heteroCliAgentType as 'claude-code' | 'codex',
         args: heteroExecArgs,
         jwt: sandboxJwt,
         marketService,

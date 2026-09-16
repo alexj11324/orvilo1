@@ -1,16 +1,10 @@
 import type { HeterogeneousProviderConfig, HeteroSelectorCapability } from '@orvilo/types';
 import { applyHeteroSelection, getHeteroSelectorCapability } from '@orvilo/types';
-import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 
+import { getStaticModelOptions } from './modelOptions';
 import type { ModelCapability } from './selectorView';
-import {
-  buildSelectorView,
-  resolveModelSwitchSelection,
-  resolveSelectorShape,
-} from './selectorView';
-
-const t = ((key: string) => key) as unknown as TFunction<'chat'>;
+import { resolveModelSwitchSelection } from './selectorView';
 
 const selectorCapabilityOf = (type: string): HeteroSelectorCapability => {
   const capability = getHeteroSelectorCapability(type);
@@ -28,62 +22,16 @@ const capabilityOf = (type: string): ModelCapability => {
   return { ...capability, model: capability.model };
 };
 
-const viewOf = (provider: HeterogeneousProviderConfig) =>
-  buildSelectorView({ capability: selectorCapabilityOf(provider.type), provider, t });
-
-const dimensionKeys = (provider: HeterogeneousProviderConfig) =>
-  viewOf(provider).dimensions.map((dimension) => dimension.key);
-
-describe('resolveSelectorShape', () => {
-  it('renders nothing for providers with no selector', () => {
-    expect(resolveSelectorShape({ type: 'kimi-code' }, true).kind).toBe('none');
-    expect(resolveSelectorShape(undefined, true).kind).toBe('none');
-  });
-
-  it('renders nothing when the caller cannot configure the shared provider', () => {
-    expect(resolveSelectorShape({ model: 'opus', type: 'claude-code' }, false).kind).toBe('none');
-  });
-
-  it('gives catalog-only providers the bare picker', () => {
-    expect(resolveSelectorShape({ type: 'opencode' }, true).kind).toBe('catalog');
-    expect(resolveSelectorShape({ type: 'pi' }, true).kind).toBe('catalog');
-  });
-
-  it('gives a catalog provider with another dimension the full menu', () => {
-    expect(resolveSelectorShape({ type: 'codebuddy' }, true).kind).toBe('menu');
-    expect(resolveSelectorShape({ type: 'qoder' }, true).kind).toBe('menu');
-  });
-
-  it('gives static providers the full menu', () => {
-    expect(resolveSelectorShape({ type: 'amp' }, true).kind).toBe('menu');
-    expect(resolveSelectorShape({ type: 'claude-code' }, true).kind).toBe('menu');
-    expect(resolveSelectorShape({ type: 'codex' }, true).kind).toBe('menu');
-  });
-});
-
-describe('dimensions per provider', () => {
-  it('offers Astra before older Codex models with five reasoning levels through max', () => {
-    const options = viewOf({ type: 'codex' }).dimensions[0].options;
-    expect(options[1]).toEqual({ label: 'GPT-6 Astra', value: 'gpt-6-astra' });
-
-    const view = viewOf({ effort: 'max', model: 'gpt-6-astra', type: 'codex' });
-    expect(view.dimensions[1].options.map((option) => option.value)).toEqual([
-      'default',
-      'low',
-      'medium',
-      'high',
-      'xhigh',
-      'max',
-    ]);
-    expect(view.triggerLabel).toEqual({
-      secondaryText: 'heteroAgent.modelSelector.reasoning.max',
-      text: 'GPT-6 Astra',
+describe('selector capabilities behind the engine form', () => {
+  it('offers Astra before older Codex models', () => {
+    expect(getStaticModelOptions('codex')[0]).toEqual({
+      label: 'GPT-6 Astra',
+      value: 'gpt-6-astra',
     });
   });
 
   it('labels Claude aliases without claiming a fixed model version', () => {
-    const options = viewOf({ type: 'claude-code' }).dimensions[0].options;
-    expect(options.slice(1)).toEqual([
+    expect(getStaticModelOptions('claude-code')).toEqual([
       { label: 'Fable', value: 'fable' },
       { label: 'Opus', value: 'opus' },
       { label: 'Sonnet', value: 'sonnet' },
@@ -91,139 +39,19 @@ describe('dimensions per provider', () => {
     ]);
   });
 
-  it('offers Amp mode without inventing a model dimension', () => {
-    const dimensions = viewOf({ type: 'amp' }).dimensions;
-
-    expect(dimensions.map((dimension) => dimension.key)).toEqual(['mode']);
-    expect(dimensions[0].label).toBe('heteroAgent.modelSelector.mode.label');
-    expect(dimensions[0].options.map((option) => option.value)).toEqual([
-      'default',
-      'low',
-      'medium',
-      'high',
-      'ultra',
-    ]);
-  });
-
-  it('offers model, reasoning and speed for a fast-capable codex model', () => {
-    expect(dimensionKeys({ model: 'gpt-5.6-sol', type: 'codex' })).toEqual([
-      'model',
-      'reasoning',
-      'speed',
-    ]);
-  });
-
-  it('hides speed for codex models without a fast tier', () => {
-    expect(dimensionKeys({ model: 'gpt-5.3-codex-spark', type: 'codex' })).toEqual([
-      'model',
-      'reasoning',
-    ]);
-  });
-
-  it('offers model and reasoning but never speed for claude-code', () => {
-    expect(dimensionKeys({ model: 'opus', type: 'claude-code' })).toEqual(['model', 'reasoning']);
-  });
-
-  it('loads the CodeBuddy model dimension from its CLI catalog and keeps reasoning in the menu', () => {
-    const view = viewOf({ effort: 'high', model: 'gpt-5.4', type: 'codebuddy' });
-
-    expect(view.isCatalogModel).toBe(true);
-    expect(view.dimensions.map((dimension) => dimension.key)).toEqual(['reasoning']);
-  });
-
-  it('leaves the model dimension to the catalog picker for qoder', () => {
-    const view = viewOf({ model: 'qwen3-coder', type: 'qoder' });
-
-    expect(view.isCatalogModel).toBe(true);
-    expect(view.dimensions.map((dimension) => dimension.key)).toEqual(['reasoning']);
-  });
-
   it('narrows codex reasoning levels to what the model serves', () => {
-    const solLevels = viewOf({ model: 'gpt-5.6-sol', type: 'codex' }).dimensions[1].options;
-    const lunaLevels = viewOf({ model: 'gpt-5.6-luna', type: 'codex' }).dimensions[1].options;
+    const capability = selectorCapabilityOf('codex');
 
-    expect(solLevels.map((option) => option.value)).toContain('ultra');
-    expect(lunaLevels.map((option) => option.value)).toContain('max');
-    expect(lunaLevels.map((option) => option.value)).not.toContain('ultra');
+    expect(capability.effort?.levels('gpt-5.6-sol')).toContain('ultra');
+    expect(capability.effort?.levels('gpt-5.6-luna')).toContain('max');
+    expect(capability.effort?.levels('gpt-5.6-luna')).not.toContain('ultra');
   });
 
-  it('keeps an off-catalog model pickable so the menu never drops the current value', () => {
-    const options = viewOf({ model: 'gpt-4o-legacy', type: 'codex' }).dimensions[0].options;
+  it('gates codex fast speed on the model', () => {
+    const capability = selectorCapabilityOf('codex');
 
-    expect(options[0]).toEqual({ label: 'gpt-4o-legacy', value: 'gpt-4o-legacy' });
-  });
-});
-
-describe('current value surfaced on each dimension', () => {
-  it('reflects a hand-authored Amp mode and gives it precedence over the persisted field', () => {
-    const view = viewOf({ args: ['--mode=ultra'], mode: 'low', type: 'amp' });
-
-    expect(view.dimensions[0].current).toBe('ultra');
-    expect(view.dimensions[0].valueLabel).toBe('heteroAgent.modelSelector.mode.ultra');
-    expect(view.ariaLabel).toBe('heteroAgent.modelSelector.mode.ariaLabel');
-    expect(view.triggerLabel).toEqual({ text: 'heteroAgent.modelSelector.mode.ultra' });
-  });
-
-  it('shows Default config when Amp does not override its native mode', () => {
-    expect(viewOf({ type: 'amp' }).triggerLabel).toEqual({
-      text: 'heteroAgent.modelSelector.defaultConfig',
-    });
-  });
-
-  it('shows the resolved model and effort labels', () => {
-    const view = viewOf({ effort: 'high', model: 'opus', type: 'claude-code' });
-
-    expect(view.dimensions[0].valueLabel).toBe('Opus');
-    expect(view.dimensions[1].valueLabel).toBe('heteroAgent.modelSelector.reasoning.high');
-  });
-
-  it('prefers a contradicting arg over the persisted field, matching spawn behaviour', () => {
-    const view = viewOf({ args: ['--model', 'haiku'], model: 'opus', type: 'claude-code' });
-
-    expect(view.dimensions[0].valueLabel).toBe('Haiku');
-  });
-
-  it('renames codex low effort to Light', () => {
-    const view = viewOf({ effort: 'low', model: 'gpt-5.4', type: 'codex' });
-
-    expect(view.dimensions[1].valueLabel).toBe('heteroAgent.modelSelector.reasoning.light');
-  });
-
-  it('keeps the plain Low wording for claude-code', () => {
-    const view = viewOf({ effort: 'low', model: 'opus', type: 'claude-code' });
-
-    expect(view.dimensions[1].valueLabel).toBe('heteroAgent.modelSelector.reasoning.low');
-  });
-
-  it('flags fast speed so the trigger can badge it', () => {
-    expect(viewOf({ model: 'gpt-5.6-sol', speed: 'fast', type: 'codex' }).isFastSpeed).toBe(true);
-    expect(viewOf({ model: 'gpt-5.6-sol', type: 'codex' }).isFastSpeed).toBe(false);
-  });
-
-  it('ignores a fast speed the current model cannot serve', () => {
-    expect(viewOf({ model: 'gpt-5.3-codex-spark', speed: 'fast', type: 'codex' }).isFastSpeed).toBe(
-      false,
-    );
-  });
-
-  it('collapses the trigger to one label when nothing is overridden', () => {
-    expect(viewOf({ type: 'claude-code' }).triggerLabel).toEqual({
-      text: 'heteroAgent.modelSelector.defaultConfig',
-    });
-  });
-
-  it('names both halves in the trigger once either is overridden', () => {
-    expect(viewOf({ model: 'opus', type: 'claude-code' }).triggerLabel).toEqual({
-      secondaryText: 'heteroAgent.modelSelector.defaultReasoning',
-      text: 'Opus',
-    });
-  });
-
-  it('keeps the effort in its own half so a long model name cannot truncate it', () => {
-    expect(viewOf({ effort: 'xhigh', model: 'gpt-5.6-sol', type: 'codex' }).triggerLabel).toEqual({
-      secondaryText: 'heteroAgent.modelSelector.reasoning.xhigh',
-      text: 'GPT-5.6 Sol',
-    });
+    expect(capability.speed?.supported('gpt-5.6-sol')).toBe(true);
+    expect(capability.speed?.supported('gpt-5.3-codex-spark')).toBe(false);
   });
 });
 

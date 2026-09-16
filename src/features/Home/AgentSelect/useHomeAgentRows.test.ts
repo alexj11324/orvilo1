@@ -42,6 +42,7 @@ vi.mock('@/store/agent/selectors', () => ({
   },
   builtinAgentSelectors: {
     inboxAgentId: (state: typeof mocks.agentState) => state.builtinAgentIdMap.inbox,
+    taskAgentId: (state: typeof mocks.agentState) => state.builtinAgentIdMap['task-agent'],
   },
 }));
 
@@ -100,6 +101,7 @@ describe('useHomeAgentRows', () => {
     mocks.sidebarHiddenGroupIds = [];
     mocks.sidebarVisibilityOverrides = {};
     mocks.agentState.agentMap = { agt_inbox: { title: 'Orvilo AI' } };
+    mocks.agentState.builtinAgentIdMap = { inbox: 'agt_inbox' };
     mocks.homeState.agentGroups = [];
     mocks.homeState.pinnedAgents = [];
     mocks.homeState.privateAgentGroups = [];
@@ -229,6 +231,20 @@ describe('useHomeAgentRows', () => {
     expect(result.current.workspaceRows.find((row) => row.id === 'agt_legacy')?.subtitle).toBe(
       undefined,
     );
+  });
+
+  it('lists the builtin task agent only when includeTaskAgent is set', () => {
+    mocks.agentState.builtinAgentIdMap['task-agent'] = 'agt_task';
+    mocks.agentState.agentMap['agt_task'] = { title: 'Task Agent' };
+    mocks.homeState.ungroupedAgents = [agent('agt_a', 'Shared')];
+
+    const { result: withoutTaskAgent } = renderHook(() => useHomeAgentRows());
+    expect(ids(withoutTaskAgent.current.workspaceRows)).toEqual(['agt_inbox', 'agt_a']);
+
+    const { result: withTaskAgent } = renderHook(() =>
+      useHomeAgentRows({ includeTaskAgent: true }),
+    );
+    expect(ids(withTaskAgent.current.workspaceRows)).toEqual(['agt_inbox', 'agt_task', 'agt_a']);
   });
 
   it('excludes chat groups so only agent ids reach the home input', () => {

@@ -143,17 +143,15 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
   const goalScope = `project:${projectId}`;
   const goals = useGoalStore(goalSelectors.goalList(goalScope));
   const goalSWR = useGoalStore((s) => s.useFetchGoals)(undefined, projectId);
-  const coordinatorAgentId = detail.project.coordinatorAgentId;
   const projectReference = detail.project.slug ?? projectId;
-  const workSWR = useClientDataSWR(
-    coordinatorAgentId
-      ? workKeys.workspace(workspaceId, `project:${projectId}:${coordinatorAgentId}`)
-      : null,
-    () =>
-      workService.listByWorkspace({
-        limit: 4,
-        originAgentId: coordinatorAgentId,
-      }),
+  const workSWR = useClientDataSWR(workKeys.workspace(workspaceId, `project:${projectId}`), () =>
+    workService.listByWorkspace({
+      limit: 4,
+      // Scoped by the project's own Work associations, not by its coordinator: a
+      // project with no coordinator configured still has its Works bound in
+      // `project_works`, and filtering by `originAgentId` reported those as none.
+      projectId,
+    }),
   );
 
   const tasks = detail.tasks ?? [];

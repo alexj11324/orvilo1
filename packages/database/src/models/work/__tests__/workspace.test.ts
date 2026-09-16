@@ -2,8 +2,9 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { topics, works, workspaces } from '../../../schemas';
+import { projectWorks, topics, works, workspaces } from '../../../schemas';
 import { AgentDocumentModel } from '../../agentDocuments';
+import { ProjectModel } from '../../project';
 import { TaskModel } from '../../task';
 import { WorkModel } from '..';
 import {
@@ -305,5 +306,97 @@ describe('WorkModel · listByWorkspace', () => {
     const summary = expectTaskSummaryItem(items[0]);
     expect(summary.task.name).toBe('Orphan task');
     expect(summary.resourceDeleted).toBe(true);
+  });
+});
+
+describe('WorkModel · listByWorkspace · project scope', () => {
+  /**
+   * `projects` has no column on `works`; the association is the `project_works`
+   * join table (one Work may serve several projects). `ProjectModel.create` is
+   * used rather than a raw insert so the NOT NULL `coordinatorAgentId` (and its
+   * virtual agent) come from the same path production uses.
+   */
+  const createProject = async (ownerId: string, name: string, identifier: string) =>
+    new ProjectModel(serverDB, ownerId).create({ identifier, name });
+
+  const registerTaskWork = async (ownerId: string, name: string) => {
+    const taskModel = new TaskModel(serverDB, ownerId);
+    const workModel = new WorkModel(serverDB, ownerId);
+    const task = await taskModel.create({ instruction: name, name });
+    const work = await workModel.registerTask({
+      changeType: 'created',
+      rootOperationId: `op-project-${name}`,
+      toolName: 'createTask',
+      toolIdentifier: 'lobe-task',
+      toolCallId: `tool-call-project-${name}`,
+      taskId: task.id,
+      topicId,
+    });
+    return { workModel, work: work! };
+  };
+
+  it('returns only the Works bound to the project, and composes with paging', async () => {
+    const project = await createProject(userId, 'Bound', 'BND1');
+    const other = await createProject(userId, 'Other', 'BND2');
+
+    const first = await registerTaskWork(userId, 'Project one');
+    const second = await registerTaskWork(userId, 'Project two');
+    const elsewhere = await registerTaskWork(userId, 'Not in project');
+
+    await serverDB.insert(projectWorks).values([
+      { addedByUserId: userId, projectId: project.id, workId: first.work.id },
+      { addedByUserId: userId, projectId: project.id, workId: second.work.id },
+      { addedByUserId: userId, projectId: other.id, workId: elsewhere.work.id },
+    ]);
+
+    const all = await first.workModel.listByWorkspace({ projectId: project.id });
+    expect(all.items.map((item) => item.id)).toEqual([second.work.id, first.work.id]);
+
+    // The filter narrows within the same keyset pipeline: one Work still yields
+    // one row, so `limit` counts Works and not join matches.
+    const page = await first.workModel.listByWorkspace({ limit: 1, projectId: project.id });
+    expect(page.items.map((item) => item.id)).toEqual([second.work.id]);
+    expect(page.nextCursor).not.toBeNull();
+  });
+
+  it('lists a Work bound to two projects under each of them', async () => {
+    const alpha = await createProject(userId, 'Alpha', 'ALP1');
+    const beta = await createProject(userId, 'Beta', 'BET1');
+    const { work, workModel } = await registerTaskWork(userId, 'Shared');
+
+    await serverDB.insert(projectWorks).values([
+      { addedByUserId: userId, projectId: alpha.id, workId: work.id },
+      { addedByUserId: userId, projectId: beta.id, workId: work.id },
+    ]);
+
+    for (const projectId of [alpha.id, beta.id]) {
+      const { items } = await workModel.listByWorkspace({ projectId });
+      expect(items.map((item) => item.id)).toEqual([work.id]);
+    }
+  });
+
+  it('returns nothing for a project id the caller cannot see', async () => {
+    const foreignProject = await createProject(userId2, 'Foreign', 'FOR1');
+    const foreign = await registerTaskWork(userId2, 'Foreign work');
+
+    await serverDB
+      .insert(projectWorks)
+      .values({ addedByUserId: userId2, projectId: foreignProject.id, workId: foreign.work.id });
+
+    // Ownership is enforced on the Work, so passing another user's project id
+    // cannot widen the result — it simply matches no visible Work.
+    const { items } = await new WorkModel(serverDB, userId).listByWorkspace({
+      projectId: foreignProject.id,
+    });
+    expect(items).toEqual([]);
+  });
+
+  it('returns an empty page for a project with no bound Works', async () => {
+    const empty = await createProject(userId, 'Empty', 'EMP1');
+    const { workModel } = await registerTaskWork(userId, 'Unbound');
+
+    const { items, nextCursor } = await workModel.listByWorkspace({ projectId: empty.id });
+    expect(items).toEqual([]);
+    expect(nextCursor).toBeNull();
   });
 });

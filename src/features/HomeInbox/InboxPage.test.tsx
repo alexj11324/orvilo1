@@ -2,6 +2,8 @@ import { cleanup, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ownsRailSections } from '@/features/HomeInbox/railSectionPlacement';
+
 import InboxPage from './InboxPage';
 
 const mocks = vi.hoisted(() => ({
@@ -37,13 +39,31 @@ describe('inbox route page', () => {
     expect(screen.getByText('inbox')).toBeInTheDocument();
   });
 
-  // The rail variant is the folded sidebar form the old Home used. Mounting that
-  // here would still render an inbox — just the wrong one — so it is asserted
-  // rather than left to the eye.
+  // Asserted through the real predicate rather than by pinning prop values: this
+  // page has no rail, so if the main column does not carry the rail's sections,
+  // goals, the daily brief and usage are neither fetched nor rendered — silently,
+  // and while every prop still looks reasonable. An earlier version of this test
+  // asserted `variant === 'main'` alone, which is exactly the state that had the
+  // bug, so it passed on a page that showed no briefs.
+  it('mounts the inbox so its main column carries the sections the rail owns', () => {
+    render(<InboxPage />);
+
+    expect(ownsRailSections(mocks.inboxProps as never)).toBe(true);
+  });
+
   it('mounts the full column variant, not the rail form', () => {
     render(<InboxPage />);
 
     expect(mocks.inboxProps?.variant).toBe('main');
+  });
+
+  // Without this the empty case renders the page title over a blank column
+  // (HomeInbox returns null for an empty main column), which reads as a broken
+  // build — the same failure the retired share route was fixed for.
+  it('gives the inbox an empty state of its own', () => {
+    render(<InboxPage />);
+
+    expect(mocks.inboxProps?.emptyState).toBeTruthy();
   });
 
   it('titles the page from the navigation namespace', () => {

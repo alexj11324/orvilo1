@@ -14,6 +14,11 @@ import { describe, expect, it } from 'vitest';
  * `storage.actions.copyOrvilo AI.button` in the source — a key holding a space,
  * which no `t()` call can ever spell. The runtime resources kept the original
  * name, so the UI was unaffected and the divergence stayed invisible.
+ *
+ * Both directions are checked. Source → JSON catches a key the runtime cannot
+ * resolve; JSON → source catches a key left behind in the runtime after the
+ * source dropped it, which is the more dangerous direction because it looks fine
+ * until something reads it.
  */
 const here = path.dirname(fileURLToPath(import.meta.url));
 const defaultDir = path.join(here, 'default');
@@ -40,21 +45,35 @@ const namespaceFiles = readdirSync(defaultDir).filter(
 );
 const sources = namespaceFiles
   .map((file) => ({ keys: readSourceKeys(file), namespace: path.basename(file, '.ts') }))
-  // Namespaces whose source is not a literal key map (arrays of phrases, or keys
-  // generated from `model-bank`) yield nothing here and are covered elsewhere.
+  // Namespaces whose source is not a literal key map (arrays of phrases, keys
+  // generated from `model-bank`, or the `.vite` variants) yield nothing here.
   .filter(({ keys }) => keys.length > 0);
 
 describe('default locale sources', () => {
-  it('covers namespaces, so a rename cannot hide a whole file from this check', () => {
-    expect(sources.length).toBeGreaterThan(10);
+  // A floor on the keys actually read, not on the number of files seen: if the
+  // extraction regex stops matching — a namespace reformatted to four-space
+  // indentation or double quotes — every assertion below would pass vacuously on
+  // an empty set, and a file-count check would not notice.
+  it('reads the keys it claims to read', () => {
+    const total = sources.reduce((sum, { keys }) => sum + keys.length, 0);
+
+    expect(sources.length).toBeGreaterThan(20);
+    expect(total).toBeGreaterThan(10_000);
   });
 
-  it('never names a key with whitespace', () => {
-    const offenders = sources.flatMap(({ keys, namespace }) =>
+  it.each(['en-US', 'zh-CN'])('never names a key with whitespace in %s', (locale) => {
+    const sourceOffenders = sources.flatMap(({ keys, namespace }) =>
       keys.filter((key) => /\s/.test(key)).map((key) => `${namespace}: ${JSON.stringify(key)}`),
     );
+    // A malformed name in the runtime resources is the one that actually reaches
+    // `t()`; scanning only the source would miss it.
+    const localeOffenders = sources.flatMap(({ namespace }) =>
+      [...readLocaleKeys(locale, namespace)]
+        .filter((key) => /\s/.test(key))
+        .map((key) => `${namespace}: ${JSON.stringify(key)}`),
+    );
 
-    expect(offenders).toEqual([]);
+    expect([...sourceOffenders, ...localeOffenders]).toEqual([]);
   });
 
   it('is mirrored exactly in en-US', () => {
@@ -62,17 +81,26 @@ describe('default locale sources', () => {
       const translated = readLocaleKeys('en-US', namespace);
       return keys.filter((key) => !translated.has(key)).map((key) => `${namespace}: ${key}`);
     });
+    const orphaned = sources.flatMap(({ keys, namespace }) => {
+      const inSource = new Set(keys);
+      return [...readLocaleKeys('en-US', namespace)]
+        .filter((key) => !inSource.has(key))
+        .map((key) => `${namespace}: ${key}`);
+    });
 
-    expect(missing).toEqual([]);
+    expect({ orphaned, missing }).toEqual({ orphaned: [], missing: [] });
   });
 
   /**
-   * Other locales are hand-translated, so they are allowed to ship only the plural
-   * categories their language uses: i18next's `zh` rule resolves plurals through
-   * `_other` alone, which is why `…attempts_one` exists in the source and en-US but
-   * not in zh-CN. Any sibling form of the same stem therefore counts as covered.
+   * zh-CN is the other hand-maintained locale. It is allowed to ship only the
+   * plural categories its language uses: i18next's `zh` rule resolves plurals
+   * through `_other` alone, which is why `…attempts_one` exists in the source and
+   * en-US but not here. Any sibling form of the same stem therefore counts.
+   *
+   * The ~30 machine-translated locales are not checked — they lag by design and
+   * fall back to English until the daily workflow catches up.
    */
-  it('covers every other shipped locale', () => {
+  it('covers the other hand-maintained locale', () => {
     const missing = sources.flatMap(({ keys, namespace }) => {
       const translated = readLocaleKeys('zh-CN', namespace);
       const hasPluralSibling = (key: string) => {

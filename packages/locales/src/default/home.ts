@@ -112,6 +112,8 @@ export default {
   'dashboard.task.unsupportedContext':
     'Task mode does not support attachments or selected context yet. Remove them or switch to Agent mode; your draft has been kept.',
   'inbox.author.scheduled': 'Scheduled',
+  'inbox.empty.desc': 'Briefs, unread conversations and anything waiting on you will appear here.',
+  'inbox.empty.title': 'Nothing needs you right now',
   'inbox.error.title': 'Run failed',
   'inbox.goals.review': 'Pending acceptance',
   'inbox.goals.running': 'In progress',

@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
+import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,11 +24,17 @@ import WideScreenContainer from '@/features/WideScreenContainer';
  * the capability happened to ship inside.
  *
  * `variant='main'` is the full column (the `rail` variant is the folded sidebar
- * form the old Home used); no `hide*` flags, so every section the user has not
- * hidden in their home-widget preferences is shown.
+ * form), and `inlineRail` is what makes the main column *carry* the sections the
+ * rail owns. Without it `ownsRailSections` is false for a `main` variant and
+ * goals, the daily brief and usage are neither fetched nor rendered — this page
+ * has no rail for them to fall back to, so it is the main column or nothing.
+ *
+ * No `hide*` flags: every section the user has not hidden in their home-widget
+ * preferences is shown.
  */
 const InboxPage = memo(() => {
   const { t } = useTranslation('electron');
+  const { t: tHome } = useTranslation('home');
 
   return (
     <Flexbox flex={1} height={'100%'}>
@@ -40,7 +46,15 @@ const InboxPage = memo(() => {
         }
       />
       <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-        <HomeInbox variant={'main'} />
+        <HomeInbox
+          inlineRail
+          variant={'main'}
+          emptyState={
+            <Center paddingBlock={48}>
+              <Empty description={tHome('inbox.empty.desc')} title={tHome('inbox.empty.title')} />
+            </Center>
+          }
+        />
       </WideScreenContainer>
     </Flexbox>
   );

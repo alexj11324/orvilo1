@@ -108,6 +108,8 @@
   "homePromoBanner.dismiss": "关闭",
   "homePromoBanner.label": "{{model}} 现已上线",
   "inbox.author.scheduled": "定时触发",
+  "inbox.empty.desc": "简报、未读会话，以及任何等你处理的内容都会出现在这里。",
+  "inbox.empty.title": "当前没有需要你处理的事",
   "inbox.error.title": "运行失败",
   "inbox.goals.review": "待验收",
   "inbox.goals.running": "进行中",

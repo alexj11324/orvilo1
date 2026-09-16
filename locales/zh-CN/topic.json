@@ -149,8 +149,6 @@
   "management.actionsMenu.archiveStale.label": "归档 3 个月未活动的话题",
   "management.actionsMenu.archiveStale.noneFound": "没有需要归档的话题。",
   "management.actionsMenu.archiveStale.title": "归档过时话题？",
-  "management.actionsMenu.autoSummarize.comingSoon": "自动生成摘要功能即将上线,敬请期待。",
-  "management.actionsMenu.autoSummarize.label": "为缺少摘要的话题自动生成",
   "management.actionsMenu.title": "更多操作",
   "management.bulk.archive": "归档",
   "management.bulk.cancel": "取消",

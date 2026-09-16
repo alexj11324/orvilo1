@@ -188,9 +188,6 @@ export default {
   'management.actionsMenu.archiveStale.label': 'Archive topics inactive for 3+ months',
   'management.actionsMenu.archiveStale.noneFound': 'No stale topics found.',
   'management.actionsMenu.archiveStale.title': 'Archive stale topics?',
-  'management.actionsMenu.autoSummarize.comingSoon':
-    'Auto-summarization is coming soon — track on the roadmap.',
-  'management.actionsMenu.autoSummarize.label': 'Auto-generate summaries for topics without one',
   'management.actionsMenu.title': 'More actions',
   'management.bulk.archive': 'Archive',
   'management.bulk.cancel': 'Cancel',

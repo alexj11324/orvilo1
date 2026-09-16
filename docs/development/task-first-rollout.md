@@ -1640,7 +1640,26 @@ i18next 的 `zh` 规则只走 `_other`）。反向验证过：把其中一个坏
 `check-duplicate-run`、`typecheck`、`test-packages`、`test-app`（+ `merge-app-coverage`）、
 `test-windows-shell`、`test-desktop`、`test-server`（+ `merge-server-coverage`）、`test-databsae`（原文如此拼写）。
 
-### 6.3 哪些验收项**不能**用 Web 证据结清
+### 6.3 基线自带的红色测试：`src/services/chat/chat.test.ts`（2026-09-16 对照确认）
+
+跑 CI 之前先知道这件事，否则这个红点会被算到本轮头上。**它与本分支无关**：
+
+| 证据             | 实测                                                                                                                             |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 本分支是否改过它 | **没有**。`git log 58d79735..HEAD -- src/services/chat packages/context-engine` 皆为空                                           |
+| 两棵树里的内容   | 工作树与主仓（`main`）**逐字节相同**（`shasum` 均为 `d0d15df7…`）                                                                |
+| 对照运行         | 在主仓 `main` 上、`src/services/chat` 与 `packages/context-engine` **均为干净**时运行，**失败完全一致**：同为 7 条、同名、同分布 |
+
+失败形态（本机单跑，非并发）：**6 条快速断言失败**（36–265ms）+ **1 条超时**（`should preserve the topic ID when using the browser runtime`，约 5.1s）。
+快速失败的直接原因是：用例中被 mock 的 fetch 返回占位负载 `{"some":"data"}` →
+`TRPCClientError: translatedResponse.UnreadableServerResponse`（`TransformResultError: Unable to transform response from server`）
+→ 带日期的 system 消息根本没被构造出来 → 断言 `content` 含 `Current date: 2026-09-16 (UTC)` 失败。
+即这是**测试桩与新请求路径之间的缺口**，不是产品行为断言。
+
+⚠️ 那条 5.1s 超时属于本文件记录的**第四例同类**（测试体真实耗时贴着默认 5s 预算），
+但它在 base 上就如此，且不在本分支改动集内，**故只记录不修** —— 修它要先决定那个桩缺口是产品问题还是测试问题。
+
+### 6.4 哪些验收项**不能**用 Web 证据结清
 
 依据本轮两份审计（§2.2、§2.2.2）与方案 §13.2 的条目，下列项需要平台专有 runner / 真机，
 Web 证据不能替代（方案 §13.1：「涉及平台专有 Electron 行为的验证使用合适远端 runner / 已授权测试设备；

@@ -1,11 +1,13 @@
 import type { TaskPlanningAction, TaskPlanningProposal, TaskPlanningTrigger } from '@orvilo/types';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
+import { AgentModel } from '@/database/models/agent';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { TaskModel } from '@/database/models/task';
 import type { TaskDomainEventItem, TaskPlanningScopeItem } from '@/database/schemas';
-import { taskDependencies, tasks } from '@/database/schemas';
+import { taskDependencies, taskPlanningRevisions, tasks } from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
+import { TaskService } from '@/server/services/task';
 
 import { taskPlanningProposalSchema } from './contract';
 import { createLinearCoordinatorPlanner } from './coordinator';
@@ -142,14 +144,28 @@ export class LinearPlanningWorker {
    */
   async applyProposal(
     revisionId: string,
-    proposal: TaskPlanningProposal,
     userId: string,
+    approvalConfirmed: boolean,
   ): Promise<ApplyPlanningProposalResult> {
     return this.db.transaction(async (tx) => {
       const model = new LinearSyncModel(tx, this.workspaceId);
-      const revision = await model.findPlanningRevisionById(revisionId);
+      const [revision] = await tx
+        .select()
+        .from(taskPlanningRevisions)
+        .where(
+          and(
+            eq(taskPlanningRevisions.id, revisionId),
+            eq(taskPlanningRevisions.workspaceId, this.workspaceId),
+          ),
+        )
+        .for('update')
+        .limit(1);
       if (!revision || revision.status !== 'proposed') {
         throw new Error('Planning revision is not awaiting application');
+      }
+      const proposal = taskPlanningProposalSchema.parse(revision.proposal);
+      if (proposal.requiresApproval && !approvalConfirmed) {
+        throw new Error('Planning proposal requires explicit approval');
       }
 
       const scope = await model.lockPlanningScope(revision.scopeId);
@@ -196,16 +212,36 @@ export class LinearPlanningWorker {
       }
 
       const taskModel = new TaskModel(tx, userId, this.workspaceId);
+      const taskService = new TaskService(tx, userId, this.workspaceId);
+      const agentModel = new AgentModel(tx, userId, this.workspaceId);
       const createdTaskIds: string[] = [];
       const updatedTaskIds: string[] = [];
 
       for (const action of proposal.actions) {
         switch (action.action) {
           case 'assign_task': {
-            const updated = await taskModel.update(action.taskId, {
-              assigneeAgentId: action.assigneeAgentId,
-              assigneeUserId: action.assigneeUserId,
-            });
+            const task = await taskModel.findById(action.taskId);
+            if (!task) throw new Error(`Task ${action.taskId} is not available to this approver`);
+            if (action.assigneeAgentId) {
+              const exists = await agentModel.existsById(action.assigneeAgentId);
+              if (!exists) throw new Error('Planning proposal assignee Agent is not available');
+              const agentVisibility = await agentModel.getAgentVisibility(action.assigneeAgentId);
+              taskService.assertAgentVisibilityCompat(task.visibility, agentVisibility);
+            }
+            await taskService.assertAssigneeUserAssignable(action.assigneeUserId);
+            taskService.assertAssigneeUserVisibilityCompat(
+              task.visibility,
+              action.assigneeUserId,
+              task.createdByUserId ?? '',
+            );
+            const updated = await taskService.updateTaskWithAssigneeLock(
+              action.taskId,
+              {
+                assigneeAgentId: action.assigneeAgentId,
+                assigneeUserId: action.assigneeUserId,
+              },
+              { userId },
+            );
             if (!updated) throw new Error(`Task ${action.taskId} could not be assigned`);
             const syncChange = await model.recordTaskChangeInTransaction(tx, {
               eventType: 'task.assigned',
@@ -229,7 +265,7 @@ export class LinearPlanningWorker {
             if (scope.scopeType === 'project' && action.projectId !== scope.scopeId) {
               throw new Error('Planning proposal cannot create a task outside its project scope');
             }
-            const created = await taskModel.create({
+            const created = await taskService.createTask({
               description: action.description,
               instruction: action.instruction,
               name: action.name,
@@ -269,11 +305,15 @@ export class LinearPlanningWorker {
             break;
           }
           case 'update_task': {
-            const updated = await taskModel.update(action.taskId, {
-              instruction: action.patch.instruction,
-              name: action.patch.name,
-              priority: action.patch.priority,
-            });
+            const updated = await taskService.updateTaskWithAssigneeLock(
+              action.taskId,
+              {
+                instruction: action.patch.instruction,
+                name: action.patch.name,
+                priority: action.patch.priority,
+              },
+              { userId },
+            );
             if (!updated) throw new Error(`Task ${action.taskId} could not be updated`);
             const syncChange = await model.recordTaskChangeInTransaction(tx, {
               eventType: 'task.requirement.changed',
@@ -299,7 +339,6 @@ export class LinearPlanningWorker {
       await model.updatePlanningRevision(revision.id, {
         appliedAt: new Date(),
         error: null,
-        proposal,
         status: 'applied',
       });
       await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');

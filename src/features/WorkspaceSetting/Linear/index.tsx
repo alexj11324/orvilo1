@@ -97,13 +97,14 @@ const LinearWorkspaceSettings = memo(() => {
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
-    const [catalogResponse, installationResponse, projectResponse, bindingResponse, scopeResponse] = await Promise.all([
-      lambdaClient.linearSync.catalog.query(),
-      lambdaClient.linearSync.installations.query(),
-      lambdaClient.linearSync.projects.query(),
-      lambdaClient.linearSync.bindings.query(),
-      lambdaClient.linearSync.planningScopes.query(),
-    ]);
+    const [catalogResponse, installationResponse, projectResponse, bindingResponse, scopeResponse] =
+      await Promise.all([
+        lambdaClient.linearSync.catalog.query(),
+        lambdaClient.linearSync.installations.query(),
+        lambdaClient.linearSync.projects.query(),
+        lambdaClient.linearSync.bindings.query(),
+        lambdaClient.linearSync.planningScopes.query(),
+      ]);
     if (
       !catalogResponse?.data ||
       !installationResponse?.data ||
@@ -119,7 +120,9 @@ const LinearWorkspaceSettings = memo(() => {
     setBindings(bindingResponse.data);
     setPlanningScopes(scopeResponse.data);
     setSelectedInstallationId((current) => current || installationResponse.data[0]?.id || '');
-    setSelectedOrganizationId((current) => current || installationResponse.data[0]?.organizationId || '');
+    setSelectedOrganizationId(
+      (current) => current || installationResponse.data[0]?.organizationId || '',
+    );
   }, []);
 
   useEffect(() => {
@@ -194,7 +197,8 @@ const LinearWorkspaceSettings = memo(() => {
     try {
       const response = await lambdaClient.linearSync.upsertInstallation.mutate({
         organizationId: selectedOrganizationId,
-        organizationName: catalog?.organizations.find((item) => item.id === selectedOrganizationId)?.name,
+        organizationName: catalog?.organizations.find((item) => item.id === selectedOrganizationId)
+          ?.name,
       });
       if (!response?.data) throw new Error('Linear installation response is empty');
       setInstallations((current) => [
@@ -242,7 +246,8 @@ const LinearWorkspaceSettings = memo(() => {
   );
   const selectedInstallation = installations.find((item) => item.id === selectedInstallationId);
   const selectedBinding = bindings.find(
-    (item) => item.projectId === selectedProjectId && item.installationId === selectedInstallationId,
+    (item) =>
+      item.projectId === selectedProjectId && item.installationId === selectedInstallationId,
   );
   const latestProposalRevision = planningRevisions.find(
     (revision) => revision.status === 'proposed' && revision.proposal,
@@ -255,9 +260,7 @@ const LinearWorkspaceSettings = memo(() => {
           <Text strong as="h1" style={{ fontSize: 24, margin: 0 }}>
             {t('workspaceSetting.linear.title')}
           </Text>
-          <Text className={styles.description}>
-            {t('workspaceSetting.linear.description')}
-          </Text>
+          <Text className={styles.description}>{t('workspaceSetting.linear.description')}</Text>
         </Flexbox>
 
         <Block variant="outlined">
@@ -268,7 +271,9 @@ const LinearWorkspaceSettings = memo(() => {
                 <Text type="secondary">
                   {linearServer?.isConnected
                     ? t('workspaceSetting.linear.connectedAs', {
-                        name: linearServer.providerUsername || t('workspaceSetting.linear.connectedAccount'),
+                        name:
+                          linearServer.providerUsername ||
+                          t('workspaceSetting.linear.connectedAccount'),
                       })
                     : t('workspaceSetting.linear.connectionDescription')}
                 </Text>
@@ -294,7 +299,9 @@ const LinearWorkspaceSettings = memo(() => {
               <Flexbox gap={16} padding={20}>
                 <Flexbox gap={4}>
                   <Text strong>{t('workspaceSetting.linear.organizationTitle')}</Text>
-                  <Text type="secondary">{t('workspaceSetting.linear.organizationDescription')}</Text>
+                  <Text type="secondary">
+                    {t('workspaceSetting.linear.organizationDescription')}
+                  </Text>
                 </Flexbox>
                 <Select
                   placeholder={t('workspaceSetting.linear.organizationPlaceholder')}
@@ -305,14 +312,22 @@ const LinearWorkspaceSettings = memo(() => {
                   }))}
                   onChange={(value) => setSelectedOrganizationId(value)}
                 />
-                <Button disabled={!canManage || !selectedOrganizationId} loading={loading} onClick={saveInstallation}>
+                <Button
+                  disabled={!canManage || !selectedOrganizationId}
+                  loading={loading}
+                  onClick={saveInstallation}
+                >
                   {t('workspaceSetting.linear.saveOrganization')}
                 </Button>
-                {selectedOrganizationName && <Text type="secondary">{selectedOrganizationName}</Text>}
+                {selectedOrganizationName && (
+                  <Text type="secondary">{selectedOrganizationName}</Text>
+                )}
                 {selectedInstallation && (
                   <Text type="secondary">
                     {t('workspaceSetting.linear.installationReady', {
-                      name: selectedInstallation.organizationName || selectedInstallation.organizationId,
+                      name:
+                        selectedInstallation.organizationName ||
+                        selectedInstallation.organizationId,
                     })}
                   </Text>
                 )}
@@ -333,24 +348,40 @@ const LinearWorkspaceSettings = memo(() => {
                     onChange={(value) => setSelectedProjectId(value)}
                   />
                   <Select
-                    options={(catalog?.projects ?? []).map((item) => ({ label: item.name, value: item.id }))}
                     placeholder={t('workspaceSetting.linear.remoteProjectPlaceholder')}
                     value={selectedLinearProjectId || undefined}
+                    options={(catalog?.projects ?? []).map((item) => ({
+                      label: item.name,
+                      value: item.id,
+                    }))}
                     onChange={(value) => setSelectedLinearProjectId(value)}
                   />
                 </div>
                 <div className={styles.row}>
                   <Text>{t('workspaceSetting.linear.replanning')}</Text>
-                  <Switch checked={replanningEnabled} disabled={!canManage} onChange={setReplanningEnabled} />
+                  <Switch
+                    checked={replanningEnabled}
+                    disabled={!canManage}
+                    onChange={setReplanningEnabled}
+                  />
                 </div>
                 <div className={styles.row}>
                   <Text>{t('workspaceSetting.linear.autoExecution')}</Text>
-                  <Switch checked={autoExecutionEnabled} disabled={!canManage} onChange={setAutoExecutionEnabled} />
+                  <Switch
+                    checked={autoExecutionEnabled}
+                    disabled={!canManage}
+                    onChange={setAutoExecutionEnabled}
+                  />
                 </div>
                 <Text type="secondary">{t('workspaceSetting.linear.autoExecutionNote')}</Text>
                 <Button
-                  disabled={!canManage || !selectedInstallationId || !selectedProjectId || !selectedLinearProjectId}
                   loading={loading}
+                  disabled={
+                    !canManage ||
+                    !selectedInstallationId ||
+                    !selectedProjectId ||
+                    !selectedLinearProjectId
+                  }
                   onClick={saveBinding}
                 >
                   {t('workspaceSetting.linear.saveBinding')}
@@ -368,7 +399,9 @@ const LinearWorkspaceSettings = memo(() => {
                       });
                       toast.success(t('workspaceSetting.linear.importSuccess'));
                     } catch (error) {
-                      toast.error((error as Error).message || t('workspaceSetting.linear.importFailed'));
+                      toast.error(
+                        (error as Error).message || t('workspaceSetting.linear.importFailed'),
+                      );
                     } finally {
                       setLoading(false);
                     }
@@ -402,7 +435,9 @@ const LinearWorkspaceSettings = memo(() => {
                   await lambdaClient.linearSync.processPlanning.mutate({ limit: 10 });
                   toast.success(t('workspaceSetting.linear.workerSuccess'));
                 } catch (error) {
-                  toast.error((error as Error).message || t('workspaceSetting.linear.workerFailed'));
+                  toast.error(
+                    (error as Error).message || t('workspaceSetting.linear.workerFailed'),
+                  );
                 } finally {
                   setLoading(false);
                 }
@@ -440,7 +475,7 @@ const LinearWorkspaceSettings = memo(() => {
                       setLoading(true);
                       try {
                         await lambdaClient.linearSync.applyPlanningProposal.mutate({
-                          proposal: latestProposalRevision.proposal,
+                          approvalConfirmed: true,
                           revisionId: latestProposalRevision.id,
                         });
                         setPlanningRevisions((current) =>

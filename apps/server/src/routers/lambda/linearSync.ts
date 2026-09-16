@@ -10,7 +10,6 @@ import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { taskPlanningProposalSchema } from '@/server/services/linearSync/contract';
 import { LinearPlanningWorker } from '@/server/services/linearSync/planning';
 import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/provider';
 import { LinearSyncWorker } from '@/server/services/linearSync/worker';
@@ -106,11 +105,11 @@ export const linearSyncRouter = router({
 
   createIssueLink: linearSyncWriteProcedure
     .input(
-        z.object({
-          bindingId: z.string().uuid(),
-          linearIdentifier: z.string().min(1),
-          linearIssueId: z.string().min(1),
-          remoteSnapshot: snapshotSchema.optional(),
+      z.object({
+        bindingId: z.string().uuid(),
+        linearIdentifier: z.string().min(1),
+        linearIssueId: z.string().min(1),
+        remoteSnapshot: snapshotSchema.optional(),
         taskId: z.string(),
       }),
     )
@@ -348,7 +347,7 @@ export const linearSyncRouter = router({
   applyPlanningProposal: linearSyncWriteProcedure
     .input(
       z.object({
-        proposal: taskPlanningProposalSchema,
+        approvalConfirmed: z.literal(true),
         revisionId: z.string().uuid(),
       }),
     )
@@ -356,8 +355,8 @@ export const linearSyncRouter = router({
       try {
         const data = await new LinearPlanningWorker(ctx.serverDB, ctx.workspaceId!).applyProposal(
           input.revisionId,
-          input.proposal,
           ctx.userId,
+          input.approvalConfirmed,
         );
         return { data, message: 'Linear planning proposal applied', success: true };
       } catch (error) {

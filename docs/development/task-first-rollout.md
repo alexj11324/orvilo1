@@ -348,6 +348,25 @@ import { imageRouter } from '@/server/routers/lambda/image';
 > **用户裁决（覆盖方案 §7）**：整合后的界面**名称仍取「自动化」/ Automation**，
 > 而非方案写的「周期任务」。落地细节待 S40 确认。
 
+### 1.6b S30.3 / S30.4 规模（本次补测）
+
+方案 §6.4 要求退役 `/eval` 的通用实验 / 数据集 / 基准 / 案例 UI。实测规模**与 S30.2 同级**，不是「顺手可删」：
+
+| 项                                       | 证据                                                                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `src/routes/(main)/eval/` **111 个文件** | `find "src/routes/(main)/eval" -type f \| wc -l` = 111                                                              |
+| 路由注册                                 | `desktopRouter.shared.tsx:878` 起，含 `experiments/:id`、`datasets/:id`、`cases/:id`、`bench/:id/runs/:runId/...`   |
+| **删除前必须先迁移的生产者**             | `Conversation/Messages/components/MessageActionBar/actions/saveAsEvalCase.ts`（消息操作「存为评测用例」，面向用户） |
+| 同上                                     | `src/features/HomeSidebar/Footer/index.tsx`（侧栏页脚入口）                                                         |
+| 同上                                     | `src/features/NavPanel/routeKey.ts` + 对应测试                                                                      |
+
+方案 §6.4 同时明确「`Acceptance` / `Verify` / 任务测试报告 / 证据 / 失败追踪是任务产品核心，**保留**」—— 即 eval 与 Acceptance 必须切开，不能按 `eval` 目录名连带处理。
+
+> ⚠️ **S30.2 与 S30.4 都受同一个验证缺口约束**：两者的后台链路都是**进程内调用**
+> （`router.createCaller` / `asyncCaller.image.createImage`，见 §1.4），删错东西不会在运行时暴露，
+> 只在 `apps/server` 的 tsc 里报错，而方案 §0.1 禁止本机跑类型检查。
+> 这类删除的「删对了」证据只能由 GHA 的 Typecheck job 提供。
+
 ### 1.7 待补清单
 
 以下功能域的清单仍在收集中，收集完成后补入本节：

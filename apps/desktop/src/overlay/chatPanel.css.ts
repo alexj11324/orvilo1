@@ -395,23 +395,6 @@ export const nativeSelect = style({
   },
 });
 
-export const modelIconBox = style({
-  alignItems: 'center',
-  display: 'inline-flex',
-  flexShrink: 0,
-  height: 20,
-  justifyContent: 'center',
-  width: 20,
-});
-
-export const modelIconBoxFallback = style({
-  background: v(vars.colorFillSecondary),
-  borderRadius: 5,
-  flexShrink: 0,
-  height: 20,
-  width: 20,
-});
-
 export const shortcutHint = style({
   alignItems: 'center',
   color: v(vars.colorTextQuaternary),

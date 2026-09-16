@@ -17,6 +17,8 @@ export {
   sanitizeClaudeCodeDirectEnv,
 } from './claudeCodeDirectEnv';
 export type {
+  BuiltinHeterogeneousAgentDescriptor,
+  BuiltinHeterogeneousAgentType,
   HeterogeneousAgentCliError,
   HeterogeneousAgentDescriptor,
   HeterogeneousAgentMenuLabelKey,
@@ -31,6 +33,7 @@ export {
   AMP_CLI_INSTALL_DOCS_URL,
   buildHeterogeneousAgentAuthRequiredError,
   buildHeterogeneousAgentCliNotFoundError,
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
   CLAUDE_CODE_CLI_INSTALL_COMMANDS,
   CLAUDE_CODE_CLI_INSTALL_DOCS_URL,
   CODEBUDDY_CLI_INSTALL_COMMANDS,
@@ -43,9 +46,11 @@ export {
   DROID_CLI_INSTALL_DOCS_URL,
   getHeterogeneousAgentConfig,
   getHeterogeneousAgentConfigOrThrow,
+  getNativeHeteroSessionBindingKey,
   GROK_BUILD_CLI_INSTALL_COMMANDS,
   GROK_BUILD_CLI_INSTALL_DOCS_URL,
   HETEROGENEOUS_AGENT_CONFIGS,
+  isBuiltinHeterogeneousType,
   isHeterogeneousAgentAuthRequired,
   isLocalHeterogeneousType,
   isRemoteHeterogeneousType,

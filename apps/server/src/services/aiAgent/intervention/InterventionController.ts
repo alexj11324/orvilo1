@@ -1,6 +1,10 @@
 import type { AgentState } from '@orvilo/agent-runtime';
 import type { LobeChatDatabase } from '@orvilo/database';
-import { isLocalHeterogeneousType, isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
+import {
+  isBuiltinHeterogeneousType,
+  isLocalHeterogeneousType,
+  isRemoteHeterogeneousType,
+} from '@orvilo/heterogeneous-agents';
 import { ThreadStatus } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import debug from 'debug';
@@ -136,7 +140,10 @@ export class InterventionController {
         targetOperation?.deviceId &&
         targetOperation.heteroType &&
         (isRemoteHeterogeneousType(targetOperation.heteroType) ||
-          isLocalHeterogeneousType(targetOperation.heteroType))
+          isLocalHeterogeneousType(targetOperation.heteroType) ||
+          // The builtin Orvilo harness runs on the device through the engine's
+          // CLI family — runningOperation keeps the declared 'orvilo' type.
+          isBuiltinHeterogeneousType(targetOperation.heteroType))
       ) {
         const taskId = targetOperation.operationId ?? resolvedOperationId;
         log(
@@ -164,7 +171,10 @@ export class InterventionController {
           10_000,
         );
 
-        if (isLocalHeterogeneousType(targetOperation.heteroType)) {
+        if (
+          isLocalHeterogeneousType(targetOperation.heteroType) ||
+          isBuiltinHeterogeneousType(targetOperation.heteroType)
+        ) {
           deviceCancellationConfirmed =
             cancelResult.success &&
             isRecord(cancelResult.state) &&

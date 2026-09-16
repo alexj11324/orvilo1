@@ -1,6 +1,7 @@
 import type { ActionKey, ActionKeys } from './config';
 
 const CHAT_ONLY_ACTIONS = new Set<ActionKey>([
+  'agent',
   'agentMode',
   'clear',
   'fileUpload',

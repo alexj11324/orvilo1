@@ -4,6 +4,7 @@ import type { AgentGraph } from './graph';
 import { hasAnyCliFlag, hasCliConfigKey, hasCliFlag } from './heteroCliArgs';
 import type { HeterogeneousAgentType, LocalHeterogeneousAgentType } from './heterogeneousAgent';
 import {
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
   HETEROGENEOUS_AGENT_CONFIGS,
   REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
 } from './heterogeneousAgent';
@@ -180,11 +181,96 @@ export type HeterogeneousApiConfig =
   HeterogeneousProviderApiConfig | HeterogeneousServerDefaultApiConfig;
 
 /**
+ * Inner engine driving a builtin Orvilo harness session
+ * (`HeterogeneousProviderConfig.type === 'orvilo'`).
+ *
+ * - `'claude-sdk'`: in-process Claude Agent SDK session over the local `claude` binary.
+ * - `'codex-app-server'`: Codex app-server thread session over the local `codex` binary.
+ */
+export type OrviloEngineKind = 'claude-sdk' | 'codex-app-server';
+
+export const ORVILO_ENGINE_KINDS = [
+  'claude-sdk',
+  'codex-app-server',
+] as const satisfies readonly OrviloEngineKind[];
+
+/**
+ * Engine used when `engine` is missing or carries an unrecognized value. The
+ * Claude Agent SDK engine is the default Orvilo runtime.
+ */
+export const DEFAULT_ORVILO_ENGINE: OrviloEngineKind = 'claude-sdk';
+
+export const isOrviloEngineKind = (engine: unknown): engine is OrviloEngineKind =>
+  typeof engine === 'string' && (ORVILO_ENGINE_KINDS as readonly string[]).includes(engine);
+
+/**
+ * Resolve the effective Orvilo engine, defaulting to the Claude Agent SDK
+ * engine. Unknown persisted values degrade to the default rather than failing
+ * the run — the engine field is a preference, not an identity.
+ */
+export const resolveOrviloEngine = (
+  engine: OrviloEngineKind | string | null | undefined,
+): OrviloEngineKind => (isOrviloEngineKind(engine) ? engine : DEFAULT_ORVILO_ENGINE);
+
+/**
+ * Local CLI family each Orvilo engine executes through — the managed transport
+ * binary on desktop (`claude` / `codex`) and the CLI fallback family on
+ * connected devices and cloud sandboxes.
+ */
+export const ORVILO_ENGINE_CLI_AGENT_TYPES = {
+  'claude-sdk': 'claude-code',
+  'codex-app-server': 'codex',
+} as const satisfies Record<OrviloEngineKind, LocalHeterogeneousAgentType>;
+
+/**
+ * The local CLI family an Orvilo engine resolves to. Every gate that only
+ * understands local CLI types (command resolution, adapters, auth/error
+ * classification, resume identity) must see THIS type — `orvilo` has no
+ * executable or adapter of its own.
+ */
+export const resolveOrviloCliAgentType = (
+  engine: OrviloEngineKind | string | null | undefined,
+): (typeof ORVILO_ENGINE_CLI_AGENT_TYPES)[OrviloEngineKind] =>
+  ORVILO_ENGINE_CLI_AGENT_TYPES[resolveOrviloEngine(engine)];
+
+/**
+ * Resolve the local CLI family that actually executes a heterogeneous
+ * provider: for the builtin `'orvilo'` harness it is the selected engine's
+ * family; for every other declared type it is the type unchanged (remote
+ * platform types pass through — callers gate them out separately).
+ */
+export const resolveHeteroCliAgentType = (
+  provider: { engine?: OrviloEngineKind | string | null; type: string } | null | undefined,
+): string | undefined =>
+  provider?.type === 'orvilo' ? resolveOrviloCliAgentType(provider.engine) : provider?.type;
+
+/**
+ * Resolve the agent-level system context handed to a heterogeneous run:
+ * the provider's static `systemContext`, with the agent's `systemRole`
+ * persona prepended for the builtin Orvilo harness only.
+ *
+ * External CLI harnesses keep their own identity — a raw `claude-code` agent
+ * is Claude Code plus extra context, so its `systemRole` stays a LobeHub-side
+ * display field. The builtin Orvilo harness has no identity of its own: the
+ * agent's persona IS the product, so it leads the injected context.
+ */
+export const resolveHeteroAgentSystemContext = (
+  provider: { systemContext?: string | null; type: string } | null | undefined,
+  agentSystemRole?: string | null,
+): string | undefined => {
+  const persona = provider?.type === 'orvilo' ? agentSystemRole?.trim() : undefined;
+  const staticContext = provider?.systemContext?.trim();
+
+  if (!persona && !staticContext) return undefined;
+  return [persona, staticContext].filter(Boolean).join('\n\n');
+};
+
+/**
  * Heterogeneous agent provider configuration.
  * When set, the assistant delegates execution to an external agent runtime
  * instead of using the built-in model runtime.
  *
- * Two families of hetero agents are supported:
+ * Three families of hetero agents are supported:
  *
  * - **Local CLI** (`amp` | `claude-code` | `codebuddy` | `codex` |
  *   `cursor` | `droid` | `grok-build` | `kimi-code` | `opencode` | `pi` | `qoder` | `trae`):
@@ -194,6 +280,9 @@ export type HeterogeneousApiConfig =
  * - **Platform task** (`openclaw` | `hermes`): runs on this desktop when
  *   `executionTarget` is `local`, or on a machine connected via `lh connect`
  *   when it is `device`. `platformAgentId` selects the named platform agent.
+ *
+ * - **Builtin engine** (`orvilo`): a managed session driven by the local
+ *   engine selected by `engine`; `command` overrides the engine binary path.
  */
 export interface HeterogeneousProviderConfig {
   /** Credential-free API binding used when `authMode` is `api`. */
@@ -202,7 +291,10 @@ export interface HeterogeneousProviderConfig {
   args?: string[];
   /** Defaults to `subscription` for backwards compatibility. */
   authMode?: HeterogeneousAuthMode;
-  /** Command to spawn the agent (e.g. 'claude') (local CLI only). */
+  /**
+   * Command to spawn the agent (e.g. 'claude') (local CLI only). For the
+   * builtin Orvilo engine this overrides the binary resolved from `engine`.
+   */
   command?: string;
   /**
    * Reasoning effort, surfaced through the chat-input model selector and
@@ -212,6 +304,13 @@ export interface HeterogeneousProviderConfig {
    * vars, and account defaults.
    */
   effort?: HeterogeneousReasoningEffort;
+  /**
+   * Inner engine for the builtin Orvilo harness (`type === 'orvilo'` only).
+   * Defaults to `'claude-sdk'`; when the preferred engine's binary is not
+   * installed on the execution device, the runtime may fall back to another
+   * detected engine.
+   */
+  engine?: OrviloEngineKind;
   /** Custom environment variables (local CLI only). */
   env?: Record<string, string>;
   /**
@@ -284,7 +383,11 @@ export const resolveHeterogeneousProviderTopicModel = (
     return { model: config.apiConfig.model, provider: config.apiConfig.providerId };
   }
 
-  const model = getHeteroSelectorCapability(config.type)?.model?.resolve(config);
+  // Selector capabilities are keyed by CLI family — the builtin Orvilo harness
+  // resolves through its engine's family, so snapshot the resolved model under
+  // the declared 'orvilo' type.
+  const family = resolveHeteroCliAgentType(config);
+  const model = getHeteroSelectorCapability(family)?.model?.resolve(config);
   return model ? { model, provider: config.type } : undefined;
 };
 
@@ -312,10 +415,13 @@ const applyTopicModelPin = (
     };
   }
 
-  if (topicModel.provider !== config.type) return config;
+  // Accept pins spelled with the declared type ('orvilo') or its engine's CLI
+  // family — both identify this provider.
+  const family = resolveHeteroCliAgentType(config);
+  if (topicModel.provider !== config.type && topicModel.provider !== family) return config;
   return {
     ...config,
-    ...applyHeteroSelection(config, { model: topicModel.model }),
+    ...applyHeteroSelection({ ...config, type: family }, { model: topicModel.model }),
   };
 };
 
@@ -334,7 +440,7 @@ export const applyTopicModelToHeterogeneousProvider = (
   const withModel = applyTopicModelPin(config, topicModel);
   let effort = topicModel?.effort;
   if (effort === undefined) return withModel;
-  const capability = getHeteroSelectorCapability(withModel.type);
+  const capability = getHeteroSelectorCapability(resolveHeteroCliAgentType(withModel));
   if (!capability?.effort) return withModel;
   const model =
     withModel.authMode === 'api'
@@ -346,11 +452,15 @@ export const applyTopicModelToHeterogeneousProvider = (
   }
   return {
     ...withModel,
-    ...applyHeteroSelection(withModel, { effort }),
+    ...applyHeteroSelection(
+      { ...withModel, type: resolveHeteroCliAgentType(withModel) },
+      { effort },
+    ),
   };
 };
 
 const HETEROGENEOUS_AGENT_TYPES = new Set<string>([
+  ...BUILTIN_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
   ...HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
   ...REMOTE_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
 ]);
@@ -540,6 +650,15 @@ export const buildHeteroSpawnArgs = (
   provider: HeterogeneousProviderConfig | undefined | null,
 ): string[] | undefined => {
   if (!provider) return undefined;
+  // The builtin Orvilo harness has no argv of its own — the selected engine's
+  // CLI family owns model/effort/speed translation (`--model`/`--effort` for
+  // claude-sdk, codex `-c` config for codex-app-server).
+  if (provider.type === 'orvilo') {
+    return buildHeteroSpawnArgs({
+      ...provider,
+      type: resolveOrviloCliAgentType(provider.engine),
+    });
+  }
   if (
     provider.type !== 'amp' &&
     provider.type !== 'claude-code' &&
@@ -677,6 +796,18 @@ export const buildHeteroExecArgs = (
   provider: HeterogeneousProviderConfig | undefined | null,
 ): string[] | undefined => {
   if (!provider) return undefined;
+  // Builtin Orvilo harness: the device/sandbox-side `lh hetero exec` still
+  // needs the resolved engine to pick the engine's CLI family — it travels as
+  // the wrapper-level `--engine` option; model/effort/speed use the family's
+  // structured encodings.
+  if (provider.type === 'orvilo') {
+    const engine = resolveOrviloEngine(provider.engine);
+    const execArgs = buildHeteroExecArgs({
+      ...provider,
+      type: resolveOrviloCliAgentType(engine),
+    });
+    return ['--engine', engine, ...(execArgs ?? [])];
+  }
   if (
     provider.type !== 'amp' &&
     provider.type !== 'claude-code' &&

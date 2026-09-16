@@ -44,6 +44,8 @@ interface AgentListProps {
   activeAgentId: string;
   /** Thrown error from the agent-list SWR — surfaced as a failure state. */
   error?: unknown;
+  /** Also list the builtin task agent — the composer chip offers every conversation target. */
+  includeTaskAgent?: boolean;
   onRetry?: () => void;
   onSelect: (agentId: string) => void;
 }
@@ -57,77 +59,81 @@ const SectionHeader = memo<{ children: ReactNode }>(({ children }) => (
   </Flexbox>
 ));
 
-const AgentList = memo<AgentListProps>(({ activeAgentId, error, onRetry, onSelect }) => {
-  const { t } = useTranslation('common');
+const AgentList = memo<AgentListProps>(
+  ({ activeAgentId, error, includeTaskAgent, onRetry, onSelect }) => {
+    const { t } = useTranslation('common');
 
-  const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
-  const { privateRows, showPrivateSection, workspaceRows } = useHomeAgentRows();
+    const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
+    const { privateRows, showPrivateSection, workspaceRows } = useHomeAgentRows({
+      includeTaskAgent,
+    });
 
-  const renderRow = (row: AgentRow) => {
-    const isActive = row.id === activeAgentId;
+    const renderRow = (row: AgentRow) => {
+      const isActive = row.id === activeAgentId;
 
-    return (
-      <Block
-        clickable
-        horizontal
-        align={'center'}
-        className={`${styles.item} ${isActive ? styles.active : ''}`}
-        gap={8}
-        key={row.id}
-        variant={'borderless'}
-        onClick={() => onSelect(row.id)}
-      >
-        <Avatar
-          avatar={row.avatar || DEFAULT_AVATAR}
-          background={row.backgroundColor}
-          name={row.title}
-          shape={'square'}
-          size={24}
-        />
-        <Text
-          ellipsis
-          color={isActive ? cssVar.colorText : cssVar.colorTextSecondary}
-          style={{ flex: 1 }}
-          weight={isActive ? 600 : 500}
+      return (
+        <Block
+          clickable
+          horizontal
+          align={'center'}
+          className={`${styles.item} ${isActive ? styles.active : ''}`}
+          gap={8}
+          key={row.id}
+          variant={'borderless'}
+          onClick={() => onSelect(row.id)}
         >
-          {row.title}
-        </Text>
-        {row.pinned && (
-          <ActionIcon icon={PinIcon} size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} />
-        )}
-      </Block>
-    );
-  };
+          <Avatar
+            avatar={row.avatar || DEFAULT_AVATAR}
+            background={row.backgroundColor}
+            name={row.title}
+            shape={'square'}
+            size={24}
+          />
+          <Text
+            ellipsis
+            color={isActive ? cssVar.colorText : cssVar.colorTextSecondary}
+            style={{ flex: 1 }}
+            weight={isActive ? 600 : 500}
+          >
+            {row.title}
+          </Text>
+          {row.pinned && (
+            <ActionIcon icon={PinIcon} size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} />
+          )}
+        </Block>
+      );
+    };
 
-  // Error gated ahead of the skeleton so a failed list fetch shows Retry instead
-  // of a permanent skeleton (`isAgentListInit` only flips on success).
-  return (
-    <AsyncBoundary
-      data={isInit ? workspaceRows : undefined}
-      error={error}
-      errorVariant={'block'}
-      isLoading={!isInit && !error}
-      loading={<SkeletonList rows={6} style={{ padding: 8 }} />}
-      onRetry={onRetry}
-    >
-      <Flexbox
-        className={styles.list}
-        gap={2}
-        style={{ maxHeight: 360, overflowY: 'auto', width: '100%' }}
+    // Error gated ahead of the skeleton so a failed list fetch shows Retry instead
+    // of a permanent skeleton (`isAgentListInit` only flips on success).
+    return (
+      <AsyncBoundary
+        data={isInit ? workspaceRows : undefined}
+        error={error}
+        errorVariant={'block'}
+        isLoading={!isInit && !error}
+        loading={<SkeletonList rows={6} style={{ padding: 8 }} />}
+        onRetry={onRetry}
       >
-        {showPrivateSection ? (
-          <>
-            <SectionHeader>{t('navPanel.privateAgents')}</SectionHeader>
-            {privateRows.map(renderRow)}
-            <SectionHeader>{t('navPanel.publicAgents')}</SectionHeader>
-            {workspaceRows.map(renderRow)}
-          </>
-        ) : (
-          [...workspaceRows, ...privateRows].map(renderRow)
-        )}
-      </Flexbox>
-    </AsyncBoundary>
-  );
-});
+        <Flexbox
+          className={styles.list}
+          gap={2}
+          style={{ maxHeight: 360, overflowY: 'auto', width: '100%' }}
+        >
+          {showPrivateSection ? (
+            <>
+              <SectionHeader>{t('navPanel.privateAgents')}</SectionHeader>
+              {privateRows.map(renderRow)}
+              <SectionHeader>{t('navPanel.publicAgents')}</SectionHeader>
+              {workspaceRows.map(renderRow)}
+            </>
+          ) : (
+            [...workspaceRows, ...privateRows].map(renderRow)
+          )}
+        </Flexbox>
+      </AsyncBoundary>
+    );
+  },
+);
 
 export default AgentList;

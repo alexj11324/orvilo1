@@ -83,6 +83,7 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
       });
 
       expect(updateMetadata).toHaveBeenCalledWith('topic-1', {
+        heteroSessionBindingKey: 'native:v1:claude-code',
         heteroSessionId: 'cc-session-fresh',
       });
     });
@@ -204,8 +205,13 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
         topicId: 'topic-stale',
       });
 
-      // Must clear the stale session id so the next turn starts fresh
-      expect(updateMetadata).toHaveBeenCalledWith('topic-stale', { heteroSessionId: undefined });
+      // Must clear the stale session id AND its binding key so the next turn
+      // starts fresh under whichever engine family runs it. Both keys must be
+      // present in the patch (written as `undefined`) — a missing key would
+      // leave the stale binding in place.
+      const patch = updateMetadata.mock.calls[0]?.[1] as Record<string, unknown>;
+      expect(patch).toHaveProperty('heteroSessionId', undefined);
+      expect(patch).toHaveProperty('heteroSessionBindingKey', undefined);
     });
 
     /**
@@ -332,6 +338,7 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
       });
 
       expect(updateMetadata).toHaveBeenCalledWith('topic-3', {
+        heteroSessionBindingKey: 'native:v1:claude-code',
         heteroSessionId: 'cc-session-partial',
       });
     });
@@ -402,7 +409,10 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
       expect(updateMetadata).toHaveBeenCalledTimes(1);
       const call = updateMetadata.mock.calls[0] as unknown as [string, Record<string, unknown>];
       const patch = call[1];
-      expect(patch).toEqual({ heteroSessionId: 'cc-session-resume-target' });
+      expect(patch).toEqual({
+        heteroSessionBindingKey: 'native:v1:claude-code',
+        heteroSessionId: 'cc-session-resume-target',
+      });
       expect(patch).not.toHaveProperty('runningOperation');
       expect(patch).not.toHaveProperty('workingDirectory');
     });

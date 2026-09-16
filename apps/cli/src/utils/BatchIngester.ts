@@ -14,6 +14,13 @@ export interface IngestSink {
       type: string;
     };
     result: 'cancelled' | 'error' | 'success';
+    /**
+     * Set when a `--resume` run had to be retried fresh because the stored
+     * native session was unusable (sandbox recycled, context overflow). The
+     * server clears the persisted `heteroSessionId` so the next turn does not
+     * try to resume the dead session again.
+     */
+    resumeSessionInvalidated?: boolean;
     sessionId?: string;
   }) => Promise<void>;
   ingest: (events: AgentStreamEvent[]) => Promise<void>;

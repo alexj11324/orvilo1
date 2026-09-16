@@ -1427,6 +1427,10 @@ const HeteroFinishSchema = z.object({
     .optional(),
   operationId: z.string().min(1),
   result: z.enum(['success', 'error', 'cancelled']),
+  /** Producer retried without `--resume` because the stored native session was
+   * unusable; the server clears the persisted `heteroSessionId` so a later
+   * turn does not attempt to resume the dead session again. */
+  resumeSessionInvalidated: z.boolean().optional(),
   sessionId: z.string().optional(),
   topicId: z.string().min(1),
 });
@@ -3162,7 +3166,16 @@ export const aiAgentRouter = router({
    * CLI's own end-event was lost mid-flight.
    */
   heteroFinish: heteroAgentProcedure.input(HeteroFinishSchema).mutation(async ({ input, ctx }) => {
-    const { agentType, assistantMessageId, error, operationId, result, sessionId, topicId } = input;
+    const {
+      agentType,
+      assistantMessageId,
+      error,
+      operationId,
+      result,
+      resumeSessionInvalidated,
+      sessionId,
+      topicId,
+    } = input;
 
     await authorizeOperationCallback(ctx, operationId, 'hetero:finish');
 
@@ -3190,6 +3203,7 @@ export const aiAgentRouter = router({
         error,
         operationId,
         result,
+        resumeSessionInvalidated,
         sessionId,
         topicId,
       });

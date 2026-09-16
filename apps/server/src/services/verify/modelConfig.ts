@@ -5,7 +5,11 @@ import {
   DEFAULT_VERIFY_MODEL,
   DEFAULT_VERIFY_PROVIDER,
 } from '@orvilo/business-const';
-import { LOCAL_HETEROGENEOUS_AGENT_TYPES, REMOTE_HETEROGENEOUS_AGENT_CONFIGS } from '@orvilo/types';
+import {
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
+  LOCAL_HETEROGENEOUS_AGENT_TYPES,
+  REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
+} from '@orvilo/types';
 
 import { AgentModel } from '@/database/models/agent';
 import type { LobeChatDatabase } from '@/database/type';
@@ -24,6 +28,9 @@ interface ResolveVerifyModelConfigParams {
 const HETEROGENEOUS_PROVIDER_IDS = new Set<string>([
   ...LOCAL_HETEROGENEOUS_AGENT_TYPES,
   ...REMOTE_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
+  // Builtin harnesses (`orvilo`) are runtime identities too: a verifier agent
+  // bound to one exposes `provider: 'orvilo'`, which is not a model provider.
+  ...BUILTIN_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
 ]);
 
 export const isHeterogeneousVerifyProvider = (provider?: string | null): boolean =>

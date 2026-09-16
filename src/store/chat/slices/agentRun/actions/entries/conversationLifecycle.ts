@@ -71,7 +71,7 @@ import { resolveNewThreadIntent } from '@/store/chat/slices/agentRun/actions/dis
 import { buildRunLifecycle } from '@/store/chat/slices/agentRun/actions/lifecycle/buildRunLifecycle';
 import type { RunScope } from '@/store/chat/slices/agentRun/actions/lifecycle/types';
 import {
-  getNativeHeteroSessionBindingKey,
+  getHeteroProviderSessionBindingKey,
   resolveHeteroResume,
 } from '@/store/chat/slices/agentRun/actions/transports/hetero/heteroResume';
 import type { QueuedFile } from '@/store/chat/slices/operation/types';
@@ -1620,7 +1620,7 @@ export class ConversationLifecycleActionImpl {
           {
             currentBindingKey: providerBinding
               ? undefined
-              : getNativeHeteroSessionBindingKey(heterogeneousProvider.type),
+              : getHeteroProviderSessionBindingKey(heterogeneousProvider),
             providerBinding,
           },
         );
@@ -1635,6 +1635,7 @@ export class ConversationLifecycleActionImpl {
         );
 
         await executeHeterogeneousAgent(() => this.#get(), {
+          agentSystemRole: agentConfig?.systemRole,
           assistantMessageId: heteroExecutionAssistantId,
           context: heteroExecutionContext,
           contextSelections: effectiveContextSelections,

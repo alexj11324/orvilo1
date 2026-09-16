@@ -445,9 +445,35 @@ export type HeterogeneousAgentDescriptor =
   | (typeof HETEROGENEOUS_AGENT_CONFIGS)[number]
   | (typeof REMOTE_HETEROGENEOUS_AGENT_CONFIGS)[number];
 
+/**
+ * The Orvilo engine — a builtin harness whose runtime is a managed session
+ * driven by a local Claude Agent SDK or Codex app-server transport, with the
+ * agent's persona, builtin tools, and working directory injected by Orvilo.
+ *
+ * It is deliberately kept out of `HETEROGENEOUS_AGENT_CONFIGS` / CLI scan
+ * catalogs: there is no `orvilo` binary to detect — the engine borrows the
+ * `claude` or `codex` executable selected by `HeterogeneousProviderConfig.engine`.
+ */
+export interface BuiltinHeterogeneousAgentDescriptor {
+  kind: 'builtin';
+  title: string;
+  type: 'orvilo';
+}
+
+export const BUILTIN_HETEROGENEOUS_AGENT_CONFIGS = [
+  {
+    kind: 'builtin',
+    title: 'Orvilo',
+    type: 'orvilo',
+  },
+] as const satisfies readonly BuiltinHeterogeneousAgentDescriptor[];
+
 export type HeterogeneousAgentMenuLabelKey =
   (typeof HETEROGENEOUS_AGENT_CONFIGS)[number]['menuLabelKey'];
 export type LocalHeterogeneousAgentType = (typeof HETEROGENEOUS_AGENT_CONFIGS)[number]['type'];
 export type RemoteHeterogeneousAgentType =
   (typeof REMOTE_HETEROGENEOUS_AGENT_CONFIGS)[number]['type'];
-export type HeterogeneousAgentType = LocalHeterogeneousAgentType | RemoteHeterogeneousAgentType;
+export type BuiltinHeterogeneousAgentType =
+  (typeof BUILTIN_HETEROGENEOUS_AGENT_CONFIGS)[number]['type'];
+export type HeterogeneousAgentType =
+  LocalHeterogeneousAgentType | RemoteHeterogeneousAgentType | BuiltinHeterogeneousAgentType;

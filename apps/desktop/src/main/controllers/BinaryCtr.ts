@@ -7,6 +7,7 @@ import type {
 } from '@orvilo/electron-client-ipc';
 import {
   getHeterogeneousAgentConfigOrThrow,
+  isLocalHeterogeneousType,
   isRemoteHeterogeneousType,
 } from '@orvilo/heterogeneous-agents';
 import { resolveRemotePlatformCommand } from '@orvilo/heterogeneous-agents/scanHost';
@@ -50,6 +51,13 @@ export default class BinaryCtr extends ControllerModule {
     logger.debug('Detecting heterogeneous agent command:', params);
     if (isRemoteHeterogeneousType(params.agentType)) {
       return resolveRemotePlatformCommand(params.agentType);
+    }
+
+    // The builtin harness (Orvilo Engine) has no CLI binary to detect — the
+    // engine borrows the Claude/Codex binaries, whose own entries are scanned
+    // separately.
+    if (!isLocalHeterogeneousType(params.agentType)) {
+      return { available: false, error: `Builtin harness has no CLI binary: ${params.agentType}` };
     }
 
     const defaultCommand = getHeterogeneousAgentConfigOrThrow(params.agentType).defaultCommand;

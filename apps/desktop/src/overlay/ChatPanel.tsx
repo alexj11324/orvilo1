@@ -1,9 +1,7 @@
 import { Select } from '@base-ui/react/select';
-import { ModelIcon } from '@lobehub/icons';
 import type {
   OverlayCaptureUploadStatus,
   ScreenCaptureAgentOption,
-  ScreenCaptureModelOption,
   ScreenCaptureOverlayTheme,
 } from '@orvilo/electron-client-ipc';
 import {
@@ -44,9 +42,7 @@ export interface ChatPanelSelection {
 export interface ChatPanelSubmitPayload {
   agentId?: string;
   captureIds: string[];
-  modelId?: string;
   prompt: string;
-  provider?: string;
 }
 
 export interface ChatPanelProps {
@@ -54,8 +50,6 @@ export interface ChatPanelProps {
   agents?: ScreenCaptureAgentOption[];
   capturing?: boolean;
   hidden?: boolean;
-  modelId?: string;
-  models?: ScreenCaptureModelOption[];
   onRemoveSelection: (selectionId: string) => void;
   onStartCapture: () => void;
   onSubmit: (payload: ChatPanelSubmitPayload) => void;
@@ -66,9 +60,6 @@ export interface ChatPanelProps {
   viewportWidth: number;
 }
 
-export const shouldShowOverlayModelSelector = (agent?: ScreenCaptureAgentOption) =>
-  !agent?.heterogeneousType;
-
 /** Screenshots are optional; a prompt alone is sendable once attached uploads finish. */
 export const canSubmitOverlayPrompt = ({
   prompt,
@@ -77,22 +68,6 @@ export const canSubmitOverlayPrompt = ({
   prompt: string;
   selections: Pick<ChatPanelSelection, 'uploadStatus'>[];
 }) => prompt.trim().length > 0 && selections.every((item) => item.uploadStatus === 'ready');
-
-export const resolveOverlayModelSelectionPayload = ({
-  agent,
-  model,
-  modelId,
-}: {
-  agent?: ScreenCaptureAgentOption;
-  model?: ScreenCaptureModelOption;
-  modelId?: string;
-}) => {
-  if (!shouldShowOverlayModelSelector(agent)) {
-    return { modelId: undefined, provider: undefined };
-  }
-
-  return { modelId, provider: model?.provider };
-};
 
 const formatBytes = (rect: Rect): string =>
   `${Math.round(rect.width)} × ${Math.round(rect.height)} · ${OVERLAY_COPY.selectionFormatLabel}`;
@@ -149,8 +124,6 @@ const ChatPanel = memo<ChatPanelProps>(
     agents,
     capturing = false,
     hidden = false,
-    modelId: initialModelId,
-    models,
     onRemoveSelection,
     onStartCapture,
     onSubmit,
@@ -162,7 +135,6 @@ const ChatPanel = memo<ChatPanelProps>(
   }) => {
     const [prompt, setPrompt] = useState('');
     const [agentId, setAgentId] = useState<string | undefined>(initialAgentId);
-    const [modelId, setModelId] = useState<string | undefined>(initialModelId);
     const lastSelectionPlacementRef = useRef<PanelPlacement | null>(null);
     const lastPlacementResetKeyRef = useRef(placementResetKey);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -175,21 +147,11 @@ const ChatPanel = memo<ChatPanelProps>(
       () => agents?.find((item) => item.id === agentId),
       [agents, agentId],
     );
-    const currentModel = useMemo(
-      () => models?.find((item) => item.id === modelId),
-      [models, modelId],
-    );
-    const showModelSelector = shouldShowOverlayModelSelector(currentAgent);
 
     useEffect(() => {
       if (!initialAgentId) return;
       setAgentId(initialAgentId);
     }, [initialAgentId]);
-
-    useEffect(() => {
-      if (!initialModelId) return;
-      setModelId(initialModelId);
-    }, [initialModelId]);
 
     useEffect(() => {
       if (!agents?.length) return;
@@ -204,20 +166,6 @@ const ChatPanel = memo<ChatPanelProps>(
         setAgentId(nextAgentId);
       }
     }, [agents, agentId, initialAgentId]);
-
-    useEffect(() => {
-      if (!models?.length) return;
-      if (modelId && models.some((item) => item.id === modelId)) return;
-
-      const nextModelId =
-        (initialModelId && models.some((item) => item.id === initialModelId)
-          ? initialModelId
-          : undefined) ?? models[0]?.id;
-
-      if (nextModelId !== modelId) {
-        setModelId(nextModelId);
-      }
-    }, [initialModelId, modelId, models]);
 
     const initialPlacement = useMemo(
       () => createInitialPanelPlacement(viewportWidth, viewportHeight),
@@ -324,20 +272,15 @@ const ChatPanel = memo<ChatPanelProps>(
 
     const submit = useCallback(() => {
       if (!canSend) return;
-      const modelSelection = resolveOverlayModelSelectionPayload({
-        agent: currentAgent,
-        model: currentModel,
-        modelId,
-      });
 
+      // The agent is the invocation identity — model/provider resolve from the
+      // selected agent's stored config downstream, not from a UI pick.
       onSubmit({
         agentId,
         captureIds: selections.map((item) => item.captureId),
-        modelId: modelSelection.modelId,
         prompt: prompt.trim(),
-        provider: modelSelection.provider,
       });
-    }, [selections, prompt, agentId, currentAgent, modelId, currentModel, onSubmit, canSend]);
+    }, [selections, prompt, agentId, onSubmit, canSend]);
 
     const handleKeyDown = useCallback(
       (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -353,12 +296,7 @@ const ChatPanel = memo<ChatPanelProps>(
       setAgentId(value || undefined);
     }, []);
 
-    const handleModelChange = useCallback((value: string) => {
-      setModelId(value || undefined);
-    }, []);
-
     const hasAgents = !!agents && agents.length > 0;
-    const hasModels = !!models && models.length > 0;
 
     return (
       <>
@@ -531,51 +469,6 @@ const ChatPanel = memo<ChatPanelProps>(
                   </Select.Positioner>
                 </Select.Portal>
               </Select.Root>
-
-              {showModelSelector && (
-                <Select.Root
-                  disabled={!hasModels}
-                  value={modelId ?? ''}
-                  onValueChange={handleModelChange}
-                >
-                  <Select.Trigger
-                    aria-label={OVERLAY_COPY.modelSelectLabel}
-                    className={cn(styles.selectChip, !hasModels && styles.selectChipDisabled)}
-                  >
-                    {currentModel ? (
-                      <span className={styles.modelIconBox}>
-                        <ModelIcon model={currentModel.id} size={16} />
-                      </span>
-                    ) : (
-                      <span className={styles.modelIconBoxFallback} />
-                    )}
-                    <Select.Value className={styles.chipLabel}>
-                      {currentModel?.displayName ??
-                        currentModel?.id ??
-                        OVERLAY_COPY.modelSelectPlaceholder}
-                    </Select.Value>
-                    <ChevronDownIcon className={styles.chevron} size={12} strokeWidth={2} />
-                  </Select.Trigger>
-                  <Select.Portal>
-                    <Select.Positioner
-                      align="start"
-                      className={styles.popupPositioner}
-                      sideOffset={6}
-                    >
-                      <Select.Popup className={styles.popup}>
-                        {models?.map((item) => (
-                          <Select.Item className={styles.popupItem} key={item.id} value={item.id}>
-                            <Select.ItemIndicator className={styles.popupItemIndicator}>
-                              <CheckIcon size={12} strokeWidth={2.4} />
-                            </Select.ItemIndicator>
-                            <Select.ItemText>{item.displayName ?? item.id}</Select.ItemText>
-                          </Select.Item>
-                        ))}
-                      </Select.Popup>
-                    </Select.Positioner>
-                  </Select.Portal>
-                </Select.Root>
-              )}
             </div>
 
             <div className={styles.actionBarRight}>

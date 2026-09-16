@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  canSubmitOverlayPrompt,
-  resolveOverlayModelSelectionPayload,
-  shouldShowOverlayModelSelector,
-} from './ChatPanel';
+import { canSubmitOverlayPrompt, type ChatPanelSubmitPayload } from './ChatPanel';
 import { resolvePanelPlacement } from './panelPlacement';
 
 vi.mock('./chatPanel.css.ts', () => new Proxy({}, { get: (_, key) => String(key) }));
@@ -15,10 +11,6 @@ vi.mock('./cn', () => ({
 
 vi.mock('./Avatar', () => ({
   default: () => null,
-}));
-
-vi.mock('@lobehub/icons', () => ({
-  ModelIcon: () => null,
 }));
 
 describe('ChatPanel', () => {
@@ -67,42 +59,15 @@ describe('ChatPanel', () => {
     ).toBe(true);
   });
 
-  it('hides the model selector and omits model payload for heterogeneous agents', () => {
-    const heterogeneousAgent = {
-      heterogeneousType: 'codex',
-      id: 'agent-codex',
-      title: 'Codex Agent',
+  it('submits with the agent as the sole invocation identity (no model pick)', () => {
+    // The overlay's model selector is gone — the payload carries only the
+    // agent id; model/provider resolve from that agent's stored config.
+    const payload: ChatPanelSubmitPayload = {
+      agentId: 'agent-1',
+      captureIds: ['c1'],
+      prompt: 'hi',
     };
 
-    expect(shouldShowOverlayModelSelector(heterogeneousAgent)).toBe(false);
-    expect(
-      resolveOverlayModelSelectionPayload({
-        agent: heterogeneousAgent,
-        model: { id: 'gpt-4.1', provider: 'openai' },
-        modelId: 'gpt-4.1',
-      }),
-    ).toEqual({
-      modelId: undefined,
-      provider: undefined,
-    });
-  });
-
-  it('keeps the model selector and payload for regular agents', () => {
-    const regularAgent = {
-      id: 'agent-regular',
-      title: 'Regular Agent',
-    };
-
-    expect(shouldShowOverlayModelSelector(regularAgent)).toBe(true);
-    expect(
-      resolveOverlayModelSelectionPayload({
-        agent: regularAgent,
-        model: { id: 'gpt-4.1', provider: 'openai' },
-        modelId: 'gpt-4.1',
-      }),
-    ).toEqual({
-      modelId: 'gpt-4.1',
-      provider: 'openai',
-    });
+    expect(Object.keys(payload).sort()).toEqual(['agentId', 'captureIds', 'prompt']);
   });
 });

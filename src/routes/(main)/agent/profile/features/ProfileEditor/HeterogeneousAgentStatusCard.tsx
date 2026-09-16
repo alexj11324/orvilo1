@@ -21,6 +21,10 @@ import { useTranslation } from 'react-i18next';
 
 import { ProviderItemRender } from '@/components/ModelSelect';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
+import {
+  isBuiltinEngineType,
+  resolveOrviloEngineCliType,
+} from '@/features/HeterogeneousAgent/engine';
 import { useProviderBindingCompatibleProviders } from '@/features/HeterogeneousAgent/hooks/useProviderBinding';
 import {
   buildServerDefaultModelOptions,
@@ -268,7 +272,15 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     const { t } = useTranslation('setting');
     const navigate = useWorkspaceAwareNavigate();
     const { allowed: canEdit } = usePermission('edit_own_content');
-    const providerConfig = getHeterogeneousAgentClientConfig(provider.type);
+    // The builtin Orvilo harness has no client-config entry of its own — its
+    // spawned binary, detection, and install guide all resolve through the
+    // selected engine's CLI family (`claude` for claude-sdk, `codex` for
+    // codex-app-server). Provider binding stays keyed on `provider.type`: the
+    // managed session has no provider-binding capability of its own.
+    const detectionType = isBuiltinEngineType(provider.type)
+      ? resolveOrviloEngineCliType(provider.engine)
+      : provider.type;
+    const providerConfig = getHeterogeneousAgentClientConfig(detectionType);
     const defaultCommand = providerConfig?.defaultCommand || '';
     const resolvedCommand = provider.command?.trim() || defaultCommand;
     const isUsingCustomCommand = resolvedCommand !== defaultCommand;
@@ -340,18 +352,18 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     const displayName = providerConfig?.title || provider.type;
     const AgentIcon = providerConfig?.icon;
     const showCliInstallGuide =
-      (provider.type === 'amp' ||
-        provider.type === 'claude-code' ||
-        provider.type === 'codebuddy' ||
-        provider.type === 'codex' ||
-        provider.type === 'cursor' ||
-        provider.type === 'droid' ||
-        provider.type === 'devin' ||
-        provider.type === 'kimi-code' ||
-        provider.type === 'opencode' ||
-        provider.type === 'pi' ||
-        provider.type === 'qoder' ||
-        provider.type === 'trae') &&
+      (detectionType === 'amp' ||
+        detectionType === 'claude-code' ||
+        detectionType === 'codebuddy' ||
+        detectionType === 'codex' ||
+        detectionType === 'cursor' ||
+        detectionType === 'droid' ||
+        detectionType === 'devin' ||
+        detectionType === 'kimi-code' ||
+        detectionType === 'opencode' ||
+        detectionType === 'pi' ||
+        detectionType === 'qoder' ||
+        detectionType === 'trae') &&
       !detecting &&
       !status?.available &&
       !isUsingCustomCommand;
@@ -436,7 +448,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
 
     const detect = useCallback(async () => {
       // Remote platform agents (openclaw, hermes, …) have no local CLI to detect.
-      if (isRemoteHeterogeneousType(provider.type) || !isDesktop || !resolvedCommand) {
+      if (isRemoteHeterogeneousType(detectionType) || !isDesktop || !resolvedCommand) {
         setDetecting(false);
         return;
       }
@@ -444,7 +456,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       setDetecting(true);
       try {
         const result = await binaryService.detectHeterogeneousAgentCommand({
-          agentType: provider.type,
+          agentType: detectionType,
           command: resolvedCommand,
         });
         setStatus(result);
@@ -456,14 +468,14 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       } finally {
         setDetecting(false);
       }
-    }, [provider.type, resolvedCommand]);
+    }, [detectionType, resolvedCommand]);
 
     useEffect(() => {
       void detect();
     }, [detect]);
 
     useEffect(() => {
-      if (provider.type !== 'claude-code' || authMode !== 'subscription' || !status?.available) {
+      if (detectionType !== 'claude-code' || authMode !== 'subscription' || !status?.available) {
         setAuth(null);
         return;
       }
@@ -485,7 +497,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       return () => {
         cancelled = true;
       };
-    }, [authMode, detecting, provider.type, resolvedCommand, status?.available]);
+    }, [authMode, detecting, detectionType, resolvedCommand, status?.available]);
 
     useEffect(() => {
       setCommandInput(resolvedCommand);
@@ -724,7 +736,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
 
     const renderSubscriptionAccount = () => {
       if (
-        provider.type !== 'claude-code' ||
+        detectionType !== 'claude-code' ||
         authMode !== 'subscription' ||
         detecting ||
         !status?.available ||
@@ -844,7 +856,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
               <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
                 <Text className={styles.unavailableText}>
                   {t(
-                    provider.type === 'codex'
+                    detectionType === 'codex'
                       ? 'heterogeneousStatus.apiMode.noResponsesProviders'
                       : 'heterogeneousStatus.apiMode.noProviders',
                   )}
@@ -859,7 +871,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
               </Flexbox>
             </div>
           )}
-          {provider.type === 'claude-code' && providerApiConfig && (
+          {detectionType === 'claude-code' && providerApiConfig && (
             <div className={styles.detailRow} style={{ alignItems: 'flex-start' }}>
               <Text className={styles.detailLabel} style={{ paddingBlockStart: 14 }}>
                 {t('heterogeneousStatus.apiMode.smallFastModel')}
@@ -929,7 +941,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
         </div>
         {showCliInstallGuide && (
           <HeterogeneousAgentStatusGuide
-            agentType={provider.type}
+            agentType={detectionType}
             variant={'embedded'}
             onOpenSystemTools={() => navigate('/settings/system-tools')}
           />

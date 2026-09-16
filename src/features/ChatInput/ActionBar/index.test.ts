@@ -67,6 +67,10 @@ describe('filterChatOnlyActions', () => {
   it('keeps the model chip for chat-only members', () => {
     expect(filterChatOnlyActions(['model', 'plus'])).toEqual(['model', 'plus']);
   });
+
+  it('keeps the agent chip for chat-only members — it navigates, it does not configure', () => {
+    expect(filterChatOnlyActions(['agent', 'params'])).toEqual(['agent']);
+  });
 });
 
 describe('Context window token', () => {

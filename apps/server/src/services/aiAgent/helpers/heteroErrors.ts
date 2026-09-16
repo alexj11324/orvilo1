@@ -1,6 +1,9 @@
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import { getHeterogeneousAgentConfig } from '@orvilo/heterogeneous-agents';
-import { ChatErrorType, type ErrorType } from '@orvilo/types';
+import {
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
+  getHeterogeneousAgentConfig,
+} from '@orvilo/heterogeneous-agents';
+import { ChatErrorType, type ErrorType, resolveOrviloCliAgentType } from '@orvilo/types';
 
 /**
  * Turn a raw device-gateway dispatch error code into a human-readable headline.
@@ -73,8 +76,21 @@ export const resolveHeteroDispatchErrorType = (raw?: string): ErrorType => {
   return (code && HETERO_DISPATCH_ERROR_TYPES[code]) || ChatErrorType.ServerAgentRuntimeError;
 };
 
-export const supportsCloudHeterogeneousSandbox = (type: HeterogeneousAgentType): boolean =>
-  type === 'claude-code' || type === 'codex';
+/**
+ * Whether the type can run in the cloud sandbox. The builtin `'orvilo'`
+ * harness resolves through its selected engine's CLI family (`claude` /
+ * `codex`), both of which are sandbox-capable; `engine` is only read when
+ * `type === 'orvilo'`.
+ */
+export const supportsCloudHeterogeneousSandbox = (
+  type: HeterogeneousAgentType,
+  engine?: string | null,
+): boolean => {
+  const family = type === 'orvilo' ? resolveOrviloCliAgentType(engine) : type;
+  return family === 'claude-code' || family === 'codex';
+};
 
 export const getHeterogeneousAgentTitle = (type: HeterogeneousAgentType): string =>
-  getHeterogeneousAgentConfig(type)?.title ?? type;
+  getHeterogeneousAgentConfig(type)?.title ??
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS.find((config) => config.type === type)?.title ??
+  type;

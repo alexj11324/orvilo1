@@ -10,12 +10,14 @@ export interface AgentProfileTabOption {
 /**
  * Message channels exist for cloud agents and for the two CLI providers whose
  * runtime can host them — a device-only heterogeneous agent has nothing to
- * connect, so the segment must not be offered.
+ * connect, so the segment must not be offered. The builtin 'orvilo' harness
+ * resolves to one of those engines, so it qualifies either way.
  */
 export const supportsMessageChannels = (heterogeneousProviderType?: string) =>
   !heterogeneousProviderType ||
   heterogeneousProviderType === 'claude-code' ||
-  heterogeneousProviderType === 'codex';
+  heterogeneousProviderType === 'codex' ||
+  heterogeneousProviderType === 'orvilo';
 
 export const buildAgentProfileTabPath = (agentId: string, tab: AgentProfileTab) =>
   urlJoin('/agent', agentId, tab);

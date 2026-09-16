@@ -33,9 +33,7 @@ const OverlayMessageDispatcher = memo(() => {
         agentId,
         captureIds: payload.captureIds,
         dispatchId,
-        modelId: payload.modelId,
         prompt: payload.prompt,
-        provider: payload.provider,
       });
 
       const { activeAgentId, activeTopicId, switchTopic } = useChatStore.getState();

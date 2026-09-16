@@ -1,4 +1,6 @@
 import type {
+  BuiltinHeterogeneousAgentDescriptor,
+  BuiltinHeterogeneousAgentType,
   HeterogeneousAgentDescriptor,
   HeterogeneousAgentMenuLabelKey,
   HeterogeneousAgentType,
@@ -8,12 +10,15 @@ import type {
   RemoteHeterogeneousAgentType,
 } from '@orvilo/types';
 import {
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
   HETEROGENEOUS_AGENT_CONFIGS,
   LOCAL_HETEROGENEOUS_AGENT_TYPES,
   REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
 } from '@orvilo/types';
 
 export type {
+  BuiltinHeterogeneousAgentDescriptor,
+  BuiltinHeterogeneousAgentType,
   HeterogeneousAgentDescriptor,
   HeterogeneousAgentMenuLabelKey,
   HeterogeneousAgentType,
@@ -23,6 +28,7 @@ export type {
   RemoteHeterogeneousAgentType,
 };
 export {
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
   HETEROGENEOUS_AGENT_CONFIGS,
   LOCAL_HETEROGENEOUS_AGENT_TYPES,
   REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
@@ -37,12 +43,29 @@ const LOCAL_HETERO_TYPES = new Set<string>(LOCAL_HETEROGENEOUS_AGENT_TYPES);
 const REMOTE_HETERO_TYPES = new Set<string>(
   REMOTE_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
 );
+const BUILTIN_HETERO_TYPES = new Set<string>(
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
+);
 
 export const isLocalHeterogeneousType = (type: string): type is LocalHeterogeneousAgentType =>
   LOCAL_HETERO_TYPES.has(type);
 
 export const isRemoteHeterogeneousType = (type: string): type is RemoteHeterogeneousAgentType =>
   REMOTE_HETERO_TYPES.has(type);
+
+export const isBuiltinHeterogeneousType = (type: string): type is BuiltinHeterogeneousAgentType =>
+  BUILTIN_HETERO_TYPES.has(type);
+
+/**
+ * Binding identity stored alongside `topic.metadata.heteroSessionId` so a later
+ * turn can tell whether the saved native session belongs to the same execution
+ * identity. Callers must pass the resolved CLI family — for the builtin
+ * `'orvilo'` harness that is the engine's family (`claude-code` / `codex`),
+ * which both isolates Claude- vs Codex-backed sessions and lets Orvilo reuse a
+ * session originally created by the matching native CLI.
+ */
+export const getNativeHeteroSessionBindingKey = (agentType: string): string =>
+  `native:v1:${agentType}`;
 
 export const getHeterogeneousAgentConfig = (type: string) =>
   HETEROGENEOUS_AGENT_CONFIGS.find((config) => config.type === type);

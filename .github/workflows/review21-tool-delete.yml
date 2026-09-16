@@ -1,0 +1,61 @@
+name: PR21 Final Focused Verification
+on:
+  push:
+    branches: [feat/issue-prerequisite-gates]
+    paths: [.github/workflows/review21-tool-delete.yml]
+permissions:
+  contents: write
+concurrency:
+  group: pr21-tool-delete-fix
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'alexj11324/orvilo1' && github.ref == 'refs/heads/feat/issue-prerequisite-gates'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+      - uses: ./.github/actions/setup-env
+      - run: pnpm install
+      - name: Apply deletion entry-point fix
+        run: python3 .github/review21-tool-delete.py
+      - name: Lint updated source and tests
+        run: >-
+          bun run check --lint
+          apps/server/src/services/toolExecution/serverRuntimes/task.ts
+          apps/server/src/services/toolExecution/serverRuntimes/__tests__/task.test.ts
+      - name: Agent-tool regression tests
+        run: >-
+          bunx vitest run --project server --silent='passed-only'
+          apps/server/src/services/toolExecution/serverRuntimes/__tests__/task.test.ts
+      - name: Prerequisite editor and frontend regression tests
+        run: >-
+          bunx vitest run --project app --silent='passed-only'
+          src/features/AgentTasks/AgentTaskDetail/TaskPrerequisites.test.tsx
+          src/store/task/slices/detail/action.test.ts
+          src/store/task/selectors/detailSelectors.test.ts
+      - name: Full typecheck
+        run: pnpm type-check
+      - name: Commit validated source and remove transport
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/review21-tool-delete.py .github/workflows/review21-tool-delete.yml
+          git add apps/server/src/services/toolExecution/serverRuntimes
+          git commit -m '🛡️ Preserve prerequisite worktrees through agent-tool deletion'
+          git push origin HEAD:refs/heads/feat/issue-prerequisite-gates
+      - name: Export validation evidence
+        if: always()
+        run: |
+          git rev-parse HEAD > /tmp/review21-final-head.txt
+          git diff HEAD > /tmp/review21-final-working.patch
+          git show --format=fuller HEAD > /tmp/review21-final-commit.patch
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: pr21-final-focused-evidence
+          path: /tmp/review21-final-*
+          retention-days: 3

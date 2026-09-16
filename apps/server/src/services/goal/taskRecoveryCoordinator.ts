@@ -5,6 +5,7 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { TaskModel } from '@/database/models/task';
 import type { LobeChatDatabase } from '@/database/type';
 import { TaskRunnerService } from '@/server/services/taskRunner';
+import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 
 import { resolveTaskAttemptBudget, resolveTaskMaxSteps } from './recoveryPolicy';
 import { statusAuthoredByActor } from './supervisor/policy';
@@ -107,8 +108,14 @@ export class TaskRecoveryCoordinator {
 
     try {
       const run = await new TaskRunnerService(this.db, this.userId, this.workspaceId).runTask({
+        idempotencyKey: taskRunIdempotencyKey.goalTaskAttempt({
+          executionGeneration: current.executionGeneration ?? 0,
+          goalId: goal.id,
+          taskId: current.id,
+          taskRevision: current.domainRevision ?? 0,
+        }),
         maxSteps: resolveTaskMaxSteps(goal),
-        taskId: task.id,
+        taskId: current.id,
         trigger: 'goal',
       });
       log('task %s → recovery attempt %d spawned', task.identifier, attempts + 1);

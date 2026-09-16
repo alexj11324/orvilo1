@@ -14,6 +14,7 @@ import {
   setTaskSchedulerExecutionCallback,
 } from '@/server/services/taskScheduler';
 
+import { taskRunIdempotencyKey } from './idempotency';
 import { TaskRunnerService } from './index';
 
 const log = debug('task-runner:heartbeat-tick');
@@ -92,8 +93,12 @@ export async function runHeartbeatTick(
   const runner = new TaskRunnerService(db, userId, wsId);
   try {
     await runner.runTask({
-      idempotencyKey:
-        tickToken ?? `heartbeat:${taskId}:${task.lastHeartbeatAt?.toISOString() ?? 'initial'}`,
+      idempotencyKey: taskRunIdempotencyKey.automationTick({
+        executionGeneration: task.executionGeneration ?? 0,
+        kind: 'heartbeat',
+        taskId,
+        tickToken,
+      }),
       taskId,
       trigger: 'heartbeat',
     });

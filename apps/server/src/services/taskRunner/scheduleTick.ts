@@ -9,6 +9,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { tasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 
+import { taskRunIdempotencyKey } from './idempotency';
 import { TaskRunnerService } from './index';
 
 const log = debug('task-runner:schedule-tick');
@@ -131,8 +132,12 @@ export async function runScheduleTick(
   const runner = new TaskRunnerService(db, userId, wsId);
   try {
     await runner.runTask({
-      idempotencyKey:
-        tickToken ?? `schedule:${taskId}:${task.lastHeartbeatAt?.toISOString() ?? 'initial'}`,
+      idempotencyKey: taskRunIdempotencyKey.automationTick({
+        executionGeneration: task.executionGeneration ?? 0,
+        kind: 'schedule',
+        taskId,
+        tickToken,
+      }),
       taskId,
       trigger: 'schedule',
     });

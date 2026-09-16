@@ -18,6 +18,7 @@ import {
   resolveGithubAccessToken,
 } from '@/server/services/githubRepo';
 import { TaskRunnerService } from '@/server/services/taskRunner';
+import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 import { runVerifyOnCompletion } from '@/server/services/verify';
 import { after } from '@/server/utils/scheduleAfterResponse';
@@ -1204,6 +1205,12 @@ export class TaskIntegrationService {
       parentOperationId: originalRun?.operationId ?? undefined,
       replaceReservationId: completionReservationId,
       skipTaskVerification: true,
+      idempotencyKey: taskRunIdempotencyKey.integrationCorrection({
+        attempt: attempts,
+        taskId: task.id,
+        taskRevision: task.domainRevision ?? 0,
+        topicId,
+      }),
       taskId: task.id,
       workspaceOverride,
     });

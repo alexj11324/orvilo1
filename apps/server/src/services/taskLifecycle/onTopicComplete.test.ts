@@ -613,6 +613,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         expect.objectContaining({
           continueFromMessageId: 'msg-steer',
           continueTopicId: 'topic-1',
+          idempotencyKey: 'steer:task-1:topic:topic-1:message:msg-steer',
           taskId: 'task-1',
         }),
       );

@@ -242,7 +242,8 @@ class TaskService {
 
   previewSubtaskLayers = async (id: string) => lambdaClient.task.previewSubtaskLayers.query({ id });
 
-  runReadySubtasks = async (id: string) => lambdaClient.task.runReadySubtasks.mutate({ id });
+  runReadySubtasks = async (id: string, requestId = crypto.randomUUID()) =>
+    lambdaClient.task.runReadySubtasks.mutate({ id, requestId });
 
   addComment = async (
     id: string,

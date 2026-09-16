@@ -65,6 +65,7 @@ describe('runHeartbeatTick', () => {
 
   const baseTask = (overrides: Partial<Record<string, unknown>> = {}) => ({
     automationMode: 'heartbeat',
+    executionGeneration: 0,
     heartbeatInterval: 30,
     id: taskId,
     identifier: 'T-1',
@@ -144,7 +145,7 @@ describe('runHeartbeatTick', () => {
       excludeTypes: ['error'],
     });
     expect(mockRunner.runTask).toHaveBeenCalledWith({
-      idempotencyKey: `heartbeat:${taskId}:initial`,
+      idempotencyKey: `heartbeat:tick:task:${taskId}:generation:1`,
       taskId,
       trigger: 'heartbeat',
     });

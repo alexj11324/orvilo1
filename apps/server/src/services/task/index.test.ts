@@ -1713,6 +1713,7 @@ describe('TaskService', () => {
           consecutiveFailures: 0,
           scheduledAt: expect.any(String),
           tickMessageId: 'tick-new',
+          tickRevision: 1,
           tickToken: expect.any(String),
         },
       });
@@ -1769,7 +1770,7 @@ describe('TaskService', () => {
       expect(mockTaskModel.updateStatus).toHaveBeenNthCalledWith(1, 'task-1', 'scheduled', {});
       expect(mockTaskModel.updateStatus).toHaveBeenNthCalledWith(2, 'task-1', 'paused');
       expect(mockTaskModel.updateContext).toHaveBeenCalledWith('task-1', {
-        scheduler: { tickToken: expect.any(String) },
+        scheduler: { tickRevision: 1, tickToken: expect.any(String) },
       });
       expect(mockTaskModel.update).toHaveBeenCalledWith('task-1', { context: {} });
     });
@@ -2466,6 +2467,7 @@ describe('TaskService', () => {
         expect.objectContaining({
           continueFromMessageId: 'msg-steer',
           continueTopicId: 'topic-1',
+          idempotencyKey: 'steer:task-1:topic:topic-1:message:msg-steer',
           taskId: 'task-1',
         }),
       );
@@ -2491,6 +2493,7 @@ describe('TaskService', () => {
         expect.objectContaining({
           continueFromMessageId: 'msg-steer',
           continueTopicId: 'topic-1',
+          idempotencyKey: 'steer:task-1:topic:topic-1:message:msg-steer',
         }),
       );
     });

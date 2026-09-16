@@ -183,8 +183,11 @@ describe('TaskService', () => {
     });
 
     it('runReadySubtasks should call task.runReadySubtasks.mutate', async () => {
-      await taskService.runReadySubtasks('T-1');
-      expect(lambdaClient.task.runReadySubtasks.mutate).toHaveBeenCalledWith({ id: 'T-1' });
+      await taskService.runReadySubtasks('T-1', 'run-all-request-1');
+      expect(lambdaClient.task.runReadySubtasks.mutate).toHaveBeenCalledWith({
+        id: 'T-1',
+        requestId: 'run-all-request-1',
+      });
     });
 
     it('pinDocument should pass all params', async () => {

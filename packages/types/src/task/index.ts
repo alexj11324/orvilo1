@@ -435,6 +435,9 @@ export interface TaskSchedulerContext {
   // Provider message id (or LocalScheduler scheduleId) for the next tick. Used
   // to cancel when the user wants an interval change to take effect immediately.
   tickMessageId?: string;
+  // Monotonic scheduler generation. It gives each user restart / lifecycle
+  // re-arm a durable identity without relying on wall-clock time or UUIDs.
+  tickRevision?: number;
   // Generation token carried by the currently active tick. A delivered tick
   // must match this value so a failed best-effort cancellation cannot create
   // a second heartbeat chain.

@@ -34,6 +34,7 @@ import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 import { buildTaskPrompt } from './buildTaskPrompt';
+import { taskRunIdempotencyKey } from './idempotency';
 
 const log = debug('task-runner');
 const RUN_KICKOFF_CLAIM_TTL_MS = 15 * 60 * 1000;
@@ -151,6 +152,17 @@ export class TaskRunnerService {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
     }
 
+    // Automated callers must provide a durable command identity. Manual
+    // callers retain one-request-per-click behavior for older clients.
+    const resolvedIdempotencyKey =
+      idempotencyKey ?? (trigger === 'manual' ? `manual:${task.id}:${randomUUID()}` : undefined);
+    if (!resolvedIdempotencyKey) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Task runs triggered by ${trigger} require a stable idempotency key`,
+      });
+    }
+
     // Preflight before assignment/provisioning; reserveRun repeats this check
     // under the dependency graph lock so a concurrent edit cannot bypass it.
     if (!(await this.taskModel.areAllDependenciesCompleted(task.id))) {
@@ -180,8 +192,7 @@ export class TaskRunnerService {
     try {
       try {
         preparedDispatch = await this.taskDispatch.prepare({
-          idempotencyKey:
-            idempotencyKey ?? `${trigger}:${task.id}:${continueTopicId ?? 'new'}:${randomUUID()}`,
+          idempotencyKey: resolvedIdempotencyKey,
           planRevision,
           requestedBy,
           task,
@@ -783,7 +794,15 @@ export class TaskRunnerService {
       }
 
       try {
-        await runner.runTask({ taskId: task.id });
+        await runner.runTask({
+          idempotencyKey: taskRunIdempotencyKey.dependencyCascade({
+            completedTaskIds,
+            executionGeneration: task.executionGeneration ?? 0,
+            taskId: task.id,
+            taskRevision: task.domainRevision ?? 0,
+          }),
+          taskId: task.id,
+        });
         result.started.push(task.identifier);
       } catch (error) {
         // Readiness can change after discovery. No execution happened: leave

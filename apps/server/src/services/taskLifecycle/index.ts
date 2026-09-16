@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { BRANDING_URL } from '@orvilo/business-const';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
@@ -49,6 +47,7 @@ import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { SystemAgentService } from '@/server/services/systemAgent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
+import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 import { createTaskSchedulerModule } from '@/server/services/taskScheduler';
 
 import {
@@ -363,6 +362,11 @@ export class TaskLifecycleService {
               await new TaskRunnerService(this.db, this.userId, this.workspaceId).runTask({
                 continueFromMessageId: steerMessageId,
                 continueTopicId: topicId,
+                idempotencyKey: taskRunIdempotencyKey.steerContinuation({
+                  messageId: steerMessageId,
+                  taskId,
+                  topicId,
+                }),
                 replaceReservationId: claimed,
                 taskId,
                 trigger: params.runTrigger,
@@ -1055,7 +1059,8 @@ export class TaskLifecycleService {
 
     try {
       const scheduler = createTaskSchedulerModule();
-      const tickToken = randomUUID();
+      const tickRevision = (sched.tickRevision ?? 0) + 1;
+      const tickToken = `heartbeat:task:${task.id}:revision:${tickRevision}`;
 
       // Cancel any prior tick (defensive — we usually wouldn't have one
       // pending here, since the prior tick has already fired to bring us
@@ -1076,6 +1081,7 @@ export class TaskLifecycleService {
           consecutiveFailures,
           scheduledAt: new Date().toISOString(),
           tickMessageId,
+          tickRevision,
           tickToken,
         },
       };

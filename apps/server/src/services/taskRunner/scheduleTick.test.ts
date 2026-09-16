@@ -60,6 +60,7 @@ describe('runScheduleTick', () => {
     automationMode: 'schedule',
     config: {},
     context: { scheduler: { scheduleStartedAt: new Date('2026-05-01T00:00:00Z').toISOString() } },
+    executionGeneration: 0,
     id: taskId,
     identifier: 'T-1',
     schedulePattern: '*/5 * * * *',
@@ -124,7 +125,7 @@ describe('runScheduleTick', () => {
     });
     expect(mockTaskTopicModel.countByTask).not.toHaveBeenCalled();
     expect(mockRunner.runTask).toHaveBeenCalledWith({
-      idempotencyKey: `schedule:${taskId}:initial`,
+      idempotencyKey: `schedule:tick:task:${taskId}:generation:1`,
       taskId,
       trigger: 'schedule',
     });
@@ -144,7 +145,7 @@ describe('runScheduleTick', () => {
       triggers: ['schedule'],
     });
     expect(mockRunner.runTask).toHaveBeenCalledWith({
-      idempotencyKey: `schedule:${taskId}:initial`,
+      idempotencyKey: `schedule:tick:task:${taskId}:generation:1`,
       taskId,
       trigger: 'schedule',
     });

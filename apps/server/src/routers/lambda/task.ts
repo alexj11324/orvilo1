@@ -1985,20 +1985,29 @@ export const taskRouter = router({
     }
   }),
 
-  runReadySubtasks: taskProcedureWrite.input(idInput).mutation(async ({ input, ctx }) => {
-    try {
-      const result = await ctx.taskService.runReadySubtasks(input.id);
-      return { data: result, success: result.failed.length === 0 };
-    } catch (error) {
-      if (error instanceof TRPCError) throw error;
-      console.error('[task:runReadySubtasks]', error);
-      throw new TRPCError({
-        cause: error,
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to run subtasks',
-      });
-    }
-  }),
+  runReadySubtasks: taskProcedureWrite
+    .input(
+      idInput.merge(
+        z.object({
+          /** One client-generated identity for this manual "run all" action. */
+          requestId: z.string().min(1).max(255).optional(),
+        }),
+      ),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const result = await ctx.taskService.runReadySubtasks(input.id, input.requestId);
+        return { data: result, success: result.failed.length === 0 };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[task:runReadySubtasks]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to run subtasks',
+        });
+      }
+    }),
 
   updateStatus: taskProcedureWrite
     .input(

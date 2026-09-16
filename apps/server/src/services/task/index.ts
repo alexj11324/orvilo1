@@ -45,6 +45,7 @@ import { type SubtaskGraphPlan, TaskGraphService } from '../taskGraph';
 import { TaskIntegrationService } from '../taskIntegration';
 import { type ReviewResult, TaskReviewService } from '../taskReview';
 import { TaskRunnerService } from '../taskRunner';
+import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { createTaskSchedulerModule } from '../taskScheduler';
 import { resolveTaskAcceptance } from '../verify/taskAcceptance';
 import { collapseActivityLog } from './collapseActivityLog';
@@ -498,6 +499,11 @@ export class TaskService {
       await runner.runTask({
         continueFromMessageId: steerMessage.id,
         continueTopicId: input.topicId,
+        idempotencyKey: taskRunIdempotencyKey.steerContinuation({
+          messageId: steerMessage.id,
+          taskId: task.id,
+          topicId: input.topicId,
+        }),
         taskId: task.id,
       });
     } catch (error) {
@@ -764,14 +770,15 @@ export class TaskService {
       const schedulerContext = (resolved.context as TaskContext | null)?.scheduler as
         TaskSchedulerContext | undefined;
       const previousTickMessageId = schedulerContext?.tickMessageId;
-      const tickToken = randomUUID();
+      const tickRevision = (schedulerContext?.tickRevision ?? 0) + 1;
+      const tickToken = `heartbeat:task:${task.id}:revision:${tickRevision}`;
       let tickMessageId: string | undefined;
 
       try {
         // Invalidate the previous generation before publishing. This closes
         // the race where an old QStash delivery arrives while the replacement
         // message is being created.
-        await this.taskModel.updateContext(task.id, { scheduler: { tickToken } });
+        await this.taskModel.updateContext(task.id, { scheduler: { tickRevision, tickToken } });
         tickMessageId = await scheduler.scheduleNextTopic({
           delay: task.heartbeatInterval,
           taskId: task.id,
@@ -784,6 +791,7 @@ export class TaskService {
             consecutiveFailures: schedulerContext?.consecutiveFailures ?? 0,
             scheduledAt: new Date().toISOString(),
             tickMessageId,
+            tickRevision,
             tickToken,
           },
         });
@@ -1003,7 +1011,10 @@ export class TaskService {
    * Subsequent layers fire automatically through
    * `TaskRunnerService.cascadeOnCompletion` as each upstream finishes.
    */
-  async runReadySubtasks(idOrIdentifier: string): Promise<RunReadySubtasksResult> {
+  async runReadySubtasks(
+    idOrIdentifier: string,
+    requestId = randomUUID(),
+  ): Promise<RunReadySubtasksResult> {
     const parent = await this.resolveOrThrow(idOrIdentifier);
     const graph = new TaskGraphService(this.db, this.userId, this.workspaceId);
     const { descendants, plan } = await graph.planForParent(parent.id);
@@ -1028,7 +1039,14 @@ export class TaskService {
       firstLayer.map(async (identifier) => {
         const id = identifierToId.get(identifier);
         if (!id) throw new Error(`Subtask ${identifier} not found`);
-        await runner.runTask({ taskId: id });
+        await runner.runTask({
+          idempotencyKey: taskRunIdempotencyKey.readySubtask({
+            parentTaskId: parent.id,
+            requestId,
+            taskId: id,
+          }),
+          taskId: id,
+        });
         return identifier;
       }),
     );

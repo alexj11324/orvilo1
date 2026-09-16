@@ -49,7 +49,7 @@ const taskHeartbeatInput = z.object({
   userId: z.string().min(1),
 });
 
-const taskScheduleExecuteInput = taskHeartbeatInput.omit({ tickToken: true });
+const taskScheduleExecuteInput = taskHeartbeatInput;
 
 const agentStepInput = z.object({
   context: z.unknown().optional(),
@@ -213,8 +213,8 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     name: HATCHET_TASK_NAMES.taskScheduleExecute,
     backoff: { factor: 2, maxSeconds: 300 },
     executionTimeout: '15m',
-    fn: async ({ taskId, userId }: Omit<TaskHeartbeatInput, 'tickToken'>) =>
-      runScheduleTick(taskId, userId),
+    fn: async ({ taskId, tickToken, userId }: TaskHeartbeatInput & InputType) =>
+      runScheduleTick(taskId, userId, tickToken),
     inputValidator: taskScheduleExecuteInput,
     retries: 5,
   });

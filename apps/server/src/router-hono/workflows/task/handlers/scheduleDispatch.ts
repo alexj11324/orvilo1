@@ -20,6 +20,7 @@ interface DueTask {
   pattern: string;
   taskId: string;
   taskIdentifier: string;
+  tickToken: string;
   timezone: string | null;
   userId: string;
 }
@@ -63,6 +64,8 @@ export const runScheduleDispatch = async ({ dryRun = false }: ScheduleDispatchPa
       pattern: task.schedulePattern,
       taskId: task.id,
       taskIdentifier: task.identifier,
+      // A retrying sweep must reuse the same durable execution identity.
+      tickToken: `task:${task.id}:generation:${task.executionGeneration + 1}`,
       timezone: task.scheduleTimezone,
       userId: task.createdByUserId,
     });
@@ -107,6 +110,7 @@ const fanout = async (due: DueTask[]): Promise<number> => {
       due.map((d) =>
         enqueueHatchetTask(HATCHET_TASK_NAMES.taskScheduleExecute, {
           taskId: d.taskId,
+          tickToken: d.tickToken,
           userId: d.userId,
         }),
       ),
@@ -130,7 +134,9 @@ const fanout = async (due: DueTask[]): Promise<number> => {
 
   // Local / dev: invoke runScheduleTick directly. Errors are logged but don't
   // fail the dispatch — one bad task shouldn't block the rest.
-  const results = await Promise.allSettled(due.map((d) => runScheduleTick(d.taskId, d.userId)));
+  const results = await Promise.allSettled(
+    due.map((d) => runScheduleTick(d.taskId, d.userId, d.tickToken)),
+  );
   let dispatched = 0;
   for (const [i, r] of results.entries()) {
     if (r.status === 'fulfilled') {

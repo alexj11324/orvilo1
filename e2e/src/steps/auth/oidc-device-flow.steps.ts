@@ -203,11 +203,23 @@ Then('CLI 应取得 access token 与 refresh token', async function (this: Custo
   const claims = decodeAccessToken(token.access_token!);
   const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
   expect(audiences).toContain(RESOURCE);
-  // Vercel may serve the confirmation page through a deployment URL while
-  // the provider advertises the stable branch alias as its issuer. The
-  // authorization response is the source of truth for that issuer origin.
+
   const verificationUrl = this.testContext.oidcVerificationUrl as string | undefined;
   if (!verificationUrl) throw new Error('OIDC verification URL is unavailable');
-  expect(claims.iss).toBe(`${new URL(verificationUrl).origin}/oidc`);
+
+  const verificationOrigin = new URL(verificationUrl).origin;
+  const issuerUrl = new URL(claims.iss!);
+  expect(issuerUrl.protocol).toBe(new URL(verificationUrl).protocol);
+  expect(issuerUrl.pathname).toBe('/oidc');
+
+  // Vercel may serve the confirmation page through a deployment URL while
+  // the provider advertises the stable branch alias as its issuer. Keep
+  // exact-origin validation for non-Vercel environments, where both values
+  // are expected to come from the same configured application URL.
+  if (!verificationUrl.includes('.vercel.app')) {
+    expect(issuerUrl.origin).toBe(verificationOrigin);
+  } else {
+    expect(issuerUrl.hostname).toMatch(/\.vercel\.app$/);
+  }
   expect(claims.sub).toBe(TEST_USER.id);
 });

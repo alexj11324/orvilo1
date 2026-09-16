@@ -32,6 +32,7 @@ import {
   assertContentsNotInRestrictedKnowledgeBase,
   getRestrictedKnowledgeBaseIds,
 } from './_helpers/knowledgeBaseAccess';
+import { assertDocumentsNotPinnedToTasks } from './_helpers/taskDocumentReferences';
 import {
   compareDocumentHistoryItemsInputSchema,
   getDocumentHistoryItemInputSchema,
@@ -270,6 +271,7 @@ export const documentRouter = router({
       const document = await ctx.documentModel.findById(input.id);
       if (!document) throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
       await assertContentsNotInRestrictedKnowledgeBase(ctx, [input.id]);
+      await assertDocumentsNotPinnedToTasks(ctx, [input.id]);
 
       const result = await ctx.documentService.deleteDocument(input.id);
       if (ctx.workspaceId) {
@@ -295,6 +297,7 @@ export const documentRouter = router({
         });
       }
       await assertContentsNotInRestrictedKnowledgeBase(ctx, ids);
+      await assertDocumentsNotPinnedToTasks(ctx, ids);
 
       const result = await ctx.documentService.deleteDocuments(ids);
       if (ctx.workspaceId) {

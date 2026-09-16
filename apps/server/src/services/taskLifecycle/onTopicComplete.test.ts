@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { DEFAULT_BRIEF_ACTIONS, type TaskItem } from '@orvilo/types';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { TaskLifecycleService } from './index';
 
@@ -112,13 +112,14 @@ const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
 
 describe('TaskLifecycleService.onTopicComplete', () => {
   let service: TaskLifecycleService;
-  let updateStatus: ReturnType<typeof vi.fn>;
-  let updateStatusIfCurrent: ReturnType<typeof vi.fn>;
-  let updateContext: ReturnType<typeof vi.fn>;
-  let findById: ReturnType<typeof vi.fn>;
-  let updateTopicStatus: ReturnType<typeof vi.fn>;
-  let createBrief: ReturnType<typeof vi.fn>;
-  let getReviewConfig: ReturnType<typeof vi.fn>;
+  type AnyMock = Mock<(...args: unknown[]) => unknown>;
+  let updateStatus: AnyMock;
+  let updateStatusIfCurrent: AnyMock;
+  let updateContext: AnyMock;
+  let findById: AnyMock;
+  let updateTopicStatus: AnyMock;
+  let createBrief: AnyMock;
+  let getReviewConfig: AnyMock;
 
   beforeEach(() => {
     fakeScheduler.scheduleNextTopic.mockClear().mockResolvedValue('msg-new');
@@ -131,13 +132,13 @@ describe('TaskLifecycleService.onTopicComplete', () => {
 
     service = new TaskLifecycleService({} as any, 'user-1');
 
-    updateStatus = vi.fn().mockResolvedValue(null);
-    updateStatusIfCurrent = vi.fn();
-    updateContext = vi.fn().mockResolvedValue(null);
-    findById = vi.fn();
-    updateTopicStatus = vi.fn().mockResolvedValue(undefined);
-    createBrief = vi.fn().mockResolvedValue(undefined);
-    getReviewConfig = vi.fn().mockReturnValue(undefined);
+    updateStatus = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(null);
+    updateStatusIfCurrent = vi.fn<(...args: unknown[]) => unknown>();
+    updateContext = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(null);
+    findById = vi.fn<(...args: unknown[]) => unknown>();
+    updateTopicStatus = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(undefined);
+    createBrief = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(undefined);
+    getReviewConfig = vi.fn<(...args: unknown[]) => unknown>().mockReturnValue(undefined);
     verifyFindByOperation.mockReset().mockResolvedValue(undefined);
 
     const taskModel = (service as any).taskModel;

@@ -144,19 +144,19 @@ describe('TaskService', () => {
     getAgentSnapshotForTaskCreate: vi
       .fn()
       .mockResolvedValue({ snapshot: null, visibility: 'public' }),
-    getAgentVisibility: vi.fn().mockResolvedValue('public'),
+    getAgentVisibility: vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue('public'),
   };
 
   const mockTaskModel = {
     addActivities: vi.fn(),
     addActivity: vi.fn(),
     findSubtasks: vi.fn(),
-    lockForStatusChange: vi.fn(),
-    updateStatusForIds: vi.fn(),
+    lockForStatusChange: vi.fn<(...args: unknown[]) => unknown>(),
+    updateStatusForIds: vi.fn<(...args: unknown[]) => unknown>(),
     updateWithLog: vi.fn(),
     create: vi.fn(),
     delete: vi.fn(),
-    findById: vi.fn(),
+    findById: vi.fn<(...args: unknown[]) => unknown>(),
     findByIds: vi.fn(),
     findAllDescendants: vi.fn(),
     getActivities: vi.fn().mockResolvedValue([]),

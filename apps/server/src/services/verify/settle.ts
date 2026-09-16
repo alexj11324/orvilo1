@@ -4,6 +4,7 @@ import {
   VERIFICATION_FAILED_ERROR,
   VERIFICATION_UNJUDGEABLE_ERROR,
 } from '@orvilo/const/goal';
+import type { TaskStatus } from '@orvilo/types';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
@@ -277,7 +278,7 @@ export const driveTaskFromVerify = async (
                 { id: taskOperation.taskId, status: 'completed' },
                 undefined,
                 {
-                  currentStatus: currentTask.status,
+                  currentStatus: currentTask.status as TaskStatus,
                   reservationId: completionReservationId,
                 },
               )
@@ -299,7 +300,7 @@ export const driveTaskFromVerify = async (
               { id: taskOperation.taskId, status: 'completed' },
               undefined,
               {
-                currentStatus: currentTask.status,
+                currentStatus: currentTask.status as TaskStatus,
                 reservationId: completionReservationId,
               },
             )

@@ -12,6 +12,7 @@ type WatchdogTask = {
   identifier: string;
   workspaceId: null | string;
 };
+type WatchdogUpdate = { id: string };
 
 const {
   briefCreate,
@@ -43,7 +44,7 @@ const {
         currentStatus: string,
         status: string,
         extra?: unknown,
-      ) => Promise<null | WatchdogTask>
+      ) => Promise<null | WatchdogUpdate>
     >(),
   updateStatusIfReservation:
     vi.fn<
@@ -53,7 +54,7 @@ const {
         currentStatus: string,
         status: string,
         extra?: unknown,
-      ) => Promise<null | WatchdogTask>
+      ) => Promise<null | WatchdogUpdate>
     >(),
 }));
 

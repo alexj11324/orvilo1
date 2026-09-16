@@ -46,8 +46,7 @@ export const linearInstallations = pgTable(
       .references(() => workspaces.id, { onDelete: 'cascade' })
       .notNull(),
     connectorId: uuid('connector_id')
-      .references(() => userConnectors.id, { onDelete: 'cascade' })
-      .notNull(),
+      .references(() => userConnectors.id, { onDelete: 'cascade' }),
     organizationId: text('organization_id').notNull(),
     organizationName: text('organization_name'),
     /** Name of the secret in the deployment secret store, never the secret itself. */
@@ -92,6 +91,8 @@ export const linearProjectBindings = pgTable(
     autoExecutionEnabled: boolean('auto_execution_enabled').notNull().default(false),
     replanningEnabled: boolean('replanning_enabled').notNull().default(false),
     version: integer('version').notNull().default(1),
+    importCursor: text('import_cursor'),
+    importCompletedAt: timestamptz('import_completed_at'),
     ...createdAtColumns(),
   },
   (table) => [

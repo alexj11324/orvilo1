@@ -20,6 +20,11 @@ const ISSUE_FIELDS = `
   assignee { id }
 `;
 
+const PAGE_INFO_FIELDS = `pageInfo { endCursor hasNextPage }`;
+const ORGANIZATION_FIELDS = `id name url`;
+const PROJECT_FIELDS = `id name state teams { nodes { id } }`;
+const TEAM_FIELDS = `id key name`;
+
 export interface LinearIssueCreateInput {
   description?: string | null;
   projectId?: string | null;
@@ -36,9 +41,38 @@ export interface LinearIssueUpdateInput {
   title?: string;
 }
 
+export interface LinearOrganizationSnapshot {
+  id: string;
+  name: string;
+  url?: string | null;
+}
+
+export interface LinearProjectSnapshot {
+  id: string;
+  name: string;
+  state?: string | null;
+  teamIds: string[];
+}
+
+export interface LinearTeamSnapshot {
+  id: string;
+  key: string;
+  name: string;
+}
+
+export interface LinearIssuePage {
+  endCursor: string | null;
+  hasNextPage: boolean;
+  issues: LinearIssueSnapshot[];
+}
+
 export interface LinearIssueProvider {
   createIssue: (input: LinearIssueCreateInput) => Promise<LinearIssueSnapshot>;
   getIssue: (id: string) => Promise<LinearIssueSnapshot>;
+  listIssues: (projectId: string, first?: number, after?: string | null) => Promise<LinearIssuePage>;
+  listOrganizations: () => Promise<LinearOrganizationSnapshot[]>;
+  listProjects: () => Promise<LinearProjectSnapshot[]>;
+  listTeams: () => Promise<LinearTeamSnapshot[]>;
   updateIssue: (id: string, input: LinearIssueUpdateInput) => Promise<LinearIssueSnapshot>;
 }
 
@@ -112,6 +146,99 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
     });
     const data = extractGraphQLData<{ issue: unknown }>(response);
     return normalizeLinearIssue(data.issue);
+  }
+
+  async listIssues(projectId: string, first = 50, after?: string | null): Promise<LinearIssuePage> {
+    const response = await this.marketService.proxyOAuthRequest({
+      body: {
+        query: `query ListIssues($projectId: String!, $first: Int!, $after: String) {
+          issues(filter: { project: { id: { eq: $projectId } } }, first: $first, after: $after) {
+            nodes { ${ISSUE_FIELDS} }
+            ${PAGE_INFO_FIELDS}
+          }
+        }`,
+        variables: { after: after ?? null, first, projectId },
+      },
+      endpoint: '/graphql',
+      method: 'POST',
+      provider: 'linear',
+    });
+    const data = extractGraphQLData<{
+      issues: { nodes: unknown[]; pageInfo: { endCursor?: string | null; hasNextPage?: boolean } };
+    }>(response);
+    return {
+      endCursor: data.issues.pageInfo.endCursor ?? null,
+      hasNextPage: data.issues.pageInfo.hasNextPage === true,
+      issues: data.issues.nodes.map(normalizeLinearIssue),
+    };
+  }
+
+  async listOrganizations(): Promise<LinearOrganizationSnapshot[]> {
+    const response = await this.marketService.proxyOAuthRequest({
+      body: {
+        query: `query ListOrganizations { organizations { nodes { ${ORGANIZATION_FIELDS} } } }`,
+      },
+      endpoint: '/graphql',
+      method: 'POST',
+      provider: 'linear',
+    });
+    const data = extractGraphQLData<{ organizations: { nodes: unknown[] } }>(response);
+    return data.organizations.nodes.flatMap((value) => {
+      if (!isRecord(value)) return [];
+      const id = stringValue(value.id);
+      const name = stringValue(value.name);
+      if (!id || !name) return [];
+      return [{ id, name, url: typeof value.url === 'string' ? value.url : null }];
+    });
+  }
+
+  async listProjects(): Promise<LinearProjectSnapshot[]> {
+    const response = await this.marketService.proxyOAuthRequest({
+      body: {
+        query: `query ListProjects { projects { nodes { ${PROJECT_FIELDS} } } }`,
+      },
+      endpoint: '/graphql',
+      method: 'POST',
+      provider: 'linear',
+    });
+    const data = extractGraphQLData<{ projects: { nodes: unknown[] } }>(response);
+    return data.projects.nodes.flatMap((value) => {
+      if (!isRecord(value)) return [];
+      const id = stringValue(value.id);
+      const name = stringValue(value.name);
+      if (!id || !name) return [];
+      const teams = isRecord(value.teams) && Array.isArray(value.teams.nodes) ? value.teams.nodes : [];
+      return [
+        {
+          id,
+          name,
+          state: typeof value.state === 'string' ? value.state : null,
+          teamIds: teams.flatMap((team) => {
+            const teamId = isRecord(team) ? stringValue(team.id) : null;
+            return teamId ? [teamId] : [];
+          }),
+        },
+      ];
+    });
+  }
+
+  async listTeams(): Promise<LinearTeamSnapshot[]> {
+    const response = await this.marketService.proxyOAuthRequest({
+      body: {
+        query: `query ListTeams { teams { nodes { ${TEAM_FIELDS} } } }`,
+      },
+      endpoint: '/graphql',
+      method: 'POST',
+      provider: 'linear',
+    });
+    const data = extractGraphQLData<{ teams: { nodes: unknown[] } }>(response);
+    return data.teams.nodes.flatMap((value) => {
+      if (!isRecord(value)) return [];
+      const id = stringValue(value.id);
+      const key = stringValue(value.key);
+      const name = stringValue(value.name);
+      return id && key && name ? [{ id, key, name }] : [];
+    });
   }
 
   async createIssue(input: LinearIssueCreateInput): Promise<LinearIssueSnapshot> {

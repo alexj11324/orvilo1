@@ -8,6 +8,7 @@ import {
   LinearWebhookError,
   parseLinearWebhookPayload,
 } from '@/server/services/linearSync';
+import { LinearSyncWorkflow } from '@/server/workflows/linearSync';
 
 /**
  * Capture a Linear delivery for one workspace. The workspace is part of the
@@ -56,6 +57,17 @@ export const linearWebhook = async (c: Context): Promise<Response> => {
       secret,
       signature,
       timestamp,
+    });
+
+    // The inbox/domain-event write is the acknowledgement boundary. Queue the
+    // leased workers after that durable write; a missing local QStash setup must
+    // never turn a successfully captured Linear delivery into a retry storm.
+    void LinearSyncWorkflow.trigger({
+      installationId: installation.id,
+      limit: 20,
+      workspaceId,
+    }).catch((error) => {
+      console.error('[linear:webhook] failed to schedule durable sync worker', error);
     });
 
     // Linear retries non-2xx deliveries even when the inbox row was durably

@@ -10,6 +10,7 @@ import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { taskPlanningProposalSchema } from '@/server/services/linearSync/contract';
 import { LinearPlanningWorker } from '@/server/services/linearSync/planning';
 import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/provider';
 import { LinearSyncWorker } from '@/server/services/linearSync/worker';
@@ -67,64 +68,6 @@ const snapshotSchema = z.object({
   url: z.string().url().nullable().optional(),
 });
 
-const planningActionSchema = z.discriminatedUnion('action', [
-  z.object({
-    action: z.literal('assign_task'),
-    assigneeAgentId: z.string().nullable().optional(),
-    assigneeUserId: z.string().nullable().optional(),
-    reason: z.string().trim().min(1).max(8_000),
-    taskId: z.string().min(1),
-  }),
-  z.object({
-    action: z.literal('create_task'),
-    description: z.string().max(8_000),
-    instruction: z.string().min(1).max(50_000),
-    name: z.string().trim().min(1).max(255),
-    parentTaskId: z.string().nullable().optional(),
-    priority: z.number().int().min(0).max(4).optional(),
-    projectId: z.string().min(1),
-    reason: z.string().trim().min(1).max(8_000),
-  }),
-  z.object({
-    action: z.literal('escalate'),
-    reason: z.string().trim().min(1).max(8_000),
-  }),
-  z.object({
-    action: z.literal('noop'),
-    reason: z.string().trim().min(1).max(8_000),
-  }),
-  z.object({
-    action: z.literal('request_stop'),
-    reason: z.string().trim().min(1).max(8_000),
-    taskId: z.string().min(1),
-  }),
-  z.object({
-    action: z.literal('set_dependency'),
-    dependsOnTaskId: z.string().min(1),
-    operation: z.enum(['add', 'remove']),
-    reason: z.string().trim().min(1).max(8_000),
-    taskId: z.string().min(1),
-  }),
-  z.object({
-    action: z.literal('update_task'),
-    patch: z
-      .object({
-        instruction: z.string().min(1).max(50_000).optional(),
-        name: z.string().trim().min(1).max(255).optional(),
-        priority: z.number().int().min(0).max(4).optional(),
-      })
-      .refine((patch) => Object.keys(patch).length > 0, 'Task patch cannot be empty'),
-    reason: z.string().trim().min(1).max(8_000),
-    taskId: z.string().min(1),
-  }),
-]);
-
-const planningProposalSchema = z.object({
-  actions: z.array(planningActionSchema).max(50),
-  explanation: z.string().trim().min(1).max(20_000),
-  requiresApproval: z.boolean(),
-});
-
 const mapError = (error: unknown, operation: string): never => {
   if (error instanceof TRPCError) throw error;
   console.error(`[linearSync:${operation}]`, error);
@@ -144,14 +87,30 @@ export const linearSyncRouter = router({
     }
   }),
 
+  catalog: linearSyncProcedure.query(async ({ ctx }) => {
+    try {
+      const provider = createLinearGraphqlIssueProvider({
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId!,
+      });
+      const [organizations, projects, teams] = await Promise.all([
+        provider.listOrganizations(),
+        provider.listProjects(),
+        provider.listTeams(),
+      ]);
+      return { data: { organizations, projects, teams }, success: true };
+    } catch (error) {
+      mapError(error, 'catalog');
+    }
+  }),
+
   createIssueLink: linearSyncWriteProcedure
     .input(
-      z.object({
-        bindingId: z.string().uuid(),
-        linearIdentifier: z.string().min(1),
-        linearIssueId: z.string().min(1),
-        organizationId: z.string().min(1),
-        remoteSnapshot: snapshotSchema.optional(),
+        z.object({
+          bindingId: z.string().uuid(),
+          linearIdentifier: z.string().min(1),
+          linearIssueId: z.string().min(1),
+          remoteSnapshot: snapshotSchema.optional(),
         taskId: z.string(),
       }),
     )
@@ -177,7 +136,7 @@ export const linearSyncRouter = router({
             installationId: installation.id,
             linearIdentifier: input.linearIdentifier,
             linearIssueId: input.linearIssueId,
-            organizationId: input.organizationId,
+            organizationId: installation.organizationId,
             remoteSnapshot: input.remoteSnapshot,
             taskId: task.id,
           }),
@@ -236,6 +195,38 @@ export const linearSyncRouter = router({
     }
   }),
 
+  importProject: linearSyncWriteProcedure
+    .input(
+      z.object({
+        bindingId: z.string().uuid(),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const binding = await ctx.linearSyncModel.findBindingById(input.bindingId);
+        if (!binding) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear project binding not found' });
+        }
+        const installation = await ctx.linearSyncModel.findInstallationById(binding.installationId);
+        if (!installation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
+        }
+        const provider = createLinearGraphqlIssueProvider({
+          userId: installation.installedByUserId ?? ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        });
+        const data = await new LinearSyncWorker(ctx.serverDB, ctx.workspaceId!).importBinding(
+          provider,
+          binding.id,
+          input.limit,
+        );
+        return { data, message: 'Linear project import processed', success: true };
+      } catch (error) {
+        mapError(error, 'importProject');
+      }
+    }),
+
   issueLinks: linearSyncProcedure
     .input(z.object({ bindingId: z.string().uuid().optional() }))
     .query(async ({ ctx, input }) => {
@@ -273,6 +264,14 @@ export const linearSyncRouter = router({
       return { data: await ctx.linearSyncModel.listPlanningScopes(), success: true };
     } catch (error) {
       mapError(error, 'listPlanningScopes');
+    }
+  }),
+
+  projects: linearSyncProcedure.query(async ({ ctx }) => {
+    try {
+      return { data: await ctx.projectModel.list(), success: true };
+    } catch (error) {
+      mapError(error, 'projects');
     }
   }),
 
@@ -349,7 +348,7 @@ export const linearSyncRouter = router({
   applyPlanningProposal: linearSyncWriteProcedure
     .input(
       z.object({
-        proposal: planningProposalSchema,
+        proposal: taskPlanningProposalSchema,
         revisionId: z.string().uuid(),
       }),
     )
@@ -387,7 +386,7 @@ export const linearSyncRouter = router({
   upsertInstallation: linearSyncWriteProcedure
     .input(
       z.object({
-        connectorId: z.string(),
+        connectorId: z.string().uuid().optional(),
         organizationId: z.string().min(1),
         organizationName: z.string().optional(),
         webhookSecretRef: z.string().min(1).optional(),
@@ -395,14 +394,18 @@ export const linearSyncRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        const connector = await ctx.connectorModel.findPublicById(input.connectorId);
-        if (!connector || connector.identifier !== 'linear') {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear connector not found' });
+        let connectorId: string | undefined;
+        if (input.connectorId) {
+          const connector = await ctx.connectorModel.findPublicById(input.connectorId);
+          if (!connector || connector.identifier !== 'linear') {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear connector not found' });
+          }
+          connectorId = connector.id;
         }
 
         return {
           data: await ctx.linearSyncModel.upsertInstallation({
-            connectorId: connector.id,
+            connectorId,
             installedByUserId: ctx.userId,
             organizationId: input.organizationId,
             organizationName: input.organizationName,

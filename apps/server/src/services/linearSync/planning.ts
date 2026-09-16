@@ -7,6 +7,11 @@ import type { TaskDomainEventItem, TaskPlanningScopeItem } from '@/database/sche
 import { taskDependencies, tasks } from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 
+import { taskPlanningProposalSchema } from './contract';
+import { createLinearCoordinatorPlanner } from './coordinator';
+
+export { proposeLinearPlanningReview } from './defaultPlanner';
+
 export interface TaskPlanningSnapshot {
   dependencies: Array<{ dependsOnId: string; taskId: string; type: string }>;
   events: TaskDomainEventItem[];
@@ -33,54 +38,6 @@ export interface TaskPlanningSnapshot {
 /** A planner is deliberately injected so model-backed planning cannot bypass the version gate. */
 export type TaskPlanningPlanner = (snapshot: TaskPlanningSnapshot) => Promise<TaskPlanningProposal>;
 
-const semanticEventTypes = new Set([
-  'linear.issue.changed',
-  'task.assigned',
-  'task.created',
-  'task.dependency.changed',
-  'task.requirement.changed',
-  'task.status.changed',
-]);
-
-/**
- * Safe default used by the durable worker until a project coordinator is
- * explicitly selected. It records that a coordinator decision is required,
- * rather than silently dispatching an Agent or changing a task.
- */
-export const proposeLinearPlanningReview: TaskPlanningPlanner = async (snapshot) => {
-  const semanticEvents = snapshot.events.filter((event) => semanticEventTypes.has(event.type));
-  const issueIds = Array.from(
-    new Set(
-      semanticEvents
-        .map((event) => (event.payload as Record<string, unknown>).issueId)
-        .filter((value): value is string => typeof value === 'string'),
-    ),
-  );
-
-  if (semanticEvents.length === 0) {
-    return {
-      actions: [{ action: 'noop', reason: 'No planning-relevant domain changes were found.' }],
-      explanation: 'The scope was evaluated and no semantic task change requires replanning.',
-      requiresApproval: false,
-    };
-  }
-
-  return {
-    actions: [
-      {
-        action: 'escalate',
-        reason:
-          issueIds.length > 0
-            ? `Linear issue change requires coordinator review: ${issueIds.join(', ')}`
-            : `The planning scope changed in ${semanticEvents.length} event(s).`,
-      },
-    ],
-    explanation:
-      'The change was durably captured and the affected task scope was snapshotted. A selected project coordinator must review the bounded scope before task or issue mutations are applied.',
-    requiresApproval: true,
-  };
-};
-
 export interface LinearPlanningWorkerResult {
   failed: number;
   processed: number;
@@ -105,11 +62,12 @@ export class LinearPlanningWorker {
   }
 
   async processPending(
-    planner: TaskPlanningPlanner = proposeLinearPlanningReview,
+    planner?: TaskPlanningPlanner,
     limit = 10,
   ): Promise<LinearPlanningWorkerResult> {
     const scopes = await this.model.claimPlanningScopes(limit);
     const result: LinearPlanningWorkerResult = { failed: 0, proposed: 0, processed: 0 };
+    const coordinatorPlanner = planner ?? createLinearCoordinatorPlanner(this.db, this.workspaceId);
 
     for (const scope of scopes) {
       try {
@@ -157,9 +115,10 @@ export class LinearPlanningWorker {
                   'The event remains recorded for audit, but this project has opted out of automatic replanning.',
                 requiresApproval: false,
               }
-            : await planner(snapshot);
+            : await coordinatorPlanner(snapshot);
+        const validatedProposal = taskPlanningProposalSchema.parse(proposal);
         await this.model.updatePlanningRevision(revision.id, {
-          proposal,
+          proposal: validatedProposal,
           status: 'proposed',
         });
         await this.model.finishPlanningScope(scope.id, inputRevision, 'idle');

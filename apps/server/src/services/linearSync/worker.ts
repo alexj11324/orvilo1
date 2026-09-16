@@ -49,7 +49,9 @@ const taskSnapshot = (
   identifier: issue.identifier,
   description: task.instruction,
   priority: task.priority,
-  projectId: task.projectId,
+  // Task.projectId is an Orvilo project id. The snapshot field is a Linear
+  // project id, so it must remain on the remote identity side of the binding.
+  projectId: issue.projectId,
   stateId:
     settings.statusMappings?.find((mapping) => mapping.localStatus === task.status)
       ?.linearStateId ?? issue.stateId,
@@ -209,6 +211,53 @@ export class LinearSyncWorker {
     return result;
   }
 
+  async importBinding(
+    provider: LinearIssueProvider,
+    bindingId: string,
+    limit = 50,
+  ): Promise<LinearWorkerResult & { completed: boolean; nextCursor: string | null }> {
+    const binding = await this.model.findBindingById(bindingId);
+    if (!binding) throw new Error('Linear project binding not found');
+    const installation = await this.model.findInstallationById(binding.installationId);
+    if (!installation) throw new Error('Linear installation not found');
+
+    const page = await provider.listIssues(binding.linearProjectId, limit, binding.importCursor);
+    const issueById = new Map(page.issues.map((issue) => [issue.id, issue]));
+    const pageProvider: LinearIssueProvider = {
+      ...provider,
+      getIssue: async (id) => issueById.get(id) ?? provider.getIssue(id),
+    };
+    const result: LinearWorkerResult = {
+      failed: 0,
+      imported: 0,
+      pendingBinding: 0,
+      processed: 0,
+    };
+
+    for (const issue of page.issues) {
+      try {
+        const outcome = await this.processRow(
+          {
+            id: `linear-import:${binding.id}:${issue.id}`,
+            installationId: installation.id,
+            subjectId: issue.id,
+          },
+          pageProvider,
+        );
+        if (outcome === 'imported') result.imported += 1;
+        if (outcome === 'pending-binding') result.pendingBinding += 1;
+        if (outcome !== 'pending-binding') result.processed += 1;
+      } catch (error) {
+        result.failed += 1;
+        console.error('[linear:import]', error);
+      }
+    }
+
+    const nextCursor = page.hasNextPage ? page.endCursor : null;
+    await this.model.updateBindingImportCursor(binding.id, nextCursor, !page.hasNextPage);
+    return { ...result, completed: !page.hasNextPage, nextCursor };
+  }
+
   private async processRow(
     row: { installationId: string; subjectId: string | null; id: string },
     provider: LinearIssueProvider,
@@ -238,6 +287,8 @@ export class LinearSyncWorker {
         installation.installedByUserId,
         this.workspaceId,
       ).createTask({
+        assigneeAgentId: settingsAssignmentAgent(binding.settings, issue.assigneeId),
+        assigneeUserId: settingsAssignmentUser(binding.settings, issue.assigneeId),
         description: issue.description?.slice(0, 255),
         instruction: issue.description || issue.title,
         name: issue.title,
@@ -245,6 +296,15 @@ export class LinearSyncWorker {
         projectId: binding.projectId,
         visibility: 'public',
       });
+      const initialStatus = binding.settings.statusMappings?.find(
+        (mapping) => mapping.linearStateId === issue.stateId,
+      )?.localStatus;
+      if (initialStatus) {
+        await new TaskModel(this.db, installation.installedByUserId, this.workspaceId).update(
+          task.id,
+          { status: initialStatus },
+        );
+      }
       await this.model.createIssueLink({
         bindingId: binding.id,
         installationId: installation.id,
@@ -351,3 +411,13 @@ export class LinearSyncWorker {
     return 'processed';
   }
 }
+
+const settingsAssignmentAgent = (
+  settings: LinearProjectBindingSettings,
+  linearUserId?: string | null,
+) => settings.assignmentMappings?.find((mapping) => mapping.linearUserId === linearUserId)?.orviloAgentId;
+
+const settingsAssignmentUser = (
+  settings: LinearProjectBindingSettings,
+  linearUserId?: string | null,
+) => settings.assignmentMappings?.find((mapping) => mapping.linearUserId === linearUserId)?.orviloUserId;

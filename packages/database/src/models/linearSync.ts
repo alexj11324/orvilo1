@@ -109,7 +109,7 @@ export class LinearSyncModel {
   }
 
   async upsertInstallation(input: {
-    connectorId: string;
+    connectorId?: string;
     installedByUserId: string;
     organizationId: string;
     organizationName?: string;
@@ -232,6 +232,21 @@ export class LinearSyncModel {
       .returning();
 
     return row;
+  }
+
+  async updateBindingImportCursor(id: string, cursor: string | null, completed: boolean) {
+    const [row] = await this.db
+      .update(linearProjectBindings)
+      .set({
+        importCompletedAt: completed ? new Date() : null,
+        importCursor: cursor,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(linearProjectBindings.id, id), eq(linearProjectBindings.workspaceId, this.workspaceId)),
+      )
+      .returning();
+    return row ?? null;
   }
 
   async findIssueLinkByExternalId(linearIssueId: string) {
@@ -891,7 +906,9 @@ export class LinearSyncModel {
         : {}),
       description: input.task.instruction,
       priority: input.task.priority,
-      projectId: input.task.projectId,
+      // Task.projectId is local to Orvilo. A Linear issue update must carry
+      // the bound remote project UUID instead of leaking the local id.
+      projectId: binding?.linearProjectId ?? link.remoteSnapshot?.projectId ?? null,
       ...(statusId !== undefined ? { stateId: statusId } : {}),
       title: input.task.name || input.task.identifier,
     };

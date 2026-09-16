@@ -361,17 +361,17 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 ## 2. 工作包状态
 
-| 工作包                   | 实现状态     | 验证状态 | commit / 证据 | 保留依赖 / 阻塞                   |
-| ------------------------ | ------------ | -------- | ------------- | --------------------------------- |
-| S00 基线与依赖清单       | IN\_PROGRESS | NOT\_RUN | 本文          | 见 §1.7 待补                      |
-| S10 统一入口与偏好迁移   | IMPLEMENTED  | NOT\_RUN | 待提交        | 见 §2.1；本机无法跑测试与类型检查 |
-| S20 默认看板、旧首页卸载 | TODO         | NOT\_RUN | —             | 依赖 S10                          |
-| S30 独立功能退役         | TODO         | NOT\_RUN | —             | 依赖 S00、S10                     |
-| S40 自动化整合           | TODO         | NOT\_RUN | —             | 依赖 S10、S20                     |
-| S50 资源与产物归位       | TODO         | NOT\_RUN | —             | 依赖 S00                          |
-| S60 Goal 与规则下沉      | TODO         | NOT\_RUN | —             | 依赖 S20、S50                     |
-| S70 设置、文案与依赖清理 | TODO         | NOT\_RUN | —             | 依赖各功能工作包                  |
-| S80 远端验收与证据       | TODO         | NOT\_RUN | —             | 覆盖全部                          |
+| 工作包                   | 实现状态     | 验证状态    | commit / 证据              | 保留依赖 / 阻塞                     |
+| ------------------------ | ------------ | ----------- | -------------------------- | ----------------------------------- |
+| S00 基线与依赖清单       | IN\_PROGRESS | NOT\_RUN    | 本文                       | 见 §1.7 待补                        |
+| S10 统一入口与偏好迁移   | IMPLEMENTED  | CI\_PENDING | `e66656d4`                 | 本机 300 项测试通过；待 CI 类型检查 |
+| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING | `fb1a52a6`（视图偏好部分） | 旧首页卸载未做，见 §2.2             |
+| S30 独立功能退役         | TODO         | NOT\_RUN    | —                          | 依赖 S00、S10                       |
+| S40 自动化整合           | TODO         | NOT\_RUN    | —                          | 依赖 S10、S20                       |
+| S50 资源与产物归位       | TODO         | NOT\_RUN    | —                          | 依赖 S00                            |
+| S60 Goal 与规则下沉      | TODO         | NOT\_RUN    | —                          | 依赖 S20、S50                       |
+| S70 设置、文案与依赖清理 | TODO         | NOT\_RUN    | —                          | 依赖各功能工作包                    |
+| S80 远端验收与证据       | TODO         | NOT\_RUN    | —                          | 覆盖全部                            |
 
 ---
 
@@ -427,6 +427,53 @@ import { imageRouter } from '@/server/routers/lambda/image';
 - `resource` 标为 `secondary` 是**目标态声明**，实际从主导航下沉在 S50 完成；当前保持可达
 - `electronKey` 已证实为死字段，清理留给 S70
 - `SidebarTabKey` 中 `Community` / `Image` / `Memory` / `Pages` / `Video` 成员现已无引用，清理留给 S70
+
+### 2.2 S20 实施记录
+
+**已完成（`fb1a52a6`）—— 默认视图与完成项可见性**
+
+方案 §2.2 要求「新用户或没有有效偏好时使用 `'kanban'`」并「让完成列可见」。实测发现这些默认值**散落在两层的 5 个位置**：
+
+| 位置                                                                                                                              | 原值                                      | 新值                                  |
+| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------- |
+| `src/store/global/initialState.ts` `INITIAL_STATUS.taskListViewMode`                                                              | `'list'`                                  | `'kanban'`                            |
+| `src/store/global/initialState.ts` `INITIAL_STATUS.taskListViewOptions.hideCompleted`                                             | `true`                                    | `false`                               |
+| `src/store/global/initialState.ts` `INITIAL_STATUS.taskKanbanHiddenColumns`                                                       | `['done','canceled']`                     | `['canceled']`                        |
+| `src/features/AgentTasks/AgentTaskList/listViewOptions.ts` `DEFAULT_TASK_LIST_VIEW_OPTIONS.hideCompleted`                         | `true`                                    | `false`                               |
+| `src/store/global/selectors/systemStatus.ts`（`taskListViewOptions` 兜底 / `taskListViewMode` / `DEFAULT_KANBAN_HIDDEN_COLUMNS`） | `true` / `'list'` / `['done','canceled']` | `false` / `'kanban'` / `['canceled']` |
+
+> ⚠️ **两层默认值的陷阱**：`INITIAL_STATUS` 是**显式种下**这些值的，所以 selector 里的 `?? 'list'` 兜底对新用户**根本不会触发**。只改 selector 会完全没有效果。已加测试直接断言 `INITIAL_STATUS`，防止将来只改一层造成默认值静默分裂。
+
+**语义后果（已处理）**：`general.test.ts` 原有一个「切到 kanban 应持久化」的用例，因为 kanban 现在是默认值，切换到它成了空操作而失败。已改为从非默认值出发，保住原意图。
+
+**未完成 —— 旧首页卸载（S20 剩余部分）**
+
+调研已定位到三个必须一起处理的耦合点：
+
+1. **根路径 `/` 的 index 路由在 Web 上是空的**：
+   `src/spa/router/desktopRouter.shared.tsx:1603-1616` 的 index 元素是
+   `deferPlatformElement(options.createHomeElement)`，注释明说「Web leaves this element
+   empty; **Electron injects the per-tab Home route**」。
+   所以 Web 的首页内容**不是路由渲染的**，而是下一项那个无条件挂载；而 Electron 往**同一个**
+   index 注入每标签页自己的 Home。**「改 `/` 跳转」与「卸载 Home」在两端是两件事，不能一刀切。**
+
+2. **`src/routes/(main)/_layout/index.tsx:57-64` 无条件组合 Home**：
+   `DesktopHomeLayout` + `DesktopHome` 包在 `<Outlet/>` 外面。同文件 `:43-71` 的全局能力
+   （HotkeysProvider / DesktopAutoOidcOnFirstOpen / AuthRequiredModal / WorkspaceContextSlot /
+   RouteMetaBridge / CloudBanner / DndContextWrapper / NavPanelShell / HotkeyHelperPanel /
+   RegisterHotkeys / CmdkLazy / GlobalApprovalNotification）**必须原样保留**。
+
+3. **`src/features/HomeLayout/index.tsx` 不只是外壳**：
+   除 `Activity` 常驻机制外，它还挂着 **`HomeAgentIdSync`** 和 **`RecentSync`** 两个同步组件
+   （`:64-65`）。**卸载 Home 前必须先查清这两个组件做什么** —— 否则会静默丢掉行为。
+   另需迁移 `TopicChatDrawer`、`AcceptancePortalDrawer` 两个真实交互宿主
+   （`src/features/Home/index.tsx:455-464`），并保证「每页恰好一个宿主」。
+
+4. **移动路由**需一并核对（`mobileRouter.config.tsx`）。
+
+**建议顺序**：先查清 `HomeAgentIdSync` / `RecentSync` → 迁移两个抽屉宿主到独立挂载点 →
+处理 Web index 跳转（保持 Electron 的每标签页注入不变）→ 再卸载
+`DesktopHomeLayout` + `DesktopHome` → 最后删 `HomePortrait` / `PortraitBubble` 与装饰预设。
 
 ## 3. 旧路由映射（草案）
 

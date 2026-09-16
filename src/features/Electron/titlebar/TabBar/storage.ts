@@ -30,7 +30,7 @@ export const getTabPages = (scope: TabScope): TabPagesStorageData => {
     const data = window.localStorage.getItem(tabPagesStorageKey(scope));
     if (!data) return EMPTY;
 
-    const parsed = JSON.parse(data);
+    const parsed = JSON.parse(data) as Partial<TabPagesStorageData>;
     if (!parsed || typeof parsed !== 'object') return EMPTY;
 
     const tabs = Array.isArray(parsed.tabs)

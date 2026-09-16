@@ -17,6 +17,7 @@ const { checkDeprecatedAuth } = require(sharedModulePath);
 const DB_MIGRATION_SCRIPT_PATH = '/app/docker.cjs';
 const ES_MIGRATION_SCRIPT_PATH = '/app/fts-search-elasticsearch-reindex.cjs';
 const SERVER_SCRIPT_PATH = '/app/server.js';
+const HATCHET_WORKER_SCRIPT_PATH = '/app/hatchet-worker.mjs';
 const PROXYCHAINS_CONF_PATH = '/etc/proxychains4.conf';
 
 // Function to check if a string is a valid IP address
@@ -165,65 +166,25 @@ const startGateway = async () => {
   console.error('❌ Gateway: Failed to start after retries.');
 };
 
-// Recurring QStash schedules this deployment needs.
-//
-// The goal sweep is not an optimization: a Goal Graph advances on events, so a
-// dropped delivery or a process that dies after dispatch would strand the goal
-// forever with nothing to notice. The sweep is what makes that recoverable.
-const QSTASH_SCHEDULES = [
-  {
-    cron: '*/10 * * * *',
-    id: 'lobe-task-schedule-dispatch',
-    path: '/api/workflows/task/schedule-dispatch',
-  },
-  {
-    cron: '*/5 * * * *',
-    id: 'lobe-goal-sweep',
-    path: '/api/workflows/goal/sweep',
-  },
-];
-
-// Function to create the recurring QStash schedules the server relies on
-const createQstashSchedule = async () => {
-  const QSTASH_URL = process.env.QSTASH_URL || 'https://qstash-eu-central-1.upstash.io';
-
-  const QSTASH_TOKEN = process.env.QSTASH_TOKEN;
-  if (!QSTASH_TOKEN) {
-    console.warn('⚠️ QStash: QSTASH_TOKEN not set. Skipping schedule creation.');
-    return;
+const startHatchetWorker = () => {
+  if (process.env.AGENT_RUNTIME_MODE !== 'queue') return;
+  if (process.env.HATCHET_WORKER_ENABLED === '0') return;
+  if (!process.env.HATCHET_CLIENT_TOKEN) {
+    throw new Error('HATCHET_CLIENT_TOKEN is required when AGENT_RUNTIME_MODE=queue');
   }
 
-  const APP_URL = process.env.APP_URL;
-  if (!APP_URL) {
-    console.warn('⚠️ QStash: APP_URL not set. Skipping schedule creation.');
-    return;
-  }
+  const worker = spawn('/bin/node', [HATCHET_WORKER_SCRIPT_PATH], { stdio: 'inherit' });
+  worker.on('error', (error) => {
+    console.error('❌ Hatchet: Worker failed to start:', error);
+    process.exit(1);
+  });
+  worker.on('close', (code) => {
+    if (code === 0) return;
+    console.error(`❌ Hatchet: Worker exited with code ${code}`);
+    process.exit(code || 1);
+  });
 
-  for (const schedule of QSTASH_SCHEDULES) {
-    const url = `${QSTASH_URL}/v2/schedules/${APP_URL}${schedule.path}`;
-
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${QSTASH_TOKEN}`,
-          'Content-Type': 'application/json',
-          'Upstash-Method': 'POST',
-          'Upstash-Cron': schedule.cron,
-          'Upstash-Schedule-Id': schedule.id,
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (res.ok) {
-        console.log(`✅ QStash: Schedule ${schedule.id} created successfully.`);
-      } else {
-        console.error(`❌ QStash: Failed to create schedule ${schedule.id}. Status ${res.status}`);
-      }
-    } catch (err) {
-      console.error(`❌ QStash: Error creating schedule ${schedule.id}:`, err);
-    }
-  }
+  console.log('✅ Hatchet: Core worker started.');
 };
 
 // Main function to run the server with optional proxy
@@ -281,8 +242,7 @@ const runServer = async () => {
   // Start gateway in background after server is ready
   startGateway();
 
-  // Create QStash schedule for workflow task dispatching
-  createQstashSchedule();
+  startHatchetWorker();
 
   // Run the server in either database or non-database mode
   await runServer();

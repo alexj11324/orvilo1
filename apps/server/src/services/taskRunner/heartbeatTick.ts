@@ -27,8 +27,8 @@ export type HeartbeatTickSkipReason =
   | 'terminal';
 
 /**
- * Run a heartbeat tick — invoked by both the LocalScheduler `setTimeout`
- * callback and the QStash `/heartbeat-tick` HTTP handler.
+ * Run a heartbeat tick — invoked by the LocalScheduler `setTimeout` callback,
+ * the Hatchet worker, and the legacy HTTP handler during migration.
  *
  * DB is the authority: every check below re-reads task state because the
  * scheduled message may arrive after the user paused, canceled, or changed

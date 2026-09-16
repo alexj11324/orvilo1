@@ -101,6 +101,7 @@ RUN pnpm exec esbuild scripts/elasticsearchReindex/index.ts --bundle --platform=
 RUN pnpm exec esbuild scripts/elasticsearchSync/cli.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-elasticsearch-sync.cjs --external:pg --external:drizzle-orm '--external:drizzle-orm/*'
 RUN pnpm exec esbuild scripts/elasticsearchCleanupIneligibleMessages/cli.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-ineligible-message-cleanup.cjs --external:pg --external:drizzle-orm '--external:drizzle-orm/*'
 RUN pnpm exec esbuild scripts/pgSearchCleanup/index.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-pg-search-cleanup.cjs --external:pg
+RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --outfile=/app/hatchet-worker.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*'
 
 # Preserve SWC helpers referenced through pnpm virtual-store symlinks by Next.js.
 RUN mkdir -p /runtime-deps && cp -a node_modules/.pnpm/@swc+helpers@* /runtime-deps/
@@ -126,6 +127,7 @@ COPY --from=builder /app/fts-search-elasticsearch-reindex.cjs /app/fts-search-el
 COPY --from=builder /app/fts-search-elasticsearch-sync.cjs /app/fts-search-elasticsearch-sync.cjs
 COPY --from=builder /app/fts-search-ineligible-message-cleanup.cjs /app/fts-search-ineligible-message-cleanup.cjs
 COPY --from=builder /app/fts-search-pg-search-cleanup.cjs /app/fts-search-pg-search-cleanup.cjs
+COPY --from=builder /app/hatchet-worker.mjs /app/hatchet-worker.mjs
 
 # copy dependencies
 COPY --from=builder /deps/node_modules/.pnpm /app/node_modules/.pnpm
@@ -169,6 +171,10 @@ ENV HOSTNAME="0.0.0.0" \
 
 # General Variables
 ENV APP_URL="" \
+    HATCHET_CLIENT_TOKEN="" \
+    HATCHET_WORKER_ENABLED="" \
+    HATCHET_WORKER_NAME="" \
+    HATCHET_WORKER_SLOTS="" \
     API_KEY_SELECT_MODE="" \
     DEFAULT_AGENT_CONFIG="" \
     SYSTEM_AGENT="" \

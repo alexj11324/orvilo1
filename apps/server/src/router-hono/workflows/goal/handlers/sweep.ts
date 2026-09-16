@@ -4,9 +4,9 @@ import type { Context } from 'hono';
 import { GoalModel } from '@/database/models/goal';
 import { getServerDB } from '@/database/server';
 import { appEnv } from '@/envs/app';
-import { qstashClient } from '@/libs/qstash';
+import { enqueueHatchetTask } from '@/libs/hatchet';
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
-import { GOAL_ADVANCE_PATH } from '@/server/services/goal/scheduler';
+import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 
 const log = debug('lobe-server:workflows:goal:sweep');
 
@@ -41,35 +41,41 @@ export interface GoalSweepPayload {
 export async function sweep(c: Context) {
   try {
     const body = (await c.req.json().catch(() => ({}))) as GoalSweepPayload;
-    const { dryRun = false, limit = 200, staleAfterMs = DEFAULT_STALE_AFTER_MS } = body ?? {};
-
-    const db = await getServerDB();
-    const stalled = await GoalModel.listStalled(db, {
-      limit,
-      staleBefore: new Date(Date.now() - staleAfterMs),
-    });
-
-    log('scan: stalled=%d dryRun=%s', stalled.length, dryRun);
-
-    if (dryRun || stalled.length === 0) {
-      return c.json({ advanced: 0, dryRun, stalled: stalled.length, success: true });
-    }
-
-    const advanced = await fanout(
-      stalled.map((goal) => ({
-        goalId: goal.id,
-        trigger: 'sweep' as const,
-        userId: goal.userId,
-        workspaceId: goal.workspaceId ?? undefined,
-      })),
-    );
-
-    return c.json({ advanced, stalled: stalled.length, success: true });
+    return c.json(await runGoalSweep(body));
   } catch (error) {
     console.error('[goal/sweep] Error:', error);
     return c.json({ error: error instanceof Error ? error.message : 'Internal error' }, 500);
   }
 }
+
+export const runGoalSweep = async ({
+  dryRun = false,
+  limit = 200,
+  staleAfterMs = DEFAULT_STALE_AFTER_MS,
+}: GoalSweepPayload = {}) => {
+  const db = await getServerDB();
+  const stalled = await GoalModel.listStalled(db, {
+    limit,
+    staleBefore: new Date(Date.now() - staleAfterMs),
+  });
+
+  log('scan: stalled=%d dryRun=%s', stalled.length, dryRun);
+
+  if (dryRun || stalled.length === 0) {
+    return { advanced: 0, dryRun, stalled: stalled.length, success: true };
+  }
+
+  const advanced = await fanout(
+    stalled.map((goal) => ({
+      goalId: goal.id,
+      trigger: 'sweep' as const,
+      userId: goal.userId,
+      workspaceId: goal.workspaceId ?? undefined,
+    })),
+  );
+
+  return { advanced, stalled: stalled.length, success: true };
+};
 
 interface StalledGoal {
   goalId: string;
@@ -97,10 +103,7 @@ const fanout = async (goals: StalledGoal[]): Promise<number> => {
 };
 
 const publishAll = async (goals: StalledGoal[]) => {
-  if (!process.env.APP_URL) {
-    throw new Error('APP_URL is required to fan out goal advances via QStash');
-  }
-  const url = `${process.env.APP_URL.replace(/\/$/, '')}${GOAL_ADVANCE_PATH}`;
-
-  return Promise.allSettled(goals.map((body) => qstashClient.publishJSON({ body, url })));
+  return Promise.allSettled(
+    goals.map((input) => enqueueHatchetTask(HATCHET_TASK_NAMES.goalAdvance, input)),
+  );
 };

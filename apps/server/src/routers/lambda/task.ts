@@ -900,18 +900,25 @@ export const taskRouter = router({
       // (per docs/usage/workspace-permissions: bulk actions only affect
       // caller-created content).
       const restrictToCreator = !!ctx.workspaceId;
-      // Worktree teardown must precede the delete: task_topics rows (and
-      // their integration records) cascade away with the task rows.
-      const { tasks: doomed } = await model.list({
-        createdByUserId: restrictToCreator ? ctx.userId : undefined,
-        limit: 10_000,
-      });
-      await Promise.allSettled(
-        doomed.map((task) => ctx.taskIntegration.cleanupTaskWorktrees(task.id)),
+      // Snapshot without side effects, then delete a frozen set under the graph
+      // lock. A rejected deletion must never remove a surviving task's worktree.
+      const ids = await model.getTaskIdsForDeletion(restrictToCreator);
+      const snapshots = new Map(
+        await Promise.all(
+          ids.map(async (id) => [id, await ctx.taskIntegration.snapshotTaskWorktrees(id)] as const),
+        ),
       );
-      const count = await model.deleteAll({ restrictToCreator });
+      const deletedIds = await model.deleteMany(ids);
+      await Promise.allSettled(
+        deletedIds.map((id) => ctx.taskIntegration.cleanupTaskWorktrees(id, snapshots.get(id)!)),
+      );
+      const count = deletedIds.length;
       return { count, message: `${count} tasks deleted`, success: true };
     } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      if (error instanceof TaskDependencyError) {
+        throw new TRPCError({ cause: error, code: error.code, message: error.message });
+      }
       console.error('[task:clearAll]', error);
       throw new TRPCError({
         cause: error,
@@ -926,13 +933,15 @@ export const taskRouter = router({
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
-      // Tear down provisioned run worktrees before the task_topics rows
-      // cascade away with the task. Best-effort — never blocks the delete.
-      await ctx.taskIntegration.cleanupTaskWorktrees(task.id);
-      await model.delete(task.id);
+      const snapshot = await ctx.taskIntegration.snapshotTaskWorktrees(task.id);
+      const deleted = await model.delete(task.id);
+      if (deleted) await ctx.taskIntegration.cleanupTaskWorktrees(task.id, snapshot);
       return { data: task, message: 'Task deleted', success: true };
     } catch (error) {
       if (error instanceof TRPCError) throw error;
+      if (error instanceof TaskDependencyError) {
+        throw new TRPCError({ cause: error, code: error.code, message: error.message });
+      }
       console.error('[task:delete]', error);
       throw new TRPCError({
         cause: error,

@@ -7,6 +7,7 @@ import { AcceptanceModel } from '@/database/models/acceptance';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TaskService } from '@/server/services/task';
+import { TaskIntegrationService } from '@/server/services/taskIntegration';
 
 import { taskRouter } from '../../task';
 import {
@@ -995,6 +996,42 @@ describe('Task Router Integration', () => {
       // ...so a fresh run is allowed instead of "already has a running topic".
       await caller.run({ id: task.data.id });
       expect((await caller.detail({ id: task.data.id })).data?.status).toBe('running');
+    });
+  });
+
+  describe('guarded deletion cleanup', () => {
+    it('rejects a blocked delete with an actionable error before touching worktrees', async () => {
+      const upstream = await caller.create({ instruction: 'Upstream' });
+      const dependent = await caller.create({ instruction: 'Dependent' });
+      await caller.addDependency({ taskId: dependent.data.id, dependsOnId: upstream.data.id });
+      const cleanup = vi
+        .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
+        .mockResolvedValue(undefined);
+      try {
+        await expect(caller.delete({ id: upstream.data.id })).rejects.toMatchObject({
+          code: 'BAD_REQUEST',
+        });
+        expect(cleanup).not.toHaveBeenCalled();
+        expect((await caller.find({ id: upstream.data.id })).data.id).toBe(upstream.data.id);
+      } finally {
+        cleanup.mockRestore();
+      }
+    });
+
+    it('uses a pre-delete snapshot but performs cleanup only after the deletion commits', async () => {
+      const task = await caller.create({ instruction: 'Removable' });
+      const cleanup = vi
+        .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
+        .mockImplementation(async (id, snapshot) => {
+          expect(await new TaskModel(serverDB, userId).findById(id)).toBeNull();
+          expect(Array.isArray(snapshot)).toBe(true);
+        });
+      try {
+        await caller.delete({ id: task.data.id });
+        expect(cleanup).toHaveBeenCalledTimes(1);
+      } finally {
+        cleanup.mockRestore();
+      }
     });
   });
 

@@ -8,3 +8,10 @@ export class TaskDependencyError extends Error {
     this.code = code;
   }
 }
+
+/** Preserve the domain distinction through a tRPC Error.cause wrapper. */
+export const isTaskDependencyBlocked = (error: unknown): boolean =>
+  (error instanceof TaskDependencyError && error.code === 'PRECONDITION_FAILED') ||
+  (error instanceof Error &&
+    error.cause instanceof TaskDependencyError &&
+    error.cause.code === 'PRECONDITION_FAILED');

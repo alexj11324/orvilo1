@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
+import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { tasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
@@ -19,6 +20,7 @@ export type ScheduleTickOutcome =
   { ran: true; taskIdentifier: string } | { ran: false; reason: ScheduleTickSkipReason };
 
 export type ScheduleTickSkipReason =
+  | 'dependencies-blocked'
   | 'human-waiting'
   | 'in-flight'
   | 'max-executions-reached'
@@ -114,7 +116,12 @@ export async function runScheduleTick(
           maxExecutions,
         );
         const taskModel = new TaskModel(db, userId, wsId);
-        await taskModel.updateStatus(taskId, 'completed', { completedAt: new Date() });
+        try {
+          await taskModel.updateStatus(taskId, 'completed', { completedAt: new Date() });
+        } catch (error) {
+          if (isTaskDependencyBlocked(error)) return { ran: false, reason: 'dependencies-blocked' };
+          throw error;
+        }
         return { ran: false, reason: 'max-executions-reached' };
       }
     }
@@ -124,6 +131,7 @@ export async function runScheduleTick(
   try {
     await runner.runTask({ taskId, trigger: 'schedule' });
   } catch (e) {
+    if (isTaskDependencyBlocked(e)) return { ran: false, reason: 'dependencies-blocked' };
     // Concurrent tick / manual run already running this task — graceful skip.
     if (e instanceof TRPCError && e.code === 'CONFLICT') {
       log('skip task=%s reason=in-flight', taskId);

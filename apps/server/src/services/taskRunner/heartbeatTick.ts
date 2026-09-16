@@ -1,11 +1,18 @@
+import { randomUUID } from 'node:crypto';
+
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
 
 import { BriefModel } from '@/database/models/brief';
+import { TaskModel } from '@/database/models/task';
+import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { tasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
-import { setTaskSchedulerExecutionCallback } from '@/server/services/taskScheduler';
+import {
+  createTaskSchedulerModule,
+  setTaskSchedulerExecutionCallback,
+} from '@/server/services/taskScheduler';
 
 import { TaskRunnerService } from './index';
 
@@ -18,6 +25,8 @@ export type HeartbeatTickOutcome =
   { ran: true; taskIdentifier: string } | { ran: false; reason: HeartbeatTickSkipReason };
 
 export type HeartbeatTickSkipReason =
+  | 'dependencies-blocked'
+  | 'paused'
   | 'human-waiting'
   | 'in-flight'
   | 'mode-changed'
@@ -71,6 +80,8 @@ export async function runHeartbeatTick(
     return { ran: false, reason: 'no-interval' };
   }
 
+  if (task.status === 'paused') return { ran: false, reason: 'paused' };
+
   const wsId = task.workspaceId ?? undefined;
   const briefModel = new BriefModel(db, userId, wsId);
   if (await briefModel.hasUnresolvedUrgentByTask(taskId, { excludeTypes: ['error'] })) {
@@ -82,6 +93,32 @@ export async function runHeartbeatTick(
   try {
     await runner.runTask({ taskId, trigger: 'heartbeat' });
   } catch (e) {
+    if (isTaskDependencyBlocked(e)) {
+      if (task.status === 'scheduled') {
+        const scheduler = createTaskSchedulerModule();
+        const nextToken = randomUUID();
+        const tickMessageId = await scheduler.scheduleNextTopic({
+          delay: task.heartbeatInterval,
+          taskId,
+          tickToken: nextToken,
+          userId,
+        });
+        let retained = false;
+        try {
+          retained = await new TaskModel(db, userId, wsId).updateContextIfHeartbeatTick(
+            taskId,
+            activeTickToken,
+            task.heartbeatInterval,
+            { scheduledAt: new Date().toISOString(), tickMessageId, tickToken: nextToken },
+          );
+        } finally {
+          // Another tick, pause, cancel or configuration edit won. Never keep
+          // a delayed message that no longer owns this scheduled generation.
+          if (!retained) await scheduler.cancelScheduled(tickMessageId);
+        }
+      }
+      return { ran: false, reason: 'dependencies-blocked' };
+    }
     // Concurrent tick / manual run already running this task — treat as a
     // graceful skip. runTask's own rollback only fires when *it* set running,
     // so the in-flight run keeps its 'running' status untouched.

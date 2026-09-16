@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { tasks, users, workspaces } from '../../schemas';
+import { taskDependencies, tasks, users, workspaces } from '../../schemas';
 import { TaskModel } from '../task';
 import { TaskDependencyError } from '../taskDependency';
 
@@ -180,5 +180,121 @@ describe('task prerequisite invariants', () => {
     await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
     await member.removeDependency(dependent.id, upstream.id);
     await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
+  });
+});
+
+describe('prerequisite review regressions', () => {
+  const workspace = async () => {
+    const workspaceId = 'prerequisite-review-workspace';
+    await db.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Review',
+      slug: workspaceId,
+      primaryOwnerId: userId,
+    });
+    return {
+      owner: new TaskModel(db, userId, workspaceId),
+      member: new TaskModel(db, otherUserId, workspaceId),
+    };
+  };
+
+  it('keeps legacy member-authored edges visible to the dependent owner after demotion', async () => {
+    const { owner, member } = await workspace();
+    const upstream = await owner.create({ instruction: 'Upstream' });
+    const dependent = await owner.create({ instruction: 'Shared dependent' });
+    await member.addDependency(dependent.id, upstream.id);
+    expect((await owner.getDependencies(dependent.id))[0].userId).toBe(userId);
+    await db
+      .update(taskDependencies)
+      .set({ userId: otherUserId })
+      .where(eq(taskDependencies.taskId, dependent.id));
+    await owner.updateVisibility(dependent.id, 'private');
+    expect(await owner.getDependencies(dependent.id)).toHaveLength(1);
+    expect(await member.getDependencies(dependent.id)).toEqual([]);
+    await expect(owner.reserveRun(dependent.id, 'blocked')).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+    await expect(owner.updateStatus(dependent.id, 'completed')).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+    await owner.removeDependency(dependent.id, upstream.id);
+    expect(await owner.getDependencies(dependent.id)).toEqual([]);
+  });
+
+  it('evaluates mixed-visibility readiness in the dependent owner scope regardless of the last completer', async () => {
+    const { owner, member } = await workspace();
+    const privateTask = await owner.create({
+      instruction: 'Private upstream',
+      visibility: 'private',
+    });
+    const publicTask = await member.create({ instruction: 'Public upstream' });
+    const dependent = await owner.create({ instruction: 'Shared dependent' });
+    await owner.addDependency(dependent.id, privateTask.id);
+    await owner.addDependency(dependent.id, publicTask.id);
+    await owner.updateStatus(privateTask.id, 'completed');
+    expect(await owner.getUnlockedTasks(privateTask.id)).toEqual([]);
+    await member.updateStatus(publicTask.id, 'completed');
+    expect((await member.getUnlockedTasks(publicTask.id)).map(({ id }) => id)).toEqual([
+      dependent.id,
+    ]);
+    expect(await member.areAllDependenciesCompleted(dependent.id)).toBe(false);
+    expect(await owner.areAllDependenciesCompleted(dependent.id)).toBe(true);
+  });
+
+  it('rejects creator-only clear-all when another creator has a surviving dependent', async () => {
+    const { owner, member } = await workspace();
+    const upstream = await owner.create({ instruction: 'Upstream' });
+    const unrelated = await owner.create({ instruction: 'Unrelated' });
+    const dependent = await member.create({ instruction: 'Surviving dependent' });
+    await member.addDependency(dependent.id, upstream.id);
+    await expect(owner.deleteAll({ restrictToCreator: true })).rejects.toThrow('dependency links');
+    expect(await owner.findById(upstream.id)).not.toBeNull();
+    expect(await owner.findById(unrelated.id)).not.toBeNull();
+    expect(await member.areAllDependenciesCompleted(dependent.id)).toBe(false);
+    expect(await member.getDependencies(dependent.id)).toHaveLength(1);
+  });
+
+  it('allows deleting a complete internal dependency set atomically', async () => {
+    const upstream = await create('Upstream');
+    const dependent = await create('Dependent');
+    await model.addDependency(dependent.id, upstream.id);
+    expect(await model.deleteAll()).toBe(2);
+    expect((await model.list()).total).toBe(0);
+  });
+
+  it('does not erase surviving blockers through subtree deletion', async () => {
+    const root = await create('Root');
+    const child = await model.create({ instruction: 'Child', parentTaskId: root.id });
+    const external = await create('External');
+    await model.addDependency(external.id, child.id);
+    await expect(model.deleteSubtree(root.id)).rejects.toThrow('dependency links');
+    expect(await model.findById(root.id)).not.toBeNull();
+    expect(await model.findById(child.id)).not.toBeNull();
+  });
+
+  it('fences deferred heartbeat writes by token, status, mode and interval while preserving counters', async () => {
+    const task = await model.create({
+      instruction: 'Heartbeat',
+      status: 'scheduled',
+      automationMode: 'heartbeat',
+      heartbeatInterval: 600,
+      context: { scheduler: { tickToken: 'old', consecutiveFailures: 2 } },
+    });
+    const patch = {
+      tickToken: 'next',
+      tickMessageId: 'message',
+      scheduledAt: new Date().toISOString(),
+    };
+    expect(await model.updateContextIfHeartbeatTick(task.id, 'stale', 600, patch)).toBe(false);
+    expect(await model.updateContextIfHeartbeatTick(task.id, 'old', 900, patch)).toBe(false);
+    expect(await model.updateContextIfHeartbeatTick(task.id, 'old', 600, patch)).toBe(true);
+    expect((await model.findById(task.id))?.context).toMatchObject({
+      scheduler: { ...patch, consecutiveFailures: 2 },
+    });
+    expect(await model.updateContextIfHeartbeatTick(task.id, 'old', 600, patch)).toBe(false);
+    await model.updateStatus(task.id, 'paused');
+    expect(await model.updateContextIfHeartbeatTick(task.id, 'next', 600, patch)).toBe(false);
+    await model.update(task.id, { status: 'scheduled', automationMode: 'schedule' });
+    expect(await model.updateContextIfHeartbeatTick(task.id, 'next', 600, patch)).toBe(false);
   });
 });

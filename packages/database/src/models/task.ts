@@ -551,22 +551,54 @@ export class TaskModel {
    * to render as "resource deleted" from its version snapshot. See.
    */
   async delete(id: string): Promise<boolean> {
-    if (!this.dependencyLockHeld) return this.withDependencyLock((model) => model.delete(id));
-    if (!(await this.findById(id))) return false;
+    return (await this.deleteMany([id])).length > 0;
+  }
+
+  /** Validate the entire frozen deletion set before any rows disappear. */
+  private async assertCanDeleteTasks(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
     const inbound = await this.db
       .select({ id: taskDependencies.id })
       .from(taskDependencies)
-      .where(and(eq(taskDependencies.dependsOnId, id), eq(taskDependencies.type, 'blocks')))
+      .where(
+        and(
+          inArray(taskDependencies.dependsOnId, ids),
+          notInArray(taskDependencies.taskId, ids),
+          eq(taskDependencies.type, 'blocks'),
+        ),
+      )
       .limit(1);
     if (inbound.length > 0) {
       throw new TaskDependencyError('Remove blocking dependency links before deleting this task.');
     }
+  }
+
+  /** Full, unpaginated candidate set; callers can snapshot cleanup before deletion. */
+  async getTaskIdsForDeletion(restrictToCreator = false): Promise<string[]> {
+    const rows = await this.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(
+        and(
+          this.ownership(),
+          restrictToCreator ? eq(tasks.createdByUserId, this.userId) : undefined,
+        ),
+      );
+    return rows.map(({ id }) => id);
+  }
+
+  /** Delete exactly these accessible tasks; return only ids actually deleted. */
+  async deleteMany(ids: string[]): Promise<string[]> {
+    if (!this.dependencyLockHeld) return this.withDependencyLock((model) => model.deleteMany(ids));
+    const accessible = await this.findByIds(ids);
+    const liveIds = accessible.map(({ id }) => id);
+    if (liveIds.length === 0) return [];
+    await this.assertCanDeleteTasks(liveIds);
     const deleted = await this.db
       .delete(tasks)
-      .where(and(eq(tasks.id, id), this.ownership()))
+      .where(and(inArray(tasks.id, liveIds), this.ownership()))
       .returning({ id: tasks.id });
-
-    return deleted.length > 0;
+    return deleted.map(({ id }) => id);
   }
 
   /**
@@ -736,20 +768,20 @@ export class TaskModel {
 
   /** See {@link delete}: bulk task deletion likewise leaves Work artifacts intact. */
   async deleteAll(options?: { restrictToCreator?: boolean }): Promise<number> {
-    // `restrictToCreator` narrows the workspace-wide sweep to rows the caller
-    // created (non-owner members); owners/personal mode keep the full scope.
-    const where = options?.restrictToCreator
-      ? and(this.ownership(), eq(tasks.createdByUserId, this.userId))
-      : this.ownership();
-
-    const result = await this.db.delete(tasks).where(where).returning({ id: tasks.id });
-    return result.length;
+    if (!this.dependencyLockHeld)
+      return this.withDependencyLock((model) => model.deleteAll(options));
+    const ids = await this.getTaskIdsForDeletion(options?.restrictToCreator);
+    return (await this.deleteMany(ids)).length;
   }
 
   /** Delete a task and every descendant in one transaction. */
   async deleteSubtree(rootTaskId: string): Promise<number> {
+    if (!this.dependencyLockHeld)
+      return this.withDependencyLock((model) => model.deleteSubtree(rootTaskId));
+    if (!(await this.findById(rootTaskId))) return 0;
     const descendants = await this.findAllDescendants(rootTaskId);
     const taskIds = [rootTaskId, ...descendants.map(({ id }) => id)];
+    await this.assertCanDeleteTasks(taskIds);
 
     return this.db.transaction(async (tx) => {
       await tx
@@ -1895,6 +1927,34 @@ export class TaskModel {
     return this.update(id, { context });
   }
 
+  /** Commit a deferred heartbeat only if its original tick and schedule still own it. */
+  async updateContextIfHeartbeatTick(
+    id: string,
+    tickToken: string | undefined,
+    interval: number,
+    scheduler: { scheduledAt: string; tickMessageId: string; tickToken: string },
+  ): Promise<boolean> {
+    const updated = await this.db
+      .update(tasks)
+      .set({
+        context: sql`jsonb_set(coalesce(${tasks.context}, '{}'::jsonb), '{scheduler}',
+        coalesce(${tasks.context}->'scheduler', '{}'::jsonb) || ${JSON.stringify(scheduler)}::jsonb)`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          this.ownership(),
+          eq(tasks.status, 'scheduled'),
+          eq(tasks.automationMode, 'heartbeat'),
+          eq(tasks.heartbeatInterval, interval),
+          sql`${tasks.context} #>> '{scheduler,tickToken}' IS NOT DISTINCT FROM ${tickToken ?? null}`,
+        ),
+      )
+      .returning({ id: tasks.id });
+    return updated.length > 0;
+  }
+
   // ========== Checkpoint ==========
 
   getCheckpointConfig(task: TaskItem): CheckpointConfig {
@@ -2091,12 +2151,13 @@ export class TaskModel {
 
   // ========== Dependencies ==========
 
-  private depsOwnership = () =>
-    this.childOwnership({
-      userId: taskDependencies.userId,
-      visibility: taskDependencies.visibility,
-      workspaceId: taskDependencies.workspaceId,
-    });
+  // Authorize through the dependent, not the member who originally added the
+  // edge. This also repairs reads of legacy edges after public -> private.
+  private depsOwnership = () => sql`exists (
+    select 1 from tasks dependency_owner
+    where dependency_owner.id = ${taskDependencies.taskId}
+      and ${this.ownershipSql('dependency_owner')}
+  )`;
 
   /** Only used by the demotion cascade in {@link updateVisibility} — regular
    *  taskTopics reads/writes live in `TaskTopicModel`. */
@@ -2166,12 +2227,12 @@ export class TaskModel {
         dependsOnId,
         taskId,
         type,
-        userId: this.userId,
+        userId: task.createdByUserId,
         visibility: task.visibility,
         workspaceId: this.workspaceId ?? null,
       })
       .onConflictDoUpdate({
-        set: { type },
+        set: { type, userId: task.createdByUserId, visibility: task.visibility },
         target: [taskDependencies.taskId, taskDependencies.dependsOnId],
       });
   }
@@ -2251,8 +2312,8 @@ export class TaskModel {
 
   /**
    * Batched variant of {@link getUnlockedTasks}: discover every task unblocked
-   * by any of `settledTaskIds` with a constant number of queries instead of
-   * one dependency walk per settled task.
+   * by any of `settledTaskIds`, batching readiness checks per dependent owner
+   * instead of walking the graph once per settled task.
    */
   async getUnlockedTasksForMany(settledTaskIds: string[]): Promise<TaskItem[]> {
     if (settledTaskIds.length === 0) return [];
@@ -2271,15 +2332,28 @@ export class TaskModel {
     const dependentIds = [...new Set(dependents.map(({ taskId }) => taskId))];
     if (dependentIds.length === 0) return [];
 
-    const blockedIds = new Set(await this.findBlockedTaskIds(dependentIds));
-    const unlockedIds = dependentIds.filter((id) => !blockedIds.has(id));
-    if (unlockedIds.length === 0) return [];
-
-    // Only unlock tasks still waiting in backlog
-    return this.db
+    // Discovery remains caller-visible. Evaluate each candidate in its owner's
+    // scope: the last completing member need not see every private prerequisite.
+    const candidates = await this.db
       .select()
       .from(tasks)
-      .where(and(inArray(tasks.id, unlockedIds), eq(tasks.status, 'backlog'), this.ownership()));
+      .where(and(inArray(tasks.id, dependentIds), eq(tasks.status, 'backlog'), this.ownership()));
+    const byOwner = new Map<string, string[]>();
+    for (const task of candidates) {
+      const ids = byOwner.get(task.createdByUserId) ?? [];
+      ids.push(task.id);
+      byOwner.set(task.createdByUserId, ids);
+    }
+    const blockedIds = new Set(
+      (
+        await Promise.all(
+          [...byOwner].map(([ownerId, ids]) =>
+            new TaskModel(this.db, ownerId, this.workspaceId).findBlockedTaskIds(ids),
+          ),
+        )
+      ).flat(),
+    );
+    return candidates.filter(({ id }) => !blockedIds.has(id));
   }
 
   // Check if all subtasks of a parent task are completed

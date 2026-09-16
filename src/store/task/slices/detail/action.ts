@@ -598,7 +598,8 @@ export class TaskDetailSliceActionImpl {
     // polling never starts — even once real data arrives.
     const shouldPoll = useTaskStore((s) => {
       const detail = taskId ? s.taskDetailMap[taskId] : undefined;
-      // Even an idle dependent must refresh when an upstream completes or reopens.
+      // Busy/linked tasks refresh faster. Idle mounted details still refresh at
+      // 15s below, including a teammate adding the very first prerequisite.
       return (
         hasInFlightActivity(detail) ||
         detail?.dependencies?.some((dep) => dep.type === 'blocks') === true
@@ -608,7 +609,7 @@ export class TaskDetailSliceActionImpl {
     return useClientDataSWR(
       taskId ? taskKeys.detail(taskId) : null,
       async ([, id]: [string, string]) => this.fetchTaskDetail(id),
-      { refreshInterval: shouldPoll ? TASK_DETAIL_POLL_INTERVAL : 0 },
+      { refreshInterval: shouldPoll ? TASK_DETAIL_POLL_INTERVAL : taskId ? 15_000 : 0 },
     );
   };
 

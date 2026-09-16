@@ -231,9 +231,18 @@ export class TaskIntegrationService {
    * not break the primary operation. A removal that fails leaves
    * `worktreeCleaned` false so a later pass can retry.
    */
-  async cleanupTaskWorktrees(taskId: string): Promise<void> {
+  async snapshotTaskWorktrees(taskId: string) {
+    return this.taskTopicModel.findByTaskId(taskId);
+  }
+
+  async cleanupTaskWorktrees(
+    taskId: string,
+    snapshot?: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>,
+  ): Promise<void> {
     try {
-      const rows = await this.taskTopicModel.findByTaskId(taskId);
+      // Delete callers capture records first, commit the guarded deletion, and
+      // only then perform irreversible device cleanup from that snapshot.
+      const rows = snapshot ?? (await this.taskTopicModel.findByTaskId(taskId));
       const candidates: { paths: string[]; topicId: string }[] = [];
       const removals = new Map<string, { deviceId: string; repoPath: string }>();
 
@@ -280,6 +289,7 @@ export class TaskIntegrationService {
         }
       }
 
+      if (snapshot) return; // The task_topics rows were already deleted.
       for (const { paths, topicId } of candidates) {
         await this.taskTopicModel
           .updateIntegration(taskId, topicId, {

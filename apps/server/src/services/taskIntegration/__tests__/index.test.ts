@@ -713,6 +713,17 @@ describe('TaskIntegrationService', () => {
   });
 
   describe('cleanupTaskWorktrees', () => {
+    it('uses the pre-delete snapshot after task-topic rows cascade away', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
+      const snapshot = await service.snapshotTaskWorktrees('task_1');
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      mockTaskTopicModel.findByTaskId.mockClear().mockResolvedValue([]);
+      await service.cleanupTaskWorktrees('task_1', snapshot);
+      expect(mockTaskTopicModel.findByTaskId).not.toHaveBeenCalled();
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledTimes(1);
+      expect(mockTaskTopicModel.updateIntegration).not.toHaveBeenCalled();
+    });
+
     it('removes a stale task worktree and flags the record cleaned', async () => {
       mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
 

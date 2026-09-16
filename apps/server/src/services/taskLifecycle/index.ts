@@ -38,6 +38,7 @@ import { BriefModel } from '@/database/models/brief';
 import { GoalModel } from '@/database/models/goal';
 import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
+import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
@@ -703,6 +704,27 @@ export class TaskLifecycleService {
       if (error instanceof TaskCompletionSupersededError) {
         log('onTopicComplete: generation superseded while processing task=%s', taskIdentifier);
         return;
+      }
+      if (isTaskDependencyBlocked(error)) {
+        // The topic is settled, but its delivery cannot complete after an
+        // upstream reopen. Park this generation for recovery, not as a ghost run.
+        try {
+          await this.taskModel.updateStatusIfReservation(
+            taskId,
+            claimed,
+            claimedTaskStatus,
+            'paused',
+            {
+              error:
+                'A prerequisite changed during this run. Complete the prerequisites before resuming.',
+            },
+          );
+          verifyBound = false;
+          return;
+        } catch (recoveryError) {
+          lifecycleFailed = true;
+          throw recoveryError;
+        }
       }
       lifecycleFailed = true;
       throw error;

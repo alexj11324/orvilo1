@@ -19,7 +19,7 @@ const { checkDeprecatedAuth } = require(sharedModulePath);
 const DB_MIGRATION_SCRIPT_PATH = '/app/docker.cjs';
 const ES_MIGRATION_SCRIPT_PATH = '/app/fts-search-elasticsearch-reindex.cjs';
 const SERVER_SCRIPT_PATH = '/app/server.js';
-const HATCHET_WORKER_SCRIPT_PATH = '/app/hatchet-worker.mjs';
+const HATCHET_WORKER_SCRIPT_PATH = '/app/hatchet-worker/worker.mjs';
 const PROXYCHAINS_CONF_PATH = '/etc/proxychains4.conf';
 
 // Function to check if a string is a valid IP address

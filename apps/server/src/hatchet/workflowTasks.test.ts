@@ -5,6 +5,7 @@ import { HATCHET_TASK_NAMES } from '../services/hatchet/taskNames';
 import {
   completeHatchetDispatch,
   invokeHonoHandler,
+  recoverStaleHatchetDispatches,
   scheduleWorkflowCoordinationRetry,
 } from './workflowTasks';
 
@@ -89,6 +90,25 @@ describe('completeHatchetDispatch', () => {
       error: null,
       status: 'completed',
       updatedAt: expect.any(Date),
+    });
+  });
+});
+
+describe('recoverStaleHatchetDispatches', () => {
+  it('returns expired running dispatches to the pending sweep queue', async () => {
+    const returning = vi.fn().mockResolvedValue([{ id: '00000000-0000-4000-8000-000000000005' }]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const db = { update: vi.fn().mockReturnValue({ set }) };
+    const now = new Date('2026-09-16T20:00:00.000Z');
+
+    await expect(recoverStaleHatchetDispatches(db as never, now)).resolves.toEqual([
+      { id: '00000000-0000-4000-8000-000000000005' },
+    ]);
+    expect(set).toHaveBeenCalledWith({
+      error: 'Recovered stale running Hatchet dispatch',
+      status: 'pending',
+      updatedAt: now,
     });
   });
 });

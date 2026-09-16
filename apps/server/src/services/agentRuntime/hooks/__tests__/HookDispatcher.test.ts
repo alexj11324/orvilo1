@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { deliverWebhook, HookDispatcher } from '../HookDispatcher';
-import type { AgentHook, AgentHookEvent } from '../types';
+import type { AgentHook, AgentHookEvent, AgentHookWebhook } from '../types';
 
 // Mock isQueueAgentRuntimeEnabled to control local vs production mode
 vi.mock('@/server/services/queue/impls', () => ({
@@ -288,6 +288,22 @@ describe('HookDispatcher', () => {
         '/api/agent/webhooks/bot-callback',
         { a: 1 },
         { concurrencyKey: 'hook.global.hook' },
+      );
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('hands persisted pre-cutover QStash callbacks to Hatchet', async () => {
+      const persistedWebhook = {
+        delivery: 'qstash',
+        url: '/api/agent/webhooks/bot-callback',
+      } as unknown as AgentHookWebhook;
+
+      await deliverWebhook(persistedWebhook, { operationId: 'op-before-cutover' });
+
+      expect(mockTriggerHatchetWorkflow).toHaveBeenCalledWith(
+        '/api/agent/webhooks/bot-callback',
+        { operationId: 'op-before-cutover' },
+        { concurrencyKey: 'hook.op-before-cutover.hook' },
       );
       expect(global.fetch).not.toHaveBeenCalled();
     });

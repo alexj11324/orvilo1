@@ -42,7 +42,11 @@ export async function deliverWebhook(
     ? url
     : urlJoin(process.env.INTERNAL_APP_URL || process.env.APP_URL || '', url);
 
-  if (delivery === 'hatchet') {
+  // Operations started before the hard cut persisted `delivery: "qstash"` in
+  // topic metadata. Route that legacy wire value through Hatchet as well so an
+  // in-flight lifecycle callback cannot fall through to the retired HTTP route.
+  const usesHatchet = delivery === 'hatchet' || (delivery as string) === 'qstash';
+  if (usesHatchet) {
     const path = new URL(resolvedUrl, 'http://orvilo.internal').pathname;
     if (!isHatchetWorkflowPath(path)) {
       throw new Error(`Unsupported Hatchet internal webhook path: ${path}`);

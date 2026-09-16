@@ -75,7 +75,7 @@ services:
       - 'REDIS_TLS=0'
     env_file:
       - .env
-    entrypoint: ['/bin/node', '/app/hatchet-worker.mjs']
+    entrypoint: ['/bin/node', '/app/hatchet-worker/worker.mjs']
     restart: always
     networks:
       - lobe-network

@@ -163,16 +163,20 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     expect(worker.image).toBe(compose.services.lobe.image);
     expect(worker.build).toEqual({ context: '../..', dockerfile: 'Dockerfile' });
     expect(worker.profiles).toEqual(['hatchet']);
-    expect(worker.entrypoint).toEqual(['/bin/node', '/app/hatchet-worker.mjs']);
+    expect(worker.entrypoint).toEqual(['/bin/node', '/app/hatchet-worker/worker.mjs']);
     expect(compose.services.lobe.environment).toContain('HATCHET_WORKER_ENABLED=0');
     expect(dockerfile).toContain(
-      'RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --outfile=/app/hatchet-worker.mjs',
+      'RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker',
     );
+    expect(dockerfile).toContain('--out-extension:.js=.mjs');
+    expect(dockerfile).toContain('--external:sharp');
     expect(dockerfile).toContain(
       '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
     );
+    expect(dockerfile).toContain('COPY --from=builder /app/hatchet-worker /app/hatchet-worker');
+    expect(dockerfile).toContain('pnpm add pg drizzle-orm @neondatabase/serverless sharp');
     expect(dockerfile).toContain(
-      'COPY --from=builder /app/hatchet-worker.mjs /app/hatchet-worker.mjs',
+      'COPY --from=builder /deps/node_modules/sharp /app/node_modules/sharp',
     );
   });
 

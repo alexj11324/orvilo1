@@ -96,6 +96,10 @@ const WORKFLOW_DISPATCH_RETRIES = 5;
 // reclaim it only after the previous worker has had enough time to terminate;
 // while the original worker is alive, its heartbeat keeps the lease fenced.
 const WORKFLOW_STEP_LEASE_MS = 45 * 60 * 1000;
+// The provider enforces a 30-minute execution timeout. A running row older
+// than this cannot belong to a live attempt and is safe for the minute sweep
+// to return to pending.
+const WORKFLOW_DISPATCH_STALE_AFTER_MS = 35 * 60 * 1000;
 const WORKFLOW_COORDINATION_RETRY_DELAY_MS = 30_000;
 const WORKFLOW_STEP_GC_GRACE_MS = 5 * 60 * 1000;
 
@@ -284,7 +288,15 @@ const createHatchetStepStore = (
         )
         .returning({ status: hatchetWorkflowSteps.status });
 
-      return Boolean(renewed);
+      if (!renewed) return false;
+
+      const [dispatchRenewed] = await db
+        .update(hatchetDispatches)
+        .set({ updatedAt: now })
+        .where(and(eq(hatchetDispatches.id, dispatchId), eq(hatchetDispatches.status, 'running')))
+        .returning({ status: hatchetDispatches.status });
+
+      return Boolean(dispatchRenewed);
     },
   };
 };
@@ -324,6 +336,24 @@ export const completeHatchetDispatch = async (
   if (!completed) return false;
   await clearStepResults();
   return true;
+};
+
+export const recoverStaleHatchetDispatches = async (
+  db: Awaited<ReturnType<typeof getServerDB>>,
+  now = new Date(),
+) => {
+  const staleBefore = new Date(now.getTime() - WORKFLOW_DISPATCH_STALE_AFTER_MS);
+  return db
+    .update(hatchetDispatches)
+    .set({
+      error: 'Recovered stale running Hatchet dispatch',
+      status: 'pending',
+      updatedAt: now,
+    })
+    .where(
+      and(eq(hatchetDispatches.status, 'running'), lt(hatchetDispatches.updatedAt, staleBefore)),
+    )
+    .returning({ id: hatchetDispatches.id });
 };
 
 const clearTerminalHatchetStepResults = async (
@@ -717,6 +747,7 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
     fn: async () => {
       const db = await getServerDB();
       const cleaned = await clearTerminalHatchetStepResults(db);
+      const recovered = await recoverStaleHatchetDispatches(db);
       const pending = await db
         .select()
         .from(hatchetDispatches)
@@ -726,7 +757,7 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
       const results = await Promise.allSettled(pending.map(enqueueStoredDispatch));
       const failed = results.filter((result) => result.status === 'rejected').length;
       if (failed > 0) throw new Error(`Failed to enqueue ${failed} pending Hatchet dispatches`);
-      return { cleaned, queued: pending.length, success: true };
+      return { cleaned, queued: pending.length, recovered: recovered.length, success: true };
     },
     onCrons: ['* * * * *'],
     retries: 3,

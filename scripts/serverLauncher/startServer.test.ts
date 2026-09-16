@@ -99,7 +99,7 @@ describe('Docker startup migrations', () => {
     });
 
     expect(result.commands.map((command) => command[1])).toEqual([
-      '/app/hatchet-worker.mjs',
+      '/app/hatchet-worker/worker.mjs',
       '/app/server.js',
     ]);
     expect(result.exits).toEqual([]);

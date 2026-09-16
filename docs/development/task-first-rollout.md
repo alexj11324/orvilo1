@@ -686,6 +686,25 @@ import { imageRouter } from '@/server/routers/lambda/image';
 第二条同类问题：`HomeInbox` 在空主列时 `return null`（在首页合理，因为周围有输入区与推荐），
 在 `/inbox` 这条独立路由上就是「标题压空列」。故给 `HomeInbox` 加了可选 `emptyState`（仅主列用），本页传 `home:inbox.empty.*`。
 
+**⚠️ 第三处同类失效，且是本轮刚发现的（2026-09-16，`?` 之前一直没被发现）**：`/inbox` **漏在
+`RESERVED_FIRST_SEGMENTS` 之外**（`src/features/Workspace/useWorkspaceUrlSync.ts`）。
+那张表的注释一直写着「Kept in sync with `sharedMainAreaChildren` (paths) … **If you add a new root
+path segment, add it here too**」，但**没有任何东西强制执行它** —— 我加 `/inbox` 时就没照做。
+后果：`isWorkspaceSlugCandidatePath('/inbox')` 为真，于是 `useWorkspaceUrlSync` 走 slug 分支、
+`workspaces.find(w => w.slug === 'inbox')` 落空、**直接 return 不动 store** ——
+即访问 `/inbox` 时**不会像 `/tasks` 那样切回个人上下文**。
+（页面本身仍能渲染：react-router 里静态段 `/inbox` 优先于 `:workspaceSlug`，所以不是 404。）
+
+**修法不是补一个词，而是把那条散文指令变成可执行的守卫** —— 新增
+`src/features/Workspace/__tests__/reservedSegments.test.ts`，从 `createMainAreaChildren()` 读出
+所有静态顶层段并与保留表求差。它一次就报出 **5 个漂移**：`agents`、`automations`、`goal`、`inbox`、`project`。
+
+⚠️ **这个守卫的第一版自己是空的**：它用 `.map(r => r.path)` 只看外层条目，
+于是漏掉了挂在**无 `path` 包装项**下的段 —— 它报了 `agents`/`project`/`automations`，**却对 `/inbox` 只字不提**，
+而 `/inbox` 正是写这个守卫的原因。改成递归下钻无 path 包装后才报全。
+记下来是因为「带盲点的检查比没有检查更糟」：它读起来像通过。
+两个断言（顶层段 > 5、差集为空）互为前提，反向验证过：把 `'inbox'` 从表里拿掉，守卫精确点名 `["inbox"]`。
+
 **仍未解决（明确记录，不是「以后再说」）**：`HomeInbox` 读 `systemStatusSelectors.hiddenHomeWidgets`，
 而唯一**写**它的 UI 是 `CustomizeButton`，其挂载链是
 `CustomizeButton` → `Home/HomeNavHeader.tsx:43` → `routes/(main)/home/index.tsx`，

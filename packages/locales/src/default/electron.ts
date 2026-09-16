@@ -28,6 +28,7 @@ export default {
   'navigation.onboarding': 'Onboarding',
   'navigation.page': 'Page',
   'navigation.pages': 'Pages',
+  'navigation.project': 'Projects',
   'navigation.permission': 'Permissions',
   'navigation.pin': 'Pin',
   'navigation.pinned': 'Pinned',

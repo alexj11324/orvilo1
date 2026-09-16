@@ -153,7 +153,7 @@ const hiddenSidebarSections =
       const overlay = s.status.workspace?.hiddenSidebarSections;
       // Once the user touches sidebar visibility in this workspace the overlay
       // owns the list — including an explicit empty array meaning "show all".
-      if (overlay !== undefined) return overlay;
+      if (overlay !== undefined) return withoutRetiredItems(overlay);
       // Untouched workspace: inherit any personal-mode hides and layer the
       // workspace defaults on top so `recents` starts collapsed.
       const personal = s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS;
@@ -161,16 +161,18 @@ const hiddenSidebarSections =
       for (const k of WORKSPACE_DEFAULT_HIDDEN_SECTIONS) {
         if (!merged.includes(k)) merged.push(k);
       }
-      return merged;
+      return withoutRetiredItems(merged);
     }
-    return s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS;
+    return withoutRetiredItems(s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS);
   };
 
 const sidebarExpandedKeys =
   (workspaceId: string | null) =>
   (s: GlobalState): string[] =>
-    readOverridableField(s.status, 'sidebarExpandedKeys', workspaceId) ??
-    DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS;
+    withoutRetiredItems(
+      readOverridableField(s.status, 'sidebarExpandedKeys', workspaceId) ??
+        DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS,
+    );
 
 /** Sentinel id representing the flex spacer slot. Its position in `sidebarItems`
  * determines where the sidebar pushes items to the bottom. */
@@ -185,11 +187,41 @@ export const DEFAULT_SIDEBAR_ITEMS: string[] = [
   'private',
   'agent',
   SIDEBAR_SPACER_ID,
-  'image',
-  'community',
-  'pages',
-  'memory',
 ];
+
+/**
+ * Sidebar keys whose product surface has been withdrawn by the task-first
+ * convergence. See docs/development/product-scope.md.
+ *
+ * This list exists because removing an entry from `DEFAULT_SIDEBAR_ITEMS` is not
+ * sufficient on its own: `withAllKnownKeys` only *backfills* missing defaults, it
+ * never strips anything. A user who already has `'image'` in their stored order
+ * keeps it after the default changes, and the sidebar keeps rendering it. The
+ * strip below runs on the read path so stored, overlaid, and re-synced state all
+ * pass through it.
+ *
+ * Both spellings of the documents key are listed: the sidebar stores `pages`
+ * (its `SidebarTabKey`), while the route registry uses `page`.
+ */
+export const RETIRED_SIDEBAR_KEYS = new Set(['community', 'image', 'memory', 'page', 'pages']);
+
+/**
+ * Drop retired keys from a stored sidebar order.
+ *
+ * Idempotent, and returns the original reference when there is nothing to strip
+ * so that downstream reference-equality checks (`arraysEqual`, `useMemo`) keep
+ * working and a second pass is provably a no-op.
+ */
+const withoutRetiredItems = (items: string[]): string[] => {
+  let seen = false;
+  for (const item of items) {
+    if (RETIRED_SIDEBAR_KEYS.has(item)) {
+      seen = true;
+      break;
+    }
+  }
+  return seen ? items.filter((item) => !RETIRED_SIDEBAR_KEYS.has(item)) : items;
+};
 
 /** Items that must stay contiguous in the sidebar list (accordion block).
  * `private` sits above `agent` so workspace users see their personal items
@@ -235,13 +267,17 @@ const normalizeSpacerPosition = (order: string[]): string[] => {
 // default added in a future version would silently appear in the bottom group
 // for existing users.
 const withAllKnownKeys = (order: string[]): string[] => {
-  let nextOrder = order;
-  if (!order.includes('project')) {
-    const recentsIndex = order.indexOf('recents');
-    const firstAgentIndex = order.findIndex((key) => key === 'private' || key === 'agent');
+  // Strip retired keys first. This function is the single choke point every
+  // stored order passes through — including the legacy `sidebarSectionOrder`
+  // migration path — so retiring here covers all of them at once.
+  const activeOrder = withoutRetiredItems(order);
+  let nextOrder = activeOrder;
+  if (!activeOrder.includes('project')) {
+    const recentsIndex = activeOrder.indexOf('recents');
+    const firstAgentIndex = activeOrder.findIndex((key) => key === 'private' || key === 'agent');
     const insertAt =
       recentsIndex >= 0 ? recentsIndex + 1 : firstAgentIndex >= 0 ? firstAgentIndex : 0;
-    nextOrder = [...order.slice(0, insertAt), 'project', ...order.slice(insertAt)];
+    nextOrder = [...activeOrder.slice(0, insertAt), 'project', ...activeOrder.slice(insertAt)];
   }
 
   const present = new Set(nextOrder);

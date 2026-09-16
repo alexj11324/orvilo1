@@ -28,6 +28,7 @@ import { type ThemeMode } from './types';
  */
 export const useCommandMenu = () => {
   const [open] = useGlobalStore((s) => [s.status.showCommandMenu]);
+  const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const {
     mounted,
     onClose,
@@ -208,6 +209,17 @@ export const useCommandMenu = () => {
     onClose();
   }, [canCreate, createPage, onClose]);
 
+  const handleCreateTask = useCallback(() => {
+    if (!canCreate) return;
+
+    // Expanding the inline composer *before* navigating means the task page opens
+    // ready to type. This deliberately reuses the same status flag the task page's
+    // own "+" toggles, so there is no second task-creation path to keep in sync.
+    updateSystemStatus({ taskCreateInlineCollapsed: false }, 'expandTaskCreateInline');
+    navigate('/tasks');
+    onClose();
+  }, [canCreate, navigate, onClose, updateSystemStatus]);
+
   const handleCreateAgentTeam = useCallback(() => {
     if (!canCreate) return;
 
@@ -231,6 +243,7 @@ export const useCommandMenu = () => {
     handleCreateLibrary,
     handleCreatePage,
     handleCreateSession,
+    handleCreateTask,
     handleCreateTopic,
     handleExternalLink,
     handleNavigate,

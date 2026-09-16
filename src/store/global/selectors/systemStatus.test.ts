@@ -206,9 +206,10 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.sidebarItems(null)(initialState)).toEqual(DEFAULT_SIDEBAR_ITEMS);
     });
 
-    it('should re-anchor the spacer immediately after the accordion block', () => {
-      // Stored order has pages/tasks between the accordion and the first default-bottom item.
-      // The invariant moves them into the bottom group (after the spacer).
+    it('should strip retired items and re-anchor the spacer after the accordion block', () => {
+      // The stored order is a pre-convergence one: it carries retired keys and a
+      // mispositioned spacer. Reading it must both drop the retired entries and
+      // re-anchor the spacer behind the accordion block.
       const stored = [
         'private',
         'agent',
@@ -230,12 +231,8 @@ describe('systemStatusSelectors', () => {
         'recents',
         'project',
         SIDEBAR_SPACER_ID,
-        'pages',
         'tasks',
-        'image',
-        'community',
         'resource',
-        'memory',
       ]);
     });
 
@@ -256,21 +253,17 @@ describe('systemStatusSelectors', () => {
       const s: GlobalState = merge(initialState, {
         status: { sidebarItems: stored },
       });
-      // `automations` is a newer top-group default — backfilled immediately
-      // before the accordion block.
+      // `automations` is a newer default — backfilled immediately before the
+      // accordion block.
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
-        'pages',
         'automations',
         'project',
         'recents',
         'private',
         'agent',
         SIDEBAR_SPACER_ID,
-        'image',
         'tasks',
-        'community',
         'resource',
-        'memory',
       ]);
     });
 
@@ -294,51 +287,23 @@ describe('systemStatusSelectors', () => {
       });
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
         'tasks',
-        'pages',
         'automations',
         'recents',
         'project',
         'private',
         'agent',
         SIDEBAR_SPACER_ID,
-        'image',
-        'community',
         'resource',
-        'memory',
       ]);
     });
 
-    it('should slot missing top-group defaults before the accordion block', () => {
+    it('should slot missing defaults before the accordion block', () => {
       const s: GlobalState = merge(initialState, {
         status: { sidebarItems: ['agent', 'recents'] },
       });
       const items = systemStatusSelectors.sidebarItems(null)(s);
       const spacerIdx = items.indexOf(SIDEBAR_SPACER_ID);
-      // every known key is present
-      expect(items).toContain('pages');
-      expect(items).toContain('tasks');
-      expect(items).toContain('community');
-      expect(items).toContain('resource');
-      expect(items).toContain('memory');
-      // accordion block is flush against the spacer, in stored order
-      expect(items[spacerIdx - 3]).toBe('agent');
-      expect(items[spacerIdx - 2]).toBe('recents');
-      expect(items[spacerIdx - 1]).toBe('project');
-      // missing top-group defaults slot in just before the accordion
-      expect(items.indexOf('tasks')).toBeLessThan(spacerIdx - 3);
-      expect(items.indexOf('resource')).toBeLessThan(spacerIdx - 3);
-      // missing bottom-group defaults sit after the spacer
-      expect(items.indexOf('image')).toBeGreaterThan(spacerIdx);
-      expect(items.indexOf('pages')).toBeGreaterThan(spacerIdx);
-    });
-
-    it('should migrate legacy `sidebarSectionOrder` accordion order into the default layout', () => {
-      const s: GlobalState = merge(initialState, {
-        status: { sidebarSectionOrder: ['agent', 'recents'] },
-      });
-      const items = systemStatusSelectors.sidebarItems(null)(s);
-      // accordion slot uses the user's legacy order; `private` (added after
-      // the legacy state was saved) is backfilled at the head of the block.
+      // every surviving key is backfilled, and no retired key is reintroduced
       expect(items).toEqual([
         'tasks',
         'automations',
@@ -348,10 +313,35 @@ describe('systemStatusSelectors', () => {
         'recents',
         'project',
         SIDEBAR_SPACER_ID,
-        'image',
-        'community',
-        'pages',
-        'memory',
+      ]);
+      // accordion block is flush against the spacer, in stored order
+      expect(items[spacerIdx - 3]).toBe('agent');
+      expect(items[spacerIdx - 2]).toBe('recents');
+      expect(items[spacerIdx - 1]).toBe('project');
+      // missing defaults slot in just before the accordion
+      expect(items.indexOf('tasks')).toBeLessThan(spacerIdx - 3);
+      expect(items.indexOf('resource')).toBeLessThan(spacerIdx - 3);
+    });
+
+    it('should migrate legacy `sidebarSectionOrder` accordion order into the default layout', () => {
+      const s: GlobalState = merge(initialState, {
+        status: { sidebarSectionOrder: ['agent', 'recents'] },
+      });
+      const items = systemStatusSelectors.sidebarItems(null)(s);
+      // The accordion slot uses the user's legacy order. `project` is backfilled
+      // right after `recents`, and `private` — which the legacy loop never emits,
+      // because only the first accordion key in DEFAULT_SIDEBAR_ITEMS seeds the
+      // block — is backfilled as a missing top-group default ahead of the block.
+      // Retired keys never enter the layout at all.
+      expect(items).toEqual([
+        'tasks',
+        'automations',
+        'resource',
+        'private',
+        'agent',
+        'recents',
+        'project',
+        SIDEBAR_SPACER_ID,
       ]);
     });
 
@@ -360,8 +350,8 @@ describe('systemStatusSelectors', () => {
         status: { sidebarSectionOrder: ['recents', 'agent'] },
       });
       const items = systemStatusSelectors.sidebarItems(null)(s);
-      // `private` (new accordion entry not present in legacy state) is
-      // backfilled at the head of the block; recents/agent keep legacy order.
+      // recents/agent keep their legacy order; `project` is backfilled right after
+      // `recents` and `private` ahead of the block (see the note above).
       expect(items).toEqual([
         'tasks',
         'automations',
@@ -371,10 +361,6 @@ describe('systemStatusSelectors', () => {
         'project',
         'agent',
         SIDEBAR_SPACER_ID,
-        'image',
-        'community',
-        'pages',
-        'memory',
       ]);
     });
 
@@ -387,6 +373,84 @@ describe('systemStatusSelectors', () => {
       });
       const items = systemStatusSelectors.sidebarItems(null)(s);
       expect(items.indexOf('recents')).toBeLessThan(items.indexOf('agent'));
+    });
+  });
+
+  describe('retired sidebar items', () => {
+    // Deleting an entry from DEFAULT_SIDEBAR_ITEMS only affects users who never
+    // customized their sidebar — withAllKnownKeys backfills, it never strips. So
+    // retirement also has to happen on the read path, and it has to be stable.
+    const RETIRED = ['community', 'image', 'memory', 'page', 'pages'];
+
+    it('is idempotent: reading twice yields the same layout', () => {
+      const first = systemStatusSelectors.sidebarItems(null)(
+        merge(initialState, {
+          status: { sidebarItems: ['tasks', 'image', 'recents', 'agent', 'memory'] },
+        }),
+      );
+
+      const second = systemStatusSelectors.sidebarItems(null)(
+        merge(initialState, { status: { sidebarItems: [...first] } }),
+      );
+
+      expect(second).toEqual(first);
+    });
+
+    it('does not let an older client resurrect a retired entry on re-sync', () => {
+      const items = systemStatusSelectors.sidebarItems(null)(
+        merge(initialState, {
+          status: {
+            sidebarItems: ['tasks', 'automations', 'resource', 'image', 'memory', 'pages'],
+          },
+        }),
+      );
+
+      for (const retired of RETIRED) expect(items).not.toContain(retired);
+    });
+
+    it('strips retired keys from a workspace overlay as well as the personal list', () => {
+      const items = systemStatusSelectors.sidebarItems('ws-1')(
+        merge(initialState, {
+          status: {
+            sidebarItems: ['tasks'],
+            workspace: { sidebarItems: ['automations', 'image', 'recents', 'agent', 'memory'] },
+          },
+        }),
+      );
+
+      for (const retired of RETIRED) expect(items).not.toContain(retired);
+      expect(items).toContain('automations');
+    });
+
+    it('leaves a preference that names no retired item untouched', () => {
+      const clean = [
+        'tasks',
+        'automations',
+        'resource',
+        'recents',
+        'project',
+        'private',
+        'agent',
+        SIDEBAR_SPACER_ID,
+      ];
+
+      expect(
+        systemStatusSelectors.sidebarItems(null)(
+          merge(initialState, { status: { sidebarItems: [...clean] } }),
+        ),
+      ).toEqual(clean);
+    });
+
+    it('strips retired keys from hidden sections and expanded keys', () => {
+      const s: GlobalState = merge(initialState, {
+        status: {
+          hiddenSidebarSections: ['recents', 'memory', 'pages'],
+          sidebarExpandedKeys: ['agent', 'image', 'community'],
+        },
+      });
+
+      expect(systemStatusSelectors.hiddenSidebarSections(null)(s)).toEqual(['recents']);
+      expect(systemStatusSelectors.sidebarExpandedKeys(null)(s)).toEqual(['agent']);
     });
   });
 
@@ -415,8 +479,12 @@ describe('systemStatusSelectors', () => {
   });
 
   describe('reorderSidebarItems', () => {
-    // Mirrors the shape returned by the sidebarItems selector — spacer is always
-    // present, anchored immediately after the accordion block.
+    // Synthetic fixture: one top-group slot, the accordion block, the spacer, then
+    // three bottom-group slots. `reorderSidebarItems` is key-agnostic — it only
+    // consults SIDEBAR_ACCORDION_KEYS membership — and it deliberately does not
+    // strip retired keys, so the retired names here are placeholders that keep the
+    // shape wide enough to exercise the reorder rules. Retirement itself is
+    // covered by the "retired sidebar items" suite through the selector.
     const DEFAULT = [
       'pages',
       'recents',
@@ -617,11 +685,13 @@ describe('systemStatusSelectors', () => {
       });
 
       it('layers workspace defaults on top of personal-mode hides when overlay is untouched', () => {
+        // `resource` is a surviving key on purpose — a retired one would be
+        // stripped before the layering this test is about could be observed.
         const s: GlobalState = merge(initialState, {
-          status: { hiddenSidebarSections: ['pages'], workspace: undefined },
+          status: { hiddenSidebarSections: ['resource'], workspace: undefined },
         });
         expect(systemStatusSelectors.hiddenSidebarSections('ws-1')(s)).toEqual([
-          'pages',
+          'resource',
           'recents',
         ]);
       });

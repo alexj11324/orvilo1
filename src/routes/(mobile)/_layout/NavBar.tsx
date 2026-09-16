@@ -4,7 +4,7 @@ import { Icon } from '@lobehub/ui';
 import { type TabBarProps } from '@lobehub/ui/mobile';
 import { TabBar } from '@lobehub/ui/mobile';
 import { createStaticStyles } from 'antd-style';
-import { Compass, MessageSquare, User } from 'lucide-react';
+import { ListTodo, MessageSquare, User } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,7 +12,6 @@ import { MOBILE_TABBAR_HEIGHT } from '@/const/layoutTokens';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import { SidebarTabKey } from '@/store/global/initialState';
-import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   active: css`
@@ -33,8 +32,10 @@ const NavBar = memo(() => {
   const activeKey = useActiveTabKey();
   const navigate = useWorkspaceAwareNavigate();
 
-  const { showMarket } = useServerConfigStore(featureFlagsSelectors);
-
+  // The community tab that used to sit here has been retired by the task-first
+  // convergence, so this slot now carries the primary working destination. Tasks
+  // must stay reachable from every client, and the tab bar is the only navigation
+  // a phone viewport gets.
   const items: TabBarProps['items'] = useMemo(
     () =>
       [
@@ -48,15 +49,15 @@ const NavBar = memo(() => {
           },
           title: t('tab.chat'),
         },
-        showMarket && {
+        {
           icon: (active: boolean) => (
-            <Icon className={active ? styles.active : undefined} icon={Compass} />
+            <Icon className={active ? styles.active : undefined} icon={ListTodo} />
           ),
-          key: SidebarTabKey.Community,
+          key: SidebarTabKey.Tasks,
           onClick: () => {
-            navigate('/community');
+            navigate('/tasks');
           },
-          title: t('tab.community'),
+          title: t('tab.tasks'),
         },
         {
           icon: (active: boolean) => (
@@ -68,7 +69,7 @@ const NavBar = memo(() => {
           },
           title: t('tab.me'),
         },
-      ].filter(Boolean) as TabBarProps['items'],
+      ] as TabBarProps['items'],
     [t],
   );
 

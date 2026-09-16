@@ -6,6 +6,7 @@ import {
   FeatherIcon,
   FilePen,
   LibraryBig,
+  ListTodo,
   MessageSquarePlusIcon,
   Monitor,
   Star,
@@ -39,6 +40,7 @@ const MainMenu = memo(() => {
     handleCreateTopic,
     handleCreateLibrary,
     handleCreatePage,
+    handleCreateTask,
     handleNavigate,
     handleExternalLink,
     handleCreateAgentTeam,
@@ -49,6 +51,19 @@ const MainMenu = memo(() => {
       <ContextCommands />
 
       <Command.Group>
+        {/* Creating a task leads the list: the product's default working surface
+            is the task board, so the palette's first command should be the one
+            that puts work into it. */}
+        <CommandItem
+          disabled={!canCreate}
+          icon={<ListTodo />}
+          keywords={['task', 'todo', 'create', 'new', 'kanban', 'board']}
+          value="create new task"
+          onSelect={handleCreateTask}
+        >
+          {t('cmdk.newTask')}
+        </CommandItem>
+
         <CommandItem
           disabled={!canCreate}
           icon={<Bot />}

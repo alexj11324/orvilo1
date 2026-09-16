@@ -474,10 +474,24 @@ const LinearWorkspaceSettings = memo(() => {
                       if (!latestProposalRevision?.proposal) return;
                       setLoading(true);
                       try {
-                        await lambdaClient.linearSync.applyPlanningProposal.mutate({
-                          approvalConfirmed: true,
-                          revisionId: latestProposalRevision.id,
-                        });
+                        const response = await lambdaClient.linearSync.applyPlanningProposal.mutate(
+                          {
+                            approvalConfirmed: true,
+                            revisionId: latestProposalRevision.id,
+                          },
+                        );
+                        if (!response?.data) throw new Error('Planning proposal response is empty');
+                        if (response.data.stale) {
+                          setPlanningRevisions((current) =>
+                            current.map((revision) =>
+                              revision.id === latestProposalRevision.id
+                                ? { ...revision, status: 'superseded' }
+                                : revision,
+                            ),
+                          );
+                          toast.error(t('workspaceSetting.linear.proposalStale'));
+                          return;
+                        }
                         setPlanningRevisions((current) =>
                           current.map((revision) =>
                             revision.id === latestProposalRevision.id

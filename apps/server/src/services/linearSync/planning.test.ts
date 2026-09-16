@@ -4,6 +4,7 @@ import type { TaskPlanningSnapshot } from './planning';
 import { proposeLinearPlanningReview } from './planning';
 
 const snapshot = (events: TaskPlanningSnapshot['events']): TaskPlanningSnapshot => ({
+  consistency: { bindingVersion: null, orchestrationPolicyRevision: null },
   dependencies: [],
   events,
   scope: { id: 'scope-1', scopeId: 'project-1', scopeType: 'project', revision: 2 },

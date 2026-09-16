@@ -5,7 +5,13 @@ import { AgentModel } from '@/database/models/agent';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { TaskModel } from '@/database/models/task';
 import type { TaskDomainEventItem, TaskPlanningScopeItem } from '@/database/schemas';
-import { taskDependencies, taskPlanningRevisions, tasks } from '@/database/schemas';
+import {
+  linearProjectBindings,
+  projects,
+  taskDependencies,
+  taskPlanningRevisions,
+  tasks,
+} from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 import { TaskService } from '@/server/services/task';
 
@@ -15,6 +21,10 @@ import { createLinearCoordinatorPlanner } from './coordinator';
 export { proposeLinearPlanningReview } from './defaultPlanner';
 
 export interface TaskPlanningSnapshot {
+  consistency: {
+    bindingVersion: number | null;
+    orchestrationPolicyRevision: number | null;
+  };
   dependencies: Array<{ dependsOnId: string; taskId: string; type: string }>;
   events: TaskDomainEventItem[];
   scope: {
@@ -168,18 +178,11 @@ export class LinearPlanningWorker {
         throw new Error('Planning proposal requires explicit approval');
       }
 
-      const scope = await model.lockPlanningScope(revision.scopeId);
-      if (!scope) throw new Error('Planning scope no longer exists');
-      if (scope.dirtyRevision > revision.inputRevision) {
-        await model.updatePlanningRevision(revision.id, {
-          error: 'A newer domain event arrived while this proposal was waiting.',
-          status: 'superseded',
-        });
-        await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
-        return { createdTaskIds: [], stale: true, updatedTaskIds: [] };
-      }
-
       const inputSnapshot = revision.inputSnapshot as {
+        consistency?: {
+          bindingVersion?: number | null;
+          orchestrationPolicyRevision?: number | null;
+        };
         tasks?: Array<{ id: string; updatedAt: string }>;
       };
       const existingTaskIds = this.actionTaskIds(proposal.actions);
@@ -190,11 +193,72 @@ export class LinearPlanningWorker {
         throw new Error('Planning proposal references a task outside its captured scope');
       }
 
+      // Lock tasks before the planning scope. User task writes lock the task
+      // first and then enqueue the scope event, so this order turns a race into
+      // a stale proposal instead of a task/scope deadlock.
+      const currentTasks =
+        existingTaskIds.length === 0
+          ? []
+          : await tx
+              .select({
+                assigneeLocked: tasks.assigneeLocked,
+                id: tasks.id,
+                priorityLocked: tasks.priorityLocked,
+                requirementLocked: tasks.requirementLocked,
+                updatedAt: tasks.updatedAt,
+              })
+              .from(tasks)
+              .where(
+                and(eq(tasks.workspaceId, this.workspaceId), inArray(tasks.id, existingTaskIds)),
+              )
+              .for('update');
+      const lockedTaskById = new Map(currentTasks.map((task) => [task.id, task]));
+
+      const scope = await model.lockPlanningScope(revision.scopeId);
+      if (!scope) throw new Error('Planning scope no longer exists');
+      const supersede = async (error: string): Promise<ApplyPlanningProposalResult> => {
+        await model.updatePlanningRevision(revision.id, { error, status: 'superseded' });
+        await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
+        return { createdTaskIds: [], stale: true, updatedTaskIds: [] };
+      };
+      if (scope.dirtyRevision > revision.inputRevision) {
+        return supersede('A newer domain event arrived while this proposal was waiting.');
+      }
+
+      if (scope.scopeType === 'project' && !inputSnapshot.consistency) {
+        // Revisions created before the consistency metadata was added cannot be
+        // safely compared with the current project policy, so force a fresh plan.
+        return supersede('This planning proposal is missing its consistency snapshot.');
+      }
+      if (scope.scopeType === 'project') {
+        const [binding] = await tx
+          .select({ version: linearProjectBindings.version })
+          .from(linearProjectBindings)
+          .where(
+            and(
+              eq(linearProjectBindings.workspaceId, this.workspaceId),
+              eq(linearProjectBindings.projectId, scope.scopeId),
+            ),
+          )
+          .for('update')
+          .limit(1);
+        const [project] = await tx
+          .select({ orchestrationPolicyRevision: projects.orchestrationPolicyRevision })
+          .from(projects)
+          .where(and(eq(projects.id, scope.scopeId), eq(projects.workspaceId, this.workspaceId)))
+          .for('update')
+          .limit(1);
+        const expectedConsistency = inputSnapshot.consistency!;
+        if (
+          (binding?.version ?? null) !== (expectedConsistency.bindingVersion ?? null) ||
+          (project?.orchestrationPolicyRevision ?? null) !==
+            (expectedConsistency.orchestrationPolicyRevision ?? null)
+        ) {
+          return supersede('The Linear binding or project policy changed after planning.');
+        }
+      }
+
       if (existingTaskIds.length > 0) {
-        const currentTasks = await tx
-          .select({ id: tasks.id, updatedAt: tasks.updatedAt })
-          .from(tasks)
-          .where(and(eq(tasks.workspaceId, this.workspaceId), inArray(tasks.id, existingTaskIds)));
         const currentById = new Map(currentTasks.map((task) => [task.id, task.updatedAt]));
         if (
           currentTasks.length !== new Set(existingTaskIds).size ||
@@ -202,12 +266,24 @@ export class LinearPlanningWorker {
             (taskId) => currentById.get(taskId)?.toISOString() !== expectedVersions.get(taskId),
           )
         ) {
-          await model.updatePlanningRevision(revision.id, {
-            error: 'A task changed after this proposal was generated.',
-            status: 'superseded',
-          });
-          await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
-          return { createdTaskIds: [], stale: true, updatedTaskIds: [] };
+          return supersede('A task changed after this proposal was generated.');
+        }
+
+        const humanLockConflict = proposal.actions.some((action) => {
+          if (action.action === 'assign_task') {
+            return lockedTaskById.get(action.taskId)?.assigneeLocked;
+          }
+          if (action.action !== 'update_task') return false;
+          const task = lockedTaskById.get(action.taskId);
+          return Boolean(
+            (task &&
+              (action.patch.instruction !== undefined || action.patch.name !== undefined) &&
+              task.requirementLocked) ||
+            (action.patch.priority !== undefined && task?.priorityLocked),
+          );
+        });
+        if (humanLockConflict) {
+          return supersede('A human task lock protects a field targeted by this proposal.');
         }
       }
 
@@ -467,6 +543,10 @@ export class LinearPlanningWorker {
             .where(eq(taskDependencies.workspaceId, this.workspaceId));
 
     return {
+      consistency:
+        scope.scopeType === 'project'
+          ? await this.projectConsistencySnapshot(scope.scopeId)
+          : { bindingVersion: null, orchestrationPolicyRevision: null },
       dependencies: dependencyRows.filter(
         (dependency) =>
           taskIds.includes(dependency.taskId) || taskIds.includes(dependency.dependsOnId),
@@ -482,6 +562,31 @@ export class LinearPlanningWorker {
         ...task,
         updatedAt: task.updatedAt.toISOString(),
       })),
+    };
+  }
+
+  private async projectConsistencySnapshot(projectId: string) {
+    const [[binding], [project]] = await Promise.all([
+      this.db
+        .select({ version: linearProjectBindings.version })
+        .from(linearProjectBindings)
+        .where(
+          and(
+            eq(linearProjectBindings.workspaceId, this.workspaceId),
+            eq(linearProjectBindings.projectId, projectId),
+          ),
+        )
+        .limit(1),
+      this.db
+        .select({ orchestrationPolicyRevision: projects.orchestrationPolicyRevision })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), eq(projects.workspaceId, this.workspaceId)))
+        .limit(1),
+    ]);
+
+    return {
+      bindingVersion: binding?.version ?? null,
+      orchestrationPolicyRevision: project?.orchestrationPolicyRevision ?? null,
     };
   }
 }

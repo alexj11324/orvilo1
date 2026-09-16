@@ -20,6 +20,7 @@ vi.mock('@/server/services/aiGeneration', () => ({
 }));
 
 const snapshot: TaskPlanningSnapshot = {
+  consistency: { bindingVersion: null, orchestrationPolicyRevision: null },
   dependencies: [],
   events: [],
   scope: { id: 'scope-1', scopeId: 'project-1', scopeType: 'project', revision: 4 },
@@ -37,13 +38,17 @@ describe('createLinearCoordinatorPlanner', () => {
     const db = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
-          limit: vi.fn().mockResolvedValue([
-            { coordinatorAgentId: 'agent-1', name: 'Project', userId: 'owner-1' },
-          ]),
-          where: vi.fn(() => ({
-            limit: vi.fn().mockResolvedValue([
+          limit: vi
+            .fn()
+            .mockResolvedValue([
               { coordinatorAgentId: 'agent-1', name: 'Project', userId: 'owner-1' },
             ]),
+          where: vi.fn(() => ({
+            limit: vi
+              .fn()
+              .mockResolvedValue([
+                { coordinatorAgentId: 'agent-1', name: 'Project', userId: 'owner-1' },
+              ]),
           })),
         })),
       })),

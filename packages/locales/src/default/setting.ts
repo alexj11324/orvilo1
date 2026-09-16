@@ -3402,19 +3402,22 @@ When I am ___, I need ___
   'workspaceSetting.linear.connectFailed': 'Could not connect Linear',
   'workspaceSetting.linear.loadFailed': 'Could not load Linear organizations and projects',
   'workspaceSetting.linear.organizationTitle': 'Organization',
-  'workspaceSetting.linear.organizationDescription': 'Choose the Linear workspace shared with this Orvilo workspace.',
+  'workspaceSetting.linear.organizationDescription':
+    'Choose the Linear workspace shared with this Orvilo workspace.',
   'workspaceSetting.linear.organizationPlaceholder': 'Select a Linear organization',
   'workspaceSetting.linear.saveOrganization': 'Save organization',
   'workspaceSetting.linear.installationSaved': 'Linear organization saved',
   'workspaceSetting.linear.installationReady': 'Workspace installation: {{name}}',
   'workspaceSetting.linear.saveFailed': 'Could not save Linear settings',
   'workspaceSetting.linear.bindingTitle': 'Project binding',
-  'workspaceSetting.linear.bindingDescription': 'Bind one Orvilo project to one Linear project before importing issues.',
+  'workspaceSetting.linear.bindingDescription':
+    'Bind one Orvilo project to one Linear project before importing issues.',
   'workspaceSetting.linear.localProjectPlaceholder': 'Select an Orvilo project',
   'workspaceSetting.linear.remoteProjectPlaceholder': 'Select a Linear project',
   'workspaceSetting.linear.replanning': 'Create durable replanning proposals for issue changes',
   'workspaceSetting.linear.autoExecution': 'Allow bounded automatic execution',
-  'workspaceSetting.linear.autoExecutionNote': 'Proposals remain version-checked and require the explicit apply path.',
+  'workspaceSetting.linear.autoExecutionNote':
+    'Proposals remain version-checked and require the explicit apply path.',
   'workspaceSetting.linear.saveBinding': 'Save project binding',
   'workspaceSetting.linear.bindingSaved': 'Linear project binding saved',
   'workspaceSetting.linear.importProject': 'Import Linear issues',
@@ -3425,8 +3428,11 @@ When I am ___, I need ___
   'workspaceSetting.linear.applyProposal': 'Apply proposal',
   'workspaceSetting.linear.proposalApplied': 'Planning proposal applied',
   'workspaceSetting.linear.proposalFailed': 'Could not apply planning proposal',
+  'workspaceSetting.linear.proposalStale':
+    'Planning proposal was superseded because the workspace changed. Run planning again.',
   'workspaceSetting.linear.workerTitle': 'Sync workers',
-  'workspaceSetting.linear.workerDescription': 'Process pending issue changes, local updates, and planning scopes for this installation.',
+  'workspaceSetting.linear.workerDescription':
+    'Process pending issue changes, local updates, and planning scopes for this installation.',
   'workspaceSetting.linear.runWorker': 'Run sync now',
   'workspaceSetting.linear.workerSuccess': 'Linear sync workers completed',
   'workspaceSetting.linear.workerFailed': 'Linear sync workers failed',

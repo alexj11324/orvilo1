@@ -54,6 +54,15 @@ After `dev:spa` starts, the terminal prints a **Debug Proxy** URL. Opening it lo
 local dev server inside the hosted environment, so you get HMR against real server
 config.
 
+### Preview testing
+
+Vercel Preview is the shared testing target for this repository. Push a branch to create
+a Preview deployment, then use its URL for browser and end-to-end verification. Preview
+deployments use the remote PostgreSQL, Redis, and Cloudflare R2 services documented in
+[`.env.example.preview`](./.env.example.preview). For local work, choose the cloud-dev
+mode in [`.env.example.development`](./.env.example.development); Docker remains available
+as a local fallback.
+
 ### Quality checks
 
 ```bash

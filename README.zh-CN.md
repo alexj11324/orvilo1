@@ -51,6 +51,14 @@ pnpm --filter @orvilo/server dev
 `dev:spa` 启动后终端会打印一个 **Debug Proxy** URL。打开它会把你的本地开发服务器
 加载进线上环境，从而在真实服务端配置下获得 HMR。
 
+### Preview 测试
+
+Vercel Preview 是本仓库共享的测试目标。推送分支后会创建 Preview 部署，使用它的地址
+进行浏览器和端到端验证。Preview 部署使用 [`.env.example.preview`](./.env.example.preview)
+中记录的远程 PostgreSQL、Redis 与 Cloudflare R2 服务。本地开发可按
+[`.env.example.development`](./.env.example.development) 选择云开发模式，Docker 仍可作为本地
+回退方案。
+
 ### 质量检查
 
 ```bash

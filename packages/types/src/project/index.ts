@@ -24,3 +24,16 @@ export type ProjectWorkingDirectoryPermission =
 export const PROJECT_COMPLETION_DECISIONS = ['accepted', 'rejected'] as const;
 
 export type ProjectCompletionDecision = (typeof PROJECT_COMPLETION_DECISIONS)[number];
+
+export interface ProjectOrchestrationPolicy {
+  allowedAgentIds?: string[];
+  allowedRoles?: string[];
+  autoDispatch: boolean;
+  concurrencyLimit?: number;
+  executionBudget?: {
+    maxCost?: number;
+    maxRuns?: number;
+  };
+  replanMode: 'disabled' | 'observe' | 'suggest' | 'apply';
+  requireHumanReview: boolean;
+}

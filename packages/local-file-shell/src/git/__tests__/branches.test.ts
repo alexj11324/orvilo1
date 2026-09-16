@@ -9,8 +9,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   checkoutGitBranch,
   deleteGitBranch,
+  finalizeGitMerge,
   listGitBranches,
   listGitRemoteBranches,
+  mergeGitBranch,
   pullGitBranch,
   pushGitBranch,
   renameGitBranch,
@@ -18,7 +20,12 @@ import {
 } from '../branches';
 import { getGitAheadBehind, getGitBranch } from '../info';
 import { getGitBranchDiff, getGitWorkingTreeFiles, getGitWorkingTreePatches } from '../workingTree';
-import { listGitWorktrees, parseGitWorktreeList, removeGitWorktree } from '../worktrees';
+import {
+  addGitWorktree,
+  listGitWorktrees,
+  parseGitWorktreeList,
+  removeGitWorktree,
+} from '../worktrees';
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
@@ -309,5 +316,197 @@ describe('remote operations (push / pull / ahead-behind)', () => {
 
     const pulled = await pullGitBranch({ path: repo });
     expect(pulled).toMatchObject({ noop: true, success: true });
+  });
+
+  it('pushGitBranch remoteBranch publishes HEAD under a different remote ref', async () => {
+    const bare = await mkdtemp(path.join(tmpdir(), 'lfs-bare-'));
+    cleanup.push(bare);
+    execFileSync('git', ['init', '--bare', bare], { cwd: bare });
+    git(repo, 'remote', 'add', 'origin', bare);
+
+    // Detached HEAD — how the integration worktree lands its merge result.
+    git(repo, 'checkout', '--detach', 'HEAD');
+    const pushed = await pushGitBranch({ path: repo, remoteBranch: 'main' });
+    expect(pushed.success).toBe(true);
+    expect(git(bare, 'branch', '--list', 'main')).toContain('main');
+  });
+
+  it('pushGitBranch rejects an invalid remoteBranch without invoking git', async () => {
+    const result = await pushGitBranch({ path: repo, remoteBranch: 'bad name' });
+    expect(result).toEqual({ error: 'Invalid remote branch name: bad name', success: false });
+  });
+});
+
+describe('mergeGitBranch', () => {
+  it('merges a branch with --no-ff and reports the merge sha', async () => {
+    git(repo, 'checkout', '-b', 'task/T-1');
+    await writeFile(path.join(repo, 'b.txt'), 'task work\n');
+    git(repo, 'add', 'b.txt');
+    git(repo, 'commit', '-m', 'task work');
+    git(repo, 'checkout', 'main');
+
+    const result = await mergeGitBranch({ branch: 'task/T-1', path: repo });
+    expect(result.state).toBe('merged');
+    expect(result.sha).toBe(git(repo, 'rev-parse', 'HEAD'));
+    // --no-ff produced a merge commit with two parents.
+    expect(git(repo, 'rev-list', '--parents', '-n', '1', 'HEAD').split(' ')).toHaveLength(3);
+    expect(await readFile(path.join(repo, 'b.txt'), 'utf8')).toBe('task work\n');
+  });
+
+  it('re-baselines onto baseRef before merging', async () => {
+    git(repo, 'checkout', '-b', 'base-work');
+    await writeFile(path.join(repo, 'c.txt'), 'base moved\n');
+    git(repo, 'add', 'c.txt');
+    git(repo, 'commit', '-m', 'base move');
+    const baseSha = git(repo, 'rev-parse', 'HEAD');
+    git(repo, 'checkout', 'main');
+
+    git(repo, 'checkout', '-b', 'task/T-2');
+    await writeFile(path.join(repo, 'd.txt'), 'task\n');
+    git(repo, 'add', 'd.txt');
+    git(repo, 'commit', '-m', 'task');
+    git(repo, 'checkout', 'main');
+
+    const result = await mergeGitBranch({
+      baseRef: 'base-work',
+      branch: 'task/T-2',
+      path: repo,
+    });
+    expect(result.state).toBe('merged');
+    // HEAD's first parent is the re-baselined base tip.
+    expect(git(repo, 'rev-parse', 'HEAD^1')).toBe(baseSha);
+  });
+
+  it('reports conflicts and leaves the merge in progress', async () => {
+    git(repo, 'checkout', '-b', 'task/T-3');
+    await writeFile(path.join(repo, 'a.txt'), 'task side\n');
+    git(repo, 'commit', '-am', 'task side');
+    git(repo, 'checkout', 'main');
+    await writeFile(path.join(repo, 'a.txt'), 'base side\n');
+    git(repo, 'commit', '-am', 'base side');
+
+    const result = await mergeGitBranch({ branch: 'task/T-3', path: repo });
+    expect(result.state).toBe('conflict');
+    expect(result.conflicts).toEqual(['a.txt']);
+    // MERGE_HEAD is left in place for the corrective run.
+    expect(git(repo, 'rev-parse', '--verify', '--quiet', 'MERGE_HEAD')).toBeTruthy();
+  });
+
+  it('reports in-progress when a merge is already running', async () => {
+    git(repo, 'checkout', '-b', 'task/T-4');
+    await writeFile(path.join(repo, 'a.txt'), 'task side\n');
+    git(repo, 'commit', '-am', 'task side');
+    git(repo, 'checkout', 'main');
+    await writeFile(path.join(repo, 'a.txt'), 'base side\n');
+    git(repo, 'commit', '-am', 'base side');
+    try {
+      git(repo, 'merge', 'task/T-4');
+    } catch {
+      /* conflict expected */
+    }
+
+    const result = await mergeGitBranch({ branch: 'task/T-4', path: repo });
+    expect(result.state).toBe('in-progress');
+    expect(result.conflicts).toEqual(['a.txt']);
+  });
+
+  it('rejects an invalid branch without invoking git', async () => {
+    const result = await mergeGitBranch({ branch: 'bad name', path: repo });
+    expect(result).toEqual({
+      error: 'Invalid branch name: bad name',
+      state: 'conflict',
+      success: false,
+    });
+  });
+});
+
+describe('addGitWorktree ref/detach', () => {
+  it('forks the new branch from ref when given', async () => {
+    git(repo, 'checkout', '-b', 'older');
+    await writeFile(path.join(repo, 'old.txt'), 'old\n');
+    git(repo, 'add', 'old.txt');
+    git(repo, 'commit', '-m', 'old');
+    const olderSha = git(repo, 'rev-parse', 'HEAD');
+    git(repo, 'checkout', 'main');
+
+    const worktreeParent = await mkdtemp(path.join(tmpdir(), 'lfs-addwt-'));
+    cleanup.push(worktreeParent);
+    const linked = path.join(worktreeParent, 'linked');
+
+    const result = await addGitWorktree({
+      branch: 'task/T-7',
+      path: repo,
+      ref: 'older',
+      worktreePath: linked,
+    });
+    expect(result).toEqual({ success: true, worktreePath: linked });
+    expect(git(linked, 'rev-parse', 'HEAD')).toBe(olderSha);
+  });
+
+  it('checks out a ref detached when detach is set', async () => {
+    const worktreeParent = await mkdtemp(path.join(tmpdir(), 'lfs-addwt-detach-'));
+    cleanup.push(worktreeParent);
+    const linked = path.join(worktreeParent, 'integration-main');
+
+    const result = await addGitWorktree({
+      branch: '',
+      detach: true,
+      path: repo,
+      ref: 'main',
+      worktreePath: linked,
+    });
+    expect(result).toEqual({ success: true, worktreePath: linked });
+    expect(git(linked, 'rev-parse', 'HEAD')).toBe(git(repo, 'rev-parse', 'main'));
+    // Detached: HEAD resolves to 'HEAD' rather than a branch name.
+    expect(git(linked, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('HEAD');
+  });
+});
+
+describe('finalizeGitMerge', () => {
+  it('commits a fully-resolved merge', async () => {
+    git(repo, 'checkout', '-b', 'task/T-5');
+    await writeFile(path.join(repo, 'a.txt'), 'task side\n');
+    git(repo, 'commit', '-am', 'task side');
+    git(repo, 'checkout', 'main');
+    await writeFile(path.join(repo, 'a.txt'), 'base side\n');
+    git(repo, 'commit', '-am', 'base side');
+    try {
+      git(repo, 'merge', 'task/T-5');
+    } catch {
+      /* conflict expected */
+    }
+
+    // Simulate the corrective run: resolve + stage, but don't commit.
+    await writeFile(path.join(repo, 'a.txt'), 'resolved\n');
+    git(repo, 'add', 'a.txt');
+
+    const result = await finalizeGitMerge({ path: repo });
+    expect(result.state).toBe('integrated');
+    expect(result.sha).toBe(git(repo, 'rev-parse', 'HEAD'));
+    expect(await readFile(path.join(repo, 'a.txt'), 'utf8')).toBe('resolved\n');
+  });
+
+  it('reports the remaining conflicts when paths are still unmerged', async () => {
+    git(repo, 'checkout', '-b', 'task/T-6');
+    await writeFile(path.join(repo, 'a.txt'), 'task side\n');
+    git(repo, 'commit', '-am', 'task side');
+    git(repo, 'checkout', 'main');
+    await writeFile(path.join(repo, 'a.txt'), 'base side\n');
+    git(repo, 'commit', '-am', 'base side');
+    try {
+      git(repo, 'merge', 'task/T-6');
+    } catch {
+      /* conflict expected */
+    }
+
+    const result = await finalizeGitMerge({ path: repo });
+    expect(result.state).toBe('conflict');
+    expect(result.conflicts).toEqual(['a.txt']);
+  });
+
+  it('reports integrated when no merge is in progress', async () => {
+    const result = await finalizeGitMerge({ path: repo });
+    expect(result.state).toBe('integrated');
+    expect(result.sha).toBe(git(repo, 'rev-parse', 'HEAD'));
   });
 });

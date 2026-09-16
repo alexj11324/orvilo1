@@ -8,7 +8,9 @@ import type {
   GitCheckoutResult,
   GitDeleteBranchResult,
   GitFileRevertResult,
+  GitFinalizeMergeResult,
   GitLinkedPullRequestResult,
+  GitMergeResult,
   GitPullResult,
   GitPushResult,
   GitRemoteBranchListItem,
@@ -149,11 +151,29 @@ export default class GitController extends ControllerModule {
   @IpcMethod()
   async addGitWorktree(payload: {
     branch: string;
+    detach?: boolean;
     path: string;
+    ref?: string;
     worktreePath: string;
   }): Promise<GitAddWorktreeResult> {
     const { addGitWorktree: runAddGitWorktree } = await loadGit();
     return runAddGitWorktree(payload);
+  }
+
+  @IpcMethod()
+  async mergeGitBranch(payload: {
+    baseRef?: string;
+    branch: string;
+    path: string;
+  }): Promise<GitMergeResult> {
+    const { mergeGitBranch: runMergeGitBranch } = await loadGit();
+    return runMergeGitBranch(payload);
+  }
+
+  @IpcMethod()
+  async finalizeGitMerge(payload: { path: string }): Promise<GitFinalizeMergeResult> {
+    const { finalizeGitMerge: runFinalizeGitMerge } = await loadGit();
+    return runFinalizeGitMerge(payload);
   }
 
   @IpcMethod()
@@ -163,7 +183,7 @@ export default class GitController extends ControllerModule {
   }
 
   @IpcMethod()
-  async pushGitBranch(payload: { path: string }): Promise<GitPushResult> {
+  async pushGitBranch(payload: { path: string; remoteBranch?: string }): Promise<GitPushResult> {
     const { pushGitBranch: runPushGitBranch } = await loadGit();
     return runPushGitBranch(payload);
   }

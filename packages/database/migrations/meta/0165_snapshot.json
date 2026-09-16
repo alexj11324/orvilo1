@@ -6,9 +6,9 @@
   },
   "dialect": "postgresql",
   "enums": {},
-  "id": "43c0ccc8-e01b-4941-a711-ab80467a70cc",
+  "id": "a12e56e0-c33e-4e5f-accf-7887c6b88c28",
   "policies": {},
-  "prevId": "6b9d80bf-5ab5-424e-a6a0-c53531883835",
+  "prevId": "43c0ccc8-e01b-4941-a711-ab80467a70cc",
   "roles": {},
   "schemas": {},
   "sequences": {
@@ -28291,6 +28291,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "reviewer_user_id": {
+          "name": "reviewer_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "parent_task_id": {
           "name": "parent_task_id",
           "type": "text",
@@ -28796,6 +28802,15 @@
           "tableFrom": "tasks",
           "tableTo": "tasks",
           "columnsFrom": ["parent_task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "tasks_reviewer_user_id_users_id_fk": {
+          "name": "tasks_reviewer_user_id_users_id_fk",
+          "tableFrom": "tasks",
+          "tableTo": "users",
+          "columnsFrom": ["reviewer_user_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"

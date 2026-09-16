@@ -3,6 +3,7 @@ import type {
   BriefMetadata,
   TaskActivityLogPayload,
   TaskActivityLogType,
+  TaskTopicIntegration,
 } from '@orvilo/types';
 import { isNotNull, isNull } from 'drizzle-orm';
 import {
@@ -267,6 +268,10 @@ export const taskTopics = pgTable(
     // Handoff (populated after topic completes via LLM summarization)
     // { title, summary, keyFindings: string[], nextAction }
     handoff: jsonb('handoff'),
+
+    // Per-run workspace-integration record (CAID merge-back state).
+    // Null for runs that never provisioned an isolated worktree.
+    integration: jsonb('integration').$type<TaskTopicIntegration>(),
 
     // Review results (populated after topic completes + review runs)
     reviewPassed: integer('review_passed'), // 1 = passed, 0 = failed, null = not reviewed

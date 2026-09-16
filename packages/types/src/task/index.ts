@@ -131,6 +131,73 @@ export interface CheckpointConfig {
 }
 
 /**
+ * Repo workspace binding persisted under `tasks.config.workspace`. When present,
+ * the runner provisions an isolated git worktree on the bound device for every
+ * fresh run (branch `task/<identifier>`) and pins the topic's working directory
+ * to it — so parallel task runs never share one checkout. Subtasks inherit the
+ * nearest ancestor's binding (whole-config semantics).
+ */
+export interface TaskWorkspaceConfig {
+  /**
+   * Integration target branch. Default: the repo's remote default branch when
+   * `origin/HEAD` resolves, else the source checkout's current branch.
+   */
+  baseBranch?: string;
+  /**
+   * Pinned execution device. When omitted, provisioning inherits the assignee
+   * agent's `agencyConfig.boundDeviceId`; runs with no concrete device
+   * (auto/sandbox/in-process) execute unprovisioned.
+   */
+  deviceId?: string;
+  provider: 'git';
+  /** Absolute path of the repository on the device. */
+  repoPath: string;
+}
+
+/**
+ * Per-run workspace/integration record persisted on `task_topics.integration`.
+ * Written by the task runner at provision time and advanced by
+ * TaskIntegrationService once the run's topic completes.
+ */
+export interface TaskTopicIntegration {
+  /** Number of corrective merge runs dispatched so far. */
+  attempts: number;
+  /** Integration target branch the task branch merges into. */
+  baseBranch: string;
+  /** Branch created for the run (`task/<identifier>`). */
+  branch: string;
+  /** Repo-relative paths reported unmerged at the last attempt. */
+  conflicts?: string[];
+  /** Device hosting the worktrees. */
+  deviceId: string;
+  /** Merge commit SHA once `state` reaches 'integrated'. */
+  integratedSha?: string;
+  /** Path of the detached integration worktree on the device. */
+  integrationWorktreePath?: string;
+  lastError?: string;
+  /** True once the merge result was pushed to `origin/<baseBranch>`. */
+  pushedToRemote?: boolean;
+  /** Absolute repo path on the device (source of both worktrees). */
+  repoPath: string;
+  /**
+   * 'task' — the run's own provisioned worktree;
+   * 'integrate' — a corrective run bound to the integration worktree.
+   */
+  role: 'task' | 'integrate';
+  /**
+   * On 'integrate' rows: the task_topics row of the original task run, so its
+   * record can be advanced once the merge lands.
+   */
+  runTopicId?: string;
+  /** pending → merging → integrated | conflict | blocked | skipped */
+  state: 'pending' | 'merging' | 'integrated' | 'conflict' | 'blocked' | 'skipped';
+  /** True once the provisioned worktree was removed after integration. */
+  worktreeCleaned?: boolean;
+  /** Worktree path the run executes in (task or integration worktree). */
+  worktreePath: string;
+}
+
+/**
  * Legacy Task-level delivery-acceptance gate config persisted under
  * `tasks.config.verify`. New flows persist this policy on the Task's Acceptance;
  * this shape remains for API compatibility and lazy migration. It is *not*

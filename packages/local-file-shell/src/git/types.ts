@@ -252,3 +252,27 @@ export interface GitPushResult {
   noop?: boolean;
   success: boolean;
 }
+
+export interface GitMergeResult {
+  /** Repo-relative paths reported unmerged. Present for 'conflict'/'in-progress'. */
+  conflicts?: string[];
+  error?: string;
+  /** Resulting HEAD sha when the merge committed. */
+  sha?: string;
+  /**
+   * 'merged' — merge commit created;
+   * 'conflict' — merge stopped on unmerged paths (left in progress);
+   * 'in-progress' — a merge was already running here, left untouched.
+   */
+  state: 'merged' | 'conflict' | 'in-progress';
+  success: boolean;
+}
+
+export interface GitFinalizeMergeResult {
+  conflicts?: string[];
+  error?: string;
+  sha?: string;
+  /** 'integrated' — merge commit landed; 'conflict' — unmerged paths remain. */
+  state: 'integrated' | 'conflict';
+  success: boolean;
+}

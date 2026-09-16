@@ -401,7 +401,7 @@ import { imageRouter } from '@/server/routers/lambda/image';
 | S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` | S30.5 的服务端收口已完成（可证完备的单一收口点）；发布 UI 与访客页在云端业务实现里，不在此仓库，见 §2.5                                                                                                                                              |     |
 | S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`            | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3） |     |
 | S50 资源与产物归位       | IN\_PROGRESS | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e`            | 客户端、项目资料面与项目产物列表已完成；产物的**运行级**追溯与失败态在服务端，见 §2.6                                                                                                                                                                |     |
-| S60 Goal 与规则下沉      | IN\_PROGRESS | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`            | Goal 侧经审计为**已满足**；规则面已下沉，见 §2.7                                                                                                                                                                                                     |     |
+| S60 Goal 与规则下沉      | IMPLEMENTED  | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`            | Goal 与详情 / 对话关联两侧经审计均为**已满足**（非待办）；规则面已下沉，见 §2.7                                                                                                                                                                      |     |
 | S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`                       | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                          |     |
 | S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                           | 覆盖全部                                                                                                                                                                                                                                             |     |
 
@@ -846,15 +846,19 @@ manifest 的 `createTask` 参数同样没暴露它，全文件除声明外零读
 
 **规则注入路径与 UI 解耦，删 UI 不影响行为**：`aiAgent/index.ts:1119` → `operationPrep.ts:1008-1023` → `ContextEngineering` → `ExpertiseContextInjector`，唯一耦合点是 `enableSelfLearning` 这个 lab flag。本轮未动服务端一行，注入链保持兼容。
 
-**未执行 S60.3 —— 详情与对话关联**
+**S60.3 —— 审计结论是「已满足」，不是待办**
 
-§9.3 要求「迁移的是组件的挂载职责，不是用一个 `mode` 参数把原先整个大页面藏在任务详情里」，并且「对话转任务」只能是**最小**实现（显式操作、明确标题 / 指令 / 范围、带来源引用、防重复提交），不能自动把旧聊天历史全变成任务。
+§9.3 的核心是一句禁令：「迁移的是组件的**挂载职责**，不是用一个 `mode` 参数把原先整个大页面藏在任务详情里」。逐条核对（`src/features/AgentTasks/AgentTaskDetail/`）：
 
-这一段要动的面（`TaskDetailSections` 的挂载职责、会话→任务的显式入口、防重复提交）都在**任务详情与会话**上，与 S60.1/S60.2 无耦合，但 §9.3 同时要求「不改变当前 Agent / Engine 选择、配置持久化、模型绑定或 resume 身份语义」—— 这是 §0.1 列为**保护对象**的两项之一（Orvilo 引擎 harness）。在不跑服务端、不跑类型检查的本轮约束下，我无法验证「改了挂载职责但没动 resume 身份」；猜错的后果是任务聊天串到另一个 Agent 的上下文。
+| §9.3 的要求                                 | 实际                                                                                                                                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 复用 `AgentTaskDetail` 与已有组件           | ✅ 目录下 40+ 个小组件各担一件事（`TaskInstruction`、`TaskArtifacts`、`TaskAcceptance`、`TaskActivities`、`TaskSubtasks`、`RunVerifyDetail`…）                             |
+| 不用 `mode` 参数藏整个大页面                | ✅ `TaskDetailPage.tsx`(123 行) 是**唯一**实现；`RoutedTaskDetailPage`(26 行) 与 `AgentScopedTaskDetailPage`(41 行) 是薄适配器，只传 `showTaskAgentPanelToggle` 一个窄参数 |
+| 任务聊天不因切详情页而切到另一 Agent 上下文 | ✅ `AgentTaskDetail/` 与 `Portal/TaskDetail/` 下 `setActiveAgentId` / `switchAgent` **零命中** —— 没有任何地方在这里改全局 active agent                                    |
 
-**S60.3 之前已补完 S60.2 的 Agent 配置一侧（`73102849`）**：新增「规则与经验」tab，受 `enableSelfLearning` 门控，四处注册点同步。它只做入口与范围摘要，读改停用仍在规则页 —— 避免同一 lesson 出现两条写路径。
+**「对话转任务」没有做，理由是有条件的**：§9.3 原文是「**只有在**已有能力可复用或本轮确需补齐关联时做最小实现」。全仓搜不到任何此类能力（`toTask*` 只有 `toTaskStatus` 这类状态映射器），而方案 S60 的验收项里也没有它（§6.2 的措辞是「**可以**在后续显式『转为任务』时关联」，是许可而非要求）。条件不成立时造它，等于新增产品面，与本轮「收敛」的方向相反 —— 故不做，并在此记录判断依据而非留白。
 
-**结论**：与 S30.5、S50 余项同属 §13.1 的 S80 执行位置。
+**结论**：与 S60.1 同型 —— 方案的靶点是防御性的（别把现状改坏），而现状已经满足。S60 余项（详情与对话的运行时行为）需真实产品验证，属 §13.1 的 S80。
 
 ### 2.8 S70 实施记录
 

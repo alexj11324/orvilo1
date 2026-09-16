@@ -2727,6 +2727,48 @@ describe('TaskModel', () => {
       expect(ids).toContain(stuck.id);
       expect(ids).not.toContain(healthy.id);
     });
+
+    it('should keep an active completion lease out of the heartbeat sweep', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const completing = await model.create({ instruction: 'Completing' });
+      await model.update(completing.id, {
+        heartbeatTimeout: 1,
+        runReservationExpiresAt: new Date(Date.now() + 60_000),
+        runReservationId: 'completion:operation:lease',
+        status: 'running',
+      });
+      await serverDB
+        .update(tasks)
+        .set({ lastHeartbeatAt: new Date(Date.now() - 60_000) })
+        .where(eq(tasks.id, completing.id));
+
+      const result = await TaskModel.findStuckTasks(serverDB);
+
+      expect(result.map((task) => task.id)).not.toContain(completing.id);
+    });
+
+    it('should scope an API sweep to one personal task creator', async () => {
+      const ownModel = new TaskModel(serverDB, userId);
+      const foreignModel = new TaskModel(serverDB, userId2);
+      const own = await ownModel.create({ instruction: 'Own stuck task' });
+      const foreign = await foreignModel.create({ instruction: 'Foreign stuck task' });
+      for (const task of [own, foreign]) {
+        await new TaskModel(serverDB, task.createdByUserId).update(task.id, {
+          heartbeatTimeout: 1,
+          status: 'running',
+        });
+        await serverDB
+          .update(tasks)
+          .set({ lastHeartbeatAt: new Date(Date.now() - 60_000) })
+          .where(eq(tasks.id, task.id));
+      }
+
+      const result = await TaskModel.findStuckTasks(serverDB, { createdByUserId: userId });
+      const ids = result.map((task) => task.id);
+
+      expect(ids).toContain(own.id);
+      expect(ids).not.toContain(foreign.id);
+    });
   });
 
   describe('updateComment', () => {

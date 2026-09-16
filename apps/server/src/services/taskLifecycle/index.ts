@@ -191,6 +191,11 @@ export class TaskLifecycleService {
       return;
     }
 
+    // A duplicate completion callback can reclaim an expired `completion:*`
+    // lease after the scheduler has moved the task back to `scheduled`. Keep
+    // the CAS aligned with the status that settleIfRunning actually claimed;
+    // requiring `running` here would strand that task with no next tick.
+    const claimedTaskStatus = currentTask.status === 'scheduled' ? 'scheduled' : 'running';
     const updateOwnedStatus = async (
       status: string,
       extra?: { completedAt?: Date; error?: string | null },
@@ -198,7 +203,7 @@ export class TaskLifecycleService {
       const updated = await this.taskModel.updateStatusIfReservation(
         taskId,
         claimed,
-        'running',
+        claimedTaskStatus,
         status,
         extra,
       );

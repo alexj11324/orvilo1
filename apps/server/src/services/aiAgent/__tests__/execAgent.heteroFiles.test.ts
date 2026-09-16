@@ -1655,6 +1655,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     });
 
     it('cancels a platform task through the principal persisted at dispatch', async () => {
+      mockExecuteToolCall.mockResolvedValueOnce({ success: true, state: { exited: true } });
       topicMock.findById.mockResolvedValue({
         metadata: {
           runningOperation: {
@@ -1667,7 +1668,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         },
       });
 
-      await service.interruptTask({ operationId: 'operation-1', topicId: 'topic-1' });
+      const result = await service.interruptTask({ operationId: 'operation-1', topicId: 'topic-1' });
 
       expect(mockExecuteToolCall).toHaveBeenCalledWith(
         {
@@ -1678,6 +1679,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         expect.objectContaining({ apiName: 'cancelHeteroTask' }),
         10_000,
       );
+      expect(result).toMatchObject({ success: true, deviceCancellationConfirmed: true });
     });
 
     /**
@@ -1782,6 +1784,17 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         success: false,
       });
       expect(mockInterruptOperation).not.toHaveBeenCalled();
+    });
+
+    it('treats an already-terminal durable operation as an idempotent stop', async () => {
+      mockInterruptOperation.mockResolvedValueOnce(false);
+      (service as any).agentOperationModel.findById = vi
+        .fn()
+        .mockResolvedValue({ status: 'interrupted' });
+
+      const result = await service.interruptTask({ operationId: 'operation-interrupted' });
+
+      expect(result).toMatchObject({ operationId: 'operation-interrupted', success: true });
     });
 
     it('cancels a remote child operation without touching the supervisor device', async () => {

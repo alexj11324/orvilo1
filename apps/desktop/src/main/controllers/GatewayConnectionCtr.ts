@@ -13,6 +13,7 @@ import {
   resolveRemotePlatformRuntime,
 } from '@orvilo/heterogeneous-agents/scanHost';
 import { type ILocalSystemService, LocalSystemExecutionRuntime } from '@orvilo/tool-runtime';
+import { sleep } from '@orvilo/utils/sleep';
 
 import AuvService, { type AuvRunCommandParams } from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
@@ -38,6 +39,9 @@ type AvailableRemotePlatformRuntime = Extract<RemotePlatformCommandRuntime, { av
 // package deps — importing one risks the @orvilo/types stub runtime leak.
 const BrowserIdentifier = 'lobe-browser';
 const AuvIdentifier = 'lobe-computer-use';
+const PLATFORM_CANCEL_GRACE_MS = 2000;
+const PLATFORM_CANCEL_FORCE_MS = 3000;
+const PLATFORM_PROCESS_GROUP_POLL_MS = 50;
 
 function parseHermesSessionId(stderr: string): string | undefined {
   for (const line of stderr.split(/\r?\n/).reverse()) {
@@ -1123,6 +1127,18 @@ export default class GatewayConnectionCtr extends ControllerModule {
     }
   }
 
+  /** Wait until the complete detached platform-agent process tree is gone. */
+  private async waitForPlatformProcessTreeExit(pid: number, timeoutMs: number): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    while (this.isPlatformProcessGroupAlive(pid)) {
+      if (Date.now() >= deadline) return false;
+      await sleep(PLATFORM_PROCESS_GROUP_POLL_MS);
+    }
+
+    this.clearPlatformTaskKillTimer(pid);
+    return true;
+  }
+
   private clearPlatformTaskKillTimer(pid: number): void {
     const timer = this.platformTaskKillTimers.get(pid);
     if (!timer) return;
@@ -1148,9 +1164,16 @@ export default class GatewayConnectionCtr extends ControllerModule {
     }
 
     // The close handler sends the terminal notify after the whole tree exits.
-    this.killPlatformProcessTree(entry.pid, signal as NodeJS.Signals);
+    const requestedSignal = signal as NodeJS.Signals;
+    this.killPlatformProcessTree(entry.pid, requestedSignal);
+    const exited = await this.waitForPlatformProcessTreeExit(
+      entry.pid,
+      requestedSignal === 'SIGKILL'
+        ? PLATFORM_CANCEL_FORCE_MS
+        : PLATFORM_CANCEL_GRACE_MS + PLATFORM_CANCEL_FORCE_MS,
+    );
 
-    return JSON.stringify({ pid: entry.pid, signal, taskId });
+    return JSON.stringify({ exited, pid: entry.pid, signal, taskId });
   }
 
   /**

@@ -1964,17 +1964,32 @@ export class TaskModel {
   }
 
   // Find stuck tasks (running but heartbeat timed out)
-  // Only checks tasks that have both lastHeartbeatAt and heartbeatTimeout set
-  static async findStuckTasks(db: LobeChatDatabase): Promise<TaskItem[]> {
+  // Only checks tasks that have both lastHeartbeatAt and heartbeatTimeout set.
+  // A completion callback owns a long-lived lease while verify/settlement
+  // side effects are running; its heartbeat is deliberately not treated as a
+  // dead generation. API callers may additionally restrict the sweep to one
+  // task creator and workspace.
+  static async findStuckTasks(
+    db: LobeChatDatabase,
+    options: { createdByUserId?: string; workspaceId?: string } = {},
+  ): Promise<TaskItem[]> {
     return db
       .select()
       .from(tasks)
       .where(
         and(
           eq(tasks.status, 'running'),
+          options.createdByUserId
+            ? eq(tasks.createdByUserId, options.createdByUserId)
+            : undefined,
+          options.workspaceId ? eq(tasks.workspaceId, options.workspaceId) : undefined,
+          options.createdByUserId && !options.workspaceId
+            ? isNull(tasks.workspaceId)
+            : undefined,
           isNotNull(tasks.lastHeartbeatAt),
           isNotNull(tasks.heartbeatTimeout),
           sql`${tasks.lastHeartbeatAt} < now() - make_interval(secs => ${tasks.heartbeatTimeout})`,
+          sql`NOT (coalesce(${tasks.runReservationId}, '') LIKE 'completion:%' AND ${tasks.runReservationExpiresAt} > now())`,
         ),
       );
   }

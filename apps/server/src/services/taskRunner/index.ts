@@ -506,7 +506,39 @@ export class TaskRunnerService {
         taskIdentifier: task.identifier,
       };
     } catch (error) {
-      if (provisioned && !provisionedRegistered) {
+      // A dispatch can succeed before the task-topic registration write. Keep
+      // that provisioned worktree until the operation has physically stopped;
+      // deleting it first lets a still-running device command write into (or
+      // recreate) a path that is no longer owned by the task.
+      const requiresPhysicalExitConfirmation = Boolean(provisioned?.integration.deviceId);
+      let orphanInterruptionConfirmed = !dispatchedOperationId;
+      if (dispatchedOperationId && dispatchService) {
+        try {
+          const interruption = await dispatchService.interruptTask({
+            operationId: dispatchedOperationId,
+            topicId: dispatchedTopicId,
+          });
+          orphanInterruptionConfirmed =
+            interruption.success &&
+            (requiresPhysicalExitConfirmation
+              ? interruption.deviceCancellationConfirmed === true
+              : interruption.deviceCancellationConfirmed !== false);
+          if (!orphanInterruptionConfirmed) {
+            log(
+              'runTask: orphaned operation %s did not confirm interruption; preserving worktree',
+              dispatchedOperationId,
+            );
+          }
+        } catch (interruptError) {
+          log(
+            'runTask: failed to interrupt orphaned operation %s — %O',
+            dispatchedOperationId,
+            interruptError,
+          );
+        }
+      }
+
+      if (provisioned && !provisionedRegistered && orphanInterruptionConfirmed) {
         await this.taskWorkspace
           .discardUnregistered(provisioned)
           .catch((cleanupError) =>
@@ -515,20 +547,6 @@ export class TaskRunnerService {
       }
       if (ownsReservation) {
         try {
-          if (dispatchedOperationId && dispatchService) {
-            await dispatchService
-              .interruptTask({
-                operationId: dispatchedOperationId,
-                topicId: dispatchedTopicId,
-              })
-              .catch((interruptError) =>
-                log(
-                  'runTask: failed to interrupt orphaned operation %s — %O',
-                  dispatchedOperationId,
-                  interruptError,
-                ),
-              );
-          }
           const errorText = error instanceof Error ? error.message : 'Unknown error';
           // A failed kickoff must not kill an automation task's schedule. The
           // token-fenced update is a no-op if another generation took over.

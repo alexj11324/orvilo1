@@ -209,6 +209,26 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
     });
 
+    it('reclaims a scheduled completion lease with a scheduled CAS guard', async () => {
+      const task = baseTask({ automationMode: 'heartbeat', status: 'scheduled' });
+      findById.mockResolvedValue(task);
+
+      await service.onTopicComplete({
+        operationId: 'op-1',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+      });
+
+      expect(updateStatusIfCurrent).toHaveBeenCalledWith(
+        'task-1',
+        'scheduled',
+        'scheduled',
+        { error: null },
+      );
+    });
+
     it.each(['max_steps', 'cost_limit'])('%s is a successful task completion', async (reason) => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);

@@ -393,17 +393,17 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 ## 2. 工作包状态
 
-| 工作包                   | 实现状态     | 验证状态         | commit / 证据                    | 保留依赖 / 阻塞                                                                                                                                                                                                                                      |
-| ------------------------ | ------------ | ---------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S00 基线与依赖清单       | IN\_PROGRESS | NOT\_RUN         | 本文                             | 见 §1.7 待补                                                                                                                                                                                                                                         |
-| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de` | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                             |
-| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`（视图偏好部分）       | 旧首页卸载未做，见 §2.2                                                                                                                                                                                                                              |
-| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` | S30.5（外部访客共享）未执行，见 §2.5                                                                                                                                                                                                                 |
-| S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81` | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3） |
-| S50 资源与产物归位       | IN\_PROGRESS | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` | 客户端、项目资料面与项目产物列表已完成；产物的**运行级**追溯与失败态在服务端，见 §2.6                                                                                                                                                                |
-| S60 Goal 与规则下沉      | IN\_PROGRESS | CI\_PENDING      | `23751be7` `7c565528` `3126df0d` | Goal 侧经审计为**已满足**；规则面已下沉，见 §2.7                                                                                                                                                                                                     |
-| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`            | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                          |
-| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                | 覆盖全部                                                                                                                                                                                                                                             |
+| 工作包                   | 实现状态     | 验证状态         | commit / 证据                               | 保留依赖 / 阻塞                                                                                                                                                                                                                                      |     |
+| ------------------------ | ------------ | ---------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| S00 基线与依赖清单       | IN\_PROGRESS | NOT\_RUN         | 本文                                        | 见 §1.7 待补                                                                                                                                                                                                                                         |     |
+| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de`            | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                             |     |
+| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`（视图偏好部分）                  | 旧首页卸载未做，见 §2.2                                                                                                                                                                                                                              |     |
+| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` | S30.5 的服务端收口已完成（可证完备的单一收口点）；发布 UI 与访客页在云端业务实现里，不在此仓库，见 §2.5                                                                                                                                              |     |
+| S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`            | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3） |     |
+| S50 资源与产物归位       | IN\_PROGRESS | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e`            | 客户端、项目资料面与项目产物列表已完成；产物的**运行级**追溯与失败态在服务端，见 §2.6                                                                                                                                                                |     |
+| S60 Goal 与规则下沉      | IN\_PROGRESS | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`            | Goal 侧经审计为**已满足**；规则面已下沉，见 §2.7                                                                                                                                                                                                     |     |
+| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`                       | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                          |     |
+| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                           | 覆盖全部                                                                                                                                                                                                                                             |     |
 
 ---
 
@@ -721,24 +721,28 @@ S70 的完整范围（方案 §10）还包括**设置重新分组**（账户 / �
 
 ⚠️ **`src/proxy.ts` 特意不改**：它的 matcher 里列着 `/eval`、`/image`、`/video`，看起来是死条目。但那是「哪些路径走 middleware」的白名单（不是鉴权放行），删掉退役段会把「旧深链接由 SPA 兜底重定向回家」变成框架层硬 404。
 
-**未执行 S30.5 —— 外部访客共享 Agent**
+**已完成 S30.5 第一步 —— 服务端收口（`c95f9ba6`）**
 
-方案 §6.5 把顺序写死为：**服务端先禁止新发布 / 新的访客执行** → 入口同步移除 → 旧链接返回安全说明 → 历史运行与审计继续读取 → 依赖清零后删代码。第一步就是服务端授权变更。
+方案 §6.5 把顺序写死为：**服务端先禁止新发布 / 新的访客执行** → 入口同步移除 → 旧链接返回安全说明 → 历史运行与审计继续读取 → 依赖清零后删代码。本轮完成第一步。
 
-审计结果（已定位，未改）：
+两处拒绝都是**无条件**的：不是把原来的 flag 判断取反，而是删掉 —— §6.5 要求「旧持久化 feature flag、旧客户端或尚未过期的访客 token 不能绕过退役策略」，留一个分支就等于留一个开关。原先的创建门读 `enableAgentShare`，那个分支现在不存在。
 
-| 入口                       | 位置                                                                                                 |
-| -------------------------- | ---------------------------------------------------------------------------------------------------- |
-| 发布 / 恢复发布 / 管理分享 | `apps/server/src/routers/lambda/agentShare.ts`                                                       |
-| 发布开关与 rollout 语义    | `routers/lambda/_helpers/agentShareFeatureGate.ts`（已区分 publish/enable 与 manage/revoke/preview） |
-| 公开执行的工具授权面       | `services/aiAgent/shareGate.ts`（`AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS`、tool grant）             |
-| 访客会话越权防护           | `routers/lambda/_helpers/shareVisitorTargetGuard.ts`（注释详述为何该守卫不能下沉到 model 默认值）    |
-| 通用分享 / 访客会话        | `routers/lambda/share.ts`、`shareChat.ts`                                                            |
-| 客户端                     | `apps/share`（50 个文件）                                                                            |
+**`shareChat.execAgent` 是可证完备的收口点**（不是「多处之一」）：运行态里每一个访客标记都派生自 `execAgent` 内部构造的那个 `shareGate`（`services/aiAgent/pipeline/startOperation.ts:141` 把它读成 `agentShareVisitor`），而全仓**只有这一处**构造 `shareGate`。所以没有任何其它过程能发起访客运行；拒绝它也一并拒绝了流式输入、继续生成、异步派发与工具调用 —— 它们都在「起不来的运行」下游。
 
-**为什么停在这里**：这一步是授权变更，落在 §0.4 明令保护的范围（权限、工作区隔离、额度、审计、**访客限制**）。而本轮禁止本机类型检查、不跑服务端、不跑 CI —— 我无法在本地区分「一个正确的门」和「一个过宽或过窄的门」。§6.5 本身也警告「旧持久化 feature flag、旧客户端或尚未过期的访客 token 不能绕过退役策略」，即这个门必须可证完备。猜错的两种后果都很重：留下访客执行漏洞，或误伤任务链接 / 产物只读分享 / 团队邀请（§6.5 明确要求先区分这四类）。
+**刻意不退役的**（§6.5 明文保留）：读取路径 `share.getSharedAgent`、`shareChat.getTopics` / `getMessages`；`agentShare.disableShare` 与 `updateVisibility` 回到 `private`；`shareChat.interruptTask` 与两个 gateway token 过程 —— 最后一项是为了「已有运行按发布时的明确策略完成或取消」，掐掉在途运行的流或它的话费都不属于退役目标。
 
-**结论**：S30.5 需要一个能跑服务端与类型检查的环境 —— 即方案 §13.1 的 S80 执行位置。
+**四类分享在代码里保持可区分**：`getSharedTopic` 走 `TopicShareModel`（会话分享，另一张表、另一个能力），`AgentShareModel` 才是「公开可交互 Agent」这一类。本轮只动后者。
+
+**客户端侧的关键发现：本仓库没有可移除的发布入口，因为入口本来就已隐藏。**
+`useAgentShareSupported`（`src/business/client/useAgentShareSupported.ts`）是**业务槽位**，其开源默认返回
+`{ publishable: false, supported: false, visible: false }`，注释明说「这隐藏了所有分享入口（profile tab、header action、settings page）」。
+三个消费者（`features/AgentProfileTabs/index.tsx:70`、`routes/(main)/agent/profile/features/Header/index.tsx:254`、
+`AgentShareSettingsPage`）读的都是它。也就是说真正的发布 UI 与访客页在**云端业务实现**（该槽位的覆盖者）里，不在此仓库 ——
+「入口同步移除」属于那次云端改动。同理 `agentShareService`（`src/services/agentShare.ts`）与 `ShareShell` 全仓均**零消费者**。
+
+**旧链接为什么不动读路径**：`share.getSharedAgent` 同时服务三件事 —— 访客历史页面的解析、所有者的预览（`isOwner` 分支）、以及「审查与撤销」所需的读取。封掉它等于同时打断 §6.5 要求保留的历史读取与撤销路径，正是那节警告的「误伤」。旧链接的**安全说明**因此落在访客**尝试运行时**：`execAgent` 返回 FORBIDDEN，而客户端既有范式 `features/Share/ErrorView.tsx:58` 的 FORBIDDEN 分支（403 说明页，经 `ShareShell` 渲染）已经在处理这类响应。
+
+**仍未做（属云端仓库或 S80）**：云端发布 UI 与访客页的入口移除与「已退役」文案；以及 §6.5 最后一步「依赖清零后删除无用代码」—— `execAgent` 的实现体、`services/aiAgent/shareGate.ts` 的工具白名单、`AgentRuntime` 里的访客分支与 `apps/share` 都还在。本轮**刻意保留**：§6.5 把删除排在最后，而删 `AgentRuntime` 的访客分支要动 §0.1 保护的引擎 harness，且本机没有运行时可验证。代价是**那 12 个 `execAgent` 用例随之退役、实现体暂时无覆盖** —— 被移除的覆盖点已逐条写进测试注释与提交信息（花费准入、访客 topic/turn 上限、creator 作用域派发、prompt 尺寸、失败脱敏、`interactiveStart: false` 存活契约），重新开放该能力时据此恢复。
 
 ### 2.6 S50 实施记录
 

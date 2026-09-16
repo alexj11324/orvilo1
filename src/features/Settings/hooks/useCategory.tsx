@@ -46,10 +46,12 @@ import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selec
 export enum SettingsGroupKey {
   Account = 'account',
   Agent = 'agent',
+  Channels = 'channels',
+  Data = 'data',
   Developer = 'developer',
-  General = 'general',
-  Subscription = 'subscription',
-  System = 'system',
+  Security = 'security',
+  Tools = 'tools',
+  UsageAndCost = 'usageAndCost',
 }
 
 export interface CategoryItem {
@@ -89,216 +91,242 @@ export const useCategory = () => {
     return avatar;
   }, [avatar, remoteServerUrl]);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
-  const categoryGroups: CategoryGroup[] = useMemo(() => {
-    const groups: CategoryGroup[] = [];
+  const categoryGroups = useMemo<CategoryGroup[]>(
+    () => [
+      // Capability groups (S70). The sidebar used to be ordered by audience —
+      // personal / subscription / developer — which put a capability's settings in
+      // two different places depending on who it was for. Grouping by what the
+      // settings operate on keeps a capability's configuration together.
+      //
+      // The workspace sidebar is deliberately not mirroring this: it already has a
+      // Workspace group (with Members) and an Admin group (with the audit log),
+      // which is the same vocabulary, and its shape is asserted by its own tests.
 
-    // Account group — settings that follow the user everywhere (profile,
-    // appearance, hotkeys, messenger bindings). Kept as its own group so the
-    // workspace settings sidebar can mirror exactly this set.
-    const accountItems: CategoryItem[] = [
+      // 账户与外观 — settings that follow the user everywhere.
       {
-        icon: avatarUrl ? <Avatar avatar={avatarUrl} shape={'square'} size={26} /> : undefined,
-        key: SettingsTabs.Profile,
-        label: username || tAuth('tab.profile'),
+        items: [
+          {
+            icon: avatarUrl ? <Avatar avatar={avatarUrl} shape={'square'} size={26} /> : undefined,
+            key: SettingsTabs.Profile,
+            label: username || tAuth('tab.profile'),
+          },
+          {
+            icon: PaletteIcon,
+            key: SettingsTabs.Appearance,
+            label: t('tab.appearance'),
+          },
+          !mobile && {
+            icon: KeyboardIcon,
+            key: SettingsTabs.Hotkey,
+            label: t('tab.hotkey'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.Account,
+        title: t('group.profile'),
       },
-      {
-        icon: PaletteIcon,
-        key: SettingsTabs.Appearance,
-        label: t('tab.appearance'),
-      },
-      !mobile && {
-        icon: KeyboardIcon,
-        key: SettingsTabs.Hotkey,
-        label: t('tab.hotkey'),
-      },
-      // Messenger bindings are a per-user identity (owned by userId), so they
-      // live with the account rather than the agent configuration.
-      {
-        icon: MessageCircleIcon,
-        key: SettingsTabs.Messenger,
-        label: t('tab.messenger'),
-      },
-    ].filter(Boolean) as CategoryItem[];
 
-    groups.push({
-      items: accountItems,
-      key: SettingsGroupKey.Account,
-      title: t('group.profile'),
-    });
-
-    // Personal group — personal-scoped data (stats, devices, notifications).
-    const generalItems: CategoryItem[] = [
+      // 通知与渠道 — the user's own channels. Messenger bindings and notifications
+      // share a group for navigability only; each keeps its own token owner, scope
+      // and server-side permission, which S70 asks not to merge.
       {
-        icon: ChartColumnBigIcon,
-        key: SettingsTabs.Stats,
-        label: tAuth('tab.stats'),
+        items: [
+          {
+            icon: MessageCircleIcon,
+            key: SettingsTabs.Messenger,
+            label: t('tab.messenger'),
+          },
+          (enableBusinessFeatures || isDesktop) && {
+            icon: BellIcon,
+            key: SettingsTabs.Notification,
+            label: t('tab.notification'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.Channels,
+        title: t('group.channels'),
       },
-      {
-        icon: MonitorSmartphoneIcon,
-        key: SettingsTabs.Devices,
-        label: t('tab.devices'),
-      },
-      (enableBusinessFeatures || isDesktop) && {
-        icon: BellIcon,
-        key: SettingsTabs.Notification,
-        label: t('tab.notification'),
-      },
-    ].filter(Boolean) as CategoryItem[];
 
-    groups.push({
-      items: generalItems,
-      key: SettingsGroupKey.General,
-      title: t('group.personal'),
-    });
-
-    // Personal subscription / billing items. Always shown when business
-    // features are enabled — workspace settings live under a separate
-    // `/:workspaceSlug/settings/*` surface and never share this sidebar.
-    if (enableBusinessFeatures) {
-      const subscriptionItems: CategoryItem[] = [
-        { icon: Map, key: SettingsTabs.Plans, label: tSubscription('tab.plans') },
-        { icon: ChartColumnBigIcon, key: SettingsTabs.Usage, label: t('tab.usage') },
-        { icon: Coins, key: SettingsTabs.Credits, label: tSubscription('tab.credits') },
-        { icon: CreditCard, key: SettingsTabs.Billing, label: tSubscription('tab.billing') },
-        { icon: Gift, key: SettingsTabs.Referral, label: tSubscription('tab.referral') },
-      ];
-
-      groups.push({
-        items: subscriptionItems,
-        key: SettingsGroupKey.Subscription,
-        title: t('group.subscription'),
-      });
-    }
-
-    // Agent group
-    const agentItems: CategoryItem[] = [
-      // Provider settings should not depend on Advanced tools: new users may need
-      // non-LobeHub providers, and desktop users often bring their own API keys.
-      showProvider && {
-        icon: Brain,
-        key: SettingsTabs.Provider,
-        label: t('tab.provider'),
-      },
+      // 执行环境与 Agent — the agent plus the runtime it executes in.
       {
-        icon: Sparkles,
-        key: SettingsTabs.ServiceModel,
-        label: t('tab.serviceModel'),
+        items: [
+          // Provider settings should not depend on Advanced tools: new users may need
+          // non-LobeHub providers, and desktop users often bring their own API keys.
+          showProvider && {
+            icon: Brain,
+            key: SettingsTabs.Provider,
+            label: t('tab.provider'),
+          },
+          {
+            icon: Sparkles,
+            key: SettingsTabs.ServiceModel,
+            label: t('tab.serviceModel'),
+          },
+          {
+            icon: BrainCircuit,
+            key: SettingsTabs.Memory,
+            label: t('tab.memory'),
+          },
+          isDesktop && {
+            icon: EthernetPort,
+            key: SettingsTabs.Proxy,
+            label: t('tab.proxy'),
+          },
+          isDesktop && {
+            icon: TerminalSquare,
+            key: SettingsTabs.SystemTools,
+            label: t('tab.systemTools'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.Agent,
+        title: t('group.aiConfig'),
       },
-      {
-        icon: SkillsIcon,
-        key: SettingsTabs.Skill,
-        label: t('tab.skill'),
-      },
-      {
-        icon: TagIcon,
-        key: SettingsTabs.Labels,
-        label: t('tab.labels'),
-      },
-      {
-        icon: Blocks,
-        key: SettingsTabs.Connector,
-        label: t('tab.connector'),
-      },
-      {
-        icon: BrainCircuit,
-        key: SettingsTabs.Memory,
-        label: t('tab.memory'),
-      },
-      {
-        icon: KeyRound,
-        key: SettingsTabs.Creds,
-        label: t('tab.creds'),
-      },
-      showApiKeyManage && {
-        icon: KeyIcon,
-        key: SettingsTabs.APIKey,
-        label: tAuth('tab.apikey'),
-      },
-    ].filter(Boolean) as CategoryItem[];
 
-    groups.push({
-      items: agentItems,
-      key: SettingsGroupKey.Agent,
-      title: t('group.aiConfig'),
-    });
-
-    // System group
-    const systemItems: CategoryItem[] = [
-      isDesktop && {
-        icon: EthernetPort,
-        key: SettingsTabs.Proxy,
-        label: t('tab.proxy'),
-      },
-      isDesktop && {
-        icon: TerminalSquare,
-        key: SettingsTabs.SystemTools,
-        label: t('tab.systemTools'),
-      },
+      // 工具、技能与连接器
       {
-        icon: Database,
-        key: SettingsTabs.Storage,
-        label: t('tab.storage'),
+        items: [
+          {
+            icon: SkillsIcon,
+            key: SettingsTabs.Skill,
+            label: t('tab.skill'),
+          },
+          {
+            icon: Blocks,
+            key: SettingsTabs.Connector,
+            label: t('tab.connector'),
+          },
+          {
+            icon: TagIcon,
+            key: SettingsTabs.Labels,
+            label: t('tab.labels'),
+          },
+          enableOAuthApps && {
+            icon: AppWindowIcon,
+            key: SettingsTabs.OAuthApps,
+            label: tAuth('tab.oauthApps'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.Tools,
+        title: t('group.tools'),
       },
-      !hideDocs && {
-        icon: Info,
-        key: SettingsTabs.About,
-        label: t('tab.about'),
-      },
-    ].filter(Boolean) as CategoryItem[];
 
-    groups.push({
-      items: systemItems,
-      key: SettingsGroupKey.System,
-      title: t('group.system'),
-    });
-
-    // Developer group. Advanced comes first, followed by the system-level API
-    // Key (dev mode), OAuth apps (lab flag), and the Labs playground.
-    const developerItems: CategoryItem[] = [
+      // 用量与成本 — the quota / cost / billing / audit surface S70 says to keep.
+      // Statistics sit here rather than in a "personal" bucket: what they report is
+      // usage and spend, which is the same capability regardless of who reads it.
       {
-        icon: EllipsisIcon,
-        key: SettingsTabs.Advanced,
-        label: t('tab.advanced'),
+        items: [
+          {
+            icon: ChartColumnBigIcon,
+            key: SettingsTabs.Stats,
+            label: tAuth('tab.stats'),
+          },
+          enableBusinessFeatures && {
+            icon: ChartColumnBigIcon,
+            key: SettingsTabs.Usage,
+            label: t('tab.usage'),
+          },
+          enableBusinessFeatures && {
+            icon: Map,
+            key: SettingsTabs.Plans,
+            label: tSubscription('tab.plans'),
+          },
+          enableBusinessFeatures && {
+            icon: Coins,
+            key: SettingsTabs.Credits,
+            label: tSubscription('tab.credits'),
+          },
+          enableBusinessFeatures && {
+            icon: CreditCard,
+            key: SettingsTabs.Billing,
+            label: tSubscription('tab.billing'),
+          },
+          enableBusinessFeatures && {
+            icon: Gift,
+            key: SettingsTabs.Referral,
+            label: tSubscription('tab.referral'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.UsageAndCost,
+        title: t('group.usageAndCost'),
       },
-      isDevMode && {
-        icon: KeyIcon,
-        key: SettingsTabs.APIKey,
-        label: tAuth('tab.apikey'),
-      },
-      enableOAuthApps && {
-        icon: AppWindowIcon,
-        key: SettingsTabs.OAuthApps,
-        label: tAuth('tab.oauthApps'),
-      },
+
+      // 安全、权限与审计. The API Key entry used to be listed twice — once under
+      // `showApiKeyManage` and once under dev mode — so a user who met both gates
+      // saw two rows pointing at the same page.
       {
-        icon: FlaskConical,
-        key: SettingsTabs.Labs,
-        label: tLabs('title'),
+        items: [
+          {
+            icon: KeyRound,
+            key: SettingsTabs.Creds,
+            label: t('tab.creds'),
+          },
+          (showApiKeyManage || isDevMode) && {
+            icon: KeyIcon,
+            key: SettingsTabs.APIKey,
+            label: tAuth('tab.apikey'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.Security,
+        title: t('group.security'),
       },
-    ].filter(Boolean) as CategoryItem[];
 
-    groups.push({
-      items: developerItems,
-      key: SettingsGroupKey.Developer,
-      title: t('group.developer'),
-    });
+      // 数据管理 — where this install keeps its data, and the devices it syncs to.
+      {
+        items: [
+          {
+            icon: Database,
+            key: SettingsTabs.Storage,
+            label: t('tab.storage'),
+          },
+          {
+            icon: MonitorSmartphoneIcon,
+            key: SettingsTabs.Devices,
+            label: t('tab.devices'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.Data,
+        title: t('group.data'),
+      },
 
-    return groups;
-  }, [
-    t,
-    tAuth,
-    tLabs,
-    tSubscription,
-    enableBusinessFeatures,
-    hideDocs,
-    mobile,
-    showApiKeyManage,
-    showProvider,
-    isDevMode,
-    enableOAuthApps,
-    avatarUrl,
-    username,
-  ]);
+      // 开发者 — app-level settings that operate on the install rather than on any
+      // capability: update channel, diagnostics, lab flags, version info. The plan
+      // names no group for these, and fitting them elsewhere would mislabel them.
+      {
+        items: [
+          {
+            icon: EllipsisIcon,
+            key: SettingsTabs.Advanced,
+            label: t('tab.advanced'),
+          },
+          {
+            icon: FlaskConical,
+            key: SettingsTabs.Labs,
+            label: tLabs('title'),
+          },
+          !hideDocs && {
+            icon: Info,
+            key: SettingsTabs.About,
+            label: t('tab.about'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.Developer,
+        title: t('group.developer'),
+      },
+    ],
+    [
+      t,
+      tAuth,
+      tLabs,
+      tSubscription,
+      enableBusinessFeatures,
+      hideDocs,
+      mobile,
+      showApiKeyManage,
+      showProvider,
+      isDevMode,
+      enableOAuthApps,
+      avatarUrl,
+      username,
+    ],
+  );
 
   return categoryGroups;
 };

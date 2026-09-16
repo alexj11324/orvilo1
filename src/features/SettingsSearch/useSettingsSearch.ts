@@ -28,7 +28,7 @@ import { containsHan, loadPinyinTexts, type PinyinTexts } from './pinyin';
 export interface SettingsSearchResult {
   /** Present on item-level results; used as the URL hash for scroll targeting */
   anchor?: string;
-  /** Where the result lives, e.g. `General › Appearance` */
+  /** Where the result lives, e.g. `Account › Appearance` */
   breadcrumb: string;
   icon?: IconProps['icon'];
   key: string;
@@ -117,10 +117,12 @@ export const useSettingsSearch = (
 
     for (const group of categoryGroups) {
       for (const item of group.items) {
-        // The same tab may appear in multiple groups (e.g. APIKey in Agent and
-        // System when dev mode is on); index only the first occurrence,
-        // matching the sidebar's top-to-bottom order — otherwise one query
-        // shows duplicate results pointing at the same page.
+        // One tab, one result: when a tab is reachable from two groups, index the
+        // first occurrence so the sidebar's top-to-bottom order decides which group
+        // it is reported under, and one query cannot return two results pointing at
+        // the same page. No tab is listed twice since the S70 regroup merged the
+        // duplicate API Key entry, but the map below is keyed by tab and must keep
+        // agreeing with that rule if one ever is.
         if (visibleTabs.has(item.key)) continue;
 
         const url = item.href ?? getTabUrl(item.key);

@@ -1,0 +1,93 @@
+name: PR21 Review Fix Verification
+
+on:
+  push:
+    branches: [feat/issue-prerequisite-gates]
+    paths: [.github/workflows/review21-fixes.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr21-review-fixes
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'alexj11324/orvilo1' && github.ref == 'refs/heads/feat/issue-prerequisite-gates'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+      - name: Apply source and regression fixes
+        id: apply
+        run: |
+          python3 .github/review21-fixes.py
+          python3 .github/review21-tests.py
+          git add apps packages src
+          git diff --cached --name-only > /tmp/review21-files.txt
+          git diff --check
+      - uses: ./.github/actions/setup-env
+      - name: Install dependencies
+        id: install
+        run: pnpm install
+      - name: Lint and format changed files
+        id: lint
+        run: |
+          mapfile -t files < /tmp/review21-files.txt
+          bun run check --lint "${files[@]}"
+      - name: Commit source and remove temporary transport
+        if: always() && steps.apply.outcome == 'success'
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/review21-fixes.py .github/review21-tests.py .github/workflows/review21-fixes.yml
+          git add apps packages src
+          git commit -m '🐛 Address prerequisite permission, recovery, deletion and scheduling reviews'
+          git push origin HEAD:refs/heads/feat/issue-prerequisite-gates
+          git rev-parse HEAD > /tmp/review21-head.txt
+      - name: Database dependency and deletion regressions
+        if: always() && steps.apply.outcome == 'success' && steps.install.outcome == 'success'
+        working-directory: packages/database
+        run: bunx vitest run --silent='passed-only' src/models/__tests__/taskDependency.test.ts src/models/__tests__/task.test.ts
+      - name: Server lifecycle, scheduling and routed deletion regressions
+        if: always() && steps.apply.outcome == 'success' && steps.install.outcome == 'success'
+        run: >-
+          bunx vitest run --project server --silent='passed-only'
+          apps/server/src/services/taskRunner/cascade.test.ts
+          apps/server/src/services/taskRunner/heartbeatTick.test.ts
+          apps/server/src/services/taskRunner/scheduleTick.test.ts
+          apps/server/src/services/taskLifecycle/onTopicComplete.test.ts
+          apps/server/src/services/taskLifecycle/heartbeatRearm.test.ts
+          apps/server/src/services/taskIntegration/__tests__/index.test.ts
+          apps/server/src/services/task/index.test.ts
+          apps/server/src/services/taskGraph/index.test.ts
+          apps/server/src/routers/lambda/__tests__/integration/task.integration.test.ts
+      - name: Frontend polling, dependency editor and selector regressions
+        if: always() && steps.apply.outcome == 'success' && steps.install.outcome == 'success'
+        run: >-
+          bunx vitest run --project app --silent='passed-only'
+          src/store/task/slices/detail/action.test.ts
+          src/store/task/selectors/detailSelectors.test.ts
+          src/features/AgentTasks/AgentTaskDetail/TaskDependencies.test.tsx
+      - name: Full typecheck
+        if: always() && steps.apply.outcome == 'success' && steps.install.outcome == 'success'
+        run: pnpm type-check
+      - name: Export exact source evidence
+        if: always()
+        run: |
+          git archive --format=tar HEAD | gzip > /tmp/review21-source.tar.gz
+          git diff HEAD > /tmp/review21-uncommitted.patch
+          git rev-parse HEAD > /tmp/review21-head.txt
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: pr21-review-fix-evidence
+          path: |
+            /tmp/review21-source.tar.gz
+            /tmp/review21-head.txt
+            /tmp/review21-uncommitted.patch
+          retention-days: 3

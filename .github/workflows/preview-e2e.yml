@@ -1,0 +1,62 @@
+name: Preview E2E
+
+# 与 preview-smoke 同一触发时机，但跑完整的 @P0 用户旅程套件。
+# 需要 secrets：PREVIEW_DATABASE_URL、VERCEL_AUTOMATION_BYPASS_SECRET。
+
+on:
+  deployment_status: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-e2e-${{ github.event.deployment.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      contains(github.event.deployment_status.environment, 'Preview')
+    name: E2E test Vercel Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASE_URL: ${{ github.event.deployment_status.target_url }}
+      DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.deployment.sha }}
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers (with system deps)
+        run: bunx playwright install --with-deps chromium
+
+      - name: Check preview environment
+        run: bun scripts/ci/checkPreviewEnv.mts
+
+      - name: Run E2E tests
+        working-directory: e2e
+        run: pnpm exec cucumber-js --config cucumber.config.js --tags '@P0'
+        env:
+          E2E_PARALLEL: '3'
+          E2E_REPORTS: '0'
+          HEADLESS: 'true'
+
+      - name: Upload E2E test artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: preview-e2e-artifacts
+          path: |
+            e2e/reports
+            e2e/screenshots
+          if-no-files-found: ignore

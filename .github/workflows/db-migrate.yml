@@ -1,0 +1,44 @@
+name: Database Migration
+
+# Vercel build 不再跑 db:migrate（build:vercel 只构建）。数据库迁移由这个
+# 手动 workflow 执行：production 走 GitHub environment 保护，preview 用于
+# 共享 Preview 库的日常推进。
+#
+# 需要 secrets：PRODUCTION_DATABASE_URL、PREVIEW_DATABASE_URL。
+# 建议在 GitHub → Environments → production 上配置 required reviewers。
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '迁移目标环境'
+        type: choice
+        options:
+          - preview
+          - production
+        default: preview
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Migrate ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.target }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run migrations
+        run: bun run db:migrate
+        env:
+          DATABASE_URL: ${{ inputs.target == 'production' && secrets.PRODUCTION_DATABASE_URL || secrets.PREVIEW_DATABASE_URL }}
+          DATABASE_DRIVER: node

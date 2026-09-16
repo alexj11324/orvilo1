@@ -70,6 +70,13 @@ export class CustomWorld extends World {
 
     this.browserContext = await this.browser.newContext({
       baseURL: BASE_URL,
+      ...(process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+        ? {
+            extraHTTPHeaders: {
+              'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+            },
+          }
+        : {}),
       viewport: { height: 720, width: 1280 },
     });
 

@@ -1,0 +1,58 @@
+name: Preview DB Cleanup
+
+# PR 关闭时删除对应的 orvilo_pr_<n> 数据库和该分支的 Vercel branch env。
+# 与 preview-db.yml 一样由 PREVIEW_EPHEMERAL_DB_ENABLED 开关控制。
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-db-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  teardown:
+    if: >-
+      vars.PREVIEW_EPHEMERAL_DB_ENABLED == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Drop per-PR database
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DB_NAME: orvilo_pr_${{ github.event.pull_request.number }}
+      HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+      ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Drop database
+        run: |
+          set -euo pipefail
+          # FORCE 断开残留连接（Postgres 13+；ParadeDB pg17 支持）
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 \
+            -c "DROP DATABASE IF EXISTS \"$DB_NAME\" WITH (FORCE)"
+          echo "dropped $DB_NAME"
+
+      - name: Remove Vercel branch env DATABASE_URL
+        run: |
+          set -euo pipefail
+          ENV_IDS=$(curl -fsS \
+            "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            | jq -r --arg b "$HEAD_BRANCH" \
+              '.envs[]? | select(.key == "DATABASE_URL" and .gitBranch == $b) | .id')
+          if [ -z "$ENV_IDS" ]; then
+            echo "no branch-scoped DATABASE_URL for $HEAD_BRANCH; nothing to remove"
+            exit 0
+          fi
+          for id in $ENV_IDS; do
+            curl -fsS -X DELETE \
+              "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env/${id}?teamId=${VERCEL_ORG_ID}" \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}" > /dev/null
+            echo "removed env $id"
+          done

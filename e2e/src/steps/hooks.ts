@@ -36,7 +36,16 @@ BeforeAll({ timeout: 600_000 }, async function () {
   }
 
   console.log('🔐 Signing in once through the auth API...');
-  const api = await request.newContext({ baseURL: baseUrl });
+  const api = await request.newContext({
+    baseURL: baseUrl,
+    ...(process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+      ? {
+          extraHTTPHeaders: {
+            'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+          },
+        }
+      : {}),
+  });
 
   try {
     const response = await api.post('/api/auth/sign-in/email', {

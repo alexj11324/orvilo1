@@ -1,0 +1,63 @@
+name: Preview Smoke
+
+# Vercel Git integration 每次部署都会产生 deployment_status 事件；
+# 只在 Preview 部署成功后对部署 URL 跑 @smoke 测试。
+# 需要 secrets：PREVIEW_DATABASE_URL、VERCEL_AUTOMATION_BYPASS_SECRET
+# （见 .env.example.preview 末尾的 CI-side secrets 一节）。
+
+on:
+  deployment_status: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-smoke-${{ github.event.deployment.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      contains(github.event.deployment_status.environment, 'Preview')
+    name: Smoke test Vercel Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE_URL: ${{ github.event.deployment_status.target_url }}
+      DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.deployment.sha }}
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers (with system deps)
+        run: bunx playwright install --with-deps chromium
+
+      - name: Check preview environment
+        run: bun scripts/ci/checkPreviewEnv.mts
+
+      - name: Run smoke tests
+        working-directory: e2e
+        run: pnpm exec cucumber-js --config cucumber.config.js --tags '@smoke'
+        env:
+          E2E_PARALLEL: '3'
+          HEADLESS: 'true'
+
+      - name: Upload E2E test artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: preview-smoke-artifacts
+          path: |
+            e2e/reports
+            e2e/screenshots
+          if-no-files-found: ignore

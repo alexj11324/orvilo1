@@ -1,0 +1,115 @@
+name: Preview DB
+
+# PR 打开时为该 PR 在 Preview ParadeDB 实例上建独立数据库（orvilo_pr_<n>），
+# 跑完迁移后通过 Vercel API 把 DATABASE_URL 写成该分支的 branch-scoped env，
+# 让此分支的 Preview 部署指向自己的库。关闭 PR 时由 preview-cleanup.yml 清理。
+#
+# 默认不启用：把 repo variable PREVIEW_EPHEMERAL_DB_ENABLED 设为 true 才会跑。
+# 需要 secrets：PREVIEW_DB_ADMIN_URL（admin 连接串，建议指到 postgres 库）、
+# VERCEL_TOKEN、VERCEL_ORG_ID、VERCEL_PROJECT_ID。
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+
+# 建库/写 env 不是幂等中间态可以随便打断的操作，取消并发会留下半截环境
+concurrency:
+  group: preview-db-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    # fork PR 拿不到 secrets；同仓库 PR 才允许跑
+    if: >-
+      vars.PREVIEW_EPHEMERAL_DB_ENABLED == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Provision per-PR database
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB_NAME: orvilo_pr_${{ github.event.pull_request.number }}
+      HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+      ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Create database
+        run: |
+          set -euo pipefail
+          # 重复打开 PR 时库可能已存在；CREATE 失败就确认它存在，保持幂等
+          if ! psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$DB_NAME\""; then
+            psql "$ADMIN_URL" -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1
+            echo "database $DB_NAME already exists, reusing"
+          fi
+
+      - name: Resolve app database URL
+        id: db
+        run: |
+          # admin URL 的库名部分换成新库；保留查询参数（如 sslmode=require）
+          PR_DB_URL=$(echo "$ADMIN_URL" | sed -E "s|/[^/?]+(\?.*)?\$|/${DB_NAME}\1|")
+          echo "::add-mask::$PR_DB_URL"
+          echo "url=$PR_DB_URL" >> "$GITHUB_OUTPUT"
+          echo "app database: ${PR_DB_URL%%\?*} (credentials hidden)"
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: ${{ steps.db.outputs.url }}
+          DATABASE_DRIVER: node
+        run: bun run db:migrate
+
+      - name: Set Vercel branch env DATABASE_URL
+        env:
+          PR_DB_URL: ${{ steps.db.outputs.url }}
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            "https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env?upsert=true&teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -n --arg v "$PR_DB_URL" --arg b "$HEAD_BRANCH" '{
+              key: "DATABASE_URL",
+              value: $v,
+              type: "encrypted",
+              target: ["preview"],
+              gitBranch: $b
+            }')" | jq -r '.key + " → preview@" + .gitBranch'
+
+      - name: Redeploy latest preview deployment for branch
+        # 首个部署可能早于 env 写入；尽量触发一次 redeploy 让它吃到新 DATABASE_URL。
+        # 还没有部署就跳过 —— 下一次 push 自然会用到新 env。
+        env:
+          PR_DB_URL: ${{ steps.db.outputs.url }}
+        run: |
+          set -euo pipefail
+          PROJECT_NAME=$(curl -fsS \
+            "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" | jq -r '.name')
+          DEPLOYMENT_ID=$(curl -fsS \
+            "https://api.vercel.com/v6/deployments?projectId=${VERCEL_PROJECT_ID}&teamId=${VERCEL_ORG_ID}&meta-githubCommitRef=${HEAD_BRANCH}&target=preview&limit=1" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" | jq -r '.deployments[0].uid // empty')
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "no existing preview deployment for $HEAD_BRANCH yet; nothing to redeploy"
+            exit 0
+          fi
+          curl -fsS -X POST \
+            "https://api.vercel.com/v13/deployments?teamId=${VERCEL_ORG_ID}&forceNew=1" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -n --arg name "$PROJECT_NAME" --arg id "$DEPLOYMENT_ID" '{
+              name: $name,
+              deploymentId: $id,
+              target: "preview"
+            }')" | jq -r '"redeployed: " + .url'

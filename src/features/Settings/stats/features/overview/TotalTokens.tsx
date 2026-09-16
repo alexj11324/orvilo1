@@ -13,7 +13,7 @@ import { formatShortenNumber } from '@/utils/format';
 import { lastMonth } from '@/utils/time';
 
 import { HeatmapType } from '../../types';
-import TotalCard from './ShareButton/TotalCard';
+import TotalCard from './TotalCard';
 
 /**
  * Cumulative token count. Derived from the daily token-heatmap series (same SWR

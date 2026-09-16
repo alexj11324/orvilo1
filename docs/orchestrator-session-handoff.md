@@ -14,14 +14,15 @@
 
 ## 当前状态：三个 stacked PR
 
-| PR  | 分支                                 | base                                 | 内容                                               | 验证                                         |
-| --- | ------------------------------------ | ------------------------------------ | -------------------------------------------------- | -------------------------------------------- |
-| #5  | `feat/orchestrator-sandbox-contract` | `main`                               | Phase C：sandbox 远端分支契约                      | 文件级 check 绿（64 tests）；`--type` 未跑完 |
-| #6  | `feat/orchestrator-worktree-cleanup` | `feat/orchestrator-sandbox-contract` | Phase D1：cancel/delete/blocked 时拆 task worktree | check 绿（114 tests）；`--type` 未跑完       |
-| #7  | `feat/orchestrator-integration-ui`   | `feat/orchestrator-sandbox-contract` | Phase D2：run 卡片 / 抽屉上的集成状态 chip         | check 绿（104 tests）；`--type` 未跑完       |
+| PR  | 分支                                 | base                                 | 内容                                               | 验证                                                                   |
+| --- | ------------------------------------ | ------------------------------------ | -------------------------------------------------- | ---------------------------------------------------------------------- |
+| #5  | `feat/orchestrator-sandbox-contract` | `main`                               | Phase C：sandbox 远端分支契约                      | **CI 全绿 CLEAN**（含 push Test CI + E2E）                             |
+| #6  | `feat/orchestrator-worktree-cleanup` | `feat/orchestrator-sandbox-contract` | Phase D1：cancel/delete/blocked 时拆 task worktree | **CI 全绿 CLEAN**；Test Database 曾挂一次是 FTS fixture 偶发，重跑已过 |
+| #7  | `feat/orchestrator-integration-ui`   | `feat/orchestrator-sandbox-contract` | Phase D2：run 卡片 / 抽屉上的集成状态 chip         | **CI 全绿 CLEAN**；含新增 `RunIntegrationTag.test.tsx`（9 用例）       |
+| #8  | `ci/typecheck-gate`                  | `main`                               | 全仓 type-check 移入 GHA + 本地 fail-fast          | `Typecheck` job 已验证绿；其余 job 跑完即 CLEAN                        |
 
-合并顺序：#5 → #6 → #7（#6/#7 merge 后 GitHub 会自动 retarget 到 main；
-不自动就手动 `gh pr edit -B main`）。
+合并顺序：**#8 → #5 → #6 → #7**（#8 先合，让后续 push 都带 typecheck 门禁；
+\#6/#7 merge 后 GitHub 会自动 retarget 到 main；不自动就手动 `gh pr edit -B main`）。
 
 仓库：`https://github.com/alexj11324/orvilo1.git`（fork 的实际 trunk 是 `main`，
 不是 AGENTS.md 里写的 `canary`——#1/#3 都合的 `main`）。
@@ -77,7 +78,7 @@ requestedDeviceId: config.deviceId }).kind === 'sandbox'`。
   serverRuntimes/index → task.ts）。测试靠 mock `@/server/services/taskIntegration`
   截断（和既有 `TaskService` mock 同款）。生产路径 builtin→index→task 顺序安全。
 - D2 `RunIntegrationTag` 只渲染有 integration 记录的 run；tooltip 里放
-  branch→base /attempts/conflicts /lastError/ PR 链接。
+  branch→base /attempts/conflicts/lastError/ PR 链接。
 
 ## 评审 findings 处理情况（独立 light review 已完成）
 
@@ -92,13 +93,17 @@ requestedDeviceId: config.deviceId }).kind === 'sandbox'`。
 
 ## 待办（按优先级）
 
-1. **`bun run check --type` 全仓 type-check**：最后一次没跑完（tsgo 冷启动
-   \~15–25min）。#5/#6/#7 各自都要过一次再合。
+1. ~~全仓 type-check~~ **已完成 —— 移入 CI**。`--type` 本地跑不动（tsgo/tsc
+   都 OOM），已加 GHA `Typecheck` job（#8，`ci/typecheck-gate` → main），
+   `pnpm type-check` / `check --type` 本地直接 fail-fast
+   （`scripts/type-check.mjs`）。#8 的 Typecheck job 已验证绿。
+   **合并顺序变为 #8 → #5 → #6 → #7**（#8 先合，后续 push 都带 typecheck 门禁）。
 2. **acceptance**：orchestrator 是行为变更，仓库约定要产品级验证。最低限度：
    起一个 repo-bound task（assignee=claude-code，workspace.repo = 某个测试 repo）
    → 看 sandbox 里 branch+push+PR → integrator run 合回 → run 卡片上的
    integration chip。跑完把 `app.lobehub.com/acceptance/<id>` 链接补进 #5。
-3. **D2 视觉检查**：Tag 在 TopicCard / 抽屉上的渲染没实际看过截图。
+3. **D2 视觉检查**：RTL 测试已补（`RunIntegrationTag.test.tsx`，9 用例），
+   但 chip 在 TopicCard / 抽屉上的实际渲染没看过截图。
 4. Phase E（下一个大块，见 plan 文档 non-goals 外沿）：
    - blocked 之后共享 integration worktree 里的 stale open merge 清理
      （需要 abort RPC 或 per-task integration worktree）
@@ -112,8 +117,8 @@ requestedDeviceId: config.deviceId }).kind === 'sandbox'`。
 ```bash
 # 文件级 lint+相关测试（不要跑 bun run test）
 bun run check <files...>
-# 全仓 type-check（慢）
-bun run .agents/scripts/check/cli.ts --type
+# 全仓 type-check：本地禁跑（fail-fast），看 CI 的 Typecheck job
+# 本地 scoped 检查可用：cd apps/server && pnpm type-check
 # 手动单测
 bunx vitest run --silent='passed-only' <test-file>
 # 依赖

@@ -346,16 +346,20 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       const task = await taskModel().resolve(args.identifier);
       if (!task) return { content: `Task not found: ${args.identifier}`, success: false };
 
-      // Tear down provisioned run worktrees before the task_topics rows
-      // cascade away with the task. Best-effort — never blocks the delete.
+      let integration: TaskIntegrationService | undefined;
+      let snapshot:
+        Awaited<ReturnType<TaskIntegrationService['snapshotTaskWorktrees']>> | undefined;
       if (deps.db && deps.userId) {
         const workspaceId = deps.workspaceId ?? (await resolveWorkspaceId(deps.db, task.id));
-        await new TaskIntegrationService(deps.db, deps.userId, workspaceId).cleanupTaskWorktrees(
-          task.id,
-        );
+        integration = new TaskIntegrationService(deps.db, deps.userId, workspaceId);
+        snapshot = await integration.snapshotTaskWorktrees(task.id);
       }
 
-      await taskModel().delete(task.id);
+      // The model checks dependencies atomically. Never destroy worktrees or
+      // report a successful deletion when that guard rejects or the row is gone.
+      const deleted = await taskModel().delete(task.id);
+      if (!deleted) return { content: `Task not found: ${args.identifier}`, success: false };
+      if (integration && snapshot) await integration.cleanupTaskWorktrees(task.id, snapshot);
 
       return {
         content: formatTaskDeleted(task.identifier, task.name),

@@ -1,9 +1,15 @@
 import { normalizeListTasksParams, UNFINISHED_TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TaskDependencyError } from '@/database/models/taskDependency';
+
 import { createTaskRuntime, taskRuntime } from '../task';
 
 const verifyMocks = vi.hoisted(() => ({ createCriteriaFromDrafts: vi.fn() }));
+const deletionMocks = vi.hoisted(() => ({
+  cleanupTaskWorktrees: vi.fn(),
+  snapshotTaskWorktrees: vi.fn(),
+}));
 
 const memberMocks = vi.hoisted(() => ({
   findLinksByUserIds: vi.fn(),
@@ -70,7 +76,9 @@ vi.mock('@/server/services/task', () => ({
 // agentRuntime → toolExecution/builtin → serverRuntimes/index) cycle back
 // onto this module mid-load; a stubbed class keeps the graph shallow.
 vi.mock('@/server/services/taskIntegration', () => ({
-  TaskIntegrationService: vi.fn(() => ({ cleanupTaskWorktrees: vi.fn() })),
+  TaskIntegrationService: vi.fn(function () {
+    return deletionMocks;
+  }),
 }));
 
 vi.mock('@/server/services/verify/planGenerator', () => ({
@@ -1260,5 +1268,53 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
       expect(result.success).toBe(false);
       expect(result.content).toContain('unavailable');
     });
+  });
+});
+
+describe('agent-tool deletion prerequisite guard', () => {
+  const task = { id: 'task-delete', identifier: 'T-99', name: 'Delete fixture' };
+  const fixture = (remove: ReturnType<typeof vi.fn>) =>
+    createTaskRuntime({
+      db: {} as never,
+      userId: 'owner',
+      workspaceId: 'workspace',
+      agentModel: {} as never,
+      taskModel: { resolve: vi.fn().mockResolvedValue(task), delete: remove } as never,
+      taskService: {} as never,
+      taskCaller: {} as never,
+    });
+
+  beforeEach(() => {
+    deletionMocks.snapshotTaskWorktrees.mockReset().mockResolvedValue([]);
+    deletionMocks.cleanupTaskWorktrees.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('preserves the worktree when an inbound dependency rejects deletion', async () => {
+    const remove = vi.fn().mockRejectedValue(new TaskDependencyError('Remove dependency links'));
+    await expect(fixture(remove).deleteTask({ identifier: task.identifier })).rejects.toThrow(
+      'dependency links',
+    );
+    expect(deletionMocks.cleanupTaskWorktrees).not.toHaveBeenCalled();
+  });
+
+  it('cleans up from the snapshot only after a successful guarded delete', async () => {
+    const remove = vi.fn().mockResolvedValue(true);
+    const result = await fixture(remove).deleteTask({ identifier: task.identifier });
+    expect(result.success).toBe(true);
+    expect(deletionMocks.cleanupTaskWorktrees).toHaveBeenCalledWith(task.id, []);
+    expect(deletionMocks.snapshotTaskWorktrees.mock.invocationCallOrder[0]).toBeLessThan(
+      remove.mock.invocationCallOrder[0],
+    );
+    expect(remove.mock.invocationCallOrder[0]).toBeLessThan(
+      deletionMocks.cleanupTaskWorktrees.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('does not report deletion or clean up if the row was not deleted', async () => {
+    const result = await fixture(vi.fn().mockResolvedValue(false)).deleteTask({
+      identifier: task.identifier,
+    });
+    expect(result.success).toBe(false);
+    expect(deletionMocks.cleanupTaskWorktrees).not.toHaveBeenCalled();
   });
 });

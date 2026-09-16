@@ -113,15 +113,19 @@ Then(
       await expect(blocked).toBeVisible({ timeout: 25_000 });
       await rejected('run', { id: target.id });
       await screenshot('reopened');
-      await this.page.getByRole('button', {
-        exact: true,
-        name: `Remove prerequisite ${first.identifier}`,
-      }).click();
+      await this.page
+        .getByRole('button', {
+          exact: true,
+          name: `Remove prerequisite ${first.identifier}`,
+        })
+        .click();
       await expect(ready).toBeVisible();
-      await this.page.getByRole('button', {
-        exact: true,
-        name: `Remove prerequisite ${second.identifier}`,
-      }).click();
+      await this.page
+        .getByRole('button', {
+          exact: true,
+          name: `Remove prerequisite ${second.identifier}`,
+        })
+        .click();
       await expect(empty).toBeVisible();
     } catch (error) {
       primaryFailure = { error };
@@ -152,6 +156,7 @@ Then(
       );
     }
     if (primaryFailure) throw primaryFailure.error;
-    if (failures.length > 0) throw new AggregateError(failures, 'Prerequisite fixture cleanup failed');
+    if (failures.length > 0)
+      throw new AggregateError(failures, 'Prerequisite fixture cleanup failed');
   },
 );

@@ -244,8 +244,8 @@ jobs:
           E2E_REPORTS: '0'
           HEADLESS: 'true'
 
-      - name: Upload E2E test artifacts (on failure)
-        if: failure()
+      - name: Upload E2E test artifacts
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: e2e-artifacts

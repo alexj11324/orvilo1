@@ -798,6 +798,8 @@ created task”，但所在参数根本没有 `goalId` 字段（`task.create` �
 
 这一段要动的面（`TaskDetailSections` 的挂载职责、会话→任务的显式入口、防重复提交）都在**任务详情与会话**上，与 S60.1/S60.2 无耦合，但 §9.3 同时要求「不改变当前 Agent / Engine 选择、配置持久化、模型绑定或 resume 身份语义」—— 这是 §0.1 列为**保护对象**的两项之一（Orvilo 引擎 harness）。在不跑服务端、不跑类型检查的本轮约束下，我无法验证「改了挂载职责但没动 resume 身份」；猜错的后果是任务聊天串到另一个 Agent 的上下文。
 
+**S60.3 之前已补完 S60.2 的 Agent 配置一侧（`73102849`）**：新增「规则与经验」tab，受 `enableSelfLearning` 门控，四处注册点同步。它只做入口与范围摘要，读改停用仍在规则页 —— 避免同一 lesson 出现两条写路径。
+
 **结论**：与 S30.5、S50 余项同属 §13.1 的 S80 执行位置。
 
 ### 2.8 S70 实施记录
@@ -808,6 +810,15 @@ created task”，但所在参数根本没有 `goalId` 字段（`task.create` �
 **已完成 —— 无消费者标识（`0a4f0b05`）**：死字段 `NavigationRoute.electronKey`、死枚举
 `GroupKey.Community/Pages`、`SidebarTabKey` 的五个退役成员。变死的 lab flag `showMarket`
 **决定不删**并记录了理由（它是服务端配置契约，且是 `schema.test.ts` 的通用样本）。
+
+**已完成 —— 无消费者的 Coming Soon 文案（`f03a0da6`）**
+
+复核后把「Coming Soon 卡」这个靶点收敛到了**点了没反应的项**：`management.actionsMenu.autoSummarize.*`
+标的是一个只会宣布自己「即将上线」的话题动作（连那一行都不存在了，只剩文案），
+`image.notSupportGuide.*` 则是 S30.2 图像退役后没人再渲染的说明。两簇共 10 个 key，三份手维护的
+en-US /zh-CN 与默认源 key-for-key 对齐；其余 30 个生成语种按 `AGENTS.md` 交给每日 auto-i18n 工作流。
+
+渠道平台的 `comingSoon` **保留**：复核发现它是真实功能态而非营销占位。
 
 **已完成 —— 统计页的聊天排名与分享海报（`2d9ee3a6`）**
 
@@ -823,7 +834,7 @@ created task”，但所在参数根本没有 `goalId` 字段（`task.create` �
 
 - **设置分组**：§10 要求整理为八组。现有 `useCategory.tsx` 的组织与之不同，重排是一次纯 IA 变更，会动到个人设置与工作区设置两条挂载路径。未做。
 - **Onboarding 文案**：本分支的 `src/features/Onboarding/` 未改（主工作区里那份 Onboarding 精简是**另一个 agent** 的在途改动，§0.3 已裁决不归本分支管）。
-- **Coming Soon 卡**：`channel.comingSoon*` 三处（`agent/channel/Header.tsx:279`、`detail/ComingSoon.tsx:66,68`、`list.tsx:266`）。§10 要区分「纯营销占位」与「真实能力不可用的解释」（需要桌面设备配置、权限不足、连接失效）。渠道平台的 coming-soon 属于前者，但删它要动渠道平台的**定义清单**（`platformDef.comingSoon`），影响到渠道列表本身 —— 需要先确认这些平台是否还有别的引用。已挂 §5 跟进项 16。
+- **~~Coming Soon 卡~~（已更正，见 §5 跟进项 16）**：`channel.comingSoon*` 三处（`agent/channel/Header.tsx:279`、`detail/ComingSoon.tsx:66,68`、`list.tsx:266`）。§10 要区分「纯营销占位」与「真实能力不可用的解释」（需要桌面设备配置、权限不足、连接失效）。渠道平台的 coming-soon 属于前者，但删它要动渠道平台的**定义清单**（`platformDef.comingSoon`），影响到渠道列表本身 —— 需要先确认这些平台是否还有别的引用。已挂 §5 跟进项 16。
 
 ---
 
@@ -930,7 +941,11 @@ S10 的交付范围，但**必须挂到具体工作包**，否则会在「文档
 | 13  | 项目产物列表按协调者而非按项目过滤                                | `src/features/Projects/Workspace/ProjectDashboard.tsx:148-157`（`originAgentId`）                                      | S60 或独立小修               | 该处用 `workService.listByWorkspace({ originAgentId: coordinatorAgentId })` 取「最新产物」，与 `project_works` 表语义不一致 —— 项目没配协调者时这张卡片会空，而 `projectWorks` 里其实有数据                                                                                                                                                                                       |
 | 14  | `project_working_directories` 零消费者                            | `packages/database/src/schemas/project.ts:105`                                                                         | 不清理（观察）               | 表已建但只有 `topic.ts:43` 一个 FK 引用，无 model /router/service 写入。§12 的规矩是本轮不自动清库，故只记录；它也不在本分支新增                                                                                                                                                                                                                                                  |
 | 15  | 残留错误注释 “Bind a goal entity”                                 | `src/services/task.ts:125`；`src/store/task/slices/detail/action.ts:296`                                               | 可随手清理                   | 注释挂在一个没有 `goalId` 字段的参数上（`task.create` 也不接受 `goal`，见 §2.7）。纯注释，无行为影响，故未混进 S60 提交                                                                                                                                                                                                                                                           |
-| 16  | 渠道平台的 Coming Soon 卡                                         | `src/routes/(main)/agent/channel/{Header.tsx:279,detail/ComingSoon.tsx:66,68,list.tsx:266}`                            | S70 余项                     | 删它要动平台定义清单（`platformDef.comingSoon`），不是只删一个组件。需先确认这些平台是否还有别的引用                                                                                                                                                                                                                                                                              |
+| 16  | ~~渠道平台的 Coming Soon 卡~~ **分类更正**                        | `src/routes/(main)/agent/channel/const.ts:41-64`、`index.tsx:85-89`、`list.tsx:244`                                    | **已核实为非靶点**           | 复核后否掉了我原先的判断：`comingSoon` 是个**真实功能态**而不是营销占位 —— 它决定平台排序、`enableImessage` lab 开关会切换它、详情页据此渲染说明页而非配置表单。这正是 §10 要求**保留**的「真实能力不可用的解释」。真正的靶点是**点了没反应的项**，见 §2.8 的 i18n 清理（`f03a0da6`）                                                                                             |
 | 17  | 设置分组未整理                                                    | `src/features/Settings/hooks/useCategory.tsx`                                                                          | S70 余项                     | §10 要八组；现有分组不同，且个人 / 工作区两条挂载路径都要同步                                                                                                                                                                                                                                                                                                                     |
-| 18  | Agent 配置里的「规则与经验」入口                                  | 候选落点 `src/features/AgentSetting/AgentSelfIteration/index.tsx`                                                      | S60 余项                     | §9.2 原话是「下沉到 Agent 配置中的『规则与经验』」。本轮把 `/agent/:aid/self-evolving` 从画像改成规则清单（已在 Agent 区），但**没有**在 Agent 设置 tab 里加入口 —— 加它要同时改 `Content.tsx`、`AgentCategory/useCategory.tsx`、`AgentSettingsContent.tsx` 三处，不同步就会有一个形态看不到该 tab                                                                                |
+| 18  | Agent 配置里的「规则与经验」入口                                  | `src/features/AgentSetting/AgentRules/`                                                                                | **已完成 `73102849`**        | 新增 `ChatSettingsTabs.Rules` 与「规则与经验」tab，受 `enableSelfLearning` 门控；四处注册点（枚举 / 弹层 tab 列表与可用性 / 移动与侧栏列表 / 内容分发）同步改动。刻意**不做成第二个编辑器** —— 读改停用仍在 `/agent/:aid/self-evolving` 上，避免同一 lesson 出现两条写路径                                                                                                        |
 | 19  | 服务端死能力（零消费者，勿在无服务端环境删）                      | `expertiseBindings.enabled`；`expertiseInsights`；`expertise.listLessons`；`actorsByDomain` / `listRuns`               | S80（仅记录）                | 与 §2.7 的成熟度死数据同源：schema 与索引齐备但无生产者。§10 要求「确认无消费者后才移除」，而这几处需要服务端与 CLI 侧一并核验                                                                                                                                                                                                                                                    |
+
+### 6. 复核时新发现（未修）
+
+**`setting` 命名空间有一批 key 名被全局改名改坏了**：默认源里是 `storage.actions.copyOrvilo AI.button`（key 里带空格和 “Orvilo AI”），而 en-US /zh-CN 里是 `copyLobeAI.*`。也就是说这些 key 在英文下**根本解析不到**。它不是本轮引入的，而是一次把 “Lobe” 全局替换成 “Orvilo” 时连 key 名一起替换的结果。成因清楚但**影响面未测**（同类残留可能不止这一簇），所以只记录：修它要先枚举 `default/` 里所有含空格或 “Orvilo AI” 的 key，再对照两个 JSON 逐个对齐。

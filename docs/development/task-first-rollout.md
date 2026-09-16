@@ -367,7 +367,7 @@ import { imageRouter } from '@/server/routers/lambda/image';
 | S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de` | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5 |
 | S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`（视图偏好部分）       | 旧首页卸载未做，见 §2.2                                                  |
 | S30 独立功能退役         | TODO         | NOT\_RUN         | —                                | 依赖 S00、S10                                                            |
-| S40 自动化整合           | TODO         | NOT\_RUN         | —                                | 依赖 S10、S20                                                            |
+| S40 自动化整合           | IN\_PROGRESS | CI\_PENDING      | `03d606a0`（数据层统一）+ 命名   | 数据层已统一、名称已改「自动化」；入口合并与 5 项能力搬运未做，见 §2.3   |
 | S50 资源与产物归位       | TODO         | NOT\_RUN         | —                                | 依赖 S00                                                                 |
 | S60 Goal 与规则下沉      | TODO         | NOT\_RUN         | —                                | 依赖 S20、S50                                                            |
 | S70 设置、文案与依赖清理 | TODO         | NOT\_RUN         | —                                | 依赖各功能工作包                                                         |
@@ -485,6 +485,55 @@ import { imageRouter } from '@/server/routers/lambda/image';
 **建议顺序**：先查清 `HomeAgentIdSync` / `RecentSync` → 迁移两个抽屉宿主到独立挂载点 →
 处理 Web index 跳转（保持 Electron 的每标签页注入不变）→ 再卸载
 `DesktopHomeLayout` + `DesktopHome` → 最后删 `HomePortrait` / `PortraitBubble` 与装饰预设。
+
+### 2.3 S40 实施记录
+
+**已完成 —— 数据层统一（`03d606a0`）**
+
+`scheduledList` 与 `automationList` 曾是**两个 hook 打在同一个查询上**：都调 `fetchTaskList({ automated: true, orderBy: 'updatedAt' })`，在无筛选、无 agent/project 作用域时**发出的请求逐字节相同**，却挂在两个 key 根下 —— 同一页被缓存两次、失效两次。
+
+改动：
+
+- `taskKeys.scheduledList` 增加 `scope` / `statuses` 两个槽位（照 `myList` 已有的 `statuses ? [...].sort().join(',') : 'all'` 模式，保证同一集合不同顺序是同一 key）
+- `useFetchScheduledTaskList` 接收 `scope` / `statuses` 并透传
+- 删除 `useFetchAutomationList`、`taskKeys.automationList`、`isAutomationListKey`
+- `action.ts` 的失效调用减少一处（`isScheduledTaskListKey` 已覆盖）
+- `AutomationsPage` 改用统一 hook
+
+**已完成 —— 命名取「自动化」（`03d606a0` 之后）**
+
+用户裁决：合并后界面名仍取「自动化」。实现方式是**只改 i18n 值，不动标识符与路由** —— `collection=scheduled` 是查询标识也是路由，改名会破坏已存储的深链接：
+
+| 位置                                                              | 原值                        | 新值                    |
+| ----------------------------------------------------------------- | --------------------------- | ----------------------- |
+| `packages/locales/src/default/chat.ts` `taskList.scheduled.title` | `'Scheduled tasks'`         | `'Automations'`         |
+| `packages/locales/src/default/chat.ts` `taskList.scheduled.empty` | `'No scheduled tasks yet'`  | `'No automations yet'`  |
+| `locales/en-US/chat.json` 同上两条                                | 同上                        | 同上                    |
+| `locales/zh-CN/chat.json` 同上两条                                | `定时任务` / `暂无定时任务` | `自动化` / `暂无自动化` |
+
+**未完成 —— 入口合并，以及一个改变做法的约束**
+
+⚠️ **方案 §7 指定的做法（列表入口 = `/tasks?collection=scheduled`）会让「自动化」导航项永远不高亮。**
+
+证据：`src/hooks/useActiveTabKey.ts` 返回 **pathname 的第一段**作为 `SidebarTabKey`，**不读 query**。
+于是 `/tasks` 与 `/tasks?collection=scheduled` 都解析成 `tasks` —— 用户点「自动化」会把高亮跑到「任务」上。
+（`src/features/NavPanel/routeKey.ts` 同样只看 pathname，且 `tasks` / `automations` 都无 case，落到 `default: 'home'`，与本条无关。）
+
+**应改为**：导航项**留在 `/automations`**，让 `/automations` 渲染同一个 scheduled 集合视图。
+这样「一个视图实现 + 一份数据 + 两个入口」成立，且高亮正确。
+
+**仍待搬运的能力**（Automations 有、scheduled 集合没有，方案 §7 要求逐项对照）：
+
+| 能力                        | Automations 位置                      | 待办                                                                                   |
+| --------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------- |
+| active/paused 状态过滤      | `AutomationsPage.tsx:274-278,362-397` | 搬进统一视图（数据层已支持，见 S40-a）                                                 |
+| `scope=created`「由我创建」 | `:266-272`                            | 同上；注意与 agentId/projectId 收窄**互斥**                                            |
+| 客户端搜索                  | `:234-241`                            | 同上（服务端 `list` 无 `search` 参数）                                                 |
+| 批量 pause/resume/delete    | `:290-310,494-509`                    | 同上                                                                                   |
+| 行内 pause/resume           | `:166-203`                            | scheduled 的右键菜单只有 runNow/delete（`useTaskItemContextMenu.tsx:178-187,242-247`） |
+
+**不需要动的**：`useFetchAutomationRuns` / `taskKeys.automationRuns` —— 它走 `task.automationRuns` **独立 procedure**（run 维度，不是 task 维度），与本次统一无关。
+`/automations/new`、`/automations/runs`、`/automations/:taskId` 按方案 §7 分别处理；`:taskId` 是 `T-<seq>` 可读标识符，服务端 `getTaskDetail` 双解析，**不需要转换 helper**。
 
 ## 3. 旧路由映射（草案）
 

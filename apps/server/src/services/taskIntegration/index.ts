@@ -280,11 +280,24 @@ export class TaskIntegrationService {
             ),
           );
       }
+      const latest = await this.taskTopicModel.findByTopicId(topicId).catch((error) => {
+        log(
+          'integrateOnComplete: failed to refresh integration state for %s/%s — %O',
+          task.id,
+          topicId,
+          error,
+        );
+        return undefined;
+      });
       // A terminal 'blocked' abandons the merge pipeline: tear down the run's
-      // task worktree and its topic-owned integration worktree so neither leaks on
-      // the device. Best-effort — cleanup never re-blocks a parked task.
+      // task worktree and its topic-owned integration worktree so neither leaks.
+      // A successful publish also leaves no work for either checkout. Cleanup
+      // runs only after releasing this invocation's lease so it atomically
+      // excludes concurrent completion/retry work.
       if (outcome === 'blocked') {
         await this.blockRelated(task.id, record.branch);
+      }
+      if (outcome === 'blocked' || latest?.integration?.state === 'integrated') {
         await this.cleanupTaskWorktrees(task.id);
       }
       return outcome;
@@ -326,11 +339,14 @@ export class TaskIntegrationService {
    * to one owning topic, so both the task checkout and its integration checkout
    * can be reclaimed without affecting another task.
    *
-   * Never throws — cleanup runs on cancel/delete paths where a failure must
-   * not break the primary operation. A removal that fails leaves
-   * `worktreeCleaned` false so a later pass can retry.
+   * Never throws. Returns false when an active owner, lease contention, or a
+   * removal failure leaves durable worktree metadata for a later retry. Delete
+   * callers use that result to retain the task rows; cancel/status callers can
+   * keep cleanup best-effort.
    */
-  async cleanupTaskWorktrees(taskId: string): Promise<void> {
+  async cleanupTaskWorktrees(taskId: string): Promise<boolean> {
+    const cleanupClaims = new Map<string, string>();
+    let cleanupComplete = true;
     try {
       const rows = await this.taskTopicModel.findByTaskId(taskId);
       const candidates: {
@@ -338,36 +354,96 @@ export class TaskIntegrationService {
         taskPaths: string[];
         topicId: string;
       }[] = [];
-      const removals = new Map<string, { deviceId: string; repoPath: string }>();
+      const removals = new Map<string, { deviceId: string; force: boolean; repoPath: string }>();
+      const rowsByTopicId = new Map(
+        rows.flatMap((row) => (row.topicId ? [[row.topicId, row] as const] : [])),
+      );
+      const activeOwnerTopicIds = new Set(
+        rows.flatMap((row) =>
+          row.status === 'running' && row.topicId
+            ? [row.integration?.integrationOwnerTopicId ?? row.topicId]
+            : [],
+        ),
+      );
 
       for (const row of rows) {
         const record = row.integration;
         if (!row.topicId || !record || record.repo) continue;
         if (!record.deviceId || !record.repoPath) continue;
-        const nonTerminal =
-          record.state === 'pending' ||
-          record.state === 'merging' ||
-          record.state === 'conflict' ||
-          record.state === 'publish_failed';
         const taskPaths = [record.role === 'task' ? record.worktreePath : undefined].filter(
           (path): path is string =>
-            !!path && path !== record.repoPath && (nonTerminal || record.worktreeCleaned !== true),
+            !!path && path !== record.repoPath && record.worktreeCleaned !== true,
         );
+        const legacySharedIntegrationPath = deriveWorktreePath(
+          record.repoPath,
+          `integration-${record.baseBranch.replaceAll('/', '-')}`,
+        );
+        if (
+          record.integrationWorktreePath === legacySharedIntegrationPath &&
+          record.integrationWorktreeCleaned !== true
+        ) {
+          // This pre-topic ownership path may still be shared by another run.
+          // Preserve both the checkout and its metadata rather than reporting a
+          // deletion-safe cleanup that would orphan the shared directory.
+          cleanupComplete = false;
+        }
         const integrationPaths = [record.integrationWorktreePath].filter(
           (path): path is string =>
             !!path &&
             path !== record.repoPath &&
-            (nonTerminal || record.integrationWorktreeCleaned !== true),
+            path !== legacySharedIntegrationPath &&
+            // Records created before topic-owned integration worktrees used a
+            // shared `integration-<base>` path. A later claim can backfill an
+            // owner marker onto that row, so the path itself is the durable
+            // signal that another in-flight task may still be using it.
+            !!record.integrationOwnerTopicId &&
+            record.integrationWorktreeCleaned !== true,
         );
         const paths = [...new Set([...taskPaths, ...integrationPaths])];
         if (paths.length === 0) continue;
+        const ownerTopicId = record.integrationOwnerTopicId ?? row.topicId;
+        if (activeOwnerTopicIds.has(ownerTopicId)) {
+          cleanupComplete = false;
+          continue;
+        }
+
+        if (!cleanupClaims.has(ownerTopicId)) {
+          const ownerRecord = rowsByTopicId.get(ownerTopicId)?.integration;
+          if (!ownerRecord) {
+            cleanupComplete = false;
+            continue;
+          }
+          const cleanupToken = randomUUID();
+          const claimed = await this.taskTopicModel.claimIntegration(
+            taskId,
+            ownerTopicId,
+            ownerRecord.state,
+            cleanupToken,
+            new Date(Date.now() - INTEGRATION_CLAIM_TTL_MS),
+          );
+          if (!claimed) {
+            cleanupComplete = false;
+            continue;
+          }
+          cleanupClaims.set(ownerTopicId, cleanupToken);
+        }
 
         candidates.push({ integrationPaths, taskPaths, topicId: row.topicId });
         for (const worktreePath of paths) {
-          removals.set(worktreePath, { deviceId: record.deviceId, repoPath: record.repoPath });
+          const existing = removals.get(worktreePath);
+          removals.set(worktreePath, {
+            deviceId: record.deviceId,
+            // A blocked merge can leave its system-owned integration checkout
+            // dirty. Task worktrees remain non-forced because they may contain
+            // user-authored changes that were never part of integration. The
+            // owner lease acquired above excludes active retries while a forced
+            // integration-worktree removal is in progress.
+            force: (existing?.force ?? false) || integrationPaths.includes(worktreePath),
+            repoPath: record.repoPath,
+          });
         }
       }
-      if (candidates.length === 0) return;
+      if (candidates.length === 0) return cleanupComplete;
 
       const removed = new Map<string, boolean>();
       for (const [worktreePath, target] of removals) {
@@ -377,9 +453,11 @@ export class TaskIntegrationService {
           userId: this.userId,
           workspaceId: this.workspaceId,
           worktreePath,
+          force: target.force,
         });
         removed.set(worktreePath, result.success);
         if (!result.success) {
+          cleanupComplete = false;
           log(
             'cleanupTaskWorktrees: remove failed for task %s path %s — %s',
             taskId,
@@ -403,12 +481,21 @@ export class TaskIntegrationService {
               ? { worktreeCleaned: taskPaths.every((path) => removed.get(path) === true) }
               : {}),
           })
-          .catch((error) =>
-            log('cleanupTaskWorktrees: flag update failed for %s/%s — %O', taskId, topicId, error),
-          );
+          .catch((error) => {
+            cleanupComplete = false;
+            log('cleanupTaskWorktrees: flag update failed for %s/%s — %O', taskId, topicId, error);
+          });
       }
+      return cleanupComplete;
     } catch (error) {
       log('cleanupTaskWorktrees: failed for task %s — %O', taskId, error);
+      return false;
+    } finally {
+      await Promise.allSettled(
+        [...cleanupClaims].map(([topicId, token]) =>
+          this.taskTopicModel.releaseIntegration(taskId, topicId, token),
+        ),
+      );
     }
   }
 
@@ -1194,12 +1281,6 @@ export class TaskIntegrationService {
     task: TaskItem,
     record: TaskTopicIntegration,
   ): Promise<boolean> {
-    const wasDeferred =
-      record.role === 'integrate' ||
-      record.state === 'publish_failed' ||
-      record.state === 'verification_pending';
-    if (!wasDeferred) return false;
-
     const rows = await this.taskTopicModel.findByTaskId(task.id);
     const originalRun = rows.find(
       (row) =>

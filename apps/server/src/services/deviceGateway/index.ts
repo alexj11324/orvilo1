@@ -723,20 +723,21 @@ export class DeviceGateway {
    */
   async removeGitWorktree(params: {
     deviceId: string;
+    force?: boolean;
     path: string;
     timeout?: number;
     userId: string;
     workspaceId?: string;
     worktreePath: string;
   }): Promise<DeviceGitRemoveWorktreeResult> {
-    const { userId, deviceId, path, worktreePath, workspaceId, timeout = 30_000 } = params;
+    const { userId, deviceId, force, path, worktreePath, workspaceId, timeout = 30_000 } = params;
     const client = this.getClient();
     if (!client) return { error: 'Device gateway not configured', success: false };
 
     try {
       const result = await client.invokeRpc<DeviceGitRemoveWorktreeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'removeGitWorktree', params: { path, worktreePath } },
+        { method: 'removeGitWorktree', params: { force, path, worktreePath } },
       );
 
       if (!result.success || !result.data) {

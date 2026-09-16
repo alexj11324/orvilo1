@@ -70,7 +70,7 @@ vi.mock('@/server/services/task', () => ({
 // agentRuntime → toolExecution/builtin → serverRuntimes/index) cycle back
 // onto this module mid-load; a stubbed class keeps the graph shallow.
 vi.mock('@/server/services/taskIntegration', () => ({
-  TaskIntegrationService: vi.fn(() => ({ cleanupTaskWorktrees: vi.fn() })),
+  TaskIntegrationService: vi.fn(() => ({ cleanupTaskWorktrees: vi.fn().mockResolvedValue(true) })),
 }));
 
 vi.mock('@/server/services/verify/planGenerator', () => ({

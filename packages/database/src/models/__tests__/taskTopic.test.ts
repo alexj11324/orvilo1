@@ -178,6 +178,81 @@ describe('TaskTopicModel', () => {
       ).resolves.toBe(true);
     });
 
+    it('does not claim integration after every applicable checkout is cleaned', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Cleaned integration' });
+      const topicId = 'tpc_integration_cleaned';
+      await createTopic(topicId);
+      await topicModel.add(task.id, topicId, { integration, seq: 1 });
+      await topicModel.updateIntegration(task.id, topicId, { worktreeCleaned: true });
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          topicId,
+          'publish_failed',
+          'late-owner',
+          new Date(Date.now() - 60_000),
+        ),
+      ).resolves.toBe(false);
+    });
+
+    it('allows cleanup retry while the task checkout remains', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Partially cleaned integration' });
+      const topicId = 'tpc_integration_partially_cleaned';
+      await createTopic(topicId);
+      await topicModel.add(task.id, topicId, {
+        integration: {
+          ...integration,
+          integrationOwnerTopicId: topicId,
+          integrationWorktreeCleaned: true,
+          integrationWorktreePath: '/repo/integration-topic',
+          worktreeCleaned: false,
+        },
+        seq: 1,
+      });
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          topicId,
+          'publish_failed',
+          'cleanup-retry-owner',
+          new Date(Date.now() - 60_000),
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('allows publish retry through a surviving integration worktree', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Retry cleaned task checkout' });
+      const topicId = 'tpc_integration_publish_retry';
+      await createTopic(topicId);
+      await topicModel.add(task.id, topicId, {
+        integration: {
+          ...integration,
+          integrationOwnerTopicId: topicId,
+          integrationWorktreePath: '/repo/integration-topic',
+          worktreeCleaned: true,
+        },
+        seq: 1,
+      });
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          topicId,
+          'publish_failed',
+          'retry-owner',
+          new Date(Date.now() - 60_000),
+        ),
+      ).resolves.toBe(true);
+    });
+
     it('shares one lease across a corrective chain', async () => {
       const taskModel = new TaskModel(serverDB, userId);
       const topicModel = new TaskTopicModel(serverDB, userId);

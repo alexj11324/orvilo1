@@ -251,7 +251,7 @@ export const executeDeviceRpc = async (
     }
 
     case 'removeGitWorktree': {
-      return removeGitWorktree(params as { path: string; worktreePath: string });
+      return removeGitWorktree(params as { force?: boolean; path: string; worktreePath: string });
     }
 
     case 'addGitWorktree': {

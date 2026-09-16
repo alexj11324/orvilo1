@@ -483,12 +483,27 @@ export class TaskService {
       });
       await this.interruptTaskOperation(aiAgentService, target.operationId);
     }
+    if (target.status === 'running') {
+      // The interrupt above is confirmed before this transition. Cleanup can
+      // now distinguish an abandoned integration checkout from a corrective
+      // run that is still actively writing to it.
+      await this.taskTopicModel.cancelIfRunning(target.taskId, topicId);
+    }
 
     // The task_topics row is about to go — tear down the run's provisioned
-    // worktrees while its integration record still exists (best-effort).
-    await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
-      target.taskId,
-    );
+    // worktrees while its integration record still exists. Keep the row when
+    // another topic or retry still owns the workspace.
+    const cleanupComplete = await new TaskIntegrationService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).cleanupTaskWorktrees(target.taskId);
+    if (!cleanupComplete) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Topic workspace cleanup is still active. Stop the run and try again.',
+      });
+    }
 
     await this.taskTopicModel.remove(target.taskId, topicId);
     await this.topicModel.delete(topicId);

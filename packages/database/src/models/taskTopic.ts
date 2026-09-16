@@ -150,6 +150,13 @@ export class TaskTopicModel {
             ? [sql`${taskTopics.integration}->>'state' = ${expectedState}`]
             : []),
           or(
+            sql`not coalesce((${taskTopics.integration}->>'worktreeCleaned')::boolean, false)`,
+            and(
+              sql`not coalesce((${taskTopics.integration}->>'integrationWorktreeCleaned')::boolean, false)`,
+              sql`coalesce(${taskTopics.integration}->>'integrationWorktreePath', '') <> ''`,
+            ),
+          ),
+          or(
             sql`not coalesce(jsonb_exists(${taskTopics.integration}, 'processingToken'), false)`,
             sql`coalesce((${taskTopics.integration}->>'processingStartedAt')::timestamptz, '-infinity'::timestamptz) < ${staleBefore}`,
           ),
@@ -173,6 +180,13 @@ export class TaskTopicModel {
             eq(taskTopics.topicId, topicId),
             this.ownership(),
             sql`${taskTopics.integration}->>'state' = ${expectedState}`,
+            or(
+              sql`not coalesce((${taskTopics.integration}->>'worktreeCleaned')::boolean, false)`,
+              and(
+                sql`not coalesce((${taskTopics.integration}->>'integrationWorktreeCleaned')::boolean, false)`,
+                sql`coalesce(${taskTopics.integration}->>'integrationWorktreePath', '') <> ''`,
+              ),
+            ),
           ),
         )
         .returning({ id: taskTopics.id });

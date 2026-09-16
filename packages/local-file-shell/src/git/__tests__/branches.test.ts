@@ -169,6 +169,25 @@ describe('removeGitWorktree', () => {
     );
   });
 
+  it('force-removes a dirty system-owned worktree', async () => {
+    const worktreeParent = await mkdtemp(path.join(tmpdir(), 'lfs-worktree-dirty-'));
+    cleanup.push(worktreeParent);
+    const linked = path.join(worktreeParent, 'dirty');
+    git(repo, 'worktree', 'add', '--detach', linked, 'HEAD');
+    const linkedRealPath = await realpath(linked);
+    await writeFile(path.join(linked, 'untracked.txt'), 'unfinished merge');
+
+    expect(await removeGitWorktree({ path: repo, worktreePath: linked })).toMatchObject({
+      success: false,
+    });
+    expect(existsSync(linkedRealPath)).toBe(true);
+
+    expect(await removeGitWorktree({ force: true, path: repo, worktreePath: linked })).toEqual({
+      success: true,
+    });
+    expect(existsSync(linkedRealPath)).toBe(false);
+  });
+
   it('refuses to remove the current worktree', async () => {
     expect(await removeGitWorktree({ path: repo, worktreePath: repo })).toEqual({
       error: 'Cannot remove the current worktree',

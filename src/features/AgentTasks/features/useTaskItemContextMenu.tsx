@@ -7,6 +7,7 @@ import {
   CircleDashedIcon,
   CopyIcon,
   LinkIcon,
+  MessageSquareTextIcon,
   PlayIcon,
   Trash2Icon,
 } from 'lucide-react';
@@ -43,6 +44,8 @@ interface TaskItemContextMenu {
 export interface TaskContextMenuTarget {
   assigneeAgentId?: string | null;
   assigneeUserId?: string | null;
+  /** Live run's topic — present while a run is in flight; gates "Open run". */
+  currentTopicId?: string | null;
   identifier: string;
   /** Only feeds the copied link's readable slug tail. */
   name?: string | null;
@@ -71,6 +74,7 @@ export const useTaskContextMenuActions = (
   const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const runTask = useTaskStore((s) => s.runTask);
+  const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
 
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -146,8 +150,27 @@ export const useTaskContextMenuActions = (
         activeWorkspaceSlug,
       )}`;
       const canRunNow = RUN_NOW_STATUSES.has(currentStatus);
+      const canOpenRun = currentStatus === 'running' && !!task.currentTopicId;
 
       return [
+        ...(canOpenRun
+          ? ([
+              {
+                icon: <Icon icon={MessageSquareTextIcon} />,
+                key: 'openRun',
+                label: t('taskList.contextMenu.openRun', { defaultValue: 'Open run' }),
+                onClick: ({ domEvent }: MenuInfo) => {
+                  domEvent.stopPropagation();
+                  openTopicDrawer(task.currentTopicId!, {
+                    agentId: task.assigneeAgentId ?? undefined,
+                    taskId: task.identifier,
+                    title: task.name ?? undefined,
+                  });
+                },
+              },
+              { type: 'divider' },
+            ] satisfies NativeContextMenuItem[])
+          : []),
         ...(canRunNow
           ? ([
               {
@@ -312,6 +335,7 @@ export const useTaskContextMenuActions = (
     refreshTaskList,
     deleteTask,
     runTask,
+    openTopicDrawer,
     inboxAgentId,
     routeScope,
   ]);

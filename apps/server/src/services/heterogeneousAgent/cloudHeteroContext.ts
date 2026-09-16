@@ -1,3 +1,5 @@
+import { repoToLocalDir } from '@orvilo/types';
+
 export interface ConversationHistoryEntry {
   content: string;
   role: 'assistant' | 'user';
@@ -165,12 +167,8 @@ export function buildCloudHeteroContext(params: {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers (mirrors sandboxRunner logic — kept local to avoid coupling)
+// Helpers
 // ---------------------------------------------------------------------------
-
-function repoToLocalDir(repo: string): string {
-  return (repo.split('/').findLast(Boolean) ?? repo).replace(/\.git$/, '');
-}
 
 function toGithubUrl(repo: string): string {
   if (repo.startsWith('http')) return repo.replace(/\.git$/, '');

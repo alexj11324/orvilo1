@@ -1,8 +1,8 @@
 import { Block, ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import { LockIcon } from 'lucide-react';
+import { LockIcon, MessageSquareTextIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,10 +30,7 @@ export type TaskItemRouteScope = 'agent' | 'global';
 interface TaskItemProps {
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
-  variant?: 'compact' | 'default';
 }
-
-const FLEX_MIN_WIDTH_0 = { minWidth: 0 };
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
   'backlog',
@@ -48,10 +45,12 @@ const TASK_STATUS_SET = new Set<TaskStatus>([
 const toTaskStatus = (status: string): TaskStatus =>
   TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
-const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent', variant = 'default' }) => {
+const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
   const taskDetail = useTaskStore((s) => s.taskDetailMap[task.identifier]);
   const { items: contextMenuItems, onContextMenu: handleContextMenuOpen } = useTaskItemContextMenu(
     task,
@@ -148,23 +147,47 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent', variant
 
   const assigneeNode = (
     <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
-      {shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
-        <AssigneeMemberSelector
-          currentUserId={task.assigneeUserId}
-          disabled={status === 'running'}
-          taskCreatorId={task.createdByUserId}
-          taskIdentifier={task.identifier}
-          taskVisibility={task.visibility}
-        >
-          {task.assigneeUserId ? (
-            <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
-          ) : (
-            <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
-              <UnassignedAssigneeIcon kind={'human'} />
-            </Tooltip>
+      {status === 'paused'
+        ? // Pending review: the member slot shows who owns the review — the
+          // reviewer (auto-stamped as assignee → creator), not the executor.
+          shouldShowMemberAssignee(activeWorkspaceId, task.reviewerUserId) && (
+            <AssigneeMemberSelector
+              currentUserId={task.reviewerUserId}
+              taskCreatorId={task.createdByUserId}
+              taskIdentifier={task.identifier}
+              taskVisibility={task.visibility}
+              onChange={(userId) => void updateTask(task.identifier, { reviewerUserId: userId })}
+            >
+              {task.reviewerUserId ? (
+                <Tooltip title={tChat('taskDetail.reviewer')}>
+                  <span>
+                    <AssigneeUserAvatar userId={task.reviewerUserId} />
+                  </span>
+                </Tooltip>
+              ) : (
+                <Tooltip title={tChat('taskDetail.reviewer')}>
+                  <UnassignedAssigneeIcon kind={'human'} />
+                </Tooltip>
+              )}
+            </AssigneeMemberSelector>
+          )
+        : shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
+            <AssigneeMemberSelector
+              currentUserId={task.assigneeUserId}
+              disabled={status === 'running'}
+              taskCreatorId={task.createdByUserId}
+              taskIdentifier={task.identifier}
+              taskVisibility={task.visibility}
+            >
+              {task.assigneeUserId ? (
+                <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
+              ) : (
+                <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
+                  <UnassignedAssigneeIcon kind={'human'} />
+                </Tooltip>
+              )}
+            </AssigneeMemberSelector>
           )}
-        </AssigneeMemberSelector>
-      )}
       <AssigneeAgentSelector
         currentAgentId={task.assigneeAgentId}
         disabled={status === 'running'}
@@ -182,6 +205,26 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent', variant
     </Flexbox>
   );
 
+  // Running cards get a one-tap door into the live run's conversation — the
+  // steering surface — without routing through the detail page first.
+  const openRunNode =
+    status === 'running' && task.currentTopicId ? (
+      <Tooltip title={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}>
+        <ActionIcon
+          icon={MessageSquareTextIcon}
+          size={'small'}
+          onClick={(event) => {
+            event.stopPropagation();
+            openTopicDrawer(task.currentTopicId!, {
+              agentId: task.assigneeAgentId ?? undefined,
+              taskId: task.identifier,
+              title: task.name ?? undefined,
+            });
+          }}
+        />
+      </Tooltip>
+    ) : null;
+
   const scheduleNode = task.automationMode ? (
     <TaskTriggerTag
       automationMode={task.automationMode}
@@ -195,46 +238,12 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent', variant
     <Text
       align={'right'}
       fontSize={12}
-      style={{ whiteSpace: 'nowrap', width: variant === 'compact' ? undefined : 48 }}
+      style={{ whiteSpace: 'nowrap', width: 48 }}
       type={'secondary'}
     >
       {time}
     </Text>
   ) : null;
-
-  if (variant === 'compact') {
-    return (
-      <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
-        <Block clickable gap={8} padding={12} variant={'borderless'} onClick={handleClick}>
-          <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-            <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
-              {task.identifier}
-            </Text>
-            {assigneeNode}
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-            <TaskStatusTag status={status} taskIdentifier={task.identifier} />
-            <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-              {hasName ? task.name : task.identifier}
-            </Text>
-            {scheduledBadge}
-            <TaskSubtaskProgressTag
-              currentIdentifier={task.identifier}
-              progress={task.subtaskProgress}
-              subtasks={taskDetail?.subtasks}
-              onRequestSubtasks={handleRequestSubtasks}
-              onSubtaskClick={handleSubtaskClick}
-            />
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8} style={FLEX_MIN_WIDTH_0}>
-            <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
-            {scheduleNode}
-            {timeNode}
-          </Flexbox>
-        </Block>
-      </ContextMenuTrigger>
-    );
-  }
 
   return (
     <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
@@ -242,6 +251,7 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent', variant
         <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
           {titleRow}
           <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
+            {openRunNode}
             {scheduleNode}
             {assigneeNode}
             {timeNode}

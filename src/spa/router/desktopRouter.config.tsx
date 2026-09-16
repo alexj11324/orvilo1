@@ -5,7 +5,7 @@ import type { RouteObject } from 'react-router';
 import { acceptanceRouteMeta } from '@/features/Acceptance/routeMeta';
 import { dynamicElement, ErrorBoundary } from '@/utils/router';
 
-import DesktopHomeRoute from './DesktopHomeRoute';
+import { createDesktopHomeElement } from './desktopHomeElement';
 import {
   createMainAreaRouteFactory,
   createSharedDesktopRoutes,
@@ -15,8 +15,10 @@ import {
 export { sharedMainAreaChildren } from './desktopRouter.shared';
 
 const mainAreaRouteOptions: MainAreaRouteOptions = {
-  // The first screen every tab paints — eager so it never suspends behind a chunk fetch.
-  createHomeElement: () => <DesktopHomeRoute />,
+  // Eager on Electron so the first screen never suspends behind a chunk fetch;
+  // lazy everywhere else. See `desktopHomeElement.tsx` — importing the Home
+  // graph here directly costs every test file that touches this router.
+  createHomeElement: createDesktopHomeElement,
   createWorkspaceSettingsIndexElement: () =>
     dynamicElement(
       () => import('@/routes/(main)/[workspaceSlug]/settings'),

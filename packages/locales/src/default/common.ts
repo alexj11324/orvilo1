@@ -148,6 +148,7 @@ export default {
   'cmdk.askAgentHeading': 'Ask Agent',
   'cmdk.askAgentPlaceholder': 'Ask {{agent}} something...',
   'cmdk.askLobeAI': 'Ask Orvilo AI',
+  'cmdk.automations': 'Automations',
   'cmdk.community': 'Community',
   'cmdk.communitySupport': 'Community Support',
   'cmdk.contactUs': 'Contact Us',
@@ -165,6 +166,7 @@ export default {
   'cmdk.keyboard.Enter': 'Enter',
   'cmdk.keyboard.Tab': 'Tab',
 
+  'cmdk.keywords.automations': 'automations schedule automation cron',
   'cmdk.keywords.about': 'about version info',
 
   'cmdk.keywords.apikey': 'apikey api key token',
@@ -603,6 +605,7 @@ export default {
     'You can adjust the schedule after creating the task.',
   'taskTemplate.schedule.weekly': 'Every {{weekday}} at {{time}}',
   'taskTemplate.section.title': 'Try these scheduled tasks',
+  'tab.automations': 'Automations',
   'tab.image': 'Image',
   'tab.audio': 'Audio',
   'tab.chat': 'Chat',

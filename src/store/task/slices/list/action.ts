@@ -2,7 +2,14 @@ import type { TaskStatus } from '@orvilo/types';
 import { useEffect } from 'react';
 
 import { mutate, useClientDataSWR } from '@/libs/swr';
-import { isMyTaskListKey, isScheduledTaskListKey, isTaskListKey, taskKeys } from '@/libs/swr/keys';
+import {
+  isAutomationListKey,
+  isAutomationRunsKey,
+  isMyTaskListKey,
+  isScheduledTaskListKey,
+  isTaskListKey,
+  taskKeys,
+} from '@/libs/swr/keys';
 import { taskService } from '@/services/task';
 import type { StoreSetter } from '@/store/types';
 
@@ -250,6 +257,11 @@ export class TaskListSliceActionImpl {
       mutate(isScheduledTaskListKey),
       // Assigning or creating moves a task in or out of "My tasks".
       mutate(isMyTaskListKey),
+      // A run starting or an automation being (un)configured shifts the
+      // workspace roll-up the "All runs" page reads, and the automations
+      // list's own rows.
+      mutate(isAutomationRunsKey),
+      mutate(isAutomationListKey),
     ]);
   };
 
@@ -448,6 +460,69 @@ export class TaskListSliceActionImpl {
           limit,
           offset,
           orderBy: 'updatedAt',
+        }),
+      { revalidateOnFocus: false },
+    );
+  };
+
+  /**
+   * The Automations page's "All runs" roll-up: every run whose task still
+   * carries an automation mode, newest-first, with the 24h/7d outcome
+   * summary. Consumed like `useFetchScheduledTaskList` — its own SWR result,
+   * so paging or filtering one surface cannot serve another's page.
+   */
+  useFetchAutomationRuns = (
+    options: {
+      enabled?: boolean;
+      limit?: number;
+      offset?: number;
+      scope?: 'all' | 'created';
+      search?: string;
+      statuses?: string[];
+    } = {},
+  ) => {
+    const { enabled = true, limit, offset, scope = 'all', search, statuses } = options;
+    const statusesSignature = statuses?.length ? [...statuses].sort().join(',') : undefined;
+    return useClientDataSWR(
+      enabled ? taskKeys.automationRuns(scope, limit, offset, search, statusesSignature) : null,
+      async () =>
+        taskService.automationRuns({
+          limit,
+          offset,
+          scope: scope === 'created' ? 'created' : undefined,
+          search: search?.trim() || undefined,
+          statuses,
+        }),
+      { revalidateOnFocus: false },
+    );
+  };
+
+  /**
+   * The Automations page's list: automated tasks that can still fire, with
+   * the optional "created by me" scope and active/paused status narrowing the
+   * Cordy-style tabs need. Server-paginated like `useFetchScheduledTaskList`.
+   */
+  useFetchAutomationList = (
+    options: {
+      enabled?: boolean;
+      limit?: number;
+      offset?: number;
+      scope?: 'all' | 'created';
+      statuses?: TaskStatus[];
+    } = {},
+  ) => {
+    const { enabled = true, limit, offset, scope = 'all', statuses } = options;
+    const statusesSignature = statuses?.length ? [...statuses].sort().join(',') : 'all';
+    return useClientDataSWR(
+      enabled ? taskKeys.automationList(scope, statusesSignature, limit, offset) : null,
+      async () =>
+        this.fetchTaskList({
+          automated: true,
+          limit,
+          offset,
+          orderBy: 'updatedAt',
+          scope: scope === 'created' ? 'created' : undefined,
+          statuses,
         }),
       { revalidateOnFocus: false },
     );

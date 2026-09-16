@@ -1,5 +1,6 @@
 import { type LucideIcon } from 'lucide-react';
 import {
+  AlarmClock,
   BrainCircuit,
   FilePenIcon,
   Image,
@@ -108,6 +109,16 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
     pathPrefix: '/tasks',
   },
   {
+    cmdkKey: 'cmdk.automations',
+    electronKey: 'navigation.automations',
+    icon: AlarmClock,
+    id: 'automations',
+    keywords: ['automation', 'schedule', 'cron', 'recurring', 'heartbeat'],
+    keywordsKey: 'cmdk.keywords.automations',
+    path: '/automations',
+    pathPrefix: '/automations',
+  },
+  {
     cmdkKey: 'cmdk.settings',
     electronKey: 'navigation.settings',
     icon: Settings,
@@ -137,7 +148,7 @@ export const getRouteById = (id: string): NavigationRoute | undefined =>
  */
 export const getNavigableRoutes = (): NavigationRoute[] =>
   NAVIGATION_ROUTES.filter((r) =>
-    ['community', 'image', 'resource', 'page', 'memory'].includes(r.id),
+    ['community', 'image', 'resource', 'page', 'memory', 'automations'].includes(r.id),
   ).map((r) =>
     r.id === 'image'
       ? {

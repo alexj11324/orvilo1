@@ -349,6 +349,12 @@ export const isScheduledTaskListKey = (key: unknown): boolean =>
 export const isMyTaskListKey = (key: unknown): boolean =>
   Array.isArray(key) && key[0] === 'task:myList';
 
+export const isAutomationRunsKey = (key: unknown): boolean =>
+  Array.isArray(key) && key[0] === 'task:automationRuns';
+
+export const isAutomationListKey = (key: unknown): boolean =>
+  Array.isArray(key) && key[0] === 'task:automationList';
+
 /**
  * Goal Graph reads. Keyed by the `goals` row id (not the carrier task's
  * identifier) because that is what every `goal.*` procedure takes.
@@ -359,6 +365,43 @@ export const goalKeys = {
 };
 
 export const taskKeys = {
+  /**
+   * The Automations list page: automated tasks still able to fire. Its own
+   * root like `scheduledList` — the extra scope/status slots keep the "mine"
+   * tab and the active/paused filter from sharing cache entries.
+   */
+  automationList: def(
+    'task:automationList',
+    (scope: 'created' | 'all', statuses: string, limit?: number, offset?: number) => [
+      'task:automationList',
+      scope,
+      statuses,
+      limit ?? 'all',
+      offset ?? 0,
+    ],
+  ),
+  /**
+   * The Automations "All runs" roll-up: every run whose task still carries an
+   * automation mode, newest first, plus the 24h/7d outcome counts. Its own
+   * root like `myList`/`scheduledList` — a different result set from `list`.
+   */
+  automationRuns: def(
+    'task:automationRuns',
+    (
+      scope: 'created' | 'all',
+      limit?: number,
+      offset?: number,
+      search?: string,
+      statuses?: string,
+    ) => [
+      'task:automationRuns',
+      scope,
+      limit ?? 'all',
+      offset ?? 0,
+      search ?? '',
+      statuses ?? 'all',
+    ],
+  ),
   detail: def('task:detail', (taskId: string) => ['task:detail', taskId]),
   groupList: def(
     'task:groupList',

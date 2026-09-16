@@ -25,8 +25,8 @@ jobs:
           skip_after_successful_duplicate: 'true'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
-  # Full-repo type-check. Root `tsgo --noEmit` needs several GB and OOMs most
-  # developer machines, so CI is the only place it runs end to end.
+  # Full-repo type-check - CI-only; scripts/type-check.mjs fails fast locally
+  # because root `tsgo --noEmit` OOMs developer machines.
   typecheck:
     needs: check-duplicate-run
     if: needs.check-duplicate-run.outputs.should_skip != 'true'

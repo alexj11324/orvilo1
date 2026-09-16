@@ -17,7 +17,7 @@ export type TaskActivityType =
  * change with no migration.
  */
 export type TaskActivityLogType =
-  'assignee_agent' | 'assignee_user' | 'automation' | 'priority' | 'status';
+  'assignee_agent' | 'assignee_user' | 'automation' | 'priority' | 'reviewer' | 'status';
 
 /**
  * Payload of a `task_activities` row: what the slot moved between.
@@ -55,7 +55,7 @@ export interface TaskAutomationSnapshot {
 export type TaskActivityValue = number | string | TaskAutomationSnapshot | null;
 
 /** Which assignee slot an `assignment` activity describes. */
-export type TaskAssignmentKind = 'agent' | 'member';
+export type TaskAssignmentKind = 'agent' | 'member' | 'reviewer';
 
 // null = no automation
 export type TaskAutomationMode = 'heartbeat' | 'schedule';
@@ -150,8 +150,18 @@ export interface TaskWorkspaceConfig {
    */
   deviceId?: string;
   provider: 'git';
-  /** Absolute path of the repository on the device. */
-  repoPath: string;
+  /**
+   * GitHub coordinate (`owner/repo` or clone URL) identifying the repository
+   * for runs that cannot use a device worktree — cloud-sandbox runs pre-clone
+   * it into `/workspace` and land work via a pushed `task/<id>` branch + PR,
+   * merged back by a later integrator run.
+   */
+  repo?: string;
+  /**
+   * Absolute path of the repository on the device. Required for device
+   * worktree provisioning; may be omitted on cloud-only bindings.
+   */
+  repoPath?: string;
 }
 
 /**
@@ -168,17 +178,28 @@ export interface TaskTopicIntegration {
   branch: string;
   /** Repo-relative paths reported unmerged at the last attempt. */
   conflicts?: string[];
-  /** Device hosting the worktrees. */
-  deviceId: string;
+  /**
+   * Device hosting the worktrees. Absent on sandbox-contract records — those
+   * integrate through the remote (`repo`) rather than a device worktree.
+   */
+  deviceId?: string;
   /** Merge commit SHA once `state` reaches 'integrated'. */
   integratedSha?: string;
   /** Path of the detached integration worktree on the device. */
   integrationWorktreePath?: string;
   lastError?: string;
+  /** URL of the pull request opened for {@link branch}, when known. */
+  prUrl?: string;
   /** True once the merge result was pushed to `origin/<baseBranch>`. */
   pushedToRemote?: boolean;
+  /**
+   * GitHub coordinate (`owner/repo` or URL) for sandbox-contract runs. Its
+   * presence marks the record as remote: no device worktrees exist, the run's
+   * branch lives on the remote, and merge state is verified via the GitHub API.
+   */
+  repo?: string;
   /** Absolute repo path on the device (source of both worktrees). */
-  repoPath: string;
+  repoPath?: string;
   /**
    * 'task' — the run's own provisioned worktree;
    * 'integrate' — a corrective run bound to the integration worktree.
@@ -193,8 +214,11 @@ export interface TaskTopicIntegration {
   state: 'pending' | 'merging' | 'integrated' | 'conflict' | 'blocked' | 'skipped';
   /** True once the provisioned worktree was removed after integration. */
   worktreeCleaned?: boolean;
-  /** Worktree path the run executes in (task or integration worktree). */
-  worktreePath: string;
+  /**
+   * Worktree path the run executes in (task or integration worktree). Absent
+   * on sandbox-contract records — the clone lives inside the ephemeral sandbox.
+   */
+  worktreePath?: string;
 }
 
 /**
@@ -423,6 +447,11 @@ export interface TaskItem {
   position: number | null;
   priority: number | null;
   projectId: string | null;
+  /**
+   * The human accountable while the task sits in 'paused' ("pending review").
+   * Stamped when a run hands off for review; the assignees stay the executors.
+   */
+  reviewerUserId: string | null;
   schedulePattern: string | null;
   scheduleTimezone: string | null;
   seq: number;
@@ -488,6 +517,7 @@ export interface NewTask {
   position?: number | null;
   priority?: number | null;
   projectId?: string | null;
+  reviewerUserId?: string | null;
   schedulePattern?: string | null;
   scheduleTimezone?: string | null;
   seq: number;
@@ -527,6 +557,8 @@ export interface TaskDetailSubtask {
   identifier: string;
   name?: string | null;
   priority?: number | null;
+  /** Review-phase owner once the subtask pauses for review. */
+  reviewerUserId?: string | null;
   runningTopic?: TaskDetailSubtaskRunningTopic | null;
   schedule?: { pattern?: string | null; timezone?: string | null };
   status: string;
@@ -607,6 +639,12 @@ export interface TaskDetailActivity {
   /** Comment-only: files attached to this comment for rendering in the UI. */
   files?: ChatFileItem[];
   id?: string;
+  /**
+   * Topic-only: per-run workspace-integration record mirrored from
+   * `task_topics.integration`. Absent on runs that never provisioned an
+   * isolated worktree — most runs have nothing to merge back.
+   */
+  integration?: TaskTopicIntegration | null;
   /**
    * Topic-only: persisted Gateway operation ID for the task topic, sourced
    * from `task_topics.operationId`. Survives across runs (created on add,
@@ -713,6 +751,10 @@ export interface TaskDetailData {
   name?: string | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
   priority?: number | null;
+  /** Owning project; drives the automation detail's project picker. */
+  projectId?: string | null;
+  /** The human accountable while the task sits in 'paused' ("pending review"). */
+  reviewerUserId?: string | null;
   schedule?: {
     maxExecutions?: number | null;
     pattern?: string | null;

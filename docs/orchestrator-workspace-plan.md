@@ -84,10 +84,34 @@ provisioned run → `integrateRun` first.
 - `conflict` → hold settle: launch the corrective continuation and leave the task `running`
 - integration infra error → brief + `paused`, never silently marked done
 
-### 5. Non-goals (v1)
+### 5. Phase C — sandbox (remote) branch contract
 
-- Sandbox branch contract (`task/<id>` push + PR) — sandbox already isolates; record
-  `git.upstream` and integrate via a later integrator run
+Device worktrees cover the `device`/`local` path; a run bound for the **cloud sandbox**
+needs a remote contract instead — the clone is ephemeral, so the branch must live on the
+GitHub remote for a later integrator run to land it.
+
+- `TaskWorkspaceConfig.repo?: string` — GitHub coordinate (`owner/repo` or clone URL)
+  alongside `repoPath` (now optional). A binding needs at least one of them.
+- `TaskWorkspaceService.provision` picks the mode by where the run actually executes:
+  `resolveExecutionTarget(...) === 'sandbox'` → remote contract; `repoPath` + device →
+  worktree; otherwise unprovisioned (unchanged).
+- Remote provision returns `repos: [repo]` → `initialTopicMetadata.repos` → topic
+  `metadata.repos` → `heteroDispatch` → `spawnHeteroSandbox` pre-clones it into
+  `/workspace/<dir>` (`repoToLocalDir` / `cloudSandboxRepoPath`, shared in
+  `@orvilo/types` and now also used by `cloudHeteroContext`).
+- The provision's `prompt` rides into `buildTaskPrompt`: create `task/<id>` off
+  `origin/<base>`, commit + `push -u origin`, `gh pr create --base <base>`. The topic's
+  `workingDirectoryConfig.git.upstream` records the published ref.
+- Integration: `TaskTopicIntegration.repo` marks a remote record. On task-run completion
+  the service verifies the merge on the remote (`findBranchPr` merged → else compare
+  `base...head` ancestry) via the new `githubRepo` service (Market `github` cred token,
+  shared with `heteroDispatch`). Not landed → a corrective **sandbox** run
+  (`workspaceOverride.repos`) performs `merge --no-ff` + push (or `gh pr merge`),
+  re-entering the same gate. Merged → `integrated` + `prUrl` + `pushedToRemote` on every
+  row tracking the branch; exhausted attempts → `blocked`.
+
+### 6. Non-goals (v1)
+
 - Desktop in-process `local` runs (same provisioning via GitCtr IPC)
 - Cross-repo / multi-repo tasks
 
@@ -126,5 +150,32 @@ provisioned run → `integrateRun` first.
     worktree (`workspaceOverride` + `integrationSeed`), capped at 3 attempts →
     `blocked`; settle gate lives in `onTopicComplete` ('done'), records persist on
     `task_topics.integration` (migration 0164)
-- [ ] Phase C: sandbox contract
+- [x] Phase C: sandbox contract
+  - `TaskWorkspaceConfig.repo` (GitHub coordinate) + `TaskTopicIntegration.repo`/`prUrl`
+    mark remote records; device fields went optional (jsonb, no migration)
+  - `TaskWorkspaceService.provisionOnRemote`: `repos` → topic metadata (sandbox
+    pre-clone at `cloudSandboxRepoPath`), contract prompt (branch/push/PR),
+    `git.upstream` on `workingDirectoryConfig`; gated by `resolveExecutionTarget`
+    mirroring the server's own plan resolution
+  - `apps/server/src/services/githubRepo`: `parseGithubRepo`, GitHub REST helpers
+    (`getRepoDefaultBranch` / `findBranchPr` / `isBranchMergedInto`) and
+    `resolveGithubAccessToken` — now shared with `heteroDispatch`
+  - `TaskIntegrationService`: remote records verify the merge via the GitHub API and
+    hand unfinished merges to a corrective **sandbox** run (`workspaceOverride.repos`),
+    skipping all device RPCs; publish/cleanup stamps `pushedToRemote` on all rows
 - [ ] Phase D: cleanup + UI surface
+  - D1 (`feat/orchestrator-worktree-cleanup`, stacked on Phase C):
+    `TaskIntegrationService.cleanupTaskWorktrees` removes **task-scoped** device
+    worktrees for stale records (pending/merging/conflict or `worktreeCleaned`
+    false) and flags them so a failed removal retries on a later pass. Wired into
+    run cancel/remove, task terminal-status transitions (`canceled|completed|
+failed`), the cascade update, and both task-delete paths (router + agent
+    tool runtime). The shared per-(repo, base) integration worktree is never
+    removed by task-scoped cleanup — deleting it could destroy another task's
+    in-flight merge on the same base. Remote records skip device RPCs.
+  - D2 (`feat/orchestrator-integration-ui`, stacked on Phase C):
+    `TaskDetailActivity.integration` mirrors `task_topics.integration` through
+    `TaskTopicModel` + `TaskService`; `RunIntegrationTag` renders the run's
+    merge state chip (pending/merging/conflict/blocked/integrated/skipped) on
+    `TopicCard` + `TopicChatDrawer` with a tooltip carrying branch→base,
+    attempts, conflicts, lastError and the PR link. en-US + zh-CN keys.

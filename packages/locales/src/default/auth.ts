@@ -143,6 +143,7 @@ export default {
   'betterAuth.signin.continueWithLogto': 'Sign in with Logto',
   'betterAuth.signin.continueWithMicrosoft': 'Continue with Microsoft',
   'betterAuth.signin.continueWithOIDC': 'Sign in with OIDC',
+  'betterAuth.signin.continueWithGenericOidc': 'Continue with Orvilo ID',
   'betterAuth.signin.continueWithOkta': 'Sign in with Okta',
   'betterAuth.signin.continueWithWechat': 'Sign in with WeChat',
   'betterAuth.signin.continueWithZitadel': 'Sign in with Zitadel',

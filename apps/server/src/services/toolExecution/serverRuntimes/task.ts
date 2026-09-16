@@ -33,6 +33,7 @@ import { tasks } from '@/database/schemas';
 import { appEnv } from '@/envs/app';
 import { taskRouter } from '@/server/routers/lambda/task';
 import { TaskService } from '@/server/services/task';
+import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
 import { type ServerRuntimeRegistration } from './types';
@@ -344,6 +345,15 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
     deleteTask: async (args: { identifier: string }) => {
       const task = await taskModel().resolve(args.identifier);
       if (!task) return { content: `Task not found: ${args.identifier}`, success: false };
+
+      // Tear down provisioned run worktrees before the task_topics rows
+      // cascade away with the task. Best-effort — never blocks the delete.
+      if (deps.db && deps.userId) {
+        const workspaceId = deps.workspaceId ?? (await resolveWorkspaceId(deps.db, task.id));
+        await new TaskIntegrationService(deps.db, deps.userId, workspaceId).cleanupTaskWorktrees(
+          task.id,
+        );
+      }
 
       await taskModel().delete(task.id);
 

@@ -200,8 +200,13 @@ export class WorkspaceMemberModel {
 
       await tx
         .update(tasks)
-        .set({ assigneeUserId: null })
-        .where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.assigneeUserId, userId)));
+        .set({ assigneeUserId: null, reviewerUserId: null })
+        .where(
+          and(
+            eq(tasks.workspaceId, workspaceId),
+            or(eq(tasks.assigneeUserId, userId), eq(tasks.reviewerUserId, userId)),
+          ),
+        );
     });
 
     // Surfaced so callers can best-effort unenroll any still-connected gateway
@@ -228,8 +233,13 @@ export class WorkspaceMemberModel {
       if (updatedMembers.length > 0 && !canWorkspaceRoleBeTaskAssignee(role)) {
         await tx
           .update(tasks)
-          .set({ assigneeUserId: null })
-          .where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.assigneeUserId, userId)));
+          .set({ assigneeUserId: null, reviewerUserId: null })
+          .where(
+            and(
+              eq(tasks.workspaceId, workspaceId),
+              or(eq(tasks.assigneeUserId, userId), eq(tasks.reviewerUserId, userId)),
+            ),
+          );
       }
 
       return updatedMembers;

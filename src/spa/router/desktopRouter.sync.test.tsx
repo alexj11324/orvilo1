@@ -407,15 +407,43 @@ describe('desktop router shared definition', () => {
     expect(fallbackTypes?.at(-1)).toBe(RouteSegmentSkeleton);
   });
 
-  it('injects Home eagerly into the per-tab content routes', () => {
+  it('injects Home into the per-tab content routes', () => {
     const children = createMainAreaChildren();
     const workspace = children.find((route) => route.path === ':workspaceSlug');
 
-    // Home is the first screen every tab paints, so it must not suspend behind
-    // a chunk fetch the way the bare shared factory would leave it.
+    // The bare shared factory leaves the index element empty; this adapter fills
+    // it, because each Electron tab owns an independent memory router.
     expect(children.find((route) => route.index)?.element).toBeDefined();
     expect(workspace?.children?.find((route) => route.index)?.element).toBeDefined();
     expect(createMainAreaRouteFactory()().find((route) => route.index)?.element).toBeUndefined();
+  });
+
+  // Regression: making this file the Electron adapter first pulled
+  // `DesktopHomeRoute` in statically, which drags the whole Home page graph
+  // (~770 src modules) into a module ~29 files under `src/` import. Since
+  // neither tsgo nor vitest applies the `platformResolve` plugin, every test
+  // file touching the router paid for it and the app suite went from ~13min to
+  // over 85min in CI. Home stays behind `desktopHomeElement`, whose `.desktop`
+  // variant carries the eager version for the renderer build alone.
+  it('keeps the Home page graph out of the router config resolved by tsgo and vitest', async () => {
+    const [, configSource] = await readRouterSources();
+
+    expect(configSource).not.toContain("from './DesktopHomeRoute'");
+    expect(configSource).toContain("from './desktopHomeElement'");
+
+    const eagerVariant = await readFile(
+      path.join(process.cwd(), 'src/spa/router/desktopHomeElement.desktop.tsx'),
+      'utf8',
+    );
+    const lazyBase = await readFile(
+      path.join(process.cwd(), 'src/spa/router/desktopHomeElement.tsx'),
+      'utf8',
+    );
+
+    // The renderer build keeps Home eager; the base module must not.
+    expect(eagerVariant).toContain("from './DesktopHomeRoute'");
+    expect(lazyBase).not.toContain("from './DesktopHomeRoute'");
+    expect(lazyBase).toContain("import('./DesktopHomeRoute')");
   });
 
   it('registers every workspace-aware settings tab', () => {

@@ -366,8 +366,8 @@
 | ------------------------------------------------------- | ------------------------------------ |
 | `src/routes/(desktop)/screen-capture-overlay/index.tsx` | overlay 页面入口；仅负责挂载 UI 组件 |
 | `src/features/DesktopScreenCaptureOverlay/*`            | 业务组件、hooks、样式                |
-| `src/spa/router/desktopRouter.shared.tsx`               | Web/Electron 共用路由定义            |
-| `src/spa/router/desktopRouter.config.desktop.tsx`       | Electron 独有路由差分                |
+| `src/spa/router/desktopRouter.shared.tsx`               | 桌面端共享路由定义                   |
+| `src/spa/router/desktopRouter.config.tsx`               | Electron 适配器（含平台路由差分）    |
 
 必须注意：
 

@@ -48,6 +48,12 @@ import { agentDocumentRouteMeta } from '@/features/AgentDocumentPage/routeMeta';
 import { goalDetailRouteMeta, goalsRouteMeta } from '@/features/AgentGoals/routeMeta';
 import { taskRouteMeta, tasksRouteMeta } from '@/features/AgentTasks/routeMeta';
 import { agentsRouteMeta } from '@/features/AgentViewAll/routeMeta';
+import {
+  automationDetailRouteMeta,
+  automationNewRouteMeta,
+  automationRunsRouteMeta,
+  automationsRouteMeta,
+} from '@/features/Automations/routeMeta';
 import { pageRouteMeta } from '@/features/Pages/routeMeta';
 import { projectsRouteMeta } from '@/features/Projects/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
@@ -1091,6 +1097,46 @@ export const sharedMainAreaChildren: RouteObject[] = [
       'Desktop > Task Workspace > Layout',
       { preloadId: 'tasks' },
     ),
+  },
+
+  // Automations routes — recurring agent runs, one level above the task list
+  {
+    children: [
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/automations'),
+          'Desktop > Automations',
+        ),
+        handle: { meta: automationsRouteMeta },
+        index: true,
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/automations/new'),
+          'Desktop > Automation New',
+        ),
+        handle: { meta: automationNewRouteMeta },
+        path: 'new',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/automations/runs'),
+          'Desktop > Automation Runs',
+        ),
+        handle: { meta: automationRunsRouteMeta },
+        path: 'runs',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/automations/[taskId]'),
+          'Desktop > Automation Detail',
+        ),
+        handle: { meta: automationDetailRouteMeta },
+        path: ':taskId',
+      },
+    ],
+    errorElement: <ErrorBoundary resetPath=".." />,
+    path: 'automations',
   },
 
   // Pages routes

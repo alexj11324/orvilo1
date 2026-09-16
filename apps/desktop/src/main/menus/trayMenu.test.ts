@@ -52,11 +52,11 @@ describe('buildTrayMenuTemplate', () => {
       })),
       pinned: Array.from({ length: 4 }, (_, index) => ({
         title: `Pinned ${index}`,
-        url: `/page/pinned-${index}`,
+        url: `/tasks/pinned-${index}`,
       })),
       recent: Array.from({ length: 6 }, (_, index) => ({
         title: `Recent ${index}`,
-        url: `/page/recent-${index}`,
+        url: `/agent/agent-${index}/topic-${index}`,
       })),
     });
     const labels = template.map((item) => item.label);
@@ -86,22 +86,16 @@ describe('buildTrayMenuTemplate', () => {
     });
   });
 
-  it('renders recent topics and pages as two-line native items', () => {
+  it('renders recent topics as two-line native items', () => {
     const { app } = createApp();
     const template = buildTrayMenuTemplate(app, {
       agents: [],
       pinned: [],
-      recent: [
-        { subtitle: 'Researcher', title: 'Topic title', url: '/agent/agent-1/topic-1' },
-        { subtitle: 'Page', title: 'Page title', url: '/page/page-1' },
-      ],
+      recent: [{ subtitle: 'Researcher', title: 'Topic title', url: '/agent/agent-1/topic-1' }],
     });
 
     expect(template.find(({ label }) => label === 'Topic title')).toMatchObject({
       sublabel: 'Researcher',
-    });
-    expect(template.find(({ label }) => label === 'Page title')).toMatchObject({
-      sublabel: 'Page',
     });
   });
 

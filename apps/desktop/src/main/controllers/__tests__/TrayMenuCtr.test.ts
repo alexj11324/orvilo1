@@ -91,7 +91,7 @@ describe('TrayMenuCtr', () => {
       const snapshot: TrayNavigationSnapshot = {
         agents: [{ id: 'agent-1', title: 'Researcher', url: '/agent/agent-1' }],
         pinned: [{ title: 'Pinned task', url: '/tasks/pinned' }],
-        recent: [{ title: 'Recent page', url: '/page/recent' }],
+        recent: [{ subtitle: 'Researcher', title: 'Recent topic', url: '/agent/agent-1/topic-1' }],
       };
 
       const result = trayMenuCtr.updateNavigationSnapshot(snapshot);

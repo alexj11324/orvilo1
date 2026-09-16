@@ -15,7 +15,7 @@ import HomeDashboard from './Home';
 
 /**
  * Path segment → category for routes that own one: /resource/all,
- * /resource/page (derived pages/notes), /resource/documents, …
+ * /resource/documents, /resource/images, …
  */
 export const CATEGORY_BY_SEGMENT: Record<string, FilesTabs> = {
   all: FilesTabs.All,
@@ -23,7 +23,6 @@ export const CATEGORY_BY_SEGMENT: Record<string, FilesTabs> = {
   documents: FilesTabs.Documents,
   files: FilesTabs.Files,
   images: FilesTabs.Images,
-  page: FilesTabs.Pages,
   videos: FilesTabs.Videos,
   websites: FilesTabs.Websites,
 };
@@ -32,7 +31,7 @@ const SEGMENT_BY_CATEGORY = Object.fromEntries(
   Object.entries(CATEGORY_BY_SEGMENT).map(([segment, category]) => [category, segment]),
 );
 
-/** Canonical path for a category, e.g. /resource/page for Pages. */
+/** Canonical path for a category, e.g. /resource/documents. */
 export const resourceCategoryPath = (category: FilesTabs): string =>
   SEGMENT_BY_CATEGORY[category] ? `/resource/${SEGMENT_BY_CATEGORY[category]}` : '/resource';
 

@@ -3,7 +3,6 @@
 import { Flexbox } from '@lobehub/ui';
 import {
   ClipboardListIcon,
-  FilePenIcon,
   FilesIcon,
   FileText,
   HouseIcon,
@@ -93,12 +92,6 @@ const CategoryMenu = memo(() => {
       ],
       // LobeHub business entities
       [
-        {
-          icon: FilePenIcon,
-          key: FilesTabs.Pages,
-          title: t('tab.pages'),
-          url: '/resource/page',
-        },
         {
           icon: ClipboardListIcon,
           key: 'works',

@@ -21,18 +21,9 @@ export interface Context {
 }
 
 export type MenuContext =
-  | 'general'
-  | 'agent'
-  | 'group'
-  | 'resource'
-  | 'settings'
-  | 'memory'
-  | 'community'
-  | 'page'
-  | 'painting'
-  | 'video';
+  'general' | 'agent' | 'group' | 'resource' | 'settings' | 'memory' | 'painting' | 'video';
 
 export type ContextType = Extract<
   MenuContext,
-  'agent' | 'group' | 'resource' | 'settings' | 'page' | 'painting' | 'video'
+  'agent' | 'group' | 'resource' | 'settings' | 'painting' | 'video'
 >;

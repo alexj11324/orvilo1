@@ -33,20 +33,16 @@ export class SelectionActionImpl {
     // Don't allow deselecting the current page
     if (selectedPageId === pageId) return;
 
-    // Select and navigate
+    // Select the document for the current editor surface.
     this.#set({ isCreatingNew: false, selectedPageId: pageId }, false, n('selectPage'));
-    this.#get().navigateToPage(pageId);
   };
 
   setRenamingPageId = (pageId: string | null): void => {
     this.#set({ renamingPageId: pageId }, false, n('setRenamingPageId'));
   };
 
-  setSelectedPageId = (pageId: string | null, shouldNavigate: boolean = true): void => {
+  setSelectedPageId = (pageId: string | null, _shouldNavigate: boolean = true): void => {
     this.#set({ selectedPageId: pageId }, false, n('setSelectedPageId'));
-    if (shouldNavigate) {
-      this.#get().navigateToPage(pageId);
-    }
   };
 }
 

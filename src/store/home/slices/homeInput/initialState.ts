@@ -1,4 +1,4 @@
-export type StarterMode = 'agent' | 'group' | 'write' | 'video' | 'research' | 'image' | null;
+export type StarterMode = 'agent' | 'group' | 'video' | 'research' | 'image' | null;
 
 export interface HomeInputState {
   homeInputLoading: boolean;

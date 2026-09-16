@@ -13,16 +13,7 @@ import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfi
 import NavBar from './NavBar';
 
 const CloudBanner = dynamic(() => import('@/features/AlertBanner/CloudBanner'));
-const MOBILE_NAV_ROUTES = new Set([
-  '/',
-  '/community',
-  '/community/agent',
-  '/community/mcp',
-  '/community/plugin',
-  '/community/model',
-  '/community/provider',
-  '/me',
-]);
+const MOBILE_NAV_ROUTES = new Set(['/', '/me']);
 
 const MobileMainLayout: FC = () => {
   const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);

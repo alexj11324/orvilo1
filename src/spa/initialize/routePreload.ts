@@ -71,12 +71,6 @@ const createWebRoutePreloadTasks = (): RoutePreloadTask[] => [
     priority: 'medium',
   }),
   createTask({
-    id: 'community',
-    idleDelay: 6000,
-    matches: matchesRoute('community'),
-    priority: 'medium',
-  }),
-  createTask({
     id: 'settings',
     idleDelay: 8000,
     matches: matchesRoute('settings'),
@@ -92,12 +86,6 @@ const createWebRoutePreloadTasks = (): RoutePreloadTask[] => [
     id: 'memory',
     idleDelay: 12_000,
     matches: matchesRoute('memory'),
-    priority: 'low',
-  }),
-  createTask({
-    id: 'page',
-    idleDelay: Number.POSITIVE_INFINITY,
-    matches: matchesRoute('page'),
     priority: 'low',
   }),
   createTask({
@@ -143,12 +131,6 @@ const createMobileRoutePreloadTasks = (): RoutePreloadTask[] => [
     id: 'mobile-tasks',
     idleDelay: 4000,
     matches: matchesRoute('(?:tasks|task|agent/[^/]+/task)'),
-    priority: 'medium',
-  }),
-  createTask({
-    id: 'mobile-community',
-    idleDelay: 6000,
-    matches: matchesRoute('community'),
     priority: 'medium',
   }),
   createTask({

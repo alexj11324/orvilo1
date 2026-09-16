@@ -1,5 +1,3 @@
-import { type NavigateFunction } from 'react-router';
-
 import { type LobeDocument } from '@/types/document';
 
 export interface PageQueryFilter {
@@ -41,7 +39,6 @@ export interface PageState {
    */
   isLoadingMoreDocuments: boolean;
 
-  navigate?: NavigateFunction;
   /**
    * Filters used in the last query
    */

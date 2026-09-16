@@ -1,15 +1,7 @@
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { Command } from 'cmdk';
-import {
-  Bot,
-  FeatherIcon,
-  FilePen,
-  LibraryBig,
-  MessageSquarePlusIcon,
-  Monitor,
-  Star,
-} from 'lucide-react';
+import { Bot, FeatherIcon, LibraryBig, MessageSquarePlusIcon, Monitor, Star } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -38,7 +30,6 @@ const MainMenu = memo(() => {
     handleCreateSession,
     handleCreateTopic,
     handleCreateLibrary,
-    handleCreatePage,
     handleNavigate,
     handleExternalLink,
     handleCreateAgentTeam,
@@ -52,7 +43,7 @@ const MainMenu = memo(() => {
         <CommandItem
           disabled={!canCreate}
           icon={<Bot />}
-          unpinned={menuContext === 'agent' || menuContext === 'page'}
+          unpinned={menuContext === 'agent'}
           value="create new agent assistant"
           onSelect={handleCreateSession}
         >
@@ -62,7 +53,7 @@ const MainMenu = memo(() => {
         <CommandItem
           disabled={!canCreate}
           icon={<Bot />}
-          unpinned={menuContext === 'agent' || menuContext === 'page'}
+          unpinned={menuContext === 'agent'}
           value="create new agent team"
           onSelect={handleCreateAgentTeam}
         >
@@ -80,15 +71,6 @@ const MainMenu = memo(() => {
             {t('cmdk.newTopic')}
           </CommandItem>
         )}
-
-        <CommandItem
-          disabled={!canCreate}
-          icon={<FilePen />}
-          value="create new page"
-          onSelect={handleCreatePage}
-        >
-          {t('cmdk.newPage')}
-        </CommandItem>
 
         <CommandItem
           disabled={!canCreate}

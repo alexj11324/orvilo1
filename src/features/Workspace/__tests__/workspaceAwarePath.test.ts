@@ -17,9 +17,6 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/video?model=video-model', 'acme')).toBe(
       '/acme/video?model=video-model',
     );
-    expect(buildWorkspaceAwarePath('/community/agent/jailbreak', 'acme')).toBe(
-      '/acme/community/agent/jailbreak',
-    );
     expect(buildWorkspaceAwarePath('/group/group-1', 'acme')).toBe('/acme/group/group-1');
     expect(buildWorkspaceAwarePath('/project/project-1', 'acme')).toBe('/acme/project/project-1');
     expect(buildWorkspaceAwarePath('/projects', 'acme')).toBe('/acme/projects');

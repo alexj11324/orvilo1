@@ -13,7 +13,7 @@ import FileTree from '@/features/FileTree';
 import { DetailProvider } from '@/features/MCPPluginDetail/DetailProvider';
 import Tools from '@/features/MCPPluginDetail/Schema/Tools';
 import { ModeType } from '@/features/MCPPluginDetail/Schema/types';
-import Title from '@/routes/(main)/community/features/Title';
+import Title from '@/features/MCPPluginDetail/Title';
 
 import { useDetailContext } from './DetailContext';
 

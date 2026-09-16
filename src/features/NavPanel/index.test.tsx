@@ -140,7 +140,7 @@ describe('NavPanel', () => {
   });
 
   it('shows a route-keyed fallback instead of stale Home content while a dedicated portal loads', async () => {
-    pathname = '/lobe-team/community';
+    pathname = '/lobe-team/memory';
 
     render(
       <>
@@ -154,7 +154,7 @@ describe('NavPanel', () => {
     await waitFor(() => {
       expect(screen.getByTestId('nav-sidebar-skeleton')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('nav-panel')).toHaveAttribute('data-nav-key', 'pending:discover');
+    expect(screen.getByTestId('nav-panel')).toHaveAttribute('data-nav-key', 'pending:memory');
     expect(screen.queryByText('Home sidebar')).not.toBeInTheDocument();
   });
 
@@ -181,8 +181,8 @@ describe('NavPanel', () => {
     expect(screen.queryByTestId('nav-sidebar-skeleton-search')).not.toBeInTheDocument();
   });
 
-  it('shapes the skeleton per nav key: discover is header-plus-nav with no body', async () => {
-    pathname = '/community';
+  it('shapes the skeleton per nav key: memory is header-plus-nav with no search', async () => {
+    pathname = '/memory';
 
     render(<NavPanel />);
 
@@ -242,7 +242,7 @@ describe('NavPanelShell', () => {
   });
 
   it('still yields to a dedicated route panel', async () => {
-    pathname = '/community';
+    pathname = '/memory';
 
     render(<NavPanelShell />);
 
@@ -270,7 +270,7 @@ describe('SideBarLayout scroll restoration', () => {
   });
 
   it('keeps offsets isolated per nav key', () => {
-    pathname = '/community';
+    pathname = '/resource';
     const first = render(<SideBarLayout body={<div>body</div>} />);
     const viewport = getViewport(first.container);
     viewport.scrollTop = 80;

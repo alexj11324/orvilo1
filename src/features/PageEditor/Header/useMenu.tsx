@@ -19,9 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
 import { useDocumentTransferMenuItem } from '@/business/client/hooks/useDocumentTransferMenuItem';
-import { useResourcePermission } from '@/features/ResourcePermission/useResourcePermission';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
@@ -93,29 +91,6 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
   const canMakePrivate = Boolean(
     activeWorkspaceId && isOwnPage && pageDocument?.visibility === 'public' && canEditPage,
   );
-  // Member Permissions moved to its own page (same shape as Agent's). Private
-  // pages are included — the creator configures what members get the moment
-  // the page is published; the server stores the level ahead of publishing.
-  const wsNavigate = useWorkspaceAwareNavigate();
-  const { data: pagePermission } = useResourcePermission(
-    'document',
-    activeWorkspaceId ? documentId : undefined,
-  );
-  const memberPermissionMenuItem: DropdownItem | null = useMemo(
-    () =>
-      activeWorkspaceId && pagePermission?.canManage && documentId
-        ? {
-            icon: <Icon icon={UsersIcon} />,
-            key: 'member-permissions',
-            label: t('permission.page.entry', { ns: 'setting' }),
-            onClick: () => {
-              wsNavigate(`/page/${documentId}/permission`);
-            },
-          }
-        : null,
-    [activeWorkspaceId, pagePermission?.canManage, documentId, t, wsNavigate],
-  );
-
   const [togglePageAgentPanel, wideScreen, toggleWideScreen] = useGlobalStore((s) => [
     s.togglePageAgentPanel,
     systemStatusSelectors.wideScreen(s),
@@ -227,9 +202,8 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
             },
           ]
         : []),
-      ...(memberPermissionMenuItem || canMakePrivate
+      ...(canMakePrivate
         ? [
-            ...(memberPermissionMenuItem ? [memberPermissionMenuItem] : []),
             ...(canMakePrivate
               ? [
                   {
@@ -361,7 +335,6 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
     handleMakePrivate,
     handlePublish,
     handleExportMarkdown,
-    memberPermissionMenuItem,
     transferMenuItems,
     onCopyLink,
     onDeleted,

@@ -18,6 +18,19 @@ describe('SPA proxy route matching', () => {
     },
   );
 
+  it.each([
+    '/community',
+    '/community/agent/example',
+    '/page',
+    '/page/docs_example/permission',
+    '/acme/community/org/example',
+    '/acme/page/docs_example',
+  ])('routes retired product URL %s through the SPA tombstones', (pathname) => {
+    expect(unstable_doesMiddlewareMatch({ config, url: `http://localhost:3010${pathname}` })).toBe(
+      true,
+    );
+  });
+
   it.each(['/api/chat', '/trpc/lambda/share.getSharedAgent', '/webapi/chat'])(
     'keeps backend authentication in the handler for %s',
     (pathname) => {

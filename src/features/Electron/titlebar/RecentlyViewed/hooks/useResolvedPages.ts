@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { mainAreaMetaRoutes } from '@/spa/router/desktopRouter.config';
 import { useElectronStore } from '@/store/electron';
 
+import { isRetiredProductUrl } from '../../retiredProductUrl';
 import { type ResolvedTab, resolveTab } from '../../TabBar/hooks/useResolvedTabs';
 
 interface UseResolvedPagesResult {
@@ -20,17 +21,24 @@ export const useResolvedPages = (): UseResolvedPagesResult => {
 
   const pinnedRefs = useElectronStore((s) => s.pinnedPages);
   const recentRefs = useElectronStore((s) => s.recentPages);
+  const scope = useElectronStore((s) => s.activeRecentScope);
 
   const translate = t as unknown as Translate;
 
   const pinnedPages = useMemo(
-    () => pinnedRefs.map((tab) => resolveTab(mainAreaMetaRoutes, tab, false, translate)),
-    [pinnedRefs, translate],
+    () =>
+      pinnedRefs
+        .filter((tab) => !isRetiredProductUrl(tab.url, scope))
+        .map((tab) => resolveTab(mainAreaMetaRoutes, tab, false, translate)),
+    [pinnedRefs, scope, translate],
   );
 
   const recentPages = useMemo(
-    () => recentRefs.map((tab) => resolveTab(mainAreaMetaRoutes, tab, false, translate)),
-    [recentRefs, translate],
+    () =>
+      recentRefs
+        .filter((tab) => !isRetiredProductUrl(tab.url, scope))
+        .map((tab) => resolveTab(mainAreaMetaRoutes, tab, false, translate)),
+    [recentRefs, scope, translate],
   );
 
   return { pinnedPages, recentPages };

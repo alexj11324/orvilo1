@@ -7,7 +7,6 @@ import { documentSWRKeys } from '@/services/document/swrKeys';
 import { type StoreSetter } from '@/store/types';
 import { type LobeDocument } from '@/types/document';
 import { DocumentSourceType } from '@/types/document';
-import { standardizeIdentifier } from '@/utils/identifier';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { type PageStore } from '../../store';
@@ -85,16 +84,11 @@ export class CrudActionImpl {
         n('createNewPage/success'),
       );
 
-      // Navigate to the new page
-      this.#get().navigateToPage(newPage.id);
-
       return newPage.id;
     } catch (error) {
       console.error('Failed to create page:', error);
       this.#get().removeTempPage(tempPageId);
       this.#set({ isCreatingNew: false, selectedPageId: null }, false, n('createNewPage/error'));
-      this.#get().navigate?.('/page');
-
       throw error;
     }
   };
@@ -166,7 +160,6 @@ export class CrudActionImpl {
 
     if (selectedPageId === pageId) {
       this.#set({ isCreatingNew: false, selectedPageId: null }, false, n('deletePage'));
-      this.#get().navigateToPage(null);
     }
   };
 
@@ -225,14 +218,6 @@ export class CrudActionImpl {
     return newPage;
   };
 
-  navigateToPage = (pageId: string | null): void => {
-    if (!pageId) {
-      this.#get().navigate?.('/page');
-    } else {
-      this.#get().navigate?.(`/page/${standardizeIdentifier(pageId)}`);
-    }
-  };
-
   removePage = async (pageId: string): Promise<void> => {
     const { documents, selectedPageId } = this.#get();
 
@@ -245,7 +230,6 @@ export class CrudActionImpl {
     // Clear selected page ID if the deleted page is currently selected
     if (selectedPageId === pageId) {
       this.#set({ selectedPageId: null }, false, n('removePage/clearSelection'));
-      this.#get().navigateToPage(null);
     }
 
     try {
@@ -262,7 +246,6 @@ export class CrudActionImpl {
       }
       if (selectedPageId === pageId) {
         this.#set({ selectedPageId: pageId }, false, n('removePage/restoreSelection'));
-        this.#get().navigateToPage(pageId);
       }
       throw error;
     }

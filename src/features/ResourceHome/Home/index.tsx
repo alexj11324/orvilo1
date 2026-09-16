@@ -10,7 +10,6 @@ import AddButton from '@/features/ResourceManager/components/Header/AddButton';
 
 import Libraries from './Libraries';
 import RecentFiles from './RecentFiles';
-import RecentPages from './RecentPages';
 import RecentWorks from './RecentWorks';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -29,7 +28,7 @@ const styles = createStaticStyles(({ css }) => ({
 
 /**
  * The library-style landing page of /resource: libraries (once — the sidebar
- * holds the full index), then works → recent pages → recent files, instead of
+ * holds the full index), then works → recent files, instead of
  * the flat all-files table (which now lives at /resource/all).
  */
 const ResourceHomeDashboard = memo(() => {
@@ -46,7 +45,6 @@ const ResourceHomeDashboard = memo(() => {
         <Flexbox className={styles.content} gap={40}>
           <Libraries />
           <RecentWorks />
-          <RecentPages />
           <RecentFiles />
         </Flexbox>
       </div>

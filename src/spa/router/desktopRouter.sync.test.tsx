@@ -214,6 +214,49 @@ describe('desktop router shared definition', () => {
   });
 
   it.each(mainAreaVariants)(
+    '%s registers only redirect tombstones for the retired Community and Pages routes',
+    (_, factory) => {
+      const routes = factory();
+
+      for (const path of ['community', 'page']) {
+        const route = routes.find((candidate) => candidate.path === path);
+
+        expect(route?.element).toBeDefined();
+        expect(route?.children).toBeUndefined();
+      }
+    },
+  );
+
+  it.each(mainAreaVariants)(
+    '%s keeps retired product redirects inside the active workspace',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+
+      for (const pathname of [
+        '/community',
+        '/community/agent/example',
+        '/community/workspace/settings',
+        '/page',
+        '/page/docs_example',
+        '/page/docs_example/permission',
+        '/acme/community/agent/example',
+        '/acme/page/docs_example',
+      ]) {
+        const matches = matchRoutes(routes, pathname);
+        const redirect = matches?.find(
+          ({ route }) =>
+            (route.element as ReactElement<{ to?: string }> | undefined)?.props.to === '..',
+        );
+
+        expect(
+          (redirect?.route.element as ReactElement<{ to: string }> | undefined)?.props.to,
+          pathname,
+        ).toBe('..');
+      }
+    },
+  );
+
+  it.each(mainAreaVariants)(
     '%s personal memory settings are not shadowed by workspace memory routes',
     (_, factory) => {
       const matches = matchRoutes(createMainAreaRoutes(factory), '/settings/memory');

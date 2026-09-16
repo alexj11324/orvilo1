@@ -40,16 +40,14 @@ describe('resolveTrayNavigationSnapshot', () => {
     expect(snapshot.agents).toHaveLength(4);
   });
 
-  it('keeps only concrete topics and pages with a descriptive second line', () => {
+  it('keeps only concrete topics with a descriptive second line', () => {
     const snapshot = resolveTrayNavigationSnapshot({
       agents: [agent('agent-1', 'Researcher', '2026-07-11T00:00:00.000Z')],
       pinnedPages: [],
       recentPages: [
         page('Topic title · Researcher', '/agent/agent-1/topic-1', 5),
-        page('Page title', '/page/page-1', 4),
         page('Agent root', '/agent/agent-1', 3),
         page('Agent task', '/agent/agent-1/task/task-1', 3),
-        page('Page list', '/page', 2),
         page('Settings', '/settings', 1),
       ],
       scope: { type: 'personal' },
@@ -57,7 +55,6 @@ describe('resolveTrayNavigationSnapshot', () => {
 
     expect(snapshot.recent).toEqual([
       { subtitle: 'Researcher', title: 'Topic title', url: '/agent/agent-1/topic-1' },
-      { subtitle: 'Page', title: 'Page title', url: '/page/page-1' },
     ]);
   });
 
@@ -65,10 +62,10 @@ describe('resolveTrayNavigationSnapshot', () => {
     const snapshot = resolveTrayNavigationSnapshot({
       agents: [agent('agent 1', '', '2026-07-11T00:00:00.000Z')],
       pinnedPages: Array.from({ length: 4 }, (_, index) =>
-        page(`Pinned ${index}`, `/page/pinned-${index}`, index),
+        page(`Pinned ${index}`, `/tasks/pinned-${index}`, index),
       ),
       recentPages: Array.from({ length: 6 }, (_, index) =>
-        page(`Recent ${index}`, `/page/recent-${index}`, index),
+        page(`Recent ${index} · Untitled`, `/agent/agent%201/topic-${index}`, index),
       ),
       scope: { type: 'personal' },
     });
@@ -76,7 +73,7 @@ describe('resolveTrayNavigationSnapshot', () => {
     expect(snapshot.agents[0]).toEqual({
       id: 'agent 1',
       title: 'Untitled',
-      url: '/agent/agent%201',
+      url: '/agent/agent%201/topic-5',
     });
     expect(snapshot.pinned).toHaveLength(4);
     expect(snapshot.recent).toHaveLength(6);

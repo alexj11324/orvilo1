@@ -52,11 +52,6 @@ const resolveRecentItem = (page: ResolvedTab, agentNames: ReadonlyMap<string, st
       url: page.tab.url,
     };
   }
-
-  const pageIndex = segments.indexOf('page');
-  if (pageIndex >= 0 && segments.length === pageIndex + 2 && segments[pageIndex + 1]) {
-    return { subtitle: 'Page', title: page.meta.title, url: page.tab.url };
-  }
 };
 
 export const resolveTrayNavigationSnapshot = ({

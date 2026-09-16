@@ -12,10 +12,8 @@ const permissionMock = vi.hoisted(() => ({
 }));
 
 const resourcePermissionMock = vi.hoisted(() => ({
-  canManage: false,
   workspaceId: undefined as string | undefined,
 }));
-const wsNavigateMock = vi.hoisted(() => vi.fn());
 const menuActionMocks = vi.hoisted(() => ({
   handleCopyLink: vi.fn(),
   handleDelete: vi.fn(),
@@ -71,21 +69,6 @@ vi.mock('@/business/client/hooks/useDocumentTransferMenuItem', () => ({
 
 vi.mock('@/features/VisibilityConfirmContent', () => ({
   default: () => null,
-}));
-
-vi.mock('@/features/ResourcePermission/useResourcePermission', () => ({
-  useResourcePermission: (_type: string, resourceId?: string) => ({
-    data: resourceId ? { canManage: resourcePermissionMock.canManage } : undefined,
-    error: undefined,
-    isLoading: false,
-    mutate: vi.fn(),
-    setAccessLevel: vi.fn(),
-    updating: false,
-  }),
-}));
-
-vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
-  useWorkspaceAwareNavigate: () => wsNavigateMock,
 }));
 
 vi.mock('@/hooks/usePermission', () => ({
@@ -171,30 +154,8 @@ describe('PageEditor header menu', () => {
   beforeEach(() => {
     permissionMock.create_content = true;
     permissionMock.edit_own_content = true;
-    resourcePermissionMock.canManage = false;
     resourcePermissionMock.workspaceId = undefined;
     vi.clearAllMocks();
-  });
-
-  it('places the member-permission page entry in the overflow menu for managers', () => {
-    resourcePermissionMock.workspaceId = 'ws-1';
-    resourcePermissionMock.canManage = true;
-
-    const { result } = renderHook(() => useMenu());
-
-    const item = getMenuItem(result.current.menuItems, 'member-permissions');
-    expect(item).toMatchObject({ label: 'permission.page.entry' });
-    (item as { onClick: () => void }).onClick();
-    expect(wsNavigateMock).toHaveBeenCalledWith('/page/doc-1/permission');
-  });
-
-  it('hides the member-permission entry for non-managers', () => {
-    resourcePermissionMock.workspaceId = 'ws-1';
-    resourcePermissionMock.canManage = false;
-
-    const { result } = renderHook(() => useMenu());
-
-    expect(getMenuItem(result.current.menuItems, 'member-permissions')).toBeUndefined();
   });
 
   it('disables mutating page actions for workspace viewers', () => {

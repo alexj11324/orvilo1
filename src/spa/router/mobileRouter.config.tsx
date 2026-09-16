@@ -7,15 +7,12 @@ import {
   BusinessMobileRoutesWithoutMainLayout,
 } from '@/business/client/BusinessMobileRoutes';
 import AppsSkeleton from '@/components/Skeleton/Apps';
-import CommunityListSkeleton from '@/components/Skeleton/CommunityList';
 import { delayed } from '@/components/Skeleton/Delayed';
-import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import { acceptanceRouteMeta } from '@/features/Acceptance/routeMeta';
 import { mobileAgentSettingsRouteMeta } from '@/features/RouteMeta/mobileRouteMeta';
 import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
 import { agentRouteMeta } from '@/routes/(main)/agent/features/routeMeta';
 import { loadRouteWithBuiltinToolSurfaces } from '@/spa/initialize/toolSurfaces';
-import { routeMeta } from '@/spa/router/routeMeta';
 import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@/utils/router';
 
 const mobileChatElement = dynamicElement(
@@ -30,6 +27,33 @@ const mobileChatElement = dynamicElement(
  * home stay personal-only.
  */
 export const sharedMainAreaChildren: RouteObject[] = [
+  // Retired Community and standalone Pages URLs return to the current scope root.
+  ...[
+    'community',
+    ...[
+      'agent',
+      'group_agent',
+      'mcp',
+      'model',
+      'provider',
+      'skill',
+      'user',
+      'org',
+      'workspace',
+    ].flatMap((type) => [`community/${type}`, `community/${type}/:slug`]),
+    'community/workspace/settings',
+    'page',
+    'page/:id',
+    'page/:id/permission',
+  ].map((path): RouteObject => ({ element: redirectElement('..'), path })),
+  {
+    element: redirectElement('..'),
+    path: 'community/*',
+  },
+  {
+    element: redirectElement('..'),
+    path: 'page/*',
+  },
   // Chat routes
   {
     children: [
@@ -68,161 +92,6 @@ export const sharedMainAreaChildren: RouteObject[] = [
       },
     ],
     path: 'agent',
-  },
-
-  // Discover routes with nested structure
-  {
-    children: [
-      {
-        element: dynamicElement(
-          () => import('@/routes/(main)/community/(detail)/workspace/settings'),
-          'Mobile > Discover > Workspace > Settings',
-        ),
-        path: 'workspace/settings',
-      },
-      // List routes (with ListLayout)
-      {
-        children: [
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/community/(list)/(home)'),
-              'Mobile > Discover > List > Home',
-              { preloadId: 'mobile-community' },
-            ),
-            index: true,
-          },
-          {
-            children: [
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/community/(list)/agent'),
-                  'Mobile > Discover > List > Agent',
-                ),
-                path: 'agent',
-              },
-            ],
-          },
-          {
-            children: [
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/community/(list)/model'),
-                  'Mobile > Discover > List > Model',
-                ),
-                path: 'model',
-              },
-            ],
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/community/(list)/provider'),
-              'Mobile > Discover > List > Provider',
-            ),
-            path: 'provider',
-          },
-          {
-            children: [
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/community/(list)/mcp'),
-                  'Mobile > Discover > List > MCP',
-                ),
-                path: 'mcp',
-              },
-            ],
-          },
-          {
-            element: dynamicElement(
-              () =>
-                import('@/routes/(main)/community/(detail)/workspace').then(
-                  (m) => m.MobileWorkspaceDetailPage,
-                ),
-              'Mobile > Discover > List > Workspace',
-            ),
-            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('detail') }) },
-            path: 'workspace',
-          },
-        ],
-        element: dynamicElement(
-          () => import('@/routes/(mobile)/community/(list)/_layout'),
-          'Mobile > Discover > List > Layout',
-          { preloadId: 'mobile-community' },
-        ),
-        handle: { meta: routeMeta({ Skeleton: CommunityListSkeleton }) },
-      },
-      // Detail routes (with DetailLayout)
-      {
-        children: [
-          {
-            element: dynamicElement(
-              () =>
-                import('@/routes/(main)/community/(detail)/agent').then(
-                  (m) => m.MobileDiscoverAssistantDetailPage,
-                ),
-              'Mobile > Discover > Detail > Agent',
-            ),
-            path: 'agent/:slug',
-          },
-          {
-            element: dynamicElement(
-              () =>
-                import('@/routes/(main)/community/(detail)/model').then((m) => m.MobileModelPage),
-              'Mobile > Discover > Detail > Model',
-            ),
-            path: 'model/:slug',
-          },
-          {
-            element: dynamicElement(
-              () =>
-                import('@/routes/(main)/community/(detail)/provider').then(
-                  (m) => m.MobileProviderPage,
-                ),
-              'Mobile > Discover > Detail > Provider',
-            ),
-            path: 'provider/:slug',
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/community/(detail)/mcp').then((m) => m.MobileMcpPage),
-              'Mobile > Discover > Detail > MCP',
-            ),
-            path: 'mcp/:slug',
-          },
-          {
-            element: dynamicElement(
-              () =>
-                import('@/routes/(main)/community/(detail)/user').then(
-                  (m) => m.MobileUserDetailPage,
-                ),
-              'Mobile > Discover > Detail > User',
-            ),
-            path: 'user/:slug',
-          },
-          {
-            element: dynamicElement(
-              () =>
-                import('@/routes/(main)/community/(detail)/organization').then(
-                  (m) => m.MobileOrganizationDetailPage,
-                ),
-              'Mobile > Discover > Detail > Organization',
-            ),
-            path: 'org/:slug',
-          },
-        ],
-        element: dynamicElement(
-          () => import('@/routes/(mobile)/community/(detail)/_layout'),
-          'Mobile > Discover > Detail > Layout',
-        ),
-        handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('detail') }) },
-      },
-    ],
-    element: dynamicElement(
-      () => import('@/routes/(mobile)/community/_layout'),
-      'Mobile > Discover > Layout',
-      { preloadId: 'mobile-community' },
-    ),
-    errorElement: <ErrorBoundary />,
-    path: 'community',
   },
 
   // Agents view-all route (flat list of workspace/private agents)

@@ -3,20 +3,11 @@ import { Text, toast } from '@lobehub/ui/base-ui';
 import { GroupBotSquareIcon } from '@lobehub/ui/icons';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import type { ItemType } from 'antd/es/menu/interface';
-import {
-  BotIcon,
-  FileTextIcon,
-  FolderCogIcon,
-  FolderPlus,
-  ListPlusIcon,
-  MonitorSmartphone,
-  Store,
-} from 'lucide-react';
+import { BotIcon, FolderCogIcon, FolderPlus, ListPlusIcon, MonitorSmartphone } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWRMutation from 'swr/mutation';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useGroupTemplates } from '@/components/ChatGroupWizard/templates';
 import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
@@ -29,7 +20,6 @@ import { chatGroupService } from '@/services/chatGroup';
 import { useAgentStore } from '@/store/agent';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { useHomeStore } from '@/store/home';
-import { usePageStore } from '@/store/page';
 
 type MenuItem = NonNullable<ItemType> & { sfSymbol?: SFSymbol };
 
@@ -51,10 +41,7 @@ interface CreateAgentOptions {
  */
 export const useCreateMenuItems = () => {
   const { t } = useTranslation('chat');
-  const { t: tFile } = useTranslation('file');
-
   const navigate = useWorkspaceAwareNavigate();
-  const activeWorkspaceId = useActiveWorkspaceId();
   const groupTemplates = useGroupTemplates();
   const { allowed: canCreate } = usePermission('create_content');
 
@@ -65,7 +52,6 @@ export const useCreateMenuItems = () => {
     s.switchToGroup,
   ]);
   const [createGroup, loadGroups] = useAgentGroupStore((s) => [s.createGroup, s.loadGroups]);
-  const createNewPage = usePageStore((s) => s.createNewPage);
 
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [isCreatingSessionGroup, setIsCreatingSessionGroup] = useState(false);
@@ -263,26 +249,6 @@ export const useCreateMenuItems = () => {
   );
 
   /**
-   * Add market agent menu item
-   */
-  const createMarketAgentMenuItem = useCallback(
-    (): MenuItem => ({
-      icon: <Icon icon={Store} />,
-      disabled: !canCreate,
-      key: 'addAgentFromMarket',
-      label: t('addAgentFromMarket'),
-      sfSymbol: 'bag',
-      onClick: (info) => {
-        info.domEvent?.stopPropagation();
-        if (!canCreate) return;
-
-        navigate('/community/agent');
-      },
-    }),
-    [canCreate, navigate, t],
-  );
-
-  /**
    * Open the complete Agent list, where shared Agents can be added to the
    * caller's sidebar without mutating the Agent itself.
    */
@@ -408,50 +374,7 @@ export const useCreateMenuItems = () => {
   );
 
   /**
-   * Create page action
-   */
-  const createPage = useCallback(async () => {
-    if (!canCreate) return;
-
-    const untitledTitle = tFile('pageList.untitled');
-    try {
-      // In workspace mode the server auto-defaults top-level `sourceType: 'api'`
-      // rows to `'private'`; pass it explicitly so the optimistic row lands in
-      // 私人 too, instead of flashing in 工作区 and jumping when the server replies.
-      const defaultVisibility = activeWorkspaceId ? 'private' : undefined;
-      const newPageId = await createNewPage(untitledTitle, defaultVisibility);
-      navigate(`/page/${newPageId}`);
-    } catch (error) {
-      console.error('Failed to create page:', error);
-      toast.error('Failed to create page');
-    }
-  }, [canCreate, createNewPage, tFile, navigate, activeWorkspaceId]);
-
-  /**
-   * Create page menu item
-   */
-  const createPageMenuItem = useCallback(
-    (): MenuItem => ({
-      icon: <Icon icon={FileTextIcon} />,
-      disabled: !canCreate,
-      key: 'newPage',
-      label: t('newPage'),
-      sfSymbol: 'doc.badge.plus',
-      onClick: async (info) => {
-        info.domEvent?.stopPropagation();
-        if (!canCreate) return;
-
-        await createPage();
-      },
-    }),
-    [canCreate, t, createPage],
-  );
-
-  /**
    * Top-level create menu shown by the Agent section and header add buttons.
-   *
-   * Regression example: the Agent section + menu used to expose only local creation actions,
-   * so users had no visible entry to `/community/agent`.
    */
   const createTopLevelMenuItems = useCallback((): ItemType[] => {
     const connectItem = createConnectAgentMenuItem();
@@ -462,14 +385,12 @@ export const useCreateMenuItems = () => {
       ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
       { type: 'divider' as const },
       createAgentListMenuItem(),
-      createMarketAgentMenuItem(),
     ];
   }, [
     createAgentListMenuItem,
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
-    createMarketAgentMenuItem,
   ]);
 
   return {
@@ -482,9 +403,6 @@ export const useCreateMenuItems = () => {
     createGroupChatMenuItem,
     createGroupFromTemplate,
     createGroupWithMembers,
-    createMarketAgentMenuItem,
-    createPage,
-    createPageMenuItem,
     createSessionGroupMenuItem,
     createTopLevelMenuItems,
     openCreateModal,

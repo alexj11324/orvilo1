@@ -1,3 +1,5 @@
+import { RETIRED_ROUTE_PREFIXES } from '@/config/routes';
+
 import { type TabScope, tabScopeKey } from './scope';
 import { type TabItem } from './types';
 
@@ -22,6 +24,29 @@ const isTabItem = (item: unknown): item is TabItem =>
   typeof (item as TabItem).url === 'string' &&
   typeof (item as TabItem).lastVisited === 'number';
 
+/**
+ * Whether a stored tab points at a product that no longer exists.
+ *
+ * This list is the only thing between a tab pinned to `/image` before that
+ * surface was retired and it being restored onto a path nothing resolves.
+ * Workspace URLs mirror the same segments one level deeper (`/{slug}/image`),
+ * so the first two segments are checked.
+ */
+export const isRetiredTabUrl = (url: string): boolean => {
+  let pathname: string;
+  try {
+    pathname = new URL(url, 'http://localhost').pathname;
+  } catch {
+    return false;
+  }
+
+  return pathname
+    .split('/')
+    .filter(Boolean)
+    .slice(0, 2)
+    .some((segment) => RETIRED_ROUTE_PREFIXES.has(`/${segment}`));
+};
+
 export const getTabPages = (scope: TabScope): TabPagesStorageData => {
   if (typeof window === 'undefined') return EMPTY;
 
@@ -32,12 +57,17 @@ export const getTabPages = (scope: TabScope): TabPagesStorageData => {
     const parsed = JSON.parse(data);
     if (!parsed || typeof parsed !== 'object') return EMPTY;
 
-    const tabs = Array.isArray(parsed.tabs) ? parsed.tabs.filter(isTabItem) : [];
+    const tabs = Array.isArray(parsed.tabs)
+      ? parsed.tabs.filter(isTabItem).filter((tab) => !isRetiredTabUrl(tab.url))
+      : [];
+    // Dropping the active tab would leave an `activeTabId` naming nothing, so
+    // the selection falls back to what is left rather than to a dangling id.
+    const requestedActiveId = typeof parsed.activeTabId === 'string' ? parsed.activeTabId : null;
+    const activeTabId = tabs.some((tab) => tab.id === requestedActiveId)
+      ? requestedActiveId
+      : (tabs[0]?.id ?? null);
 
-    return {
-      activeTabId: typeof parsed.activeTabId === 'string' ? parsed.activeTabId : null,
-      tabs,
-    };
+    return { activeTabId, tabs };
   } catch {
     return EMPTY;
   }

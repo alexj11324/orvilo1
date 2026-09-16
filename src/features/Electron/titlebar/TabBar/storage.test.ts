@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   getTabPages,
+  isRetiredTabUrl,
   saveTabPages,
   TAB_PAGES_STORAGE_KEY_V1,
   TAB_PAGES_STORAGE_KEY_V2,
@@ -75,5 +76,60 @@ describe('TabBar storage', () => {
 
     expect(window.localStorage.getItem(tabPagesStorageKey(personalScope))).toBeNull();
     expect(window.localStorage.getItem(tabPagesStorageKey(acmeScope))).toContain('workspace-tab');
+  });
+
+  describe('restoring a tab pinned to a retired product', () => {
+    it('drops it and moves the selection onto a tab that still resolves', () => {
+      saveTabPages(
+        personalScope,
+        [
+          { id: 'image-tab', lastVisited: 2, url: '/image' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/tasks' },
+        ],
+        'image-tab',
+      );
+
+      expect(getTabPages(personalScope)).toEqual({
+        activeTabId: 'tasks-tab',
+        tabs: [{ id: 'tasks-tab', lastVisited: 1, url: '/tasks' }],
+      });
+    });
+
+    it('drops it under a workspace too, where the same segment sits one level deeper', () => {
+      saveTabPages(
+        acmeScope,
+        [
+          { id: 'memory-tab', lastVisited: 2, url: '/acme/memory' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/acme/tasks' },
+        ],
+        'tasks-tab',
+      );
+
+      expect(getTabPages(acmeScope).tabs.map((tab) => tab.id)).toEqual(['tasks-tab']);
+    });
+
+    it('reports no selection when every stored tab was retired', () => {
+      saveTabPages(
+        acmeScope,
+        [{ id: 'video-tab', lastVisited: 1, url: '/acme/video' }],
+        'video-tab',
+      );
+
+      expect(getTabPages(acmeScope)).toEqual({ activeTabId: null, tabs: [] });
+    });
+
+    it('matches a path segment, never a word that merely starts the same', () => {
+      // `/resource/images` is a resource-library category, not the retired
+      // generation workbench; a raw `startsWith` would drop the tab.
+      expect(isRetiredTabUrl('/images')).toBe(false);
+      expect(isRetiredTabUrl('/resource/images')).toBe(false);
+      expect(isRetiredTabUrl('/resource/videos')).toBe(false);
+      expect(isRetiredTabUrl('/tasks')).toBe(false);
+    });
+
+    it('reads the path out of an absolute tab URL', () => {
+      expect(isRetiredTabUrl('https://app.example.com/image/123')).toBe(true);
+      expect(isRetiredTabUrl('https://app.example.com/acme/page/doc-1')).toBe(true);
+    });
   });
 });

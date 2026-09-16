@@ -51,13 +51,15 @@ describe('createTabRouter', () => {
 
   it('creates independent instances for different URLs', () => {
     const first = createTabRouter('/agent/abc');
-    const second = createTabRouter('/image');
+    // Any second route works here; `/image` used to be it, but that surface is
+    // retired, and a sample route that no longer exists tests nothing.
+    const second = createTabRouter('/tasks');
 
     expect(first.state.location.pathname).toBe('/agent/abc');
-    expect(second.state.location.pathname).toBe('/image');
+    expect(second.state.location.pathname).toBe('/tasks');
     expect(first.state.location.pathname).not.toBe(second.state.location.pathname);
     expect(matchedPaths(first)).toContain('agent');
-    expect(matchedPaths(second)).toContain('image');
+    expect(matchedPaths(second)).toContain('tasks');
   });
 });
 

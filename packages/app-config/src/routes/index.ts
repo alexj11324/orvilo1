@@ -158,6 +158,20 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
 ];
 
 /**
+ * Path prefixes owned by a product that has been withdrawn — derived from the
+ * registry rather than listed again, so retiring a route retires its stored
+ * URLs in the same edit.
+ *
+ * Retirement has to reach persisted state, not only the surfaces that build
+ * their entries from this registry. Electron keeps one tab list per scope in
+ * `localStorage`, and a tab pinned before retirement would otherwise be
+ * restored onto a path nothing resolves any more.
+ */
+export const RETIRED_ROUTE_PREFIXES: Set<string> = new Set(
+  NAVIGATION_ROUTES.filter((route) => route.tier === 'retired').map((route) => route.pathPrefix),
+);
+
+/**
  * Get route configuration by id
  */
 export const getRouteById = (id: string): NavigationRoute | undefined =>

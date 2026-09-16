@@ -7,7 +7,6 @@ import {
   FilesIcon,
   FileText,
   HomeIcon,
-  Image,
   ImageIcon,
   LayoutPanelTopIcon,
   LibraryBigIcon,
@@ -38,7 +37,6 @@ import CommunityListSkeleton from '@/components/Skeleton/CommunityList';
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import { delayed } from '@/components/Skeleton/Delayed';
-import GenerationSkeleton from '@/components/Skeleton/Generation';
 import MemorySkeleton from '@/components/Skeleton/Memory';
 import ResourceHomeSkeleton from '@/components/Skeleton/ResourceHome';
 import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
@@ -820,49 +818,6 @@ export const sharedMainAreaChildren: RouteObject[] = [
     errorElement: <ErrorBoundary />,
     handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
     path: 'memory',
-  },
-
-  // Video routes
-  {
-    children: [
-      {
-        element: dynamicElement(() => import('@/routes/(main)/(create)/video'), 'Desktop > Video', {
-          preloadId: 'video',
-        }),
-        index: true,
-      },
-    ],
-    element: dynamicLayout(
-      () => import('@/routes/(main)/(create)/video/_layout'),
-      'Desktop > Video > Layout',
-      { preloadId: 'video' },
-    ),
-    errorElement: <ErrorBoundary />,
-    handle: { meta: routeMeta({ Skeleton: GenerationSkeleton }) },
-    path: 'video',
-  },
-
-  // Image routes
-  {
-    children: [
-      {
-        element: dynamicElement(() => import('@/routes/(main)/(create)/image'), 'Desktop > Image', {
-          preloadId: 'image',
-        }),
-        handle: {
-          meta: routeMeta({ icon: Image, titleKey: 'navigation.image' }),
-        },
-        index: true,
-      },
-    ],
-    element: dynamicLayout(
-      () => import('@/routes/(main)/(create)/image/_layout'),
-      'Desktop > Image > Layout',
-      { preloadId: 'image' },
-    ),
-    errorElement: <ErrorBoundary />,
-    handle: { meta: routeMeta({ Skeleton: GenerationSkeleton }) },
-    path: 'image',
   },
 
   ...BusinessDesktopRoutesWithMainLayout,

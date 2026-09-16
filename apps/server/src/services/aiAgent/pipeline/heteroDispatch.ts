@@ -485,16 +485,14 @@ export const dispatchHeteroAgent = async (
     runAttachments.imageList && runAttachments.imageList.length > 0
       ? runAttachments.imageList.map((image) => ({ id: image.id, url: image.url }))
       : undefined;
+  const effectiveHeterogeneousProvider =
+    heterogeneousProvider?.type === heteroType
+      ? applyTopicModelToHeterogeneousProvider(heterogeneousProvider, pinnedHeterogeneousTopicModel)
+      : undefined;
   const heteroExecArgs = isLocalHeterogeneousType(heteroCliAgentType)
     ? buildHeteroExecArgs(
-        heterogeneousProvider?.type === heteroType
-          ? applyTopicModelToHeterogeneousProvider(
-              // Orvilo's selector args follow the engine's CLI family — the
-              // wrapper is invoked as `--type <family>`, so translate against
-              // the family, not the declared 'orvilo'.
-              { ...heterogeneousProvider, type: heteroCliAgentType },
-              pinnedHeterogeneousTopicModel,
-            )
+        effectiveHeterogeneousProvider
+          ? { ...effectiveHeterogeneousProvider, type: heteroCliAgentType }
           : { type: heteroCliAgentType },
       )
     : undefined;

@@ -211,10 +211,16 @@ export const RETIRED_SIDEBAR_KEYS = new Set(['community', 'image', 'memory', 'pa
  * Drop retired keys from a stored sidebar order.
  *
  * Idempotent, and returns the original reference when there is nothing to strip.
- * Reference stability matters because the result feeds a zustand selector:
- * handing back a freshly built array on every read would re-render every
- * subscriber. Keeping the same reference also makes a second pass a provable
- * no-op.
+ * Reference stability matters because the result feeds a zustand selector: a
+ * freshly built array on every read breaks the store's snapshot bail-out in
+ * `useSyncExternalStore`, which costs a re-render per subscriber and can trip
+ * the "getSnapshot should be cached" warning. Keeping the same reference also
+ * makes a second pass a provable no-op.
+ *
+ * Note this only reaches the store on paths that hand the value straight back.
+ * `sidebarItems` additionally runs through `normalizeSpacerPosition`, which
+ * always builds a new array, so it bails out only on the `DEFAULT_SIDEBAR_ITEMS`
+ * fast path.
  */
 const withoutRetiredItems = (items: string[]): string[] => {
   let seen = false;
@@ -289,6 +295,10 @@ const withAllKnownKeys = (order: string[]): string[] => {
   const missingBottom: string[] = [];
   for (const k of DEFAULT_SIDEBAR_ITEMS) {
     if (k === SIDEBAR_SPACER_ID || present.has(k)) continue;
+    // `missingBottom` is empty today — every entry below the spacer was retired,
+    // so `DEFAULT_BOTTOM_KEYS` is an empty set. The split is kept so a future
+    // bottom-group default lands below the spacer instead of silently appearing
+    // in the top group.
     (DEFAULT_BOTTOM_KEYS.has(k) ? missingBottom : missingTop).push(k);
   }
 

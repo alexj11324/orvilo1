@@ -130,11 +130,15 @@ describe('Home sidebar body', () => {
   });
 
   it('renders items strictly in sidebarItems order with the spacer at its stored position', () => {
+    // Production has no bottom-group destinations left, so every item is a top
+    // nav item; the render order still comes from `sidebarItems`, not from which
+    // list an item is declared in.
     mocks.navLayout = {
-      bottomMenuItems: [{ key: 'resource', title: 'Resource', url: '/resource' }],
+      bottomMenuItems: [],
       topNavItems: [
         { key: 'automations', title: 'Automations', url: '/automations' },
         { key: 'tasks', title: 'Tasks', url: '/tasks' },
+        { key: 'resource', title: 'Resource', url: '/resource' },
       ],
     };
     mocks.globalState.status.sidebarItems = [
@@ -162,8 +166,11 @@ describe('Home sidebar body', () => {
 
   it('keeps a top item that was dragged past the spacer in its new position', () => {
     mocks.navLayout = {
-      bottomMenuItems: [{ key: 'resource', title: 'Resource', url: '/resource' }],
-      topNavItems: [{ key: 'tasks', title: 'Tasks', url: '/tasks' }],
+      bottomMenuItems: [],
+      topNavItems: [
+        { key: 'tasks', title: 'Tasks', url: '/tasks' },
+        { key: 'resource', title: 'Resource', url: '/resource' },
+      ],
     };
     // User dragged `tasks` from the top section to sit after `resource`.
     mocks.globalState.status.sidebarItems = ['recents', 'agent', '__spacer__', 'resource', 'tasks'];

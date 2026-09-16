@@ -4,6 +4,7 @@ import { type FC } from 'react';
 import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
 import Loading from '@/components/Loading/BrandTextLoading';
 import { RouteMetaBridge } from '@/features/RouteMeta';
@@ -13,8 +14,18 @@ import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfi
 import NavBar from './NavBar';
 
 const CloudBanner = dynamic(() => import('@/features/AlertBanner/CloudBanner'));
+
+/**
+ * Root-relative paths that keep the mobile tab bar on screen.
+ *
+ * Matched *after* dropping a workspace prefix. `useWorkspaceAwareNavigate`
+ * mirrors most destinations under `/:workspaceSlug`, so comparing the raw
+ * pathname would hide the tab bar inside a workspace — where it is the only
+ * navigation a phone viewport gets.
+ */
 const MOBILE_NAV_ROUTES = new Set([
   '/',
+  '/tasks',
   '/community',
   '/community/agent',
   '/community/mcp',
@@ -24,11 +35,30 @@ const MOBILE_NAV_ROUTES = new Set([
   '/me',
 ]);
 
+/**
+ * Whether the tab bar belongs on this route.
+ *
+ * Pure so it can be unit-tested without standing up the router or the store —
+ * the same reason `buildWorkspaceAwarePath` is extracted.
+ */
+export const isMobileNavRoute = (
+  pathname: string,
+  activeSlug: string | null | undefined,
+): boolean => {
+  const scoped =
+    activeSlug && (pathname === `/${activeSlug}` || pathname.startsWith(`/${activeSlug}/`))
+      ? pathname.slice(activeSlug.length + 1) || '/'
+      : pathname;
+
+  return MOBILE_NAV_ROUTES.has(scoped);
+};
+
 const MobileMainLayout: FC = () => {
   const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);
-  const location = useLocation();
-  const pathname = location.pathname;
-  const showNav = MOBILE_NAV_ROUTES.has(pathname);
+  const activeSlug = useActiveWorkspaceSlug();
+  const { pathname } = useLocation();
+
+  const showNav = isMobileNavRoute(pathname, activeSlug);
   return (
     <WorkspaceContextSlot>
       <RouteMetaBridge />

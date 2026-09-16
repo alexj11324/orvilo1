@@ -161,6 +161,23 @@ describe('heterogeneous topic models', () => {
     });
   });
 
+  it('snapshots an Orvilo model with its resolved CLI family identity', () => {
+    expect(
+      resolveHeterogeneousProviderTopicModel({
+        engine: 'claude-sdk',
+        model: 'claude-sonnet',
+        type: 'orvilo',
+      }),
+    ).toEqual({ model: 'claude-sonnet', provider: 'claude-code' });
+    expect(
+      resolveHeterogeneousProviderTopicModel({
+        engine: 'codex-app-server',
+        model: 'gpt-5.5',
+        type: 'orvilo',
+      }),
+    ).toEqual({ model: 'gpt-5.5', provider: 'codex' });
+  });
+
   it('keeps server-default API models Agent-scoped and ignores stale topic bindings', () => {
     const config = {
       apiConfig: { model: 'server-model', source: 'server-default' },
@@ -225,6 +242,53 @@ describe('heterogeneous topic models', () => {
         provider: 'codex',
       }),
     ).toBe(config);
+  });
+
+  it('applies a pin when its Orvilo CLI family matches the current engine', () => {
+    const config = {
+      engine: 'codex-app-server',
+      model: 'agent-model',
+      type: 'orvilo',
+    } as const;
+
+    expect(
+      applyTopicModelToHeterogeneousProvider(config, {
+        model: 'gpt-5.5',
+        provider: 'codex',
+      }),
+    ).toMatchObject({ engine: 'codex-app-server', model: 'gpt-5.5', type: 'orvilo' });
+  });
+
+  it('rejects a model and effort pin from a different Orvilo engine', () => {
+    const config = {
+      effort: 'high',
+      engine: 'codex-app-server',
+      model: 'agent-model',
+      type: 'orvilo',
+    } as const;
+
+    expect(
+      applyTopicModelToHeterogeneousProvider(config, {
+        effort: 'ultra',
+        model: 'claude-sonnet',
+        provider: 'claude-code',
+      }),
+    ).toBe(config);
+  });
+
+  it('keeps legacy Orvilo pins on the default Claude engine only', () => {
+    const legacyPin = { model: 'legacy-claude-model', provider: 'orvilo' } as const;
+    const claudeConfig = { engine: 'claude-sdk', model: 'agent-model', type: 'orvilo' } as const;
+    const codexConfig = {
+      engine: 'codex-app-server',
+      model: 'agent-model',
+      type: 'orvilo',
+    } as const;
+
+    expect(applyTopicModelToHeterogeneousProvider(claudeConfig, legacyPin)).toMatchObject({
+      model: 'legacy-claude-model',
+    });
+    expect(applyTopicModelToHeterogeneousProvider(codexConfig, legacyPin)).toBe(codexConfig);
   });
 });
 

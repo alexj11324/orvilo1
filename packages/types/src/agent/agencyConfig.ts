@@ -353,6 +353,11 @@ export interface HeterogeneousProviderConfig {
 
 export interface HeterogeneousTopicModel {
   model: string;
+  /**
+   * Provider identity used by the topic pin. For the builtin Orvilo harness,
+   * this is the resolved CLI family (`claude-code` or `codex`) rather than the
+   * declared `orvilo` wrapper type so the pin remains engine-scoped.
+   */
   provider: string;
 }
 
@@ -383,12 +388,33 @@ export const resolveHeterogeneousProviderTopicModel = (
     return { model: config.apiConfig.model, provider: config.apiConfig.providerId };
   }
 
-  // Selector capabilities are keyed by CLI family — the builtin Orvilo harness
-  // resolves through its engine's family, so snapshot the resolved model under
-  // the declared 'orvilo' type.
+  // Selector capabilities are keyed by CLI family. Persist that family as the
+  // Orvilo topic identity so a Claude pin cannot be replayed by Codex later.
   const family = resolveHeteroCliAgentType(config);
   const model = getHeteroSelectorCapability(family)?.model?.resolve(config);
-  return model ? { model, provider: config.type } : undefined;
+  return model ? { model, provider: family ?? config.type } : undefined;
+};
+
+/**
+ * Check whether a topic model pin belongs to the provider that will execute it.
+ *
+ * Before Orvilo engines were selectable, its topics were persisted with the
+ * wrapper type (`provider: 'orvilo'`). Those pins are compatible with the old
+ * Claude default, but their origin cannot be recovered once an Agent is using
+ * Codex. Keep the legacy Claude behavior while refusing to carry an unknown
+ * model across the engine boundary.
+ */
+const isCompatibleHeterogeneousTopicModelPin = (
+  config: HeterogeneousProviderConfig,
+  topicModel: HeterogeneousTopicPin,
+): boolean => {
+  const family = resolveHeteroCliAgentType(config);
+
+  if (config.type === 'orvilo' && topicModel.provider === config.type) {
+    return family === resolveOrviloCliAgentType(DEFAULT_ORVILO_ENGINE);
+  }
+
+  return topicModel.provider === config.type || topicModel.provider === family;
 };
 
 const applyTopicModelPin = (
@@ -415,10 +441,9 @@ const applyTopicModelPin = (
     };
   }
 
-  // Accept pins spelled with the declared type ('orvilo') or its engine's CLI
-  // family — both identify this provider.
+  if (!isCompatibleHeterogeneousTopicModelPin(config, topicModel)) return config;
+
   const family = resolveHeteroCliAgentType(config);
-  if (topicModel.provider !== config.type && topicModel.provider !== family) return config;
   return {
     ...config,
     ...applyHeteroSelection({ ...config, type: family }, { model: topicModel.model }),
@@ -437,6 +462,14 @@ export const applyTopicModelToHeterogeneousProvider = (
   config: HeterogeneousProviderConfig,
   topicModel: HeterogeneousTopicPin | undefined,
 ): HeterogeneousProviderConfig => {
+  if (
+    config.authMode !== 'api' &&
+    topicModel?.model &&
+    !isCompatibleHeterogeneousTopicModelPin(config, topicModel)
+  ) {
+    return config;
+  }
+
   const withModel = applyTopicModelPin(config, topicModel);
   let effort = topicModel?.effort;
   if (effort === undefined) return withModel;

@@ -440,8 +440,12 @@ import { imageRouter } from '@/server/routers/lambda/image';
 | 主题 / 页面 / 产物 三类公开分享 | `KEEP_SHARED`   | `apps/share` 路由表只有 `share/t/:id`、`share/page/:id`、`share/artifact/:id` 三条                                                     |
 | `apps/share`（65 文件）         | `KEEP_SHARED`   | **该应用内零 agent 分享面**：`grep -i agent` 在 `apps/share` 无命中，路由表里也没有 agent 路由                                         |
 
-> ⚠️ **方案 §6.5 的「删除 `apps/share`」是过度删除，不执行**：该应用服务的是主题 / 页面 /
-> 产物三类公开分享，与本轮要退役的 agent 分享无关。本轮只收口 agent 分享分支。
+> **方案在这里是保护 `apps/share` 的，别误读成删除对象。** §6.5 L295 逐字：
+> 「**不得删除整个 `apps/share` 或通用共享身份系统**；先区分任务链接、产物只读分享、团队邀请和公开可交互 Agent。」
+> L622 又把「直接删除 `apps/share`、`ResourceManager`、`generation*`、`memory*`、`document*` 或任意整个包
+> 而没有消费者证据」列为**禁止捷径**。实测印证了这条：`apps/share` 的目录内**零 agent 分享面**，
+> 它服务的是主题 / 页面 / 产物三类公开分享，与本轮要退役的 agent 分享是两回事。
+> 本轮只收口 agent 分享分支。
 > （`execAgent` 函数体、`shareGate.ts`、`AgentRuntime` 访客分支属云端侧，见 §2.5。）
 
 #### 1.7.5 Goal（S60.1）与规则 / 经验（S60.2）
@@ -472,7 +476,7 @@ import { imageRouter } from '@/server/routers/lambda/image';
 | S00 基线与依赖清单       | IMPLEMENTED  | NOT\_RUN         | 本文 §1.7                                                         | 清单已按功能域填齐（2026-09-16）；纯清单，无需运行时验证。S30.1 社区 / 文稿属范围外，见 §1.7.1                                                                                                                                                       |     |     |
 | S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de`                                  | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                             |     |     |
 | S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`                                                        | 默认看板与 Web 落地任务列表已完成；**Web 收件箱（未读话题 / 简报 / 需要你处理）在本分支变为不可达，这是真实回退**，两条修法见 §2.2；旧 Home 组件仍被 Electron 每标签页使用，故未删                                                                   |     |     |
-| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` `cc3b9489`            | S30.5 的服务端收口已完成（可证完备的单一收口点）；agent 分享的访客页不在本仓，属云端侧。**但 `apps/share` 在本仓且服务主题 / 页面 / 产物三类分享，方案 §6.5 的「删除 apps/share」是过度删除、不执行**，见 §1.7.4 与 §2.5                             |     |     |
+| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` `cc3b9489`            | S30.5 的服务端收口已完成（可证完备的单一收口点）；agent 分享的访客页不在本仓，属云端侧。**`apps/share` 按 §6.5 L295 明文保留**（它只服务主题 / 页面 / 产物三类分享，目录内零 agent 分享面），见 §1.7.4 与 §2.5                                       |     |     |
 | S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`                                  | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3） |     |     |
 | S50 资源与产物归位       | IMPLEMENTED  | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` `263ebf78` `15d06a28` `ee076357` | 四项全部完成并在本机验证（PGlite + `bunx tsc`）；运行级追溯复用既有 `works.originTopicId`，**零新增表**，见 §2.6                                                                                                                                     |     |     |
 | S60 Goal 与规则下沉      | IMPLEMENTED  | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`                                  | Goal 与详情 / 对话关联两侧经审计均为**已满足**（非待办）；规则面已下沉，见 §2.7                                                                                                                                                                      |     |     |
@@ -885,12 +889,12 @@ slice，`evalKeys` 的唯一消费者也是它们 —— 三者的消费者**互
 
 **仍未做（属云端仓库或 S80）**：云端发布 UI 与访客页的入口移除与「已退役」文案；以及 §6.5 最后一步「依赖清零后删除无用代码」—— `execAgent` 的实现体、`services/aiAgent/shareGate.ts` 的工具白名单、`AgentRuntime` 里的访客分支都还在。本轮**刻意保留**：§6.5 把删除排在最后，而删 `AgentRuntime` 的访客分支要动 §0.1 保护的引擎 harness，且本机没有运行时可验证。代价是**那 12 个 `execAgent` 用例随之退役、实现体暂时无覆盖** —— 被移除的覆盖点已逐条写进测试注释与提交信息（花费准入、访客 topic/turn 上限、creator 作用域派发、prompt 尺寸、失败脱敏、`interactiveStart: false` 存活契约），重新开放该能力时据此恢复。
 
-> ⚠️ **§6.5 的删除清单里把 `apps/share` 也列上了，这一条不执行。**
-> 实测该应用服务的是**主题 / 页面 / 产物**三类公开分享：路由表只有 `share/t/:id`、
-> `share/page/:id`、`share/artifact/:id`（`apps/share/app/routes.ts`），且 `grep -i agent`
-> 在 `apps/share` 目录内**零命中** —— 它本来就不含任何 agent 分享面。
-> 删它属于连带删除：方案要退役的是 **agent 分享**，不是全部分享。
-> 因此本轮只收口 agent 分享分支，`apps/share`（65 文件）原样保留。
+**更正：早先这条把 `apps/share` 写进了待删清单，是错的 —— 方案明文保护它。**
+§6.5 L295：「**不得删除整个 `apps/share` 或通用共享身份系统**；先区分任务链接、产物只读分享、
+团队邀请和公开可交互 Agent。」L622 同样把「直接删除 `apps/share`… 而没有消费者证据」列为禁止捷径。
+实测印证：该应用路由表只有 `share/t/:id`、`share/page/:id`、`share/artifact/:id`
+（`apps/share/app/routes.ts`），`grep -i agent` 在目录内**零命中** —— 它本来就不含任何 agent 分享面。
+所以「不删」不是我对方案的偏离，**而是照方案执行**。`apps/share`（65 文件）原样保留。
 
 ### 2.6 S50 实施记录
 

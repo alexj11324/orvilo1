@@ -28,13 +28,24 @@ jobs:
           s = p.read_text()
           old = 'TaskIntegrationService: vi.fn(() => deletionMocks),'
           assert s.count(old) == 1
-          p.write_text(s.replace(old, 'TaskIntegrationService: vi.fn(function () { return deletionMocks; }),'))
+          s = s.replace(old, 'TaskIntegrationService: vi.fn(function () { return deletionMocks; }),')
+          old = '    taskService: {} as never,\n  });'
+          assert s.count(old) == 1
+          s = s.replace(old, '    taskService: {} as never,\n    taskCaller: {} as never,\n  });')
+          p.write_text(s)
+          p = Path('.github/workflows/e2e.yml')
+          s = p.read_text()
+          old = 'Upload E2E test artifacts (on failure)\n        if: failure()'
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, 'Upload E2E test artifacts\n        if: always()'))
           PY
       - name: Lint updated source and tests
         run: >-
           bun run check --lint
           apps/server/src/services/toolExecution/serverRuntimes/task.ts
           apps/server/src/services/toolExecution/serverRuntimes/__tests__/task.test.ts
+          e2e/src/steps/common/taskPrerequisites.steps.ts
+          .github/workflows/e2e.yml
       - name: Agent-tool regression tests
         run: >-
           bunx vitest run --project server --silent='passed-only'
@@ -46,6 +57,9 @@ jobs:
             src/features/AgentTasks/AgentTaskDetail/TaskPrerequisites.test.tsx \
             src/store/task/slices/detail/action.test.ts \
             src/store/task/selectors/detailSelectors.test.ts
+      - name: Validate browser step registration without claiming execution
+        working-directory: e2e
+        run: bunx cucumber-js --config cucumber.config.js --dry-run --tags '@prerequisites'
       - name: Full typecheck
         run: pnpm type-check
       - name: Commit validated source and remove transport
@@ -54,7 +68,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/review21-tool-delete.py .github/workflows/review21-tool-delete.yml
-          git add apps/server/src/services/toolExecution/serverRuntimes
+          git add apps/server/src/services/toolExecution/serverRuntimes e2e/src/steps/common/taskPrerequisites.steps.ts .github/workflows/e2e.yml
           git commit -m '🛡️ Preserve prerequisite worktrees through agent-tool deletion'
           git push origin HEAD:refs/heads/feat/issue-prerequisite-gates
       - name: Export validation evidence

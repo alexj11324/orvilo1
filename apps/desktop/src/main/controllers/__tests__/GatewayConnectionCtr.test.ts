@@ -1277,6 +1277,7 @@ describe('GatewayConnectionCtr', () => {
         mockChild.pid = 67900;
         capturedOnChildSpawned?.(mockChild);
         const cancellation = ctr['cancelHeteroTask']({ signal: 'SIGINT', taskId: 'op-orphan' });
+        await vi.advanceTimersByTimeAsync(0);
 
         // The wrapper honors SIGINT, while process.kill(-pid, 0) still reports
         // that a detached descendant remains in the process group.

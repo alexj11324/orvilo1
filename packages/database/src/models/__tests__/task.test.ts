@@ -2733,13 +2733,15 @@ describe('TaskModel', () => {
       const completing = await model.create({ instruction: 'Completing' });
       await model.update(completing.id, {
         heartbeatTimeout: 1,
-        runReservationExpiresAt: new Date(Date.now() + 60_000),
-        runReservationId: 'completion:operation:lease',
         status: 'running',
       });
       await serverDB
         .update(tasks)
-        .set({ lastHeartbeatAt: new Date(Date.now() - 60_000) })
+        .set({
+          lastHeartbeatAt: new Date(Date.now() - 60_000),
+          runReservationExpiresAt: new Date(Date.now() + 60_000),
+          runReservationId: 'completion:operation:lease',
+        })
         .where(eq(tasks.id, completing.id));
 
       const result = await TaskModel.findStuckTasks(serverDB);

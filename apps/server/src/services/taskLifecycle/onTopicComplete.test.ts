@@ -121,6 +121,15 @@ describe('TaskLifecycleService.onTopicComplete', () => {
   let createBrief: AnyMock;
   let getReviewConfig: AnyMock;
 
+  const lastCreatedBrief = () =>
+    createBrief.mock.calls.at(-1)?.[0] as {
+      actions: Array<{ key: string; label?: string; type?: string; url?: string }>;
+      metadata?: unknown;
+      summary: string;
+      title: string;
+      topicId?: string;
+    };
+
   beforeEach(() => {
     fakeScheduler.scheduleNextTopic.mockClear().mockResolvedValue('msg-new');
     notifyCompleted.mockReset().mockResolvedValue(undefined);
@@ -1091,7 +1100,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      const brief = createBrief.mock.calls.at(-1)?.[0];
+      const brief = lastCreatedBrief();
       // Title/summary are human-facing: no raw topic id, no "topic #N", no
       // "Execution failed:" log framing. The topic id lives on `topicId`.
       expect(brief.title).not.toContain('topic-1');
@@ -1119,7 +1128,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      const brief = createBrief.mock.calls.at(-1)?.[0];
+      const brief = lastCreatedBrief();
       const keys = brief.actions.map((a: { key: string }) => a.key);
       // Retrying a budget failure just re-fails — offer the fix, not Retry.
       expect(keys).toContain('upgrade');
@@ -1158,7 +1167,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      const brief = createBrief.mock.calls.at(-1)?.[0];
+      const brief = lastCreatedBrief();
       const keys = brief.actions.map((a: { key: string }) => a.key);
       expect(keys).toContain('retry');
       expect(keys).not.toContain('upgrade');
@@ -1184,7 +1193,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      const brief = createBrief.mock.calls.at(-1)?.[0];
+      const brief = lastCreatedBrief();
       const keys = brief.actions.map((a: { key: string }) => a.key);
       expect(keys).toContain('retry');
       expect(keys).not.toContain('upgrade');

@@ -8,10 +8,10 @@ This directory contains end-to-end (E2E) tests for LobeHub using Cucumber (BDD) 
 e2e/
 ├── src/               # Source files
 │   ├── features/      # Gherkin feature files
-│   │   └── discover/  # Discover page tests
+│   │   └── routes/    # Core route tests
 │   ├── steps/         # Step definitions
 │   │   ├── common/    # Reusable step definitions
-│   │   └── discover/  # Discover-specific steps
+│   │   └── routes/    # Route-specific steps
 │   └── support/       # Test support files
 │       └── world.ts   # Custom World context
 ├── reports/           # Test reports (generated)
@@ -59,12 +59,6 @@ Run only smoke tests:
 npm run test:smoke
 ```
 
-Run discover tests:
-
-```bash
-npm run test:discover
-```
-
 ## Environment Variables
 
 - `BASE_URL`: Base URL for the application (default: `http://localhost:3010`)
@@ -84,17 +78,15 @@ HEADLESS=false BASE_URL=http://localhost:3000 npm run test:smoke
 Feature files are written in Gherkin syntax and placed in the `src/features/` directory:
 
 ```gherkin
-@community @smoke
-Feature: Community Smoke Tests
-  Critical path tests to ensure the community module is functional
+@routes @smoke
+Feature: Core Routes Accessibility
+  Critical path tests to ensure core routes remain accessible
 
-  @COMMUNITY-SMOKE-001 @P0
-  Scenario: Load community assistant list page
-    Given I navigate to "/community/agent"
+  @ROUTES-001 @P0
+  Scenario: Load the home page
+    Given I navigate to "/"
     Then the page should load without errors
     And I should see the page body
-    And I should see the search bar
-    And I should see assistant cards
 ```
 
 ### Step Definitions

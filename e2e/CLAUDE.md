@@ -18,13 +18,12 @@ Related: [LOBE-2417](https://linear.app/lobehub/issue/LOBE-2417/建立核心产�
 
 ### 产品架构覆盖
 
-| 模块             | 子功能                            | 优先级 | 状态 |
-| ---------------- | --------------------------------- | ------ | ---- |
-| **Agent**        | Builder, 对话，Task               | P0     | 🚧   |
-| **Agent Group**  | Builder, 群聊                     | P0     | ⏳   |
-| **Page（文稿）** | 侧边栏 CRUD ✅，文档编辑，Copilot | P0     | 🚧   |
-| **知识库**       | 创建，上传，RAG 对话              | P1     | ⏳   |
-| **记忆**         | 查看，编辑，关联                  | P2     | ⏳   |
+| 模块            | 子功能               | 优先级 | 状态 |
+| --------------- | -------------------- | ------ | ---- |
+| **Agent**       | Builder, 对话，Task  | P0     | 🚧   |
+| **Agent Group** | Builder, 群聊        | P0     | ⏳   |
+| **知识库**      | 创建，上传，RAG 对话 | P1     | ⏳   |
+| **记忆**        | 查看，编辑，关联     | P2     | ⏳   |
 
 ### 标签系统
 
@@ -39,7 +38,6 @@ Related: [LOBE-2417](https://linear.app/lobehub/issue/LOBE-2417/建立核心产�
 
 @agent        # Agent 模块
 @agent-group  # Agent Group 模块
-@page         # Page 文稿模块
 @knowledge    # 知识库模块
 @memory       # 记忆模块
 ```

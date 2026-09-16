@@ -533,3 +533,25 @@ Electron 的 `RETIRED_PRODUCT_SEGMENTS` 改为从它派生 —— 否则同一�
 **另需注意**：对方**删除**了 `community` / `page` 的注册表条目，因此 `getRouteById('community')`
 在合并后返回 `undefined`。本分支保留条目 + `tier` 的方案让旧深链接与旧持久化偏好仍有解析目标
 （方案 §4 第 5 点的要求）；合并时需确认这一点不被回退。
+
+**具体缺口：桌面固定标签页（合并时必须一并收敛）**
+
+这是第三条、也是最容易被漏掉的持久化路径 —— 它**不在 `SystemStatus` 里**：
+
+| 环节       | 现状                                                                                                                                                                                                                                                             |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 存储       | `src/features/Electron/titlebar/TabBar/storage.ts:4-6`，key `lobechat:desktop:tab-pages:v3:<scope>`                                                                                                                                                              |
+| 读取校验   | `:18-23` `isTabItem` **只做结构校验**（`id`/`url`/`lastVisited` 的类型），**没有任何退役 URL 过滤**                                                                                                                                                              |
+| 对方的机制 | `bbd6ead3` 新增 `src/features/Electron/titlebar/retiredProductUrl.ts` 的 `isRetiredProductUrl(url, scope)`，接进 `TabBar/storage.ts`、`RecentlyViewed/storage.ts`、`useResolvedPages.ts`；但其集合是 `RETIRED_PRODUCT_SEGMENTS = new Set(['community', 'page'])` |
+
+**合并时要做的事**：把 `RETIRED_PRODUCT_SEGMENTS` 改为**从 registry 派生**
+（`NAVIGATION_ROUTES.filter(r => r.tier === 'retired')` 映射出 path segment），
+这样 `image` / `memory` / `video` 一并覆盖。
+
+> ⚠️ 本分支**故意没有**新建等价实现。当前 `retiredProductUrl.ts` 只存在于 `bbd6ead3`，
+> 在本分支再造一个就是第三套并行机制 —— 正是 §14 和本文档反复警告的情况。
+
+**影响面**：当前 S10 阶段 `/image`、`/memory` 的 SPA 路由仍然存在（那是 S30 的工作），
+所以被恢复的固定标签页暂时仍能打开。**S30 删除这些路由之后**，这些标签页会落进 catch-all
+重定向到 `/`。方案 §13.1 `NAV-05` 要求「进入兼容目标或明确退役页，不白屏、不错误绑定 slug」——
+合并收敛后即可满足。

@@ -210,9 +210,11 @@ export const RETIRED_SIDEBAR_KEYS = new Set(['community', 'image', 'memory', 'pa
 /**
  * Drop retired keys from a stored sidebar order.
  *
- * Idempotent, and returns the original reference when there is nothing to strip
- * so that downstream reference-equality checks (`arraysEqual`, `useMemo`) keep
- * working and a second pass is provably a no-op.
+ * Idempotent, and returns the original reference when there is nothing to strip.
+ * Reference stability matters because the result feeds a zustand selector:
+ * handing back a freshly built array on every read would re-render every
+ * subscriber. Keeping the same reference also makes a second pass a provable
+ * no-op.
  */
 const withoutRetiredItems = (items: string[]): string[] => {
   let seen = false;

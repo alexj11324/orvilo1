@@ -1,8 +1,8 @@
 import { SpanStatusCode } from '@orvilo/observability-otel/api';
 import {
-  buildUpstashWorkflowMetricAttributes,
-  tracer as upstashWorkflowTracer,
-} from '@orvilo/observability-otel/modules/upstash-workflow';
+  buildHatchetWorkflowMetricAttributes,
+  tracer as hatchetWorkflowTracer,
+} from '@orvilo/observability-otel/modules/hatchet-workflow';
 import { LayersEnum, MemorySourceType } from '@orvilo/types';
 import { errorMessageFrom } from '@orvilo/utils';
 
@@ -31,7 +31,7 @@ const IDENTITY_LAYERS: LayersEnum[] = [LayersEnum.Identity];
 const WORKFLOW_PATH = 'api/workflows/memory-user-memory/pipelines/chat-topic/process-topic';
 
 export const processTopicHandler = async (context: WorkflowContext<MemoryExtractionPayloadInput>) =>
-  upstashWorkflowTracer.startActiveSpan(
+  hatchetWorkflowTracer.startActiveSpan(
     'workflow:memory-user-memory:process-topic',
     async (span) => {
       await ensureWorkflowStarted(context, WORKFLOW_PATH);
@@ -39,7 +39,7 @@ export const processTopicHandler = async (context: WorkflowContext<MemoryExtract
       const payload = normalizeMemoryExtractionPayload(context.requestPayload || {});
 
       span.setAttributes({
-        ...buildUpstashWorkflowMetricAttributes(context),
+        ...buildHatchetWorkflowMetricAttributes(context),
         'workflow.memory_user_memory.layers': payload.layers.join(','),
         'workflow.memory_user_memory.source': payload.sources.join(','),
         'workflow.memory_user_memory.topic_id': payload.topicIds[0],

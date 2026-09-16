@@ -12,10 +12,9 @@
     "./modules/memory-user-memory": "./src/modules/memory-user-memory/index.ts",
     "./modules/onboarding-understanding": "./src/modules/onboarding-understanding/index.ts",
     "./modules/fts-search-reindex": "./src/modules/fts-search-reindex/index.ts",
-    "./modules/upstash-workflow": "./src/modules/upstash-workflow/index.ts"
+    "./modules/hatchet-workflow": "./src/modules/hatchet-workflow/index.ts"
   },
   "dependencies": {
-    "@orvilo/utils": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.76.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.208.0",
@@ -29,6 +28,7 @@
     "@opentelemetry/sdk-trace-base": "^2.8.0",
     "@opentelemetry/sdk-trace-node": "^2.8.0",
     "@opentelemetry/semantic-conventions": "^1.41.1",
+    "@orvilo/utils": "workspace:*",
     "@vercel/otel": "^2.1.3"
   }
 }

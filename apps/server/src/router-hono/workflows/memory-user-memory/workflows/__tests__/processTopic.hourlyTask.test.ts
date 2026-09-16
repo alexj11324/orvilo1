@@ -12,8 +12,8 @@ const mocks = vi.hoisted(() => ({
   isHourlyMemoryExtractionCancellationRequested: vi.fn(),
 }));
 
-vi.mock('@orvilo/observability-otel/modules/upstash-workflow', () => ({
-  buildUpstashWorkflowMetricAttributes: vi.fn(function () {
+vi.mock('@orvilo/observability-otel/modules/hatchet-workflow', () => ({
+  buildHatchetWorkflowMetricAttributes: vi.fn(function () {
     return {};
   }),
   tracer: {

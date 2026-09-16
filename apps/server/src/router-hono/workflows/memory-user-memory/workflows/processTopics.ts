@@ -1,8 +1,8 @@
 import { SpanStatusCode } from '@orvilo/observability-otel/api';
 import {
-  buildUpstashWorkflowMetricAttributes,
-  tracer as upstashWorkflowTracer,
-} from '@orvilo/observability-otel/modules/upstash-workflow';
+  buildHatchetWorkflowMetricAttributes,
+  tracer as hatchetWorkflowTracer,
+} from '@orvilo/observability-otel/modules/hatchet-workflow';
 import { LayersEnum, MemorySourceType } from '@orvilo/types';
 
 import { AsyncTaskModel } from '@/database/models/asyncTask';
@@ -33,7 +33,7 @@ const CEPA_LAYERS: LayersEnum[] = [
 const IDENTITY_LAYERS: LayersEnum[] = [LayersEnum.Identity];
 
 export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPayloadInput>) =>
-  upstashWorkflowTracer.startActiveSpan(
+  hatchetWorkflowTracer.startActiveSpan(
     'workflow:memory-user-memory:process-topics',
     async (span) => {
       await ensureWorkflowStarted(context, WORKFLOW_PATH);
@@ -41,7 +41,7 @@ export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPa
       const payload = normalizeMemoryExtractionPayload(context.requestPayload || {});
 
       span.setAttributes({
-        ...buildUpstashWorkflowMetricAttributes(context),
+        ...buildHatchetWorkflowMetricAttributes(context),
         'workflow.memory_user_memory.force_all': payload.forceAll,
         'workflow.memory_user_memory.force_topics': payload.forceTopics,
         'workflow.memory_user_memory.layers': payload.layers.join(','),
@@ -53,7 +53,7 @@ export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPa
 
       try {
         // NOTICE: Return (never throw) on a guard match — a throw before the first step makes
-        // Upstash re-enqueue the run, turning a "disable" guard into an infinite retry storm.
+        // Hatchet re-enqueues the run, turning a "disable" guard into an infinite retry storm.
         const entryGuard = await checkGuard(context, WORKFLOW_PATH, {
           response: { processedTopics: 0, processedUsers: 0 },
         });

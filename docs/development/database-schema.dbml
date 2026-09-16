@@ -2131,6 +2131,8 @@ table linear_sync_inbox {
   attempts integer [not null, default: 0]
   available_at "timestamp with time zone" [not null, default: `now()`]
   locked_until "timestamp with time zone"
+  lease_owner text
+  lease_fence integer [not null, default: 0]
   last_error text
   processed_at "timestamp with time zone"
   created_at "timestamp with time zone" [not null, default: `now()`]
@@ -2156,6 +2158,8 @@ table linear_sync_outbox {
   attempts integer [not null, default: 0]
   available_at "timestamp with time zone" [not null, default: `now()`]
   locked_until "timestamp with time zone"
+  lease_owner text
+  lease_fence integer [not null, default: 0]
   last_error text
   outcome_unknown_at "timestamp with time zone"
   sent_at "timestamp with time zone"
@@ -3545,7 +3549,7 @@ table task_dispatches {
   requirement_revision integer [not null]
   policy_revision integer [not null]
   plan_revision integer
-  fence integer [not null, default: 1]
+  fence integer [not null, default: 0]
   operation_id text
   idempotency_key text [not null]
   requested_by text [not null]

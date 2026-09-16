@@ -59,16 +59,19 @@ export const linearWebhook = async (c: Context): Promise<Response> => {
       timestamp,
     });
 
-    // The inbox/domain-event write is the acknowledgement boundary. Queue the
-    // leased workers after that durable write; a missing local QStash setup must
-    // never turn a successfully captured Linear delivery into a retry storm.
-    void LinearSyncWorkflow.trigger({
-      installationId: installation.id,
-      limit: 20,
-      workspaceId,
-    }).catch((error) => {
+    // Await the durable enqueue before acknowledging. If enqueueing fails,
+    // Linear retries the same delivery; captureWebhook is idempotent, so that
+    // retry schedules the already-persisted inbox row without duplicating it.
+    try {
+      await LinearSyncWorkflow.trigger({
+        installationId: installation.id,
+        limit: 20,
+        workspaceId,
+      });
+    } catch (error) {
       console.error('[linear:webhook] failed to schedule durable sync worker', error);
-    });
+      return c.json({ error: 'Linear delivery was captured but could not be scheduled' }, 503);
+    }
 
     // Linear retries non-2xx deliveries even when the inbox row was durably
     // written. The body reports queued/duplicate state; the transport status

@@ -50,4 +50,18 @@ describe('LinearSyncWorkflow', () => {
       }),
     );
   });
+
+  it('passes a bounded delay to a continuation run', async () => {
+    await LinearSyncWorkflow.triggerInstallation(
+      { installationId: '00000000-0000-4000-8000-000000000001', workspaceId: 'workspace-1' },
+      { delay: 12 },
+    );
+
+    expect(mocks.trigger).toHaveBeenCalledWith(
+      expect.objectContaining({
+        delay: 12,
+        url: 'https://app.example.test/api/workflows/linear-sync/execute',
+      }),
+    );
+  });
 });

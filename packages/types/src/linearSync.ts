@@ -9,10 +9,17 @@ export type LinearIssueLinkSyncState =
 
 /** Durable state of a received Linear delivery. */
 export type LinearSyncInboxStatus =
-  'failed' | 'ignored' | 'pending_binding' | 'processed' | 'received';
+  | 'dead_letter'
+  | 'failed'
+  | 'ignored'
+  | 'pending_binding'
+  | 'processed'
+  | 'processing'
+  | 'received';
 
 /** Durable state of a local change waiting to reach Linear. */
-export type LinearSyncOutboxStatus = 'failed' | 'outcome_unknown' | 'pending' | 'sent' | 'sending';
+export type LinearSyncOutboxStatus =
+  'dead_letter' | 'failed' | 'outcome_unknown' | 'pending' | 'sent' | 'sending';
 
 /** Scope of a persisted planning cursor. */
 export type TaskPlanningScopeType = 'goal' | 'project' | 'workspace';

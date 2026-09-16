@@ -1,19 +1,34 @@
+import { randomUUID } from 'node:crypto';
+
 import type { LinearIssueSnapshot, LinearProjectBindingSettings, TaskItem } from '@orvilo/types';
 import { and, eq } from 'drizzle-orm';
 
-import { LinearSyncModel } from '@/database/models/linearSync';
+import {
+  LINEAR_SYNC_DEFAULT_LEASE_MS,
+  LINEAR_SYNC_MAX_ATTEMPTS,
+  type LinearSyncLease,
+  LinearSyncModel,
+  linearSyncRetryDelayMs,
+} from '@/database/models/linearSync';
 import { TaskModel } from '@/database/models/task';
 import { tasks } from '@/database/schemas/task';
 import type { LobeChatDatabase } from '@/database/type';
 import { TaskService } from '@/server/services/task';
 
 import { changedLinearIssueFields, mergeLinearIssueSnapshots } from './merge';
-import type { LinearIssueProvider } from './provider';
+import type { LinearIssueProvider, LinearIssueUpdateInput } from './provider';
 
 export class LinearBindingPendingError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'LinearBindingPendingError';
+  }
+}
+
+class LinearSyncLeaseLostError extends Error {
+  constructor() {
+    super('Linear sync lease is no longer owned by this worker');
+    this.name = 'LinearSyncLeaseLostError';
   }
 }
 
@@ -105,10 +120,34 @@ const remoteTaskPatch = (
   return patch;
 };
 
+const leaseForRow = (row: { leaseFence: number; leaseOwner: string | null }): LinearSyncLease => {
+  if (!row.leaseOwner) throw new LinearSyncLeaseLostError();
+  return { fence: row.leaseFence, owner: row.leaseOwner };
+};
+
+const remoteMatchesUpdate = (remote: LinearIssueSnapshot, input: LinearIssueUpdateInput) => {
+  const fields: (keyof LinearIssueUpdateInput)[] = [
+    'assigneeId',
+    'description',
+    'priority',
+    'projectId',
+    'stateId',
+    'title',
+  ];
+
+  return fields.every((field) => {
+    if (!(field in input)) return true;
+    return remote[field] === input[field];
+  });
+};
+
+const retryAt = (attempts: number) => new Date(Date.now() + linearSyncRetryDelayMs(attempts));
+
 export class LinearSyncWorker {
   private readonly db: LobeChatDatabase;
   private readonly model: LinearSyncModel;
   private readonly workspaceId: string;
+  private readonly leaseOwner = randomUUID();
 
   constructor(db: LobeChatDatabase, workspaceId: string) {
     this.db = db;
@@ -121,7 +160,12 @@ export class LinearSyncWorker {
     limit = 20,
     installationId?: string,
   ): Promise<LinearWorkerResult> {
-    const rows = await this.model.claimInbox(limit, 60_000, installationId);
+    const rows = await this.model.claimInbox(
+      limit,
+      LINEAR_SYNC_DEFAULT_LEASE_MS,
+      installationId,
+      this.leaseOwner,
+    );
     const result: LinearWorkerResult = {
       failed: 0,
       imported: 0,
@@ -130,28 +174,38 @@ export class LinearSyncWorker {
     };
 
     for (const row of rows) {
+      const lease = leaseForRow(row);
       try {
         const outcome = await this.processRow(row, provider);
+        const settled = await this.model.updateInbox(
+          row.id,
+          {
+            availableAt: outcome === 'pending-binding' ? new Date(Date.now() + 60_000) : new Date(),
+            lastError: null,
+            lockedUntil: null,
+            processedAt: outcome === 'pending-binding' ? null : new Date(),
+            status: outcome === 'pending-binding' ? 'pending_binding' : 'processed',
+          },
+          lease,
+        );
+        if (!settled) continue;
         if (outcome === 'imported') result.imported += 1;
         if (outcome === 'pending-binding') result.pendingBinding += 1;
         if (outcome !== 'pending-binding') result.processed += 1;
-
-        await this.model.updateInbox(row.id, {
-          availableAt: outcome === 'pending-binding' ? new Date(Date.now() + 60_000) : new Date(),
-          lastError: null,
-          lockedUntil: null,
-          processedAt: outcome === 'pending-binding' ? null : new Date(),
-          status: outcome === 'pending-binding' ? 'pending_binding' : 'processed',
-        });
       } catch (error) {
-        result.failed += 1;
+        if (error instanceof LinearSyncLeaseLostError) continue;
         const message = error instanceof Error ? error.message : String(error);
-        await this.model.updateInbox(row.id, {
-          availableAt: new Date(Date.now() + 60_000),
-          lastError: message.slice(0, 2_000),
-          lockedUntil: null,
-          status: 'failed',
-        });
+        const settled = await this.model.updateInbox(
+          row.id,
+          {
+            availableAt: retryAt(row.attempts),
+            lastError: message.slice(0, 2_000),
+            lockedUntil: null,
+            status: row.attempts >= LINEAR_SYNC_MAX_ATTEMPTS ? 'dead_letter' : 'failed',
+          },
+          lease,
+        );
+        if (settled) result.failed += 1;
       }
     }
 
@@ -163,48 +217,61 @@ export class LinearSyncWorker {
     limit = 20,
     installationId?: string,
   ): Promise<LinearOutboxWorkerResult> {
-    const rows = await this.model.claimOutbox(limit, 60_000, installationId);
+    const rows = await this.model.claimOutbox(
+      limit,
+      LINEAR_SYNC_DEFAULT_LEASE_MS,
+      installationId,
+      this.leaseOwner,
+    );
     const result: LinearOutboxWorkerResult = { failed: 0, sent: 0 };
 
     for (const row of rows) {
+      const lease = leaseForRow(row);
+      let providerWriteAttempted = false;
       try {
         if (!row.linkId) throw new Error('Linear outbox row has no issue link');
         const issueLink = await this.model.findIssueLinkById(row.linkId);
         if (!issueLink) throw new Error('Linear issue link no longer exists');
 
-        const updated = await provider.updateIssue(
-          issueLink.linearIssueId,
-          row.payload as {
-            assigneeId?: string | null;
-            description?: string | null;
-            priority?: number | null;
-            projectId?: string | null;
-            stateId?: string | null;
-            title?: string;
-          },
-        );
-        await this.model.updateIssueLink(issueLink.id, {
-          conflict: null,
-          lastConfirmedSnapshot: updated,
+        const updateInput = row.payload as LinearIssueUpdateInput;
+        const current = await provider.getIssue(issueLink.linearIssueId);
+        const updated = remoteMatchesUpdate(current, updateInput)
+          ? current
+          : await (async () => {
+              if (!(await this.model.hasCurrentOutboxLease(row.id, lease))) {
+                throw new LinearSyncLeaseLostError();
+              }
+              providerWriteAttempted = true;
+              return provider.updateIssue(issueLink.linearIssueId, updateInput);
+            })();
+
+        const settled = await this.model.settleOutbox(row.id, lease, {
+          issueLinkId: issueLink.id,
           remoteSnapshot: updated,
-          syncState: 'synced',
         });
-        await this.model.updateOutbox(row.id, {
-          lastError: null,
-          lockedUntil: null,
-          sentAt: new Date(),
-          status: 'sent',
-        });
+        if (!settled) continue;
         result.sent += 1;
       } catch (error) {
-        result.failed += 1;
+        if (error instanceof LinearSyncLeaseLostError) continue;
+
         const message = error instanceof Error ? error.message : String(error);
-        await this.model.updateOutbox(row.id, {
-          availableAt: new Date(Date.now() + 60_000),
-          lastError: message.slice(0, 2_000),
-          lockedUntil: null,
-          status: 'failed',
-        });
+        const settled = await this.model.updateOutbox(
+          row.id,
+          {
+            availableAt: retryAt(row.attempts),
+            lastError: message.slice(0, 2_000),
+            lockedUntil: null,
+            outcomeUnknownAt: providerWriteAttempted ? new Date() : null,
+            status:
+              row.attempts >= LINEAR_SYNC_MAX_ATTEMPTS
+                ? 'dead_letter'
+                : providerWriteAttempted
+                  ? 'outcome_unknown'
+                  : 'failed',
+          },
+          lease,
+        );
+        if (settled) result.failed += 1;
       }
     }
 

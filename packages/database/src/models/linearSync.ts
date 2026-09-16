@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type {
   LinearIssueLinkSyncState,
   LinearIssueSnapshot,
@@ -65,6 +67,23 @@ export interface CaptureLinearDeliveryInput {
   subjectId?: string | null;
   webhookId?: string | null;
 }
+
+export interface LinearSyncLease {
+  fence: number;
+  owner: string;
+}
+
+export const LINEAR_SYNC_DEFAULT_LEASE_MS = 60_000;
+export const LINEAR_SYNC_MAX_ATTEMPTS = 5;
+export const LINEAR_SYNC_RETRY_BASE_MS = 1_000;
+export const LINEAR_SYNC_RETRY_MAX_MS = 60_000;
+
+/** Deterministic backoff keeps retries bounded and makes queue behavior testable. */
+export const linearSyncRetryDelayMs = (attempts: number) =>
+  Math.min(
+    LINEAR_SYNC_RETRY_MAX_MS,
+    LINEAR_SYNC_RETRY_BASE_MS * 2 ** Math.max(0, Math.min(attempts, 16) - 1),
+  );
 
 export class LinearSyncModel {
   private readonly db: LobeChatDatabase;
@@ -243,7 +262,10 @@ export class LinearSyncModel {
         updatedAt: new Date(),
       })
       .where(
-        and(eq(linearProjectBindings.id, id), eq(linearProjectBindings.workspaceId, this.workspaceId)),
+        and(
+          eq(linearProjectBindings.id, id),
+          eq(linearProjectBindings.workspaceId, this.workspaceId),
+        ),
       )
       .returning();
     return row ?? null;
@@ -367,36 +389,49 @@ export class LinearSyncModel {
   /** Claim inbox rows with a lease so a crashed worker can be replaced safely. */
   async claimInbox(
     limit = 20,
-    leaseMs = 60_000,
+    leaseMs = LINEAR_SYNC_DEFAULT_LEASE_MS,
     installationId?: string,
+    leaseOwner = randomUUID(),
   ): Promise<LinearSyncInboxItem[]> {
     const lockedUntil = new Date(Date.now() + leaseMs);
     const installationFilter = installationId
       ? sql`AND installation_id = ${installationId}`
       : sql``;
-    const result = await this.db.execute(sql`
-      WITH candidates AS (
-        SELECT id
-        FROM linear_sync_inbox
-        WHERE workspace_id = ${this.workspaceId}
-          AND status IN ('received', 'pending_binding')
-          AND available_at <= now()
-          AND (locked_until IS NULL OR locked_until < now())
-          ${installationFilter}
-        ORDER BY created_at
-        LIMIT ${limit}
-        FOR UPDATE SKIP LOCKED
-      )
-      UPDATE linear_sync_inbox AS inbox
-      SET locked_until = ${lockedUntil},
-          attempts = inbox.attempts + 1,
-          updated_at = now()
-      FROM candidates
-      WHERE inbox.id = candidates.id
-      RETURNING inbox.*
-    `);
-
-    return result.rows as unknown as LinearSyncInboxItem[];
+    return this.db.transaction(async (tx) => {
+      const result = await tx.execute(sql`
+        WITH candidates AS (
+          SELECT id
+          FROM linear_sync_inbox
+          WHERE workspace_id = ${this.workspaceId}
+            AND status IN ('received', 'pending_binding', 'failed', 'processing')
+            AND available_at <= now()
+            AND (locked_until IS NULL OR locked_until < now())
+            ${installationFilter}
+          ORDER BY created_at
+          LIMIT ${limit}
+          FOR UPDATE SKIP LOCKED
+        )
+        UPDATE linear_sync_inbox AS inbox
+        SET locked_until = ${lockedUntil},
+            lease_owner = ${leaseOwner},
+            lease_fence = inbox.lease_fence + 1,
+            attempts = inbox.attempts + 1,
+            status = 'processing',
+            updated_at = now()
+        FROM candidates
+        WHERE inbox.id = candidates.id
+        RETURNING inbox.id
+      `);
+      const ids = result.rows.map((row) => String((row as { id: string }).id));
+      if (ids.length === 0) return [];
+      return tx
+        .select()
+        .from(linearSyncInbox)
+        .where(
+          and(eq(linearSyncInbox.workspaceId, this.workspaceId), inArray(linearSyncInbox.id, ids)),
+        )
+        .orderBy(linearSyncInbox.createdAt);
+    });
   }
 
   async updateInbox(
@@ -409,11 +444,24 @@ export class LinearSyncModel {
       processedAt?: Date | null;
       status?: LinearSyncInboxStatus;
     },
+    lease?: LinearSyncLease,
   ) {
+    const values = {
+      ...patch,
+      ...(lease ? { leaseOwner: null } : {}),
+      updatedAt: new Date(),
+    };
     const [row] = await this.db
       .update(linearSyncInbox)
-      .set({ ...patch, updatedAt: new Date() })
-      .where(and(eq(linearSyncInbox.id, id), eq(linearSyncInbox.workspaceId, this.workspaceId)))
+      .set(values)
+      .where(
+        and(
+          eq(linearSyncInbox.id, id),
+          eq(linearSyncInbox.workspaceId, this.workspaceId),
+          lease ? eq(linearSyncInbox.leaseOwner, lease.owner) : undefined,
+          lease ? eq(linearSyncInbox.leaseFence, lease.fence) : undefined,
+        ),
+      )
       .returning();
     return row ?? null;
   }
@@ -428,7 +476,7 @@ export class LinearSyncModel {
             eq(linearSyncOutbox.workspaceId, this.workspaceId),
             eq(linearSyncOutbox.linkId, input.linkId),
             eq(linearSyncOutbox.operation, input.operation),
-            inArray(linearSyncOutbox.status, ['failed', 'pending']),
+            inArray(linearSyncOutbox.status, ['failed', 'pending', 'outcome_unknown']),
           ),
         )
         .orderBy(desc(linearSyncOutbox.createdAt))
@@ -441,6 +489,9 @@ export class LinearSyncModel {
             availableAt: new Date(),
             expectedLocalRevision: input.expectedLocalRevision,
             lastError: null,
+            lockedUntil: null,
+            leaseOwner: null,
+            outcomeUnknownAt: null,
             payload: {
               ...(existing.payload as Record<string, unknown>),
               ...input.payload,
@@ -484,37 +535,52 @@ export class LinearSyncModel {
 
   async claimOutbox(
     limit = 20,
-    leaseMs = 60_000,
+    leaseMs = LINEAR_SYNC_DEFAULT_LEASE_MS,
     installationId?: string,
+    leaseOwner = randomUUID(),
   ): Promise<LinearSyncOutboxItem[]> {
     const lockedUntil = new Date(Date.now() + leaseMs);
     const installationFilter = installationId
       ? sql`AND installation_id = ${installationId}`
       : sql``;
-    const result = await this.db.execute(sql`
-      WITH candidates AS (
-        SELECT id
-        FROM linear_sync_outbox
-        WHERE workspace_id = ${this.workspaceId}
-          AND status IN ('failed', 'pending')
-          AND available_at <= now()
-          AND (locked_until IS NULL OR locked_until < now())
-          ${installationFilter}
-        ORDER BY created_at
-        LIMIT ${limit}
-        FOR UPDATE SKIP LOCKED
-      )
-      UPDATE linear_sync_outbox AS outbox
-      SET locked_until = ${lockedUntil},
-          attempts = outbox.attempts + 1,
-          status = 'sending',
-          updated_at = now()
-      FROM candidates
-      WHERE outbox.id = candidates.id
-      RETURNING outbox.*
-    `);
-
-    return result.rows as unknown as LinearSyncOutboxItem[];
+    return this.db.transaction(async (tx) => {
+      const result = await tx.execute(sql`
+        WITH candidates AS (
+          SELECT id
+          FROM linear_sync_outbox
+          WHERE workspace_id = ${this.workspaceId}
+            AND status IN ('failed', 'pending', 'sending', 'outcome_unknown')
+            AND available_at <= now()
+            AND (locked_until IS NULL OR locked_until < now())
+            ${installationFilter}
+          ORDER BY created_at
+          LIMIT ${limit}
+          FOR UPDATE SKIP LOCKED
+        )
+        UPDATE linear_sync_outbox AS outbox
+        SET locked_until = ${lockedUntil},
+            lease_owner = ${leaseOwner},
+            lease_fence = outbox.lease_fence + 1,
+            attempts = outbox.attempts + 1,
+            status = 'sending',
+            updated_at = now()
+        FROM candidates
+        WHERE outbox.id = candidates.id
+        RETURNING outbox.id
+      `);
+      const ids = result.rows.map((row) => String((row as { id: string }).id));
+      if (ids.length === 0) return [];
+      return tx
+        .select()
+        .from(linearSyncOutbox)
+        .where(
+          and(
+            eq(linearSyncOutbox.workspaceId, this.workspaceId),
+            inArray(linearSyncOutbox.id, ids),
+          ),
+        )
+        .orderBy(linearSyncOutbox.createdAt);
+    });
   }
 
   async updateOutbox(
@@ -523,16 +589,126 @@ export class LinearSyncModel {
       availableAt?: Date;
       lastError?: string | null;
       lockedUntil?: Date | null;
+      outcomeUnknownAt?: Date | null;
       sentAt?: Date | null;
       status?: LinearSyncOutboxStatus;
     },
+    lease?: LinearSyncLease,
   ) {
+    const values = {
+      ...patch,
+      ...(lease ? { leaseOwner: null } : {}),
+      updatedAt: new Date(),
+    };
     const [row] = await this.db
       .update(linearSyncOutbox)
-      .set({ ...patch, updatedAt: new Date() })
-      .where(and(eq(linearSyncOutbox.id, id), eq(linearSyncOutbox.workspaceId, this.workspaceId)))
+      .set(values)
+      .where(
+        and(
+          eq(linearSyncOutbox.id, id),
+          eq(linearSyncOutbox.workspaceId, this.workspaceId),
+          lease ? eq(linearSyncOutbox.leaseOwner, lease.owner) : undefined,
+          lease ? eq(linearSyncOutbox.leaseFence, lease.fence) : undefined,
+        ),
+      )
       .returning();
     return row ?? null;
+  }
+
+  /** Earliest time a crashed/retried inbox or outbox row can be claimed again. */
+  async nextSyncWakeAt(installationId?: string): Promise<Date | null> {
+    const installationFilter = installationId
+      ? sql`AND installation_id = ${installationId}`
+      : sql``;
+    const result = await this.db.execute(sql`
+      WITH wakeups AS (
+        SELECT greatest(available_at, coalesce(locked_until, available_at)) AS wake_at
+        FROM linear_sync_inbox
+        WHERE workspace_id = ${this.workspaceId}
+          AND status IN ('received', 'failed', 'processing')
+          ${installationFilter}
+        UNION ALL
+        SELECT greatest(available_at, coalesce(locked_until, available_at)) AS wake_at
+        FROM linear_sync_outbox
+        WHERE workspace_id = ${this.workspaceId}
+          AND status IN ('pending', 'failed', 'sending', 'outcome_unknown')
+          ${installationFilter}
+      )
+      SELECT min(wake_at) AS next_wake_at FROM wakeups
+    `);
+    const nextWakeAt = (result.rows[0] as { next_wake_at?: Date | string | null } | undefined)
+      ?.next_wake_at;
+    return nextWakeAt ? new Date(nextWakeAt) : null;
+  }
+
+  async hasCurrentOutboxLease(id: string, lease: LinearSyncLease) {
+    const [row] = await this.db
+      .select({ id: linearSyncOutbox.id })
+      .from(linearSyncOutbox)
+      .where(
+        and(
+          eq(linearSyncOutbox.id, id),
+          eq(linearSyncOutbox.workspaceId, this.workspaceId),
+          eq(linearSyncOutbox.leaseOwner, lease.owner),
+          eq(linearSyncOutbox.leaseFence, lease.fence),
+        ),
+      )
+      .limit(1);
+    return Boolean(row);
+  }
+
+  /** Complete a provider write and its local receipt under the same lease fence. */
+  async settleOutbox(
+    id: string,
+    lease: LinearSyncLease,
+    input: { issueLinkId: string; remoteSnapshot: LinearIssueSnapshot },
+  ) {
+    return this.db.transaction(async (tx) => {
+      const now = new Date();
+      const [outbox] = await tx
+        .update(linearSyncOutbox)
+        .set({
+          lastError: null,
+          lockedUntil: null,
+          leaseOwner: null,
+          outcomeUnknownAt: null,
+          sentAt: now,
+          status: 'sent',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(linearSyncOutbox.id, id),
+            eq(linearSyncOutbox.workspaceId, this.workspaceId),
+            eq(linearSyncOutbox.leaseOwner, lease.owner),
+            eq(linearSyncOutbox.leaseFence, lease.fence),
+          ),
+        )
+        .returning();
+
+      if (!outbox) return null;
+
+      const [link] = await tx
+        .update(linearIssueLinks)
+        .set({
+          conflict: null,
+          lastConfirmedSnapshot: input.remoteSnapshot,
+          lastOutboundRevision: outbox.expectedLocalRevision,
+          remoteSnapshot: input.remoteSnapshot,
+          syncState: 'synced',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(linearIssueLinks.id, input.issueLinkId),
+            eq(linearIssueLinks.workspaceId, this.workspaceId),
+          ),
+        )
+        .returning();
+
+      if (!link) throw new Error('Linear issue link no longer exists');
+      return { link, outbox };
+    });
   }
 
   async findPlanningScope(scopeType: TaskPlanningScopeType, scopeId: string) {
@@ -612,31 +788,43 @@ export class LinearSyncModel {
   /** Claim queued scopes without holding a database connection during planning. */
   async claimPlanningScopes(limit = 10, leaseMs = 120_000): Promise<TaskPlanningScopeItem[]> {
     const lockedUntil = new Date(Date.now() + leaseMs);
-    const result = await this.db.execute(sql`
-      WITH candidates AS (
-        SELECT id
-        FROM task_planning_scopes
-        WHERE workspace_id = ${this.workspaceId}
-          AND dirty_revision > planned_revision
-          AND (
-            status = 'queued'
-            OR (status = 'running' AND (locked_until IS NULL OR locked_until < now()))
-          )
-        ORDER BY dirty_revision, updated_at
-        LIMIT ${limit}
-        FOR UPDATE SKIP LOCKED
-      )
-      UPDATE task_planning_scopes AS scopes
-      SET locked_until = ${lockedUntil},
-          status = 'running',
-          last_error = NULL,
-          updated_at = now()
-      FROM candidates
-      WHERE scopes.id = candidates.id
-      RETURNING scopes.*
-    `);
-
-    return result.rows as unknown as TaskPlanningScopeItem[];
+    return this.db.transaction(async (tx) => {
+      const result = await tx.execute(sql`
+        WITH candidates AS (
+          SELECT id
+          FROM task_planning_scopes
+          WHERE workspace_id = ${this.workspaceId}
+            AND dirty_revision > planned_revision
+            AND (
+              status = 'queued'
+              OR (status = 'running' AND (locked_until IS NULL OR locked_until < now()))
+            )
+          ORDER BY dirty_revision, updated_at
+          LIMIT ${limit}
+          FOR UPDATE SKIP LOCKED
+        )
+        UPDATE task_planning_scopes AS scopes
+        SET locked_until = ${lockedUntil},
+            status = 'running',
+            last_error = NULL,
+            updated_at = now()
+        FROM candidates
+        WHERE scopes.id = candidates.id
+        RETURNING scopes.id
+      `);
+      const ids = result.rows.map((row) => String((row as { id: string }).id));
+      if (ids.length === 0) return [];
+      return tx
+        .select()
+        .from(taskPlanningScopes)
+        .where(
+          and(
+            eq(taskPlanningScopes.workspaceId, this.workspaceId),
+            inArray(taskPlanningScopes.id, ids),
+          ),
+        )
+        .orderBy(taskPlanningScopes.dirtyRevision, taskPlanningScopes.updatedAt);
+    });
   }
 
   async listDomainEventsForPlanning(

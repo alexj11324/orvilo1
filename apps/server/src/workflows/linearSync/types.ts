@@ -17,8 +17,10 @@ export interface LinearSyncWorkflowResult {
 }
 
 export interface LinearSyncInstallationResult {
+  continuationScheduled: boolean;
   inbox: { failed: number; imported: number; pendingBinding: number; processed: number };
   installationId: string;
+  nextWakeAt: string | null;
   outbox: { failed: number; sent: number };
   planning: { failed: number; processed: number; proposed: number };
 }

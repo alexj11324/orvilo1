@@ -4,6 +4,7 @@ import { LinearPlanningWorker } from '@/server/services/linearSync/planning';
 import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/provider';
 import { LinearSyncWorker } from '@/server/services/linearSync/worker';
 import type { WorkflowContext } from '@/server/workflows/context';
+import { LinearSyncWorkflow } from '@/server/workflows/linearSync';
 
 import {
   type LinearSyncInstallationResult,
@@ -32,7 +33,9 @@ export const executeLinearSyncWorkflow = async (
   if (installation.status !== 'active') {
     return {
       installationId: installation.id,
+      continuationScheduled: false,
       inbox: { failed: 0, imported: 0, pendingBinding: 0, processed: 0 },
+      nextWakeAt: null,
       outbox: { failed: 0, sent: 0 },
       planning: { failed: 0, processed: 0, proposed: 0 },
     };
@@ -53,6 +56,25 @@ export const executeLinearSyncWorkflow = async (
   const planning = await context.run('linear-sync:process-planning', () =>
     new LinearPlanningWorker(db, payload.workspaceId).processPending(undefined, payload.limit),
   );
+  const nextWakeAt = await context.run('linear-sync:next-wake-at', () =>
+    model.nextSyncWakeAt(installation.id),
+  );
+  if (nextWakeAt) {
+    const delay = Math.max(0, Math.ceil((nextWakeAt.getTime() - Date.now()) / 1000));
+    await context.run('linear-sync:schedule-continuation', () =>
+      LinearSyncWorkflow.triggerInstallation(
+        { ...payload, installationId: installation.id },
+        { delay },
+      ),
+    );
+  }
 
-  return { installationId: installation.id, inbox, outbox, planning };
+  return {
+    continuationScheduled: Boolean(nextWakeAt),
+    inbox,
+    installationId: installation.id,
+    nextWakeAt: nextWakeAt?.toISOString() ?? null,
+    outbox,
+    planning,
+  };
 };

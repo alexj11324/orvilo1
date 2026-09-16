@@ -45,8 +45,7 @@ export const linearInstallations = pgTable(
     workspaceId: text('workspace_id')
       .references(() => workspaces.id, { onDelete: 'cascade' })
       .notNull(),
-    connectorId: uuid('connector_id')
-      .references(() => userConnectors.id, { onDelete: 'cascade' }),
+    connectorId: uuid('connector_id').references(() => userConnectors.id, { onDelete: 'cascade' }),
     organizationId: text('organization_id').notNull(),
     organizationName: text('organization_name'),
     /** Name of the secret in the deployment secret store, never the secret itself. */
@@ -173,6 +172,8 @@ export const linearSyncInbox = pgTable(
     attempts: integer('attempts').notNull().default(0),
     availableAt: timestamptz('available_at').notNull().defaultNow(),
     lockedUntil: timestamptz('locked_until'),
+    leaseOwner: text('lease_owner'),
+    leaseFence: integer('lease_fence').notNull().default(0),
     lastError: text('last_error'),
     processedAt: timestamptz('processed_at'),
     ...createdAtColumns(),
@@ -207,6 +208,8 @@ export const linearSyncOutbox = pgTable(
     attempts: integer('attempts').notNull().default(0),
     availableAt: timestamptz('available_at').notNull().defaultNow(),
     lockedUntil: timestamptz('locked_until'),
+    leaseOwner: text('lease_owner'),
+    leaseFence: integer('lease_fence').notNull().default(0),
     lastError: text('last_error'),
     outcomeUnknownAt: timestamptz('outcome_unknown_at'),
     sentAt: timestamptz('sent_at'),

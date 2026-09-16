@@ -13,6 +13,7 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { LinearPlanningWorker } from '@/server/services/linearSync/planning';
 import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/provider';
 import { LinearSyncWorker } from '@/server/services/linearSync/worker';
+import { LinearSyncWorkflow } from '@/server/workflows/linearSync';
 
 const linearSyncProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -168,16 +169,23 @@ export const linearSyncRouter = router({
         const project = await ctx.projectModel.findManageableById(input.projectId);
         if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
 
+        const binding = await ctx.linearSyncModel.upsertBinding({
+          defaultTeamId: input.defaultTeamId,
+          installationId: installation.id,
+          linearProjectId: input.linearProjectId,
+          projectId: project.id,
+          settings: input.settings,
+          syncEnabled: input.syncEnabled,
+          teamIds: input.teamIds,
+        });
+        await LinearSyncWorkflow.triggerInstallation({
+          installationId: installation.id,
+          limit: 20,
+          workspaceId: ctx.workspaceId!,
+        });
+
         return {
-          data: await ctx.linearSyncModel.upsertBinding({
-            defaultTeamId: input.defaultTeamId,
-            installationId: installation.id,
-            linearProjectId: input.linearProjectId,
-            projectId: project.id,
-            settings: input.settings,
-            syncEnabled: input.syncEnabled,
-            teamIds: input.teamIds,
-          }),
+          data: binding,
           message: 'Linear project binding saved',
           success: true,
         };

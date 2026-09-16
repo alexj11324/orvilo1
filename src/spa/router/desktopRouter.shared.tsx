@@ -949,6 +949,11 @@ export const sharedMainAreaChildren: RouteObject[] = [
       'Desktop > Task Workspace > Layout',
       { preloadId: 'tasks' },
     ),
+    // This one wrapper carries `/tasks`, `/inbox`, `/task/*` and `/goal/*`, and
+    // every one of them mounts the portal column (`TaskWorkspaceLayout` renders
+    // `AgentTaskManager` or `MobilePortal`). Declaring it once here is what lets
+    // the acceptance drawer know it would be a second host; see `RouteMeta`.
+    handle: { meta: routeMeta({ portalColumn: true }) },
   },
 
   // Automations routes — recurring agent runs, one level above the task list

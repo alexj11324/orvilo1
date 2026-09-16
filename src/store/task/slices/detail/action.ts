@@ -55,6 +55,8 @@ export interface TaskUpdatePayload {
   /** Explicit board ordering key; anchors take precedence server-side. */
   position?: number;
   priority?: number;
+  /** Owning project; `null` unassigns. */
+  projectId?: string | null;
   /** Review-phase owner; auto-stamped on the paused transition when unset. */
   reviewerUserId?: string | null;
   /**
@@ -289,6 +291,8 @@ export class TaskDetailSliceActionImpl {
     createdByAgentId?: string;
     description?: string;
     editorData?: unknown;
+    /** Periodic-execution interval in seconds for `automationMode: 'heartbeat'`. */
+    heartbeatInterval?: number;
     /** Bind a goal entity (`goals` row) to the created task. */
     instruction: string;
     name?: string;

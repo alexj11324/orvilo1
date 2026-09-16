@@ -9,6 +9,7 @@ export default {
   'navigation.discoverModels': 'Discover Models',
   'navigation.discoverProviders': 'Discover Providers',
   'navigation.apps': 'Apps',
+  'navigation.automations': 'Automations',
   'navigation.group': 'Group',
   'navigation.groupChat': 'Group Chat',
   'navigation.groupProfile': 'Group Profile',

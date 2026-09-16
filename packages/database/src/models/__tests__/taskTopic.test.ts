@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, tasks, taskTopics, topics, users } from '../../schemas';
+import { agents, tasks, taskTopics, topics, users, workspaces } from '../../schemas';
 import type { LobeChatDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskTopicModel } from '../taskTopic';
@@ -753,6 +753,165 @@ describe('TaskTopicModel', () => {
         await serverDB.select().from(taskTopics).where(eq(taskTopics.taskId, task.id)).limit(1)
       )[0];
       expect(row.visibility).toBe('private');
+    });
+  });
+
+  describe('findAutomationRuns', () => {
+    it('rolls up runs only for tasks that still have an automation mode', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const automated = await taskModel.create({
+        automationMode: 'schedule',
+        instruction: 'Test',
+        name: 'Nightly report',
+      });
+      const manual = await taskModel.create({ instruction: 'Test', name: 'Plain task' });
+      await createTopic('tpc_run_a');
+      await createTopic('tpc_run_b');
+      await createTopic('tpc_manual');
+
+      await topicModel.add(automated.id, 'tpc_run_a', { seq: 1, trigger: 'schedule' });
+      await topicModel.add(automated.id, 'tpc_run_b', { seq: 2, trigger: 'manual' });
+      await topicModel.add(manual.id, 'tpc_manual', { seq: 1 });
+
+      const { rows, total } = await topicModel.findAutomationRuns({ limit: 25, offset: 0 });
+
+      expect(total).toBe(2);
+      expect(rows.map((r) => r.topicId)).toEqual(['tpc_run_b', 'tpc_run_a']); // seq desc
+      expect(rows[0]).toMatchObject({
+        seq: 2,
+        sourceTaskId: automated.id,
+        sourceTaskIdentifier: automated.identifier,
+        sourceTaskName: 'Nightly report',
+        trigger: 'manual',
+      });
+    });
+
+    it('filters by run status and by task name / run title search', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({
+        automationMode: 'heartbeat',
+        heartbeatInterval: 3600,
+        instruction: 'Test',
+        name: 'Metrics sweep',
+      });
+      await serverDB.insert(topics).values({ id: 'tpc_ok', title: 'Sweep pass', userId });
+      await serverDB.insert(topics).values({ id: 'tpc_bad', title: 'Sweep crash', userId });
+      await topicModel.add(task.id, 'tpc_ok', { seq: 1, trigger: 'heartbeat' });
+      await topicModel.add(task.id, 'tpc_bad', { seq: 2, trigger: 'heartbeat' });
+      await topicModel.updateStatus(task.id, 'tpc_ok', 'completed');
+      await topicModel.updateStatus(task.id, 'tpc_bad', 'failed');
+
+      const failed = await topicModel.findAutomationRuns({
+        limit: 25,
+        offset: 0,
+        statuses: ['failed'],
+      });
+      expect(failed.total).toBe(1);
+      expect(failed.rows[0].topicId).toBe('tpc_bad');
+      expect(failed.rows[0].status).toBe('failed');
+
+      const byTaskName = await topicModel.findAutomationRuns({
+        limit: 25,
+        offset: 0,
+        search: 'metrics',
+      });
+      expect(byTaskName.total).toBe(2);
+
+      const byRunTitle = await topicModel.findAutomationRuns({
+        limit: 25,
+        offset: 0,
+        search: 'crash',
+      });
+      expect(byRunTitle.total).toBe(1);
+      expect(byRunTitle.rows[0].topicId).toBe('tpc_bad');
+    });
+
+    it('scopes to the workspace and narrows by creator', async () => {
+      const workspaceId = 'ws_automation_runs';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'WS',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
+      const memberTasks = new TaskModel(serverDB, userId2, workspaceId);
+      const topicModel = new TaskTopicModel(serverDB, userId, workspaceId);
+      const memberTopicModel = new TaskTopicModel(serverDB, userId2, workspaceId);
+
+      const mine = await ownerTasks.create({
+        automationMode: 'schedule',
+        instruction: 'Test',
+        name: 'Mine',
+      });
+      const theirs = await memberTasks.create({
+        automationMode: 'schedule',
+        instruction: 'Test',
+        name: 'Theirs',
+        visibility: 'public',
+      });
+      await createTopic('tpc_mine');
+      await createTopic('tpc_theirs', userId2);
+      await topicModel.add(mine.id, 'tpc_mine', { seq: 1, trigger: 'schedule' });
+      await memberTopicModel.add(theirs.id, 'tpc_theirs', { seq: 1, trigger: 'schedule' });
+
+      const all = await topicModel.findAutomationRuns({ limit: 25, offset: 0 });
+      expect(all.total).toBe(2);
+
+      const onlyMine = await topicModel.findAutomationRuns({
+        createdByUserId: userId,
+        limit: 25,
+        offset: 0,
+      });
+      expect(onlyMine.total).toBe(1);
+      expect(onlyMine.rows[0].topicId).toBe('tpc_mine');
+    });
+  });
+
+  describe('automationRunStats', () => {
+    it('counts completed vs failed/timeout inside the 24h and 7d windows', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const automated = await taskModel.create({
+        automationMode: 'schedule',
+        instruction: 'Test',
+        name: 'Stats task',
+      });
+      const manual = await taskModel.create({ instruction: 'Test' });
+      for (const [id, title] of [
+        ['tpc_s1', 'recent completed'],
+        ['tpc_s2', 'recent failed'],
+        ['tpc_s3', 'old timeout'],
+        ['tpc_s4', 'manual completed'],
+      ] as const) {
+        await serverDB.insert(topics).values({ id, title, userId });
+      }
+
+      await topicModel.add(automated.id, 'tpc_s1', { seq: 1, trigger: 'schedule' });
+      await topicModel.add(automated.id, 'tpc_s2', { seq: 2, trigger: 'schedule' });
+      await topicModel.add(automated.id, 'tpc_s3', { seq: 3, trigger: 'schedule' });
+      await topicModel.add(manual.id, 'tpc_s4', { seq: 1 });
+      await topicModel.updateStatus(automated.id, 'tpc_s1', 'completed');
+      await topicModel.updateStatus(automated.id, 'tpc_s2', 'failed');
+      await topicModel.updateStatus(automated.id, 'tpc_s3', 'timeout');
+      await topicModel.updateStatus(manual.id, 'tpc_s4', 'completed');
+      // Backdate tpc_s3 out of the 24h window but inside 7d.
+      await serverDB
+        .update(taskTopics)
+        .set({ createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) })
+        .where(eq(taskTopics.topicId, 'tpc_s3'));
+
+      const stats = await topicModel.automationRunStats();
+
+      // tpc_s4 belongs to a non-automated task and drops out everywhere.
+      expect(stats).toEqual({
+        completed24h: 1,
+        completed7d: 1,
+        failed24h: 1,
+        failed7d: 2,
+      });
     });
   });
 });

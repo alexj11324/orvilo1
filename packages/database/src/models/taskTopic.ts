@@ -1,5 +1,5 @@
 import type { BriefDecision, TaskTopicHandoff, TaskTopicIntegration } from '@orvilo/types';
-import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import type { TaskTopicItem } from '../schemas/task';
 import { tasks, taskTopics } from '../schemas/task';
@@ -450,6 +450,117 @@ export class TaskTopicModel {
       .where(and(inArray(taskTopics.taskId, taskIds), this.ownership()))
       .orderBy(desc(taskTopics.createdAt), desc(taskTopics.seq))
       .limit(limit);
+  }
+
+  /**
+   * Workspace-wide roll-up of every run belonging to a task that still has an
+   * automation mode configured — the rows behind the Automations "All runs"
+   * surface. Runs of tasks whose automation was later removed drop out with
+   * the task itself; a paused automation still counts as configured.
+   *
+   * `createdByUserId` narrows the roll-up to automations one member created
+   * (the list page's "mine" tab); `search` matches the automation name or the
+   * run title; `statuses` is an include-list on the run's own status.
+   */
+  async findAutomationRuns(options: {
+    createdByUserId?: string;
+    limit: number;
+    offset: number;
+    search?: string;
+    statuses?: string[];
+  }) {
+    const conditions = [isNotNull(tasks.automationMode), this.ownership()];
+    if (options.createdByUserId) {
+      conditions.push(eq(tasks.createdByUserId, options.createdByUserId));
+    }
+    if (options.statuses?.length) {
+      conditions.push(inArray(taskTopics.status, options.statuses));
+    }
+    if (options.search) {
+      const pattern = `%${options.search}%`;
+      conditions.push(or(ilike(tasks.name, pattern), ilike(topics.title, pattern))!);
+    }
+    const where = and(...conditions);
+
+    const [rows, totals] = await Promise.all([
+      this.db
+        .select({
+          // The agent that actually ran this topic — used so each activity row
+          // keeps its own avatar instead of inheriting the task's *current*
+          // assignee (which changes when the task is reassigned).
+          agentId: topics.agentId,
+          completedAt: topics.completedAt,
+          totalCost: topics.totalCost,
+          createdAt: taskTopics.createdAt,
+          handoff: taskTopics.handoff,
+          operationId: taskTopics.operationId,
+          seq: taskTopics.seq,
+          sourceTaskAssigneeAgentId: tasks.assigneeAgentId,
+          sourceTaskId: tasks.id,
+          sourceTaskIdentifier: tasks.identifier,
+          sourceTaskName: tasks.name,
+          status: taskTopics.status,
+          title: topics.title,
+          topicId: taskTopics.topicId,
+          trigger: taskTopics.trigger,
+        })
+        .from(taskTopics)
+        .innerJoin(tasks, eq(taskTopics.taskId, tasks.id))
+        .leftJoin(topics, eq(taskTopics.topicId, topics.id))
+        .where(where)
+        .orderBy(desc(taskTopics.createdAt), desc(taskTopics.seq))
+        .limit(options.limit)
+        .offset(options.offset),
+      this.db
+        .select({ value: count() })
+        .from(taskTopics)
+        .innerJoin(tasks, eq(taskTopics.taskId, tasks.id))
+        .leftJoin(topics, eq(taskTopics.topicId, topics.id))
+        .where(where),
+    ]);
+
+    return { rows, total: totals[0]?.value ?? 0 };
+  }
+
+  /**
+   * Success/failure counts for the "All runs" summary cards: completed vs
+   * failed/timeout runs in the trailing 24h and 7d windows, scoped the same
+   * way as `findAutomationRuns` (a timeout reads as a failure on the UI).
+   */
+  async automationRunStats(options?: { createdByUserId?: string }): Promise<{
+    completed24h: number;
+    completed7d: number;
+    failed24h: number;
+    failed7d: number;
+  }> {
+    const conditions = [
+      isNotNull(tasks.automationMode),
+      this.ownership(),
+      gte(taskTopics.createdAt, sql`now() - interval '7 days'`),
+    ];
+    if (options?.createdByUserId) {
+      conditions.push(eq(tasks.createdByUserId, options.createdByUserId));
+    }
+
+    const rows = await this.db
+      .select({
+        completed24h: sql<number>`count(*) filter (where ${taskTopics.status} = 'completed' and ${taskTopics.createdAt} >= now() - interval '24 hours')::int`,
+        completed7d: sql<number>`count(*) filter (where ${taskTopics.status} = 'completed')::int`,
+        failed24h: sql<number>`count(*) filter (where ${taskTopics.status} in ('failed', 'timeout') and ${taskTopics.createdAt} >= now() - interval '24 hours')::int`,
+        failed7d: sql<number>`count(*) filter (where ${taskTopics.status} in ('failed', 'timeout'))::int`,
+      })
+      .from(taskTopics)
+      .innerJoin(tasks, eq(taskTopics.taskId, tasks.id))
+      .where(and(...conditions));
+
+    return (
+      rows[0] ?? {
+        completed24h: 0,
+        completed7d: 0,
+        failed24h: 0,
+        failed7d: 0,
+      }
+    );
   }
 
   async remove(taskId: string, topicId: string): Promise<boolean> {

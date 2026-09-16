@@ -224,6 +224,7 @@ describe('systemStatusSelectors', () => {
         status: { sidebarItems: stored },
       });
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
+        'automations',
         'private',
         'agent',
         'recents',
@@ -255,7 +256,22 @@ describe('systemStatusSelectors', () => {
       const s: GlobalState = merge(initialState, {
         status: { sidebarItems: stored },
       });
-      expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual(stored);
+      // `automations` is a newer top-group default — backfilled immediately
+      // before the accordion block.
+      expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
+        'pages',
+        'automations',
+        'project',
+        'recents',
+        'private',
+        'agent',
+        SIDEBAR_SPACER_ID,
+        'image',
+        'tasks',
+        'community',
+        'resource',
+        'memory',
+      ]);
     });
 
     it('should re-anchor the spacer when stored above the accordion', () => {
@@ -279,6 +295,7 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
         'tasks',
         'pages',
+        'automations',
         'recents',
         'project',
         'private',
@@ -324,6 +341,7 @@ describe('systemStatusSelectors', () => {
       // the legacy state was saved) is backfilled at the head of the block.
       expect(items).toEqual([
         'tasks',
+        'automations',
         'resource',
         'private',
         'agent',
@@ -346,6 +364,7 @@ describe('systemStatusSelectors', () => {
       // backfilled at the head of the block; recents/agent keep legacy order.
       expect(items).toEqual([
         'tasks',
+        'automations',
         'resource',
         'private',
         'recents',

@@ -463,11 +463,22 @@ import { imageRouter } from '@/server/routers/lambda/image';
    RouteMetaBridge / CloudBanner / DndContextWrapper / NavPanelShell / HotkeyHelperPanel /
    RegisterHotkeys / CmdkLazy / GlobalApprovalNotification）**必须原样保留**。
 
-3. **`src/features/HomeLayout/index.tsx` 不只是外壳**：
-   除 `Activity` 常驻机制外，它还挂着 **`HomeAgentIdSync`** 和 **`RecentSync`** 两个同步组件
-   （`:64-65`）。**卸载 Home 前必须先查清这两个组件做什么** —— 否则会静默丢掉行为。
-   另需迁移 `TopicChatDrawer`、`AcceptancePortalDrawer` 两个真实交互宿主
-   （`src/features/Home/index.tsx:455-464`），并保证「每页恰好一个宿主」。
+3. **`src/features/HomeLayout/index.tsx` 不只是外壳 —— 两个同步组件的用途已查清**（`:64-65`）：
+
+   | 组件                       | 行为                                                                                             | 处置                                                                                                                                                                                                         |
+   | -------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `HomeAgentIdSync`（32 行） | 把 `activeAgentId` 钉成 `inboxAgentId`，并在**卸载时清空**为 `undefined`                         | Home 专属语义，Home 移除后失去意义。⚠️ 与 `AgentIdSync` 有 `useLayoutEffect` **顺序耦合**（注释说明：同一次路由切换的提交里，被移除树的 layout cleanup 总在新树的 layout effect 之前跑），迁移时须保持该顺序 |
+   | `RecentSync`（9 行）       | 调用 `useSyncRecents()` → `useFetchRecents(isLogin, scope, recentPageSize)`，写入 `useHomeStore` | ⚠️ **必须迁移，不能随 Home 一起删** —— 见下                                                                                                                                                                  |
+
+   > **`RecentSync` 是真实的静默失效风险**：它的**唯一挂载点**就是 `HomeLayout/index.tsx:65`，
+   > 而 `src/features/HomeSidebar/Body/index.tsx:12,58` 渲染 `@/features/Home/Recents`，
+   > 侧栏的「最近访问」区间依赖这份数据。直接删掉 Home 会让该区间**静默变空** ——
+   > 不报错、不崩，现有测试也不会红（它们断言渲染，不断言数据来源）。
+   >
+   > **迁移目标**：把它移到常驻的 `src/routes/(main)/_layout/index.tsx`（与其它全局能力并列），
+   > 而不是留在即将被删的 `HomeLayout` 里。
+   > 另需迁移 `TopicChatDrawer`、`AcceptancePortalDrawer` 两个真实交互宿主
+   > （`src/features/Home/index.tsx:455-464`），并保证「每页恰好一个宿主」。
 
 4. **移动路由**需一并核对（`mobileRouter.config.tsx`）。
 

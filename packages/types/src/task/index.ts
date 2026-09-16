@@ -464,6 +464,10 @@ export interface TaskItem {
    * Stamped when a run hands off for review; the assignees stay the executors.
    */
   reviewerUserId: string | null;
+  /** Expiry for the active run-generation fence, when one is present. */
+  runReservationExpiresAt: Date | null;
+  /** Active run-generation fence; null when no generation owns the task. */
+  runReservationId: string | null;
   schedulePattern: string | null;
   scheduleTimezone: string | null;
   seq: number;

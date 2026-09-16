@@ -3,6 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { watchdog } from './watchdog';
 
+type RunningTopic = { operationId?: null | string; status: string; topicId?: string };
+type WatchdogTask = {
+  assigneeAgentId: null | string;
+  createdByUserId: string;
+  heartbeatTimeout: number;
+  id: string;
+  identifier: string;
+  workspaceId: null | string;
+};
+
 const {
   briefCreate,
   cancelIfRunning,
@@ -14,15 +24,37 @@ const {
   updateStatusIfCurrent,
   updateStatusIfReservation,
 } = vi.hoisted(() => ({
-  briefCreate: vi.fn(),
-  cancelIfRunning: vi.fn(),
-  cleanupTaskWorktrees: vi.fn(),
-  findByTaskId: vi.fn(),
-  findStuckTasks: vi.fn(),
-  interruptTask: vi.fn(),
-  updateStatus: vi.fn(),
-  updateStatusIfCurrent: vi.fn(),
-  updateStatusIfReservation: vi.fn(),
+  briefCreate: vi.fn<(input: unknown) => Promise<unknown>>(),
+  cancelIfRunning: vi.fn<(taskId: string, topicId: string) => Promise<boolean>>(),
+  cleanupTaskWorktrees: vi.fn<(taskId: string) => Promise<void>>(),
+  findByTaskId: vi.fn<(taskId: string) => Promise<RunningTopic[]>>(),
+  findStuckTasks: vi.fn<() => Promise<WatchdogTask[]>>(),
+  interruptTask:
+    vi.fn<
+      (params: {
+        operationId?: string;
+      }) => Promise<{ deviceCancellationConfirmed?: boolean; success: boolean }>
+    >(),
+  updateStatus: vi.fn<(id: string, status: string, extra?: unknown) => Promise<unknown>>(),
+  updateStatusIfCurrent:
+    vi.fn<
+      (
+        id: string,
+        currentStatus: string,
+        status: string,
+        extra?: unknown,
+      ) => Promise<null | WatchdogTask>
+    >(),
+  updateStatusIfReservation:
+    vi.fn<
+      (
+        id: string,
+        reservationId: string,
+        currentStatus: string,
+        status: string,
+        extra?: unknown,
+      ) => Promise<null | WatchdogTask>
+    >(),
 }));
 
 vi.mock('@/database/server', () => ({ getServerDB: vi.fn().mockResolvedValue({}) }));
@@ -61,7 +93,7 @@ vi.mock('@/server/services/taskResultBridge/redisStore', () => ({
 }));
 vi.mock('@/server/services/taskResultBridge', () => ({ TaskResultBridgeService: vi.fn() }));
 
-const stuckTask = {
+const stuckTask: WatchdogTask = {
   assigneeAgentId: 'agent-1',
   createdByUserId: 'user-1',
   heartbeatTimeout: 60,

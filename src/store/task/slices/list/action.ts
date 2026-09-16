@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import {
-  isAutomationListKey,
   isAutomationRunsKey,
   isMyTaskListKey,
   isScheduledTaskListKey,
@@ -259,9 +258,9 @@ export class TaskListSliceActionImpl {
       mutate(isMyTaskListKey),
       // A run starting or an automation being (un)configured shifts the
       // workspace roll-up the "All runs" page reads, and the automations
-      // list's own rows.
+      // list's own rows — which live under the scheduled root, so
+      // `isScheduledTaskListKey` above already covers them.
       mutate(isAutomationRunsKey),
-      mutate(isAutomationListKey),
     ]);
   };
 
@@ -431,12 +430,17 @@ export class TaskListSliceActionImpl {
   };
 
   /**
-   * The automated-task roll-up behind Home's "Scheduled" section and the Tasks
-   * page's scheduled tab. Each caller consumes its own SWR result because Home
-   * and the paginated Tasks page can coexist in Electron with different limits
-   * and offsets. `agentId`/`projectId` narrow the roll-up to the scoped Tasks
-   * page; they are part of the key so an agent's schedules never render under
-   * another scope.
+   * The automated-task roll-up behind Home's "Scheduled" section, the Tasks
+   * page's scheduled collection and the Automations list.
+   *
+   * A single roll-up on purpose. This used to be two hooks under two key roots,
+   * so two callers asking the same question — same scope, same limit, same
+   * offset, no filter — each held their own copy of the same page and each
+   * revalidated it separately.
+   *
+   * `agentId`/`projectId` narrow it to a scoped Tasks page, `scope` picks
+   * "created by me", and `statuses` is the active/paused narrowing. All three
+   * are part of the key, so different questions still get different entries.
    */
   useFetchScheduledTaskList = (
     options: {
@@ -445,14 +449,19 @@ export class TaskListSliceActionImpl {
       limit?: number;
       offset?: number;
       projectId?: string;
+      scope?: 'all' | 'created';
+      statuses?: TaskStatus[];
     } = {},
   ) => {
-    const { agentId, enabled = true, limit, offset, projectId } = options;
+    const { agentId, enabled = true, limit, offset, projectId, scope = 'all', statuses } = options;
     const scopeKey = projectId
       ? `${PROJECT_LIST_KEY_PREFIX}${projectId}`
       : (agentId ?? ALL_AGENTS_LIST_KEY);
+    const statusesSignature = statuses?.length ? [...statuses].sort().join(',') : 'all';
     return useClientDataSWR(
-      enabled ? taskKeys.scheduledList(scopeKey, 'all', limit, offset) : null,
+      enabled
+        ? taskKeys.scheduledList(scopeKey, 'all', limit, offset, scope, statusesSignature)
+        : null,
       async () =>
         this.fetchTaskList({
           ...(projectId ? { projectId } : agentId ? { assigneeAgentId: agentId } : {}),
@@ -460,6 +469,8 @@ export class TaskListSliceActionImpl {
           limit,
           offset,
           orderBy: 'updatedAt',
+          scope: scope === 'created' ? 'created' : undefined,
+          statuses,
         }),
       { revalidateOnFocus: false },
     );
@@ -491,37 +502,6 @@ export class TaskListSliceActionImpl {
           offset,
           scope: scope === 'created' ? 'created' : undefined,
           search: search?.trim() || undefined,
-          statuses,
-        }),
-      { revalidateOnFocus: false },
-    );
-  };
-
-  /**
-   * The Automations page's list: automated tasks that can still fire, with
-   * the optional "created by me" scope and active/paused status narrowing the
-   * Cordy-style tabs need. Server-paginated like `useFetchScheduledTaskList`.
-   */
-  useFetchAutomationList = (
-    options: {
-      enabled?: boolean;
-      limit?: number;
-      offset?: number;
-      scope?: 'all' | 'created';
-      statuses?: TaskStatus[];
-    } = {},
-  ) => {
-    const { enabled = true, limit, offset, scope = 'all', statuses } = options;
-    const statusesSignature = statuses?.length ? [...statuses].sort().join(',') : 'all';
-    return useClientDataSWR(
-      enabled ? taskKeys.automationList(scope, statusesSignature, limit, offset) : null,
-      async () =>
-        this.fetchTaskList({
-          automated: true,
-          limit,
-          offset,
-          orderBy: 'updatedAt',
-          scope: scope === 'created' ? 'created' : undefined,
           statuses,
         }),
       { revalidateOnFocus: false },

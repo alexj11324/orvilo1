@@ -218,9 +218,12 @@ const AutomationsPage = memo(() => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { pause, remove, resume } = useAutomationActions();
 
-  const useFetchAutomationList = useTaskStore((s) => s.useFetchAutomationList);
+  // The scheduled roll-up is the one automated-task read in the app; this page
+  // supplies the scope and active/paused narrowing the task collection does not
+  // ask for. Same cache root, so the two surfaces converge as they merge.
+  const useFetchScheduledTaskList = useTaskStore((s) => s.useFetchScheduledTaskList);
   const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
-  const { data, error, isLoading, mutate } = useFetchAutomationList({
+  const { data, error, isLoading, mutate } = useFetchScheduledTaskList({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     scope,

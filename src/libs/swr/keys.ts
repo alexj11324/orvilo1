@@ -352,9 +352,6 @@ export const isMyTaskListKey = (key: unknown): boolean =>
 export const isAutomationRunsKey = (key: unknown): boolean =>
   Array.isArray(key) && key[0] === 'task:automationRuns';
 
-export const isAutomationListKey = (key: unknown): boolean =>
-  Array.isArray(key) && key[0] === 'task:automationList';
-
 /**
  * Goal Graph reads. Keyed by the `goals` row id (not the carrier task's
  * identifier) because that is what every `goal.*` procedure takes.
@@ -365,21 +362,6 @@ export const goalKeys = {
 };
 
 export const taskKeys = {
-  /**
-   * The Automations list page: automated tasks still able to fire. Its own
-   * root like `scheduledList` — the extra scope/status slots keep the "mine"
-   * tab and the active/paused filter from sharing cache entries.
-   */
-  automationList: def(
-    'task:automationList',
-    (scope: 'created' | 'all', statuses: string, limit?: number, offset?: number) => [
-      'task:automationList',
-      scope,
-      statuses,
-      limit ?? 'all',
-      offset ?? 0,
-    ],
-  ),
   /**
    * The Automations "All runs" roll-up: every run whose task still carries an
    * automation mode, newest first, plus the 24h/7d outcome counts. Its own
@@ -492,6 +474,14 @@ export const taskKeys = {
       ...(limit === undefined && offset === undefined ? [] : [{ limit, offset }]),
     ],
   ),
+  /**
+   * The automated-task roll-up: Home's "Scheduled" section, the Tasks page's
+   * scheduled collection, and the Automations list.
+   *
+   * One root on purpose. `scope` / `statuses` used to live under a separate
+   * `automationList` root, which meant the same query — same agent scope, same
+   * limit, same offset, no filter — was cached and revalidated twice.
+   */
   scheduledList: def(
     'task:scheduledList',
     (
@@ -499,11 +489,17 @@ export const taskKeys = {
       visibility: 'all' | 'private' | 'workspace' = 'all',
       limit?: number,
       offset?: number,
+      scope: 'all' | 'created' = 'all',
+      statuses: string = 'all',
     ) => [
       'task:scheduledList',
       agentKey,
       visibility,
       ...(limit === undefined && offset === undefined ? [] : [{ limit, offset }]),
+      scope,
+      // Status narrowing is part of the identity, exactly as in `myList`:
+      // "active only" and "everything" are different server pages.
+      statuses,
     ],
   ),
   /**

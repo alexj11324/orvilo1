@@ -1337,6 +1337,36 @@ S10 的交付范围，但**必须挂到具体工作包**，否则会在「文档
 | 18  | Agent 配置里的「规则与经验」入口                                  | `src/features/AgentSetting/AgentRules/`                                                                                                                                                                              | **已完成 `73102849`**        | 新增 `ChatSettingsTabs.Rules` 与「规则与经验」tab，受 `enableSelfLearning` 门控；四处注册点（枚举 / 弹层 tab 列表与可用性 / 移动与侧栏列表 / 内容分发）同步改动。刻意**不做成第二个编辑器** —— 读改停用仍在 `/agent/:aid/self-evolving` 上，避免同一 lesson 出现两条写路径                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 19  | 服务端死能力（零消费者，勿在无服务端环境删）                      | `expertiseBindings.enabled`；`expertiseInsights`；`expertise.listLessons`；`actorsByDomain` / `listRuns`                                                                                                             | S80（仅记录）                | 与 §2.7 的成熟度死数据同源：schema 与索引齐备但无生产者。§10 要求「确认无消费者后才移除」，而这几处需要服务端与 CLI 侧一并核验                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
-### 6. 复核时新发现（未修）
+### 6. 复核时新发现
+
+**`setting` 命名空间的 15 个 key 名被全局改名改坏了（已修）**
+
+默认源 `packages/locales/src/default/setting.ts` 里是 `storage.actions.copyOrvilo AI.button`
+这类名字 —— key 里带**空格**和「Orvilo AI」，而 en-US /zh-CN 里是 `copyLobeAI.*`。
+成因是一次把「Lobe」全局替换成「Orvilo」时**连 key 名一起替换了**，不是本轮引入的。
+
+⚠️ **本条此前写错了一句，先更正**：原稿说「这些 key 在英文下根本解析不到」。**是错的** ——
+实测这 15 个后缀在 en-US 与 zh-CN 里**都存在正确的 `copyLobeAI.*` 名字，且值与源逐字节相同**，
+所以运行时解析正常、UI 没有坏。真正坏的是**默认源**：它的名字与本文件声称的镜像关系脱钩了。
+
+| 事实                                       | 实测                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| 坏 key 数                                  | 15（全部在 `setting`）                                                               |
+| 其中有多少是重复条目（另有正确名字的孪生） | **0** —— 这些是它们逻辑 key 在源里的唯一条目                                         |
+| 对应的 `copyLobeAI.<后缀>` 在源里存在吗    | 15 个**全都不存在**（所以改名不会产生重名）                                          |
+| 在 en-US /zh-CN 里存在吗                   | 15 个**全都存在**，且值与源逐字节相同                                                |
+| 全仓调用点                                 | `src` / `apps` 内 `copyOrvilo AI` 与 `copyLobeAI` **都零命中**（消费者在云端私有层） |
+
+**修法**：把源里这 15 个 key 名改回 `copyLobeAI.*`（只替换 key 位置 —— 值里也有「Orvilo AI」，
+不能全局替换），源即重新成为两个 JSON 的精确镜像。
+
+**同类残留的规模（原稿说「未测」，现已测）**：枚举 `default/` 全部字面量 key 共 **15,344** 个，
+在改名后**没有一个**在 en-US 里缺失 —— 也就是说**这一簇是唯一的**，没有第二处同类损坏。
+（覆盖面边界：`color` / `modelRuntime` / `models` / `opStatusTray` / `providers` 五个命名空间的源不是
+「字面量 key 表」—— 分别是不带引号的键、字符串数组、由 `model-bank` 生成 —— 本检查不覆盖它们。）
+
+**护栏**：新增 `packages/locales/src/defaultKeys.test.ts`，三条断言 —— 源里不得有含空白的 key 名、
+源必须被 en-US 精确镜像、其他语言（zh-CN）覆盖（允许只带本语言用到的复数形态，因为
+i18next 的 `zh` 规则只走 `_other`）。反向验证过：把其中一个坏名改回去，三条断言全部失败。
 
 **`setting` 命名空间有一批 key 名被全局改名改坏了**：默认源里是 `storage.actions.copyOrvilo AI.button`（key 里带空格和 “Orvilo AI”），而 en-US /zh-CN 里是 `copyLobeAI.*`。也就是说这些 key 在英文下**根本解析不到**。它不是本轮引入的，而是一次把 “Lobe” 全局替换成 “Orvilo” 时连 key 名一起替换的结果。成因清楚但**影响面未测**（同类残留可能不止这一簇），所以只记录：修它要先枚举 `default/` 里所有含空格或 “Orvilo AI” 的 key，再对照两个 JSON 逐个对齐。

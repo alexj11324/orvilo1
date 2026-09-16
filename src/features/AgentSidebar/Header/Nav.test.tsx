@@ -267,14 +267,14 @@ describe('Agent sidebar header nav', () => {
     expect(screen.getByRole('button', { name: 'title' })).toHaveAttribute('data-active', 'true');
   });
 
-  it('places topics above profile, goals, self-learning, and tasks in the agent navigation', () => {
+  it('orders profile, goals, self-learning, and tasks in the agent navigation', () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 
     render(<Nav />);
 
     const labels = screen.getAllByRole('button').map((button) => button.textContent);
-    expect(labels.indexOf('management.sidebarEntry')).toBeLessThan(labels.indexOf('tab.profile'));
-    expect(labels.indexOf('tab.profile')).toBeLessThan(labels.indexOf('goalList.title'));
+    expect(labels.indexOf('tab.profile')).toBeLessThan(labels.indexOf('title'));
+    expect(labels.indexOf('title')).toBeLessThan(labels.indexOf('goalList.title'));
     expect(labels.indexOf('goalList.title')).toBeLessThan(labels.indexOf('tab.tasks'));
   });
 });

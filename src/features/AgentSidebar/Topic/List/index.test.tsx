@@ -8,6 +8,7 @@ import TopicList from './index';
 
 const pushMock = vi.hoisted(() => vi.fn());
 const closeAllTopicsDrawerMock = vi.hoisted(() => vi.fn());
+const openAllTopicsDrawerMock = vi.hoisted(() => vi.fn());
 const permissionMock = vi.hoisted(() => ({
   create_content: true,
 }));
@@ -20,6 +21,7 @@ const chatStoreStateMock = vi.hoisted(() => ({
   hasMore: true,
   isExpandingPageSize: false,
   isUndefinedTopics: false,
+  openAllTopicsDrawer: openAllTopicsDrawerMock,
   topicLength: 0,
   topics: [],
 }));
@@ -139,6 +141,7 @@ describe('Agent topic list', () => {
   beforeEach(() => {
     pushMock.mockReset();
     closeAllTopicsDrawerMock.mockReset();
+    openAllTopicsDrawerMock.mockReset();
     permissionMock.create_content = true;
     chatStoreStateMock.hasMore = true;
     chatStoreStateMock.isExpandingPageSize = false;
@@ -167,11 +170,12 @@ describe('Agent topic list', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('opens all agent topics from the view-all entry', () => {
+  it('opens the all-topics drawer from the load-more entry', () => {
     render(<TopicList />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'topic.viewAll' }));
+    fireEvent.click(screen.getByRole('button', { name: 'loadMore' }));
 
-    expect(pushMock).toHaveBeenCalledWith('/agent/agent-1/topics');
+    expect(openAllTopicsDrawerMock).toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });

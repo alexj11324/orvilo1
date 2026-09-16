@@ -101,7 +101,9 @@
 - **Doesn't work**: scrolling any element to the bottom — with only 2 rows there is
   no scroll container (`scrollHeight <= clientHeight`), and virtua's sentinel never
   intersects.
-- **Works — two parts**:
+- **Works — two parts** (the original probe target `AgentTopicManager` /
+  `loadMoreAgentTopicsView` was removed with the `/agent/:aid/topics` page — the live
+  equivalents are `AllTopicsDrawer` and `loadMoreTopics`):
   1. **Force pagination with tiny seed data via HMR**: lower the component's page-size
      const so a small dataset paginates. `AgentTopicManager` `PAGE_SIZE = 30` → `2`,
      then an agent with 3 topics loads page-1 = 2, `hasMore = true`.

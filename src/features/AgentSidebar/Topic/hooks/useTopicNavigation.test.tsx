@@ -4,7 +4,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useNavigateToAgentTopics, useTopicNavigation } from './useTopicNavigation';
+import { useTopicNavigation } from './useTopicNavigation';
 
 const switchTopicMock = vi.hoisted(() => vi.fn());
 const toggleMobileTopicMock = vi.hoisted(() => vi.fn());
@@ -204,15 +204,5 @@ describe('useTopicNavigation', () => {
     expect(pushMock).toHaveBeenCalledWith('/lobehub/agent/agent-1/topic-prefixed');
     expect(switchTopicMock).not.toHaveBeenCalled();
     expect(toggleMobileTopicMock).toHaveBeenCalledWith(false);
-  });
-
-  it('opens the agent topics page through the workspace-aware query router', () => {
-    const { result } = renderHook(() => useNavigateToAgentTopics());
-
-    act(() => {
-      result.current('agent-1');
-    });
-
-    expect(pushMock).toHaveBeenCalledWith('/agent/agent-1/topics');
   });
 });

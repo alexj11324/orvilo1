@@ -67,7 +67,6 @@ import {
   agentSelfLearningRouteMeta,
   agentShareRouteMeta,
   agentStatisticsRouteMeta,
-  topicsRouteMeta,
 } from '@/routes/(main)/agent/features/routeMeta';
 import {
   groupPermissionRouteMeta,
@@ -229,12 +228,11 @@ export const sharedMainAreaChildren: RouteObject[] = [
             handle: { meta: agentChannelRouteMeta },
             path: 'channel/:platform',
           },
+          // Legacy `/agent/:aid/topics` URLs — the management page is gone,
+          // keep deep-links landing on the agent chat instead of a phantom
+          // `topics` topic.
           {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/topics'),
-              'Desktop > Chat > Topics',
-            ),
-            handle: { meta: topicsRouteMeta },
+            element: redirectElement('..'),
             path: 'topics',
           },
           {

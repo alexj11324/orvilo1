@@ -9,16 +9,22 @@ const fakeScheduler = {
   scheduleNextTopic: vi.fn().mockResolvedValue('msg-new'),
 };
 
-const { cascadeOnCompletion, deferredVerifyDrive, runTaskMock } = vi.hoisted(() => ({
+const {
+  captureRemoteIdentityOnComplete,
+  cascadeOnCompletion,
+  deferredVerifyDrive,
+  integrateOnComplete,
+  runTaskMock,
+} = vi.hoisted(() => ({
+  captureRemoteIdentityOnComplete: vi.fn().mockResolvedValue(true),
   cascadeOnCompletion: vi.fn().mockResolvedValue({ failed: [], paused: [], started: [] }),
   deferredVerifyDrive: vi.fn().mockResolvedValue(undefined),
+  integrateOnComplete: vi.fn().mockResolvedValue('settled'),
   runTaskMock: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 vi.mock('@/server/services/verify/settle', () => ({ driveTaskFromVerify: deferredVerifyDrive }));
 
-const integrateOnComplete = vi.fn().mockResolvedValue('settled');
-const captureRemoteIdentityOnComplete = vi.fn().mockResolvedValue(true);
 vi.mock('@/server/services/taskIntegration', () => ({
   TaskIntegrationService: vi.fn(function () {
     return { captureRemoteIdentityOnComplete, integrateOnComplete };
@@ -202,6 +208,42 @@ describe('TaskLifecycleService.onTopicComplete', () => {
   });
 
   describe('reason=done', () => {
+    it('holds the lifecycle while workspace integration is still active', async () => {
+      const task = baseTask({ automationMode: 'heartbeat' });
+      findById.mockResolvedValue(task);
+      integrateOnComplete.mockResolvedValueOnce('hold');
+
+      await service.onTopicComplete({
+        operationId: 'op-1',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+      });
+
+      expect(updateStatus).not.toHaveBeenCalled();
+      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
+    });
+
+    it('pauses the task when workspace integration blocks', async () => {
+      const task = baseTask({ automationMode: 'heartbeat' });
+      findById.mockResolvedValue(task);
+      integrateOnComplete.mockResolvedValueOnce('blocked');
+
+      await service.onTopicComplete({
+        operationId: 'op-1',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+      });
+
+      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
+        error: 'Workspace merge could not be completed',
+      });
+      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
+    });
+
     it('automation task → status="scheduled" (not paused)', async () => {
       const task = baseTask({ automationMode: 'heartbeat' });
       findById.mockResolvedValue(task);

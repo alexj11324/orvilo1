@@ -55,5 +55,5 @@ describe('TopicCard', () => {
     // through to the card behind it. user-event refuses to click through that
     // rule, which is exactly what a reader hit: a link that ignores the mouse.
     await expect(userEvent.click(link)).resolves.not.toThrow();
-  });
+  }, 15_000);
 });

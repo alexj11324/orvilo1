@@ -10,11 +10,8 @@ const copyDirs = ['assets', 'devtools', 'i18n', 'model-bank', 'shiki', 'vendor']
 const rootCopyDirs = ['app-workers'] as const;
 const copyRootFilePatterns = [/^favicon.*\.ico$/, /^apple-touch-icon\.png$/] as const;
 const targets = [
-  { distDir: 'desktop', publicDir: 'public/_spa' },
   { distDir: 'mobile', publicDir: 'public/_spa' },
   { distDir: 'auth', publicDir: 'public/_spa-auth' },
-  { distDir: 'workbench', publicDir: 'public/_spa-workbench' },
-  { distDir: 'share', publicDir: 'public/_spa-share' },
 ] as const;
 
 export const spaPublicDirNames = [

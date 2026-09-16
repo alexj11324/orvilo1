@@ -10,7 +10,7 @@ type NamespaceLoaderMap = Record<string, () => Promise<NamespaceModule>>;
 // Platform variants are resolved from their canonical file; exposing them as
 // separate namespace keys creates duplicate, unreachable dynamic entries.
 // Patterns are file-relative (not root-absolute) so the map stays correct no
-// matter which app's vite root builds this module (repo root, apps/workbench).
+// matter which app's vite root builds this module.
 const defaultLoaders = import.meta.glob([
   '../../../packages/locales/src/default/*.ts',
   '!../../../packages/locales/src/default/*.vite.ts',

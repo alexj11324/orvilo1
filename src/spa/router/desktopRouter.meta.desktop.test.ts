@@ -3,13 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { matchRouteMeta } from '@/features/Electron/titlebar/TabBar/resolveRouteMeta';
 
-import { mainAreaMetaRoutes } from './desktopRouter.config.desktop';
+import { mainAreaMetaRoutes } from './desktopRouter.config';
 
-// vitest does not apply the platformResolve Vite plugin, so the Electron adapter
-// must be imported by its explicit `.desktop` path. This guards Critical 1: the
-// electron root router's `/` children are slim null stubs with zero meta, so a
-// meta tree that aliased those stubs would silently degrade every tab title to
-// brand and every icon to the Circle fallback on the packaged app.
+// Guards Critical 1: the electron root router's `/` children are slim null
+// stubs with zero meta, so a meta tree that aliased those stubs would silently
+// degrade every tab title to brand and every icon to the Circle fallback on the
+// packaged app.
 describe('mainAreaMetaRoutes (Electron adapter)', () => {
   it('uses Home for the personal Home tab and document title', () => {
     const { static: staticMeta } = matchRouteMeta(mainAreaMetaRoutes, '/');

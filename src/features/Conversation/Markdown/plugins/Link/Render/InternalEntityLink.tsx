@@ -16,7 +16,6 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { shouldHardNavigateToWorkbench } from '@/libs/next/workbenchNavigation';
 import { useClientDataSWR } from '@/libs/swr';
 import { agentDocumentService, agentDocumentSWRKeys } from '@/services/agentDocument';
 import { useAgentStore } from '@/store/agent';
@@ -127,16 +126,6 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
       if (!isDesktop && modifierClick) return;
 
       event.preventDefault();
-
-      if (
-        (reference.type === 'acceptance' ||
-          reference.type === 'document' ||
-          reference.type === 'verify') &&
-        shouldHardNavigateToWorkbench(reference.pathname)
-      ) {
-        window.location.assign(reference.pathname);
-        return;
-      }
 
       // Portal-backed entities (verify / acceptance) open in-context regardless
       // of workspace scope — their reads are id-addressed and scope-independent.

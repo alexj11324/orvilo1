@@ -72,10 +72,10 @@ const resolveNextPort = async (): Promise<number> => {
  * to locate the Vite dev server (no fs port file involved).
  */
 const resolveVitePortEnv = async (): Promise<number> => {
-  const isMobile = process.env.MOBILE === 'true';
-  const envName = isMobile ? 'MOBILE_SPA_PORT' : 'SPA_PORT';
+  // `dev:spa` serves the mobile renderer — the browser SPA is gone.
+  const envName = 'MOBILE_SPA_PORT';
   const explicit = Number(process.env[envName]);
-  const port = explicit || (await findFreePort(isMobile ? 3012 : 9876));
+  const port = explicit || (await findFreePort(3012));
 
   process.env[envName] = String(port);
   process.env.VITE_DEV_PORT = String(port);

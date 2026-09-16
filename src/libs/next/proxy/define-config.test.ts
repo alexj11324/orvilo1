@@ -54,18 +54,7 @@ describe('defineConfig locale path-traversal hardening', () => {
   });
 });
 
-describe('defineConfig Workbench SPA rewrite', () => {
-  it('routes verify through Workbench for every user agent', async () => {
-    const mobileVerify = await run(
-      'http://localhost:3010/verify/run-1?hl=en-US',
-      MOBILE_USER_AGENT,
-    );
-    const desktopVerify = await run('http://localhost:3010/verify/run-1?hl=en-US');
-
-    expect(new URL(mobileVerify!).pathname).toBe('/spa-workbench/en-US/verify/run-1');
-    expect(new URL(desktopVerify!).pathname).toBe('/spa-workbench/en-US/verify/run-1');
-  });
-
+describe('defineConfig SPA rewrites for former micro-app routes', () => {
   it('keeps acceptance on the main SPA', async () => {
     const mobileAcceptance = await run(
       'http://localhost:3010/acceptance/acceptance-1?hl=en-US',
@@ -79,38 +68,25 @@ describe('defineConfig Workbench SPA rewrite', () => {
     );
   });
 
-  it('keeps the agent documents index in the Main Mobile SPA', async () => {
+  // The standalone Workbench and Share apps are gone, so nothing is carved out
+  // of the main SPA rewrite any more.
+  it('keeps agent documents on the main SPA', async () => {
     const detail = await run(
       'http://localhost:3010/agent/agt_1/docs/doc_1?hl=en-US',
       MOBILE_USER_AGENT,
     );
     const index = await run('http://localhost:3010/agent/agt_1/docs?hl=en-US', MOBILE_USER_AGENT);
 
-    expect(new URL(detail!).pathname).toBe('/spa-workbench/en-US/agent/agt_1/docs/doc_1');
+    expect(new URL(detail!).pathname).toMatch(/^\/spa\/[^/]+\/agent\/agt_1\/docs\/doc_1$/);
     expect(new URL(index!).pathname).toMatch(/^\/spa\/[^/]+\/agent\/agt_1\/docs$/);
   });
-});
 
-describe('defineConfig Share SPA rewrite', () => {
-  it('routes share pages through the Share SPA for every user agent', async () => {
-    const mobileTopic = await run(
-      'http://localhost:3010/share/t/topic-1?hl=en-US',
-      MOBILE_USER_AGENT,
-    );
-    const desktopTopic = await run('http://localhost:3010/share/t/topic-1?hl=en-US');
-    const desktopPage = await run('http://localhost:3010/share/page/docs_1?hl=en-US');
-    const desktopArtifact = await run('http://localhost:3010/share/artifact/42?hl=en-US');
+  it('keeps verify and share paths on the main SPA', async () => {
+    const verify = await run('http://localhost:3010/verify/run-1?hl=en-US');
+    const topic = await run('http://localhost:3010/share/t/topic-1?hl=en-US');
 
-    expect(new URL(mobileTopic!).pathname).toBe('/spa-share/en-US/share/t/topic-1');
-    expect(new URL(desktopTopic!).pathname).toBe('/spa-share/en-US/share/t/topic-1');
-    expect(new URL(desktopPage!).pathname).toBe('/spa-share/en-US/share/page/docs_1');
-    expect(new URL(desktopArtifact!).pathname).toBe('/spa-share/en-US/share/artifact/42');
-  });
-
-  it('leaves non-share paths that merely start with the prefix in the main SPA', async () => {
-    const rewrite = await run('http://localhost:3010/shared-workspace/settings?hl=en-US');
-
-    expect(new URL(rewrite!).pathname).toMatch(/^\/spa\/[^/]+\/shared-workspace\/settings$/);
+    expect(new URL(verify!).pathname).toMatch(/^\/spa\/[^/]+\/verify\/run-1$/);
+    expect(new URL(topic!).pathname).toMatch(/^\/spa\/[^/]+\/share\/t\/topic-1$/);
   });
 });
 

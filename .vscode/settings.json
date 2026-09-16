@@ -29,8 +29,6 @@
     "**/logs/**": true,
     "**/node_modules/*/**": true,
     "**/public/_spa-auth/**": true,
-    "**/public/_spa-share/**": true,
-    "**/public/_spa-workbench/**": true,
     "**/public/_spa/**": true
   },
   "js/ts.tsdk.path": "node_modules/typescript/lib",

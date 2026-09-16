@@ -3,9 +3,9 @@ import { serializeForHtml } from '@/server/utils/serializeForHtml';
 import { type AnalyticsConfig } from '@/types/spaServerConfig';
 
 // VITE_DEV_PORT is injected by scripts/devStartupSequence.mts with the actual
-// port of the Vite dev server it spawned; 9876 matches the standalone default.
+// port of the Vite dev server it spawned; 3012 matches `dev:spa`'s default.
 export const resolveViteDevOrigin = () =>
-  `http://localhost:${Number(process.env.VITE_DEV_PORT) || 9876}`;
+  `http://localhost:${Number(process.env.VITE_DEV_PORT) || 3012}`;
 
 const SERVER_CONFIG_PLACEHOLDER =
   /window\.__SERVER_CONFIG__\s*=\s*undefined;\s*\/\*\s*SERVER_CONFIG\s*\*\//;

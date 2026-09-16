@@ -26,21 +26,32 @@ For the full repository map or help locating a code layer, read the `project-ove
 - `src/app`: Next.js HTML/auth shells. Web shell helpers belong under `src/libs` or the relevant app segment, not `src/server`.
 - `src/spa`: SPA entry points and React Router configuration. `src/routes` holds thin page segments that compose `src/features`; business UI and logic belong in features by domain.
 - `src/services` and `src/store`: client API services and Zustand state. Keep fetch/cache guidance in `data-fetching-architecture` and store conventions in `zustand`.
-- `apps/desktop`, `apps/cli`: Electron and CLI applications. `packages` holds shared code, including `database`, `agent-runtime`, `env`, and `locales`.
+- `apps/desktop`, `apps/cli`: Electron and CLI applications. `apps/auth` is the standalone public auth surface. `packages` holds shared code, including `database`, `agent-runtime`, `env`, and `locales`.
 - `e2e`: end-to-end tests using Cucumber and Playwright.
 
-Before changing SPA routes, read the `spa-routes` skill. Register common Web/Electron paths, metadata, lazy loaders and `preloadId` values once in `src/spa/router/desktopRouter.shared.tsx`; keep `desktopRouter.config*.tsx` limited to platform differences and `desktopRouter.sync.test.tsx` passing. Do not create `features` directories inside `src/routes`.
+Before changing SPA routes, read the `spa-routes` skill. Register common desktop paths, metadata, lazy loaders and `preloadId` values once in `src/spa/router/desktopRouter.shared.tsx`; keep `desktopRouter.config.tsx` (Electron) and `mobileRouter.config.tsx` limited to platform differences and `desktopRouter.sync.test.tsx` passing. Do not create `features` directories inside `src/routes`.
 
 ## Development
 
 ### Starting the Dev Environment
 
+The product ships two clients: the **mobile** SPA (served over the public
+network by the Next.js host) and the **desktop** Electron app. There is no
+browser SPA. Public authentication still runs on the web, through the
+standalone auth surface (`index.auth.html` + `src/app/spa-auth`).
+
 ```bash
-# SPA dev mode (frontend only, proxies API to localhost:3010)
+# Mobile SPA dev mode (frontend only, proxies API to localhost:3010) — port 3012
 bun run dev:spa
+
+# Auth SPA dev mode — port 3013
+bun run dev:spa:auth
 
 # Full-stack dev (Next.js + Vite SPA concurrently)
 bun run dev
+
+# Electron desktop app
+bun run dev:desktop
 
 # Standalone Hono backend service
 pnpm --filter @orvilo/server dev
@@ -49,7 +60,7 @@ pnpm --filter @orvilo/server dev
 After `dev:spa` starts, the terminal prints a **Debug Proxy** URL:
 
 ```plaintext
-Debug Proxy: https://app.lobehub.com/_dangerous_local_dev_proxy?debug-host=http%3A%2F%2Flocalhost%3A9876
+Debug Proxy: https://app.lobehub.com/_dangerous_local_dev_proxy?debug-host=http%3A%2F%2Flocalhost%3A3012
 ```
 
 Open this URL to develop locally against the production backend (app.lobehub.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.

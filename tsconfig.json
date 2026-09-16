@@ -41,8 +41,6 @@
     "node_modules",
     "apps/desktop/**",
     "apps/mobile/**",
-    "apps/share/**",
-    "apps/workbench/**",
     "tmp",
     "temp",
     ".temp",

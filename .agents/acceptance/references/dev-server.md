@@ -14,8 +14,8 @@ before starting or probing any local test surface.
 | Command             | What it runs                                              | Port source         |
 | ------------------- | --------------------------------------------------------- | ------------------- |
 | `pnpm run dev:next` | Next.js backend (API + auth)                              | `PORT`              |
-| `bun run dev`       | Full-stack (Next.js + Vite SPA, via `devStartupSequence`) | `PORT` + `SPA_PORT` |
-| `bun run dev:spa`   | Vite SPA only, proxies API to `PORT`                      | `SPA_PORT`          |
+| `bun run dev`       | Full-stack (Next.js + Vite SPA, via `devStartupSequence`) | `PORT` + `MOBILE_SPA_PORT` |
+| `bun run dev:spa`   | Mobile Vite SPA only, proxies API to `PORT`               | `MOBILE_SPA_PORT`   |
 
 In the **cloud repo** (where this repo is the `lobehub/` submodule), local
 worktree names map to fallback defaults only when `.env` and shell env do not

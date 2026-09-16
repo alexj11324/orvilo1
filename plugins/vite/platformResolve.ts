@@ -2,7 +2,7 @@ import { access } from 'node:fs/promises';
 
 import type { Plugin } from 'vite';
 
-type Platform = 'web' | 'mobile' | 'desktop' | 'auth';
+type Platform = 'mobile' | 'desktop' | 'auth';
 
 /**
  * Resolves platform-specific file variants by suffix priority:
@@ -18,7 +18,7 @@ export function vitePlatformResolve(platform?: Platform): Plugin {
   if (platform) suffixes.push(`.${platform}`);
   suffixes.push('.vite');
   const EXT_RE = /\.(ts|tsx|js|jsx)$/;
-  const PLATFORM_RE = /\.(?:vite|web|mobile|desktop|auth)\.(?:ts|tsx|js|jsx)$/;
+  const PLATFORM_RE = /\.(?:vite|mobile|desktop|auth)\.(?:ts|tsx|js|jsx)$/;
 
   return {
     enforce: 'pre',

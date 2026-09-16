@@ -353,7 +353,7 @@ describe('Link Render — internal entities', () => {
     expect(mockOpenAgentDetail).toHaveBeenCalledWith('agt_1');
   });
 
-  it('hard-navigates personal verify pages into the Workbench runtime', () => {
+  it('opens a personal verify page in the report portal', () => {
     const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => undefined);
 
     const { getByRole } = renderLink({
@@ -364,9 +364,11 @@ describe('Link Render — internal entities', () => {
 
     fireEvent.click(getByRole('link', { name: 'Verify report' }));
 
-    expect(assign).toHaveBeenCalledWith('/verify/run-1');
+    // The standalone Workbench app used to own `/verify`; without it the link
+    // opens in place rather than hard-navigating out of the conversation.
+    expect(assign).not.toHaveBeenCalled();
+    expect(mockOpenVerifyReport).toHaveBeenCalledWith('run-1');
     expect(mockNavigate).not.toHaveBeenCalled();
-    expect(mockOpenVerifyReport).not.toHaveBeenCalled();
   });
 
   it('opens a verify link for the active workspace in the report portal', () => {

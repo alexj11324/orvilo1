@@ -25,35 +25,14 @@ const devShells = walk(path.resolve(root, 'src/app'))
   })
   .sort((a, b) => a.template.localeCompare(b.template));
 
-const entrySrc = (html: string) =>
-  html.match(/<script type="module" src="([^"]+)"><\/script>/)?.[1];
-
 describe('dev SPA shells', () => {
   it('finds every route handler that fetches a named dev template', () => {
-    expect(devShells.map((shell) => shell.template)).toEqual([
-      '/index.auth.html',
-      '/index.workbench.html',
-    ]);
+    expect(devShells.map((shell) => shell.template)).toEqual(['/index.auth.html']);
   });
 
-  // Vite falls back to the main `index.html` for a missing root shell, so a typo
-  // or a forgotten file boots the main SPA under the micro app's URL instead of
-  // failing — silently, and only in dev.
+  // A typo or a forgotten file makes Vite 404 the shell in dev only, so pin the
+  // file each route handler names to one that actually exists at the repo root.
   it.each(devShells)('$template exists at the repo root for $file', ({ template }) => {
     expect(existsSync(path.resolve(root, `.${template}`))).toBe(true);
-  });
-
-  it.each(
-    devShells.filter(({ template }) =>
-      existsSync(path.resolve(root, `apps/${template.slice(7, -5)}/index.html`)),
-    ),
-  )('$template points at its own app entry, not the main SPA', ({ template }) => {
-    const app = template.slice(7, -5);
-    const rootShell = readFileSync(path.resolve(root, `.${template}`), 'utf8');
-    const appShell = readFileSync(path.resolve(root, `apps/${app}/index.html`), 'utf8');
-
-    expect(entrySrc(rootShell)).toBe(`/apps/${app}/src/entry.tsx`);
-    expect(entrySrc(appShell)).toBe('/src/entry.tsx');
-    expect(rootShell.replace(`/apps/${app}/src/entry.tsx`, '/src/entry.tsx')).toBe(appShell);
   });
 });

@@ -325,7 +325,7 @@ interface SharedRolldownOutputOptions {
   strictExecutionOrder?: boolean;
 }
 
-// @lobehub/ui members on the first-screen path of dist/desktop, measured with
+// @lobehub/ui members on the first-screen path of dist/mobile, measured with
 // bundle-size-gate --type entry-graph. lobeUiImports splits the barrel into one
 // module per member; folding the eager ones back into one chunk keeps the heavy
 // members (Markdown, Mermaid, EmojiPicker, Highlighter, Image) on lazy routes.
@@ -393,7 +393,7 @@ export const createSharedRolldownOutput = (options: SharedRolldownOutputOptions 
   };
 };
 
-type Platform = 'web' | 'mobile' | 'desktop' | 'auth';
+type Platform = 'mobile' | 'desktop' | 'auth';
 
 const isDev = process.env.NODE_ENV !== 'production';
 

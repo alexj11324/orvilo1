@@ -10,11 +10,7 @@ import '@/utils/NavigatorRegistrar.desktop';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  createMainAreaChildren,
-  desktopRoutes,
-  mainAreaMetaRoutes,
-} from './desktopRouter.config.desktop';
+import { createMainAreaChildren, desktopRoutes, mainAreaMetaRoutes } from './desktopRouter.config';
 
 describe('desktop boot init order', () => {
   it('evaluates desktopRouter.config after the navigation facade without a TDZ crash', () => {

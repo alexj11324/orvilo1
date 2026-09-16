@@ -9,9 +9,8 @@ const vercelConfig = {
   outputFileTracingExcludes: {
     '*': [
       'node_modules/.pnpm/@img+sharp-libvips-*musl*',
-      // Exclude SPA/desktop/mobile build artifacts from serverless functions
+      // Exclude SPA/mobile build artifacts from serverless functions
       'public/_spa/**',
-      'dist/desktop/**',
       'dist/mobile/**',
       'apps/desktop/**',
       'packages/database/migrations/**',

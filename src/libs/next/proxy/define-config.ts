@@ -13,8 +13,6 @@ import { parseBrowserLanguage } from '@/utils/locale';
 import { DEFAULT_LANG, locales, RouteVariants } from '@/utils/server/routeVariants';
 
 import { authSpaRoutes, nextjsOnlyRoutes } from '../nextjsOnlyRoutes';
-import { isShareSpaRoute } from '../shareRoutes';
-import { isAlwaysWorkbenchSpaRoute, isWorkbenchSpaRoute } from '../workbenchRoutes';
 import { createRouteMatcher } from './createRouteMatcher';
 
 // Create debug logger instances
@@ -143,33 +141,6 @@ export function defineConfig() {
       return response;
     }
 
-    // Share pages are responsive on their own, so they get one bundle for every
-    // device rather than a mobile variant.
-    if (isShareSpaRoute(url.pathname)) {
-      const sharePath = `/spa-share/${safeLocale}${url.pathname}`;
-      logDefault('Share SPA route, rewriting to: %s', sharePath);
-      url.pathname = sharePath;
-
-      const response = NextResponse.rewrite(url);
-      persistLocaleCookie(response, request, explicitlyLocale);
-
-      return response;
-    }
-
-    if (
-      isAlwaysWorkbenchSpaRoute(url.pathname) ||
-      (device.type === 'mobile' && isWorkbenchSpaRoute(url.pathname))
-    ) {
-      const workbenchPath = `/spa-workbench/${safeLocale}${url.pathname}`;
-      logDefault('Workbench SPA route, rewriting to: %s', workbenchPath);
-      url.pathname = workbenchPath;
-
-      const response = NextResponse.rewrite(url);
-      persistLocaleCookie(response, request, explicitlyLocale);
-
-      return response;
-    }
-
     const isNextjsRoute = nextjsOnlyRoutes.some((r) => url.pathname.startsWith(r));
 
     // SPA routes: rewrite to /spa/[variants]/[...path] catch-all
@@ -245,11 +216,6 @@ export function defineConfig() {
     '/oidc/interaction/(.*)',
     // market
     '/market-auth-callback',
-    // public share pages
-    '/share(.*)',
-    // standalone verification report viewer — the run id in the URL is the
-    // read-only capability for viewing the report without a signed-in session.
-    '/verify/(.*)',
     // acceptance decision page — same shape as /verify/:id: the id is the
     // capability; the tRPC layer enforces the aggregate's `visibility` (a
     // private aggregate 404s for anyone but the owner / workspace members).

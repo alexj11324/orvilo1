@@ -8,7 +8,7 @@ import {
   sharedRendererPlugins,
 } from './sharedRendererConfig';
 
-const getPluginNames = (platform: 'desktop' | 'web') =>
+const getPluginNames = (platform: 'desktop' | 'mobile') =>
   sharedRendererPlugins({ platform })
     .flat(Number.POSITIVE_INFINITY)
     .filter((plugin): plugin is { name: string } => Boolean(plugin) && typeof plugin === 'object')
@@ -17,13 +17,13 @@ const getPluginNames = (platform: 'desktop' | 'web') =>
 describe('sharedRendererPlugins', () => {
   it('keeps the icon barrel transform out of the Electron renderer', () => {
     expect(getPluginNames('desktop')).not.toContain('lobe-icon-named-export-proxy');
-    expect(getPluginNames('web')).toContain('lobe-icon-named-export-proxy');
+    expect(getPluginNames('mobile')).toContain('lobe-icon-named-export-proxy');
   });
 });
 
 describe('lobe-dev-editor-provider', () => {
   it('sends the provider entry back to the one prebundled editor bundle', async () => {
-    const plugin = sharedRendererPlugins({ platform: 'web' })
+    const plugin = sharedRendererPlugins({ platform: 'mobile' })
       .flat(Number.POSITIVE_INFINITY)
       .find(
         (

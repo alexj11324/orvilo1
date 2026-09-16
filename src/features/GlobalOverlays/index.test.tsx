@@ -12,6 +12,9 @@ const stub = (testId: string) => ({ default: () => <div data-testid={testId} /> 
 
 const useSyncRecents = vi.fn();
 
+/** Props the host passed to the run drawer on the most recent render. */
+const topicDrawerProps: Record<string, unknown>[] = [];
+
 /**
  * `GlobalOverlays` is the single host for the app-wide drawers and the recents
  * writer. Both of those used to be mounted by the Home layout, which happened
@@ -23,12 +26,17 @@ const renderOverlays = async ({
   topicDrawerTopicId,
 }: RenderOverlaysOptions = {}) => {
   vi.resetModules();
+  topicDrawerProps.length = 0;
 
   vi.doMock('@/hooks/useSyncRecents', () => ({ useSyncRecents }));
   vi.doMock('./AcceptancePortalDrawer', () => stub('acceptance-portal-drawer'));
-  vi.doMock('@/features/AgentTasks/AgentTaskDetail/TopicChatDrawer', () =>
-    stub('topic-chat-drawer'),
-  );
+  vi.doMock('@/features/AgentTasks/AgentTaskDetail/TopicChatDrawer', () => ({
+    default: (props: Record<string, unknown>) => {
+      topicDrawerProps.push(props);
+
+      return <div data-testid="topic-chat-drawer" />;
+    },
+  }));
   vi.doMock('@/store/chat', () => ({
     useChatStore: (selector: (state: unknown) => unknown) => selector({}),
   }));
@@ -88,5 +96,16 @@ describe('GlobalOverlays', () => {
     await renderOverlays({ topicDrawerTopicId: 'topic-1' });
 
     expect(await screen.findByTestId('topic-chat-drawer')).toBeInTheDocument();
+  });
+
+  // Page-level call sites are plain `<TopicChatDrawer />` and stand down inside
+  // a tree that has this host, which is what keeps one open topic to one panel.
+  // The count itself is proven in `topicChatDrawerHost.test.tsx`.
+  it('marks its run drawer as the global host of the tree', async () => {
+    await renderOverlays({ topicDrawerTopicId: 'topic-1' });
+
+    await screen.findByTestId('topic-chat-drawer');
+
+    expect(topicDrawerProps).toEqual([expect.objectContaining({ asGlobalHost: true })]);
   });
 });

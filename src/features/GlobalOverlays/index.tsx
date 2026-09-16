@@ -52,7 +52,9 @@ const GlobalOverlays = memo(() => {
       <RecentSync />
       {topicMounted && (
         <Suspense fallback={null}>
-          <TopicChatDrawer />
+          {/* The one instance allowed to open a panel inside a tree that has a
+              global host — every other mount is page-level and stands down. */}
+          <TopicChatDrawer asGlobalHost />
         </Suspense>
       )}
       {acceptanceMounted && (

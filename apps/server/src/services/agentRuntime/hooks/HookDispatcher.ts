@@ -3,9 +3,9 @@ import type { SerializedAgentHook } from '@orvilo/types';
 import debug from 'debug';
 import urlJoin from 'url-join';
 
+import { isHatchetWorkflowPath, triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
 import { isQueueAgentRuntimeEnabled } from '@/server/services/queue/impls';
 
-import { deliverInternalWebhook, isInternalWebhookPath } from './internalWebhook';
 import type {
   AgentHook,
   AgentHookEvent,
@@ -44,11 +44,16 @@ export async function deliverWebhook(
 
   if (delivery === 'hatchet' || delivery === 'qstash') {
     const path = new URL(resolvedUrl, 'http://orvilo.internal').pathname;
-    if (!isInternalWebhookPath(path)) {
+    if (!isHatchetWorkflowPath(path)) {
       throw new Error(`Unsupported Hatchet internal webhook path: ${path}`);
     }
-    await deliverInternalWebhook(path, payload);
-    log('Webhook delivered inside Hatchet worker: %s', path);
+    const operationId = typeof payload.operationId === 'string' ? payload.operationId : 'global';
+    const hookId = typeof payload.hookId === 'string' ? payload.hookId : 'hook';
+    const stepIndex = typeof payload.stepIndex === 'number' ? `.${payload.stepIndex}` : '';
+    await triggerHatchetWorkflow(path, payload, {
+      concurrencyKey: `hook.${operationId}.${hookId}${stepIndex}`,
+    });
+    log('Webhook handed off to Hatchet: %s', path);
     return;
   }
 

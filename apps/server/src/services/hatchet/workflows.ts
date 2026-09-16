@@ -8,6 +8,11 @@ import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 
 export const HATCHET_WORKFLOW_PATHS = [
+  '/api/agent/webhooks/bot-callback',
+  '/api/agent/webhooks/group-member-callback',
+  '/api/agent/webhooks/subagent-callback',
+  '/api/workflows/agent-eval-run/on-thread-complete',
+  '/api/workflows/agent-eval-run/on-trajectory-complete',
   '/api/workflows/agent-eval-run/execute-test-case',
   '/api/workflows/agent-eval-run/finalize-run',
   '/api/workflows/agent-eval-run/paginate-test-cases',
@@ -31,11 +36,18 @@ export const HATCHET_WORKFLOW_PATHS = [
   '/api/workflows/onboarding/understanding/process-collected',
   '/api/workflows/onboarding/understanding/process-detailed-persona',
   '/api/workflows/onboarding/understanding/process-providers',
+  '/api/workflows/task/on-creator-complete',
+  '/api/workflows/task/on-topic-complete',
   '/api/workflows/topic-auto-summary/dispatch',
   '/api/workflows/topic-auto-summary/execute',
+  '/api/workflows/verify/on-evidence-complete',
+  '/api/workflows/verify/on-verifier-complete',
 ] as const;
 
 export type HatchetWorkflowPath = (typeof HATCHET_WORKFLOW_PATHS)[number];
+
+export const isHatchetWorkflowPath = (path: string): path is HatchetWorkflowPath =>
+  HATCHET_WORKFLOW_PATHS.includes(path as HatchetWorkflowPath);
 
 interface TriggerHatchetWorkflowOptions {
   concurrencyKey?: string;

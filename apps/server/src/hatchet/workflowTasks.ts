@@ -12,6 +12,11 @@ import { z } from 'zod';
 import { hatchetDispatches } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import { enqueueHatchetTask } from '@/libs/hatchet';
+import { botCallback } from '@/server/router-hono/agent/handlers/botCallback';
+import { groupMemberCallback } from '@/server/router-hono/agent/handlers/groupMemberCallback';
+import { subAgentCallback } from '@/server/router-hono/agent/handlers/subAgentCallback';
+import { onThreadComplete } from '@/server/router-hono/workflows/agent-eval-run/handlers/onThreadComplete';
+import { onTrajectoryComplete } from '@/server/router-hono/workflows/agent-eval-run/handlers/onTrajectoryComplete';
 import { executeTestCaseHandler } from '@/server/router-hono/workflows/agent-eval-run/workflows/executeTestCase';
 import { finalizeRunHandler } from '@/server/router-hono/workflows/agent-eval-run/workflows/finalizeRun';
 import { paginateTestCasesHandler } from '@/server/router-hono/workflows/agent-eval-run/workflows/paginateTestCases';
@@ -30,8 +35,12 @@ import { processTopicHandler } from '@/server/router-hono/workflows/memory-user-
 import { processTopicsHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/processTopics';
 import { processUsersHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/processUsers';
 import { processUserTopicsHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/processUserTopics';
+import { onCreatorComplete } from '@/server/router-hono/workflows/task/handlers/onCreatorComplete';
+import { onTopicComplete } from '@/server/router-hono/workflows/task/handlers/onTopicComplete';
 import { dispatchTopicAutoSummary } from '@/server/router-hono/workflows/topic-auto-summary/dispatch';
 import { executeTopicAutoSummary } from '@/server/router-hono/workflows/topic-auto-summary/execute';
+import { onEvidenceComplete } from '@/server/router-hono/workflows/verify/handlers/onEvidenceComplete';
+import { onVerifierComplete } from '@/server/router-hono/workflows/verify/handlers/onVerifierComplete';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import {
   HATCHET_WORKFLOW_PATHS,
@@ -83,6 +92,12 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
   '/api/workflows/agent-eval-run/run-benchmark': (input) => invoke(runBenchmarkHandler, input),
   '/api/workflows/agent-eval-run/run-thread-trajectory': (input) =>
     invoke(runThreadTrajectoryHandler, input),
+  '/api/agent/webhooks/bot-callback': (input) => invoke(botCallback, input),
+  '/api/agent/webhooks/group-member-callback': (input) => invoke(groupMemberCallback, input),
+  '/api/agent/webhooks/subagent-callback': (input) => invoke(subAgentCallback, input),
+  '/api/workflows/agent-eval-run/on-thread-complete': (input) => invoke(onThreadComplete, input),
+  '/api/workflows/agent-eval-run/on-trajectory-complete': (input) =>
+    invoke(onTrajectoryComplete, input),
   '/api/workflows/agent-signal/execute-nightly-review-user': (input) =>
     invoke(executeNightlyReviewUser, input),
   '/api/workflows/agent-signal/paginate-nightly-review-users': (input) =>
@@ -132,8 +147,12 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
           OnboardingTaskRecommendationWorkflow.trigger(payload, options),
       },
     ),
+  '/api/workflows/task/on-creator-complete': (input) => invoke(onCreatorComplete, input),
+  '/api/workflows/task/on-topic-complete': (input) => invoke(onTopicComplete, input),
   '/api/workflows/topic-auto-summary/dispatch': (input) => invoke(dispatchTopicAutoSummary, input),
   '/api/workflows/topic-auto-summary/execute': (input) => invoke(executeTopicAutoSummary, input),
+  '/api/workflows/verify/on-evidence-complete': (input) => invoke(onEvidenceComplete, input),
+  '/api/workflows/verify/on-verifier-complete': (input) => invoke(onVerifierComplete, input),
 };
 
 const workflowDispatchInput = z.object({

@@ -10,11 +10,11 @@ vi.mock('@/server/services/queue/impls', () => ({
   }), // Default: local mode
 }));
 
-const mockDeliverInternalWebhook = vi.hoisted(() => vi.fn());
+const mockTriggerHatchetWorkflow = vi.hoisted(() => vi.fn());
 
-vi.mock('../internalWebhook', () => ({
-  deliverInternalWebhook: mockDeliverInternalWebhook,
-  isInternalWebhookPath: (path: string) => path === '/api/agent/webhooks/bot-callback',
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  triggerHatchetWorkflow: mockTriggerHatchetWorkflow,
+  isHatchetWorkflowPath: (path: string) => path === '/api/agent/webhooks/bot-callback',
 }));
 
 const { isQueueAgentRuntimeEnabled } = await import('@/server/services/queue/impls');
@@ -271,7 +271,7 @@ describe('HookDispatcher', () => {
   describe('deliverWebhook Hatchet callbacks', () => {
     beforeEach(() => {
       global.fetch = vi.fn().mockResolvedValue({ status: 200 });
-      mockDeliverInternalWebhook.mockReset().mockResolvedValue(undefined);
+      mockTriggerHatchetWorkflow.mockReset().mockResolvedValue(undefined);
     });
 
     afterEach(() => {
@@ -284,9 +284,11 @@ describe('HookDispatcher', () => {
         { a: 1 },
       );
 
-      expect(mockDeliverInternalWebhook).toHaveBeenCalledWith('/api/agent/webhooks/bot-callback', {
-        a: 1,
-      });
+      expect(mockTriggerHatchetWorkflow).toHaveBeenCalledWith(
+        '/api/agent/webhooks/bot-callback',
+        { a: 1 },
+        { concurrencyKey: 'hook.global.hook' },
+      );
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
@@ -299,7 +301,7 @@ describe('HookDispatcher', () => {
     });
 
     it('surfaces an internal callback failure', async () => {
-      mockDeliverInternalWebhook.mockRejectedValue(new Error('callback failed'));
+      mockTriggerHatchetWorkflow.mockRejectedValue(new Error('callback failed'));
 
       await expect(
         deliverWebhook({ delivery: 'hatchet', url: '/api/agent/webhooks/bot-callback' }, { a: 1 }),
@@ -311,7 +313,7 @@ describe('HookDispatcher', () => {
     it('dispatch rejects a no-fallback delivery failure after delivering other hooks', async () => {
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(true);
       const consoleError = vi.spyOn(console, 'error').mockImplementation(function () {});
-      mockDeliverInternalWebhook.mockRejectedValue(new Error('callback failed'));
+      mockTriggerHatchetWorkflow.mockRejectedValue(new Error('callback failed'));
 
       dispatcher.register(operationId, [
         {

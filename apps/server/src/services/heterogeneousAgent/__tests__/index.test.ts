@@ -24,10 +24,10 @@ vi.mock('@/server/services/queue/impls', () => ({
   isQueueAgentRuntimeEnabled: vi.fn(() => false),
 }));
 
-const mockDeliverInternalWebhook = vi.hoisted(() => vi.fn());
-vi.mock('@/server/services/agentRuntime/hooks/internalWebhook', () => ({
-  deliverInternalWebhook: mockDeliverInternalWebhook,
-  isInternalWebhookPath: () => true,
+const mockTriggerHatchetWorkflow = vi.hoisted(() => vi.fn());
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  triggerHatchetWorkflow: mockTriggerHatchetWorkflow,
+  isHatchetWorkflowPath: () => true,
 }));
 
 const { isQueueAgentRuntimeEnabled } = await import('@/server/services/queue/impls');
@@ -854,7 +854,7 @@ describe('HeterogeneousAgentService', () => {
 
     beforeEach(() => {
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(true);
-      mockDeliverInternalWebhook.mockReset().mockResolvedValue(undefined);
+      mockTriggerHatchetWorkflow.mockReset().mockResolvedValue(undefined);
       process.env.APP_URL = 'https://app.test';
     });
 
@@ -874,8 +874,8 @@ describe('HeterogeneousAgentService', () => {
         topicId: 'topic-q',
       });
 
-      expect(mockDeliverInternalWebhook).toHaveBeenCalledTimes(1);
-      const [path, body] = mockDeliverInternalWebhook.mock.calls[0];
+      expect(mockTriggerHatchetWorkflow).toHaveBeenCalledTimes(1);
+      const [path, body] = mockTriggerHatchetWorkflow.mock.calls[0];
       expect(path).toBe('/api/workflows/task/on-topic-complete');
       expect(body).toMatchObject({
         hookId: 'task-on-complete',
@@ -899,8 +899,8 @@ describe('HeterogeneousAgentService', () => {
         topicId: 'topic-q',
       });
 
-      expect(mockDeliverInternalWebhook).toHaveBeenCalledTimes(1);
-      expect(mockDeliverInternalWebhook.mock.calls[0][1]).toMatchObject({
+      expect(mockTriggerHatchetWorkflow).toHaveBeenCalledTimes(1);
+      expect(mockTriggerHatchetWorkflow.mock.calls[0][1]).toMatchObject({
         hookId: 'task-on-complete',
         topicId: 'topic-q',
       });
@@ -916,7 +916,7 @@ describe('HeterogeneousAgentService', () => {
         topicId: 'topic-q',
       });
 
-      expect(mockDeliverInternalWebhook).not.toHaveBeenCalled();
+      expect(mockTriggerHatchetWorkflow).not.toHaveBeenCalled();
     });
   });
 
@@ -1022,7 +1022,7 @@ describe('HeterogeneousAgentService', () => {
 
     beforeEach(() => {
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(true);
-      mockDeliverInternalWebhook.mockReset().mockResolvedValue(undefined);
+      mockTriggerHatchetWorkflow.mockReset().mockResolvedValue(undefined);
       process.env.APP_URL = 'https://app.test';
     });
 
@@ -1057,8 +1057,8 @@ describe('HeterogeneousAgentService', () => {
         topicId: TOPIC,
       });
 
-      expect(mockDeliverInternalWebhook).toHaveBeenCalledTimes(1);
-      expect(mockDeliverInternalWebhook.mock.calls[0][0]).toBe(
+      expect(mockTriggerHatchetWorkflow).toHaveBeenCalledTimes(1);
+      expect(mockTriggerHatchetWorkflow.mock.calls[0][0]).toBe(
         '/api/workflows/task/on-topic-complete',
       );
     });
@@ -1094,7 +1094,7 @@ describe('HeterogeneousAgentService', () => {
       // Exactly the production failure: the run finished, but the terminal hook
       // had nothing to deliver, so onTopicComplete never fires and the task
       // topic is stranded at `running`.
-      expect(mockDeliverInternalWebhook).not.toHaveBeenCalled();
+      expect(mockTriggerHatchetWorkflow).not.toHaveBeenCalled();
     });
   });
 });

@@ -193,6 +193,9 @@ export class LinearPlanningWorker {
         throw new Error('Planning proposal references a task outside its captured scope');
       }
 
+      const scopeSnapshot = await model.findPlanningScopeById(revision.scopeId);
+      if (!scopeSnapshot) throw new Error('Planning scope no longer exists');
+
       // Lock tasks before the planning scope. User task writes lock the task
       // first and then enqueue the scope event, so this order turns a race into
       // a stale proposal instead of a task/scope deadlock.
@@ -214,6 +217,32 @@ export class LinearPlanningWorker {
               .for('update');
       const lockedTaskById = new Map(currentTasks.map((task) => [task.id, task]));
 
+      let bindingVersion: number | null = null;
+      let orchestrationPolicyRevision: number | null = null;
+      if (scopeSnapshot.scopeType === 'project') {
+        const [binding] = await tx
+          .select({ version: linearProjectBindings.version })
+          .from(linearProjectBindings)
+          .where(
+            and(
+              eq(linearProjectBindings.workspaceId, this.workspaceId),
+              eq(linearProjectBindings.projectId, scopeSnapshot.scopeId),
+            ),
+          )
+          .for('update')
+          .limit(1);
+        const [project] = await tx
+          .select({ orchestrationPolicyRevision: projects.orchestrationPolicyRevision })
+          .from(projects)
+          .where(
+            and(eq(projects.id, scopeSnapshot.scopeId), eq(projects.workspaceId, this.workspaceId)),
+          )
+          .for('update')
+          .limit(1);
+        bindingVersion = binding?.version ?? null;
+        orchestrationPolicyRevision = project?.orchestrationPolicyRevision ?? null;
+      }
+
       const scope = await model.lockPlanningScope(revision.scopeId);
       if (!scope) throw new Error('Planning scope no longer exists');
       const supersede = async (error: string): Promise<ApplyPlanningProposalResult> => {
@@ -231,28 +260,10 @@ export class LinearPlanningWorker {
         return supersede('This planning proposal is missing its consistency snapshot.');
       }
       if (scope.scopeType === 'project') {
-        const [binding] = await tx
-          .select({ version: linearProjectBindings.version })
-          .from(linearProjectBindings)
-          .where(
-            and(
-              eq(linearProjectBindings.workspaceId, this.workspaceId),
-              eq(linearProjectBindings.projectId, scope.scopeId),
-            ),
-          )
-          .for('update')
-          .limit(1);
-        const [project] = await tx
-          .select({ orchestrationPolicyRevision: projects.orchestrationPolicyRevision })
-          .from(projects)
-          .where(and(eq(projects.id, scope.scopeId), eq(projects.workspaceId, this.workspaceId)))
-          .for('update')
-          .limit(1);
         const expectedConsistency = inputSnapshot.consistency!;
         if (
-          (binding?.version ?? null) !== (expectedConsistency.bindingVersion ?? null) ||
-          (project?.orchestrationPolicyRevision ?? null) !==
-            (expectedConsistency.orchestrationPolicyRevision ?? null)
+          bindingVersion !== (expectedConsistency.bindingVersion ?? null) ||
+          orchestrationPolicyRevision !== (expectedConsistency.orchestrationPolicyRevision ?? null)
         ) {
           return supersede('The Linear binding or project policy changed after planning.');
         }
@@ -431,6 +442,9 @@ export class LinearPlanningWorker {
             case 'request_stop':
             case 'update_task': {
               return [action.taskId];
+            }
+            case 'create_task': {
+              return action.parentTaskId ? [action.parentTaskId] : [];
             }
             case 'set_dependency': {
               return [action.taskId, action.dependsOnTaskId];

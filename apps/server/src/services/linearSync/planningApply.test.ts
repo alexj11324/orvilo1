@@ -215,4 +215,37 @@ describe('LinearPlanningWorker.applyProposal', () => {
       'Before planning',
     );
   });
+
+  it('supersedes a child-creation proposal when its captured parent changes', async () => {
+    const { project, revision, task } = await createRevision('Stale child parent', false, true);
+    await db
+      .update(taskPlanningRevisions)
+      .set({
+        proposal: {
+          actions: [
+            {
+              action: 'create_task',
+              description: 'A planned child',
+              instruction: 'Implement the planned child',
+              name: 'Planned child',
+              parentTaskId: task.id,
+              projectId: project!.id,
+              reason: 'The parent needs a bounded child task',
+            },
+          ],
+          explanation: 'Create one child task',
+          requiresApproval: false,
+        },
+      })
+      .where(eq(taskPlanningRevisions.id, revision.id));
+    await db
+      .update(tasks)
+      .set({ name: 'Human changed parent', updatedAt: new Date(task.updatedAt.getTime() + 1_000) })
+      .where(eq(tasks.id, task.id));
+
+    await expect(
+      new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, userId, true),
+    ).resolves.toEqual({ createdTaskIds: [], stale: true, updatedTaskIds: [] });
+    expect(await db.select().from(tasks).where(eq(tasks.workspaceId, workspaceId))).toHaveLength(1);
+  });
 });

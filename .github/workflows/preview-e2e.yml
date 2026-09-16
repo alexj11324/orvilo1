@@ -10,7 +10,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: preview-e2e-${{ github.event.deployment.ref }}
+  # Smoke and full E2E share the small Preview PostgreSQL instance. Run one
+  # validation suite per deployment so their seed clients do not contend.
+  group: preview-validation-${{ github.event.deployment.ref }}
   cancel-in-progress: true
 
 jobs:

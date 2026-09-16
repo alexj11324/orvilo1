@@ -2,7 +2,9 @@ name: PR21 Final Focused Verification
 on:
   push:
     branches: [feat/issue-prerequisite-gates]
-    paths: [.github/workflows/review21-tool-delete.yml]
+    paths:
+      - .github/workflows/review21-tool-delete.yml
+      - e2e/src/steps/common/taskPrerequisites.steps.ts
 permissions:
   contents: write
 concurrency:
@@ -59,7 +61,7 @@ jobs:
             src/store/task/selectors/detailSelectors.test.ts
       - name: Validate browser step registration without claiming execution
         working-directory: e2e
-        run: bunx cucumber-js --config cucumber.config.js --dry-run --tags '@prerequisites'
+        run: pnpm exec cucumber-js --config cucumber.config.js --dry-run --tags '@prerequisites'
       - name: Full typecheck
         run: pnpm type-check
       - name: Commit validated source and remove transport

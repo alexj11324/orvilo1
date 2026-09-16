@@ -1,81 +1,36 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import {
-  earlyPassRate,
-  habitTier,
-  layerLabel,
-  passRateSeries,
-  previewSections,
-  profileWord,
-  recentPassRate,
-  zeroViolationStreak,
-} from './helpers';
+import { describeRecent, previewSections } from './helpers';
 
 const p = { pass: true };
 const v = { pass: false };
 
-describe('habitTier', () => {
-  it('treats fewer than two hits as fresh even when one failed', () => {
-    expect(habitTier([])).toBe('fresh');
-    expect(habitTier([v])).toBe('fresh');
+describe('describeRecent', () => {
+  // The surfaces used to grade this — 老毛病 / 还不稳 / 已养成. The counts are what actually
+  // happened, and they are what a reader can act on.
+  it('reports the outcome of each recent practice in order', () => {
+    const t = vi.fn((key: string, options?: Record<string, unknown>) =>
+      key === 'habit.recentTip.title' ? `title:${options?.count}:${options?.list}` : key,
+    );
+
+    expect(describeRecent([p, v, p], false, t)).toBe(
+      'title:3:habit.recentTip.pass habit.recentTip.violation habit.recentTip.pass',
+    );
   });
 
-  it('flags two or more recent violations as a recurring problem', () => {
-    expect(habitTier([p, v, p, v, v, p])).toBe('recurring');
+  it('says a rule has not been tested rather than reporting an empty history', () => {
+    const t = vi.fn((key: string) => key);
+
+    expect(describeRecent([], false, t)).toBe('habit.recentTip.none');
+    expect(t).toHaveBeenCalledWith('habit.recentTip.none');
   });
 
-  it('flags a single recent violation as shaky', () => {
-    expect(habitTier([p, p, v, p, p, p])).toBe('shaky');
-  });
+  // A hand-taught rule with no practice yet is pending validation, not merely unused — the
+  // distinction the taught flag exists to carry.
+  it('tells a hand-taught rule apart from one with an empty history', () => {
+    const t = vi.fn((key: string) => key);
 
-  it('calls a clean recent record stable', () => {
-    expect(habitTier([p, p, p])).toBe('stable');
-  });
-});
-
-describe('profileWord', () => {
-  it('prefers weak over unstable when both are present', () => {
-    expect(profileWord({ fresh: 0, recurring: 1, shaky: 2, stable: 5 }, 8)).toBe('weak');
-  });
-  it('is fresh for an empty layer', () => {
-    expect(profileWord({ fresh: 0, recurring: 0, shaky: 0, stable: 0 }, 0)).toBe('fresh');
-  });
-  it('is stable only when everything is stable', () => {
-    expect(profileWord({ fresh: 1, recurring: 0, shaky: 0, stable: 3 }, 4)).toBe('mostlyStable');
-    expect(profileWord({ fresh: 0, recurring: 0, shaky: 0, stable: 4 }, 4)).toBe('stable');
-  });
-});
-
-describe('layerLabel', () => {
-  it('uses a sequential user-facing label instead of the internal layer key', () => {
-    expect(layerLabel(0)).toBe('L1');
-    expect(layerLabel(11)).toBe('L12');
-  });
-});
-
-describe('reliability series', () => {
-  const rel = [
-    { pass: 2, run: 1, violation: 2 },
-    { pass: 0, run: 2, violation: 0 },
-    { pass: 3, run: 3, violation: 1 },
-    { pass: 4, run: 4, violation: 0 },
-    { pass: 5, run: 5, violation: 0 },
-  ];
-
-  it('drops runs that judged nothing', () => {
-    expect(passRateSeries(rel).map((s) => s.run)).toEqual([1, 3, 4, 5]);
-  });
-
-  it('counts the trailing zero-violation streak only across runs that judged something', () => {
-    expect(zeroViolationStreak(rel)).toBe(2);
-    expect(zeroViolationStreak([{ pass: 0, run: 1, violation: 0 }])).toBe(0);
-  });
-
-  it('averages recent and early windows', () => {
-    const s = passRateSeries(rel);
-    expect(recentPassRate(s, 2)).toBe(1);
-    expect(earlyPassRate(s, 2)).toBeCloseTo((0.5 + 0.75) / 2);
-    expect(recentPassRate([])).toBeNull();
+    expect(describeRecent([], true, t)).toBe('habit.hint.taughtPending');
   });
 });
 

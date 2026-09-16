@@ -1096,10 +1096,6 @@ export const messengerKeys = {
 // ---- verify (deliverable judging) ---------------------------------------
 export const expertiseKeys = {
   domain: def('expertise:domain', (domainId: string) => ['expertise:domain', domainId]),
-  historyCount: def('expertise:historyCount', (agentId: string) => [
-    'expertise:historyCount',
-    agentId,
-  ]),
   lesson: def('expertise:lesson', (lessonId: string) => ['expertise:lesson', lessonId]),
   overview: def('expertise:overview', (agentId: string) => ['expertise:overview', agentId]),
 };

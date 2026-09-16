@@ -4,6 +4,7 @@ import { Block, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
 import type { DropdownItem } from '@lobehub/ui/base-ui';
 import { ActionIcon, DropdownMenu, Popover, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { ArchiveIcon, MessageSquareTextIcon, MoreHorizontalIcon, PencilIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +19,10 @@ import { describeRecent } from '../helpers';
 import LessonPreview from './LessonPreview';
 import { portraitStyles as styles } from './styles';
 import TeachBox from './TeachBox';
+
+// `.fromNow()` needs the plugin; extending here keeps the module self-sufficient. See the
+// note in `LessonDetail`.
+dayjs.extend(relativeTime);
 
 interface HabitListProps {
   agentId: string;

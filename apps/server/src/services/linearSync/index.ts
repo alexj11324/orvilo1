@@ -183,6 +183,18 @@ export class LinearSyncService {
       ? await this.model.findBindingByLinearProjectId(linearProjectId)
       : null;
 
+    if (!binding) {
+      await this.model.updateInbox(captured.row.id, {
+        processedAt: null,
+        status: 'pending_binding',
+      });
+      return {
+        deliveryId: input.deliveryId,
+        duplicate: false,
+        status: 'pending_binding',
+      };
+    }
+
     const event = await this.model.recordDomainEvent({
       action: payload.action,
       eventId: input.deliveryId,

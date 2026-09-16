@@ -58,7 +58,10 @@ export const linearWebhook = async (c: Context): Promise<Response> => {
       timestamp,
     });
 
-    return c.json(result, result.duplicate ? 200 : 202);
+    // Linear retries non-2xx deliveries even when the inbox row was durably
+    // written. The body reports queued/duplicate state; the transport status
+    // must remain a successful acknowledgement for both paths.
+    return c.json(result, 200);
   } catch (error) {
     if (error instanceof LinearWebhookError) {
       return c.json({ error: error.message }, error.status);

@@ -10,6 +10,7 @@ import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { LinearPlanningWorker } from '@/server/services/linearSync/planning';
 import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/provider';
 import { LinearSyncWorker } from '@/server/services/linearSync/worker';
 
@@ -190,6 +191,33 @@ export const linearSyncRouter = router({
       }
     }),
 
+  planningRevisions: linearSyncProcedure
+    .input(
+      z.object({ limit: z.number().int().min(1).max(100).default(20), scopeId: z.string().uuid() }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const scope = await ctx.linearSyncModel.findPlanningScopeById(input.scopeId);
+        if (!scope) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Planning scope not found' });
+        }
+        return {
+          data: await ctx.linearSyncModel.listPlanningRevisions(scope.id, input.limit),
+          success: true,
+        };
+      } catch (error) {
+        mapError(error, 'listPlanningRevisions');
+      }
+    }),
+
+  planningScopes: linearSyncProcedure.query(async ({ ctx }) => {
+    try {
+      return { data: await ctx.linearSyncModel.listPlanningScopes(), success: true };
+    } catch (error) {
+      mapError(error, 'listPlanningScopes');
+    }
+  }),
+
   processInbox: linearSyncWriteProcedure
     .input(
       z.object({
@@ -243,6 +271,38 @@ export const linearSyncRouter = router({
         return { data, message: 'Linear outbox processed', success: true };
       } catch (error) {
         mapError(error, 'processOutbox');
+      }
+    }),
+
+  processPlanning: linearSyncWriteProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(20).default(10) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await new LinearPlanningWorker(ctx.serverDB, ctx.workspaceId!).processPending(
+          undefined,
+          input.limit,
+        );
+        return { data, message: 'Linear planning scopes processed', success: true };
+      } catch (error) {
+        mapError(error, 'processPlanning');
+      }
+    }),
+
+  requeuePlanningScope: linearSyncWriteProcedure
+    .input(z.object({ scopeId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const scope = await ctx.linearSyncModel.findPlanningScopeById(input.scopeId);
+        if (!scope) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Planning scope not found' });
+        }
+        return {
+          data: await ctx.linearSyncModel.requeuePlanningScope(scope.id),
+          message: 'Planning scope requeued',
+          success: true,
+        };
+      } catch (error) {
+        mapError(error, 'requeuePlanningScope');
       }
     }),
 

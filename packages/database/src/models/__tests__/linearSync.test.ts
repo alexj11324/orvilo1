@@ -8,6 +8,7 @@ import {
   linearSyncInbox,
   linearSyncOutbox,
   taskDomainEvents,
+  taskPlanningRevisions,
   taskPlanningScopes,
   users,
   workspaces,
@@ -22,6 +23,7 @@ const workspaceId = 'linear-sync-model-workspace';
 const cleanup = async () => {
   await db.delete(linearSyncOutbox);
   await db.delete(linearSyncInbox);
+  await db.delete(taskPlanningRevisions);
   await db.delete(taskPlanningScopes);
   await db.delete(taskDomainEvents);
   await db.delete(linearProjectBindings);
@@ -81,5 +83,53 @@ describe('LinearSyncModel', () => {
         status: 'queued',
       },
     ]);
+  });
+
+  it('keeps a newer event queued when an older planning revision finishes', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const first = await model.recordDomainEvent({
+      action: 'create',
+      idempotencyKey: 'linear:delivery-1',
+      payload: { issueId: 'issue-1' },
+      projectId: null,
+      source: 'linear',
+      taskId: null,
+      type: 'linear.issue.changed',
+    });
+    const [scope] = await model.claimPlanningScopes();
+    expect(scope.id).toBe(first.scope?.id);
+
+    const revision = await model.createPlanningRevision({
+      eventIds: [first.event.id],
+      inputRevision: first.event.revision,
+      inputSnapshot: { revision: first.event.revision },
+      scopeId: scope.id,
+      trigger: first.scope!.lastTrigger!,
+    });
+
+    const second = await model.recordDomainEvent({
+      action: 'update',
+      idempotencyKey: 'linear:delivery-2',
+      payload: { issueId: 'issue-1', title: 'Changed' },
+      projectId: null,
+      source: 'linear',
+      taskId: null,
+      type: 'linear.issue.changed',
+    });
+    await model.updatePlanningRevision(revision.id, {
+      proposal: {
+        actions: [{ action: 'noop', reason: 'test' }],
+        explanation: 'test',
+        requiresApproval: false,
+      },
+      status: 'proposed',
+    });
+    const finished = await model.finishPlanningScope(scope.id, first.event.revision, 'idle');
+
+    expect(finished).toMatchObject({
+      dirtyRevision: second.event.revision,
+      plannedRevision: first.event.revision,
+      status: 'queued',
+    });
   });
 });

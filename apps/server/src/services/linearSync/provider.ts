@@ -28,6 +28,7 @@ export interface LinearIssueCreateInput {
 }
 
 export interface LinearIssueUpdateInput {
+  assigneeId?: string | null;
   description?: string | null;
   priority?: number | null;
   projectId?: string | null;

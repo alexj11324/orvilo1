@@ -1,4 +1,4 @@
-import type { LinearIssueSnapshot, TaskItem } from '@orvilo/types';
+import type { LinearIssueSnapshot, LinearProjectBindingSettings, TaskItem } from '@orvilo/types';
 import { and, eq } from 'drizzle-orm';
 
 import { LinearSyncModel } from '@/database/models/linearSync';
@@ -34,12 +34,25 @@ const taskPriority = (priority: number | null | undefined) => {
   return Math.max(0, Math.min(4, priority));
 };
 
-const taskSnapshot = (task: TaskItem, issue: LinearIssueSnapshot): LinearIssueSnapshot => ({
+const taskSnapshot = (
+  task: TaskItem,
+  issue: LinearIssueSnapshot,
+  settings: LinearProjectBindingSettings,
+): LinearIssueSnapshot => ({
+  assigneeId:
+    settings.assignmentMappings?.find(
+      (mapping) =>
+        mapping.orviloAgentId === task.assigneeAgentId ||
+        mapping.orviloUserId === task.assigneeUserId,
+    )?.linearUserId ?? issue.assigneeId,
   id: issue.id,
   identifier: issue.identifier,
   description: task.instruction,
   priority: task.priority,
   projectId: task.projectId,
+  stateId:
+    settings.statusMappings?.find((mapping) => mapping.localStatus === task.status)
+      ?.linearStateId ?? issue.stateId,
   title: task.name || task.identifier,
 });
 
@@ -49,6 +62,7 @@ const remoteTaskPatch = (
   base: LinearIssueSnapshot,
   local: LinearIssueSnapshot,
   remote: LinearIssueSnapshot,
+  settings: LinearProjectBindingSettings,
 ): Parameters<TaskModel['update']>[1] => {
   const patch: Parameters<TaskModel['update']>[1] = {};
   const remoteChanged = changedLinearIssueFields(base, remote);
@@ -64,6 +78,26 @@ const remoteTaskPatch = (
   }
   if (remoteChanged.includes('priority') && !localChanged.has('priority')) {
     patch.priority = taskPriority(merged.priority);
+  }
+  if (remoteChanged.includes('stateId') && !localChanged.has('stateId')) {
+    const statusMapping = settings.statusMappings?.find(
+      (mapping) => mapping.linearStateId === merged.stateId,
+    );
+    if (statusMapping) patch.status = statusMapping.localStatus;
+  }
+  if (remoteChanged.includes('assigneeId') && !localChanged.has('assigneeId')) {
+    if (merged.assigneeId === null) {
+      patch.assigneeAgentId = null;
+      patch.assigneeUserId = null;
+    } else {
+      const assignmentMapping = settings.assignmentMappings?.find(
+        (mapping) => mapping.linearUserId === merged.assigneeId,
+      );
+      if (assignmentMapping) {
+        patch.assigneeAgentId = assignmentMapping.orviloAgentId ?? null;
+        patch.assigneeUserId = assignmentMapping.orviloUserId ?? null;
+      }
+    }
   }
 
   return patch;
@@ -139,6 +173,7 @@ export class LinearSyncWorker {
         const updated = await provider.updateIssue(
           issueLink.linearIssueId,
           row.payload as {
+            assigneeId?: string | null;
             description?: string | null;
             priority?: number | null;
             projectId?: string | null;
@@ -185,6 +220,7 @@ export class LinearSyncWorker {
       ? await this.model.findBindingByLinearProjectId(issue.projectId)
       : null;
     if (!binding) return 'pending-binding';
+    if (!binding.syncEnabled) return 'processed';
 
     const installation = await this.model.findInstallationById(row.installationId);
     if (!installation?.installedByUserId) {
@@ -244,7 +280,7 @@ export class LinearSyncWorker {
       return 'processed';
     }
 
-    const local = taskSnapshot(task, issue);
+    const local = taskSnapshot(task, issue, binding.settings);
     const merged = mergeLinearIssueSnapshots({
       base: existingLink.lastConfirmedSnapshot,
       local,
@@ -267,8 +303,28 @@ export class LinearSyncWorker {
       existingLink.lastConfirmedSnapshot,
       local,
       issue,
+      binding.settings,
     );
-    if (Object.keys(patch).length > 0) await taskModel.update(task.id, patch);
+    if (Object.keys(patch).length > 0) {
+      const updatedTask = await taskModel.update(task.id, patch);
+      if (updatedTask) {
+        const eventType =
+          patch.assigneeAgentId !== undefined || patch.assigneeUserId !== undefined
+            ? 'task.assigned'
+            : patch.status !== undefined
+              ? 'task.status.changed'
+              : 'task.requirement.changed';
+        await this.model.recordDomainEvent({
+          eventId: row.id,
+          idempotencyKey: `linear:task-update:${row.id}`,
+          payload: { issueId: issue.id, patch },
+          projectId: binding.projectId,
+          source: 'linear',
+          taskId: task.id,
+          type: eventType,
+        });
+      }
+    }
 
     const localChanged = changedLinearIssueFields(existingLink.lastConfirmedSnapshot, local);
     if (localChanged.length > 0) {

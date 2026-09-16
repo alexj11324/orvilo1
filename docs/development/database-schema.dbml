@@ -2037,60 +2037,8 @@ table hatchet_workflow_steps {
   updated_at "timestamp with time zone" [not null, default: `now()`]
 
   indexes {
-    (dispatch_id, step_name) [unique, name: 'hatchet_workflow_steps_dispatch_id_step_name_unique']
+    (dispatch_id, step_name) [name: 'hatchet_workflow_steps_dispatch_id_step_name_unique', unique]
     (status, lease_expires_at) [name: 'hatchet_workflow_steps_lease_idx']
-  }
-}
-
-table llm_generation_tracing {
-  id uuid [pk, not null, default: `gen_random_uuid()`]
-  scenario text [not null]
-  prompt_version text [not null]
-  prompt_hash text [not null]
-  schema_name text
-  user_id text [not null]
-  agent_id text
-  topic_id text
-  workspace_id text
-  trigger text
-  parent_tracing_id uuid
-  provider text
-  model text
-  success boolean [not null]
-  error_code text
-  error_detail text
-  validation_failed boolean [not null, default: false]
-  input_hash text
-  input_hint text
-  latency_ms integer
-  input_tokens integer
-  output_tokens integer
-  cost_usd "numeric(12, 8)"
-  storage_key text
-  feedback_signal text
-  feedback_score "numeric(3, 2)"
-  feedback_source text
-  feedback_data jsonb
-  feedback_updated_at "timestamp with time zone"
-  trace_id text
-  span_id text
-  metadata jsonb [default: `{}`]
-  created_at "timestamp with time zone" [not null, default: `now()`]
-
-  indexes {
-    scenario [name: 'llm_generation_tracing_scenario_idx']
-    prompt_version [name: 'llm_generation_tracing_prompt_version_idx']
-    user_id [name: 'llm_generation_tracing_user_id_idx']
-    agent_id [name: 'llm_generation_tracing_agent_id_idx']
-    topic_id [name: 'llm_generation_tracing_topic_id_idx']
-    workspace_id [name: 'llm_generation_tracing_workspace_id_idx']
-    provider [name: 'llm_generation_tracing_provider_idx']
-    model [name: 'llm_generation_tracing_model_idx']
-    success [name: 'llm_generation_tracing_success_idx']
-    error_code [name: 'llm_generation_tracing_error_code_idx']
-    validation_failed [name: 'llm_generation_tracing_validation_failed_idx']
-    feedback_signal [name: 'llm_generation_tracing_feedback_signal_idx']
-    created_at [name: 'llm_generation_tracing_created_at_idx']
   }
 }
 
@@ -2241,6 +2189,28 @@ table task_domain_events {
   }
 }
 
+table task_planning_revisions {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text [not null]
+  scope_id uuid [not null]
+  input_revision bigint [not null]
+  status text [not null, default: 'running']
+  trigger jsonb [not null]
+  event_ids text[] [not null, default: `[]`]
+  input_snapshot jsonb [not null]
+  proposal jsonb
+  error text
+  applied_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (scope_id, input_revision) [name: 'task_planning_revisions_scope_revision_unique', unique]
+    (workspace_id, status, created_at) [name: 'task_planning_revisions_workspace_status_idx']
+    (scope_id, created_at) [name: 'task_planning_revisions_scope_created_at_idx']
+  }
+}
+
 table task_planning_scopes {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   workspace_id text [not null]
@@ -2259,6 +2229,58 @@ table task_planning_scopes {
   indexes {
     (workspace_id, scope_type, scope_id) [name: 'task_planning_scopes_workspace_type_id_unique', unique]
     (status, dirty_revision) [name: 'task_planning_scopes_ready_idx']
+  }
+}
+
+table llm_generation_tracing {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  scenario text [not null]
+  prompt_version text [not null]
+  prompt_hash text [not null]
+  schema_name text
+  user_id text [not null]
+  agent_id text
+  topic_id text
+  workspace_id text
+  trigger text
+  parent_tracing_id uuid
+  provider text
+  model text
+  success boolean [not null]
+  error_code text
+  error_detail text
+  validation_failed boolean [not null, default: false]
+  input_hash text
+  input_hint text
+  latency_ms integer
+  input_tokens integer
+  output_tokens integer
+  cost_usd "numeric(12, 8)"
+  storage_key text
+  feedback_signal text
+  feedback_score "numeric(3, 2)"
+  feedback_source text
+  feedback_data jsonb
+  feedback_updated_at "timestamp with time zone"
+  trace_id text
+  span_id text
+  metadata jsonb [default: `{}`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    scenario [name: 'llm_generation_tracing_scenario_idx']
+    prompt_version [name: 'llm_generation_tracing_prompt_version_idx']
+    user_id [name: 'llm_generation_tracing_user_id_idx']
+    agent_id [name: 'llm_generation_tracing_agent_id_idx']
+    topic_id [name: 'llm_generation_tracing_topic_id_idx']
+    workspace_id [name: 'llm_generation_tracing_workspace_id_idx']
+    provider [name: 'llm_generation_tracing_provider_idx']
+    model [name: 'llm_generation_tracing_model_idx']
+    success [name: 'llm_generation_tracing_success_idx']
+    error_code [name: 'llm_generation_tracing_error_code_idx']
+    validation_failed [name: 'llm_generation_tracing_validation_failed_idx']
+    feedback_signal [name: 'llm_generation_tracing_feedback_signal_idx']
+    created_at [name: 'llm_generation_tracing_created_at_idx']
   }
 }
 

@@ -19,6 +19,10 @@ export type TaskPlanningScopeType = 'goal' | 'project' | 'workspace';
 
 export type TaskPlanningScopeStatus = 'failed' | 'idle' | 'queued' | 'running';
 
+/** Durable lifecycle of one versioned incremental planning attempt. */
+export type TaskPlanningRevisionStatus =
+  'applied' | 'failed' | 'proposed' | 'running' | 'superseded';
+
 /** Which boundary produced a domain change. */
 export type TaskDomainEventSource = 'agent' | 'linear' | 'system' | 'user';
 
@@ -85,4 +89,61 @@ export interface TaskPlanningTrigger {
   eventId?: string;
   source: TaskDomainEventSource;
   type: TaskDomainEventType;
+}
+
+/** Safe, auditable actions a coordinator may propose for a planning scope. */
+export type TaskPlanningAction =
+  | {
+      action: 'assign_task';
+      assigneeAgentId?: string | null;
+      assigneeUserId?: string | null;
+      reason: string;
+      taskId: string;
+    }
+  | {
+      action: 'create_task';
+      description: string;
+      instruction: string;
+      name: string;
+      parentTaskId?: string | null;
+      priority?: number;
+      projectId: string;
+      reason: string;
+    }
+  | {
+      action: 'escalate';
+      reason: string;
+    }
+  | {
+      action: 'noop';
+      reason: string;
+    }
+  | {
+      action: 'request_stop';
+      reason: string;
+      taskId: string;
+    }
+  | {
+      action: 'set_dependency';
+      dependsOnTaskId: string;
+      operation: 'add' | 'remove';
+      reason: string;
+      taskId: string;
+    }
+  | {
+      action: 'update_task';
+      patch: {
+        instruction?: string;
+        name?: string;
+        priority?: number;
+      };
+      reason: string;
+      taskId: string;
+    };
+
+/** Versioned planning output. The action list is validated before application. */
+export interface TaskPlanningProposal {
+  actions: TaskPlanningAction[];
+  explanation: string;
+  requiresApproval: boolean;
 }

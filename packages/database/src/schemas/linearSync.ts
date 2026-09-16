@@ -8,6 +8,7 @@ import type {
   LinearSyncOutboxStatus,
   TaskDomainEventSource,
   TaskDomainEventType,
+  TaskPlanningRevisionStatus,
   TaskPlanningScopeStatus,
   TaskPlanningScopeType,
   TaskPlanningTrigger,
@@ -280,6 +281,41 @@ export const taskPlanningScopes = pgTable(
   ],
 );
 
+/** Immutable input/output record for one incremental planning attempt. */
+export const taskPlanningRevisions = pgTable(
+  'task_planning_revisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' })
+      .notNull(),
+    scopeId: uuid('scope_id')
+      .references(() => taskPlanningScopes.id, { onDelete: 'cascade' })
+      .notNull(),
+    inputRevision: bigint('input_revision', { mode: 'number' }).notNull(),
+    status: text('status').$type<TaskPlanningRevisionStatus>().notNull().default('running'),
+    trigger: jsonb('trigger').$type<TaskPlanningTrigger>().notNull(),
+    eventIds: text('event_ids').array().notNull().default([]),
+    inputSnapshot: jsonb('input_snapshot').notNull(),
+    proposal: jsonb('proposal'),
+    error: text('error'),
+    appliedAt: timestamptz('applied_at'),
+    ...createdAtColumns(),
+  },
+  (table) => [
+    uniqueIndex('task_planning_revisions_scope_revision_unique').on(
+      table.scopeId,
+      table.inputRevision,
+    ),
+    index('task_planning_revisions_workspace_status_idx').on(
+      table.workspaceId,
+      table.status,
+      table.createdAt,
+    ),
+    index('task_planning_revisions_scope_created_at_idx').on(table.scopeId, table.createdAt),
+  ],
+);
+
 export type LinearInstallationItem = typeof linearInstallations.$inferSelect;
 export type NewLinearInstallation = typeof linearInstallations.$inferInsert;
 export type LinearProjectBindingItem = typeof linearProjectBindings.$inferSelect;
@@ -294,6 +330,8 @@ export type TaskDomainEventItem = typeof taskDomainEvents.$inferSelect;
 export type NewTaskDomainEvent = typeof taskDomainEvents.$inferInsert;
 export type TaskPlanningScopeItem = typeof taskPlanningScopes.$inferSelect;
 export type NewTaskPlanningScope = typeof taskPlanningScopes.$inferInsert;
+export type TaskPlanningRevisionItem = typeof taskPlanningRevisions.$inferSelect;
+export type NewTaskPlanningRevision = typeof taskPlanningRevisions.$inferInsert;
 
 /** Keep creation and update columns consistent without repeating them per table. */
 function createdAtColumns() {

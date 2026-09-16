@@ -8,13 +8,21 @@ import type {
   TaskDomainEventSource,
   TaskDomainEventType,
   TaskItem,
+  TaskPlanningProposal,
+  TaskPlanningRevisionStatus,
   TaskPlanningScopeStatus,
   TaskPlanningScopeType,
   TaskPlanningTrigger,
 } from '@orvilo/types';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
 
-import type { LinearSyncInboxItem, LinearSyncOutboxItem } from '../schemas';
+import type {
+  LinearSyncInboxItem,
+  LinearSyncOutboxItem,
+  TaskDomainEventItem,
+  TaskPlanningRevisionItem,
+  TaskPlanningScopeItem,
+} from '../schemas';
 import {
   linearInstallations,
   linearIssueLinks,
@@ -22,6 +30,7 @@ import {
   linearSyncInbox,
   linearSyncOutbox,
   taskDomainEvents,
+  taskPlanningRevisions,
   taskPlanningScopes,
 } from '../schemas';
 import type { LobeChatDatabase } from '../type';
@@ -526,6 +535,211 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  async findPlanningScopeById(id: string) {
+    const [row] = await this.db
+      .select()
+      .from(taskPlanningScopes)
+      .where(
+        and(eq(taskPlanningScopes.id, id), eq(taskPlanningScopes.workspaceId, this.workspaceId)),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async listPlanningScopes() {
+    return this.db
+      .select()
+      .from(taskPlanningScopes)
+      .where(eq(taskPlanningScopes.workspaceId, this.workspaceId))
+      .orderBy(desc(taskPlanningScopes.updatedAt));
+  }
+
+  async listPlanningRevisions(scopeId: string, limit = 20) {
+    return this.db
+      .select()
+      .from(taskPlanningRevisions)
+      .where(
+        and(
+          eq(taskPlanningRevisions.workspaceId, this.workspaceId),
+          eq(taskPlanningRevisions.scopeId, scopeId),
+        ),
+      )
+      .orderBy(desc(taskPlanningRevisions.createdAt))
+      .limit(limit);
+  }
+
+  /** Claim queued scopes without holding a database connection during planning. */
+  async claimPlanningScopes(limit = 10, leaseMs = 120_000): Promise<TaskPlanningScopeItem[]> {
+    const lockedUntil = new Date(Date.now() + leaseMs);
+    const result = await this.db.execute(sql`
+      WITH candidates AS (
+        SELECT id
+        FROM task_planning_scopes
+        WHERE workspace_id = ${this.workspaceId}
+          AND dirty_revision > planned_revision
+          AND (
+            status = 'queued'
+            OR (status = 'running' AND (locked_until IS NULL OR locked_until < now()))
+          )
+        ORDER BY dirty_revision, updated_at
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )
+      UPDATE task_planning_scopes AS scopes
+      SET locked_until = ${lockedUntil},
+          status = 'running',
+          last_error = NULL,
+          updated_at = now()
+      FROM candidates
+      WHERE scopes.id = candidates.id
+      RETURNING scopes.*
+    `);
+
+    return result.rows as unknown as TaskPlanningScopeItem[];
+  }
+
+  async listDomainEventsForPlanning(
+    scope: TaskPlanningScopeItem,
+    fromRevision: number,
+    toRevision: number,
+  ): Promise<TaskDomainEventItem[]> {
+    return this.db
+      .select()
+      .from(taskDomainEvents)
+      .where(
+        and(
+          eq(taskDomainEvents.workspaceId, this.workspaceId),
+          gt(taskDomainEvents.revision, fromRevision),
+          lte(taskDomainEvents.revision, toRevision),
+          scope.scopeType === 'project' ? eq(taskDomainEvents.projectId, scope.scopeId) : undefined,
+        ),
+      )
+      .orderBy(taskDomainEvents.revision);
+  }
+
+  async createPlanningRevision(input: {
+    eventIds: string[];
+    inputRevision: number;
+    inputSnapshot: Record<string, unknown>;
+    proposal?: TaskPlanningProposal;
+    scopeId: string;
+    status?: TaskPlanningRevisionStatus;
+    trigger: TaskPlanningTrigger;
+  }): Promise<TaskPlanningRevisionItem> {
+    const [inserted] = await this.db
+      .insert(taskPlanningRevisions)
+      .values({
+        eventIds: input.eventIds,
+        inputRevision: input.inputRevision,
+        inputSnapshot: input.inputSnapshot,
+        proposal: input.proposal,
+        scopeId: input.scopeId,
+        status: input.status ?? 'running',
+        trigger: input.trigger,
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoNothing({
+        target: [taskPlanningRevisions.scopeId, taskPlanningRevisions.inputRevision],
+      })
+      .returning();
+
+    if (inserted) return inserted;
+    const [existing] = await this.db
+      .select()
+      .from(taskPlanningRevisions)
+      .where(
+        and(
+          eq(taskPlanningRevisions.workspaceId, this.workspaceId),
+          eq(taskPlanningRevisions.scopeId, input.scopeId),
+          eq(taskPlanningRevisions.inputRevision, input.inputRevision),
+        ),
+      )
+      .limit(1);
+    if (!existing) throw new Error('Failed to persist planning revision');
+    return existing;
+  }
+
+  async updatePlanningRevision(
+    id: string,
+    patch: {
+      appliedAt?: Date | null;
+      error?: string | null;
+      proposal?: TaskPlanningProposal;
+      status?: TaskPlanningRevisionStatus;
+    },
+  ) {
+    const [row] = await this.db
+      .update(taskPlanningRevisions)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(
+        and(
+          eq(taskPlanningRevisions.id, id),
+          eq(taskPlanningRevisions.workspaceId, this.workspaceId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  /** Advance a scope cursor only when no newer event arrived during planning. */
+  async finishPlanningScope(
+    scopeId: string,
+    inputRevision: number,
+    status: TaskPlanningScopeStatus,
+  ) {
+    const [row] = await this.db
+      .update(taskPlanningScopes)
+      .set({
+        lastError: null,
+        lastPlannedAt: new Date(),
+        lockedUntil: null,
+        plannedRevision: sql`greatest(${taskPlanningScopes.plannedRevision}, ${inputRevision})`,
+        status: sql`case when ${taskPlanningScopes.dirtyRevision} > ${inputRevision} then 'queued' else ${status} end`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(taskPlanningScopes.id, scopeId),
+          eq(taskPlanningScopes.workspaceId, this.workspaceId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async failPlanningScope(scopeId: string, error: string) {
+    const [row] = await this.db
+      .update(taskPlanningScopes)
+      .set({
+        lastError: error.slice(0, 2_000),
+        lockedUntil: null,
+        status: 'failed',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(taskPlanningScopes.id, scopeId),
+          eq(taskPlanningScopes.workspaceId, this.workspaceId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async requeuePlanningScope(scopeId: string) {
+    const [row] = await this.db
+      .update(taskPlanningScopes)
+      .set({ lastError: null, status: 'queued', updatedAt: new Date() })
+      .where(
+        and(
+          eq(taskPlanningScopes.id, scopeId),
+          eq(taskPlanningScopes.workspaceId, this.workspaceId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
   async recordDomainEvent(input: RecordTaskDomainEventInput) {
     return this.db.transaction((tx) =>
       this.recordDomainEventInDatabase(tx as unknown as LobeChatDatabase, input),
@@ -628,10 +842,31 @@ export class LinearSyncModel {
     const installation = await this.findInstallationById(link.installationId);
     if (!installation) return null;
 
+    const binding = link.bindingId ? await this.findBindingById(link.bindingId) : null;
+    if (binding && !binding.syncEnabled) return null;
+
+    const settings = binding?.settings;
+    const statusId = settings?.statusMappings?.find(
+      (mapping) => mapping.localStatus === input.task.status,
+    )?.linearStateId;
+    const assignmentId = settings?.assignmentMappings?.find(
+      (mapping) =>
+        mapping.orviloAgentId === input.task.assigneeAgentId ||
+        mapping.orviloUserId === input.task.assigneeUserId,
+    )?.linearUserId;
+    const shouldClearAssignment =
+      !input.task.assigneeAgentId &&
+      !input.task.assigneeUserId &&
+      Boolean(link.remoteSnapshot?.assigneeId);
+
     const payload = {
+      ...(assignmentId !== undefined || shouldClearAssignment
+        ? { assigneeId: assignmentId ?? null }
+        : {}),
       description: input.task.instruction,
       priority: input.task.priority,
       projectId: input.task.projectId,
+      ...(statusId !== undefined ? { stateId: statusId } : {}),
       title: input.task.name || input.task.identifier,
     };
     const event = await this.recordDomainEventInDatabase(db, {

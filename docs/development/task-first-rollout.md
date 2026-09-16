@@ -397,30 +397,38 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 #### 1.7.2 个人画像（S30.3）
 
-| 项                         | 规模              | 分类                  | 证据 / 说明                                                               |
-| -------------------------- | ----------------- | --------------------- | ------------------------------------------------------------------------- |
-| 画像浏览层（已退役）       | 53 文件 / 3249 行 | `DELETE_UI`           | `99528daa`                                                                |
-| `HomePortrait.tsx`         | 60 行             | `KEEP_SHARED`（暂留） | 生产消费者只有 `src/features/Home/index.tsx:391`                          |
-| `PortraitBubble/index.tsx` | 65 行             | `KEEP_SHARED`（暂留） | 同上 `:388`                                                               |
-| `portraitFraming.ts`       | 24 行             | `KEEP_SHARED`（暂留） | 布局计算，被 `index.tsx:78` 与 `:214` 使用                                |
-| `CustomizeModal/`          | 8 文件 / 677 行   | `NEEDS_TRACE`         | 开关的是「首页显示什么」，与画像本体不同寿                                |
-| `showHomePortrait` 偏好    | 非测试 16 处      | `KEEP_COMPAT`         | `initialState.ts:567` 默认 `true`；已持久化的用户会带回该值，删除要带迁移 |
+| 项                         | 规模              | 分类                            | 证据 / 说明                                                                                                                                                                                         |
+| -------------------------- | ----------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 画像浏览层（已退役）       | 53 文件 / 3249 行 | `DELETE_UI`                     | `99528daa`                                                                                                                                                                                          |
+| `HomePortrait.tsx`         | 60 行             | `DELETE_UI`（**方案明文要求**） | 方案 §S20 具体修改逐字：「移除 `HomePortrait`、`PortraitBubble`、仅用于形象的 framing/styles，以及已经无消费者的首页装饰 / 布局预设」                                                               |
+| `PortraitBubble/index.tsx` | 65 行             | `DELETE_UI`（同上）             | 同上                                                                                                                                                                                                |
+| `portraitFraming.ts`       | 24 行             | **不可整删**                    | `HOME_PORTRAIT_VISIBLE_RATIO` 被**活跃**的 `src/features/ArtworkStudio/Content.tsx:37,271,591` 使用（经 `AgentProfileArtwork/index.tsx:524,556` 打开）；方案要退役的是**首页**画像，不是 agent 画像 |
+| `CustomizeModal/`          | 8 文件 / 677 行   | `NEEDS_TRACE`                   | 开关的是「首页显示什么」，与画像本体不同寿                                                                                                                                                          |
+| `showHomePortrait` 偏好    | 非测试 16 处      | `DELETE_UI`（随画像一起）       | `initialState.ts:567` 默认 `true`；删组件后该键即无写入方，见下                                                                                                                                     |
 
-**阻塞（实测，非推测）**：Electron 的每标签页开启内容是 `HomeLayout + Home` ——
-`src/spa/router/DesktopHomeRoute.tsx` 同时 import `routes/(main)/home/_layout` 与
-`routes/(main)/home`，由 `desktopRouter.config.desktop.tsx:18` 的 `createHomeElement` 注入。
-`HomePortrait` 挂在 `Home` 内，所以删它必须同时改 Electron 的每标签页落地面，
-超出「退役一个独立功能」的范围，属 S80 决策。
+⚠️ **本条此前写错了，先更正。** 原稿把这三项标为 `KEEP_SHARED`（暂留），并给出阻塞理由
+「Electron 的每标签页内容是 `HomeLayout + Home`，所以删它必须改 Electron 落地面」。
+**两条都不对**：方案明写要删，而删它们**不需要**删 `features/Home` 或改 Electron 的落地面 ——
+`HomePortrait` 只是 `Home` 页面里的一个子组件。
+
+**真正的闸门是布局常量，不是 Electron**：这些常量被调成了**一组**，作用就是为画像预留那条 lane ——
+
+```
+PORTRAIT_LANE (:64) → COLLAPSED_CONTENT_GAIN (:66) → COLLAPSED_CONTENT_OFFSET (:67)
+  → SPEECH_RESERVED_WIDTH (:71) → SPEECH_INLINE_MIN (:74)
+另有 COMPACT_PORTRAIT_* (:75-78) 与 grid 的 HOME_PORTRAIT_CARD_GAP (:105)
+```
+
+只删组件而不重调这组常量，首页 hero 会留下**一条空的 lane**（肉眼可见的破损）；而重调它们的正确取值
+只能靠渲染后的页面判断 —— **这是本项真正的验证缺口，属 §13.1 的 S80**，不是「不可做」。
+**另有一处会让业务槽位失去落点**：`useHomePromoLine`（`src/business/client/features/useHomePromoLine.ts`，
+OSS 默认返回 `undefined`、由云端覆盖）在本仓**唯一消费者就是 `PortraitBubble`**，
+删画像后该槽位的返回值将无处渲染 —— 与删除同批决策。
 
 #### 1.7.3 通用评测（S30.4）
 
-| 项                                       | 分类          | 证据 / 说明                                                                                                |
-| ---------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
-| 工作台路由与视图                         | `DELETE_UI`   | `aaec4243`（129 文件 / 14137 行）。`src/routes/(main)/eval` 与 `src/features/Eval` 均已不存在              |
-| 浏览器侧 client 栈                       | `DELETE_UI`   | `cc3b9489`（23 文件 / 1402 行）：`src/store/eval/`、`src/services/agentEval.ts`、`evalKeys` 与 `keys.eval` |
-| 服务端 `agentEval` / `agentEvalExternal` | `KEEP_SHARED` | CLI 是活消费者（`apps/cli/src/commands/eval.ts` 用 `client.agentEval.*`），Acceptance 走同一执行骨干       |
-| `agentEvalRun` service 与 workflows      | `KEEP_SHARED` | `apps/server/src/services/agentEvalRun/`、`apps/server/src/router-hono/workflows/agent-eval-run/`          |
-| `ragEvalKeys` / `ragEvalService`         | `KEEP_SHARED` | 消费者是 `src/store/library/slices/ragEval/`                                                               |
+\| `agentEvalRun` service 与 workflows | `KEEP_SHARED` | `apps/server/src/services/agentEvalRun/`、`apps/server/src/router-hono/workflows/agent-eval-run/` |
+\| `ragEvalKeys` / `ragEvalService` | `KEEP_SHARED` | 消费者是 `src/store/library/slices/ragEval/` |
 
 > **这才是「哪些能删」的判据 —— 结构性差别，不是目录名**：通用评测有**独立的顶层 store**
 > （`src/store/eval`，20 文件），而它在本仓唯一的树外消费者是登出重置表
@@ -471,17 +479,17 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 ## 2. 工作包状态
 
-| 工作包                   | 实现状态     | 验证状态         | commit / 证据                                                     | 保留依赖 / 阻塞                                                                                                                                                                                                                                      |     |     |
-| ------------------------ | ------------ | ---------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- |
-| S00 基线与依赖清单       | IMPLEMENTED  | NOT\_RUN         | 本文 §1.7                                                         | 清单已按功能域填齐（2026-09-16）；纯清单，无需运行时验证。S30.1 社区 / 文稿属范围外，见 §1.7.1                                                                                                                                                       |     |     |
-| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de`                                  | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                             |     |     |
-| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`                                                        | 默认看板、Web 落地任务列表、**Web 侧卸载 Home**、\*\* 收件箱薄路由 `/inbox`\*\* 均已完成（§2.2）。两处遗留：①`HomeInbox` 继承的隐藏区块偏好在本页改不了；②未加导航项（按 URL 可达）。`features/Home` 仅为 Electron 开屏存活，其边界见 §2.2.1         |     |     |
-| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` `cc3b9489`            | S30.5 的服务端收口已完成（可证完备的单一收口点）；agent 分享的访客页不在本仓，属云端侧。**`apps/share` 按 §6.5 L295 明文保留**（它只服务主题 / 页面 / 产物三类分享，目录内零 agent 分享面），见 §1.7.4 与 §2.5                                       |     |     |
-| S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`                                  | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3） |     |     |
-| S50 资源与产物归位       | IMPLEMENTED  | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` `263ebf78` `15d06a28` `ee076357` | 四项全部完成并在本机验证（PGlite + `bunx tsc`）；运行级追溯复用既有 `works.originTopicId`，**零新增表**，见 §2.6                                                                                                                                     |     |     |
-| S60 Goal 与规则下沉      | IMPLEMENTED  | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`                                  | Goal 与详情 / 对话关联两侧经审计均为**已满足**（非待办）；规则面已下沉，见 §2.7                                                                                                                                                                      |     |     |
-| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`                                             | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                          |     |     |
-| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                                                 | 覆盖全部                                                                                                                                                                                                                                             |     |     |
+| 工作包                   | 实现状态     | 验证状态         | commit / 证据                                                     | 保留依赖 / 阻塞                                                                                                                                                                                                                                                                                                        |     |     |
+| ------------------------ | ------------ | ---------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- |
+| S00 基线与依赖清单       | IMPLEMENTED  | NOT\_RUN         | 本文 §1.7                                                         | 清单已按功能域填齐（2026-09-16）；纯清单，无需运行时验证。S30.1 社区 / 文稿属范围外，见 §1.7.1                                                                                                                                                                                                                         |     |     |
+| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de`                                  | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                                                                                               |     |     |
+| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`                                                        | 已完成：默认看板、Web 落地任务列表、**Web 侧卸载 Home**、**收件箱薄路由 `/inbox`**（§2.2）。**未做（方案明文要求）**：移除首页画像 `HomePortrait` / `PortraitBubble` —— 闸门是为画像预留 lane 的那组布局常量，重调须渲染验证，见 §1.7.2。另两处遗留：`HomeInbox` 的隐藏区块偏好在本页改不了；未加导航项（按 URL 可达） |     |     |
+| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` `cc3b9489`            | S30.5 的服务端收口已完成（可证完备的单一收口点）；agent 分享的访客页不在本仓，属云端侧。**`apps/share` 按 §6.5 L295 明文保留**（它只服务主题 / 页面 / 产物三类分享，目录内零 agent 分享面），见 §1.7.4 与 §2.5                                                                                                         |     |     |
+| S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`                                  | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3）                                                                   |     |     |
+| S50 资源与产物归位       | IMPLEMENTED  | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` `263ebf78` `15d06a28` `ee076357` | 四项全部完成并在本机验证（PGlite + `bunx tsc`）；运行级追溯复用既有 `works.originTopicId`，**零新增表**，见 §2.6                                                                                                                                                                                                       |     |     |
+| S60 Goal 与规则下沉      | IMPLEMENTED  | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`                                  | Goal 与详情 / 对话关联两侧经审计均为**已满足**（非待办）；规则面已下沉，见 §2.7                                                                                                                                                                                                                                        |     |     |
+| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`                                             | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                                                                                            |     |     |
+| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                                                 | 覆盖全部                                                                                                                                                                                                                                                                                                               |     |     |
 
 ---
 
@@ -593,10 +601,13 @@ import { imageRouter } from '@/server/routers/lambda/image';
    这条正是「把宿主从 `Activity hidden` 的 `display:none` 容器里挪到常驻布局」能保持行为等价的依据 ——
    宿主从来就没有被那个 `display:none` 遮住过。
 
-4. **旧 Home 仍不能删。** Electron 的 index 槽仍注入 `DesktopHomeRoute`，它包着
+4. **旧 Home 目录仍不能删。** Electron 的 index 槽仍注入 `DesktopHomeRoute`，它包着
    `HomeLayout + Home`。删掉 `features/Home` 会**直接打掉每个 Electron 标签页的开屏内容**。
-   因此 `HomePortrait` / `PortraitBubble` 的删除不是「推迟」，而是**当前不可达** ——
-   要么先决定 Electron 首页的去向，要么不动。
+
+   ⚠️ **但这与「能不能删 `HomePortrait` / `PortraitBubble`」是两件事，前一版把它们混为一谈了。**
+   原稿写「因此 `HomePortrait` / `PortraitBubble` 的删除不是推迟，而是当前不可达」——**错的**：
+   方案 §S20 明文要求移除这两个组件，而它们是 `Home` 页面里的**子组件**，删它们既不需要删目录、
+   也不需要改 Electron 的落地面。真正的闸门是那组为画像预留 lane 的布局常量，见 §1.7.2。
 
 ⚠️ **S20 的真实缺口不是「旧首页没删」，而是「收件箱在 Web 上不可达」—— 本分支引入的功能回退**
 

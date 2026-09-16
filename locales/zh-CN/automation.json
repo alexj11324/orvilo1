@@ -49,6 +49,7 @@
   "page.empty.hint": "自动化按触发条件运行周期性的智能体任务，可以从空白开始创建，也可以在下方选择模板。",
   "page.empty.title": "还没有自动化",
   "page.load_failed": "加载自动化失败",
+  "page.loading": "正在加载自动化…",
   "page.new_automation": "新建自动化",
   "page.no_matches": "没有匹配的自动化",
   "page.retry": "重试",

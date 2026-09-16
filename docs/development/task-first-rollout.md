@@ -511,33 +511,49 @@ import { imageRouter } from '@/server/routers/lambda/image';
 | `locales/en-US/chat.json` 同上两条                                | 同上                        | 同上                    |
 | `locales/zh-CN/chat.json` 同上两条                                | `定时任务` / `暂无定时任务` | `自动化` / `暂无自动化` |
 
-**未完成 —— 入口合并，以及一个改变做法的约束**
+**已完成 —— 视图合并（S40-c）**
 
-⚠️ **方案 §7 指定的做法（列表入口 = `/tasks?collection=scheduled`）会让「自动化」导航项永远不高亮。**
+`/automations` 从 519 行独立表格改成薄壳，与 tasks 页的「自动化」tab **共用同一份视图与同一份读取**：
 
-证据：`src/hooks/useActiveTabKey.ts` 返回 **pathname 的第一段**作为 `SidebarTabKey`，**不读 query**。
-于是 `/tasks` 与 `/tasks?collection=scheduled` 都解析成 `tasks` —— 用户点「自动化」会把高亮跑到「任务」上。
-（`src/features/NavPanel/routeKey.ts` 同样只看 pathname，且 `tasks` / `automations` 都无 case，落到 `default: 'home'`，与本条无关。）
+| 新增 / 改动                                       | 职责                                                                      |
+| ------------------------------------------------- | ------------------------------------------------------------------------- |
+| `Automations/useScheduledTaskPage.ts`（新）       | 唯一的 scheduled 读取；统一 page size，令两个入口落进同一个 SWR key       |
+| `Automations/AutomationScheduleFilters.tsx`（新） | 受控的 `AutomationScopeSwitch` / `AutomationStatusSelect`                 |
+| `Automations/AutomationScheduleList.tsx`（新）    | 共享主体：搜索、表格、勾选、批量条、行内菜单、分页；**自身不发请求**      |
+| `Automations/shared.ts`（扩展）                   | `AutomationScope` / `AutomationStatusFilter` / 两个 resolver / 页尺寸常量 |
+| `AutomationsPage.tsx`（重写 519→140 行）          | 只剩标题行、「全部运行」链接、新建按钮，以及筛选写入的 URL 参数           |
+| `AgentTasksPage.tsx`                              | scheduled 分支挂 `AutomationScheduleList` + 两个页头筛选控件              |
 
-**应改为**：导航项**留在 `/automations`**，让 `/automations` 渲染同一个 scheduled 集合视图。
-这样「一个视图实现 + 一份数据 + 两个入口」成立，且高亮正确。
+方案 §7 要求逐项对照的 5 项能力，现在**两个入口都有**：
 
-> ⚠️ **顺序约束（做反会造成真实回退）**：
-> 必须**先把下面 5 项能力搬进 scheduled 集合，再切入口**。
-> 反过来先让 `/automations` 渲染 scheduled 集合，会让 active/paused 过滤、`scope=created`、
-> 搜索、批量操作、行内 pause/resume **当场消失** —— 这正是方案 §14 禁止的
-> 「先删，后面再补」的中间破损态。当前 `/automations` 仍是 `AutomationsPage`，
-> 功能完整，**不要提前动它**。
+| 能力                        | 实现                                                                     |
+| --------------------------- | ------------------------------------------------------------------------ |
+| active/paused 状态过滤      | `?status=active\|paused` → `automationStatusesFor()` → 服务端 `statuses` |
+| `scope=created`「由我创建」 | `?scope=created` → 服务端 `scope`                                        |
+| 客户端搜索                  | `AutomationScheduleList` 内，按 `name ?? identifier` 过滤**当前页**      |
+| 批量 pause/resume/delete    | 勾选 + 底部 sticky 批量条                                                |
+| 行内 pause/resume           | 每行 `DropdownMenu`：立即运行 / 暂停・恢复 / 删除                        |
 
-**仍待搬运的能力**（Automations 有、scheduled 集合没有，方案 §7 要求逐项对照）：
+**关键决定：scheduled 集合整体改用自动化表格，而不是给 `TaskList` 打补丁。**
 
-| 能力                        | Automations 位置                      | 待办                                                                                   |
-| --------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------- |
-| active/paused 状态过滤      | `AutomationsPage.tsx:274-278,362-397` | 搬进统一视图（数据层已支持，见 S40-a）                                                 |
-| `scope=created`「由我创建」 | `:266-272`                            | 同上；注意与 agentId/projectId 收窄**互斥**                                            |
-| 客户端搜索                  | `:234-241`                            | 同上（服务端 `list` 无 `search` 参数）                                                 |
-| 批量 pause/resume/delete    | `:290-310,494-509`                    | 同上                                                                                   |
-| 行内 pause/resume           | `:166-203`                            | scheduled 的右键菜单只有 runNow/delete（`useTaskItemContextMenu.tsx:178-187,242-247`） |
+原自动化表格有「创建者 / 状态 / 触发方式 / 下次运行」四列，`TaskList` 的行没有。
+若只把筛选与批量搬过去、保留 `TaskList`，切入口时这四列会**静默消失** —— 所以 scheduled 分支整体换掉。
+代价：`getScheduledTaskViewOptions`（`groupBy: 'automationMode'` 那份 view options 覆盖）成为死代码，
+已删除，`AgentTasksPage.test.ts` 中对应的 2 个用例一并移除。
+
+**入口保持 `/automations` 不动（与方案 §7 的写法不同）。**
+
+`src/hooks/useActiveTabKey.ts` 只取 pathname 第一段、**不读 query**，所以方案 §7 的
+「入口 = `/tasks?collection=scheduled`」会让「自动化」导航项永远不高亮（点它，高亮跑到「任务」上）。
+让 `/automations` 保留独立路径、渲染同一套视图，则「一个实现 + 一份数据 + 两个入口 + 高亮正确」
+同时成立，且已存在的深链接不破坏。
+
+**本次顺带修掉的真实缺陷**：`clampCollectionPage` 内部硬编码 `COLLECTION_PAGE_SIZE`(50)。
+scheduled tab 改为 25 / 页后，总数落在 26–50 时第 2 页**存在却会被该 effect 强制弹回第 1 页**。
+现已把 `pageSize` 提为必填参数并补用例。
+
+**已知未覆盖**：服务端 `taskService.list` 没有 `search` 参数，所以搜索只作用于当前已取回的一页。
+这是沿用原 `/automations` 的行为，不是本次引入；要真正全局搜索需先给服务端加 `search`。
 
 **不需要动的**：`useFetchAutomationRuns` / `taskKeys.automationRuns` —— 它走 `task.automationRuns` **独立 procedure**（run 维度，不是 task 维度），与本次统一无关。
 `/automations/new`、`/automations/runs`、`/automations/:taskId` 按方案 §7 分别处理；`:taskId` 是 `T-<seq>` 可读标识符，服务端 `getTaskDetail` 双解析，**不需要转换 helper**。

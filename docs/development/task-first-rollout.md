@@ -509,12 +509,23 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 **尚未做（已知，非回退）**
 
-- 每页「恰好一个宿主」：`TopicChatDrawer` 仍有 4 处重复宿主
+- 每页「恰好一个宿主」：`TopicChatDrawer` 仍有 4 处页面级宿主
   （`Portal/TaskDetail/Body.tsx:51`、`Portal/TaskResult/Body.tsx:77`、
   `AgentTaskDetail/TaskDetailPage.tsx:118`、`Automations/AutomationDetailPage.tsx:301`）。
-  它们**在改动前就与 Home 的宿主并存**，且因内容相同而完全重叠，所以不构成本次回退；
-  清理是跟进项。
-- 移动端：`(mobile)` 树不使用 `(main)/_layout`，因此这三个宿主在移动端**本来就没有**，行为未变。
+  它们**在改动前就与 Home 的宿主并存**，且因内容相同而完全重叠，所以不构成本次回退。
+
+  ⚠️ **修法已经查清，且「直接删掉这 4 处」是错的。** `GlobalOverlays`（`src/features/GlobalOverlays/index.tsx:39`）
+  的注释写着「exactly one host is mounted for the whole app」，但它只在 **`(main)`** 两处布局里挂载
+  （`routes/(main)/_layout/index.tsx:68`、`index.desktop.tsx:98`）—— `(mobile)` 树有自己的 `_layout`，
+  **没有挂它**。因此这 4 处页面级宿主在移动端是**唯一**宿主，删掉它们会让移动端的任务会话抽屉彻底没有宿主。
+  两个平台各自成立，冲突只发生在 `(main)`：全局宿主一旦因首次打开而挂载就**常驻**（`topicMounted` 只置真），
+  此时再从任务列表点进任务详情页，页面级宿主与它读同一份 `activeTopicDrawerTopicId`，抽屉打开时会渲染两层。
+  正确做法二选一：①把宿主统一到 `GlobalOverlays` 并**先给移动端布局也挂上**，再删 4 处页面宿主；
+  ②让页面级宿主在全局宿主存在时渲染 `null`（需要一个「已被全局托管」的 context，移动端无 provider 故行为不变）。
+  两条都需要在真实 Web + 移动端上验证「抽屉只出现一层」，属 §13.1 的 S80。
+
+- 移动端：`(mobile)` 树不使用 `(main)/_layout`，因此 `GlobalOverlays` 的三个子项在移动端**本来就没有**，
+  行为未变 —— 上面的宿主问题是同一件事的另一面。
 
 **验证**：`src/spa/router/`、`src/features/{GlobalOverlays,Home,HomeLayout}/` 共 **207 个用例全绿**；
 `desktopRouter.sync.test.tsx` 中断言「Web 索引槽为空」的那条**按新契约改写**为

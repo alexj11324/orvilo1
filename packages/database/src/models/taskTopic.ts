@@ -134,18 +134,21 @@ export class TaskTopicModel {
     expectedState: TaskTopicIntegration['state'],
     token: string,
     staleBefore: Date,
+    leaseTopicId = topicId,
   ): Promise<boolean> {
     const claimed = await this.db
       .update(taskTopics)
       .set({
-        integration: sql`coalesce(${taskTopics.integration}, '{}'::jsonb) || jsonb_build_object('processingToken', ${token}::text, 'processingStartedAt', ${new Date().toISOString()}::text)`,
+        integration: sql`coalesce(${taskTopics.integration}, '{}'::jsonb) || jsonb_build_object('integrationOwnerTopicId', ${leaseTopicId}::text, 'processingToken', ${token}::text, 'processingStartedAt', ${new Date().toISOString()}::text)`,
       })
       .where(
         and(
           eq(taskTopics.taskId, taskId),
-          eq(taskTopics.topicId, topicId),
+          eq(taskTopics.topicId, leaseTopicId),
           this.ownership(),
-          sql`${taskTopics.integration}->>'state' = ${expectedState}`,
+          ...(leaseTopicId === topicId
+            ? [sql`${taskTopics.integration}->>'state' = ${expectedState}`]
+            : []),
           or(
             sql`${taskTopics.integration}->>'processingToken' is null`,
             sql`coalesce((${taskTopics.integration}->>'processingStartedAt')::timestamptz, '-infinity'::timestamptz) < ${staleBefore}`,
@@ -153,7 +156,33 @@ export class TaskTopicModel {
         ),
       )
       .returning({ id: taskTopics.id });
-    return claimed.length > 0;
+    if (claimed.length === 0) return false;
+
+    // A corrective chain leases its original task-run row. Backfill the
+    // callback's owner with an atomic JSONB patch and require its state to
+    // remain processable after acquiring that shared lease.
+    if (leaseTopicId !== topicId) {
+      const current = await this.db
+        .update(taskTopics)
+        .set({
+          integration: sql`coalesce(${taskTopics.integration}, '{}'::jsonb) || jsonb_build_object('integrationOwnerTopicId', ${leaseTopicId}::text)`,
+        })
+        .where(
+          and(
+            eq(taskTopics.taskId, taskId),
+            eq(taskTopics.topicId, topicId),
+            this.ownership(),
+            sql`${taskTopics.integration}->>'state' = ${expectedState}`,
+          ),
+        )
+        .returning({ id: taskTopics.id });
+      if (current.length === 0) {
+        await this.releaseIntegration(taskId, leaseTopicId, token);
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /** Release only the integration lease owned by this invocation. */

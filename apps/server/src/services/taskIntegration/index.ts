@@ -153,6 +153,22 @@ export class TaskIntegrationService {
       ) {
         return 'settled';
       }
+
+      const topicId = taskTopic.topicId;
+      const relatedRows =
+        record.role === 'integrate' || !record.integrationOwnerTopicId
+          ? await this.taskTopicModel.findByTaskId(task.id)
+          : undefined;
+
+      // Once a corrective row has spawned a successor, its completion is
+      // historical. Queue/webhook redelivery must leave the active child in
+      // charge instead of finalizing or redispatching the parent again.
+      if (
+        record.role === 'integrate' &&
+        this.hasCorrectiveSuccessor(topicId, record, relatedRows ?? [])
+      ) {
+        return 'hold';
+      }
       if (record.state === 'blocked') return 'blocked';
 
       // A task row in conflict already has a corrective run in flight. A
@@ -168,14 +184,21 @@ export class TaskIntegrationService {
           : record.state === 'merging');
       if (!processable) return 'blocked';
 
-      const topicId = taskTopic.topicId;
+      const integrationOwnerTopicId =
+        record.integrationOwnerTopicId ??
+        this.resolveIntegrationOwnerTopicId(topicId, record, relatedRows ?? []);
+      const activeRecord =
+        record.integrationOwnerTopicId === integrationOwnerTopicId
+          ? record
+          : { ...record, integrationOwnerTopicId };
       const claimToken = randomUUID();
       const claimed = await this.taskTopicModel.claimIntegration(
         task.id,
         topicId,
-        record.state,
+        activeRecord.state,
         claimToken,
         new Date(Date.now() - INTEGRATION_CLAIM_TTL_MS),
+        integrationOwnerTopicId,
       );
       if (!claimed) {
         const latest = await this.taskTopicModel.findByTopicId(topicId);
@@ -187,51 +210,67 @@ export class TaskIntegrationService {
 
       let outcome: IntegrationOutcome;
       try {
+        // Close the query/claim race: a child may be inserted after the first
+        // successor read but before this invocation acquires the chain lease.
+        if (
+          activeRecord.role === 'integrate' &&
+          this.hasCorrectiveSuccessor(
+            topicId,
+            activeRecord,
+            await this.taskTopicModel.findByTaskId(task.id),
+          )
+        ) {
+          return 'hold';
+        }
         outcome =
-          record.state === 'publish_failed'
-            ? await this.retryLocalPublish(task, topicId, record)
-            : record.role === 'task'
-              ? record.state === 'merging'
-                ? record.repo
+          activeRecord.state === 'publish_failed'
+            ? await this.retryLocalPublish(task, topicId, activeRecord)
+            : activeRecord.role === 'task'
+              ? activeRecord.state === 'merging'
+                ? activeRecord.repo
                   ? await this.dispatchCorrective(
                       task,
                       topicId,
-                      record,
+                      activeRecord,
                       undefined,
                       params.completionReservationId,
                     )
-                  : record.integratedSha
-                    ? await this.publishAndCleanup(task.id, record, record.integratedSha)
+                  : activeRecord.integratedSha
+                    ? await this.publishAndCleanup(
+                        task.id,
+                        activeRecord,
+                        activeRecord.integratedSha,
+                      )
                     : 'blocked'
-                : record.repo
+                : activeRecord.repo
                   ? await this.integrateRemoteRun(
                       task,
                       topicId,
-                      record,
+                      activeRecord,
                       params.completionReservationId,
                     )
                   : await this.integrateTaskRun(
                       task,
                       topicId,
-                      record,
+                      activeRecord,
                       params.completionReservationId,
                     )
-              : record.repo
+              : activeRecord.repo
                 ? await this.finalizeRemoteCorrectiveRun(
                     task,
                     topicId,
-                    record,
+                    activeRecord,
                     params.completionReservationId,
                   )
                 : await this.finalizeCorrectiveRun(
                     task,
                     topicId,
-                    record,
+                    activeRecord,
                     params.completionReservationId,
                   );
       } finally {
         await this.taskTopicModel
-          .releaseIntegration(task.id, topicId, claimToken)
+          .releaseIntegration(task.id, integrationOwnerTopicId, claimToken)
           .catch((error) =>
             log(
               'integrateOnComplete: failed to release claim for %s/%s — %O',
@@ -1108,6 +1147,41 @@ export class TaskIntegrationService {
   /** Prefer the remote-tracking ref so merges land on the published tip. */
   private baseRef(record: TaskTopicIntegration): string {
     return record.baseBranch === 'HEAD' ? 'HEAD' : `origin/${record.baseBranch}`;
+  }
+
+  private hasCorrectiveSuccessor(
+    topicId: string,
+    record: TaskTopicIntegration,
+    rows: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>,
+  ): boolean {
+    return rows.some(
+      (row) =>
+        row.topicId !== topicId &&
+        row.integration?.role === 'integrate' &&
+        row.integration.runTopicId === topicId &&
+        row.integration.branch === record.branch,
+    );
+  }
+
+  /** Follow corrective parent links back to the task row that owns the chain lease. */
+  private resolveIntegrationOwnerTopicId(
+    topicId: string,
+    record: TaskTopicIntegration,
+    rows: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>,
+  ): string {
+    if (record.role === 'task') return topicId;
+
+    const byTopicId = new Map(rows.map((row) => [row.topicId, row.integration]));
+    const visited = new Set<string>([topicId]);
+    let ownerTopicId = topicId;
+    let current: TaskTopicIntegration | null | undefined = record;
+    while (current?.role === 'integrate' && current.runTopicId) {
+      if (visited.has(current.runTopicId)) break;
+      visited.add(current.runTopicId);
+      ownerTopicId = current.runTopicId;
+      current = byTopicId.get(ownerTopicId);
+    }
+    return ownerTopicId;
   }
 
   /**

@@ -175,6 +175,76 @@ describe('TaskIntegrationService', () => {
     expect(mockRunner.runTask).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [
+      'device',
+      seedRecord({ attempts: 1, role: 'integrate', runTopicId: 'topic_0', state: 'conflict' }),
+    ],
+    [
+      'remote',
+      remoteRecord({ attempts: 1, role: 'integrate', runTopicId: 'topic_0', state: 'merging' }),
+    ],
+  ])('holds a stale %s corrective callback once it has a successor', async (_kind, record) => {
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
+    mockTaskTopicModel.findByTaskId.mockResolvedValue([
+      { integration: record, topicId: 'topic_1' } as TaskTopicItem,
+      {
+        integration: {
+          ...record,
+          attempts: 2,
+          role: 'integrate',
+          runTopicId: 'topic_1',
+          state: 'merging',
+        },
+        topicId: 'topic_2',
+      } as TaskTopicItem,
+    ]);
+
+    await expect(
+      service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' }),
+    ).resolves.toBe('hold');
+
+    expect(mockTaskTopicModel.claimIntegration).not.toHaveBeenCalled();
+    expect(deviceGateway.finalizeGitMerge).not.toHaveBeenCalled();
+    expect(findBranchPr).not.toHaveBeenCalled();
+    expect(mockRunner.runTask).not.toHaveBeenCalled();
+    expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+  });
+
+  it('rechecks for a corrective successor after acquiring the chain lease', async () => {
+    const record = remoteRecord({
+      attempts: 1,
+      integrationOwnerTopicId: 'topic_0',
+      role: 'integrate',
+      runTopicId: 'topic_0',
+      state: 'merging',
+    });
+    const child = {
+      integration: {
+        ...record,
+        attempts: 2,
+        role: 'integrate',
+        runTopicId: 'topic_1',
+      },
+      topicId: 'topic_2',
+    } as TaskTopicItem;
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
+    mockTaskTopicModel.findByTaskId.mockResolvedValueOnce([]).mockResolvedValueOnce([child]);
+
+    await expect(
+      service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' }),
+    ).resolves.toBe('hold');
+
+    expect(mockTaskTopicModel.claimIntegration).toHaveBeenCalledTimes(1);
+    expect(mockTaskTopicModel.releaseIntegration).toHaveBeenCalledWith(
+      'task_1',
+      'topic_0',
+      expect.any(String),
+    );
+    expect(findBranchPr).not.toHaveBeenCalled();
+    expect(mockRunner.runTask).not.toHaveBeenCalled();
+  });
+
   it('merges, pushes, cleans up and settles on a clean merge', async () => {
     mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
     const persisted = asTopic(

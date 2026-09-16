@@ -122,6 +122,9 @@ describe('TaskTopicModel', () => {
       ]);
 
       expect(results.filter(Boolean)).toHaveLength(1);
+      await expect(topicModel.findByTopicId('tpc_integration_claim')).resolves.toMatchObject({
+        integration: { integrationOwnerTopicId: 'tpc_integration_claim' },
+      });
       const owner = results[0] ? 'owner-a' : 'owner-b';
       const other = owner === 'owner-a' ? 'owner-b' : 'owner-a';
 
@@ -171,6 +174,65 @@ describe('TaskTopicModel', () => {
           'publish_failed',
           'new-owner',
           new Date(Date.now() + 60_000),
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('shares one lease across a corrective chain', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Lease integration chain' });
+      await createTopic('tpc_integration_owner');
+      await createTopic('tpc_integration_child');
+      await topicModel.add(task.id, 'tpc_integration_owner', {
+        integration: { ...integration, state: 'conflict' },
+        seq: 1,
+      });
+      await topicModel.add(task.id, 'tpc_integration_child', {
+        integration: {
+          ...integration,
+          integrationOwnerTopicId: 'tpc_integration_owner',
+          role: 'integrate',
+          runTopicId: 'tpc_integration_owner',
+          state: 'verification_pending',
+        },
+        seq: 2,
+      });
+      const staleBefore = new Date(Date.now() - 60_000);
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_child',
+          'verification_pending',
+          'owner-a',
+          staleBefore,
+          'tpc_integration_owner',
+        ),
+      ).resolves.toBe(true);
+      await expect(topicModel.findByTopicId('tpc_integration_child')).resolves.toMatchObject({
+        integration: { integrationOwnerTopicId: 'tpc_integration_owner' },
+      });
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_child',
+          'verification_pending',
+          'owner-b',
+          staleBefore,
+          'tpc_integration_owner',
+        ),
+      ).resolves.toBe(false);
+
+      await topicModel.releaseIntegration(task.id, 'tpc_integration_owner', 'owner-a');
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_child',
+          'verification_pending',
+          'owner-b',
+          staleBefore,
+          'tpc_integration_owner',
         ),
       ).resolves.toBe(true);
     });

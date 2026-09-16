@@ -2,6 +2,7 @@
 
 import { Block, Flexbox } from '@lobehub/ui';
 import { Alert, Button, Select, Switch, Text, toast } from '@lobehub/ui/base-ui';
+import type { TaskPlanningProposal } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Link2, RefreshCw } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -49,15 +50,10 @@ type ProjectBinding = {
   projectId: string;
   replanningEnabled: boolean;
 };
-type PlanningProposal = {
-  actions: Array<{ action: string; reason: string }>;
-  explanation: string;
-  requiresApproval: boolean;
-};
 type PlanningRevision = {
   createdAt: string | Date;
   id: string;
-  proposal: PlanningProposal | null;
+  proposal: TaskPlanningProposal | null;
   status: string;
 };
 type PlanningScope = {
@@ -108,6 +104,15 @@ const LinearWorkspaceSettings = memo(() => {
       lambdaClient.linearSync.bindings.query(),
       lambdaClient.linearSync.planningScopes.query(),
     ]);
+    if (
+      !catalogResponse?.data ||
+      !installationResponse?.data ||
+      !projectResponse?.data ||
+      !bindingResponse?.data ||
+      !scopeResponse?.data
+    ) {
+      throw new Error('Linear workspace settings returned an incomplete response');
+    }
     setCatalog(catalogResponse.data);
     setInstallations(installationResponse.data);
     setLocalProjects(projectResponse.data);
@@ -145,7 +150,15 @@ const LinearWorkspaceSettings = memo(() => {
     }
     void lambdaClient.linearSync.planningRevisions
       .query({ limit: 10, scopeId: selectedPlanningScope.id })
-      .then((response) => setPlanningRevisions(response.data))
+      .then((response) => {
+        if (!response?.data) throw new Error('Planning revisions response is empty');
+        setPlanningRevisions(
+          response.data.map((revision) => ({
+            ...revision,
+            proposal: revision.proposal as TaskPlanningProposal | null,
+          })),
+        );
+      })
       .catch((error) => {
         console.error('[LinearWorkspaceSettings] Failed to load planning revisions', error);
       });
@@ -183,6 +196,7 @@ const LinearWorkspaceSettings = memo(() => {
         organizationId: selectedOrganizationId,
         organizationName: catalog?.organizations.find((item) => item.id === selectedOrganizationId)?.name,
       });
+      if (!response?.data) throw new Error('Linear installation response is empty');
       setInstallations((current) => [
         response.data,
         ...current.filter((item) => item.id !== response.data.id),
@@ -209,6 +223,7 @@ const LinearWorkspaceSettings = memo(() => {
         settings: { autoExecutionEnabled, replanningEnabled },
         teamIds: remoteProject?.teamIds,
       });
+      if (!response?.data) throw new Error('Linear binding response is empty');
       setBindings((current) => [
         response.data,
         ...current.filter((item) => item.id !== response.data.id),
@@ -364,9 +379,10 @@ const LinearWorkspaceSettings = memo(() => {
               </Flexbox>
             </Block>
 
-            <Alert title={t('workspaceSetting.linear.workerTitle')}>
-              {t('workspaceSetting.linear.workerDescription')}
-            </Alert>
+            <Alert
+              description={t('workspaceSetting.linear.workerDescription')}
+              title={t('workspaceSetting.linear.workerTitle')}
+            />
             <Button
               disabled={!selectedInstallationId || !canManage}
               icon={RefreshCw}
@@ -403,15 +419,16 @@ const LinearWorkspaceSettings = memo(() => {
                     <Alert
                       title={latestProposalRevision.proposal.explanation}
                       type={latestProposalRevision.proposal.requiresApproval ? 'warning' : 'info'}
-                    >
-                      <Flexbox gap={4}>
-                        {latestProposalRevision.proposal.actions.map((action, index) => (
-                          <Text key={`${latestProposalRevision.id}-${index}`} type="secondary">
-                            {action.action}: {action.reason}
-                          </Text>
-                        ))}
-                      </Flexbox>
-                    </Alert>
+                      description={
+                        <Flexbox gap={4}>
+                          {latestProposalRevision.proposal.actions.map((action, index) => (
+                            <Text key={`${latestProposalRevision.id}-${index}`} type="secondary">
+                              {action.action}: {action.reason}
+                            </Text>
+                          ))}
+                        </Flexbox>
+                      }
+                    />
                   ) : (
                     <Text type="secondary">{t('workspaceSetting.linear.noProposal')}</Text>
                   )}

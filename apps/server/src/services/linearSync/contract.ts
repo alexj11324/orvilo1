@@ -1,3 +1,4 @@
+import type { GenerateObjectSchema } from '@orvilo/model-runtime';
 import { z } from 'zod';
 
 /**
@@ -172,4 +173,4 @@ export const taskPlanningProposalJsonSchema = {
     type: 'object' as const,
   },
   strict: true,
-} as const;
+} satisfies GenerateObjectSchema;

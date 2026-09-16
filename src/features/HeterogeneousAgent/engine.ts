@@ -135,13 +135,13 @@ export const buildEngineProviderPatch = (
   if (current.engine === nextEngine) return { engine: nextEngine };
 
   const nextCapability = getHeteroSelectorCapability(resolveOrviloEngineCliType(nextEngine));
-  const effort = current.effort?.trim();
+  const effort = current.effort;
   const keepEffort =
     !!effort &&
     effort !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION &&
     !!nextCapability?.effort?.levels(HETEROGENEOUS_AGENT_DEFAULT_SELECTION).includes(effort);
 
-  return {
+  const patch: Record<string, unknown> = {
     // User-authored args spell flags for the old engine's CLI family; keep none.
     args: null,
     effort: keepEffort ? current.effort : HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
@@ -149,4 +149,6 @@ export const buildEngineProviderPatch = (
     model: HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
     speed: HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
   };
+
+  return patch as PartialDeep<HeterogeneousProviderConfig>;
 };

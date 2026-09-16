@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
       avatar: 'current-avatar',
       name: 'Current Agent',
     } as Record<string, unknown>,
-  },
+  } as Record<string, Record<string, unknown>>,
   agentId: 'agt_current',
   fetchAgentList: vi.fn(),
   listSelect: vi.fn(),

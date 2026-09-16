@@ -148,7 +148,9 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
     });
 
     it('clears stale heteroSessionId when result=error and no sessionId (sandbox recycled)', async () => {
-      const updateMetadata = vi.fn(async () => undefined);
+      const updateMetadata = vi.fn(
+        async (_topicId: string, _patch: Record<string, unknown>) => undefined,
+      );
       const findById = vi.fn(async () => ({
         agentId: null,
         id: 'topic-stale',

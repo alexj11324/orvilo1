@@ -20,6 +20,7 @@ import type {
 } from '@orvilo/types';
 import { getHeteroSelectorCapability, HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import isEqual from 'fast-deep-equal';
 import { Cpu } from 'lucide-react';
 import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -61,6 +62,7 @@ import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
+import { agentSelectors } from '@/store/agent/selectors';
 import { useElectronStore } from '@/store/electron';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -220,7 +222,7 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'chat']);
   const { allowed: canEdit } = usePermission('edit_own_content');
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
-  const config = useAgentStore((s) => s.agentMap[agentId]);
+  const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
   const provider = config?.agencyConfig?.heterogeneousProvider;
   const isWorkspaceAgent = !!config?.workspaceId;
   const {

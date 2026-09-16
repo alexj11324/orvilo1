@@ -58,8 +58,12 @@ jobs:
       - name: Resolve app database URL
         id: db
         run: |
-          # admin URL 的库名部分换成新库；保留查询参数（如 sslmode=require）
+          # admin URL 的库名部分换成新库；保留查询参数，并为自签名 TLS
+          # 补上 pg-connection-string 的 libpq 兼容开关。
           PR_DB_URL=$(echo "$ADMIN_URL" | sed -E "s|/[^/?]+(\?.*)?\$|/${DB_NAME}\1|")
+          if [[ "$PR_DB_URL" == *"sslmode=require"* && "$PR_DB_URL" != *"uselibpqcompat="* ]]; then
+            if [[ "$PR_DB_URL" == *"?"* ]]; then PR_DB_URL="${PR_DB_URL}&uselibpqcompat=true"; else PR_DB_URL="${PR_DB_URL}?uselibpqcompat=true"; fi
+          fi
           echo "::add-mask::$PR_DB_URL"
           echo "url=$PR_DB_URL" >> "$GITHUB_OUTPUT"
           echo "app database: ${PR_DB_URL%%\?*} (credentials hidden)"

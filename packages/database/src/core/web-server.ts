@@ -8,6 +8,7 @@ import { serverDBEnv } from '@/config/db';
 
 import * as schema from '../schemas';
 import type { LobeChatDatabase } from '../type';
+import { normalizeNodePostgresConnectionString } from './connection-string';
 
 export const getDBInstance = (): LobeChatDatabase => {
   // In test environment, return a mock instance to avoid initialization errors
@@ -40,7 +41,13 @@ If you don't have it, please run \`openssl rand -base64 32\` to create one.
     : {};
 
   if (serverDBEnv.DATABASE_DRIVER === 'node') {
-    const client = new NodePool({ connectionString, ...timeoutConfig });
+    const client = new NodePool({
+      connectionString: normalizeNodePostgresConnectionString(
+        connectionString,
+        process.env.VERCEL_ENV === 'preview',
+      ),
+      ...timeoutConfig,
+    });
     // pg.Pool emits 'error' on idle clients when the backend connection drops.
     // Without a listener Node escalates it to uncaughtException and exits the process.
     // See: https://node-postgres.com/apis/pool#error

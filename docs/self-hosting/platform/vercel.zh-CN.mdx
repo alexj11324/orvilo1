@@ -296,7 +296,7 @@ tags:
 
 **函数超时** — 在 Hobby 套餐遇到超时时：升级到 Pro（60 秒超时）、使用更快的模型（如 GPT-4o-mini 代替 GPT-4o）、减少最大 token 数，或确认已启用流式响应。
 
-**数据库连接失败** — 检查 `DATABASE_URL` 格式。对于托管数据库，确保末尾追加了 `?sslmode=require`。检查数据库 IP 白名单是否包含 Vercel IP（或使用 `0.0.0.0/0` 开放访问）。本地测试：`psql "$DATABASE_URL"`。
+**数据库连接失败** — 检查 `DATABASE_URL` 格式。对于托管数据库，确保末尾追加 `?sslmode=require`。如果 PostgreSQL 使用自签名证书，还要追加 `&uselibpqcompat=true`，让 Node 的 `pg` 客户端加密连接但不要求公共 CA。检查数据库 IP 白名单是否包含 Vercel IP（或使用 `0.0.0.0/0` 开放访问）。本地测试：`psql "$DATABASE_URL"`。
 
 **502 网关错误** — 常见原因：函数超时、内存溢出、数据库连接池耗尽。使用连接池（PgBouncer）、减少并发连接数或查看数据库日志。
 

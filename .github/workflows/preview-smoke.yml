@@ -39,6 +39,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Normalize preview PostgreSQL TLS URL
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const connectionString = process.env.DATABASE_URL;
+          if (!connectionString) process.exit(0);
+          if (
+            /(?:\?|&)sslmode=require(?:&|$)/.test(connectionString) &&
+            !/(?:\?|&)uselibpqcompat=/.test(connectionString)
+          ) {
+            const normalized = `${connectionString}${connectionString.includes('?') ? '&' : '?'}uselibpqcompat=true`;
+            fs.appendFileSync(process.env.GITHUB_ENV, `DATABASE_URL=${normalized}\n`);
+          }
+          NODE
+
       - name: Install Playwright browsers (with system deps)
         run: bunx playwright install --with-deps chromium
 

@@ -243,7 +243,15 @@ pg_admin() { try_pg "$PREVIEW_DB_ADMIN_URL" "$1"; }
 
 # app_db_url DBNAME — derive an app connection string from the admin URL.
 app_db_url() {
-  echo "$PREVIEW_DB_ADMIN_URL" | sed -E "s|/[^/?]+(\?.*)?\$|/$1\1|"
+  local url
+  url=$(echo "$PREVIEW_DB_ADMIN_URL" | sed -E "s|/[^/?]+(\?.*)?\$|/$1\1|")
+  # pg-connection-string treats sslmode=require as verify-full unless its
+  # libpq-compatible mode is requested. The preview database uses a
+  # self-signed certificate, so retain TLS while disabling CA verification.
+  if [[ "$url" == *"sslmode=require"* && "$url" != *"uselibpqcompat="* ]]; then
+    if [[ "$url" == *"?"* ]]; then url="${url}&uselibpqcompat=true"; else url="${url}?uselibpqcompat=true"; fi
+  fi
+  echo "$url"
 }
 
 banner "Orvilo 云开发环境迁移"

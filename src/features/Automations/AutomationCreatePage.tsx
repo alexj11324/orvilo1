@@ -35,7 +35,12 @@ const AutomationCreatePage = memo(() => {
       : undefined;
   }, [searchParams]);
 
-  const [name, setName] = useState(() => (template ? t(`templates.${template.id}.title`) : ''));
+  // The template title lives in a lazily-loaded i18n namespace: freezing it into
+  // state at mount can capture the raw key before the bundle arrives. Keep the
+  // translated default derived and only store the user's own edit.
+  const templateTitle = template ? t(`templates.${template.id}.title`) : '';
+  const [nameOverride, setNameOverride] = useState<string | null>(null);
+  const name = nameOverride ?? templateTitle;
   const [instructions, setInstructions] = useState(() => template?.prompt ?? '');
   const [assigneeAgentId, setAssigneeAgentId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TriggerDraft | null>(() =>
@@ -148,7 +153,7 @@ const AutomationCreatePage = memo(() => {
               style={{ fontSize: 20, fontWeight: 600 }}
               value={name}
               variant={'borderless'}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setNameOverride(e.target.value)}
             />
             <AutomationTriggerDraft draft={draft} onChange={setDraft} />
             <Flexbox gap={8}>

@@ -28,12 +28,27 @@ export const automationStatusesFor = (
 ): TaskStatus[] | undefined =>
   filter === 'active' ? AUTOMATION_ACTIVE_STATUSES : filter === 'paused' ? ['paused'] : undefined;
 
+/**
+ * `formatScheduleDescription`/`formatIntervalLabel` emit `taskSchedule.*` keys
+ * that live in the `chat` namespace. An `automation`-bound `t` cannot reach them
+ * — react-i18next binds lookups to the FIRST requested namespace only — so each
+ * call is forwarded with an explicit `ns: 'chat'` override.
+ */
+const asChatT = (t: TFunction<'automation'>): TFunction<'chat'> => {
+  const forwarded = (key: string, options?: Record<string, unknown>) =>
+    (t as (k: string, o?: Record<string, unknown>) => string)(key, {
+      ...options,
+      ns: 'chat',
+    });
+  return forwarded as TFunction<'chat'>;
+};
+
 /** One-line trigger summary for a list row ("Every 10 min" / "Every day 09:00"). */
 export const automationTriggerSummary = (
   task: TaskListItem,
   t: TFunction<'automation'>,
 ): string => {
-  const tChat = t as unknown as TFunction<'chat'>;
+  const tChat = asChatT(t);
   if (task.automationMode === 'schedule' && task.schedulePattern) {
     return formatScheduleDescription(task.schedulePattern, tChat);
   }
@@ -138,7 +153,7 @@ export const automationDetailTriggerSummary = (
   detail: TaskDetailData,
   t: TFunction<'automation'>,
 ): string => {
-  const tChat = t as unknown as TFunction<'chat'>;
+  const tChat = asChatT(t);
   if (detail.automationMode === 'schedule' && detail.schedule?.pattern) {
     return formatScheduleDescription(detail.schedule.pattern, tChat);
   }

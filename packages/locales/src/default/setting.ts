@@ -300,8 +300,15 @@ export default {
   'agentTab.opening': 'Opening Settings',
   'agentTab.plugin': 'Skill Settings',
   'agentTab.prompt': 'Agent Profile',
+  'agentTab.rules': 'Rules & experience',
   'agentTab.selfIteration': 'Self-Iteration',
   'agentTab.tts': 'Voice Service',
+  'agentRules.domainMeta': '{{habits}} rules · {{runs}} practices',
+  'agentRules.empty': 'It has not learned any rules for this agent yet.',
+  'agentRules.loading': 'Loading rules…',
+  'agentRules.open': 'Open rules',
+  'agentRules.summary': '{{count}} rules in use',
+
   'permission.accessTag.useOnlyTip':
     'Your member permission here is "Can use" — you can view and use it, but not edit. Ask the creator or a workspace owner for edit access.',
   'permission.accessTag.viewOnlyTip':

@@ -24,6 +24,7 @@ export enum ChatSettingsTabs {
   Opening = 'opening',
   Plugin = 'plugin',
   Prompt = 'prompt',
+  Rules = 'rules',
   SelfIteration = 'selfIteration',
 }
 

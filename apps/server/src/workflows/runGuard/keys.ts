@@ -11,7 +11,7 @@ import { WORKFLOW_RUN_GUARD_KEY_PREFIX } from './types';
  * Normalizes workflow paths for guard key construction.
  *
  * Before:
- * - "https://app.lobehub.com/api/workflows/demo/"
+ * - "https://orvilo.aspectlylabs.com/api/workflows/demo/"
  * - "/api/workflows/demo/?x=1#hash"
  * - "api/workflows/demo?x=1#hash"
  *

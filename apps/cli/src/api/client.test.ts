@@ -14,7 +14,7 @@ vi.mock('../auth/refresh', () => ({
 
 vi.mock('../settings', () => ({
   loadActiveWorkspace: () => undefined,
-  resolveServerUrl: () => 'https://app.lobehub.com',
+  resolveServerUrl: () => 'https://orvilo.aspectlylabs.com',
 }));
 
 const headersOfLastLink = () => {

@@ -198,7 +198,7 @@ export const createShareRrConfig = ({
     };
   };
 
-  const proxyTarget = process.env.SHARE_API_PROXY || 'https://app.lobehub.com';
+  const proxyTarget = process.env.SHARE_API_PROXY || 'https://orvilo.aspectlylabs.com';
   const backendProxy = Object.fromEntries(
     ['/api', '/oidc', '/trpc', '/webapi'].map((prefix) => [
       prefix,

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockGetValidToken = vi.hoisted(() => vi.fn());
-const mockResolveServerUrl = vi.hoisted(() => vi.fn(() => 'https://app.lobehub.com'));
+const mockResolveServerUrl = vi.hoisted(() => vi.fn(() => 'https://orvilo.aspectlylabs.com'));
 
 vi.mock('../auth/refresh', () => ({
   getValidToken: mockGetValidToken,
@@ -44,7 +44,7 @@ describe('api/http auth helpers', () => {
         'Oidc-Auth': 'env-jwt',
         'X-Workspace-Id': 'workspace-1',
       },
-      serverUrl: 'https://app.lobehub.com',
+      serverUrl: 'https://orvilo.aspectlylabs.com',
     });
     expect(mockGetValidToken).not.toHaveBeenCalled();
   });

@@ -2,12 +2,12 @@ import type { Config } from './generated/client';
 import { createClient, createConfig } from './generated/client';
 import { LobeHub } from './generated/sdk.gen';
 
-export const DEFAULT_BASE_URL = 'https://app.lobehub.com';
+export const DEFAULT_BASE_URL = 'https://orvilo.aspectlylabs.com';
 
 export interface LobeHubOptions extends Omit<Config, 'auth' | 'baseUrl'> {
   /** LobeHub API Key (`sk-lh-...`) or an OIDC JWT */
   apiKey: string;
-  /** API origin, defaults to LobeHub Cloud (`https://app.lobehub.com`) */
+  /** API origin, defaults to LobeHub Cloud (`https://orvilo.aspectlylabs.com`) */
   baseURL?: string;
 }
 

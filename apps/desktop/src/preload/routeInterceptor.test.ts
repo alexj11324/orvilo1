@@ -129,7 +129,7 @@ describe('setupRouteInterceptors', () => {
       // An absolute LobeHub URL: a different origin than `app://renderer`, but the
       // renderer has claimed it and will open it in the portal itself.
       const link = document.createElement('a');
-      link.href = 'https://app.lobehub.com/verify/run-1';
+      link.href = 'https://orvilo.aspectlylabs.com/verify/run-1';
       link.setAttribute(RENDERER_HANDLED_LINK_ATTR, 'true');
       document.body.append(link);
 
@@ -149,7 +149,7 @@ describe('setupRouteInterceptors', () => {
       setupRouteInterceptors();
 
       const link = document.createElement('a');
-      link.href = 'https://app.lobehub.com/api/webhooks';
+      link.href = 'https://orvilo.aspectlylabs.com/api/webhooks';
       document.body.append(link);
 
       const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -158,7 +158,7 @@ describe('setupRouteInterceptors', () => {
 
       expect(invoke).toHaveBeenCalledWith(
         'system.openExternalLink',
-        'https://app.lobehub.com/api/webhooks',
+        'https://orvilo.aspectlylabs.com/api/webhooks',
       );
     });
 

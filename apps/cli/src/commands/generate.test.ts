@@ -73,7 +73,7 @@ describe('generate command', () => {
         'Content-Type': 'application/json',
         'Oidc-Auth': 'test-token',
       },
-      serverUrl: 'https://app.lobehub.com',
+      serverUrl: 'https://orvilo.aspectlylabs.com',
     });
     for (const router of Object.values(mockTrpcClient)) {
       for (const method of Object.values(router)) {
@@ -188,7 +188,7 @@ describe('generate command', () => {
       ]);
 
       expect(fetch).toHaveBeenCalledWith(
-        'https://app.lobehub.com/webapi/chat/anthropic',
+        'https://orvilo.aspectlylabs.com/webapi/chat/anthropic',
         expect.any(Object),
       );
     });
@@ -348,7 +348,7 @@ describe('generate command', () => {
       ]);
 
       expect(fetch).toHaveBeenCalledWith(
-        'https://app.lobehub.com/webapi/tts/openai',
+        'https://orvilo.aspectlylabs.com/webapi/tts/openai',
         expect.objectContaining({ method: 'POST' }),
       );
       expect(mockWriteFileSync).toHaveBeenCalledWith('/tmp/test.mp3', expect.any(Buffer));

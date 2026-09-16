@@ -9,14 +9,14 @@ vi.mock('@/libs/trpc/utils/internalJwt', () => ({
 }));
 
 vi.mock('@/envs/app', () => ({
-  appEnv: { APP_URL: 'https://app.lobehub.com' },
+  appEnv: { APP_URL: 'https://orvilo.aspectlylabs.com' },
 }));
 
 vi.mock('@/utils/env', () => ({
   isDev: false,
 }));
 
-const CREDS = "LOBEHUB_JWT='mock-jwt-token' LOBEHUB_SERVER='https://app.lobehub.com'";
+const CREDS = "LOBEHUB_JWT='mock-jwt-token' LOBEHUB_SERVER='https://orvilo.aspectlylabs.com'";
 /** The shim, with credentials scoped to the `npx` process rather than exported. */
 const shim = (extraEnv = '') => `lh() { ${CREDS}${extraEnv} npx -y @lobehub/cli "$@"; }`;
 

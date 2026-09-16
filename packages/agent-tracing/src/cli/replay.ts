@@ -15,7 +15,7 @@ import { loadSnapshot } from '../store/loadSnapshot';
 import type { ExecutionSnapshot } from '../types';
 
 const DEFAULT_JUDGE_MODEL = 'openai/gpt-4o-mini';
-const DEFAULT_SERVER_URL = 'https://app.lobehub.com';
+const DEFAULT_SERVER_URL = 'https://orvilo.aspectlylabs.com';
 
 /**
  * Replay reaches a model through the LobeHub chat route, which needs a token.

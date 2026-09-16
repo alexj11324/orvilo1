@@ -18,7 +18,7 @@
     "logs": { "invocation_logs": false }
   },
   "vars": {
-    "AUTH_API_BASE": "https://app.lobehub.com",
+    "AUTH_API_BASE": "https://orvilo.aspectlylabs.com",
     "AUTH_APP_HOME": "https://lobehub.com"
   }
 }

@@ -166,7 +166,7 @@ export default defineConfig({
     isDev && {
       name: 'lobe-dev-proxy-print',
       configureServer(server: ViteDevServer) {
-        const ONLINE_HOST = 'https://app.lobehub.com';
+        const ONLINE_HOST = 'https://orvilo.aspectlylabs.com';
         const c = {
           green: (s: string) => `\x1B[32m${s}\x1B[0m`,
           bold: (s: string) => `\x1B[1m${s}\x1B[0m`,

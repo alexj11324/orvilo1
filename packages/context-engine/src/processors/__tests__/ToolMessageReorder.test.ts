@@ -321,7 +321,7 @@ describe('ToolMessageReorder', () => {
     const multimodalContent = [
       { text: '[Image: screenshot.png]', type: 'text' },
       {
-        image_url: { detail: 'auto', url: 'https://app.lobehub.com/f/file_abc' },
+        image_url: { detail: 'auto', url: 'https://orvilo.aspectlylabs.com/f/file_abc' },
         type: 'image_url',
       },
     ];

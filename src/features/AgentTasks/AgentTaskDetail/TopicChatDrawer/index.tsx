@@ -40,6 +40,7 @@ import { authSelectors } from '@/store/user/selectors';
 import { isForbiddenError } from '@/utils/forbiddenError';
 
 import AssigneeAvatar from '../../features/AssigneeAvatar';
+import RunIntegrationTag from '../RunIntegrationTag';
 import FeedbackInput from './FeedbackInput';
 
 const SHARE_ICON_SIZE = { blockSize: 32, size: 16 } as const;
@@ -283,6 +284,7 @@ const TopicChatDrawer = memo(() => {
           #{activity.seq}
         </Text>
       )}
+      <RunIntegrationTag integration={activity?.integration} />
       <DropdownMenu items={menuItems}>
         <ActionIcon icon={MoreHorizontal} size={'small'} />
       </DropdownMenu>

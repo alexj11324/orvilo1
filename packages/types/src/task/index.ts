@@ -640,6 +640,12 @@ export interface TaskDetailActivity {
   files?: ChatFileItem[];
   id?: string;
   /**
+   * Topic-only: per-run workspace-integration record mirrored from
+   * `task_topics.integration`. Absent on runs that never provisioned an
+   * isolated worktree — most runs have nothing to merge back.
+   */
+  integration?: TaskTopicIntegration | null;
+  /**
    * Topic-only: persisted Gateway operation ID for the task topic, sourced
    * from `task_topics.operationId`. Survives across runs (created on add,
    * updated on resume) so it remains available after the topic completes —

@@ -122,7 +122,7 @@ class TaskService {
     editorData?: unknown;
     /** Periodic-execution interval in seconds for `automationMode: 'heartbeat'`. */
     heartbeatInterval?: number;
-    /** Bind a goal entity (`goals` row) to the created task. */
+    /** Prefix of the generated task identifier (`PREFIX-1`). Defaults to `T` server-side. */
     identifierPrefix?: string;
     instruction: string;
     name?: string;

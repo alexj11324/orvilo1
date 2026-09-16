@@ -176,13 +176,6 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
     instruction: string;
     assigneeAgentId?: string;
     assigneeUserId?: string;
-    // Bind a goal entity to the created task (see TaskService.createTask).
-    goal?: {
-      maxRounds?: number | null;
-      maxTotalCost?: number | null;
-      requirement?: string | null;
-      title?: string;
-    };
     name: string;
     parentIdentifier?: string;
     priority?: number;

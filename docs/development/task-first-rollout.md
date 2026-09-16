@@ -361,17 +361,17 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 ## 2. 工作包状态
 
-| 工作包                   | 实现状态     | 验证状态    | commit / 证据              | 保留依赖 / 阻塞                     |
-| ------------------------ | ------------ | ----------- | -------------------------- | ----------------------------------- |
-| S00 基线与依赖清单       | IN\_PROGRESS | NOT\_RUN    | 本文                       | 见 §1.7 待补                        |
-| S10 统一入口与偏好迁移   | IMPLEMENTED  | CI\_PENDING | `e66656d4`                 | 本机 300 项测试通过；待 CI 类型检查 |
-| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING | `fb1a52a6`（视图偏好部分） | 旧首页卸载未做，见 §2.2             |
-| S30 独立功能退役         | TODO         | NOT\_RUN    | —                          | 依赖 S00、S10                       |
-| S40 自动化整合           | TODO         | NOT\_RUN    | —                          | 依赖 S10、S20                       |
-| S50 资源与产物归位       | TODO         | NOT\_RUN    | —                          | 依赖 S00                            |
-| S60 Goal 与规则下沉      | TODO         | NOT\_RUN    | —                          | 依赖 S20、S50                       |
-| S70 设置、文案与依赖清理 | TODO         | NOT\_RUN    | —                          | 依赖各功能工作包                    |
-| S80 远端验收与证据       | TODO         | NOT\_RUN    | —                          | 覆盖全部                            |
+| 工作包                   | 实现状态     | 验证状态         | commit / 证据                    | 保留依赖 / 阻塞                                                          |
+| ------------------------ | ------------ | ---------------- | -------------------------------- | ------------------------------------------------------------------------ |
+| S00 基线与依赖清单       | IN\_PROGRESS | NOT\_RUN         | 本文                             | 见 §1.7 待补                                                             |
+| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de` | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5 |
+| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`（视图偏好部分）       | 旧首页卸载未做，见 §2.2                                                  |
+| S30 独立功能退役         | TODO         | NOT\_RUN         | —                                | 依赖 S00、S10                                                            |
+| S40 自动化整合           | TODO         | NOT\_RUN         | —                                | 依赖 S10、S20                                                            |
+| S50 资源与产物归位       | TODO         | NOT\_RUN         | —                                | 依赖 S00                                                                 |
+| S60 Goal 与规则下沉      | TODO         | NOT\_RUN         | —                                | 依赖 S20、S50                                                            |
+| S70 设置、文案与依赖清理 | TODO         | NOT\_RUN         | —                                | 依赖各功能工作包                                                         |
+| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                | 覆盖全部                                                                 |
 
 ---
 
@@ -555,3 +555,19 @@ Electron 的 `RETIRED_PRODUCT_SEGMENTS` 改为从它派生 —— 否则同一�
 所以被恢复的固定标签页暂时仍能打开。**S30 删除这些路由之后**，这些标签页会落进 catch-all
 重定向到 `/`。方案 §13.1 `NAV-05` 要求「进入兼容目标或明确退役页，不白屏、不错误绑定 slug」——
 合并收敛后即可满足。
+
+## 5. 跟进项（已挂到工作包，不留在叙述里）
+
+S10 的验收要求覆盖「入口、路由、命令、搜索、**持久化状态**」。下列各项经 review 确认不属于
+S10 的交付范围，但**必须挂到具体工作包**，否则会在「文档里提过」和「实际做了」之间消失。
+
+| #   | 项                                                                | 位置                                                                                                       | 归属                  | 为什么是那时做                                                                                                                                                                                                     |
+| --- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **桌面固定标签页无退役过滤**                                      | `src/features/Electron/titlebar/TabBar/storage.ts:25-45`；`src/store/electron/actions/tabPages.ts:579-585` | **S30**               | S10 里唯一未兜住的持久化路径。当前 `/image`、`/memory` 路由仍在，标签页尚可打开；**S30 删除路由后**被恢复的标签页会落在退役页上，那时才有真实后果。合并时把 `RETIRED_PRODUCT_SEGMENTS` 改为从 registry `tier` 派生 |
+| 2   | 「管理记忆」按钮仍跳退役页                                        | `src/features/Settings/memory/features/ManageMemoryButton.tsx:22`                                          | S30.3                 | 应用自己生成的入口，非旧深链接                                                                                                                                                                                     |
+| 3   | FTS 搜索结果跳退役页                                              | `src/features/CommandMenu/SearchResults.tsx:165`（另见 :209、:250）                                        | S30.3                 | 同上                                                                                                                                                                                                               |
+| 4   | 死字段 `NavigationRoute.electronKey`                              | `packages/app-config/src/routes/index.ts:35`，10 条目各填一次，定义外零读取                                | S70                   | 连带本分支新增的 `navigation.project` 文案目前只喂这个死字段。**注意 `navigation.*` 命名空间本身没死**（`AgentTasks/routeMeta.ts:15` 等仍在用）                                                                    |
+| 5   | 死枚举 `GroupKey.Community` / `GroupKey.Pages`                    | `src/features/HomeSidebar/Body/index.tsx:35,36`                                                            | S70                   | 零消费者                                                                                                                                                                                                           |
+| 6   | 死枚举 `SidebarTabKey.Community / Image / Memory / Pages / Video` | `src/store/global/initialState.ts`                                                                         | S70                   | 除定义外引用数均为 0                                                                                                                                                                                               |
+| 7   | 变死的 feature flag `showMarket`                                  | `packages/app-config/src/featureFlags/schema.ts:156`                                                       | S70（或随社区线清理） | 唯一 UI 消费者是 `useNavLayout` 与移动 NavBar，本分支删掉后全仓已无非测试消费者                                                                                                                                    |
+| 8   | `missingBottom` 分支不可达                                        | `src/store/global/selectors/systemStatus.ts`（`withAllKnownKeys` 内）                                      | 不清理                | `DEFAULT_BOTTOM_KEYS` 本身仍被 `normalizeSpacerPosition` 使用；已加注释说明「为未来 bottom 组默认值保留」                                                                                                          |

@@ -1,7 +1,6 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { LobeHub } from '@lobehub/ui/brand';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { createStaticStyles, keyframes } from 'antd-style';
 import { memo, useEffect, useState } from 'react';
@@ -43,7 +42,7 @@ const slideUp = keyframes`
 `;
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  contentBrand: css`
+  contentOverlay: css`
     pointer-events: none;
 
     position: absolute;
@@ -55,23 +54,17 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     color: ${cssVar.colorTextQuaternary};
   `,
-  // Floated rather than stacked in flow: a caption that joins the column would
-  // push the brand mark off the center it shares with the app that replaces it.
+  // Pinned to the bottom edge of the content placeholder so the caption reads
+  // like a status line, not a centered splash.
   hint: css`
     position: absolute;
-    inset-block-start: calc(100% + 8px);
+    inset-block-end: 24px;
     inset-inline-start: 50%;
 
     font-size: 13px;
     white-space: nowrap;
 
     animation: ${slideUp} 0.42s ${cssVar.motionEaseOut} both;
-  `,
-  brand: css`
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   `,
   dragRegion: css`
     pointer-events: auto;
@@ -149,12 +142,7 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
             style={getInnerCssVariables({ isDark })}
             width={'100%'}
           >
-            <div className={styles.contentBrand}>
-              <div className={styles.brand}>
-                <LobeHub size={40} type={'text'} />
-                {waiting && <LoadingHint />}
-              </div>
-            </div>
+            <div className={styles.contentOverlay}>{waiting && <LoadingHint />}</div>
           </Flexbox>
         </Flexbox>
       </Flexbox>

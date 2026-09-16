@@ -218,6 +218,34 @@ export const linearSyncRouter = router({
       }
     }),
 
+  processOutbox: linearSyncWriteProcedure
+    .input(
+      z.object({
+        installationId: z.string().uuid(),
+        limit: z.number().int().min(1).max(50).default(20),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const installation = await ctx.linearSyncModel.findInstallationById(input.installationId);
+        if (!installation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
+        }
+        const provider = createLinearGraphqlIssueProvider({
+          userId: installation.installedByUserId ?? ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        });
+        const data = await new LinearSyncWorker(ctx.serverDB, ctx.workspaceId!).processOutbox(
+          provider,
+          input.limit,
+          installation.id,
+        );
+        return { data, message: 'Linear outbox processed', success: true };
+      } catch (error) {
+        mapError(error, 'processOutbox');
+      }
+    }),
+
   upsertInstallation: linearSyncWriteProcedure
     .input(
       z.object({

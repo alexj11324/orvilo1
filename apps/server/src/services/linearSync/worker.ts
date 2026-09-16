@@ -24,6 +24,11 @@ export interface LinearWorkerResult {
   processed: number;
 }
 
+export interface LinearOutboxWorkerResult {
+  failed: number;
+  sent: number;
+}
+
 const taskPriority = (priority: number | null | undefined) => {
   if (priority === null || priority === undefined) return 0;
   return Math.max(0, Math.min(4, priority));
@@ -106,6 +111,58 @@ export class LinearSyncWorker {
         result.failed += 1;
         const message = error instanceof Error ? error.message : String(error);
         await this.model.updateInbox(row.id, {
+          availableAt: new Date(Date.now() + 60_000),
+          lastError: message.slice(0, 2_000),
+          lockedUntil: null,
+          status: 'failed',
+        });
+      }
+    }
+
+    return result;
+  }
+
+  async processOutbox(
+    provider: LinearIssueProvider,
+    limit = 20,
+    installationId?: string,
+  ): Promise<LinearOutboxWorkerResult> {
+    const rows = await this.model.claimOutbox(limit, 60_000, installationId);
+    const result: LinearOutboxWorkerResult = { failed: 0, sent: 0 };
+
+    for (const row of rows) {
+      try {
+        if (!row.linkId) throw new Error('Linear outbox row has no issue link');
+        const issueLink = await this.model.findIssueLinkById(row.linkId);
+        if (!issueLink) throw new Error('Linear issue link no longer exists');
+
+        const updated = await provider.updateIssue(
+          issueLink.linearIssueId,
+          row.payload as {
+            description?: string | null;
+            priority?: number | null;
+            projectId?: string | null;
+            stateId?: string | null;
+            title?: string;
+          },
+        );
+        await this.model.updateIssueLink(issueLink.id, {
+          conflict: null,
+          lastConfirmedSnapshot: updated,
+          remoteSnapshot: updated,
+          syncState: 'synced',
+        });
+        await this.model.updateOutbox(row.id, {
+          lastError: null,
+          lockedUntil: null,
+          sentAt: new Date(),
+          status: 'sent',
+        });
+        result.sent += 1;
+      } catch (error) {
+        result.failed += 1;
+        const message = error instanceof Error ? error.message : String(error);
+        await this.model.updateOutbox(row.id, {
           availableAt: new Date(Date.now() + 60_000),
           lastError: message.slice(0, 2_000),
           lockedUntil: null,

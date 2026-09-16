@@ -7,13 +7,14 @@ import type {
   LinearSyncOutboxStatus,
   TaskDomainEventSource,
   TaskDomainEventType,
+  TaskItem,
   TaskPlanningScopeStatus,
   TaskPlanningScopeType,
   TaskPlanningTrigger,
 } from '@orvilo/types';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
-import type { LinearSyncInboxItem } from '../schemas';
+import type { LinearSyncInboxItem, LinearSyncOutboxItem } from '../schemas';
 import {
   linearInstallations,
   linearIssueLinks,
@@ -238,6 +239,15 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  async findIssueLinkById(id: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearIssueLinks)
+      .where(and(eq(linearIssueLinks.workspaceId, this.workspaceId), eq(linearIssueLinks.id, id)))
+      .limit(1);
+    return row ?? null;
+  }
+
   async findIssueLinkByTaskId(taskId: string) {
     const [row] = await this.db
       .select()
@@ -448,6 +458,59 @@ export class LinearSyncModel {
       .orderBy(linearSyncOutbox.createdAt);
   }
 
+  async claimOutbox(
+    limit = 20,
+    leaseMs = 60_000,
+    installationId?: string,
+  ): Promise<LinearSyncOutboxItem[]> {
+    const lockedUntil = new Date(Date.now() + leaseMs);
+    const installationFilter = installationId
+      ? sql`AND installation_id = ${installationId}`
+      : sql``;
+    const result = await this.db.execute(sql`
+      WITH candidates AS (
+        SELECT id
+        FROM linear_sync_outbox
+        WHERE workspace_id = ${this.workspaceId}
+          AND status IN ('failed', 'pending')
+          AND available_at <= now()
+          AND (locked_until IS NULL OR locked_until < now())
+          ${installationFilter}
+        ORDER BY created_at
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )
+      UPDATE linear_sync_outbox AS outbox
+      SET locked_until = ${lockedUntil},
+          attempts = outbox.attempts + 1,
+          status = 'sending',
+          updated_at = now()
+      FROM candidates
+      WHERE outbox.id = candidates.id
+      RETURNING outbox.*
+    `);
+
+    return result.rows as unknown as LinearSyncOutboxItem[];
+  }
+
+  async updateOutbox(
+    id: string,
+    patch: {
+      availableAt?: Date;
+      lastError?: string | null;
+      lockedUntil?: Date | null;
+      sentAt?: Date | null;
+      status?: LinearSyncOutboxStatus;
+    },
+  ) {
+    const [row] = await this.db
+      .update(linearSyncOutbox)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(and(eq(linearSyncOutbox.id, id), eq(linearSyncOutbox.workspaceId, this.workspaceId)))
+      .returning();
+    return row ?? null;
+  }
+
   async findPlanningScope(scopeType: TaskPlanningScopeType, scopeId: string) {
     const [row] = await this.db
       .select()
@@ -464,78 +527,131 @@ export class LinearSyncModel {
   }
 
   async recordDomainEvent(input: RecordTaskDomainEventInput) {
-    return this.db.transaction(async (tx) => {
-      const [inserted] = await tx
-        .insert(taskDomainEvents)
-        .values({
-          idempotencyKey: input.idempotencyKey,
-          payload: input.payload,
-          projectId: input.projectId,
-          source: input.source,
-          taskId: input.taskId,
-          type: input.type,
-          workspaceId: this.workspaceId,
-        })
-        .onConflictDoNothing({
-          target: [taskDomainEvents.workspaceId, taskDomainEvents.idempotencyKey],
-        })
-        .returning();
+    return this.db.transaction((tx) =>
+      this.recordDomainEventInDatabase(tx as unknown as LobeChatDatabase, input),
+    );
+  }
 
-      const event =
-        inserted ??
-        (
-          await tx
-            .select()
-            .from(taskDomainEvents)
-            .where(
-              and(
-                eq(taskDomainEvents.workspaceId, this.workspaceId),
-                eq(taskDomainEvents.idempotencyKey, input.idempotencyKey),
-              ),
-            )
-            .limit(1)
-        )[0];
+  /** Use when the caller already owns the transaction (for example TaskModel). */
+  async recordDomainEventInTransaction(db: LobeChatDatabase, input: RecordTaskDomainEventInput) {
+    return this.recordDomainEventInDatabase(db, input);
+  }
 
-      if (!event) throw new Error('Failed to persist task domain event');
-
-      const scopeType: TaskPlanningScopeType = input.projectId ? 'project' : 'workspace';
-      const scopeId = input.projectId ?? this.workspaceId;
-      const trigger: TaskPlanningTrigger = {
-        ...(input.action ? { action: input.action } : {}),
-        ...(input.eventId ? { eventId: input.eventId } : {}),
+  private async recordDomainEventInDatabase(
+    db: LobeChatDatabase,
+    input: RecordTaskDomainEventInput,
+  ) {
+    const [inserted] = await db
+      .insert(taskDomainEvents)
+      .values({
+        idempotencyKey: input.idempotencyKey,
+        payload: input.payload,
+        projectId: input.projectId,
         source: input.source,
+        taskId: input.taskId,
         type: input.type,
-      };
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoNothing({
+        target: [taskDomainEvents.workspaceId, taskDomainEvents.idempotencyKey],
+      })
+      .returning();
 
-      const [scope] = await tx
-        .insert(taskPlanningScopes)
-        .values({
-          dirtyRevision: event.revision,
+    const event =
+      inserted ??
+      (
+        await db
+          .select()
+          .from(taskDomainEvents)
+          .where(
+            and(
+              eq(taskDomainEvents.workspaceId, this.workspaceId),
+              eq(taskDomainEvents.idempotencyKey, input.idempotencyKey),
+            ),
+          )
+          .limit(1)
+      )[0];
+
+    if (!event) throw new Error('Failed to persist task domain event');
+
+    const scopeType: TaskPlanningScopeType = input.projectId ? 'project' : 'workspace';
+    const scopeId = input.projectId ?? this.workspaceId;
+    const trigger: TaskPlanningTrigger = {
+      ...(input.action ? { action: input.action } : {}),
+      ...(input.eventId ? { eventId: input.eventId } : {}),
+      source: input.source,
+      type: input.type,
+    };
+
+    const [scope] = await db
+      .insert(taskPlanningScopes)
+      .values({
+        dirtyRevision: event.revision,
+        lastError: null,
+        lastTrigger: trigger,
+        scopeId,
+        scopeType,
+        status: 'queued',
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoUpdate({
+        target: [
+          taskPlanningScopes.workspaceId,
+          taskPlanningScopes.scopeType,
+          taskPlanningScopes.scopeId,
+        ],
+        set: {
+          dirtyRevision: sql`greatest(${taskPlanningScopes.dirtyRevision}, ${event.revision})`,
           lastError: null,
           lastTrigger: trigger,
-          scopeId,
-          scopeType,
           status: 'queued',
-          workspaceId: this.workspaceId,
-        })
-        .onConflictDoUpdate({
-          target: [
-            taskPlanningScopes.workspaceId,
-            taskPlanningScopes.scopeType,
-            taskPlanningScopes.scopeId,
-          ],
-          set: {
-            dirtyRevision: sql`greatest(${taskPlanningScopes.dirtyRevision}, ${event.revision})`,
-            lastError: null,
-            lastTrigger: trigger,
-            status: 'queued',
-            updatedAt: new Date(),
-          },
-        })
-        .returning();
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
-      return { event, scope };
+    return { event, scope };
+  }
+
+  /** Persist a local task change, its planner wakeup, and Linear outbox row together. */
+  async recordTaskChangeInTransaction(
+    db: LobeChatDatabase,
+    input: {
+      eventType: TaskDomainEventType;
+      source: TaskDomainEventSource;
+      task: TaskItem;
+    },
+  ) {
+    const link = await this.findIssueLinkByTaskId(input.task.id);
+    if (!link) return null;
+
+    const installation = await this.findInstallationById(link.installationId);
+    if (!installation) return null;
+
+    const payload = {
+      description: input.task.instruction,
+      priority: input.task.priority,
+      projectId: input.task.projectId,
+      title: input.task.name || input.task.identifier,
+    };
+    const event = await this.recordDomainEventInDatabase(db, {
+      idempotencyKey: `task:${input.task.id}:${input.task.updatedAt.toISOString()}`,
+      payload,
+      projectId: input.task.projectId,
+      source: input.source,
+      taskId: input.task.id,
+      type: input.eventType,
     });
+    const outbox = await this.queueOutbox({
+      expectedLocalRevision: input.task.updatedAt.getTime(),
+      installationId: installation.id,
+      linkId: link.id,
+      operation: 'update_issue',
+      payload,
+      taskId: input.task.id,
+    });
+
+    return { event, link, outbox };
   }
 
   async updatePlanningScope(

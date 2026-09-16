@@ -57,6 +57,7 @@ import { works } from '../schemas/work';
 import type { LobeChatDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { TaskDependencyError } from './taskDependency';
+import { LinearSyncModel } from './linearSync';
 
 /** Columns whose change is worth a line in the task activity feed. */
 const TRACKED_TASK_COLUMNS = [
@@ -72,6 +73,17 @@ const TRACKED_TASK_COLUMNS = [
   'schedulePattern',
   'scheduleTimezone',
   'status',
+] as const;
+
+/** Task fields that must wake a linked Linear issue even without an activity row. */
+const LINEAR_SYNC_TASK_COLUMNS = [
+  'description',
+  'editorData',
+  'instruction',
+  'name',
+  'parentTaskId',
+  'priority',
+  'projectId',
 ] as const;
 
 /** The automation columns folded into one value — see `TaskAutomationSnapshot`. */
@@ -2754,8 +2766,11 @@ export class TaskModel {
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
     actor: { agentId?: string | null; userId?: string | null },
   ): Promise<TaskItem | null> {
-    const touched = TRACKED_TASK_COLUMNS.some((col) => data[col] !== undefined);
-    // Nothing to diff against: an ordinary rename should not pay for a lock.
+    const touched =
+      TRACKED_TASK_COLUMNS.some((col) => data[col] !== undefined) ||
+      LINEAR_SYNC_TASK_COLUMNS.some((col) => data[col] !== undefined);
+    // Nothing to diff against: a field unrelated to task activity or Linear
+    // synchronization should not pay for a lock.
     if (!touched) return this.update(id, data);
 
     return this.db.transaction(async (tx) => {
@@ -2836,6 +2851,19 @@ export class TaskModel {
           payload: { ...event.payload, actorKind },
           taskId: id,
           type: event.type,
+        });
+      }
+
+      if (this.workspaceId) {
+        const source = actor.agentId ? 'agent' : actor.userId ? 'user' : 'system';
+        const eventType =
+          data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined
+            ? 'task.assigned'
+            : 'task.requirement.changed';
+        await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
+          eventType,
+          source,
+          task: updated,
         });
       }
 

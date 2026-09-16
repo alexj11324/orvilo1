@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import {
   acceptances,
+  agentOperations,
   agents,
   briefs,
   documents,
@@ -1056,6 +1057,101 @@ describe('TaskModel', () => {
       expect(staleUpdate).toBeNull();
       expect((await model.findById(task.id))?.status).toBe('completed');
     });
+
+    it('reserves one run when two callers race', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Run once' });
+
+      const results = await Promise.all([
+        model.reserveRun(task.id, 'reservation-a'),
+        model.reserveRun(task.id, 'reservation-b'),
+      ]);
+
+      expect(results.filter(Boolean)).toHaveLength(1);
+      expect((await model.findById(task.id))?.status).toBe('running');
+    });
+
+    it('only lets the reservation owner roll back its generation', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Fenced rollback' });
+
+      await expect(model.reserveRun(task.id, 'reservation-a')).resolves.toBe(true);
+      await expect(model.releaseRunReservation(task.id, 'reservation-a')).resolves.toBe(true);
+      await expect(model.reserveRun(task.id, 'reservation-b')).resolves.toBe(true);
+
+      await expect(
+        model.failRunReservation(task.id, 'reservation-a', 'paused', 'stale failure'),
+      ).resolves.toBe(false);
+      expect(await model.findById(task.id)).toMatchObject({
+        runReservationId: 'reservation-b',
+        status: 'running',
+      });
+    });
+
+    it('fences lifecycle status and context writes to the reservation owner', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Fenced lifecycle' });
+      await model.reserveRun(task.id, 'completion:owner');
+
+      await expect(
+        model.updateStatusIfReservation(task.id, 'completion:stale', 'running', 'scheduled'),
+      ).resolves.toBeNull();
+      await expect(
+        model.updateContextIfReservation(task.id, 'completion:stale', {
+          scheduler: { tickToken: 'stale' },
+        }),
+      ).resolves.toBe(false);
+
+      await expect(
+        model.updateContextIfReservation(task.id, 'completion:owner', {
+          scheduler: { tickToken: 'current' },
+        }),
+      ).resolves.toBe(true);
+      await expect(
+        model.updateStatusIfReservation(task.id, 'completion:owner', 'running', 'scheduled'),
+      ).resolves.toMatchObject({ status: 'scheduled' });
+      expect(await model.findById(task.id)).toMatchObject({
+        context: { scheduler: { tickToken: 'current' } },
+        status: 'scheduled',
+      });
+    });
+
+    it('fences a post-verify scheduler write to the scheduled state', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Heartbeat' });
+      await model.updateStatus(task.id, 'scheduled');
+
+      await expect(
+        model.updateContextIfStatus(task.id, 'scheduled', {
+          scheduler: { tickToken: 'current' },
+        }),
+      ).resolves.toBe(true);
+      await model.updateStatus(task.id, 'paused');
+      await expect(
+        model.updateContextIfStatus(task.id, 'scheduled', {
+          scheduler: { tickToken: 'stale' },
+        }),
+      ).resolves.toBe(false);
+      expect(await model.findById(task.id)).toMatchObject({
+        context: { scheduler: { tickToken: 'current' } },
+        status: 'paused',
+      });
+    });
+
+    it('does not reclaim a crashed dispatch while its agent operation is active', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Crash-safe dispatch' });
+      await serverDB.insert(agentOperations).values({
+        id: 'op-active-task-dispatch',
+        status: 'running',
+        taskId: task.id,
+        userId,
+      });
+
+      await expect(
+        model.reserveRun(task.id, 'reservation-retry', new Date('2026-01-01T00:10:00Z')),
+      ).resolves.toBe(false);
+    });
   });
 
   describe('heartbeat', () => {
@@ -1066,6 +1162,18 @@ describe('TaskModel', () => {
       await model.updateHeartbeat(task.id);
       const found = await model.findById(task.id);
       expect(found!.lastHeartbeatAt).toBeDefined();
+    });
+
+    it('rejects a callback from an older topic generation', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Current generation' });
+      await createTopic('topic-current');
+      await model.updateCurrentTopic(task.id, 'topic-current');
+
+      await expect(model.updateHeartbeatIfCurrentTopic(task.id, 'topic-old')).resolves.toBe(false);
+      await expect(model.updateHeartbeatIfCurrentTopic(task.id, 'topic-current')).resolves.toBe(
+        true,
+      );
     });
   });
 
@@ -1151,6 +1259,25 @@ describe('TaskModel', () => {
       unlocked = await model.getUnlockedTasks(taskB.id);
       expect(unlocked).toHaveLength(1);
       expect(unlocked[0].id).toBe(taskC.id);
+    });
+
+    it('treats a canceled dependency as settled while failed still blocks', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const canceled = await model.create({ instruction: 'Canceled dependency' });
+      const failed = await model.create({ instruction: 'Failed dependency' });
+      const dependent = await model.create({ instruction: 'Dependent' });
+      await model.addDependency(dependent.id, canceled.id);
+      await model.addDependency(dependent.id, failed.id);
+
+      await model.updateStatus(canceled.id, 'canceled');
+      await model.updateStatus(failed.id, 'failed');
+      await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
+
+      await model.updateStatus(failed.id, 'completed');
+      await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
+      await expect(model.getUnlockedTasks(failed.id)).resolves.toEqual([
+        expect.objectContaining({ id: dependent.id }),
+      ]);
     });
 
     it('should not unlock tasks that are not in backlog', async () => {
@@ -1509,6 +1636,24 @@ describe('TaskModel', () => {
       const model = new TaskModel(serverDB, userId);
       const result = await model.updateTaskConfig('non-existent-id', { model: 'gpt-4' });
       expect(result).toBeNull();
+    });
+
+    it('invalidates the active run when a user-facing config write requests it', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Scheduled run' });
+      await model.reserveRun(task.id, 'completion:op-1:lease-1');
+
+      const updated = await model.updateTaskConfig(
+        task.id,
+        { schedule: { maxExecutions: 10 } },
+        { invalidateRun: true },
+      );
+
+      expect(updated).toMatchObject({
+        runReservationExpiresAt: null,
+        runReservationId: null,
+      });
+      expect((updated?.config as Record<string, unknown>).schedule).toEqual({ maxExecutions: 10 });
     });
 
     it('should work with updateCheckpointConfig delegating to updateTaskConfig', async () => {
@@ -2266,6 +2411,24 @@ describe('TaskModel', () => {
       expect((await model.findById(late.id))!.status).toBe('running');
     });
 
+    it('can clear run reservations atomically with a terminal cascade', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Reserved' });
+      await model.reserveRun(task.id, 'completion:op-1');
+
+      await model.updateStatusForIds([task.id], 'canceled', {
+        completedAt: new Date(),
+        runReservationExpiresAt: null,
+        runReservationId: null,
+      });
+
+      expect(await model.findById(task.id)).toMatchObject({
+        runReservationExpiresAt: null,
+        runReservationId: null,
+        status: 'canceled',
+      });
+    });
+
     it('returns an empty list for an empty id set', async () => {
       const model = new TaskModel(serverDB, userId);
       await expect(model.updateStatusForIds([], 'completed')).resolves.toEqual([]);
@@ -2905,6 +3068,23 @@ describe('TaskModel', () => {
 
       expect(await alice.findById(privateTask.id)).not.toBeNull();
       expect(await bob.findById(privateTask.id)).toBeNull();
+    });
+
+    it('filters private descendants from another member task-tree query', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const root = await alice.create({ instruction: 'Shared root', visibility: 'public' });
+      const secretChild = await alice.create({
+        instruction: 'Alice secret child',
+        parentTaskId: root.id,
+        visibility: 'private',
+      });
+
+      expect((await alice.getTaskTree(root.id)).map(({ id }) => id)).toEqual([
+        root.id,
+        secretChild.id,
+      ]);
+      expect((await bob.getTaskTree(root.id)).map(({ id }) => id)).toEqual([root.id]);
     });
 
     it('should cascade updateVisibility to descendants and child tables', async () => {

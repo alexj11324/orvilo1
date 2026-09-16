@@ -77,6 +77,32 @@ export class TaskWorkspaceService {
   }
 
   /**
+   * Remove a device worktree that was provisioned but never made durable on a
+   * task_topics row. This closes the startup gap where prompt construction or
+   * agent dispatch can fail after `git worktree add` succeeds.
+   */
+  async discardUnregistered(workspace: ProvisionedWorkspace): Promise<boolean> {
+    const { deviceId, repoPath, worktreePath } = workspace.integration;
+    if (!deviceId || !repoPath || !worktreePath || worktreePath === repoPath) return true;
+
+    const removed = await deviceGateway.removeGitWorktree({
+      deviceId,
+      path: repoPath,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+      worktreePath,
+    });
+    if (!removed.success) {
+      log(
+        'discardUnregistered: remove failed for %s — %s',
+        worktreePath,
+        removed.error ?? 'unknown error',
+      );
+    }
+    return removed.success;
+  }
+
+  /**
    * Read `config.workspace` off the task or its nearest ancestor. Subtasks of
    * a workspace-bound root share the repo binding — they get their own
    * branch/worktree rather than each needing the config repeated.
@@ -149,11 +175,9 @@ export class TaskWorkspaceService {
       return this.provisionOnDevice({ config, deviceId, seq, task });
     }
 
-    log(
-      'provision: %s has a workspace binding but no provisionable target — running unprovisioned',
-      task.identifier,
+    throw new Error(
+      `Task ${task.identifier} has a repository binding but no available device or sandbox execution target`,
     );
-    return undefined;
   }
 
   /** Create the run's worktree on the bound device. */

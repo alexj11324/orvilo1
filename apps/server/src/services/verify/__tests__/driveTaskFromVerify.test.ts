@@ -25,28 +25,46 @@ const {
   goalFindByTask,
   runFindByOperation,
   runClaimTaskDrive,
+  runCompleteTaskDrive,
+  runReleaseTaskDrive,
+  runRenewTaskDrive,
   runSetMetadata,
   opFindById,
   taskFindById,
+  taskReleaseRunReservation,
   taskUpdateStatus,
+  taskUpdateStatusIfReservation,
   briefModelConstruct,
   briefCreate,
   serviceUpdateStatus,
   statusRecompute,
   deliverMock,
+  rearmHeartbeatAfterVerify,
+  scheduleCapReached,
+  integrateOnComplete,
+  topicFindByTopicId,
 } = vi.hoisted(() => ({
   goalFindByTask: vi.fn(),
   briefCreate: vi.fn(),
   briefModelConstruct: vi.fn(),
   deliverMock: vi.fn(),
+  rearmHeartbeatAfterVerify: vi.fn(),
+  scheduleCapReached: vi.fn(),
+  integrateOnComplete: vi.fn(),
   opFindById: vi.fn(),
   runFindByOperation: vi.fn(),
-  runClaimTaskDrive: vi.fn().mockResolvedValue(true),
+  runClaimTaskDrive: vi.fn().mockResolvedValue('drive-owner'),
+  runCompleteTaskDrive: vi.fn(),
+  runReleaseTaskDrive: vi.fn(),
+  runRenewTaskDrive: vi.fn(),
   runSetMetadata: vi.fn(),
   serviceUpdateStatus: vi.fn(),
   statusRecompute: vi.fn(),
   taskFindById: vi.fn(),
+  taskReleaseRunReservation: vi.fn(),
   taskUpdateStatus: vi.fn(),
+  taskUpdateStatusIfReservation: vi.fn(),
+  topicFindByTopicId: vi.fn(),
 }));
 
 vi.mock('../statusService', () => ({
@@ -59,9 +77,17 @@ vi.mock('@/database/models/verifyRun', () => ({
   VerifyRunModel: vi.fn(function () {
     return {
       claimTaskDrive: runClaimTaskDrive,
+      completeTaskDrive: runCompleteTaskDrive,
       findByOperation: runFindByOperation,
+      releaseTaskDrive: runReleaseTaskDrive,
+      renewTaskDrive: runRenewTaskDrive,
       setMetadata: runSetMetadata,
     };
+  }),
+}));
+vi.mock('@/database/models/taskTopic', () => ({
+  TaskTopicModel: vi.fn(function () {
+    return { findByTopicId: topicFindByTopicId };
   }),
 }));
 vi.mock('@/database/models/agentOperation', () => ({
@@ -73,7 +99,9 @@ vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(function () {
     return {
       findById: taskFindById,
+      releaseRunReservation: taskReleaseRunReservation,
       updateStatus: taskUpdateStatus,
+      updateStatusIfReservation: taskUpdateStatusIfReservation,
     };
   }),
 }));
@@ -90,6 +118,16 @@ vi.mock('@/server/services/task', () => ({
 vi.mock('@/server/services/taskResultBridge', () => ({
   TaskResultBridgeService: vi.fn(function () {
     return { deliver: deliverMock };
+  }),
+}));
+vi.mock('@/server/services/taskIntegration', () => ({
+  TaskIntegrationService: vi.fn(function () {
+    return { integrateOnComplete };
+  }),
+}));
+vi.mock('@/server/services/taskLifecycle', () => ({
+  TaskLifecycleService: vi.fn(function () {
+    return { rearmHeartbeatAfterVerify, scheduleCapReached };
   }),
 }));
 
@@ -110,9 +148,13 @@ describe('driveTaskFromVerify', () => {
     });
     await driveTaskFromVerify(db, 'u1', 'op-1');
     expect(serviceUpdateStatus).not.toHaveBeenCalled();
-    expect(taskUpdateStatus).toHaveBeenCalledWith('task-1', 'paused', {
-      error: 'Delivery did not pass verification.',
-    });
+    expect(taskUpdateStatusIfReservation).toHaveBeenCalledWith(
+      'task-1',
+      'completion:op-1:lease-1',
+      'running',
+      'paused',
+      expect.objectContaining({ error: 'Delivery did not pass verification.' }),
+    );
     expect(deliverMock).toHaveBeenCalledWith(expect.objectContaining({ reason: 'error' }));
     expect(scheduleGoalAdvance).toHaveBeenCalledWith(
       expect.objectContaining({ goalId: 'goal-1', trigger: 'settle' }),
@@ -140,12 +182,20 @@ describe('driveTaskFromVerify', () => {
     });
     await driveTaskFromVerify(db, 'u1', 'op-1');
     expect(serviceUpdateStatus).not.toHaveBeenCalled();
-    expect(taskUpdateStatus).toHaveBeenCalledWith('task-1', 'paused', {
-      error: VERIFICATION_UNJUDGEABLE_ERROR,
-    });
-    expect(taskUpdateStatus).not.toHaveBeenCalledWith('task-1', 'paused', {
-      error: 'Delivery did not pass verification.',
-    });
+    expect(taskUpdateStatusIfReservation).toHaveBeenCalledWith(
+      'task-1',
+      'completion:op-1:lease-1',
+      'running',
+      'paused',
+      expect.objectContaining({ error: VERIFICATION_UNJUDGEABLE_ERROR }),
+    );
+    expect(taskUpdateStatusIfReservation).not.toHaveBeenCalledWith(
+      'task-1',
+      'completion:op-1:lease-1',
+      'running',
+      'paused',
+      expect.objectContaining({ error: 'Delivery did not pass verification.' }),
+    );
   });
 
   /**
@@ -173,9 +223,13 @@ describe('driveTaskFromVerify', () => {
     // the whole review, which would re-ask checks that already rejected.
     expect(reviewGoalDelivery).toHaveBeenCalledTimes(1);
     expect(serviceUpdateStatus).not.toHaveBeenCalled();
-    expect(taskUpdateStatus).toHaveBeenCalledWith('task-1', 'paused', {
-      error: ACCEPTANCE_REVIEW_ERRORED_ERROR,
-    });
+    expect(taskUpdateStatusIfReservation).toHaveBeenCalledWith(
+      'task-1',
+      'completion:op-1:lease-1',
+      'running',
+      'paused',
+      expect.objectContaining({ error: ACCEPTANCE_REVIEW_ERRORED_ERROR }),
+    );
     // The creator still hears the delivery was not evaluated, not that it failed.
     expect(deliverMock.mock.calls[0][0].errorMessage.toLowerCase()).toContain('internal error');
   });
@@ -197,28 +251,48 @@ describe('driveTaskFromVerify', () => {
     goalFindByTask.mockReset();
     [
       runClaimTaskDrive,
+      runCompleteTaskDrive,
+      runReleaseTaskDrive,
+      runRenewTaskDrive,
       runFindByOperation,
       runSetMetadata,
       opFindById,
       taskFindById,
+      taskReleaseRunReservation,
       taskUpdateStatus,
+      taskUpdateStatusIfReservation,
       briefModelConstruct,
       briefCreate,
       serviceUpdateStatus,
       statusRecompute,
       deliverMock,
+      rearmHeartbeatAfterVerify,
+      scheduleCapReached,
+      integrateOnComplete,
+      topicFindByTopicId,
     ].forEach((m) => m.mockReset());
     // The drive is claimed before any side effect; unclaimed means "someone
     // else is driving this run", which every test here is not.
-    runClaimTaskDrive.mockResolvedValue(true);
+    runClaimTaskDrive.mockResolvedValue('drive-owner');
+    runCompleteTaskDrive.mockResolvedValue(true);
+    runReleaseTaskDrive.mockResolvedValue(true);
+    runRenewTaskDrive.mockResolvedValue(true);
+    taskUpdateStatusIfReservation.mockResolvedValue({ id: 'task-1' });
+    scheduleCapReached.mockResolvedValue(false);
+    serviceUpdateStatus.mockResolvedValue({ paused: [], task: {}, unlocked: [] });
+    integrateOnComplete.mockResolvedValue('settled');
     briefModelConstruct.mockImplementation(function () {
       return { create: briefCreate };
     });
     opFindById.mockResolvedValue({ taskId: 'task-1', topicId: 'topic-done' });
+    topicFindByTopicId.mockImplementation(async (topicId: string) => ({
+      operationId: topicId === 'topic-repair' ? 'repair-op' : 'op-1',
+    }));
     taskFindById.mockResolvedValue({
       assigneeAgentId: 'a1',
       id: 'task-1',
       identifier: 'T-1',
+      runReservationId: 'completion:op-1:lease-1',
       status: 'running',
     });
   });
@@ -227,7 +301,14 @@ describe('driveTaskFromVerify', () => {
   it('passed → completes the task (with cascade), delivers the creator callback, marks done', async () => {
     runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
     await driveTaskFromVerify(db, 'u1', 'op-1');
-    expect(serviceUpdateStatus).toHaveBeenCalledWith({ id: 'task-1', status: 'completed' });
+    expect(serviceUpdateStatus).toHaveBeenCalledWith(
+      { id: 'task-1', status: 'completed' },
+      undefined,
+      {
+        currentStatus: 'running',
+        reservationId: 'completion:op-1:lease-1',
+      },
+    );
     // Deferred creator callback fires here (not in onTopicComplete), reason 'done'.
     expect(deliverMock).toHaveBeenCalledTimes(1);
     expect(deliverMock.mock.calls[0][0]).toMatchObject({
@@ -237,6 +318,7 @@ describe('driveTaskFromVerify', () => {
       topicId: 'topic-done',
     });
     expect(runClaimTaskDrive).toHaveBeenCalledWith('run-1');
+    expect(rearmHeartbeatAfterVerify).not.toHaveBeenCalled();
   });
 
   it('passed → keeps a recurring task scheduled', async () => {
@@ -246,6 +328,7 @@ describe('driveTaskFromVerify', () => {
       automationMode: 'heartbeat',
       id: 'task-1',
       identifier: 'T-1',
+      runReservationId: 'completion:op-1:lease-1',
       status: 'scheduled',
     });
 
@@ -257,6 +340,124 @@ describe('driveTaskFromVerify', () => {
       expect.objectContaining({ reason: 'done', taskId: 'task-1' }),
     );
     expect(runClaimTaskDrive).toHaveBeenCalledWith('run-1');
+    expect(rearmHeartbeatAfterVerify).toHaveBeenCalledWith('task-1');
+  });
+
+  it('passed → completes a schedule task after its final allowed verified run', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    taskFindById.mockResolvedValue({
+      assigneeAgentId: 'a1',
+      automationMode: 'schedule',
+      id: 'task-1',
+      identifier: 'T-1',
+      runReservationId: 'completion:op-1:lease-1',
+      status: 'scheduled',
+    });
+    scheduleCapReached.mockResolvedValue(true);
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(scheduleCapReached).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'task-1', automationMode: 'schedule' }),
+    );
+    expect(serviceUpdateStatus).toHaveBeenCalledWith(
+      { id: 'task-1', status: 'completed' },
+      undefined,
+      {
+        currentStatus: 'scheduled',
+        reservationId: 'completion:op-1:lease-1',
+      },
+    );
+    expect(deliverMock).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'done', taskId: 'task-1' }),
+    );
+    expect(runCompleteTaskDrive).toHaveBeenCalledWith('run-1', 'drive-owner');
+  });
+
+  it('retires a capped Verify drive without side effects after the user supersedes its lease', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    taskFindById.mockResolvedValue({
+      assigneeAgentId: 'a1',
+      automationMode: 'schedule',
+      id: 'task-1',
+      identifier: 'T-1',
+      runReservationId: 'completion:op-1:lease-1',
+      status: 'scheduled',
+    });
+    scheduleCapReached.mockResolvedValue(true);
+    serviceUpdateStatus.mockResolvedValueOnce(null);
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(deliverMock).not.toHaveBeenCalled();
+    expect(taskReleaseRunReservation).not.toHaveBeenCalled();
+    expect(rearmHeartbeatAfterVerify).not.toHaveBeenCalled();
+    expect(runCompleteTaskDrive).toHaveBeenCalledWith('run-1', 'drive-owner');
+  });
+
+  it('uses the current schedule cap after configuration changes while Verify is pending', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    taskFindById
+      .mockResolvedValueOnce({
+        automationMode: 'schedule',
+        config: { schedule: { maxExecutions: 1 } },
+        id: 'task-1',
+        identifier: 'T-1',
+        runReservationId: 'completion:op-1:lease-1',
+        status: 'scheduled',
+      })
+      .mockResolvedValue({
+        automationMode: 'schedule',
+        config: { schedule: { maxExecutions: 10 } },
+        id: 'task-1',
+        identifier: 'T-1',
+        runReservationId: 'completion:op-1:lease-1',
+        status: 'scheduled',
+      });
+    scheduleCapReached.mockResolvedValue(false);
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(scheduleCapReached).toHaveBeenCalledWith(
+      expect.objectContaining({ config: { schedule: { maxExecutions: 10 } } }),
+    );
+    expect(serviceUpdateStatus).not.toHaveBeenCalled();
+    expect(deliverMock).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'done', taskId: 'task-1' }),
+    );
+  });
+
+  it('keeps the task-drive lease reclaimable when heartbeat re-arm fails', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    taskFindById.mockResolvedValue({
+      automationMode: 'heartbeat',
+      id: 'task-1',
+      identifier: 'T-1',
+      status: 'scheduled',
+    });
+    rearmHeartbeatAfterVerify.mockRejectedValueOnce(new Error('scheduler unavailable'));
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(runCompleteTaskDrive).not.toHaveBeenCalled();
+  });
+
+  it('defers task drive until a corrective integration run settles', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    integrateOnComplete.mockResolvedValue('hold');
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(integrateOnComplete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        completionReservationId: 'completion:op-1:lease-1',
+        verifyOperationId: 'op-1',
+      }),
+    );
+    expect(runReleaseTaskDrive).toHaveBeenCalledWith('run-1', 'drive-owner');
+    expect(runCompleteTaskDrive).not.toHaveBeenCalled();
+    expect(serviceUpdateStatus).not.toHaveBeenCalled();
+    expect(deliverMock).not.toHaveBeenCalled();
   });
 
   it('settles the owning task when the passing verify run belongs to a repair child', async () => {
@@ -334,9 +535,13 @@ describe('driveTaskFromVerify', () => {
     runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'failed' });
     await driveTaskFromVerify(db, 'u1', 'op-1');
     expect(briefModelConstruct).not.toHaveBeenCalled();
-    expect(taskUpdateStatus).toHaveBeenCalledWith('task-1', 'paused', {
-      error: 'Delivery did not pass verification.',
-    });
+    expect(taskUpdateStatusIfReservation).toHaveBeenCalledWith(
+      'task-1',
+      'completion:op-1:lease-1',
+      'running',
+      'paused',
+      expect.objectContaining({ error: 'Delivery did not pass verification.' }),
+    );
     expect(serviceUpdateStatus).not.toHaveBeenCalled();
     // Creator is told it failed verification (reason 'error'), not a passed result.
     expect(deliverMock.mock.calls[0][0]).toMatchObject({ reason: 'error', taskId: 'task-1' });
@@ -347,8 +552,10 @@ describe('driveTaskFromVerify', () => {
     await driveTaskFromVerify(db, 'u1', 'op-1');
 
     // Paused for a human, but NOT completed — the delivery was never evaluated.
-    expect(taskUpdateStatus).toHaveBeenCalledWith(
+    expect(taskUpdateStatusIfReservation).toHaveBeenCalledWith(
       'task-1',
+      'completion:op-1:lease-1',
+      'running',
       'paused',
       expect.objectContaining({ error: expect.stringContaining('could not run') }),
     );
@@ -395,12 +602,70 @@ describe('driveTaskFromVerify', () => {
     expect(serviceUpdateStatus).not.toHaveBeenCalled();
   });
 
+  it('does not let an older verify generation mutate the current task', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    taskFindById.mockResolvedValue({
+      currentTopicId: 'topic-current',
+      id: 'task-1',
+      status: 'running',
+    });
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(runClaimTaskDrive).not.toHaveBeenCalled();
+    expect(integrateOnComplete).not.toHaveBeenCalled();
+    expect(serviceUpdateStatus).not.toHaveBeenCalled();
+    expect(taskUpdateStatus).not.toHaveBeenCalled();
+  });
+
+  it('defers a settled Verify verdict until the task callback claims the running topic', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    topicFindByTopicId.mockResolvedValue({ operationId: 'op-1', status: 'running' });
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(runClaimTaskDrive).not.toHaveBeenCalled();
+    expect(integrateOnComplete).not.toHaveBeenCalled();
+    expect(serviceUpdateStatus).not.toHaveBeenCalled();
+  });
+
+  it('re-drives the original verify after its corrective integration generation settles', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    taskFindById.mockResolvedValue({
+      currentTopicId: 'topic-current',
+      id: 'task-1',
+      status: 'running',
+    });
+    topicFindByTopicId.mockImplementation(async (topicId: string) =>
+      topicId === 'topic-current'
+        ? {
+            integration: {
+              state: 'integrated',
+              verifyOperationId: 'op-1',
+            },
+          }
+        : { operationId: 'op-1' },
+    );
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(runClaimTaskDrive).toHaveBeenCalledWith('run-1');
+    expect(serviceUpdateStatus).toHaveBeenCalledWith({ id: 'task-1', status: 'completed' });
+  });
+
   it('completes the task on a passing verify', async () => {
     runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
 
     await driveTaskFromVerify(db, 'u1', 'op-1');
 
-    expect(serviceUpdateStatus).toHaveBeenCalledWith({ id: 'task-1', status: 'completed' });
+    expect(serviceUpdateStatus).toHaveBeenCalledWith(
+      { id: 'task-1', status: 'completed' },
+      undefined,
+      {
+        currentStatus: 'running',
+        reservationId: 'completion:op-1:lease-1',
+      },
+    );
     expect(briefCreate).not.toHaveBeenCalled();
   });
 });

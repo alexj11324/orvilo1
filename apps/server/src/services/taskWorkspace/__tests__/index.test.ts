@@ -29,6 +29,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
     addGitWorktree: vi.fn(),
     isConfigured: false,
     listGitRemoteBranches: vi.fn(),
+    removeGitWorktree: vi.fn(),
   },
 }));
 
@@ -87,6 +88,7 @@ describe('TaskWorkspaceService', () => {
       { isDefault: true, name: 'origin/main' },
     ]);
     vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({ success: true });
+    vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({ success: true });
   });
 
   describe('resolveWorkspaceConfig', () => {
@@ -116,6 +118,20 @@ describe('TaskWorkspaceService', () => {
   });
 
   describe('provision', () => {
+    it('removes a device worktree that failed before topic registration', async () => {
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+      const provisioned = await service.provision({ seq: 1, task });
+
+      await expect(service.discardUnregistered(provisioned!)).resolves.toBe(true);
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith({
+        deviceId: 'dev-1',
+        path: '/repos/orvilo',
+        userId: 'user-1',
+        workspaceId: 'ws-1',
+        worktreePath: '/repos/orvilo-task-T-1',
+      });
+    });
+
     it('creates a worktree on the resolved device and seeds the integration record', async () => {
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
@@ -169,11 +185,12 @@ describe('TaskWorkspaceService', () => {
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
 
-    it('returns undefined when no concrete device can be resolved', async () => {
+    it('blocks when no concrete device can be resolved', async () => {
       mockAgentModel.getAgentConfig.mockResolvedValue({ agencyConfig: {} });
       const task = baseTask({ config: { workspace: workspaceConfig } });
-      const result = await service.provision({ seq: 1, task });
-      expect(result).toBeUndefined();
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'no available device or sandbox execution target',
+      );
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
 
@@ -283,15 +300,15 @@ describe('TaskWorkspaceService', () => {
       expect(result?.repos).toEqual(['https://github.com/acme/widgets.git']);
     });
 
-    it('runs unprovisioned when the assignee does not resolve to the sandbox', async () => {
+    it('blocks when the assignee does not resolve to the sandbox', async () => {
       mockAgentModel.getAgentConfig.mockResolvedValue({
         agencyConfig: { executionTarget: 'none' },
       });
       const task = baseTask({ config: { workspace: remoteWorkspaceConfig } });
 
-      const result = await service.provision({ seq: 1, task });
-
-      expect(result).toBeUndefined();
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'no available device or sandbox execution target',
+      );
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
 
@@ -335,7 +352,7 @@ describe('TaskWorkspaceService', () => {
       }
     });
 
-    it('does not emit the contract for a non-hetero assignee', async () => {
+    it('blocks a non-hetero assignee that cannot honor the remote contract', async () => {
       // `repos` pre-clone + GITHUB_TOKEN only exist on the hetero sandbox path;
       // a plain agent on 'sandbox' could never honour the contract.
       mockAgentModel.getAgentConfig.mockResolvedValue({
@@ -343,17 +360,18 @@ describe('TaskWorkspaceService', () => {
       });
       const task = baseTask({ config: { workspace: remoteWorkspaceConfig } });
 
-      const result = await service.provision({ seq: 1, task });
-
-      expect(result).toBeUndefined();
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'no available device or sandbox execution target',
+      );
     });
 
-    it('runs unprovisioned when the repo coordinate is unparseable', async () => {
+    it('blocks when the repo coordinate is unparseable', async () => {
       const task = baseTask({
         config: { workspace: { provider: 'git', repo: 'not-a-repo' } },
       });
-      const result = await service.provision({ seq: 1, task });
-      expect(result).toBeUndefined();
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'no available device or sandbox execution target',
+      );
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
 

@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
+
 import type { BriefDecision, TaskTopicHandoff, TaskTopicIntegration } from '@orvilo/types';
-import { and, count, desc, eq, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, exists, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import type { TaskTopicItem } from '../schemas/task';
 import { tasks, taskTopics } from '../schemas/task';
@@ -27,6 +29,16 @@ export class TaskTopicModel {
         userId: taskTopics.userId,
         visibility: taskTopics.visibility,
         workspaceId: taskTopics.workspaceId,
+      },
+    );
+
+  private taskOwnership = () =>
+    buildWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      {
+        userId: tasks.createdByUserId,
+        visibility: tasks.visibility,
+        workspaceId: tasks.workspaceId,
       },
     );
 
@@ -95,20 +107,24 @@ export class TaskTopicModel {
   async updateIntegration(
     taskId: string,
     topicId: string,
-    patch: Partial<TaskTopicIntegration>,
-  ): Promise<void> {
-    const current = await this.db
-      .select({ integration: taskTopics.integration })
-      .from(taskTopics)
-      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()))
-      .limit(1);
-    const record = current[0]?.integration;
-    if (!record) return;
-
-    await this.db
+    patch: { [K in keyof TaskTopicIntegration]?: TaskTopicIntegration[K] | null },
+  ): Promise<boolean> {
+    const updated = await this.db
       .update(taskTopics)
-      .set({ integration: { ...record, ...patch } })
-      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
+      .set({
+        integration: sql`jsonb_strip_nulls(${taskTopics.integration} || ${JSON.stringify(patch)}::jsonb)`,
+      })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, topicId),
+          isNotNull(taskTopics.integration),
+          this.ownership(),
+        ),
+      )
+      .returning({ id: taskTopics.id });
+
+    return updated.length > 0;
   }
 
   async updateStatus(taskId: string, topicId: string, status: string): Promise<void> {
@@ -268,6 +284,136 @@ export class TaskTopicModel {
       .where(and(eq(taskTopics.topicId, topicId), this.ownership()))
       .limit(1);
     return result[0] || null;
+  }
+
+  /**
+   * Atomically accept a terminal callback exactly once.
+   *
+   * Queue delivery is at-least-once. A plain read followed by `updateStatus`
+   * lets two copies both run the lifecycle side effects. Restricting the
+   * transition to the still-running row makes the status write the claim.
+   */
+  async settleIfRunning(
+    taskId: string,
+    topicId: string,
+    operationId: string,
+    status: 'completed' | 'failed',
+  ): Promise<string | null> {
+    const now = new Date();
+    const reservationPrefix = `completion:${operationId}:`;
+    const completionReservationId = `${reservationPrefix}${randomUUID()}`;
+    const leaseExpiresAt = new Date(now.getTime() + 30 * 60 * 1000);
+    const claimed = await this.db.transaction(async (tx) => {
+      const settled = await tx
+        .update(taskTopics)
+        .set({ status })
+        .where(
+          and(
+            eq(taskTopics.taskId, taskId),
+            eq(taskTopics.topicId, topicId),
+            eq(taskTopics.operationId, operationId),
+            eq(taskTopics.status, 'running'),
+            exists(
+              tx
+                .select({ id: tasks.id })
+                .from(tasks)
+                .where(
+                  and(
+                    eq(tasks.id, taskId),
+                    eq(tasks.currentTopicId, topicId),
+                    eq(tasks.status, 'running'),
+                  ),
+                ),
+            ),
+            this.ownership(),
+          ),
+        )
+        .returning({ id: taskTopics.id });
+
+      if (settled.length > 0) {
+        const taskClaim = await tx
+          .update(tasks)
+          .set({
+            lastHeartbeatAt: now,
+            runReservationExpiresAt: leaseExpiresAt,
+            runReservationId: completionReservationId,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(tasks.id, taskId),
+              eq(tasks.currentTopicId, topicId),
+              eq(tasks.status, 'running'),
+              this.taskOwnership(),
+            ),
+          )
+          .returning({ id: tasks.id });
+        if (taskClaim.length === 0) {
+          throw new Error('Task generation changed while claiming its completion callback');
+        }
+        return completionReservationId;
+      }
+
+      // The callback may have claimed task_topics and then crashed before its
+      // side effects finished. Reclaim only its expired completion lease; an
+      // active owner makes this delivery retryable instead of being mistaken
+      // for an already-settled duplicate.
+      const reclaimed = await tx
+        .update(tasks)
+        .set({
+          lastHeartbeatAt: now,
+          runReservationExpiresAt: leaseExpiresAt,
+          runReservationId: completionReservationId,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(tasks.id, taskId),
+            eq(tasks.currentTopicId, topicId),
+            inArray(tasks.status, ['running', 'scheduled']),
+            sql`${tasks.runReservationId} like ${`${reservationPrefix}%`}`,
+            sql`${tasks.runReservationExpiresAt} <= ${now}`,
+            this.taskOwnership(),
+            exists(
+              tx
+                .select({ id: taskTopics.id })
+                .from(taskTopics)
+                .where(
+                  and(
+                    eq(taskTopics.taskId, taskId),
+                    eq(taskTopics.topicId, topicId),
+                    eq(taskTopics.operationId, operationId),
+                    eq(taskTopics.status, status),
+                    this.ownership(),
+                  ),
+                ),
+            ),
+          ),
+        )
+        .returning({ id: tasks.id });
+      return reclaimed.length > 0 ? completionReservationId : null;
+    });
+
+    if (claimed) {
+      await this.markTopicEnded(topicId, status);
+      return claimed;
+    }
+
+    const [active] = await this.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.id, taskId),
+          eq(tasks.currentTopicId, topicId),
+          sql`${tasks.runReservationId} like ${`${reservationPrefix}%`}`,
+          sql`${tasks.runReservationExpiresAt} > ${now}`,
+          this.taskOwnership(),
+        ),
+      )
+      .limit(1);
+    if (active) throw new Error('Task completion callback is already being processed');
+    return null;
   }
 
   /**

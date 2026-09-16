@@ -699,6 +699,7 @@ export class AiAgentService {
       disableLocalSystem,
       initialStepCount,
       signal,
+      skipTaskVerification,
       userInterventionConfig: requestedUserInterventionConfig = { approvalMode: 'headless' },
       queueRetries,
       queueRetryDelay,
@@ -1075,6 +1076,7 @@ export class AiAgentService {
           requestedDeviceId: turn.effectiveRequestedDeviceId,
           runAttachments,
           selfMessageIds,
+          skipTaskVerification,
           topicStartOwnerOperationId: params.topicStartOwnerOperationId,
         },
       );
@@ -1342,6 +1344,7 @@ export class AiAgentService {
         queueRetries,
         queueRetryDelay,
         signal,
+        skipTaskVerification,
         stream,
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,
         updateAbortedAssistantMessage,

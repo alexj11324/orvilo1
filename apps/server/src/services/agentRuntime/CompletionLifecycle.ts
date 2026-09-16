@@ -229,7 +229,7 @@ export class CompletionLifecycle {
     // void-ing it) so `dispatchHooks` can await it before the completion gate runs
     // — a fast run can otherwise complete first and the gate would no-op on a plan
     // that lands moments later. (instantiateVerifyPlanOnStart never rejects.)
-    if (params.taskId && !params.parentOperationId) {
+    if (params.taskId && !params.parentOperationId && !params.skipTaskVerification) {
       this.verifyPlanInstantiations.set(
         params.operationId,
         instantiateVerifyPlanOnStart(

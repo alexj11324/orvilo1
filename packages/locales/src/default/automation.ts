@@ -108,6 +108,7 @@ export default {
   'settings.tab_settings': 'Settings',
 
   'status.active': 'Active',
+  'status.inactive': 'Inactive',
   'status.paused': 'Paused',
 
   'template_categories.code_review': 'Code review',

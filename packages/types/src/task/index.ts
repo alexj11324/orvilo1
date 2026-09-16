@@ -177,17 +177,23 @@ export interface TaskTopicIntegration {
   /** Branch created for the run (`task/<identifier>`). */
   branch: string;
   /** Repo-relative paths reported unmerged at the last attempt. */
-  conflicts?: string[];
+  conflicts?: null | string[];
   /**
    * Device hosting the worktrees. Absent on sandbox-contract records — those
    * integrate through the remote (`repo`) rather than a device worktree.
    */
   deviceId?: string;
+  /** Immutable base commit observed when the delivery run completed. */
+  expectedBaseSha?: string;
+  /** Immutable source commit accepted for this delivery. */
+  expectedHeadSha?: string;
   /** Merge commit SHA once `state` reaches 'integrated'. */
   integratedSha?: string;
   /** Path of the detached integration worktree on the device. */
   integrationWorktreePath?: string;
-  lastError?: string;
+  lastError?: null | string;
+  /** Pull request number bound to this delivery, when known. */
+  prNumber?: number;
   /** URL of the pull request opened for {@link branch}, when known. */
   prUrl?: string;
   /** True once the merge result was pushed to `origin/<baseBranch>`. */
@@ -212,6 +218,12 @@ export interface TaskTopicIntegration {
   runTopicId?: string;
   /** pending → merging → integrated | conflict | blocked | skipped */
   state: 'pending' | 'merging' | 'integrated' | 'conflict' | 'blocked' | 'skipped';
+  /**
+   * Original verified delivery waiting for this corrective integration chain.
+   * Once the chain settles, the lifecycle re-drives that Verify run so task
+   * completion and the creator callback still use the accepted delivery.
+   */
+  verifyOperationId?: string;
   /** True once the provisioned worktree was removed after integration. */
   worktreeCleaned?: boolean;
   /**

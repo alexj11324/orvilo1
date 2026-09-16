@@ -3334,6 +3334,7 @@ table task_topics {
   status text [not null, default: 'running']
   trigger text
   handoff jsonb
+  integration jsonb
   review_passed integer
   review_score integer
   review_scores jsonb
@@ -3384,6 +3385,8 @@ table tasks {
   total_topics integer [default: 0]
   max_topics integer
   current_topic_id text
+  run_reservation_id text
+  run_reservation_expires_at "timestamp with time zone"
   context jsonb [default: `{}`]
   config jsonb [default: `{}`]
   error text

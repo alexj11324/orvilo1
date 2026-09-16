@@ -103,6 +103,10 @@ export const tasks = pgTable(
     totalTopics: integer('total_topics').default(0),
     maxTopics: integer('max_topics'), // null = unlimited
     currentTopicId: text('current_topic_id').references(() => topics.id, { onDelete: 'set null' }),
+    /** Owner token for the short dispatch/provisioning critical section. */
+    runReservationId: text('run_reservation_id'),
+    /** Crash-recovery deadline for the dispatch reservation. */
+    runReservationExpiresAt: timestamptz('run_reservation_expires_at'),
 
     // Context & config (each task independent, no inheritance from parent)
     context: jsonb('context').default({}),

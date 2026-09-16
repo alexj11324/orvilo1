@@ -1,0 +1,175 @@
+// @vitest-environment node
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { watchdog } from './watchdog';
+
+const {
+  briefCreate,
+  cancelIfRunning,
+  cleanupTaskWorktrees,
+  findByTaskId,
+  findStuckTasks,
+  interruptTask,
+  updateStatus,
+  updateStatusIfCurrent,
+  updateStatusIfReservation,
+} = vi.hoisted(() => ({
+  briefCreate: vi.fn(),
+  cancelIfRunning: vi.fn(),
+  cleanupTaskWorktrees: vi.fn(),
+  findByTaskId: vi.fn(),
+  findStuckTasks: vi.fn(),
+  interruptTask: vi.fn(),
+  updateStatus: vi.fn(),
+  updateStatusIfCurrent: vi.fn(),
+  updateStatusIfReservation: vi.fn(),
+}));
+
+vi.mock('@/database/server', () => ({ getServerDB: vi.fn().mockResolvedValue({}) }));
+vi.mock('@/database/models/task', () => ({
+  TaskModel: Object.assign(
+    vi.fn(function () {
+      return { updateStatus, updateStatusIfCurrent, updateStatusIfReservation };
+    }),
+    { findStuckTasks },
+  ),
+}));
+vi.mock('@/database/models/taskTopic', () => ({
+  TaskTopicModel: vi.fn(function () {
+    return { cancelIfRunning, findByTaskId };
+  }),
+}));
+vi.mock('@/server/services/aiAgent', () => ({
+  AiAgentService: vi.fn(function () {
+    return { interruptTask };
+  }),
+}));
+vi.mock('@/server/services/taskIntegration', () => ({
+  TaskIntegrationService: vi.fn(function () {
+    return { cleanupTaskWorktrees };
+  }),
+}));
+vi.mock('@/database/models/brief', () => ({
+  BriefModel: vi.fn(function () {
+    return { create: briefCreate };
+  }),
+}));
+vi.mock('@/server/services/taskResultBridge/redisStore', () => ({
+  TaskResultCallbackRedisStore: Object.assign(vi.fn(), {
+    findRecoverableScopes: vi.fn().mockResolvedValue([]),
+  }),
+}));
+vi.mock('@/server/services/taskResultBridge', () => ({ TaskResultBridgeService: vi.fn() }));
+
+const stuckTask = {
+  assigneeAgentId: 'agent-1',
+  createdByUserId: 'user-1',
+  heartbeatTimeout: 60,
+  id: 'task-1',
+  identifier: 'TASK-1',
+  workspaceId: null,
+};
+
+const context = () =>
+  ({
+    json: vi.fn((body: unknown, status = 200) => ({ body, status })),
+  }) as any;
+
+describe('task watchdog', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    findStuckTasks.mockResolvedValue([stuckTask]);
+    findByTaskId.mockResolvedValue([]);
+    interruptTask.mockResolvedValue({ success: true });
+    updateStatusIfCurrent.mockResolvedValue({ id: 'task-1' });
+    updateStatusIfReservation.mockResolvedValue({ id: 'task-1' });
+  });
+
+  it('does not declare failure while the timed-out generation still owns a running topic', async () => {
+    findByTaskId.mockResolvedValue([
+      { operationId: 'op-1', status: 'running', topicId: 'topic-1' },
+    ]);
+    interruptTask.mockResolvedValue({
+      deviceCancellationConfirmed: false,
+      success: false,
+    });
+
+    const response = await watchdog(context());
+
+    expect(response.body).toMatchObject({
+      canceled: [],
+      cancellationRequired: ['TASK-1'],
+      failed: [],
+      success: true,
+    });
+    expect(updateStatus).not.toHaveBeenCalled();
+    expect(briefCreate).not.toHaveBeenCalled();
+  });
+
+  it('marks a heartbeat-expired task failed once no running generation remains', async () => {
+    findByTaskId.mockResolvedValue([{ status: 'completed', topicId: 'topic-1' }]);
+
+    const response = await watchdog(context());
+
+    expect(response.body).toMatchObject({ cancellationRequired: [], failed: ['TASK-1'] });
+    expect(updateStatusIfCurrent).toHaveBeenCalledWith(
+      'task-1',
+      'running',
+      'failed',
+      expect.objectContaining({ error: 'Heartbeat timeout' }),
+    );
+    expect(cleanupTaskWorktrees).toHaveBeenCalledWith('task-1');
+    expect(briefCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('interrupts and reclaims a timed-out task when every running operation confirms cancellation', async () => {
+    findByTaskId.mockResolvedValue([
+      { operationId: 'op-1', status: 'running', topicId: 'topic-1' },
+      { operationId: 'op-2', status: 'running', topicId: 'topic-2' },
+    ]);
+
+    const response = await watchdog(context());
+
+    expect(interruptTask).toHaveBeenCalledTimes(2);
+    expect(interruptTask).toHaveBeenNthCalledWith(1, { operationId: 'op-1' });
+    expect(interruptTask).toHaveBeenNthCalledWith(2, { operationId: 'op-2' });
+    expect(cancelIfRunning).toHaveBeenCalledWith('task-1', 'topic-1');
+    expect(cancelIfRunning).toHaveBeenCalledWith('task-1', 'topic-2');
+    expect(response.body).toMatchObject({ canceled: ['TASK-1'], failed: ['TASK-1'] });
+    expect(cleanupTaskWorktrees).toHaveBeenCalledWith('task-1');
+  });
+
+  it('preserves the task and worktrees when device cancellation is not confirmed', async () => {
+    findByTaskId.mockResolvedValue([
+      { operationId: 'op-1', status: 'running', topicId: 'topic-1' },
+    ]);
+    interruptTask.mockResolvedValue({
+      deviceCancellationConfirmed: false,
+      success: false,
+    });
+
+    const response = await watchdog(context());
+
+    expect(response.body).toMatchObject({
+      canceled: [],
+      cancellationRequired: ['TASK-1'],
+      failed: [],
+    });
+    expect(cancelIfRunning).not.toHaveBeenCalled();
+    expect(updateStatusIfCurrent).not.toHaveBeenCalled();
+    expect(updateStatusIfReservation).not.toHaveBeenCalled();
+    expect(cleanupTaskWorktrees).not.toHaveBeenCalled();
+    expect(briefCreate).not.toHaveBeenCalled();
+  });
+
+  it('requires cancellation when a running topic has no operation identity', async () => {
+    findByTaskId.mockResolvedValue([{ status: 'running', topicId: 'topic-1' }]);
+
+    const response = await watchdog(context());
+
+    expect(response.body).toMatchObject({ cancellationRequired: ['TASK-1'], failed: [] });
+    expect(interruptTask).not.toHaveBeenCalled();
+    expect(cancelIfRunning).not.toHaveBeenCalled();
+    expect(cleanupTaskWorktrees).not.toHaveBeenCalled();
+  });
+});

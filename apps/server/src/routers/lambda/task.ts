@@ -1386,7 +1386,9 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateCheckpointConfig(resolved.id, checkpoint);
+        const task = await model.updateCheckpointConfig(resolved.id, checkpoint, {
+          invalidateRun: true,
+        });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return {
           data: model.getCheckpointConfig(task),
@@ -1454,7 +1456,7 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateReviewConfig(resolved.id, review);
+        const task = await model.updateReviewConfig(resolved.id, review, { invalidateRun: true });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return {
           data: model.getReviewConfig(task),
@@ -1874,7 +1876,7 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateTaskConfig(resolved.id, config);
+        const task = await model.updateTaskConfig(resolved.id, config, { invalidateRun: true });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return { data: task, message: 'Config updated', success: true };
       } catch (error) {

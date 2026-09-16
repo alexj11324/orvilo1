@@ -94,6 +94,7 @@
   "settings.tab_runs": "Runs",
   "settings.tab_settings": "Settings",
   "status.active": "Active",
+  "status.inactive": "Inactive",
   "status.paused": "Paused",
   "template_categories.code_review": "Code review",
   "template_categories.data_research": "Data & research",

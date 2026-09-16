@@ -174,6 +174,7 @@ describe('TaskService', () => {
     update: vi.fn(),
     updateContext: vi.fn(),
     updateStatus: vi.fn(),
+    updateStatusIfReservation: vi.fn(),
   };
 
   const mockTaskTopicModel = {
@@ -206,6 +207,7 @@ describe('TaskService', () => {
     cancelScheduled.mockResolvedValue(undefined);
     scheduleNextTopic.mockResolvedValue('tick-new');
     resolveTaskAcceptance.mockResolvedValue(undefined);
+    cascadeManyMock.mockResolvedValue({ failed: [], paused: [], started: [] });
     mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([]);
     mockTaskModel.getActivities.mockResolvedValue([]);
     (AgentModel as any).mockImplementation(function () {
@@ -1724,6 +1726,59 @@ describe('TaskService', () => {
       expect(mockTaskModel.updateContext).not.toHaveBeenCalled();
     });
 
+    it('clears a completion reservation when a person pauses the task', async () => {
+      const prev = baseTask({ status: 'running' });
+      const next = baseTask({ status: 'paused' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateWithLog.mockResolvedValue(next);
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([]);
+
+      const actor = { userId };
+      await new TaskService(db, userId).updateStatus({ id: 'T-1', status: 'paused' as any }, actor);
+
+      expect(mockTaskModel.updateWithLog).toHaveBeenCalledWith(
+        'task-1',
+        expect.objectContaining({
+          runReservationExpiresAt: null,
+          runReservationId: null,
+          status: 'paused',
+        }),
+        actor,
+      );
+    });
+
+    it('does not complete when the owning run reservation was superseded', async () => {
+      const prev = baseTask({
+        runReservationId: 'completion:op-1:old',
+        status: 'scheduled',
+      });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateStatusIfReservation.mockResolvedValue(null);
+
+      const result = await new TaskService(db, userId).updateStatus(
+        { id: 'T-1', status: 'completed' as any },
+        undefined,
+        {
+          currentStatus: 'scheduled' as any,
+          reservationId: 'completion:op-1:old',
+        },
+      );
+
+      expect(result).toBeNull();
+      expect(mockTaskModel.updateStatusIfReservation).toHaveBeenCalledWith(
+        'task-1',
+        'completion:op-1:old',
+        'scheduled',
+        'completed',
+        expect.objectContaining({
+          completedAt: expect.any(Date),
+          runReservationExpiresAt: null,
+          runReservationId: null,
+        }),
+      );
+      expect(cascadeMock).not.toHaveBeenCalled();
+    });
+
     it('stamps on user-initiated restart (paused → scheduled)', async () => {
       const prev = baseTask({ status: 'paused', automationMode: 'schedule' });
       const next = baseTask({ status: 'scheduled', automationMode: 'schedule' });
@@ -1877,13 +1932,20 @@ describe('TaskService', () => {
     it('writes one status row per family member a person cascaded', async () => {
       const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
       const openChild = baseTask({ id: 'task-c1', identifier: 'C-1', status: 'backlog' });
+      const openGrandchild = baseTask({
+        id: 'task-g1',
+        identifier: 'G-1',
+        parentTaskId: 'task-c1',
+        status: 'running',
+      });
       // Already finished: not part of the cascade, so no row.
       const doneChild = baseTask({ id: 'task-c2', identifier: 'C-2', status: 'completed' });
       mockTaskModel.resolve.mockResolvedValue(parent);
-      mockTaskModel.findSubtasks.mockResolvedValue([openChild, doneChild]);
+      mockTaskModel.findAllDescendants.mockResolvedValue([openChild, doneChild, openGrandchild]);
       mockTaskModel.updateStatusForIds.mockResolvedValue([
         { ...parent, status: 'canceled' },
         { ...openChild, status: 'canceled' },
+        { ...openGrandchild, status: 'canceled' },
       ]);
       // What each task is *leaving* comes from the locked read inside the
       // transaction, not the dialog-time snapshot: the child moved backlog →
@@ -1891,6 +1953,7 @@ describe('TaskService', () => {
       mockTaskModel.lockForStatusChange.mockResolvedValue([
         { id: 'task-p', status: 'running', visibility: 'public' },
         { id: 'task-c1', status: 'paused', visibility: 'private' },
+        { id: 'task-g1', status: 'running', visibility: 'public' },
       ]);
       mockTaskTopicModel.cancelRunningByTaskIds.mockResolvedValue([]);
       (db as any).transaction = async (fn: (tx: unknown) => Promise<void>) => fn(db);
@@ -1898,7 +1961,11 @@ describe('TaskService', () => {
       const service = new TaskService(db, userId);
       await service.updateStatusCascade({ id: 'P-1', status: 'canceled' }, { userId });
 
-      expect(mockTaskModel.lockForStatusChange).toHaveBeenCalledWith(['task-p', 'task-c1']);
+      expect(mockTaskModel.lockForStatusChange).toHaveBeenCalledWith([
+        'task-p',
+        'task-c1',
+        'task-g1',
+      ]);
       expect(mockTaskModel.addActivities).toHaveBeenCalledTimes(1);
       expect(mockTaskModel.addActivities).toHaveBeenCalledWith([
         {
@@ -1917,13 +1984,21 @@ describe('TaskService', () => {
           type: 'status',
           visibility: 'private',
         },
+        {
+          actorAgentId: null,
+          actorUserId: userId,
+          payload: { actorKind: 'user', from: 'running', to: 'canceled' },
+          taskId: 'task-g1',
+          type: 'status',
+          visibility: 'public',
+        },
       ]);
     });
 
     it('stays silent for a system cascade', async () => {
       const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
       mockTaskModel.resolve.mockResolvedValue(parent);
-      mockTaskModel.findSubtasks.mockResolvedValue([]);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
       mockTaskModel.updateStatusForIds.mockResolvedValue([{ ...parent, status: 'canceled' }]);
       mockTaskTopicModel.cancelRunningByTaskIds.mockResolvedValue([]);
       (db as any).transaction = async (fn: (tx: unknown) => Promise<void>) => fn(db);
@@ -2100,6 +2175,26 @@ describe('TaskService', () => {
         'task_001',
         { assigneeAgentId: 'agt_new' },
         { agentId: 'agt_actor', userId: 'user_actor' },
+      );
+    });
+
+    it('invalidates the active run when automation configuration changes', async () => {
+      mockTaskModel.updateWithLog.mockResolvedValue({ id: 'task_001' });
+
+      await new TaskService(db, userId, 'ws-1').updateTaskWithAssigneeLock(
+        'task_001',
+        { config: { schedule: { maxExecutions: 10 } } },
+        { userId: 'user_actor' },
+      );
+
+      expect(mockTaskModel.updateWithLog).toHaveBeenCalledWith(
+        'task_001',
+        {
+          config: { schedule: { maxExecutions: 10 } },
+          runReservationExpiresAt: null,
+          runReservationId: null,
+        },
+        { userId: 'user_actor' },
       );
     });
 

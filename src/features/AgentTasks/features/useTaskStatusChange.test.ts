@@ -5,7 +5,7 @@ import { useTaskStatusChange } from './useTaskStatusChange';
 
 const mocks = vi.hoisted(() => ({
   createCascadeModal: vi.fn(),
-  getSubtasks: vi.fn(),
+  getTaskTree: vi.fn(),
   refreshTaskDetail: vi.fn(),
   refreshTaskList: vi.fn(),
   toastError: vi.fn(),
@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/services/task', () => ({
   taskService: {
-    getSubtasks: mocks.getSubtasks,
+    getTaskTree: mocks.getTaskTree,
     updateStatusCascade: mocks.updateStatusCascade,
   },
 }));
@@ -62,15 +62,16 @@ describe('useTaskStatusChange', () => {
 
     await expect(result.current('T-1', 'paused')).resolves.toBe(true);
 
-    expect(mocks.getSubtasks).not.toHaveBeenCalled();
+    expect(mocks.getTaskTree).not.toHaveBeenCalled();
     expect(mocks.updateTaskStatus).toHaveBeenCalledWith('T-1', 'paused');
   });
 
   it('updates a terminal status directly when there are no open subtasks', async () => {
-    mocks.getSubtasks.mockResolvedValue({
+    mocks.getTaskTree.mockResolvedValue({
       data: [
-        { identifier: 'T-2', status: 'completed' },
-        { identifier: 'T-3', status: 'canceled' },
+        { id: 'task-1', identifier: 'T-1', status: 'running' },
+        { id: 'task-2', identifier: 'T-2', status: 'completed' },
+        { id: 'task-3', identifier: 'T-3', status: 'canceled' },
       ],
     });
     const { result } = renderHook(() => useTaskStatusChange());
@@ -82,12 +83,13 @@ describe('useTaskStatusChange', () => {
   });
 
   it('updates every open subtask before the parent when the user chooses update all', async () => {
-    mocks.getSubtasks.mockResolvedValue({
+    mocks.getTaskTree.mockResolvedValue({
       data: [
-        { identifier: 'T-2', name: 'Open', status: 'backlog' },
-        { identifier: 'T-3', name: 'Already done', status: 'completed' },
-        { identifier: 'T-4', name: 'Running', status: 'running' },
-        { identifier: 'T-5', name: 'Failed', status: 'failed' },
+        { id: 'task-1', identifier: 'T-1', name: 'Root', status: 'running' },
+        { id: 'task-2', identifier: 'T-2', name: 'Open', status: 'backlog' },
+        { id: 'task-3', identifier: 'T-3', name: 'Already done', status: 'completed' },
+        { id: 'task-4', identifier: 'T-4', name: 'Running', status: 'running' },
+        { id: 'task-5', identifier: 'T-5', name: 'Failed', status: 'failed' },
       ],
     });
     mocks.createCascadeModal.mockImplementation(async ({ onApply }) => {
@@ -113,9 +115,31 @@ describe('useTaskStatusChange', () => {
     expect(mocks.refreshTaskList).toHaveBeenCalledTimes(1);
   });
 
+  it('excludes the root when the caller uses its database id', async () => {
+    mocks.getTaskTree.mockResolvedValue({
+      data: [
+        { id: 'task-1', identifier: 'T-1', status: 'running' },
+        { id: 'task-2', identifier: 'T-2', status: 'backlog' },
+      ],
+    });
+    mocks.createCascadeModal.mockResolvedValue(false);
+    const { result } = renderHook(() => useTaskStatusChange());
+
+    await result.current('task-1', 'completed');
+
+    expect(mocks.createCascadeModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subtasks: [expect.objectContaining({ id: 'task-2', identifier: 'T-2' })],
+      }),
+    );
+  });
+
   it('leaves subtasks unchanged when the user chooses parent only', async () => {
-    mocks.getSubtasks.mockResolvedValue({
-      data: [{ identifier: 'T-2', status: 'backlog' }],
+    mocks.getTaskTree.mockResolvedValue({
+      data: [
+        { id: 'task-1', identifier: 'T-1', status: 'running' },
+        { id: 'task-2', identifier: 'T-2', status: 'backlog' },
+      ],
     });
     mocks.createCascadeModal.mockImplementation(async ({ onApply }) => {
       await onApply(false);
@@ -130,8 +154,11 @@ describe('useTaskStatusChange', () => {
   });
 
   it('does not update anything when the modal is dismissed', async () => {
-    mocks.getSubtasks.mockResolvedValue({
-      data: [{ identifier: 'T-2', status: 'backlog' }],
+    mocks.getTaskTree.mockResolvedValue({
+      data: [
+        { id: 'task-1', identifier: 'T-1', status: 'running' },
+        { id: 'task-2', identifier: 'T-2', status: 'backlog' },
+      ],
     });
     mocks.createCascadeModal.mockResolvedValue(false);
     const { result } = renderHook(() => useTaskStatusChange());

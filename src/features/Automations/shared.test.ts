@@ -2,7 +2,13 @@ import type { TaskDetailData, TaskListItem } from '@orvilo/types';
 import i18next from 'i18next';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { automationDetailTriggerSummary, automationTriggerSummary } from './shared';
+import {
+  automationDetailNextRun,
+  automationDetailTriggerSummary,
+  automationNextRun,
+  automationStatusOf,
+  automationTriggerSummary,
+} from './shared';
 
 // Real i18next instance mirroring the app config (keySeparator: false): the
 // 'automation' namespace intentionally lacks taskSchedule.* keys — they live in
@@ -63,4 +69,17 @@ describe('automationDetailTriggerSummary', () => {
     const t = i18n.getFixedT('en', 'automation');
     expect(automationDetailTriggerSummary(scheduledDetail, t)).toBe('Daily at 09:00');
   });
+});
+
+describe('automation status', () => {
+  it.each(['completed', 'failed', 'canceled'])(
+    'does not present terminal task status %s as an active automation',
+    (status) => {
+      expect(automationStatusOf(status)).toBe('inactive');
+      expect(automationNextRun({ ...scheduledTask, status } as TaskListItem)).toBeNull();
+      expect(
+        automationDetailNextRun({ ...scheduledDetail, status } as unknown as TaskDetailData),
+      ).toBeNull();
+    },
+  );
 });

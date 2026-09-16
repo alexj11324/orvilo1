@@ -8,6 +8,7 @@ import type { TaskTopicItem } from '@/database/schemas/task';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import {
   findBranchPr,
+  getRemoteBranchSha,
   isBranchMergedInto,
   resolveGithubAccessToken,
 } from '@/server/services/githubRepo';
@@ -62,6 +63,7 @@ vi.mock('@/server/services/githubRepo', async (importOriginal) => {
   return {
     ...actual,
     findBranchPr: vi.fn(),
+    getRemoteBranchSha: vi.fn(),
     isBranchMergedInto: vi.fn(),
     resolveGithubAccessToken: vi.fn(),
   };
@@ -116,11 +118,15 @@ describe('TaskIntegrationService', () => {
       provider: 'git',
       repoPath: '/repos/orvilo',
     });
+    mockTaskTopicModel.updateIntegration.mockResolvedValue(true);
     service = new TaskIntegrationService({} as any, 'user-1', 'ws-1');
     vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({ success: true });
-    vi.mocked(deviceGateway.pushGitBranch).mockResolvedValue({ success: true });
+    vi.mocked(deviceGateway.pushGitBranch).mockImplementation(async ({ sourceRef }) => ({
+      pushedSourceRef: sourceRef,
+      success: true,
+    }));
     vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({ success: true });
-    mockTaskTopicModel.findByTaskId.mockResolvedValue([]);
+    mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
     mockRunner.runTask.mockResolvedValue({ success: true, topicId: 'topic_2' });
   });
 
@@ -143,6 +149,7 @@ describe('TaskIntegrationService', () => {
   it('merges, pushes, cleans up and settles on a clean merge', async () => {
     mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
     vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+      headSha: 'task123',
       sha: 'abc123',
       state: 'merged',
       success: true,
@@ -160,14 +167,18 @@ describe('TaskIntegrationService', () => {
         detach: true,
         path: '/repos/orvilo',
         ref: 'origin/main',
-        worktreePath: '/repos/orvilo-integration-main',
+        worktreePath: '/repos/orvilo-integration-main-topic_1',
       }),
     );
     expect(deviceGateway.mergeGitBranch).toHaveBeenCalledWith(
       expect.objectContaining({ baseRef: 'origin/main', branch: 'task/T-1' }),
     );
     expect(deviceGateway.pushGitBranch).toHaveBeenCalledWith(
-      expect.objectContaining({ remoteBranch: 'main' }),
+      expect.objectContaining({
+        path: '/repos/orvilo-integration-main-topic_1',
+        remoteBranch: 'main',
+        sourceRef: 'abc123',
+      }),
     );
     expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
       expect.objectContaining({ worktreePath: '/repos/orvilo-task-T-1' }),
@@ -179,11 +190,86 @@ describe('TaskIntegrationService', () => {
     );
   });
 
+  it('resumes publishing an already merged candidate after callback recovery', async () => {
+    const recovering = seedRecord({
+      integratedSha: 'candidate123',
+      integrationWorktreePath: '/repos/orvilo-integration-main-topic_1',
+      state: 'merging',
+    });
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(recovering));
+    mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(recovering)]);
+
+    const outcome = await service.integrateOnComplete({
+      task: baseTask(),
+      taskTopicId: 'topic_1',
+    });
+
+    expect(outcome).toBe('settled');
+    expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+    expect(deviceGateway.pushGitBranch).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceRef: 'candidate123' }),
+    );
+  });
+
   it('dispatches a corrective run bound to the integration worktree on conflict', async () => {
     mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
     vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
       conflicts: ['src/a.ts'],
+      headSha: 'task123',
       state: 'conflict',
+      success: false,
+    });
+
+    const outcome = await service.integrateOnComplete({
+      completionReservationId: 'completion:op-verified',
+      task: baseTask(),
+      taskTopicId: 'topic_1',
+      verifyOperationId: 'op-verified',
+    });
+
+    expect(outcome).toBe('hold');
+    expect(mockRunner.runTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: 'task_1',
+        workspaceOverride: {
+          workingDirectory: '/repos/orvilo-integration-main-topic_1',
+          workingDirectoryConfig: expect.objectContaining({ repoType: 'git' }),
+        },
+      }),
+    );
+    const seed = mockRunner.runTask.mock.calls[0][0].integrationSeed;
+    expect(seed).toMatchObject({
+      attempts: 1,
+      expectedHeadSha: 'task123',
+      role: 'integrate',
+      runTopicId: 'topic_1',
+      state: 'merging',
+      verifyOperationId: 'op-verified',
+      worktreePath: '/repos/orvilo-integration-main-topic_1',
+    });
+    expect(mockRunner.runTask.mock.calls[0][0].replaceReservationId).toBe('completion:op-verified');
+    expect(mockRunner.runTask.mock.calls[0][0].skipTaskVerification).toBe(true);
+    const parentStateWrite = mockTaskTopicModel.updateIntegration.mock.calls.findIndex(
+      ([, , patch]) => patch.attempts === 1 && patch.verifyOperationId === 'op-verified',
+    );
+    expect(parentStateWrite).toBeGreaterThanOrEqual(0);
+    expect(
+      mockTaskTopicModel.updateIntegration.mock.invocationCallOrder[parentStateWrite],
+    ).toBeLessThan(mockRunner.runTask.mock.invocationCallOrder[0]);
+    expect(mockRunner.runTask.mock.calls[0][0].extraPrompt).toContain('src/a.ts');
+  });
+
+  it('blocks and retains both worktrees when the candidate push fails', async () => {
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+    mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
+    vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+      headSha: 'task123',
+      sha: 'candidate123',
+      state: 'merged',
+      success: true,
+    });
+    vi.mocked(deviceGateway.pushGitBranch).mockResolvedValue({
+      error: 'non-fast-forward',
       success: false,
     });
 
@@ -192,33 +278,118 @@ describe('TaskIntegrationService', () => {
       taskTopicId: 'topic_1',
     });
 
-    expect(outcome).toBe('hold');
-    expect(mockRunner.runTask).toHaveBeenCalledWith(
+    expect(outcome).toBe('blocked');
+    expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+      'task_1',
+      'topic_1',
       expect.objectContaining({
-        taskId: 'task_1',
-        workspaceOverride: {
-          workingDirectory: '/repos/orvilo-integration-main',
-          workingDirectoryConfig: expect.objectContaining({ repoType: 'git' }),
-        },
+        integratedSha: 'candidate123',
+        pushedToRemote: false,
+        state: 'blocked',
       }),
     );
-    const seed = mockRunner.runTask.mock.calls[0][0].integrationSeed;
-    expect(seed).toMatchObject({
-      attempts: 1,
-      role: 'integrate',
-      runTopicId: 'topic_1',
-      state: 'merging',
-      worktreePath: '/repos/orvilo-integration-main',
+    expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+  });
+
+  it('does not push when the integration row disappeared before publish', async () => {
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+    vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+      headSha: 'task123',
+      sha: 'candidate123',
+      state: 'merged',
+      success: true,
     });
-    expect(mockRunner.runTask.mock.calls[0][0].extraPrompt).toContain('src/a.ts');
+    mockTaskTopicModel.updateIntegration.mockImplementation(
+      async (_taskId: string, _topicId: string, patch: Partial<TaskTopicIntegration>) =>
+        patch.state !== 'merging',
+    );
+
+    const outcome = await service.integrateOnComplete({
+      task: baseTask(),
+      taskTopicId: 'topic_1',
+    });
+
+    expect(outcome).toBe('blocked');
+    expect(deviceGateway.pushGitBranch).not.toHaveBeenCalled();
+  });
+
+  it('blocks and retains worktrees when an older device cannot confirm the pushed commit', async () => {
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+    mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
+    vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+      headSha: 'task123',
+      sha: 'candidate123',
+      state: 'merged',
+      success: true,
+    });
+    vi.mocked(deviceGateway.pushGitBranch).mockResolvedValue({ success: true });
+
+    const outcome = await service.integrateOnComplete({
+      task: baseTask(),
+      taskTopicId: 'topic_1',
+    });
+
+    expect(outcome).toBe('blocked');
+    expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+      'task_1',
+      'topic_1',
+      expect.objectContaining({
+        lastError: expect.stringContaining('immutable source commit'),
+        pushedToRemote: false,
+        state: 'blocked',
+      }),
+    );
+    expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
   });
 
   it('settles when the corrective run finalized the merge', async () => {
     const record = seedRecord({
       attempts: 1,
+      expectedHeadSha: 'task123',
       integrationWorktreePath: '/repos/orvilo-integration-main',
       role: 'integrate',
       runTopicId: 'topic_0',
+      state: 'merging',
+      worktreePath: '/repos/orvilo-integration-main',
+    });
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
+    mockTaskTopicModel.findByTaskId.mockResolvedValue([
+      asTopic(record),
+      { integration: seedRecord(), topicId: 'topic_0' } as TaskTopicItem,
+    ]);
+    vi.mocked(deviceGateway.finalizeGitMerge).mockResolvedValue({
+      sha: 'def456',
+      state: 'integrated',
+      success: true,
+      validatedExpectedHead: true,
+    });
+
+    const outcome = await service.integrateOnComplete({
+      task: baseTask(),
+      taskTopicId: 'topic_1',
+    });
+
+    expect(outcome).toBe('settled');
+    expect(deviceGateway.finalizeGitMerge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedHead: 'task123',
+        path: '/repos/orvilo-integration-main',
+      }),
+    );
+    // Original run's record advanced too.
+    expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+      'task_1',
+      'topic_0',
+      expect.objectContaining({ state: 'integrated' }),
+    );
+  });
+
+  it('blocks an older device client that did not enforce the accepted commit', async () => {
+    const record = seedRecord({
+      attempts: 1,
+      expectedHeadSha: 'task123',
+      integrationWorktreePath: '/repos/orvilo-integration-main',
+      role: 'integrate',
       state: 'merging',
       worktreePath: '/repos/orvilo-integration-main',
     });
@@ -234,15 +405,12 @@ describe('TaskIntegrationService', () => {
       taskTopicId: 'topic_1',
     });
 
-    expect(outcome).toBe('settled');
-    expect(deviceGateway.finalizeGitMerge).toHaveBeenCalledWith(
-      expect.objectContaining({ path: '/repos/orvilo-integration-main' }),
-    );
-    // Original run's record advanced too.
+    expect(outcome).toBe('blocked');
+    expect(deviceGateway.pushGitBranch).not.toHaveBeenCalled();
     expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
       'task_1',
-      'topic_0',
-      expect.objectContaining({ state: 'integrated' }),
+      'topic_1',
+      expect.objectContaining({ lastError: expect.stringContaining('update'), state: 'blocked' }),
     );
   });
 
@@ -299,6 +467,7 @@ describe('TaskIntegrationService', () => {
       success: false,
     });
     vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+      headSha: 'task123',
       sha: 'abc',
       state: 'merged',
       success: true,
@@ -306,6 +475,25 @@ describe('TaskIntegrationService', () => {
 
     expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
       'settled',
+    );
+  });
+
+  it('blocks a legacy shared integration worktree instead of reusing it', async () => {
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(
+      asTopic(seedRecord({ integrationWorktreePath: '/repos/orvilo-integration-main' })),
+    );
+
+    expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
+      'blocked',
+    );
+    expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+      'task_1',
+      'topic_1',
+      expect.objectContaining({
+        lastError: expect.stringContaining('Legacy shared'),
+        state: 'blocked',
+      }),
     );
   });
 
@@ -317,6 +505,9 @@ describe('TaskIntegrationService', () => {
       });
       vi.mocked(resolveGithubAccessToken).mockResolvedValue('gh-token');
       vi.mocked(findBranchPr).mockResolvedValue(undefined);
+      vi.mocked(getRemoteBranchSha).mockImplementation(async (_repo, branch) =>
+        branch === 'main' ? 'base123' : 'head123',
+      );
       vi.mocked(isBranchMergedInto).mockResolvedValue('unmerged');
     });
 
@@ -324,7 +515,10 @@ describe('TaskIntegrationService', () => {
       mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(remoteRecord()));
       mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(remoteRecord())]);
       vi.mocked(findBranchPr).mockResolvedValue({
+        baseBranch: 'main',
+        headSha: 'head123',
         merged: true,
+        number: 7,
         sha: 'merge123',
         url: 'https://github.com/acme/widgets/pull/7',
       });
@@ -376,6 +570,8 @@ describe('TaskIntegrationService', () => {
       expect(call.extraPrompt).toContain('git push origin main');
       expect(call.integrationSeed).toMatchObject({
         attempts: 1,
+        expectedBaseSha: 'base123',
+        expectedHeadSha: 'head123',
         repo: 'acme/widgets',
         role: 'integrate',
         runTopicId: 'topic_1',
@@ -447,6 +643,31 @@ describe('TaskIntegrationService', () => {
       );
     });
 
+    it('blocks when the task branch advanced after its accepted commit', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(remoteRecord({ expectedHeadSha: 'accepted123' })),
+      );
+      vi.mocked(getRemoteBranchSha).mockImplementation(async (_repo, branch) =>
+        branch === 'main' ? 'base123' : 'new456',
+      );
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('blocked');
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({
+          lastError: expect.stringContaining('advanced'),
+          state: 'blocked',
+        }),
+      );
+    });
+
     it('blocks immediately on an unparseable repo coordinate', async () => {
       mockTaskTopicModel.findByTopicId.mockResolvedValue(
         asTopic(remoteRecord({ repo: 'not-a-repo' })),
@@ -509,7 +730,7 @@ describe('TaskIntegrationService', () => {
       });
     });
 
-    it('never removes the shared integration worktree', async () => {
+    it('removes the run-scoped integration worktree', async () => {
       mockTaskTopicModel.findByTaskId.mockResolvedValue([
         // The task row knows the integration worktree once a merge started…
         asTopic(
@@ -532,9 +753,12 @@ describe('TaskIntegrationService', () => {
 
       await service.cleanupTaskWorktrees('task_1');
 
-      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledTimes(1);
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledTimes(2);
       expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
         expect.objectContaining({ worktreePath: '/repos/orvilo-task-T-1' }),
+      );
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ worktreePath: '/repos/orvilo-integration-main' }),
       );
     });
 

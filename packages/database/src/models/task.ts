@@ -25,6 +25,7 @@ import {
   isNull,
   lt,
   ne,
+  notExists,
   notInArray,
   or,
   type SQL,
@@ -34,6 +35,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { merge } from '@/utils/merge';
 
+import { agentOperations } from '../schemas/agentOperations';
 import { documents } from '../schemas/file';
 import type {
   NewTaskActivity,
@@ -1421,12 +1423,14 @@ export class TaskModel {
   // Recursive query to get full task tree
   async getTaskTree(rootTaskId: string): Promise<TaskItem[]> {
     const ownership = this.ownershipSql();
+    const childOwnership = this.ownershipSql('t');
     const result = await this.db.execute(sql`
       WITH RECURSIVE task_tree AS (
         SELECT * FROM tasks WHERE id = ${rootTaskId} AND ${ownership}
         UNION ALL
         SELECT t.* FROM tasks t
         JOIN task_tree tt ON t.parent_task_id = tt.id
+        WHERE ${childOwnership}
       )
       SELECT * FROM task_tree
     `);
@@ -1497,7 +1501,13 @@ export class TaskModel {
   async updateStatus(
     id: string,
     status: string,
-    extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
+    extra?: {
+      completedAt?: Date;
+      error?: string | null;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    },
   ): Promise<TaskItem | null> {
     return this.update(id, { status, ...extra });
   }
@@ -1523,6 +1533,189 @@ export class TaskModel {
     return task ?? null;
   }
 
+  /**
+   * Transition only while the caller still owns the active run/completion
+   * generation. User status changes clear this token, fencing any lifecycle
+   * work that was already in progress.
+   */
+  async updateStatusIfReservation(
+    id: string,
+    reservationId: string,
+    currentStatus: string,
+    status: string,
+    extra?: {
+      completedAt?: Date;
+      error?: string | null;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    },
+  ): Promise<TaskItem | null> {
+    const [task] = await this.db
+      .update(tasks)
+      .set({
+        status,
+        updatedAt: new Date(),
+        ...extra,
+        ...TaskModel.reviewerBackfillSet(status),
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          eq(tasks.runReservationId, reservationId),
+          eq(tasks.status, currentStatus),
+          this.ownership(),
+        ),
+      )
+      .returning();
+
+    return task ?? null;
+  }
+
+  /** Merge task context only while the caller still owns the run generation. */
+  async updateContextIfReservation(
+    id: string,
+    reservationId: string,
+    partial: Record<string, unknown>,
+  ): Promise<boolean> {
+    const task = await this.findById(id);
+    if (!task || task.runReservationId !== reservationId) return false;
+
+    const current = (task.context as Record<string, unknown>) || {};
+    const [updated] = await this.db
+      .update(tasks)
+      .set({ context: merge(current, partial), updatedAt: new Date() })
+      .where(and(eq(tasks.id, id), eq(tasks.runReservationId, reservationId), this.ownership()))
+      .returning({ id: tasks.id });
+    return Boolean(updated);
+  }
+
+  /** Merge context only while the task remains in the expected lifecycle state. */
+  async updateContextIfStatus(
+    id: string,
+    status: string,
+    partial: Record<string, unknown>,
+  ): Promise<boolean> {
+    const task = await this.findById(id);
+    if (!task || task.status !== status) return false;
+
+    const current = (task.context as Record<string, unknown>) || {};
+    const [updated] = await this.db
+      .update(tasks)
+      .set({ context: merge(current, partial), updatedAt: new Date() })
+      .where(and(eq(tasks.id, id), eq(tasks.status, status), this.ownership()))
+      .returning({ id: tasks.id });
+    return Boolean(updated);
+  }
+
+  /**
+   * Atomically reserve the single dispatch slot for a task.
+   *
+   * The durable lease closes both races around the pre-dispatch gap: a second
+   * caller cannot provision while this caller has not written its topic yet,
+   * and a crashed caller becomes reclaimable after the deadline. The topic
+   * subquery keeps an already-dispatched generation authoritative after the
+   * short reservation is released.
+   */
+  async reserveRun(
+    id: string,
+    reservationId: string,
+    now: Date = new Date(),
+    leaseMs = 30 * 60 * 1000,
+    replaceReservationId?: string,
+  ): Promise<boolean> {
+    const reserved = await this.db
+      .update(tasks)
+      .set({
+        error: null,
+        runReservationExpiresAt: new Date(now.getTime() + leaseMs),
+        runReservationId: reservationId,
+        startedAt: now,
+        status: 'running',
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          or(
+            isNull(tasks.runReservationId),
+            lt(tasks.runReservationExpiresAt, now),
+            replaceReservationId ? eq(tasks.runReservationId, replaceReservationId) : undefined,
+          ),
+          notExists(
+            this.db
+              .select({ id: taskTopics.id })
+              .from(taskTopics)
+              .where(and(eq(taskTopics.taskId, id), eq(taskTopics.status, 'running'))),
+          ),
+          notExists(
+            this.db
+              .select({ id: agentOperations.id })
+              .from(agentOperations)
+              .where(
+                and(
+                  eq(agentOperations.taskId, id),
+                  notInArray(agentOperations.status, ['abandoned', 'done', 'error', 'interrupted']),
+                ),
+              ),
+          ),
+          this.ownership(),
+        ),
+      )
+      .returning({ id: tasks.id });
+
+    return reserved.length > 0;
+  }
+
+  /** Extend a dispatch lease only while the caller still owns it. */
+  async renewRunReservation(
+    id: string,
+    reservationId: string,
+    now: Date = new Date(),
+    leaseMs = 30 * 60 * 1000,
+  ): Promise<boolean> {
+    const renewed = await this.db
+      .update(tasks)
+      .set({ runReservationExpiresAt: new Date(now.getTime() + leaseMs), updatedAt: now })
+      .where(and(eq(tasks.id, id), eq(tasks.runReservationId, reservationId), this.ownership()))
+      .returning({ id: tasks.id });
+
+    return renewed.length > 0;
+  }
+
+  /** Release a dispatch reservation without changing the task lifecycle. */
+  async releaseRunReservation(id: string, reservationId: string): Promise<boolean> {
+    const released = await this.db
+      .update(tasks)
+      .set({ runReservationExpiresAt: null, runReservationId: null, updatedAt: new Date() })
+      .where(and(eq(tasks.id, id), eq(tasks.runReservationId, reservationId), this.ownership()))
+      .returning({ id: tasks.id });
+
+    return released.length > 0;
+  }
+
+  /** Roll back only the dispatch generation owned by `reservationId`. */
+  async failRunReservation(
+    id: string,
+    reservationId: string,
+    status: 'paused' | 'scheduled',
+    error: string,
+  ): Promise<boolean> {
+    const released = await this.db
+      .update(tasks)
+      .set({
+        error,
+        runReservationExpiresAt: null,
+        runReservationId: null,
+        status,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tasks.id, id), eq(tasks.runReservationId, reservationId), this.ownership()))
+      .returning({ id: tasks.id });
+
+    return released.length > 0;
+  }
+
   async batchUpdateStatus(ids: string[], status: string): Promise<number> {
     const result = await this.db
       .update(tasks)
@@ -1542,7 +1735,13 @@ export class TaskModel {
   async updateStatusForIds(
     ids: string[],
     status: string,
-    extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
+    extra?: {
+      completedAt?: Date;
+      error?: string | null;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    },
   ): Promise<TaskItem[]> {
     if (ids.length === 0) return [];
     return this.db
@@ -1563,13 +1762,22 @@ export class TaskModel {
    * Safely merge-update the task's config object.
    * Reads the current config, shallow-merges the incoming partial, and writes back.
    */
-  async updateTaskConfig(id: string, partial: Record<string, unknown>): Promise<TaskItem | null> {
+  async updateTaskConfig(
+    id: string,
+    partial: Record<string, unknown>,
+    options: { invalidateRun?: boolean } = {},
+  ): Promise<TaskItem | null> {
     const task = await this.findById(id);
     if (!task) return null;
 
     const current = (task.config as Record<string, unknown>) || {};
     const config = merge(current, partial);
-    return this.update(id, { config });
+    return this.update(id, {
+      config,
+      ...(options.invalidateRun
+        ? { runReservationExpiresAt: null, runReservationId: null }
+        : undefined),
+    });
   }
 
   // ========== Context (runtime state) ==========
@@ -1594,8 +1802,12 @@ export class TaskModel {
     return (task.config as Record<string, any>)?.checkpoint || {};
   }
 
-  async updateCheckpointConfig(id: string, checkpoint: CheckpointConfig): Promise<TaskItem | null> {
-    return this.updateTaskConfig(id, { checkpoint });
+  async updateCheckpointConfig(
+    id: string,
+    checkpoint: CheckpointConfig,
+    options?: { invalidateRun?: boolean },
+  ): Promise<TaskItem | null> {
+    return this.updateTaskConfig(id, { checkpoint }, options);
   }
 
   // ========== Review Config ==========
@@ -1604,8 +1816,12 @@ export class TaskModel {
     return (task.config as Record<string, any>)?.review;
   }
 
-  async updateReviewConfig(id: string, review: Record<string, any>): Promise<TaskItem | null> {
-    return this.updateTaskConfig(id, { review });
+  async updateReviewConfig(
+    id: string,
+    review: Record<string, any>,
+    options?: { invalidateRun?: boolean },
+  ): Promise<TaskItem | null> {
+    return this.updateTaskConfig(id, { review }, options);
   }
 
   // ========== Verify Config ==========
@@ -1708,6 +1924,27 @@ export class TaskModel {
       .update(tasks)
       .set({ lastHeartbeatAt: new Date(), updatedAt: new Date() })
       .where(and(eq(tasks.id, id), this.ownership()));
+  }
+
+  /**
+   * Touch a callback only while it still belongs to the task's active topic.
+   * `NULL` is accepted for legacy tasks created before currentTopicId was
+   * recorded; once a task has a generation, an older topic cannot claim it.
+   */
+  async updateHeartbeatIfCurrentTopic(id: string, topicId: string): Promise<boolean> {
+    const updated = await this.db
+      .update(tasks)
+      .set({ lastHeartbeatAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(tasks.id, id),
+          or(isNull(tasks.currentTopicId), eq(tasks.currentTopicId, topicId)),
+          this.ownership(),
+        ),
+      )
+      .returning({ id: tasks.id });
+
+    return updated.length > 0;
   }
 
   // Tasks eligible for cron-based dispatch.
@@ -1817,7 +2054,7 @@ export class TaskModel {
       .where(and(eq(taskDependencies.dependsOnId, taskId), this.depsOwnership()));
   }
 
-  // Check if all dependencies of a task are completed
+  // Check if every blocking dependency is terminal and no longer actionable.
   async areAllDependenciesCompleted(taskId: string): Promise<boolean> {
     const result = await this.db
       .select({ count: sql<number>`count(*)` })
@@ -1827,7 +2064,7 @@ export class TaskModel {
         and(
           eq(taskDependencies.taskId, taskId),
           eq(taskDependencies.type, 'blocks'),
-          ne(tasks.status, 'completed'),
+          notInArray(tasks.status, ['canceled', 'completed']),
           this.depsOwnership(),
         ),
       );
@@ -1835,18 +2072,18 @@ export class TaskModel {
     return Number(result[0].count) === 0;
   }
 
-  // Find tasks that are now unblocked after a dependency completes
-  async getUnlockedTasks(completedTaskId: string): Promise<TaskItem[]> {
-    return this.getUnlockedTasksForMany([completedTaskId]);
+  // Find tasks that are now unblocked after a dependency settles.
+  async getUnlockedTasks(settledTaskId: string): Promise<TaskItem[]> {
+    return this.getUnlockedTasksForMany([settledTaskId]);
   }
 
   /**
    * Batched variant of {@link getUnlockedTasks}: discover every task unblocked
-   * by any of `completedTaskIds` with a constant number of queries instead of
-   * one dependency walk per completed task.
+   * by any of `settledTaskIds` with a constant number of queries instead of
+   * one dependency walk per settled task.
    */
-  async getUnlockedTasksForMany(completedTaskIds: string[]): Promise<TaskItem[]> {
-    if (completedTaskIds.length === 0) return [];
+  async getUnlockedTasksForMany(settledTaskIds: string[]): Promise<TaskItem[]> {
+    if (settledTaskIds.length === 0) return [];
 
     // All tasks that depend on any of the completed tasks
     const dependents = await this.db
@@ -1854,7 +2091,7 @@ export class TaskModel {
       .from(taskDependencies)
       .where(
         and(
-          inArray(taskDependencies.dependsOnId, completedTaskIds),
+          inArray(taskDependencies.dependsOnId, settledTaskIds),
           eq(taskDependencies.type, 'blocks'),
           this.depsOwnership(),
         ),
@@ -1871,7 +2108,7 @@ export class TaskModel {
         and(
           inArray(taskDependencies.taskId, dependentIds),
           eq(taskDependencies.type, 'blocks'),
-          ne(tasks.status, 'completed'),
+          notInArray(tasks.status, ['canceled', 'completed']),
           this.depsOwnership(),
         ),
       );

@@ -398,6 +398,18 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     );
   });
 
+  it('propagates the server-only verify skip to a heterogeneous corrective run', async () => {
+    await service.execAgent({
+      agentId: 'agent-1',
+      prompt: 'resolve the delivery conflict',
+      skipTaskVerification: true,
+    } as any);
+
+    expect(recordStartSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ skipTaskVerification: true }),
+    );
+  });
+
   it('should attach fileIds to the user message (SPA gateway device/sandbox mode)', async () => {
     // regression: the hetero early exit used to create the user message
     // without `files`, so images attached in device mode were never linked

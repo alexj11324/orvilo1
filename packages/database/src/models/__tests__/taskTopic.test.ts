@@ -101,6 +101,99 @@ describe('TaskTopicModel', () => {
       expect(topics[0].status).toBe('completed');
     });
 
+    it('claims one terminal callback when duplicate deliveries race', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Settle once' });
+      await createTopic('tpc_settle_once');
+      await topicModel.add(task.id, 'tpc_settle_once', { operationId: 'op-settle', seq: 1 });
+      await taskModel.updateCurrentTopic(task.id, 'tpc_settle_once');
+      await taskModel.updateStatus(task.id, 'running');
+
+      const results = await Promise.allSettled([
+        topicModel.settleIfRunning(task.id, 'tpc_settle_once', 'op-settle', 'completed'),
+        topicModel.settleIfRunning(task.id, 'tpc_settle_once', 'op-settle', 'completed'),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+      expect((await topicModel.findByTaskId(task.id))[0].status).toBe('completed');
+      expect((await getTopic('tpc_settle_once')).completedAt).toBeInstanceOf(Date);
+    });
+
+    it('reclaims a completion callback after its processing lease expires', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Recover completion' });
+      await createTopic('tpc_settle_reclaim');
+      await topicModel.add(task.id, 'tpc_settle_reclaim', {
+        operationId: 'op-reclaim',
+        seq: 1,
+      });
+      await taskModel.updateCurrentTopic(task.id, 'tpc_settle_reclaim');
+      await taskModel.updateStatus(task.id, 'running');
+
+      const first = await topicModel.settleIfRunning(
+        task.id,
+        'tpc_settle_reclaim',
+        'op-reclaim',
+        'completed',
+      );
+      await serverDB
+        .update(tasks)
+        .set({ runReservationExpiresAt: new Date(Date.now() - 1) })
+        .where(eq(tasks.id, task.id));
+      const reclaimed = await topicModel.settleIfRunning(
+        task.id,
+        'tpc_settle_reclaim',
+        'op-reclaim',
+        'completed',
+      );
+
+      expect(first).toMatch(/^completion:op-reclaim:/);
+      expect(reclaimed).toMatch(/^completion:op-reclaim:/);
+      expect(reclaimed).not.toBe(first);
+    });
+
+    it('does not reclaim an expired completion after the task was paused', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Pause completion' });
+      await createTopic('tpc_settle_paused');
+      await topicModel.add(task.id, 'tpc_settle_paused', {
+        operationId: 'op-paused',
+        seq: 1,
+      });
+      await taskModel.updateCurrentTopic(task.id, 'tpc_settle_paused');
+      await taskModel.updateStatus(task.id, 'running');
+      await topicModel.settleIfRunning(task.id, 'tpc_settle_paused', 'op-paused', 'completed');
+      await taskModel.updateStatus(task.id, 'paused');
+      await serverDB
+        .update(tasks)
+        .set({ runReservationExpiresAt: new Date(Date.now() - 1) })
+        .where(eq(tasks.id, task.id));
+
+      await expect(
+        topicModel.settleIfRunning(task.id, 'tpc_settle_paused', 'op-paused', 'completed'),
+      ).resolves.toBeNull();
+    });
+
+    it('rejects a terminal callback whose operation is not the active generation', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Fence generation' });
+      await createTopic('tpc_old_generation');
+      await createTopic('tpc_current_generation');
+      await topicModel.add(task.id, 'tpc_old_generation', { operationId: 'op-old', seq: 1 });
+      await taskModel.updateCurrentTopic(task.id, 'tpc_current_generation');
+      await taskModel.updateStatus(task.id, 'running');
+
+      await expect(
+        topicModel.settleIfRunning(task.id, 'tpc_old_generation', 'op-old', 'completed'),
+      ).resolves.toBeNull();
+      expect((await topicModel.findByTaskId(task.id))[0].status).toBe('running');
+    });
+
     it('should mirror completed status to topics row', async () => {
       const taskModel = new TaskModel(serverDB, userId);
       const topicModel = new TaskTopicModel(serverDB, userId);

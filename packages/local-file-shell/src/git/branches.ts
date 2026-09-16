@@ -221,12 +221,20 @@ export const pullGitBranch = async (payload: { path: string }): Promise<GitPullR
 export const pushGitBranch = async (payload: {
   path: string;
   remoteBranch?: string;
+  sourceRef?: string;
 }): Promise<GitPushResult> => {
-  const { path: dirPath, remoteBranch } = payload;
+  const { path: dirPath, remoteBranch, sourceRef = 'HEAD' } = payload;
   if (remoteBranch && isInvalidBranchRef(remoteBranch)) {
     return { error: `Invalid remote branch name: ${remoteBranch}`, success: false };
   }
-  const refspec = remoteBranch ? `HEAD:refs/heads/${remoteBranch}` : 'HEAD';
+  if (
+    !sourceRef.trim() ||
+    sourceRef.startsWith('-') ||
+    (sourceRef !== 'HEAD' && !/^[\da-f]{40,64}$/i.test(sourceRef))
+  ) {
+    return { error: `Invalid source ref: ${sourceRef}`, success: false };
+  }
+  const refspec = remoteBranch ? `${sourceRef}:refs/heads/${remoteBranch}` : sourceRef;
   try {
     const { stderr } = await execFileAsync('git', ['push', '-u', 'origin', refspec], {
       cwd: dirPath,
@@ -234,7 +242,7 @@ export const pushGitBranch = async (payload: {
     });
     // git push writes progress/status to stderr even on success
     const noop = /Everything up-to-date/i.test(stderr);
-    return { noop, success: true };
+    return { noop, pushedSourceRef: sourceRef, success: true };
   } catch (error: any) {
     const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
     log.debug('[pushGitBranch] failed', { stderr });
@@ -274,6 +282,18 @@ const readHeadSha = async (dirPath: string): Promise<string | undefined> => {
   }
 };
 
+const readRevisionSha = async (dirPath: string, revision: string): Promise<string | undefined> => {
+  try {
+    const { stdout } = await execFileAsync('git', ['rev-parse', revision], {
+      cwd: dirPath,
+      timeout: 5000,
+    });
+    return stdout.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 /**
  * Merge `branch` into the current HEAD of the given working directory
  * (`git merge --no-ff --no-edit`). Designed for a detached, system-owned
@@ -304,7 +324,17 @@ export const mergeGitBranch = async (payload: {
     if (await hasMergeInProgress(dirPath)) {
       return {
         conflicts: await readUnmergedPaths(dirPath),
+        headSha: await readRevisionSha(dirPath, 'MERGE_HEAD'),
         state: 'in-progress',
+        success: false,
+      };
+    }
+
+    const headSha = await readRevisionSha(dirPath, branch);
+    if (!headSha) {
+      return {
+        error: `Could not resolve task branch ${branch}`,
+        state: 'conflict',
         success: false,
       };
     }
@@ -321,19 +351,20 @@ export const mergeGitBranch = async (payload: {
         cwd: dirPath,
         timeout: 120_000,
       });
-      return { sha: await readHeadSha(dirPath), state: 'merged', success: true };
+      return { headSha, sha: await readHeadSha(dirPath), state: 'merged', success: true };
     } catch (error: any) {
       const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
       if (await hasMergeInProgress(dirPath)) {
         return {
           conflicts: await readUnmergedPaths(dirPath),
           error: stderr || undefined,
+          headSha,
           state: 'conflict',
           success: false,
         };
       }
       log.debug('[mergeGitBranch] failed', { branch, stderr });
-      return { error: stderr || 'git merge failed', state: 'conflict', success: false };
+      return { error: stderr || 'git merge failed', headSha, state: 'conflict', success: false };
     }
   } catch (error: any) {
     const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
@@ -349,22 +380,65 @@ export const mergeGitBranch = async (payload: {
  * 'conflict'. All-resolved-but-uncommitted lands via `git commit --no-edit`.
  */
 export const finalizeGitMerge = async (payload: {
+  expectedHead?: string;
   path: string;
 }): Promise<GitFinalizeMergeResult> => {
-  const { path: dirPath } = payload;
+  const { expectedHead, path: dirPath } = payload;
   if (!dirPath?.trim())
     return { error: 'Working directory is required', state: 'conflict', success: false };
 
   try {
+    const verifyExpectedHead = async (): Promise<GitFinalizeMergeResult | undefined> => {
+      if (!expectedHead) return undefined;
+      try {
+        await execFileAsync('git', ['merge-base', '--is-ancestor', expectedHead, 'HEAD'], {
+          cwd: dirPath,
+          timeout: 10_000,
+        });
+        return undefined;
+      } catch {
+        return {
+          error: `Integration candidate does not contain expected task head ${expectedHead}`,
+          state: 'conflict',
+          success: false,
+        };
+      }
+    };
+
     if (!(await hasMergeInProgress(dirPath))) {
-      return { sha: await readHeadSha(dirPath), state: 'integrated', success: true };
+      const invalid = await verifyExpectedHead();
+      if (invalid) return invalid;
+      return {
+        sha: await readHeadSha(dirPath),
+        state: 'integrated',
+        success: true,
+        validatedExpectedHead: !!expectedHead,
+      };
     }
 
     const conflicts = await readUnmergedPaths(dirPath);
     if (conflicts.length > 0) return { conflicts, state: 'conflict', success: false };
 
+    if (expectedHead) {
+      const mergeHead = await readRevisionSha(dirPath, 'MERGE_HEAD');
+      if (mergeHead !== expectedHead) {
+        return {
+          error: `Merge in progress contains ${mergeHead ?? 'an unknown source'}, not expected task head ${expectedHead}`,
+          state: 'conflict',
+          success: false,
+        };
+      }
+    }
+
     await execFileAsync('git', ['commit', '--no-edit'], { cwd: dirPath, timeout: 30_000 });
-    return { sha: await readHeadSha(dirPath), state: 'integrated', success: true };
+    const invalid = await verifyExpectedHead();
+    if (invalid) return invalid;
+    return {
+      sha: await readHeadSha(dirPath),
+      state: 'integrated',
+      success: true,
+      validatedExpectedHead: !!expectedHead,
+    };
   } catch (error: any) {
     const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
     log.debug('[finalizeGitMerge] failed', { stderr });

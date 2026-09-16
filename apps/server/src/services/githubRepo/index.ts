@@ -107,7 +107,10 @@ export const getRepoDefaultBranch = async (
 };
 
 export interface RemotePrInfo {
+  baseBranch: string;
+  headSha: string;
   merged: boolean;
+  number: number;
   /** The merge commit SHA when the PR was merged. */
   sha?: string;
   url: string;
@@ -122,21 +125,46 @@ export interface RemotePrInfo {
 export const findBranchPr = async (
   repo: string,
   headBranch: string,
+  baseBranch: string,
   token?: string,
 ): Promise<RemotePrInfo | undefined> => {
   const coordinate = parseGithubRepo(repo);
   if (!coordinate) return undefined;
   const res = await githubFetch(
-    `/repos/${coordinate.owner}/${coordinate.name}/pulls?state=all&head=${encodeURIComponent(`${coordinate.owner}:${headBranch}`)}&per_page=1`,
+    `/repos/${coordinate.owner}/${coordinate.name}/pulls?state=all&head=${encodeURIComponent(`${coordinate.owner}:${headBranch}`)}&base=${encodeURIComponent(baseBranch)}&per_page=1`,
     token,
   );
   const pr = Array.isArray(res.json) ? res.json[0] : undefined;
-  if (!pr?.html_url) return undefined;
+  if (
+    !pr?.html_url ||
+    typeof pr.number !== 'number' ||
+    typeof pr.head?.sha !== 'string' ||
+    typeof pr.base?.ref !== 'string'
+  )
+    return undefined;
   return {
+    baseBranch: pr.base.ref,
+    headSha: pr.head.sha,
     merged: Boolean(pr.merged_at),
+    number: pr.number,
     sha: typeof pr.merge_commit_sha === 'string' ? pr.merge_commit_sha : undefined,
     url: pr.html_url,
   };
+};
+
+/** Resolve the current commit of one remote branch. */
+export const getRemoteBranchSha = async (
+  repo: string,
+  branch: string,
+  token?: string,
+): Promise<string | undefined> => {
+  const coordinate = parseGithubRepo(repo);
+  if (!coordinate) return undefined;
+  const res = await githubFetch(
+    `/repos/${coordinate.owner}/${coordinate.name}/branches/${encodeURIComponent(branch)}`,
+    token,
+  );
+  return res.ok && typeof res.json?.commit?.sha === 'string' ? res.json.commit.sha : undefined;
 };
 
 export type RemoteMergeState = 'merged' | 'unmerged' | 'unknown';

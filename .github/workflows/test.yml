@@ -25,6 +25,67 @@ jobs:
           skip_after_successful_duplicate: 'true'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
+  # Full-repo type-check. Root `tsgo --noEmit` needs several GB and OOMs most
+  # developer machines, so CI is the only place it runs end to end.
+  typecheck:
+    needs: check-duplicate-run
+    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        env:
+          REF_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${REPOSITORY}.git"
+          git fetch --no-tags --depth=1 origin "${REF_SHA}"
+          git checkout --force FETCH_HEAD
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install deps
+        run: pnpm install
+
+      - name: Typecheck
+        run: pnpm type-check
+
+  # Lint. The `lint:style` script carries `--fix`, which would silently repair
+  # violations in the runner's checkout and let them merge; CI runs stylelint
+  # read-only so a fixable violation still fails the gate.
+  lint:
+    needs: check-duplicate-run
+    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        env:
+          REF_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${REPOSITORY}.git"
+          git fetch --no-tags --depth=1 origin "${REF_SHA}"
+          git checkout --force FETCH_HEAD
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install deps
+        run: pnpm install
+
+      - name: ESLint
+        run: pnpm lint:ts
+
+      - name: Stylelint
+        run: bunx stylelint "{src,tests}/**/*.{js,jsx,ts,tsx}"
+
+      - name: Circular imports
+        run: pnpm lint:circular
+
   # Package tests - all packages in single job to save runner resources
   test-packages:
     needs: check-duplicate-run

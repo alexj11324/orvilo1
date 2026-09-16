@@ -181,6 +181,30 @@ describe('AiAgentService.execAgent - headless approval default', () => {
     expect(callArgs.userInterventionConfig).toEqual({ approvalMode: 'headless' });
   });
 
+  it('awaits caller persistence before creating the runtime operation', async () => {
+    const order: string[] = [];
+    const beforeOperationStart = vi.fn(async () => {
+      order.push('persisted');
+    });
+    mockCreateOperation.mockImplementationOnce(async () => {
+      order.push('created');
+      return {
+        autoStarted: true,
+        messageId: 'queue-msg-1',
+        operationId: 'op-123',
+        success: true,
+      };
+    });
+
+    await service.execAgent({ agentId: 'agent-1', beforeOperationStart, prompt: 'Hello' });
+
+    expect(beforeOperationStart).toHaveBeenCalledWith({
+      operationId: expect.stringContaining('op_'),
+      topicId: 'topic-1',
+    });
+    expect(order).toEqual(['persisted', 'created']);
+  });
+
   it('should respect explicit userInterventionConfig when provided', async () => {
     await service.execAgent({
       agentId: 'agent-1',

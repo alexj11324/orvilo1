@@ -147,7 +147,7 @@ export class TaskRunnerService {
       workspaceOverride,
     } = params;
 
-    const task = await this.taskModel.resolve(idOrIdentifier);
+    let task = await this.taskModel.resolve(idOrIdentifier);
     if (!task) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
     }
@@ -207,6 +207,9 @@ export class TaskRunnerService {
         }
         throw error;
       }
+      // prepare() re-reads and locks the Task. Continue only with that
+      // authoritative assignee/revision snapshot, never the earlier resolve.
+      task = preparedDispatch.task;
 
       if (!task.assigneeAgentId) {
         const inboxAgent = await this.agentModel.getBuiltinAgent(INBOX_SESSION_ID);
@@ -288,6 +291,9 @@ export class TaskRunnerService {
           });
         }
       }
+      const continuedTopic = continueTopicId
+        ? existingTopics.find((topic) => topic.topicId === continueTopicId)
+        : undefined;
 
       // A `continueFromMessageId` continuation answers a user row that is
       // already persisted in the target topic — validate the anchor before
@@ -313,8 +319,7 @@ export class TaskRunnerService {
       }
 
       if (continueTopicId) {
-        const target = existingTopics.find((t) => t.topicId === continueTopicId);
-        if (target?.status === 'running') {
+        if (continuedTopic?.status === 'running') {
           throw new TRPCError({
             code: 'CONFLICT',
             message: `Topic ${continueTopicId} is already running.`,
@@ -486,7 +491,7 @@ export class TaskRunnerService {
         expected: ['claimed', 'provisioning'],
         phase: 'dispatched',
       });
-      runtimeDispatchStarted = true;
+      let taskTopicStarted = false;
 
       if (!(await this.taskModel.renewRunReservation(task.id, reservationId))) {
         throw new TRPCError({
@@ -507,6 +512,35 @@ export class TaskRunnerService {
         ...(typeof taskConfig.model === 'string' && { model: taskConfig.model }),
         ...(typeof taskConfig.provider === 'string' && { provider: taskConfig.provider }),
         skipTaskVerification,
+        beforeOperationStart: async ({ operationId, topicId }) => {
+          await this.db.transaction(async (tx) => {
+            const dispatch = new TaskDispatchService(tx, this.workspaceId);
+            const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
+            const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
+
+            await dispatch.transition(preparedDispatch!, {
+              environmentSnapshot,
+              expected: ['dispatched'],
+              operationId,
+              phase: 'running',
+            });
+            await taskTopicModel.startRun(task.id, topicId, {
+              dispatch: {
+                ...preparedDispatch!.dispatch,
+                fence: preparedDispatch!.fence,
+              },
+              environmentSnapshot,
+              integration: runIntegration,
+              operationId,
+              seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
+              trigger,
+            });
+            if (!continueTopicId) await taskModel.incrementTopicCount(task.id);
+            await taskModel.updateCurrentTopic(task.id, topicId);
+          });
+          taskTopicStarted = true;
+          runtimeDispatchStarted = true;
+        },
         hooks: [
           {
             handler: async (event) => {
@@ -596,18 +630,22 @@ export class TaskRunnerService {
         // the Task looking in flight — a goal coordinator would even record a
         // `started_run` for it — with nothing left to ever settle it. Keep the
         // attempt visible as a failed run, then fail the kickoff like any other.
-        if (result.topicId && !continueTopicId) {
-          await this.taskModel.incrementTopicCount(task.id);
+        if (result.topicId && !taskTopicStarted) {
           await this.taskModel.updateCurrentTopic(task.id, result.topicId);
-          await this.taskTopicModel.add(task.id, result.topicId, {
-            dispatch: { ...preparedDispatch.dispatch, fence: preparedDispatch.fence },
+          await this.taskTopicModel.startRun(task.id, result.topicId, {
+            dispatch: {
+              ...preparedDispatch.dispatch,
+              fence: preparedDispatch.fence,
+            },
             environmentSnapshot,
             integration: runIntegration,
             operationId: result.operationId,
-            seq: (task.totalTopics || 0) + 1,
+            seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
             trigger,
           });
           provisionedRegistered = true;
+          if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
+          taskTopicStarted = true;
         }
         if (result.topicId) {
           await this.taskTopicModel.updateStatus(task.id, result.topicId, 'failed');
@@ -617,35 +655,28 @@ export class TaskRunnerService {
         throw new Error(result.error || result.message || 'Agent run failed to start');
       }
 
-      await this.taskDispatch.transition(preparedDispatch, {
-        environmentSnapshot,
-        expected: ['dispatched'],
-        operationId: result.operationId,
-        phase: 'running',
-      });
-
-      if (result.topicId) {
-        if (continueTopicId) {
-          await this.taskTopicModel.updateStatus(task.id, continueTopicId, 'running');
-          await this.taskTopicModel.updateOperationId(task.id, continueTopicId, result.operationId);
-          await this.taskModel.updateCurrentTopic(task.id, continueTopicId);
-        } else {
-          await this.taskModel.incrementTopicCount(task.id);
-          await this.taskModel.updateCurrentTopic(task.id, result.topicId);
-          await this.taskTopicModel.add(task.id, result.topicId, {
-            dispatch: { ...preparedDispatch.dispatch, fence: preparedDispatch.fence },
-            environmentSnapshot,
-            integration: runIntegration,
-            operationId: result.operationId,
-            seq: (task.totalTopics || 0) + 1,
-            trigger,
-          });
-          provisionedRegistered = true;
-        }
-      } else {
-        throw new Error('Agent run started without a topic id');
+      if (!taskTopicStarted) {
+        if (!result.topicId) throw new Error('Agent run started without a topic id');
+        await this.taskDispatch.transition(preparedDispatch, {
+          environmentSnapshot,
+          expected: ['dispatched'],
+          operationId: result.operationId,
+          phase: 'running',
+        });
+        await this.taskModel.updateCurrentTopic(task.id, result.topicId);
+        await this.taskTopicModel.startRun(task.id, result.topicId, {
+          dispatch: { ...preparedDispatch.dispatch, fence: preparedDispatch.fence },
+          environmentSnapshot,
+          integration: runIntegration,
+          operationId: result.operationId,
+          seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
+          trigger,
+        });
+        if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
+        taskTopicStarted = true;
+        runtimeDispatchStarted = true;
+        provisionedRegistered = true;
       }
-
       await this.taskModel.updateHeartbeat(task.id);
       registrationComplete = true;
       if (earlyCompletion) await handleCompletion(earlyCompletion);

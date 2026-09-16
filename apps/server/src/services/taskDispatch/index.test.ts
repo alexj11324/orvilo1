@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
-import { taskDispatches, tasks, users, workspaces } from '@/database/schemas';
+import { agents, taskDispatches, tasks, users, workspaces } from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 
 import { TaskDispatchService, TaskDispatchWaitingError } from './index';
@@ -15,6 +15,7 @@ const workspaceId = 'task-dispatch-service-workspace';
 const cleanup = async () => {
   await db.delete(taskDispatches);
   await db.delete(tasks).where(eq(tasks.workspaceId, workspaceId));
+  await db.delete(agents).where(eq(agents.workspaceId, workspaceId));
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   await db.delete(users).where(eq(users.id, userId));
 };
@@ -107,5 +108,37 @@ describe('TaskDispatchService', () => {
 
     expect(prepared.dispatch).toMatchObject({ generation: 1, phase: 'claimed' });
     expect(prepared.fence).toBe(1);
+  });
+
+  it('claims the current Agent instead of the stale caller snapshot', async () => {
+    await db.insert(agents).values([
+      { id: 'dispatch-service-old', userId, workspaceId },
+      { id: 'dispatch-service-new', userId, workspaceId },
+    ]);
+    const [staleTask] = await db
+      .insert(tasks)
+      .values({
+        assigneeAgentId: 'dispatch-service-old',
+        createdByUserId: userId,
+        identifier: 'CURRENT-1',
+        instruction: 'Use current assignment',
+        seq: 4,
+        workspaceId,
+      })
+      .returning();
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'dispatch-service-new' })
+      .where(eq(tasks.id, staleTask.id));
+
+    const prepared = await new TaskDispatchService(db, workspaceId).prepare({
+      idempotencyKey: 'manual:CURRENT-1:request-1',
+      requestedBy: userId,
+      task: staleTask,
+      trigger: 'manual',
+    });
+
+    expect(prepared.dispatch.agentId).toBe('dispatch-service-new');
+    expect(prepared.task.assigneeAgentId).toBe('dispatch-service-new');
   });
 });

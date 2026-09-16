@@ -471,17 +471,17 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 ## 2. 工作包状态
 
-| 工作包                   | 实现状态     | 验证状态         | commit / 证据                                                     | 保留依赖 / 阻塞                                                                                                                                                                                                                                      |     |     |
-| ------------------------ | ------------ | ---------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- |
-| S00 基线与依赖清单       | IMPLEMENTED  | NOT\_RUN         | 本文 §1.7                                                         | 清单已按功能域填齐（2026-09-16）；纯清单，无需运行时验证。S30.1 社区 / 文稿属范围外，见 §1.7.1                                                                                                                                                       |     |     |
-| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de`                                  | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                             |     |     |
-| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`                                                        | 默认看板与 Web 落地任务列表已完成；**Web 收件箱（未读话题 / 简报 / 需要你处理）在本分支变为不可达，这是真实回退**，两条修法见 §2.2；旧 Home 组件仍被 Electron 每标签页使用，故未删                                                                   |     |     |
-| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` `cc3b9489`            | S30.5 的服务端收口已完成（可证完备的单一收口点）；agent 分享的访客页不在本仓，属云端侧。**`apps/share` 按 §6.5 L295 明文保留**（它只服务主题 / 页面 / 产物三类分享，目录内零 agent 分享面），见 §1.7.4 与 §2.5                                       |     |     |
-| S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`                                  | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3） |     |     |
-| S50 资源与产物归位       | IMPLEMENTED  | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` `263ebf78` `15d06a28` `ee076357` | 四项全部完成并在本机验证（PGlite + `bunx tsc`）；运行级追溯复用既有 `works.originTopicId`，**零新增表**，见 §2.6                                                                                                                                     |     |     |
-| S60 Goal 与规则下沉      | IMPLEMENTED  | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`                                  | Goal 与详情 / 对话关联两侧经审计均为**已满足**（非待办）；规则面已下沉，见 §2.7                                                                                                                                                                      |     |     |
-| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`                                             | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                          |     |     |
-| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                                                 | 覆盖全部                                                                                                                                                                                                                                             |     |     |
+| 工作包                   | 实现状态     | 验证状态         | commit / 证据                                                     | 保留依赖 / 阻塞                                                                                                                                                                                                                                                       |     |     |
+| ------------------------ | ------------ | ---------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- |
+| S00 基线与依赖清单       | IMPLEMENTED  | NOT\_RUN         | 本文 §1.7                                                         | 清单已按功能域填齐（2026-09-16）；纯清单，无需运行时验证。S30.1 社区 / 文稿属范围外，见 §1.7.1                                                                                                                                                                        |     |     |
+| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de`                                  | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                                              |     |     |
+| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`                                                        | 默认看板与 Web 落地任务列表已完成。**真实回退**：Web 上简报与「需要你处理」无入口，未读话题只剩聚合视图缺失（侧栏 agent 未读徽标与话题圆点仍在），两条修法见 §2.2。旧 Home 仍被 Electron 每标签页使用；其卸载施工图（含唯一硬阻塞 `AcceptancePortalDrawer`）见 §2.2.1 |     |     |
+| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` `cc3b9489`            | S30.5 的服务端收口已完成（可证完备的单一收口点）；agent 分享的访客页不在本仓，属云端侧。**`apps/share` 按 §6.5 L295 明文保留**（它只服务主题 / 页面 / 产物三类分享，目录内零 agent 分享面），见 §1.7.4 与 §2.5                                                        |     |     |
+| S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`                                  | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3）                  |     |     |
+| S50 资源与产物归位       | IMPLEMENTED  | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` `263ebf78` `15d06a28` `ee076357` | 四项全部完成并在本机验证（PGlite + `bunx tsc`）；运行级追溯复用既有 `works.originTopicId`，**零新增表**，见 §2.6                                                                                                                                                      |     |     |
+| S60 Goal 与规则下沉      | IMPLEMENTED  | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`                                  | Goal 与详情 / 对话关联两侧经审计均为**已满足**（非待办）；规则面已下沉，见 §2.7                                                                                                                                                                                       |     |     |
+| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`                                             | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                                           |     |     |
+| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                                                 | 覆盖全部                                                                                                                                                                                                                                                              |     |     |
 
 ---
 
@@ -611,8 +611,20 @@ import { imageRouter } from '@/server/routers/lambda/image';
 3. 简报 UI（`features/DailyBrief/*`）**只**被 `HomeInbox` 消费，而 `HomeInbox` **只**被 Home 渲染
    （`Home/HomeModeContent.tsx:541,549,617`、`Home/index.tsx:428`）。
 
-结论：Web 上未读话题、简报（执行简报）、「需要你处理」三类信息**没有任何入口**。侧栏那个 `InboxModal`
+结论：Web 上**简报（执行简报）与「需要你处理」两类信息没有任何入口**；侧栏那个 `InboxModal`
 （`HomeSidebar/Header/components/InboxModal`）只覆盖**通知**与**待处理转移**，不含简报，也不含未读话题。
+
+**但「未读话题也不可达」这句要收窄（2026-09-16 复核，原先写过头了）** —— 未读状态在 Web 上**仍有两条存活路径**，
+丢的是**聚合视图**而不是**未读感知本身**：
+
+| 存活路径          | 证据                                                                                                                 | 覆盖到什么                                               |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| 侧栏 agent 行徽标 | `HomeSidebar/Body/Agent/List/AgentItem/index.tsx:86-89`（服务端按 `topics.status==='unread'` 算好）+ `:172-178` 渲染 | 「哪个 agent 有未读、有几条」；agent 手风琴在 Web 恒可见 |
+| 会话侧栏未读圆点  | `AgentSidebar/Topic/List/Item/index.tsx:325`（`hasUnread`）+ `:433` 渲染 `<UnreadDot/>`                              | 点进 agent 后逐条话题的未读                              |
+
+所以准确的说法是：**没有「未读话题的聚合收件箱」**，而不是「未读话题不可达」。这一点影响修法的优先级 ——
+它把 A / B 两个选项从「恢复丢失的能力」降级为「恢复聚合入口」。侧栏 `Recents` 也在（`HomeSidebar/Body/index.tsx:44,52-57`），
+但它**不带未读状态**（`Home/Recents/*` 无 unread 引用）。
 
 方案 §5 的「收件箱迁移」要求的正是这件事：「优先从现有 `HomeInbox`、简报、审批和通知组件抽出可独立挂载的能力，
 **建立薄路由或接入等价现有路由**」，并且特意警告「旧首页的 `news` 可能是执行简报，**不得仅凭名字当作新闻推荐删除**」。
@@ -631,10 +643,10 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 **两条候选修法（都需在真实 Web 上验证，属 S80 或紧接着的 S20 收尾）**：
 
-| 选项              | 做法                                                                                                        | 代价 / 风险                                                                                                    |
-| ----------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| A. 薄路由         | 注册一条 Web 可达的收件箱路由，渲染既有的 `HomeInbox`（它本来就是可挂载组件，已有 rail /main 两种 variant） | 要决定路径与导航入口；与侧栏 `InboxModal` 职责重叠需说清（一个是通知，一个是话题 / 简报）                      |
-| B. 并入侧栏收件箱 | 把 `HomeInbox` 的简报与未读话题接进既有 `InboxModal`                                                        | 该 modal 有自己的列表架构（`useNotificationList` + 分类 + 游标），合并要避免**第二份未读状态** —— 方案明文禁止 |
+| 选项              | 做法                                                                                                                                                               | 代价 / 风险                                                                                                                                                                                                                                                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A. 薄路由         | 注册一条 Web 可达的收件箱路由，渲染既有的 `HomeInbox`（它本来就是可挂载组件，`variant` 有三个值 `'default' \| 'main' \| 'rail'`，**不需要任何 context provider**） | 要决定路径与导航入口；与侧栏 `InboxModal` 职责重叠需说清（一个是通知，一个是话题 / 简报）。**另有一个新发现的耦合**：`HomeInbox` 读 `systemStatusSelectors.hiddenHomeWidgets`，而唯一**写**它的 UI 是 `CustomizeButton`，只挂自 `routes/(main)/home/index.tsx` —— 在 Web 上不可达。所以挂上去会继承「旧首页的隐藏区块」状态却**改不了**，需要一并解决 |
+| B. 并入侧栏收件箱 | 把 `HomeInbox` 的简报与未读话题接进既有 `InboxModal`                                                                                                               | 该 modal 有自己的列表架构（`useNotificationList` + 分类 + 游标），合并要避免**第二份未读状态** —— 方案明文禁止                                                                                                                                                                                                                                        |
 
 **尚未做（已知，非回退）**
 
@@ -655,6 +667,52 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 - 移动端：`(mobile)` 树不使用 `(main)/_layout`，因此 `GlobalOverlays` 的三个子项在移动端**本来就没有**，
   行为未变 —— 上面的宿主问题是同一件事的另一面。
+
+#### 2.2.1 「旧 Home 卸载」的实测施工图（2026-09-16 审计，未施工）
+
+本项**仍未做**，但审计把未知变成了已知，下一次不必重新调研。结论是：**这不是「删一个页面」，
+而是「拆一个被 11 个 feature 当组件库用的目录」**，且其中有 1 处是硬阻塞。
+
+**唯一的硬阻塞：`AcceptancePortalDrawer` 全仓只有 Home 一个宿主。**
+
+| 组件                     | 宿主数 | 证据                                                                                                                                                          |
+| ------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AcceptancePortalDrawer` | **1**  | 定义 `features/Home/AcceptancePortalDrawer.tsx:18`，唯一挂载点 `features/Home/index.tsx:462`。其余引用只有 Home 自己的 import、:18/:62 与两个测试             |
+| `TopicChatDrawer`        | 5      | Home + `Portal/TaskDetail/Body.tsx:51`、`Portal/TaskResult/Body.tsx:77`、`AgentTaskDetail/TaskDetailPage.tsx:118`、`Automations/AutomationDetailPage.tsx:301` |
+
+删 Home 的后果不同：`TopicChatDrawer` 仍有 4 个宿主（不缺渲染能力）；而 `AcceptancePortalDrawer`
+一旦随 Home 消失，`chatStore` 的 `isAcceptancePortalView` **照样被写成 true，却没有任何组件去渲染它** ——
+验收深链**静默失效**，不报错。**所以必须先迁移它，再谈删 Home。**
+
+**必须先抽出的 11 个模块**（现在被 `features/Home/` **外部**深度 import，目录整体删会直接编译失败）：
+`Home/components/RunningGlyph`（`AgentGoals/*` ×3、`HomeInbox/*` ×2）、`Home/components/Time`（`AgentTasks/*` ×2、`HomeInbox/*` ×4）、
+`Home/components/homeType`（`HomeInbox/*` ×5、`Recommendations`、`RecommendTaskTemplates`）、`Home/components/GroupBlock`、
+`Home/components/RailCard`、`Home/AgentSelect/useHomeAgentRows`（`AgentSidebar/Header/Agent/SwitchPanel.tsx`）、
+`Home/AgentSelect/AgentList`（`ChatInput/ActionBar/Agent/index.tsx`）、`Home/CustomizeModal/config`（`HomeInbox/hiddenWidgets.ts`、`inboxBlockState.ts`）、
+`Home/CustomizeModal/useHomeCustomization`、`Home/portraitFraming`（`ArtworkStudio/Content.tsx`）、`Home/HomeNavHeader`、
+`Home/Recents`（**`HomeSidebar/Body/index.tsx`**）。
+
+**两个改动点，缺一不可**（一个平台一个，不是同一处）：
+
+| 平台     | 改动点                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Electron | `desktopRouter.config.desktop.tsx:18` 的 `createHomeElement: () => <DesktopHomeRoute />`，以及 `DesktopHomeRoute.tsx:3-4` |
+| Web      | `routes/(main)/_layout/index.tsx:26-27`（两条 import）与 `:58-60`（手工包 `<DesktopHomeLayout>`）                         |
+
+**外加一处前置修正**：`routes/(main)/_layout/authMount.test.ts:47-48` 用 `vi.mock('../home', …)` 指路径；
+目录删掉后这两行指向不存在的路径。工厂式 mock 通常不解析真实模块，但**未经运行验证**，按前置项处理、不要假设安全。
+
+**一个需要产品裁定的问题（不是工程阻塞）**：`createHomeElement` 若一并去掉，Web 的索引槽已是 `WebHomeRedirect`（跳 `/tasks`），
+而 Electron 的每标签页首屏就**没有落点**了。Electron 该落到任务看板还是别的，方案没写 —— 这决定了 Electron 侧改动的形状，
+不能由工程单方面定。
+
+**代价（`Activity` 保活丢失，也是产品决定）**：`HomeLayout/index.tsx:46` 用 React 19 的 `<Activity mode={…}>` 让 Home 在非首页时保持挂载，
+所以删掉会丢这些**局部 state**：`Home/index.tsx:339-342` 的 `mode` / `inputValue`、`:349-352` 的抽屉 latch、
+`HomeModeContent.tsx:479` 的 `mine/team` 作用域，以及首页滚动位置。
+注意 `mainInputEditor` **不是** Home 独占的（另有 `Conversation/store/slices/input/action.ts:130`、
+`routes/(main)/{group,agent}/features/Conversation/MainChatInput/index.tsx`、`HeterogeneousChatInput/index.tsx:306` 四个写入方），
+但有两个跨树读者（`features/SuggestQuestions/Item.tsx:18,23-24`、`features/AgentBuilder/SuggestionChips/index.tsx:28,33-34`）
+会 `setDocument` 进那个槽位 —— 若看板侧没有任何 composer 写它，**「点建议填入输入框」会静默变成空操作**。
 
 **验证**：`src/spa/router/`、`src/features/{GlobalOverlays,Home,HomeLayout}/` 共 **207 个用例全绿**；
 `desktopRouter.sync.test.tsx` 中断言「Web 索引槽为空」的那条**按新契约改写**为
@@ -861,6 +919,26 @@ slice，`evalKeys` 的唯一消费者也是它们 —— 三者的消费者**互
 
 **四类分享在代码里保持可区分**：`getSharedTopic` 走 `TopicShareModel`（会话分享，另一张表、另一个能力），`AgentShareModel` 才是「公开可交互 Agent」这一类。本轮只动后者。
 
+**四类分享的完整归属图（2026-09-16 审计补，用来防止连带删除）**：
+
+| 类别                    | 表                      | Model / 入口                                        | 在 `apps/share` 里？ |
+| ----------------------- | ----------------------- | --------------------------------------------------- | -------------------- |
+| (a) 任务 / 会话链接分享 | `topic_shares`          | `TopicShareModel`、`share.getSharedTopic`           | **是**               |
+| (b) 只读产物 / 页面分享 | `document_shares`       | `DocumentShareModel`、`pageShare` / `artifactShare` | **是**               |
+| (c) 团队邀请            | `workspace_invitations` | `workspaceMember` router                            | 否（零代码交集）     |
+| (d) 公开可交互 Agent    | `agent_shares`          | `AgentShareModel`、`shareChat.*`                    | **否**               |
+
+所以 `apps/share` 只服务 (a)(b)，退役 (d) 不需要动它的目录结构 —— 这与 §6.5 L295 的要求一致。
+
+**另一个部署级事实：OSS 自托管上这条链路本来就是关的，退役是第二重保证。**
+`packages/business/const/src/index.ts:7` 的 `ENABLE_BUSINESS_FEATURES = false` 是编译期常量，
+而 `assertAgentShareVisitorEnabled`（部署门，本轮未改）在它为 false 时直接抛 FORBIDDEN
+—— 即六个 `shareChat` 过程与 `share.getSharedAgent` 在自托管部署上**早就全是 403**。
+在自托管环境设 `agent_share` 环境变量也没用（`packages/app-config/src/featureFlags/schema.ts:88-90` 有注释说明）。
+本轮新增的两个门（`assertAgentShareCreationEnabled` / `assertAgentShareVisitorExecutionEnabled`）
+是**无条件拒绝**、不读任何开关，因此它们的作用不是「在自托管上再挡一次」，而是**在开了这个能力的部署上把它关掉**
+—— 且没有任何开关能把它们翻回去（这正是 §6.5「旧持久化 feature flag 不能绕过」要求的形状）。
+
 **客户端侧的关键发现：本仓库没有可移除的发布入口，因为入口本来就已隐藏。**
 `useAgentShareSupported`（`src/business/client/useAgentShareSupported.ts`）是**业务槽位**，其开源默认返回
 `{ publishable: false, supported: false, visible: false }`，注释明说「这隐藏了所有分享入口（profile tab、header action、settings page）」。
@@ -1046,6 +1124,38 @@ manifest 的 `createTask` 参数同样没暴露它，全文件除声明外零读
 | 任务聊天不因切详情页而切到另一 Agent 上下文 | ✅ `AgentTaskDetail/` 与 `Portal/TaskDetail/` 下 `setActiveAgentId` / `switchAgent` **零命中** —— 没有任何地方在这里改全局 active agent                                    |
 
 **「对话转任务」没有做，理由是有条件的**：§9.3 原文是「**只有在**已有能力可复用或本轮确需补齐关联时做最小实现」。全仓搜不到任何此类能力（`toTask*` 只有 `toTaskStatus` 这类状态映射器），而方案 S60 的验收项里也没有它（§6.2 的措辞是「**可以**在后续显式『转为任务』时关联」，是许可而非要求）。条件不成立时造它，等于新增产品面，与本轮「收敛」的方向相反 —— 故不做，并在此记录判断依据而非留白。
+
+**但第三行要加一个必须说清的边界（2026-09-16 审计补）**：上面那行只证明了**任务详情本体**是干净的，
+不能读成「任务详情所在的工作区不改全局 agent」。分两层看，结论相反：
+
+| 层                    | 位置                                                                                                           | 对全局 Agent 语义                                                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A. 任务详情本体       | `AgentTaskDetail/` 全目录                                                                                      | **只读**：assignee 从 task detail 读；`useHydrateAgentConfig` 是 hydrate-only；改模型写的是任务级 `taskService.updateConfig`（`TaskModelConfig.tsx:43`） |
+| B. 任务工作区聊天面板 | `TaskAgentProvider.tsx:74-76`（`setActiveAgentId`）、`:88`（`useChatStore.setState`）、`:102`（`switchTopic`） | **确实写全局**，且被 `TaskAgentProvider.test.tsx:161-162,233-234,359-360,384` **钉死在测试里**，是有意设计                                               |
+
+B 的挂载方是与详情**平级**的兄弟节点，不是详情的子组件：`TaskWorkspaceLayout.tsx:19` 给整个 `(task-workspace)` 布局挂一个，
+`AgentScopedTaskDetailPage.tsx:33` 另挂一个（带 `preferredAgentId`）。
+
+**这条边界有实施含义**：将来若在任务详情里加「讨论」视图，**绝不能走 `TaskAgentProvider`**，
+必须沿 `TopicChatDrawerBody` 的路线 —— 显式传 `agentId` + `topicId` + `isolatedTopic: true`
+（`TopicChatDrawer/index.tsx:71-79`；`isolatedTopic` 的语义是 sendMessage 不改全局 `activeTopicId`，
+定义在 `packages/types/src/conversation.ts:171-177`）。否则就会撞上 §9.3 那条禁令。
+
+**两个现成先例（§9.3 要的「迁移挂载职责」已经有人在仓里做过）**：
+
+- `TopicChatDrawerBody`（`TopicChatDrawer/index.tsx:64`）与浮层 chrome（`:128`）是分开导出的；
+  三个宿主复用 body、**不挂 chrome**，其中 `Acceptance/Viewer/Conversation/TopicPanel.tsx:14-18` 的注释明写
+  「deliberately reuses the drawer's conversation body without mounting the floating drawer chrome」。
+- `useOpenAcceptanceInPanel.ts:6-14` 明写**刻意不做路由跳转**，因为独立 `/acceptance/:id` 是与工作区无关的路由，
+  跳过去会把整个应用切回个人 scope —— 这正是「迁移挂载职责而非迁移导航」的既有表达。
+
+**顺带澄清两处最接近 `mode` 反模式、但判定为不是的地方**（免得下一个人误删）：
+`TaskAcceptance.tsx:121` 的 `variant='result'` 在 `:246-257` 挂的是**真的验收 atom**
+（`AcceptanceScope embedded` + `AcceptanceCheckInventory` + `AcceptanceDecision`）；
+`TaskActivities.tsx:247` 的 `variant='result'` 只差三处条件分支（`:461` 换 `TaskRunReport`、`:472` 去 lifecycle 行、`:497` 去外层 chrome）。
+两者是「同一组件为不同读者换组合」，不是「把整页藏起来」。真正算 embed flag 的是
+`AcceptanceScope.tsx:29-39` 的 `embedded`（由 `Viewer/index.tsx:63` 从 `explicitAcceptanceId` 推导），
+它作用于原本独立的 `/acceptance/:acceptanceId` 页面 —— 也是既有做法。
 
 **结论**：与 S60.1 同型 —— 方案的靶点是防御性的（别把现状改坏），而现状已经满足。S60 余项（详情与对话的运行时行为）需真实产品验证，属 §13.1 的 S80。
 

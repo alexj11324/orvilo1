@@ -634,6 +634,7 @@ describe('driveTaskFromVerify', () => {
     taskFindById.mockResolvedValue({
       currentTopicId: 'topic-current',
       id: 'task-1',
+      runReservationId: 'completion:op-corrective:lease-2',
       status: 'running',
     });
     topicFindByTopicId.mockImplementation(async (topicId: string) =>
@@ -643,6 +644,7 @@ describe('driveTaskFromVerify', () => {
               state: 'integrated',
               verifyOperationId: 'op-1',
             },
+            operationId: 'op-corrective',
           }
         : { operationId: 'op-1' },
     );
@@ -650,7 +652,14 @@ describe('driveTaskFromVerify', () => {
     await driveTaskFromVerify(db, 'u1', 'op-1');
 
     expect(runClaimTaskDrive).toHaveBeenCalledWith('run-1');
-    expect(serviceUpdateStatus).toHaveBeenCalledWith({ id: 'task-1', status: 'completed' });
+    expect(serviceUpdateStatus).toHaveBeenCalledWith(
+      { id: 'task-1', status: 'completed' },
+      undefined,
+      {
+        currentStatus: 'running',
+        reservationId: 'completion:op-corrective:lease-2',
+      },
+    );
   });
 
   it('completes the task on a passing verify', async () => {

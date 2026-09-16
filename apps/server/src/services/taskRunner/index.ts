@@ -168,8 +168,18 @@ export class TaskRunnerService {
       // old ordering rejected on the stale running row first, so timeout
       // cleanup below was unreachable precisely when it was needed.
       if (task.lastHeartbeatAt && task.heartbeatTimeout) {
-        const elapsed = (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000;
-        if (elapsed > task.heartbeatTimeout) {
+        const now = Date.now();
+        const elapsed = (now - new Date(task.lastHeartbeatAt).getTime()) / 1000;
+        const hasRunningTopic = existingTopics.some((topic) => topic.status === 'running');
+        const hasActiveReservation =
+          Boolean(task.runReservationId) &&
+          !!task.runReservationExpiresAt &&
+          new Date(task.runReservationExpiresAt).getTime() > now;
+        if (
+          task.status === 'running' &&
+          (hasRunningTopic || hasActiveReservation) &&
+          elapsed > task.heartbeatTimeout
+        ) {
           // A stale heartbeat is evidence that the run needs attention, not
           // proof that its external writer has stopped. Starting a replacement
           // here can put two agents in the same delivery pipeline. Keep the

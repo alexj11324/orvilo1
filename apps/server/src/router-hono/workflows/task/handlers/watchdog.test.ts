@@ -172,6 +172,26 @@ describe('task watchdog', () => {
     expect(cleanupTaskWorktrees).toHaveBeenCalledWith('task-1');
   });
 
+  it('settles each confirmed operation before retrying an unconfirmed sibling', async () => {
+    findByTaskId.mockResolvedValue([
+      { operationId: 'op-1', status: 'running', topicId: 'topic-1' },
+      { operationId: 'op-2', status: 'running', topicId: 'topic-2' },
+    ]);
+    interruptTask.mockImplementation(async ({ operationId }) => ({
+      success: operationId === 'op-1',
+    }));
+
+    const response = await watchdog(context());
+
+    expect(cancelIfRunning).toHaveBeenCalledWith('task-1', 'topic-1');
+    expect(cancelIfRunning).not.toHaveBeenCalledWith('task-1', 'topic-2');
+    expect(response.body).toMatchObject({
+      cancellationRequired: ['TASK-1'],
+      failed: [],
+    });
+    expect(cleanupTaskWorktrees).not.toHaveBeenCalled();
+  });
+
   it('preserves the task and worktrees when device cancellation is not confirmed', async () => {
     findByTaskId.mockResolvedValue([
       { operationId: 'op-1', status: 'running', topicId: 'topic-1' },

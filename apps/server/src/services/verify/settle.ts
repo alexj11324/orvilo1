@@ -105,11 +105,15 @@ export const driveTaskFromVerify = async (
     const taskModel = new TaskModel(db, userId, workspaceId);
     const task = await taskModel.findById(taskOperation.taskId);
     if (!task || TERMINAL_TASK_STATUS.has(task.status)) return; // task already settled
-    const completionReservationId = task.runReservationId?.startsWith(`completion:${operationId}:`)
+    const originalCompletionReservationId = task.runReservationId?.startsWith(
+      `completion:${operationId}:`,
+    )
       ? task.runReservationId
       : undefined;
+    let correctiveCompletionReservationId: string | undefined;
+    let currentTopic: Awaited<ReturnType<TaskTopicModel['findByTopicId']>> | null = null;
     if (task.currentTopicId && task.currentTopicId !== op.topicId) {
-      const currentTopic = await new TaskTopicModel(db, userId, workspaceId).findByTopicId(
+      currentTopic = await new TaskTopicModel(db, userId, workspaceId).findByTopicId(
         task.currentTopicId,
       );
       const correctiveSettled =
@@ -125,7 +129,21 @@ export const driveTaskFromVerify = async (
         );
         return;
       }
+      const correctiveOperationId = currentTopic?.operationId;
+      if (
+        correctiveSettled &&
+        correctiveOperationId &&
+        task.runReservationId?.startsWith(`completion:${correctiveOperationId}:`)
+      ) {
+        correctiveCompletionReservationId = task.runReservationId;
+      }
     }
+    // A corrective run replaces the original completion lease with a lease
+    // keyed by its own operation id. Once the current topic has been validated
+    // against this Verify operation above, retain that corrective token for all
+    // subsequent task CAS updates.
+    const completionReservationId =
+      originalCompletionReservationId ?? correctiveCompletionReservationId;
 
     const taskTopic = op.topicId
       ? await new TaskTopicModel(db, userId, workspaceId).findByTopicId(op.topicId)

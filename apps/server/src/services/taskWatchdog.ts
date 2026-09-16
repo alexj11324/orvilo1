@@ -66,7 +66,9 @@ export async function runTaskWatchdog(
       for (const operationId of operationIds) {
         try {
           const result = await aiAgentService.interruptTask({ operationId });
-          if (!result.success || result.deviceCancellationConfirmed === false) {
+          const operationCancellationConfirmed =
+            result.success && result.deviceCancellationConfirmed !== false;
+          if (!operationCancellationConfirmed) {
             cancellationConfirmed = false;
             log(
               'Watchdog cancellation unconfirmed: task=%s operation=%s success=%s device=%s',
@@ -75,6 +77,16 @@ export async function runTaskWatchdog(
               result.success,
               result.deviceCancellationConfirmed,
             );
+            continue;
+          }
+
+          // Persist each confirmed operation immediately. If a sibling
+          // operation remains live, the next sweep must see this topic as
+          // terminal instead of retrying an already-interrupted operation.
+          for (const topic of runningTopics) {
+            if (topic.operationId === operationId && topic.topicId) {
+              await taskTopicModel.cancelIfRunning(task.id, topic.topicId);
+            }
           }
         } catch (error) {
           cancellationConfirmed = false;
@@ -94,9 +106,6 @@ export async function runTaskWatchdog(
         continue;
       }
 
-      for (const topic of runningTopics) {
-        if (topic.topicId) await taskTopicModel.cancelIfRunning(task.id, topic.topicId);
-      }
     }
 
     const failureExtra = {

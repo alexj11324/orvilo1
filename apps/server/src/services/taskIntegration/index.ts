@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { TaskItem, TaskTopicIntegration } from '@orvilo/types';
 import { cloudSandboxRepoPath, deriveWorktreePath } from '@orvilo/types';
 import debug from 'debug';
@@ -5,10 +7,12 @@ import debug from 'debug';
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { LobeChatDatabase } from '@/database/type';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import {
   findBranchPr,
+  getBranchHead,
   getRemoteBranchSha,
   isBranchMergedInto,
   parseGithubRepo,
@@ -16,11 +20,14 @@ import {
 } from '@/server/services/githubRepo';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
+import { runVerifyOnCompletion } from '@/server/services/verify';
+import { after } from '@/server/utils/scheduleAfterResponse';
 
 const log = debug('task-integration');
 
 /** Corrective merge runs dispatched per task run before the task blocks. */
 const MAX_CORRECTIVE_ATTEMPTS = 3;
+const INTEGRATION_CLAIM_TTL_MS = 15 * 60 * 1000;
 
 /**
  * What the integration gate concluded for a completed run:
@@ -141,53 +148,106 @@ export class TaskIntegrationService {
       if (
         !record ||
         !taskTopic?.topicId ||
-        (record.role === 'task' && record.state === 'integrated')
+        record.state === 'integrated' ||
+        record.state === 'skipped'
       ) {
         return 'settled';
       }
       if (record.state === 'blocked') return 'blocked';
-      if (
-        record.role === 'task' &&
-        record.state !== 'pending' &&
-        record.state !== 'conflict' &&
-        record.state !== 'merging'
-      ) {
-        return 'settled';
+
+      // A task row in conflict already has a corrective run in flight. A
+      // repeated completion callback must not dispatch another one.
+      if (record.role === 'task' && record.state === 'conflict') {
+        return 'hold';
       }
-      if (record.role === 'integrate' && record.state !== 'merging') return 'settled';
+      const processable =
+        record.state === 'publish_failed' ||
+        record.state === 'verification_pending' ||
+        (record.role === 'task'
+          ? record.state === 'pending' || record.state === 'merging'
+          : record.state === 'merging');
+      if (!processable) return 'blocked';
 
       const topicId = taskTopic.topicId;
-      const outcome =
-        record.role === 'task'
-          ? record.state === 'merging'
-            ? record.repo
-              ? await this.dispatchCorrective(
-                  task,
-                  topicId,
-                  record,
-                  undefined,
-                  params.completionReservationId,
-                )
-              : record.integratedSha
-                ? await this.publishAndCleanup(task.id, record, record.integratedSha)
-                : 'blocked'
-            : record.repo
-              ? await this.integrateRemoteRun(task, topicId, record, params.completionReservationId)
-              : await this.integrateTaskRun(task, topicId, record, params.completionReservationId)
-          : record.repo
-            ? await this.finalizeRemoteCorrectiveRun(
-                task,
-                topicId,
-                record,
-                params.completionReservationId,
-              )
-            : await this.finalizeCorrectiveRun(
-                task,
-                topicId,
-                record,
-                params.completionReservationId,
-              );
-      if (outcome === 'blocked') await this.blockRelated(task.id, record.branch);
+      const claimToken = randomUUID();
+      const claimed = await this.taskTopicModel.claimIntegration(
+        task.id,
+        topicId,
+        record.state,
+        claimToken,
+        new Date(Date.now() - INTEGRATION_CLAIM_TTL_MS),
+      );
+      if (!claimed) {
+        const latest = await this.taskTopicModel.findByTopicId(topicId);
+        return latest?.integration?.state === 'integrated' ||
+          latest?.integration?.state === 'skipped'
+          ? 'settled'
+          : 'hold';
+      }
+
+      let outcome: IntegrationOutcome;
+      try {
+        outcome =
+          record.state === 'publish_failed'
+            ? await this.retryLocalPublish(task, topicId, record)
+            : record.role === 'task'
+              ? record.state === 'merging'
+                ? record.repo
+                  ? await this.dispatchCorrective(
+                      task,
+                      topicId,
+                      record,
+                      undefined,
+                      params.completionReservationId,
+                    )
+                  : record.integratedSha
+                    ? await this.publishAndCleanup(task.id, record, record.integratedSha)
+                    : 'blocked'
+                : record.repo
+                  ? await this.integrateRemoteRun(
+                      task,
+                      topicId,
+                      record,
+                      params.completionReservationId,
+                    )
+                  : await this.integrateTaskRun(
+                      task,
+                      topicId,
+                      record,
+                      params.completionReservationId,
+                    )
+              : record.repo
+                ? await this.finalizeRemoteCorrectiveRun(
+                    task,
+                    topicId,
+                    record,
+                    params.completionReservationId,
+                  )
+                : await this.finalizeCorrectiveRun(
+                    task,
+                    topicId,
+                    record,
+                    params.completionReservationId,
+                  );
+      } finally {
+        await this.taskTopicModel
+          .releaseIntegration(task.id, topicId, claimToken)
+          .catch((error) =>
+            log(
+              'integrateOnComplete: failed to release claim for %s/%s — %O',
+              task.id,
+              topicId,
+              error,
+            ),
+          );
+      }
+      // A terminal 'blocked' abandons the merge pipeline: tear down the run's
+      // task worktree and its topic-owned integration worktree so neither leaks on
+      // the device. Best-effort — cleanup never re-blocks a parked task.
+      if (outcome === 'blocked') {
+        await this.blockRelated(task.id, record.branch);
+        await this.cleanupTaskWorktrees(task.id);
+      }
       return outcome;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Integration failed';
@@ -223,9 +283,9 @@ export class TaskIntegrationService {
    * double-removal.
    *
    * Remote records (`repo`, no device fields) never touch device RPCs — their
-   * clone lived inside an ephemeral sandbox. The detached integration
-   * integration worktree is run-scoped too and is safe to remove with the task
-   * worktree once the candidate no longer needs recovery.
+   * clone lived inside an ephemeral sandbox. Integration worktrees are scoped
+   * to one owning topic, so both the task checkout and its integration checkout
+   * can be reclaimed without affecting another task.
    *
    * Never throws — cleanup runs on cancel/delete paths where a failure must
    * not break the primary operation. A removal that fails leaves
@@ -234,26 +294,36 @@ export class TaskIntegrationService {
   async cleanupTaskWorktrees(taskId: string): Promise<void> {
     try {
       const rows = await this.taskTopicModel.findByTaskId(taskId);
-      const candidates: { paths: string[]; topicId: string }[] = [];
+      const candidates: {
+        integrationPaths: string[];
+        taskPaths: string[];
+        topicId: string;
+      }[] = [];
       const removals = new Map<string, { deviceId: string; repoPath: string }>();
 
       for (const row of rows) {
         const record = row.integration;
         if (!row.topicId || !record || record.repo) continue;
         if (!record.deviceId || !record.repoPath) continue;
-        const stale =
+        const nonTerminal =
           record.state === 'pending' ||
           record.state === 'merging' ||
           record.state === 'conflict' ||
-          record.worktreeCleaned !== true;
-        if (!stale) continue;
-
-        const paths = [record.worktreePath, record.integrationWorktreePath].filter(
-          (path): path is string => !!path && path !== record.repoPath,
+          record.state === 'publish_failed';
+        const taskPaths = [record.role === 'task' ? record.worktreePath : undefined].filter(
+          (path): path is string =>
+            !!path && path !== record.repoPath && (nonTerminal || record.worktreeCleaned !== true),
         );
+        const integrationPaths = [record.integrationWorktreePath].filter(
+          (path): path is string =>
+            !!path &&
+            path !== record.repoPath &&
+            (nonTerminal || record.integrationWorktreeCleaned !== true),
+        );
+        const paths = [...new Set([...taskPaths, ...integrationPaths])];
         if (paths.length === 0) continue;
 
-        candidates.push({ paths, topicId: row.topicId });
+        candidates.push({ integrationPaths, taskPaths, topicId: row.topicId });
         for (const worktreePath of paths) {
           removals.set(worktreePath, { deviceId: record.deviceId, repoPath: record.repoPath });
         }
@@ -280,10 +350,19 @@ export class TaskIntegrationService {
         }
       }
 
-      for (const { paths, topicId } of candidates) {
+      for (const { integrationPaths, taskPaths, topicId } of candidates) {
         await this.taskTopicModel
           .updateIntegration(taskId, topicId, {
-            worktreeCleaned: paths.every((path) => removed.get(path) === true),
+            ...(integrationPaths.length > 0
+              ? {
+                  integrationWorktreeCleaned: integrationPaths.every(
+                    (path) => removed.get(path) === true,
+                  ),
+                }
+              : {}),
+            ...(taskPaths.length > 0
+              ? { worktreeCleaned: taskPaths.every((path) => removed.get(path) === true) }
+              : {}),
           })
           .catch((error) =>
             log('cleanupTaskWorktrees: flag update failed for %s/%s — %O', taskId, topicId, error),
@@ -325,6 +404,11 @@ export class TaskIntegrationService {
       return 'blocked';
     }
     const integrationWorktreePath = record.integrationWorktreePath ?? ownedIntegrationWorktreePath;
+    const activeRecord: TaskTopicIntegration = {
+      ...record,
+      integrationOwnerTopicId: record.integrationOwnerTopicId ?? topicId,
+      integrationWorktreePath,
+    };
 
     const ensured = await this.ensureIntegrationWorktree({
       baseRef: this.baseRef(record),
@@ -345,6 +429,7 @@ export class TaskIntegrationService {
     // blocked/cancel cleanup can find it — the merge-report branches below
     // only persist it on conflict.
     await this.updateIntegrationOrThrow(task.id, topicId, {
+      integrationOwnerTopicId: activeRecord.integrationOwnerTopicId,
       integrationWorktreePath,
     });
 
@@ -357,7 +442,7 @@ export class TaskIntegrationService {
       workspaceId: this.workspaceId,
     });
     const deliveryRecord: TaskTopicIntegration = {
-      ...record,
+      ...activeRecord,
       expectedHeadSha: merged.headSha ?? record.expectedHeadSha,
       integrationWorktreePath,
     };
@@ -387,6 +472,7 @@ export class TaskIntegrationService {
     await this.updateIntegrationOrThrow(task.id, topicId, {
       conflicts: merged.conflicts,
       integrationWorktreePath,
+      lastErrorCode: 'merge_conflict',
       lastError: merged.error,
       state: 'conflict',
     });
@@ -430,20 +516,23 @@ export class TaskIntegrationService {
     if (check.prUrl) patch.prUrl = check.prUrl;
     if (check.prNumber) patch.prNumber = check.prNumber;
     if (check.expectedHeadSha) patch.expectedHeadSha = check.expectedHeadSha;
-    if (check.error) patch.lastError = check.error;
+    if (check.error) {
+      patch.lastError = check.error;
+      patch.lastErrorCode = 'remote_verification_unavailable';
+      patch.state = 'verification_pending';
+    }
     if (Object.keys(patch).length > 0) {
       await this.updateIntegrationOrThrow(task.id, topicId, patch);
     }
     if (check.merged) {
       await this.landRemoteMerge(task.id, topicId, record, check);
-      return 'settled';
+      return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : 'settled';
     }
     if (check.error) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
         ...patch,
-        state: 'blocked',
       });
-      return 'blocked';
+      return 'hold';
     }
     return this.dispatchCorrective(
       task,
@@ -467,11 +556,20 @@ export class TaskIntegrationService {
     if (check.prUrl) patch.prUrl = check.prUrl;
     if (check.prNumber) patch.prNumber = check.prNumber;
     if (check.expectedHeadSha) patch.expectedHeadSha = check.expectedHeadSha;
-    if (check.error) patch.lastError = check.error;
+    if (check.error) {
+      patch.lastError = check.error;
+      patch.lastErrorCode = 'remote_verification_unavailable';
+      patch.state = 'verification_pending';
+    }
 
     if (check.merged) {
       await this.landRemoteMerge(task.id, topicId, record, check);
-      return 'settled';
+      return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : 'settled';
+    }
+
+    if (check.error) {
+      await this.taskTopicModel.updateIntegration(task.id, topicId, patch);
+      return 'hold';
     }
 
     if (check.error) {
@@ -627,6 +725,8 @@ export class TaskIntegrationService {
       integratedSha: check.sha,
       expectedBaseSha: check.expectedBaseSha,
       expectedHeadSha: check.expectedHeadSha,
+      lastError: null,
+      lastErrorCode: null,
       prNumber: check.prNumber,
       prUrl: check.prUrl,
       pushedToRemote: true,
@@ -714,7 +814,8 @@ export class TaskIntegrationService {
    * merge — it's recorded on the record for a human to re-push.
    *
    * Both run-owned worktrees are removed only after the exact candidate commit
-   * has been pushed successfully. A failed push retains them for recovery.
+   * has been pushed successfully. A failed push remains recoverable and keeps
+   * the integration worktree for an exact-SHA retry.
    */
   private async landMerge(
     task: TaskItem,
@@ -722,25 +823,41 @@ export class TaskIntegrationService {
     record: TaskTopicIntegration,
     sha?: string,
   ): Promise<IntegrationOutcome> {
-    const persisted = await this.taskTopicModel.updateIntegration(task.id, topicId, {
+    if (!sha) {
+      await this.updateIntegrationOrThrow(task.id, topicId, {
+        lastError: 'Merge completed without a verifiable integration commit',
+        state: 'blocked',
+      });
+      return 'blocked';
+    }
+    await this.updateIntegrationOrThrow(task.id, topicId, {
       integratedSha: sha,
       state: 'merging',
     });
-    if (!persisted) {
-      log(
-        'landMerge: integration row disappeared before publish task=%s topic=%s',
-        task.id,
-        topicId,
-      );
+    const outcome = await this.publishAndCleanup(task.id, record, sha);
+    if (outcome !== 'settled') return outcome;
+    return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : outcome;
+  }
+
+  private async retryLocalPublish(
+    task: TaskItem,
+    topicId: string,
+    record: TaskTopicIntegration,
+  ): Promise<IntegrationOutcome> {
+    if (record.repo || !record.integratedSha) {
+      await this.updateIntegrationOrThrow(task.id, topicId, {
+        lastError: 'Publish retry is missing its local integration commit',
+        state: 'blocked',
+      });
       return 'blocked';
     }
-    return this.publishAndCleanup(task.id, record, sha);
+    return this.landMerge(task, topicId, record, record.integratedSha);
   }
 
   private async publishAndCleanup(
     taskId: string,
     record: TaskTopicIntegration,
-    sha?: string,
+    sha: string,
   ): Promise<IntegrationOutcome> {
     const rows = await this.taskTopicModel.findByTaskId(taskId);
     const related = rows.filter((row) => row.topicId && row.integration?.branch === record.branch);
@@ -754,15 +871,12 @@ export class TaskIntegrationService {
     }
     const updateRelated = async (patch: Partial<TaskTopicIntegration>) => {
       for (const row of related) {
-        const updated = await this.taskTopicModel.updateIntegration(taskId, row.topicId!, patch);
-        if (!updated) {
-          throw new Error(`Integration row disappeared for task ${taskId} topic ${row.topicId}`);
-        }
+        await this.updateIntegrationOrThrow(taskId, row.topicId!, patch);
       }
     };
 
     const publishPath = record.integrationWorktreePath ?? record.worktreePath;
-    if (!record.deviceId || !record.repoPath || !publishPath || !sha) {
+    if (!record.deviceId || !record.repoPath || !publishPath) {
       await updateRelated({
         integratedSha: sha,
         lastError: 'Integration candidate is missing the device path or commit SHA',
@@ -775,6 +889,7 @@ export class TaskIntegrationService {
     if (record.baseBranch !== 'HEAD') {
       const pushed = await deviceGateway.pushGitBranch({
         deviceId: record.deviceId,
+        expectedSha: sha,
         path: publishPath,
         remoteBranch: record.baseBranch,
         sourceRef: sha,
@@ -795,51 +910,54 @@ export class TaskIntegrationService {
         await updateRelated({
           integratedSha: sha,
           lastError,
+          lastErrorCode: 'publish_failed',
           pushedToRemote: false,
-          state: 'blocked',
+          state: 'publish_failed',
         });
-        return 'blocked';
+        await this.cleanupTaskRunWorktrees(taskId, record.branch);
+        return 'hold';
       }
       pushedToRemote = true;
-    }
-
-    const paths = new Set<string>();
-    for (const row of related) {
-      const integration = row.integration!;
-      if (integration.worktreePath && integration.worktreePath !== integration.repoPath) {
-        paths.add(integration.worktreePath);
-      }
-      if (
-        integration.integrationWorktreePath &&
-        integration.integrationWorktreePath !== integration.repoPath
-      ) {
-        paths.add(integration.integrationWorktreePath);
-      }
-    }
-    let worktreeCleaned = true;
-    for (const worktreePath of paths) {
-      const removed = await deviceGateway.removeGitWorktree({
-        deviceId: record.deviceId,
-        path: record.repoPath,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-        worktreePath,
-      });
-      worktreeCleaned &&= !!removed.success;
-      if (!removed.success) {
-        log('publishAndCleanup: worktree cleanup failed for task %s — %s', taskId, removed.error);
-      }
     }
 
     await updateRelated({
       conflicts: null,
       integratedSha: sha,
       lastError: null,
+      lastErrorCode: null,
       pushedToRemote,
       state: 'integrated',
-      worktreeCleaned,
     });
+    await this.cleanupTaskWorktrees(taskId);
     return 'settled';
+  }
+
+  /** Remove completed task worktrees while retaining the integration checkout for publish retry. */
+  private async cleanupTaskRunWorktrees(taskId: string, branch: string): Promise<void> {
+    const rows = await this.taskTopicModel.findByTaskId(taskId);
+    for (const row of rows) {
+      const candidate = row.integration;
+      if (
+        !row.topicId ||
+        candidate?.branch !== branch ||
+        candidate.role !== 'task' ||
+        !candidate.deviceId ||
+        !candidate.repoPath ||
+        !candidate.worktreePath ||
+        candidate.worktreeCleaned === true
+      )
+        continue;
+      const removed = await deviceGateway.removeGitWorktree({
+        deviceId: candidate.deviceId,
+        path: candidate.repoPath,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+        worktreePath: candidate.worktreePath,
+      });
+      await this.updateIntegrationOrThrow(taskId, row.topicId, {
+        worktreeCleaned: removed.success,
+      });
+    }
   }
 
   /**
@@ -938,6 +1056,10 @@ export class TaskIntegrationService {
     });
 
     const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
+    const relatedRows = await this.taskTopicModel.findByTaskId(task.id);
+    const originalRun = relatedRows.find(
+      (row) => row.integration?.branch === record.branch && row.integration.role === 'task',
+    );
     await runner.runTask({
       extraPrompt,
       integrationSeed: {
@@ -949,6 +1071,7 @@ export class TaskIntegrationService {
         runTopicId: topicId,
         state: 'merging',
       },
+      parentOperationId: originalRun?.operationId ?? undefined,
       replaceReservationId: completionReservationId,
       skipTaskVerification: true,
       taskId: task.id,
@@ -985,6 +1108,54 @@ export class TaskIntegrationService {
   /** Prefer the remote-tracking ref so merges land on the published tip. */
   private baseRef(record: TaskTopicIntegration): string {
     return record.baseBranch === 'HEAD' ? 'HEAD' : `origin/${record.baseBranch}`;
+  }
+
+  /**
+   * A completion whose integration previously held never reached the runtime's
+   * normal verify scheduler. Once recovery or a corrective run publishes the
+   * branch, resume the original run's confirmed Verify plan and keep this
+   * lifecycle invocation from settling the Task independently.
+   */
+  private async scheduleDeferredVerify(
+    task: TaskItem,
+    record: TaskTopicIntegration,
+  ): Promise<boolean> {
+    const wasDeferred =
+      record.role === 'integrate' ||
+      record.state === 'publish_failed' ||
+      record.state === 'verification_pending';
+    if (!wasDeferred) return false;
+
+    const rows = await this.taskTopicModel.findByTaskId(task.id);
+    const originalRun = rows.find(
+      (row) =>
+        row.operationId &&
+        row.integration?.branch === record.branch &&
+        row.integration.role === 'task',
+    );
+    if (!originalRun?.operationId) return false;
+
+    const verifyRun = await new VerifyRunModel(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).findByOperation(originalRun.operationId);
+    if (!verifyRun?.planConfirmedAt) return false;
+
+    const handoff = originalRun.handoff as { content?: string } | null;
+    after(() =>
+      runVerifyOnCompletion(
+        this.db,
+        this.userId,
+        {
+          deliverable: handoff?.content ?? '',
+          goal: task.instruction,
+          operationId: originalRun.operationId!,
+        },
+        this.workspaceId,
+      ),
+    );
+    return true;
   }
 }
 

@@ -87,6 +87,95 @@ describe('TaskTopicModel', () => {
     });
   });
 
+  describe('integration claim', () => {
+    const integration = {
+      attempts: 0,
+      baseBranch: 'main',
+      branch: 'task/T-1',
+      role: 'task' as const,
+      state: 'publish_failed' as const,
+    };
+
+    it('allows only one concurrent owner and releases only for that owner', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Claim integration' });
+      await createTopic('tpc_integration_claim');
+      await topicModel.add(task.id, 'tpc_integration_claim', { integration, seq: 1 });
+      const staleBefore = new Date(Date.now() - 60_000);
+
+      const results = await Promise.all([
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_claim',
+          'publish_failed',
+          'owner-a',
+          staleBefore,
+        ),
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_claim',
+          'publish_failed',
+          'owner-b',
+          staleBefore,
+        ),
+      ]);
+
+      expect(results.filter(Boolean)).toHaveLength(1);
+      const owner = results[0] ? 'owner-a' : 'owner-b';
+      const other = owner === 'owner-a' ? 'owner-b' : 'owner-a';
+
+      await topicModel.releaseIntegration(task.id, 'tpc_integration_claim', other);
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_claim',
+          'publish_failed',
+          'owner-c',
+          staleBefore,
+        ),
+      ).resolves.toBe(false);
+
+      await topicModel.releaseIntegration(task.id, 'tpc_integration_claim', owner);
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_claim',
+          'publish_failed',
+          'owner-c',
+          staleBefore,
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('reclaims a stale integration owner', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Reclaim integration' });
+      await createTopic('tpc_integration_stale');
+      await topicModel.add(task.id, 'tpc_integration_stale', { integration, seq: 1 });
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_stale',
+          'publish_failed',
+          'stale-owner',
+          new Date(Date.now() - 60_000),
+        ),
+      ).resolves.toBe(true);
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_stale',
+          'publish_failed',
+          'new-owner',
+          new Date(Date.now() + 60_000),
+        ),
+      ).resolves.toBe(true);
+    });
+  });
+
   describe('updateStatus', () => {
     it('should update topic status', async () => {
       const taskModel = new TaskModel(serverDB, userId);

@@ -532,7 +532,13 @@ export default {
   'agentEngine.engine.label': 'Engine',
   'agentEngine.engine.claudeSdk': 'Claude Agent SDK',
   'agentEngine.engine.codexAppServer': 'Codex',
+  'agentEngine.engine.limitedCapabilities':
+    'This engine cannot ask questions during a run or use Orvilo builtin tools yet.',
   'agentEngine.model.label': 'Model',
+  'agentEngine.legacy.description':
+    'This agent still uses its existing chat runtime. Its execution path will not change until you migrate it.',
+  'agentEngine.legacy.migrate': 'Migrate to Orvilo',
+  'agentEngine.legacy.name': 'Legacy chat runtime',
   'agentEngine.model.catalogPending':
     'Models load from the selected machine once an execution target is set.',
   'agentEngine.model.catalogError': 'Could not load models from the selected machine.',

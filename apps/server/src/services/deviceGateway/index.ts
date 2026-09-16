@@ -927,6 +927,7 @@ export class DeviceGateway {
    */
   async pushGitBranch(params: {
     deviceId: string;
+    expectedSha?: string;
     path: string;
     remoteBranch?: string;
     sourceRef?: string;
@@ -934,12 +935,13 @@ export class DeviceGateway {
     userId: string;
     workspaceId?: string;
   }): Promise<DeviceGitSyncResult> {
-    const {
-      userId,
-      deviceId,
-      path,
-      remoteBranch,
-      sourceRef,
+      const {
+        userId,
+        deviceId,
+        expectedSha,
+        path,
+        remoteBranch,
+        sourceRef,
       timeout = 65_000,
       workspaceId,
     } = params;
@@ -949,7 +951,7 @@ export class DeviceGateway {
     try {
       const result = await client.invokeRpc<DeviceGitSyncResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'pushGitBranch', params: { path, remoteBranch, sourceRef } },
+        { method: 'pushGitBranch', params: { expectedSha, path, remoteBranch, sourceRef } },
       );
 
       if (!result.success || !result.data) {

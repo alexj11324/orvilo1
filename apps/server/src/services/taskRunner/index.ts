@@ -28,6 +28,7 @@ import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/servic
 import { buildTaskPrompt } from './buildTaskPrompt';
 
 const log = debug('task-runner');
+const RUN_KICKOFF_CLAIM_TTL_MS = 15 * 60 * 1000;
 
 export interface RunTaskParams {
   /**
@@ -51,6 +52,8 @@ export interface RunTaskParams {
   replaceReservationId?: string;
   /** Internal corrective runs stay bound to the original task Verify plan. */
   skipTaskVerification?: boolean;
+  /** Parent delivery operation for internal corrective runs. */
+  parentOperationId?: string;
   taskId: string;
   /**
    * What triggered this run. Defaults to `'manual'` — the ad-hoc "run now"
@@ -119,6 +122,7 @@ export class TaskRunnerService {
       extraPrompt,
       integrationSeed,
       maxSteps,
+      parentOperationId,
       replaceReservationId,
       skipTaskVerification,
       trigger = 'manual',
@@ -139,6 +143,11 @@ export class TaskRunnerService {
     let dispatchService: AiAgentService | undefined;
     let provisioned: ProvisionedWorkspace | undefined;
     let provisionedRegistered = false;
+    // Keep the legacy kickoff claim until the task-row reservation and topic
+    // registration both settle; the two fences protect different rollout
+    // generations during the watchdog transition.
+    const kickoffClaimToken = randomUUID();
+    let ownsKickoffClaim = false;
 
     try {
       if (!task.assigneeAgentId) {
@@ -162,7 +171,32 @@ export class TaskRunnerService {
         task.assigneeAgentId = inboxAgent.id;
       }
 
-      const existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+      ownsKickoffClaim = await this.taskModel.claimRunKickoff(
+        task.id,
+        kickoffClaimToken,
+        new Date(Date.now() - RUN_KICKOFF_CLAIM_TTL_MS),
+      );
+      if (!ownsKickoffClaim) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Another run is already starting for this task.',
+        });
+      }
+
+      let existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+
+      // Recover expired runs before deciding whether another run conflicts.
+      // The previous ordering rejected every stale `running` topic first, so
+      // the timeout cleanup below was unreachable for the case it existed to
+      // repair. Re-read after the conditional update so concurrent callers all
+      // make their decision from the persisted state.
+      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
+        const elapsed = (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000;
+        if (elapsed > task.heartbeatTimeout) {
+          await this.taskTopicModel.timeoutRunning(task.id);
+          existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+        }
+      }
 
       // Recover a dead generation before checking for an in-flight topic. The
       // old ordering rejected on the stale running row first, so timeout
@@ -250,7 +284,6 @@ export class TaskRunnerService {
         });
       }
       ownsReservation = true;
-
       // Workspace provisioning (CAID isolation): a fresh run on a
       // workspace-bound task gets its own git worktree on the bound device —
       // or, when no device exists and the run resolves to the cloud sandbox,
@@ -423,6 +456,7 @@ export class TaskRunnerService {
         ],
         ...(attachmentFileIds.length > 0 ? { fileIds: attachmentFileIds } : {}),
         ...(maxSteps ? { maxSteps } : {}),
+        ...(parentOperationId ? { parentOperationId } : {}),
         prompt: continueFromMessageId ? continueAnchorContent! : prompt,
         taskId: task.id,
         title: continueFromMessageId
@@ -509,6 +543,12 @@ export class TaskRunnerService {
       if (earlyCompletion) await handleCompletion(earlyCompletion);
       await this.taskModel.releaseRunReservation(task.id, reservationId);
       ownsReservation = false;
+      await this.taskModel
+        .releaseRunKickoff(task.id, kickoffClaimToken)
+        .catch((releaseError) =>
+          log('runTask: failed to release kickoff claim for %s — %O', task.id, releaseError),
+        );
+      ownsKickoffClaim = false;
 
       return {
         ...result,
@@ -516,6 +556,13 @@ export class TaskRunnerService {
         taskIdentifier: task.identifier,
       };
     } catch (error) {
+      if (ownsKickoffClaim) {
+        await this.taskModel
+          .releaseRunKickoff(task.id, kickoffClaimToken)
+          .catch((releaseError) =>
+            log('runTask: failed to release kickoff claim for %s — %O', task.id, releaseError),
+          );
+      }
       // A dispatch can succeed before the task-topic registration write. Keep
       // that provisioned worktree until the operation has physically stopped;
       // deleting it first lets a still-running device command write into (or

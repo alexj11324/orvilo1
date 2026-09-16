@@ -55,11 +55,9 @@ export interface ProvisionedWorkspace {
  * TaskWorkspaceService — resolves a task's `config.workspace` repo binding and
  * provisions an isolated git worktree on the bound device for each fresh run
  * (branch `task/<identifier>`), so parallel runs never share one checkout.
- * Provisioning is best-effort on device resolution — a task whose assignee has
- * no concrete device runs unprovisioned — but a resolved device that fails to
- * create the worktree fails the run (the caller pauses the task), since
- * silently running in the source checkout would corrupt the isolation
- * guarantee the binding exists to provide.
+ * Once a workspace binding exists, provisioning is mandatory. Missing devices,
+ * invalid repo coordinates, and incompatible execution targets fail the run so
+ * the user never gets an unisolated execution that only looks repo-bound.
  */
 export class TaskWorkspaceService {
   private agentModel: AgentModel;
@@ -112,6 +110,11 @@ export class TaskWorkspaceService {
     for (let depth = 0; current && depth < WORKSPACE_INHERIT_DEPTH; depth += 1) {
       const config = parseWorkspaceConfig(current.config);
       if (config) return config;
+      const rawConfig = current.config as Record<string, unknown> | null;
+      const rawWorkspace = rawConfig?.workspace;
+      if (isRecord(rawWorkspace) && rawWorkspace.provider === 'git') {
+        throw new Error('Git workspace binding must provide repoPath or repo');
+      }
       if (!current.parentTaskId) break;
       current = await this.taskModel.findById(current.parentTaskId);
     }
@@ -121,7 +124,7 @@ export class TaskWorkspaceService {
   /**
    * Provision the run's workspace and return the topic working directory +
    * integration seed. Returns `undefined` when the task carries no workspace
-   * binding or neither provisioning mode applies.
+   * binding. A configured binding that cannot be provisioned throws.
    *
    * Two modes:
    * - **device** — `repoPath` + a resolvable device → `addGitWorktree` RPC.
@@ -175,9 +178,14 @@ export class TaskWorkspaceService {
       return this.provisionOnDevice({ config, deviceId, seq, task });
     }
 
-    throw new Error(
-      `Task ${task.identifier} has a repository binding but no available device or sandbox execution target`,
-    );
+    const reason =
+      config.repo && !parseGithubRepo(config.repo)
+        ? `Workspace repository is not a valid GitHub coordinate: ${config.repo}`
+        : config.repoPath && !deviceId
+          ? 'Workspace device is unavailable or not configured'
+          : 'Workspace binding does not match the selected execution target';
+    log('provision: %s cannot provision workspace — %s', task.identifier, reason);
+    throw new Error(reason);
   }
 
   /** Create the run's worktree on the bound device. */
@@ -265,7 +273,10 @@ export class TaskWorkspaceService {
       userId: this.userId,
       workspaceId: this.workspaceId,
     });
-    const baseBranch = config.baseBranch ?? (await getRepoDefaultBranch(repo, token)) ?? 'main';
+    const baseBranch = config.baseBranch ?? (await getRepoDefaultBranch(repo, token));
+    if (!baseBranch) {
+      throw new Error(`Could not resolve the default branch for workspace repository ${repo}`);
+    }
 
     const branch = taskBranchName(task.identifier, seq);
     const workingDirectory = cloudSandboxRepoPath(repo);
@@ -325,7 +336,9 @@ export class TaskWorkspaceService {
       log('resolveBase: remote lookup failed for %s — %O', task.identifier, error);
     }
 
-    return { baseBranch: 'HEAD', forkRef: undefined };
+    throw new Error(
+      `Could not resolve a remote base branch for ${task.identifier}; configure baseBranch explicitly`,
+    );
   }
 }
 

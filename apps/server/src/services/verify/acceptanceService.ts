@@ -839,10 +839,19 @@ export class AcceptanceService {
   accept = async (acceptanceId: string, comment?: string): Promise<AcceptanceItem> => {
     const acceptance = await this.requireDecidableAcceptance(acceptanceId);
 
+    let operationId: string | null | undefined;
+    if (acceptance.subjectType === 'task') {
+      const runs = await this.runModel.listByAcceptance(acceptanceId);
+      operationId = runs.at(-1)?.operationId;
+      await this.assertTaskIntegrationSettled(operationId);
+    }
+
     await this.stampDecision(acceptanceId, 'accept', comment);
     await this.acceptanceModel.updateStatus(acceptanceId, 'accepted');
 
-    if (acceptance.subjectType === 'task') await this.completeTaskSubject(acceptance.subjectId);
+    if (acceptance.subjectType === 'task') {
+      await this.completeTaskSubject(acceptance.subjectId, operationId);
+    }
 
     return (await this.acceptanceModel.findById(acceptanceId))!;
   };
@@ -1042,11 +1051,30 @@ export class AcceptanceService {
    * already (e.g. the round failed but the user accepted anyway). Best-effort:
    * a task error must not undo the recorded acceptance.
    */
-  private completeTaskSubject = async (subjectId: string): Promise<void> => {
+  private completeTaskSubject = async (
+    subjectId: string,
+    operationId?: string | null,
+  ): Promise<void> => {
     try {
       const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
       const task = await taskModel.resolve(subjectId);
       if (!task || ['canceled', 'completed', 'failed'].includes(task.status)) return;
+      if (operationId) {
+        const taskTopic = await new TaskTopicModel(
+          this.db,
+          this.userId,
+          this.workspaceId,
+        ).findByOperationId(operationId);
+        const integration = taskTopic?.integration;
+        if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
+          log(
+            'acceptance accepted for task %s but workspace integration is %s; task remains open',
+            task.id,
+            integration.state,
+          );
+          return;
+        }
+      }
 
       // TaskService cascades checkpoint / sibling rollup / downstream unlock —
       // the same completion path settle.ts drives on a passed verify.
@@ -1057,6 +1085,22 @@ export class AcceptanceService {
       log('acceptance accepted → task %s completed', task.id);
     } catch (error) {
       log('completeTaskSubject failed (non-fatal): %O', error);
+    }
+  };
+
+  /** Keep a manual acceptance retryable until its task branch is delivered. */
+  private assertTaskIntegrationSettled = async (operationId?: string | null): Promise<void> => {
+    if (!operationId) return;
+    const taskTopic = await new TaskTopicModel(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).findByOperationId(operationId);
+    const integration = taskTopic?.integration;
+    if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
+      throw new Error(
+        `Workspace integration is still ${integration.state}; retry acceptance after delivery completes`,
+      );
     }
   };
 

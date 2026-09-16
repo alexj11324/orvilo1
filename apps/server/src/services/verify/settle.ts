@@ -203,6 +203,23 @@ export const driveTaskFromVerify = async (
       }
     };
 
+    const taskTopic = await new TaskTopicModel(db, userId, workspaceId).findByOperationId(
+      taskOperation.id,
+    );
+    const integration = taskTopic?.integration;
+    if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
+      log(
+        'verify settled for op %s but workspace integration is %s; task remains open',
+        taskOperation.id,
+        integration.state,
+      );
+      return;
+    }
+
+    // Claim only after every completion gate is satisfied. A deferred
+    // integration must leave the drive claim available for the later retry.
+    if (!(await runModel.claimTaskDrive(run.id))) return;
+
     // The review already retries a check whose review could not run. An
     // `errored` result here is the reviewer's problem, and another builder
     // attempt would only re-deliver into the same broken review.

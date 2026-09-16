@@ -200,6 +200,17 @@ export const ORVILO_ENGINE_KINDS = [
  */
 export const DEFAULT_ORVILO_ENGINE: OrviloEngineKind = 'claude-sdk';
 
+export interface OrviloEngineCapabilities {
+  builtinTools: boolean;
+  userQuestions: boolean;
+}
+
+/** Capabilities implemented by this repository's managed desktop transports. */
+export const ORVILO_ENGINE_CAPABILITIES = {
+  'claude-sdk': { builtinTools: true, userQuestions: true },
+  'codex-app-server': { builtinTools: false, userQuestions: false },
+} as const satisfies Record<OrviloEngineKind, OrviloEngineCapabilities>;
+
 export const isOrviloEngineKind = (engine: unknown): engine is OrviloEngineKind =>
   typeof engine === 'string' && (ORVILO_ENGINE_KINDS as readonly string[]).includes(engine);
 
@@ -211,6 +222,10 @@ export const isOrviloEngineKind = (engine: unknown): engine is OrviloEngineKind 
 export const resolveOrviloEngine = (
   engine: OrviloEngineKind | string | null | undefined,
 ): OrviloEngineKind => (isOrviloEngineKind(engine) ? engine : DEFAULT_ORVILO_ENGINE);
+
+export const getOrviloEngineCapabilities = (
+  engine: OrviloEngineKind | string | null | undefined,
+): OrviloEngineCapabilities => ORVILO_ENGINE_CAPABILITIES[resolveOrviloEngine(engine)];
 
 /**
  * Local CLI family each Orvilo engine executes through — the managed transport

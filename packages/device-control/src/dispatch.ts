@@ -279,7 +279,14 @@ export const executeDeviceRpc = async (
     }
 
     case 'pushGitBranch': {
-      return pushGitBranch(params as { path: string; remoteBranch?: string; sourceRef?: string });
+      return pushGitBranch(
+        params as {
+          expectedSha?: string;
+          path: string;
+          remoteBranch?: string;
+          sourceRef?: string;
+        },
+      );
     }
 
     case 'revertGitFile': {

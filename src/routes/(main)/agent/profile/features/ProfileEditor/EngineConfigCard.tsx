@@ -2,7 +2,7 @@
 
 import { Flexbox, Icon } from '@lobehub/ui';
 import type { SelectOptions } from '@lobehub/ui/base-ui';
-import { Select, Text } from '@lobehub/ui/base-ui';
+import { Button, Select, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import {
   isRemoteHeterogeneousType,
@@ -18,7 +18,12 @@ import type {
   ListHeterogeneousAgentModelsParams,
   OrviloEngineKind,
 } from '@orvilo/types';
-import { getHeteroSelectorCapability, HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
+import {
+  getHeteroSelectorCapability,
+  getOrviloEngineCapabilities,
+  HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
+  normalizeHeterogeneousProviderConfig,
+} from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Cpu } from 'lucide-react';
@@ -223,7 +228,8 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   const { allowed: canEdit } = usePermission('edit_own_content');
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
-  const provider = config?.agencyConfig?.heterogeneousProvider;
+  const rawProvider = config?.agencyConfig?.heterogeneousProvider;
+  const provider = rawProvider ? normalizeHeterogeneousProviderConfig(rawProvider) : undefined;
   const isWorkspaceAgent = useAgentStore(agentByIdSelectors.isWorkspaceAgentById(agentId));
   const {
     agencyConfig: effectiveAgencyConfig,
@@ -235,14 +241,18 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
   const cwd = useEffectiveWorkingDirectory(agentId);
 
-  // No provider configured yet = the builtin Orvilo harness on its default
-  // engine. Every control below writes through `patchProvider`, which turns
-  // the first pick into an explicit `heterogeneousProvider` row.
+  // A missing provider is a legacy chat runtime. Keep that visible until the
+  // user explicitly migrates it; displaying Orvilo here while dispatch still
+  // chose client/gateway made the settings card disagree with actual runs.
+  const legacyRuntime = !provider;
   const harnessType: HeterogeneousAgentType = provider?.type ?? 'orvilo';
-  const builtinEngine = isBuiltinEngineType(harnessType);
+  const builtinEngine = !legacyRuntime && isBuiltinEngineType(harnessType);
   const remoteEngine = isRemoteHeterogeneousType(harnessType);
   const selectorType = builtinEngine ? resolveOrviloEngineCliType(provider?.engine) : harnessType;
-  const capability = getHeteroSelectorCapability(selectorType);
+  const capability = legacyRuntime ? undefined : getHeteroSelectorCapability(selectorType);
+  const engineCapabilities = builtinEngine
+    ? getOrviloEngineCapabilities(provider?.engine)
+    : undefined;
 
   const patchProvider = (patch: PartialDeep<HeterogeneousProviderConfig>) => {
     const nextType = patch.type ?? provider?.type ?? 'orvilo';
@@ -512,7 +522,22 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
 
   const rows: { content: ReactNode; key: string; label: string }[] = [
     {
-      content: (
+      content: legacyRuntime ? (
+        <Flexbox align={'flex-start'} gap={8}>
+          <Text>{t('agentEngine.legacy.name')}</Text>
+          <Text className={styles.hint}>{t('agentEngine.legacy.description')}</Text>
+          <Button
+            disabled={!canEdit}
+            size={'small'}
+            type={'primary'}
+            onClick={() => {
+              void patchProvider({ engine: DEFAULT_ORVILO_ENGINE, type: 'orvilo' });
+            }}
+          >
+            {t('agentEngine.legacy.migrate')}
+          </Button>
+        </Flexbox>
+      ) : (
         <Select
           className={styles.select}
           disabled={!canEdit}
@@ -534,16 +559,24 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   if (builtinEngine) {
     rows.push({
       content: (
-        <Select
-          className={styles.select}
-          disabled={!canEdit}
-          options={engineOptions}
-          value={provider?.engine ?? DEFAULT_ORVILO_ENGINE}
-          onChange={(value) => {
-            if (typeof value !== 'string') return;
-            void patchProvider(buildEngineProviderPatch(provider, value as OrviloEngineKind));
-          }}
-        />
+        <>
+          <Select
+            className={styles.select}
+            disabled={!canEdit}
+            options={engineOptions}
+            value={provider?.engine ?? DEFAULT_ORVILO_ENGINE}
+            onChange={(value) => {
+              if (typeof value !== 'string') return;
+              void patchProvider(buildEngineProviderPatch(provider, value as OrviloEngineKind));
+            }}
+          />
+          {engineCapabilities &&
+          (!engineCapabilities.userQuestions || !engineCapabilities.builtinTools) ? (
+            <Text className={styles.hint} type={'warning'}>
+              {t('agentEngine.engine.limitedCapabilities')}
+            </Text>
+          ) : null}
+        </>
       ),
       key: 'engine',
       label: t('agentEngine.engine.label'),

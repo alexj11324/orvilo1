@@ -4,6 +4,7 @@ import debug from 'debug';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DocumentModel } from '@/database/models/document';
 import { TaskModel } from '@/database/models/task';
+import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { LobeChatDatabase } from '@/database/type';
@@ -100,6 +101,26 @@ const executeVerifyLifecycle = async (
     if (!op) {
       log('op %s missing, cannot run verify', params.operationId);
       return;
+    }
+
+    if (op.taskId) {
+      const taskTopic = await new TaskTopicModel(db, userId, workspaceId).findByOperationId(
+        params.operationId,
+      );
+      const integration = taskTopic?.integration;
+      if (
+        integration &&
+        (integration.role === 'integrate' ||
+          (integration.state !== 'integrated' && integration.state !== 'skipped'))
+      ) {
+        log(
+          'op %s verification deferred until workspace integration settles (role=%s, state=%s)',
+          params.operationId,
+          integration.role,
+          integration.state,
+        );
+        return;
+      }
     }
 
     // The builder now captures Acceptance evidence inside the main run. When it

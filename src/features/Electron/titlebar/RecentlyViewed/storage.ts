@@ -1,3 +1,4 @@
+import { isRetiredProductUrl } from '../retiredProductUrl';
 import { type TabScope, tabScopeKey } from '../TabBar/scope';
 import { type TabItem } from '../TabBar/types';
 
@@ -24,7 +25,7 @@ export const getPinnedPages = (scope: TabScope): TabItem[] => {
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed)) return [];
 
-    return parsed.filter(isTabItem);
+    return parsed.filter(isTabItem).filter((page) => !isRetiredProductUrl(page.url, scope));
   } catch {
     return [];
   }

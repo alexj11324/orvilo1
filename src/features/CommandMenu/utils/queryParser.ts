@@ -18,11 +18,7 @@ const VALID_TYPES = [
   'message',
   'file',
   'folder',
-  'page',
   'memory',
-  'mcp',
-  'plugin',
-  'communityAgent',
   'knowledgeBase',
 ] as const;
 

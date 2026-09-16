@@ -13,10 +13,8 @@ import {
   ScaleIcon,
   StarIcon,
 } from 'lucide-react';
-import qs from 'query-string';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
 import useSWR from 'swr';
 
 import OfficialIcon from '@/components/OfficialIcon';
@@ -133,16 +131,9 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
   );
 
   const cateButton = (
-    <Link
-      to={qs.stringifyUrl({
-        query: { category: cate?.key },
-        url: '/community/mcp',
-      })}
-    >
-      <Button icon={cate?.icon} size={'middle'}>
-        {cate?.label}
-      </Button>
-    </Link>
+    <Button disabled icon={cate?.icon} size={'middle'}>
+      {cate?.label}
+    </Button>
   );
 
   return (

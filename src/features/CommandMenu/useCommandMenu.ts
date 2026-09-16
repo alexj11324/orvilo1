@@ -51,7 +51,7 @@ export const useCommandMenu = () => {
   const refreshAgentList = useHomeStore((s) => s.refreshAgentList);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const { openGroupWizard } = useGroupWizard();
-  const { createGroupWithMembers, createGroupFromTemplate, createPage } = useCreateMenuItems();
+  const { createGroupWithMembers, createGroupFromTemplate } = useCreateMenuItems();
   const { open: openCreateLibraryModal } = useCreateNewModal();
 
   // Debounce search input to reduce API calls
@@ -201,13 +201,6 @@ export const useCommandMenu = () => {
     });
   }, [canCreate, onClose, openCreateLibraryModal, navigate]);
 
-  const handleCreatePage = useCallback(async () => {
-    if (!canCreate) return;
-
-    await createPage();
-    onClose();
-  }, [canCreate, createPage, onClose]);
-
   const handleCreateAgentTeam = useCallback(() => {
     if (!canCreate) return;
 
@@ -229,7 +222,6 @@ export const useCommandMenu = () => {
     handleBack,
     handleCreateAgentTeam,
     handleCreateLibrary,
-    handleCreatePage,
     handleCreateSession,
     handleCreateTopic,
     handleExternalLink,

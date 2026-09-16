@@ -3,13 +3,8 @@
 import { Center, Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleDashedIcon, HammerIcon, LayersIcon, MessageSquareQuoteIcon } from 'lucide-react';
-import qs from 'query-string';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import urlJoin from 'url-join';
-
-import { Link } from '@/libs/router';
-import { McpNavKey } from '@/types/discover';
 
 import {
   calculateScore,
@@ -199,69 +194,49 @@ const Scores = memo<ScoresProps>(
 
     return (
       <Flexbox horizontal align={'center'} flex={'none'} gap={8} onClick={stopPropagation}>
-        {identifier && (
-          <Link
-            href={qs.stringifyUrl({
-              query: {
-                activeTab: McpNavKey.Score,
-              },
-              url: urlJoin('/community/mcp', identifier),
-            })}
-          >
-            {isValidated ? scoreTag : unvalidatedTag}
-          </Link>
-        )}
+        {identifier && (isValidated ? scoreTag : unvalidatedTag)}
         {showExtra && (
-          <Link
-            href={qs.stringifyUrl({
-              query: {
-                activeTab: McpNavKey.Schema,
-              },
-              url: urlJoin('/community/mcp', identifier),
-            })}
-          >
-            <Flexbox horizontal align={'center'} className={styles.extraTag} gap={16}>
-              {showToolts && (
-                <Tooltip
-                  title={[
-                    t('mcp.details.schema.tools.title'),
-                    t('mcp.details.schema.tools.desc'),
-                  ].join(': ')}
-                >
-                  <Flexbox horizontal align={'center'} className={styles.extraTagActive} gap={8}>
-                    <Icon icon={HammerIcon} size={14} />
-                    {toolsCount}
-                  </Flexbox>
-                </Tooltip>
-              )}
-              {showPrompts && (
-                <Tooltip
-                  title={[
-                    t('mcp.details.schema.prompts.title'),
-                    t('mcp.details.schema.prompts.desc'),
-                  ].join(': ')}
-                >
-                  <Flexbox horizontal align={'center'} className={styles.extraTagActive} gap={8}>
-                    <Icon icon={MessageSquareQuoteIcon} size={14} />
-                    {promptsCount}
-                  </Flexbox>
-                </Tooltip>
-              )}
-              {showResources && (
-                <Tooltip
-                  title={[
-                    t('mcp.details.schema.resources.title'),
-                    t('mcp.details.schema.resources.desc'),
-                  ].join(': ')}
-                >
-                  <Flexbox horizontal align={'center'} className={styles.extraTagActive} gap={8}>
-                    <Icon icon={LayersIcon} size={14} />
-                    {resourcesCount}
-                  </Flexbox>
-                </Tooltip>
-              )}
-            </Flexbox>
-          </Link>
+          <Flexbox horizontal align={'center'} className={styles.extraTag} gap={16}>
+            {showToolts && (
+              <Tooltip
+                title={[
+                  t('mcp.details.schema.tools.title'),
+                  t('mcp.details.schema.tools.desc'),
+                ].join(': ')}
+              >
+                <Flexbox horizontal align={'center'} className={styles.extraTagActive} gap={8}>
+                  <Icon icon={HammerIcon} size={14} />
+                  {toolsCount}
+                </Flexbox>
+              </Tooltip>
+            )}
+            {showPrompts && (
+              <Tooltip
+                title={[
+                  t('mcp.details.schema.prompts.title'),
+                  t('mcp.details.schema.prompts.desc'),
+                ].join(': ')}
+              >
+                <Flexbox horizontal align={'center'} className={styles.extraTagActive} gap={8}>
+                  <Icon icon={MessageSquareQuoteIcon} size={14} />
+                  {promptsCount}
+                </Flexbox>
+              </Tooltip>
+            )}
+            {showResources && (
+              <Tooltip
+                title={[
+                  t('mcp.details.schema.resources.title'),
+                  t('mcp.details.schema.resources.desc'),
+                ].join(': ')}
+              >
+                <Flexbox horizontal align={'center'} className={styles.extraTagActive} gap={8}>
+                  <Icon icon={LayersIcon} size={14} />
+                  {resourcesCount}
+                </Flexbox>
+              </Tooltip>
+            )}
+          </Flexbox>
         )}
       </Flexbox>
     );

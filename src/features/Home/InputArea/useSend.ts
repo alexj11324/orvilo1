@@ -101,8 +101,7 @@ export const useSend = (mode: HomeMode = 'chat') => {
       const contextList = fileChatSelectors.chatContextSelections(contextSelectionKey)(
         useFileStore.getState(),
       );
-      const { sendAsAgent, sendAsGroup, sendAsWrite, sendAsResearch, inputActiveMode } =
-        useHomeStore.getState();
+      const { sendAsAgent, sendAsGroup, sendAsResearch, inputActiveMode } = useHomeStore.getState();
 
       // If the user pressed Enter on an empty input, fall back to the
       // currently displayed daily-brief hint (with cosmetic ellipsis stripped)
@@ -198,18 +197,6 @@ export const useSend = (mode: HomeMode = 'chat') => {
 
           case 'group': {
             await sendAsGroup({
-              contextSelections,
-              editorData,
-              message,
-              pageSelections,
-              workspaceSlug: activeWorkspaceSlug,
-            });
-            submitted = true;
-            break;
-          }
-
-          case 'write': {
-            await sendAsWrite({
               contextSelections,
               editorData,
               message,

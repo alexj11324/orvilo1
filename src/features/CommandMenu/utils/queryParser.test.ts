@@ -60,10 +60,6 @@ describe('parseSearchQuery', () => {
       cleanQuery: 'search',
       typeFilter: 'knowledgeBase',
     });
-    expect(parseSearchQuery('is:communityagent search')).toEqual({
-      cleanQuery: 'search',
-      typeFilter: 'communityAgent',
-    });
   });
 
   it('should ignore invalid type values', () => {
@@ -82,11 +78,14 @@ describe('parseSearchQuery', () => {
     });
   });
 
-  it('should handle only type filter', () => {
-    const result = parseSearchQuery('type:page');
-    expect(result).toEqual({
-      cleanQuery: '',
-      typeFilter: 'page',
+  it('should preserve removed type filters as search text', () => {
+    expect(parseSearchQuery('type:page')).toEqual({
+      cleanQuery: 'type:page',
+      typeFilter: undefined,
+    });
+    expect(parseSearchQuery('is:communityAgent search')).toEqual({
+      cleanQuery: 'is:communityAgent search',
+      typeFilter: undefined,
     });
   });
 
@@ -98,11 +97,7 @@ describe('parseSearchQuery', () => {
       'message',
       'file',
       'folder',
-      'page',
       'memory',
-      'mcp',
-      'plugin',
-      'communityAgent',
       'knowledgeBase',
     ];
 

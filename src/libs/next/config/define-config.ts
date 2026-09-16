@@ -305,37 +305,6 @@ export function defineConfig(config: CustomNextConfig) {
         permanent: true,
         source: '/manifest.json',
       },
-      {
-        destination: '/community/agent',
-        permanent: true,
-        source: '/community/assistants',
-      },
-      {
-        destination: '/community/plugin',
-        permanent: true,
-        source: '/community/plugins',
-      },
-      {
-        destination: '/community/model',
-        permanent: true,
-        source: '/community/models',
-      },
-      {
-        destination: '/community/provider',
-        permanent: true,
-        source: '/community/providers',
-      },
-      // Legacy redirects from /discover to /community
-      {
-        destination: '/community',
-        permanent: true,
-        source: '/discover',
-      },
-      {
-        destination: '/community/:path*',
-        permanent: true,
-        source: '/discover/:path*',
-      },
       // {
       //   destination: '/settings/common',
       //   permanent: true,

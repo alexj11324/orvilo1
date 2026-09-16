@@ -17,9 +17,7 @@ interface PageExplorerProps {
 }
 
 /**
- * Dedicated for the /page route
- *
- * Work together with a sidebar @/features/Pages/PageLayout/Body
+ * Document editor surface shared by Agent Documents and Resource Manager.
  */
 const PageExplorer = memo<PageExplorerProps>(({ pageId, header, fullWidthHeader }) => {
   const updatePageOptimistically = usePageStore((s) => s.updatePageOptimistically);

@@ -16,7 +16,6 @@ const toggleRightPanelMock = vi.hoisted(() => vi.fn());
 const setChatPanelExpandedMock = vi.hoisted(() => vi.fn());
 const createGroupMock = vi.hoisted(() => vi.fn());
 const loadGroupsMock = vi.hoisted(() => vi.fn());
-const createDocumentMock = vi.hoisted(() => vi.fn());
 
 const enabledModels = vi.hoisted(() => ({
   isInit: true,
@@ -31,19 +30,16 @@ const agentState = vi.hoisted(() => ({
       model: 'gpt-4o-mini',
       provider: 'openai',
     },
-    pageAgent: { model: 'deepseek-v4-pro', provider: 'lobehub' },
   },
   agentMap: {
     // Personal-mode rows by default; a test flips `workspaceId` on to assert the
     // workspace-shared behaviour.
     agentBuilder: {} as { workspaceId?: string },
     groupAgentBuilder: {} as { workspaceId?: string },
-    pageAgent: {} as { workspaceId?: string },
   },
   builtinAgentIdMap: {
     'agent-builder': 'agentBuilder',
     'group-agent-builder': 'groupAgentBuilder',
-    'page-agent': 'pageAgent',
   },
   createAgent: createAgentMock,
   inboxAgentId: 'inbox',
@@ -55,13 +51,6 @@ vi.mock('@orvilo/builtin-agents', () => ({
   BUILTIN_AGENT_SLUGS: {
     agentBuilder: 'agent-builder',
     groupAgentBuilder: 'group-agent-builder',
-    pageAgent: 'page-agent',
-  },
-}));
-
-vi.mock('@/services/document', () => ({
-  documentService: {
-    createDocument: createDocumentMock,
   },
 }));
 
@@ -168,8 +157,7 @@ describe('HomeInputActionImpl', () => {
         id: 'group-new',
       },
     });
-    createDocumentMock.mockResolvedValue({ id: 'doc-new' });
-    for (const key of ['agentBuilder', 'groupAgentBuilder', 'pageAgent'] as const) {
+    for (const key of ['agentBuilder', 'groupAgentBuilder'] as const) {
       delete agentState.agentMap[key].workspaceId;
       agentState.agentConfigMap[key] = { model: 'deepseek-v4-pro', provider: 'lobehub' };
     }
@@ -368,62 +356,6 @@ describe('HomeInputActionImpl', () => {
       await action.sendAsGroup({ message: 'build a research group' });
 
       expect(updateAgentConfigByIdMock).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('sendAsWrite', () => {
-    it('passes the freshly created document id through the page context', async () => {
-      const action = createAction();
-
-      await action.sendAsWrite({ message: 'write me a doc' });
-
-      expect(createDocumentMock).toHaveBeenCalled();
-      expect(navigateMock).toHaveBeenCalledWith('/page/doc-new');
-      // The new editor has not mounted yet, so the doc id must travel in context
-      // explicitly rather than relying on the page editor runtime singleton.
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          context: { agentId: 'pageAgent', documentId: 'doc-new', scope: 'page' },
-          message: 'write me a doc',
-        }),
-      );
-    });
-
-    it('keeps syncing model/provider onto a personal page agent', async () => {
-      const action = createAction();
-
-      await action.sendAsWrite({ message: 'write me a doc' });
-
-      expect(updateAgentConfigByIdMock).toHaveBeenCalledWith('pageAgent', {
-        model: 'gpt-4o-mini',
-        provider: 'openai',
-      });
-    });
-
-    it('never writes model/provider onto a workspace-shared page agent', async () => {
-      agentState.agentMap.pageAgent.workspaceId = 'ws-1';
-      const action = createAction();
-
-      await action.sendAsWrite({ message: 'write me a doc' });
-
-      expect(updateAgentConfigByIdMock).not.toHaveBeenCalled();
-    });
-
-    it('passes the workspace slug to the page agent message context', async () => {
-      const action = createAction();
-
-      await action.sendAsWrite({ message: 'write me a doc', workspaceSlug: 'team' });
-
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          context: {
-            agentId: 'pageAgent',
-            documentId: 'doc-new',
-            scope: 'page',
-            workspaceSlug: 'team',
-          },
-        }),
-      );
     });
   });
 });

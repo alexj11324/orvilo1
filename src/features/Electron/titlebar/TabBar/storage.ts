@@ -1,3 +1,4 @@
+import { isRetiredProductUrl } from '../retiredProductUrl';
 import { type TabScope, tabScopeKey } from './scope';
 import { type TabItem } from './types';
 
@@ -29,13 +30,19 @@ export const getTabPages = (scope: TabScope): TabPagesStorageData => {
     const data = window.localStorage.getItem(tabPagesStorageKey(scope));
     if (!data) return EMPTY;
 
-    const parsed = JSON.parse(data);
+    const parsed = JSON.parse(data) as Partial<TabPagesStorageData>;
     if (!parsed || typeof parsed !== 'object') return EMPTY;
 
-    const tabs = Array.isArray(parsed.tabs) ? parsed.tabs.filter(isTabItem) : [];
+    const tabs = Array.isArray(parsed.tabs)
+      ? parsed.tabs.filter(isTabItem).filter((tab) => !isRetiredProductUrl(tab.url, scope))
+      : [];
+    const activeTabId =
+      typeof parsed.activeTabId === 'string' && tabs.some((tab) => tab.id === parsed.activeTabId)
+        ? parsed.activeTabId
+        : null;
 
     return {
-      activeTabId: typeof parsed.activeTabId === 'string' ? parsed.activeTabId : null,
+      activeTabId,
       tabs,
     };
   } catch {

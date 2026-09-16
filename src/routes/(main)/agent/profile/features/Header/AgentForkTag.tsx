@@ -6,7 +6,6 @@ import { GitFork } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { marketApiService } from '@/services/marketApi';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -18,7 +17,6 @@ import { type AgentForkSourceResponse } from '@/types/discover';
  */
 const AgentForkTag = memo(() => {
   const { t } = useTranslation('setting');
-  const navigate = useWorkspaceAwareNavigate();
   const [forkSource, setForkSource] = useState<AgentForkSourceResponse['source']>(null);
   const [loading, setLoading] = useState(false);
 
@@ -59,22 +57,15 @@ const AgentForkTag = memo(() => {
 
   if (loading || !forkSource) return null;
 
-  const handleClick = () => {
-    if (forkSource?.identifier) {
-      navigate(`/community/agent/${forkSource.identifier}`);
-    }
-  };
-
   return (
     <Tag
       color="default"
       icon={<Icon icon={GitFork} />}
-      style={{ cursor: 'pointer', marginRight: 8 }}
+      style={{ marginRight: 8 }}
       title={t('marketPublish.forkFrom.tooltip', {
         agent: forkSource.name,
         defaultValue: `Forked from ${forkSource.name}`,
       })}
-      onClick={handleClick}
     >
       {t('marketPublish.forkFrom.label', { defaultValue: 'Forked from' })} {forkSource.name}
     </Tag>

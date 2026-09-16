@@ -21,7 +21,6 @@ export interface NavigationBroadcastEvents {
    * Ask renderer to create a new page.
    * Triggered from the main process File menu.
    */
-  createNewPage: () => void;
 
   /**
    * Ask renderer to open a new tab, optionally at a specific path.

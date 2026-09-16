@@ -49,7 +49,6 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
-    createMarketAgentMenuItem,
     isLoading,
   } = useCreateMenuItems();
 
@@ -67,14 +66,12 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
       // list opens on the Private tab so the surface matches this bucket.
       { type: 'divider' as const },
       createAgentListMenuItem({ visibility: 'private' }),
-      createMarketAgentMenuItem(),
     ];
   }, [
     createAgentListMenuItem,
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
-    createMarketAgentMenuItem,
   ]);
 
   const handleOpenConfigGroupModal = useCallback(() => {
@@ -111,12 +108,12 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
           <Flexbox
             horizontal
             align="center"
+            gap={2}
             className={cx(
               'accordion-action',
               accordionStyles.action,
               accordionStyles.actionBorderless,
             )}
-            gap={2}
           >
             <ActionIcon
               icon={ArrowRight}

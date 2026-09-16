@@ -65,13 +65,11 @@ export interface SidebarItemConfig {
 const ALL_SIDEBAR_ITEMS: SidebarItemConfig[] = [
   { id: 'tasks', labelKey: 'tab.tasks', routeId: 'tasks' },
   { id: 'automations', labelKey: 'tab.automations', routeId: 'automations' },
-  { id: 'pages', labelKey: 'tab.pages', routeId: 'page' },
   { id: 'recents', labelKey: 'recents' },
   { id: 'project', labelKey: 'project:sidebar.title' },
   { id: 'private', labelKey: 'navPanel.privateAgents' },
   { alwaysVisible: true, id: 'agent', labelKey: 'navPanel.agent' },
   { id: 'image', labelKey: 'tab.generation', routeId: 'image' },
-  { id: 'community', labelKey: 'tab.community', routeId: 'community' },
   { id: 'resource', labelKey: 'tab.resource', routeId: 'resource' },
   { id: 'memory', labelKey: 'tab.memory', routeId: 'memory' },
 ];
@@ -463,7 +461,7 @@ const CustomizeSidebarContent = memo(() => {
 
   // Collision detection: restrict targets to the same container as the active item.
   // - Active in inner (recents/agent) → only collide with inner items
-  // - Active in outer (pages/community/... or the group itself) → only collide with outer items
+  // - Active in outer (tasks/resource/... or the group itself) → only collide with outer items
   const collisionDetection = useCallback<CollisionDetection>((args) => {
     const activeId = args.active.id as string;
     const isInner = isAccordionKey(activeId);
@@ -502,7 +500,7 @@ const CustomizeSidebarContent = memo(() => {
           bindSpacerToAccordion,
         );
       } else {
-        // Outer reorder (pages/community/... or the whole accordion group)
+        // Outer reorder (tasks/resource/... or the whole accordion group)
         const oldIdx = outerItems.indexOf(activeKey);
         const newIdx = outerItems.indexOf(overKey);
         if (oldIdx === -1 || newIdx === -1) return;

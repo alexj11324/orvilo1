@@ -687,13 +687,61 @@ import { imageRouter } from '@/server/routers/lambda/image';
 在 `/inbox` 这条独立路由上就是「标题压空列」。故给 `HomeInbox` 加了可选 `emptyState`（仅主列用），本页传 `home:inbox.empty.*`。
 
 **仍未解决（明确记录，不是「以后再说」）**：`HomeInbox` 读 `systemStatusSelectors.hiddenHomeWidgets`，
-而唯一**写**它的 UI 是 `CustomizeButton`，只挂自 `routes/(main)/home/index.tsx` —— 在 Web 上不可达。
-因此本页会**继承**用户在旧首页设过的隐藏区块，却**改不了**。这与可达性是两个问题：
-本页解决了「看得到」，没解决「改得了」。修法要决定自定义入口放哪（把 `CustomizeButton` 搬到本页，或接进设置），属后续增量。
+而唯一**写**它的 UI 是 `CustomizeButton`，其挂载链是
+`CustomizeButton` → `Home/HomeNavHeader.tsx:43` → `routes/(main)/home/index.tsx`，
+而后者的**唯一引用者是** `src/spa/router/DesktopHomeRoute.tsx:3` —— 纯 Electron 模块；
+Web 侧该 index 元素被 `createHomeElement: () => <WebHomeRedirect />` 取代。
+故在 Web 上这个偏好**没有任何写入者**。
+
+**但影响面比看上去小得多，先量准再谈修法。** 本次核对逐条查了 `HomeInbox` 内各区块的门控，
+受该偏好影响的**只有两处可选内容**：
+
+| 区块                      | 实际门控                                                       | 受偏好影响 |
+| ------------------------- | -------------------------------------------------------------- | ---------- |
+| briefs / unread / running | 始终取数，由 `hide*` props 控制                                | 否         |
+| news（每日简报）          | `showRailSections` + `isLogin`                                 | 否         |
+| goals                     | `showRailSections` + lab 开关                                  | 否         |
+| suggestions               | `useRecommendationsVisible()` → `Recommendations/index.tsx:26` | **是**     |
+| usage                     | `HomeInbox/index.tsx:206`                                      | **是**     |
+
+即旧用户若隐藏过 `suggestions` 或 `usage`，在 Web 的 `/inbox` 上会看不到这两块，且改不了。
+**不会**出现「选过 `minimal` 就看空页」—— 简报、未读、运行、每日简报都不由该偏好门控。
+
+**为什么不顺手把 `CustomizeButton` 搬过来**：`HOME_COUNT_*` 两个控件（recents /tasks 数量）
+经核对**只被 `HomeModeContent.tsx:369/414/467` 消费**，`/inbox` 根本不用。把整个首页自定义面板挂到本页，
+等于摆出两个在本页毫无作用的控件 —— 与 §1.7.2 记的 `ArtworkStudio` 那段「65% 虚线框在承诺一件不再发生的事」同类。
+真正干净的修法是让 `HomeInbox` / `useRecommendationsVisible` 不再直读全局偏好、改由宿主传入，
+但这要同时动 `features/HomeInbox` 与 `features/Recommendations`，且本机没有前端类型检查器兜底；
+在影响面只有两块可选内容、且「尊重用户偏好」本身可辩的情况下，不做重构、按低严重度挂跟进项更相称。
 
 **入口方面的取舍（有意为之）**：本包只建立路由，**没有新增导航项** —— 方案该处的措辞是「建立薄路由或接入等价现有路由」，
 导航条目的归属是 S10；且改 `DEFAULT_SIDEBAR_ITEMS` 只影响新用户（`withAllKnownKeys` 只做回填，见 §1.2），
 加一项并不能让存量用户看见。故 `/inbox` 目前按 URL 可达，导航入口另议。
+
+**⚠️ 与既有「通知收件箱」重名，且本页只做了方案要求的其中一半。** 核对时发现产品里**本来就有**一个收件箱：
+
+| 面                     | 位置                                                                                     | 数据源                                                                 | 内容                                                   |
+| ---------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------ |
+| 既有的**通知** modal   | `HomeSidebar/Header/components/InboxModal/index.tsx:153`（`openInboxModal()` 于 `:466`） | `notificationService` + `inboxKeys.notifications` / `navigationCounts` | 未读 / 已读 / 全部筛选、全部已读、归档、逐条动作       |
+| 本次新增的 `/inbox` 页 | `features/HomeInbox/InboxPage.tsx`                                                       | `useBriefStore`（简报）+ goals + topics                                | 简报、needs-you、未读与运行话题、每日简报、goals、推荐 |
+
+两者**不是同一个服务端实体**（`services/notification` vs `store/brief`），所以不构成「复制第二份未读状态」；
+但**用户可见名称撞车**：两个东西都叫 Inbox，一个是从侧栏头部打开、含未读数与归档的 modal，一个是 URL 可达、内容完全不同的页面。
+
+更重要的是方案原文把「**通知组件**」列为收件箱的能力来源之一，并在同一节写下
+「不能关联任务的历史对话仍可打开原会话，**不能伪造 taskId 或直接丢弃通知**」。
+按此读法，`/inbox` 目前只覆盖了简报 / 活动这一半，**通知那一半仍留在 modal 里**，属该条款的未完成部分，
+而不是可选的后续增量。两条出路方向相反，需先定架构再动手：
+
+- **A 合并**：把通知列表并入 `/inbox`（筛选、已读、归档、逐条动作、分页都要搬），再把 modal 退役或降级为快捷预览。
+  方案文字偏向这条，但工作量是一块新功能，且要额外保证不产生第二份未读状态。
+- **B 并存**：承认通知与活动是两个面，给 `/inbox` 换一个不与「Inbox」同义的名称。
+  其前提**已核对成立**：通知 modal 在 Web 上仍可达 ——
+  `NavPanel/Shell.tsx` → `HomeSidebar/index.tsx` → `Content.tsx:5` → `Header/index.tsx:12`（`right={<InboxButton />}`）
+  → `InboxButton.tsx:18` → `openInboxModal()`。故方案「不能直接丢弃通知」当前**已由面 modal 满足**，
+  不存在通知被丢掉的缺陷；重名是命名问题，不是可达性问题。
+
+**未定，故未改**：两条都不做，是因为任一方向都会预先决定架构取舍。此处不重命名，是为了不把 B 偷偷做掉。
 
 **尚未做（已知，非回退）**
 

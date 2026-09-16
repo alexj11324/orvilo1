@@ -6,15 +6,18 @@ user-invocable: false
 
 # Micro App: Split, SSR, SEO, Gateway
 
-Canonical living examples, both extracted 2026-08 — read the real files, this skill records
-the decisions and landmines, not copies of the code:
+Canonical living example — read the real files, this skill records the decisions and
+landmines, not copies of the code:
 
-- **`apps/workbench`** (`/verify`, `/acceptance`) — all code in this repo, builds and deploys from OSS CI.
-- **`apps/share`** (`/share/t/:id`, `/share/page/:id`) — renders Cloud-only surfaces, so it
-  builds and deploys from **lobehub-cloud** CI. See §1b before touching it.
 - **`apps/auth`** (`/signin`, `/signup`, …) — the SSG variant: `ssr: false` + `prerender`, so
   the worker carries no React at all (7KB). 18 locales x 4 routes of prerendered documents.
-  Also renders Cloud-only surfaces (§1b). See §3b.
+  Renders Cloud-only surfaces (§1b). See §3b.
+
+> **`apps/workbench` and `apps/share` no longer exist.** They were removed with the browser
+> client; the product now ships only the mobile SPA, the Electron desktop app and this auth
+> surface. Every reference to them below is a record of what those apps taught us, not a path
+> you can open — read them out of git history (`git log --diff-filter=D -- apps/share`) if you
+> need the code. `apps/auth` is the only one still in the tree.
 
 ## Hosting
 
@@ -44,7 +47,7 @@ accepted trade, not a bug to chase.
 has one; it differs from `apps/<name>/index.html` only in the entry path, which must point at
 `/apps/<name>/src/entry.tsx`). Miss it and Vite's HTML fallback answers **200 with the main SPA
 shell** — the micro app never loads, nothing errors, and the main SPA no longer has those routes.
-An app developed against its own Vite server (share: `dev:spa:share`) carries **no dev branch at
+An app developed against its own Vite server (auth: `dev:spa:auth`) carries **no dev branch at
 all**. `scripts/spaDevShells.test.ts` guards both directions.
 
 ## Crossing from the main SPA

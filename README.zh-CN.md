@@ -24,7 +24,7 @@ Electron 桌面客户端，以及 CLI。
 | `apps/server/` | 后端运行时、路由与服务 |
 | `apps/desktop/` | Electron 桌面客户端 |
 | `apps/cli/` | 命令行客户端 |
-| `apps/share/`、`apps/workbench/`、`apps/auth/` | 辅助 Web 应用 |
+| `apps/auth/` | 独立的公网认证登录界面 |
 | `packages/` | 共享 workspace 包 |
 | `e2e/` | 端到端测试（Cucumber + Playwright） |
 

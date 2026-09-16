@@ -8,7 +8,7 @@ user-invocable: false
 
 SPA structure:
 
-- **`src/spa/`** – Entry points (`entry.web.tsx`, `entry.mobile.tsx`, `entry.desktop.tsx`) and router config (`router/`). Router lives here to avoid confusion with `src/routes/`.
+- **`src/spa/`** – Entry points (`entry.mobile.tsx`, `entry.desktop.tsx`, `entry.auth.tsx`, `entry.popup.tsx`) and router config (`router/`). Router lives here to avoid confusion with `src/routes/`.
 - **`src/routes/`** – Page segments only (roots).
 - **`src/features/`** – Business logic and UI by domain.
 
@@ -97,8 +97,11 @@ Each feature should:
 | File                               | Role                                                                                                            |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `desktopRouter.shared.tsx`         | Single source of truth for common paths, nesting, metadata, lazy imports, and prioritized route preload groups. |
-| `desktopRouter.config.tsx`         | Thin Web adapter: mounts the common content tree at `/` and adds Web-only routes.                               |
-| `desktopRouter.config.desktop.tsx` | Thin Electron adapter: injects per-tab Home behavior, TabHost root stubs, and Electron-only onboarding.         |
+| `desktopRouter.config.tsx`         | Thin Electron adapter: injects per-tab Home behavior, TabHost root stubs, Electron-only onboarding, and the standalone `/verify-im` and `/acceptance` routes. |
+
+There is no `.desktop` variant of this file. The browser client was removed, and
+`tsgo` and vitest do not apply the `platformResolve` Vite plugin, so the Electron
+adapter has to be the base `desktopRouter.config.tsx` that those tools resolve.
 
 Add or remove common routes only in `desktopRouter.shared.tsx`. Keep `desktopRouter.sync.test.tsx` passing so path behavior, lazy boundaries, preload ownership, and the intentional platform differences remain verified.
 

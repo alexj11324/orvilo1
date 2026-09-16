@@ -71,7 +71,11 @@ describe('copySpaBuild', () => {
   // these directories afterwards; a target whose publicDir escapes this list
   // ships its whole SPA inside the Electron asar.
   it('derives a public dir name for every copy target', () => {
-    expect(spaPublicDirNames.sort()).toEqual(['_spa', '_spa-auth']);
+    // `_spa-share` / `_spa-workbench` are retired tombstones: nothing writes
+    // them any more, but a checkout that built those apps before they were
+    // removed still has the directories, and this list is the only thing that
+    // keeps them out of the packaged desktop app.
+    expect(spaPublicDirNames.sort()).toEqual(['_spa', '_spa-auth', '_spa-share', '_spa-workbench']);
     for (const name of spaPublicDirNames) {
       expect(name).toMatch(/^_spa/);
     }

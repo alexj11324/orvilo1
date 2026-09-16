@@ -134,23 +134,37 @@ export default defineConfig({
   },
   optimizeDeps: sharedOptimizeDeps,
   plugins: [
-    // There is no root `index.html` any more, so the dev server has nothing to
-    // fall back to: point `/` at whichever named shell this mode builds.
+    // There is no root `index.html` any more, so Vite's SPA fallback has nothing
+    // to serve: every HTML navigation — `/` and deep links like `/agent/foo` or
+    // `/signin` alike — has to be pointed at whichever named shell this mode
+    // builds, or a refresh on a nested route 404s.
     isDev && {
       name: 'runtime-html-dev-entry',
       enforce: 'pre' as const,
       configureServer(server: ViteDevServer) {
         const entryHtml = isAuth ? '/index.auth.html' : '/index.mobile.html';
+        // Vite internals and source graph requests are never navigations.
+        const nonNavigationPrefixes = ['/@', '/src/', '/apps/', '/packages/', '/node_modules/'];
 
         server.middlewares.use((req, _res, next) => {
           const raw = req.url;
           if (!raw) return next();
+
+          // Module and asset requests do not accept HTML; leave them alone.
+          if (!req.headers.accept?.includes('text/html')) return next();
+
           const q = raw.indexOf('?');
           const pathOnly = q === -1 ? raw : raw.slice(0, q);
           const search = q === -1 ? '' : raw.slice(q);
-          if (pathOnly === '/' || pathOnly === '/index.html') {
-            req.url = `${entryHtml}${search}`;
-          }
+
+          if (nonNavigationPrefixes.some((prefix) => pathOnly.startsWith(prefix))) return next();
+
+          // A dotted last segment is a real file — the other named shells and
+          // everything under public/ must keep resolving to themselves.
+          const lastSegment = pathOnly.split('/').pop() ?? '';
+          if (pathOnly !== '/index.html' && lastSegment.includes('.')) return next();
+
+          req.url = `${entryHtml}${search}`;
           next();
         });
       },

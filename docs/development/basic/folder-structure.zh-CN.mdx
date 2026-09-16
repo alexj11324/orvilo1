@@ -75,7 +75,7 @@ src/
 │                       # （SEO metadata、SPA HTML 渲染、composio services）
 ├── services/          # 客户端服务接口
 ├── spa/               # SPA 入口和 React Router 配置
-│   ├── entry.web.tsx / entry.mobile.tsx / entry.desktop.tsx / entry.popup.tsx / entry.auth.tsx
+│   ├── entry.mobile.tsx / entry.desktop.tsx / entry.popup.tsx / entry.auth.tsx
 │   └── router/        # 路由配置（desktopRouter.config.tsx、mobileRouter.config.tsx、
 │                       # popupRouter.config.tsx、authRouter.config.tsx）
 ├── store/             # zustand 状态管理
@@ -97,8 +97,9 @@ src/
 - **`src/routes/`** — SPA 页面片段，按平台路由组分组
   （`(main)`、`(mobile)`、`(desktop)`、`(popup)`），以及 `auth/`、`onboarding/`、`share/`。
   这些文件很薄，只负责委托给 `src/features/*` 中的实际 UI 和业务逻辑。
-- **`src/spa/`** — SPA 入口（`entry.web.tsx`、`entry.mobile.tsx`、`entry.desktop.tsx`、
+- **`src/spa/`** — SPA 入口（`entry.mobile.tsx`、`entry.desktop.tsx`、
   `entry.popup.tsx`、`entry.auth.tsx`）和 `router/` 下的 React Router 配置。
+  没有浏览器入口：产品只发布移动端 SPA 和 Electron 桌面端。
 
 ```bash
 app/
@@ -136,14 +137,14 @@ src/routes/
 
 ```bash
 src/spa/
-├── entry.web.tsx           # 桌面 Web 入口
 ├── entry.mobile.tsx        # 移动端入口
 ├── entry.desktop.tsx       # Electron 桌面端入口
 ├── entry.popup.tsx         # 弹出窗口入口
 ├── entry.auth.tsx          # 认证页入口
 └── router/
-    ├── desktopRouter.config.tsx           # 桌面端 React Router 路由
-    ├── desktopRouter.config.desktop.tsx   # 桌面端（Electron）变体，需与上者保持同步
+    ├── desktopRouter.shared.tsx           # 桌面端共享路由定义
+    ├── desktopRouter.config.tsx           # Electron 适配器（没有 .desktop 变体：
+    │                                      # tsgo 和 vitest 不走 platformResolve）
     ├── mobileRouter.config.tsx            # 移动端 React Router 路由
     ├── popupRouter.config.tsx             # 弹出窗口路由
     └── authRouter.config.tsx              # 认证页路由
@@ -208,13 +209,12 @@ Next.js App Router 负责渲染 SPA 的 HTML 外壳和静态 / 认证页面，
 React Router DOM 在浏览器中加载 bundle 后承载主应用 SPA。
 
 **入口**：Next.js 路由 `src/app/spa/[variants]/[[...path]]/route.ts`
-渲染 HTML 外壳（根据设备类型选择桌面端或移动端模板），
-随后加载 `src/spa/` 下对应的 Vite 入口（`entry.web.tsx`、`entry.mobile.tsx`
-或 `entry.desktop.tsx`）来挂载 React Router 应用。
+渲染移动端 HTML 外壳，随后加载 `src/spa/entry.mobile.tsx` 来挂载 React Router 应用。
+Electron 桌面端自带外壳，加载的是 `entry.desktop.tsx`。
 
 **关键配置文件：**
 
-- 桌面端路由：`src/spa/router/desktopRouter.config.tsx`（需与 `desktopRouter.config.desktop.tsx` 保持同步）
+- 桌面端路由：`src/spa/router/desktopRouter.config.tsx`（基于 `desktopRouter.shared.tsx` 的 Electron 适配器）
 - 移动端路由：`src/spa/router/mobileRouter.config.tsx`
 - 弹出窗口路由：`src/spa/router/popupRouter.config.tsx`
 - 认证页路由：`src/spa/router/authRouter.config.tsx`

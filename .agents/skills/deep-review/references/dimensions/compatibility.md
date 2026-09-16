@@ -23,7 +23,7 @@ The same change must work across every surface this product ships to. Authors (a
 ## Quick checklist
 
 - Hardcoded colors or light-only assets — break dark mode; use theme tokens
-- New route/page registered in `src/spa/router/desktopRouter.config.tsx` but not `desktopRouter.config.desktop.tsx` (or vice versa) — causes blank screens; `desktopRouter.sync.test.tsx` must stay green
+- New route/page registered in `src/spa/router/desktopRouter.config.tsx` (Electron) but not `mobileRouter.config.tsx` (or vice versa) — causes blank screens; `desktopRouter.sync.test.tsx` must stay green
 - Mobile variant missing: page/feature added to desktop routes with no `(mobile)` counterpart or responsive handling
 - Deleted/renamed TRPC procedure or webapi route still called by released clients — keep a compatibility alias; for deprecated write paths a side-effect-free noop is acceptable **only when** the old client treats that success shape as "nothing to do" and no user-visible state, billing, permission, or deletion is falsely reported complete; for meaningful operations return a stable business error (`PRECONDITION_FAILED` / `410 Gone`) instead of blind success
 - Changed API input/output shape without versioning or optional-field fallback for older callers

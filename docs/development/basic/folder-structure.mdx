@@ -77,7 +77,7 @@ src/
 │                       # (SEO metadata, SPA HTML rendering, composio services)
 ├── services/          # Client-side service interfaces
 ├── spa/               # SPA entry points and React Router config
-│   ├── entry.web.tsx / entry.mobile.tsx / entry.desktop.tsx / entry.popup.tsx / entry.auth.tsx
+│   ├── entry.mobile.tsx / entry.desktop.tsx / entry.popup.tsx / entry.auth.tsx
 │   └── router/        # Router configs (desktopRouter.config.tsx, mobileRouter.config.tsx,
 │                       # popupRouter.config.tsx, authRouter.config.tsx)
 ├── store/             # Zustand state management
@@ -99,8 +99,9 @@ Page routing is now split across three directories:
 - **`src/routes/`** — SPA page segments, grouped by platform route group
   (`(main)`, `(mobile)`, `(desktop)`, `(popup)`), plus `auth/`, `onboarding/`, and `share/`.
   These are thin files that delegate to `src/features/*` for actual UI and business logic.
-- **`src/spa/`** — SPA entry points (`entry.web.tsx`, `entry.mobile.tsx`, `entry.desktop.tsx`,
-  `entry.popup.tsx`, `entry.auth.tsx`) and React Router config under `router/`.
+- **`src/spa/`** — SPA entry points (`entry.mobile.tsx`, `entry.desktop.tsx`,
+  `entry.popup.tsx`, `entry.auth.tsx`) and React Router config under `router/`. There is no
+  browser entry: the product ships the mobile SPA and the Electron desktop app.
 
 ```bash
 app/
@@ -138,14 +139,14 @@ src/routes/
 
 ```bash
 src/spa/
-├── entry.web.tsx           # Desktop web entry
 ├── entry.mobile.tsx        # Mobile entry
 ├── entry.desktop.tsx       # Electron desktop entry
 ├── entry.popup.tsx         # Popup window entry
 ├── entry.auth.tsx          # Auth pages entry
 └── router/
-    ├── desktopRouter.config.tsx           # Desktop React Router routes
-    ├── desktopRouter.config.desktop.tsx   # Desktop (Electron) variant, kept in sync
+    ├── desktopRouter.shared.tsx           # Shared desktop route definition
+    ├── desktopRouter.config.tsx           # Electron adapter (no .desktop variant: tsgo
+    │                                      # and vitest do not run platformResolve)
     ├── mobileRouter.config.tsx            # Mobile React Router routes
     ├── popupRouter.config.tsx             # Popup window routes
     └── authRouter.config.tsx              # Auth pages routes
@@ -211,13 +212,12 @@ Next.js App Router serves the SPA's HTML shell and static/auth pages,
 while React Router DOM powers the main SPA once the bundle loads in the browser.
 
 **Entry**: The Next.js route `src/app/spa/[variants]/[[...path]]/route.ts`
-renders the HTML shell (desktop or mobile template based on device type),
-which then boots the matching Vite entry in `src/spa/` (`entry.web.tsx`, `entry.mobile.tsx`,
-or `entry.desktop.tsx`) to mount the React Router app.
+renders the mobile HTML shell, which then boots `src/spa/entry.mobile.tsx` to mount the
+React Router app. The Electron app serves its own shell and boots `entry.desktop.tsx`.
 
 **Key configuration files:**
 
-- Desktop router: `src/spa/router/desktopRouter.config.tsx` (kept in sync with `desktopRouter.config.desktop.tsx`)
+- Desktop router: `src/spa/router/desktopRouter.config.tsx` (Electron adapter over `desktopRouter.shared.tsx`)
 - Mobile router: `src/spa/router/mobileRouter.config.tsx`
 - Popup router: `src/spa/router/popupRouter.config.tsx`
 - Auth router: `src/spa/router/authRouter.config.tsx`

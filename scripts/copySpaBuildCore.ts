@@ -14,8 +14,24 @@ const targets = [
   { distDir: 'auth', publicDir: 'public/_spa-auth' },
 ] as const;
 
+/**
+ * Public directories this script no longer writes, kept so the desktop
+ * renderer still deletes them.
+ *
+ * `public/` is gitignored for these, so a checkout that built Share or
+ * Workbench before they were removed still has the directories on disk.
+ * `apps/desktop/vite.renderer.config.ts` prunes `dist/renderer` using
+ * `spaPublicDirNames` alone, so dropping a name here would ship those stale
+ * assets inside the packaged app. Removing an entry is only safe once no
+ * working copy can still be carrying it.
+ */
+const retiredPublicDirNames = ['_spa-share', '_spa-workbench'] as const;
+
 export const spaPublicDirNames = [
-  ...new Set(targets.map(({ publicDir }) => publicDir.split('/')[1])),
+  ...new Set([
+    ...targets.map(({ publicDir }) => publicDir.split('/')[1]),
+    ...retiredPublicDirNames,
+  ]),
 ];
 
 export const copySpaBuild = (root = path.resolve(import.meta.dirname, '..')) => {

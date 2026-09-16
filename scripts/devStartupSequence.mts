@@ -72,9 +72,13 @@ const resolveNextPort = async (): Promise<number> => {
  * to locate the Vite dev server (no fs port file involved).
  */
 const resolveVitePortEnv = async (): Promise<number> => {
-  // `dev:spa` serves the mobile renderer — the browser SPA is gone.
+  // `dev:spa` serves the mobile renderer — the browser SPA is gone. SPA_PORT is
+  // still honoured because the acceptance harness
+  // (.agents/acceptance/scripts/init-dev-env.sh) allocates a port and exports it
+  // under that name; ignoring it would start Vite on a different origin than the
+  // one the harness configured S3 CORS for.
   const envName = 'MOBILE_SPA_PORT';
-  const explicit = Number(process.env[envName]);
+  const explicit = Number(process.env[envName] || process.env.SPA_PORT);
   const port = explicit || (await findFreePort(3012));
 
   process.env[envName] = String(port);

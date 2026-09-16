@@ -25,7 +25,7 @@ Electron desktop client, and a CLI.
 | `apps/server/` | Backend runtime, routers and services |
 | `apps/desktop/` | Electron desktop client |
 | `apps/cli/` | Command-line client |
-| `apps/share/`, `apps/workbench/`, `apps/auth/` | Auxiliary web apps |
+| `apps/auth/` | Standalone public authentication surface |
 | `packages/` | Shared workspace packages |
 | `e2e/` | End-to-end tests (Cucumber + Playwright) |
 

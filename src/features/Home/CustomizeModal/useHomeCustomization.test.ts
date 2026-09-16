@@ -42,10 +42,7 @@ describe('clampHomeCount', () => {
 });
 
 describe('resolveHomePreset', () => {
-  const stateOf = (key: keyof typeof HOME_PRESETS) => ({
-    hiddenWidgets: [...HOME_PRESETS[key].hiddenWidgets],
-    showPortrait: HOME_PRESETS[key].showPortrait,
-  });
+  const stateOf = (key: keyof typeof HOME_PRESETS) => [...HOME_PRESETS[key].hiddenWidgets];
 
   it('names each preset from the switches it spells out', () => {
     expect(resolveHomePreset(stateOf('minimal'))).toBe('minimal');
@@ -54,26 +51,15 @@ describe('resolveHomePreset', () => {
   });
 
   it('ignores the order the hidden widgets were stored in', () => {
-    expect(
-      resolveHomePreset({
-        hiddenWidgets: ['suggestions', 'news', 'unread', 'running'],
-        showPortrait: false,
-      }),
-    ).toBe('balanced');
+    expect(resolveHomePreset(['suggestions', 'news', 'unread', 'running'])).toBe('balanced');
   });
 
   it('ignores keys it does not know, so a stale entry cannot mask a preset', () => {
-    expect(resolveHomePreset({ hiddenWidgets: ['retiredWidget'], showPortrait: true })).toBe(
-      'full',
-    );
+    expect(resolveHomePreset(['retiredWidget'])).toBe('full');
   });
 
   it('names no preset once a single switch departs from one', () => {
-    expect(resolveHomePreset({ hiddenWidgets: ['news'], showPortrait: true })).toBeUndefined();
-  });
-
-  it('tells the presets apart by the portrait alone', () => {
-    expect(resolveHomePreset({ hiddenWidgets: [], showPortrait: false })).toBeUndefined();
+    expect(resolveHomePreset(['news'])).toBeUndefined();
   });
 
   // The usage widget is a business slot: where it doesn't exist, its key must
@@ -82,61 +68,38 @@ describe('resolveHomePreset', () => {
     const legacyMinimal = HOME_WIDGET_KEYS.filter((key) => key !== 'usage');
 
     it('keeps a pre-usage minimal selection minimal where the slot is empty', () => {
-      expect(resolveHomePreset({ hiddenWidgets: [...legacyMinimal], showPortrait: false })).toBe(
-        'minimal',
-      );
+      expect(resolveHomePreset([...legacyMinimal])).toBe('minimal');
     });
 
     it('keeps an empty hidden set full where the slot is empty', () => {
-      expect(resolveHomePreset({ hiddenWidgets: [], showPortrait: true }, false)).toBe('full');
+      expect(resolveHomePreset([], false)).toBe('full');
     });
 
     it('requires the usage switch too once the slot is active', () => {
-      expect(
-        resolveHomePreset({ hiddenWidgets: [...legacyMinimal], showPortrait: false }, true),
-      ).toBeUndefined();
-      expect(
-        resolveHomePreset({ hiddenWidgets: [...HOME_WIDGET_KEYS], showPortrait: false }, true),
-      ).toBe('minimal');
+      expect(resolveHomePreset([...legacyMinimal], true)).toBeUndefined();
+      expect(resolveHomePreset([...HOME_WIDGET_KEYS], true)).toBe('minimal');
     });
 
     it('counts a visible usage widget toward full once the slot is active', () => {
-      expect(resolveHomePreset({ hiddenWidgets: [], showPortrait: true }, true)).toBe('full');
+      expect(resolveHomePreset([], true)).toBe('full');
     });
   });
 });
 
 describe('isHomeMinimalLayout', () => {
-  it('centers the page once every section and the portrait are off', () => {
-    expect(isHomeMinimalLayout({ hiddenWidgets: [...HOME_WIDGET_KEYS], showPortrait: false })).toBe(
-      true,
-    );
-  });
-
-  it('keeps the dashboard while the portrait still has a lane to sit in', () => {
-    expect(isHomeMinimalLayout({ hiddenWidgets: [...HOME_WIDGET_KEYS], showPortrait: true })).toBe(
-      false,
-    );
+  it('centers the page once every section is off', () => {
+    expect(isHomeMinimalLayout([...HOME_WIDGET_KEYS])).toBe(true);
   });
 
   it('ignores the usage key where its slot is empty, but demands it where active', () => {
     const legacyAllHidden = HOME_WIDGET_KEYS.filter((key) => key !== 'usage');
 
-    expect(isHomeMinimalLayout({ hiddenWidgets: [...legacyAllHidden], showPortrait: false })).toBe(
-      true,
-    );
-    expect(
-      isHomeMinimalLayout({ hiddenWidgets: [...legacyAllHidden], showPortrait: false }, true),
-    ).toBe(false);
+    expect(isHomeMinimalLayout([...legacyAllHidden])).toBe(true);
+    expect(isHomeMinimalLayout([...legacyAllHidden], true)).toBe(false);
   });
 
   it('keeps the dashboard while one section still has something to stack', () => {
-    expect(
-      isHomeMinimalLayout({
-        hiddenWidgets: HOME_WIDGET_KEYS.filter((key) => key !== 'tasks'),
-        showPortrait: false,
-      }),
-    ).toBe(false);
+    expect(isHomeMinimalLayout(HOME_WIDGET_KEYS.filter((key) => key !== 'tasks'))).toBe(false);
   });
 });
 
@@ -179,12 +142,8 @@ describe('isHomeWidgetHidden', () => {
   });
 
   it('does not grow a section back onto a page saved before the key existed', () => {
-    expect(resolveHomePreset({ hiddenWidgets: LEGACY_ALL_HIDDEN, showPortrait: false })).toBe(
-      'minimal',
-    );
-    expect(isHomeMinimalLayout({ hiddenWidgets: LEGACY_ALL_HIDDEN, showPortrait: false })).toBe(
-      true,
-    );
+    expect(resolveHomePreset(LEGACY_ALL_HIDDEN)).toBe('minimal');
+    expect(isHomeMinimalLayout(LEGACY_ALL_HIDDEN)).toBe(true);
   });
 });
 

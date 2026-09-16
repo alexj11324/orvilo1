@@ -306,7 +306,6 @@ export interface SystemStatus {
   showAgentBuilderPanel?: boolean;
   showCommandMenu?: boolean;
   showFilePanel?: boolean;
-  showHomePortrait?: boolean;
   /**
    * Visibility of the Home dashboard's activity and recommendations rail.
    * Independent from `showRightPanel` so Home preferences do not affect chat pages.
@@ -564,7 +563,6 @@ export const INITIAL_STATUS = {
   resourceManagerColumnWidths: DEFAULT_RESOURCE_MANAGER_COLUMN_WIDTHS,
   showCommandMenu: false,
   showFilePanel: true,
-  showHomePortrait: true,
   showHotkeyHelper: false,
   showHomeRail: true,
   showImagePanel: true,
@@ -613,10 +611,6 @@ export const createInitialSystemStatus = (): SystemStatus => {
       typeof persistedStatus.leftPanelWidth === 'number'
         ? persistedStatus.leftPanelWidth
         : INITIAL_STATUS.leftPanelWidth,
-    showHomePortrait:
-      typeof persistedStatus.showHomePortrait === 'boolean'
-        ? persistedStatus.showHomePortrait
-        : INITIAL_STATUS.showHomePortrait,
     showHomeRail:
       typeof persistedStatus.showHomeRail === 'boolean'
         ? persistedStatus.showHomeRail

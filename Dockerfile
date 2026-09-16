@@ -101,7 +101,10 @@ RUN pnpm exec esbuild scripts/elasticsearchReindex/index.ts --bundle --platform=
 RUN pnpm exec esbuild scripts/elasticsearchSync/cli.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-elasticsearch-sync.cjs --external:pg --external:drizzle-orm '--external:drizzle-orm/*'
 RUN pnpm exec esbuild scripts/elasticsearchCleanupIneligibleMessages/cli.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-ineligible-message-cleanup.cjs --external:pg --external:drizzle-orm '--external:drizzle-orm/*'
 RUN pnpm exec esbuild scripts/pgSearchCleanup/index.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-pg-search-cleanup.cjs --external:pg
-RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --outfile=/app/hatchet-worker.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*'
+# Hatchet and some transitive CommonJS dependencies use dynamic require() at startup. Keep the
+# worker as ESM for the bundled top-level await, but provide the CommonJS bridge that esbuild's
+# ESM output needs when those dependencies execute in the scratch image.
+RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --outfile=/app/hatchet-worker.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*' --banner:js='import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);'
 
 # Preserve SWC helpers referenced through pnpm virtual-store symlinks by Next.js.
 RUN mkdir -p /runtime-deps && cp -a node_modules/.pnpm/@swc+helpers@* /runtime-deps/

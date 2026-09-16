@@ -45,7 +45,9 @@ describe('deploy docker-compose optional Elasticsearch', () => {
   } = compose.services;
 
   it('keeps every Elasticsearch service behind an opt-in profile so the default deployment is unchanged', () => {
-    const profiled = Object.entries(compose.services).filter(([, service]) => service.profiles);
+    const profiled = Object.entries(compose.services).filter(([, service]) =>
+      service.profiles?.some((profile) => ELASTICSEARCH_PROFILES.includes(profile)),
+    );
     expect(profiled.map(([name]) => name).sort()).toEqual([
       'elasticsearch',
       'fts-search-reindex',
@@ -155,6 +157,25 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     );
   });
 
+  it('packages the Hatchet worker in the deployment image and keeps it out of the web container', () => {
+    const worker = compose.services['hatchet-worker'];
+
+    expect(worker.image).toBe(compose.services.lobe.image);
+    expect(worker.build).toEqual({ context: '../..', dockerfile: 'Dockerfile' });
+    expect(worker.profiles).toEqual(['hatchet']);
+    expect(worker.entrypoint).toEqual(['/bin/node', '/app/hatchet-worker.mjs']);
+    expect(compose.services.lobe.environment).toContain('HATCHET_WORKER_ENABLED=0');
+    expect(dockerfile).toContain(
+      'RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --outfile=/app/hatchet-worker.mjs',
+    );
+    expect(dockerfile).toContain(
+      '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
+    );
+    expect(dockerfile).toContain(
+      'COPY --from=builder /app/hatchet-worker.mjs /app/hatchet-worker.mjs',
+    );
+  });
+
   it('never switches the search provider on behalf of the operator', () => {
     for (const service of [elasticsearch, reindex, sync, compose.services.lobe]) {
       expect(
@@ -176,6 +197,12 @@ describe('deploy docker-compose optional Elasticsearch', () => {
       expect(envExample).not.toMatch(/^#?\s*ES_API_KEY=/m);
       // Every optional line stays commented so the default deployment ignores the whole block.
       expect(envExample).not.toMatch(/^(COMPOSE_PROFILES|ES_[A-Z_]+)=/m);
+    }
+  });
+
+  it('documents the plain-gRPC TLS override for self-hosted Hatchet in both env examples', () => {
+    for (const envExample of envExamples) {
+      expect(envExample).toContain('# HATCHET_CLIENT_TLS_STRATEGY=none');
     }
   });
 

@@ -5,7 +5,7 @@ export type LinearInstallationStatus = 'active' | 'error' | 'paused' | 'revoked'
 
 /** State of one Orvilo task ↔ Linear issue binding. */
 export type LinearIssueLinkSyncState =
-  'conflict' | 'outcome_unknown' | 'removed' | 'synced' | 'unlinked';
+  'conflict' | 'outcome_unknown' | 'pending' | 'removed' | 'synced' | 'unlinked';
 
 /** Durable state of a received Linear delivery. */
 export type LinearSyncInboxStatus =

@@ -1,6 +1,6 @@
 import type { LinearIssueSnapshot, LinearSyncConflict } from '@orvilo/types';
 
-const MERGED_FIELDS = [
+export const LINEAR_SYNC_FIELDS = [
   'archivedAt',
   'assigneeId',
   'description',
@@ -39,7 +39,7 @@ export const mergeLinearIssueSnapshots = (input: {
   const localValues: Record<string, unknown> = {};
   const remoteValues: Record<string, unknown> = {};
 
-  for (const field of MERGED_FIELDS) {
+  for (const field of LINEAR_SYNC_FIELDS) {
     const baseValue = input.base[field];
     const localValue = field in input.local ? input.local[field] : baseValue;
     const remoteValue = field in input.remote ? input.remote[field] : baseValue;
@@ -71,3 +71,10 @@ export const mergeLinearIssueSnapshots = (input: {
     merged,
   };
 };
+
+export const changedLinearIssueFields = (base: LinearIssueSnapshot, current: LinearIssueSnapshot) =>
+  LINEAR_SYNC_FIELDS.filter((field) => {
+    const baseValue = base[field];
+    const currentValue = field in current ? current[field] : baseValue;
+    return !equal(baseValue, currentValue);
+  });

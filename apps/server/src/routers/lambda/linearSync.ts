@@ -10,6 +10,8 @@ import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/provider';
+import { LinearSyncWorker } from '@/server/services/linearSync/worker';
 
 const linearSyncProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -185,6 +187,34 @@ export const linearSyncRouter = router({
         };
       } catch (error) {
         mapError(error, 'listIssueLinks');
+      }
+    }),
+
+  processInbox: linearSyncWriteProcedure
+    .input(
+      z.object({
+        installationId: z.string().uuid(),
+        limit: z.number().int().min(1).max(50).default(20),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const installation = await ctx.linearSyncModel.findInstallationById(input.installationId);
+        if (!installation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
+        }
+        const provider = createLinearGraphqlIssueProvider({
+          userId: installation.installedByUserId ?? ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        });
+        const data = await new LinearSyncWorker(ctx.serverDB, ctx.workspaceId!).processPending(
+          provider,
+          input.limit,
+          installation.id,
+        );
+        return { data, message: 'Linear inbox processed', success: true };
+      } catch (error) {
+        mapError(error, 'processInbox');
       }
     }),
 

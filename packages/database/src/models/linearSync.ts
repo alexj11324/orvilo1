@@ -11,8 +11,9 @@ import type {
   TaskPlanningScopeType,
   TaskPlanningTrigger,
 } from '@orvilo/types';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
+import type { LinearSyncInboxItem } from '../schemas';
 import {
   linearInstallations,
   linearIssueLinks,
@@ -329,11 +330,48 @@ export class LinearSyncModel {
     return { inserted: false, row: existing ?? null };
   }
 
+  /** Claim inbox rows with a lease so a crashed worker can be replaced safely. */
+  async claimInbox(
+    limit = 20,
+    leaseMs = 60_000,
+    installationId?: string,
+  ): Promise<LinearSyncInboxItem[]> {
+    const lockedUntil = new Date(Date.now() + leaseMs);
+    const installationFilter = installationId
+      ? sql`AND installation_id = ${installationId}`
+      : sql``;
+    const result = await this.db.execute(sql`
+      WITH candidates AS (
+        SELECT id
+        FROM linear_sync_inbox
+        WHERE workspace_id = ${this.workspaceId}
+          AND status IN ('received', 'pending_binding')
+          AND available_at <= now()
+          AND (locked_until IS NULL OR locked_until < now())
+          ${installationFilter}
+        ORDER BY created_at
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )
+      UPDATE linear_sync_inbox AS inbox
+      SET locked_until = ${lockedUntil},
+          attempts = inbox.attempts + 1,
+          updated_at = now()
+      FROM candidates
+      WHERE inbox.id = candidates.id
+      RETURNING inbox.*
+    `);
+
+    return result.rows as unknown as LinearSyncInboxItem[];
+  }
+
   async updateInbox(
     id: string,
     patch: {
       attempts?: number;
+      availableAt?: Date;
       lastError?: string | null;
+      lockedUntil?: Date | null;
       processedAt?: Date | null;
       status?: LinearSyncInboxStatus;
     },
@@ -347,6 +385,41 @@ export class LinearSyncModel {
   }
 
   async queueOutbox(input: QueueLinearSyncInput) {
+    if (input.linkId) {
+      const [existing] = await this.db
+        .select()
+        .from(linearSyncOutbox)
+        .where(
+          and(
+            eq(linearSyncOutbox.workspaceId, this.workspaceId),
+            eq(linearSyncOutbox.linkId, input.linkId),
+            eq(linearSyncOutbox.operation, input.operation),
+            inArray(linearSyncOutbox.status, ['failed', 'pending']),
+          ),
+        )
+        .orderBy(desc(linearSyncOutbox.createdAt))
+        .limit(1);
+
+      if (existing) {
+        const [row] = await this.db
+          .update(linearSyncOutbox)
+          .set({
+            availableAt: new Date(),
+            expectedLocalRevision: input.expectedLocalRevision,
+            lastError: null,
+            payload: {
+              ...(existing.payload as Record<string, unknown>),
+              ...input.payload,
+            },
+            status: 'pending',
+            updatedAt: new Date(),
+          })
+          .where(eq(linearSyncOutbox.id, existing.id))
+          .returning();
+        return row;
+      }
+    }
+
     const [row] = await this.db
       .insert(linearSyncOutbox)
       .values({

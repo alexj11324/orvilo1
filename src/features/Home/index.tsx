@@ -18,7 +18,19 @@ import InputArea from './InputArea';
 import { RAIL_INBOX_PROPS, resolveRailVisibility } from './railVisibility';
 import type { HomeMode } from './types';
 
-export const DEFAULT_HOME_MODE: HomeMode = 'chat';
+/**
+ * The task board, not the chat composer. S20 L214 requires that login, workspace
+ * creation and onboarding stop landing on the chat-style home; on Web the root
+ * redirects to `/tasks` and never mounts this page, so the mode that matters is
+ * Electron's, where Home *is* the index slot. Task mode is what the post-onboarding
+ * entry already asks for via `?onboarding=task`, so the bare landing was the only
+ * path still disagreeing with it.
+ *
+ * The model shortcuts are not a casualty of this: `InputArea` renders them from
+ * the `showNewModelShortcuts` prop (`InputArea/index.tsx:117`) and never looks at
+ * the mode.
+ */
+export const DEFAULT_HOME_MODE: HomeMode = 'task';
 export const ONBOARDING_HOME_MODE_PARAM = 'onboarding';
 export const ONBOARDING_HOME_MODE_TASK_VALUE = 'task';
 

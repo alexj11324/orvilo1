@@ -11,6 +11,15 @@ const stub = (testId: string) => ({ default: () => <div data-testid={testId} /> 
 const modeStub = (testId: string) => ({
   default: ({ mode }: { mode?: string }) => <div data-mode={mode} data-testid={testId} />,
 });
+/**
+ * Mirrors the real component: `InputArea` renders the shortcuts from the prop
+ * alone (`InputArea/index.tsx:117` — `{showNewModelShortcuts && …}`) and never
+ * inspects the mode. An earlier version of this stub ANDed in `mode === 'chat'`,
+ * which invented a coupling the component does not have — and then the tests
+ * below asserted it, so the suite "confirmed" a difference that did not exist.
+ * That false difference was the only argument against defaulting Home to task
+ * mode, which is why it is called out here rather than quietly fixed.
+ */
 const inputAreaStub = {
   default: ({
     mode,
@@ -20,7 +29,7 @@ const inputAreaStub = {
     showNewModelShortcuts?: boolean;
   }) => (
     <div data-mode={mode} data-testid={'home-input-area'}>
-      {mode === 'chat' && showNewModelShortcuts && <div data-testid={'new-model-shortcuts'} />}
+      {showNewModelShortcuts && <div data-testid={'new-model-shortcuts'} />}
     </div>
   ),
 };
@@ -86,20 +95,25 @@ describe('home dashboard', () => {
     expect(screen.getByTestId('home-rail')).toBeInTheDocument();
   }, 20000);
 
-  it('opens the home dashboard in chat mode by default', async () => {
+  // S20 L214: login, workspace creation and onboarding must stop landing on the
+  // chat-style home. On Electron this page *is* the landing surface, so the mode
+  // it opens in is the requirement.
+  it('opens the home dashboard in task mode by default', async () => {
     await renderHome();
 
-    expect(screen.getByTestId('home-input-area')).toHaveAttribute('data-mode', 'chat');
-    expect(screen.getByTestId('home-mode-content')).toHaveAttribute('data-mode', 'chat');
+    expect(screen.getByTestId('home-input-area')).toHaveAttribute('data-mode', 'task');
+    expect(screen.getByTestId('home-mode-content')).toHaveAttribute('data-mode', 'task');
+    // Present in task mode too — the shortcuts follow the prop, not the mode.
     expect(screen.getByTestId('new-model-shortcuts')).toBeInTheDocument();
   }, 20000);
 
-  it('opens the home dashboard in task mode for the post-onboarding entry', async () => {
+  it('clears the legacy onboarding param instead of letting it drive the mode', async () => {
     await renderHome({ search: '?onboarding=task' });
 
     expect(screen.getByTestId('home-input-area')).toHaveAttribute('data-mode', 'task');
     expect(screen.getByTestId('home-mode-content')).toHaveAttribute('data-mode', 'task');
-    expect(screen.queryByTestId('new-model-shortcuts')).not.toBeInTheDocument();
+    // Still consumed and stripped, so a reload cannot re-apply it — it just no
+    // longer changes anything, because task is now where the page opens anyway.
     expect(window.location.search).toBe('');
   }, 20000);
 

@@ -380,17 +380,17 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 ## 2. 工作包状态
 
-| 工作包                   | 实现状态     | 验证状态         | commit / 证据                    | 保留依赖 / 阻塞                                                                             |
-| ------------------------ | ------------ | ---------------- | -------------------------------- | ------------------------------------------------------------------------------------------- |
-| S00 基线与依赖清单       | IN\_PROGRESS | NOT\_RUN         | 本文                             | 见 §1.7 待补                                                                                |
-| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de` | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                    |
-| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`（视图偏好部分）       | 旧首页卸载未做，见 §2.2                                                                     |
-| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` | S30.5（外部访客共享）未执行，见 §2.5                                                        |
-| S40 自动化整合           | IN\_PROGRESS | CI\_PENDING      | `03d606a0`（数据层统一）+ 命名   | 数据层已统一、名称已改「自动化」；入口合并与 5 项能力搬运未做，见 §2.3                      |
-| S50 资源与产物归位       | IN\_PROGRESS | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` | 客户端、项目资料面与项目产物列表已完成；产物的**运行级**追溯与失败态在服务端，见 §2.6       |
-| S60 Goal 与规则下沉      | IN\_PROGRESS | CI\_PENDING      | `23751be7` `7c565528` `3126df0d` | Goal 侧经审计为**已满足**；规则面已下沉，见 §2.7                                            |
-| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`            | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8 |
-| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                | 覆盖全部                                                                                    |
+| 工作包                   | 实现状态     | 验证状态         | commit / 证据                    | 保留依赖 / 阻塞                                                                                                                                                                                                                                      |
+| ------------------------ | ------------ | ---------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S00 基线与依赖清单       | IN\_PROGRESS | NOT\_RUN         | 本文                             | 见 §1.7 待补                                                                                                                                                                                                                                         |
+| S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de` | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                             |
+| S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`（视图偏好部分）       | 旧首页卸载未做，见 §2.2                                                                                                                                                                                                                              |
+| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` | S30.5（外部访客共享）未执行，见 §2.5                                                                                                                                                                                                                 |
+| S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81` | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3） |
+| S50 资源与产物归位       | IN\_PROGRESS | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` | 客户端、项目资料面与项目产物列表已完成；产物的**运行级**追溯与失败态在服务端，见 §2.6                                                                                                                                                                |
+| S60 Goal 与规则下沉      | IN\_PROGRESS | CI\_PENDING      | `23751be7` `7c565528` `3126df0d` | Goal 侧经审计为**已满足**；规则面已下沉，见 §2.7                                                                                                                                                                                                     |
+| S70 设置、文案与依赖清理 | IMPLEMENTED  | CI\_PENDING      | `2d9ee3a6` `3242086a`            | 文案、死代码、统计页与设置分组已做；Onboarding 文案属另一 agent 的在途改动（§0.3），见 §2.8                                                                                                                                                          |
+| S80 远端验收与证据       | TODO         | NOT\_RUN         | —                                | 覆盖全部                                                                                                                                                                                                                                             |
 
 ---
 
@@ -637,6 +637,10 @@ scheduled tab 改为 25 / 页后，总数落在 26–50 时第 2 页**存在却�
 
 **不需要动的**：`useFetchAutomationRuns` / `taskKeys.automationRuns` —— 它走 `task.automationRuns` **独立 procedure**（run 维度，不是 task 维度），与本次统一无关。
 `/automations/new`、`/automations/runs`、`/automations/:taskId` 按方案 §7 分别处理；`:taskId` 是 `T-<seq>` 可读标识符，服务端 `getTaskDetail` 双解析，**不需要转换 helper**。
+
+**复核确认：`Home/HomeModeContent.tsx:415` 那处直调不构成「第二套读取」，不要再去改它。**
+它用 `useFetchScheduledTaskList({ limit: taskCount })` 渲染首页的定时任务块（要 `total` 加前 N 条做徽标与预览），参数与列表页**天然不同**（列表页是分页 + 作用域 + 状态过滤），因此本就无法共用同一个 key —— 与 `03d606a0` 修掉的「两个 hook 发出逐字节相同请求却挂在两个 key 根下」不是同一件事。
+真正需要确认的是失效是否漏掉一份，答案是**不漏**：`isScheduledTaskListKey` 只比 key 根（`key[0] === 'task:scheduledList'`），`mutate(isScheduledTaskListKey)` 会同时失效所有参数组合，两处缓存永远一起失效。
 
 ### 2.4 S70 部分实施记录（文案 + 无消费者标识）
 

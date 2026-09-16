@@ -19,12 +19,12 @@ import {
  *   persisted user preferences.
  * - `secondary` — still supported, but deliberately sunk below the primary
  *   working set. Reachable from a second-level surface, not the main nav.
- * - `retired`  — the product surface has been withdrawn. Retired routes are
- *   **never rendered by any navigation surface** (sidebar, command menu,
- *   Electron menu, mobile). They stay in the registry on purpose: legacy
- *   deep links, persisted preferences and stored tab state still reference
- *   these ids, and `getRouteById` must keep resolving them to a safe target
- *   instead of throwing. See docs/development/product-scope.md.
+ * - `retired`  — the product surface has been withdrawn. Retired routes are not
+ *   offered by the sidebar, the sidebar customizer or the command palette. They
+ *   stay in the registry on purpose: legacy deep links, persisted preferences
+ *   and stored tab state still reference these ids, and `getRouteById` must keep
+ *   resolving them to a safe target instead of throwing.
+ *   See docs/development/product-scope.md.
  */
 export type NavigationTier = 'primary' | 'retired' | 'secondary';
 
@@ -182,10 +182,13 @@ export const getRouteById = (id: string): NavigationRoute | undefined =>
  * reach: every non-retired route except `settings`, which MainMenu renders in
  * its own group so it can reuse that entry's icon and keyword handling.
  *
- * Retirement is expressed here, in the shared registry, rather than as a
- * per-surface hide. The sidebar, the Electron menu and the palette all derive
- * from this list, so they cannot drift apart — and adding a surface later does
- * not require remembering to hide retired entries in it.
+ * Retirement is expressed once, here, rather than as a per-surface hide: the
+ * palette reads this list directly, and the sidebar and its customizer resolve
+ * their entries through `getRouteById`.
+ *
+ * Surfaces that do not read the registry — the mobile tab bar, the Electron
+ * native menus and tray — still have to be updated by hand, so they are where a
+ * retired entry is most likely to survive unnoticed.
  *
  * `secondary` routes stay reachable on purpose: sinking a destination below
  * the primary working set is not the same as withdrawing it.

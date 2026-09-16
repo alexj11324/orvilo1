@@ -446,9 +446,70 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 **语义后果（已处理）**：`general.test.ts` 原有一个「切到 kanban 应持久化」的用例，因为 kanban 现在是默认值，切换到它成了空操作而失败。已改为从非默认值出发，保住原意图。
 
-**未完成 —— 旧首页卸载（S20 剩余部分）**
+**已完成 —— Web 首页改为任务列表（S20 剩余部分）**
 
-调研已定位到三个必须一起处理的耦合点：
+「Task-First」的用户可见结果 —— `/` 打开任务列表而不是聊天收件箱 —— 已落地；**旧 Home 组件本身尚未删除**（原因见下）。
+
+改动：
+
+| 位置                                                                    | 改动                                                                                              |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `src/features/GlobalOverlays/`（新）                                    | App 级覆盖层与后台同步的**唯一宿主**：`RecentSync` + `TopicChatDrawer` + `AcceptancePortalDrawer` |
+| `src/spa/router/WebHomeRedirect.tsx`（新）                              | Web 索引槽的落地行为：工作区感知地跳 `/tasks`                                                     |
+| `src/spa/router/desktopRouter.config.tsx`                               | 首次为 Web 提供 `createHomeElement`（此前 Web 该槽为空）                                          |
+| `src/routes/(main)/_layout/index.tsx`（Web）                            | 摘掉 `DesktopHomeLayout` + `DesktopHome`，改挂 `<GlobalOverlays />`                               |
+| `src/routes/(main)/_layout/index.desktop.tsx`（Electron）               | 同样挂上 `<GlobalOverlays />`                                                                     |
+| `src/features/Home/index.tsx` / `HomeLayout/index.tsx`                  | 交出三个宿主；Home 变成纯展示组件                                                                 |
+| `src/features/Home/{AcceptancePortalDrawer,acceptancePortalView}.ts(x)` | 移到 `GlobalOverlays/`（`git mv`，保留历史）                                                      |
+
+**关键事实（本轮查清，且修正了原计划的判断）**
+
+1. **这是 Web-only 改动，Electron 一行都不用改。** `src/routes/(main)/_layout/index.desktop.tsx`
+   **从来不渲染** `DesktopHomeLayout` / `DesktopHome` —— 它渲染的是 `TabHost`。Electron 的首页来自
+   index 槽的 `createHomeElement` → `DesktopHomeRoute`，而后者自己就是
+   `HomeLayout + Home`（`src/spa/router/DesktopHomeRoute.tsx:6-10`）。
+   所以「Web 侧卸载 Home」与「Electron 每标签页 Home」互不影响。
+
+2. **`AcceptancePortalDrawer` 是和 `RecentSync` 同级的静默失效项，原计划没点到。**
+   它的**唯一挂载点是 Home**（`Home/index.tsx:462`），而且它自己的文件**就住在 `features/Home/` 里**。
+   `Home/index.tsx:58` 的注释对 `TopicChatDrawer` 说得更直白：
+   「TaskDetailPage mounts its own; **home needs one too, or the click is a silent no-op**」。
+   → 两个抽屉都是**承重**的，不是装饰。
+
+3. **`FloatingPanel` 的 `getContainer={false}` 不是「就地渲染」。**
+   库里是 `const container = getContainer === false ? void 0 : getContainer;`，然后仍交给
+   `ModalPortal`（`node_modules/@lobehub/ui/es/base-ui/FloatingPanel/FloatingPanel.mjs:168,263`）。
+   即 `false` 只是省略显式容器，**仍然 portal 到 document**。
+   这条正是「把宿主从 `Activity hidden` 的 `display:none` 容器里挪到常驻布局」能保持行为等价的依据 ——
+   宿主从来就没有被那个 `display:none` 遮住过。
+
+4. **旧 Home 仍不能删。** Electron 的 index 槽仍注入 `DesktopHomeRoute`，它包着
+   `HomeLayout + Home`。删掉 `features/Home` 会**直接打掉每个 Electron 标签页的开屏内容**。
+   因此 `HomePortrait` / `PortraitBubble` 的删除不是「推迟」，而是**当前不可达** ——
+   要么先决定 Electron 首页的去向，要么不动。
+
+**尚未做（已知，非回退）**
+
+- 每页「恰好一个宿主」：`TopicChatDrawer` 仍有 4 处重复宿主
+  （`Portal/TaskDetail/Body.tsx:51`、`Portal/TaskResult/Body.tsx:77`、
+  `AgentTaskDetail/TaskDetailPage.tsx:118`、`Automations/AutomationDetailPage.tsx:301`）。
+  它们**在改动前就与 Home 的宿主并存**，且因内容相同而完全重叠，所以不构成本次回退；
+  清理是跟进项。
+- 移动端：`(mobile)` 树不使用 `(main)/_layout`，因此这三个宿主在移动端**本来就没有**，行为未变。
+
+**验证**：`src/spa/router/`、`src/features/{GlobalOverlays,Home,HomeLayout}/` 共 **207 个用例全绿**；
+`desktopRouter.sync.test.tsx` 中断言「Web 索引槽为空」的那条**按新契约改写**为
+「Web 落地到任务列表、Electron 落地到自己的 Home」。
+新建 `GlobalOverlays/index.test.tsx` 承接了原先挂在 Home 上的「验收抽屉只在验收门户打开时加载」契约，
+并补上 `RecentSync` 与运行抽屉的宿主断言。
+
+⚠️ **既有失败（非本次引入）**：`src/routes/(main)/_layout/authMount.test.ts` 的 **desktop** 用例会撞满
+自带的 20s 预算。已用对照法确认 —— 在 `f4605a81` 上还原原版布局与原版测试后运行，**同样失败**。
+本次改动反而让它的 web 用例从失败转为通过（少了一条 `../home` 导入链）。
+
+---
+
+### 附：改动前的调研记录（保留，供核对）
 
 1. **根路径 `/` 的 index 路由在 Web 上是空的**：
    `src/spa/router/desktopRouter.shared.tsx:1603-1616` 的 index 元素是

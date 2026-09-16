@@ -7,7 +7,6 @@ import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspa
 import { useIsDark } from '@/hooks/useIsDark';
 
 import HomeAgentIdSync from './HomeAgentIdSync';
-import RecentSync from './RecentSync';
 import { styles } from './style';
 
 interface LayoutProps {
@@ -61,8 +60,10 @@ const Layout: FC<LayoutProps> = ({ children }) => {
           {content}
         </Flexbox>
 
+        {/* `RecentSync` used to sit here. It writes the recents the nav panel
+            reads, and Home is no longer mounted for the whole app, so it moved
+            to `GlobalOverlays` in the shell layout. */}
         <HomeAgentIdSync />
-        <RecentSync />
       </Flexbox>
     </Activity>
   );

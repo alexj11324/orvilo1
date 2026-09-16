@@ -40,6 +40,7 @@ vi.mock('@/features/Electron/ScreenCapture/OverlaySnapshotPublisher', nullCompon
 vi.mock('@/features/Electron/system/ZoomHUD', nullComponent);
 vi.mock('@/features/Electron/titlebar/TabBar/TabCacheBridges', nullComponent);
 vi.mock('@/features/Electron/titlebar/TitleBar', nullComponent);
+vi.mock('@/features/GlobalOverlays', nullComponent);
 vi.mock('@/features/HotkeyHelperPanel', nullComponent);
 vi.mock('@/features/NavPanel/Shell', nullComponent);
 vi.mock('@/layout/GlobalProvider/CmdkLazy', nullComponent);

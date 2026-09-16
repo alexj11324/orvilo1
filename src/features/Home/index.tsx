@@ -7,15 +7,11 @@ import { lazy, memo, Suspense, useCallback, useEffect, useState } from 'react';
 import { useHomeUsageWidgetActive } from '@/business/client/features/HomeUsageWidget';
 import { useHomePromoLine } from '@/business/client/features/useHomePromoLine';
 import { useChatStore } from '@/store/chat';
-import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
-import { useTaskStore } from '@/store/task';
-import { taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/slices/auth/selectors';
 
-import { isAcceptancePortalView } from './acceptancePortalView';
 import { isHomeMinimalLayout } from './CustomizeModal/config';
 import HomeHeader from './HomeHeader';
 import HomeModeContent from './HomeModeContent';
@@ -53,13 +49,6 @@ const clearOnboardingHomeModeParam = () => {
   window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
 };
 
-// The "View run" button on brief cards only writes drawer state to the task
-// store — some component must mount the drawer shell that reacts to it.
-// TaskDetailPage mounts its own; home needs one too, or the click is a silent
-// no-op. Lazy so the home bundle doesn't pay for the chat stack until a run is
-// actually opened.
-const TopicChatDrawer = lazy(() => import('@/features/AgentTasks/AgentTaskDetail/TopicChatDrawer'));
-const AcceptancePortalDrawer = lazy(() => import('./AcceptancePortalDrawer'));
 // The inbox renders markdown, briefs and an editor; keeping it lazy leaves the
 // greeting and the input box as the only static content of the home route.
 const HomeInbox = lazy(() => import('@/features/HomeInbox'));
@@ -341,15 +330,6 @@ const Home = memo(() => {
   );
   const [inputValue, setInputValue] = useState('');
 
-  const drawerTopicId = useTaskStore(taskDetailSelectors.activeTopicDrawerTopicId);
-  const portalViewType = useChatStore(chatPortalSelectors.currentViewType);
-  const acceptancePortalOpen = isAcceptancePortalView(portalViewType);
-  // Mount the drawer on first open and keep it mounted afterwards, so its
-  // close animation can play instead of the panel vanishing with the state.
-  const [drawerMounted, setDrawerMounted] = useState(false);
-  if (drawerTopicId && !drawerMounted) setDrawerMounted(true);
-  const [acceptanceDrawerMounted, setAcceptanceDrawerMounted] = useState(false);
-  if (acceptancePortalOpen && !acceptanceDrawerMounted) setAcceptanceDrawerMounted(true);
   const railVisible = resolveRailVisibility({ hiddenWidgets, isLogin, showHomeRail, usageActive });
   const railCollapsed = !railVisible;
   const portraitVisible = Boolean(isLogin && showHomePortrait);
@@ -448,19 +428,6 @@ const Home = memo(() => {
             <HomeInbox {...RAIL_INBOX_PROPS} variant={'rail'} />
           </Suspense>
         </aside>
-      )}
-
-      {/* FloatingPanel portals to the app element, so where this sits in the
-          tree doesn't affect its viewport-anchored position. */}
-      {drawerMounted && (
-        <Suspense fallback={null}>
-          <TopicChatDrawer />
-        </Suspense>
-      )}
-      {acceptanceDrawerMounted && (
-        <Suspense fallback={null}>
-          <AcceptancePortalDrawer />
-        </Suspense>
       )}
     </Flexbox>
   );

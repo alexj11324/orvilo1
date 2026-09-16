@@ -118,7 +118,12 @@ const resourceCategoryRoutes: RouteObject[] = [
 }));
 
 export interface MainAreaRouteOptions {
-  /** Electron renders Home inside each tab router; Web renders it beside the router outlet. */
+  /**
+   * What each platform puts in the index slot. They differ because the slot
+   * means different things: on Web the root router is the only router, so its
+   * index element is the app's landing behaviour; Electron gives every tab its
+   * own router, so each tab's index element is that tab's opening screen.
+   */
   createHomeElement?: () => ReactElement;
   /** Electron keeps the workspace settings redirect behind its own lazy route module. */
   createWorkspaceSettingsIndexElement?: () => ReactElement;

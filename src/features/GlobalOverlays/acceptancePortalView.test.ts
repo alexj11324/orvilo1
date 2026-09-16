@@ -6,7 +6,7 @@ import { isAcceptancePortalView } from './acceptancePortalView';
 
 describe('isAcceptancePortalView', () => {
   it.each([PortalViewType.Acceptance, PortalViewType.AcceptanceCheck])(
-    'hosts %s in the Home drawer',
+    'hosts %s in the app-wide acceptance drawer',
     (viewType) => {
       expect(isAcceptancePortalView(viewType)).toBe(true);
     },

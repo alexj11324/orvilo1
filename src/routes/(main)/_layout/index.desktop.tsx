@@ -27,6 +27,7 @@ import ZoomHUD from '@/features/Electron/system/ZoomHUD';
 import { TabHost, useSeedTabsOnBoot } from '@/features/Electron/TabHost';
 import TabCacheBridges from '@/features/Electron/titlebar/TabBar/TabCacheBridges';
 import TitleBar from '@/features/Electron/titlebar/TitleBar';
+import GlobalOverlays from '@/features/GlobalOverlays';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
 import NavPanelShell from '@/features/NavPanel/Shell';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
@@ -94,6 +95,7 @@ const Layout: FC = () => {
           <RegisterHotkeys />
           <CmdkLazy />
           <GlobalApprovalNotification />
+          <GlobalOverlays />
         </Suspense>
       </WorkspaceContextSlot>
     </HotkeysProvider>

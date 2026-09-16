@@ -14,6 +14,7 @@ import { isDesktop } from '@/const/version';
 import { BANNER_HEIGHT } from '@/features/AlertBanner/CloudBanner';
 import DesktopLayoutContainer from '@/features/DesktopLayoutContainer';
 import AuthRequiredModal from '@/features/Electron/AuthRequiredModal';
+import GlobalOverlays from '@/features/GlobalOverlays';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
 import NavPanelShell from '@/features/NavPanel/Shell';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
@@ -23,8 +24,6 @@ import CmdkLazy from '@/layout/GlobalProvider/CmdkLazy';
 import dynamic from '@/libs/next/dynamic';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
-import DesktopHome from '../home';
-import DesktopHomeLayout from '../home/_layout';
 import DesktopAutoOidcOnFirstOpen from './DesktopAutoOidcOnFirstOpen';
 import RegisterHotkeys from './RegisterHotkeys';
 import { styles } from './style';
@@ -55,9 +54,6 @@ const Layout: FC = () => {
           >
             <NavPanelShell />
             <DesktopLayoutContainer>
-              <DesktopHomeLayout>
-                <DesktopHome />
-              </DesktopHomeLayout>
               <Suspense fallback={<RouteSegmentSkeleton />}>
                 <Outlet />
               </Suspense>
@@ -69,6 +65,7 @@ const Layout: FC = () => {
           <RegisterHotkeys />
           <CmdkLazy />
           <GlobalApprovalNotification />
+          <GlobalOverlays />
         </Suspense>
       </WorkspaceContextSlot>
     </HotkeysProvider>

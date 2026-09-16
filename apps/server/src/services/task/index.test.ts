@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
@@ -67,6 +68,61 @@ vi.mock('@/server/services/aiAgent', () => ({
   }),
 }));
 
+// steerTopic touches the topic/operation/message models plus the runner —
+// mock them at the module boundary so the dispatch modes can be asserted
+// without a database.
+const {
+  cascadeMock,
+  cascadeManyMock,
+  latestNonToolMock,
+  latestSpineMock,
+  messageCreateMock,
+  operationFindByIdMock,
+  runTaskMock,
+  topicFindByIdMock,
+} = vi.hoisted(() => ({
+  cascadeManyMock: vi.fn(),
+  cascadeMock: vi.fn(),
+  latestNonToolMock: vi.fn(),
+  latestSpineMock: vi.fn(),
+  messageCreateMock: vi.fn(),
+  operationFindByIdMock: vi.fn(),
+  runTaskMock: vi.fn(),
+  topicFindByIdMock: vi.fn(),
+}));
+
+vi.mock('@/database/models/topic', () => ({
+  TopicModel: vi.fn().mockImplementation(function () {
+    return { delete: vi.fn(), findById: topicFindByIdMock };
+  }),
+}));
+
+vi.mock('@/database/models/agentOperation', () => ({
+  AgentOperationModel: vi.fn().mockImplementation(function () {
+    return { findById: operationFindByIdMock };
+  }),
+}));
+
+vi.mock('@/database/models/message', () => ({
+  MessageModel: vi.fn().mockImplementation(function () {
+    return {
+      create: messageCreateMock,
+      getLatestNonToolMessageId: latestNonToolMock,
+      getLatestSpineMessageId: latestSpineMock,
+    };
+  }),
+}));
+
+vi.mock('@/server/services/taskRunner', () => ({
+  TaskRunnerService: vi.fn().mockImplementation(function () {
+    return {
+      cascadeOnCompletion: cascadeMock,
+      cascadeOnCompletionMany: cascadeManyMock,
+      runTask: runTaskMock,
+    };
+  }),
+}));
+
 vi.mock('@/server/services/taskScheduler', () => ({
   createTaskSchedulerModule: () => ({ cancelScheduled, scheduleNextTopic }),
 }));
@@ -124,10 +180,12 @@ describe('TaskService', () => {
     cancelIfRunning: vi.fn(),
     cancelRunningByTaskIds: vi.fn(),
     findByTaskId: vi.fn(),
+    findByTopicId: vi.fn(),
     findRunningByTaskIds: vi.fn().mockResolvedValue([]),
     findWithHandoff: vi.fn(),
     findWithHandoffByTaskIds: vi.fn().mockResolvedValue([]),
     timeoutRunning: vi.fn(),
+    updateStatus: vi.fn(),
   };
 
   const mockBriefModel = {
@@ -2112,6 +2170,182 @@ describe('TaskService', () => {
         kind: 'agent',
         to: null,
       });
+    });
+  });
+
+  describe('steerTopic', () => {
+    const baseTask = {
+      assigneeAgentId: 'agt_1',
+      id: 'task-1',
+      identifier: 'TASK-1',
+    };
+
+    const runningLink = {
+      operationId: 'op-1',
+      status: 'running',
+      taskId: 'task-1',
+      topicId: 'topic-1',
+    };
+
+    beforeEach(() => {
+      mockTaskModel.resolve.mockResolvedValue(baseTask);
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(runningLink);
+      mockTaskTopicModel.updateStatus.mockResolvedValue(undefined);
+      topicFindByIdMock.mockResolvedValue({
+        metadata: { runningOperation: { heteroType: null, operationId: 'op-1' } },
+      });
+      operationFindByIdMock.mockResolvedValue({ agentId: 'agt_1', status: 'running' });
+      latestSpineMock.mockResolvedValue('msg-parent');
+      latestNonToolMock.mockResolvedValue(null);
+      messageCreateMock.mockResolvedValue({ id: 'msg-steer' });
+      runTaskMock.mockResolvedValue({ success: true, taskId: 'task-1' });
+    });
+
+    it('injects a live steer into a running homogeneous run without restarting it', async () => {
+      const service = new TaskService(db, userId);
+      const result = await service.steerTopic({
+        id: 'TASK-1',
+        message: 'do X first',
+        topicId: 'topic-1',
+      });
+
+      expect(result).toEqual({ messageId: 'msg-steer', mode: 'injected' });
+      expect(messageCreateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: { steer: true },
+          parentId: 'msg-parent',
+          role: 'user',
+          topicId: 'topic-1',
+        }),
+      );
+      expect(runTaskMock).not.toHaveBeenCalled();
+      expect(interruptTaskMock).not.toHaveBeenCalled();
+    });
+
+    it('asks for confirmation before tearing down a heterogeneous run', async () => {
+      topicFindByIdMock.mockResolvedValue({
+        metadata: { runningOperation: { heteroType: 'claude-code', operationId: 'op-1' } },
+      });
+
+      const service = new TaskService(db, userId);
+      const result = await service.steerTopic({
+        id: 'TASK-1',
+        message: 'stop that',
+        topicId: 'topic-1',
+      });
+
+      expect(result).toEqual({ mode: 'requiresInterrupt' });
+      // No message is persisted until the user confirms the interrupt.
+      expect(messageCreateMock).not.toHaveBeenCalled();
+      expect(interruptTaskMock).not.toHaveBeenCalled();
+    });
+
+    it('asks for confirmation when the run is parked on a human approval', async () => {
+      operationFindByIdMock.mockResolvedValue({
+        agentId: 'agt_1',
+        status: 'waiting_for_human',
+      });
+
+      const service = new TaskService(db, userId);
+      const result = await service.steerTopic({
+        id: 'TASK-1',
+        message: 'skip that tool',
+        topicId: 'topic-1',
+      });
+
+      expect(result).toEqual({ mode: 'requiresInterrupt' });
+      expect(messageCreateMock).not.toHaveBeenCalled();
+    });
+
+    it('interrupts a heterogeneous run then continues off the persisted steer message', async () => {
+      topicFindByIdMock.mockResolvedValue({
+        metadata: { runningOperation: { heteroType: 'claude-code', operationId: 'op-1' } },
+      });
+      interruptTaskMock.mockResolvedValue({ success: true });
+
+      const service = new TaskService(db, userId);
+      const result = await service.steerTopic({
+        id: 'TASK-1',
+        interrupt: true,
+        message: 'redirect the work',
+        topicId: 'topic-1',
+      });
+
+      expect(interruptTaskMock).toHaveBeenCalledWith({ operationId: 'op-1' });
+      expect(mockTaskTopicModel.updateStatus).toHaveBeenCalledWith('task-1', 'topic-1', 'canceled');
+      expect(runTaskMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          continueFromMessageId: 'msg-steer',
+          continueTopicId: 'topic-1',
+          taskId: 'task-1',
+        }),
+      );
+      expect(result).toEqual({ messageId: 'msg-steer', mode: 'continued' });
+    });
+
+    it('continues an idle topic off the steer message', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue({
+        ...runningLink,
+        operationId: null,
+        status: 'done',
+      });
+
+      const service = new TaskService(db, userId);
+      const result = await service.steerTopic({
+        id: 'TASK-1',
+        message: 'also handle Y',
+        topicId: 'topic-1',
+      });
+
+      expect(result).toEqual({ messageId: 'msg-steer', mode: 'continued' });
+      expect(runTaskMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          continueFromMessageId: 'msg-steer',
+          continueTopicId: 'topic-1',
+        }),
+      );
+    });
+
+    it('treats a lost continuation race as delivered, not failed', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue({
+        ...runningLink,
+        operationId: null,
+        status: 'done',
+      });
+      runTaskMock.mockRejectedValue(
+        new TRPCError({ code: 'CONFLICT', message: 'Topic topic-1 is already running.' }),
+      );
+
+      const service = new TaskService(db, userId);
+      const result = await service.steerTopic({
+        id: 'TASK-1',
+        message: 'racing steer',
+        topicId: 'topic-1',
+      });
+
+      // A concurrent run claimed the topic between the status read and the
+      // continuation attempt; the persisted message rides that run instead.
+      expect(result).toEqual({ messageId: 'msg-steer', mode: 'injected' });
+    });
+
+    it('rejects a topic that does not belong to the task', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue({
+        ...runningLink,
+        taskId: 'task-other',
+      });
+
+      const service = new TaskService(db, userId);
+      await expect(
+        service.steerTopic({ id: 'TASK-1', message: 'hi', topicId: 'topic-1' }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect(messageCreateMock).not.toHaveBeenCalled();
+    });
+
+    it('rejects an empty steer', async () => {
+      const service = new TaskService(db, userId);
+      await expect(
+        service.steerTopic({ id: 'TASK-1', message: '   ', topicId: 'topic-1' }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     });
   });
 });

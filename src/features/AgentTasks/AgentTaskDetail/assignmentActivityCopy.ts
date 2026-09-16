@@ -4,7 +4,9 @@ type AssignmentVerbKey =
   | 'taskDetail.activities.assignment.agentAssigned'
   | 'taskDetail.activities.assignment.agentUnassigned'
   | 'taskDetail.activities.assignment.memberAssigned'
-  | 'taskDetail.activities.assignment.memberUnassigned';
+  | 'taskDetail.activities.assignment.memberUnassigned'
+  | 'taskDetail.activities.assignment.reviewerAssigned'
+  | 'taskDetail.activities.assignment.reviewerUnassigned';
 
 type DeletedTargetKey =
   | 'taskDetail.activities.assignment.deletedAgent'
@@ -34,6 +36,7 @@ export const resolveAssignmentActivityCopy = (
   assignment: TaskDetailActivity['assignment'],
 ): AssignmentActivityCopy => {
   const isAgentSlot = assignment?.kind === 'agent';
+  const isReviewerSlot = assignment?.kind === 'reviewer';
   const assigned = Boolean(assignment?.to);
 
   return {
@@ -41,12 +44,16 @@ export const resolveAssignmentActivityCopy = (
     deletedTargetKey: isAgentSlot
       ? 'taskDetail.activities.assignment.deletedAgent'
       : 'taskDetail.activities.assignment.deletedMember',
-    verbKey: isAgentSlot
+    verbKey: isReviewerSlot
       ? assigned
-        ? 'taskDetail.activities.assignment.agentAssigned'
-        : 'taskDetail.activities.assignment.agentUnassigned'
-      : assigned
-        ? 'taskDetail.activities.assignment.memberAssigned'
-        : 'taskDetail.activities.assignment.memberUnassigned',
+        ? 'taskDetail.activities.assignment.reviewerAssigned'
+        : 'taskDetail.activities.assignment.reviewerUnassigned'
+      : isAgentSlot
+        ? assigned
+          ? 'taskDetail.activities.assignment.agentAssigned'
+          : 'taskDetail.activities.assignment.agentUnassigned'
+        : assigned
+          ? 'taskDetail.activities.assignment.memberAssigned'
+          : 'taskDetail.activities.assignment.memberUnassigned',
   };
 };

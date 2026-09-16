@@ -44,6 +44,10 @@ const activeTaskAgentId = (s: TaskStoreState) => activeTaskDetail(s)?.agentId;
 // server-side `tasks.assignee_user_id` column.
 const activeTaskAssigneeUserId = (s: TaskStoreState) => activeTaskDetail(s)?.userId;
 
+// Review-phase owner: the member accountable while the task sits paused for
+// review. Falls back to assignee→creator server-side on the paused transition.
+const activeTaskReviewerUserId = (s: TaskStoreState) => activeTaskDetail(s)?.reviewerUserId;
+
 // TODO: Once the frontend store switches to reading from detail.model / detail.provider returned by the backend getTaskDetail procedure
 const activeTaskModel = (s: TaskStoreState) =>
   activeTaskDetail(s)?.config?.model as string | undefined;
@@ -148,6 +152,7 @@ export const taskDetailSelectors = {
   activeTaskPeriodicInterval,
   activeTaskPriority,
   activeTaskProvider,
+  activeTaskReviewerUserId,
   activeTaskScheduleMaxExecutions,
   activeTaskSchedulePattern,
   activeTaskScheduleTimezone,

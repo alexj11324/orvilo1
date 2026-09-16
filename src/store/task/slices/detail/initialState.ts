@@ -10,6 +10,13 @@ export interface TaskDetailSliceState {
    * `taskDetailMap` entry to read the agent / title from.
    */
   activeTopicDrawerAgentId?: string;
+  /**
+   * The task (identifier) that owns the drawer's topic — set when a run is
+   * opened from a surface where `activeTaskId` does not point at the owning
+   * task (the kanban board), so run status / steering resolve against the
+   * right task detail.
+   */
+  activeTopicDrawerTaskId?: string;
   activeTopicDrawerTitle?: string;
   activeTopicDrawerTopicId?: string;
   isCreatingTask: boolean;

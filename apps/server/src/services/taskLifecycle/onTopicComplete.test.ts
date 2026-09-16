@@ -9,8 +9,9 @@ const fakeScheduler = {
   scheduleNextTopic: vi.fn().mockResolvedValue('msg-new'),
 };
 
-const { cascadeOnCompletion } = vi.hoisted(() => ({
+const { cascadeOnCompletion, runTaskMock } = vi.hoisted(() => ({
   cascadeOnCompletion: vi.fn().mockResolvedValue({ failed: [], paused: [], started: [] }),
+  runTaskMock: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 // The error brief only grows an "Upgrade plan" remedy when the distribution
@@ -35,7 +36,7 @@ vi.mock('@orvilo/business-const', async (importOriginal) => ({
 
 vi.mock('@/server/services/taskRunner', () => ({
   TaskRunnerService: vi.fn(function () {
-    return { cascadeOnCompletion };
+    return { cascadeOnCompletion, runTask: runTaskMock };
   }),
 }));
 
@@ -137,6 +138,13 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     taskModel.getCheckpointConfig = vi.fn().mockReturnValue({});
     // Default checkpoint behavior: pause after topic complete
     taskModel.shouldPauseOnTopicComplete = vi.fn().mockReturnValue(true);
+    // The late-steer probe reads the topic spine tail; default to "no tail
+    // message" so the probe is a no-op unless a test stages a steer row.
+    (service as any).messageModel = {
+      findById: vi.fn().mockResolvedValue(undefined),
+      getLatestSpineMessageId: vi.fn().mockResolvedValue(undefined),
+    };
+    runTaskMock.mockReset().mockResolvedValue({ success: true });
     // Avoid generateHandoff side effects by skipping when lastAssistantContent is undefined
     (service as any).taskTopicModel.updateStatus = updateTopicStatus;
     (service as any).taskTopicModel.updateHandoffContent = vi.fn().mockResolvedValue(undefined);
@@ -296,6 +304,105 @@ describe('TaskLifecycleService.onTopicComplete', () => {
 
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', { error: null });
       expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'scheduled', expect.anything());
+    });
+
+    it('continues the topic off a tail steer the finished run never consumed', async () => {
+      const task = baseTask({ automationMode: null });
+      findById.mockResolvedValue(task);
+      const messageModel = (service as any).messageModel;
+      messageModel.getLatestSpineMessageId.mockResolvedValue('msg-steer');
+      messageModel.findById.mockResolvedValue({
+        id: 'msg-steer',
+        metadata: { steer: true },
+        role: 'user',
+      });
+
+      await service.onTopicComplete({
+        operationId: 'op-1',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+      });
+
+      expect(runTaskMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          continueFromMessageId: 'msg-steer',
+          continueTopicId: 'topic-1',
+          taskId: 'task-1',
+        }),
+      );
+      // The continuation owns the lifecycle — parking for review is skipped.
+      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
+    });
+
+    it('parks normally when the tail steer was already consumed mid-run', async () => {
+      const task = baseTask({ automationMode: null });
+      findById.mockResolvedValue(task);
+      const messageModel = (service as any).messageModel;
+      messageModel.getLatestSpineMessageId.mockResolvedValue('msg-steer');
+      messageModel.findById.mockResolvedValue({
+        id: 'msg-steer',
+        metadata: { steer: true, steerConsumedBy: 'op-1' },
+        role: 'user',
+      });
+
+      await service.onTopicComplete({
+        operationId: 'op-1',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+      });
+
+      expect(runTaskMock).not.toHaveBeenCalled();
+      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', { error: null });
+    });
+
+    it('lets a verify-bound settle own the transition instead of steering', async () => {
+      const task = baseTask({ automationMode: null });
+      findById.mockResolvedValue(task);
+      verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date() });
+      const messageModel = (service as any).messageModel;
+      messageModel.getLatestSpineMessageId.mockResolvedValue('msg-steer');
+      messageModel.findById.mockResolvedValue({
+        id: 'msg-steer',
+        metadata: { steer: true },
+        role: 'user',
+      });
+
+      await service.onTopicComplete({
+        operationId: 'op-1',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+      });
+
+      expect(runTaskMock).not.toHaveBeenCalled();
+    });
+
+    it('still parks when the late-steer continuation cannot start', async () => {
+      const task = baseTask({ automationMode: null });
+      findById.mockResolvedValue(task);
+      const messageModel = (service as any).messageModel;
+      messageModel.getLatestSpineMessageId.mockResolvedValue('msg-steer');
+      messageModel.findById.mockResolvedValue({
+        id: 'msg-steer',
+        metadata: { steer: true },
+        role: 'user',
+      });
+      runTaskMock.mockRejectedValue(new Error('runner unavailable'));
+
+      await service.onTopicComplete({
+        operationId: 'op-1',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+      });
+
+      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', { error: null });
     });
 
     it('finalizes a current-operation completion request after the topic completes', async () => {

@@ -21,6 +21,7 @@ import {
   normalizeKanbanGroupBy,
   placeKanbanCardInColumn,
   preserveKanbanColumnOrder,
+  resolveKanbanDragTask,
   resolveKanbanDropColumn,
   STATUS_KANBAN_COLUMNS,
   taskKanbanColumnKey,
@@ -405,6 +406,30 @@ describe('kanbanBoardModel', () => {
       expect(buildKanbanGroupQuery({ excludeStatuses, groupBy: 'status' })).toMatchObject({
         excludeStatuses,
       });
+    });
+  });
+
+  describe('resolveKanbanDragTask', () => {
+    it('reads the task from drag data when the node is still mounted', () => {
+      const dragged = task('1');
+      const map = new Map([[dragged.identifier, dragged]]);
+      const active = { data: { current: { task: dragged } }, id: dragged.identifier };
+      expect(resolveKanbanDragTask(active, map)).toBe(dragged);
+    });
+
+    it('falls back to the snapshot map when the dragged node unmounted mid-drag', () => {
+      // Regression: parking the card onto a hidden column unmounts its
+      // sortable node, and dnd-kit clears `data.current` — the drop must
+      // still resolve the task or it silently writes nothing.
+      const dragged = task('1');
+      const map = new Map([[dragged.identifier, dragged]]);
+      const active = { data: { current: {} }, id: dragged.identifier };
+      expect(resolveKanbanDragTask(active, map)).toBe(dragged);
+    });
+
+    it('returns undefined when neither source knows the id', () => {
+      const active = { data: { current: {} }, id: 'ghost' };
+      expect(resolveKanbanDragTask(active, new Map())).toBeUndefined();
     });
   });
 

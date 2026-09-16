@@ -65,6 +65,7 @@ const TRACKED_TASK_COLUMNS = [
   'config',
   'heartbeatInterval',
   'priority',
+  'reviewerUserId',
   'schedulePattern',
   'scheduleTimezone',
   'status',
@@ -455,6 +456,24 @@ export class TaskModel {
     return result[0] || null;
   }
 
+  /**
+   * Reviewer backfill for the 'paused' ("pending review") transition: the
+   * human accountable at review is the member assignee when there is one,
+   * otherwise the creator. COALESCE keeps an explicitly chosen reviewer
+   * (either a non-null `reviewer_user_id` already on the row, or a caller-
+   * supplied `data.reviewerUserId`) instead of overwriting it.
+   */
+  private static reviewerBackfillSet(status: string | undefined, explicit?: string | null) {
+    if (status !== 'paused' || explicit !== undefined) return {};
+    return {
+      reviewerUserId: sql<string | null>`coalesce(
+        ${tasks.reviewerUserId},
+        ${tasks.assigneeUserId},
+        ${tasks.createdByUserId}
+      )`,
+    };
+  }
+
   async update(
     id: string,
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
@@ -463,7 +482,11 @@ export class TaskModel {
 
     const updated = await this.db
       .update(tasks)
-      .set({ ...data, updatedAt: new Date() })
+      .set({
+        ...data,
+        ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
+        updatedAt: new Date(),
+      })
       .where(and(eq(tasks.id, id), this.ownership()))
       .returning();
     return updated[0] || null;
@@ -1488,7 +1511,12 @@ export class TaskModel {
   ): Promise<TaskItem | null> {
     const [task] = await this.db
       .update(tasks)
-      .set({ status, updatedAt: new Date(), ...extra })
+      .set({
+        status,
+        updatedAt: new Date(),
+        ...extra,
+        ...TaskModel.reviewerBackfillSet(status),
+      })
       .where(and(eq(tasks.id, id), eq(tasks.status, currentStatus), this.ownership()))
       .returning();
 
@@ -1498,7 +1526,7 @@ export class TaskModel {
   async batchUpdateStatus(ids: string[], status: string): Promise<number> {
     const result = await this.db
       .update(tasks)
-      .set({ status, updatedAt: new Date() })
+      .set({ status, updatedAt: new Date(), ...TaskModel.reviewerBackfillSet(status) })
       .where(and(inArray(tasks.id, ids), this.ownership()))
       .returning();
 
@@ -1519,7 +1547,12 @@ export class TaskModel {
     if (ids.length === 0) return [];
     return this.db
       .update(tasks)
-      .set({ status, updatedAt: new Date(), ...extra })
+      .set({
+        status,
+        updatedAt: new Date(),
+        ...extra,
+        ...TaskModel.reviewerBackfillSet(status),
+      })
       .where(and(inArray(tasks.id, ids), this.ownership()))
       .returning();
   }
@@ -2223,6 +2256,7 @@ export class TaskModel {
           config: tasks.config,
           heartbeatInterval: tasks.heartbeatInterval,
           priority: tasks.priority,
+          reviewerUserId: tasks.reviewerUserId,
           schedulePattern: tasks.schedulePattern,
           scheduleTimezone: tasks.scheduleTimezone,
           status: tasks.status,
@@ -2251,6 +2285,16 @@ export class TaskModel {
         events.push({
           payload: { fromId: before.assigneeUserId, toId: updated.assigneeUserId },
           type: 'assignee_user',
+        });
+      }
+      // Only an explicit reviewer write earns a feed row — the COALESCE
+      // backfill stamped on a paused transition is the system's fallback
+      // choice, and attributing it to whoever paused would read as their
+      // deliberate pick.
+      if (data.reviewerUserId !== undefined && before.reviewerUserId !== updated.reviewerUserId) {
+        events.push({
+          payload: { fromId: before.reviewerUserId, toId: updated.reviewerUserId },
+          type: 'reviewer',
         });
       }
       if (before.status !== updated.status) {

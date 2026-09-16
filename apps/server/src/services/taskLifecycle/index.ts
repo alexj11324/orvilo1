@@ -36,6 +36,7 @@ import {
 } from '@/business/server/task/notifyScheduledTaskResult';
 import { BriefModel } from '@/database/models/brief';
 import { GoalModel } from '@/database/models/goal';
+import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
@@ -114,6 +115,7 @@ export interface TopicCompleteParams {
 export class TaskLifecycleService {
   private briefModel: BriefModel;
   private db: LobeChatDatabase;
+  private messageModel: MessageModel;
   private systemAgentService: SystemAgentService;
   private taskModel: TaskModel;
   private taskTopicModel: TaskTopicModel;
@@ -129,6 +131,7 @@ export class TaskLifecycleService {
     this.taskModel = new TaskModel(db, userId, workspaceId);
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.briefModel = new BriefModel(db, userId, workspaceId);
+    this.messageModel = new MessageModel(db, userId, workspaceId);
     this.topicModel = new TopicModel(db, userId, workspaceId);
     this.systemAgentService = new SystemAgentService(db, userId, workspaceId);
   }
@@ -283,6 +286,43 @@ export class TaskLifecycleService {
         verifyBound = Boolean(verifyRun?.planConfirmedAt);
       } catch (error) {
         log('verify-bound check failed for op=%s (non-fatal): %O', params.operationId, error);
+      }
+
+      // Late-steer fallback: a steer message (`task.steer`) that landed after
+      // the run's last consumed step sits as an unanswered tail user turn —
+      // the runtime never saw it. Continue the same topic off that persisted
+      // row instead of parking for review, so steering is never lost. Skipped
+      // for verify-bound runs: the verify settle owns the next transition.
+      if (topicId && !verifyBound) {
+        const steerMessageId = await this.findUnconsumedSteerMessageId(topicId);
+        if (steerMessageId) {
+          try {
+            // Lazy import breaks the taskRunner -> taskLifecycle static cycle.
+            const { TaskRunnerService } = await import('../taskRunner');
+            await new TaskRunnerService(this.db, this.userId, this.workspaceId).runTask({
+              continueFromMessageId: steerMessageId,
+              continueTopicId: topicId,
+              taskId,
+              trigger: params.runTrigger,
+            });
+            log(
+              'onTopicComplete: continuing topic=%s off late steer message %s',
+              topicId,
+              steerMessageId,
+            );
+            // The continuation owns the lifecycle now — its own completion
+            // produces the brief, handoff, status transition and re-arm.
+            return;
+          } catch (error) {
+            // Fall through to the normal settle — the message stays in the
+            // topic for the user to follow up on manually.
+            log(
+              'onTopicComplete: late-steer continuation failed for topic=%s (non-fatal): %O',
+              topicId,
+              error,
+            );
+          }
+        }
       }
 
       if (currentTask) {
@@ -554,6 +594,28 @@ export class TaskLifecycleService {
     // next tick.
     const finalTask = await this.taskModel.findById(taskId);
     if (finalTask) await this.maybeRearmHeartbeat(finalTask, reason);
+  }
+
+  /**
+   * A steer message the just-finished run never saw: the spine tail is a
+   * `metadata.steer` user row without a `steerConsumedBy` stamp (the stamp is
+   * written by the runtime when it loads the message into the working set —
+   * see `AgentRuntimeService.refreshMessagesFromDB`). Only the tail matters:
+   * an earlier unconsumed steer is still inside the continued run's history.
+   */
+  private async findUnconsumedSteerMessageId(topicId: string): Promise<string | undefined> {
+    const tailId = await this.messageModel
+      .getLatestSpineMessageId({ topicId })
+      .catch(() => undefined);
+    if (!tailId) return undefined;
+
+    const tail = await this.messageModel.findById(tailId).catch(() => undefined);
+    if (tail?.role !== 'user') return undefined;
+
+    const metadata = tail.metadata as
+      { steer?: boolean; steerConsumedBy?: string } | null | undefined;
+    if (metadata?.steer !== true || metadata.steerConsumedBy) return undefined;
+    return tail.id;
   }
 
   /**

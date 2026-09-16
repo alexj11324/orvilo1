@@ -17,7 +17,7 @@ export type TaskActivityType =
  * change with no migration.
  */
 export type TaskActivityLogType =
-  'assignee_agent' | 'assignee_user' | 'automation' | 'priority' | 'status';
+  'assignee_agent' | 'assignee_user' | 'automation' | 'priority' | 'reviewer' | 'status';
 
 /**
  * Payload of a `task_activities` row: what the slot moved between.
@@ -55,7 +55,7 @@ export interface TaskAutomationSnapshot {
 export type TaskActivityValue = number | string | TaskAutomationSnapshot | null;
 
 /** Which assignee slot an `assignment` activity describes. */
-export type TaskAssignmentKind = 'agent' | 'member';
+export type TaskAssignmentKind = 'agent' | 'member' | 'reviewer';
 
 // null = no automation
 export type TaskAutomationMode = 'heartbeat' | 'schedule';
@@ -447,6 +447,11 @@ export interface TaskItem {
   position: number | null;
   priority: number | null;
   projectId: string | null;
+  /**
+   * The human accountable while the task sits in 'paused' ("pending review").
+   * Stamped when a run hands off for review; the assignees stay the executors.
+   */
+  reviewerUserId: string | null;
   schedulePattern: string | null;
   scheduleTimezone: string | null;
   seq: number;
@@ -512,6 +517,7 @@ export interface NewTask {
   position?: number | null;
   priority?: number | null;
   projectId?: string | null;
+  reviewerUserId?: string | null;
   schedulePattern?: string | null;
   scheduleTimezone?: string | null;
   seq: number;
@@ -551,6 +557,8 @@ export interface TaskDetailSubtask {
   identifier: string;
   name?: string | null;
   priority?: number | null;
+  /** Review-phase owner once the subtask pauses for review. */
+  reviewerUserId?: string | null;
   runningTopic?: TaskDetailSubtaskRunningTopic | null;
   schedule?: { pattern?: string | null; timezone?: string | null };
   status: string;
@@ -737,6 +745,8 @@ export interface TaskDetailData {
   name?: string | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
   priority?: number | null;
+  /** The human accountable while the task sits in 'paused' ("pending review"). */
+  reviewerUserId?: string | null;
   schedule?: {
     maxExecutions?: number | null;
     pattern?: string | null;

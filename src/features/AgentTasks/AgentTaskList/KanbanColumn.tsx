@@ -1,50 +1,29 @@
 import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { type DropdownItem, DropdownMenu, Icon } from '@lobehub/ui';
+import { Icon } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
-import { EyeOff, MoreHorizontal, Plus } from 'lucide-react';
-import { memo, type ReactNode, useMemo } from 'react';
+import { EyeOff, Plus } from 'lucide-react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { TaskKanbanGroupBy, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
-import AgentTaskItem from '../features/AgentTaskItem';
 import TaskStatusIcon from '../features/TaskStatusIcon';
 import { getKanbanColumnHeaderVariant } from './kanbanBoardModel';
 import type { TaskGroupMeta } from './listViewOptions';
+import TaskBoardCard from './TaskBoardCard';
 import TaskGroupLabel from './TaskGroupLabel';
 import TaskItemSkeleton from './TaskItemSkeleton';
 
-export const COLUMN_WIDTH = 300;
+export const COLUMN_WIDTH = 320;
 
-const cardStyles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgElevated};
-    box-shadow:
-      0 1px 2px rgb(0 0 0 / 4%),
-      0 2px 6px rgb(0 0 0 / 3%);
-
-    &,
-    & * {
-      cursor: default;
-    }
-
-    &:active,
-    &:active * {
-      cursor: grabbing;
-    }
-
-    &:hover > * {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
+const cardStyles = createStaticStyles(({ css }) => ({
   dragging: css`
-    visibility: hidden;
+    opacity: 0.3;
   `,
 }));
 
@@ -58,7 +37,7 @@ const SortableTaskCard = memo<{ routeScope?: TaskItemRouteScope; task: TaskListI
     return (
       <div
         data-board-card
-        className={cx(cardStyles.card, isDragging && cardStyles.dragging)}
+        className={cx(isDragging && cardStyles.dragging)}
         ref={setNodeRef}
         style={{
           transform: CSS.Transform.toString(transform),
@@ -67,17 +46,13 @@ const SortableTaskCard = memo<{ routeScope?: TaskItemRouteScope; task: TaskListI
         {...listeners}
         {...attributes}
       >
-        <AgentTaskItem routeScope={routeScope} task={task} variant="compact" />
+        <TaskBoardCard routeScope={routeScope} task={task} />
       </div>
     );
   },
 );
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  action: css`
-    opacity: 0;
-    transition: opacity 0.2s;
-  `,
   addPill: css`
     cursor: pointer;
 
@@ -87,8 +62,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     justify-content: center;
 
     height: 36px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 999px;
+    border: 1px dashed ${cssVar.colorBorder};
+    border-radius: ${cssVar.borderRadiusLG};
 
     color: ${cssVar.colorTextTertiary};
 
@@ -110,8 +85,15 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     flex-direction: column;
     gap: 6px;
 
+    min-height: 120px;
     padding-block: 4px 12px;
     padding-inline: 8px;
+    border-radius: 0 0 ${cssVar.borderRadiusLG} ${cssVar.borderRadiusLG};
+
+    transition: background 0.2s;
+  `,
+  bodyDropActive: css`
+    background: ${cssVar.colorFillSecondary};
   `,
   column: css`
     display: flex;
@@ -120,21 +102,44 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     width: ${COLUMN_WIDTH}px;
     max-height: 100%;
+    border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: ${cssVar.borderRadiusLG};
 
-    background: ${cssVar.colorFillQuaternary};
+    background: ${cssVar.colorBgContainer};
 
     transition:
-      background 0.2s,
-      box-shadow 0.2s;
+      box-shadow 0.2s,
+      border-color 0.2s;
 
-    &:hover .kanban-col-action {
+    .kanban-col-action {
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    &:hover .kanban-col-action,
+    &:focus-within .kanban-col-action,
+    &:has([data-open]) .kanban-col-action {
       opacity: 1;
     }
   `,
-  dropActive: css`
-    background: ${cssVar.colorFillTertiary};
+  columnDropActive: css`
+    border-color: ${cssVar.colorPrimaryBorderHover};
     box-shadow: inset 0 0 0 1px ${cssVar.colorPrimaryBorderHover};
+  `,
+  count: css`
+    flex: none;
+
+    padding-block: 1px;
+    padding-inline: 6px;
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    line-height: 16px;
+    color: ${cssVar.colorTextTertiary};
+
+    background: ${cssVar.colorFillTertiary};
   `,
   emptyText: css`
     padding-block: 24px;
@@ -146,21 +151,27 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   header: css`
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
+    justify-content: space-between;
 
-    padding-block: 10px 8px;
-    padding-inline: 10px 6px;
+    min-height: 40px;
+    padding-block: 10px;
+    padding-inline: 12px 8px;
   `,
   headerActions: css`
     display: flex;
     gap: 2px;
     align-items: center;
-    margin-inline-start: auto;
+  `,
+  headerTitle: css`
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    min-width: 0;
   `,
   notDroppable: css`
-    pointer-events: none;
-    opacity: 0.4;
+    opacity: 0.45;
   `,
 }));
 
@@ -232,62 +243,46 @@ const KanbanColumn = memo<KanbanColumnProps>(
     const showDropHighlight = isOver && droppable && !isFromThisColumn;
     const showDisabled = isDragActive && !droppable;
 
-    const menuItems = useMemo<DropdownItem[]>(
-      () =>
-        onHide
-          ? [
-              {
-                icon: <Icon icon={EyeOff} />,
-                key: 'hide',
-                label: t('taskList.kanban.hideColumn'),
-                onClick: onHide,
-              },
-            ]
-          : [],
-      [onHide, t],
-    );
-
     return (
       <div
         ref={setNodeRef}
         className={cx(
           styles.column,
-          showDropHighlight && styles.dropActive,
+          showDropHighlight && styles.columnDropActive,
           showDisabled && styles.notDroppable,
         )}
       >
         <div className={styles.header}>
-          {headerVariant === 'loading' ? (
-            <>
-              <Skeleton.Avatar
-                shape={'square'}
-                size={16}
-                style={{ borderRadius: 4, flex: 'none' }}
-              />
-              <Skeleton height={14} style={{ minWidth: 64 }} width={64} />
-              <Skeleton height={12} style={{ minWidth: 20 }} width={20} />
-            </>
-          ) : headerVariant === 'group' && groupMeta ? (
-            <>
+          <div className={styles.headerTitle}>
+            {headerVariant === 'loading' ? (
+              <>
+                <Skeleton.Avatar
+                  shape={'square'}
+                  size={16}
+                  style={{ borderRadius: 4, flex: 'none' }}
+                />
+                <Skeleton height={14} style={{ minWidth: 64 }} width={64} />
+              </>
+            ) : headerVariant === 'group' && groupMeta ? (
               <TaskGroupLabel group={groupMeta} />
-              <Text fontSize={12} type={'secondary'}>
-                {total}
-              </Text>
-            </>
-          ) : (
-            <>
-              {statusIcon && <TaskStatusIcon size={18} status={statusIcon} />}
-              <Text weight={500}>{label}</Text>
-              <Text fontSize={12} type={'secondary'}>
-                {total}
-              </Text>
-            </>
-          )}
+            ) : (
+              <>
+                {statusIcon && <TaskStatusIcon size={16} status={statusIcon} />}
+                <Text fontSize={13} weight={500}>
+                  {label}
+                </Text>
+              </>
+            )}
+            {headerVariant !== 'loading' && <span className={styles.count}>{total}</span>}
+          </div>
           <div className={cx(styles.headerActions, 'kanban-col-action')}>
-            {menuItems.length > 0 && (
-              <DropdownMenu items={menuItems}>
-                <ActionIcon icon={MoreHorizontal} size={'small'} />
-              </DropdownMenu>
+            {onHide && (
+              <ActionIcon
+                icon={EyeOff}
+                size={'small'}
+                title={t('taskList.kanban.hideColumn')}
+                onClick={onHide}
+              />
             )}
             {onCreate && (
               <ActionIcon
@@ -299,12 +294,10 @@ const KanbanColumn = memo<KanbanColumnProps>(
             )}
           </div>
         </div>
-        <div className={styles.body}>
+        <div className={cx(styles.body, showDropHighlight && styles.bodyDropActive)}>
           {loading ? (
             Array.from({ length: 3 }).map((_, index) => (
-              <div className={cardStyles.card} key={`kanban-skeleton-${columnKey}-${index}`}>
-                <TaskItemSkeleton variant={'compact'} />
-              </div>
+              <TaskItemSkeleton key={`kanban-skeleton-${columnKey}-${index}`} variant={'compact'} />
             ))
           ) : tasks.length > 0 ? (
             <SortableContext

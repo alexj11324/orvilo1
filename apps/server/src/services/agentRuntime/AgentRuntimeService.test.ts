@@ -3174,4 +3174,52 @@ describe('AgentRuntimeService', () => {
       expect(result.nextStepScheduled).toBe(true);
     });
   });
+
+  describe('markSteerMessagesConsumed', () => {
+    const callMarkSteer = (dbMessages: any[], operationId = 'op-1') =>
+      (service as any).markSteerMessagesConsumed(dbMessages, operationId);
+
+    beforeEach(() => {
+      (service as any).messageModel.updateMetadata = vi.fn().mockResolvedValue(undefined);
+    });
+
+    it('stamps an unconsumed steer user message with the operation id', async () => {
+      await callMarkSteer([{ id: 'steer-1', metadata: { steer: true }, role: 'user' }]);
+
+      expect((service as any).messageModel.updateMetadata).toHaveBeenCalledWith('steer-1', {
+        steerConsumedBy: 'op-1',
+      });
+    });
+
+    it('skips non-steer, non-user and already-consumed messages', async () => {
+      await callMarkSteer([
+        { id: 'plain-user', metadata: null, role: 'user' },
+        { id: 'steer-assistant', metadata: { steer: true }, role: 'assistant' },
+        {
+          id: 'steer-done',
+          metadata: { steer: true, steerConsumedBy: 'op-0' },
+          role: 'user',
+        },
+      ]);
+
+      expect((service as any).messageModel.updateMetadata).not.toHaveBeenCalled();
+    });
+
+    it('keeps stamping the remaining messages when one update fails', async () => {
+      (service as any).messageModel.updateMetadata = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('db write failed'))
+        .mockResolvedValue(undefined);
+
+      await callMarkSteer([
+        { id: 'steer-1', metadata: { steer: true }, role: 'user' },
+        { id: 'steer-2', metadata: { steer: true }, role: 'user' },
+      ]);
+
+      expect((service as any).messageModel.updateMetadata).toHaveBeenCalledTimes(2);
+      expect((service as any).messageModel.updateMetadata).toHaveBeenLastCalledWith('steer-2', {
+        steerConsumedBy: 'op-1',
+      });
+    });
+  });
 });

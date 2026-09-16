@@ -17,8 +17,12 @@ export interface BuildOptimisticAssignmentInput {
   assigneeAgentId?: string | null;
   assigneeUserId?: string | null;
   /** The assignees before this edit, for the no-op check and the `from` side. */
-  current: { agentId?: string | null; userId?: string | null };
+  current: { agentId?: string | null; reviewerUserId?: string | null; userId?: string | null };
   now: string;
+  /** Display metadata for the newly chosen reviewer, handed in by the picker that has it. */
+  reviewerTarget?: TaskDetailActivityAuthor;
+  /** `undefined` = slot untouched, `null` = cleared. Mirrors `TaskUpdatePayload`. */
+  reviewerUserId?: string | null;
   /** Display metadata for the newly chosen assignee, handed in by the picker that has it. */
   target?: TaskDetailActivityAuthor;
 }
@@ -39,6 +43,8 @@ export const buildOptimisticAssignmentActivities = ({
   assigneeUserId,
   current,
   now,
+  reviewerTarget,
+  reviewerUserId,
   target,
 }: BuildOptimisticAssignmentInput): TaskDetailActivity[] => {
   if (!actor) return [];
@@ -47,9 +53,11 @@ export const buildOptimisticAssignmentActivities = ({
   const side = (
     id: string | null | undefined,
     type: TaskDetailActivityAuthor['type'],
+    meta?: TaskDetailActivityAuthor,
   ): TaskDetailActivityAuthor | null => {
     if (!id) return null;
-    return target?.id === id ? target : { id, name: null, type };
+    const known = target?.id === id ? target : meta?.id === id ? meta : undefined;
+    return known ?? { id, name: null, type };
   };
 
   if (assigneeAgentId !== undefined && assigneeAgentId !== (current.agentId ?? null)) {
@@ -75,6 +83,20 @@ export const buildOptimisticAssignmentActivities = ({
       },
       author: actor,
       id: `${OPTIMISTIC_ACTIVITY_ID_PREFIX}assignment-member-${now}`,
+      time: now,
+      type: 'assignment',
+    });
+  }
+
+  if (reviewerUserId !== undefined && reviewerUserId !== (current.reviewerUserId ?? null)) {
+    rows.push({
+      assignment: {
+        from: side(current.reviewerUserId, 'user'),
+        kind: 'reviewer',
+        to: side(reviewerUserId, 'user', reviewerTarget),
+      },
+      author: actor,
+      id: `${OPTIMISTIC_ACTIVITY_ID_PREFIX}assignment-reviewer-${now}`,
       time: now,
       type: 'assignment',
     });

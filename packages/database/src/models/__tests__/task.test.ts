@@ -230,6 +230,80 @@ describe('TaskModel', () => {
       const result = await model2.update(task.id, { name: 'Hacked' });
       expect(result).toBeNull();
     });
+
+    it('backfills the reviewer from the member assignee on the paused transition', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
+
+      const updated = await model.update(task.id, { status: 'paused' });
+
+      expect(updated!.status).toBe('paused');
+      expect(updated!.reviewerUserId).toBe(userId2);
+    });
+
+    it('falls back to the creator when no member assignee exists', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Do X' });
+
+      const updated = await model.update(task.id, { status: 'paused' });
+
+      expect(updated!.reviewerUserId).toBe(userId);
+    });
+
+    it('keeps an explicitly chosen reviewer over the backfill', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
+
+      const updated = await model.update(task.id, {
+        reviewerUserId: userId,
+        status: 'paused',
+      });
+
+      expect(updated!.reviewerUserId).toBe(userId);
+    });
+
+    it('lets an explicit null clear the reviewer even while pausing', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
+
+      const updated = await model.update(task.id, {
+        reviewerUserId: null,
+        status: 'paused',
+      });
+
+      expect(updated!.reviewerUserId).toBeNull();
+    });
+
+    it('does not touch the reviewer on non-paused transitions', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
+
+      const updated = await model.update(task.id, { status: 'running' });
+
+      expect(updated!.reviewerUserId).toBeNull();
+    });
+
+    it('keeps a previously stored reviewer on a later pause', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
+      await model.update(task.id, { reviewerUserId: userId });
+
+      const updated = await model.update(task.id, { status: 'paused' });
+
+      expect(updated!.reviewerUserId).toBe(userId);
+    });
+  });
+
+  describe('updateStatusIfCurrent', () => {
+    it('backfills the reviewer when the transition lands on paused', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
+      await model.update(task.id, { status: 'running' });
+
+      const updated = await model.updateStatusIfCurrent(task.id, 'running', 'paused');
+
+      expect(updated!.reviewerUserId).toBe(userId2);
+    });
   });
 
   describe('delete', () => {

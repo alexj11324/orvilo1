@@ -35,7 +35,14 @@ const hasUnresolvedBriefs = (s: TaskStoreState): boolean => unresolvedBriefCount
 const activeDrawerTopicActivity = (s: TaskStoreState): TaskDetailActivity | undefined => {
   const topicId = s.activeTopicDrawerTopicId;
   if (!topicId) return undefined;
-  return activeTaskTopics(s).find((a) => a.id === topicId);
+  // A run opened off its task's detail surface (kanban board) carries the
+  // owning task identifier — its activities live under that detail entry, not
+  // whatever `activeTaskId` happens to point at.
+  const detail = s.activeTopicDrawerTaskId
+    ? s.taskDetailMap[s.activeTopicDrawerTaskId]
+    : taskDetailSelectors.activeTaskDetail(s);
+  const topics = (detail?.activities ?? []).filter((a) => a.type === 'topic');
+  return topics.find((a) => a.id === topicId);
 };
 
 export const taskActivitySelectors = {

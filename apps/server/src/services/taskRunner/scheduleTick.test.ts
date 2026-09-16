@@ -123,7 +123,11 @@ describe('runScheduleTick', () => {
       excludeTypes: ['error'],
     });
     expect(mockTaskTopicModel.countByTask).not.toHaveBeenCalled();
-    expect(mockRunner.runTask).toHaveBeenCalledWith({ taskId, trigger: 'schedule' });
+    expect(mockRunner.runTask).toHaveBeenCalledWith({
+      idempotencyKey: `schedule:${taskId}:initial`,
+      taskId,
+      trigger: 'schedule',
+    });
   });
 
   it('runs the task when the run count is still under maxExecutions', async () => {
@@ -139,7 +143,11 @@ describe('runScheduleTick', () => {
       since: new Date('2026-05-01T00:00:00Z'),
       triggers: ['schedule'],
     });
-    expect(mockRunner.runTask).toHaveBeenCalledWith({ taskId, trigger: 'schedule' });
+    expect(mockRunner.runTask).toHaveBeenCalledWith({
+      idempotencyKey: `schedule:${taskId}:initial`,
+      taskId,
+      trigger: 'schedule',
+    });
     expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
   });
 

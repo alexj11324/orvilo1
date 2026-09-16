@@ -289,6 +289,15 @@ export class LinearSyncWorker {
       ).createTask({
         assigneeAgentId: settingsAssignmentAgent(binding.settings, issue.assigneeId),
         assigneeUserId: settingsAssignmentUser(binding.settings, issue.assigneeId),
+        creationSubject: {
+          id: installation.id,
+          kind: 'integration',
+          snapshot: {
+            displayName: installation.organizationName || 'Linear',
+            externalId: installation.organizationId,
+            kind: 'integration',
+          },
+        },
         description: issue.description?.slice(0, 255),
         instruction: issue.description || issue.title,
         name: issue.title,
@@ -415,9 +424,13 @@ export class LinearSyncWorker {
 const settingsAssignmentAgent = (
   settings: LinearProjectBindingSettings,
   linearUserId?: string | null,
-) => settings.assignmentMappings?.find((mapping) => mapping.linearUserId === linearUserId)?.orviloAgentId;
+) =>
+  settings.assignmentMappings?.find((mapping) => mapping.linearUserId === linearUserId)
+    ?.orviloAgentId;
 
 const settingsAssignmentUser = (
   settings: LinearProjectBindingSettings,
   linearUserId?: string | null,
-) => settings.assignmentMappings?.find((mapping) => mapping.linearUserId === linearUserId)?.orviloUserId;
+) =>
+  settings.assignmentMappings?.find((mapping) => mapping.linearUserId === linearUserId)
+    ?.orviloUserId;

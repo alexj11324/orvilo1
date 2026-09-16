@@ -1261,6 +1261,7 @@ export const taskRouter = router({
       idInput.merge(
         z.object({
           continueTopicId: z.string().optional(),
+          idempotencyKey: z.string().min(1).max(255).optional(),
           prompt: z.string().optional(),
         }),
       ),
@@ -1277,6 +1278,7 @@ export const taskRouter = router({
         return await runner.runTask({
           continueTopicId: input.continueTopicId,
           extraPrompt: input.prompt,
+          idempotencyKey: input.idempotencyKey,
           taskId: task.id,
         });
       } catch (error) {

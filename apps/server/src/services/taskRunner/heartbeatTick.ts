@@ -91,7 +91,12 @@ export async function runHeartbeatTick(
 
   const runner = new TaskRunnerService(db, userId, wsId);
   try {
-    await runner.runTask({ taskId, trigger: 'heartbeat' });
+    await runner.runTask({
+      idempotencyKey:
+        tickToken ?? `heartbeat:${taskId}:${task.lastHeartbeatAt?.toISOString() ?? 'initial'}`,
+      taskId,
+      trigger: 'heartbeat',
+    });
   } catch (e) {
     if (isTaskDependencyBlocked(e)) {
       if (task.status === 'scheduled') {
@@ -125,6 +130,9 @@ export async function runHeartbeatTick(
     if (e instanceof TRPCError && e.code === 'CONFLICT') {
       log('skip task=%s reason=in-flight', taskId);
       return { ran: false, reason: 'in-flight' };
+    }
+    if (e instanceof TRPCError && e.code === 'PRECONDITION_FAILED') {
+      return { ran: false, reason: 'human-waiting' };
     }
     throw e;
   }

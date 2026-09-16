@@ -17,12 +17,20 @@ const {
   deferredVerifyDrive,
   integrateOnComplete,
   runTaskMock,
+  settleDispatch,
 } = vi.hoisted(() => ({
   captureRemoteIdentityOnComplete: vi.fn().mockResolvedValue(true),
   cascadeOnCompletion: vi.fn().mockResolvedValue({ failed: [], paused: [], started: [] }),
   deferredVerifyDrive: vi.fn().mockResolvedValue(undefined),
   integrateOnComplete: vi.fn().mockResolvedValue('settled'),
   runTaskMock: vi.fn().mockResolvedValue({ success: true }),
+  settleDispatch: vi.fn().mockResolvedValue({ currentGeneration: true }),
+}));
+
+vi.mock('@/database/models/taskDispatch', () => ({
+  TaskDispatchModel: vi.fn(function () {
+    return { settle: settleDispatch };
+  }),
 }));
 
 vi.mock('@/server/services/verify/settle', () => ({ driveTaskFromVerify: deferredVerifyDrive }));
@@ -146,6 +154,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     deferredVerifyDrive.mockReset().mockResolvedValue(undefined);
     captureRemoteIdentityOnComplete.mockReset().mockResolvedValue(true);
     integrateOnComplete.mockReset().mockResolvedValue('settled');
+    settleDispatch.mockReset().mockResolvedValue({ currentGeneration: true });
 
     service = new TaskLifecycleService({} as any, 'user-1');
 
@@ -291,6 +300,35 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         error: 'Workspace merge could not be completed',
       });
       expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
+    });
+
+    it('archives a stale generation result without advancing the current task', async () => {
+      settleDispatch.mockResolvedValue({ currentGeneration: false });
+
+      await service.onTopicComplete({
+        dispatchFence: 3,
+        dispatchId: 'dispatch-old',
+        executionGeneration: 7,
+        lastAssistantContent: 'Historical result',
+        operationId: 'op-old',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-old',
+      });
+
+      expect(settleDispatch).toHaveBeenCalledWith({
+        dispatchId: 'dispatch-old',
+        fence: 3,
+        generation: 7,
+        operationId: 'op-old',
+        phase: 'succeeded',
+      });
+      expect(updateTopicStatus).toHaveBeenCalledWith('task-1', 'topic-old', 'completed');
+      expect(findById).not.toHaveBeenCalled();
+      expect(updateStatus).not.toHaveBeenCalled();
+      expect(updateStatusIfCurrent).not.toHaveBeenCalled();
+      expect(cascadeOnCompletion).not.toHaveBeenCalled();
     });
 
     it('automation task → status="scheduled" (not paused)', async () => {

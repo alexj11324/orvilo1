@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import type { BriefDecision, TaskTopicHandoff, TaskTopicIntegration } from '@orvilo/types';
+import type {
+  BriefDecision,
+  TaskExecutionEnvironmentSnapshot,
+  TaskTopicHandoff,
+  TaskTopicIntegration,
+} from '@orvilo/types';
 import { and, count, desc, eq, exists, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import type { TaskTopicItem } from '../schemas/task';
@@ -10,6 +15,13 @@ import type { LobeChatDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 const TERMINAL_TOPIC_STATUSES = new Set(['canceled', 'completed', 'failed', 'timeout']);
+
+const runStateForStatus = (status: string) => {
+  if (status === 'completed') return 'succeeded' as const;
+  if (status === 'canceled') return 'canceled' as const;
+  if (status === 'failed' || status === 'timeout') return 'failed' as const;
+  return 'running' as const;
+};
 
 export class TaskTopicModel {
   private readonly userId: string;
@@ -76,6 +88,16 @@ export class TaskTopicModel {
     taskId: string,
     topicId: string,
     params: {
+      dispatch?: {
+        fence: number;
+        generation: number;
+        id: string;
+        planRevision: number | null;
+        policyRevision: number;
+        requirementRevision: number;
+        taskRevision: number;
+      };
+      environmentSnapshot?: TaskExecutionEnvironmentSnapshot;
       integration?: TaskTopicIntegration;
       operationId?: string;
       seq: number;
@@ -86,10 +108,18 @@ export class TaskTopicModel {
     await this.db
       .insert(taskTopics)
       .values({
+        dispatchFence: params.dispatch?.fence,
+        dispatchId: params.dispatch?.id,
+        environmentSnapshot: params.environmentSnapshot,
+        executionGeneration: params.dispatch?.generation,
         integration: params.integration,
         operationId: params.operationId,
+        planRevision: params.dispatch?.planRevision,
+        policyRevision: params.dispatch?.policyRevision,
+        requirementRevision: params.dispatch?.requirementRevision,
         seq: params.seq,
         taskId,
+        taskRevision: params.dispatch?.taskRevision,
         topicId,
         trigger: params.trigger,
         userId: this.userId,
@@ -219,7 +249,7 @@ export class TaskTopicModel {
   async updateStatus(taskId: string, topicId: string, status: string): Promise<void> {
     await this.db
       .update(taskTopics)
-      .set({ status })
+      .set({ runState: runStateForStatus(status), status })
       .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
 
     if (TERMINAL_TOPIC_STATUSES.has(status)) {
@@ -234,7 +264,7 @@ export class TaskTopicModel {
   async cancelIfRunning(taskId: string, topicId: string): Promise<boolean> {
     const result = await this.db
       .update(taskTopics)
-      .set({ status: 'canceled' })
+      .set({ runState: 'canceled', status: 'canceled' })
       .where(
         and(
           eq(taskTopics.taskId, taskId),
@@ -261,7 +291,7 @@ export class TaskTopicModel {
 
     const canceled = await this.db
       .update(taskTopics)
-      .set({ status: 'canceled' })
+      .set({ runState: 'canceled', status: 'canceled' })
       .where(
         and(
           inArray(taskTopics.taskId, taskIds),
@@ -352,7 +382,7 @@ export class TaskTopicModel {
   async timeoutRunning(taskId: string): Promise<number> {
     const result = await this.db
       .update(taskTopics)
-      .set({ status: 'timeout' })
+      .set({ runState: 'failed', status: 'timeout' })
       .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.status, 'running'), this.ownership()))
       .returning({ topicId: taskTopics.topicId });
 

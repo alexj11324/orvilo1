@@ -65,6 +65,7 @@ export interface TaskExecutionEnvironmentSnapshot {
   deviceId?: string;
   provider?: string;
   repo?: string;
+  workingDirectory?: string;
   workingDirectoryId?: string;
 }
 

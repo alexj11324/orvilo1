@@ -3,18 +3,21 @@ import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
 import type { Context } from 'hono';
 
-import { agentOperations, tasks, taskTopics } from '@/database/schemas';
+import { agentOperations, taskDispatches, tasks, taskTopics } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 
 const log = debug('lobe-server:workflows:task:on-topic-complete');
 
 export interface OnTopicCompletePayload {
+  dispatchFence?: number;
+  dispatchId?: string;
   errorMessage?: string;
   /** Structured terminal error type (e.g. `InsufficientBudgetForModel`). Spread
    *  onto the webhook body from the completion lifecycle event (no eventFields
    *  filter), used to pick the error brief's remedy action. */
   errorType?: string;
+  executionGeneration?: number;
   hookId?: string;
   hookType?: string;
   lastAssistantContent?: string;
@@ -34,6 +37,9 @@ export async function onTopicComplete(c: Context) {
     const {
       errorMessage,
       errorType,
+      dispatchFence,
+      dispatchId,
+      executionGeneration,
       lastAssistantContent,
       operationId,
       reason,
@@ -48,8 +54,18 @@ export async function onTopicComplete(c: Context) {
       return c.json({ error: 'Missing required fields' }, 400);
     }
     const normalizedReason = reason === 'max_steps' || reason === 'cost_limit' ? 'done' : reason;
-    if (normalizedReason !== 'done' && normalizedReason !== 'error') {
+    if (
+      typeof normalizedReason !== 'string' ||
+      !['done', 'error', 'interrupted'].includes(normalizedReason)
+    ) {
       return c.json({ error: 'Unsupported task completion reason' }, 400);
+    }
+    const hasAnyDispatchClaim =
+      dispatchId !== undefined || dispatchFence !== undefined || executionGeneration !== undefined;
+    const hasCompleteDispatchClaim =
+      Boolean(dispatchId) && dispatchFence !== undefined && executionGeneration !== undefined;
+    if (hasAnyDispatchClaim && !hasCompleteDispatchClaim) {
+      return c.json({ error: 'Incomplete dispatch claim' }, 400);
     }
 
     log(
@@ -99,6 +115,23 @@ export async function onTopicComplete(c: Context) {
       return c.json({ error: 'Task workspace does not match the operation' }, 409);
     }
 
+    if (hasCompleteDispatchClaim) {
+      const [dispatch] = await db
+        .select({ id: taskDispatches.id })
+        .from(taskDispatches)
+        .where(
+          and(
+            eq(taskDispatches.taskId, taskId),
+            eq(taskDispatches.id, dispatchId!),
+            eq(taskDispatches.fence, dispatchFence!),
+            eq(taskDispatches.generation, executionGeneration!),
+            eq(taskDispatches.operationId, operationId),
+          ),
+        )
+        .limit(1);
+      if (!dispatch) return c.json({ error: 'Task dispatch claim does not match this run' }, 409);
+    }
+
     // A very fast operation can publish its durable QStash callback before the
     // dispatcher has registered task_topics/currentTopicId. Returning success
     // there loses the only terminal delivery. Ask QStash to retry while this is
@@ -128,6 +161,9 @@ export async function onTopicComplete(c: Context) {
     await taskLifecycle.onTopicComplete({
       errorCode: errorType,
       errorMessage,
+      dispatchFence,
+      dispatchId,
+      executionGeneration,
       lastAssistantContent,
       operationId,
       reason: normalizedReason,

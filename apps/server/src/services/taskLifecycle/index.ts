@@ -39,6 +39,7 @@ import { GoalModel } from '@/database/models/goal';
 import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
@@ -100,10 +101,13 @@ const BILLING_ERROR_CODES = new Set<string>([
 ]);
 
 export interface TopicCompleteParams {
+  dispatchFence?: number;
+  dispatchId?: string;
   /** Structured terminal error type (e.g. `InsufficientBudgetForModel`) from the
    *  completion lifecycle event, used to pick the error brief's remedy action. */
   errorCode?: string;
   errorMessage?: string;
+  executionGeneration?: number;
   lastAssistantContent?: string;
   operationId: string;
   reason: string; // 'done' | 'error' | 'interrupted' | ...
@@ -161,9 +165,50 @@ export class TaskLifecycleService {
     } = params;
     const reason = rawReason === 'max_steps' || rawReason === 'cost_limit' ? 'done' : rawReason;
 
+    const hasDispatchClaim =
+      params.dispatchId !== undefined ||
+      params.dispatchFence !== undefined ||
+      params.executionGeneration !== undefined;
+    if (hasDispatchClaim) {
+      if (
+        !params.dispatchId ||
+        params.dispatchFence === undefined ||
+        params.executionGeneration === undefined
+      ) {
+        throw new Error('Incomplete Task dispatch claim on completion');
+      }
+      const terminalPhase =
+        reason === 'done' ? 'succeeded' : reason === 'interrupted' ? 'canceled' : 'failed';
+      const settlement = await new TaskDispatchModel(this.db, this.workspaceId).settle({
+        dispatchId: params.dispatchId,
+        fence: params.dispatchFence,
+        generation: params.executionGeneration,
+        operationId: params.operationId,
+        phase: terminalPhase,
+      });
+      if (!settlement) throw new Error('Task dispatch claim is stale or does not match this run');
+      if (!settlement.currentGeneration) {
+        if (topicId) {
+          const historicalStatus =
+            reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed';
+          await this.taskTopicModel.updateStatus(taskId, topicId, historicalStatus);
+          if (lastAssistantContent) {
+            await this.taskTopicModel.updateHandoffContent(taskId, topicId, lastAssistantContent);
+          }
+        }
+        log(
+          'Ignored stale generation completion: task=%s dispatch=%s generation=%s',
+          taskId,
+          params.dispatchId,
+          params.executionGeneration,
+        );
+        return;
+      }
+    }
+
     log('onTopicComplete: task=%s topic=%s reason=%s', taskIdentifier, topicId, reason);
 
-    if (reason !== 'done' && reason !== 'error') {
+    if (reason !== 'done' && reason !== 'error' && reason !== 'interrupted') {
       log('onTopicComplete: non-terminal task callback ignored reason=%s', reason);
       return;
     }
@@ -180,7 +225,7 @@ export class TaskLifecycleService {
       taskId,
       topicId,
       params.operationId,
-      reason === 'done' ? 'completed' : 'failed',
+      reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed',
     );
     if (!claimed) {
       log(
@@ -189,6 +234,11 @@ export class TaskLifecycleService {
         currentTask.currentTopicId,
         topicId,
       );
+      return;
+    }
+
+    if (reason === 'interrupted') {
+      log('onTopicComplete: interrupted run settled without advancing task=%s', taskIdentifier);
       return;
     }
 

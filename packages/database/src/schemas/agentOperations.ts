@@ -28,7 +28,10 @@ export interface AgentOperationError {
 
 export interface AgentOperationAppContext {
   defaultTaskAssigneeAgentId?: string;
+  dispatchFence?: number;
+  dispatchId?: string;
   documentId?: string | null;
+  executionGeneration?: number;
   groupId?: string | null;
   scope?: string | null;
   sessionId?: string;

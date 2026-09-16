@@ -227,8 +227,15 @@ class TaskService {
     },
   ) => lambdaClient.task.updateStatusCascade.mutate({ id, status, ...move });
 
-  run = async (id: string, params?: { continueTopicId?: string; prompt?: string }) =>
-    lambdaClient.task.run.mutate({ id, ...params });
+  run = async (
+    id: string,
+    params?: { continueTopicId?: string; idempotencyKey?: string; prompt?: string },
+  ) =>
+    lambdaClient.task.run.mutate({
+      id,
+      idempotencyKey: params?.idempotencyKey ?? crypto.randomUUID(),
+      ...params,
+    });
 
   retryIntegration = async (id: string, topicId: string) =>
     lambdaClient.task.retryIntegration.mutate({ id, topicId });

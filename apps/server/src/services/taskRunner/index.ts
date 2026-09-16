@@ -6,6 +6,7 @@ import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import type {
   ExecAgentResult,
+  TaskExecutionEnvironmentSnapshot,
   TaskItem,
   TaskRunTrigger,
   TaskTopicIntegration,
@@ -23,6 +24,12 @@ import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { LobeChatDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
+import {
+  type PreparedTaskDispatch,
+  TaskDispatchConflictError,
+  TaskDispatchService,
+  TaskDispatchWaitingError,
+} from '@/server/services/taskDispatch';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
@@ -41,6 +48,8 @@ export interface RunTaskParams {
   continueFromMessageId?: string;
   continueTopicId?: string;
   extraPrompt?: string;
+  /** Stable identity supplied by the originating command or scheduler tick. */
+  idempotencyKey?: string;
   /**
    * Workspace-integration record persisted on this run's task_topics row —
    * set by the workspace provisioner or by TaskIntegrationService when it
@@ -49,10 +58,12 @@ export interface RunTaskParams {
   integrationSeed?: TaskTopicIntegration;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
+  planRevision?: number;
   /** Parent delivery operation for internal corrective runs. */
   parentOperationId?: string;
   /** Atomically transfer a completion lease into this continuation dispatch. */
   replaceReservationId?: string;
+  requestedBy?: string;
   /** Internal corrective runs stay bound to the original task Verify plan. */
   skipTaskVerification?: boolean;
   taskId: string;
@@ -96,6 +107,7 @@ export class TaskRunnerService {
   private briefModel: BriefModel;
   private db: LobeChatDatabase;
   private taskLifecycle: TaskLifecycleService;
+  private taskDispatch: TaskDispatchService;
   private taskModel: TaskModel;
   private taskTopicModel: TaskTopicModel;
   private taskWorkspace: TaskWorkspaceService;
@@ -112,6 +124,7 @@ export class TaskRunnerService {
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.briefModel = new BriefModel(db, userId, workspaceId);
     this.taskLifecycle = new TaskLifecycleService(db, userId, workspaceId);
+    this.taskDispatch = new TaskDispatchService(db, workspaceId);
     this.taskWorkspace = new TaskWorkspaceService(db, userId, workspaceId);
   }
 
@@ -122,9 +135,12 @@ export class TaskRunnerService {
       continueTopicId,
       extraPrompt,
       integrationSeed,
+      idempotencyKey,
       maxSteps,
       parentOperationId,
+      planRevision,
       replaceReservationId,
+      requestedBy = this.userId,
       skipTaskVerification,
       trigger = 'manual',
       workspaceOverride,
@@ -158,8 +174,29 @@ export class TaskRunnerService {
     // generations during the watchdog transition.
     const kickoffClaimToken = randomUUID();
     let ownsKickoffClaim = false;
+    let preparedDispatch: PreparedTaskDispatch | undefined;
+    let runtimeDispatchStarted = false;
 
     try {
+      try {
+        preparedDispatch = await this.taskDispatch.prepare({
+          idempotencyKey:
+            idempotencyKey ?? `${trigger}:${task.id}:${continueTopicId ?? 'new'}:${randomUUID()}`,
+          planRevision,
+          requestedBy,
+          task,
+          trigger,
+        });
+      } catch (error) {
+        if (error instanceof TaskDispatchConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        if (error instanceof TaskDispatchWaitingError) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+        }
+        throw error;
+      }
+
       if (!task.assigneeAgentId) {
         const inboxAgent = await this.agentModel.getBuiltinAgent(INBOX_SESSION_ID);
         if (!inboxAgent) {
@@ -179,6 +216,11 @@ export class TaskRunnerService {
           await this.taskModel.updateWithLog(task.id, { assigneeAgentId: inboxAgent.id }, {});
         }
         task.assigneeAgentId = inboxAgent.id;
+        await this.taskDispatch.transition(preparedDispatch, {
+          agentId: inboxAgent.id,
+          expected: ['claimed'],
+          phase: 'claimed',
+        });
       }
 
       ownsKickoffClaim = await this.taskModel.claimRunKickoff(
@@ -303,6 +345,10 @@ export class TaskRunnerService {
       // building so the contract can ride into the prompt via extraPrompt.
       if (!workspaceOverride && !continueTopicId) {
         try {
+          await this.taskDispatch.transition(preparedDispatch, {
+            expected: ['claimed'],
+            phase: 'provisioning',
+          });
           provisioned = await this.taskWorkspace.provision({
             seq: (task.totalTopics || 0) + 1,
             task,
@@ -344,8 +390,11 @@ export class TaskRunnerService {
       let registrationComplete = false;
       let earlyCompletion:
         | {
+            dispatchFence?: number;
+            dispatchId?: string;
             errorCode?: string;
             errorMessage?: string;
+            executionGeneration?: number;
             lastAssistantContent?: string;
             operationId: string;
             reason: string;
@@ -354,8 +403,11 @@ export class TaskRunnerService {
         | undefined;
       const handleCompletion = async (event: NonNullable<typeof earlyCompletion>) => {
         await taskLifecycle.onTopicComplete({
+          dispatchFence: event.dispatchFence,
+          dispatchId: event.dispatchId,
           errorCode: event.errorCode,
           errorMessage: event.errorMessage,
+          executionGeneration: event.executionGeneration,
           lastAssistantContent: event.lastAssistantContent,
           operationId: event.operationId,
           reason: event.reason,
@@ -397,6 +449,12 @@ export class TaskRunnerService {
         workspaceOverride?.workingDirectoryConfig ?? provisioned?.workingDirectoryConfig;
       const initialRepos = workspaceOverride?.repos ?? provisioned?.repos;
       const runIntegration = integrationSeed ?? provisioned?.integration;
+      const environmentSnapshot: TaskExecutionEnvironmentSnapshot = {
+        branch: runIntegration?.branch,
+        deviceId: runIntegration?.deviceId,
+        repo: runIntegration?.repo,
+        workingDirectory: initialWorkingDirectory ?? initialWorkingDirectoryConfig?.path,
+      };
 
       // Backfill model snapshot for tasks created before the snapshot logic
       // landed, or whose assignee was set after creation. Once written, the
@@ -411,6 +469,13 @@ export class TaskRunnerService {
       }
 
       log('runTask: %s (continue=%s)', taskIdentifier, continueTopicId);
+
+      await this.taskDispatch.transition(preparedDispatch, {
+        environmentSnapshot,
+        expected: ['claimed', 'provisioning'],
+        phase: 'dispatched',
+      });
+      runtimeDispatchStarted = true;
 
       if (!(await this.taskModel.renewRunReservation(task.id, reservationId))) {
         throw new TRPCError({
@@ -435,8 +500,11 @@ export class TaskRunnerService {
           {
             handler: async (event) => {
               const completion = {
+                dispatchFence: preparedDispatch.fence,
+                dispatchId: preparedDispatch.dispatch.id,
                 errorCode: event.errorType,
                 errorMessage: event.errorMessage,
+                executionGeneration: preparedDispatch.dispatch.generation,
                 lastAssistantContent: event.lastAssistantContent,
                 operationId: event.operationId,
                 reason:
@@ -457,7 +525,15 @@ export class TaskRunnerService {
               // `runTrigger` rides in the static body so the production webhook
               // callback (which reconstructs onTopicComplete params server-side)
               // knows whether this was a manual run or an automation tick.
-              body: { runTrigger: trigger, taskId, taskIdentifier, userId },
+              body: {
+                dispatchFence: preparedDispatch.fence,
+                dispatchId: preparedDispatch.dispatch.id,
+                executionGeneration: preparedDispatch.dispatch.generation,
+                runTrigger: trigger,
+                taskId,
+                taskIdentifier,
+                userId,
+              },
               delivery: 'hatchet' as const,
               fallback: 'none' as const,
               url: '/api/workflows/task/on-topic-complete',
@@ -476,23 +552,21 @@ export class TaskRunnerService {
             : task.name || task.identifier,
         trigger: TopicTrigger.RunTask,
         userInterventionConfig: { approvalMode: 'headless' },
-        ...(continueTopicId ||
-        initialWorkingDirectory ||
-        initialWorkingDirectoryConfig ||
-        initialRepos?.length
-          ? {
-              appContext: {
-                ...(continueTopicId ? { topicId: continueTopicId } : {}),
-                initialTopicMetadata: {
-                  ...(initialRepos?.length ? { repos: initialRepos } : {}),
-                  ...(initialWorkingDirectory ? { workingDirectory: initialWorkingDirectory } : {}),
-                  ...(initialWorkingDirectoryConfig
-                    ? { workingDirectoryConfig: initialWorkingDirectoryConfig }
-                    : {}),
-                },
-              },
-            }
-          : {}),
+        appContext: {
+          dispatchFence: preparedDispatch.fence,
+          dispatchId: preparedDispatch.dispatch.id,
+          executionGeneration: preparedDispatch.dispatch.generation,
+          ...(continueTopicId ? { topicId: continueTopicId } : {}),
+          ...((initialWorkingDirectory || initialWorkingDirectoryConfig || initialRepos?.length) && {
+            initialTopicMetadata: {
+              ...(initialRepos?.length ? { repos: initialRepos } : {}),
+              ...(initialWorkingDirectory ? { workingDirectory: initialWorkingDirectory } : {}),
+              ...(initialWorkingDirectoryConfig
+                ? { workingDirectoryConfig: initialWorkingDirectoryConfig }
+                : {}),
+            },
+          }),
+        },
       });
       dispatchedOperationId = result.operationId;
       dispatchedTopicId = result.topicId;
@@ -515,6 +589,8 @@ export class TaskRunnerService {
           await this.taskModel.incrementTopicCount(task.id);
           await this.taskModel.updateCurrentTopic(task.id, result.topicId);
           await this.taskTopicModel.add(task.id, result.topicId, {
+            dispatch: { ...preparedDispatch.dispatch, fence: preparedDispatch.fence },
+            environmentSnapshot,
             integration: runIntegration,
             operationId: result.operationId,
             seq: (task.totalTopics || 0) + 1,
@@ -525,8 +601,17 @@ export class TaskRunnerService {
         if (result.topicId) {
           await this.taskTopicModel.updateStatus(task.id, result.topicId, 'failed');
         }
+        await this.taskDispatch.settle(preparedDispatch, 'failed');
+        runtimeDispatchStarted = false;
         throw new Error(result.error || result.message || 'Agent run failed to start');
       }
+
+      await this.taskDispatch.transition(preparedDispatch, {
+        environmentSnapshot,
+        expected: ['dispatched'],
+        operationId: result.operationId,
+        phase: 'running',
+      });
 
       if (result.topicId) {
         if (continueTopicId) {
@@ -537,6 +622,8 @@ export class TaskRunnerService {
           await this.taskModel.incrementTopicCount(task.id);
           await this.taskModel.updateCurrentTopic(task.id, result.topicId);
           await this.taskTopicModel.add(task.id, result.topicId, {
+            dispatch: { ...preparedDispatch.dispatch, fence: preparedDispatch.fence },
+            environmentSnapshot,
             integration: runIntegration,
             operationId: result.operationId,
             seq: (task.totalTopics || 0) + 1,
@@ -566,6 +653,21 @@ export class TaskRunnerService {
         taskIdentifier: task.identifier,
       };
     } catch (error) {
+      if (preparedDispatch) {
+        try {
+          if (runtimeDispatchStarted) {
+            await this.taskDispatch.transition(preparedDispatch, {
+              expected: ['dispatched', 'running'],
+              phase: 'outcome_unknown',
+              waitingReason: error instanceof Error ? error.message : 'Dispatch outcome unknown',
+            });
+          } else {
+            await this.taskDispatch.settle(preparedDispatch, 'failed');
+          }
+        } catch {
+          // Preserve the original runner error; recovery will reconcile the dispatch.
+        }
+      }
       if (ownsKickoffClaim) {
         await this.taskModel
           .releaseRunKickoff(task.id, kickoffClaimToken)

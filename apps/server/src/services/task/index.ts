@@ -86,6 +86,15 @@ export interface CreateTaskInput {
   // creation to record `context.origin` — the creator conversation pointer.
   context?: TaskContext;
   createdByAgentId?: string;
+  creationSubject?: {
+    id?: string;
+    kind: 'integration' | 'system';
+    snapshot?: {
+      displayName?: string;
+      externalId?: string;
+      kind: 'integration' | 'system';
+    };
+  };
   description?: string;
   editorData?: unknown;
   fileIds?: string[];
@@ -1082,9 +1091,10 @@ export class TaskService {
   private async createTaskWithAssigneeLock(
     createData: CreateTaskInput & { config?: Record<string, unknown> },
   ): Promise<TaskItem> {
+    const { creationSubject, ...taskData } = createData;
     if (!createData.assigneeUserId || !this.workspaceId) {
       await this.assertAssigneeUserAssignable(createData.assigneeUserId);
-      return this.taskModel.create(createData);
+      return this.taskModel.create(taskData, { creationSubject });
     }
 
     // TaskModel's normal retry loop cannot continue after a unique violation
@@ -1095,7 +1105,10 @@ export class TaskService {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         return await this.withAssigneeUserLock(createData.assigneeUserId, (db) =>
-          new TaskModel(db, this.userId, this.workspaceId).create(createData, { maxRetries: 1 }),
+          new TaskModel(db, this.userId, this.workspaceId).create(taskData, {
+            creationSubject,
+            maxRetries: 1,
+          }),
         );
       } catch (error) {
         if (!isTaskIdentifierUniqueViolation(error) || attempt === maxRetries - 1) throw error;

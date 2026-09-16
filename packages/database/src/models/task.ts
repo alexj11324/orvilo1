@@ -409,7 +409,14 @@ export class TaskModel {
     data: Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'> & {
       identifierPrefix?: string;
     },
-    options: { maxRetries?: number } = {},
+    options: {
+      creationSubject?: {
+        id?: string;
+        kind: 'integration' | 'system';
+        snapshot?: NewTask['createdBySnapshot'];
+      };
+      maxRetries?: number;
+    } = {},
   ): Promise<TaskItem> {
     const { identifierPrefix = 'T', ...rest } = data;
 
@@ -439,7 +446,13 @@ export class TaskModel {
           .insert(tasks)
           .values({
             ...rest,
-            createdByUserId: this.userId,
+            createdBySnapshot: options.creationSubject?.snapshot ?? {
+              kind: data.createdByAgentId ? 'agent' : 'user',
+            },
+            createdBySubjectId: options.creationSubject?.id ?? data.createdByAgentId ?? this.userId,
+            createdBySubjectKind:
+              options.creationSubject?.kind ?? (data.createdByAgentId ? 'agent' : 'user'),
+            createdByUserId: options.creationSubject ? null : this.userId,
             identifier,
             seq: nextSeq,
             workspaceId: this.workspaceId ?? null,

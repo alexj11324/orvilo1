@@ -11,6 +11,7 @@ const prefixes = {
   agentHistoryJobs: 'ahj',
   briefs: 'brf',
   taskComments: 'cmt',
+  taskDispatches: 'dsp',
   tasks: 'task',
   agents: 'agt',
   budget: 'bgt',

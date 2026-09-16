@@ -122,6 +122,7 @@ describe('TaskService', () => {
       await taskService.run('T-1', { prompt: 'Focus on tests' });
       expect(lambdaClient.task.run.mutate).toHaveBeenCalledWith({
         id: 'T-1',
+        idempotencyKey: expect.any(String),
         prompt: 'Focus on tests',
       });
     });

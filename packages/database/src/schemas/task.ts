@@ -219,7 +219,7 @@ export const taskDispatches = pgTable(
     requirementRevision: integer('requirement_revision').notNull(),
     policyRevision: integer('policy_revision').notNull(),
     planRevision: integer('plan_revision'),
-    fence: integer('fence').notNull().default(1),
+    fence: integer('fence').notNull().default(0),
     operationId: text('operation_id'),
     idempotencyKey: text('idempotency_key').notNull(),
     requestedBy: text('requested_by').notNull(),

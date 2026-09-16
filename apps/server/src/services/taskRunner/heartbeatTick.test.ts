@@ -143,7 +143,11 @@ describe('runHeartbeatTick', () => {
     expect(mockBriefModel.hasUnresolvedUrgentByTask).toHaveBeenCalledWith(taskId, {
       excludeTypes: ['error'],
     });
-    expect(mockRunner.runTask).toHaveBeenCalledWith({ taskId, trigger: 'heartbeat' });
+    expect(mockRunner.runTask).toHaveBeenCalledWith({
+      idempotencyKey: `heartbeat:${taskId}:initial`,
+      taskId,
+      trigger: 'heartbeat',
+    });
   });
 
   it('still skips when a non-error urgent brief requires human input', async () => {

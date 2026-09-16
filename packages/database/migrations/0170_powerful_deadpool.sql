@@ -10,7 +10,7 @@ CREATE TABLE "task_dispatches" (
 	"requirement_revision" integer NOT NULL,
 	"policy_revision" integer NOT NULL,
 	"plan_revision" integer,
-	"fence" integer DEFAULT 1 NOT NULL,
+	"fence" integer DEFAULT 0 NOT NULL,
 	"operation_id" text,
 	"idempotency_key" text NOT NULL,
 	"requested_by" text NOT NULL,

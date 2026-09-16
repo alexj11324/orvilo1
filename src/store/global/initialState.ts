@@ -10,17 +10,12 @@ import { AsyncLocalStorage } from '@/utils/localStorage';
 export enum SidebarTabKey {
   Automations = 'automations',
   Chat = 'chat',
-  Community = 'community',
   Home = 'home',
-  Image = 'image',
   Knowledge = 'knowledge',
   Me = 'me',
-  Memory = 'memory',
-  Pages = 'pages',
   Resource = 'resource',
   Setting = 'settings',
   Tasks = 'tasks',
-  Video = 'video',
 }
 
 export enum ChatSettingsTabs {

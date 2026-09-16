@@ -31,8 +31,6 @@ export type NavigationTier = 'primary' | 'retired' | 'secondary';
 export interface NavigationRoute {
   /** CMDK i18n key in common namespace */
   cmdkKey: string;
-  /** Electron i18n key in electron namespace */
-  electronKey: string;
   /** Route icon component */
   icon: LucideIcon;
   /** Unique route identifier */
@@ -58,7 +56,6 @@ export interface NavigationRoute {
 export const NAVIGATION_ROUTES: NavigationRoute[] = [
   {
     cmdkKey: 'cmdk.community',
-    electronKey: 'navigation.discover',
     icon: ShapesIcon,
     id: 'community',
     keywords: ['discover', 'market', 'assistant', 'model', 'provider', 'mcp'],
@@ -69,7 +66,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.video',
-    electronKey: 'navigation.video',
     icon: Video,
     id: 'video',
     keywords: ['video', 'generate', 'seedance', 'kling'],
@@ -80,7 +76,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.painting',
-    electronKey: 'navigation.image',
     icon: Image,
     id: 'image',
     keywords: ['painting', 'art', 'generate', 'draw'],
@@ -91,7 +86,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.resource',
-    electronKey: 'navigation.resources',
     icon: LibraryBigIcon,
     id: 'resource',
     keywords: ['knowledge', 'files', 'library', 'documents'],
@@ -102,7 +96,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.pages',
-    electronKey: 'navigation.pages',
     icon: FilePenIcon,
     id: 'page',
     keywords: ['documents', 'write', 'notes'],
@@ -114,7 +107,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.memory',
-    electronKey: 'navigation.memory',
     icon: BrainCircuit,
     id: 'memory',
     keywords: ['identities', 'contexts', 'preferences', 'experiences'],
@@ -125,7 +117,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.tasks',
-    electronKey: 'navigation.tasks',
     icon: ListTodoIcon,
     id: 'tasks',
     keywords: ['tasks', 'todo', 'agent', 'kanban', 'board'],
@@ -136,7 +127,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.project',
-    electronKey: 'navigation.project',
     icon: FolderKanbanIcon,
     id: 'project',
     keywords: ['project', 'projects', 'workspace', 'board'],
@@ -147,7 +137,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.automations',
-    electronKey: 'navigation.automations',
     icon: AlarmClock,
     id: 'automations',
     keywords: ['automation', 'schedule', 'cron', 'recurring', 'heartbeat'],
@@ -158,7 +147,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.settings',
-    electronKey: 'navigation.settings',
     icon: Settings,
     id: 'settings',
     keywords: ['settings', 'preferences', 'configuration', 'options'],

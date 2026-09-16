@@ -1,4 +1,3 @@
-import type { WorkflowContext } from '@upstash/workflow';
 import debug from 'debug';
 
 import { getServerDB } from '@/database/server';
@@ -8,6 +7,7 @@ import {
   type RunThreadTrajectoryPayload,
 } from '@/server/workflows/agentEvalRun';
 import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/utils';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 const log = debug('lobe-server:workflows:run-thread-trajectory');
@@ -97,12 +97,4 @@ export const runThreadTrajectoryHandler = async (
   log('Thread agent started: runId=%s testCaseId=%s threadId=%s', runId, testCaseId, threadId);
 
   return { success: true, testCaseId, threadId, topicId };
-};
-
-export const runThreadTrajectoryWorkflowOptions = {
-  flowControl: {
-    key: 'agent-eval-run.run-thread-trajectory',
-    parallelism: 500,
-    ratePerSecond: 20,
-  },
 };

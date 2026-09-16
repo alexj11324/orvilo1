@@ -81,7 +81,7 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
 
     const workflowRunIds = Array.from(
       new Set([
-        ...(metadata.control?.upstash?.workflowRunIds || []),
+        ...(metadata.control?.hatchet?.workflowRunIds || []),
         ...(payload.workflowRunId ? [payload.workflowRunId] : []),
         ...(payload.workflowRunIds || []),
       ]),
@@ -93,8 +93,8 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
         cancelReason: payload.reason || metadata.control?.cancelReason,
         cancelRequestedAt: metadata.control?.cancelRequestedAt || new Date().toISOString(),
         cancelledBy: 'webhook',
-        upstash: {
-          ...metadata.control?.upstash,
+        hatchet: {
+          ...metadata.control?.hatchet,
           workflowRunIds,
         },
       },

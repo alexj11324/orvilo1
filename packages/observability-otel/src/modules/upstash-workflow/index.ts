@@ -233,7 +233,7 @@ export const withOtelMetricsForUpstashWorkflowContext = <
  * Wraps an Upstash Workflow route function with serve, step, and invoke metrics.
  *
  * Use when:
- * - Passing a handler to `@upstash/workflow/hono` or `@upstash/workflow/nextjs` `serve`
+ * - Passing a handler to the durable workflow worker adapter
  * - Counting inbound workflow deliveries and the steps they submit
  *
  * Expects:

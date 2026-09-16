@@ -75,8 +75,8 @@ const createRunStepContext = (
     req: {
       header: (name: string) => {
         const normalized = name.toLowerCase();
-        if (normalized === 'upstash-retried') return String(retryCount);
-        if (normalized === 'message-id' || normalized === 'upstash-message-id') return runId;
+        if (normalized === 'retry-count') return String(retryCount);
+        if (normalized === 'message-id') return runId;
         return undefined;
       },
       json: async () => input,

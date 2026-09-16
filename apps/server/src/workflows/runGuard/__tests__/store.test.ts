@@ -27,13 +27,13 @@ describe('workflow run guard store', () => {
     await setWorkflowRunGuard(redis as unknown as Parameters<typeof setWorkflowRunGuard>[0], {
       scope: { type: 'path', workflowPath: 'api/workflows/memory-user-memory' },
       ttlSeconds: 99_999,
-      value: { reason: 'stop memory', policy: { cancelQstash: true } },
+      value: { reason: 'stop memory', policy: { cancelQueuedWork: true } },
     });
 
     const [key, raw, options] = redis.set.mock.calls[0];
     expect(key).toBe('workflow:run-guard:path:api/workflows/memory-user-memory');
     expect(JSON.parse(raw)).toMatchObject({
-      policy: { cancelQstash: true },
+      policy: { cancelQueuedWork: true },
       reason: 'stop memory',
     });
     expect(JSON.parse(raw).createdAt).toEqual(expect.any(String));

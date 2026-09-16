@@ -75,15 +75,14 @@ const readPayload = async (c: Context): Promise<ScheduleNightlyReviewPayload> =>
 };
 
 /**
- * Starts the layered Agent Signal nightly review scheduler from a QStash cron call.
+ * Starts the layered Agent Signal nightly review scheduler from a Hatchet cron task.
  *
  * Use when:
- * - A QStash Schedule or local QStash publish call needs to start cursor pagination
+ * - The Hatchet cron task needs to start cursor pagination
  * - Cron must return before database scanning and per-user source enqueueing begin
  *
  * Expects:
- * - The route is protected by {@link qstashAuth} in `agent-signal/index.ts`
- * - QStash or the caller may omit a JSON body, in which case bounded page defaults are used
+ * - A worker call may omit a JSON body, in which case bounded page defaults are used
  *
  * Returns:
  * - HTTP 202 with the root pagination workflow id

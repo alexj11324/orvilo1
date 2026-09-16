@@ -10,8 +10,7 @@ import { z } from 'zod';
  */
 export const agentHookWebhookSchema = z.object({
   body: z.record(z.string(), z.unknown()).optional(),
-  // Read legacy `qstash` values until pre-migration operations have drained.
-  delivery: z.enum(['fetch', 'hatchet', 'qstash']).optional(),
+  delivery: z.enum(['fetch', 'hatchet']).optional(),
   eventFields: z.array(z.string()).optional(),
   url: z.string(),
 });

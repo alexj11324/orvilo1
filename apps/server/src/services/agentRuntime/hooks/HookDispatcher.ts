@@ -42,7 +42,7 @@ export async function deliverWebhook(
     ? url
     : urlJoin(process.env.INTERNAL_APP_URL || process.env.APP_URL || '', url);
 
-  if (delivery === 'hatchet' || delivery === 'qstash') {
+  if (delivery === 'hatchet') {
     const path = new URL(resolvedUrl, 'http://orvilo.internal').pathname;
     if (!isHatchetWorkflowPath(path)) {
       throw new Error(`Unsupported Hatchet internal webhook path: ${path}`);

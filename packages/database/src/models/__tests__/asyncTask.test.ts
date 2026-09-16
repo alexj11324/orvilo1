@@ -432,7 +432,7 @@ describe('AsyncTaskModel', () => {
       });
       const metadata = updated?.metadata as HourlyUserMemoryExtractionMetadata | undefined;
 
-      expect(metadata?.control?.upstash?.workflowRunIds).toEqual(['run-1']);
+      expect(metadata?.control?.hatchet?.workflowRunIds).toEqual(['run-1']);
       expect(metadata?.progress).toEqual({
         processedUsers: 0,
         scheduledBatches: 0,
@@ -451,7 +451,7 @@ describe('AsyncTaskModel', () => {
           metadata: {
             control: {
               cancelReason: 'operator_request',
-              upstash: {
+              hatchet: {
                 workflowRunIds: ['run-1'],
               },
             },
@@ -484,7 +484,7 @@ describe('AsyncTaskModel', () => {
       expect(metadata).toMatchObject({
         control: {
           cancelReason: 'operator_request',
-          upstash: {
+          hatchet: {
             workflowRunIds: ['run-1', 'run-2'],
           },
         },
@@ -746,14 +746,14 @@ describe('initUserMemoryExtractionMetadata', () => {
     expect(result.source).toBe('chat_topic');
   });
 
-  it('should preserve a full control block including upstash workflowRunIds', () => {
+  it('should preserve a full control block including Hatchet workflowRunIds', () => {
     const cancelRequestedAt = new Date().toISOString();
     const result = initUserMemoryExtractionMetadata({
       control: {
         cancelReason: 'user_requested',
         cancelRequestedAt,
         cancelledBy: 'user-1',
-        upstash: {
+        hatchet: {
           entryWorkflowRunId: 'entry-run',
           workflowRunIds: ['run-1', 'run-2'],
         },
@@ -769,7 +769,7 @@ describe('initUserMemoryExtractionMetadata', () => {
       cancelReason: 'user_requested',
       cancelRequestedAt,
       cancelledBy: 'user-1',
-      upstash: {
+      hatchet: {
         entryWorkflowRunId: 'entry-run',
         workflowRunIds: ['run-1', 'run-2'],
       },
@@ -777,11 +777,11 @@ describe('initUserMemoryExtractionMetadata', () => {
     expect(result.progress).toEqual({ completedTopics: 1, totalTopics: 4 });
   });
 
-  it('should default upstash workflowRunIds to an empty array when missing', () => {
+  it('should default Hatchet workflowRunIds to an empty array when missing', () => {
     const result = initUserMemoryExtractionMetadata({
       control: {
         cancelRequestedAt: new Date().toISOString(),
-        upstash: {},
+        hatchet: {},
       },
       progress: {
         completedTopics: 0,
@@ -790,10 +790,10 @@ describe('initUserMemoryExtractionMetadata', () => {
       source: 'chat_topic',
     } as any);
 
-    expect(result.control?.upstash).toEqual({ workflowRunIds: [] });
+    expect(result.control?.hatchet).toEqual({ workflowRunIds: [] });
   });
 
-  it('should leave upstash undefined when control has no upstash field', () => {
+  it('should leave Hatchet undefined when control has no Hatchet field', () => {
     const result = initUserMemoryExtractionMetadata({
       control: {
         cancelRequestedAt: new Date().toISOString(),
@@ -806,7 +806,7 @@ describe('initUserMemoryExtractionMetadata', () => {
     } as any);
 
     expect(result.control).toBeDefined();
-    expect(result.control?.upstash).toBeUndefined();
+    expect(result.control?.hatchet).toBeUndefined();
   });
 });
 
@@ -838,14 +838,14 @@ describe('initHourlyUserMemoryExtractionMetadata', () => {
   it('should preserve hourly control workflow run ids', () => {
     /**
      * @example
-     * expect(result.control?.upstash?.workflowRunIds).toEqual(['run-1']);
+     * expect(result.control?.hatchet?.workflowRunIds).toEqual(['run-1']);
      */
     const result = initHourlyUserMemoryExtractionMetadata({
       control: {
         cancelReason: 'operator_request',
         cancelRequestedAt: '2026-07-06T01:00:00.000Z',
         cancelledBy: 'webhook',
-        upstash: { entryWorkflowRunId: 'entry-run', workflowRunIds: ['run-1'] },
+        hatchet: { entryWorkflowRunId: 'entry-run', workflowRunIds: ['run-1'] },
       },
       progress: {
         processedUsers: 4,
@@ -860,7 +860,7 @@ describe('initHourlyUserMemoryExtractionMetadata', () => {
       cancelReason: 'operator_request',
       cancelRequestedAt: '2026-07-06T01:00:00.000Z',
       cancelledBy: 'webhook',
-      upstash: { entryWorkflowRunId: 'entry-run', workflowRunIds: ['run-1'] },
+      hatchet: { entryWorkflowRunId: 'entry-run', workflowRunIds: ['run-1'] },
     });
     expect(result.progress).toEqual({
       processedUsers: 4,

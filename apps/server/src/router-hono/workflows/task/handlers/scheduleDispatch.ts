@@ -25,15 +25,14 @@ interface DueTask {
 }
 
 /**
- * Cron-style central dispatcher. Registered as a QStash Schedule (e.g.
+ * Cron-style central dispatcher. Registered as a Hatchet cron task (e.g.
  * `*\/30 * * * *`) pointing at this endpoint. On each tick:
  *
  *   1. Loads all schedule-mode tasks in dispatchable status (`scheduled`/`backlog`).
  *   2. Filters by cron pattern + timezone + last-run dedup (`isExecutionTime`).
- *   3. Fan-outs one QStash message per due task to `/schedule-execute`.
+ *   3. Fan-outs one Hatchet task per due task to the schedule executor.
  *
- * No per-user authentication: this is a global sweep. Signature verification is
- * handled by the `qstashAuth` middleware on the route.
+ * No per-user authentication: this is a global worker sweep.
  */
 export async function scheduleDispatch(c: Context) {
   try {
@@ -102,7 +101,7 @@ export const runScheduleDispatch = async ({ dryRun = false }: ScheduleDispatchPa
 const fanout = async (due: DueTask[]): Promise<number> => {
   // In queue mode, hand off via Hatchet so each task gets its own retry budget
   // and runs in an isolated handler invocation. Locally, just run inline so
-  // dev / electron can exercise the path without QStash.
+  // dev / electron can exercise the path without a remote worker.
   if (appEnv.enableQueueAgentRuntime) {
     const results = await Promise.allSettled(
       due.map((d) =>

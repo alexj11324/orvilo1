@@ -92,8 +92,10 @@ stale standalone install: a recently added workspace package fails to resolve �
     `.records/data/agent-testing-s3`. Fixed `S3RVER` credentials are required by
     the emulator's presigned-URL validation. `preflight` does HeadBucket + a real
     Put/Get/Delete round trip; a listening port alone is not "ready".
-  - **QStash** — `init-dev-env.sh qstash` (terminal B). A hard prerequisite for
-    ANY agent-runtime test (see §6).
+  - **Hatchet** — configure `HATCHET_CLIENT_TOKEN` (and optional endpoint,
+    namespace, and worker settings), then run `init-dev-env.sh hatchet` in a
+    second terminal. A Hatchet control plane and worker are required for queue
+    mode (see §6).
 
 - **Already-running detection:**
 
@@ -120,7 +122,7 @@ stale standalone install: a recently added workspace package fails to resolve �
   `JWKS_KEY` (persisted at `.records/env/agent-testing-jwks.json`, required by every
   async-task dispatch such as image generation), `SSRF_ALLOW_PRIVATE_IP_ADDRESS=1`
   (the server fetches reference images from the local s3rver on 127.0.0.1), plus
-  local `s3rver` and local QStash vars. Treat the dev-server terminal output as final when the
+  Hatchet client and worker settings. Treat the dev-server terminal output as final when the
   port is non-standard, then `export SERVER_URL=http://localhost:<port>`.
 
   In the cloud repo (this repo as the `lobehub/` submodule), worktree names map
@@ -315,32 +317,30 @@ in `.agents/acceptance/references/agent-gateway.md`.
 
 ## 6. Known constraints
 
-- **QStash is a hard prerequisite for ANY agent-runtime test.** Any test that
-  runs an agent (`lh agent run`, durable ops, `/api/agent/run`, the server agent
-  runtime) goes through `AGENT_RUNTIME_MODE=queue` (the default here and in
-  production). Creating an agent operation POSTs to local QStash
-  (`127.0.0.1:8080`); if QStash is down the run dies at operation creation with
-  `TypeError: fetch failed` / `ECONNREFUSED 127.0.0.1:8080` **before any LLM
-  call** — no trace is recorded and it reads as unrelated to the env. Start it
-  and gate before the first `agent run`:
+- **Hatchet is a hard prerequisite for queue-mode agent-runtime tests.** Any
+  test that runs an agent (`lh agent run`, durable ops, the server agent
+  runtime) uses `AGENT_RUNTIME_MODE=queue` (the production path). The server
+  requires `HATCHET_CLIENT_TOKEN` and a running Hatchet worker before an
+  operation can start. Configure the client and worker, then gate before the
+  first `agent run`:
 
   ```bash
-  .agents/acceptance/scripts/init-dev-env.sh qstash    # terminal B — keep running
-  .agents/acceptance/scripts/init-dev-env.sh preflight # non-zero exit if QStash (or Redis) is down
+  .agents/acceptance/scripts/init-dev-env.sh hatchet   # terminal B — keep running
+  .agents/acceptance/scripts/init-dev-env.sh preflight # non-zero exit if Hatchet (or Redis) is unavailable
   ```
 
   `FEATURE_FLAGS=-agent_self_iteration` only drops the self-iteration workflow
-  (so a simple chat does not fan out); it does NOT remove QStash from the
-  agent-runtime dispatch path. Treat QStash as required, not an "only-for-workflow"
-  nicety.
+  (so a simple chat does not fan out); it does not switch queue execution to
+  local mode. Use `AGENT_RUNTIME_MODE=local` only when a non-durable local run
+  is the intended subject of the test.
 
 - **Verify which runtime actually ran — do not assume.** Some features have two
   execution paths and the UI silently picks one. Group orchestration is the
   concrete example: the chat UI defaults to the **client** runtime, while a fix
   may live in the **server** runtime / `AGENT_RUNTIME_MODE=queue` durable-op path.
   A test that exercises the wrong path passes green without touching the code
-  under test. Prove which ran (a server `agent_operations` row, the QStash
-  `/api/agent/run` steps, server-only log lines); if the UI will not take the
+  under test. Prove which ran (a server `agent_operations` row, Hatchet worker
+  task logs, server-only log lines); if the UI will not take the
   server path, drive it directly (call the server TRPC mutation / endpoint).
 
 - **`apps/desktop` and `apps/cli` are standalone installs** (see §1) — run

@@ -147,7 +147,7 @@ export interface MemoryExtractionNormalizedPayload {
   identityCursor: number;
   layers: LayersEnum[];
   /**
-   * - `workflow` depends on Upstash Workflows to process the extraction asynchronously.
+   * - `workflow` depends on Hatchet to process the extraction asynchronously.
    * - `direct` processes the extraction within the webhook request itself.
    */
   mode: 'workflow' | 'direct';
@@ -2798,7 +2798,7 @@ export class MemoryExtractionWorkflowService {
    * - `MEMORY_EXTRACTION_HOURLY_TASK_USER_ID` identifies the service-account task owner
    *
    * Returns:
-   * - The created async task id and root Upstash workflow run id
+   * - The created async task id and root Hatchet workflow run id
    */
   static async triggerHourlyTracked(
     payload: MemoryExtractionHourlyWorkflowPayload,
@@ -2825,7 +2825,7 @@ export class MemoryExtractionWorkflowService {
           where: and(
             eq(asyncTasks.type, AsyncTaskType.UserMemoryExtractionHourly),
             eq(asyncTasks.userId, userId),
-            sql`${asyncTasks.metadata} #>> '{control,upstash,entryWorkflowRunId}' = ${options.entryWorkflowRunId}`,
+            sql`${asyncTasks.metadata} #>> '{control,hatchet,entryWorkflowRunId}' = ${options.entryWorkflowRunId}`,
           ),
         })
       : undefined;
@@ -2836,7 +2836,7 @@ export class MemoryExtractionWorkflowService {
         metadata: initHourlyUserMemoryExtractionMetadata({
           control: options?.entryWorkflowRunId
             ? {
-                upstash: {
+                hatchet: {
                   entryWorkflowRunId: options.entryWorkflowRunId,
                   workflowRunIds: [
                     options.entryWorkflowRunId,

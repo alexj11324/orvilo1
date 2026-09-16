@@ -1,6 +1,7 @@
 /** Provider-neutral workflow surface used by business workflow handlers. */
 export interface WorkflowContext<TPayload = Record<string, unknown>> {
   headers?: Headers;
+  invoke?: <TResult = unknown>(stepName: string, settings: unknown) => Promise<TResult>;
   requestPayload: TPayload;
   run: <TResult>(name: string, step: () => TResult | Promise<TResult>) => Promise<TResult>;
   workflowRunId?: string;

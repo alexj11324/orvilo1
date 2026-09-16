@@ -8,7 +8,6 @@ import {
   observeOnboardingUnderstandingOperation,
   recordOnboardingUnderstandingEndToEndDuration,
 } from '@orvilo/observability-otel/modules/onboarding-understanding';
-import type { PublicServeOptions, WorkflowContext } from '@upstash/workflow';
 
 import { getServerDB } from '@/database/server';
 import { publishOnboardingGenerationProgress } from '@/server/services/onboardingProgress';
@@ -16,6 +15,7 @@ import {
   createUnderstandingService,
   type UnderstandingService,
 } from '@/server/services/understanding/service';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 import { observeOnboardingUnderstandingWorkflow } from './observability';
@@ -116,7 +116,7 @@ export const processDetailedUnderstandingPersona = async (
  * Marks only the current detailed persona pass failed when its workflow exhausts retries.
  *
  * Use when:
- * - Upstash invokes the detailed writer failure callback
+ * - The Hatchet workflow dispatch exhausts its retries
  *
  * Expects:
  * - Unknown input that must match the collected Understanding payload
@@ -143,30 +143,3 @@ export const failRunningDetailedUnderstandingPersona = async (
     throw error;
   }
 };
-
-/**
- * Supplies payload validation and failure terminalization for the detailed persona workflow.
- *
- * Use when:
- * - Registering the detailed persona handler with Upstash Workflow
- *
- * Expects:
- * - JSON request bodies matching the collected Understanding payload
- *
- * Returns:
- * - Public workflow serve options with a bounded failure callback
- */
-export const processDetailedPersonaWorkflowOptions = {
-  failureFunction: async ({
-    context: { requestPayload },
-  }: {
-    context: { requestPayload?: unknown };
-  }) => {
-    const parsed = ProcessCollectedUnderstandingPayloadSchema.safeParse(requestPayload);
-    if (!parsed.success) return 'invalid-payload';
-    const result = await failRunningDetailedUnderstandingPersona(parsed.data);
-    return result.failed ? 'detailed-writing-failed' : 'detailed-writing-not-current';
-  },
-  initialPayloadParser: (input: string) =>
-    ProcessCollectedUnderstandingPayloadSchema.parse(JSON.parse(input)),
-} satisfies PublicServeOptions<ProcessCollectedUnderstandingPayload>;

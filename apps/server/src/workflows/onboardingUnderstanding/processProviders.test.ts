@@ -88,7 +88,7 @@ describe('processUnderstandingProviders', () => {
     // ROOT CAUSE:
     //
     // If one provider completed before another, its async map callback immediately created writing
-    // and recommendation steps. Upstash then persisted a parallel group whose membership depended on
+    // and recommendation steps. The durable worker persists a parallel group whose membership depended on
     // completion timing, so replay could expect GitHub steps while receiving Twitter steps.
     //
     // Before: provider callbacks mixed collection and downstream workflow steps.

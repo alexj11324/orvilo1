@@ -90,7 +90,7 @@ describe('memory extraction cancel route', () => {
       id: '00000000-0000-4000-8000-000000000001',
       metadata: {
         control: {
-          upstash: {
+          hatchet: {
             workflowRunIds: ['hatchet-dispatch:root-run', 'hatchet-dispatch:child-run'],
           },
         },
@@ -134,7 +134,7 @@ describe('memory extraction cancel route', () => {
           control: expect.objectContaining({
             cancelReason: 'operator stop',
             cancelledBy: 'webhook',
-            upstash: {
+            hatchet: {
               workflowRunIds: [
                 'hatchet-dispatch:root-run',
                 'hatchet-dispatch:child-run',
@@ -158,7 +158,7 @@ describe('memory extraction cancel route', () => {
       id: '00000000-0000-4000-8000-000000000002',
       metadata: {
         control: {
-          upstash: { workflowRunIds: ['hatchet-dispatch:manual-run'] },
+          hatchet: { workflowRunIds: ['hatchet-dispatch:manual-run'] },
         },
         progress: {
           completedTopics: 0,
@@ -193,7 +193,7 @@ describe('memory extraction cancel route', () => {
         metadata: expect.objectContaining({
           control: expect.objectContaining({
             cancelledBy: 'webhook',
-            upstash: { workflowRunIds: ['hatchet-dispatch:manual-run'] },
+            hatchet: { workflowRunIds: ['hatchet-dispatch:manual-run'] },
           }),
           source: 'chat_topic',
         }),

@@ -1,24 +1,16 @@
 import { Hono } from 'hono';
 
-import { botCallback } from './handlers/botCallback';
-import { botReplay } from './handlers/botReplay';
-import { execAgent } from './handlers/execAgent';
 import { finalizeAbandoned } from './handlers/finalizeAbandoned';
 import { gatewayCallback } from './handlers/gatewayCallback';
 import { gatewayCron } from './handlers/gatewayCron';
 import { gatewayDesiredConnections } from './handlers/gatewayDesiredConnections';
 import { gatewayStart } from './handlers/gatewayStart';
-import { groupMemberCallback } from './handlers/groupMemberCallback';
 import { messengerInstall } from './handlers/messengerInstall';
 import { messengerOAuthCallback } from './handlers/messengerOAuthCallback';
 import { messengerWebhook } from './handlers/messengerWebhook';
 import { platformWebhook } from './handlers/platformWebhook';
-import { runStep, runStepHealth } from './handlers/runStep';
-import { subAgentCallback } from './handlers/subAgentCallback';
 import { toolResult } from './handlers/toolResult';
 import { bearerSecretAuth } from './middlewares/bearerSecretAuth';
-import { qstashAuth } from './middlewares/qstashAuth';
-import { qstashOrApiKeyAuth } from './middlewares/qstashOrApiKeyAuth';
 import { serviceTokenAuth } from './middlewares/serviceTokenAuth';
 
 /**
@@ -30,13 +22,6 @@ import { serviceTokenAuth } from './middlewares/serviceTokenAuth';
  * and add the corresponding handler here.
  */
 const app = new Hono().basePath('/api/agent');
-
-// POST /api/agent — start a new agent operation (QStash sig OR API key)
-app.post('/', qstashOrApiKeyAuth(), execAgent);
-
-// POST /api/agent/run — execute a single step (QStash signature)
-app.post('/run', qstashAuth(), runStep);
-app.get('/run', runStepHealth);
 
 // POST /api/agent/tool-result — gateway-side tool result LPUSH'd to Redis
 app.post('/tool-result', serviceTokenAuth(), toolResult);
@@ -73,18 +58,6 @@ app.post('/gateway/callback', gatewayCallback);
 // payloads it should hold, so it can rebuild itself after a restart.
 // (auth is inline for the same reason as the callback above)
 app.post('/gateway/desired-connections', gatewayDesiredConnections);
-
-// POST /api/agent/webhooks/bot-callback — agent step/completion webhooks (QStash)
-app.post('/webhooks/bot-callback', qstashAuth(), botCallback);
-
-// Replay retries carry no completion response and require the queue signature.
-app.post('/webhooks/bot-replay', qstashAuth(), botReplay);
-
-// POST /api/agent/webhooks/subagent-callback — sub-agent completion bridge (QStash)
-app.post('/webhooks/subagent-callback', qstashAuth(), subAgentCallback);
-
-// POST /api/agent/webhooks/group-member-callback — group-action member bridge (QStash)
-app.post('/webhooks/group-member-callback', qstashAuth(), groupMemberCallback);
 
 // POST /api/agent/webhooks/:platform[/:appId] — Chat SDK bot platform webhooks
 app.post('/webhooks/:platform/:appId?', platformWebhook);

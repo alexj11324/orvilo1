@@ -346,8 +346,8 @@ export interface TaskSchedulerContext {
   consecutiveFailures?: number;
   // ISO timestamp when the latest tick was scheduled. Informational only.
   scheduledAt?: string;
-  // QStash messageId (or LocalScheduler scheduleId) for the next tick. Used to
-  // cancel when the user wants an interval change to take effect immediately.
+  // Provider message id (or LocalScheduler scheduleId) for the next tick. Used
+  // to cancel when the user wants an interval change to take effect immediately.
   tickMessageId?: string;
   // Generation token carried by the currently active tick. A delivered tick
   // must match this value so a failed best-effort cancellation cannot create

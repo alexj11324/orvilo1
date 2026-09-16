@@ -11,10 +11,8 @@ vi.mock('@/envs/app', () => ({
   },
 }));
 
-vi.mock('@/libs/qstash', () => ({
-  workflowClient: {
-    trigger: triggerMock,
-  },
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  triggerHatchetWorkflow: triggerMock,
 }));
 
 describe('AgentSignalWorkflow', () => {
@@ -23,7 +21,7 @@ describe('AgentSignalWorkflow', () => {
     triggerMock.mockResolvedValue({ workflowRunId: 'wfr_agent_signal' });
   });
 
-  it('normalizes the flow-control key while preserving the workflow payload scope key', async () => {
+  it('uses a stable Hatchet lane while preserving the workflow payload scope key', async () => {
     const { AgentSignalWorkflow } = await import('./agentSignal');
 
     await AgentSignalWorkflow.triggerRun({
@@ -41,8 +39,9 @@ describe('AgentSignalWorkflow', () => {
       userId: 'user-1',
     });
 
-    expect(triggerMock).toHaveBeenCalledWith({
-      body: {
+    expect(triggerMock).toHaveBeenCalledWith(
+      '/api/workflows/agent-signal/run',
+      {
         agentId: 'agent-1',
         sourceEvent: {
           payload: {
@@ -56,12 +55,10 @@ describe('AgentSignalWorkflow', () => {
         },
         userId: 'user-1',
       },
-      flowControl: {
-        key: 'agent-signal.run.scope.topic_topic-1',
-        parallelism: 1,
+      {
+        concurrencyKey: 'agent-signal.run.scope.topic:topic-1',
+        headers: {},
       },
-      headers: {},
-      url: 'http://localhost:3011/api/workflows/agent-signal/run',
-    });
+    );
   });
 });

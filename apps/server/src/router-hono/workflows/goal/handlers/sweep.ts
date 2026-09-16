@@ -35,8 +35,8 @@ export interface GoalSweepPayload {
  * operation lease with nobody left to reclaim it. Without it, one lost message
  * strands a long-horizon goal forever.
  *
- * Registered as a QStash Schedule pointing at this endpoint. Global scan, no
- * per-user auth; the route is signature-verified by `qstashAuth`.
+ * Registered as a Hatchet cron task. Global scan, no per-user auth; the worker
+ * invokes this handler directly.
  */
 export async function sweep(c: Context) {
   try {

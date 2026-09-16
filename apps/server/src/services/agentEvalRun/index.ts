@@ -47,8 +47,8 @@ import { evaluateAndFinalizeRun } from './aggregate';
 
 /** Round cost to at most 6 decimal places to avoid floating-point noise */
 const roundCost = (v: number): number => Math.round(v * 1e6) / 1e6;
-const EVAL_AGENT_RUNTIME_QSTASH_RETRIES = 5;
-const EVAL_AGENT_RUNTIME_QSTASH_RETRY_DELAY = '10000 * (1 + retried)';
+const EVAL_AGENT_RUNTIME_QUEUE_RETRIES = 5;
+const EVAL_AGENT_RUNTIME_QUEUE_RETRY_DELAY = '10000 * (1 + retried)';
 const EVAL_HISTORY_MESSAGE_BATCH_SIZE = 500;
 const EVAL_HISTORY_TAIL_METADATA_KEY = 'evalHistoryTailMessageId';
 const RESUMABLE_THREAD_STATUSES = new Set(['error', 'timeout']);
@@ -166,7 +166,7 @@ export class AgentEvalRunService {
     id?: string;
     /**
      * 'internal' (default): pre-create Topics/RunTopics for every test case and
-     * leave the run `idle` until `startRun` triggers the QStash workflow.
+     * leave the run `idle` until `startRun` triggers the Hatchet workflow.
      * 'external': create no Topics/RunTopics and set the run `pending` so an
      * external worker can claim it; no workflow is triggered.
      */
@@ -1359,8 +1359,8 @@ export class AgentEvalRunService {
         ...getEvalContextParams(envPrompt, environment, caseId),
         maxSteps: run.config?.maxSteps,
         prompt: params.testCase.content.input || '',
-        queueRetries: EVAL_AGENT_RUNTIME_QSTASH_RETRIES,
-        queueRetryDelay: EVAL_AGENT_RUNTIME_QSTASH_RETRY_DELAY,
+        queueRetries: EVAL_AGENT_RUNTIME_QUEUE_RETRIES,
+        queueRetryDelay: EVAL_AGENT_RUNTIME_QUEUE_RETRY_DELAY,
         userInterventionConfig: { approvalMode: 'headless' },
       });
 
@@ -1638,8 +1638,8 @@ export class AgentEvalRunService {
         ...getEvalContextParams(envPrompt, environment, caseId),
         maxSteps: run.config?.maxSteps,
         prompt: params.testCase.content.input || '',
-        queueRetries: EVAL_AGENT_RUNTIME_QSTASH_RETRIES,
-        queueRetryDelay: EVAL_AGENT_RUNTIME_QSTASH_RETRY_DELAY,
+        queueRetries: EVAL_AGENT_RUNTIME_QUEUE_RETRIES,
+        queueRetryDelay: EVAL_AGENT_RUNTIME_QUEUE_RETRY_DELAY,
         userInterventionConfig: { approvalMode: 'headless' },
       });
 

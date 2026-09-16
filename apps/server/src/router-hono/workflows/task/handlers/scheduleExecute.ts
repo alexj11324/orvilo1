@@ -11,7 +11,7 @@ export interface ScheduleExecutePayload {
 }
 
 /**
- * Per-task executor — handler for QStash messages fanned out by
+ * Per-task executor — handler for Hatchet tasks fanned out by
  * `/schedule-dispatch`. Mirrors `heartbeatTick.ts`: thin transport adapter,
  * delegates to `runScheduleTick` which owns DB-state re-validation.
  */

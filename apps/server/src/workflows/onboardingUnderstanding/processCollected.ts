@@ -7,7 +7,6 @@ import {
   UnderstandingSessionNotFoundError,
 } from '@orvilo/database';
 import { observeOnboardingUnderstandingOperation } from '@orvilo/observability-otel/modules/onboarding-understanding';
-import type { PublicServeOptions, WorkflowContext } from '@upstash/workflow';
 
 import { getServerDB } from '@/database/server';
 import { publishOnboardingGenerationProgress } from '@/server/services/onboardingProgress';
@@ -15,6 +14,7 @@ import {
   createUnderstandingService,
   type UnderstandingService,
 } from '@/server/services/understanding/service';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 import { observeOnboardingUnderstandingWorkflow } from './observability';
@@ -161,18 +161,3 @@ export const failRunningUnderstandingWriting = async (
     sourceFingerprint: payload.sourceFingerprint,
   };
 };
-
-export const processCollectedWorkflowOptions = {
-  failureFunction: async ({
-    context: { requestPayload },
-  }: {
-    context: { requestPayload?: unknown };
-  }) => {
-    const parsed = ProcessCollectedUnderstandingPayloadSchema.safeParse(requestPayload);
-    if (!parsed.success) return 'invalid-payload';
-    const result = await failRunningUnderstandingWriting(parsed.data);
-    return result.failed ? 'writing-failed' : 'writing-not-current';
-  },
-  initialPayloadParser: (input: string) =>
-    ProcessCollectedUnderstandingPayloadSchema.parse(JSON.parse(input)),
-} satisfies PublicServeOptions<ProcessCollectedUnderstandingPayload>;

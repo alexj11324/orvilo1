@@ -184,7 +184,7 @@ describe('MemoryExtractionWorkflowService.triggerHourlyTracked', () => {
     expect(mockCreate).toHaveBeenCalledWith({
       metadata: {
         control: {
-          upstash: {
+          hatchet: {
             entryWorkflowRunId: 'entry-run-1',
             workflowRunIds: ['entry-run-1', 'memory-user-memory-hourly-entry-run-1'],
           },
@@ -215,7 +215,7 @@ describe('MemoryExtractionWorkflowService.triggerHourlyTracked', () => {
      * @example
      * await expect(MemoryExtractionWorkflowService.triggerHourlyTracked({ baseUrl })).rejects.toThrow();
      */
-    const triggerError = new Error('upstash unavailable');
+    const triggerError = new Error('hatchet unavailable');
     mockTrigger.mockRejectedValue(triggerError);
 
     await expect(

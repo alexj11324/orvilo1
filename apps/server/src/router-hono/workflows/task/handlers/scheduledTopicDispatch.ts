@@ -21,7 +21,7 @@ export interface ScheduledTopicDispatchPayload {
 
 /**
  * Cron-style dispatcher for deferred runs on pure (non-Task) topics. Registered
- * as a QStash Schedule (e.g. `*\/10 * * * *`) pointing at this endpoint. On each
+ * as a Hatchet cron task (e.g. `*\/10 * * * *`). On each
  * tick:
  *
  *   1. Loads topics with `status = 'scheduled'` whose `scheduledRun.runAt` has
@@ -41,7 +41,7 @@ export interface ScheduledTopicDispatchPayload {
  * is offline) the topic stays `scheduled` and the claim lease expires so the next
  * tick retries — the scheduled state is never lost.
  *
- * Signature verification is handled by the `qstashAuth` middleware on the route.
+ * The worker invokes this handler directly.
  */
 export async function scheduledTopicDispatch(c: Context) {
   try {

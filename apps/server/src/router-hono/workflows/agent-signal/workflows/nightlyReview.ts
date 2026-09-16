@@ -1,4 +1,3 @@
-import type { WorkflowContext } from '@upstash/workflow';
 import { chunk } from 'es-toolkit/compat';
 
 import { getServerDB } from '@/database/server';
@@ -6,11 +5,10 @@ import { createServerNightlyReviewScheduleService } from '@/server/services/agen
 import {
   AgentSignalNightlyReviewWorkflow,
   type ExecuteNightlyReviewUserPayload,
-  NIGHTLY_REVIEW_EXECUTE_FLOW_CONTROL_KEY,
-  NIGHTLY_REVIEW_PAGINATE_FLOW_CONTROL_KEY,
   type NightlyReviewWorkflowUser,
   type PaginateNightlyReviewUsersPayload,
 } from '@/server/workflows/agentSignal/nightlyReview';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -237,44 +235,4 @@ export const executeNightlyReviewUser = async (
   );
 
   return { ...summary, success: true, userId: payload.user.id };
-};
-
-/**
- * Serve options for serialized cursor pagination.
- *
- * Use when:
- * - Registering the paginate route with Upstash Workflow
- *
- * Expects:
- * - Trigger-side pagination uses the same flow-control key
- *
- * Returns:
- * - One active pagination run with bounded delivery rate
- */
-export const paginateNightlyReviewUsersOptions = {
-  flowControl: {
-    key: NIGHTLY_REVIEW_PAGINATE_FLOW_CONTROL_KEY,
-    parallelism: 1,
-    ratePerSecond: 5,
-  },
-};
-
-/**
- * Serve options for bounded per-user execution.
- *
- * Use when:
- * - Registering the execute-user route with Upstash Workflow
- *
- * Expects:
- * - Trigger-side execution uses the same flow-control key
- *
- * Returns:
- * - At most five concurrent user executions
- */
-export const executeNightlyReviewUserOptions = {
-  flowControl: {
-    key: NIGHTLY_REVIEW_EXECUTE_FLOW_CONTROL_KEY,
-    parallelism: 5,
-    ratePerSecond: 5,
-  },
 };

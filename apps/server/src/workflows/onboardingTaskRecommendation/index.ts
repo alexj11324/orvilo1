@@ -27,16 +27,16 @@ interface TriggerOptions {
  *
  * Expects:
  * - A validated immutable Understanding source fingerprint
- * - QStash credentials and an internal application URL
+ * - Hatchet credentials and a configured worker
  *
  * Returns:
- * - The QStash workflow trigger receipt
+ * - The Hatchet workflow trigger receipt
  *
  * Call stack:
  *
  * processUnderstandingProviders
  *   -> {@link OnboardingTaskRecommendationWorkflow.trigger}
- *     -> workflowClient.trigger
+ *     -> triggerHatchetWorkflow
  *       -> /api/workflows/onboarding/task-recommendations/process
  */
 export class OnboardingTaskRecommendationWorkflow {
@@ -50,7 +50,7 @@ export class OnboardingTaskRecommendationWorkflow {
    * - A payload owned by the authenticated onboarding user
    *
    * Returns:
-   * - The QStash trigger receipt for the durable workflow run
+   * - The Hatchet trigger receipt for the durable workflow run
    */
   static async trigger(
     input: ProcessOnboardingTaskRecommendationPayload,

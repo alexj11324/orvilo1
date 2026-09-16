@@ -6,12 +6,13 @@ import {
   type InputType,
   NonRetryableError,
 } from '@hatchet-dev/typescript-sdk/v1';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import type { Context as HonoContext } from 'hono';
 import { z } from 'zod';
 
 import { hatchetDispatches } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
-import { enqueueHatchetTask } from '@/libs/hatchet';
+import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
 import { botCallback } from '@/server/router-hono/agent/handlers/botCallback';
 import { groupMemberCallback } from '@/server/router-hono/agent/handlers/groupMemberCallback';
 import { subAgentCallback } from '@/server/router-hono/agent/handlers/subAgentCallback';
@@ -31,7 +32,10 @@ import {
 } from '@/server/router-hono/workflows/agent-signal/workflows/nightlyReview';
 import { hourlyWorkflowHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/hourly';
 import { personaUpdateHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/personaUpdate';
-import { processTopicHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/processTopic';
+import {
+  failMemoryExtractionTopic,
+  processTopicHandler,
+} from '@/server/router-hono/workflows/memory-user-memory/workflows/processTopic';
 import { processTopicsHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/processTopics';
 import { processUsersHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/processUsers';
 import { processUserTopicsHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/processUserTopics';
@@ -55,19 +59,57 @@ import {
 import { runExpertiseHistoryWorkflow } from '@/server/workflows/expertiseHistory';
 import { runExpertiseHistoryTopicWorkflow } from '@/server/workflows/expertiseHistory/topic';
 import { OnboardingTaskRecommendationWorkflow } from '@/server/workflows/onboardingTaskRecommendation';
-import { processOnboardingTaskRecommendations } from '@/server/workflows/onboardingTaskRecommendation/process';
+import {
+  failOnboardingTaskRecommendations,
+  processOnboardingTaskRecommendations,
+} from '@/server/workflows/onboardingTaskRecommendation/process';
 import { OnboardingUnderstandingWorkflow } from '@/server/workflows/onboardingUnderstanding';
-import { processCollectedUnderstanding } from '@/server/workflows/onboardingUnderstanding/processCollected';
-import { processDetailedUnderstandingPersona } from '@/server/workflows/onboardingUnderstanding/processDetailedPersona';
-import { processUnderstandingProviders } from '@/server/workflows/onboardingUnderstanding/processProviders';
+import {
+  failRunningUnderstandingWriting,
+  processCollectedUnderstanding,
+} from '@/server/workflows/onboardingUnderstanding/processCollected';
+import {
+  failRunningDetailedUnderstandingPersona,
+  processDetailedUnderstandingPersona,
+} from '@/server/workflows/onboardingUnderstanding/processDetailedPersona';
+import {
+  failRunningUnderstandingProviders,
+  processUnderstandingProviders,
+} from '@/server/workflows/onboardingUnderstanding/processProviders';
 
 interface StoredWorkflowInput {
   body: unknown;
+  dispatchId: string;
   headers?: Record<string, string>;
   workflowRunId: string;
 }
 
 type WorkflowRunner = (input: StoredWorkflowInput) => Promise<unknown>;
+
+const WORKFLOW_DISPATCH_RETRIES = 5;
+
+const runWorkflowFailureCompensation = async (path: HatchetWorkflowPath, body: unknown) => {
+  switch (path) {
+    case '/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic': {
+      return failMemoryExtractionTopic(body);
+    }
+    case '/api/workflows/onboarding/task-recommendations/process': {
+      return failOnboardingTaskRecommendations(body);
+    }
+    case '/api/workflows/onboarding/understanding/process-collected': {
+      return failRunningUnderstandingWriting(body);
+    }
+    case '/api/workflows/onboarding/understanding/process-detailed-persona': {
+      return failRunningDetailedUnderstandingPersona(body);
+    }
+    case '/api/workflows/onboarding/understanding/process-providers': {
+      return failRunningUnderstandingProviders(body);
+    }
+    default: {
+      return undefined;
+    }
+  }
+};
 
 const invoke = async <THandler extends (context: never) => Promise<unknown>>(
   handler: THandler,
@@ -80,6 +122,36 @@ const invoke = async <THandler extends (context: never) => Promise<unknown>>(
       input.workflowRunId,
     ) as Parameters<THandler>[0],
   );
+
+const readResponseBody = async (response: Response): Promise<Record<string, unknown>> => {
+  const body = (await response.json()) as unknown;
+  return body && typeof body === 'object' ? (body as Record<string, unknown>) : { body };
+};
+
+const createHonoContext = (input: StoredWorkflowInput): HonoContext =>
+  ({
+    json: (body: unknown, status = 200, headers?: HeadersInit) =>
+      Response.json(body, { headers, status }),
+    req: {
+      header: (name: string) => {
+        const normalized = name.toLowerCase();
+        const entry = Object.entries(input.headers ?? {}).find(
+          ([key]) => key.toLowerCase() === normalized,
+        );
+        return entry?.[1];
+      },
+      json: async () => input.body,
+    },
+  }) as unknown as HonoContext;
+
+export const invokeHonoHandler = async (
+  handler: (context: HonoContext) => Promise<Response>,
+  input: StoredWorkflowInput,
+) => {
+  const response = await handler(createHonoContext(input));
+  if (!response.ok) throw new Error(await response.text());
+  return readResponseBody(response);
+};
 
 const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
   '/api/workflows/agent-eval-run/execute-test-case': (input) =>
@@ -96,12 +168,14 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
   '/api/workflows/agent-eval-run/run-benchmark': (input) => invoke(runBenchmarkHandler, input),
   '/api/workflows/agent-eval-run/run-thread-trajectory': (input) =>
     invoke(runThreadTrajectoryHandler, input),
-  '/api/agent/webhooks/bot-callback': (input) => invoke(botCallback, input),
-  '/api/agent/webhooks/group-member-callback': (input) => invoke(groupMemberCallback, input),
-  '/api/agent/webhooks/subagent-callback': (input) => invoke(subAgentCallback, input),
-  '/api/workflows/agent-eval-run/on-thread-complete': (input) => invoke(onThreadComplete, input),
+  '/api/agent/webhooks/bot-callback': (input) => invokeHonoHandler(botCallback, input),
+  '/api/agent/webhooks/group-member-callback': (input) =>
+    invokeHonoHandler(groupMemberCallback, input),
+  '/api/agent/webhooks/subagent-callback': (input) => invokeHonoHandler(subAgentCallback, input),
+  '/api/workflows/agent-eval-run/on-thread-complete': (input) =>
+    invokeHonoHandler(onThreadComplete, input),
   '/api/workflows/agent-eval-run/on-trajectory-complete': (input) =>
-    invoke(onTrajectoryComplete, input),
+    invokeHonoHandler(onTrajectoryComplete, input),
   '/api/workflows/agent-signal/execute-nightly-review-user': (input) =>
     invoke(executeNightlyReviewUser, input),
   '/api/workflows/agent-signal/paginate-nightly-review-users': (input) =>
@@ -151,12 +225,14 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
           OnboardingTaskRecommendationWorkflow.trigger(payload, options),
       },
     ),
-  '/api/workflows/task/on-creator-complete': (input) => invoke(onCreatorComplete, input),
-  '/api/workflows/task/on-topic-complete': (input) => invoke(onTopicComplete, input),
+  '/api/workflows/task/on-creator-complete': (input) => invokeHonoHandler(onCreatorComplete, input),
+  '/api/workflows/task/on-topic-complete': (input) => invokeHonoHandler(onTopicComplete, input),
   '/api/workflows/topic-auto-summary/dispatch': (input) => invoke(dispatchTopicAutoSummary, input),
   '/api/workflows/topic-auto-summary/execute': (input) => invoke(executeTopicAutoSummary, input),
-  '/api/workflows/verify/on-evidence-complete': (input) => invoke(onEvidenceComplete, input),
-  '/api/workflows/verify/on-verifier-complete': (input) => invoke(onVerifierComplete, input),
+  '/api/workflows/verify/on-evidence-complete': (input) =>
+    invokeHonoHandler(onEvidenceComplete, input),
+  '/api/workflows/verify/on-verifier-complete': (input) =>
+    invokeHonoHandler(onVerifierComplete, input),
 };
 
 const workflowDispatchInput = z.object({
@@ -179,10 +255,35 @@ const enqueueStoredDispatch = async (dispatch: typeof hatchetDispatches.$inferSe
     laneKey: dispatch.laneKey,
   });
   const db = await getServerDB();
+  // Store the provider receipt before attempting pending→queued. The worker
+  // may claim the stale pending row while this sweep is between statements;
+  // cancellation still needs the receipt in that race.
   await db
     .update(hatchetDispatches)
-    .set({ error: null, providerRunId, status: 'queued', updatedAt: new Date() })
+    .set({ providerRunId, updatedAt: new Date() })
     .where(eq(hatchetDispatches.id, dispatch.id));
+  const [transitioned] = await db
+    .update(hatchetDispatches)
+    .set({ error: null, status: 'queued', updatedAt: new Date() })
+    .where(and(eq(hatchetDispatches.id, dispatch.id), eq(hatchetDispatches.status, 'pending')))
+    .returning({ status: hatchetDispatches.status });
+
+  if (!transitioned) {
+    const [current] = await db
+      .select({ providerRunId: hatchetDispatches.providerRunId, status: hatchetDispatches.status })
+      .from(hatchetDispatches)
+      .where(eq(hatchetDispatches.id, dispatch.id))
+      .limit(1);
+    if (current?.status === 'cancelled') {
+      await cancelHatchetTask(providerRunId).catch((error) => {
+        console.error('[hatchet] failed to cancel swept dispatch', {
+          dispatchId: dispatch.id,
+          error,
+          providerRunId,
+        });
+      });
+    }
+  }
 };
 
 export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
@@ -195,8 +296,9 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
       maxRuns: 1,
     },
     executionTimeout: '30m',
-    fn: async (rawInput: z.infer<typeof workflowDispatchInput> & InputType) => {
+    fn: async (rawInput: z.infer<typeof workflowDispatchInput> & InputType, hatchetContext) => {
       const input = workflowDispatchInput.parse(rawInput);
+      const retryCount = hatchetContext.retryCount();
       const db = await getServerDB();
       const [dispatch] = await db
         .select()
@@ -208,43 +310,105 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
         return { deduped: true, success: true };
       }
       if (!isWorkflowPath(dispatch.payload.path)) {
-        throw new Error(`Unsupported Hatchet workflow path: ${dispatch.payload.path}`);
+        await db
+          .update(hatchetDispatches)
+          .set({
+            error: `Unsupported Hatchet workflow path: ${dispatch.payload.path}`,
+            status: 'failed',
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(hatchetDispatches.id, dispatch.id),
+              inArray(hatchetDispatches.status, ['pending', 'queued', 'running']),
+            ),
+          );
+        throw new NonRetryableError(`Unsupported Hatchet workflow path: ${dispatch.payload.path}`);
       }
 
-      await db
+      const claimableStatuses: Array<'pending' | 'queued' | 'running'> =
+        retryCount > 0 ? ['pending', 'queued', 'running'] : ['pending', 'queued'];
+      const [claimed] = await db
         .update(hatchetDispatches)
         .set({ error: null, status: 'running', updatedAt: new Date() })
-        .where(eq(hatchetDispatches.id, dispatch.id));
+        .where(
+          and(
+            eq(hatchetDispatches.id, dispatch.id),
+            inArray(hatchetDispatches.status, claimableStatuses),
+          ),
+        )
+        .returning({ id: hatchetDispatches.id });
+      if (!claimed) return { deduped: true, success: true };
+
+      const [claimedState] = await db
+        .select({ status: hatchetDispatches.status })
+        .from(hatchetDispatches)
+        .where(eq(hatchetDispatches.id, dispatch.id))
+        .limit(1);
+      if (!claimedState || claimedState.status === 'cancelled') {
+        return { cancelled: true, success: true };
+      }
+
       try {
         await runners[dispatch.payload.path]({
           body: dispatch.payload.body,
           headers: dispatch.payload.headers,
           workflowRunId: dispatch.payload.workflowRunId,
+          dispatchId: dispatch.id,
         });
         await db
           .update(hatchetDispatches)
           .set({ error: null, status: 'completed', updatedAt: new Date() })
-          .where(eq(hatchetDispatches.id, dispatch.id));
+          .where(
+            and(eq(hatchetDispatches.id, dispatch.id), eq(hatchetDispatches.status, 'running')),
+          );
         return { success: true };
       } catch (error) {
         if (error instanceof WorkflowAbort) {
           await db
             .update(hatchetDispatches)
             .set({ error: null, status: 'completed', updatedAt: new Date() })
-            .where(eq(hatchetDispatches.id, dispatch.id));
+            .where(
+              and(eq(hatchetDispatches.id, dispatch.id), eq(hatchetDispatches.status, 'running')),
+            );
           return { aborted: true, success: true };
         }
+
+        const isTerminalFailure =
+          error instanceof WorkflowNonRetryableError || retryCount >= WORKFLOW_DISPATCH_RETRIES;
+        let compensationError: unknown;
+        if (isTerminalFailure) {
+          try {
+            await runWorkflowFailureCompensation(dispatch.payload.path, dispatch.payload.body);
+          } catch (failureError) {
+            compensationError = failureError;
+            console.error('[hatchet] workflow failure compensation failed', {
+              dispatchId: dispatch.id,
+              error: failureError,
+              path: dispatch.payload.path,
+            });
+          }
+        }
+
         await db
           .update(hatchetDispatches)
           .set({
-            error: error instanceof Error ? error.message : String(error),
-            status: 'failed',
+            error:
+              compensationError instanceof Error
+                ? `${error instanceof Error ? error.message : String(error)}; compensation: ${compensationError.message}`
+                : error instanceof Error
+                  ? error.message
+                  : String(error),
+            status: isTerminalFailure ? 'failed' : 'running',
             updatedAt: new Date(),
           })
-          .where(eq(hatchetDispatches.id, dispatch.id));
+          .where(
+            and(eq(hatchetDispatches.id, dispatch.id), eq(hatchetDispatches.status, 'running')),
+          );
         if (error instanceof WorkflowNonRetryableError) {
           throw new NonRetryableError(error.message);
         }
+        if (compensationError) throw compensationError;
         throw error;
       }
     },
@@ -254,7 +418,7 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
       strategy: 'status',
     },
     inputValidator: workflowDispatchInput,
-    retries: 5,
+    retries: WORKFLOW_DISPATCH_RETRIES,
   });
 
   const workflowDispatchSweep = hatchet.task({

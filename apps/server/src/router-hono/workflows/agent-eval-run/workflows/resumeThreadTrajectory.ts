@@ -1,10 +1,10 @@
-import type { WorkflowContext } from '@upstash/workflow';
 import debug from 'debug';
 
 import { getServerDB } from '@/database/server';
 import { AgentEvalRunService } from '@/server/services/agentEvalRun';
 import type { ResumeThreadTrajectoryPayload } from '@/server/workflows/agentEvalRun';
 import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/utils';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 const log = debug('lobe-server:workflows:resume-thread-trajectory');
@@ -46,12 +46,4 @@ export const resumeThreadTrajectoryHandler = async (
   );
 
   return { success: true, testCaseId, threadId, topicId };
-};
-
-export const resumeThreadTrajectoryWorkflowOptions = {
-  flowControl: {
-    key: 'agent-eval-run.resume-thread-trajectory',
-    parallelism: 500,
-    ratePerSecond: 20,
-  },
 };

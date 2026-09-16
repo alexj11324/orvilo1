@@ -68,28 +68,51 @@ export const triggerHatchetWorkflow = async (
   const deduplicationKey = stableKey(`${path}\0${requestId}`);
   const laneKey = stableKey(options.concurrencyKey ?? requestId);
   const db = await getServerDB();
-  const [created] = await db
-    .insert(hatchetDispatches)
-    .values({
-      deduplicationKey,
-      id: proposedDispatchId,
-      laneKey,
-      payload: { body: payload, headers: options.headers, path, workflowRunId: requestId },
-    })
-    .onConflictDoNothing()
-    .returning({ id: hatchetDispatches.id, status: hatchetDispatches.status });
-  const [dispatch] = created
-    ? [created]
-    : await db
-        .select({ id: hatchetDispatches.id, status: hatchetDispatches.status })
-        .from(hatchetDispatches)
-        .where(
-          and(
-            eq(hatchetDispatches.deduplicationKey, deduplicationKey),
-            inArray(hatchetDispatches.status, ['pending', 'queued', 'running']),
-          ),
-        )
-        .limit(1);
+  const values = {
+    deduplicationKey,
+    id: proposedDispatchId,
+    laneKey,
+    payload: { body: payload, headers: options.headers, path, workflowRunId: requestId },
+  };
+  const insertDispatch = async () =>
+    db
+      .insert(hatchetDispatches)
+      .values(values)
+      .onConflictDoNothing()
+      .returning({ id: hatchetDispatches.id, status: hatchetDispatches.status });
+  const [created] = await insertDispatch();
+  let dispatch = created;
+  if (!dispatch) {
+    [dispatch] = await db
+      .select({ id: hatchetDispatches.id, status: hatchetDispatches.status })
+      .from(hatchetDispatches)
+      .where(
+        and(
+          eq(hatchetDispatches.deduplicationKey, deduplicationKey),
+          inArray(hatchetDispatches.status, ['pending', 'queued', 'running']),
+        ),
+      )
+      .limit(1);
+
+    // A conflicting active row may have reached a terminal state between the
+    // insert and the lookup. Retry the insert so terminal history does not
+    // block a new logical run with the same deduplication key.
+    if (!dispatch) {
+      [dispatch] = await insertDispatch();
+      if (!dispatch) {
+        [dispatch] = await db
+          .select({ id: hatchetDispatches.id, status: hatchetDispatches.status })
+          .from(hatchetDispatches)
+          .where(
+            and(
+              eq(hatchetDispatches.deduplicationKey, deduplicationKey),
+              inArray(hatchetDispatches.status, ['pending', 'queued', 'running']),
+            ),
+          )
+          .limit(1);
+      }
+    }
+  }
   if (!dispatch) throw new Error('Failed to create or find active Hatchet dispatch');
   const dispatchId = dispatch.id;
   if (dispatch.status !== 'pending') {
@@ -102,10 +125,40 @@ export const triggerHatchetWorkflow = async (
       dispatchId,
       laneKey,
     });
+    // Persist the provider receipt independently of the state transition. The
+    // worker can claim and finish the row before the publisher gets scheduled
+    // again; losing this id would make a later cancellation unable to reach
+    // Hatchet.
     await db
       .update(hatchetDispatches)
-      .set({ error: null, providerRunId, status: 'queued', updatedAt: new Date() })
+      .set({ providerRunId, updatedAt: new Date() })
       .where(eq(hatchetDispatches.id, dispatchId));
+    const [transitioned] = await db
+      .update(hatchetDispatches)
+      .set({ error: null, status: 'queued', updatedAt: new Date() })
+      .where(and(eq(hatchetDispatches.id, dispatchId), eq(hatchetDispatches.status, 'pending')))
+      .returning({ status: hatchetDispatches.status });
+
+    // The worker is allowed to claim a dispatch as soon as Hatchet accepts it.
+    // Never let this publisher acknowledgement move a running or terminal row
+    // backwards. If cancellation won the race, cancel the provider run that was
+    // just created so the stale delivery becomes a no-op.
+    if (!transitioned) {
+      const [current] = await db
+        .select({ status: hatchetDispatches.status })
+        .from(hatchetDispatches)
+        .where(eq(hatchetDispatches.id, dispatchId))
+        .limit(1);
+      if (current?.status === 'cancelled') {
+        await cancelHatchetTask(providerRunId).catch((cancelError) => {
+          console.error('[hatchet] failed to cancel raced dispatch', {
+            cancelError,
+            dispatchId,
+            providerRunId,
+          });
+        });
+      }
+    }
   } catch (error) {
     await db
       .update(hatchetDispatches)
@@ -114,7 +167,7 @@ export const triggerHatchetWorkflow = async (
         status: 'pending',
         updatedAt: new Date(),
       })
-      .where(eq(hatchetDispatches.id, dispatchId));
+      .where(and(eq(hatchetDispatches.id, dispatchId), eq(hatchetDispatches.status, 'pending')));
     throw error;
   }
 
@@ -126,15 +179,34 @@ export const cancelHatchetWorkflow = async (workflowRunId: string): Promise<bool
   const dispatchId = workflowRunId.slice(DISPATCH_ID_PREFIX.length);
   const db = await getServerDB();
   const [dispatch] = await db
-    .select({ providerRunId: hatchetDispatches.providerRunId })
+    .select({ providerRunId: hatchetDispatches.providerRunId, status: hatchetDispatches.status })
     .from(hatchetDispatches)
     .where(eq(hatchetDispatches.id, dispatchId))
     .limit(1);
   if (!dispatch) return false;
-  if (dispatch?.providerRunId) await cancelHatchetTask(dispatch.providerRunId);
-  await db
+
+  const [cancelled] = await db
     .update(hatchetDispatches)
     .set({ status: 'cancelled', updatedAt: new Date() })
-    .where(eq(hatchetDispatches.id, dispatchId));
-  return true;
+    .where(
+      and(
+        eq(hatchetDispatches.id, dispatchId),
+        inArray(hatchetDispatches.status, ['pending', 'queued', 'running']),
+      ),
+    )
+    .returning({ providerRunId: hatchetDispatches.providerRunId });
+
+  if (cancelled?.providerRunId) {
+    await cancelHatchetTask(cancelled.providerRunId).catch((error) => {
+      console.error('[hatchet] provider cancellation failed', { dispatchId, error });
+    });
+  } else if (dispatch.status === 'cancelled' && dispatch.providerRunId) {
+    // A concurrent caller may have won the database transition. Keep provider
+    // cancellation idempotent for that case as well.
+    await cancelHatchetTask(dispatch.providerRunId).catch((error) => {
+      console.error('[hatchet] provider cancellation retry failed', { dispatchId, error });
+    });
+  }
+
+  return Boolean(cancelled || dispatch.status === 'cancelled');
 };

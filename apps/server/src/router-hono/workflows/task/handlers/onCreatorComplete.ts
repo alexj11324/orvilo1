@@ -42,8 +42,8 @@ export async function onCreatorComplete(c: Context) {
     }
     const deliveredChunkCount = await callbackStore.getDeliveredChunkCount(body.operationId);
     // Messenger delivery and receipt settlement intentionally share this
-    // retryable QStash handler. A platform failure returns 500, so the receipt
-    // stays processing and QStash retries instead of reporting a false success.
+    // retryable Hatchet handler. A platform failure returns 500, so the receipt
+    // stays processing and Hatchet retries instead of reporting a false success.
     if (body.platformThreadId && body.applicationId) {
       await new BotCallbackService(db).handleCallback(
         {

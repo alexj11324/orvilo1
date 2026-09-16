@@ -8,9 +8,8 @@ import { runTaskWatchdog } from '@/server/services/taskWatchdog';
  * `lastHeartbeatAt + heartbeatTimeout < now()` and marks them `failed`,
  * leaving an urgent brief for the user.
  *
- * No per-user authentication: this is a global sweep registered as a QStash
- * Schedule (cron). Signature verification is handled by the `qstashAuth`
- * middleware mounted on the route.
+ * No per-user authentication: this is a global sweep registered as a Hatchet
+ * cron task and invoked directly by the worker.
  */
 export async function watchdog(c: Context) {
   try {

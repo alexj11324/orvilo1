@@ -268,7 +268,7 @@ export class Eval extends HeyApiClient {
     /**
      * Create an eval run
      *
-     * Queues an asynchronous QStash-backed evaluation run and returns immediately.
+     * Queues an asynchronous Hatchet-backed evaluation run and returns immediately.
      */
     public createRuns<ThrowOnError extends boolean = false>(options: Options<PostApiV1EvalRunsData, ThrowOnError>): RequestResult<PostApiV1EvalRunsResponses, PostApiV1EvalRunsErrors, ThrowOnError> {
         return (options.client ?? this.client).post<PostApiV1EvalRunsResponses, PostApiV1EvalRunsErrors, ThrowOnError>({

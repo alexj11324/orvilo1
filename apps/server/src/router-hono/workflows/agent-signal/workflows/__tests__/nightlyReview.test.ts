@@ -1,4 +1,3 @@
-import type { WorkflowContext } from '@upstash/workflow';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { LobeChatDatabase } from '@/database/type';
@@ -8,6 +7,7 @@ import type {
   ExecuteNightlyReviewUserPayload,
   PaginateNightlyReviewUsersPayload,
 } from '@/server/workflows/agentSignal/nightlyReview';
+import type { WorkflowContext } from '@/server/workflows/context';
 
 import type { NightlyReviewWorkflowDependencies } from '../nightlyReview';
 import { executeNightlyReviewUser, paginateNightlyReviewUsers } from '../nightlyReview';

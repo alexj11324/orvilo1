@@ -1,8 +1,7 @@
-import type { WorkflowContext } from '@upstash/workflow';
-
 import { getRedisConfig } from '@/envs/redis';
 import { initializeRedis, isRedisEnabled } from '@/libs/redis';
 import { type BaseRedisProvider } from '@/libs/redis/types';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { assertWorkflowRunAllowed, WorkflowRunGuardError } from '@/server/workflows/runGuard';
 import { runStep } from '@/server/workflows/step';
 
@@ -127,7 +126,7 @@ const createBlockedResponse = <TExtra extends MemoryWorkflowRunGuardResponseExtr
   skipped: true,
 });
 
-// NOTICE: Upstash retries/DLQs a workflow if it throws before the first persisted step.
+// NOTICE: The worker retries a workflow if it throws before the first persisted step.
 // Keep this no-op as the first entry action so later guard/config failures are normal steps.
 export const ensureWorkflowStarted = (
   context: WorkflowContext<unknown>,
@@ -140,7 +139,7 @@ export const ensureWorkflowStarted = (
   );
 
 /**
- * Checks a memory workflow run guard as one explicit Upstash workflow step.
+ * Checks a memory workflow run guard as one explicit durable workflow step.
  *
  * Use when:
  * - A workflow handler wants a lightweight guard check before continuing.
@@ -148,7 +147,7 @@ export const ensureWorkflowStarted = (
  * - Redis failures should inherit the shared run guard fail-open behavior.
  *
  * Expects:
- * - `context` is the active Upstash workflow context.
+ * - `context` is the active durable workflow context.
  * - `workflowPath` identifies the current memory workflow route.
  * - `stepName` is only provided for step-boundary checks.
  *

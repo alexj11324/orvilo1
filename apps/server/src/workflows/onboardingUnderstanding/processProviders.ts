@@ -7,7 +7,6 @@ import {
   UnderstandingSessionNotFoundError,
 } from '@orvilo/database';
 import { observeOnboardingUnderstandingOperation } from '@orvilo/observability-otel/modules/onboarding-understanding';
-import type { InvokableWorkflow, PublicServeOptions, WorkflowContext } from '@upstash/workflow';
 
 import { getServerDB } from '@/database/server';
 import { publishOnboardingGenerationProgress } from '@/server/services/onboardingProgress';
@@ -15,6 +14,7 @@ import {
   createUnderstandingService,
   type UnderstandingService,
 } from '@/server/services/understanding/service';
+import type { WorkflowContext } from '@/server/workflows/context';
 import type { ProcessOnboardingTaskRecommendationPayload } from '@/server/workflows/onboardingTaskRecommendation';
 import { getTaskRecommendationFlowControlKey } from '@/server/workflows/onboardingTaskRecommendation/types';
 import { runStep } from '@/server/workflows/step';
@@ -43,7 +43,7 @@ type ProviderWorkflowContext = Pick<
 
 interface ProviderWorkflowDependencies {
   createService?: (userId: string) => Promise<ProviderService>;
-  processCollectedWorkflow: InvokableWorkflow<ProcessCollectedUnderstandingPayload, unknown>;
+  processCollectedWorkflow?: unknown;
   triggerCollected?: (
     input: ProcessCollectedUnderstandingPayload,
     options: { workflowRunId: string },
@@ -89,7 +89,7 @@ const taskRecommendationWorkflowRunId = (sessionId: string, sourceFingerprint: s
  * Collects selected Understanding providers and schedules fingerprint-scoped writers.
  *
  * Use when:
- * - QStash delivers an onboarding Understanding provider workflow
+ * - Hatchet delivers an onboarding Understanding provider task
  *
  * Expects:
  * - A validated user, topic, session, and deterministic provider revision list
@@ -124,12 +124,8 @@ export const processUnderstandingProviders = async (
       const service = await (dependencies.createService ?? createService)(payload.userId);
 
       // NOTICE:
-      // Upstash batches workflow steps created in the same microtask into one parallel step group.
-      // Creating downstream steps inside provider callbacks made that group depend on which provider
-      // finished first, so replay expected GitHub steps while receiving Twitter steps (or vice versa).
-      // Source/context: `@upstash/workflow@0.2.23/index.js:2058-2083` and `:2278-2315`.
-      // Keep collection and downstream scheduling as separate, deterministically ordered stages until
-      // Upstash supports dynamic parallel branches with independently replayable child step graphs.
+      // Keep collection and downstream scheduling in separate deterministic stages so
+      // provider completion order cannot change the child task graph.
       const providerResults = await Promise.all(
         payload.providers.map(async ({ id: providerId, revision }) => ({
           providerId,
@@ -176,6 +172,9 @@ export const processUnderstandingProviders = async (
             dependencies.triggerCollected!(body, { workflowRunId }),
           );
         } else {
+          if (!context.invoke) {
+            throw new Error('A workflow invoke handler is required for provider writing');
+          }
           await context.invoke(`provider:${providerId}:write:${result.revision}`, {
             body,
             // Serialize writers for this session. The fingerprint CAS prevents a delayed older
@@ -191,12 +190,6 @@ export const processUnderstandingProviders = async (
         }
         if (payload.triggerTaskRecommendations !== false) {
           await runStep(context, `provider:${providerId}:recommend:${result.revision}`, () =>
-            // NOTICE:
-            // Cross-route workflow fan-out must use an absolute QStash trigger.
-            // context.invoke only replaces the current URL's final path segment, which sent this
-            // child to `/api/workflows/onboarding/understanding/process` and returned 404.
-            // Source/context: `router-hono/workflows/memory-user-memory/workflows/processUserTopics.ts:193`.
-            // Remove when Upstash context.invoke supports absolute cross-route workflow URLs.
             dependencies.triggerTaskRecommendations(
               {
                 responseLanguage: payload.responseLanguage,
@@ -237,7 +230,7 @@ export const processUnderstandingProviders = async (
 };
 
 /**
- * Terminalizes provider-workflow state after Upstash exhausts delivery retries.
+ * Terminalizes provider-workflow state after durable delivery retries are exhausted.
  *
  * Use when:
  * - Registering the failure callback for the provider collection workflow
@@ -315,31 +308,16 @@ export const failRunningUnderstandingProviders = async (
  * Supplies validation and terminal failure handling for the provider workflow route.
  *
  * Use when:
- * - Registering the provider handler with Upstash Workflow
+ * - Registering the provider handler with the Hatchet worker
  *
  * Expects:
  * - JSON payloads matching the provider workflow schema
  *
  * Returns:
- * - Public workflow serve options with revision-scoped failure compensation
+ * - Revision-scoped failure compensation for the Hatchet dispatch worker
  *
  * Call stack:
  *
- * workflow route
- *   -> processProvidersWorkflowOptions.failureFunction
- *     -> {@link failRunningUnderstandingProviders}
+ * Hatchet workflow dispatch failure
+ *   -> {@link failRunningUnderstandingProviders}
  */
-export const processProvidersWorkflowOptions = {
-  failureFunction: async ({
-    context: { requestPayload },
-  }: {
-    context: { requestPayload?: unknown };
-  }) => {
-    const parsed = ProcessUnderstandingProvidersPayloadSchema.safeParse(requestPayload);
-    if (!parsed.success) return 'invalid-payload';
-    const result = await failRunningUnderstandingProviders(parsed.data);
-    return `failed-providers:${result.failedProviderIds.length}`;
-  },
-  initialPayloadParser: (input: string) =>
-    ProcessUnderstandingProvidersPayloadSchema.parse(JSON.parse(input)),
-} satisfies PublicServeOptions<ProcessUnderstandingProvidersPayload>;

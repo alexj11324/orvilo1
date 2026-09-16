@@ -30,7 +30,7 @@ vi.mock('@orvilo/observability-otel/modules/upstash-workflow', () => ({
 
 vi.mock('@/server/globalConfig/parseMemoryExtractionConfig', () => ({
   parseMemoryExtractionConfig: () => ({
-    upstashWorkflowExtraHeaders: {},
+    workflowExtraHeaders: {},
   }),
 }));
 

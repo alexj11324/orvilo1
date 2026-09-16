@@ -29,6 +29,7 @@ import {
   linearInstallations,
   linearIssueLinks,
   linearProjectBindings,
+  linearSyncImportReceipts,
   linearSyncInbox,
   linearSyncOutbox,
   taskDomainEvents,
@@ -269,6 +270,70 @@ export class LinearSyncModel {
       )
       .returning();
     return row ?? null;
+  }
+
+  async updateBindingImportState(
+    id: string,
+    patch: {
+      importCompletedAt?: Date | null;
+      importCursor?: string | null;
+      importPhase?: 'initial' | 'reconciliation' | 'completed';
+      importReconciliationCursor?: string | null;
+      importStartedAt?: Date | null;
+    },
+  ) {
+    const [row] = await this.db
+      .update(linearProjectBindings)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(
+        and(
+          eq(linearProjectBindings.id, id),
+          eq(linearProjectBindings.workspaceId, this.workspaceId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async transaction<T>(callback: (model: LinearSyncModel, db: LobeChatDatabase) => Promise<T>) {
+    return this.db.transaction((tx) =>
+      callback(
+        new LinearSyncModel(tx as unknown as LobeChatDatabase, this.workspaceId),
+        tx as unknown as LobeChatDatabase,
+      ),
+    );
+  }
+
+  async recordImportReceipt(input: {
+    bindingId: string;
+    lastError?: string | null;
+    linearIssueId: string;
+    phase: 'initial' | 'reconciliation';
+    status: 'failed' | 'processed';
+  }) {
+    const [row] = await this.db
+      .insert(linearSyncImportReceipts)
+      .values({
+        bindingId: input.bindingId,
+        lastError: input.lastError,
+        linearIssueId: input.linearIssueId,
+        phase: input.phase,
+        processedAt: input.status === 'processed' ? new Date() : null,
+        status: input.status,
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoUpdate({
+        target: [linearSyncImportReceipts.bindingId, linearSyncImportReceipts.linearIssueId],
+        set: {
+          lastError: input.lastError,
+          phase: input.phase,
+          processedAt: input.status === 'processed' ? new Date() : null,
+          status: input.status,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return row;
   }
 
   async findIssueLinkByExternalId(linearIssueId: string) {

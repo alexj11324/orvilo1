@@ -91,6 +91,12 @@ export const linearProjectBindings = pgTable(
     replanningEnabled: boolean('replanning_enabled').notNull().default(false),
     version: integer('version').notNull().default(1),
     importCursor: text('import_cursor'),
+    importPhase: text('import_phase')
+      .$type<'initial' | 'reconciliation' | 'completed'>()
+      .notNull()
+      .default('initial'),
+    importReconciliationCursor: text('import_reconciliation_cursor'),
+    importStartedAt: timestamptz('import_started_at'),
     importCompletedAt: timestamptz('import_completed_at'),
     ...createdAtColumns(),
   },
@@ -105,6 +111,33 @@ export const linearProjectBindings = pgTable(
     ),
     index('linear_project_bindings_installation_id_idx').on(table.installationId),
     index('linear_project_bindings_workspace_id_idx').on(table.workspaceId),
+  ],
+);
+
+/** Durable per-issue receipt for the resumable historical import. */
+export const linearSyncImportReceipts = pgTable(
+  'linear_sync_import_receipts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' })
+      .notNull(),
+    bindingId: uuid('binding_id')
+      .references(() => linearProjectBindings.id, { onDelete: 'cascade' })
+      .notNull(),
+    linearIssueId: text('linear_issue_id').notNull(),
+    phase: text('phase').$type<'initial' | 'reconciliation'>().notNull(),
+    status: text('status').$type<'failed' | 'processed'>().notNull(),
+    lastError: text('last_error'),
+    processedAt: timestamptz('processed_at'),
+    ...createdAtColumns(),
+  },
+  (table) => [
+    uniqueIndex('linear_sync_import_receipts_binding_issue_unique').on(
+      table.bindingId,
+      table.linearIssueId,
+    ),
+    index('linear_sync_import_receipts_workspace_idx').on(table.workspaceId, table.status),
   ],
 );
 

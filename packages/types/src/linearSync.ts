@@ -35,6 +35,7 @@ export type TaskDomainEventSource = 'agent' | 'linear' | 'system' | 'user';
 
 export type TaskDomainEventType =
   | 'linear.issue.changed'
+  | 'linear.import.completed'
   | 'task.assigned'
   | 'task.created'
   | 'task.dependency.changed'

@@ -288,7 +288,26 @@ export class LinearSyncWorker {
     const installation = await this.model.findInstallationById(binding.installationId);
     if (!installation) throw new Error('Linear installation not found');
 
-    const page = await provider.listIssues(binding.linearProjectId, limit, binding.importCursor);
+    if (binding.importPhase === 'completed') {
+      return {
+        failed: 0,
+        imported: 0,
+        pendingBinding: 0,
+        processed: 0,
+        completed: true,
+        nextCursor: null,
+      };
+    }
+    const watermark = binding.importStartedAt ?? new Date();
+    if (!binding.importStartedAt) {
+      await this.model.updateBindingImportState(binding.id, {
+        importPhase: 'initial',
+        importStartedAt: watermark,
+      });
+    }
+    const phase = binding.importPhase === 'reconciliation' ? 'reconciliation' : 'initial';
+    const cursor = phase === 'initial' ? binding.importCursor : binding.importReconciliationCursor;
+    const page = await provider.listIssues(binding.linearProjectId, limit, cursor);
     const issueById = new Map(page.issues.map((issue) => [issue.id, issue]));
     const pageProvider: LinearIssueProvider = {
       ...provider,
@@ -301,56 +320,144 @@ export class LinearSyncWorker {
       processed: 0,
     };
 
+    const seenIssueIds = new Set<string>();
+    let pageBlocked = false;
     for (const issue of page.issues) {
+      if (seenIssueIds.has(issue.id)) continue;
+      seenIssueIds.add(issue.id);
+      if (
+        phase === 'reconciliation' &&
+        issue.updatedAt &&
+        new Date(issue.updatedAt).getTime() < watermark.getTime()
+      )
+        continue;
       try {
-        const outcome = await this.processRow(
+        const outcome = await this.processImportIssue(
           {
             id: `linear-import:${binding.id}:${issue.id}`,
             installationId: installation.id,
             subjectId: issue.id,
           },
+          issue,
+          phase,
           pageProvider,
         );
         if (outcome === 'imported') result.imported += 1;
         if (outcome === 'pending-binding') result.pendingBinding += 1;
         if (outcome !== 'pending-binding') result.processed += 1;
+        if (outcome === 'pending-binding') pageBlocked = true;
       } catch (error) {
+        pageBlocked = true;
+        await this.model.recordImportReceipt({
+          bindingId: binding.id,
+          lastError: error instanceof Error ? error.message.slice(0, 2_000) : String(error),
+          linearIssueId: issue.id,
+          phase,
+          status: 'failed',
+        });
         result.failed += 1;
         console.error('[linear:import]', error);
       }
     }
 
-    const nextCursor = page.hasNextPage ? page.endCursor : null;
-    await this.model.updateBindingImportCursor(binding.id, nextCursor, !page.hasNextPage);
-    return { ...result, completed: !page.hasNextPage, nextCursor };
+    if (pageBlocked) return { ...result, completed: false, nextCursor: cursor };
+    if (page.hasNextPage) {
+      const nextCursor = page.endCursor;
+      await this.model.updateBindingImportState(
+        binding.id,
+        phase === 'initial'
+          ? { importCursor: nextCursor }
+          : { importReconciliationCursor: nextCursor },
+      );
+      return { ...result, completed: false, nextCursor };
+    }
+    if (phase === 'initial') {
+      await this.model.updateBindingImportState(binding.id, {
+        importCursor: null,
+        importPhase: 'reconciliation',
+        importReconciliationCursor: null,
+      });
+      return { ...result, completed: false, nextCursor: null };
+    }
+    await this.model.transaction(async (model) => {
+      await model.updateBindingImportState(binding.id, {
+        importCompletedAt: new Date(),
+        importPhase: 'completed',
+        importReconciliationCursor: null,
+      });
+      await model.recordDomainEvent({
+        idempotencyKey: `linear:import-completed:${binding.id}:${watermark.toISOString()}`,
+        payload: { bindingId: binding.id, importedAt: new Date().toISOString() },
+        projectId: binding.projectId,
+        source: 'linear',
+        type: 'linear.import.completed',
+      });
+    });
+    return { ...result, completed: true, nextCursor: null };
+  }
+
+  private async processImportIssue(
+    row: { installationId: string; subjectId: string | null; id: string },
+    issue: LinearIssueSnapshot,
+    phase: 'initial' | 'reconciliation',
+    provider: LinearIssueProvider,
+  ) {
+    return this.model.transaction((model, db) =>
+      this.processRow(row, provider, {
+        db,
+        historicalImport: true,
+        knownIssue: issue,
+        model,
+        phase,
+      }),
+    );
   }
 
   private async processRow(
     row: { installationId: string; subjectId: string | null; id: string },
     provider: LinearIssueProvider,
+    context: {
+      db?: LobeChatDatabase;
+      historicalImport?: boolean;
+      knownIssue?: LinearIssueSnapshot;
+      model?: LinearSyncModel;
+      phase?: 'initial' | 'reconciliation';
+    } = {},
   ): Promise<'imported' | 'pending-binding' | 'processed'> {
     if (!row.subjectId) return 'processed';
 
-    const issue = await provider.getIssue(row.subjectId);
+    const db = context.db ?? this.db;
+    const model = context.model ?? this.model;
+    const issue = context.knownIssue ?? (await provider.getIssue(row.subjectId));
     const binding = issue.projectId
-      ? await this.model.findBindingByLinearProjectId(issue.projectId)
+      ? await model.findBindingByLinearProjectId(issue.projectId)
       : null;
     if (!binding) return 'pending-binding';
-    if (!binding.syncEnabled) return 'processed';
+    if (!binding.syncEnabled) {
+      if (context.phase) {
+        await model.recordImportReceipt({
+          bindingId: binding.id,
+          linearIssueId: issue.id,
+          phase: context.phase,
+          status: 'processed',
+        });
+      }
+      return 'processed';
+    }
 
-    const installation = await this.model.findInstallationById(row.installationId);
+    const installation = await model.findInstallationById(row.installationId);
     if (!installation?.installedByUserId) {
       throw new Error('Linear installation has no active Orvilo owner');
     }
 
-    const existingLink = await this.model.findIssueLinkByExternalId(issue.id);
+    const existingLink = await model.findIssueLinkByExternalId(issue.id);
     if (!existingLink) {
       if (!binding.defaultTeamId) {
         throw new Error('Linear project binding has no default team');
       }
 
       const task = await new TaskService(
-        this.db,
+        db,
         installation.installedByUserId,
         this.workspaceId,
       ).createTask({
@@ -376,12 +483,11 @@ export class LinearSyncWorker {
         (mapping) => mapping.linearStateId === issue.stateId,
       )?.localStatus;
       if (initialStatus) {
-        await new TaskModel(this.db, installation.installedByUserId, this.workspaceId).update(
-          task.id,
-          { status: initialStatus },
-        );
+        await new TaskModel(db, installation.installedByUserId, this.workspaceId).update(task.id, {
+          status: initialStatus,
+        });
       }
-      await this.model.createIssueLink({
+      await model.createIssueLink({
         bindingId: binding.id,
         installationId: installation.id,
         linearIdentifier: issue.identifier,
@@ -390,29 +496,46 @@ export class LinearSyncWorker {
         remoteSnapshot: issue,
         taskId: task.id,
       });
-      await this.model.recordDomainEvent({
-        eventId: row.id,
-        idempotencyKey: `linear:import:${row.id}`,
-        payload: { issueId: issue.id, taskId: task.id },
-        projectId: binding.projectId,
-        source: 'linear',
-        taskId: task.id,
-        type: 'task.created',
-      });
+      if (!context.historicalImport)
+        await model.recordDomainEvent({
+          eventId: row.id,
+          idempotencyKey: `linear:import:${row.id}`,
+          payload: { issueId: issue.id, taskId: task.id },
+          projectId: binding.projectId,
+          source: 'linear',
+          taskId: task.id,
+          type: 'task.created',
+        });
+      if (context.phase) {
+        await model.recordImportReceipt({
+          bindingId: binding.id,
+          linearIssueId: issue.id,
+          phase: context.phase,
+          status: 'processed',
+        });
+      }
       return 'imported';
     }
 
-    const [task] = await this.db
+    const [task] = await db
       .select()
       .from(tasks)
       .where(and(eq(tasks.id, existingLink.taskId), eq(tasks.workspaceId, this.workspaceId)))
       .limit(1);
     if (!task) {
-      await this.model.updateIssueLink(existingLink.id, {
+      await model.updateIssueLink(existingLink.id, {
         lastInboundDeliveryId: row.id,
         remoteSnapshot: issue,
         syncState: 'removed',
       });
+      if (context.phase) {
+        await model.recordImportReceipt({
+          bindingId: binding.id,
+          linearIssueId: issue.id,
+          phase: context.phase,
+          status: 'processed',
+        });
+      }
       return 'processed';
     }
 
@@ -423,16 +546,24 @@ export class LinearSyncWorker {
       remote: issue,
     });
     if (merged.conflicts) {
-      await this.model.updateIssueLink(existingLink.id, {
+      await model.updateIssueLink(existingLink.id, {
         conflict: merged.conflicts,
         lastInboundDeliveryId: row.id,
         remoteSnapshot: issue,
         syncState: 'conflict',
       });
+      if (context.phase) {
+        await model.recordImportReceipt({
+          bindingId: binding.id,
+          linearIssueId: issue.id,
+          phase: context.phase,
+          status: 'processed',
+        });
+      }
       return 'processed';
     }
 
-    const taskModel = new TaskModel(this.db, task.createdByUserId, this.workspaceId);
+    const taskModel = new TaskModel(db, task.createdByUserId, this.workspaceId);
     const patch = remoteTaskPatch(
       task,
       merged.merged,
@@ -450,15 +581,16 @@ export class LinearSyncWorker {
             : patch.status !== undefined
               ? 'task.status.changed'
               : 'task.requirement.changed';
-        await this.model.recordDomainEvent({
-          eventId: row.id,
-          idempotencyKey: `linear:task-update:${row.id}`,
-          payload: { issueId: issue.id, patch },
-          projectId: binding.projectId,
-          source: 'linear',
-          taskId: task.id,
-          type: eventType,
-        });
+        if (!context.historicalImport)
+          await model.recordDomainEvent({
+            eventId: row.id,
+            idempotencyKey: `linear:task-update:${row.id}`,
+            payload: { issueId: issue.id, patch },
+            projectId: binding.projectId,
+            source: 'linear',
+            taskId: task.id,
+            type: eventType,
+          });
       }
     }
 
@@ -467,7 +599,7 @@ export class LinearSyncWorker {
       const payload = Object.fromEntries(
         localChanged.map((field) => [field, local[field] ?? null]),
       );
-      await this.model.queueOutbox({
+      await model.queueOutbox({
         expectedLocalRevision: task.updatedAt.getTime(),
         installationId: installation.id,
         linkId: existingLink.id,
@@ -477,13 +609,21 @@ export class LinearSyncWorker {
       });
     }
 
-    await this.model.updateIssueLink(existingLink.id, {
+    await model.updateIssueLink(existingLink.id, {
       conflict: null,
       lastConfirmedSnapshot: issue,
       lastInboundDeliveryId: row.id,
       remoteSnapshot: issue,
       syncState: localChanged.length > 0 ? 'pending' : 'synced',
     });
+    if (context.phase) {
+      await model.recordImportReceipt({
+        bindingId: binding.id,
+        linearIssueId: issue.id,
+        phase: context.phase,
+        status: 'processed',
+      });
+    }
     return 'processed';
   }
 }

@@ -28,9 +28,12 @@ const os = require('node:os');
 const path = require('node:path');
 const zlib = require('node:zlib');
 
-const WEB_TARGETS = ['dist/desktop', 'dist/auth', 'dist/workbench'];
+// `dist/desktop` was the browser SPA and `dist/workbench` the standalone
+// Workbench app; both are gone. `dist/mobile` is what the default `vite build`
+// now emits, so it has to be listed here or the gate measures auth alone and
+// reports green while the shipped client goes unwatched.
+const WEB_TARGETS = ['dist/mobile', 'dist/auth'];
 const ENTRY_GRAPH_TARGETS = [
-  { dir: 'dist/desktop', html: 'index.html' },
   { dir: 'dist/mobile', html: 'index.mobile.html' },
   { dir: 'dist/auth', html: 'index.auth.html' },
 ];

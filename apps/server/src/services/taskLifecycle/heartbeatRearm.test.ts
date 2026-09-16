@@ -42,7 +42,14 @@ describe('TaskLifecycleService.maybeRearmHeartbeat', () => {
     updateContext = vi.fn().mockResolvedValue(null);
     hasUnresolvedUrgent = vi.fn().mockResolvedValue(false);
 
-    (service as any).taskModel.updateContext = updateContext;
+    const taskModel = (service as any).taskModel;
+    taskModel.updateContext = updateContext;
+    taskModel.updateContextIfStatus = vi.fn(
+      async (_taskId: string, _status: string, patch: Record<string, unknown>) => {
+        await updateContext(_taskId, patch);
+        return true;
+      },
+    );
     (service as any).briefModel.hasUnresolvedUrgentByTask = hasUnresolvedUrgent;
   });
 

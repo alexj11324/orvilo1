@@ -52,6 +52,7 @@ import {
   automationRunsRouteMeta,
   automationsRouteMeta,
 } from '@/features/Automations/routeMeta';
+import { inboxRouteMeta } from '@/features/HomeInbox/routeMeta';
 import { pageRouteMeta } from '@/features/Pages/routeMeta';
 import {
   projectLibraryRouteMeta,
@@ -896,6 +897,22 @@ export const sharedMainAreaChildren: RouteObject[] = [
         ],
         errorElement: <ErrorBoundary resetPath=".." />,
         path: 'tasks',
+      },
+      // The inbox kept its capability but lost its page when Web stopped mounting
+      // the old Home. A thin route is what the plan asks for, so the capability is
+      // reachable without reviving the surface it used to live on.
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/inbox'), 'Desktop > Inbox', {
+              preloadId: 'inbox',
+            }),
+            handle: { meta: inboxRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'inbox',
       },
       {
         children: [

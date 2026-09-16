@@ -1,11 +1,18 @@
-import type { TaskItem, TaskTopicIntegration, WorkingDirConfig } from '@orvilo/types';
-import { deriveWorktreePath } from '@orvilo/types';
+import type { TaskItem, TaskTopicIntegration } from '@orvilo/types';
+import { cloudSandboxRepoPath, deriveWorktreePath } from '@orvilo/types';
 import debug from 'debug';
 
+import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { LobeChatDatabase } from '@/database/type';
 import { deviceGateway } from '@/server/services/deviceGateway';
+import {
+  findBranchPr,
+  isBranchMergedInto,
+  parseGithubRepo,
+  resolveGithubAccessToken,
+} from '@/server/services/githubRepo';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
@@ -90,9 +97,13 @@ export class TaskIntegrationService {
 
       const topicId = taskTopic.topicId;
       if (record.role === 'task') {
-        return await this.integrateTaskRun(task, topicId, record);
+        return record.repo
+          ? await this.integrateRemoteRun(task, topicId, record)
+          : await this.integrateTaskRun(task, topicId, record);
       }
-      return await this.finalizeCorrectiveRun(task, topicId, record);
+      return record.repo
+        ? await this.finalizeRemoteCorrectiveRun(task, topicId, record)
+        : await this.finalizeCorrectiveRun(task, topicId, record);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Integration failed';
       log('integrateOnComplete: %s failed — %s', task.identifier, message);
@@ -104,17 +115,30 @@ export class TaskIntegrationService {
     }
   }
 
-  /** First integration attempt for a fresh task run. */
+  /** First integration attempt for a fresh task run (device worktree path). */
   private async integrateTaskRun(
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
   ): Promise<IntegrationOutcome> {
+    if (!record.deviceId || !record.repoPath || !record.worktreePath) {
+      await this.taskTopicModel.updateIntegration(task.id, topicId, {
+        lastError: 'Integration record is missing its device workspace fields',
+        state: 'blocked',
+      });
+      return 'blocked';
+    }
+
     const integrationWorktreePath =
       record.integrationWorktreePath ??
       deriveWorktreePath(record.repoPath, `integration-${record.baseBranch.replaceAll('/', '-')}`);
 
-    const ensured = await this.ensureIntegrationWorktree(record, integrationWorktreePath);
+    const ensured = await this.ensureIntegrationWorktree({
+      baseRef: this.baseRef(record),
+      deviceId: record.deviceId,
+      integrationWorktreePath,
+      repoPath: record.repoPath,
+    });
     if (!ensured) {
       await this.taskTopicModel.updateIntegration(task.id, topicId, {
         integrationWorktreePath,
@@ -158,15 +182,183 @@ export class TaskIntegrationService {
     });
   }
 
+  /**
+   * Sandbox-contract integration: the run's branch lives on the remote, not a
+   * device worktree. Verify whether it already landed (the agent may have
+   * merged its own PR); otherwise hand the merge to a corrective run — itself
+   * a sandbox run, since the original sandbox is long gone.
+   */
+  private async integrateRemoteRun(
+    task: TaskItem,
+    topicId: string,
+    record: TaskTopicIntegration,
+  ): Promise<IntegrationOutcome> {
+    if (!parseGithubRepo(record.repo!)) {
+      // An unparseable coordinate can never verify or merge — block now rather
+      // than burning corrective runs on it.
+      await this.taskTopicModel.updateIntegration(task.id, topicId, {
+        lastError: `Integration repo is not a GitHub coordinate: ${record.repo}`,
+        state: 'blocked',
+      });
+      return 'blocked';
+    }
+
+    const check = await this.verifyRemoteMerge(record, task);
+    const patch: Partial<TaskTopicIntegration> = {};
+    if (check.prUrl) patch.prUrl = check.prUrl;
+    // Record *why* a merge run is being dispatched — an unverifiable remote
+    // state (rate limit, outage, missing cred) spends an integrator run and
+    // must not be invisible.
+    if (check.error) patch.lastError = check.error;
+    if (Object.keys(patch).length > 0) {
+      await this.taskTopicModel.updateIntegration(task.id, topicId, patch);
+    }
+    if (check.merged) {
+      await this.landRemoteMerge(task.id, topicId, record, check);
+      return 'settled';
+    }
+    return this.dispatchCorrective(task, topicId, record);
+  }
+
+  /** Check the remote merge state after an integrator run returned. */
+  private async finalizeRemoteCorrectiveRun(
+    task: TaskItem,
+    topicId: string,
+    record: TaskTopicIntegration,
+  ): Promise<IntegrationOutcome> {
+    const check = await this.verifyRemoteMerge(record, task);
+    const patch: Partial<TaskTopicIntegration> = {};
+    if (check.prUrl) patch.prUrl = check.prUrl;
+    if (check.error) patch.lastError = check.error;
+
+    if (check.merged) {
+      await this.landRemoteMerge(task.id, topicId, record, check);
+      return 'settled';
+    }
+
+    if (record.attempts >= MAX_CORRECTIVE_ATTEMPTS) {
+      const lastError =
+        check.error ?? `Remote merge not landed after ${record.attempts} integrator runs`;
+      await this.taskTopicModel.updateIntegration(task.id, topicId, {
+        ...patch,
+        lastError,
+        state: 'blocked',
+      });
+      if (record.runTopicId) {
+        await this.taskTopicModel.updateIntegration(task.id, record.runTopicId, {
+          lastError,
+          state: 'blocked',
+        });
+      }
+      return 'blocked';
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await this.taskTopicModel.updateIntegration(task.id, topicId, patch);
+    }
+    return this.dispatchCorrective(task, topicId, record);
+  }
+
+  /**
+   * Verify on the remote that `record.branch` landed on `record.baseBranch`:
+   * a merged PR for the branch wins (covers squash merges that leave no
+   * ancestry), otherwise an ancestry compare decides. API failures report
+   * `merged: false` + `error` — the caller treats them as "not landed yet".
+   */
+  private async verifyRemoteMerge(
+    record: TaskTopicIntegration,
+    task: TaskItem,
+  ): Promise<{
+    error?: string;
+    merged: boolean;
+    prUrl?: string;
+    sha?: string;
+  }> {
+    if (!record.repo) return { error: 'Remote record is missing its repo', merged: false };
+
+    // The assignee's `env.GITHUB_CRED_KEY` override must drive verify the same
+    // way it drives the sandbox run — verifying against the default 'github'
+    // cred while the run pushed under another account misreads private-repo
+    // merges as 'unknown' forever.
+    const credKey = task.assigneeAgentId
+      ? ((
+          await new AgentModel(this.db, this.userId, this.workspaceId)
+            .getAgentConfig(task.assigneeAgentId)
+            .catch(() => null)
+        )?.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY ?? 'github')
+      : 'github';
+    const token = await resolveGithubAccessToken({
+      credKey,
+      db: this.db,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+
+    const pr = await findBranchPr(record.repo, record.branch, token);
+    if (pr?.merged) return { merged: true, prUrl: pr.url, sha: pr.sha };
+
+    const state = await isBranchMergedInto({
+      base: record.baseBranch,
+      head: record.branch,
+      repo: record.repo,
+      token,
+    });
+    if (state === 'merged') return { merged: true, prUrl: pr?.url };
+    if (state === 'unmerged') return { merged: false, prUrl: pr?.url };
+    return {
+      error: 'Could not verify the remote merge state via the GitHub API',
+      merged: false,
+      prUrl: pr?.url,
+    };
+  }
+
+  /** Remote merge verified: stamp every row tracking this branch. */
+  private async landRemoteMerge(
+    taskId: string,
+    topicId: string,
+    record: TaskTopicIntegration,
+    check: { prUrl?: string; sha?: string },
+  ): Promise<void> {
+    const patch: Partial<TaskTopicIntegration> = {
+      integratedSha: check.sha,
+      prUrl: check.prUrl,
+      pushedToRemote: true,
+      state: 'integrated',
+    };
+    // Multi-hop corrective chains (task → integrate → integrate → …) must all
+    // land — `runTopicId` alone only walks one hop back and would strand the
+    // original run's row at 'merging' after a 3+-hop chain. Fan out by branch
+    // like the device path's publish loop does.
+    const rows = await this.taskTopicModel.findByTaskId(taskId);
+    for (const row of rows) {
+      if (
+        row.topicId &&
+        row.integration?.branch === record.branch &&
+        row.integration.state !== 'blocked'
+      ) {
+        await this.taskTopicModel.updateIntegration(taskId, row.topicId, patch);
+      }
+    }
+  }
+
   /** Check the merge state after a corrective run returned. */
   private async finalizeCorrectiveRun(
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
   ): Promise<IntegrationOutcome> {
+    const finalizePath = record.integrationWorktreePath ?? record.worktreePath;
+    if (!record.deviceId || !finalizePath) {
+      await this.taskTopicModel.updateIntegration(task.id, topicId, {
+        lastError: 'Integration record is missing its device workspace fields',
+        state: 'blocked',
+      });
+      return 'blocked';
+    }
+
     const finalized = await deviceGateway.finalizeGitMerge({
       deviceId: record.deviceId,
-      path: record.integrationWorktreePath ?? record.worktreePath,
+      path: finalizePath,
       userId: this.userId,
       workspaceId: this.workspaceId,
     });
@@ -237,13 +429,23 @@ export class TaskIntegrationService {
   ): Promise<void> {
     const patch: Partial<TaskTopicIntegration> = {};
 
-    // Only attempt a remote publish when the base actually names a branch —
-    // a 'HEAD' fallback base means the workspace has no remote tracking ref
-    // worth pushing to.
-    if (record.baseBranch !== 'HEAD') {
+    if (record.repo) {
+      // Sandbox-contract record: the integrator run pushed the base branch
+      // itself and `verifyRemoteMerge` proved it landed — nothing is left to
+      // publish, and there is no device worktree to remove.
+      patch.pushedToRemote = true;
+    } else if (
+      record.deviceId &&
+      record.baseBranch !== 'HEAD' &&
+      // Only attempt a remote publish when the base actually names a branch —
+      // a 'HEAD' fallback base means the workspace has no remote tracking ref
+      // worth pushing to.
+      (record.integrationWorktreePath ?? record.worktreePath)
+    ) {
+      const publishPath = (record.integrationWorktreePath ?? record.worktreePath)!;
       const pushed = await deviceGateway.pushGitBranch({
         deviceId: record.deviceId,
-        path: record.integrationWorktreePath ?? record.worktreePath,
+        path: publishPath,
         remoteBranch: record.baseBranch,
         userId: this.userId,
         workspaceId: this.workspaceId,
@@ -260,16 +462,18 @@ export class TaskIntegrationService {
       }
     }
 
-    const removed = await deviceGateway.removeGitWorktree({
-      deviceId: record.deviceId,
-      path: record.repoPath,
-      userId: this.userId,
-      workspaceId: this.workspaceId,
-      worktreePath: record.worktreePath,
-    });
-    patch.worktreeCleaned = !!removed.success;
-    if (!removed.success) {
-      log('publishAndCleanup: worktree cleanup failed for task %s — %s', taskId, removed.error);
+    if (record.deviceId && record.repoPath && record.worktreePath) {
+      const removed = await deviceGateway.removeGitWorktree({
+        deviceId: record.deviceId,
+        path: record.repoPath,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+        worktreePath: record.worktreePath,
+      });
+      patch.worktreeCleaned = !!removed.success;
+      if (!removed.success) {
+        log('publishAndCleanup: worktree cleanup failed for task %s — %s', taskId, removed.error);
+      }
     }
 
     // Persist onto every task_topics row tracking this branch's integration
@@ -287,11 +491,15 @@ export class TaskIntegrationService {
   }
 
   /**
-   * Kick off a corrective run inside the integration worktree. The run is a
-   * normal task run (new topic, new seq) but bound to the merge worktree via
-   * `workspaceOverride`, and its task_topics row carries the same integration
-   * record with `role: 'integrate'` so its completion re-enters this service's
-   * finalize path.
+   * Kick off a corrective run that finishes the merge. The run is a normal
+   * task run (new topic, new seq) whose task_topics row carries the same
+   * integration record with `role: 'integrate'` so its completion re-enters
+   * this service's finalize path.
+   *
+   * - Device records: bound to the shared integration worktree via
+   *   `workspaceOverride`; the agent resolves the open conflict there.
+   * - Remote records (sandbox contract): bound to a fresh sandbox pre-clone of
+   *   `record.repo`; the agent performs the whole merge and pushes the base.
    */
   private async dispatchCorrective(
     task: TaskItem,
@@ -309,9 +517,10 @@ export class TaskIntegrationService {
       return 'blocked';
     }
 
+    const isRemote = !!record.repo;
     const integrationWorktreePath =
       context?.integrationWorktreePath ?? record.integrationWorktreePath;
-    if (!integrationWorktreePath) {
+    if (!isRemote && !integrationWorktreePath) {
       await this.taskTopicModel.updateIntegration(task.id, topicId, {
         lastError: 'No integration worktree to correct in',
         state: 'blocked',
@@ -319,70 +528,101 @@ export class TaskIntegrationService {
       return 'blocked';
     }
 
-    const workingDirectoryConfig: WorkingDirConfig = {
-      git: { detached: true, isWorktree: true },
-      path: integrationWorktreePath,
-      repoType: 'git',
-    };
+    let extraPrompt: string;
+    let workspaceOverride: NonNullable<
+      Parameters<TaskRunnerService['runTask']>[0]['workspaceOverride']
+    >;
+    let seedOverrides: Partial<TaskTopicIntegration>;
 
-    const conflictList = context?.conflicts?.length
-      ? `Conflicting paths:\n${context.conflicts.map((f) => `- ${f}`).join('\n')}`
-      : 'A merge is in progress in this worktree.';
+    if (isRemote) {
+      const workingDirectory = cloudSandboxRepoPath(record.repo!);
+      workspaceOverride = {
+        repos: [record.repo!],
+        workingDirectory,
+        workingDirectoryConfig: {
+          git: {
+            branch: record.baseBranch,
+            upstream: { branch: record.baseBranch, remote: 'origin' },
+          },
+          path: workingDirectory,
+          repoType: 'git',
+        },
+      };
+      extraPrompt = buildRemoteMergePrompt(record, context?.conflicts);
+      seedOverrides = {};
+    } else {
+      workspaceOverride = {
+        workingDirectory: integrationWorktreePath!,
+        workingDirectoryConfig: {
+          git: { detached: true, isWorktree: true },
+          path: integrationWorktreePath!,
+          repoType: 'git',
+        },
+      };
 
-    const extraPrompt = [
-      `[Workspace integration] Your previous run finished on branch \`${record.branch}\`.`,
-      `Merging it into \`${record.baseBranch}\` hit conflicts in the shared integration worktree — the working directory you are in now.`,
-      conflictList,
-      'Resolve the conflicts (look for <<<<<<< conflict markers), `git add` the resolved files, and commit to complete the merge. Do not start unrelated work.',
-    ].join('\n');
+      const conflictList = context?.conflicts?.length
+        ? `Conflicting paths:\n${context.conflicts.map((f) => `- ${f}`).join('\n')}`
+        : 'A merge is in progress in this worktree.';
+      extraPrompt = [
+        `[Workspace integration] Your previous run finished on branch \`${record.branch}\`.`,
+        `Merging it into \`${record.baseBranch}\` hit conflicts in the shared integration worktree — the working directory you are in now.`,
+        conflictList,
+        'Resolve the conflicts (look for <<<<<<< conflict markers), `git add` the resolved files, and commit to complete the merge. Do not start unrelated work.',
+      ].join('\n');
+      seedOverrides = {
+        integrationWorktreePath: integrationWorktreePath!,
+        worktreePath: integrationWorktreePath!,
+      };
+    }
 
     const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
     await runner.runTask({
       extraPrompt,
       integrationSeed: {
         ...record,
+        ...seedOverrides,
         attempts,
         conflicts: context?.conflicts,
-        integrationWorktreePath,
         role: 'integrate',
         runTopicId: topicId,
         state: 'merging',
-        worktreePath: integrationWorktreePath,
       },
       taskId: task.id,
-      workspaceOverride: {
-        workingDirectory: integrationWorktreePath,
-        workingDirectoryConfig,
-      },
+      workspaceOverride,
     });
 
     await this.taskTopicModel.updateIntegration(task.id, topicId, {
       attempts,
-      state: 'conflict',
+      // Remote dispatches mean a merge run is in flight — not necessarily a
+      // conflict; 'merging' reports that honestly. Device rows keep 'conflict'
+      // since they only dispatch after a conflicted merge.
+      state: isRemote ? 'merging' : 'conflict',
     });
 
     return 'hold';
   }
 
   /** Create the detached integration worktree; tolerate one already on disk. */
-  private async ensureIntegrationWorktree(
-    record: TaskTopicIntegration,
-    integrationWorktreePath: string,
-  ): Promise<boolean> {
+  private async ensureIntegrationWorktree(params: {
+    baseRef: string;
+    deviceId: string;
+    integrationWorktreePath: string;
+    repoPath: string;
+  }): Promise<boolean> {
     const added = await deviceGateway.addGitWorktree({
       branch: '',
       detach: true,
-      deviceId: record.deviceId,
-      path: record.repoPath,
-      ref: this.baseRef(record),
+      deviceId: params.deviceId,
+      path: params.repoPath,
+      ref: params.baseRef,
       userId: this.userId,
       workspaceId: this.workspaceId,
-      worktreePath: integrationWorktreePath,
+      worktreePath: params.integrationWorktreePath,
     });
     if (added.success) return true;
     // Reuse an existing directory — e.g. a stale worktree from an earlier run.
     if (added.error && /already exists/i.test(added.error)) return true;
-    log('ensureIntegrationWorktree: add failed for %s — %s', record.repoPath, added.error);
+    log('ensureIntegrationWorktree: add failed for %s — %s', params.repoPath, added.error);
     return false;
   }
 
@@ -391,3 +631,16 @@ export class TaskIntegrationService {
     return record.baseBranch === 'HEAD' ? 'HEAD' : `origin/${record.baseBranch}`;
   }
 }
+
+/** Merge instructions for a remote (sandbox-contract) integrator run. */
+const buildRemoteMergePrompt = (record: TaskTopicIntegration, conflicts?: string[]): string =>
+  [
+    `[Workspace integration] Land the task branch onto the base branch of \`${record.repo}\`.`,
+    `- The repo should be pre-cloned at \`${cloudSandboxRepoPath(record.repo!)}\` — clone it there yourself if it is missing.`,
+    `- Steps: \`git fetch origin\` → \`git checkout -B ${record.baseBranch} origin/${record.baseBranch}\` → \`git merge --no-ff origin/${record.branch}\` → resolve any conflicts → \`git push origin ${record.baseBranch}\`.`,
+    `- If a pull request exists for \`${record.branch}\`, landing it with \`gh pr merge --merge\` is equivalent.`,
+    ...(conflicts?.length
+      ? [`The previous attempt reported conflicts:\n${conflicts.map((f) => `- ${f}`).join('\n')}`]
+      : []),
+    'Do not start unrelated work. The run is complete only once the merge is pushed to the remote.',
+  ].join('\n');

@@ -1,0 +1,45 @@
+name: Issue Prerequisites Editing Workspace
+
+on:
+  push:
+    branches: [feat/issue-prerequisites]
+    paths:
+      - .github/workflows/issue-prerequisites-edit.yml
+      - .github/issue-prerequisites-edit.py
+
+permissions:
+  contents: write
+
+concurrency:
+  group: issue-prerequisites-edit
+  cancel-in-progress: false
+
+jobs:
+  workspace:
+    if: github.repository == 'alexj11324/orvilo1' && github.ref == 'refs/heads/feat/issue-prerequisites'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+      - name: Apply reviewed branch-only edits
+        run: |
+          if [ -f .github/issue-prerequisites-edit.py ]; then
+            python3 .github/issue-prerequisites-edit.py
+            git diff --check
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add packages src apps locales
+            if ! git diff --cached --quiet; then
+              git commit -m '✨ Implement issue prerequisite gating'
+              git push origin HEAD:refs/heads/feat/issue-prerequisites
+            fi
+          fi
+      - name: Export branch source for review
+        run: git archive --format=tar HEAD | gzip > /tmp/orvilo1-prerequisites-source.tar.gz
+      - uses: actions/upload-artifact@v6
+        with:
+          name: issue-prerequisites-source
+          path: /tmp/orvilo1-prerequisites-source.tar.gz
+          retention-days: 1

@@ -379,15 +379,89 @@ import { imageRouter } from '@/server/routers/lambda/image';
 > （`router.createCaller` / `asyncCaller.image.createImage`，见 §1.4），删错东西不会在运行时暴露，
 > 只在 `apps/server` 的 tsc 里报错，而方案 §0.1 禁止本机跑类型检查。
 > 这类删除的「删对了」证据只能由 GHA 的 Typecheck job 提供。
+>
+> **补充（2026-09-16 收口）**：两者都已执行完 —— S30.2 是 `e965e3e5`，S30.4 是 `aaec4243`
+> 加残留清理 `cc3b9489`。本机可跑的那部分证据（扇入扇出 grep、邻近单测）都已跑过并记在上表；
+> 上面这条缺口指的是**服务端进程内调用链**，那部分仍然只能由 GHA 提供，故 S30 的验证状态是
+> `CI_PENDING` 而不是 `REVIEW_APPROVED`。
 
-### 1.7 待补清单
+### 1.7 各功能域清单（2026-09-16 收口，实测填写）
 
-以下功能域的清单仍在收集中，收集完成后补入本节：
+按方案 §3 的分类词表登记。S30 / S60 / S70 已执行完毕，故这里登记的是**实测结果**
+而非预判；社区 / 文稿一项是范围外。
 
-- [ ] 社区 / 文稿残留（S30.1）
-- [ ] 个人画像（S30.3）、通用评测（S30.4）、公共访客分享（S30.5）
-- [ ] Goal（S60.1）与规则 / 经验（S60.2）
-- [ ] 设置分组与渠道（S70）
+#### 1.7.1 社区 / 文稿残留（S30.1）—— 范围外，不登记
+
+用户 2026-09-16 裁决（§0.3）：该项由另一个 Agent 负责，本分支不实施、不清理其残留。
+因此**不做清单**，也不计入 S80 验收。重叠文件与对账方式见 §0.3。
+
+#### 1.7.2 个人画像（S30.3）
+
+| 项                         | 规模              | 分类                  | 证据 / 说明                                                               |
+| -------------------------- | ----------------- | --------------------- | ------------------------------------------------------------------------- |
+| 画像浏览层（已退役）       | 53 文件 / 3249 行 | `DELETE_UI`           | `99528daa`                                                                |
+| `HomePortrait.tsx`         | 60 行             | `KEEP_SHARED`（暂留） | 生产消费者只有 `src/features/Home/index.tsx:391`                          |
+| `PortraitBubble/index.tsx` | 65 行             | `KEEP_SHARED`（暂留） | 同上 `:388`                                                               |
+| `portraitFraming.ts`       | 24 行             | `KEEP_SHARED`（暂留） | 布局计算，被 `index.tsx:78` 与 `:214` 使用                                |
+| `CustomizeModal/`          | 8 文件 / 677 行   | `NEEDS_TRACE`         | 开关的是「首页显示什么」，与画像本体不同寿                                |
+| `showHomePortrait` 偏好    | 非测试 16 处      | `KEEP_COMPAT`         | `initialState.ts:567` 默认 `true`；已持久化的用户会带回该值，删除要带迁移 |
+
+**阻塞（实测，非推测）**：Electron 的每标签页开启内容是 `HomeLayout + Home` ——
+`src/spa/router/DesktopHomeRoute.tsx` 同时 import `routes/(main)/home/_layout` 与
+`routes/(main)/home`，由 `desktopRouter.config.desktop.tsx:18` 的 `createHomeElement` 注入。
+`HomePortrait` 挂在 `Home` 内，所以删它必须同时改 Electron 的每标签页落地面，
+超出「退役一个独立功能」的范围，属 S80 决策。
+
+#### 1.7.3 通用评测（S30.4）
+
+| 项                                       | 分类          | 证据 / 说明                                                                                                |
+| ---------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
+| 工作台路由与视图                         | `DELETE_UI`   | `aaec4243`（129 文件 / 14137 行）。`src/routes/(main)/eval` 与 `src/features/Eval` 均已不存在              |
+| 浏览器侧 client 栈                       | `DELETE_UI`   | `cc3b9489`（23 文件 / 1402 行）：`src/store/eval/`、`src/services/agentEval.ts`、`evalKeys` 与 `keys.eval` |
+| 服务端 `agentEval` / `agentEvalExternal` | `KEEP_SHARED` | CLI 是活消费者（`apps/cli/src/commands/eval.ts` 用 `client.agentEval.*`），Acceptance 走同一执行骨干       |
+| `agentEvalRun` service 与 workflows      | `KEEP_SHARED` | `apps/server/src/services/agentEvalRun/`、`apps/server/src/router-hono/workflows/agent-eval-run/`          |
+| `ragEvalKeys` / `ragEvalService`         | `KEEP_SHARED` | 消费者是 `src/store/library/slices/ragEval/`                                                               |
+
+> **这才是「哪些能删」的判据 —— 结构性差别，不是目录名**：通用评测有**独立的顶层 store**
+> （`src/store/eval`，20 文件），而它在本仓唯一的树外消费者是登出重置表
+> `src/store/utils/userDataStores.ts` 的一行，即「一个没人观察、只被 `reset()` 的 store」。
+> RAG 评测则是 `library` store 内的一个 slice（`store/library/slices/ragEval/`），
+> 与资源同寿，所以随资源保留。**判据是「有没有独立生命周期」，不是名字里有没有 eval。**
+
+#### 1.7.4 公共访客分享（S30.5）
+
+| 项                              | 分类            | 证据 / 说明                                                                                                                            |
+| ------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| agent 分享创建（服务端）        | `STOP_PRODUCER` | `c95f9ba6`：`assertAgentShareCreationEnabled()` 无条件抛错                                                                             |
+| agent 分享访客执行（服务端）    | `STOP_PRODUCER` | 同上：`assertAgentShareVisitorExecutionEnabled()`；两个拒绝**都不读开关**（§6.5）                                                      |
+| 收口点完备性                    | 已证            | `shareGate` 全仓**只有一处构造**（`shareChat.ts:268`），`startOperation.ts:141` 由它派生 → 门住 `execAgent` 即可证完备                 |
+| `src/services/agentShare.ts`    | `KEEP_COMPAT`   | 53 行 router 客户端绑定；本仓零消费者，但消费者是**云端业务实现**提供的发布 / 撤销 UI，删了会打断那个构建，本机无法验证 —— 判据见 §2.5 |
+| `ShareShell`                    | `KEEP_SHARED`   | **不是零消费者**：`apps/share/src/features/topic/SharedTopicView.tsx:54` 在用，是公开分享应用的共用外壳                                |
+| 主题 / 页面 / 产物 三类公开分享 | `KEEP_SHARED`   | `apps/share` 路由表只有 `share/t/:id`、`share/page/:id`、`share/artifact/:id` 三条                                                     |
+| `apps/share`（65 文件）         | `KEEP_SHARED`   | **该应用内零 agent 分享面**：`grep -i agent` 在 `apps/share` 无命中，路由表里也没有 agent 路由                                         |
+
+> ⚠️ **方案 §6.5 的「删除 `apps/share`」是过度删除，不执行**：该应用服务的是主题 / 页面 /
+> 产物三类公开分享，与本轮要退役的 agent 分享无关。本轮只收口 agent 分享分支。
+> （`execAgent` 函数体、`shareGate.ts`、`AgentRuntime` 访客分支属云端侧，见 §2.5。）
+
+#### 1.7.5 Goal（S60.1）与规则 / 经验（S60.2）
+
+| 项                                         | 规模             | 分类          | 说明                                                        |
+| ------------------------------------------ | ---------------- | ------------- | ----------------------------------------------------------- |
+| `src/features/Portal/GoalMetric/`          | 2 文件 / 561 行  | `KEEP_SHARED` | 目标度量已挂在对话侧栏 Portal（`Body.tsx` 541 行）          |
+| `src/features/Portal/GoalNode/`            | 2 文件 / 305 行  | `KEEP_SHARED` | 同上                                                        |
+| `HomeInbox/homeGoals.ts` + `GoalsRailCard` | 296 行           | `KEEP_SHARED` | 收件箱 rail 卡片                                            |
+| `src/features/SelfLearning/`               | 19 文件 / 583 行 | `KEEP_SHARED` | 规则 / 经验面已下沉；`LegacyRouteRedirect.tsx` 是旧路由兼容 |
+
+两者在 S60 实施期的审计结论均为**已满足**（非待办），见 §2.7。
+
+#### 1.7.6 设置分组与渠道（S70）
+
+| 项         | 分类          | 证据 / 说明                                                                                                                                    |
+| ---------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 分组枚举   | 已重构        | `3242086a`：`SettingsGroupKey` 八组 —— Account / Agent / Channels / Data / Developer / Security / Tools / UsageAndCost，单一数组字面量直接返回 |
+| 渠道分组   | `KEEP_SHARED` | `src/features/Settings/hooks/useCategory.tsx:144` 的 `Channels` 组 = 用户自己的信使绑定与通知，与「资源渠道」不是一回事                        |
+| 移动端分组 | 7 组          | `src/routes/(mobile)/me/settings/features/useCategory.tsx`，无 `Channels`                                                                      |
 
 ---
 
@@ -395,10 +469,10 @@ import { imageRouter } from '@/server/routers/lambda/image';
 
 | 工作包                   | 实现状态     | 验证状态         | commit / 证据                                                     | 保留依赖 / 阻塞                                                                                                                                                                                                                                      |     |     |
 | ------------------------ | ------------ | ---------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- |
-| S00 基线与依赖清单       | IN\_PROGRESS | NOT\_RUN         | 本文                                                              | 见 §1.7 待补                                                                                                                                                                                                                                         |     |     |
+| S00 基线与依赖清单       | IMPLEMENTED  | NOT\_RUN         | 本文 §1.7                                                         | 清单已按功能域填齐（2026-09-16）；纯清单，无需运行时验证。S30.1 社区 / 文稿属范围外，见 §1.7.1                                                                                                                                                       |     |     |
 | S10 统一入口与偏好迁移   | IMPLEMENTED  | REVIEW\_APPROVED | `e66656d4` `440f1bc2` `880af5de`                                  | review 通过；本机 550+ 项测试通过；待 CI 类型检查；跟进项已挂工作包见 §5                                                                                                                                                                             |     |     |
 | S20 默认看板、旧首页卸载 | IN\_PROGRESS | CI\_PENDING      | `fb1a52a6`                                                        | 默认看板与 Web 落地任务列表已完成；**Web 收件箱（未读话题 / 简报 / 需要你处理）在本分支变为不可达，这是真实回退**，两条修法见 §2.2；旧 Home 组件仍被 Electron 每标签页使用，故未删                                                                   |     |     |
-| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6`                       | S30.5 的服务端收口已完成（可证完备的单一收口点）；发布 UI 与访客页在云端业务实现里，不在此仓库，见 §2.5                                                                                                                                              |     |     |
+| S30 独立功能退役         | IMPLEMENTED  | CI\_PENDING      | `e965e3e5` `99528daa` `aaec4243` `c95f9ba6` `cc3b9489`            | S30.5 的服务端收口已完成（可证完备的单一收口点）；agent 分享的访客页不在本仓，属云端侧。**但 `apps/share` 在本仓且服务主题 / 页面 / 产物三类分享，方案 §6.5 的「删除 apps/share」是过度删除、不执行**，见 §1.7.4 与 §2.5                             |     |     |
 | S40 自动化整合           | IMPLEMENTED  | CI\_PENDING      | `03d606a0` `c27ab198` `f4605a81`                                  | 数据层已统一、名称已改「自动化」，视图合并与方案 §7 的 5 项能力两个入口都有；入口按 §2.3 的可验证理由保留 `/automations`（`useActiveTabKey` 只取 pathname 第一段、不读 query，改成 `/tasks?collection=scheduled` 会让该导航项永远不会高亮，见 §2.3） |     |     |
 | S50 资源与产物归位       | IMPLEMENTED  | CI\_PENDING      | `b017069b` `2957b55b` `a870f37e` `263ebf78` `15d06a28` `ee076357` | 四项全部完成并在本机验证（PGlite + `bunx tsc`）；运行级追溯复用既有 `works.originTopicId`，**零新增表**，见 §2.6                                                                                                                                     |     |     |
 | S60 Goal 与规则下沉      | IMPLEMENTED  | CI\_PENDING      | `23751be7` `7c565528` `3126df0d`                                  | Goal 与详情 / 对话关联两侧经审计均为**已满足**（非待办）；规则面已下沉，见 §2.7                                                                                                                                                                      |     |     |
@@ -755,7 +829,19 @@ S70 的完整范围（方案 §10）还包括**设置重新分组**（账户 / �
 
 `(main)/eval`（111 文件，与 S30.2 同级，不是「顺手可删」）与 `features/EvalCapture`（7 文件）退役；`saveAsEvalCase` 消息动作、侧栏页脚两处「Evaluation Lab」、命令面板 `eval` 路由键、`enableEvalCapture` Labs 开关与其 selector 一并移除（开关留着会变成「拨了没用」的静默空操作）。
 
-**§6.4 要求保留的**：`Acceptance` / `Verify` / 任务测试报告 / 证据 / 失败追踪全部未动；`apps/cli/src/commands/eval.ts` 是内部消费者，其库保留；`store/eval` 被 `store/utils/userDataStores` 注册，保留；`agentEval` / `ragEval` 服务端 router 未动；`ragEvalService` 属知识库，与本次无关。
+**§6.4 要求保留的**：`Acceptance` / `Verify` / 任务测试报告 / 证据 / 失败追踪全部未动；`apps/cli/src/commands/eval.ts` 是内部消费者，其库保留；`agentEval` / `ragEval` 服务端 router 未动；`ragEvalService` 属知识库，与本次无关。
+
+**补做：浏览器侧 client 残留（`cc3b9489`）—— 并且推翻了本轮早先的一个判断。**
+当时把 `store/eval` 判为「被 `store/utils/userDataStores` 注册，保留」。复核下来这条推理是**反的**：
+登记进登出重置表，只说明「登出时要把它清掉」，**不说明有人在读它**。实测该 store 在树外的
+唯一消费者就是那一行 `useEvalStore`，`services/agentEval`（浏览器包装）的唯一消费者是该 store 的
+slice，`evalKeys` 的唯一消费者也是它们 —— 三者的消费者**互为闭环、出口为零**，即
+「一个没人观察、只被 `reset()` 的 store」。故 `cc3b9489` 删除 23 文件 / 1402 行。
+
+**为什么 RAG 评测不跟着删（结构性判据）**：RAG 评测是 `store/library/slices/ragEval/`，即 library store
+的一个 slice，与资源同寿；通用评测则有**独立顶层 store**。删的判据是「有没有独立生命周期」，
+不是「目录名里有没有 eval」。同理服务端 `agentEval` / `agentEvalExternal` router、
+`services/agentEvalRun/` 与其 workflows 全部保留 —— CLI 是它们的活消费者，Acceptance 走同一执行骨干。
 
 ⚠️ **`src/proxy.ts` 特意不改**：它的 matcher 里列着 `/eval`、`/image`、`/video`，看起来是死条目。但那是「哪些路径走 middleware」的白名单（不是鉴权放行），删掉退役段会把「旧深链接由 SPA 兜底重定向回家」变成框架层硬 404。
 
@@ -776,11 +862,35 @@ S70 的完整范围（方案 §10）还包括**设置重新分组**（账户 / �
 `{ publishable: false, supported: false, visible: false }`，注释明说「这隐藏了所有分享入口（profile tab、header action、settings page）」。
 三个消费者（`features/AgentProfileTabs/index.tsx:70`、`routes/(main)/agent/profile/features/Header/index.tsx:254`、
 `AgentShareSettingsPage`）读的都是它。也就是说真正的发布 UI 与访客页在**云端业务实现**（该槽位的覆盖者）里，不在此仓库 ——
-「入口同步移除」属于那次云端改动。同理 `agentShareService`（`src/services/agentShare.ts`）与 `ShareShell` 全仓均**零消费者**。
+「入口同步移除」属于那次云端改动。**更正本条早先的两个判断（2026-09-16 复核）**：
+
+- `ShareShell`（`src/business/client/features/ShareShell/`）**不是**零消费者 —— 它是公开分享应用的共用外壳，被
+  `apps/share/src/features/topic/SharedTopicView.tsx:54` 使用。原先写它「零消费者」是错的。
+- `agentShareService`（`src/services/agentShare.ts`，53 行）在本仓确实是零消费者，但**这不构成删除理由**。
+  它是 `agentShare` router 的客户端绑定（`disableShare` / `enableShare` / `getShareStats` / `getShareStatus` /
+  `getSharedAgent` / `updateShareConfig` / `updateSlug` / `updateVisibility`），而发布与撤销 UI 恰恰就是被
+  业务槽位 `useAgentShareSupported` 隐藏掉的那部分 —— 即它的消费者在**云端业务实现**里，不在本仓库。
+
+> **由此得出删死代码前必须先问的那个问题：消费者为什么缺席？**
+>
+> | 缺席原因             | 例子                           | 处置                                           |
+> | -------------------- | ------------------------------ | ---------------------------------------------- |
+> | 同仓重构删掉了消费者 | `src/store/eval`（`cc3b9489`） | 可删（删完出口为零，闭环）                     |
+> | 下游私有层提供消费者 | `src/services/agentShare.ts`   | **保留**（删了会打断那个构建，而本机无法验证） |
+>
+> 本仓 73 个 `src/services/*.ts` 里只有 2 个零消费者，说明这个仓库**不留投机性的 API 面** ——
+> 所以「零消费者」本身是有信号的；信号要配上「缺席原因」才能定处置。
 
 **旧链接为什么不动读路径**：`share.getSharedAgent` 同时服务三件事 —— 访客历史页面的解析、所有者的预览（`isOwner` 分支）、以及「审查与撤销」所需的读取。封掉它等于同时打断 §6.5 要求保留的历史读取与撤销路径，正是那节警告的「误伤」。旧链接的**安全说明**因此落在访客**尝试运行时**：`execAgent` 返回 FORBIDDEN，而客户端既有范式 `features/Share/ErrorView.tsx:58` 的 FORBIDDEN 分支（403 说明页，经 `ShareShell` 渲染）已经在处理这类响应。
 
-**仍未做（属云端仓库或 S80）**：云端发布 UI 与访客页的入口移除与「已退役」文案；以及 §6.5 最后一步「依赖清零后删除无用代码」—— `execAgent` 的实现体、`services/aiAgent/shareGate.ts` 的工具白名单、`AgentRuntime` 里的访客分支与 `apps/share` 都还在。本轮**刻意保留**：§6.5 把删除排在最后，而删 `AgentRuntime` 的访客分支要动 §0.1 保护的引擎 harness，且本机没有运行时可验证。代价是**那 12 个 `execAgent` 用例随之退役、实现体暂时无覆盖** —— 被移除的覆盖点已逐条写进测试注释与提交信息（花费准入、访客 topic/turn 上限、creator 作用域派发、prompt 尺寸、失败脱敏、`interactiveStart: false` 存活契约），重新开放该能力时据此恢复。
+**仍未做（属云端仓库或 S80）**：云端发布 UI 与访客页的入口移除与「已退役」文案；以及 §6.5 最后一步「依赖清零后删除无用代码」—— `execAgent` 的实现体、`services/aiAgent/shareGate.ts` 的工具白名单、`AgentRuntime` 里的访客分支都还在。本轮**刻意保留**：§6.5 把删除排在最后，而删 `AgentRuntime` 的访客分支要动 §0.1 保护的引擎 harness，且本机没有运行时可验证。代价是**那 12 个 `execAgent` 用例随之退役、实现体暂时无覆盖** —— 被移除的覆盖点已逐条写进测试注释与提交信息（花费准入、访客 topic/turn 上限、creator 作用域派发、prompt 尺寸、失败脱敏、`interactiveStart: false` 存活契约），重新开放该能力时据此恢复。
+
+> ⚠️ **§6.5 的删除清单里把 `apps/share` 也列上了，这一条不执行。**
+> 实测该应用服务的是**主题 / 页面 / 产物**三类公开分享：路由表只有 `share/t/:id`、
+> `share/page/:id`、`share/artifact/:id`（`apps/share/app/routes.ts`），且 `grep -i agent`
+> 在 `apps/share` 目录内**零命中** —— 它本来就不含任何 agent 分享面。
+> 删它属于连带删除：方案要退役的是 **agent 分享**，不是全部分享。
+> 因此本轮只收口 agent 分享分支，`apps/share`（65 文件）原样保留。
 
 ### 2.6 S50 实施记录
 

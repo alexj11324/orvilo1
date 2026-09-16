@@ -193,17 +193,38 @@ describe('buildEngineProviderPatch', () => {
     });
   });
 
-  it('resets model and speed but keeps a still-valid effort', () => {
+  it('clears old engine fields, preserves context, and keeps a valid effort', () => {
     const patch = buildEngineProviderPatch(
-      { effort: 'high', engine: 'claude-sdk', model: 'opus', type: 'orvilo' },
+      {
+        apiConfig: { model: 'legacy-model', providerId: 'legacy-provider' },
+        args: ['--model', 'opus'],
+        authMode: 'api',
+        command: 'claude',
+        effort: 'high',
+        engine: 'claude-sdk',
+        env: { LEGACY_ENGINE: 'claude' },
+        mode: 'high',
+        model: 'opus',
+        platformAgentId: 'legacy-agent',
+        speed: 'fast',
+        systemContext: 'Always run tests.',
+        type: 'orvilo',
+      },
       'codex-app-server',
     );
     expect(patch).toEqual({
+      apiConfig: null,
       args: null,
       effort: 'high',
       engine: 'codex-app-server',
+      authMode: null,
+      command: null,
+      env: null,
+      mode: null,
       model: 'default',
+      platformAgentId: null,
       speed: 'default',
+      systemContext: 'Always run tests.',
     });
   });
 

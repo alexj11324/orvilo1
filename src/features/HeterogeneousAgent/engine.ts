@@ -74,7 +74,7 @@ export const applyEngineAwareSelection = (
  * harness switch must clear them rather than let the deep merge carry them
  * over.
  */
-const HARNESS_SCOPED_PROVIDER_FIELDS = [
+const CLEARABLE_PROVIDER_FIELDS = [
   'apiConfig',
   'args',
   'authMode',
@@ -87,6 +87,43 @@ const HARNESS_SCOPED_PROVIDER_FIELDS = [
   'platformAgentId',
   'speed',
 ] as const satisfies readonly (keyof HeterogeneousProviderConfig)[];
+
+type ClearableProviderField = (typeof CLEARABLE_PROVIDER_FIELDS)[number];
+
+const ENGINE_SWITCH_CLEARABLE_FIELDS = [
+  'apiConfig',
+  'authMode',
+  'command',
+  'env',
+  'mode',
+  'platformAgentId',
+] as const satisfies readonly ClearableProviderField[];
+
+/**
+ * `null` is the persisted clear marker for provider fields. Keep it explicit
+ * in the patch type instead of widening the provider config or using `any`.
+ */
+type ClearableHeterogeneousProviderPatch = Omit<
+  PartialDeep<HeterogeneousProviderConfig>,
+  ClearableProviderField
+> & {
+  [K in ClearableProviderField]?: HeterogeneousProviderConfig[K] | null;
+};
+
+const toHeterogeneousProviderPatch = (
+  patch: ClearableHeterogeneousProviderPatch,
+): PartialDeep<HeterogeneousProviderConfig> =>
+  // The persistence patch API is typed as PartialDeep, while null is its
+  // runtime clear marker. This is the single boundary between those shapes.
+  patch as PartialDeep<HeterogeneousProviderConfig>;
+
+const clearProviderField = <K extends ClearableProviderField>(
+  patch: ClearableHeterogeneousProviderPatch,
+  current: HeterogeneousProviderConfig,
+  field: K,
+): void => {
+  if (Object.hasOwn(current, field)) patch[field] = null;
+};
 
 /**
  * Patch written when the user switches harness in the Engine section.
@@ -101,10 +138,12 @@ export const buildHarnessProviderPatch = (
   current: HeterogeneousProviderConfig | null | undefined,
   nextType: HeterogeneousAgentType,
 ): PartialDeep<HeterogeneousProviderConfig> => {
-  const patch: Record<string, unknown> = { type: nextType };
+  const patch: ClearableHeterogeneousProviderPatch = { type: nextType };
 
-  for (const field of HARNESS_SCOPED_PROVIDER_FIELDS) {
-    if (current && Object.hasOwn(current, field)) patch[field] = null;
+  if (current) {
+    for (const field of CLEARABLE_PROVIDER_FIELDS) {
+      clearProviderField(patch, current, field);
+    }
   }
 
   if (isBuiltinEngineType(nextType)) {
@@ -115,7 +154,7 @@ export const buildHarnessProviderPatch = (
     patch.systemContext = current.systemContext;
   }
 
-  return patch as PartialDeep<HeterogeneousProviderConfig>;
+  return toHeterogeneousProviderPatch(patch);
 };
 
 /**
@@ -141,7 +180,7 @@ export const buildEngineProviderPatch = (
     effort !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION &&
     !!nextCapability?.effort?.levels(HETEROGENEOUS_AGENT_DEFAULT_SELECTION).includes(effort);
 
-  const patch: Record<string, unknown> = {
+  const patch: ClearableHeterogeneousProviderPatch = {
     // User-authored args spell flags for the old engine's CLI family; keep none.
     args: null,
     effort: keepEffort ? current.effort : HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
@@ -150,5 +189,13 @@ export const buildEngineProviderPatch = (
     speed: HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
   };
 
-  return patch as PartialDeep<HeterogeneousProviderConfig>;
+  for (const field of ENGINE_SWITCH_CLEARABLE_FIELDS) {
+    clearProviderField(patch, current, field);
+  }
+
+  if (current.systemContext !== undefined) {
+    patch.systemContext = current.systemContext;
+  }
+
+  return toHeterogeneousProviderPatch(patch);
 };

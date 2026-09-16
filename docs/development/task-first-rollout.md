@@ -666,6 +666,54 @@ S70 的完整范围（方案 §10）还包括**设置重新分组**（账户 / �
 
 ---
 
+### 2.5 S30 实施记录
+
+**已完成 S30.2 —— 图片 / 视频工作台（`e965e3e5`）**
+
+`/image`、`/video` 与 `src/routes/(main)/(create)`（**实测 100 个文件**，§1.4 原先记的 111 偏高）一并退役。外部消费者只有 router 的 4 处懒加载，`GenerationSkeleton` 只被这两条路由的 `handle.meta` 使用 —— 是闭合集合。
+
+**保留**：整条进程内后端链（`imageGeneration.ts` → `generationRouter`/`imageRouter`/`aiModelRouter`）、生成模型配置、以及工具仍调用的共享能力。`apps/server` 一行未改。
+**注意**：`/resource/images`、`/resource/videos` 是资源库分类，未受影响。
+
+**已完成 S30.3 —— 个人画像浏览层（`99528daa`）**
+
+删除 `identities` / `contexts` / `experiences` / `activities` 四个浏览层与 `(home)` 首页仪表盘（44 个文件），侧栏改为只列 preferences。
+
+⚠️ **本轮的一次自我修正**：第一版把整个 `/memory` 路由组删掉了。但 §6.3 的原文是删「**浏览** UI、首页入口和个人画像成长展示」，同时要求「保持用户读取、导出、更正 / 删除数据的**受控路径**」—— 而 `/memory/preferences` 正是那条路径（服务端 `deleteAll`/`updatePreference`/`listPersonaVersions` 等过程只有它在前端调用）。删掉它等于移除了用户删除自己数据的唯一入口。已改为只删浏览层，保留 preferences 管理器，`/memory` 索引重定向到它。
+
+其余入口同步处理：用户面板的「记忆」（指向已删的首页仪表盘）移除；`ManageMemoryButton` 保留并改指 `/memory/preferences`；`AgentSignalReceiptList` 只保留 Preference 一条路径，其余四层改为纯状态卡（不再给「打开」按钮）；命令面板的 `memory` 作用域与结果类型保留。
+
+**后台未动，按 §6.3 的规矩**：它要求先区分「个人画像提取」与「任务 / 项目 / Agent 上下文」再停产出，且「若无法明确区分，标记为共享依赖保留」。现有触发点是 `router-hono/workflows/memory-user-memory`（`call-cron-hourly-analysis`、`pipelines/persona/update-writing`、四条 `chat-topic/*`）与 `router-hono/webhooks`。其中 chat-topic 链明显喂 Agent 上下文；persona 链是否有存活读者，仅凭客户端代码无法证否 —— 故**未停任何生产者**。
+
+**已完成 S30.4 —— 通用评测（`aaec4243`）**
+
+`(main)/eval`（111 文件，与 S30.2 同级，不是「顺手可删」）与 `features/EvalCapture`（7 文件）退役；`saveAsEvalCase` 消息动作、侧栏页脚两处「Evaluation Lab」、命令面板 `eval` 路由键、`enableEvalCapture` Labs 开关与其 selector 一并移除（开关留着会变成「拨了没用」的静默空操作）。
+
+**§6.4 要求保留的**：`Acceptance` / `Verify` / 任务测试报告 / 证据 / 失败追踪全部未动；`apps/cli/src/commands/eval.ts` 是内部消费者，其库保留；`store/eval` 被 `store/utils/userDataStores` 注册，保留；`agentEval` / `ragEval` 服务端 router 未动；`ragEvalService` 属知识库，与本次无关。
+
+⚠️ **`src/proxy.ts` 特意不改**：它的 matcher 里列着 `/eval`、`/image`、`/video`，看起来是死条目。但那是「哪些路径走 middleware」的白名单（不是鉴权放行），删掉退役段会把「旧深链接由 SPA 兜底重定向回家」变成框架层硬 404。
+
+**未执行 S30.5 —— 外部访客共享 Agent**
+
+方案 §6.5 把顺序写死为：**服务端先禁止新发布 / 新的访客执行** → 入口同步移除 → 旧链接返回安全说明 → 历史运行与审计继续读取 → 依赖清零后删代码。第一步就是服务端授权变更。
+
+审计结果（已定位，未改）：
+
+| 入口                       | 位置                                                                                                 |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 发布 / 恢复发布 / 管理分享 | `apps/server/src/routers/lambda/agentShare.ts`                                                       |
+| 发布开关与 rollout 语义    | `routers/lambda/_helpers/agentShareFeatureGate.ts`（已区分 publish/enable 与 manage/revoke/preview） |
+| 公开执行的工具授权面       | `services/aiAgent/shareGate.ts`（`AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS`、tool grant）             |
+| 访客会话越权防护           | `routers/lambda/_helpers/shareVisitorTargetGuard.ts`（注释详述为何该守卫不能下沉到 model 默认值）    |
+| 通用分享 / 访客会话        | `routers/lambda/share.ts`、`shareChat.ts`                                                            |
+| 客户端                     | `apps/share`（50 个文件）                                                                            |
+
+**为什么停在这里**：这一步是授权变更，落在 §0.4 明令保护的范围（权限、工作区隔离、额度、审计、**访客限制**）。而本轮禁止本机类型检查、不跑服务端、不跑 CI —— 我无法在本地区分「一个正确的门」和「一个过宽或过窄的门」。§6.5 本身也警告「旧持久化 feature flag、旧客户端或尚未过期的访客 token 不能绕过退役策略」，即这个门必须可证完备。猜错的两种后果都很重：留下访客执行漏洞，或误伤任务链接 / 产物只读分享 / 团队邀请（§6.5 明确要求先区分这四类）。
+
+**结论**：S30.5 需要一个能跑服务端与类型检查的环境 —— 即方案 §13.1 的 S80 执行位置。
+
+---
+
 ## 3. 旧路由映射（草案）
 
 | 旧路径                               | 目标行为                                                                       |
@@ -754,9 +802,9 @@ S10 的交付范围，但**必须挂到具体工作包**，否则会在「文档
 
 | #   | 项                                                                | 位置                                                                                                       | 归属                  | 为什么是那时做                                                                                                                                                                                                                                                                                                                                                              |
 | --- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **桌面固定标签页无退役过滤**                                      | `src/features/Electron/titlebar/TabBar/storage.ts:25-45`；`src/store/electron/actions/tabPages.ts:579-585` | **S30**               | S10 里唯一未兜住的持久化路径。当前 `/image`、`/memory` 路由仍在，标签页尚可打开；**S30 删除路由后**被恢复的标签页会落在退役页上，那时才有真实后果。合并时把 `RETIRED_PRODUCT_SEGMENTS` 改为从 registry `tier` 派生                                                                                                                                                          |
-| 2   | 「管理记忆」按钮仍跳退役页                                        | `src/features/Settings/memory/features/ManageMemoryButton.tsx:22`                                          | S30.3                 | 应用自己生成的入口，非旧深链接                                                                                                                                                                                                                                                                                                                                              |
-| 3   | FTS 搜索结果跳退役页                                              | `src/features/CommandMenu/SearchResults.tsx:165`（另见 :209、:250）                                        | S30.3                 | 同上                                                                                                                                                                                                                                                                                                                                                                        |
+| 1   | **桌面固定标签页无退役过滤**                                      | `src/features/Electron/titlebar/TabBar/storage.ts:25-45`；`src/store/electron/actions/tabPages.ts:579-585` | **已完成 `e965e3e5`** | 已按此处建议落地：`RETIRED_ROUTE_PREFIXES` **从 registry 的 `tier` 派生**，`getTabPages` 丢弃指向退役段的标签页，并把 `activeTabId` 从悬空 id 移到剩下的标签上。（§5 表头提到的 `RETIRED_PRODUCT_SEGMENTS` 是 `bbd6ead3` 里的名字，本分支用同一做法、不同命名。）                                                                                                           |
+| 2   | 「管理记忆」按钮仍跳退役页                                        | `src/features/Settings/memory/features/ManageMemoryButton.tsx:22`                                          | **已完成 `99528daa`** | 该按钮**保留**并改指 `/memory/preferences`：它是设置页进入管理器的入口，不是浏览入口，§6.3 要求保留受控路径。`/memory` 索引改为重定向到该路由，旧深链接不再落空。                                                                                                                                                                                                           |
+| 3   | FTS 搜索结果跳退役页                                              | `src/features/CommandMenu/SearchResults.tsx:165`（另见 :209、:250）                                        | **已完成 `99528daa`** | 搜索结果与 `memory` 作用域**保留并指回** `/memory/preferences`（该层是本轮唯一存活的记忆页面）；`queryParser.test.ts` 改为从 `VALID_TYPES` 派生，不再手抄一份。                                                                                                                                                                                                             |
 | 4   | 死字段 `NavigationRoute.electronKey`                              | `packages/app-config/src/routes/index.ts:35`，10 条目各填一次，定义外零读取                                | **已完成 `0a4f0b05`** | 连带本分支新增的 `navigation.project` 文案目前只喂这个死字段。**注意 `navigation.*` 命名空间本身没死**（`AgentTasks/routeMeta.ts:15` 等仍在用）                                                                                                                                                                                                                             |
 | 5   | 死枚举 `GroupKey.Community` / `GroupKey.Pages`                    | `src/features/HomeSidebar/Body/index.tsx:35,36`                                                            | **已完成 `0a4f0b05`** | 零消费者                                                                                                                                                                                                                                                                                                                                                                    |
 | 6   | 死枚举 `SidebarTabKey.Community / Image / Memory / Pages / Video` | `src/store/global/initialState.ts`                                                                         | **已完成 `0a4f0b05`** | 除定义外引用数均为 0；另确认全仓无 `Object.values(SidebarTabKey)` 一类动态读取                                                                                                                                                                                                                                                                                              |

@@ -3663,9 +3663,36 @@ export class AgentRuntimeService {
    */
   private async refreshMessagesFromDB(state: AgentState): Promise<AgentState['messages']> {
     const dbMessages = await this.queryMessagesFromDB(state);
+    await this.markSteerMessagesConsumed(dbMessages, state.operationId);
 
     const { flatList } = parse(dbMessages);
     return flatList as AgentState['messages'];
+  }
+
+  /**
+   * A live steer (`task.steer`) lands in the topic as a `metadata.steer` user
+   * row while a run is in flight. Loading it into the working set IS the
+   * delivery — the next LLM step sees it — so stamp `steerConsumedBy` here.
+   * The stamp is how `TaskLifecycleService` tells a mid-run steer (delivered)
+   * apart from a tail steer that arrived after the last step (needs a
+   * continuation run so the message is never left unanswered).
+   */
+  private async markSteerMessagesConsumed(
+    dbMessages: Awaited<ReturnType<AgentRuntimeService['queryMessagesFromDB']>>,
+    operationId: string,
+  ): Promise<void> {
+    for (const message of dbMessages) {
+      const metadata = message.metadata as
+        { steer?: boolean; steerConsumedBy?: string } | null | undefined;
+      if (message.role !== 'user' || metadata?.steer !== true || metadata.steerConsumedBy) {
+        continue;
+      }
+      try {
+        await this.messageModel.updateMetadata(message.id, { steerConsumedBy: operationId });
+      } catch (error) {
+        log('[markSteerMessagesConsumed] failed for %s (non-fatal): %O', message.id, error);
+      }
+    }
   }
 
   /**

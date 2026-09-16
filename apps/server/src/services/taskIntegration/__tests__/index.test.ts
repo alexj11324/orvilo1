@@ -6,6 +6,11 @@ import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { TaskTopicItem } from '@/database/schemas/task';
 import { deviceGateway } from '@/server/services/deviceGateway';
+import {
+  findBranchPr,
+  isBranchMergedInto,
+  resolveGithubAccessToken,
+} from '@/server/services/githubRepo';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
@@ -52,6 +57,16 @@ vi.mock('@/server/services/deviceGateway', () => ({
   },
 }));
 
+vi.mock('@/server/services/githubRepo', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    findBranchPr: vi.fn(),
+    isBranchMergedInto: vi.fn(),
+    resolveGithubAccessToken: vi.fn(),
+  };
+});
+
 const baseTask = (): TaskItem =>
   ({ id: 'task_1', identifier: 'T-1', status: 'running' }) as TaskItem;
 
@@ -69,6 +84,16 @@ const seedRecord = (overrides: Partial<TaskTopicIntegration> = {}): TaskTopicInt
 
 const asTopic = (integration: TaskTopicIntegration | null): TaskTopicItem =>
   ({ integration, topicId: 'topic_1' }) as TaskTopicItem;
+
+const remoteRecord = (overrides: Partial<TaskTopicIntegration> = {}): TaskTopicIntegration => ({
+  attempts: 0,
+  baseBranch: 'main',
+  branch: 'task/T-1',
+  repo: 'acme/widgets',
+  role: 'task',
+  state: 'pending',
+  ...overrides,
+});
 
 describe('TaskIntegrationService', () => {
   let service: TaskIntegrationService;
@@ -282,5 +307,268 @@ describe('TaskIntegrationService', () => {
     expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
       'settled',
     );
+  });
+
+  describe('remote (sandbox-contract) records', () => {
+    beforeEach(() => {
+      mockWorkspaceService.resolveWorkspaceConfig.mockResolvedValue({
+        provider: 'git',
+        repo: 'acme/widgets',
+      });
+      vi.mocked(resolveGithubAccessToken).mockResolvedValue('gh-token');
+      vi.mocked(findBranchPr).mockResolvedValue(undefined);
+      vi.mocked(isBranchMergedInto).mockResolvedValue('unmerged');
+    });
+
+    it('settles a task run whose branch already landed on the remote', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(remoteRecord()));
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(remoteRecord())]);
+      vi.mocked(findBranchPr).mockResolvedValue({
+        merged: true,
+        sha: 'merge123',
+        url: 'https://github.com/acme/widgets/pull/7',
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('settled');
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({
+          integratedSha: 'merge123',
+          prUrl: 'https://github.com/acme/widgets/pull/7',
+          pushedToRemote: true,
+          state: 'integrated',
+        }),
+      );
+      // No device worktree machinery runs for a remote record.
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+    });
+
+    it('dispatches a sandbox integrator run when the branch is not yet merged', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(remoteRecord()));
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      const call = mockRunner.runTask.mock.calls[0][0];
+      expect(call.taskId).toBe('task_1');
+      expect(call.workspaceOverride).toEqual({
+        repos: ['acme/widgets'],
+        workingDirectory: '/workspace/widgets',
+        workingDirectoryConfig: {
+          git: { branch: 'main', upstream: { branch: 'main', remote: 'origin' } },
+          path: '/workspace/widgets',
+          repoType: 'git',
+        },
+      });
+      expect(call.extraPrompt).toContain('git merge --no-ff origin/task/T-1');
+      expect(call.extraPrompt).toContain('git push origin main');
+      expect(call.integrationSeed).toMatchObject({
+        attempts: 1,
+        repo: 'acme/widgets',
+        role: 'integrate',
+        runTopicId: 'topic_1',
+        state: 'merging',
+      });
+      // The task run's row reports the in-flight merge, not a conflict.
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ attempts: 1, state: 'merging' }),
+      );
+    });
+
+    it('settles an integrator run once the remote merge is verified', async () => {
+      const record = remoteRecord({
+        attempts: 1,
+        role: 'integrate',
+        runTopicId: 'topic_0',
+        state: 'merging',
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
+      // Both rows tracking this branch land — the integrator's and the
+      // original run's.
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([
+        asTopic(record),
+        { integration: remoteRecord(), topicId: 'topic_0' } as TaskTopicItem,
+      ]);
+      vi.mocked(isBranchMergedInto).mockResolvedValue('merged');
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('settled');
+      // Both the integrator's row and the original run's row advance.
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ pushedToRemote: true, state: 'integrated' }),
+      );
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_0',
+        expect.objectContaining({ pushedToRemote: true, state: 'integrated' }),
+      );
+    });
+
+    it('re-dispatches while the remote merge is still pending', async () => {
+      const record = remoteRecord({
+        attempts: 1,
+        role: 'integrate',
+        runTopicId: 'topic_0',
+        state: 'merging',
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
+      vi.mocked(isBranchMergedInto).mockResolvedValue('unmerged');
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      expect(mockRunner.runTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          integrationSeed: expect.objectContaining({ attempts: 2, state: 'merging' }),
+        }),
+      );
+    });
+
+    it('blocks immediately on an unparseable repo coordinate', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(remoteRecord({ repo: 'not-a-repo' })),
+      );
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('blocked');
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ state: 'blocked' }),
+      );
+    });
+
+    it('blocks after the integrator attempts are exhausted', async () => {
+      const record = remoteRecord({
+        attempts: 3,
+        role: 'integrate',
+        runTopicId: 'topic_0',
+        state: 'merging',
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
+      vi.mocked(isBranchMergedInto).mockResolvedValue('unmerged');
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('blocked');
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_0',
+        expect.objectContaining({ state: 'blocked' }),
+      );
+    });
+  });
+
+  describe('cleanupTaskWorktrees', () => {
+    it('removes a stale task worktree and flags the record cleaned', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceId: 'dev-1',
+          path: '/repos/orvilo',
+          worktreePath: '/repos/orvilo-task-T-1',
+        }),
+      );
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith('task_1', 'topic_1', {
+        worktreeCleaned: true,
+      });
+    });
+
+    it('never removes the shared integration worktree', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([
+        // The task row knows the integration worktree once a merge started…
+        asTopic(
+          seedRecord({
+            integrationWorktreePath: '/repos/orvilo-integration-main',
+            state: 'conflict',
+          }),
+        ),
+        // …and the corrective row aliases it under `worktreePath`.
+        {
+          integration: seedRecord({
+            integrationWorktreePath: '/repos/orvilo-integration-main',
+            role: 'integrate',
+            state: 'merging',
+            worktreePath: '/repos/orvilo-integration-main',
+          }),
+          topicId: 'topic_2',
+        } as TaskTopicItem,
+      ]);
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledTimes(1);
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ worktreePath: '/repos/orvilo-task-T-1' }),
+      );
+    });
+
+    it('skips remote records — the sandbox clone never touched a device', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(remoteRecord())]);
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(mockTaskTopicModel.updateIntegration).not.toHaveBeenCalled();
+    });
+
+    it('skips records whose worktree was already cleaned', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([
+        asTopic(seedRecord({ state: 'integrated', worktreeCleaned: true })),
+      ]);
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('leaves worktreeCleaned false when the removal RPC fails', async () => {
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
+      vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({
+        error: 'device offline',
+        success: false,
+      });
+
+      await service.cleanupTaskWorktrees('task_1');
+
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith('task_1', 'topic_1', {
+        worktreeCleaned: false,
+      });
+    });
   });
 });

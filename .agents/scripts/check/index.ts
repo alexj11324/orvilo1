@@ -37,7 +37,7 @@ const USAGE = `Usage: bun run check [files...] [--lint] [--test] [--type] [--sta
   --staged  collect staged files only (pre-commit scope); ignored with explicit files
   --lint    lint pipelines (with autofix)
   --test    related tests
-  --type    full type-check; alone, file collection is skipped`;
+  --type    full type-check (CI-only; fails fast outside GitHub Actions)`;
 
 const KNOWN_FLAGS = new Set(['--lint', '--test', '--type', '--staged']);
 
@@ -69,6 +69,13 @@ export const runCli = async (config: CheckConfig) => {
   const wantLint = rawArgs.includes('--lint');
   const wantTest = rawArgs.includes('--test');
   const runType = rawArgs.includes('--type');
+  if (runType && !process.env.GITHUB_ACTIONS && !process.env.CI) {
+    console.error(
+      '✗ --type runs in CI only (full-repo tsgo OOMs dev machines).\n' +
+        '  See the `Typecheck` job in .github/workflows/test.yml.',
+    );
+    process.exit(1);
+  }
   const noSelector = !wantLint && !wantTest && !runType;
   const runLint = wantLint || noSelector;
   const runTest = wantTest || noSelector;

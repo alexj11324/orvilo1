@@ -26,7 +26,7 @@ interface AssigneeMemberSelectorProps {
   currentUserId?: string | null;
   disabled?: boolean;
   fullWidth?: boolean;
-  onChange?: (userId: string | null) => void;
+  onChange?: (userId: string | null, member?: WorkspaceMemberRow) => void;
   taskCreatorId?: string | null;
   taskIdentifier?: string;
   taskVisibility?: 'private' | 'public' | null;
@@ -169,7 +169,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
         setKey((value) => value + 1);
         setSearch('');
         if (onChange) {
-          onChange(userId);
+          onChange(userId, member);
           return;
         }
         if (taskIdentifier)

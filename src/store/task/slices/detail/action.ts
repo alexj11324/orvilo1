@@ -57,6 +57,8 @@ export interface TaskUpdatePayload {
   priority?: number;
   /** Owning project; `null` unassigns. */
   projectId?: string | null;
+  /** Review-phase owner; auto-stamped on the paused transition when unset. */
+  reviewerUserId?: string | null;
   /**
    * Status transition — the board commits one through `update` so a drop
    * writes status and position atomically. The lifecycle slice's own
@@ -80,6 +82,11 @@ export interface TaskUpdateOptions {
    * not resolve members itself (that source is a business-layer hook).
    */
   optimisticAssignee?: TaskDetailActivityAuthor;
+  /**
+   * Same contract as `optimisticAssignee`, for a reviewer pick — the picker
+   * already holds the chosen member's display metadata.
+   */
+  optimisticReviewer?: TaskDetailActivityAuthor;
   /**
    * The mounted editor marks its own autosaves so they do not request an
    * external-content reload. Tool calls and refetches are authoritative by default.
@@ -366,6 +373,7 @@ export class TaskDetailSliceActionImpl {
       {
         activeTaskId: taskId,
         activeTopicDrawerAgentId: undefined,
+        activeTopicDrawerTaskId: undefined,
         activeTopicDrawerTitle: undefined,
         activeTopicDrawerTopicId: undefined,
       },
@@ -377,13 +385,19 @@ export class TaskDetailSliceActionImpl {
   /**
    * `topic` carries the agent and title for a run opened outside a task detail
    * (the home inbox lists plain topics too) — the drawer falls back to it when
-   * no task detail is loaded to read them from.
+   * no task detail is loaded to read them from. `taskId` names the owning
+   * task when the drawer's topic is opened off that task's detail surface
+   * (the kanban board), so run status and steering still resolve.
    */
-  openTopicDrawer = (topicId: string, topic?: { agentId?: string; title?: string }): void => {
+  openTopicDrawer = (
+    topicId: string,
+    topic?: { agentId?: string; taskId?: string; title?: string },
+  ): void => {
     if (this.#get().activeTopicDrawerTopicId === topicId) return;
     this.#set(
       {
         activeTopicDrawerAgentId: topic?.agentId,
+        activeTopicDrawerTaskId: topic?.taskId,
         activeTopicDrawerTitle: topic?.title,
         activeTopicDrawerTopicId: topicId,
       },
@@ -397,6 +411,7 @@ export class TaskDetailSliceActionImpl {
     this.#set(
       {
         activeTopicDrawerAgentId: undefined,
+        activeTopicDrawerTaskId: undefined,
         activeTopicDrawerTitle: undefined,
         activeTopicDrawerTopicId: undefined,
       },
@@ -449,7 +464,7 @@ export class TaskDetailSliceActionImpl {
     data: TaskUpdatePayload,
     options?: TaskUpdateOptions,
   ): Promise<void> => {
-    const { assigneeAgentId, assigneeUserId, ...rest } = data;
+    const { assigneeAgentId, assigneeUserId, reviewerUserId, ...rest } = data;
     const optimisticRest = { ...rest };
     // Drop anchors are request geometry, not task fields — they must not land
     // on the optimistic detail object.
@@ -480,8 +495,14 @@ export class TaskDetailSliceActionImpl {
             : undefined,
           assigneeAgentId,
           assigneeUserId,
-          current: { agentId: current.agentId, userId: current.userId },
+          current: {
+            agentId: current.agentId,
+            reviewerUserId: current.reviewerUserId,
+            userId: current.userId,
+          },
           now: new Date().toISOString(),
+          reviewerUserId,
+          reviewerTarget: options?.optimisticReviewer,
           target: options?.optimisticAssignee,
         })
       : [];
@@ -509,6 +530,7 @@ export class TaskDetailSliceActionImpl {
       ...optimisticRest,
       ...(assigneeAgentId !== undefined ? { agentId: assigneeAgentId } : {}),
       ...(assigneeUserId !== undefined ? { userId: assigneeUserId } : {}),
+      ...(reviewerUserId !== undefined ? { reviewerUserId } : {}),
       ...(optimisticActivities.length > 0 || priorityRow ? { activities } : {}),
     };
     const payload = options?.actorAgentId ? { ...data, actorAgentId: options.actorAgentId } : data;
@@ -562,7 +584,8 @@ export class TaskDetailSliceActionImpl {
       data.priority !== undefined ||
       // Status writes stamp `completedAt` and append a status activity row
       // server-side — the cached detail has to reconcile, not just the list.
-      data.status !== undefined
+      data.status !== undefined ||
+      reviewerUserId !== undefined
     ) {
       await Promise.all([this.#get().refreshTaskList(), refreshPatchedTargets()]).catch(() => {});
     }

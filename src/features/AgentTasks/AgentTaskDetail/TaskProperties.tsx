@@ -1,4 +1,4 @@
-import { Block } from '@lobehub/ui';
+import { Block, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { TaskPriority, TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -54,6 +54,7 @@ const TaskProperties = memo(() => {
   const status = useTaskStore(taskDetailSelectors.activeTaskStatus) as TaskStatus | undefined;
   const priority = useTaskStore(taskDetailSelectors.activeTaskPriority);
   const assigneeUserId = useTaskStore(taskDetailSelectors.activeTaskAssigneeUserId);
+  const reviewerUserId = useTaskStore(taskDetailSelectors.activeTaskReviewerUserId);
   const createdByUserId = useTaskStore(taskDetailSelectors.activeTaskCreatedByUserId);
   const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
   const heartbeatInterval = useTaskStore(taskDetailSelectors.activeTaskPeriodicInterval);
@@ -61,6 +62,8 @@ const TaskProperties = memo(() => {
   const schedulePattern = useTaskStore(taskDetailSelectors.activeTaskSchedulePattern);
   const scheduleTimezone = useTaskStore(taskDetailSelectors.activeTaskScheduleTimezone);
   const memberMeta = useUserDisplayMeta(assigneeUserId);
+  const reviewerMeta = useUserDisplayMeta(reviewerUserId);
+  const updateTask = useTaskStore((s) => s.updateTask);
   const activeWorkspaceId = useActiveWorkspaceId();
 
   if (!taskId) return null;
@@ -137,6 +140,63 @@ const TaskProperties = memo(() => {
           </Block>
         </AssigneeMemberSelector>
       )}
+
+      {/* Review-phase owner: visible once the task has someone accountable for
+          review (auto-stamped on the paused transition) or while it sits in
+          'paused', where the picker can re-point the review. */}
+      {(status === 'paused' || reviewerUserId) &&
+        shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
+          <AssigneeMemberSelector
+            currentUserId={reviewerUserId}
+            disabled={status === 'running'}
+            taskCreatorId={createdByUserId}
+            taskIdentifier={taskId}
+            taskVisibility={visibility}
+            onChange={(userId, member) =>
+              void updateTask(
+                taskId,
+                { reviewerUserId: userId },
+                {
+                  optimisticReviewer: member
+                    ? {
+                        avatar: member.user?.avatar ?? null,
+                        id: member.userId,
+                        name: member.user?.fullName ?? null,
+                        type: 'user',
+                      }
+                    : undefined,
+                },
+              )
+            }
+          >
+            <Tooltip title={t('taskDetail.reviewer')}>
+              <Block
+                clickable
+                horizontal
+                align="center"
+                className={styles.propertyItem}
+                gap={8}
+                variant={'borderless'}
+              >
+                {reviewerUserId ? (
+                  <>
+                    <AssigneeUserAvatar size={16} userId={reviewerUserId} />
+                    <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+                      {reviewerMeta?.title}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <UnassignedAssigneeIcon kind={'human'} size={16} />
+                    <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                      {t('taskDetail.reviewer')}
+                    </Text>
+                  </>
+                )}
+              </Block>
+            </Tooltip>
+          </AssigneeMemberSelector>
+        )}
 
       <TaskScheduleConfig>
         <Block

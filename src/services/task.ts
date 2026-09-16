@@ -179,6 +179,7 @@ class TaskService {
       priority?: number;
       /** Owning project; `null` unassigns the task from its project. */
       projectId?: string | null;
+      reviewerUserId?: string | null;
       // schedulePattern: cron expression for scheduled automation (e.g. '0 9 * * *')
       schedulePattern?: string | null;
       // scheduleTimezone: IANA timezone for the cron expression (e.g. 'Asia/Shanghai')
@@ -263,6 +264,11 @@ class TaskService {
     lambdaClient.task.reorderSubtasks.mutate({ id, order });
 
   cancelTopic = async (topicId: string) => lambdaClient.task.cancelTopic.mutate({ topicId });
+
+  steerTopic = async (
+    id: string,
+    params: { fileIds?: string[]; interrupt?: boolean; message: string; topicId: string },
+  ) => lambdaClient.task.steer.mutate({ id, ...params });
 
   deleteTopic = async (topicId: string) => lambdaClient.task.deleteTopic.mutate({ topicId });
 

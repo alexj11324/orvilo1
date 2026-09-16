@@ -214,6 +214,25 @@ export const deriveWorktreePath = (sourcePath: string, branch: string): string =
   return parent ? `${parent}${sep}${folder}` : folder;
 };
 
+/**
+ * Directory name a GitHub repo is cloned under inside the cloud sandbox:
+ * the coordinate's last path segment minus a `.git` suffix
+ * (`owner/repo` or `https://github.com/owner/repo.git` → `repo`).
+ * Anything outside `[\w.-]` is stripped — the name lands in shell commands
+ * and prompts, and `repos` also arrives ungated via the chat repo selector.
+ * Shared convention — the sandbox pre-clone, the cloud context prompt and the
+ * task-workspace provisioner must derive it identically.
+ */
+export const repoToLocalDir = (repo: string): string =>
+  (repo.split('/').findLast(Boolean) ?? repo).replace(/\.git$/, '').replaceAll(/[^\w.-]/g, '');
+
+/** Root directory the cloud sandbox pre-clones topic repos into. */
+export const CLOUD_WORKSPACE_ROOT = '/workspace';
+
+/** Absolute path of a topic repo's clone inside the cloud sandbox. */
+export const cloudSandboxRepoPath = (repo: string): string =>
+  `${CLOUD_WORKSPACE_ROOT}/${repoToLocalDir(repo)}`;
+
 export interface WorkingDirEntry extends WorkingDirConfig {
   /**
    * Cached "workspace init" scan of this directory (AGENTS.md + project skills).

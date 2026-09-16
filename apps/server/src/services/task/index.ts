@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { UNFINISHED_TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { TASK_ASSIGNEE_PERMISSION_CODES } from '@orvilo/const/rbac';
+import { isLocalHeterogeneousType, isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import type {
   TaskAssignmentKind,
   TaskAutomationSnapshot,
@@ -20,6 +21,8 @@ import type {
 import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
+import { AgentOperationModel } from '@/database/models/agentOperation';
+import { MessageModel } from '@/database/models/message';
 import { ProjectModel } from '@/database/models/project';
 import { RbacModel } from '@/database/models/rbac';
 import {
@@ -38,6 +41,7 @@ import { AiAgentService } from '../aiAgent';
 import { extractFileIdsFromEditorData } from '../file/extractFileIdsFromEditorData';
 import { resolveAttachmentMetadata } from '../file/resolveAttachments';
 import { type SubtaskGraphPlan, TaskGraphService } from '../taskGraph';
+import { TaskIntegrationService } from '../taskIntegration';
 import { type ReviewResult, TaskReviewService } from '../taskReview';
 import { TaskRunnerService } from '../taskRunner';
 import { createTaskSchedulerModule } from '../taskScheduler';
@@ -46,6 +50,11 @@ import { collapseActivityLog } from './collapseActivityLog';
 
 const emptyWorkspace: WorkspaceData = { nodeMap: {}, tree: [] };
 const UNTITLED_TOPIC_TITLE = 'Untitled';
+/**
+ * Statuses at which the task's merge pipeline is abandoned for good — any
+ * provisioned run worktrees it left behind are torn down best-effort.
+ */
+const TERMINAL_TASK_STATUSES = new Set<TaskStatus>(['canceled', 'completed', 'failed']);
 const TASK_DETAIL_DIRECT_TOPIC_LIMIT = 100;
 /**
  * Newest raw activity rows read per detail fetch, before collapsing. The
@@ -117,6 +126,14 @@ export interface RunReadySubtasksResult {
   plan: SubtaskGraphPlan;
   skipped?: { reason: 'nothing-runnable' };
 }
+
+export type SteerTopicResult =
+  | { messageId: string; mode: 'continued' }
+  | { messageId: string; mode: 'injected' }
+  | { mode: 'requiresInterrupt' };
+
+/** Verify rounds past which `driveTaskFromVerify` no longer moves the task. */
+const VERIFY_SETTLED_STATUSES = new Set(['passed', 'failed', 'errored', 'delivered']);
 
 export class TaskService {
   private agentModel: AgentModel;
@@ -325,6 +342,131 @@ export class TaskService {
 
     await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
     await this.taskModel.updateStatus(target.taskId, 'paused');
+
+    // The canceled run's provisioned worktrees are abandoned — tear them down
+    // best-effort; a cleanup failure must not break the cancel.
+    await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
+      target.taskId,
+    );
+  }
+
+  /**
+   * Steer a task topic: deliver a user message into the run's conversation.
+   *
+   * - Homogeneous run (server runtime rehydrates topic messages at every step
+   *   boundary): persist the message — the next step consumes it live.
+   * - Heterogeneous run (external CLI/device process) or a parked approval:
+   *   the run never reads topic messages, so steering requires an explicit
+   *   interrupt; once confirmed (`interrupt: true`) the operation is stopped
+   *   and the same topic resumes anchored on the persisted steer message.
+   * - Topic not running (or the run ended between our status read and the
+   *   insert): continue the topic off the persisted message. A run that
+   *   finished without consuming a tail steer is also picked up by the
+   *   `onTopicComplete` late-steer fallback, so the message is never lost.
+   */
+  async steerTopic(input: {
+    fileIds?: string[];
+    id: string;
+    interrupt?: boolean;
+    message: string;
+    topicId: string;
+  }): Promise<SteerTopicResult> {
+    const task = await this.taskModel.resolve(input.id);
+    if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found.' });
+
+    if (!input.message.trim() && !input.fileIds?.length) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A steer needs a message or files.' });
+    }
+
+    const target = await this.taskTopicModel.findByTopicId(input.topicId);
+    if (!target || target.taskId !== task.id) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found for this task.' });
+    }
+
+    const running = target.status === 'running';
+    const topic = running ? await this.topicModel.findById(input.topicId) : null;
+    const runningOp = topic?.metadata?.runningOperation;
+    const heteroType = runningOp?.heteroType;
+    const isHetero =
+      !!heteroType &&
+      (isLocalHeterogeneousType(heteroType) || isRemoteHeterogeneousType(heteroType));
+
+    const operationId = target.operationId ?? runningOp?.operationId;
+    const operation = running
+      ? await new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
+          operationId ?? '',
+        )
+      : null;
+
+    // Anything that cannot consume a live topic message needs the explicit
+    // interrupt opt-in before we tear the run down.
+    const needsInterrupt = isHetero || operation?.status === 'waiting_for_human';
+    if (running && needsInterrupt && !input.interrupt) {
+      return { mode: 'requiresInterrupt' };
+    }
+
+    // Persist the user's message first — it is the deliverable regardless of
+    // which dispatch branch runs below, and a confirmed interrupt must not
+    // drop it.
+    const messageModel = new MessageModel(this.db, this.userId, this.workspaceId);
+    const parentId =
+      (await messageModel.getLatestSpineMessageId({ topicId: input.topicId })) ??
+      (await messageModel.getLatestNonToolMessageId({ topicId: input.topicId }));
+    const steerMessage = await messageModel.create({
+      agentId: operation?.agentId ?? task.assigneeAgentId ?? undefined,
+      content: input.message,
+      files: input.fileIds,
+      metadata: { steer: true },
+      parentId,
+      role: 'user',
+      topicId: input.topicId,
+    });
+
+    if (running && needsInterrupt) {
+      const aiAgentService = new AiAgentService(this.db, this.userId, {
+        workspaceId: this.workspaceId,
+      });
+      if (operationId) await this.interruptTaskOperation(aiAgentService, operationId);
+      // Settle the interrupted segment so the continuation can claim the
+      // topic (`runTask` refuses a 'running' continue target).
+      await this.taskTopicModel.updateStatus(task.id, input.topicId, 'canceled');
+    } else if (running) {
+      return { messageId: steerMessage.id, mode: 'injected' };
+    }
+
+    // Verify-bound settle race: the topic is done but the confirmed verify
+    // plan still owns the next transition (`driveTaskFromVerify` CASes the
+    // task out of 'running'). Continuing now would bounce the status and hand
+    // the topic a second lifecycle pass. Park the message on the spine
+    // instead — once verify settles the task lands in 'paused', where a
+    // follow-up steer continues it normally.
+    if (!running && operationId) {
+      const verifyRun = await new VerifyRunModel(this.db, this.userId, this.workspaceId)
+        .findByOperation(operationId)
+        .catch(() => undefined);
+      if (verifyRun?.planConfirmedAt && !VERIFY_SETTLED_STATUSES.has(verifyRun.status ?? '')) {
+        return { messageId: steerMessage.id, mode: 'injected' };
+      }
+    }
+
+    const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
+    try {
+      await runner.runTask({
+        continueFromMessageId: steerMessage.id,
+        continueTopicId: input.topicId,
+        taskId: task.id,
+      });
+    } catch (error) {
+      // Lost the status race: the topic flipped back to running between our
+      // read above and the continuation attempt. The persisted message sits
+      // on the spine, so the live run consumes it at its next step — that is
+      // delivery, not failure.
+      if (error instanceof TRPCError && error.code === 'CONFLICT') {
+        return { messageId: steerMessage.id, mode: 'injected' };
+      }
+      throw error;
+    }
+    return { messageId: steerMessage.id, mode: 'continued' };
   }
 
   /**
@@ -341,6 +483,12 @@ export class TaskService {
       });
       await this.interruptTaskOperation(aiAgentService, target.operationId);
     }
+
+    // The task_topics row is about to go — tear down the run's provisioned
+    // worktrees while its integration record still exists (best-effort).
+    await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
+      target.taskId,
+    );
 
     await this.taskTopicModel.remove(target.taskId, topicId);
     await this.topicModel.delete(topicId);
@@ -471,6 +619,15 @@ export class TaskService {
       ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
       : await this.taskModel.updateStatus(resolved.id, status, extra);
     if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+
+    // A terminal transition abandons the task's merge pipeline — tear down
+    // any provisioned worktrees its runs left behind. Best-effort: cleanup
+    // must never break the status change itself.
+    if (TERMINAL_TASK_STATUSES.has(status)) {
+      await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
+        task.id,
+      );
+    }
 
     // Stamp the schedule run-count window each time the user (re)starts a
     // scheduled task. The cron dispatcher itself flips a task running →
@@ -686,6 +843,11 @@ export class TaskService {
         .filter((topic) => topic.operationId && !interruptedOperationIds.has(topic.operationId))
         .map((topic) => aiAgentService.interruptTask({ operationId: topic.operationId! })),
     );
+
+    // Every cascaded task reached a terminal status — its merge pipeline is
+    // abandoned, so tear down any provisioned worktrees it left behind.
+    const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
+    await Promise.allSettled(targetTasks.map((t) => integrationService.cleanupTaskWorktrees(t.id)));
 
     const task = updatedTasks.find(({ id }) => id === resolved.id);
     if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
@@ -1051,6 +1213,7 @@ export class TaskService {
           identifier: s.identifier,
           name: s.name,
           priority: s.priority,
+          reviewerUserId: s.reviewerUserId,
           ...(runningTopic?.topicId
             ? {
                 runningTopic: {
@@ -1140,7 +1303,8 @@ export class TaskService {
       if (log.actorAgentId) agentIds.add(log.actorAgentId);
       if (log.actorUserId) userIds.add(log.actorUserId);
       // Property events carry values, not participant ids.
-      if (log.type !== 'assignee_agent' && log.type !== 'assignee_user') continue;
+      if (log.type !== 'assignee_agent' && log.type !== 'assignee_user' && log.type !== 'reviewer')
+        continue;
       const target = log.type === 'assignee_agent' ? agentIds : userIds;
       for (const id of [log.payload?.fromId, log.payload?.toId]) if (id) target.add(id);
     }
@@ -1178,6 +1342,9 @@ export class TaskService {
           // the synthesized summary on the run card.
           content: handoff?.content,
           id: t.topicId ?? undefined,
+          // The run's workspace-integration record (merge state, branch, PR) —
+          // null for runs that never provisioned an isolated worktree.
+          integration: t.integration ?? null,
           operationId: t.operationId ?? null,
           runningOperation: t.metadata?.runningOperation ?? null,
           seq: t.seq,
@@ -1266,7 +1433,8 @@ export class TaskService {
           };
         }
 
-        const kind: TaskAssignmentKind = log.type === 'assignee_agent' ? 'agent' : 'member';
+        const kind: TaskAssignmentKind =
+          log.type === 'assignee_agent' ? 'agent' : log.type === 'reviewer' ? 'reviewer' : 'member';
         // A missing author row means the participant is gone, or is private to
         // another member and filtered out of this viewer's scope. Keep a stub
         // instead of collapsing to `null`/`undefined`: `null` reads as
@@ -1341,6 +1509,7 @@ export class TaskService {
               timezone: task.scheduleTimezone,
             }
           : undefined,
+      reviewerUserId: task.reviewerUserId,
       startedAt: task.startedAt ? new Date(task.startedAt).toISOString() : undefined,
       status: task.status,
       userId: task.assigneeUserId,

@@ -25,6 +25,33 @@ jobs:
           skip_after_successful_duplicate: 'true'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
+  # Full-repo type-check - CI-only; scripts/type-check.mjs fails fast locally
+  # because root `tsgo --noEmit` OOMs developer machines.
+  typecheck:
+    needs: check-duplicate-run
+    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        env:
+          REF_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${REPOSITORY}.git"
+          git fetch --no-tags --depth=1 origin "${REF_SHA}"
+          git checkout --force FETCH_HEAD
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install deps
+        run: pnpm install
+
+      - name: Typecheck
+        run: pnpm type-check
+
   # Package tests - all packages in single job to save runner resources
   test-packages:
     needs: check-duplicate-run

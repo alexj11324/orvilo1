@@ -24,6 +24,7 @@ import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
 import { TaskIntentService } from '@/server/services/task/intent';
+import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { AcceptanceService } from '@/server/services/verify/acceptanceService';
@@ -47,6 +48,7 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
       agentModel: new AgentModel(ctx.serverDB, ctx.userId, wsId),
       briefModel: new BriefModel(ctx.serverDB, ctx.userId, wsId),
       editLockService: new EditLockService(ctx.userId),
+      taskIntegration: new TaskIntegrationService(ctx.serverDB, ctx.userId, wsId),
       taskLifecycle: new TaskLifecycleService(ctx.serverDB, ctx.userId, wsId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, wsId),
       taskIntentService: new TaskIntentService(ctx.serverDB, ctx.userId, wsId),
@@ -165,6 +167,7 @@ const updateSchema = z.object({
   position: z.number().optional(),
   priority: z.number().min(0).max(4).optional(),
   projectId: z.string().nullish(),
+  reviewerUserId: z.string().nullish(),
   schedulePattern: z.string().nullish(),
   scheduleTimezone: z.string().nullish(),
   status: z.enum(TASK_STATUSES).optional(),
@@ -766,6 +769,37 @@ export const taskRouter = router({
       }
     }),
 
+  /**
+   * Steer a task topic's agent: a message sent while the run is live is
+   * injected into the topic (the runtime picks it up at the next step); a
+   * run that cannot consume messages (heterogeneous process / parked
+   * approval) reports `requiresInterrupt` and must be resent with
+   * `interrupt: true`; an idle topic is continued off the new message.
+   */
+  steer: taskProcedureWrite
+    .input(
+      z.object({
+        fileIds: z.array(z.string()).optional(),
+        id: z.string(),
+        interrupt: z.boolean().optional(),
+        message: z.string(),
+        topicId: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await ctx.taskService.steerTopic(input);
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[task:steer]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to steer task topic',
+        });
+      }
+    }),
+
   deleteTopic: taskProcedureWrite
     .input(z.object({ topicId: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -840,6 +874,15 @@ export const taskRouter = router({
       // (per docs/usage/workspace-permissions: bulk actions only affect
       // caller-created content).
       const restrictToCreator = !!ctx.workspaceId;
+      // Worktree teardown must precede the delete: task_topics rows (and
+      // their integration records) cascade away with the task rows.
+      const { tasks: doomed } = await model.list({
+        createdByUserId: restrictToCreator ? ctx.userId : undefined,
+        limit: 10_000,
+      });
+      await Promise.allSettled(
+        doomed.map((task) => ctx.taskIntegration.cleanupTaskWorktrees(task.id)),
+      );
       const count = await model.deleteAll({ restrictToCreator });
       return { count, message: `${count} tasks deleted`, success: true };
     } catch (error) {
@@ -857,6 +900,9 @@ export const taskRouter = router({
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
+      // Tear down provisioned run worktrees before the task_topics rows
+      // cascade away with the task. Best-effort — never blocks the delete.
+      await ctx.taskIntegration.cleanupTaskWorktrees(task.id);
       await model.delete(task.id);
       return { data: task, message: 'Task deleted', success: true };
     } catch (error) {
@@ -1581,6 +1627,16 @@ export const taskRouter = router({
         ctx.taskService.assertAssigneeUserVisibilityCompat(
           resolved.visibility,
           data.assigneeUserId,
+          resolved.createdByUserId,
+        );
+
+        // The reviewer is the human accountable at review — same workspace
+        // membership and private-visibility rules as the member assignee.
+        // `null` clears and is always safe.
+        await ctx.taskService.assertAssigneeUserAssignable(data.reviewerUserId);
+        ctx.taskService.assertAssigneeUserVisibilityCompat(
+          resolved.visibility,
+          data.reviewerUserId,
           resolved.createdByUserId,
         );
 

@@ -70,6 +70,34 @@ describe('buildOptimisticAssignmentActivities', () => {
     expect(rows.map((r) => r.assignment?.kind)).toEqual(['agent', 'member']);
   });
 
+  it('logs a reviewer row when the review owner moves', () => {
+    const rows = buildOptimisticAssignmentActivities({
+      actor,
+      current: { agentId: null, reviewerUserId: null, userId: null },
+      now,
+      reviewerTarget: { avatar: null, id: 'user_carol', name: 'Carol', type: 'user' },
+      reviewerUserId: 'user_carol',
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].assignment).toEqual({
+      from: null,
+      kind: 'reviewer',
+      to: { avatar: null, id: 'user_carol', name: 'Carol', type: 'user' },
+    });
+  });
+
+  it('a re-saved identical reviewer produces no row', () => {
+    expect(
+      buildOptimisticAssignmentActivities({
+        actor,
+        current: { agentId: null, reviewerUserId: 'user_carol', userId: null },
+        now,
+        reviewerUserId: 'user_carol',
+      }),
+    ).toEqual([]);
+  });
+
   it('refuses to invent an actor when the viewer identity is unknown', () => {
     expect(
       buildOptimisticAssignmentActivities({

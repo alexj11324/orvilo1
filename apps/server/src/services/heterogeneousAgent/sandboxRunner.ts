@@ -6,6 +6,7 @@ import {
   buildHeteroExecStdinPayload,
   type HeteroExecImageRef,
 } from '@orvilo/heterogeneous-agents/protocol';
+import { repoToLocalDir } from '@orvilo/types';
 import debug from 'debug';
 
 import { appEnv } from '@/envs/app';
@@ -53,16 +54,6 @@ export interface SandboxRunParams {
   userId: string;
   /** Topic/run workspace — injected as `LOBEHUB_WORKSPACE_ID` for ingest. */
   workspaceId?: string;
-}
-
-/**
- * Derive the local directory name from a repo identifier.
- * Accepts "owner/repo", "https://github.com/owner/repo", or "https://github.com/owner/repo.git".
- * Only allows safe characters to prevent shell injection.
- */
-function repoToLocalDir(repo: string): string {
-  const raw = (repo.split('/').findLast(Boolean) ?? repo).replace(/\.git$/, '');
-  return raw.replaceAll(/[^\w.-]/g, '');
 }
 
 /**

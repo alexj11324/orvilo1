@@ -41,4 +41,14 @@ describe('resolveAssignmentActivityCopy', () => {
       deletedTargetKey: 'taskDetail.activities.assignment.deletedMember',
     });
   });
+
+  it('reads the reviewer slot as a review ownership change', () => {
+    const reviewer = { avatar: null, id: 'user_carol', name: 'Carol', type: 'user' } as const;
+    expect(
+      resolveAssignmentActivityCopy({ from: null, kind: 'reviewer', to: reviewer }).verbKey,
+    ).toBe('taskDetail.activities.assignment.reviewerAssigned');
+    expect(
+      resolveAssignmentActivityCopy({ from: reviewer, kind: 'reviewer', to: null }).verbKey,
+    ).toBe('taskDetail.activities.assignment.reviewerUnassigned');
+  });
 });

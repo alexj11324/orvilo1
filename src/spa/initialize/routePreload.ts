@@ -100,12 +100,6 @@ const createWebRoutePreloadTasks = (): RoutePreloadTask[] => [
     matches: matchesRoute('page'),
     priority: 'low',
   }),
-  createTask({
-    id: 'eval',
-    idleDelay: Number.POSITIVE_INFINITY,
-    matches: matchesRoute('eval'),
-    priority: 'low',
-  }),
 ];
 
 const createMobileRoutePreloadTasks = (): RoutePreloadTask[] => [

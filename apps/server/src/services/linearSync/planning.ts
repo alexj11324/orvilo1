@@ -1,7 +1,8 @@
-import type { TaskPlanningProposal, TaskPlanningTrigger } from '@orvilo/types';
-import { and, eq } from 'drizzle-orm';
+import type { TaskPlanningAction, TaskPlanningProposal, TaskPlanningTrigger } from '@orvilo/types';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { LinearSyncModel } from '@/database/models/linearSync';
+import { TaskModel } from '@/database/models/task';
 import type { TaskDomainEventItem, TaskPlanningScopeItem } from '@/database/schemas';
 import { taskDependencies, tasks } from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
@@ -86,6 +87,12 @@ export interface LinearPlanningWorkerResult {
   proposed: number;
 }
 
+export interface ApplyPlanningProposalResult {
+  createdTaskIds: string[];
+  stale: boolean;
+  updatedTaskIds: string[];
+}
+
 export class LinearPlanningWorker {
   private readonly db: LobeChatDatabase;
   private readonly model: LinearSyncModel;
@@ -166,6 +173,258 @@ export class LinearPlanningWorker {
     }
 
     return result;
+  }
+
+  /**
+   * Apply a coordinator proposal only while its captured scope and task
+   * versions are still current. Every task mutation and the planning receipt
+   * share one transaction; a later Linear/user event leaves the proposal
+   * superseded and asks the caller to plan again.
+   */
+  async applyProposal(
+    revisionId: string,
+    proposal: TaskPlanningProposal,
+    userId: string,
+  ): Promise<ApplyPlanningProposalResult> {
+    return this.db.transaction(async (tx) => {
+      const model = new LinearSyncModel(tx, this.workspaceId);
+      const revision = await model.findPlanningRevisionById(revisionId);
+      if (!revision || revision.status !== 'proposed') {
+        throw new Error('Planning revision is not awaiting application');
+      }
+
+      const scope = await model.lockPlanningScope(revision.scopeId);
+      if (!scope) throw new Error('Planning scope no longer exists');
+      if (scope.dirtyRevision > revision.inputRevision) {
+        await model.updatePlanningRevision(revision.id, {
+          error: 'A newer domain event arrived while this proposal was waiting.',
+          status: 'superseded',
+        });
+        await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
+        return { createdTaskIds: [], stale: true, updatedTaskIds: [] };
+      }
+
+      const inputSnapshot = revision.inputSnapshot as {
+        tasks?: Array<{ id: string; updatedAt: string }>;
+      };
+      const existingTaskIds = this.actionTaskIds(proposal.actions);
+      const expectedVersions = new Map(
+        (inputSnapshot.tasks ?? []).map((task) => [task.id, task.updatedAt]),
+      );
+      if (existingTaskIds.some((taskId) => !expectedVersions.has(taskId))) {
+        throw new Error('Planning proposal references a task outside its captured scope');
+      }
+
+      if (existingTaskIds.length > 0) {
+        const currentTasks = await tx
+          .select({ id: tasks.id, updatedAt: tasks.updatedAt })
+          .from(tasks)
+          .where(and(eq(tasks.workspaceId, this.workspaceId), inArray(tasks.id, existingTaskIds)));
+        const currentById = new Map(currentTasks.map((task) => [task.id, task.updatedAt]));
+        if (
+          currentTasks.length !== new Set(existingTaskIds).size ||
+          existingTaskIds.some(
+            (taskId) => currentById.get(taskId)?.toISOString() !== expectedVersions.get(taskId),
+          )
+        ) {
+          await model.updatePlanningRevision(revision.id, {
+            error: 'A task changed after this proposal was generated.',
+            status: 'superseded',
+          });
+          await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
+          return { createdTaskIds: [], stale: true, updatedTaskIds: [] };
+        }
+      }
+
+      const taskModel = new TaskModel(tx, userId, this.workspaceId);
+      const createdTaskIds: string[] = [];
+      const updatedTaskIds: string[] = [];
+
+      for (const action of proposal.actions) {
+        switch (action.action) {
+          case 'assign_task': {
+            const updated = await taskModel.update(action.taskId, {
+              assigneeAgentId: action.assigneeAgentId,
+              assigneeUserId: action.assigneeUserId,
+            });
+            if (!updated) throw new Error(`Task ${action.taskId} could not be assigned`);
+            const syncChange = await model.recordTaskChangeInTransaction(tx, {
+              eventType: 'task.assigned',
+              source: 'user',
+              task: updated,
+            });
+            if (!syncChange) {
+              await model.recordDomainEventInTransaction(tx, {
+                idempotencyKey: `planning:${revision.id}:assigned:${updated.id}`,
+                payload: { taskId: updated.id },
+                projectId: updated.projectId,
+                source: 'user',
+                taskId: updated.id,
+                type: 'task.assigned',
+              });
+            }
+            updatedTaskIds.push(updated.id);
+            break;
+          }
+          case 'create_task': {
+            if (scope.scopeType === 'project' && action.projectId !== scope.scopeId) {
+              throw new Error('Planning proposal cannot create a task outside its project scope');
+            }
+            const created = await taskModel.create({
+              description: action.description,
+              instruction: action.instruction,
+              name: action.name,
+              parentTaskId: action.parentTaskId ?? undefined,
+              priority: action.priority,
+              projectId: action.projectId,
+              visibility: 'public',
+            });
+            await model.recordDomainEventInTransaction(tx, {
+              idempotencyKey: `planning:${revision.id}:task-created:${created.id}`,
+              payload: { taskId: created.id, reason: action.reason },
+              projectId: created.projectId,
+              source: 'user',
+              taskId: created.id,
+              type: 'task.created',
+            });
+            createdTaskIds.push(created.id);
+            break;
+          }
+          case 'noop':
+          case 'escalate': {
+            break;
+          }
+          case 'request_stop': {
+            throw new Error('request_stop proposals require the task stop coordinator');
+          }
+          case 'set_dependency': {
+            await this.applyDependencyAction(tx, taskModel, action, userId);
+            await model.recordDomainEventInTransaction(tx, {
+              idempotencyKey: `planning:${revision.id}:dependency:${action.taskId}:${action.dependsOnTaskId}:${action.operation}`,
+              payload: action,
+              projectId: scope.scopeType === 'project' ? scope.scopeId : undefined,
+              source: 'user',
+              taskId: action.taskId,
+              type: 'task.dependency.changed',
+            });
+            break;
+          }
+          case 'update_task': {
+            const updated = await taskModel.update(action.taskId, {
+              instruction: action.patch.instruction,
+              name: action.patch.name,
+              priority: action.patch.priority,
+            });
+            if (!updated) throw new Error(`Task ${action.taskId} could not be updated`);
+            const syncChange = await model.recordTaskChangeInTransaction(tx, {
+              eventType: 'task.requirement.changed',
+              source: 'user',
+              task: updated,
+            });
+            if (!syncChange) {
+              await model.recordDomainEventInTransaction(tx, {
+                idempotencyKey: `planning:${revision.id}:updated:${updated.id}`,
+                payload: { taskId: updated.id, patch: action.patch },
+                projectId: updated.projectId,
+                source: 'user',
+                taskId: updated.id,
+                type: 'task.requirement.changed',
+              });
+            }
+            updatedTaskIds.push(updated.id);
+            break;
+          }
+        }
+      }
+
+      await model.updatePlanningRevision(revision.id, {
+        appliedAt: new Date(),
+        error: null,
+        proposal,
+        status: 'applied',
+      });
+      await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
+      return { createdTaskIds, stale: false, updatedTaskIds };
+    });
+  }
+
+  private actionTaskIds(actions: TaskPlanningAction[]) {
+    return Array.from(
+      new Set(
+        actions.flatMap((action) => {
+          switch (action.action) {
+            case 'assign_task':
+            case 'request_stop':
+            case 'update_task': {
+              return [action.taskId];
+            }
+            case 'set_dependency': {
+              return [action.taskId, action.dependsOnTaskId];
+            }
+            default: {
+              return [];
+            }
+          }
+        }),
+      ),
+    );
+  }
+
+  private async applyDependencyAction(
+    tx: LobeChatDatabase,
+    taskModel: TaskModel,
+    action: Extract<TaskPlanningAction, { action: 'set_dependency' }>,
+    userId: string,
+  ) {
+    const [task, dependency] = await Promise.all([
+      taskModel.findById(action.taskId),
+      taskModel.findById(action.dependsOnTaskId),
+    ]);
+    if (!task || !dependency) throw new Error('Planning dependency references an unavailable task');
+    if (action.taskId === action.dependsOnTaskId) {
+      throw new Error('A task cannot depend on itself');
+    }
+
+    if (action.operation === 'remove') {
+      await tx
+        .delete(taskDependencies)
+        .where(
+          and(
+            eq(taskDependencies.workspaceId, this.workspaceId),
+            eq(taskDependencies.taskId, action.taskId),
+            eq(taskDependencies.dependsOnId, action.dependsOnTaskId),
+          ),
+        );
+      return;
+    }
+
+    const cycle = await tx.execute(sql`
+      WITH RECURSIVE reachable(id) AS (
+        SELECT depends_on_id
+        FROM task_dependencies
+        WHERE task_id = ${action.dependsOnTaskId}
+          AND workspace_id = ${this.workspaceId}
+        UNION
+        SELECT dependencies.depends_on_id
+        FROM task_dependencies AS dependencies
+        JOIN reachable ON dependencies.task_id = reachable.id
+        WHERE dependencies.workspace_id = ${this.workspaceId}
+      )
+      SELECT 1 FROM reachable WHERE id = ${action.taskId} LIMIT 1
+    `);
+    if (cycle.rows.length > 0) throw new Error('Planning proposal would create a dependency cycle');
+
+    await tx
+      .insert(taskDependencies)
+      .values({
+        dependsOnId: action.dependsOnTaskId,
+        taskId: action.taskId,
+        type: 'blocks',
+        userId,
+        visibility: task.visibility,
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoNothing({ target: [taskDependencies.taskId, taskDependencies.dependsOnId] });
   }
 
   private async snapshot(

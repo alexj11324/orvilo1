@@ -67,6 +67,64 @@ const snapshotSchema = z.object({
   url: z.string().url().nullable().optional(),
 });
 
+const planningActionSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('assign_task'),
+    assigneeAgentId: z.string().nullable().optional(),
+    assigneeUserId: z.string().nullable().optional(),
+    reason: z.string().trim().min(1).max(8_000),
+    taskId: z.string().min(1),
+  }),
+  z.object({
+    action: z.literal('create_task'),
+    description: z.string().max(8_000),
+    instruction: z.string().min(1).max(50_000),
+    name: z.string().trim().min(1).max(255),
+    parentTaskId: z.string().nullable().optional(),
+    priority: z.number().int().min(0).max(4).optional(),
+    projectId: z.string().min(1),
+    reason: z.string().trim().min(1).max(8_000),
+  }),
+  z.object({
+    action: z.literal('escalate'),
+    reason: z.string().trim().min(1).max(8_000),
+  }),
+  z.object({
+    action: z.literal('noop'),
+    reason: z.string().trim().min(1).max(8_000),
+  }),
+  z.object({
+    action: z.literal('request_stop'),
+    reason: z.string().trim().min(1).max(8_000),
+    taskId: z.string().min(1),
+  }),
+  z.object({
+    action: z.literal('set_dependency'),
+    dependsOnTaskId: z.string().min(1),
+    operation: z.enum(['add', 'remove']),
+    reason: z.string().trim().min(1).max(8_000),
+    taskId: z.string().min(1),
+  }),
+  z.object({
+    action: z.literal('update_task'),
+    patch: z
+      .object({
+        instruction: z.string().min(1).max(50_000).optional(),
+        name: z.string().trim().min(1).max(255).optional(),
+        priority: z.number().int().min(0).max(4).optional(),
+      })
+      .refine((patch) => Object.keys(patch).length > 0, 'Task patch cannot be empty'),
+    reason: z.string().trim().min(1).max(8_000),
+    taskId: z.string().min(1),
+  }),
+]);
+
+const planningProposalSchema = z.object({
+  actions: z.array(planningActionSchema).max(50),
+  explanation: z.string().trim().min(1).max(20_000),
+  requiresApproval: z.boolean(),
+});
+
 const mapError = (error: unknown, operation: string): never => {
   if (error instanceof TRPCError) throw error;
   console.error(`[linearSync:${operation}]`, error);
@@ -285,6 +343,26 @@ export const linearSyncRouter = router({
         return { data, message: 'Linear planning scopes processed', success: true };
       } catch (error) {
         mapError(error, 'processPlanning');
+      }
+    }),
+
+  applyPlanningProposal: linearSyncWriteProcedure
+    .input(
+      z.object({
+        proposal: planningProposalSchema,
+        revisionId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await new LinearPlanningWorker(ctx.serverDB, ctx.workspaceId!).applyProposal(
+          input.revisionId,
+          input.proposal,
+          ctx.userId,
+        );
+        return { data, message: 'Linear planning proposal applied', success: true };
+      } catch (error) {
+        mapError(error, 'applyPlanningProposal');
       }
     }),
 

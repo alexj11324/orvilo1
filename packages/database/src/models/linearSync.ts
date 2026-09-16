@@ -546,6 +546,18 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  async lockPlanningScope(id: string) {
+    const [row] = await this.db
+      .select()
+      .from(taskPlanningScopes)
+      .where(
+        and(eq(taskPlanningScopes.id, id), eq(taskPlanningScopes.workspaceId, this.workspaceId)),
+      )
+      .for('update')
+      .limit(1);
+    return row ?? null;
+  }
+
   async listPlanningScopes() {
     return this.db
       .select()
@@ -566,6 +578,20 @@ export class LinearSyncModel {
       )
       .orderBy(desc(taskPlanningRevisions.createdAt))
       .limit(limit);
+  }
+
+  async findPlanningRevisionById(id: string) {
+    const [row] = await this.db
+      .select()
+      .from(taskPlanningRevisions)
+      .where(
+        and(
+          eq(taskPlanningRevisions.id, id),
+          eq(taskPlanningRevisions.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
   }
 
   /** Claim queued scopes without holding a database connection during planning. */

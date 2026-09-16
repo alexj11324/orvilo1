@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { taskDispatches, tasks, users, workspaces } from '../../schemas';
+import { agents, taskDispatches, tasks, users, workspaces } from '../../schemas';
 import type { LobeChatDatabase } from '../../type';
 import {
   TaskDispatchIdempotencyConflictError,
@@ -21,6 +21,8 @@ const cleanup = async () => {
   await db.delete(taskDispatches);
   await db.delete(tasks).where(eq(tasks.workspaceId, workspaceId));
   await db.delete(tasks).where(eq(tasks.workspaceId, otherWorkspaceId));
+  await db.delete(agents).where(eq(agents.userId, userId));
+  await db.delete(agents).where(eq(agents.userId, otherUserId));
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   await db.delete(workspaces).where(eq(workspaces.id, otherWorkspaceId));
   await db.delete(users).where(eq(users.id, userId));
@@ -210,6 +212,7 @@ describe('TaskDispatchModel', () => {
     if (first.state === 'busy') throw new Error('unexpected busy');
     await model.settle({
       dispatchId: first.dispatch.id,
+      expected: ['requested'],
       fence: first.dispatch.fence,
       generation: first.dispatch.generation,
       phase: 'failed',
@@ -225,11 +228,14 @@ describe('TaskDispatchModel', () => {
 
     const late = await model.settle({
       dispatchId: first.dispatch.id,
+      expected: ['requested'],
       fence: first.dispatch.fence,
       generation: first.dispatch.generation,
       phase: 'succeeded',
     });
     expect(late?.currentGeneration).toBe(false);
+    expect(late?.state).toBe('already_settled');
+    expect(late?.dispatch.phase).toBe('failed');
     expect(second.dispatch.generation).toBe(first.dispatch.generation + 1);
   });
 
@@ -257,10 +263,132 @@ describe('TaskDispatchModel', () => {
     await expect(
       model.settle({
         dispatchId: requested.dispatch.id,
+        expected: ['requested'],
         fence: requested.dispatch.fence,
         generation: requested.dispatch.generation,
         phase: 'failed',
       }),
     ).resolves.toBeNull();
+  });
+
+  it('resumes the same waiting dispatch after an Agent is assigned', async () => {
+    const task = await createTask('RUN-6', 6);
+    await db.insert(agents).values({ id: 'dispatch-agent-1', userId, workspaceId });
+    const model = new TaskDispatchModel(db, workspaceId);
+    const first = await model.request({
+      idempotencyKey: 'orchestrator:RUN-6:plan-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (first.state === 'busy') throw new Error('unexpected busy');
+    await model.markWaiting(first.dispatch.id, 'no_eligible_agent');
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'dispatch-agent-1' })
+      .where(eq(tasks.id, task.id));
+
+    const resumed = await model.request({
+      idempotencyKey: 'orchestrator:RUN-6:plan-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (resumed.state === 'busy') throw new Error('unexpected busy');
+    expect(resumed).toMatchObject({
+      dispatch: { agentId: 'dispatch-agent-1', phase: 'requested', waitingReason: null },
+      state: 'existing',
+    });
+  });
+
+  it('cancels a dispatch whose assigned Agent changed before claim', async () => {
+    await db.insert(agents).values([
+      { id: 'dispatch-agent-old', userId, workspaceId },
+      { id: 'dispatch-agent-new', userId, workspaceId },
+    ]);
+    const task = await createTask('RUN-7', 7);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'dispatch-agent-old' })
+      .where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'manual:RUN-7:request-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'dispatch-agent-new' })
+      .where(eq(tasks.id, task.id));
+
+    await expect(
+      model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000),
+    ).resolves.toBeNull();
+    await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
+      phase: 'canceled',
+      waitingReason: 'superseded_before_claim',
+    });
+  });
+
+  it('fences cancellation and makes completion replay idempotent', async () => {
+    const task = await createTask('RUN-8', 8);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'manual:RUN-8:request-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    const running = await model.transition({
+      dispatchId: requested.dispatch.id,
+      expected: ['claimed'],
+      fence: claim!.fence,
+      operationId: 'operation-8',
+      owner: 'worker-a',
+      phase: 'running',
+    });
+    const stopping = await model.requestStop({
+      dispatchId: requested.dispatch.id,
+      fence: running!.fence,
+      generation: running!.generation,
+      operationId: 'operation-8',
+      reason: 'user_cancel',
+    });
+    expect(stopping?.fence).toBe(running!.fence + 1);
+    await expect(
+      model.settle({
+        dispatchId: requested.dispatch.id,
+        expected: ['running'],
+        fence: running!.fence,
+        generation: running!.generation,
+        operationId: 'operation-8',
+        phase: 'succeeded',
+      }),
+    ).resolves.toBeNull();
+
+    const settled = await model.settle({
+      dispatchId: requested.dispatch.id,
+      expected: ['cancel_requested'],
+      fence: stopping!.fence,
+      generation: stopping!.generation,
+      operationId: 'operation-8',
+      phase: 'canceled',
+    });
+    expect(settled).toMatchObject({ dispatch: { phase: 'canceled' }, state: 'settled' });
+    await expect(
+      model.settle({
+        dispatchId: requested.dispatch.id,
+        expected: ['cancel_requested'],
+        fence: stopping!.fence,
+        generation: stopping!.generation,
+        operationId: 'operation-8',
+        phase: 'failed',
+      }),
+    ).resolves.toMatchObject({ dispatch: { phase: 'canceled' }, state: 'already_settled' });
   });
 });

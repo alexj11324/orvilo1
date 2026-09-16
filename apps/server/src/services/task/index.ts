@@ -30,6 +30,7 @@ import {
   taskActivityActor,
   TaskModel,
 } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
@@ -342,6 +343,23 @@ export class TaskService {
       });
     }
 
+    let stoppingDispatch;
+    if (target.dispatchId && target.dispatchFence !== null && target.executionGeneration !== null) {
+      stoppingDispatch = await new TaskDispatchModel(this.db, this.workspaceId).requestStop({
+        dispatchId: target.dispatchId,
+        fence: target.dispatchFence,
+        generation: target.executionGeneration,
+        operationId: target.operationId,
+        reason: 'user_cancel',
+      });
+      if (!stoppingDispatch) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task execution changed before cancellation could be fenced.',
+        });
+      }
+    }
+
     if (target.operationId) {
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
@@ -351,6 +369,23 @@ export class TaskService {
 
     await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
     await this.taskModel.updateStatus(target.taskId, 'paused');
+
+    if (stoppingDispatch) {
+      const settled = await new TaskDispatchModel(this.db, this.workspaceId).settle({
+        dispatchId: stoppingDispatch.id,
+        expected: ['cancel_requested'],
+        fence: stoppingDispatch.fence,
+        generation: stoppingDispatch.generation,
+        operationId: stoppingDispatch.operationId ?? undefined,
+        phase: 'canceled',
+      });
+      if (!settled) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task cancellation lost dispatch ownership before settlement.',
+        });
+      }
+    }
 
     // The canceled run's provisioned worktrees are abandoned — tear them down
     // best-effort; a cleanup failure must not break the cancel.

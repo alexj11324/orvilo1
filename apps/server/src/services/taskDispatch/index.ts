@@ -33,6 +33,7 @@ export interface PreparedTaskDispatch {
   dispatch: TaskDispatchItem;
   fence: number;
   owner: string;
+  task: TaskItem;
 }
 
 export class TaskDispatchService {
@@ -65,7 +66,6 @@ export class TaskDispatchService {
     let requested;
     try {
       requested = await this.model.request({
-        agentId: input.task.assigneeAgentId,
         idempotencyKey: input.idempotencyKey,
         planRevision: input.planRevision,
         requestedBy: input.requestedBy,
@@ -86,9 +86,10 @@ export class TaskDispatchService {
     }
 
     const dispatch = requested.dispatch;
+    const currentTask = requested.task;
     if (
-      !input.task.assigneeAgentId &&
-      !TaskDispatchService.allowsInboxFallback(input.task, input.trigger as TaskRunTrigger)
+      !dispatch.agentId &&
+      !TaskDispatchService.allowsInboxFallback(currentTask, input.trigger as TaskRunTrigger)
     ) {
       await this.model.markWaiting(dispatch.id, 'no_eligible_agent');
       throw new TaskDispatchWaitingError('Task has no eligible execution Agent', dispatch.id);
@@ -108,7 +109,7 @@ export class TaskDispatchService {
         dispatch.id,
       );
     }
-    return { dispatch: lease.dispatch, fence: lease.fence, owner };
+    return { dispatch: lease.dispatch, fence: lease.fence, owner, task: currentTask };
   }
 
   async transition(
@@ -137,6 +138,16 @@ export class TaskDispatchService {
   async settle(prepared: PreparedTaskDispatch, phase: 'canceled' | 'failed' | 'succeeded') {
     return this.model.settle({
       dispatchId: prepared.dispatch.id,
+      expected: [
+        'requested',
+        'claimed',
+        'provisioning',
+        'dispatched',
+        'running',
+        'waiting',
+        'cancel_requested',
+        'outcome_unknown',
+      ],
       fence: prepared.fence,
       generation: prepared.dispatch.generation,
       phase,

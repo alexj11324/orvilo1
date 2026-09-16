@@ -129,6 +129,98 @@ export class TaskTopicModel {
       .onConflictDoNothing();
   }
 
+  /** Persist the exact dispatch owner before the runtime is allowed to start. */
+  async startRun(
+    taskId: string,
+    topicId: string,
+    params: {
+      dispatch: {
+        fence: number;
+        generation: number;
+        id: string;
+        planRevision: number | null;
+        policyRevision: number;
+        requirementRevision: number;
+        taskRevision: number;
+      };
+      environmentSnapshot?: TaskExecutionEnvironmentSnapshot;
+      integration?: TaskTopicIntegration;
+      operationId: string;
+      seq: number;
+      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal';
+    },
+  ): Promise<void> {
+    const visibility = await this.getTaskVisibility(taskId);
+    const run = {
+      dispatchFence: params.dispatch.fence,
+      dispatchId: params.dispatch.id,
+      environmentSnapshot: params.environmentSnapshot,
+      executionGeneration: params.dispatch.generation,
+      operationId: params.operationId,
+      planRevision: params.dispatch.planRevision,
+      policyRevision: params.dispatch.policyRevision,
+      requirementRevision: params.dispatch.requirementRevision,
+      runState: 'running' as const,
+      status: 'running',
+      taskRevision: params.dispatch.taskRevision,
+      trigger: params.trigger,
+    };
+    await this.db
+      .insert(taskTopics)
+      .values({
+        ...run,
+        integration: params.integration,
+        seq: params.seq,
+        taskId,
+        topicId,
+        userId: this.userId,
+        visibility,
+        workspaceId: this.workspaceId ?? null,
+      })
+      .onConflictDoUpdate({
+        set: {
+          ...run,
+          ...(params.integration === undefined ? {} : { integration: params.integration }),
+        },
+        target: [taskTopics.taskId, taskTopics.topicId],
+      });
+  }
+
+  /** Settle history only while the topic row still belongs to that dispatch. */
+  async settleHistoricalRun(
+    taskId: string,
+    topicId: string,
+    claim: { dispatchId: string; fence: number; generation: number },
+    status: 'canceled' | 'completed' | 'failed',
+    lastAssistantContent?: string,
+  ): Promise<boolean> {
+    const [updated] = await this.db
+      .update(taskTopics)
+      .set({
+        ...(lastAssistantContent
+          ? {
+              handoff: sql`jsonb_set(COALESCE(${taskTopics.handoff}, '{}'::jsonb), '{content}', ${JSON.stringify(lastAssistantContent)}::jsonb)`,
+            }
+          : {}),
+        runState: runStateForStatus(status),
+        status,
+      })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, topicId),
+          eq(taskTopics.dispatchId, claim.dispatchId),
+          eq(taskTopics.dispatchFence, claim.fence),
+          eq(taskTopics.executionGeneration, claim.generation),
+          this.ownership(),
+        ),
+      )
+      .returning({ topicId: taskTopics.topicId });
+    if (!updated) return false;
+    await this.markTopicEnded(topicId, status);
+    return true;
+  }
+
   /**
    * Patch the run's workspace-integration record in place. Used by
    * TaskIntegrationService as the merge state machine advances (pending →

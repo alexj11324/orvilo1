@@ -181,20 +181,37 @@ export class TaskLifecycleService {
         reason === 'done' ? 'succeeded' : reason === 'interrupted' ? 'canceled' : 'failed';
       const settlement = await new TaskDispatchModel(this.db, this.workspaceId).settle({
         dispatchId: params.dispatchId,
+        expected: ['dispatched', 'running', 'cancel_requested', 'outcome_unknown'],
         fence: params.dispatchFence,
         generation: params.executionGeneration,
         operationId: params.operationId,
         phase: terminalPhase,
       });
       if (!settlement) throw new Error('Task dispatch claim is stale or does not match this run');
+      if (settlement.state === 'already_settled') {
+        log(
+          'Ignored replayed completion: task=%s dispatch=%s generation=%s',
+          taskId,
+          params.dispatchId,
+          params.executionGeneration,
+        );
+        return;
+      }
       if (!settlement.currentGeneration) {
         if (topicId) {
           const historicalStatus =
             reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed';
-          await this.taskTopicModel.updateStatus(taskId, topicId, historicalStatus);
-          if (lastAssistantContent) {
-            await this.taskTopicModel.updateHandoffContent(taskId, topicId, lastAssistantContent);
-          }
+          await this.taskTopicModel.settleHistoricalRun(
+            taskId,
+            topicId,
+            {
+              dispatchId: params.dispatchId,
+              fence: params.dispatchFence,
+              generation: params.executionGeneration,
+            },
+            historicalStatus,
+            lastAssistantContent,
+          );
         }
         log(
           'Ignored stale generation completion: task=%s dispatch=%s generation=%s',

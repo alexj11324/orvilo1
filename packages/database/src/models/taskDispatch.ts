@@ -5,7 +5,7 @@ import type {
 } from '@orvilo/types';
 import { and, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 
-import type { TaskDispatchItem } from '../schemas/task';
+import type { TaskDispatchItem, TaskItem } from '../schemas/task';
 import { taskDispatches, tasks } from '../schemas/task';
 import type { LobeChatDatabase } from '../type';
 import { idGenerator } from '../utils/idGenerator';
@@ -27,7 +27,6 @@ export class TaskDispatchNotFoundError extends Error {}
 export class TaskDispatchIdempotencyConflictError extends Error {}
 
 export interface RequestTaskDispatchInput {
-  agentId?: string | null;
   dispatchId?: string;
   idempotencyKey: string;
   planRevision?: number | null;
@@ -37,8 +36,8 @@ export interface RequestTaskDispatchInput {
 }
 
 export type RequestTaskDispatchResult =
-  | { dispatch: TaskDispatchItem; state: 'created' | 'existing' }
-  | { active: TaskDispatchItem; state: 'busy' };
+  | { dispatch: TaskDispatchItem; state: 'created' | 'existing'; task: TaskItem }
+  | { active: TaskDispatchItem; state: 'busy'; task: TaskItem };
 
 export interface TaskDispatchLease {
   dispatch: TaskDispatchItem;
@@ -73,16 +72,6 @@ export class TaskDispatchModel {
 
   async request(input: RequestTaskDispatchInput): Promise<RequestTaskDispatchResult> {
     return this.db.transaction(async (tx) => {
-      const [existing] = await tx
-        .select()
-        .from(taskDispatches)
-        .where(and(eq(taskDispatches.idempotencyKey, input.idempotencyKey), this.scopeCondition()))
-        .limit(1);
-      if (existing) {
-        this.assertIdempotencyTarget(existing, input.taskId);
-        return { dispatch: existing, state: 'existing' as const };
-      }
-
       const [task] = await tx
         .select()
         .from(tasks)
@@ -93,17 +82,33 @@ export class TaskDispatchModel {
         throw new TaskDispatchNotFoundError('Task not found in dispatch scope');
       }
 
-      // A concurrent request may have committed while this transaction waited
-      // for the Task row lock. Re-read the key under that serialization point
-      // so retries observe the same dispatch instead of reporting it as busy.
-      const [concurrentExisting] = await tx
+      // Resolve idempotency only after locking the Task. Besides serializing
+      // concurrent retries, this makes the assignee and revision snapshots
+      // below authoritative for the exact dispatch we are about to claim.
+      const [existing] = await tx
         .select()
         .from(taskDispatches)
         .where(and(eq(taskDispatches.idempotencyKey, input.idempotencyKey), this.scopeCondition()))
         .limit(1);
-      if (concurrentExisting) {
-        this.assertIdempotencyTarget(concurrentExisting, input.taskId);
-        return { dispatch: concurrentExisting, state: 'existing' as const };
+      if (existing) {
+        this.assertIdempotencyTarget(existing, input.taskId);
+        if (existing.phase === 'waiting' && task.assigneeAgentId) {
+          const [resumed] = await tx
+            .update(taskDispatches)
+            .set({
+              agentId: task.assigneeAgentId,
+              phase: 'requested',
+              planRevision: input.planRevision,
+              policyRevision: task.policyRevision,
+              requirementRevision: task.requirementRevision,
+              taskRevision: task.domainRevision,
+              waitingReason: null,
+            })
+            .where(and(eq(taskDispatches.id, existing.id), eq(taskDispatches.phase, 'waiting')))
+            .returning();
+          return { dispatch: resumed ?? existing, state: 'existing' as const, task };
+        }
+        return { dispatch: existing, state: 'existing' as const, task };
       }
 
       const [active] = await tx
@@ -113,13 +118,13 @@ export class TaskDispatchModel {
           and(eq(taskDispatches.taskId, task.id), inArray(taskDispatches.phase, ACTIVE_PHASES)),
         )
         .limit(1);
-      if (active) return { active, state: 'busy' as const };
+      if (active) return { active, state: 'busy' as const, task };
 
       const generation = task.executionGeneration + 1;
       const [dispatch] = await tx
         .insert(taskDispatches)
         .values({
-          agentId: input.agentId,
+          agentId: task.assigneeAgentId,
           generation,
           id: input.dispatchId ?? idGenerator('taskDispatches'),
           idempotencyKey: input.idempotencyKey,
@@ -136,7 +141,7 @@ export class TaskDispatchModel {
 
       await tx.update(tasks).set({ executionGeneration: generation }).where(eq(tasks.id, task.id));
 
-      return { dispatch, state: 'created' as const };
+      return { dispatch, state: 'created' as const, task };
     });
   }
 
@@ -145,29 +150,63 @@ export class TaskDispatchModel {
     owner: string,
     leaseMs: number,
   ): Promise<TaskDispatchLease | null> {
-    const now = new Date();
-    const [dispatch] = await this.db
-      .update(taskDispatches)
-      .set({
-        fence: sql`${taskDispatches.fence} + 1`,
-        leaseExpiresAt: new Date(now.getTime() + leaseMs),
-        leaseOwner: owner,
-        phase: 'claimed',
-      })
-      .where(
-        and(
-          eq(taskDispatches.id, dispatchId),
-          this.scopeCondition(),
-          inArray(taskDispatches.phase, PROVISIONABLE_PHASES),
-          or(
-            eq(taskDispatches.leaseOwner, owner),
-            isNull(taskDispatches.leaseExpiresAt),
-            lt(taskDispatches.leaseExpiresAt, now),
-          ),
-        ),
-      )
-      .returning();
-    return dispatch ? { dispatch, fence: dispatch.fence } : null;
+    return this.db.transaction(async (tx) => {
+      const now = new Date();
+      const [dispatch] = await tx
+        .select()
+        .from(taskDispatches)
+        .where(and(eq(taskDispatches.id, dispatchId), this.scopeCondition()))
+        .limit(1)
+        .for('update');
+      if (!dispatch || !PROVISIONABLE_PHASES.includes(dispatch.phase)) return null;
+      if (
+        dispatch.leaseOwner !== owner &&
+        dispatch.leaseExpiresAt &&
+        dispatch.leaseExpiresAt >= now
+      ) {
+        return null;
+      }
+
+      const [task] = await tx
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, dispatch.taskId))
+        .limit(1)
+        .for('update');
+      const isCurrent =
+        task &&
+        task.workspaceId === (this.workspaceId ?? null) &&
+        task.executionGeneration === dispatch.generation &&
+        task.domainRevision === dispatch.taskRevision &&
+        task.requirementRevision === dispatch.requirementRevision &&
+        task.policyRevision === dispatch.policyRevision &&
+        task.assigneeAgentId === dispatch.agentId;
+      if (!isCurrent) {
+        await tx
+          .update(taskDispatches)
+          .set({
+            fence: sql`${taskDispatches.fence} + 1`,
+            leaseExpiresAt: null,
+            leaseOwner: null,
+            phase: 'canceled',
+            waitingReason: 'superseded_before_claim',
+          })
+          .where(eq(taskDispatches.id, dispatch.id));
+        return null;
+      }
+
+      const [claimed] = await tx
+        .update(taskDispatches)
+        .set({
+          fence: sql`${taskDispatches.fence} + 1`,
+          leaseExpiresAt: new Date(now.getTime() + leaseMs),
+          leaseOwner: owner,
+          phase: 'claimed',
+        })
+        .where(eq(taskDispatches.id, dispatch.id))
+        .returning();
+      return claimed ? { dispatch: claimed, fence: claimed.fence } : null;
+    });
   }
 
   /**
@@ -241,14 +280,29 @@ export class TaskDispatchModel {
     return updated ?? null;
   }
 
-  async requestStop(dispatchId: string, reason: string): Promise<TaskDispatchItem | null> {
+  async requestStop(input: {
+    dispatchId: string;
+    fence: number;
+    generation: number;
+    operationId?: string | null;
+    reason: string;
+  }): Promise<TaskDispatchItem | null> {
     const [updated] = await this.db
       .update(taskDispatches)
-      .set({ phase: 'cancel_requested', waitingReason: reason })
+      .set({
+        fence: sql`${taskDispatches.fence} + 1`,
+        leaseExpiresAt: null,
+        leaseOwner: null,
+        phase: 'cancel_requested',
+        waitingReason: input.reason,
+      })
       .where(
         and(
-          eq(taskDispatches.id, dispatchId),
+          eq(taskDispatches.id, input.dispatchId),
           this.scopeCondition(),
+          eq(taskDispatches.fence, input.fence),
+          eq(taskDispatches.generation, input.generation),
+          input.operationId ? eq(taskDispatches.operationId, input.operationId) : undefined,
           inArray(taskDispatches.phase, [
             'requested',
             'claimed',
@@ -261,7 +315,26 @@ export class TaskDispatchModel {
         ),
       )
       .returning();
-    return updated ?? null;
+    if (updated) return updated;
+
+    // A cancel request can be retried after the remote interrupt succeeded but
+    // before the caller finished its local topic/task updates. Reuse only the
+    // exact fence successor minted by that request.
+    const [existing] = await this.db
+      .select()
+      .from(taskDispatches)
+      .where(
+        and(
+          eq(taskDispatches.id, input.dispatchId),
+          this.scopeCondition(),
+          eq(taskDispatches.fence, input.fence + 1),
+          eq(taskDispatches.generation, input.generation),
+          input.operationId ? eq(taskDispatches.operationId, input.operationId) : undefined,
+          eq(taskDispatches.phase, 'cancel_requested'),
+        ),
+      )
+      .limit(1);
+    return existing ?? null;
   }
 
   async markWaiting(dispatchId: string, reason: string): Promise<TaskDispatchItem | null> {
@@ -309,11 +382,16 @@ export class TaskDispatchModel {
 
   async settle(input: {
     dispatchId: string;
+    expected: TaskDispatchPhase[];
     fence: number;
     generation: number;
     operationId?: string;
     phase: Extract<TaskDispatchPhase, 'canceled' | 'failed' | 'succeeded'>;
-  }): Promise<{ currentGeneration: boolean; dispatch: TaskDispatchItem } | null> {
+  }): Promise<{
+    currentGeneration: boolean;
+    dispatch: TaskDispatchItem;
+    state: 'already_settled' | 'settled';
+  } | null> {
     return this.db.transaction(async (tx) => {
       const [dispatch] = await tx
         .select()
@@ -333,14 +411,32 @@ export class TaskDispatchModel {
         .for('update');
       if (!task) return null;
 
+      if (['canceled', 'failed', 'succeeded'].includes(dispatch.phase)) {
+        return {
+          currentGeneration: task.executionGeneration === dispatch.generation,
+          dispatch,
+          state: 'already_settled' as const,
+        };
+      }
+      if (!input.expected.includes(dispatch.phase)) return null;
+
       const [settled] = await tx
         .update(taskDispatches)
         .set({ leaseExpiresAt: null, leaseOwner: null, phase: input.phase })
-        .where(eq(taskDispatches.id, dispatch.id))
+        .where(
+          and(
+            eq(taskDispatches.id, dispatch.id),
+            eq(taskDispatches.fence, input.fence),
+            eq(taskDispatches.generation, input.generation),
+            inArray(taskDispatches.phase, input.expected),
+          ),
+        )
         .returning();
+      if (!settled) return null;
       return {
         currentGeneration: task.executionGeneration === dispatch.generation,
         dispatch: settled,
+        state: 'settled' as const,
       };
     });
   }

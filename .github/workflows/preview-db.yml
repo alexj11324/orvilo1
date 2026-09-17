@@ -6,6 +6,8 @@ name: Preview DB
 # 让此分支的 Preview 部署指向自己的库。关闭 PR 时由 preview-cleanup.yml 清理。
 #
 # 默认不启用：把 repo variable PREVIEW_EPHEMERAL_DB_ENABLED 设为 true 才会跑。
+# 即使打开 provisioning，VERCEL_PREVIEW_DEPLOYMENT_GATE 也必须显式设为 open；
+# 这个闸门代表人工确认 Vercel 配额可用。闸门关闭时不会建库、轮换凭据或写 Vercel。
 # 需要 secrets：PREVIEW_DB_ADMIN_URL（admin 连接串，建议指到 postgres 库）、
 # PREVIEW_KEY_VAULTS_SECRET、PREVIEW_DATABASE_SSL_CA、VERCEL_TOKEN、
 # VERCEL_ORG_ID、VERCEL_PROJECT_ID、ORACLE_HOST、ORACLE_SSH_KEY、
@@ -17,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 # 建库/写 env 不是幂等中间态可以随便打断的操作，取消并发会留下半截环境
 concurrency:
@@ -28,6 +31,7 @@ jobs:
     # fork PR 拿不到 secrets；仅仓库所有者推动的同仓库 PR 才允许接触基础设施凭据。
     if: >-
       vars.PREVIEW_EPHEMERAL_DB_ENABLED == 'true' &&
+      vars.VERCEL_PREVIEW_DEPLOYMENT_GATE == 'open' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == github.repository_owner
     name: Provision per-PR database
@@ -42,6 +46,35 @@ jobs:
       HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
+      - name: Validate exact-head CI, Vercel access, and manual deployment gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REQUIRED_SHA: ${{ env.HEAD_SHA }}
+          REQUIRED_WORKFLOWS: E2E CI
+          REQUIRED_EVENT: push
+          VERCEL_PREVIEW_DEPLOYMENT_GATE: ${{ vars.VERCEL_PREVIEW_DEPLOYMENT_GATE }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          if [[ "$VERCEL_PREVIEW_DEPLOYMENT_GATE" != "open" ]]; then
+            echo "Vercel Preview gate is closed. Set repository variable VERCEL_PREVIEW_DEPLOYMENT_GATE=open only after confirming quota." >&2
+            exit 1
+          fi
+          : "${VERCEL_TOKEN:?VERCEL_TOKEN is required for the Vercel preflight}"
+          : "${VERCEL_ORG_ID:?VERCEL_ORG_ID is required for the Vercel preflight}"
+          : "${VERCEL_PROJECT_ID:?VERCEL_PROJECT_ID is required for the Vercel preflight}"
+          node scripts/ci/checkGitHubWorkflowGate.mjs
+          status=$(curl -sS -o /dev/null -w '%{http_code}' \
+            "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}")
+          if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
+            echo "Vercel token preflight failed with HTTP $status; refusing to touch Preview infrastructure" >&2
+            exit 1
+          fi
+          echo "Vercel access preflight passed; quota was manually confirmed by the open gate"
+
       - name: Open trusted Preview database tunnel
         env:
           ORACLE_HOST: ${{ secrets.ORACLE_HOST }}

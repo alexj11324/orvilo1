@@ -10,7 +10,7 @@ interface WorkflowStep {
 }
 
 interface Workflow {
-  jobs: Record<string, { env?: Record<string, string>; steps: WorkflowStep[] }>;
+  jobs: Record<string, { if?: string; env?: Record<string, string>; steps: WorkflowStep[] }>;
 }
 
 const provisionWorkflow = parse(
@@ -24,6 +24,23 @@ const cleanupWorkflow = parse(
 ) as Workflow;
 
 describe('Preview database workflow', () => {
+  it('checks exact-head CI and Vercel access before opening the Oracle tunnel', () => {
+    expect(provisionWorkflow.jobs.provision.if).toContain('VERCEL_PREVIEW_DEPLOYMENT_GATE');
+    const gateIndex = provisionWorkflow.jobs.provision.steps.findIndex(
+      (step) => step.name === 'Validate exact-head CI, Vercel access, and manual deployment gate',
+    );
+    const tunnelIndex = provisionWorkflow.jobs.provision.steps.findIndex(
+      (step) => step.name === 'Open trusted Preview database tunnel',
+    );
+    const gate = provisionWorkflow.jobs.provision.steps[gateIndex];
+
+    expect(gateIndex).toBeGreaterThanOrEqual(0);
+    expect(gateIndex).toBeLessThan(tunnelIndex);
+    expect(gate?.run).toContain('VERCEL_PREVIEW_DEPLOYMENT_GATE');
+    expect(gate?.run).toContain('checkGitHubWorkflowGate.mjs');
+    expect(gate?.run).toContain('api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env');
+  });
+
   it('extracts grant log metadata in a fail-closed command', () => {
     const grant = provisionWorkflow.jobs.provision.steps.find(
       (step) => step.name === 'Grant app database privileges',

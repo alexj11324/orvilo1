@@ -18,15 +18,15 @@ Electron 桌面客户端，以及 CLI。
 
 ## 仓库结构
 
-| 路径 | 内容 |
-| --- | --- |
-| `src/` | React SPA —— 产品主界面 |
-| `apps/server/` | 后端运行时、路由与服务 |
-| `apps/desktop/` | Electron 桌面客户端 |
-| `apps/cli/` | 命令行客户端 |
-| `apps/share/`、`apps/workbench/`、`apps/auth/` | 辅助 Web 应用 |
-| `packages/` | 共享 workspace 包 |
-| `e2e/` | 端到端测试（Cucumber + Playwright） |
+| 路径                                           | 内容                                |
+| ---------------------------------------------- | ----------------------------------- |
+| `src/`                                         | React SPA —— 产品主界面             |
+| `apps/server/`                                 | 后端运行时、路由与服务              |
+| `apps/desktop/`                                | Electron 桌面客户端                 |
+| `apps/cli/`                                    | 命令行客户端                        |
+| `apps/share/`、`apps/workbench/`、`apps/auth/` | 辅助 Web 应用                       |
+| `packages/`                                    | 共享 workspace 包                   |
+| `e2e/`                                         | 端到端测试（Cucumber + Playwright） |
 
 智能体可以接入聊天平台（Slack、Discord、Telegram、微信等）、Git 托管服务，
 以及你自己配置的模型供应商。
@@ -53,18 +53,22 @@ pnpm --filter @orvilo/server dev
 
 ### Preview 测试
 
-Vercel Preview 是本仓库共享的测试目标。推送分支后会创建 Preview 部署，使用它的地址
-进行浏览器和端到端验证。Preview 部署使用 [`.env.example.preview`](./.env.example.preview)
-中记录的远程 PostgreSQL、Redis 与 Cloudflare R2 服务。本地开发可按
-[`.env.example.development`](./.env.example.development) 选择云开发模式，Docker 仍可作为本地
-回退方案。
+Oracle 是当前暂时使用的生产目标。Docker 镜像由 GitHub Actions 的 arm64 runner 构建并推送，
+然后 Oracle 部署 job 通过 SSH 拉取当前 commit 对应的不可变镜像 tag。本地 Docker 或 Next.js
+构建不属于生产部署路径。
+
+Vercel Preview 默认暂停。Preview 数据库 workflow 仍受
+`PREVIEW_EPHEMERAL_DB_ENABLED` 和手动变量 `VERCEL_PREVIEW_DEPLOYMENT_GATE` 双重保护；
+只有 exact-head E2E CI 通过、Vercel Token 预检成功，并且人工确认配额可用后，才会打开
+Oracle 数据库隧道或写入 Vercel 环境变量。Preview 使用的 PostgreSQL、Redis 与 Cloudflare R2
+见 [`.env.example.preview`](./.env.example.preview)。
 
 ### 质量检查
 
 ```bash
-pnpm run type-check     # tsgo --noEmit
-pnpm run test-app       # vitest run
-pnpm run lint           # eslint + stylelint + 类型检查 + 循环依赖
+pnpm run type-check # tsgo --noEmit
+pnpm run test-app   # vitest run
+pnpm run lint       # eslint + stylelint + 类型检查 + 循环依赖
 
 # 只检查改动的文件
 bun run check [changed-files...]
@@ -79,7 +83,7 @@ Orvilo 依赖 PostgreSQL。完整配置项见 [`.env.example`](./.env.example)�
 部署方案见 [`docker-compose/`](./docker-compose)。
 
 ```bash
-cp .env.example .env    # 然后填入数据库与模型供应商凭据
+cp .env.example .env # 然后填入数据库与模型供应商凭据
 pnpm run build
 ```
 

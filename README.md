@@ -19,15 +19,15 @@ Electron desktop client, and a CLI.
 
 ## What's in here
 
-| Path | What it is |
-| --- | --- |
-| `src/` | The React SPA — the main product surface |
-| `apps/server/` | Backend runtime, routers and services |
-| `apps/desktop/` | Electron desktop client |
-| `apps/cli/` | Command-line client |
-| `apps/share/`, `apps/workbench/`, `apps/auth/` | Auxiliary web apps |
-| `packages/` | Shared workspace packages |
-| `e2e/` | End-to-end tests (Cucumber + Playwright) |
+| Path                                           | What it is                               |
+| ---------------------------------------------- | ---------------------------------------- |
+| `src/`                                         | The React SPA — the main product surface |
+| `apps/server/`                                 | Backend runtime, routers and services    |
+| `apps/desktop/`                                | Electron desktop client                  |
+| `apps/cli/`                                    | Command-line client                      |
+| `apps/share/`, `apps/workbench/`, `apps/auth/` | Auxiliary web apps                       |
+| `packages/`                                    | Shared workspace packages                |
+| `e2e/`                                         | End-to-end tests (Cucumber + Playwright) |
 
 Agents can be connected to chat platforms (Slack, Discord, Telegram, WeChat and
 others), to Git hosts, and to model providers you configure yourself.
@@ -56,19 +56,24 @@ config.
 
 ### Preview testing
 
-Vercel Preview is the shared testing target for this repository. Push a branch to create
-a Preview deployment, then use its URL for browser and end-to-end verification. Preview
-deployments use the remote PostgreSQL, Redis, and Cloudflare R2 services documented in
-[`.env.example.preview`](./.env.example.preview). For local work, choose the cloud-dev
-mode in [`.env.example.development`](./.env.example.development); Docker remains available
-as a local fallback.
+Oracle is the temporary production target. Its Docker image is built and pushed by
+GitHub Actions on the arm64 runner, then the exact immutable image tag is pulled over
+SSH by the Oracle deploy job. A local Docker or Next.js build is not a production
+deployment path.
+
+Vercel Preview is paused by default. The Preview database workflow remains behind
+`PREVIEW_EPHEMERAL_DB_ENABLED` and the manual `VERCEL_PREVIEW_DEPLOYMENT_GATE`; when
+enabled, it first requires exact-head E2E CI and a successful Vercel token preflight
+before it can open the Oracle database tunnel or write Vercel environment variables.
+Preview deployments use the remote PostgreSQL, Redis, and Cloudflare R2 services documented
+in [`.env.example.preview`](./.env.example.preview).
 
 ### Quality checks
 
 ```bash
-pnpm run type-check     # tsgo --noEmit
-pnpm run test-app       # vitest run
-pnpm run lint           # eslint + stylelint + type-check + circular deps
+pnpm run type-check # tsgo --noEmit
+pnpm run test-app   # vitest run
+pnpm run lint       # eslint + stylelint + type-check + circular deps
 
 # Scope a check to the files you changed
 bun run check [changed-files...]
@@ -84,7 +89,7 @@ configuration variables, and [`docker-compose/`](./docker-compose) for deploymen
 recipes.
 
 ```bash
-cp .env.example .env    # then fill in your database and provider credentials
+cp .env.example .env # then fill in your database and provider credentials
 pnpm run build
 ```
 

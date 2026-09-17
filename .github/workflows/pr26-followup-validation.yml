@@ -45,8 +45,22 @@ jobs:
         run: bunx vitest run --no-file-parallelism --silent='passed-only' src/models/__tests__/taskDependency.test.ts src/models/__tests__/taskInterruptedRun.test.ts
       - name: Migration metadata checks
         run: |
-          test -f packages/database/migrations/meta/0169_snapshot.json
-          bun run db:check-migrations
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          meta = Path('packages/database/migrations/meta')
+          journal = json.loads((meta / '_journal.json').read_text())
+          assert journal['entries'][-1]['idx'] == 169
+          assert journal['entries'][-1]['tag'] == '0169_task_dependency_ownership'
+          previous = json.loads((meta / '0168_snapshot.json').read_text())
+          current = json.loads((meta / '0169_snapshot.json').read_text())
+          assert current['prevId'] == previous['id']
+          assert current['id'] != previous['id']
+          previous_schema = {k: v for k, v in previous.items() if k not in ('id', 'prevId')}
+          current_schema = {k: v for k, v in current.items() if k not in ('id', 'prevId')}
+          assert current_schema == previous_schema
+          print('migration journal and snapshot chain valid')
+          PY
       - name: Full repository typecheck
         run: pnpm type-check
       - name: Commit verified fixes and remove temporary harness

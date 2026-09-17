@@ -2,7 +2,6 @@
 
 import {
   BrainCircuit,
-  Download,
   FilesIcon,
   FileText,
   HomeIcon,
@@ -29,7 +28,6 @@ import {
   BusinessResourceRoutes,
 } from '@/business/client/BusinessDesktopRoutes';
 import BrandTextLoading from '@/components/Loading/BrandTextLoading';
-import AppsSkeleton from '@/components/Skeleton/Apps';
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import { delayed } from '@/components/Skeleton/Delayed';
@@ -801,13 +799,11 @@ export const sharedMainAreaChildren: RouteObject[] = [
 const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): RouteObject[] => [
   ...sharedMainAreaChildren,
 
-  // Apps page (personal-only — never mirrored under /:workspaceSlug)
+  // Retired: `/apps` folded into Settings > About, which now hosts the app
+  // download links. Kept as a redirect so legacy deep-links and stored tab
+  // state still land somewhere honest.
   {
-    element: dynamicElement(() => import('@/routes/(main)/apps'), 'Desktop > Apps'),
-    errorElement: <ErrorBoundary />,
-    handle: {
-      meta: routeMeta({ icon: Download, Skeleton: AppsSkeleton, titleKey: 'navigation.apps' }),
-    },
+    element: redirectElement('/settings/about'),
     path: 'apps',
   },
 

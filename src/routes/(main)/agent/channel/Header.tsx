@@ -31,7 +31,7 @@ interface HeaderProps {
   agentId: string;
   currentConfig?: BotProviderItem;
   disabled?: boolean;
-  platformDef?: SerializedPlatformDefinition & { comingSoon?: boolean };
+  platformDef?: SerializedPlatformDefinition;
   providers?: BotProviderItem[];
   runtimeStatus?: BotRuntimeStatus;
 }
@@ -276,7 +276,6 @@ const Header = memo<HeaderProps>(
           style={{ position: 'relative' }}
           right={
             <Flexbox horizontal align="center" gap={8}>
-              {platformDef?.comingSoon && <Tag size={'small'}>{t('channel.comingSoon')}</Tag>}
               {platformDef?.access?.requiredPlan === 'paid' && (
                 <Tag color="gold" size={'small'}>
                   {platformDef.access.rolloutMode === 'notice'

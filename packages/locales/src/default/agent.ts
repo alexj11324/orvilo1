@@ -37,10 +37,6 @@ export default {
     'Due to the high communication costs for the {{name}} channel, we plan to make this channel a paid feature soon. Existing connections remain available during the notice period, but creating or reconnecting this channel requires upgrading this workspace to Pro or Business.',
   'channel.paidFeature.notice.title': '{{name}} will soon require a paid plan',
   'channel.paidFeature.noticeBadge': 'Pro soon',
-  'channel.comingSoon': 'Coming Soon',
-  'channel.comingSoonDesc':
-    'We are working on bringing this integration to Orvilo. Stay tuned for updates.',
-  'channel.comingSoonTitle': '{{name}} integration is coming soon',
   'channel.copy': 'Copy',
   'channel.deleteAllChannels': 'Remove All Channels',
   'channel.deleteAllConfirm': 'Are you sure you want to remove all channels?',
@@ -76,8 +72,6 @@ export default {
     'Offer fast AI help in private and group chats—ideal for communities, audiences, and lightweight support.',
   'channel.platform.wechat.description':
     'Make the agent available in everyday chats—ideal for personal assistance and WeChat-based audiences.',
-  'channel.platform.whatsapp.description':
-    'Meet customers in familiar mobile chats for support and follow-ups—ideal for customer-facing teams.',
   'channel.discord.description':
     'Connect this agent to Discord server for channel chat and direct messages.',
   'channel.documentation': 'Documentation',

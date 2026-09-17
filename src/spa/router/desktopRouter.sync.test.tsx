@@ -3,11 +3,10 @@ import path from 'node:path';
 
 import { isValidElement, type ReactElement, Suspense } from 'react';
 import type { RouteObject } from 'react-router';
-import { matchRoutes } from 'react-router';
+import { matchRoutes, Navigate } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
 import BrandTextLoading from '@/components/Loading/BrandTextLoading';
-import AppsSkeleton from '@/components/Skeleton/Apps';
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import DelayedFallback from '@/components/Skeleton/Delayed';
@@ -492,7 +491,6 @@ describe('desktop router shared definition', () => {
       ['/group/group-1/profile', GroupProfileRouteSkeleton],
       ['/group/group-1/topic-1', ConversationLayoutSkeleton],
       ['/settings/profile', SettingsPageSkeleton],
-      ['/apps', AppsSkeleton],
       ['/memory', MemorySkeleton],
       ['/resource', ResourceHomeSkeleton],
       ['/resource/files', ResourceCategorySkeleton],
@@ -532,17 +530,19 @@ describe('desktop router shared definition', () => {
   it.each([
     ['Web', (_pathname: string) => webDesktopRoutes],
     ['Electron', (pathname: string) => createTabRouter(pathname).routes],
-  ])('%s keeps /apps on the route-segment fallback', (_, getRoutes) => {
+  ])('%s redirects retired /apps to the Settings > About downloads', (_, getRoutes) => {
+    // `/apps` was retired into Settings > About; the route stays registered as
+    // a static redirect so legacy deep-links and stored tab state still land
+    // somewhere honest instead of 404ing.
     const matches = matchRoutes(getRoutes('/apps'), '/apps');
-    const fallbackTypes = matches
-      ?.map(
-        ({ route }) =>
-          (route.element as ReactElement<{ fallback?: ReactElement }> | undefined)?.props.fallback
-            ?.type,
-      )
-      .filter(Boolean);
+    const element = matches?.at(-1)?.route.element as ReactElement<{
+      replace?: boolean;
+      to?: string;
+    }>;
 
-    expect(fallbackTypes?.at(-1)).toBe(RouteSegmentSkeleton);
+    expect(element?.type).toBe(Navigate);
+    expect(element?.props.to).toBe('/settings/about');
+    expect(element?.props.replace).toBe(true);
   });
 
   it('fills each platform index slot with that platform landing element', () => {

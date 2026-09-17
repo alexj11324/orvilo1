@@ -8,7 +8,8 @@ name: Preview DB
 # 默认不启用：把 repo variable PREVIEW_EPHEMERAL_DB_ENABLED 设为 true 才会跑。
 # 需要 secrets：PREVIEW_DB_ADMIN_URL（admin 连接串，建议指到 postgres 库）、
 # PREVIEW_KEY_VAULTS_SECRET、PREVIEW_DATABASE_SSL_CA、VERCEL_TOKEN、
-# VERCEL_ORG_ID、VERCEL_PROJECT_ID。
+# VERCEL_ORG_ID、VERCEL_PROJECT_ID、ORACLE_HOST、ORACLE_SSH_KEY、
+# ORACLE_SSH_KNOWN_HOSTS。
 
 on:
   pull_request:
@@ -41,6 +42,26 @@ jobs:
       HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
+      - name: Open trusted Preview database tunnel
+        env:
+          ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+          ORACLE_KNOWN_HOSTS: ${{ secrets.ORACLE_SSH_KNOWN_HOSTS }}
+          ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          ssh_dir="$RUNNER_TEMP/orvilo-preview-ssh"
+          install -d -m 700 "$ssh_dir"
+          printf '%s\n' "$ORACLE_SSH_KEY" > "$ssh_dir/id_ed25519"
+          printf '%s\n' "$ORACLE_KNOWN_HOSTS" > "$ssh_dir/known_hosts"
+          chmod 600 "$ssh_dir/id_ed25519" "$ssh_dir/known_hosts"
+          ssh -i "$ssh_dir/id_ed25519" -o BatchMode=yes -o ConnectTimeout=15 \
+            -o ExitOnForwardFailure=yes -o IdentitiesOnly=yes -o ServerAliveCountMax=3 \
+            -o ServerAliveInterval=30 -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$ssh_dir/known_hosts" -fNT \
+            -L 127.0.0.1:35432:127.0.0.1:25432 "ubuntu@$ORACLE_HOST"
+          rm -f -- "$ssh_dir/id_ed25519" "$ssh_dir/known_hosts"
+          rmdir "$ssh_dir"
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -55,11 +76,16 @@ jobs:
 
       - name: Validate Preview migration secrets
         env:
+          DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
           KEY_VAULTS_SECRET: ${{ secrets.PREVIEW_KEY_VAULTS_SECRET }}
         run: |
           set -euo pipefail
           if [[ -z "$KEY_VAULTS_SECRET" ]]; then
             echo "KEY_VAULTS_SECRET for target=preview is missing" >&2
+            exit 1
+          fi
+          if [[ -z "$DATABASE_SSL_CA" ]]; then
+            echo "DATABASE_SSL_CA for target=preview is missing" >&2
             exit 1
           fi
           echo "::add-mask::$KEY_VAULTS_SECRET"
@@ -68,32 +94,27 @@ jobs:
         id: db
         env:
           ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
-          DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
         run: |
           set -euo pipefail
           : "${ADMIN_URL:?PREVIEW_DB_ADMIN_URL is required}"
-          if [[ -n "$DATABASE_SSL_CA" ]]; then
-            pg_ca_file="$RUNNER_TEMP/orvilo-preview-postgres-ca.crt"
-            printf '%s\n' "$DATABASE_SSL_CA" > "$pg_ca_file"
-            chmod 600 "$pg_ca_file"
-            ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" CA_FILE="$pg_ca_file" node -e '
-              const url = new URL(process.env.DATABASE_URL);
-              if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
-              url.searchParams.delete("uselibpqcompat");
-              url.searchParams.set("sslmode", "verify-full");
-              url.searchParams.set("sslrootcert", process.env.CA_FILE);
-              process.stdout.write(url.href);
-            ')
-          else
-            ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" node -e '
-              const url = new URL(process.env.DATABASE_URL);
-              if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
-              url.searchParams.delete("uselibpqcompat");
-              url.searchParams.delete("sslrootcert");
-              url.searchParams.set("sslmode", "require");
-              process.stdout.write(url.href);
-            ')
-          fi
+          PUBLIC_ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" node -e '
+            const url = new URL(process.env.DATABASE_URL);
+            if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
+            url.searchParams.delete("sslrootcert");
+            url.searchParams.set("sslmode", "require");
+            url.searchParams.set("uselibpqcompat", "true");
+            process.stdout.write(url.href);
+          ')
+          ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" node -e '
+            const url = new URL(process.env.DATABASE_URL);
+            url.hostname = "127.0.0.1";
+            url.port = "35432";
+            url.searchParams.delete("sslrootcert");
+            url.searchParams.delete("uselibpqcompat");
+            url.searchParams.set("sslmode", "require");
+            process.stdout.write(url.href);
+          ')
+          export ADMIN_URL PUBLIC_ADMIN_URL
           if [[ ! "$APP_ROLE" =~ ^orvilo_pr_[0-9]+_app$ ]]; then
             echo "invalid Preview app role identifier" >&2
             exit 1
@@ -111,8 +132,14 @@ jobs:
           echo "::add-mask::$MIGRATION_PASSWORD"
           url_json=$(node <<'NODE'
           const adminUrl = new URL(process.env.ADMIN_URL);
+          const publicAdminUrl = new URL(process.env.PUBLIC_ADMIN_URL);
           const allowedProtocols = new Set(['postgres:', 'postgresql:']);
-          if (!allowedProtocols.has(adminUrl.protocol) || !adminUrl.hostname) {
+          if (
+            !allowedProtocols.has(adminUrl.protocol) ||
+            !adminUrl.hostname ||
+            !allowedProtocols.has(publicAdminUrl.protocol) ||
+            !publicAdminUrl.hostname
+          ) {
             throw new Error('PREVIEW_DB_ADMIN_URL must be a PostgreSQL URL with a hostname');
           }
 
@@ -137,10 +164,10 @@ jobs:
           // psql rejects the Node-only compatibility query parameter. Keep it
           // only on URLs consumed by the Node migration/app runtime.
           adminUrl.searchParams.delete('uselibpqcompat');
-          const runtimeUrl = new URL(adminUrl.href);
+          const runtimeUrl = new URL(publicAdminUrl.href);
+          runtimeUrl.pathname = adminUrl.pathname;
           runtimeUrl.searchParams.delete('sslrootcert');
           runtimeUrl.searchParams.set('sslmode', 'require');
-          if (process.env.DB_TLS_HOST) runtimeUrl.hostname = process.env.DB_TLS_HOST;
           if (runtimeUrl.searchParams.get('sslmode') === 'require' && !runtimeUrl.searchParams.has('uselibpqcompat')) {
             runtimeUrl.searchParams.set('uselibpqcompat', 'true');
           }
@@ -148,9 +175,11 @@ jobs:
           const appUrl = new URL(runtimeUrl.href);
           appUrl.username = appRole;
           appUrl.password = appPassword;
-          const migrationUrl = new URL(runtimeUrl.href);
+          const migrationUrl = new URL(adminUrl.href);
           migrationUrl.username = migrationRole;
           migrationUrl.password = migrationPassword;
+          migrationUrl.searchParams.set('sslmode', 'require');
+          migrationUrl.searchParams.set('uselibpqcompat', 'true');
 
           process.stdout.write(JSON.stringify({
             adminUrl: adminUrl.href,
@@ -249,37 +278,22 @@ jobs:
           DATABASE_URL: ${{ steps.db.outputs.migration-url }}
           DATABASE_DRIVER: node
           KEY_VAULTS_SECRET: ${{ secrets.PREVIEW_KEY_VAULTS_SECRET }}
-          DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
         run: bun run db:migrate
 
       - name: Grant app database privileges
         env:
           ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
-          DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
         run: |
           set -euo pipefail
-          if [[ -n "$DATABASE_SSL_CA" ]]; then
-            pg_ca_file="$RUNNER_TEMP/orvilo-preview-postgres-ca.crt"
-            printf '%s\n' "$DATABASE_SSL_CA" > "$pg_ca_file"
-            chmod 600 "$pg_ca_file"
-            ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" CA_FILE="$pg_ca_file" node -e '
-              const url = new URL(process.env.DATABASE_URL);
-              if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
-              url.searchParams.delete("uselibpqcompat");
-              url.searchParams.set("sslmode", "verify-full");
-              url.searchParams.set("sslrootcert", process.env.CA_FILE);
-              process.stdout.write(url.href);
-            ')
-          else
-            ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" node -e '
-              const url = new URL(process.env.DATABASE_URL);
-              if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
-              url.searchParams.delete("uselibpqcompat");
-              url.searchParams.delete("sslrootcert");
-              url.searchParams.set("sslmode", "require");
-              process.stdout.write(url.href);
-            ')
-          fi
+          ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" node -e '
+            const url = new URL(process.env.DATABASE_URL);
+            url.hostname = "127.0.0.1";
+            url.port = "35432";
+            url.searchParams.delete("sslrootcert");
+            url.searchParams.delete("uselibpqcompat");
+            url.searchParams.set("sslmode", "require");
+            process.stdout.write(url.href);
+          ')
           echo "::add-mask::$ADMIN_URL"
           PR_ADMIN_URL=$(node <<'NODE'
           const url = new URL(process.env.ADMIN_URL);

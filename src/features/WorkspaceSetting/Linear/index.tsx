@@ -593,17 +593,17 @@ const LinearWorkspaceSettings = memo(() => {
       installationResponse.data[0];
     setSelectedInstallationId(nextInstallation?.id ?? '');
     const nextInstallationId = nextInstallation?.id;
+    const catalogResponse = nextInstallationId
+      ? await lambdaClient.linearSync.catalog.query({ installationId: nextInstallationId })
+      : undefined;
     setCatalog(
-      nextInstallationId
-        ? ((await lambdaClient.linearSync.catalog.query({ installationId: nextInstallationId }))
-            .data ?? {
-            members: [],
-            organizations: [],
-            projects: [],
-            teams: [],
-            workflowStates: {},
-          })
-        : { members: [], organizations: [], projects: [], teams: [], workflowStates: {} },
+      catalogResponse?.data ?? {
+        members: [],
+        organizations: [],
+        projects: [],
+        teams: [],
+        workflowStates: {},
+      },
     );
   }, [canManage, selectedInstallationId]);
 

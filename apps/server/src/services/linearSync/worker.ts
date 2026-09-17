@@ -1558,6 +1558,9 @@ export class LinearSyncWorker {
         );
       }
     } else if (projection.dependency) {
+      if (!projection.dependency.taskId || !projection.dependency.dependsOnTaskId) {
+        throw new Error('Linear dependency projection is missing task identities');
+      }
       await integrationTasks.addPublicDependency(
         projection.dependency.taskId,
         projection.dependency.dependsOnTaskId,

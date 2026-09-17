@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import type { TaskItem, TaskRunTrigger } from '@orvilo/types';
+import type {
+  TaskDispatchPhase,
+  TaskExecutionEnvironmentSnapshot,
+  TaskItem,
+  TaskRunTrigger,
+} from '@orvilo/types';
 
 import {
   TaskDispatchIdempotencyConflictError,

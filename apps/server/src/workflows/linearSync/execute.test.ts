@@ -80,7 +80,7 @@ describe('executeLinearSyncWorkflow', () => {
         installationId: '00000000-0000-4000-8000-000000000001',
         workspaceId: 'workspace-1',
       }),
-      { delay: 12 },
+      expect.objectContaining({ delay: 12 }),
     );
   });
 

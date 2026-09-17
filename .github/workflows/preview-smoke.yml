@@ -14,6 +14,10 @@ on:
         description: Existing orvilo1 Vercel deployment URL to validate
         required: true
         type: string
+      deployment_id:
+        description: Immutable Vercel deployment ID matching base_url
+        required: true
+        type: string
       deployment_sha:
         description: Full Git commit SHA used to build that deployment
         required: true
@@ -39,6 +43,7 @@ jobs:
       - name: Validate manual Preview URL
         id: validate-manual-preview
         env:
+          EXPECTED_DEPLOYMENT_ID: ${{ inputs.deployment_id }}
           EXPECTED_SHA: ${{ inputs.deployment_sha }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -54,15 +59,20 @@ jobs:
             echo "deployment_sha must be a full lowercase Git commit SHA" >&2
             exit 1
           fi
+          if [[ ! "$EXPECTED_DEPLOYMENT_ID" =~ ^dpl_[A-Za-z0-9]+$ ]]; then
+            echo "deployment_id must be an immutable Vercel deployment ID" >&2
+            exit 1
+          fi
           deployment_host="${preview_url#https://}"
           deployment=$(curl -fsS --get \
-            "https://api.vercel.com/v13/deployments/${deployment_host}" \
+            "https://api.vercel.com/v13/deployments/${EXPECTED_DEPLOYMENT_ID}" \
             --data-urlencode "teamId=${VERCEL_ORG_ID}" \
             -H "Authorization: Bearer ${VERCEL_TOKEN}")
           actual_sha=$(jq -er '.meta.githubCommitSha // empty' <<< "$deployment")
           actual_project=$(jq -er '.projectId // empty' <<< "$deployment")
+          actual_url=$(jq -er '.url // empty' <<< "$deployment")
           deployment_ref=$(jq -er '.meta.githubCommitRef // empty' <<< "$deployment")
-          if [[ "$actual_sha" != "$EXPECTED_SHA" || "$actual_project" != "$VERCEL_PROJECT_ID" ]]; then
+          if [[ "$actual_sha" != "$EXPECTED_SHA" || "$actual_project" != "$VERCEL_PROJECT_ID" || "$actual_url" != "$deployment_host" ]]; then
             echo "manual URL does not match the requested commit and Vercel project" >&2
             exit 1
           fi

@@ -38,6 +38,8 @@ describe.each([
     expect(validate?.id).toBe('validate-manual-preview');
     expect(validate?.run).toContain(`printf 'deployment-ref=%s\\n'`);
     expect(validate?.run).toContain('>> "$GITHUB_OUTPUT"');
+    expect(validate?.run).toContain('deployments/${EXPECTED_DEPLOYMENT_ID}');
+    expect(validate?.run).toContain('actual_url" != "$deployment_host"');
     expect(validate?.run).not.toContain('MANUAL_DEPLOYMENT_REF');
     expect(resolve?.with?.['deployment-ref']).toBe(
       '${{ steps.validate-manual-preview.outputs.deployment-ref }}',

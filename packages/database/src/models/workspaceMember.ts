@@ -8,6 +8,7 @@ import { tasks } from '../schemas/task';
 import { users } from '../schemas/user';
 import { workspaceInvitations, workspaceMembers } from '../schemas/workspace';
 import type { LobeChatDatabase } from '../type';
+import { ProjectMemberModel } from './projectMember';
 import { ResourcePermissionModel } from './resourcePermission';
 import { detachMemberFromTasks } from './taskDomainMutation';
 import { WorkspaceInvitationModel } from './workspaceInvitation';
@@ -212,6 +213,12 @@ export class WorkspaceMemberModel {
         );
 
       await new ResourcePermissionModel(tx, workspaceId).removeMemberGrants(userId);
+
+      // Identical reasoning for per-project grants: `project_members` is the
+      // same class of per-member grant one level down. A row left behind is
+      // reactivated by `ProjectMemberModel.add`'s upsert on re-invite, so the
+      // member would silently regain their old (uncapped) project role.
+      await new ProjectMemberModel(tx, userId).removeAllForWorkspaceMember(workspaceId, userId);
 
       // The two responsibility fields detach independently: clearing both
       // wherever EITHER matched would strip the surviving teammate's role

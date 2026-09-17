@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { taskDependencies, tasks, users, workspaces } from '../../schemas';
+import { taskDependencies, tasks, users, workspaceMembers, workspaces } from '../../schemas';
 import { TaskModel } from '../task';
 import { TaskDependencyError } from '../taskDependency';
 import { UserModel } from '../user';
@@ -195,6 +195,10 @@ describe('prerequisite review regressions', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await db.insert(workspaceMembers).values([
+      { workspaceId, userId, role: 'owner' },
+      { workspaceId, userId: otherUserId, role: 'member' },
+    ]);
     return {
       owner: new TaskModel(db, userId, workspaceId),
       member: new TaskModel(db, otherUserId, workspaceId),
@@ -262,6 +266,26 @@ describe('prerequisite review regressions', () => {
     expect(await personal.getUnlockedTasks(upstream.id)).toEqual([]);
     await owner.update(dependent.id, { isDeleted: true });
     expect(await member.getUnlockedTasks(upstream.id)).toEqual([]);
+  });
+
+  it('does not dispatch a private dependent owned by a departed workspace member', async () => {
+    const { owner, member } = await workspace();
+    const upstream = await member.create({ instruction: 'Public upstream' });
+    const dependent = await owner.create({
+      instruction: 'Private dependent',
+      visibility: 'private',
+    });
+    await owner.addDependency(dependent.id, upstream.id);
+    await db
+      .update(workspaceMembers)
+      .set({ deletedAt: new Date() })
+      .where(eq(workspaceMembers.userId, userId));
+    await member.updateStatus(upstream.id, 'completed');
+    expect(await member.getUnlockedTasks(upstream.id)).toEqual([]);
+    expect(await owner.findById(dependent.id)).toMatchObject({
+      id: dependent.id,
+      status: 'backlog',
+    });
   });
 
   it('does not let a caller trigger internal discovery from an inaccessible source', async () => {

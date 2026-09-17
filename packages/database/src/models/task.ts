@@ -17,6 +17,7 @@ import {
   and,
   desc,
   eq,
+  exists,
   getTableColumns,
   gt,
   gte,
@@ -54,6 +55,7 @@ import {
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
+import { workspaceMembers } from '../schemas/workspace';
 import type { LobeChatDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { shouldParkInterruptedTask } from './interruptedRunFence';
@@ -2484,6 +2486,20 @@ export class TaskModel {
           isNull(tasks.deletedAt),
           sql`${tasks.isDeleted} IS NOT TRUE`,
           this.seqOwnership(),
+          this.workspaceId
+            ? exists(
+                this.db
+                  .select({ one: sql`1` })
+                  .from(workspaceMembers)
+                  .where(
+                    and(
+                      eq(workspaceMembers.workspaceId, this.workspaceId),
+                      eq(workspaceMembers.userId, tasks.createdByUserId),
+                      isNull(workspaceMembers.deletedAt),
+                    ),
+                  ),
+              )
+            : undefined,
         ),
       );
     const byOwner = new Map<string, string[]>();

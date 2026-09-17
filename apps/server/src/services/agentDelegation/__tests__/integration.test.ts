@@ -222,6 +222,7 @@ describe('agentDelegation services (integration)', () => {
       await expect(
         service.decide({
           approvalId: approval.id,
+          baseSha: 'sha-1',
           baseVersion: 8,
           callerIsWorkspaceAdmin: false,
           decision: 'approved',
@@ -236,6 +237,20 @@ describe('agentDelegation services (integration)', () => {
         service.decide({
           approvalId: approval.id,
           baseSha: 'sha-2',
+          baseVersion: 7,
+          callerIsWorkspaceAdmin: false,
+          decision: 'approved',
+        }),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+    });
+
+    it('rejects a decision that omits the recorded base', async () => {
+      const approval = await insertApproval();
+      const service = new ActionApprovalService(db, ownerId, workspaceId);
+      // A recorded base must be echoed — omitting it skips the drift check.
+      await expect(
+        service.decide({
+          approvalId: approval.id,
           callerIsWorkspaceAdmin: false,
           decision: 'approved',
         }),
@@ -259,6 +274,8 @@ describe('agentDelegation services (integration)', () => {
       const service = new ActionApprovalService(db, memberId, workspaceId);
       const decided = await service.decide({
         approvalId: approval.id,
+        baseSha: 'sha-1',
+        baseVersion: 7,
         callerIsWorkspaceAdmin: true,
         decision: 'rejected',
       });
@@ -270,6 +287,8 @@ describe('agentDelegation services (integration)', () => {
       const service = new ActionApprovalService(db, ownerId, workspaceId);
       await service.decide({
         approvalId: approval.id,
+        baseSha: 'sha-1',
+        baseVersion: 7,
         callerIsWorkspaceAdmin: false,
         decision: 'approved',
       });

@@ -161,7 +161,7 @@ export class RoomHub {
    * clients can distinguish a kick from a network drop before `close`.
    */
   kick = (workspaceId: string, userId: string, reason: string) => {
-    for (const conns of this.rooms.values()) {
+    for (const [room, conns] of this.rooms) {
       for (const [connectionId, conn] of conns) {
         const { connection } = conn;
         if (connection.userId !== userId || connection.workspaceId !== workspaceId) continue;
@@ -172,7 +172,13 @@ export class RoomHub {
           // A half-dead socket must not abort the remaining kicks.
         }
         conns.delete(connectionId);
+        // Same as `leave`: peers must not keep rendering the kicked member's
+        // presence until the TTL sweep prunes it.
+        if (conn.lastPresenceAt !== undefined) {
+          this.broadcast(room, { connectionId, type: 'presence-gone' });
+        }
       }
+      if (conns.size === 0) this.rooms.delete(room);
     }
   };
 

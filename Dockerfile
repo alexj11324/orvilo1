@@ -74,7 +74,8 @@ COPY apps/workbench/package.json ./apps/workbench/package.json
 # DATABASE_DRIVER=node selects the pg driver; without it the sync container crash-loops.
 # Keep the standalone native image dependency aligned with the app's direct sharp
 # dependency. An unpinned install can resolve a newer JS wrapper while Next's
-# traced tree still points at the older virtual-store directory.
+# traced tree still points at the older virtual-store directory. The standalone
+# dependency project is new, so explicitly allow sharp's native install script.
 RUN set -e && \
     if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
         export SENTRYCLI_CDNURL="https://npmmirror.com/mirrors/sentry-cli"; \
@@ -89,7 +90,7 @@ RUN set -e && \
     mkdir -p /deps && \
     cd /deps && \
     echo '{"name":"deps","private":true}' > package.json && \
-    pnpm add pg drizzle-orm @neondatabase/serverless sharp@0.34.5
+    pnpm add --allow-build=sharp pg drizzle-orm @neondatabase/serverless sharp@0.34.5
 
 COPY . .
 

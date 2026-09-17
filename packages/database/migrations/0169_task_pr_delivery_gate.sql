@@ -9,8 +9,10 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Match TaskWorkspaceService inheritance semantics: the nearest task/ancestor
-  -- carrying a concrete git workspace wins as one whole config.
+  -- Match TaskWorkspaceService inheritance semantics exactly: the nearest
+  -- task/ancestor that declares provider=git owns the whole workspace config.
+  -- A malformed local declaration must fail closed rather than silently
+  -- falling through to a valid ancestor binding.
   WITH RECURSIVE lineage AS (
     SELECT t.id, t.parent_task_id, t.config, 0 AS depth
     FROM tasks t
@@ -25,10 +27,6 @@ BEGIN
   INTO workspace_binding
   FROM lineage
   WHERE config -> 'workspace' ->> 'provider' = 'git'
-    AND (
-      NULLIF(BTRIM(config -> 'workspace' ->> 'repo'), '') IS NOT NULL
-      OR NULLIF(BTRIM(config -> 'workspace' ->> 'repoPath'), '') IS NOT NULL
-    )
   ORDER BY depth ASC
   LIMIT 1;
 

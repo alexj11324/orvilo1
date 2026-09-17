@@ -25,6 +25,7 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { ProjectModel } from '@/database/models/project';
 import { RbacModel } from '@/database/models/rbac';
+import { RepositoryModel } from '@/database/models/repository';
 import {
   isTaskIdentifierUniqueViolation,
   taskActivityActor,
@@ -206,6 +207,40 @@ export class TaskService {
       const project = await this.projectModel.findManageableById(createData.projectId);
       if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
       createData.identifierPrefix ??= project.identifier;
+    }
+
+    // Workspace-mode resource resolution (linear-workspace-v3): when the
+    // caller did not pin a workspace binding, fill `config.workspace.repo`
+    // from the deterministic repository resolver — explicit task targets
+    // win, then project links, then team defaults. `ambiguous`/`unresolved`
+    // stays unset rather than silently picking a candidate.
+    if (this.workspaceId && (createData.projectId || createData.teamId)) {
+      const workspaceConfig = (createData.config as Record<string, unknown> | undefined)?.[
+        'workspace'
+      ] as Record<string, unknown> | undefined;
+      if (!workspaceConfig?.['repo'] && !workspaceConfig?.['repoPath']) {
+        const repositoryModel = new RepositoryModel(this.db, this.userId, this.workspaceId);
+        const resolution = await repositoryModel.resolveForScope({
+          projectId: createData.projectId ?? null,
+          teamId: createData.teamId ?? null,
+        });
+        if (resolution.ok) {
+          const repository = await repositoryModel.findById(resolution.repositoryId);
+          if (repository?.coordinate.owner && repository.coordinate.name) {
+            createData.config = {
+              ...createData.config,
+              workspace: {
+                ...workspaceConfig,
+                provider: 'git',
+                repo: `${repository.coordinate.owner}/${repository.coordinate.name}`,
+                ...(repository.coordinate.defaultBranch
+                  ? { baseBranch: repository.coordinate.defaultBranch }
+                  : {}),
+              },
+            };
+          }
+        }
+      }
     }
 
     // Pull the model/provider snapshot and the agent's visibility in a single

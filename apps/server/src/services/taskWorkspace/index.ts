@@ -10,6 +10,7 @@ import { isRecord } from '@orvilo/utils/object';
 import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
+import { RepositoryModel } from '@/database/models/repository';
 import { TaskModel } from '@/database/models/task';
 import type { LobeChatDatabase } from '@/database/type';
 import { resolveExecutionPlan } from '@/helpers/executionTarget';
@@ -117,6 +118,26 @@ export class TaskWorkspaceService {
       }
       if (!current.parentTaskId) break;
       current = await this.taskModel.findById(current.parentTaskId);
+    }
+
+    // Association fallback (linear-workspace-v3): no explicit binding on the
+    // task or its ancestors — ask the deterministic resolver. A resolved
+    // repository produces a remote-coordinate binding; `ambiguous`/`unresolved`
+    // stays unbound rather than silently picking a candidate.
+    if (this.workspaceId && (task.projectId || task.teamId)) {
+      const repositoryModel = new RepositoryModel(this.db, this.userId, this.workspaceId);
+      const resolution = await repositoryModel.resolveForTask(task.id);
+      if (resolution.ok) {
+        const repository = await repositoryModel.findById(resolution.repositoryId);
+        const { owner, name, defaultBranch } = repository?.coordinate ?? {};
+        if (owner && name) {
+          return {
+            baseBranch: defaultBranch ?? undefined,
+            provider: 'git',
+            repo: `${owner}/${name}`,
+          };
+        }
+      }
     }
     return undefined;
   }

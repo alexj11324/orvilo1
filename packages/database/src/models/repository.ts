@@ -501,26 +501,8 @@ export class RepositoryModel {
       .limit(1);
     if (!task) return { candidates: [], ok: false, reason: 'unresolved' };
 
-    const appliedCandidates = async (
-      sourceKind: AssociationSourceKind,
-      sourceId: string,
-    ): Promise<string[]> => {
-      const rows = await this.db
-        .select({ targetRepositoryId: associationDecisions.targetRepositoryId })
-        .from(associationDecisions)
-        .where(
-          and(
-            eq(associationDecisions.workspaceId, this.workspaceId),
-            eq(associationDecisions.sourceKind, sourceKind),
-            eq(associationDecisions.sourceId, sourceId),
-            eq(associationDecisions.status, 'applied'),
-          ),
-        );
-      return rows.map((r) => r.targetRepositoryId);
-    };
-
     // 1. Explicit task target.
-    const taskCandidates = await appliedCandidates('task', task.id);
+    const taskCandidates = await this.appliedCandidates('task', task.id);
     if (taskCandidates.length === 1) {
       return { ok: true, repositoryId: taskCandidates[0], source: 'task' };
     }
@@ -528,14 +510,25 @@ export class RepositoryModel {
       return { candidates: taskCandidates, ok: false, reason: 'ambiguous' };
     }
 
+    return this.resolveForScope({ projectId: task.projectId, teamId: task.teamId });
+  };
+
+  /**
+   * Scope-level resolution without a task row — used at task-creation time
+   * before the task id exists. Steps 2–4 of the frozen precedence.
+   */
+  resolveForScope = async (scope: {
+    projectId?: string | null;
+    teamId?: string | null;
+  }): Promise<RepositoryResolution> => {
     // 2. Confirmed primary project repository.
-    if (task.projectId) {
+    if (scope.projectId) {
       const projectRows = await this.db
         .select({ repositoryId: projectRepositories.repositoryId })
         .from(projectRepositories)
         .where(
           and(
-            eq(projectRepositories.projectId, task.projectId),
+            eq(projectRepositories.projectId, scope.projectId),
             eq(projectRepositories.workspaceId, this.workspaceId),
           ),
         );
@@ -552,7 +545,7 @@ export class RepositoryModel {
     }
 
     // 3. Confirmed team default (primary first, then single default).
-    if (task.teamId) {
+    if (scope.teamId) {
       const defaults = await this.db
         .select({
           repositoryId: teamRepoDefaults.repositoryId,
@@ -561,7 +554,7 @@ export class RepositoryModel {
         .from(teamRepoDefaults)
         .where(
           and(
-            eq(teamRepoDefaults.teamId, task.teamId),
+            eq(teamRepoDefaults.teamId, scope.teamId),
             eq(teamRepoDefaults.workspaceId, this.workspaceId),
           ),
         )
@@ -582,8 +575,8 @@ export class RepositoryModel {
 
     // 4. Approved candidates from any source object.
     const candidates = new Set<string>([
-      ...(task.projectId ? await appliedCandidates('project', task.projectId) : []),
-      ...(task.teamId ? await appliedCandidates('team', task.teamId) : []),
+      ...(scope.projectId ? await this.appliedCandidates('project', scope.projectId) : []),
+      ...(scope.teamId ? await this.appliedCandidates('team', scope.teamId) : []),
     ]);
     if (candidates.size === 1) {
       return { ok: true, repositoryId: [...candidates][0], source: 'single_candidate' };
@@ -592,5 +585,23 @@ export class RepositoryModel {
       return { candidates: [...candidates], ok: false, reason: 'ambiguous' };
     }
     return { candidates: [], ok: false, reason: 'unresolved' };
+  };
+
+  private appliedCandidates = async (
+    sourceKind: AssociationSourceKind,
+    sourceId: string,
+  ): Promise<string[]> => {
+    const rows = await this.db
+      .select({ targetRepositoryId: associationDecisions.targetRepositoryId })
+      .from(associationDecisions)
+      .where(
+        and(
+          eq(associationDecisions.workspaceId, this.workspaceId),
+          eq(associationDecisions.sourceKind, sourceKind),
+          eq(associationDecisions.sourceId, sourceId),
+          eq(associationDecisions.status, 'applied'),
+        ),
+      );
+    return rows.map((r) => r.targetRepositoryId);
   };
 }

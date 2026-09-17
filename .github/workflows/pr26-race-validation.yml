@@ -10,4 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - run: echo 'temporary validation harness'
+      - run: |
+          git status --short
+          git push origin HEAD:fix/task-pr-audit-20260916

@@ -2,7 +2,6 @@ name: Hatchet Audit Validation
 on:
   push:
     branches: [fix/hatchet-audit-20260917]
-    paths: [.github/workflows/hatchet-audit-validation.yml]
 permissions:
   contents: write
 jobs:
@@ -15,16 +14,18 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-env
       - run: pnpm install
-      - name: Apply fixes
+      - name: Apply remaining source fixes
         run: |
           python .github/scripts/apply-hatchet-audit.py
           git diff --check
-          git add apps/server/src/services/memory/userMemory/extract.ts apps/server/src/router-hono/webhooks/handlers/__tests__/memoryUserMemoryChatTopicCancel.test.ts
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m '🐛 fix(memory): restore per-user Hatchet limits and cancellation observability'
-          git push origin HEAD:fix/hatchet-audit-20260917
+          if ! git diff --quiet; then
+            git add apps/server/src/services/memory/userMemory/extract.ts apps/server/src/router-hono/webhooks/handlers/__tests__/memoryUserMemoryChatTopicCancel.test.ts
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m '🐛 fix(memory): restore per-user Hatchet limits and cancellation observability'
+            git push origin HEAD:fix/hatchet-audit-20260917
+          fi
       - name: Tests
         run: |
-          bunx vitest run --project server apps/server/src/router-hono/webhooks/handlers/__tests__/memoryUserMemoryChatTopicCancel.test.ts apps/server/src/router-hono/workflows/memory-user-memory/workflows/__tests__/processTopics.hourlyTask.test.ts
+          bunx vitest run --project server apps/server/src/hatchet/tasks.retryDelay.test.ts apps/server/src/router-hono/webhooks/handlers/__tests__/memoryUserMemoryChatTopicCancel.test.ts apps/server/src/router-hono/workflows/memory-user-memory/workflows/__tests__/processTopics.hourlyTask.test.ts
       - run: pnpm type-check

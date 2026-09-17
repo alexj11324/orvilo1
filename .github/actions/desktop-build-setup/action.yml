@@ -32,7 +32,7 @@ runs:
       if: inputs.cloud-token != ''
       shell: bash
       env:
-        CLOUD_CHECKOUT: ${{ runner.temp }}/lobehub-cloud
+        CLOUD_CHECKOUT: ${{ runner.temp }}/orvilo-cloud
         CLOUD_REF: ${{ inputs.cloud-ref }}
         CLOUD_REPOSITORY: ${{ inputs.cloud-repository }}
         CLOUD_ROOT: ${{ github.workspace }}/..
@@ -43,7 +43,7 @@ runs:
         : "${CLOUD_REPOSITORY:?cloud-repository input is empty — pass the OVERLAY_REPOSITORY repository variable}"
 
         cloud_root="$(cd "$GITHUB_WORKSPACE/.." && pwd)"
-        cloud_checkout="$RUNNER_TEMP/lobehub-cloud"
+        cloud_checkout="$RUNNER_TEMP/orvilo-cloud"
 
         rm -rf "$cloud_checkout"
 
@@ -64,7 +64,7 @@ runs:
 
         const source = process.env.CLOUD_CHECKOUT;
         const target = process.env.CLOUD_ROOT;
-        const skip = new Set(['.git', 'lobehub', 'node_modules']);
+        const skip = new Set(['.git', 'orvilo', 'node_modules']);
 
         const copy = (from, to) => {
           const stat = fs.lstatSync(from);
@@ -123,7 +123,7 @@ runs:
         set -euo pipefail
         if [ "${CLOUD_DESKTOP:-}" = "1" ]; then
           cd ..
-          npm run install-isolated --prefix=./lobehub/apps/desktop -- --frozen-lockfile
+          npm run install-isolated --prefix=./orvilo/apps/desktop -- --frozen-lockfile
         else
           npm run install-isolated --prefix=./apps/desktop -- --frozen-lockfile
         fi

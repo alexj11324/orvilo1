@@ -5,7 +5,7 @@ import { after, NextResponse } from 'next/server';
 import { OAuthHandoffModel } from '@/database/models/oauthHandoff';
 import { serverDB } from '@/database/server';
 
-const log = debug('lobe-oidc:callback:desktop');
+const log = debug('orvilo-oidc:callback:desktop');
 
 const errorPathname = '/oauth/callback/error';
 

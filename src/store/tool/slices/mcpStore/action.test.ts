@@ -1,5 +1,5 @@
 import { type PluginItem } from '@lobehub/market-sdk';
-import type * as LobechatConstModule from '@orvilo/const';
+import type * as OrvilochatConstModule from '@orvilo/const';
 import { type ToolManifest } from '@orvilo/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -55,7 +55,7 @@ const bootstrapToolStoreWithDesktop = async (isDesktopEnv: boolean) => {
   vi.resetModules();
 
   vi.doMock('@orvilo/const', async () => {
-    const actual = await vi.importActual<typeof LobechatConstModule>('@orvilo/const');
+    const actual = await vi.importActual<typeof OrvilochatConstModule>('@orvilo/const');
     return {
       ...actual,
       isDesktop: isDesktopEnv,

@@ -9,7 +9,7 @@ import type {
 import { resolveMappedModelId } from '../../utils/modelIdMapping';
 import type { CreateVideoOptions } from '../openaiCompatibleFactory';
 
-const log = createDebug('lobe-video:openai-compatible');
+const log = createDebug('orvilo-video:openai-compatible');
 
 interface OpenAIVideoStatusResponse {
   completed_at?: number;

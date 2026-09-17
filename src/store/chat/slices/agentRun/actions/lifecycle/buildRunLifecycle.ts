@@ -35,7 +35,7 @@ import type {
   UserMessagePersistedEvent,
 } from './types';
 
-const log = debug('lobe-store:run-lifecycle');
+const log = debug('orvilo-store:run-lifecycle');
 
 /**
  * Normalize the runtime/operation status into the cross-runtime

@@ -3,22 +3,22 @@ import { globalStyle, keyframes, style } from '@vanilla-extract/css';
 import { OVERLAY_LAYOUT } from './constants';
 
 const vars = {
-  colorBgElevated: '--lobe-overlay-bg-elevated',
-  colorBorderSecondary: '--lobe-overlay-border-secondary',
-  colorFill: '--lobe-overlay-fill',
-  colorFillQuaternary: '--lobe-overlay-fill-quaternary',
-  colorFillSecondary: '--lobe-overlay-fill-secondary',
-  colorFillTertiary: '--lobe-overlay-fill-tertiary',
-  colorPrimary: '--lobe-overlay-primary',
-  colorPrimaryActive: '--lobe-overlay-primary-active',
-  colorPrimaryHover: '--lobe-overlay-primary-hover',
-  colorText: '--lobe-overlay-text',
-  colorTextLightSolid: '--lobe-overlay-text-light-solid',
-  colorTextQuaternary: '--lobe-overlay-text-quaternary',
-  colorTextSecondary: '--lobe-overlay-text-secondary',
-  colorTextTertiary: '--lobe-overlay-text-tertiary',
-  panelBorder: '--lobe-overlay-panel-border',
-  panelShadow: '--lobe-overlay-shadow',
+  colorBgElevated: '--orvilo-overlay-bg-elevated',
+  colorBorderSecondary: '--orvilo-overlay-border-secondary',
+  colorFill: '--orvilo-overlay-fill',
+  colorFillQuaternary: '--orvilo-overlay-fill-quaternary',
+  colorFillSecondary: '--orvilo-overlay-fill-secondary',
+  colorFillTertiary: '--orvilo-overlay-fill-tertiary',
+  colorPrimary: '--orvilo-overlay-primary',
+  colorPrimaryActive: '--orvilo-overlay-primary-active',
+  colorPrimaryHover: '--orvilo-overlay-primary-hover',
+  colorText: '--orvilo-overlay-text',
+  colorTextLightSolid: '--orvilo-overlay-text-light-solid',
+  colorTextQuaternary: '--orvilo-overlay-text-quaternary',
+  colorTextSecondary: '--orvilo-overlay-text-secondary',
+  colorTextTertiary: '--orvilo-overlay-text-tertiary',
+  panelBorder: '--orvilo-overlay-panel-border',
+  panelShadow: '--orvilo-overlay-shadow',
 } as const;
 
 const v = (name: string) => `var(${name})`;
@@ -525,7 +525,7 @@ globalStyle(`.${multiSelectionRail}::-webkit-scrollbar`, {
 });
 
 globalStyle(`.${textarea}::selection`, {
-  background: 'color-mix(in srgb, var(--lobe-overlay-primary) 22%, transparent)',
+  background: 'color-mix(in srgb, var(--orvilo-overlay-primary) 22%, transparent)',
 });
 
 export const popupPositioner = style({

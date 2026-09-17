@@ -26,7 +26,7 @@ function resolvePersistedScope(): WorkspaceScope | undefined {
 
   const identity = resolveIdentityFingerprint();
   const reason = !identity
-    ? "the current credentials don't identify an account — set LOBEHUB_WORKSPACE_ID instead"
+    ? "the current credentials don't identify an account — set ORVILO_WORKSPACE_ID instead"
     : identity !== stored.identity
       ? `it was set under a different account. Run 'workspace use' again to re-select it`
       : stored.serverUrl !== resolveServerUrl()
@@ -48,24 +48,24 @@ function resolvePersistedScope(): WorkspaceScope | undefined {
  * from — `lh workspace current` and `lh whoami` report the source so a caller
  * can tell "wrong workspace" from "not found".
  *
- * Precedence: explicit caller arg -> `LOBEHUB_WORKSPACE_ID` env ->
+ * Precedence: explicit caller arg -> `ORVILO_WORKSPACE_ID` env ->
  * `lh workspace use` (persisted, and still bound to this account/server) ->
  * personal mode.
  */
 export function resolveWorkspaceScope(explicit?: string): WorkspaceScope {
   if (explicit) return { source: 'explicit', workspaceId: explicit };
 
-  const fromEnv = process.env.LOBEHUB_WORKSPACE_ID;
+  const fromEnv = process.env.ORVILO_WORKSPACE_ID;
   if (fromEnv && fromEnv.length > 0) return { source: 'env', workspaceId: fromEnv };
 
-  // A server-dispatched execution (operation-scoped `LOBEHUB_JWT`) carries its
-  // complete scope in env: `LOBEHUB_WORKSPACE_ID` when the run is
+  // A server-dispatched execution (operation-scoped `ORVILO_JWT`) carries its
+  // complete scope in env: `ORVILO_WORKSPACE_ID` when the run is
   // workspace-scoped, nothing when personal. The persisted `workspace use`
   // scope belongs to whoever sits at this machine's terminal; letting it leak
   // into a dispatched run stamps every heteroIngest/heteroFinish call with a
   // workspace the run's topic is not in, and the server rejects the entire
   // event stream ("Topic is outside the caller scope").
-  if (process.env.LOBEHUB_JWT) return { source: 'personal' };
+  if (process.env.ORVILO_JWT) return { source: 'personal' };
 
   return resolvePersistedScope() ?? { source: 'personal' };
 }

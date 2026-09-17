@@ -1,6 +1,6 @@
 ---
 name: testing-heterogeneous-agents
-description: 'Manually runs the live LobeHub official-provider compatibility matrix across Claude Code, Codex, Grok Build, Kimi Code, Pi, and TRAE when explicitly invoked by the user.'
+description: 'Manually runs the live Orvilo official-provider compatibility matrix across Claude Code, Codex, Grok Build, Kimi Code, Pi, and TRAE when explicitly invoked by the user.'
 disable-model-invocation: true
 ---
 
@@ -8,11 +8,11 @@ disable-model-invocation: true
 
 This project skill extends `acceptance` with one scenario: proving that every
 server-advertised official model completes through each supported external CLI
-agent and LobeHub's `server-default` provider binding.
+agent and Orvilo's `server-default` provider binding.
 
 It does not replace Acceptance. Use Acceptance for the plan, approval gate,
 evidence contract, immutable rounds, publishing, and teardown. Use
-`.agents/acceptance/PROJECT.md` for LobeHub's Electron launch, auth, CDP, and
+`.agents/acceptance/PROJECT.md` for Orvilo's Electron launch, auth, CDP, and
 multi-instance commands. This skill owns only the compatibility-matrix semantics
 and its executable harness.
 

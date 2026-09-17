@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { useUserStore } from '@/store/user';
-import type { LobeUser } from '@/types/user';
+import type { OrviloUser } from '@/types/user';
 
 import { useResolvedInterestKeys } from './useResolvedInterestKeys';
 
@@ -19,7 +19,7 @@ describe('useResolvedInterestKeys', () => {
         isLoaded: true,
         isSignedIn: true,
         isUserStateInit: false,
-        user: { id: 'user-id' } as LobeUser,
+        user: { id: 'user-id' } as OrviloUser,
       });
     });
 
@@ -34,7 +34,7 @@ describe('useResolvedInterestKeys', () => {
         isLoaded: true,
         isSignedIn: true,
         isUserStateInit: true,
-        user: { id: 'user-id', interests: [' AI ', '', 'Research'] } as LobeUser,
+        user: { id: 'user-id', interests: [' AI ', '', 'Research'] } as OrviloUser,
       });
     });
 
@@ -49,7 +49,7 @@ describe('useResolvedInterestKeys', () => {
         isLoaded: true,
         isSignedIn: true,
         isUserStateInit: true,
-        user: { id: 'user-id', interests: [] } as LobeUser,
+        user: { id: 'user-id', interests: [] } as OrviloUser,
       });
     });
 

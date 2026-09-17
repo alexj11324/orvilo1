@@ -6,7 +6,7 @@ import { S3StaticFileImpl } from './s3';
 
 const redisMocks = vi.hoisted(() => ({
   getRedisConfig: vi.fn(function () {
-    return { enabled: false, prefix: 'lobechat', tls: false, url: '' };
+    return { enabled: false, prefix: 'orvilo', tls: false, url: '' };
   }),
   initializeRedis: vi.fn(),
   isRedisEnabled: vi.fn(function () {
@@ -81,7 +81,7 @@ describe('S3StaticFileImpl', () => {
     config.S3_SET_ACL = true;
     redisMocks.getRedisConfig.mockReturnValue({
       enabled: false,
-      prefix: 'lobechat',
+      prefix: 'orvilo',
       tls: false,
       url: '',
     });
@@ -142,7 +142,7 @@ describe('S3StaticFileImpl', () => {
       config.S3_SET_ACL = false;
       redisMocks.getRedisConfig.mockReturnValue({
         enabled: true,
-        prefix: 'lobechat',
+        prefix: 'orvilo',
         tls: false,
         url: 'redis://localhost:6379',
       });
@@ -159,7 +159,7 @@ describe('S3StaticFileImpl', () => {
       config.S3_SET_ACL = false;
       redisMocks.getRedisConfig.mockReturnValue({
         enabled: true,
-        prefix: 'lobechat',
+        prefix: 'orvilo',
         tls: false,
         url: 'redis://localhost:6379',
       });
@@ -191,7 +191,7 @@ describe('S3StaticFileImpl', () => {
       config.S3_ENABLE_PATH_STYLE = false;
     });
 
-    // Legacy bug compatibility tests - https://github.com/lobehub/lobe-chat/issues/8994
+    // Legacy bug compatibility tests -
     describe('legacy bug compatibility', () => {
       it('should handle full URL input by extracting key (S3_SET_ACL=false)', async () => {
         config.S3_SET_ACL = false;

@@ -1,6 +1,6 @@
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
-import type { LobeToolManifest } from '@orvilo/context-engine';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloToolManifest } from '@orvilo/context-engine';
+import type { OrviloDatabase } from '@orvilo/database';
 import debug from 'debug';
 
 import { ConnectorModel } from '@/database/models/connector';
@@ -14,7 +14,7 @@ import {
 } from '@/libs/composio';
 import { type ToolExecutionResult } from '@/server/services/toolExecution/types';
 
-const log = debug('lobe-server:composio-service');
+const log = debug('orvilo-server:composio-service');
 
 const VALID_COMPOSIO_IDENTIFIERS = new Set(COMPOSIO_APP_TYPES.map((type) => type.identifier));
 
@@ -31,7 +31,7 @@ export interface ComposioToolExecuteParams {
 }
 
 export interface ComposioServiceOptions {
-  db?: LobeChatDatabase;
+  db?: OrviloDatabase;
   userId?: string;
   /**
    * Workspace scope. When set, connector/plugin rows resolve within the team
@@ -255,8 +255,8 @@ export class ComposioService {
     return undefined;
   }
 
-  async getComposioManifests(agentId?: string): Promise<LobeToolManifest[]> {
-    const manifests: LobeToolManifest[] = [];
+  async getComposioManifests(agentId?: string): Promise<OrviloToolManifest[]> {
+    const manifests: OrviloToolManifest[] = [];
     const coveredIdentifiers = new Set<string>();
 
     // 1. Connector-based (new path): rows whose metadata.composio marks them as
@@ -312,7 +312,7 @@ export class ComposioService {
               },
               type: 'builtin',
               version: '1.0.0',
-            } as LobeToolManifest);
+            } as OrviloToolManifest);
             coveredIdentifiers.add(connector.identifier);
           }
         }
@@ -351,7 +351,7 @@ export class ComposioService {
             },
             type: 'builtin',
             version: '1.0.0',
-          } as LobeToolManifest);
+          } as OrviloToolManifest);
         }
       } catch (error) {
         console.error('ComposioService.getComposioManifests (plugin) error: %O', error);

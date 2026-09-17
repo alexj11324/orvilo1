@@ -1,6 +1,6 @@
 import { getModelKnowledgeCutoff } from '../const/knowledgeCutoff';
 import type { ModelProvider } from '../const/modelProvider';
-import { type AiFullModelCard, type LobeDefaultAiModelListItem } from '../types/aiModel';
+import { type AiFullModelCard, type OrviloDefaultAiModelListItem } from '../types/aiModel';
 import { default as ai21 } from './ai21';
 import { default as ai302 } from './ai302';
 import { default as ai360 } from './ai360';
@@ -94,8 +94,8 @@ export interface LoadModelsOptions {
   providerLoaders?: Partial<Record<ModelProvider, ModelProviderLoader | undefined>>;
 }
 
-const buildDefaultModelList = (map: ModelsMap): LobeDefaultAiModelListItem[] => {
-  let models: LobeDefaultAiModelListItem[] = [];
+const buildDefaultModelList = (map: ModelsMap): OrviloDefaultAiModelListItem[] => {
+  let models: OrviloDefaultAiModelListItem[] = [];
 
   Object.entries(map).forEach(([provider, providerModels]) => {
     const newModels = providerModels.map((model) => ({
@@ -200,14 +200,14 @@ const staticModelMap: ModelsMap = {
   zhipu,
 };
 
-export const LOBE_DEFAULT_MODEL_LIST = buildDefaultModelList(staticModelMap);
+export const ORVILO_DEFAULT_MODEL_LIST = buildDefaultModelList(staticModelMap);
 
 export const loadModels = async (
   options?: LoadModelsOptions,
-): Promise<LobeDefaultAiModelListItem[]> => {
+): Promise<OrviloDefaultAiModelListItem[]> => {
   const providerLoaders = options?.providerLoaders;
   if (!providerLoaders || Object.keys(providerLoaders).length === 0) {
-    return LOBE_DEFAULT_MODEL_LIST;
+    return ORVILO_DEFAULT_MODEL_LIST;
   }
 
   const validProviderLoaders = Object.entries(providerLoaders).flatMap(([provider, loader]) =>
@@ -215,7 +215,7 @@ export const loadModels = async (
   );
 
   if (validProviderLoaders.length === 0) {
-    return LOBE_DEFAULT_MODEL_LIST;
+    return ORVILO_DEFAULT_MODEL_LIST;
   }
 
   const modelMap = { ...staticModelMap };

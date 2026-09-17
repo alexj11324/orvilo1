@@ -48,4 +48,4 @@ export const params = {
   provider: ModelProvider.Ai302,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const Lobe302AI = createOpenAICompatibleRuntime(params);
+export const Orvilo302AI = createOpenAICompatibleRuntime(params);

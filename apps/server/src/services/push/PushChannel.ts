@@ -8,7 +8,7 @@ import { serverDB } from '@/database/server';
 import { DEFAULT_PUSH_CHANNEL_ID } from './constants';
 import type { PushDeliveryContext, PushDeliveryResult, PushTicketRecord } from './types';
 
-const log = debug('lobe-notification:push');
+const log = debug('orvilo-notification:push');
 
 /** Expo Push Service hard rate limit (messages per second per project) */
 const SEND_CHUNK_THROTTLE_MS = 100;

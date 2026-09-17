@@ -9,7 +9,7 @@ import { getServerDB } from '@/database/server';
 
 import { dispatchScheduledRun } from './scheduledRunKinds';
 
-const log = debug('lobe-server:workflows:task:scheduled-topic-dispatch');
+const log = debug('orvilo-server:workflows:task:scheduled-topic-dispatch');
 
 /** How long a claim lease is held before another tick may re-claim the topic. */
 const CLAIM_LEASE_MS = 5 * 60 * 1000;

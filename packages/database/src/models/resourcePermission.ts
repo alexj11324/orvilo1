@@ -6,7 +6,7 @@ import type {
   ResourcePermissionItem,
 } from '../schemas';
 import { getDefaultResourceAccessLevel, resourcePermissions } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 /**
  * Access policy for public resources, scoped to one workspace. The table is
@@ -18,10 +18,10 @@ import type { LobeChatDatabase } from '../type';
  * workspace-wide level.
  */
 export class ResourcePermissionModel {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId: string;
 
-  constructor(db: LobeChatDatabase, workspaceId: string) {
+  constructor(db: OrviloDatabase, workspaceId: string) {
     this.db = db;
     this.workspaceId = workspaceId;
   }

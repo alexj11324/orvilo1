@@ -11,7 +11,7 @@ import {
   topics,
   userMemories,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { notShareVisitorMessage } from '../../utils/shareVisitor';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
@@ -100,11 +100,11 @@ export interface AgentSignalDocumentActivityRow {
 
 /** Database-backed context queries for Agent Signal self-review policies. */
 export class AgentSignalReviewContextModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

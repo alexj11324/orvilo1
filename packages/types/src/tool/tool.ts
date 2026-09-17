@@ -2,19 +2,19 @@ import { z } from 'zod';
 
 import type { MetaData } from '../meta';
 
-export type LobeToolType = 'builtin' | 'customPlugin' | 'plugin';
+export type OrviloToolType = 'builtin' | 'customPlugin' | 'plugin';
 
-export interface LobeToolMeta extends MetaData {
+export interface OrviloToolMeta extends MetaData {
   author?: string;
   identifier: string;
   /**
    * @deprecated
    */
   meta: MetaData;
-  type: LobeToolType;
+  type: OrviloToolType;
 }
 
-export interface LobeUniformTool {
+export interface OrviloUniformTool {
   /**
    * The description of what the function does.
    */
@@ -34,7 +34,7 @@ export interface LobeUniformTool {
   };
 }
 
-export const LobeUniformToolSchema = z.object({
+export const OrviloUniformToolSchema = z.object({
   description: z.string().optional(),
   name: z.string(),
   parameters: z.object({

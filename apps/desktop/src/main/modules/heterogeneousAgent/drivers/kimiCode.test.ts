@@ -92,7 +92,7 @@ describe('kimiCodeDriver', () => {
         KEEP_ME: 'yes',
         KIMI_CODE_HOME: '/managed/kimi',
         KIMI_MODEL_BASE_URL: 'https://app.example.com/api/v1/anthropic',
-        KIMI_MODEL_NAME: 'lobehub/kimi-k2.6',
+        KIMI_MODEL_NAME: 'aspectlylabs/kimi-k2.6',
         KIMI_MODEL_PROVIDER_TYPE: 'anthropic',
       },
       operationTokenEnvKey: 'KIMI_MODEL_API_KEY',

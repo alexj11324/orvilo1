@@ -1,4 +1,4 @@
-import type { LobeAgentAgencyConfig, LobeAgentChatConfig } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig, OrviloAgentChatConfig } from '@orvilo/types';
 import { AgentGraphSchema } from '@orvilo/types/agent/graph';
 import { z } from 'zod';
 
@@ -11,9 +11,9 @@ import type { IPaginationQuery, PaginationQueryResponse } from './common.type';
  * Create Agent request parameters
  */
 export interface CreateAgentRequest {
-  agencyConfig?: Pick<LobeAgentAgencyConfig, 'enableGraphMode' | 'graph'>;
+  agencyConfig?: Pick<OrviloAgentAgencyConfig, 'enableGraphMode' | 'graph'>;
   avatar?: string;
-  chatConfig?: LobeAgentChatConfig;
+  chatConfig?: OrviloAgentChatConfig;
   description?: string;
   model?: string;
   params?: Record<string, unknown>;

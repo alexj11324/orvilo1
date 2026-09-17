@@ -22,7 +22,7 @@ export const ReadReferenceInspector = memo<
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-skills.apiName.readReference')}
+            {t('builtins.orvilo-skills.apiName.readReference')}
           </span>
         </div>
       );
@@ -30,7 +30,7 @@ export const ReadReferenceInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-skills.apiName.readReference')}:
+          {t('builtins.orvilo-skills.apiName.readReference')}:
         </span>
         <span>{path}</span>
       </div>
@@ -41,7 +41,7 @@ export const ReadReferenceInspector = memo<
     <div className={inspectorTextStyles.root}>
       <span className={inspectorTextStyles.root}>
         <span className={cx(isLoading && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-skills.apiName.readReference')}:
+          {t('builtins.orvilo-skills.apiName.readReference')}:
         </span>
         <span className={highlightTextStyles.primary}>{resolvedPath}</span>
       </span>

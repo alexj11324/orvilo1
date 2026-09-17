@@ -3,13 +3,13 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeStepfunAI, params } from './index';
+import { OrviloStepfunAI, params } from './index';
 
 const provider = ModelProvider.Stepfun;
 const defaultBaseURL = 'https://api.stepfun.com/v1';
 
 testProvider({
-  Runtime: LobeStepfunAI,
+  Runtime: OrviloStepfunAI,
   chatDebugEnv: 'DEBUG_STEPFUN_CHAT_COMPLETION',
   chatModel: 'stepfun',
   defaultBaseURL,
@@ -19,11 +19,11 @@ testProvider({
   },
 });
 
-describe('LobeStepfunAI - custom features', () => {
-  let instance: InstanceType<typeof LobeStepfunAI>;
+describe('OrviloStepfunAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloStepfunAI>;
 
   beforeEach(() => {
-    instance = new LobeStepfunAI({ apiKey: 'test_api_key' });
+    instance = new OrviloStepfunAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

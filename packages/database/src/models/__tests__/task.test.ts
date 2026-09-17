@@ -16,12 +16,12 @@ import {
 } from '../../schemas';
 import { taskTopics } from '../../schemas/task';
 import { works } from '../../schemas/work';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
 import { taskActivityActor, TaskModel } from '../task';
 import { WorkModel } from '../work';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'task-test-user-id';
 const userId2 = 'task-test-user-id-2';
@@ -373,7 +373,7 @@ describe('TaskModel', () => {
       await workModel.registerTask({
         changeType: 'created',
         toolCallId: 'tool-call-task-keep',
-        toolIdentifier: 'lobe-task',
+        toolIdentifier: 'orvilo-task',
         toolName: 'createTask',
         taskId: task.id,
       });

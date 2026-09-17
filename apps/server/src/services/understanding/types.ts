@@ -13,7 +13,7 @@ export interface CollectedUnderstandingProviderContext {
 }
 
 /** Connection system used by onboarding to authorize one Understanding provider. */
-export type UnderstandingProviderConnectionSource = 'composio' | 'lobehub';
+export type UnderstandingProviderConnectionSource = 'composio' | 'orvilo';
 
 /** Registry contract for a provider that contributes onboarding Understanding evidence. */
 export interface UnderstandingProvider {

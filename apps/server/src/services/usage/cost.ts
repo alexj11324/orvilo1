@@ -1,5 +1,5 @@
 import { USD_TO_CNY } from '@orvilo/const';
-import { LOBE_DEFAULT_MODEL_LIST, type Pricing } from 'model-bank';
+import { ORVILO_DEFAULT_MODEL_LIST, type Pricing } from 'model-bank';
 
 import { type ModelUsage } from '@/types/message';
 import {
@@ -14,7 +14,7 @@ const PER_MILLION = 1_000_000;
 // Pricing is keyed by `provider/model` with an `model`-only fallback so messages
 // whose stored provider differs from the model-bank providerId still resolve.
 const pricingByKey = new Map<string, Pricing | undefined>();
-for (const m of LOBE_DEFAULT_MODEL_LIST) {
+for (const m of ORVILO_DEFAULT_MODEL_LIST) {
   pricingByKey.set(`${m.providerId}/${m.id}`, m.pricing);
   if (!pricingByKey.has(m.id)) pricingByKey.set(m.id, m.pricing);
 }

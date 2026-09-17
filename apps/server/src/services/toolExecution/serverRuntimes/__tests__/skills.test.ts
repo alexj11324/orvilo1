@@ -194,7 +194,7 @@ describe('skillsRuntime', () => {
           apiName: api,
           arguments: '{}',
           id: 'refusal',
-          identifier: 'lobe-skills',
+          identifier: 'orvilo-skills',
           type: 'builtin',
         },
         { toolManifestMap: {} },
@@ -318,7 +318,7 @@ describe('skillsRuntime', () => {
 
   it('passes workspace scope when preprocessing sandbox lh commands', async () => {
     mocks.preprocessLhCommand.mockResolvedValueOnce({
-      command: 'LOBEHUB_WORKSPACE_ID=workspace-1 npx -y @lobehub/cli agent edit agt_123',
+      command: 'ORVILO_WORKSPACE_ID=workspace-1 npx -y @orvilo/cli agent edit agt_123',
       isLhCommand: true,
       skipSkillLookup: true,
     });
@@ -340,13 +340,13 @@ describe('skillsRuntime', () => {
       'workspace-1',
     );
     expect(mocks.sandboxService.callTool).toHaveBeenCalledWith('runCommand', {
-      command: 'LOBEHUB_WORKSPACE_ID=workspace-1 npx -y @lobehub/cli agent edit agt_123',
+      command: 'ORVILO_WORKSPACE_ID=workspace-1 npx -y @orvilo/cli agent edit agt_123',
     });
   });
 
   it('recovers workspace scope for sandbox lh commands when context lost it', async () => {
     mocks.preprocessLhCommand.mockResolvedValueOnce({
-      command: 'LOBEHUB_WORKSPACE_ID=workspace-1 npx -y @lobehub/cli agent edit agt_123',
+      command: 'ORVILO_WORKSPACE_ID=workspace-1 npx -y @orvilo/cli agent edit agt_123',
       isLhCommand: true,
       skipSkillLookup: true,
     });
@@ -381,7 +381,7 @@ describe('skillsRuntime', () => {
   it('preprocesses lh commands passed to execScript, not just runCommand', async () => {
     mocks.preprocessLhCommand.mockResolvedValueOnce({
       command:
-        'lh() { LOBEHUB_WORKSPACE_ID=\'workspace-1\' npx -y @lobehub/cli "$@"; }\nlh agent edit agt_123 -t x',
+        'lh() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent edit agt_123 -t x',
       isLhCommand: true,
       skipSkillLookup: true,
     });
@@ -410,7 +410,7 @@ describe('skillsRuntime', () => {
       'execScript',
       expect.objectContaining({
         command:
-          'lh() { LOBEHUB_WORKSPACE_ID=\'workspace-1\' npx -y @lobehub/cli "$@"; }\nlh agent edit agt_123 -t x',
+          'lh() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent edit agt_123 -t x',
       }),
     );
   });
@@ -442,7 +442,7 @@ describe('skillsRuntime', () => {
   });
 
   it('scopes device-routed execScript lh commands to the run workspace', async () => {
-    mocks.buildDeviceLhEnv.mockReturnValue({ LOBEHUB_WORKSPACE_ID: 'workspace-1' });
+    mocks.buildDeviceLhEnv.mockReturnValue({ ORVILO_WORKSPACE_ID: 'workspace-1' });
     mocks.resolveContentWorkspaceId.mockResolvedValue('workspace-1');
     mocks.executeToolCall.mockResolvedValue({
       state: { exitCode: 0, stdout: 'ok', success: true },
@@ -468,9 +468,9 @@ describe('skillsRuntime', () => {
     });
 
     const [, toolCall] = mocks.executeToolCall.mock.calls.at(-1)!;
-    expect(JSON.parse(toolCall.arguments).env).toEqual({ LOBEHUB_WORKSPACE_ID: 'workspace-1' });
+    expect(JSON.parse(toolCall.arguments).env).toEqual({ ORVILO_WORKSPACE_ID: 'workspace-1' });
     // Auth stays with the device — the caller's token must not travel there.
-    expect(JSON.parse(toolCall.arguments).env).not.toHaveProperty('LOBEHUB_JWT');
+    expect(JSON.parse(toolCall.arguments).env).not.toHaveProperty('ORVILO_JWT');
   });
 
   describe('disabled skill enforcement', () => {
@@ -533,7 +533,7 @@ describe('skillsRuntime', () => {
   describe('device execution branch', () => {
     it('prepares archives on the device and runs the command with cwd = extracted dir', async () => {
       mocks.prepareSkillDirectory.mockResolvedValue({
-        extractedDir: '/home/user/.lobehub/skills/extracted/zip-hash-1',
+        extractedDir: '/home/user/.orvilo/skills/extracted/zip-hash-1',
         success: true,
       });
       mocks.executeToolCall.mockResolvedValue({
@@ -573,9 +573,9 @@ describe('skillsRuntime', () => {
           apiName: 'runCommand',
           arguments: JSON.stringify({
             command: 'python scripts/run.py',
-            cwd: '/home/user/.lobehub/skills/extracted/zip-hash-1',
+            cwd: '/home/user/.orvilo/skills/extracted/zip-hash-1',
           }),
-          identifier: 'lobe-local-system',
+          identifier: 'orvilo-local-system',
         }),
         undefined,
       );
@@ -635,7 +635,7 @@ describe('skillsRuntime', () => {
 
       expect(result.success).toBe(true);
       expect(result.state).toMatchObject({ executionEnv: 'sandbox' });
-      expect(result.content).toContain('update their LobeHub app');
+      expect(result.content).toContain('update their Orvilo app');
       expect(mocks.executeToolCall).not.toHaveBeenCalled();
       expect(mocks.sandboxService.callTool).toHaveBeenCalledWith(
         'execScript',
@@ -682,7 +682,7 @@ describe('skillsRuntime', () => {
     // over earlier archive-backed ones.
     it('uses the project skill directory as cwd, winning over earlier archives', async () => {
       mocks.prepareSkillDirectory.mockResolvedValue({
-        extractedDir: '/home/user/.lobehub/skills/extracted/zip-hash-1',
+        extractedDir: '/home/user/.orvilo/skills/extracted/zip-hash-1',
         success: true,
       });
       mocks.executeToolCall.mockResolvedValue({
@@ -977,7 +977,7 @@ describe('skillsRuntime', () => {
           exitCode: 0,
           outputFiles: {
             stdout: {
-              path: '/tmp/lobe-shell/shell-1.stdout.log',
+              path: '/tmp/orvilo-shell/shell-1.stdout.log',
               size: 5_242_880,
               truncated: true,
             },
@@ -1004,7 +1004,7 @@ describe('skillsRuntime', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.content).toContain('/tmp/lobe-shell/shell-1.stdout.log');
+      expect(result.content).toContain('/tmp/orvilo-shell/shell-1.stdout.log');
       expect(result.state).toMatchObject({
         outputFiles: { stdout: expect.objectContaining({ truncated: true }) },
       });
@@ -1027,7 +1027,7 @@ describe('skillsRuntime', () => {
       const result = await runtime.runCommand({ command: 'ls' });
 
       expect(result.success).toBe(false);
-      expect(result.content).toContain('lobe-local-system');
+      expect(result.content).toContain('orvilo-local-system');
       expect(mocks.createSandboxService).not.toHaveBeenCalled();
     });
 
@@ -1082,8 +1082,8 @@ describe('skillsRuntime', () => {
 
   // Regression guard for the split-sandbox bug: the sandbox session is keyed by
   // the acting account, which is derived from the trusted-client token. Without
-  // `workspaceId` this runtime acted as the personal account while `lobe-creds`
-  // and `lobe-cloud-sandbox` (which pass it) acted as the workspace, so
+  // `workspaceId` this runtime acted as the personal account while `orvilo-creds`
+  // and `orvilo-cloud-sandbox` (which pass it) acted as the workspace, so
   // credentials injected for a workspace topic were invisible to every command
   // run here.
   it('scopes the market identity to the run workspace so sandbox calls share one session', async () => {

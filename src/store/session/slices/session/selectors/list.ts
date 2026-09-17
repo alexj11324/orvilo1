@@ -3,26 +3,26 @@ import { sessionHelpers } from '@/store/session/slices/session/helpers';
 import {
   type CustomSessionGroup,
   type GroupMemberWithAgent,
-  type LobeGroupSession,
-  type LobeSession,
-  type LobeSessions,
+  type OrviloGroupSession,
+  type OrviloSession,
+  type OrviloSessions,
 } from '@/types/session';
 
 import { type SessionStore } from '../../../store';
 
-const defaultSessions = (s: SessionStore): LobeSessions => s.defaultSessions;
+const defaultSessions = (s: SessionStore): OrviloSessions => s.defaultSessions;
 
-const pinnedSessions = (s: SessionStore): LobeSessions => s.pinnedSessions;
+const pinnedSessions = (s: SessionStore): OrviloSessions => s.pinnedSessions;
 const customSessionGroups = (s: SessionStore): CustomSessionGroup[] => s.customSessionGroups;
 
-const allSessions = (s: SessionStore): LobeSessions => s.sessions;
+const allSessions = (s: SessionStore): OrviloSessions => s.sessions;
 
 const getSessionById =
   (id: string) =>
-  (s: SessionStore): LobeSession =>
+  (s: SessionStore): OrviloSession =>
     sessionHelpers.getSessionById(id, allSessions(s));
 
-const currentSession = (s: SessionStore): LobeSession | undefined => {
+const currentSession = (s: SessionStore): OrviloSession | undefined => {
   if (!s.activeId) return;
 
   return allSessions(s).find((i) => i.id === s.activeId);
@@ -36,7 +36,7 @@ const isCurrentSessionGroupSession = (s: SessionStore): boolean => {
 };
 
 const currentGroupAgents = (s: SessionStore): GroupMemberWithAgent[] => {
-  const session = currentSession(s) as LobeGroupSession;
+  const session = currentSession(s) as OrviloGroupSession;
 
   if (session && session.type !== 'group') return [];
 

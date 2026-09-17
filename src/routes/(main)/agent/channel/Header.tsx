@@ -86,7 +86,7 @@ const Header = memo<HeaderProps>(
         // The cached providers carry masked credentials, so the file has to be
         // built from a fresh authorized read or it would export placeholders.
         const exportData = await exportBotProviders(agentId);
-        exportJSONFile(exportData, `lobehub-channels-${agentId}.json`);
+        exportJSONFile(exportData, `orvilo-channels-${agentId}.json`);
         // The file holds real tokens — say so rather than let it look inert.
         toast.warning(t('channel.exportContainsCredentials'));
       } catch (error) {

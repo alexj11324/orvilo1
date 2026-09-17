@@ -12,31 +12,31 @@ import type { EnterWorktreeArgs, ExitWorktreeArgs } from '../../types';
 type InspectorPhase = 'completed' | 'failed' | 'idle' | 'loading';
 
 const CREATE_LABEL_KEYS = {
-  completed: 'builtins.lobe-claude-code.worktree.create.completed',
-  failed: 'builtins.lobe-claude-code.worktree.create.failed',
-  idle: 'builtins.lobe-claude-code.worktree.create.idle',
-  loading: 'builtins.lobe-claude-code.worktree.create.loading',
+  completed: 'builtins.orvilo-claude-code.worktree.create.completed',
+  failed: 'builtins.orvilo-claude-code.worktree.create.failed',
+  idle: 'builtins.orvilo-claude-code.worktree.create.idle',
+  loading: 'builtins.orvilo-claude-code.worktree.create.loading',
 } as const;
 
 const ENTER_LABEL_KEYS = {
-  completed: 'builtins.lobe-claude-code.worktree.enter.completed',
-  failed: 'builtins.lobe-claude-code.worktree.enter.failed',
-  idle: 'builtins.lobe-claude-code.worktree.enter.idle',
-  loading: 'builtins.lobe-claude-code.worktree.enter.loading',
+  completed: 'builtins.orvilo-claude-code.worktree.enter.completed',
+  failed: 'builtins.orvilo-claude-code.worktree.enter.failed',
+  idle: 'builtins.orvilo-claude-code.worktree.enter.idle',
+  loading: 'builtins.orvilo-claude-code.worktree.enter.loading',
 } as const;
 
 const EXIT_LABEL_KEYS = {
-  completed: 'builtins.lobe-claude-code.worktree.exit.completed',
-  failed: 'builtins.lobe-claude-code.worktree.exit.failed',
-  idle: 'builtins.lobe-claude-code.worktree.exit.idle',
-  loading: 'builtins.lobe-claude-code.worktree.exit.loading',
+  completed: 'builtins.orvilo-claude-code.worktree.exit.completed',
+  failed: 'builtins.orvilo-claude-code.worktree.exit.failed',
+  idle: 'builtins.orvilo-claude-code.worktree.exit.idle',
+  loading: 'builtins.orvilo-claude-code.worktree.exit.loading',
 } as const;
 
 const REMOVE_LABEL_KEYS = {
-  completed: 'builtins.lobe-claude-code.worktree.remove.completed',
-  failed: 'builtins.lobe-claude-code.worktree.remove.failed',
-  idle: 'builtins.lobe-claude-code.worktree.remove.idle',
-  loading: 'builtins.lobe-claude-code.worktree.remove.loading',
+  completed: 'builtins.orvilo-claude-code.worktree.remove.completed',
+  failed: 'builtins.orvilo-claude-code.worktree.remove.failed',
+  idle: 'builtins.orvilo-claude-code.worktree.remove.idle',
+  loading: 'builtins.orvilo-claude-code.worktree.remove.loading',
 } as const;
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -162,7 +162,7 @@ export const ExitWorktreeInspector = memo<BuiltinInspectorProps<ExitWorktreeArgs
         </span>
         {action === 'remove' && discardChanges && (
           <span className={styles.risk}>
-            {t('builtins.lobe-claude-code.worktree.discardChanges')}
+            {t('builtins.orvilo-claude-code.worktree.discardChanges')}
           </span>
         )}
       </div>

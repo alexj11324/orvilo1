@@ -11,7 +11,7 @@ export interface Classification {
 
 /**
  * Pull the first plausible "server repo" GitHub URL out of the issue body.
- * Skips links to LobeHub's own org and the MCP registry org so we land on the
+ * Skips links to Orvilo's own org and the MCP registry org so we land on the
  * submitter's repository.
  *
  * A missing URL is fine: private repos can still be submitted via the CLI after
@@ -41,7 +41,7 @@ export function extractRepoUrl(body: string): string | null {
     'topics',
     'user-attachments',
   ]);
-  const ignoredOwners = new Set(['lobehub', 'lobechat', 'modelcontextprotocol']);
+  const ignoredOwners = new Set(['alexj11324', 'lobehub', 'lobechat', 'modelcontextprotocol']);
   const regex = /https?:\/\/github\.com\/([\w.-]+)\/([\w.-]+)/gi;
 
   for (const match of body.matchAll(regex)) {

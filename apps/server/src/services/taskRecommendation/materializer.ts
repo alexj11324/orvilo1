@@ -3,7 +3,7 @@ import { OnboardingTaskRecommendationSessionSchema } from '@orvilo/types';
 import { and, eq, isNull } from 'drizzle-orm';
 
 import { topics } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { CreateTaskInput } from '@/server/services/task';
 import { TaskService } from '@/server/services/task';
 
@@ -27,14 +27,14 @@ interface MaterializeTaskRecommendationInput {
 }
 
 type CreateTaskInTransaction = (
-  database: LobeChatDatabase,
+  database: OrviloDatabase,
   input: CreateTaskInput,
 ) => Promise<{ id: string }>;
 
 /** Atomically materializes one recommendation and records its task mapping. */
 export class TaskRecommendationMaterializer {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly createTask: CreateTaskInTransaction = (database, input) =>
       new TaskService(database, userId).createTask(input),
@@ -89,7 +89,7 @@ export class TaskRecommendationMaterializer {
       const sourceList = recommendation.sources.map(({ subject, title, url }) =>
         title || subject ? `- ${title ?? subject}: ${url}` : `- ${url}`,
       );
-      const task = await this.createTask(transaction as unknown as LobeChatDatabase, {
+      const task = await this.createTask(transaction as unknown as OrviloDatabase, {
         assigneeAgentId: input.assigneeAgentId,
         // NOTICE:
         // Task descriptions are stored in `tasks.description` as varchar(255).

@@ -16,7 +16,7 @@ import { isSingleAccountRebindBlocked, shouldShowSingleAccountSuccess } from './
 
 interface TelegramBodyProps {
   existingLink?: ExistingLink | null;
-  lobeAccount: string;
+  orviloAccount: string;
   platformMeta?: PlatformMeta;
   randomId: string;
   signInUrl: string;
@@ -25,7 +25,7 @@ interface TelegramBodyProps {
 }
 
 const TelegramBody = memo<TelegramBodyProps>(
-  ({ existingLink, lobeAccount, platformMeta, randomId, signInUrl, tokenData, userAvatar }) => {
+  ({ existingLink, orviloAccount, platformMeta, randomId, signInUrl, tokenData, userAvatar }) => {
     const { t } = useTranslation('messenger');
     const [done, setDone] = useState(false);
 
@@ -48,7 +48,7 @@ const TelegramBody = memo<TelegramBodyProps>(
     // Telegram has no workspace/tenant concept — skip the workspace row entirely.
     const handle = tokenData.platformUsername ?? `ID ${tokenData.platformUserId}`;
     const infoRows: InfoRow[] = [
-      { label: t('verify.confirm.fields.lobeHubAccount'), value: lobeAccount },
+      { label: t('verify.confirm.fields.orviloHubAccount'), value: orviloAccount },
       {
         label: t('verify.confirm.fields.platformAccount', { platform: platformLabel }),
         value: handle,

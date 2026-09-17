@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import { AgentRuntimeErrorType } from '../../types/error';
-import { Lobe302AI, params } from './index';
+import { Orvilo302AI, params } from './index';
 
 testProvider({
-  Runtime: Lobe302AI,
+  Runtime: Orvilo302AI,
   provider: ModelProvider.Ai302,
   defaultBaseURL: 'https://api.302.ai/v1',
   chatDebugEnv: 'DEBUG_AI302_CHAT_COMPLETION',
@@ -20,7 +20,7 @@ testProvider({
   },
 });
 
-describe('Lobe302AI - params', () => {
+describe('Orvilo302AI - params', () => {
   it('should have correct baseURL', () => {
     expect(params.baseURL).toBe('https://api.302.ai/v1');
     expect(params.provider).toBe(ModelProvider.Ai302);

@@ -1,6 +1,6 @@
 ---
 name: design-prototype
-description: 'Use for interactive HTML prototypes (交互原型) with the real LobeHub UI stack. Excludes production UI implementation.'
+description: 'Use for interactive HTML prototypes (交互原型) with the real Orvilo UI stack. Excludes production UI implementation.'
 ---
 
 # Design Prototype
@@ -18,7 +18,7 @@ of a prototype, not its code style.
 ## How it works
 
 ```
-one-time (~2s, cached):   scripts/build-runtime.sh  →  lobe-prototype-runtime.js (IIFE global)
+one-time (~2s, cached):   scripts/build-runtime.sh  →  orvilo-prototype-runtime.js (IIFE global)
                                                        + vendored babel.min.js
 per prototype (no build): single HTML  =  <script runtime> + babel-standalone
                           + <script type="text/babel"> with production-style React
@@ -45,7 +45,7 @@ per prototype (no build): single HTML  =  <script runtime> + babel-standalone
    bash .agents/skills/design-prototype/scripts/build-runtime.sh /tmp/my-proto
    ```
 
-   Skip if `lobe-prototype-runtime.js` + `babel.min.js` are already there and the
+   Skip if `orvilo-prototype-runtime.js` + `babel.min.js` are already there and the
    design-system versions haven't bumped.
 
 2. **Copy [`references/template.html`](references/template.html)** into the same dir,

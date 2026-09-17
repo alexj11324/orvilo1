@@ -89,7 +89,7 @@ describe('apiKeyRouter workspace member access', () => {
       enabled: true,
       expiresAt: null,
       id: 'key-1',
-      key: 'sk-lh-plaintext',
+      key: 'sk-ov-plaintext',
       name: 'Member integration',
       scopes: ['*'],
       userId: 'member-user',
@@ -126,7 +126,7 @@ describe('apiKeyRouter workspace member access', () => {
     });
 
     // The creation response is the one-time plaintext reveal for the UI.
-    expect(created.key).toBe('sk-lh-plaintext');
+    expect(created.key).toBe('sk-ov-plaintext');
     expect(mockApiKeyModel.createWithPlaintext).toHaveBeenCalledWith({
       expiresAt: null,
       name: 'Member integration',

@@ -29,7 +29,7 @@ export const WriteDocumentInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-web-onboarding.apiName.writeDocument')}
+          {t('builtins.orvilo-web-onboarding.apiName.writeDocument')}
         </span>
       </div>
     );
@@ -38,16 +38,16 @@ export const WriteDocumentInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-web-onboarding.apiName.writeDocument')}
+        {t('builtins.orvilo-web-onboarding.apiName.writeDocument')}
       </span>
       {type && (
         <span className={styles.chip}>
-          {t(`builtins.lobe-web-onboarding.docType.${type}` as const)}
+          {t(`builtins.orvilo-web-onboarding.docType.${type}` as const)}
         </span>
       )}
       {charCount > 0 && (
         <span className={styles.meta}>
-          {t('builtins.lobe-web-onboarding.inspector.charCount', { count: charCount })}
+          {t('builtins.orvilo-web-onboarding.inspector.charCount', { count: charCount })}
         </span>
       )}
     </div>

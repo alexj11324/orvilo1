@@ -1,6 +1,6 @@
 import type { AgentState } from '@orvilo/agent-runtime';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type {
   ExecAgentResult,
   ExecGroupAgentParams,
@@ -73,7 +73,7 @@ import { execAgentMember, execAgentThreadRun } from './subAgentRuns';
 import { acquireTopicStartReservation } from './topicStartReservation';
 import type { ExecRunContext, InternalExecAgentParams } from './types';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 /**
  * AI Agent Service
@@ -85,7 +85,7 @@ const log = debug('lobe-server:ai-agent-service');
  */
 export class AiAgentService {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly agentDocumentsService: AgentDocumentsService;
   private readonly agentModel: AgentModel;
   private readonly agentOperationModel: AgentOperationModel;
@@ -112,7 +112,7 @@ export class AiAgentService {
   private readonly withholdGatewayToken: boolean;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     options?: {
       /**
@@ -294,7 +294,7 @@ export class AiAgentService {
    *
    * Delegates to the internal AgentRuntimeService, which is already wired with
    * the agent-invocation fork callbacks. The QStash step worker drives stepping
-   * through here so `lobe-agent.callSubAgent` can fork virtual sub-agents —
+   * through here so `orvilo-agent.callSubAgent` can fork virtual sub-agents —
    * building a bare runtime there would lose the callback and fail with
    * SUB_AGENT_UNAVAILABLE.
    */
@@ -1414,7 +1414,7 @@ export class AiAgentService {
     });
 
   /**
-   * Execute a virtual sub-agent created by `lobe-agent.callSubAgent`.
+   * Execute a virtual sub-agent created by `orvilo-agent.callSubAgent`.
    *
    * This path is a child operation of the current agent run. It is marked as a
    * sub-agent so it cannot recursively spawn more sub-agents, and it registers
@@ -1434,7 +1434,7 @@ export class AiAgentService {
     });
 
   /**
-   * Fork a single group member ("call agent member") under a `lobe-group-management`
+   * Fork a single group member ("call agent member") under a `orvilo-group-management`
    * tool call. Dispatches to the in-group (non-isolated, shared group session)
    * or isolated (own thread) path, installing the group-action member completion
    * bridge. Invoked once per member by the runtime's `agentMember` runner.

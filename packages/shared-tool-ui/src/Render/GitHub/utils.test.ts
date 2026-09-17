@@ -9,7 +9,7 @@ describe('buildGitHubRenderModel', () => {
       args: {
         base: 'canary',
         head: 'fix/codex-github-render',
-        repository_full_name: 'lobehub/lobehub',
+        repository_full_name: 'alexj11324/orvilo1',
       },
       content: JSON.stringify({
         body: 'PR body',
@@ -20,7 +20,7 @@ describe('buildGitHubRenderModel', () => {
         state: 'open',
         title: 'Render Codex GitHub MCP tool calls',
         updated_at: '2026-06-29T08:20:00Z',
-        url: 'https://github.com/lobehub/lobehub/pull/16430',
+        url: 'https://github.com/alexj11324/orvilo1/pull/16430',
       }),
     });
 
@@ -32,11 +32,11 @@ describe('buildGitHubRenderModel', () => {
       kind: 'Pull request',
       state: 'Open',
       title: 'Render Codex GitHub MCP tool calls',
-      url: 'https://github.com/lobehub/lobehub/pull/16430',
+      url: 'https://github.com/alexj11324/orvilo1/pull/16430',
     });
     expect(model.resultEntities[0].fields).toEqual(
       expect.arrayContaining([
-        { key: 'repository', label: 'Repository', value: 'lobehub/lobehub' },
+        { key: 'repository', label: 'Repository', value: 'alexj11324/orvilo1' },
       ]),
     );
   });
@@ -44,14 +44,14 @@ describe('buildGitHubRenderModel', () => {
   it('unwraps GitHub list wrappers into entity cards', () => {
     const model = buildGitHubRenderModel({
       apiName: 'search_issues',
-      args: { query: 'is:open repo:lobehub/lobehub' },
+      args: { query: 'is:open repo:alexj11324/orvilo1' },
       content: JSON.stringify({
         items: [
           {
             number: 10,
             state: 'open',
             title: 'First issue',
-            url: 'https://github.com/lobehub/lobehub/issues/10',
+            url: 'https://github.com/alexj11324/orvilo1/issues/10',
           },
         ],
       }),

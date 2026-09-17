@@ -6,7 +6,7 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InlineTable from '@/components/InlineTable';
-import { ModelIcon, ProviderIcon } from '@/components/LobeIcons';
+import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
 import { type UsageLog, type UsageRecordItem } from '@/types/usage/usageRecord';
 import { formatPrice } from '@/utils/format';
 

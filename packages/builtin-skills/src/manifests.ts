@@ -2,17 +2,17 @@ import type { BuiltinSkillManifest } from '@orvilo/types';
 
 import { AgentBrowserManifest } from './agent-browser/manifest';
 import { ArtifactsManifest } from './artifacts/manifest';
-import { LobeHubManifest } from './lobehub/manifest';
+import { OrviloManifest } from './orvilo/manifest';
 import { TaskManifest } from './task/manifest';
 
 export { AgentBrowserIdentifier } from './agent-browser/manifest';
 export { ArtifactsIdentifier } from './artifacts/manifest';
-export { LobeHubIdentifier } from './lobehub/manifest';
+export { OrviloIdentifier } from './orvilo/manifest';
 export { TaskIdentifier } from './task/manifest';
 
 export const builtinSkillManifests: BuiltinSkillManifest[] = [
   AgentBrowserManifest,
   ArtifactsManifest,
-  LobeHubManifest,
+  OrviloManifest,
   TaskManifest,
 ];

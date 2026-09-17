@@ -29,11 +29,11 @@ export const AUTHOR_LIST = {
     name: 'CanisMinor',
     url: 'https://github.com/canisminor1990',
   },
-  lobehub: {
+  orvilo: {
     avatar: 'https://avatars.githubusercontent.com/u/131470832?v=4',
     desc: 'Official Account',
-    name: 'LobeHub',
-    url: 'https://github.com/lobehub',
+    name: 'Orvilo',
+    url: 'https://github.com/orvilo',
   },
 };
 
@@ -135,8 +135,8 @@ export class Ld {
       '@type': 'Organization',
     };
     if (!ids || ids.length === 0) return defaultAuthor;
-    if (ids.length === 1 && ids[0] === 'lobehub') return defaultAuthor;
-    const personId = ids.find((id) => id !== 'lobehub');
+    if (ids.length === 1 && ids[0] === 'orvilo') return defaultAuthor;
+    const personId = ids.find((id) => id !== 'orvilo');
     if (!personId) return defaultAuthor;
     const person = (AUTHOR_LIST as any)?.[personId];
     if (!person) return defaultAuthor;

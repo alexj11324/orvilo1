@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type * as ModelBankModule from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -138,7 +138,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -176,7 +176,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         abilities: { functionCall: true, vision: true },
         id: 'gpt-4',
@@ -201,7 +201,7 @@ describe('AiAgentService.execAgent - resumeToolResult', () => {
   const pendingToolPlugin = {
     apiName: 'askUserQuestion',
     arguments: '{"question":"favorite color?"}',
-    identifier: 'lobe-agent',
+    identifier: 'orvilo-agent',
     intervention: { status: 'pending' },
     toolCallId: 'call_ask',
     type: 'builtin',
@@ -227,7 +227,7 @@ describe('AiAgentService.execAgent - resumeToolResult', () => {
     mockUpdateMessagePlugin.mockResolvedValue(undefined);
     mockUpdatePluginState.mockResolvedValue(undefined);
     mockUpdateToolMessage.mockResolvedValue(undefined);
-    service = new AiAgentService({} as unknown as LobeChatDatabase, 'user-1');
+    service = new AiAgentService({} as unknown as OrviloDatabase, 'user-1');
   });
 
   const baseParams = {

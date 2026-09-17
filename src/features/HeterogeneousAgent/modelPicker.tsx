@@ -1,6 +1,6 @@
 import type { ServerDefaultHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { createStaticStyles } from 'antd-style';
-import type { LobeDefaultAiModelListItem } from 'model-bank';
+import type { OrviloDefaultAiModelListItem } from 'model-bank';
 
 import { ModelItemRender, TAG_CLASSNAME } from '@/components/ModelSelect';
 
@@ -38,9 +38,9 @@ export const modelPickerStyles = createStaticStyles(({ css }) => ({
 
 export const resolveServerDefaultModelMeta = (
   model: string,
-  builtinAiModelList: LobeDefaultAiModelListItem[],
+  builtinAiModelList: OrviloDefaultAiModelListItem[],
 ) =>
-  builtinAiModelList.find((item) => item.id === model && item.providerId === 'lobehub') ??
+  builtinAiModelList.find((item) => item.id === model && item.providerId === 'orvilo') ??
   builtinAiModelList.find((item) => item.id === model);
 
 /** Closed-trigger text. Prefer Select's public `title`, not extra option fields. */
@@ -52,7 +52,7 @@ export const compactModelTriggerText = (option: { title?: string; value?: unknow
 
 export const buildServerDefaultModelOptions = (
   models: ServerDefaultModel[],
-  builtinAiModelList: LobeDefaultAiModelListItem[],
+  builtinAiModelList: OrviloDefaultAiModelListItem[],
 ) =>
   models.map(({ model }) => {
     const meta = resolveServerDefaultModelMeta(model, builtinAiModelList);

@@ -15,7 +15,7 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
 import { assertAgentShareVisitorEnabled } from './_helpers/agentShareFeatureGate';
 
-const log = debug('lobe-server:router:share');
+const log = debug('orvilo-server:router:share');
 
 export const shareRouter = router({
   /**

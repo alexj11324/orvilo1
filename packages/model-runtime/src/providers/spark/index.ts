@@ -69,4 +69,4 @@ export const params = {
   provider: ModelProvider.Spark,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeSparkAI = createOpenAICompatibleRuntime(params);
+export const OrviloSparkAI = createOpenAICompatibleRuntime(params);

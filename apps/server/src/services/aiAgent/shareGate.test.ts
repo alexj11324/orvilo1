@@ -5,7 +5,7 @@ import {
 import { AgentManagementIdentifier } from '@orvilo/builtin-tool-agent-management';
 import { CalculatorIdentifier } from '@orvilo/builtin-tool-calculator';
 import { KnowledgeBaseApiName, KnowledgeBaseIdentifier } from '@orvilo/builtin-tool-knowledge-base';
-import { LobeAgentApiName, LobeAgentIdentifier } from '@orvilo/builtin-tool-lobe-agent';
+import { OrviloAgentApiName, OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import { MemoryApiName, MemoryIdentifier } from '@orvilo/builtin-tool-memory';
 import { TopicReferenceIdentifier } from '@orvilo/builtin-tool-topic-reference';
 import {
@@ -141,9 +141,9 @@ describe('isShareBlockedBuiltinDispatch', () => {
   it('passes an enabled builtin with no intervention semantics', () => {
     expect(
       isShareBlockedBuiltinDispatch(
-        { toolGrants: [{ identifier: LobeAgentIdentifier }] },
-        LobeAgentIdentifier,
-        LobeAgentApiName.analyzeMedia,
+        { toolGrants: [{ identifier: OrviloAgentIdentifier }] },
+        OrviloAgentIdentifier,
+        OrviloAgentApiName.analyzeMedia,
       ),
     ).toBe(false);
   });
@@ -153,11 +153,11 @@ describe('isShareBlockedBuiltinDispatch', () => {
     // visitor run has no approver, so letting it reach the executor under
     // headless would silently auto-run it without its consent step. The
     // dispatch gate re-reads the unstripped manifest and blocks.
-    for (const apiName of [LobeAgentApiName.createPlan, LobeAgentApiName.askUserQuestion]) {
+    for (const apiName of [OrviloAgentApiName.createPlan, OrviloAgentApiName.askUserQuestion]) {
       expect(
         isShareBlockedBuiltinDispatch(
-          { toolGrants: [{ identifier: LobeAgentIdentifier }] },
-          LobeAgentIdentifier,
+          { toolGrants: [{ identifier: OrviloAgentIdentifier }] },
+          OrviloAgentIdentifier,
           apiName,
         ),
       ).toBe(true);
@@ -171,9 +171,19 @@ describe('isShareBlockedBuiltinDispatch', () => {
     // blocked by its dedicated dispatch rule.
     expect(
       isShareBlockedBuiltinDispatch(
-        { toolGrants: [{ identifier: LobeAgentIdentifier }] },
-        LobeAgentIdentifier,
-        LobeAgentApiName.callSubAgent,
+        { toolGrants: [{ identifier: OrviloAgentIdentifier }] },
+        OrviloAgentIdentifier,
+        OrviloAgentApiName.callSubAgent,
+      ),
+    ).toBe(true);
+
+    // Ops persisted before the lobe→orvilo rename carry the legacy identifier —
+    // the dispatch block must catch those too.
+    expect(
+      isShareBlockedBuiltinDispatch(
+        { toolGrants: [{ identifier: 'lobe-agent' }] },
+        'lobe-agent',
+        OrviloAgentApiName.callSubAgent,
       ),
     ).toBe(true);
   });
@@ -216,16 +226,16 @@ describe('isShareBlockedBuiltinDispatch', () => {
 
   it('a per-API grant grants only the named API, not the whole identifier', () => {
     const enabled = {
-      toolGrants: [{ apis: [LobeAgentApiName.analyzeMedia], identifier: LobeAgentIdentifier }],
+      toolGrants: [{ apis: [OrviloAgentApiName.analyzeMedia], identifier: OrviloAgentIdentifier }],
     };
 
     expect(
-      isShareBlockedBuiltinDispatch(enabled, LobeAgentIdentifier, LobeAgentApiName.analyzeMedia),
+      isShareBlockedBuiltinDispatch(enabled, OrviloAgentIdentifier, OrviloAgentApiName.analyzeMedia),
     ).toBe(false);
     // updatePlan carries no intervention config either, so only the picker's
     // per-API scoping is what blocks it here.
     expect(
-      isShareBlockedBuiltinDispatch(enabled, LobeAgentIdentifier, LobeAgentApiName.updatePlan),
+      isShareBlockedBuiltinDispatch(enabled, OrviloAgentIdentifier, OrviloAgentApiName.updatePlan),
     ).toBe(true);
   });
 });

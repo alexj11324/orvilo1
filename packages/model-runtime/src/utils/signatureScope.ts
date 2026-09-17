@@ -11,7 +11,7 @@ export interface SignatureScope {
   fingerprint: string;
 }
 
-const SCOPED_SIGNATURE_PREFIX = 'lobe-scoped-state-v1:';
+const SCOPED_SIGNATURE_PREFIX = 'orvilo-scoped-state-v1:';
 const SIGNATURE_SCOPE_FINGERPRINT_LENGTH = 32;
 
 /**

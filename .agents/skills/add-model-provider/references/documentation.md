@@ -14,7 +14,7 @@ Use a nearby provider with the same authentication method as the structural exam
 Explain:
 
 - Where the user obtains access and which account, API key, subscription, or OAuth login is required, with real public registration/dashboard links.
-- How to find the provider in LobeHub, authenticate or enter configuration, choose a supported model, and verify the connection.
+- How to find the provider in Orvilo, authenticate or enter configuration, choose a supported model, and verify the connection.
 - The implemented endpoint and API-mode restrictions that affect setup. Clearly distinguish an official API from a compatible third-party service.
 - Relevant availability, billing model, and a link to current authoritative pricing. Do not present subscription access as per-token API billing or copy volatile prices without a source/date.
 - Actionable setup errors and limitations that were actually verified.
@@ -38,7 +38,7 @@ Inspect the current `Dockerfile` and any deployment templates that already expos
 
 - Add a cover or screenshots when they help users complete setup, following neighboring docs. There is no fixed screenshot quota.
 - Capture real, current UI with credentials, personal data, and account identifiers removed or hidden before sharing. Use unmistakable placeholders in text examples. Never fabricate dashboard screenshots or claim that a generated image is verification evidence.
-- Follow the repository's existing asset workflow; current provider guides use the public CDN `hub-apac-1.lobeobjects.space`. Uploading images to an external host requires authorization for that destination; otherwise keep local reviewable assets and state the remaining publication step.
+- Follow the repository's existing asset workflow; current provider guides use the public CDN `hub-apac-1.objects.aspectlylabs.com`. Uploading images to an external host requires authorization for that destination; otherwise keep local reviewable assets and state the remaining publication step.
 - Inspect how neighboring provider pages enter navigation or generated indexes and update those sources when required. Do not invent a sidebar file when discovery is automatic.
 
 ## Validate

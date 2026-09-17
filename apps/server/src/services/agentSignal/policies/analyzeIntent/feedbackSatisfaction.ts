@@ -11,7 +11,7 @@ import { RequestTrigger } from '@orvilo/types';
 import debug from 'debug';
 import { z } from 'zod';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 
 import { classifySatisfaction, transitionToSignals } from '../../processors';
@@ -19,7 +19,7 @@ import { defineSourceHandler } from '../../runtime/middleware';
 import type { ClassifierDiagnosticsService, SatisfactionClassifierService } from '../../services';
 import type { AgentSignalFeedbackSatisfactionStagePayload } from '../types';
 
-const log = debug('lobe-server:agent-signal:feedback-satisfaction:agent');
+const log = debug('orvilo-server:agent-signal:feedback-satisfaction:agent');
 
 const FeedbackEvidenceSchema = z.object({
   cue: z.string(),
@@ -77,7 +77,7 @@ export interface FeedbackSatisfactionJudgeAgentModelConfig {
 export interface CreateFeedbackSatisfactionJudgePolicyOptions {
   /** Optional diagnostics sink for malformed structured classifier output. */
   classifierDiagnostics?: ClassifierDiagnosticsService;
-  db?: LobeChatDatabase;
+  db?: OrviloDatabase;
   judge?: FeedbackSatisfactionJudge;
   model?: string;
   provider?: string;
@@ -99,13 +99,13 @@ export interface CreateFeedbackSatisfactionJudgePolicyOptions {
  * - One validated satisfaction result parsed from structured model output
  */
 export class FeedbackSatisfactionJudgeAgentService implements FeedbackSatisfactionJudge {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly modelConfig: FeedbackSatisfactionJudgeAgentModelConfig;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     modelConfig: Partial<FeedbackSatisfactionJudgeAgentModelConfig> = {},
     workspaceId?: string,

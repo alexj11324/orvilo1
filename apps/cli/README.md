@@ -1,15 +1,15 @@
-# @lobehub/cli
+# @orvilo/cli
 
-LobeHub command-line interface.
+Orvilo command-line interface.
 
 ## Local Development
 
-| Task                                       | Command                    |
-| ------------------------------------------ | -------------------------- |
-| Run in dev mode                            | `bun run dev -- <command>` |
-| Build the CLI                              | `bun run build`            |
-| Link `lh`/`lobe`/`lobehub` into your shell | `bun run cli:link`         |
-| Remove the global link                     | `bun run cli:unlink`       |
+| Task                                        | Command                    |
+| ------------------------------------------- | -------------------------- |
+| Run in dev mode                             | `bun run dev -- <command>` |
+| Build the CLI                               | `bun run build`            |
+| Link `lh`/`orvilo`/`orvilo` into your shell | `bun run cli:link`         |
+| Remove the global link                      | `bun run cli:unlink`       |
 
 - `bun run build` only generates `dist/index.js`.
 - To make `lh` available in your shell, run `bun run cli:link`.
@@ -19,12 +19,12 @@ LobeHub command-line interface.
 
 By default the CLI connects to `https://orvilo.aspectlylabs.com`. To point it at a different server (e.g. a local instance):
 
-| Method               | Command                                                         | Persistence                         |
-| -------------------- | --------------------------------------------------------------- | ----------------------------------- |
-| Environment variable | `LOBEHUB_SERVER=http://localhost:4000 bun run dev -- <command>` | Current command only                |
-| Login flag           | `lh login --server http://localhost:4000`                       | Saved to `~/.lobehub/settings.json` |
+| Method               | Command                                                        | Persistence                        |
+| -------------------- | -------------------------------------------------------------- | ---------------------------------- |
+| Environment variable | `ORVILO_SERVER=http://localhost:4000 bun run dev -- <command>` | Current command only               |
+| Login flag           | `lh login --server http://localhost:4000`                      | Saved to `~/.orvilo/settings.json` |
 
-Priority: `LOBEHUB_SERVER` env var > `settings.json` > default official URL.
+Priority: `ORVILO_SERVER` env var > `settings.json` > default official URL.
 
 ## Shell Completion
 

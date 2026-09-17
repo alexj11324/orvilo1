@@ -1,5 +1,5 @@
 /**
- * @see https://github.com/lobehub/lobe-chat/discussions/6563
+ * @see
  */
 import type { GoogleGenAIOptions } from '@google/genai';
 import type {
@@ -14,8 +14,8 @@ import type { ClientOptions } from 'openai';
 import type OpenAI from 'openai';
 import type { Stream } from 'openai/streaming';
 
-import { LobeOpenAI } from '../../providers/openai';
-import { LobeVertexAI } from '../../providers/vertexai';
+import { OrviloOpenAI } from '../../providers/openai';
+import { OrviloVertexAI } from '../../providers/vertexai';
 import type {
   ASROptions,
   ASRPayload,
@@ -35,7 +35,7 @@ import type {
   GenerateObjectPayload,
   HandleCreateVideoWebhookPayload,
   HandleCreateVideoWebhookResult,
-  ILobeAgentRuntimeErrorType,
+  IOrviloAgentRuntimeErrorType,
   TextToSpeechPayload,
 } from '../../types';
 import { AgentRuntimeError } from '../../utils/createError';
@@ -47,7 +47,7 @@ import type { ModelIdMappingOptions } from '../../utils/modelIdMapping';
 import { postProcessModelList } from '../../utils/postProcessModelList';
 import { safeParseJSON } from '../../utils/safeParseJSON';
 import { setRuntimeSignatureScopeSource } from '../../utils/signatureScope';
-import type { LobeRuntimeAI } from '../BaseAI';
+import type { OrviloRuntimeAI } from '../BaseAI';
 import type {
   CreateImageOptions,
   CreateVideoOptions,
@@ -55,8 +55,8 @@ import type {
 } from '../openaiCompatibleFactory';
 import type { ApiType, RuntimeClass } from './apiTypes';
 
-const log = debug('lobe-model-runtime:router-runtime');
-const { logger: timing } = createTimingHelpers('lobe-server:chat:lobehub:timing');
+const log = debug('orvilo-model-runtime:router-runtime');
+const { logger: timing } = createTimingHelpers('orvilo-server:chat:orvilo:timing');
 
 interface ProviderIniOptions extends Record<string, any> {
   accessKeyId?: string;
@@ -94,15 +94,15 @@ interface RouterInstance {
   runtime?: RuntimeClass;
 }
 
-// OpenAI SDK v6 widened `apiKey` to `string | ApiKeySetter`; lobehub only ever
+// OpenAI SDK v6 widened `apiKey` to `string | ApiKeySetter`; orvilo only ever
 // passes a plain string, so narrow it back to keep `.trim()` / string assignments valid.
-type LobeClientOptions = Omit<ClientOptions, 'apiKey'> & { apiKey?: string };
-type ConstructorOptions<T extends Record<string, any> = any> = LobeClientOptions & T;
+type OrviloClientOptions = Omit<ClientOptions, 'apiKey'> & { apiKey?: string };
+type ConstructorOptions<T extends Record<string, any> = any> = OrviloClientOptions & T;
 
 type Routers =
   | RouterInstance[]
   | ((
-      options: LobeClientOptions & Record<string, any>,
+      options: OrviloClientOptions & Record<string, any>,
       runtimeContext: RouterRuntimeRequestContext,
     ) => RouterInstance[] | Promise<RouterInstance[]>);
 
@@ -182,7 +182,7 @@ export interface CreateRouterRuntimeOptions<T extends Record<string, any> = any>
     handleStreamBizErrorType?: (error: {
       message: string;
       name: string;
-    }) => ILobeAgentRuntimeErrorType | undefined;
+    }) => IOrviloAgentRuntimeErrorType | undefined;
     handleTransformResponseToStream?: (
       data: OpenAI.ChatCompletion,
     ) => ReadableStream<OpenAI.ChatCompletionChunk>;
@@ -204,8 +204,8 @@ export interface CreateRouterRuntimeOptions<T extends Record<string, any> = any>
   };
   defaultHeaders?: Record<string, any>;
   errorType?: {
-    bizError: ILobeAgentRuntimeErrorType;
-    invalidAPIKey: ILobeAgentRuntimeErrorType;
+    bizError: IOrviloAgentRuntimeErrorType;
+    invalidAPIKey: IOrviloAgentRuntimeErrorType;
   };
   handleCreateVideoWebhook?: (
     payload: HandleCreateVideoWebhookPayload,
@@ -249,8 +249,8 @@ export const createRouterRuntime = ({
   models: modelsOption,
   ...params
 }: CreateRouterRuntimeOptions) => {
-  return class UniformRuntime implements LobeRuntimeAI {
-    public _options: LobeClientOptions & Record<string, any>;
+  return class UniformRuntime implements OrviloRuntimeAI {
+    public _options: OrviloClientOptions & Record<string, any>;
     private _routers: Routers;
     private _params: any;
     private _id: string;
@@ -259,7 +259,7 @@ export const createRouterRuntime = ({
       metadata: Record<string, unknown> | undefined,
       routeAttempt: RouteAttemptMetadata,
     ) {
-      if (!metadata || this._id !== 'lobehub') return;
+      if (!metadata || this._id !== 'orvilo') return;
 
       metadata.routeAttempt = routeAttempt;
     }
@@ -279,7 +279,7 @@ export const createRouterRuntime = ({
       const trigger = metadata?.trigger;
       const traceId = typeof metadata?.traceId === 'string' ? metadata.traceId : undefined;
 
-      if (this._id !== 'lobehub' || (effectiveUserId && trigger)) return effectiveUserId;
+      if (this._id !== 'orvilo' || (effectiveUserId && trigger)) return effectiveUserId;
       if (process.env.NODE_ENV !== 'development') return effectiveUserId;
 
       const diagnostic = {
@@ -303,7 +303,7 @@ export const createRouterRuntime = ({
       throw new Error(`[RouteAttemptMissingContext] ${JSON.stringify(diagnostic)}`);
     }
 
-    constructor(options: LobeClientOptions & Record<string, any> = {}) {
+    constructor(options: OrviloClientOptions & Record<string, any> = {}) {
       const startedAt = Date.now();
       this._options = {
         ...options,
@@ -316,7 +316,7 @@ export const createRouterRuntime = ({
       this._params = params;
       this._id = options.id ?? id;
 
-      if (this._id === 'lobehub') {
+      if (this._id === 'orvilo') {
         timing(
           'constructor done providerId=%s durationMs=%d hasApiKey=%s hasBaseURL=%s',
           this._id,
@@ -341,7 +341,7 @@ export const createRouterRuntime = ({
             ? await this._routers(this._options, runtimeContext)
             : this._routers;
 
-        if (this._id === 'lobehub') {
+        if (this._id === 'orvilo') {
           timing(
             'resolveRouters done model=%s durationMs=%d routerCount=%d dynamic=%s',
             model,
@@ -361,7 +361,7 @@ export const createRouterRuntime = ({
 
         return resolvedRouters;
       } catch (error) {
-        if (this._id === 'lobehub') {
+        if (this._id === 'orvilo') {
           timing('resolveRouters error model=%s durationMs=%d', model, getDurationMs(startedAt));
         }
         throw error;
@@ -383,7 +383,7 @@ export const createRouterRuntime = ({
       if (baseURL) {
         const baseURLMatch = resolvedRouters.find((router) => router.baseURLPattern?.test(baseURL));
         if (baseURLMatch) {
-          if (this._id === 'lobehub') {
+          if (this._id === 'orvilo') {
             timing(
               'resolveMatchedRouter done model=%s match=baseURL routerId=%s apiType=%s durationMs=%d',
               model,
@@ -404,7 +404,7 @@ export const createRouterRuntime = ({
         return false;
       });
       if (modelMatch) {
-        if (this._id === 'lobehub') {
+        if (this._id === 'orvilo') {
           timing(
             'resolveMatchedRouter done model=%s match=models routerId=%s apiType=%s durationMs=%d',
             model,
@@ -418,7 +418,7 @@ export const createRouterRuntime = ({
 
       // Fallback: Use the last router
       const fallbackRouter = resolvedRouters.at(-1)!;
-      if (this._id === 'lobehub') {
+      if (this._id === 'orvilo') {
         timing(
           'resolveMatchedRouter done model=%s match=fallback routerId=%s apiType=%s durationMs=%d',
           model,
@@ -438,7 +438,7 @@ export const createRouterRuntime = ({
         throw new Error('empty provider options');
       }
 
-      if (this._id === 'lobehub') {
+      if (this._id === 'orvilo') {
         timing(
           'normalizeRouterOptions done routerId=%s options=%d durationMs=%d',
           router.id,
@@ -474,7 +474,7 @@ export const createRouterRuntime = ({
           sorted.length === routerOptions.length &&
           routerOptions.every((optionItem) => sorted.includes(optionItem));
 
-        if (this._id === 'lobehub') {
+        if (this._id === 'orvilo') {
           timing(
             'sortRouterOptions done model=%s routerId=%s durationMs=%d applied=%s',
             model,
@@ -491,7 +491,7 @@ export const createRouterRuntime = ({
         log('sortRouterOptions returned a non-permutation result, ignoring');
         return routerOptions;
       } catch (error) {
-        if (this._id === 'lobehub') {
+        if (this._id === 'orvilo') {
           timing(
             'sortRouterOptions error model=%s routerId=%s durationMs=%d',
             model,
@@ -515,7 +515,7 @@ export const createRouterRuntime = ({
       channelId?: string;
       id: ApiType;
       remark?: string;
-      runtime: LobeRuntimeAI;
+      runtime: OrviloRuntimeAI;
     }> {
       const startedAt = Date.now();
       const { apiType: optionApiType, id: channelId, remark, ...optionOverrides } = optionItem;
@@ -553,7 +553,7 @@ export const createRouterRuntime = ({
         if (project) vertexOptions.project = project;
         if (location) vertexOptions.location = location as GoogleGenAIOptions['location'];
 
-        if (this._id === 'lobehub') {
+        if (this._id === 'orvilo') {
           timing(
             'createRuntimeFromOption done routerId=%s channelId=%s apiType=%s durationMs=%d vertex=true',
             router.id,
@@ -563,7 +563,7 @@ export const createRouterRuntime = ({
           );
         }
 
-        const runtime = LobeVertexAI.initFromVertexAI(vertexOptions);
+        const runtime = OrviloVertexAI.initFromVertexAI(vertexOptions);
         setRuntimeSignatureScopeSource(runtime, signatureScopeSource);
 
         return {
@@ -577,12 +577,12 @@ export const createRouterRuntime = ({
       const { baseRuntimeMap } = await import('./baseRuntimeMap');
       const providerAI =
         resolvedApiType === router.apiType
-          ? (router.runtime ?? baseRuntimeMap[resolvedApiType] ?? LobeOpenAI)
-          : (baseRuntimeMap[resolvedApiType] ?? LobeOpenAI);
-      const runtime: LobeRuntimeAI = new providerAI({ ...finalOptions, id: this._id });
+          ? (router.runtime ?? baseRuntimeMap[resolvedApiType] ?? OrviloOpenAI)
+          : (baseRuntimeMap[resolvedApiType] ?? OrviloOpenAI);
+      const runtime: OrviloRuntimeAI = new providerAI({ ...finalOptions, id: this._id });
       setRuntimeSignatureScopeSource(runtime, signatureScopeSource);
 
-      if (this._id === 'lobehub') {
+      if (this._id === 'orvilo') {
         timing(
           'createRuntimeFromOption done routerId=%s channelId=%s apiType=%s durationMs=%d',
           router.id,
@@ -602,7 +602,7 @@ export const createRouterRuntime = ({
 
     private async runWithFallback<T>(
       model: string,
-      requestHandler: (runtime: LobeRuntimeAI) => Promise<T>,
+      requestHandler: (runtime: OrviloRuntimeAI) => Promise<T>,
       routeContext: RouteAttemptContext = {},
     ): Promise<T> {
       const totalStartedAt = Date.now();
@@ -624,7 +624,7 @@ export const createRouterRuntime = ({
         throw new TypeError(`No provider route supports raw audio input for model ${model}`);
       }
 
-      if (this._id === 'lobehub') {
+      if (this._id === 'orvilo') {
         timing(
           'runWithFallback start model=%s routerId=%s apiType=%s options=%d traceId=%s',
           model,
@@ -664,7 +664,7 @@ export const createRouterRuntime = ({
         });
 
         try {
-          if (this._id === 'lobehub') {
+          if (this._id === 'orvilo') {
             timing(
               'attempt request start model=%s attempt=%d/%d routerId=%s channelId=%s apiType=%s traceId=%s',
               model,
@@ -677,7 +677,7 @@ export const createRouterRuntime = ({
             );
           }
           const result = await requestHandler(runtime);
-          if (this._id === 'lobehub') {
+          if (this._id === 'orvilo') {
             timing(
               'attempt request success model=%s attempt=%d/%d routerId=%s channelId=%s apiType=%s durationMs=%d totalMs=%d traceId=%s',
               model,
@@ -744,7 +744,7 @@ export const createRouterRuntime = ({
           return result;
         } catch (error) {
           lastError = error;
-          if (this._id === 'lobehub') {
+          if (this._id === 'orvilo') {
             timing(
               'attempt request error model=%s attempt=%d/%d routerId=%s channelId=%s apiType=%s durationMs=%d totalMs=%d traceId=%s',
               model,
@@ -799,7 +799,7 @@ export const createRouterRuntime = ({
               optionIndex: index,
             });
 
-            if (this._id === 'lobehub') {
+            if (this._id === 'orvilo') {
               timing(
                 'shouldStopFallback done model=%s attempt=%d/%d durationMs=%d shouldStop=%s traceId=%s',
                 model,
@@ -847,7 +847,7 @@ export const createRouterRuntime = ({
         }
       }
 
-      if (this._id === 'lobehub') {
+      if (this._id === 'orvilo') {
         timing(
           'runWithFallback failed model=%s routerId=%s options=%d totalMs=%d traceId=%s',
           model,

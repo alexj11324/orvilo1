@@ -2,7 +2,7 @@ import type { RecentChannelHistory, RecentChannelTopic } from '@orvilo/prompts';
 
 import { MessageModel } from '@/database/models/message';
 import { TopicModel } from '@/database/models/topic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 /** Max characters kept per pre-injected text field, to bound the prompt size. */
 const TEXT_MAX_CHARS = 300;
@@ -37,7 +37,7 @@ const stripSpeakerTag = (text: string) => text.replace(/^\s*<speaker\b[^>]*\/>\s
  * surfaces.
  */
 export const buildRecentChannelHistory = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   workspaceId: string | undefined,
   { platformThreadId, topicLimit = 3 }: BuildRecentChannelHistoryParams,

@@ -27,7 +27,7 @@ const {
   }),
   mockAppEnv: {
     AGENT_GATEWAY_SERVICE_TOKEN: undefined as string | undefined,
-    AGENT_GATEWAY_URL: 'https://agent-gateway.lobehub.com',
+    AGENT_GATEWAY_URL: 'https://agent-gateway.aspectlylabs.com',
     enableQueueAgentRuntime: false,
   },
   mockGetAgentRuntimeRedisClient: vi.fn(),
@@ -110,7 +110,7 @@ describe('AgentRuntime factory', () => {
   describe('createStreamEventManager', () => {
     beforeEach(() => {
       mockAppEnv.AGENT_GATEWAY_SERVICE_TOKEN = undefined;
-      mockAppEnv.AGENT_GATEWAY_URL = 'https://agent-gateway.lobehub.com';
+      mockAppEnv.AGENT_GATEWAY_URL = 'https://agent-gateway.aspectlylabs.com';
     });
 
     it('prefers Redis-backed streams when Redis is available in local mode', () => {
@@ -142,7 +142,7 @@ describe('AgentRuntime factory', () => {
       expect(result.kind).toBe('gateway-stream-notifier');
       expect(result.inner).toEqual({ kind: 'redis-stream-event-manager' });
       expect(result.token).toBe('my-token');
-      expect(result.url).toBe('https://agent-gateway.lobehub.com');
+      expect(result.url).toBe('https://agent-gateway.aspectlylabs.com');
     });
 
     it('uses custom AGENT_GATEWAY_URL when set', () => {

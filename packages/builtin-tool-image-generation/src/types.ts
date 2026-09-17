@@ -1,7 +1,7 @@
 import type { AsyncTaskError, AsyncTaskStatus, Generation } from '@orvilo/types';
 import type { ModelParamsSchema, Pricing, RuntimeImageGenParams } from 'model-bank';
 
-export const ImageGenerationIdentifier = 'lobe-image-generation';
+export const ImageGenerationIdentifier = 'orvilo-image-generation';
 
 export const ImageGenerationApiName = {
   generateImage: 'generateImage',
@@ -36,7 +36,7 @@ export interface ListImageModelsParams {
    */
   limit?: number;
   /**
-   * Provider id, for example `lobehub`, `openai`, or `fal`.
+   * Provider id, for example `orvilo`, `openai`, or `fal`.
    */
   provider?: string;
 }
@@ -62,11 +62,11 @@ export interface GetImageModelParametersState {
 export interface GenerateImageParams {
   imageNum?: number;
   /**
-   * Single reference image URL. Use only URLs already accessible to LobeHub.
+   * Single reference image URL. Use only URLs already accessible to Orvilo.
    */
   imageUrl?: null | string;
   /**
-   * Multiple reference image URLs. Use only URLs already accessible to LobeHub.
+   * Multiple reference image URLs. Use only URLs already accessible to Orvilo.
    */
   imageUrls?: string[];
   model?: string;

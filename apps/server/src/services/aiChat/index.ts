@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { createTimingHelpers } from '@orvilo/utils';
 
 import { MessageModel } from '@/database/models/message';
@@ -6,7 +6,7 @@ import { TopicModel } from '@/database/models/topic';
 import { FileService } from '@/server/services/file';
 
 const { createPrefixedTimingContext, runTimedStage, toTimingContext } = createTimingHelpers(
-  'lobe-server:chat:lobehub:timing',
+  'orvilo-server:chat:orvilo:timing',
 );
 
 interface GetMessagesAndTopicsParams {
@@ -33,7 +33,7 @@ export class AiChatService {
   private fileService: FileService;
   private topicModel: TopicModel;
 
-  constructor(serverDB: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(serverDB: OrviloDatabase, userId: string, workspaceId?: string) {
     this.messageModel = new MessageModel(serverDB, userId, workspaceId);
     this.topicModel = new TopicModel(serverDB, userId, workspaceId);
     this.fileService = new FileService(serverDB, userId, workspaceId);

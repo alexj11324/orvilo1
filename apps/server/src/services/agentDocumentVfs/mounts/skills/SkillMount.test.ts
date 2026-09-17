@@ -10,13 +10,13 @@ describe('SkillMount', () => {
 
     const result = await service.get({
       agentId: 'agent-1',
-      path: './lobe/skills/builtin/skills/builtin-skill/SKILL.md',
+      path: './orvilo/skills/builtin/skills/builtin-skill/SKILL.md',
       topicId: 'topic-1',
     });
 
     expect(builtinProvider.get).toHaveBeenCalledWith({
       agentId: 'agent-1',
-      path: './lobe/skills/builtin/skills/builtin-skill/SKILL.md',
+      path: './orvilo/skills/builtin/skills/builtin-skill/SKILL.md',
       resolvedPath: {
         filePath: 'SKILL.md',
         namespace: 'builtin',
@@ -34,13 +34,13 @@ describe('SkillMount', () => {
 
     const result = await service.list({
       agentId: 'agent-1',
-      path: './lobe/skills/installed/active/skills',
+      path: './orvilo/skills/installed/active/skills',
       topicId: 'topic-2',
     });
 
     expect(installedProvider.list).toHaveBeenCalledWith({
       agentId: 'agent-1',
-      path: './lobe/skills/installed/active/skills',
+      path: './orvilo/skills/installed/active/skills',
       resolvedPath: {
         namespace: 'installed-active',
         relativePath: '',
@@ -52,7 +52,7 @@ describe('SkillMount', () => {
 
   it('creates agent skills through the writable provider', async () => {
     const agentProvider = {
-      create: vi.fn().mockResolvedValue({ path: './lobe/skills/agent/skills/a/SKILL.md' }),
+      create: vi.fn().mockResolvedValue({ path: './orvilo/skills/agent/skills/a/SKILL.md' }),
       delete: vi.fn(),
       get: vi.fn(),
       list: vi.fn(),
@@ -84,34 +84,34 @@ describe('SkillMount', () => {
       delete: vi.fn().mockResolvedValue(undefined),
       get: vi.fn(),
       list: vi.fn(),
-      update: vi.fn().mockResolvedValue({ path: './lobe/skills/agent/skills/a/SKILL.md' }),
+      update: vi.fn().mockResolvedValue({ path: './orvilo/skills/agent/skills/a/SKILL.md' }),
     };
     const service = new SkillMount({ agent: agentProvider } as any);
 
     const updateResult = await service.update({
       agentId: 'agent-1',
       content: '# Updated',
-      path: './lobe/skills/agent/skills/a/SKILL.md',
+      path: './orvilo/skills/agent/skills/a/SKILL.md',
       topicId: 'topic-1',
     });
     await service.delete({
       agentId: 'agent-1',
-      path: './lobe/skills/agent/skills/a/SKILL.md',
+      path: './orvilo/skills/agent/skills/a/SKILL.md',
       topicId: 'topic-1',
     });
 
     expect(agentProvider.update).toHaveBeenCalledWith({
       agentId: 'agent-1',
       content: '# Updated',
-      path: './lobe/skills/agent/skills/a/SKILL.md',
+      path: './orvilo/skills/agent/skills/a/SKILL.md',
       topicId: 'topic-1',
     });
     expect(agentProvider.delete).toHaveBeenCalledWith({
       agentId: 'agent-1',
-      path: './lobe/skills/agent/skills/a/SKILL.md',
+      path: './orvilo/skills/agent/skills/a/SKILL.md',
       topicId: 'topic-1',
     });
-    expect(updateResult.path).toBe('./lobe/skills/agent/skills/a/SKILL.md');
+    expect(updateResult.path).toBe('./orvilo/skills/agent/skills/a/SKILL.md');
   });
 
   it('rejects write operations for non-writable namespaces', async () => {
@@ -122,7 +122,7 @@ describe('SkillMount', () => {
       service.update({
         agentId: 'agent-1',
         content: '# Updated',
-        path: './lobe/skills/builtin/skills/a/SKILL.md',
+        path: './orvilo/skills/builtin/skills/a/SKILL.md',
       }),
     ).rejects.toThrow('Namespace "builtin" is not writable');
   });

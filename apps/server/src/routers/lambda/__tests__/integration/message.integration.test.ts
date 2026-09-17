@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { messages, sessions, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
@@ -20,7 +20,7 @@ vi.mock('@/server/services/file', () => ({
 }));
 
 // We need to mock getServerDB to return our test database instance
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -36,7 +36,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
  * 3. Verify database constraints and associations
  */
 describe('Message Router Integration Tests', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let userId: string;
   let testSessionId: string;
   let testTopicId: string;

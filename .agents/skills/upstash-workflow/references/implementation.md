@@ -19,7 +19,7 @@ Full code templates for the 3-layer architecture. Read this when actually writin
 import { Client } from '@upstash/workflow';
 import debug from 'debug';
 
-const log = debug('lobe-server:workflows:{workflow-name}');
+const log = debug('orvilo-server:workflows:{workflow-name}');
 
 // Workflow paths
 const WORKFLOW_PATHS = {

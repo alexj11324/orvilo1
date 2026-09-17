@@ -28,7 +28,7 @@ function createHarness() {
   const daemon = {
     connect: vi.fn().mockResolvedValue(connection),
     connectionOptions: {
-      endpoint: 'unix:///tmp/lobehub-auv.sock',
+      endpoint: 'unix:///tmp/orvilo-auv.sock',
       local: true,
       transport: 'unix',
     },
@@ -46,14 +46,14 @@ function createHarness() {
     startAuv: vi.fn().mockResolvedValue(daemon),
   } as unknown as AuvSdkRuntime;
   const app = {
-    appStoragePath: '/tmp/lobehub-storage',
+    appStoragePath: '/tmp/orvilo-storage',
   } as unknown as App;
   const ipcCleanup = vi.fn().mockResolvedValue(undefined);
-  const resolveBinaryPath = vi.fn().mockResolvedValue('/opt/lobehub/bin/auv');
+  const resolveBinaryPath = vi.fn().mockResolvedValue('/opt/orvilo/bin/auv');
   const runCli = vi.fn().mockResolvedValue({
     stderr: '',
     stdout: JSON.stringify({
-      artifacts: [{ file_path: '/tmp/lobehub-storage/auv/runs/capture.png' }],
+      artifacts: [{ file_path: '/tmp/orvilo-storage/auv/runs/capture.png' }],
       command_id: 'display.capture',
       status: 'completed',
     }),
@@ -84,10 +84,10 @@ describe('AuvService', () => {
 
     expect(resolveBinaryPath).toHaveBeenCalledOnce();
     expect(sdk.startAuv).toHaveBeenCalledWith({
-      binaryPath: '/opt/lobehub/bin/auv',
+      binaryPath: '/opt/orvilo/bin/auv',
       listeners: ['unix:///private/auv/session.sock'],
       noDiscovery: true,
-      storeRoot: '/tmp/lobehub-storage/auv/store',
+      storeRoot: '/tmp/orvilo-storage/auv/store',
     });
     expect(daemon.connect).toHaveBeenCalledOnce();
     expect(client.health.check).toHaveBeenCalledOnce();
@@ -182,22 +182,21 @@ describe('AuvService', () => {
 
     expect(runCli).toHaveBeenCalledWith({
       argv: ['invoke', 'display.capture', '--json'],
-      binaryPath: '/opt/lobehub/bin/auv',
+      binaryPath: '/opt/orvilo/bin/auv',
       endpoint: 'unix:///private/auv/session.sock',
-      storeRoot: '/tmp/lobehub-storage/auv/runs',
+      storeRoot: '/tmp/orvilo-storage/auv/runs',
     });
     expect(result).toEqual({
       argv: ['invoke', 'display.capture'],
       exitCode: 0,
       output: {
-        artifacts: [{ file_path: '/tmp/lobehub-storage/auv/runs/capture.png' }],
+        artifacts: [{ file_path: '/tmp/orvilo-storage/auv/runs/capture.png' }],
         command_id: 'display.capture',
         status: 'completed',
       },
     });
   });
 
-  // https://github.com/lobehub/lobehub/pull/19051
   it('preserves structured CLI failure output across the IPC boundary', async () => {
     const { runCli, service } = createHarness();
     const failure = {
@@ -246,7 +245,7 @@ describe('AuvService', () => {
     [{ argv: ['serve', '--help'] }, 'Only "auv invoke" commands are allowed'],
     [
       { argv: ['invoke', 'display.capture', '--store-root', '/tmp/other'] },
-      'AUV --store-root is managed by LobeHub',
+      'AUV --store-root is managed by Orvilo',
     ],
   ])('rejects unsafe CLI argv before starting AUV', async (params, message) => {
     const { runCli, sdk, service } = createHarness();

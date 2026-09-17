@@ -1,7 +1,7 @@
 import {
-  LobeActivatorInspectors,
-  LobeActivatorManifest,
-  LobeActivatorRenders,
+  OrviloActivatorInspectors,
+  OrviloActivatorManifest,
+  OrviloActivatorRenders,
 } from '@orvilo/builtin-tool-activator/client';
 import {
   AgentBuilderInspectors,
@@ -75,13 +75,6 @@ import {
   KnowledgeBaseRenders,
 } from '@orvilo/builtin-tool-knowledge-base/client';
 import {
-  LobeAgentInspectors,
-  LobeAgentInterventions,
-  LobeAgentManifest,
-  LobeAgentRenders,
-  LobeAgentStreamings,
-} from '@orvilo/builtin-tool-lobe-agent/client';
-import {
   LocalSystemApiName,
   LocalSystemIdentifier,
   LocalSystemInspectors,
@@ -106,6 +99,13 @@ import {
   MessageRenders,
   MessageStreamings,
 } from '@orvilo/builtin-tool-message/client';
+import {
+  OrviloAgentInspectors,
+  OrviloAgentInterventions,
+  OrviloAgentManifest,
+  OrviloAgentRenders,
+  OrviloAgentStreamings,
+} from '@orvilo/builtin-tool-orvilo-agent/client';
 import {
   PageAgentInspectors,
   PageAgentManifest,
@@ -195,13 +195,13 @@ const KIMI_CODE_IDENTIFIER = 'kimi-code';
 
 const heterogeneousCliInspectors: Record<string, BuiltinInspector> = {
   bash: createRunCommandInspector(
-    'builtins.lobe-local-system.apiName.runCommand',
+    'builtins.orvilo-local-system.apiName.runCommand',
   ) as BuiltinInspector,
   read: createReadLocalFileInspector(
-    'builtins.lobe-local-system.apiName.readFile',
+    'builtins.orvilo-local-system.apiName.readFile',
   ) as BuiltinInspector,
   write: createWriteLocalFileInspector(
-    'builtins.lobe-local-system.apiName.writeFile',
+    'builtins.orvilo-local-system.apiName.writeFile',
   ) as BuiltinInspector,
 };
 
@@ -242,7 +242,7 @@ export const registerBuiltinToolSurfaces = (): void => {
     [GoalManifest.identifier]: GoalRenders as Record<string, BuiltinRender>,
     [ImageGenerationManifest.identifier]: ImageGenerationRenders as Record<string, BuiltinRender>,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseRenders as Record<string, BuiltinRender>,
-    [LobeAgentManifest.identifier]: LobeAgentRenders as Record<string, BuiltinRender>,
+    [OrviloAgentManifest.identifier]: OrviloAgentRenders as Record<string, BuiltinRender>,
     [BrowserManifest.identifier]: BrowserRenders as Record<string, BuiltinRender>,
     [LocalSystemManifest.identifier]: LocalSystemRenders as Record<string, BuiltinRender>,
     [MemoryManifest.identifier]: MemoryRenders as Record<string, BuiltinRender>,
@@ -254,7 +254,7 @@ export const registerBuiltinToolSurfaces = (): void => {
     [SkillsManifest.identifier]: SkillsRenders as Record<string, BuiltinRender>,
     [TaskManifest.identifier]: TaskRenders as Record<string, BuiltinRender>,
     [UserInteractionIdentifier]: UserInteractionRenders as Record<string, BuiltinRender>,
-    [LobeActivatorManifest.identifier]: LobeActivatorRenders as Record<string, BuiltinRender>,
+    [OrviloActivatorManifest.identifier]: OrviloActivatorRenders as Record<string, BuiltinRender>,
     [WebBrowsingManifest.identifier]: WebBrowsingRenders as Record<string, BuiltinRender>,
     [WebOnboardingManifest.identifier]: WebOnboardingRenders as Record<string, BuiltinRender>,
     [OPENCODE_IDENTIFIER]: heterogeneousCliRenders,
@@ -271,8 +271,8 @@ export const registerBuiltinToolSurfaces = (): void => {
   registerBuiltinInspectors({
     [AuvIdentifier]: AuvInspectors as Record<string, BuiltinInspector>,
     // Read-only alias for messages recorded by the original private desktop PR.
-    // New manifests and execution routes only advertise lobe-computer-use.
-    'lobe-auv': AuvInspectors as Record<string, BuiltinInspector>,
+    // New manifests and execution routes only advertise orvilo-computer-use.
+    'orvilo-auv': AuvInspectors as Record<string, BuiltinInspector>,
     [AgentBuilderManifest.identifier]: AgentBuilderInspectors as Record<string, BuiltinInspector>,
     [AgentDocumentsManifest.identifier]: AgentDocumentsInspectors as Record<
       string,
@@ -306,14 +306,17 @@ export const registerBuiltinToolSurfaces = (): void => {
       BuiltinInspector
     >,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseInspectors as Record<string, BuiltinInspector>,
-    [LobeAgentManifest.identifier]: LobeAgentInspectors as Record<string, BuiltinInspector>,
+    [OrviloAgentManifest.identifier]: OrviloAgentInspectors as Record<string, BuiltinInspector>,
     [BrowserManifest.identifier]: BrowserInspectors as Record<string, BuiltinInspector>,
     [LocalSystemManifest.identifier]: LocalSystemInspectors as Record<string, BuiltinInspector>,
     [MemoryManifest.identifier]: MemoryInspectors as Record<string, BuiltinInspector>,
     [MessageManifest.identifier]: MessageInspectors as Record<string, BuiltinInspector>,
     [PageAgentManifest.identifier]: PageAgentInspectors as Record<string, BuiltinInspector>,
     [RemoteDeviceManifest.identifier]: RemoteDeviceInspectors as Record<string, BuiltinInspector>,
-    [LobeActivatorManifest.identifier]: LobeActivatorInspectors as Record<string, BuiltinInspector>,
+    [OrviloActivatorManifest.identifier]: OrviloActivatorInspectors as Record<
+      string,
+      BuiltinInspector
+    >,
     [selfFeedbackIntentManifest.identifier]: SelfFeedbackIntentInspectors as Record<
       string,
       BuiltinInspector
@@ -354,7 +357,7 @@ export const registerBuiltinToolSurfaces = (): void => {
       string,
       BuiltinStreaming
     >,
-    [LobeAgentManifest.identifier]: LobeAgentStreamings as Record<string, BuiltinStreaming>,
+    [OrviloAgentManifest.identifier]: OrviloAgentStreamings as Record<string, BuiltinStreaming>,
     [LocalSystemManifest.identifier]: LocalSystemStreamings as Record<string, BuiltinStreaming>,
     [MemoryManifest.identifier]: MemoryStreamings as Record<string, BuiltinStreaming>,
     [MessageManifest.identifier]: MessageStreamings as Record<string, BuiltinStreaming>,
@@ -387,7 +390,10 @@ export const registerBuiltinToolSurfaces = (): void => {
       BuiltinIntervention
     >,
     [GoalManifest.identifier]: GoalInterventions as Record<string, BuiltinIntervention>,
-    [LobeAgentManifest.identifier]: LobeAgentInterventions as Record<string, BuiltinIntervention>,
+    [OrviloAgentManifest.identifier]: OrviloAgentInterventions as Record<
+      string,
+      BuiltinIntervention
+    >,
     [LocalSystemIdentifier]: LocalSystemInterventions as Record<string, BuiltinIntervention>,
     [MemoryManifest.identifier]: MemoryInterventions as Record<string, BuiltinIntervention>,
     [MessageManifest.identifier]: MessageInterventions as Record<string, BuiltinIntervention>,

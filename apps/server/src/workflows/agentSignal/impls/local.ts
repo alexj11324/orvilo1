@@ -2,7 +2,7 @@ import debug from 'debug';
 
 import type { AgentSignalWorkflowRunPayload } from '../types';
 
-const log = debug('lobe-server:workflows:agent-signal');
+const log = debug('orvilo-server:workflows:agent-signal');
 const localRunQueues = new Map<string, Promise<void>>();
 
 const deferLocalRun = () =>

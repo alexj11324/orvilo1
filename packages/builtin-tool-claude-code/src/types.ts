@@ -25,7 +25,7 @@ export enum ClaudeCodeApiName {
   Agent = 'Agent',
   /**
    * Synthetic apiName the adapter rewrites the local
-   * `mcp__lobe_cc__ask_user_question` MCP tool to. Routes the dedicated
+   * `mcp__orvilo_cc__ask_user_question` MCP tool to. Routes the dedicated
    * intervention UI for CC's clarifying-question flow (); not
    * something CC's CLI emits directly.
    */
@@ -87,7 +87,7 @@ export enum ClaudeCodeApiName {
 
 /**
  * Status of a single todo item in a `TodoWrite` tool_use.
- * Matches Claude Code's native schema — do not reuse lobe-agent's `TodoStatus`,
+ * Matches Claude Code's native schema — do not reuse orvilo-agent's `TodoStatus`,
  * which has a different vocabulary (`todo` / `processing`).
  */
 export type ClaudeCodeTodoStatus = 'pending' | 'in_progress' | 'completed';
@@ -281,7 +281,7 @@ export interface SendMessageResult {
 
 /**
  * AskUserQuestion data model now lives in `@orvilo/shared-tool-ui/ask-user`
- * and is consumed identically by the builtin `user-interaction` / `lobe-agent`
+ * and is consumed identically by the builtin `user-interaction` / `orvilo-agent`
  * surfaces. Re-exported here so CC's existing import sites keep resolving.
  */
 export type {

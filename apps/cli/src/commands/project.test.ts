@@ -58,12 +58,12 @@ describe('project command', () => {
       '--name',
       'Apollo',
       '--identifier',
-      'LOBE',
+      'ORVILO',
       '--visibility',
       'private',
     ]);
     expect(mockClient.project.create.mutate).toHaveBeenCalledWith({
-      identifier: 'LOBE',
+      identifier: 'ORVILO',
       name: 'Apollo',
       visibility: 'private',
     });
@@ -94,7 +94,7 @@ describe('project command', () => {
 
   it('creates a task directly in the project', async () => {
     mockResolveWorkspaceId.mockReturnValue('ws-1');
-    mockClient.workspace.getById.query.mockResolvedValue({ id: 'ws-1', slug: 'lobehub' });
+    mockClient.workspace.getById.query.mockResolvedValue({ id: 'ws-1', slug: 'orvilo' });
     mockClient.task.create.mutate.mockResolvedValue({
       data: { identifier: 'T-1' },
     });
@@ -118,7 +118,7 @@ describe('project command', () => {
       projectId: 'prj_1',
     });
     expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('https://app.example.com/lobehub/task/T-1'),
+      expect.stringContaining('https://app.example.com/orvilo/task/T-1'),
     );
   });
 

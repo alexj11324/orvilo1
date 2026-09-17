@@ -109,10 +109,10 @@ export interface GlobalServerConfig {
    * Whether Gateway mode is available for app-level agent execution.
    */
   enableGatewayMode?: boolean;
-  enableLobehubSkill?: boolean;
   enableMagicLink?: boolean;
   enableMarketTrustedClient?: boolean;
   enableMultimodalUnderstanding?: boolean;
+  enableOrviloSkill?: boolean;
   enableUploadFileToServer?: boolean;
   memory?: GlobalMemoryConfig;
   multimodalUnderstanding?: MultimodalUnderstandingConfig;

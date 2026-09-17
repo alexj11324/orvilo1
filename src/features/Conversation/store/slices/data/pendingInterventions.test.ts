@@ -20,7 +20,7 @@ const toolMessage = (
       apiName: 'createPlan',
       arguments: '{}',
       id: toolCallId,
-      identifier: 'lobe-agent',
+      identifier: 'orvilo-agent',
       type: 'builtin',
     },
     pluginIntervention: { ...identity, status: 'pending' },
@@ -36,7 +36,7 @@ const assistantGroup = (id: string, toolCallIds: string[]): UIChatMessage =>
           apiName: 'createPlan',
           arguments: '{}',
           id: toolCallId,
-          identifier: 'lobe-agent',
+          identifier: 'orvilo-agent',
           intervention: { status: 'pending' },
           result_msg_id: `msg-${toolCallId}`,
           type: 'builtin',
@@ -156,7 +156,7 @@ describe('canApproveInterventionBatch', () => {
   it('allows a multi-item batch only when every member is binary', () => {
     expect(
       canApproveInterventionBatch([
-        pending('lobe-agent', 'createPlan', 1),
+        pending('orvilo-agent', 'createPlan', 1),
         pending('filesystem', 'writeFile', 2),
       ]),
     ).toBe(true);
@@ -166,15 +166,15 @@ describe('canApproveInterventionBatch', () => {
     [
       'question',
       [
-        pending('lobe-user-interaction', 'askUserQuestion', 1),
-        pending('lobe-user-interaction', 'askUserQuestion', 2),
+        pending('orvilo-user-interaction', 'askUserQuestion', 1),
+        pending('orvilo-user-interaction', 'askUserQuestion', 2),
       ],
     ],
     [
       'marketplace',
       [
-        pending('lobe-web-onboarding', 'showAgentMarketplace', 1),
-        pending('lobe-web-onboarding', 'showAgentMarketplace', 2),
+        pending('orvilo-web-onboarding', 'showAgentMarketplace', 1),
+        pending('orvilo-web-onboarding', 'showAgentMarketplace', 2),
       ],
     ],
     ['heterogeneous', [pending('claude-code', 'permission', 1), pending('qoder', 'plan', 2)]],
@@ -186,7 +186,7 @@ describe('canApproveInterventionBatch', () => {
       'mixed',
       [
         pending('filesystem', 'writeFile', 1),
-        pending('lobe-user-interaction', 'askUserQuestion', 2),
+        pending('orvilo-user-interaction', 'askUserQuestion', 2),
       ],
     ],
   ])('rejects a %s batch', (_name, members) => {

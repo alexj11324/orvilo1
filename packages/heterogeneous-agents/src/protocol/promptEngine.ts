@@ -32,7 +32,7 @@ const defaultContextProviders = [topicReferenceGuidanceProvider];
 
 /**
  * Builds the semantic prompt shared by every heterogeneous-agent transport.
- * Providers add LobeHub context before the user message; CLI-specific wire
+ * Providers add Orvilo context before the user message; CLI-specific wire
  * serialization remains the responsibility of `buildAgentInput`.
  */
 export class HeterogeneousPromptEngine {

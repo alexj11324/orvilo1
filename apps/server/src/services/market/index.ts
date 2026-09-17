@@ -1,5 +1,5 @@
 import { MarketSDK, type OrgRef, orgRefToPathSegment } from '@lobehub/market-sdk';
-import { type LobeToolManifest } from '@orvilo/context-engine';
+import { type OrviloToolManifest } from '@orvilo/context-engine';
 import { CacheRevalidate, CacheTag } from '@orvilo/types';
 import debug from 'debug';
 import { type NextRequest } from 'next/server';
@@ -10,11 +10,11 @@ import { getToolAccessDeniedError } from '@/server/services/toolExecution/errorC
 
 import { listSkillToolsWithLiveFallback } from './listSkillToolsWithLiveFallback';
 
-const log = debug('lobe-server:market-service');
+const log = debug('orvilo-server:market-service');
 
-const MARKET_BASE_URL = process.env.MARKET_BASE_URL || 'https://market.lobehub.com';
-export const LOBEHUB_SKILL_DISCOVERY_TIMEOUT_MS = 3_000;
-export const LOBEHUB_SKILL_EXECUTION_TIMEOUT_MS = 120_000;
+const MARKET_BASE_URL = process.env.MARKET_BASE_URL || 'https://market.aspectlylabs.com';
+export const ORVILO_SKILL_DISCOVERY_TIMEOUT_MS = 3_000;
+export const ORVILO_SKILL_EXECUTION_TIMEOUT_MS = 120_000;
 
 // ============================== Helper Functions ==============================
 
@@ -29,7 +29,7 @@ export function extractAccessToken(req: NextRequest): string | undefined {
   return undefined;
 }
 
-export interface LobehubSkillExecuteParams {
+export interface OrviloSkillExecuteParams {
   args: Record<string, any>;
   context?: {
     topicId?: string;
@@ -39,7 +39,7 @@ export interface LobehubSkillExecuteParams {
   toolName: string;
 }
 
-export interface LobehubSkillExecuteResult {
+export interface OrviloSkillExecuteResult {
   content: string;
   error?: { code: string; message?: string };
   success: boolean;
@@ -142,8 +142,8 @@ export class MarketService {
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...(ownerAccountId === undefined
         ? {}
-        : { 'x-lobe-owner-account-id': String(ownerAccountId) }),
-      ...(resolvedTrustedClientToken ? { 'x-lobe-trust-token': resolvedTrustedClientToken } : {}),
+        : { 'x-orvilo-owner-account-id': String(ownerAccountId) }),
+      ...(resolvedTrustedClientToken ? { 'x-orvilo-trust-token': resolvedTrustedClientToken } : {}),
     };
 
     this.market = new MarketSDK({
@@ -213,7 +213,7 @@ export class MarketService {
       if (parameter.in === 'query') {
         url.searchParams.set(parameter.name, String(parameter.value));
       } else if (
-        !['authorization', 'x-lobe-owner-account-id', 'x-lobe-trust-token'].includes(
+        !['authorization', 'x-orvilo-owner-account-id', 'x-orvilo-trust-token'].includes(
           parameter.name.toLowerCase(),
         )
       ) {
@@ -230,12 +230,12 @@ export class MarketService {
     // provider's `content-encoding` header after its upstream body has already been decompressed.
     // This makes Node surface `terminated` and Bun surface `ZlibError` while reading valid 200s.
     // Source/context: local GitHub proxy verification on 2026-08-30 against
-    // `https://market.lobehub.com/api/v1/proxy/github/*`.
+    // `https://market.aspectlylabs.com/api/v1/proxy/github/*`.
     // Remove once Market strips stale upstream encoding headers or streams the encoded body intact.
     forwardedHeaders['Accept-Encoding'] = 'identity';
 
     // Market owns and injects the provider token. This request carries only the
-    // authenticated LobeHub caller identity plus the provider request payload.
+    // authenticated Orvilo caller identity plus the provider request payload.
     if (
       body !== undefined &&
       !Object.keys(forwardedHeaders).some((key) => key.toLowerCase() === 'content-type')
@@ -254,7 +254,7 @@ export class MarketService {
   // ============================== Feedback Methods ==============================
 
   /**
-   * Submit feedback to LobeHub
+   * Submit feedback to Orvilo
    */
   async submitFeedback(params: {
     clientInfo?: {
@@ -322,7 +322,7 @@ export class MarketService {
    * Get user info with trusted client token (server-side)
    */
   async getUserInfoWithTrustedClient() {
-    const userInfoUrl = `${MARKET_BASE_URL}/lobehub-oidc/userinfo`;
+    const userInfoUrl = `${MARKET_BASE_URL}/orvilo-oidc/userinfo`;
     const response = await fetch(userInfoUrl, {
       // @ts-ignore
       headers: this.market.headers,
@@ -535,7 +535,7 @@ export class MarketService {
   // ============================== Skills Methods (using SDK) ==============================
 
   /**
-   * Search for skills in the LobeHub Market
+   * Search for skills in the Orvilo Market
    */
   async searchSkill(params: {
     category?: string;
@@ -640,22 +640,22 @@ export class MarketService {
   }
 
   /**
-   * Execute a LobeHub Skill tool
+   * Execute a Orvilo Skill tool
    * @param params - The skill execution parameters (provider, toolName, args)
    * @returns Execution result with content and success status
    */
-  async executeLobehubSkill(params: LobehubSkillExecuteParams): Promise<LobehubSkillExecuteResult> {
+  async executeOrviloSkill(params: OrviloSkillExecuteParams): Promise<OrviloSkillExecuteResult> {
     const { provider, toolName, args, context } = params;
-    const timeoutMs = params.timeoutMs ?? LOBEHUB_SKILL_EXECUTION_TIMEOUT_MS;
+    const timeoutMs = params.timeoutMs ?? ORVILO_SKILL_EXECUTION_TIMEOUT_MS;
     const abortController = new AbortController();
     let timeout: ReturnType<typeof setTimeout> | undefined;
 
-    log('executeLobehubSkill: %s/%s with args: %O, context: %O', provider, toolName, args, context);
+    log('executeOrviloSkill: %s/%s with args: %O, context: %O', provider, toolName, args, context);
 
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeout = setTimeout(() => {
-          const error = new Error(`LobeHub Skill execution timed out after ${timeoutMs}ms`);
+          const error = new Error(`Orvilo Skill execution timed out after ${timeoutMs}ms`);
           error.name = 'TimeoutError';
           reject(error);
           abortController.abort(error);
@@ -675,7 +675,7 @@ export class MarketService {
         timeoutPromise,
       ]);
 
-      log('executeLobehubSkill: response: %O', response);
+      log('executeOrviloSkill: response: %O', response);
 
       if (!response.success) {
         const responseError = (response as any).error;
@@ -687,7 +687,7 @@ export class MarketService {
           dataMessage = JSON.stringify(response.data);
         }
 
-        const message = responseError?.message || dataMessage || 'LobeHub Skill call failed';
+        const message = responseError?.message || dataMessage || 'Orvilo Skill call failed';
         const denial = getToolAccessDeniedError(responseError, message);
         if (denial)
           return { content: JSON.stringify({ error: denial }), error: denial, success: false };
@@ -695,7 +695,7 @@ export class MarketService {
         return {
           content: message,
           error: {
-            code: responseError?.code || 'LOBEHUB_SKILL_ERROR',
+            code: responseError?.code || 'ORVILO_SKILL_ERROR',
             message,
           },
           success: false,
@@ -708,12 +708,12 @@ export class MarketService {
       };
     } catch (error) {
       const err = error as Error;
-      console.error('MarketService.executeLobehubSkill error %s/%s: %O', provider, toolName, err);
+      console.error('MarketService.executeOrviloSkill error %s/%s: %O', provider, toolName, err);
 
       if (err.name === 'TimeoutError') {
         return {
           content: err.message,
-          error: { code: 'LOBEHUB_SKILL_TIMEOUT', message: err.message },
+          error: { code: 'ORVILO_SKILL_TIMEOUT', message: err.message },
           success: false,
         };
       }
@@ -731,7 +731,7 @@ export class MarketService {
       return {
         content,
         error: {
-          code: skillError?.code || 'LOBEHUB_SKILL_ERROR',
+          code: skillError?.code || 'ORVILO_SKILL_ERROR',
           message: skillError?.message || err.message,
         },
         success: false,
@@ -742,33 +742,33 @@ export class MarketService {
   }
 
   /**
-   * Fetch LobeHub Skills manifests from Market API
+   * Fetch Orvilo Skills manifests from Market API
    * Gets user's connected skills and builds tool manifests for agent execution
    *
    * @returns Array of tool manifests for connected skills
    */
-  async getLobehubSkillManifests(): Promise<LobeToolManifest[]> {
+  async getOrviloSkillManifests(): Promise<OrviloToolManifest[]> {
     try {
       // 1. Get user's connected skills
       const { connections } = await this.market.connect.listConnections({
-        signal: AbortSignal.timeout(LOBEHUB_SKILL_DISCOVERY_TIMEOUT_MS),
+        signal: AbortSignal.timeout(ORVILO_SKILL_DISCOVERY_TIMEOUT_MS),
       });
       if (!connections || connections.length === 0) {
-        log('getLobehubSkillManifests: no connected skills found');
+        log('getOrviloSkillManifests: no connected skills found');
         return [];
       }
 
-      log('getLobehubSkillManifests: found %d connected skills', connections.length);
+      log('getOrviloSkillManifests: found %d connected skills', connections.length);
 
       // 2. Fetch tools for each connection and build manifests
-      const manifests: LobeToolManifest[] = [];
+      const manifests: OrviloToolManifest[] = [];
 
       for (const connection of connections) {
         try {
           // Connection returns providerId (e.g., 'twitter', 'linear'), not numeric id
           const providerId = (connection as any).providerId;
           if (!providerId) {
-            log('getLobehubSkillManifests: connection missing providerId: %O', connection);
+            log('getOrviloSkillManifests: connection missing providerId: %O', connection);
             continue;
           }
           const icon = (connection as any).icon;
@@ -776,8 +776,8 @@ export class MarketService {
           // Look up the provider's display name from the static registry.
           // connection.providerName is the *user's* display name on that provider,
           // NOT the provider's own name (e.g., "LiJian" instead of "Linear").
-          // Static label map — avoids importing LOBEHUB_SKILL_PROVIDERS which
-          // pulls in react-icons (client-side only). Keep in sync with lobehubSkill.ts.
+          // Static label map — avoids importing ORVILO_SKILL_PROVIDERS which
+          // pulls in react-icons (client-side only). Keep in sync with orviloSkill.ts.
           const PROVIDER_LABELS: Record<string, string> = {
             github: 'GitHub',
             linear: 'Linear',
@@ -792,7 +792,7 @@ export class MarketService {
           const { tools, instruction } = await this.listSkillTools(providerId);
           if (!tools || tools.length === 0) continue;
 
-          const manifest: LobeToolManifest = {
+          const manifest: OrviloToolManifest = {
             api: tools.map((tool: any) => ({
               description: tool.description || '',
               name: tool.name,
@@ -801,8 +801,8 @@ export class MarketService {
             identifier: providerId,
             meta: {
               avatar: icon || '🔗',
-              description: `LobeHub Skill: ${providerLabel}`,
-              tags: ['lobehub-skill', providerId],
+              description: `Orvilo Skill: ${providerLabel}`,
+              tags: ['orvilo-skill', providerId],
               title: providerLabel,
             },
             systemRole: instruction || undefined,
@@ -811,18 +811,18 @@ export class MarketService {
 
           manifests.push(manifest);
           log(
-            'getLobehubSkillManifests: built manifest for %s with %d tools',
+            'getOrviloSkillManifests: built manifest for %s with %d tools',
             providerId,
             tools.length,
           );
         } catch (error) {
-          log('getLobehubSkillManifests: failed to fetch tools for connection: %O', error);
+          log('getOrviloSkillManifests: failed to fetch tools for connection: %O', error);
         }
       }
 
       return manifests;
     } catch (error) {
-      log('getLobehubSkillManifests: error fetching skills: %O', error);
+      log('getOrviloSkillManifests: error fetching skills: %O', error);
       return [];
     }
   }
@@ -875,7 +875,7 @@ export class MarketService {
     formData.append('file', blob, fileName);
 
     // Extract only auth headers (not Content-Type, which would break multipart/form-data).
-    // We deliberately also strip `x-lobe-owner-account-id` for the org path —
+    // We deliberately also strip `x-orvilo-owner-account-id` for the org path —
     // ownership is in the URL now, the header is ignored by the org route.
     // @ts-ignore - market.headers contains auth headers
     const sdkHeaders = this.market.headers as Record<string, string>;
@@ -883,7 +883,7 @@ export class MarketService {
     for (const [key, value] of Object.entries(sdkHeaders)) {
       const lower = key.toLowerCase();
       if (lower === 'content-type') continue;
-      if (lower === 'x-lobe-owner-account-id' && orgSegment !== undefined) continue;
+      if (lower === 'x-orvilo-owner-account-id' && orgSegment !== undefined) continue;
       authHeaders[key] = value;
     }
 

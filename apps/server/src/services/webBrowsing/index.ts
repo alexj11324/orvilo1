@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { Md5 } from 'ts-md5';
 
 import { DocumentModel } from '@/database/models/document';
@@ -37,14 +37,14 @@ const hashContent = (content: string): string => Md5.hashStr(content);
  * Single owner of "crawl a web page, persist it as a document" semantics.
  *
  * Both the server agent runtime (`serverRuntimes/webBrowsing.ts`) and the
- * client builtin-tool executor (`store/.../lobe-web-browsing.ts`) route
+ * client builtin-tool executor (`store/.../orvilo-web-browsing.ts`) route
  * through `upsertCrawledDocument`, so dedupe + content-hash short-circuit +
  * `document_histories` snapshot all live in one place. Splitting these
  * across two call sites previously caused (client path created a
  * fresh row every crawl while the server path was being patched to dedupe).
  */
 export class WebBrowsingDocumentService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
   private readonly documentModel: DocumentModel;
@@ -58,7 +58,7 @@ export class WebBrowsingDocumentService {
   private readonly callerAgentVisibility?: 'private' | 'public' | null;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     callerAgentVisibility?: 'private' | 'public' | null,

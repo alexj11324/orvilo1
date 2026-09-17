@@ -28,7 +28,7 @@ export const SaveUserQuestionInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-web-onboarding.apiName.saveUserQuestion')}
+          {t('builtins.orvilo-web-onboarding.apiName.saveUserQuestion')}
         </span>
       </div>
     );
@@ -37,7 +37,7 @@ export const SaveUserQuestionInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-web-onboarding.apiName.saveUserQuestion')}
+        {t('builtins.orvilo-web-onboarding.apiName.saveUserQuestion')}
       </span>
       {(agentName || agentEmoji) && (
         <span className={styles.chip}>
@@ -48,7 +48,7 @@ export const SaveUserQuestionInspector = memo<
       {fullName && <span className={styles.chip}>{fullName}</span>}
       {interestsCount > 0 && (
         <span className={styles.meta}>
-          {t('builtins.lobe-web-onboarding.inspector.interests', { count: interestsCount })}
+          {t('builtins.orvilo-web-onboarding.inspector.interests', { count: interestsCount })}
         </span>
       )}
     </div>

@@ -81,7 +81,7 @@ const interruptGatewayTaskOrThrow = async (
  * When the agent runs against the local machine, resolve this desktop's
  * own gateway deviceId so it can be passed as the run's routing `deviceId` and
  * `localDeviceId` capability hint. The server then presets `activeDeviceId`,
- * injects `lobe-local-system` into the first LLM payload, and advertises direct
+ * injects `orvilo-local-system` into the first LLM payload, and advertises direct
  * image reads only when the routed device still matches this desktop. This
  * skips the extra `activateDevice` round-trip the model is otherwise forced to
  * make whenever more than one device is online (with a single device the
@@ -202,7 +202,7 @@ export interface ConnectGatewayParams {
    */
   agentShareId?: string;
   /**
-   * Gateway WebSocket URL (e.g. https://agent-gateway.lobehub.com)
+   * Gateway WebSocket URL (e.g. https://agent-gateway.aspectlylabs.com)
    */
   gatewayUrl: string;
   /**
@@ -564,7 +564,7 @@ export class GatewayActionImpl {
      */
     resumeApprovals?: ResumeApprovalParam[];
     /**
-     * Resume a paused op waiting on a human-intervention tool (e.g. lobe-agent
+     * Resume a paused op waiting on a human-intervention tool (e.g. orvilo-agent
      * `askUserQuestion`). Forwarded to `aiAgentService.execAgentTask` so the new
      * server-side op writes the human answer as the tool result and resumes from
      * `phase: 'tool_result'` WITHOUT re-executing the tool.

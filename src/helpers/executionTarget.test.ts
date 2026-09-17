@@ -1,4 +1,4 @@
-import type { LobeAgentAgencyConfig } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
@@ -16,40 +16,40 @@ import {
   resolveWorkspaceScoped,
 } from './executionTarget';
 
-const cfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({ ...over });
-const ampCfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({
+const cfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({ ...over });
+const ampCfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({
   heterogeneousProvider: { command: 'amp', type: 'amp' },
   ...over,
 });
-const codeBuddyCfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({
+const codeBuddyCfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({
   heterogeneousProvider: { command: 'codebuddy', type: 'codebuddy' },
   ...over,
 });
-const cursorCfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({
+const cursorCfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({
   heterogeneousProvider: { command: 'agent', type: 'cursor' },
   ...over,
 });
-const droidCfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({
+const droidCfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({
   heterogeneousProvider: { command: 'droid', type: 'droid' },
   ...over,
 });
-const kimiCodeCfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({
+const kimiCodeCfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({
   heterogeneousProvider: { command: 'kimi', type: 'kimi-code' },
   ...over,
 });
-const openCodeCfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({
+const openCodeCfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({
   heterogeneousProvider: { command: 'opencode', type: 'opencode' },
   ...over,
 });
-const piCfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({
+const piCfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({
   heterogeneousProvider: { command: 'pi', type: 'pi' },
   ...over,
 });
-const openClawCfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({
+const openClawCfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({
   heterogeneousProvider: { type: 'openclaw' },
   ...over,
 });
-const qoderCfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({
+const qoderCfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({
   heterogeneousProvider: { command: 'qodercli', type: 'qoder' },
   ...over,
 });
@@ -1108,7 +1108,7 @@ describe('resolveExecutionPlan', () => {
   });
 
   // Agent Share visitors: `canUseDevice` is always false and the creator may
-  // have granted `lobe-cloud-sandbox` — the grant is honoured via the sandbox
+  // have granted `orvilo-cloud-sandbox` — the grant is honoured via the sandbox
   // instead of being dropped with `none`.
   describe('sandboxFallback — device-denied runs resolve to the sandbox', () => {
     it('sends a denied device-capable target to the sandbox', () => {

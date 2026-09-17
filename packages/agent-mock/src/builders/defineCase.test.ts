@@ -25,7 +25,7 @@ describe('defineCase', () => {
       name: 'Tool only',
       steps: [
         toolStep({
-          identifier: 'lobe-todo-write',
+          identifier: 'orvilo-todo-write',
           apiName: 'addTodo',
           arguments: '{}',
           result: { success: true },

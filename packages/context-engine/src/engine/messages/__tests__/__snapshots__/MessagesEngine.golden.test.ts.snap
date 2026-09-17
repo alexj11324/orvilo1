@@ -24,7 +24,7 @@ exports[`MessagesEngine golden payloads > history truncation: historyCount actua
 exports[`MessagesEngine golden payloads > plain chat: system role + short history 1`] = `
 [
   {
-    "content": "You are LobeHub assistant. Answer concisely in the user language.",
+    "content": "You are Orvilo assistant. Answer concisely in the user language.",
     "role": "system",
   },
   {
@@ -45,7 +45,7 @@ exports[`MessagesEngine golden payloads > plain chat: system role + short histor
 exports[`MessagesEngine golden payloads > system prompt assembly stays inside its token budget 1`] = `
 [
   {
-    "content": "You are LobeHub assistant.",
+    "content": "You are Orvilo assistant.",
     "role": "system",
   },
   {
@@ -72,7 +72,7 @@ Redis is an in-memory data store.
 exports[`MessagesEngine golden payloads > tool round-trip: assistant tool_calls + tool result survive assembly intact 1`] = `
 [
   {
-    "content": "You are LobeHub assistant.",
+    "content": "You are Orvilo assistant.",
     "role": "system",
   },
   {
@@ -86,7 +86,7 @@ exports[`MessagesEngine golden payloads > tool round-trip: assistant tool_calls 
       {
         "function": {
           "arguments": "{"pattern":"TODO","path":"src"}",
-          "name": "lobe-local-system____grepContent",
+          "name": "orvilo-local-system____grepContent",
         },
         "id": "call_1",
         "type": "function",

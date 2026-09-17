@@ -5,11 +5,11 @@ import { importJWK, jwtVerify, SignJWT } from 'jose';
 
 import { authEnv } from '@/envs/auth';
 
-const log = debug('lobe-internal-jwt');
+const log = debug('orvilo-internal-jwt');
 
-const INTERNAL_JWT_PURPOSE = 'lobe-internal-call';
-export const HETERO_OPERATION_JWT_ISSUER = 'urn:lobehub:internal';
-export const HETERO_OPERATION_JWT_AUDIENCE = 'urn:lobehub:hetero-operation';
+const INTERNAL_JWT_PURPOSE = 'orvilo-internal-call';
+export const HETERO_OPERATION_JWT_ISSUER = 'urn:orvilo:internal';
+export const HETERO_OPERATION_JWT_AUDIENCE = 'urn:orvilo:hetero-operation';
 export const HETERO_OPERATION_JWT_PURPOSE = 'hetero-operation';
 
 export type HeteroOperationCapability =
@@ -90,7 +90,7 @@ const getVerificationKey = async () => {
 /**
  * Sign JWT for internal lambda → async calls
  * Uses JWKS private key with configurable expiration (default: 30s)
- * The JWT only proves the request is from lambda, payload is sent via LOBE_CHAT_AUTH_HEADER
+ * The JWT only proves the request is from lambda, payload is sent via ORVILO_AUTH_HEADER
  */
 export const signInternalJWT = async (): Promise<string> => {
   const { key, kid } = await getSigningKey();

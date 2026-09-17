@@ -6,7 +6,7 @@ import type { PipelineEntry } from './types';
  * Superprojects that mount this repo import this table for the mount and
  * provide their own table for their root.
  */
-export const lobehubPipelines: PipelineEntry[] = [
+export const orviloPipelines: PipelineEntry[] = [
   {
     exts: ['.md'],
     tools: [

@@ -415,9 +415,9 @@ export const documentRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       await assertContentsNotInRestrictedKnowledgeBase(ctx, [input.id]);
-      const lobeDocument = await ctx.documentService.parseDocument(input.id);
+      const orviloDocument = await ctx.documentService.parseDocument(input.id);
 
-      return lobeDocument;
+      return orviloDocument;
     }),
 
   parseFileContent: documentProcedure
@@ -430,9 +430,9 @@ export const documentRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       await assertContentsNotInRestrictedKnowledgeBase(ctx, [input.id]);
-      const lobeDocument = await ctx.documentService.parseFile(input.id);
+      const orviloDocument = await ctx.documentService.parseFile(input.id);
 
-      return lobeDocument;
+      return orviloDocument;
     }),
 
   queryDocuments: documentProcedure

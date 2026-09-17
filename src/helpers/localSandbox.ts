@@ -1,5 +1,5 @@
 import { isDesktop } from '@orvilo/const';
-import type { LobeAgentAgencyConfig } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { resolveAgentAgencyConfig } from '@orvilo/types';
 
 import { getRuntimeCanManageAgent } from '@/helpers/agentManagementAccess';
@@ -19,7 +19,7 @@ export interface ClientLocalSandboxDecision {
 
 const unfenced: ClientLocalSandboxDecision = { localSandbox: false, localSandboxNetwork: false };
 
-const isFenced = (agencyConfig: LobeAgentAgencyConfig | undefined): boolean =>
+const isFenced = (agencyConfig: OrviloAgentAgencyConfig | undefined): boolean =>
   isLocalSandboxEnabled(
     agencyConfig,
     resolveExecutionTarget(agencyConfig, {

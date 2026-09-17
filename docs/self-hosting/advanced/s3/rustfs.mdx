@@ -38,7 +38,7 @@ We need to configure an S3-compatible storage service in the server-side databas
   services:
       rustfs:
           image: rustfs/rustfs:latest
-          container_name: lobe-rustfs
+          container_name: orvilo-rustfs
           ports:
               - '9000:9000'
               - '9001:9001'
@@ -63,7 +63,7 @@ We need to configure an S3-compatible storage service in the server-side databas
 
   Open the RustFS WebUI (`http://localhost:9001/`) and you will be redirected to the login screen. Enter the username (`RUSTFS_ACCESS_KEY` in the `docker-compose.yml`) and password (`RUSTFS_SECRET_KEY` in the same file) to sign in.
 
-  Click `Object Storage` in the left sidebar, then the `Create Bucket` button in the top-right corner to create a new bucket. This example uses the name `lobe`. Leave Versioning and Object Lock disabled (default settings).
+  Click `Object Storage` in the left sidebar, then the `Create Bucket` button in the top-right corner to create a new bucket. This example uses the name `orvilo`. Leave Versioning and Object Lock disabled (default settings).
 
   <Image alt={"Create Bucket"} src={'/blog/assetsc958eae64465451c4374cdee8f6fd596.webp'} />
 
@@ -87,7 +87,7 @@ We need to configure an S3-compatible storage service in the server-side databas
         ],
         "NotAction": [],
         "Resource": [
-          "arn:aws:s3:::lobe/*"
+          "arn:aws:s3:::orvilo/*"
         ],
         "NotResource": [],
         "Condition": {}
@@ -116,25 +116,25 @@ We need to configure an S3-compatible storage service in the server-side databas
 
   You also need reverse-proxy rules so that RustFS is accessible from the LAN/public internet. Map the following ports to domains:
 
-  | Domain                    | Port   | Required |
-  | ------------------------- | ------ | -------- |
-  | `lobe-s3-api.example.com` | `9000` | Yes      |
-  | `lobe-s3-ui.example.com`  | `9001` |          |
+  | Domain                      | Port   | Required |
+  | --------------------------- | ------ | -------- |
+  | `orvilo-s3-api.example.com` | `9000` | Yes      |
+  | `orvilo-s3-ui.example.com`  | `9001` |          |
 
   After completing the reverse proxy, remember to configure the corresponding SSL certificate and enable HTTPS access.
 
   ### Set Environment Variables
 
-  Update the LobeHub `.env` file with the following environment variables to use RustFS as the S3 backend:
+  Update the Orvilo `.env` file with the following environment variables to use RustFS as the S3 backend:
 
   ```shell
   # RustFS Access Key / Secret Key
   S3_ACCESS_KEY_ID=<YOUR_ACCESS_KEY>
   S3_SECRET_ACCESS_KEY=<YOUR_SECRET_KEY>
   # RustFS API endpoint
-  S3_ENDPOINT=https://lobe-s3-api.example.com
+  S3_ENDPOINT=https://orvilo-s3-api.example.com
   # Bucket name
-  S3_BUCKET=lobe
+  S3_BUCKET=orvilo
   S3_ENABLE_PATH_STYLE=1
   ```
 </Steps>

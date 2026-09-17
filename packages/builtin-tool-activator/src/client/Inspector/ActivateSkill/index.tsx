@@ -18,16 +18,16 @@ import type { ActivateSkillParams, ActivateSkillSource, ActivateSkillState } fro
 const resolveLabel = (t: TFunction<'plugin'>, source: ActivateSkillSource | undefined): string => {
   switch (source) {
     case 'agent': {
-      return t('builtins.lobe-skills.apiName.activateAgentSkill');
+      return t('builtins.orvilo-skills.apiName.activateAgentSkill');
     }
     case 'device': {
-      return t('builtins.lobe-skills.apiName.activateDeviceSkill');
+      return t('builtins.orvilo-skills.apiName.activateDeviceSkill');
     }
     case 'project': {
-      return t('builtins.lobe-skills.apiName.activateProjectSkill');
+      return t('builtins.orvilo-skills.apiName.activateProjectSkill');
     }
     default: {
-      return t('builtins.lobe-skills.apiName.activateSkill');
+      return t('builtins.orvilo-skills.apiName.activateSkill');
     }
   }
 };

@@ -1,13 +1,13 @@
 import {
   type AiModelReasoningConfig,
   type AiProviderModelListItem,
-  type LobeDefaultAiModelListItem,
+  type OrviloDefaultAiModelListItem,
 } from 'model-bank';
 
 export interface AIModelsState {
   aiModelLoadingIds: string[];
   aiProviderModelList: AiProviderModelListItem[];
-  builtinAiModelList: LobeDefaultAiModelListItem[];
+  builtinAiModelList: OrviloDefaultAiModelListItem[];
   isAiModelListInit?: boolean;
   /**
    * The user's per-model-instance reasoning defaults, keyed by

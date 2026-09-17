@@ -1,7 +1,7 @@
 ---
 title: Configuring Upstash Redis Service
 description: >-
-  Step-by-step guide to configure Upstash Redis for LobeHub cache and session
+  Step-by-step guide to configure Upstash Redis for Orvilo cache and session
   storage.
 tags:
   - Upstash
@@ -12,7 +12,7 @@ tags:
 
 # Configuring Upstash Redis Service
 
-[Upstash](https://upstash.com/) is a serverless Redis service that provides a free tier and pay-as-you-go pricing, making it ideal for LobeHub deployments.
+[Upstash](https://upstash.com/) is a serverless Redis service that provides a free tier and pay-as-you-go pricing, making it ideal for Orvilo deployments.
 
 ## Configuration Steps
 
@@ -23,7 +23,7 @@ tags:
   2. Click **Create Database** and configure: name, region, enable TLS
   3. Copy the **Redis URL** (TCP connection, not REST API) from the database details page:
 
-  <Image alt={'Copy Redis URL from Upstash'} src={'https://hub-apac-1.lobeobjects.space/docs/43d110283ba816c0c2b45408e4f9d344.png'} />
+  <Image alt={'Copy Redis URL from Upstash'} src={'https://hub-apac-1.objects.aspectlylabs.com/docs/43d110283ba816c0c2b45408e4f9d344.png'} />
 
   ### Configure Environment Variables
 
@@ -35,11 +35,11 @@ tags:
   REDIS_TLS=1
 
   # Optional: Set a prefix for Redis keys
-  REDIS_PREFIX=lobechat
+  REDIS_PREFIX=orvilo
   ```
 
   <Callout type={'info'}>
-    Upstash uses `rediss://` (with double 's') for TLS connections. LobeHub supports this format automatically.
+    Upstash uses `rediss://` (with double 's') for TLS connections. Orvilo supports this format automatically.
   </Callout>
 </Steps>
 
@@ -53,7 +53,7 @@ REDIS_URL=rediss://default:xxxxxxxxxxxxx@us1-xxxxx-xxxxx.upstash.io:6379
 REDIS_TLS=1
 
 # Optional: Key prefix for data isolation
-REDIS_PREFIX=lobechat
+REDIS_PREFIX=orvilo
 ```
 
 ## Notes

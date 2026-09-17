@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import {
   agents,
   messages,
@@ -19,7 +19,7 @@ import { assertTopicCommentReadAccess } from '../../_helpers/topicCommentAccess'
 import { topicCommentRouter } from '../../topicComment';
 import { cleanupTestUser, createTestUser } from './setup';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 const notifyTopicCommentActivity = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const notifyTopicCommentModeration = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const publishResourceEvent = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -54,7 +54,7 @@ const context = (userId: string, workspaceId?: string) => ({
 
 describe('topicCommentRouter integration', () => {
   let adminId: string;
-  let db: LobeChatDatabase;
+  let db: OrviloDatabase;
   let memberId: string;
   let ownerId: string;
   let topicId: string;

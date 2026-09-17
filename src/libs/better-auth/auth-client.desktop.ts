@@ -19,7 +19,7 @@ function getClient() {
   if (!_client) {
     _client = createAuthClient({
       // better-auth getBaseURL only accepts http(s); app://renderer throws.
-      baseURL: 'http://lobehub.invalid',
+      baseURL: 'http://orvilo.invalid',
       fetchOptions: {
         customFetchImpl: desktopAuthFetch,
       },

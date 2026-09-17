@@ -1,6 +1,6 @@
 import { Flexbox, Hotkey, Icon } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
-import { LOBE_CHAT_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
+import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { isDesktop } from '@orvilo/const';
 import type { ItemType } from 'antd/es/menu/interface';
 import { Cloudy, Download, HardDriveDownload, LogOut, Settings2 } from 'lucide-react';
@@ -87,7 +87,7 @@ export const useMenu = () => {
           rel="noopener noreferrer"
           target="_blank"
         >
-          {t('userPanel.cloud', { name: LOBE_CHAT_CLOUD })}
+          {t('userPanel.cloud', { name: ORVILO_CLOUD })}
         </a>
       ),
     },

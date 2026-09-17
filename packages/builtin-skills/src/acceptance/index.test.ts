@@ -58,11 +58,11 @@ describe('AcceptanceSkill', () => {
 
   it('names no host environment variable — the skill needs no ambient ids', () => {
     // The skill is portable and runs anywhere. Instructing a builder to read
-    // `$LOBEHUB_TOPIC_ID` / `$LOBE_OPERATION_ID` both couples it to one host and
+    // `$ORVILO_TOPIC_ID` / `$ORVILO_OPERATION_ID` both couples it to one host and
     // invites it to hunt for an id that is absent by design; the CLI resolves
     // subject and origin from its own env without the agent's help.
-    expect(skillBundle).not.toMatch(/LOBEHUB_[A-Z_]+/);
-    expect(skillBundle).not.toMatch(/LOBE_OPERATION_ID/);
+    expect(skillBundle).not.toMatch(/ORVILO_[A-Z_]+/);
+    expect(skillBundle).not.toMatch(/ORVILO_OPERATION_ID/);
   });
 
   it('routes to the project layer before touching an environment', () => {

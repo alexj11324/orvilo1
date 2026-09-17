@@ -106,7 +106,7 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
     if (totalCount === 0) {
       return (
         <div className={styles.container}>
-          <div className={styles.empty}>{t('builtins.lobe-user-memory.inspector.noResults')}</div>
+          <div className={styles.empty}>{t('builtins.orvilo-user-memory.inspector.noResults')}</div>
         </div>
       );
     }
@@ -159,7 +159,7 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
               paddingInline={12}
               title={
                 <Text className={styles.sectionHeader}>
-                  <span>{t('builtins.lobe-user-memory.render.contexts')}</span>
+                  <span>{t('builtins.orvilo-user-memory.render.contexts')}</span>
                   <Text as={'span'} type={'secondary'}>
                     {' '}
                     ({contexts.length})
@@ -189,7 +189,7 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
               paddingInline={12}
               title={
                 <Text className={styles.sectionHeader}>
-                  <span>{t('builtins.lobe-user-memory.render.experiences')}</span>
+                  <span>{t('builtins.orvilo-user-memory.render.experiences')}</span>
                   <Text as={'span'} type={'secondary'}>
                     {' '}
                     ({experiences.length})
@@ -248,7 +248,7 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
               paddingInline={12}
               title={
                 <Text className={styles.sectionHeader}>
-                  <span>{t('builtins.lobe-user-memory.render.preferences')}</span>
+                  <span>{t('builtins.orvilo-user-memory.render.preferences')}</span>
                   <Text as={'span'} type={'secondary'}>
                     {' '}
                     ({preferences.length})

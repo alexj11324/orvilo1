@@ -1,7 +1,7 @@
 import debug from 'debug';
 
 import { BaseProcessor } from '../base/BaseProcessor';
-import type { LobeToolManifest } from '../engine/tools/types';
+import type { OrviloToolManifest } from '../engine/tools/types';
 import type { SkillMeta } from '../providers/SkillContextProvider';
 import type { Message, PipelineContext, ProcessorOptions } from '../types';
 
@@ -18,14 +18,14 @@ const log = debug('context-engine:processor:ActivationResultTrimProcessor');
 
 /**
  * Wire-format tool identifiers of the activation tools. Literal copies of
- * `LobeActivatorIdentifier` (@orvilo/builtin-tool-activator) and
+ * `OrviloActivatorIdentifier` (@orvilo/builtin-tool-activator) and
  * `SkillsIdentifier` (@orvilo/builtin-tool-skills) — both are frozen,
  * persisted in DB message rows, and not importable here without adding
  * tool-package deps to context-engine (same rationale as agent-runtime's
  * messageSelectors).
  */
-const ACTIVATOR_IDENTIFIER = 'lobe-activator';
-const SKILLS_IDENTIFIER = 'lobe-skills';
+const ACTIVATOR_IDENTIFIER = 'orvilo-activator';
+const SKILLS_IDENTIFIER = 'orvilo-skills';
 
 interface ActivatedToolState {
   apiCount?: number;
@@ -46,7 +46,7 @@ export interface ActivationResultTrimConfig {
    * (manifests present + function calling supported); pass an empty array when
    * the provider is disabled so nothing gets trimmed.
    */
-  injectedManifests?: LobeToolManifest[];
+  injectedManifests?: OrviloToolManifest[];
   /**
    * Activated skills whose full content the SkillContextProvider injects into
    * the system prompt for this request. Must be computed with
@@ -89,7 +89,7 @@ export interface ActivationResultTrimConfig {
 export class ActivationResultTrimProcessor extends BaseProcessor {
   readonly name = 'ActivationResultTrimProcessor';
 
-  private injectedManifestsById: Map<string, LobeToolManifest>;
+  private injectedManifestsById: Map<string, OrviloToolManifest>;
   private injectedSkillsByIdentifier: Map<string, SkillMeta>;
   private injectedSkillsByName: Map<string, SkillMeta>;
 

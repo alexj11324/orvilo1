@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 
 import { OIDCService } from '@/server/services/oidc';
 
-const log = debug('lobe-oidc:consent');
+const log = debug('orvilo-oidc:consent');
 
 export async function POST(request: NextRequest) {
   log('Received POST request for /oidc/consent, URL: %s', request.url);

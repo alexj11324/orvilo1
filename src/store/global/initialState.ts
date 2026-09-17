@@ -589,7 +589,7 @@ export const INITIAL_STATUS = {
   workingSidebarWidth: 360,
 } satisfies SystemStatus;
 
-const statusStorage = new AsyncLocalStorage<SystemStatus>('LOBE_SYSTEM_STATUS');
+const statusStorage = new AsyncLocalStorage<SystemStatus>('ORVILO_SYSTEM_STATUS');
 
 /**
  * Restore the shell-defining preferences before React's first render. The

@@ -12,11 +12,11 @@ import { and, desc, eq } from 'drizzle-orm';
 import { topicSummaryEligibleMessage, TopicSummaryModel } from '@/database/models/topicSummary';
 import { UserModel } from '@/database/models/user';
 import { messages, topics } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 import { resolveSystemAgentModelConfig } from '@/server/services/systemAgent/modelConfig';
 
-const log = debug('lobe-server:service:topic-auto-summary');
+const log = debug('orvilo-server:service:topic-auto-summary');
 
 const MAX_MESSAGES = 80;
 const MAX_MESSAGE_CHARS = 12_000;
@@ -30,7 +30,7 @@ export interface TopicAutoSummaryResult {
 
 export class TopicAutoSummaryService {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}

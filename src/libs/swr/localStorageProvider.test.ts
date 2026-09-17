@@ -56,7 +56,7 @@ describe('createCacheProvider — tiering', () => {
   });
 
   it('getScopedCacheKey namespaces by scope', () => {
-    expect(getScopedCacheKey('u1:personal')).toBe('lobechat-swr-cache:u1:personal');
+    expect(getScopedCacheKey('u1:personal')).toBe('orvilo-swr-cache:u1:personal');
     expect(getScopedCacheKey('anon:personal')).not.toBe(getScopedCacheKey('u1:personal'));
   });
 
@@ -122,7 +122,7 @@ describe('createCacheProvider — tiering', () => {
       localPatterns: [...CACHE_TIERS.local],
     });
     const map = provider();
-    const key = 'modelConfig:lobehub';
+    const key = 'modelConfig:orvilo';
 
     map.set(key, { data: { homeNewModels: [{ model: 'gpt-image-2', type: 'image' }] } });
 
@@ -451,8 +451,8 @@ describe('clearSWRCache', () => {
   beforeEach(() => localStorage.clear());
 
   it('removes the given cache key', () => {
-    localStorage.setItem('lobechat-swr-cache', '[]');
+    localStorage.setItem('orvilo-swr-cache', '[]');
     clearSWRCache();
-    expect(localStorage.getItem('lobechat-swr-cache')).toBeNull();
+    expect(localStorage.getItem('orvilo-swr-cache')).toBeNull();
   });
 });

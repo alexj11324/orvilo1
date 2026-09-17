@@ -29,12 +29,14 @@ describe('claudeCodeDriver', () => {
       profileDir: '/tmp/profile',
     });
 
-    expect(plan.args).toEqual(expect.arrayContaining(['--model', 'lobehub/claude-sonnet-4-6']));
+    expect(plan.args).toEqual(
+      expect.arrayContaining(['--model', 'aspectlylabs/claude-sonnet-4-6']),
+    );
     expect(plan.env).toMatchObject({
       ANTHROPIC_BASE_URL: 'https://app.example.com/api/v1/anthropic',
-      ANTHROPIC_MODEL: 'lobehub/claude-sonnet-4-6',
-      ANTHROPIC_SMALL_FAST_MODEL: 'lobehub/claude-sonnet-4-6',
-      CLAUDE_CODE_SUBAGENT_MODEL: 'lobehub/claude-sonnet-4-6',
+      ANTHROPIC_MODEL: 'aspectlylabs/claude-sonnet-4-6',
+      ANTHROPIC_SMALL_FAST_MODEL: 'aspectlylabs/claude-sonnet-4-6',
+      CLAUDE_CODE_SUBAGENT_MODEL: 'aspectlylabs/claude-sonnet-4-6',
     });
     expect(plan.operationTokenEnvKey).toBe('ANTHROPIC_AUTH_TOKEN');
     expect(plan.env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
@@ -46,11 +48,11 @@ describe('claudeCodeDriver', () => {
 
   it('appends --mcp-config <path> when mcpConfigPath is provided', async () => {
     const { args } = await claudeCodeDriver.buildSpawnPlan(
-      buildParams({ mcpConfigPath: '/tmp/lobe-cc-mcp-op-1.json' }),
+      buildParams({ mcpConfigPath: '/tmp/orvilo-cc-mcp-op-1.json' }),
     );
     const idx = args.indexOf('--mcp-config');
     expect(idx).toBeGreaterThan(-1);
-    expect(args[idx + 1]).toBe('/tmp/lobe-cc-mcp-op-1.json');
+    expect(args[idx + 1]).toBe('/tmp/orvilo-cc-mcp-op-1.json');
   });
 
   it('still pins shared --disallowedTools alongside --mcp-config', async () => {

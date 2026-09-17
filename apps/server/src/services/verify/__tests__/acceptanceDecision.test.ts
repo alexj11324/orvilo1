@@ -86,7 +86,7 @@ describe('AcceptanceService decision gating', () => {
     mocks.taskTopicFindByOperationId.mockResolvedValue(null);
   });
 
-  it('creates a standalone acceptance without resolving a LobeHub task, topic, or document', async () => {
+  it('creates a standalone acceptance without resolving a Orvilo task, topic, or document', async () => {
     mocks.ensureForSubject.mockResolvedValue({ id: 'acc-standalone' });
 
     await service().ensureForSubject('standalone', 'external-delivery-1', {

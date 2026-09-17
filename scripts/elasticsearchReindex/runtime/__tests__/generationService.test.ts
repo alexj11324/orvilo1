@@ -33,7 +33,7 @@ import {
 } from '../generationService';
 import { diffFtsSearchMappings } from '../mappingDiff';
 
-const NAMESPACE = 'lobehub';
+const NAMESPACE = 'orvilo';
 const ENTITY: FtsSearchDocumentEntity = 'topics';
 const ALIAS = getFtsSearchIndexAlias(NAMESPACE, ENTITY);
 const DECLARED_FINGERPRINT = getFtsSearchIndexSchemaFingerprint(ENTITY);

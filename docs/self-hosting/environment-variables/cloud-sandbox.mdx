@@ -11,7 +11,7 @@ tags:
 
 # Configuring Cloud Sandbox
 
-Cloud Sandbox powers the built-in code execution, shell command, file operation, and file export tools. By default, LobeHub uses the Market sandbox. Self-hosted deployments can switch the same tool surface to an Onlyboxes-compatible sandbox provider.
+Cloud Sandbox powers the built-in code execution, shell command, file operation, and file export tools. By default, Orvilo uses the Market sandbox. Self-hosted deployments can switch the same tool surface to an Onlyboxes-compatible sandbox provider.
 
 ## Core Environment Variables
 
@@ -31,15 +31,15 @@ Supported values:
 
 - Type: Optional
 - Description: Base URL of the Market service. Leave it unset when using the official Market; set it only when connecting to a self-hosted or dedicated Market service.
-- Default: `https://market.lobehub.com`
+- Default: `https://market.aspectlylabs.com`
 - Example: `https://market.example.com`
 
 ### `MARKET_TRUSTED_CLIENT_ID`
 
 - Type: Optional
-- Description: Market Trusted Client ID used by the LobeHub server to call Market capabilities on behalf of the current user. It must be registered by the target Market service.
+- Description: Market Trusted Client ID used by the Orvilo server to call Market capabilities on behalf of the current user. It must be registered by the target Market service.
 - Default: -
-- Example: `lobechat-com`
+- Example: `orvilo-com`
 
 ### `MARKET_TRUSTED_CLIENT_SECRET`
 
@@ -67,12 +67,12 @@ Supported values:
 - Type: Optional
 - Description: Issuer used in Onlyboxes JIT token claims.
 - Default: `APP_URL`
-- Example: `https://lobehub.example.com`
+- Example: `https://orvilo.example.com`
 
 ### `ONLYBOXES_JIT_TTL_SEC`
 
 - Type: Optional
-- Description: Lifetime of each Onlyboxes JIT token minted by LobeHub.
+- Description: Lifetime of each Onlyboxes JIT token minted by Orvilo.
 - Default: `1800`
 - Example: `900`
 
@@ -85,7 +85,7 @@ Supported values:
 
 ## Market Configuration
 
-By default, LobeHub uses the official Market sandbox and does not require extra sandbox configuration:
+By default, Orvilo uses the official Market sandbox and does not require extra sandbox configuration:
 
 ```bash
 # SANDBOX_PROVIDER=market
@@ -98,10 +98,10 @@ SANDBOX_PROVIDER=market
 MARKET_BASE_URL=https://market.example.com
 ```
 
-If that Market service requires the LobeHub server to call sandbox, credential, or skill capabilities on behalf of the current user, also configure Trusted Client credentials:
+If that Market service requires the Orvilo server to call sandbox, credential, or skill capabilities on behalf of the current user, also configure Trusted Client credentials:
 
 ```bash
-MARKET_TRUSTED_CLIENT_ID=lobechat-com
+MARKET_TRUSTED_CLIENT_ID=orvilo-com
 MARKET_TRUSTED_CLIENT_SECRET=your-market-trusted-client-secret
 ```
 
@@ -109,7 +109,7 @@ MARKET_TRUSTED_CLIENT_SECRET=your-market-trusted-client-secret
 
 ## Onlyboxes Runtime Requirements
 
-The configured Onlyboxes worker should expose `terminalExec` and `terminalResource`. LobeHub uses `terminalExec` as the compatibility layer for shell commands, code execution, and file operations, and uses `terminalResource` for file export through a pre-signed upload URL.
+The configured Onlyboxes worker should expose `terminalExec` and `terminalResource`. Orvilo uses `terminalExec` as the compatibility layer for shell commands, code execution, and file operations, and uses `terminalResource` for file export through a pre-signed upload URL.
 
 For feature parity with the Market sandbox, the terminal runtime image should include:
 
@@ -133,6 +133,6 @@ CONSOLE_JIT_SIGNING_KEY=onlyboxes-jit-signing-secret
 ```
 
 <Callout type={'info'}>
-  File export still writes the exported artifact to the configured LobeHub S3 storage. Configure the
+  File export still writes the exported artifact to the configured Orvilo S3 storage. Configure the
   S3 environment variables when users need to download files generated inside the sandbox.
 </Callout>

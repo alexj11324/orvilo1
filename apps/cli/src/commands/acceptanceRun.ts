@@ -872,7 +872,7 @@ async function ingestReportAction(reportDir: string, options: IngestReportOption
         // Signed by the agent that produced the round, not by whoever's
         // credentials carried the ingest. Absent outside an agent run, and
         // then it falls back to the account.
-        authorAgentId: process.env.LOBEHUB_AGENT_ID || undefined,
+        authorAgentId: process.env.ORVILO_AGENT_ID || undefined,
         // Derived from the round, so re-ingesting the same round edits nothing
         // and duplicates nothing.
         clientId: `proposal:${runId}`,

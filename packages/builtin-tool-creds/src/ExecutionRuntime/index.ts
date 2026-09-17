@@ -1,6 +1,6 @@
 import {
   getComposioAppByIdentifier,
-  getLobehubSkillProviderById,
+  getOrviloSkillProviderById,
   OFFICIAL_URL,
 } from '@orvilo/const';
 import type { BuiltinServerRuntimeOutput } from '@orvilo/types';
@@ -11,7 +11,7 @@ import type {
   InjectCredsToSandboxParams,
   SaveCredsParams,
 } from '../types';
-import { LOBEHUB_OAUTH_PROVIDER_LIST } from '../types';
+import { ORVILO_OAUTH_PROVIDER_LIST } from '../types';
 
 /**
  * Service interface for Credentials operations
@@ -117,7 +117,7 @@ export class CredsExecutionRuntime {
     // Server-side cannot open OAuth popups or access browser stores.
     // Guide the user to connect via the frontend UI.
     return {
-      content: `To connect ${serverType.label}, please use the LobeHub app UI to initiate the Composio OAuth flow. Server-side execution cannot open OAuth popups. Go to Settings or the onboarding page to connect ${serverType.label}.`,
+      content: `To connect ${serverType.label}, please use the Orvilo app UI to initiate the Composio OAuth flow. Server-side execution cannot open OAuth popups. Go to Settings or the onboarding page to connect ${serverType.label}.`,
       state: {
         connected: false,
         identifier: service,
@@ -140,10 +140,10 @@ export class CredsExecutionRuntime {
       const { provider } = args;
 
       // Get provider config for display name
-      const providerConfig = getLobehubSkillProviderById(provider);
+      const providerConfig = getOrviloSkillProviderById(provider);
       if (!providerConfig) {
         return {
-          content: `Unknown OAuth provider: ${provider}. Available providers: ${LOBEHUB_OAUTH_PROVIDER_LIST}`,
+          content: `Unknown OAuth provider: ${provider}. Available providers: ${ORVILO_OAUTH_PROVIDER_LIST}`,
           error: {
             message: `Unknown OAuth provider: ${provider}`,
             type: 'UnknownProvider',

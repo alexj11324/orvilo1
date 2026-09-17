@@ -35,8 +35,8 @@ describe('sanitizeBm25Query', () => {
   it('should escape multiple special characters and join with AND', () => {
     expect(sanitizeBm25Query('(a+b) & c!')).toBe('\\(a\\+b\\) AND \\& AND c\\!');
     expect(sanitizeBm25Query('react-component')).toBe('react AND component');
-    expect(sanitizeBm25Query('<https://lobehub.com/skills/openclaw>')).toBe(
-      '\\<https\\:\\/\\/lobehub.com\\/skills\\/openclaw\\>',
+    expect(sanitizeBm25Query('<https://orvilo.aspectlylabs.com/skills/openclaw>')).toBe(
+      '\\<https\\:\\/\\/orvilo.aspectlylabs.com\\/skills\\/openclaw\\>',
     );
   });
 

@@ -14,7 +14,7 @@
 //   2. JWKS_SOURCE=<file>              (any env file with a JWKS_KEY= line)
 //   3. .records/env/gateway.env        (managed flow default)
 //
-// Run from the lobehub repo root (needs `jose` from its node_modules):
+// Run from the orvilo repo root (needs `jose` from its node_modules):
 //   JWKS_KEY="$JWKS_KEY" node .agents/acceptance/scripts/agent-gateway/local-gateway-probe.mjs
 //   JWKS_SOURCE=.env.local node .../local-gateway-probe.mjs            # explicit file
 //   GATEWAY_WS=ws://localhost:8787 node .../local-gateway-probe.mjs    # override ws

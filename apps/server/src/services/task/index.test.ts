@@ -10,7 +10,7 @@ import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { UserModel } from '@/database/models/user';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { TaskService } from './index';
 
@@ -159,7 +159,7 @@ vi.mock('@/server/services/file/resolveAttachments', () => ({
 }));
 
 describe('TaskService', () => {
-  const db = {} as LobeChatDatabase;
+  const db = {} as OrviloDatabase;
   const userId = 'user-1';
 
   const mockAgentModel = {

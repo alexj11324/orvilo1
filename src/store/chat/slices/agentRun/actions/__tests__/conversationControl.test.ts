@@ -873,7 +873,7 @@ describe('ConversationControl actions', () => {
           plugin: {
             apiName: 'editFile',
             arguments: '{"path":"/tmp/a"}',
-            identifier: 'lobe-local-system',
+            identifier: 'orvilo-local-system',
             type: 'default',
           },
           pluginIntervention: {
@@ -1701,7 +1701,7 @@ describe('ConversationControl actions', () => {
         plugin: {
           apiName: 'askUserQuestion',
           arguments: '{}',
-          identifier: 'lobe-user-interaction',
+          identifier: 'orvilo-user-interaction',
           type: 'default',
         },
         role: 'tool',
@@ -1837,7 +1837,7 @@ describe('ConversationControl actions', () => {
         plugin: {
           apiName: 'selectAgentTemplate',
           arguments: '{}',
-          identifier: 'lobe-agent-marketplace',
+          identifier: 'orvilo-agent-marketplace',
           type: 'default',
         },
         role: 'tool',
@@ -1918,7 +1918,7 @@ describe('ConversationControl actions', () => {
         plugin: {
           apiName: 'selectAgentTemplate',
           arguments: '{}',
-          identifier: 'lobe-agent-marketplace',
+          identifier: 'orvilo-agent-marketplace',
           type: 'default',
         },
         role: 'tool',
@@ -2005,7 +2005,7 @@ describe('ConversationControl actions', () => {
           plugin: {
             apiName: 'askUserQuestion',
             arguments: '{}',
-            identifier: 'lobe-agent',
+            identifier: 'orvilo-agent',
             type: 'default',
           },
           role: 'tool',
@@ -2084,7 +2084,7 @@ describe('ConversationControl actions', () => {
           plugin: {
             apiName: 'askUserQuestion',
             arguments: '{}',
-            identifier: 'lobe-agent',
+            identifier: 'orvilo-agent',
             type: 'default',
           },
           role: 'tool',
@@ -2137,7 +2137,7 @@ describe('ConversationControl actions', () => {
           plugin: {
             apiName: 'showAgentMarketplace',
             arguments: '{}',
-            identifier: 'lobe-web-onboarding',
+            identifier: 'orvilo-web-onboarding',
             type: 'default',
           },
           pluginIntervention: {
@@ -2201,7 +2201,7 @@ describe('ConversationControl actions', () => {
           plugin: {
             apiName: 'askUserQuestion',
             arguments: '{}',
-            identifier: 'lobe-agent',
+            identifier: 'orvilo-agent',
             type: 'default',
           },
           role: 'tool',
@@ -2321,7 +2321,7 @@ describe('ConversationControl actions', () => {
         plugin: {
           apiName: 'askUserQuestion',
           arguments: '{}',
-          identifier: 'lobe-user-interaction',
+          identifier: 'orvilo-user-interaction',
           type: 'default',
         },
         role: 'tool',
@@ -2454,7 +2454,7 @@ describe('ConversationControl actions', () => {
         plugin: {
           apiName: 'showAgentMarketplace',
           arguments: '{}',
-          identifier: 'lobe-web-onboarding',
+          identifier: 'orvilo-web-onboarding',
           type: 'default',
         },
         role: 'tool',
@@ -3282,7 +3282,7 @@ describe('ConversationControl actions', () => {
         plugin: {
           apiName: 'askUserQuestion',
           arguments: '{}',
-          identifier: 'lobe-claude-code',
+          identifier: 'orvilo-claude-code',
           type: 'default',
         },
         role: 'tool',
@@ -3362,7 +3362,7 @@ describe('ConversationControl actions', () => {
         plugin: {
           apiName: 'askUserQuestion',
           arguments: '{}',
-          identifier: 'lobe-claude-code',
+          identifier: 'orvilo-claude-code',
           type: 'default',
         },
         role: 'tool',
@@ -3440,7 +3440,7 @@ describe('ConversationControl actions', () => {
         plugin: {
           apiName: 'askUserQuestion',
           arguments: '{}',
-          identifier: 'lobe-claude-code',
+          identifier: 'orvilo-claude-code',
           type: 'default',
         },
         role: 'tool',
@@ -3554,7 +3554,7 @@ describe('ConversationControl actions', () => {
         plugin: {
           apiName: 'askUserQuestion',
           arguments: '{}',
-          identifier: 'lobe-claude-code',
+          identifier: 'orvilo-claude-code',
           type: 'default',
         },
         role: 'tool',
@@ -3622,7 +3622,7 @@ describe('ConversationControl actions', () => {
           plugin: {
             apiName: 'calculate',
             arguments: `{"expression":"${index}"}`,
-            identifier: 'lobe-calculator',
+            identifier: 'orvilo-calculator',
             type: 'default',
           },
           role: 'tool',

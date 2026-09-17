@@ -3,13 +3,13 @@ import { ModelProvider } from 'model-bank';
 import { describe, expect, it } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeSparkAI, params } from './index';
+import { OrviloSparkAI, params } from './index';
 
 const provider = ModelProvider.Spark;
 const defaultBaseURL = 'https://spark-api-open.xf-yun.com/v1';
 
 testProvider({
-  Runtime: LobeSparkAI,
+  Runtime: OrviloSparkAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_SPARK_CHAT_COMPLETION',
@@ -20,7 +20,7 @@ testProvider({
   },
 });
 
-describe('LobeSparkAI - custom features', () => {
+describe('OrviloSparkAI - custom features', () => {
   describe('params object', () => {
     it('should export params with correct structure', () => {
       expect(params).toBeDefined();
@@ -289,20 +289,20 @@ describe('LobeSparkAI - custom features', () => {
 
   describe('runtime instantiation', () => {
     it('should create instance with default baseURL', () => {
-      const instance = new LobeSparkAI({ apiKey: 'test-api-key' });
+      const instance = new OrviloSparkAI({ apiKey: 'test-api-key' });
       expect(instance).toBeDefined();
       expect(instance.baseURL).toBe(defaultBaseURL);
     });
 
     it('should create instance with custom baseURL', () => {
       const customBaseURL = 'https://custom.spark.com/v1';
-      const instance = new LobeSparkAI({ apiKey: 'test-api-key', baseURL: customBaseURL });
+      const instance = new OrviloSparkAI({ apiKey: 'test-api-key', baseURL: customBaseURL });
       expect(instance).toBeDefined();
       expect(instance.baseURL).toBe(customBaseURL);
     });
 
     it('should create instance with custom headers', () => {
-      const instance = new LobeSparkAI({
+      const instance = new OrviloSparkAI({
         apiKey: 'test-api-key',
         headers: { 'X-Custom-Header': 'value' },
       });

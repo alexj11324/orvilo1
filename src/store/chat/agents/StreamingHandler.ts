@@ -20,7 +20,7 @@ import {
   type StreamingResult,
 } from './types/streaming';
 
-const log = debug('lobe-store:streaming-handler');
+const log = debug('orvilo-store:streaming-handler');
 
 /**
  * Streaming message handler

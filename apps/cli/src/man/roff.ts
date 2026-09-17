@@ -19,23 +19,23 @@ interface RoffDefinition {
 const FILE_ENTRIES = [
   {
     description: 'Encrypted access and refresh tokens.',
-    path: '~/.lobehub/credentials.json',
+    path: '~/.orvilo/credentials.json',
   },
   {
     description: 'CLI settings such as server and gateway URLs.',
-    path: '~/.lobehub/settings.json',
+    path: '~/.orvilo/settings.json',
   },
   {
     description: 'Background daemon PID file.',
-    path: '~/.lobehub/daemon.pid',
+    path: '~/.orvilo/daemon.pid',
   },
   {
     description: 'Background daemon status metadata.',
-    path: '~/.lobehub/daemon.status',
+    path: '~/.orvilo/daemon.status',
   },
   {
     description: 'Background daemon log output.',
-    path: '~/.lobehub/daemon.log',
+    path: '~/.orvilo/daemon.log',
   },
 ] as const;
 
@@ -113,8 +113,7 @@ export function generateRootManPage(program: Command, version: string) {
       escapeRoff(example.description),
     ]),
     '.SH SEE ALSO',
-    '.BR lobe (1),',
-    '.BR lobehub (1)',
+    '.BR orvilo (1)',
   ];
 
   return `${lines.join('\n')}\n`;

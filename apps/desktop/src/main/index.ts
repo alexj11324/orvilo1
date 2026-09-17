@@ -3,7 +3,7 @@ import './pre-app-init';
 import { App } from './core/App';
 import { installProcessErrorHandlers } from './process-error-handlers';
 
-const mainBootstrapKey = '__LOBEHUB_DESKTOP_MAIN_BOOTSTRAPPED__' as const;
+const mainBootstrapKey = '__ORVILO_DESKTOP_MAIN_BOOTSTRAPPED__' as const;
 const mainProcessGlobal = globalThis as typeof globalThis & {
   [mainBootstrapKey]?: boolean;
 };

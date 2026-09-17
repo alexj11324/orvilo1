@@ -1,8 +1,8 @@
 # Worked example — Agent topics / 话题列表 (topic management) audit
 
 A real run of this skill against the per-agent topic-management page
-(`/agent/:aid/topics` → `src/features/AgentTopicManager`), 2026-07-02 (LOBE-11217, under the
-Chat / 会话 UX-Audit parent LOBE-11145). Use it as a **template for the output shape**, not as
+(`/agent/:aid/topics` → `src/features/AgentTopicManager`), 2026-07-02 (ORVILO-11217, under the
+Chat / 会话 UX-Audit parent ORVILO-11145). Use it as a **template for the output shape**, not as
 current-state truth (the code moves; re-verify before citing).
 
 Surface = a scrolling management view over one agent's topics: **chrome** = `NavHeader` +
@@ -61,7 +61,7 @@ on either the initial load or the page loads — gaps ①/④).
     closed loop. This is the confirm→in-progress(locked)→done/error shape the bulk bar (gap ⑤)
     lacks; it's the "don't regress" reference for every other mutating path on this surface.
 - **✅ 亮点 — Move picker re-adds the virtual inbox agent (already landed as ux Read §1.4 ✅).**
-  `targetAgents` prepends the inbox/default "LobeAI" agent that the sidebar list filters out
+  `targetAgents` prepends the inbox/default "OrviloAI" agent that the sidebar list filters out
   (`Content.tsx:80-98`), so topics can be moved to it — a picker that lists every valid
   target, not "every target the sidebar happened to keep".
 - **✅ 亮点 — Server-side BM25 search + infinite-scroll disabled in search mode.** Search
@@ -123,7 +123,7 @@ the active filter + sort into `getTopics` (cheapest), or lift the whole read-sta
 
 **③ "Archive stale >3mo" mutates only the loaded page and reports success even on partial
 failure — ux Read §1.2 + Act §3.1** 🟠 The overflow "archive stale" scans
-`topicSelectors.agentTopicsViewTopics` = **loaded topics only** (`Toolbar.tsx:349-355`, dup in
+`topicSelectors.agentTopicsViewTopics` = **loaded topics only** (`Toolbar.tsx:349-355`, dup
 the unused `ToolbarActions.tsx:24-31`), so with 30 of 500 loaded it silently archives the
 stale rows among 30 and **misses the rest** — a bulk op whose scope is the partial page (the
 mutating twin of gap ②). And the loop `for (…) await updateTopicStatus(…)` has **no per-item
@@ -134,7 +134,7 @@ partial completion.
 
 **④ A failed load-more page fails silently — no error, no retry, and the observer can
 re-fire — ux Feedback §4.2** 🟠 `loadMoreAgentTopicsView`'s `catch` only resets
-`isLoadingMore: false` — **no error state, no retry** (`action.ts:678-689`; identical in
+`isLoadingMore: false` — **no error state, no retry** (`action.ts:678-689`; identical
 `loadMoreTopics:765-776`). A failed page-N fetch makes the "Loading more…" row vanish
 (`index.tsx:251`) and the list just **stops**, indistinguishable from end-of-list — while
 `hasMore` is still `true`, so the `IntersectionObserver` (`index.tsx:185-193`) re-fires on any
@@ -155,7 +155,7 @@ toast on failure, matching delete/move.
 **⑥ The default (card) view is missing both per-item actions and select-all that the list
 view has — ux Act (lifecycle completeness + bulk↔single parity) / Read §1.2** 🟡 The default
 `viewMode` is `'card'` (`store.ts:52`), yet `TopicGrid` / `TopicCard` render **no per-item
-dropdown** — rename, single-delete, favorite-toggle, and "open in new tab" all live only in
+dropdown** — rename, single-delete, favorite-toggle, and "open in new tab" all live only
 `TopicListView`'s `Row` via `useTopicItemDropdownMenu` (`TopicListView.tsx:148-153,231-233`).
 So in the view the user lands on, a topic's own lifecycle is unreachable without switching to
 list view. `TopicGrid` also has **no select-all** (only `TopicListView` renders the header

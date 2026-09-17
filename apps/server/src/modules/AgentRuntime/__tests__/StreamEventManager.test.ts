@@ -545,7 +545,7 @@ describe('StreamEventManager', () => {
         error: {
           error: { message: 'Budget exceeded' },
           errorType: 'InsufficientBudgetForModel',
-          provider: 'lobehub',
+          provider: 'orvilo',
         },
       };
       expect(getDefaultReasonDetail(state, 'error')).toBe('Budget exceeded');

@@ -3,7 +3,7 @@ import { AGENT_DOCUMENT_FILE_TYPE } from '@orvilo/const';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentAccess, AgentDocumentModel } from '@/database/models/agentDocuments';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import * as headlessEditor from '../agentDocuments/headlessEditor';
 import { AgentDocumentVfsService } from './index';
@@ -28,7 +28,7 @@ vi.mock('./mounts/skills/createSkillMount', () => ({
 }));
 
 describe('AgentDocumentVfsService', () => {
-  const db = {} as LobeChatDatabase;
+  const db = {} as OrviloDatabase;
   const userId = 'user-1';
   const mockAgentDocumentModel = {
     create: vi.fn(),
@@ -72,7 +72,7 @@ describe('AgentDocumentVfsService', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists ordinary root nodes plus the synthetic lobe directory', async () => {
+  it('lists ordinary root nodes plus the synthetic orvilo directory', async () => {
     mockAgentDocumentModel.listByParent.mockResolvedValue([
       {
         accessSelf: AgentAccess.READ | AgentAccess.WRITE | AgentAccess.LIST,
@@ -112,9 +112,9 @@ describe('AgentDocumentVfsService', () => {
         type: 'file',
       }),
       expect.objectContaining({
-        id: 'synthetic:./lobe',
-        name: 'lobe',
-        path: './lobe',
+        id: 'synthetic:./orvilo',
+        name: 'orvilo',
+        path: './orvilo',
         type: 'directory',
       }),
     ]);
@@ -139,18 +139,18 @@ describe('AgentDocumentVfsService', () => {
       {
         name: 'writer',
         namespace: 'builtin',
-        path: './lobe/skills/builtin/skills/writer',
+        path: './orvilo/skills/builtin/skills/writer',
         readOnly: true,
         type: 'directory',
       },
     ]);
 
     const service = new AgentDocumentVfsService(db, userId);
-    const nodes = await service.list('./lobe/skills/builtin/skills', { agentId: 'agent-1' });
+    const nodes = await service.list('./orvilo/skills/builtin/skills', { agentId: 'agent-1' });
 
     expect(mockSkillMount.list).toHaveBeenCalledWith({
       agentId: 'agent-1',
-      path: './lobe/skills/builtin/skills',
+      path: './orvilo/skills/builtin/skills',
       topicId: undefined,
     });
     expect(nodes).toEqual([
@@ -161,7 +161,7 @@ describe('AgentDocumentVfsService', () => {
           source: 'builtin',
         }),
         name: 'writer',
-        path: './lobe/skills/builtin/skills/writer',
+        path: './orvilo/skills/builtin/skills/writer',
         type: 'directory',
       }),
     ]);
@@ -233,14 +233,14 @@ describe('AgentDocumentVfsService', () => {
       contentType: 'text/markdown',
       name: 'SKILL.md',
       namespace: 'agent',
-      path: './lobe/skills/agent/skills/writer/SKILL.md',
+      path: './orvilo/skills/agent/skills/writer/SKILL.md',
       readOnly: false,
       type: 'file',
     });
 
     const service = new AgentDocumentVfsService(db, userId);
     const result = await service.read(
-      './lobe/skills/agent/skills/writer/SKILL.md',
+      './orvilo/skills/agent/skills/writer/SKILL.md',
       {
         agentId: 'agent-1',
       },
@@ -253,7 +253,7 @@ describe('AgentDocumentVfsService', () => {
         contentType: 'text/markdown',
         lineCount: 2,
         loc: [2, 4],
-        path: './lobe/skills/agent/skills/writer/SKILL.md',
+        path: './orvilo/skills/agent/skills/writer/SKILL.md',
         totalLineCount: 4,
       }),
     );
@@ -407,7 +407,7 @@ ${'lossless tool result\n'.repeat(100)}
       content: '# Draft',
       name: 'SKILL.md',
       namespace: 'agent',
-      path: './lobe/skills/agent/skills/writer/SKILL.md',
+      path: './orvilo/skills/agent/skills/writer/SKILL.md',
       readOnly: false,
       type: 'file',
     });
@@ -415,20 +415,20 @@ ${'lossless tool result\n'.repeat(100)}
       content: '# Final',
       name: 'SKILL.md',
       namespace: 'agent',
-      path: './lobe/skills/agent/skills/writer/SKILL.md',
+      path: './orvilo/skills/agent/skills/writer/SKILL.md',
       readOnly: false,
       type: 'file',
     });
 
     const service = new AgentDocumentVfsService(db, userId);
-    const node = await service.write('./lobe/skills/agent/skills/writer/SKILL.md', '# Final', {
+    const node = await service.write('./orvilo/skills/agent/skills/writer/SKILL.md', '# Final', {
       agentId: 'agent-1',
     });
 
     expect(mockSkillMount.update).toHaveBeenCalledWith({
       agentId: 'agent-1',
       content: '# Final',
-      path: './lobe/skills/agent/skills/writer/SKILL.md',
+      path: './orvilo/skills/agent/skills/writer/SKILL.md',
       topicId: undefined,
     });
     expect(node).toEqual(
@@ -786,7 +786,7 @@ ${'lossless tool result\n'.repeat(100)}
     const service = new AgentDocumentVfsService(db, userId);
 
     await expect(
-      service.delete('./lobe/skills/builtin/skills/lobehub/SKILL.md', { agentId: 'agent-1' }),
+      service.delete('./orvilo/skills/builtin/skills/orvilo/SKILL.md', { agentId: 'agent-1' }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 

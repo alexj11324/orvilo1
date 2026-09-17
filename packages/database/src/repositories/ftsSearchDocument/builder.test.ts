@@ -20,7 +20,7 @@ import {
   userPersonaDocuments,
   users,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { FTS_SEARCH_DOCUMENT_FIXTURES } from './__tests__/fixtures';
 import { FtsSearchDocumentBuilder } from './builder';
 import { FTS_SEARCH_DOCUMENT_ENTITIES } from './zodSchema';
@@ -30,7 +30,7 @@ const createdAt = new Date('2026-01-01T00:00:00.000Z');
 const updatedAt = new Date('2026-01-02T00:00:00.000Z');
 const capturedAt = new Date('2026-01-03T00:00:00.000Z');
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 const builder = new FtsSearchDocumentBuilder(db);
 
 const seedFixtures = async () => {

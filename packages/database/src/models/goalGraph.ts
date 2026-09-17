@@ -26,7 +26,7 @@ import {
 } from '../schemas/goalGraph';
 import { tasks } from '../schemas/task';
 import { works, workVersions } from '../schemas/work';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { workOwnership } from './work/context';
 
@@ -71,7 +71,7 @@ export class GoalGraphModel {
    * human do this, or did the system decide it".
    */
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
     private readonly actor?: GoalEventActor,
@@ -80,7 +80,7 @@ export class GoalGraphModel {
   private ownership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, goals);
 
-  private ownedGoal = async (goalId: string, tx: LobeChatDatabase | Transaction = this.db) => {
+  private ownedGoal = async (goalId: string, tx: OrviloDatabase | Transaction = this.db) => {
     const [goal] = await tx
       .select()
       .from(goals)
@@ -366,7 +366,7 @@ export class GoalGraphModel {
         eventType: 'created',
       });
       const model = new GoalGraphModel(
-        tx as unknown as LobeChatDatabase,
+        tx as unknown as OrviloDatabase,
         this.userId,
         this.workspaceId,
         this.actor,

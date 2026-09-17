@@ -5,7 +5,7 @@ import type { Stream } from 'openai/streaming';
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import type { ChatStreamCallbacks, ChatStreamPayload } from '../../types/chat';
 import { AgentRuntimeErrorType } from '../../types/error';
 import type { ModelRuntimeDiagnostics } from '../../types/providerDiagnostics';
@@ -82,9 +82,9 @@ vi.mock('../../utils/model', () => ({
   getModelPricing: vi.fn().mockResolvedValue({}),
 }));
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
-const LobeMockProvider = createOpenAICompatibleRuntime({
+const OrviloMockProvider = createOpenAICompatibleRuntime({
   baseURL: defaultBaseURL,
   chatCompletion: {
     handleError: (error) => {
@@ -100,7 +100,7 @@ const LobeMockProvider = createOpenAICompatibleRuntime({
 });
 
 beforeEach(() => {
-  instance = new LobeMockProvider({ apiKey: 'test' });
+  instance = new OrviloMockProvider({ apiKey: 'test' });
 
   // Use vi.spyOn to mock the chat.completions.create method
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -113,7 +113,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('LobeOpenAICompatibleFactory', () => {
+describe('OrviloOpenAICompatibleFactory', () => {
   // Polyfill File for Node environment used in image tests
   if (typeof File === 'undefined') {
     // @ts-ignore
@@ -128,8 +128,8 @@ describe('LobeOpenAICompatibleFactory', () => {
 
   describe('init', () => {
     it('should correctly initialize with an API key', async () => {
-      const instance = new LobeMockProvider({ apiKey: 'test_api_key' });
-      expect(instance).toBeInstanceOf(LobeMockProvider);
+      const instance = new OrviloMockProvider({ apiKey: 'test_api_key' });
+      expect(instance).toBeInstanceOf(OrviloMockProvider);
       expect(instance.baseURL).toEqual(defaultBaseURL);
     });
   });
@@ -610,7 +610,6 @@ describe('LobeOpenAICompatibleFactory', () => {
         );
       });
 
-      // https://github.com/lobehub/lobe-chat/issues/2752
       it('should handle burn hair data chunks correctly', async () => {
         const chunks = [
           {
@@ -899,12 +898,12 @@ describe('LobeOpenAICompatibleFactory', () => {
       });
 
       it('should add prompt_cache_key for OpenAI chat requests with user', async () => {
-        const LobeOpenAIProvider = createOpenAICompatibleRuntime({
+        const OrviloOpenAIProvider = createOpenAICompatibleRuntime({
           baseURL: 'https://api.openai.com/v1',
           provider: ModelProvider.OpenAI,
         });
 
-        const instance = new LobeOpenAIProvider({ apiKey: 'test' });
+        const instance = new OrviloOpenAIProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -920,7 +919,7 @@ describe('LobeOpenAICompatibleFactory', () => {
 
         expect(mockCreateMethod).toHaveBeenCalledWith(
           expect.objectContaining({
-            prompt_cache_key: 'lobe:testUser:gpt-4o',
+            prompt_cache_key: 'orvilo:testUser:gpt-4o',
           }),
           expect.anything(),
         );
@@ -947,11 +946,11 @@ describe('LobeOpenAICompatibleFactory', () => {
       });
 
       it('should not add prompt_cache_key for GPT chat requests without user', async () => {
-        const LobeOpenAIProvider = createOpenAICompatibleRuntime({
+        const OrviloOpenAIProvider = createOpenAICompatibleRuntime({
           baseURL: 'https://api.openai.com/v1',
           provider: ModelProvider.OpenAI,
         });
-        const instance = new LobeOpenAIProvider({ apiKey: 'test' });
+        const instance = new OrviloOpenAIProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -972,12 +971,12 @@ describe('LobeOpenAICompatibleFactory', () => {
 
       it('should add prompt_cache_key for GPT models from any provider (including new-api/aihubmix)', async () => {
         // Test with non-OpenAI provider but GPT model
-        const LobeCustomOpenAICompatibleProvider = createOpenAICompatibleRuntime({
+        const OrviloCustomOpenAICompatibleProvider = createOpenAICompatibleRuntime({
           baseURL: 'https://custom-proxy.new-api.com/v1',
           provider: 'custom-openai-compatible',
         });
 
-        const instance = new LobeCustomOpenAICompatibleProvider({ apiKey: 'test' });
+        const instance = new OrviloCustomOpenAICompatibleProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -993,14 +992,14 @@ describe('LobeOpenAICompatibleFactory', () => {
 
         expect(mockCreateMethod).toHaveBeenCalledWith(
           expect.objectContaining({
-            prompt_cache_key: 'lobe:testUser:gpt-4o-mini',
+            prompt_cache_key: 'orvilo:testUser:gpt-4o-mini',
           }),
           expect.anything(),
         );
       });
 
       it('should not override custom prompt_cache_key from handlePayload', async () => {
-        const LobeOpenAIProvider = createOpenAICompatibleRuntime({
+        const OrviloOpenAIProvider = createOpenAICompatibleRuntime({
           baseURL: 'https://api.openai.com/v1',
           chatCompletion: {
             handlePayload: (payload) =>
@@ -1013,7 +1012,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           provider: ModelProvider.OpenAI,
         });
 
-        const instance = new LobeOpenAIProvider({ apiKey: 'test' });
+        const instance = new OrviloOpenAIProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -1038,7 +1037,7 @@ describe('LobeOpenAICompatibleFactory', () => {
 
     describe('noUserId option', () => {
       it('should not add user to payload when noUserId is true', async () => {
-        const LobeMockProvider = createOpenAICompatibleRuntime({
+        const OrviloMockProvider = createOpenAICompatibleRuntime({
           baseURL: 'https://api.mistral.ai/v1',
           chatCompletion: {
             noUserId: true,
@@ -1046,7 +1045,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           provider: ModelProvider.Mistral,
         });
 
-        const instance = new LobeMockProvider({ apiKey: 'test' });
+        const instance = new OrviloMockProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -1069,7 +1068,7 @@ describe('LobeOpenAICompatibleFactory', () => {
       });
 
       it('should add user to payload when noUserId is false', async () => {
-        const LobeMockProvider = createOpenAICompatibleRuntime({
+        const OrviloMockProvider = createOpenAICompatibleRuntime({
           baseURL: 'https://api.mistral.ai/v1',
           chatCompletion: {
             noUserId: false,
@@ -1077,7 +1076,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           provider: ModelProvider.Mistral,
         });
 
-        const instance = new LobeMockProvider({ apiKey: 'test' });
+        const instance = new OrviloMockProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -1100,12 +1099,12 @@ describe('LobeOpenAICompatibleFactory', () => {
       });
 
       it('should add user to payload when noUserId is not set in chatCompletion', async () => {
-        const LobeMockProvider = createOpenAICompatibleRuntime({
+        const OrviloMockProvider = createOpenAICompatibleRuntime({
           baseURL: 'https://api.mistral.ai/v1',
           provider: ModelProvider.Mistral,
         });
 
-        const instance = new LobeMockProvider({ apiKey: 'test' });
+        const instance = new OrviloMockProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -1145,7 +1144,7 @@ describe('LobeOpenAICompatibleFactory', () => {
       };
 
       it('aborts before dispatch with ExceededContextWindow when prompt exceeds ctx', async () => {
-        const LobePreFlightProvider = createOpenAICompatibleRuntime({
+        const OrviloPreFlightProvider = createOpenAICompatibleRuntime({
           baseURL: defaultBaseURL,
           chatCompletion: {
             contextPreFlight: { models: [tightModel] },
@@ -1153,7 +1152,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           provider: 'preflight-test',
         });
 
-        const instance = new LobePreFlightProvider({ apiKey: 'test' });
+        const instance = new OrviloPreFlightProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -1186,7 +1185,7 @@ describe('LobeOpenAICompatibleFactory', () => {
       });
 
       it('passes through when prompt fits comfortably', async () => {
-        const LobePreFlightProvider = createOpenAICompatibleRuntime({
+        const OrviloPreFlightProvider = createOpenAICompatibleRuntime({
           baseURL: defaultBaseURL,
           chatCompletion: {
             contextPreFlight: { models: [roomyModel] },
@@ -1194,7 +1193,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           provider: 'preflight-test',
         });
 
-        const instance = new LobePreFlightProvider({ apiKey: 'test' });
+        const instance = new OrviloPreFlightProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -1209,7 +1208,7 @@ describe('LobeOpenAICompatibleFactory', () => {
       });
 
       it('skips when the model is unknown to the pre-flight list', async () => {
-        const LobePreFlightProvider = createOpenAICompatibleRuntime({
+        const OrviloPreFlightProvider = createOpenAICompatibleRuntime({
           baseURL: defaultBaseURL,
           chatCompletion: {
             contextPreFlight: { models: [tightModel] },
@@ -1217,7 +1216,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           provider: 'preflight-test',
         });
 
-        const instance = new LobePreFlightProvider({ apiKey: 'test' });
+        const instance = new OrviloPreFlightProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -1237,7 +1236,7 @@ describe('LobeOpenAICompatibleFactory', () => {
         // minOutputTokens before deciding, which rejected a ~198.5k-token
         // prompt against a 200k-token window. The corrected threshold
         // only fires on real overflow.
-        const LobePreFlightProvider = createOpenAICompatibleRuntime({
+        const OrviloPreFlightProvider = createOpenAICompatibleRuntime({
           baseURL: defaultBaseURL,
           chatCompletion: {
             contextPreFlight: { models: [roomyModel] },
@@ -1245,7 +1244,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           provider: 'preflight-test',
         });
 
-        const instance = new LobePreFlightProvider({ apiKey: 'test' });
+        const instance = new OrviloPreFlightProvider({ apiKey: 'test' });
         const mockCreateMethod = vi
           .spyOn(instance['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -1379,7 +1378,7 @@ describe('LobeOpenAICompatibleFactory', () => {
 
       it('should throw AgentRuntimeError with invalidErrorType if no apiKey is provided', async () => {
         try {
-          new LobeMockProvider({});
+          new OrviloMockProvider({});
         } catch (e) {
           expect(e).toEqual({ errorType: invalidErrorType });
         }
@@ -1423,7 +1422,7 @@ describe('LobeOpenAICompatibleFactory', () => {
         };
         const apiError = new OpenAI.APIError(400, errorInfo, 'module error', new Headers());
 
-        instance = new LobeMockProvider({
+        instance = new OrviloMockProvider({
           apiKey: 'test',
 
           baseURL: 'https://api.abc.com/v1',
@@ -1716,7 +1715,7 @@ describe('LobeOpenAICompatibleFactory', () => {
         },
       );
 
-      const LobeMockProvider = createOpenAICompatibleRuntime({
+      const OrviloMockProvider = createOpenAICompatibleRuntime({
         baseURL: 'https://api.test.com/v1',
         chatCompletion: {
           handleStream: customStreamHandler,
@@ -1724,7 +1723,7 @@ describe('LobeOpenAICompatibleFactory', () => {
         provider: ModelProvider.OpenAI,
       });
 
-      const instance = new LobeMockProvider({ apiKey: 'test' });
+      const instance = new OrviloMockProvider({ apiKey: 'test' });
 
       // Create a mock stream
       const mockStream = new ReadableStream({
@@ -1780,7 +1779,7 @@ describe('LobeOpenAICompatibleFactory', () => {
         });
       });
 
-      const LobeMockProvider = createOpenAICompatibleRuntime({
+      const OrviloMockProvider = createOpenAICompatibleRuntime({
         baseURL: 'https://api.test.com/v1',
         chatCompletion: {
           handleTransformResponseToStream: customTransformHandler,
@@ -1788,7 +1787,7 @@ describe('LobeOpenAICompatibleFactory', () => {
         provider: ModelProvider.OpenAI,
       });
 
-      const instance = new LobeMockProvider({ apiKey: 'test' });
+      const instance = new OrviloMockProvider({ apiKey: 'test' });
 
       const mockResponse: OpenAI.ChatCompletion = {
         choices: [
@@ -1831,7 +1830,7 @@ describe('LobeOpenAICompatibleFactory', () => {
         'should route to Responses API when chatCompletion.useResponse is true',
         { timeout: 10000 },
         async () => {
-          const LobeMockProviderUseResponses = createOpenAICompatibleRuntime({
+          const OrviloMockProviderUseResponses = createOpenAICompatibleRuntime({
             baseURL: 'https://api.test.com/v1',
             chatCompletion: {
               useResponse: true,
@@ -1839,7 +1838,7 @@ describe('LobeOpenAICompatibleFactory', () => {
             provider: ModelProvider.OpenAI,
           });
 
-          const inst = new LobeMockProviderUseResponses({ apiKey: 'test' });
+          const inst = new OrviloMockProviderUseResponses({ apiKey: 'test' });
 
           // Mock responses.create to return a proper stream-like object
           const mockResponsesCreate = vi
@@ -1869,7 +1868,7 @@ describe('LobeOpenAICompatibleFactory', () => {
       );
 
       it('should enable strictToolPairing when building Responses API input', async () => {
-        const LobeMockProviderUseResponses = createOpenAICompatibleRuntime({
+        const OrviloMockProviderUseResponses = createOpenAICompatibleRuntime({
           baseURL: 'https://api.test.com/v1',
           chatCompletion: {
             useResponse: true,
@@ -1877,7 +1876,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           provider: ModelProvider.OpenAI,
         });
 
-        const inst = new LobeMockProviderUseResponses({ apiKey: 'test' });
+        const inst = new OrviloMockProviderUseResponses({ apiKey: 'test' });
         const convertSpy = vi
           .spyOn(openaiHelpers, 'convertOpenAIResponseInputs')
           .mockResolvedValue([{ role: 'user', content: 'mocked input' }] as any);
@@ -1987,7 +1986,7 @@ describe('LobeOpenAICompatibleFactory', () => {
       });
 
       it('should keep OpenRouter OpenAI slugs on chat completions for provider payload normalization', async () => {
-        const LobeMockOpenRouter = createOpenAICompatibleRuntime({
+        const OrviloMockOpenRouter = createOpenAICompatibleRuntime({
           baseURL: 'https://openrouter.ai/api/v1',
           chatCompletion: {
             handlePayload: (payload) => {
@@ -2003,7 +2002,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           provider: ModelProvider.OpenRouter,
         });
 
-        const inst = new LobeMockOpenRouter({ apiKey: 'test' });
+        const inst = new OrviloMockOpenRouter({ apiKey: 'test' });
         const chatSpy = vi
           .spyOn(inst['client'].chat.completions, 'create')
           .mockResolvedValue(new ReadableStream() as any);
@@ -2031,14 +2030,14 @@ describe('LobeOpenAICompatibleFactory', () => {
         'should route to Responses API when model matches useResponseModels',
         { timeout: 10000 },
         async () => {
-          const LobeMockProviderUseResponseModels = createOpenAICompatibleRuntime({
+          const OrviloMockProviderUseResponseModels = createOpenAICompatibleRuntime({
             baseURL: 'https://api.test.com/v1',
             chatCompletion: {
               useResponseModels: ['special-model', /special-\w+/],
             },
             provider: ModelProvider.OpenAI,
           });
-          const inst = new LobeMockProviderUseResponseModels({ apiKey: 'test' });
+          const inst = new OrviloMockProviderUseResponseModels({ apiKey: 'test' });
           const spy = vi.spyOn(inst['client'].responses, 'create');
           // Prevent hanging by mocking normal chat completion stream
           vi.spyOn(inst['client'].chat.completions, 'create').mockResolvedValue(
@@ -2190,7 +2189,7 @@ describe('LobeOpenAICompatibleFactory', () => {
       });
 
       it('should route mapped logical image-chat models through chat completions', async () => {
-        const mappedInstance = new LobeMockProvider({
+        const mappedInstance = new OrviloMockProvider({
           apiKey: 'test',
           modelIdMapping: { 'logical-image-model:image': 'upstream-image-model' },
         });
@@ -2773,7 +2772,7 @@ describe('LobeOpenAICompatibleFactory', () => {
         {
           input: payload.messages,
           model: payload.model,
-          prompt_cache_key: 'lobe:test-user:gpt-4o',
+          prompt_cache_key: 'orvilo:test-user:gpt-4o',
           // @ts-ignore
           text: { format: { strict: true, type: 'json_schema', ...payload.schema } },
           safety_identifier: options.user,
@@ -2785,12 +2784,12 @@ describe('LobeOpenAICompatibleFactory', () => {
     });
 
     it('should add prompt_cache_key for OpenAI generateObject responses requests with user', async () => {
-      const LobeOpenAIProvider = createOpenAICompatibleRuntime({
+      const OrviloOpenAIProvider = createOpenAICompatibleRuntime({
         baseURL: 'https://api.openai.com/v1',
         provider: ModelProvider.OpenAI,
       });
 
-      const instance = new LobeOpenAIProvider({ apiKey: 'test' });
+      const instance = new OrviloOpenAIProvider({ apiKey: 'test' });
       const mockResponse = {
         output_text: '{"status": "success"}',
       };
@@ -2811,7 +2810,7 @@ describe('LobeOpenAICompatibleFactory', () => {
 
       expect(instance['client'].responses.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          prompt_cache_key: 'lobe:testUser:gpt-4o',
+          prompt_cache_key: 'orvilo:testUser:gpt-4o',
         }),
         expect.anything(),
       );
@@ -3063,7 +3062,7 @@ describe('LobeOpenAICompatibleFactory', () => {
           {
             messages: payload.messages,
             model: payload.model,
-            prompt_cache_key: 'lobe:test-user-123:gpt-4o',
+            prompt_cache_key: 'orvilo:test-user-123:gpt-4o',
             response_format: { json_schema: payload.schema, type: 'json_schema' },
             user: options.user,
           },
@@ -3074,12 +3073,12 @@ describe('LobeOpenAICompatibleFactory', () => {
       });
 
       it('should add prompt_cache_key for OpenAI generateObject chat completion requests with user', async () => {
-        const LobeOpenAIProvider = createOpenAICompatibleRuntime({
+        const OrviloOpenAIProvider = createOpenAICompatibleRuntime({
           baseURL: 'https://api.openai.com/v1',
           provider: ModelProvider.OpenAI,
         });
 
-        const instance = new LobeOpenAIProvider({ apiKey: 'test' });
+        const instance = new OrviloOpenAIProvider({ apiKey: 'test' });
         const mockResponse = {
           choices: [
             {
@@ -3108,7 +3107,7 @@ describe('LobeOpenAICompatibleFactory', () => {
 
         expect(instance['client'].chat.completions.create).toHaveBeenCalledWith(
           expect.objectContaining({
-            prompt_cache_key: 'lobe:testUser:gpt-4o',
+            prompt_cache_key: 'orvilo:testUser:gpt-4o',
           }),
           expect.anything(),
         );

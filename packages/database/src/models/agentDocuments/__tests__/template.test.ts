@@ -132,9 +132,9 @@ describe('DocumentTemplateManager', () => {
     it('should replace all matching placeholders and leave missing values unchanged', () => {
       expect(
         DocumentTemplateManager.replaceVariables('Hi {{name}} and {{name}} from {{team}}', {
-          name: 'Lobe',
+          name: 'Orvilo',
         }),
-      ).toBe('Hi Lobe and Lobe from {{team}}');
+      ).toBe('Hi Orvilo and Orvilo from {{team}}');
     });
   });
 

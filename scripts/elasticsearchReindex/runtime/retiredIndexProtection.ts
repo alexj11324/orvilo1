@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { z } from 'zod';
 
-export const RETIRED_INDEX_PROTECTION_OWNER = 'lobehub-fts-search-retirement';
+export const RETIRED_INDEX_PROTECTION_OWNER = 'orvilo-fts-search-retirement';
 export const RETIRED_INDEX_PROTECTION_PRIORITY = 1_000_000;
 
 const indexTemplateSchema = z.object({
@@ -40,7 +40,7 @@ export const assertExactRetiredIndexName = (index: string) => {
 
 export const getRetiredIndexProtectionTemplateName = (index: string) => {
   const digest = createHash('sha256').update(index).digest('hex').slice(0, 20);
-  return `lobehub-fts-retired-${digest}`;
+  return `orvilo-fts-retired-${digest}`;
 };
 
 export const getRetiredIndexProtectionTemplate = (
@@ -91,7 +91,7 @@ export const assertRetiredIndexProtection = (
 
   if (named && !isOwnedAndEffective) {
     throw new Error(
-      `Elasticsearch index template ${name} already exists but is not owned by LobeHub retirement protection or has drifted`,
+      `Elasticsearch index template ${name} already exists but is not owned by Orvilo retirement protection or has drifted`,
     );
   }
 

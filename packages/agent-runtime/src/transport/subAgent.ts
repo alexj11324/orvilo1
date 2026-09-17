@@ -22,7 +22,7 @@ export interface SubAgentExecutionResult extends ExecSubAgentResult {
  * executors. `execVirtualSubAgent` additionally installs the async completion
  * bridge and marks the child as a sub-agent.
  *
- * Group-member fan-out (`lobe-group-management`) is NOT here — it is plumbed
+ * Group-member fan-out (`orvilo-group-management`) is NOT here — it is plumbed
  * through the tool-execution adapter as the per-call member runner, so it
  * stays bound inside {@link ToolTransport}.
  */

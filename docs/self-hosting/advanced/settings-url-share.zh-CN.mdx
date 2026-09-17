@@ -1,10 +1,10 @@
 ---
-title: URL 分享设置参数 - LobeHub 配置快速设置
-description: 了解如何从外部 URL 导入和导出 LobeHub 的设置参数，包括 keyVaults 和 languageModel，以及参数格式和类型。
+title: URL 分享设置参数 - Orvilo 配置快速设置
+description: 了解如何从外部 URL 导入和导出 Orvilo 的设置参数，包括 keyVaults 和 languageModel，以及参数格式和类型。
 tags:
   - URL 分享
   - 设置参数
-  - LobeHub
+  - Orvilo
   - keyVaults
   - languageModel
   - JSON 格式
@@ -14,7 +14,7 @@ tags:
 
 # URL 分享设置参数
 
-LobeHub 支持从外部 URL 导入设置参数，以便于快速设置 LobeHub 的配置。
+Orvilo 支持从外部 URL 导入设置参数，以便于快速设置 Orvilo 的配置。
 
 目前支持的设置项有：
 
@@ -26,8 +26,8 @@ LobeHub 支持从外部 URL 导入设置参数，以便于快速设置 LobeHub �
 使用以下 URL 格式，可以从外部 URL 导入设置参数：
 
 ```plaintext
-https://lobehub.com/?settings=<JSON格式的设置对象>
-https://lobehub.com/?settings={"keyVaults":{"openai":{"apiKey":"user-key","baseURL":"https://your-proxy.com/v1"}}}
+https://orvilo.aspectlylabs.com/?settings=<JSON格式的设置对象>
+https://orvilo.aspectlylabs.com/?settings={"keyVaults":{"openai":{"apiKey":"user-key","baseURL":"https://your-proxy.com/v1"}}}
 ```
 
 JSON 格式的设置示例：
@@ -61,7 +61,7 @@ console.log(url);
 ```
 
 <Callout type={'warning'}>
-  LobeHub 不对 URL 中的设置参数进行正确性校验，也不提供 URL 的加密、解密方法，请谨慎使用。
+  Orvilo 不对 URL 中的设置参数进行正确性校验，也不提供 URL 的加密、解密方法，请谨慎使用。
 </Callout>
 
 ## 参数格式

@@ -14,7 +14,7 @@ import { type StoreSetter } from '@/store/types';
 import { takeWorkIntent } from '@/utils/clientWorkIntentStash';
 import { safeParseJSON } from '@/utils/safeParseJSON';
 
-const log = debug('lobe-store:client-tool-execution');
+const log = debug('orvilo-store:client-tool-execution');
 
 type Setter = StoreSetter<ChatStore>;
 

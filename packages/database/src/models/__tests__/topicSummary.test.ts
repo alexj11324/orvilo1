@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { messages, topics, users, userSettings } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { TopicSummaryModel } from '../topicSummary';
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 const model = new TopicSummaryModel(db);
 const userId = 'topic-summary-user';
 const otherUserId = 'topic-summary-other';

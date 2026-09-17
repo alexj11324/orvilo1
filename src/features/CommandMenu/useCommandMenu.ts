@@ -133,7 +133,7 @@ export const useCommandMenu = () => {
     [setTheme, onClose],
   );
 
-  const handleAskLobeAI = useCallback(() => {
+  const handleAskOrviloAI = useCallback(() => {
     // Navigate to inbox agent with the message query parameter
     if (inboxAgentId && search.trim()) {
       const message = encodeURIComponent(search.trim());
@@ -220,7 +220,7 @@ export const useCommandMenu = () => {
 
   return {
     closeCommandMenu,
-    handleAskLobeAI,
+    handleAskOrviloAI,
     handleBack,
     handleCreateAgentTeam,
     handleCreateLibrary,

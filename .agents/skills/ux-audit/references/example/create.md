@@ -1,8 +1,8 @@
 # Worked example — Create surfaces (视频创作 / 图像创作) audit
 
 A real run of this skill against the two desktop **generation** surfaces —
-`src/routes/(main)/(create)/video` and `.../image` — 2026-07 (LOBE-11151, under the
-desktop-main-area audit LOBE-11098). Use it as a **template for the output shape**, not as
+`src/routes/(main)/(create)/video` and `.../image` — 2026-07 (ORVILO-11151, under the
+desktop-main-area audit ORVILO-11098). Use it as a **template for the output shape**, not as
 current-state truth (the code moves; re-verify before citing).
 
 The two surfaces are **near-identical**: both compose the shared shell
@@ -48,8 +48,8 @@ before generate ⏳ (not surfaced; out of L1 scope).
 | Capability gate (feedback)    | `image/NotSupportClient.tsx` (CLI / self-hosted upsell)              | ✅     | class-norm gate present                                     |
 | Empty-state as onboarding     | `EmptyState` = centered composer, **no examples/showcase**           | ⚠️     | bare first-run (gap ④)                                      |
 
-**Read:** navigation, feed, progress and defaults are solid. Weakness clusters in
-**Feedback (failure paths)** — the same family this codebase is repeatedly weak in — and in
+**Read:** navigation, feed, progress and defaults are solid. Weakness clusters
+**Feedback (failure paths)** — the same family this codebase is repeatedly weak in — and
 two absent generation-class affordances (cancel, result→input).
 
 ## 2 — Strengths / good cases (don't regress)

@@ -4,7 +4,7 @@ import debug from 'debug';
 
 import type { StepCompletionReason, StepPresentationData } from './types';
 
-const log = debug('lobe-server:operation-trace-recorder');
+const log = debug('orvilo-server:operation-trace-recorder');
 
 type SignalEvent = { [key: string]: unknown; type: string };
 

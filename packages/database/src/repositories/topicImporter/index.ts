@@ -3,7 +3,7 @@ import type { ExportedTopic, ImportedMessage } from '@orvilo/types';
 import { clampToolIdentifier } from '@/utils/clampToolIdentifier';
 
 import { messagePlugins, messages, topics } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { idGenerator } from '../../utils/idGenerator';
 
 export interface ImportTopicParams {
@@ -54,10 +54,10 @@ interface PreparedMessagePlugin {
 
 export class TopicImporterRepo {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;

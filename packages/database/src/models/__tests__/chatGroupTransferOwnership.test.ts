@@ -13,7 +13,7 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AGENT_TRANSFER_IN_PROGRESS, AgentTransferJobModel } from '../agentTransferJob';
 import {
   CHAT_GROUP_OWNERSHIP_STALE,
@@ -21,7 +21,7 @@ import {
   ChatGroupModel,
 } from '../chatGroup';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const ownerId = 'group-handover-owner';
 const recipientId = 'group-handover-recipient';

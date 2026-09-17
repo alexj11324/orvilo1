@@ -1,4 +1,4 @@
-import { LOBE_DEFAULT_MODEL_LIST, ModelProvider } from 'model-bank';
+import { ModelProvider, ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 import urlJoin from 'url-join';
 
 import { createRouterRuntime } from '../../core/RouterRuntime';
@@ -54,13 +54,13 @@ export interface AiHubMixModelCard {
 }
 
 /**
- * Maps AiHubMix `types` field values to LobeHub AiModelType.
+ * Maps AiHubMix `types` field values to Orvilo AiModelType.
  * Both current identifiers and legacy aliases are included; the platform
  * auto-maps them server-side, but we handle both defensively on the client.
  * See https://docs.aihubmix.com/cn/api/Models-API
  *
  * Note: `rerank` / `reranking` are intentionally omitted — they are not part of
- * LobeHub's AiModelType and are filtered out before model list processing to
+ * Orvilo's AiModelType and are filtered out before model list processing to
  * prevent rerank models from silently falling back to `chat` and failing at
  * inference time.
  */
@@ -79,14 +79,14 @@ const TYPE_MAP: Record<string, string> = {
 };
 
 /**
- * AiHubMix `types` values that have no corresponding LobeHub AiModelType.
+ * AiHubMix `types` values that have no corresponding Orvilo AiModelType.
  * Models with these types are filtered out before processing to prevent them
  * from incorrectly appearing as chat models in the UI.
  */
 const UNSUPPORTED_AIHUBMIX_TYPES = new Set(['rerank', 'reranking']);
 
 /**
- * Map AiHubMix full-catalog API response fields to LobeHub model card fields.
+ * Map AiHubMix full-catalog API response fields to Orvilo model card fields.
  * The new endpoint returns its own schema (model_id, desc, types, features, etc.)
  * which must be normalized before being passed to processMultiProviderModelList.
  */
@@ -131,7 +131,7 @@ const mapAiHubMixModel = (m: any): { [key: string]: any; id: string } => {
     // Map `features` capabilities only when the field is present; when absent,
     // processMultiProviderModelList falls back to keyword-based detection.
     // Known features values: thinking | tools | function_calling | web | structured_outputs
-    // `structured_outputs` has no corresponding LobeHub model card field and is intentionally omitted.
+    // `structured_outputs` has no corresponding Orvilo model card field and is intentionally omitted.
     ...(featureSet && {
       functionCall: featureSet.has('tools') || featureSet.has('function_calling'),
       reasoning: featureSet.has('thinking'),
@@ -156,7 +156,7 @@ export const params: CreateRouterRuntimeOptions = {
     chatCompletion: () => process.env.DEBUG_AIHUBMIX_CHAT_COMPLETION === '1',
   },
   defaultHeaders: {
-    'APP-Code': 'LobeHub',
+    'APP-Code': 'Orvilo',
   },
   id: ModelProvider.AiHubMix,
   models: async ({ client }) => {
@@ -181,7 +181,7 @@ export const params: CreateRouterRuntimeOptions = {
       const response = await fetch(urlJoin(rootBaseURL, '/api/v1/models'), {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
-          'APP-Code': 'LobeHub',
+          'APP-Code': 'Orvilo',
         },
         signal: controller.signal,
       });
@@ -203,21 +203,21 @@ export const params: CreateRouterRuntimeOptions = {
   routers: (options, runtimeContext) => [
     {
       apiType: 'anthropic',
-      models: LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+      models: ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
         (id) => detectModelProvider(id) === 'anthropic',
       ),
       options: { baseURL: resolveBaseURL(options) },
     },
     {
       apiType: 'google',
-      models: LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+      models: ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
         (id) => detectModelProvider(id) === 'google',
       ),
       options: { baseURL: urlJoin(resolveBaseURL(options), '/gemini') },
     },
     {
       apiType: 'xai',
-      models: LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+      models: ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
         (id) => detectModelProvider(id) === 'xai',
       ),
       options: { baseURL: urlJoin(resolveBaseURL(options), '/v1') },
@@ -230,7 +230,7 @@ export const params: CreateRouterRuntimeOptions = {
       // response_format json_schema which DeepSeek upstreams reject.
       models: resolveProviderRouteModels(
         'deepseek',
-        LOBE_DEFAULT_MODEL_LIST,
+        ORVILO_DEFAULT_MODEL_LIST,
         runtimeContext?.model,
       ),
       options: { baseURL: urlJoin(resolveBaseURL(options), '/v1') },
@@ -247,4 +247,4 @@ export const params: CreateRouterRuntimeOptions = {
   ],
 };
 
-export const LobeAiHubMixAI = createRouterRuntime(params);
+export const OrviloAiHubMixAI = createRouterRuntime(params);

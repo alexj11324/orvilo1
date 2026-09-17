@@ -10,7 +10,7 @@ import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import { type MarkdownElementProps } from '../../type';
 import { parseInternalLink } from '../internalLink';
-import { type LobeLinkKind } from '../parse';
+import { type OrviloLinkKind } from '../parse';
 import FaviconIcon from './FaviconIcon';
 import { InternalEntityLink } from './InternalEntityLink';
 import LinearIcon from './LinearIcon';
@@ -18,14 +18,14 @@ import LinkChip from './LinkChip';
 
 const ICON_SIZE = 15;
 
-interface LobeLinkProperties {
+interface OrviloLinkProperties {
   linkDomain?: string;
   linkHref?: string;
-  linkKind?: LobeLinkKind;
+  linkKind?: OrviloLinkKind;
   linkLabel?: string;
 }
 
-const Render = memo<MarkdownElementProps<LobeLinkProperties>>(({ node }) => {
+const Render = memo<MarkdownElementProps<OrviloLinkProperties>>(({ node }) => {
   const { linkHref, linkKind, linkLabel, linkDomain } = node?.properties || {};
   const showIcon = useUserStore(userGeneralSettingsSelectors.enableMessageLinkIcon);
   const workspaces = useWorkspaces();
@@ -66,6 +66,6 @@ const Render = memo<MarkdownElementProps<LobeLinkProperties>>(({ node }) => {
   );
 });
 
-Render.displayName = 'LobeLinkRender';
+Render.displayName = 'OrviloLinkRender';
 
 export default Render;

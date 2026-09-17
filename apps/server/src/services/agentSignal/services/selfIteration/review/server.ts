@@ -7,7 +7,7 @@ import { AgentSignalNightlyReviewModel } from '@/database/models/agentSignal/nig
 import { AgentSignalReviewContextModel } from '@/database/models/agentSignal/reviewContext';
 import { BriefModel } from '@/database/models/brief';
 import type { BriefItem } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AGENT_SIGNAL_DEFAULTS } from '@/server/services/agentSignal/constants';
 import { isAgentSignalEnabledForUser } from '@/server/services/agentSignal/featureGate';
 import { runMemoryActionAgent } from '@/server/services/agentSignal/policies/analyzeIntent/actions/userMemory';
@@ -404,7 +404,7 @@ export interface ReviewRuntimePrimitiveDeps {
   agentId: string;
   briefModel: BriefModel;
   briefTextTranslator?: SelfReviewBriefTextTranslator;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   localDate: string;
   proposalBriefWriter: ReturnType<typeof createServerSelfReviewBriefWriter>;
   reviewWindowEnd: string;

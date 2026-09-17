@@ -4,7 +4,7 @@ import type { EvalBenchmarkRubric, UserSystemAgentConfig } from '@orvilo/types';
 import debug from 'debug';
 
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 
 import { resolveSystemAgentModelConfig } from '../systemAgent/modelConfig';
@@ -34,11 +34,11 @@ export interface ReviewResult {
 }
 
 export class TaskReviewService {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

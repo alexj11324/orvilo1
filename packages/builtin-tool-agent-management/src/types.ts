@@ -1,11 +1,11 @@
 import type { HeteroAgentRuntimeDescriptor } from '@orvilo/agent-manager-runtime';
-import type { HeterogeneousProviderConfig, LobeAgentConfig, MetaData } from '@orvilo/types';
+import type { HeterogeneousProviderConfig, MetaData, OrviloAgentConfig } from '@orvilo/types';
 import type { PartialDeep } from 'type-fest';
 
 /**
  * Agent Management Tool Identifier
  */
-export const AgentManagementIdentifier = 'lobe-agent-management';
+export const AgentManagementIdentifier = 'orvilo-agent-management';
 
 /**
  * Agent Management API Names
@@ -119,7 +119,7 @@ export interface UpdateAgentParams {
   /**
    * Partial agent configuration to update
    */
-  config?: PartialDeep<LobeAgentConfig>;
+  config?: PartialDeep<OrviloAgentConfig>;
   /**
    * Partial metadata to update
    */
@@ -392,7 +392,7 @@ export interface InstallPluginParams {
    */
   identifier: string;
   /**
-   * Plugin source: 'official' (builtin/composio/lobehub-skill) or 'market' (MCP marketplace)
+   * Plugin source: 'official' (builtin/composio/orvilo-skill) or 'market' (MCP marketplace)
    */
   source: InstallPluginSource;
 }

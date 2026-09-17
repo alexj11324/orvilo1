@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 import { assertCheckRoot, detectHostCheckRoot } from './delegate';
 import { runCli } from './index';
-import { lobehubPipelines } from './pipelines';
+import { orviloPipelines } from './pipelines';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -31,7 +31,7 @@ const main = async () => {
   }
 
   await runCli({
-    repos: [{ baseRef: 'origin/canary', dir: '', pipelines: lobehubPipelines }],
+    repos: [{ baseRef: 'origin/canary', dir: '', pipelines: orviloPipelines }],
     rootDir,
   });
 };

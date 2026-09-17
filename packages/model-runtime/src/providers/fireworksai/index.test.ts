@@ -4,14 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { FireworksAIModelCard } from './index';
-import { LobeFireworksAI, params } from './index';
+import { OrviloFireworksAI, params } from './index';
 
 const provider = ModelProvider.FireworksAI;
 const defaultBaseURL = 'https://api.fireworks.ai/inference/v1';
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeFireworksAI,
+  Runtime: OrviloFireworksAI,
   bizErrorType: 'ProviderBizError',
   chatDebugEnv: 'DEBUG_FIREWORKSAI_CHAT_COMPLETION',
   chatModel: 'deepseek-r1',
@@ -25,7 +25,7 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeFireworksAI - custom features', () => {
+describe('OrviloFireworksAI - custom features', () => {
   describe('params export', () => {
     it('should export params object', () => {
       expect(params).toBeDefined();
@@ -199,7 +199,7 @@ describe('LobeFireworksAI - custom features', () => {
       expect(result[0].vision).toBe(true);
     });
 
-    it('should handle models not in LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should handle models not in ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockModels: FireworksAIModelCard[] = [
         {
           context_length: 4096,
@@ -270,7 +270,7 @@ describe('LobeFireworksAI - custom features', () => {
 
       const result = await params.models!({ client: mockClient });
 
-      // Since 'regular-model' doesn't contain reasoning keywords and is not in LOBE_DEFAULT_MODEL_LIST
+      // Since 'regular-model' doesn't contain reasoning keywords and is not in ORVILO_DEFAULT_MODEL_LIST
       // with reasoning abilities, it should be false
       expect(result[0].reasoning).toBe(false);
     });

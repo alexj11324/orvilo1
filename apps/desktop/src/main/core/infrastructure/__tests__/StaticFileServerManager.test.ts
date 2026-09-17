@@ -29,7 +29,7 @@ vi.mock('node:http', () => ({
 
 // Mock LOCAL_STORAGE_URL_PREFIX
 vi.mock('@/const/dir', () => ({
-  LOCAL_STORAGE_URL_PREFIX: '/lobe-desktop-file',
+  LOCAL_STORAGE_URL_PREFIX: '/orvilo-desktop-file',
 }));
 
 describe('StaticFileServerManager', () => {
@@ -153,7 +153,7 @@ describe('StaticFileServerManager', () => {
         method: 'OPTIONS',
         on: vi.fn(),
         setTimeout: vi.fn(),
-        url: '/lobe-desktop-file/test.png',
+        url: '/orvilo-desktop-file/test.png',
       };
       const res = {
         destroyed: false,
@@ -185,7 +185,7 @@ describe('StaticFileServerManager', () => {
         method: 'GET',
         on: vi.fn(),
         setTimeout: vi.fn(),
-        url: '/lobe-desktop-file/images/test.jpg',
+        url: '/orvilo-desktop-file/images/test.jpg',
       };
       const res = {
         destroyed: false,
@@ -212,7 +212,7 @@ describe('StaticFileServerManager', () => {
         method: 'GET',
         on: vi.fn(),
         setTimeout: vi.fn(),
-        url: '/lobe-desktop-file/',
+        url: '/orvilo-desktop-file/',
       };
       const res = {
         destroyed: false,
@@ -237,7 +237,7 @@ describe('StaticFileServerManager', () => {
         method: 'GET',
         on: vi.fn(),
         setTimeout: vi.fn(),
-        url: '/lobe-desktop-file/nonexistent.png',
+        url: '/orvilo-desktop-file/nonexistent.png',
       };
       const res = {
         destroyed: false,
@@ -263,7 +263,7 @@ describe('StaticFileServerManager', () => {
         method: 'GET',
         on: vi.fn(),
         setTimeout: vi.fn(),
-        url: '/lobe-desktop-file/test.png',
+        url: '/orvilo-desktop-file/test.png',
       };
       const res = {
         destroyed: false,
@@ -287,7 +287,7 @@ describe('StaticFileServerManager', () => {
         method: 'GET',
         on: vi.fn(),
         setTimeout: vi.fn(),
-        url: '/lobe-desktop-file/test.png',
+        url: '/orvilo-desktop-file/test.png',
       };
       const res = {
         destroyed: true,
@@ -309,7 +309,7 @@ describe('StaticFileServerManager', () => {
         method: 'GET',
         on: vi.fn(),
         setTimeout: vi.fn(),
-        url: '/lobe-desktop-file/path%20with%20spaces/file%20name.png',
+        url: '/orvilo-desktop-file/path%20with%20spaces/file%20name.png',
       };
       const res = {
         destroyed: false,

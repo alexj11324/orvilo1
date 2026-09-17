@@ -233,7 +233,7 @@ describe('Hooks integration — afterStep event carries step presentation data',
       nextContext: {
         payload: {
           data: 'Search found 3 results',
-          toolCall: { apiName: 'search', id: 'tc-1', identifier: 'lobe-web-browsing' },
+          toolCall: { apiName: 'search', id: 'tc-1', identifier: 'orvilo-web-browsing' },
           toolCallId: 'tc-1',
         },
         phase: 'tool_result',
@@ -266,7 +266,7 @@ describe('Hooks integration — afterStep event carries step presentation data',
     expect(event.toolsResult).toEqual([
       expect.objectContaining({
         apiName: 'search',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         output: 'Search found 3 results',
       }),
     ]);

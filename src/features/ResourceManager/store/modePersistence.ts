@@ -1,6 +1,6 @@
 import type { ResourceListVisibilityFilter } from './initialState';
 
-const KEY_PREFIX = 'lobehub:resource-mode:';
+const KEY_PREFIX = 'orvilo:resource-mode:';
 const VALID_MODES: readonly ResourceListVisibilityFilter[] = ['private', 'workspace'];
 
 const isBrowser = () => typeof window !== 'undefined' && !!window.localStorage;

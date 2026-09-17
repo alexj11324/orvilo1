@@ -2,9 +2,9 @@ import { isRetiredProductUrl } from '../retiredProductUrl';
 import { type TabScope, tabScopeKey } from './scope';
 import { type TabItem } from './types';
 
-export const TAB_PAGES_STORAGE_KEY_V1 = 'lobechat:desktop:tab-pages:v1';
-export const TAB_PAGES_STORAGE_KEY_V2 = 'lobechat:desktop:tab-pages:v2';
-export const TAB_PAGES_STORAGE_KEY_PREFIX = 'lobechat:desktop:tab-pages:v3';
+export const TAB_PAGES_STORAGE_KEY_V1 = 'orvilo:desktop:tab-pages:v1';
+export const TAB_PAGES_STORAGE_KEY_V2 = 'orvilo:desktop:tab-pages:v2';
+export const TAB_PAGES_STORAGE_KEY_PREFIX = 'orvilo:desktop:tab-pages:v3';
 
 export interface TabPagesStorageData {
   activeTabId: string | null;

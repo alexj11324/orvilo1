@@ -184,7 +184,7 @@
   "verify.confirm.defaultAgent": "Varsayılan ajan",
   "verify.confirm.defaultAgentHint": "Mesajlarınız önce buraya yönlendirilecektir. Botta /agents veya Ayarlar → Mesajlaşma üzerinden istediğiniz zaman değiştirebilirsiniz.",
   "verify.confirm.defaultAgentPlaceholder": "Bir ajan seçin",
-  "verify.confirm.fields.lobeHubAccount": "Orvilo hesabı",
+  "verify.confirm.fields.orviloHubAccount": "Orvilo hesabı",
   "verify.confirm.fields.platformAccount": "{{platform}} hesabı",
   "verify.confirm.fields.workspace": "Çalışma alanı",
   "verify.confirm.noAgents": "Henüz hiçbir ajanınız yok. Orvilo'da bir tane oluşturun, ardından bağlantıyı tamamlamak için geri dönün.",
@@ -203,7 +203,7 @@
   "verify.error.unlinkBeforeRelink": "Bu Orvilo hesabı zaten başka bir Telegram hesabıyla bağlantılı. Yeni bir hesap bağlamadan önce Ayarlar → Messenger bölümünden bağlantıyı kesin.",
   "verify.signInCta": "Devam etmek için giriş yapın",
   "verify.signInRequired": "Bağlantıyı onaylamak için Orvilo'a giriş yapın.",
-  "verify.success.backToLobeHub": "Orvilo'a Dön",
+  "verify.success.backToOrvilo": "Orvilo'a Dön",
   "verify.success.description": "Hesabınız artık {{platform}} ile bağlı. {{platform}}'u açın ve ilk mesajınızı gönderin.",
   "verify.success.openBot": "{{platform}}'da aç",
   "verify.success.title": "Başarıyla bağlandı!"

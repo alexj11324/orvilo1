@@ -6,7 +6,7 @@ import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
 import type { HeterogeneousAgentBuildPlanParams, HeterogeneousAgentDriver } from '../types';
 
-const HOST_API_KEY_ENV = 'LOBEHUB_PI_API_KEY';
+const HOST_API_KEY_ENV = 'ORVILO_PI_API_KEY';
 const MODELS_FILE = 'models.json';
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 16_384;
@@ -86,7 +86,7 @@ export const piDriver: HeterogeneousAgentDriver = {
 
     const model = resolution.apiConfig.model;
     const metadata = resolution.modelMetadata;
-    const providerId = `lobehub-${path.basename(profileDir)}`;
+    const providerId = `orvilo-${path.basename(profileDir)}`;
     const contextWindow =
       metadata?.contextWindowTokens && metadata.contextWindowTokens > 0
         ? metadata.contextWindowTokens
@@ -110,7 +110,7 @@ export const piDriver: HeterogeneousAgentDriver = {
               reasoning: metadata?.abilities?.reasoning === true,
             },
           ],
-          name: 'LobeHub Provider',
+          name: 'Orvilo Provider',
         },
       },
     };
@@ -128,7 +128,7 @@ export const piDriver: HeterogeneousAgentDriver = {
     };
   },
   prepareServerDefaultBinding({ args, endpoint, env, model, profileDir }) {
-    const providerId = 'lobehub-server-default';
+    const providerId = 'orvilo-server-default';
     const requestModel = formatServerDefaultHeterogeneousModel(model);
     const modelsConfig = {
       providers: {
@@ -147,7 +147,7 @@ export const piDriver: HeterogeneousAgentDriver = {
               reasoning: false,
             },
           ],
-          name: 'LobeHub Server Default',
+          name: 'Orvilo Server Default',
         },
       },
     };

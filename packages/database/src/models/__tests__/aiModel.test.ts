@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import type { NewAiModelItem } from '../../schemas';
 import { aiModels, users, workspaces } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AiModelModel } from '../aiModel';
 
 vi.mock('@orvilo/business-model-bank/model-config', () => ({
@@ -18,7 +18,7 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
   ]),
 }));
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'ai-model-test-user-id';
 const workspaceId = 'ai-model-test-workspace-id';
@@ -717,7 +717,7 @@ describe('AiModelModel', () => {
           type: 'image',
         },
         {
-          displayName: 'LobeHub Image Model',
+          displayName: 'Orvilo Image Model',
           id: generatedImageModelId,
           parameters: CHAT_MODEL_IMAGE_GENERATION_PARAMS,
           type: 'image',
@@ -728,7 +728,7 @@ describe('AiModelModel', () => {
 
       expect(result).toHaveLength(2);
       expect(await aiProviderModel.findById(generatedImageModelId)).toMatchObject({
-        displayName: 'LobeHub Image Model',
+        displayName: 'Orvilo Image Model',
         parameters: CHAT_MODEL_IMAGE_GENERATION_PARAMS,
       });
     });

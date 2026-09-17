@@ -7,7 +7,7 @@ import { after } from '@/server/utils/scheduleAfterResponse';
 
 import { type ConnectorToolSyncContext, syncConnectorToolsById } from './sync';
 
-const log = debug('lobe-server:connector-refresh');
+const log = debug('orvilo-server:connector-refresh');
 
 /**
  * Refresh a connector's synced tool list at most once per this window. Picked to

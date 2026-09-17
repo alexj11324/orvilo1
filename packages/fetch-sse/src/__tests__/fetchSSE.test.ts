@@ -577,7 +577,7 @@ describe('fetchSSE', () => {
             type: 'invalid_request_error',
             message: 'Invalid signature in thinking block',
           },
-          provider: 'lobehub',
+          provider: 'orvilo',
           errorType: 'ProviderBizError',
         },
         message: 'ProviderBizError',
@@ -602,7 +602,7 @@ describe('fetchSSE', () => {
       expect(receivedError.body).not.toHaveProperty('elapsedMs');
       expect(receivedError.body).not.toHaveProperty('networkStatus');
       expect(receivedError.body).not.toHaveProperty('model');
-      expect(receivedError.body.provider).toBe('lobehub');
+      expect(receivedError.body.provider).toBe('orvilo');
     });
 
     it('should call onErrorHandle when Unknown error is thrown', async () => {

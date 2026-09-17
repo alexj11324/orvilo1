@@ -12,20 +12,20 @@ export interface XinferenceModelCard {
   name: string;
 }
 
-export const LobeXinferenceAI = createOpenAICompatibleRuntime({
+export const OrviloXinferenceAI = createOpenAICompatibleRuntime({
   baseURL: 'http://localhost:9997/v1',
   debug: {
     chatCompletion: () => process.env.DEBUG_XINFERENCE_CHAT_COMPLETION === '1',
   },
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const modelsPage = (await client.models.list()) as any;
     const modelList: XinferenceModelCard[] = modelsPage.data;
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 

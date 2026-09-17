@@ -1,4 +1,4 @@
-import type * as LobechatConst from '@orvilo/const';
+import type * as OrvilochatConst from '@orvilo/const';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -61,7 +61,7 @@ const renderFooter = async ({
   };
 
   vi.doMock('@orvilo/const', async (importOriginal) => {
-    const actual = (await importOriginal()) as typeof LobechatConst;
+    const actual = (await importOriginal()) as typeof OrvilochatConst;
 
     return {
       ...actual,

@@ -15,7 +15,7 @@ import {
   messageTranslates,
   messageTTS,
 } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 export type IdPair = [sourceId: string, newId: string];
 
@@ -75,7 +75,7 @@ export interface CopyMessagesInDatabaseParams {
   agentIdPairs?: IdPair[];
   /** Ownership scope applied to each child-table copy (plugins, translates, TTS, file/RAG links) */
   childScope?: (table: ScopedMessageChildTable) => SQL | undefined;
-  executor: Pick<LobeChatDatabase, 'execute'>;
+  executor: Pick<OrviloDatabase, 'execute'>;
   /** Value for the copied rows' `group_id` */
   groupId: null | string;
   /** Every message to copy; rows outside this map are untouched */
@@ -89,7 +89,7 @@ export interface CopyMessagesInDatabaseParams {
 }
 
 const seedIdMapTable = async (
-  executor: Pick<LobeChatDatabase, 'execute'>,
+  executor: Pick<OrviloDatabase, 'execute'>,
   tableName: string,
   pairs: IdPair[],
 ) => {

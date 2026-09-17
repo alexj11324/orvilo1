@@ -1,4 +1,4 @@
-# LobeHub Acceptance Mistakes
+# Orvilo Acceptance Mistakes
 
 Project-specific mistakes only. Read this with the acceptance skill's generic
 `references/common-mistakes.md`; stable ids use the `L-` prefix so they cannot be
@@ -10,7 +10,7 @@ when its line applies (`rg -n '^### L-' <file>`, then `sed -n`).
 Only judgment rules live here. Every entry carries `since` and `holds-while` —
 the mechanism it depends on. When that mechanism moves into a script default or
 an ingest check, the entry is deleted the same day (admission and exit rules:
-[PROCESS.md](./PROCESS.md) Step 0). Rules an agent skips under pressure are in
+[PROCESS.md](./PROCESS.md) Step 0). Rules an agent skips under pressure are
 PROCESS.md, not here. Incident narratives, feature-spec facts, and retired
 entries live in [the field notes](./references/common-mistakes-field-notes.md).
 
@@ -53,7 +53,7 @@ the next free number of that prefix.
 - **L-S1** Prove the ingest target from effective CLI settings or an environment-distinguishing probe, never from `lh whoami` alone.
 - **L-S2** Green Vite/Vitest/lint/tsc is not boot insurance: boot the real surface and read `agent-browser console` on an ErrorBoundary.
 - **L-S3** Fetch `origin canary`, record the SHA, and confirm it is an ancestor of the branch before starting the evidence environment.
-- **L-S5** Before driving CDP 9222 or a pool port, prove who owns it: Electron `Browser` string on `/json/version`, a LobeHub renderer marker, and _your_ worktree's absolute source path.
+- **L-S5** Before driving CDP 9222 or a pool port, prove who owns it: Electron `Browser` string on `/json/version`, a Orvilo renderer marker, and _your_ worktree's absolute source path.
 - **L-S7** Before capturing evidence for a dependency or module-graph change, prove the served bundle carries it, or restart Vite; compare the running port with `test-env.sh`'s resolved `PORT`.
 - **L-S8** A first-boot renderer `Cannot access 'X' before initialization` is reloaded once and re-probed before it is attributed to the change.
 - **L-S9** After `migrate`, assert the tables exist; on the shared Postgres, never reset — create a per-run database and export `DATABASE_URL`.
@@ -342,7 +342,7 @@ DB may hold the synchronized profile.
 
 **Rule:** inspect the effective CLI settings or run a data probe that
 distinguishes environments. For production publishing without touching a local
-login, use an isolated `LOBEHUB_CLI_HOME`.
+login, use an isolated `ORVILO_CLI_HOME`.
 
 ### L-S2 — Trusting green gates as proof the app boots
 
@@ -359,7 +359,7 @@ console` (the ErrorBoundary page shows no stack) before diagnosing. Keep
 cross-module constants in the folder's leaf module; router-host component tests
 cover the real outer-router composition.
 
-### L-S3 — Verifying against an unfetched canary ref
+### L-S3 — Verifying against an unfetched canary
 
 `since 2026-07-30` · `holds-while: PROCESS.md Step 2 does not fetch canary itself`
 
@@ -373,7 +373,7 @@ ancestor of the test branch before starting the evidence environment.
 
 `since 2026-07-30` · `holds-while: electron-dev.sh start treats any reachable CDP port as "already running", and app-probe checks a product-level marker only`
 
-**Trap**, three shapes: 9222 belongs to another Electron project; it is LobeHub
+**Trap**, three shapes: 9222 belongs to another Electron project; it is Orvilo
 but a sibling worktree's instance (the first `electron-dev.sh` started owns
 9222/5173, and a product marker passes for every worktree); or the pool port is
 owned by a different debugger — `wrangler`/`workerd` defaults to 9229, which is
@@ -382,7 +382,7 @@ pool id 7, and `electron-dev.sh start <id>` skips the launch with
 
 **Rule:** before collecting evidence, require all three: an Electron `Browser`
 string on `/json/version` (a `wrangler/*` or `node` answer → pick another id),
-a LobeHub renderer marker, and _your_ worktree's absolute source path plus a
+a Orvilo renderer marker, and _your_ worktree's absolute source path plus a
 marker unique to the change:
 
 ```bash
@@ -426,7 +426,7 @@ survives the reload belongs to the code.
 
 ### L-S9 — Trusting "migration pass" on the shared acceptance Postgres
 
-`since 2026-08-16` · `holds-while: init-dev-env.sh migrate trusts drizzle's pass line, and every worktree shares lobehub-agent-testing-postgres`
+`since 2026-08-16` · `holds-while: init-dev-env.sh migrate trusts drizzle's pass line, and every worktree shares orvilo-agent-testing-postgres`
 
 **Trap**, two shapes: drizzle applies journal entries by `when` vs the newest
 `created_at`, so a sibling worktree's same-numbered migration applied minutes
@@ -442,8 +442,8 @@ skipped, run the branch's SQL with `psql -v ON_ERROR_STOP=1` after stripping
 wait out or reset the shared database — create your own inside the container:
 
 ```bash
-docker exec lobehub-agent-testing-postgres psql -U postgres -c "CREATE DATABASE <run>"
-docker exec lobehub-agent-testing-postgres psql -U postgres -d "CREATE EXTENSION IF NOT EXISTS vector" < run > -c
+docker exec orvilo-agent-testing-postgres psql -U postgres -c "CREATE DATABASE <run>"
+docker exec orvilo-agent-testing-postgres psql -U postgres -d "CREATE EXTENSION IF NOT EXISTS vector" < run > -c
 export DATABASE_URL="postgresql://postgres:postgres@localhost:5433/<run>"
 ```
 
@@ -508,7 +508,7 @@ next round — never `run delete`, which destroys the round's real evidence too.
 `since 2026-09-03` · `holds-while: init-dev-env.sh defaults DB_PORT=5433 / REDIS_PORT=6380 instead of reading the managed containers' ports`
 
 **Trap:** on a machine where the managed containers were created on 5434/6381
-(`docker ps` → `lobehub-agent-testing-postgres` on `0.0.0.0:5434`), the default
+(`docker ps` → `orvilo-agent-testing-postgres` on `0.0.0.0:5434`), the default
 dials another project's Postgres — `password authentication failed`
 (`routine: 'auth_failed'`), or worse, a successful migrate against a database
 that is not ours, followed by a healthy page whose every tRPC write fails.
@@ -534,7 +534,7 @@ identity: resolve the Vite pid from its port and read its cwd
 (`lsof -a -p <pid> -d cwd -Fn`), fetch the changed module from the **Vite**
 origin (the Debug Proxy port) and require a unique marker — or drive the feature
 once and require its server call in the log. Before trusting any gate,
-`pwd`/`cd <worktree> &&` and confirm the NAME of the test you added appears in
+`pwd`/`cd <worktree> &&` and confirm the NAME of the test you added appears
 the runner output. Distinct from L-S7: that is a stale bundle from the right
 tree; this is a healthy bundle from the wrong tree.
 

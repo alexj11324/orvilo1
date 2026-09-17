@@ -33,7 +33,7 @@ describe('buildWorkVersionCumulativeUsage', () => {
           tokens: { input: 100, output: 20, total: 120 },
         },
         tools: {
-          byTool: [{ calls: 1, errors: 0, name: 'lobe-task/createTask', totalTimeMs: 20 }],
+          byTool: [{ calls: 1, errors: 0, name: 'orvilo-task/createTask', totalTimeMs: 20 }],
           totalCalls: 1,
           totalTimeMs: 20,
         },

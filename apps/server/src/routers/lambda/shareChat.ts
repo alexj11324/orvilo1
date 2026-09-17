@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { AgentShareModel } from '@/database/models/agentShare';
 import { MessageModel, sanitizeVisitorError } from '@/database/models/message';
 import { TopicModel } from '@/database/models/topic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { signUserJWT } from '@/libs/trpc/utils/internalJwt';
@@ -20,7 +20,7 @@ import {
   assertAgentShareVisitorExecutionEnabled,
 } from './_helpers/agentShareFeatureGate';
 
-const log = debug('lobe-server:router:shareChat');
+const log = debug('orvilo-server:router:shareChat');
 
 /**
  * Visitor-facing lifecycle surface for shared agents (Agent Share).
@@ -75,7 +75,11 @@ const ShareTopicScopeSchema = z.object({
  * run can never be authorized to start under a rule its own step loop would
  * immediately abort it for.
  */
-const resolveLinkShareOrThrow = async (db: LobeChatDatabase, shareId: string, viewerId: string) => {
+const resolveLinkShareOrThrow = async (
+  db: OrviloDatabase,
+  shareId: string,
+  viewerId: string,
+) => {
   const share = await AgentShareModel.findByShareIdWithAccessCheck(db, shareId, viewerId);
 
   if (share.visibility !== 'link') {

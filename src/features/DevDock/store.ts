@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-const STORAGE_KEY = 'LOBE_DEV_DOCK_UI';
+const STORAGE_KEY = 'ORVILO_DEV_DOCK_UI';
 
 export const MIN_PANEL_HEIGHT = 180;
 

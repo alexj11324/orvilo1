@@ -1,4 +1,8 @@
-import { LOBE_CHAT_OBSERVATION_ID, LOBE_CHAT_TRACE_ID, MESSAGE_CANCEL_FLAT } from '@orvilo/const';
+import {
+  MESSAGE_CANCEL_FLAT,
+  ORVILO_OBSERVATION_ID,
+  ORVILO_TRACE_ID,
+} from '@orvilo/const';
 import { parseToolCalls } from '@orvilo/model-runtime/helpers/parseToolCalls';
 import type {
   ChatImageChunk,
@@ -547,8 +551,8 @@ export const fetchSSE = async (url: string, options: RequestInit & FetchSSEOptio
         options.onMessageHandle?.({ text: output, type: 'text' });
       }
 
-      const traceId = response.headers.get(LOBE_CHAT_TRACE_ID);
-      const observationId = response.headers.get(LOBE_CHAT_OBSERVATION_ID);
+      const traceId = response.headers.get(ORVILO_TRACE_ID);
+      const observationId = response.headers.get(ORVILO_OBSERVATION_ID);
 
       textController.flushQueue();
       thinkingController.flushQueue();

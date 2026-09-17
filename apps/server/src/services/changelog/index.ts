@@ -36,10 +36,10 @@ export class ChangelogService {
     changelogPath: 'changelog',
     docsPath: 'docs/changelog',
     majorVersion: 1,
-    repo: 'lobe-chat',
+    repo: 'orvilo1',
     type: 'cloud',
     urlTemplate: process.env.CHANGELOG_URL_TEMPLATE || URL_TEMPLATE,
-    user: 'lobehub',
+    user: 'alexj11324',
   };
 
   async getLatestChangelogId() {
@@ -216,7 +216,8 @@ export class ChangelogService {
   }
 
   private replaceCdnUrl(url: string) {
-    if (url?.startsWith('/blog')) return urlJoin('https://hub-apac-1.lobeobjects.space/', url);
+    if (url?.startsWith('/blog'))
+      return urlJoin('https://hub-apac-1.objects.aspectlylabs.com/', url);
     return url;
   }
 }

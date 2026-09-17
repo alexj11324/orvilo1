@@ -22,7 +22,7 @@ export const SearchAgentInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-group-agent-builder.apiName.searchAgent')}
+          {t('builtins.orvilo-group-agent-builder.apiName.searchAgent')}
         </span>
       </div>
     );
@@ -34,7 +34,7 @@ export const SearchAgentInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-group-agent-builder.apiName.searchAgent')}
+        {t('builtins.orvilo-group-agent-builder.apiName.searchAgent')}
       </span>
       {query && (
         <>
@@ -53,7 +53,7 @@ export const SearchAgentInspector = memo<
             fontSize={12}
             style={{ marginInlineStart: 4 }}
           >
-            ({t('builtins.lobe-group-agent-builder.inspector.noResults')})
+            ({t('builtins.orvilo-group-agent-builder.inspector.noResults')})
           </Text>
         ))}
     </div>

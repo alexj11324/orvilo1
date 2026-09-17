@@ -49,7 +49,7 @@ export const ExecuteAgentTaskInspector = memo<BuiltinInspectorProps<ExecuteTaskP
         return (
           <div className={styles.root}>
             <span className={shinyTextStyles.shinyText}>
-              {t('builtins.lobe-group-management.apiName.executeAgentTask')}
+              {t('builtins.orvilo-group-management.apiName.executeAgentTask')}
             </span>
           </div>
         );
@@ -62,7 +62,7 @@ export const ExecuteAgentTaskInspector = memo<BuiltinInspectorProps<ExecuteTaskP
             gap={8}
           >
             <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-              {t('builtins.lobe-group-management.inspector.executeAgentTask.assignTo')}
+              {t('builtins.orvilo-group-management.inspector.executeAgentTask.assignTo')}
             </span>
             {agent && (
               <>
@@ -81,7 +81,7 @@ export const ExecuteAgentTaskInspector = memo<BuiltinInspectorProps<ExecuteTaskP
             {taskTitle && (
               <>
                 <span className={styles.title}>
-                  {t('builtins.lobe-group-management.inspector.executeAgentTask.task')}
+                  {t('builtins.orvilo-group-management.inspector.executeAgentTask.task')}
                 </span>
                 <span className={highlightTextStyles.primary}>{taskTitle}</span>
               </>
@@ -96,7 +96,7 @@ export const ExecuteAgentTaskInspector = memo<BuiltinInspectorProps<ExecuteTaskP
     return (
       <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-group-management.inspector.executeAgentTask.assignTo')}
+          {t('builtins.orvilo-group-management.inspector.executeAgentTask.assignTo')}
         </span>
         {agent && (
           <Avatar
@@ -111,7 +111,7 @@ export const ExecuteAgentTaskInspector = memo<BuiltinInspectorProps<ExecuteTaskP
         {taskTitle && (
           <>
             <span className={styles.title}>
-              {t('builtins.lobe-group-management.inspector.executeAgentTask.task')}
+              {t('builtins.orvilo-group-management.inspector.executeAgentTask.task')}
             </span>
             <span className={highlightTextStyles.primary}>{taskTitle}</span>
           </>

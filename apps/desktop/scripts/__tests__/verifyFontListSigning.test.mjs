@@ -7,7 +7,7 @@ import { verifyFontListSignature } from '../verifyFontListSigning.mjs';
 const createContext = (electronPlatformName) => ({
   appOutDir: path.join(path.sep, 'build', `${electronPlatformName}-unpacked`),
   electronPlatformName,
-  packager: { appInfo: { productFilename: 'LobeHub' } },
+  packager: { appInfo: { productFilename: 'Orvilo' } },
 });
 
 describe('system font helper post-sign verification', () => {
@@ -16,7 +16,7 @@ describe('system font helper post-sign verification', () => {
       path.sep,
       'build',
       'darwin-unpacked',
-      'LobeHub.app',
+      'Orvilo.app',
       'Contents',
       'Resources',
     );

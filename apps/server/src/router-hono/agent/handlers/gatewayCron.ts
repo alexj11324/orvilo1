@@ -23,7 +23,7 @@ import {
 } from '@/server/services/gateway/runtimeStatus';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
-const log = debug('lobe-server:bot:gateway:cron');
+const log = debug('orvilo-server:bot:gateway:cron');
 
 // A single gateway invocation keeps persistent bots alive for one
 // serverless cron window. Keep this aligned with BotConnectQueue.EXPIRE_MS

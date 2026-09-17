@@ -30,7 +30,7 @@ export const ExecScriptInspector = memo<BuiltinInspectorProps<ExecScriptParams, 
         return (
           <div className={inspectorTextStyles.root}>
             <span className={shinyTextStyles.shinyText}>
-              {t('builtins.lobe-skills.apiName.execScript')}
+              {t('builtins.orvilo-skills.apiName.execScript')}
             </span>
           </div>
         );
@@ -38,7 +38,7 @@ export const ExecScriptInspector = memo<BuiltinInspectorProps<ExecScriptParams, 
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-skills.apiName.execScript')}:{' '}
+            {t('builtins.orvilo-skills.apiName.execScript')}:{' '}
           </span>
           <span className={highlightTextStyles.primary}>{description}</span>
         </div>
@@ -56,7 +56,7 @@ export const ExecScriptInspector = memo<BuiltinInspectorProps<ExecScriptParams, 
       <div className={inspectorTextStyles.root}>
         <span style={{ marginInlineStart: 2 }}>
           <span className={cx(isLoading && shinyTextStyles.shinyText)}>
-            {t('builtins.lobe-skills.apiName.execScript')}:{' '}
+            {t('builtins.orvilo-skills.apiName.execScript')}:{' '}
           </span>
           {description && <span className={highlightTextStyles.primary}>{description}</span>}
           {isLoading ? null : isStillRunning ? (

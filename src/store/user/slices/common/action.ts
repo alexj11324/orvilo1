@@ -12,7 +12,7 @@ import { userService } from '@/services/user';
 import { type StoreSetter } from '@/store/types';
 import { type UserStore } from '@/store/user';
 import { type GlobalServerConfig } from '@/types/serverConfig';
-import { type LobeUser, type UserInitializationState } from '@/types/user';
+import { type OrviloUser, type UserInitializationState } from '@/types/user';
 import { type UserSettings } from '@/types/user/settings';
 import { merge } from '@/utils/merge';
 import { setNamespace } from '@/utils/storeDebug';
@@ -146,7 +146,7 @@ export class CommonActionImpl {
                     interests: data.interests,
                     latestName: data.lastName,
                     username: data.username,
-                  } as LobeUser)
+                  } as OrviloUser)
                 : this.#get().user;
 
             this.#set(

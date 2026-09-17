@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { DeviceToolCallResult } from '@orvilo/device-gateway-client';
 
 import { resolveDeviceDispatchAuthorizationFailure } from './dispatchAuthorization';
@@ -17,7 +17,7 @@ import { deviceGateway } from './index';
  * - The Gateway result, or immediate structured `DEVICE_NOT_FOUND` after Unshare
  */
 export const executeAuthorizedDeviceToolCall = async (
-  serverDB: LobeChatDatabase | undefined,
+  serverDB: OrviloDatabase | undefined,
   params: { deviceId: string; operationId?: string; userId: string; workspaceId?: string },
   toolCall: { apiName: string; arguments: string; identifier: string },
   timeout?: number,

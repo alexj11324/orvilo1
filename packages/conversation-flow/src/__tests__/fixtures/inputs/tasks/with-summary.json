@@ -22,7 +22,7 @@
         "type": "builtin",
         "apiName": "callSubAgents",
         "arguments": "{\"tasks\": [{\"description\": \"Research LLM architectures\"}, {\"description\": \"Research AI agents\"}, {\"description\": \"Research RAG systems\"}]}",
-        "identifier": "lobe-agent"
+        "identifier": "orvilo-agent"
       }
     ]
   },

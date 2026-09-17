@@ -85,8 +85,8 @@ const HeteroPlus = memo(() => {
           onClick: () => armSchedule(hours),
         })),
         // Trailing chevron (replaces base-ui's default triangle submenu arrow,
-        // which ActionDropdown hides via the .lobe-submenu-chevron rule).
-        extra: <Icon className="lobe-submenu-chevron" icon={ChevronRight} size={16} />,
+        // which ActionDropdown hides via the .orvilo-submenu-chevron rule).
+        extra: <Icon className="orvilo-submenu-chevron" icon={ChevronRight} size={16} />,
         icon: CalendarClockIcon,
         key: 'scheduleSend',
         label: t('input.schedule.title'),

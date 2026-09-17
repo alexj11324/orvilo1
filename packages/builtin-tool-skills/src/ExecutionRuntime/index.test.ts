@@ -228,7 +228,7 @@ describe('SkillsExecutionRuntime', () => {
           encoding: 'utf8',
           fileHash: 'hash-1',
           fileType: 'text/x-python',
-          fullPath: '/Users/test/lobehub/file-storage/skills/extracted/hash-1/bazi.py',
+          fullPath: '/Users/test/orvilo/file-storage/skills/extracted/hash-1/bazi.py',
           path: 'bazi.py',
           size: 14,
         }),
@@ -241,7 +241,7 @@ describe('SkillsExecutionRuntime', () => {
       expect(result.state).toEqual({
         encoding: 'utf8',
         fileType: 'text/x-python',
-        fullPath: '/Users/test/lobehub/file-storage/skills/extracted/hash-1/bazi.py',
+        fullPath: '/Users/test/orvilo/file-storage/skills/extracted/hash-1/bazi.py',
         path: 'bazi.py',
         size: 14,
       });
@@ -438,7 +438,7 @@ describe('SkillsExecutionRuntime', () => {
           {
             content: 'browser content',
             description: 'browser',
-            identifier: 'lobe-agent-browser',
+            identifier: 'orvilo-agent-browser',
             name: 'agent-browser',
             source: 'builtin',
           },
@@ -473,8 +473,8 @@ describe('SkillsExecutionRuntime', () => {
           {
             content: 'main',
             description: '',
-            identifier: 'lobehub',
-            name: 'lobehub',
+            identifier: 'orvilo',
+            name: 'orvilo',
             resources: { 'references/kb': { content: 'kb body', fileHash: 'h', size: 7 } },
             source: 'builtin',
           },
@@ -482,7 +482,7 @@ describe('SkillsExecutionRuntime', () => {
         service: createMockService(),
       });
 
-      const result = await runtime.readReference({ id: 'LobeHub', path: 'references/kb' });
+      const result = await runtime.readReference({ id: 'Orvilo', path: 'references/kb' });
       expect(result.success).toBe(true);
       expect(result.content).toBe('kb body');
     });

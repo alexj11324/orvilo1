@@ -10,7 +10,7 @@ const DEAD_PRODUCT_SEGMENTS = new Set([...DEAD_ROUTE_PREFIXES].map((prefix) => p
 export const isRetiredProductUrl = (url: string, scope: TabScope): boolean => {
   let pathname: string;
   try {
-    pathname = new URL(url, 'https://lobehub.local').pathname;
+    pathname = new URL(url, 'https://orvilo.local').pathname;
   } catch {
     return false;
   }

@@ -6,7 +6,7 @@ import type {
   SignalAttempt,
 } from '@orvilo/agent-signal';
 import { MemoryIdentifier } from '@orvilo/builtin-tool-memory';
-import type { LobeToolManifest, ToolExecutor, ToolSource } from '@orvilo/context-engine';
+import type { OrviloToolManifest, ToolExecutor, ToolSource } from '@orvilo/context-engine';
 import {
   createAgentSignalMemoryWriterPrompt,
   createAgentSignalMemoryWriterSystemRole,
@@ -16,7 +16,7 @@ import { nanoid } from '@orvilo/utils';
 
 import { PluginModel } from '@/database/models/plugin';
 import { ThreadModel } from '@/database/models/thread';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   InMemoryAgentStateManager,
   InMemoryStreamEventManager,
@@ -59,7 +59,7 @@ export { resolveMemoryActionResultFromState, resolveMemoryActionTargetFromState 
 
 export interface UserMemoryActionHandlerOptions {
   agentService?: Pick<AgentService, 'getAgentConfig'>;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   memoryActionRunner?: (input: {
     agentId?: string;
     conflictPolicy?: AgentSignalFeedbackDomainConflictPolicy;
@@ -140,8 +140,8 @@ const createInitialContext = (operationId: string): AgentRuntimeContext => {
   };
 };
 
-const toManifestRecord = (manifestMap: Map<string, LobeToolManifest>) => {
-  return Object.fromEntries(manifestMap) as Record<string, LobeToolManifest>;
+const toManifestRecord = (manifestMap: Map<string, OrviloToolManifest>) => {
+  return Object.fromEntries(manifestMap) as Record<string, OrviloToolManifest>;
 };
 
 const createFunctionCallSupportChecker = async () => {

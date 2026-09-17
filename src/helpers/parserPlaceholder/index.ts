@@ -92,9 +92,9 @@ export const HOST_VARIABLE_GENERATORS = {
    *
    * | Value | Example |
    * |-------|---------|
-   * | `{{email}}` | demo@lobehub.com |
+   * | `{{email}}` | demo@orvilo.aspectlylabs.com |
    * | `{{nickname}}` | Community User |
-   * | `{{username}}` | LobeChat |
+   * | `{{username}}` | Orvilo |
    *
    */
   email: () => userProfileSelectors.email(useUserStore.getState()) ?? '',
@@ -178,7 +178,7 @@ export const HOST_VARIABLE_GENERATORS = {
    * | `{{musicPath}}` | /Users/username/Music |
    * | `{{picturesPath}}` | /Users/username/Pictures |
    * | `{{videosPath}}` | /Users/username/Videos |
-   * | `{{userDataPath}}` | /Users/username/Library/Application Support/LobeChat |
+   * | `{{userDataPath}}` | /Users/username/Library/Application Support/Orvilo |
    * | `{{workingDirectory}}` | /Users/username/Projects/my-project |
    * | `{{defaultShell}}` | PowerShell 7+ (pwsh) |
    * | `{{shellSyntaxGuidance}}` | Write PowerShell syntax; ... |

@@ -119,7 +119,7 @@ const matchesPattern = (key: string, patterns: string[]): boolean =>
  * Partitioned per identity scope so different users / workspaces sharing the
  * same browser origin never read or overwrite each other's cached data.
  */
-export const getScopedCacheKey = (scope: string) => `lobechat-swr-cache:${scope}`;
+export const getScopedCacheKey = (scope: string) => `orvilo-swr-cache:${scope}`;
 
 /**
  * Create a unified tiered cache provider.
@@ -467,7 +467,7 @@ export function createCacheProvider(options: CacheProviderOptions = {}): ScopedS
 /**
  * Clear the localStorage cache tier for a scope (or the legacy key).
  */
-export function clearSWRCache(cacheKey = 'lobechat-swr-cache'): void {
+export function clearSWRCache(cacheKey = 'orvilo-swr-cache'): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(cacheKey);

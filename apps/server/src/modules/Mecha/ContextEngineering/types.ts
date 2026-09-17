@@ -10,8 +10,8 @@ import type {
   FileContent,
   GroupAgentBuilderContext,
   KnowledgeBaseInfo,
-  LobeToolManifest,
   OnboardingContext,
+  OrviloToolManifest,
   PlanTodoConfig,
   ProjectInstructionFile,
   SkillMeta,
@@ -59,7 +59,7 @@ export interface ServerToolsConfig {
   /** Tool identifiers that must be removed from historical tool calls in this runtime scope */
   disabledToolIdentifiers?: string[];
   /** Tool manifests with systemRole and API definitions */
-  manifests?: LobeToolManifest[];
+  manifests?: OrviloToolManifest[];
   /** Enabled tool IDs (kept for compatibility) */
   tools?: string[];
 }

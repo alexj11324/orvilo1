@@ -6,7 +6,7 @@ const EXPECTED_INDEXES_BY_NAME = new Map<string, { name: string; table: string }
   PG_SEARCH_BM25_INDEXES.map((index) => [index.name, index]),
 );
 
-export const assertOnlyLobeHubBm25Indexes = (inventory: PgSearchInventory) => {
+export const assertOnlyOrviloBm25Indexes = (inventory: PgSearchInventory) => {
   const unexpectedIndexes = inventory.bm25Indexes.filter(({ name, schema, table }) => {
     const expected = EXPECTED_INDEXES_BY_NAME.get(name);
     return !expected || schema !== 'public' || table !== expected.table;
@@ -35,7 +35,7 @@ const recordIndexDrop = (index: string, status: 'started' | 'succeeded') => {
 
 export const runPgSearchCleanup = async (client: Client) => {
   const before = await readPgSearchInventory(client);
-  assertOnlyLobeHubBm25Indexes(before);
+  assertOnlyOrviloBm25Indexes(before);
 
   await client.query(`SET lock_timeout = '2s'`);
   await client.query(`SET statement_timeout = '10min'`);
@@ -47,7 +47,7 @@ export const runPgSearchCleanup = async (client: Client) => {
   }
 
   const afterIndexes = await readPgSearchInventory(client);
-  assertOnlyLobeHubBm25Indexes(afterIndexes);
+  assertOnlyOrviloBm25Indexes(afterIndexes);
   if (afterIndexes.bm25Indexes.length > 0) {
     throw new Error('BM25 indexes remain after cleanup');
   }

@@ -136,7 +136,7 @@ export interface ClaudeAgentSdkSessionOptions {
   env: NodeJS.ProcessEnv;
   /**
    * Extra MCP servers handed to the SDK `query` — used to mount the builtin
-   * `lobe_cc` server (AskUserQuestion bridge + browser tools), which the CLI
+   * `orvilo_cc` server (AskUserQuestion bridge + browser tools), which the CLI
    * spawn path wires through `--mcp-config` instead.
    */
   mcpServers?: Record<string, McpServerConfig>;
@@ -376,7 +376,7 @@ export class ClaudeAgentSdkSession {
 
   private get inactivityTimeoutMs(): number {
     return readTimeoutMs(
-      'LOBE_CLAUDE_CODE_SDK_INACTIVITY_TIMEOUT_MS',
+      'ORVILO_CLAUDE_CODE_SDK_INACTIVITY_TIMEOUT_MS',
       DEFAULT_INACTIVITY_TIMEOUT_MS,
     );
   }

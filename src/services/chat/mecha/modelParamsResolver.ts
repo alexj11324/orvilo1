@@ -5,7 +5,7 @@ import {
   resolveDefaultThinkingLevelForModel,
   resolveEffectiveReasoningChatConfig,
 } from '@orvilo/model-runtime/utils/modelExtendParams';
-import type { LobeAgentChatConfig } from '@orvilo/types';
+import type { OrviloAgentChatConfig } from '@orvilo/types';
 import type { AiModelReasoningConfig } from 'model-bank';
 
 import { aiModelSelectors, getAiInfraStoreState } from '@/store/aiInfra';
@@ -17,14 +17,14 @@ export { resolveDefaultEnableAdaptiveThinkingForModel, resolveDefaultThinkingLev
  * Context for resolving model parameters
  */
 export interface ModelParamsContext {
-  chatConfig: LobeAgentChatConfig;
+  chatConfig: OrviloAgentChatConfig;
   model: string;
   provider: string;
   /**
    * Raw sub-agent chatConfig override; explicit reasoning fields set here win
    * over the user's model-instance defaults.
    */
-  subAgentChatConfigOverride?: Partial<LobeAgentChatConfig>;
+  subAgentChatConfigOverride?: Partial<OrviloAgentChatConfig>;
   /**
    * Reasoning config pinned to the topic for exactly this model
    * (`topicSelectors.getTopicReasoningConfigForModel`). Wins over the

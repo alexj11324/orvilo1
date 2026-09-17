@@ -14,7 +14,7 @@ import { FileS3 } from '@/server/modules/S3';
 const compressZstd = promisify(zstdCompress);
 const decompressZstd = promisify(zstdDecompress);
 
-const log = debug('lobe-server:agent-tracing:s3');
+const log = debug('orvilo-server:agent-tracing:s3');
 
 const TRACE_PREFIX = 'agent-traces';
 const SNAPSHOT_SUFFIX = '.json.zst';

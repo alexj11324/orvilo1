@@ -16,7 +16,7 @@ import { today } from '@/utils/time';
 
 import type { NewUser, UserItem, UserSettingsItem } from '../schemas';
 import { messages, nextauthAccounts, tasks, topics, users, userSettings } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { AGENT_TRANSFER_PENDING_OWNER_DELETE, AgentTransferJobModel } from './agentTransferJob';
 
 type DecryptUserKeyVaults = (
@@ -55,9 +55,9 @@ interface LastActiveAtTransition {
 
 export class UserModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.userId = userId;
     this.db = db;
   }
@@ -420,11 +420,11 @@ export class UserModel {
   };
 
   // Static method
-  static makeSureUserExist = async (db: LobeChatDatabase, userId: string) => {
+  static makeSureUserExist = async (db: OrviloDatabase, userId: string) => {
     await db.insert(users).values({ id: userId }).onConflictDoNothing();
   };
 
-  static createUser = async (db: LobeChatDatabase, params: NewUser) => {
+  static createUser = async (db: OrviloDatabase, params: NewUser) => {
     // if user already exists, skip creation
     if (params.id) {
       const user = await db.query.users.findFirst({ where: eq(users.id, params.id) });
@@ -448,7 +448,7 @@ export class UserModel {
    * drop `topics` where `senderId = id`; messages, threads, and topic
    * documents cascade from `topics.id`, so the topic delete is enough.
    */
-  static deleteUser = async (db: LobeChatDatabase, id: string) => {
+  static deleteUser = async (db: OrviloDatabase, id: string) => {
     // A pending agent-TRANSFER backfill means message rows moved to (or from)
     // this user still carry the other side's scope snapshot; cascading the
     // delete now would destroy history the transfer already re-homed. Transfer
@@ -468,22 +468,22 @@ export class UserModel {
     });
   };
 
-  static findById = async (db: LobeChatDatabase, id: string) => {
+  static findById = async (db: OrviloDatabase, id: string) => {
     return db.query.users.findFirst({ where: eq(users.id, id) });
   };
 
-  static findByUsername = async (db: LobeChatDatabase, username: string) => {
+  static findByUsername = async (db: OrviloDatabase, username: string) => {
     const normalizedUsername = username.trim();
     if (!normalizedUsername) return null;
 
     return db.query.users.findFirst({ where: eq(users.username, normalizedUsername) });
   };
 
-  static findByEmail = async (db: LobeChatDatabase, email: string) => {
+  static findByEmail = async (db: OrviloDatabase, email: string) => {
     return db.query.users.findFirst({ where: eq(users.email, email) });
   };
 
-  static findByIds = async (db: LobeChatDatabase, ids: string[]) => {
+  static findByIds = async (db: OrviloDatabase, ids: string[]) => {
     if (ids.length === 0) return [];
     return db.query.users.findMany({ where: inArray(users.id, ids) });
   };
@@ -497,7 +497,7 @@ export class UserModel {
    * see (e.g. userIds harvested from workspace-scoped connector rows).
    */
   static getDisplayInfoByIds = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     ids: string[],
   ): Promise<
     Array<{ avatar: string | null; fullName: string | null; id: string; username: string | null }>
@@ -521,7 +521,7 @@ export class UserModel {
    * see addresses (e.g. workspace members resolving a teammate to assign).
    */
   static getEmailsByIds = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     ids: string[],
   ): Promise<Array<{ email: string | null; id: string }>> => {
     if (ids.length === 0) return [];
@@ -532,7 +532,7 @@ export class UserModel {
   };
 
   static getUserApiKeys = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     id: string,
     decryptor: DecryptUserKeyVaults,
   ) => {
@@ -554,7 +554,7 @@ export class UserModel {
   };
 
   static listUsersForMemoryExtractor = (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     options: ListUsersForMemoryExtractorOptions = {},
   ) => {
     const cursorCondition = options.cursor
@@ -588,7 +588,7 @@ export class UserModel {
   };
 
   static listUsersForHourlyMemoryExtractor = (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     options: ListUsersForHourlyMemoryExtractorOptions = {},
   ) => {
     const cursorCondition = options.cursor
@@ -637,7 +637,7 @@ export class UserModel {
    * Get user info for AI generation (name and language preference)
    */
   static getInfoForAIGeneration = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
   ): Promise<UserInfoForAIGeneration> => {
     const result = await db

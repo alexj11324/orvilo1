@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentRuntimeErrorType } from '../../types/error';
 import { AgentRuntimeError } from '../../utils/createError';
 import * as debugStreamModule from '../../utils/debugStream';
-import { LobeOllamaAI, params } from './index';
+import { OrviloOllamaAI, params } from './index';
 
 vi.mock('ollama/browser');
 vi.mock('@orvilo/utils', async () => {
@@ -21,11 +21,11 @@ vi.mock('@orvilo/utils', async () => {
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-describe('LobeOllamaAI', () => {
-  let ollamaAI: LobeOllamaAI;
+describe('OrviloOllamaAI', () => {
+  let ollamaAI: OrviloOllamaAI;
 
   beforeEach(() => {
-    ollamaAI = new LobeOllamaAI({ baseURL: 'https://example.com' });
+    ollamaAI = new OrviloOllamaAI({ baseURL: 'https://example.com' });
   });
 
   afterEach(() => {
@@ -39,14 +39,14 @@ describe('LobeOllamaAI', () => {
     });
 
     it('should initialize Ollama client without baseURL', () => {
-      const instance = new LobeOllamaAI();
+      const instance = new OrviloOllamaAI();
       expect(instance['client']).toBeInstanceOf(Ollama);
       expect(instance.baseURL).toBeUndefined();
     });
 
     it('should throw AgentRuntimeError with invalid baseURL', () => {
       try {
-        new LobeOllamaAI({ baseURL: 'invalid-url' });
+        new OrviloOllamaAI({ baseURL: 'invalid-url' });
       } catch (e) {
         expect(e).toMatchObject({
           error: new TypeError('Invalid URL'),

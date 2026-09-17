@@ -291,7 +291,7 @@ describe('Crawler', () => {
       const { crawlImpls } = await import('../crawImpl');
 
       for (const url of [
-        'https://lobe.example.com:8443/app-icons/icon-512x512.png',
+        'https://orvilo.example.com:8443/app-icons/icon-512x512.png',
         'https://example.no/assets/logo.svg?v=3',
         'https://cdn.example.com/fonts/inter.woff2',
         'https://example.com/clip.mp4',

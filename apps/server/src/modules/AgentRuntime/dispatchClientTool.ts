@@ -9,7 +9,7 @@ import type { ToolResultPayload } from './ToolResultWaiter';
 import { ToolResultWaiter } from './ToolResultWaiter';
 import type { IStreamEventManager } from './types';
 
-const log = debug('lobe-server:agent-runtime:dispatch-client-tool');
+const log = debug('orvilo-server:agent-runtime:dispatch-client-tool');
 
 interface DispatchContext {
   agentId?: string | null;

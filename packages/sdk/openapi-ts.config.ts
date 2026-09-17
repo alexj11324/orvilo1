@@ -2,8 +2,8 @@ import type { IR } from '@hey-api/openapi-ts';
 import { defineConfig } from '@hey-api/openapi-ts';
 
 /**
- * SDK structure: `new LobeHub(...)` root instance with one resource group per
- * top-level path segment — `lobehub.agents.list()`, `lobehub.files.uploadBatch()`.
+ * SDK structure: `new Orvilo(...)` root instance with one resource group per
+ * top-level path segment — `orvilo.agents.list()`, `orvilo.files.uploadBatch()`.
  *
  * Method naming is a mechanical rule (derived from `{method} {path}`) plus
  * explicit overrides for the awkward cases:
@@ -85,7 +85,7 @@ export default defineConfig({
       name: '@hey-api/sdk',
       operations: {
         container: 'class',
-        containerName: 'LobeHub',
+        containerName: 'Orvilo',
         methods: 'instance',
         nesting,
         strategy: 'single',

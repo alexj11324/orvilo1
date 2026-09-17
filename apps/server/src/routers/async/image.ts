@@ -26,7 +26,7 @@ import { sanitizeFileName } from '@/utils/sanitizeFileName';
 
 import { categorizeImageGenerationError } from './imageError';
 
-const log = debug('lobe-image:async');
+const log = debug('orvilo-image:async');
 
 const IMAGE_URL_PREVIEW_LENGTH = 100;
 

@@ -271,7 +271,7 @@ describe('Browser', () => {
       };
 
       handler(event, webPreferences, {
-        partition: 'persist:lobe-browser-app',
+        partition: 'persist:orvilo-browser-app',
         src: 'https://example.com',
       });
 
@@ -279,7 +279,7 @@ describe('Browser', () => {
       expect(webPreferences).toMatchObject({
         contextIsolation: true,
         nodeIntegration: false,
-        partition: 'persist:lobe-browser-app',
+        partition: 'persist:orvilo-browser-app',
       });
       expect(webPreferences).not.toHaveProperty('preload');
     });
@@ -1003,10 +1003,10 @@ describe('Browser', () => {
     it('should open web URLs in the system browser', () => {
       expect(windowOpenHandler).toBeDefined();
 
-      expect(windowOpenHandler({ url: 'https://github.com/lobehub/lobehub' })).toEqual({
+      expect(windowOpenHandler({ url: 'https://github.com/alexj11324/orvilo1' })).toEqual({
         action: 'deny',
       });
-      expect(mockShell.openExternal).toHaveBeenCalledWith('https://github.com/lobehub/lobehub');
+      expect(mockShell.openExternal).toHaveBeenCalledWith('https://github.com/alexj11324/orvilo1');
     });
 
     it('should deny renderer-origin URLs instead of handing them to the OS', () => {

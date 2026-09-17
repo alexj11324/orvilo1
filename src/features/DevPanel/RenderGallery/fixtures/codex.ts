@@ -28,12 +28,12 @@ const linearIssueResult = {
   links: [
     {
       title: 'PR #15766: refactor(chat): unify agent run lifecycle',
-      url: 'https://github.com/lobehub/lobehub/pull/15766',
+      url: 'https://github.com/alexj11324/orvilo1/pull/15766',
     },
   ],
   state: { name: 'In Review' },
   title: '统一三种客户端 Agent Runtime 的 run 生命周期 hooks',
-  url: 'https://linear.app/lobehub/issue/TEST-0000',
+  url: 'https://linear.app/orvilo/issue/TEST-0000',
 };
 
 const githubPullRequestResult = {
@@ -54,11 +54,11 @@ const githubPullRequestResult = {
   mergeable: true,
   merged: false,
   number: 16430,
-  repository_full_name: 'lobehub/lobehub',
+  repository_full_name: 'alexj11324/orvilo1',
   state: 'open',
   title: 'Render Codex GitHub MCP tool calls',
   updated_at: '2026-06-29T08:20:00Z',
-  url: 'https://github.com/lobehub/lobehub/pull/16430',
+  url: 'https://github.com/alexj11324/orvilo1/pull/16430',
 };
 
 export default defineFixtures({
@@ -222,7 +222,7 @@ export default defineFixtures({
           arguments: {
             base: 'canary',
             head: 'fix/codex-github-render',
-            repository_full_name: 'lobehub/lobehub',
+            repository_full_name: 'alexj11324/orvilo1',
             title: 'Render Codex GitHub MCP tool calls',
           },
           server: 'mcp__codex_apps__github',
@@ -234,7 +234,7 @@ export default defineFixtures({
           arguments: {
             base: 'canary',
             head: 'fix/codex-github-render',
-            repository_full_name: 'lobehub/lobehub',
+            repository_full_name: 'alexj11324/orvilo1',
             title: 'Render Codex GitHub MCP tool calls',
           },
           result: {
@@ -267,14 +267,14 @@ export default defineFixtures({
             url: 'https://example.com/codex-render',
           },
           {
-            snippet: 'How LobeHub maps builtin tool inspectors, renders, and display controls.',
-            title: 'LobeHub builtin tool render registry',
-            url: 'https://example.com/lobehub-tools',
+            snippet: 'How Orvilo maps builtin tool inspectors, renders, and display controls.',
+            title: 'Orvilo builtin tool render registry',
+            url: 'https://example.com/orvilo-tools',
           },
         ],
       },
       content:
-        'Search results\n\n1. Codex tool render examples - https://example.com/codex-render\n2. LobeHub builtin tool render registry - https://example.com/lobehub-tools',
+        'Search results\n\n1. Codex tool render examples - https://example.com/codex-render\n2. Orvilo builtin tool render registry - https://example.com/orvilo-tools',
     }),
   },
 });

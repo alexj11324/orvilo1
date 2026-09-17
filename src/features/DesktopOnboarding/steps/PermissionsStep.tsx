@@ -18,8 +18,8 @@ import { useTranslation } from 'react-i18next';
 
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
-import LobeMessage from '../components/LobeMessage';
 import OnboardingFooterActions from '../components/OnboardingFooterActions';
+import OrviloMessage from '../components/OrviloMessage';
 
 type PermissionMeta = {
   descriptionKey: string;
@@ -158,7 +158,7 @@ const PermissionsStep = memo<PermissionsStepProps>(({ onBack, onNext }) => {
   return (
     <Flexbox gap={16} style={{ height: '100%', minHeight: '100%' }}>
       <Flexbox>
-        <LobeMessage sentences={[t('screen3.title'), t('screen3.title2'), t('screen3.title3')]} />
+        <OrviloMessage sentences={[t('screen3.title'), t('screen3.title2'), t('screen3.title3')]} />
         <Text as={'p'}>{t('screen3.description')}</Text>
       </Flexbox>
       <Block gap={12} padding={4} style={{ width: '100%' }} variant={'outlined'}>

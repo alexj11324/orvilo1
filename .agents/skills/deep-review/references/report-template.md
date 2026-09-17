@@ -69,7 +69,7 @@ Before sending, confirm every item; fix and re-render if any is missing:
 ```markdown
 # Deep Review Report
 
-**Scope**: {e.g. `feat/user-batch-delete` vs local `main`, 8 files +240/-37, incl. submodule lobehub}
+**Scope**: {e.g. `feat/user-batch-delete` vs local `main`, 8 files +240/-37, incl. submodule orvilo}
 **Background**: {1-2 sentence core of the step-0 scope summary}
 **Execution**: {N} dimension reviewers ({list}) + {M} verifiers{ + global consolidation when run}; pruned: {dimension — one-line reason, or "none"}
 

@@ -1,5 +1,5 @@
 import { builtinSkills } from '@orvilo/builtin-skills';
-import { LobeActivatorIdentifier } from '@orvilo/builtin-tool-activator';
+import { OrviloActivatorIdentifier } from '@orvilo/builtin-tool-activator';
 import {
   ActivatorExecutionRuntime,
   type ActivatorRuntimeService,
@@ -46,7 +46,7 @@ export const activatorRuntime: ServerRuntimeRegistration = {
         context: { agentId: context.agentId, userId: context.userId },
         domainKey: 'skill:builtin-skill',
         errorReason: input.errorReason,
-        identifier: LobeActivatorIdentifier,
+        identifier: OrviloActivatorIdentifier,
         intentClass: 'tool_command',
         messageId: context.messageId,
         operationId: context.operationId,
@@ -172,5 +172,5 @@ export const activatorRuntime: ServerRuntimeRegistration = {
 
     return new ActivatorExecutionRuntime({ service });
   },
-  identifier: LobeActivatorIdentifier,
+  identifier: OrviloActivatorIdentifier,
 };

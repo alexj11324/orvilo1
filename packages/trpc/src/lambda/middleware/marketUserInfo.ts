@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 
 import { UserModel } from '@/database/models/user';
 import { type TrustedClientUserInfo } from '@/libs/trusted-client';
@@ -7,7 +7,7 @@ import { trpc } from '../init';
 
 interface ContextWithServerDB {
   marketAccessToken?: string;
-  serverDB?: LobeChatDatabase;
+  serverDB?: OrviloDatabase;
   userId?: string | null;
   workspaceId?: string | null;
 }

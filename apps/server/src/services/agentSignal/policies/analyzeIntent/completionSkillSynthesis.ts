@@ -4,7 +4,7 @@ import debug from 'debug';
 import { and, asc, eq, gte, isNull } from 'drizzle-orm';
 
 import { MessageModel } from '@/database/models/message';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
 
 import type { RuntimeProcessorContext } from '../../runtime/context';
@@ -17,7 +17,7 @@ import {
 import type { SkillManagementActionHandlerOptions } from './actions';
 import { executeSkillManagementAction } from './actions';
 
-const log = debug('lobe-server:agent-signal:completion-skill-synthesis');
+const log = debug('orvilo-server:agent-signal:completion-skill-synthesis');
 
 /** Cap on the number of turn messages serialized into the trajectory context. */
 const MAX_TRAJECTORY_MESSAGES = 40;
@@ -53,7 +53,7 @@ interface CompletedTurnAnchors {
  * assistant turn, or has no user ancestor with content.
  */
 const resolveCompletedTurnAnchors = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   workspaceId: string | undefined,
   assistantMessageId: string,
@@ -131,7 +131,7 @@ const renderTrajectoryMessage = (message: CompletedTurnMessage): string => {
  * sequence + final product, not just the user prompt).
  */
 const assembleTrajectoryContext = async (input: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   threadId?: string;
   topicId: string;
   turnStartAt: Date;

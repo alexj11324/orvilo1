@@ -19,10 +19,10 @@ export const COMFYUI_DEFAULTS = {
  */
 export const FLUX_MODEL_CONFIG = {
   FILENAME_PREFIXES: {
-    DEV: 'LobeChat/%year%-%month%-%day%/FLUX_Dev',
-    KONTEXT: 'LobeChat/%year%-%month%-%day%/FLUX_Kontext',
-    KREA: 'LobeChat/%year%-%month%-%day%/FLUX_Krea',
-    SCHNELL: 'LobeChat/%year%-%month%-%day%/FLUX_Schnell',
+    DEV: 'Orvilo/%year%-%month%-%day%/FLUX_Dev',
+    KONTEXT: 'Orvilo/%year%-%month%-%day%/FLUX_Kontext',
+    KREA: 'Orvilo/%year%-%month%-%day%/FLUX_Krea',
+    SCHNELL: 'Orvilo/%year%-%month%-%day%/FLUX_Schnell',
   },
 } as const;
 
@@ -32,10 +32,10 @@ export const FLUX_MODEL_CONFIG = {
  */
 export const SD_MODEL_CONFIG = {
   FILENAME_PREFIXES: {
-    CUSTOM: 'LobeChat/%year%-%month%-%day%/CustomSD',
-    SD15: 'LobeChat/%year%-%month%-%day%/SD15',
-    SD35: 'LobeChat/%year%-%month%-%day%/SD35',
-    SDXL: 'LobeChat/%year%-%month%-%day%/SDXL',
+    CUSTOM: 'Orvilo/%year%-%month%-%day%/CustomSD',
+    SD15: 'Orvilo/%year%-%month%-%day%/SD15',
+    SD35: 'Orvilo/%year%-%month%-%day%/SD35',
+    SDXL: 'Orvilo/%year%-%month%-%day%/SDXL',
   },
 } as const;
 
@@ -94,8 +94,8 @@ export const SUPPORTED_MODEL_FORMATS = [
  * Fixed model and VAE filenames for custom SD models
  */
 export const CUSTOM_SD_CONFIG = {
-  MODEL_FILENAME: 'custom_sd_lobe.safetensors', // Both custom models use same file
-  VAE_FILENAME: 'custom_sd_vae_lobe.safetensors', // Optional VAE file
+  MODEL_FILENAME: 'custom_sd_orvilo.safetensors', // Both custom models use same file
+  VAE_FILENAME: 'custom_sd_vae_orvilo.safetensors', // Optional VAE file
 } as const;
 
 /**

@@ -166,7 +166,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     () =>
       parentTaskId
         ? null
-        : `lobehub:task-create-draft:${activeWorkspaceId ?? 'personal'}:${projectId ?? agentId ?? 'all'}`,
+        : `orvilo:task-create-draft:${activeWorkspaceId ?? 'personal'}:${projectId ?? agentId ?? 'all'}`,
     [activeWorkspaceId, agentId, parentTaskId, projectId],
   );
   // Tracks which scope key the editor is currently hydrated for. The component

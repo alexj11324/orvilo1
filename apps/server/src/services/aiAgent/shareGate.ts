@@ -3,7 +3,10 @@ import {
   AgentDocumentsIdentifier,
 } from '@orvilo/builtin-tool-agent-documents';
 import { KnowledgeBaseApiName, KnowledgeBaseIdentifier } from '@orvilo/builtin-tool-knowledge-base';
-import { LobeAgentApiName, LobeAgentIdentifier } from '@orvilo/builtin-tool-lobe-agent';
+import {
+  OrviloAgentApiName,
+  OrviloAgentIdentifier,
+} from '@orvilo/builtin-tool-orvilo-agent';
 import { MEMORY_WRITE_API_NAMES, MemoryIdentifier } from '@orvilo/builtin-tool-memory';
 import {
   AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS,
@@ -254,7 +257,11 @@ const isApiUsableForShareVisitor = (humanIntervention: unknown): boolean =>
  * `SHARE_VISITOR_ALLOWED_IDENTIFIERS`, so it never survives that gate.
  */
 const SUB_AGENT_DISPATCH_APIS: Record<string, string> = {
-  [LobeAgentIdentifier]: LobeAgentApiName.callSubAgent,
+  // Both identifiers are blocked: ops persisted before the lobe→orvilo rename
+  // carry the legacy `lobe-agent` identifier, anything newer carries
+  // `orvilo-agent` — a visitor run must not reach `callSubAgent` under either.
+  'lobe-agent': OrviloAgentApiName.callSubAgent,
+  [OrviloAgentIdentifier]: OrviloAgentApiName.callSubAgent,
 };
 
 /**

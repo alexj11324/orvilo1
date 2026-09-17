@@ -16,23 +16,23 @@ const runCommand = (command: string, output = '') =>
 describe('normalizeGithubToolResult (gh runCommand parsing)', () => {
   it('keeps spaces and double quotes inside single-quoted values', () => {
     const operation = runCommand(
-      `gh issue create --repo lobehub/lobehub --title 'Fix: "quoted" bug report'`,
-      'https://github.com/lobehub/lobehub/issues/123',
+      `gh issue create --repo alexj11324/orvilo1 --title 'Fix: "quoted" bug report'`,
+      'https://github.com/alexj11324/orvilo1/issues/123',
     );
 
     expect(operation?.params).toMatchObject({
-      identifier: 'lobehub/lobehub#123',
-      resourceId: 'lobehub/lobehub#123',
+      identifier: 'alexj11324/orvilo1#123',
+      resourceId: 'alexj11324/orvilo1#123',
       changeType: 'created',
       title: 'Fix: "quoted" bug report',
-      url: 'https://github.com/lobehub/lobehub/issues/123',
+      url: 'https://github.com/alexj11324/orvilo1/issues/123',
     });
   });
 
   it('unescapes \\" inside double quotes and keeps $ literal', () => {
     const operation = runCommand(
-      `gh issue create --repo lobehub/lobehub --title "hello" --body "He said \\"hi\\" for $5"`,
-      'https://github.com/lobehub/lobehub/issues/7',
+      `gh issue create --repo alexj11324/orvilo1 --title "hello" --body "He said \\"hi\\" for $5"`,
+      'https://github.com/alexj11324/orvilo1/issues/7',
     );
 
     expect(operation?.params.description).toBe('He said "hi" for $5');
@@ -47,8 +47,8 @@ describe('normalizeGithubToolResult (gh runCommand parsing)', () => {
   it('emits the full --body as content while capping the description preview', () => {
     const body = 'C'.repeat(300);
     const operation = runCommand(
-      `gh issue create --repo lobehub/lobehub --title 'Long body' --body '${body}'`,
-      'https://github.com/lobehub/lobehub/issues/8',
+      `gh issue create --repo alexj11324/orvilo1 --title 'Long body' --body '${body}'`,
+      'https://github.com/alexj11324/orvilo1/issues/8',
     );
 
     // `content` keeps the full untruncated body; `description` is the ≤120 preview.
@@ -58,10 +58,12 @@ describe('normalizeGithubToolResult (gh runCommand parsing)', () => {
   });
 
   it('honors backslash escapes outside quotes', () => {
-    const operation = runCommand(`gh issue edit 42 --repo lobehub/lobehub --title Fix\\ the\\ bug`);
+    const operation = runCommand(
+      `gh issue edit 42 --repo alexj11324/orvilo1 --title Fix\\ the\\ bug`,
+    );
 
     expect(operation?.params).toMatchObject({
-      identifier: 'lobehub/lobehub#42',
+      identifier: 'alexj11324/orvilo1#42',
       changeType: 'updated',
       title: 'Fix the bug',
     });
@@ -69,8 +71,8 @@ describe('normalizeGithubToolResult (gh runCommand parsing)', () => {
 
   it('treats backslash-newline as a line continuation', () => {
     const operation = runCommand(
-      `gh issue create \\\n  --repo lobehub/lobehub \\\n  --title 'Multiline invocation'`,
-      'https://github.com/lobehub/lobehub/issues/9',
+      `gh issue create \\\n  --repo alexj11324/orvilo1 \\\n  --title 'Multiline invocation'`,
+      'https://github.com/alexj11324/orvilo1/issues/9',
     );
 
     expect(operation?.params.title).toBe('Multiline invocation');
@@ -78,7 +80,7 @@ describe('normalizeGithubToolResult (gh runCommand parsing)', () => {
 
   it('supports --flag=value with quoted values', () => {
     const operation = runCommand(
-      `gh issue edit 15 --repo lobehub/lobehub --title='Inline equals title'`,
+      `gh issue edit 15 --repo alexj11324/orvilo1 --title='Inline equals title'`,
     );
 
     expect(operation?.params.title).toBe('Inline equals title');
@@ -86,30 +88,30 @@ describe('normalizeGithubToolResult (gh runCommand parsing)', () => {
 
   it('does not misread a value-flag argument as the edit target', () => {
     const operation = runCommand(
-      `gh issue edit 952 --repo lobehub/lobehub --milestone 'v2 launch'`,
+      `gh issue edit 952 --repo alexj11324/orvilo1 --milestone 'v2 launch'`,
     );
 
-    expect(operation?.params.identifier).toBe('lobehub/lobehub#952');
+    expect(operation?.params.identifier).toBe('alexj11324/orvilo1#952');
     // Milestone is consumed as the flag value, not snapshotted as a title.
     expect(operation?.params.title).toBeUndefined();
   });
 
   it('skips registration on an unterminated single quote', () => {
-    expect(runCommand(`gh issue create --repo lobehub/lobehub --title 'broken`)).toBeNull();
+    expect(runCommand(`gh issue create --repo alexj11324/orvilo1 --title 'broken`)).toBeNull();
   });
 
   it('skips registration on an unterminated double quote', () => {
-    expect(runCommand(`gh issue create --repo lobehub/lobehub --title "broken`)).toBeNull();
+    expect(runCommand(`gh issue create --repo alexj11324/orvilo1 --title "broken`)).toBeNull();
   });
 
   it('uses the last gh create/edit segment of a chained command', () => {
     const operation = runCommand(
       `git push origin HEAD && gh pr create --base main --title 'New PR'`,
-      'https://github.com/lobehub/lobehub/pull/88',
+      'https://github.com/alexj11324/orvilo1/pull/88',
     );
 
     expect(operation?.params).toMatchObject({
-      identifier: 'lobehub/lobehub#88',
+      identifier: 'alexj11324/orvilo1#88',
       resourceType: 'github_pull_request',
       changeType: 'created',
       title: 'New PR',
@@ -118,11 +120,11 @@ describe('normalizeGithubToolResult (gh runCommand parsing)', () => {
 
   it('splits segments on semicolons and parses the last gh segment', () => {
     const operation = runCommand(
-      `gh issue edit 1 --add-label bug; gh pr edit 7 --repo lobehub/lobehub --title 'Second'`,
+      `gh issue edit 1 --add-label bug; gh pr edit 7 --repo alexj11324/orvilo1 --title 'Second'`,
     );
 
     expect(operation?.params).toMatchObject({
-      identifier: 'lobehub/lobehub#7',
+      identifier: 'alexj11324/orvilo1#7',
       changeType: 'updated',
       title: 'Second',
     });
@@ -137,7 +139,7 @@ describe('normalizeGithubToolResult (url scheme allowlist)', () => {
   const editWithStdoutUrl = (url: string) =>
     // `gh issue edit 5` supplies repo+number identity; the stdout URL is the
     // attacker-controlled value under test.
-    runCommand(`gh issue edit 5 --repo lobehub/lobehub`, url);
+    runCommand(`gh issue edit 5 --repo alexj11324/orvilo1`, url);
 
   it.each([
     ['javascript:alert(1)', 'javascript'],
@@ -148,40 +150,40 @@ describe('normalizeGithubToolResult (url scheme allowlist)', () => {
     // back to the command's edit target (number 5) and carries no url.
     const operation = editWithStdoutUrl(url);
 
-    expect(operation?.params.identifier).toBe('lobehub/lobehub#5');
+    expect(operation?.params.identifier).toBe('alexj11324/orvilo1#5');
     expect(operation?.params.url).toBeUndefined();
   });
 
   it('keeps a plain https github url', () => {
     const operation = runCommand(
-      `gh issue create --repo lobehub/lobehub --title 'ok'`,
-      'https://github.com/lobehub/lobehub/issues/321',
+      `gh issue create --repo alexj11324/orvilo1 --title 'ok'`,
+      'https://github.com/alexj11324/orvilo1/issues/321',
     );
 
-    expect(operation?.params.url).toBe('https://github.com/lobehub/lobehub/issues/321');
+    expect(operation?.params.url).toBe('https://github.com/alexj11324/orvilo1/issues/321');
   });
 
   it('keeps a structured-result html_url only when it is http(s)', () => {
     const good = normalizeGithubToolResult({
-      data: { html_url: 'https://github.com/lobehub/lobehub/issues/9', number: 9 },
-      args: { owner: 'lobehub', repo: 'lobehub' },
+      data: { html_url: 'https://github.com/alexj11324/orvilo1/issues/9', number: 9 },
+      args: { owner: 'alexj11324', repo: 'orvilo1' },
       toolName: 'create_issue',
     });
-    expect(good?.params.url).toBe('https://github.com/lobehub/lobehub/issues/9');
+    expect(good?.params.url).toBe('https://github.com/alexj11324/orvilo1/issues/9');
 
     const bad = normalizeGithubToolResult({
       data: { html_url: 'javascript:alert(1)', number: 9 },
-      args: { owner: 'lobehub', repo: 'lobehub' },
+      args: { owner: 'alexj11324', repo: 'orvilo1' },
       toolName: 'create_issue',
     });
-    expect(bad?.params.identifier).toBe('lobehub/lobehub#9');
+    expect(bad?.params.identifier).toBe('alexj11324/orvilo1#9');
     expect(bad?.params.url).toBeUndefined();
   });
 });
 
 /**
  * Heterogeneous / device shell surface (codex `command_execution`, claude-code
- * `Bash`, lobe-local-system `runCommand`): same gh-CLI parsing, but no
+ * `Bash`, orvilo-local-system `runCommand`): same gh-CLI parsing, but no
  * toolName gate — the caller has already scoped the record to a shell tool.
  */
 describe('normalizeGithubShellToolResult', () => {
@@ -190,19 +192,19 @@ describe('normalizeGithubShellToolResult', () => {
       data: {
         command: `git push -u origin fix/tray && gh pr create --title 'Fix tray' --body 'Details'`,
         exitCode: 0,
-        output: 'https://github.com/lobehub/lobehub/pull/17654\n',
+        output: 'https://github.com/alexj11324/orvilo1/pull/17654\n',
       },
       toolName: 'command_execution',
     });
 
     expect(operation?.params).toMatchObject({
       changeType: 'created',
-      identifier: 'lobehub/lobehub#17654',
-      resourceId: 'lobehub/lobehub#17654',
+      identifier: 'alexj11324/orvilo1#17654',
+      resourceId: 'alexj11324/orvilo1#17654',
       resourceType: 'github_pull_request',
       title: 'Fix tray',
       toolName: 'command_execution',
-      url: 'https://github.com/lobehub/lobehub/pull/17654',
+      url: 'https://github.com/alexj11324/orvilo1/pull/17654',
     });
   });
 
@@ -211,15 +213,15 @@ describe('normalizeGithubShellToolResult', () => {
     // plugin error, so a missing exit code must not reject the record.
     const operation = normalizeGithubShellToolResult({
       data: {
-        command: `gh issue edit 952 --repo lobehub/lobehub --title 'Better title'`,
-        output: 'https://github.com/lobehub/lobehub/issues/952',
+        command: `gh issue edit 952 --repo alexj11324/orvilo1 --title 'Better title'`,
+        output: 'https://github.com/alexj11324/orvilo1/issues/952',
       },
       toolName: 'Bash',
     });
 
     expect(operation?.params).toMatchObject({
       changeType: 'updated',
-      identifier: 'lobehub/lobehub#952',
+      identifier: 'alexj11324/orvilo1#952',
       resourceType: 'github_issue',
       title: 'Better title',
     });
@@ -232,17 +234,17 @@ describe('normalizeGithubShellToolResult', () => {
       data: {
         command: `/bin/zsh -lc 'git push -u origin fix/tray && gh pr create --title "Fix tray"'`,
         exitCode: 0,
-        output: 'https://github.com/lobehub/lobehub/pull/17654\n',
+        output: 'https://github.com/alexj11324/orvilo1/pull/17654\n',
       },
       toolName: 'command_execution',
     });
 
     expect(operation?.params).toMatchObject({
       changeType: 'created',
-      identifier: 'lobehub/lobehub#17654',
+      identifier: 'alexj11324/orvilo1#17654',
       resourceType: 'github_pull_request',
       title: 'Fix tray',
-      url: 'https://github.com/lobehub/lobehub/pull/17654',
+      url: 'https://github.com/alexj11324/orvilo1/pull/17654',
     });
   });
 
@@ -251,16 +253,16 @@ describe('normalizeGithubShellToolResult', () => {
     // lives at the OUTER level and must still parse.
     const operation = normalizeGithubShellToolResult({
       data: {
-        command: `bash -c 'git push' && gh pr create --repo lobehub/lobehub --title 'Outer chain'`,
+        command: `bash -c 'git push' && gh pr create --repo alexj11324/orvilo1 --title 'Outer chain'`,
         exitCode: 0,
-        output: 'https://github.com/lobehub/lobehub/pull/91',
+        output: 'https://github.com/alexj11324/orvilo1/pull/91',
       },
       toolName: 'command_execution',
     });
 
     expect(operation?.params).toMatchObject({
       changeType: 'created',
-      identifier: 'lobehub/lobehub#91',
+      identifier: 'alexj11324/orvilo1#91',
       title: 'Outer chain',
     });
   });
@@ -270,16 +272,16 @@ describe('normalizeGithubShellToolResult', () => {
     // segment must still parse from the original token stream.
     const operation = normalizeGithubShellToolResult({
       data: {
-        command: `bash ./prepare.sh && gh pr create --repo lobehub/lobehub --title 'After script'`,
+        command: `bash ./prepare.sh && gh pr create --repo alexj11324/orvilo1 --title 'After script'`,
         exitCode: 0,
-        output: 'https://github.com/lobehub/lobehub/pull/90',
+        output: 'https://github.com/alexj11324/orvilo1/pull/90',
       },
       toolName: 'command_execution',
     });
 
     expect(operation?.params).toMatchObject({
       changeType: 'created',
-      identifier: 'lobehub/lobehub#90',
+      identifier: 'alexj11324/orvilo1#90',
       title: 'After script',
     });
   });
@@ -305,7 +307,7 @@ describe('normalizeGithubShellToolResult', () => {
         data: {
           command: 'gh pr view 17654',
           exitCode: 0,
-          output: 'https://github.com/lobehub/lobehub/pull/17654',
+          output: 'https://github.com/alexj11324/orvilo1/pull/17654',
         },
         toolName: 'command_execution',
       }),

@@ -131,7 +131,7 @@ Discord 的速率限制分为全局和按路由两级。
 | `IS_VOICE_MESSAGE`       | `1 << 13` | 语音消息。                          |
 | `IS_COMPONENTS_V2`       | `1 << 15` | 使用 Components V2 布局（不可变）。 |
 
-### 3.3 MESSAGE_CONTENT 特权意图
+### 3.3 MESSAGE\_CONTENT 特权意图
 
 没有 `MESSAGE_CONTENT` 意图（`1 << 15`）的 Bot，收到的消息对象中 `content`、`embeds`、`attachments`、`components` 字段为空，`poll` 字段不会出现。
 
@@ -1275,7 +1275,7 @@ curl 'https://discord.com/api/v10/channels/123456789012345678/polls/987654321098
 
 ### 15.1 测试环境
 
-- **Guild**: LobeHub (ID: `1127171173982154893`)
+- **Guild**: Orvilo (ID: `1127171173982154893`)
 - **测试频道**: #system (ID: `1127182445373042728`)
 - **SDK**: `@discordjs/rest`
 - **测试日期**: 2026-03-26

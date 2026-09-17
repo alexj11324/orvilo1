@@ -36,7 +36,7 @@ export interface PendingArgs {
    *
    * For CC, the producer should pass `extra._meta['claudecode/toolUseId']`
    * here so it equals the existing tool message id on the renderer side
-   * (the assistant `tool_use` for `mcp__lobe_cc__ask_user_question` and
+   * (the assistant `tool_use` for `mcp__orvilo_cc__ask_user_question` and
    * the intervention request both reference the same tool bubble).
    *
    * If omitted, the bridge synthesizes a random UUID — fine for

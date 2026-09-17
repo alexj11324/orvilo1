@@ -3,7 +3,7 @@ import type { BuiltinToolManifest } from '@orvilo/types';
 import { systemPrompt } from './systemRole';
 import { BriefApiName } from './types';
 
-export const BriefIdentifier = 'lobe-brief';
+export const BriefIdentifier = 'orvilo-brief';
 
 export const BriefManifest: BuiltinToolManifest = {
   api: [

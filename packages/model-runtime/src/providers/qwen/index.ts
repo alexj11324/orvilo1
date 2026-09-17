@@ -164,4 +164,4 @@ export const params = {
   provider: ModelProvider.Qwen,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeQwenAI = createOpenAICompatibleRuntime(params);
+export const OrviloQwenAI = createOpenAICompatibleRuntime(params);

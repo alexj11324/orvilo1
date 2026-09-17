@@ -1,5 +1,5 @@
 import { HETERO_CONTINUE_PROMPT, LOADING_FLAT } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { ExecAgentResult, TopicScheduledRun, TopicScheduledRunKind } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
 
@@ -11,7 +11,7 @@ import { AiAgentService } from '@/server/services/aiAgent';
 export interface ScheduledRunContext {
   /** The dispatcher's claim lease id — fences post-dispatch writes against stale attempts. */
   claimId: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   topic: TopicItem;
   workspaceId?: string;
 }

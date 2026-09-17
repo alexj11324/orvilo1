@@ -2,12 +2,12 @@
 import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeWenxinAI, params } from './index';
+import { OrviloWenxinAI, params } from './index';
 
 testProvider({
-  Runtime: LobeWenxinAI,
+  Runtime: OrviloWenxinAI,
   provider: ModelProvider.Wenxin,
   defaultBaseURL: 'https://qianfan.baidubce.com/v2',
   chatDebugEnv: 'DEBUG_WENXIN_CHAT_COMPLETION',
@@ -17,10 +17,10 @@ testProvider({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeWenxinAI({ apiKey: 'test' });
+  instance = new OrviloWenxinAI({ apiKey: 'test' });
 
   // 使用 vi.spyOn 来模拟 chat.completions.create 方法
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -28,7 +28,7 @@ beforeEach(() => {
   );
 });
 
-describe('LobeWenxinAI', () => {
+describe('OrviloWenxinAI', () => {
   describe('chat', () => {
     it('should with search citations', async () => {
       const data = [
@@ -120,7 +120,7 @@ describe('LobeWenxinAI', () => {
   });
 });
 
-describe('LobeWenxinAI - Custom Features', () => {
+describe('OrviloWenxinAI - Custom Features', () => {
   describe('Debug Configuration', () => {
     it('should disable debug by default', () => {
       delete process.env.DEBUG_WENXIN_CHAT_COMPLETION;

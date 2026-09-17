@@ -62,7 +62,7 @@ describe('heterogeneous operation auth middleware', () => {
       capabilities: ['model:invoke'],
       model: 'claude-sonnet-4-6',
       operation_id: 'operation-1',
-      provider_id: 'lobehub',
+      provider_id: 'orvilo',
       sub: 'user-1',
     });
     mockGetServerDB.mockResolvedValue({});
@@ -100,7 +100,7 @@ describe('heterogeneous operation auth middleware', () => {
       ingress: 'anthropic-messages',
       model: 'claude-sonnet-4-6',
       operationId: 'operation-1',
-      provider: 'lobehub',
+      provider: 'orvilo',
     });
   });
 

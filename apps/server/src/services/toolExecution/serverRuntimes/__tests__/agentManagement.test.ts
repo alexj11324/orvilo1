@@ -82,7 +82,7 @@ describe('agentManagementRuntime', () => {
   });
 
   it('declares the agent management runtime identifier', () => {
-    expect(agentManagementRuntime.identifier).toBe('lobe-agent-management');
+    expect(agentManagementRuntime.identifier).toBe('orvilo-agent-management');
   });
 
   it('throws if required server context is missing', () => {

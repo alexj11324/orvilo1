@@ -1,4 +1,4 @@
-import type { LobeDefaultAiModelListItem } from 'model-bank';
+import type { OrviloDefaultAiModelListItem } from 'model-bank';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -12,11 +12,11 @@ const catalogItem = (partial: {
   displayName?: string;
   id: string;
   providerId: string;
-}): LobeDefaultAiModelListItem =>
+}): OrviloDefaultAiModelListItem =>
   ({
     abilities: {},
     ...partial,
-  }) as LobeDefaultAiModelListItem;
+  }) as OrviloDefaultAiModelListItem;
 
 describe('resolveServerDefaultAgentModels', () => {
   it('returns an empty list when an older server omits the requested agent entry', () => {
@@ -33,10 +33,10 @@ describe('resolveServerDefaultAgentModels', () => {
 });
 
 describe('resolveServerDefaultModelMeta', () => {
-  it('prefers the LobeHub catalog entry over another provider with the same id', () => {
+  it('prefers the Orvilo catalog entry over another provider with the same id', () => {
     const meta = resolveServerDefaultModelMeta('gpt-5.6', [
       catalogItem({ displayName: 'OpenAI GPT', id: 'gpt-5.6', providerId: 'openai' }),
-      catalogItem({ displayName: 'GPT-5.6', id: 'gpt-5.6', providerId: 'lobehub' }),
+      catalogItem({ displayName: 'GPT-5.6', id: 'gpt-5.6', providerId: 'orvilo' }),
     ]);
 
     expect(meta?.displayName).toBe('GPT-5.6');
@@ -70,7 +70,7 @@ describe('buildServerDefaultModelOptions', () => {
   it('puts the catalog display name on Select title for the closed trigger', () => {
     const options = buildServerDefaultModelOptions(
       [{ model: 'gpt-5.6' }],
-      [catalogItem({ displayName: 'GPT-5.6', id: 'gpt-5.6', providerId: 'lobehub' })],
+      [catalogItem({ displayName: 'GPT-5.6', id: 'gpt-5.6', providerId: 'orvilo' })],
     );
 
     expect(options[0]).toMatchObject({ title: 'GPT-5.6', value: 'gpt-5.6' });

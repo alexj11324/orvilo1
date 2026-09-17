@@ -4,7 +4,7 @@ import { pick } from 'es-toolkit/compat';
 import type { RuntimeImageGenParamsValue } from 'model-bank';
 import type { ClientOptions } from 'openai';
 
-import type { LobeRuntimeAI } from '../../core/BaseAI';
+import type { OrviloRuntimeAI } from '../../core/BaseAI';
 import { AgentRuntimeErrorType } from '../../types/error';
 import type { CreateImagePayload, CreateImageResponse } from '../../types/image';
 import { AgentRuntimeError } from '../../utils/createError';
@@ -12,14 +12,14 @@ import type { ModelIdMappingOptions } from '../../utils/modelIdMapping';
 import { resolveMappedModelId } from '../../utils/modelIdMapping';
 
 // Create debug logger
-const log = debug('lobe-image:fal');
+const log = debug('orvilo-image:fal');
 
 type FluxDevOutput = Awaited<ReturnType<typeof fal.subscribe<'fal-ai/flux/dev'>>>['data'];
 
-export class LobeFalAI implements LobeRuntimeAI {
+export class OrviloFalAI implements OrviloRuntimeAI {
   private readonly modelIdMappingOptions: ModelIdMappingOptions;
 
-  // OpenAI SDK v6 widened `apiKey` to `string | ApiKeySetter`; lobehub only uses the string form.
+  // OpenAI SDK v6 widened `apiKey` to `string | ApiKeySetter`; orvilo only uses the string form.
   constructor({
     apiKey,
     modelIdMapping,

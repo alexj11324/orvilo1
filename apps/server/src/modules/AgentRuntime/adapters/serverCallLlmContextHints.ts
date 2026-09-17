@@ -12,13 +12,13 @@ import {
   type ModelExtendParams,
   resolveEffectiveReasoningChatConfig,
 } from '@orvilo/model-runtime';
-import type { LobeAgentChatConfig, UIChatMessage } from '@orvilo/types';
+import type { OrviloAgentChatConfig, UIChatMessage } from '@orvilo/types';
 import {
   type AiModelReasoningConfig,
   type ExtendParamsType,
-  type LobeDefaultAiModelListItem,
   MODEL_REASONING_EXTEND_PARAMS,
   ModelProvider,
+  type OrviloDefaultAiModelListItem,
 } from 'model-bank';
 
 import { AiModelModel } from '@/database/models/aiModel';
@@ -53,9 +53,9 @@ export interface ServerCallLlmContextHints {
 
 export interface ResolvedModelExtendParams {
   /** Bundled card matched by id across any provider (aggregation fallback). */
-  canonicalModelCard?: LobeDefaultAiModelListItem;
+  canonicalModelCard?: OrviloDefaultAiModelListItem;
   /** Bundled card for exactly `provider`/`model`. */
-  modelCard?: LobeDefaultAiModelListItem;
+  modelCard?: OrviloDefaultAiModelListItem;
   /** Effective extend params: user row → provider card → canonical card. */
   modelExtendParams?: string[];
   /** True when any effort-family / reasoningMode param is among `modelExtendParams`. */
@@ -77,7 +77,7 @@ export const resolveModelExtendParamsForUser = async ({
 }: {
   aiModelModel: AiModelModel | undefined;
   /** Already-loaded model bank; callers on a hot path pass it to avoid a second load. */
-  builtinModels?: LobeDefaultAiModelListItem[];
+  builtinModels?: OrviloDefaultAiModelListItem[];
   model: string;
   provider: string;
 }): Promise<ResolvedModelExtendParams> => {
@@ -85,7 +85,9 @@ export const resolveModelExtendParamsForUser = async ({
     preloadedModels ??
     (await (await import('@/business/client/model-bank/loadModels')).loadModels());
 
-  const readExtendParams = (card: LobeDefaultAiModelListItem | undefined): string[] | undefined =>
+  const readExtendParams = (
+    card: OrviloDefaultAiModelListItem | undefined,
+  ): string[] | undefined =>
     card &&
     'settings' in card &&
     card.settings &&
@@ -125,7 +127,7 @@ export const resolveModelExtendParamsForUser = async ({
   if (modelExtendParams === undefined) {
     modelExtendParams = readExtendParams(modelCard);
 
-    // Aggregation providers (e.g. `lobehub`) may serve a model without copying
+    // Aggregation providers (e.g. `orvilo`) may serve a model without copying
     // its origin `settings.extendParams`. Fall back to the canonical model card
     // (matched by id across any provider) so reasoning/thinking params like
     // `thinkingLevel` still reach the model. Mirrors the client-side
@@ -180,12 +182,12 @@ export const resolveServerCallLlmContextHints = async ({
 
   const modelKnowledgeCutoff =
     modelCard?.knowledgeCutoff ??
-    (provider === ModelProvider.LobeHub ? canonicalModelCard?.knowledgeCutoff : undefined);
+    (provider === ModelProvider.Orvilo ? canonicalModelCard?.knowledgeCutoff : undefined);
   // User-set displayName wins, matching the client list merge
   const modelDisplayName =
     userModelRow?.displayName ??
     modelCard?.displayName ??
-    (provider === ModelProvider.LobeHub ? canonicalModelCard?.displayName : undefined);
+    (provider === ModelProvider.Orvilo ? canonicalModelCard?.displayName : undefined);
 
   // Reasoning fields (effort family + reasoningMode) resolve as: topic pin →
   // user-level model-instance config (personal scope, cross-workspace).
@@ -231,8 +233,8 @@ export const resolveServerCallLlmContextHints = async ({
     }
   }
 
-  const agentChatConfig: LobeAgentChatConfig | undefined = agentConfig?.chatConfig;
-  const subAgentChatConfigOverride: Partial<LobeAgentChatConfig> | undefined =
+  const agentChatConfig: OrviloAgentChatConfig | undefined = agentConfig?.chatConfig;
+  const subAgentChatConfigOverride: Partial<OrviloAgentChatConfig> | undefined =
     agentConfig?.subAgentChatConfigOverride ?? undefined;
   const effectiveChatConfig =
     agentChatConfig || modelReasoningConfig || subAgentChatConfigOverride

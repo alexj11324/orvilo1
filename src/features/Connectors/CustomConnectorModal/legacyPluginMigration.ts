@@ -1,4 +1,4 @@
-import { type LobeToolCustomPlugin } from '@orvilo/types';
+import { type OrviloToolCustomPlugin } from '@orvilo/types';
 
 import { ConnectorSourceType } from '@/database/schemas';
 
@@ -44,7 +44,9 @@ const cleanRecord = (record?: Record<string, string>): Record<string, string> | 
  * the legacy form lets users set both independently, and dropping either side
  * silently would break tool calls for the 38 rows in that combo.
  */
-export const buildConnectorPayloadFromLegacy = (legacy: LobeToolCustomPlugin): MigrationResult => {
+export const buildConnectorPayloadFromLegacy = (
+  legacy: OrviloToolCustomPlugin,
+): MigrationResult => {
   const mcp = legacy.customParams?.mcp;
   if (!mcp) return { ok: false, reason: 'no-mcp' };
 
@@ -174,8 +176,8 @@ export type MigrationSaveResult =
   | { ok: false; reason: 'no-mcp' | 'no-endpoint' | 'unsupported-transport' };
 
 export const executeLegacyMigrationSave = async (
-  legacyPlugin: LobeToolCustomPlugin,
-  formValue: LobeToolCustomPlugin,
+  legacyPlugin: OrviloToolCustomPlugin,
+  formValue: OrviloToolCustomPlugin,
   deps: MigrationSaveDeps,
 ): Promise<MigrationSaveResult> => {
   const built = buildConnectorPayloadFromLegacy(formValue);

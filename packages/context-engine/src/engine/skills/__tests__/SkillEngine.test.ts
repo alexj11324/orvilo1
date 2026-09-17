@@ -17,9 +17,9 @@ describe('SkillEngine', () => {
       name: 'Agent Browser',
     },
     {
-      description: 'LobeHub management',
-      identifier: 'lobehub-cli',
-      name: 'LobeHub CLI',
+      description: 'Orvilo management',
+      identifier: 'orvilo-cli',
+      name: 'Orvilo CLI',
     },
   ];
 
@@ -46,9 +46,9 @@ describe('SkillEngine', () => {
 
   it('should pass through pluginIds to OperationSkillSet', () => {
     const engine = new SkillEngine({ skills: rawSkills });
-    const result = engine.generate(['artifacts', 'lobehub-cli']);
+    const result = engine.generate(['artifacts', 'orvilo-cli']);
 
-    expect(result.enabledPluginIds).toEqual(['artifacts', 'lobehub-cli']);
+    expect(result.enabledPluginIds).toEqual(['artifacts', 'orvilo-cli']);
   });
 
   it('should preserve skill content in output', () => {

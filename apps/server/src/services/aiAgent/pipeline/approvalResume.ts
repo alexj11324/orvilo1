@@ -12,7 +12,7 @@ import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 
 import type { InternalExecAgentParams } from '../types';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 /**
  * Mutable rollback guard owned by `execAgentWithApprovalRollback`. The claim
@@ -76,7 +76,7 @@ export interface ClaimedApprovalResume {
  * were asked about — guards against stale / double-clicks.
  *
  * 2.7 Human-answer resume: a `humanIntervention: 'always'` tool (e.g.
- * lobe-agent `askUserQuestion`) paused this run. Write the human-provided
+ * orvilo-agent `askUserQuestion`) paused this run. Write the human-provided
  * answer as the target tool message's result and mark the intervention
  * approved. Unlike `resumeApproval` (`approved`), the run resumes from
  * `phase: 'tool_result'` (see 16c) rather than re-executing the tool — the

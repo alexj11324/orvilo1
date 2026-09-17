@@ -37,21 +37,23 @@ import {
 
 describe('server-default heterogeneous model request', () => {
   it('only accepts the namespaced operation model used for CLI metadata', () => {
-    expect(formatServerDefaultHeterogeneousModel('gpt-5.4')).toBe('lobehub/gpt-5.4');
-    expect(isServerDefaultHeterogeneousModel('lobehub/gpt-5.4', 'gpt-5.4')).toBe(true);
-    expect(isServerDefaultHeterogeneousModel('lobehub-default', 'gpt-5.4')).toBe(false);
-    expect(isServerDefaultHeterogeneousModel('lobehub/gpt-5.5', 'gpt-5.4')).toBe(false);
+    expect(formatServerDefaultHeterogeneousModel('gpt-5.4')).toBe('aspectlylabs/gpt-5.4');
+    expect(isServerDefaultHeterogeneousModel('aspectlylabs/gpt-5.4', 'gpt-5.4')).toBe(true);
+    expect(isServerDefaultHeterogeneousModel('orvilo-default', 'gpt-5.4')).toBe(false);
+    expect(isServerDefaultHeterogeneousModel('aspectlylabs/gpt-5.5', 'gpt-5.4')).toBe(false);
   });
 
   it('unwraps namespaced CLI reports and the legacy Claude Code alias', () => {
-    expect(unwrapServerDefaultHeterogeneousModel('lobehub/claude-sonnet-4-6')).toBe(
+    expect(unwrapServerDefaultHeterogeneousModel('aspectlylabs/claude-sonnet-4-6')).toBe(
       'claude-sonnet-4-6',
     );
-    expect(unwrapServerDefaultHeterogeneousModel('lobehub/gpt-5.4', 'ignored')).toBe('gpt-5.4');
-    expect(unwrapServerDefaultHeterogeneousModel('lobehub-default', 'claude-sonnet-4-6')).toBe(
+    expect(unwrapServerDefaultHeterogeneousModel('aspectlylabs/gpt-5.4', 'ignored')).toBe(
+      'gpt-5.4',
+    );
+    expect(unwrapServerDefaultHeterogeneousModel('orvilo-default', 'claude-sonnet-4-6')).toBe(
       'claude-sonnet-4-6',
     );
-    expect(unwrapServerDefaultHeterogeneousModel('lobehub-default')).toBe('lobehub-default');
+    expect(unwrapServerDefaultHeterogeneousModel('orvilo-default')).toBe('orvilo-default');
     expect(unwrapServerDefaultHeterogeneousModel('claude-opus-4-6', 'claude-sonnet-4-6')).toBe(
       'claude-opus-4-6',
     );
@@ -67,7 +69,7 @@ describe('server-default heterogeneous model request', () => {
       ingress: 'openai-responses',
       model: 'gpt-5.4',
       operationId: 'operation-1',
-      provider: 'lobehub',
+      provider: 'orvilo',
     };
 
     expect(isServerDefaultHeterogeneousRelayInvocation(invocation)).toBe(true);
@@ -463,15 +465,15 @@ describe('buildHeteroSpawnArgs', () => {
 
   it('keeps Droid model selection in ACP instead of native process arguments', () => {
     const provider: HeterogeneousProviderConfig = {
-      args: ['--tag', 'lobe'],
+      args: ['--tag', 'orvilo'],
       model: 'gpt-5.4',
       type: 'droid',
     };
 
-    expect(buildHeteroSpawnArgs(provider)).toEqual(['--tag', 'lobe']);
+    expect(buildHeteroSpawnArgs(provider)).toEqual(['--tag', 'orvilo']);
     expect(buildHeteroExecArgs(provider)).toEqual([
       '--agent-arg=--tag',
-      '--agent-arg=lobe',
+      '--agent-arg=orvilo',
       '--model',
       'gpt-5.4',
     ]);

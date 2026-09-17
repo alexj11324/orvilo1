@@ -90,7 +90,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     await expect(service.hasDeadLetters()).resolves.toBe(true);
@@ -111,7 +111,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
       { bulkMaxBytes: 10_000 },
     );
 
@@ -164,7 +164,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     const result = await service.drainOnce();
@@ -188,12 +188,12 @@ describe('FtsSearchSyncService', () => {
       new Map([['a', { id: 'a', summary: 'added in v2', title: 'title' }]]),
     );
     harness.client.getFtsSearchSyncGenerationTargets.mockResolvedValue({
-      'lobehub-test-agents': ['lobehub-test-agents-v1', 'lobehub-test-agents-v2'],
+      'orvilo-test-agents': ['orvilo-test-agents-v1', 'orvilo-test-agents-v2'],
     });
     harness.client.getFtsSearchSyncIndexFields.mockResolvedValue({
       fieldsByIndex: {
-        'lobehub-test-agents-v1': ['id', 'title'],
-        'lobehub-test-agents-v2': ['id', 'summary', 'title'],
+        'orvilo-test-agents-v1': ['id', 'title'],
+        'orvilo-test-agents-v2': ['id', 'summary', 'title'],
       },
       incompatibilities: [],
     });
@@ -205,14 +205,14 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     await service.drainOnce();
 
     expect(harness.client.getFtsSearchSyncIndexFields).toHaveBeenCalledWith({
-      'lobehub-test-agents-v1': 'agents',
-      'lobehub-test-agents-v2': 'agents',
+      'orvilo-test-agents-v1': 'agents',
+      'orvilo-test-agents-v2': 'agents',
     });
     const sources = (harness.client.bulk.mock.calls[0][0] as string)
       .trim()
@@ -236,7 +236,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     const result = await service.drainOnce();
@@ -262,15 +262,15 @@ describe('FtsSearchSyncService', () => {
     );
     harness.client.getFtsSearchSyncIndexFields.mockResolvedValueOnce({
       fieldsByIndex: {
-        'lobehub-test-agents-v1': ['id', 'legacy_title', 'title'],
-        'lobehub-test-topics-v1': ['id', 'title'],
+        'orvilo-test-agents-v1': ['id', 'legacy_title', 'title'],
+        'orvilo-test-topics-v1': ['id', 'title'],
       },
       incompatibilities: [
         {
           entity: 'agents',
-          index: 'lobehub-test-agents-v1',
+          index: 'orvilo-test-agents-v1',
           message:
-            'Elasticsearch full-text search index lobehub-test-agents-v1 is incompatible with the current agents projection. Retain compatible source fields or retire the index before syncing agents.',
+            'Elasticsearch full-text search index orvilo-test-agents-v1 is incompatible with the current agents projection. Retain compatible source fields or retire the index before syncing agents.',
         },
       ],
     });
@@ -279,7 +279,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     const result = await service.drainOnce();
@@ -297,7 +297,7 @@ describe('FtsSearchSyncService', () => {
     expect(bulkActions(harness.client)).toEqual([
       {
         _id: 'topic',
-        _index: 'lobehub-test-topics-v1',
+        _index: 'orvilo-test-topics-v1',
         version: 4,
         version_type: 'external',
       },
@@ -313,7 +313,7 @@ describe('FtsSearchSyncService', () => {
       new Map(works.map((item) => [item.documentId, { id: item.documentId, title: 'title' }])),
     );
     harness.client.getFtsSearchSyncGenerationTargets.mockResolvedValue({
-      'lobehub-test-agents': ['lobehub-test-agents-v1', 'lobehub-test-agents-v2'],
+      'orvilo-test-agents': ['orvilo-test-agents-v1', 'orvilo-test-agents-v2'],
     });
     const errorType = `es_rejected_${'x'.repeat(200)}`;
     harness.client.bulk.mockResolvedValue({
@@ -334,19 +334,19 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     const result = await service.drainOnce();
 
     expect(harness.client.getFtsSearchSyncGenerationTargets).toHaveBeenCalledWith([
-      'lobehub-test-agents',
+      'orvilo-test-agents',
     ]);
     expect(bulkActions(harness.client)).toEqual([
-      { _id: 'a', _index: 'lobehub-test-agents-v1', version: 3, version_type: 'external' },
-      { _id: 'a', _index: 'lobehub-test-agents-v2', version: 3, version_type: 'external' },
-      { _id: 'b', _index: 'lobehub-test-agents-v1', version: 4, version_type: 'external' },
-      { _id: 'b', _index: 'lobehub-test-agents-v2', version: 4, version_type: 'external' },
+      { _id: 'a', _index: 'orvilo-test-agents-v1', version: 3, version_type: 'external' },
+      { _id: 'a', _index: 'orvilo-test-agents-v2', version: 3, version_type: 'external' },
+      { _id: 'b', _index: 'orvilo-test-agents-v1', version: 4, version_type: 'external' },
+      { _id: 'b', _index: 'orvilo-test-agents-v2', version: 4, version_type: 'external' },
     ]);
     expect(harness.outbox.acknowledgeMany).toHaveBeenCalledWith([works[0]]);
     expect(harness.outbox.markFailures).toHaveBeenCalledWith([
@@ -370,7 +370,7 @@ describe('FtsSearchSyncService', () => {
       new Map(works.map((item) => [item.documentId, { id: item.documentId, title: 'title' }])),
     );
     harness.client.getFtsSearchSyncGenerationTargets.mockResolvedValue({
-      'lobehub-test-agents': ['lobehub-test-agents-v1', 'lobehub-test-agents-v2'],
+      'orvilo-test-agents': ['orvilo-test-agents-v1', 'orvilo-test-agents-v2'],
     });
     const notFound = {
       error: { reason: 'private source text', type: 'index_not_found_exception' },
@@ -389,7 +389,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     const result = await service.drainOnce();
@@ -420,7 +420,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     const result = await service.drainOnce();
@@ -440,7 +440,7 @@ describe('FtsSearchSyncService', () => {
       new Map(works.map((item) => [item.documentId, { id: item.documentId, title: 'x' }])),
     );
     harness.client.getFtsSearchSyncGenerationTargets.mockResolvedValue({
-      'lobehub-test-agents': ['lobehub-test-agents-v1', 'lobehub-test-agents-v2'],
+      'orvilo-test-agents': ['orvilo-test-agents-v1', 'orvilo-test-agents-v2'],
     });
     harness.client.bulk.mockResolvedValue({
       errors: false,
@@ -450,7 +450,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
       { bulkMaxBytes: 300 },
     );
 
@@ -474,10 +474,10 @@ describe('FtsSearchSyncService', () => {
       ]),
     );
     harness.client.getFtsSearchSyncGenerationTargets.mockResolvedValue({
-      'lobehub-test-agents': [
-        'lobehub-test-agents-v1',
-        'lobehub-test-agents-v2',
-        'lobehub-test-agents-v3',
+      'orvilo-test-agents': [
+        'orvilo-test-agents-v1',
+        'orvilo-test-agents-v2',
+        'orvilo-test-agents-v3',
       ],
     });
     harness.client.bulk.mockImplementation(async (body: string) => {
@@ -493,7 +493,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
       { bulkMaxBytes: 300, maxBulkRequests: 1 },
     );
 
@@ -530,10 +530,10 @@ describe('FtsSearchSyncService', () => {
       ]),
     );
     harness.client.getFtsSearchSyncGenerationTargets.mockResolvedValue({
-      'lobehub-test-agents': [
-        'lobehub-test-agents-v1',
-        'lobehub-test-agents-v2',
-        'lobehub-test-agents-v3',
+      'orvilo-test-agents': [
+        'orvilo-test-agents-v1',
+        'orvilo-test-agents-v2',
+        'orvilo-test-agents-v3',
       ],
     });
     harness.client.bulk
@@ -543,7 +543,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
       { bulkMaxBytes: 300, maxBulkRequests: 1 },
     );
 
@@ -563,7 +563,7 @@ describe('FtsSearchSyncService', () => {
     const item = work('a', 3);
     const harness = createHarness([item], new Map([['a', { id: 'a', title: 'x'.repeat(100) }]]));
     harness.client.getFtsSearchSyncGenerationTargets.mockResolvedValue({
-      'lobehub-test-agents': ['lobehub-test-agents-v1', 'lobehub-test-agents-v2'],
+      'orvilo-test-agents': ['orvilo-test-agents-v1', 'orvilo-test-agents-v2'],
     });
     harness.client.bulk
       .mockResolvedValueOnce({
@@ -575,7 +575,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
       { bulkMaxBytes: 300, maxBulkRequests: 1 },
     );
 
@@ -596,7 +596,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     await service.drainOnce();
@@ -618,7 +618,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     const result = await service.drainOnce();
@@ -644,7 +644,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
       { bulkMaxBytes: 300 },
     );
 
@@ -673,7 +673,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
       { bulkMaxBytes: 210 },
     );
 
@@ -699,7 +699,7 @@ describe('FtsSearchSyncService', () => {
         harness.builder as never,
         harness.outbox as never,
         harness.client,
-        'lobehub-test',
+        'orvilo-test',
       );
 
       const result = await service.drainOnce();
@@ -733,14 +733,14 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     const result = await service.drainOnce();
 
     expect(bulkActions(harness.client)).toEqual([
-      expect.objectContaining({ _id: 'urgent-message', _index: 'lobehub-test-messages-v1' }),
-      expect.objectContaining({ _id: 'ordinary-agent', _index: 'lobehub-test-agents-v1' }),
+      expect.objectContaining({ _id: 'urgent-message', _index: 'orvilo-test-messages-v1' }),
+      expect.objectContaining({ _id: 'ordinary-agent', _index: 'orvilo-test-agents-v1' }),
     ]);
     expect(result.bulkRequestSamples[0].entities).toEqual({
       agents: { bytes: expect.any(Number), items: 1, result: 'success' },
@@ -767,7 +767,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
       { bulkMaxBytes: 210, maxBulkRequests: 1 },
     );
 
@@ -789,7 +789,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     await expect(service.drainOnce()).resolves.toMatchObject({ dead: 1, failed: 1 });
@@ -812,7 +812,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
       { projectionBatchSize: 1 },
     );
 
@@ -843,7 +843,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     await expect(service.drainOnce()).rejects.toBe(acknowledgementError);
@@ -872,7 +872,7 @@ describe('FtsSearchSyncService', () => {
       harness.builder as never,
       harness.outbox as never,
       harness.client,
-      'lobehub-test',
+      'orvilo-test',
     );
 
     await expect(service.drainOnce()).rejects.toBe(failureError);

@@ -148,8 +148,8 @@ describe('browserRuntime', () => {
       const context: ToolExecutionContext = {
         agentId: 'agt-1',
         // Device-unrouted run WITH the picker still advertised: recovery via
-        // lobe-remote-device activation is possible.
-        toolManifestMap: { 'lobe-remote-device': {} as any },
+        // orvilo-remote-device activation is possible.
+        toolManifestMap: { 'orvilo-remote-device': {} as any },
         userId: 'user-1',
       };
 
@@ -166,7 +166,7 @@ describe('browserRuntime', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toMatchObject({ code: 'NO_ACTIVE_DEVICE' });
-      expect(result.content).toContain('lobe-remote-device.listOnlineDevices');
+      expect(result.content).toContain('orvilo-remote-device.listOnlineDevices');
       expect(result.content).toContain('activateDevice');
       expect(result.content).toContain('desktop application or cli');
       // No device dispatch happened.
@@ -177,7 +177,7 @@ describe('browserRuntime', () => {
       const context: ToolExecutionContext = {
         agentId: 'agt-1',
         toolManifestMap: {
-          'lobe-browser': {} as any,
+          'orvilo-browser': {} as any,
         },
         userId: 'user-1',
       };

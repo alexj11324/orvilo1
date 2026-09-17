@@ -11,7 +11,7 @@ import { validateApiKeyFormat } from '@/utils/apiKey';
 import { extractBearerToken } from '@/utils/server/auth';
 
 // Create context logger namespace
-const log = debug('lobe-hono:auth-middleware');
+const log = debug('orvilo-hono:auth-middleware');
 
 /**
  * Standard Hono authentication middleware
@@ -19,7 +19,7 @@ const log = debug('lobe-hono:auth-middleware');
  */
 export const userAuthMiddleware = async (c: Context, next: Next) => {
   // Development mode debug bypass
-  const isDebugApi = c.req.header('lobe-auth-dev-backend-api') === '1';
+  const isDebugApi = c.req.header('orvilo-auth-dev-backend-api') === '1';
   const isMockUser = process.env.ENABLE_MOCK_DEV_USER === '1';
   if (process.env.NODE_ENV === 'development' && (isDebugApi || isMockUser)) {
     log('Development debug mode, using mock user ID');

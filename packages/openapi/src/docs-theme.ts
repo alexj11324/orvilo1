@@ -1,5 +1,5 @@
 /**
- * Scalar theme overrides matching the main app's look: LobeHub's neutral
+ * Scalar theme overrides matching the main app's look: Orvilo's neutral
  * monochrome palette (black accent on light, white accent on true-black dark)
  * and the antd system font stack. Applied on top of Scalar's default theme
  * via `customCss` in `app.ts`.

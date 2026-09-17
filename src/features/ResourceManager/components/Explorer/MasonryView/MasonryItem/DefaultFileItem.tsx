@@ -1,7 +1,7 @@
 import { Flexbox, stopPropagation, Tooltip } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon, Folder } from 'lucide-react';
 import { memo } from 'react';
@@ -100,7 +100,7 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
           {!isFolder && (
             <div
               style={{
-                color: 'var(--lobe-chat-text-tertiary)',
+                color: cssVar.colorTextTertiary,
                 fontSize: 12,
                 textAlign: 'center',
               }}

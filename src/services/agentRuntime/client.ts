@@ -3,7 +3,7 @@ import debug from 'debug';
 
 import { type StreamConnectionOptions, type StreamEvent } from './type';
 
-const log = debug('lobe-agent-runtime:client');
+const log = debug('orvilo-agent-runtime:client');
 
 /**
  * Agent Client Service for communicating with durable agents

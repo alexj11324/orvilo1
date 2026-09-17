@@ -910,7 +910,7 @@ describe('DeviceGateway', () => {
       const result = await proxy.copyAssetForPublish({
         deviceId: 'dev-1',
         from: '/outside/image.png',
-        to: '/proj/.lobe-artifacts/site/image.png',
+        to: '/proj/.orvilo-artifacts/site/image.png',
         userId: 'user-1',
         workingDirectory: '/proj',
       });
@@ -922,7 +922,7 @@ describe('DeviceGateway', () => {
           method: 'copyAssetForPublish',
           params: {
             from: '/outside/image.png',
-            to: '/proj/.lobe-artifacts/site/image.png',
+            to: '/proj/.orvilo-artifacts/site/image.png',
             workingDirectory: '/proj',
           },
         },

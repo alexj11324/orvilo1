@@ -4,7 +4,7 @@ import { FileModel } from '@/database/models/file';
 import { getServerDB } from '@/database/server';
 import { FileService } from '@/server/services/file';
 
-const log = debug('lobe-file:proxy');
+const log = debug('orvilo-file:proxy');
 
 type Params = Promise<{ id: string }>;
 

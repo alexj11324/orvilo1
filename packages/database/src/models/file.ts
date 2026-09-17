@@ -36,7 +36,7 @@ import {
   topics,
   users,
 } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { buildFileCategoryFilter } from '../utils/fileTypeCategory';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
@@ -54,10 +54,10 @@ export interface SandboxInitFileItem {
 
 export class FileModel {
   private readonly userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -77,7 +77,7 @@ export class FileModel {
    * @param id - File ID
    * @returns File record or undefined
    */
-  static async getFileById(db: LobeChatDatabase, id: string): Promise<FileItem | undefined> {
+  static async getFileById(db: OrviloDatabase, id: string): Promise<FileItem | undefined> {
     return db.query.files.findFirst({
       where: eq(files.id, id),
     });

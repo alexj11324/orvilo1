@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import type { CreateVideoOptions } from '../../core/openaiCompatibleFactory';
 import type { CreateVideoPayload, CreateVideoResponse } from '../../types/video';
 
-const log = createDebug('lobe-video:wenxin');
+const log = createDebug('orvilo-video:wenxin');
 
 interface WenxinVideoStatusResponse {
   content?: {

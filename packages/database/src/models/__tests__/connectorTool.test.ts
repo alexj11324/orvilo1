@@ -11,10 +11,10 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { ConnectorToolModel, type SyncToolInput } from '../connectorTool';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'connector-tool-user';
 const otherUserId = 'connector-tool-other-user';

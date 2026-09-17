@@ -9,10 +9,6 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Match TaskWorkspaceService inheritance semantics exactly: the nearest
-  -- task/ancestor that declares provider=git owns the whole workspace config.
-  -- A malformed local declaration must fail closed rather than silently
-  -- falling through to a valid ancestor binding.
   WITH RECURSIVE lineage AS (
     SELECT t.id, t.parent_task_id, t.config, 0 AS depth
     FROM tasks t
@@ -30,7 +26,6 @@ BEGIN
   ORDER BY depth ASC
   LIMIT 1;
 
-  -- Non-repository tasks keep their existing completion semantics.
   IF workspace_binding IS NULL THEN
     RETURN NEW;
   END IF;
@@ -40,13 +35,15 @@ BEGIN
       USING ERRCODE = '23514', CONSTRAINT = 'tasks_completed_requires_github_repo';
   END IF;
 
-  -- The application writes this proof only after GitHub confirms the PR merged.
-  -- URL alone is intentionally insufficient: the row must include the PR
-  -- identity and an integrated, remotely-published delivery state.
-  IF NOT EXISTS (
+  -- Completion evidence belongs to a run generation, not merely a task. A
+  -- historical merged PR must not authorize a reopened task whose current run
+  -- has a new, unmerged PR. current_topic_id is the durable pointer to the run
+  -- being completed, so require the integrated evidence on that exact topic.
+  IF NEW.current_topic_id IS NULL OR NOT EXISTS (
     SELECT 1
     FROM task_topics tt
     WHERE tt.task_id = NEW.id
+      AND tt.topic_id = NEW.current_topic_id
       AND tt.integration IS NOT NULL
       AND tt.integration ->> 'repo' = workspace_binding ->> 'repo'
       AND NULLIF(tt.integration ->> 'prUrl', '') IS NOT NULL
@@ -55,7 +52,7 @@ BEGIN
       AND tt.integration ->> 'pushedToRemote' = 'true'
       AND NULLIF(tt.integration ->> 'expectedHeadSha', '') IS NOT NULL
   ) THEN
-    RAISE EXCEPTION 'Git task % cannot complete until its pull request is merged', NEW.identifier
+    RAISE EXCEPTION 'Git task % cannot complete until its current pull request is merged', NEW.identifier
       USING ERRCODE = '23514', CONSTRAINT = 'tasks_completed_requires_merged_pr';
   END IF;
 

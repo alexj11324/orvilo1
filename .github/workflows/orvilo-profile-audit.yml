@@ -1,0 +1,28 @@
+name: Orvilo Profile Audit
+on:
+  push:
+    branches: [fix/orvilo-profile-audit-20260917]
+    paths: [.github/workflows/orvilo-profile-audit.yml]
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 0 }
+      - uses: ./.github/actions/setup-env
+      - run: pnpm install
+      - name: Apply fixes
+        run: |
+          python .github/scripts/apply-orvilo-profile-audit.py
+          git diff --check
+          git add 'src/routes/(main)/agent/profile/features/ProfileEditor'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '🐛 fix(orvilo): restore builtin profile controls and safe local targeting'
+          git push origin HEAD:fix/orvilo-profile-audit-20260917
+      - name: Tests
+        run: bunx vitest run --project app 'src/routes/(main)/agent/profile/features/ProfileEditor/orviloProfilePolicy.test.ts'
+      - run: pnpm type-check

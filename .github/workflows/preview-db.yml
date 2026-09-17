@@ -408,15 +408,8 @@ jobs:
               --data-urlencode "meta-githubCommitSha=${HEAD_SHA}" \
               --data-urlencode 'limit=100' \
               -H "Authorization: Bearer ${VERCEL_TOKEN}")
-            deployment_json=$(jq -c --arg branch "$HEAD_BRANCH" --arg sha "$HEAD_SHA" '
-              [.deployments[]?
-                | select(.target == "preview")
-                | select((.meta.githubCommitRef // "") == $branch)
-                | select((.meta.githubCommitSha // "") == $sha)
-              ]
-              | sort_by(.createdAt // 0)
-              | if length == 0 then empty else .[-1] end
-            ' <<< "$deployments")
+            deployment_json=$(bun scripts/ci/selectPreviewDeployment.ts \
+              "$HEAD_BRANCH" "$HEAD_SHA" <<< "$deployments")
             if [[ -n "$deployment_json" ]]; then
               break
             fi

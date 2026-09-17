@@ -14,6 +14,7 @@ import { taskTemplateRouter } from '@/business/server/lambda-routers/taskTemplat
 import { topUpRouter } from '@/business/server/lambda-routers/topUp';
 import { waitlistRouter } from '@/business/server/lambda-routers/waitlist';
 import { workspaceRouter } from '@/business/server/lambda-routers/workspace';
+import { workspaceAgentRouter } from '@/business/server/lambda-routers/workspaceAgent';
 import { workspaceAuditLogRouter } from '@/business/server/lambda-routers/workspaceAuditLog';
 import { workspaceCreditsRouter } from '@/business/server/lambda-routers/workspaceCredits';
 import { workspaceCredsRouter } from '@/business/server/lambda-routers/workspaceCreds';
@@ -196,6 +197,7 @@ export const lambdaRouter = router({
   webBrowsing: webBrowsingRouter,
   work: workRouter,
   workspace: workspaceRouter,
+  workspaceAgent: workspaceAgentRouter,
   workspaceAuditLog: workspaceAuditLogRouter,
   workspaceCreds: workspaceCredsRouter,
   workspaceCredits: workspaceCreditsRouter,

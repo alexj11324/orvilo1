@@ -123,6 +123,21 @@ describe('RoomHub', () => {
     expect(hub.connectionCount).toBe(2);
   });
 
+  it('kick emits presence-gone for a kicked connection that had published presence', () => {
+    const hub = new RoomHub();
+    const target = fakeConnection({ connectionId: 't1', userId: 'user-9' });
+    const bystander = fakeConnection({ connectionId: 'keep', userId: 'user-1' });
+    hub.join(target.connection);
+    hub.join(bystander.connection);
+    hub.updatePresence('t1', 'task:task-1', { typing: true });
+    bystander.sent.length = 0; // drop the presence broadcast itself
+
+    hub.kick('ws-1', 'user-9', 'workspace.member.removed');
+
+    // Peers stop rendering the kicked member immediately, not on TTL prune.
+    expect(bystander.sent).toEqual([{ connectionId: 't1', type: 'presence-gone' }]);
+  });
+
   it('ignores malformed presence payloads', () => {
     const hub = new RoomHub();
     const a = fakeConnection({ connectionId: 'a' });

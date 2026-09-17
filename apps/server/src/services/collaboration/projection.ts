@@ -71,10 +71,14 @@ export const projectOutboxEvent = (event: OutboxEventRow): RoomDelivery[] => {
   const deliveries: RoomDelivery[] = [];
 
   // Revocation rides ahead of the notice so a connected-but-removed member
-  // loses the socket before any further room traffic reaches them.
+  // loses the socket before any further room traffic reaches them. A voluntary
+  // leave kicks too — otherwise the departing member's sockets keep receiving
+  // room broadcasts until they close on their own.
   if (
     event.aggregateType === 'workspace' &&
-    (event.eventType === 'workspace.member.removed' || event.eventType === 'workspace.member.suspended')
+    (event.eventType === 'workspace.member.removed' ||
+      event.eventType === 'workspace.member.suspended' ||
+      event.eventType === 'workspace.member.left')
   ) {
     const userId = payloadUserId(event.payload);
     if (userId) {

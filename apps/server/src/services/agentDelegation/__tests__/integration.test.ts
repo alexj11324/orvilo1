@@ -8,7 +8,7 @@ import { cleanupTestUser, createTestUser } from '@/server/routers/lambda/__tests
 import { uuid } from '@/utils/uuid';
 
 import { ActionApprovalService } from '../actionApprovals';
-import { actionApprovals, tasks, workspaceMembers, workspaces } from '../contractTables';
+import { actionApprovals, agents, tasks, workspaceMembers, workspaces } from '../contractTables';
 import { AgentDelegationService } from '../executionGrants';
 import { TaskInputService } from '../taskInputs';
 
@@ -60,6 +60,8 @@ describe('agentDelegation services (integration)', () => {
     ]);
     const task = await createTask(db, { creatorId: ownerId, workspaceId });
     taskId = task.id;
+    // Grants FK to agents — the delegation subject must be a real agent row.
+    await db.insert(agents).values({ id: 'agt_worker', userId: ownerId, workspaceId });
   });
 
   afterEach(async () => {

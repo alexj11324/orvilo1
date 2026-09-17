@@ -27,30 +27,31 @@ jobs:
       - name: Focused lint
         run: bun run check --lint apps/server/src/services/taskDeliveryReview/index.ts apps/server/src/services/taskDeliveryReview/__tests__/reviewController.cases.ts apps/server/src/services/taskDeliveryReview/index.test.ts
       - name: Review lifecycle regressions
+        id: review-tests
         run: |
           set +e
           bunx vitest run --project server apps/server/src/services/taskDeliveryReview/index.test.ts > /tmp/review-order-test.log 2>&1
           status=$?
           cat /tmp/review-order-test.log
-          if [ "$status" -ne 0 ]; then
-            mkdir -p .agents/tmp
-            cp /tmp/review-order-test.log .agents/tmp/pr25-review-order-failure.log
-            git config user.name 'ChatGPT Delivery Repair'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add .agents/tmp/pr25-review-order-failure.log
-            git commit -m '🧪 chore: capture PR review-order failure'
-            git push origin HEAD:feat/task-pr-delivery-review
-            exit "$status"
-          fi
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Upload test diagnostics
+        if: failure() && steps.review-tests.outputs.status != '0'
+        uses: actions/upload-artifact@v6
+        with:
+          name: pr25-review-order-test-log
+          path: /tmp/review-order-test.log
+          retention-days: 1
       - name: Full repository typecheck
+        if: success()
         run: pnpm type-check
       - name: Commit verified fixes and remove temporary harness
+        if: success()
         run: |
           set -euo pipefail
           git config user.name 'ChatGPT Delivery Repair'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .agents/tmp/pr25-review-order-fix.py .github/workflows/pr25-review-order-validation.yml
-          git rm -f .agents/tmp/pr25-review-order-failure.log || true
           git add apps/server/src/services/taskDeliveryReview
           git diff --cached --check
           git commit -m '🐛 fix(tasks): bind PR before review'

@@ -33,6 +33,7 @@ import AgentTool from './AgentTool';
 import CloudHeterogeneousConfig from './CloudHeterogeneousConfig';
 import EngineConfigCard from './EngineConfigCard';
 import HeterogeneousAgentStatusCard from './HeterogeneousAgentStatusCard';
+import { shouldShowHeterogeneousCloudConfig, shouldShowPersonaEditor } from './orviloProfilePolicy';
 import RemoteAgentConfigCard from './RemoteAgentConfigCard';
 import WorkspaceAgentDevicePolicy from './WorkspaceAgentDevicePolicy';
 import { WorkspaceAgentModelPolicy } from './WorkspaceAgentModelPolicy';
@@ -127,7 +128,7 @@ const ProfileEditor = memo(() => {
   // wraps the claude-code CLI.
   const isBuiltinEngine =
     isHeterogeneous && !!heterogeneousProvider && isBuiltinEngineType(heterogeneousProvider.type);
-  const showCloudHeterogeneousTab = heterogeneousProvider?.type === 'claude-code';
+  const showCloudHeterogeneousTab = shouldShowHeterogeneousCloudConfig(heterogeneousProvider);
   const localDesktopAvailable =
     isDesktop &&
     !!heterogeneousProvider &&
@@ -240,12 +241,21 @@ const ProfileEditor = memo(() => {
               onBoundDeviceChange={updateBoundDeviceId}
             />
           ) : isBuiltinEngine && heterogeneousProvider ? (
-            // Builtin Orvilo harness: engine-CLI detection + command override,
-            // no cloud/desktop tab split.
-            <HeterogeneousAgentStatusCard
-              provider={heterogeneousProvider}
-              onCommandChange={updateHeterogeneousCommand}
-            />
+            // Builtin Orvilo keeps its own identity/persona, but a Claude
+            // engine still needs the same cloud credential surface as the
+            // borrowed claude-code runner. Codex remains desktop-only.
+            showCloudHeterogeneousTab ? (
+              <Tabs
+                defaultActiveKey={isDesktop ? 'desktop' : 'cloud'}
+                items={heterogeneousTabItems}
+                size="small"
+              />
+            ) : (
+              <HeterogeneousAgentStatusCard
+                provider={heterogeneousProvider}
+                onCommandChange={updateHeterogeneousCommand}
+              />
+            )
           ) : isHeterogeneous && heterogeneousProvider ? (
             // Local CLI agents: Claude Code supports cloud config; Codex is desktop-only for now.
             <Tabs
@@ -310,7 +320,7 @@ const ProfileEditor = memo(() => {
           system prompt, so the agent's systemRole never reaches them. Hide the
           editor here to avoid a control that looks effective but isn't (mirrors the
           ModelSelect hiding above). */}
-      {!isHeterogeneous && <EditorCanvas />}
+      {shouldShowPersonaEditor(isHeterogeneous, isBuiltinEngine) && <EditorCanvas />}
     </>
   );
 });

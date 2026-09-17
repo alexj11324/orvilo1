@@ -496,6 +496,10 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   const handleTargetChange = (value: string) => {
     const selection = parseExecutionTargetValue(value);
     if (!selection) return;
+    // Do not persist a local target until the gateway has identified this
+    // device. Otherwise the deep merge leaves a stale remote boundDeviceId
+    // behind and server/web resolution silently executes on that old device.
+    if (selection.target === 'local' && !currentDeviceId) return;
 
     void updateAgentConfigById(agentId, {
       agencyConfig: {

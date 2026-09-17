@@ -76,7 +76,7 @@ describe('wsCompatProcedure', () => {
     await expect(caller.compatContext()).resolves.toEqual({
       membership: null,
       workspaceId: undefined,
-      workspaceRole: null,
+      workspaceRole: undefined,
       workspaceSlug: undefined,
     });
     expect(mockGetActiveWorkspaceMembershipRole).not.toHaveBeenCalled();
@@ -138,7 +138,7 @@ describe('wsCompatProcedure', () => {
 
     await expect(caller.publicCompatContext()).resolves.toEqual({
       workspaceId: undefined,
-      workspaceRole: null,
+      workspaceRole: undefined,
     });
   });
 });
@@ -221,9 +221,9 @@ describe('requireWorkspaceRole / requireWorkspaceRoleWhenScoped', () => {
 
     await expect(caller.compatAdminContext()).resolves.toEqual({
       membership: null,
-      workspaceRole: null,
+      workspaceRole: undefined,
     });
-    await expect(caller.compatWhenScopedAdmin()).resolves.toEqual({ workspaceRole: null });
+    await expect(caller.compatWhenScopedAdmin()).resolves.toEqual({ workspaceRole: undefined });
   });
 
   it('rejects non-members even for the lowest role gate', async () => {

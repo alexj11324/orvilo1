@@ -1,7 +1,6 @@
 from pathlib import Path
 p = Path('src/libs/swr/useSharedPollingSWR.ts')
-s = p.read_text().replace('unstable_serialize(augmentKey(key, workspaceId))', 'unstable_serialize(augmentKey(key, workspaceId) as Key)')
-p.write_text(s)
+p.write_text(p.read_text().replace('unstable_serialize(augmentKey(key, workspaceId))', 'unstable_serialize(augmentKey(key, workspaceId) as Key)'))
 p = Path('src/store/task/slices/detail/polling.test.tsx')
 s = p.read_text().replace('act, cleanup, renderHook', 'act, cleanup, render, renderHook')
 start = s.index('      const page = renderHook', s.index("'preserves the %s deadline"))
@@ -29,4 +28,4 @@ s = s[:start] + '''      const Consumer = () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(period * 3); });
       expect(taskService.getDetail).toHaveBeenCalledTimes(3);
 ''' + s[end:]
-p.write_text(s)"}
+p.write_text(s)

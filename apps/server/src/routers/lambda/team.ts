@@ -42,7 +42,7 @@ const orchestrationPolicySchema = z.object({
   allowedRoles: z.array(z.string().trim().min(1)).max(100).optional(),
   autoDispatch: z.boolean().optional(),
   concurrencyLimit: z.number().int().min(1).max(100).optional(),
-  defaultAgentId: z.string().min(1).nullable().optional(),
+  defaultAgentId: z.string().min(1).optional(),
   executionBudget: z
     .object({ maxCost: z.number().min(0).optional(), maxRuns: z.number().int().min(1).optional() })
     .optional(),
@@ -106,7 +106,7 @@ export const teamRouter = router({
   addMember: teamWriteProcedure
     .input(
       teamIdInput.extend({
-        role: z.enum(['lead', 'member', 'viewer']).default('member'),
+        role: z.enum(['lead', 'member']).default('member'),
         userId: z.string().min(1),
       }),
     )

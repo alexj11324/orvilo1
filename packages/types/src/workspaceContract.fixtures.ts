@@ -144,6 +144,7 @@ export const fixtureAssociationDecision = (
   inputRevision: 1,
   policyRevision: 1,
   relation: 'project_repository',
+  revokedAt: null,
   source: 'deterministic',
   sourceId: FIXTURE_PROJECT_ID,
   sourceKind: 'project',

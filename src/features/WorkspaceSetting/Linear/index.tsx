@@ -204,7 +204,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   scopePanel: css`
     padding: 16px;
     border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLg};
+    border-radius: ${cssVar.borderRadiusLG};
     background: ${cssVar.colorBgElevated};
   `,
   statusGrid: css`

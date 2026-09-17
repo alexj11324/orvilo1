@@ -1151,7 +1151,7 @@ export class LinearPlanningWorker {
       .from(projects)
       .where(and(eq(projects.id, projectId), eq(projects.workspaceId, this.workspaceId)))
       .limit(1);
-    return project
+    return project?.userId
       ? {
           policy: normalizeProjectOrchestrationPolicy(project.orchestrationPolicy),
           userId: project.userId,
@@ -1173,7 +1173,7 @@ export class LinearPlanningWorker {
       .from(teams)
       .where(and(eq(teams.id, teamId), eq(teams.workspaceId, this.workspaceId)))
       .limit(1);
-    return team
+    return team?.createdByUserId
       ? {
           policy: normalizeProjectOrchestrationPolicy(team.orchestrationPolicy),
           userId: team.createdByUserId,

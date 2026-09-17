@@ -376,7 +376,7 @@ export class ProjectModel {
             eq(projectAgents.workspaceId, project.workspaceId),
           )
         : and(
-            eq(agents.userId, project.userId),
+            project.userId ? eq(agents.userId, project.userId) : isNull(agents.userId),
             isNull(agents.workspaceId),
             isNull(projectAgents.workspaceId),
           );

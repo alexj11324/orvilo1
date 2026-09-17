@@ -73,7 +73,7 @@ export const createLinearCoordinatorPlanner =
       .from(projects)
       .where(and(eq(projects.id, snapshot.scope.scopeId), eq(projects.workspaceId, workspaceId)))
       .limit(1);
-    if (!project) return proposeLinearPlanningReview(snapshot);
+    if (!project?.userId) return proposeLinearPlanningReview(snapshot);
 
     const agent = await new AgentModel(db, project.userId, workspaceId).getAgentConfig(
       project.coordinatorAgentId,

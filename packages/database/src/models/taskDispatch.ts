@@ -9,6 +9,7 @@ import { and, asc, eq, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 
 import { projectAgents, projects } from '../schemas/project';
 import type { TaskDispatchItem, TaskTopicItem } from '../schemas/task';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
+import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import type { LobeChatDatabase } from '../type';
 import { idGenerator } from '../utils/idGenerator';
@@ -271,12 +272,13 @@ export class TaskDispatchModel {
         planRevision: taskDispatches.planRevision,
         requestedBy: taskDispatches.requestedBy,
         taskId: taskDispatches.taskId,
-        userId: projects.userId,
+        userId: sql<string | null>`coalesce(${projects.userId}, ${teams.createdByUserId})`,
         workspaceId: taskDispatches.workspaceId,
       })
       .from(taskDispatches)
       .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
-      .innerJoin(projects, eq(projects.id, tasks.projectId))
+      .leftJoin(projects, eq(projects.id, tasks.projectId))
+      .leftJoin(teams, eq(teams.id, tasks.teamId))
       .where(
         and(
           eq(taskDispatches.phase, 'requested'),
@@ -288,7 +290,9 @@ export class TaskDispatchModel {
       .orderBy(asc(taskDispatches.updatedAt), asc(taskDispatches.id))
       .limit(limit);
     return rows.flatMap((row) =>
-      row.planRevision === null ? [] : [{ ...row, planRevision: row.planRevision }],
+      row.planRevision === null || row.userId === null
+        ? []
+        : [{ ...row, planRevision: row.planRevision, userId: row.userId }],
     );
   }
 

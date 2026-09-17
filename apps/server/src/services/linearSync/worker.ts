@@ -808,14 +808,16 @@ export class LinearSyncWorker {
             )
             .map((field) => [field, merged.merged[field]]),
         ) as LinearIssueUpdateInput;
-        const latestBinding = await this.model.findBindingById(binding.id);
-        if (!latestBinding || !linearBindingWriteEnabled(latestBinding)) {
-          await this.model.updateOutbox(
-            row.id,
-            { availableAt: new Date(), lastError: null, lockedUntil: null, status: 'paused' },
-            lease,
-          );
-          continue;
+        if (binding) {
+          const latestBinding = await this.model.findBindingById(binding.id);
+          if (!latestBinding || !linearBindingWriteEnabled(latestBinding)) {
+            await this.model.updateOutbox(
+              row.id,
+              { availableAt: new Date(), lastError: null, lockedUntil: null, status: 'paused' },
+              lease,
+            );
+            continue;
+          }
         }
         const updated =
           Object.keys(mergedInput).length === 0
@@ -824,8 +826,13 @@ export class LinearSyncWorker {
                 if (!(await this.model.hasCurrentOutboxLease(row.id, lease))) {
                   throw new LinearSyncLeaseLostError();
                 }
-                const beforeMutationBinding = await this.model.findBindingById(binding.id);
-                if (!beforeMutationBinding || !linearBindingWriteEnabled(beforeMutationBinding)) {
+                const beforeMutationBinding = binding
+                  ? await this.model.findBindingById(binding.id)
+                  : null;
+                if (
+                  binding &&
+                  (!beforeMutationBinding || !linearBindingWriteEnabled(beforeMutationBinding))
+                ) {
                   await this.model.updateOutbox(
                     row.id,
                     {
@@ -1515,7 +1522,7 @@ export class LinearSyncWorker {
     model: LinearSyncModel,
     db: LobeChatDatabase,
     integrationTasks: LinearIntegrationTaskService,
-    _binding: Awaited<ReturnType<LinearSyncModel['findBindingById']>>,
+    _binding: Awaited<ReturnType<LinearSyncModel['findBindingById']>> | null,
     _taskId: string,
     issueId: string,
     relations: LinearRelationSnapshot[],
@@ -2136,7 +2143,7 @@ export class LinearSyncWorker {
     let linked = 0;
     for (const remote of eligible) {
       const existing = await this.model.findBindingByLinearProjectId(remote.id);
-      let localProjectId = existing?.projectId;
+      let localProjectId: string | undefined = existing?.projectId;
       if (!localProjectId && projectModel) {
         localProjectId = (await this.createImportedProject(projectModel, installation, remote))?.id;
       }

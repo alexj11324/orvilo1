@@ -71,7 +71,7 @@ export const repositoryRouter = router({
       const token = await resolveGithubAccessToken({
         db: ctx.serverDB,
         userId: ctx.userId,
-        workspaceId: ctx.workspaceId,
+        workspaceId: ctx.workspaceId ?? undefined,
       });
       const verified = await verifyGithubRepository(input.repo, token);
       if (!verified) {

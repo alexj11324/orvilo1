@@ -2233,8 +2233,6 @@ export default {
   'taskList.visibility.label': 'Visibility',
   'taskList.breadcrumb.task': 'Task',
   'taskList.empty': 'No tasks yet',
-  'taskList.emptyHero.greeting': 'What should we tackle today?',
-  'taskList.emptyHero.templatesTitle': 'Templates picked for you',
   'taskList.form.columns': 'Columns',
   'taskList.form.grouping': 'Grouping',
   'taskList.form.nestedSubTasks': 'Nested sub-tasks',

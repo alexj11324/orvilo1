@@ -317,7 +317,6 @@ async function assertTaskSteeringCapability(
       const projectRole = await new ProjectMemberModel(
         ctx.serverDB,
         ctx.userId,
-        workspaceId,
       ).getRole(task.projectId, ctx.userId);
       if (projectRole === 'manager') return;
     }

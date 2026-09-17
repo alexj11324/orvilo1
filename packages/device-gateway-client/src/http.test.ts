@@ -493,6 +493,7 @@ describe('GatewayHttpClient', () => {
 
       await client.dispatchAgentRun({
         agentType: 'claude-code',
+        assistantMessageId: 'asst-1',
         idempotencyKey: 'op-1',
         jwt: 'jwt',
         operationId: 'op-1',

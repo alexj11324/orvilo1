@@ -1522,7 +1522,7 @@ export class AiAgentService {
     threadId?: string;
     topicId?: string;
   }): Promise<{
-    cancelState: 'confirmed' | 'none' | 'requested' | 'unknown';
+    cancelState?: 'confirmed' | 'none' | 'requested' | 'unknown';
     deviceCancellationConfirmed?: boolean;
     operationId?: string;
     success: boolean;

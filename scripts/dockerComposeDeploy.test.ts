@@ -173,7 +173,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     expect(dockerfile).toContain('--out-extension:.js=.mjs');
     expect(dockerfile).toContain('--external:sharp');
     expect(dockerfile).toContain(
-      '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
+      '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; import { fileURLToPath as fileURLToPathForHatchetBundle } from "node:url"; import { dirname as dirnameForHatchetBundle } from "node:path"; const require = createRequireForHatchetBundle(import.meta.url); const __filename = fileURLToPathForHatchetBundle(import.meta.url); const __dirname = dirnameForHatchetBundle(__filename);\'',
     );
     expect(dockerfile).toContain('COPY --from=builder /app/hatchet-worker /app/hatchet-worker');
     expect(dockerfile).toContain(

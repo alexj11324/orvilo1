@@ -106,7 +106,9 @@ RUN pnpm exec esbuild scripts/elasticsearchCleanupIneligibleMessages/cli.ts --bu
 RUN pnpm exec esbuild scripts/pgSearchCleanup/index.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-pg-search-cleanup.cjs --external:pg
 # Preserve ESM module boundaries so circular top-level-await initializers settle before the worker
 # starts. Native sharp stays external and is copied with its platform package into the runtime.
-RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker --entry-names=worker '--chunk-names=chunks/[name]-[hash]' --out-extension:.js=.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*' --external:sharp --banner:js='import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);'
+# The SDK still evaluates a CommonJS helper that reads __dirname, so provide the
+# equivalent ESM values in every split bundle.
+RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker --entry-names=worker '--chunk-names=chunks/[name]-[hash]' --out-extension:.js=.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*' --external:sharp --banner:js='import { createRequire as createRequireForHatchetBundle } from "node:module"; import { fileURLToPath as fileURLToPathForHatchetBundle } from "node:url"; import { dirname as dirnameForHatchetBundle } from "node:path"; const require = createRequireForHatchetBundle(import.meta.url); const __filename = fileURLToPathForHatchetBundle(import.meta.url); const __dirname = dirnameForHatchetBundle(__filename);'
 
 # Preserve SWC helpers referenced through pnpm virtual-store symlinks by Next.js.
 RUN mkdir -p /runtime-deps && cp -a node_modules/.pnpm/@swc+helpers@* /runtime-deps/

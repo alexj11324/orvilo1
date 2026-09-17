@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull, or } from 'drizzle-orm';
 
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { UserModel } from '@/database/models/user';
@@ -34,6 +34,7 @@ export const workspaceAgentRouter = router({
             agentAvatar: agents.avatar,
             agentId: agents.id,
             agentName: agents.name,
+            agentTitle: agents.title,
             enabled: projectAgents.enabled,
             maintainerId: agents.userId,
             projectId: projects.id,
@@ -45,7 +46,20 @@ export const workspaceAgentRouter = router({
           .where(
             and(
               eq(projectAgents.workspaceId, ctx.workspaceId),
-              eq(projectAgents.enabled, true),
+              // Roster rows join across ownership boundaries, so the binding's
+              // workspace scope alone would leak other members' private
+              // agents/projects. Visibility-only filter (public + own
+              // private), matching `buildWorkspaceWhere`'s NULL-is-public rule.
+              or(
+                isNull(agents.visibility),
+                eq(agents.visibility, 'public'),
+                and(eq(agents.visibility, 'private'), eq(agents.userId, ctx.userId)),
+              ),
+              or(
+                isNull(projects.visibility),
+                eq(projects.visibility, 'public'),
+                and(eq(projects.visibility, 'private'), eq(projects.userId, ctx.userId)),
+              ),
             ),
           )
           .orderBy(asc(projects.name), asc(projectAgents.sortOrder));
@@ -74,14 +88,17 @@ export const workspaceAgentRouter = router({
                     name: maintainer.fullName ?? maintainer.username,
                   }
                 : null,
-              name: row.agentName ?? row.agentId,
+              name: row.agentName ?? row.agentTitle ?? row.agentId,
               projects: [],
-              status: 'active',
+              status: 'disabled',
             };
             byAgent.set(row.agentId, summary);
           }
-          if (!summary.projects.some((p) => p.id === row.projectId)) {
-            summary.projects.push({ id: row.projectId, name: row.projectName ?? row.projectId });
+          if (row.enabled) {
+            summary.status = 'active';
+            if (!summary.projects.some((p) => p.id === row.projectId)) {
+              summary.projects.push({ id: row.projectId, name: row.projectName ?? row.projectId });
+            }
           }
         }
         return [...byAgent.values()];

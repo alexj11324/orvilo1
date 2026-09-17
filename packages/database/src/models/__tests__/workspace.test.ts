@@ -466,7 +466,8 @@ describe('WorkspaceMemberModel', () => {
       status: 'pending',
       workspaceId,
     });
-    expect(invitation.token).toHaveLength(32);
+    // 256-bit token, base64url-encoded → 43 chars.
+    expect(invitation.token).toHaveLength(43);
     expect(invitation.expiresAt.getTime()).toBeGreaterThan(
       before.getTime() + 6 * 24 * 60 * 60 * 1000,
     );

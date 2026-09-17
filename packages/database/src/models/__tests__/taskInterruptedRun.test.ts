@@ -97,6 +97,29 @@ describe('confirmed interruption compensation', () => {
     expect((await model.findById(input.id))?.status).toBe('paused');
   });
 
+  it('cancels a confirmed non-current operation without clearing the current run lease', async () => {
+    const input = await seed();
+    await db.insert(topics).values({ id: 'topic-old', userId });
+    await topicModel.add(input.id, 'topic-old', { operationId: 'op-old', seq: 2 });
+    expect(
+      await model.recoverInterruptedRun({
+        currentTopicId: null,
+        id: input.id,
+        operationId: 'op-old',
+        reservationId: null,
+        topicId: 'topic-old',
+      }),
+    ).toBe(false);
+    expect(await model.findById(input.id)).toMatchObject({
+      currentTopicId: 'topic-1',
+      runReservationId: 'run-1',
+      status: 'running',
+    });
+    expect(
+      (await topicModel.findByTaskId(input.id)).find((topic) => topic.topicId === 'topic-old')?.status,
+    ).toBe('canceled');
+  });
+
   it('does not alter another owner task or topic', async () => {
     const input = await seed();
     expect(await new TaskModel(db, 'other-owner').recoverInterruptedRun(input)).toBe(false);

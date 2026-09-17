@@ -201,6 +201,12 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     background: ${cssVar.colorBgContainer};
   `,
+  scopePanel: css`
+    padding: 16px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: ${cssVar.borderRadiusLg};
+    background: ${cssVar.colorBgElevated};
+  `,
   statusGrid: css`
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -336,6 +342,35 @@ type Catalog = {
 };
 
 type LocalProject = { id: string; identifier: string; name: string };
+
+/** Workspace sync scope row (linear-workspace-v3) as returned by `syncScope`. */
+type LinearSyncScopeView = {
+  id: string;
+  importCompletedAt: string | Date | null;
+  importPhase: string | null;
+  importStartedAt: string | Date | null;
+  installationId: string;
+  issuesFailed: number;
+  issuesImported: number;
+  lastError: string | null;
+  projectsLinked: number;
+  settings: {
+    approvedTeamIds?: string[];
+    includeProjectlessIssues?: boolean;
+    privateTeamPolicy?: 'import_restricted' | 'skip';
+  } | null;
+  status: string;
+  teamsLinked: number;
+};
+
+type LinearTeamLinkView = {
+  id: string;
+  linearTeamId: string;
+  linearTeamKey: string | null;
+  syncState: string;
+  teamId: string;
+};
+
 type PlanningRevision = {
   createdAt: string | Date;
   id: string;
@@ -362,6 +397,7 @@ type Action =
   | 'replanning'
   | 'read'
   | 'retry'
+  | 'scopeImport'
   | 'sync'
   | 'write'
   | 'worker';
@@ -497,6 +533,15 @@ const LinearWorkspaceSettings = memo(() => {
     Record<string, Record<string, 'linear' | 'local'>>
   >({});
   const [resolvingConflictId, setResolvingConflictId] = useState<string | null>(null);
+  // Workspace sync scope (linear-workspace-v3): the durable approved-team set
+  // behind the resumable workspace import.
+  const [syncScope, setSyncScope] = useState<LinearSyncScopeView | null>(null);
+  const [teamLinks, setTeamLinks] = useState<LinearTeamLinkView[]>([]);
+  const [scopeApprovedTeamIds, setScopeApprovedTeamIds] = useState<string[] | null>(null);
+  const [scopeIncludeProjectless, setScopeIncludeProjectless] = useState(true);
+  const [scopePrivateTeamPolicy, setScopePrivateTeamPolicy] = useState<
+    'import_restricted' | 'skip'
+  >('import_restricted');
   const isConnected = installations.some((installation) => installation.status === 'active');
 
   const selectedInstallation = installations.find((item) => item.id === selectedInstallationId);
@@ -629,6 +674,67 @@ const LinearWorkspaceSettings = memo(() => {
   useEffect(() => {
     void loadCatalog();
   }, [loadCatalog]);
+
+  /** Load the workspace sync scope + team links for the selected installation. */
+  const loadScope = useCallback(async () => {
+    if (!selectedInstallationId) {
+      setSyncScope(null);
+      setTeamLinks([]);
+      return;
+    }
+    try {
+      const [scopeResponse, teamLinkResponse] = await Promise.all([
+        lambdaClient.linearSync.syncScope.query({ installationId: selectedInstallationId }),
+        lambdaClient.linearSync.teamLinks.query(),
+      ]);
+      setSyncScope((scopeResponse?.data as LinearSyncScopeView | null) ?? null);
+      setTeamLinks((teamLinkResponse?.data as LinearTeamLinkView[]) ?? []);
+    } catch (error) {
+      console.error('[LinearWorkspaceSettings] Failed to load sync scope', error);
+    }
+  }, [selectedInstallationId]);
+
+  useEffect(() => {
+    void loadScope();
+  }, [loadScope]);
+
+  // Hydrate the draft scope settings once the persisted scope arrives — a
+  // missing `approvedTeamIds` means "every remote team is approved" (null).
+  useEffect(() => {
+    const settings = syncScope?.settings;
+    setScopeApprovedTeamIds(settings?.approvedTeamIds ?? null);
+    setScopeIncludeProjectless(settings?.includeProjectlessIssues !== false);
+    setScopePrivateTeamPolicy(settings?.privateTeamPolicy ?? 'import_restricted');
+  }, [syncScope?.id]);
+
+  // While an import runs, poll the durable scope row — the server keeps
+  // stepping even if this page closes.
+  useEffect(() => {
+    if (syncScope?.status !== 'importing') return;
+    const timer = setInterval(() => void loadScope(), 3_000);
+    return () => clearInterval(timer);
+  }, [syncScope?.status, loadScope]);
+
+  const startWorkspaceImport = async () => {
+    if (!selectedInstallationId) return;
+    setAction('scopeImport');
+    try {
+      await lambdaClient.linearSync.upsertSyncScope.mutate({
+        installationId: selectedInstallationId,
+        settings: {
+          ...(scopeApprovedTeamIds ? { approvedTeamIds: scopeApprovedTeamIds } : {}),
+          includeProjectlessIssues: scopeIncludeProjectless,
+          privateTeamPolicy: scopePrivateTeamPolicy,
+        },
+        startImport: true,
+      });
+      await loadScope();
+    } catch (error) {
+      console.error('[LinearWorkspaceSettings] Failed to start workspace import', error);
+    } finally {
+      setAction(null);
+    }
+  };
 
   useEffect(() => {
     const binding = bindings.find((item) => item.projectId === selectedProjectId);
@@ -1300,6 +1406,142 @@ const LinearWorkspaceSettings = memo(() => {
     </StepCard>
   );
 
+  /**
+   * Workspace-scope import panel (linear-workspace-v3): pick the approved
+   * remote teams, start the resumable import, and watch durable progress.
+   * The server keeps stepping after this page closes — this card only
+   * reports the persisted scope row.
+   */
+  const renderWorkspaceScope = () => {
+    const importing = syncScope?.status === 'importing';
+    const remoteTeams = catalog?.teams ?? [];
+    const approved = (teamId: string) =>
+      scopeApprovedTeamIds === null || scopeApprovedTeamIds.includes(teamId);
+    const toggleTeam = (teamId: string, checked: boolean) => {
+      setScopeApprovedTeamIds((current) => {
+        const base = current ?? remoteTeams.map((team) => team.id);
+        const next = checked ? [...new Set([...base, teamId])] : base.filter((id) => id !== teamId);
+        return next.length === remoteTeams.length ? null : next;
+      });
+    };
+    const linkedTeamIds = new Set(teamLinks.map((link) => link.linearTeamId));
+    return (
+      <Flexbox className={styles.scopePanel} gap={12}>
+        <Flexbox horizontal align={'center'} justify={'space-between'}>
+          <Text weight={600}>{t('workspaceSetting.linear.workspaceScopeTitle')}</Text>
+          <Button
+            disabled={!canManage || remoteTeams.length === 0}
+            icon={Upload}
+            loading={action === 'scopeImport' || importing}
+            type={'primary'}
+            onClick={() => void startWorkspaceImport()}
+          >
+            {importing
+              ? t('workspaceSetting.linear.workspaceImporting')
+              : syncScope?.importCompletedAt
+                ? t('workspaceSetting.linear.workspaceReimport')
+                : t('workspaceSetting.linear.workspaceImportStart')}
+          </Button>
+        </Flexbox>
+        <Text className={styles.description} fontSize={12}>
+          {t('workspaceSetting.linear.workspaceScopeDescription')}
+        </Text>
+        <Flexbox gap={8}>
+          {remoteTeams.map((team) => (
+            <Flexbox horizontal align={'center'} gap={8} key={team.id}>
+              <input
+                checked={approved(team.id)}
+                disabled={!canManage || importing}
+                type={'checkbox'}
+                onChange={(event) => toggleTeam(team.id, event.target.checked)}
+              />
+              <Text>
+                {team.name} ({team.key})
+              </Text>
+              {linkedTeamIds.has(team.id) && (
+                <Tag>{t('workspaceSetting.linear.workspaceScopeLinked')}</Tag>
+              )}
+            </Flexbox>
+          ))}
+        </Flexbox>
+        <Flexbox horizontal gap={24} wrap={'wrap'}>
+          <Flexbox horizontal align={'center'} gap={8}>
+            <input
+              checked={scopeIncludeProjectless}
+              disabled={!canManage || importing}
+              type={'checkbox'}
+              onChange={(event) => setScopeIncludeProjectless(event.target.checked)}
+            />
+            <Text type={'secondary'}>{t('workspaceSetting.linear.includeProjectlessIssues')}</Text>
+          </Flexbox>
+          <Flexbox horizontal align={'center'} gap={8}>
+            <Text type={'secondary'}>{t('workspaceSetting.linear.privateTeamPolicy')}</Text>
+            <Select
+              disabled={!canManage || importing}
+              size={'small'}
+              value={scopePrivateTeamPolicy}
+              options={[
+                {
+                  label: t('workspaceSetting.linear.privateTeamImportRestricted'),
+                  value: 'import_restricted',
+                },
+                { label: t('workspaceSetting.linear.privateTeamSkip'), value: 'skip' },
+              ]}
+              onChange={(value) => setScopePrivateTeamPolicy(value as 'import_restricted' | 'skip')}
+            />
+          </Flexbox>
+        </Flexbox>
+        {syncScope && (
+          <div className={styles.statusPanel}>
+            <Tag
+              icon={
+                <Icon
+                  spin={syncScope.status === 'importing'}
+                  icon={
+                    syncScope.status === 'importing'
+                      ? RefreshCw
+                      : syncScope.status === 'failed'
+                        ? CircleAlert
+                        : CircleCheck
+                  }
+                />
+              }
+            >
+              <Text type={syncScope.status === 'failed' ? 'danger' : undefined}>
+                {t(`workspaceSetting.linear.scopeStatus.${syncScope.status}` as never)}
+              </Text>
+            </Tag>
+            {syncScope.importPhase && (
+              <Text type={'secondary'}>
+                {t('workspaceSetting.linear.scopePhase', {
+                  phase: t(
+                    `workspaceSetting.linear.scopePhaseName.${syncScope.importPhase}` as never,
+                  ),
+                })}
+              </Text>
+            )}
+            <Text className={styles.muted} fontSize={12}>
+              {t('workspaceSetting.linear.scopeCounters', {
+                issues: syncScope.issuesImported,
+                issuesFailed: syncScope.issuesFailed,
+                projects: syncScope.projectsLinked,
+                teams: syncScope.teamsLinked,
+              })}
+            </Text>
+            {syncScope.lastError && <Text type={'danger'}>{syncScope.lastError}</Text>}
+            {syncScope.importCompletedAt && (
+              <Text className={styles.muted} fontSize={12}>
+                {t('workspaceSetting.linear.scopeCompletedAt', {
+                  time: dateLabel(syncScope.importCompletedAt, i18n.language),
+                })}
+              </Text>
+            )}
+          </div>
+        )}
+      </Flexbox>
+    );
+  };
+
   const renderScope = () => (
     <StepCard
       description={t(STEP_COPY.scope.description as never)}
@@ -1324,6 +1566,7 @@ const LinearWorkspaceSettings = memo(() => {
                 selectedInstallation.organizationName || selectedInstallation.organizationId,
             })}
           </Text>
+          {renderWorkspaceScope()}
           <div className={styles.grid}>
             <div className={styles.field}>
               <Text className={styles.fieldLabel}>{t('workspaceSetting.linear.teamTitle')}</Text>

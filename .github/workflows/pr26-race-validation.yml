@@ -4,7 +4,7 @@ on:
     branches: [fix/task-pr-audit-20260916]
     paths: [.github/workflows/pr26-race-validation.yml]
 permissions:
-  contents: read
+  contents: write
 jobs:
   validate:
     runs-on: ubuntu-latest

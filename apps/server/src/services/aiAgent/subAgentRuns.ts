@@ -12,8 +12,8 @@ import type { AgentOperationModel } from '@/database/models/agentOperation';
 import type { MessageModel } from '@/database/models/message';
 import type { ThreadModel } from '@/database/models/thread';
 import type { AgentRuntimeService } from '@/server/services/agentRuntime';
-import { hookDispatcher } from '@/server/services/agentRuntime/hooks';
-import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
+import { hookDispatcher } from '@/server/services/agentExecution/hooks';
+import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,

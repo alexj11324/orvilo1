@@ -8,6 +8,11 @@ import type {
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 
 import { AgentStreamPipeline, type UploadHeterogeneousImage } from './agentStreamPipeline';
+import type {
+  HeterogeneousAgentRuntimeState,
+  HeterogeneousAgentRuntimeStatus,
+  HeterogeneousAgentRuntimeTask,
+} from './runtimeStatus';
 
 const CLAUDE_SDK_DISALLOWED_TOOLS = ['AskUserQuestion', 'Monitor', 'ScheduleWakeup'] as const;
 const DEFAULT_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
@@ -98,36 +103,11 @@ interface TrackedTask {
   type?: string;
 }
 
-export type HeterogeneousAgentRuntimeState =
-  'starting' | 'running' | 'monitoring' | 'idle' | 'stale' | 'closing' | 'closed' | 'error';
-
-export interface HeterogeneousAgentRuntimeTask {
-  description?: string;
-  lastEventAt: number;
-  startedAt: number;
-  taskId: string;
-  toolUseId?: string;
-  type?: string;
-}
-
-export interface HeterogeneousAgentRuntimeStatus {
-  activeTasks: HeterogeneousAgentRuntimeTask[];
-  idleDeadlineAt?: number;
-  lastEventAt: number;
-  operationId?: string;
-  sessionId: string;
-  staleDeadlineAt?: number;
-  state: HeterogeneousAgentRuntimeState;
-  transport:
-    | 'acp-stdio'
-    | 'claude-sdk'
-    | 'cli-spawn'
-    | 'codex-app-server'
-    | 'cursor-acp'
-    | 'droid-acp'
-    | 'devin-acp'
-    | 'trae-acp';
-}
+export type {
+  HeterogeneousAgentRuntimeState,
+  HeterogeneousAgentRuntimeStatus,
+  HeterogeneousAgentRuntimeTask,
+} from './runtimeStatus';
 
 export interface ClaudeAgentSdkSessionOptions {
   args: string[];

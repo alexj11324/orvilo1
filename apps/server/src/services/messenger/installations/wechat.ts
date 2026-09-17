@@ -5,7 +5,7 @@ import { getMessengerWechatConfig } from '@/config/messenger';
 import { getServerDB } from '@/database/core/db-adaptor';
 import type { DecryptedMessengerAccountLink } from '@/database/models/messengerAccountLink';
 import { MessengerAccountLinkModel } from '@/database/models/messengerAccountLink';
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import type { WechatWindowRedis } from '@/server/services/bot/platforms/wechat/contextWindow';
 import { recordInboundToken } from '@/server/services/bot/platforms/wechat/contextWindow';

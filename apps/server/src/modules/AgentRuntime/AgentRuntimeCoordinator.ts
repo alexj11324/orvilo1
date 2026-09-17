@@ -2,9 +2,9 @@ import { type AgentState } from '@orvilo/agent-runtime';
 import { type UIChatMessage } from '@orvilo/types';
 import debug from 'debug';
 
-import { type AgentOperationMetadata, type StepResult } from './AgentStateManager';
-import { createAgentStateManager, createStreamEventManager } from './factory';
-import { type IAgentStateManager, type IStreamEventManager } from './types';
+import { type AgentOperationMetadata, type StepResult } from '../AgentExecution/AgentStateManager';
+import { createAgentStateManager, createStreamEventManager } from '../AgentExecution/factory';
+import { type IAgentStateManager, type IStreamEventManager } from '../AgentExecution/types';
 import { hasVisibleOutputEndPublished } from './visibleOutputEnd';
 
 const log = debug('orvilo-server:agent-runtime:coordinator');

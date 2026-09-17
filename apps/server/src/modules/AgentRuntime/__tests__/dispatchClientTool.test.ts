@@ -2,7 +2,7 @@ import type { ChatToolPayload } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { dispatchClientTool } from '../dispatchClientTool';
-import type { IStreamEventManager } from '../types';
+import type { IStreamEventManager } from '../../AgentExecution/types';
 
 // Mock Redis before importing the SUT so the module-level getter sees it.
 const mockBlpop = vi.fn();
@@ -10,7 +10,7 @@ const mockDisconnect = vi.fn();
 const mockDuplicate = vi.fn();
 let currentRedis: any;
 
-vi.mock('../redis', () => ({
+vi.mock('../../AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => currentRedis,
 }));
 

@@ -36,10 +36,10 @@ import { signHeteroOperationJWT, signUserJWT } from '@/libs/trpc/utils/internalJ
 import {
   createAgentStateManager,
   createStreamEventManager,
-} from '@/server/modules/AgentRuntime/factory';
-import { CompletionLifecycle } from '@/server/services/agentRuntime/CompletionLifecycle';
-import { hookDispatcher } from '@/server/services/agentRuntime/hooks';
-import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
+} from '@/server/modules/AgentExecution/factory';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+import { hookDispatcher } from '@/server/services/agentExecution/hooks';
+import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 import { resolveGithubAccessToken } from '@/server/services/githubRepo';

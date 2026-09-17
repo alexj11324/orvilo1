@@ -11,7 +11,7 @@ import { AgentBotProviderModel } from '@/database/models/agentBotProvider';
 import type { OrviloDatabase } from '@/database/type';
 import { appEnv } from '@/envs/app';
 import { resolveToolMode } from '@/helpers/executionTarget';
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { emitAgentSignalSourceEvent } from '@/server/services/agentSignal';
 import { AiAgentService } from '@/server/services/aiAgent';

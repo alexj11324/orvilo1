@@ -20,7 +20,7 @@ import type { OrviloDatabase } from '@/database/type';
 import {
   InMemoryAgentStateManager,
   InMemoryStreamEventManager,
-} from '@/server/modules/AgentRuntime';
+} from '@/server/modules/AgentExecution';
 import {
   createServerAgentToolsEngine,
   type InstalledPlugin,

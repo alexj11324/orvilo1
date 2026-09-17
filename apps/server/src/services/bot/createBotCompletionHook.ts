@@ -1,6 +1,6 @@
 import type { ChatTopicBotContext } from '@orvilo/types';
 
-import type { AgentHookWebhook } from '@/server/services/agentRuntime/hooks/types';
+import type { AgentHookWebhook } from '@/server/services/agentExecution/hooks/types';
 
 const BOT_CALLBACK_URL = '/api/agent/webhooks/bot-callback';
 

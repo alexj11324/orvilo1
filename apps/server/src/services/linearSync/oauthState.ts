@@ -1,4 +1,4 @@
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 const STATE_TTL_SECONDS = 600;
 const KEY_PREFIX = 'linear:oauth-state:';

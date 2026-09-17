@@ -65,7 +65,7 @@ vi.mock('@/server/services/gateway', () => ({
   }),
 }));
 
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => null,
 }));
 

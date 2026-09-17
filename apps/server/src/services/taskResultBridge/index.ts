@@ -8,7 +8,7 @@ import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import type { OrviloDatabase } from '@/database/type';
-import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
+import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
 import type { BotCallbackBody } from '@/server/services/bot/BotCallbackService';
 import { BotCallbackService } from '@/server/services/bot/BotCallbackService';
 

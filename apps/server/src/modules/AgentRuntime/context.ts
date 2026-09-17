@@ -8,14 +8,14 @@ import {
 
 import { type MessageModel } from '@/database/models/message';
 import { type OrviloDatabase } from '@/database/type';
-import type { HookDispatcher } from '@/server/services/agentRuntime/hooks/HookDispatcher';
+import type { HookDispatcher } from '@/server/services/agentExecution/hooks/HookDispatcher';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
 } from '@/server/services/agentRuntime/types';
 import { type ToolExecutionService } from '@/server/services/toolExecution';
 
-import { type IStreamEventManager } from './types';
+import { type IStreamEventManager } from '../AgentExecution/types';
 
 export interface RuntimeExecutorContext {
   /**

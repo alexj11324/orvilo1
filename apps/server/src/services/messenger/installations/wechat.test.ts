@@ -35,7 +35,7 @@ vi.mock('@/database/models/messengerAccountLink', () => ({
   },
 }));
 
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => ({
     expire: mockRedisExpire,
     hset: mockRedisHset,

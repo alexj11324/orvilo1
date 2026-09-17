@@ -1,7 +1,7 @@
 import { pickNonEmptyString, toRecord } from '@orvilo/utils/object';
 
-import { formatErrorForState } from './formatErrorForState';
-import { formatPgError, pgErrorType, unwrapPgError } from './pgError';
+import { formatErrorForState } from '../AgentExecution/formatErrorForState';
+import { formatPgError, pgErrorType, unwrapPgError } from '../AgentExecution/pgError';
 
 const isErrorType = (value: unknown): value is string | number =>
   typeof value === 'string' || typeof value === 'number';

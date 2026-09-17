@@ -57,7 +57,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
 const { store } = vi.hoisted(() => ({
   store: { events: [] as any[], failPublish: false, seq: 0 },
 }));
-vi.mock('@/server/modules/AgentRuntime/factory', () => ({
+vi.mock('@/server/modules/AgentExecution/factory', () => ({
   createStreamEventManager: () => ({
     async publishStreamEvent(operationId: string, event: any) {
       if (store.failPublish) throw new Error('stream publish failed');

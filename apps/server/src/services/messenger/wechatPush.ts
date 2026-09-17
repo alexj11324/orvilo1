@@ -4,7 +4,7 @@ import debug from 'debug';
 
 import { MessengerAccountLinkModel } from '@/database/models/messengerAccountLink';
 import type { OrviloDatabase } from '@/database/type';
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import type { AttachmentDegradation } from '@/server/services/bot/platforms/attachmentBudget';
 import {

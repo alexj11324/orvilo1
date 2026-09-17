@@ -9,7 +9,7 @@ import * as ContextEngineering from '@/server/modules/Mecha/ContextEngineering';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 
 import { createRuntimeExecutors, type RuntimeExecutorContext } from '../RuntimeExecutors';
-import type { StreamEvent } from '../StreamEventManager';
+import type { StreamEvent } from '../../AgentExecution/StreamEventManager';
 import { VISIBLE_OUTPUT_END_PUBLISHED_STEP_INDEX_METADATA_KEY } from '../visibleOutputEnd';
 
 type PublishedStreamEvent = Omit<StreamEvent, 'operationId' | 'timestamp'>;

@@ -4,7 +4,7 @@ import { consumeLinearOAuthState, saveLinearOAuthState } from './oauthState';
 
 const redis = vi.hoisted(() => ({ eval: vi.fn(), set: vi.fn() }));
 
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => redis,
 }));
 

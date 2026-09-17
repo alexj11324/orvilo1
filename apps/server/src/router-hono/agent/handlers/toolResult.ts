@@ -2,7 +2,7 @@ import debug from 'debug';
 import type { Context } from 'hono';
 import { z } from 'zod';
 
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 const log = debug('orvilo-server:agent:tool-result');
 

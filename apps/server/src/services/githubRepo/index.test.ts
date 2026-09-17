@@ -83,12 +83,12 @@ describe('github api helpers', () => {
 
   describe('isBranchMergedInto', () => {
     it.each([
-      ['ahead', 'merged'],
-      ['identical', 'merged'],
+      ['ahead', 'unknown'],
+      ['identical', 'unknown'],
       ['behind', 'unknown'],
       ['diverged', 'unknown'],
       ['anything-else', 'unknown'],
-    ] as const)('maps compare status %s → %s', async (status, expected) => {
+    ] as const)('does not accept compare status %s as PR merge proof', async (status, expected) => {
       fetchMock.mockResolvedValue(jsonResponse({ status }));
       await expect(
         isBranchMergedInto({ base: 'main', head: 'task/T-1', repo: 'acme/widgets' }),

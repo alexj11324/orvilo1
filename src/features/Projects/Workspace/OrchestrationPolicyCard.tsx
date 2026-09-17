@@ -189,6 +189,7 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
         return;
       }
 
+      await policySWR.mutate({ data: result, success: true }, { revalidate: false });
       const nextDraft = toDraft(result);
       setDraft(nextDraft);
       setSavedDraftKey(draftKey(nextDraft));
@@ -335,6 +336,28 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
                       })
                     }
                   />
+                </div>
+                <div className={styles.field}>
+                  <Text className={styles.fieldLabel}>
+                    {t('orchestration.maxPlanningRevisionsLabel')}
+                  </Text>
+                  <InputNumber
+                    disabled={saving}
+                    min={1}
+                    style={{ width: '100%' }}
+                    value={draft.orchestrationPolicy.planningBudget?.maxRevisions}
+                    onChange={(value) =>
+                      patchPolicy({
+                        planningBudget: {
+                          ...draft.orchestrationPolicy.planningBudget,
+                          maxRevisions: typeof value === 'number' ? value : undefined,
+                        },
+                      })
+                    }
+                  />
+                  <Text className={styles.fieldHint} fontSize={12}>
+                    {t('orchestration.maxPlanningRevisionsHint')}
+                  </Text>
                 </div>
               </Flexbox>
             </Flexbox>

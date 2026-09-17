@@ -124,6 +124,9 @@ export default {
   'orchestration.humanReviewRequiredTag': 'Review required',
   'orchestration.loadError': 'Could not load orchestration policy.',
   'orchestration.maxCostLabel': 'Maximum cost',
+  'orchestration.maxPlanningRevisionsHint':
+    'When automatic planning reaches this limit, the scope waits for a human decision.',
+  'orchestration.maxPlanningRevisionsLabel': 'Maximum planning revisions',
   'orchestration.maxRunsLabel': 'Maximum runs',
   'orchestration.replanMode.apply': 'Apply bounded changes',
   'orchestration.replanMode.disabled': 'Disabled',

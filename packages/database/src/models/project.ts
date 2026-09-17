@@ -72,15 +72,16 @@ export interface ProjectWorkInput {
   workId: string;
 }
 
-const DEFAULT_ORCHESTRATION_POLICY: ProjectOrchestrationPolicy = {
+export const DEFAULT_PROJECT_ORCHESTRATION_POLICY: ProjectOrchestrationPolicy = {
   autoDispatch: false,
   concurrencyLimit: 1,
   executionBudget: { maxCost: 25, maxRuns: 10 },
+  planningBudget: { maxRevisions: 20 },
   replanMode: 'disabled',
   requireHumanReview: true,
 };
 
-const normalizeOrchestrationPolicy = (
+export const normalizeProjectOrchestrationPolicy = (
   policy: Partial<ProjectOrchestrationPolicy> | null | undefined,
 ): ProjectOrchestrationPolicy => ({
   allowedAgentIds:
@@ -91,16 +92,25 @@ const normalizeOrchestrationPolicy = (
     policy?.allowedRoles === undefined
       ? undefined
       : [...new Set(policy.allowedRoles.map((role) => role.trim()).filter(Boolean))],
-  autoDispatch: policy?.autoDispatch ?? DEFAULT_ORCHESTRATION_POLICY.autoDispatch,
-  concurrencyLimit: policy?.concurrencyLimit ?? DEFAULT_ORCHESTRATION_POLICY.concurrencyLimit,
+  autoDispatch: policy?.autoDispatch ?? DEFAULT_PROJECT_ORCHESTRATION_POLICY.autoDispatch,
+  concurrencyLimit:
+    policy?.concurrencyLimit ?? DEFAULT_PROJECT_ORCHESTRATION_POLICY.concurrencyLimit,
   executionBudget: {
     maxCost:
-      policy?.executionBudget?.maxCost ?? DEFAULT_ORCHESTRATION_POLICY.executionBudget!.maxCost,
+      policy?.executionBudget?.maxCost ??
+      DEFAULT_PROJECT_ORCHESTRATION_POLICY.executionBudget!.maxCost,
     maxRuns:
-      policy?.executionBudget?.maxRuns ?? DEFAULT_ORCHESTRATION_POLICY.executionBudget!.maxRuns,
+      policy?.executionBudget?.maxRuns ??
+      DEFAULT_PROJECT_ORCHESTRATION_POLICY.executionBudget!.maxRuns,
   },
-  replanMode: policy?.replanMode ?? DEFAULT_ORCHESTRATION_POLICY.replanMode,
-  requireHumanReview: policy?.requireHumanReview ?? DEFAULT_ORCHESTRATION_POLICY.requireHumanReview,
+  planningBudget: {
+    maxRevisions:
+      policy?.planningBudget?.maxRevisions ??
+      DEFAULT_PROJECT_ORCHESTRATION_POLICY.planningBudget!.maxRevisions,
+  },
+  replanMode: policy?.replanMode ?? DEFAULT_PROJECT_ORCHESTRATION_POLICY.replanMode,
+  requireHumanReview:
+    policy?.requireHumanReview ?? DEFAULT_PROJECT_ORCHESTRATION_POLICY.requireHumanReview,
 });
 
 const validateOrchestrationPolicy = (policy: ProjectOrchestrationPolicy) => {
@@ -121,6 +131,14 @@ const validateOrchestrationPolicy = (policy: ProjectOrchestrationPolicy) => {
   const maxCost = policy.executionBudget?.maxCost;
   if (maxCost !== undefined && (!Number.isFinite(maxCost) || maxCost < 0 || maxCost > 100_000)) {
     throw new Error('Maximum cost must be a finite number between 0 and 100000');
+  }
+
+  const maxRevisions = policy.planningBudget?.maxRevisions;
+  if (
+    maxRevisions !== undefined &&
+    (!Number.isInteger(maxRevisions) || maxRevisions < 1 || maxRevisions > 1000)
+  ) {
+    throw new Error('Maximum planning revisions must be an integer between 1 and 1000');
   }
 
   if (!['disabled', 'observe', 'suggest', 'apply'].includes(policy.replanMode)) {
@@ -144,7 +162,7 @@ const projectRequiresHumanReview = (project: ProjectPolicyRow) =>
 
 const toOrchestrationPolicyView = (project: ProjectPolicyRow): ProjectOrchestrationPolicyView => ({
   coordinatorAgentId: project.coordinatorAgentId,
-  orchestrationPolicy: normalizeOrchestrationPolicy(project.orchestrationPolicy),
+  orchestrationPolicy: normalizeProjectOrchestrationPolicy(project.orchestrationPolicy),
   orchestrationPolicyRevision: project.orchestrationPolicyRevision,
   requireHumanReviewRequired: projectRequiresHumanReview(project),
 });
@@ -207,7 +225,7 @@ export class ProjectModel {
               ...input,
               coordinatorAgentId: coordinator.id,
               identifier,
-              orchestrationPolicy: DEFAULT_ORCHESTRATION_POLICY,
+              orchestrationPolicy: DEFAULT_PROJECT_ORCHESTRATION_POLICY,
             },
           ),
         )
@@ -331,7 +349,7 @@ export class ProjectModel {
         return { ...current, stale: true };
       }
 
-      const policy = normalizeOrchestrationPolicy(input.orchestrationPolicy);
+      const policy = normalizeProjectOrchestrationPolicy(input.orchestrationPolicy);
       validateOrchestrationPolicy(policy);
       if (!policy.requireHumanReview && projectRequiresHumanReview(project)) {
         throw new Error('Human review is required while the project is completing or completed');

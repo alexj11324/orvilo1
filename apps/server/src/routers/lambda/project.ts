@@ -52,6 +52,11 @@ const orchestrationPolicySchema = z.object({
       maxRuns: z.number().int().min(1).max(1000).optional(),
     })
     .optional(),
+  planningBudget: z
+    .object({
+      maxRevisions: z.number().int().min(1).max(1000).optional(),
+    })
+    .optional(),
   replanMode: z.enum(['disabled', 'observe', 'suggest', 'apply']),
   requireHumanReview: z.boolean(),
 });

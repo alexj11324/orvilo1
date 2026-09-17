@@ -34,6 +34,9 @@ export interface ProjectOrchestrationPolicy {
     maxCost?: number;
     maxRuns?: number;
   };
+  planningBudget?: {
+    maxRevisions?: number;
+  };
   replanMode: 'disabled' | 'observe' | 'suggest' | 'apply';
   requireHumanReview: boolean;
 }

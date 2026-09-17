@@ -4,6 +4,7 @@ import { and, asc, count, eq, inArray, notInArray, or, sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { LinearSyncModel } from '@/database/models/linearSync';
+import { normalizeProjectOrchestrationPolicy } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import type { TaskDomainEventItem, TaskPlanningScopeItem } from '@/database/schemas';
@@ -176,26 +177,81 @@ export class LinearPlanningWorker {
           scope.scopeType === 'project'
             ? await this.model.findBindingByProjectId(scope.scopeId)
             : null;
-        const proposal =
-          binding && !binding.replanningEnabled
-            ? {
-                actions: [
-                  {
-                    action: 'noop' as const,
-                    reason: 'Project replanning is disabled for this Linear binding.',
-                  },
-                ],
-                explanation:
-                  'The event remains recorded for audit, but this project has opted out of automatic replanning.',
-                requiresApproval: false,
-              }
-            : await coordinatorPlanner(snapshot);
+        const control =
+          scope.scopeType === 'project' ? await this.projectPlanningControl(scope.scopeId) : null;
+        const recentRevisions = control
+          ? await this.model.listPlanningRevisions(
+              scope.id,
+              (control.policy.planningBudget?.maxRevisions ?? 20) + 1,
+            )
+          : [];
+        const previousReceipt = recentRevisions.findIndex(
+          (candidate) => candidate.id !== revision.id && candidate.status === 'applied',
+        );
+        const automaticAttempts = previousReceipt < 0 ? recentRevisions.length : previousReceipt;
+        const planningBudgetExceeded = Boolean(
+          control?.policy.planningBudget?.maxRevisions &&
+          automaticAttempts > control.policy.planningBudget.maxRevisions,
+        );
+
+        let proposal: TaskPlanningProposal;
+        let autoApply = false;
+        if (binding && !binding.replanningEnabled) {
+          proposal = {
+            actions: [
+              {
+                action: 'noop',
+                reason: 'Project replanning is disabled for this Linear binding.',
+              },
+            ],
+            explanation:
+              'The event remains recorded for audit, but this Linear binding has opted out of replanning.',
+            requiresApproval: false,
+          };
+          autoApply = true;
+        } else if (control?.policy.replanMode === 'disabled') {
+          proposal = {
+            actions: [{ action: 'noop', reason: 'Project replanning is disabled by policy.' }],
+            explanation: 'The event remains recorded for audit; project replanning is disabled.',
+            requiresApproval: false,
+          };
+          autoApply = true;
+        } else if (control?.policy.replanMode === 'observe') {
+          proposal = {
+            actions: [{ action: 'noop', reason: 'Project policy is observe-only.' }],
+            explanation:
+              'The change was observed and recorded without proposing or applying task mutations.',
+            requiresApproval: false,
+          };
+          autoApply = true;
+        } else if (planningBudgetExceeded) {
+          proposal = {
+            actions: [
+              {
+                action: 'escalate',
+                reason: `Automatic planning reached its ${control!.policy.planningBudget!.maxRevisions} revision budget.`,
+              },
+            ],
+            explanation:
+              'The planning scope is waiting for a human decision before another automatic revision.',
+            requiresApproval: true,
+          };
+        } else {
+          proposal = await coordinatorPlanner(snapshot);
+          if (control?.policy.replanMode === 'suggest') {
+            proposal = { ...proposal, requiresApproval: true };
+          }
+          autoApply = control?.policy.replanMode === 'apply' && !proposal.requiresApproval;
+        }
         const validatedProposal = taskPlanningProposalSchema.parse(proposal);
         await this.model.updatePlanningRevision(revision.id, {
           proposal: validatedProposal,
           status: 'proposed',
         });
         await this.model.finishPlanningScope(scope.id, inputRevision, 'idle');
+        if (autoApply && control) {
+          await this.applyProposal(revision.id, control.userId, false);
+        }
         result.proposed += 1;
         result.processed += 1;
       } catch (error) {
@@ -859,6 +915,20 @@ export class LinearPlanningWorker {
           (row) => candidateIds.includes(row.taskId) && candidateIds.includes(row.dependsOnId),
         )
       : rows;
+  }
+
+  private async projectPlanningControl(projectId: string) {
+    const [project] = await this.db
+      .select({ orchestrationPolicy: projects.orchestrationPolicy, userId: projects.userId })
+      .from(projects)
+      .where(and(eq(projects.id, projectId), eq(projects.workspaceId, this.workspaceId)))
+      .limit(1);
+    return project
+      ? {
+          policy: normalizeProjectOrchestrationPolicy(project.orchestrationPolicy),
+          userId: project.userId,
+        }
+      : null;
   }
 
   private async projectConsistencySnapshot(projectId: string) {

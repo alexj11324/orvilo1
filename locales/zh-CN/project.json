@@ -91,6 +91,8 @@
   "orchestration.humanReviewRequiredTag": "必须审核",
   "orchestration.loadError": "无法加载编排策略。",
   "orchestration.maxCostLabel": "最高成本",
+  "orchestration.maxPlanningRevisionsHint": "自动规划达到此上限后，该范围会等待人工决定。",
+  "orchestration.maxPlanningRevisionsLabel": "最多规划版本数",
   "orchestration.maxRunsLabel": "最多运行次数",
   "orchestration.reload": "重新加载当前策略",
   "orchestration.replanMode.apply": "应用有界变更",

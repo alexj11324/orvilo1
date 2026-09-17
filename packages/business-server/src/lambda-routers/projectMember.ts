@@ -49,7 +49,7 @@ export const projectMemberRouter = router({
           workspaceRole: ctx.workspaceRole ?? null,
         });
       } catch (error) {
-        wrapInternal('add', error);
+        return wrapInternal('add', error);
       }
     }),
 
@@ -68,7 +68,7 @@ export const projectMemberRouter = router({
           workspaceRole: ctx.workspaceRole ?? null,
         });
       } catch (error) {
-        wrapInternal('changeRole', error);
+        return wrapInternal('changeRole', error);
       }
     }),
 
@@ -83,7 +83,7 @@ export const projectMemberRouter = router({
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
-        wrapInternal('list', error);
+        return wrapInternal('list', error);
       }
     }),
 
@@ -101,7 +101,7 @@ export const projectMemberRouter = router({
           workspaceRole: ctx.workspaceRole ?? null,
         });
       } catch (error) {
-        wrapInternal('remove', error);
+        return wrapInternal('remove', error);
       }
     }),
 });

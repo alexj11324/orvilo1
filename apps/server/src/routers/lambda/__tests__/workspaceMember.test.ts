@@ -142,6 +142,7 @@ const createCaller = (
 ) =>
   workspaceMemberRouter.createCaller({
     clientIp: '10.0.0.1',
+    membership: { role, userId: `u-${role}`, workspaceId: 'ws-1' },
     serverDB: fakeDb,
     userId: `u-${role}`,
     workspaceId: 'ws-1',
@@ -208,7 +209,7 @@ describe('workspaceMemberRouter.invite', () => {
     expect(invitationQueries.markInvitationSent).toHaveBeenCalled();
     expect(audit.recordAudit).toHaveBeenCalledWith(
       fakeDb,
-      expect.objectContaining({ action: 'invite.created' }),
+      expect.objectContaining({ action: 'member.invited' }),
     );
   });
 
@@ -324,7 +325,7 @@ describe('workspaceMemberRouter.changeRole / suspend / resume / remove / leave',
     expect(queries.bumpAuthzVersion).toHaveBeenCalledWith(fakeDb, 'ws-1', 'u-target');
     expect(audit.recordAudit).toHaveBeenCalledWith(
       fakeDb,
-      expect.objectContaining({ action: 'member.role_changed' }),
+      expect.objectContaining({ action: 'member.role_updated' }),
     );
   });
 

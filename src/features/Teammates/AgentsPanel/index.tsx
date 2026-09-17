@@ -1,7 +1,7 @@
 'use client';
 
 import { Empty, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Alert, Button, Skeleton, Tag } from '@lobehub/ui/base-ui';
+import { Alert, Button, SkeletonText, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Bot, Check, Minus } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -55,12 +55,10 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const STATUS_COLOR: Record<string, string> = {
+const STATUS_COLOR = {
+  active: 'green',
   disabled: 'default',
-  idle: 'default',
-  online: 'green',
-  running: 'processing',
-};
+} as const satisfies Record<NonNullable<WorkspaceAgentSummary['status']>, string>;
 
 interface AgentRowProps {
   agent: WorkspaceAgentSummary;
@@ -73,7 +71,7 @@ const AgentRow = memo<AgentRowProps>(({ agent }) => {
     () => (agent.projects ?? []).map((project) => project.name).join(', '),
     [agent.projects],
   );
-  const status = agent.status ?? 'idle';
+  const status = agent.status ?? 'active';
 
   return (
     <div className={styles.row}>
@@ -95,7 +93,7 @@ const AgentRow = memo<AgentRowProps>(({ agent }) => {
         </Tooltip>
       </div>
       <div>
-        <Tag color={STATUS_COLOR[status] ?? 'default'}>
+        <Tag color={STATUS_COLOR[status]}>
           {t(`workspaceSetting.agents.status.${status}`, { defaultValue: status })}
         </Tag>
       </div>
@@ -125,7 +123,19 @@ export const AgentsPanel = memo(() => {
   const { t } = useTranslation('setting');
   const { data, error, isLoading, mutate } = useWorkspaceAgentsQuery();
 
-  if (isLoading) return <Skeleton active paragraph={{ rows: 3 }} />;
+  if (isLoading) {
+    return (
+      <Flexbox gap={16} style={{ paddingBlock: 8 }}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Flexbox align="center" gap={10} horizontal key={i}>
+            <SkeletonText style={{ marginBottom: 0, width: '30%' }} />
+            <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
+            <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
+          </Flexbox>
+        ))}
+      </Flexbox>
+    );
+  }
   if (error) {
     return (
       <Alert

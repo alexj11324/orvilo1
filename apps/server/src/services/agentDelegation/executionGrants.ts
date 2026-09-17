@@ -97,7 +97,9 @@ export class AgentDelegationService {
         .values({
           agentId: input.agentId,
           allowedActions,
-          authzVersions: { workspaceAuthzVersion: member?.authzVersion ?? null },
+          // `Record<string, number>` — omit the entry rather than store null
+          // when the subject is a non-member automation policy.
+          authzVersions: member ? { workspaceAuthzVersion: member.authzVersion } : {},
           delegationSubjectId: subjectId,
           delegationSubjectType: subjectType,
           expiresAt: input.expiresAt ?? null,
@@ -196,22 +198,25 @@ export class AgentDelegationService {
     const revoked = await this.markRevoked(grant.id);
     if (!revoked) return grant; // already terminal — idempotent
 
-    await this.db.transaction(async (tx) => {
-      await insertOutboxEvent(tx, {
-        aggregateId: grant.taskId,
-        aggregateType: 'task',
-        eventId: newEventId(),
-        eventType: 'task.delegation.revoked',
-        payload: {
-          agentId: grant.agentId,
-          grantId: grant.id,
-          revokedBy: this.userId,
-          taskId: grant.taskId,
+    // No task bound → no task room to notify; the revocation still stands.
+    if (grant.taskId) {
+      await this.db.transaction(async (tx) => {
+        await insertOutboxEvent(tx, {
+          aggregateId: grant.taskId!,
+          aggregateType: 'task',
+          eventId: newEventId(),
+          eventType: 'task.delegation.revoked',
+          payload: {
+            agentId: grant.agentId,
+            grantId: grant.id,
+            revokedBy: this.userId,
+            taskId: grant.taskId,
+            workspaceId: grant.workspaceId,
+          },
           workspaceId: grant.workspaceId,
-        },
-        workspaceId: grant.workspaceId ?? workspaceId,
+        });
       });
-    });
+    }
 
     return { ...grant, revokedAt: new Date(), status: 'revoked' };
   };

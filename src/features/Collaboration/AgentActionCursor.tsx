@@ -77,22 +77,14 @@ export const AGENT_PHASE_ICON: Record<ActivityPhase, typeof FileEdit> = {
   started: CirclePlay,
 };
 
-const phaseClass = (phase: ActivityPhase): string => {
-  switch (phase) {
-    case 'committed': {
-      return styles.committed;
-    }
-    case 'failed': {
-      return styles.failed;
-    }
-    case 'proposed': {
-      return styles.proposed;
-    }
-    case 'started': {
-      return styles.started;
-    }
-  }
+const PHASE_CLASS: Record<ActivityPhase, string> = {
+  committed: styles.committed,
+  failed: styles.failed,
+  proposed: styles.proposed,
+  started: styles.started,
 };
+
+const phaseClass = (phase: ActivityPhase): string => PHASE_CLASS[phase];
 
 /**
  * One live agent activity pinned to its semantic target. The four phases read

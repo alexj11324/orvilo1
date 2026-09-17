@@ -39,7 +39,7 @@ export const invitationRouter = router({
           userId: ctx.userId,
         });
       } catch (error) {
-        wrapInternal('accept', error);
+        return wrapInternal('accept', error);
       }
     }),
 
@@ -53,7 +53,7 @@ export const invitationRouter = router({
           userId: ctx.userId,
         });
       } catch (error) {
-        wrapInternal('preview', error);
+        return wrapInternal('preview', error);
       }
     }),
 
@@ -68,7 +68,7 @@ export const invitationRouter = router({
           ipAddress: ctx.clientIp ?? undefined,
         });
       } catch (error) {
-        wrapInternal('resend', error);
+        return wrapInternal('resend', error);
       }
     }),
 
@@ -83,7 +83,7 @@ export const invitationRouter = router({
           ipAddress: ctx.clientIp ?? undefined,
         });
       } catch (error) {
-        wrapInternal('revoke', error);
+        return wrapInternal('revoke', error);
       }
     }),
 });

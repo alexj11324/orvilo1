@@ -3631,6 +3631,7 @@ When I am ___, I need ___
   'workspaceSetting.agents.empty': 'No agents shared with this workspace yet.',
   'workspaceSetting.agents.loadFailed': "Couldn't load workspace agents.",
   'workspaceSetting.agents.noProjects': 'No projects',
+  'workspaceSetting.agents.status.active': 'Active',
   'workspaceSetting.agents.status.disabled': 'Disabled',
   'workspaceSetting.agents.status.idle': 'Idle',
   'workspaceSetting.agents.status.online': 'Online',

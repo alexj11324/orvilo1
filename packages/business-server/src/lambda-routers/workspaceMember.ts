@@ -87,7 +87,7 @@ export const workspaceMemberRouter = router({
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
-        wrapInternal('changeRole', error);
+        return wrapInternal('changeRole', error);
       }
     }),
 
@@ -107,7 +107,7 @@ export const workspaceMemberRouter = router({
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
-        wrapInternal('invite', error);
+        return wrapInternal('invite', error);
       }
     }),
 
@@ -119,7 +119,7 @@ export const workspaceMemberRouter = router({
         workspaceId: ctx.workspaceId!,
       });
     } catch (error) {
-      wrapInternal('leave', error);
+      return wrapInternal('leave', error);
     }
   }),
 
@@ -135,7 +135,7 @@ export const workspaceMemberRouter = router({
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
-        wrapInternal('list', error);
+        return wrapInternal('list', error);
       }
     }),
 
@@ -147,7 +147,7 @@ export const workspaceMemberRouter = router({
         workspaceId: ctx.workspaceId!,
       });
     } catch (error) {
-      wrapInternal('listInvitations', error);
+      return wrapInternal('listInvitations', error);
     }
   }),
 
@@ -161,7 +161,7 @@ export const workspaceMemberRouter = router({
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
-        wrapInternal('removalPreview', error);
+        return wrapInternal('removalPreview', error);
       }
     }),
 
@@ -184,7 +184,7 @@ export const workspaceMemberRouter = router({
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
-        wrapInternal('remove', error);
+        return wrapInternal('remove', error);
       }
     }),
 
@@ -201,7 +201,7 @@ export const workspaceMemberRouter = router({
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
-        wrapInternal('resume', error);
+        return wrapInternal('resume', error);
       }
     }),
 
@@ -218,7 +218,7 @@ export const workspaceMemberRouter = router({
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
-        wrapInternal('suspend', error);
+        return wrapInternal('suspend', error);
       }
     }),
 });

@@ -94,25 +94,29 @@ export class ActionApprovalService {
         throw new TRPCError({ code: 'CONFLICT', message: APPROVAL_STALE });
       }
 
-      await insertOutboxEvent(tx, {
-        aggregateId: approval.targetId,
-        aggregateType: approval.targetType,
-        eventId: newEventId(),
-        eventType: 'collaboration.activity',
-        payload: {
-          action: `approval.${input.decision}`,
-          actor: { id: this.userId, kind: 'human' },
-          approvalId: approval.id,
-          phase: 'committed',
-          target: {
-            anchor: 'status',
-            entityId: approval.targetId,
-            entityType: approval.targetType === 'project' ? 'project' : 'task',
+      // A target-less approval has no room to project into — the decision is
+      // still durable on the row itself.
+      if (approval.targetId && approval.targetType) {
+        await insertOutboxEvent(tx, {
+          aggregateId: approval.targetId,
+          aggregateType: approval.targetType,
+          eventId: newEventId(),
+          eventType: 'collaboration.activity',
+          payload: {
+            action: `approval.${input.decision}`,
+            actor: { id: this.userId, kind: 'human' },
+            approvalId: approval.id,
+            phase: 'committed',
+            target: {
+              anchor: 'status',
+              entityId: approval.targetId,
+              entityType: approval.targetType === 'project' ? 'project' : 'task',
+            },
+            workspaceId: approval.workspaceId,
           },
           workspaceId: approval.workspaceId,
-        },
-        workspaceId: approval.workspaceId ?? this.workspaceId,
-      });
+        });
+      }
 
       return updated;
     });

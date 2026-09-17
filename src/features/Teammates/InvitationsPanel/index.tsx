@@ -1,7 +1,7 @@
 'use client';
 
 import { DropdownMenu, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Alert, Button, Skeleton, Tag } from '@lobehub/ui/base-ui';
+import { Alert, Button, SkeletonText, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Ban, Mail } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -51,12 +51,12 @@ const STATUS_COLOR: Record<string, string> = {
   revoked: 'red',
 };
 
-const STATUS_KEY: Record<string, string> = {
+const STATUS_KEY = {
   accepted: 'workspaceSetting.invitations.status.accepted',
   expired: 'workspaceSetting.invitations.status.expired',
   pending: 'workspaceSetting.invitations.status.pending',
   revoked: 'workspaceSetting.invitations.status.revoked',
-};
+} as const satisfies Record<WorkspaceInvitationSummary['status'], string>;
 
 const formatDate = (value: Date | string | null | undefined, locale: string): string => {
   if (!value) return '—';
@@ -109,7 +109,7 @@ const InvitationRow = memo<InvitationRowProps>(({ canManage, invitation, locale 
       </div>
       <div>
         <Tag color={STATUS_COLOR[invitation.status] ?? 'default'}>
-          {t(STATUS_KEY[invitation.status] ?? 'workspaceSetting.invitations.status.pending')}
+          {t(STATUS_KEY[invitation.status])}
         </Tag>
       </div>
       <div className={styles.meta}>
@@ -121,7 +121,7 @@ const InvitationRow = memo<InvitationRowProps>(({ canManage, invitation, locale 
       <div>
         {menuItems.length > 0 && (
           <DropdownMenu items={menuItems}>
-            <Button size="small" variant="text">
+            <Button size="small" type="text">
               ⋯
             </Button>
           </DropdownMenu>
@@ -153,7 +153,19 @@ export const InvitationsPanel = memo(() => {
     [data],
   );
 
-  if (isLoading) return <Skeleton active paragraph={{ rows: 3 }} />;
+  if (isLoading) {
+    return (
+      <Flexbox gap={16} style={{ paddingBlock: 8 }}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Flexbox align="center" gap={10} horizontal key={i}>
+            <SkeletonText style={{ marginBottom: 0, width: '45%' }} />
+            <SkeletonText style={{ marginBottom: 0, width: '20%' }} />
+            <SkeletonText style={{ marginBottom: 0, width: '20%' }} />
+          </Flexbox>
+        ))}
+      </Flexbox>
+    );
+  }
   if (error) {
     return (
       <Alert

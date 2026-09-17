@@ -6,7 +6,8 @@ import { signRoomTicket, verifyRoomTicket } from '../ticket';
 const ORIGINAL_JWKS = process.env.JWKS_KEY;
 
 beforeAll(async () => {
-  const { privateKey, publicKey } = await generateKeyPair('RS256');
+  // `extractable` — exportJWK needs it; WebCrypto defaults to false.
+  const { privateKey, publicKey } = await generateKeyPair('RS256', { extractable: true });
   const privateJwk = await exportJWK(privateKey);
   const publicJwk = await exportJWK(publicKey);
   const jwk = { ...privateJwk, ...publicJwk, alg: 'RS256', kid: 'test-collab-key', kty: 'RSA' };
@@ -58,7 +59,7 @@ describe('room tickets', () => {
   it('rejects a token signed by a different key', async () => {
     const { token } = await signRoomTicket(claims);
 
-    const { privateKey, publicKey } = await generateKeyPair('RS256');
+    const { privateKey, publicKey } = await generateKeyPair('RS256', { extractable: true });
     const jwk = {
       ...(await exportJWK(privateKey)),
       ...(await exportJWK(publicKey)),

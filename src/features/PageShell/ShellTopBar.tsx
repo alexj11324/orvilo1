@@ -194,7 +194,7 @@ const ShellTopBar = ({ actions, onBack, title, titleExtra }: ShellTopBarProps) =
             aria-label={t('workspaceSetting.members.inviteButton')}
             icon={<Icon icon={UserPlus} size={15} />}
             size="small"
-            variant="text"
+            type="text"
             onClick={() => openInviteTeammateModal()}
           />
         </Tooltip>

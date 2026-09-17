@@ -41,7 +41,7 @@ export const parseCollabId = (collabId: string): ParsedCollabId | null => {
   if (!entityType) return null;
 
   const last = parts.at(-1);
-  if (parts.length > 2 && ANCHOR_NAMES.has(last)) {
+  if (parts.length > 2 && last !== undefined && ANCHOR_NAMES.has(last)) {
     return { anchor: last, entityId: parts.slice(1, -1).join(':'), entityType };
   }
   return { entityId: parts.slice(1).join(':'), entityType };

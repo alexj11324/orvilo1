@@ -207,6 +207,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   brief: rw('chat:read', 'chat:write'),
   changelog: 'open',
   chunk: rw('knowledge:read', 'knowledge:write'),
+  // room tickets/snapshots stay inside the caller's verified membership —
+  // the ticket itself grants nothing beyond it
+  collaboration: { any: 'workspace:read' },
   comfyui: rw('model:read', 'model:write'),
   // third-party integrations hold external credentials
   composio: 'blocked',
@@ -232,6 +235,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // whole-account backup import can overwrite credential-bearing settings,
   // provider/model config and agents
   importer: 'blocked',
+  // invitation accept/resend/revoke grants or revokes membership — same class
+  // as workspace_member management, an interactive human decision
+  invitation: 'blocked',
   klavis: 'blocked',
   knowledge: rw('knowledge:read', 'knowledge:write'),
   knowledgeBase: rw('knowledge:read', 'knowledge:write'),
@@ -253,6 +259,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   pageShare: rw('chat:read', 'chat:write'),
   plugin: rw('agent:read', 'agent:write'),
   project: rw('agent:read', 'agent:write'),
+  // membership listing is readable; grant/revoke mutations stay off-limits to
+  // restricted keys, like workspaceMember
+  projectMember: rw('workspace:read', null),
   pushToken: 'blocked',
   ragEval: 'blocked',
   recent: rw('chat:read', null),

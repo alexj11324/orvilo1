@@ -219,7 +219,7 @@ describe('invitationRouter.accept', () => {
     });
     expect(audit.recordAudit).toHaveBeenCalledWith(
       fakeDb,
-      expect.objectContaining({ action: 'invite.accepted', userId: 'u-invitee' }),
+      expect.objectContaining({ action: 'member.joined', userId: 'u-invitee' }),
     );
     expect(audit.emitWorkspaceEvent).toHaveBeenCalledWith(
       fakeDb,
@@ -460,7 +460,7 @@ describe('invitationRouter.resend / revoke', () => {
     expect(invitationModel.rotateToken).toHaveBeenCalledWith('inv-1');
     expect(audit.recordAudit).toHaveBeenCalledWith(
       fakeDb,
-      expect.objectContaining({ action: 'invite.resent' }),
+      expect.objectContaining({ action: 'invitation.resent' }),
     );
   });
 
@@ -487,7 +487,7 @@ describe('invitationRouter.resend / revoke', () => {
     expect(invitationModel.revoke).toHaveBeenCalledWith('inv-1', { revokedBy: 'u-inviter' });
     expect(audit.recordAudit).toHaveBeenCalledWith(
       fakeDb,
-      expect.objectContaining({ action: 'invite.revoked' }),
+      expect.objectContaining({ action: 'invitation.revoked' }),
     );
     expect(audit.emitWorkspaceEvent).toHaveBeenCalledWith(
       fakeDb,

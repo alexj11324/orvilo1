@@ -18,7 +18,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
         ports: ['5432:5432']
-        options: --health-cmd 'pg_isready -U postgres' --health-interval 10s --health-timeout 5s --health-retries 5
+        options: --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       NODE_OPTIONS: --max-old-space-size=8192
       DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
@@ -35,6 +35,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-env
       - name: Install dependencies
+        id: install
         run: pnpm install
       - name: Scoped lint and exact-head evidence
         run: |
@@ -47,20 +48,20 @@ jobs:
           git diff --exit-code > /tmp/audit-evidence/working-diff.txt
       - name: Frontend regressions
         id: frontend
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           set -o pipefail
           bunx vitest run --project app --silent='passed-only' src/store/task/slices/detail/action.test.ts src/store/task/slices/detail/polling.test.tsx --reporter=default --reporter=json --outputFile=/tmp/audit-evidence/frontend.json 2>&1 | tee /tmp/audit-evidence/frontend.log
       - name: Database regressions
         id: database
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         working-directory: packages/database
         run: |
           set -o pipefail
           bunx vitest run --no-file-parallelism --silent='passed-only' src/models/__tests__/task.test.ts src/models/__tests__/taskDependency.test.ts src/models/__tests__/taskInterruptedRun.test.ts src/models/__tests__/taskTopic.test.ts --reporter=default --reporter=json --outputFile=/tmp/audit-evidence/database.json 2>&1 | tee /tmp/audit-evidence/database.log
       - name: Server regressions
         id: server
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           set -o pipefail
           bunx vitest run --project server --silent='passed-only' apps/server/src/services/task/index.test.ts apps/server/src/services/taskRunner/cascade.test.ts apps/server/src/services/taskLifecycle/onTopicComplete.test.ts apps/server/src/services/taskLifecycle/heartbeatRearm.test.ts --reporter=default --reporter=json --outputFile=/tmp/audit-evidence/server.json 2>&1 | tee /tmp/audit-evidence/server.log
@@ -91,7 +92,7 @@ jobs:
               print(name, 'expected original-code failures:', report['numFailedTests'])
           PY
       - name: Full repository typecheck
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           set -o pipefail
           pnpm type-check 2>&1 | tee /tmp/audit-evidence/typecheck.log

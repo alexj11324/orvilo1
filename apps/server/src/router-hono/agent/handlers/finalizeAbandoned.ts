@@ -5,6 +5,7 @@ import { getServerDB } from '@/database/core/db-adaptor';
 import { AbandonOperationService } from '@/server/services/agentRuntime';
 import { deliverWebhook } from '@/server/services/agentRuntime/hooks/HookDispatcher';
 import { AiAgentService } from '@/server/services/aiAgent';
+import { isQueueAgentRuntimeEnabled } from '@/server/services/queue/impls';
 
 const log = debug('lobe-server:agent:finalize-abandoned');
 
@@ -64,7 +65,7 @@ export async function finalizeAbandoned(c: Context): Promise<Response> {
         threadId,
         toolMessageId,
       };
-      if (process.env.HATCHET_CLIENT_TOKEN) {
+      if (isQueueAgentRuntimeEnabled()) {
         await deliverWebhook(
           { delivery: 'hatchet', fallback: 'none', url: '/api/agent/webhooks/subagent-callback' },
           bridgeBody,

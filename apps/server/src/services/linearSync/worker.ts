@@ -729,7 +729,7 @@ export class LinearSyncWorker {
       return 'processed';
     }
 
-    const local = taskSnapshot(task, issue, binding.settings);
+    const local = taskSnapshot(task, issue, existingLink.lastConfirmedSnapshot, binding.settings);
     const merged = mergeLinearIssueSnapshots({
       base: existingLink.lastConfirmedSnapshot,
       local,

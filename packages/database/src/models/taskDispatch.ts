@@ -3,14 +3,16 @@ import type {
   TaskExecutionEnvironmentSnapshot,
   TaskRunTrigger,
 } from '@orvilo/types';
-import { and, asc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 
+import { projectAgents, projects } from '../schemas/project';
 import type { TaskDispatchItem, TaskItem, TaskTopicItem } from '../schemas/task';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
 import type { LobeChatDatabase } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
+import { normalizeProjectOrchestrationPolicy } from './project';
 
 const ACTIVE_PHASES: TaskDispatchPhase[] = [
   'requested',
@@ -19,6 +21,16 @@ const ACTIVE_PHASES: TaskDispatchPhase[] = [
   'dispatched',
   'running',
   'waiting',
+  'cancel_requested',
+  'outcome_unknown',
+];
+
+const PROJECT_CONCURRENCY_PHASES: TaskDispatchPhase[] = [
+  'requested',
+  'claimed',
+  'provisioning',
+  'dispatched',
+  'running',
   'cancel_requested',
   'outcome_unknown',
 ];
@@ -81,6 +93,88 @@ export class TaskDispatchModel {
     }
   }
 
+  private async projectDispatchWaitingReason(
+    db: LobeChatDatabase,
+    task: TaskItem,
+    trigger: TaskRunTrigger | 'orchestrator',
+    excludeDispatchId?: string,
+  ): Promise<string | null> {
+    if (trigger !== 'orchestrator' || !task.projectId || !this.workspaceId) return null;
+
+    const [project] = await db
+      .select({ orchestrationPolicy: projects.orchestrationPolicy })
+      .from(projects)
+      .where(and(eq(projects.id, task.projectId), eq(projects.workspaceId, this.workspaceId)))
+      .for('update')
+      .limit(1);
+    if (!project) return 'project_policy_unavailable';
+
+    const policy = normalizeProjectOrchestrationPolicy(project.orchestrationPolicy);
+    if (!policy.autoDispatch) return 'project_auto_dispatch_disabled';
+    if (!task.assigneeAgentId) return null;
+
+    const [participant] = await db
+      .select({ enabled: projectAgents.enabled, role: projectAgents.role })
+      .from(projectAgents)
+      .where(
+        and(
+          eq(projectAgents.projectId, task.projectId),
+          eq(projectAgents.agentId, task.assigneeAgentId),
+          eq(projectAgents.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1);
+    if (!participant?.enabled) return 'project_agent_not_enabled';
+    if (policy.allowedAgentIds?.length && !policy.allowedAgentIds.includes(task.assigneeAgentId)) {
+      return 'project_agent_not_allowed';
+    }
+    if (
+      policy.allowedRoles?.length &&
+      (!participant.role || !policy.allowedRoles.includes(participant.role))
+    ) {
+      return 'project_agent_role_not_allowed';
+    }
+
+    if (policy.concurrencyLimit !== undefined) {
+      const [active] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(taskDispatches)
+        .where(
+          and(
+            eq(taskDispatches.workspaceId, this.workspaceId),
+            eq(taskDispatches.projectId, task.projectId),
+            inArray(taskDispatches.phase, PROJECT_CONCURRENCY_PHASES),
+            excludeDispatchId ? ne(taskDispatches.id, excludeDispatchId) : undefined,
+          ),
+        );
+      if (Number(active?.count ?? 0) >= policy.concurrencyLimit) {
+        return 'project_concurrency_limit';
+      }
+    }
+
+    const maxRuns = policy.executionBudget?.maxRuns;
+    const maxCost = policy.executionBudget?.maxCost;
+    if (maxRuns !== undefined || maxCost !== undefined) {
+      const [spend] = await db
+        .select({
+          runs: sql<number>`count(${taskTopics.id})::int`,
+          totalCost: sql<string>`coalesce(sum(${topics.totalCost}), 0)`,
+        })
+        .from(taskTopics)
+        .innerJoin(tasks, eq(taskTopics.taskId, tasks.id))
+        .leftJoin(topics, eq(taskTopics.topicId, topics.id))
+        .where(and(eq(tasks.workspaceId, this.workspaceId), eq(tasks.projectId, task.projectId)));
+      if (maxRuns !== undefined && Number(spend?.runs ?? 0) >= maxRuns) {
+        return 'project_run_budget_exhausted';
+      }
+      if (maxCost !== undefined && Number(spend?.totalCost ?? 0) >= maxCost) {
+        return 'project_cost_budget_exhausted';
+      }
+    }
+
+    return null;
+  }
+
   /**
    * Discover durable stop intents whose worker lease is available. The global
    * watchdog uses this read-only scan, then each workspace-scoped model claims
@@ -127,7 +221,31 @@ export class TaskDispatchModel {
         .limit(1);
       if (existing) {
         this.assertIdempotencyTarget(existing, input.taskId);
-        if (existing.phase === 'waiting' && task.assigneeAgentId) {
+        let resumedWaitingReason: string | null | undefined;
+        if (existing.phase === 'waiting' && input.trigger === 'orchestrator' && task.projectId) {
+          resumedWaitingReason = await this.projectDispatchWaitingReason(
+            tx,
+            task,
+            input.trigger,
+            existing.id,
+          );
+          if (!resumedWaitingReason && !task.assigneeAgentId) {
+            resumedWaitingReason = 'no_eligible_agent';
+          }
+          if (resumedWaitingReason) {
+            const [waiting] = await tx
+              .update(taskDispatches)
+              .set({ waitingReason: resumedWaitingReason })
+              .where(and(eq(taskDispatches.id, existing.id), eq(taskDispatches.phase, 'waiting')))
+              .returning();
+            return { dispatch: waiting ?? existing, state: 'existing' as const, task };
+          }
+        }
+        if (
+          existing.phase === 'waiting' &&
+          task.assigneeAgentId &&
+          (existing.waitingReason === 'no_eligible_agent' || resumedWaitingReason === null)
+        ) {
           const [resumed] = await tx
             .update(taskDispatches)
             .set({
@@ -155,6 +273,7 @@ export class TaskDispatchModel {
         .limit(1);
       if (active) return { active, state: 'busy' as const, task };
 
+      const waitingReason = await this.projectDispatchWaitingReason(tx, task, input.trigger);
       const generation = task.executionGeneration + 1;
       const [dispatch] = await tx
         .insert(taskDispatches)
@@ -163,6 +282,7 @@ export class TaskDispatchModel {
           generation,
           id: input.dispatchId ?? idGenerator('taskDispatches'),
           idempotencyKey: input.idempotencyKey,
+          phase: waitingReason ? 'waiting' : 'requested',
           planRevision: input.planRevision,
           policyRevision: task.policyRevision,
           projectId: task.projectId,
@@ -170,6 +290,7 @@ export class TaskDispatchModel {
           requirementRevision: task.requirementRevision,
           taskId: task.id,
           taskRevision: task.domainRevision,
+          waitingReason,
           workspaceId: task.workspaceId,
         })
         .returning();

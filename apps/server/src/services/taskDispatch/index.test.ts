@@ -3,7 +3,16 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
-import { agents, taskDispatches, tasks, users, workspaces } from '@/database/schemas';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import {
+  agents,
+  projectAgents,
+  projects,
+  taskDispatches,
+  tasks,
+  users,
+  workspaces,
+} from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 
 import { TaskDispatchService, TaskDispatchWaitingError } from './index';
@@ -15,6 +24,7 @@ const workspaceId = 'task-dispatch-service-workspace';
 const cleanup = async () => {
   await db.delete(taskDispatches);
   await db.delete(tasks).where(eq(tasks.workspaceId, workspaceId));
+  await db.delete(projects).where(eq(projects.workspaceId, workspaceId));
   await db.delete(agents).where(eq(agents.workspaceId, workspaceId));
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   await db.delete(users).where(eq(users.id, userId));
@@ -34,6 +44,40 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe('TaskDispatchService', () => {
+  const createPolicyProject = async (input: {
+    autoDispatch: boolean;
+    concurrencyLimit?: number;
+  }) => {
+    await db.insert(agents).values({ id: 'dispatch-policy-agent', userId, workspaceId });
+    const [project] = await db
+      .insert(projects)
+      .values({
+        coordinatorAgentId: 'dispatch-policy-agent',
+        identifier: 'POL',
+        name: 'Policy project',
+        orchestrationPolicy: {
+          autoDispatch: input.autoDispatch,
+          concurrencyLimit: input.concurrencyLimit,
+          executionBudget: { maxCost: 25, maxRuns: 10 },
+          planningBudget: { maxRevisions: 20 },
+          replanMode: 'apply',
+          requireHumanReview: true,
+        },
+        userId,
+        workspaceId,
+      })
+      .returning();
+    await db.insert(projectAgents).values({
+      addedByUserId: userId,
+      agentId: 'dispatch-policy-agent',
+      enabled: true,
+      projectId: project.id,
+      role: 'implementer',
+      workspaceId,
+    });
+    return project;
+  };
+
   it('parks an unassigned integration task instead of using a personal inbox Agent', async () => {
     const [task] = await db
       .insert(tasks)
@@ -140,5 +184,211 @@ describe('TaskDispatchService', () => {
 
     expect(prepared.dispatch.agentId).toBe('dispatch-service-new');
     expect(prepared.task.assigneeAgentId).toBe('dispatch-service-new');
+  });
+
+  it('parks orchestrator work while project auto-dispatch is disabled and resumes after policy changes', async () => {
+    const project = await createPolicyProject({ autoDispatch: false });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        assigneeAgentId: 'dispatch-policy-agent',
+        createdByUserId: userId,
+        identifier: 'POL-1',
+        instruction: 'Policy gated work',
+        projectId: project.id,
+        seq: 5,
+        workspaceId,
+      })
+      .returning();
+    const service = new TaskDispatchService(db, workspaceId);
+
+    await expect(
+      service.prepare({
+        idempotencyKey: 'policy:POL-1:revision-1',
+        requestedBy: 'planner',
+        task,
+        trigger: 'orchestrator',
+      }),
+    ).rejects.toMatchObject({
+      dispatchId: expect.any(String),
+      message: 'project_auto_dispatch_disabled',
+    });
+    expect((await db.select().from(taskDispatches))[0]).toMatchObject({
+      phase: 'waiting',
+      waitingReason: 'project_auto_dispatch_disabled',
+    });
+
+    await db
+      .update(projects)
+      .set({
+        orchestrationPolicy: {
+          ...project.orchestrationPolicy,
+          autoDispatch: true,
+        },
+      })
+      .where(eq(projects.id, project.id));
+    await expect(
+      service.prepare({
+        idempotencyKey: 'policy:POL-1:revision-1',
+        requestedBy: 'planner',
+        task,
+        trigger: 'orchestrator',
+      }),
+    ).resolves.toMatchObject({ dispatch: { phase: 'claimed' } });
+  });
+
+  it('serializes project auto-dispatch at the configured concurrency limit', async () => {
+    const project = await createPolicyProject({ autoDispatch: true, concurrencyLimit: 1 });
+    const [firstTask, secondTask] = await db
+      .insert(tasks)
+      .values([
+        {
+          assigneeAgentId: 'dispatch-policy-agent',
+          createdByUserId: userId,
+          identifier: 'POL-2',
+          instruction: 'First policy run',
+          projectId: project.id,
+          seq: 6,
+          workspaceId,
+        },
+        {
+          assigneeAgentId: 'dispatch-policy-agent',
+          createdByUserId: userId,
+          identifier: 'POL-3',
+          instruction: 'Second policy run',
+          projectId: project.id,
+          seq: 7,
+          workspaceId,
+        },
+      ])
+      .returning();
+    const service = new TaskDispatchService(db, workspaceId);
+    const first = await service.prepare({
+      idempotencyKey: 'policy:POL-2:revision-1',
+      requestedBy: 'planner',
+      task: firstTask,
+      trigger: 'orchestrator',
+    });
+    await expect(
+      service.prepare({
+        idempotencyKey: 'policy:POL-3:revision-1',
+        requestedBy: 'planner',
+        task: secondTask,
+        trigger: 'orchestrator',
+      }),
+    ).rejects.toMatchObject({ message: 'project_concurrency_limit' });
+
+    await new TaskDispatchModel(db, workspaceId).settle({
+      dispatchId: first.dispatch.id,
+      expected: ['claimed'],
+      fence: first.fence,
+      generation: first.dispatch.generation,
+      phase: 'canceled',
+    });
+    await expect(
+      service.prepare({
+        idempotencyKey: 'policy:POL-3:revision-1',
+        requestedBy: 'planner',
+        task: secondTask,
+        trigger: 'orchestrator',
+      }),
+    ).resolves.toMatchObject({ dispatch: { phase: 'claimed' } });
+  });
+
+  it('does not let parked policy work consume project concurrency', async () => {
+    const project = await createPolicyProject({ autoDispatch: false, concurrencyLimit: 1 });
+    const [firstTask, secondTask] = await db
+      .insert(tasks)
+      .values([
+        {
+          assigneeAgentId: 'dispatch-policy-agent',
+          createdByUserId: userId,
+          identifier: 'POL-4',
+          instruction: 'First parked policy run',
+          projectId: project.id,
+          seq: 8,
+          workspaceId,
+        },
+        {
+          assigneeAgentId: 'dispatch-policy-agent',
+          createdByUserId: userId,
+          identifier: 'POL-5',
+          instruction: 'Second parked policy run',
+          projectId: project.id,
+          seq: 9,
+          workspaceId,
+        },
+      ])
+      .returning();
+    const service = new TaskDispatchService(db, workspaceId);
+
+    for (const [task, key] of [
+      [firstTask, 'policy:POL-4:revision-1'],
+      [secondTask, 'policy:POL-5:revision-1'],
+    ] as const) {
+      await expect(
+        service.prepare({
+          idempotencyKey: key,
+          requestedBy: 'planner',
+          task,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toMatchObject({ message: 'project_auto_dispatch_disabled' });
+    }
+
+    await db
+      .update(projects)
+      .set({ orchestrationPolicy: { ...project.orchestrationPolicy, autoDispatch: true } })
+      .where(eq(projects.id, project.id));
+    await expect(
+      service.prepare({
+        idempotencyKey: 'policy:POL-4:revision-1',
+        requestedBy: 'planner',
+        task: firstTask,
+        trigger: 'orchestrator',
+      }),
+    ).resolves.toMatchObject({ dispatch: { phase: 'claimed' } });
+  });
+
+  it('rechecks project policy before resuming work that first waited for an Agent', async () => {
+    const project = await createPolicyProject({ autoDispatch: true });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'POL-6',
+        instruction: 'Assignment arrives after the policy changes',
+        projectId: project.id,
+        seq: 10,
+        workspaceId,
+      })
+      .returning();
+    const service = new TaskDispatchService(db, workspaceId);
+
+    await expect(
+      service.prepare({
+        idempotencyKey: 'policy:POL-6:revision-1',
+        requestedBy: 'planner',
+        task,
+        trigger: 'orchestrator',
+      }),
+    ).rejects.toMatchObject({ message: 'Task has no eligible execution Agent' });
+    await db
+      .update(projects)
+      .set({ orchestrationPolicy: { ...project.orchestrationPolicy, autoDispatch: false } })
+      .where(eq(projects.id, project.id));
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'dispatch-policy-agent' })
+      .where(eq(tasks.id, task.id));
+
+    await expect(
+      service.prepare({
+        idempotencyKey: 'policy:POL-6:revision-1',
+        requestedBy: 'planner',
+        task,
+        trigger: 'orchestrator',
+      }),
+    ).rejects.toMatchObject({ message: 'project_auto_dispatch_disabled' });
   });
 });

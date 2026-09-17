@@ -87,6 +87,12 @@ export class TaskDispatchService {
 
     const dispatch = requested.dispatch;
     const currentTask = requested.task;
+    if (dispatch.phase === 'waiting') {
+      throw new TaskDispatchWaitingError(
+        dispatch.waitingReason ?? 'Task execution is waiting for project policy',
+        dispatch.id,
+      );
+    }
     if (
       !dispatch.agentId &&
       !TaskDispatchService.allowsInboxFallback(currentTask, input.trigger as TaskRunTrigger)

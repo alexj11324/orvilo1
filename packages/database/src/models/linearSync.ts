@@ -1408,7 +1408,9 @@ export class LinearSyncModel {
 
     const settings = binding?.settings;
     const statusId = settings?.statusMappings?.find(
-      (mapping) => mapping.localStatus === input.task.status,
+      (mapping) =>
+        mapping.workflowCategory === input.task.workflowCategory ||
+        (!mapping.workflowCategory && mapping.localStatus === input.task.status),
     )?.linearStateId;
     const assignmentId = settings?.assignmentMappings?.find(
       (mapping) =>

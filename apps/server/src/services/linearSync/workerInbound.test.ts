@@ -254,4 +254,90 @@ describe('LinearSyncWorker inbound ordering', () => {
       visibility: 'private',
     });
   });
+
+  it('projects a mapped Linear state into workflow fields without changing execution status', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'WFN',
+      name: 'Workflow Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'linear-org-workflow', workspaceId })
+      .returning();
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-workflow',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-workflow',
+      projectId: project.id,
+      settings: {
+        statusMappings: [{ linearStateId: 'linear-state-done', workflowCategory: 'done' }],
+      },
+      teamIds: ['linear-team-workflow'],
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'WFN-1',
+        instruction: 'Keep execution separate',
+        name: 'Workflow task',
+        projectId: project.id,
+        seq: 1,
+        status: 'running',
+        visibility: 'public',
+        workflowCategory: 'in_progress',
+        workflowStateId: 'linear-state-todo',
+        workspaceId,
+      })
+      .returning();
+    await model.createIssueLink({
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: 'WFN-1',
+      linearIssueId: 'linear-issue-workflow',
+      organizationId: installation.organizationId,
+      remoteSnapshot: {
+        id: 'linear-issue-workflow',
+        identifier: 'WFN-1',
+        projectId: binding.linearProjectId,
+        stateId: 'linear-state-todo',
+        teamId: 'linear-team-workflow',
+        title: 'Workflow task',
+        updatedAt: '2026-09-16T12:00:00.000Z',
+      },
+      taskId: task.id,
+    });
+    await model.captureDelivery({
+      action: 'update',
+      deliveryId: 'workflow-delivery',
+      eventType: 'Issue',
+      installationId: installation.id,
+      organizationId: installation.organizationId,
+      payload: { id: 'linear-issue-workflow' },
+      subjectId: 'linear-issue-workflow',
+    });
+    const provider = {
+      getIssue: vi.fn().mockResolvedValue({
+        id: 'linear-issue-workflow',
+        identifier: 'WFN-1',
+        projectId: binding.linearProjectId,
+        stateId: 'linear-state-done',
+        teamId: 'linear-team-workflow',
+        title: 'Workflow task',
+        updatedAt: '2026-09-16T12:01:00.000Z',
+      }),
+    };
+
+    await expect(
+      new LinearSyncWorker(db, workspaceId).processPending(provider as never, 20, installation.id),
+    ).resolves.toMatchObject({ failed: 0, processed: 1 });
+
+    const [updated] = await db.select().from(tasks).where(eq(tasks.id, task.id));
+    expect(updated).toMatchObject({
+      status: 'running',
+      workflowCategory: 'done',
+      workflowStateId: 'linear-state-done',
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import type { TaskStatus } from './task';
+import type { TaskStatus, TaskWorkflowCategory } from './task';
 
 /** Lifecycle of a workspace's Linear installation. */
 export type LinearInstallationStatus = 'active' | 'error' | 'paused' | 'revoked';
@@ -51,7 +51,10 @@ export type TaskDomainEventType =
 /** Status mapping is explicit per Linear workflow-state UUID. */
 export interface LinearStatusMapping {
   linearStateId: string;
-  localStatus: TaskStatus;
+  /** Legacy execution projection retained for existing bindings. */
+  localStatus?: TaskStatus;
+  /** Business workflow projection. This must be used for new mappings. */
+  workflowCategory?: TaskWorkflowCategory;
 }
 
 /** Optional mapping from a Linear user UUID to an Orvilo member or agent. */

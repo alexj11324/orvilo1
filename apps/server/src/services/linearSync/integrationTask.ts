@@ -164,6 +164,9 @@ export class LinearIntegrationTaskService {
     if (!scope.inScope) return null;
 
     const { binding, installation, issue } = input;
+    const workflowMapping = binding.settings.statusMappings?.find(
+      (mapping) => mapping.linearStateId === issue.stateId,
+    );
 
     return this.taskModel.create(
       {
@@ -180,6 +183,8 @@ export class LinearIntegrationTaskService {
         priority: issue.priority ?? 0,
         projectId: binding.projectId,
         visibility: 'public',
+        workflowCategory: workflowMapping?.workflowCategory ?? 'backlog',
+        workflowStateId: issue.stateId ?? null,
       },
       {
         creationSubject: {

@@ -66,8 +66,13 @@ const taskSnapshot = (
   // project id, so it must remain on the remote identity side of the binding.
   projectId: issue.projectId,
   stateId:
-    settings.statusMappings?.find((mapping) => mapping.localStatus === task.status)
-      ?.linearStateId ?? issue.stateId,
+    settings.statusMappings?.find(
+      (mapping) =>
+        mapping.workflowCategory === task.workflowCategory ||
+        (!mapping.workflowCategory && mapping.localStatus === task.status),
+    )?.linearStateId ??
+    task.workflowStateId ??
+    issue.stateId,
   title: task.name || task.identifier,
 });
 
@@ -98,7 +103,10 @@ const remoteTaskPatch = (
     const statusMapping = settings.statusMappings?.find(
       (mapping) => mapping.linearStateId === merged.stateId,
     );
-    if (statusMapping) patch.status = statusMapping.localStatus;
+    patch.workflowStateId = merged.stateId;
+    if (statusMapping?.workflowCategory) {
+      patch.workflowCategory = statusMapping.workflowCategory;
+    }
   }
   if (remoteChanged.includes('assigneeId') && !localChanged.has('assigneeId')) {
     if (merged.assigneeId === null) {
@@ -518,22 +526,6 @@ export class LinearSyncWorker {
         },
       });
       if (!task) return 'processed';
-      const initialStatus = binding.settings.statusMappings?.find(
-        (mapping) => mapping.linearStateId === issue.stateId,
-      )?.localStatus;
-      if (initialStatus) {
-        await integrationTasks.updatePublicTask(
-          task.id,
-          { status: initialStatus },
-          {
-            eventId: row.id,
-            idempotencyKey: `linear:initial-status:${row.id}`,
-            source: 'linear',
-            suppressDomainEvent: context.historicalImport,
-            suppressLinearOutbox: true,
-          },
-        );
-      }
       await model.createIssueLink({
         bindingId: binding.id,
         installationId: installation.id,

@@ -57,7 +57,19 @@ const settingsSchema = z.object({
   autoExecutionEnabled: z.boolean().optional(),
   replanningEnabled: z.boolean().optional(),
   statusMappings: z
-    .array(z.object({ linearStateId: z.string().min(1), localStatus: z.enum(TASK_STATUSES) }))
+    .array(
+      z
+        .object({
+          linearStateId: z.string().min(1),
+          localStatus: z.enum(TASK_STATUSES).optional(),
+          workflowCategory: z
+            .enum(['backlog', 'canceled', 'done', 'in_progress', 'in_review', 'todo', 'triage'])
+            .optional(),
+        })
+        .refine((mapping) => mapping.localStatus || mapping.workflowCategory, {
+          message: 'A Linear state mapping needs a workflow category or legacy local status',
+        }),
+    )
     .optional(),
 });
 

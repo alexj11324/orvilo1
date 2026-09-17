@@ -18,17 +18,12 @@ interface TestHonoEnv {
   };
 }
 
-const {
-  mockCanUseWorkspaceApiKeys,
-  mockGetServerDB,
-  mockWorkspaceMembersFindFirst,
-  mockWorkspacesFindFirst,
-} = vi.hoisted(() => ({
-  mockCanUseWorkspaceApiKeys: vi.fn(),
-  mockGetServerDB: vi.fn(),
-  mockWorkspaceMembersFindFirst: vi.fn(),
-  mockWorkspacesFindFirst: vi.fn(),
-}));
+const { mockCanUseWorkspaceApiKeys, mockGetActiveWorkspaceMembershipRole, mockGetServerDB } =
+  vi.hoisted(() => ({
+    mockCanUseWorkspaceApiKeys: vi.fn(),
+    mockGetActiveWorkspaceMembershipRole: vi.fn(),
+    mockGetServerDB: vi.fn(),
+  }));
 
 vi.mock('@/business/server/workspaceApiKey', () => ({
   canUseWorkspaceApiKeys: mockCanUseWorkspaceApiKeys,
@@ -38,15 +33,8 @@ vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: mockGetServerDB,
 }));
 
-vi.mock('@/database/schemas', () => ({
-  workspaceMembers: {
-    deletedAt: 'workspaceMembers.deletedAt',
-    userId: 'workspaceMembers.userId',
-    workspaceId: 'workspaceMembers.workspaceId',
-  },
-  workspaces: {
-    id: 'workspaces.id',
-  },
+vi.mock('@/database/models/workspace', () => ({
+  getActiveWorkspaceMembershipRole: mockGetActiveWorkspaceMembershipRole,
 }));
 
 interface TestAuthContext {
@@ -89,19 +77,8 @@ describe('OpenAPI workspace middleware', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCanUseWorkspaceApiKeys.mockResolvedValue(true);
-
-    mockGetServerDB.mockResolvedValue({
-      query: {
-        workspaceMembers: {
-          findFirst: mockWorkspaceMembersFindFirst,
-        },
-        workspaces: {
-          findFirst: mockWorkspacesFindFirst,
-        },
-      },
-    });
-    mockWorkspacesFindFirst.mockResolvedValue({ id: 'workspace-1' });
-    mockWorkspaceMembersFindFirst.mockResolvedValue({ role: 'admin' });
+    mockGetServerDB.mockResolvedValue({});
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValue('admin');
   });
 
   it('continues in personal context when the workspace header is absent', async () => {
@@ -128,27 +105,54 @@ describe('OpenAPI workspace middleware', () => {
     expect(mockGetServerDB).not.toHaveBeenCalled();
   });
 
-  it('rejects an unknown workspace', async () => {
+  it('rejects an unknown workspace without leaking existence', async () => {
     const app = createApp();
-    mockWorkspacesFindFirst.mockResolvedValueOnce(undefined);
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce(null);
 
     const response = await app.request('/workspace', {
       headers: { [OPENAPI_WORKSPACE_HEADER]: 'workspace-missing' },
     });
 
     expect(response.status).toBe(404);
-    expect(mockWorkspaceMembersFindFirst).not.toHaveBeenCalled();
   });
 
   it('rejects workspace access when the user is not a member', async () => {
     const app = createApp();
-    mockWorkspaceMembersFindFirst.mockResolvedValueOnce(undefined);
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce(null);
 
     const response = await app.request('/workspace', {
       headers: { [OPENAPI_WORKSPACE_HEADER]: 'workspace-1' },
     });
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(404);
+  });
+
+  it('returns an identical rejection for unknown workspace and non-member', async () => {
+    // Existence-hiding: probing must not reveal whether the workspace exists.
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValue(null);
+    const app = createApp();
+
+    const missing = await app.request('/workspace', {
+      headers: { [OPENAPI_WORKSPACE_HEADER]: 'workspace-missing' },
+    });
+    const notMember = await app.request('/workspace', {
+      headers: { [OPENAPI_WORKSPACE_HEADER]: 'workspace-1' },
+    });
+
+    expect(missing.status).toBe(notMember.status);
+    await expect(missing.text()).resolves.toBe(await notMember.text());
+  });
+
+  it('rejects suspended and removed members identically (helper reports null)', async () => {
+    // Contract: suspendedAt / deletedAt members resolve `null` from the helper.
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce(null);
+    const app = createApp();
+
+    const response = await app.request('/workspace', {
+      headers: { [OPENAPI_WORKSPACE_HEADER]: 'workspace-1' },
+    });
+
+    expect(response.status).toBe(404);
   });
 
   it('sets workspace context when the user is a workspace member', async () => {
@@ -163,8 +167,11 @@ describe('OpenAPI workspace middleware', () => {
       workspaceRole: 'admin',
     });
     expect(response.status).toBe(200);
-    expect(mockWorkspacesFindFirst).toHaveBeenCalledTimes(1);
-    expect(mockWorkspaceMembersFindFirst).toHaveBeenCalledTimes(1);
+    expect(mockGetActiveWorkspaceMembershipRole).toHaveBeenCalledTimes(1);
+    expect(mockGetActiveWorkspaceMembershipRole).toHaveBeenCalledWith(
+      expect.anything(),
+      { userId: 'user-1', workspaceId: 'workspace-1' },
+    );
   });
 
   it('keeps a personal API Key in personal context when the workspace header is absent', async () => {
@@ -201,8 +208,7 @@ describe('OpenAPI workspace middleware', () => {
       workspaceRole: 'admin',
     });
     expect(response.status).toBe(200);
-    expect(mockWorkspacesFindFirst).toHaveBeenCalledTimes(1);
-    expect(mockWorkspaceMembersFindFirst).toHaveBeenCalledTimes(1);
+    expect(mockGetActiveWorkspaceMembershipRole).toHaveBeenCalledTimes(1);
   });
 
   it('accepts a matching workspace header for a workspace API Key', async () => {
@@ -219,9 +225,9 @@ describe('OpenAPI workspace middleware', () => {
     expect(response.status).toBe(200);
   });
 
-  it('keeps a workspace API Key active after its issuer becomes a member', async () => {
+  it('lets a workspace API Key keep working while its issuer is an active member', async () => {
     const app = createApp({ apiKeyWorkspaceId: 'workspace-1', authType: 'apikey' });
-    mockWorkspaceMembersFindFirst.mockResolvedValueOnce({ role: 'member' });
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce('member');
 
     const response = await app.request('/workspace');
 
@@ -230,6 +236,15 @@ describe('OpenAPI workspace middleware', () => {
       workspaceRole: 'member',
     });
     expect(response.status).toBe(200);
+  });
+
+  it('rejects a workspace API Key when its issuer is no longer an active member', async () => {
+    const app = createApp({ apiKeyWorkspaceId: 'workspace-1', authType: 'apikey' });
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce(null);
+
+    const response = await app.request('/workspace');
+
+    expect(response.status).toBe(404);
   });
 
   it('rejects a different workspace header for a workspace API Key', async () => {
@@ -256,7 +271,7 @@ describe('OpenAPI workspace middleware', () => {
   it('gates on membership.role alone — stale RBAC rows have no effect', async () => {
     // membership.role is the single source of truth: an Admin
     // membership passes regardless of whatever legacy rbac_user_roles claim.
-    mockWorkspaceMembersFindFirst.mockResolvedValueOnce({ role: 'admin' });
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce('admin');
     const app = createApp({ apiKeyWorkspaceId: 'workspace-1', authType: 'apikey' });
 
     const response = await app.request('/workspace');
@@ -265,8 +280,9 @@ describe('OpenAPI workspace middleware', () => {
     expect(mockCanUseWorkspaceApiKeys).toHaveBeenCalledWith('workspace-1');
   });
 
-  // `workspaceAuthMiddleware` only admin-gates `apikey` auth, so an OIDC/session
-  // member previously reached routes whose model predicate is workspace-wide.
+  // `workspaceAuthMiddleware` verifies membership for every auth type, so an
+  // OIDC/session member previously reached routes whose model predicate is
+  // workspace-wide without a role gate.
   describe('requireWorkspaceRoleWhenScoped', () => {
     const roleApp = (role: string | undefined, workspaceId: string | undefined) => {
       const app = new Hono<TestHonoEnv>();

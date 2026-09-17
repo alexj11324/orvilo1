@@ -5,11 +5,57 @@ on:
     paths: [.github/workflows/pr26-race-validation.yml]
 permissions:
   contents: write
+concurrency:
+  group: pr26-race-validation
+  cancel-in-progress: false
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: paradedb/paradedb:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
+      DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_DRIVER: node
+      TEST_SERVER_DB: '1'
+      S3_PUBLIC_DOMAIN: https://example.com
+      APP_URL: https://home.com
     steps:
       - uses: actions/checkout@v6
-      - run: |
-          git status --short
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: ./.github/actions/setup-env
+      - name: Load public development test secret
+        run: echo "KEY_VAULTS_SECRET=$(grep '^KEY_VAULTS_SECRET=' .env.example.development | cut -d= -f2-)" >> "$GITHUB_ENV"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Apply reviewed repair
+        run: python .agents/tmp/pr26-race-fix.py
+      - name: Focused lint
+        run: bun run check --lint apps/server/src/services/task/index.ts apps/server/src/services/task/index.test.ts packages/database/src/models/task.ts packages/database/src/models/__tests__/taskInterruptedRun.test.ts
+      - name: Database interruption regressions
+        working-directory: packages/database
+        run: bunx vitest run --no-file-parallelism --silent='passed-only' src/models/__tests__/taskInterruptedRun.test.ts src/models/__tests__/taskDependency.test.ts
+      - name: Server interruption and cascade regressions
+        run: bunx vitest run --project server --silent='passed-only' apps/server/src/services/task/index.test.ts apps/server/src/services/taskRunner/cascade.test.ts
+      - name: Polling regressions
+        run: bunx vitest run --project app --silent='passed-only' src/store/task/slices/detail/action.test.ts src/store/task/slices/detail/polling.test.tsx src/store/task/slices/detail/pollingPolicy.test.ts
+      - name: Full repository typecheck
+        run: pnpm type-check
+      - name: Commit verified repair and remove temporary harness
+        run: |
+          set -euo pipefail
+          git config user.name 'ChatGPT Delivery Repair'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .agents/tmp/pr26-race-fix.py .github/workflows/pr26-race-validation.yml
+          git add apps/server/src/services/task/index.ts apps/server/src/services/task/index.test.ts packages/database/src/models/task.ts packages/database/src/models/__tests__/taskInterruptedRun.test.ts
+          git diff --cached --check
+          git commit -m '🐛 fix(tasks): close interruption recovery races'
           git push origin HEAD:fix/task-pr-audit-20260916

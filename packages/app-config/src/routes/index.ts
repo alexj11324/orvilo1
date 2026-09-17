@@ -147,11 +147,8 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
     tier: 'primary',
   },
   {
-    cmdkKey: 'cmdk.apps',
     icon: Download,
     id: 'apps',
-    keywords: ['apps', 'download', 'desktop', 'mobile', 'cli'],
-    keywordsKey: 'cmdk.keywords.apps',
     path: '/apps',
     pathPrefix: '/apps',
     // The promo page folded into Settings > About, which now hosts the

@@ -141,7 +141,6 @@ export default {
   'cmdk.aiModeEmptyState': 'Type your question above to start chatting with AI',
   'cmdk.aiModeHint': 'Press Enter to ask',
   'cmdk.aiModePlaceholder': 'Ask AI anything...',
-  'cmdk.apps': 'Apps',
   'cmdk.askAI': 'Ask Agent',
   'cmdk.askAIHeading': 'Use the following features for {{query}}',
   'cmdk.askAIHeadingEmpty': 'Choose an AI feature',
@@ -168,8 +167,6 @@ export default {
   'cmdk.keywords.apikey': 'apikey api key token',
 
   'cmdk.keywords.appearance': 'common appearance theme display',
-
-  'cmdk.keywords.apps': 'apps download desktop mobile cli',
 
   'cmdk.keywords.billing': 'billing payment invoice transaction',
 

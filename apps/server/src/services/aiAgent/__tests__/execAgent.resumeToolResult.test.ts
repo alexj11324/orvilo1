@@ -91,6 +91,9 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
+      // `findById` returns null, so turnSetup probes the visitor guard next —
+      // these topics are not share-visitor rows.
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       updateMetadata: vi.fn(),
     };
   }),

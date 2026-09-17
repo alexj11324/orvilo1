@@ -114,6 +114,7 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: mockTryReserveTaskCallback,
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       updateMetadata: mockUpdateTopicMetadata,
     };
   }),

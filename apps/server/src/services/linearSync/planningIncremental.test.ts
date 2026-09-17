@@ -9,6 +9,7 @@ import { GoalGraphModel } from '@/database/models/goalGraph';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import {
+  projects,
   taskDependencies,
   taskPlanningRevisions,
   tasks,
@@ -51,11 +52,17 @@ beforeEach(async () => {
 
 afterEach(cleanup);
 
-const createProject = async () =>
-  new ProjectModel(db, userId, workspaceId).create({
+const createProject = async () => {
+  const project = await new ProjectModel(db, userId, workspaceId).create({
     identifier: `P${String(projectSequence).padStart(4, '0')}`,
     name: 'Incremental Planning Project',
   });
+  await db
+    .update(projects)
+    .set({ orchestrationPolicy: { ...project.orchestrationPolicy, replanMode: 'suggest' } })
+    .where(eq(projects.id, project.id));
+  return project;
+};
 
 const createTask = async (projectId: string, parentTaskId?: string) => {
   const [task] = await db

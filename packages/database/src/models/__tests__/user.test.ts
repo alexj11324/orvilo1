@@ -904,6 +904,24 @@ describe('UserModel', () => {
         // Empty whitelist should not filter (same as no whitelist)
         expect(result.map((u) => u.id)).toEqual(['user-1', 'user-2']);
       });
+
+      it('should exclude users who disabled memory while keeping missing settings enabled', async () => {
+        await serverDB.delete(users);
+        await serverDB.insert(users).values([
+          { id: 'user-on', createdAt: new Date('2024-01-01T00:00:00Z') },
+          { id: 'user-off', createdAt: new Date('2024-01-02T00:00:00Z') },
+          { id: 'user-default', createdAt: new Date('2024-01-03T00:00:00Z') }, // no settings row
+        ]);
+
+        await serverDB.insert(userSettings).values([
+          { id: 'user-on', memory: { enabled: true } },
+          { id: 'user-off', memory: { enabled: false } },
+        ]);
+
+        const result = await UserModel.listUsersForMemoryExtractor(serverDB);
+
+        expect(result.map((u) => u.id)).toEqual(['user-on', 'user-default']);
+      });
     });
 
     describe('listUsersForHourlyMemoryExtractor', () => {

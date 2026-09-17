@@ -82,6 +82,7 @@ import { getUserScopedAiProviderRuntimeState } from '@/server/services/aiProvide
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 import { recordUserMemoryLexicalSearchDecision } from '@/server/services/ftsSearch/observability';
 import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
+import { isUserMemoryExtractionEnabled } from '@/server/services/memory/userMemory/gate';
 import {
   AsyncTaskError,
   type AsyncTaskErrorBody,
@@ -1539,6 +1540,23 @@ export class MemoryExtractionExecutor {
 
         try {
           const db = await this.db;
+
+          // Unified production gate: the `memory.enabled` opt-out is enforced
+          // server-side at the extraction choke point, so no entry (hourly
+          // workflow, webhook fan-out, direct run, force flags) can produce
+          // memories for a user who disabled memory.
+          const memoryEnabled = await isUserMemoryExtractionEnabled(job.userId, db);
+          if (!memoryEnabled) {
+            span.setStatus({ code: SpanStatusCode.OK, message: 'memory_disabled' });
+            topicProcessed = true;
+            return {
+              extracted: false,
+              layers: {},
+              memoryIds: [],
+              traceId: span.spanContext().traceId,
+            };
+          }
+
           const topic = await db.query.topics.findFirst({
             columns: { createdAt: true, id: true, metadata: true, updatedAt: true, userId: true },
             where: and(

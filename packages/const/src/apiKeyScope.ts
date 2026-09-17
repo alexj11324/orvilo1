@@ -389,9 +389,6 @@ export const TRPC_PROCEDURE_EXTRA_SCOPES: Record<string, ApiKeyScope[]> = {
   'user.retryOnboardingUnderstandingSource': ['model:invoke'],
   'user.reviseOnboardingUnderstanding': ['model:invoke'],
   'user.startOnboardingUnderstanding': ['model:invoke'],
-  // schedules the full memory-extraction workflow (embeddings + per-layer
-  // `generateObject`), unlike the accepted search/re-embed embedding tradeoff
-  'userMemory.requestMemoryFromChatTopic': ['model:invoke'],
   // persists crawled pages as `documents` rows — a knowledge write
   'webBrowsing.upsertCrawledDocument': ['knowledge:write'],
 };

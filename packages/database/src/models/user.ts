@@ -569,14 +569,22 @@ export class UserModel {
         ? inArray(users.id, options.whitelist)
         : undefined;
 
-    const where = and(cursorCondition, whitelistCondition);
+    // User memory defaults to enabled=true when user settings are missing; an
+    // explicit `enabled = false` opts the user out of every extraction entry,
+    // paged sweeps included. Same gate as listUsersForHourlyMemoryExtractor.
+    const memoryEnabledCondition = sql`COALESCE((${userSettings.memory} ->> 'enabled')::boolean, true) = true`;
 
-    return db.query.users.findMany({
-      columns: { createdAt: true, id: true },
-      limit: options.limit,
-      orderBy: (fields, { asc }) => [asc(fields.createdAt), asc(fields.id)],
-      where,
-    });
+    const query = db
+      .select({
+        createdAt: users.createdAt,
+        id: users.id,
+      })
+      .from(users)
+      .leftJoin(userSettings, eq(users.id, userSettings.id))
+      .where(and(cursorCondition, whitelistCondition, memoryEnabledCondition))
+      .orderBy(asc(users.createdAt), asc(users.id));
+
+    return options.limit !== undefined ? query.limit(options.limit) : query;
   };
 
   static listUsersForHourlyMemoryExtractor = (

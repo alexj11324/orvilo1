@@ -87,7 +87,7 @@ const PreferencesArea = memo(() => {
           )
         }
         right={
-          <ActionBar showAnalysis showPurge>
+          <ActionBar showPurge>
             <ViewModeSwitcher value={viewMode} onChange={setViewMode} />
             <WideScreenButton />
           </ActionBar>

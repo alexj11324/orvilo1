@@ -3484,6 +3484,15 @@ When I am ___, I need ___
   'workspaceSetting.linear.import.outcomeUnknown': 'Outcome unknown',
   'workspaceSetting.linear.import.removed': 'Removed',
   'workspaceSetting.linear.syncEnabled': 'Sync enabled',
+  'workspaceSetting.linear.inboundReadTitle': 'Linear inbound reads',
+  'workspaceSetting.linear.inboundReadDescription':
+    'Pause Linear updates and imports while keeping durable inbox work for later.',
+  'workspaceSetting.linear.outboundWriteTitle': 'Linear outbound writes',
+  'workspaceSetting.linear.outboundWriteDescription':
+    'Pause remote issue writes while preserving queued local intent.',
+  'workspaceSetting.linear.rolloutCompatibilityNote':
+    'Existing bindings inherit their current Sync enabled setting until these controls are set.',
+  'workspaceSetting.linear.rolloutSaved': 'Linear rollout control saved',
   'workspaceSetting.linear.syncDisabled': 'Sync disabled',
   'workspaceSetting.linear.noSyncRecorded': 'No sync run recorded yet.',
   'workspaceSetting.linear.syncEnableNote':

@@ -2,7 +2,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 import { isRecord } from '@orvilo/utils';
 
-import { LinearSyncModel } from '@/database/models/linearSync';
+import { linearBindingReadEnabled, LinearSyncModel } from '@/database/models/linearSync';
 import type { LobeChatDatabase } from '@/database/type';
 
 const DEFAULT_WEBHOOK_MAX_AGE_MS = 60_000;
@@ -221,7 +221,9 @@ export class LinearSyncService {
     const link = subjectId ? await this.model.findIssueLinkByExternalId(subjectId) : null;
     const binding = linearProjectId
       ? await this.model.findBindingByLinearProjectId(linearProjectId)
-      : null;
+      : link?.bindingId
+        ? await this.model.findBindingById(link.bindingId)
+        : null;
 
     if (!binding) {
       await this.model.updateInbox(captured.row.id, {
@@ -233,6 +235,16 @@ export class LinearSyncService {
         duplicate: false,
         status: 'pending_binding',
       };
+    }
+
+    // The inbox remains durable, but a disabled read rollout must not wake the
+    // planner or mutate any local task before the worker resumes it.
+    if (!linearBindingReadEnabled(binding)) {
+      await this.model.updateInbox(captured.row.id, {
+        processedAt: null,
+        status: 'paused',
+      });
+      return { deliveryId, duplicate: false, status: 'queued' };
     }
 
     const event = await this.model.recordDomainEvent({

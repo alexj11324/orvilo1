@@ -5,6 +5,8 @@ import type { LinearIssueSnapshot, LinearProjectBindingSettings, TaskItem } from
 import {
   LINEAR_SYNC_DEFAULT_LEASE_MS,
   LINEAR_SYNC_MAX_ATTEMPTS,
+  linearBindingReadEnabled,
+  linearBindingWriteEnabled,
   type LinearSyncLease,
   LinearSyncModel,
   linearSyncRetryDelayMs,
@@ -225,15 +227,20 @@ export class LinearSyncWorker {
             availableAt: outcome === 'pending-binding' ? new Date(Date.now() + 60_000) : new Date(),
             lastError: null,
             lockedUntil: null,
-            processedAt: outcome === 'pending-binding' ? null : new Date(),
-            status: outcome === 'pending-binding' ? 'pending_binding' : 'processed',
+            processedAt: outcome === 'pending-binding' || outcome === 'paused' ? null : new Date(),
+            status:
+              outcome === 'pending-binding'
+                ? 'pending_binding'
+                : outcome === 'paused'
+                  ? 'paused'
+                  : 'processed',
           },
           lease,
         );
         if (!settled) continue;
         if (outcome === 'imported') result.imported += 1;
         if (outcome === 'pending-binding') result.pendingBinding += 1;
-        if (outcome !== 'pending-binding') result.processed += 1;
+        if (outcome !== 'pending-binding' && outcome !== 'paused') result.processed += 1;
       } catch (error) {
         if (error instanceof LinearSyncLeaseLostError) continue;
         const message = error instanceof Error ? error.message : String(error);
@@ -271,6 +278,17 @@ export class LinearSyncWorker {
       const lease = leaseForRow(row);
       let providerWriteAttempted = false;
       try {
+        if (!row.linkId && row.taskId) {
+          const taskBinding = await this.model.findBindingByTaskId(row.taskId);
+          if (taskBinding && !linearBindingWriteEnabled(taskBinding)) {
+            await this.model.updateOutbox(
+              row.id,
+              { availableAt: new Date(), lastError: null, lockedUntil: null, status: 'paused' },
+              lease,
+            );
+            continue;
+          }
+        }
         if (!row.linkId) throw new Error('Linear outbox row has no issue link');
         const issueLink = await this.model.findIssueLinkById(row.linkId);
         if (!issueLink) throw new Error('Linear issue link no longer exists');
@@ -287,6 +305,14 @@ export class LinearSyncWorker {
           issueLink.organizationId !== installation.organizationId
         ) {
           throw new Error('Linear issue link installation scope does not match');
+        }
+        if (!linearBindingWriteEnabled(binding)) {
+          await this.model.updateOutbox(
+            row.id,
+            { availableAt: new Date(), lastError: null, lockedUntil: null, status: 'paused' },
+            lease,
+          );
+          continue;
         }
 
         const updateInput = row.payload as LinearIssueUpdateInput;
@@ -306,10 +332,28 @@ export class LinearSyncWorker {
         ) {
           throw new Error('Linear outbound write is outside the validated public binding scope');
         }
+        const latestBinding = await this.model.findBindingById(binding.id);
+        if (!latestBinding || !linearBindingWriteEnabled(latestBinding)) {
+          await this.model.updateOutbox(
+            row.id,
+            { availableAt: new Date(), lastError: null, lockedUntil: null, status: 'paused' },
+            lease,
+          );
+          continue;
+        }
         const updated = remoteMatchesUpdate(current, updateInput)
           ? current
           : await (async () => {
               if (!(await this.model.hasCurrentOutboxLease(row.id, lease))) {
+                throw new LinearSyncLeaseLostError();
+              }
+              const beforeMutationBinding = await this.model.findBindingById(binding.id);
+              if (!beforeMutationBinding || !linearBindingWriteEnabled(beforeMutationBinding)) {
+                await this.model.updateOutbox(
+                  row.id,
+                  { availableAt: new Date(), lastError: null, lockedUntil: null, status: 'paused' },
+                  lease,
+                );
                 throw new LinearSyncLeaseLostError();
               }
               providerWriteAttempted = true;
@@ -320,10 +364,20 @@ export class LinearSyncWorker {
           issueLinkId: issueLink.id,
           remoteSnapshot: updated,
         });
-        if (!settled) continue;
+        if (!settled) {
+          if (providerWriteAttempted) {
+            await this.model.markOutboxOutcomeUnknownAfterFence(row.id, lease.fence);
+          }
+          continue;
+        }
         result.sent += 1;
       } catch (error) {
-        if (error instanceof LinearSyncLeaseLostError) continue;
+        if (error instanceof LinearSyncLeaseLostError) {
+          if (providerWriteAttempted) {
+            await this.model.markOutboxOutcomeUnknownAfterFence(row.id, lease.fence);
+          }
+          continue;
+        }
 
         const message = error instanceof Error ? error.message : String(error);
         const settled = await this.model.updateOutbox(
@@ -358,6 +412,20 @@ export class LinearSyncWorker {
     if (!binding) throw new Error('Linear project binding not found');
     const installation = await this.model.findInstallationById(binding.installationId);
     if (!installation) throw new Error('Linear installation not found');
+
+    if (!linearBindingReadEnabled(binding)) {
+      return {
+        failed: 0,
+        imported: 0,
+        pendingBinding: 0,
+        processed: 0,
+        completed: false,
+        nextCursor:
+          binding.importPhase === 'reconciliation'
+            ? binding.importReconciliationCursor
+            : binding.importCursor,
+      };
+    }
 
     if (binding.importPhase === 'completed') {
       return {
@@ -415,8 +483,8 @@ export class LinearSyncWorker {
         );
         if (outcome === 'imported') result.imported += 1;
         if (outcome === 'pending-binding') result.pendingBinding += 1;
-        if (outcome !== 'pending-binding') result.processed += 1;
-        if (outcome === 'pending-binding') pageBlocked = true;
+        if (outcome !== 'pending-binding' && outcome !== 'paused') result.processed += 1;
+        if (outcome === 'pending-binding' || outcome === 'paused') pageBlocked = true;
       } catch (error) {
         pageBlocked = true;
         await this.model.recordImportReceipt({
@@ -494,7 +562,7 @@ export class LinearSyncWorker {
       model?: LinearSyncModel;
       phase?: 'initial' | 'reconciliation';
     } = {},
-  ): Promise<'imported' | 'pending-binding' | 'processed'> {
+  ): Promise<'imported' | 'paused' | 'pending-binding' | 'processed'> {
     if (!row.subjectId) return 'processed';
 
     const db = context.db ?? this.db;
@@ -519,20 +587,10 @@ export class LinearSyncWorker {
     }
 
     const binding = issue.projectId
-      ? await model.findBindingByLinearProjectId(issue.projectId)
+      ? await model.lockBindingByLinearProjectId(issue.projectId)
       : null;
     if (!binding) return 'pending-binding';
-    if (!binding.syncEnabled) {
-      if (context.phase) {
-        await model.recordImportReceipt({
-          bindingId: binding.id,
-          linearIssueId: issue.id,
-          phase: context.phase,
-          status: 'processed',
-        });
-      }
-      return 'processed';
-    }
+    if (!linearBindingReadEnabled(binding)) return 'paused';
 
     const integrationTasks = new LinearIntegrationTaskService(
       db,

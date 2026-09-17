@@ -2,6 +2,7 @@ import type { LinearIssueLinkSyncState } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import {
+  getLinearBindingRollout,
   getLinearRecoverySummary,
   getScopedProjects,
   getWizardStepStates,
@@ -88,5 +89,21 @@ describe('linear sync view model', () => {
         isSyncEnabled: true,
       }).automation.enabled,
     ).toBe(true);
+  });
+
+  it('inherits legacy syncEnabled for bindings without rollout fields', () => {
+    expect(getLinearBindingRollout({ settings: {}, syncEnabled: true })).toEqual({
+      readEnabled: true,
+      writeEnabled: true,
+    });
+  });
+
+  it('keeps inbound and outbound controls independent', () => {
+    expect(
+      getLinearBindingRollout({
+        settings: { readEnabled: false, writeEnabled: true },
+        syncEnabled: true,
+      }),
+    ).toEqual({ readEnabled: false, writeEnabled: true });
   });
 });

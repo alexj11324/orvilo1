@@ -26,6 +26,10 @@ vi.mock('@/database/models/linearSync', () => ({
       Object.assign(this, modelMocks);
     }
   },
+  linearBindingReadEnabled: (binding: any) =>
+    binding.settings?.readEnabled ?? binding.syncEnabled ?? true,
+  linearBindingWriteEnabled: (binding: any) =>
+    binding.settings?.writeEnabled ?? binding.syncEnabled ?? true,
 }));
 
 const payload = JSON.stringify({
@@ -155,6 +159,43 @@ describe('Linear webhook verification', () => {
       2,
       expect.objectContaining({ deliveryId: first.deliveryId }),
     );
+  });
+
+  it('pauses a disabled binding without waking the planner', async () => {
+    const pausedPayload = JSON.stringify({
+      action: 'update',
+      data: { id: 'issue-1', identifier: 'ENG-1', project: { id: 'project-1' }, title: 'Issue' },
+      organizationId: 'org-1',
+      type: 'Issue',
+      webhookTimestamp: 1_700_000_000_000,
+    });
+    const secret = 'test-secret';
+    modelMocks.findInstallationByOrganization.mockResolvedValue({
+      id: 'installation-1',
+      oauthClientId: 'client-1',
+      status: 'active',
+    });
+    modelMocks.captureDelivery.mockResolvedValue({ inserted: true, row: { id: 'inbox-1' } });
+    modelMocks.findBindingByLinearProjectId.mockResolvedValue({
+      id: 'binding-1',
+      settings: { readEnabled: false },
+      syncEnabled: true,
+    });
+
+    const result = await new LinearSyncService({} as never, 'workspace-1').captureWebhook({
+      now: 1_700_000_000_000,
+      rawBody: pausedPayload,
+      secret,
+      signature: createHmac('sha256', secret).update(pausedPayload).digest('hex'),
+      timestamp: 1_700_000_000_000,
+    });
+
+    expect(result).toMatchObject({ duplicate: false, status: 'queued' });
+    expect(modelMocks.updateInbox).toHaveBeenCalledWith('inbox-1', {
+      processedAt: null,
+      status: 'paused',
+    });
+    expect(modelMocks.recordDomainEvent).not.toHaveBeenCalled();
   });
 
   it('marks a matching OAuthApp revoked event as processed and revokes the installation', async () => {

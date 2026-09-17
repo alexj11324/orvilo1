@@ -17,9 +17,15 @@ vi.mock('@/database/models/linearSync', () => ({
     findInstallationById = vi.fn(async () => ({ id: 'installation-1' }));
     recordDomainEvent = mocks.recordDomainEvent;
     recordImportReceipt = mocks.recordImportReceipt;
-    transaction = vi.fn(async (callback: (model: unknown, db: unknown) => unknown) => callback(this, {}));
+    transaction = vi.fn(async (callback: (model: unknown, db: unknown) => unknown) =>
+      callback(this, {}),
+    );
     updateBindingImportState = mocks.updateBindingImportState;
   },
+  linearBindingReadEnabled: (binding: any) =>
+    binding.settings?.readEnabled ?? binding.syncEnabled ?? true,
+  linearBindingWriteEnabled: (binding: any) =>
+    binding.settings?.writeEnabled ?? binding.syncEnabled ?? true,
   linearSyncRetryDelayMs: vi.fn(() => 1_000),
 }));
 vi.mock('@/database/models/task', () => ({ TaskModel: class {} }));
@@ -59,9 +65,11 @@ describe('LinearSyncWorker.importBinding', () => {
 
   it('holds the page cursor when one issue fails, then resumes the same page', async () => {
     const provider = {
-      listIssues: vi
-        .fn()
-        .mockResolvedValue({ endCursor: 'cursor-1', hasNextPage: true, issues: [issue('1'), issue('2')] }),
+      listIssues: vi.fn().mockResolvedValue({
+        endCursor: 'cursor-1',
+        hasNextPage: true,
+        issues: [issue('1'), issue('2')],
+      }),
     };
     const worker = new LinearSyncWorker({} as never, 'workspace-1');
     const processIssue = vi
@@ -81,6 +89,19 @@ describe('LinearSyncWorker.importBinding', () => {
     expect(processIssue).toHaveBeenCalledTimes(4);
   });
 
+  it('does not contact Linear while inbound reads are disabled', async () => {
+    mocks.binding = { ...newBinding(), settings: { readEnabled: false }, syncEnabled: true };
+    const provider = { listIssues: vi.fn() };
+    const result = await new LinearSyncWorker({} as never, 'workspace-1').importBinding(
+      provider as never,
+      'binding-1',
+      2,
+    );
+
+    expect(result).toMatchObject({ completed: false, nextCursor: null });
+    expect(provider.listIssues).not.toHaveBeenCalled();
+  });
+
   it('runs an overlap reconciliation page and records one scope completion fact', async () => {
     const changedDuringImport = issue('1', new Date(Date.now() + 60_000).toISOString());
     const provider = {
@@ -88,10 +109,16 @@ describe('LinearSyncWorker.importBinding', () => {
         .fn()
         .mockResolvedValueOnce({ endCursor: 'cursor-1', hasNextPage: true, issues: [issue('1')] })
         .mockResolvedValueOnce({ endCursor: null, hasNextPage: false, issues: [issue('2')] })
-        .mockResolvedValueOnce({ endCursor: null, hasNextPage: false, issues: [changedDuringImport, changedDuringImport] }),
+        .mockResolvedValueOnce({
+          endCursor: null,
+          hasNextPage: false,
+          issues: [changedDuringImport, changedDuringImport],
+        }),
     };
     const worker = new LinearSyncWorker({} as never, 'workspace-1');
-    const processIssue = vi.spyOn(worker as any, 'processImportIssue').mockResolvedValue('processed');
+    const processIssue = vi
+      .spyOn(worker as any, 'processImportIssue')
+      .mockResolvedValue('processed');
 
     await worker.importBinding(provider as never, 'binding-1', 1);
     await worker.importBinding(provider as never, 'binding-1', 1);

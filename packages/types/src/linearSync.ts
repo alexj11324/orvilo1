@@ -16,13 +16,14 @@ export type LinearSyncInboxStatus =
   | 'failed'
   | 'ignored'
   | 'pending_binding'
+  | 'paused'
   | 'processed'
   | 'processing'
   | 'received';
 
 /** Durable state of a local change waiting to reach Linear. */
 export type LinearSyncOutboxStatus =
-  'dead_letter' | 'failed' | 'outcome_unknown' | 'pending' | 'sent' | 'sending';
+  'dead_letter' | 'failed' | 'outcome_unknown' | 'paused' | 'pending' | 'sent' | 'sending';
 
 /** Scope of a persisted planning cursor. */
 export type TaskPlanningScopeType = 'goal' | 'project' | 'workspace';
@@ -95,8 +96,12 @@ export interface LinearAssignmentMapping {
 export interface LinearProjectBindingSettings {
   assignmentMappings?: LinearAssignmentMapping[];
   autoExecutionEnabled?: boolean;
+  /** Independent rollout control. Missing values inherit legacy syncEnabled. */
+  readEnabled?: boolean;
   replanningEnabled?: boolean;
   statusMappings?: LinearStatusMapping[];
+  /** Independent rollout control. Missing values inherit legacy syncEnabled. */
+  writeEnabled?: boolean;
 }
 
 /** Canonical subset of a Linear Issue used for synchronization decisions. */

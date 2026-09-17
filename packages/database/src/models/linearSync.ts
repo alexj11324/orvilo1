@@ -111,6 +111,17 @@ export const linearSyncRetryDelayMs = (attempts: number) =>
     LINEAR_SYNC_RETRY_BASE_MS * 2 ** Math.max(0, Math.min(attempts, 16) - 1),
   );
 
+/** Resolve the additive rollout flags while keeping old bindings unchanged. */
+export const linearBindingReadEnabled = (binding: {
+  settings: LinearProjectBindingSettings;
+  syncEnabled: boolean;
+}) => binding.settings.readEnabled ?? binding.syncEnabled;
+
+export const linearBindingWriteEnabled = (binding: {
+  settings: LinearProjectBindingSettings;
+  syncEnabled: boolean;
+}) => binding.settings.writeEnabled ?? binding.syncEnabled;
+
 export class LinearInstallationUnavailableError extends Error {
   readonly code = 'LINEAR_INSTALLATION_UNAVAILABLE';
 
@@ -434,6 +445,22 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  /** Serialize inbound reconciliation with a binding rollout change. */
+  async lockBindingByLinearProjectId(linearProjectId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearProjectBindings)
+      .where(
+        and(
+          eq(linearProjectBindings.workspaceId, this.workspaceId),
+          eq(linearProjectBindings.linearProjectId, linearProjectId),
+        ),
+      )
+      .for('update')
+      .limit(1);
+    return row ?? null;
+  }
+
   async findBindingByProjectId(projectId: string) {
     const [row] = await this.db
       .select()
@@ -446,6 +473,22 @@ export class LinearSyncModel {
       )
       .limit(1);
     return row ?? null;
+  }
+
+  async findBindingByTaskId(taskId: string) {
+    const [row] = await this.db
+      .select({ binding: linearProjectBindings })
+      .from(linearProjectBindings)
+      .innerJoin(tasks, eq(tasks.projectId, linearProjectBindings.projectId))
+      .where(
+        and(
+          eq(linearProjectBindings.workspaceId, this.workspaceId),
+          eq(tasks.workspaceId, this.workspaceId),
+          eq(tasks.id, taskId),
+        ),
+      )
+      .limit(1);
+    return row?.binding ?? null;
   }
 
   async listBindings() {
@@ -498,6 +541,152 @@ export class LinearSyncModel {
       .returning();
 
     return row;
+  }
+
+  /**
+   * Change only the binding rollout controls. Queue rows are paused/requeued in
+   * the same transaction so a worker cannot revive an old lease after a
+   * rollback. No provider call is made by this method.
+   */
+  async updateBindingControls(input: {
+    expectedVersion?: number;
+    id: string;
+    readEnabled?: boolean;
+    writeEnabled?: boolean;
+  }) {
+    return this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(linearProjectBindings)
+        .where(
+          and(
+            eq(linearProjectBindings.id, input.id),
+            eq(linearProjectBindings.workspaceId, this.workspaceId),
+            input.expectedVersion === undefined
+              ? undefined
+              : eq(linearProjectBindings.version, input.expectedVersion),
+          ),
+        )
+        .for('update')
+        .limit(1);
+      if (!current) return null;
+
+      const nextSettings: LinearProjectBindingSettings = {
+        ...current.settings,
+        ...(input.readEnabled === undefined ? {} : { readEnabled: input.readEnabled }),
+        ...(input.writeEnabled === undefined ? {} : { writeEnabled: input.writeEnabled }),
+      };
+      const [binding] = await tx
+        .update(linearProjectBindings)
+        .set({ settings: nextSettings, updatedAt: new Date(), version: current.version + 1 })
+        .where(eq(linearProjectBindings.id, current.id))
+        .returning();
+
+      const readChanged =
+        input.readEnabled !== undefined && input.readEnabled !== linearBindingReadEnabled(current);
+      const writeChanged =
+        input.writeEnabled !== undefined &&
+        input.writeEnabled !== linearBindingWriteEnabled(current);
+      const bindingId = current.id;
+      const installationId = current.installationId;
+      const now = new Date();
+
+      if (readChanged) {
+        if (input.readEnabled === false) {
+          await tx.execute(sql`
+            UPDATE linear_sync_inbox AS inbox
+            SET status = 'paused', locked_until = NULL, lease_owner = NULL,
+                lease_fence = lease_fence + 1, updated_at = now()
+            WHERE inbox.workspace_id = ${this.workspaceId}
+              AND inbox.installation_id = ${installationId}
+              AND inbox.status IN ('received', 'pending_binding', 'failed', 'processing')
+              AND (
+                EXISTS (
+                  SELECT 1 FROM linear_issue_links AS link
+                  WHERE link.workspace_id = inbox.workspace_id
+                    AND link.linear_issue_id = inbox.subject_id
+                    AND link.binding_id = ${bindingId}
+                )
+                OR inbox.payload -> 'data' -> 'project' ->> 'id' = ${current.linearProjectId}
+              )
+          `);
+        } else {
+          await tx.execute(sql`
+            UPDATE linear_sync_inbox AS inbox
+            SET status = CASE WHEN status = 'pending_binding' THEN 'pending_binding' ELSE 'received' END,
+                available_at = ${now}, locked_until = NULL, lease_owner = NULL,
+                updated_at = now()
+            WHERE inbox.workspace_id = ${this.workspaceId}
+              AND inbox.installation_id = ${installationId}
+              AND inbox.status = 'paused'
+              AND (
+                EXISTS (
+                  SELECT 1 FROM linear_issue_links AS link
+                  WHERE link.workspace_id = inbox.workspace_id
+                    AND link.linear_issue_id = inbox.subject_id
+                    AND link.binding_id = ${bindingId}
+                )
+                OR inbox.payload -> 'data' -> 'project' ->> 'id' = ${current.linearProjectId}
+              )
+          `);
+        }
+      }
+
+      if (writeChanged) {
+        if (input.writeEnabled === false) {
+          await tx.execute(sql`
+            UPDATE linear_sync_outbox AS outbox
+            SET status = CASE WHEN status = 'sending' THEN 'outcome_unknown' ELSE 'paused' END,
+                outcome_unknown_at = CASE
+                  WHEN status = 'sending' THEN now()
+                  ELSE outcome_unknown_at
+                END,
+                locked_until = NULL, lease_owner = NULL,
+                lease_fence = lease_fence + 1, updated_at = now()
+            WHERE outbox.workspace_id = ${this.workspaceId}
+              AND outbox.installation_id = ${installationId}
+              AND outbox.status IN ('pending', 'failed', 'sending', 'outcome_unknown')
+              AND (
+                EXISTS (
+                  SELECT 1 FROM linear_issue_links AS link
+                  WHERE outbox.link_id = link.id AND link.binding_id = ${bindingId}
+                )
+                OR EXISTS (
+                  SELECT 1 FROM tasks AS task
+                  WHERE outbox.link_id IS NULL
+                    AND outbox.operation LIKE 'linear-issue:create:%'
+                    AND task.id = outbox.task_id
+                    AND task.project_id = ${current.projectId}
+                )
+              )
+          `);
+        } else {
+          await tx.execute(sql`
+            UPDATE linear_sync_outbox AS outbox
+            SET status = 'pending', available_at = ${now}, locked_until = NULL,
+                lease_owner = NULL, last_error = NULL, updated_at = now()
+            WHERE outbox.workspace_id = ${this.workspaceId}
+              AND outbox.installation_id = ${installationId}
+              AND outbox.status = 'paused'
+              AND (
+                EXISTS (
+                  SELECT 1 FROM linear_issue_links AS link
+                  WHERE outbox.link_id = link.id AND link.binding_id = ${bindingId}
+                )
+                OR EXISTS (
+                  SELECT 1 FROM tasks AS task
+                  WHERE outbox.link_id IS NULL
+                    AND outbox.operation LIKE 'linear-issue:create:%'
+                    AND task.id = outbox.task_id
+                    AND task.project_id = ${current.projectId}
+                )
+              )
+          `);
+        }
+      }
+
+      return binding ?? null;
+    });
   }
 
   async updateBindingImportCursor(id: string, cursor: string | null, completed: boolean) {
@@ -745,6 +934,22 @@ export class LinearSyncModel {
             AND status IN ('received', 'pending_binding', 'failed', 'processing')
             AND available_at <= now()
             AND (locked_until IS NULL OR locked_until < now())
+            AND NOT EXISTS (
+              SELECT 1
+              FROM linear_project_bindings AS binding
+              WHERE binding.workspace_id = linear_sync_inbox.workspace_id
+                AND binding.installation_id = linear_sync_inbox.installation_id
+                AND COALESCE((binding.settings ->> 'readEnabled')::boolean, binding.sync_enabled) = false
+                AND (
+                  EXISTS (
+                    SELECT 1 FROM linear_issue_links AS link
+                    WHERE link.workspace_id = linear_sync_inbox.workspace_id
+                      AND link.linear_issue_id = linear_sync_inbox.subject_id
+                      AND link.binding_id = binding.id
+                  )
+                  OR linear_sync_inbox.payload -> 'data' -> 'project' ->> 'id' = binding.linear_project_id
+                )
+            )
             ${installationFilter}
           ORDER BY created_at
           LIMIT ${limit}
@@ -1100,6 +1305,26 @@ export class LinearSyncModel {
             AND status IN ('failed', 'pending', 'sending', 'outcome_unknown')
             AND available_at <= now()
             AND (locked_until IS NULL OR locked_until < now())
+            AND NOT EXISTS (
+              SELECT 1
+              FROM linear_issue_links AS link
+              JOIN linear_project_bindings AS binding ON binding.id = link.binding_id
+              WHERE link.id = linear_sync_outbox.link_id
+                AND link.workspace_id = linear_sync_outbox.workspace_id
+                AND COALESCE((binding.settings ->> 'writeEnabled')::boolean, binding.sync_enabled) = false
+            )
+            AND NOT EXISTS (
+              SELECT 1
+              FROM tasks AS task
+              JOIN linear_project_bindings AS binding ON binding.project_id = task.project_id
+              WHERE linear_sync_outbox.link_id IS NULL
+                AND linear_sync_outbox.operation LIKE 'linear-issue:create:%'
+                AND task.id = linear_sync_outbox.task_id
+                AND task.workspace_id = linear_sync_outbox.workspace_id
+                AND binding.workspace_id = linear_sync_outbox.workspace_id
+                AND binding.installation_id = linear_sync_outbox.installation_id
+                AND COALESCE((binding.settings ->> 'writeEnabled')::boolean, binding.sync_enabled) = false
+            )
             ${installationFilter}
           ORDER BY created_at, id
           LIMIT ${limit}
@@ -1157,6 +1382,32 @@ export class LinearSyncModel {
           eq(linearSyncOutbox.workspaceId, this.workspaceId),
           lease ? eq(linearSyncOutbox.leaseOwner, lease.owner) : undefined,
           lease ? eq(linearSyncOutbox.leaseFence, lease.fence) : undefined,
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  /** Preserve uncertainty when a provider call raced a control rollback. */
+  async markOutboxOutcomeUnknownAfterFence(
+    id: string,
+    previousFence: number,
+    message = 'Linear write may have completed while outbound sync was disabled',
+  ) {
+    const [row] = await this.db
+      .update(linearSyncOutbox)
+      .set({
+        lastError: message,
+        outcomeUnknownAt: new Date(),
+        status: 'outcome_unknown',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(linearSyncOutbox.id, id),
+          eq(linearSyncOutbox.workspaceId, this.workspaceId),
+          inArray(linearSyncOutbox.status, ['paused', 'outcome_unknown']),
+          gt(linearSyncOutbox.leaseFence, previousFence),
         ),
       )
       .returning();
@@ -1677,8 +1928,6 @@ export class LinearSyncModel {
     }
 
     const binding = link.bindingId ? await model.findBindingById(link.bindingId) : null;
-    if (binding && !binding.syncEnabled) return { event, link, outbox: null };
-
     const settings = binding?.settings;
     const statusId = settings?.statusMappings?.find(
       (mapping) =>

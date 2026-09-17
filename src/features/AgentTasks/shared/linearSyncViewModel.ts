@@ -59,7 +59,15 @@ export type LinearBindingView = {
   settings: LinearProjectBindingSettings;
   syncEnabled: boolean;
   teamIds: string[];
+  version: number;
 };
+
+export const getLinearBindingRollout = (
+  binding: Pick<LinearBindingView, 'settings' | 'syncEnabled'>,
+) => ({
+  readEnabled: binding.settings.readEnabled ?? binding.syncEnabled,
+  writeEnabled: binding.settings.writeEnabled ?? binding.syncEnabled,
+});
 
 export type LinearInstallationTone = 'danger' | 'success' | 'warning';
 

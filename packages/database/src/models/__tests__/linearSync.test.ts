@@ -61,6 +61,169 @@ const createInstallation = () =>
   });
 
 describe('LinearSyncModel', () => {
+  it('pauses linkless create intent without attempts and requeues it on enable', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'FLAG',
+      name: 'Rollout flags',
+    });
+    const binding = await model.upsertBinding({
+      installationId,
+      linearProjectId: 'linear-project-flag',
+      projectId: project.id,
+      settings: { readEnabled: true, writeEnabled: true },
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'FLAG-1',
+        instruction: 'create remotely later',
+        projectId: project.id,
+        seq: 1,
+        workspaceId,
+      })
+      .returning();
+    await model.queueOutbox({
+      expectedLocalRevision: 1,
+      installationId,
+      operation: 'linear-issue:create:FLAG-1',
+      payload: { title: 'create later' },
+      taskId: task.id,
+    });
+
+    const disabled = await model.updateBindingControls({
+      expectedVersion: binding.version,
+      id: binding.id,
+      writeEnabled: false,
+    });
+    expect(disabled?.settings).toMatchObject({ writeEnabled: false });
+    expect(await model.claimOutbox(1, 60_000, installationId, 'paused-worker')).toHaveLength(0);
+    const pausedOutbox = await model.listOutbox('paused');
+    expect(pausedOutbox).toHaveLength(1);
+    expect(pausedOutbox[0]).toMatchObject({ attempts: 0, status: 'paused' });
+
+    const reenabled = await model.updateBindingControls({
+      expectedVersion: disabled!.version,
+      id: binding.id,
+      writeEnabled: true,
+    });
+    expect(reenabled?.settings).toMatchObject({ writeEnabled: true });
+    const resumedOutbox = await model.claimOutbox(1, 60_000, installationId, 'resumed-worker');
+    expect(resumedOutbox).toHaveLength(1);
+    expect(resumedOutbox[0]).toMatchObject({ attempts: 1, status: 'sending' });
+  });
+
+  it('pauses inbound work without attempts and requeues it on enable', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'READ',
+      name: 'Read rollout',
+    });
+    const binding = await model.upsertBinding({
+      installationId,
+      linearProjectId: 'linear-project-read',
+      projectId: project.id,
+      settings: { readEnabled: true, writeEnabled: true },
+    });
+    await model.captureDelivery({
+      action: 'update',
+      deliveryId: 'read-rollout-delivery',
+      eventType: 'Issue',
+      installationId,
+      organizationId: 'linear-org-1',
+      payload: { data: { project: { id: binding.linearProjectId } } },
+      subjectId: 'linear-read-issue',
+    });
+
+    await model.updateBindingControls({
+      expectedVersion: binding.version,
+      id: binding.id,
+      readEnabled: false,
+    });
+    expect(await model.claimInbox(1, 60_000, installationId, 'paused-reader')).toHaveLength(0);
+    const pausedInbox = await db
+      .select()
+      .from(linearSyncInbox)
+      .where(eq(linearSyncInbox.workspaceId, workspaceId));
+    expect(pausedInbox).toHaveLength(1);
+    expect(pausedInbox[0]).toMatchObject({ attempts: 0, status: 'paused' });
+
+    const current = await model.findBindingById(binding.id);
+    await model.updateBindingControls({
+      expectedVersion: current!.version,
+      id: binding.id,
+      readEnabled: true,
+    });
+    const resumedInbox = await model.claimInbox(1, 60_000, installationId, 'resumed-reader');
+    expect(resumedInbox).toHaveLength(1);
+    expect(resumedInbox[0]).toMatchObject({ attempts: 1, status: 'processing' });
+  });
+
+  it('fences an in-flight write as outcome unknown across a fast disable-enable race', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'RACE',
+      name: 'Write race',
+    });
+    const binding = await model.upsertBinding({
+      installationId,
+      linearProjectId: 'linear-project-race',
+      projectId: project.id,
+      settings: { readEnabled: true, writeEnabled: true },
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'RACE-1',
+        instruction: 'uncertain remote write',
+        projectId: project.id,
+        seq: 1,
+        workspaceId,
+      })
+      .returning();
+    const [row] = await db
+      .insert(linearSyncOutbox)
+      .values({
+        expectedLocalRevision: 2,
+        installationId,
+        leaseFence: 7,
+        leaseOwner: 'active-writer',
+        lockedUntil: new Date(Date.now() + 60_000),
+        operation: 'linear-issue:create:RACE-1',
+        payload: { title: 'uncertain' },
+        status: 'sending',
+        taskId: task.id,
+        workspaceId,
+      })
+      .returning();
+
+    const disabled = await model.updateBindingControls({
+      expectedVersion: binding.version,
+      id: binding.id,
+      writeEnabled: false,
+    });
+    const fenced = (await model.listOutbox())[0];
+    expect(fenced).toMatchObject({
+      id: row.id,
+      leaseFence: 8,
+      leaseOwner: null,
+      status: 'outcome_unknown',
+    });
+    expect(fenced.outcomeUnknownAt).toEqual(expect.any(Date));
+
+    await model.updateBindingControls({
+      expectedVersion: disabled!.version,
+      id: binding.id,
+      writeEnabled: true,
+    });
+    expect((await model.listOutbox())[0]).toMatchObject({ status: 'outcome_unknown' });
+  });
+
   it('bounds task-scoped issue links and keeps the workspace scope', async () => {
     await createInstallation();
     await db.insert(workspaces).values({

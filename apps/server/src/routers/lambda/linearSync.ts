@@ -66,6 +66,7 @@ const settingsSchema = z.object({
     )
     .optional(),
   autoExecutionEnabled: z.boolean().optional(),
+  readEnabled: z.boolean().optional(),
   replanningEnabled: z.boolean().optional(),
   statusMappings: z
     .array(
@@ -82,7 +83,19 @@ const settingsSchema = z.object({
         }),
     )
     .optional(),
+  writeEnabled: z.boolean().optional(),
 });
+
+export const linearBindingControlsSchema = z
+  .object({
+    expectedVersion: z.number().int().positive().optional(),
+    id: z.string().uuid(),
+    readEnabled: z.boolean().optional(),
+    writeEnabled: z.boolean().optional(),
+  })
+  .refine((input) => input.readEnabled !== undefined || input.writeEnabled !== undefined, {
+    message: 'A rollout control is required',
+  });
 
 const snapshotSchema = z.object({
   archivedAt: z.string().nullable().optional(),
@@ -388,6 +401,26 @@ export const linearSyncRouter = router({
       mapError(error, 'listInstallations');
     }
   }),
+
+  updateBindingControls: linearSyncWriteProcedure
+    .input(linearBindingControlsSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const binding = await ctx.linearSyncModel.updateBindingControls(input);
+        if (!binding) {
+          throw new TRPCError({
+            code: input.expectedVersion === undefined ? 'NOT_FOUND' : 'CONFLICT',
+            message:
+              input.expectedVersion === undefined
+                ? 'Linear binding not found'
+                : 'Linear binding changed; reload before updating rollout controls',
+          });
+        }
+        return { data: binding, message: 'Linear rollout controls updated', success: true };
+      } catch (error) {
+        mapError(error, 'updateBindingControls');
+      }
+    }),
 
   importProject: linearSyncWriteProcedure
     .input(

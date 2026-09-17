@@ -323,8 +323,10 @@ type Action =
   | 'load'
   | 'proposal'
   | 'replanning'
+  | 'read'
   | 'retry'
   | 'sync'
+  | 'write'
   | 'worker';
 
 const STEP_ORDER: LinearWizardStepId[] = [
@@ -456,6 +458,8 @@ const LinearWorkspaceSettings = memo(() => {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedLinearProjectId, setSelectedLinearProjectId] = useState('');
   const [syncEnabled, setSyncEnabled] = useState(false);
+  const [readEnabled, setReadEnabled] = useState(false);
+  const [writeEnabled, setWriteEnabled] = useState(false);
   const [replanningEnabled, setReplanningEnabled] = useState(false);
   const [autoExecutionEnabled, setAutoExecutionEnabled] = useState(false);
   const [activeStep, setActiveStep] = useState<LinearWizardStepId>('installation');
@@ -586,6 +590,8 @@ const LinearWorkspaceSettings = memo(() => {
     const binding = bindings.find((item) => item.projectId === selectedProjectId);
     if (!binding) {
       setSyncEnabled(false);
+      setReadEnabled(false);
+      setWriteEnabled(false);
       setReplanningEnabled(false);
       setAutoExecutionEnabled(false);
       return;
@@ -594,6 +600,8 @@ const LinearWorkspaceSettings = memo(() => {
     setSelectedLinearProjectId(binding.linearProjectId);
     setSelectedTeamId(binding.defaultTeamId ?? binding.teamIds[0] ?? '');
     setSyncEnabled(binding.syncEnabled);
+    setReadEnabled(binding.settings.readEnabled ?? binding.syncEnabled);
+    setWriteEnabled(binding.settings.writeEnabled ?? binding.syncEnabled);
     setReplanningEnabled(binding.replanningEnabled);
     setAutoExecutionEnabled(binding.autoExecutionEnabled);
   }, [bindings, selectedProjectId]);
@@ -708,7 +716,9 @@ const LinearWorkspaceSettings = memo(() => {
       const settings: LinearProjectBindingSettings = {
         ...selectedBinding?.settings,
         autoExecutionEnabled: nextAutoExecutionEnabled,
+        readEnabled,
         replanningEnabled: nextReplanningEnabled,
+        writeEnabled,
       };
       const response = await lambdaClient.linearSync.createProjectBinding.mutate({
         defaultTeamId: selectedTeamId || selectedRemoteProject.teamIds[0],
@@ -729,6 +739,8 @@ const LinearWorkspaceSettings = memo(() => {
       setSelectedLinearProjectId(binding.linearProjectId);
       setSelectedTeamId(binding.defaultTeamId ?? binding.teamIds[0] ?? '');
       setSyncEnabled(binding.syncEnabled);
+      setReadEnabled(binding.settings.readEnabled ?? binding.syncEnabled);
+      setWriteEnabled(binding.settings.writeEnabled ?? binding.syncEnabled);
       setReplanningEnabled(binding.replanningEnabled);
       setAutoExecutionEnabled(binding.autoExecutionEnabled);
       toast.success(t('workspaceSetting.linear.bindingSaved'));
@@ -736,6 +748,28 @@ const LinearWorkspaceSettings = memo(() => {
     } catch (error) {
       toast.error(errorMessage(error, t('workspaceSetting.linear.saveFailed')));
       return false;
+    } finally {
+      setAction(null);
+    }
+  };
+
+  const persistRolloutControl = async (control: 'read' | 'write', enabled: boolean) => {
+    if (!canManage || !selectedBinding) return;
+    setAction(control);
+    try {
+      const response = await lambdaClient.linearSync.updateBindingControls.mutate({
+        expectedVersion: selectedBinding.version,
+        id: selectedBinding.id,
+        ...(control === 'read' ? { readEnabled: enabled } : { writeEnabled: enabled }),
+      });
+      if (!response?.data) throw new Error('Linear rollout response is empty');
+      const binding = response.data as LinearBindingView;
+      setBindings((current) => current.map((item) => (item.id === binding.id ? binding : item)));
+      if (control === 'read') setReadEnabled(enabled);
+      else setWriteEnabled(enabled);
+      toast.success(t('workspaceSetting.linear.rolloutSaved'));
+    } catch (error) {
+      toast.error(errorMessage(error, t('workspaceSetting.linear.saveFailed')));
     } finally {
       setAction(null);
     }
@@ -1176,6 +1210,41 @@ const LinearWorkspaceSettings = memo(() => {
               </Tag>
             )}
           </div>
+          <Flexbox gap={12}>
+            <div className={styles.gate}>
+              <div className={styles.row}>
+                <Flexbox gap={4}>
+                  <Text strong>{t('workspaceSetting.linear.inboundReadTitle')}</Text>
+                  <Text className={styles.description} fontSize={12}>
+                    {t('workspaceSetting.linear.inboundReadDescription')}
+                  </Text>
+                </Flexbox>
+                <Switch
+                  checked={readEnabled}
+                  disabled={!canManage}
+                  onChange={(value) => void persistRolloutControl('read', value)}
+                />
+              </div>
+            </div>
+            <div className={styles.gate}>
+              <div className={styles.row}>
+                <Flexbox gap={4}>
+                  <Text strong>{t('workspaceSetting.linear.outboundWriteTitle')}</Text>
+                  <Text className={styles.description} fontSize={12}>
+                    {t('workspaceSetting.linear.outboundWriteDescription')}
+                  </Text>
+                </Flexbox>
+                <Switch
+                  checked={writeEnabled}
+                  disabled={!canManage}
+                  onChange={(value) => void persistRolloutControl('write', value)}
+                />
+              </div>
+            </div>
+          </Flexbox>
+          <Text className={styles.muted} fontSize={12}>
+            {t('workspaceSetting.linear.rolloutCompatibilityNote')}
+          </Text>
           <Text className={styles.muted} fontSize={12}>
             {t('workspaceSetting.linear.bindingSyncDisabledUntilStep')}
           </Text>

@@ -3036,6 +3036,7 @@
   "workspaceSetting.agents.empty": "该工作区暂无共享的 Agent。",
   "workspaceSetting.agents.loadFailed": "无法加载工作区 Agent。",
   "workspaceSetting.agents.noProjects": "未关联项目",
+  "workspaceSetting.agents.status.active": "活跃",
   "workspaceSetting.agents.status.disabled": "已停用",
   "workspaceSetting.agents.status.idle": "空闲",
   "workspaceSetting.agents.status.online": "在线",

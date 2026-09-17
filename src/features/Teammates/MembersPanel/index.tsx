@@ -1,7 +1,7 @@
 'use client';
 
 import { DropdownMenu, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Alert, Button, createModal, Select, Skeleton, Tag } from '@lobehub/ui/base-ui';
+import { Alert, Button, createModal, Select, SkeletonText, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Crown, PauseCircle, PlayCircle, UserMinus } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -15,7 +15,12 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import type { WorkspaceMemberSummary } from '../api/contract';
 import { useTeammateActions, useWorkspaceMembersQuery } from '../api/hooks';
-import { canManageMember, changeableRolesFor, memberStatus } from '../api/roleCapabilities';
+import {
+  canManageMember,
+  changeableRolesFor,
+  type MemberStatus,
+  memberStatus,
+} from '../api/roleCapabilities';
 
 const RemoveMemberContent = lazy(() => import('./RemoveMemberContent'));
 
@@ -77,11 +82,11 @@ const ROLE_TAG_COLOR: Record<string, string> = {
   viewer: 'default',
 };
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL = {
   active: 'workspaceSetting.members.status.active',
   removed: 'workspaceSetting.members.status.removed',
   suspended: 'workspaceSetting.members.status.suspended',
-};
+} as const satisfies Record<MemberStatus, string>;
 
 interface MemberRowProps {
   callerRole: string | null;
@@ -188,7 +193,7 @@ const MemberRow = memo<MemberRowProps>(({ callerRole, callerUserId, member, onRe
       <div>
         {manageable && menuItems.length > 0 && (
           <DropdownMenu items={menuItems}>
-            <Button size="small" variant="text">
+            <Button size="small" type="text">
               ⋯
             </Button>
           </DropdownMenu>
@@ -232,7 +237,19 @@ export const MembersPanel = memo(() => {
     [members, t],
   );
 
-  if (isLoading) return <Skeleton active paragraph={{ rows: 4 }} />;
+  if (isLoading) {
+    return (
+      <Flexbox gap={16} style={{ paddingBlock: 8 }}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Flexbox align="center" gap={10} horizontal key={i}>
+            <SkeletonText style={{ marginBottom: 0, width: '40%' }} />
+            <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
+            <SkeletonText style={{ marginBottom: 0, width: '20%' }} />
+          </Flexbox>
+        ))}
+      </Flexbox>
+    );
+  }
   if (error) {
     return (
       <Alert

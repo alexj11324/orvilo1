@@ -68,18 +68,19 @@ export const parseEmails = (raw: string): { emails: string[]; invalid: string[] 
   return { emails, invalid };
 };
 
-const WORKSPACE_ROLE_LABEL: Record<string, string> = {
+const WORKSPACE_ROLE_LABEL = {
   admin: 'workspaceSetting.members.role.admin',
   member: 'workspaceSetting.members.role.member',
+  owner: 'workspaceSetting.members.role.owner',
   viewer: 'workspaceSetting.members.role.viewer',
-};
+} as const satisfies Record<WorkspaceRole, string>;
 
-const PROJECT_ROLE_LABEL: Record<ProjectRole, string> = {
+const PROJECT_ROLE_LABEL = {
   commenter: 'workspaceSetting.members.projectRole.commenter',
   contributor: 'workspaceSetting.members.projectRole.contributor',
   manager: 'workspaceSetting.members.projectRole.manager',
   viewer: 'workspaceSetting.members.projectRole.viewer',
-};
+} as const satisfies Record<ProjectRole, string>;
 
 interface InviteTeammateContentProps {
   /** Pre-select a project (e.g. invited from inside a project surface). */
@@ -113,7 +114,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
   const workspaceRoleOptions = useMemo(
     () =>
       grantableWorkspaceRoles(capabilities.role).map((value) => ({
-        label: t(WORKSPACE_ROLE_LABEL[value] ?? `workspaceSetting.members.role.${value}`),
+        label: t(WORKSPACE_ROLE_LABEL[value]),
         value,
       })),
     [capabilities.role, t],

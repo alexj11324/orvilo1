@@ -86,7 +86,13 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
         type="warning"
       />
 
-      {isLoading && <SkeletonText active paragraph={{ rows: 3 }} />}
+      {isLoading && (
+        <Flexbox gap={10}>
+          <SkeletonText style={{ marginBottom: 0, width: '70%' }} />
+          <SkeletonText style={{ marginBottom: 0, width: '55%' }} />
+          <SkeletonText style={{ marginBottom: 0, width: '60%' }} />
+        </Flexbox>
+      )}
       {error && <Alert title={t('workspaceSetting.members.previewFailed')} type="error" />}
       {preview && (
         <Flexbox gap={4}>

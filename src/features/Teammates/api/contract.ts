@@ -14,7 +14,7 @@ export type ProjectRole = 'commenter' | 'contributor' | 'manager' | 'viewer';
 export interface WorkspaceMembershipSummary extends WorkspaceItem {
   lockedOut?: boolean;
   plan?: string;
-  role: string | null;
+  role: WorkspaceRole | null;
 }
 
 /** `workspaceMember.list` → membership row joined with the public profile. */
@@ -22,7 +22,7 @@ export interface WorkspaceMemberSummary {
   authzVersion?: number;
   deletedAt?: Date | null;
   joinedAt?: Date | string;
-  role: string;
+  role: WorkspaceRole;
   suspendedAt?: Date | null;
   user: {
     avatar: string | null;
@@ -59,10 +59,10 @@ export interface WorkspaceInvitationSummary {
   lastSentAt?: Date | string | null;
   projects: {
     projectId: string;
-    role: string;
+    role: ProjectRole;
   }[];
-  role: string;
-  status: 'accepted' | 'expired' | 'pending' | 'revoked' | string;
+  role: WorkspaceRole;
+  status: 'accepted' | 'expired' | 'pending' | 'revoked';
 }
 
 /** `workspaceMember.removalPreview` → what removing this member disturbs. */
@@ -80,7 +80,7 @@ export interface RemovalPreview {
 /** `projectMember.list` → project membership row + public profile. */
 export interface ProjectMemberSummary {
   projectId: string;
-  role: string;
+  role: ProjectRole;
   user?: {
     avatar: string | null;
     email: string | null;
@@ -121,5 +121,5 @@ export interface WorkspaceAgentSummary {
     id: string;
     name: string;
   }[];
-  status?: string;
+  status?: 'active' | 'disabled';
 }

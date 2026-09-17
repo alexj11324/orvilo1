@@ -11,6 +11,7 @@ export {
 export * from './selectors';
 export { getCollaborationStoreState, useCollaborationStore } from './store';
 export type {
+  ActivityPhase,
   ClientMessage,
   CollaborationActor,
   CollaborationActorKind,

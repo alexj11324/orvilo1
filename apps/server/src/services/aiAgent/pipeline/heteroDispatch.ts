@@ -1,5 +1,6 @@
 import { LOADING_FLAT } from '@orvilo/const';
 import type { OrviloDatabase } from '@orvilo/database';
+import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
   getNativeHeteroSessionBindingKey,
@@ -8,6 +9,7 @@ import {
   isRemoteHeterogeneousType,
 } from '@orvilo/heterogeneous-agents';
 import type {
+  AgentRunAdmissionState,
   DeviceUnavailableErrorData,
   ErrorType,
   ExecAgentResult,
@@ -47,6 +49,14 @@ import { HeterogeneousAgentService } from '@/server/services/heterogeneousAgent'
 import type { ConversationHistoryEntry } from '@/server/services/heterogeneousAgent/cloudHeteroContext';
 import { buildCloudHeteroContext } from '@/server/services/heterogeneousAgent/cloudHeteroContext';
 import { buildRemoteDeviceHeteroContext } from '@/server/services/heterogeneousAgent/remoteDeviceHeteroContext';
+import {
+  classifyRemoteDispatchFailure,
+  createRemoteRunAdmission,
+  markRemoteRunRunning,
+  readRemoteRunAdmission,
+  type RemoteRunChannel,
+  writeRemoteRunAdmission,
+} from '@/server/services/heterogeneousAgent/runAdmission';
 import type { MarketService } from '@/server/services/market';
 
 import {
@@ -195,13 +205,16 @@ const finalizeHeteroDispatchError = async (
  * op row + its task failed, and closes the UI stream out from under a run that
  * is still producing output.
  *
- * Two cheap reads tell a stranded dispatch apart from a live one:
+ * Three cheap reads tell a stranded dispatch apart from a live one:
  *
  * 1. `agent_operations.status` — anything other than `running` means the run
  *    reached `heteroFinish` (or a park) on its own. Nothing left to finalize.
  * 2. `topics.metadata.heteroCurrentMsgId` — the ingest path repoints this at
  *    every assistant turn it persists, scoped by `operationId`. It naming THIS
  *    operation is proof the sandbox is alive and writing.
+ * 3. `agent_operations.metadata.remoteAdmission.state === 'running'` — the
+ *    same evidence as (2) for notify-based remote agents that never repoint
+ *    `heteroCurrentMsgId`.
  *
  * When neither fires the sandbox really never came up and the caller finalizes
  * as before. A run that passes this probe and then dies is not stranded: the
@@ -238,6 +251,19 @@ const hasHeteroRunStarted = async (
       return true;
     }
 
+    // The admission ledger is the third probe: a producer batch already flipped
+    // it to `running` (see markRemoteRunRunning in heteroIngest), which is the
+    // same evidence as heteroCurrentMsgId for notify-based remote agents that
+    // never write that pointer.
+    const admission = readRemoteRunAdmission(operation?.metadata);
+    if (admission?.state === 'running') {
+      log(
+        'hasHeteroRunStarted: op=%s admission already running — skipping spawn-failure finalize',
+        operationId,
+      );
+      return true;
+    }
+
     return false;
   } catch (err) {
     // A probe that cannot read must not swallow a real spawn failure: fall
@@ -249,6 +275,104 @@ const hasHeteroRunStarted = async (
     );
     return false;
   }
+};
+
+/**
+ * Mint the admission record for a remote dispatch BEFORE the gateway call so
+ * a crash mid-dispatch still leaves a durable `pending` intent. Idempotent:
+ * the same operationId can only ever create one record.
+ *
+ * Ledger fields pin the contract identities: `idempotencyKey` is the
+ * operationId (which is also the task id the device dedupes on), `generation`
+ * is the run fence (1 for the first admission of an operation), and the
+ * device triple records the exact execution host so cancel/status always
+ * address the same device — never a substitute.
+ */
+const writeDispatchAdmission = async (
+  deps: HeteroDispatchDeps,
+  params: {
+    channel: RemoteRunChannel;
+    deviceId?: string;
+    deviceUserId?: string;
+    deviceWorkspaceId?: string;
+    operationId: string;
+  },
+): Promise<void> => {
+  try {
+    await createRemoteRunAdmission(deps.db, params.operationId, {
+      channel: params.channel,
+      deviceId: params.deviceId,
+      deviceUserId: params.deviceUserId,
+      deviceWorkspaceId: params.deviceWorkspaceId,
+      generation: 1,
+      idempotencyKey: params.operationId,
+    });
+  } catch (err) {
+    // The admission write is the audit trail, not the dispatch gate — the
+    // operation row (recordStart) is already the durable intent, so a ledger
+    // hiccup must not block an otherwise healthy dispatch.
+    log('writeDispatchAdmission failed op=%s (non-fatal): %O', params.operationId, err);
+  }
+};
+
+/**
+ * Settle the admission ledger after a remote dispatch call and classify what
+ * the caller may do next:
+ *
+ * - `'acknowledged'` — the gateway/host accepted the run, or the failure was
+ *   ambiguous but the liveness probe proves it is already producing events.
+ *   The caller continues to the normal `autoStarted` success return.
+ * - `'terminal'` — a definite refusal (offline device, rejected request,
+ *   unauthorized): nothing ran. The caller finalizes through
+ *   `finalizeHeteroDispatchError` exactly as before.
+ * - `'unknown'` — the ack was lost and no sign of life: the operation row,
+ *   topic marker and stream stay OPEN so a device that is in fact running can
+ *   still deliver its events; the caller returns `success:false` +
+ *   `error:'OUTCOME_UNKNOWN'` instead of a fabricated failure. This is the
+ *   P20 fix for the zombie-run hazard: the old code finalized every dispatch
+ *   failure, which could leave a live device writing into a settled marker.
+ */
+const settleRemoteDispatchOutcome = async (
+  deps: HeteroDispatchDeps,
+  params: {
+    error?: string;
+    errorCode?: string;
+    operationId: string;
+    success: boolean;
+    topicId: string;
+  },
+): Promise<{
+  admissionState: AgentRunAdmissionState;
+  outcome: 'acknowledged' | 'terminal' | 'unknown';
+}> => {
+  const { errorCode, operationId, topicId } = params;
+
+  if (params.success) {
+    await writeRemoteRunAdmission(deps.db, operationId, { state: 'acknowledged' }).catch((err) =>
+      log('remoteAdmission acknowledged write failed op=%s: %O', operationId, err),
+    );
+    return { admissionState: 'acknowledged', outcome: 'acknowledged' };
+  }
+
+  // No transport code means the device produced an authoritative answer
+  // (explicit rejection / tool failure) — definite, not ambiguous.
+  const admissionState = errorCode ? classifyRemoteDispatchFailure(errorCode) : 'rejected';
+  await writeRemoteRunAdmission(deps.db, operationId, {
+    errorCode: errorCode ?? params.error,
+    reason: params.error,
+    state: admissionState,
+  }).catch((err) => log('remoteAdmission failure write failed op=%s: %O', operationId, err));
+
+  if (admissionState !== 'unknown') return { admissionState, outcome: 'terminal' };
+
+  if (await hasHeteroRunStarted(deps, { operationId, topicId })) {
+    await markRemoteRunRunning(deps.db, operationId).catch((err) =>
+      log('remoteAdmission running write failed op=%s: %O', operationId, err),
+    );
+    return { admissionState: 'running', outcome: 'acknowledged' };
+  }
+
+  return { admissionState: 'unknown', outcome: 'unknown' };
 };
 
 export interface HeteroDispatchInput {
@@ -801,10 +925,23 @@ export const dispatchHeteroAgent = async (
       remoteDeviceId,
       remoteDeviceWorkspaceId,
     );
+
+    // Durable admission BEFORE the dispatch: the record survives a crash or a
+    // lost ack, carries the idempotency key (operationId = the device-side
+    // taskId) and the exact execution-host binding for later cancel/status.
+    await writeDispatchAdmission(deps, {
+      channel: 'tool_call',
+      deviceId: remoteDeviceId,
+      deviceUserId: remoteDeviceUserId,
+      deviceWorkspaceId: remoteDeviceWorkspaceId,
+      operationId,
+    });
+
     const result = authorizationError
       ? {
           content: 'The workspace device is no longer registered or visible for this run.',
           error: 'DEVICE_NOT_FOUND',
+          errorCode: DeviceTransportErrorCode.DeviceNotFound,
           errorData: authorizationError,
           success: false,
         }
@@ -820,10 +957,12 @@ export const dispatchHeteroAgent = async (
               agentId: resolvedAgentId,
               agentType: heteroType,
               cwd: undefined,
+              idempotencyKey: operationId,
               operationId,
               parentOperationId: topicStartOwnerOperationId,
               platformAgentId: agentConfig.agencyConfig?.heterogeneousProvider?.platformAgentId,
               prompt,
+              runGeneration: 1,
               taskId: operationId,
               topicId,
               // Scope notify callbacks to the same workspace as the dispatched
@@ -836,7 +975,43 @@ export const dispatchHeteroAgent = async (
           },
           120_000, // hetero tasks can take longer than the default 30 s
         );
-    if (!result.success) {
+    const dispatchOutcome = await settleRemoteDispatchOutcome(deps, {
+      error: result.error,
+      errorCode: result.errorCode,
+      operationId,
+      success: result.success,
+      topicId,
+    });
+    if (dispatchOutcome.outcome === 'unknown') {
+      // Ambiguous ack: the request may have reached the device — a 120 s tool
+      // timeout does NOT prove the task never launched, and the notify
+      // callbacks would still arrive. Keep the operation row, topic marker and
+      // stream open so they can land; report the contract outcome instead of
+      // a fabricated failure. The watchdog reaps a truly dead admission.
+      log(
+        'execAgent: remote hetero dispatch outcome unknown (device may be running) op=%s error=%s',
+        operationId,
+        result.error,
+      );
+      return {
+        agentId: resolvedAgentId,
+        assistantMessageId,
+        autoStarted: false,
+        createdAt: new Date().toISOString(),
+        error: 'OUTCOME_UNKNOWN',
+        errorData: result.errorData,
+        message:
+          'Could not confirm the device accepted the run; it may still be executing. Do not retry the same operation.',
+        operationId,
+        remoteAdmission: 'unknown',
+        status: 'error',
+        success: false,
+        timestamp: new Date().toISOString(),
+        topicId,
+        userMessageId: userMessageId ?? parentMessageId ?? '',
+      };
+    }
+    if (dispatchOutcome.outcome === 'terminal') {
       log('execAgent: remote hetero dispatch failed: %s', result.error);
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
@@ -857,6 +1032,7 @@ export const dispatchHeteroAgent = async (
         errorData: result.errorData,
         message: 'Remote hetero agent dispatch failed',
         operationId,
+        remoteAdmission: dispatchOutcome.admissionState,
         status: 'error',
         success: false,
         timestamp: new Date().toISOString(),
@@ -997,14 +1173,34 @@ export const dispatchHeteroAgent = async (
         dispatchDeviceId,
         dispatchWorkspaceId,
       );
+
+      // Durable admission BEFORE the gateway call — see writeDispatchAdmission.
+      await writeDispatchAdmission(deps, {
+        channel: 'agent_run_request',
+        deviceId: dispatchDeviceId,
+        deviceUserId: deps.userId,
+        deviceWorkspaceId: dispatchWorkspaceId,
+        operationId,
+      });
+
       const result = authorizationError
-        ? { error: 'DEVICE_NOT_FOUND', errorData: authorizationError, success: false }
+        ? {
+            error: 'DEVICE_NOT_FOUND',
+            errorCode: DeviceTransportErrorCode.DeviceNotFound,
+            errorData: authorizationError,
+            success: false,
+          }
         : await deviceGateway.dispatchAgentRun({
             ...heteroParams,
             args: heteroExecArgs,
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
+            // The device dedupes agent_run_request on this key (= the task id
+            // it already tracks for cancelHeteroTask), so a gateway retry can
+            // never spawn a duplicate execution of this operation.
+            idempotencyKey: operationId,
             resumeFallbackSystemContext: deviceResumeFallbackSystemContext,
+            runGeneration: 1,
             systemContext: deviceSystemContext,
             // Route to the workspace pool when this is a workspace device; the
             // operation JWT stays member-scoped (the run belongs to the member).
@@ -1014,7 +1210,39 @@ export const dispatchHeteroAgent = async (
             // device still has to write back under `deps.workspaceId`.
             ingestWorkspaceId: deps.workspaceId,
           });
-      if (!result.success) {
+      const dispatchOutcome = await settleRemoteDispatchOutcome(deps, {
+        error: result.error,
+        errorCode: result.errorCode,
+        operationId,
+        success: result.success,
+        topicId,
+      });
+      if (dispatchOutcome.outcome === 'unknown') {
+        // Ambiguous ack — keep the run open; see the remote-hetero branch above.
+        log(
+          'execAgent: hetero device dispatch outcome unknown (device may be running) op=%s error=%s',
+          operationId,
+          result.error,
+        );
+        return {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          autoStarted: false,
+          createdAt: new Date().toISOString(),
+          error: 'OUTCOME_UNKNOWN',
+          errorData: result.errorData,
+          message:
+            'Could not confirm the device accepted the run; it may still be executing. Do not retry the same operation.',
+          operationId,
+          remoteAdmission: 'unknown',
+          status: 'error',
+          success: false,
+          timestamp: new Date().toISOString(),
+          topicId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        };
+      }
+      if (dispatchOutcome.outcome === 'terminal') {
         log('execAgent: hetero device dispatch failed: %s', result.error);
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,
@@ -1035,6 +1263,7 @@ export const dispatchHeteroAgent = async (
           errorData: result.errorData,
           message: 'Hetero agent device dispatch failed',
           operationId,
+          remoteAdmission: dispatchOutcome.admissionState,
           status: 'error',
           success: false,
           timestamp: new Date().toISOString(),
@@ -1107,6 +1336,9 @@ export const dispatchHeteroAgent = async (
       // ownership-gated on heteroIngest/heteroFinish) with a run-length TTL
       // so it outlives a multi-hour run.
       const sandboxJwt = await signUserJWT(deps.userId, '4h');
+      // Durable admission BEFORE the spawn — the sandbox is the execution host
+      // for this channel; `deviceId` stays absent by design.
+      await writeDispatchAdmission(deps, { channel: 'cloud_sandbox', operationId });
       spawnHeteroSandbox({
         ...heteroParams,
         agentType: heteroCliAgentType as 'claude-code' | 'codex',
@@ -1125,7 +1357,18 @@ export const dispatchHeteroAgent = async (
         // call is the only dispatch failure that can land AFTER the agent
         // started, so a rejection here is not by itself evidence that nothing
         // ran — see `hasHeteroRunStarted`.
-        if (await hasHeteroRunStarted(deps, { operationId, topicId })) return;
+        if (await hasHeteroRunStarted(deps, { operationId, topicId })) {
+          await markRemoteRunRunning(deps.db, operationId).catch(() => undefined);
+          return;
+        }
+
+        // The spawn ack is ambiguous (a gateway 504 can arrive after the
+        // sandbox booted): record `unknown` so the ledger stays honest even
+        // though the run is finalized as failed below.
+        await writeRemoteRunAdmission(deps.db, operationId, {
+          reason: err instanceof Error ? err.message : String(err),
+          state: 'unknown',
+        }).catch(() => undefined);
 
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,

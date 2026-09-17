@@ -26,6 +26,12 @@ import {
   StaleHeteroOperationError,
 } from './HeterogeneousPersistenceHandler';
 import { HeteroTraceRecorder } from './HeteroTraceRecorder';
+import {
+  markRemoteRunRunning,
+  patchRemoteRunAdmission,
+  remoteRunGenerationMatches,
+  resolveRemoteCancel,
+} from './runAdmission';
 
 const log = debug('orvilo-server:hetero-agent-service');
 
@@ -41,6 +47,11 @@ export interface HeterogeneousIngestParams {
   assistantMessageId?: string;
   events: AgentStreamEvent[];
   operationId: string;
+  /**
+   * Run generation the producer was admitted under (P20 fence). Producers that
+   * omit it are grandfathered; a mismatch drops the batch as a stale writer.
+   */
+  runGeneration?: number;
   topicId: string;
 }
 
@@ -60,6 +71,11 @@ export interface HeterogeneousFinishParams {
   result: HeterogeneousFinishResult;
   /** True only when the producer proved the requested native session unusable. */
   resumeSessionInvalidated?: boolean;
+  /**
+   * Run generation the producer was admitted under (P20 fence). A mismatch
+   * drops the terminal callback — the admitted generation owns the lifecycle.
+   */
+  runGeneration?: number;
   /**
    * Native CLI session id (e.g. CC's per-cwd session). Used in phase 2c to
    * persist on `topic.metadata` so a subsequent `lh hetero exec` run can
@@ -143,11 +159,7 @@ export class HeterogeneousAgentService {
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(
-    db: OrviloDatabase,
-    userId: string,
-    options: HeterogeneousAgentServiceOptions = {},
-  ) {
+  constructor(db: OrviloDatabase, userId: string, options: HeterogeneousAgentServiceOptions = {}) {
     this.db = db;
     this.userId = userId;
     const workspaceId = options.workspaceId;
@@ -172,7 +184,7 @@ export class HeterogeneousAgentService {
   }
 
   async heteroIngest(params: HeterogeneousIngestParams): Promise<void> {
-    const { agentType, assistantMessageId, events, operationId, topicId } = params;
+    const { agentType, assistantMessageId, events, operationId, runGeneration, topicId } = params;
 
     log(
       'heteroIngest: user=%s topic=%s op=%s type=%s count=%d',
@@ -182,6 +194,14 @@ export class HeterogeneousAgentService {
       agentType,
       events.length,
     );
+
+    // Generation fence (P20): a producer asserting a generation that differs
+    // from the admitted one is a stale writer — drop the batch without
+    // refreshing the lease. Callers that omit the field are grandfathered.
+    if (!(await remoteRunGenerationMatches(this.db, operationId, runGeneration))) {
+      log('heteroIngest: drop stale-generation batch op=%s gen=%s', operationId, runGeneration);
+      return;
+    }
 
     const leaseRefreshed = await this.agentOperationModel.touchRunning(operationId);
     if (!leaseRefreshed) {
@@ -215,6 +235,14 @@ export class HeterogeneousAgentService {
       }
       throw err;
     }
+
+    // The producer demonstrably reached the execution host — flip the durable
+    // admission ledger to `running` (pending/acknowledged/unknown only; the
+    // guarded write is a no-op once latched). Best-effort: a ledger hiccup
+    // must not break event delivery.
+    await markRemoteRunRunning(this.db, operationId).catch((err) =>
+      log('heteroIngest: admission running write failed op=%s: %O', operationId, err),
+    );
 
     // Publish only events not yet delivered to the stream. The publish gate
     // (`publishedKeys`, peer of the persistence dedupe) makes a BatchIngester
@@ -262,6 +290,7 @@ export class HeterogeneousAgentService {
       operationId,
       result,
       resumeSessionInvalidated,
+      runGeneration,
       sessionId,
       topicId,
     } = params;
@@ -276,6 +305,35 @@ export class HeterogeneousAgentService {
       result,
       sessionId ?? '<none>',
     );
+
+    // Generation fence (P20): a terminal callback from a fenced (older)
+    // generation must not settle the operation — the admitted generation owns
+    // the lifecycle. Callers that omit the field are grandfathered.
+    if (!(await remoteRunGenerationMatches(this.db, operationId, runGeneration))) {
+      log(
+        'heteroFinish: drop stale-generation finish op=%s gen=%s result=%s',
+        operationId,
+        runGeneration,
+        result,
+      );
+      return;
+    }
+
+    // A terminal signal proves the host process stopped — resolve a pending
+    // remote cancel to `confirmed` (first resolution wins; a `requested`
+    // record without one stays `requested` until the watchdog settles it).
+    // Also persist the host's native session id on the admission record so
+    // the run's ACP/CLI session identity is visible next to the operation id.
+    await Promise.all([
+      resolveRemoteCancel(this.db, operationId, 'confirmed', `host reported ${result}`).catch(
+        (err) => log('heteroFinish: cancel resolve failed op=%s: %O', operationId, err),
+      ),
+      sessionId
+        ? patchRemoteRunAdmission(this.db, operationId, { acpSessionId: sessionId }).catch((err) =>
+            log('heteroFinish: acpSessionId write failed op=%s: %O', operationId, err),
+          )
+        : Promise.resolve(),
+    ]);
 
     if (error?.body?.code === 'auth_required') {
       log(

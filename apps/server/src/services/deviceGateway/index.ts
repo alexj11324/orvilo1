@@ -7,6 +7,7 @@ import {
   type DeviceStatusResult,
   type DeviceSystemInfo,
   type DeviceToolCallResult,
+  type DeviceTransportErrorCode,
   GatewayHttpClient,
   type GatewayMcpParams,
 } from '@orvilo/device-gateway-client';
@@ -1604,6 +1605,8 @@ export class DeviceGateway {
     args?: string[];
     cwd?: string;
     deviceId?: string;
+    /** Admission idempotency key (always the operationId), relayed to the device. */
+    idempotencyKey?: string;
     /** Image attachments forwarded to the device as fetchable (signed) URLs. */
     imageList?: Array<{ id?: string; url: string }>;
     jwt: string;
@@ -1611,22 +1614,39 @@ export class DeviceGateway {
     prompt: string;
     resumeFallbackSystemContext?: string;
     resumeSessionId?: string;
+    /** Run generation/fence minted at admission, relayed to the device. */
+    runGeneration?: number;
     systemContext?: string;
     topicId: string;
     userId: string;
     workspaceId?: string;
     /** Topic/run workspace forwarded to the device for hetero ingest. */
     ingestWorkspaceId?: string;
-  }): Promise<{ error?: string; errorData?: DeviceUnavailableErrorData; success: boolean }> {
+  }): Promise<{
+    error?: string;
+    errorCode?: DeviceTransportErrorCode | 'GATEWAY_NOT_CONFIGURED';
+    errorData?: DeviceUnavailableErrorData;
+    success: boolean;
+  }> {
     const client = this.getClient();
-    if (!client) return { error: 'GATEWAY_NOT_CONFIGURED', success: false };
+    if (!client) {
+      return {
+        error: 'GATEWAY_NOT_CONFIGURED',
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
+        success: false,
+      };
+    }
 
     try {
       return await client.dispatchAgentRun(params);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       log('dispatchAgentRun: error — %s', message);
-      return { error: message, success: false };
+      // Backstop for anything the http client did not already describe — the
+      // failure code decides whether the admission ledger records a definite
+      // rejection or an ambiguous (`unknown`) outcome.
+      const failure = describeGatewayRequestFailure(error, 'agent run');
+      return { error: failure.error, errorCode: failure.code, success: false };
     }
   }
 
@@ -1640,6 +1660,7 @@ export class DeviceGateway {
       return {
         content: 'Device Gateway is not configured',
         error: 'GATEWAY_NOT_CONFIGURED',
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
         success: false,
       };
     }
@@ -1671,7 +1692,12 @@ export class DeviceGateway {
       // `TimeoutError` / driver message here reads to the model as if the tool
       // itself blew up; name the failing hop and its recovery instead.
       const failure = describeGatewayRequestFailure(error, 'tool call');
-      return { content: failure.content, error: failure.error, success: false };
+      return {
+        content: failure.content,
+        error: failure.error,
+        errorCode: failure.code,
+        success: false,
+      };
     }
   }
 
@@ -1698,6 +1724,7 @@ export class DeviceGateway {
       return {
         content: 'Device Gateway is not configured',
         error: 'GATEWAY_NOT_CONFIGURED',
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
         success: false,
       };
     }
@@ -1730,6 +1757,7 @@ export class DeviceGateway {
       return {
         content: 'Device Gateway is not configured',
         error: 'GATEWAY_NOT_CONFIGURED',
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
         success: false,
       };
     }
@@ -1755,7 +1783,13 @@ export class DeviceGateway {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       log('executeMessageApi: error — %s', message);
-      return { content: `Device message API error: ${message}`, error: message, success: false };
+      const failure = describeGatewayRequestFailure(error, 'message API call');
+      return {
+        content: failure.content,
+        error: failure.error,
+        errorCode: failure.code,
+        success: false,
+      };
     }
   }
 

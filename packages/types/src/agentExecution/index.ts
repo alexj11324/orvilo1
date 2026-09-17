@@ -1,3 +1,4 @@
+import type { AgentRunAdmissionState } from '../agent/acpExecution';
 import type { OrviloAgentChatConfig } from '../agent/chatConfig';
 import type { CreateThreadWithMessageParams } from '../aiChat';
 import type { DeviceUnavailableErrorData, WorkingDirConfig } from '../device';
@@ -335,6 +336,14 @@ export interface ExecAgentResult {
   messageId?: string;
   /** Operation ID for SSE connection */
   operationId: string;
+  /**
+   * Remote-run admission state when this run was dispatched to a device or
+   * sandbox execution host (see `agent_operations.metadata.remoteAdmission`).
+   * `'unknown'` means the dispatch acknowledgement was lost — the run may
+   * still be executing and must not be blindly retried (`OUTCOME_UNKNOWN`).
+   * Absent for in-process (non-remote) runs.
+   */
+  remoteAdmission?: AgentRunAdmissionState;
   /** Operation status */
   status: string;
   /** Whether the operation was created successfully */

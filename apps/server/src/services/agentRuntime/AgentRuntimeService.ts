@@ -54,15 +54,15 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { type OrviloDatabase } from '@/database/type';
 import { appEnv } from '@/envs/app';
-import { type AgentRuntimeCoordinatorOptions } from '@/server/modules/AgentRuntime';
-import { AgentRuntimeCoordinator, createStreamEventManager } from '@/server/modules/AgentRuntime';
 import { formatErrorForState } from '@/server/modules/AgentExecution/formatErrorForState';
 import { hasNonPersistedMessage } from '@/server/modules/AgentExecution/messagePersistence';
+import { type IStreamEventManager } from '@/server/modules/AgentExecution/types';
+import { type AgentRuntimeCoordinatorOptions } from '@/server/modules/AgentRuntime';
+import { AgentRuntimeCoordinator, createStreamEventManager } from '@/server/modules/AgentRuntime';
 import {
   createRuntimeExecutors,
   type RuntimeExecutorContext,
 } from '@/server/modules/AgentRuntime/RuntimeExecutors';
-import { type IStreamEventManager } from '@/server/modules/AgentExecution/types';
 import { emitAgentSignalSourceEvent } from '@/server/services/agentSignal';
 import { toAgentSignalTraceEvents } from '@/server/services/agentSignal/observability/traceEvents';
 import { FileService } from '@/server/services/file';
@@ -84,11 +84,12 @@ import {
   isSuccessLikeCompletionReason,
   normalizeCompletionMessages,
 } from '../agentExecution/CompletionLifecycle';
-import { logToolCallPc } from './formalObservation';
 import { type AgentHook, hookDispatcher } from '../agentExecution/hooks';
+import { createDefaultSnapshotStore } from '../agentExecution/snapshotStore';
+import { loadRemoteExecutionStatus } from '../heterogeneousAgent/runAdmission';
+import { logToolCallPc } from './formalObservation';
 import { HumanInterventionHandler } from './HumanInterventionHandler';
 import { OperationTraceRecorder } from './OperationTraceRecorder';
-import { createDefaultSnapshotStore } from '../agentExecution/snapshotStore';
 import { buildStepPresentation, formatTokenCount } from './stepPresentation';
 import {
   type AgentExecutionParams,
@@ -2575,16 +2576,53 @@ export class AgentRuntimeService {
     try {
       log('Getting operation status for %s', operationId);
 
-      // Get current state and metadata
-      const [currentState, operationMetadata] = await Promise.all([
+      // Get current state and metadata. The remote-execution ledger is
+      // durable (Postgres), so it is read alongside the Redis snapshot —
+      // a remote run keeps a status surface even after its runtime state
+      // expired.
+      const [currentState, operationMetadata, remoteExecution] = await Promise.all([
         this.coordinator.loadAgentState(operationId),
         this.coordinator.getOperationMetadata(operationId),
+        loadRemoteExecutionStatus(this.serverDB, this.streamManager, operationId).catch((error) => {
+          log('Failed to load remote execution status for %s: %O', operationId, error);
+          return undefined;
+        }),
       ]);
 
-      // Operation may have expired or does not exist, return null
+      // Operation may have expired or does not exist, return null — unless a
+      // remote-admitted run is still in flight. Its device writes through
+      // ingest/finish callbacks, not the local runtime, so the Redis snapshot
+      // can expire while the host keeps working; the durable admission ledger
+      // is the remaining source of truth a reconnect polls.
       if (!currentState || !operationMetadata) {
-        log('Operation %s not found (may have expired)', operationId);
-        return null;
+        if (!remoteExecution) {
+          log('Operation %s not found (may have expired)', operationId);
+          return null;
+        }
+
+        const remoteActive = !['offline', 'rejected'].includes(remoteExecution.admission.state);
+
+        return {
+          currentState: {
+            lastModified: remoteExecution.admission.updatedAt,
+            status: remoteActive ? 'running' : 'error',
+            stepCount: 0,
+          },
+          hasError: !remoteActive,
+          isActive: remoteActive,
+          isCompleted: false,
+          metadata: {},
+          needsHumanInput: false,
+          operationId,
+          remoteExecution,
+          stats: {
+            lastActiveTime: 0,
+            totalCost: 0,
+            totalMessages: 0,
+            totalSteps: 0,
+            uptime: 0,
+          },
+        };
       }
 
       // Get execution history (if needed)
@@ -2645,6 +2683,7 @@ export class AgentRuntimeService {
         needsHumanInput: currentState.status === 'waiting_for_human',
         operationId,
         recentEvents: recentEvents?.slice(0, 10),
+        remoteExecution,
         stats,
       };
     } catch (error) {

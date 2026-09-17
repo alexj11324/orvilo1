@@ -28,9 +28,7 @@ import type {
  * agents (local CLI/desktop or remote platform). Builtin managed engines
  * (e.g. 'orvilo') have no binary to pin and are excluded by construction.
  */
-export type AcpInstallableAgentType =
-  | LocalHeterogeneousAgentType
-  | RemoteHeterogeneousAgentType;
+export type AcpInstallableAgentType = LocalHeterogeneousAgentType | RemoteHeterogeneousAgentType;
 
 /** The only execution protocol at the Orvilo → external-Agent boundary. */
 export type AgentExecutionProtocol = 'acp';
@@ -93,11 +91,27 @@ export interface AgentRunIdentity {
   operationId: string;
   /** Run generation/fence for stale-writer detection. */
   runGeneration?: number;
-  /** Task this run serves, when any (free chat runs have none). */
-  taskId?: string;
   /** Device that owns execution; the workspace root lives there. */
   targetDeviceId?: string;
+  /** Task this run serves, when any (free chat runs have none). */
+  taskId?: string;
 }
+
+/**
+ * Admission state of a remote run — where in the admit pipeline it stands,
+ * recorded durably on the operation row before the dispatch is attempted.
+ *
+ * `pending`      — admission intent persisted; no dispatch outcome yet.
+ * `acknowledged` — the gateway/host accepted the run for the target device.
+ * `running`      — the execution host produced its first event/callback.
+ * `rejected`     — explicitly refused (malformed, unauthorized, declined).
+ * `offline`      — the target device was unreachable for delivery; nothing ran.
+ * `unknown`      — the ack was lost (timeout / mid-request transport failure):
+ *                  the run may still be executing; treat as `OUTCOME_UNKNOWN`
+ *                  until the host reports or the watchdog abandons it.
+ */
+export type AgentRunAdmissionState =
+  'acknowledged' | 'offline' | 'pending' | 'rejected' | 'running' | 'unknown';
 
 /**
  * Cancellation state of a run — three-way, never collapsed to a boolean.
@@ -163,4 +177,68 @@ export interface AgentExecutionError {
   code: AgentExecutionErrorCode;
   /** Non-secret diagnostic detail; never carries credentials or prompts. */
   message?: string;
+}
+
+/**
+ * Dispatch transport an admission was sent over. `agent_run_request` is the
+ * device CLI path; `tool_call` is the platform-agent path (`runHeteroTask`
+ * for openclaw / hermes); `cloud_sandbox` is the managed sandbox spawn.
+ */
+export type RemoteRunChannel = 'agent_run_request' | 'cloud_sandbox' | 'tool_call';
+
+/**
+ * Durable admission record for a remotely-executed run (P20). Persisted on
+ * `agent_operations.metadata.remoteAdmission` BEFORE the dispatch is
+ * attempted, then driven through guarded transitions. This is the wire
+ * surface of the server's admission ledger — clients and status endpoints
+ * read it verbatim.
+ */
+export interface AgentRunAdmissionRecord {
+  /**
+   * Native session id reported by the execution host (the CLI session, or
+   * the future ACP session id). Distinct from `operationId`.
+   */
+  acpSessionId?: string;
+  channel: RemoteRunChannel;
+  /** Device that executes — the resolved target, never inferred later. */
+  deviceId?: string;
+  /** Identity the run executes under on the device (owner vs. member). */
+  deviceUserId?: string;
+  /** Device pool the dispatch was routed through (workspace vs. personal). */
+  deviceWorkspaceId?: string;
+  /** Transport error code when `state` is `rejected` / `offline` / `unknown`. */
+  errorCode?: string;
+  /** Run generation/fence minted at admission; a re-admission bumps it. */
+  generation: number;
+  /**
+   * Admission idempotency key — always the operationId, which is also the
+   * task id the device dedupes dispatch/cancel on.
+   */
+  idempotencyKey: string;
+  reason?: string;
+  state: AgentRunAdmissionState;
+  updatedAt: string;
+}
+
+/**
+ * Durable cancellation record for a remote-admitted run (P20). Persisted on
+ * `agent_operations.metadata.remoteCancel`; absence of the record means no
+ * cancel was ever dispatched (`none` is never written).
+ */
+export interface AgentRunCancelRecord {
+  reason?: string;
+  requestedAt: string;
+  resolvedAt?: string;
+  state: Exclude<AgentRunCancelState, 'none'>;
+}
+
+/**
+ * Remote-execution status surface for a run — the durable admission + cancel
+ * ledger plus the stream tail cursor a reconnect would resume from.
+ */
+export interface RemoteExecutionStatus {
+  admission: AgentRunAdmissionRecord;
+  cancel?: AgentRunCancelRecord;
+  /** Tail of the op's event stream — the resume cursor for a reconnect. */
+  eventCursor?: string;
 }

@@ -312,6 +312,7 @@ describe('DeviceGateway', () => {
       expect(result).toEqual({
         content: 'Device Gateway is not configured',
         error: 'GATEWAY_NOT_CONFIGURED',
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
         success: false,
       });
     });
@@ -400,6 +401,7 @@ describe('DeviceGateway', () => {
       expect(result).toEqual({
         content: 'Device Gateway is not configured',
         error: 'GATEWAY_NOT_CONFIGURED',
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
         success: false,
       });
     });
@@ -454,6 +456,7 @@ describe('DeviceGateway', () => {
       expect(result).toEqual({
         content: 'Device Gateway is not configured',
         error: 'GATEWAY_NOT_CONFIGURED',
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
         success: false,
       });
     });
@@ -496,11 +499,13 @@ describe('DeviceGateway', () => {
       const proxy = new DeviceGateway();
       const result = await proxy.executeMessageApi(params, api);
 
-      expect(result).toEqual({
-        content: 'Device message API error: connection refused',
-        error: 'connection refused',
-        success: false,
-      });
+      // Same described-hop treatment as executeToolCall: the failure names the
+      // transport leg and carries the normalized code instead of the raw
+      // driver message.
+      expect(result.success).toBe(false);
+      expect(result.errorCode).toBe('DEVICE_GATEWAY_UNREACHABLE');
+      expect(result.content).toContain('Could not reach the device gateway');
+      expect(result.error).toBe('DEVICE_GATEWAY_UNREACHABLE: connection refused');
     });
   });
 

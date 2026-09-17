@@ -1,9 +1,12 @@
 import type {
   ProjectCompletionDecision,
+  ProjectMigrationClass,
   ProjectOrchestrationPolicy,
   ProjectStatus,
   ProjectVisibility,
   ProjectWorkingDirectoryPermission,
+  TaskCreationSubjectKind,
+  TaskCreationSubjectSnapshot,
 } from '@orvilo/types';
 import { sql } from 'drizzle-orm';
 import {
@@ -54,10 +57,29 @@ export const projects = pgTable(
 
     status: text('status').$type<ProjectStatus>().notNull().default('backlog'),
 
-    userId: text('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
-      .notNull(),
+    /**
+     * Owning user. Nullable (linear-workspace-v3): when the owner account is
+     * removed, workspace-owned projects survive with `user_id = NULL` instead
+     * of being cascaded away; personal rows (workspace_id IS NULL) become
+     * ownerless and invisible — equivalent to deletion for every reader.
+     */
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+    /** Managed creation audit — same pattern as tasks/teams. */
+    createdBySubjectKind: text('created_by_subject_kind')
+      .$type<TaskCreationSubjectKind>()
+      .notNull()
+      .default('user'),
+    createdBySubjectId: text('created_by_subject_id'),
+    createdBySnapshot: jsonb('created_by_snapshot').$type<TaskCreationSubjectSnapshot>(),
+    /**
+     * Migration-review marker for pre-existing projects — records how a legacy
+     * project is treated while delivery semantics roll out. Not user-facing.
+     */
+    migrationClass: text('migration_class')
+      .$type<ProjectMigrationClass>()
+      .notNull()
+      .default('undetermined'),
     visibility: text('visibility').$type<ProjectVisibility>().notNull().default('public'),
     orchestrationPolicy: jsonb('orchestration_policy')
       .$type<ProjectOrchestrationPolicy>()

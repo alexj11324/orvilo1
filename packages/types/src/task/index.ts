@@ -16,7 +16,8 @@ export type TaskWorkflowCategory =
 
 export type TaskAssignmentMode = 'manual' | 'rules' | 'orchestrated';
 
-export type TaskOrchestrationOwner = 'manual' | `goal:${string}` | `project:${string}`;
+export type TaskOrchestrationOwner =
+  'manual' | `goal:${string}` | `project:${string}` | `team:${string}`;
 
 export type TaskCreationSubjectKind = 'agent' | 'integration' | 'system' | 'user';
 
@@ -534,6 +535,8 @@ export interface TaskItem {
   createdBySubjectKind: TaskCreationSubjectKind;
   createdByUserId: string | null;
   currentTopicId: string | null;
+  /** Team-scoped cycle association (local `team_cycles` row), when set. */
+  cycleRefId: string | null;
   deletedAt?: Date | null;
   description: string | null;
   domainRevision: number;
@@ -582,6 +585,12 @@ export interface TaskItem {
   status: string;
   /** Lightweight recursive descendant progress attached by task list reads. */
   subtaskProgress?: TaskSubtaskProgress;
+  /**
+   * Owning team (shared mode). Every shared-mode task resolves to exactly one
+   * team — explicit assignment or the workspace default. Personal-mode tasks
+   * keep `null`.
+   */
+  teamId: string | null;
   totalRunCost?: number | null;
   totalRunDuration?: number | null;
   totalTopics: number | null;
@@ -592,7 +601,10 @@ export interface TaskItem {
   visibility: 'private' | 'public';
   workflowCategory: TaskWorkflowCategory;
   workflowLocked: boolean;
+  /** External provider state identity (Linear state UUID) — kept verbatim. */
   workflowStateId: string | null;
+  /** Local `team_workflow_states` row; the canonical internal state pointer. */
+  workflowStateRefId: string | null;
   workspaceId: string | null;
 }
 
@@ -634,6 +646,7 @@ export interface NewTask {
   createdBySubjectKind?: TaskCreationSubjectKind;
   createdByUserId?: string | null;
   currentTopicId?: string | null;
+  cycleRefId?: string | null;
   deletedAt?: Date | null;
   description?: string | null;
   domainRevision?: number;
@@ -666,12 +679,14 @@ export interface NewTask {
   sortOrder?: number | null;
   startedAt?: Date | null;
   status?: string;
+  teamId?: string | null;
   totalTopics?: number | null;
   updatedAt?: Date;
   visibility?: 'private' | 'public';
   workflowCategory?: TaskWorkflowCategory;
   workflowLocked?: boolean;
   workflowStateId?: string | null;
+  workflowStateRefId?: string | null;
   workspaceId?: string | null;
 }
 
@@ -917,6 +932,8 @@ export interface TaskDetailData {
   startedAt?: string;
   status: string;
   subtasks?: TaskDetailSubtask[];
+  /** Owning team (shared mode); null for personal tasks and legacy rows. */
+  teamId?: string | null;
   topicCount?: number;
   updatedAt?: string;
   userId?: string | null;
@@ -929,6 +946,8 @@ export interface TaskDetailData {
   workflowCategory?: TaskWorkflowCategory;
   /** Exact provider workflow-state identity; null means the task has no external workflow state. */
   workflowStateId?: string | null;
+  /** Local `team_workflow_states` row id; the canonical internal state pointer. */
+  workflowStateRefId?: string | null;
   workspace?: TaskDetailWorkspaceNode[];
   /** Owning workspace; null for personal (non-workspace) tasks. */
   workspaceId?: string | null;

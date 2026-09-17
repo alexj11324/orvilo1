@@ -1,8 +1,13 @@
 import type {
   LinearCommentSnapshot,
+  LinearIssuePage,
   LinearIssueSnapshot,
+  LinearMemberSnapshot,
+  LinearOrganizationSnapshot,
+  LinearProjectSnapshot,
   LinearRelationKind,
   LinearRelationSnapshot,
+  LinearTeamSnapshot,
 } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils';
 
@@ -10,6 +15,17 @@ import type { LobeChatDatabase } from '@/database/type';
 
 import { createLinearInstallationAuth, type LinearInstallationAuthOptions } from './auth';
 import { LINEAR_GRAPHQL_URL } from './oauth';
+
+// Canonical snapshot shapes live in @orvilo/types (frozen WM-01 contract);
+// re-exported here so existing provider consumers keep working.
+export type {
+  LinearIssuePage,
+  LinearMemberSnapshot,
+  LinearOrganizationSnapshot,
+  LinearProjectSnapshot,
+  LinearTeamSnapshot,
+  LinearWorkflowStateSnapshot,
+} from '@orvilo/types';
 
 const ISSUE_FIELDS = `
   id
@@ -88,48 +104,6 @@ export interface LinearRelationCreateInput {
   kind: Exclude<LinearRelationKind, 'parent'>;
   sourceIssueId: string;
   targetIssueId: string;
-}
-
-export interface LinearOrganizationSnapshot {
-  id: string;
-  name: string;
-  url?: string | null;
-}
-
-export interface LinearProjectSnapshot {
-  id: string;
-  name: string;
-  organizationId: string | null;
-  state?: string | null;
-  teamIds: string[];
-}
-
-export interface LinearTeamSnapshot {
-  id: string;
-  key: string;
-  name: string;
-  organizationId: string | null;
-  visibility: string | null;
-  workflowStates?: LinearWorkflowStateSnapshot[];
-}
-
-export interface LinearWorkflowStateSnapshot {
-  id: string;
-  name: string;
-  position: number | null;
-  teamId: string;
-  type: string | null;
-}
-
-export interface LinearMemberSnapshot {
-  id: string;
-  name: string;
-}
-
-export interface LinearIssuePage {
-  endCursor: string | null;
-  hasNextPage: boolean;
-  issues: LinearIssueSnapshot[];
 }
 
 export class LinearRemoteResourceError extends Error {

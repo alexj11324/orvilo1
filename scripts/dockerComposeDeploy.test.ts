@@ -158,7 +158,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     // @neondatabase/serverless at load time even though DATABASE_DRIVER=node never uses it, so the
     // image must ship that package next to pg and drizzle-orm or the container crash-loops.
     expect(dockerfile).toContain(
-      'pnpm add --allow-build=sharp --allow-build=@hatchet-dev/typescript-sdk pg drizzle-orm @neondatabase/serverless sharp@0.34.5 @hatchet-dev/typescript-sdk@1.33.1 @grpc/grpc-js@1.14.4',
+      'pnpm add --allow-build=sharp --allow-build=@hatchet-dev/typescript-sdk --allow-build=protobufjs pg drizzle-orm @neondatabase/serverless sharp@0.34.5 @hatchet-dev/typescript-sdk@1.33.1 @grpc/grpc-js@1.14.4',
     );
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/@neondatabase /app/node_modules/@neondatabase',

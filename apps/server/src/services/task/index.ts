@@ -47,6 +47,7 @@ import { TaskRunnerService } from '../taskRunner';
 import { createTaskSchedulerModule } from '../taskScheduler';
 import { resolveTaskAcceptance } from '../verify/taskAcceptance';
 import { collapseActivityLog } from './collapseActivityLog';
+import { buildInterruptedTaskGeneration } from './interruptedGeneration';
 
 const emptyWorkspace: WorkspaceData = { nodeMap: {}, tree: [] };
 const UNTITLED_TOPIC_TITLE = 'Untitled';
@@ -576,14 +577,10 @@ export class TaskService {
       if (!topic.topicId) continue;
       const snapshot = targetTasks.find(({ id }) => id === topic.taskId);
       if (!snapshot) continue;
+      const generation = buildInterruptedTaskGeneration(snapshot, topic);
+      if (!generation) continue;
       try {
-        await this.taskModel.recoverInterruptedRun({
-          currentTopicId: snapshot.currentTopicId ?? null,
-          id: snapshot.id,
-          operationId: topic.operationId ?? null,
-          reservationId: snapshot.runReservationId ?? null,
-          topicId: topic.topicId,
-        });
+        await this.taskModel.recoverInterruptedRun(generation);
       } catch (error) {
         failures.push(error);
       }

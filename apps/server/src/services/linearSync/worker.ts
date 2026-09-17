@@ -740,9 +740,10 @@ export class LinearSyncWorker {
           throw new Error('Linear issue link scope is unavailable');
         }
         if (
-          binding &&
-          (binding.installationId !== installation.id ||
-            issueLink.organizationId !== installation.organizationId)
+          issueLink.organizationId !== installation.organizationId ||
+          (binding
+            ? binding.installationId !== installation.id
+            : teamLink!.installationId !== installation.id)
         ) {
           throw new Error('Linear issue link installation scope does not match');
         }
@@ -2486,11 +2487,11 @@ export class LinearSyncWorker {
       const teamModel = installation.installedByUserId
         ? new TeamModel(db, installation.installedByUserId, this.workspaceId)
         : null;
-      const workflowStateRefId =
+      const workflowState =
         issue.stateId && teamModel
-          ? ((await teamModel.findWorkflowStateByRemoteId(teamLink.teamId, issue.stateId))?.id ??
-            null)
+          ? await teamModel.findWorkflowStateByRemoteId(teamLink.teamId, issue.stateId)
           : null;
+      const workflowStateRefId = workflowState?.id ?? null;
       const cycleRefId =
         issue.cycleId && teamModel
           ? ((await teamModel.findCycleByRemoteId(teamLink.teamId, issue.cycleId))?.id ?? null)
@@ -2513,6 +2514,7 @@ export class LinearSyncWorker {
           mutation,
           projectId: binding?.projectId ?? null,
           settings: binding?.settings,
+          workflowCategory: workflowState?.category,
           workflowStateRefId,
         });
         if (!task) return 'processed';
@@ -2589,6 +2591,9 @@ export class LinearSyncWorker {
       }
       if (workflowStateRefId && task.workflowStateRefId !== workflowStateRefId) {
         patch.workflowStateRefId = workflowStateRefId;
+      }
+      if (workflowState?.category && task.workflowCategory !== workflowState.category) {
+        patch.workflowCategory = workflowState.category;
       }
       if (task.cycleRefId !== cycleRefId) {
         patch.cycleRefId = cycleRefId;
@@ -3090,10 +3095,21 @@ export class LinearSyncWorker {
       ? new TeamModel(db, installation.installedByUserId, this.workspaceId)
       : null;
     if (issue.stateId && remoteTeamLink && remoteTeamModel) {
-      const refId =
-        (await remoteTeamModel.findWorkflowStateByRemoteId(remoteTeamLink.teamId, issue.stateId))
-          ?.id ?? null;
+      const remoteState = await remoteTeamModel.findWorkflowStateByRemoteId(
+        remoteTeamLink.teamId,
+        issue.stateId,
+      );
+      const refId = remoteState?.id ?? null;
       if (refId && task.workflowStateRefId !== refId) patch.workflowStateRefId = refId;
+      // When no configured statusMapping produced a category, fall back to the
+      // synced team state's category so the denormalized column stays truthful.
+      if (
+        remoteState?.category &&
+        patch.workflowCategory === undefined &&
+        task.workflowCategory !== remoteState.category
+      ) {
+        patch.workflowCategory = remoteState.category;
+      }
     }
     if (remoteTeamLink && remoteTeamModel) {
       const cycleRef = issue.cycleId

@@ -3502,7 +3502,7 @@ export class TaskModel {
       LINEAR_SYNC_TASK_COLUMNS.some((col) => data[col] !== undefined);
     // Nothing to diff against: a field unrelated to task activity or Linear
     // synchronization should not pay for a lock.
-    if (!touched) return this.update(id, data);
+    if (!touched) return this.update(id, data, mutation);
 
     return this.db.transaction(async (tx) => {
       const runner = tx as LobeChatDatabase;

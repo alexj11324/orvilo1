@@ -3,9 +3,11 @@ import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { LinearSyncModel } from '@/database/models/linearSync';
+import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TeamModel } from '@/database/models/team';
-import { hasWorkspaceAdminAccess } from '@/database/models/workspace';
+import { hasActiveWorkspaceMembership, hasWorkspaceAdminAccess } from '@/database/models/workspace';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
@@ -22,6 +24,8 @@ const teamProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
   }
   return opts.next({
     ctx: {
+      linearSyncModel: new LinearSyncModel(ctx.serverDB, ctx.workspaceId),
+      projectModel: new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, ctx.workspaceId),
       teamModel: new TeamModel(ctx.serverDB, ctx.userId, ctx.workspaceId),
     },
@@ -132,6 +136,21 @@ export const teamRouter = router({
       if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
       }
+      // PERMISSIONS: leads may add/remove members but cannot change lead
+      // assignment — neither promoting to lead nor demoting an existing one.
+      const targetRole = await ctx.teamModel.getMembershipRole(input.teamId, input.userId);
+      if (
+        (input.role === 'lead' || targetRole === 'lead') &&
+        !(await hasWorkspaceAdminAccess(ctx.serverDB, {
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        }))
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Changing team leads requires a workspace admin',
+        });
+      }
       const member = await ctx.teamModel.addMember(input.teamId, input.userId, input.role);
       return { data: member, message: 'Team member added', success: true };
     }),
@@ -142,6 +161,18 @@ export const teamRouter = router({
       if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
       }
+      if (
+        (await ctx.teamModel.getMembershipRole(input.teamId, input.userId)) === 'lead' &&
+        !(await hasWorkspaceAdminAccess(ctx.serverDB, {
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        }))
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Removing a team lead requires a workspace admin',
+        });
+      }
       await ctx.teamModel.removeMember(input.teamId, input.userId);
       return { message: 'Team member removed', success: true };
     }),
@@ -149,8 +180,26 @@ export const teamRouter = router({
   linkProject: teamWriteProcedure
     .input(teamIdInput.extend({ projectId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
+      // PERMISSIONS: workspace admin or a member with project write access.
+      // There is no per-project ACL — `agent:update` (procedure gate) is the
+      // project-write capability, so any active member qualifies; the real
+      // check is that the project exists in THIS workspace, never leaking or
+      // attaching foreign ids.
+      const project = await ctx.projectModel.findById(input.projectId);
+      if (!project || project.workspaceId !== ctx.workspaceId) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
+      }
+      if (
+        !(await hasWorkspaceAdminAccess(ctx.serverDB, {
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        })) &&
+        !(await hasActiveWorkspaceMembership(ctx.serverDB, {
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        }))
+      ) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace membership required' });
       }
       await ctx.teamModel.linkProject(input.projectId, input.teamId);
       return { message: 'Project linked to team', success: true };
@@ -159,8 +208,21 @@ export const teamRouter = router({
   unlinkProject: teamWriteProcedure
     .input(teamIdInput.extend({ projectId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
+      const project = await ctx.projectModel.findById(input.projectId);
+      if (!project || project.workspaceId !== ctx.workspaceId) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
+      }
+      if (
+        !(await hasWorkspaceAdminAccess(ctx.serverDB, {
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        })) &&
+        !(await hasActiveWorkspaceMembership(ctx.serverDB, {
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        }))
+      ) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace membership required' });
       }
       await ctx.teamModel.unlinkProject(input.projectId, input.teamId);
       return { message: 'Project unlinked from team', success: true };
@@ -177,6 +239,14 @@ export const teamRouter = router({
       // out of the current team requires write access there too.
       const current = await ctx.taskModel.findById(input.taskId);
       if (!current) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      // A Linear-linked task's team membership is owned by the remote issue;
+      // a local move would be silently reverted by the next inbound delivery.
+      if (await ctx.linearSyncModel.findIssueLinkByTaskId(input.taskId)) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Move the issue between teams in Linear instead',
+        });
+      }
       for (const teamId of new Set([current.teamId, input.teamId].filter(Boolean) as string[])) {
         if (!(await ctx.teamModel.hasWriteAccess(teamId))) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Team write access required' });

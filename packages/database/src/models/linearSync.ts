@@ -36,7 +36,7 @@ import type {
   TaskPlanningScopeType,
   TaskPlanningTrigger,
 } from '@orvilo/types';
-import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 
 import type {
   LinearSyncInboxItem,
@@ -61,6 +61,7 @@ import {
   taskPlanningRevisions,
   taskPlanningScopes,
   tasks,
+  teamWorkflowStates,
 } from '../schemas';
 import type { LobeChatDatabase } from '../type';
 
@@ -905,6 +906,36 @@ export class LinearSyncModel {
             lt(linearSyncScopes.lockedUntil, new Date()),
             eq(linearSyncScopes.leaseOwner, input.leaseOwner),
           ),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  /**
+   * Atomically reset a scope for a fresh import run. The `status != importing`
+   * predicate makes the check-and-reset a single statement so a worker that
+   * just claimed the lease cannot have its cursors wiped mid-flight.
+   */
+  async resetScopeImport(id: string) {
+    const [row] = await this.db
+      .update(linearSyncScopes)
+      .set({
+        cursors: {},
+        importCompletedAt: null,
+        importPhase: 'teams',
+        issuesFailed: 0,
+        issuesImported: 0,
+        projectsLinked: 0,
+        status: 'importing',
+        teamsLinked: 0,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(linearSyncScopes.id, id),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+          ne(linearSyncScopes.status, 'importing'),
         ),
       )
       .returning();
@@ -3267,17 +3298,42 @@ export class LinearSyncModel {
       return { event, link, outbox };
     }
     const settings = binding?.settings;
-    const statusId = settings?.statusMappings?.find(
+    const changedFields = new Set(input.changedFields);
+    const workflowChanged =
+      changedFields.has('workflowCategory') || changedFields.has('workflowStateId');
+    let statusId = settings?.statusMappings?.find(
       (mapping) =>
         mapping.workflowCategory === input.task.workflowCategory ||
         (!mapping.workflowCategory && mapping.localStatus === input.task.status),
     )?.linearStateId;
+    // Team-scope links carry no binding.statusMappings — the remote state id
+    // comes from the synced team workflow states matching the new category.
+    if (
+      statusId === undefined &&
+      workflowChanged &&
+      !binding &&
+      link.linearTeamId &&
+      input.task.teamId
+    ) {
+      const [teamState] = await db
+        .select({ remoteStateId: teamWorkflowStates.remoteStateId })
+        .from(teamWorkflowStates)
+        .where(
+          and(
+            eq(teamWorkflowStates.teamId, input.task.teamId),
+            eq(teamWorkflowStates.category, input.task.workflowCategory),
+            isNotNull(teamWorkflowStates.remoteStateId),
+          ),
+        )
+        .orderBy(teamWorkflowStates.position)
+        .limit(1);
+      statusId = teamState?.remoteStateId ?? undefined;
+    }
     const assignmentId = settings?.assignmentMappings?.find(
       (mapping) =>
         mapping.orviloAgentId === input.task.assigneeAgentId ||
         mapping.orviloUserId === input.task.assigneeUserId,
     )?.linearUserId;
-    const changedFields = new Set(input.changedFields);
     const assignmentChanged =
       changedFields.has('assigneeAgentId') || changedFields.has('assigneeUserId');
     const shouldClearAssignment =
@@ -3285,8 +3341,6 @@ export class LinearSyncModel {
       !input.task.assigneeAgentId &&
       !input.task.assigneeUserId &&
       Boolean(link.remoteSnapshot?.assigneeId);
-    const workflowChanged =
-      changedFields.has('workflowCategory') || changedFields.has('workflowStateId');
 
     const payload = {
       ...(assignmentChanged && (assignmentId !== undefined || shouldClearAssignment)

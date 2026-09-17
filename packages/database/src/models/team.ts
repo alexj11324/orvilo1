@@ -401,9 +401,17 @@ export class TeamModel {
     return row ? toTeamItem(row) : null;
   };
 
-  /** Teams the current user may read (public + own private memberships). */
+  /** Teams the current user may read (public + own private memberships; workspace admins see all). */
   listReadable = async (): Promise<TeamItem[]> => {
-    const rows = await this.db.select().from(teams).where(this.readable()).orderBy(asc(teams.name));
+    const isWorkspaceAdmin = await hasWorkspaceAdminAccess(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    const rows = await this.db
+      .select()
+      .from(teams)
+      .where(isWorkspaceAdmin ? eq(teams.workspaceId, this.workspaceId) : this.readable())
+      .orderBy(asc(teams.name));
     return rows.map(toTeamItem);
   };
 

@@ -1,5 +1,9 @@
 import { TASK_ASSIGNEE_PERMISSION_CODES } from '@orvilo/const/rbac';
-import type { LinearIssueSnapshot, LinearProjectBindingSettings } from '@orvilo/types';
+import type {
+  LinearIssueSnapshot,
+  LinearProjectBindingSettings,
+  TaskWorkflowCategory,
+} from '@orvilo/types';
 import { and, eq, isNull, or } from 'drizzle-orm';
 
 import { RbacModel } from '@/database/models/rbac';
@@ -188,7 +192,9 @@ export class LinearIntegrationTaskService {
         projectId: binding.projectId,
         teamId: input.localTeamId ?? null,
         visibility: 'public',
-        workflowCategory: workflowMapping?.workflowCategory ?? 'backlog',
+        // Prefer the synced team state's category; fall back to the project
+        // binding's status mappings, then backlog.
+        workflowCategory: input.workflowCategory ?? workflowMapping?.workflowCategory ?? 'backlog',
         workflowStateId: issue.stateId ?? null,
         workflowStateRefId: input.workflowStateRefId ?? null,
       },
@@ -222,6 +228,7 @@ export class LinearIntegrationTaskService {
     mutation: TaskMutationContext;
     projectId?: string | null;
     settings?: LinearProjectBindingSettings;
+    workflowCategory?: TaskWorkflowCategory;
     workflowStateRefId?: string | null;
   }) {
     const { installation, issue, mutation, settings } = input;
@@ -249,7 +256,9 @@ export class LinearIntegrationTaskService {
         projectId: input.projectId ?? null,
         teamId: input.localTeamId,
         visibility: 'public',
-        workflowCategory: workflowMapping?.workflowCategory ?? 'backlog',
+        // Prefer the synced team state's category; fall back to the project
+        // binding's status mappings, then backlog.
+        workflowCategory: input.workflowCategory ?? workflowMapping?.workflowCategory ?? 'backlog',
         workflowStateId: issue.stateId ?? null,
         workflowStateRefId: input.workflowStateRefId ?? null,
       },

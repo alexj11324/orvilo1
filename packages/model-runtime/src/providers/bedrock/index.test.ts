@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentRuntimeErrorType } from '../../types/error';
 import * as debugStreamModule from '../../utils/debugStream';
-import { experimental_buildLlama2Prompt, LobeBedrockAI } from './index';
+import { experimental_buildLlama2Prompt, OrviloBedrockAI } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -29,10 +29,10 @@ vi.mock('@aws-sdk/client-bedrock-runtime', async (importOriginal) => {
   };
 });
 
-let instance: LobeBedrockAI;
+let instance: OrviloBedrockAI;
 
 beforeEach(() => {
-  instance = new LobeBedrockAI({
+  instance = new OrviloBedrockAI({
     region: 'us-west-2',
     accessKeyId: 'test-access-key-id',
     accessKeySecret: 'test-access-key-secret',
@@ -45,20 +45,20 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeBedrockAI', () => {
+describe('OrviloBedrockAI', () => {
   describe('init', () => {
     it('should correctly initialize with AWS credentials', async () => {
-      const instance = new LobeBedrockAI({
+      const instance = new OrviloBedrockAI({
         region: 'us-west-2',
         accessKeyId: 'test-access-key-id',
         accessKeySecret: 'test-access-key-secret',
       });
-      expect(instance).toBeInstanceOf(LobeBedrockAI);
+      expect(instance).toBeInstanceOf(OrviloBedrockAI);
       expect(instance.region).toBe('us-west-2');
     });
 
     it('should use default region if not provided', () => {
-      const instance = new LobeBedrockAI({
+      const instance = new OrviloBedrockAI({
         accessKeyId: 'test-access-key-id',
         accessKeySecret: 'test-access-key-secret',
       });
@@ -66,22 +66,22 @@ describe('LobeBedrockAI', () => {
     });
 
     it('should correctly initialize with session token', () => {
-      const instance = new LobeBedrockAI({
+      const instance = new OrviloBedrockAI({
         region: 'us-west-2',
         accessKeyId: 'test-access-key-id',
         accessKeySecret: 'test-access-key-secret',
         sessionToken: 'test-session-token',
       });
-      expect(instance).toBeInstanceOf(LobeBedrockAI);
+      expect(instance).toBeInstanceOf(OrviloBedrockAI);
     });
 
     it('should correctly initialize with API key authentication', async () => {
-      const instance = new LobeBedrockAI({
+      const instance = new OrviloBedrockAI({
         apiKey: 'test-bedrock-api-key',
         region: 'us-west-2',
       });
 
-      expect(instance).toBeInstanceOf(LobeBedrockAI);
+      expect(instance).toBeInstanceOf(OrviloBedrockAI);
       expect(instance.region).toBe('us-west-2');
       await expect(instance['client'].config.authSchemePreference()).resolves.toEqual([
         'httpBearerAuth',
@@ -93,7 +93,7 @@ describe('LobeBedrockAI', () => {
 
     it('should throw InvalidBedrockCredentials if accessKeyId is missing', () => {
       expect(() => {
-        new LobeBedrockAI({
+        new OrviloBedrockAI({
           accessKeySecret: 'test-access-key-secret',
         });
       }).toThrow(
@@ -105,7 +105,7 @@ describe('LobeBedrockAI', () => {
 
     it('should throw InvalidBedrockCredentials if accessKeySecret is missing', () => {
       expect(() => {
-        new LobeBedrockAI({
+        new OrviloBedrockAI({
           accessKeyId: 'test-access-key-id',
         });
       }).toThrow(
@@ -117,7 +117,7 @@ describe('LobeBedrockAI', () => {
 
     it('should throw InvalidBedrockCredentials if both credentials are missing', () => {
       expect(() => {
-        new LobeBedrockAI({});
+        new OrviloBedrockAI({});
       }).toThrow(
         expect.objectContaining({
           errorType: AgentRuntimeErrorType.InvalidBedrockCredentials,
@@ -279,7 +279,7 @@ describe('LobeBedrockAI', () => {
       it('should drop assistant prefill when a logical id maps to a Claude 5 Bedrock id', async () => {
         // The channel modelIdMapping resolves the actually-sent Bedrock model
         // id; the prefill guard must follow it, not the logical id.
-        const mappedInstance = new LobeBedrockAI({
+        const mappedInstance = new OrviloBedrockAI({
           accessKeyId: 'test-access-key-id',
           accessKeySecret: 'test-access-key-secret',
           modelIdMapping: { 'my-router-model': 'global.anthropic.claude-opus-5' },
@@ -369,7 +369,7 @@ describe('LobeBedrockAI', () => {
             {
               content: 'Here is my response.',
               model: 'deepseek-v4-pro',
-              provider: 'lobehub',
+              provider: 'orvilo',
               reasoning: {
                 content: 'DeepSeek reasoning',
                 signature: '340acffe-0000-4000-8000-000000000000',
@@ -957,7 +957,7 @@ describe('LobeBedrockAI', () => {
 
         it('should resolve Claude model IDs from channel modelIdMapping', async () => {
           // Arrange
-          const mappedInstance = new LobeBedrockAI({
+          const mappedInstance = new OrviloBedrockAI({
             region: 'us-east-1',
             accessKeyId: 'test-access-key-id',
             accessKeySecret: 'test-access-key-secret',
@@ -1312,7 +1312,7 @@ describe('LobeBedrockAI', () => {
     });
 
     it('should resolve generateObject model IDs from channel modelIdMapping', async () => {
-      const mappedInstance = new LobeBedrockAI({
+      const mappedInstance = new OrviloBedrockAI({
         region: 'us-east-1',
         accessKeyId: 'test-access-key-id',
         accessKeySecret: 'test-access-key-secret',
@@ -1359,7 +1359,7 @@ describe('LobeBedrockAI', () => {
     it('should drop assistant prefill in generateObject when a logical id maps to Claude 5', async () => {
       // The prefill guard must follow the resolved Bedrock model id, not the
       // logical alias the channel mapping hides it behind.
-      const mappedInstance = new LobeBedrockAI({
+      const mappedInstance = new OrviloBedrockAI({
         accessKeyId: 'test-access-key-id',
         accessKeySecret: 'test-access-key-secret',
         modelIdMapping: { 'my-router-model': 'global.anthropic.claude-opus-5' },

@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import debug from 'debug';
 import type { AiFullModelCard, AiModelType } from 'model-bank';
-import { LOBE_DEFAULT_MODEL_LIST } from 'model-bank';
+import { ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 import type { ClientOptions } from 'openai';
 import type OpenAI from 'openai';
 import type { Stream } from 'openai/streaming';
@@ -31,7 +31,7 @@ import type {
   TextToSpeechOptions,
   TextToSpeechPayload,
 } from '../../types';
-import type { ILobeAgentRuntimeErrorType } from '../../types/error';
+import type { IOrviloAgentRuntimeErrorType } from '../../types/error';
 import { AgentRuntimeErrorType } from '../../types/error';
 import type {
   CreateImageMethodOptions,
@@ -67,7 +67,7 @@ import {
   getRuntimeSignatureScopeSource,
   type SignatureScopeKind,
 } from '../../utils/signatureScope';
-import type { LobeRuntimeAI } from '../BaseAI';
+import type { OrviloRuntimeAI } from '../BaseAI';
 import { normalizeToolsParameters } from '../contextBuilders/normalizeToolSchema';
 import { convertOpenAIMessages, convertOpenAIResponseInputs } from '../contextBuilders/openai';
 import { resolveModelSamplingParameters } from '../parameterResolver';
@@ -122,10 +122,10 @@ export const CHAT_MODELS_BLOCK_LIST = [
   'dall-e',
 ];
 
-// OpenAI SDK v6 widened `apiKey` to `string | ApiKeySetter`; lobehub only ever
+// OpenAI SDK v6 widened `apiKey` to `string | ApiKeySetter`; orvilo only ever
 // passes a plain string, so narrow it back to keep `.trim()` / string assignments valid.
-type LobeClientOptions = Omit<ClientOptions, 'apiKey'> & { apiKey?: string };
-type ConstructorOptions<T extends Record<string, any> = any> = LobeClientOptions &
+type OrviloClientOptions = Omit<ClientOptions, 'apiKey'> & { apiKey?: string };
+type ConstructorOptions<T extends Record<string, any> = any> = OrviloClientOptions &
   ModelIdMappingOptions &
   T;
 type OpenAIExtraParams = { prompt_cache_key?: string; safety_identifier?: string };
@@ -154,7 +154,7 @@ const getGenerateObjectReasoningParams = ({
   reasoning_effort,
   thinking,
 }: GenerateObjectReasoningParams) => ({
-  // `thinking` is a Lobe runtime abstraction, not a generic OpenAI-compatible API field.
+  // `thinking` is a Orvilo runtime abstraction, not a generic OpenAI-compatible API field.
   // Use it here only to suppress `reasoning_effort`; providers that support thinking
   // must translate it via `generateObject.handlePayload`.
   ...(reasoning_effort && thinking?.type !== 'disabled' ? { reasoning_effort } : {}),
@@ -237,7 +237,7 @@ export interface OpenAICompatibleFactoryOptions<T extends Record<string, any> = 
     handleStreamBizErrorType?: (error: {
       message: string;
       name: string;
-    }) => ILobeAgentRuntimeErrorType | undefined;
+    }) => IOrviloAgentRuntimeErrorType | undefined;
     handleTransformResponseToStream?: (
       data: OpenAI.ChatCompletion,
     ) => ReadableStream<OpenAI.ChatCompletionChunk>;
@@ -269,8 +269,8 @@ export interface OpenAICompatibleFactoryOptions<T extends Record<string, any> = 
     responses?: () => boolean;
   };
   errorType?: {
-    bizError: ILobeAgentRuntimeErrorType;
-    invalidAPIKey: ILobeAgentRuntimeErrorType;
+    bizError: IOrviloAgentRuntimeErrorType;
+    invalidAPIKey: IOrviloAgentRuntimeErrorType;
   };
   generateObject?: {
     /**
@@ -356,7 +356,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
     invalidAPIKey: errorType?.invalidAPIKey || AgentRuntimeErrorType.InvalidProviderAPIKey,
   };
 
-  return class LobeOpenAICompatibleAI implements LobeRuntimeAI {
+  return class OrviloOpenAICompatibleAI implements OrviloRuntimeAI {
     client!: OpenAI;
 
     private id: string;
@@ -367,8 +367,8 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
     baseURL!: string;
     protected _options: ConstructorOptions<T>;
 
-    constructor(options: LobeClientOptions & Record<string, any> = {}) {
-      const { modelIdMapping, ...inputOptions } = options as LobeClientOptions &
+    constructor(options: OrviloClientOptions & Record<string, any> = {}) {
+      const { modelIdMapping, ...inputOptions } = options as OrviloClientOptions &
         Record<string, any> &
         ModelIdMappingOptions;
       const _options = {
@@ -400,7 +400,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
           inputOptions.chatgptAccountId,
         );
       }
-      this.logPrefix = `lobe-model-runtime:${this.id}`;
+      this.logPrefix = `orvilo-model-runtime:${this.id}`;
     }
 
     /**
@@ -569,7 +569,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
 
       // Keep the default key at {userId}:{model}; {agentId/topicId} can be added later if a narrower cache bucket is needed.
       if (model?.startsWith('gpt-') || /^o\d/.test(model || '') || model === 'chat-latest') {
-        return `lobe:${user}:${model}`;
+        return `orvilo:${user}:${model}`;
       }
 
       const matchesProviderPromptCacheModel = promptCacheKeyModels?.some((item) => {
@@ -580,7 +580,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
         return item.test(model);
       });
       if (matchesProviderPromptCacheModel) {
-        return `lobe:${user}:${model}`;
+        return `orvilo:${user}:${model}`;
       }
     }
 
@@ -758,7 +758,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
           // Apply sampling sanitization to processedPayload for the custom client path.
           // We use processedPayload (ChatStreamPayload type) here because
           // createChatCompletionStream expects ChatStreamPayload, not the OpenAI SDK format.
-          // Strip LobeHub-internal fields that should never reach downstream APIs.
+          // Strip Orvilo-internal fields that should never reach downstream APIs.
           const {
             apiMode: _apiMode,
             preserveThinking: _preserveThinking,
@@ -787,7 +787,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
           ) as any;
           recordOpenAIResponseMetadata(providerResponseDiagnostics, {});
         } else {
-          // Remove LobeHub-internal fields before sending to downstream API.
+          // Remove Orvilo-internal fields before sending to downstream API.
           // `preserveThinking` is only consumed by Qwen/Zhipu handlePayload (which runs above)
           // and must not leak to other providers' APIs as an unknown parameter.
           const { apiMode: _, preserveThinking: _pt, ...cleanedPayload } = postPayload as any;
@@ -818,7 +818,6 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
             sentAt: Date.now(),
           });
           const responsePromise = this.client.chat.completions.create(requestPayload, {
-            // https://github.com/lobehub/lobe-chat/pull/318
             headers: { Accept: '*/*', ...options?.requestHeaders },
             signal: options?.signal,
           });
@@ -1035,7 +1034,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
             };
 
             // TODO: should refactor after remove v1 user/modelList code
-            const knownModel = LOBE_DEFAULT_MODEL_LIST.find((model) => model.id === item.id);
+            const knownModel = ORVILO_DEFAULT_MODEL_LIST.find((model) => model.id === item.id);
 
             if (knownModel) {
               const releasedAt = knownModel.releasedAt ?? toReleasedAt();
@@ -1383,7 +1382,6 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
 
       let desensitizedEndpoint = this.baseURL;
 
-      // refs: https://github.com/lobehub/lobe-chat/issues/842
       if (this.baseURL !== DEFAULT_BASE_URL) {
         desensitizedEndpoint = desensitizeUrl(this.baseURL);
       }
@@ -1859,7 +1857,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
 
       try {
         const result = toolCalls.map((item) => {
-          // OpenAI SDK v6 made tool calls a function|custom union; lobehub only emits function calls.
+          // OpenAI SDK v6 made tool calls a function|custom union; orvilo only emits function calls.
           const { function: fn } = item as OpenAI.ChatCompletionMessageFunctionToolCall;
           return {
             arguments: JSON.parse(fn.arguments),

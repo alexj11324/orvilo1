@@ -9,7 +9,7 @@
  * are preserved only to keep legacy tool-call messages rendering and
  * executing. Do not use these exports in new code.
  */
-export const NotebookIdentifier = 'lobe-notebook';
+export const NotebookIdentifier = 'orvilo-notebook';
 
 export const NotebookApiName = {
   createDocument: 'createDocument',

@@ -411,7 +411,7 @@ describe('topic command', () => {
             tools: [
               {
                 apiName: 'search',
-                arguments: '{"query":"lobehub"}',
+                arguments: '{"query":"orvilo"}',
                 id: 'call_1',
                 identifier: 'web',
                 type: 'default',
@@ -426,7 +426,7 @@ describe('topic command', () => {
       await createProgram().parseAsync(['node', 'test', 'topic', 'view', 't1']);
 
       expect(output()).toContain('web.search');
-      expect(output()).toContain('lobehub');
+      expect(output()).toContain('orvilo');
     });
 
     it('preserves group-chat roles and marks real thread messages', async () => {

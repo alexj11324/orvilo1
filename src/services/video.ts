@@ -3,7 +3,7 @@ import debug from 'debug';
 import { lambdaClient } from '@/libs/trpc/client';
 import { type CreateVideoServicePayload } from '@/server/routers/lambda/video';
 
-const log = debug('lobe-video:service');
+const log = debug('orvilo-video:service');
 
 export class AiVideoService {
   async createVideo(payload: CreateVideoServicePayload) {

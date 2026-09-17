@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 
 import { getElectronLocalFilePath } from '@/utils/electron/localFilePath';
 
-const log = debug('lobe-client:drag-upload:local');
+const log = debug('orvilo-client:drag-upload:local');
 
 export type DragContentKind = 'files' | 'folders' | 'mixed' | 'none';
 

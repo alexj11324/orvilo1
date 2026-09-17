@@ -20,7 +20,7 @@ import type { BotMessageAttachment } from '@/server/services/bot/platforms/types
 
 import type { InstallationCredentials } from './installations/types';
 
-const log = debug('lobe-messenger:outbound');
+const log = debug('orvilo-messenger:outbound');
 
 /**
  * Outbound-only DM delivery for the System Bot, deliberately kept off

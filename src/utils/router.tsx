@@ -157,7 +157,7 @@ export const ErrorBoundary = ({ resetPath }: ErrorBoundaryProps) => {
         appearance={appearance}
         defaultAppearance={appearance}
         defaultThemeMode={appearance}
-        theme={{ cssVar: { key: 'lobe-vars' } }}
+        theme={{ cssVar: { key: 'orvilo-vars' } }}
       >
         <ErrorCapture error={error} resetPath={resetPath} />
       </ThemeProvider>

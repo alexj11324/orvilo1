@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { topics } from '@orvilo/database/schemas';
 import type { OpenAIChatMessage } from '@orvilo/model-runtime';
 import type { ChatTopicMetadata } from '@orvilo/types';
@@ -30,14 +30,14 @@ export interface ChatTopicProviderOptions {
 
 export interface ChatTopicResultRecorderOptions {
   currentMetadata?: ChatTopicMetadata;
-  database: LobeChatDatabase;
+  database: OrviloDatabase;
   lastMessageAt?: string;
   messageCount?: number;
   topicId: string;
   traceId?: string;
 }
 
-export class LobeChatTopicContextProvider implements MemoryContextProvider<
+export class OrviloTopicContextProvider implements MemoryContextProvider<
   Record<string, unknown>,
   Record<string, unknown>
 > {
@@ -123,7 +123,7 @@ export class LobeChatTopicContextProvider implements MemoryContextProvider<
   }
 }
 
-export class LobeChatTopicResultRecorder implements MemoryResultRecorder<{
+export class OrviloTopicResultRecorder implements MemoryResultRecorder<{
   processedMemoryCount: number;
 }> {
   private readonly options: ChatTopicResultRecorderOptions;

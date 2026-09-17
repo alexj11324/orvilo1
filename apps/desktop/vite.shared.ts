@@ -15,10 +15,10 @@ export const CLOUD_ROOT_DIR = path.resolve(__dirname, '../../..');
 export const isCloudDesktopBuild = () => process.env.CLOUD_DESKTOP === '1';
 
 // Renderer dev-server port. Overridable per instance (e.g. one git worktree per
-// concurrent dev instance) via LOBE_DESKTOP_VITE_PORT; `scripts/dev.mjs` injects
+// concurrent dev instance) via ORVILO_DESKTOP_VITE_PORT; `scripts/dev.mjs` injects
 // the matching ELECTRON_RENDERER_URL into the main process. Kept deterministic
 // (still `strictPort`) so the HMR `clientPort` stays in sync.
-export const DEV_VITE_PORT = Number(process.env.LOBE_DESKTOP_VITE_PORT) || 5173;
+export const DEV_VITE_PORT = Number(process.env.ORVILO_DESKTOP_VITE_PORT) || 5173;
 
 // Electron 41 ships Node 24.14 / Chromium 146 — keep in sync when bumping electron.
 export const MAIN_NODE_TARGET = 'node24.14';
@@ -47,7 +47,7 @@ export const REACT_DEVTOOLS_BRIDGE_URL = 'http://localhost:8097';
  */
 export const reactDevtoolsPlugin = (): PluginOption => ({
   apply: 'serve',
-  name: 'lobe-desktop-react-devtools',
+  name: 'orvilo-desktop-react-devtools',
   transformIndexHtml: () => [
     { attrs: { src: REACT_DEVTOOLS_BRIDGE_URL }, injectTo: 'head-prepend', tag: 'script' },
   ],
@@ -88,7 +88,7 @@ export const applyDesktopViteConfigExtension = async (
   config: UserConfig,
   env: ConfigEnv,
 ): Promise<UserConfig> => {
-  const configuredPath = process.env.LOBE_DESKTOP_VITE_CONFIG_EXTENSION;
+  const configuredPath = process.env.ORVILO_DESKTOP_VITE_CONFIG_EXTENSION;
   const extensionPath = configuredPath
     ? path.resolve(process.cwd(), configuredPath)
     : process.env.CLOUD_DESKTOP === '1'

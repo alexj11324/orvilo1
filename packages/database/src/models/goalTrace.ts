@@ -1,7 +1,7 @@
 import { and, desc, eq } from 'drizzle-orm';
 
 import { goals, goalTraces, type NewGoalTrace } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 /**
@@ -18,7 +18,7 @@ import { buildWorkspaceWhere } from '../utils/workspace';
  */
 export class GoalTraceModel {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId?: string,
     private readonly workspaceId?: string,
   ) {}

@@ -12,7 +12,7 @@ import {
 } from '../keys';
 import { buildLocalDataKey, localDataCache, type ScopeEntry } from '../localDataCache';
 
-const log = debug('lobe-client:swr-message-migration');
+const log = debug('orvilo-client:swr-message-migration');
 
 const LEGACY_MESSAGE_LIST_ROOT = 'message:listLegacy';
 const legacyMessageListRoots = [messageKeys.list.root, LEGACY_MESSAGE_LIST_ROOT];

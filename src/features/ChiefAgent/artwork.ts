@@ -17,7 +17,7 @@ export const CHIEF_AGENT_ARTWORKS: ChiefAgentArtwork[] = [
   {
     avatar: asset('887f1fa54f3896e91d8a0f5633f241bdc1bbddfe0877b806fe332be6194beed9'),
     hero: asset('aecf77a7df115e25f612dcdbfa250a87f1aaff4604c4cab932bcacd0aa04da2b'),
-    id: 'lobe',
+    id: 'orvilo',
     tint: '#c98d81',
   },
   {

@@ -22,7 +22,7 @@ export function registerDeviceCommand(program: Command) {
       // With a workspace context the server returns BOTH pools (personal +
       // workspace), each row tagged with `scope`. An explicit --workspace is a
       // filter request, so narrow to that workspace's pool; an ambient context
-      // (LOBEHUB_WORKSPACE_ID env) keeps the union.
+      // (ORVILO_WORKSPACE_ID env) keeps the union.
       const devices = options.workspace ? all.filter((d: any) => d.scope === 'workspace') : all;
 
       if (options.json !== undefined) {

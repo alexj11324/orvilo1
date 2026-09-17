@@ -22,13 +22,13 @@ declare global {
   interface Window {
     __DEBUG_PROXY__: boolean | undefined;
     __editor?: IEditor;
-    __LOBE_BOOT_T_HTML__?: number;
-    /** Dev-only: Zustand store snapshots via `getState()` keyed by store name */
-    __LOBE_STORES?: Record<string, () => unknown>;
     /** Chat input editor of the main composer, mounted by MainChatInput while it is on screen */
     __mainEditor?: ChatInputEditor;
+    __ORVILO_BOOT_T_HTML__?: number;
+    /** Dev-only: Zustand store snapshots via `getState()` keyed by store name */
+    __ORVILO_STORES?: Record<string, () => unknown>;
     __SERVER_CONFIG__: SPAServerConfig | undefined;
-    lobeEnv?: {
+    orviloEnv?: {
       chromeVersion?: string;
       darwinMajorVersion?: number;
       electronVersion?: string;

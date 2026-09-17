@@ -5,11 +5,11 @@ import { appEnv } from '@/envs/app';
 import { signUserJWT } from '@/libs/trpc/utils/internalJwt';
 import { isDev } from '@/utils/env';
 
-const log = debug('lobe-server:lh-command');
+const log = debug('orvilo-server:lh-command');
 
 /** Error surfaced when an Agent Share visitor's sandbox command tries to invoke the `lh` CLI. */
 export const SHARE_VISITOR_LH_BLOCKED_MESSAGE =
-  'The LobeHub CLI is unavailable in shared conversations.';
+  'The Orvilo CLI is unavailable in shared conversations.';
 
 export interface PreprocessResult {
   command: string;
@@ -56,7 +56,7 @@ export const isLhCommand = (command: string): boolean => LH_COMMAND_PATTERN.test
  * in the sandbox.
  *
  * A device shell has its own `lh` and its own stored credentials, so nothing
- * needs rewriting there — but without `LOBEHUB_WORKSPACE_ID` the CLI resolves
+ * needs rewriting there — but without `ORVILO_WORKSPACE_ID` the CLI resolves
  * to personal scope, and a workspace agent asked to edit itself silently reads
  * and writes the wrong tenancy instead of failing.
  *
@@ -66,10 +66,10 @@ export const isLhCommand = (command: string): boolean => LH_COMMAND_PATTERN.test
  * command invokes indirectly: `bash -lc 'lh whoami'`, a shell script, a
  * Makefile target, an npm script. Command-position detection sees none of
  * those, and unlike the sandbox path there is nothing here worth gating: this
- * mints no credential, it exports a non-secret scope id that only the LobeHub
+ * mints no credential, it exports a non-secret scope id that only the Orvilo
  * CLI reads, so setting it on a command that never calls `lh` costs nothing.
  *
- * `LOBEHUB_JWT` is deliberately NOT sent: on a personal device the stored
+ * `ORVILO_JWT` is deliberately NOT sent: on a personal device the stored
  * credentials already are the caller's, so it buys nothing, while a workspace
  * device belongs to another member and shipping the caller's token onto their
  * machine would be a real credential leak. Auth stays with the device; only the
@@ -79,7 +79,7 @@ export const isLhCommand = (command: string): boolean => LH_COMMAND_PATTERN.test
 export const buildDeviceLhEnv = (
   workspaceId: string | undefined,
 ): Record<string, string> | undefined =>
-  workspaceId ? { LOBEHUB_WORKSPACE_ID: workspaceId } : undefined;
+  workspaceId ? { ORVILO_WORKSPACE_ID: workspaceId } : undefined;
 
 /** POSIX single-quoting, safe for any value including quotes and newlines. */
 const shellSingleQuote = (value: string): string => `'${value.replaceAll("'", String.raw`'\''`)}'`;
@@ -92,7 +92,7 @@ const shellSingleQuote = (value: string): string => `'${value.replaceAll("'", St
  * and a one-line shim is prepended:
  *
  * ```sh
- * lh() { LOBEHUB_JWT='…' LOBEHUB_SERVER='…' LOBEHUB_WORKSPACE_ID='…' npx -y @lobehub/cli "$@"; }
+ * lh() { ORVILO_JWT='…' ORVILO_SERVER='…' ORVILO_WORKSPACE_ID='…' npx -y @orvilo/cli "$@"; }
  * <original command>
  * ```
  *
@@ -104,14 +104,14 @@ const shellSingleQuote = (value: string): string => `'${value.replaceAll("'", St
  * The credentials are assignment-prefixed to `npx` INSIDE the function rather
  * than `export`ed around the script. Exporting would put a full user auth token
  * in the environment of every command the model wrote, where any later `env`,
- * `echo $LOBEHUB_JWT`, `curl` or child process could read and exfiltrate it —
+ * `echo $ORVILO_JWT`, `curl` or child process could read and exfiltrate it —
  * and since detection is deliberately permissive, a script that merely mentions
  * `lh` in quoted text would get one too. Prefixing an external command is
  * well-defined POSIX and scopes the value to that one `npx` process. Nothing is
  * lost: the shim is a shell function, so it was never visible to a child shell
  * process (`sh -c 'lh …'`) that an exported variable would have reached.
  *
- * `LOBEHUB_WORKSPACE_ID` is what keeps a workspace run's CLI calls in the
+ * `ORVILO_WORKSPACE_ID` is what keeps a workspace run's CLI calls in the
  * workspace: without it the CLI resolves to personal scope and a workspace
  * agent cannot even find itself.
  */
@@ -152,14 +152,14 @@ export const preprocessLhCommand = async (
     const serverUrl = isDev ? OFFICIAL_URL : appEnv.APP_URL;
 
     const envAssignments = [
-      `LOBEHUB_JWT=${shellSingleQuote(jwt)}`,
-      `LOBEHUB_SERVER=${shellSingleQuote(serverUrl)}`,
-      ...(workspaceId ? [`LOBEHUB_WORKSPACE_ID=${shellSingleQuote(workspaceId)}`] : []),
+      `ORVILO_JWT=${shellSingleQuote(jwt)}`,
+      `ORVILO_SERVER=${shellSingleQuote(serverUrl)}`,
+      ...(workspaceId ? [`ORVILO_WORKSPACE_ID=${shellSingleQuote(workspaceId)}`] : []),
     ].join(' ');
 
     // Newline-separated (not `;`-separated) so a command whose first line is a
     // comment or a shebang cannot swallow the shim.
-    const finalCommand = [`lh() { ${envAssignments} npx -y @lobehub/cli "$@"; }`, command].join(
+    const finalCommand = [`lh() { ${envAssignments} npx -y @orvilo/cli "$@"; }`, command].join(
       '\n',
     );
 

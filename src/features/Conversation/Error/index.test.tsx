@@ -1,8 +1,8 @@
-import type * as lobechatConstModule from '@orvilo/const';
+import type * as orviloConstModule from '@orvilo/const';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
 import type * as modelRuntimeModule from '@orvilo/model-runtime';
 import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
-import type * as lobechatTypesModule from '@orvilo/types';
+import type * as orviloTypesModule from '@orvilo/types';
 import { ChatErrorType } from '@orvilo/types';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -34,7 +34,7 @@ const businessErrorContentMock = vi.hoisted(() =>
 );
 
 vi.mock('@orvilo/const', async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof lobechatConstModule;
+  const actual = (await importOriginal()) as typeof orviloConstModule;
 
   return { ...actual, isDesktop: true };
 });
@@ -52,7 +52,7 @@ vi.mock('@orvilo/model-runtime', async (importOriginal) => {
 });
 
 vi.mock('@orvilo/types', async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof lobechatTypesModule;
+  const actual = (await importOriginal()) as typeof orviloTypesModule;
 
   return {
     ...actual,
@@ -688,7 +688,7 @@ describe('ErrorMessageExtra', () => {
       <ErrorMessageWithContent
         data={{
           error: {
-            body: { diagnostics: { cost: 5.980_015, provider: 'lobehub' } },
+            body: { diagnostics: { cost: 5.980_015, provider: 'orvilo' } },
             message: 'The model provider returned an empty completion.',
             type: AgentRuntimeErrorType.ModelEmptyCompletion,
           } as any,

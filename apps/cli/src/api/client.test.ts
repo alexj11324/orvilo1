@@ -23,22 +23,22 @@ const headersOfLastLink = () => {
 };
 
 describe('api/client workspace scoping', () => {
-  const originalJwt = process.env.LOBEHUB_JWT;
-  const originalWorkspaceId = process.env.LOBEHUB_WORKSPACE_ID;
+  const originalJwt = process.env.ORVILO_JWT;
+  const originalWorkspaceId = process.env.ORVILO_WORKSPACE_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
-    process.env.LOBEHUB_JWT = 'env-jwt';
-    delete process.env.LOBEHUB_WORKSPACE_ID;
+    process.env.ORVILO_JWT = 'env-jwt';
+    delete process.env.ORVILO_WORKSPACE_ID;
   });
 
   afterEach(() => {
-    if (originalJwt === undefined) delete process.env.LOBEHUB_JWT;
-    else process.env.LOBEHUB_JWT = originalJwt;
+    if (originalJwt === undefined) delete process.env.ORVILO_JWT;
+    else process.env.ORVILO_JWT = originalJwt;
 
-    if (originalWorkspaceId === undefined) delete process.env.LOBEHUB_WORKSPACE_ID;
-    else process.env.LOBEHUB_WORKSPACE_ID = originalWorkspaceId;
+    if (originalWorkspaceId === undefined) delete process.env.ORVILO_WORKSPACE_ID;
+    else process.env.ORVILO_WORKSPACE_ID = originalWorkspaceId;
   });
 
   /**
@@ -47,19 +47,19 @@ describe('api/client workspace scoping', () => {
    * operation token never reached it and every request after the original
    * token's four hours was rejected.
    */
-  it('sends a renewed LOBEHUB_JWT on requests from an existing client', async () => {
+  it('sends a renewed ORVILO_JWT on requests from an existing client', async () => {
     const { getTrpcClient } = await import('./client');
     await getTrpcClient();
     expect(headersOfLastLink()).toMatchObject({ 'Oidc-Auth': 'env-jwt' });
 
-    process.env.LOBEHUB_JWT = 'renewed-jwt';
+    process.env.ORVILO_JWT = 'renewed-jwt';
     expect(headersOfLastLink()).toMatchObject({ 'Oidc-Auth': 'renewed-jwt' });
   });
 
   // The tools router is workspace aware like lambda; without the header every
   // `lh search` ran against personal scope and billed the personal budget.
   it('scopes the tools client to the run workspace', async () => {
-    process.env.LOBEHUB_WORKSPACE_ID = 'workspace-1';
+    process.env.ORVILO_WORKSPACE_ID = 'workspace-1';
 
     const { getToolsTrpcClient } = await import('./client');
     await getToolsTrpcClient();

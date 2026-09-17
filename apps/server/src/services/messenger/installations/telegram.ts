@@ -4,7 +4,7 @@ import { getMessengerTelegramConfig } from '@/config/messenger';
 
 import type { InstallationCredentials, MessengerInstallationStore } from './types';
 
-const log = debug('lobe-server:messenger:install-store:telegram');
+const log = debug('orvilo-server:messenger:install-store:telegram');
 
 /**
  * Telegram bots are global — one bot token in env serves every chat — so

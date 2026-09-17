@@ -8,7 +8,7 @@ import {
   type VideoModelParamsSchema,
 } from 'model-bank/standardParameters';
 
-export const DEFAULT_AI_VIDEO_PROVIDER = ModelProvider.LobeHub;
+export const DEFAULT_AI_VIDEO_PROVIDER = ModelProvider.Orvilo;
 export const DEFAULT_AI_VIDEO_MODEL = 'dreamina-seedance-2-0-260128';
 
 const seedance20Params: VideoModelParamsSchema = {

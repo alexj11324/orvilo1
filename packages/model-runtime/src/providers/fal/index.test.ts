@@ -3,7 +3,7 @@ import { fal } from '@fal-ai/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CreateImagePayload } from '../../types';
-import { LobeFalAI } from './index';
+import { OrviloFalAI } from './index';
 
 // Mock the fal client
 vi.mock('@fal-ai/client', () => ({
@@ -23,22 +23,22 @@ const provider = 'fal';
 const bizErrorType = 'ProviderBizError';
 const invalidErrorType = 'InvalidProviderAPIKey';
 
-let instance: LobeFalAI;
+let instance: OrviloFalAI;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  instance = new LobeFalAI({ apiKey: 'test-api-key' });
+  instance = new OrviloFalAI({ apiKey: 'test-api-key' });
 });
 
 afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeFalAI', () => {
+describe('OrviloFalAI', () => {
   describe('init', () => {
     it('should correctly initialize with an API key', () => {
-      const instance = new LobeFalAI({ apiKey: 'test_api_key' });
-      expect(instance).toBeInstanceOf(LobeFalAI);
+      const instance = new OrviloFalAI({ apiKey: 'test_api_key' });
+      expect(instance).toBeInstanceOf(OrviloFalAI);
       expect(mockFal.config).toHaveBeenCalledWith({
         credentials: 'test_api_key',
       });
@@ -46,13 +46,13 @@ describe('LobeFalAI', () => {
 
     it('should throw InvalidProviderAPIKey if no apiKey is provided', () => {
       expect(() => {
-        new LobeFalAI({});
+        new OrviloFalAI({});
       }).toThrow();
     });
 
     it('should throw InvalidProviderAPIKey if apiKey is undefined', () => {
       expect(() => {
-        new LobeFalAI({ apiKey: undefined });
+        new OrviloFalAI({ apiKey: undefined });
       }).toThrow();
     });
   });
@@ -106,7 +106,7 @@ describe('LobeFalAI', () => {
     });
 
     it('should use mapped model id for fal endpoint requests', async () => {
-      const mappedInstance = new LobeFalAI({
+      const mappedInstance = new OrviloFalAI({
         apiKey: 'test-api-key',
         modelIdMapping: { 'logical-fal-image': 'fal-ai/upstream/image-model' },
       });

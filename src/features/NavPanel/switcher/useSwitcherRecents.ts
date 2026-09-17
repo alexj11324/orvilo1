@@ -4,7 +4,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 
 import { touchRecentId } from './switcherItems';
 
-const STORAGE_PREFIX = 'lobe-switcher-recent';
+const STORAGE_PREFIX = 'orvilo-switcher-recent';
 
 const readIds = (key: string): string[] => {
   if (typeof window === 'undefined') return [];

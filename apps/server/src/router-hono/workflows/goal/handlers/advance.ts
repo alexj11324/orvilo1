@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 
-const log = debug('lobe-server:workflows:goal:advance');
+const log = debug('orvilo-server:workflows:goal:advance');
 
 export interface GoalAdvancePayload {
   goalId?: string;

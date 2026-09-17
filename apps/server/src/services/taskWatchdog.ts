@@ -3,13 +3,13 @@ import debug from 'debug';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { TaskResultCallbackRedisStore } from '@/server/services/taskResultBridge/redisStore';
 
-const log = debug('lobe-server:task-watchdog');
+const log = debug('orvilo-server:task-watchdog');
 
 export interface TaskWatchdogOptions {
   /** Restrict a manual/API sweep to tasks created by this user. */
@@ -33,7 +33,7 @@ export interface TaskWatchdogResult {
  * without an owner filter; user/API callers pass their own creator scope.
  */
 export async function runTaskWatchdog(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   options: TaskWatchdogOptions = {},
 ): Promise<TaskWatchdogResult> {
   const stuckTasks = await TaskModel.findStuckTasks(db, options);
@@ -105,7 +105,6 @@ export async function runTaskWatchdog(
         cancellationRequired.push(task.identifier);
         continue;
       }
-
     }
 
     const failureExtra = {
@@ -128,9 +127,7 @@ export async function runTaskWatchdog(
       continue;
     }
 
-    await new TaskIntegrationService(db, task.createdByUserId, wsId).cleanupTaskWorktrees(
-      task.id,
-    );
+    await new TaskIntegrationService(db, task.createdByUserId, wsId).cleanupTaskWorktrees(task.id);
 
     const briefModel = new BriefModel(db, task.createdByUserId, wsId);
     await briefModel.create({

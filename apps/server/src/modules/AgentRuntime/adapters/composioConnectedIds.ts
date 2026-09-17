@@ -1,11 +1,11 @@
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import debug from 'debug';
 
 import { ConnectorModel } from '@/database/models/connector';
 import { PluginModel } from '@/database/models/plugin';
 
-const log = debug('lobe-server:composio-connected-ids');
+const log = debug('orvilo-server:composio-connected-ids');
 
 /**
  * Composio service identifiers currently connected (ACTIVE) in the caller's
@@ -22,7 +22,7 @@ const log = debug('lobe-server:composio-connected-ids');
  * connect flow) instead of calling the already-authorized tool.
  */
 export async function loadConnectedComposioIds(
-  serverDB: LobeChatDatabase,
+  serverDB: OrviloDatabase,
   userId: string,
   workspaceId: string | undefined,
   agentId: string | undefined,

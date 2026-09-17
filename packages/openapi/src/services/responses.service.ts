@@ -226,14 +226,14 @@ export class ResponsesService extends BaseService {
 
   /**
    * Decode internal tool name format to display name.
-   * - lobe-client-fn____get_weather → get_weather
-   * - lobe-cloud-sandbox____executeCode → lobe-cloud-sandbox/executeCode
+   * - orvilo-client-fn____get_weather → get_weather
+   * - orvilo-cloud-sandbox____executeCode → orvilo-cloud-sandbox/executeCode
    * - my-plugin____myApi____mcp → my-plugin/myApi (legacy 3-segment still tolerated)
    */
   private decodeToolName(rawName: string): string {
     const SEPARATOR = '____';
-    if (rawName.startsWith(`lobe-client-fn${SEPARATOR}`)) {
-      return rawName.slice(`lobe-client-fn${SEPARATOR}`.length);
+    if (rawName.startsWith(`orvilo-client-fn${SEPARATOR}`)) {
+      return rawName.slice(`orvilo-client-fn${SEPARATOR}`.length);
     }
     const parts = rawName.split(SEPARATOR);
     if (parts.length >= 2) {
@@ -628,7 +628,7 @@ export class ResponsesService extends BaseService {
                 if (!existing) {
                   // First time seeing this tool call — emit output_item.added
                   const fcItemId = `fc_${responseId}_${itemCounter++}`;
-                  const isClientTool = toolCall.identifier === 'lobe-client-fn';
+                  const isClientTool = toolCall.identifier === 'orvilo-client-fn';
                   const toolDisplayName = isClientTool
                     ? toolCall.apiName
                     : `${toolCall.identifier}/${toolCall.apiName}`;

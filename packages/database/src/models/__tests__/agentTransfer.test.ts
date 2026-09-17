@@ -41,7 +41,7 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AGENT_SHARED_TRANSFER_BLOCKED, AgentModel } from '../agent';
 import { ExpertiseModel } from '../expertise';
 import {
@@ -50,7 +50,7 @@ import {
   TopicCommentModel,
 } from '../topicComment';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const isServerDB = process.env.TEST_SERVER_DB === '1';
 
 const userId = 'transfer-test-user';

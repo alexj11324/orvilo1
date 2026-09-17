@@ -79,8 +79,8 @@ export const params = {
   },
   constructorOptions: {
     defaultHeaders: {
-      'http-referer': 'https://lobehub.com',
-      'x-title': 'LobeHub',
+      'http-referer': 'https://orvilo.aspectlylabs.com',
+      'x-title': 'Orvilo',
     },
   },
   debug: {
@@ -157,4 +157,4 @@ export const params = {
   provider: ModelProvider.VercelAIGateway,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeVercelAIGatewayAI = createOpenAICompatibleRuntime(params);
+export const OrviloVercelAIGatewayAI = createOpenAICompatibleRuntime(params);

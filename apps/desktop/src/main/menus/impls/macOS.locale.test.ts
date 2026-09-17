@@ -11,7 +11,7 @@ const { mockAppModule } = vi.hoisted(() => ({
     dock: { setMenu: vi.fn() },
     getAppPath: vi.fn(() => '/mock/app/path'),
     getLocale: vi.fn(() => 'en-US'),
-    getName: vi.fn(() => 'LobeHub'),
+    getName: vi.fn(() => 'Orvilo'),
     getPath: vi.fn((type: string) => `/mock/path/${type}`),
     getPreferredSystemLanguages: vi.fn(() => ['en-US']),
   },
@@ -69,7 +69,7 @@ const buildMenuLabels = async () => {
 describe('macOS menu bar language on first launch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAppModule.getName.mockReturnValue('LobeHub');
+    mockAppModule.getName.mockReturnValue('Orvilo');
   });
 
   it('renders the menu bar in the OS language when nothing is stored yet', async () => {
@@ -80,7 +80,7 @@ describe('macOS menu bar language on first launch', () => {
 
     const { topLevel, windowSubmenu } = await buildMenuLabels();
 
-    expect(topLevel).toEqual(['LobeHub', '文件', '编辑', '视图', '前往', '窗口', '帮助']);
+    expect(topLevel).toEqual(['Orvilo', '文件', '编辑', '视图', '前往', '窗口', '帮助']);
     expect(windowSubmenu).toEqual(['最小化', '缩放', '前置所有窗口']);
   });
 
@@ -90,7 +90,7 @@ describe('macOS menu bar language on first launch', () => {
 
     const { topLevel, windowSubmenu } = await buildMenuLabels();
 
-    expect(topLevel).toEqual(['LobeHub', 'File', 'Edit', 'View', 'Go', 'Window', 'Help']);
+    expect(topLevel).toEqual(['Orvilo', 'File', 'Edit', 'View', 'Go', 'Window', 'Help']);
     expect(windowSubmenu).toEqual(['Minimize', 'Zoom', 'Bring All Windows to Front']);
   });
 });

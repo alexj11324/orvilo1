@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { agents, messagePlugins, messages, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
@@ -42,7 +42,7 @@ const aiAgentService = vi.hoisted(() => ({
 }));
 
 // Mock getServerDB to return our test database instance
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -99,7 +99,7 @@ vi.mock('@/server/services/heterogeneousAgent', () => ({
 }));
 
 describe('aiAgentRouter — remote Human-in-the-loop', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let userId: string;
 
   beforeEach(async () => {
@@ -143,11 +143,11 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     aiAgentRouter.createCaller({
       jwtPayload: { userId },
       oidcAuth: {
-        aud: 'urn:lobehub:hetero-operation',
+        aud: 'urn:orvilo:hetero-operation',
         capabilities: ['hetero:intervention:read'],
         exp: Math.floor(Date.now() / 1000) + 3600,
         iat: Math.floor(Date.now() / 1000),
-        iss: 'urn:lobehub:internal',
+        iss: 'urn:orvilo:internal',
         jti: `jti-${operationId}`,
         operation_id: operationId,
         purpose: 'hetero-operation',
@@ -195,7 +195,7 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       apiName: 'editFile',
       arguments: '{"path":"/tmp/a"}',
       id: params.messageId,
-      identifier: 'lobe-local-system',
+      identifier: 'orvilo-local-system',
       intervention: {
         batchId: params.batchId,
         operationId: params.operationId,

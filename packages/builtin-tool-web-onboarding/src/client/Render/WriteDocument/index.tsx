@@ -24,7 +24,7 @@ const WriteDocument = memo<WriteDocumentRenderProps>(({ args }) => {
 
   if (!content || !type) return null;
 
-  const title = t(`builtins.lobe-web-onboarding.docType.${type}` as const);
+  const title = t(`builtins.orvilo-web-onboarding.docType.${type}` as const);
 
   return <DocumentCard content={content} title={title} />;
 });

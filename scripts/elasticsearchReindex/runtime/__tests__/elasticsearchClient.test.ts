@@ -22,7 +22,7 @@ const agentsIndexBody: FtsSearchReindexIndexBody = {
   settings: { analysis: FTS_SEARCH_INDEX_ANALYSIS },
 };
 const existingAgentsMapping = {
-  'lobehub-messages-v1': {
+  'orvilo-messages-v1': {
     mappings: {
       _meta: reindexMeta,
       ...FTS_SEARCH_INDEX_DEFINITIONS.agents.mappings,
@@ -77,9 +77,9 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'http://elasticsearch:9200',
     });
 
-    await expect(client.count('lobehub-agents-v1')).resolves.toBe(3);
+    await expect(client.count('orvilo-agents-v1')).resolves.toBe(3);
     const [endpoint, init] = fetchMock.mock.calls[0];
-    expect(String(endpoint)).toBe('http://elasticsearch:9200/lobehub-agents-v1/_count');
+    expect(String(endpoint)).toBe('http://elasticsearch:9200/orvilo-agents-v1/_count');
     expect(Object.keys(init.headers)).not.toContain('Authorization');
   });
 
@@ -94,11 +94,11 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await client.ensureIndex('lobehub-messages-v1', agentsIndexBody);
+    await client.ensureIndex('orvilo-messages-v1', agentsIndexBody);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[1][0])).toBe(
-      'https://search.example.com/lobehub-messages-v1',
+      'https://search.example.com/orvilo-messages-v1',
     );
     expect(String(fetchMock.mock.calls[1][0])).not.toContain('secret-key');
   });
@@ -112,21 +112,21 @@ describe('FtsSearchReindexHttpClient', () => {
     });
 
     await expect(
-      client.ensureIndex('lobehub-messages-v1', agentsIndexBody, { createIfMissing: false }),
-    ).rejects.toThrow('Completed Elasticsearch index lobehub-messages-v1 is missing');
+      client.ensureIndex('orvilo-messages-v1', agentsIndexBody, { createIfMissing: false }),
+    ).rejects.toThrow('Completed Elasticsearch index orvilo-messages-v1 is missing');
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it('validates ICU analysis settings on an existing index', async () => {
     const incompatibleSettings = {
-      'lobehub-messages-v1': {
+      'orvilo-messages-v1': {
         settings: {
           index: {
             analysis: {
               ...FTS_SEARCH_INDEX_ANALYSIS,
               analyzer: {
                 ...FTS_SEARCH_INDEX_ANALYSIS.analyzer,
-                lobehub_icu: {
+                orvilo_icu: {
                   filter: ['icu_folding'],
                   tokenizer: 'standard',
                   type: 'custom',
@@ -148,7 +148,7 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureIndex('lobehub-messages-v1', agentsIndexBody)).rejects.toThrow(
+    await expect(client.ensureIndex('orvilo-messages-v1', agentsIndexBody)).rejects.toThrow(
       'analysis settings are incompatible',
     );
   });
@@ -160,7 +160,7 @@ describe('FtsSearchReindexHttpClient', () => {
       .mockResolvedValueOnce(response(existingAgentsMapping))
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v1': {
+          'orvilo-messages-v1': {
             settings: { index: { analysis: FTS_SEARCH_INDEX_ANALYSIS } },
           },
         }),
@@ -172,7 +172,7 @@ describe('FtsSearchReindexHttpClient', () => {
     });
 
     await expect(
-      client.ensureIndex('lobehub-messages-v1', agentsIndexBody),
+      client.ensureIndex('orvilo-messages-v1', agentsIndexBody),
     ).resolves.toBeUndefined();
   });
 
@@ -182,7 +182,7 @@ describe('FtsSearchReindexHttpClient', () => {
       .mockResolvedValueOnce(response(undefined))
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v1': {
+          'orvilo-messages-v1': {
             mappings: {
               _meta: reindexMeta,
               dynamic: 'strict',
@@ -200,7 +200,7 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureIndex('lobehub-messages-v1', agentsIndexBody)).rejects.toThrow(
+    await expect(client.ensureIndex('orvilo-messages-v1', agentsIndexBody)).rejects.toThrow(
       'mapping is incompatible for id',
     );
   });
@@ -211,7 +211,7 @@ describe('FtsSearchReindexHttpClient', () => {
       .mockResolvedValueOnce(response(undefined))
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v1': {
+          'orvilo-messages-v1': {
             mappings: {
               _meta: { ...reindexMeta, reindex_run_id: '00000000-0000-4000-8000-000000000002' },
               dynamic: 'strict',
@@ -226,7 +226,7 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureIndex('lobehub-messages-v1', agentsIndexBody)).rejects.toThrow(
+    await expect(client.ensureIndex('orvilo-messages-v1', agentsIndexBody)).rejects.toThrow(
       'reindex run identity is incompatible',
     );
   });
@@ -238,14 +238,14 @@ describe('FtsSearchReindexHttpClient', () => {
       .mockResolvedValueOnce(response(undefined))
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v1': {
+          'orvilo-messages-v1': {
             mappings: { _meta: legacyMeta, ...FTS_SEARCH_INDEX_DEFINITIONS.agents.mappings },
           },
         }),
       )
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v1': {
+          'orvilo-messages-v1': {
             settings: { index: { analysis: FTS_SEARCH_INDEX_ANALYSIS } },
           },
         }),
@@ -257,7 +257,7 @@ describe('FtsSearchReindexHttpClient', () => {
     });
 
     await expect(
-      client.ensureIndex('lobehub-messages-v1', agentsIndexBody),
+      client.ensureIndex('orvilo-messages-v1', agentsIndexBody),
     ).resolves.toBeUndefined();
   });
 
@@ -267,7 +267,7 @@ describe('FtsSearchReindexHttpClient', () => {
       .mockResolvedValueOnce(response(undefined))
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v1': {
+          'orvilo-messages-v1': {
             mappings: {
               _meta: { ...reindexMeta, schema_fingerprint: 'f'.repeat(64) },
               ...FTS_SEARCH_INDEX_DEFINITIONS.agents.mappings,
@@ -281,7 +281,7 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureIndex('lobehub-messages-v1', agentsIndexBody)).rejects.toThrow(
+    await expect(client.ensureIndex('orvilo-messages-v1', agentsIndexBody)).rejects.toThrow(
       'was built from a different v1 mapping than the code declares',
     );
   });
@@ -289,8 +289,8 @@ describe('FtsSearchReindexHttpClient', () => {
   it('keeps an alias that already targets the expected writable index', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       response({
-        'lobehub-messages-v1': {
-          aliases: { 'lobehub-messages': { is_write_index: true } },
+        'orvilo-messages-v1': {
+          aliases: { 'orvilo-messages': { is_write_index: true } },
         },
       }),
     );
@@ -300,12 +300,12 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureAlias('lobehub-messages', 'lobehub-messages-v1')).resolves.toBe(
+    await expect(client.ensureAlias('orvilo-messages', 'orvilo-messages-v1')).resolves.toBe(
       'existing',
     );
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(String(fetchMock.mock.calls[0][0])).toBe(
-      'https://search.example.com/_alias/lobehub-messages',
+      'https://search.example.com/_alias/orvilo-messages',
     );
   });
 
@@ -313,7 +313,7 @@ describe('FtsSearchReindexHttpClient', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
-        response({ 'lobehub-messages-v1': { aliases: { 'lobehub-messages': {} } } }),
+        response({ 'orvilo-messages-v1': { aliases: { 'orvilo-messages': {} } } }),
       );
     vi.stubGlobal('fetch', fetchMock);
     const client = new FtsSearchReindexHttpClient({
@@ -321,7 +321,7 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureAlias('lobehub-messages', 'lobehub-messages-v1')).resolves.toBe(
+    await expect(client.ensureAlias('orvilo-messages', 'orvilo-messages-v1')).resolves.toBe(
       'existing',
     );
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -330,8 +330,8 @@ describe('FtsSearchReindexHttpClient', () => {
   it('keeps an alias that still serves another generation of the same entity', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       response({
-        'lobehub-messages-v1': {
-          aliases: { 'lobehub-messages': { is_write_index: true } },
+        'orvilo-messages-v1': {
+          aliases: { 'orvilo-messages': { is_write_index: true } },
         },
       }),
     );
@@ -341,14 +341,14 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureAlias('lobehub-messages', 'lobehub-messages-v2')).resolves.toBe(
+    await expect(client.ensureAlias('orvilo-messages', 'orvilo-messages-v2')).resolves.toBe(
       'kept_other_generation',
     );
     // Promotion is an explicit later step, so the backfill must not mutate the alias here.
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock.mock.calls[0][1].method).toBe('GET');
     expect(String(fetchMock.mock.calls[0][0])).toBe(
-      'https://search.example.com/_alias/lobehub-messages',
+      'https://search.example.com/_alias/orvilo-messages',
     );
   });
 
@@ -356,7 +356,7 @@ describe('FtsSearchReindexHttpClient', () => {
     const fetchMock = vi.fn().mockResolvedValue(
       response({
         'legacy-messages-index': {
-          aliases: { 'lobehub-messages': { is_write_index: true } },
+          aliases: { 'orvilo-messages': { is_write_index: true } },
         },
       }),
     );
@@ -366,8 +366,8 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureAlias('lobehub-messages', 'lobehub-messages-v2')).rejects.toThrow(
-      'Elasticsearch alias lobehub-messages points to legacy-messages-index instead of a single writable lobehub-messages-v<n> generation',
+    await expect(client.ensureAlias('orvilo-messages', 'orvilo-messages-v2')).rejects.toThrow(
+      'Elasticsearch alias orvilo-messages points to legacy-messages-index instead of a single writable orvilo-messages-v<n> generation',
     );
     expect(fetchMock).toHaveBeenCalledOnce();
   });
@@ -383,7 +383,7 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureAlias('lobehub-messages', 'lobehub-messages-v2')).resolves.toBe(
+    await expect(client.ensureAlias('orvilo-messages', 'orvilo-messages-v2')).resolves.toBe(
       'created',
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -392,14 +392,14 @@ describe('FtsSearchReindexHttpClient', () => {
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual({
       actions: [
-        { add: { alias: 'lobehub-messages', index: 'lobehub-messages-v2', is_write_index: true } },
+        { add: { alias: 'orvilo-messages', index: 'orvilo-messages-v2', is_write_index: true } },
       ],
     });
   });
 
   it('describes open and closed generations of an alias', async () => {
     const openDetail = {
-      'lobehub-messages-v1': {
+      'orvilo-messages-v1': {
         mappings: {
           _meta: { ...reindexMeta, schema_version: 1 },
           dynamic: 'strict',
@@ -407,7 +407,7 @@ describe('FtsSearchReindexHttpClient', () => {
         },
         settings: { index: { analysis: FTS_SEARCH_INDEX_ANALYSIS } },
       },
-      'lobehub-messages-v2': {
+      'orvilo-messages-v2': {
         mappings: {
           _meta: { ...reindexMeta, schema_version: 2 },
           dynamic: 'strict',
@@ -420,13 +420,13 @@ describe('FtsSearchReindexHttpClient', () => {
       .fn()
       .mockResolvedValueOnce(
         response([
-          { index: 'lobehub-messages-v2', status: 'open' },
-          { index: 'lobehub-messages-v1', status: 'close' },
+          { index: 'orvilo-messages-v2', status: 'open' },
+          { index: 'orvilo-messages-v1', status: 'close' },
         ]),
       )
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v2': { aliases: { 'lobehub-messages': { is_write_index: true } } },
+          'orvilo-messages-v2': { aliases: { 'orvilo-messages': { is_write_index: true } } },
         }),
       )
       .mockResolvedValueOnce(response(openDetail));
@@ -436,13 +436,13 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.describeGenerations('lobehub-messages')).resolves.toEqual([
+    await expect(client.describeGenerations('orvilo-messages')).resolves.toEqual([
       {
         aliased: false,
         analysis: FTS_SEARCH_INDEX_ANALYSIS,
-        index: 'lobehub-messages-v1',
+        index: 'orvilo-messages-v1',
         isWriteIndex: false,
-        mappings: openDetail['lobehub-messages-v1'].mappings,
+        mappings: openDetail['orvilo-messages-v1'].mappings,
         meta: { ...reindexMeta, schema_version: 1 },
         state: 'closed',
         version: 1,
@@ -450,9 +450,9 @@ describe('FtsSearchReindexHttpClient', () => {
       {
         aliased: true,
         analysis: FTS_SEARCH_INDEX_ANALYSIS,
-        index: 'lobehub-messages-v2',
+        index: 'orvilo-messages-v2',
         isWriteIndex: true,
-        mappings: openDetail['lobehub-messages-v2'].mappings,
+        mappings: openDetail['orvilo-messages-v2'].mappings,
         meta: { ...reindexMeta, schema_version: 2 },
         state: 'open',
         version: 2,
@@ -460,24 +460,24 @@ describe('FtsSearchReindexHttpClient', () => {
     ]);
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(String(fetchMock.mock.calls[0][0])).toBe(
-      'https://search.example.com/_cat/indices/lobehub-messages-v*?format=json&h=index,status&expand_wildcards=all&allow_no_indices=true',
+      'https://search.example.com/_cat/indices/orvilo-messages-v*?format=json&h=index,status&expand_wildcards=all&allow_no_indices=true',
     );
     expect(String(fetchMock.mock.calls[1][0])).toBe(
-      'https://search.example.com/_alias/lobehub-messages',
+      'https://search.example.com/_alias/orvilo-messages',
     );
     expect(String(fetchMock.mock.calls[2][0])).toBe(
-      'https://search.example.com/lobehub-messages-v2,lobehub-messages-v1?expand_wildcards=all&filter_path=*.mappings,*.settings.index.analysis',
+      'https://search.example.com/orvilo-messages-v2,orvilo-messages-v1?expand_wildcards=all&filter_path=*.mappings,*.settings.index.analysis',
     );
   });
 
   it('describes generations of an entity whose alias does not exist yet', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(response([{ index: 'lobehub-messages-v1', status: 'open' }]))
+      .mockResolvedValueOnce(response([{ index: 'orvilo-messages-v1', status: 'open' }]))
       .mockResolvedValueOnce(response(undefined, 404))
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v1': {
+          'orvilo-messages-v1': {
             mappings: { _meta: reindexMeta, dynamic: 'strict', properties: {} },
             settings: { index: { analysis: FTS_SEARCH_INDEX_ANALYSIS } },
           },
@@ -489,11 +489,11 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.describeGenerations('lobehub-messages')).resolves.toEqual([
+    await expect(client.describeGenerations('orvilo-messages')).resolves.toEqual([
       {
         aliased: false,
         analysis: FTS_SEARCH_INDEX_ANALYSIS,
-        index: 'lobehub-messages-v1',
+        index: 'orvilo-messages-v1',
         isWriteIndex: false,
         mappings: { _meta: reindexMeta, dynamic: 'strict', properties: {} },
         meta: reindexMeta,
@@ -515,7 +515,7 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.describeGenerations('lobehub-messages')).resolves.toEqual([]);
+    await expect(client.describeGenerations('orvilo-messages')).resolves.toEqual([]);
     // Without an open index there is nothing to inspect, so no detail request is issued.
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -525,14 +525,14 @@ describe('FtsSearchReindexHttpClient', () => {
       .fn()
       .mockResolvedValueOnce(
         response([
-          { index: 'lobehub-messages-vnext', status: 'open' },
-          { index: 'lobehub-messages-v3', status: 'open' },
+          { index: 'orvilo-messages-vnext', status: 'open' },
+          { index: 'orvilo-messages-v3', status: 'open' },
         ]),
       )
       .mockResolvedValueOnce(response(undefined, 404))
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v3': {
+          'orvilo-messages-v3': {
             mappings: { _meta: reindexMeta, dynamic: 'strict', properties: {} },
             settings: { index: { analysis: FTS_SEARCH_INDEX_ANALYSIS } },
           },
@@ -544,11 +544,11 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    const generations = await client.describeGenerations('lobehub-messages');
+    const generations = await client.describeGenerations('orvilo-messages');
 
-    expect(generations.map(({ index }) => index)).toEqual(['lobehub-messages-v3']);
+    expect(generations.map(({ index }) => index)).toEqual(['orvilo-messages-v3']);
     expect(String(fetchMock.mock.calls[2][0])).toBe(
-      'https://search.example.com/lobehub-messages-v3?expand_wildcards=all&filter_path=*.mappings,*.settings.index.analysis',
+      'https://search.example.com/orvilo-messages-v3?expand_wildcards=all&filter_path=*.mappings,*.settings.index.analysis',
     );
   });
 
@@ -557,11 +557,11 @@ describe('FtsSearchReindexHttpClient', () => {
       .fn()
       .mockResolvedValueOnce(response([]))
       .mockResolvedValueOnce(
-        response({ 'lobehub-messages-legacy': { aliases: { 'lobehub-messages': {} } } }),
+        response({ 'orvilo-messages-legacy': { aliases: { 'orvilo-messages': {} } } }),
       )
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-legacy': {
+          'orvilo-messages-legacy': {
             mappings: { _meta: reindexMeta, dynamic: 'strict', properties: {} },
             settings: { index: { analysis: FTS_SEARCH_INDEX_ANALYSIS } },
           },
@@ -573,32 +573,32 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.describeGenerations('lobehub-messages')).resolves.toMatchObject([
+    await expect(client.describeGenerations('orvilo-messages')).resolves.toMatchObject([
       {
         aliased: true,
-        index: 'lobehub-messages-legacy',
+        index: 'orvilo-messages-legacy',
         isWriteIndex: true,
         state: 'open',
         version: null,
       },
     ]);
     expect(String(fetchMock.mock.calls[2][0])).toBe(
-      'https://search.example.com/lobehub-messages-legacy?expand_wildcards=all&filter_path=*.mappings,*.settings.index.analysis',
+      'https://search.example.com/orvilo-messages-legacy?expand_wildcards=all&filter_path=*.mappings,*.settings.index.analysis',
     );
   });
 
   it('reports the stamped generation of an index upgraded in place', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(response([{ index: 'lobehub-messages-v1', status: 'open' }]))
+      .mockResolvedValueOnce(response([{ index: 'orvilo-messages-v1', status: 'open' }]))
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v1': { aliases: { 'lobehub-messages': { is_write_index: true } } },
+          'orvilo-messages-v1': { aliases: { 'orvilo-messages': { is_write_index: true } } },
         }),
       )
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-v1': {
+          'orvilo-messages-v1': {
             mappings: {
               _meta: { ...reindexMeta, schema_version: 2 },
               dynamic: 'strict',
@@ -615,8 +615,8 @@ describe('FtsSearchReindexHttpClient', () => {
     });
 
     // The `-v1` suffix only records which generation built the index, not the one it implements.
-    await expect(client.describeGenerations('lobehub-messages')).resolves.toMatchObject([
-      { index: 'lobehub-messages-v1', isWriteIndex: true, version: 2 },
+    await expect(client.describeGenerations('orvilo-messages')).resolves.toMatchObject([
+      { index: 'orvilo-messages-v1', isWriteIndex: true, version: 2 },
     ]);
   });
 
@@ -625,11 +625,11 @@ describe('FtsSearchReindexHttpClient', () => {
       .fn()
       .mockResolvedValueOnce(response([]))
       .mockResolvedValueOnce(
-        response({ 'lobehub-messages-restored': { aliases: { 'lobehub-messages': {} } } }),
+        response({ 'orvilo-messages-restored': { aliases: { 'orvilo-messages': {} } } }),
       )
       .mockResolvedValueOnce(
         response({
-          'lobehub-messages-restored': {
+          'orvilo-messages-restored': {
             mappings: {
               _meta: { ...reindexMeta, schema_version: 3 },
               dynamic: 'strict',
@@ -645,8 +645,8 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.describeGenerations('lobehub-messages')).resolves.toMatchObject([
-      { index: 'lobehub-messages-restored', meta: { schema_version: 3 }, version: null },
+    await expect(client.describeGenerations('orvilo-messages')).resolves.toMatchObject([
+      { index: 'orvilo-messages-restored', meta: { schema_version: 3 }, version: null },
     ]);
   });
 
@@ -659,7 +659,7 @@ describe('FtsSearchReindexHttpClient', () => {
     });
 
     await expect(
-      client.putMapping('lobehub-messages-v1', {
+      client.putMapping('orvilo-messages-v1', {
         _meta: reindexMeta,
         properties: FTS_SEARCH_INDEX_DEFINITIONS.agents.mappings.properties,
       }),
@@ -667,7 +667,7 @@ describe('FtsSearchReindexHttpClient', () => {
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [endpoint, init] = fetchMock.mock.calls[0];
-    expect(String(endpoint)).toBe('https://search.example.com/lobehub-messages-v1/_mapping');
+    expect(String(endpoint)).toBe('https://search.example.com/orvilo-messages-v1/_mapping');
     expect(init.method).toBe('PUT');
     expect(JSON.parse(init.body)).toEqual({
       _meta: reindexMeta,
@@ -684,11 +684,11 @@ describe('FtsSearchReindexHttpClient', () => {
     });
 
     await expect(
-      client.putMapping('lobehub-messages-v1', {
+      client.putMapping('orvilo-messages-v1', {
         _meta: reindexMeta,
         properties: FTS_SEARCH_INDEX_DEFINITIONS.agents.mappings.properties,
       }),
-    ).rejects.toThrow('Elasticsearch mapping upgrade failed for lobehub-messages-v1 (400)');
+    ).rejects.toThrow('Elasticsearch mapping upgrade failed for orvilo-messages-v1 (400)');
   });
 
   it('promotes a generation and removes the alias from every previous generation', async () => {
@@ -701,9 +701,9 @@ describe('FtsSearchReindexHttpClient', () => {
 
     await expect(
       client.promoteAlias(
-        'lobehub-messages',
-        ['lobehub-messages-v1', 'lobehub-messages-v2'],
-        'lobehub-messages-v3',
+        'orvilo-messages',
+        ['orvilo-messages-v1', 'orvilo-messages-v2'],
+        'orvilo-messages-v3',
       ),
     ).resolves.toBeUndefined();
 
@@ -713,9 +713,9 @@ describe('FtsSearchReindexHttpClient', () => {
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual({
       actions: [
-        { remove: { alias: 'lobehub-messages', index: 'lobehub-messages-v1' } },
-        { remove: { alias: 'lobehub-messages', index: 'lobehub-messages-v2' } },
-        { add: { alias: 'lobehub-messages', index: 'lobehub-messages-v3', is_write_index: true } },
+        { remove: { alias: 'orvilo-messages', index: 'orvilo-messages-v1' } },
+        { remove: { alias: 'orvilo-messages', index: 'orvilo-messages-v2' } },
+        { add: { alias: 'orvilo-messages', index: 'orvilo-messages-v3', is_write_index: true } },
       ],
     });
   });
@@ -729,15 +729,15 @@ describe('FtsSearchReindexHttpClient', () => {
     });
 
     await client.promoteAlias(
-      'lobehub-messages',
-      ['lobehub-messages-v1', 'lobehub-messages-v2'],
-      'lobehub-messages-v2',
+      'orvilo-messages',
+      ['orvilo-messages-v1', 'orvilo-messages-v2'],
+      'orvilo-messages-v2',
     );
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       actions: [
-        { remove: { alias: 'lobehub-messages', index: 'lobehub-messages-v1' } },
-        { add: { alias: 'lobehub-messages', index: 'lobehub-messages-v2', is_write_index: true } },
+        { remove: { alias: 'orvilo-messages', index: 'orvilo-messages-v1' } },
+        { add: { alias: 'orvilo-messages', index: 'orvilo-messages-v2', is_write_index: true } },
       ],
     });
   });
@@ -750,10 +750,10 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.closeIndex('lobehub-messages-v1')).resolves.toBeUndefined();
+    await expect(client.closeIndex('orvilo-messages-v1')).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledOnce();
     const [endpoint, init] = fetchMock.mock.calls[0];
-    expect(String(endpoint)).toBe('https://search.example.com/lobehub-messages-v1/_close');
+    expect(String(endpoint)).toBe('https://search.example.com/orvilo-messages-v1/_close');
     expect(init.method).toBe('POST');
   });
 
@@ -765,8 +765,8 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.closeIndex('lobehub-messages-v1')).rejects.toThrow(
-      'Elasticsearch index close failed for lobehub-messages-v1 (403)',
+    await expect(client.closeIndex('orvilo-messages-v1')).rejects.toThrow(
+      'Elasticsearch index close failed for orvilo-messages-v1 (403)',
     );
   });
 
@@ -778,18 +778,18 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.deleteIndex('lobehub-messages-v1')).resolves.toBeUndefined();
+    await expect(client.deleteIndex('orvilo-messages-v1')).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledOnce();
     const [endpoint, init] = fetchMock.mock.calls[0];
-    expect(String(endpoint)).toBe('https://search.example.com/lobehub-messages-v1');
+    expect(String(endpoint)).toBe('https://search.example.com/orvilo-messages-v1');
     expect(init.method).toBe('DELETE');
   });
 
   it('installs an exact-index auto-create tombstone before deletion', async () => {
-    const index = 'lobehub-messages-v1';
+    const index = 'orvilo-messages-v1';
     const templateName = getRetiredIndexProtectionTemplateName(index);
     const template = {
-      _meta: { index, owner: 'lobehub-fts-search-retirement' },
+      _meta: { index, owner: 'orvilo-fts-search-retirement' },
       allow_auto_create: false,
       index_patterns: [index],
       priority: 1_000_000,
@@ -829,21 +829,21 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureRetiredIndexProtection('lobehub-messages-v*')).rejects.toThrow(
+    await expect(client.ensureRetiredIndexProtection('orvilo-messages-v*')).rejects.toThrow(
       'must be one exact physical index name',
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('accepts an existing owned tombstone with Elasticsearch defaults', async () => {
-    const index = 'lobehub-messages-v1';
+    const index = 'orvilo-messages-v1';
     const templateName = getRetiredIndexProtectionTemplateName(index);
     const fetchMock = vi.fn().mockResolvedValue(
       response({
         index_templates: [
           {
             index_template: {
-              _meta: { index, owner: 'lobehub-fts-search-retirement' },
+              _meta: { index, owner: 'orvilo-fts-search-retirement' },
               allow_auto_create: false,
               composed_of: [],
               index_patterns: [index],
@@ -873,7 +873,7 @@ describe('FtsSearchReindexHttpClient', () => {
       response({
         index_templates: [
           {
-            index_template: { index_patterns: ['lobehub-*'], priority: 500, template: {} },
+            index_template: { index_patterns: ['orvilo-*'], priority: 500, template: {} },
             name: 'operator-defaults',
           },
         ],
@@ -885,14 +885,14 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.ensureRetiredIndexProtection('lobehub-messages-v1')).rejects.toThrow(
+    await expect(client.ensureRetiredIndexProtection('orvilo-messages-v1')).rejects.toThrow(
       'overlaps external index template operator-defaults',
     );
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it('refuses an unowned collision at the deterministic tombstone name', async () => {
-    const index = 'lobehub-messages-v1';
+    const index = 'orvilo-messages-v1';
     const templateName = getRetiredIndexProtectionTemplateName(index);
     const fetchMock = vi.fn().mockResolvedValue(
       response({
@@ -923,48 +923,48 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.deleteIndex('lobehub-messages-v1')).rejects.toThrow(
+    await expect(client.deleteIndex('orvilo-messages-v1')).rejects.toThrow(
       'did not acknowledge deletion',
     );
   });
 
   it.each([
     {
-      expected: 'alias creation for lobehub-messages',
+      expected: 'alias creation for orvilo-messages',
       name: 'alias creation',
       preflight404: true,
       run: (client: FtsSearchReindexHttpClient) =>
-        client.ensureAlias('lobehub-messages', 'lobehub-messages-v1'),
+        client.ensureAlias('orvilo-messages', 'orvilo-messages-v1'),
     },
     {
-      expected: 'alias promotion for lobehub-messages',
+      expected: 'alias promotion for orvilo-messages',
       name: 'alias promotion',
       preflight404: false,
       run: (client: FtsSearchReindexHttpClient) =>
-        client.promoteAlias('lobehub-messages', ['lobehub-messages-v1'], 'lobehub-messages-v2'),
+        client.promoteAlias('orvilo-messages', ['orvilo-messages-v1'], 'orvilo-messages-v2'),
     },
     {
-      expected: 'index close for lobehub-messages-v1',
+      expected: 'index close for orvilo-messages-v1',
       name: 'index close',
       preflight404: false,
-      run: (client: FtsSearchReindexHttpClient) => client.closeIndex('lobehub-messages-v1'),
+      run: (client: FtsSearchReindexHttpClient) => client.closeIndex('orvilo-messages-v1'),
     },
     {
-      expected: 'mapping upgrade for lobehub-messages-v1',
+      expected: 'mapping upgrade for orvilo-messages-v1',
       name: 'mapping upgrade',
       preflight404: false,
       run: (client: FtsSearchReindexHttpClient) =>
-        client.putMapping('lobehub-messages-v1', {
+        client.putMapping('orvilo-messages-v1', {
           _meta: reindexMeta,
           properties: FTS_SEARCH_INDEX_DEFINITIONS.agents.mappings.properties,
         }),
     },
     {
-      expected: 'index creation for lobehub-messages-v1',
+      expected: 'index creation for orvilo-messages-v1',
       name: 'index creation',
       preflight404: true,
       run: (client: FtsSearchReindexHttpClient) =>
-        client.ensureIndex('lobehub-messages-v1', agentsIndexBody),
+        client.ensureIndex('orvilo-messages-v1', agentsIndexBody),
     },
   ])(
     'blocks $name when Elasticsearch does not acknowledge it',
@@ -997,7 +997,7 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await client.closeIndex('lobehub-messages-v1');
+    await client.closeIndex('orvilo-messages-v1');
     expect(events).toEqual(['guard', 'request:POST']);
   });
 
@@ -1009,30 +1009,28 @@ describe('FtsSearchReindexHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.deleteIndex('lobehub-messages-v1')).rejects.toThrow(
-      'Elasticsearch index deletion failed for lobehub-messages-v1 (404)',
+    await expect(client.deleteIndex('orvilo-messages-v1')).rejects.toThrow(
+      'Elasticsearch index deletion failed for orvilo-messages-v1 (404)',
     );
   });
 });
 
 describe('parseGenerationVersion', () => {
   it('parses the generation of an index that follows the alias naming scheme', () => {
-    expect(parseGenerationVersion('lobehub-messages', 'lobehub-messages-v1')).toBe(1);
-    expect(parseGenerationVersion('lobehub-messages', 'lobehub-messages-v12')).toBe(12);
+    expect(parseGenerationVersion('orvilo-messages', 'orvilo-messages-v1')).toBe(1);
+    expect(parseGenerationVersion('orvilo-messages', 'orvilo-messages-v12')).toBe(12);
   });
 
   it('returns undefined for an index outside the alias naming scheme', () => {
-    expect(parseGenerationVersion('lobehub-messages', 'lobehub-messages')).toBeUndefined();
-    expect(parseGenerationVersion('lobehub-messages', 'lobehub-messages-vnext')).toBeUndefined();
+    expect(parseGenerationVersion('orvilo-messages', 'orvilo-messages')).toBeUndefined();
+    expect(parseGenerationVersion('orvilo-messages', 'orvilo-messages-vnext')).toBeUndefined();
     expect(
-      parseGenerationVersion('lobehub-messages', 'lobehub-messages-v1-restored'),
+      parseGenerationVersion('orvilo-messages', 'orvilo-messages-v1-restored'),
     ).toBeUndefined();
   });
 
   it('returns undefined for a generation of a foreign alias prefix', () => {
-    expect(parseGenerationVersion('lobehub-messages', 'lobehub-agents-v1')).toBeUndefined();
-    expect(
-      parseGenerationVersion('lobehub-messages', 'shadow-lobehub-messages-v1'),
-    ).toBeUndefined();
+    expect(parseGenerationVersion('orvilo-messages', 'orvilo-agents-v1')).toBeUndefined();
+    expect(parseGenerationVersion('orvilo-messages', 'shadow-orvilo-messages-v1')).toBeUndefined();
   });
 });

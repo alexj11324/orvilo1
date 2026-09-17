@@ -7,7 +7,7 @@ import type { WorkRegistrationIntent } from '@orvilo/types';
  * that do NOT return a rich result object up to `call_tool`:
  * - task: the builtin executor registry (`invokeExecutor`) — returns the result
  *   object, but the intent is manifest-derived there;
- * - skill (linear / github): `lobehubSkillExecutor`, whose dispatch returns only
+ * - skill (linear / github): `orviloSkillExecutor`, whose dispatch returns only
  *   the truncated content STRING;
  * - document: the agent-documents runtime, whose registration used to be a
  *   server-side side-effect of the lambda mutation.

@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { Command } from 'commander';
-import { LOBE_DEFAULT_MODEL_LIST } from 'model-bank';
+import { ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 
 import { buildContextMap } from '../analysis/contextMap';
 import { renderContextMap } from '../viewer/contextMap';
@@ -15,7 +15,7 @@ const dim = (s: string) => `\x1B[2m${s}\x1B[22m`;
 /** Context window of the model the operation ran on, preferring the matching provider. */
 function resolveContextWindow(model?: string, provider?: string): number | undefined {
   if (!model) return undefined;
-  const matches = LOBE_DEFAULT_MODEL_LIST.filter((m) => m.id === model);
+  const matches = ORVILO_DEFAULT_MODEL_LIST.filter((m) => m.id === model);
   const exact = matches.find((m) => m.providerId === provider);
   return (exact ?? matches[0])?.contextWindowTokens ?? undefined;
 }

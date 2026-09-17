@@ -55,7 +55,7 @@ export const UpdateGroupPromptInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-group-agent-builder.apiName.updateGroupPrompt')}
+          {t('builtins.orvilo-group-agent-builder.apiName.updateGroupPrompt')}
         </span>
       </div>
     );
@@ -71,7 +71,7 @@ export const UpdateGroupPromptInspector = memo<
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
       >
-        {t('builtins.lobe-group-agent-builder.apiName.updateGroupPrompt')}
+        {t('builtins.orvilo-group-agent-builder.apiName.updateGroupPrompt')}
       </span>
       {/* Show length diff when completed */}
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
@@ -83,14 +83,14 @@ export const UpdateGroupPromptInspector = memo<
         >
           {lengthDiff >= 0 ? '+' : ''}
           {lengthDiff}
-          {t('builtins.lobe-agent-builder.inspector.chars')}
+          {t('builtins.orvilo-agent-builder.inspector.chars')}
         </Text>
       )}
       {/* Show streaming length */}
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
         <Text code as="span" color={cssVar.colorTextDescription} fontSize={12}>
           ({streamingLength}
-          {t('builtins.lobe-agent-builder.inspector.chars')})
+          {t('builtins.orvilo-agent-builder.inspector.chars')})
         </Text>
       )}
     </Flexbox>

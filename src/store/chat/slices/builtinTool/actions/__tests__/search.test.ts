@@ -15,7 +15,7 @@ vi.mock('@orvilo/builtin-tool-web-browsing', () => ({
     crawlMultiPages: 'crawlMultiPages',
   },
   WebBrowsingManifest: {
-    identifier: 'lobe-web-browsing',
+    identifier: 'orvilo-web-browsing',
   },
 }));
 

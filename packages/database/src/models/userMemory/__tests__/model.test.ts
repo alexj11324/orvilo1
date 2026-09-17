@@ -21,14 +21,14 @@ import {
   userMemoriesPreferences,
   users,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { UserMemoryModel } from '../model';
 
 const userId = 'memory-model-test-user';
 const otherUserId = 'other-memory-model-user';
 
 let memoryModel: UserMemoryModel;
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 beforeEach(async () => {
   await serverDB.delete(userMemoriesActivities);

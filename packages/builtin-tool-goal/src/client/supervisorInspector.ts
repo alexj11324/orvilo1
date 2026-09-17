@@ -6,7 +6,7 @@ import type { GoalSupervisorApiName } from '../supervisor';
 const inspector = (api: keyof typeof GoalSupervisorApiName): BuiltinInspector =>
   function SupervisorInspector() {
     const { t } = useTranslation('plugin');
-    return t(`builtins.lobe-goal-supervisor.apiName.${api}`);
+    return t(`builtins.orvilo-goal-supervisor.apiName.${api}`);
   };
 
 export const GoalSupervisorInspectors = {

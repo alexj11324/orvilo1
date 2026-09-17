@@ -12,11 +12,9 @@ describe('getContextMemoryViewModel', () => {
         details: 'Long form notes',
         summary: 'Team is building an agent harness',
         tags: ['agent-harness'],
-        title: 'LobeHub Agent Harness exploration',
+        title: 'Orvilo Agent Harness exploration',
         withContext: {
-          associatedObjects: [
-            { extra: '{"repo":"lobehub"}', name: 'LobeHub', type: 'application' },
-          ],
+          associatedObjects: [{ extra: '{"repo":"orvilo"}', name: 'Orvilo', type: 'application' }],
           associatedSubjects: [{ extra: null, name: 'Arvin Xu', type: 'person' }],
           currentStatus: 'ongoing',
           description: 'The team focuses on agentic infrastructure this quarter.',
@@ -41,7 +39,7 @@ describe('getContextMemoryViewModel', () => {
     // subjects come first, then objects
     expect(vm.entities).toEqual([
       { extra: undefined, name: 'Arvin Xu', type: 'person' },
-      { extra: '{"repo":"lobehub"}', name: 'LobeHub', type: 'application' },
+      { extra: '{"repo":"orvilo"}', name: 'Orvilo', type: 'application' },
     ]);
   });
 
@@ -73,7 +71,7 @@ describe('getContextMemoryViewModel', () => {
             null,
             'Arvin Xu',
             { name: '', type: 'person' },
-            { extra: { repo: 'lobehub' }, name: 'Arvin Xu', type: 'person' },
+            { extra: { repo: 'orvilo' }, name: 'Arvin Xu', type: 'person' },
           ],
         },
       }),

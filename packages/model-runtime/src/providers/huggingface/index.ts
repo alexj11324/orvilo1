@@ -109,8 +109,7 @@ export const params = {
             : model.id;
 
         const pricing = getFieldFromProviders('pricing') as
-          | { input?: number; output?: number }
-          | undefined;
+          { input?: number; output?: number } | undefined;
 
         return {
           contextWindowTokens,
@@ -129,4 +128,4 @@ export const params = {
   provider: ModelProvider.HuggingFace,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeHuggingFaceAI = createOpenAICompatibleRuntime(params);
+export const OrviloHuggingFaceAI = createOpenAICompatibleRuntime(params);

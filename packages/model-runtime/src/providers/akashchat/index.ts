@@ -48,4 +48,4 @@ export const params = {
   provider: ModelProvider.AkashChat,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeAkashChatAI = createOpenAICompatibleRuntime(params);
+export const OrviloAkashChatAI = createOpenAICompatibleRuntime(params);

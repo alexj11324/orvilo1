@@ -105,7 +105,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -257,7 +257,7 @@ describe('AiAgentService.execSubAgent', () => {
       });
     });
 
-    it('should run deferred lobe-agent children through execVirtualSubAgent', async () => {
+    it('should run deferred orvilo-agent children through execVirtualSubAgent', async () => {
       const execAgentSpy = vi.spyOn(service, 'execAgent').mockResolvedValue({
         agentId: 'agent-1',
         assistantMessageId: 'assistant-msg-1',

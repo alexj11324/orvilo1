@@ -6,7 +6,7 @@ import createClient from '@azure-rest/ai-inference';
 import { ModelProvider } from 'model-bank';
 import type OpenAI from 'openai';
 
-import type { LobeRuntimeAI } from '../../core/BaseAI';
+import type { OrviloRuntimeAI } from '../../core/BaseAI';
 import { transformResponseToStream } from '../../core/openaiCompatibleFactory';
 import { createSSEDataExtractor, OpenAIStream } from '../../core/streams';
 import type { ChatMethodOptions, ChatStreamPayload } from '../../types';
@@ -23,7 +23,7 @@ interface AzureAIParams {
   baseURL?: string;
 }
 
-export class LobeAzureAI implements LobeRuntimeAI {
+export class OrviloAzureAI implements OrviloRuntimeAI {
   client: ModelClient;
 
   constructor(params?: AzureAIParams) {

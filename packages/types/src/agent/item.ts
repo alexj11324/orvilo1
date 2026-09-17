@@ -4,11 +4,11 @@ import { z } from 'zod';
 import type { FileItem } from '../files';
 import type { KnowledgeBaseItem } from '../knowledgeBase';
 import type { FewShots } from '../llm';
-import type { LobeAgentAgencyConfig } from './agencyConfig';
-import { AgentChatConfigSchema, type LobeAgentChatConfig } from './chatConfig';
+import type { OrviloAgentAgencyConfig } from './agencyConfig';
+import { AgentChatConfigSchema, type OrviloAgentChatConfig } from './chatConfig';
 import { type AgentPluginEntry, AgentPluginEntrySchema } from './pluginConfig';
 import type { AgentProfile } from './profile';
-import type { LobeAgentTTSConfig } from './tts';
+import type { OrviloAgentTTSConfig } from './tts';
 
 /**
  * A single entry in the agent usage ranking (by topic count). `id` is the
@@ -24,16 +24,16 @@ export interface AgentRankItem {
   title: string | null;
 }
 
-export interface LobeAgentConfig {
+export interface OrviloAgentConfig {
   /**
    * Agency configuration: device binding, heterogeneous agent provider, etc.
    */
-  agencyConfig?: LobeAgentAgencyConfig;
+  agencyConfig?: OrviloAgentAgencyConfig;
 
   avatar?: string;
   backgroundColor?: string;
 
-  chatConfig: LobeAgentChatConfig;
+  chatConfig: OrviloAgentChatConfig;
 
   /**
    * Editor content (JSON format)
@@ -56,7 +56,7 @@ export interface LobeAgentConfig {
   model: string;
   /**
    * The agent's personal name (e.g. "Alice", "小艾") — the identity it is
-   * addressed by. Distinct from {@link LobeAgentConfig.title}, which describes
+   * addressed by. Distinct from {@link OrviloAgentConfig.title}, which describes
    * the role it plays ("Health Assistant" / "健康助手"). Optional: agents
    * created before this field existed have no name.
    */
@@ -99,14 +99,14 @@ export interface LobeAgentConfig {
 
   /**
    * The role the agent plays, shown as its display label across the app
-   * (see {@link LobeAgentConfig.name} for the personal name).
+   * (see {@link OrviloAgentConfig.name} for the personal name).
    */
   title?: string;
 
   /**
    * Text-to-speech service
    */
-  tts: LobeAgentTTSConfig;
+  tts: OrviloAgentTTSConfig;
 
   /**
    * Flag for assistants generated automatically (e.g., from templates)
@@ -114,15 +114,15 @@ export interface LobeAgentConfig {
   virtual?: boolean;
 }
 
-export type LobeAgentConfigKeys =
-  keyof LobeAgentConfig | ['params', keyof LobeAgentConfig['params']];
+export type OrviloAgentConfigKeys =
+  keyof OrviloAgentConfig | ['params', keyof OrviloAgentConfig['params']];
 
 /**
  * Zod schema for creating a new agent.
  * Covers all user-configurable fields; system fields (id, userId, timestamps) are excluded.
  */
 export const CreateAgentSchema = z.object({
-  agencyConfig: z.custom<LobeAgentAgencyConfig>().optional(),
+  agencyConfig: z.custom<OrviloAgentAgencyConfig>().optional(),
   avatar: z.string().nullish(),
   backgroundColor: z.string().nullish(),
   chatConfig: AgentChatConfigSchema.optional(),
@@ -141,7 +141,7 @@ export const CreateAgentSchema = z.object({
   systemRole: z.string().nullish(),
   tags: z.array(z.string()).optional(),
   title: z.string().nullish(),
-  tts: z.custom<LobeAgentTTSConfig>().optional(),
+  tts: z.custom<OrviloAgentTTSConfig>().optional(),
   virtual: z.boolean().nullish(),
   /**
    * `private` keeps the agent visible only to its creator within the workspace;
@@ -155,10 +155,10 @@ export type CreateAgentConfig = z.infer<typeof CreateAgentSchema>;
 
 // Agent database item type (independent from schema)
 export interface AgentItem {
-  agencyConfig?: LobeAgentAgencyConfig | null;
+  agencyConfig?: OrviloAgentAgencyConfig | null;
   avatar?: string | null;
   backgroundColor?: string | null;
-  chatConfig?: LobeAgentChatConfig | null;
+  chatConfig?: OrviloAgentChatConfig | null;
   clientId?: string | null;
   createdAt: Date;
   description?: string | null;
@@ -170,7 +170,7 @@ export interface AgentItem {
   /** Default extension bag for values with no column and no home in `profile`. */
   metadata?: Record<string, unknown> | null;
   model?: string | null;
-  /** Personal name of the agent — see {@link LobeAgentConfig.name}. */
+  /** Personal name of the agent — see {@link OrviloAgentConfig.name}. */
   name?: string | null;
   openingMessage?: string | null;
   openingQuestions?: string[];
@@ -191,7 +191,7 @@ export interface AgentItem {
   systemRole?: string | null;
   tags?: string[];
   title?: string | null;
-  tts?: LobeAgentTTSConfig | null;
+  tts?: OrviloAgentTTSConfig | null;
   updatedAt: Date;
   userId: string;
   virtual?: boolean | null;

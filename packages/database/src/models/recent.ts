@@ -12,7 +12,7 @@ import {
   tasks,
   topics,
 } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
@@ -74,9 +74,9 @@ const toPlainTextPreview = (markdown: string): string => {
 export class RecentModel {
   private userId: string;
   private workspaceId?: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

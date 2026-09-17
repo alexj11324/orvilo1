@@ -43,7 +43,7 @@ import type { ThreadModel } from '@/database/models/thread';
 import type { TopicModel } from '@/database/models/topic';
 import { formatErrorForState } from '@/server/modules/AgentRuntime/formatErrorForState';
 
-const log = debug('lobe-server:hetero-agent:persistence');
+const log = debug('orvilo-server:hetero-agent:persistence');
 
 const generateThreadId = () => `thd_${createNanoId(16)()}`;
 

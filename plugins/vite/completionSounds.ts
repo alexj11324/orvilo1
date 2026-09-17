@@ -119,7 +119,7 @@ const SOUNDS: Record<string, { duration: number; instrument: Instrument; notes: 
 
 // UNNotificationSound resolves names only from ~/Library/Sounds, and only AIFF — a WAV
 // there silently falls back to the system alert sound.
-export const BANNER_SOUND = { aiff: 'lobehub-complete.aiff', source: 'chat-complete' };
+export const BANNER_SOUND = { aiff: 'orvilo-complete.aiff', source: 'chat-complete' };
 
 const mulberry32 = (seed: number) => () => {
   seed = (seed + 0x6d_2b_79_f5) | 0;
@@ -319,6 +319,6 @@ export const viteCompletionSounds = (options: { aiffDir?: string } = {}): Plugin
     configResolved(config) {
       if (config.publicDir) wavDir = path.join(config.publicDir, 'sounds');
     },
-    name: 'lobe-completion-sounds',
+    name: 'orvilo-completion-sounds',
   };
 };

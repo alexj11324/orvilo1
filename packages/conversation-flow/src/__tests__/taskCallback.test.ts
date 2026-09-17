@@ -72,7 +72,9 @@ describe('parse — taskCallback role', () => {
         createdAt: 1,
         id: 'a1',
         role: 'assistant',
-        tools: [{ apiName: 'createTasks', id: 'call-1', identifier: 'lobe-task', type: 'builtin' }],
+        tools: [
+          { apiName: 'createTasks', id: 'call-1', identifier: 'orvilo-task', type: 'builtin' },
+        ],
         updatedAt: 1,
       },
       {
@@ -162,7 +164,7 @@ describe('parse — taskCallback role', () => {
           id: fork.parentId,
           role: 'assistant',
           tools: [
-            { apiName: 'queryTask', id: toolCallId, identifier: 'lobe-task', type: 'builtin' },
+            { apiName: 'queryTask', id: toolCallId, identifier: 'orvilo-task', type: 'builtin' },
           ],
           updatedAt: parentAt,
         },

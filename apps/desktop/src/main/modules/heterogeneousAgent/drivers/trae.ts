@@ -3,8 +3,8 @@ import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
 import type { HeterogeneousAgentDriver } from '../types';
 
-const HOST_API_KEY_ENV = 'LOBEHUB_TRAE_API_KEY';
-const HOST_PROVIDER_ID = 'lobehub';
+const HOST_API_KEY_ENV = 'ORVILO_TRAE_API_KEY';
+const HOST_PROVIDER_ID = 'orvilo';
 
 const isConflictingConfigOverride = (value: string): boolean => {
   const key = value.split('=', 1)[0]?.trim();
@@ -64,7 +64,7 @@ const buildTraeProviderArgs = (params: { baseURL: string; model: string }): stri
   [
     ['model', tomlString(params.model)],
     ['model_provider', tomlString(HOST_PROVIDER_ID)],
-    [`model_providers.${HOST_PROVIDER_ID}.name`, tomlString('LobeHub Provider')],
+    [`model_providers.${HOST_PROVIDER_ID}.name`, tomlString('Orvilo Provider')],
     [`model_providers.${HOST_PROVIDER_ID}.base_url`, tomlString(params.baseURL)],
     [`model_providers.${HOST_PROVIDER_ID}.env_key`, tomlString(HOST_API_KEY_ENV)],
     [`model_providers.${HOST_PROVIDER_ID}.wire_api`, tomlString('responses')],

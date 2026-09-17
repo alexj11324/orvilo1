@@ -21,7 +21,7 @@ import {
  * Chat only: image/video generation is not exposed through the subscription
  * OAuth scope.
  */
-export const LobeSuperGrokAI = createOpenAICompatibleRuntime({
+export const OrviloSuperGrokAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.x.ai/v1',
   chatCompletion: {
     handlePayload: handleXAIChatCompletionPayload,

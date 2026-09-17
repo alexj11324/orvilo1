@@ -406,7 +406,7 @@ export const TRPC_BLOCKED_PATH_PREFIXES: string[] = [
   // non-API-key auth and would bypass the scope guard entirely
   'aiAgent.issueGatewayUserToken',
   'aiAgent.refreshGatewayToken',
-  // sandbox execution mints a full LOBEHUB_JWT for `lh` commands
+  // sandbox execution mints a full ORVILO_JWT for `lh` commands
   // (`preprocessLhCommand`), which would bypass the key's scopes entirely
   'market.callCodeInterpreterTool',
   'market.execInSandbox',

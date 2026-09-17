@@ -25,7 +25,7 @@ import {
 } from '@/database/schemas';
 import type { AcceptanceCommentRow } from '@/database/schemas/acceptanceComment';
 import type { AcceptanceItem } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { authedProcedure, publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -115,7 +115,7 @@ const deactivatedAuthor: AcceptanceCommentAuthor = {
  * dropped there rather than guessed.
  */
 const enrich = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   rows: AcceptanceCommentRow[],
   scope: {
     /** Whether this reader may take down a remark that is not theirs. */
@@ -291,7 +291,7 @@ const enrich = async (
 const requireComment = async (
   ctx: {
     acceptanceCommentModel: AcceptanceCommentModel;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     userId: string;
   },
   id: string,
@@ -322,7 +322,7 @@ const requireComment = async (
  * personal scope, where they can only sign as their own agents.
  */
 const assertAuthorAgentUsable = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   ctx: { userId: string; workspaceId?: string },
   agentId?: string,
 ) => {
@@ -345,7 +345,7 @@ const assertAuthorAgentUsable = async (
  * round index or an evidence anchor out of an acceptance they cannot read.
  */
 const assertReferencesBelongToAcceptance = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   acceptanceId: string,
   refs: { evidenceId?: string; runId?: string },
 ) => {

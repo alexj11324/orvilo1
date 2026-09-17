@@ -203,7 +203,7 @@ export interface ToolActivityDigest {
   failedCount: number;
   /** First use in the review window as an ISO string. */
   firstUsedAt?: string;
-  /** Tool identifier, such as `lobe-agent-documents`, when recorded by the tool runner. */
+  /** Tool identifier, such as `orvilo-agent-documents`, when recorded by the tool runner. */
   identifier?: string | null;
   /** Last use in the review window as an ISO string. */
   lastUsedAt?: string;

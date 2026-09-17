@@ -20,7 +20,7 @@ describe('publishWorkspaceHtmlArtifact', () => {
     const publishArtifact = vi.fn(async () => ({
       id: 'dep_1',
       latestRevisionNumber: 2,
-      publicUrl: 'https://example.lobehub.com/page',
+      publicUrl: 'https://example.aspectlylabs.com/page',
     }));
 
     const result = await publishWorkspaceHtmlArtifact(
@@ -50,7 +50,7 @@ describe('publishWorkspaceHtmlArtifact', () => {
 
     expect(result).toEqual({
       id: 'dep_1',
-      publicUrl: 'https://example.lobehub.com/page',
+      publicUrl: 'https://example.aspectlylabs.com/page',
       revision: 2,
     });
     const content = createMessage.mock.calls[0]?.[0]?.content ?? '';
@@ -62,11 +62,13 @@ describe('publishWorkspaceHtmlArtifact', () => {
     });
     expect(content).toContain('identifier="workspace-html-index-html"');
     expect(content).toContain('data:text/css;base64,');
-    expect(content.startsWith('<lobeArtifact ')).toBe(true);
-    expect(content.endsWith('</lobeArtifact>')).toBe(true);
+    expect(content.startsWith('<orviloArtifact ')).toBe(true);
+    expect(content.endsWith('</orviloArtifact>')).toBe(true);
     expect(content).toBe(
       wrapWorkspaceHtmlArtifact({
-        html: content.replace(/^<lobeArtifact\b[^>]*>\n/u, '').replace(/\n<\/lobeArtifact>$/u, ''),
+        html: content
+          .replace(/^<orviloArtifact\b[^>]*>\n/u, '')
+          .replace(/\n<\/orviloArtifact>$/u, ''),
         identifier: 'workspace-html-index-html',
         title: 'Demo',
       }),
@@ -82,7 +84,7 @@ describe('publishWorkspaceHtmlArtifact', () => {
   it('uploads files over the inline limit through publishSite', async () => {
     const publishSite = vi.fn(async () => ({
       latestRevisionNumber: 1,
-      publicUrl: 'https://example.lobehub.com/page',
+      publicUrl: 'https://example.aspectlylabs.com/page',
     }));
     const large = 'y'.repeat(32 * 1024 + 4);
 
@@ -115,7 +117,7 @@ describe('publishWorkspaceHtmlArtifact', () => {
       },
     );
 
-    expect(result.publicUrl).toBe('https://example.lobehub.com/page');
+    expect(result.publicUrl).toBe('https://example.aspectlylabs.com/page');
     expect(publishSite).toHaveBeenCalledWith(
       expect.objectContaining({
         artifactIdentifier: 'workspace-html-index-html',

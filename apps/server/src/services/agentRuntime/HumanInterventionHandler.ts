@@ -2,11 +2,11 @@ import type { AgentRuntimeContext } from '@orvilo/agent-runtime';
 import debug from 'debug';
 
 import type { MessageModel } from '@/database/models/message';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { hookDispatcher } from './hooks';
 
-const log = debug('lobe-server:human-intervention-handler');
+const log = debug('orvilo-server:human-intervention-handler');
 
 export interface InterventionInput {
   approvedToolCall?: any;
@@ -39,7 +39,7 @@ export interface InterventionResult {
  */
 export class HumanInterventionHandler {
   constructor(
-    private readonly serverDB: LobeChatDatabase,
+    private readonly serverDB: OrviloDatabase,
     private readonly messageModel: MessageModel,
   ) {}
 

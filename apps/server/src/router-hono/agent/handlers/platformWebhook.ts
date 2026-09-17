@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 import { getBotMessageRouter } from '@/server/services/bot';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
-const log = debug('lobe-server:bot:webhook-route');
+const log = debug('orvilo-server:bot:webhook-route');
 
 const REMOVED_INTERNAL_WEBHOOK_PLATFORMS = new Set([
   'bot-callback',

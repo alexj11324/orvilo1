@@ -1,7 +1,7 @@
 ---
 title: Chat API Client-Server Interaction Logic
 description: >-
-  Explore the client-server interaction logic of LobeHub Chat API, including
+  Explore the client-server interaction logic of Orvilo API, including
   event sequences and core components.
 tags:
   - Chat API
@@ -14,7 +14,7 @@ tags:
 # Chat API Client-Server Interaction Logic
 
 This document explains the implementation logic of
-LobeHub Chat API in client-server interactions,
+Orvilo API in client-server interactions,
 including event sequences and core components involved.
 
 ## Interaction Sequence Diagram
@@ -142,7 +142,7 @@ the executor calls ChatService:
   (`packages/model-runtime/src/core/ModelRuntime.ts`)
   calls the respective model provider's API
   and returns a streaming response
-- Frontend processes the streaming response via
+- Frontend processes the streaming response
   `fetchSSE` and
   [fetchEventSource](https://github.com/Azure/fetch-event-source)
 - Handles different types of events
@@ -153,7 +153,7 @@ the executor calls ChatService:
 
 When the AI model returns a `tool_calls` field in its
 response, the Agent issues a `call_tool` instruction.
-LobeHub supports three types of tools:
+Orvilo supports three types of tools:
 
 **Builtin Tools**: Tools built into the application,
 executed directly via local executors.
@@ -163,7 +163,7 @@ executed directly via local executors.
 - Includes built-in features like search,
   DALL-E image generation, etc.
 
-**MCP Tools**: External tools connected via
+**MCP Tools**: External tools connected
 [Model Context Protocol](https://modelcontextprotocol.io/).
 
 - Frontend calls `MCPService` (`src/services/mcp.ts`)
@@ -188,7 +188,7 @@ After tool execution completes, results are written to
 the message and returned to the Agent loop.
 The Agent then calls the LLM again to generate
 the final response based on tool results.
-The tool dispatch logic is in
+The tool dispatch logic is
 `src/store/chat/slices/plugin/actions/pluginTypes.ts`.
 
 ### 7. Preset Task Processing
@@ -338,14 +338,14 @@ depends on the scenario:
 ## Model Runtime
 
 Model Runtime (`packages/model-runtime/`) is the core
-abstraction layer in LobeHub for interacting with
+abstraction layer in Orvilo for interacting with
 LLM model providers, adapting different provider APIs
 into a unified interface.
 
 **Core Responsibilities**:
 
 - **Unified Abstraction Layer**: Hides differences
-  between AI provider APIs through the `LobeRuntimeAI`
+  between AI provider APIs through the `OrviloRuntimeAI`
   interface
   (`packages/model-runtime/src/core/BaseAI.ts`)
 - **Model Initialization**: Initializes the corresponding
@@ -361,7 +361,7 @@ into a unified interface.
 
 ```ts
 // packages/model-runtime/src/core/BaseAI.ts
-export interface LobeRuntimeAI {
+export interface OrviloRuntimeAI {
   baseURL?: string;
   chat?(
     payload: ChatStreamPayload,
@@ -396,7 +396,7 @@ in `packages/model-runtime/src/providers/`.
 
 ## Agent Runtime
 
-Agent Runtime (`packages/agent-runtime/`) is LobeHub's
+Agent Runtime (`packages/agent-runtime/`) is Orvilo's
 agent orchestration engine. As described above, it is the
 core execution engine that drives the entire chat flow.
 

@@ -1,6 +1,6 @@
-# E2E Tests for LobeHub
+# E2E Tests for Orvilo
 
-This directory contains end-to-end (E2E) tests for LobeHub using Cucumber (BDD) and Playwright.
+This directory contains end-to-end (E2E) tests for Orvilo using Cucumber (BDD) and Playwright.
 
 ## Directory Structure
 

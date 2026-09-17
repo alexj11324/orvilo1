@@ -1,5 +1,5 @@
 import { type DeviceAttachment } from '@orvilo/builtin-tool-remote-device';
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { sortDevicesByActivity } from '@orvilo/types';
 import debug from 'debug';
 
@@ -8,7 +8,7 @@ import { DeviceModel } from '@/database/models/device';
 import { deviceGateway } from './index';
 import { filterAuthorizedDevicePresence } from './scopedDevicePresence';
 
-const log = debug('lobe-server:device-scope');
+const log = debug('orvilo-server:device-scope');
 
 /**
  * Online devices an agent run may reach, scoped to a SINGLE principal and built
@@ -46,7 +46,7 @@ const log = debug('lobe-server:device-scope');
  * - Registered devices with scoped liveness, plus personal-only transient devices
  */
 export const getScopedOnlineDevices = async (
-  serverDB: LobeChatDatabase,
+  serverDB: OrviloDatabase,
   userId: string,
   workspaceId?: string,
 ): Promise<DeviceAttachment[]> => {

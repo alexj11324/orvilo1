@@ -1,4 +1,4 @@
-export const TopicReferenceIdentifier = 'lobe-topic-reference';
+export const TopicReferenceIdentifier = 'orvilo-topic-reference';
 
 export const TopicReferenceApiName = {
   getTopicContext: 'getTopicContext',

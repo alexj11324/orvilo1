@@ -10,7 +10,7 @@ export const BRANDING_NAME: string = 'Orvilo';
 
 export const ORG_NAME: string = 'Orvilo';
 
-export const LOBE_CHAT_CLOUD = 'Orvilo Cloud';
+export const ORVILO_CLOUD = 'Orvilo Cloud';
 
 export const BRANDING_PROVIDER = 'orvilo';
 

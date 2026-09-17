@@ -88,14 +88,14 @@ describe('search index mappings', () => {
   it('provides deployment-neutral versioned alias and physical names', () => {
     // The first rollout built every entity as v1; later generations move per entity.
     expect(FTS_SEARCH_INDEX_SCHEMA_VERSION).toBe(1);
-    expect(getFtsSearchIndexAlias('lobehub-dev', 'knowledgeBases')).toBe(
-      'lobehub-dev-knowledge-bases',
+    expect(getFtsSearchIndexAlias('orvilo-dev', 'knowledgeBases')).toBe(
+      'orvilo-dev-knowledge-bases',
     );
-    expect(getFtsSearchPhysicalIndexName('lobehub-dev', 'knowledgeBases')).toBe(
-      `lobehub-dev-knowledge-bases-v${getFtsSearchIndexSchemaVersion('knowledgeBases')}`,
+    expect(getFtsSearchPhysicalIndexName('orvilo-dev', 'knowledgeBases')).toBe(
+      `orvilo-dev-knowledge-bases-v${getFtsSearchIndexSchemaVersion('knowledgeBases')}`,
     );
-    expect(getFtsSearchPhysicalIndexName('lobehub-dev', 'knowledgeBases', 4)).toBe(
-      'lobehub-dev-knowledge-bases-v4',
+    expect(getFtsSearchPhysicalIndexName('orvilo-dev', 'knowledgeBases', 4)).toBe(
+      'orvilo-dev-knowledge-bases-v4',
     );
   });
 
@@ -109,23 +109,23 @@ describe('search index mappings', () => {
 
   it('keeps analyzer names generic for OSS deployments', () => {
     expect(Object.keys(FTS_SEARCH_INDEX_ANALYSIS.analyzer)).toEqual([
-      'lobehub_cjk_bigram_english',
-      'lobehub_filename',
-      'lobehub_icu',
-      'lobehub_icu_english',
+      'orvilo_cjk_bigram_english',
+      'orvilo_filename',
+      'orvilo_icu',
+      'orvilo_icu_english',
     ]);
   });
 
   it('splits file names on common separators while preserving an exact field', () => {
-    expect(FTS_SEARCH_INDEX_ANALYSIS.tokenizer.lobehub_filename).toEqual({
+    expect(FTS_SEARCH_INDEX_ANALYSIS.tokenizer.orvilo_filename).toEqual({
       tokenize_on_chars: ['whitespace', '-', '_', '/', '.'],
       type: 'char_group',
     });
     expect(FTS_SEARCH_INDEX_DEFINITIONS.files.mappings.properties.name).toEqual({
-      analyzer: 'lobehub_filename',
+      analyzer: 'orvilo_filename',
       fields: {
         raw: { ignore_above: 256, type: 'keyword' },
-        words: { analyzer: 'lobehub_icu', type: 'text' },
+        words: { analyzer: 'orvilo_icu', type: 'text' },
       },
       type: 'text',
     });
@@ -145,7 +145,7 @@ describe('search index mappings', () => {
   });
 
   it('normalizes memory text before generating CJK bigrams', () => {
-    expect(FTS_SEARCH_INDEX_ANALYSIS.analyzer.lobehub_cjk_bigram_english.filter).toEqual([
+    expect(FTS_SEARCH_INDEX_ANALYSIS.analyzer.orvilo_cjk_bigram_english.filter).toEqual([
       'english_possessive_stemmer',
       'icu_folding',
       'cjk_bigram',
@@ -158,13 +158,13 @@ describe('search index mappings', () => {
       for (const field of definition.queryFields) {
         expect(Object.entries(definition.mappings.properties)).toContainEqual([
           field,
-          expect.objectContaining({ analyzer: 'lobehub_cjk_bigram_english' }),
+          expect.objectContaining({ analyzer: 'orvilo_cjk_bigram_english' }),
         ]);
       }
     }
 
     expect(FTS_SEARCH_INDEX_DEFINITIONS.documents.mappings.properties.content).toEqual(
-      expect.objectContaining({ analyzer: 'lobehub_icu_english' }),
+      expect.objectContaining({ analyzer: 'orvilo_icu_english' }),
     );
   });
 });

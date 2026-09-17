@@ -16,7 +16,7 @@ import {
   resolveMessageGatewayHost,
 } from '@/server/services/gateway/MessageGatewayClient';
 
-const log = debug('lobe-server:messenger:config');
+const log = debug('orvilo-server:messenger:config');
 
 /**
  * Messenger bot configuration — DB-backed.
@@ -27,7 +27,7 @@ const log = debug('lobe-server:messenger:config');
  *
  * Two distribution models still apply downstream:
  *
- * - **Global-token platforms (Telegram, Discord)**: a single LobeHub-owned
+ * - **Global-token platforms (Telegram, Discord)**: a single Orvilo-owned
  *   bot serves every user. The full credential bundle for the bot lives in
  *   the row.
  *
@@ -40,10 +40,10 @@ export const getMessengerConfig = () => {
   return createEnv({
     client: {},
     runtimeEnv: {
-      LOBE_LINK_TOKEN_TTL_SECONDS: process.env.LOBE_LINK_TOKEN_TTL_SECONDS,
+      ORVILO_LINK_TOKEN_TTL_SECONDS: process.env.ORVILO_LINK_TOKEN_TTL_SECONDS,
     },
     server: {
-      LOBE_LINK_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(1800),
+      ORVILO_LINK_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(1800),
     },
   });
 };
@@ -229,4 +229,4 @@ export const getEnabledMessengerPlatforms = async (): Promise<MessengerPlatform[
   return checks.filter((p): p is MessengerPlatform => p !== null);
 };
 
-export const getMessengerLinkTokenTtl = (): number => messengerEnv.LOBE_LINK_TOKEN_TTL_SECONDS;
+export const getMessengerLinkTokenTtl = (): number => messengerEnv.ORVILO_LINK_TOKEN_TTL_SECONDS;

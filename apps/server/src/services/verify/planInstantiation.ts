@@ -3,14 +3,14 @@ import debug from 'debug';
 import { GoalModel } from '@/database/models/goal';
 import { TaskModel } from '@/database/models/task';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { AcceptanceService, buildAcceptanceCheckUnion } from './acceptanceService';
 import { resolveVerifyModelConfig } from './modelConfig';
 import { VerifyPlanGeneratorService } from './planGenerator';
 import { resolveTaskAcceptance } from './taskAcceptance';
 
-const log = debug('lobe-server:verify-plan-instantiation');
+const log = debug('orvilo-server:verify-plan-instantiation');
 
 export interface InstantiateVerifyPlanParams {
   operationId: string;
@@ -34,7 +34,7 @@ export interface InstantiateVerifyPlanParams {
  * and skips when a plan already exists (recordStart can re-fire).
  */
 export const instantiateVerifyPlanOnStart = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   params: InstantiateVerifyPlanParams,
   workspaceId?: string,

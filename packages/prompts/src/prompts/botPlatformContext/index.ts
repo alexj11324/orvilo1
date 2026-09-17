@@ -23,7 +23,7 @@ export interface RecentChannelHistory {
 
 /**
  * Identity of the conversation the bot is currently replying in, expressed in
- * the exact terms the `lobe-message` tool takes.
+ * the exact terms the `orvilo-message` tool takes.
  *
  * Without this the model holds a `readMessages` tool whose `channelId` is a
  * required parameter it has no way to fill: most platforms have no
@@ -119,7 +119,7 @@ export const formatBotPlatformContext = ({
     lines.push(
       '',
       `<current_conversation platform="${sanitize(currentChannel.platformId)}" channelId="${sanitize(currentChannel.id)}">`,
-      'These are the EXACT argument values for any `lobe-message` call that targets the conversation you are currently in:',
+      'These are the EXACT argument values for any `orvilo-message` call that targets the conversation you are currently in:',
       `- \`platform\`: "${sanitize(currentChannel.platformId)}"`,
       `- \`channelId\`: "${sanitize(currentChannel.id)}"`,
       '',

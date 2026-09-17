@@ -1,6 +1,6 @@
 # Worked example — Memory (记忆) module audit
 
-A real run of this skill against the **Memory module**, 2026-07 (LOBE-11150) — a personal-AI-memory
+A real run of this skill against the **Memory module**, 2026-07 (ORVILO-11150) — a personal-AI-memory
 management area: a **home persona** dashboard + five isomorphic list surfaces
 (identities / contexts / preferences / experiences / activities), each with a filter bar, grid /
 timeline views, a right-side detail panel, and an "Analyze" flow that extracts memory from chat
@@ -79,7 +79,7 @@ each slice sets `xSearchLoading=false` / `xInit=true` **only in `onSuccess`** wi
 - **home false-empty** — home gates on SWR `isLoading` (resolves after retries) then falls to
   `MemoryEmpty` when `!persona && !roles.length` (`(home)/index.tsx:52-63`) → a failed load reads
   as "analyze to get started", inviting redundant re-analysis.
-- **detail permanent blank** — 5 panels read only `{data, isLoading}`; `content` is set only in
+- **detail permanent blank** — 5 panels read only `{data, isLoading}`; `content` is set only
   the `isLoading` / `data` branches (`ContextRightPanel.tsx:32-34` + 4 twins) → error _and_
   not-found both render an empty panel body.
 - **load-more silent no-op** — a failed page-2 fetch appends nothing, footer spinner vanishes,
@@ -128,7 +128,7 @@ so "find everything about X" means repeating the query in 5 tabs. → Read §1.8
 `add*Memory` / `createIdentity` exist (`services/userMemory/index.ts`) but no button calls them. →
 Act §3.4 (lifecycle: create entry point).
 
-**🟠 H — Sort silently vanishes on switch to timeline (4 tabs).** Sort `<Select>` renders only in
+**🟠 H — Sort silently vanishes on switch to timeline (4 tabs).** Sort `<Select>` renders only
 grid mode and the chosen sort is dropped on toggle with no signal (`contexts/index.tsx:52,106`). →
 "consistency is semantic".
 

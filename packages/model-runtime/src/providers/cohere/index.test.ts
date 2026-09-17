@@ -2,15 +2,15 @@
 import { ModelProvider } from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeCohereAI, params } from './index';
+import { OrviloCohereAI, params } from './index';
 
 const provider = ModelProvider.Cohere;
 const defaultBaseURL = 'https://api.cohere.ai/compatibility/v1';
 
 testProvider({
-  Runtime: LobeCohereAI,
+  Runtime: OrviloCohereAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_COHERE_CHAT_COMPLETION',
@@ -23,10 +23,10 @@ testProvider({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeCohereAI({ apiKey: 'test' });
+  instance = new OrviloCohereAI({ apiKey: 'test' });
 
   // Mock chat.completions.create method
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -38,7 +38,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeCohereAI - custom features', () => {
+describe('OrviloCohereAI - custom features', () => {
   describe('Debug Configuration', () => {
     it('should disable debug by default', () => {
       delete process.env.DEBUG_COHERE_CHAT_COMPLETION;
@@ -447,7 +447,7 @@ describe('LobeCohereAI - custom features', () => {
       const models = await params.models({ client: mockClient as any });
 
       expect(models).toHaveLength(1);
-      // Should have displayName and enabled from LOBE_DEFAULT_MODEL_LIST
+      // Should have displayName and enabled from ORVILO_DEFAULT_MODEL_LIST
       expect(models[0].displayName).toBeDefined();
       expect(models[0].enabled).toBeDefined();
     });
@@ -497,7 +497,7 @@ describe('LobeCohereAI - custom features', () => {
 
       expect(models).toHaveLength(1);
       expect(models[0].id).toBe('COMMAND-R-PLUS');
-      // Should match with lowercase in LOBE_DEFAULT_MODEL_LIST
+      // Should match with lowercase in ORVILO_DEFAULT_MODEL_LIST
       expect(models[0].displayName).toBeDefined();
     });
 
@@ -820,7 +820,7 @@ describe('LobeCohereAI - custom features', () => {
     });
 
     it('should initialize instance with custom baseURL', () => {
-      const customInstance = new LobeCohereAI({
+      const customInstance = new OrviloCohereAI({
         apiKey: 'test',
         baseURL: 'https://custom.cohere.ai/v1',
       });

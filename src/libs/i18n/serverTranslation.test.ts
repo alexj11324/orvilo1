@@ -14,7 +14,7 @@ vi.mock('next/headers', () => ({
 
 vi.mock('@/const/locale', () => ({
   DEFAULT_LANG: 'en-US',
-  LOBE_LOCALE_COOKIE: 'LOBE_LOCALE',
+  ORVILO_LOCALE_COOKIE: 'ORVILO_LOCALE',
 }));
 
 vi.mock('@/locales/resources', () => ({

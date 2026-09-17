@@ -16,7 +16,7 @@ import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -279,7 +279,7 @@ function isTaskHiddenFrom(
 }
 
 interface TaskNotificationCtx {
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   taskModel: TaskModel;
   workspaceId: string;
 }
@@ -368,7 +368,7 @@ function notifyAssignedBestEffort(
 }
 
 async function assertAssigneeAgentBelongsToUser(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   callerCtx: { userId: string; workspaceId?: string },
   assigneeAgentId?: string | null,
 ) {
@@ -403,7 +403,7 @@ async function assertAssigneeAgentBelongsToUser(
 async function resolveActivityActor(
   ctx: {
     actingAgentId?: string | null;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     userId: string;
     workspaceId?: string | null;
   },

@@ -87,16 +87,16 @@ export const InitPageStreaming = memo<BuiltinStreamingProps<InitDocumentArgs>>((
         <FileText className={styles.icon} size={16} />
         <Flexbox flex={1} gap={2}>
           <div className={styles.title}>
-            {title || t('builtins.lobe-page-agent.apiName.initPage.creating')}
+            {title || t('builtins.orvilo-page-agent.apiName.initPage.creating')}
           </div>
           <Flexbox horizontal align={'center'} className={styles.meta} gap={10}>
             <Text as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
               <Icon icon={ListTree} size={12} /> <AnimatedNumber value={lines} />
-              {t('builtins.lobe-page-agent.apiName.initPage.lines')}
+              {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
             </Text>
             <Text as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
               <Icon icon={Hash} size={12} /> <AnimatedNumber value={chars} />
-              {t('builtins.lobe-page-agent.apiName.initPage.chars')}
+              {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
             </Text>
           </Flexbox>
         </Flexbox>

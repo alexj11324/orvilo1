@@ -174,7 +174,7 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
 
     // Model ids can contain `:` (e.g. `gemini-3-pro-image-preview:image`). i18next
     // defaults nsSeparator to `:`, so without disabling it the lookup splits into the
-    // wrong namespace and never hits `models.lobehub.<id>.description`.
+    // wrong namespace and never hits `models.orvilo.<id>.description`.
     const description = model.description
       ? String(
           t(getModelDescriptionI18nKey(model.id, provider) as any, {

@@ -1,4 +1,4 @@
-import type { AgentItem, LobeAgentConfig } from '../agent';
+import type { AgentItem, OrviloAgentConfig } from '../agent';
 import type { NewChatGroupAgent } from '../agentGroup';
 import type { MetaData } from '../meta';
 
@@ -7,7 +7,7 @@ export const CHAT_GROUP_SESSION_ID_PREFIX = 'cg_' as const;
 export const isChatGroupSessionId = (id?: string | null): id is string =>
   typeof id === 'string' && id.startsWith(CHAT_GROUP_SESSION_ID_PREFIX);
 
-export enum LobeSessionType {
+export enum OrviloSessionType {
   Agent = 'agent',
   Group = 'group',
 }
@@ -18,10 +18,10 @@ export enum LobeSessionType {
 export type GroupMemberWithAgent = NewChatGroupAgent & AgentItem;
 
 /**
- * Lobe Agent Session
+ * Orvilo Agent Session
  */
-export interface LobeAgentSession {
-  config: LobeAgentConfig;
+export interface OrviloAgentSession {
+  config: OrviloAgentConfig;
   createdAt: Date;
   group?: string;
   id: string;
@@ -31,14 +31,14 @@ export interface LobeAgentSession {
   model: string;
   pinned?: boolean;
   tags?: string[];
-  type: LobeSessionType.Agent;
+  type: OrviloSessionType.Agent;
   updatedAt: Date;
 }
 
 /**
  * Group chat (not confuse with session group)
  */
-export interface LobeGroupSession {
+export interface OrviloGroupSession {
   createdAt: Date;
   group?: string;
   id: string; // Start with CHAT_GROUP_SESSION_ID_PREFIX
@@ -46,19 +46,19 @@ export interface LobeGroupSession {
   meta: MetaData;
   pinned?: boolean;
   tags?: string[];
-  type: LobeSessionType.Group;
+  type: OrviloSessionType.Group;
   updatedAt: Date;
 }
 
-export interface LobeAgentSettings {
+export interface OrviloAgentSettings {
   /**
    * Language model agent configuration
    */
-  config: LobeAgentConfig;
+  config: OrviloAgentConfig;
   meta: MetaData;
 }
 
 // Union type for all session types
-export type LobeSession = LobeAgentSession | LobeGroupSession;
+export type OrviloSession = OrviloAgentSession | OrviloGroupSession;
 
-export type LobeSessions = LobeSession[];
+export type OrviloSessions = OrviloSession[];

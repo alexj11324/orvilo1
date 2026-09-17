@@ -3,7 +3,7 @@ import { mergeNotificationSettings } from '@orvilo/utils/mergeNotificationSettin
 import { and, eq } from 'drizzle-orm';
 
 import { workspaceUserSettings } from '../schemas/workspace';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 /**
  * Per-user preferences scoped to a specific workspace — the workspace-scoped
@@ -20,11 +20,11 @@ import type { LobeChatDatabase } from '../type';
  * and callers fall through to defaults on read.
  */
 export class WorkspaceUserSettingsModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

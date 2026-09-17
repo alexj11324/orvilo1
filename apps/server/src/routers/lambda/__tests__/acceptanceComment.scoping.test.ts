@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto';
 
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   acceptances,
   verifyCheckResults,
@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { acceptanceCommentRouter } from '../acceptanceComment';
 import { cleanupTestUser, createTestAgent, createTestUser } from './integration/setup';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(() => testDB),
 }));
@@ -29,7 +29,7 @@ const rect = { height: 0.2, width: 0.3, x: 0.1, y: 0.1 };
  * participant of one acceptance can name rows belonging to another.
  */
 describe('acceptanceCommentRouter create reference scoping', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let ownerId: string;
   let strangerId: string;
   let acceptanceId: string;

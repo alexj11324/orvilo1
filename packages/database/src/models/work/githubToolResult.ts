@@ -490,7 +490,7 @@ const normalizeGithubCliResult = (
 
 /**
  * Normalize a HETEROGENEOUS / device shell tool result (codex
- * `command_execution`, claude-code `Bash`, lobe-local-system `runCommand`) that
+ * `command_execution`, claude-code `Bash`, orvilo-local-system `runCommand`) that
  * may have run `gh issue|pr create/edit`.
  *
  * Reuses the github skill's gh-CLI parsing wholesale: callers present the

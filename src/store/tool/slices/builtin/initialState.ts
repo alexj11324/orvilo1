@@ -1,13 +1,13 @@
 import { builtinSkillManifests } from '@orvilo/builtin-skills/manifests';
 import { builtinTools, defaultUninstalledBuiltinTools } from '@orvilo/builtin-tools';
-import { type BuiltinSkillManifest, type LobeBuiltinTool } from '@orvilo/types';
+import { type BuiltinSkillManifest, type OrviloBuiltinTool } from '@orvilo/types';
 
 import { filterBuiltinSkills } from '@/helpers/skillFilters';
 
 export interface BuiltinToolState {
   builtinSkills: BuiltinSkillManifest[];
   builtinToolLoading: Record<string, boolean>;
-  builtinTools: LobeBuiltinTool[];
+  builtinTools: OrviloBuiltinTool[];
   /**
    * List of uninstalled builtin tool identifiers
    * Empty array means all builtin tools are enabled

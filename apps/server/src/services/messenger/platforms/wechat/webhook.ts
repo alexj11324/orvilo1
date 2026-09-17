@@ -4,7 +4,7 @@ import { gatewayEnv } from '@/envs/gateway';
 
 import type { MessengerPlatformWebhookGate } from '../types';
 
-const log = debug('lobe-server:messenger:wechat:webhook-gate');
+const log = debug('orvilo-server:messenger:wechat:webhook-gate');
 
 /**
  * WeChat polling events are forwarded by the trusted Message Gateway rather

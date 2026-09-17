@@ -5,9 +5,9 @@ import { getShellSyntaxGuidance } from '@orvilo/builtin-tool-local-system';
 import { builtinTools } from '@orvilo/builtin-tools';
 import type { AgentManagementContext, ProjectInstructionFile } from '@orvilo/context-engine';
 import { buildExpertiseContextSnapshot, SkillEngine } from '@orvilo/context-engine';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { buildTaskManagerDefaultsPrompt, resourcesTreePrompt } from '@orvilo/prompts';
-import type { LobeAgentAgencyConfig, WorkingDirConfig, WorkspaceInitResult } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig, WorkingDirConfig, WorkspaceInitResult } from '@orvilo/types';
 import {
   buildGoalOverviewContext,
   getActivePluginIds,
@@ -39,7 +39,7 @@ import { isWorkspaceCacheFresh, upsertWorkspaceScan } from '../workspaceInitCach
 import type { ToolDiscoveryResult } from './toolDiscovery';
 import type { RunAttachments } from './turnSetup';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 export interface HistoryLoaderInput {
   appContext?: InternalExecAgentParams['appContext'];
@@ -57,7 +57,7 @@ export interface HistoryLoaderInput {
  */
 export const createHistoryMessagesLoader = (
   deps: {
-    db: LobeChatDatabase;
+    db: OrviloDatabase;
     isShareVisitorRun: boolean;
     messageModel: MessageModel;
     userId: string;
@@ -169,7 +169,7 @@ export interface OperationPrepDeps {
     currentWorkingDirectory?: string;
     topicId: string;
   }) => Promise<void>;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   topicModel: TopicModel;
   userId: string;
   workspaceId?: string;
@@ -223,7 +223,7 @@ const resolveWorkspaceInit = async (
   deps: OperationPrepDeps,
   params: {
     activeDeviceId: string | undefined;
-    agencyConfig?: LobeAgentAgencyConfig;
+    agencyConfig?: OrviloAgentAgencyConfig;
     topicId: string;
   },
 ): Promise<ResolvedWorkspaceInit> => {
@@ -377,7 +377,7 @@ export const prepareOperation = async (
     composioManifests,
     connectorManifests,
     executionPlan,
-    lobehubSkillManifests,
+    orviloSkillManifests,
     onlineDevices,
     toolsEngine,
     toolsResult,
@@ -448,7 +448,7 @@ export const prepareOperation = async (
   //   can decide to activate agent-management on its own) OR when the tool is explicitly enabled.
   // - availableProviders / availablePlugins are only built when the tool is explicitly
   //   enabled, since they're solely needed for createAgent / updateAgent.
-  const isAgentManagementEnabled = toolsResult.enabledToolIds?.includes('lobe-agent-management');
+  const isAgentManagementEnabled = toolsResult.enabledToolIds?.includes('orvilo-agent-management');
   const isInAutoSkillMode = agentConfig.chatConfig?.skillActivateMode !== 'manual';
   const shouldInjectAvailableAgents = isInAutoSkillMode || isAgentManagementEnabled;
   let agentManagementContext: AgentManagementContext | undefined;
@@ -532,10 +532,10 @@ export const prepareOperation = async (
     // Build availablePlugins from all plugin sources
     // Exclude only truly internal tools (agent-management itself, agent-builder, page-agent)
     const INTERNAL_TOOLS = new Set([
-      'lobe-agent-management', // Don't show agent-management in its own context
-      'lobe-agent-builder', // Used for editing current agent, not for creating new agents
-      'lobe-group-agent-builder', // Used for editing current group, not for creating new agents
-      'lobe-page-agent', // Page-editor specific tool
+      'orvilo-agent-management', // Don't show agent-management in its own context
+      'orvilo-agent-builder', // Used for editing current agent, not for creating new agents
+      'orvilo-group-agent-builder', // Used for editing current group, not for creating new agents
+      'orvilo-page-agent', // Page-editor specific tool
     ]);
 
     const availablePlugins = [
@@ -548,12 +548,12 @@ export const prepareOperation = async (
           name: tool.manifest.meta?.title || tool.identifier,
           type: 'builtin' as const,
         })),
-      // Lobehub Skills
-      ...lobehubSkillManifests.map((manifest) => ({
+      // Orvilo Skills
+      ...orviloSkillManifests.map((manifest) => ({
         description: manifest.meta?.description,
         identifier: manifest.identifier,
         name: manifest.meta?.title || manifest.identifier,
-        type: 'lobehub-skill' as const,
+        type: 'orvilo-skill' as const,
       })),
       // Composio tools
       ...composioManifests.map((manifest) => ({
@@ -676,13 +676,13 @@ export const prepareOperation = async (
       : [];
 
   // Final share-gate allowlist enforcement — run once here, after every
-  // manifest/default/dynamic-activation source (installed plugins, LobeHub
+  // manifest/default/dynamic-activation source (installed plugins, Orvilo
   // Skills, Composio, real-MCP connectors, always-on builtin defaults) has
   // been merged into `toolManifestMap` / `toolsResult.enabledToolIds` /
   // `tools` / `activatableToolIds` by `toolDiscovery` and the historical
   // re-activation pass above. `filterPluginsByShareGate` in `toolDiscovery`
   // only trimmed the initial candidate id list — it does not stop
-  // `lobe-activator` from dynamically activating (and `ToolExecutionService`
+  // `orvilo-activator` from dynamically activating (and `ToolExecutionService`
   // from executing, with the CREATOR's credentials) a creator-connected tool
   // that was never in `shareConfig.toolGrants`. Mutates the discovery maps
   // in place, so the `toolSet` handed to `createOperation` is the pruned one.
@@ -866,7 +866,7 @@ export const prepareOperation = async (
     // not lazily via the `activateSkill` tool. Gate on the agent's genuinely
     // pinned entries (`getActivePluginIds(agentConfig.plugins)`), NOT the
     // fully-expanded `agentPlugins`: the latter also carries turn-scoped tool
-    // ids (mentions, selected tools, `lobe-topic-reference`, …), which would
+    // ids (mentions, selected tools, `orvilo-topic-reference`, …), which would
     // eager-activate an auto-mode skill whose identifier merely collides with
     // one of them. `findAll` uses `skillListColumns` (no `content`), so fetch
     // bodies only for the pinned subset to keep the op-param payload bounded.

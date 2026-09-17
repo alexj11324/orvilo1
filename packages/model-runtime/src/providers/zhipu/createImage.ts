@@ -6,7 +6,7 @@ import type { TaskResult } from '../../utils/asyncifyPolling';
 import { asyncifyPolling } from '../../utils/asyncifyPolling';
 import { resolveMappedModelId } from '../../utils/modelIdMapping';
 
-const log = createDebug('lobe-image:zhipu');
+const log = createDebug('orvilo-image:zhipu');
 
 interface ZhipuImageStatusResponse {
   created?: number;

@@ -23,7 +23,7 @@ import { SkillImporter } from '@/server/services/skill/importer';
 
 import { type ServerRuntimeRegistration } from './types';
 
-const log = debug('lobe-server:skill-store-runtime');
+const log = debug('orvilo-server:skill-store-runtime');
 
 class SkillStoreServerRuntimeService implements SkillStoreRuntimeService {
   private agentId?: string;

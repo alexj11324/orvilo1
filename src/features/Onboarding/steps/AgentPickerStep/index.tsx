@@ -25,7 +25,7 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { resolvePostOnboardingTargetUrl } from '@/utils/onboardingRedirect';
 
-import LobeMessage from '../../components/LobeMessage';
+import OrviloMessage from '../../components/OrviloMessage';
 import { interestsToCategoryHints } from '../../interestCategoryMap';
 import AgentCard from './AgentCard';
 import CategoryFilter, { type ActiveCategory } from './CategoryFilter';
@@ -151,7 +151,7 @@ const AgentPickerStep = memo<AgentPickerStepProps>(({ onBack }) => {
 
   return (
     <Flexbox gap={16}>
-      <LobeMessage
+      <OrviloMessage
         sentences={[t('agentPicker.title'), t('agentPicker.title2'), t('agentPicker.title3')]}
       />
       <Text fontSize={14} type={'secondary'}>

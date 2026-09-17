@@ -175,7 +175,7 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
   // Initialize OIDC client (client-side only)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const baseUrl = process.env.NEXT_PUBLIC_MARKET_BASE_URL || 'https://market.lobehub.com';
+      const baseUrl = process.env.NEXT_PUBLIC_MARKET_BASE_URL || 'https://market.aspectlylabs.com';
       const desktopRedirectUri = new URL(MARKET_OIDC_ENDPOINTS.desktopCallback, baseUrl).toString();
 
       // Desktop uses Market's manually maintained Web callback; Web uses the current domain
@@ -185,7 +185,7 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
 
       const oidcConfig: OIDCConfig = {
         baseUrl,
-        clientId: isDesktop ? 'lobehub-desktop' : 'lobechat-com',
+        clientId: isDesktop ? 'orvilo-desktop' : 'orvilo-com',
         redirectUri,
         scope: 'openid profile email offline_access',
       };
@@ -208,7 +208,7 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
     (refreshTokenValue: string): Promise<boolean> =>
       refreshSingleFlight(async (): Promise<boolean> => {
         try {
-          const clientId = isDesktop ? 'lobehub-desktop' : 'lobechat-com';
+          const clientId = isDesktop ? 'orvilo-desktop' : 'orvilo-com';
 
           const response = await lambdaClient.market.oidc.refreshToken.mutate({
             clientId,
@@ -466,7 +466,7 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
    */
   const signIn = useCallback(async (scene: MarketAuthScene = 'default'): Promise<number | null> => {
     if (!useUserStore.getState().isSignedIn) {
-      throw new Error('LobeChat session required');
+      throw new Error('Orvilo session required');
     }
     setAuthScene(scene);
     return new Promise<number | null>((resolve, reject) => {

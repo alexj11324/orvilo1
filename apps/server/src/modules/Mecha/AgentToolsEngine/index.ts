@@ -26,7 +26,7 @@ import {
   defaultToolIds,
   groupSupervisorToolIds,
 } from '@orvilo/builtin-tools';
-import { createEnableChecker, type LobeToolManifest } from '@orvilo/context-engine';
+import { createEnableChecker, type OrviloToolManifest } from '@orvilo/context-engine';
 import { ToolsEngine } from '@orvilo/context-engine';
 import {
   type BuiltinToolManifest,
@@ -61,7 +61,7 @@ export type {
   ServerCreateAgentToolsEngineParams,
 } from './types';
 
-const log = debug('lobe-server:agent-tools-engine');
+const log = debug('orvilo-server:agent-tools-engine');
 
 /**
  * A manifest is usable by ToolsEngine only if it has an `api` array.
@@ -72,14 +72,14 @@ const log = debug('lobe-server:agent-tools-engine');
  * schema validation, so guard defensively at the merge point. Mirrors the
  * frontend `dropInvalidManifests` in `src/helpers/toolEngineering`.
  */
-const isValidToolManifest = (m: LobeToolManifest | undefined): m is LobeToolManifest =>
-  !!m && typeof m === 'object' && Array.isArray((m as LobeToolManifest).api);
+const isValidToolManifest = (m: OrviloToolManifest | undefined): m is OrviloToolManifest =>
+  !!m && typeof m === 'object' && Array.isArray((m as OrviloToolManifest).api);
 
 const dropInvalidManifests = (
-  manifests: (LobeToolManifest | undefined)[],
+  manifests: (OrviloToolManifest | undefined)[],
   source: string,
-): LobeToolManifest[] => {
-  const valid: LobeToolManifest[] = [];
+): OrviloToolManifest[] => {
+  const valid: OrviloToolManifest[] = [];
   const dropped: Array<{ identifier?: string; reason: string }> = [];
 
   for (const m of manifests) {
@@ -127,7 +127,7 @@ export const createServerToolsEngine = (
 
   // Get plugin manifests from installed plugins (from database)
   const pluginManifests = dropInvalidManifests(
-    context.installedPlugins.map((plugin) => plugin.manifest as LobeToolManifest | undefined),
+    context.installedPlugins.map((plugin) => plugin.manifest as OrviloToolManifest | undefined),
     'installedPlugins',
   );
 
@@ -139,7 +139,7 @@ export const createServerToolsEngine = (
   // bypass them.
   //
   // When a manifest context is supplied (agent runtime path), context-aware
-  // tools resolve their manifest for it — trimming APIs (e.g. lobe-agent hides
+  // tools resolve their manifest for it — trimming APIs (e.g. orvilo-agent hides
   // callSubAgent inside a sub-agent / group, both list AND systemRole) or opting
   // out entirely via `null`. This MUST mirror the frontend `createToolsEngine`:
   // a sub-agent run server-side that skipped this would still be handed
@@ -151,12 +151,12 @@ export const createServerToolsEngine = (
         ? tool.resolveManifest(manifestContext)
         : tool.manifest,
     )
-    .filter((m): m is BuiltinToolManifest => !!m) as LobeToolManifest[];
+    .filter((m): m is BuiltinToolManifest => !!m) as OrviloToolManifest[];
 
   // Combine all manifests, then drop anything whose identifier the caller
   // has explicitly forbidden for this turn. The post-merge filter closes
   // the second half of the wall: an installed plugin or a
-  // Skill/Composio manifest claiming `lobe-remote-device` would otherwise
+  // Skill/Composio manifest claiming `orvilo-remote-device` would otherwise
   // slip through `buildAllowedBuiltinTools` (which only touches the
   // builtin source).
   const combinedManifests = [
@@ -364,10 +364,10 @@ export const createServerAgentToolsEngine = (
   }
 
   return createServerToolsEngine(context, {
-    // Pass additional manifests (e.g., LobeHub Skills)
+    // Pass additional manifests (e.g., Orvilo Skills)
     additionalManifests,
     // Physically drop device-tool manifests for turns whose access policy
-    // denies them. Without this filter, `lobe-activator`'s explicit
+    // denies them. Without this filter, `orvilo-activator`'s explicit
     // activation could resolve the manifest and bypass the rule-layer
     // gates below ().
     builtinTools: buildAllowedBuiltinTools({
@@ -397,10 +397,10 @@ export const createServerAgentToolsEngine = (
     // stays for the routed device).
     excludeIdentifiers: excludedIdentifiers.size > 0 ? excludedIdentifiers : undefined,
     // Conversation context for context-aware builtin manifests (scope /
-    // isSubAgent), e.g. hiding lobe-agent's callSubAgent in sub-agent / group runs.
+    // isSubAgent), e.g. hiding orvilo-agent's callSubAgent in sub-agent / group runs.
     manifestContext,
     enableChecker: createEnableChecker({
-      // Allow lobe-activator to dynamically enable tools at runtime (e.g., lobe-creds, lobe-task).
+      // Allow orvilo-activator to dynamically enable tools at runtime (e.g., orvilo-creds, orvilo-task).
       // Only in agent mode; chat/custom modes can't let the activator bypass their fixed set.
       allowExplicitActivation: toolMode === 'agent',
       rules: isCustomMode ? customModeRules : isChatMode ? chatModeRules : agentModeRules,

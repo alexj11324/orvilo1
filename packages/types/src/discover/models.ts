@@ -1,4 +1,4 @@
-import type { LobeDefaultAiModelListItem } from 'model-bank';
+import type { OrviloDefaultAiModelListItem } from 'model-bank';
 
 import type { ModelProviderCard } from '../llm';
 
@@ -17,7 +17,7 @@ export enum ModelNavKey {
   Related = 'related',
 }
 
-export interface DiscoverModelItem extends LobeDefaultAiModelListItem {
+export interface DiscoverModelItem extends OrviloDefaultAiModelListItem {
   category?: string;
   identifier: string;
   providerCount: number;
@@ -42,7 +42,7 @@ export interface ModelListResponse {
 }
 
 export interface DiscoverModelDetailProviderItem extends ModelProviderCard {
-  model?: LobeDefaultAiModelListItem;
+  model?: OrviloDefaultAiModelListItem;
 }
 
 export interface DiscoverModelDetail extends Omit<DiscoverModelItem, 'providers'> {

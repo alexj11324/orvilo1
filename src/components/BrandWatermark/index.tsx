@@ -2,7 +2,7 @@
 
 import { type FlexboxProps } from '@lobehub/ui';
 import { Flexbox } from '@lobehub/ui';
-import { LobeHub } from '@lobehub/ui/brand';
+import { LobeHub as Orvilo } from '@lobehub/ui/brand';
 import { ORG_NAME, UTM_SOURCE } from '@orvilo/business-const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -42,7 +42,7 @@ const BrandWatermark = memo<Omit<FlexboxProps, 'children'>>(({ style, ...rest })
           rel="noreferrer"
           target="_blank"
         >
-          <LobeHub size={20} type={'text'} />
+          <Orvilo size={20} type={'text'} />
         </a>
       )}
     </Flexbox>

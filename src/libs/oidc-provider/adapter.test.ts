@@ -145,7 +145,7 @@ describe('OIDCAdapter (DrizzleAdapter)', () => {
       const { db, update } = createUpsertDb();
       const adapter = new DrizzleAdapter('AccessToken', db as any);
 
-      await adapter.upsert('token-2', { accountId: 'user-1', clientId: 'lobehub-cli' }, 3600);
+      await adapter.upsert('token-2', { accountId: 'user-1', clientId: 'orvilo-cli' }, 3600);
       await flush();
 
       expect(update).not.toHaveBeenCalled();

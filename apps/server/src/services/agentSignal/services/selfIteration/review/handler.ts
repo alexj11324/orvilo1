@@ -6,7 +6,7 @@ import { tracer } from '@orvilo/observability-otel/modules/agent-signal';
 import { createAgentSignalSelfIterationPrompt } from '@orvilo/prompts';
 import { isNonEmptyString } from '@orvilo/utils';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { defineSourceHandler } from '../../../runtime/middleware';
 import { enqueueSelfIterationRun } from '../dispatch/enqueueSelfIterationRun';
@@ -80,7 +80,7 @@ export interface CreateNightlyReviewSourceHandlerDependencies {
   /** Collects bounded digest context without mutating shared resources. */
   collectContext: (input: CollectNightlyReviewContextInput) => Promise<NightlyReviewContext>;
   /** Postgres handle used by the dispatch helper to enqueue the execAgent run. */
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   /** Enqueues the async self-iteration run. Overridable for tests. */
   dispatch?: typeof enqueueSelfIterationRun;
   /**

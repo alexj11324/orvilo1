@@ -206,7 +206,7 @@ describe('runStep handler', () => {
     // 2. sub-agent forking — stepping MUST go through AiAgentService (not a bare
     //    AgentRuntimeService), because only AiAgentService's runtime carries the
     //    in-process `execSubAgent` fork callback. A bare runtime here makes
-    //    `lobe-agent.callSubAgent` fail with SUB_AGENT_UNAVAILABLE.
+    //    `orvilo-agent.callSubAgent` fail with SUB_AGENT_UNAVAILABLE.
     mockGetOperationMetadata.mockResolvedValue({ userId: 'user-1', workspaceId: 'ws-1' });
     mockExecuteStep.mockResolvedValue({
       nextStepScheduled: false,

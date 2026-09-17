@@ -3,7 +3,7 @@ import { unstable_serialize } from 'swr';
 
 import { buildLocalDataKey, localDataCache, type ScopeEntry } from '../localDataCache';
 
-const log = debug('lobe-client:swr-retired-keys');
+const log = debug('orvilo-client:swr-retired-keys');
 
 /**
  * Serialized SWR roots whose writers no longer exist. The IndexedDB tier never

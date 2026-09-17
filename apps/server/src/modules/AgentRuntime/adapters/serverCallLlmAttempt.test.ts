@@ -526,7 +526,7 @@ describe('ServerCallLlmAttempt', () => {
       apiType: 'deepseek',
       channelId: 'deepseek',
       optionIndex: 0,
-      providerId: 'lobehub',
+      providerId: 'orvilo',
       routerId: 'deepseek',
       success: true,
       totalOptions: 3,

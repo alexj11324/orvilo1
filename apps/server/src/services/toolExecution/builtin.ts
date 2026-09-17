@@ -1,5 +1,5 @@
 import { builtinTools } from '@orvilo/builtin-tools';
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   type ChatToolPayload,
   isWorkSkillProvider,
@@ -17,7 +17,7 @@ import { getServerRuntime, hasServerRuntime } from './serverRuntimes';
 import { type IToolExecutor, type ToolExecutionContext, type ToolExecutionResult } from './types';
 import { resolveBuiltinToolWorkIntent } from './workRegistration';
 
-const log = debug('lobe-server:builtin-tools-executor');
+const log = debug('orvilo-server:builtin-tools-executor');
 
 /**
  * Declared API names for a builtin tool, read from its manifest — the
@@ -51,11 +51,11 @@ const collectRuntimeApiNames = (runtime: Record<string, any>): string[] => {
 };
 
 export class BuiltinToolsExecutor implements IToolExecutor {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private userId: string;
   private _marketService?: MarketService;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }
@@ -146,10 +146,10 @@ export class BuiltinToolsExecutor implements IToolExecutor {
       args,
     );
 
-    // Route LobeHub Skills to MarketService
-    if (source === 'lobehubSkill') {
+    // Route Orvilo Skills to MarketService
+    if (source === 'orviloSkill') {
       const marketService = await this.getMarketService();
-      const result = await marketService.executeLobehubSkill({
+      const result = await marketService.executeOrviloSkill({
         args,
         context: {
           topicId: context.topicId,

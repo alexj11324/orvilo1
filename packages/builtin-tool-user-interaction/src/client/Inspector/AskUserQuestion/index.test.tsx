@@ -28,7 +28,7 @@ describe('AskUserQuestionInspector', () => {
     render(
       <AskUserQuestionInspector
         apiName="askUserQuestion"
-        identifier="lobe-user-interaction"
+        identifier="orvilo-user-interaction"
         args={{
           questions: [
             {
@@ -53,7 +53,7 @@ describe('AskUserQuestionInspector', () => {
         isArgumentsStreaming
         apiName="askUserQuestion"
         args={{ questions: [] }}
-        identifier="lobe-user-interaction"
+        identifier="orvilo-user-interaction"
         partialArgs={{
           questions: [
             {
@@ -76,7 +76,7 @@ describe('AskUserQuestionInspector', () => {
         isArgumentsStreaming
         apiName="askUserQuestion"
         args={{ questions: [] }}
-        identifier="lobe-user-interaction"
+        identifier="orvilo-user-interaction"
         partialArgs={{ questions: [] }}
       />,
     );
@@ -89,7 +89,7 @@ describe('AskUserQuestionInspector', () => {
     render(
       <AskUserQuestionInspector
         apiName="askUserQuestion"
-        identifier="lobe-user-interaction"
+        identifier="orvilo-user-interaction"
         args={{
           questions: [
             { header: 'Scope', options: [], question: 'How broad should this pass be?' },

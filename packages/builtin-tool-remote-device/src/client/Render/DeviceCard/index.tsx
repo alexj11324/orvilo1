@@ -109,7 +109,7 @@ const DeviceCard = memo<DeviceCardProps>(({ device, activated, variant = 'card' 
   const { t } = useTranslation('plugin');
   const displayName = device.friendlyName || device.hostname;
   const scopeLabel = device.scope
-    ? t(`builtins.lobe-remote-device.render.scope.${device.scope}`)
+    ? t(`builtins.orvilo-remote-device.render.scope.${device.scope}`)
     : undefined;
   const details = [device.friendlyName ? device.hostname : undefined, device.platform, scopeLabel]
     .filter(Boolean)
@@ -137,8 +137,8 @@ const DeviceCard = memo<DeviceCardProps>(({ device, activated, variant = 'card' 
             />
             {t(
               device.online
-                ? 'builtins.lobe-remote-device.render.online'
-                : 'builtins.lobe-remote-device.render.offline',
+                ? 'builtins.orvilo-remote-device.render.online'
+                : 'builtins.orvilo-remote-device.render.offline',
             )}
           </span>
         )}
@@ -146,7 +146,7 @@ const DeviceCard = memo<DeviceCardProps>(({ device, activated, variant = 'card' 
       {activated ? (
         <span className={[styles.badge, styles.activated].join(' ')}>
           <Icon icon={CheckCircle2} size={12} />
-          {t('builtins.lobe-remote-device.render.activated')}
+          {t('builtins.orvilo-remote-device.render.activated')}
         </span>
       ) : (
         details && <span className={styles.details}>{details}</span>

@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-      USE_OVERLAY: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.OVERLAY_REPOSITORY != '' && secrets.LOBEHUB_CLOUD_TOKEN != '' }}
+      USE_OVERLAY: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.OVERLAY_REPOSITORY != '' && secrets.ORVILO_CLOUD_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,10 +54,10 @@ jobs:
           if gh run download "${{ steps.base.outputs.run_id }}" --repo "${{ github.repository }}" \
             -n share-build-inputs -D /tmp/share-manifest; then
             # An overlay build records this repo's files under the submodule
-            # prefix (`lobehub/src/...`); strip it so the manifest exact-matches
+            # prefix (`aspectlylabs/src/...`); strip it so the manifest exact-matches
             # this repo's own diff paths. Overlay-only entries survive
             # unprefixed and simply never match here.
-            sed -i 's#^lobehub/##' /tmp/share-manifest/build-inputs.txt
+            sed -i 's#^aspectlylabs/##' /tmp/share-manifest/build-inputs.txt
             echo "path=/tmp/share-manifest/build-inputs.txt" >> "$GITHUB_OUTPUT"
           else
             echo "no manifest artifact on last successful run"
@@ -81,7 +81,7 @@ jobs:
         uses: ./.github/actions/business-overlay
         with:
           overlay-repository: ${{ vars.OVERLAY_REPOSITORY }}
-          overlay-token: ${{ secrets.LOBEHUB_CLOUD_TOKEN }}
+          overlay-token: ${{ secrets.ORVILO_CLOUD_TOKEN }}
 
       - name: Setup environment
         if: steps.detect.outputs.should_build == 'true'
@@ -91,7 +91,7 @@ jobs:
         if: steps.detect.outputs.should_build == 'true' && env.USE_OVERLAY == 'true'
         # pnpm, not bun: the overlay root's `pnpm.overrides` is what redirects
         # `@orvilo/business-*` onto the overlay packages, and its workspace
-        # list is the only one that includes `lobehub/apps/share`.
+        # list is the only one that includes `aspectlylabs/apps/share`.
         run: cd .. && pnpm install
 
       - name: Install deps (open-source workspace)
@@ -106,13 +106,13 @@ jobs:
           # own workers.dev origin, the way production serves them from the CDN — never
           # same-origin, because the gateway routes /assets to the landing target.
           NODE_ENV: production
-          VITE_CDN_BASE: https://pr${{ github.event.pull_request.number }}-lobehub-share-preview.lobeobjects-tg.workers.dev/
+          VITE_CDN_BASE: https://pr${{ github.event.pull_request.number }}-orvilo-share-preview.orvilo-objects-tg.workers.dev/
         # `build:share` is the overlay repo's own build entry (tsconfig project,
         # SSR stub list) — invoking it keeps that knowledge over there.
         run: |
           cd ..
           bun run build:share
-          printf '/*\n  Access-Control-Allow-Origin: *\n' > lobehub/apps/share/build/client/_headers
+          printf '/*\n  Access-Control-Allow-Origin: *\n' > aspectlylabs/apps/share/build/client/_headers
 
       - name: Build share (open-source stubs)
         if: steps.detect.outputs.should_build == 'true' && env.USE_OVERLAY != 'true'
@@ -151,7 +151,7 @@ jobs:
           # uploads onto the real script would push its deployed versions out of that
           # window within a day.
           node_modules/.bin/wrangler versions upload \
-            --name lobehub-share-preview \
+            --name orvilo-share-preview \
             --config build/server/wrangler.json "$@" | tee /tmp/upload.log
           gzip_kib=$(grep -Eo 'gzip: [0-9.]+ KiB' /tmp/upload.log | grep -Eo '[0-9.]+' | head -1)
           echo "worker gzip size: ${gzip_kib} KiB"
@@ -160,7 +160,7 @@ jobs:
             exit 1
           fi
           if [ "$SAME_REPO" = 'true' ]; then
-            echo "Preview: https://pr${PR}-lobehub-share-preview.lobeobjects-tg.workers.dev" >> "$GITHUB_STEP_SUMMARY"
+            echo "Preview: https://pr${PR}-orvilo-share-preview.orvilo-objects-tg.workers.dev" >> "$GITHUB_STEP_SUMMARY"
           fi
         working-directory: apps/share
 
@@ -184,7 +184,7 @@ jobs:
           body="${marker}
           ### Share preview
 
-          <https://pr${PR}-lobehub-share-preview.lobeobjects-tg.workers.dev>
+          <https://pr${PR}-orvilo-share-preview.orvilo-objects-tg.workers.dev>
 
           A version, not a deployment: it takes no production traffic. ${build_note}"
           id=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \

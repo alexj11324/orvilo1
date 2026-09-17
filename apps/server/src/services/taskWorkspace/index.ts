@@ -1,5 +1,5 @@
 import type {
-  LobeAgentAgencyConfig,
+  OrviloAgentAgencyConfig,
   TaskItem,
   TaskTopicIntegration,
   TaskWorkspaceConfig,
@@ -11,7 +11,7 @@ import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { resolveExecutionPlan } from '@/helpers/executionTarget';
 import { supportsCloudHeterogeneousSandbox } from '@/server/services/aiAgent/helpers/heteroErrors';
 import { deviceGateway } from '@/server/services/deviceGateway';
@@ -61,12 +61,12 @@ export interface ProvisionedWorkspace {
  */
 export class TaskWorkspaceService {
   private agentModel: AgentModel;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private taskModel: TaskModel;
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -386,7 +386,7 @@ const taskBranchName = (identifier: string, seq: number): string =>
  * first-party default: server-initiated task runs are never denied senders.
  */
 const runsInSandbox = (
-  agencyConfig: LobeAgentAgencyConfig | undefined,
+  agencyConfig: OrviloAgentAgencyConfig | undefined,
   requestedDeviceId?: string,
 ): boolean => {
   const heteroType = agencyConfig?.heterogeneousProvider?.type;

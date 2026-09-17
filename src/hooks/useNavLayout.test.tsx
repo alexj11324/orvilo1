@@ -49,7 +49,7 @@ describe('useNavLayout', () => {
   });
 
   it('hides Memory in workspace mode', async () => {
-    mocks.activeWorkspaceSlug = 'lobe-team';
+    mocks.activeWorkspaceSlug = 'orvilo-team';
 
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());

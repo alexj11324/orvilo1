@@ -15,14 +15,14 @@ interface LocalizableProvider {
 interface GetLocalizedConnectorDetailOptions {
   composioApp?: LocalizableProvider;
   connector: LocalizableConnector;
-  lobehubProvider?: LocalizableProvider;
+  orviloProvider?: LocalizableProvider;
   t: TFunction<'setting'>;
 }
 
 export const getLocalizedConnectorDetail = ({
   composioApp,
   connector,
-  lobehubProvider,
+  orviloProvider,
   t,
 }: GetLocalizedConnectorDetailOptions) => {
   const rawDescription =
@@ -41,12 +41,12 @@ export const getLocalizedConnectorDetail = ({
     };
   }
 
-  if (lobehubProvider) {
+  if (orviloProvider) {
     return {
-      description: t(`tools.lobehubSkill.providers.${connector.identifier}.description`, {
-        defaultValue: lobehubProvider.description || rawDescription || '',
+      description: t(`tools.orviloSkill.providers.${connector.identifier}.description`, {
+        defaultValue: orviloProvider.description || rawDescription || '',
       }),
-      name: lobehubProvider.label,
+      name: orviloProvider.label,
     };
   }
 

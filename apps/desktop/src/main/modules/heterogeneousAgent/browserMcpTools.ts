@@ -17,7 +17,7 @@ interface BrowserMcpToolSpec {
   apiName: string;
   description: string;
   inputSchema: z.ZodRawShape;
-  /** MCP-facing tool name (CC sees `mcp__lobe_cc__<name>`). */
+  /** MCP-facing tool name (CC sees `mcp__orvilo_cc__<name>`). */
   name: string;
   title: string;
 }

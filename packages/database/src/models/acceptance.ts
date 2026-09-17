@@ -3,7 +3,7 @@ import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 
 import type { AcceptanceItem, NewAcceptance } from '../schemas/verify';
 import { acceptances } from '../schemas/verify';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { isUuid } from '../utils/uuid';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
@@ -39,11 +39,11 @@ const decodeCursor = (cursor?: string): { createdAt: Date; id: string } | null =
  * current / latest-report are all derived from that chain at read time.
  */
 export class AcceptanceModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

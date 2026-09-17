@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 import { processMultiProviderModelList } from '../../utils/modelParse';
 
-export const LobeMinimaxCodingPlanAI = createOpenAICompatibleRuntime({
+export const OrviloMinimaxCodingPlanAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.minimaxi.com/v1',
   chatCompletion: {
     handlePayload: (payload) => {

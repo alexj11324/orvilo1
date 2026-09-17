@@ -7,11 +7,11 @@ import { users } from './user';
 /**
  * Per-tenant install record for messenger platforms that distribute via OAuth
  * (Slack today; Feishu / MS Teams later). Keyed by `(platform, application_id,
- * tenant_id)` so a single LobeHub deployment can serve many workspaces of the
+ * tenant_id)` so a single Orvilo deployment can serve many workspaces of the
  * same Slack App without collisions.
  *
  * Distinct from `agent_bot_providers` (per-agent-per-user bot bindings): this
- * row represents the LobeHub-owned, Marketplace-distributed app installed
+ * row represents the Orvilo-owned, Marketplace-distributed app installed
  * into a workspace, not a user-deployed bot. Routing key is `tenant_id`,
  * not the agent.
  *
@@ -61,7 +61,7 @@ export const messengerInstallations = pgTable(
      */
     tokenExpiresAt: timestamptz('token_expires_at'),
 
-    /** LobeHub user who clicked "Connect Slack" — bound at OAuth callback. */
+    /** Orvilo user who clicked "Connect Slack" — bound at OAuth callback. */
     installedByUserId: text('installed_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),

@@ -28,7 +28,7 @@ Files the user uploaded in this conversation (attachments and session files) are
 **IMPORTANT: Prefer Pre-installed Software**
 The sandbox comes with pre-installed software and libraries. **Always prioritize using these pre-installed tools** when they can solve the user's problem, rather than installing additional packages.
 
-**Base Image:** lobehubbot/python-node:latest (Debian-based)
+**Base Image:** orvilobot/python-node:latest (Debian-based)
 
 **Programming Languages & Runtimes:**
 - Python (with pip)

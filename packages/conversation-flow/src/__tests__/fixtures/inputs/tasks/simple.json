@@ -22,7 +22,7 @@
         "type": "builtin",
         "apiName": "callSubAgents",
         "arguments": "{\"tasks\": [{\"description\": \"Research Hangzhou weather\", \"instruction\": \"Search for Hangzhou weather tomorrow.\"}, {\"description\": \"Research Beijing weather\", \"instruction\": \"Search for Beijing weather tomorrow.\"}]}",
-        "identifier": "lobe-agent"
+        "identifier": "orvilo-agent"
       }
     ],
     "metadata": {
@@ -47,7 +47,7 @@
     "plugin": {
       "apiName": "callSubAgents",
       "arguments": "{\"tasks\": [{\"description\": \"Research Hangzhou weather\", \"instruction\": \"Search for Hangzhou weather tomorrow.\"}, {\"description\": \"Research Beijing weather\", \"instruction\": \"Search for Beijing weather tomorrow.\"}]}",
-      "identifier": "lobe-agent",
+      "identifier": "orvilo-agent",
       "type": "builtin"
     },
     "pluginState": {

@@ -16,7 +16,7 @@ import type {
   GenerateObjectOptions,
   GenerateObjectPayload,
 } from '../../types';
-import type { ILobeAgentRuntimeErrorType } from '../../types/error';
+import type { IOrviloAgentRuntimeErrorType } from '../../types/error';
 import { AgentRuntimeErrorType } from '../../types/error';
 import { AgentRuntimeError } from '../../utils/createError';
 import { debugPayload, debugStream } from '../../utils/debugStream';
@@ -26,7 +26,7 @@ import type { ModelIdMappingOptions } from '../../utils/modelIdMapping';
 import { resolveMappedModelId } from '../../utils/modelIdMapping';
 import { MODEL_LIST_CONFIGS, processModelList } from '../../utils/modelParse';
 import { StreamingResponse } from '../../utils/response';
-import type { LobeRuntimeAI } from '../BaseAI';
+import type { OrviloRuntimeAI } from '../BaseAI';
 import {
   buildAnthropicMessages,
   buildAnthropicTools,
@@ -117,8 +117,8 @@ export interface AnthropicCompatibleFactoryOptions<T extends Record<string, any>
     chatCompletion?: () => boolean;
   };
   errorType?: {
-    bizError: ILobeAgentRuntimeErrorType;
-    invalidAPIKey: ILobeAgentRuntimeErrorType;
+    bizError: IOrviloAgentRuntimeErrorType;
+    invalidAPIKey: IOrviloAgentRuntimeErrorType;
   };
   generateObject?: (
     client: Anthropic,
@@ -146,7 +146,7 @@ export interface AnthropicCompatibleParamsInput<T extends Record<string, any> = 
 }
 
 /**
- * Build the default Anthropic Messages payload with LobeChat normalization.
+ * Build the default Anthropic Messages payload with Orvilo normalization.
  */
 export const buildDefaultAnthropicPayload = async (
   payload: ChatStreamPayload,
@@ -223,7 +223,7 @@ export const buildDefaultAnthropicPayload = async (
   }
 
   // Resolve temperature/top_p: Claude 4+ doesn't allow both simultaneously.
-  // normalizeTemperature divides by 2 to map LobeChat's 0-2 range to Anthropic's 0-1 range.
+  // normalizeTemperature divides by 2 to map Orvilo's 0-2 range to Anthropic's 0-1 range.
   const resolvedSamplingParams = resolveModelSamplingParameters(
     model,
     { temperature, top_p },
@@ -287,7 +287,7 @@ export const createDefaultAnthropicClient = <T extends Record<string, any> = any
   const betaHeaders = process.env.ANTHROPIC_BETA_HEADERS;
   const baseURL = normalizeAnthropicCompatibleBaseURL(options.baseURL);
   const defaultHeaders = {
-    'User-Agent': `lobehub/${CURRENT_VERSION}`,
+    'User-Agent': `aspectlylabs/${CURRENT_VERSION}`,
     ...options.defaultHeaders,
     ...(betaHeaders ? { 'anthropic-beta': betaHeaders } : {}),
   };
@@ -474,7 +474,7 @@ export const createAnthropicCompatibleRuntime = <T extends Record<string, any> =
     invalidAPIKey: errorType?.invalidAPIKey || AgentRuntimeErrorType.InvalidProviderAPIKey,
   };
 
-  return class LobeAnthropicCompatibleAI implements LobeRuntimeAI {
+  return class OrviloAnthropicCompatibleAI implements OrviloRuntimeAI {
     client!: Anthropic;
 
     private id: string;
@@ -530,7 +530,7 @@ export const createAnthropicCompatibleRuntime = <T extends Record<string, any> =
 
       this.baseURL = finalBaseURL || this.client.baseURL;
       this.id = options.id || provider;
-      this.logPrefix = `lobe-model-runtime:${this.id}`;
+      this.logPrefix = `orvilo-model-runtime:${this.id}`;
     }
 
     private withMappedRequestModel<TPayload extends { model?: string }>(

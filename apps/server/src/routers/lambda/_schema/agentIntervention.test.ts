@@ -44,7 +44,7 @@ describe('ResolveAgentInterventionSchema', () => {
       ResolveAgentInterventionSchema.safeParse({
         ...wrapper,
         action: { itemId: 'item-1', type: 'skip_interaction' },
-        canonicalToolKey: 'lobe-local-system/editFile',
+        canonicalToolKey: 'orvilo-local-system/editFile',
         operationId: 'client-operation',
       }).success,
     ).toBe(false);

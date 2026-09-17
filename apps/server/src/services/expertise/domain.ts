@@ -7,7 +7,7 @@ import {
 import { z } from 'zod';
 
 import { ExpertiseModel } from '@/database/models/expertise';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { resolveExpertiseModelConfig } from './modelConfig';
@@ -79,7 +79,7 @@ interface DraftFromBriefInput {
 
 export class ExpertiseDomainService {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}

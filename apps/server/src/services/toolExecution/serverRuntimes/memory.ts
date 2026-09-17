@@ -8,7 +8,7 @@ import {
   DEFAULT_USER_MEMORY_EMBEDDING_MODEL_ITEM,
   MEMORY_SEARCH_TOP_K_LIMITS,
 } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type {
   ActivityMemoryItemSchema,
   AddIdentityActionSchema,
@@ -93,7 +93,7 @@ const applySearchLimitsByEffort = (
 };
 
 const getEmbeddingRuntime = async (
-  serverDB: LobeChatDatabase,
+  serverDB: OrviloDatabase,
   userId: string,
   workspaceId?: string,
 ) => {
@@ -138,7 +138,7 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
   private messageId?: string;
   private memoryModel: UserMemoryModel;
   private operationId?: string;
-  private serverDB: LobeChatDatabase;
+  private serverDB: OrviloDatabase;
   private taskId?: string;
   private toolCallId?: string;
   private topicId?: string;
@@ -161,7 +161,7 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
     memoryEmbeddingRuntime?: ToolExecutionMemoryEmbeddingRuntime;
     memoryModel: UserMemoryModel;
     operationId?: string;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     spendOrigin?: SpendOrigin;
     taskId?: string;
     toolCallId?: string;

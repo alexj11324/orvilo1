@@ -47,7 +47,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@orvilo/const', () => ({
   getComposioAppByIdentifier: () => undefined,
-  getLobehubSkillProviderById: () => undefined,
+  getOrviloSkillProviderById: () => undefined,
 }));
 
 // The manage gate pulls in the user store chain — irrelevant to these render

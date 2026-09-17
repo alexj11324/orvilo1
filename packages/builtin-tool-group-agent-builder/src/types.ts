@@ -1,10 +1,10 @@
 import type { UpdateAgentConfigParams } from '@orvilo/builtin-tool-agent-builder';
-import type { LobeAgentConfig, MetaData } from '@orvilo/types';
+import type { MetaData, OrviloAgentConfig } from '@orvilo/types';
 
 /**
  * Group Agent Builder Tool Identifier
  */
-export const GroupAgentBuilderIdentifier = 'lobe-group-agent-builder';
+export const GroupAgentBuilderIdentifier = 'orvilo-group-agent-builder';
 
 /**
  * Group Agent Builder API Names
@@ -134,7 +134,7 @@ export interface CreateGroupParams {
     /**
      * Model parameters for the supervisor
      */
-    params?: Partial<LobeAgentConfig['params']>;
+    params?: Partial<OrviloAgentConfig['params']>;
     /**
      * AI provider for the supervisor
      */

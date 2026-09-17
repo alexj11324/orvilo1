@@ -179,7 +179,7 @@ export class MarketApiService {
   // ==================== Skills API ====================
 
   /**
-   * Search for skills in the LobeHub Market
+   * Search for skills in the Orvilo Market
    */
   async searchSkill(params: {
     category?: string;
@@ -199,7 +199,8 @@ export class MarketApiService {
    * Get skill download URL from market
    */
   getSkillDownloadUrl(identifier: string): string {
-    const marketBaseUrl = process.env.NEXT_PUBLIC_MARKET_BASE_URL || 'https://market.lobehub.com';
+    const marketBaseUrl =
+      process.env.NEXT_PUBLIC_MARKET_BASE_URL || 'https://market.aspectlylabs.com';
     return `${marketBaseUrl}/api/v1/skills/${identifier}/download`;
   }
 }

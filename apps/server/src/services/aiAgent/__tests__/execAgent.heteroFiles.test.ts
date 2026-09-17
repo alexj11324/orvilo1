@@ -176,7 +176,7 @@ vi.mock('@/database/models/thread', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
       market: {
         creds: {
           get: vi.fn(),
@@ -534,7 +534,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
   it('should pin the runtime type of a remote platform agent on a server-created topic', async () => {
     heteroAgentConfig.agencyConfig = { heterogeneousProvider: { type: 'openclaw' } } as any;
-    heteroAgentConfig.provider = 'lobehub';
+    heteroAgentConfig.provider = 'orvilo';
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run the build' });
 
@@ -1376,7 +1376,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         heterogeneousProvider: { type: 'openclaw' },
       } as any;
       heteroAgentConfig.model = 'openclaw';
-      heteroAgentConfig.provider = 'lobehub';
+      heteroAgentConfig.provider = 'orvilo';
       topicMock.findById.mockResolvedValue({
         metadata: {
           runningOperation: {

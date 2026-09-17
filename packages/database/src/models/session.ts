@@ -1,9 +1,9 @@
 import { DEFAULT_AGENT_CONFIG, INBOX_SESSION_ID } from '@orvilo/const';
 import type {
   ChatSessionList,
-  LobeAgentConfig,
-  LobeAgentSession,
-  LobeGroupSession,
+  OrviloAgentConfig,
+  OrviloAgentSession,
+  OrviloGroupSession,
 } from '@orvilo/types';
 import { and, asc, count, desc, eq, inArray, not, or, sql } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
@@ -13,7 +13,7 @@ import { merge } from '@/utils/merge';
 import type { FtsSearchCandidateSource } from '../repositories/ftsSearch';
 import type { AgentItem, NewAgent, NewSession, SessionItem } from '../schemas';
 import { agents, agentsToSessions, sessionGroups, sessions } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { sanitizeBm25Query } from '../utils/bm25';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { idGenerator } from '../utils/idGenerator';
@@ -22,12 +22,12 @@ import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export class SessionModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private ftsSearchCandidateSource?: FtsSearchCandidateSource;
   private workspaceId?: string;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     ftsSearchCandidateSource?: FtsSearchCandidateSource,
@@ -214,7 +214,7 @@ export class SessionModel {
         tags = [],
         avatar,
         backgroundColor,
-        // LobeAgentConfig fields
+        // OrviloAgentConfig fields
         model,
         params,
         systemRole,
@@ -313,7 +313,7 @@ export class SessionModel {
     });
   };
 
-  createInbox = async (defaultAgentConfig: PartialDeep<LobeAgentConfig>) => {
+  createInbox = async (defaultAgentConfig: PartialDeep<OrviloAgentConfig>) => {
     const item = await this.db.query.sessions.findFirst({
       where: and(this.ownership(), eq(sessions.slug, INBOX_SESSION_ID)),
     });
@@ -321,7 +321,7 @@ export class SessionModel {
     if (item) return;
 
     return await this.create({
-      // `merge` returns the `@orvilo/types` LobeAgentConfig shape
+      // `merge` returns the `@orvilo/types` OrviloAgentConfig shape
       // (plugins: AgentPluginEntry[]); `create`'s `config` is the DB-layer
       // NewAgent, whose `plugins` column type is intentionally left as
       // `string[]` (only the domain types are widened for the tri-state
@@ -548,7 +548,7 @@ export class SessionModel {
     type,
     ...res
   }: SessionItem & { agentsToSessions?: { agent: AgentItem }[] }):
-    LobeAgentSession | LobeGroupSession => {
+    OrviloAgentSession | OrviloGroupSession => {
     const meta = {
       avatar: avatar ?? undefined,
       backgroundColor: backgroundColor ?? undefined,
@@ -582,7 +582,7 @@ export class SessionModel {
         members,
         meta,
         type: 'group',
-      } as LobeGroupSession;
+      } as OrviloGroupSession;
     }
 
     // For agent sessions, include agent-specific fields
@@ -603,7 +603,7 @@ export class SessionModel {
       },
       model: agent?.model || '',
       type: 'agent',
-    } as LobeAgentSession;
+    } as OrviloAgentSession;
   };
 
   findSessionsByKeywords = async (params: {

@@ -21,7 +21,7 @@ export const CrawlSinglePageInspector = memo<BuiltinInspectorProps<CrawlSinglePa
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-web-browsing.apiName.crawlSinglePage')}
+            {t('builtins.orvilo-web-browsing.apiName.crawlSinglePage')}
           </span>
         </div>
       );
@@ -30,7 +30,7 @@ export const CrawlSinglePageInspector = memo<BuiltinInspectorProps<CrawlSinglePa
     return (
       <div className={inspectorTextStyles.root}>
         <span className={cx(isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-web-browsing.apiName.crawlSinglePage')}:{'\u00A0'}
+          {t('builtins.orvilo-web-browsing.apiName.crawlSinglePage')}:{'\u00A0'}
         </span>
         {url && <span className={highlightTextStyles.gold}>{url}</span>}
       </div>

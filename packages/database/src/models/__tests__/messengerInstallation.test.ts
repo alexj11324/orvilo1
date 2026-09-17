@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { messengerInstallations, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { MessengerInstallationModel } from '../messengerInstallation';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const installerUserId = 'messenger-install-test-user-id';
 const installerUserId2 = 'messenger-install-test-user-id-2';
@@ -151,7 +151,7 @@ describe('MessengerInstallationModel', () => {
   });
 
   describe('listByInstallerUserId', () => {
-    it('returns only installs the given LobeHub user kicked off', async () => {
+    it('returns only installs the given Orvilo user kicked off', async () => {
       await MessengerInstallationModel.upsert(serverDB, {
         applicationId: 'A_APP_1',
         credentials: { botToken: 'xoxb-1' },

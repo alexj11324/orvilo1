@@ -7,7 +7,7 @@ import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { createVerifierAgentRunner } from './agentVerifier';
 import {
@@ -21,11 +21,11 @@ import { VERIFY_ABANDONED_MS } from './staleness';
 import { VerifyStatusService } from './statusService';
 import { resolveTaskAcceptance } from './taskAcceptance';
 
-const log = debug('lobe-server:verify-lifecycle');
+const log = debug('orvilo-server:verify-lifecycle');
 const MAX_TASK_DOCUMENT_CHARS = 80_000;
 
 export const resolveVerificationDeliverable = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   deliverable: string,
   taskId?: string | null,
@@ -82,7 +82,7 @@ export interface RunVerifyOnCompletionParams {
  * those items degrade gracefully (skipped / no repair).
  */
 const executeVerifyLifecycle = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   params: RunVerifyOnCompletionParams,
   workspaceId?: string,
@@ -300,7 +300,7 @@ const executeVerifyLifecycle = async (
 };
 
 export const runVerifyOnCompletion = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   params: RunVerifyOnCompletionParams,
   workspaceId?: string,
@@ -308,7 +308,7 @@ export const runVerifyOnCompletion = async (
 
 /** The only entry point allowed to advance a task run out of evidence collection. */
 export const runVerifyAfterEvidenceSubmission = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   params: RunVerifyOnCompletionParams,
   workspaceId?: string,

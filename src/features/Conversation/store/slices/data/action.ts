@@ -26,7 +26,7 @@ import { messagesReducer } from './reducer';
 import { dataSelectors } from './selectors';
 import { stabilizeReferences } from './stabilizeReferences';
 
-const log = debug('lobe-render:features:Conversation');
+const log = debug('orvilo-render:features:Conversation');
 
 const mergeFetchedMessagesWithLocalState = (
   fetchedMessages: UIChatMessage[],

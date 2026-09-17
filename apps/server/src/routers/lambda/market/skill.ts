@@ -16,8 +16,8 @@ const log = debug('lambda-router:market:skill');
  * `UNAUTHORIZED` is not an inert status code here — it drives re-authentication
  * UI. `createResponseMeta` tags any `UNAUTHORIZED` whose message isn't the
  * `MARKET_AUTH_REQUIRED_MESSAGE` sentinel with `X-Auth-Required`, and the
- * desktop proxy opens the LobeHub re-login prompt on that header. Mapping an
- * upstream 401 through would therefore ask the user to re-sign into LobeHub
+ * desktop proxy opens the Orvilo re-login prompt on that header. Mapping an
+ * upstream 401 through would therefore ask the user to re-sign into Orvilo
  * because *Market* rejected a credential.
  *
  * Routing it to the Market sentinel instead would be just as wrong for this

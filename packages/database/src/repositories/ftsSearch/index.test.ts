@@ -20,7 +20,7 @@ import { messages } from '../../schemas/message';
 import type { NewTopic } from '../../schemas/topic';
 import { topics } from '../../schemas/topic';
 import { users } from '../../schemas/user';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import type { FtsSearchResult } from './index';
 import { FtsSearchCandidateError, FtsSearchRepo } from './index';
 
@@ -29,7 +29,7 @@ const otherUserId = 'other-search-user';
 
 let ftsSearchRepo: FtsSearchRepo;
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 beforeEach(async () => {
   // Clean up
@@ -1841,7 +1841,7 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
       });
 
       await new FtsSearchRepo(
-        db as unknown as LobeChatDatabase,
+        db as unknown as OrviloDatabase,
         userId,
         options?.workspaceId,
       ).search({

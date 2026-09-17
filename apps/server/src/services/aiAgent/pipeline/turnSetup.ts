@@ -1,5 +1,5 @@
 import { isHeterogeneousAgentModelId, LOADING_FLAT } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import type {
   ChatAudioItem,
@@ -38,10 +38,10 @@ import type { AgentShareGate } from '../shareGate';
 import { reserveShareVisitorTopic, reserveShareVisitorTurn } from '../shareVisitorAbuseGuards';
 import type { InternalExecAgentParams } from '../types';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 export interface TurnSetupDeps {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   messageModel: MessageModel;
   topicModel: TopicModel;
   userId: string;

@@ -1,5 +1,5 @@
 import { manualModeExcludeToolIds } from '@orvilo/builtin-tools';
-import type { LobeAgentChatConfig, RuntimeEnvMode } from '@orvilo/types';
+import type { OrviloAgentChatConfig, RuntimeEnvMode } from '@orvilo/types';
 
 interface ToolContextRefreshKeyOptions {
   agentId?: string;
@@ -10,13 +10,13 @@ interface ToolContextRefreshKeyOptions {
   isProviderHasBuiltinSearch?: boolean;
   memoryEnabled?: boolean;
   runtimeMode?: RuntimeEnvMode;
-  searchMode?: LobeAgentChatConfig['searchMode'];
-  skillActivateMode?: LobeAgentChatConfig['skillActivateMode'];
+  searchMode?: OrviloAgentChatConfig['searchMode'];
+  skillActivateMode?: OrviloAgentChatConfig['skillActivateMode'];
   useModelBuiltinSearch?: boolean;
 }
 
 export const getToolExcludeDefaultToolIds = (
-  skillActivateMode?: LobeAgentChatConfig['skillActivateMode'],
+  skillActivateMode?: OrviloAgentChatConfig['skillActivateMode'],
 ) => (skillActivateMode === 'manual' ? manualModeExcludeToolIds : undefined);
 
 export const getToolContextRefreshKey = ({

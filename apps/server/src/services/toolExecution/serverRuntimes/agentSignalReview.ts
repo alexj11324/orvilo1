@@ -7,7 +7,7 @@ import { AgentSignalToolExecutionRuntime } from '@orvilo/builtin-tool-agent-sign
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { BriefModel } from '@/database/models/brief';
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
 import { readAgentSignalMarker } from '@/server/services/agentSignal/operationMarker';
 import { createServerSelfReviewBriefWriter } from '@/server/services/agentSignal/services/selfIteration/review/brief';
@@ -16,7 +16,7 @@ import { SkillManagementDocumentService } from '@/server/services/skillManagemen
 
 import type { ServerRuntimeRegistration } from './types';
 
-const resolveBriefTextTranslator = async (db: LobeChatDatabase, userId: string) => {
+const resolveBriefTextTranslator = async (db: OrviloDatabase, userId: string) => {
   const userInfo = await UserModel.getInfoForAIGeneration(db, userId);
   const { t } = await translation('home', userInfo.responseLanguage ?? 'en-US');
 

@@ -971,14 +971,14 @@ components:
       scheme: bearer
       type: http
 info:
-  title: LobeHub API
-  description: LobeHub platform REST API. Generated from `packages/openapi` routes
+  title: Orvilo API
+  description: Orvilo platform REST API. Generated from `packages/openapi` routes
     — do not edit openapi.yml by hand; run `bun generate:openapi` instead.
   version: 1.0.0
 security:
   - bearerAuth: []
 servers:
-  - description: LobeHub Cloud
+  - description: Orvilo Cloud
     url: https://orvilo.aspectlylabs.com
 paths:
   /api/v1/health:
@@ -16447,7 +16447,7 @@ paths:
                             properties:
                               type:
                                 type: string
-                                pattern: ^lobe-.*
+                                pattern: ^orvilo-.*
                             required:
                               - type
                     - type: "null"

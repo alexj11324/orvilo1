@@ -202,7 +202,7 @@ const GenerationTile = memo<{ index: number; task: GeneratedImageTask }>(({ inde
     <div className={styles.tile}>
       {url ? (
         <img
-          alt={t('builtins.lobe-image-generation.render.imageAlt', { index: index + 1 })}
+          alt={t('builtins.orvilo-image-generation.render.imageAlt', { index: index + 1 })}
           className={styles.image}
           src={url}
         />
@@ -215,12 +215,12 @@ const GenerationTile = memo<{ index: number; task: GeneratedImageTask }>(({ inde
             fontSize={12}
           >
             {status === 'error'
-              ? errorDetail || t('builtins.lobe-image-generation.render.status.error')
-              : t(`builtins.lobe-image-generation.render.status.${status}`)}
+              ? errorDetail || t('builtins.orvilo-image-generation.render.status.error')
+              : t(`builtins.orvilo-image-generation.render.status.${status}`)}
           </Text>
           {canRetry && (
             <Button loading={isValidating} size={'small'} onClick={retry}>
-              {t('builtins.lobe-image-generation.render.retry')}
+              {t('builtins.orvilo-image-generation.render.retry')}
             </Button>
           )}
         </div>
@@ -242,7 +242,7 @@ export const GenerateImageRender = memo<
       <Alert
         showIcon
         description={pluginError.message}
-        title={t('builtins.lobe-image-generation.render.generationFailed')}
+        title={t('builtins.orvilo-image-generation.render.generationFailed')}
         type={'error'}
       />
     );
@@ -262,7 +262,7 @@ export const GenerateImageRender = memo<
           <div className={styles.model}>{[provider, model].filter(Boolean).join('/')}</div>
         </div>
         <span className={styles.status}>
-          {t('builtins.lobe-image-generation.render.generatedCount', {
+          {t('builtins.orvilo-image-generation.render.generatedCount', {
             count: generations.length,
           })}
         </span>

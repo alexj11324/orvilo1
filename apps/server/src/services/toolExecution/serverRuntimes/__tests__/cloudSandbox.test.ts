@@ -36,7 +36,7 @@ vi.mock('@/server/services/sandbox', () => ({
 vi.mock('@/server/services/toolExecution/preprocessLhCommand', () => ({
   isLhCommand: (command: string) => command.startsWith('lh'),
   preprocessLhCommand: mocks.preprocessLhCommand,
-  SHARE_VISITOR_LH_BLOCKED_MESSAGE: 'The LobeHub CLI is unavailable in shared conversations.',
+  SHARE_VISITOR_LH_BLOCKED_MESSAGE: 'The Orvilo CLI is unavailable in shared conversations.',
 }));
 
 const buildContext = (overrides: Record<string, unknown> = {}) =>
@@ -70,7 +70,7 @@ describe('cloudSandboxRuntime', () => {
   it('preprocesses lh commands with the run workspace scope', async () => {
     mocks.preprocessLhCommand.mockResolvedValueOnce({
       command:
-        'lh() { LOBEHUB_WORKSPACE_ID=\'ws-42\' npx -y @lobehub/cli "$@"; }\nlh agent edit agt_1 -t x',
+        'lh() { ORVILO_WORKSPACE_ID=\'ws-42\' npx -y @orvilo/cli "$@"; }\nlh agent edit agt_1 -t x',
       isLhCommand: true,
       skipSkillLookup: true,
     });
@@ -90,7 +90,7 @@ describe('cloudSandboxRuntime', () => {
       'runCommand',
       expect.objectContaining({
         command:
-          'lh() { LOBEHUB_WORKSPACE_ID=\'ws-42\' npx -y @lobehub/cli "$@"; }\nlh agent edit agt_1 -t x',
+          'lh() { ORVILO_WORKSPACE_ID=\'ws-42\' npx -y @orvilo/cli "$@"; }\nlh agent edit agt_1 -t x',
       }),
     );
   });
@@ -141,7 +141,7 @@ describe('cloudSandboxRuntime', () => {
     expect(result.state).toMatchObject({ success: false });
   });
 
-  // `lobe-cloud-sandbox` is allowlisted for Agent Share visitors specifically
+  // `orvilo-cloud-sandbox` is allowlisted for Agent Share visitors specifically
   // because this shim never mints the creator's JWT for them — a visitor
   // controls the shell command, so an `lh` invocation must fail closed
   // instead of ever reaching `preprocessLhCommand` (which would sign a

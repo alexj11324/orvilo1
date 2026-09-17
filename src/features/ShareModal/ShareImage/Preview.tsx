@@ -5,7 +5,7 @@ import { cx } from 'antd-style';
 import { memo } from 'react';
 
 import { ProductLogo } from '@/components/Branding';
-import { ModelTag } from '@/components/LobeIcons';
+import { ModelTag } from '@/components/OrviloIcons';
 import PluginTag from '@/features/PluginTag';
 import { filterToolIds } from '@/helpers/toolFilters';
 import { useAgentStore } from '@/store/agent';

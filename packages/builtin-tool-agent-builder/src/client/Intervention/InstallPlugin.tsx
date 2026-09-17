@@ -12,12 +12,12 @@ import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfi
 import { useToolStore } from '@/store/tool';
 import {
   composioStoreSelectors,
-  lobehubSkillStoreSelectors,
   mcpStoreSelectors,
+  orviloSkillStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore/types';
-import { LobehubSkillStatus } from '@/store/tool/slices/lobehubSkillStore/types';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
 import type { InstallPluginParams } from '../../types';
 
@@ -33,7 +33,7 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
     const { identifier, source } = args;
     const { t } = useTranslation('chat');
     const isComposioEnabled = useServerConfigStore(serverConfigSelectors.enableComposio);
-    const isLobehubSkillEnabled = useServerConfigStore(serverConfigSelectors.enableLobehubSkill);
+    const isOrviloSkillEnabled = useServerConfigStore(serverConfigSelectors.enableOrviloSkill);
 
     // Tool store selectors
     const isPluginInstalled = useToolStore((s) => pluginSelectors.isPluginInstalled(identifier)(s));
@@ -43,9 +43,9 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
       composioStoreSelectors.getServers(s).find((srv) => srv.identifier === identifier),
     );
 
-    // Get LobehubSkill server state
-    const lobehubSkillServer = useToolStore((s) =>
-      lobehubSkillStoreSelectors.getServers(s).find((srv) => srv.identifier === identifier),
+    // Get OrviloSkill server state
+    const orviloSkillServer = useToolStore((s) =>
+      orviloSkillStoreSelectors.getServers(s).find((srv) => srv.identifier === identifier),
     );
 
     // Get Market MCP plugin info
@@ -58,13 +58,13 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
 
     const connector = resolveConnectorCatalogItem(identifier, {
       composio: isComposioEnabled,
-      lobehub: isLobehubSkillEnabled,
+      orvilo: isOrviloSkillEnabled,
     });
     const composioAppInfo = connector?.type === 'composio' ? connector.serverType : undefined;
     const isComposio = source === 'official' && !!composioAppInfo;
 
-    const lobehubSkillProviderInfo = connector?.type === 'lobehub' ? connector.provider : undefined;
-    const isLobehubSkill = source === 'official' && !!lobehubSkillProviderInfo;
+    const orviloSkillProviderInfo = connector?.type === 'orvilo' ? connector.provider : undefined;
+    const isOrviloSkill = source === 'official' && !!orviloSkillProviderInfo;
 
     // Render success state (already installed)
     if (isPluginInstalled) {
@@ -82,12 +82,12 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
           <CheckCircle size={20} style={{ color: 'var(--lobe-success-6)' }} />
           <Flexbox gap={4}>
             <span style={{ fontWeight: 600 }}>
-              {isComposio || isLobehubSkill
+              {isComposio || isOrviloSkill
                 ? t('agentBuilder.installPlugin.connectedAndEnabled')
                 : t('agentBuilder.installPlugin.installedAndEnabled')}
             </span>
             <span style={{ color: 'var(--lobe-text-secondary)', fontSize: 12 }}>
-              {composioAppInfo?.label || lobehubSkillProviderInfo?.label || identifier}
+              {composioAppInfo?.label || orviloSkillProviderInfo?.label || identifier}
             </span>
           </Flexbox>
         </Flexbox>
@@ -132,14 +132,14 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
       );
     }
 
-    // Render LobehubSkill provider
-    if (isLobehubSkill) {
+    // Render OrviloSkill provider
+    if (isOrviloSkill) {
       const icon =
-        typeof lobehubSkillProviderInfo?.icon === 'string'
-          ? lobehubSkillProviderInfo.icon
+        typeof orviloSkillProviderInfo?.icon === 'string'
+          ? orviloSkillProviderInfo.icon
           : undefined;
       const isNotConnected =
-        !lobehubSkillServer || lobehubSkillServer.status !== LobehubSkillStatus.CONNECTED;
+        !orviloSkillServer || orviloSkillServer.status !== OrviloSkillStatus.CONNECTED;
 
       return (
         <Flexbox
@@ -149,7 +149,7 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
           <Flexbox horizontal align="center" gap={12}>
             {icon ? (
               <img
-                alt={lobehubSkillProviderInfo?.label || identifier}
+                alt={orviloSkillProviderInfo?.label || identifier}
                 height={40}
                 src={icon}
                 style={{ borderRadius: 8 }}
@@ -161,10 +161,10 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
             <Flexbox flex={1} gap={4}>
               <Flexbox horizontal align="center" gap={8}>
                 <span style={{ fontWeight: 600 }}>
-                  {lobehubSkillProviderInfo?.label || identifier}
+                  {orviloSkillProviderInfo?.label || identifier}
                 </span>
                 <span style={{ color: 'var(--lobe-text-tertiary)', fontSize: 12 }}>
-                  LobeHub Skill
+                  Orvilo Skill
                 </span>
               </Flexbox>
               <span style={{ color: 'var(--lobe-text-secondary)', fontSize: 12 }}>

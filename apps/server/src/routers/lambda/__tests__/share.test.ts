@@ -95,7 +95,7 @@ describe('shareRouter', () => {
         maxTopicsPerVisitor: 5,
         maxTurnsPerTopic: 20,
         slug: 'shared-agent',
-        toolGrants: [{ apis: ['search'], identifier: 'lobe-web-browsing' }],
+        toolGrants: [{ apis: ['search'], identifier: 'orvilo-web-browsing' }],
       },
       shareId: 'agent-share-1',
       userViewCount: 42,
@@ -149,7 +149,7 @@ describe('shareRouter', () => {
           maxTurnsPerTopic: 20,
         },
         // Identifier only: the granted API list is owner-facing configuration.
-        toolGrants: ['lobe-web-browsing'],
+        toolGrants: ['orvilo-web-browsing'],
         visibility: 'link',
       });
       expect(result).not.toHaveProperty('ownerId');

@@ -4,7 +4,7 @@ import { MemorySourceType } from '@orvilo/types';
 
 import { convertLocomoFile } from '../../src/converters/locomo';
 
-const baseUrl = process.env.MEMORY_USER_MEMORY_LOBEHUB_BASE_URL;
+const baseUrl = process.env.MEMORY_USER_MEMORY_ORVILO_BASE_URL;
 const benchmarkLoCoMoFile = process.env.MEMORY_USER_MEMORY_BENCHMARKS_LOCOMO_DATASETS;
 const webhookExtraHeaders = process.env.MEMORY_USER_MEMORY_WEBHOOK_HEADERS;
 
@@ -40,7 +40,7 @@ const post = async (path: string, body: unknown) => {
 async function main() {
   if (!baseUrl || !benchmarkLoCoMoFile) {
     console.error(
-      '[@orvilo/memory-user-memory/benchmarks/locomo] Missing required envs. Set MEMORY_USER_MEMORY_LOBEHUB_BASE_URL and MEMORY_USER_MEMORY_BENCHMARKS_LOCOMO_DATASETS.',
+      '[@orvilo/memory-user-memory/benchmarks/locomo] Missing required envs. Set MEMORY_USER_MEMORY_ORVILO_BASE_URL and MEMORY_USER_MEMORY_BENCHMARKS_LOCOMO_DATASETS.',
     );
 
     exit(1);

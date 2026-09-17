@@ -1,9 +1,9 @@
 export * from './share';
 
 /**
- * Document object in LobeChat
+ * Document object in Orvilo
  */
-export interface LobeDocument {
+export interface OrviloDocument {
   /**
    * File content
    */
@@ -50,7 +50,7 @@ export interface LobeDocument {
    * Array containing all logical pages/blocks in the document
    * Order typically corresponds to the natural order in the file
    */
-  pages?: LobeDocumentPage[];
+  pages?: OrviloDocumentPage[];
 
   /**
    * Parent Folder ID
@@ -109,7 +109,7 @@ export interface LobeDocument {
 /**
  * Represents a logical unit/page/block in a file
  */
-export interface LobeDocumentPage {
+export interface OrviloDocumentPage {
   /**
    * Character count of this page/block content
    */

@@ -64,7 +64,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
         true,
       );
     }
-    expect(compose.services.lobe.depends_on).not.toHaveProperty('elasticsearch');
+    expect(compose.services.orvilo.depends_on).not.toHaveProperty('elasticsearch');
   });
 
   it('keeps the backfill and sync services usable against an external Elasticsearch', () => {
@@ -118,11 +118,11 @@ describe('deploy docker-compose optional Elasticsearch', () => {
 
   it('runs backfill and continuous sync from the image built in this repository', () => {
     // This repo ships its own deploy stack, so the backfill and the sync worker are built from the
-    // root Dockerfile instead of pulling the upstream LobeHub release. They must run the very same
+    // root Dockerfile instead of pulling the upstream Orvilo release. They must run the very same
     // tag as the app service, or the bundles could drift from the server that wrote the Outbox.
-    expect(compose.services.lobe.image).toBe('${ORVILO_IMAGE_TAG:-orvilo:local}');
+    expect(compose.services.orvilo.image).toBe('${ORVILO_IMAGE_TAG:-orvilo:local}');
     for (const service of [reindex, sync]) {
-      expect(service.image).toBe(compose.services.lobe.image);
+      expect(service.image).toBe(compose.services.orvilo.image);
       expect(service.build).toEqual({ context: '../..', dockerfile: 'Dockerfile' });
     }
 
@@ -133,13 +133,13 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     expect(reindex.command).toEqual(['--status']);
     expect(reindex.environment).toContain('ES_REINDEX_STATE_DIR=/app/.elasticsearch-reindex');
     expect(reindex.volumes).toContain('fts-search-reindex-state:/app/.elasticsearch-reindex');
-    expect(compose.services.lobe.volumes).toContain(
+    expect(compose.services.orvilo.volumes).toContain(
       'fts-search-reindex-state:/app/.elasticsearch-reindex',
     );
     expect(compose.volumes).toHaveProperty('fts-search-reindex-state');
     // The image pre-creates the checkpoint mountpoint so the named volume inherits nextjs ownership.
     expect(dockerfile).toContain('mkdir -p /app/.elasticsearch-reindex');
-    expect(compose.services.lobe.environment).toContain(
+    expect(compose.services.orvilo.environment).toContain(
       'ES_REINDEX_STATE_DIR=/app/.elasticsearch-reindex',
     );
 
@@ -168,11 +168,11 @@ describe('deploy docker-compose optional Elasticsearch', () => {
   it('packages the Hatchet worker in the deployment image and keeps it out of the web container', () => {
     const worker = compose.services['hatchet-worker'];
 
-    expect(worker.image).toBe(compose.services.lobe.image);
+    expect(worker.image).toBe(compose.services.orvilo.image);
     expect(worker.build).toEqual({ context: '../..', dockerfile: 'Dockerfile' });
     expect(worker.profiles).toEqual(['hatchet']);
     expect(worker.entrypoint).toEqual(['/bin/node', '/app/hatchet-worker/worker.mjs']);
-    expect(compose.services.lobe.environment).toContain('HATCHET_WORKER_ENABLED=0');
+    expect(compose.services.orvilo.environment).toContain('HATCHET_WORKER_ENABLED=0');
     expect(dockerfile).toContain(
       'RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker',
     );
@@ -249,7 +249,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
   });
 
   it('never switches the search provider on behalf of the operator', () => {
-    for (const service of [elasticsearch, reindex, sync, compose.services.lobe]) {
+    for (const service of [elasticsearch, reindex, sync, compose.services.orvilo]) {
       expect(
         service.environment?.some((entry) => entry.startsWith('FTS_SEARCH_PROVIDER=')),
       ).toBeFalsy();

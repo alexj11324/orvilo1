@@ -13,10 +13,10 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { TopicModel } from '../topic';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'topic-model-test-user';
 const otherUserId = 'topic-model-test-other-user';
@@ -1103,14 +1103,14 @@ describe('TopicModel', () => {
       const topic = await topicModel.create({
         metadata: { reasoningConfig: { glm5_2ReasoningEffort: 'max' }, workingDirectory: '/w' },
         model: 'glm-5.2',
-        provider: 'lobehub',
+        provider: 'orvilo',
         title: 'pin',
       });
 
       const [updated] = await topicModel.updateModelPin(topic.id, {
         metadata: { reasoningConfig: { deepseekV4GAReasoningEffort: 'low' } },
         model: 'deepseek-v4-flash',
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
 
       expect(updated.model).toBe('deepseek-v4-flash');

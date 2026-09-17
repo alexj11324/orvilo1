@@ -4,7 +4,7 @@ import type { CreateImageOptions } from '../../core/openaiCompatibleFactory';
 import type { CreateImagePayload, CreateImageResponse } from '../../types/image';
 import { AgentRuntimeError } from '../../utils/createError';
 
-const log = createDebug('lobe-image:xai');
+const log = createDebug('orvilo-image:xai');
 
 interface XAIImageRequest {
   aspect_ratio?:

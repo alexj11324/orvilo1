@@ -12,7 +12,7 @@ import {
   userMemoriesPreferences,
   users,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { UserMemoryModel } from '../model';
 import type { LayerBaseMemorySignals } from '../query';
 import { scoreHybridCandidates } from '../query';
@@ -20,7 +20,7 @@ import { scoreHybridCandidates } from '../query';
 const userId = 'memory-query-ext-user';
 const otherUserId = 'memory-query-ext-other-user';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 let memoryModel: UserMemoryModel;
 

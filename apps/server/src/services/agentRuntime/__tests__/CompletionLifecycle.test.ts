@@ -81,10 +81,10 @@ describe('CompletionLifecycle.extractErrorMessage', () => {
   it('extracts message from ChatCompletionErrorPayload (InsufficientBudgetForModel)', () => {
     const lifecycle = buildLifecycle();
     const error = {
-      _responseBody: { provider: 'lobehub' },
+      _responseBody: { provider: 'orvilo' },
       error: { message: 'Budget exceeded' },
       errorType: 'InsufficientBudgetForModel',
-      provider: 'lobehub',
+      provider: 'orvilo',
     };
 
     expect(lifecycle.extractErrorMessage(error)).toBe('Budget exceeded');
@@ -154,10 +154,10 @@ describe('CompletionLifecycle.extractErrorMessage', () => {
   it('never returns [object Object] for nested error objects', () => {
     const lifecycle = buildLifecycle();
     const error = {
-      _responseBody: { provider: 'lobehub' },
+      _responseBody: { provider: 'orvilo' },
       error: { message: 'Budget exceeded' },
       errorType: 'InsufficientBudgetForModel',
-      provider: 'lobehub',
+      provider: 'orvilo',
     };
 
     const result = lifecycle.extractErrorMessage(error);
@@ -563,7 +563,7 @@ describe('CompletionLifecycle.dispatchHooks — error persistence', () => {
           budget,
           error: { message: 'Budget exceeded' },
           errorType: ChatErrorType.FreePlanLimit,
-          provider: 'lobehub',
+          provider: 'orvilo',
         },
         metadata: { assistantMessageId: 'msg-1' },
         host: { hooks: [] },
@@ -577,7 +577,7 @@ describe('CompletionLifecycle.dispatchHooks — error persistence', () => {
         body: expect.objectContaining({
           budget,
           message: 'Budget exceeded',
-          provider: 'lobehub',
+          provider: 'orvilo',
         }),
         message: 'Budget exceeded',
         type: ChatErrorType.FreePlanLimit,

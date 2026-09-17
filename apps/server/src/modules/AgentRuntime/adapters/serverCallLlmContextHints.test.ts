@@ -426,7 +426,7 @@ describe('resolveServerCallLlmContextHints - model-instance reasoning config', (
         responseItems: [
           {
             encrypted_content:
-              'lobe-scoped-state-v1:reasoning:0123456789abcdef0123456789abcdef:opaque',
+              'orvilo-scoped-state-v1:reasoning:0123456789abcdef0123456789abcdef:opaque',
             id: 'rs_meta',
             summary: [],
             type: 'reasoning',

@@ -6,7 +6,7 @@ import { getTestDB } from '../../core/getTestDB';
 import { messageGroups, messages } from '../../schemas/message';
 import { topics } from '../../schemas/topic';
 import { users } from '../../schemas/user';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { CompressionRepository } from './index';
 
 const userId = 'compression-test-user';
@@ -14,7 +14,7 @@ const topicId = 'test-topic-1';
 
 let compressionRepo: CompressionRepository;
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 beforeEach(async () => {
   // Clean up

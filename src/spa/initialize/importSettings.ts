@@ -1,4 +1,4 @@
-import { LOBE_URL_IMPORT_NAME } from '@/const/url';
+import { ORVILO_URL_IMPORT_NAME } from '@/const/url';
 import { getUserStoreState, useUserStore } from '@/store/user';
 
 let importSettingsStarted = false;
@@ -14,10 +14,10 @@ const readImportSettingsFromUrl = (): string | null => {
   if (typeof window === 'undefined') return null;
 
   const params = new URLSearchParams(window.location.search);
-  const settings = params.get(LOBE_URL_IMPORT_NAME);
+  const settings = params.get(ORVILO_URL_IMPORT_NAME);
   if (!settings) return null;
 
-  params.delete(LOBE_URL_IMPORT_NAME);
+  params.delete(ORVILO_URL_IMPORT_NAME);
   const search = params.toString();
   const nextUrl = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`;
   window.history.replaceState({}, '', nextUrl);

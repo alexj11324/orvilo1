@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { McpServerService } from './mcp-server.service';
 
@@ -77,7 +77,7 @@ describe('McpServerService row-level manage checks', () => {
     hasAnyPermissionMock.mockResolvedValue(false);
   });
 
-  const service = () => new McpServerService({} as LobeChatDatabase, OWNER, WORKSPACE);
+  const service = () => new McpServerService({} as OrviloDatabase, OWNER, WORKSPACE);
 
   it.each(['updateServer', 'deleteServer', 'syncServer'] as const)(
     'refuses %s on a row created by another workspace member',

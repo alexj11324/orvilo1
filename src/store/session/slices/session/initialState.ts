@@ -1,4 +1,4 @@
-import { type LobeSessions } from '@/types/session';
+import { type OrviloSessions } from '@/types/session';
 
 export interface SessionState {
   activeAgentId?: string;
@@ -11,7 +11,7 @@ export interface SessionState {
    * whether all agents drawer is open
    */
   allAgentsDrawerOpen: boolean;
-  defaultSessions: LobeSessions;
+  defaultSessions: OrviloSessions;
   /**
    * @title Whether the agent panel is pinned
    * @description Controls the agent panel pinning state in the UI layout
@@ -19,7 +19,7 @@ export interface SessionState {
   isAgentPinned: boolean;
   isSearching: boolean;
   isSessionsFirstFetchFinished: boolean;
-  pinnedSessions: LobeSessions;
+  pinnedSessions: OrviloSessions;
   searchKeywords: string;
   /**
    * @title Session ID being renamed
@@ -29,7 +29,7 @@ export interface SessionState {
   /**
    * it means defaultSessions
    */
-  sessions: LobeSessions;
+  sessions: OrviloSessions;
   sessionSearchKeywords?: string;
   /**
    * @title Session ID being updated

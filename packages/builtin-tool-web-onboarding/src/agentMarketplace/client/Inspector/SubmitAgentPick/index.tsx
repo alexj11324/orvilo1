@@ -23,7 +23,7 @@ export const SubmitAgentPickInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {tPlugin('builtins.lobe-web-onboarding.apiName.submitAgentPick')}
+          {tPlugin('builtins.orvilo-web-onboarding.apiName.submitAgentPick')}
         </span>
       </div>
     );
@@ -32,7 +32,7 @@ export const SubmitAgentPickInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {tPlugin('builtins.lobe-web-onboarding.apiName.submitAgentPick')}
+        {tPlugin('builtins.orvilo-web-onboarding.apiName.submitAgentPick')}
       </span>
       {ids.length > 0 && (
         <span className={styles.meta}>

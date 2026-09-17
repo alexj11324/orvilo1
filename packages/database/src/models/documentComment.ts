@@ -4,7 +4,7 @@ import { and, asc, count, eq, getTableColumns, gt, inArray, isNull, or, sql } fr
 import type { DocumentCommentItem } from '../schemas/documentComment';
 import { documentCommentMentions, documentComments } from '../schemas/documentComment';
 import { documents } from '../schemas/file';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 export const DOCUMENT_COMMENT_WORKSPACE_REQUIRED =
   'Document comments are workspace-scoped; a workspaceId is required';
@@ -88,11 +88,11 @@ export interface ListDocumentCommentRepliesParams {
 }
 
 export class DocumentCommentModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string | null;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string | null) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string | null) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

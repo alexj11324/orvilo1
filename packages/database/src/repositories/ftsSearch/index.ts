@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { PgSearchFtsSearchBackend } from './pgSearch';
 import type {
   FtsSearchBackendFilters,
@@ -53,7 +53,7 @@ export class FtsSearchRepo {
   private scope: FtsSearchBackendScope;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     callerAgentVisibility?: 'private' | 'public' | null,

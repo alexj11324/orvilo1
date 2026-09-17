@@ -113,7 +113,7 @@ export const BrowserInspector = memo<BuiltinInspectorProps<BrowserArgs>>(
   ({ apiName, args, partialArgs, isArgumentsStreaming, isLoading }) => {
     const { t } = useTranslation('plugin');
     const browserApiName = apiName as BrowserApiNameType;
-    const label = t(`builtins.lobe-browser.apiName.${browserApiName}` as any);
+    const label = t(`builtins.orvilo-browser.apiName.${browserApiName}` as any);
     const value = getChipValue(browserApiName, args || partialArgs || {});
     const Icon = API_ICONS[browserApiName];
 

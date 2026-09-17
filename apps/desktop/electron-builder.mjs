@@ -28,7 +28,7 @@ const channel = process.env.UPDATE_CHANNEL;
 const arch = os.arch();
 const hasAppleCertificate = Boolean(process.env.CSC_LINK);
 
-const macAppId = 'com.lobehub.lobehub-desktop';
+const macAppId = 'com.aspectlylabs.orvilo';
 // Communication notifications need the restricted
 // `com.apple.developer.usernotifications.communication` entitlement, and
 // macOS refuses to launch an app carrying it without a provisioning profile
@@ -105,7 +105,7 @@ const getPublishConfig = () => {
   // 本地开发无 S3 时回退到 GitHub
   console.info(`📦 ${channelPath} channel: No UPDATE_SERVER_URL, falling back to GitHub provider`);
   // The fallback must never be the upstream repository: a build without an
-  // update server would otherwise poll LobeHub's releases and offer their
+  // update server would otherwise poll Orvilo's releases and offer their
   // installers as updates to this app.
   return [
     {
@@ -125,9 +125,9 @@ if (!hasAppleCertificate) {
 
 // 根据版本类型确定协议 scheme
 const getProtocolScheme = () => {
-  if (isCanary) return 'lobehub-canary';
-  if (isNightly) return 'lobehub-nightly';
-  return 'lobehub';
+  if (isCanary) return 'orvilo-canary';
+  if (isNightly) return 'orvilo-nightly';
+  return 'orvilo';
 };
 
 const protocolScheme = getProtocolScheme();
@@ -173,13 +173,13 @@ const config = {
     console.info('📦 Building CLI for embedding...');
     execSync('npm run build:cli', { stdio: 'inherit', cwd: __dirname });
     const cliSrc = path.resolve(__dirname, '../cli/dist/index.js');
-    const cliDest = path.resolve(__dirname, 'resources/bin/lobe-cli.js');
+    const cliDest = path.resolve(__dirname, 'resources/bin/orvilo-cli.js');
     await fs.mkdir(path.dirname(cliDest), { recursive: true });
     await fs.copyFile(cliSrc, cliDest);
 
     // Write a minimal package.json next to the CLI bundle so that
     // createRequire('../package.json') resolves correctly in the packaged app.
-    // The CLI script lives at Resources/bin/lobe-cli.js, so '../package.json'
+    // The CLI script lives at Resources/bin/orvilo-cli.js, so '../package.json'
     // resolves to Resources/package.json.
     const cliPkg = JSON.parse(
       await fs.readFile(path.resolve(__dirname, '../cli/package.json'), 'utf8'),
@@ -188,7 +188,7 @@ const config = {
       path.resolve(__dirname, 'resources/cli-package.json'),
       JSON.stringify({ name: cliPkg.name, type: 'module', version: cliPkg.version }),
     );
-    console.info('✅ CLI bundle copied to resources/bin/lobe-cli.js');
+    console.info('✅ CLI bundle copied to resources/bin/orvilo-cli.js');
   },
   /**
    * AfterPack hook for copying Liquid Glass Assets.car on macOS 26+.

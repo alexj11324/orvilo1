@@ -8,7 +8,7 @@ import { params as openAIParams } from '../openai';
 const CHATGPT_CODEX_BASE_URL = 'https://chatgpt.com/backend-api/codex';
 const CHATGPT_RESPONSES_LITE_HEADER = 'x-openai-internal-codex-responses-lite';
 const CHATGPT_RESPONSES_LITE_MODEL_IDS = new Set(['gpt-5.6-luna', 'gpt-5.6-sol', 'gpt-5.6-terra']);
-const USER_AGENT = `LobeHub/${CURRENT_VERSION}`;
+const USER_AGENT = `Orvilo/${CURRENT_VERSION}`;
 
 interface ChatGPTClientOptions {
   chatgptAccountId?: string;
@@ -23,7 +23,7 @@ interface ChatGPTAdditionalToolsInput {
 const isResponsesLiteModel = (model: string | undefined) =>
   !!model && CHATGPT_RESPONSES_LITE_MODEL_IDS.has(model);
 
-export const LobeChatGPTAI = createOpenAICompatibleRuntime<ChatGPTClientOptions>({
+export const OrviloGPTAI = createOpenAICompatibleRuntime<ChatGPTClientOptions>({
   baseURL: CHATGPT_CODEX_BASE_URL,
   chatCompletion: {
     useResponse: true,
@@ -36,7 +36,7 @@ export const LobeChatGPTAI = createOpenAICompatibleRuntime<ChatGPTClientOptions>
           ...options.defaultHeaders,
           ...(chatgptAccountId && { 'ChatGPT-Account-Id': chatgptAccountId }),
           'User-Agent': USER_AGENT,
-          'originator': 'lobehub',
+          'originator': 'orvilo',
           'session-id': crypto.randomUUID(),
           'version': CURRENT_VERSION,
         },

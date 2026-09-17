@@ -2,7 +2,7 @@
  * Group Management Server Runtime — server-side group orchestration.
  *
  * The supervisor agent runs as a normal durable QStash operation; its
- * `lobe-group-management` tool calls execute here as deferred tools. Each action
+ * `orvilo-group-management` tool calls execute here as deferred tools. Each action
  * forks group member(s) via the injected `ctx.agentMember` runner and returns
  * `deferred: true`: the agent runtime parks the supervisor (`waiting_for_async_tool`),
  * and the group-action member completion bridge backfills + resumes/finishes it

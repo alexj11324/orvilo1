@@ -272,8 +272,8 @@ export class DroidAcpSession extends AcpAgentSession<
     return {
       clientCapabilities: {},
       clientInfo: {
-        name: 'lobehub',
-        title: 'LobeHub',
+        name: 'orvilo',
+        title: 'Orvilo',
         version: this.options.clientVersion,
       },
       protocolVersion: ACP_PROTOCOL_VERSION,

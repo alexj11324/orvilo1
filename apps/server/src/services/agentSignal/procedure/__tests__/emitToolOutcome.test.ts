@@ -33,7 +33,7 @@ describe('recordToolOutcome', () => {
       apiName: 'addPreferenceMemory',
       context: { userId: 'u1' },
       domainKey: 'memory:user-preference',
-      identifier: 'lobe-user-memory',
+      identifier: 'orvilo-user-memory',
       intentClass: 'explicit_persistence',
       messageId: 'm1',
       policyStateStore: store,
@@ -57,13 +57,13 @@ describe('recordToolOutcome', () => {
     });
     await expect(store.readPolicyState(PROCEDURE_RECORDS_POLICY_ID, 'topic:t1')).resolves.toEqual(
       expect.objectContaining({
-        'record:procedure-record:tool-outcome:lobe-user-memory:addPreferenceMemory:succeeded:m1':
+        'record:procedure-record:tool-outcome:orvilo-user-memory:addPreferenceMemory:succeeded:m1':
           expect.stringContaining('Saved preference.'),
       }),
     );
     await expect(store.readPolicyState(PROCEDURE_RECEIPTS_POLICY_ID, 'topic:t1')).resolves.toEqual(
       expect.objectContaining({
-        'receipt:procedure-receipt:procedure-record:tool-outcome:lobe-user-memory:addPreferenceMemory:succeeded:m1':
+        'receipt:procedure-receipt:procedure-record:tool-outcome:orvilo-user-memory:addPreferenceMemory:succeeded:m1':
           expect.stringContaining('handled'),
       }),
     );
@@ -79,7 +79,7 @@ describe('recordToolOutcome', () => {
       apiName: 'addPreferenceMemory',
       context: { userId: 'u1' },
       domainKey: 'memory:user-preference',
-      identifier: 'lobe-user-memory',
+      identifier: 'orvilo-user-memory',
       intentClass: 'explicit_persistence',
       messageId: 'm1',
       operationId: 'op1',
@@ -147,7 +147,7 @@ describe('recordToolOutcome', () => {
         apiName: 'addPreferenceMemory',
         context: { userId: 'u1' },
         domainKey: 'memory:user-preference',
-        identifier: 'lobe-user-memory',
+        identifier: 'orvilo-user-memory',
         intentClass: 'explicit_persistence',
         messageId: 'm1',
         policyStateStore: store,

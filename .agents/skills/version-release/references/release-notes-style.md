@@ -87,7 +87,7 @@ COMMIT_COUNT=$(git log "$PREV_TAG..origin/release/weekly-{YYYYMMDD}" --no-merges
 
 CONTRIBUTOR_COUNT=$(git log "$PREV_TAG..origin/release/weekly-{YYYYMMDD}" --no-merges --pretty=format:'%an' \
   | sort -u \
-  | grep -viE '^(lobehubbot|LobeHub Bot|renovate\[bot\])$' \
+  | grep -viE '^(orvilobot|Orvilo Bot|renovate\[bot\])$' \
   | wc -l | tr -d ' ')
 ```
 
@@ -98,10 +98,10 @@ If a number cannot be confidently derived, omit it — never guess.
 Git `%an` is the commit author display name, not the GitHub handle. For each author you mention, confirm the handle:
 
 ```bash
-gh pr view "$PR_NUMBER" --repo lobehub/lobe-chat --json author --jq '.author.login'
+gh pr view "$PR_NUMBER" --repo aspectlylabs/orvilo --json author --jq '.author.login'
 ```
 
-Use the result for `@handle`. Then classify each author per the `LobeHub team roster` below; community first, team after.
+Use the result for `@handle`. Then classify each author per the `Orvilo team roster` below; community first, team after.
 
 ### 5. Pre-publish verification (mandatory)
 
@@ -123,7 +123,7 @@ Also verify the metrics line in the body matches the computed values (`PR_COUNT`
 
 Follow this section order for **Minor** and **Weekly** releases unless the user asks otherwise. For **Hotfix** and **DB Migration**, see § Variants for Shorter Releases below — the canonical structure does not apply.
 
-1. `# 🚀 LobeHub Release (<YYYYMMDD>)`
+1. `# 🚀 Orvilo Release (<YYYYMMDD>)`
 2. Metadata lines:
    - `Release Date`
    - `Since <Previous Version>` metrics
@@ -151,7 +151,7 @@ A hotfix targets one regression and ships fast. The body is short and operator-f
 
 Required sections, in order:
 
-1. `# 🚀 LobeHub Release (<YYYYMMDD>)`
+1. `# 🚀 Orvilo Release (<YYYYMMDD>)`
 2. `**Hotfix Scope:**` — one line summarizing the regression scope (e.g. `Agent topic-switching regression — stale chat state on agent change`). Replaces the long-form `Release Date` / `Since vX.Y.Z` metrics.
 3. One quoted thesis (single paragraph, 1-2 lines) describing what is now restored.
 4. `## 🐛 What's Fixed` — 1-3 bullets, each `**<symptom>** — <fix in one sentence>. (#PR)`. No root-cause prose; that lives in the commit message.
@@ -171,7 +171,7 @@ Database schema changes that need to be released independently. Operator impact 
 
 Required sections, in order:
 
-1. `# 🚀 LobeHub Release (<YYYYMMDD>)` + scope line
+1. `# 🚀 Orvilo Release (<YYYYMMDD>)` + scope line
 2. **Migration overview** — what tables / columns are added, modified, or removed
 3. **Operator impact** — backwards-compatible? required actions for self-hosted?
 4. **Rollback / backup note** — how to recover
@@ -215,9 +215,9 @@ See `changelog-example/db-migration.md` for the canonical template.
 
 ## Contributor Ordering
 
-Render contributors as a **single flat list** (no separate "Community" / "Core Team" subsections). Order: **community contributors first, team members after**. Within each group, sort by PR count desc. Bots (`@lobehubbot`, `renovate[bot]`) go on a separate "maintenance" line.
+Render contributors as a **single flat list** (no separate "Community" / "Core Team" subsections). Order: **community contributors first, team members after**. Within each group, sort by PR count desc. Bots (`@orvilobot`, `renovate[bot]`) go on a separate "maintenance" line.
 
-**LobeHub team roster** — anyone in this list is a team member; anyone not in this list is a community contributor:
+**Orvilo team roster** — anyone in this list is a team member; anyone not in this list is a community contributor:
 
 - @arvinxx
 - @Innei
@@ -238,9 +238,9 @@ If a new contributor appears who is not on this list, treat them as community by
 ## Template
 
 ```md
-# 🚀 LobeHub Release (<YYYYMMDD>)
+# 🚀 Orvilo Release (<YYYYMMDD>)
 
-**Release Date:** <Month DD, YYYY>  
+**Release Date:** <Month DD, YYYY>
 **Since <Previous Version>:** <N merged PRs> · <N resolved issues> · <N contributors>
 
 > <One release thesis sentence: what this release unlocks in practice.>
@@ -297,7 +297,7 @@ Huge thanks to **<N contributors>** who shipped **<N merged PRs>** this cycle.
 
 @<community-handle> · @<community-handle> · @<team-handle> · @<team-handle>
 
-Plus @lobehubbot and renovate[bot] for maintenance.
+Plus @orvilobot and renovate[bot] for maintenance.
 
 ---
 

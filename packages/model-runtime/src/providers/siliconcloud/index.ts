@@ -154,4 +154,4 @@ export const params = {
   provider: ModelProvider.SiliconCloud,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeSiliconCloudAI = createOpenAICompatibleRuntime(params);
+export const OrviloSiliconCloudAI = createOpenAICompatibleRuntime(params);

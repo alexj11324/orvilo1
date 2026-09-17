@@ -3,7 +3,7 @@ import type { BuiltinToolManifest } from '@orvilo/types';
 import { systemPrompt } from './systemRole';
 import { AcceptanceEvidenceApiName } from './types';
 
-export const AcceptanceEvidenceIdentifier = 'lobe-acceptance-evidence';
+export const AcceptanceEvidenceIdentifier = 'orvilo-acceptance-evidence';
 
 export const AcceptanceEvidenceManifest: BuiltinToolManifest = {
   api: [
@@ -35,10 +35,10 @@ export const AcceptanceEvidenceManifest: BuiltinToolManifest = {
                 },
                 documentId: {
                   description:
-                    'An existing LobeHub document id from documents.id. Do not use an agent_documents.id binding id.',
+                    'An existing Orvilo document id from documents.id. Do not use an agent_documents.id binding id.',
                   type: 'string',
                 },
-                fileId: { description: 'An existing LobeHub artifact file id.', type: 'string' },
+                fileId: { description: 'An existing Orvilo artifact file id.', type: 'string' },
                 type: {
                   enum: ['markdown', 'screenshot', 'text', 'video'],
                   type: 'string',

@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 import { getServerDB } from '@/database/server';
 import { settleVerifierCheckFromTerminal } from '@/server/services/verify/verifierTerminal';
 
-const log = debug('lobe-server:workflows:verify:on-verifier-complete');
+const log = debug('orvilo-server:workflows:verify:on-verifier-complete');
 
 export interface OnVerifierCompletePayload {
   checkItemId: string;

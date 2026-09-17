@@ -18,12 +18,12 @@ import type { RequiredEvidenceSpec, VerifyCheckItem } from '@orvilo/types';
 import debug from 'debug';
 import { z } from 'zod';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { resolveGoalModelConfig } from './modelConfig';
 
-const log = debug('lobe-server:goal-criteria-generator');
+const log = debug('orvilo-server:goal-criteria-generator');
 const DEFAULT_MAX_CRITERIA = 4;
 
 const generatedCriteriaSchema = z.object({
@@ -92,7 +92,7 @@ export type GoalDecompositionDraft = z.infer<typeof decompositionSchema>;
 
 export class GoalCriteriaGeneratorService {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}

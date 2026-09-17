@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
  * Prerequisites:
  * - `lh` CLI is installed and linked globally
  * - User is authenticated (`lh login` completed)
- * - Network access to the LobeHub server
+ * - Network access to the Orvilo server
  */
 
 const CLI = process.env.LH_CLI_PATH || 'lh';

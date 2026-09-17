@@ -27,7 +27,7 @@ export interface SpawnHeteroAgentRunParams {
   serverUrl: string;
   systemContext?: string;
   topicId: string;
-  /** Topic/run workspace — forwarded as `LOBEHUB_WORKSPACE_ID` for ingest. */
+  /** Topic/run workspace — forwarded as `ORVILO_WORKSPACE_ID` for ingest. */
   workspaceId?: string;
 }
 
@@ -120,10 +120,10 @@ export function spawnHeteroAgentRun(
   // evidence commands must never attach this run's outputs to that ancestor.
   const childEnv = { ...process.env };
   for (const key of [
-    'LOBEHUB_AGENT_ID',
-    'LOBEHUB_ASSISTANT_MESSAGE_ID',
-    'LOBEHUB_TASK_ID',
-    'LOBEHUB_WORKSPACE_ID',
+    'ORVILO_AGENT_ID',
+    'ORVILO_ASSISTANT_MESSAGE_ID',
+    'ORVILO_TASK_ID',
+    'ORVILO_WORKSPACE_ID',
   ]) {
     delete childEnv[key];
   }
@@ -142,13 +142,13 @@ export function spawnHeteroAgentRun(
       detached: true,
       env: {
         ...childEnv,
-        ...(assistantMessageId ? { LOBEHUB_ASSISTANT_MESSAGE_ID: assistantMessageId } : {}),
+        ...(assistantMessageId ? { ORVILO_ASSISTANT_MESSAGE_ID: assistantMessageId } : {}),
         [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
-        LOBEHUB_JWT: jwt,
-        LOBEHUB_OPERATION_ID: operationId,
-        LOBEHUB_SERVER: serverUrl,
-        LOBEHUB_TOPIC_ID: topicId,
-        ...(workspaceId ? { LOBEHUB_WORKSPACE_ID: workspaceId } : {}),
+        ORVILO_JWT: jwt,
+        ORVILO_OPERATION_ID: operationId,
+        ORVILO_SERVER: serverUrl,
+        ORVILO_TOPIC_ID: topicId,
+        ...(workspaceId ? { ORVILO_WORKSPACE_ID: workspaceId } : {}),
       },
       stdio: ['pipe', 'inherit', 'inherit'],
       windowsHide: true,

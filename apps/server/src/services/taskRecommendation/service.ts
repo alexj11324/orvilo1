@@ -17,7 +17,7 @@ import {
 import { AgentModel } from '@/database/models/agent';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { appEnv } from '@/envs/app';
 import { parseSystemAgent } from '@/server/globalConfig/parseSystemAgent';
 import { AiGenerationService } from '@/server/services/aiGeneration';
@@ -393,7 +393,7 @@ export class TaskRecommendationService {
 }
 
 interface CreateTaskRecommendationServiceOptions {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   userId: string;
 }
 

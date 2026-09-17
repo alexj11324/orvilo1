@@ -10,7 +10,7 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   DOCUMENT_COMMENT_DOCUMENT_NOT_FOUND,
   DOCUMENT_COMMENT_PARENT_NOT_FOUND,
@@ -18,7 +18,7 @@ import {
   DocumentCommentModel,
 } from '../documentComment';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const authorId = 'document-comment-author';
 const memberId = 'document-comment-member';
@@ -257,12 +257,12 @@ describe('DocumentCommentModel', () => {
       },
     };
     const updated = await authorModel.update(created.comment.id, {
-      content: '[updated](https://lobehub.com)',
+      content: '[updated](https://orvilo.aspectlylabs.com)',
       editorData: nextEditorData,
     });
 
     expect(updated?.comment).toMatchObject({
-      content: '[updated](https://lobehub.com)',
+      content: '[updated](https://orvilo.aspectlylabs.com)',
       editorData: nextEditorData,
     });
   });

@@ -7,7 +7,7 @@ export const SkillStoreManifest: BuiltinToolManifest = {
   api: [
     {
       description:
-        "Search for skills in the LobeHub Market. Use this to discover available skills that can extend Claude's capabilities. Search across skill names, descriptions, and summaries. Results can be filtered and sorted by various criteria (stars, downloads, etc).",
+        "Search for skills in the Orvilo Market. Use this to discover available skills that can extend Claude's capabilities. Search across skill names, descriptions, and summaries. Results can be filtered and sorted by various criteria (stars, downloads, etc).",
       name: SkillStoreApiName.searchSkill,
       parameters: {
         properties: {
@@ -54,7 +54,7 @@ export const SkillStoreManifest: BuiltinToolManifest = {
     },
     {
       description:
-        'Import/install a skill directly from the LobeHub Market using its identifier. This is the recommended way to install skills from the market after searching with searchSkill. The skill will be downloaded and installed automatically. Requires user confirmation before installation.',
+        'Import/install a skill directly from the Orvilo Market using its identifier. This is the recommended way to install skills from the market after searching with searchSkill. The skill will be downloaded and installed automatically. Requires user confirmation before installation.',
       humanIntervention: 'required',
       name: SkillStoreApiName.importFromMarket,
       parameters: {
@@ -100,7 +100,7 @@ export const SkillStoreManifest: BuiltinToolManifest = {
     // just a keyword list. Keep it in sync with <skill_store_discovery> in
     // builtin-tool-activator/src/systemRole.ts.
     description:
-      'Browse and install agent skills from the LobeHub marketplace. MUST USE this tool when users mention: "SKILL.md", "LobeHub Skills", "skill store", "install skill", "search skill", or need extended capabilities. A `lobehub.com/skills/{identifier}` URL already contains the identifier — activate this tool and call importFromMarket with it; use importSkill for any other skill URL. Do not read such a page to look up install steps. The marketplace CLI (`npx @lobehub/market-cli`) is a last resort for agents without this tool, not the first step.',
+      'Browse and install agent skills from the Orvilo marketplace. MUST USE this tool when users mention: "SKILL.md", "Orvilo Skills", "skill store", "install skill", "search skill", or need extended capabilities. A `orvilo.aspectlylabs.com/skills/{identifier}` URL already contains the identifier — activate this tool and call importFromMarket with it; use importSkill for any other skill URL. Do not read such a page to look up install steps. The marketplace CLI (`npx @lobehub/market-cli`) is a last resort for agents without this tool, not the first step.',
     title: 'Skill Store',
   },
   systemRole: systemPrompt,

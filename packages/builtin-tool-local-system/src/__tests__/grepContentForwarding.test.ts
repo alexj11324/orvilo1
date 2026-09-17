@@ -51,7 +51,7 @@ describe('localSystemExecutor.grepContent — params forwarding', () => {
       'glob': '**/*.ts',
       'output_mode': 'files_with_matches',
       'pattern': 'tool.*name.*mcp',
-      'scope': '/Users/arvinxx/CodeProjects/LobeHub/lobehub-desktop',
+      'scope': '/Users/arvinxx/CodeProjects/Orvilo/orvilo-desktop',
     });
 
     expect(spy).toHaveBeenCalledTimes(1);
@@ -65,7 +65,7 @@ describe('localSystemExecutor.grepContent — params forwarding', () => {
       'pattern': 'tool.*name.*mcp',
       // resolveArgsWithScope copies scope into `path` so the downstream
       // resolveSearchPath can pick it up; either field reaching the runtime is fine.
-      'path': '/Users/arvinxx/CodeProjects/LobeHub/lobehub-desktop',
+      'path': '/Users/arvinxx/CodeProjects/Orvilo/orvilo-desktop',
     });
 
     // And it must NOT have been collapsed to the stripped {directory, pattern} shape.

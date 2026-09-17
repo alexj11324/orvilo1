@@ -6,7 +6,7 @@ import { t } from 'i18next';
 import { BuiltinAgentSkillDetailContent } from './BuiltinAgentSkillDetailContent';
 import { BuiltinSkillDetailContent } from './BuiltinSkillDetailContent';
 import { ComposioSkillDetailContent } from './ComposioSkillDetailContent';
-import { LobehubSkillDetailContent } from './LobehubSkillDetailContent';
+import { OrviloSkillDetailContent } from './OrviloSkillDetailContent';
 
 export interface CreateBuiltinAgentSkillDetailModalOptions {
   identifier: string;
@@ -52,15 +52,13 @@ export const createComposioSkillDetailModal = ({
     width: 800,
   });
 
-export interface CreateLobehubSkillDetailModalOptions {
+export interface CreateOrviloSkillDetailModalOptions {
   identifier: string;
 }
 
-export const createLobehubSkillDetailModal = ({
-  identifier,
-}: CreateLobehubSkillDetailModalOptions) =>
+export const createOrviloSkillDetailModal = ({ identifier }: CreateOrviloSkillDetailModalOptions) =>
   createModal({
-    content: <LobehubSkillDetailContent identifier={identifier} />,
+    content: <OrviloSkillDetailContent identifier={identifier} />,
     footer: null,
     title: t('dev.title.skillDetails', { ns: 'plugin' }),
     width: 800,

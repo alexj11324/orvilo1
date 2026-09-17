@@ -72,7 +72,6 @@ const hasUsableToolContent = (content: unknown, pluginErrorMessage?: string): bo
 
 /**
  * Reorder tool messages to ensure that tool messages are displayed in the correct order.
- * see https://github.com/lobehub/lobe-chat/pull/3155
  */
 export class ToolMessageReorder extends BaseProcessor {
   readonly name = 'ToolMessageReorder';

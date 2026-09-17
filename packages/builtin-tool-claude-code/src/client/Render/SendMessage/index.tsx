@@ -59,7 +59,7 @@ const SendMessage = memo<BuiltinRenderProps<SendMessageArgs>>(({ args, content }
       <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
         <Icon icon={SendHorizontal} size={'small'} />
         <Text ellipsis strong>
-          {summary || t('builtins.lobe-claude-code.sendMessage.title')}
+          {summary || t('builtins.orvilo-claude-code.sendMessage.title')}
         </Text>
       </Flexbox>
 
@@ -75,7 +75,7 @@ const SendMessage = memo<BuiltinRenderProps<SendMessageArgs>>(({ args, content }
         <Flexbox horizontal align={'center'} className={styles.status} gap={6}>
           <Icon icon={CircleCheckBig} size={'small'} style={{ color: cssVar.colorSuccess }} />
           <Text style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
-            {t('builtins.lobe-claude-code.sendMessage.queued')}
+            {t('builtins.orvilo-claude-code.sendMessage.queued')}
           </Text>
         </Flexbox>
       )}

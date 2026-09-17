@@ -1,4 +1,4 @@
-import { LobeAgentApiName, LobeAgentIdentifier } from '@orvilo/builtin-tool-lobe-agent';
+import { OrviloAgentApiName, OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import {
   UserInteractionApiName,
   UserInteractionIdentifier,
@@ -82,7 +82,7 @@ describe('customInteractionHandlers', () => {
   });
 
   it.each([
-    [LobeAgentIdentifier, LobeAgentApiName.askUserQuestion],
+    [OrviloAgentIdentifier, OrviloAgentApiName.askUserQuestion],
     [UserInteractionIdentifier, UserInteractionApiName.askUserQuestion],
   ])('persists structured ask-user answers for %s', async (identifier, apiName) => {
     const payload = {

@@ -190,13 +190,13 @@ describe('GatewayClient', () => {
         autoReconnect: false,
         gatewayUrl: 'https://gateway.test.com',
         token: 'tok',
-        userAgent: 'LobeHub Desktop/1.2.3',
+        userAgent: 'Orvilo Desktop/1.2.3',
       });
       c.connect();
       const ws = (c as any).ws;
       expect(ws.options).toEqual({
         handshakeTimeout: 15_000,
-        headers: { 'User-Agent': 'LobeHub Desktop/1.2.3' },
+        headers: { 'User-Agent': 'Orvilo Desktop/1.2.3' },
       });
       c.disconnect();
     });
@@ -470,7 +470,7 @@ describe('GatewayClient', () => {
             homePath: '/home/test',
             musicPath: '/home/test/Music',
             picturesPath: '/home/test/Pictures',
-            userDataPath: '/home/test/.lobehub',
+            userDataPath: '/home/test/.orvilo',
             videosPath: '/home/test/Videos',
             workingDirectory: '/home/test',
           },

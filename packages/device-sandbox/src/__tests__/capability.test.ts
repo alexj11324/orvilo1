@@ -46,7 +46,7 @@ describe('probeSandboxCapability', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsSupportedPlatform.mockReturnValue(true);
-    mockResolveEffectiveSrtWin.mockReturnValue('C:\\ProgramData\\LobeHub\\srt-win.exe');
+    mockResolveEffectiveSrtWin.mockReturnValue('C:\\ProgramData\\Orvilo\\srt-win.exe');
     mockResolveSrtWin.mockImplementation((cfg: { path: string }) => ({
       exe: cfg.path,
       prependArgs: ['--srt-win'],
@@ -70,10 +70,10 @@ describe('probeSandboxCapability', () => {
       expect(capability.available).toBe(true);
       expect(mockCheckDependencies).not.toHaveBeenCalled();
       expect(mockResolveSrtWin).toHaveBeenCalledWith({
-        path: 'C:\\ProgramData\\LobeHub\\srt-win.exe',
+        path: 'C:\\ProgramData\\Orvilo\\srt-win.exe',
       });
       expect(mockUserStatus).toHaveBeenCalledWith({
-        srtWin: { exe: 'C:\\ProgramData\\LobeHub\\srt-win.exe', prependArgs: ['--srt-win'] },
+        srtWin: { exe: 'C:\\ProgramData\\Orvilo\\srt-win.exe', prependArgs: ['--srt-win'] },
       });
     });
 

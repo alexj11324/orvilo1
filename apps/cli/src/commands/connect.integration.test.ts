@@ -30,9 +30,9 @@ async function runCli(
         env: {
           ...process.env,
           HOME: home,
-          LOBEHUB_CLI_API_KEY: '',
-          LOBEHUB_CLI_HOME: '.lobehub',
-          LOBEHUB_JWT: '',
+          ORVILO_CLI_API_KEY: '',
+          ORVILO_CLI_HOME: '.orvilo',
+          ORVILO_JWT: '',
           ...extraEnv,
         },
         timeout: 10_000,
@@ -68,9 +68,9 @@ afterEach(async () => {
 
 describe('connect daemon startup', () => {
   it('reports a startup failure instead of claiming the daemon started', async () => {
-    const home = await mkdtemp(path.join(os.tmpdir(), 'lobehub-cli-daemon-startup-'));
+    const home = await mkdtemp(path.join(os.tmpdir(), 'orvilo-cli-daemon-startup-'));
     tempHomes.push(home);
-    const configDir = path.join(home, '.lobehub');
+    const configDir = path.join(home, '.orvilo');
     await mkdir(configDir, { recursive: true });
     await writeFile(path.join(configDir, 'daemon.log'), '─'.repeat(512));
 
@@ -91,12 +91,12 @@ describe('connect daemon startup', () => {
 
     const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
     const payload = Buffer.from(JSON.stringify({ sub: 'test-user' })).toString('base64url');
-    const home = await mkdtemp(path.join(os.tmpdir(), 'lobehub-cli-daemon-startup-'));
+    const home = await mkdtemp(path.join(os.tmpdir(), 'orvilo-cli-daemon-startup-'));
     tempHomes.push(home);
 
     const result = await runCli(['connect', '--workspace', 'workspace-id', '--daemon'], home, {
-      LOBEHUB_JWT: `${header}.${payload}.signature`,
-      LOBEHUB_SERVER: `http://127.0.0.1:${port}`,
+      ORVILO_JWT: `${header}.${payload}.signature`,
+      ORVILO_SERVER: `http://127.0.0.1:${port}`,
     });
 
     expect(result.exitCode).toBe(1);
@@ -146,15 +146,15 @@ describe('connect daemon startup', () => {
 
     const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
     const payload = Buffer.from(JSON.stringify({ sub: 'test-user' })).toString('base64url');
-    const home = await mkdtemp(path.join(os.tmpdir(), 'lobehub-cli-daemon-startup-'));
+    const home = await mkdtemp(path.join(os.tmpdir(), 'orvilo-cli-daemon-startup-'));
     tempHomes.push(home);
 
     const result = await runCli(
       ['connect', '--workspace', 'workspace-id', '--public', '--daemon'],
       home,
       {
-        LOBEHUB_JWT: `${header}.${payload}.signature`,
-        LOBEHUB_SERVER: `http://127.0.0.1:${port}`,
+        ORVILO_JWT: `${header}.${payload}.signature`,
+        ORVILO_SERVER: `http://127.0.0.1:${port}`,
       },
     );
 

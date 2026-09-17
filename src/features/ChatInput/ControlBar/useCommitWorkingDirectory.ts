@@ -1,6 +1,6 @@
 import { confirmModal } from '@lobehub/ui/base-ui';
 import type {
-  LobeAgentConfig,
+  OrviloAgentConfig,
   WorkingDirConfig,
   WorkingDirConfigValue,
   WorkingDirEntry,
@@ -197,7 +197,7 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
           };
           const configPatch = {
             agencyConfig: { ...agencyConfig, workingDirByDevice: nextMap },
-          } as PartialDeep<LobeAgentConfig>;
+          } as PartialDeep<OrviloAgentConfig>;
           await updateAgentConfigById(agentId, configPatch);
         }
         // Clearing the agent default must also drop the legacy per-agent value —
@@ -257,7 +257,7 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
       };
       const configPatch = {
         agencyConfig: { ...agencyConfig, workingDirByDevice: nextMap },
-      } as PartialDeep<LobeAgentConfig>;
+      } as PartialDeep<OrviloAgentConfig>;
       await updateAgentConfigById(agentId, configPatch);
     }
     // (Only clears the localStorage map; no network round-trip since

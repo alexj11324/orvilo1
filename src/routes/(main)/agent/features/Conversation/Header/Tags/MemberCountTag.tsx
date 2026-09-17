@@ -6,13 +6,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
-import { type LobeGroupSession } from '@/types/session';
+import { type OrviloGroupSession } from '@/types/session';
 
 const MemberCountTag = memo(() => {
   const { t } = useTranslation('chat');
   const currentSession = useSessionStore(sessionSelectors.currentSession);
 
-  const memberCount = (currentSession as LobeGroupSession).members?.length ?? 0 + 1;
+  const memberCount = (currentSession as OrviloGroupSession).members?.length ?? 0 + 1;
 
   if (memberCount < 0) return null;
 

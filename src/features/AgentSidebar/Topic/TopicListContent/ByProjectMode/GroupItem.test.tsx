@@ -12,7 +12,7 @@ const switchTopicMock = vi.hoisted(() => vi.fn());
 const routerPushMock = vi.hoisted(() => vi.fn());
 const routeParamsMock = vi.hoisted(() => ({ aid: 'agent-1' as string | undefined }));
 const agentStoreStateMock = vi.hoisted(() => ({ activeAgentId: 'agent-1' as string | undefined }));
-const activeWorkspaceSlugMock = vi.hoisted(() => ({ value: 'lobehub' as string | null }));
+const activeWorkspaceSlugMock = vi.hoisted(() => ({ value: 'orvilo' as string | null }));
 
 vi.mock('react-router', () => ({
   useParams: () => routeParamsMock,
@@ -57,7 +57,7 @@ vi.mock('@/hooks/useQueryRoute', () => ({
 }));
 
 vi.mock('@/hooks/useActiveLocation', () => ({
-  useActiveLocation: () => ({ hash: '', pathname: '/lobehub/agent/agent-1/profile', search: '' }),
+  useActiveLocation: () => ({ hash: '', pathname: '/orvilo/agent/agent-1/profile', search: '' }),
 }));
 
 vi.mock('@/store/agent', () => ({
@@ -101,7 +101,7 @@ describe('Project topic group item', () => {
     routerPushMock.mockReset();
     routeParamsMock.aid = 'agent-1';
     agentStoreStateMock.activeAgentId = 'agent-1';
-    activeWorkspaceSlugMock.value = 'lobehub';
+    activeWorkspaceSlugMock.value = 'orvilo';
   });
 
   it('navigates to a new chat topic after committing the project directory', async () => {
@@ -148,7 +148,7 @@ describe('Project topic group item', () => {
     fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopicInProject:project' }));
 
     await expect.poll(() => routerPushMock.mock.calls.length).toBe(1);
-    expect(routerPushMock).toHaveBeenCalledWith('/lobehub/agent/agent-1');
+    expect(routerPushMock).toHaveBeenCalledWith('/orvilo/agent/agent-1');
   });
 
   it('falls back to the pathname agent id when route params and store state are unavailable', () => {

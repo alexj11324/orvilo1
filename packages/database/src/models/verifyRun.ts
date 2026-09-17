@@ -13,7 +13,7 @@ import { and, asc, desc, eq, gt, ilike, inArray, isNotNull, lt, or, sql } from '
 import { agentOperations } from '../schemas/agentOperations';
 import type { NewVerifyRun, VerifyRunItem } from '../schemas/verify';
 import { verifyCheckResults, verifyRuns } from '../schemas/verify';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { isUuid } from '../utils/uuid';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { VerifyCriterionModel } from './verifyCriterion';
@@ -71,11 +71,11 @@ const toState = (run: VerifyRunItem | null | undefined): VerifyRunState | null =
  * (e.g. agent-testing ingest) are created directly with no operation.
  */
 export class VerifyRunModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -726,7 +726,7 @@ export class VerifyRunModel {
    * it. Truncating both sides keeps the keyset lossless.
    */
   static findStuckVerifying = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     olderThan: Date,
     options?: { after?: { id: string; updatedAt: Date }; limit?: number },
   ): Promise<VerifyRunItem[]> => {

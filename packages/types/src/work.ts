@@ -364,7 +364,7 @@ export interface RegisterExternalWorkParams {
 }
 
 /**
- * LobeHub Skill providers whose tool results are adapted into the Work
+ * Orvilo Skill providers whose tool results are adapted into the Work
  * registry. Single source of truth: it gates `handleSkillToolResult` (client
  * executors + server BuiltinToolsExecutor), keys the DB normalizer registry
  * (`SKILL_TOOL_RESULT_NORMALIZERS`), keys `WORK_PROVIDER_RESOURCE_TYPES`, and

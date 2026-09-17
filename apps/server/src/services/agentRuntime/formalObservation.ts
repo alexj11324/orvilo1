@@ -1,6 +1,6 @@
 import debug from 'debug';
 
-const debugLog = debug('lobe-server:agent-runtime:tool-call-stability');
+const debugLog = debug('orvilo-server:agent-runtime:tool-call-stability');
 
 export const logToolCallPc = (
   operationId: string,

@@ -22,7 +22,7 @@ describe('BinaryCtr', () => {
   let cacheRoot: string;
 
   beforeEach(async () => {
-    cacheRoot = await mkdtemp(path.join(os.tmpdir(), 'lobehub-binary-ctr-'));
+    cacheRoot = await mkdtemp(path.join(os.tmpdir(), 'orvilo-binary-ctr-'));
     const { app } = await import('electron');
     vi.mocked(app.getPath).mockReturnValue(cacheRoot);
   });

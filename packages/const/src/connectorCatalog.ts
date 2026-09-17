@@ -1,19 +1,19 @@
 import type { ComposioAppType } from './composio';
 import { COMPOSIO_APP_TYPES } from './composio';
-import type { LobehubSkillProviderType } from './lobehubSkill';
-import { LOBEHUB_SKILL_PROVIDERS } from './lobehubSkill';
+import type { OrviloSkillProviderType } from './orviloSkill';
+import { ORVILO_SKILL_PROVIDERS } from './orviloSkill';
 
 /** Feature availability used when resolving an unqualified connector identifier. */
 export interface ConnectorCatalogAvailability {
   /** Whether Composio-backed connectors may be selected. */
   composio: boolean;
-  /** Whether LobeHub Market connectors may be selected. */
-  lobehub: boolean;
+  /** Whether Orvilo Market connectors may be selected. */
+  orvilo: boolean;
 }
 
 /** A connector definition with its owning authorization system attached. */
 export type ConnectorCatalogItem =
-  | { provider: LobehubSkillProviderType; type: 'lobehub' }
+  | { provider: OrviloSkillProviderType; type: 'orvilo' }
   | { serverType: ComposioAppType; type: 'composio' };
 
 /**
@@ -21,11 +21,11 @@ export type ConnectorCatalogItem =
  *
  * Use when:
  * - A generic connector surface only stores an identifier such as `github`
- * - LobeHub and Composio catalogs may contain the same identifier
+ * - Orvilo and Composio catalogs may contain the same identifier
  *
  * Expects:
  * - Explicitly source-qualified flows use their declared source instead
- * - LobeHub owns collisions even when its connector integration is unavailable
+ * - Orvilo owns collisions even when its connector integration is unavailable
  *
  * Returns:
  * - The single connector definition that generic product surfaces should render
@@ -34,8 +34,8 @@ export const resolveConnectorCatalogItem = (
   identifier: string,
   availability: ConnectorCatalogAvailability,
 ): ConnectorCatalogItem | undefined => {
-  const provider = LOBEHUB_SKILL_PROVIDERS.find((item) => item.id === identifier);
-  if (provider) return availability.lobehub ? { provider, type: 'lobehub' } : undefined;
+  const provider = ORVILO_SKILL_PROVIDERS.find((item) => item.id === identifier);
+  if (provider) return availability.orvilo ? { provider, type: 'orvilo' } : undefined;
 
   if (availability.composio) {
     const serverType = COMPOSIO_APP_TYPES.find((item) => item.identifier === identifier);
@@ -54,17 +54,17 @@ export const resolveConnectorCatalogItem = (
  * - Explicit onboarding/provider registries continue to use their source-qualified catalogs
  *
  * Returns:
- * - LobeHub connectors first, followed by non-conflicting Composio connectors
+ * - Orvilo connectors first, followed by non-conflicting Composio connectors
  */
 export const getConnectorCatalog = (
   availability: ConnectorCatalogAvailability,
 ): ConnectorCatalogItem[] => {
-  const identifiers = new Set(LOBEHUB_SKILL_PROVIDERS.map((provider) => provider.id));
+  const identifiers = new Set(ORVILO_SKILL_PROVIDERS.map((provider) => provider.id));
   const catalog: ConnectorCatalogItem[] = [];
 
-  if (availability.lobehub) {
-    for (const provider of LOBEHUB_SKILL_PROVIDERS) {
-      catalog.push({ provider, type: 'lobehub' });
+  if (availability.orvilo) {
+    for (const provider of ORVILO_SKILL_PROVIDERS) {
+      catalog.push({ provider, type: 'orvilo' });
     }
   }
 

@@ -1,9 +1,9 @@
-import type { ILobeAgentRuntimeErrorType } from '@orvilo/types';
+import type { IOrviloAgentRuntimeErrorType } from '@orvilo/types';
 import { AgentRuntimeErrorType } from '@orvilo/types';
 
 import { matchErrorPattern } from './match';
 
-const matches = (message: string | undefined, code: ILobeAgentRuntimeErrorType): boolean => {
+const matches = (message: string | undefined, code: IOrviloAgentRuntimeErrorType): boolean => {
   if (!message) return false;
   return matchErrorPattern({ message })?.code === code;
 };

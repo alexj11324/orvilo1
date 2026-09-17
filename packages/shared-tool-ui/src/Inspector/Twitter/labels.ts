@@ -1,5 +1,5 @@
 // Pure label utilities for X (Twitter) tool calls — consumed by both the
-// LobeHub built-in X (Twitter) skill (bare apiName='get_tweet', …) and
+// Orvilo built-in X (Twitter) skill (bare apiName='get_tweet', …) and
 // (potentially) the CC adapter when the same wire names are surfaced via
 // MCP.
 //

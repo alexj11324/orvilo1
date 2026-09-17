@@ -40,8 +40,8 @@ describe('localSystemRuntime', () => {
     it('should return a structured NO_ACTIVE_DEVICE result per API when activeDeviceId is missing', async () => {
       const context: ToolExecutionContext = {
         // Device-unrouted run WITH the picker still advertised: recovery via
-        // lobe-remote-device activation is possible.
-        toolManifestMap: { 'lobe-remote-device': {} as any },
+        // orvilo-remote-device activation is possible.
+        toolManifestMap: { 'orvilo-remote-device': {} as any },
         userId: 'user-1',
       };
 
@@ -61,7 +61,7 @@ describe('localSystemRuntime', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toMatchObject({ code: 'NO_ACTIVE_DEVICE' });
-      expect(result.content).toContain('lobe-remote-device.listOnlineDevices');
+      expect(result.content).toContain('orvilo-remote-device.listOnlineDevices');
       expect(result.content).toContain('activateDevice');
       expect(result.content).toContain('desktop application or cli');
       // No device dispatch happened.
@@ -73,7 +73,7 @@ describe('localSystemRuntime', () => {
         toolManifestMap: {
           // Device-locked run: only local-system is present, the picker is
           // physically stripped, so recovery via activation is impossible.
-          'lobe-local-system': {} as any,
+          'orvilo-local-system': {} as any,
         },
         userId: 'user-1',
       };
@@ -514,14 +514,14 @@ describe('localSystemRuntime', () => {
       const proxy = buildProxy({ workspaceId: 'ws-42' });
       await proxy[LocalSystemApiName.runCommand]({ command: 'lh agent edit agt_1 -t x' });
 
-      expect(parseArgs().env).toEqual({ LOBEHUB_WORKSPACE_ID: 'ws-42' });
+      expect(parseArgs().env).toEqual({ ORVILO_WORKSPACE_ID: 'ws-42' });
     });
 
     it('never sends the caller JWT to the device', async () => {
       const proxy = buildProxy({ workspaceId: 'ws-42' });
       await proxy[LocalSystemApiName.runCommand]({ command: 'lh agent list' });
 
-      expect(parseArgs().env).not.toHaveProperty('LOBEHUB_JWT');
+      expect(parseArgs().env).not.toHaveProperty('ORVILO_JWT');
     });
 
     it('keeps the scope on a personal-scope device, which is addressed personally but still edits workspace content', async () => {
@@ -531,7 +531,7 @@ describe('localSystemRuntime', () => {
       // Gateway addressing drops the workspace (no `workspace:<id>` connection
       // for this device) — the CONTENT scope must not follow it down.
       expect(mockExecuteToolCall.mock.calls[0][0].workspaceId).toBeUndefined();
-      expect(parseArgs().env).toEqual({ LOBEHUB_WORKSPACE_ID: 'ws-42' });
+      expect(parseArgs().env).toEqual({ ORVILO_WORKSPACE_ID: 'ws-42' });
     });
 
     // Regression: injection used to be gated on detecting `lh` in command
@@ -548,7 +548,7 @@ describe('localSystemRuntime', () => {
       const proxy = buildProxy({ workspaceId: 'ws-42' });
       await proxy[LocalSystemApiName.runCommand]({ command });
 
-      expect(parseArgs().env).toEqual({ LOBEHUB_WORKSPACE_ID: 'ws-42' });
+      expect(parseArgs().env).toEqual({ ORVILO_WORKSPACE_ID: 'ws-42' });
     });
 
     it('does not inject in a personal run', async () => {
@@ -562,10 +562,10 @@ describe('localSystemRuntime', () => {
       const proxy = buildProxy({ workspaceId: 'ws-42' });
       await proxy[LocalSystemApiName.runCommand]({
         command: 'lh agent list',
-        env: { LOBEHUB_WORKSPACE_ID: 'ws-explicit' },
+        env: { ORVILO_WORKSPACE_ID: 'ws-explicit' },
       });
 
-      expect(parseArgs().env).toEqual({ LOBEHUB_WORKSPACE_ID: 'ws-explicit' });
+      expect(parseArgs().env).toEqual({ ORVILO_WORKSPACE_ID: 'ws-explicit' });
     });
   });
 });

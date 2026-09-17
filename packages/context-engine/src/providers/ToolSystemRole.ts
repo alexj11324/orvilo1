@@ -4,7 +4,7 @@ import debug from 'debug';
 
 import { BaseSystemRoleProvider } from '../base/BaseSystemRoleProvider';
 import { ToolNameResolver } from '../engine/tools';
-import type { LobeToolManifest } from '../engine/tools/types';
+import type { OrviloToolManifest } from '../engine/tools/types';
 import type { PipelineContext, ProcessorOptions } from '../types';
 
 declare module '../types' {
@@ -28,7 +28,7 @@ export interface ToolSystemRoleConfig {
   /** Function to check if function calling is supported */
   isCanUseFC: (model: string, provider: string) => boolean | undefined;
   /** Tool manifests with systemRole and API definitions */
-  manifests?: LobeToolManifest[];
+  manifests?: OrviloToolManifest[];
   /** Model name */
   model: string;
   /** Provider name */
@@ -43,7 +43,7 @@ export interface ToolSystemRoleConfig {
  * predicate, whether an activation tool result's full documentation is already
  * carried by the system prompt and can therefore be trimmed from history.
  */
-export const selectToolPromptManifests = (manifests?: LobeToolManifest[]): LobeToolManifest[] =>
+export const selectToolPromptManifests = (manifests?: OrviloToolManifest[]): OrviloToolManifest[] =>
   (manifests ?? []).filter((manifest) => manifest.api.length > 0 || manifest.systemRole);
 
 /**

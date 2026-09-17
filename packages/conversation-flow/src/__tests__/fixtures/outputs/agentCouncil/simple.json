@@ -64,7 +64,7 @@
                 "name": "broadcast",
                 "arguments": "{\"agentIds\": [\"agent-backend\", \"agent-devops\", \"agent-architect\"], \"instruction\": \"Discuss the pros and cons of microservices architecture from your perspective.\"}"
               },
-              "identifier": "lobe-group-management",
+              "identifier": "orvilo-group-management",
               "apiName": "broadcast",
               "result": {
                 "id": "msg-broadcast-tool-1",
@@ -174,7 +174,7 @@
             "name": "broadcast",
             "arguments": "{\"agentIds\": [\"agent-backend\", \"agent-devops\", \"agent-architect\"], \"instruction\": \"Discuss the pros and cons of microservices architecture from your perspective.\"}"
           },
-          "identifier": "lobe-group-management",
+          "identifier": "orvilo-group-management",
           "apiName": "broadcast"
         }
       ]

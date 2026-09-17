@@ -1066,7 +1066,7 @@ describe('chatMessage actions', () => {
             apiName: 'askUserQuestion',
             arguments: '{}',
             id: 'tool-call-id',
-            identifier: 'lobe-user-interaction',
+            identifier: 'orvilo-user-interaction',
             intervention: { status: 'pending' },
           },
         ],
@@ -1079,7 +1079,7 @@ describe('chatMessage actions', () => {
         plugin: {
           apiName: 'askUserQuestion',
           arguments: '{}',
-          identifier: 'lobe-user-interaction',
+          identifier: 'orvilo-user-interaction',
           intervention: { status: 'pending' },
         },
         tool_call_id: 'tool-call-id',

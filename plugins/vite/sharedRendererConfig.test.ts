@@ -16,12 +16,12 @@ const getPluginNames = (platform: 'desktop' | 'web') =>
 
 describe('sharedRendererPlugins', () => {
   it('keeps the icon barrel transform out of the Electron renderer', () => {
-    expect(getPluginNames('desktop')).not.toContain('lobe-icon-named-export-proxy');
-    expect(getPluginNames('web')).toContain('lobe-icon-named-export-proxy');
+    expect(getPluginNames('desktop')).not.toContain('orvilo-icon-named-export-proxy');
+    expect(getPluginNames('web')).toContain('orvilo-icon-named-export-proxy');
   });
 });
 
-describe('lobe-dev-editor-provider', () => {
+describe('orvilo-dev-editor-provider', () => {
   it('sends the provider entry back to the one prebundled editor bundle', async () => {
     const plugin = sharedRendererPlugins({ platform: 'web' })
       .flat(Number.POSITIVE_INFINITY)
@@ -31,7 +31,7 @@ describe('lobe-dev-editor-provider', () => {
         ): item is { name: string; resolveId: (source: string, importer: string) => unknown } =>
           Boolean(item) &&
           typeof item === 'object' &&
-          (item as { name?: string }).name === 'lobe-dev-editor-provider',
+          (item as { name?: string }).name === 'orvilo-dev-editor-provider',
       );
 
     const resolve = async (source: string) =>

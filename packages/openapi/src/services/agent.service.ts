@@ -3,7 +3,7 @@ import { and, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
 import { AgentModel } from '@/database/models/agent';
 import type { FileItem, KnowledgeBaseItem, NewAgent } from '@/database/schemas';
 import { agents, agentsToSessions } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { idGenerator, randomSlug } from '@/database/utils/idGenerator';
 import { isWorkspacePrimaryOwner } from '@/server/services/workspacePermission';
 
@@ -30,7 +30,7 @@ import type {
  * Agent service implementation class
  */
 export class AgentService extends BaseService {
-  constructor(db: LobeChatDatabase, userId: string | null, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string | null, workspaceId?: string) {
     super(db, userId, workspaceId);
   }
 
@@ -204,7 +204,7 @@ export class AgentService extends BaseService {
         if (request.avatar !== undefined) updateData.avatar = request.avatar ?? null;
         if (request.chatConfig !== undefined) {
           // Same reason as `agencyConfig` above: the schema exposes 13 of
-          // `LobeAgentChatConfig`'s fields, so replacing the object would drop
+          // `OrviloAgentChatConfig`'s fields, so replacing the object would drop
           // the two dozen a caller has no way to send back.
           updateData.chatConfig =
             request.chatConfig === null

@@ -19,7 +19,7 @@ import {
   sessionGroups,
   tasks,
 } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { sanitizeAgencyConfigsForWorkspace } from '../utils/agencyConfigDevices';
 import { rehomeAgentConnectorsForRecipient } from '../utils/agentConnectors';
 import { rehomeAgentDocumentsForRecipient } from '../utils/agentDocumentsOwnership';
@@ -59,10 +59,10 @@ export const CHAT_GROUP_TRANSFER_HIDDEN_MEMBER = 'CHAT_GROUP_TRANSFER_HIDDEN_MEM
 
 export class ChatGroupModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -747,7 +747,7 @@ export class ChatGroupModel {
    * leaked. The caller has already proven it may delete the group itself.
    */
   private findOwnedMemberAgentIds = async (
-    executor: LobeChatDatabase,
+    executor: OrviloDatabase,
     groupIds: string[],
   ): Promise<string[]> => {
     if (groupIds.length === 0) return [];
@@ -769,7 +769,7 @@ export class ChatGroupModel {
    * `owned` braces, on a delete whose blast radius is somebody's Inbox.
    */
   private deleteOwnedMemberAgents = async (
-    executor: LobeChatDatabase,
+    executor: OrviloDatabase,
     agentIds: string[],
   ): Promise<string[]> => {
     if (agentIds.length === 0) return [];

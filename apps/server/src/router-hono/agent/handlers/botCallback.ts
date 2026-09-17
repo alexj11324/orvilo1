@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 import { getServerDB } from '@/database/core/db-adaptor';
 import { BotCallbackService } from '@/server/services/bot/BotCallbackService';
 
-const log = debug('lobe-server:agent:bot-callback');
+const log = debug('orvilo-server:agent:bot-callback');
 
 /**
  * Bot callback endpoint for agent step/completion webhooks.

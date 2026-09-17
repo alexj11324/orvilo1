@@ -14,7 +14,7 @@ import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { goals } from '@/database/schemas/goal';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { scheduleGoalAdvance } from './scheduler';
@@ -96,7 +96,7 @@ export const answeredProblem = (state?: GoalManagerState) =>
 
 export class GoalManagerService {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}
@@ -114,7 +114,7 @@ export class GoalManagerService {
     };
   };
 
-  private save = async (db: LobeChatDatabase, id: string, state: GoalManagerState) => {
+  private save = async (db: OrviloDatabase, id: string, state: GoalManagerState) => {
     // Caller holds the owned Goal row lock. Do not overwrite concurrent policy namespaces.
     await db
       .update(goals)

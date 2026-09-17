@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { CreateMessageParams, DBMessageItem } from '@orvilo/types';
 import { ChatErrorType } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -29,7 +29,7 @@ import { agentShares } from '@/database/schemas';
  * visibility, or an id mismatch.
  */
 const assertShareStillAuthorized = async (
-  tx: LobeChatDatabase,
+  tx: OrviloDatabase,
   agentId: string,
   expectedShareId: string,
 ): Promise<void> => {
@@ -75,7 +75,7 @@ const assertShareStillAuthorized = async (
 export const reserveShareVisitorTopicOrThrow = async (params: {
   agentId: string;
   create: (topicModel: TopicModel) => Promise<TopicItem>;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   /**
    * The `agentShares.id` the caller resolved this request against
    * (`AgentShareGate.shareId`) — re-checked fresh under this same row lock via
@@ -89,7 +89,7 @@ export const reserveShareVisitorTopicOrThrow = async (params: {
   const { agentId, create, db, expectedShareId, ownerId, visitorUserId, workspaceId } = params;
 
   return db.transaction(async (trx) => {
-    const tx = trx as unknown as LobeChatDatabase;
+    const tx = trx as unknown as OrviloDatabase;
 
     // Fail closed: a deleted/transferred/no-longer-owned agent never gets a
     // new visitor topic, same as every other share-mutation path locking this
@@ -131,7 +131,7 @@ export const reserveShareVisitorTopicOrThrow = async (params: {
 export const reserveShareVisitorTopic = (
   params: {
     agentId: string;
-    db: LobeChatDatabase;
+    db: OrviloDatabase;
     expectedShareId: string;
     ownerId: string;
     visitorUserId: string;
@@ -167,7 +167,7 @@ export const reserveShareVisitorTopic = (
 export const reserveShareVisitorTurnOrThrow = async (params: {
   agentId: string;
   create: (messageModel: MessageModel) => Promise<DBMessageItem | undefined>;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   /** See {@link reserveShareVisitorTopicOrThrow}'s `expectedShareId` param JSDoc. */
   expectedShareId: string;
   ownerId: string;
@@ -177,7 +177,7 @@ export const reserveShareVisitorTurnOrThrow = async (params: {
   const { agentId, create, db, expectedShareId, ownerId, topicId, workspaceId } = params;
 
   return db.transaction(async (trx) => {
-    const tx = trx as unknown as LobeChatDatabase;
+    const tx = trx as unknown as OrviloDatabase;
 
     // Fail closed: same ownership/existence check as the topic guard.
     const locked = await AgentShareModel.lockOwnedAgentRow(tx, agentId, ownerId);
@@ -214,7 +214,7 @@ export const reserveShareVisitorTurnOrThrow = async (params: {
 export const reserveShareVisitorTurn = (
   params: {
     agentId: string;
-    db: LobeChatDatabase;
+    db: OrviloDatabase;
     expectedShareId: string;
     ownerId: string;
     topicId: string;

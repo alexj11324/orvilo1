@@ -18,7 +18,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     author: 'Composio',
     authorUrl: 'https://composio.dev',
     description: 'Gmail is a free email service provided by Google',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/gmail.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/gmail.svg',
     identifier: 'gmail',
     label: 'Gmail',
     readme:
@@ -29,7 +29,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     author: 'Composio',
     authorUrl: 'https://composio.dev',
     description: 'Google Calendar is a time-management and scheduling calendar service',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/googlecalendar.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/googlecalendar.svg',
     identifier: 'google-calendar',
     label: 'Google Calendar',
     readme:
@@ -41,7 +41,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'Airtable is a cloud-based database and spreadsheet platform that combines the flexibility of a spreadsheet with the power of a database, enabling teams to organize, track, and collaborate on projects with customizable views and powerful automation features',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/airtable.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/airtable.svg',
     identifier: 'airtable',
     label: 'Airtable',
     readme:
@@ -53,7 +53,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'Google Sheets is a web-based spreadsheet application that allows users to create, edit, and collaborate on spreadsheets online',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/googlesheets.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/googlesheets.svg',
     identifier: 'google-sheets',
     label: 'Google Sheets',
     readme:
@@ -65,7 +65,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'Google Docs is a word processor included as part of the free, web-based Google Docs Editors suite',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/googledocs.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/googledocs.svg',
     identifier: 'google-docs',
     label: 'Google Docs',
     readme:
@@ -76,7 +76,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     author: 'Composio',
     authorUrl: 'https://composio.dev',
     description: 'Supabase open source Firebase alternative with PostgreSQL',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/supabase.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/supabase.svg',
     identifier: 'supabase',
     label: 'Supabase',
     readme:
@@ -87,7 +87,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     author: 'Composio',
     authorUrl: 'https://composio.dev',
     description: 'Google Drive is a cloud storage service',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/googledrive.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/googledrive.svg',
     identifier: 'google-drive',
     label: 'Google Drive',
     readme:
@@ -99,7 +99,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'Slack is a messaging app for business that connects people to the information they need',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/slack.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/slack.svg',
     identifier: 'slack',
     label: 'Slack',
     readme:
@@ -110,7 +110,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     author: 'Composio',
     authorUrl: 'https://composio.dev',
     description: 'Confluence is a team workspace where knowledge and collaboration meet',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/confluence.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/confluence.svg',
     identifier: 'confluence',
     label: 'Confluence',
     readme:
@@ -121,7 +121,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     author: 'Composio',
     authorUrl: 'https://composio.dev',
     description: 'Jira is a project management and issue tracking tool developed by Atlassian',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/jira.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/jira.svg',
     identifier: 'jira',
     label: 'Jira',
     readme:
@@ -133,7 +133,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'ClickUp is a comprehensive project management and productivity platform that helps teams organize tasks, manage projects, and collaborate effectively with customizable workflows and powerful tracking features',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/clickup.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/clickup.svg',
     identifier: 'clickup',
     label: 'ClickUp',
     readme:
@@ -145,7 +145,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'Complete file management solution for Dropbox cloud storage. Upload, download, organize files and folders, manage sharing and collaboration, handle file versions, create file requests, and perform batch operations on your Dropbox files and folders',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/dropbox.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/dropbox.svg',
     identifier: 'dropbox',
     label: 'Dropbox',
     readme:
@@ -156,7 +156,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     author: 'Composio',
     authorUrl: 'https://composio.dev',
     description: 'Figma is a collaborative interface design tool for web and mobile applications.',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/figma.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/figma.svg',
     identifier: 'figma',
     label: 'Figma',
     readme:
@@ -168,7 +168,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'HubSpot is a developer and marketer of software products for inbound marketing, sales, and customer service',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/hubspot.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/hubspot.svg',
     identifier: 'hubspot',
     label: 'HubSpot',
     readme:
@@ -180,7 +180,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'OneDrive is a file hosting service and synchronization service operated by Microsoft',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/onedrive.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/onedrive.svg',
     identifier: 'onedrive',
     label: 'OneDrive',
     readme:
@@ -192,7 +192,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'Outlook Mail is a web-based suite of webmail, contacts, tasks, and calendaring services from Microsoft.',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/outlook.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/outlook.svg',
     identifier: 'outlook-mail',
     label: 'Outlook Mail',
     readme:
@@ -204,7 +204,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       "Salesforce is the world's leading customer relationship management (CRM) platform that helps businesses connect with customers, partners, and potential customers",
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/salesforce.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/salesforce.svg',
     identifier: 'salesforce',
     label: 'Salesforce',
     readme:
@@ -216,7 +216,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'WhatsApp Business API integration that enables sending text messages, media, and managing conversations with customers.',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/whatsapp.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/whatsapp.svg',
     identifier: 'whatsapp',
     label: 'WhatsApp',
     readme:
@@ -228,7 +228,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     authorUrl: 'https://composio.dev',
     description:
       'YouTube is a video-sharing platform where users can upload, share, and discover content. Access video information, transcripts, and metadata programmatically.',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/youtube.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/youtube.svg',
     identifier: 'youtube',
     label: 'YouTube',
     readme:
@@ -239,7 +239,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     author: 'Composio',
     authorUrl: 'https://composio.dev',
     description: 'Zendesk is a customer service software company',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/zendesk.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/zendesk.svg',
     identifier: 'zendesk',
     label: 'Zendesk',
     readme:
@@ -262,7 +262,7 @@ export const COMPOSIO_APP_TYPES: ComposioAppType[] = [
     author: 'Composio',
     authorUrl: 'https://composio.dev',
     description: 'Notion is a collaborative productivity and note-taking application',
-    icon: 'https://hub-apac-1.lobeobjects.space/assets/logos/notion.svg',
+    icon: 'https://hub-apac-1.objects.aspectlylabs.com/assets/logos/notion.svg',
     identifier: 'notion',
     label: 'Notion',
     readme:

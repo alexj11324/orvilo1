@@ -7,10 +7,10 @@ import type {
 import { GoogleGenAI } from '@google/genai';
 import debug from 'debug';
 
-import type { LobeRuntimeAI } from '../../core/BaseAI';
+import type { OrviloRuntimeAI } from '../../core/BaseAI';
 import { buildGoogleMessages, buildGoogleTools } from '../../core/contextBuilders/google';
 import { GoogleGenerativeAIStream } from '../../core/streams';
-import { LOBE_ERROR_KEY } from '../../core/streams/google';
+import { ORVILO_ERROR_KEY } from '../../core/streams/google';
 import type {
   ASROptions,
   ASRPayload,
@@ -95,7 +95,7 @@ function getThreshold(model: string): HarmBlockThreshold {
 
 const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com';
 
-interface LobeGoogleAIParams extends ModelIdMappingOptions {
+interface OrviloGoogleAIParams extends ModelIdMappingOptions {
   apiKey?: string;
   baseURL?: string;
   client?: GoogleGenAI;
@@ -115,7 +115,7 @@ const isAbortError = (error: Error): boolean => {
   );
 };
 
-export class LobeGoogleAI implements LobeRuntimeAI {
+export class OrviloGoogleAI implements OrviloRuntimeAI {
   private client: GoogleGenAI;
   private isVertexAi: boolean;
   baseURL?: string;
@@ -131,7 +131,7 @@ export class LobeGoogleAI implements LobeRuntimeAI {
     id,
     defaultHeaders,
     modelIdMapping,
-  }: LobeGoogleAIParams = {}) {
+  }: OrviloGoogleAIParams = {}) {
     if (!apiKey) throw AgentRuntimeError.createError(AgentRuntimeErrorType.InvalidProviderAPIKey);
 
     const httpOptions = baseURL
@@ -205,7 +205,6 @@ export class LobeGoogleAI implements LobeRuntimeAI {
         maxOutputTokens: payload.max_tokens,
         responseModalities: isImageResponseModel ? ['Text', 'Image'] : undefined,
         // avoid wide sensitive words
-        // refs: https://github.com/lobehub/lobe-chat/pull/1418
         safetySettings: [
           {
             category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
@@ -439,7 +438,7 @@ export class LobeGoogleAI implements LobeRuntimeAI {
                 log('Stream cancelled gracefully, preserving existing output');
                 // Explicitly inject cancellation error to avoid SSE fallback unexpected_end
                 controller.enqueue({
-                  [LOBE_ERROR_KEY]: {
+                  [ORVILO_ERROR_KEY]: {
                     body: { name: 'Stream cancelled', provider, reason: 'aborted' },
                     message: 'Stream cancelled',
                     name: 'Stream cancelled',
@@ -469,7 +468,7 @@ export class LobeGoogleAI implements LobeRuntimeAI {
               log('Stream reading cancelled gracefully, preserving existing output');
               // Explicitly inject cancellation error to avoid SSE fallback unexpected_end
               controller.enqueue({
-                [LOBE_ERROR_KEY]: {
+                [ORVILO_ERROR_KEY]: {
                   body: { name: 'Stream cancelled', provider, reason: 'aborted' },
                   message: 'Stream cancelled',
                   name: 'Stream cancelled',
@@ -482,7 +481,7 @@ export class LobeGoogleAI implements LobeRuntimeAI {
               log('Stream reading cancelled before any output');
               // Inject an error marker with detailed error information to be handled by downstream google-ai transformer to output error event
               controller.enqueue({
-                [LOBE_ERROR_KEY]: {
+                [ORVILO_ERROR_KEY]: {
                   body: {
                     message: err.message,
                     name: 'AbortError',
@@ -507,7 +506,7 @@ export class LobeGoogleAI implements LobeRuntimeAI {
 
             // Inject an error marker with detailed error information to be handled by downstream google-ai transformer to output error event
             controller.enqueue({
-              [LOBE_ERROR_KEY]: {
+              [ORVILO_ERROR_KEY]: {
                 body: { ...parsedError, provider },
                 message: parsedError?.message || err.message || 'Stream parsing error',
                 name: 'Stream parsing error',
@@ -663,4 +662,4 @@ export class LobeGoogleAI implements LobeRuntimeAI {
   }
 }
 
-export default LobeGoogleAI;
+export default OrviloGoogleAI;

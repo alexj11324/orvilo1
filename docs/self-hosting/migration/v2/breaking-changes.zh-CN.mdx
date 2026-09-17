@@ -1,20 +1,20 @@
 ---
-title: LobeHub 2.0 破坏性变更
-description: LobeHub 2.0 破坏性变更完整指南，帮助用户从 1.x 版本升级到 2.0 版本。
+title: Orvilo 2.0 破坏性变更
+description: Orvilo 2.0 破坏性变更完整指南，帮助用户从 1.x 版本升级到 2.0 版本。
 tags:
-  - LobeHub 2.0
+  - Orvilo 2.0
   - 迁移指南
   - 破坏性变更
   - 身份验证
 ---
 
-# LobeHub 2.0 破坏性变更
+# Orvilo 2.0 破坏性变更
 
-本文档概述了 LobeHub 2.0 中引入的破坏性变更，并为从 1.x 版本升级的用户提供迁移指南。
+本文档概述了 Orvilo 2.0 中引入的破坏性变更，并为从 1.x 版本升级的用户提供迁移指南。
 
 ## 移除的环境变量
 
-以下环境变量在 LobeHub 2.0 中已被移除：
+以下环境变量在 Orvilo 2.0 中已被移除：
 
 | 环境变量                                | 移除原因                                         |
 | ----------------------------------- | -------------------------------------------- |
@@ -31,7 +31,7 @@ tags:
 
 ## 新增的必需环境变量
 
-LobeHub 2.0 仅支持 Better Auth 认证系统。以下环境变量现在是必需的：
+Orvilo 2.0 仅支持 Better Auth 认证系统。以下环境变量现在是必需的：
 
 - `AUTH_SECRET`：用于加密会话令牌
 - `JWKS_KEY`：用于签名和验证 JWT，包括 OIDC JWT token 和内部服务调用认证 token
@@ -52,7 +52,7 @@ LobeHub 2.0 仅支持 Better Auth 认证系统。以下环境变量现在是必�
 
 ## 认证系统变更
 
-LobeHub 2.0 仅支持 Better Auth 认证系统，不再支持 NextAuth 和 Clerk。
+Orvilo 2.0 仅支持 Better Auth 认证系统，不再支持 NextAuth 和 Clerk。
 
 ## 迁移指南
 
@@ -66,15 +66,15 @@ LobeHub 2.0 仅支持 Better Auth 认证系统，不再支持 NextAuth 和 Clerk
 
 ## 数据库模式变更
 
-LobeHub 2.0 仅支持 Server DB 模式，不再支持 Client DB (PGlite)。如果您之前使用 `NEXT_PUBLIC_SERVICE_MODE=client`，需要迁移到 Server DB 部署方式。
+Orvilo 2.0 仅支持 Server DB 模式，不再支持 Client DB (PGlite)。如果您之前使用 `NEXT_PUBLIC_SERVICE_MODE=client`，需要迁移到 Server DB 部署方式。
 
 详细部署指南请参阅[快速开始](/docs/self-hosting/start)。
 
 ## PostgreSQL 版本要求
 
-LobeHub 2.0 推荐使用 **PostgreSQL 17** 及以上版本。
+Orvilo 2.0 推荐使用 **PostgreSQL 17** 及以上版本。
 
-LobeHub 2.0 引入了 [pg\_search](https://github.com/paradedb/paradedb/tree/main/pg_search)
+Orvilo 2.0 引入了 [pg\_search](https://github.com/paradedb/paradedb/tree/main/pg_search)
 扩展来提供全文搜索。当 2.0 发布时，Neon 会为新的 PostgreSQL 17 项目提供该扩展。此后 Neon 已停止为新项目提供
 `pg_search`，并已通知受影响的现有客户：该扩展将在 2026 年 9 月 21 日移除。现有 Neon 部署应在截止日期前完成
 [从 pg\_search 迁移到 Elasticsearch](/zh/docs/self-hosting/advanced/elasticsearch-migration)。当前部署在选择搜索后端前，请先阅读

@@ -4,7 +4,7 @@ import { extractStaticStyle, StyleProvider } from 'antd-style';
 import { renderToReadableStream } from 'react-dom/server';
 import type { EntryContext } from 'react-router';
 import { ServerRouter } from 'react-router';
-import { styleKeys } from 'virtual:lobehub/antd-static-css';
+import { styleKeys } from 'virtual:aspectlylabs/antd-static-css';
 
 export default async function handleRequest(
   request: Request,

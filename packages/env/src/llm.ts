@@ -242,7 +242,7 @@ export const getLLMConfig = () => {
       ENABLED_STRAICO: z.boolean(),
       STRAICO_API_KEY: z.string().optional(),
 
-      ENABLED_LOBEHUB: z.boolean(),
+      ENABLED_ORVILO: z.boolean(),
 
       ENABLED_OPENCODEZEN: z.boolean(),
       OPENCODEZEN_API_KEY: z.string().optional(),
@@ -502,7 +502,7 @@ export const getLLMConfig = () => {
       ENABLED_STRAICO: !!process.env.STRAICO_API_KEY,
       STRAICO_API_KEY: process.env.STRAICO_API_KEY,
 
-      ENABLED_LOBEHUB: !!process.env.ENABLED_LOBEHUB,
+      ENABLED_ORVILO: !!process.env.ENABLED_ORVILO,
 
       ENABLED_OPENCODEZEN: !!process.env.OPENCODEZEN_API_KEY,
       OPENCODEZEN_API_KEY: process.env.OPENCODEZEN_API_KEY,

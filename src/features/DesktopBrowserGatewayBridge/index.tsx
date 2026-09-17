@@ -6,7 +6,7 @@ import { memo, useCallback } from 'react';
 import { electronBrowserControlService } from '@/services/electron/browserControl';
 import { invokeExecutor } from '@/store/tool/slices/builtin/executors';
 
-const BROWSER_IDENTIFIER = 'lobe-browser';
+const BROWSER_IDENTIFIER = 'orvilo-browser';
 
 /**
  * Desktop-only bridge for cloud-agent (gateway) browser tool calls.

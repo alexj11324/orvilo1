@@ -13,7 +13,7 @@ import {
 } from '@orvilo/model-runtime';
 import { parseClaudeModelId } from '@orvilo/model-runtime/providers/anthropic/modelId';
 import { isResponsesAPIModel } from '@orvilo/model-runtime/providers/openai/modelId';
-import { LobeVertexAI } from '@orvilo/model-runtime/vertexai';
+import { OrviloVertexAI } from '@orvilo/model-runtime/vertexai';
 import {
   type AWSBedrockKeyVault,
   type AzureOpenAIKeyVault,
@@ -37,7 +37,7 @@ import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 import { loadModels } from '@/business/client/model-bank/loadModels';
 import { getBusinessModelRuntimeHooks } from '@/business/server/model-runtime';
 import { AiProviderModel } from '@/database/models/aiProvider';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import { getLLMConfig } from '@/envs/llm';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { createLLMGenerationTracingHook } from '@/server/services/llmGenerationTracing/hook';
@@ -210,7 +210,7 @@ const getParamsFromPayload = (provider: string, payload: ClientSecretPayload) =>
   const llmConfig = getLLMConfig() as Record<string, any>;
 
   switch (provider) {
-    case ModelProvider.LobeHub: {
+    case ModelProvider.Orvilo: {
       return { apikey: payload.apiKey, baseURL: payload.baseURL, ...payload };
     }
 
@@ -441,7 +441,7 @@ export const initModelRuntimeWithUserPayload = (
 
   if (runtimeProvider === ModelProvider.VertexAI) {
     const vertexOptions = buildVertexOptions(payload, params);
-    const runtime = LobeVertexAI.initFromVertexAI(vertexOptions);
+    const runtime = OrviloVertexAI.initFromVertexAI(vertexOptions);
 
     return new ModelRuntime(runtime, hooks);
   }
@@ -475,7 +475,7 @@ export const initModelRuntimeWithUserPayload = (
  * ```
  */
 export const initModelRuntimeFromDB = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   provider: string,
   workspaceId?: string,
@@ -541,7 +541,7 @@ export type ServerDefaultHeterogeneousModels = Record<
 >;
 
 /**
- * Every supported CLI uses the single LobeHub relay provider. `lobehub` is a
+ * Every supported CLI uses the single Orvilo relay provider. `orvilo` is a
  * deployment-owned router slot, not a hosted-only upstream: official and
  * private distributions provide their own model catalog and RouterRuntime
  * behind it.
@@ -549,7 +549,7 @@ export type ServerDefaultHeterogeneousModels = Record<
  * The shared agent matrix selects either the Anthropic Messages or OpenAI
  * Responses ingress. Both translate the wire protocol in both directions
  * rather than proxying it, and every CLI addresses the relay as
- * `lobehub/${catalogId}`. The operation token remains the source of truth and
+ * `aspectlylabs/${catalogId}`. The operation token remains the source of truth and
  * the request must match that selection.
  *
  * Legacy agent policies accept any tool-capable chat model; the
@@ -624,7 +624,7 @@ export const getServerDefaultHeterogeneousModels = async () => {
     models[agentType] = [];
   }
 
-  for (const model of await getEnabledServerChatModels(ModelProvider.LobeHub)) {
+  for (const model of await getEnabledServerChatModels(ModelProvider.Orvilo)) {
     for (const agentType of SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES) {
       if (supportsServerDefaultHeterogeneousAgent(agentType, model)) {
         models[agentType].push({ model: model.id });
@@ -644,13 +644,13 @@ export const resolveServerDefaultHeterogeneousModel = async (
   agentType: ServerDefaultHeterogeneousAgentType,
   model: string,
 ) => {
-  const modelConfig = await findEnabledServerChatModel(ModelProvider.LobeHub, model);
+  const modelConfig = await findEnabledServerChatModel(ModelProvider.Orvilo, model);
   if (!supportsServerDefaultHeterogeneousAgent(agentType, modelConfig)) {
     throw new Error('The selected server model is not compatible with this heterogeneous agent');
   }
 
   return {
-    ...toServerModelSelection(ModelProvider.LobeHub, modelConfig),
+    ...toServerModelSelection(ModelProvider.Orvilo, modelConfig),
     supportsAdaptiveThinking:
       modelConfig.settings?.extendParams?.includes('enableAdaptiveThinking') === true,
   };
@@ -661,7 +661,7 @@ export const resolveServerDefaultHeterogeneousModel = async (
  *
  * Do not resolve `DEFAULT_AGENT_CONFIG` here or translate this into OpenAI /
  * Anthropic environment credentials. Those names describe the two CLI ingress
- * protocols only; the deployment-owned LobeHub RouterRuntime owns the one
+ * protocols only; the deployment-owned Orvilo RouterRuntime owns the one
  * upstream endpoint, credentials, model routing, fallback, and billing policy.
  */
 export const initModelRuntimeFromServerConfig = async (params: {
@@ -670,16 +670,16 @@ export const initModelRuntimeFromServerConfig = async (params: {
 }): Promise<ModelRuntime> => {
   const businessHooks = getBusinessModelRuntimeHooks(
     params.actorUserId,
-    ModelProvider.LobeHub,
+    ModelProvider.Orvilo,
     params.workspaceId,
   );
   const tracingHooks = createLLMGenerationTracingHook(
     params.actorUserId,
-    ModelProvider.LobeHub,
+    ModelProvider.Orvilo,
     params.workspaceId,
   );
   return ModelRuntime.initializeWithProvider(
-    ModelProvider.LobeHub,
+    ModelProvider.Orvilo,
     { userId: params.actorUserId, workspaceId: params.workspaceId },
     mergeModelRuntimeHooks(businessHooks, tracingHooks),
   );

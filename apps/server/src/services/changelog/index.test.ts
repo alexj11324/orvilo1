@@ -242,7 +242,7 @@ describe('ChangelogService', () => {
       it('should generate correct URL', () => {
         // @ts-ignore - accessing private method for testing
         const result = service.genUrl('test/path');
-        expect(result).toBe('https://raw.githubusercontent.com/lobehub/lobe-chat/main/test/path');
+        expect(result).toBe('https://raw.githubusercontent.com/alexj11324/orvilo1/main/test/path');
       });
     });
 
@@ -282,7 +282,7 @@ describe('ChangelogService', () => {
         // @ts-ignore - accessing private method for testing
         const result = service.replaceCdnUrl('/blog/image.jpg');
 
-        expect(result).toBe('https://hub-apac-1.lobeobjects.space/blog/image.jpg');
+        expect(result).toBe('https://hub-apac-1.objects.aspectlylabs.com/blog/image.jpg');
       });
 
       it('should return original URL if not starting with /blog', () => {

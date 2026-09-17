@@ -1,4 +1,4 @@
-import type * as LobechatConstModule from '@orvilo/const';
+import type * as OrvilochatConstModule from '@orvilo/const';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -10,7 +10,7 @@ import { useUserAvatar } from './useUserAvatar';
 const mockConstEnv = vi.hoisted(() => ({ isDesktop: false }));
 
 vi.mock('@orvilo/const', async (importOriginal) => {
-  const actual = await importOriginal<typeof LobechatConstModule>();
+  const actual = await importOriginal<typeof OrvilochatConstModule>();
   return {
     ...actual,
     get isDesktop() {

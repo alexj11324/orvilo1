@@ -2,7 +2,7 @@ import type { ComfyUIKeyVault } from '@orvilo/types';
 import { createBasicAuthCredentials } from '@orvilo/utils';
 import debug from 'debug';
 
-import type { LobeRuntimeAI } from '../../core/BaseAI';
+import type { OrviloRuntimeAI } from '../../core/BaseAI';
 import type {
   AuthenticatedImageRuntime,
   CreateImagePayload,
@@ -11,13 +11,13 @@ import type {
 import { parseComfyUIErrorMessage } from '../../utils/comfyuiErrorParser';
 import { AgentRuntimeError } from '../../utils/createError';
 
-const log = debug('lobe-image:comfyui');
+const log = debug('orvilo-image:comfyui');
 
 /**
  * ComfyUI Runtime implementation
  * Supports text-to-image and image editing
  */
-export class LobeComfyUI implements LobeRuntimeAI, AuthenticatedImageRuntime {
+export class OrviloComfyUI implements OrviloRuntimeAI, AuthenticatedImageRuntime {
   private options: ComfyUIKeyVault;
   baseURL: string;
 
@@ -88,7 +88,7 @@ export class LobeComfyUI implements LobeRuntimeAI, AuthenticatedImageRuntime {
 
       // In development mode, use debug header to bypass auth
       if (process.env.NODE_ENV === 'development') {
-        headers['lobe-auth-dev-backend-api'] = '1';
+        headers['orvilo-auth-dev-backend-api'] = '1';
       }
 
       // If KEY_VAULTS_SECRET is available (server-side), use it for internal service auth

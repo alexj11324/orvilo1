@@ -7,7 +7,7 @@ import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/ut
 import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
-const log = debug('lobe-server:workflows:resume-agent-trajectory');
+const log = debug('orvilo-server:workflows:resume-agent-trajectory');
 
 export const resumeAgentTrajectoryHandler = async (
   context: WorkflowContext<ResumeAgentTrajectoryPayload>,

@@ -590,7 +590,7 @@ describe('tool executors', () => {
     const instruction: Extract<AgentInstruction, { type: 'call_tool' }> = {
       payload: {
         parentMessageId: 'assistant-msg-1',
-        toolCalling: createToolCall('sub-agent-call', 'lobe-agent'),
+        toolCalling: createToolCall('sub-agent-call', 'orvilo-agent'),
       },
       type: 'call_tool',
     };
@@ -621,7 +621,7 @@ describe('tool executors', () => {
       {
         payload: {
           parentMessageId: 'assistant-msg-1',
-          toolCalling: createToolCall('sub-agent-call', 'lobe-agent'),
+          toolCalling: createToolCall('sub-agent-call', 'orvilo-agent'),
         },
         type: 'call_tool',
       },
@@ -649,8 +649,8 @@ describe('tool executors', () => {
         payload: {
           parentMessageId: 'assistant-msg-1',
           toolsCalling: [
-            createToolCall('sub-a', 'lobe-agent'),
-            createToolCall('sub-b', 'lobe-agent'),
+            createToolCall('sub-a', 'orvilo-agent'),
+            createToolCall('sub-b', 'orvilo-agent'),
           ],
         },
         type: 'call_tools_batch',
@@ -1148,13 +1148,13 @@ describe('tool executors', () => {
     // marked `ordered` runs its calls one after another in emission order;
     // everything else in the batch stays concurrent.
     const manifestMap = {
-      'lobe-message': {
+      'orvilo-message': {
         api: [
           { name: 'sendMessage', ordered: true },
           { name: 'replyToThread', ordered: true },
           { name: 'readMessages' },
         ],
-        identifier: 'lobe-message',
+        identifier: 'orvilo-message',
       },
     };
 
@@ -1162,7 +1162,7 @@ describe('tool executors', () => {
       apiName,
       arguments: '{}',
       id,
-      identifier: 'lobe-message',
+      identifier: 'orvilo-message',
       type: 'builtin' as const,
     });
 
@@ -1262,8 +1262,8 @@ describe('tool executors', () => {
           activatedStepTools: [
             {
               activatedAtStep: 0,
-              id: 'lobe-message',
-              manifest: manifestMap['lobe-message'] as any,
+              id: 'orvilo-message',
+              manifest: manifestMap['orvilo-message'] as any,
               source: 'activator' as any,
             },
           ],
@@ -1299,7 +1299,7 @@ describe('tool executors', () => {
     // capped Redis step blob) — clients only read `workRegistration` as a
     // presence flag.
     const createSkillIntent = () => ({
-      args: { number: 42, repo: 'lobehub/lobehub' },
+      args: { number: 42, repo: 'alexj11324/orvilo1' },
       data: { body: 'x'.repeat(500), issues: Array.from({ length: 30 }, (_, i) => ({ id: i })) },
       provider: 'github',
       toolName: 'github.searchIssues',
@@ -1427,7 +1427,7 @@ describe('tool executors', () => {
   });
 
   describe('todo state forwarding', () => {
-    // Todo-mutating tools (lobe-agent createTodos/updateTodos) persist their own
+    // Todo-mutating tools (orvilo-agent createTodos/updateTodos) persist their own
     // copy into a plan document that only exists after `createPlan`. Message
     // history is the store that always exists, so the run context must carry it
     // — otherwise `updateTodos` reloads an empty list and silently drops every
@@ -1438,7 +1438,7 @@ describe('tool executors', () => {
           {
             content: 'todo tool result',
             id: 'tool-msg-0',
-            plugin: { apiName: 'createTodos', identifier: 'lobe-agent', type: 'builtin' },
+            plugin: { apiName: 'createTodos', identifier: 'orvilo-agent', type: 'builtin' },
             pluginState: {
               todos: {
                 items: [
@@ -1457,7 +1457,7 @@ describe('tool executors', () => {
       const instruction: Extract<AgentInstruction, { type: 'call_tool' }> = {
         payload: {
           parentMessageId: 'assistant-msg-1',
-          toolCalling: createToolCall('tool-call-1', 'lobe-agent'),
+          toolCalling: createToolCall('tool-call-1', 'orvilo-agent'),
         },
         type: 'call_tool',
       };

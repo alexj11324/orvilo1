@@ -1184,7 +1184,9 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
         total: 1,
       });
       memberMocks.getDisplayInfoByIds.mockResolvedValue([alice]);
-      memberMocks.getEmailsByIds.mockResolvedValue([{ email: 'alice@lobehub.com', id: 'usr_2' }]);
+      memberMocks.getEmailsByIds.mockResolvedValue([
+        { email: 'alice@orvilo.aspectlylabs.com', id: 'usr_2' },
+      ]);
       memberMocks.findLinksByUserIds.mockResolvedValue([
         {
           platform: 'discord',
@@ -1199,12 +1201,14 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
       const result = await runtime.listWorkspaceMembers();
 
       expect(result.content).toContain(
-        '- Alice  @alice  alice@lobehub.com  role=member  im=discord:@Neko(4521),slack:U123  id=usr_2',
+        '- Alice  @alice  alice@orvilo.aspectlylabs.com  role=member  im=discord:@Neko(4521),slack:U123  id=usr_2',
       );
     });
 
     it('passes the folded query and the cap to the directory lookup and announces the cut', async () => {
-      memberMocks.getEmailsByIds.mockResolvedValue([{ email: 'alice@lobehub.com', id: 'usr_2' }]);
+      memberMocks.getEmailsByIds.mockResolvedValue([
+        { email: 'alice@orvilo.aspectlylabs.com', id: 'usr_2' },
+      ]);
       memberMocks.findLinksByUserIds.mockResolvedValue([
         { platform: 'discord', platformUserId: '4521', platformUsername: 'Neko', userId: 'usr_2' },
       ]);

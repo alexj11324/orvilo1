@@ -147,7 +147,7 @@ export default {
   'cmdk.askAIHeadingEmpty': 'Choose an AI feature',
   'cmdk.askAgentHeading': 'Ask Agent',
   'cmdk.askAgentPlaceholder': 'Ask {{agent}} something...',
-  'cmdk.askLobeAI': 'Ask Orvilo AI',
+  'cmdk.askOrviloAI': 'Ask Orvilo AI',
   'cmdk.automations': 'Automations',
   'cmdk.community': 'Community',
   'cmdk.communitySupport': 'Community Support',

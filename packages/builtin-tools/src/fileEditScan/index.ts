@@ -21,8 +21,8 @@ export type {
  * The scanner recognizes two kinds of edit-producing sources: STRUCTURED ones
  * (cloud-sandbox + local-system writeFile/editFile/moveFiles, codex
  * file_change, claude-code Edit/Write/MultiEdit) plus HETERO-SHELL command-text
- * scanning (lobe-local-system runCommand, claude-code Bash, codex
- * command_execution, device-routed lobe-skills runCommand/execScript) —
+ * scanning (orvilo-local-system runCommand, claude-code Bash, codex
+ * command_execution, device-routed orvilo-skills runCommand/execScript) —
  * see `extractShellCommandOps`. Built-in tool identifiers / apiNames use their
  * packages' canonical exported contracts; heterogeneous-agent names remain
  * local because those packages are intentionally not dependencies here.
@@ -91,7 +91,7 @@ const CLAUDE_CODE_EDIT_APIS = new Set(['Edit', 'Write', 'MultiEdit']);
  * entity-document write markers (see `extractShellCommandOps`). Each carries the
  * command in its `arguments` JSON as `{ command: string }`.
  *
- * - lobe-local-system runCommand. Source: `@orvilo/builtin-tool-local-system`
+ * - orvilo-local-system runCommand. Source: `@orvilo/builtin-tool-local-system`
  *   `LocalSystemIdentifier` + `LocalSystemApiName.runCommand`; state
  *   `@orvilo/tool-runtime` `RunCommandState` (`{ exitCode?, success, … }`).
  * - claude-code Bash. Source: `@orvilo/heterogeneous-agents`
@@ -101,20 +101,20 @@ const CLAUDE_CODE_EDIT_APIS = new Set(['Edit', 'Write', 'MultiEdit']);
  *   `adapters/codex.ts` `CODEX_IDENTIFIER` + `CODEX_COMMAND_API`; state pluginState
  *   carries `{ exitCode?, success, … }`.
  *
- * - lobe-skills runCommand / execScript, DEVICE rows only. Source:
+ * - orvilo-skills runCommand / execScript, DEVICE rows only. Source:
  *   `@orvilo/builtin-tool-skills` — both APIs carry the shell text in
  *   `arguments.command` (execScript's script body shares the field name), and
  *   the server runtime stamps `state.executionEnv: 'device' | 'sandbox'` on
  *   every persisted result. Only `executionEnv === 'device'` rows are scanned:
- *   a device-run skill behaves exactly like lobe-local-system runCommand (the
+ *   a device-run skill behaves exactly like orvilo-local-system runCommand (the
  *   file lands on the user's device). Sandbox rows stay excluded for the same
  *   reason as sandbox runCommand below, and rows missing the field (legacy
  *   data) are ambiguous — excluded to preserve the heuristic's precision.
  *
- * Deliberately NOT in scope: `lobe-cloud-sandbox` runCommand and SANDBOX-side
- * `lobe-skills` rows (sandbox delivery is covered by `exportFile` registration;
+ * Deliberately NOT in scope: `orvilo-cloud-sandbox` runCommand and SANDBOX-side
+ * `orvilo-skills` rows (sandbox delivery is covered by `exportFile` registration;
  * un-exported sandbox shell output is usually intermediate). Skill-produced
- * deliverables are still captured: a successful `lobe-skills` exportFile row is
+ * deliverables are still captured: a successful `orvilo-skills` exportFile row is
  * a registration source in the server's file-work registration, alongside the
  * sandbox tool's exportFile.
  */
@@ -195,7 +195,7 @@ const isFailedState = (state: unknown): boolean => {
 /**
  * A shell tool call whose state reports a non-zero exit code failed — the
  * command's output (and any file it would have written) never landed. Only
- * `RunCommandState` (lobe-local-system) and the codex `command_execution`
+ * `RunCommandState` (orvilo-local-system) and the codex `command_execution`
  * pluginState carry an `exitCode`; the other structured sources never set it,
  * so this generic guard only fires for the hetero-shell branch.
  */
@@ -632,10 +632,10 @@ const extractRecordOps = (record: FileEditToolCallRecord): EditOp[] => {
     return extractClaudeCodeOps(record);
   }
 
-  // Hetero-shell: lobe-local-system runCommand / claude-code Bash / codex
-  // command_execution / DEVICE-routed lobe-skills runCommand+execScript — scan
+  // Hetero-shell: orvilo-local-system runCommand / claude-code Bash / codex
+  // command_execution / DEVICE-routed orvilo-skills runCommand+execScript — scan
   // the raw command text for entity-document write markers. Gated on
-  // identifier+apiName so lobe-cloud-sandbox runCommand (covered by exportFile
+  // identifier+apiName so orvilo-cloud-sandbox runCommand (covered by exportFile
   // registration) stays out; skills rows additionally require
   // `state.executionEnv === 'device'` — sandbox skills output is delivered via
   // exportFile, and legacy rows without the field are ambiguous.

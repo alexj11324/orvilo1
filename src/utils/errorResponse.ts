@@ -1,6 +1,6 @@
 import { AUTH_REQUIRED_HEADER } from '@orvilo/desktop-bridge';
 import { getErrorCodeSpec } from '@orvilo/model-runtime/errors/specs';
-import type { ILobeAgentRuntimeErrorType } from '@orvilo/model-runtime/types/error';
+import type { IOrviloAgentRuntimeErrorType } from '@orvilo/model-runtime/types/error';
 import type { ErrorResponse, ErrorType } from '@orvilo/types';
 import { ChatErrorType } from '@orvilo/types';
 
@@ -15,7 +15,7 @@ const AUTH_REQUIRED_ERROR_TYPES = new Set<ErrorType>([ChatErrorType.Unauthorized
  * Resolves canonical runtime specs before app-only fallbacks so codes such as
  * InvalidRequestFormat keep their declared 400 instead of the legacy Invalid* 401.
  */
-const getStatus = (errorType: ILobeAgentRuntimeErrorType | ErrorType) => {
+const getStatus = (errorType: IOrviloAgentRuntimeErrorType | ErrorType) => {
   const spec = getErrorCodeSpec(typeof errorType === 'string' ? errorType : undefined);
   if (spec) return spec.httpStatus;
 
@@ -43,7 +43,7 @@ const getStatus = (errorType: ILobeAgentRuntimeErrorType | ErrorType) => {
 };
 
 export const createErrorResponse = (
-  errorType: ErrorType | ILobeAgentRuntimeErrorType,
+  errorType: ErrorType | IOrviloAgentRuntimeErrorType,
   body?: any,
 ) => {
   const resolvedStatusCode = getStatus(errorType);

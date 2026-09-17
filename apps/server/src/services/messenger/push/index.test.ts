@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { getMessengerPushWindow, MESSENGER_PUSH_PLATFORMS, sendMessengerPush } from './index';
 
@@ -34,7 +34,7 @@ vi.mock('@/server/services/messenger/wechatPush', () => ({
   sendProactiveWechatMessage: mocks.sendProactiveWechatMessage,
 }));
 
-const serverDB = { kind: 'db' } as unknown as LobeChatDatabase;
+const serverDB = { kind: 'db' } as unknown as OrviloDatabase;
 
 const buildLink = (platform: 'discord' | 'slack' | 'telegram', tenantId = '') => ({
   id: `link-${platform}-${tenantId}`,

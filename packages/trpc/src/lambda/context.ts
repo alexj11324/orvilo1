@@ -11,7 +11,7 @@ import { canUseWorkspaceApiKeys } from '@/business/server/workspaceApiKey';
 import { getServerDB } from '@/database/core/db-adaptor';
 import { ApiKeyModel } from '@/database/models/apiKey';
 import { hasActiveWorkspaceMembership } from '@/database/models/workspace';
-import { authEnv, LOBE_CHAT_OIDC_AUTH_HEADER } from '@/envs/auth';
+import { authEnv, ORVILO_OIDC_AUTH_HEADER } from '@/envs/auth';
 import { extractTraceContext } from '@/libs/observability/traceparent';
 import { assertOIDCUserActive, isOIDCUserInactiveError } from '@/libs/oidc-provider/access-control';
 import { validateOIDCJWT } from '@/libs/oidc-provider/jwt';
@@ -21,8 +21,8 @@ import { describeOIDCAuthFailure, setAuthFailureHeader } from '../utils/authFail
 import { HETERO_OPERATION_JWT_PURPOSE } from '../utils/internalJwt';
 
 // Create context logger namespace
-const log = debug('lobe-trpc:lambda:context');
-const LOBE_CHAT_API_KEY_HEADER = 'X-API-Key';
+const log = debug('orvilo-trpc:lambda:context');
+const ORVILO_API_KEY_HEADER = 'X-API-Key';
 
 const extractClientIp = (request: NextRequest): string | undefined => {
   const forwardedFor = request.headers.get('x-forwarded-for');
@@ -183,7 +183,7 @@ export const createLambdaContext = async (request: NextRequest): Promise<LambdaC
 
   // we have a special header to debug the api endpoint in development mode
   // IT WON'T GO INTO PRODUCTION ANYMORE
-  const isDebugApi = request.headers.get('lobe-auth-dev-backend-api') === '1';
+  const isDebugApi = request.headers.get('orvilo-auth-dev-backend-api') === '1';
   const isMockUser = process.env.ENABLE_MOCK_DEV_USER === '1';
 
   if (process.env.NODE_ENV === 'development' && (isDebugApi || isMockUser)) {
@@ -217,7 +217,7 @@ export const createLambdaContext = async (request: NextRequest): Promise<LambdaC
     workspaceId,
   };
 
-  const apiKeyToken = request.headers.get(LOBE_CHAT_API_KEY_HEADER)?.trim();
+  const apiKeyToken = request.headers.get(ORVILO_API_KEY_HEADER)?.trim();
   log('X-API-Key header: %s', apiKeyToken ? 'exists' : 'not found');
 
   if (apiKeyToken) {
@@ -311,7 +311,7 @@ export const createLambdaContext = async (request: NextRequest): Promise<LambdaC
   // Prioritize checking for OIDC authentication (both standard Authorization and custom Oidc-Auth headers)
   if (authEnv.ENABLE_OIDC) {
     log('OIDC enabled, attempting OIDC authentication');
-    const oidcAuthToken = request.headers.get(LOBE_CHAT_OIDC_AUTH_HEADER);
+    const oidcAuthToken = request.headers.get(ORVILO_OIDC_AUTH_HEADER);
     log('Oidc-Auth header: %s', oidcAuthToken ? 'exists' : 'not found');
     if (!oidcAuthToken) authFailure = 'no_token';
 

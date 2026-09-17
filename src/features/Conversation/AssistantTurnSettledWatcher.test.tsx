@@ -268,7 +268,7 @@ describe('AssistantTurnSettledWatcher', () => {
   it('falls back to reason "completed" and logs when no terminal op exists', async () => {
     const hook = vi.fn();
     const logSpy = vi.spyOn(debug, 'log').mockImplementation(() => {});
-    debug.enable('lobe-render:features:Conversation');
+    debug.enable('orvilo-render:features:Conversation');
 
     const { rerender } = render(<AssistantTurnSettledWatcher />);
     armAndSettle(rerender, hook);

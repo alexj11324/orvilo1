@@ -76,7 +76,8 @@ export async function runHeartbeatTick(
     log('skip task=%s reason=terminal (status=%s)', taskId, task.status);
     return { ran: false, reason: 'terminal' };
   }
-  if (!task.heartbeatInterval || task.heartbeatInterval <= 0) {
+  const heartbeatInterval = task.heartbeatInterval;
+  if (!heartbeatInterval || heartbeatInterval <= 0) {
     log('skip task=%s reason=no-interval', taskId);
     return { ran: false, reason: 'no-interval' };
   }
@@ -96,7 +97,7 @@ export async function runHeartbeatTick(
     const scheduler = createTaskSchedulerModule();
     const nextToken = randomUUID();
     const tickMessageId = await scheduler.scheduleNextTopic({
-      delay: task.heartbeatInterval,
+      delay: heartbeatInterval,
       taskId,
       tickToken: nextToken,
       userId,
@@ -106,7 +107,7 @@ export async function runHeartbeatTick(
       retained = await new TaskModel(db, userId, wsId).updateContextIfHeartbeatTick(
         taskId,
         activeTickToken,
-        task.heartbeatInterval,
+        heartbeatInterval,
         { scheduledAt: new Date().toISOString(), tickMessageId, tickToken: nextToken },
       );
     } finally {

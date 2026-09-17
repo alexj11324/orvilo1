@@ -8,7 +8,6 @@ import { ProjectModel } from '@/database/models/project';
 import { linearInstallations, tasks, users, workspaces } from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 
-import { LinearIssueNotFoundError } from './provider';
 import { LinearSyncWorker } from './worker';
 
 const db: LobeChatDatabase = await getTestDB();
@@ -98,7 +97,7 @@ describe('LinearSyncWorker inbound ordering', () => {
       subjectId: issue.id,
     });
     const provider = {
-      getIssue: vi.fn().mockRejectedValue(new LinearIssueNotFoundError(issue.id)),
+      getIssue: vi.fn(),
     };
 
     await expect(
@@ -111,7 +110,7 @@ describe('LinearSyncWorker inbound ordering', () => {
       lastInboundDeliveryId: expect.any(String),
       syncState: 'removed',
     });
-    expect(provider.getIssue).toHaveBeenCalledWith(issue.id);
+    expect(provider.getIssue).not.toHaveBeenCalled();
   });
 
   it('does not let an older remote update roll a task back', async () => {

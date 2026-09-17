@@ -15,7 +15,6 @@ import type { LobeChatDatabase } from '@/database/type';
 import { LinearIntegrationTaskService } from './integrationTask';
 import { changedLinearIssueFields, mergeLinearIssueSnapshots } from './merge';
 import {
-  LinearIssueNotFoundError,
   type LinearIssueProvider,
   type LinearIssueUpdateInput,
   normalizeLinearIssue,
@@ -209,22 +208,13 @@ export class LinearSyncWorker {
         // together so a crash can only replay the complete local command.
         let knownIssue: LinearIssueSnapshot | undefined;
         if (row.subjectId) {
-          try {
-            knownIssue = await provider.getIssue(row.subjectId);
-          } catch (error) {
-            if (
-              row.action === 'remove' &&
-              row.eventType === 'Issue' &&
-              error instanceof LinearIssueNotFoundError
-            ) {
-              // A remove webhook is already authenticated and its body is
-              // durable in the inbox. The remote issue can disappear before
-              // the worker reads it, so reconcile from that signed snapshot.
-              knownIssue = issueFromSignedRemovePayload(row);
-            } else {
-              throw error;
-            }
-          }
+          // A remove webhook is already authenticated and its exact body is
+          // durable in the inbox. Reconcile from that signed snapshot instead
+          // of issuing a provider read that may fail after deletion.
+          knownIssue =
+            row.action === 'remove' && row.eventType === 'Issue'
+              ? issueFromSignedRemovePayload(row)
+              : await provider.getIssue(row.subjectId);
         }
         const outcome = await this.model.transaction((model, db) =>
           this.processRow(row, provider, { db, knownIssue, model }),

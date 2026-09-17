@@ -8,10 +8,7 @@ import { serverDBEnv } from '@/config/db';
 
 import * as schema from '../schemas';
 import type { LobeChatDatabase } from '../type';
-import {
-  normalizeNodePostgresConnectionString,
-  removeNodePostgresSslParameters,
-} from './connection-string';
+import { resolveNodePostgresConnectionOptions } from './connection-string';
 import { resolveNodePostgresPoolMax } from './pool-config';
 
 export const getDBInstance = (): LobeChatDatabase => {
@@ -48,14 +45,12 @@ If you don't have it, please run \`openssl rand -base64 32\` to create one.
     const poolMax = resolveNodePostgresPoolMax(process.env.VERCEL_ENV);
     const databaseSslCA = serverDBEnv.DATABASE_SSL_CA;
     const client = new NodePool({
-      connectionString: databaseSslCA
-        ? removeNodePostgresSslParameters(connectionString)
-        : normalizeNodePostgresConnectionString(
-            connectionString,
-            process.env.VERCEL_ENV === 'preview',
-          ),
+      ...resolveNodePostgresConnectionOptions(
+        connectionString,
+        databaseSslCA,
+        process.env.VERCEL_ENV,
+      ),
       ...(poolMax ? { max: poolMax } : {}),
-      ...(databaseSslCA ? { ssl: { ca: databaseSslCA, rejectUnauthorized: true } } : {}),
       ...timeoutConfig,
     });
     // pg.Pool emits 'error' on idle clients when the backend connection drops.

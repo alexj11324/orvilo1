@@ -10,6 +10,7 @@ import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
+import { LinearIntegrationTaskService } from '@/server/services/linearSync/integrationTask';
 import {
   buildLinearAuthorizationUrl,
   createLinearPkcePair,
@@ -42,7 +43,9 @@ const linearSyncProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
   });
 });
 
-const linearSyncWriteProcedure = linearSyncProcedure.use(withScopedPermission('agent:update'));
+const linearSyncWriteProcedure = linearSyncProcedure.use(
+  withScopedPermission('workspace:settings_update'),
+);
 
 const settingsSchema = z.object({
   assignmentMappings: z
@@ -171,6 +174,12 @@ export const linearSyncRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear binding not found' });
         const task = await ctx.taskModel.resolve(input.taskId);
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+        if (task.visibility !== 'public' || task.projectId !== binding.projectId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only public tasks in the bound project can be linked to Linear',
+          });
+        }
         const installation = await ctx.linearSyncModel.findInstallationById(binding.installationId);
         if (!installation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
@@ -180,6 +189,35 @@ export const linearSyncRouter = router({
           throw new TRPCError({ code: 'CONFLICT', message: 'Task is already linked to Linear' });
         }
 
+        const provider = createLinearGraphqlIssueProvider({
+          db: ctx.serverDB,
+          installationId: installation.id,
+          organizationId: installation.organizationId,
+          workspaceId: ctx.workspaceId!,
+        });
+        const remoteIssue = await provider.getIssue(input.linearIssueId);
+        if (
+          remoteIssue.id !== input.linearIssueId ||
+          remoteIssue.identifier !== input.linearIdentifier ||
+          remoteIssue.projectId !== binding.linearProjectId
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Linear issue is outside the bound project',
+          });
+        }
+        const inScope = await new LinearIntegrationTaskService(
+          ctx.serverDB,
+          ctx.workspaceId!,
+          installation.id,
+        ).validateIssueScope({ binding, installation, issue: remoteIssue });
+        if (!inScope) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Linear issue is outside the validated organization and team scope',
+          });
+        }
+
         return {
           data: await ctx.linearSyncModel.createIssueLink({
             bindingId: binding.id,
@@ -187,7 +225,7 @@ export const linearSyncRouter = router({
             linearIdentifier: input.linearIdentifier,
             linearIssueId: input.linearIssueId,
             organizationId: installation.organizationId,
-            remoteSnapshot: input.remoteSnapshot,
+            remoteSnapshot: remoteIssue,
             taskId: task.id,
           }),
           message: 'Linear issue linked',

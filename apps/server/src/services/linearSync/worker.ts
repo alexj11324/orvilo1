@@ -245,8 +245,37 @@ export class LinearSyncWorker {
         const issueLink = await this.model.findIssueLinkById(row.linkId);
         if (!issueLink) throw new Error('Linear issue link no longer exists');
 
+        const [binding, installation] = await Promise.all([
+          this.model.findBindingById(issueLink.bindingId),
+          this.model.findInstallationById(issueLink.installationId),
+        ]);
+        if (!binding || !installation || installation.status !== 'active') {
+          throw new Error('Linear issue link scope is unavailable');
+        }
+        if (
+          binding.installationId !== installation.id ||
+          issueLink.organizationId !== installation.organizationId
+        ) {
+          throw new Error('Linear issue link installation scope does not match');
+        }
+
         const updateInput = row.payload as LinearIssueUpdateInput;
         const current = await provider.getIssue(issueLink.linearIssueId);
+        const integrationTasks = new LinearIntegrationTaskService(
+          this.db,
+          this.workspaceId,
+          installation.id,
+        );
+        const task = await integrationTasks.findPublicTask(issueLink.taskId);
+        if (
+          !task ||
+          task.visibility !== 'public' ||
+          task.projectId !== binding.projectId ||
+          current.projectId !== binding.linearProjectId ||
+          !(await integrationTasks.validateIssueScope({ binding, installation, issue: current }))
+        ) {
+          throw new Error('Linear outbound write is outside the validated public binding scope');
+        }
         const updated = remoteMatchesUpdate(current, updateInput)
           ? current
           : await (async () => {

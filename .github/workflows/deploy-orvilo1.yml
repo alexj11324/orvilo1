@@ -144,7 +144,7 @@ jobs:
              sudo ORVILO_IMAGE_TAG='ghcr.io/${{ github.repository }}:sha-${{ github.sha }}' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d hatchet-worker"
           for i in $(seq 1 30); do
             if ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
-                 'sudo docker logs orvilo-hatchet-worker 2>&1 | tail -80' | grep -Eq 'Worker .* listening for actions'; then
+                 'sudo docker logs orvilo-hatchet-worker 2>&1 | tail -80' | grep -Eiq 'worker .* listening for actions'; then
               echo "Hatchet worker 已注册"
               break
             fi

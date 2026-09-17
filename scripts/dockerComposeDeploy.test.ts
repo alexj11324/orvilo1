@@ -28,6 +28,10 @@ const compose = parse(readFileSync(path.join(deployDirectory, 'docker-compose.ym
   volumes: Record<string, unknown>;
 };
 const dockerfile = readFileSync(path.resolve(import.meta.dirname, '../Dockerfile'), 'utf8');
+const deployWorkflow = readFileSync(
+  path.resolve(import.meta.dirname, '../.github/workflows/deploy-orvilo1.yml'),
+  'utf8',
+);
 const elasticsearchDockerfile = readFileSync(
   path.join(deployDirectory, 'elasticsearch/Dockerfile'),
   'utf8',
@@ -239,6 +243,10 @@ describe('deploy docker-compose optional Elasticsearch', () => {
       rmSync(outputDirectory, { force: true, recursive: true });
     }
   }, 60_000);
+
+  it('accepts Hatchet registration logs regardless of logger case', () => {
+    expect(deployWorkflow).toContain("grep -Eiq 'worker .* listening for actions'");
+  });
 
   it('never switches the search provider on behalf of the operator', () => {
     for (const service of [elasticsearch, reindex, sync, compose.services.lobe]) {

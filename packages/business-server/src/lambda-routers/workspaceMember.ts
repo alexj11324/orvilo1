@@ -47,6 +47,14 @@ const wrapInternal = (domain: string, error: unknown): never => {
 const inviteInput = z.object({
   emails: z.array(z.string().min(1).max(320)).min(1).max(50),
   projectIds: z.array(z.string().min(1)).optional(),
+  projectRoles: z
+    .array(
+      z.object({
+        projectId: z.string().min(1),
+        role: z.enum(['commenter', 'contributor', 'manager', 'viewer']),
+      }),
+    )
+    .optional(),
   role: z.enum(['admin', 'member', 'viewer']).default('member'),
 });
 
@@ -94,6 +102,7 @@ export const workspaceMemberRouter = router({
           inviterRole: ctx.workspaceRole ?? null,
           inviterUserId: ctx.userId,
           projectIds: input.projectIds,
+          projectRoles: input.projectRoles,
           role: input.role,
           workspaceId: ctx.workspaceId!,
         });

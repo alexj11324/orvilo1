@@ -133,6 +133,7 @@ export const issueInvitations = async (
     inviterRole: WorkspaceRoleName | null;
     inviterUserId: string;
     projectIds?: string[];
+    projectRoles?: { projectId: string; role: ProjectRoleName }[];
     role: InvitableRole;
     workspaceId: string;
   },
@@ -171,8 +172,13 @@ export const issueInvitations = async (
         });
       }
     }
-    const grantRole = capProjectRole(params.role, 'contributor');
-    projectGrants = projectIds.map((projectId) => ({ projectId, role: grantRole }));
+    const requestedRoles = new Map(
+      (params.projectRoles ?? []).map((entry) => [entry.projectId, entry.role]),
+    );
+    projectGrants = projectIds.map((projectId) => ({
+      projectId,
+      role: capProjectRole(params.role, requestedRoles.get(projectId) ?? 'contributor'),
+    }));
   }
 
   const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_DAYS * 86_400_000);
@@ -220,7 +226,7 @@ export const issueInvitations = async (
           workspaceId: params.workspaceId,
         });
         await recordAudit(tx, {
-          action: 'invite.created',
+          action: 'member.invited',
           ipAddress: params.ipAddress,
           metadata: { email: emailNormalized, projectIds, role: params.role },
           resourceId: created.invitation.id,
@@ -229,8 +235,8 @@ export const issueInvitations = async (
           workspaceId: params.workspaceId,
         });
         await emitWorkspaceEvent(tx, {
-          aggregateId: created.invitation.id,
-          aggregateType: 'workspace_invitation',
+          aggregateId: params.workspaceId,
+          aggregateType: 'workspace',
           eventType: 'workspace.invitation.created',
           payload: { invitationId: created.invitation.id },
           workspaceId: params.workspaceId,
@@ -465,7 +471,7 @@ export const acceptInvitation = async (
       }
 
       await recordAudit(tx, {
-        action: 'invite.accepted',
+        action: 'member.joined',
         ipAddress: params.ipAddress,
         metadata: { alreadyMember, invitationId: invitation.id },
         resourceId: invitation.id,
@@ -474,8 +480,8 @@ export const acceptInvitation = async (
         workspaceId: found.workspaceId,
       });
       await emitWorkspaceEvent(tx, {
-        aggregateId: invitation.id,
-        aggregateType: 'workspace_invitation',
+        aggregateId: found.workspaceId,
+        aggregateType: 'workspace',
         eventType: 'workspace.invitation.accepted',
         payload: { invitationId: invitation.id, userId: params.userId },
         workspaceId: found.workspaceId,
@@ -558,7 +564,7 @@ export const resendInvitation = async (
     const generation = rotated?.generation ?? locked.generation + 1;
 
     await recordAudit(tx, {
-      action: 'invite.resent',
+      action: 'invitation.resent',
       ipAddress: params.ipAddress,
       metadata: { generation },
       resourceId: invitation.id,
@@ -567,8 +573,8 @@ export const resendInvitation = async (
       workspaceId: invitation.workspaceId,
     });
     await emitWorkspaceEvent(tx, {
-      aggregateId: invitation.id,
-      aggregateType: 'workspace_invitation',
+      aggregateId: invitation.workspaceId,
+      aggregateType: 'workspace',
       eventType: 'workspace.invitation.resent',
       payload: { invitationId: invitation.id },
       workspaceId: invitation.workspaceId,
@@ -618,7 +624,7 @@ export const revokeInvitation = async (
       throw new TRPCError({ code: 'CONFLICT', message: 'Invitation is no longer pending' });
     }
     await recordAudit(tx, {
-      action: 'invite.revoked',
+      action: 'invitation.revoked',
       ipAddress: params.ipAddress,
       resourceId: invitation.id,
       resourceType: 'workspace_invitation',
@@ -626,8 +632,8 @@ export const revokeInvitation = async (
       workspaceId: invitation.workspaceId,
     });
     await emitWorkspaceEvent(tx, {
-      aggregateId: invitation.id,
-      aggregateType: 'workspace_invitation',
+      aggregateId: invitation.workspaceId,
+      aggregateType: 'workspace',
       eventType: 'workspace.invitation.revoked',
       payload: { invitationId: invitation.id },
       workspaceId: invitation.workspaceId,

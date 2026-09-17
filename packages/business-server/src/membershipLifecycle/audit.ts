@@ -3,15 +3,11 @@ import type { WorkspaceAuditAction } from '@/database/models/workspaceAuditLog';
 import { EventOutboxModel, newEventId } from '@/database/models/eventOutbox';
 import { WorkspaceAuditLogModel } from '@/database/models/workspaceAuditLog';
 
-/**
- * Audit actions emitted by the teammates lifecycle. The column is plain text;
- * the union type lags behind until the database slice extends it, so accept a
- * plain string and narrow at the write boundary.
- */
+/** Audit actions emitted by the teammates lifecycle; the column is plain text. */
 export const recordAudit = async (
   db: LobeChatDatabase,
   params: {
-    action: string;
+    action: WorkspaceAuditAction;
     ipAddress?: string;
     metadata?: Record<string, unknown>;
     resourceId?: string;
@@ -21,7 +17,7 @@ export const recordAudit = async (
   },
 ) => {
   await new WorkspaceAuditLogModel(db).create({
-    action: params.action as WorkspaceAuditAction,
+    action: params.action,
     ipAddress: params.ipAddress,
     metadata: params.metadata,
     resourceId: params.resourceId,

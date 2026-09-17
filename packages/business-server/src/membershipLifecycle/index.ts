@@ -113,7 +113,7 @@ export const changeMemberRole = async (
     await memberModel.updateMemberRole(params.workspaceId, params.targetUserId, params.role);
     await bumpAuthzVersion(tx, params.workspaceId, params.targetUserId);
     await recordAudit(tx, {
-      action: 'member.role_changed',
+      action: 'member.role_updated',
       ipAddress: params.ipAddress,
       metadata: { fromRole: target.role, toRole: params.role },
       resourceId: params.targetUserId,
@@ -122,8 +122,8 @@ export const changeMemberRole = async (
       workspaceId: params.workspaceId,
     });
     await emitWorkspaceEvent(tx, {
-      aggregateId: params.targetUserId,
-      aggregateType: 'workspace_member',
+      aggregateId: params.workspaceId,
+      aggregateType: 'workspace',
       eventType: 'workspace.member.role_changed',
       payload: { role: params.role, userId: params.targetUserId },
       workspaceId: params.workspaceId,
@@ -184,8 +184,8 @@ const setMemberSuspended = async (
       workspaceId: params.workspaceId,
     });
     await emitWorkspaceEvent(tx, {
-      aggregateId: params.targetUserId,
-      aggregateType: 'workspace_member',
+      aggregateId: params.workspaceId,
+      aggregateType: 'workspace',
       eventType: `workspace.${action}`,
       payload: { userId: params.targetUserId },
       workspaceId: params.workspaceId,
@@ -320,8 +320,8 @@ export const removeMember = async (
       workspaceId: params.workspaceId,
     });
     await emitWorkspaceEvent(tx, {
-      aggregateId: params.targetUserId,
-      aggregateType: 'workspace_member',
+      aggregateId: params.workspaceId,
+      aggregateType: 'workspace',
       eventType: 'workspace.member.removed',
       payload: { userId: params.targetUserId },
       workspaceId: params.workspaceId,
@@ -360,8 +360,8 @@ export const leaveWorkspace = async (
       workspaceId: params.workspaceId,
     });
     await emitWorkspaceEvent(tx, {
-      aggregateId: params.userId,
-      aggregateType: 'workspace_member',
+      aggregateId: params.workspaceId,
+      aggregateType: 'workspace',
       eventType: 'workspace.member.left',
       payload: { userId: params.userId },
       workspaceId: params.workspaceId,
@@ -400,7 +400,7 @@ export const transferWorkspaceOwnership = async (
         params.newOwnerUserId,
       );
       await recordAudit(tx, {
-        action: 'ownership.transferred',
+        action: 'workspace.primary_ownership_transferred',
         ipAddress: params.ipAddress,
         metadata: {
           newOwnerUserId: result.newPrimaryOwnerUserId,

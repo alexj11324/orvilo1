@@ -98,7 +98,7 @@ describe('personal mode (no workspace selected)', () => {
   it('grants the implicit-owner baseline over own content', async () => {
     const c = caller({});
 
-    await expect(c.scopedAgentUpdate()).resolves.toEqual({ workspaceRole: null });
+    await expect(c.scopedAgentUpdate()).resolves.toEqual({ workspaceRole: undefined });
     await expect(c.anyAgentWrite()).resolves.toBe('ok');
     // `:all`-scoped codes are NOT part of the personal baseline — widening
     // past own content still requires a real DB role.

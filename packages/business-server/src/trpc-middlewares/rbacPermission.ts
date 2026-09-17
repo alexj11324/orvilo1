@@ -151,7 +151,7 @@ const permissionMiddleware = (codes: string[], operator: 'all' | 'any') =>
     return opts.next({
       ctx: {
         membership,
-        workspaceRole: membership?.role ?? null,
+        workspaceRole: membership?.role ?? undefined,
       },
     });
   });

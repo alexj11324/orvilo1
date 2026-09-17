@@ -1,0 +1,41 @@
+name: PR26 Round3 Validation
+on:
+  push:
+    branches: [fix/pr26-review-round3]
+    paths: [.github/workflows/pr26-round3-validation.yml]
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: paradedb/paradedb:latest
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_DRIVER: node
+      TEST_SERVER_DB: '1'
+      NODE_OPTIONS: --max-old-space-size=8192
+    steps:
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 0 }
+      - uses: ./.github/actions/setup-env
+      - run: pnpm install
+      - name: Apply fixes
+        run: |
+          python .github/scripts/apply-pr26-round3.py
+          git diff --check
+          git add apps/server/src/services/task packages/database/src/models
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '🐛 fix(tasks): enforce graph-first lock and successor-safe recovery'
+          git push origin HEAD:fix/pr26-review-round3
+      - name: Tests
+        run: |
+          bunx vitest run --project server apps/server/src/services/task/index.test.ts apps/server/src/services/task/interruptedGeneration.test.ts
+          (cd packages/database && bunx vitest run --no-file-parallelism src/models/__tests__/taskInterruptedRun.test.ts src/models/interruptedRunFence.test.ts)
+      - run: pnpm type-check

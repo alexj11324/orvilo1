@@ -11,8 +11,6 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useClientDataSWR } from '@/libs/swr';
 import { lambdaClient } from '@/libs/trpc/client';
-import { useToolStore } from '@/store/tool';
-import { lobehubSkillStoreSelectors } from '@/store/tool/selectors';
 
 import { getIssueLinkUrl, type LinearIssueLinkView } from './linearSyncViewModel';
 
@@ -60,14 +58,13 @@ const LinearTaskSyncContext = createContext<LinearTaskSyncContextValue | null>(n
 
 export const LinearTaskSyncProvider = ({ children }: PropsWithChildren) => {
   const workspaceId = useActiveWorkspaceId();
-  const linearServer = useToolStore(lobehubSkillStoreSelectors.getServerByIdentifier('linear'));
   const { data } = useClientDataSWR(
-    workspaceId && linearServer?.isConnected ? 'linear-sync/issue-links' : null,
+    workspaceId ? `linear-sync/issue-links/${workspaceId}` : null,
     async () => {
       const response = await lambdaClient.linearSync.issueLinks.query({});
       return (response?.data ?? []) as LinearIssueLinkView[];
     },
-    { dedupingInterval: 30_000 },
+    { dedupingInterval: 30_000, refreshInterval: 30_000 },
   );
 
   const linksByTaskId = useMemo(

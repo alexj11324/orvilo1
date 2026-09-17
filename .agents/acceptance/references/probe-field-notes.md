@@ -644,7 +644,7 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
   LOBE_GOLDEN_PROFILE=/tmp/empty-golden ./electron-dev.sh start <id>
   ```
   Drive onboarding (`开始` → `下一步` ×2 → `登录 LobeHub Cloud`). The device-code flow opens the
-  browser and auto-approves against an existing app.lobehub.com session, giving the instance its
+  browser and auto-approves against an existing orvilo.aspectlylabs.com session, giving the instance its
   OWN token — so it never rotates the one the user's resident app holds.
 - **Why the blank shell has no login button**: the failed refresh leaves `isUserStateInit:false`
   (with `isLoaded:true, user:null`), and the desktop first-frame gate waits on it forever. Every
@@ -1124,7 +1124,7 @@ ingest-report <dir> --subject topic:<id> …` — and verify attachment in the D
     SKIP_LOGIN_SAVE=1 .agents/acceptance/scripts/electron-dev.sh start <id>
   ```
   The instance lands on `/desktop-onboarding`; drive 开始 → 下一步 ×2 → 登录 LobeHub Cloud and the
-  device-code flow auto-approves against the browser's existing app.lobehub.com session. A pristine
+  device-code flow auto-approves against the browser's existing orvilo.aspectlylabs.com session. A pristine
   profile defaults to production, so `remoteServerUrl` stays unset. `SKIP_LOGIN_SAVE=1` keeps `stop`
   from overwriting the user's real snapshot.
 
@@ -1209,7 +1209,7 @@ does not provide an export named 'MAX_ANALYSIS_...'`.
 - **Situation**: recreated test DB (or fresh profile) → Electron signed out; the saved snapshot's
   refresh token fails `signature verification failed`; the app must log into `localhost:3010`.
 - **Doesn't work**: `requestAuthorization({ storageMode: 'cloud' })` — that targets production
-  app.lobehub.com. Also the plain dev server rejects `/oidc/auth` with "OIDC is not enabled".
+  orvilo.aspectlylabs.com. Also the plain dev server rejects `/oidc/auth` with "OIDC is not enabled".
 - **Works**, end to end:
   1. Dev server needs `JWKS_KEY` (that is what flips `ENABLE_OIDC`): generate once with
      `node scripts/generate-oidc-jwk.mjs`, export, restart dev.

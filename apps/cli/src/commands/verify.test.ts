@@ -44,7 +44,7 @@ const { getTrpcClient: mockGetTrpcClient } = vi.hoisted(() => ({
 }));
 
 vi.mock('../api/client', () => ({ getTrpcClient: mockGetTrpcClient }));
-vi.mock('../settings', () => ({ resolveServerUrl: () => 'https://app.lobehub.com' }));
+vi.mock('../settings', () => ({ resolveServerUrl: () => 'https://orvilo.aspectlylabs.com' }));
 describe('verify rubric config commands', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>;
 
@@ -1315,7 +1315,7 @@ describe('lh acceptance — canonical run tree', () => {
     ]);
 
     const lines = consoleSpy.mock.calls.map((call) => String(call[0]));
-    expect(lines).toContain('report: https://app.lobehub.com/verify/run_1');
+    expect(lines).toContain('report: https://orvilo.aspectlylabs.com/verify/run_1');
   });
 
   it('includes the verification report URL in JSON output', async () => {
@@ -1335,7 +1335,7 @@ describe('lh acceptance — canonical run tree', () => {
     ]);
 
     const output = JSON.parse(consoleSpy.mock.calls.map((call) => String(call[0])).join(''));
-    expect(output.url).toBe('https://app.lobehub.com/verify/run_1');
+    expect(output.url).toBe('https://orvilo.aspectlylabs.com/verify/run_1');
   });
 
   it('exposes `acceptance install` defaulting to the acceptance skill', async () => {

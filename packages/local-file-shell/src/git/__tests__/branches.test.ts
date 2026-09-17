@@ -169,6 +169,25 @@ describe('removeGitWorktree', () => {
     );
   });
 
+  it('force-removes a dirty system-owned worktree', async () => {
+    const worktreeParent = await mkdtemp(path.join(tmpdir(), 'lfs-worktree-dirty-'));
+    cleanup.push(worktreeParent);
+    const linked = path.join(worktreeParent, 'dirty');
+    git(repo, 'worktree', 'add', '--detach', linked, 'HEAD');
+    const linkedRealPath = await realpath(linked);
+    await writeFile(path.join(linked, 'untracked.txt'), 'unfinished merge');
+
+    expect(await removeGitWorktree({ path: repo, worktreePath: linked })).toMatchObject({
+      success: false,
+    });
+    expect(existsSync(linkedRealPath)).toBe(true);
+
+    expect(await removeGitWorktree({ force: true, path: repo, worktreePath: linked })).toEqual({
+      success: true,
+    });
+    expect(existsSync(linkedRealPath)).toBe(false);
+  });
+
   it('refuses to remove the current worktree', async () => {
     expect(await removeGitWorktree({ path: repo, worktreePath: repo })).toEqual({
       error: 'Cannot remove the current worktree',
@@ -487,6 +506,7 @@ describe('finalizeGitMerge', () => {
     git(repo, 'checkout', '-b', 'task/T-5');
     await writeFile(path.join(repo, 'a.txt'), 'task side\n');
     git(repo, 'commit', '-am', 'task side');
+    const taskHead = git(repo, 'rev-parse', 'HEAD');
     git(repo, 'checkout', 'main');
     await writeFile(path.join(repo, 'a.txt'), 'base side\n');
     git(repo, 'commit', '-am', 'base side');
@@ -500,7 +520,7 @@ describe('finalizeGitMerge', () => {
     await writeFile(path.join(repo, 'a.txt'), 'resolved\n');
     git(repo, 'add', 'a.txt');
 
-    const result = await finalizeGitMerge({ path: repo });
+    const result = await finalizeGitMerge({ expectedHead: taskHead, path: repo });
     expect(result.state).toBe('integrated');
     expect(result.sha).toBe(git(repo, 'rev-parse', 'HEAD'));
     expect(await readFile(path.join(repo, 'a.txt'), 'utf8')).toBe('resolved\n');

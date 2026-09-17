@@ -3,7 +3,7 @@ import urlJoin from 'url-join';
 
 import { appEnv } from '@/envs/app';
 
-const cloudAppOrigins = ['https://app.lobehub.com', 'https://lobehub.com'];
+const cloudAppOrigins = ['https://orvilo.aspectlylabs.com', 'https://lobehub.com'];
 const appUrl = appEnv.APP_URL!;
 const desktopAppOrigins = cloudAppOrigins.includes(new URL(appUrl).origin)
   ? cloudAppOrigins

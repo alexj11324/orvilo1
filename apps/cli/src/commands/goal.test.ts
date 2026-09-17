@@ -27,7 +27,7 @@ vi.mock('../api/client', () => ({ getTrpcClient: vi.fn().mockResolvedValue(mockC
 vi.mock('./task/url', () => ({
   resolveAppUrlBuilder: vi
     .fn()
-    .mockResolvedValue((pathname: string) => `https://app.lobehub.com${pathname}`),
+    .mockResolvedValue((pathname: string) => `https://orvilo.aspectlylabs.com${pathname}`),
 }));
 const createProgram = () => {
   const program = new Command();
@@ -429,7 +429,7 @@ describe('goal create command', () => {
       .mock.calls.map(([value]) => (value === undefined ? '' : String(value)))
       .join('\n');
 
-    expect(output).toContain('https://app.lobehub.com/goal/goal_PrUIwfSnU9TH');
+    expect(output).toContain('https://orvilo.aspectlylabs.com/goal/goal_PrUIwfSnU9TH');
     expect(output).not.toContain('/goal/undefined');
   });
 

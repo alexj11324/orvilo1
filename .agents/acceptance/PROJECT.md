@@ -187,9 +187,11 @@ stale standalone install: a recently added workspace package fails to resolve �
 - **Local-run vs publish env distinction:** those seeded overrides are for
   _running_ the local backend test. They are WRONG for _publishing_ — a localhost
   run yields a verify URL nobody else can open, and the local stub S3 makes
-  evidence upload fail. Strip them for the publish step (the skill's Step 6 does
-  `env -u LOBEHUB_SERVER -u LOBE_API_KEY -u LOBEHUB_CLI_API_KEY -u LOBEHUB_CLI_HOME lh verify ingest-report …`
-  so `lh` uses production defaults + the user's real `~/.lobehub` login).
+  evidence upload fail. Strip the local credentials and CLI home for the publish
+  step, while pinning Orvilo explicitly (the skill's Step 6 does
+  `env -u LOBE_API_KEY -u LOBEHUB_CLI_API_KEY -u LOBEHUB_CLI_HOME LOBEHUB_SERVER=https://orvilo.aspectlylabs.com lh verify ingest-report …`
+  so `lh` cannot fall back to an upstream host and still uses the user's real
+  `~/.lobehub` login).
 
 - Standalone install: `cd apps/cli && pnpm install` (root install does not cover it).
 

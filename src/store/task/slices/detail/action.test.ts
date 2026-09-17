@@ -99,6 +99,19 @@ describe('TaskDetailSliceAction', () => {
       expect(useTaskStore.getState().isCreatingTask).toBe(false);
     });
 
+    it('returns the committed identifier when the follow-up cache refresh fails', async () => {
+      vi.mocked(taskService.create).mockResolvedValue({
+        data: { identifier: 'T-1' },
+        success: true,
+      } as any);
+      useTaskStore.setState({ refreshTaskList: vi.fn().mockRejectedValue(new Error('offline')) });
+
+      await expect(
+        useTaskStore.getState().createTask({ instruction: 'Do something' }),
+      ).resolves.toMatchObject({ identifier: 'T-1' });
+      expect(taskService.create).toHaveBeenCalledTimes(1);
+    });
+
     it('should reject and reset isCreatingTask on error (callers own the error path)', async () => {
       vi.mocked(taskService.create).mockRejectedValue(new Error('fail'));
 

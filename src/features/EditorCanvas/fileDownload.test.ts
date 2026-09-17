@@ -14,15 +14,17 @@ describe('fileDownload', () => {
   it('requests attachment delivery for file proxy URLs', () => {
     expect(
       getFileDownloadUrl('/f/file_123', {
-        baseUrl: 'https://app.lobehub.com/tasks/T-201',
+        baseUrl: 'https://orvilo.aspectlylabs.com/tasks/T-201',
       }),
-    ).toBe('https://app.lobehub.com/f/file_123?download=1');
+    ).toBe('https://orvilo.aspectlylabs.com/f/file_123?download=1');
   });
 
   it('keeps unregistered direct storage URLs unchanged', () => {
     const url = 'https://storage.example.com/video.mp4?X-Amz-Signature=signature';
 
-    expect(getFileDownloadUrl(url, { baseUrl: 'https://app.lobehub.com/tasks/T-201' })).toBe(url);
+    expect(
+      getFileDownloadUrl(url, { baseUrl: 'https://orvilo.aspectlylabs.com/tasks/T-201' }),
+    ).toBe(url);
   });
 
   it('routes direct storage URLs through the stable file download proxy', () => {
@@ -30,10 +32,10 @@ describe('fileDownload', () => {
 
     expect(
       getFileDownloadUrl(url, {
-        downloadUrl: 'https://app.lobehub.com/f/file_video',
+        downloadUrl: 'https://orvilo.aspectlylabs.com/f/file_video',
         fileId: 'file_video',
       }),
-    ).toBe('https://app.lobehub.com/f/file_video?download=1');
+    ).toBe('https://orvilo.aspectlylabs.com/f/file_video?download=1');
   });
 
   it('opens the download synchronously in a new tab', () => {
@@ -52,7 +54,7 @@ describe('fileDownload', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     seedAttachments([
       {
-        downloadUrl: 'https://app.lobehub.com/f/file_historical',
+        downloadUrl: 'https://orvilo.aspectlylabs.com/f/file_historical',
         id: 'file_historical',
         url: 'https://storage.example.com/tasks/report.pdf?X-Amz-Signature=current',
       },
@@ -61,7 +63,7 @@ describe('fileDownload', () => {
     openFileDownload('https://storage.example.com/tasks/report.pdf?X-Amz-Signature=historical');
 
     expect(open).toHaveBeenCalledWith(
-      'https://app.lobehub.com/f/file_historical?download=1',
+      'https://orvilo.aspectlylabs.com/f/file_historical?download=1',
       '_blank',
       'noopener,noreferrer',
     );

@@ -231,7 +231,7 @@ const ssrModuleTrace = (needle: string): Plugin => ({
   name: 'workbench-ssr-module-trace',
 });
 
-const proxyTarget = process.env.WORKBENCH_API_PROXY || 'https://app.lobehub.com';
+const proxyTarget = process.env.WORKBENCH_API_PROXY || 'https://orvilo.aspectlylabs.com';
 
 const buildInputIds = new Set<string>();
 

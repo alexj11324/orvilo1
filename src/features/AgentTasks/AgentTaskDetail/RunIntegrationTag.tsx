@@ -1,7 +1,7 @@
 'use client';
 
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
+import { Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskTopicIntegration } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
@@ -11,10 +11,14 @@ import {
   CircleMinus,
   CircleX,
   Loader2,
+  RefreshCw,
   TriangleAlert,
 } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { taskService } from '@/services/task';
+import { useTaskStore } from '@/store/task';
 
 /**
  * A run row's workspace-integration state — where the branch this run produced
@@ -39,15 +43,21 @@ const STATE_META: Record<
   integrated: { color: cssVar.colorSuccess, icon: CircleCheck },
   merging: { color: cssVar.colorInfo, icon: Loader2, spin: true },
   pending: { color: cssVar.colorTextTertiary, icon: CircleDashed },
+  publish_failed: { color: cssVar.colorError, icon: CircleX },
   skipped: { color: cssVar.colorTextTertiary, icon: CircleMinus },
+  verification_pending: { color: cssVar.colorWarning, icon: TriangleAlert },
 };
 
 interface RunIntegrationTagProps {
   integration?: TaskTopicIntegration | null;
+  taskId?: string;
+  topicId?: string;
 }
 
-const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration }) => {
+const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, topicId }) => {
   const { t } = useTranslation('chat');
+  const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
+  const [retrying, setRetrying] = useState(false);
 
   // Runs without a provisioned worktree have nothing to integrate — the row
   // keeps exactly what it has today.
@@ -59,6 +69,22 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration }) => {
   const label = t(`taskDetail.integration.state.${integration.state}` as const, {
     defaultValue: integration.state,
   });
+  const retryable =
+    integration.state === 'publish_failed' || integration.state === 'verification_pending';
+
+  const retry = async () => {
+    if (!taskId || !topicId || retrying) return;
+    setRetrying(true);
+    try {
+      await taskService.retryIntegration(taskId, topicId);
+      await refreshTaskDetail(taskId);
+      toast.success(t('taskDetail.integration.retryStarted'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('taskDetail.integration.retryFailed'));
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const tooltip = (
     <Flexbox gap={4} style={{ maxWidth: 320 }}>
@@ -97,6 +123,23 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration }) => {
           {t('taskDetail.integration.openPr')}
         </a>
       )}
+      {retryable && taskId && topicId && (
+        <Button
+          icon={<RefreshCw size={12} />}
+          loading={retrying}
+          size={'small'}
+          onClick={(event) => {
+            event.stopPropagation();
+            void retry();
+          }}
+        >
+          {t(
+            integration.state === 'publish_failed'
+              ? 'taskDetail.integration.retryPublish'
+              : 'taskDetail.integration.recheck',
+          )}
+        </Button>
+      )}
     </Flexbox>
   );
 
@@ -105,9 +148,9 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration }) => {
       <Tag
         icon={<Icon color={meta.color} icon={meta.icon} size={12} spin={meta.spin} />}
         size={'small'}
-        style={{ cursor: integration.prUrl ? 'pointer' : undefined, flexShrink: 0 }}
+        style={{ cursor: integration.prUrl && !retryable ? 'pointer' : undefined, flexShrink: 0 }}
         onClick={
-          integration.prUrl
+          integration.prUrl && !retryable
             ? (event) => {
                 event.stopPropagation();
                 window.open(integration.prUrl, '_blank', 'noopener,noreferrer');

@@ -294,7 +294,7 @@ describe('streamAgentEventsViaWebSocket', () => {
     const promise = streamAgentEventsViaWebSocket({
       gatewayUrl: 'https://gw.test.com',
       operationId: 'op-1',
-      serverUrl: 'https://app.lobehub.com',
+      serverUrl: 'https://orvilo.aspectlylabs.com',
       token: 'lh_sk_abc',
       tokenType: 'apiKey',
     });
@@ -305,7 +305,7 @@ describe('streamAgentEventsViaWebSocket', () => {
     // serverUrl is forwarded so the gateway can call back to /api/v1/users/me
     // to verify the API key.
     expect(ws.sent.map((s) => JSON.parse(s))[0]).toEqual({
-      serverUrl: 'https://app.lobehub.com',
+      serverUrl: 'https://orvilo.aspectlylabs.com',
       token: 'lh_sk_abc',
       tokenType: 'apiKey',
       type: 'auth',

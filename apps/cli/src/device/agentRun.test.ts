@@ -47,7 +47,7 @@ const baseParams = {
   jwt: 'jwt',
   operationId: 'op',
   prompt: 'hi',
-  serverUrl: 'https://app.lobehub.com',
+  serverUrl: 'https://orvilo.aspectlylabs.com',
   topicId: 'tpc',
 };
 
@@ -105,7 +105,7 @@ describe('spawnHeteroAgentRun', () => {
         [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
         LOBEHUB_ASSISTANT_MESSAGE_ID: 'asst',
         LOBEHUB_JWT: 'jwt-token',
-        LOBEHUB_SERVER: 'https://app.lobehub.com',
+        LOBEHUB_SERVER: 'https://orvilo.aspectlylabs.com',
       }),
       windowsHide: true,
     });

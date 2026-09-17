@@ -21,7 +21,7 @@ vi.mock('@/server/services/file', () => ({
   FileService: vi.fn().mockImplementation(function () {
     return { getFullFileUrl: mocks.getFullFileUrl };
   }),
-  getFileProxyUrl: (fileId: string) => `https://app.lobehub.com/f/${fileId}`,
+  getFileProxyUrl: (fileId: string) => `https://orvilo.aspectlylabs.com/f/${fileId}`,
 }));
 
 describe('resolveAttachmentMetadata', () => {
@@ -51,7 +51,7 @@ describe('resolveAttachmentMetadata', () => {
 
     expect(result).toEqual([
       {
-        downloadUrl: 'https://app.lobehub.com/f/file_historical',
+        downloadUrl: 'https://orvilo.aspectlylabs.com/f/file_historical',
         fileType: 'application/pdf',
         id: 'file_historical',
         name: 'report.pdf',

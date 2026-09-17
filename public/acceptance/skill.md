@@ -41,4 +41,4 @@ instructions and referenced resources. Do not replace it with this installation 
 
 Tell the user which project was configured and whether installation completed.
 The user can then invoke `/acceptance` in their coding agent to verify a delivery.
-Published reviews appear at <https://app.lobehub.com/acceptance>.
+Published reviews appear at <https://orvilo.aspectlylabs.com/acceptance>.

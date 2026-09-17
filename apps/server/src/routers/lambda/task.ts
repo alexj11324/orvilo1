@@ -881,12 +881,19 @@ export const taskRouter = router({
         createdByUserId: restrictToCreator ? ctx.userId : undefined,
         limit: 10_000,
       });
-      await Promise.allSettled(
+      const cleanupResults = await Promise.all(
         doomed.map((task) => ctx.taskIntegration.cleanupTaskWorktrees(task.id)),
       );
+      if (cleanupResults.some((complete) => !complete)) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Some task workspaces are still active. Stop their runs and try again.',
+        });
+      }
       const count = await model.deleteAll({ restrictToCreator });
       return { count, message: `${count} tasks deleted`, success: true };
     } catch (error) {
+      if (error instanceof TRPCError) throw error;
       console.error('[task:clearAll]', error);
       throw new TRPCError({
         cause: error,
@@ -902,8 +909,15 @@ export const taskRouter = router({
       const task = await resolveOrThrow(model, input.id);
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
       // Tear down provisioned run worktrees before the task_topics rows
-      // cascade away with the task. Best-effort — never blocks the delete.
-      await ctx.taskIntegration.cleanupTaskWorktrees(task.id);
+      // cascade away with the task. Keep the task when an active owner or
+      // device failure leaves cleanup incomplete so its metadata is retryable.
+      const cleanupComplete = await ctx.taskIntegration.cleanupTaskWorktrees(task.id);
+      if (!cleanupComplete) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task workspace cleanup is still active. Stop the run and try again.',
+        });
+      }
       await model.delete(task.id);
       return { data: task, message: 'Task deleted', success: true };
     } catch (error) {
@@ -1254,6 +1268,35 @@ export const taskRouter = router({
           message: 'Failed to run task',
         });
       }
+    }),
+
+  retryIntegration: taskProcedureWrite
+    .input(z.object({ id: z.string(), topicId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      const topic = await ctx.taskTopicModel.findByTopicId(input.topicId);
+      if (!topic || topic.taskId !== task.id || !topic.integration) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Integration run not found' });
+      }
+      if (
+        topic.integration.state !== 'publish_failed' &&
+        topic.integration.state !== 'verification_pending'
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `Integration is not retryable from ${topic.integration.state}`,
+        });
+      }
+
+      await ctx.taskLifecycle.onTopicComplete({
+        operationId: topic.operationId ?? `integration-retry:${input.topicId}`,
+        reason: 'done',
+        runTrigger: topic.trigger ?? 'manual',
+        taskId: task.id,
+        taskIdentifier: task.identifier,
+        topicId: input.topicId,
+      });
+      return { success: true };
     }),
 
   pinDocument: taskProcedureWrite

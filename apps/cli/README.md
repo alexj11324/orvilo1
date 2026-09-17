@@ -17,7 +17,7 @@ LobeHub command-line interface.
 
 ## Custom Server URL
 
-By default the CLI connects to `https://app.lobehub.com`. To point it at a different server (e.g. a local instance):
+By default the CLI connects to `https://orvilo.aspectlylabs.com`. To point it at a different server (e.g. a local instance):
 
 | Method               | Command                                                         | Persistence                         |
 | -------------------- | --------------------------------------------------------------- | ----------------------------------- |

@@ -23,7 +23,7 @@ vi.mock('../auth/identity', () => ({
   resolveIdentityFingerprint: mockResolveIdentityFingerprint,
 }));
 
-const SERVER = 'https://app.lobehub.com';
+const SERVER = 'https://orvilo.aspectlylabs.com';
 const stored = (overrides: Record<string, string> = {}) => ({
   identity: 'user:u1',
   serverUrl: SERVER,
@@ -133,7 +133,7 @@ describe('api/workspace scope resolution', () => {
       [
         'names the other server',
         () => mockResolveServerUrl.mockReturnValue('https://self-hosted.example.com'),
-        'https://app.lobehub.com',
+        'https://orvilo.aspectlylabs.com',
       ],
     ])('%s', (_label, arrange, expected) => {
       mockLoadActiveWorkspace.mockReturnValue(stored());

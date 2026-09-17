@@ -79,6 +79,8 @@ const {
   messageCreateMock,
   operationFindByIdMock,
   runTaskMock,
+  taskWorktreeCleanupMock,
+  topicDeleteMock,
   topicFindByIdMock,
 } = vi.hoisted(() => ({
   cascadeManyMock: vi.fn(),
@@ -88,12 +90,14 @@ const {
   messageCreateMock: vi.fn(),
   operationFindByIdMock: vi.fn(),
   runTaskMock: vi.fn(),
+  taskWorktreeCleanupMock: vi.fn(),
+  topicDeleteMock: vi.fn(),
   topicFindByIdMock: vi.fn(),
 }));
 
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
-    return { delete: vi.fn(), findById: topicFindByIdMock };
+    return { delete: topicDeleteMock, findById: topicFindByIdMock };
   }),
 }));
 
@@ -120,6 +124,12 @@ vi.mock('@/server/services/taskRunner', () => ({
       cascadeOnCompletionMany: cascadeManyMock,
       runTask: runTaskMock,
     };
+  }),
+}));
+
+vi.mock('@/server/services/taskIntegration', () => ({
+  TaskIntegrationService: vi.fn().mockImplementation(function () {
+    return { cleanupTaskWorktrees: taskWorktreeCleanupMock };
   }),
 }));
 
@@ -185,6 +195,7 @@ describe('TaskService', () => {
     findRunningByTaskIds: vi.fn().mockResolvedValue([]),
     findWithHandoff: vi.fn(),
     findWithHandoffByTaskIds: vi.fn().mockResolvedValue([]),
+    remove: vi.fn(),
     timeoutRunning: vi.fn(),
     updateStatus: vi.fn(),
   };
@@ -208,6 +219,7 @@ describe('TaskService', () => {
     scheduleNextTopic.mockResolvedValue('tick-new');
     resolveTaskAcceptance.mockResolvedValue(undefined);
     cascadeManyMock.mockResolvedValue({ failed: [], paused: [], started: [] });
+    taskWorktreeCleanupMock.mockResolvedValue(true);
     mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([]);
     mockTaskModel.getActivities.mockResolvedValue([]);
     (AgentModel as any).mockImplementation(function () {
@@ -227,6 +239,45 @@ describe('TaskService', () => {
     });
     (WorkspaceMemberModel as any).mockImplementation(function () {
       return mockWorkspaceMemberModel;
+    });
+  });
+
+  describe('deleteTopic', () => {
+    it('marks a confirmed interrupted topic terminal before cleaning its worktrees', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue({
+        operationId: 'op-1',
+        status: 'running',
+        taskId: 'task-1',
+        topicId: 'topic-1',
+      });
+      mockTaskTopicModel.cancelIfRunning.mockResolvedValue(true);
+
+      const service = new TaskService(db, userId, 'workspace-1');
+      await service.deleteTopic('topic-1');
+
+      expect(interruptTaskMock).toHaveBeenCalledWith({ operationId: 'op-1' });
+      expect(mockTaskTopicModel.cancelIfRunning).toHaveBeenCalledWith('task-1', 'topic-1');
+      expect(taskWorktreeCleanupMock).toHaveBeenCalledWith('task-1');
+      expect(mockTaskTopicModel.cancelIfRunning.mock.invocationCallOrder[0]).toBeLessThan(
+        taskWorktreeCleanupMock.mock.invocationCallOrder[0],
+      );
+      expect(mockTaskTopicModel.remove).toHaveBeenCalledWith('task-1', 'topic-1');
+      expect(topicDeleteMock).toHaveBeenCalledWith('topic-1');
+    });
+
+    it('keeps the topic row when workspace cleanup is incomplete', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue({
+        status: 'completed',
+        taskId: 'task-1',
+        topicId: 'topic-1',
+      });
+      taskWorktreeCleanupMock.mockResolvedValue(false);
+
+      const service = new TaskService(db, userId, 'workspace-1');
+
+      await expect(service.deleteTopic('topic-1')).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(mockTaskTopicModel.remove).not.toHaveBeenCalled();
+      expect(topicDeleteMock).not.toHaveBeenCalled();
     });
   });
 

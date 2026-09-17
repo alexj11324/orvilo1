@@ -7,6 +7,7 @@ import { AcceptanceModel } from '@/database/models/acceptance';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TaskService } from '@/server/services/task';
+import { TaskIntegrationService } from '@/server/services/taskIntegration';
 
 import { taskRouter } from '../../task';
 import {
@@ -1009,6 +1010,40 @@ describe('Task Router Integration', () => {
 
       const list = await caller.list({});
       expect(list.data).toHaveLength(0);
+    });
+
+    it('keeps every task when a workspace cleanup is still active', async () => {
+      await caller.create({ instruction: 'Task 1' });
+      await caller.create({ instruction: 'Task 2' });
+      const cleanup = vi
+        .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      try {
+        await expect(caller.clearAll()).rejects.toMatchObject({ code: 'CONFLICT' });
+        expect((await caller.list({})).data).toHaveLength(2);
+      } finally {
+        cleanup.mockRestore();
+      }
+    });
+  });
+
+  describe('delete', () => {
+    it('keeps the task when its workspace cleanup is still active', async () => {
+      const task = await caller.create({ instruction: 'Task 1' });
+      const cleanup = vi
+        .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
+        .mockResolvedValue(false);
+
+      try {
+        await expect(caller.delete({ id: task.data.id })).rejects.toMatchObject({
+          code: 'CONFLICT',
+        });
+        expect((await caller.find({ id: task.data.id })).data.id).toBe(task.data.id);
+      } finally {
+        cleanup.mockRestore();
+      }
     });
   });
 

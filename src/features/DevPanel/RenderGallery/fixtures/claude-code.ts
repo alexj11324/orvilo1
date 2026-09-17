@@ -442,7 +442,7 @@ export default defineFixtures({
     TaskOutput: single({
       args: { block: false, task_id: 'task-build-2025-04-25', timeout_ms: 8000 },
       content:
-        '✅  Vite: compile and bundle finished (200) http://localhost:9876/\nDebug Proxy: https://app.lobehub.com/_dangerous_local_dev_proxy?debug-host=http://localhost:9876',
+        '✅  Vite: compile and bundle finished (200) http://localhost:9876/\nDebug Proxy: https://orvilo.aspectlylabs.com/_dangerous_local_dev_proxy?debug-host=http://localhost:9876',
     }),
     TaskStop: single({
       args: { task_id: 'task-build-2025-04-25' },

@@ -34,7 +34,7 @@ import type { ToolDiscoveryMeta } from '../../providers/ToolDiscoveryProvider';
 import type { TopicReferenceItem } from '../../providers/TopicReferenceContextInjector';
 import type { WorkspaceContext } from '../../providers/WorkspaceContextInjector';
 import type { PipelineContextMetadata } from '../../types';
-import type { LobeToolManifest } from '../tools/types';
+import type { OrviloToolManifest } from '../tools/types';
 
 /**
  * Model capability checker
@@ -68,7 +68,7 @@ export interface ToolsConfig {
   /** Tool identifiers that must be removed from historical tool calls in this runtime scope */
   disabledToolIdentifiers?: string[];
   /** Tool manifests with systemRole and API definitions */
-  manifests?: LobeToolManifest[];
+  manifests?: OrviloToolManifest[];
   /** Enabled tool IDs (kept for compatibility) */
   tools?: string[];
 }

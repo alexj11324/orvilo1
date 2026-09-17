@@ -13,13 +13,13 @@ export interface LoadSnapshotOptions {
   allowDownload?: boolean;
   /**
    * Leaf directory holding the snapshots, resolved against `rootDir`. Defaults
-   * to `.agent-tracing`; the CLI passes its own (`~/.lobehub/traces`).
+   * to `.agent-tracing`; the CLI passes its own (`~/.orvilo/traces`).
    */
   dirName?: string;
   /**
    * Resolve the download URL for an operation id, instead of building one from
    * `TRACING_BASE_URL`. Lets an authenticated caller (`lh`) reach the object
-   * through the LobeHub server — which knows the key from
+   * through the Orvilo server — which knows the key from
    * `agent_operations.trace_s3_key` and signs it for the caller's own scope —
    * so no public bucket domain has to be configured. Returning `null` falls
    * back to `TRACING_BASE_URL`.
@@ -63,7 +63,7 @@ const isUrl = (target: string) => target.startsWith('http://') || target.startsW
  * traceId, `latest`, or nothing (latest local).
  *
  * Shared by the `agent-tracing` CLI and by `lh trace`, which needs the same
- * resolution but reaches the model through the authenticated LobeHub server.
+ * resolution but reaches the model through the authenticated Orvilo server.
  */
 export async function loadSnapshot(
   target?: string,

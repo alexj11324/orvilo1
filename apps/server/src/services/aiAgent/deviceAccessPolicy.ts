@@ -11,7 +11,7 @@ export type DeviceAccessReason =
   /** Bot caller, sender matches the configured owner platform ID. */
   | 'bot-owner'
   /**
-   * Bot caller on a platform whose LobeHub integration is structurally
+   * Bot caller on a platform whose Orvilo integration is structurally
    * personal-scope (no group chat surfaced, no `settings.userId` to gate
    * on). See `PERSONAL_SCOPE_BOT_PLATFORMS` below.
    */
@@ -40,7 +40,7 @@ export type DeviceAccessReason =
   | 'share-visitor';
 
 /**
- * Bot platforms whose LobeHub integration is **personal-scope-only at the
+ * Bot platforms whose Orvilo integration is **personal-scope-only at the
  * integration layer**. Two conditions must hold to qualify:
  *
  *   1. The platform's chat-adapter encodes every inbound thread as 1:1

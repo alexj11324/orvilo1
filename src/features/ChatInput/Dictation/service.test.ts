@@ -27,7 +27,7 @@ const responseBody = {
 describe('createRealtimeAsrSession', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('uses the provider-neutral Lobe Session API and validates its frozen contract', async () => {
+  it('uses the provider-neutral Orvilo Session API and validates its frozen contract', async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(responseBody), {
         headers: { 'Content-Type': 'application/json' },

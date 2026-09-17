@@ -13,7 +13,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { documents } from '../../schemas/file';
 import { tasks } from '../../schemas/task';
 import { works, workVersions } from '../../schemas/work';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { documentOwnership, type WorkContext, workOwnership } from './context';
 import {
   type CreateVersionInput,
@@ -147,7 +147,7 @@ export const registerWorkVersion = async (
   for (let attempt = 0; attempt < MAX_VERSION_CREATE_RETRIES; attempt += 1) {
     try {
       return await ctx.db.transaction(async (tx) => {
-        const txCtx: WorkContext = { ...ctx, db: tx as LobeChatDatabase };
+        const txCtx: WorkContext = { ...ctx, db: tx as OrviloDatabase };
 
         // Bare ON CONFLICT handles either owner-scope partial unique index. A
         // conflict performs no UPDATE, so an idempotent replay cannot bump

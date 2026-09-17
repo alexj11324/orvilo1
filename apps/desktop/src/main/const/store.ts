@@ -11,7 +11,7 @@ import type { ElectronMainStore } from '@/types/store';
 /**
  * Storage name
  */
-export const STORE_NAME = 'lobehub-settings';
+export const STORE_NAME = 'orvilo-settings';
 
 export const defaultProxySettings: NetworkProxySettings = {
   enableProxy: false,
@@ -31,7 +31,7 @@ export const STORE_DEFAULTS: ElectronMainStore = {
   encryptedTokens: {},
   gatewayDeviceId: '',
   gatewayEnabled: true,
-  gatewayUrl: 'https://device-gateway.lobehub.com',
+  gatewayUrl: 'https://device-gateway.aspectlylabs.com',
   gatewayWorkspaceEnrollments: [],
   heteroSessionDirPrefs: {},
   heteroTracingEnabled: false,

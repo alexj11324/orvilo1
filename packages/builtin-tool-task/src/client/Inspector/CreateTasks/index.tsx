@@ -68,7 +68,7 @@ export const CreateTasksInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-task.apiName.createTasks')}
+          {t('builtins.orvilo-task.apiName.createTasks')}
         </span>
       </div>
     );
@@ -77,11 +77,11 @@ export const CreateTasksInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-task.apiName.createTasks')}
+        {t('builtins.orvilo-task.apiName.createTasks')}
       </span>
       {count > 0 && (
         <span className={styles.countBadge}>
-          {t('builtins.lobe-task.createTasks.count', { count })}
+          {t('builtins.orvilo-task.createTasks.count', { count })}
         </span>
       )}
       {previewName && (
@@ -90,7 +90,7 @@ export const CreateTasksInspector = memo<
           <span className={styles.previewChip}>{previewName}</span>
           {remaining > 0 && (
             <span className={styles.moreBadge}>
-              {t('builtins.lobe-task.createTasks.more', { count: remaining })}
+              {t('builtins.orvilo-task.createTasks.more', { count: remaining })}
             </span>
           )}
         </>

@@ -46,12 +46,12 @@ describe('socialProfileRouter.submitRepo', () => {
 
     await caller.submitRepo({
       actAs: 123,
-      gitUrl: 'https://github.com/lobehub/example-skill',
+      gitUrl: 'https://github.com/alexj11324/example-skill',
       type: 'skill',
     });
 
     const call = fetchSpy.mock.calls[0] as [string, RequestInit] | undefined;
     expect(String(call?.[0])).toMatch(/\/api\/v1\/user\/claims\/submit-repo$/);
-    expect((call?.[1]?.headers as Record<string, string>)['x-lobe-owner-account-id']).toBe('123');
+    expect((call?.[1]?.headers as Record<string, string>)['x-orvilo-owner-account-id']).toBe('123');
   });
 });

@@ -35,7 +35,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
     });
   const { filePath, plan, workingDirectory } = input;
   const identifier = workspaceHtmlArtifactIdentifierForFile(filePath, workingDirectory);
-  const relativeTargetDirectory = `.lobe-artifacts/${identifier}`;
+  const relativeTargetDirectory = `.orvilo-artifacts/${identifier}`;
   const failedPaths = new Set(failed.map((item) => item.absolutePath));
   return (
     <>

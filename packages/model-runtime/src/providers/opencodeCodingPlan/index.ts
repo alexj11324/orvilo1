@@ -1,5 +1,5 @@
 import { pickNonEmptyString } from '@orvilo/utils/object';
-import { LOBE_DEFAULT_MODEL_LIST, ModelProvider } from 'model-bank';
+import { ModelProvider, ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 import type OpenAI from 'openai';
 
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
@@ -440,7 +440,7 @@ const buildOpenAIPayload = (
 // ============================================================================
 
 // OpenAI-compatible runtime for non-Anthropic models
-const LobeOpenCodeCodingPlanOpenAI = createOpenAICompatibleRuntime({
+const OrviloOpenCodeCodingPlanOpenAI = createOpenAICompatibleRuntime({
   provider: ModelProvider.OpenCodeCodingPlan,
   baseURL: GO_BASE_URL,
   chatCompletion: { handlePayload: buildOpenAIPayload },
@@ -513,7 +513,7 @@ export const params = {
         apiType: 'deepseek',
         models: resolveProviderRouteModels(
           'deepseek',
-          LOBE_DEFAULT_MODEL_LIST,
+          ORVILO_DEFAULT_MODEL_LIST,
           runtimeContext?.model,
         ),
         options: { ...options, baseURL, sdkType: 'openai' },
@@ -521,18 +521,18 @@ export const params = {
       // OpenAI-compatible fallback for all other models
       {
         apiType: 'openai',
-        runtime: LobeOpenCodeCodingPlanOpenAI as any,
+        runtime: OrviloOpenCodeCodingPlanOpenAI as any,
         options: { ...options, baseURL },
       },
     ];
   },
 } satisfies CreateRouterRuntimeOptions;
 
-export class LobeOpenCodeCodingPlanAI extends createRouterRuntime(params) {
+export class OrviloOpenCodeCodingPlanAI extends createRouterRuntime(params) {
   private getSessionHeaders(metadata?: Record<string, unknown>) {
     return {
-      'User-Agent': 'lobehub',
-      'x-opencode-client': 'lobehub',
+      'User-Agent': 'orvilo',
+      'x-opencode-client': 'orvilo',
       // Callers preserve topic identity or reuse a task ID across related calls.
       // Only requests without either identity receive a standalone session.
       'x-opencode-session':

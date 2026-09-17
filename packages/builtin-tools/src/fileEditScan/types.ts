@@ -24,7 +24,7 @@ export interface FileEditToolCallRecord {
    * is the plugin-level counterpart to a `state`-reported failure.
    */
   error?: unknown;
-  /** Plugin/tool identifier, e.g. 'lobe-cloud-sandbox'. */
+  /** Plugin/tool identifier, e.g. 'orvilo-cloud-sandbox'. */
   identifier?: string | null;
   /** Persisted plugin state (tool result state). */
   state?: unknown;

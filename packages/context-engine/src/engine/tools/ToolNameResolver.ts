@@ -3,7 +3,7 @@ import { Md5 } from 'ts-md5';
 
 import type { ChatToolPayload, MessageToolCall } from '@/types/index';
 
-import type { LobeChatPluginApi, LobeToolManifest } from './types';
+import type { OrviloPluginApi, OrviloToolManifest } from './types';
 
 // Tool naming constants
 const PLUGIN_SCHEMA_SEPARATOR = '____';
@@ -126,7 +126,7 @@ export class ToolNameResolver {
    * @param toolCalls - Tool calls from AI model response
    * @param manifests - Available tool manifests mapped by identifier
    * @param offeredToolNames - Tool names actually sent to the LLM in this turn
-   *   (e.g. `lobe-activator____activateTools`). When provided, the
+   *   (e.g. `orvilo-activator____activateTools`). When provided, the
    *   missing-prefix fallback only considers tools in this list, so an
    *   ambiguous bare name cannot resolve to a disabled duplicate. Explicitly
    *   namespaced, manifest-backed calls are still parsed; the agent's allow-list
@@ -136,7 +136,7 @@ export class ToolNameResolver {
    */
   resolve(
     toolCalls: MessageToolCall[],
-    manifests: Record<string, LobeToolManifest>,
+    manifests: Record<string, OrviloToolManifest>,
     offeredToolNames?: string[],
   ): ChatToolPayload[] {
     const offeredSet = offeredToolNames ? new Set(offeredToolNames) : null;
@@ -153,8 +153,8 @@ export class ToolNameResolver {
         if (resolved) return resolved;
 
         // Last resort: the model garbled the separator itself (observed in
-        // production: `lobe-local-system~~__runCommand` for
-        // `lobe-local-system____runCommand`, mid-operation, after earlier steps
+        // production: `orvilo-local-system~~__runCommand` for
+        // `orvilo-local-system____runCommand`, mid-operation, after earlier steps
         // had spelled the same tool correctly). Nothing above can parse that,
         // and dropping it ends the turn with an empty assistant message.
         // Recover the name when it collapses to exactly one offered tool, then
@@ -173,8 +173,8 @@ export class ToolNameResolver {
 
   /**
    * Comparison key for tool names: lowercase, letters and digits only. Both
-   * `lobe-local-system~~__runCommand` and `lobe-local-system____runCommand`
-   * collapse to `lobelocalsystemruncommand`, so a mangled separator still
+   * `orvilo-local-system~~__runCommand` and `orvilo-local-system____runCommand`
+   * collapse to `orvilolocalsystemruncommand`, so a mangled separator still
    * matches the tool it was meant to name.
    */
   private squashToolName(name: string): string {
@@ -182,7 +182,7 @@ export class ToolNameResolver {
   }
 
   /** Every tool name the manifests can produce; used when no offered list is given. */
-  private listManifestToolNames(manifests: Record<string, LobeToolManifest>): string[] {
+  private listManifestToolNames(manifests: Record<string, OrviloToolManifest>): string[] {
     const names: string[] = [];
 
     for (const [identifier, manifest] of Object.entries(manifests)) {
@@ -213,7 +213,7 @@ export class ToolNameResolver {
   /** Resolve a single tool call, or `null` when its name maps to no known tool. */
   private resolveOne(
     toolCall: MessageToolCall,
-    manifests: Record<string, LobeToolManifest>,
+    manifests: Record<string, OrviloToolManifest>,
     offeredSet: Set<string> | null,
   ): ChatToolPayload | null {
     const [initialIdentifier, initialApiName, type] =
@@ -223,7 +223,7 @@ export class ToolNameResolver {
 
     // Fallback for malformed tool names without the `____` separator
     // (e.g. model returns "activateTools" instead of
-    // "lobe-activator____activateTools"). When the bare name uniquely
+    // "orvilo-activator____activateTools"). When the bare name uniquely
     // matches an API across the manifests we're allowed to consider,
     // recover the identifier so we don't silently drop the tool call.
     // The manifest's `type` is picked up by the existing `type ??
@@ -232,7 +232,7 @@ export class ToolNameResolver {
       const bareName = initialIdentifier;
       const matches: string[] = [];
       for (const [id, manifest] of Object.entries(manifests)) {
-        const matchedApi = manifest?.api?.find((api: LobeChatPluginApi) => api.name === bareName);
+        const matchedApi = manifest?.api?.find((api: OrviloPluginApi) => api.name === bareName);
         if (!matchedApi) continue;
         // Restrict to tools actually offered to the LLM this turn so a
         // model can't reach tools that weren't enabled, and so disabled
@@ -267,14 +267,14 @@ export class ToolNameResolver {
       const md5 = apiName.replace(PLUGIN_SCHEMA_API_MD5_PREFIX, '');
       const manifest = manifests[identifier];
 
-      const api = manifest?.api.find((api: LobeChatPluginApi) => this.genHash(api.name) === md5);
+      const api = manifest?.api.find((api: OrviloPluginApi) => this.genHash(api.name) === md5);
       if (api) {
         apiName = api.name;
       }
     }
 
     const manifest = manifests[identifier];
-    const matchedApi = manifest?.api.find((api: LobeChatPluginApi) => api.name === apiName);
+    const matchedApi = manifest?.api.find((api: OrviloPluginApi) => api.name === apiName);
 
     // A tool explicitly offered by the server is already authoritative and
     // may not have a prompt manifest. A stale namespaced call that was not

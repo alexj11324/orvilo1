@@ -13,7 +13,7 @@ describe('runCommand', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lobehub-shell-runner-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'orvilo-shell-runner-'));
     processManager = new ShellProcessManager(tmpDir);
   });
 

@@ -1,5 +1,5 @@
 import type { IconProps } from '@lobehub/ui';
-import { isDesktop, LOBEHUB_SKILL_PROVIDERS } from '@orvilo/const';
+import { isDesktop, ORVILO_SKILL_PROVIDERS } from '@orvilo/const';
 import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -203,7 +203,7 @@ export const useSettingsSearch = (
     // renders from.
     const connectorTab = visibleTabs.get(SettingsTabs.Connector);
     if (connectorTab)
-      for (const connector of LOBEHUB_SKILL_PROVIDERS) {
+      for (const connector of ORVILO_SKILL_PROVIDERS) {
         entries.push({
           breadcrumb: `${connectorTab.groupTitle} › ${connectorTab.label}`,
           haystack: [connector.label.toLowerCase(), connector.id.toLowerCase()],

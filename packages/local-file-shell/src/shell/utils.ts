@@ -423,8 +423,8 @@ export const getShellConfig = async (command: string): Promise<{ args: string[];
       'try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}' +
       '\n$OutputEncoding = [System.Text.Encoding]::UTF8\n';
     const exitGuard =
-      '\n$__lobeExecOk = $?' +
-      '\nif (-not $__lobeExecOk) {' +
+      '\n$__orviloExecOk = $?' +
+      '\nif (-not $__orviloExecOk) {' +
       '\n  if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) { exit $LASTEXITCODE }' +
       '\n  exit 1' +
       '\n}';
@@ -435,7 +435,6 @@ export const getShellConfig = async (command: string): Promise<{ args: string[];
     // parser, which mangles quotes and backslashes in file paths. Encoding the
     // command sidesteps that tokenization entirely — the same approach used by
     // Ansible, VS Code Remote and Codex. See:
-    // https://github.com/lobehub/lobehub/pull/14697
     const encoded = Buffer.from(script, 'utf16le').toString('base64');
     return {
       args: ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],

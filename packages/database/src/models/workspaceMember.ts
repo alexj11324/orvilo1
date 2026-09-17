@@ -8,7 +8,7 @@ import { messengerAccountLinks } from '../schemas/messengerAccountLink';
 import { tasks } from '../schemas/task';
 import { users } from '../schemas/user';
 import { workspaceInvitations, workspaceMembers } from '../schemas/workspace';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { ResourcePermissionModel } from './resourcePermission';
 
 type MemberRole = 'admin' | 'member' | 'viewer';
@@ -25,10 +25,10 @@ const containsIgnoreCase = (column: unknown, needle: string) =>
   sql<boolean>`${column} ILIKE ${`%${escapeLike(needle)}%`} ESCAPE '\\'`;
 
 export class WorkspaceMemberModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }

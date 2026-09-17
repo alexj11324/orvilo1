@@ -13,11 +13,11 @@ import {
   type CustomPluginState,
   initialCustomPluginState,
 } from './slices/customPlugin/initialState';
-import {
-  initialLobehubSkillStoreState,
-  type LobehubSkillStoreState,
-} from './slices/lobehubSkillStore/initialState';
 import { initialMCPStoreState, type MCPStoreState } from './slices/mcpStore/initialState';
+import {
+  initialOrviloSkillStoreState,
+  type OrviloSkillStoreState,
+} from './slices/orviloSkillStore/initialState';
 import { initialPluginState, type PluginState } from './slices/plugin/initialState';
 
 export type ToolStoreState = ConnectorState &
@@ -26,7 +26,7 @@ export type ToolStoreState = ConnectorState &
   BuiltinToolState &
   MCPStoreState &
   ComposioStoreState &
-  LobehubSkillStoreState &
+  OrviloSkillStoreState &
   AgentSkillsState &
   AgentDocumentSkillsState;
 
@@ -37,7 +37,7 @@ export const initialState: ToolStoreState = {
   ...initialBuiltinToolState,
   ...initialMCPStoreState,
   ...initialComposioStoreState,
-  ...initialLobehubSkillStoreState,
+  ...initialOrviloSkillStoreState,
   ...initialAgentSkillsState,
   ...initialAgentDocumentSkillsState,
 };

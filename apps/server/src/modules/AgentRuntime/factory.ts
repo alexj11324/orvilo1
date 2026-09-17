@@ -11,7 +11,7 @@ import { getAgentRuntimeRedisClient } from './redis';
 import { StreamEventManager } from './StreamEventManager';
 import { type IAgentStateManager, type IStreamEventManager } from './types';
 
-const log = debug('lobe-server:agent-runtime:factory');
+const log = debug('orvilo-server:agent-runtime:factory');
 
 /**
  * Check if Redis is available for Agent Runtime

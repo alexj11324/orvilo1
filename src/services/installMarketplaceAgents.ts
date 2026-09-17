@@ -63,7 +63,7 @@ export const installMarketplaceAgents = async (
 
   // Workspace-mode forks must be attributed to the workspace's Market org via
   // `actAs` — the per-user trust token already carries workspaceId, so Market
-  // rejects forks without `x-lobe-owner-account-id` (403). Mirrors the lookup
+  // rejects forks without `x-orvilo-owner-account-id` (403). Mirrors the lookup
   // ForkAndChat does for the single-fork community flow.
   //
   // `autoProvision` lets owners install agents on a brand-new workspace before

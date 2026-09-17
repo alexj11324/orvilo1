@@ -3,7 +3,7 @@ import { merge } from 'es-toolkit/compat';
 import { mcpService } from '@/services/mcp';
 import { pluginService } from '@/services/plugin';
 import { type StoreSetter } from '@/store/types';
-import { type LobeToolCustomPlugin, type PluginInstallError } from '@/types/tool/plugin';
+import { type OrviloToolCustomPlugin, type PluginInstallError } from '@/types/tool/plugin';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { type ToolStore } from '../../store';
@@ -26,7 +26,7 @@ export class CustomPluginActionImpl {
     this.#get = get;
   }
 
-  installCustomPlugin = async (value: LobeToolCustomPlugin): Promise<void> => {
+  installCustomPlugin = async (value: OrviloToolCustomPlugin): Promise<void> => {
     await pluginService.createCustomPlugin(value);
 
     await this.#get().refreshPlugins();
@@ -71,7 +71,7 @@ export class CustomPluginActionImpl {
     await this.#get().refreshPlugins();
   };
 
-  updateCustomPlugin = async (id: string, value: LobeToolCustomPlugin): Promise<void> => {
+  updateCustomPlugin = async (id: string, value: OrviloToolCustomPlugin): Promise<void> => {
     const { reinstallCustomPlugin } = this.#get();
     // 1. Update list item information
     await pluginService.updatePlugin(id, value);
@@ -80,7 +80,7 @@ export class CustomPluginActionImpl {
     await reinstallCustomPlugin(id);
   };
 
-  updateNewCustomPlugin = (newCustomPlugin: Partial<LobeToolCustomPlugin>): void => {
+  updateNewCustomPlugin = (newCustomPlugin: Partial<OrviloToolCustomPlugin>): void => {
     this.#set(
       { newCustomPlugin: merge({}, this.#get().newCustomPlugin, newCustomPlugin) },
       false,

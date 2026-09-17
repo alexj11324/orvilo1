@@ -88,7 +88,7 @@ describe('FlatListBuilder', () => {
               apiName: 'callAgent',
               arguments: '{"agentId":"target-agent"}',
               id: 'call-agent-1',
-              identifier: 'lobe-agent-management',
+              identifier: 'orvilo-agent-management',
               type: 'default',
             },
           ],

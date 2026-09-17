@@ -1,7 +1,7 @@
 ---
 title: ComfyUI Extension Development Guide
 description: >-
-  Learn how to add new models, workflows, and features to LobeHub's ComfyUI
+  Learn how to add new models, workflows, and features to Orvilo's ComfyUI
   integration
 tags:
   - ComfyUI
@@ -12,15 +12,15 @@ tags:
 
 # ComfyUI Extension Development Guide
 
-This guide is based on actual code implementation and helps developers extend LobeHub's ComfyUI integration functionality.
+This guide is based on actual code implementation and helps developers extend Orvilo's ComfyUI integration functionality.
 
 ## Architecture Overview
 
-LobeHub ComfyUI integration uses a four-layer service architecture built around the main `LobeComfyUI` class:
+Orvilo ComfyUI integration uses a four-layer service architecture built around the main `OrviloComfyUI` class:
 
 ```plaintext
 packages/model-runtime/src/providers/comfyui/
-├── index.ts                      # LobeComfyUI main class entry
+├── index.ts                      # OrviloComfyUI main class entry
 ├── services/                     # Four core services
 │   ├── comfyuiClient.ts         # ComfyUIClientService - client and auth
 │   ├── modelResolver.ts         # ModelResolverService - model resolution
@@ -97,11 +97,11 @@ packages/model-runtime/src/utils/  # Shared utilities
 
 ### Core Service Architecture
 
-The main `LobeComfyUI` class initializes four core services:
+The main `OrviloComfyUI` class initializes four core services:
 
 ```typescript
 // packages/model-runtime/src/providers/comfyui/index.ts
-export class LobeComfyUI implements LobeRuntimeAI, AuthenticatedImageRuntime {
+export class OrviloComfyUI implements OrviloRuntimeAI, AuthenticatedImageRuntime {
   constructor(options: ComfyUIKeyVault = {}) {
     // 1. Client Service - handles auth and API calls
     this.clientService = new ComfyUIClientService(options);
@@ -149,13 +149,13 @@ interface ComfyUIKeyVault {
 
 ```typescript
 // No authentication
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'http://localhost:8000',
   authType: 'none'
 });
 
 // Basic authentication
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'https://your-comfyui-server.com',
   authType: 'basic',
   username: 'your-username',
@@ -163,14 +163,14 @@ const comfyUI = new LobeComfyUI({
 });
 
 // Bearer Token
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'https://your-comfyui-server.com',
   authType: 'bearer',
   apiKey: 'your-api-key'
 });
 
 // Custom headers
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'https://your-comfyui-server.com',
   authType: 'custom',
   customHeaders: {
@@ -885,7 +885,7 @@ bunx vitest run 'src/comfyui/__tests__/integration/parameterMapping.test.ts'
 
 ```bash
 # Start ComfyUI debug mode
-DEBUG=lobe-image:* pnpm dev
+DEBUG=orvilo-image:* pnpm dev
 ```
 
 ### 2. Testing New Features
@@ -933,9 +933,9 @@ describe('Model Registry', () => {
 ### Basic Image Generation
 
 ```typescript
-import { LobeComfyUI } from '@orvilo/model-runtime';
+import { OrviloComfyUI } from '@orvilo/model-runtime';
 
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'http://localhost:8000',
   authType: 'none'
 });

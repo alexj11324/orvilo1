@@ -1,19 +1,19 @@
 import createDebug from 'debug';
 import type { ClientOptions } from 'openai';
 
-import type { LobeRuntimeAI } from '../../core/BaseAI';
+import type { OrviloRuntimeAI } from '../../core/BaseAI';
 import { AgentRuntimeErrorType } from '../../types/error';
 import type { CreateImagePayload, CreateImageResponse } from '../../types/image';
 import { AgentRuntimeError } from '../../utils/createError';
 import { createBflImage } from './createImage';
 
-const log = createDebug('lobe-image:bfl');
+const log = createDebug('orvilo-image:bfl');
 
-export class LobeBflAI implements LobeRuntimeAI {
+export class OrviloBflAI implements OrviloRuntimeAI {
   private apiKey: string;
   baseURL?: string;
 
-  // OpenAI SDK v6 widened `apiKey` to `string | ApiKeySetter`; lobehub only uses the string form.
+  // OpenAI SDK v6 widened `apiKey` to `string | ApiKeySetter`; orvilo only uses the string form.
   constructor({ apiKey, baseURL }: Omit<ClientOptions, 'apiKey'> & { apiKey?: string } = {}) {
     if (!apiKey) throw AgentRuntimeError.createError(AgentRuntimeErrorType.InvalidProviderAPIKey);
 

@@ -50,7 +50,7 @@ describe('ErrorState', () => {
     id: 'batch-id',
     model: 'gpt-image-2',
     prompt: 'test prompt',
-    provider: 'lobehub',
+    provider: 'orvilo',
   };
 
   it.each([

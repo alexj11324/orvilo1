@@ -49,7 +49,7 @@ const pickNonEmptyString = (value: unknown): string | undefined => {
 };
 
 /**
- * Anthropic SDK clients append `/v1/messages` to their base URL. LobeHub
+ * Anthropic SDK clients append `/v1/messages` to their base URL. Orvilo
  * provider settings often store the SDK-style host (`…/v1` or
  * `…/v1/messages`). Strip with linear string ops; quantified-slash regexes
  * are ReDoS on user URLs.
@@ -118,7 +118,7 @@ export const sanitizeClaudeCodeDirectArgs = (source: string[] | undefined): stri
 };
 
 /**
- * Resolve a LobeHub provider into Claude Code environment variables.
+ * Resolve a Orvilo provider into Claude Code environment variables.
  *
  * This accepts decrypted credentials and must only run inside the trusted Desktop-local
  * boundary. Remote targets must use an operation-scoped gateway instead.

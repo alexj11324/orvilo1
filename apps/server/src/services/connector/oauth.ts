@@ -17,7 +17,7 @@ import debug from 'debug';
 
 import { appEnv } from '@/envs/app';
 
-const log = debug('lobe-server:connector:oauth');
+const log = debug('orvilo-server:connector:oauth');
 
 export const CONNECTOR_OAUTH_CALLBACK_PATH = '/oauth/connector/callback';
 
@@ -95,7 +95,7 @@ export const registerDynamicClient = async (params: {
 }): Promise<OAuthClientInformationFull> => {
   return registerClient(params.authorizationServerUrl, {
     clientMetadata: {
-      client_name: params.clientName ?? 'LobeHub',
+      client_name: params.clientName ?? 'Orvilo',
       grant_types: ['authorization_code', 'refresh_token'],
       redirect_uris: [params.redirectUri],
       response_types: ['code'],

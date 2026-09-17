@@ -143,7 +143,7 @@ const CreateModalRenderer = memo<CreateModalRendererProps>(
       [navigate, onClose],
     );
 
-    const handleTryInLobeAI = useCallback(() => {
+    const handleTryInOrviloAI = useCallback(() => {
       if (!inboxAgentId) return;
 
       navigate(AGENT_CHAT_URL(inboxAgentId, false));
@@ -159,7 +159,7 @@ const CreateModalRenderer = memo<CreateModalRendererProps>(
       onCreateBlank: handleCreateBlank,
       onOpenSkills: handleOpenSkills,
       onSubmit: handleSubmit,
-      onTryInLobeAI: handleTryInLobeAI,
+      onTryInOrviloAI: handleTryInOrviloAI,
     };
 
     useEffect(() => {

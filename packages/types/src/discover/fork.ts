@@ -26,7 +26,7 @@ export interface AgentForkRequest {
 export interface AgentForkBatchInput extends AgentForkRequest {
   /**
    * Optional Market organization account id to attribute the fork to. When
-   * present, the cloud forwards `X-Lobe-Owner-Account-Id` so the resulting
+   * present, the cloud forwards `X-Orvilo-Owner-Account-Id` so the resulting
    * `agents.ownerId` points at the organization rather than the calling user.
    * Callers in a workspace context should resolve this via
    * `WorkspaceMarketIdentityService.ensureOrganization`.

@@ -39,7 +39,7 @@ describe('resolveServerDefaultHeterogeneousCapability', () => {
     await expect(resolveServerDefaultHeterogeneousCapability()).resolves.toEqual({
       agents: ['claude-code', 'codex', 'grok-build', 'kimi-code', 'pi', 'trae'],
       enabled: true,
-      model: 'lobehub-default',
+      model: 'orvilo-default',
       models: {
         'claude-code': [{ model: 'claude-sonnet-4-6' }],
         'codex': [{ model: 'gpt-5.4' }],

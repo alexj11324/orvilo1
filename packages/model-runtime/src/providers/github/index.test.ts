@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { GithubModelCard } from './index';
-import { LobeGithubAI, params } from './index';
+import { OrviloGithubAI, params } from './index';
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeGithubAI,
+  Runtime: OrviloGithubAI,
   chatDebugEnv: 'DEBUG_GITHUB_CHAT_COMPLETION',
   chatModel: 'openai/gpt-4o',
   defaultBaseURL: 'https://models.github.ai/inference',
@@ -17,11 +17,11 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeGithubAI - custom features', () => {
-  let instance: InstanceType<typeof LobeGithubAI>;
+describe('OrviloGithubAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloGithubAI>;
 
   beforeEach(() => {
-    instance = new LobeGithubAI({ apiKey: 'test_api_key' });
+    instance = new OrviloGithubAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

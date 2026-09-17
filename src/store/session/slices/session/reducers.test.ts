@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
 import { describe, expect, it } from 'vitest';
 
-import { type LobeSessions } from '@/types/session';
+import { type OrviloSessions } from '@/types/session';
 
 import { type SessionDispatch } from './reducers';
 import { sessionsReducer } from './reducers';
@@ -19,7 +19,7 @@ describe('sessionsReducer', () => {
     },
   } as any;
 
-  const initialState: LobeSessions = [];
+  const initialState: OrviloSessions = [];
 
   it('should add a new session', () => {
     const addAction: SessionDispatch = {
@@ -38,7 +38,7 @@ describe('sessionsReducer', () => {
   });
 
   it('should remove an existing session', () => {
-    const state: LobeSessions = [mockSession];
+    const state: OrviloSessions = [mockSession];
     const removeAction: SessionDispatch = {
       id: mockSession.id,
       type: 'removeSession',
@@ -50,7 +50,7 @@ describe('sessionsReducer', () => {
   });
 
   it('should update an existing session', () => {
-    const state: LobeSessions = [mockSession];
+    const state: OrviloSessions = [mockSession];
     const updateAction: SessionDispatch = {
       id: mockSession.id,
       type: 'updateSession',
@@ -68,7 +68,7 @@ describe('sessionsReducer', () => {
   });
 
   it('should return the same state for unknown action', () => {
-    const state: LobeSessions = [mockSession];
+    const state: OrviloSessions = [mockSession];
     // @ts-ignore
     const unknownAction: SessionDispatch = { type: 'unknown' };
 

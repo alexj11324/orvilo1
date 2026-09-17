@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import type { OIDCSessionCookieContext } from '@/libs/oidc-provider/session-cleanup';
 import { clearCurrentOIDCSession } from '@/libs/oidc-provider/session-cleanup';
 
-const log = debug('lobe-oidc:clear-session');
+const log = debug('orvilo-oidc:clear-session');
 
 /**
  * POST /oidc/clear-session

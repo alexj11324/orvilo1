@@ -19,7 +19,7 @@ import { dbMessageSelectors } from '@/store/chat/slices/message/selectors';
 import { type ChatStore } from '@/store/chat/store';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
-const log = debug('lobe-store:group-orchestration-executors');
+const log = debug('orvilo-store:group-orchestration-executors');
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -721,7 +721,7 @@ export const createGroupOrchestrationExecutors = (
           parentMessageType: 'user',
           operationId: taskOperationId,
           parentOperationId: orchestrationOperationId,
-          isSubAgent: true, // Disable lobe-agent tool to prevent nested sub-agents
+          isSubAgent: true, // Disable orvilo-agent tool to prevent nested sub-agents
         });
 
         log(`[${sessionLogId}] Client-side AgentRuntime execution completed`);

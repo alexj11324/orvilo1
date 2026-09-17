@@ -51,11 +51,11 @@ workspace_root() {
   local name
   name="$(basename "$root")"
 
-  if [[ "$name" == "lobehub" ]]; then
+  if [[ "$name" == "orvilo" ]]; then
     local parent parent_name
     parent="$(cd "$root/.." && pwd)"
     parent_name="$(basename "$parent")"
-    if [[ "$parent_name" == lobehub-cloud* ]]; then
+    if [[ "$parent_name" == orvilo-cloud* ]]; then
       root="$parent"
     fi
   fi
@@ -67,11 +67,11 @@ workspace_offset() {
   local name="$1"
 
   case "$name" in
-    lobehub-cloud)
+    orvilo-cloud)
       printf '0\n'
       ;;
-    lobehub-cloud-*)
-      local suffix="${name#lobehub-cloud-}"
+    orvilo-cloud-*)
+      local suffix="${name#orvilo-cloud-}"
       if [[ "$suffix" =~ ^[0-9]+$ ]]; then
         printf '%s\n' "$((10#$suffix))"
       else

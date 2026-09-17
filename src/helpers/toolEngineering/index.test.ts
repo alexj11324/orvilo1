@@ -49,7 +49,7 @@ vi.mock('@/store/tool', () => ({
         type: 'builtin' as const,
       },
       {
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         manifest: {
           api: [
             {
@@ -65,7 +65,7 @@ vi.mock('@/store/tool', () => ({
               },
             },
           ],
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           meta: {
             title: 'Web Browsing',
             avatar: '🌐',
@@ -75,7 +75,7 @@ vi.mock('@/store/tool', () => ({
         type: 'builtin' as const,
       },
       {
-        identifier: 'lobe-agent',
+        identifier: 'orvilo-agent',
         manifest: {
           api: [
             {
@@ -98,9 +98,9 @@ vi.mock('@/store/tool', () => ({
               },
             },
           ],
-          identifier: 'lobe-agent',
+          identifier: 'orvilo-agent',
           meta: {
-            title: 'Lobe Agent',
+            title: 'Orvilo Agent',
             avatar: 'V',
           },
           type: 'builtin',
@@ -108,7 +108,7 @@ vi.mock('@/store/tool', () => ({
         type: 'builtin' as const,
       },
       {
-        identifier: 'lobe-image-generation',
+        identifier: 'orvilo-image-generation',
         manifest: {
           api: [
             {
@@ -123,7 +123,7 @@ vi.mock('@/store/tool', () => ({
               },
             },
           ],
-          identifier: 'lobe-image-generation',
+          identifier: 'orvilo-image-generation',
           meta: {
             title: 'Image Generation',
             avatar: 'I',
@@ -145,10 +145,10 @@ vi.mock('@/store/tool/selectors', () => ({
     installedPluginManifestList: () => mockInstalledPluginManifestList(),
   },
   composioStoreSelectors: {
-    composioAsLobeTools: () => [],
+    composioAsOrviloTools: () => [],
   },
-  lobehubSkillStoreSelectors: {
-    lobehubSkillAsLobeTools: () => [],
+  orviloSkillStoreSelectors: {
+    orviloSkillAsOrviloTools: () => [],
   },
 }));
 
@@ -345,12 +345,12 @@ describe('toolEngineering', () => {
         provider: 'anthropic',
       });
 
-      expect(result.enabledToolIds).not.toContain('lobe-image-generation');
+      expect(result.enabledToolIds).not.toContain('orvilo-image-generation');
     });
 
     it('should enable image generation in chat mode when the tool is pinned', () => {
       mockCurrentChatConfig = { enableAgentMode: false };
-      mockCurrentAgentPlugins = ['lobe-image-generation'];
+      mockCurrentAgentPlugins = ['orvilo-image-generation'];
       mockImageOutputSupport = false;
 
       const toolsEngine = createAgentToolsEngine({
@@ -359,17 +359,17 @@ describe('toolEngineering', () => {
       });
 
       const result = toolsEngine.generateToolsDetailed({
-        toolIds: ['lobe-image-generation'],
+        toolIds: ['orvilo-image-generation'],
         model: 'claude-sonnet',
         provider: 'anthropic',
       });
 
-      expect(result.enabledToolIds).toContain('lobe-image-generation');
+      expect(result.enabledToolIds).toContain('orvilo-image-generation');
     });
 
     it('should not enable image generation in chat mode when model has native image output', () => {
       mockCurrentChatConfig = { enableAgentMode: false };
-      mockCurrentAgentPlugins = ['lobe-image-generation'];
+      mockCurrentAgentPlugins = ['orvilo-image-generation'];
       mockImageOutputSupport = true;
 
       const toolsEngine = createAgentToolsEngine({
@@ -378,17 +378,17 @@ describe('toolEngineering', () => {
       });
 
       const result = toolsEngine.generateToolsDetailed({
-        toolIds: ['lobe-image-generation'],
+        toolIds: ['orvilo-image-generation'],
         model: 'gpt-image-chat',
         provider: 'openai',
       });
 
-      expect(result.enabledToolIds).not.toContain('lobe-image-generation');
+      expect(result.enabledToolIds).not.toContain('orvilo-image-generation');
     });
 
     it('should not enable image generation in chat mode when model cannot call tools', () => {
       mockCurrentChatConfig = { enableAgentMode: false };
-      mockCurrentAgentPlugins = ['lobe-image-generation'];
+      mockCurrentAgentPlugins = ['orvilo-image-generation'];
       mockIsCanUseFC = false;
 
       const toolsEngine = createAgentToolsEngine({
@@ -397,12 +397,12 @@ describe('toolEngineering', () => {
       });
 
       const result = toolsEngine.generateToolsDetailed({
-        toolIds: ['lobe-image-generation'],
+        toolIds: ['orvilo-image-generation'],
         model: 'plain-text-model',
         provider: 'test',
       });
 
-      expect(result.enabledToolIds).not.toContain('lobe-image-generation');
+      expect(result.enabledToolIds).not.toContain('orvilo-image-generation');
     });
 
     it('should include web browsing tool as default when no tools are provided', () => {
@@ -417,7 +417,7 @@ describe('toolEngineering', () => {
         provider: 'openai',
       });
 
-      expect(result.enabledToolIds).toContain('lobe-web-browsing');
+      expect(result.enabledToolIds).toContain('orvilo-web-browsing');
     });
 
     it('should include web browsing tool alongside user-provided tools', () => {
@@ -434,14 +434,14 @@ describe('toolEngineering', () => {
         provider: 'openai',
       });
 
-      // lobe-agent is always-on (alwaysOnToolIds), so it rides along with user tools.
-      expect(result.enabledToolIds).toEqual(['search', 'lobe-web-browsing', 'lobe-agent']);
+      // orvilo-agent is always-on (alwaysOnToolIds), so it rides along with user tools.
+      expect(result.enabledToolIds).toEqual(['search', 'orvilo-web-browsing', 'orvilo-agent']);
       expect(result.enabledToolIds).toHaveLength(3);
     });
 
-    it('should enable lobe-agent when it is injected into runtime plugin ids', () => {
+    it('should enable orvilo-agent when it is injected into runtime plugin ids', () => {
       const toolsEngine = createAgentToolsEngine({ model: 'deepseek-chat', provider: 'deepseek' }, [
-        'lobe-agent',
+        'orvilo-agent',
       ]);
 
       const result = toolsEngine.generateToolsDetailed({
@@ -450,10 +450,10 @@ describe('toolEngineering', () => {
         toolIds: [],
       });
 
-      expect(result.enabledToolIds).toContain('lobe-agent');
+      expect(result.enabledToolIds).toContain('orvilo-agent');
     });
 
-    it('should enable lobe-agent by default since it is always-on', () => {
+    it('should enable orvilo-agent by default since it is always-on', () => {
       const toolsEngine = createAgentToolsEngine({
         model: 'deepseek-chat',
         provider: 'deepseek',
@@ -465,11 +465,11 @@ describe('toolEngineering', () => {
         toolIds: [],
       });
 
-      expect(result.enabledToolIds).toContain('lobe-agent');
+      expect(result.enabledToolIds).toContain('orvilo-agent');
     });
 
     it('should honor an explicit disabled policy for an always-on builtin tool', () => {
-      mockCurrentAgentDisabledPlugins = ['lobe-agent'];
+      mockCurrentAgentDisabledPlugins = ['orvilo-agent'];
 
       const toolsEngine = createAgentToolsEngine({
         model: 'deepseek-chat',
@@ -482,7 +482,7 @@ describe('toolEngineering', () => {
         toolIds: [],
       });
 
-      expect(result.enabledToolIds).not.toContain('lobe-agent');
+      expect(result.enabledToolIds).not.toContain('orvilo-agent');
     });
 
     it('should use chat-mode defaults when the model does not support function calling', () => {
@@ -490,22 +490,22 @@ describe('toolEngineering', () => {
 
       const toolsEngine = createAgentToolsEngine({
         model: 'gemini-3.1-flash-lite-image',
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
 
       const result = toolsEngine.generateToolsDetailed({
         model: 'gemini-3.1-flash-lite-image',
-        provider: 'lobehub',
+        provider: 'orvilo',
         toolIds: [],
       });
 
       expect(result.enabledToolIds).toEqual([]);
       expect(result.filteredTools).not.toContainEqual({
-        id: 'lobe-agent',
+        id: 'orvilo-agent',
         reason: 'incompatible',
       });
       expect(result.filteredTools).toContainEqual({
-        id: 'lobe-web-browsing',
+        id: 'orvilo-web-browsing',
         reason: 'incompatible',
       });
     });
@@ -522,7 +522,7 @@ describe('toolEngineering', () => {
         toolIds: [],
       });
 
-      expect(result.enabledToolIds).not.toContain('lobe-image-generation');
+      expect(result.enabledToolIds).not.toContain('orvilo-image-generation');
     });
 
     it('should allow image generation explicit activation in agent mode', () => {
@@ -536,10 +536,10 @@ describe('toolEngineering', () => {
         model: 'gpt-4',
         provider: 'openai',
         skipDefaultTools: true,
-        toolIds: ['lobe-image-generation'],
+        toolIds: ['orvilo-image-generation'],
       });
 
-      expect(result.enabledToolIds).toContain('lobe-image-generation');
+      expect(result.enabledToolIds).toContain('orvilo-image-generation');
     });
   });
 
@@ -549,15 +549,15 @@ describe('toolEngineering', () => {
 
       const toolsEngine = createAgentToolsEngine({ model: 'gpt-4', provider: 'openai' });
       const result = toolsEngine.generateToolsDetailed({
-        toolIds: ['lobe-web-browsing'],
+        toolIds: ['orvilo-web-browsing'],
         model: 'gpt-4',
         provider: 'openai',
         skipDefaultTools: true,
       });
 
-      expect(result.enabledToolIds).not.toContain('lobe-web-browsing');
+      expect(result.enabledToolIds).not.toContain('orvilo-web-browsing');
       expect(result.filteredTools).toContainEqual({
-        id: 'lobe-web-browsing',
+        id: 'orvilo-web-browsing',
         reason: 'disabled',
       });
     });
@@ -568,13 +568,13 @@ describe('toolEngineering', () => {
       const toolsEngine = createAgentToolsEngine({ model: 'gpt-4', provider: 'openai' });
       const result = toolsEngine.generateToolsDetailed({
         context: { isExplicitActivation: true },
-        toolIds: ['lobe-web-browsing'],
+        toolIds: ['orvilo-web-browsing'],
         model: 'gpt-4',
         provider: 'openai',
         skipDefaultTools: true,
       });
 
-      expect(result.enabledToolIds).toContain('lobe-web-browsing');
+      expect(result.enabledToolIds).toContain('orvilo-web-browsing');
       expect(result.filteredTools).toEqual([]);
       expect(result.tools).toHaveLength(1);
     });
@@ -604,7 +604,7 @@ describe('toolEngineering', () => {
       const toolsEngine = createAgentToolsEngine({ model: 'gpt-4', provider: 'openai' });
       const result = toolsEngine.generateToolsDetailed({
         context: { isExplicitActivation: true },
-        toolIds: ['stdio-mcp-plugin', 'lobe-web-browsing'],
+        toolIds: ['stdio-mcp-plugin', 'orvilo-web-browsing'],
         model: 'gpt-4',
         provider: 'openai',
         skipDefaultTools: true,
@@ -612,7 +612,7 @@ describe('toolEngineering', () => {
 
       // Both should be enabled despite their normal filters
       expect(result.enabledToolIds).toContain('stdio-mcp-plugin');
-      expect(result.enabledToolIds).toContain('lobe-web-browsing');
+      expect(result.enabledToolIds).toContain('orvilo-web-browsing');
     });
 
     it('does NOT let isExplicitActivation enable a plugin the agent has disabled', () => {
@@ -735,7 +735,6 @@ describe('toolEngineering', () => {
   });
 });
 
-// https://github.com/lobehub/lobehub/pull/19051
 describe('Computer Use activation', () => {
   it('loads the native API only after activation in standalone Electron', () => {
     desktopEnv.enabled = true;

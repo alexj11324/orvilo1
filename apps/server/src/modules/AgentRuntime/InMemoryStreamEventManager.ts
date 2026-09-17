@@ -7,7 +7,7 @@ import {
 } from './StreamEventManager';
 import { type IStreamEventManager, type PublishAgentRuntimeEndParams } from './types';
 
-const log = debug('lobe-server:agent-runtime:in-memory-stream-event-manager');
+const log = debug('orvilo-server:agent-runtime:in-memory-stream-event-manager');
 
 const getDefaultReasonDetail = (finalState: any, reason?: string): string => {
   if (reason === 'error') {

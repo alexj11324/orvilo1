@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeRuntimeAI } from '@orvilo/model-runtime';
+import type { OrviloRuntimeAI } from '@orvilo/model-runtime';
 import { AgentRuntimeErrorType, ModelRuntime } from '@orvilo/model-runtime';
 import { ChatErrorType } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -55,7 +55,7 @@ describe('GET handler', () => {
       errorWithStack.stack =
         'Error: Something went wrong\n    at Object.<anonymous> (/path/to/file.ts:10:15)';
 
-      const mockRuntime: LobeRuntimeAI = {
+      const mockRuntime: OrviloRuntimeAI = {
         baseURL: 'abc',
         chat: vi.fn(),
         models: vi.fn().mockRejectedValue(errorWithStack),
@@ -87,7 +87,7 @@ describe('GET handler', () => {
       const customError = new CustomError('Custom error occurred');
       customError.stack = 'CustomError: Custom error occurred\n    at somewhere';
 
-      const mockRuntime: LobeRuntimeAI = {
+      const mockRuntime: OrviloRuntimeAI = {
         baseURL: 'abc',
         chat: vi.fn(),
         models: vi.fn().mockRejectedValue(customError),
@@ -110,7 +110,7 @@ describe('GET handler', () => {
         error: { code: 'PROVIDER_ERROR', message: 'API limit exceeded' },
       };
 
-      const mockRuntime: LobeRuntimeAI = {
+      const mockRuntime: OrviloRuntimeAI = {
         baseURL: 'abc',
         chat: vi.fn(),
         models: vi.fn().mockRejectedValue(structuredError),
@@ -131,7 +131,7 @@ describe('GET handler', () => {
     it('should return generic status code for model fetch errors', async () => {
       const mockParams = Promise.resolve({ provider: 'google' });
 
-      const mockRuntime: LobeRuntimeAI = {
+      const mockRuntime: OrviloRuntimeAI = {
         baseURL: 'abc',
         chat: vi.fn(),
         models: vi.fn().mockRejectedValue(new Error('Failed')),
@@ -152,7 +152,7 @@ describe('GET handler', () => {
       const cause = new Error('OpenRouter models API request failed with status 401');
       const wrappedError = new Error('Failed to fetch OpenRouter models', { cause });
 
-      const mockRuntime: LobeRuntimeAI = {
+      const mockRuntime: OrviloRuntimeAI = {
         baseURL: 'abc',
         chat: vi.fn(),
         models: vi.fn().mockRejectedValue(wrappedError),
@@ -220,7 +220,7 @@ describe('GET handler', () => {
     it('should include provider in error response', async () => {
       const mockParams = Promise.resolve({ provider: 'openai' });
 
-      const mockRuntime: LobeRuntimeAI = {
+      const mockRuntime: OrviloRuntimeAI = {
         baseURL: 'abc',
         chat: vi.fn(),
         models: vi.fn().mockRejectedValue(new Error('Failed')),
@@ -243,7 +243,7 @@ describe('GET handler', () => {
         { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
       ];
 
-      const mockRuntime: LobeRuntimeAI = {
+      const mockRuntime: OrviloRuntimeAI = {
         baseURL: 'abc',
         chat: vi.fn(),
         models: vi.fn().mockResolvedValue(mockModelList),

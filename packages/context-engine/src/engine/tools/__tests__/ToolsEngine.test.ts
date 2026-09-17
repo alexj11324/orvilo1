@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createEnableChecker } from '../enableCheckerFactory';
 import { ToolsEngine } from '../ToolsEngine';
-import type { LobeToolManifest } from '../types';
+import type { OrviloToolManifest } from '../types';
 
 // Mock manifest schemas for testing
-const mockWebBrowsingManifest: LobeToolManifest = {
+const mockWebBrowsingManifest: OrviloToolManifest = {
   api: [
     {
       description: 'Search the web',
@@ -19,7 +19,7 @@ const mockWebBrowsingManifest: LobeToolManifest = {
       },
     },
   ],
-  identifier: 'lobe-web-browsing',
+  identifier: 'orvilo-web-browsing',
   meta: {
     title: 'Web Browsing',
     description: 'Browse the web',
@@ -27,7 +27,7 @@ const mockWebBrowsingManifest: LobeToolManifest = {
   type: 'builtin',
 };
 
-const mockDalleManifest: LobeToolManifest = {
+const mockDalleManifest: OrviloToolManifest = {
   api: [
     {
       description: 'Generate images',
@@ -56,7 +56,7 @@ describe('ToolsEngine', () => {
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
       });
 
-      expect(engine.hasPlugin('lobe-web-browsing')).toBe(true);
+      expect(engine.hasPlugin('orvilo-web-browsing')).toBe(true);
       expect(engine.hasPlugin('dalle')).toBe(true);
       expect(engine.hasPlugin('non-existent')).toBe(false);
     });
@@ -67,7 +67,7 @@ describe('ToolsEngine', () => {
       });
 
       const availablePlugins = engine.getAvailablePlugins();
-      expect(availablePlugins).toEqual(['lobe-web-browsing', 'dalle']);
+      expect(availablePlugins).toEqual(['orvilo-web-browsing', 'dalle']);
     });
   });
 
@@ -80,7 +80,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateTools({
-        toolIds: ['lobe-web-browsing'],
+        toolIds: ['orvilo-web-browsing'],
         model: 'gpt-3.5-turbo',
         provider: 'openai',
       });
@@ -97,14 +97,14 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateTools({
-        toolIds: ['lobe-web-browsing'],
+        toolIds: ['orvilo-web-browsing'],
         model: 'gpt-4',
         provider: 'openai',
       });
 
       expect(result).toBeUndefined();
       expect(mockEnableChecker).toHaveBeenCalledWith({
-        pluginId: 'lobe-web-browsing',
+        pluginId: 'orvilo-web-browsing',
         manifest: mockWebBrowsingManifest,
         model: 'gpt-4',
         provider: 'openai',
@@ -120,7 +120,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateTools({
-        toolIds: ['lobe-web-browsing'],
+        toolIds: ['orvilo-web-browsing'],
         model: 'gpt-4',
         provider: 'openai',
       });
@@ -129,7 +129,7 @@ describe('ToolsEngine', () => {
         {
           type: 'function',
           function: {
-            name: 'lobe-web-browsing____search',
+            name: 'orvilo-web-browsing____search',
             description: 'Search the web',
             parameters: {
               type: 'object',
@@ -153,14 +153,14 @@ describe('ToolsEngine', () => {
 
       const context = { isSearchEnabled: true };
       engine.generateTools({
-        toolIds: ['lobe-web-browsing'],
+        toolIds: ['orvilo-web-browsing'],
         model: 'gpt-4',
         provider: 'openai',
         context,
       });
 
       expect(mockEnableChecker).toHaveBeenCalledWith({
-        pluginId: 'lobe-web-browsing',
+        pluginId: 'orvilo-web-browsing',
         manifest: mockWebBrowsingManifest,
         model: 'gpt-4',
         provider: 'openai',
@@ -169,7 +169,7 @@ describe('ToolsEngine', () => {
     });
 
     it('should default object-typed parameters required to [] when omitted', () => {
-      const allOptionalManifest: LobeToolManifest = {
+      const allOptionalManifest: OrviloToolManifest = {
         api: [
           {
             description: 'Search with all-optional params',
@@ -182,7 +182,7 @@ describe('ToolsEngine', () => {
             },
           },
         ],
-        identifier: 'lobe-all-optional',
+        identifier: 'orvilo-all-optional',
         meta: { title: 'All Optional', description: '' },
         type: 'builtin',
       };
@@ -194,7 +194,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateTools({
-        toolIds: ['lobe-all-optional'],
+        toolIds: ['orvilo-all-optional'],
         model: 'gpt-4',
         provider: 'openai',
       });
@@ -203,7 +203,7 @@ describe('ToolsEngine', () => {
         {
           type: 'function',
           function: {
-            name: 'lobe-all-optional____search',
+            name: 'orvilo-all-optional____search',
             description: 'Search with all-optional params',
             parameters: {
               type: 'object',
@@ -225,7 +225,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateTools({
-        toolIds: ['lobe-web-browsing', 'non-existent'],
+        toolIds: ['orvilo-web-browsing', 'non-existent'],
         model: 'gpt-4',
         provider: 'openai',
       });
@@ -239,18 +239,18 @@ describe('ToolsEngine', () => {
     it('should return detailed results with filtered plugins', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        enableChecker: ({ pluginId }) => pluginId === 'lobe-web-browsing',
+        enableChecker: ({ pluginId }) => pluginId === 'orvilo-web-browsing',
         functionCallChecker: () => true,
       });
 
       const result = engine.generateToolsDetailed({
-        toolIds: ['lobe-web-browsing', 'dalle', 'non-existent'],
+        toolIds: ['orvilo-web-browsing', 'dalle', 'non-existent'],
         model: 'gpt-4',
         provider: 'openai',
       });
 
       expect(result.tools).toHaveLength(1);
-      expect(result.enabledToolIds).toEqual(['lobe-web-browsing']);
+      expect(result.enabledToolIds).toEqual(['orvilo-web-browsing']);
       expect(result.filteredTools).toEqual([
         { id: 'dalle', reason: 'disabled' },
         { id: 'non-existent', reason: 'not_found' },
@@ -265,7 +265,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateToolsDetailed({
-        toolIds: ['lobe-web-browsing', 'dalle'],
+        toolIds: ['orvilo-web-browsing', 'dalle'],
         model: 'gpt-5.6-sol',
         provider: 'openai',
       });
@@ -274,7 +274,7 @@ describe('ToolsEngine', () => {
       expect(result.tools).toBeUndefined();
       expect(result.enabledToolIds).toEqual([]);
       expect(result.filteredTools).toEqual([
-        { id: 'lobe-web-browsing', reason: 'incompatible' },
+        { id: 'orvilo-web-browsing', reason: 'incompatible' },
         { id: 'dalle', reason: 'incompatible' },
       ]);
     });
@@ -286,7 +286,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateToolsDetailed({
-        toolIds: ['lobe-web-browsing', 'non-existent', 'dalle'],
+        toolIds: ['orvilo-web-browsing', 'non-existent', 'dalle'],
         model: 'gpt-5.6-sol',
         provider: 'openai',
       });
@@ -294,7 +294,7 @@ describe('ToolsEngine', () => {
       expect(result.tools).toBeUndefined();
       expect(result.enabledToolIds).toEqual([]);
       expect(result.filteredTools).toEqual([
-        { id: 'lobe-web-browsing', reason: 'incompatible' },
+        { id: 'orvilo-web-browsing', reason: 'incompatible' },
         { id: 'non-existent', reason: 'not_found' },
         { id: 'dalle', reason: 'not_found' },
       ]);
@@ -309,7 +309,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateToolsDetailed({
-        toolIds: ['lobe-web-browsing', 'dalle'],
+        toolIds: ['orvilo-web-browsing', 'dalle'],
         model: 'gpt-4',
         provider: 'openai',
       });
@@ -318,7 +318,7 @@ describe('ToolsEngine', () => {
       expect(result.tools).toBeUndefined();
       expect(result.enabledToolIds).toEqual([]);
       expect(result.filteredTools).toEqual([
-        { id: 'lobe-web-browsing', reason: 'disabled' },
+        { id: 'orvilo-web-browsing', reason: 'disabled' },
         { id: 'dalle', reason: 'disabled' },
       ]);
     });
@@ -332,7 +332,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateToolsDetailed({
-        toolIds: ['lobe-web-browsing', 'dalle'],
+        toolIds: ['orvilo-web-browsing', 'dalle'],
         model: 'gpt-5.6-sol',
         provider: 'openai',
       });
@@ -341,7 +341,7 @@ describe('ToolsEngine', () => {
       expect(result.tools).toBeUndefined();
       expect(result.enabledToolIds).toEqual([]);
       expect(result.filteredTools).toEqual([
-        { id: 'lobe-web-browsing', reason: 'incompatible' },
+        { id: 'orvilo-web-browsing', reason: 'incompatible' },
         { id: 'dalle', reason: 'incompatible' },
       ]);
     });
@@ -379,7 +379,7 @@ describe('ToolsEngine', () => {
         manifestSchemas: [mockWebBrowsingManifest],
       });
 
-      expect(engine.getAvailablePlugins()).toEqual(['lobe-web-browsing']);
+      expect(engine.getAvailablePlugins()).toEqual(['orvilo-web-browsing']);
 
       engine.updateManifestSchemas([mockDalleManifest]);
 
@@ -403,10 +403,10 @@ describe('ToolsEngine', () => {
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
       });
 
-      const result = engine.getEnabledPluginManifests(['lobe-web-browsing', 'dalle']);
+      const result = engine.getEnabledPluginManifests(['orvilo-web-browsing', 'dalle']);
 
       expect(result.size).toBe(2);
-      expect(result.get('lobe-web-browsing')).toBe(mockWebBrowsingManifest);
+      expect(result.get('orvilo-web-browsing')).toBe(mockWebBrowsingManifest);
       expect(result.get('dalle')).toBe(mockDalleManifest);
     });
 
@@ -416,10 +416,10 @@ describe('ToolsEngine', () => {
         defaultToolIds: ['dalle'],
       });
 
-      const result = engine.getEnabledPluginManifests(['lobe-web-browsing']);
+      const result = engine.getEnabledPluginManifests(['orvilo-web-browsing']);
 
       expect(result.size).toBe(2);
-      expect(result.has('lobe-web-browsing')).toBe(true);
+      expect(result.has('orvilo-web-browsing')).toBe(true);
       expect(result.has('dalle')).toBe(true);
     });
 
@@ -428,23 +428,23 @@ describe('ToolsEngine', () => {
         manifestSchemas: [mockWebBrowsingManifest],
       });
 
-      const result = engine.getEnabledPluginManifests(['lobe-web-browsing', 'non-existent']);
+      const result = engine.getEnabledPluginManifests(['orvilo-web-browsing', 'non-existent']);
 
       expect(result.size).toBe(1);
-      expect(result.has('lobe-web-browsing')).toBe(true);
+      expect(result.has('orvilo-web-browsing')).toBe(true);
       expect(result.has('non-existent')).toBe(false);
     });
 
     it('should return all default tools when called without arguments', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        defaultToolIds: ['dalle', 'lobe-web-browsing'],
+        defaultToolIds: ['dalle', 'orvilo-web-browsing'],
       });
 
       const result = engine.getEnabledPluginManifests();
 
       expect(result.size).toBe(2);
-      expect(result.has('lobe-web-browsing')).toBe(true);
+      expect(result.has('orvilo-web-browsing')).toBe(true);
       expect(result.has('dalle')).toBe(true);
     });
 
@@ -470,7 +470,7 @@ describe('ToolsEngine', () => {
       const result = engine.getAllPluginManifests();
 
       expect(result.size).toBe(2);
-      expect(result.get('lobe-web-browsing')).toBe(mockWebBrowsingManifest);
+      expect(result.get('orvilo-web-browsing')).toBe(mockWebBrowsingManifest);
       expect(result.get('dalle')).toBe(mockDalleManifest);
     });
 
@@ -497,7 +497,7 @@ describe('ToolsEngine', () => {
 
       // But have the same content
       expect(result1.size).toBe(result2.size);
-      expect(result1.get('lobe-web-browsing')).toBe(result2.get('lobe-web-browsing'));
+      expect(result1.get('orvilo-web-browsing')).toBe(result2.get('orvilo-web-browsing'));
     });
 
     it('should reflect changes after adding a plugin', () => {
@@ -539,7 +539,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateTools({
-        toolIds: ['lobe-web-browsing'],
+        toolIds: ['orvilo-web-browsing'],
         model: 'gpt-4',
         provider: 'openai',
       });
@@ -555,7 +555,7 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateTools({
-        toolIds: ['lobe-web-browsing'],
+        toolIds: ['orvilo-web-browsing'],
         model: 'gpt-4',
         provider: 'openai',
       });
@@ -567,7 +567,7 @@ describe('ToolsEngine', () => {
 
   describe('ToolsEngine Integration Tests (migrated from enabledSchema)', () => {
     // Mock manifest data similar to the original tool selector tests
-    const mockManifests: LobeToolManifest[] = [
+    const mockManifests: OrviloToolManifest[] = [
       {
         identifier: 'plugin-1',
         api: [{ name: 'api-1', description: 'API 1', parameters: {} }],
@@ -772,7 +772,7 @@ describe('ToolsEngine', () => {
     });
 
     describe('parameter handling and filtering', () => {
-      // fix https://github.com/lobehub/lobe-chat/issues/2036
+      // fix
       it('should not include URL field in function parameters', () => {
         const engine = createTestEngine();
         const result = engine.generateTools({
@@ -926,7 +926,7 @@ describe('ToolsEngine', () => {
    */
   describe('enabledSchema Migration to ToolsEngine', () => {
     // Sample manifest data that mimics the old toolSelectors test data
-    const sampleManifests: LobeToolManifest[] = [
+    const sampleManifests: OrviloToolManifest[] = [
       {
         identifier: 'plugin-1',
         api: [{ name: 'api-1', description: 'API 1', parameters: {} }],
@@ -1110,9 +1110,9 @@ describe('ToolsEngine', () => {
   });
 
   describe('explicit activation with always-on builtins', () => {
-    const builtinManifests: LobeToolManifest[] = [
+    const builtinManifests: OrviloToolManifest[] = [
       {
-        identifier: 'lobe-activator',
+        identifier: 'orvilo-activator',
         api: [
           { name: 'run', description: 'Discover and activate tools and skills', parameters: {} },
         ],
@@ -1120,37 +1120,37 @@ describe('ToolsEngine', () => {
         type: 'builtin',
       },
       {
-        identifier: 'lobe-skills',
+        identifier: 'orvilo-skills',
         api: [{ name: 'run', description: 'Run skill', parameters: {} }],
         meta: { title: 'Skills' },
         type: 'builtin',
       },
       {
-        identifier: 'lobe-skill-store',
+        identifier: 'orvilo-skill-store',
         api: [{ name: 'search', description: 'Search', parameters: {} }],
         meta: { title: 'Skill Store' },
         type: 'builtin',
       },
       {
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         api: [{ name: 'search', description: 'Search web', parameters: {} }],
         meta: { title: 'Web Browsing' },
         type: 'builtin',
       },
       {
-        identifier: 'lobe-knowledge-base',
+        identifier: 'orvilo-knowledge-base',
         api: [{ name: 'query', description: 'Query KB', parameters: {} }],
         meta: { title: 'Knowledge Base' },
         type: 'builtin',
       },
       {
-        identifier: 'lobe-user-memory',
+        identifier: 'orvilo-user-memory',
         api: [{ name: 'recall', description: 'Recall', parameters: {} }],
         meta: { title: 'Memory' },
         type: 'builtin',
       },
       {
-        identifier: 'lobe-notebook',
+        identifier: 'orvilo-notebook',
         api: [{ name: 'write', description: 'Write note', parameters: {} }],
         meta: { title: 'Notebook' },
         type: 'builtin',
@@ -1158,14 +1158,14 @@ describe('ToolsEngine', () => {
     ];
 
     it('should only enable notebook + always-on builtins when user selected only notebook', () => {
-      const userSelectedPlugins = ['lobe-notebook'];
+      const userSelectedPlugins = ['orvilo-notebook'];
       const defaultToolIds = [
-        'lobe-activator',
-        'lobe-skills',
-        'lobe-skill-store',
-        'lobe-web-browsing',
-        'lobe-knowledge-base',
-        'lobe-user-memory',
+        'orvilo-activator',
+        'orvilo-skills',
+        'orvilo-skill-store',
+        'orvilo-web-browsing',
+        'orvilo-knowledge-base',
+        'orvilo-user-memory',
       ];
 
       // Build rules: user-selected plugins + always-on builtins + system conditions
@@ -1173,12 +1173,12 @@ describe('ToolsEngine', () => {
         // User-selected plugins
         ...Object.fromEntries(userSelectedPlugins.map((id) => [id, true])),
         // Always-on builtin tools
-        'lobe-activator': true,
-        'lobe-skills': true,
+        'orvilo-activator': true,
+        'orvilo-skills': true,
         // System-level rules
-        'lobe-knowledge-base': false, // no knowledge bases enabled
-        'lobe-user-memory': false, // memory disabled
-        'lobe-web-browsing': true, // search enabled
+        'orvilo-knowledge-base': false, // no knowledge bases enabled
+        'orvilo-user-memory': false, // memory disabled
+        'orvilo-web-browsing': true, // search enabled
       };
 
       const engine = new ToolsEngine({
@@ -1194,15 +1194,15 @@ describe('ToolsEngine', () => {
         provider: 'openai',
       });
 
-      // notebook + web-browsing + always-on builtins (lobe-activator, lobe-skills) should be enabled
-      expect(result.enabledToolIds).toContain('lobe-notebook');
-      expect(result.enabledToolIds).toContain('lobe-web-browsing');
-      expect(result.enabledToolIds).toContain('lobe-activator');
-      expect(result.enabledToolIds).toContain('lobe-skills');
-      // lobe-skill-store should NOT be enabled (not always-on, not user-selected)
-      expect(result.enabledToolIds).not.toContain('lobe-skill-store');
-      expect(result.enabledToolIds).not.toContain('lobe-knowledge-base');
-      expect(result.enabledToolIds).not.toContain('lobe-user-memory');
+      // notebook + web-browsing + always-on builtins (orvilo-activator, orvilo-skills) should be enabled
+      expect(result.enabledToolIds).toContain('orvilo-notebook');
+      expect(result.enabledToolIds).toContain('orvilo-web-browsing');
+      expect(result.enabledToolIds).toContain('orvilo-activator');
+      expect(result.enabledToolIds).toContain('orvilo-skills');
+      // orvilo-skill-store should NOT be enabled (not always-on, not user-selected)
+      expect(result.enabledToolIds).not.toContain('orvilo-skill-store');
+      expect(result.enabledToolIds).not.toContain('orvilo-knowledge-base');
+      expect(result.enabledToolIds).not.toContain('orvilo-user-memory');
     });
   });
 
@@ -1215,34 +1215,34 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateTools({
-        toolIds: ['lobe-web-browsing', 'lobe-web-browsing', 'dalle'],
+        toolIds: ['orvilo-web-browsing', 'orvilo-web-browsing', 'dalle'],
         model: 'gpt-4',
         provider: 'openai',
       });
 
       // Should only generate 2 tools, not 3
       expect(result).toHaveLength(2);
-      expect(result![0].function.name).toBe('lobe-web-browsing____search');
+      expect(result![0].function.name).toBe('orvilo-web-browsing____search');
       expect(result![1].function.name).toBe('dalle____generateImage');
     });
 
     it('should deduplicate between toolIds and defaultToolIds', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        defaultToolIds: ['lobe-web-browsing'],
+        defaultToolIds: ['orvilo-web-browsing'],
         enableChecker: () => true,
         functionCallChecker: () => true,
       });
 
       const result = engine.generateTools({
-        toolIds: ['lobe-web-browsing', 'dalle'],
+        toolIds: ['orvilo-web-browsing', 'dalle'],
         model: 'gpt-4',
         provider: 'openai',
       });
 
-      // Should only generate 2 tools (lobe-web-browsing should appear once)
+      // Should only generate 2 tools (orvilo-web-browsing should appear once)
       expect(result).toHaveLength(2);
-      expect(result![0].function.name).toBe('lobe-web-browsing____search');
+      expect(result![0].function.name).toBe('orvilo-web-browsing____search');
       expect(result![1].function.name).toBe('dalle____generateImage');
     });
 
@@ -1255,27 +1255,27 @@ describe('ToolsEngine', () => {
       });
 
       const result = engine.generateToolsDetailed({
-        toolIds: ['lobe-web-browsing', 'dalle', 'dalle'],
+        toolIds: ['orvilo-web-browsing', 'dalle', 'dalle'],
         model: 'gpt-4',
         provider: 'openai',
       });
 
       // Should only generate 2 unique tools
       expect(result.tools).toHaveLength(2);
-      expect(result.enabledToolIds).toEqual(['lobe-web-browsing', 'dalle']);
+      expect(result.enabledToolIds).toEqual(['orvilo-web-browsing', 'dalle']);
       expect(result.filteredTools).toEqual([]);
     });
 
     it('should handle complex deduplication scenarios', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        defaultToolIds: ['lobe-web-browsing', 'dalle'],
+        defaultToolIds: ['orvilo-web-browsing', 'dalle'],
         enableChecker: () => true,
         functionCallChecker: () => true,
       });
 
       const result = engine.generateTools({
-        toolIds: ['dalle', 'lobe-web-browsing', 'dalle', 'lobe-web-browsing'],
+        toolIds: ['dalle', 'orvilo-web-browsing', 'dalle', 'orvilo-web-browsing'],
         model: 'gpt-4',
         provider: 'openai',
       });
@@ -1286,33 +1286,33 @@ describe('ToolsEngine', () => {
   });
 
   describe('excludeDefaultToolIds (manual skill mode)', () => {
-    const builtinManifests: LobeToolManifest[] = [
+    const builtinManifests: OrviloToolManifest[] = [
       {
-        identifier: 'lobe-activator',
+        identifier: 'orvilo-activator',
         api: [{ name: 'run', description: 'Run tool', parameters: {} }],
         meta: { title: 'Tools' },
         type: 'builtin',
       },
       {
-        identifier: 'lobe-skills',
+        identifier: 'orvilo-skills',
         api: [{ name: 'run', description: 'Run skill', parameters: {} }],
         meta: { title: 'Skills' },
         type: 'builtin',
       },
       {
-        identifier: 'lobe-skill-store',
+        identifier: 'orvilo-skill-store',
         api: [{ name: 'search', description: 'Search', parameters: {} }],
         meta: { title: 'Skill Store' },
         type: 'builtin',
       },
       {
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         api: [{ name: 'search', description: 'Search web', parameters: {} }],
         meta: { title: 'Web Browsing' },
         type: 'builtin',
       },
       {
-        identifier: 'lobe-cloud-sandbox',
+        identifier: 'orvilo-cloud-sandbox',
         api: [{ name: 'exec', description: 'Execute', parameters: {} }],
         meta: { title: 'Cloud Sandbox' },
         type: 'builtin',
@@ -1320,25 +1320,25 @@ describe('ToolsEngine', () => {
     ];
 
     const defaultToolIds = [
-      'lobe-activator',
-      'lobe-skills',
-      'lobe-skill-store',
-      'lobe-web-browsing',
-      'lobe-cloud-sandbox',
+      'orvilo-activator',
+      'orvilo-skills',
+      'orvilo-skill-store',
+      'orvilo-web-browsing',
+      'orvilo-cloud-sandbox',
     ];
 
-    const alwaysOnToolIds = ['lobe-activator', 'lobe-skills', 'lobe-skill-store'];
-    const manualModeExcludeToolIds = ['lobe-activator', 'lobe-skill-store'];
+    const alwaysOnToolIds = ['orvilo-activator', 'orvilo-skills', 'orvilo-skill-store'];
+    const manualModeExcludeToolIds = ['orvilo-activator', 'orvilo-skill-store'];
 
-    it('should NOT inject lobe-activator and lobe-skill-store in manual mode', () => {
+    it('should NOT inject orvilo-activator and orvilo-skill-store in manual mode', () => {
       const engine = new ToolsEngine({
         manifestSchemas: builtinManifests,
         defaultToolIds,
         enableChecker: createEnableChecker({
           rules: {
             ...Object.fromEntries(alwaysOnToolIds.map((id) => [id, true])),
-            'lobe-web-browsing': true,
-            'lobe-cloud-sandbox': true,
+            'orvilo-web-browsing': true,
+            'orvilo-cloud-sandbox': true,
           },
         }),
         functionCallChecker: () => true,
@@ -1352,23 +1352,23 @@ describe('ToolsEngine', () => {
       });
 
       // Discovery tools should be excluded from defaults in manual mode
-      expect(result.enabledToolIds).not.toContain('lobe-activator');
-      expect(result.enabledToolIds).not.toContain('lobe-skill-store');
+      expect(result.enabledToolIds).not.toContain('orvilo-activator');
+      expect(result.enabledToolIds).not.toContain('orvilo-skill-store');
       // Execution tools and other defaults should still be available
-      expect(result.enabledToolIds).toContain('lobe-skills');
-      expect(result.enabledToolIds).toContain('lobe-web-browsing');
-      expect(result.enabledToolIds).toContain('lobe-cloud-sandbox');
+      expect(result.enabledToolIds).toContain('orvilo-skills');
+      expect(result.enabledToolIds).toContain('orvilo-web-browsing');
+      expect(result.enabledToolIds).toContain('orvilo-cloud-sandbox');
     });
 
-    it('should inject lobe-activator and lobe-skill-store in auto mode (no excludeDefaultToolIds)', () => {
+    it('should inject orvilo-activator and orvilo-skill-store in auto mode (no excludeDefaultToolIds)', () => {
       const engine = new ToolsEngine({
         manifestSchemas: builtinManifests,
         defaultToolIds,
         enableChecker: createEnableChecker({
           rules: {
             ...Object.fromEntries(alwaysOnToolIds.map((id) => [id, true])),
-            'lobe-web-browsing': true,
-            'lobe-cloud-sandbox': true,
+            'orvilo-web-browsing': true,
+            'orvilo-cloud-sandbox': true,
           },
         }),
         functionCallChecker: () => true,
@@ -1382,11 +1382,11 @@ describe('ToolsEngine', () => {
       });
 
       // All default tools should be injected in auto mode
-      expect(result.enabledToolIds).toContain('lobe-activator');
-      expect(result.enabledToolIds).toContain('lobe-skill-store');
-      expect(result.enabledToolIds).toContain('lobe-skills');
-      expect(result.enabledToolIds).toContain('lobe-web-browsing');
-      expect(result.enabledToolIds).toContain('lobe-cloud-sandbox');
+      expect(result.enabledToolIds).toContain('orvilo-activator');
+      expect(result.enabledToolIds).toContain('orvilo-skill-store');
+      expect(result.enabledToolIds).toContain('orvilo-skills');
+      expect(result.enabledToolIds).toContain('orvilo-web-browsing');
+      expect(result.enabledToolIds).toContain('orvilo-cloud-sandbox');
     });
 
     it('should keep externally enabled tools (sandbox, web browsing) available in manual mode', () => {
@@ -1396,8 +1396,8 @@ describe('ToolsEngine', () => {
         enableChecker: createEnableChecker({
           rules: {
             ...Object.fromEntries(alwaysOnToolIds.map((id) => [id, true])),
-            'lobe-web-browsing': true,
-            'lobe-cloud-sandbox': true,
+            'orvilo-web-browsing': true,
+            'orvilo-cloud-sandbox': true,
           },
         }),
         functionCallChecker: () => true,
@@ -1411,8 +1411,8 @@ describe('ToolsEngine', () => {
       });
 
       // Web browsing and sandbox should remain available even in manual mode
-      expect(result.enabledToolIds).toContain('lobe-web-browsing');
-      expect(result.enabledToolIds).toContain('lobe-cloud-sandbox');
+      expect(result.enabledToolIds).toContain('orvilo-web-browsing');
+      expect(result.enabledToolIds).toContain('orvilo-cloud-sandbox');
       expect(result.enabledToolIds).toHaveLength(3); // skills + web-browsing + cloud-sandbox
     });
 
@@ -1441,7 +1441,7 @@ describe('ToolsEngine', () => {
     it('should not include default tools when skipDefaultTools is true in generateTools', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        defaultToolIds: ['lobe-web-browsing'],
+        defaultToolIds: ['orvilo-web-browsing'],
         enableChecker: () => true,
         functionCallChecker: () => true,
       });
@@ -1453,7 +1453,7 @@ describe('ToolsEngine', () => {
         skipDefaultTools: true,
       });
 
-      // Should only include dalle, not the default lobe-web-browsing
+      // Should only include dalle, not the default orvilo-web-browsing
       expect(result).toHaveLength(1);
       expect(result![0].function.name).toBe('dalle____generateImage');
     });
@@ -1461,7 +1461,7 @@ describe('ToolsEngine', () => {
     it('should not include default tools when skipDefaultTools is true in generateToolsDetailed', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        defaultToolIds: ['lobe-web-browsing'],
+        defaultToolIds: ['orvilo-web-browsing'],
         enableChecker: () => true,
         functionCallChecker: () => true,
       });
@@ -1473,7 +1473,7 @@ describe('ToolsEngine', () => {
         skipDefaultTools: true,
       });
 
-      // Should only include dalle, not the default lobe-web-browsing
+      // Should only include dalle, not the default orvilo-web-browsing
       expect(result.tools).toHaveLength(1);
       expect(result.enabledToolIds).toEqual(['dalle']);
       expect(result.enabledManifests).toHaveLength(1);
@@ -1483,7 +1483,7 @@ describe('ToolsEngine', () => {
     it('should return undefined when skipDefaultTools is true and toolIds is empty', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        defaultToolIds: ['lobe-web-browsing', 'dalle'],
+        defaultToolIds: ['orvilo-web-browsing', 'dalle'],
         enableChecker: () => true,
         functionCallChecker: () => true,
       });
@@ -1502,7 +1502,7 @@ describe('ToolsEngine', () => {
     it('should return empty results when skipDefaultTools is true and toolIds is empty in generateToolsDetailed', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        defaultToolIds: ['lobe-web-browsing', 'dalle'],
+        defaultToolIds: ['orvilo-web-browsing', 'dalle'],
         enableChecker: () => true,
         functionCallChecker: () => true,
       });
@@ -1523,7 +1523,7 @@ describe('ToolsEngine', () => {
     it('should include default tools when skipDefaultTools is false', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        defaultToolIds: ['lobe-web-browsing'],
+        defaultToolIds: ['orvilo-web-browsing'],
         enableChecker: () => true,
         functionCallChecker: () => true,
       });
@@ -1535,14 +1535,14 @@ describe('ToolsEngine', () => {
         skipDefaultTools: false,
       });
 
-      // Should include both dalle and the default lobe-web-browsing
+      // Should include both dalle and the default orvilo-web-browsing
       expect(result).toHaveLength(2);
     });
 
     it('should include default tools when skipDefaultTools is undefined (default behavior)', () => {
       const engine = new ToolsEngine({
         manifestSchemas: [mockWebBrowsingManifest, mockDalleManifest],
-        defaultToolIds: ['lobe-web-browsing'],
+        defaultToolIds: ['orvilo-web-browsing'],
         enableChecker: () => true,
         functionCallChecker: () => true,
       });
@@ -1554,7 +1554,7 @@ describe('ToolsEngine', () => {
         // skipDefaultTools not specified
       });
 
-      // Should include both dalle and the default lobe-web-browsing
+      // Should include both dalle and the default orvilo-web-browsing
       expect(result).toHaveLength(2);
     });
 

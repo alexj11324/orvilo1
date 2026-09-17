@@ -125,7 +125,7 @@ describe('callLlmFinalizer', () => {
       host: createHost(messages, stream),
       model: 'glm',
       output,
-      provider: 'lobehub',
+      provider: 'orvilo',
       shouldReplayAssistantReasoning: false,
       state,
     });
@@ -194,7 +194,7 @@ describe('callLlmFinalizer', () => {
         ],
         toolsCalling: [toolCalling],
       }),
-      provider: 'lobehub',
+      provider: 'orvilo',
       shouldReplayAssistantReasoning: false,
       state,
     });

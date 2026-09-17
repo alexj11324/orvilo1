@@ -10,7 +10,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   // Card sits inline with the chat — no surrounding panel chrome. Hover
   // tints the row so the stack reads as clickable; selection swaps to a
   // neutral filled row so the pick is visually weighty. We use `colorFill*`
-  // rather than `colorPrimaryBg` because LobeHub's default primary is a
+  // rather than `colorPrimaryBg` because Orvilo's default primary is a
   // near-black neutral, which makes `colorPrimaryBg` render as a muddy black
   // block; the selection signal instead rides the filled row + the checkmark.
   option: css`
@@ -109,7 +109,7 @@ export interface OptionCardProps {
  *
  * Presentational and self-contained — shared across the ask-user surfaces
  * (Claude Code `AskUserQuestion`, the builtin `user-interaction` /
- * `lobe-agent` clarification form) so the tiled options read identically
+ * `orvilo-agent` clarification form) so the tiled options read identically
  * everywhere.
  */
 export const OptionCard = memo<OptionCardProps>(

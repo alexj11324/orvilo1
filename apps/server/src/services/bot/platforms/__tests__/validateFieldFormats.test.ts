@@ -33,7 +33,7 @@ describe('collectFieldFormatViolations', () => {
       'https://discord.com/oauth2/authorize?client_id=1000000000000000001',
     ],
     ['a block of prose', '## Summary - Endpoint or schema scope, consumers, version'],
-    ['a LobeHub API key', 'sk-lh-000000000000fake'],
+    ['a Orvilo API key', 'sk-ov-000000000000fake'],
   ])('rejects %s pasted into publicKey', (_label, publicKey) => {
     const violations = collectFieldFormatViolations(discordSchema, {
       ...VALID_DISCORD,
@@ -57,7 +57,7 @@ describe('collectFieldFormatViolations', () => {
 
   it('rejects a bot token that is not three dot-separated segments', () => {
     const violations = collectFieldFormatViolations(discordSchema, {
-      credentials: { botToken: 'sk-lh-000000000000fake' },
+      credentials: { botToken: 'sk-ov-000000000000fake' },
     });
 
     expect(fieldsOf(violations)).toEqual(['credentials.botToken']);

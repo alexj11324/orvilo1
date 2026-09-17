@@ -1412,7 +1412,6 @@ describe('convertOpenAIResponseInputs', () => {
   });
 
   it('should handle openai and claude mixed message', async () => {
-    // See: https://github.com/lobehub/lobehub/pull/12017
     const messages: OpenAIChatMessage[] = [
       {
         content: 'system prompts',

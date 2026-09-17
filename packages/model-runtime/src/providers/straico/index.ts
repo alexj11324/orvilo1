@@ -23,7 +23,7 @@ const cleanModelName = (name: string): string => {
   return name.replace(/^[^:]+:\s*/, '');
 };
 
-export const LobeStraicoAI = createOpenAICompatibleRuntime({
+export const OrviloStraicoAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.straico.com/v0',
   chatCompletion: {
     handlePayload: (payload) => {

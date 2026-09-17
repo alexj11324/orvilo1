@@ -44,7 +44,7 @@ describe('deriveSelfReviewSignals', () => {
           {
             apiName: 'createDocument',
             failedCount: 0,
-            identifier: 'lobe-agent-documents',
+            identifier: 'orvilo-agent-documents',
             messageIds: ['msg-1', 'msg-2', 'msg-3'],
             sampleArgs: [],
             sampleErrors: [],
@@ -74,7 +74,7 @@ describe('deriveSelfReviewSignals', () => {
         {
           apiName: 'createDocument',
           failedCount: 0,
-          identifier: 'lobe-agent-documents',
+          identifier: 'orvilo-agent-documents',
           messageIds: ['msg-1', 'msg-2', 'msg-3'],
           sampleArgs: [],
           sampleErrors: [],

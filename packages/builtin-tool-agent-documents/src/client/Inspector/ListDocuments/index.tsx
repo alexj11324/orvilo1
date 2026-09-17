@@ -22,13 +22,13 @@ export const ListDocumentsInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-documents.apiName.listDocuments')}
+        {t('builtins.orvilo-agent-documents.apiName.listDocuments')}
       </span>
       {scope && (
         <>
           <span className={styles.separator}>·</span>
           <span className={styles.subdued}>
-            {t(`builtins.lobe-agent-documents.inspector.scope.${scope}` as const)}
+            {t(`builtins.orvilo-agent-documents.inspector.scope.${scope}` as const)}
           </span>
         </>
       )}
@@ -36,7 +36,7 @@ export const ListDocumentsInspector = memo<
         <>
           <span className={styles.separator}>·</span>
           <span className={styles.subdued}>
-            {t('builtins.lobe-agent-documents.inspector.docCount', { count })}
+            {t('builtins.orvilo-agent-documents.inspector.docCount', { count })}
           </span>
         </>
       )}

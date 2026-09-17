@@ -7,7 +7,7 @@ import { createAgentStateManager, createStreamEventManager } from './factory';
 import { type IAgentStateManager, type IStreamEventManager } from './types';
 import { hasVisibleOutputEndPublished } from './visibleOutputEnd';
 
-const log = debug('lobe-server:agent-runtime:coordinator');
+const log = debug('orvilo-server:agent-runtime:coordinator');
 
 /**
  * Statuses that end the event stream for the current operationId.

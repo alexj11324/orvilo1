@@ -28,23 +28,23 @@ import {
   ATTR_GEN_AI_USAGE_INPUT_TOKENS,
   ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
   ATTR_GEN_AI_USAGE_REASONING_OUTPUT_TOKENS,
-  ATTR_LOBEHUB_AGENT_COMPLETION_REASON,
-  ATTR_LOBEHUB_AGENT_OPERATION_ID,
-  ATTR_LOBEHUB_AGENT_STEP_COUNT,
-  ATTR_LOBEHUB_AGENT_STEP_INDEX,
-  ATTR_LOBEHUB_CONTEXT_HAS_IMAGES,
-  ATTR_LOBEHUB_CONTEXT_HISTORY_COMPRESSED,
-  ATTR_LOBEHUB_CONTEXT_KNOWLEDGE_COUNT,
-  ATTR_LOBEHUB_CONTEXT_KNOWLEDGE_INJECTED,
-  ATTR_LOBEHUB_CONTEXT_MEMORY_INJECTED,
-  ATTR_LOBEHUB_CONTEXT_MESSAGE_COUNT,
-  ATTR_LOBEHUB_CONTEXT_SYSTEM_ROLE_LENGTH,
-  ATTR_LOBEHUB_CONTEXT_TOKEN_USAGE,
-  ATTR_LOBEHUB_CONTEXT_TOOL_COUNT,
-  ATTR_LOBEHUB_CONTEXT_WINDOW_RATIO,
-  ATTR_LOBEHUB_TOOL_ATTEMPTS,
-  ATTR_LOBEHUB_TOOL_SOURCE,
-  ATTR_LOBEHUB_TOOL_SUCCESS,
+  ATTR_ORVILO_AGENT_COMPLETION_REASON,
+  ATTR_ORVILO_AGENT_OPERATION_ID,
+  ATTR_ORVILO_AGENT_STEP_COUNT,
+  ATTR_ORVILO_AGENT_STEP_INDEX,
+  ATTR_ORVILO_CONTEXT_HAS_IMAGES,
+  ATTR_ORVILO_CONTEXT_HISTORY_COMPRESSED,
+  ATTR_ORVILO_CONTEXT_KNOWLEDGE_COUNT,
+  ATTR_ORVILO_CONTEXT_KNOWLEDGE_INJECTED,
+  ATTR_ORVILO_CONTEXT_MEMORY_INJECTED,
+  ATTR_ORVILO_CONTEXT_MESSAGE_COUNT,
+  ATTR_ORVILO_CONTEXT_SYSTEM_ROLE_LENGTH,
+  ATTR_ORVILO_CONTEXT_TOKEN_USAGE,
+  ATTR_ORVILO_CONTEXT_TOOL_COUNT,
+  ATTR_ORVILO_CONTEXT_WINDOW_RATIO,
+  ATTR_ORVILO_TOOL_ATTEMPTS,
+  ATTR_ORVILO_TOOL_SOURCE,
+  ATTR_ORVILO_TOOL_SUCCESS,
   GEN_AI_OPERATION_CHAT,
   GEN_AI_OPERATION_EXECUTE_TOOL,
   GEN_AI_OPERATION_INVOKE_AGENT,
@@ -91,8 +91,8 @@ export const buildInvokeAgentAttributes = (input: InvokeAgentAttributes): Attrib
     [ATTR_GEN_AI_REQUEST_MODEL]: input.requestModel,
     [ATTR_GEN_AI_CONVERSATION_ID]: input.conversationId,
     [ATTR_GEN_AI_DATA_SOURCE_ID]: input.dataSourceId,
-    [ATTR_LOBEHUB_AGENT_OPERATION_ID]: input.operationId,
-    [ATTR_LOBEHUB_AGENT_STEP_INDEX]: input.stepIndex,
+    [ATTR_ORVILO_AGENT_OPERATION_ID]: input.operationId,
+    [ATTR_ORVILO_AGENT_STEP_INDEX]: input.stepIndex,
   });
 
 export interface InvokeAgentResultAttributes {
@@ -106,8 +106,8 @@ export const buildInvokeAgentResultAttributes = (input: InvokeAgentResultAttribu
   compact({
     [ATTR_GEN_AI_USAGE_INPUT_TOKENS]: input.inputTokens,
     [ATTR_GEN_AI_USAGE_OUTPUT_TOKENS]: input.outputTokens,
-    [ATTR_LOBEHUB_AGENT_STEP_COUNT]: input.stepCount,
-    [ATTR_LOBEHUB_AGENT_COMPLETION_REASON]: input.completionReason,
+    [ATTR_ORVILO_AGENT_STEP_COUNT]: input.stepCount,
+    [ATTR_ORVILO_AGENT_COMPLETION_REASON]: input.completionReason,
   });
 
 export const invokeAgentSpanName = (agentName?: string) =>
@@ -137,8 +137,8 @@ export const buildChatRequestAttributes = (input: ChatRequestAttributes): Attrib
     [ATTR_GEN_AI_REQUEST_TEMPERATURE]: input.temperature,
     [ATTR_GEN_AI_REQUEST_TOP_P]: input.topP,
     [ATTR_GEN_AI_CONVERSATION_ID]: input.conversationId,
-    [ATTR_LOBEHUB_AGENT_OPERATION_ID]: input.operationId,
-    [ATTR_LOBEHUB_AGENT_STEP_INDEX]: input.stepIndex,
+    [ATTR_ORVILO_AGENT_OPERATION_ID]: input.operationId,
+    [ATTR_ORVILO_AGENT_STEP_INDEX]: input.stepIndex,
   });
 
 export interface ChatResponseAttributes {
@@ -194,9 +194,9 @@ export const buildExecuteToolAttributes = (input: ExecuteToolAttributes): Attrib
     [ATTR_GEN_AI_TOOL_CALL_ID]: input.toolCallId,
     [ATTR_GEN_AI_TOOL_DESCRIPTION]: input.description,
     [ATTR_GEN_AI_TOOL_CALL_ARGUMENTS]: input.argumentsJson,
-    [ATTR_LOBEHUB_TOOL_SOURCE]: input.toolSource,
-    [ATTR_LOBEHUB_AGENT_OPERATION_ID]: input.operationId,
-    [ATTR_LOBEHUB_AGENT_STEP_INDEX]: input.stepIndex,
+    [ATTR_ORVILO_TOOL_SOURCE]: input.toolSource,
+    [ATTR_ORVILO_AGENT_OPERATION_ID]: input.operationId,
+    [ATTR_ORVILO_AGENT_STEP_INDEX]: input.stepIndex,
   });
 
 export interface ExecuteToolResultAttributes {
@@ -207,15 +207,15 @@ export interface ExecuteToolResultAttributes {
 
 export const buildExecuteToolResultAttributes = (input: ExecuteToolResultAttributes): Attributes =>
   compact({
-    [ATTR_LOBEHUB_TOOL_SUCCESS]: input.success,
-    [ATTR_LOBEHUB_TOOL_ATTEMPTS]: input.attempts,
+    [ATTR_ORVILO_TOOL_SUCCESS]: input.success,
+    [ATTR_ORVILO_TOOL_ATTEMPTS]: input.attempts,
     [ATTR_GEN_AI_TOOL_CALL_RESULT]: input.resultJson,
   });
 
 export const executeToolSpanName = (toolName: string) =>
   `${GEN_AI_OPERATION_EXECUTE_TOOL} ${toolName}`;
 
-// ---- context_engineering span (LobeHub-only) ----
+// ---- context_engineering span (Orvilo-only) ----
 
 export interface ContextEngineeringAttributes {
   hasImages?: boolean;
@@ -236,18 +236,18 @@ export const buildContextEngineeringAttributes = (
   input: ContextEngineeringAttributes,
 ): Attributes =>
   compact({
-    [ATTR_LOBEHUB_CONTEXT_MESSAGE_COUNT]: input.messageCount,
-    [ATTR_LOBEHUB_CONTEXT_TOKEN_USAGE]: input.tokenUsage,
-    [ATTR_LOBEHUB_CONTEXT_WINDOW_RATIO]: input.windowRatio,
-    [ATTR_LOBEHUB_CONTEXT_KNOWLEDGE_INJECTED]: input.knowledgeInjected,
-    [ATTR_LOBEHUB_CONTEXT_KNOWLEDGE_COUNT]: input.knowledgeCount,
-    [ATTR_LOBEHUB_CONTEXT_HISTORY_COMPRESSED]: input.historyCompressed,
-    [ATTR_LOBEHUB_CONTEXT_MEMORY_INJECTED]: input.memoryInjected,
-    [ATTR_LOBEHUB_CONTEXT_SYSTEM_ROLE_LENGTH]: input.systemRoleLength,
-    [ATTR_LOBEHUB_CONTEXT_TOOL_COUNT]: input.toolCount,
-    [ATTR_LOBEHUB_CONTEXT_HAS_IMAGES]: input.hasImages,
-    [ATTR_LOBEHUB_AGENT_OPERATION_ID]: input.operationId,
-    [ATTR_LOBEHUB_AGENT_STEP_INDEX]: input.stepIndex,
+    [ATTR_ORVILO_CONTEXT_MESSAGE_COUNT]: input.messageCount,
+    [ATTR_ORVILO_CONTEXT_TOKEN_USAGE]: input.tokenUsage,
+    [ATTR_ORVILO_CONTEXT_WINDOW_RATIO]: input.windowRatio,
+    [ATTR_ORVILO_CONTEXT_KNOWLEDGE_INJECTED]: input.knowledgeInjected,
+    [ATTR_ORVILO_CONTEXT_KNOWLEDGE_COUNT]: input.knowledgeCount,
+    [ATTR_ORVILO_CONTEXT_HISTORY_COMPRESSED]: input.historyCompressed,
+    [ATTR_ORVILO_CONTEXT_MEMORY_INJECTED]: input.memoryInjected,
+    [ATTR_ORVILO_CONTEXT_SYSTEM_ROLE_LENGTH]: input.systemRoleLength,
+    [ATTR_ORVILO_CONTEXT_TOOL_COUNT]: input.toolCount,
+    [ATTR_ORVILO_CONTEXT_HAS_IMAGES]: input.hasImages,
+    [ATTR_ORVILO_AGENT_OPERATION_ID]: input.operationId,
+    [ATTR_ORVILO_AGENT_STEP_INDEX]: input.stepIndex,
   });
 
 export const CONTEXT_ENGINEERING_SPAN_NAME = 'context_engineering' as const;

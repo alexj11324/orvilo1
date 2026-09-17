@@ -12,7 +12,7 @@ const tool = (
   partial: Partial<ChatToolPayloadWithResult> & { apiName: string; id: string },
 ): ChatToolPayloadWithResult => ({
   arguments: '{}',
-  identifier: 'lobe-cloud-sandbox',
+  identifier: 'orvilo-cloud-sandbox',
   type: 'builtin',
   ...partial,
 });
@@ -54,14 +54,14 @@ describe('collectFileEditToolCallRecords', () => {
       {
         apiName: 'writeFile',
         arguments: JSON.stringify({ path: '/work/a.ts' }),
-        identifier: 'lobe-cloud-sandbox',
+        identifier: 'orvilo-cloud-sandbox',
         state: { path: '/work/a.ts', success: true },
         toolCallId: 't1',
       },
       {
         apiName: 'editFile',
         arguments: JSON.stringify({ path: '/work/a.ts' }),
-        identifier: 'lobe-cloud-sandbox',
+        identifier: 'orvilo-cloud-sandbox',
         state: { linesAdded: 2, path: '/work/a.ts' },
         toolCallId: 't2',
       },

@@ -1,6 +1,6 @@
 import { type DeviceAttachment } from './ExecutionRuntime/types';
 
-export const RemoteDeviceIdentifier = 'lobe-remote-device';
+export const RemoteDeviceIdentifier = 'orvilo-remote-device';
 
 export const RemoteDeviceApiName = {
   activateDevice: 'activateDevice',

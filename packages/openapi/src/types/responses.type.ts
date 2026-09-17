@@ -115,7 +115,7 @@ export const FunctionToolSchema = z.object({
 export type FunctionTool = z.infer<typeof FunctionToolSchema>;
 
 export const HostedToolSchema = z.object({
-  type: z.string().startsWith('lobe-'),
+  type: z.string().startsWith('orvilo-'),
 });
 export type HostedTool = z.infer<typeof HostedToolSchema>;
 
@@ -139,11 +139,7 @@ export interface ResponseUsage {
 // ==================== Error Types ====================
 
 export type ResponseErrorCode =
-  | 'server_error'
-  | 'invalid_request_error'
-  | 'not_found'
-  | 'model_error'
-  | 'rate_limit_error';
+  'server_error' | 'invalid_request_error' | 'not_found' | 'model_error' | 'rate_limit_error';
 
 export interface ResponseError {
   code: ResponseErrorCode;

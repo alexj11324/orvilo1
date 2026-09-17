@@ -27,7 +27,7 @@ describe('isCanUseFC', () => {
     it('assumes function calling is available for an unknown model too', () => {
       mockAiInfraState({ enabledAiModels: [], isInitAiProviderRuntimeState: false });
 
-      expect(isCanUseFC('claude-sonnet-4-6', 'lobehub')).toBe(true);
+      expect(isCanUseFC('claude-sonnet-4-6', 'orvilo')).toBe(true);
     });
   });
 

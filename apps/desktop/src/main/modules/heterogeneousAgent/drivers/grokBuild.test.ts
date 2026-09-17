@@ -23,7 +23,7 @@ const bindingContext = (
     GROK_HOME: '/user/grok',
     GROK_CODE_XAI_API_KEY: 'stale-legacy-key',
     KEEP_ME: 'yes',
-    LOBEHUB_GROK_API_KEY: 'stale-key',
+    ORVILO_GROK_API_KEY: 'stale-key',
     XAI_API_KEY: 'stale-xai-key',
   },
   profileDir: '/managed/grok',
@@ -54,7 +54,7 @@ describe('grokBuildDriver provider binding', () => {
     const plan = await grokBuildDriver.prepareServerDefaultBinding!({
       args: ['--model', 'stale-model', '--effort', 'high'],
       endpoint: 'https://app.example.com/',
-      env: { LOBEHUB_GROK_API_KEY: 'stale-token' },
+      env: { ORVILO_GROK_API_KEY: 'stale-token' },
       model: 'kimi-k2.6',
       profileDir: '/managed/grok',
     });
@@ -62,11 +62,11 @@ describe('grokBuildDriver provider binding', () => {
     const alias = plan.args.at(-1);
 
     expect(plan.args).toEqual(['--effort', 'high', '--model', alias]);
-    expect(alias).toMatch(/^lobehub-provider-[\da-f]{16}$/);
+    expect(alias).toMatch(/^orvilo-provider-[\da-f]{16}$/);
     expect(plan.env).toMatchObject({ GROK_HOME: '/managed/grok' });
-    expect(plan.env.LOBEHUB_GROK_API_KEY).toBeUndefined();
-    expect(plan.operationTokenEnvKey).toBe('LOBEHUB_GROK_API_KEY');
-    expect(config).toContain('model = "lobehub/kimi-k2.6"');
+    expect(plan.env.ORVILO_GROK_API_KEY).toBeUndefined();
+    expect(plan.operationTokenEnvKey).toBe('ORVILO_GROK_API_KEY');
+    expect(config).toContain('model = "aspectlylabs/kimi-k2.6"');
     expect(config).toContain('base_url = "https://app.example.com/api/v1/openai/v1"');
     expect(config).toContain('api_backend = "responses"');
     expect(config).toContain('auth_scheme = "bearer"');
@@ -105,7 +105,7 @@ describe('grokBuildDriver provider binding', () => {
       const alias = plan.args.at(-1);
 
       expect(plan.args).toEqual(['--effort', 'high', '--model', alias]);
-      expect(alias).toMatch(/^lobehub-provider-[\da-f]{16}$/);
+      expect(alias).toMatch(/^orvilo-provider-[\da-f]{16}$/);
       expect(plan.env).toMatchObject({
         GROK_AGENT: '',
         GROK_CONFIG: '',
@@ -113,14 +113,14 @@ describe('grokBuildDriver provider binding', () => {
         GROK_DEFAULT_MODEL: '',
         GROK_HOME: '/managed/grok',
         KEEP_ME: 'yes',
-        LOBEHUB_GROK_API_KEY: 'bound-key',
+        ORVILO_GROK_API_KEY: 'bound-key',
       });
       expect(plan.env.GROK_CODE_XAI_API_KEY).toBeUndefined();
       expect(plan.env.XAI_API_KEY).toBeUndefined();
       expect(config).toContain(`[model.${alias}]`);
       expect(config).toContain('model = "bound-model"');
       expect(config).toContain(`base_url = "${baseURL}"`);
-      expect(config).toContain('env_key = "LOBEHUB_GROK_API_KEY"');
+      expect(config).toContain('env_key = "ORVILO_GROK_API_KEY"');
       expect(config).toContain(`api_backend = "${apiBackend}"`);
       expect(config).toContain(`auth_scheme = "${authScheme}"`);
       expect(config).toContain(`default = "${alias}"`);

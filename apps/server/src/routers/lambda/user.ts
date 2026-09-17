@@ -400,7 +400,7 @@ export const userRouter = router({
     async ({
       ctx,
     }): Promise<{
-      connectionSources: Record<string, 'composio' | 'lobehub'>;
+      connectionSources: Record<string, 'composio' | 'orvilo'>;
       providerIds: string[];
       sourceProviderIds: string[];
     }> => {

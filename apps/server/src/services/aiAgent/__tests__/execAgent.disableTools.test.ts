@@ -8,7 +8,7 @@ const {
   mockCreateServerAgentToolsEngine,
   mockGetAgentConfig,
   mockGetComposioManifests,
-  mockGetLobehubSkillManifests,
+  mockGetOrviloSkillManifests,
   mockMessageCreate,
   mockPluginQuery,
 } = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ const {
   }),
   mockGetAgentConfig: vi.fn(),
   mockGetComposioManifests: vi.fn().mockResolvedValue([]),
-  mockGetLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+  mockGetOrviloSkillManifests: vi.fn().mockResolvedValue([]),
   mockMessageCreate: vi.fn(),
   mockPluginQuery: vi.fn().mockResolvedValue([]),
 }));
@@ -118,7 +118,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: mockGetLobehubSkillManifests,
+      getOrviloSkillManifests: mockGetOrviloSkillManifests,
     };
   }),
 }));
@@ -159,7 +159,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         abilities: { functionCall: true },
         id: 'gpt-4',
@@ -205,7 +205,7 @@ describe('AiAgentService.execAgent - disableTools', () => {
     expect(mockPluginQuery).not.toHaveBeenCalled();
 
     // Manifest fetches should NOT be called
-    expect(mockGetLobehubSkillManifests).not.toHaveBeenCalled();
+    expect(mockGetOrviloSkillManifests).not.toHaveBeenCalled();
     expect(mockGetComposioManifests).not.toHaveBeenCalled();
 
     // ToolsEngine should NOT be created
@@ -225,7 +225,7 @@ describe('AiAgentService.execAgent - disableTools', () => {
 
     // All tool discovery steps should be called
     expect(mockPluginQuery).toHaveBeenCalledTimes(1);
-    expect(mockGetLobehubSkillManifests).toHaveBeenCalledTimes(1);
+    expect(mockGetOrviloSkillManifests).toHaveBeenCalledTimes(1);
     expect(mockGetComposioManifests).toHaveBeenCalledTimes(1);
     expect(mockCreateServerAgentToolsEngine).toHaveBeenCalledTimes(1);
   });

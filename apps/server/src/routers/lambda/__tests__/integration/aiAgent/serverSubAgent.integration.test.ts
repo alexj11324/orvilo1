@@ -3,7 +3,7 @@
  * Integration test for the server `callSubAgent` async suspend/resume flow.
  *
  * Verifies the full deferred-tool lifecycle end-to-end on the in-memory runtime:
- *   1. Parent op LLM emits a `lobe-agent____callSubAgent` tool call.
+ *   1. Parent op LLM emits a `orvilo-agent____callSubAgent` tool call.
  *   2. The real server executor parks the parent (`waiting_for_async_tool`),
  *      creates a pending placeholder tool message, and forks a child op.
  *   3. The child op runs independently and completes.
@@ -11,7 +11,7 @@
  *      sub-agent's answer and resumes the parent.
  *   5. The parent op runs one more LLM step and reaches `done`.
  */
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { agentOperations, agents, messages } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
@@ -27,7 +27,7 @@ import { createMockResponsesStream, waitForOperationComplete } from './helpers';
 
 process.env.OPENAI_API_KEY = 'sk-test-fake-api-key-for-testing';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -45,7 +45,7 @@ vi.mock('@/server/services/file', () => ({
 }));
 
 let mockResponsesCreate: any;
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 let userId: string;
 let testAgentId: string;
 
@@ -65,7 +65,7 @@ const createCallSubAgentResponse = () => {
       instruction: 'Find the answer to the ultimate question.',
     }),
     call_id: callId,
-    name: 'lobe-agent____callSubAgent',
+    name: 'orvilo-agent____callSubAgent',
     type: 'function_call',
   };
 

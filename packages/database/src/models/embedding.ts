@@ -2,15 +2,15 @@ import { and, count, eq } from 'drizzle-orm';
 
 import type { NewEmbeddingsItem } from '../schemas';
 import { embeddings } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 export class EmbeddingModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;

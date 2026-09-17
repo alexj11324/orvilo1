@@ -163,7 +163,7 @@ describe('FtsSearchMigrationLockClient', () => {
     );
     expect(JSON.parse(createRequest?.body ?? '{}')).toEqual({
       mappings: {
-        _meta: { lobehub_fts_search_control: true, schema_version: 1 },
+        _meta: { orvilo_fts_search_control: true, schema_version: 1 },
         dynamic: 'strict',
         properties: {
           acquiredAt: { type: 'date' },

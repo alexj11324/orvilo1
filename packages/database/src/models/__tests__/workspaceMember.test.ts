@@ -13,10 +13,10 @@ import {
   workspaceMembers,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { WorkspaceMemberModel } from '../workspaceMember';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const inviterId = 'wm-inviter';
 const memberId = 'wm-member';
@@ -171,7 +171,7 @@ describe('WorkspaceMemberModel', () => {
       await serverDB.insert(users).values({ id: viewerId });
       await serverDB
         .update(users)
-        .set({ email: 'alice@lobehub.com', fullName: 'Alice Chen', username: 'alice' })
+        .set({ email: 'alice@orvilo.aspectlylabs.com', fullName: 'Alice Chen', username: 'alice' })
         .where(eq(users.id, memberId));
       await serverDB
         .update(users)
@@ -225,7 +225,7 @@ describe('WorkspaceMemberModel', () => {
 
       expect(await ids('chen')).toEqual([memberId]);
       expect(await ids('bob')).toEqual([otherUserId]);
-      expect(await ids('alice@lobehub.com')).toEqual([memberId]);
+      expect(await ids('alice@orvilo.aspectlylabs.com')).toEqual([memberId]);
       expect(await ids(memberId)).toEqual([memberId]);
       expect(await ids('neko')).toEqual([memberId]);
       expect(await ids('4521')).toEqual([memberId]);

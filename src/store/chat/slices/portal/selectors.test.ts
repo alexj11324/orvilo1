@@ -654,7 +654,7 @@ describe('chatDockSelectors', () => {
           'test-id_null': [
             {
               id: 'test-id',
-              content: `<lobeArtifact type="text">${artifactContent}</lobeArtifact>`,
+              content: `<orviloArtifact type="text">${artifactContent}</orviloArtifact>`,
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -681,11 +681,11 @@ describe('chatDockSelectors', () => {
           'test-id_null': [
             {
               id: 'test-id',
-              content: `<lobeArtifact type="text/html">
+              content: `<orviloArtifact type="text/html">
 \`\`\`html
 ${htmlContent}
 \`\`\`
-</lobeArtifact>`,
+</orviloArtifact>`,
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -707,7 +707,7 @@ ${htmlContent}
           'test-id_null': [
             {
               id: 'test-id',
-              content: `<lobeArtifact type="text/html">
+              content: `<orviloArtifact type="text/html">
 \`\`\`html
 ${htmlContent}`,
               createdAt: Date.now(),
@@ -729,7 +729,7 @@ ${htmlContent}`,
           'test-id_null': [
             {
               id: 'test-id',
-              content: `<lobeArtifact identifier="first" type="text">${content1}</lobeArtifact>\n\n<lobeArtifact identifier="second" type="text">${content2}</lobeArtifact>`,
+              content: `<orviloArtifact identifier="first" type="text">${content1}</orviloArtifact>\n\n<orviloArtifact identifier="second" type="text">${content2}</orviloArtifact>`,
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -748,7 +748,7 @@ ${htmlContent}`,
           'test-id_null': [
             {
               id: 'test-id',
-              content: `<lobeArtifact identifier="real" type="text">Real content</lobeArtifact>`,
+              content: `<orviloArtifact identifier="real" type="text">Real content</orviloArtifact>`,
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -766,7 +766,7 @@ ${htmlContent}`,
           'test-id_null': [
             {
               id: 'test-id',
-              content: `<lobeArtifact identifier="done" type="text">Done</lobeArtifact>\n\n<lobeArtifact identifier="wip" type="text">Still generating...`,
+              content: `<orviloArtifact identifier="done" type="text">Done</orviloArtifact>\n\n<orviloArtifact identifier="wip" type="text">Still generating...`,
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -785,7 +785,7 @@ ${htmlContent}`,
           'test-id_null': [
             {
               id: 'test-id',
-              content: `<lobeArtifact identifier="test+id(1)[2]" type="text">Special content</lobeArtifact>`,
+              content: `<orviloArtifact identifier="test+id(1)[2]" type="text">Special content</orviloArtifact>`,
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -807,7 +807,7 @@ ${htmlContent}`,
           'test-id_null': [
             {
               id: 'test-id',
-              content: `<lobeArtifact identifier="a" type="text">${content1}</lobeArtifact>\n\n<lobeArtifact identifier="b" type="text">Second</lobeArtifact>`,
+              content: `<orviloArtifact identifier="a" type="text">${content1}</orviloArtifact>\n\n<orviloArtifact identifier="b" type="text">Second</orviloArtifact>`,
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -827,7 +827,7 @@ ${htmlContent}`,
           'test-id_null': [
             {
               id: 'test-id',
-              content: '<lobeArtifact type="text">Test content',
+              content: '<orviloArtifact type="text">Test content',
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -845,7 +845,7 @@ ${htmlContent}`,
           'test-id_null': [
             {
               id: 'test-id',
-              content: '<lobeArtifact type="text">Test content</lobeArtifact>',
+              content: '<orviloArtifact type="text">Test content</orviloArtifact>',
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -882,7 +882,7 @@ ${htmlContent}`,
             {
               id: 'test-id',
               content:
-                '<lobeArtifact identifier="a" type="text">A</lobeArtifact>\n\n<lobeArtifact identifier="b" type="text">B</lobeArtifact>',
+                '<orviloArtifact identifier="a" type="text">A</orviloArtifact>\n\n<orviloArtifact identifier="b" type="text">B</orviloArtifact>',
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -901,7 +901,7 @@ ${htmlContent}`,
           'test-id_null': [
             {
               id: 'test-id',
-              content: '<lobeArtifact identifier="exists" type="text">Content</lobeArtifact>',
+              content: '<orviloArtifact identifier="exists" type="text">Content</orviloArtifact>',
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',
@@ -920,7 +920,7 @@ ${htmlContent}`,
             {
               id: 'test-id',
               content:
-                '<lobeArtifact identifier="done" type="text">Content 1</lobeArtifact>\n\n<lobeArtifact identifier="generating" type="text">Content 2 still going',
+                '<orviloArtifact identifier="done" type="text">Content 1</orviloArtifact>\n\n<orviloArtifact identifier="generating" type="text">Content 2 still going',
               createdAt: Date.now(),
               updatedAt: Date.now(),
               role: 'user',

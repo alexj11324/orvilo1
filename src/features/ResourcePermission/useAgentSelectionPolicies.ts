@@ -3,7 +3,7 @@
 import type {
   AgentModelSelectionPolicy,
   AgentTopicSharePolicy,
-  LobeAgentAgencyConfig,
+  OrviloAgentAgencyConfig,
 } from '@orvilo/types';
 import { useCallback, useMemo } from 'react';
 
@@ -84,7 +84,7 @@ export const useAgentSelectionPolicies = (agentId: string): AgentSelectionPolici
   });
 
   const saveAgencyConfig = useCallback(
-    (patch: Partial<LobeAgentAgencyConfig>) =>
+    (patch: Partial<OrviloAgentAgencyConfig>) =>
       updateAgentConfigById(agentId, { agencyConfig: patch }),
     [agentId, updateAgentConfigById],
   );

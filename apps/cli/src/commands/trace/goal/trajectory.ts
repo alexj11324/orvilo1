@@ -11,7 +11,7 @@ import { log } from '../../../utils/logger';
  * Unlike an operation snapshot there is no `TRACING_BASE_URL` fallback: a goal
  * trajectory's key lives on `goal_traces` and cannot be derived from the goal
  * id, so the server is the only way in. That is a feature — inspecting a
- * production goal needs a LobeHub login and nothing else.
+ * production goal needs a Orvilo login and nothing else.
  */
 export const resolveTrajectoryOrExit = async (target: string): Promise<GoalTrajectory> => {
   // Why the server declined, kept so the final message can say "no trajectory

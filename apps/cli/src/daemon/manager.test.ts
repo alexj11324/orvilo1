@@ -23,7 +23,7 @@ import {
 } from './manager';
 
 const tmpDir = path.join(os.tmpdir(), 'daemon-test-' + process.pid);
-const mockDir = path.join(tmpDir, '.lobehub');
+const mockDir = path.join(tmpDir, '.orvilo');
 
 vi.mock('node:os', async (importOriginal) => {
   const actual = await importOriginal<Record<string, any>>();

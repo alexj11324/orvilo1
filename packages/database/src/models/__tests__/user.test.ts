@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { messages, nextauthAccounts, topics, users, userSettings } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import type { ListUsersForMemoryExtractorCursor } from '../user';
 import { UserModel, UserNotFoundError } from '../user';
 
 const userId = 'user-model-test';
 const otherUserId = 'other-user-test';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const userModel = new UserModel(serverDB, userId);
 
 // Mock decryptor function

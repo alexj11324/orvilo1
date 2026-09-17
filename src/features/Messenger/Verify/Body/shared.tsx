@@ -360,7 +360,7 @@ export const SuccessCard = memo<SuccessCardProps>(({ openBotUrl, platform, platf
           size="large"
           type={openBotUrl ? 'default' : 'primary'}
         >
-          {t('verify.success.backToLobeHub')}
+          {t('verify.success.backToOrvilo')}
         </Button>
       </Flexbox>
     </Flexbox>

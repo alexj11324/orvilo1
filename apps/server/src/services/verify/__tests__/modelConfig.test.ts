@@ -47,7 +47,7 @@ describe('resolveVerifyModelConfig', () => {
   it('uses a pinned verifier agent model before the builtin verify agent', async () => {
     getAgentModelConfigMock.mockResolvedValueOnce({
       model: 'deepseek-v4-pro',
-      provider: 'lobehub',
+      provider: 'zhipu',
     });
 
     await expect(
@@ -61,7 +61,7 @@ describe('resolveVerifyModelConfig', () => {
         },
         'ws',
       ),
-    ).resolves.toEqual({ model: 'deepseek-v4-pro', provider: 'lobehub' });
+    ).resolves.toEqual({ model: 'deepseek-v4-pro', provider: 'zhipu' });
 
     expect(getAgentModelConfigMock).toHaveBeenCalledWith('agt-verifier');
     expect(getBuiltinAgentMock).not.toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe('resolveVerifyModelConfig', () => {
         // queue starts at the builtin slug lookup.
         .mockResolvedValueOnce({
           model: 'deepseek-v4-pro',
-          provider: 'lobehub',
+          provider: 'zhipu',
         });
 
       await expect(
@@ -83,7 +83,7 @@ describe('resolveVerifyModelConfig', () => {
           parentModel: 'claude-opus-4-8',
           parentProvider,
         }),
-      ).resolves.toEqual({ model: 'deepseek-v4-pro', provider: 'lobehub' });
+      ).resolves.toEqual({ model: 'deepseek-v4-pro', provider: 'zhipu' });
 
       expect(getBuiltinAgentMock).toHaveBeenCalledWith(BUILTIN_AGENT_SLUGS.verifyAgent);
       expect(getAgentModelConfigMock).toHaveBeenCalledWith(BUILTIN_AGENT_SLUGS.verifyAgent);
@@ -99,7 +99,7 @@ describe('resolveVerifyModelConfig', () => {
   it('ignores a usable parent model and judges on the verifier chain', async () => {
     getAgentModelConfigMock.mockResolvedValueOnce({
       model: 'deepseek-v4-pro',
-      provider: 'lobehub',
+      provider: 'zhipu',
     });
 
     await expect(
@@ -107,7 +107,7 @@ describe('resolveVerifyModelConfig', () => {
         parentModel: 'gpt-5.4',
         parentProvider: 'openai',
       }),
-    ).resolves.toEqual({ model: 'deepseek-v4-pro', provider: 'lobehub' });
+    ).resolves.toEqual({ model: 'deepseek-v4-pro', provider: 'zhipu' });
 
     expect(getAgentModelConfigMock).toHaveBeenCalledWith(BUILTIN_AGENT_SLUGS.verifyAgent);
   });
@@ -120,7 +120,7 @@ describe('resolveVerifyModelConfig', () => {
       })
       .mockResolvedValueOnce({
         model: 'deepseek-v4-pro',
-        provider: 'lobehub',
+        provider: 'zhipu',
       });
 
     await expect(
@@ -129,7 +129,7 @@ describe('resolveVerifyModelConfig', () => {
         parentProvider: 'openai',
         verifierAgentId: 'agt-verifier',
       }),
-    ).resolves.toEqual({ model: 'deepseek-v4-pro', provider: 'lobehub' });
+    ).resolves.toEqual({ model: 'deepseek-v4-pro', provider: 'zhipu' });
 
     expect(getAgentModelConfigMock).toHaveBeenNthCalledWith(1, 'agt-verifier');
     expect(getAgentModelConfigMock).toHaveBeenNthCalledWith(2, BUILTIN_AGENT_SLUGS.verifyAgent);
@@ -159,9 +159,9 @@ describe('VERIFY_FALLBACK_MODEL_CONFIG', () => {
    * in production. The pinned model must be able to actually see the frames.
    */
   it('pins a model that model-bank says can read images', async () => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
-    const card = LOBE_DEFAULT_MODEL_LIST.find(
+    const card = ORVILO_DEFAULT_MODEL_LIST.find(
       (model) =>
         model.id === VERIFY_FALLBACK_MODEL_CONFIG.model &&
         model.providerId === VERIFY_FALLBACK_MODEL_CONFIG.provider &&
@@ -183,9 +183,9 @@ describe('REVIEW_PREDICT_MODEL_CONFIG', () => {
    * surfaced. The pinned model must be able to actually see the frames.
    */
   it('pins a model that model-bank says can read images', async () => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
-    const card = LOBE_DEFAULT_MODEL_LIST.find(
+    const card = ORVILO_DEFAULT_MODEL_LIST.find(
       (model) =>
         model.id === REVIEW_PREDICT_MODEL_CONFIG.model &&
         model.providerId === REVIEW_PREDICT_MODEL_CONFIG.provider &&

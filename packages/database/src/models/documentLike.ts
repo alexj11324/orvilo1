@@ -4,7 +4,7 @@ import { and, count, desc, eq } from 'drizzle-orm';
 import { documentLikes } from '../schemas/documentLike';
 import { documents } from '../schemas/file';
 import { users } from '../schemas/user';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 export const DOCUMENT_LIKE_WORKSPACE_REQUIRED =
   'Document likes are workspace-scoped; a workspaceId is required';
@@ -36,11 +36,11 @@ export interface UnlikeDocumentResult {
 }
 
 export class DocumentLikeModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string | null;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string | null) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string | null) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -60,7 +60,7 @@ export class DocumentLikeModel {
    * DocumentCommentModel.create.
    */
   private lockDocument = async (
-    tx: LobeChatDatabase,
+    tx: OrviloDatabase,
     documentId: string,
     mode: 'share' | 'update',
   ) => {
@@ -84,7 +84,7 @@ export class DocumentLikeModel {
    * `knownLiked` skips the current-user probe when the caller just wrote it.
    */
   private summarizeInTx = async (
-    tx: LobeChatDatabase,
+    tx: OrviloDatabase,
     documentId: string,
     knownLiked?: boolean,
   ): Promise<DocumentLikeSummary> => {
@@ -125,7 +125,7 @@ export class DocumentLikeModel {
 
   async like(documentId: string): Promise<LikeDocumentResult> {
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const document = await this.lockDocument(runner, documentId, 'update');
 
       const [inserted] = await tx
@@ -144,7 +144,7 @@ export class DocumentLikeModel {
 
   async unlike(documentId: string): Promise<UnlikeDocumentResult> {
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const document = await this.lockDocument(runner, documentId, 'update');
 
       const removed = await tx
@@ -162,7 +162,7 @@ export class DocumentLikeModel {
 
   async summary(documentId: string): Promise<DocumentLikeSummary> {
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       // A share lock keeps the workspace validation true for the duration of
       // the reads: a concurrent transfer's UPDATE waits for this transaction.
       await this.lockDocument(runner, documentId, 'share');

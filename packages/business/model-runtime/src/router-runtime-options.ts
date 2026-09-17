@@ -16,13 +16,13 @@ interface RouterInstance {
   };
 }
 
-interface LobehubRouterRuntimeOptions {
+interface OrviloRouterRuntimeOptions {
   id: string;
   routers: (options: any, runtimeContext: RouterRuntimeRequestContext) => Promise<RouterInstance[]>;
 }
 
-export const lobehubRouterRuntimeOptions: LobehubRouterRuntimeOptions = {
-  id: 'lobehub',
+export const orviloRouterRuntimeOptions: OrviloRouterRuntimeOptions = {
+  id: 'orvilo',
 
   routers: async (_options, { model: _model }) => {
     return [];

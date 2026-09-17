@@ -1,12 +1,12 @@
 'use client';
 
-import { Avatar as LobeAvatar, type AvatarProps as LobeAvatarProps } from '@lobehub/ui/base-ui';
+import { Avatar as OrviloAvatar, type AvatarProps as OrviloAvatarProps } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
 import { remoteAvatarSrc, resolveAvatar } from './fallback';
 import { useBrokenSrc } from './useBrokenSrc';
 
-export interface AvatarProps extends LobeAvatarProps {
+export interface AvatarProps extends OrviloAvatarProps {
   /**
    * Seed for the fallback initials. Defaults to `title`; pass it when the
    * visible name differs from the tooltip title.
@@ -55,7 +55,7 @@ const Avatar = memo<AvatarProps>(
     });
 
     return (
-      <LobeAvatar
+      <OrviloAvatar
         {...rest}
         alt={imgAlt}
         avatar={resolved.avatar}

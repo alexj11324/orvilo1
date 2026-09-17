@@ -162,7 +162,7 @@ class QQGatewayClient implements PlatformClient {
 
       const chatConfig: any = {
         adapters: { qq: adapter },
-        userName: `lobehub-gateway-${this.applicationId}`,
+        userName: `orvilo-gateway-${this.applicationId}`,
       };
 
       if (this.context.redisClient) {

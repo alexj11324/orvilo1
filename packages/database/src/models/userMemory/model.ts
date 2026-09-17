@@ -46,7 +46,7 @@ import {
   userMemoriesIdentities,
   userMemoriesPreferences,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { normalizeBm25MatchQuery, SAFE_BM25_QUERY_OPTIONS } from '../../utils/bm25';
 import { selectNonVectorColumns } from '../../utils/columns';
 import { inJsonStringArray } from '../../utils/inJsonStringArray';
@@ -95,7 +95,7 @@ const buildContainsCondition = (column: unknown, q?: string) => {
   return sql<boolean>`${column} ILIKE ${`%${escapeLikePattern(normalized)}%`} ESCAPE '\\'`;
 };
 
-const isPGliteDatabase = (db: LobeChatDatabase) => {
+const isPGliteDatabase = (db: OrviloDatabase) => {
   const client = (
     db as unknown as {
       $client?: {
@@ -545,12 +545,12 @@ export class UserMemoryModel {
   }
 
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private topicModel: TopicModel;
   private queryModel: UserMemoryQueryModel;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     private readonly ftsSearchCandidateSource?: FtsSearchCandidateSource,
   ) {

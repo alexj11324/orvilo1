@@ -5,7 +5,7 @@ import {
   type HatchetClient,
   type InputType,
   NonRetryableError,
-} from '@hatchet-dev/typescript-sdk/v1';
+} from '@hatchet-dev/typescript-sdk/v1/index.js';
 import { and, asc, eq, inArray, lt, or } from 'drizzle-orm';
 import type { Context as HonoContext } from 'hono';
 import { z } from 'zod';

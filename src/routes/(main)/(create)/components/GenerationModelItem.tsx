@@ -10,8 +10,8 @@ import numeral from 'numeral';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelIcon } from '@/components/LobeIcons';
 import NewModelBadge from '@/components/ModelSelect/NewModelBadge';
+import { ModelIcon } from '@/components/OrviloIcons';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';

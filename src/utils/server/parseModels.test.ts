@@ -1,13 +1,13 @@
 import { type AiFullModelCard } from 'model-bank';
-import { LOBE_DEFAULT_MODEL_LIST, openaiChatModels } from 'model-bank';
+import { openaiChatModels, ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 import { describe, expect, it, vi } from 'vitest';
 
 import { extractEnabledModels, parseModelString, transformToAiModelList } from './parseModels';
 
 vi.mock('@orvilo/business-model-bank/model-config', async () => {
-  const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+  const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
   return {
-    loadModels: vi.fn().mockResolvedValue(LOBE_DEFAULT_MODEL_LIST),
+    loadModels: vi.fn().mockResolvedValue(ORVILO_DEFAULT_MODEL_LIST),
   };
 });
 
@@ -534,7 +534,7 @@ describe('transformToChatModelCards', () => {
   });
 
   it('should add a new known model', async () => {
-    const knownModel = LOBE_DEFAULT_MODEL_LIST.find((m) => m.providerId === 'ai21')!;
+    const knownModel = ORVILO_DEFAULT_MODEL_LIST.find((m) => m.providerId === 'ai21')!;
     const result = await transformToAiModelList({
       modelString: `${knownModel.id}`,
       defaultModels: defaultChatModels,
@@ -549,7 +549,7 @@ describe('transformToChatModelCards', () => {
   });
 
   it('should update an existing known model', async () => {
-    const knownModel = LOBE_DEFAULT_MODEL_LIST.find((m) => m.providerId === 'openai')!;
+    const knownModel = ORVILO_DEFAULT_MODEL_LIST.find((m) => m.providerId === 'openai')!;
     const result = await transformToAiModelList({
       modelString: `+${knownModel.id}=Updated Model`,
       defaultModels: [knownModel],

@@ -1,174 +1,174 @@
-import { LobeAi21AI } from './providers/ai21';
-import { Lobe302AI } from './providers/ai302';
-import { LobeAi360AI } from './providers/ai360';
-import { LobeAiHubMixAI } from './providers/aihubmix';
-import { LobeAkashChatAI } from './providers/akashchat';
-import { LobeAntGroupAI } from './providers/antgroup';
-import { LobeAnthropicAI } from './providers/anthropic';
-import { LobeAzureAI } from './providers/azureai';
-import { LobeAzureOpenAI } from './providers/azureOpenai';
-import { LobeBaichuanAI } from './providers/baichuan';
-import { LobeBailianCodingPlanAI } from './providers/bailianCodingPlan';
-import { LobeBedrockAI } from './providers/bedrock';
-import { LobeBflAI } from './providers/bfl';
-import { LobeCerebrasAI } from './providers/cerebras';
-import { LobeChatGPTAI } from './providers/chatGPT';
-import { LobeCloudflareAI } from './providers/cloudflare';
-import { LobeCohereAI } from './providers/cohere';
-import { LobeCometAPIAI } from './providers/cometapi';
-import { LobeComfyUI } from './providers/comfyui';
-import { LobeDeepSeekAI } from './providers/deepseek';
-import { LobeFalAI } from './providers/fal';
-import { LobeFireworksAI } from './providers/fireworksai';
-import { LobeGiteeAI } from './providers/giteeai';
-import { LobeGithubAI } from './providers/github';
-import { LobeGithubCopilotAI } from './providers/githubCopilot';
-import { LobeGLMCodingPlanAI } from './providers/glmCodingPlan';
-import { LobeGoogleAI } from './providers/google';
-import { LobeGroq } from './providers/groq';
-import { LobeHigressAI } from './providers/higress';
-import { LobeHuggingFaceAI } from './providers/huggingface';
-import { LobeHunyuanAI } from './providers/hunyuan';
-import { LobeInfiniAI } from './providers/infiniai';
-import { LobeInternLMAI } from './providers/internlm';
-import { LobeJinaAI } from './providers/jina';
-import { LobeKimiCodingPlanAI } from './providers/kimiCodingPlan';
-import { LobeLMStudioAI } from './providers/lmstudio';
-import { LobeHubAI } from './providers/lobehub';
-import { LobeLongCatAI } from './providers/longcat';
-import { LobeMetaAI } from './providers/meta';
-import { LobeMinimaxAI } from './providers/minimax';
-import { LobeMinimaxCodingPlanAI } from './providers/minimaxCodingPlan';
-import { LobeMistralAI } from './providers/mistral';
-import { LobeModelScopeAI } from './providers/modelscope';
-import { LobeMoonshotAI } from './providers/moonshot';
-import { LobeNebiusAI } from './providers/nebius';
-import { LobeNewAPIAI } from './providers/newapi';
-import { LobeNovitaAI } from './providers/novita';
-import { LobeNvidiaAI } from './providers/nvidia';
-import { LobeOllamaAI } from './providers/ollama';
-import { LobeOllamaCloudAI } from './providers/ollamacloud';
-import { LobeOpenAI } from './providers/openai';
-import { LobeOpenCodeCodingPlanAI } from './providers/opencodeCodingPlan';
-import { LobeOpenCodeZenAI } from './providers/opencodeZen';
-import { LobeOpenRouterAI } from './providers/openrouter';
-import { LobePerplexityAI } from './providers/perplexity';
-import { LobePPIOAI } from './providers/ppio';
-import { LobeQiniuAI } from './providers/qiniu';
-import { LobeQwenAI } from './providers/qwen';
-import { LobeReplicateAI } from './providers/replicate';
-import { LobeSambaNovaAI } from './providers/sambanova';
-import { LobeSearch1API } from './providers/search1api';
-import { LobeSenseNovaAI } from './providers/sensenova';
-import { LobeSiliconCloudAI } from './providers/siliconcloud';
-import { LobeSparkAI } from './providers/spark';
-import { LobeStepfunAI } from './providers/stepfun';
-import { LobeStraicoAI } from './providers/straico';
-import { LobeStreamLakeAI } from './providers/streamlake';
-import { LobeSuperGrokAI } from './providers/superGrok';
-import { LobeTaichuAI } from './providers/taichu';
-import { LobeTencentCloudAI } from './providers/tencentcloud';
-import { LobeTogetherAI } from './providers/togetherai';
-import { LobeUnslothAI } from './providers/unsloth';
-import { LobeUpstageAI } from './providers/upstage';
-import { LobeV0AI } from './providers/v0';
-import { LobeVercelAIGatewayAI } from './providers/vercelaigateway';
-import { LobeVLLMAI } from './providers/vllm';
-import { LobeVolcengineAI } from './providers/volcengine';
-import { LobeVolcengineCodingPlanAI } from './providers/volcengineCodingPlan';
-import { LobeWenxinAI } from './providers/wenxin';
-import { LobeXAI } from './providers/xai';
-import { LobeXiaomiMiMoAI } from './providers/xiaomimimo';
-import { LobeXinferenceAI } from './providers/xinference';
-import { LobeZenMuxAI } from './providers/zenmux';
-import { LobeZeroOneAI } from './providers/zeroone';
-import { LobeZhipuAI } from './providers/zhipu';
+import { OrviloAi21AI } from './providers/ai21';
+import { Orvilo302AI } from './providers/ai302';
+import { OrviloAi360AI } from './providers/ai360';
+import { OrviloAiHubMixAI } from './providers/aihubmix';
+import { OrviloAkashChatAI } from './providers/akashchat';
+import { OrviloAntGroupAI } from './providers/antgroup';
+import { OrviloAnthropicAI } from './providers/anthropic';
+import { OrviloAzureAI } from './providers/azureai';
+import { OrviloAzureOpenAI } from './providers/azureOpenai';
+import { OrviloBaichuanAI } from './providers/baichuan';
+import { OrviloBailianCodingPlanAI } from './providers/bailianCodingPlan';
+import { OrviloBedrockAI } from './providers/bedrock';
+import { OrviloBflAI } from './providers/bfl';
+import { OrviloCerebrasAI } from './providers/cerebras';
+import { OrviloGPTAI } from './providers/chatGPT';
+import { OrviloCloudflareAI } from './providers/cloudflare';
+import { OrviloCohereAI } from './providers/cohere';
+import { OrviloCometAPIAI } from './providers/cometapi';
+import { OrviloComfyUI } from './providers/comfyui';
+import { OrviloDeepSeekAI } from './providers/deepseek';
+import { OrviloFalAI } from './providers/fal';
+import { OrviloFireworksAI } from './providers/fireworksai';
+import { OrviloGiteeAI } from './providers/giteeai';
+import { OrviloGithubAI } from './providers/github';
+import { OrviloGithubCopilotAI } from './providers/githubCopilot';
+import { OrviloGLMCodingPlanAI } from './providers/glmCodingPlan';
+import { OrviloGoogleAI } from './providers/google';
+import { OrviloGroq } from './providers/groq';
+import { OrviloHigressAI } from './providers/higress';
+import { OrviloHuggingFaceAI } from './providers/huggingface';
+import { OrviloHunyuanAI } from './providers/hunyuan';
+import { OrviloInfiniAI } from './providers/infiniai';
+import { OrviloInternLMAI } from './providers/internlm';
+import { OrviloJinaAI } from './providers/jina';
+import { OrviloKimiCodingPlanAI } from './providers/kimiCodingPlan';
+import { OrviloLMStudioAI } from './providers/lmstudio';
+import { OrviloLongCatAI } from './providers/longcat';
+import { OrviloMetaAI } from './providers/meta';
+import { OrviloMinimaxAI } from './providers/minimax';
+import { OrviloMinimaxCodingPlanAI } from './providers/minimaxCodingPlan';
+import { OrviloMistralAI } from './providers/mistral';
+import { OrviloModelScopeAI } from './providers/modelscope';
+import { OrviloMoonshotAI } from './providers/moonshot';
+import { OrviloNebiusAI } from './providers/nebius';
+import { OrviloNewAPIAI } from './providers/newapi';
+import { OrviloNovitaAI } from './providers/novita';
+import { OrviloNvidiaAI } from './providers/nvidia';
+import { OrviloOllamaAI } from './providers/ollama';
+import { OrviloOllamaCloudAI } from './providers/ollamacloud';
+import { OrviloOpenAI } from './providers/openai';
+import { OrviloOpenCodeCodingPlanAI } from './providers/opencodeCodingPlan';
+import { OrviloOpenCodeZenAI } from './providers/opencodeZen';
+import { OrviloOpenRouterAI } from './providers/openrouter';
+import { OrviloAI } from './providers/orvilo';
+import { OrviloPerplexityAI } from './providers/perplexity';
+import { OrviloPPIOAI } from './providers/ppio';
+import { OrviloQiniuAI } from './providers/qiniu';
+import { OrviloQwenAI } from './providers/qwen';
+import { OrviloReplicateAI } from './providers/replicate';
+import { OrviloSambaNovaAI } from './providers/sambanova';
+import { OrviloSearch1API } from './providers/search1api';
+import { OrviloSenseNovaAI } from './providers/sensenova';
+import { OrviloSiliconCloudAI } from './providers/siliconcloud';
+import { OrviloSparkAI } from './providers/spark';
+import { OrviloStepfunAI } from './providers/stepfun';
+import { OrviloStraicoAI } from './providers/straico';
+import { OrviloStreamLakeAI } from './providers/streamlake';
+import { OrviloSuperGrokAI } from './providers/superGrok';
+import { OrviloTaichuAI } from './providers/taichu';
+import { OrviloTencentCloudAI } from './providers/tencentcloud';
+import { OrviloTogetherAI } from './providers/togetherai';
+import { OrviloUnslothAI } from './providers/unsloth';
+import { OrviloUpstageAI } from './providers/upstage';
+import { OrviloV0AI } from './providers/v0';
+import { OrviloVercelAIGatewayAI } from './providers/vercelaigateway';
+import { OrviloVLLMAI } from './providers/vllm';
+import { OrviloVolcengineAI } from './providers/volcengine';
+import { OrviloVolcengineCodingPlanAI } from './providers/volcengineCodingPlan';
+import { OrviloWenxinAI } from './providers/wenxin';
+import { OrviloXAI } from './providers/xai';
+import { OrviloXiaomiMiMoAI } from './providers/xiaomimimo';
+import { OrviloXinferenceAI } from './providers/xinference';
+import { OrviloZenMuxAI } from './providers/zenmux';
+import { OrviloZeroOneAI } from './providers/zeroone';
+import { OrviloZhipuAI } from './providers/zhipu';
 
 export const providerRuntimeMap = {
-  ai21: LobeAi21AI,
-  ai302: Lobe302AI,
-  ai360: LobeAi360AI,
-  aihubmix: LobeAiHubMixAI,
-  akashchat: LobeAkashChatAI,
-  antgroup: LobeAntGroupAI,
-  anthropic: LobeAnthropicAI,
-  bailiancodingplan: LobeBailianCodingPlanAI,
-  azure: LobeAzureOpenAI,
-  azureai: LobeAzureAI,
-  baichuan: LobeBaichuanAI,
-  bedrock: LobeBedrockAI,
-  bfl: LobeBflAI,
-  cerebras: LobeCerebrasAI,
-  chatgpt: LobeChatGPTAI,
-  cloudflare: LobeCloudflareAI,
-  cohere: LobeCohereAI,
-  cometapi: LobeCometAPIAI,
-  comfyui: LobeComfyUI,
-  deepseek: LobeDeepSeekAI,
-  fal: LobeFalAI,
-  fireworksai: LobeFireworksAI,
-  giteeai: LobeGiteeAI,
-  github: LobeGithubAI,
-  githubcopilot: LobeGithubCopilotAI,
-  google: LobeGoogleAI,
-  glmcodingplan: LobeGLMCodingPlanAI,
-  groq: LobeGroq,
-  higress: LobeHigressAI,
-  huggingface: LobeHuggingFaceAI,
-  hunyuan: LobeHunyuanAI,
-  infiniai: LobeInfiniAI,
-  internlm: LobeInternLMAI,
-  jina: LobeJinaAI,
-  kimicodingplan: LobeKimiCodingPlanAI,
-  lmstudio: LobeLMStudioAI,
-  lobehub: LobeHubAI,
-  longcat: LobeLongCatAI,
-  meta: LobeMetaAI,
-  minimax: LobeMinimaxAI,
-  minimaxcodingplan: LobeMinimaxCodingPlanAI,
-  mistral: LobeMistralAI,
-  modelscope: LobeModelScopeAI,
-  moonshot: LobeMoonshotAI,
-  nebius: LobeNebiusAI,
-  newapi: LobeNewAPIAI,
-  novita: LobeNovitaAI,
-  nvidia: LobeNvidiaAI,
-  ollama: LobeOllamaAI,
-  ollamacloud: LobeOllamaCloudAI,
-  opencodecodingplan: LobeOpenCodeCodingPlanAI,
-  opencodezen: LobeOpenCodeZenAI,
-  openai: LobeOpenAI,
-  openrouter: LobeOpenRouterAI,
-  perplexity: LobePerplexityAI,
-  ppio: LobePPIOAI,
-  qiniu: LobeQiniuAI,
-  qwen: LobeQwenAI,
-  replicate: LobeReplicateAI,
-  router: LobeNewAPIAI,
-  sambanova: LobeSambaNovaAI,
-  search1api: LobeSearch1API,
-  sensenova: LobeSenseNovaAI,
-  siliconcloud: LobeSiliconCloudAI,
-  spark: LobeSparkAI,
-  stepfun: LobeStepfunAI,
-  straico: LobeStraicoAI,
-  streamlake: LobeStreamLakeAI,
-  supergrok: LobeSuperGrokAI,
-  taichu: LobeTaichuAI,
-  tencentcloud: LobeTencentCloudAI,
-  togetherai: LobeTogetherAI,
-  unsloth: LobeUnslothAI,
-  upstage: LobeUpstageAI,
-  v0: LobeV0AI,
-  vercelaigateway: LobeVercelAIGatewayAI,
-  vllm: LobeVLLMAI,
-  volcengine: LobeVolcengineAI,
-  volcenginecodingplan: LobeVolcengineCodingPlanAI,
-  wenxin: LobeWenxinAI,
-  xai: LobeXAI,
-  xiaomimimo: LobeXiaomiMiMoAI,
-  xinference: LobeXinferenceAI,
-  zenmux: LobeZenMuxAI,
-  zeroone: LobeZeroOneAI,
-  zhipu: LobeZhipuAI,
+  ai21: OrviloAi21AI,
+  ai302: Orvilo302AI,
+  ai360: OrviloAi360AI,
+  aihubmix: OrviloAiHubMixAI,
+  akashchat: OrviloAkashChatAI,
+  antgroup: OrviloAntGroupAI,
+  anthropic: OrviloAnthropicAI,
+  bailiancodingplan: OrviloBailianCodingPlanAI,
+  azure: OrviloAzureOpenAI,
+  azureai: OrviloAzureAI,
+  baichuan: OrviloBaichuanAI,
+  bedrock: OrviloBedrockAI,
+  bfl: OrviloBflAI,
+  cerebras: OrviloCerebrasAI,
+  chatgpt: OrviloGPTAI,
+  cloudflare: OrviloCloudflareAI,
+  cohere: OrviloCohereAI,
+  cometapi: OrviloCometAPIAI,
+  comfyui: OrviloComfyUI,
+  deepseek: OrviloDeepSeekAI,
+  fal: OrviloFalAI,
+  fireworksai: OrviloFireworksAI,
+  giteeai: OrviloGiteeAI,
+  github: OrviloGithubAI,
+  githubcopilot: OrviloGithubCopilotAI,
+  google: OrviloGoogleAI,
+  glmcodingplan: OrviloGLMCodingPlanAI,
+  groq: OrviloGroq,
+  higress: OrviloHigressAI,
+  huggingface: OrviloHuggingFaceAI,
+  hunyuan: OrviloHunyuanAI,
+  infiniai: OrviloInfiniAI,
+  internlm: OrviloInternLMAI,
+  jina: OrviloJinaAI,
+  kimicodingplan: OrviloKimiCodingPlanAI,
+  lmstudio: OrviloLMStudioAI,
+  orvilo: OrviloAI,
+  longcat: OrviloLongCatAI,
+  meta: OrviloMetaAI,
+  minimax: OrviloMinimaxAI,
+  minimaxcodingplan: OrviloMinimaxCodingPlanAI,
+  mistral: OrviloMistralAI,
+  modelscope: OrviloModelScopeAI,
+  moonshot: OrviloMoonshotAI,
+  nebius: OrviloNebiusAI,
+  newapi: OrviloNewAPIAI,
+  novita: OrviloNovitaAI,
+  nvidia: OrviloNvidiaAI,
+  ollama: OrviloOllamaAI,
+  ollamacloud: OrviloOllamaCloudAI,
+  opencodecodingplan: OrviloOpenCodeCodingPlanAI,
+  opencodezen: OrviloOpenCodeZenAI,
+  openai: OrviloOpenAI,
+  openrouter: OrviloOpenRouterAI,
+  perplexity: OrviloPerplexityAI,
+  ppio: OrviloPPIOAI,
+  qiniu: OrviloQiniuAI,
+  qwen: OrviloQwenAI,
+  replicate: OrviloReplicateAI,
+  router: OrviloNewAPIAI,
+  sambanova: OrviloSambaNovaAI,
+  search1api: OrviloSearch1API,
+  sensenova: OrviloSenseNovaAI,
+  siliconcloud: OrviloSiliconCloudAI,
+  spark: OrviloSparkAI,
+  stepfun: OrviloStepfunAI,
+  straico: OrviloStraicoAI,
+  streamlake: OrviloStreamLakeAI,
+  supergrok: OrviloSuperGrokAI,
+  taichu: OrviloTaichuAI,
+  tencentcloud: OrviloTencentCloudAI,
+  togetherai: OrviloTogetherAI,
+  unsloth: OrviloUnslothAI,
+  upstage: OrviloUpstageAI,
+  v0: OrviloV0AI,
+  vercelaigateway: OrviloVercelAIGatewayAI,
+  vllm: OrviloVLLMAI,
+  volcengine: OrviloVolcengineAI,
+  volcenginecodingplan: OrviloVolcengineCodingPlanAI,
+  wenxin: OrviloWenxinAI,
+  xai: OrviloXAI,
+  xiaomimimo: OrviloXiaomiMiMoAI,
+  xinference: OrviloXinferenceAI,
+  zenmux: OrviloZenMuxAI,
+  zeroone: OrviloZeroOneAI,
+  zhipu: OrviloZhipuAI,
 };

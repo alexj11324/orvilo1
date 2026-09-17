@@ -3,10 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentRuntimeErrorType } from '../../../types/error';
 import {
-  LobeDeepSeekAI,
-  LobeDeepSeekAnthropicAI,
-  LobeDeepSeekOpenAI,
   openAIParams,
+  OrviloDeepSeekAI,
+  OrviloDeepSeekAnthropicAI,
+  OrviloDeepSeekOpenAI,
 } from '../index';
 import { anthropicBaseURL, defaultOpenAIBaseURL } from './testUtils';
 
@@ -14,7 +14,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('LobeDeepSeekAI', () => {
+describe('OrviloDeepSeekAI', () => {
   const createRuntime = ({
     baseURL,
     sdkType,
@@ -22,7 +22,7 @@ describe('LobeDeepSeekAI', () => {
     baseURL?: string;
     sdkType?: string;
   } = {}) =>
-    new LobeDeepSeekAI({
+    new OrviloDeepSeekAI({
       apiKey: 'test',
       ...(baseURL ? { baseURL } : {}),
       ...(sdkType ? { sdkType } : {}),
@@ -93,19 +93,19 @@ describe('LobeDeepSeekAI', () => {
         'https://aihubmix.com/v1/messages',
         'anthropic',
       );
-      const runtime = new LobeDeepSeekAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
+      const runtime = new OrviloDeepSeekAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
 
       expect(option.baseURL).toBe('https://aihubmix.com');
-      expect(runtime).toBeInstanceOf(LobeDeepSeekAnthropicAI);
+      expect(runtime).toBeInstanceOf(OrviloDeepSeekAnthropicAI);
       expect((runtime as any).baseURL).toBe('https://aihubmix.com');
     });
 
     it('should let Anthropic-compatible runtime normalize /v1 baseURL', async () => {
       const { option } = await resolveFirstRouterOption('https://aihubmix.com/v1', 'anthropic');
-      const runtime = new LobeDeepSeekAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
+      const runtime = new OrviloDeepSeekAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
 
       expect(option.baseURL).toBe('https://aihubmix.com/v1');
-      expect(runtime).toBeInstanceOf(LobeDeepSeekAnthropicAI);
+      expect(runtime).toBeInstanceOf(OrviloDeepSeekAnthropicAI);
       expect((runtime as any).baseURL).toBe('https://aihubmix.com');
     });
 
@@ -114,10 +114,10 @@ describe('LobeDeepSeekAI', () => {
         'https://api.deepseek.com/anthropic/v1/messages',
         'anthropic',
       );
-      const runtime = new LobeDeepSeekAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
+      const runtime = new OrviloDeepSeekAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
 
       expect(option.baseURL).toBe(anthropicBaseURL);
-      expect(runtime).toBeInstanceOf(LobeDeepSeekAnthropicAI);
+      expect(runtime).toBeInstanceOf(OrviloDeepSeekAnthropicAI);
       expect((runtime as any).baseURL).toBe(anthropicBaseURL);
     });
 
@@ -166,9 +166,9 @@ describe('LobeDeepSeekAI', () => {
   });
 });
 
-describe('LobeDeepSeekOpenAI', () => {
+describe('OrviloDeepSeekOpenAI', () => {
   it('should reject oversized Flash alias prompts before calling the upstream API', async () => {
-    const runtime = new LobeDeepSeekOpenAI({ apiKey: 'test_api_key' });
+    const runtime = new OrviloDeepSeekOpenAI({ apiKey: 'test_api_key' });
     const create = vi
       .spyOn(runtime.client.chat.completions, 'create')
       .mockRejectedValue(new Error('Unexpected upstream request'));
@@ -192,20 +192,20 @@ describe('LobeDeepSeekOpenAI', () => {
 
   describe('init', () => {
     it('should correctly initialize with an API key', () => {
-      const runtime = new LobeDeepSeekOpenAI({ apiKey: 'test_api_key' });
+      const runtime = new OrviloDeepSeekOpenAI({ apiKey: 'test_api_key' });
 
-      expect(runtime).toBeInstanceOf(LobeDeepSeekOpenAI);
+      expect(runtime).toBeInstanceOf(OrviloDeepSeekOpenAI);
       expect((runtime as any).baseURL).toEqual(defaultOpenAIBaseURL);
     });
   });
 });
 
-describe('LobeDeepSeekAnthropicAI', () => {
+describe('OrviloDeepSeekAnthropicAI', () => {
   describe('init', () => {
     it('should correctly initialize with an API key', () => {
-      const runtime = new LobeDeepSeekAnthropicAI({ apiKey: 'test_api_key' });
+      const runtime = new OrviloDeepSeekAnthropicAI({ apiKey: 'test_api_key' });
 
-      expect(runtime).toBeInstanceOf(LobeDeepSeekAnthropicAI);
+      expect(runtime).toBeInstanceOf(OrviloDeepSeekAnthropicAI);
       expect((runtime as any).baseURL).toEqual(anthropicBaseURL);
     });
   });

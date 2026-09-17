@@ -1,7 +1,7 @@
 import type { PlaybackState, SpeedMultiplier } from '@orvilo/agent-mock';
 import { create } from 'zustand';
 
-const LOOP_STORAGE_KEY = 'LOBE_AGENT_MOCK_LOOP';
+const LOOP_STORAGE_KEY = 'ORVILO_AGENT_MOCK_LOOP';
 
 const readPersistedLoop = (): boolean => {
   if (typeof localStorage === 'undefined') return false;

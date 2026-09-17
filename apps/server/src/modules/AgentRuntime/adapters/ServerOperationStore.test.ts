@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TopicModel } from '@/database/models/topic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { ServerOperationStore } from './ServerOperationStore';
 
@@ -16,7 +16,7 @@ vi.mock('@/database/models/topic', () => ({
   }),
 }));
 
-const db = {} as LobeChatDatabase;
+const db = {} as OrviloDatabase;
 
 const createStore = (operationId: string | undefined, topicId: string | undefined = 'topic-1') =>
   new ServerOperationStore(db, 'user-1', undefined, topicId, operationId);

@@ -99,8 +99,8 @@ describe('composioStoreSelectors', () => {
     });
   });
 
-  describe('composioAsLobeTools', () => {
-    it('converts ACTIVE servers with tools to LobeTool format', () => {
+  describe('composioAsOrviloTools', () => {
+    it('converts ACTIVE servers with tools to OrviloTool format', () => {
       const servers = [
         makeServer({
           status: ComposioServerStatus.ACTIVE,
@@ -114,7 +114,7 @@ describe('composioStoreSelectors', () => {
         }),
       ];
       const state = { ...initialState, composioServers: servers } as ToolStore;
-      const result = composioStoreSelectors.composioAsLobeTools(state);
+      const result = composioStoreSelectors.composioAsOrviloTools(state);
 
       expect(result).toHaveLength(1);
       expect(result[0].identifier).toBe('gmail');
@@ -125,13 +125,13 @@ describe('composioStoreSelectors', () => {
     it('excludes disconnected servers', () => {
       const servers = [makeServer({ status: ComposioServerStatus.PENDING_AUTH })];
       const state = { ...initialState, composioServers: servers } as ToolStore;
-      expect(composioStoreSelectors.composioAsLobeTools(state)).toEqual([]);
+      expect(composioStoreSelectors.composioAsOrviloTools(state)).toEqual([]);
     });
 
     it('excludes servers without tools', () => {
       const servers = [makeServer({ tools: undefined })];
       const state = { ...initialState, composioServers: servers } as ToolStore;
-      expect(composioStoreSelectors.composioAsLobeTools(state)).toEqual([]);
+      expect(composioStoreSelectors.composioAsOrviloTools(state)).toEqual([]);
     });
   });
 });

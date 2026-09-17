@@ -12,7 +12,7 @@ import { consumeConnectorOAuthState } from '@/server/services/connector/stateSto
 import { syncConnectorToolsById } from '@/server/services/connector/sync';
 import { tokensToCredentials } from '@/server/services/connector/tokens';
 
-const log = debug('lobe-server:connector:oauth-callback');
+const log = debug('orvilo-server:connector:oauth-callback');
 
 /** Origin allowed to receive the postMessage result (the app itself). */
 const targetOrigin = (): string => {
@@ -44,7 +44,7 @@ const renderResultPage = (result: {
   /** Whether the tool list synced. `false` = authorized but tools unavailable. */
   synced?: boolean;
 }): NextResponse => {
-  const payload = jsonForScript({ type: 'lobe-connector-oauth', ...result });
+  const payload = jsonForScript({ type: 'orvilo-connector-oauth', ...result });
   const html = `<!doctype html>
 <html>
   <head><meta charset="utf-8" /><title>Connector authorization</title></head>
@@ -89,7 +89,12 @@ export const GET = async (req: NextRequest) => {
     }
 
     const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
-    const connectorModel = new ConnectorModel(serverDB, payload.lobeUserId, undefined, gateKeeper);
+    const connectorModel = new ConnectorModel(
+      serverDB,
+      payload.orviloUserId,
+      undefined,
+      gateKeeper,
+    );
 
     const connector = await connectorModel.findById(payload.connectorId);
     if (!connector) {
@@ -128,7 +133,7 @@ export const GET = async (req: NextRequest) => {
     // Sync the tool list server-side so the connector is immediately usable —
     // no dependency on the popup/postMessage round-trip. This also sets the
     // connector status (connected on success, error on failure).
-    const connectorToolModel = new ConnectorToolModel(serverDB, payload.lobeUserId);
+    const connectorToolModel = new ConnectorToolModel(serverDB, payload.orviloUserId);
     let synced = false;
     try {
       const { toolCount } = await syncConnectorToolsById(payload.connectorId, {

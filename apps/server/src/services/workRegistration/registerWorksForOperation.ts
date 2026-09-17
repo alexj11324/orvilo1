@@ -16,7 +16,7 @@ import debug from 'debug';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { WorkModel } from '@/database/models/work';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import { FileService } from '@/server/services/file';
 import { MarketService } from '@/server/services/market';
 import { createSandboxService } from '@/server/services/sandbox';
@@ -24,7 +24,7 @@ import { createSandboxService } from '@/server/services/sandbox';
 import { UNEXECUTED_INTERVENTION_STATUSES } from './constants';
 import { registerShellWorks } from './shellWorkRegistration';
 
-const log = debug('lobe-server:file-work-registration');
+const log = debug('orvilo-server:file-work-registration');
 
 /** One tool call gathered from the operation tree, tagged for ordering + provenance. */
 type ScannedRecord = FileEditToolCallRecord & { content?: string; createdAt: Date; id: string };
@@ -57,7 +57,7 @@ export interface RegisterWorksForOperationParams {
   /** Terminal in-memory usage blob of the completing operation (`state.usage`). */
   finalUsage?: Record<string, unknown> | null;
   operationId: string;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   userId: string;
   workspaceId?: string;
 }
@@ -139,10 +139,10 @@ export const redeployFileWork = async (_params: {
 /**
  * Sandbox location of a successful `exportFile` call, across both export
  * surfaces:
- * - `lobe-cloud-sandbox` exportFile — `state.path` IS the sandbox location.
+ * - `orvilo-cloud-sandbox` exportFile — `state.path` IS the sandbox location.
  *   Unlike edits, an export carries no other success signal, so the persisted
  *   result state is required.
- * - `lobe-skills` exportFile — a skill flow (e.g. the pptx skill) routes ALL
+ * - `orvilo-skills` exportFile — a skill flow (e.g. the pptx skill) routes ALL
  *   its tool calls through the skills tool, so its export is the only record
  *   carrying the artifact's path. Its state has NO `path` field (only
  *   fileId/filename/url…) and a FAILED export persists no state at all
@@ -254,7 +254,7 @@ const collectOperationRecords = async (
  *   too: binary entity formats are produced by sandbox code execution (not by
  *   the text-based write/edit tools), so the export call is the only persisted
  *   record carrying their path. Both export surfaces count — the sandbox
- *   tool's `exportFile` and the skills tool's (`lobe-skills`) `exportFile`.
+ *   tool's `exportFile` and the skills tool's (`orvilo-skills`) `exportFile`.
  * - `deleted` files are skipped (nothing to persist).
  * - One version per operation via the dedup key `op:${operationId}`; a retry of
  *   the same operation is idempotent — an existence probe short-circuits before
@@ -264,7 +264,7 @@ const collectOperationRecords = async (
  *
  * Besides file Works, the SAME collected records feed the shell github Work
  * scan (`registerShellWorks`): heterogeneous CLI shells (codex /
- * claude-code) and the device `lobe-local-system` tool run `gh issue|pr
+ * claude-code) and the device `orvilo-local-system` tool run `gh issue|pr
  * create/edit` outside the skill-tool registration hook, so their github
  * entities are recovered here at completion time and — for hetero runs, which
  * never pass `callLlmFinalizer` — the Work display anchor is stamped onto the
@@ -402,7 +402,7 @@ export const registerWorksForOperation = async (
     : null;
 
   // Recover external Works (github issue/PR today) from hetero / device shell
-  // records (codex, claude-code, lobe-local-system) — these surfaces never pass
+  // records (codex, claude-code, orvilo-local-system) — these surfaces never pass
   // the skill-tool registration hook. Self-guarded: per-record failures are
   // counted, never thrown. Unlike file Works there is no device-provenance
   // objection: the registered entities are REMOTE resources whose identity/url
@@ -470,7 +470,7 @@ export const registerWorksForOperation = async (
   const entities = scannedEntities.filter((entry) => {
     // Only sandbox-backed edits are exportable: the export below reads the file
     // from THIS topic's cloud sandbox, so a hetero edit (codex / claude-code /
-    // lobe-local-system, including entities detected from shell command text) —
+    // orvilo-local-system, including entities detected from shell command text) —
     // which lives on the executing device, not in the sandbox — would either
     // fail the export or, worse, pick up an unrelated stale sandbox file at the
     // same path. Mirrors `stateHasEntityFileEdits`, which also only considers

@@ -3,7 +3,7 @@
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
-import type { ComposioAppType, LobehubSkillProviderType } from '@orvilo/const';
+import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -19,10 +19,10 @@ import { useToolStore } from '@/store/tool';
 import {
   builtinToolSelectors,
   composioStoreSelectors,
-  lobehubSkillStoreSelectors,
+  orviloSkillStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
-import { type LobeToolMetaWithAvailability } from '@/store/tool/slices/builtin/selectors';
+import { type OrviloToolMetaWithAvailability } from '@/store/tool/slices/builtin/selectors';
 import { connectorSelectors } from '@/store/tool/slices/connector/selectors';
 
 /**
@@ -37,17 +37,15 @@ const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon, labe
 });
 
 /**
- * LobeHub Skill Provider icon component
+ * Orvilo Skill Provider icon component
  */
-const LobehubSkillIcon = memo<Pick<LobehubSkillProviderType, 'icon' | 'label'>>(
-  ({ icon, label }) => {
-    if (typeof icon === 'string') {
-      return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
-    }
+const OrviloSkillIcon = memo<Pick<OrviloSkillProviderType, 'icon' | 'label'>>(({ icon, label }) => {
+  if (typeof icon === 'string') {
+    return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
+  }
 
-    return <Icon fill={cssVar.colorText} icon={icon} size={16} />;
-  },
-);
+  return <Icon fill={cssVar.colorText} icon={icon} size={16} />;
+});
 
 // Stable empty reference for the connector-list read when attribution is off,
 // so `showAuthor={false}` tags never subscribe to connector list changes.
@@ -197,9 +195,9 @@ const PluginTag = memo<PluginTagProps>(
     const allComposioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
     const isComposioEnabledInEnv = useServerConfigStore(serverConfigSelectors.enableComposio);
 
-    // LobeHub Skill-related state
-    const allLobehubSkillServers = useToolStore(lobehubSkillStoreSelectors.getServers, isEqual);
-    const isLobehubSkillEnabled = useServerConfigStore(serverConfigSelectors.enableLobehubSkill);
+    // Orvilo Skill-related state
+    const allOrviloSkillServers = useToolStore(orviloSkillStoreSelectors.getServers, isEqual);
+    const isOrviloSkillEnabled = useServerConfigStore(serverConfigSelectors.enableOrviloSkill);
 
     // Custom connector state
     const customConnectors = useToolStore(connectorSelectors.customConnectors, isEqual);
@@ -207,11 +205,11 @@ const PluginTag = memo<PluginTagProps>(
     // Check if plugin is installed
     const isInstalled = useToolStore(pluginSelectors.isPluginInstalled(identifier));
 
-    // Try to find in local lists first (including Composio and LobehubSkill)
+    // Try to find in local lists first (including Composio and OrviloSkill)
     const localMeta = useMemo(() => {
       // Agent-owned/mounted connector: resolve as installed even though it isn't
       // in the user-scoped stores. The icon still comes from the normal
-      // resolution below (composio/lobehub/builtin/plugin), with an MCP fallback
+      // resolution below (composio/orvilo/builtin/plugin), with an MCP fallback
       // at the end for an agent-only connector absent from every user list.
       const agentConn = agentId
         ? agentConnectors.find((c) => c.identifier === identifier)
@@ -220,17 +218,17 @@ const PluginTag = memo<PluginTagProps>(
 
       const connector = resolveConnectorCatalogItem(identifier, {
         composio: isComposioEnabledInEnv,
-        lobehub: isLobehubSkillEnabled,
+        orvilo: isOrviloSkillEnabled,
       });
-      if (connector?.type === 'lobehub') {
-        const connectedServer = allLobehubSkillServers.find((s) => s.identifier === identifier);
+      if (connector?.type === 'orvilo') {
+        const connectedServer = allOrviloSkillServers.find((s) => s.identifier === identifier);
         return {
           availableInWeb: true,
           icon: connector.provider.icon,
           isInstalled: !!connectedServer || agentInstalled,
           label: connector.provider.label,
           title: connector.provider.label,
-          type: 'lobehub-skill' as const,
+          type: 'orvilo-skill' as const,
         };
       }
       if (connector?.type === 'composio') {
@@ -263,7 +261,7 @@ const PluginTag = memo<PluginTagProps>(
         // availableInWeb is only present when using allMetaList
         const availableInWeb =
           useAllMetaList && 'availableInWeb' in builtinMeta
-            ? (builtinMeta as LobeToolMetaWithAvailability).availableInWeb
+            ? (builtinMeta as OrviloToolMetaWithAvailability).availableInWeb
             : true;
         return {
           availableInWeb,
@@ -307,8 +305,8 @@ const PluginTag = memo<PluginTagProps>(
       installedPluginList,
       isComposioEnabledInEnv,
       allComposioServers,
-      isLobehubSkillEnabled,
-      allLobehubSkillServers,
+      isOrviloSkillEnabled,
+      allOrviloSkillServers,
       customConnectors,
       useAllMetaList,
     ]);
@@ -350,9 +348,9 @@ const PluginTag = memo<PluginTagProps>(
         return <ComposioIcon icon={meta.icon} label={meta.label} />;
       }
 
-      // LobeHub Skill type has icon property
-      if (meta.type === 'lobehub-skill' && 'icon' in meta && 'label' in meta) {
-        return <LobehubSkillIcon icon={meta.icon} label={meta.label} />;
+      // Orvilo Skill type has icon property
+      if (meta.type === 'orvilo-skill' && 'icon' in meta && 'label' in meta) {
+        return <OrviloSkillIcon icon={meta.icon} label={meta.label} />;
       }
 
       // Custom connector type

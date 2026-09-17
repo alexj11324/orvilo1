@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const MANIFEST_DIR = '.lobehub';
+const MANIFEST_DIR = '.orvilo';
 const MANIFEST_FILE = 'artifacts.json';
 
 export interface ArtifactBinding {

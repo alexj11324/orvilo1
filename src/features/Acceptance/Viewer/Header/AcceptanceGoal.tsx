@@ -13,7 +13,7 @@ import { useAcceptanceScope } from '../AcceptanceScope';
 import { acceptanceCodingScope } from '../History/codingScope';
 import { useAcceptanceBundle } from '../useAcceptanceBundle';
 
-const GOAL_COLLAPSED_STORAGE_KEY = 'lobehub-acceptance-goal-collapsed';
+const GOAL_COLLAPSED_STORAGE_KEY = 'orvilo-acceptance-goal-collapsed';
 
 const styles = createStaticStyles(({ css }) => ({
   /**

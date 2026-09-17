@@ -13,10 +13,10 @@ import {
   userMemories,
   users,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { AgentSignalReviewContextModel } from '../reviewContext';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'agent-signal-review-context-user';
 const agentId = 'agent-signal-review-context-agent';
@@ -155,7 +155,7 @@ describe('AgentSignalReviewContextModel', () => {
           apiName: 'createDocument',
           arguments: '{"title":"Release Skill"}',
           id: 'agent-signal-review-context-tool-1',
-          identifier: 'lobe-agent-documents',
+          identifier: 'orvilo-agent-documents',
           toolCallId: 'tool-call-review-context-1',
           userId,
         },
@@ -164,7 +164,7 @@ describe('AgentSignalReviewContextModel', () => {
           arguments: '{"title":"Release Skill"}',
           error: { message: 'timeout while creating document' },
           id: 'agent-signal-review-context-tool-2',
-          identifier: 'lobe-agent-documents',
+          identifier: 'orvilo-agent-documents',
           toolCallId: 'tool-call-review-context-2',
           userId,
         },
@@ -172,7 +172,7 @@ describe('AgentSignalReviewContextModel', () => {
           apiName: 'createDocument',
           arguments: '{"title":"Outside"}',
           id: 'agent-signal-review-context-tool-outside',
-          identifier: 'lobe-agent-documents',
+          identifier: 'orvilo-agent-documents',
           toolCallId: 'tool-call-review-context-outside',
           userId,
         },
@@ -190,7 +190,7 @@ describe('AgentSignalReviewContextModel', () => {
         expect.objectContaining({
           apiName: 'createDocument',
           failedCount: 1,
-          identifier: 'lobe-agent-documents',
+          identifier: 'orvilo-agent-documents',
           messageIds: expect.arrayContaining([
             'agent-signal-review-context-tool-1',
             'agent-signal-review-context-tool-2',
@@ -224,7 +224,7 @@ describe('AgentSignalReviewContextModel', () => {
           id: 'agent-signal-review-context-doc-skill',
           metadata: {
             agentSignal: {
-              hintedByTool: 'lobe-agent-documents.createDocument',
+              hintedByTool: 'orvilo-agent-documents.createDocument',
               hintIsSkill: true,
             },
           },
@@ -241,7 +241,7 @@ describe('AgentSignalReviewContextModel', () => {
           id: 'agent-signal-review-context-doc-outside',
           metadata: {
             agentSignal: {
-              hintedByTool: 'lobe-agent-documents.createDocument',
+              hintedByTool: 'orvilo-agent-documents.createDocument',
               hintIsSkill: true,
             },
           },

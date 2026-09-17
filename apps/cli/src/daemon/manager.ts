@@ -11,20 +11,20 @@ const STARTUP_TIMEOUT_MS = 30_000;
 
 type DaemonStartupMessage = { message: string; type: 'startup-error' } | { type: 'startup-ready' };
 
-function getLobehubDir() {
+function getOrviloDir() {
   return path.join(os.homedir(), CLI_CONFIG_DIR_NAME);
 }
 
 function getPidPath() {
-  return path.join(getLobehubDir(), 'daemon.pid');
+  return path.join(getOrviloDir(), 'daemon.pid');
 }
 
 function getStatusPath() {
-  return path.join(getLobehubDir(), 'daemon.status.json');
+  return path.join(getOrviloDir(), 'daemon.status.json');
 }
 
 function getLogFilePath() {
-  return path.join(getLobehubDir(), 'daemon.log');
+  return path.join(getOrviloDir(), 'daemon.log');
 }
 
 export interface DaemonStatus {
@@ -36,7 +36,7 @@ export interface DaemonStatus {
 }
 
 function ensureDir() {
-  fs.mkdirSync(getLobehubDir(), { mode: 0o700, recursive: true });
+  fs.mkdirSync(getOrviloDir(), { mode: 0o700, recursive: true });
 }
 
 // --- PID file ---
@@ -77,7 +77,7 @@ export function isProcessAlive(pid: number): boolean {
 }
 
 /**
- * Verify a live PID actually belongs to a LobeHub connect daemon.
+ * Verify a live PID actually belongs to a Orvilo connect daemon.
  *
  * A bare `isProcessAlive` check is not enough: if a daemon dies without cleaning
  * up `daemon.pid` (crash, `kill -9`, reboot), the OS can later reuse that PID
@@ -198,7 +198,7 @@ export function spawnDaemon(args: string[]): Promise<number> {
   // Re-run the same entry with --daemon-child (internal flag)
   const daemon = x(process.execPath, [...process.execArgv, ...args, '--daemon-child'], {
     nodeOptions: {
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', LOBEHUB_DAEMON: '1' },
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', ORVILO_DAEMON: '1' },
       stdio: ['ignore', logFd, logFd, 'ipc'],
     },
     nodePath: false,
@@ -283,7 +283,7 @@ function readStartupError(startOffset: number): string | undefined {
 }
 
 function sendStartupMessage(message: DaemonStartupMessage): Promise<void> {
-  if (process.env.LOBEHUB_DAEMON !== '1' || !process.send || !process.connected) {
+  if (process.env.ORVILO_DAEMON !== '1' || !process.send || !process.connected) {
     return Promise.resolve();
   }
 

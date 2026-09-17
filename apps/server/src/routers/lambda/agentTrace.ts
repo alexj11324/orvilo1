@@ -11,7 +11,7 @@ import { FileS3 } from '@/server/modules/S3';
 /**
  * Read-only access to the agent execution snapshots uploaded by
  * `S3SnapshotStore`. Exists so `lh trace` can inspect a production run with
- * nothing but a LobeHub login: the two things that previously had to be done
+ * nothing but a Orvilo login: the two things that previously had to be done
  * by hand — mapping a topic id to an operation id (a SQL query) and reaching
  * the bucket (a per-deployment `TRACING_BASE_URL` pointing at a public
  * domain) — both happen here, behind the caller's own ownership scope.

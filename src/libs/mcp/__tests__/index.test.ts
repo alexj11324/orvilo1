@@ -90,7 +90,7 @@ describe('MCPClient', () => {
     );
   });
 
-  // Regression for https://github.com/lobehub/lobehub/issues/17307:
+  // Regression for
   // neither the main stdio transport nor the failure-path pre-check may spread
   // the full server process.env into the spawned subprocess, otherwise
   // server-side secrets leak to the MCP process.
@@ -98,9 +98,9 @@ describe('MCPClient', () => {
     const TIMEOUT = 120_000;
 
     it('does not pass server process.env secrets to the main stdio transport', () => {
-      const SECRET_KEY = 'LOBE_TEST_SECRET_LEAK';
+      const SECRET_KEY = 'ORVILO_TEST_SECRET_LEAK';
       const SECRET_VALUE = 'super-secret-should-not-leak-1234';
-      const ALLOWED_KEY = 'LOBE_TEST_USER_ENV';
+      const ALLOWED_KEY = 'ORVILO_TEST_USER_ENV';
       const ALLOWED_VALUE = 'user-configured-value';
 
       process.env[SECRET_KEY] = SECRET_VALUE;
@@ -132,9 +132,9 @@ describe('MCPClient', () => {
     it(
       'does not leak server process.env secrets to the pre-check subprocess',
       async () => {
-        const SECRET_KEY = 'LOBE_TEST_SECRET_LEAK';
+        const SECRET_KEY = 'ORVILO_TEST_SECRET_LEAK';
         const SECRET_VALUE = 'super-secret-should-not-leak-1234';
-        const ALLOWED_KEY = 'LOBE_TEST_USER_ENV';
+        const ALLOWED_KEY = 'ORVILO_TEST_USER_ENV';
         const ALLOWED_VALUE = 'user-configured-value';
 
         process.env[SECRET_KEY] = SECRET_VALUE;

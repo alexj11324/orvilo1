@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LobeOpenCodeCodingPlanAI } from './index';
+import { OrviloOpenCodeCodingPlanAI } from './index';
 
 vi.mock('@orvilo/business-model-bank/model-config', () => ({
   loadModels: vi.fn().mockResolvedValue([]),
@@ -10,7 +10,7 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 describe('OpenCode Go session headers', () => {
   const requests: { headers: Headers; url: string }[] = [];
   const messages = [{ content: 'Hello', role: 'user' as const }];
-  const createRuntime = () => new LobeOpenCodeCodingPlanAI({ apiKey: 'test' });
+  const createRuntime = () => new OrviloOpenCodeCodingPlanAI({ apiKey: 'test' });
 
   beforeEach(() => {
     requests.length = 0;
@@ -92,8 +92,8 @@ describe('OpenCode Go session headers', () => {
     ]);
     for (const { headers, url } of requests) {
       expect(url).toBe(`https://opencode.ai/zen/go/v1${endpoint}`);
-      expect(headers.get('x-opencode-client')).toBe('lobehub');
-      expect(headers.get('user-agent')).toBe('lobehub');
+      expect(headers.get('x-opencode-client')).toBe('orvilo');
+      expect(headers.get('user-agent')).toBe('orvilo');
       expect(headers.get('x-custom')).toBe('preserved');
     }
   });
@@ -116,7 +116,7 @@ describe('OpenCode Go session headers', () => {
       expect(result).toEqual({ ok: true });
       expect(requests).toHaveLength(1);
       expect(requests[0].headers.get('x-opencode-session')).toBe('topic-object');
-      expect(requests[0].headers.get('x-opencode-client')).toBe('lobehub');
+      expect(requests[0].headers.get('x-opencode-client')).toBe('orvilo');
     },
   );
 

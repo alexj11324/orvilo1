@@ -1,4 +1,4 @@
-import type { HeterogeneousProviderConfig, LobeAgentConfig, MetaData } from '@orvilo/types';
+import type { HeterogeneousProviderConfig, MetaData, OrviloAgentConfig } from '@orvilo/types';
 import type { PartialDeep } from 'type-fest';
 
 // ==================== Service Interfaces ====================
@@ -13,7 +13,7 @@ export interface IAgentService {
     agentId?: string;
   }>;
   duplicateAgent: (agentId: string, newTitle?: string) => Promise<{ agentId: string } | null>;
-  getAgentConfigById: (agentId: string) => Promise<LobeAgentConfig | null>;
+  getAgentConfigById: (agentId: string) => Promise<OrviloAgentConfig | null>;
   queryAgents: (params: { keyword?: string; limit?: number; offset?: number }) => Promise<
     Array<{
       avatar?: string | null;
@@ -94,7 +94,7 @@ export interface CreateAgentState {
 }
 
 export interface UpdateAgentConfigParams {
-  config?: PartialDeep<LobeAgentConfig>;
+  config?: PartialDeep<OrviloAgentConfig>;
   meta?: Partial<MetaData>;
   togglePlugin?: {
     enabled?: boolean;
@@ -242,7 +242,7 @@ export interface InstallPluginState {
   error?: string;
   installed: boolean;
   isComposio?: boolean;
-  isLobehubSkill?: boolean;
+  isOrviloSkill?: boolean;
   pluginId: string;
   pluginName?: string;
   redirectUrl?: string;

@@ -1,4 +1,4 @@
-import type { LobeBuiltinTool, WorkRegistrationIntent } from '@orvilo/types';
+import type { OrviloBuiltinTool, WorkRegistrationIntent } from '@orvilo/types';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -14,7 +14,7 @@ import {
 
 const registry = [
   {
-    identifier: 'lobe-task',
+    identifier: 'orvilo-task',
     manifest: {
       api: [
         { name: 'createTask', work: { action: 'create', resourceType: 'task' } },
@@ -26,7 +26,7 @@ const registry = [
     },
   },
   {
-    identifier: 'lobe-agent-documents',
+    identifier: 'orvilo-agent-documents',
     manifest: {
       api: [
         { name: 'createDocument', work: { action: 'create', resourceType: 'document' } },
@@ -36,23 +36,23 @@ const registry = [
       ],
     },
   },
-] as unknown as LobeBuiltinTool[];
+] as unknown as OrviloBuiltinTool[];
 
 describe('getApiWorkConfig', () => {
   it('returns the work config for an API that declares one', () => {
-    expect(getApiWorkConfig(registry, 'lobe-task', 'createTask')).toEqual({
+    expect(getApiWorkConfig(registry, 'orvilo-task', 'createTask')).toEqual({
       action: 'create',
       resourceType: 'task',
     });
   });
 
   it('returns undefined for an API without a work config', () => {
-    expect(getApiWorkConfig(registry, 'lobe-task', 'listTasks')).toBeUndefined();
+    expect(getApiWorkConfig(registry, 'orvilo-task', 'listTasks')).toBeUndefined();
   });
 
   it('returns undefined for an unknown tool or API', () => {
-    expect(getApiWorkConfig(registry, 'lobe-unknown', 'createTask')).toBeUndefined();
-    expect(getApiWorkConfig(registry, 'lobe-task', 'unknownApi')).toBeUndefined();
+    expect(getApiWorkConfig(registry, 'orvilo-unknown', 'createTask')).toBeUndefined();
+    expect(getApiWorkConfig(registry, 'orvilo-task', 'unknownApi')).toBeUndefined();
   });
 });
 
@@ -139,7 +139,7 @@ describe('extractTaskWorkTargets', () => {
 describe('resolveWorkRegistration', () => {
   it('resolves create/update into a changeType-bearing plan', () => {
     expect(
-      resolveWorkRegistration(registry, 'lobe-task', 'createTask', {
+      resolveWorkRegistration(registry, 'orvilo-task', 'createTask', {
         args: {},
         result: { state: { identifier: 'T-1', taskId: 'task_1', success: true }, success: true },
       }),
@@ -151,7 +151,7 @@ describe('resolveWorkRegistration', () => {
     });
 
     expect(
-      resolveWorkRegistration(registry, 'lobe-task', 'editTask', {
+      resolveWorkRegistration(registry, 'orvilo-task', 'editTask', {
         args: { identifier: 'T-9' },
         result: { success: true },
       }),
@@ -165,7 +165,7 @@ describe('resolveWorkRegistration', () => {
 
   it('resolves delete into a changeType-less plan keyed off state.taskId', () => {
     expect(
-      resolveWorkRegistration(registry, 'lobe-task', 'deleteTask', {
+      resolveWorkRegistration(registry, 'orvilo-task', 'deleteTask', {
         args: { identifier: 'T-1' },
         result: { state: { identifier: 'T-1', taskId: 'task_1', success: true }, success: true },
       }),
@@ -178,7 +178,7 @@ describe('resolveWorkRegistration', () => {
 
   it('returns undefined when a delete call yields no extractable target', () => {
     expect(
-      resolveWorkRegistration(registry, 'lobe-task', 'deleteTask', {
+      resolveWorkRegistration(registry, 'orvilo-task', 'deleteTask', {
         args: { identifier: 'T-1' },
         result: { success: false },
       }),
@@ -187,7 +187,7 @@ describe('resolveWorkRegistration', () => {
 
   it('returns undefined for an API without a work config', () => {
     expect(
-      resolveWorkRegistration(registry, 'lobe-task', 'listTasks', {
+      resolveWorkRegistration(registry, 'orvilo-task', 'listTasks', {
         args: {},
         result: { success: true },
       }),
@@ -196,7 +196,7 @@ describe('resolveWorkRegistration', () => {
 
   it('resolves a document create/update directly into the final register intent', () => {
     expect(
-      resolveWorkRegistration(registry, 'lobe-agent-documents', 'createDocument', {
+      resolveWorkRegistration(registry, 'orvilo-agent-documents', 'createDocument', {
         args: {},
         result: {
           state: { agentDocumentId: 'assoc_1', agentId: 'agent-1', documentId: 'doc_1' },
@@ -216,7 +216,7 @@ describe('resolveWorkRegistration', () => {
     });
 
     expect(
-      resolveWorkRegistration(registry, 'lobe-agent-documents', 'replaceDocumentContent', {
+      resolveWorkRegistration(registry, 'orvilo-agent-documents', 'replaceDocumentContent', {
         args: { id: 'assoc_1' },
         result: {
           state: { agentDocumentId: 'assoc_1', agentId: 'agent-1', documentId: 'doc_1' },
@@ -238,7 +238,7 @@ describe('resolveWorkRegistration', () => {
 
   it('resolves a document delete into a changeType-less plan keyed off state.documentId', () => {
     expect(
-      resolveWorkRegistration(registry, 'lobe-agent-documents', 'removeDocument', {
+      resolveWorkRegistration(registry, 'orvilo-agent-documents', 'removeDocument', {
         args: { id: 'assoc_1' },
         result: {
           state: { agentDocumentId: 'assoc_1', agentId: 'agent-1', documentId: 'doc_1' },
@@ -254,7 +254,7 @@ describe('resolveWorkRegistration', () => {
 
   it('returns undefined for a document API without a work config (readDocument)', () => {
     expect(
-      resolveWorkRegistration(registry, 'lobe-agent-documents', 'readDocument', {
+      resolveWorkRegistration(registry, 'orvilo-agent-documents', 'readDocument', {
         args: { id: 'assoc_1' },
         result: {
           state: { agentDocumentId: 'assoc_1', agentId: 'agent-1', documentId: 'doc_1' },
@@ -266,7 +266,7 @@ describe('resolveWorkRegistration', () => {
 
   it('returns undefined for a failed document call', () => {
     expect(
-      resolveWorkRegistration(registry, 'lobe-agent-documents', 'createDocument', {
+      resolveWorkRegistration(registry, 'orvilo-agent-documents', 'createDocument', {
         args: {},
         result: {
           state: { agentDocumentId: 'assoc_1', agentId: 'agent-1', documentId: 'doc_1' },
@@ -278,7 +278,7 @@ describe('resolveWorkRegistration', () => {
 
   it('returns undefined for a document call missing documentId in state', () => {
     expect(
-      resolveWorkRegistration(registry, 'lobe-agent-documents', 'createDocument', {
+      resolveWorkRegistration(registry, 'orvilo-agent-documents', 'createDocument', {
         args: {},
         result: { state: { agentDocumentId: 'assoc_1', agentId: 'agent-1' }, success: true },
       }),
@@ -331,7 +331,7 @@ describe('dispatchWorkRegistrationIntent', () => {
     rootOperationId: 'op-root',
     messageId: 'msg-1',
     toolCallId: 'tool-call-1',
-    toolIdentifier: 'lobe-task',
+    toolIdentifier: 'orvilo-task',
     toolName: 'createTask',
     threadId: 'thread-1',
     topicId: 'topic-1',
@@ -369,7 +369,7 @@ describe('dispatchWorkRegistrationIntent', () => {
         cumulativeUsage: provenance.cumulativeUsage,
         rootOperationId: 'op-root',
         toolName: 'createTask',
-        toolIdentifier: 'lobe-task',
+        toolIdentifier: 'orvilo-task',
         messageId: 'msg-1',
         toolCallId: 'tool-call-1',
         taskId: 'task_1',

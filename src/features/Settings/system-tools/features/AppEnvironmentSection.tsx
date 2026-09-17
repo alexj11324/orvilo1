@@ -28,12 +28,12 @@ const APP_ENVIRONMENT_ITEMS = [
 
 const AppEnvironmentSection = memo(() => {
   const { t } = useTranslation('setting');
-  const lobeEnv = window.lobeEnv;
+  const orviloEnv = window.orviloEnv;
 
   const formItems: FormGroupItemType[] = [
     {
       children: APP_ENVIRONMENT_ITEMS.map((item) => {
-        const version = lobeEnv?.[item.versionKey];
+        const version = orviloEnv?.[item.versionKey];
         const label = (
           <Flexbox horizontal align="center" gap={8}>
             <Text>{item.name}</Text>

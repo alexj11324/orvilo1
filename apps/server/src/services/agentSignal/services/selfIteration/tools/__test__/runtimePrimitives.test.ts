@@ -1,7 +1,7 @@
 import { LayersEnum } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { SkillManagementDocumentService } from '@/server/services/skillManagement';
 
 import { createResourceRuntimePrimitives } from '../runtimePrimitives';
@@ -94,7 +94,7 @@ describe('createResourceRuntimePrimitives', () => {
     });
     const service = createResourceRuntimePrimitives({
       agentId: 'agent_1',
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       memoryReason: (count) => `reason ${count}`,
       operationId: 'op_1',
       sourceId: 'source_1',
@@ -128,7 +128,7 @@ describe('createResourceRuntimePrimitives', () => {
   it('does not create rollback metadata for skill creation', async () => {
     const service = createResourceRuntimePrimitives({
       agentId: 'agent_1',
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       memoryReason: (count) => `reason ${count}`,
       operationId: 'op_1',
       sourceId: 'source_1',
@@ -159,7 +159,7 @@ describe('createResourceRuntimePrimitives', () => {
     });
     const service = createResourceRuntimePrimitives({
       agentId: 'agent_1',
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       memoryReason: (count) => `reason ${count}`,
       operationId: 'op_1',
       sourceId: 'source_1',

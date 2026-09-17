@@ -3,15 +3,15 @@ import { and, desc, eq } from 'drizzle-orm';
 
 import type { NewEvalDatasetsItem } from '../../schemas';
 import { evalDatasets } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
 export class EvalDatasetModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

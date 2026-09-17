@@ -31,7 +31,7 @@ vi.mock('electron', () => ({
 
 // Mock @/const/env
 vi.mock('@/const/env', () => ({
-  OFFICIAL_CLOUD_SERVER: 'https://cloud.lobehub.com',
+  OFFICIAL_CLOUD_SERVER: 'https://cloud.aspectlylabs.com',
 }));
 
 // Mock storeManager
@@ -517,7 +517,7 @@ describe('RemoteServerConfigCtr', () => {
         expect.objectContaining({
           body: expect.stringContaining('grant_type=refresh_token'),
           headers: expect.objectContaining({
-            'User-Agent': 'LobeHub Desktop/1.2.3',
+            'User-Agent': 'Orvilo Desktop/1.2.3',
           }),
           method: 'POST',
         }),
@@ -759,7 +759,7 @@ describe('RemoteServerConfigCtr', () => {
 
       const result = await controller.getRemoteServerUrl();
 
-      expect(result).toBe('https://cloud.lobehub.com');
+      expect(result).toBe('https://cloud.aspectlylabs.com');
     });
 
     it('should return custom URL for selfHost mode', async () => {

@@ -34,7 +34,6 @@ export const params = {
   baseURL: 'https://api.mistral.ai/v1',
   chatCompletion: {
     // Mistral API does not support stream_options: { include_usage: true }
-    // refs: https://github.com/lobehub/lobe-chat/issues/6825
     excludeUsage: true,
     handlePayload: (payload) => {
       // Resolve parameters with normalization
@@ -59,14 +58,14 @@ export const params = {
     chatCompletion: () => process.env.DEBUG_MISTRAL_CHAT_COMPLETION === '1',
   },
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const modelsPage = (await client.models.list()) as any;
     const modelList: MistralModelCard[] = modelsPage.data;
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 
@@ -89,4 +88,4 @@ export const params = {
   provider: ModelProvider.Mistral,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeMistralAI = createOpenAICompatibleRuntime(params);
+export const OrviloMistralAI = createOpenAICompatibleRuntime(params);

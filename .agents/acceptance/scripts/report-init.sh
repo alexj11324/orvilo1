@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # report-init.sh — scaffold a structured test report under the report root
-# ($ACCEPTANCE_REPORT_ROOT, default ${TMPDIR:-/tmp}/lobe-acceptance/reports).
+# ($ACCEPTANCE_REPORT_ROOT, default ${TMPDIR:-/tmp}/orvilo-acceptance/reports).
 #
 # Format spec and evidence rules: ../references/report.md
 #
@@ -40,7 +40,7 @@ json_escape() {
 }
 
 REPO_ROOT="$(pwd)"
-REPORT_ROOT="${ACCEPTANCE_REPORT_ROOT:-${TMPDIR:-/tmp}/lobe-acceptance/reports}"
+REPORT_ROOT="${ACCEPTANCE_REPORT_ROOT:-${TMPDIR:-/tmp}/orvilo-acceptance/reports}"
 TS="$(date +%Y%m%d-%H%M%S)"
 
 SUBJECT_JSON="null"

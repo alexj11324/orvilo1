@@ -3,7 +3,7 @@ import debug from 'debug';
 /**
  * Minimal logger interface. Each level is variadic — the first arg is a
  * message string and the rest are formatter arguments (matches the shape
- * agreed across LobeHub packages).
+ * agreed across Orvilo packages).
  */
 export interface Logger {
   debug: (message: unknown, ...args: unknown[]) => void;
@@ -15,11 +15,11 @@ export interface Logger {
 
 export type LoggerFactory = (namespace: string) => Logger;
 
-const DEFAULT_NAMESPACE_PREFIX = 'lobe-local-file-shell';
+const DEFAULT_NAMESPACE_PREFIX = 'orvilo-local-file-shell';
 
 /**
  * Default logger factory backed by the `debug` package — enabled at runtime
- * via the standard `DEBUG=lobe-local-file-shell:*` env var. `error` always
+ * via the standard `DEBUG=orvilo-local-file-shell:*` env var. `error` always
  * surfaces via `console.error` so genuine failures aren't swallowed even when
  * debug logging is off.
  */

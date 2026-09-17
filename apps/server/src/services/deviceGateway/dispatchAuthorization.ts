@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { DeviceUnavailableErrorData } from '@orvilo/types';
 
 import { DeviceModel } from '@/database/models/device';
@@ -18,7 +18,7 @@ import { DeviceModel } from '@/database/models/device';
  * - Structured `DEVICE_NOT_FOUND` context when the visible registry row no longer exists
  */
 export const resolveDeviceDispatchAuthorizationFailure = async (
-  serverDB: LobeChatDatabase | undefined,
+  serverDB: OrviloDatabase | undefined,
   userId: string,
   deviceId: string,
   workspaceId?: string,

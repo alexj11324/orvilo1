@@ -19,7 +19,7 @@ import { useCommandMenu } from './useCommandMenu';
 const AskAIMenu = memo(() => {
   const { t } = useTranslation(['common', 'chat', 'home']);
   const navigate = useWorkspaceAwareNavigate();
-  const { handleAskLobeAI, handleAIPainting, closeCommandMenu } = useCommandMenu();
+  const { handleAskOrviloAI, handleAIPainting, closeCommandMenu } = useCommandMenu();
   const { search } = useCommandMenuContext();
 
   // Get agent list (limit to first 20 items for simplicity)
@@ -60,7 +60,7 @@ const AskAIMenu = memo(() => {
 
   return (
     <Command.Group heading={heading}>
-      <Command.Item value="orvilo-ai" onSelect={handleAskLobeAI}>
+      <Command.Item value="orvilo-ai" onSelect={handleAskOrviloAI}>
         <Avatar emojiScaleWithBackground avatar={DEFAULT_INBOX_AVATAR} shape="square" size={18} />
         <div className={styles.itemContent}>
           <div className={styles.itemLabel}>Orvilo AI</div>

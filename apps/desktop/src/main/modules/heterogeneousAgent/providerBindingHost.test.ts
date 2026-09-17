@@ -223,7 +223,7 @@ describe('prepareHostedServerDefaultBinding', () => {
       args: [],
       driver: claudeCodeLikeDriver,
       endpoint: 'https://example.com',
-      model: 'lobehub-default',
+      model: 'orvilo-default',
       sessionId: 'session-test',
     };
   };
@@ -243,7 +243,7 @@ describe('prepareHostedServerDefaultBinding', () => {
   it('records last use on prepare so GC never collects an in-use profile', async () => {
     const params = await makeServerDefaultParams();
     const binding = await prepareHostedServerDefaultBinding(params);
-    const marker = path.join(binding.profileDir, '.lobehub-last-used');
+    const marker = path.join(binding.profileDir, '.orvilo-last-used');
     await expect(stat(marker)).resolves.toBeDefined();
 
     // Regression: the profile root mtime stays at creation for claude-code
@@ -275,7 +275,7 @@ describe('gcHostedProviderBindingProfiles', () => {
   it('records last use on prepare and only removes profiles idle beyond the max age', async () => {
     const params = await makeParams(driver);
     const binding = await prepareHostedProviderBinding(params);
-    const marker = path.join(binding.profileDir, '.lobehub-last-used');
+    const marker = path.join(binding.profileDir, '.orvilo-last-used');
     await expect(stat(marker)).resolves.toBeDefined();
 
     // A freshly used profile survives the sweep.
@@ -295,7 +295,7 @@ describe('gcHostedProviderBindingProfiles', () => {
     const params = await makeParams(driver);
     const binding = await prepareHostedProviderBinding(params);
     const { rm } = await import('node:fs/promises');
-    await rm(path.join(binding.profileDir, '.lobehub-last-used'), { force: true });
+    await rm(path.join(binding.profileDir, '.orvilo-last-used'), { force: true });
 
     const staleTime = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
     await utimes(binding.profileDir, staleTime, staleTime);

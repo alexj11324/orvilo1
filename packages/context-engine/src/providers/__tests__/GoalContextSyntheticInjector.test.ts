@@ -88,7 +88,7 @@ describe('GoalContextSyntheticInjector', () => {
           role: 'assistant',
           tool_calls: [
             {
-              function: { arguments: '{"query":"x"}', name: 'lobe-web-browsing____search' },
+              function: { arguments: '{"query":"x"}', name: 'orvilo-web-browsing____search' },
               id: 'call_real',
               type: 'function',
             },

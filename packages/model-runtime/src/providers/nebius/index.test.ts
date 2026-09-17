@@ -3,13 +3,13 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeNebiusAI, params } from './index';
+import { OrviloNebiusAI, params } from './index';
 
 const provider = ModelProvider.Nebius;
 const defaultBaseURL = 'https://api.studio.nebius.com/v1';
 
 testProvider({
-  Runtime: LobeNebiusAI,
+  Runtime: OrviloNebiusAI,
   chatDebugEnv: 'DEBUG_NEBIUS_CHAT_COMPLETION',
   chatModel: 'meta/llama-3.1-8b-instruct',
   defaultBaseURL,
@@ -19,11 +19,11 @@ testProvider({
   },
 });
 
-describe('LobeNebiusAI - custom features', () => {
-  let instance: InstanceType<typeof LobeNebiusAI>;
+describe('OrviloNebiusAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloNebiusAI>;
 
   beforeEach(() => {
-    instance = new LobeNebiusAI({ apiKey: 'test_api_key' });
+    instance = new OrviloNebiusAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

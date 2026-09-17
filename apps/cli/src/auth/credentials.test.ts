@@ -12,8 +12,8 @@ import {
 } from './credentials';
 
 // Use a fixed temp path to avoid hoisting issues with vi.mock
-const tmpDir = path.join(os.tmpdir(), 'lobehub-cli-test-creds');
-const credentialsDir = path.join(tmpDir, '.lobehub');
+const tmpDir = path.join(os.tmpdir(), 'orvilo-cli-test-creds');
+const credentialsDir = path.join(tmpDir, '.orvilo');
 const credentialsFile = path.join(credentialsDir, 'credentials.json');
 
 vi.mock('node:os', async (importOriginal) => {
@@ -22,7 +22,7 @@ vi.mock('node:os', async (importOriginal) => {
     ...actual,
     default: {
       ...actual['default'],
-      homedir: () => path.join(os.tmpdir(), 'lobehub-cli-test-creds'),
+      homedir: () => path.join(os.tmpdir(), 'orvilo-cli-test-creds'),
     },
   };
 });

@@ -633,9 +633,9 @@ describe('HeterogeneousAgentCtr', () => {
   let originalCodexAppServerLabEnv: string | undefined;
 
   beforeEach(async () => {
-    originalClaudeSdkLabEnv = process.env.LOBE_CLAUDE_CODE_SDK;
-    originalCodexAppServerLabEnv = process.env.LOBE_CODEX_APP_SERVER;
-    appStoragePath = await mkdtemp(path.join(os.tmpdir(), 'lobehub-hetero-'));
+    originalClaudeSdkLabEnv = process.env.ORVILO_CLAUDE_CODE_SDK;
+    originalCodexAppServerLabEnv = process.env.ORVILO_CODEX_APP_SERVER;
+    appStoragePath = await mkdtemp(path.join(os.tmpdir(), 'orvilo-hetero-'));
     consumeCodexRateLimitResetCreditMock.mockReset();
     fetchCodexQuotaMock.mockReset();
     claudeSdkSessionCloseMock.mockReset();
@@ -696,7 +696,7 @@ describe('HeterogeneousAgentCtr', () => {
     beginServerDefaultOperationMock.mockReset();
     beginServerDefaultOperationMock.mockResolvedValue({
       endpoint: 'https://app.example.com',
-      model: 'lobehub-default',
+      model: 'orvilo-default',
       token: 'operation-token',
     });
     getProviderBindingRuntimeMock.mockReset();
@@ -724,15 +724,15 @@ describe('HeterogeneousAgentCtr', () => {
     platformMock.mockReturnValue('linux');
     vi.mocked(existsSync).mockReturnValue(true);
     vi.mocked(statSync).mockReturnValue(asDirectory);
-    delete process.env.LOBE_CLAUDE_CODE_SDK;
-    delete process.env.LOBE_CODEX_APP_SERVER;
+    delete process.env.ORVILO_CLAUDE_CODE_SDK;
+    delete process.env.ORVILO_CODEX_APP_SERVER;
   });
 
   afterEach(async () => {
-    if (originalClaudeSdkLabEnv === undefined) delete process.env.LOBE_CLAUDE_CODE_SDK;
-    else process.env.LOBE_CLAUDE_CODE_SDK = originalClaudeSdkLabEnv;
-    if (originalCodexAppServerLabEnv === undefined) delete process.env.LOBE_CODEX_APP_SERVER;
-    else process.env.LOBE_CODEX_APP_SERVER = originalCodexAppServerLabEnv;
+    if (originalClaudeSdkLabEnv === undefined) delete process.env.ORVILO_CLAUDE_CODE_SDK;
+    else process.env.ORVILO_CLAUDE_CODE_SDK = originalClaudeSdkLabEnv;
+    if (originalCodexAppServerLabEnv === undefined) delete process.env.ORVILO_CODEX_APP_SERVER;
+    else process.env.ORVILO_CODEX_APP_SERVER = originalCodexAppServerLabEnv;
     await rm(appStoragePath, { force: true, recursive: true });
   });
 
@@ -1218,7 +1218,7 @@ describe('HeterogeneousAgentCtr', () => {
     it('cleans up the intervention when Windows command-line validation rejects before spawn', async () => {
       platformMock.mockReturnValue('win32');
       const operationId = 'op-oversized-windows-argv';
-      const tmpConfigPath = path.join(os.tmpdir(), `lobe-cc-mcp-${operationId}.json`);
+      const tmpConfigPath = path.join(os.tmpdir(), `orvilo-cc-mcp-${operationId}.json`);
       await rm(tmpConfigPath, { force: true });
 
       const ctr = new HeterogeneousAgentCtr({
@@ -1255,7 +1255,7 @@ describe('HeterogeneousAgentCtr', () => {
     });
 
     it('uses Claude SDK streaming lab instead of spawning claude -p', async () => {
-      process.env.LOBE_CLAUDE_CODE_SDK = '1';
+      process.env.ORVILO_CLAUDE_CODE_SDK = '1';
       const send = vi.fn();
       mockGetAllWindows.mockReturnValue([
         {
@@ -1306,7 +1306,7 @@ describe('HeterogeneousAgentCtr', () => {
     });
 
     it('does not start the Claude SDK when server-default execution is cancelled during preparation', async () => {
-      process.env.LOBE_CLAUDE_CODE_SDK = '1';
+      process.env.ORVILO_CLAUDE_CODE_SDK = '1';
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -1964,14 +1964,14 @@ describe('HeterogeneousAgentCtr', () => {
         '--effort',
         'high',
         '--model',
-        expect.stringMatching(/^lobehub-provider-[\da-f]{16}$/),
+        expect.stringMatching(/^orvilo-provider-[\da-f]{16}$/),
       ]);
       expect(options.env).toEqual(
         expect.objectContaining({
           GROK_CONFIG: '',
           GROK_DEFAULT_MODEL: '',
           GROK_HOME: expect.stringContaining('/heteroAgent/bindings/grok-build/'),
-          LOBEHUB_GROK_API_KEY: 'provider-secret',
+          ORVILO_GROK_API_KEY: 'provider-secret',
         }),
       );
       expect(options.env).not.toHaveProperty('GROK_CODE_XAI_API_KEY');
@@ -2201,7 +2201,7 @@ describe('HeterogeneousAgentCtr', () => {
           sessionId: providerSession.sessionId,
         }),
       ).rejects.toThrow(
-        'Kimi Code 0.6.0 or newer is required to use a LobeHub provider. Installed version: 0.5.0.',
+        'Kimi Code 0.6.0 or newer is required to use a Orvilo provider. Installed version: 0.5.0.',
       );
       expect(spawnCalls).toHaveLength(0);
 
@@ -2313,9 +2313,9 @@ describe('HeterogeneousAgentCtr', () => {
       const bindingsRoot = path.join(appStoragePath, 'heteroAgent', 'bindings', 'kimi-code');
       const [bindingDir] = await readdir(bindingsRoot);
       const profileFiles = await readdir(path.join(bindingsRoot, bindingDir));
-      expect(profileFiles).toEqual(['.lobehub-last-used']);
+      expect(profileFiles).toEqual(['.orvilo-last-used']);
       expect(
-        await readFile(path.join(bindingsRoot, bindingDir, '.lobehub-last-used'), 'utf8'),
+        await readFile(path.join(bindingsRoot, bindingDir, '.orvilo-last-used'), 'utf8'),
       ).not.toContain('kimi-provider-secret');
     });
   });
@@ -2363,7 +2363,7 @@ describe('HeterogeneousAgentCtr', () => {
         ingress: 'openai-responses',
         model: 'gpt-5.4',
         operationId: 'op-server-default',
-        provider: 'lobehub',
+        provider: 'orvilo',
       };
       settleServerDefaultOperationMock.mockResolvedValueOnce({
         relayInvocation,
@@ -2397,8 +2397,10 @@ describe('HeterogeneousAgentCtr', () => {
         operationId: 'op-server-default',
         topicId: 'topic-1',
       });
-      expect(spawnCalls[0].args).toEqual(expect.arrayContaining(['--model', 'lobehub/gpt-5.4']));
-      expect(spawnCalls[0].options.env.LOBEHUB_HETERO_TOKEN).toBe('operation-token');
+      expect(spawnCalls[0].args).toEqual(
+        expect.arrayContaining(['--model', 'aspectlylabs/gpt-5.4']),
+      );
+      expect(spawnCalls[0].options.env.ORVILO_HETERO_TOKEN).toBe('operation-token');
       expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
         cancelled: false,
         operationId: 'op-server-default',
@@ -2442,7 +2444,7 @@ describe('HeterogeneousAgentCtr', () => {
           env: {
             KIMI_MODEL_API_KEY: 'operation-token',
             KIMI_MODEL_BASE_URL: 'https://app.example.com/api/v1/anthropic',
-            KIMI_MODEL_NAME: 'lobehub/kimi-k2.6',
+            KIMI_MODEL_NAME: 'aspectlylabs/kimi-k2.6',
             KIMI_MODEL_PROVIDER_TYPE: 'anthropic',
           },
         },
@@ -2486,12 +2488,12 @@ describe('HeterogeneousAgentCtr', () => {
       expect(spawnCalls[0].args).toEqual(
         expect.arrayContaining([
           '--provider',
-          'lobehub-server-default',
+          'orvilo-server-default',
           '--model',
-          'lobehub/kimi-k2.6',
+          'aspectlylabs/kimi-k2.6',
         ]),
       );
-      expect(spawnCalls[0].options.env.LOBEHUB_PI_API_KEY).toBe('operation-token');
+      expect(spawnCalls[0].options.env.ORVILO_PI_API_KEY).toBe('operation-token');
       expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
         cancelled: false,
         operationId: 'op-server-default-pi',
@@ -2502,7 +2504,7 @@ describe('HeterogeneousAgentCtr', () => {
     it('does not launch server-default Codex when cancelled while authorization is pending', async () => {
       let resolveBegin!: (value: {
         endpoint: string;
-        model: 'lobehub-default';
+        model: 'orvilo-default';
         token: string;
       }) => void;
       beginServerDefaultOperationMock.mockImplementationOnce(
@@ -2537,7 +2539,7 @@ describe('HeterogeneousAgentCtr', () => {
       await ctr.cancelSession({ sessionId });
       resolveBegin({
         endpoint: 'https://app.example.com',
-        model: 'lobehub-default',
+        model: 'orvilo-default',
         token: 'operation-token',
       });
       await sendPrompt;
@@ -2681,7 +2683,7 @@ describe('HeterogeneousAgentCtr', () => {
       expect(options.env).toEqual(
         expect.objectContaining({
           CODEX_HOME: expect.stringContaining('/heteroAgent/bindings/codex/'),
-          LOBEHUB_CODEX_API_KEY: 'provider-secret',
+          ORVILO_CODEX_API_KEY: 'provider-secret',
         }),
       );
       expect(JSON.stringify(cliArgs)).not.toContain('provider-secret');
@@ -2803,7 +2805,7 @@ describe('HeterogeneousAgentCtr', () => {
     });
 
     it('reports a missing working directory instead of claiming the Codex CLI is missing', async () => {
-      const missingCwd = '/tmp/lobehub-deleted-worktree';
+      const missingCwd = '/tmp/orvilo-deleted-worktree';
       mockMissingDir(missingCwd);
       const detect = vi.fn().mockResolvedValue({
         available: true,
@@ -3768,7 +3770,7 @@ describe('HeterogeneousAgentCtr', () => {
       } as any);
       const { sessionId } = await ctr.startSession({
         agentType: 'droid',
-        args: ['--tag', 'lobe'],
+        args: ['--tag', 'orvilo'],
         command: 'droid',
         initialModel: 'gpt-5.4',
         resumeSessionId: 'droid_session_old',
@@ -3779,7 +3781,7 @@ describe('HeterogeneousAgentCtr', () => {
       expect(spawnCalls).toHaveLength(0);
       expect(droidAcpSessionConstructMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          args: ['--tag', 'lobe'],
+          args: ['--tag', 'orvilo'],
           clientVersion: '1.0.0-test',
           commandPath: 'droid',
           cwd: FAKE_DESKTOP_PATH,
@@ -3920,7 +3922,7 @@ describe('HeterogeneousAgentCtr', () => {
         args: ['--model', 'stale-model', '--profile', 'personal', '--permission-mode', 'auto'],
         command: 'traecli',
         env: {
-          LOBEHUB_TRAE_API_KEY: 'stale-host-key',
+          ORVILO_TRAE_API_KEY: 'stale-host-key',
           OPENAI_API_KEY: 'stale-openai-key',
           TRAE_HOME: '/user/trae',
         },
@@ -3940,22 +3942,22 @@ describe('HeterogeneousAgentCtr', () => {
         '-c',
         'model="gpt-test"',
         '-c',
-        'model_provider="lobehub"',
+        'model_provider="orvilo"',
         '-c',
-        'model_providers.lobehub.name="LobeHub Provider"',
+        'model_providers.orvilo.name="Orvilo Provider"',
         '-c',
-        'model_providers.lobehub.base_url="https://api.openai.com/v1"',
+        'model_providers.orvilo.base_url="https://api.openai.com/v1"',
         '-c',
-        'model_providers.lobehub.env_key="LOBEHUB_TRAE_API_KEY"',
+        'model_providers.orvilo.env_key="ORVILO_TRAE_API_KEY"',
         '-c',
-        'model_providers.lobehub.wire_api="responses"',
+        'model_providers.orvilo.wire_api="responses"',
         '-c',
-        'model_providers.lobehub.requires_openai_auth=false',
+        'model_providers.orvilo.requires_openai_auth=false',
       ]);
       expect(options.initialModel).toBeUndefined();
       expect(options.env).toEqual(
         expect.objectContaining({
-          LOBEHUB_TRAE_API_KEY: 'provider-secret',
+          ORVILO_TRAE_API_KEY: 'provider-secret',
           TRAE_HOME: '/user/trae',
         }),
       );
@@ -3964,7 +3966,7 @@ describe('HeterogeneousAgentCtr', () => {
 
       const bindingsDir = path.join(appStoragePath, 'heteroAgent', 'bindings', 'trae');
       const [bindingDir] = await readdir(bindingsDir);
-      expect(await readdir(path.join(bindingsDir, bindingDir))).toEqual(['.lobehub-last-used']);
+      expect(await readdir(path.join(bindingsDir, bindingDir))).toEqual(['.orvilo-last-used']);
       expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('provider-secret');
       expect(await readdir(path.join(appStoragePath, 'heteroAgent', 'runs'))).toEqual([]);
     });
@@ -3978,7 +3980,7 @@ describe('HeterogeneousAgentCtr', () => {
         agentType: 'trae',
         command: 'traecli',
         env: {
-          LOBEHUB_TRAE_API_KEY: 'stale-host-key',
+          ORVILO_TRAE_API_KEY: 'stale-host-key',
           OPENAI_API_KEY: 'stale-openai-key',
           TRAE_HOME: '/user/trae',
         },
@@ -4005,23 +4007,23 @@ describe('HeterogeneousAgentCtr', () => {
       const options = traeAcpSessionConstructMock.mock.calls.at(-1)?.[0];
       expect(options.args).toEqual([
         '-c',
-        'model="lobehub/gpt-5.4"',
+        'model="aspectlylabs/gpt-5.4"',
         '-c',
-        'model_provider="lobehub"',
+        'model_provider="orvilo"',
         '-c',
-        'model_providers.lobehub.name="LobeHub Provider"',
+        'model_providers.orvilo.name="Orvilo Provider"',
         '-c',
-        'model_providers.lobehub.base_url="https://app.example.com/api/v1/openai/v1"',
+        'model_providers.orvilo.base_url="https://app.example.com/api/v1/openai/v1"',
         '-c',
-        'model_providers.lobehub.env_key="LOBEHUB_TRAE_API_KEY"',
+        'model_providers.orvilo.env_key="ORVILO_TRAE_API_KEY"',
         '-c',
-        'model_providers.lobehub.wire_api="responses"',
+        'model_providers.orvilo.wire_api="responses"',
         '-c',
-        'model_providers.lobehub.requires_openai_auth=false',
+        'model_providers.orvilo.requires_openai_auth=false',
       ]);
       expect(options.env).toEqual(
         expect.objectContaining({
-          LOBEHUB_TRAE_API_KEY: 'operation-token',
+          ORVILO_TRAE_API_KEY: 'operation-token',
           TRAE_HOME: '/user/trae',
         }),
       );
@@ -4030,7 +4032,7 @@ describe('HeterogeneousAgentCtr', () => {
 
       const bindingsDir = path.join(appStoragePath, 'heteroAgent', 'bindings', 'trae');
       const [bindingDir] = await readdir(bindingsDir);
-      expect(await readdir(path.join(bindingsDir, bindingDir))).toEqual(['.lobehub-last-used']);
+      expect(await readdir(path.join(bindingsDir, bindingDir))).toEqual(['.orvilo-last-used']);
       expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('operation-token');
       expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
         cancelled: false,
@@ -4062,7 +4064,7 @@ describe('HeterogeneousAgentCtr', () => {
           sessionId: providerSession.sessionId,
         }),
       ).rejects.toThrow(
-        'TRAE CLI 0.201.2 or newer is required to use a LobeHub provider. Installed version: 0.201.1.',
+        'TRAE CLI 0.201.2 or newer is required to use a Orvilo provider. Installed version: 0.201.1.',
       );
       expect(traeAcpSessionConstructMock).not.toHaveBeenCalled();
 
@@ -4266,12 +4268,12 @@ describe('HeterogeneousAgentCtr', () => {
         expect.objectContaining({
           ELECTRON_RUN_AS_NODE: '1',
           [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
-          LOBEHUB_ASSISTANT_MESSAGE_ID: 'asst-gateway',
-          LOBEHUB_JWT: 'device-jwt',
-          LOBEHUB_SERVER: 'https://server.example.com',
+          ORVILO_ASSISTANT_MESSAGE_ID: 'asst-gateway',
+          ORVILO_JWT: 'device-jwt',
+          ORVILO_SERVER: 'https://server.example.com',
         }),
       );
-      expect(spawnCall.options.env).not.toHaveProperty('LOBEHUB_WORKSPACE_ID');
+      expect(spawnCall.options.env).not.toHaveProperty('ORVILO_WORKSPACE_ID');
       expect(proc.stdin.write).not.toHaveBeenCalled();
 
       proc.emit('spawn');
@@ -4281,7 +4283,7 @@ describe('HeterogeneousAgentCtr', () => {
       expect(proc.stdin.end).toHaveBeenCalledOnce();
     });
 
-    it('forwards the topic workspace as LOBEHUB_WORKSPACE_ID for ingest', async () => {
+    it('forwards the topic workspace as ORVILO_WORKSPACE_ID for ingest', async () => {
       const proc = createGatewayCliProc();
       nextFakeProc = proc;
       const ctr = new HeterogeneousAgentCtr({
@@ -4289,12 +4291,12 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
 
-      const ack = ctr.spawnLhHeteroExec({ ...params, workspaceId: 'ws-lobehub' });
+      const ack = ctr.spawnLhHeteroExec({ ...params, workspaceId: 'ws-orvilo' });
       proc.emit('spawn');
       await expect(ack).resolves.toEqual({ status: 'accepted' });
 
       expect(spawnCalls[0].options.env).toEqual(
-        expect.objectContaining({ LOBEHUB_WORKSPACE_ID: 'ws-lobehub' }),
+        expect.objectContaining({ ORVILO_WORKSPACE_ID: 'ws-orvilo' }),
       );
     });
 
@@ -4724,7 +4726,7 @@ describe('HeterogeneousAgentCtr', () => {
                   },
                 ],
               },
-              name: 'mcp__lobe_cc__ask_user_question',
+              name: 'mcp__orvilo_cc__ask_user_question',
               type: 'tool_use',
             },
           ],
@@ -4808,19 +4810,19 @@ describe('HeterogeneousAgentCtr', () => {
 
   describe('app-quit cleanup of AskUserQuestion temp configs ()', () => {
     // The async exit-handler cleanup races Electron's main-process teardown
-    // and used to leak `lobe-cc-mcp-<opId>.json` files in `os.tmpdir()` on
+    // and used to leak `orvilo-cc-mcp-<opId>.json` files in `os.tmpdir()` on
     // every quit. The controller now unlinks pending intervention temp
     // configs *synchronously* from `before-quit` AND from process signal
     // handlers (SIGTERM / SIGINT — `before-quit` doesn't fire on external
     // kills). These tests exercise both paths against real files.
 
     /**
-     * Drop a temp `lobe-cc-mcp-<id>.json` and stash it on the controller's
+     * Drop a temp `orvilo-cc-mcp-<id>.json` and stash it on the controller's
      * `opIdToIntervention` map under the same key, so the quit hook treats
      * it like a real pending intervention and tries to unlink it.
      */
     const seedPendingIntervention = async (ctr: HeterogeneousAgentCtr, opId: string) => {
-      const tmpConfigPath = path.join(os.tmpdir(), `lobe-cc-mcp-test-${opId}.json`);
+      const tmpConfigPath = path.join(os.tmpdir(), `orvilo-cc-mcp-test-${opId}.json`);
       await writeFile(tmpConfigPath, '{"mcpServers":{}}');
       const slot = {
         bridge: {} as any,

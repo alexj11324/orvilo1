@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import type { AgentShareConfig } from '../../schemas';
 import { agents, agentShares, users, workspaces } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentShareModel } from '../agentShare';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'agent-share-test-user';
 const otherUserId = 'agent-share-test-other-user';

@@ -9,7 +9,7 @@ import { type OIDCProvider } from '@/libs/oidc-provider/provider';
 
 import { getOIDCProvider } from './oidcProvider';
 
-const log = debug('lobe-oidc:service');
+const log = debug('orvilo-oidc:service');
 
 const firstPartyClientIds = new Set(defaultClients.map((client) => client.client_id));
 

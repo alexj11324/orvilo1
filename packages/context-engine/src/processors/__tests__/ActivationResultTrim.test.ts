@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import type { LobeToolManifest } from '../../engine/tools/types';
+import type { OrviloToolManifest } from '../../engine/tools/types';
 import type { SkillMeta } from '../../providers/SkillContextProvider';
 import type { PipelineContext } from '../../types';
 import { ActivationResultTrimProcessor } from '../ActivationResultTrim';
 
-const CREDS_SYSTEM_ROLE = 'lobe-creds instructions: manage credentials carefully.\n'.repeat(20);
+const CREDS_SYSTEM_ROLE = 'orvilo-creds instructions: manage credentials carefully.\n'.repeat(20);
 const SKILL_CONTENT = '# PowerShell Skill\n\nRun PowerShell commands safely.\n'.repeat(20);
 const RESOURCE_TREE = '<resources skill="PowerShell">\n- scripts/run.ps1\n</resources>';
 
@@ -14,10 +14,10 @@ const credsManifest = {
     { description: 'List credentials', name: 'listCreds' },
     { description: 'Create a credential', name: 'createCred' },
   ],
-  identifier: 'lobe-creds',
+  identifier: 'orvilo-creds',
   meta: { title: 'Creds' },
   systemRole: CREDS_SYSTEM_ROLE,
-} as unknown as LobeToolManifest;
+} as unknown as OrviloToolManifest;
 
 const powershellSkill: SkillMeta = {
   activated: true,
@@ -35,12 +35,12 @@ const createContext = (messages: any[]): PipelineContext => ({
 });
 
 const activateToolsMessage = (overrides?: Record<string, unknown>) => ({
-  content: `Successfully activated tools:\n\n## Creds (lobe-creds)\n${CREDS_SYSTEM_ROLE}\n\nAvailable APIs:\n- **listCreds**: List credentials\n- **createCred**: Create a credential`,
+  content: `Successfully activated tools:\n\n## Creds (orvilo-creds)\n${CREDS_SYSTEM_ROLE}\n\nAvailable APIs:\n- **listCreds**: List credentials\n- **createCred**: Create a credential`,
   id: 'tool-1',
-  plugin: { apiName: 'activateTools', identifier: 'lobe-activator' },
+  plugin: { apiName: 'activateTools', identifier: 'orvilo-activator' },
   pluginState: {
     activatedSkills: [],
-    activatedTools: [{ apiCount: 2, identifier: 'lobe-creds', name: 'Creds' }],
+    activatedTools: [{ apiCount: 2, identifier: 'orvilo-creds', name: 'Creds' }],
     alreadyActive: [],
     notFound: [],
   },
@@ -52,7 +52,7 @@ const activateToolsMessage = (overrides?: Record<string, unknown>) => ({
 const activateSkillMessage = (overrides?: Record<string, unknown>) => ({
   content: `${SKILL_CONTENT}\n\n${RESOURCE_TREE}`,
   id: 'tool-2',
-  plugin: { apiName: 'activateSkill', identifier: 'lobe-skills' },
+  plugin: { apiName: 'activateSkill', identifier: 'orvilo-skills' },
   pluginState: { hasResources: true, name: 'PowerShell', source: 'user' },
   role: 'tool',
   tool_call_id: 'call-2',
@@ -68,7 +68,7 @@ describe('ActivationResultTrimProcessor', () => {
       const content = result.messages[0].content as string;
       expect(content).not.toContain(CREDS_SYSTEM_ROLE);
       expect(content).toContain(
-        'Successfully activated tools: lobe-creds.listCreds, lobe-creds.createCred.',
+        'Successfully activated tools: orvilo-creds.listCreds, orvilo-creds.createCred.',
       );
       expect(content).toContain('in the system prompt');
       expect(result.metadata.activationResultTrim?.trimmedMessages).toBe(1);
@@ -81,7 +81,7 @@ describe('ActivationResultTrimProcessor', () => {
         createContext([
           activateToolsMessage({
             pluginState: {
-              activatedTools: [{ apiCount: 2, identifier: 'lobe-creds', name: 'Creds' }],
+              activatedTools: [{ apiCount: 2, identifier: 'orvilo-creds', name: 'Creds' }],
               alreadyActive: ['github'],
               notFound: ['nonexistent'],
             },
@@ -109,7 +109,7 @@ describe('ActivationResultTrimProcessor', () => {
       const original = activateToolsMessage({
         pluginState: {
           activatedSkills: [{ name: 'agent-browser' }],
-          activatedTools: [{ apiCount: 2, identifier: 'lobe-creds', name: 'Creds' }],
+          activatedTools: [{ apiCount: 2, identifier: 'orvilo-creds', name: 'Creds' }],
         },
       });
       const result = await processor.process(createContext([original]));
@@ -125,10 +125,10 @@ describe('ActivationResultTrimProcessor', () => {
       const result = await processor.process(
         createContext([
           activateToolsMessage({
-            content: `Successfully activated tools:\n\n## Creds (lobe-creds)\n${CREDS_SYSTEM_ROLE}\n${SKILL_CONTENT}`,
+            content: `Successfully activated tools:\n\n## Creds (orvilo-creds)\n${CREDS_SYSTEM_ROLE}\n${SKILL_CONTENT}`,
             pluginState: {
               activatedSkills: [{ name: 'PowerShell' }],
-              activatedTools: [{ apiCount: 2, identifier: 'lobe-creds', name: 'Creds' }],
+              activatedTools: [{ apiCount: 2, identifier: 'orvilo-creds', name: 'Creds' }],
             },
           }),
         ]),
@@ -150,10 +150,10 @@ describe('ActivationResultTrimProcessor', () => {
       const result = await processor.process(
         createContext([
           activateToolsMessage({
-            content: `Successfully activated tools:\n\n## Creds (lobe-creds)\n${CREDS_SYSTEM_ROLE}\n${SKILL_CONTENT}\n\n${RESOURCE_TREE}\nAlready active: github`,
+            content: `Successfully activated tools:\n\n## Creds (orvilo-creds)\n${CREDS_SYSTEM_ROLE}\n${SKILL_CONTENT}\n\n${RESOURCE_TREE}\nAlready active: github`,
             pluginState: {
               activatedSkills: [{ name: 'PowerShell' }],
-              activatedTools: [{ apiCount: 2, identifier: 'lobe-creds', name: 'Creds' }],
+              activatedTools: [{ apiCount: 2, identifier: 'orvilo-creds', name: 'Creds' }],
               alreadyActive: ['github'],
             },
           }),
@@ -174,10 +174,10 @@ describe('ActivationResultTrimProcessor', () => {
         injectedSkills: [powershellSkill],
       });
       const original = activateToolsMessage({
-        content: `Successfully activated tools:\n\n## Creds (lobe-creds)\n${CREDS_SYSTEM_ROLE}\nstale powershell content v1`,
+        content: `Successfully activated tools:\n\n## Creds (orvilo-creds)\n${CREDS_SYSTEM_ROLE}\nstale powershell content v1`,
         pluginState: {
           activatedSkills: [{ name: 'PowerShell' }],
-          activatedTools: [{ apiCount: 2, identifier: 'lobe-creds', name: 'Creds' }],
+          activatedTools: [{ apiCount: 2, identifier: 'orvilo-creds', name: 'Creds' }],
         },
       });
       const result = await processor.process(createContext([original]));
@@ -190,7 +190,7 @@ describe('ActivationResultTrimProcessor', () => {
       // source; the trim rebuilding the same bytes keeps history stable and
       // guards the two formats against drifting apart.
       const short = [
-        'Successfully activated tools: lobe-creds.listCreds, lobe-creds.createCred.',
+        'Successfully activated tools: orvilo-creds.listCreds, orvilo-creds.createCred.',
         'Usage instructions for the activated items are in the system prompt.',
       ].join('\n');
       const processor = new ActivationResultTrimProcessor({ injectedManifests: [credsManifest] });
@@ -204,8 +204,8 @@ describe('ActivationResultTrimProcessor', () => {
     it('should leave pure already-active results untouched', async () => {
       const processor = new ActivationResultTrimProcessor({ injectedManifests: [credsManifest] });
       const original = activateToolsMessage({
-        content: 'Already active: lobe-creds',
-        pluginState: { activatedTools: [], alreadyActive: ['lobe-creds'] },
+        content: 'Already active: orvilo-creds',
+        pluginState: { activatedTools: [], alreadyActive: ['orvilo-creds'] },
       });
       const result = await processor.process(createContext([original]));
 
@@ -263,7 +263,7 @@ describe('ActivationResultTrimProcessor', () => {
       const result = await processor.process(
         createContext([
           activateSkillMessage({
-            plugin: { apiName: 'activateSkill', identifier: 'lobe-activator' },
+            plugin: { apiName: 'activateSkill', identifier: 'orvilo-activator' },
           }),
         ]),
       );
@@ -283,7 +283,7 @@ describe('ActivationResultTrimProcessor', () => {
         {
           content: 'some other tool output',
           id: 't1',
-          plugin: { apiName: 'listCreds', identifier: 'lobe-creds' },
+          plugin: { apiName: 'listCreds', identifier: 'orvilo-creds' },
           role: 'tool',
         },
       ];

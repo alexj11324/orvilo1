@@ -37,7 +37,7 @@ describe('desktop-onboarding storage', () => {
   describe('saved screen', () => {
     it('ignores positions persisted by the previous flow order', () => {
       window.localStorage.setItem(
-        'lobechat:desktop:onboarding:screen:v2',
+        'orvilo:desktop:onboarding:screen:v2',
         DesktopOnboardingScreen.Login,
       );
 

@@ -31,7 +31,7 @@ const { topicReferenceRuntime } = await import('../topicReference');
 describe('topicReferenceRuntime', () => {
   it('should have the correct identifier', () => {
     expect(topicReferenceRuntime.identifier).toBe(TopicReferenceIdentifier);
-    expect(topicReferenceRuntime.identifier).toBe('lobe-topic-reference');
+    expect(topicReferenceRuntime.identifier).toBe('orvilo-topic-reference');
   });
 
   describe('factory', () => {

@@ -4,12 +4,12 @@ import {
 } from '@orvilo/builtin-tool-agent-documents';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { KnowledgeBaseApiName, KnowledgeBaseIdentifier } from '@orvilo/builtin-tool-knowledge-base';
-import {
-  LobeAgentApiName,
-  LobeAgentIdentifier,
-  systemPromptWithoutSubAgent,
-} from '@orvilo/builtin-tool-lobe-agent';
 import { MEMORY_WRITE_API_NAMES, MemoryIdentifier } from '@orvilo/builtin-tool-memory';
+import {
+  OrviloAgentApiName,
+  OrviloAgentIdentifier,
+  systemPromptWithoutSubAgent,
+} from '@orvilo/builtin-tool-orvilo-agent';
 import {
   AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS,
   builtinTools,
@@ -22,7 +22,7 @@ import {
   resolveShareToolGrants,
   type ShareToolGrant,
 } from '@orvilo/const';
-import type { LobeToolManifest, ToolExecutor, ToolSource } from '@orvilo/context-engine';
+import type { OrviloToolManifest, ToolExecutor, ToolSource } from '@orvilo/context-engine';
 import { ToolNameResolver } from '@orvilo/context-engine';
 import type { AgentShareToolGrant } from '@orvilo/types';
 
@@ -78,7 +78,7 @@ export interface AgentShareGate {
  * The whitelist defaults to empty, so an unconfigured share exposes no tools.
  *
  * Identifier-level only: an entry granting just one API
- * (`{ identifier: 'lobe-agent', apis: ['analyzeMedia'] }`) still counts as
+ * (`{ identifier: 'orvilo-agent', apis: ['analyzeMedia'] }`) still counts as
  * "this identifier is a
  * candidate" here — narrowing the offer down to that specific API happens
  * later, in {@link applyShareGateToToolSet}, once the real manifest is known.
@@ -90,7 +90,7 @@ export const filterPluginsByShareGate = (pluginIds: string[], gate: AgentShareGa
 };
 
 /**
- * Whether the share grants `lobe-cloud-sandbox` (at any API scope). Drives
+ * Whether the share grants `orvilo-cloud-sandbox` (at any API scope). Drives
  * `resolveExecutionPlan`'s `sandboxFallback`: a visitor can never reach the
  * creator's device, so this grant is only meaningful if the plan resolves to
  * the sandbox instead of collapsing to `none`.
@@ -346,7 +346,7 @@ export const isShareBlockedDataToolCall = (
  *    consent-gated call is blocked here instead;
  * 4. the per-API data-tool rules ({@link isShareBlockedDataToolCall}).
  *
- * Non-builtin identifiers (MCP/market/custom plugins, LobeHub skills) pass
+ * Non-builtin identifiers (MCP/market/custom plugins, Orvilo skills) pass
  * through untouched: their id namespace does not reliably match
  * `toolGrants` identifiers, so they remain governed by the assembly-time
  * `filterPluginsByShareGate` intersection only.
@@ -398,7 +398,7 @@ export interface ShareGateToolSet {
   activatableToolIds: string[];
   enabledToolIds: string[];
   executorMap: Record<string, ToolExecutor>;
-  manifestMap: Record<string, LobeToolManifest>;
+  manifestMap: Record<string, OrviloToolManifest>;
   sourceMap: Record<string, ToolSource>;
   tools: any[] | undefined;
 }
@@ -649,7 +649,7 @@ const applyShareGateToInterventionRequiredApis = (toolSet: ShareGateToolSet): vo
  *
  * Confirmed leak paths (a concrete visitor→creator-data route was found):
  *
- * - `lobe-agent-management`: `agentManagementRuntime` is scoped by `userId`
+ * - `orvilo-agent-management`: `agentManagementRuntime` is scoped by `userId`
  *   (the creator — the run executes as the creator), but `agentId` is a
  *   free-form model argument on nearly every API. `searchAgent` enumerates the
  *   creator's whole workspace; `getAgentDetail` returns any creator-owned
@@ -664,46 +664,46 @@ const applyShareGateToInterventionRequiredApis = (toolSet: ShareGateToolSet): vo
  *   `replaceSkillContentCAS` are unconditional creator-scoped mutations, and
  *   share grants are `none`/`read` only.
  *
- * - `lobe-skill-maintainer` / `agent-signal-skill-management`: hidden,
+ * - `orvilo-skill-maintainer` / `agent-signal-skill-management`: hidden,
  *   system-only tools whose every API WRITES agent-document rows under the
  *   creator's account. No write grant exists to honor.
  *
- * - `lobe-task` / `lobe-goal`: `TaskModel`/`taskRouter` are scoped only by
+ * - `orvilo-task` / `orvilo-goal`: `TaskModel`/`taskRouter` are scoped only by
  *   `userId`/`workspaceId` — the CREATOR's. Every mutating and single-task-read
  *   API takes a model-supplied identifier resolved with no topic/conversation
  *   check, letting a visitor read, edit, delete, reschedule or RUN (spending
  *   the creator's budget) any task in the workspace. `listTasks`'s `scope:
  *   'allAgents'` makes the breadth explicit.
  *
- * - `lobe-creds`: `injectCreds` takes a free-form `keys: string[]` and decrypts
+ * - `orvilo-creds`: `injectCreds` takes a free-form `keys: string[]` and decrypts
  *   matching entries out of the creator's ENTIRE saved credential store.
  *
- * - `lobe-message`: every bot-management API resolves `botId` straight from
+ * - `orvilo-message`: every bot-management API resolves `botId` straight from
  *   model args with no check against `context.agentId`; the messenger APIs act
  *   on the creator's whole personal messenger account.
  *
- * - `lobe-skill-store`: the `importFrom*` family fetches attacker-chosen
+ * - `orvilo-skill-store`: the `importFrom*` family fetches attacker-chosen
  *   remote code/zip content and persists it into the creator's skill catalog.
  *
- * - `lobe-agent-builder`: `updateConfig`/`updatePrompt` overwrite the shared
+ * - `orvilo-agent-builder`: `updateConfig`/`updatePrompt` overwrite the shared
  *   agent's own `systemRole`/config wholesale — a visitor rewriting the
  *   creator's live agent. `installPlugin` installs an arbitrary market MCP
  *   plugin onto it as the creator, with no consent step.
  *
- * - `lobe-skills`: `findById`/`findByName` resolve any skill across the
+ * - `orvilo-skills`: `findById`/`findByName` resolve any skill across the
  *   creator's ENTIRE personal skill catalog, scoped only by an opt-out
  *   `disabledSkillIds` set.
  *
- * - `lobe-brief`: `createBrief` unconditionally persists a row via
+ * - `orvilo-brief`: `createBrief` unconditionally persists a row via
  *   `BriefModel.create` under `context.userId` (the creator) from
  *   model-supplied content, with no intervention marker to gate it.
  *
- * - `lobe-group-agent-builder` / `lobe-group-management`: group-orchestration
+ * - `orvilo-group-agent-builder` / `orvilo-group-management`: group-orchestration
  *   tools operating on the creator's group-agent collection and membership,
  *   with no share-run scoping designed in — same risk class as
- *   `lobe-agent-management`.
+ *   `orvilo-agent-management`.
  *
- * - `lobe-topic-reference`: `topicReferenceRuntime.getTopicContext`
+ * - `orvilo-topic-reference`: `topicReferenceRuntime.getTopicContext`
  *   (`apps/server/src/services/toolExecution/serverRuntimes/topicReference.ts`)
  *   resolves a free-form model-supplied `topicId` via
  *   `TopicModel.findOwnTopicById`, scoped only to the creator's `userId` — not
@@ -720,32 +720,32 @@ const applyShareGateToInterventionRequiredApis = (toolSet: ShareGateToolSet): vo
  * required to withhold access — the point of default-deny is that an unproven
  * tool does not ship):
  *
- * - `lobe-local-system` / `lobe-browser` / `lobe-remote-device`: these proxy
+ * - `orvilo-local-system` / `orvilo-browser` / `orvilo-remote-device`: these proxy
  *   through `deviceGateway` to the creator's own registered physical
  *   device(s). A visitor executing arbitrary commands or driving a live
  *   browser session on the CREATOR's own machine is a far larger blast radius
  *   than any single data store.
  *
- * - `lobe-web-onboarding`: reads and WRITES the creator's own onboarding
+ * - `orvilo-web-onboarding`: reads and WRITES the creator's own onboarding
  *   `SOUL.md` document and persona.
  *
- * - `lobe-self-feedback-intent` / `agent-signal-reflection` /
+ * - `orvilo-self-feedback-intent` / `agent-signal-reflection` /
  *   `agent-signal-feedback-intent`: hidden, system-only self-iteration tools
  *   whose write paths were never audited for share safety.
  *
- * - `lobe-page-agent`: not unsafe — genuinely unreachable for a share
+ * - `orvilo-page-agent`: not unsafe — genuinely unreachable for a share
  *   visitor's run (`execAgent` strips it whenever `appContext?.scope !==
  *   'page'`, and the share visitor path never sets `scope`), so allowlisting
  *   it would only let the owner-facing tool picker confirm a grant no visitor
  *   conversation can ever exercise.
  *
- * - `lobe-user-interaction` / `lobe-activator`: same "picker promises an
+ * - `orvilo-user-interaction` / `orvilo-activator`: same "picker promises an
  *   unusable grant" class, not a data leak. Every share run is forced onto
  *   `approvalMode: 'headless'` with no approver ever present:
- *   `lobe-user-interaction`'s only entry point (`askUserQuestion`,
+ *   `orvilo-user-interaction`'s only entry point (`askUserQuestion`,
  *   `humanIntervention: 'always'`) is converted to a blocked tool result and
  *   never runs, and its other APIs all require a `requestId` only a
- *   successful `askUserQuestion` mints. `lobe-activator`'s only API
+ *   successful `askUserQuestion` mints. `orvilo-activator`'s only API
  *   (`activateTools`, `humanIntervention: 'required'`) would auto-run under
  *   headless but is stripped from the offer instead. See
  *   {@link applyShareGateToInterventionRequiredApis} for the structural fix
@@ -760,28 +760,28 @@ const applyShareGateToInterventionRequiredApis = (toolSet: ShareGateToolSet): vo
  * general-purpose reach needs an explicit safety argument instead of just the
  * absence of a known exploit.
  *
- * - `lobe-cloud-sandbox`: general-purpose shell/script execution, but a share
+ * - `orvilo-cloud-sandbox`: general-purpose shell/script execution, but a share
  *   visitor's run gets a fresh, isolated per-topic sandbox session — never
  *   the creator's own sandbox state. The `lh` CLI's JWT credential shim
  *   (`preprocessLhCommand.ts`) that would otherwise mint a creator-scoped
  *   token inside a shell the visitor controls is skipped entirely for
  *   `agentShareVisitor` runs (`serverRuntimes/cloudSandbox.ts`), and
- *   `lobe-creds` stays denied above so nothing ever writes `~/.creds/env`
+ *   `orvilo-creds` stays denied above so nothing ever writes `~/.creds/env`
  *   into that session either. No creator credential or JWT is therefore
  *   reachable from inside a visitor's sandbox command.
  */
 
 /**
  * Sub-agent dispatch is not available in shared visitor runs. This strip runs
- * unconditionally on `lobe-agent`, independent of whether the manifest was
+ * unconditionally on `orvilo-agent`, independent of whether the manifest was
  * resolved through the normal context-aware path, so a whitelisted entry can
  * never surface `callSubAgent` — nor a `systemRole` that instructs the model
- * to call it — to a share visitor's model or the activator. `lobe-agent`
+ * to call it — to a share visitor's model or the activator. `orvilo-agent`
  * already ships a precise systemRole variant without the dispatch section
  * (`systemPromptWithoutSubAgent`, also used by its own context-aware
  * `resolveManifest`).
  *
- * `lobe-agent-management`'s dispatch API (`callAgent`) does NOT need an entry
+ * `orvilo-agent-management`'s dispatch API (`callAgent`) does NOT need an entry
  * here: the whole tool — dispatch included — is simply absent from
  * `SHARE_VISITOR_ALLOWED_IDENTIFIERS`, so it never survives that gate.
  */
@@ -789,8 +789,8 @@ const SUB_AGENT_DISPATCH_APIS: Record<
   string,
   { apiName: string; systemRoleWithoutDispatch: string }
 > = {
-  [LobeAgentIdentifier]: {
-    apiName: LobeAgentApiName.callSubAgent,
+  [OrviloAgentIdentifier]: {
+    apiName: OrviloAgentApiName.callSubAgent,
     systemRoleWithoutDispatch: systemPromptWithoutSubAgent,
   },
 };
@@ -839,7 +839,7 @@ const stripSubAgentDispatchApis = (toolSet: ShareGateToolSet): void => {
 const generateToolNames = (
   identifier: string,
   apiNames: Iterable<string>,
-  type: LobeToolManifest['type'],
+  type: OrviloToolManifest['type'],
 ): Set<string> => {
   const names = new Set<string>();
   for (const apiName of apiNames) names.add(toolNameResolver.generate(identifier, apiName, type));
@@ -882,7 +882,7 @@ const pruneToolsForIdentifier = (
 /** Every generated tool-call name the manifest can currently produce. */
 const generateOwnedToolNames = (
   identifier: string,
-  manifest: LobeToolManifest | undefined,
+  manifest: OrviloToolManifest | undefined,
 ): Set<string> =>
   manifest
     ? generateToolNames(

@@ -91,7 +91,7 @@ const writeRow = (id: string, path: string) => ({
   arguments: JSON.stringify({ path }),
   createdAt: new Date(`2026-07-20T00:0${id.length}:00.000Z`),
   id,
-  identifier: 'lobe-cloud-sandbox',
+  identifier: 'orvilo-cloud-sandbox',
   state: { path, success: true },
   toolCallId: `tc-${id}`,
 });
@@ -102,7 +102,7 @@ const exportRow = (id: string, path: string) => ({
   arguments: JSON.stringify({ path }),
   createdAt: new Date(`2026-07-20T00:0${id.length}:00.000Z`),
   id,
-  identifier: 'lobe-cloud-sandbox',
+  identifier: 'orvilo-cloud-sandbox',
   state: { downloadUrl: `https://f/${id}`, filename: path.split('/').pop(), path },
   toolCallId: `tc-${id}`,
 });
@@ -120,7 +120,7 @@ const skillsExportRow = (id: string, path: string) => ({
   arguments: JSON.stringify({ filename: base(path), path }),
   createdAt: new Date(`2026-07-20T00:0${id.length}:00.000Z`),
   id,
-  identifier: 'lobe-skills',
+  identifier: 'orvilo-skills',
   state: { fileId: `file-${id}`, filename: base(path), url: `https://f/${id}` },
   toolCallId: `tc-${id}`,
 });
@@ -201,7 +201,7 @@ describe('registerWorksForOperation', () => {
       title: 'deck.pptx',
       // Stable dedup key → one version per operation (DB enforces idempotency).
       toolCallId: 'op:op-1',
-      toolIdentifier: 'lobe-cloud-sandbox',
+      toolIdentifier: 'orvilo-cloud-sandbox',
       toolName: 'writeFile',
       topicId: 'topic-1',
       userId: 'user-1',
@@ -225,7 +225,7 @@ describe('registerWorksForOperation', () => {
       arguments: JSON.stringify({ path }),
       createdAt: new Date('2026-07-20T00:01:00.000Z'),
       id,
-      identifier: 'lobe-cloud-sandbox',
+      identifier: 'orvilo-cloud-sandbox',
       intervention: { status },
       state: undefined,
       toolCallId: `tc-${id}`,
@@ -253,7 +253,7 @@ describe('registerWorksForOperation', () => {
         arguments: JSON.stringify({ path: '/mnt/data/deck.pptx' }),
         createdAt: new Date('2026-07-20T00:02:00.000Z'),
         id: 'edit-2',
-        identifier: 'lobe-cloud-sandbox',
+        identifier: 'orvilo-cloud-sandbox',
         state: { linesAdded: 3, linesDeleted: 1, path: '/mnt/data/deck.pptx' },
         toolCallId: 'tc-edit-2',
       },
@@ -424,7 +424,7 @@ describe('registerWorksForOperation', () => {
         arguments: JSON.stringify({ code: 'make_deck()' }),
         createdAt: new Date('2026-07-20T00:01:00.000Z'),
         id: 'exec-1',
-        identifier: 'lobe-cloud-sandbox',
+        identifier: 'orvilo-cloud-sandbox',
         state: { success: true },
         toolCallId: 'tc-exec-1',
       },
@@ -440,12 +440,12 @@ describe('registerWorksForOperation', () => {
       filePath: '/workspace/deck.pptx',
       messageId: 'bb',
       title: 'deck.pptx',
-      toolIdentifier: 'lobe-cloud-sandbox',
+      toolIdentifier: 'orvilo-cloud-sandbox',
       toolName: 'exportFile',
     });
   });
 
-  it('registers a skill-generated entity artifact from its lobe-skills exportFile record', async () => {
+  it('registers a skill-generated entity artifact from its orvilo-skills exportFile record', async () => {
     // A skill flow (e.g. the pptx skill) routes generation through the skills
     // tool: execScript builds the deck, and the skills exportFile — whose
     // state carries no `path` — is the only record with the artifact's location.
@@ -455,7 +455,7 @@ describe('registerWorksForOperation', () => {
         arguments: JSON.stringify({ script: 'node make_deck.mjs' }),
         createdAt: new Date('2026-07-20T00:01:00.000Z'),
         id: 'exec-1',
-        identifier: 'lobe-skills',
+        identifier: 'orvilo-skills',
         state: { exitCode: 0, success: true },
         toolCallId: 'tc-exec-1',
       },
@@ -471,12 +471,12 @@ describe('registerWorksForOperation', () => {
       filePath: '/workspace/deck.pptx',
       messageId: 'bb',
       title: 'deck.pptx',
-      toolIdentifier: 'lobe-skills',
+      toolIdentifier: 'orvilo-skills',
       toolName: 'exportFile',
     });
   });
 
-  it('ignores failed, stateless, and non-entity lobe-skills exportFile records', async () => {
+  it('ignores failed, stateless, and non-entity orvilo-skills exportFile records', async () => {
     mockListPlugins.mockResolvedValue([
       skillsExportRow('a', '/workspace/notes.txt'),
       { ...skillsExportRow('bb', '/workspace/bad.pptx'), error: 'export boom' },
@@ -699,7 +699,7 @@ describe('stateHasEntityFileEdits', () => {
   const sandboxCall = (id: string, apiName: string, args: unknown) => ({
     function: {
       arguments: JSON.stringify(args),
-      name: `lobe-cloud-sandbox____${apiName}____builtin`,
+      name: `orvilo-cloud-sandbox____${apiName}____builtin`,
     },
     id,
     type: 'function',
@@ -756,7 +756,7 @@ describe('stateHasEntityFileEdits', () => {
     expect(
       stateHasEntityFileEdits(
         stateWith([
-          { function: { arguments: '{not json', name: 'lobe-cloud-sandbox____writeFile' } },
+          { function: { arguments: '{not json', name: 'orvilo-cloud-sandbox____writeFile' } },
         ]),
       ),
     ).toBe(false);
@@ -787,7 +787,7 @@ describe('stateHasEntityFileEdits', () => {
           {
             function: {
               arguments: '{not json',
-              name: 'lobe-cloud-sandbox____moveFiles____builtin',
+              name: 'orvilo-cloud-sandbox____moveFiles____builtin',
             },
             id: 't2',
             type: 'function',
@@ -809,7 +809,7 @@ describe('stateHasEntityFileEdits', () => {
               apiName: 'writeFile',
               arguments: JSON.stringify({ path: '/w/deck.pptx' }),
               id: 't1',
-              identifier: 'lobe-cloud-sandbox',
+              identifier: 'orvilo-cloud-sandbox',
               result: { state: { path: '/w/deck.pptx', success: true } },
             },
           ],
@@ -833,7 +833,7 @@ describe('stateHasEntityFileEdits', () => {
                 operations: [{ destination: '/w/deck.pptx', source: '/w/draft.tmp' }],
               }),
               id: 't1',
-              identifier: 'lobe-cloud-sandbox',
+              identifier: 'orvilo-cloud-sandbox',
               result: {
                 state: {
                   results: [{ destination: '/w/deck.pptx', source: '/w/draft.tmp', success: true }],
@@ -861,7 +861,7 @@ describe('stateHasEntityFileEdits', () => {
               apiName: 'writeFile',
               arguments: JSON.stringify({ path: '/w/old-deck.pptx' }),
               id: 't1',
-              identifier: 'lobe-cloud-sandbox',
+              identifier: 'orvilo-cloud-sandbox',
               result: { state: { path: '/w/old-deck.pptx', success: true } },
             },
           ],
@@ -897,7 +897,7 @@ describe('stateHasEntityFileEdits', () => {
               apiName: 'exportFile',
               arguments: JSON.stringify({ path: '/workspace/report.pdf' }),
               id: 't1',
-              identifier: 'lobe-cloud-sandbox',
+              identifier: 'orvilo-cloud-sandbox',
             },
           ],
         },
@@ -915,9 +915,9 @@ describe('stateHasEntityFileEdits', () => {
     ).toBe(false);
   });
 
-  it('detects an entity lobe-skills exportFile call (raw and grouped shapes)', () => {
+  it('detects an entity orvilo-skills exportFile call (raw and grouped shapes)', () => {
     const skillsCall = (id: string, args: unknown) => ({
-      function: { arguments: JSON.stringify(args), name: 'lobe-skills____exportFile____builtin' },
+      function: { arguments: JSON.stringify(args), name: 'orvilo-skills____exportFile____builtin' },
       id,
       type: 'function',
     });
@@ -936,7 +936,7 @@ describe('stateHasEntityFileEdits', () => {
               apiName: 'exportFile',
               arguments: JSON.stringify({ filename: 'report.pdf', path: '/workspace/report.pdf' }),
               id: 't1',
-              identifier: 'lobe-skills',
+              identifier: 'orvilo-skills',
             },
           ],
         },
@@ -972,7 +972,7 @@ describe('registerWorksForOperation · shell github works', () => {
       codexCommandRow(
         'a',
         `git push && gh pr create --title 'Fix tray' --body 'Body'`,
-        'https://github.com/lobehub/lobehub/pull/17654\n',
+        'https://github.com/alexj11324/orvilo1/pull/17654\n',
       ),
     ]);
 
@@ -987,7 +987,7 @@ describe('registerWorksForOperation · shell github works', () => {
         data: expect.objectContaining({
           command: `git push && gh pr create --title 'Fix tray' --body 'Body'`,
           exitCode: 0,
-          output: 'https://github.com/lobehub/lobehub/pull/17654\n',
+          output: 'https://github.com/alexj11324/orvilo1/pull/17654\n',
         }),
         messageId: 'a',
         rootOperationId: 'op-1',
@@ -1013,7 +1013,7 @@ describe('registerWorksForOperation · shell github works', () => {
       codexCommandRow(
         'a',
         `gh pr create --title 'Fix tray'`,
-        'https://github.com/lobehub/lobehub/pull/17654\n',
+        'https://github.com/alexj11324/orvilo1/pull/17654\n',
       ),
     ]);
 
@@ -1030,8 +1030,8 @@ describe('registerWorksForOperation · shell github works', () => {
     mockListPlugins.mockResolvedValue([
       claudeCodeBashRow(
         'b',
-        `gh issue edit 952 --repo lobehub/lobehub --title 'Better'`,
-        'https://github.com/lobehub/lobehub/issues/952',
+        `gh issue edit 952 --repo alexj11324/orvilo1 --title 'Better'`,
+        'https://github.com/alexj11324/orvilo1/issues/952',
       ),
     ]);
 
@@ -1041,7 +1041,7 @@ describe('registerWorksForOperation · shell github works', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           exitCode: undefined,
-          output: 'https://github.com/lobehub/lobehub/issues/952',
+          output: 'https://github.com/alexj11324/orvilo1/issues/952',
         }),
         toolIdentifier: 'claude-code',
         toolName: 'Bash',
@@ -1056,7 +1056,11 @@ describe('registerWorksForOperation · shell github works', () => {
       // exitCode rides the data blob; exclusion here is the state error signal.
       { ...codexCommandRow('c', `gh pr create --title 'x'`, 'boom', 1), state: { error: 'boom' } },
       // Passes the cheap `gh ` pre-filter but is read-only → normalizes to null.
-      claudeCodeBashRow('d', 'gh pr view 17654', 'https://github.com/lobehub/lobehub/pull/17654'),
+      claudeCodeBashRow(
+        'd',
+        'gh pr view 17654',
+        'https://github.com/alexj11324/orvilo1/pull/17654',
+      ),
       // No `gh ` in the command at all → dropped before the model is consulted.
       claudeCodeBashRow('e', 'ls -la', 'README.md'),
     ]);
@@ -1079,7 +1083,7 @@ describe('registerWorksForOperation · shell github works', () => {
       codexCommandRow(
         'e',
         `gh pr create --title 'Fix'`,
-        'https://github.com/lobehub/lobehub/pull/1',
+        'https://github.com/alexj11324/orvilo1/pull/1',
       ),
     ]);
 
@@ -1101,7 +1105,7 @@ describe('registerWorksForOperation · shell github works', () => {
       codexCommandRow(
         'f',
         `gh pr create --title 'Fix'`,
-        'https://github.com/lobehub/lobehub/pull/2',
+        'https://github.com/alexj11324/orvilo1/pull/2',
       ),
     ]);
 
@@ -1123,7 +1127,7 @@ describe('registerWorksForOperation · shell github works', () => {
       codexCommandRow(
         'g',
         `gh pr create --title 'Fix'`,
-        'https://github.com/lobehub/lobehub/pull/3',
+        'https://github.com/alexj11324/orvilo1/pull/3',
       ),
     ]);
 

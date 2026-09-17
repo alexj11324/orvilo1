@@ -17,7 +17,7 @@ import {
   buildTriggerSourceEvent,
 } from '@/server/services/agentSignal/triggerSourceEvent';
 
-const log = debug('lobe-server:agent-signal:router');
+const log = debug('orvilo-server:agent-signal:router');
 
 const agentSignalProcedure = wsCompatProcedure;
 const agentSignalWriteProcedure = agentSignalProcedure.use(withScopedPermission('message:create'));

@@ -18,23 +18,23 @@ const DEFAULT_JUDGE_MODEL = 'openai/gpt-4o-mini';
 const DEFAULT_SERVER_URL = 'https://orvilo.aspectlylabs.com';
 
 /**
- * Replay reaches a model through the LobeHub chat route, which needs a token.
+ * Replay reaches a model through the Orvilo chat route, which needs a token.
  * The `lh` CLI has a credential store; this dev-tool CLI does not, so it reads
  * the same env vars `lh` honours and says so when they are missing.
  */
 const resolveConnection = (): ReplayConnection => {
-  const token = process.env.LOBEHUB_JWT;
+  const token = process.env.ORVILO_JWT;
   if (!token) {
     throw new Error(
-      'Replay needs a LobeHub token. Either set LOBEHUB_JWT (and optionally ' +
-        'LOBEHUB_SERVER_URL), or use `lh trace op replay`, which uses your ' +
+      'Replay needs a Orvilo token. Either set ORVILO_JWT (and optionally ' +
+        'ORVILO_SERVER_URL), or use `lh trace op replay`, which uses your ' +
         '`lh login` session.',
     );
   }
 
   return {
     headers: { 'Content-Type': 'application/json', 'Oidc-Auth': token },
-    serverUrl: process.env.LOBEHUB_SERVER_URL || DEFAULT_SERVER_URL,
+    serverUrl: process.env.ORVILO_SERVER_URL || DEFAULT_SERVER_URL,
   };
 };
 

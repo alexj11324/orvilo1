@@ -10,7 +10,7 @@ import { FileService } from '@/server/services/file';
 import type { GenerationTopicItem } from '../schemas/generation';
 import { generationTopics } from '../schemas/generation';
 import { users } from '../schemas/user';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import type { GenerationTopicType } from '../types/generation';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
@@ -20,11 +20,11 @@ type GenerationTopicUpdate = Pick<Partial<ImageGenerationTopic>, 'coverUrl' | 't
 
 export class GenerationTopicModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
   private fileService: FileService;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;

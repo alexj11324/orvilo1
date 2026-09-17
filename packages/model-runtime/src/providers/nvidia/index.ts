@@ -90,4 +90,4 @@ export const params = {
   provider: ModelProvider.Nvidia,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeNvidiaAI = createOpenAICompatibleRuntime(params);
+export const OrviloNvidiaAI = createOpenAICompatibleRuntime(params);

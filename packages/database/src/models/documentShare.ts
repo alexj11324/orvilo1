@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { documents, documentShares, users } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export interface DocumentShareAccessResult {
@@ -19,9 +19,9 @@ export interface DocumentShareAccessResult {
 export class DocumentShareModel {
   private userId: string;
   private workspaceId?: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.workspaceId = workspaceId;
     this.db = db;
@@ -123,7 +123,7 @@ export class DocumentShareModel {
     return result[0] || null;
   };
 
-  static findByDocumentId = async (db: LobeChatDatabase, documentId: string) => {
+  static findByDocumentId = async (db: OrviloDatabase, documentId: string) => {
     const result = await db
       .select({
         document: documents,
@@ -143,7 +143,7 @@ export class DocumentShareModel {
     return result[0] || null;
   };
 
-  static incrementPageViewCount = async (db: LobeChatDatabase, documentId: string) => {
+  static incrementPageViewCount = async (db: OrviloDatabase, documentId: string) => {
     await db
       .update(documentShares)
       .set({ pageViewCount: sql`${documentShares.pageViewCount} + 1` })
@@ -151,7 +151,7 @@ export class DocumentShareModel {
   };
 
   static findByDocumentIdWithAccessCheck = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     documentId: string,
     accessUserId?: string,
   ): Promise<DocumentShareAccessResult> => {

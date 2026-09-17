@@ -134,7 +134,7 @@ describe('OnboardingActionHintInjector', () => {
                 apiName: 'showAgentMarketplace',
                 arguments: '{}',
                 id: 'call_1',
-                identifier: 'lobe-web-onboarding',
+                identifier: 'orvilo-web-onboarding',
                 type: 'default',
               },
             ],
@@ -159,7 +159,7 @@ describe('OnboardingActionHintInjector', () => {
               {
                 function: {
                   arguments: '{}',
-                  name: 'lobe-web-onboarding____showAgentMarketplace____builtin',
+                  name: 'orvilo-web-onboarding____showAgentMarketplace____builtin',
                 },
                 id: 'call_1',
                 type: 'function',
@@ -186,7 +186,7 @@ describe('OnboardingActionHintInjector', () => {
                 apiName: 'saveUserQuestion',
                 arguments: '{}',
                 id: 'call_1',
-                identifier: 'lobe-web-onboarding',
+                identifier: 'orvilo-web-onboarding',
                 type: 'default',
               },
             ],

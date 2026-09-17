@@ -126,7 +126,7 @@ describe('ControlsForm', () => {
   it('should show model adaptive thinking default without persisting it', () => {
     testState.aiState.extendParams = ['enableAdaptiveThinking'];
 
-    render(<ControlsForm model="claude-sonnet-5" provider="lobehub" />);
+    render(<ControlsForm model="claude-sonnet-5" provider="orvilo" />);
 
     expect(testState.setFieldsValue).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -142,7 +142,7 @@ describe('ControlsForm', () => {
     };
     testState.aiState.extendParams = ['enableAdaptiveThinking'];
 
-    render(<ControlsForm model="claude-sonnet-5" provider="lobehub" />);
+    render(<ControlsForm model="claude-sonnet-5" provider="orvilo" />);
 
     expect(testState.setFieldsValue).toHaveBeenLastCalledWith(
       expect.objectContaining({

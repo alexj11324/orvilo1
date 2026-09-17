@@ -1,4 +1,4 @@
-import { type LobeAgentConfig } from '@orvilo/types';
+import { type OrviloAgentConfig } from '@orvilo/types';
 import { type PartialDeep } from 'type-fest';
 
 import { chatGroupService, type GroupMemberConfig } from '@/services/chatGroup';
@@ -60,7 +60,7 @@ export class ChatGroupMemberAction {
   updateMemberAgentConfig = async (
     groupId: string,
     agentId: string,
-    config: PartialDeep<LobeAgentConfig>,
+    config: PartialDeep<OrviloAgentConfig>,
   ) => {
     // 1. Persist to database via agentStore
     const agentStore = getAgentStoreState();

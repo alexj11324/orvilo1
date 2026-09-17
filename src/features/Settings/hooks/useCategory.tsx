@@ -173,7 +173,7 @@ export const useCategory = () => {
     // Agent group
     const agentItems: CategoryItem[] = [
       // Provider settings should not depend on Advanced tools: new users may need
-      // non-LobeHub providers, and desktop users often bring their own API keys.
+      // non-Orvilo providers, and desktop users often bring their own API keys.
       showProvider && {
         icon: Brain,
         key: SettingsTabs.Provider,

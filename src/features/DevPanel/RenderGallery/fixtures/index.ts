@@ -2,7 +2,7 @@
 
 import { builtinTools } from '@orvilo/builtin-tools';
 import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
-import type { BuiltinToolManifest, LobeChatPluginApi } from '@orvilo/types';
+import type { BuiltinToolManifest, OrviloPluginApi } from '@orvilo/types';
 
 import type { ToolRenderFixture } from '../lifecycleMode';
 import { buildSchemaSample, humanize, single, type ToolsetFixtureModule } from './_helpers';
@@ -11,33 +11,33 @@ import codex from './codex';
 import github from './github';
 import kimiCode from './kimi-code';
 import linear from './linear';
-import lobeActivator from './lobe-activator';
-import lobeAgent from './lobe-agent';
-import lobeAgentBuilder from './lobe-agent-builder';
-import lobeAgentDocuments from './lobe-agent-documents';
-import lobeAgentManagement from './lobe-agent-management';
-import lobeBrowser from './lobe-browser';
-import lobeCloudSandbox from './lobe-cloud-sandbox';
-import lobeGroupAgentBuilder from './lobe-group-agent-builder';
-import lobeGroupManagement from './lobe-group-management';
-import lobeImageGeneration from './lobe-image-generation';
-import lobeKnowledgeBase from './lobe-knowledge-base';
-import lobeLocalSystem from './lobe-local-system';
-import lobeNotebook from './lobe-notebook';
-import lobePageAgent from './lobe-page-agent';
-import lobeSkillStore from './lobe-skill-store';
-import lobeSkills from './lobe-skills';
-import lobeTask from './lobe-task';
-import lobeUserInteraction from './lobe-user-interaction';
-import lobeUserMemory from './lobe-user-memory';
-import lobeWebBrowsing from './lobe-web-browsing';
-import lobeWebOnboarding from './lobe-web-onboarding';
-import { lobeAuv } from './lobeAuv';
+import orviloActivator from './orvilo-activator';
+import orviloAgent from './orvilo-agent';
+import orviloAgentBuilder from './orvilo-agent-builder';
+import orviloAgentDocuments from './orvilo-agent-documents';
+import orviloAgentManagement from './orvilo-agent-management';
+import orviloBrowser from './orvilo-browser';
+import orviloCloudSandbox from './orvilo-cloud-sandbox';
+import orviloGroupAgentBuilder from './orvilo-group-agent-builder';
+import orviloGroupManagement from './orvilo-group-management';
+import orviloImageGeneration from './orvilo-image-generation';
+import orviloKnowledgeBase from './orvilo-knowledge-base';
+import orviloLocalSystem from './orvilo-local-system';
+import orviloNotebook from './orvilo-notebook';
+import orviloPageAgent from './orvilo-page-agent';
+import orviloSkillStore from './orvilo-skill-store';
+import orviloSkills from './orvilo-skills';
+import orviloTask from './orvilo-task';
+import orviloUserInteraction from './orvilo-user-interaction';
+import orviloUserMemory from './orvilo-user-memory';
+import orviloWebBrowsing from './orvilo-web-browsing';
+import orviloWebOnboarding from './orvilo-web-onboarding';
+import { orviloAuv } from './orviloAuv';
 
 export type { ToolRenderFixture, ToolRenderFixtureVariant } from '../lifecycleMode';
 
 export interface ToolRenderMeta {
-  api?: LobeChatPluginApi;
+  api?: OrviloPluginApi;
   apiName: string;
   description?: string;
   identifier: string;
@@ -88,28 +88,28 @@ const toolsetModules: ToolsetFixtureModule[] = [
   github,
   kimiCode,
   linear,
-  lobeActivator,
-  lobeAgent,
-  lobeAgentBuilder,
-  lobeAgentDocuments,
-  lobeAgentManagement,
-  lobeAuv,
-  lobeBrowser,
-  lobeCloudSandbox,
-  lobeGroupAgentBuilder,
-  lobeGroupManagement,
-  lobeImageGeneration,
-  lobeKnowledgeBase,
-  lobeLocalSystem,
-  lobeNotebook,
-  lobePageAgent,
-  lobeSkillStore,
-  lobeSkills,
-  lobeTask,
-  lobeUserInteraction,
-  lobeUserMemory,
-  lobeWebBrowsing,
-  lobeWebOnboarding,
+  orviloActivator,
+  orviloAgent,
+  orviloAgentBuilder,
+  orviloAgentDocuments,
+  orviloAgentManagement,
+  orviloAuv,
+  orviloBrowser,
+  orviloCloudSandbox,
+  orviloGroupAgentBuilder,
+  orviloGroupManagement,
+  orviloImageGeneration,
+  orviloKnowledgeBase,
+  orviloLocalSystem,
+  orviloNotebook,
+  orviloPageAgent,
+  orviloSkillStore,
+  orviloSkills,
+  orviloTask,
+  orviloUserInteraction,
+  orviloUserMemory,
+  orviloWebBrowsing,
+  orviloWebOnboarding,
 ];
 
 const fixtureRegistry = new Map<string, ToolRenderFixture>();
@@ -129,7 +129,7 @@ const manifestByIdentifier = new Map<string, BuiltinToolManifest>(
 export const getToolRenderFixture = (
   identifier: string,
   apiName: string,
-  api?: LobeChatPluginApi,
+  api?: OrviloPluginApi,
 ): ToolRenderFixture => {
   const fixture = fixtureRegistry.get(`${identifier}:${apiName}`);
   if (fixture) return fixture;

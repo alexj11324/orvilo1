@@ -3,12 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { ToolResolver } from '../ToolResolver';
 import type {
   ActivatedStepTool,
-  LobeToolManifest,
   OperationToolSet,
+  OrviloToolManifest,
   StepToolDelta,
 } from '../types';
 
-const mockCalcManifest: LobeToolManifest = {
+const mockCalcManifest: OrviloToolManifest = {
   api: [
     {
       description: 'Calculate',
@@ -21,7 +21,7 @@ const mockCalcManifest: LobeToolManifest = {
   type: 'default',
 };
 
-const mockSearchManifest: LobeToolManifest = {
+const mockSearchManifest: OrviloToolManifest = {
   api: [
     {
       description: 'Search',

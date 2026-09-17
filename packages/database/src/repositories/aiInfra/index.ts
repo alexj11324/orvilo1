@@ -22,7 +22,7 @@ import { merge, mergeArrayById } from '@/utils/merge';
 
 import { AiModelModel } from '../../models/aiModel';
 import { AiProviderModel } from '../../models/aiProvider';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 
 type DecryptUserKeyVaults = (encryptKeyVaultsStr: string | null) => Promise<any>;
 
@@ -72,14 +72,14 @@ const injectSearchSettings = (providerId: string, item: any) => {
 
 export class AiInfraRepos {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   aiProviderModel: AiProviderModel;
   private readonly providerConfigs: Record<string, ProviderConfig>;
   aiModelModel: AiModelModel;
   private modelBankModelsPromise?: ReturnType<typeof loadModels>;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     providerConfigs: Record<string, ProviderConfig>,
     workspaceId?: string,

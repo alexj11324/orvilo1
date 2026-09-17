@@ -18,13 +18,13 @@ import {
   GroupAgentBuilderIdentifier,
 } from '@orvilo/builtin-tool-group-agent-builder';
 import { GroupAgentBuilderInspectors } from '@orvilo/builtin-tool-group-agent-builder/client';
-import { LobeAgentApiName, LobeAgentIdentifier } from '@orvilo/builtin-tool-lobe-agent';
 import {
   LocalSystemApiName,
   LocalSystemIdentifier,
   LocalSystemRenders,
   LocalSystemStreamings,
 } from '@orvilo/builtin-tool-local-system/client';
+import { OrviloAgentApiName, OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import { RemoteDeviceApiName, RemoteDeviceIdentifier } from '@orvilo/builtin-tool-remote-device';
 import { SkillStoreApiName, SkillStoreIdentifier } from '@orvilo/builtin-tool-skill-store';
 import { SkillStoreInspectors, SkillStoreRenders } from '@orvilo/builtin-tool-skill-store/client';
@@ -68,7 +68,7 @@ describe('builtin tool registry', () => {
   });
 
   it('includes AUV in builtin identifiers', () => {
-    expect(AuvIdentifier).toBe('lobe-computer-use');
+    expect(AuvIdentifier).toBe('orvilo-computer-use');
     expect(AuvManifest.meta.title).toBe('Computer Use');
     expect(AuvManifest.api[0].parameters.properties).toHaveProperty('reasoning');
     expect(AuvManifest.api[0].parameters.required).toEqual(['argv']);
@@ -82,7 +82,7 @@ describe('builtin tool registry', () => {
     // AUV was registered as a builtin without a matching inspector registration.
     // The chat therefore fell back to the API name and hid the command being invoked.
     // Registering the AUV inspector makes command context available in every lifecycle phase.
-    /** @example lobe-computer-use/runCommand resolves a component in the central registry. */
+    /** @example orvilo-computer-use/runCommand resolves a component in the central registry. */
     expect(getBuiltinInspector(AuvIdentifier, AuvApiName.runCommand)).toBeDefined();
   });
 
@@ -103,7 +103,7 @@ describe('builtin tool registry', () => {
     /** @example A single "hello world" argument and an empty argument remain distinguishable. */
     expect(view.getByText('auv invoke input.typeText "hello world" ""')).toBeVisible();
     /** @example AUV uses a localized command label instead of the raw runCommand API name. */
-    expect(view.getByText('builtins.lobe-computer-use.inspector.input:')).toBeVisible();
+    expect(view.getByText('builtins.orvilo-computer-use.inspector.input:')).toBeVisible();
   });
 
   /** @example Streaming begins with a label and progressively reveals the AUV command. */
@@ -114,7 +114,7 @@ describe('builtin tool registry', () => {
     const baseProps = { apiName: AuvApiName.runCommand, args: {}, identifier: AuvIdentifier };
     const view = render(createElement(Inspector, { ...baseProps, isArgumentsStreaming: true }));
     /** @example The empty streaming phase pulses a non-empty localized title. */
-    expect(view.getByText('builtins.lobe-computer-use.inspector.operate.loading')).toHaveClass(
+    expect(view.getByText('builtins.orvilo-computer-use.inspector.operate.loading')).toHaveClass(
       shinyTextStyles.shinyText,
     );
 
@@ -139,7 +139,7 @@ describe('builtin tool registry', () => {
     /** @example Completed arguments supersede the partial command during execution. */
     expect(view.getByText('auv invoke display.list')).toBeVisible();
     /** @example Execution keeps the shared loading animation. */
-    expect(view.getByText('builtins.lobe-computer-use.inspector.inspect.loading:')).toHaveClass(
+    expect(view.getByText('builtins.orvilo-computer-use.inspector.inspect.loading:')).toHaveClass(
       shinyTextStyles.shinyText,
     );
   });
@@ -160,7 +160,7 @@ describe('builtin tool registry', () => {
     /** @example The failed command is still identifiable in conversation history. */
     expect(view.getByText('auv invoke display.capture')).toBeVisible();
     /** @example A finished failure does not keep pulsing as if it were running. */
-    expect(view.getByText('builtins.lobe-computer-use.inspector.capture:')).not.toHaveClass(
+    expect(view.getByText('builtins.orvilo-computer-use.inspector.capture:')).not.toHaveClass(
       shinyTextStyles.shinyText,
     );
   });
@@ -189,7 +189,7 @@ describe('builtin tool registry', () => {
       }),
     );
     expect(
-      view.getByText(`builtins.lobe-computer-use.inspector.${activity}.loading:`),
+      view.getByText(`builtins.orvilo-computer-use.inspector.${activity}.loading:`),
     ).toBeVisible();
     expect(view.getByText('Find the search field')).toBeVisible();
     expect(view.queryByText(`auv invoke ${command}`)).toBeNull();
@@ -208,7 +208,7 @@ describe('builtin tool registry', () => {
         },
       }),
     );
-    expect(view.getByText('builtins.lobe-computer-use.inspector.help.loading:')).toBeVisible();
+    expect(view.getByText('builtins.orvilo-computer-use.inspector.help.loading:')).toBeVisible();
     expect(view.getByText('Check capture options')).toBeVisible();
     view.rerender(
       createElement(Inspector, {
@@ -217,7 +217,7 @@ describe('builtin tool registry', () => {
         isLoading: true,
       }),
     );
-    expect(view.getByText('builtins.lobe-computer-use.inspector.preview.loading:')).toBeVisible();
+    expect(view.getByText('builtins.orvilo-computer-use.inspector.preview.loading:')).toBeVisible();
     view.rerender(
       createElement(Inspector, {
         ...base,
@@ -225,7 +225,7 @@ describe('builtin tool registry', () => {
         isLoading: true,
       }),
     );
-    expect(view.getByText('builtins.lobe-computer-use.inspector.input.loading:')).toBeVisible();
+    expect(view.getByText('builtins.orvilo-computer-use.inspector.input.loading:')).toBeVisible();
   });
 
   it('distinguishes reading an image from reading a text file', () => {
@@ -239,7 +239,9 @@ describe('builtin tool registry', () => {
         isArgumentsStreaming: true,
       }),
     );
-    expect(view.getByText('builtins.lobe-local-system.inspector.viewImage.loading:')).toBeVisible();
+    expect(
+      view.getByText('builtins.orvilo-local-system.inspector.viewImage.loading:'),
+    ).toBeVisible();
     view.rerender(
       createElement(Inspector, {
         ...base,
@@ -247,14 +249,14 @@ describe('builtin tool registry', () => {
         pluginState: { images: [{ mediaType: 'image/png', url: 'https://example.test/capture' }] },
       }),
     );
-    expect(view.getByText('builtins.lobe-local-system.inspector.viewImage:')).toBeVisible();
+    expect(view.getByText('builtins.orvilo-local-system.inspector.viewImage:')).toBeVisible();
     view.rerender(
       createElement(Inspector, {
         ...base,
         args: { path: '/tmp/notes.md' },
       }),
     );
-    expect(view.getByText('builtins.lobe-local-system.apiName.readLocalFile:')).toBeVisible();
+    expect(view.getByText('builtins.orvilo-local-system.apiName.readLocalFile:')).toBeVisible();
   });
 
   // PR #19051: collapsed chat rows bypassed the registered inspector entirely.
@@ -272,7 +274,7 @@ describe('builtin tool registry', () => {
         toolCallId: 'computer-use-capture',
       }),
     );
-    expect(view.getByText('builtins.lobe-computer-use.inspector.capture.loading:')).toBeVisible();
+    expect(view.getByText('builtins.orvilo-computer-use.inspector.capture.loading:')).toBeVisible();
     expect(view.getByText('Check the search result')).toBeVisible();
   });
 
@@ -287,25 +289,27 @@ describe('builtin tool registry', () => {
         toolCallId: 'computer-use-image',
       }),
     );
-    expect(view.getByText('builtins.lobe-local-system.inspector.viewImage.loading:')).toBeVisible();
+    expect(
+      view.getByText('builtins.orvilo-local-system.inspector.viewImage.loading:'),
+    ).toBeVisible();
   });
 
   it('renders historical AUV calls without advertising the retired identifier', () => {
-    expect(getBuiltinInspector('lobe-auv', AuvApiName.runCommand)).toBe(
+    expect(getBuiltinInspector('orvilo-auv', AuvApiName.runCommand)).toBe(
       getBuiltinInspector(AuvIdentifier, AuvApiName.runCommand),
     );
-    expect(builtinToolIdentifiers).not.toContain('lobe-auv');
+    expect(builtinToolIdentifiers).not.toContain('orvilo-auv');
     const view = render(
       createElement(ToolInspector, {
         apiName: AuvApiName.runCommand,
         arguments: JSON.stringify({ argv: ['invoke', 'input.key', 'return'] }),
-        identifier: 'lobe-auv',
+        identifier: 'orvilo-auv',
         isExpanded: false,
         result: { content: null, error: { message: 'Input failed' } },
         toolCallId: 'historical-auv',
       }),
     );
-    expect(view.getByText('builtins.lobe-computer-use.inspector.keyboard:')).toBeVisible();
+    expect(view.getByText('builtins.orvilo-computer-use.inspector.keyboard:')).toBeVisible();
   });
 
   it('keeps Computer Use out of the always-on tools', () => {
@@ -409,9 +413,11 @@ describe('builtin tool registry', () => {
       getBuiltinRender(UserInteractionIdentifier, UserInteractionApiName.askUserQuestion),
     ).toBeDefined();
     expect(
-      getBuiltinInspector(LobeAgentIdentifier, LobeAgentApiName.askUserQuestion),
+      getBuiltinInspector(OrviloAgentIdentifier, OrviloAgentApiName.askUserQuestion),
     ).toBeDefined();
-    expect(getBuiltinRender(LobeAgentIdentifier, LobeAgentApiName.askUserQuestion)).toBeDefined();
+    expect(
+      getBuiltinRender(OrviloAgentIdentifier, OrviloAgentApiName.askUserQuestion),
+    ).toBeDefined();
     expect(
       getBuiltinRender(ClaudeCodeToolIdentifier, UserInteractionApiName.askUserQuestion),
     ).toBeDefined();

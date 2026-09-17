@@ -13,7 +13,7 @@ export const DEFAULT_TOOL_RESULT_MAX_LENGTH = 25_000;
  * Tool identifiers whose results must never be truncated or archived,
  * because they are themselves the read surface for archived content.
  */
-export const ARCHIVE_BYPASS_IDENTIFIERS = new Set<string>(['lobe-agent-documents']);
+export const ARCHIVE_BYPASS_IDENTIFIERS = new Set<string>(['orvilo-agent-documents']);
 
 /**
  * Truncate tool result content if it exceeds the maximum length

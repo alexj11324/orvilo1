@@ -63,7 +63,7 @@ not remove the default just because one flow needs to supply a request-scoped ID
 ```typescript
 // ✅ Good: app-generated text ID; explicit inserts can still override it.
 id: text('id')
-  .primaryKey()
+  .primaryKey
   .$defaultFn(() => idGenerator('agents'))
   .notNull(),
 
@@ -133,8 +133,8 @@ finalDecision: varchar('final_decision', { length: 32 }).$type<UserSignupLogFina
 export type UserSignupLogFinalDecision = 'allow' | 'block' | 'error' | 'unknown';
 
 finalDecision: varchar('final_decision', { length: 32 })
-  .$type<UserSignupLogFinalDecision>()
-  .notNull()
+  .$type<UserSignupLogFinalDecision>
+  .notNull
   .default('unknown');
 ```
 
@@ -235,8 +235,7 @@ export const agents = pgTable(
   'agents',
   {
     id: text('id')
-      .primaryKey()
-      .$defaultFn(() => idGenerator('agents'))
+      .primaryKey.$defaultFn(() => idGenerator('agents'))
       .notNull(),
     slug: varchar('slug', { length: 100 })
       .$defaultFn(() => randomSlug(4))
@@ -245,7 +244,7 @@ export const agents = pgTable(
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
     clientId: text('client_id'),
-    chatConfig: jsonb('chat_config').$type<LobeAgentChatConfig>(),
+    chatConfig: jsonb('chat_config').$type<OrviloAgentChatConfig>(),
     ...timestamps,
   },
   (t) => [uniqueIndex('client_id_user_id_unique').on(t.clientId, t.userId)],
@@ -308,7 +307,7 @@ return this.db.query.agents.findFirst({
 ### Select with JOIN
 
 ```typescript
-// ✅ Good: explicit select + leftJoin
+// ✅ Good: explicit select + leftJo
 const rows = await this.db
   .select({
     runId: agentEvalRunTopics.runId,
@@ -422,16 +421,14 @@ When you need a parent record with its children, use two queries instead of rela
 
 ```typescript
 // ✅ Good: two simple queries
-const [dataset] = await this.db
-  .select()
+const [dataset] = await this.db.select
   .from(agentEvalDatasets)
   .where(eq(agentEvalDatasets.id, id))
   .limit(1);
 
 if (!dataset) return undefined;
 
-const testCases = await this.db
-  .select()
+const testCases = await this.db.select
   .from(agentEvalTestCases)
   .where(eq(agentEvalTestCases.datasetId, id))
   .orderBy(asc(agentEvalTestCases.sortOrder));

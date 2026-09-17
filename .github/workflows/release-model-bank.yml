@@ -84,7 +84,7 @@ jobs:
           packageJson.files = ['dist'];
           packageJson.repository = {
             type: 'git',
-            url: 'https://github.com/lobehub/lobehub',
+            url: 'https://github.com/alexj11324/orvilo1',
             directory: 'packages/model-bank',
           };
           packageJson.exports = Object.fromEntries(

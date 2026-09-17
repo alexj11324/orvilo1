@@ -1,13 +1,13 @@
 # Computer Use builtin tool
 
-Provides `lobe-computer-use/runCommand` for typed native computer commands on the active desktop device.
+Provides `orvilo-computer-use/runCommand` for typed native computer commands on the active desktop device.
 
 ## Activation
 
 Computer Use is available on demand through an active desktop device. By default it is not loaded in the initial tool set.
 Explicit user pins and tools already activated in the conversation retain their existing behavior.
 When a task needs native application controls, mouse/keyboard input, or screen capture,
-the agent calls `lobe-activator.activateTools` with `identifiers: ["lobe-computer-use"]`
+the agent calls `orvilo-activator.activateTools` with `identifiers: ["orvilo-computer-use"]`
 and a short `reason`. The next model call receives the API schema and operation guidance.
 Ordinary conversation, web research, and file or shell work do not need this tool.
 
@@ -49,16 +49,16 @@ Preview command headers and lifecycle states in the Dev Dock's Render Gallery un
 Use Local System for shell commands or file operations. AUV does not accept shell syntax and needs
 a desktop client that supports its runtime.
 
-The public identifier is `lobe-computer-use`; the private package and desktop service keep
+The public identifier is `orvilo-computer-use`; the private package and desktop service keep
 the AUV backend name. Client, server, and Gateway routing use the new identifier. A read-only inspector
-alias preserves historical `lobe-auv` messages; it does not enable old execution requests. Local
+alias preserves historical `orvilo-auv` messages; it does not enable old execution requests. Local
 System image reads have a separate viewing label, including screenshot artifacts. They
 are called images because the read-file result does not identify screenshot provenance.
 
 ## Runtime and compatibility
 
 Desktop ships matching `@auv-js/cli` and `@auv-js/sdk` 0.0.16. The existing device
-system-info response advertises `supportedTools: ['lobe-computer-use']`; the server
+system-info response advertises `supportedTools: ['orvilo-computer-use']`; the server
 filters discovery/activation and checks again before forwarding a call. Older
 Gateway clients omit this field and do not receive Computer Use. Standalone Electron
 retains its existing in-process client execution path. Capability-query failures

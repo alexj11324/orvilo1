@@ -5,8 +5,8 @@ import {
   type AgentMode,
   getActivePluginIds,
   getWorkingDirEffectivePath,
-  type LobeAgentAgencyConfig,
-  type LobeAgentTTSConfig,
+  type OrviloAgentAgencyConfig,
+  type OrviloAgentTTSConfig,
   type RuntimeEnvConfig,
 } from '@orvilo/types';
 
@@ -49,7 +49,7 @@ const getAgentSystemRoleById =
 
 const getAgentTTSById =
   (agentId: string) =>
-  (s: AgentStoreState): LobeAgentTTSConfig =>
+  (s: AgentStoreState): OrviloAgentTTSConfig =>
     agentSelectors.getAgentConfigById(agentId)(s)?.tts || DEFAUTT_AGENT_TTS_CONFIG;
 
 const getAgentTTSVoiceById =
@@ -181,7 +181,7 @@ const getAgentBuilderContextById =
  */
 const getAgencyConfigById =
   (agentId: string) =>
-  (s: AgentStoreState): LobeAgentAgencyConfig | undefined =>
+  (s: AgentStoreState): OrviloAgentAgencyConfig | undefined =>
     agentSelectors.getAgentConfigById(agentId)(s)?.agencyConfig;
 
 /**

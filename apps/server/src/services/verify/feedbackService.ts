@@ -1,7 +1,7 @@
 import type { VerifyCheckDecisionDetail, VerifyUserDecision, VerifyVerdict } from '@orvilo/types';
 
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 /**
  * Ground-truth derived from comparing the user's decision against the verifier's
@@ -23,7 +23,7 @@ export const computeFalseFlags = (
 export class VerifyFeedbackService {
   private readonly resultModel: VerifyCheckResultModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.resultModel = new VerifyCheckResultModel(db, userId, workspaceId);
   }
 

@@ -7,7 +7,7 @@ import { cloudflareContext } from '../lib/cloudflareContext';
 export const loader = ({ context }: LoaderFunctionArgs) => {
   const appHome = context.get(cloudflareContext).env.SHARE_APP_HOME as string | undefined;
 
-  return redirect(appHome || 'https://lobehub.com');
+  return redirect(appHome || 'https://orvilo.aspectlylabs.com');
 };
 
 export default function ExitShare() {

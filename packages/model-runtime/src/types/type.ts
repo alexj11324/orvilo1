@@ -2,7 +2,7 @@ import type { ErrorType } from '@orvilo/types';
 import type OpenAI from 'openai';
 
 import type { ChatStreamPayload } from './chat';
-import type { ILobeAgentRuntimeErrorType } from './error';
+import type { IOrviloAgentRuntimeErrorType } from './error';
 
 export interface AgentInitErrorPayload {
   error: object;
@@ -13,14 +13,14 @@ export interface ChatCompletionErrorPayload {
   [key: string]: any;
   endpoint?: string;
   error: object;
-  errorType: ErrorType | ILobeAgentRuntimeErrorType;
+  errorType: ErrorType | IOrviloAgentRuntimeErrorType;
   message?: string;
   provider: string;
 }
 
 export interface CreateImageErrorPayload {
   error: object;
-  errorType: ILobeAgentRuntimeErrorType;
+  errorType: IOrviloAgentRuntimeErrorType;
   provider: string;
 }
 

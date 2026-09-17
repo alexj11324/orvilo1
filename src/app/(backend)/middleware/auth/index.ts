@@ -6,8 +6,8 @@ import { ChatErrorType } from '@orvilo/types';
 
 import { auth } from '@/auth';
 import { getServerDB } from '@/database/core/db-adaptor';
-import type { LobeChatDatabase } from '@/database/type';
-import { LOBE_CHAT_OIDC_AUTH_HEADER } from '@/envs/auth';
+import type { OrviloDatabase } from '@/database/type';
+import { ORVILO_OIDC_AUTH_HEADER } from '@/envs/auth';
 import { extractTraceContext, injectActiveTraceHeaders } from '@/libs/observability/traceparent';
 import { assertOIDCUserActive } from '@/libs/oidc-provider/access-control';
 import { validateOIDCJWT } from '@/libs/oidc-provider/jwt';
@@ -19,7 +19,7 @@ export type RequestHandler = (
   req: Request,
   options: RequestOptions & {
     jwtPayload: ClientSecretPayload;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     userId: string;
   },
 ) => Promise<Response>;
@@ -68,7 +68,7 @@ export const checkAuth =
     const serverDB = await getServerDB();
 
     // we have a special header to debug the api endpoint in development mode
-    const isDebugApi = req.headers.get('lobe-auth-dev-backend-api') === '1';
+    const isDebugApi = req.headers.get('orvilo-auth-dev-backend-api') === '1';
     const isMockUser = process.env.ENABLE_MOCK_DEV_USER === '1';
     if (process.env.NODE_ENV === 'development' && (isDebugApi || isMockUser)) {
       const mockUserId = process.env.MOCK_DEV_USER_ID || 'DEV_USER';
@@ -84,7 +84,7 @@ export const checkAuth =
 
     try {
       // OIDC authentication (CLI)
-      const oidcAuthorization = req.headers.get(LOBE_CHAT_OIDC_AUTH_HEADER);
+      const oidcAuthorization = req.headers.get(ORVILO_OIDC_AUTH_HEADER);
       if (oidcAuthorization) {
         const oidc = await validateOIDCJWT(oidcAuthorization);
         userId = oidc.userId;
@@ -103,7 +103,7 @@ export const checkAuth =
       }
     } catch (e) {
       const params = await options.params;
-      const oidcAuthorization = req.headers.get(LOBE_CHAT_OIDC_AUTH_HEADER);
+      const oidcAuthorization = req.headers.get(ORVILO_OIDC_AUTH_HEADER);
 
       // Only log OIDC auth failures — better-auth session failures are a common
       // baseline (unauthenticated browser hits) and would otherwise flood logs.

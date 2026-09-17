@@ -3,7 +3,7 @@ import debug from 'debug';
 import { asc, desc, eq } from 'drizzle-orm';
 
 import { messages } from '@/database/schemas';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import { notCopiedTranscript } from '@/database/utils/copiedTranscript';
 import { genRangeWhere, genWhere } from '@/database/utils/genWhere';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
@@ -20,13 +20,13 @@ import { formatDate } from '@/utils/format';
 
 import { computeMessageCostSplit } from './cost';
 
-const log = debug('lobe-usage:service');
+const log = debug('orvilo-usage:service');
 
 export class UsageRecordService {
   private userId: string;
   private workspaceId?: string;
-  private db: LobeChatDatabase;
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  private db: OrviloDatabase;
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.workspaceId = workspaceId;
     this.db = db;

@@ -18,8 +18,8 @@ import type { UnixContentSearch } from '../impl/unix';
  * search families must name the missing directory instead.
  */
 describe('missing search scope', () => {
-  const missingScope = path.join(os.tmpdir(), 'lobehub-missing-scope-fixture', 'src', 'locales');
-  const realScope = fs.mkdtempSync(path.join(os.tmpdir(), 'lobehub-scope-'));
+  const missingScope = path.join(os.tmpdir(), 'orvilo-missing-scope-fixture', 'src', 'locales');
+  const realScope = fs.mkdtempSync(path.join(os.tmpdir(), 'orvilo-scope-'));
 
   afterAll(() => {
     fs.rmSync(realScope, { force: true, recursive: true });
@@ -79,7 +79,7 @@ describe('missing search scope', () => {
   it.skipIf(process.getuid?.() === 0)(
     'should not claim a scope is missing when it merely cannot be read',
     async () => {
-      const lockedParent = fs.mkdtempSync(path.join(os.tmpdir(), 'lobehub-locked-'));
+      const lockedParent = fs.mkdtempSync(path.join(os.tmpdir(), 'orvilo-locked-'));
       const child = path.join(lockedParent, 'repo');
       fs.mkdirSync(child);
       fs.chmodSync(lockedParent, 0o000);

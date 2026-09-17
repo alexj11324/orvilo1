@@ -100,7 +100,7 @@ declare global {
   interface Window {
     __clickTabByKey?: (key: string) => string;
     __listTabs?: () => Array<{ i: number; key: string | null; active: boolean; title: string }>;
-    __LOBE_STORES?: Record<string, () => any>;
+    __ORVILO_STORES?: Record<string, () => any>;
     __PROBE_ACTION_CALLS?: ProbeActionCall[];
     __PROBE_EVENT?: (label: string) => void;
     __PROBE_MSG_TIMELINE?: ProbeTimelineSample[];

@@ -8,7 +8,7 @@ project's commands.
 
 A repository that verifies itself often has more than commands to share: a
 plan gate owned by the acceptance-checker once environment readiness is established, a teardown discipline, a publish
-target, a report directory convention. Those live beside the adapter in
+target, a report directory convention. Those live beside the adapter
 `.agents/acceptance/PROCESS.md`. **When that file exists it owns the run process,
 and this skill supplies the acceptance contract** — plan, evidence, report,
 round. Read both before executing; where they disagree about _how to run_, the
@@ -29,7 +29,7 @@ skill wins.
 
 `.agents/acceptance/` is **committed** (the adapter and the project living logs are
 shared, versioned team assets). The report output directory `.records/` is
-**gitignored** — reports are per-run artifacts, published to LobeHub Acceptance,
+**gitignored** — reports are per-run artifacts, published to Orvilo Acceptance,
 not committed.
 
 ## Fixed section skeleton
@@ -157,8 +157,8 @@ The adapter draft needs a model, so the first verification run is what bootstrap
 ## Drift rule
 
 Treat the adapter like a living log: when observed reality diverges from it during a
-run (a port moved, a start command changed, a service is now required), **fix
-`PROJECT.md` in place during the run** rather than working around it silently. The
+run (a port moved, a start command changed, a service is now required), \*\*
+`PROJECT.md` in place during the run\*\* rather than working around it silently. The
 next run should not rediscover the same divergence.
 
 ## Two living-log layers

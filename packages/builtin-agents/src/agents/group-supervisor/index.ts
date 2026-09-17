@@ -26,7 +26,7 @@ const resolveSystemRole = (ctx: GroupSupervisorContext): string => {
  * Tools:
  * - GroupManagement: orchestration (speak, broadcast, executeAgentTask, etc.)
  * - GroupAgentBuilder: member management (searchAgent, inviteAgent, createAgent, etc.)
- * - LobeAgent: task tracking (plan + todos)
+ * - OrviloAgent: task tracking (plan + todos)
  */
 export const GROUP_SUPERVISOR: BuiltinAgentDefinition = {
   runtime: (ctx) => {

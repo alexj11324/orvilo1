@@ -66,7 +66,7 @@ export const UpdateAgentPromptInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-group-agent-builder.apiName.updateAgentPrompt')}
+          {t('builtins.orvilo-group-agent-builder.apiName.updateAgentPrompt')}
         </span>
       </div>
     );
@@ -78,8 +78,8 @@ export const UpdateAgentPromptInspector = memo<
 
   // Use different i18n key for supervisor
   const labelKey = isSupervisor
-    ? 'builtins.lobe-group-agent-builder.apiName.updateSupervisorPrompt'
-    : 'builtins.lobe-group-agent-builder.apiName.updateAgentPrompt';
+    ? 'builtins.orvilo-group-agent-builder.apiName.updateSupervisorPrompt'
+    : 'builtins.orvilo-group-agent-builder.apiName.updateAgentPrompt';
 
   return (
     <Flexbox horizontal align="center" className={styles.root} gap={6}>
@@ -116,14 +116,14 @@ export const UpdateAgentPromptInspector = memo<
         >
           {lengthDiff >= 0 ? '+' : ''}
           {lengthDiff}
-          {t('builtins.lobe-agent-builder.inspector.chars')}
+          {t('builtins.orvilo-agent-builder.inspector.chars')}
         </Text>
       )}
       {/* Show streaming length */}
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
         <Text code as="span" color={cssVar.colorTextDescription} fontSize={12}>
           ({streamingLength}
-          {t('builtins.lobe-agent-builder.inspector.chars')})
+          {t('builtins.orvilo-agent-builder.inspector.chars')})
         </Text>
       )}
     </Flexbox>

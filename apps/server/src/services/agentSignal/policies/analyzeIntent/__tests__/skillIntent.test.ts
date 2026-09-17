@@ -2,7 +2,7 @@
 import { RequestTrigger } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 
 import {
@@ -286,7 +286,7 @@ describe('skillIntent classifier', () => {
       route: 'direct_decision',
     });
 
-    const service = new SkillIntentClassifierAgentService({} as LobeChatDatabase, 'user_1', {
+    const service = new SkillIntentClassifierAgentService({} as OrviloDatabase, 'user_1', {
       model: 'gpt-test',
       provider: 'openai',
     });
@@ -297,7 +297,7 @@ describe('skillIntent classifier', () => {
     });
 
     expect(initModelRuntimeFromDB).toHaveBeenCalledWith(
-      {} as LobeChatDatabase,
+      {} as OrviloDatabase,
       'user_1',
       'openai',
       undefined,

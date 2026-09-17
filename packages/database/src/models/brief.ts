@@ -4,7 +4,7 @@ import { and, desc, eq, gte, inArray, isNull, lt, notInArray, type SQL, sql } fr
 import { agents } from '../schemas/agent';
 import type { BriefItem, NewBrief } from '../schemas/task';
 import { briefs, tasks } from '../schemas/task';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { normalizeInboxAgentAvatar, normalizeInboxAgentTitle } from '../utils/inboxAgent';
 import { buildWorkspacePayload } from '../utils/workspace';
 
@@ -23,10 +23,10 @@ export interface UnresolvedBriefRow {
 
 export class BriefModel {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

@@ -39,7 +39,7 @@ describe('resolveClaudeCodeRenderDisplayControl', () => {
   });
 
   describe('in-app browser screenshot', () => {
-    const screenshot = 'mcp__lobe_cc__browser_screenshot';
+    const screenshot = 'mcp__orvilo_cc__browser_screenshot';
 
     it('expands once the capture has been uploaded, so the page is visible without unfolding', () => {
       expect(resolveClaudeCodeRenderDisplayControl(screenshot, uploaded)).toBe('expand');
@@ -54,10 +54,10 @@ describe('resolveClaudeCodeRenderDisplayControl', () => {
 
     it('leaves the other browser tools collapsed', () => {
       expect(
-        resolveClaudeCodeRenderDisplayControl('mcp__lobe_cc__browser_navigate'),
+        resolveClaudeCodeRenderDisplayControl('mcp__orvilo_cc__browser_navigate'),
       ).toBeUndefined();
       expect(
-        resolveClaudeCodeRenderDisplayControl('mcp__lobe_cc__browser_snapshot', uploaded),
+        resolveClaudeCodeRenderDisplayControl('mcp__orvilo_cc__browser_snapshot', uploaded),
       ).toBeUndefined();
     });
   });

@@ -23,10 +23,10 @@ const isRuntimeError = (error: TRPCError) => {
  *
  * This function handles:
  * 1. Forwarding custom headers from context (ctx.resHeaders)
- * 2. Adding X-Auth-Required header for LobeHub session UNAUTHORIZED errors
+ * 2. Adding X-Auth-Required header for Orvilo session UNAUTHORIZED errors
  *
  * The X-Auth-Required header allows the desktop app (BackendProxyProtocolManager)
- * to distinguish between real LobeHub session failures (e.g., token expired)
+ * to distinguish between real Orvilo session failures (e.g., token expired)
  * and other 401 errors (e.g., invalid API keys, Market OAuth expiry).
  */
 export function createResponseMeta({ ctx, errors }: ResponseMetaParams): {
@@ -38,7 +38,7 @@ export function createResponseMeta({ ctx, errors }: ResponseMetaParams): {
       : undefined;
   const headers = resHeaders ? new Headers(resHeaders) : new Headers();
 
-  // Only set X-Auth-Required for LobeHub session failures, not for Market OAuth failures.
+  // Only set X-Auth-Required for Orvilo session failures, not for Market OAuth failures.
   // Market auth errors use MARKET_AUTH_REQUIRED_MESSAGE and are handled by the market-unauthorized
   // event flow (MarketAuthProvider) rather than the desktop re-login modal.
   const hasUnauthorizedError = errors.some(

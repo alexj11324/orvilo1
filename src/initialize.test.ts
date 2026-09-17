@@ -41,7 +41,7 @@ describe('chunk-load error listeners', () => {
   });
 
   it('keeps vite:preloadError default so the preload helper rethrows to React.lazy', () => {
-    sessionStorage.setItem('lobe-chunk-reload', '1');
+    sessionStorage.setItem('orvilo-chunk-reload', '1');
 
     const event = dispatchPreloadError(new Error('Failed to fetch dynamically imported module'));
 
@@ -50,7 +50,7 @@ describe('chunk-load error listeners', () => {
   });
 
   it('ignores vite:preloadError events without a chunk-load payload', () => {
-    sessionStorage.setItem('lobe-chunk-reload', '1');
+    sessionStorage.setItem('orvilo-chunk-reload', '1');
 
     dispatchPreloadError(new Error('some unrelated failure'));
 
@@ -68,7 +68,7 @@ describe('chunk-load error listeners', () => {
   });
 
   it('toasts once and never re-arms the reload when the chunk is still missing after reloading', () => {
-    sessionStorage.setItem('lobe-chunk-reload', '1');
+    sessionStorage.setItem('orvilo-chunk-reload', '1');
     const error = new Error('Failed to fetch dynamically imported module');
 
     dispatchPreloadError(error);
@@ -76,11 +76,11 @@ describe('chunk-load error listeners', () => {
 
     expect(toastError).toHaveBeenCalledOnce();
     expect(reload).not.toHaveBeenCalled();
-    expect(sessionStorage.getItem('lobe-chunk-reload')).toBe('1');
+    expect(sessionStorage.getItem('orvilo-chunk-reload')).toBe('1');
   });
 
   it('does not reload again for distinct chunk errors after the guard is armed', () => {
-    sessionStorage.setItem('lobe-chunk-reload', '1');
+    sessionStorage.setItem('orvilo-chunk-reload', '1');
 
     dispatchRejection(new Error('Failed to fetch dynamically imported module'));
     dispatchRejection(new Error('Failed to fetch dynamically imported module'));

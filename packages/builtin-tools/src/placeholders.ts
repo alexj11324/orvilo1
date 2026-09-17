@@ -36,7 +36,7 @@ export const listBuiltinPlaceholderEntries = (): BuiltinPlaceholderRegistryEntry
 
 /**
  * Get builtin placeholder component for a specific API
- * @param identifier - Tool identifier (e.g., 'lobe-local-system')
+ * @param identifier - Tool identifier (e.g., 'orvilo-local-system')
  * @param apiName - API name (e.g., 'searchLocalFiles')
  */
 export const getBuiltinPlaceholder = (

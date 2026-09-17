@@ -13,7 +13,7 @@ import type { ReceivedResourceEvent, ResourceEvent, ResourceRef } from './types'
 
 export type { ReceivedResourceEvent, ResourceEvent, ResourceRef, ResourceType } from './types';
 
-const log = debug('lobe-server:resource-events');
+const log = debug('orvilo-server:resource-events');
 
 /** Redis Stream / in-memory channel key for a resource. */
 export const resourceChannelId = (ref: ResourceRef): string => `resource:${ref.type}:${ref.id}`;

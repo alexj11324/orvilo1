@@ -24,7 +24,7 @@ import {
 import { buildMemberTransferManifest } from '@/database/repositories/resourceTransferManifest';
 import type { ResourceTransferRequestItem } from '@/database/schemas';
 import { agents, chatGroups, users } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { assertCanPerformResourceAction } from '@/server/services/resourcePermission';
@@ -82,7 +82,7 @@ interface TransferRequestResourceSummary {
  * counterpart users are and what the resource is called. Batched: one query
  * per table however many requests are listed.
  */
-const enrichRequests = async (db: LobeChatDatabase, requests: ResourceTransferRequestItem[]) => {
+const enrichRequests = async (db: OrviloDatabase, requests: ResourceTransferRequestItem[]) => {
   if (requests.length === 0) return [];
 
   // All requests here come from one workspace-scoped model; pinning the

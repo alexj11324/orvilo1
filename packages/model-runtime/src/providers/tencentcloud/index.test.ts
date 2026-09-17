@@ -4,14 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { TencentCloudModelCard } from './index';
-import { LobeTencentCloudAI, params } from './index';
+import { OrviloTencentCloudAI, params } from './index';
 
 const provider = ModelProvider.TencentCloud;
 const defaultBaseURL = 'https://api.lkeap.cloud.tencent.com/v1';
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeTencentCloudAI,
+  Runtime: OrviloTencentCloudAI,
   bizErrorType: 'ProviderBizError',
   chatDebugEnv: 'DEBUG_TENCENT_CLOUD_CHAT_COMPLETION',
   chatModel: 'DeepSeek-R1',
@@ -25,7 +25,7 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeTencentCloudAI - custom features', () => {
+describe('OrviloTencentCloudAI - custom features', () => {
   describe('params export', () => {
     it('should export params object', () => {
       expect(params).toBeDefined();
@@ -102,7 +102,7 @@ describe('LobeTencentCloudAI - custom features', () => {
       expect(result[0].reasoning).toBe(true);
     });
 
-    it('should handle models not in LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should handle models not in ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockModels: TencentCloudModelCard[] = [{ id: 'unknown-custom-model' }];
 
       mockClient.models.list.mockResolvedValue({ data: mockModels });
@@ -128,7 +128,7 @@ describe('LobeTencentCloudAI - custom features', () => {
       expect(result).toEqual([]);
     });
 
-    it('should get abilities from knownModel in LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should get abilities from knownModel in ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockModels: TencentCloudModelCard[] = [{ id: 'gpt-4o' }];
 
       mockClient.models.list.mockResolvedValue({ data: mockModels });

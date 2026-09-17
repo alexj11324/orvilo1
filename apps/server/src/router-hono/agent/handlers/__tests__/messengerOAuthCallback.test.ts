@@ -77,7 +77,7 @@ beforeEach(() => {
   vi.mocked(getMessengerSlackConfig).mockResolvedValue(VALID_SLACK_CONFIG);
   vi.mocked(getMessengerDiscordConfig).mockResolvedValue(VALID_DISCORD_CONFIG);
   vi.mocked(KeyVaultsGateKeeper.initWithEnvKey).mockResolvedValue({} as any);
-  vi.mocked(consumeOAuthState).mockResolvedValue({ lobeUserId: 'lobe-user-1', ts: Date.now() });
+  vi.mocked(consumeOAuthState).mockResolvedValue({ orviloUserId: 'orvilo-user-1', ts: Date.now() });
   vi.mocked(exchangeCode).mockResolvedValue({
     access_token: 'xoxb-real',
     app_id: 'A_APP',
@@ -184,7 +184,7 @@ describe('GET /api/agent/messenger/:platform/oauth/callback', () => {
           applicationId: 'A_APP',
           credentials: { botToken: 'xoxb-real' },
           installedByPlatformUserId: 'U_INSTALLER',
-          installedByUserId: 'lobe-user-1',
+          installedByUserId: 'orvilo-user-1',
           metadata: expect.objectContaining({
             isEnterpriseInstall: false,
             scope: 'chat:write,im:history',
@@ -233,7 +233,7 @@ describe('GET /api/agent/messenger/:platform/oauth/callback', () => {
       credentials: {},
       id: 'install-1',
       installedByPlatformUserId: 'U_FIRST_PLATFORM',
-      installedByUserId: 'lobe-user-other',
+      installedByUserId: 'orvilo-user-other',
       platform: 'slack',
       revokedAt: null,
       tenantId: 'T_ACME',
@@ -249,7 +249,7 @@ describe('GET /api/agent/messenger/:platform/oauth/callback', () => {
         expect.objectContaining({
           credentials: { botToken: 'xoxb-real' },
           installedByPlatformUserId: 'U_FIRST_PLATFORM',
-          installedByUserId: 'lobe-user-other',
+          installedByUserId: 'orvilo-user-other',
           tenantId: 'T_ACME',
         }),
         expect.anything(),
@@ -272,7 +272,7 @@ describe('GET /api/agent/messenger/:platform/oauth/callback', () => {
 
       expect(MessengerInstallationModel.upsert).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ installedByUserId: 'lobe-user-1' }),
+        expect.objectContaining({ installedByUserId: 'orvilo-user-1' }),
         expect.anything(),
       );
       expect(res.status).toBe(302);
@@ -283,14 +283,14 @@ describe('GET /api/agent/messenger/:platform/oauth/callback', () => {
     it('allows the same user to re-install (token refresh / scope bump)', async () => {
       vi.mocked(MessengerInstallationModel.findByTenant).mockResolvedValue({
         ...existingInstall,
-        installedByUserId: 'lobe-user-1',
+        installedByUserId: 'orvilo-user-1',
       });
 
       const res = await messengerOAuthCallback(buildContext('slack', 'code=c&state=s'));
 
       expect(MessengerInstallationModel.upsert).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ installedByUserId: 'lobe-user-1' }),
+        expect.objectContaining({ installedByUserId: 'orvilo-user-1' }),
         expect.anything(),
       );
       expect(res.status).toBe(302);

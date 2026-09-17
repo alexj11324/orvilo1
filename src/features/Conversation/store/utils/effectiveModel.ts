@@ -3,7 +3,7 @@ import type {
   AgentItem,
   AgentModelOverride,
   ConversationContext,
-  LobeAgentConfig,
+  OrviloAgentConfig,
 } from '@orvilo/types';
 import { resolveAgentModelConfig } from '@orvilo/types';
 
@@ -29,7 +29,7 @@ interface EffectiveConversationModelSources {
   agent?: Pick<Partial<AgentItem>, 'slug' | 'userId' | 'virtual' | 'visibility' | 'workspaceId'>;
   currentUserId?: string;
   memberOverride?: AgentModelOverride;
-  sharedConfig?: LobeAgentConfig;
+  sharedConfig?: OrviloAgentConfig;
   topic?: Pick<ChatTopic, 'model' | 'provider'>;
 }
 

@@ -1,11 +1,11 @@
 import type { ErrorResponse, ErrorType } from '@orvilo/types';
 
 import { getErrorCodeSpec } from '../errors';
-import type { ILobeAgentRuntimeErrorType } from '../types';
+import type { IOrviloAgentRuntimeErrorType } from '../types';
 
-const getStatus = (errorType: ILobeAgentRuntimeErrorType | ErrorType) => {
+const getStatus = (errorType: IOrviloAgentRuntimeErrorType | ErrorType) => {
   // 1. Authoritative source: the unified spec table.
-  const spec = getErrorCodeSpec(errorType as ILobeAgentRuntimeErrorType);
+  const spec = getErrorCodeSpec(errorType as IOrviloAgentRuntimeErrorType);
   if (spec) return spec.httpStatus;
 
   // 2. Fallback: legacy `Invalid*APIKey` shorthand codes (InvalidAccessCode,
@@ -16,7 +16,7 @@ const getStatus = (errorType: ILobeAgentRuntimeErrorType | ErrorType) => {
   return errorType as number;
 };
 
-export const createErrorResponse = (errorType: ILobeAgentRuntimeErrorType, body?: any) => {
+export const createErrorResponse = (errorType: IOrviloAgentRuntimeErrorType, body?: any) => {
   const statusCode = getStatus(errorType);
 
   const data: ErrorResponse = { body, errorType };

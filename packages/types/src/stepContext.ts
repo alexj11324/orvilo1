@@ -15,7 +15,7 @@ export type StepContextTodoStatus = 'todo' | 'processing' | 'completed';
 
 /**
  * Todo item structure
- * Duplicated here to avoid circular dependency with builtin-tool-lobe-agent
+ * Duplicated here to avoid circular dependency with builtin-tool-orvilo-agent
  */
 export interface StepContextTodoItem {
   status: StepContextTodoStatus;
@@ -86,7 +86,7 @@ export interface InitialPageEditorContext {
  */
 export interface RuntimeActiveTopicDocumentContext {
   /**
-   * Agent-document row ID used by lobe-agent-documents read/patch/edit APIs.
+   * Agent-document row ID used by orvilo-agent-documents read/patch/edit APIs.
    */
   agentDocumentId?: string;
   /**
@@ -170,7 +170,7 @@ export interface RuntimeStepContext {
    */
   activatedSkills?: StepActivatedSkill[];
   /**
-   * Activated tool identifiers accumulated from lobe-activator messages
+   * Activated tool identifiers accumulated from orvilo-activator messages
    * Tools once activated remain active for the rest of the conversation
    */
   activatedToolIds?: string[];
@@ -187,7 +187,7 @@ export interface RuntimeStepContext {
   stepPageEditor?: StepPageEditorContext;
   /**
    * Current todo list state
-   * Computed from the latest lobe-agent tool message in the conversation
+   * Computed from the latest orvilo-agent tool message in the conversation
    */
   todos?: StepContextTodos;
 }
@@ -204,7 +204,7 @@ export interface RuntimeMentionedAgent {
 
 /**
  * A slim tool manifest injected at runtime by callers (e.g. @mention → callAgent).
- * Structurally compatible with LobeToolManifest from @orvilo/context-engine
+ * Structurally compatible with OrviloToolManifest from @orvilo/context-engine
  * without requiring a cross-package import.
  */
 export interface InjectedToolManifest {

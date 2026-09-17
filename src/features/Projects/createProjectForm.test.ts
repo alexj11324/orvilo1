@@ -9,13 +9,13 @@ import {
 
 describe('createProjectForm', () => {
   it('derives a valid identifier and slug from the project name', () => {
-    expect(getProjectFieldSuggestions('LobeHub')).toEqual({
-      identifier: 'LOBE',
-      slug: 'lobe-hub',
+    expect(getProjectFieldSuggestions('Orvilo')).toEqual({
+      identifier: 'ORVI',
+      slug: 'orvilo',
     });
-    expect(getProjectFieldSuggestions('LobeHub Mobile')).toEqual({
-      identifier: 'LHM',
-      slug: 'lobe-hub-mobile',
+    expect(getProjectFieldSuggestions('Orvilo Mobile App')).toEqual({
+      identifier: 'OMA',
+      slug: 'orvilo-mobile-app',
     });
     expect(getProjectFieldSuggestions('用户记忆')).toEqual({
       identifier: 'YHJY',
@@ -28,36 +28,36 @@ describe('createProjectForm', () => {
   });
 
   it('validates the identifier format shown by the form', () => {
-    expect(isProjectIdentifierValid('LOBE')).toBe(true);
+    expect(isProjectIdentifierValid('ORVILO')).toBe(true);
     expect(isProjectIdentifierValid('LH')).toBe(false);
-    expect(isProjectIdentifierValid('1LOBE')).toBe(false);
+    expect(isProjectIdentifierValid('1ORVILO')).toBe(false);
   });
 
   it('normalizes and includes a user-provided slug', () => {
     expect(
       getCreateProjectInput({
-        identifier: ' lobe ',
-        name: '  LobeHub Project  ',
-        slug: '  LobeHub-Project  ',
+        identifier: ' orvilo ',
+        name: '  Orvilo Project  ',
+        slug: '  Orvilo-Project  ',
       }),
     ).toEqual({
-      identifier: 'LOBE',
-      name: 'LobeHub Project',
-      slug: 'lobehub-project',
+      identifier: 'ORVILO',
+      name: 'Orvilo Project',
+      slug: 'orvilo-project',
     });
   });
 
   it('omits an empty slug so the backend can generate one', () => {
     expect(
-      getCreateProjectInput({ identifier: 'LOBE', name: 'LobeHub Project', slug: '  ' }),
-    ).toEqual({ identifier: 'LOBE', name: 'LobeHub Project' });
+      getCreateProjectInput({ identifier: 'ORVILO', name: 'Orvilo Project', slug: '  ' }),
+    ).toEqual({ identifier: 'ORVILO', name: 'Orvilo Project' });
   });
 
   it('rejects malformed slugs', () => {
     expect(isProjectSlugValid('two--hyphens')).toBe(false);
     expect(isProjectSlugValid('contains spaces')).toBe(false);
     expect(
-      getCreateProjectInput({ identifier: 'LOBE', name: 'LobeHub Project', slug: '-invalid' }),
+      getCreateProjectInput({ identifier: 'ORVILO', name: 'Orvilo Project', slug: '-invalid' }),
     ).toBeNull();
   });
 });

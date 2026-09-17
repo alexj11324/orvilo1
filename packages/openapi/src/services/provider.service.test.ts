@@ -3,7 +3,7 @@ import type * as BusinessConst from '@orvilo/business-const';
 import { OFFICIAL_PROVIDER_DISABLE_ERROR } from '@orvilo/business-const';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { ProviderService } from './provider.service';
 
@@ -48,7 +48,7 @@ vi.mock('@orvilo/business-const', async () => {
     ...actual,
     BRANDING_PROVIDER: 'orvilo',
     ENABLE_BUSINESS_FEATURES: true,
-    isOfficialProvider: (id: string) => id === 'lobehub',
+    isOfficialProvider: (id: string) => id === 'orvilo',
   };
 });
 
@@ -62,7 +62,7 @@ describe('ProviderService', () => {
     vi.restoreAllMocks();
   });
 
-  const createService = () => new ProviderService({} as LobeChatDatabase, 'test-user-id');
+  const createService = () => new ProviderService({} as OrviloDatabase, 'test-user-id');
 
   describe('official provider guard', () => {
     it('should reject creating the official provider as disabled', async () => {
@@ -71,7 +71,7 @@ describe('ProviderService', () => {
       await expect(
         service.createProvider({
           enabled: false,
-          id: 'lobehub',
+          id: 'orvilo',
         }),
       ).rejects.toMatchObject({
         message: OFFICIAL_PROVIDER_DISABLE_ERROR,
@@ -85,7 +85,7 @@ describe('ProviderService', () => {
       await expect(
         service.updateProvider({
           enabled: false,
-          id: 'lobehub',
+          id: 'orvilo',
         }),
       ).rejects.toMatchObject({
         message: OFFICIAL_PROVIDER_DISABLE_ERROR,

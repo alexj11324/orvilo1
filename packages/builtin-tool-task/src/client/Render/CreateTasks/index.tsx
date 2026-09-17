@@ -118,11 +118,11 @@ export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, Crea
       <Block variant={'outlined'} width={'100%'}>
         <div className={styles.header}>
           <span className={styles.headerCount}>
-            {t('builtins.lobe-task.createTasks.count', { count: rows.length })}
+            {t('builtins.orvilo-task.createTasks.count', { count: rows.length })}
           </span>
           {failedCount > 0 && (
             <span className={styles.failedBadge}>
-              {t('builtins.lobe-task.createTasks.failedCount', { count: failedCount })}
+              {t('builtins.orvilo-task.createTasks.failedCount', { count: failedCount })}
             </span>
           )}
         </div>

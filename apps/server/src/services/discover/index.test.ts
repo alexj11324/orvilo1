@@ -23,7 +23,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...(actual as any),
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         id: 'gpt-4',
         displayName: 'GPT-4',
@@ -58,10 +58,10 @@ vi.mock('model-bank', async (importOriginal) => {
         releasedAt: '2024-02-01T00:00:00Z',
       },
       {
-        id: 'lobehub-onboarding-v1',
-        displayName: 'LobeHub Onboarding',
+        id: 'orvilo-onboarding-v1',
+        displayName: 'Orvilo Onboarding',
         description: 'Runtime-only onboarding alias model',
-        providerId: 'lobehub',
+        providerId: 'orvilo',
         contextWindowTokens: 1_000_000,
         abilities: {
           functionCall: true,
@@ -75,9 +75,9 @@ vi.mock('model-bank', async (importOriginal) => {
 });
 
 vi.mock('@/business/client/model-bank/loadModels', async () => {
-  const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+  const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
   return {
-    loadModels: vi.fn().mockResolvedValue(LOBE_DEFAULT_MODEL_LIST),
+    loadModels: vi.fn().mockResolvedValue(ORVILO_DEFAULT_MODEL_LIST),
   };
 });
 
@@ -777,7 +777,7 @@ describe('DiscoverService', () => {
 
       it('should not expose hidden runtime-only model details', async () => {
         const result = await service.getModelDetail({
-          identifier: 'lobehub-onboarding-v1',
+          identifier: 'orvilo-onboarding-v1',
         });
 
         expect(result).toBeUndefined();
@@ -801,7 +801,7 @@ describe('DiscoverService', () => {
       it('should not include categories that only have hidden models', async () => {
         const result = await service.getModelCategories();
 
-        expect(result.some((item) => item.category === 'lobehub')).toBe(false);
+        expect(result.some((item) => item.category === 'orvilo')).toBe(false);
       });
     });
   });

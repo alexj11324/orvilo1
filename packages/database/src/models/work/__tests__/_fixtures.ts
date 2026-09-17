@@ -10,7 +10,7 @@ import { expect } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
 import { agents, threads, topics, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 
 /**
  * Shared harness for the per-type WorkModel test files (task / document /
@@ -18,7 +18,7 @@ import type { LobeChatDatabase } from '../../../type';
  * (getTestDB is a per-module singleton), so seeding the same fixed ids across
  * files never collides.
  */
-export const serverDB: LobeChatDatabase = await getTestDB();
+export const serverDB: OrviloDatabase = await getTestDB();
 
 export const userId = 'work-test-user-id';
 export const userId2 = 'work-test-user-id-2';

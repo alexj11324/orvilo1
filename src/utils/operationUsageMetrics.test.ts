@@ -63,7 +63,7 @@ describe('operationUsageMetrics', () => {
     const subAgentTool = (pluginState: any, parentId = 'assistant') => ({
       id: 'tool-msg',
       parentId,
-      plugin: { identifier: 'lobe-agent' },
+      plugin: { identifier: 'orvilo-agent' },
       pluginState,
       role: 'tool',
     });
@@ -123,7 +123,7 @@ describe('operationUsageMetrics', () => {
           {
             id: 'tool-msg',
             parentId: 'assistant',
-            plugin: { identifier: 'lobe-web-browsing' },
+            plugin: { identifier: 'orvilo-web-browsing' },
             pluginState: { totalCost: 99, totalTokens: 99_999 },
             role: 'tool',
           },

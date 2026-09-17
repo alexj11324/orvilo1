@@ -42,7 +42,7 @@ export const CreateGroupInspector = memo<
     return (
       <div className={styles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-group-agent-builder.apiName.createGroup')}
+          {t('builtins.orvilo-group-agent-builder.apiName.createGroup')}
         </span>
       </div>
     );
@@ -58,7 +58,7 @@ export const CreateGroupInspector = memo<
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
       >
-        {t('builtins.lobe-group-agent-builder.apiName.createGroup')}:
+        {t('builtins.orvilo-group-agent-builder.apiName.createGroup')}:
       </span>
       {avatar && <Avatar avatar={avatar} shape={'square'} size={20} title={title || undefined} />}
       {title && <span>{title}</span>}

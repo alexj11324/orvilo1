@@ -44,7 +44,7 @@ export const RemoveAgentInspector = memo<
     return (
       <div className={styles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-group-agent-builder.apiName.removeAgent')}
+          {t('builtins.orvilo-group-agent-builder.apiName.removeAgent')}
         </span>
       </div>
     );
@@ -60,7 +60,7 @@ export const RemoveAgentInspector = memo<
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
       >
-        {t('builtins.lobe-group-agent-builder.apiName.removeAgent')}:
+        {t('builtins.orvilo-group-agent-builder.apiName.removeAgent')}:
       </span>
       {avatar && (
         <Avatar avatar={avatar} shape={'square'} size={20} title={displayName || undefined} />

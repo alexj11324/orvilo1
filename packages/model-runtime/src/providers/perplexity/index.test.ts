@@ -2,12 +2,12 @@
 import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobePerplexityAI } from './index';
+import { OrviloPerplexityAI } from './index';
 
 testProvider({
-  Runtime: LobePerplexityAI,
+  Runtime: OrviloPerplexityAI,
   provider: ModelProvider.Perplexity,
   defaultBaseURL: 'https://api.perplexity.ai',
   chatDebugEnv: 'DEBUG_PERPLEXITY_CHAT_COMPLETION',
@@ -17,10 +17,10 @@ testProvider({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobePerplexityAI({ apiKey: 'test' });
+  instance = new OrviloPerplexityAI({ apiKey: 'test' });
 
   // 使用 vi.spyOn 来模拟 chat.completions.create 方法
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -28,7 +28,7 @@ beforeEach(() => {
   );
 });
 
-describe('LobePerplexityAI', () => {
+describe('OrviloPerplexityAI', () => {
   describe('chat', () => {
     it('should call chat method with temperature', async () => {
       await instance.chat({

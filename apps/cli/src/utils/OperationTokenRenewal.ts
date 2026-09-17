@@ -34,7 +34,7 @@ const readOperationTokenExpiry = (jwt: string): number | undefined => {
  * The server signs it for four hours, and a Goal Task can run far longer. Once
  * it expires every ingest is rejected — heartbeats included — so the lease stops
  * renewing and the server reclaims the operation as abandoned while the agent is
- * still working. Renewing writes the new token back to `LOBEHUB_JWT`, which the
+ * still working. Renewing writes the new token back to `ORVILO_JWT`, which the
  * tRPC clients read on every request.
  *
  * Only a `hetero-operation` token is renewed. A desktop run authenticates with
@@ -54,7 +54,7 @@ export const createOperationTokenRenewal = ({
   };
 
   const scheduleFromCurrentToken = () => {
-    const jwt = process.env.LOBEHUB_JWT;
+    const jwt = process.env.ORVILO_JWT;
     const expiresAt = jwt ? readOperationTokenExpiry(jwt) : undefined;
     if (expiresAt === undefined) return false;
     schedule(expiresAt - RENEW_BEFORE_EXPIRY_MS - Date.now());
@@ -65,7 +65,7 @@ export const createOperationTokenRenewal = ({
     try {
       const { jwt } = await renew(operationId);
       if (stopped) return;
-      process.env.LOBEHUB_JWT = jwt;
+      process.env.ORVILO_JWT = jwt;
       scheduleFromCurrentToken();
     } catch (error) {
       const code = (error as { data?: { code?: string } } | null)?.data?.code;

@@ -2,7 +2,7 @@ import { and, count, eq, exists, inArray, notExists, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { agentsFiles, agentsKnowledgeBases, files, knowledgeBases } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from './workspace';
 
 interface AgentKnowledgeMountParams {
@@ -12,7 +12,7 @@ interface AgentKnowledgeMountParams {
   workspaceId: string;
 }
 
-type Db = LobeChatDatabase | Transaction;
+type Db = OrviloDatabase | Transaction;
 
 /**
  * Mount rows on `agentIds` whose referenced knowledge base is NOT visible to

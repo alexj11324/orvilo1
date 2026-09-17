@@ -21,7 +21,7 @@ import WorkVersionHistoryCard from './WorkVersionHistoryCard';
 
 type WorksViewMode = 'history' | 'summary';
 
-const WORKS_VIEW_MODE_STORAGE_KEY = 'lobechat-working-panel-works-view-mode';
+const WORKS_VIEW_MODE_STORAGE_KEY = 'orvilo-working-panel-works-view-mode';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`

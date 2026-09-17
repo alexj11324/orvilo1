@@ -14,8 +14,8 @@ import { resolveCliDirName } from '../constants/identity';
 const TRACES_DIR_NAME = 'traces';
 
 /**
- * `~/.lobehub/traces` — or the `LOBEHUB_CLI_HOME` override, so a dev build
- * (`LOBEHUB_CLI_HOME=.lobehub-dev`) keeps its traces out of the real ones.
+ * `~/.orvilo/traces` — or the `ORVILO_CLI_HOME` override, so a dev build
+ * (`ORVILO_CLI_HOME=.orvilo-dev`) keeps its traces out of the real ones.
  */
 export const resolveTraceRoot = (): string => path.join(os.homedir(), resolveCliDirName());
 
@@ -27,7 +27,7 @@ export const resolveTraceDir = (): string => path.join(resolveTraceRoot(), TRACE
  *
  * Layout (owned by `FileSnapshotStore`):
  *
- *   ~/.lobehub/traces/
+ *   ~/.orvilo/traces/
  *     2026-08-30T…_op_abc123def.json   completed runs
  *     _partial/op_abc….json            in-progress, or left behind by a crash
  *     latest.json                      symlink to the newest completed run

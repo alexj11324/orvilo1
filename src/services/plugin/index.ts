@@ -1,7 +1,7 @@
-import { type LobeTool, type ToolManifest } from '@orvilo/types';
+import { type OrviloTool, type ToolManifest } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
-import { type LobeToolCustomPlugin } from '@/types/tool/plugin';
+import { type OrviloToolCustomPlugin } from '@/types/tool/plugin';
 
 export interface InstallPluginParams {
   customParams?: Record<string, any>;
@@ -16,7 +16,7 @@ export class PluginService {
     await lambdaClient.plugin.createOrInstallPlugin.mutate(plugin);
   };
 
-  getInstalledPlugins = (): Promise<LobeTool[]> => {
+  getInstalledPlugins = (): Promise<OrviloTool[]> => {
     return lambdaClient.plugin.getPlugins.query();
   };
 
@@ -24,11 +24,11 @@ export class PluginService {
     await lambdaClient.plugin.removePlugin.mutate({ id: identifier });
   };
 
-  createCustomPlugin = async (customPlugin: LobeToolCustomPlugin): Promise<void> => {
+  createCustomPlugin = async (customPlugin: OrviloToolCustomPlugin): Promise<void> => {
     await lambdaClient.plugin.createPlugin.mutate({ ...customPlugin, type: 'customPlugin' });
   };
 
-  updatePlugin = async (id: string, value: Partial<LobeToolCustomPlugin>): Promise<void> => {
+  updatePlugin = async (id: string, value: Partial<OrviloToolCustomPlugin>): Promise<void> => {
     await lambdaClient.plugin.updatePlugin.mutate({
       customParams: value.customParams,
       id,

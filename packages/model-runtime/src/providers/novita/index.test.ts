@@ -3,16 +3,16 @@ import { ModelProvider } from 'model-bank';
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
 import models from './fixtures/models.json';
-import { LobeNovitaAI } from './index';
+import { OrviloNovitaAI } from './index';
 
 const provider = ModelProvider.Novita;
 const defaultBaseURL = 'https://api.novita.ai/v3/openai';
 
 testProvider({
-  Runtime: LobeNovitaAI,
+  Runtime: OrviloNovitaAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_NOVITA_CHAT_COMPLETION',
@@ -22,10 +22,10 @@ testProvider({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeNovitaAI({ apiKey: 'test' });
+  instance = new OrviloNovitaAI({ apiKey: 'test' });
 
   // 使用 vi.spyOn 来模拟 chat.completions.create 方法
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(

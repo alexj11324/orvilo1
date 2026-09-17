@@ -40,7 +40,7 @@ import { getToolStoreState } from '@/store/tool';
 import {
   builtinToolSelectors,
   composioStoreSelectors,
-  lobehubSkillStoreSelectors,
+  orviloSkillStoreSelectors,
 } from '@/store/tool/selectors';
 import { getUserStoreState, useUserStore } from '@/store/user';
 import {
@@ -225,17 +225,17 @@ class ChatService {
         typeof window !== 'undefined' &&
         window.global_serverConfigStore?.getState()?.serverConfig?.enableComposio,
       );
-      const isLobehubSkillEnabled = Boolean(
+      const isOrviloSkillEnabled = Boolean(
         typeof window !== 'undefined' &&
-        window.global_serverConfigStore?.getState()?.serverConfig?.enableLobehubSkill,
+        window.global_serverConfigStore?.getState()?.serverConfig?.enableOrviloSkill,
       );
       const connectorCatalog = getConnectorCatalog({
         composio: isComposioEnabled,
-        lobehub: isLobehubSkillEnabled,
+        orvilo: isOrviloSkillEnabled,
       });
       const connectorIdentifiers = new Set(
         connectorCatalog.map((item) =>
-          item.type === 'lobehub' ? item.provider.id : item.serverType.identifier,
+          item.type === 'orvilo' ? item.provider.id : item.serverType.identifier,
         ),
       );
 
@@ -256,7 +256,7 @@ class ChatService {
       }
 
       const allComposioServers = composioStoreSelectors.getServers(toolState);
-      const allLobehubSkillServers = lobehubSkillStoreSelectors.getServers(toolState);
+      const allOrviloSkillServers = orviloSkillStoreSelectors.getServers(toolState);
       for (const connector of connectorCatalog) {
         if (connector.type === 'composio') {
           const { serverType } = connector;
@@ -264,7 +264,7 @@ class ChatService {
             (item) => item.identifier === serverType.identifier,
           );
           officialTools.push({
-            description: `LobeHub Mcp Server: ${serverType.label}`,
+            description: `Orvilo Mcp Server: ${serverType.label}`,
             enabled: enabledPlugins.includes(serverType.identifier),
             identifier: serverType.identifier,
             installed: !!server,
@@ -275,14 +275,14 @@ class ChatService {
         }
 
         const { provider } = connector;
-        const server = allLobehubSkillServers.find((item) => item.identifier === provider.id);
+        const server = allOrviloSkillServers.find((item) => item.identifier === provider.id);
         officialTools.push({
-          description: `LobeHub Skill Provider: ${provider.label}`,
+          description: `Orvilo Skill Provider: ${provider.label}`,
           enabled: enabledPlugins.includes(provider.id),
           identifier: provider.id,
           installed: !!server,
           name: provider.label,
-          type: 'lobehub-skill',
+          type: 'orvilo-skill',
         });
       }
 

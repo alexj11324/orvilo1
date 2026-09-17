@@ -1,12 +1,12 @@
 import { DEFAULT_PROVIDER } from '@orvilo/business-const';
-import type { LobeAgentAgencyConfig, LobeAgentChatConfig } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig, OrviloAgentChatConfig } from '@orvilo/types';
 
 export { DEFAULT_MINI_MODEL, DEFAULT_MODEL } from '@orvilo/business-const';
 
 export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small';
 
 /**
- * Last-resort model for sub-agents spawned via `lobe-agent.callSubAgent`, used
+ * Last-resort model for sub-agents spawned via `orvilo-agent.callSubAgent`, used
  * only when neither an explicit `agencyConfig.subagent` override nor the
  * parent's effective model is available at the spawn site.
  *
@@ -31,7 +31,7 @@ export const DEFAULT_SUB_AGENT_MODEL = 'deepseek-v4-flash';
  * user never configured.
  */
 export const resolveSubAgentModel = (
-  subagent: LobeAgentAgencyConfig['subagent'],
+  subagent: OrviloAgentAgencyConfig['subagent'],
   parentModel?: { model?: string | null; provider?: string | null },
 ): { model: string; provider: string } => {
   if (subagent?.model)
@@ -60,8 +60,8 @@ export const resolveSubAgentModel = (
  * silently keep changing the sub-agent's behavior or cost.
  */
 export const getSubAgentChatConfigOverride = (
-  subagent: LobeAgentAgencyConfig['subagent'],
-): Partial<LobeAgentChatConfig> | undefined =>
+  subagent: OrviloAgentAgencyConfig['subagent'],
+): Partial<OrviloAgentChatConfig> | undefined =>
   subagent?.model ? (subagent.chatConfig ?? undefined) : undefined;
 
 export const resolveSubAgentChatConfig = <T extends object>(

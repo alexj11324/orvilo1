@@ -34,11 +34,11 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AGENT_OWNERSHIP_STALE, AGENT_SHARED_TRANSFER_BLOCKED, AgentModel } from '../agent';
 import { AGENT_TRANSFER_IN_PROGRESS, AgentTransferJobModel } from '../agentTransferJob';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const ownerId = 'handover-owner';
 const recipientId = 'handover-recipient';

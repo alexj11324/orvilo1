@@ -64,7 +64,7 @@ const collectRecentActivity = async (
  * - A bounded source brief that separates authored posts from third-party mentions
  */
 export const twitterUnderstandingProvider: UnderstandingProvider = {
-  connectionSource: 'lobehub',
+  connectionSource: 'orvilo',
   id: 'twitter',
   collect: async ({ connectorData }) => {
     const client = await connectorData.getTwitterClient();

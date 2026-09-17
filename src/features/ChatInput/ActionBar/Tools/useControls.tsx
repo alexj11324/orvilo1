@@ -40,12 +40,12 @@ import {
   agentSkillsSelectors,
   builtinToolSelectors,
   composioStoreSelectors,
-  lobehubSkillStoreSelectors,
+  orviloSkillStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
 import { connectorSelectors } from '@/store/tool/slices/connector';
-import { LobehubSkillStatus } from '@/store/tool/slices/lobehubSkillStore/types';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useUpdateAgentConfig } from '../../hooks/useUpdateAgentConfig';
@@ -53,16 +53,16 @@ import { closeToolDetailPopovers } from '../components/useDetailPopoverState';
 import ComposioServerItem from './ComposioServerItem';
 import ComposioSkillIcon from './ComposioSkillIcon';
 import { SKILL_ICON_GAP, SKILL_ICON_SIZE, SKILL_TRAILING_CONTROL_SIZE } from './constants';
-import LobehubSkillIcon from './LobehubSkillIcon';
-import LobehubSkillServerItem from './LobehubSkillServerItem';
 import MarketAgentSkillPopoverContent from './MarketAgentSkillPopoverContent';
 import MarketSkillIcon from './MarketSkillIcon';
+import OrviloSkillIcon from './OrviloSkillIcon';
+import OrviloSkillServerItem from './OrviloSkillServerItem';
 import SkillRow from './SkillRow';
 import ToolItem from './ToolItem';
 import ToolItemDetailPopover from './ToolItemDetailPopover';
 
 const officialTag = (
-  <Tooltip placement={'top'} title={'LobeHub'}>
+  <Tooltip placement={'top'} title={'Orvilo'}>
     <Tag color={'success'} icon={<Icon icon={BadgeCheck} />} size={'small'} />
   </Tooltip>
 );
@@ -487,7 +487,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       : builtinToolSelectors.metaList,
     isEqual,
   );
-  // Application-fixed tools (always-on, not user-controllable, e.g. lobe-agent).
+  // Application-fixed tools (always-on, not user-controllable, e.g. orvilo-agent).
   // Rendered read-only at the top of the "Pinned" section so users can see what the
   // app keeps active for every conversation. Mode-aware: in manual skill-activate mode the
   // discovery tools the engine strips (activator, skill-store) are dropped from the list.
@@ -786,9 +786,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   const allComposioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
   const isComposioEnabledInEnv = useServerConfigStore(serverConfigSelectors.enableComposio);
 
-  // LobeHub Skill related state
-  const allLobehubSkillServers = useToolStore(lobehubSkillStoreSelectors.getServers, isEqual);
-  const isLobehubSkillEnabled = useServerConfigStore(serverConfigSelectors.enableLobehubSkill);
+  // Orvilo Skill related state
+  const allOrviloSkillServers = useToolStore(orviloSkillStoreSelectors.getServers, isEqual);
+  const isOrviloSkillEnabled = useServerConfigStore(serverConfigSelectors.enableOrviloSkill);
 
   // Agent Skills related state
   const installedBuiltinSkills = useToolStore(builtinToolSelectors.installedBuiltinSkills, isEqual);
@@ -805,12 +805,12 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
 
   const [
     useFetchUserComposioConnections,
-    useFetchLobehubSkillConnections,
+    useFetchOrviloSkillConnections,
     useFetchUninstalledBuiltinTools,
     useFetchAgentSkills,
   ] = useToolStore((s) => [
     s.useFetchUserComposioConnections,
-    s.useFetchLobehubSkillConnections,
+    s.useFetchOrviloSkillConnections,
     s.useFetchUninstalledBuiltinTools,
     s.useFetchAgentSkills,
   ]);
@@ -823,8 +823,8 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   // Load user's Composio integrations via SWR (from database)
   useFetchUserComposioConnections(isComposioEnabledInEnv);
 
-  // Load user's LobeHub Skill connections via SWR
-  useFetchLobehubSkillConnections(isLobehubSkillEnabled);
+  // Load user's Orvilo Skill connections via SWR
+  useFetchOrviloSkillConnections(isOrviloSkillEnabled);
 
   // Get connected server by identifier
   const getServerByName = useCallback(
@@ -838,15 +838,15 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     () =>
       getConnectorCatalog({
         composio: isComposioEnabledInEnv,
-        lobehub: isLobehubSkillEnabled,
+        orvilo: isOrviloSkillEnabled,
       }),
-    [isComposioEnabledInEnv, isLobehubSkillEnabled],
+    [isComposioEnabledInEnv, isOrviloSkillEnabled],
   );
   const connectorIdentifiers = useMemo(
     () =>
       new Set(
         connectorCatalog.map((item) =>
-          item.type === 'lobehub' ? item.provider.id : item.serverType.identifier,
+          item.type === 'orvilo' ? item.provider.id : item.serverType.identifier,
         ),
       ),
     [connectorCatalog],
@@ -875,11 +875,11 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     [],
   );
 
-  // Get recommended Lobehub skill IDs
-  const recommendedLobehubIds = useMemo(
+  // Get recommended Orvilo skill IDs
+  const recommendedOrviloIds = useMemo(
     () =>
       new Set(
-        RECOMMENDED_SKILLS.filter((s) => s.type === RecommendedSkillType.Lobehub).map((s) => s.id),
+        RECOMMENDED_SKILLS.filter((s) => s.type === RecommendedSkillType.Orvilo).map((s) => s.id),
       ),
     [],
   );
@@ -890,10 +890,10 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     [allComposioServers],
   );
 
-  // Get installed Lobehub skill IDs
-  const installedLobehubIds = useMemo(
-    () => new Set(allLobehubSkillServers.map((s) => s.identifier)),
-    [allLobehubSkillServers],
+  // Get installed Orvilo skill IDs
+  const installedOrviloIds = useMemo(
+    () => new Set(allOrviloSkillServers.map((s) => s.identifier)),
+    [allOrviloSkillServers],
   );
 
   const visibleComposioTypes = useMemo(
@@ -910,16 +910,16 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         ),
     [connectorCatalog, installedComposioIds, recommendedComposioIds, checkedSet, disabledIdSet],
   );
-  const visibleLobehubProviders = useMemo(
+  const visibleOrviloProviders = useMemo(
     () =>
       connectorCatalog
-        .filter((item) => item.type === 'lobehub')
+        .filter((item) => item.type === 'orvilo')
         .map(({ provider }) => provider)
         .filter(
           (provider) =>
-            installedLobehubIds.has(provider.id) || recommendedLobehubIds.has(provider.id),
+            installedOrviloIds.has(provider.id) || recommendedOrviloIds.has(provider.id),
         ),
-    [connectorCatalog, installedLobehubIds, recommendedLobehubIds],
+    [connectorCatalog, installedOrviloIds, recommendedOrviloIds],
   );
 
   // Remove a Composio connection AND drop its identifier from the agent's
@@ -973,7 +973,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                   displayName: type.label,
                   onDelete: () => removeComposioServer(server.identifier),
                 },
-                extraTag: type.author === 'LobeHub' ? officialTag : undefined,
+                extraTag: type.author === 'Orvilo' ? officialTag : undefined,
                 icon,
                 id: server.identifier,
                 popoverContent,
@@ -1052,35 +1052,31 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     ],
   );
 
-  // LobeHub Skill Provider list items - only show installed or recommended
-  const lobehubSkillItems = useMemo(
+  // Orvilo Skill Provider list items - only show installed or recommended
+  const orviloSkillItems = useMemo(
     () =>
-      isLobehubSkillEnabled
-        ? visibleLobehubProviders.map((provider) => {
-            const server = allLobehubSkillServers.find((s) => s.identifier === provider.id);
+      isOrviloSkillEnabled
+        ? visibleOrviloProviders.map((provider) => {
+            const server = allOrviloSkillServers.find((s) => s.identifier === provider.id);
             const icon = (
-              <LobehubSkillIcon
-                icon={provider.icon}
-                label={provider.label}
-                size={SKILL_ICON_SIZE}
-              />
+              <OrviloSkillIcon icon={provider.icon} label={provider.label} size={SKILL_ICON_SIZE} />
             );
             const popoverContent = (
               <ToolItemDetailPopover
-                icon={<LobehubSkillIcon icon={provider.icon} label={provider.label} size={36} />}
+                icon={<OrviloSkillIcon icon={provider.icon} label={provider.label} size={36} />}
                 identifier={provider.id}
                 sourceLabel={provider.author}
                 title={provider.label}
-                description={t(`tools.lobehubSkill.providers.${provider.id}.description` as any, {
+                description={t(`tools.orviloSkill.providers.${provider.id}.description` as any, {
                   defaultValue: provider.description,
                 })}
               />
             );
 
-            if (server?.status === LobehubSkillStatus.CONNECTED || server?.isConnected) {
+            if (server?.status === OrviloSkillStatus.CONNECTED || server?.isConnected) {
               return createManagedSkillItem({
                 badge: <Icon icon={McpIcon} size={12} />,
-                extraTag: provider.author === 'LobeHub' ? officialTag : undefined,
+                extraTag: provider.author === 'Orvilo' ? officialTag : undefined,
                 icon,
                 id: server.identifier,
                 popoverContent,
@@ -1092,7 +1088,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
             return {
               key: provider.id, // Use provider.id as key, consistent with pluginId
               label: (
-                <LobehubSkillServerItem
+                <OrviloSkillServerItem
                   agentId={agentId}
                   icon={icon}
                   label={provider.label}
@@ -1105,16 +1101,16 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
           })
         : [],
     [
-      isLobehubSkillEnabled,
-      visibleLobehubProviders,
-      allLobehubSkillServers,
+      isOrviloSkillEnabled,
+      visibleOrviloProviders,
+      allOrviloSkillServers,
       agentId,
       t,
       createManagedSkillItem,
     ],
   );
 
-  // Builtin tool list items (excluding Composio and LobeHub Skill)
+  // Builtin tool list items (excluding Composio and Orvilo Skill)
   const builtinItems = useMemo(
     () =>
       filteredBuiltinList.map((item) => {
@@ -1129,7 +1125,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         const popoverContent = (
           <ToolItemDetailPopover
             identifier={item.identifier}
-            sourceLabel={t('skillStore.tabs.lobehub')}
+            sourceLabel={t('skillStore.tabs.orvilo')}
             title={title}
             description={t(`tools.builtins.${item.identifier}.description` as any, {
               defaultValue: item.meta?.description || '',
@@ -1182,7 +1178,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         const popoverContent = (
           <ToolItemDetailPopover
             identifier={item.identifier}
-            sourceLabel={t('skillStore.tabs.lobehub')}
+            sourceLabel={t('skillStore.tabs.orvilo')}
             title={title}
             description={t(`tools.builtins.${item.identifier}.description` as any, {
               defaultValue: item.meta?.description || '',
@@ -1217,7 +1213,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     [createManagedSkillItem, fixedDisplayList, t],
   );
 
-  // Builtin Agent Skills list items (grouped under LobeHub)
+  // Builtin Agent Skills list items (grouped under Orvilo)
   const builtinAgentSkillItems = useMemo(
     () =>
       installedBuiltinSkills.map((skill) => {
@@ -1232,7 +1228,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         const popoverContent = (
           <ToolItemDetailPopover
             identifier={skill.identifier}
-            sourceLabel={t('skillStore.tabs.lobehub')}
+            sourceLabel={t('skillStore.tabs.orvilo')}
             title={title}
             description={t(`tools.builtins.${skill.identifier}.description` as any, {
               defaultValue: skill.description,
@@ -1372,15 +1368,15 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     [customConnectors, t, createManagedSkillItem, deleteConnector, togglePlugin],
   );
 
-  // Skills list items (including LobeHub Skill and Composio)
-  // Connected items listed first, deduplicated by key (LobeHub takes priority)
+  // Skills list items (including Orvilo Skill and Composio)
+  // Connected items listed first, deduplicated by key (Orvilo takes priority)
   const skillItems = useMemo(() => {
-    // Deduplicate by key - LobeHub items take priority over Composio
+    // Deduplicate by key - Orvilo items take priority over Composio
     const seenKeys = new Set<string>();
-    const allItems: typeof lobehubSkillItems = [];
+    const allItems: typeof orviloSkillItems = [];
 
-    // Add LobeHub items first (they take priority)
-    for (const item of lobehubSkillItems) {
+    // Add Orvilo items first (they take priority)
+    for (const item of orviloSkillItems) {
       if (!seenKeys.has(item.key as string)) {
         seenKeys.add(item.key as string);
         allItems.push(item);
@@ -1397,21 +1393,21 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
 
     return allItems.sort((a, b) => {
       const isConnectedA =
-        installedLobehubIds.has(a.key as string) || installedComposioIds.has(a.key as string);
+        installedOrviloIds.has(a.key as string) || installedComposioIds.has(a.key as string);
       const isConnectedB =
-        installedLobehubIds.has(b.key as string) || installedComposioIds.has(b.key as string);
+        installedOrviloIds.has(b.key as string) || installedComposioIds.has(b.key as string);
 
       if (isConnectedA && !isConnectedB) return -1;
       if (!isConnectedA && isConnectedB) return 1;
       return 0;
     });
-  }, [lobehubSkillItems, composioServerItems, installedLobehubIds, installedComposioIds]);
+  }, [orviloSkillItems, composioServerItems, installedOrviloIds, installedComposioIds]);
 
   // Distinguish community plugins and custom plugins.
   // Whitelist `type === 'plugin'` (matching /settings/skill) so connected
-  // integrations (Composio/LobeHub Skill gateway plugins with other sources like
+  // integrations (Composio/Orvilo Skill gateway plugins with other sources like
   // 'self'/'builtin') don't leak in here and duplicate the brand-icon items
-  // already rendered under the LobeHub group.
+  // already rendered under the Orvilo group.
   const communityPlugins = list.filter((item) => item.type === 'plugin');
   const customPlugins = list.filter((item) => item.type === 'customPlugin');
 
@@ -1463,7 +1459,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         <Tag color={'warning'} icon={<Icon icon={Package} />} size={'small'}>
           {t('store.customPlugin', { ns: 'plugin' })}
         </Tag>
-      ) : item.author === 'LobeHub' ? (
+      ) : item.author === 'Orvilo' ? (
         officialTag
       ) : undefined,
       icon,
@@ -1474,13 +1470,13 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     });
   };
 
-  // Build LobeHub group children (including Builtin Agent Skills, builtin tools, and LobeHub Skill/Composio)
-  const lobehubGroupChildren: ItemType[] = [
+  // Build Orvilo group children (including Builtin Agent Skills, builtin tools, and Orvilo Skill/Composio)
+  const orviloGroupChildren: ItemType[] = [
     // 1. Builtin Agent Skills
     ...builtinAgentSkillItems,
     // 2. Builtin tools
     ...builtinItems,
-    // 3. LobeHub Skill and Composio (as builtin skills)
+    // 3. Orvilo Skill and Composio (as builtin skills)
     ...skillItems,
   ];
 
@@ -1499,13 +1495,13 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
 
   const normalizedSearchKeyword = searchKeyword.trim().toLowerCase();
   // Deduplicate by key: the same app can be sourced from more than one list
-  // (e.g. a Composio/LobeHub integration item plus an installed plugin sharing
+  // (e.g. a Composio/Orvilo integration item plus an installed plugin sharing
   // the same identifier), which would otherwise render the row twice. Keep the
-  // first occurrence so the richer integration item (LobeHub group, listed
+  // first occurrence so the richer integration item (Orvilo group, listed
   // first) wins over a generic plugin duplicate.
   const seenSkillKeys = new Set<string>();
   const allSkillItems = [
-    ...lobehubGroupChildren,
+    ...orviloGroupChildren,
     ...communityGroupChildren,
     ...customGroupChildren,
   ].filter((item): item is SkillMenuItem => {
@@ -1608,7 +1604,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   const marketHeader = (
     <SearchBar
       allowClear
-      className="lobe-skill-submenu-search"
+      className="orvilo-skill-submenu-search"
       placeholder={t('tools.search')}
       size="small"
       style={{ width: '100%' }}
@@ -1749,7 +1745,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         popoverContent: (
           <ToolItemDetailPopover
             identifier={item.identifier}
-            sourceLabel={t('skillStore.tabs.lobehub')}
+            sourceLabel={t('skillStore.tabs.orvilo')}
             description={t(`tools.builtins.${item.identifier}.description` as any, {
               defaultValue: item.meta?.description || '',
             })}
@@ -1777,13 +1773,13 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       checked.includes(item.key as string),
     );
 
-    // Connected LobeHub Skill Providers
-    const connectedLobehubSkillItems = lobehubSkillItems.filter((item) =>
+    // Connected Orvilo Skill Providers
+    const connectedOrviloSkillItems = orviloSkillItems.filter((item) =>
       checked.includes(item.key as string),
     );
 
-    // Merge enabled LobeHub Skill and Composio (as builtin skills)
-    const enabledSkillItems = [...connectedLobehubSkillItems, ...connectedComposioItems];
+    // Merge enabled Orvilo Skill and Composio (as builtin skills)
+    const enabledSkillItems = [...connectedOrviloSkillItems, ...connectedComposioItems];
 
     // Enabled Builtin Agent Skills
     const enabledBuiltinAgentSkillItems = installedBuiltinSkills
@@ -1810,7 +1806,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         popoverContent: (
           <ToolItemDetailPopover
             identifier={skill.identifier}
-            sourceLabel={t('skillStore.tabs.lobehub')}
+            sourceLabel={t('skillStore.tabs.orvilo')}
             description={t(`tools.builtins.${skill.identifier}.description` as any, {
               defaultValue: skill.description,
             })}
@@ -1833,7 +1829,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         ),
       }));
 
-    // Build builtin tools group children (including Builtin Agent Skills, builtin tools, and LobeHub Skill/Composio)
+    // Build builtin tools group children (including Builtin Agent Skills, builtin tools, and Orvilo Skill/Composio)
     const allBuiltinItems: ItemType[] = [
       // 1. Builtin Agent Skills
       ...enabledBuiltinAgentSkillItems,
@@ -1843,15 +1839,15 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       ...(enabledBuiltinItems.length > 0 && enabledSkillItems.length > 0
         ? [{ key: 'installed-divider-builtin-skill', type: 'divider' as const }]
         : []),
-      // 4. LobeHub Skill and Composio
+      // 4. Orvilo Skill and Composio
       ...enabledSkillItems,
     ];
 
     if (allBuiltinItems.length > 0) {
       installedItems.push({
         children: allBuiltinItems,
-        key: 'installed-lobehub',
-        label: t('skillStore.tabs.lobehub'),
+        key: 'installed-orvilo',
+        label: t('skillStore.tabs.orvilo'),
         type: 'group',
       });
     }
@@ -2040,7 +2036,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     communityPlugins,
     customPlugins,
     composioServerItems,
-    lobehubSkillItems,
+    orviloSkillItems,
     checked,
     togglePlugin,
     canEdit,

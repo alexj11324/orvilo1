@@ -16,7 +16,7 @@ import { GoalGraphModel } from '@/database/models/goalGraph';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { resolveGoalModelConfig } from '../modelConfig';
@@ -33,7 +33,7 @@ import {
 /** Durable supervisor with a dedicated, incident-scoped tool set. */
 export class GoalSupervisorService {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}

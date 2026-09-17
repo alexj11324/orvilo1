@@ -50,7 +50,7 @@ export interface ProviderResponseDiagnostics {
   model?: string;
   /** Serialized bytes retained across rawEvents, excluding JSON array delimiters. */
   rawEventByteLength?: number;
-  /** Provider-native SDK events captured before LobeHub protocol transformation. */
+  /** Provider-native SDK events captured before Orvilo protocol transformation. */
   rawEvents: unknown[];
   /** Raw HTTP response body captured before the provider SDK consumes the stream. */
   rawResponse?: ProviderRawResponseDiagnostics;

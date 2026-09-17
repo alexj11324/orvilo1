@@ -25,7 +25,7 @@ describe('deduplicateRemoteModels', () => {
       { id: 'gemini-3.1-flash-image-preview', source: 'base' },
       { id: 'gemini-3.1-flash-image-preview:image', source: 'provider' },
       { id: 'other-model', source: 'only' },
-      { id: 'gemini-3.1-flash-image-preview:image', source: 'lobehub' },
+      { id: 'gemini-3.1-flash-image-preview:image', source: 'orvilo' },
     ]);
 
     expect(result).toEqual({
@@ -33,7 +33,7 @@ describe('deduplicateRemoteModels', () => {
       models: [
         { id: 'gemini-3.1-flash-image-preview', source: 'base' },
         { id: 'other-model', source: 'only' },
-        { id: 'gemini-3.1-flash-image-preview:image', source: 'lobehub' },
+        { id: 'gemini-3.1-flash-image-preview:image', source: 'orvilo' },
       ],
       removedCount: 1,
     });

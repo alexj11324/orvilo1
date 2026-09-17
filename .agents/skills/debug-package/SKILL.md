@@ -1,6 +1,6 @@
 ---
 name: debug-package
-description: 'Use for debug() logging, lobe-* namespaces, DEBUG/localStorage.debug configuration and log formatting.'
+description: 'Use for debug() logging, orvilo-* namespaces, DEBUG/localStorage.debug configuration and log formatting.'
 user-invocable: false
 ---
 
@@ -11,8 +11,8 @@ user-invocable: false
 ```typescript
 import debug from 'debug';
 
-// Format: lobe-[module]:[submodule]
-const log = debug('lobe-server:market');
+// Format: orvilo-[module]:[submodule]
+const log = debug('orvilo-server:market');
 
 log('Simple message');
 log('With variable: %O', object);
@@ -21,10 +21,10 @@ log('Formatted number: %d', number);
 
 ## Namespace Conventions
 
-- Desktop: `lobe-desktop:[module]`
-- Server: `lobe-server:[module]`
-- Client: `lobe-client:[module]`
-- Router: `lobe-[type]-router:[module]`
+- Desktop: `orvilo-desktop:[module]`
+- Server: `orvilo-server:[module]`
+- Client: `orvilo-client:[module]`
+- Router: `orvilo-[type]-router:[module]`
 
 ## Format Specifiers
 
@@ -38,20 +38,20 @@ log('Formatted number: %d', number);
 ### Browser
 
 ```javascript
-localStorage.debug = 'lobe-*';
+localStorage.debug = 'orvilo-*';
 ```
 
 ### Node.js
 
 ```bash
-DEBUG=lobe-* npm run dev
-DEBUG=lobe-* pnpm dev
+DEBUG=orvilo-* npm run dev
+DEBUG=orvilo-* pnpm dev
 ```
 
 ### Electron
 
 ```typescript
-process.env.DEBUG = 'lobe-*';
+process.env.DEBUG = 'orvilo-*';
 ```
 
 ## Example
@@ -60,7 +60,7 @@ process.env.DEBUG = 'lobe-*';
 // apps/server/src/routers/edge/market/index.ts
 import debug from 'debug';
 
-const log = debug('lobe-edge-router:market');
+const log = debug('orvilo-edge-router:market');
 
 log('getAgent input: %O', input);
 ```

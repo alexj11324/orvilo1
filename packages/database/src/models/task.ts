@@ -849,7 +849,9 @@ export class TaskModel {
         idempotencyKey:
           mutation.idempotencyKey === undefined
             ? undefined
-            : `${mutation.idempotencyKey}:${task.id}`,
+            : liveIds.length === 1
+              ? mutation.idempotencyKey
+              : `${mutation.idempotencyKey}:${task.id}`,
       });
     }
     const deleted = await this.db

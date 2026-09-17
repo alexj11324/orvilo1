@@ -100,6 +100,15 @@ export const LINEAR_SYNC_RETRY_MAX_MS = 60_000;
 export const LINEAR_ISSUE_LINK_TASK_ID_CAP = 100;
 export const LINEAR_ISSUE_LINK_LIST_DEFAULT_LIMIT = 100;
 
+/**
+ * PostgreSQL stores timestamptz values with microsecond precision while the
+ * API exposes JavaScript Dates with millisecond precision. Compare the
+ * millisecond value the caller observed so a returned row can be retried on
+ * both PGlite and node-postgres without losing the CAS guard.
+ */
+const sameObservedUpdatedAt = (column: unknown, expected: Date) =>
+  sql`date_trunc('milliseconds', ${column}) = date_trunc('milliseconds', ${expected}::timestamptz)`;
+
 /** Provider errors are user-visible diagnostics; expose only a safe classification. */
 export const sanitizeLinearSyncError = (value: string | null | undefined) => {
   if (!value) return null;
@@ -1799,7 +1808,7 @@ export class LinearSyncModel {
           eq(linearSyncInbox.id, id),
           eq(linearSyncInbox.workspaceId, this.workspaceId),
           inArray(linearSyncInbox.status, ['failed', 'dead_letter']),
-          eq(linearSyncInbox.updatedAt, expectedUpdatedAt),
+          sameObservedUpdatedAt(linearSyncInbox.updatedAt, expectedUpdatedAt),
           or(isNull(linearSyncInbox.lockedUntil), lt(linearSyncInbox.lockedUntil, now)),
         ),
       )
@@ -1828,7 +1837,7 @@ export class LinearSyncModel {
           eq(linearSyncOutbox.id, id),
           eq(linearSyncOutbox.workspaceId, this.workspaceId),
           inArray(linearSyncOutbox.status, ['failed', 'dead_letter', 'outcome_unknown']),
-          eq(linearSyncOutbox.updatedAt, expectedUpdatedAt),
+          sameObservedUpdatedAt(linearSyncOutbox.updatedAt, expectedUpdatedAt),
           or(isNull(linearSyncOutbox.lockedUntil), lt(linearSyncOutbox.lockedUntil, now)),
           sql`NOT EXISTS (
             SELECT 1
@@ -1872,7 +1881,7 @@ export class LinearSyncModel {
           eq(taskPlanningScopes.workspaceId, this.workspaceId),
           eq(taskPlanningScopes.status, 'failed'),
           gt(taskPlanningScopes.dirtyRevision, taskPlanningScopes.plannedRevision),
-          eq(taskPlanningScopes.updatedAt, expectedUpdatedAt),
+          sameObservedUpdatedAt(taskPlanningScopes.updatedAt, expectedUpdatedAt),
           or(isNull(taskPlanningScopes.lockedUntil), lt(taskPlanningScopes.lockedUntil, now)),
         ),
       )

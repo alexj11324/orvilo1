@@ -5,7 +5,6 @@ import type { LobeChatDatabase } from '@/database/type';
 import { MarketService } from '@/server/services/market';
 
 const log = debug('github-repo');
-
 const GITHUB_API = 'https://api.github.com';
 
 export interface GithubRepoCoordinate {
@@ -13,31 +12,13 @@ export interface GithubRepoCoordinate {
   owner: string;
 }
 
-/**
- * Parse a workspace `repo` coordinate — `owner/repo`, `owner/repo.git`, or a
- * `https://github.com/owner/repo[.git]` URL — into `{ owner, name }`.
- */
 export const parseGithubRepo = (repo: string): GithubRepoCoordinate | undefined => {
-  const trimmed = repo
-    .trim()
-    .replace(/\.git$/, '')
-    .replace(/\/+$/, '');
+  const trimmed = repo.trim().replace(/\.git$/, '').replace(/\/+$/, '');
   const match = /^(?:https?:\/\/github\.com\/)?([\w.-]+)\/([\w.-]+)$/.exec(trimmed);
   if (!match) return undefined;
   return { name: match[2], owner: match[1] };
 };
 
-/**
- * Resolve the caller's GitHub OAuth access token from Market credentials —
- * the same `github` cred the cloud sandbox injects as `GITHUB_TOKEN`. Inside a
- * workspace the credential lives on the shared organization, not the
- * operator's personal list. Returns `undefined` when no credential exists;
- * callers must tolerate anonymous API access (public repos only).
- *
- * Pass `marketService` when the caller already holds one (e.g. the aiAgent
- * pipeline's `deps.getMarketService()`); otherwise it is built from the
- * user's stored market access token.
- */
 export const resolveGithubAccessToken = async (params: {
   credKey?: string;
   db: LobeChatDatabase;
@@ -54,7 +35,7 @@ export const resolveGithubAccessToken = async (params: {
         const settings = await new UserModel(db, userId).getUserSettings();
         accessToken = (settings?.market as { accessToken?: string } | undefined)?.accessToken;
       } catch {
-        // non-fatal — MarketService falls back to the trusted client token
+        // MarketService can still use its trusted client token.
       }
       marketService = new MarketService({ accessToken, userInfo: { userId } });
     }
@@ -65,7 +46,6 @@ export const resolveGithubAccessToken = async (params: {
     const list = await credsAccessor.list();
     const cred = list.data?.find((c: { key: string }) => c.key === credKey);
     if (!cred) return undefined;
-
     const full = await credsAccessor.get(cred.id, { decrypt: true });
     const values = (full as any).plaintext ?? (full as any).values ?? {};
     return values.access_token ?? values.token;
@@ -99,7 +79,6 @@ const githubFetch = async (
   }
 };
 
-/** The repo's remote default branch; `undefined` when the API can't tell. */
 export const getRepoDefaultBranch = async (
   repo: string,
   token?: string,
@@ -112,23 +91,14 @@ export const getRepoDefaultBranch = async (
 };
 
 export interface RemotePrInfo {
-  /** Target branch recorded on the pull request. */
   baseBranch: string;
-  /** Source commit recorded on the pull request. */
   headSha: string;
   merged: boolean;
   number: number;
-  /** The merge commit SHA when the PR was merged. */
   sha?: string;
   url: string;
 }
 
-/**
- * Most recent pull request whose head is `headBranch` on this repo, if any.
- * Matches on the remote side — a squash-merged PR does not make the task
- * branch an ancestor of the base, so PR state is checked alongside the
- * ancestry compare in {@link isBranchMergedInto}.
- */
 export const findBranchPr = async (
   repo: string,
   headBranch: string,
@@ -159,7 +129,6 @@ export const findBranchPr = async (
   };
 };
 
-/** Resolve the current commit of one remote branch. */
 export const getRemoteBranchSha = async (
   repo: string,
   branch: string,
@@ -181,7 +150,6 @@ export interface RemoteBranchHead {
   state: 'found' | 'missing' | 'unknown';
 }
 
-/** Resolve the current remote branch tip while preserving 404 vs API failure. */
 export const getBranchHead = async (
   repo: string,
   branch: string,
@@ -200,13 +168,10 @@ export const getBranchHead = async (
 };
 
 /**
- * Whether `head` (a task branch) is fully contained in `base` on the remote —
- * i.e. `base` is equal to or ahead of `head`. 'unknown' covers API failures
- * (private repo without a token, rate limits, network). An ordinary unmerged
- * branch deliberately reports `unknown`: PR-bound task delivery must enter the
- * review controller rather than silently dispatching the legacy direct-merge
- * corrective path. The review controller observes the PR itself and is the
- * only component allowed to request its merge.
+ * A contained branch is merged. An ordinary unmerged PR branch intentionally
+ * returns `unknown` so the task integration layer holds instead of taking its
+ * legacy direct-merge corrective path; TaskDeliveryReviewService then owns CI,
+ * review feedback and the actual GitHub merge.
  */
 export const isBranchMergedInto = async (params: {
   base: string;
@@ -223,8 +188,39 @@ export const isBranchMergedInto = async (params: {
   if (!res.ok) return 'unknown';
   const status = res.json?.status;
   if (status === 'ahead' || status === 'identical') return 'merged';
-  if (status === 'behind' || status === 'diverged') return 'unknown';
   return 'unknown';
+};
+
+export interface CreatedPullRequest {
+  number: number;
+  url: string;
+}
+
+/** Create the delivery PR only after its branch is confirmed on the remote. */
+export const createPullRequestForBranch = async (params: {
+  baseBranch: string;
+  body?: string;
+  headBranch: string;
+  repo: string;
+  title: string;
+  token?: string;
+}): Promise<CreatedPullRequest | undefined> => {
+  const coordinate = parseGithubRepo(params.repo);
+  if (!coordinate) return undefined;
+  const res = await githubFetch(`/repos/${coordinate.owner}/${coordinate.name}/pulls`, params.token, {
+    body: {
+      base: params.baseBranch,
+      body: params.body,
+      head: params.headBranch,
+      maintainer_can_modify: true,
+      title: params.title,
+    },
+    method: 'POST',
+  });
+  if (!res.ok || typeof res.json?.number !== 'number' || typeof res.json?.html_url !== 'string') {
+    return undefined;
+  }
+  return { number: res.json.number, url: res.json.html_url };
 };
 
 export interface RemotePrReviewSnapshot {
@@ -254,11 +250,10 @@ export interface RemotePrReviewSnapshot {
 const humanActor = (user: any): boolean => user?.type !== 'Bot' && typeof user?.login === 'string';
 
 /**
- * Read the complete delivery gate for one PR revision. The snapshot is bound to
- * the PR head/base SHA so stale CI or review evidence cannot be reused after a
- * corrective push. Ordinary comments, inline comments, requested-changes
- * reviews and unresolved review threads are returned as stable ids for the
- * task review controller's dedupe ledger.
+ * Snapshot every merge gate against one immutable PR head revision. CI status,
+ * formal reviews, ordinary/inline comments and unresolved review threads are
+ * kept separate so the delivery controller can dispatch a corrective run once
+ * per piece of feedback and never reuse stale green evidence after a push.
  */
 export const getPullRequestReviewSnapshot = async (
   repo: string,
@@ -277,9 +272,8 @@ export const getPullRequestReviewSnapshot = async (
     typeof pr?.head?.sha !== 'string' ||
     typeof pr?.base?.sha !== 'string' ||
     typeof pr?.base?.ref !== 'string'
-  ) {
+  )
     return undefined;
-  }
 
   const [checksRes, reviewsRes, inlineRes, issueRes, threadRes] = await Promise.all([
     githubFetch(`${root}/commits/${encodeURIComponent(pr.head.sha)}/check-runs?per_page=100`, token),
@@ -294,11 +288,22 @@ export const getPullRequestReviewSnapshot = async (
       method: 'POST',
     }),
   ]);
-
-  if (!checksRes.ok || !reviewsRes.ok || !inlineRes.ok || !issueRes.ok || !threadRes.ok) {
+  if (
+    !checksRes.ok ||
+    !reviewsRes.ok ||
+    !inlineRes.ok ||
+    !issueRes.ok ||
+    !threadRes.ok ||
+    Array.isArray(threadRes.json?.errors)
+  )
     return undefined;
-  }
 
+  const checks = {
+    failed: [] as string[],
+    pending: [] as string[],
+    skipped: [] as string[],
+    successful: [] as string[],
+  };
   const failedConclusions = new Set([
     'action_required',
     'cancelled',
@@ -308,7 +313,6 @@ export const getPullRequestReviewSnapshot = async (
     'timed_out',
   ]);
   const skippedConclusions = new Set(['neutral', 'skipped']);
-  const checks = { failed: [] as string[], pending: [] as string[], skipped: [] as string[], successful: [] as string[] };
   const checkRuns = Array.isArray(checksRes.json?.check_runs) ? checksRes.json.check_runs : [];
   for (const check of checkRuns) {
     const name = typeof check?.name === 'string' ? check.name : 'unnamed check';
@@ -319,6 +323,13 @@ export const getPullRequestReviewSnapshot = async (
     else checks.pending.push(name);
   }
   if (checkRuns.length === 0) checks.pending.push('No CI checks reported for this revision yet');
+  else if (
+    checks.successful.length === 0 &&
+    checks.failed.length === 0 &&
+    checks.pending.length === 0
+  ) {
+    checks.pending.push('No CI check executed successfully for this revision');
+  }
 
   const reviews = Array.isArray(reviewsRes.json) ? reviewsRes.json : [];
   const requestedChangeReviewIds = reviews
@@ -334,7 +345,6 @@ export const getPullRequestReviewSnapshot = async (
       .filter((comment: any) => humanActor(comment?.user))
       .map((comment: any) => `issue-comment:${comment.id}`),
   ];
-
   const threadNodes = threadRes.json?.data?.repository?.pullRequest?.reviewThreads?.nodes;
   const unresolvedThreadIds = Array.isArray(threadNodes)
     ? threadNodes
@@ -377,7 +387,7 @@ export interface MergePullRequestResult {
   sha?: string;
 }
 
-/** Merge only the exact PR revision the delivery controller reviewed. */
+/** Merge only the exact PR revision reviewed by the delivery controller. */
 export const mergePullRequest = async (params: {
   expectedHeadSha: string;
   mergeMethod?: 'merge' | 'rebase' | 'squash';

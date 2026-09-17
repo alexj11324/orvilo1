@@ -95,6 +95,7 @@ vi.mock('@/database/models/plugin', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       armScheduledRun: vi.fn().mockResolvedValue(undefined),
       create: mockTopicCreate,
       findById: vi.fn().mockResolvedValue(undefined),

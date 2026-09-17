@@ -108,7 +108,11 @@ const {
 
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
-    return { delete: topicDeleteMock, findById: topicFindByIdMock };
+    return {
+      delete: topicDeleteMock,
+      findById: topicFindByIdMock,
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
+    };
   }),
 }));
 

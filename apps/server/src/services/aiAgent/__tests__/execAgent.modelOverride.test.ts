@@ -108,6 +108,7 @@ vi.mock('@/database/models/connectorTool', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: mockTopicCreate,

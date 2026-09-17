@@ -80,6 +80,7 @@ vi.mock('@/database/models/plugin', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       appendRunningOperationChild: vi.fn().mockResolvedValue(true),
       releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),

@@ -69,6 +69,7 @@ const topicSettleRunningOperationMock = vi
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       settleRunningOperation: topicSettleRunningOperationMock,
     };
   }),

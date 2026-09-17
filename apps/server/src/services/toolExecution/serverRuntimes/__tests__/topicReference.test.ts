@@ -10,6 +10,7 @@ const mockMessageModelQuery = vi.fn();
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       findOwnTopicById: (...args: any[]) => mockTopicModelFindOwnTopicById(...args),
     };
   }),

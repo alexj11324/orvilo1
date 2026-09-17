@@ -1,0 +1,45 @@
+name: PR Audit Round 2
+on:
+  push:
+    branches: [fix/pr-audit-round2-20260917]
+    paths: [.github/workflows/pr-audit-round2.yml]
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: paradedb/paradedb:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
+      DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_DRIVER: node
+      TEST_SERVER_DB: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-env
+      - run: pnpm install
+      - name: Apply review fixes
+        run: |
+          python .github/scripts/apply-pr-audit-round2.py
+          git diff --check
+          git add apps/server/src/services/task packages/database/src/models src/store/task/slices/detail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '🐛 fix(tasks): fence interruption recovery and polling dedupe'
+          git push origin HEAD:fix/pr-audit-round2-20260917
+      - name: Focused tests
+        run: |
+          bunx vitest run --project server apps/server/src/services/task/index.test.ts apps/server/src/services/task/interruptedGeneration.test.ts
+          (cd packages/database && bunx vitest run --no-file-parallelism src/models/__tests__/taskInterruptedRun.test.ts src/models/interruptedRunFence.test.ts)
+          bunx vitest run --project app src/store/task/slices/detail/action.test.ts src/store/task/slices/detail/polling.test.tsx src/store/task/slices/detail/pollingPolicy.test.ts
+      - name: Typecheck
+        run: pnpm type-check

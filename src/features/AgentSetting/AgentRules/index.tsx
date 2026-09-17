@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import urlJoin from 'url-join';
 
+import AsyncBoundary from '@/components/AsyncBoundary';
 import { useExpertiseOverview } from '@/features/SelfLearning/hooks';
 import { useAgentStore } from '@/store/agent';
 
@@ -39,7 +40,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const AgentRules = memo(() => {
   const { t } = useTranslation(['setting', 'selfLearning']);
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
-  const { data, isLoading } = useExpertiseOverview(activeAgentId ?? undefined);
+  const { data, error, isLoading, mutate } = useExpertiseOverview(activeAgentId ?? undefined);
 
   const domains = useMemo(() => data?.domains ?? [], [data]);
   const ruleCount = useMemo(
@@ -51,11 +52,18 @@ const AgentRules = memo(() => {
 
   return (
     <FormGroup collapsible={false} gap={16} title={t('agentTab.rules')} variant={'borderless'}>
-      {isLoading || domains.length === 0 ? (
-        <Text type={'secondary'}>
-          {isLoading ? t('agentRules.loading') : t('agentRules.empty')}
-        </Text>
-      ) : (
+      {/* A failed fetch is not "no rules" — surface it with a retry instead of
+          folding it into the empty copy. */}
+      <AsyncBoundary
+        data={data}
+        empty={<Text type={'secondary'}>{t('agentRules.empty')}</Text>}
+        error={error}
+        errorVariant={'block'}
+        isEmpty={!error && domains.length === 0}
+        isLoading={isLoading}
+        loading={<Text type={'secondary'}>{t('agentRules.loading')}</Text>}
+        onRetry={() => mutate()}
+      >
         <Block padding={0} variant={'outlined'}>
           {domains.map((domain) => (
             <div className={styles.row} key={domain.id}>
@@ -73,7 +81,7 @@ const AgentRules = memo(() => {
             </div>
           ))}
         </Block>
-      )}
+      </AsyncBoundary>
       <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
         <Text fontSize={12} type={'secondary'}>
           {t('agentRules.summary', { count: ruleCount })}

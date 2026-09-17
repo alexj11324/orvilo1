@@ -410,6 +410,9 @@ export class LinearSyncModel {
         linearIssueId: input.linearIssueId,
         organizationId: input.organizationId,
         remoteSnapshot: input.remoteSnapshot,
+        remoteUpdatedAt: input.remoteSnapshot?.updatedAt
+          ? new Date(input.remoteSnapshot.updatedAt)
+          : undefined,
         taskId: input.taskId,
         workspaceId: this.workspaceId,
       })
@@ -753,14 +756,37 @@ export class LinearSyncModel {
 
       if (!outbox) return null;
 
+      const [newerIntent] = outbox.linkId
+        ? await tx
+            .select({ id: linearSyncOutbox.id })
+            .from(linearSyncOutbox)
+            .where(
+              and(
+                eq(linearSyncOutbox.workspaceId, this.workspaceId),
+                eq(linearSyncOutbox.linkId, outbox.linkId),
+                gt(linearSyncOutbox.expectedLocalRevision, outbox.expectedLocalRevision),
+                inArray(linearSyncOutbox.status, [
+                  'failed',
+                  'outcome_unknown',
+                  'pending',
+                  'sending',
+                ]),
+              ),
+            )
+            .limit(1)
+        : [];
+
       const [link] = await tx
         .update(linearIssueLinks)
         .set({
-          conflict: null,
+          ...(newerIntent ? {} : { conflict: null }),
           lastConfirmedSnapshot: input.remoteSnapshot,
-          lastOutboundRevision: outbox.expectedLocalRevision,
+          lastOutboundRevision: sql`greatest(${linearIssueLinks.lastOutboundRevision}, ${outbox.expectedLocalRevision})`,
           remoteSnapshot: input.remoteSnapshot,
-          syncState: 'synced',
+          remoteUpdatedAt: input.remoteSnapshot.updatedAt
+            ? new Date(input.remoteSnapshot.updatedAt)
+            : undefined,
+          syncState: newerIntent ? 'pending' : 'synced',
           updatedAt: now,
         })
         .where(

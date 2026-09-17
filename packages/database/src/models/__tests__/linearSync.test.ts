@@ -5,17 +5,20 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import {
   linearInstallations,
+  linearIssueLinks,
   linearProjectBindings,
   linearSyncInbox,
   linearSyncOutbox,
   taskDomainEvents,
   taskPlanningRevisions,
   taskPlanningScopes,
+  tasks,
   users,
   workspaces,
 } from '../../schemas';
 import type { LobeChatDatabase } from '../../type';
 import { LinearSyncModel } from '../linearSync';
+import { ProjectModel } from '../project';
 
 const db: LobeChatDatabase = await getTestDB();
 const userId = 'linear-sync-model-user';
@@ -246,5 +249,91 @@ describe('LinearSyncModel', () => {
     await expect(
       new LinearSyncModel(db, workspaceId).nextSyncWakeAt(installationId),
     ).resolves.toEqual(availableAt);
+  });
+
+  it('does not let an older outbox receipt clear a newer local revision', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'SYNC',
+      name: 'Sync Project',
+    });
+    const binding = await model.upsertBinding({
+      installationId,
+      linearProjectId: 'linear-project-1',
+      projectId: project.id,
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'SYNC-1',
+        instruction: 'Newest local requirement',
+        projectId: project.id,
+        seq: 1,
+        workspaceId,
+      })
+      .returning();
+    const snapshot = {
+      id: 'linear-issue-1',
+      identifier: 'ENG-1',
+      projectId: 'linear-project-1',
+      title: 'Base title',
+    };
+    const link = await model.createIssueLink({
+      bindingId: binding.id,
+      installationId,
+      linearIdentifier: snapshot.identifier,
+      linearIssueId: snapshot.id,
+      organizationId: 'linear-org-1',
+      remoteSnapshot: snapshot,
+      taskId: task.id,
+    });
+    await model.queueOutbox({
+      expectedLocalRevision: 12,
+      installationId,
+      linkId: link.id,
+      operation: 'update_issue',
+      payload: { title: 'v12' },
+      taskId: task.id,
+    });
+    const [claimed] = await model.claimOutbox(1, 60_000, installationId, 'worker-v12');
+    await model.queueOutbox({
+      expectedLocalRevision: 13,
+      installationId,
+      linkId: link.id,
+      operation: 'update_issue',
+      payload: { title: 'v13' },
+      taskId: task.id,
+    });
+
+    await model.settleOutbox(
+      claimed.id,
+      { fence: claimed.leaseFence, owner: 'worker-v12' },
+      {
+        issueLinkId: link.id,
+        remoteSnapshot: { ...snapshot, title: 'v12', updatedAt: '2026-09-16T12:00:00.000Z' },
+      },
+    );
+
+    const [settledLink] = await db
+      .select()
+      .from(linearIssueLinks)
+      .where(eq(linearIssueLinks.id, link.id));
+    expect(settledLink).toMatchObject({
+      lastOutboundRevision: 12,
+      syncState: 'pending',
+    });
+    expect(settledLink.lastConfirmedSnapshot).toMatchObject({ title: 'v12' });
+    const rows = await db
+      .select()
+      .from(linearSyncOutbox)
+      .where(eq(linearSyncOutbox.linkId, link.id));
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ expectedLocalRevision: 12, status: 'sent' }),
+        expect.objectContaining({ expectedLocalRevision: 13, status: 'pending' }),
+      ]),
+    );
   });
 });

@@ -530,6 +530,25 @@ export class LinearSyncWorker {
       return 'imported';
     }
 
+    const incomingUpdatedAt = issue.updatedAt ? new Date(issue.updatedAt) : null;
+    if (
+      incomingUpdatedAt &&
+      Number.isFinite(incomingUpdatedAt.getTime()) &&
+      existingLink.remoteUpdatedAt &&
+      incomingUpdatedAt.getTime() <= existingLink.remoteUpdatedAt.getTime()
+    ) {
+      await model.updateIssueLink(existingLink.id, { lastInboundDeliveryId: row.id });
+      if (context.phase) {
+        await model.recordImportReceipt({
+          bindingId: binding.id,
+          linearIssueId: issue.id,
+          phase: context.phase,
+          status: 'processed',
+        });
+      }
+      return 'processed';
+    }
+
     const [task] = await db
       .select()
       .from(tasks)
@@ -539,6 +558,7 @@ export class LinearSyncWorker {
       await model.updateIssueLink(existingLink.id, {
         lastInboundDeliveryId: row.id,
         remoteSnapshot: issue,
+        remoteUpdatedAt: incomingUpdatedAt,
         syncState: 'removed',
       });
       if (context.phase) {
@@ -563,6 +583,7 @@ export class LinearSyncWorker {
         conflict: merged.conflicts,
         lastInboundDeliveryId: row.id,
         remoteSnapshot: issue,
+        remoteUpdatedAt: incomingUpdatedAt,
         syncState: 'conflict',
       });
       if (context.phase) {
@@ -615,6 +636,7 @@ export class LinearSyncWorker {
       lastConfirmedSnapshot: issue,
       lastInboundDeliveryId: row.id,
       remoteSnapshot: issue,
+      remoteUpdatedAt: incomingUpdatedAt,
       syncState: localChanged.length > 0 ? 'pending' : 'synced',
     });
     if (context.phase) {

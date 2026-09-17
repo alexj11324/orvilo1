@@ -890,8 +890,8 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
   // Must come AFTER all reserved root paths so they don't shadow e.g. /agent.
   {
     children: [
-      // Web renders Home beside the router outlet; Electron injects a per-tab
-      // Home element because each tab owns an independent memory router.
+      // The workspace index is the same landing slot as the root index: both
+      // platforms fill it with the redirect to the task board.
       {
         element: deferPlatformElement(options.createHomeElement),
         handle: { meta: workspaceHomeRouteMeta },
@@ -1227,7 +1227,8 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
     path: ':workspaceSlug',
   },
 
-  // Web leaves this element empty; Electron injects the per-tab Home route.
+  // Both platforms land on the task board now — the element is a redirect on
+  // Web and, inside each Electron tab's own memory router, the same one.
   {
     element: deferPlatformElement(options.createHomeElement),
     handle: {

@@ -174,7 +174,9 @@ describe('deploy docker-compose optional Elasticsearch', () => {
       '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
     );
     expect(dockerfile).toContain('COPY --from=builder /app/hatchet-worker /app/hatchet-worker');
-    expect(dockerfile).toContain('pnpm add pg drizzle-orm @neondatabase/serverless sharp');
+    expect(dockerfile).toContain(
+      'pnpm add --allow-build=sharp pg drizzle-orm @neondatabase/serverless sharp@0.34.5',
+    );
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/sharp /app/node_modules/sharp',
     );

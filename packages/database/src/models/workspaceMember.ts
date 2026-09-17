@@ -10,6 +10,7 @@ import { users } from '../schemas/user';
 import { workspaceInvitations, workspaceMembers } from '../schemas/workspace';
 import type { LobeChatDatabase } from '../type';
 import { ResourcePermissionModel } from './resourcePermission';
+import { recordBulkTaskMutation } from './taskDomainMutation';
 
 type MemberRole = 'admin' | 'member' | 'viewer';
 
@@ -198,15 +199,27 @@ export class WorkspaceMemberModel {
 
       await new ResourcePermissionModel(tx, workspaceId).removeMemberGrants(userId);
 
-      await tx
+      const detachedTasks = await tx
         .update(tasks)
-        .set({ assigneeUserId: null, reviewerUserId: null })
+        .set({
+          assigneeUserId: null,
+          domainRevision: sql`${tasks.domainRevision} + 1`,
+          policyRevision: sql`${tasks.policyRevision} + 1`,
+          reviewerUserId: null,
+          updatedAt: tasks.updatedAt,
+        })
         .where(
           and(
             eq(tasks.workspaceId, workspaceId),
             or(eq(tasks.assigneeUserId, userId), eq(tasks.reviewerUserId, userId)),
           ),
-        );
+        )
+        .returning();
+      await recordBulkTaskMutation(tx, detachedTasks, {
+        changedFields: ['assigneeUserId', 'reviewerUserId'],
+        eventType: 'task.assigned',
+        idempotencyKeyPrefix: `workspace-member-removed:${workspaceId}:${userId}`,
+      });
     });
 
     // Surfaced so callers can best-effort unenroll any still-connected gateway
@@ -231,15 +244,27 @@ export class WorkspaceMemberModel {
         .returning({ userId: workspaceMembers.userId });
 
       if (updatedMembers.length > 0 && !canWorkspaceRoleBeTaskAssignee(role)) {
-        await tx
+        const detachedTasks = await tx
           .update(tasks)
-          .set({ assigneeUserId: null, reviewerUserId: null })
+          .set({
+            assigneeUserId: null,
+            domainRevision: sql`${tasks.domainRevision} + 1`,
+            policyRevision: sql`${tasks.policyRevision} + 1`,
+            reviewerUserId: null,
+            updatedAt: tasks.updatedAt,
+          })
           .where(
             and(
               eq(tasks.workspaceId, workspaceId),
               or(eq(tasks.assigneeUserId, userId), eq(tasks.reviewerUserId, userId)),
             ),
-          );
+          )
+          .returning();
+        await recordBulkTaskMutation(tx, detachedTasks, {
+          changedFields: ['assigneeUserId', 'reviewerUserId'],
+          eventType: 'task.assigned',
+          idempotencyKeyPrefix: `workspace-member-role:${workspaceId}:${userId}:${role}`,
+        });
       }
 
       return updatedMembers;

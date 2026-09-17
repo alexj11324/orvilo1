@@ -42,6 +42,7 @@ export type TaskDomainEventType =
   | 'task.deleted'
   | 'task.dependency.changed'
   | 'task.requirement.changed'
+  | 'task.scope.changed'
   | 'task.status.changed';
 
 /** Status mapping is explicit per Linear workflow-state UUID. */

@@ -8,6 +8,7 @@ const semanticEventTypes = new Set([
   'task.created',
   'task.dependency.changed',
   'task.requirement.changed',
+  'task.scope.changed',
   'task.status.changed',
 ]);
 

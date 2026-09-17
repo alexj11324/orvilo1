@@ -26,6 +26,7 @@ import {
   knowledgeBases,
   projectAgents,
   projects,
+  taskDomainEvents,
   tasks,
   topicDocuments,
   topics,
@@ -828,8 +829,20 @@ describe('AgentModel.transferAgentOwnership', () => {
     // Ownership never changes; only unusable private-agent assignments detach.
     expect(taskRows.find((t) => t.identifier === 'TASK-1')?.createdByUserId).toBe(ownerId);
     expect(taskRows.find((t) => t.identifier === 'TASK-1')?.assigneeAgentId).toBeNull();
+    expect(taskRows.find((t) => t.identifier === 'TASK-1')?.domainRevision).toBe(2);
     expect(taskRows.find((t) => t.identifier === 'TASK-2')?.assigneeAgentId).toBe(privateAgent.id);
     expect(taskRows.find((t) => t.identifier === 'TASK-3')?.assigneeAgentId).toBe(publicAgent.id);
+    await expect(
+      serverDB
+        .select()
+        .from(taskDomainEvents)
+        .where(eq(taskDomainEvents.taskId, taskRows.find((t) => t.identifier === 'TASK-1')!.id)),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        source: 'system',
+        type: 'task.assigned',
+      }),
+    ]);
   });
 
   it('leaves other members’ groups when a PRIVATE agent is handed over', async () => {

@@ -152,7 +152,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     // @neondatabase/serverless at load time even though DATABASE_DRIVER=node never uses it, so the
     // image must ship that package next to pg and drizzle-orm or the container crash-loops.
     expect(dockerfile).toContain(
-      'pnpm add --allow-build=sharp pg drizzle-orm @neondatabase/serverless sharp@0.34.5',
+      'pnpm add --allow-build=sharp --allow-build=@hatchet-dev/typescript-sdk pg drizzle-orm @neondatabase/serverless sharp@0.34.5 @hatchet-dev/typescript-sdk@1.33.1 @grpc/grpc-js@1.14.4',
     );
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/@neondatabase /app/node_modules/@neondatabase',
@@ -172,12 +172,19 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     );
     expect(dockerfile).toContain('--out-extension:.js=.mjs');
     expect(dockerfile).toContain('--external:sharp');
+    expect(dockerfile).toContain('--external:@hatchet-dev/typescript-sdk');
     expect(dockerfile).toContain(
-      '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; import { fileURLToPath as fileURLToPathForHatchetBundle } from "node:url"; import { dirname as dirnameForHatchetBundle } from "node:path"; const require = createRequireForHatchetBundle(import.meta.url); const __filename = fileURLToPathForHatchetBundle(import.meta.url); const __dirname = dirnameForHatchetBundle(__filename);\'',
+      '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
     );
     expect(dockerfile).toContain('COPY --from=builder /app/hatchet-worker /app/hatchet-worker');
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/sharp /app/node_modules/sharp',
+    );
+    expect(dockerfile).toContain(
+      'COPY --from=builder /deps/node_modules/@hatchet-dev /app/node_modules/@hatchet-dev',
+    );
+    expect(dockerfile).toContain(
+      'COPY --from=builder /deps/node_modules/@grpc /app/node_modules/@grpc',
     );
   });
 

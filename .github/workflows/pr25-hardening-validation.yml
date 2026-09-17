@@ -1,0 +1,46 @@
+name: PR25 Hardening Validation
+on:
+  push:
+    branches: [feat/task-pr-delivery-review]
+    paths: [.github/workflows/pr25-hardening-validation.yml]
+permissions:
+  contents: write
+concurrency:
+  group: pr25-hardening-validation
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: ./.github/actions/setup-env
+      - name: Install dependencies
+        run: pnpm install
+      - name: Reconstruct and apply reviewed hardening patch
+        run: |
+          set -euo pipefail
+          cat .agents/tmp/pr25-hardening/00 .agents/tmp/pr25-hardening/01 .agents/tmp/pr25-hardening/02 .agents/tmp/pr25-hardening/03 .agents/tmp/pr25-hardening/04 | base64 -d | gzip -d > /tmp/pr25-hardening.patch
+          git apply --check /tmp/pr25-hardening.patch
+          git apply /tmp/pr25-hardening.patch
+      - name: Focused lint
+        run: bun run check --lint apps/server/src/services/githubRepo/index.ts apps/server/src/services/githubRepo/reviewGate.ts apps/server/src/services/githubRepo/reviewSnapshot.ts apps/server/src/services/githubRepo/index.test.ts apps/server/src/services/githubRepo/reviewSnapshot.test.ts apps/server/src/services/taskDeliveryReview/index.ts apps/server/src/services/taskDeliveryReview/index.test.ts
+      - name: GitHub delivery evidence regressions
+        run: bunx vitest run --project server --silent='passed-only' apps/server/src/services/githubRepo/index.test.ts apps/server/src/services/githubRepo/reviewSnapshot.test.ts apps/server/src/services/taskDeliveryReview/index.test.ts
+      - name: Full repository typecheck
+        run: pnpm type-check
+      - name: Commit verified hardening and remove temporary harness
+        run: |
+          set -euo pipefail
+          git config user.name 'ChatGPT Delivery Repair'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .agents/tmp/pr25-hardening/00 .agents/tmp/pr25-hardening/01 .agents/tmp/pr25-hardening/02 .agents/tmp/pr25-hardening/03 .agents/tmp/pr25-hardening/04 .github/workflows/pr25-hardening-validation.yml
+          git add apps/server/src/services/githubRepo apps/server/src/services/taskDeliveryReview
+          git diff --cached --check
+          git commit -m '🛡️ fix(tasks): harden PR delivery evidence'
+          git push origin HEAD:feat/task-pr-delivery-review

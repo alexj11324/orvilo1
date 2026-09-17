@@ -949,7 +949,9 @@ Web 侧该 index 元素被 `createHomeElement: () => <WebHomeRedirect />` 取代
 
 - **若是模块求值**（体内 `await import(...)` / `vi.resetModules()`），移到模块作用域即可 ——
   静态 import + 提升的 `vi.mock`，图只求值一次且落在收集阶段，不受 `testTimeout` 约束。
-  两处已这么做：banner 用例 13001 → 89ms，本节 authMount 25756 → 12ms。
+  三处已这么做：banner 用例 13001 → 89ms，本节 authMount 25756 → 12ms，
+  以及 `Home/__tests__/homeDashboard.test.tsx` 2488 → 37ms（第三例是被一次 225 文件的广域跑撞出 20s 超时后才发现的 ——
+  它自己的 `tests` 占比一直是高的，只是单独跑够快）。
 - **若是测试体本身不可约的工作**，就只能把预算配到实测值，并写清为什么不可约。
 
 ⚠️ **不要拿 `tests` 占比单独当判别**（这是本小节上一版的漏洞）：它只说明**整个 run 是否被收集主导**。

@@ -8,6 +8,7 @@ permissions:
 concurrency:
   group: pr25-review-order-validation
   cancel-in-progress: false
+# Retry after aligning the follow-up with the hardened snapshot error contract.
 jobs:
   validate:
     runs-on: ubuntu-latest

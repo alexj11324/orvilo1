@@ -17,7 +17,10 @@ concurrency:
 
 jobs:
   teardown:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner &&
+      github.triggering_actor == github.repository_owner
     name: Drop per-PR database and role
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -28,7 +31,21 @@ jobs:
       DB_TLS_HOST: ${{ vars.PREVIEW_DB_TLS_HOST }}
       HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
     steps:
+      - name: Checkout trusted cleanup helpers
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Check branch reuse before all teardown
+        id: cleanup-preflight
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/ci/checkPreviewCleanup.mjs
+
       - name: Drop database and per-PR roles
+        if: steps.cleanup-preflight.outputs.allowed == 'true'
         env:
           ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
           DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
@@ -37,7 +54,10 @@ jobs:
           : "${ADMIN_URL:?PREVIEW_DB_ADMIN_URL is required}"
           : "${DATABASE_SSL_CA:?PREVIEW_DATABASE_SSL_CA is required}"
           pg_ca_file="$RUNNER_TEMP/orvilo-preview-postgres-ca.crt"
-          printf '%s\n' "$DATABASE_SSL_CA" > "$pg_ca_file"
+          # The wizard accepts literal \n sequences as a single-line PEM input.
+          DATABASE_SSL_CA="$DATABASE_SSL_CA" node -e '
+            process.stdout.write(process.env.DATABASE_SSL_CA.replaceAll("\\n", "\n"));
+          ' > "$pg_ca_file"
           chmod 600 "$pg_ca_file"
           ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" CA_FILE="$pg_ca_file" node -e '
             const url = new URL(process.env.DATABASE_URL);
@@ -94,13 +114,13 @@ jobs:
           then
             echo "dropped migration role for database=$DB_NAME"
           else
-            echo "failed to drop migration role for database=$DB_NAME" >&2
+            echo "failed to drop migration role=$DB_NAME" >&2
             cleanup_failed=1
           fi
           exit "$cleanup_failed"
 
       - name: Remove Vercel branch env DATABASE_URL
-        if: always()
+        if: always() && steps.cleanup-preflight.outputs.allowed == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_API_URL: ${{ github.api_url }}
@@ -114,23 +134,10 @@ jobs:
           set -euo pipefail
           echo "::add-mask::$GITHUB_TOKEN"
           echo "::add-mask::$VERCEL_TOKEN"
-          open_prs=$(curl -fsS --get \
-            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/pulls" \
-            --data-urlencode 'state=open' \
-            --data-urlencode "head=${GITHUB_REPOSITORY_OWNER}:${HEAD_BRANCH}" \
-            --data-urlencode 'per_page=100' \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28')
-          branch_reuse_count=$(jq -r --arg repo "$GITHUB_REPOSITORY" --arg branch "$HEAD_BRANCH" --argjson closed "$PR_NUMBER" '
-            [.[]?
-              | select(.head.repo.full_name == $repo)
-              | select(.head.ref == $branch)
-              | select(.number != $closed)
-            ] | length
-          ' <<< "$open_prs")
-          if [[ "$branch_reuse_count" -gt 0 ]]; then
-            echo "an open same-repository PR reuses branch=$HEAD_BRANCH; keeping branch env"
+          # Re-check before removing branch routing if another PR appeared
+          # after the preflight. A lookup error cannot authorize deletion.
+          node scripts/ci/checkPreviewCleanup.mjs
+          if [[ "$(tail -n 1 "$GITHUB_OUTPUT")" != "allowed=true" ]]; then
             exit 0
           fi
           env_ids=$(curl -fsS \

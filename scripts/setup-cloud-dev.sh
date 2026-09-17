@@ -402,6 +402,12 @@ fi
 say "为应用创建只对 orvilo_preview 有 CONNECT/表与序列读写权限的非管理员 LOGIN role。"
 ask_secret PREVIEW_DATABASE_URL "粘贴该最小权限角色的 Preview 连接串："
 ask_secret PREVIEW_TEST_DATABASE_URL "粘贴受限 CI role 的 Preview 连接串："
+# Validate and publish the identical certificate-host URLs. Probes must not
+# silently repair only their private copy of a subsequently published IP URL.
+PREVIEW_DATABASE_URL=$(PREVIEW_RESTRICTED_URL="$PREVIEW_DATABASE_URL" \
+  PREVIEW_DB_TLS_HOST="$PREVIEW_DB_TLS_HOST" node scripts/ci/normalizePreviewDatabaseUrl.mjs)
+PREVIEW_TEST_DATABASE_URL=$(PREVIEW_RESTRICTED_URL="$PREVIEW_TEST_DATABASE_URL" \
+  PREVIEW_DB_TLS_HOST="$PREVIEW_DB_TLS_HOST" node scripts/ci/normalizePreviewDatabaseUrl.mjs)
 ADMIN_USERNAME=$(ADMIN_URL="$PREVIEW_DB_ADMIN_URL" node -e 'process.stdout.write(new URL(process.env.ADMIN_URL).username)')
 APP_USERNAME=$(APP_URL="$PREVIEW_DATABASE_URL" node -e 'process.stdout.write(new URL(process.env.APP_URL).username)')
 [[ -n "$APP_USERNAME" && "$APP_USERNAME" != "$ADMIN_USERNAME" ]] || {

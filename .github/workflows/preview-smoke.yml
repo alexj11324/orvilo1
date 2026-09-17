@@ -25,6 +25,8 @@ on:
 
 permissions:
   contents: read
+  deployments: read
+  pull-requests: read
 
 concurrency:
   # Smoke and full E2E share the small Preview PostgreSQL instance. Queue both

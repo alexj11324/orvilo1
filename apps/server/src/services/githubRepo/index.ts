@@ -6,6 +6,7 @@ import { MarketService } from '@/server/services/market';
 
 const log = debug('github-repo');
 const GITHUB_API = 'https://api.github.com';
+const NON_DELIVERY_CHECK_NAMES = new Set(['Check Duplicate Run']);
 
 export interface GithubRepoCoordinate {
   name: string;
@@ -316,6 +317,10 @@ export const getPullRequestReviewSnapshot = async (
   const checkRuns = Array.isArray(checksRes.json?.check_runs) ? checksRes.json.check_runs : [];
   for (const check of checkRuns) {
     const name = typeof check?.name === 'string' ? check.name : 'unnamed check';
+    if (NON_DELIVERY_CHECK_NAMES.has(name)) {
+      checks.skipped.push(name);
+      continue;
+    }
     if (check?.status !== 'completed') checks.pending.push(name);
     else if (failedConclusions.has(check?.conclusion)) checks.failed.push(name);
     else if (skippedConclusions.has(check?.conclusion)) checks.skipped.push(name);
@@ -328,18 +333,23 @@ export const getPullRequestReviewSnapshot = async (
     checks.failed.length === 0 &&
     checks.pending.length === 0
   ) {
-    checks.pending.push('No CI check executed successfully for this revision');
+    checks.pending.push('No delivery CI check executed successfully for this revision');
   }
 
   const reviews = Array.isArray(reviewsRes.json) ? reviewsRes.json : [];
-  // GitHub returns the review history, not just the current decision. Keep the
-  // latest decisive (APPROVED/CHANGES_REQUESTED) review per actor so an old
-  // change request cannot block the PR forever after that reviewer approves a
-  // later revision. COMMENTED reviews deliberately do not clear a decision.
+  // GitHub returns review history, not only the current decision. Keep the
+  // latest decisive state per actor. COMMENTED does not clear a decision;
+  // DISMISSED does, which prevents a dismissed old change request from
+  // blocking a delivery forever.
   const latestDecisiveReviewByActor = new Map<string, any>();
   for (const review of reviews) {
     if (!humanActor(review?.user)) continue;
-    if (review?.state !== 'APPROVED' && review?.state !== 'CHANGES_REQUESTED') continue;
+    if (
+      review?.state !== 'APPROVED' &&
+      review?.state !== 'CHANGES_REQUESTED' &&
+      review?.state !== 'DISMISSED'
+    )
+      continue;
     latestDecisiveReviewByActor.set(review.user.login, review);
   }
   const requestedChangeReviewIds = [...latestDecisiveReviewByActor.values()]

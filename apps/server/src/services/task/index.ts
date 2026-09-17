@@ -1747,8 +1747,8 @@ export class TaskService {
       dependencies: dependencies.map((d) => {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
-          dependsOn: info?.identifier ?? d.dependsOnId,
-          id: d.dependsOnId,
+          dependsOn: info?.identifier ?? 'Unavailable prerequisite',
+          ...(info ? { id: d.dependsOnId } : {}),
           name: info?.name,
           status: info?.status ?? null,
           type: d.type,

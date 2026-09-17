@@ -788,7 +788,7 @@ describe('TaskService', () => {
       ]);
     });
 
-    it('should fall back to raw dependsOnId when dep task is not found', async () => {
+    it('should redact an unavailable dependency instead of exposing its id', async () => {
       const task = {
         assigneeAgentId: null,
         assigneeUserId: null,
@@ -826,8 +826,7 @@ describe('TaskService', () => {
 
       expect(result?.dependencies).toEqual([
         {
-          dependsOn: 'task_missing',
-          id: 'task_missing',
+          dependsOn: 'Unavailable prerequisite',
           name: undefined,
           status: null,
           type: 'blocks',

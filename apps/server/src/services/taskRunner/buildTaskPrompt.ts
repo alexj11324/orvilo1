@@ -333,7 +333,7 @@ export async function buildTaskPrompt(
       assigneeAgentId: task.assigneeAgentId,
       automationMode: task.automationMode,
       dependencies: dependencies.map((d: any) => ({
-        dependsOn: depIdToIdentifier.get(d.dependsOnId) ?? d.dependsOnId,
+        dependsOn: depIdToIdentifier.get(d.dependsOnId) ?? 'Unavailable prerequisite',
         type: d.type,
       })),
       description: task.description,

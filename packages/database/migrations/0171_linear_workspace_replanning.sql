@@ -188,6 +188,7 @@ ALTER TABLE "task_dispatches" DROP CONSTRAINT IF EXISTS "task_dispatches_project
 ALTER TABLE "task_dispatches" ADD CONSTRAINT "task_dispatches_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "task_dispatches" DROP CONSTRAINT IF EXISTS "task_dispatches_agent_id_agents_id_fk";--> statement-breakpoint
 ALTER TABLE "task_dispatches" ADD CONSTRAINT "task_dispatches_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "tasks_id_workspace_id_unique" ON "tasks" USING btree ("id","workspace_id");--> statement-breakpoint
 ALTER TABLE "task_dispatches" DROP CONSTRAINT IF EXISTS "task_dispatches_task_workspace_fk";--> statement-breakpoint
 ALTER TABLE "task_dispatches" ADD CONSTRAINT "task_dispatches_task_workspace_fk" FOREIGN KEY ("task_id","workspace_id") REFERENCES "public"."tasks"("id","workspace_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "linear_external_comments_workspace_remote_unique" ON "linear_external_comments" USING btree ("workspace_id","linear_comment_id");--> statement-breakpoint
@@ -224,6 +225,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS "task_topics_dispatch_id_unique" ON "task_topi
 CREATE INDEX IF NOT EXISTS "task_topics_generation_idx" ON "task_topics" USING btree ("task_id","execution_generation");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "tasks_workflow_category_idx" ON "tasks" USING btree ("workflow_category");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "tasks_orchestration_owner_idx" ON "tasks" USING btree ("orchestration_owner");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "tasks_id_workspace_id_unique" ON "tasks" USING btree ("id","workspace_id");--> statement-breakpoint
 ALTER TABLE "tasks" DROP CONSTRAINT IF EXISTS "tasks_managed_creator_requires_workspace";--> statement-breakpoint
 ALTER TABLE "tasks" ADD CONSTRAINT "tasks_managed_creator_requires_workspace" CHECK ("tasks"."created_by_subject_kind" NOT IN ('integration', 'system') OR "tasks"."workspace_id" IS NOT NULL);

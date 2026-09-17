@@ -1009,7 +1009,7 @@ export const discoverTools = async (
 
     for (const manifest of activeOrviloSkillManifests) {
       if (!isManifestIngestAllowed(manifest.identifier)) continue;
-      toolSourceMap[manifest.identifier] = 'lobehubSkill';
+      toolSourceMap[manifest.identifier] = 'orviloSkill';
     }
     for (const manifest of activeComposioManifests) {
       if (!isManifestIngestAllowed(manifest.identifier)) continue;

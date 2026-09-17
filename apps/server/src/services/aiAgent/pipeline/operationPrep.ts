@@ -371,7 +371,7 @@ export const prepareOperation = async (
     composioManifests,
     connectorManifests,
     executionPlan,
-    lobehubSkillManifests,
+    orviloSkillManifests,
     onlineDevices,
     toolsEngine,
     toolsResult,
@@ -543,11 +543,11 @@ export const prepareOperation = async (
           type: 'builtin' as const,
         })),
       // Lobehub Skills
-      ...lobehubSkillManifests.map((manifest) => ({
+      ...orviloSkillManifests.map((manifest) => ({
         description: manifest.meta?.description,
         identifier: manifest.identifier,
         name: manifest.meta?.title || manifest.identifier,
-        type: 'lobehub-skill' as const,
+        type: 'orvilo-skill' as const,
       })),
       // Composio tools
       ...composioManifests.map((manifest) => ({

@@ -90,6 +90,32 @@ export async function runHeartbeatTick(
     return { ran: false, reason: 'human-waiting' };
   }
 
+  const rearmBlockedHeartbeat = async () => {
+    if (task.status !== 'scheduled') return;
+
+    const scheduler = createTaskSchedulerModule();
+    const nextToken = randomUUID();
+    const tickMessageId = await scheduler.scheduleNextTopic({
+      delay: task.heartbeatInterval,
+      taskId,
+      tickToken: nextToken,
+      userId,
+    });
+    let retained = false;
+    try {
+      retained = await new TaskModel(db, userId, wsId).updateContextIfHeartbeatTick(
+        taskId,
+        activeTickToken,
+        task.heartbeatInterval,
+        { scheduledAt: new Date().toISOString(), tickMessageId, tickToken: nextToken },
+      );
+    } finally {
+      // Another tick, pause, cancel or configuration edit won. Never keep
+      // a delayed message that no longer owns this scheduled generation.
+      if (!retained) await scheduler.cancelScheduled(tickMessageId);
+    }
+  };
+
   const runner = new TaskRunnerService(db, userId, wsId);
   try {
     await runner.runTask({
@@ -104,29 +130,7 @@ export async function runHeartbeatTick(
     });
   } catch (e) {
     if (isTaskDependencyBlocked(e)) {
-      if (task.status === 'scheduled') {
-        const scheduler = createTaskSchedulerModule();
-        const nextToken = randomUUID();
-        const tickMessageId = await scheduler.scheduleNextTopic({
-          delay: task.heartbeatInterval,
-          taskId,
-          tickToken: nextToken,
-          userId,
-        });
-        let retained = false;
-        try {
-          retained = await new TaskModel(db, userId, wsId).updateContextIfHeartbeatTick(
-            taskId,
-            activeTickToken,
-            task.heartbeatInterval,
-            { scheduledAt: new Date().toISOString(), tickMessageId, tickToken: nextToken },
-          );
-        } finally {
-          // Another tick, pause, cancel or configuration edit won. Never keep
-          // a delayed message that no longer owns this scheduled generation.
-          if (!retained) await scheduler.cancelScheduled(tickMessageId);
-        }
-      }
+      await rearmBlockedHeartbeat();
       return { ran: false, reason: 'dependencies-blocked' };
     }
     // Concurrent tick / manual run already running this task — treat as a
@@ -137,6 +141,7 @@ export async function runHeartbeatTick(
       return { ran: false, reason: 'in-flight' };
     }
     if (e instanceof TRPCError && e.code === 'PRECONDITION_FAILED') {
+      await rearmBlockedHeartbeat();
       return { ran: false, reason: 'human-waiting' };
     }
     throw e;

@@ -52,6 +52,7 @@ export type LinearBindingView = {
   id: string;
   importCompletedAt: Date | string | null;
   importCursor: string | null;
+  importPhase: 'initial' | 'reconciliation' | 'completed';
   installationId: string;
   linearProjectId: string;
   projectId: string;
@@ -60,6 +61,18 @@ export type LinearBindingView = {
   syncEnabled: boolean;
   teamIds: string[];
   version: number;
+};
+
+export const isLinearImportInProgress = (
+  binding: Pick<LinearBindingView, 'importCursor' | 'importPhase'>,
+  lastImportCompleted?: boolean,
+) => {
+  if (binding.importPhase === 'completed') return false;
+  return (
+    binding.importPhase === 'reconciliation' ||
+    Boolean(binding.importCursor) ||
+    lastImportCompleted === false
+  );
 };
 
 export const getLinearBindingRollout = (

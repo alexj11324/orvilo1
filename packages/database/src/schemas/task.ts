@@ -231,11 +231,19 @@ export const taskDispatches = pgTable(
   },
   (t) => [
     foreignKey({
+      columns: [t.taskId],
+      foreignColumns: [tasks.id],
+      name: 'task_dispatches_task_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
       columns: [t.taskId, t.workspaceId],
       foreignColumns: [tasks.id, tasks.workspaceId],
       name: 'task_dispatches_task_workspace_fk',
     }).onDelete('cascade'),
     uniqueIndex('task_dispatches_workspace_idempotency_unique').on(t.workspaceId, t.idempotencyKey),
+    uniqueIndex('task_dispatches_personal_idempotency_unique')
+      .on(t.idempotencyKey)
+      .where(isNull(t.workspaceId)),
     uniqueIndex('task_dispatches_one_active_task_unique')
       .on(t.taskId)
       .where(

@@ -432,10 +432,13 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
   private isInstalledOrganization = (organizationId: string | null) =>
     !this.organizationId || organizationId === this.organizationId;
 
-  private requestData = async <T>(body: {
-    query: string;
-    variables?: Record<string, unknown>;
-  }): Promise<T> => {
+  private requestData = async <T>(
+    body: {
+      query: string;
+      variables?: Record<string, unknown>;
+    },
+    options: { suppressForbiddenFailure?: boolean } = {},
+  ): Promise<T> => {
     const accessToken = await this.auth.getAccessToken();
     try {
       return extractGraphQLData<T>(await this.request(accessToken, body));
@@ -444,8 +447,8 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
       const status = error instanceof LinearGraphqlError ? error.status : undefined;
       if (
         status === 401 ||
-        status === 403 ||
-        /permission|unauthori[sz]ed|revoked|forbidden/i.test(message)
+        (!options.suppressForbiddenFailure &&
+          (status === 403 || /permission|unauthori[sz]ed|revoked|forbidden/i.test(message)))
       ) {
         await this.auth.markProviderFailure?.({ message, status });
       }
@@ -459,7 +462,7 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
     body: { query: string; variables?: Record<string, unknown> },
   ): Promise<T> => {
     try {
-      return await this.requestData<T>(body);
+      return await this.requestData<T>(body, { suppressForbiddenFailure: true });
     } catch (error) {
       if (error instanceof LinearGraphqlError) {
         if (error.status === 401) throw new LinearRemoteAuthError(resource, resourceId);

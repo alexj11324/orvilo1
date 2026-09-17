@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { LinearRemoteResourceError } from './provider';
 import {
   LinearGraphqlIssueProvider,
   LinearIssueNotFoundError,
@@ -581,6 +582,23 @@ it('classifies a provider 401 as a reauthorization boundary', async () => {
     resourceId: 'issue-401',
     status: 401,
   });
+});
+
+it('keeps a resource-level 403 out of installation failure state', async () => {
+  const request = vi.fn().mockResolvedValue({ data: {}, status: 403 });
+  const markProviderFailure = vi.fn();
+  const provider = new LinearGraphqlIssueProvider(
+    { getAccessToken: vi.fn().mockResolvedValue('access-token'), markProviderFailure },
+    request,
+  );
+
+  await expect(provider.getIssue('private-issue')).rejects.toMatchObject({
+    name: 'LinearRemoteResourceError',
+    reason: 'forbidden',
+    resource: 'issue',
+    resourceId: 'private-issue',
+  } satisfies Partial<LinearRemoteResourceError>);
+  expect(markProviderFailure).not.toHaveBeenCalled();
 });
 
 it('passes preallocated UUIDv4 values to comment and relation creates', async () => {

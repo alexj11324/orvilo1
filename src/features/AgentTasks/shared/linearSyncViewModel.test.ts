@@ -7,6 +7,7 @@ import {
   getScopedProjects,
   getWizardStepStates,
   isCatalogOrganization,
+  isLinearImportInProgress,
   summarizeIssueLinks,
 } from './linearSyncViewModel';
 
@@ -105,5 +106,17 @@ describe('linear sync view model', () => {
         syncEnabled: true,
       }),
     ).toEqual({ readEnabled: false, writeEnabled: true });
+  });
+
+  it('keeps an incomplete import visibly resumable after a blocked page', () => {
+    expect(isLinearImportInProgress({ importCursor: null, importPhase: 'initial' }, false)).toBe(
+      true,
+    );
+    expect(isLinearImportInProgress({ importCursor: 'cursor-1', importPhase: 'initial' })).toBe(
+      true,
+    );
+    expect(isLinearImportInProgress({ importCursor: null, importPhase: 'completed' }, true)).toBe(
+      false,
+    );
   });
 });

@@ -742,6 +742,7 @@ export const linearSyncRouter = router({
             scopes: config.scopes,
             state,
           }),
+          callbackOrigin: new URL(redirectUri).origin,
         };
       } catch (error) {
         mapError(error, 'startOAuth');

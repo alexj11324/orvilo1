@@ -21,6 +21,8 @@ const cleanup = async () => {
   await db.delete(taskDispatches);
   await db.delete(tasks).where(eq(tasks.workspaceId, workspaceId));
   await db.delete(tasks).where(eq(tasks.workspaceId, otherWorkspaceId));
+  await db.delete(tasks).where(eq(tasks.createdByUserId, userId));
+  await db.delete(tasks).where(eq(tasks.createdByUserId, otherUserId));
   await db.delete(agents).where(eq(agents.userId, userId));
   await db.delete(agents).where(eq(agents.userId, otherUserId));
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
@@ -59,6 +61,20 @@ const createTask = async (identifier: string, seq: number, targetWorkspaceId = w
       instruction: `Run ${identifier}`,
       seq,
       workspaceId: targetWorkspaceId,
+    })
+    .returning();
+  return task;
+};
+
+const createPersonalTask = async (id: string, identifier: string, seq: number) => {
+  const [task] = await db
+    .insert(tasks)
+    .values({
+      createdByUserId: userId,
+      id,
+      identifier,
+      instruction: `Run ${identifier}`,
+      seq,
     })
     .returning();
   return task;
@@ -211,6 +227,52 @@ describe('TaskDispatchModel', () => {
         trigger: 'manual',
       }),
     ).rejects.toBeInstanceOf(TaskDispatchIdempotencyConflictError);
+  });
+
+  it('enforces idempotency keys across personal tasks', async () => {
+    const firstTask = await createPersonalTask('personal-dispatch-a', 'PERSONAL-A', 31);
+    const secondTask = await createPersonalTask('personal-dispatch-b', 'PERSONAL-B', 32);
+    const model = new TaskDispatchModel(db);
+
+    await model.request({
+      idempotencyKey: 'manual:personal-shared-request',
+      requestedBy: userId,
+      taskId: firstTask.id,
+      trigger: 'manual',
+    });
+
+    await expect(
+      model.request({
+        idempotencyKey: 'manual:personal-shared-request',
+        requestedBy: userId,
+        taskId: secondTask.id,
+        trigger: 'manual',
+      }),
+    ).rejects.toBeInstanceOf(TaskDispatchIdempotencyConflictError);
+  });
+
+  it('cascades a personal dispatch when its task is deleted', async () => {
+    const task = await createPersonalTask('personal-dispatch-cascade', 'PERSONAL-CASCADE', 33);
+    await db.insert(taskDispatches).values({
+      generation: 1,
+      id: 'personal-dispatch-cascade-row',
+      idempotencyKey: 'manual:personal-cascade',
+      policyRevision: 1,
+      requestedBy: `manual:${userId}`,
+      requirementRevision: 1,
+      taskId: task.id,
+      taskRevision: 1,
+      workspaceId: null,
+    });
+
+    await db.delete(tasks).where(eq(tasks.id, task.id));
+
+    await expect(
+      db
+        .select()
+        .from(taskDispatches)
+        .where(eq(taskDispatches.id, 'personal-dispatch-cascade-row')),
+    ).resolves.toEqual([]);
   });
 
   it('leases an expired dispatch for reconciliation without invalidating its callback fence', async () => {

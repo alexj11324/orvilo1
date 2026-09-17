@@ -135,7 +135,17 @@ ALTER TABLE "linear_sync_outbox" ADD COLUMN IF NOT EXISTS "lease_owner" text;-->
 ALTER TABLE "linear_sync_outbox" ADD COLUMN IF NOT EXISTS "lease_fence" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "orchestration_policy" jsonb DEFAULT '{"autoDispatch":false,"requireHumanReview":true,"replanMode":"disabled"}'::jsonb NOT NULL;--> statement-breakpoint
 ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "orchestration_policy_revision" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
-ALTER TABLE "task_topics" ADD COLUMN IF NOT EXISTS "run_state" text DEFAULT 'running' NOT NULL;--> statement-breakpoint
+ALTER TABLE "task_topics" ADD COLUMN IF NOT EXISTS "run_state" text;--> statement-breakpoint
+UPDATE "task_topics"
+SET "run_state" = CASE
+  WHEN "status" = 'completed' THEN 'succeeded'
+  WHEN "status" = 'canceled' THEN 'canceled'
+  WHEN "status" IN ('failed', 'timeout') THEN 'failed'
+  ELSE 'running'
+END
+WHERE "run_state" IS NULL;--> statement-breakpoint
+ALTER TABLE "task_topics" ALTER COLUMN "run_state" SET DEFAULT 'running';--> statement-breakpoint
+ALTER TABLE "task_topics" ALTER COLUMN "run_state" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "task_topics" ADD COLUMN IF NOT EXISTS "dispatch_id" text;--> statement-breakpoint
 ALTER TABLE "task_topics" ADD COLUMN IF NOT EXISTS "task_revision" integer;--> statement-breakpoint
 ALTER TABLE "task_topics" ADD COLUMN IF NOT EXISTS "requirement_revision" integer;--> statement-breakpoint
@@ -191,6 +201,12 @@ ALTER TABLE "task_dispatches" ADD CONSTRAINT "task_dispatches_agent_id_agents_id
 CREATE UNIQUE INDEX IF NOT EXISTS "tasks_id_workspace_id_unique" ON "tasks" USING btree ("id","workspace_id");--> statement-breakpoint
 ALTER TABLE "task_dispatches" DROP CONSTRAINT IF EXISTS "task_dispatches_task_workspace_fk";--> statement-breakpoint
 ALTER TABLE "task_dispatches" ADD CONSTRAINT "task_dispatches_task_workspace_fk" FOREIGN KEY ("task_id","workspace_id") REFERENCES "public"."tasks"("id","workspace_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+DELETE FROM "task_dispatches" AS duplicate
+WHERE NOT EXISTS (
+	SELECT 1 FROM "tasks" AS task WHERE task."id" = duplicate."task_id"
+);--> statement-breakpoint
+ALTER TABLE "task_dispatches" DROP CONSTRAINT IF EXISTS "task_dispatches_task_id_fk";--> statement-breakpoint
+ALTER TABLE "task_dispatches" ADD CONSTRAINT "task_dispatches_task_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "linear_external_comments_workspace_remote_unique" ON "linear_external_comments" USING btree ("workspace_id","linear_comment_id");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "linear_external_comments_workspace_local_unique" ON "linear_external_comments" USING btree ("workspace_id","local_comment_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "linear_external_comments_issue_link_idx" ON "linear_external_comments" USING btree ("issue_link_id");--> statement-breakpoint
@@ -206,6 +222,19 @@ CREATE INDEX IF NOT EXISTS "linear_issue_tombstones_issue_idx" ON "linear_issue_
 CREATE UNIQUE INDEX IF NOT EXISTS "linear_sync_import_receipts_binding_issue_unique" ON "linear_sync_import_receipts" USING btree ("binding_id","linear_issue_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "linear_sync_import_receipts_workspace_idx" ON "linear_sync_import_receipts" USING btree ("workspace_id","status");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "task_dispatches_workspace_idempotency_unique" ON "task_dispatches" USING btree ("workspace_id","idempotency_key");--> statement-breakpoint
+DELETE FROM "task_dispatches" AS duplicate
+WHERE duplicate."workspace_id" IS NULL
+  AND duplicate."id" IN (
+	SELECT "id" FROM (
+		SELECT "id", row_number() OVER (
+			PARTITION BY "idempotency_key" ORDER BY "created_at", "id"
+		) AS duplicate_rank
+		FROM "task_dispatches"
+		WHERE "workspace_id" IS NULL
+	) AS ranked
+	WHERE ranked.duplicate_rank > 1
+);--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "task_dispatches_personal_idempotency_unique" ON "task_dispatches" USING btree ("idempotency_key") WHERE "workspace_id" IS NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "task_dispatches_one_active_task_unique" ON "task_dispatches" USING btree ("task_id") WHERE "task_dispatches"."phase" IN ('requested', 'claimed', 'provisioning', 'dispatched', 'running', 'waiting', 'cancel_requested', 'outcome_unknown');--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "task_dispatches_task_generation_idx" ON "task_dispatches" USING btree ("task_id","generation");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "task_dispatches_lease_idx" ON "task_dispatches" USING btree ("phase","lease_expires_at");--> statement-breakpoint

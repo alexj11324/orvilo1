@@ -3684,6 +3684,7 @@ table task_dispatches {
   indexes {
 
     (workspace_id, idempotency_key) [name: 'task_dispatches_workspace_idempotency_unique', unique]
+    idempotency_key [name: 'task_dispatches_personal_idempotency_unique', unique]
     task_id [name: 'task_dispatches_one_active_task_unique', unique]
     (task_id, generation) [name: 'task_dispatches_task_generation_idx']
     (phase, lease_expires_at) [name: 'task_dispatches_lease_idx']

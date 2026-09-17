@@ -32,6 +32,7 @@ import {
   getLinearRecoverySummary,
   getScopedProjects,
   getWizardStepStates,
+  isLinearImportInProgress,
   type LinearBindingView,
   type LinearImportSummary,
   type LinearInstallationView,
@@ -41,6 +42,8 @@ import {
 } from '@/features/AgentTasks/shared/linearSyncViewModel';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
+
+import { waitForLinearOAuthPopup } from './oauthPopup';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -414,16 +417,6 @@ const STEP_ICONS = {
   sync: RefreshCw,
 } satisfies Record<LinearWizardStepId, typeof Link2>;
 
-const waitForPopup = (popup: Window) =>
-  new Promise<void>((resolve) => {
-    const timer = window.setInterval(() => {
-      if (popup.closed) {
-        window.clearInterval(timer);
-        resolve();
-      }
-    }, 500);
-  });
-
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error && error.message ? error.message : fallback;
 
@@ -592,19 +585,31 @@ const LinearWorkspaceSettings = memo(() => {
       installationResponse.data.find((item) => item.status === 'active') ??
       installationResponse.data[0];
     setSelectedInstallationId(nextInstallation?.id ?? '');
-    const nextInstallationId = nextInstallation?.id;
-    const catalogResponse = nextInstallationId
-      ? await lambdaClient.linearSync.catalog.query({ installationId: nextInstallationId })
+    const catalogInstallation =
+      nextInstallation?.status === 'active'
+        ? nextInstallation
+        : installationResponse.data.find((item) => item.status === 'active');
+    const catalogResponse = catalogInstallation
+      ? await lambdaClient.linearSync.catalog
+          .query({ installationId: catalogInstallation.id })
+          .catch((error) => {
+            if (nextInstallation?.status === 'active') throw error;
+            console.error('[LinearWorkspaceSettings] Failed to load fallback catalog', error);
+            return undefined;
+          })
       : undefined;
     setCatalog(
-      catalogResponse?.data ?? {
-        members: [],
-        organizations: [],
-        projects: [],
-        teams: [],
-        workflowStates: {},
-      },
+      nextInstallation?.status === 'active' && catalogResponse?.data
+        ? catalogResponse.data
+        : {
+            members: [],
+            organizations: [],
+            projects: [],
+            teams: [],
+            workflowStates: {},
+          },
     );
+    return installationResponse.data as LinearInstallationView[];
   }, [canManage, selectedInstallationId]);
 
   const loadCatalog = useCallback(async () => {
@@ -709,8 +714,26 @@ const LinearWorkspaceSettings = memo(() => {
       });
       if (!response?.authorizationUrl) throw new Error('Linear OAuth URL was not returned');
       popup.location.href = response.authorizationUrl;
-      await waitForPopup(popup);
-      await refresh();
+      const callback = await waitForLinearOAuthPopup(
+        popup,
+        response.callbackOrigin ?? window.location.origin,
+      );
+      if (callback.kind !== 'success') {
+        throw new Error(
+          callback.kind === 'cancelled'
+            ? t('workspaceSetting.linear.connectFailed')
+            : callback.error || t('workspaceSetting.linear.connectFailed'),
+        );
+      }
+      const refreshedInstallations = await refresh();
+      if (
+        !refreshedInstallations.some(
+          (installation) =>
+            installation.id === callback.installationId && installation.status === 'active',
+        )
+      ) {
+        throw new Error(t('workspaceSetting.linear.connectFailed'));
+      }
       toast.success(t('workspaceSetting.linear.connected'));
       setActiveStep('installation');
     } catch (error) {
@@ -875,7 +898,13 @@ const LinearWorkspaceSettings = memo(() => {
       if (!response?.data) throw new Error('Linear import response is empty');
       setLastImport(response.data);
       await Promise.all([refresh(), loadIssueLinks(selectedBinding.id)]);
-      toast.success(t('workspaceSetting.linear.importSuccess'));
+      toast.success(
+        t(
+          response.data.completed
+            ? 'workspaceSetting.linear.importSuccess'
+            : 'workspaceSetting.linear.importInProgress',
+        ),
+      );
     } catch (error) {
       toast.error(errorMessage(error, t('workspaceSetting.linear.importFailed')));
     } finally {
@@ -1527,108 +1556,118 @@ const LinearWorkspaceSettings = memo(() => {
     </StepCard>
   );
 
-  const renderImport = () => (
-    <StepCard
-      description={t(STEP_COPY.import.description as never)}
-      title={t(STEP_COPY.import.title as never)}
-      action={
-        <Button
-          disabled={!canManage || !hasBinding || issueLinksLoading}
-          icon={Upload}
-          loading={action === 'import'}
-          onClick={() => void importProject()}
-        >
-          {t('workspaceSetting.linear.importProject')}
-        </Button>
-      }
-    >
-      {!hasBinding || !selectedBinding ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.completeBinding')}
-          type={'warning'}
-        />
-      ) : (
-        <Flexbox gap={16}>
-          <div className={styles.statusPanel}>
-            <Tag icon={<Upload size={12} />} size={'small'}>
-              {selectedBinding.importCompletedAt
-                ? t('workspaceSetting.linear.importComplete')
-                : selectedBinding.importCursor
-                  ? t('workspaceSetting.linear.importInProgress')
-                  : t('workspaceSetting.linear.importReady')}
-            </Tag>
-            <Text type={'secondary'}>
-              {selectedBinding.importCompletedAt
-                ? dateLabel(selectedBinding.importCompletedAt, i18n.language)
-                : t('workspaceSetting.linear.importNotRun')}
-            </Text>
-            {lastImport && (
-              <Text className={styles.muted} fontSize={12}>
-                {t('workspaceSetting.linear.importBatch', {
-                  failed: lastImport.failed,
-                  imported: lastImport.imported,
-                })}
+  const renderImport = () => {
+    const importInProgress = Boolean(
+      selectedBinding && isLinearImportInProgress(selectedBinding, lastImport?.completed),
+    );
+
+    return (
+      <StepCard
+        description={t(STEP_COPY.import.description as never)}
+        title={t(STEP_COPY.import.title as never)}
+        action={
+          <Button
+            disabled={!canManage || !hasBinding || issueLinksLoading}
+            icon={Upload}
+            loading={action === 'import'}
+            onClick={() => void importProject()}
+          >
+            {t('workspaceSetting.linear.importProject')}
+          </Button>
+        }
+      >
+        {!hasBinding || !selectedBinding ? (
+          <Alert
+            showIcon
+            description={t('workspaceSetting.linear.wizard.completeBinding')}
+            type={'warning'}
+          />
+        ) : (
+          <Flexbox gap={16}>
+            <div className={styles.statusPanel}>
+              <Tag icon={<Upload size={12} />} size={'small'}>
+                {selectedBinding.importCompletedAt || selectedBinding.importPhase === 'completed'
+                  ? t('workspaceSetting.linear.importComplete')
+                  : importInProgress
+                    ? t('workspaceSetting.linear.importInProgress')
+                    : t('workspaceSetting.linear.importReady')}
+              </Tag>
+              <Text type={'secondary'}>
+                {selectedBinding.importCompletedAt || selectedBinding.importPhase === 'completed'
+                  ? dateLabel(selectedBinding.importCompletedAt, i18n.language)
+                  : importInProgress
+                    ? t('workspaceSetting.linear.importInProgress')
+                    : t('workspaceSetting.linear.importNotRun')}
               </Text>
-            )}
-          </div>
-          {issueLinksError && (
-            <Alert
-              showIcon
-              description={issueLinksError}
-              title={t('workspaceSetting.linear.issueLinksLoadFailed')}
-              type={'error'}
-              action={
-                <Button onClick={() => void loadIssueLinks(selectedBinding.id)}>
-                  {t('workspaceSetting.linear.retryLoad')}
-                </Button>
-              }
-            />
-          )}
-          <div className={styles.statusGrid}>
-            {(
-              [
-                ['total', issueSummary.total],
-                ['synced', issueSummary.synced],
-                ['pending', issueSummary.pending],
-                ['conflict', issueSummary.conflict],
-                ['outcomeUnknown', issueSummary.outcomeUnknown],
-                ['removed', issueSummary.removed],
-              ] as const
-            ).map(([key, count]) => (
-              <div className={styles.statusCell} key={key}>
-                <Text fontSize={12} type={'secondary'}>
-                  {t(`workspaceSetting.linear.import.${key}` as never)}
+              {lastImport && (
+                <Text className={styles.muted} fontSize={12}>
+                  {t('workspaceSetting.linear.importBatch', {
+                    failed: lastImport.failed,
+                    imported: lastImport.imported,
+                  })}
                 </Text>
-                <Text strong>{count}</Text>
-              </div>
-            ))}
-          </div>
-          {issueLinksLoading ? (
-            <Text className={styles.muted}>{t('workspaceSetting.linear.loadingIssueLinks')}</Text>
-          ) : issueLinks.length > 0 ? (
-            <div className={styles.previewList}>
-              {issueLinks.slice(0, 8).map((link) => (
-                <div className={styles.previewItem} key={link.id}>
-                  <Flexbox gap={2} style={{ minWidth: 0 }}>
-                    <Text ellipsis weight={500}>
-                      {link.linearIdentifier}
-                    </Text>
-                    <Text ellipsis className={styles.muted} fontSize={12}>
-                      {link.remoteSnapshot?.title ?? link.lastConfirmedSnapshot.title}
-                    </Text>
-                  </Flexbox>
-                  <Tag size={'small'}>{link.syncState}</Tag>
+              )}
+            </div>
+            {issueLinksError && (
+              <Alert
+                showIcon
+                description={issueLinksError}
+                title={t('workspaceSetting.linear.issueLinksLoadFailed')}
+                type={'error'}
+                action={
+                  <Button onClick={() => void loadIssueLinks(selectedBinding.id)}>
+                    {t('workspaceSetting.linear.retryLoad')}
+                  </Button>
+                }
+              />
+            )}
+            <div className={styles.statusGrid}>
+              {(
+                [
+                  ['total', issueSummary.total],
+                  ['synced', issueSummary.synced],
+                  ['pending', issueSummary.pending],
+                  ['conflict', issueSummary.conflict],
+                  ['outcomeUnknown', issueSummary.outcomeUnknown],
+                  ['removed', issueSummary.removed],
+                ] as const
+              ).map(([key, count]) => (
+                <div className={styles.statusCell} key={key}>
+                  <Text fontSize={12} type={'secondary'}>
+                    {t(`workspaceSetting.linear.import.${key}` as never)}
+                  </Text>
+                  <Text strong>{count}</Text>
                 </div>
               ))}
             </div>
-          ) : (
-            <Text className={styles.muted}>{t('workspaceSetting.linear.importPreviewEmpty')}</Text>
-          )}
-        </Flexbox>
-      )}
-    </StepCard>
-  );
+            {issueLinksLoading ? (
+              <Text className={styles.muted}>{t('workspaceSetting.linear.loadingIssueLinks')}</Text>
+            ) : issueLinks.length > 0 ? (
+              <div className={styles.previewList}>
+                {issueLinks.slice(0, 8).map((link) => (
+                  <div className={styles.previewItem} key={link.id}>
+                    <Flexbox gap={2} style={{ minWidth: 0 }}>
+                      <Text ellipsis weight={500}>
+                        {link.linearIdentifier}
+                      </Text>
+                      <Text ellipsis className={styles.muted} fontSize={12}>
+                        {link.remoteSnapshot?.title ?? link.lastConfirmedSnapshot.title}
+                      </Text>
+                    </Flexbox>
+                    <Tag size={'small'}>{link.syncState}</Tag>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Text className={styles.muted}>
+                {t('workspaceSetting.linear.importPreviewEmpty')}
+              </Text>
+            )}
+          </Flexbox>
+        )}
+      </StepCard>
+    );
+  };
 
   const renderSync = () => (
     <StepCard

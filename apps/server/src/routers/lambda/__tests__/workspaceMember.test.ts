@@ -28,7 +28,7 @@ const {
     rotateToken: vi.fn(),
   },
   invitationQueries: {
-    listInvitationProjectGrants: vi.fn(),
+    listInvitationProjectGrants: vi.fn().mockResolvedValue([]),
     listRecentTerminalInvitations: vi.fn(),
     markInvitationSent: vi.fn(),
   },

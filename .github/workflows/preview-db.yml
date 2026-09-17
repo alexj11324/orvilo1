@@ -33,7 +33,8 @@ jobs:
       vars.PREVIEW_EPHEMERAL_DB_ENABLED == 'true' &&
       vars.VERCEL_PREVIEW_DEPLOYMENT_GATE == 'open' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor == github.repository_owner
+      github.actor == github.repository_owner &&
+      github.triggering_actor == github.repository_owner
     name: Provision per-PR database
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -46,6 +47,12 @@ jobs:
       HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
+      - name: Checkout preflight helpers
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
       - name: Validate exact-head CI, Vercel access, and manual deployment gate
         env:
           GITHUB_TOKEN: ${{ github.token }}

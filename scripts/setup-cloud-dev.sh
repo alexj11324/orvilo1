@@ -292,6 +292,9 @@ admin_db_url() {
 
 gen_secret() { openssl rand -base64 32; }
 
+# shellcheck source=ci/previewIdentitySecrets.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ci/previewIdentitySecrets.sh"
+
 banner "Orvilo 云开发环境迁移"
 
 # ── Stage 1 · 前置检查 + Vercel link ────────────────────────────────────────
@@ -328,6 +331,10 @@ fi
 open_url "https://vercel.com/account/tokens"
 step "创建一个 Account-scoped token（名字随意，如 orvilo-ci）"
 ask_secret VERCEL_TOKEN "粘贴 Vercel token："
+load_preview_identity_inventory || { warn "无法读取远端密钥清单，停止以免覆盖已有配置。"; exit 1; }
+resolve_preview_identity_secret KEY_VAULTS_SECRET PREVIEW_KEY_VAULTS_SECRET
+resolve_preview_identity_secret AUTH_SECRET PREVIEW_AUTH_SECRET
+resolve_preview_identity_secret JWKS_KEY PREVIEW_JWKS_KEY
 
 # ── Stage 2 · Deployment Protection 绕过密钥 ────────────────────────────────
 stage "Deployment Protection（Preview 自动化绕过）"
@@ -379,8 +386,6 @@ else
 fi
 
 PREVIEW_DB_MIGRATION_URL=$(admin_db_url orvilo_preview)
-PREVIEW_KEY_VAULTS_SECRET=$(_existing KEY_VAULTS_SECRET || true)
-[[ -n "$PREVIEW_KEY_VAULTS_SECRET" ]] || PREVIEW_KEY_VAULTS_SECRET=$(gen_secret)
 if [[ -d node_modules ]] && confirm "现在对 Preview 库跑 bun run db:migrate？"; then
   if DATABASE_URL="$PREVIEW_DB_MIGRATION_URL" DATABASE_DRIVER=node \
     DATABASE_SSL_CA="$DATABASE_SSL_CA" KEY_VAULTS_SECRET="$PREVIEW_KEY_VAULTS_SECRET" \
@@ -453,18 +458,6 @@ S3_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
 # ── Stage 6 · 生成应用密钥 ──────────────────────────────────────────────────
 stage "生成 Preview 应用密钥"
-PREVIEW_AUTH_SECRET=$(_existing AUTH_SECRET || true)
-[[ -n "$PREVIEW_AUTH_SECRET" ]] || PREVIEW_AUTH_SECRET=$(gen_secret)
-say "生成 JWKS（OIDC 签名密钥对）…"
-PREVIEW_JWKS_KEY=$(_existing JWKS_KEY || true)
-if [[ -z "$PREVIEW_JWKS_KEY" ]]; then
-  if generated_jwks=$(node scripts/generate-oidc-jwk.mjs 2>/dev/null | head -n1); then
-    PREVIEW_JWKS_KEY="$generated_jwks"
-  else
-    warn "JWKS 生成失败（缺依赖就先 pnpm install）；之后手动跑 node scripts/generate-oidc-jwk.mjs"
-    SKIPPED+=("JWKS_KEY")
-  fi
-fi
 printf '  %s✓%s Preview AUTH_SECRET / KEY_VAULTS_SECRET 已就绪\n' "$GREEN" "$RESET"
 
 # ── Stage 7 · 写入 Vercel env ───────────────────────────────────────────────
@@ -485,9 +478,9 @@ vercel_env S3_ENDPOINT "$S3_ENDPOINT" preview
 vercel_env S3_BUCKET orvilo-preview preview
 vercel_env S3_REGION auto preview
 vercel_env S3_SET_ACL 0 preview
-vercel_env AUTH_SECRET "$PREVIEW_AUTH_SECRET" preview
-vercel_env KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET" preview
-[[ -n "$PREVIEW_JWKS_KEY" ]] && vercel_env JWKS_KEY "$PREVIEW_JWKS_KEY" preview
+publish_preview_identity_secret AUTH_SECRET "$PREVIEW_AUTH_SECRET"
+publish_preview_identity_secret KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET"
+[[ -n "$PREVIEW_JWKS_KEY" ]] && publish_preview_identity_secret JWKS_KEY "$PREVIEW_JWKS_KEY"
 
 # ── Stage 8 · GitHub secrets + variables ────────────────────────────────────
 stage "写入 GitHub secrets / variables"
@@ -498,7 +491,11 @@ set_secret PREVIEW_DATABASE_URL "$PREVIEW_DATABASE_URL"
 set_secret PREVIEW_TEST_DATABASE_URL "$PREVIEW_TEST_DATABASE_URL"
 set_secret PREVIEW_DB_ADMIN_URL "$PREVIEW_DB_ADMIN_URL"
 set_secret PREVIEW_DATABASE_SSL_CA "$DATABASE_SSL_CA"
-set_secret PREVIEW_KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET"
+if grep -qx PREVIEW_KEY_VAULTS_SECRET <<< "$REMOTE_GITHUB_IDENTITY_KEYS"; then
+  note "保留现有 GitHub PREVIEW_KEY_VAULTS_SECRET；轮换需单独操作。"
+else
+  set_secret PREVIEW_KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET"
+fi
 set_var PREVIEW_DB_TLS_HOST "$PREVIEW_DB_TLS_HOST"
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
   configured_secrets=$(gh secret list --json name --jq '.[].name')
@@ -521,7 +518,7 @@ say "Production 后续单独配置：独立数据库角色、独立 R2 token，�
 stage "验证"
 say "推一个分支验证整条链路："
 say "    git checkout -b test/vercel-preview && git push -u origin HEAD"
-say "Vercel 会自动构建出 Preview URL；部署成功后 preview-smoke 会跑 @smoke。"
+say "通过已配置的 Preview 发布流程取得不可变 URL 后，由仓库所有者手动运行 Preview Smoke/E2E。"
 step "打开 PR → 检查 Checks：Vercel Preview + Preview Smoke"
 say "手动对任意 preview 跑环境自检："
 say "    BASE_URL=https://<preview>.vercel.app bun scripts/ci/checkPreviewEnv.mts"
@@ -532,6 +529,7 @@ if confirm "把 preview 的云端连接写进本地 .env（Mode A 云开发）�
   write_env DATABASE_SSL_CA "$DATABASE_SSL_CA"
   write_env KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET"
   write_env AUTH_SECRET "$PREVIEW_AUTH_SECRET"
+  write_env JWKS_KEY "$PREVIEW_JWKS_KEY"
   write_env REDIS_URL "$REDIS_URL"
   write_env REDIS_PREFIX orvilo-preview
   write_env AGENT_RUNTIME_REDIS_PREFIX orvilo-preview

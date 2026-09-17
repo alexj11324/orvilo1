@@ -28,12 +28,13 @@ permissions:
 
 concurrency:
   # Smoke and full E2E share the small Preview PostgreSQL instance. Queue both
-  # suites for this deployment without cancelling either one.
-  group: preview-validation-${{ inputs.base_url }}
+  # suites across deployments, because the shared fallback database is mutable.
+  group: preview-validation-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
   smoke:
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
     name: Smoke test Vercel Preview
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -89,7 +90,12 @@ jobs:
             exit 1
           fi
           echo "BASE_URL=$preview_url" >> "$GITHUB_ENV"
-          printf 'deployment-ref=%s\n' "$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          deployment_ref=$(jq -er '.ref | select(type == "string" and length > 0)' <<< "$deployment")
+          if [[ "$deployment_ref" == *$'\n'* || "$deployment_ref" == *$'\r'* ]]; then
+            echo "deployment ref contains an invalid newline" >&2
+            exit 1
+          fi
+          printf 'deployment-ref=%s\n' "$deployment_ref" >> "$GITHUB_OUTPUT"
 
       - name: Open trusted Preview database tunnel
         env:

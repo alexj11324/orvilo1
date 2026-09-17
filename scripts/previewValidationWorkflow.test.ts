@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -13,7 +15,8 @@ interface WorkflowStep {
 }
 
 interface Workflow {
-  jobs: Record<string, { steps: WorkflowStep[] }>;
+  concurrency: { group: string };
+  jobs: Record<string, { if?: string; steps: WorkflowStep[] }>;
   on?: Record<string, unknown>;
 }
 
@@ -31,6 +34,14 @@ describe.each([
     expect(workflow.on).not.toHaveProperty('deployment_status');
   });
 
+  it('requires an explicit repository-owner trust decision before injecting secrets', () => {
+    expect(workflow.jobs[jobName].if).toContain('github.actor == github.repository_owner');
+    expect(workflow.jobs[jobName].if).toContain(
+      'github.triggering_actor == github.repository_owner',
+    );
+    expect(workflow.concurrency.group).toBe('preview-validation-${{ github.repository }}');
+  });
+
   it('passes the validated deployment ref through a step output', () => {
     const validate = steps.find((step) => step.name === 'Validate manual Preview URL');
     const resolve = steps.find((step) => step.name === 'Resolve Preview database URL');
@@ -46,6 +57,62 @@ describe.each([
     expect(resolve?.with?.['deployment-ref']).toBe(
       '${{ steps.validate-manual-preview.outputs.deployment-ref }}',
     );
+  });
+
+  it('resolves the deployment branch rather than the workflow dispatch branch', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'preview-ref-test-'));
+    const url = 'https://orvilo1-abcdef-alexs-projects-078b8b0b.vercel.app';
+    const sha = 'a'.repeat(40);
+    try {
+      const curl = path.join(directory, 'curl');
+      const statuses = [{
+        created_at: '2026-09-17',
+        creator: { login: 'vercel[bot]' },
+        environment: 'Preview',
+        environment_url: url,
+        state: 'success',
+        target_url: url,
+      }];
+      const deployment = {
+        creator: { login: 'vercel[bot]' },
+        environment: 'Preview',
+        ref: 'feat/deployment-branch',
+        sha,
+      };
+      writeFileSync(curl, `#!/usr/bin/env bash
+case "$*" in
+  *statuses*) echo '${JSON.stringify(statuses)}' ;;
+  *) echo '${JSON.stringify(deployment)}' ;;
+esac
+`);
+      chmodSync(curl, 0o755);
+      const output = path.join(directory, 'output');
+      const result = spawnSync(
+        'bash',
+        ['-c', steps.find((step) => step.id === 'validate-manual-preview')!.run!],
+        {
+          env: {
+            ...process.env,
+            BASE_URL: url,
+            EXPECTED_DEPLOYMENT_ID: '123',
+            EXPECTED_SHA: sha,
+            GITHUB_API_URL: 'https://github.invalid',
+            GITHUB_ENV: path.join(directory, 'env'),
+            GITHUB_OUTPUT: output,
+            GITHUB_REF_NAME: 'main',
+            GITHUB_REPOSITORY: 'owner/repo',
+            GITHUB_TOKEN: 'fixture',
+            PATH: `${directory}:${process.env.PATH}`,
+          },
+          timeout: 15_000,
+        },
+      );
+      expect(result.stderr.toString()).toBe('');
+      expect(result.status).toBe(0);
+      expect(readFileSync(output, 'utf8')).toBe('deployment-ref=feat/deployment-branch\n');
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
   });
 
   it('loads current validation helpers before checking out the deployment source', () => {

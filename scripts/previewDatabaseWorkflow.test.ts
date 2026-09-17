@@ -7,6 +7,7 @@ import { parse } from 'yaml';
 interface WorkflowStep {
   name?: string;
   run?: string;
+  uses?: string;
 }
 
 interface Workflow {
@@ -34,7 +35,12 @@ describe('Preview database workflow', () => {
     );
     const gate = provisionWorkflow.jobs.provision.steps[gateIndex];
 
-    expect(gateIndex).toBeGreaterThanOrEqual(0);
+    const checkoutIndex = provisionWorkflow.jobs.provision.steps.findIndex(
+      (step) =>
+        step.name === 'Checkout preflight helpers' && step.uses?.startsWith('actions/checkout@'),
+    );
+    expect(checkoutIndex).toBeGreaterThanOrEqual(0);
+    expect(checkoutIndex).toBeLessThan(gateIndex);
     expect(gateIndex).toBeLessThan(tunnelIndex);
     expect(gate?.run).toContain('VERCEL_PREVIEW_DEPLOYMENT_GATE');
     expect(gate?.run).toContain('checkGitHubWorkflowGate.mjs');

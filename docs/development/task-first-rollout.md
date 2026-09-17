@@ -1728,3 +1728,219 @@ Web 测试不能替代原生菜单与标签恢复证据」）：
 
 **本机已给的是单元 / 集成级证据**（定向 vitest + 渲染计数），按 §13.1 的说法不能当作产品行为验证 ——
 「产品行为需要实际界面 / 集成路径验证」。
+
+## 7. S80 证据清单（目标提交 `e8c44cb8`）
+
+方案 §13.3 要求至少提供：目标 commit、**真实执行的检查列表**、工作流 / 产物位置、
+失败与基线问题的区别、未验证平台、产品验收证据。本节即按该清单组织，并按 §13.2 逐 ID 记状态。
+§13.3 同时写明：**远端缺少凭据 / 设备 / 服务时记录 BLOCKED 与缺口，
+不要回头在用户电脑上启动重环境绕过约束** —— 下表的 BLOCKED 行按此办理。
+
+### 7.1 目标提交
+
+| 项                    | 值                                                                                                    |
+| --------------------- | ----------------------------------------------------------------------------------------------------- |
+| commit                | `e8c44cb81f3b29e34c2542dbfe4dfdcef894da6c`                                                            |
+| 远端                  | `origin/feat/task-first-convergence`，与本地 HEAD 一致（已用 `git ls-remote` 核对）                   |
+| 基线                  | `58d79735`                                                                                            |
+| 规模                  | 82 commits / 594 files                                                                                |
+| 为何推分支而不是开 PR | `test.yml` 是 `on: [push, pull_request]` 且无分支过滤 —— push 即触发完整 Test CI，不必额外制造公开 PR |
+
+### 7.2 真实执行的检查
+
+| 工作流  | run                                                              | 触发 | 结论    |
+| ------- | ---------------------------------------------------------------- | ---- | ------- |
+| Test CI | <https://github.com/alexj11324/orvilo1/actions/runs/35165886999> | push | failure |
+| E2E CI  | <https://github.com/alexj11324/orvilo1/actions/runs/35165886992> | push | failure |
+
+Test CI 各 job：成功 `Check Duplicate Run` / `Test Desktop App` / `Test Windows Shell` /
+`Test App (1/2)` / `Test App (2/2)` / `Test Packages` / `Test Server (2/2)` /
+`Merge and Upload App Coverage`；失败 `Typecheck` / `Test Database` / `Test Server (shard 1/2)`。
+E2E CI：`Test Web App` 失败，85 scenarios 中 4 条失败。
+
+这 4 类失败全部由本轮引入（`main` 上两者都是 success），逐条处置见 §7.6。
+
+Test CI 的 job 清单见 §6.2。⚠️ §6.1 记的跳过逻辑在这里**不会**触发：
+这份 tree 内容此前从未运行过，`skip_after_successful_duplicate` 没有可跳的重复。
+
+### 7.3 失败与基线问题的区别
+
+| 失败                                     | 性质                 | 证据                                                                                                                                                                                |
+| ---------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/services/chat/chat.test.ts`（7 条） | **基线自带，非本轮** | 本分支从未改过该文件 / `src/services/chat` / `packages/context-engine`；两棵树文件**逐字节相同**（`d0d15df7…`）；在主仓 `main` 上、待测目录干净时复现**完全相同的 7 条**。详见 §6.3 |
+| 本机广域跑里的超时                       | **机器争抢，非断言** | 225 文件 / 1650 测试，11 条失败**全部**是 `Test timed out in 20000ms`；其中 4 条来自两个单独跑全绿的文件                                                                            |
+
+⚠️ **不要**用上表把本轮 CI 的红说成「基线」。`main` 最近的 Test CI（run 35150192661）与
+E2E CI（run 35165886992 对应分支的 main 版本）均为 **success**，而本分支的失败文件
+**每一个**都被本分支的 commit 改过（§7.6 逐条列出 commit）。归属判据用的是
+「main 绿 + 该文件在本分支被改过」，不是推测。
+
+### 7.4 未验证平台与 BLOCKED（§13.3）
+
+| 平台 / 场景                                                                       | 状态        | 原因                                                                                                                                         |
+| --------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Electron 真实构建（开屏观感、折叠几何、标签页宿主粒度、活动标签页 pathname 来源） | **BLOCKED** | 本机无法渲染 Electron；§13.1 要求平台专有行为用远端 runner / 授权设备                                                                        |
+| 移动端真实构建（`(mobile)` 无 `GlobalOverlays` 时的宿主唯一性）                   | **BLOCKED** | 同上；本机只能证明「上下文默认值不变」这一层                                                                                                 |
+| 产品级验收（§13.2 各行的真实界面交互与截图 / 录屏）                               | **BLOCKED** | §13.1 把质量门禁与验收都放在 GHA / 已授权测试环境并禁止本机伪造；§13.3 明文「缺设备时记 BLOCKED」                                            |
+| 原生菜单与标签恢复证据                                                            | **BLOCKED** | §13.1 明文「Web 测试不能替代原生菜单与标签恢复证据」                                                                                         |
+| Home 右栏几何（滚动耦合、折叠）在真实桌面渲染面上的验收                           | **BLOCKED** | 该面自 S20 起只存在于 Electron 的每标签页 index 槽位；E2E CI 只跑 Web，且本机无法渲染 Electron。原 `HOME-LAYOUT-RAIL-001` 覆盖已按 §7.6 退役 |
+| Home 冷启动发送路径在真实 Electron 上的验收                                       | **BLOCKED** | 同上。原 `HOME-CHAT-COLD-001` 覆盖已按 §7.6 退役，Web 侧改由单元测试钉住                                                                     |
+
+### 7.5 逐 ID 状态（§13.2 验收矩阵）
+
+读法：**实现**列指向本文档的工作包小节（含 commit）；**证据**列写这次交付实际拥有的检查类型
+（`CI` = 本次 push 的真实工作流覆盖；`本机` = 本会话跑过的定向测试；`守卫` = 新增的可执行不变量）；
+**缺口**列写该行还差什么才算通过。
+
+> **没有任何一行标为「已通过」** —— 产品级验收全部 BLOCKED（§7.4）。
+> 本表证明的是「该行所依赖的实现与可本机验证的部分已成」，而不是该行已验收。
+
+| ID                                        | 实现                                    | 证据                                                                                                             | 缺口                                         |
+| ----------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| NAV-01 新用户个人根路径                   | §2.2.2（`2f6c5712`）                    | 本机：`WebHomeRedirect.test.tsx`（含 query 保留）+ `desktopRouter.sync.test.tsx`                                 | 真实登录后的落点                             |
+| NAV-02 工作区根路径                       | §2.2.2（URL 即真相）                    | 本机：`useWorkspaceUrlSync` 契约 + `reservedSegments.test.ts`                                                    | 真实团队工作区，不先露别空间数据             |
+| NAV-03 旧用户偏好 list                    | S10（§2.1）                             | 本机：S10 既有测试                                                                                               | 真实浏览器持久化往返                         |
+| NAV-04 旧侧栏含全部退役 key               | S10 / S30（§2.1、§2.5）                 | 本机：`withAllKnownKeys` 相关测试                                                                                | 真实旧账号二次迁移                           |
+| NAV-05 旧桌面标签 / 最近链接              | §5 #1（`e965e3e5`）+ §4.1 合并收敛      | 本机：`RETIRED_ROUTE_PREFIXES` 派生自 registry                                                                   | Electron 真实标签恢复；§4.1 收敛发生在合并时 |
+| NAV-06 命令菜单 / 菜单栏 / 移动入口       | S10 / S30                               | 本机：S10 既有测试                                                                                               | 真实三端入口                                 |
+| NAV-07 登录回调 / 邀请 / 任务深链接       | §2.2.2                                  | 本机：`sanitizeRedirectPath` + `WebHomeRedirect.test.tsx`                                                        | 真实回调与邀请                               |
+| NAV-08 项目入口                           | S50（§2.6）                             | 本机：PGlite + 客户端测试                                                                                        | 真实权限者 / 无权限者                        |
+| BOARD-01 看板拖拽                         | 未在本轮改动                            | CI                                                                                                               | 真实交互与服务端失败恢复                     |
+| BOARD-02 四类范围一致性                   | 未在本轮改动                            | CI                                                                                                               | 真实跨范围数据一致                           |
+| BOARD-03 两成员切换范围                   | 未在本轮改动                            | CI                                                                                                               | 真实双用户缓存隔离                           |
+| BOARD-04 超一页各列分页                   | 未在本轮改动                            | CI                                                                                                               | 真实分页与总数                               |
+| BOARD-05 完成列与隐藏偏好                 | 未在本轮改动                            | CI                                                                                                               | 真实新旧偏好                                 |
+| HOME-01 旧首页独有 UI / 轮询不外溢        | §2.2.1（Web 卸载 Home）                 | 本机：`(main)/_layout/authMount.test.ts`（两布局元素树）+ 路由静态核对                                           | 真实网络面板：开板不请求旧独立模块           |
+| HOME-02 通知打开运行 / 验收恰好一宿主     | §2.2（两处重复宿主已修）                | 本机：`topicChatDrawerHost.test.tsx` 与 `acceptancePortalHost.test.tsx`（渲染计数）+ `portalColumnForPath` 11 例 | 真实界面「只出现一层」；Electron 与移动端    |
+| AUTO-01 规则列表一致                      | S40（§2.3）                             | 本机：§2.3 记的测试                                                                                              | 真实记录集合与分页总数                       |
+| AUTO-02 暂停 / 恢复 / 立即运行 / 编辑     | S40（§2.3）                             | 本机：§2.3 记的测试                                                                                              | 真实权限与不重复派发                         |
+| AUTO-03 时区与已有计划                    | S40（§2.3）                             | 本机：§2.3 记的测试                                                                                              | 真实时区边界                                 |
+| AUTO-04 历史自动化链接                    | S40（§2.3、§2.4）                       | 本机：入口保留理由与测试                                                                                         | 真实旧链接可达                               |
+| RES-01 上传 / 生成 / 预览下载             | S50（§2.6）                             | 本机：PGlite + 客户端测试                                                                                        | 真实全链路与共享 viewer                      |
+| RES-02 删除附件关联不误删                 | S50（§2.6，`15d06a28`）                 | 本机：PGlite 用例（含「挂引用→删→引用消失而任务仍在」）                                                          | 真实多对象共享引用                           |
+| RES-03 个人文件关联团队任务               | S50（§2.6）                             | 本机：PGlite                                                                                                     | 真实跨工作区不泄漏                           |
+| RES-04 历史独立文稿 / 生成资料            | S50 / S30                               | 本机：§2.5、§2.6 记                                                                                              | 真实授权读取 / 导出                          |
+| GEN-01 删除工作台后 Agent 生图            | S30（§2.5）                             | CI                                                                                                               | 真实工具链与费用归属                         |
+| GEN-02 在途生成的回调 / 重试              | S30（§2.5）                             | CI                                                                                                               | 真实在途作业                                 |
+| MEM-01 停个人画像独立生产                 | S30（§2.5，`3126df0d` 等）              | 本机：§2.5 记                                                                                                    | 真实作业不再产生                             |
+| MEM-02 用户数据管理路径                   | S30（§2.5，保留 `/memory/preferences`） | 本机：§2.5 记                                                                                                    | 真实导出 / 更正 / 删除                       |
+| GOAL-01 目标拆解 / 继续 / 恢复            | S60（§2.7）                             | 本机：§2.7 记的审计                                                                                              | 真实协调与依赖行为                           |
+| GOAL-02 历史未关联 Goal                   | S60（§2.7）                             | 本机：§2.7 记                                                                                                    | 真实原数据与权限                             |
+| RULE-01 规则查看 / 编辑 / 启停            | S60（§2.7）                             | 本机：§2.7 记                                                                                                    | 真实状态更新与来源                           |
+| RULE-02 项目硬约束 vs 学习经验            | S60（§2.7）                             | 本机：§2.7 记                                                                                                    | 真实优先级不互相绕过                         |
+| SHARE-01 旧发布 / API / 访客 token        | S30（§2.5）                             | 本机：`shareChat` 403 断言 + `agentShareFeatureGate` 测试                                                        | 真实 token 发起被拒                          |
+| SHARE-02 团队分享与产物预览               | §2.5（`apps/share` 明文保留）           | 本机：§1.7.4、§2.5 记                                                                                            | 真实授权场景仍可用                           |
+| SHARE-03 在途访客运行与迟到回调           | S30（§2.5）                             | CI                                                                                                               | 真实策略终结与计费 / 审计一致                |
+| EVAL-01 旧 eval URL / API 退役            | S30（§2.5）                             | 本机：§2.5 记                                                                                                    | 真实 URL 与 flag 不能提权                    |
+| EVAL-02 任务验收与 Verify                 | §2.5 明文保留                           | 本机：验收相关测试仍在                                                                                           | 真实证据查看 / 确认 / 失败处理               |
+| ENGINE-01 Agent 选择与引擎设置            | 既有执行基线                            | CI                                                                                                               | 真实不回退模型中心入口                       |
+| ENGINE-02 本地 / 远程 / 云端与 resume     | 既有执行基线                            | CI                                                                                                               | 真实逐路径验证                               |
+| RUN-01 断线 / 重试 / 重复回调             | 既有运行链路                            | CI                                                                                                               | 真实不重复运行                               |
+| RUN-02 结束但验收失败                     | 既有运行链路                            | CI                                                                                                               | 真实状态不被置完成                           |
+| PERM-01 成员 / 管理员 / 无权用户          | 既有权限                                | CI                                                                                                               | 真实角色矩阵                                 |
+| PERM-02 跨工作区 ID 与私有资源            | 既有权限                                | CI                                                                                                               | 真实边界守住                                 |
+| BUILD-01 各端构建无残留 import / 类型错误 | 全轮删除的收口                          | **CI**：`typecheck` + `test-app` + `test-desktop`                                                                | —                                            |
+| I18N-01 中英主路径无裸 key / 旧承诺       | §6（三处齐 + 护栏）                     | **守卫**：`packages/locales/src/defaultKeys.test.ts`（40 例，反向验证过）                                        | 真实中英主路径                               |
+
+### 7.6 首次 CI 反馈的 4 类失败与处置
+
+推送 `e8c44cb8` 后 CI 报了 4 类失败。**全部判定为本轮引入**（判据：`main` 上两类 CI 都是
+success，而这 4 类涉及的文件 / 场景每一个都被本分支的 commit 改过）。逐条如下。
+
+#### 7.6.1 17 个 TypeScript 错误（`Typecheck` 与 `Test Database` 两个 job）
+
+两个 job 跑的是同一份全仓类型检查，所以报的是同一批 17 个错误，分布在 5 个文件：
+
+| 文件                                                                       | 错误数 | 引入 commit | 根因                                                                                                                                                                                                                                                                                                                                                                      | 修法                                                                                                                                                                                                 |
+| -------------------------------------------------------------------------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server/.../serverRuntimes/agentDocuments.ts`                         | 10     | `263ebf78`  | 该提交把 `pinToTask` 挪进 `withDocumentOutcome`，同时给 `T` 加了约束 `{ documentId?: string } \| undefined`。约束一旦存在，编译器在调用点就以**约束**（而非各 service 方法的真实返回类型）作为 handler 的返回类型，于是不再满足 `AgentDocumentsExecutionRuntime` 要求的 `AgentDocumentRecord \| undefined`；`removeDocumentById` 的 `Promise<boolean>` 更是直接被约束拒绝 | 恢复 `T` 无约束，把「这个结果能不能 attach」变成真正的运行时类型守卫 `isAttachableDocument`（`removeDocument` 的 outcome 确实是个 boolean）。`attachToTask` 因此只需返回失败信息，不再搬运 `{ doc }` |
+| `src/features/Electron/titlebar/TabBar/storage.ts`                         | 2      | `e965e3e5`  | `JSON.parse` 的结果是 `any`，`Array.isArray(any)` 收窄成 `any[]`，而在 `any[]` 上 `.filter(类型守卫)` 解析为 `any` 而不是 `TabItem[]`，紧随其后的 `.filter((tab) => …)` 就失去参数类型                                                                                                                                                                                    | 先把载荷按 `unknown` 读出、再声明为 `unknown[]` 后过滤；边界数据本来就该当作 `unknown`                                                                                                               |
+| `src/features/Projects/Resources/AddResourceModal.test.tsx`                | 3      | `2957b55b`  | 该文件的 hoisted 桩声明了 `isValidating`，3 处赋值漏了它                                                                                                                                                                                                                                                                                                                  | 补齐字段（值与用例语义一致：已 settle）                                                                                                                                                              |
+| `src/features/SelfLearning/Portrait/HabitList.tsx`                         | 1      | `23751be7`  | 新增的 `describeRecent` 把 `t` 写成手写最小形状 `(key, options?) => string`，而它不是 i18next `TFunction` 重载签名的超集，于是**生产调用点**传真实 `t` 反而报错                                                                                                                                                                                                           | 按仓里 47 处既有惯用法改为 `TFunction<'selfLearning'>`；测试侧按 `SkillDetail/localization.test.ts` 的既有写法桥接（`as unknown as TFunction<…>`）                                                   |
+| `src/features/Conversation/ChatList/components/AgentSignalReceiptList.tsx` | 1      | `99528daa`  | 映射表用了 `satisfies Partial<Record<…>>` —— `satisfies` **不会**拓宽推断出的类型，索引签名并不存在，用完整的 `LayersEnum` 去索引就失败                                                                                                                                                                                                                                   | 改为类型注解 `Partial<Record<LayersEnum, …>>`；`if (!route) return;` 已处理 `undefined`                                                                                                              |
+
+**其中两处机制用最小探针在本机复现过**，不是靠推断（`bunx tsc --noEmit --strict` 单文件）：
+
+- `.filter(类型守卫)` 在 `any[]` 上塌成 `any`：探针**逐字符复现**了 CI 的 `TS7006`；换成 `unknown[]` 后干净。
+- `satisfies` 不拓宽：探针逐字符复现了 CI 的 `TS7053`；改成注解后干净。
+
+⚠️ **本机**无法跑这次类型门：`bun run type-check` / `bun run check --type` 由
+`scripts/type-check.mjs` 在非 CI 下**主动 fail fast**（全仓 `tsgo` 需数 GB），而方案 §13.1
+禁止为绕过它设 `GITHUB_ACTIONS=true`。尝试过把 `include` 收窄到 5 个文件的临时 tsconfig，
+**仍被系统因内存不足杀掉**（与方案对 `tsgo` 的判断一致），临时文件已删除。
+因此这 17 处的最终判据仍是 CI 的 `Typecheck` job。
+
+#### 7.6.2 `Test Server (shard 1/2)`：`agentShare.test.ts` 4 条（真缺陷，已修）
+
+```
+TRPCError: Publishing an agent to external visitors is no longer available.
+```
+
+`c95f9ba6` 把创建门改成**无条件**（flag 分支是被删除而不是被反转，这是刻意的，见该提交正文），
+但没有同步这个既有测试文件。4 条失败的性质并不相同：
+
+| 用例                                                                | 性质                                                                                                                                    |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `enables a private share by default`                                | 断言的正是被退役的行为，须改写                                                                                                          |
+| `enables a share with an explicit visibility`                       | 同上                                                                                                                                    |
+| `disables an existing share by making it private`                   | **主体仍成立**（停用 = 暂停、行不删），只是它的前置调了 `updateVisibility→link` 去先发布                                                |
+| `rejects enabling a share when the capability is off for this user` | 与它**上一条**自相矛盾（上一条明确断言 flag 不被读）；该提交正文「retained-procedure cases keep passing on both sides」对这条**不成立** |
+
+另有一个更结构性的发现：`agentShare.ts` 现已**完全不读** `enableAgentShare`，所以原
+`publish capability` 那个 describe 里 4 条「无论 flag 怎么设都会通过」—— 属于空断言。
+处置：把该 describe 换成「publishing to visitors is retired」，用 `it.each` 覆盖 flag
+开 / 关 / 未配置三种取值，并断言 flag **根本不被读取**（这正是「不可重开」的依据）；
+保留 `still lets an owner unpublish, read and manage an existing share` 原样不动。
+
+**红证**：把实现临时换回 `c95f9ba6^`（退役之前），新断言中 **5 条失败**、
+2 条两边都通过（`still lets an owner unpublish…` 是**保留行为**的守卫，本就该两边都过；
+另一条 `deployment without business features` 也不具判别力 —— 因此**把它删了**，
+并在注释里说明它钉不住任何东西、部署维度的真正消费者在
+`_helpers/__tests__/agentShareFeatureGate.test.ts` / `share.test.ts` / `shareChat.test.ts`）。
+换回前后用 `shasum` 核对实现文件已复原。
+
+#### 7.6.3 E2E CI 的 2 条 Home 场景（S20 的既定后果，已退役）
+
+| 场景                                                       | 断言                                                      | 为什么不再成立                                                                                                                |
+| ---------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `HOME-LAYOUT-RAIL-001` 受限桌面宽度下 Home 内容整体滚动    | `goto('/')` 后等 `[data-testid="home-rail"]:visible`      | Web 的 index 槽位渲染 `WebHomeRedirect`（`spa/router/desktopRouter.config.tsx`），`/` 落到任务列表 —— 没有 Home，也就没有右栏 |
+| `HOME-CHAT-COLD-001` Home 默认输入发送后应跳转到新建 Topic | `/` 上输入并按 Enter 后跳到 `/agent/{id}`，再进新建 Topic | 同上，`/` 的输入框是任务输入框；按 Enter 建任务，不再开对话。这正是 S20 的靶点本身                                            |
+
+两个 feature 文件各自**只有这一条**场景，其对象（Home 的右栏几何、Home 默认输入）
+在 Electron 上仍然存在，只是本 job 跑 Web。处置沿用 `main` 对被退役产品 E2E 套件的先例
+（`2769eb8c 🔥 test: remove retired community and page e2e suites`）：移除场景，
+在 feature 原处留下退役理由与**替代覆盖的位置**，并把 Electron 侧验收记入 §7.4 BLOCKED。
+
+**验证**：`cucumber-js --dry-run`（只解析 feature 与匹配步骤，**不启动浏览器**，
+因此不受 §13.1 对重环境的限制）→ `83 scenarios (83 skipped)`、`0 undefined steps`、
+退出码 0。正好是 85−2，即移除的那两条；其余场景与步骤匹配全数完好。
+
+#### 7.6.4 E2E CI 的 2 条文稿（PAGE-\*）场景（非本轮引入，且主线上已被移除）
+
+`通过右键菜单重命名文稿` 与 `删除文稿` 都停在
+`locator('a[href^="/page/"]').filter({ hasText: /Untitled|无标题/ })`（后者明确是
+`Received: hidden`）。归属判据：
+
+- 本分支**从未改过 `e2e/`**（`git log 58d79735..HEAD -- e2e/` 为空）；
+- `src/routes/(main)/page` 与 `src/features/Pages` **仍在**，本分支只动过
+  `src/features/NavPanel/routeKey.ts`（删 eval 键，已核对 diff 只删 4 行 eval 分支）；
+- 文稿 / 社区退役**是另一个 agent 的工作**（用户明示「这个你不管」），且 `main` 已经落地：
+  `bbd6ead3 🔥 refactor: remove community and pages workspaces` 与
+  `2769eb8c 🔥 test: remove retired community and page e2e suites`。
+  本分支基点早于这两个提交，所以这两条场景在本分支上仍在跑，在 `main` 上已不存在。
+
+**残留不确定性（不掩饰）**：本机无法运行 E2E（需 docker + next + playwright），
+所以无法证明它们在**本分支的基点上**就是红的。能确定的是：本分支没有触碰它们的任何
+可达路径，而 `main` 的处置是删除它们。合并时随 main 的这两个提交一并消失，
+不构成本分支的交付内容。
+
+### 7.7 本轮结束时的验证状态（诚实口径）
+
+| 项                                                     | 状态                                                                                                                        |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| 17 个类型错误                                          | 已修；2 处机制经最小探针复现验证，其余靠代码阅读；**最终判据是 CI 的 `Typecheck` job**（本机无合规的全仓类型门，见 §7.6.1） |
+| `agentShare.test.ts`                                   | 27/27 通过；新断言经**红证**（换回 `c95f9ba6^` 时 5 条失败），实现文件用 `shasum` 核对已复原                                |
+| E2E feature 编辑                                       | `cucumber-js --dry-run` 通过：83 scenarios / 0 undefined steps /exit 0                                                      |
+| 受影响套件（本机）                                     | 6 文件 66 测试全绿；lint 7 文件干净                                                                                         |
+| 全仓类型检查 / 全量测试 / 生产构建 / Docker / 桌面打包 | **未在本机执行**（§13.1）                                                                                                   |
+| 产品级验收                                             | **BLOCKED**（§7.4）                                                                                                         |

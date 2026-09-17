@@ -3,7 +3,9 @@
  */
 import { accountDeletionRouter } from '@/business/server/lambda-routers/accountDeletion';
 import { artifactShareRouter } from '@/business/server/lambda-routers/artifactShare';
+import { invitationRouter } from '@/business/server/lambda-routers/invitation';
 import { pageShareRouter } from '@/business/server/lambda-routers/pageShare';
+import { projectMemberRouter } from '@/business/server/lambda-routers/projectMember';
 import { referralRouter } from '@/business/server/lambda-routers/referral';
 import { spendRouter } from '@/business/server/lambda-routers/spend';
 import { storageOverageRouter } from '@/business/server/lambda-routers/storageOverage';
@@ -45,6 +47,7 @@ import { botMessageRouter } from './botMessage';
 import { briefRouter } from './brief';
 import { changelogRouter } from './changelog';
 import { chunkRouter } from './chunk';
+import { collaborationRouter } from './collaboration';
 import { comfyuiRouter } from './comfyui';
 import { composioRouter } from './composio';
 import { configRouter } from './config';
@@ -130,6 +133,7 @@ export const lambdaRouter = router({
   apiKey: apiKeyRouter,
   asr: asrRouter,
   chunk: chunkRouter,
+  collaboration: collaborationRouter,
   comfyui: comfyuiRouter,
   config: configRouter,
   connector: connectorRouter,
@@ -149,6 +153,7 @@ export const lambdaRouter = router({
   home: homeRouter,
   image: imageRouter,
   importer: importerRouter,
+  invitation: invitationRouter,
   composio: composioRouter,
 
   klavis: klavisRouter,
@@ -166,6 +171,7 @@ export const lambdaRouter = router({
   oauthDeviceFlow: oauthDeviceFlowRouter,
   plugin: pluginRouter,
   project: projectRouter,
+  projectMember: projectMemberRouter,
   pushToken: pushTokenRouter,
   ragEval: ragEvalRouter,
   recent: recentRouter,

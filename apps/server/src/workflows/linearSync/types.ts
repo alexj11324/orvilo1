@@ -23,4 +23,13 @@ export interface LinearSyncInstallationResult {
   nextWakeAt: string | null;
   outbox: { failed: number; sent: number };
   planning: { failed: number; processed: number; proposed: number };
+  /** Workspace import progress while `linear_sync_scopes` drives a run. */
+  scopeImport?: {
+    claimed: boolean;
+    completed: boolean;
+    failed: number;
+    imported: number;
+    phase: string | null;
+    processed: number;
+  } | null;
 }

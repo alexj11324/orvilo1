@@ -114,10 +114,8 @@ export const GET = async (request: NextRequest) => {
     }
 
     const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
-    const installation = await new LinearSyncModel(
-      serverDB,
-      statePayload.workspaceId,
-    ).upsertOAuthInstallation({
+    const model = new LinearSyncModel(serverDB, statePayload.workspaceId);
+    const installation = await model.upsertOAuthInstallation({
       accessTokenCiphertext: await gateKeeper.encrypt(tokens.access_token),
       accessTokenExpiresAt: tokens.expires_in
         ? new Date(Date.now() + tokens.expires_in * 1000)
@@ -131,6 +129,10 @@ export const GET = async (request: NextRequest) => {
       refreshTokenCiphertext: await gateKeeper.encrypt(tokens.refresh_token),
       scopes,
     });
+    // The workspace sync scope exists from the moment the installation lands;
+    // mirroring still waits for the approved team/project intent delivered
+    // through `upsertSyncScope`.
+    await model.upsertScope({ installationId: installation.id, settings: {} });
 
     return renderResultPage({ installationId: installation.id, success: true });
   } catch (error) {

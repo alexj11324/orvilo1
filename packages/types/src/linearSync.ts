@@ -136,6 +136,8 @@ export interface LinearIssueSnapshot {
   archivedAt?: string | null;
   assigneeId?: string | null;
   createdAt?: string | null;
+  /** Remote Linear cycle UUID when the issue sits in a cycle. */
+  cycleId?: string | null;
   description?: string | null;
   id: string;
   identifier: string;

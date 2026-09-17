@@ -40,6 +40,7 @@ const ISSUE_FIELDS = `
   parent { id }
   project { id }
   team { id }
+  cycle { id }
   state { id type }
   assignee { id }
   labels { nodes { id } }
@@ -151,6 +152,12 @@ export interface LinearIssueProvider {
   listOrganizations: () => Promise<LinearOrganizationSnapshot[]>;
   listProjects: () => Promise<LinearProjectSnapshot[]>;
   listRelations: (issueId: string) => Promise<LinearRelationSnapshot[]>;
+  /** Team-scoped listing including issues with `project = null`. */
+  listTeamIssues: (
+    teamId: string,
+    first?: number,
+    after?: string | null,
+  ) => Promise<LinearIssuePage>;
   listTeams: () => Promise<LinearTeamSnapshot[]>;
   updateComment: (id: string, input: LinearCommentUpdateInput) => Promise<LinearCommentSnapshot>;
   updateIssue: (id: string, input: LinearIssueUpdateInput) => Promise<LinearIssueSnapshot>;
@@ -270,6 +277,7 @@ export const normalizeLinearIssue = (value: unknown): LinearIssueSnapshot => {
     archivedAt: typeof value.archivedAt === 'string' ? value.archivedAt : null,
     assigneeId: nestedId(value.assignee),
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : null,
+    cycleId: nestedId(value.cycle),
     description: typeof value.description === 'string' ? value.description : null,
     id,
     identifier,
@@ -617,6 +625,29 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
         }
       }`,
       variables: { after: after ?? null, first, projectId },
+    });
+    return {
+      endCursor: data.issues.pageInfo.endCursor ?? null,
+      hasNextPage: data.issues.pageInfo.hasNextPage === true,
+      issues: data.issues.nodes.map(normalizeLinearIssue),
+    };
+  }
+
+  async listTeamIssues(
+    teamId: string,
+    first = 50,
+    after?: string | null,
+  ): Promise<LinearIssuePage> {
+    const data = await this.requestData<{
+      issues: { nodes: unknown[]; pageInfo: { endCursor?: string | null; hasNextPage?: boolean } };
+    }>({
+      query: `query ListTeamIssues($teamId: String!, $first: Int!, $after: String) {
+        issues(filter: { team: { id: { eq: $teamId } } }, first: $first, after: $after) {
+          nodes { ${ISSUE_FIELDS} }
+          ${PAGE_INFO_FIELDS}
+        }
+      }`,
+      variables: { after: after ?? null, first, teamId },
     });
     return {
       endCursor: data.issues.pageInfo.endCursor ?? null,

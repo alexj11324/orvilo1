@@ -11,14 +11,21 @@ import type {
   LinearIssueLinkSyncState,
   LinearIssueSnapshot,
   LinearProjectBindingSettings,
+  LinearProjectSnapshot,
   LinearRelationKind,
   LinearRelationSnapshot,
   LinearSyncConflict,
+  LinearSyncImportPhase,
   LinearSyncInboxStatus,
   LinearSyncOutboxStatus,
   LinearSyncRecoveryKind,
   LinearSyncRecoveryRow,
+  LinearSyncScopeCursors,
+  LinearSyncScopeSettings,
+  LinearSyncScopeStatus,
   LinearSyncTombstone,
+  LinearTeamLinkSyncState,
+  LinearTeamSnapshot,
   LinearTombstoneKind,
   TaskDomainEventSource,
   TaskDomainEventType,
@@ -48,6 +55,8 @@ import {
   linearSyncImportReceipts,
   linearSyncInbox,
   linearSyncOutbox,
+  linearSyncScopes,
+  linearTeamLinks,
   taskDomainEvents,
   taskPlanningRevisions,
   taskPlanningScopes,
@@ -585,6 +594,8 @@ export class LinearSyncModel {
     installationId: string;
     linearProjectId: string;
     projectId: string;
+    remoteSnapshot?: LinearProjectSnapshot;
+    scopeId?: string | null;
     settings?: LinearProjectBindingSettings;
     syncEnabled?: boolean;
     teamIds?: string[];
@@ -598,7 +609,9 @@ export class LinearSyncModel {
         installationId: input.installationId,
         linearProjectId: input.linearProjectId,
         projectId: input.projectId,
+        remoteSnapshot: input.remoteSnapshot ?? null,
         replanningEnabled: settings.replanningEnabled ?? false,
+        scopeId: input.scopeId ?? null,
         settings,
         syncEnabled: input.syncEnabled ?? true,
         teamIds: input.teamIds ?? [],
@@ -611,7 +624,9 @@ export class LinearSyncModel {
           defaultTeamId: input.defaultTeamId,
           installationId: input.installationId,
           linearProjectId: input.linearProjectId,
+          remoteSnapshot: input.remoteSnapshot ?? null,
           replanningEnabled: settings.replanningEnabled ?? false,
+          scopeId: input.scopeId ?? null,
           settings,
           syncEnabled: input.syncEnabled ?? true,
           teamIds: input.teamIds ?? [],
@@ -811,6 +826,199 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  // ── Workspace sync scope + team links (linear-workspace-v3) ─────────────
+
+  async findScopeByInstallation(installationId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearSyncScopes)
+      .where(
+        and(
+          eq(linearSyncScopes.installationId, installationId),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findScopeById(id: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearSyncScopes)
+      .where(and(eq(linearSyncScopes.id, id), eq(linearSyncScopes.workspaceId, this.workspaceId)))
+      .limit(1);
+    return row ?? null;
+  }
+
+  /** Create or refresh the workspace-level scope for an installation. */
+  async upsertScope(input: {
+    installationId: string;
+    settings?: LinearSyncScopeSettings;
+    status?: LinearSyncScopeStatus;
+  }) {
+    const [row] = await this.db
+      .insert(linearSyncScopes)
+      .values({
+        installationId: input.installationId,
+        settings: input.settings ?? {},
+        status: input.status ?? 'active',
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoUpdate({
+        set: {
+          ...(input.settings !== undefined ? { settings: input.settings } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          scopeRevision: sql`${linearSyncScopes.scopeRevision} + 1`,
+          updatedAt: new Date(),
+        },
+        target: [linearSyncScopes.installationId],
+      })
+      .returning();
+    return row;
+  }
+
+  /**
+   * Atomically claim the import lease for a scope. Returns the claimed row,
+   * or null when another worker holds an unexpired lease — callers must not
+   * start a second writer for the same import run.
+   */
+  async claimScopeImport(input: { leaseOwner: string; lockMs?: number; scopeId: string }) {
+    const lockUntil = new Date(Date.now() + (input.lockMs ?? 60_000));
+    const [row] = await this.db
+      .update(linearSyncScopes)
+      .set({
+        importRunId: input.leaseOwner,
+        importStartedAt: sql`coalesce(${linearSyncScopes.importStartedAt}, now())`,
+        leaseFence: sql`${linearSyncScopes.leaseFence} + 1`,
+        leaseOwner: input.leaseOwner,
+        lockedUntil: lockUntil,
+        status: 'importing',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(linearSyncScopes.id, input.scopeId),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+          or(
+            isNull(linearSyncScopes.lockedUntil),
+            lt(linearSyncScopes.lockedUntil, new Date()),
+            eq(linearSyncScopes.leaseOwner, input.leaseOwner),
+          ),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async updateScopeImportState(
+    id: string,
+    patch: {
+      cursors?: LinearSyncScopeCursors;
+      importCompletedAt?: Date | null;
+      importPhase?: LinearSyncImportPhase | null;
+      issuesFailed?: number;
+      issuesImported?: number;
+      lastError?: string | null;
+      projectsLinked?: number;
+      status?: LinearSyncScopeStatus;
+      teamsLinked?: number;
+    },
+  ) {
+    const [row] = await this.db
+      .update(linearSyncScopes)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(and(eq(linearSyncScopes.id, id), eq(linearSyncScopes.workspaceId, this.workspaceId)))
+      .returning();
+    return row ?? null;
+  }
+
+  async releaseScopeImport(input: { leaseFence: number; leaseOwner: string; scopeId: string }) {
+    const [row] = await this.db
+      .update(linearSyncScopes)
+      .set({ leaseOwner: null, lockedUntil: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(linearSyncScopes.id, input.scopeId),
+          eq(linearSyncScopes.leaseOwner, input.leaseOwner),
+          eq(linearSyncScopes.leaseFence, input.leaseFence),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  // ── Team links ─────────────────────────────────────────────────────────
+
+  async findTeamLinkByLinearTeamId(linearTeamId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearTeamLinks)
+      .where(
+        and(
+          eq(linearTeamLinks.linearTeamId, linearTeamId),
+          eq(linearTeamLinks.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findTeamLinkByTeamId(teamId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearTeamLinks)
+      .where(
+        and(eq(linearTeamLinks.teamId, teamId), eq(linearTeamLinks.workspaceId, this.workspaceId)),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async listTeamLinks() {
+    return this.db
+      .select()
+      .from(linearTeamLinks)
+      .where(eq(linearTeamLinks.workspaceId, this.workspaceId));
+  }
+
+  async upsertTeamLink(input: {
+    installationId: string;
+    linearTeamId: string;
+    linearTeamKey?: string | null;
+    remoteSnapshot?: LinearTeamSnapshot;
+    scopeId?: string | null;
+    syncState?: LinearTeamLinkSyncState;
+    teamId: string;
+  }) {
+    const [row] = await this.db
+      .insert(linearTeamLinks)
+      .values({
+        installationId: input.installationId,
+        linearTeamId: input.linearTeamId,
+        linearTeamKey: input.linearTeamKey ?? null,
+        remoteSnapshot: input.remoteSnapshot,
+        scopeId: input.scopeId ?? null,
+        syncState: input.syncState ?? 'synced',
+        teamId: input.teamId,
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoUpdate({
+        set: {
+          installationId: input.installationId,
+          linearTeamKey: input.linearTeamKey ?? null,
+          remoteSnapshot: input.remoteSnapshot,
+          scopeId: input.scopeId ?? null,
+          syncState: input.syncState ?? 'synced',
+          updatedAt: new Date(),
+        },
+        target: [linearTeamLinks.workspaceId, linearTeamLinks.linearTeamId],
+      })
+      .returning();
+    return row;
+  }
+
   async transaction<T>(callback: (model: LinearSyncModel, db: LobeChatDatabase) => Promise<T>) {
     return this.db.transaction((tx) =>
       callback(
@@ -986,10 +1194,12 @@ export class LinearSyncModel {
   }
 
   async createIssueLink(input: {
+    aliasIdentifiers?: string[];
     bindingId?: string | null;
     installationId: string;
     linearIdentifier: string;
     linearIssueId: string;
+    linearTeamId?: string | null;
     organizationId: string;
     remoteSnapshot?: LinearIssueSnapshot;
     taskId: string;
@@ -1002,11 +1212,13 @@ export class LinearSyncModel {
     const [row] = await this.db
       .insert(linearIssueLinks)
       .values({
+        aliasIdentifiers: input.aliasIdentifiers ?? [],
         bindingId: input.bindingId,
         installationId: input.installationId,
         lastConfirmedSnapshot: snapshot,
         linearIdentifier: input.linearIdentifier,
         linearIssueId: input.linearIssueId,
+        linearTeamId: input.linearTeamId ?? null,
         organizationId: input.organizationId,
         remoteSnapshot: input.remoteSnapshot,
         remoteUpdatedAt: input.remoteSnapshot?.updatedAt

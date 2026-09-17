@@ -6,10 +6,12 @@ import type {
   LinearExternalRelationOutboxPayload,
   LinearIssueSnapshot,
   LinearProjectBindingSettings,
+  LinearProjectSnapshot,
   LinearRelationKind,
   LinearRelationSnapshot,
   LinearSyncTombstone,
   TaskItem,
+  TaskWorkflowCategory,
 } from '@orvilo/types';
 import { eq, inArray } from 'drizzle-orm';
 
@@ -22,7 +24,9 @@ import {
   LinearSyncModel,
   linearSyncRetryDelayMs,
 } from '@/database/models/linearSync';
+import { ProjectModel } from '@/database/models/project';
 import type { TaskModel } from '@/database/models/task';
+import { TeamModel } from '@/database/models/team';
 import { tasks } from '@/database/schemas/task';
 import type { LobeChatDatabase } from '@/database/type';
 
@@ -90,6 +94,30 @@ export interface LinearOutboxWorkerResult {
 const taskPriority = (priority: number | null | undefined) => {
   if (priority === null || priority === undefined) return 0;
   return Math.max(0, Math.min(4, priority));
+};
+
+/** Linear workflow-state `type` → the board's stable local category. */
+const linearStateCategory = (type: string | null): TaskWorkflowCategory => {
+  switch (type) {
+    case 'started': {
+      return 'in_progress';
+    }
+    case 'completed': {
+      return 'done';
+    }
+    case 'canceled': {
+      return 'canceled';
+    }
+    case 'triage': {
+      return 'triage';
+    }
+    case 'unstarted': {
+      return 'todo';
+    }
+    default: {
+      return 'backlog';
+    }
+  }
 };
 
 const isLinearFieldHumanLocked = (task: TaskItem, field: keyof LinearIssueSnapshot) => {
@@ -1882,6 +1910,678 @@ export class LinearSyncWorker {
     return { ...result, completed: true, nextCursor: null };
   }
 
+  // ── Workspace-scope import (linear-workspace-v3) ────────────────────────
+
+  /**
+   * Advance the durable workspace import by one bounded step. Each call claims
+   * the scope lease, finishes one phase (teams → projects) or one page of one
+   * team's issues, persists the cursor, and releases the lease — so closing a
+   * browser or killing a worker never loses progress, and there is never more
+   * than one writer for a run.
+   */
+  async importScope(
+    provider: LinearIssueProvider,
+    scopeId: string,
+    limit = 50,
+  ): Promise<LinearWorkerResult & { claimed: boolean; completed: boolean; phase: string | null }> {
+    const scope = await this.model.findScopeById(scopeId);
+    if (!scope) throw new Error('Linear sync scope not found');
+    const installation = await this.model.findInstallationById(scope.installationId);
+    if (!installation) throw new Error('Linear installation not found');
+    if (installation.status !== 'active') {
+      throw new LinearSyncPausedError('Linear installation is not active');
+    }
+
+    const claimed = await this.model.claimScopeImport({
+      leaseOwner: this.leaseOwner,
+      lockMs: LINEAR_SYNC_DEFAULT_LEASE_MS,
+      scopeId: scope.id,
+    });
+    if (!claimed) {
+      return {
+        claimed: false,
+        completed: false,
+        failed: 0,
+        imported: 0,
+        pendingBinding: 0,
+        phase: scope.importPhase,
+        processed: 0,
+      };
+    }
+
+    try {
+      const phase = claimed.importPhase ?? 'teams';
+      const result: LinearWorkerResult & {
+        claimed: boolean;
+        completed: boolean;
+        phase: string | null;
+      } = {
+        claimed: true,
+        completed: false,
+        failed: 0,
+        imported: 0,
+        pendingBinding: 0,
+        phase,
+        processed: 0,
+      };
+
+      if (phase === 'teams' || phase === 'workflow_states') {
+        await this.importScopeTeams(provider, claimed, installation);
+        return { ...result, phase: 'projects' };
+      }
+      if (phase === 'projects') {
+        await this.importScopeProjects(provider, claimed, installation);
+        return { ...result, phase: 'issues' };
+      }
+      if (phase === 'issues' || phase === 'reconciliation' || phase === 'relations') {
+        const outcome = await this.importScopeIssues(
+          provider,
+          claimed,
+          installation,
+          limit,
+          phase === 'issues' ? 'initial' : 'reconciliation',
+        );
+        return {
+          ...result,
+          completed: outcome.completed,
+          failed: outcome.failed,
+          imported: outcome.imported,
+          pendingBinding: outcome.pendingBinding,
+          phase: outcome.phase,
+          processed: outcome.processed,
+        };
+      }
+      return { ...result, completed: true, phase: 'completed' };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.model.updateScopeImportState(scope.id, {
+        lastError: message.slice(0, 2_000),
+        status: error instanceof LinearRemoteAuthError ? 'paused' : 'failed',
+      });
+      throw error;
+    } finally {
+      await this.model.releaseScopeImport({
+        leaseFence: claimed.leaseFence,
+        leaseOwner: this.leaseOwner,
+        scopeId: scope.id,
+      });
+    }
+  }
+
+  /** Teams phase: link every approved remote team and mirror its states. */
+  private async importScopeTeams(
+    provider: LinearIssueProvider,
+    scope: NonNullable<Awaited<ReturnType<LinearSyncModel['findScopeById']>>>,
+    installation: NonNullable<Awaited<ReturnType<LinearSyncModel['findInstallationById']>>>,
+  ) {
+    const remoteTeams = await provider.listTeams();
+    const settings = scope.settings ?? {};
+    const eligible = remoteTeams.filter(
+      (team) =>
+        (settings.approvedTeamIds === undefined || settings.approvedTeamIds.includes(team.id)) &&
+        !(settings.privateTeamPolicy === 'skip' && team.visibility === 'private'),
+    );
+
+    const installer = installation.installedByUserId;
+    const teamModel = installer ? new TeamModel(this.db, installer, this.workspaceId) : null;
+    let linked = 0;
+    for (const remote of eligible) {
+      let localTeamId = (await this.model.findTeamLinkByLinearTeamId(remote.id))?.teamId;
+      if (!localTeamId && teamModel) {
+        localTeamId =
+          (await teamModel.findByKey(remote.key))?.id ??
+          (
+            await teamModel.create({
+              key: remote.key,
+              name: remote.name,
+              visibility: remote.visibility === 'private' ? 'private' : 'public',
+            })
+          ).id;
+      }
+      if (!localTeamId || !teamModel) continue;
+
+      for (const state of remote.workflowStates ?? []) {
+        await teamModel.upsertWorkflowStateByRemoteId({
+          category: linearStateCategory(state.type),
+          name: state.name,
+          position: state.position,
+          remoteStateId: state.id,
+          teamId: localTeamId,
+        });
+      }
+      await this.model.upsertTeamLink({
+        installationId: installation.id,
+        linearTeamId: remote.id,
+        linearTeamKey: remote.key,
+        remoteSnapshot: remote,
+        scopeId: scope.id,
+        syncState: 'synced',
+        teamId: localTeamId,
+      });
+      linked += 1;
+    }
+
+    await this.model.updateScopeImportState(scope.id, {
+      importPhase: 'projects',
+      teamsLinked: linked,
+    });
+  }
+
+  /** Projects phase: link/create local projects and attach participating teams. */
+  private async importScopeProjects(
+    provider: LinearIssueProvider,
+    scope: NonNullable<Awaited<ReturnType<LinearSyncModel['findScopeById']>>>,
+    installation: NonNullable<Awaited<ReturnType<LinearSyncModel['findInstallationById']>>>,
+  ) {
+    const remoteProjects = await provider.listProjects();
+    const approved = scope.settings?.approvedTeamIds;
+    const eligible = remoteProjects.filter(
+      (project) =>
+        approved === undefined || project.teamIds.some((teamId) => approved.includes(teamId)),
+    );
+    const teamLinks = new Map(
+      (await this.model.listTeamLinks())
+        .filter((link) => link.syncState === 'synced')
+        .map((link) => [link.linearTeamId, link.teamId]),
+    );
+
+    const installer = installation.installedByUserId;
+    const teamModel = installer ? new TeamModel(this.db, installer, this.workspaceId) : null;
+    const projectModel = installer ? new ProjectModel(this.db, installer, this.workspaceId) : null;
+    let linked = 0;
+    for (const remote of eligible) {
+      const existing = await this.model.findBindingByLinearProjectId(remote.id);
+      let localProjectId = existing?.projectId;
+      if (!localProjectId && projectModel) {
+        localProjectId = (await this.createImportedProject(projectModel, installation, remote))?.id;
+      }
+      if (!localProjectId) continue;
+
+      await this.model.upsertBinding({
+        defaultTeamId: remote.teamIds.find((teamId) => teamLinks.has(teamId)),
+        installationId: installation.id,
+        linearProjectId: remote.id,
+        projectId: localProjectId,
+        remoteSnapshot: remote,
+        scopeId: scope.id,
+        teamIds: remote.teamIds,
+      });
+      if (teamModel) {
+        for (const remoteTeamId of remote.teamIds) {
+          const localTeamId = teamLinks.get(remoteTeamId);
+          if (localTeamId) await teamModel.linkProject(localProjectId, localTeamId);
+        }
+      }
+      linked += 1;
+    }
+
+    await this.model.updateScopeImportState(scope.id, {
+      importPhase: 'issues',
+      projectsLinked: linked,
+    });
+  }
+
+  /**
+   * Create a local project for an imported Linear project. The installer owns
+   * the coordinator agent (agents.user_id requires a real user); the
+   * `createdBySubject*` columns record that Linear performed the creation, so
+   * the row stays auditable and survives installer removal.
+   */
+  private async createImportedProject(
+    projectModel: ProjectModel,
+    installation: NonNullable<Awaited<ReturnType<LinearSyncModel['findInstallationById']>>>,
+    remote: LinearProjectSnapshot,
+  ) {
+    const base =
+      remote.name
+        .replaceAll(/[^a-z0-9]/gi, '')
+        .toUpperCase()
+        .slice(0, 6)
+        .padEnd(3, 'X') || 'LINPRJ';
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const identifier = attempt === 0 ? base : `${base.slice(0, 5)}${attempt}`;
+      try {
+        return await projectModel.create({
+          creationSubject: {
+            id: `linear-installation:${installation.id}`,
+            kind: 'integration',
+            snapshot: {
+              displayName: installation.organizationName || 'Linear',
+              externalId: installation.organizationId,
+              kind: 'integration',
+            },
+          },
+          identifier,
+          name: remote.name,
+          visibility: 'public',
+        });
+      } catch (error) {
+        if (attempt === 9) throw error;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Issues phase: process one page for the first team that still has pending
+   * pages. `issuesByTeam[remoteTeamId]` is `undefined` until the team starts,
+   * a cursor while paging, and `null` once exhausted. The reconciliation phase
+   * reruns the same sweep but skips issues untouched since the run started.
+   */
+  private async importScopeIssues(
+    provider: LinearIssueProvider,
+    scope: NonNullable<Awaited<ReturnType<LinearSyncModel['findScopeById']>>>,
+    installation: NonNullable<Awaited<ReturnType<LinearSyncModel['findInstallationById']>>>,
+    limit: number,
+    sweep: 'initial' | 'reconciliation',
+  ) {
+    const result = {
+      completed: false,
+      failed: 0,
+      imported: 0,
+      pendingBinding: 0,
+      phase: sweep === 'initial' ? 'issues' : 'reconciliation',
+      processed: 0,
+    };
+    const teamLinks = (await this.model.listTeamLinks())
+      .filter((link) => link.syncState === 'synced')
+      .sort((a, b) => a.linearTeamId.localeCompare(b.linearTeamId));
+    const issuesByTeam = { ...scope.cursors?.issuesByTeam };
+    const pending = teamLinks.find((link) => issuesByTeam[link.linearTeamId] !== null);
+
+    if (!pending) {
+      if (sweep === 'initial') {
+        // Fresh cursor map: a second sweep catches issues that changed while
+        // the first pass was running.
+        await this.model.updateScopeImportState(scope.id, {
+          cursors: { issuesByTeam: {} },
+          importPhase: 'reconciliation',
+        });
+        return { ...result, phase: 'reconciliation' };
+      }
+      await this.model.transaction(async (model) => {
+        await model.updateScopeImportState(scope.id, {
+          cursors: { issuesByTeam: {} },
+          importCompletedAt: new Date(),
+          importPhase: 'completed',
+          status: 'active',
+        });
+        await model.recordDomainEvent({
+          idempotencyKey: `linear:import-completed:${scope.id}:${scope.importRunId ?? ''}`,
+          payload: {
+            issuesImported: scope.issuesImported,
+            projectsLinked: scope.projectsLinked,
+            scopeId: scope.id,
+            teamsLinked: scope.teamsLinked,
+          },
+          source: 'linear',
+          type: 'linear.import.completed',
+        });
+      });
+      return { ...result, completed: true, phase: 'completed' };
+    }
+
+    const watermark = scope.importStartedAt ?? new Date();
+    const page = await provider.listTeamIssues(
+      pending.linearTeamId,
+      limit,
+      issuesByTeam[pending.linearTeamId] ?? null,
+    );
+    const issueById = new Map(page.issues.map((issue) => [issue.id, issue]));
+    const pageProvider: LinearIssueProvider = {
+      ...provider,
+      getIssue: async (id) => issueById.get(id) ?? provider.getIssue(id),
+    };
+
+    let pageBlocked = false;
+    const seenIssueIds = new Set<string>();
+    for (const issue of page.issues) {
+      if (seenIssueIds.has(issue.id)) continue;
+      seenIssueIds.add(issue.id);
+      if (scope.settings?.includeProjectlessIssues === false && !issue.projectId) continue;
+      if (
+        sweep === 'reconciliation' &&
+        issue.updatedAt &&
+        new Date(issue.updatedAt).getTime() < watermark.getTime()
+      )
+        continue;
+      try {
+        const outcome = await this.processScopeIssue(
+          {
+            id: `linear-scope-import:${scope.id}:${issue.id}`,
+            installationId: installation.id,
+            subjectId: issue.id,
+          },
+          issue,
+          pageProvider,
+          pending.teamId,
+          { historicalImport: true },
+        );
+        if (outcome === 'imported') result.imported += 1;
+        if (outcome === 'pending-binding') result.pendingBinding += 1;
+        if (outcome !== 'pending-binding' && outcome !== 'paused') result.processed += 1;
+        if (outcome === 'pending-binding' || outcome === 'paused') pageBlocked = true;
+      } catch (error) {
+        pageBlocked = true;
+        result.failed += 1;
+        console.error('[linear:scope-import]', error);
+      }
+    }
+
+    // A blocked page keeps its incoming cursor (undefined = not started, a
+    // string = mid-pagination) so the next call refetches the same page —
+    // processed issues dedupe on remoteUpdatedAt, failed ones get another
+    // attempt instead of being skipped forever.
+    if (!pageBlocked) {
+      issuesByTeam[pending.linearTeamId] = page.hasNextPage ? page.endCursor : null;
+    }
+    await this.model.updateScopeImportState(scope.id, {
+      cursors: { issuesByTeam },
+      issuesFailed: scope.issuesFailed + result.failed,
+      issuesImported: scope.issuesImported + result.imported,
+    });
+    return result;
+  }
+
+  /**
+   * Team-scoped variant of {@link processRow}: resolves the local team through
+   * `linear_team_links` so issues without a Linear project still import, and
+   * keeps `bindingId`/`projectId` nullable end to end.
+   */
+  private async processScopeIssue(
+    row: { id: string; installationId: string; subjectId: string | null },
+    issue: LinearIssueSnapshot,
+    provider: LinearIssueProvider,
+    localTeamId: string,
+    options: {
+      db?: LobeChatDatabase;
+      historicalImport?: boolean;
+      knownRelations?: LinearRelationSnapshot[];
+      model?: LinearSyncModel;
+    } = {},
+  ): Promise<'imported' | 'paused' | 'pending-binding' | 'processed'> {
+    const [knownComments, fetchedRelations] = await Promise.all([
+      provider.listComments ? provider.listComments(issue.id) : [],
+      options.knownRelations ?? (provider.listRelations ? provider.listRelations(issue.id) : []),
+    ]);
+    const run = async (model: LinearSyncModel, db: LobeChatDatabase) => {
+      const historicalImport = options.historicalImport ?? true;
+      const relations = issueRelationsWithParent(issue, fetchedRelations);
+      const existingLink = await model.findIssueLinkByExternalId(issue.id);
+      const installation = await model.findInstallationById(row.installationId);
+      if (!installation || installation.status !== 'active') {
+        throw new LinearSyncPausedError('Linear installation is not active');
+      }
+
+      const teamLink = issue.teamId ? await model.findTeamLinkByLinearTeamId(issue.teamId) : null;
+      const binding = issue.projectId
+        ? await model.lockBindingByLinearProjectId(issue.projectId)
+        : null;
+      if (!teamLink || (issue.projectId && !binding)) {
+        if (existingLink) {
+          await model.recordIssueTombstone({
+            deliveryId: row.id,
+            idempotencyKey: `linear:tombstone:${row.id}:out_of_scope`,
+            issueLinkId: existingLink.id,
+            kind: 'out_of_scope',
+            linearIssueId: issue.id,
+            origin: historicalImport ? 'reconciliation' : 'inbound',
+            reason: 'Issue is no longer inside an approved Linear sync scope',
+            snapshot: issue,
+          });
+          return 'processed';
+        }
+        return 'pending-binding';
+      }
+      if (teamLink.teamId !== localTeamId) {
+        // The page's team changed underneath the run — let the owning team's
+        // sweep handle the issue instead of writing through a stale link.
+        return 'pending-binding';
+      }
+      if (binding && !linearBindingReadEnabled(binding)) return 'paused';
+      if (binding && binding.installationId !== installation.id) {
+        throw new Error('Linear issue binding belongs to another installation');
+      }
+
+      const integrationTasks = new LinearIntegrationTaskService(
+        db,
+        this.workspaceId,
+        installation.id,
+      );
+      if (
+        binding &&
+        !(await integrationTasks.validateIssueScope({ binding, installation, issue }))
+      ) {
+        if (existingLink) {
+          await model.recordIssueTombstone({
+            deliveryId: row.id,
+            idempotencyKey: `linear:tombstone:${row.id}:out_of_scope`,
+            issueLinkId: existingLink.id,
+            kind: 'out_of_scope',
+            linearIssueId: issue.id,
+            origin: historicalImport ? 'reconciliation' : 'inbound',
+            reason: 'Issue is outside the validated public team scope',
+            snapshot: issue,
+          });
+        }
+        return 'processed';
+      }
+
+      const incomingUpdatedAt = issue.updatedAt ? new Date(issue.updatedAt) : null;
+      if (
+        existingLink &&
+        incomingUpdatedAt &&
+        Number.isFinite(incomingUpdatedAt.getTime()) &&
+        existingLink.remoteUpdatedAt &&
+        incomingUpdatedAt.getTime() <= existingLink.remoteUpdatedAt.getTime()
+      ) {
+        await model.updateIssueLink(existingLink.id, { lastInboundDeliveryId: row.id });
+        return 'processed';
+      }
+
+      if (existingLink && issue.archivedAt) {
+        await model.recordIssueTombstone({
+          deliveryId: row.id,
+          idempotencyKey: `linear:tombstone:${row.id}:archived`,
+          issueLinkId: existingLink.id,
+          kind: 'archived',
+          linearIssueId: issue.id,
+          origin: historicalImport ? 'reconciliation' : 'inbound',
+          reason: 'Linear issue is archived',
+          snapshot: issue,
+        });
+        return 'processed';
+      }
+
+      const teamModel = installation.installedByUserId
+        ? new TeamModel(db, installation.installedByUserId, this.workspaceId)
+        : null;
+      const workflowStateRefId =
+        issue.stateId && teamModel
+          ? ((await teamModel.findWorkflowStateByRemoteId(teamLink.teamId, issue.stateId))?.id ??
+            null)
+          : null;
+      const mutation = {
+        eventId: row.id,
+        idempotencyKey: `linear:import:${row.id}`,
+        source: 'linear' as const,
+        suppressDomainEvent: historicalImport,
+        suppressLinearOutbox: true,
+      };
+
+      if (!existingLink) {
+        if (issue.archivedAt) return 'processed';
+        const task = await integrationTasks.createTeamScopedTask({
+          installation,
+          issue,
+          localTeamId: teamLink.teamId,
+          mutation,
+          projectId: binding?.projectId ?? null,
+          settings: binding?.settings,
+          workflowStateRefId,
+        });
+        if (!task) return 'processed';
+        await model.createIssueLink({
+          aliasIdentifiers: issue.identifier ? [issue.identifier] : [],
+          bindingId: binding?.id ?? null,
+          installationId: installation.id,
+          linearIdentifier: issue.identifier,
+          linearIssueId: issue.id,
+          linearTeamId: issue.teamId,
+          organizationId: installation.organizationId,
+          remoteSnapshot: issue,
+          taskId: task.id,
+        });
+        return 'imported';
+      }
+
+      if (
+        existingLink.installationId !== installation.id ||
+        existingLink.organizationId !== installation.organizationId
+      ) {
+        throw new Error('Linear issue link installation scope does not match');
+      }
+      if (existingLink.tombstone) await model.clearIssueTombstone(existingLink.id);
+
+      const task = await integrationTasks.findPublicTask(existingLink.taskId);
+      if (!task || task.visibility !== 'public') {
+        await model.updateIssueLink(existingLink.id, {
+          lastInboundDeliveryId: row.id,
+          remoteSnapshot: issue,
+          remoteUpdatedAt: incomingUpdatedAt,
+          syncState: 'removed',
+        });
+        return 'processed';
+      }
+
+      const settings = binding?.settings ?? {};
+      const local = taskLinearIssueSnapshot(
+        task,
+        issue,
+        existingLink.lastConfirmedSnapshot,
+        settings,
+      );
+      const merged = mergeLinearIssueSnapshots({
+        base: existingLink.lastConfirmedSnapshot,
+        local,
+        remote: issue,
+      });
+      if (merged.conflicts) {
+        await model.updateIssueLink(existingLink.id, {
+          conflict: {
+            ...merged.conflicts,
+            localRevision: task.domainRevision,
+            remoteUpdatedAt: issue.updatedAt ?? null,
+          },
+          lastInboundDeliveryId: row.id,
+          remoteSnapshot: issue,
+          remoteUpdatedAt: incomingUpdatedAt,
+          syncState: 'conflict',
+        });
+        return 'processed';
+      }
+
+      const patch = remoteTaskPatch(
+        task,
+        merged.merged,
+        existingLink.lastConfirmedSnapshot,
+        local,
+        issue,
+        settings,
+      );
+      if (binding && issue.projectId !== existingLink.lastConfirmedSnapshot.projectId) {
+        patch.projectId = binding.projectId;
+      }
+      if (task.teamId !== teamLink.teamId) {
+        patch.teamId = teamLink.teamId;
+      }
+      if (workflowStateRefId && task.workflowStateRefId !== workflowStateRefId) {
+        patch.workflowStateRefId = workflowStateRefId;
+      }
+      let taskAfterRemote = task;
+      if (Object.keys(patch).length > 0) {
+        const updatedTask = await integrationTasks.updatePublicTask(task.id, patch, {
+          eventId: row.id,
+          idempotencyKey: `linear:task-update:${row.id}`,
+          source: 'linear',
+          suppressDomainEvent: historicalImport,
+          suppressLinearOutbox: true,
+        });
+        if (!updatedTask) throw new Error('Linear task update did not return a task');
+        taskAfterRemote = updatedTask;
+      }
+
+      const localChanged = Array.from(
+        new Set([
+          ...changedLinearIssueFields(existingLink.lastConfirmedSnapshot, local),
+          ...changedLinearIssueFields(existingLink.lastConfirmedSnapshot, issue).filter((field) =>
+            isLinearFieldHumanLocked(task, field),
+          ),
+        ]),
+      ).filter((field) => field !== 'labelIds');
+      if (binding && localChanged.length > 0) {
+        const payload = Object.fromEntries(
+          localChanged.flatMap((field) =>
+            local[field] === undefined ? [] : [[field, local[field]]],
+          ),
+        );
+        await model.queueOutbox({
+          expectedLocalRevision: taskAfterRemote.domainRevision,
+          initialStatus: linearBindingWriteEnabled(binding) ? 'pending' : 'paused',
+          installationId: installation.id,
+          linkId: existingLink.id,
+          operation: 'update_issue',
+          payload,
+          taskId: task.id,
+        });
+      }
+
+      await model.updateIssueLink(existingLink.id, {
+        bindingId: binding?.id ?? existingLink.bindingId,
+        conflict: null,
+        lastConfirmedSnapshot: issue,
+        lastInboundDeliveryId: row.id,
+        remoteSnapshot: issue,
+        remoteUpdatedAt: incomingUpdatedAt,
+        syncState: binding && localChanged.length > 0 ? 'pending' : 'synced',
+      });
+      await this.reconcileRelationsForIssue(
+        model,
+        db,
+        integrationTasks,
+        binding,
+        task.id,
+        issue.id,
+        relations,
+        row.id,
+        historicalImport,
+      );
+      return 'processed';
+    };
+    const execute = async (model: LinearSyncModel, db: LobeChatDatabase) => {
+      const outcome = await run(model, db);
+      if (outcome !== 'pending-binding') {
+        for (const comment of knownComments) {
+          await this.processCommentRow(
+            {
+              id: `linear-import-comment:${row.id}:${comment.id}`,
+              installationId: row.installationId,
+            },
+            comment,
+            { db, historicalImport: options.historicalImport ?? true, model },
+          );
+        }
+      }
+      return outcome;
+    };
+    // Inside an existing transaction reuse its model/db; standalone calls open
+    // one so task/link/event writes still commit atomically.
+    if (options.model || options.db) {
+      return execute(options.model ?? this.model, options.db ?? this.db);
+    }
+    return this.model.transaction(execute);
+  }
+
   private async processImportIssue(
     row: { installationId: string; subjectId: string | null; id: string },
     issue: LinearIssueSnapshot,
@@ -1949,6 +2649,23 @@ export class LinearSyncWorker {
       ? await model.lockBindingByLinearProjectId(issue.projectId)
       : null;
     if (!binding) {
+      // linear-workspace-v3: an issue outside every project binding can still
+      // be in scope through its team's link (projectless or project pending).
+      const teamLink = issue.teamId ? await model.findTeamLinkByLinearTeamId(issue.teamId) : null;
+      if (teamLink) {
+        return this.processScopeIssue(
+          { id: row.id, installationId: row.installationId, subjectId: row.subjectId },
+          issue,
+          provider,
+          teamLink.teamId,
+          {
+            db: context.db,
+            historicalImport: context.historicalImport,
+            knownRelations,
+            model: context.model,
+          },
+        );
+      }
       if (existingLink) {
         await model.recordIssueTombstone({
           deliveryId: row.id,

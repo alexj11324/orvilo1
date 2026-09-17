@@ -48,6 +48,15 @@ export const executeLinearSyncWorkflow = async (
     workspaceId: payload.workspaceId,
   });
   const syncWorker = new LinearSyncWorker(db, payload.workspaceId);
+  const scope = await context.run('linear-sync:load-scope', () =>
+    model.findScopeByInstallation(installation.id),
+  );
+  let scopeImport: LinearSyncInstallationResult['scopeImport'] = null;
+  if (scope && scope.status === 'importing' && scope.importPhase !== 'completed') {
+    scopeImport = await context.run('linear-sync:import-scope', () =>
+      syncWorker.importScope(provider, scope.id, payload.limit),
+    );
+  }
   const inbox = await context.run('linear-sync:process-inbox', () =>
     syncWorker.processPending(provider, payload.limit, installation.id),
   );
@@ -60,8 +69,11 @@ export const executeLinearSyncWorkflow = async (
   const nextWakeAt = await runStep(context, 'linear-sync:next-wake-at', () =>
     model.nextSyncWakeAt(installation.id),
   );
-  if (nextWakeAt) {
-    const nextWakeDate = parseWorkflowDate(nextWakeAt);
+  const scopeImportPending = Boolean(scopeImport && !scopeImport.completed);
+  if (nextWakeAt || scopeImportPending) {
+    // While a workspace import is in flight the stepper drives its own
+    // continuation — queue rows may have nothing due for a long time.
+    const nextWakeDate = nextWakeAt ? parseWorkflowDate(nextWakeAt) : new Date(Date.now() + 2_000);
     const delay = Math.max(0, Math.ceil((nextWakeDate.getTime() - Date.now()) / 1000));
     await context.run('linear-sync:schedule-continuation', () =>
       LinearSyncWorkflow.triggerInstallation(
@@ -75,11 +87,12 @@ export const executeLinearSyncWorkflow = async (
   }
 
   return {
-    continuationScheduled: Boolean(nextWakeAt),
+    continuationScheduled: Boolean(nextWakeAt) || scopeImportPending,
     inbox,
     installationId: installation.id,
     nextWakeAt: nextWakeAt ? parseWorkflowDate(nextWakeAt).toISOString() : null,
     outbox,
     planning,
+    scopeImport,
   };
 };

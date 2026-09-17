@@ -201,6 +201,65 @@ export class LinearIntegrationTaskService {
     );
   }
 
+  /**
+   * Workspace-scope import (linear-workspace-v3): create a public task owned
+   * by a local team. Unlike `createPublicTask`, no project binding is
+   * required — projectless Linear issues import with `projectId = null`.
+   * The task identifier is allocated from the team's `next_issue_seq`
+   * counter inside `TaskModel.create`.
+   */
+  async createTeamScopedTask(input: {
+    installation: LinearInstallation;
+    issue: LinearIssueSnapshot;
+    localTeamId: string;
+    mutation: TaskMutationContext;
+    projectId?: string | null;
+    settings?: LinearProjectBindingSettings;
+    workflowStateRefId?: string | null;
+  }) {
+    const { installation, issue, mutation, settings } = input;
+    if (installation.status !== 'active') throw new Error('Linear installation is unavailable');
+    if (!issue.teamId) return null;
+    if (settings) await this.validateAssignmentMappings(settings);
+
+    const workflowMapping = settings?.statusMappings?.find(
+      (mapping) => mapping.linearStateId === issue.stateId,
+    );
+
+    return this.taskModel.create(
+      {
+        assigneeAgentId: settings?.assignmentMappings?.find(
+          (mapping) => mapping.linearUserId === issue.assigneeId,
+        )?.orviloAgentId,
+        assigneeUserId: settings?.assignmentMappings?.find(
+          (mapping) => mapping.linearUserId === issue.assigneeId,
+        )?.orviloUserId,
+        description: issue.description?.slice(0, 255),
+        instruction: issue.description || issue.title,
+        name: issue.title,
+        priority: issue.priority ?? 0,
+        projectId: input.projectId ?? null,
+        teamId: input.localTeamId,
+        visibility: 'public',
+        workflowCategory: workflowMapping?.workflowCategory ?? 'backlog',
+        workflowStateId: issue.stateId ?? null,
+        workflowStateRefId: input.workflowStateRefId ?? null,
+      },
+      {
+        creationSubject: {
+          id: this.principal,
+          kind: 'integration',
+          snapshot: {
+            displayName: installation.organizationName || 'Linear',
+            externalId: installation.organizationId,
+            kind: 'integration',
+          },
+        },
+        mutation,
+      },
+    );
+  }
+
   /** Public-only lookup: private tasks are intentionally indistinguishable from missing tasks. */
   findPublicTask = (taskId: string) => this.taskModel.findById(taskId);
 

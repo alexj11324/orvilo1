@@ -1,5 +1,10 @@
 import { createProjectCoordinatorAgentConfig } from '@orvilo/builtin-agents';
-import type { ProjectOrchestrationPolicy, ProjectStatus, ProjectVisibility } from '@orvilo/types';
+import type {
+  ProjectOrchestrationPolicy,
+  ProjectStatus,
+  ProjectVisibility,
+  TaskCreationSubjectSnapshot,
+} from '@orvilo/types';
 import { and, asc, desc, eq, inArray, isNull, max, or, sql } from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
@@ -19,6 +24,12 @@ import { AgentModel } from './agent';
 
 export interface CreateProjectInput {
   avatar?: string;
+  /** Managed creation audit for import/integration-created projects. */
+  creationSubject?: {
+    id?: string;
+    kind: 'integration' | 'system';
+    snapshot?: TaskCreationSubjectSnapshot;
+  };
   description?: string;
   identifier: string;
   name: string;
@@ -198,6 +209,7 @@ export class ProjectModel {
     if (identifier.length < 3 || identifier.length > 6) {
       throw new Error('Project identifier must be between 3 and 6 characters');
     }
+    const { creationSubject, ...projectInput } = input;
 
     return this.db.transaction(async (tx) => {
       const coordinatorConfig = createProjectCoordinatorAgentConfig({
@@ -222,8 +234,11 @@ export class ProjectModel {
           buildWorkspacePayload(
             { userId: this.userId, workspaceId: this.workspaceId },
             {
-              ...input,
+              ...projectInput,
               coordinatorAgentId: coordinator.id,
+              createdBySnapshot: creationSubject?.snapshot ?? null,
+              createdBySubjectId: creationSubject?.id ?? this.userId,
+              createdBySubjectKind: creationSubject?.kind ?? 'user',
               identifier,
               orchestrationPolicy: DEFAULT_PROJECT_ORCHESTRATION_POLICY,
             },

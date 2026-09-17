@@ -240,11 +240,8 @@ try_pg() {
       }
       process.stdout.write(parsed.toString());
     ')
-    if psql "$psql_url" -v ON_ERROR_STOP=1 -tAc "$sql"; then
-      [[ -z "$ca_file" ]] || rm -f "$ca_file"
-      return 0
-    fi
-    local status=$?
+    local status=0
+    psql "$psql_url" -v ON_ERROR_STOP=1 -tAc "$sql" || status=$?
     [[ -z "$ca_file" ]] || rm -f "$ca_file"
     return "$status"
   fi

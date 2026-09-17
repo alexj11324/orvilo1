@@ -85,6 +85,8 @@ describe('confirmed interruption compensation', () => {
         expect(
           (await topicModel.findByTaskId(input.id)).find((t) => t.topicId === 'topic-2')?.status,
         ).toBe('running');
+      if (fence === 'reservation')
+        expect((await topicModel.findByTaskId(input.id))[0].status).toBe('running');
       if (fence === 'operation')
         expect((await topicModel.findByTaskId(input.id))[0].status).toBe('running');
     },
@@ -116,7 +118,8 @@ describe('confirmed interruption compensation', () => {
       status: 'running',
     });
     expect(
-      (await topicModel.findByTaskId(input.id)).find((topic) => topic.topicId === 'topic-old')?.status,
+      (await topicModel.findByTaskId(input.id)).find((topic) => topic.topicId === 'topic-old')
+        ?.status,
     ).toBe('canceled');
   });
 

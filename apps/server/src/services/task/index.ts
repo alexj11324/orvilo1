@@ -571,16 +571,31 @@ export class TaskService {
     targetTasks: TaskItem[],
     interruptedTopics: Awaited<ReturnType<TaskTopicModel['findRunningByTaskIds']>>,
     cause: unknown,
+    attemptedTopics: Awaited<
+      ReturnType<TaskTopicModel['findRunningByTaskIds']>
+    > = interruptedTopics,
   ): Promise<void> {
     const failures = [];
+    const attemptedByTask = new Map<string, number>();
+    const interruptedByTask = new Map<string, number>();
+    for (const topic of attemptedTopics) {
+      attemptedByTask.set(topic.taskId, (attemptedByTask.get(topic.taskId) ?? 0) + 1);
+    }
+    for (const topic of interruptedTopics) {
+      interruptedByTask.set(topic.taskId, (interruptedByTask.get(topic.taskId) ?? 0) + 1);
+    }
     for (const topic of interruptedTopics) {
       if (!topic.topicId) continue;
       const snapshot = targetTasks.find(({ id }) => id === topic.taskId);
       if (!snapshot) continue;
       const generation = buildInterruptedTaskGeneration(snapshot, topic);
       if (!generation) continue;
+      const allTaskRunsInterrupted =
+        (interruptedByTask.get(topic.taskId) ?? 0) === (attemptedByTask.get(topic.taskId) ?? 0);
       try {
-        await this.taskModel.recoverInterruptedRun(generation);
+        await this.taskModel.recoverInterruptedRun(
+          allTaskRunsInterrupted ? generation : { ...generation, parkTask: false },
+        );
       } catch (error) {
         failures.push(error);
       }
@@ -640,10 +655,14 @@ export class TaskService {
     }
 
     const interruptedTopics: Awaited<ReturnType<TaskTopicModel['findRunningByTaskIds']>> = [];
+    let attemptedTopics: Awaited<ReturnType<TaskTopicModel['findRunningByTaskIds']>> = [];
     let task: TaskItem | null | undefined;
     try {
       if (resolved.status === 'running' && status !== 'running') {
         const topics = await this.taskTopicModel.findByTaskId(resolved.id);
+        attemptedTopics = topics.filter(
+          (topic) => topic.status === 'running' && Boolean(topic.topicId),
+        );
         const aiAgentService = new AiAgentService(this.db, this.userId, {
           workspaceId: this.workspaceId,
         });
@@ -703,7 +722,7 @@ export class TaskService {
             )
           : await this.taskModel.updateStatus(resolved.id, status, extra);
     } catch (error) {
-      await this.recoverInterruptedRuns([resolved], interruptedTopics, error);
+      await this.recoverInterruptedRuns([resolved], interruptedTopics, error, attemptedTopics);
       throw error;
     }
     if (!task) {
@@ -881,7 +900,12 @@ export class TaskService {
       interruptedTopics = runningTopics.filter((_, index) => settled[index].status === 'fulfilled');
       const failure = settled.find((result) => result.status === 'rejected');
       if (failure) {
-        await this.recoverInterruptedRuns(targetTasks, interruptedTopics, failure.reason);
+        await this.recoverInterruptedRuns(
+          targetTasks,
+          interruptedTopics,
+          failure.reason,
+          runningTopics,
+        );
         throw failure.reason;
       }
     }
@@ -893,6 +917,10 @@ export class TaskService {
       await this.db.transaction(async (tx) => {
         const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
         const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
+
+        // Recovery acquires this advisory lock before task/topic rows. Take
+        // the same lock first here to prevent the inverse lock order deadlock.
+        await taskModel.acquireDependencyLockForTransaction();
 
         // Cancel by the frozen id set rather than the pre-read topic list, so a
         // topic that started between the snapshot and this transaction is still

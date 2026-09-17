@@ -158,6 +158,7 @@ describe('TaskService', () => {
   };
 
   const mockTaskModel = {
+    acquireDependencyLockForTransaction: vi.fn().mockResolvedValue(undefined),
     areAllDependenciesCompleted: vi.fn().mockResolvedValue(true),
     recoverInterruptedRun: vi.fn().mockResolvedValue(true),
     findBlockedTaskIds: vi.fn().mockResolvedValue([]),
@@ -1662,6 +1663,12 @@ describe('TaskService', () => {
         expect(mockTaskModel.recoverInterruptedRun).toHaveBeenCalledExactlyOnceWith(
           expectedRecovery,
         );
+        if (path === 'cascade') {
+          expect(mockTaskModel.acquireDependencyLockForTransaction).toHaveBeenCalledTimes(1);
+          expect(
+            mockTaskModel.acquireDependencyLockForTransaction.mock.invocationCallOrder[0],
+          ).toBeLessThan(mockTaskTopicModel.cancelRunningByTaskIds.mock.invocationCallOrder[0]);
+        }
         expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
         expect(cascadeManyMock).not.toHaveBeenCalled();
         mockTaskModel.updateStatus.mockReset();
@@ -1687,6 +1694,26 @@ describe('TaskService', () => {
       expect(mockTaskModel.recoverInterruptedRun).toHaveBeenCalledExactlyOnceWith(expectedRecovery);
       expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
       expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
+    });
+
+    it('does not park a task when only one of its own running operations was interrupted', async () => {
+      mockTaskModel.resolve.mockResolvedValue(snapshot);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([
+        running,
+        { ...running, topicId: 'topic-2', operationId: 'op-2' },
+      ]);
+      interruptTaskMock
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false });
+      await expect(
+        new TaskService(db, userId).updateStatusCascade({ id: 'T-1', status: 'completed' }),
+      ).rejects.toThrow('Task interruption was not confirmed');
+      expect(mockTaskModel.recoverInterruptedRun).toHaveBeenCalledExactlyOnceWith({
+        ...expectedRecovery,
+        parkTask: false,
+      });
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
     });
 
     it('surfaces a failed recovery rather than silently leaving a stopped run live', async () => {

@@ -375,10 +375,20 @@ export class TaskModel {
     if (this.dependencyLockHeld) return work(this);
     return this.db.transaction(async (tx) => {
       const model = new TaskModel(tx as LobeChatDatabase, this.userId, this.workspaceId);
-      await model.lockDependencyGraph();
-      model.dependencyLockHeld = true;
+      await model.acquireDependencyLockForTransaction();
       return work(model);
     });
+  }
+
+  /**
+   * Acquire the prerequisite graph lock inside an already-open transaction.
+   * Callers that also mutate task/topic rows must take this lock first so
+   * recovery and status cascades share one global lock order.
+   */
+  async acquireDependencyLockForTransaction(): Promise<void> {
+    if (this.dependencyLockHeld) return;
+    await this.lockDependencyGraph();
+    this.dependencyLockHeld = true;
   }
 
   /** Guard every advancing writer; cancellation/pause remain available for recovery. */
@@ -2200,12 +2210,29 @@ export class TaskModel {
     currentTopicId: string | null;
     id: string;
     operationId: string | null;
+    parkTask?: boolean;
     reservationId: string | null;
     topicId: string;
   }): Promise<boolean> {
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) => model.recoverInterruptedRun(input));
     }
+    // Lock and validate the task generation before touching its topic. A
+    // continuation can reuse a topic before it swaps operationId; canceling the
+    // topic first would otherwise kill that successor generation.
+    const [taskState] = await this.db
+      .select({
+        currentTopicId: tasks.currentTopicId,
+        runReservationId: tasks.runReservationId,
+        status: tasks.status,
+      })
+      .from(tasks)
+      .where(and(eq(tasks.id, input.id), this.ownership()))
+      .for('update');
+    if (!taskState) return false;
+    const ownsTaskGeneration = shouldParkInterruptedTask(taskState, input);
+    if (taskState.currentTopicId === input.topicId && !ownsTaskGeneration) return false;
+
     const [interrupted] = await this.db
       .select({ id: taskTopics.id })
       .from(taskTopics)
@@ -2226,19 +2253,7 @@ export class TaskModel {
       input.id,
       input.topicId,
     );
-    // A stopped historical/non-current topic must never inherit the task's
-    // current reservation. Only the exact current topic generation may park
-    // task-level state; otherwise recovery is topic-local.
-    const [taskState] = await this.db
-      .select({
-        currentTopicId: tasks.currentTopicId,
-        runReservationId: tasks.runReservationId,
-        status: tasks.status,
-      })
-      .from(tasks)
-      .where(and(eq(tasks.id, input.id), this.ownership()))
-      .for('update');
-    if (!taskState || !shouldParkInterruptedTask(taskState, input)) return false;
+    if (!ownsTaskGeneration || input.parkTask === false) return false;
     const recovered = await this.db
       .update(tasks)
       .set({

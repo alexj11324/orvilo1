@@ -9,6 +9,7 @@ import { tasks } from '@/database/schemas/task';
 import type { LobeChatDatabase } from '@/database/type';
 import {
   createPullRequestForBranch,
+  findBranchPr,
   getPullRequestReviewSnapshot,
   getRemoteBranchSha,
   isRemotePrMergeReady,
@@ -301,7 +302,9 @@ export const runTaskDeliveryReviewSweep = async (
     const repo = row.integration.repo;
     result.checked += 1;
 
-    if (!(await ensureReviewTaskPaused(db, task, rows, workspaceId))) {
+    // Review snapshots must describe an immutable candidate. If any task run
+    // is still live, do not read/act on GitHub review state yet.
+    if (rows.some((candidate) => candidate.status === 'running')) {
       result.waiting.push(task.identifier);
       continue;
     }
@@ -315,37 +318,50 @@ export const runTaskDeliveryReviewSweep = async (
         workspaceId,
       });
 
+      // A task is not in delivery review until the remote branch and canonical
+      // PR identity are durable. This also recovers the cross-system half-fail
+      // where GitHub created the PR but the database write was interrupted.
+      let deliveryRecord = record;
       let prNumber = record.prNumber;
       let prUrl = record.prUrl;
       if (!prNumber) {
         const remoteHead = await getRemoteBranchSha(repo, record.branch, token);
-        if (remoteHead) {
-          const created = await createPullRequestForBranch({
+        if (!remoteHead) {
+          await taskModel.update(task.id, {
+            error: 'Delivery branch is not published to GitHub yet; review has not started.',
+          });
+          result.waiting.push(task.identifier);
+          continue;
+        }
+        const existing = await findBranchPr(repo, record.branch, record.baseBranch, token);
+        const bound =
+          existing ??
+          (await createPullRequestForBranch({
             baseBranch: record.baseBranch,
             body: `Automated delivery for Orvilo task ${task.identifier}. This PR remains open while CI and review feedback are processed.`,
             headBranch: record.branch,
             repo,
             title: `${task.identifier}: ${task.name || task.instruction.slice(0, 80)}`,
             token,
+          }));
+        prNumber = bound?.number;
+        prUrl = bound?.url;
+        if (prNumber && prUrl) {
+          const persisted = await topicModel.updateIntegration(task.id, row.topicId, {
+            expectedHeadSha: remoteHead,
+            prNumber,
+            prUrl,
           });
-          prNumber = created?.number;
-          prUrl = created?.url;
-          if (prNumber && prUrl) {
-            await topicModel.updateIntegration(task.id, row.topicId, {
-              expectedHeadSha: remoteHead,
-              prNumber,
-              prUrl,
-            });
-          }
+          if (!persisted) throw new Error('Pull request identity could not be persisted');
+          deliveryRecord = { ...record, expectedHeadSha: remoteHead, prNumber, prUrl };
         }
       }
 
       if (!prNumber) {
         await taskModel.update(task.id, {
-          error:
-            'Pull request required: push the delivery branch to GitHub before review can continue.',
+          error: 'Pull request could not be established; review has not started.',
         });
-        result.paused.push(task.identifier);
+        result.waiting.push(task.identifier);
         continue;
       }
 
@@ -363,6 +379,17 @@ export const runTaskDeliveryReviewSweep = async (
         continue;
       }
 
+      // Read the canonical PR even when its head moved, then reject the moved
+      // revision explicitly. Returning generic "unavailable" would hide a
+      // manually advanced or otherwise unaccepted delivery head.
+      if (deliveryRecord.expectedHeadSha && snapshot.headSha !== deliveryRecord.expectedHeadSha) {
+        await taskModel.update(task.id, {
+          error: `Pull request head ${snapshot.headSha} does not match accepted delivery ${deliveryRecord.expectedHeadSha}.`,
+        });
+        result.waiting.push(task.identifier);
+        continue;
+      }
+
       if (snapshot.baseBranch !== record.baseBranch) {
         await topicModel.updateIntegration(task.id, row.topicId, {
           lastError: `PR targets ${snapshot.baseBranch}, expected ${record.baseBranch}`,
@@ -375,10 +402,34 @@ export const runTaskDeliveryReviewSweep = async (
         continue;
       }
 
+      if (!deliveryRecord.expectedHeadSha) {
+        const persisted = await topicModel.updateIntegration(task.id, row.topicId, {
+          expectedBaseSha: snapshot.baseSha,
+          expectedHeadSha: snapshot.headSha,
+          prNumber: snapshot.number,
+          prUrl: snapshot.url,
+        });
+        if (!persisted) throw new Error('Pull request identity could not be persisted');
+        deliveryRecord = {
+          ...deliveryRecord,
+          expectedBaseSha: snapshot.baseSha,
+          expectedHeadSha: snapshot.headSha,
+          prNumber: snapshot.number,
+          prUrl: snapshot.url,
+        };
+      }
+
+      // Only now does the task cross the user-visible Pending Review boundary.
+      // If a run is still live, keep waiting rather than reviewing mutable code.
+      if (!(await ensureReviewTaskPaused(db, task, rows, workspaceId))) {
+        result.waiting.push(task.identifier);
+        continue;
+      }
+
       if (snapshot.merged) {
         await markDeliveryMerged({
           db,
-          record: { ...record, prNumber },
+          record: { ...deliveryRecord, prNumber },
           snapshot,
           task,
           topicModel,
@@ -416,7 +467,7 @@ export const runTaskDeliveryReviewSweep = async (
         // do we advance the dedupe cursor; otherwise a transient dispatch error
         // would permanently hide the CI failure/review comment.
         await taskModel.update(task.id, { error: null });
-        await dispatchCorrective({ db, record, row, snapshot, task, workspaceId });
+        await dispatchCorrective({ db, record: deliveryRecord, row, snapshot, task, workspaceId });
         await persistReviewContext(taskModel, task.id, {
           ...context,
           handledFeedbackIds: [...new Set([...(context.handledFeedbackIds ?? []), ...newFeedback])],
@@ -475,7 +526,7 @@ export const runTaskDeliveryReviewSweep = async (
 
       await markDeliveryMerged({
         db,
-        record: { ...record, expectedHeadSha: snapshot.headSha, prNumber: snapshot.number },
+        record: { ...deliveryRecord, expectedHeadSha: snapshot.headSha, prNumber: snapshot.number },
         snapshot: confirmed,
         task,
         topicModel,

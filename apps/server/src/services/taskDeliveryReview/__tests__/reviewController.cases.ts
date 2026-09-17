@@ -20,7 +20,7 @@ type Row = {
     branch: string;
     expectedHeadSha?: string;
     integratedSha?: string;
-    prNumber: number;
+    prNumber?: number;
     repo: string;
     role: string;
     state: string;
@@ -75,6 +75,9 @@ function setup(
     first?: Partial<RemotePrReviewSnapshot>;
     handled?: string[];
     liveTopic?: boolean;
+    missingPr?: boolean;
+    missingRemote?: boolean;
+    runningTask?: boolean;
     noMatchingRowsAtConfirmation?: boolean;
     otherRepositoryRow?: boolean;
     superseded?: boolean;
@@ -87,7 +90,7 @@ function setup(
       baseBranch: 'main',
       branch: 'task/T-1',
       expectedHeadSha: HEAD,
-      prNumber: 9,
+      ...(options.missingPr ? {} : { prNumber: 9 }),
       repo: 'acme/widgets',
       role: 'task',
       state: 'verification_pending',
@@ -120,13 +123,14 @@ function setup(
     id: 'task-1',
     identifier: 'T-1',
     instruction: 'Fix the code',
-    status: 'paused',
+    status: options.runningTask ? 'running' : 'paused',
     workspaceId: 'w1',
   };
   const state = {
     completed: [] as string[],
     errors: [] as (string | null)[],
     expected: [] as (ExpectedPullRequestIdentity | undefined)[],
+    events: [] as string[],
     merges: [] as { expectedHeadSha: string }[],
     rows,
     runs: [] as Record<string, unknown>[],
@@ -172,6 +176,7 @@ function setup(
           return structuredClone(state.rows);
         }
         async updateIntegration(_task: string, topic: string, patch: Partial<Row['integration']>) {
+          state.events.push('persist-pr');
           if (options.failPersistence) return false;
           const found = state.rows.find((item) => item.topicId === topic);
           if (!found) return false;
@@ -183,6 +188,7 @@ function setup(
     '@/server/services/task': {
       TaskService: class {
         async updateStatus(args: { status: string }) {
+          if (args.status === 'paused') state.events.push('enter-review');
           if (args.status === 'completed') state.completed.push(args.status);
         }
       },
@@ -196,9 +202,11 @@ function setup(
     },
     '@/server/services/githubRepo': {
       createPullRequestForBranch: async () => {
-        throw new Error('Unexpected new PR');
+        state.events.push('create-pr');
+        return { number: 9, url: 'https://github.com/acme/widgets/pull/9' };
       },
-      getRemoteBranchSha: async () => HEAD,
+      findBranchPr: async () => undefined,
+      getRemoteBranchSha: async () => (options.missingRemote ? undefined : HEAD),
       isRemotePrMergeReady,
       mergePullRequest: async (args: { expectedHeadSha: string }) => {
         state.merges.push(args);
@@ -349,6 +357,26 @@ add(
     assert.equal(f.state.merges.length, 0);
   },
 );
+
+add('missing remote delivery does not enter review without a PR', async (load) => {
+  const f = setup({ missingPr: true, missingRemote: true, runningTask: true });
+  const result = await (await load(f.mocks))(f.db);
+  assert.deepEqual(result.waiting, ['T-1']);
+  assert.equal(f.state.events.includes('enter-review'), false);
+  assert.equal(f.state.events.includes('create-pr'), false);
+});
+
+add('persists the canonical PR before entering review', async (load) => {
+  const f = setup({ missingPr: true, runningTask: true, first: { draft: true } });
+  await (
+    await load(f.mocks)
+  )(f.db);
+  const persisted = f.state.events.indexOf('persist-pr');
+  const entered = f.state.events.indexOf('enter-review');
+  assert.ok(persisted >= 0);
+  assert.ok(entered > persisted);
+  assert.equal(f.state.events.filter((event) => event === 'create-pr').length, 1);
+});
 
 add('an external merge of a different accepted head is not completed', async (load) => {
   const f = setup({

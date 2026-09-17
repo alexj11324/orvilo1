@@ -1,0 +1,10 @@
+from pathlib import Path
+r=Path.cwd()
+def rep(path,old,new):
+ p=r/path;s=p.read_text();assert s.count(old)==1,(path,s.count(old));p.write_text(s.replace(old,new))
+rep('apps/server/src/services/memory/userMemory/extract.ts', "concurrencyKey: `memory-user-memory.process-topic.${userId}.${payload.topicIds?.[0] ?? 'unknown'}`,", "concurrencyKey: `memory-user-memory.process-topic.${userId}`," )
+p=r/'apps/server/src/router-hono/webhooks/handlers/__tests__/memoryUserMemoryChatTopicCancel.test.ts'
+s=p.read_text(); marker="  it('normalizes hourly tasks with missing metadata before cancellation', async () => {"
+assert s.count(marker)==1
+case='''  it('reports every partial Hatchet cancellation failure without hiding successful siblings', async () => {\n    mocks.findFirst.mockResolvedValue({\n      id: '00000000-0000-4000-8000-000000000004',\n      metadata: { control: { hatchet: { workflowRunIds: ['hatchet-dispatch:ok', 'hatchet-dispatch:boom', 'legacy-run'] } } },\n      type: AsyncTaskType.UserMemoryExtractionWithChatTopic,\n      userId: 'user-1',\n      workspaceId: null,\n    });\n    mocks.cancel.mockImplementation(async (id: string) => {\n      if (id === 'hatchet-dispatch:boom') throw new Error('provider unavailable');\n      return id === 'hatchet-dispatch:ok';\n    });\n    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);\n    const response = await app.fetch(createRequest({ taskId: '00000000-0000-4000-8000-000000000004' }));\n    await expect(response.json()).resolves.toMatchObject({\n      cancelledWorkflowRuns: 1,\n      failedWorkflowRunIds: ['hatchet-dispatch:boom', 'legacy-run'],\n      status: AsyncTaskStatus.Error,\n    });\n    expect(response.status).toBe(200);\n    expect(mocks.cancel).toHaveBeenCalledTimes(3);\n    expect(error).toHaveBeenCalledWith(\n      expect.stringContaining('workflow cancellation failed'),\n      expect.objectContaining({ workflowRunId: 'hatchet-dispatch:boom' }),\n    );\n    error.mockRestore();\n  });\n\n'''
+p.write_text(s.replace(marker,case+marker))

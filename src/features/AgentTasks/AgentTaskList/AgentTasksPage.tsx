@@ -378,12 +378,13 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
 
   // Collaboration scope: a project board joins `project:{id}`; the global
   // workspace task page joins `workspace:{id}`; personal mode joins nothing —
-  // there is no tenant to share presence with.
-  const collaborationRoom = projectId
-    ? { id: projectId, scope: 'project' as const }
-    : activeWorkspaceId
-      ? { id: activeWorkspaceId, scope: 'workspace' as const }
-      : null;
+  // there is no tenant to share presence with. Project rooms only exist under
+  // a workspace, so without an active workspace there is no room to join.
+  const collaborationRoom = activeWorkspaceId
+    ? projectId
+      ? { id: projectId, scope: 'project' as const }
+      : { id: activeWorkspaceId, scope: 'workspace' as const }
+    : null;
 
   return (
     <CollaborationProvider room={collaborationRoom} viewKey="tasks">

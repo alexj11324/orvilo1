@@ -97,7 +97,7 @@ interface MemberRowProps {
 
 const MemberRow = memo<MemberRowProps>(({ callerRole, callerUserId, member, onRemove }) => {
   const { t } = useTranslation('setting');
-  const { changeRole, resume, suspend } = useTeammateActions();
+  const { changeRole, mutating, resume, suspend } = useTeammateActions();
 
   const status = memberStatus(member);
   const manageable = canManageMember(callerRole, member, callerUserId);
@@ -165,6 +165,7 @@ const MemberRow = memo<MemberRowProps>(({ callerRole, callerUserId, member, onRe
       <div>
         {manageable && roleChoices.length > 0 ? (
           <Select
+            disabled={mutating}
             size="small"
             style={{ width: 128 }}
             value={member.role}
@@ -173,7 +174,9 @@ const MemberRow = memo<MemberRowProps>(({ callerRole, callerUserId, member, onRe
               label: t(`workspaceSetting.members.role.${role}`),
               value: role,
             }))}
-            onChange={(value) => void changeRole(member.userId, value as typeof member.role)}
+            onChange={(value) =>
+              void changeRole(member.userId, value as typeof member.role, member.authzVersion)
+            }
           />
         ) : (
           <Tag color={ROLE_TAG_COLOR[member.role] ?? 'default'}>
@@ -193,7 +196,7 @@ const MemberRow = memo<MemberRowProps>(({ callerRole, callerUserId, member, onRe
       <div>
         {manageable && menuItems.length > 0 && (
           <DropdownMenu items={menuItems}>
-            <Button size="small" type="text">
+            <Button disabled={mutating} size="small" type="text">
               ⋯
             </Button>
           </DropdownMenu>

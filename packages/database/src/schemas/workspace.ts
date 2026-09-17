@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   index,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -40,6 +41,9 @@ export const workspaces = pgTable(
     frozen: boolean('frozen').default(false),
     frozenReason: text('frozen_reason'),
     frozenAt: timestamptz('frozen_at'),
+    // Bump on workspace policy changes (default access levels, sharing rules)
+    // so cached authorization decisions can be invalidated by version.
+    policyVersion: integer('policy_version').notNull().default(1),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -65,6 +69,12 @@ export const workspaceMembers = pgTable(
     joinedAt: timestamptz('joined_at').notNull().defaultNow(),
     updatedAt: updatedAt(),
     deletedAt: timestamptz('deleted_at'),
+    // Access is temporarily revoked without removing the membership row;
+    // active members are `deletedAt IS NULL AND suspendedAt IS NULL`.
+    suspendedAt: timestamptz('suspended_at'),
+    // Bumped on removal, suspension, resume and role change; authorization
+    // caches keyed on (workspace, user, authzVersion) invalidate by compare.
+    authzVersion: integer('authz_version').notNull().default(1),
   },
   (t) => [
     // Composite PK guarantees one row per (workspace, user). Without it the
@@ -101,10 +111,28 @@ export const workspaceInvitations = pgTable(
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
     email: text('email'),
+    // Auth-matching form of the invited email (lowercase + trim only — dots
+    // and +tags are preserved to stay consistent with auth-system semantics).
+    emailNormalized: text('email_normalized'),
     role: text('role').notNull().default('member'),
-    token: text('token').unique().notNull(),
+    // Legacy plaintext bearer token; retired — new rows store only
+    // `tokenHash`, this stays nullable for historical rows.
+    token: text('token').unique(),
+    // SHA-256 hex digest of the raw 32-byte token; the only persisted form.
+    tokenHash: text('token_hash'),
+    // Token generation, bumped by resend so previously issued links die.
+    generation: integer('generation').notNull().default(1),
+    // 'pending' | 'accepted' | 'expired' | 'revoked'
     status: text('status').notNull().default('pending'),
     expiresAt: timestamptz('expires_at').notNull(),
+    acceptedBy: text('accepted_by').references(() => users.id, { onDelete: 'set null' }),
+    acceptedAt: timestamptz('accepted_at'),
+    revokedBy: text('revoked_by').references(() => users.id, { onDelete: 'set null' }),
+    revokedAt: timestamptz('revoked_at'),
+    lastSentAt: timestamptz('last_sent_at'),
+    // `workspaces.policy_version` recorded at issuance — an audit snapshot for
+    // accept-time validation, not a replacement for it.
+    createdByPolicyVersion: integer('created_by_policy_version'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -112,6 +140,7 @@ export const workspaceInvitations = pgTable(
     index('workspace_invitations_workspace_id_idx').on(t.workspaceId),
     index('workspace_invitations_email_idx').on(t.email),
     index('workspace_invitations_token_idx').on(t.token),
+    uniqueIndex('workspace_invitations_token_hash_idx').on(t.tokenHash),
   ],
 );
 

@@ -370,6 +370,12 @@ export const taskTopics = pgTable(
     planRevision: integer('plan_revision'),
     executionGeneration: integer('execution_generation'),
     dispatchFence: integer('dispatch_fence'),
+    // Fencing token for the delegated-execution occupancy on this run; only
+    // the writer holding the current epoch may commit managed writes.
+    executionEpoch: integer('execution_epoch').notNull().default(0),
+    // Soft reference to `execution_grants.id` (the grant table points back at
+    // this run — a direct FK would make the two schemas mutually recursive).
+    executionGrantId: text('execution_grant_id'),
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
 
     // What triggered this run: 'manual' (ad-hoc run-now / agent tool call),

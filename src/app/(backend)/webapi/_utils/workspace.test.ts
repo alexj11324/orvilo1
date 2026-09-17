@@ -3,21 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { LobeChatDatabase } from '@/database/type';
 
-import { resolveValidWorkspaceIdFromRequest, WORKSPACE_ID_HEADER } from './workspace';
+import {
+  resolveValidWorkspaceIdFromRequest,
+  WORKSPACE_ID_HEADER,
+  WorkspaceAccessDeniedError,
+} from './workspace';
 
-const workspaceFindFirst = vi.fn();
-const workspaceMemberFindFirst = vi.fn();
+const { mockGetActiveWorkspaceMembershipRole } = vi.hoisted(() => ({
+  mockGetActiveWorkspaceMembershipRole: vi.fn(),
+}));
 
-const serverDB = {
-  query: {
-    workspaceMembers: {
-      findFirst: workspaceMemberFindFirst,
-    },
-    workspaces: {
-      findFirst: workspaceFindFirst,
-    },
-  },
-} as unknown as LobeChatDatabase;
+vi.mock('@/database/models/workspace', () => ({
+  getActiveWorkspaceMembershipRole: mockGetActiveWorkspaceMembershipRole,
+}));
+
+const serverDB = {} as LobeChatDatabase;
 
 const createRequest = (workspaceId?: string | null) => {
   const headers = new Headers();
@@ -41,8 +41,7 @@ describe('resolveValidWorkspaceIdFromRequest', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(workspaceFindFirst).not.toHaveBeenCalled();
-    expect(workspaceMemberFindFirst).not.toHaveBeenCalled();
+    expect(mockGetActiveWorkspaceMembershipRole).not.toHaveBeenCalled();
   });
 
   it('trims blank workspace headers and treats them as absent', async () => {
@@ -54,28 +53,24 @@ describe('resolveValidWorkspaceIdFromRequest', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(workspaceFindFirst).not.toHaveBeenCalled();
-    expect(workspaceMemberFindFirst).not.toHaveBeenCalled();
+    expect(mockGetActiveWorkspaceMembershipRole).not.toHaveBeenCalled();
   });
 
-  it('returns undefined when the workspace id does not exist', async () => {
-    workspaceFindFirst.mockResolvedValueOnce(undefined);
+  it('rejects when the workspace id does not exist', async () => {
+    // The helper inner-joins workspaces: an unknown id resolves no membership.
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce(null);
 
     await expect(
       resolveValidWorkspaceIdFromRequest({
-        req: createRequest(' ws-1 '),
+        req: createRequest(' ws-missing '),
         serverDB,
         userId: 'user-1',
       }),
-    ).resolves.toBeUndefined();
-
-    expect(workspaceFindFirst).toHaveBeenCalledTimes(1);
-    expect(workspaceMemberFindFirst).not.toHaveBeenCalled();
+    ).rejects.toBeInstanceOf(WorkspaceAccessDeniedError);
   });
 
-  it('returns undefined when the requester is not an active workspace member', async () => {
-    workspaceFindFirst.mockResolvedValueOnce({ id: 'ws-1' });
-    workspaceMemberFindFirst.mockResolvedValueOnce(undefined);
+  it('rejects when the requester is not an active workspace member', async () => {
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce(null);
 
     await expect(
       resolveValidWorkspaceIdFromRequest({
@@ -83,18 +78,46 @@ describe('resolveValidWorkspaceIdFromRequest', () => {
         serverDB,
         userId: 'user-1',
       }),
-    ).resolves.toBeUndefined();
+    ).rejects.toBeInstanceOf(WorkspaceAccessDeniedError);
 
-    expect(workspaceMemberFindFirst).toHaveBeenCalledTimes(1);
+    expect(mockGetActiveWorkspaceMembershipRole).toHaveBeenCalledWith(serverDB, {
+      userId: 'user-1',
+      workspaceId: 'ws-1',
+    });
   });
 
-  it('returns the trimmed workspace id for an existing workspace and active member', async () => {
-    workspaceFindFirst.mockResolvedValueOnce({ id: 'ws-1' });
-    workspaceMemberFindFirst.mockResolvedValueOnce({ userId: 'user-1' });
+  it('rejects suspended and removed members identically (helper reports null)', async () => {
+    // Contract: suspendedAt / deletedAt members resolve `null` from the helper —
+    // the rejection is indistinguishable from "not a member" / "not found".
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValue(null);
+
+    await expect(
+      resolveValidWorkspaceIdFromRequest({
+        req: createRequest('ws-1'),
+        serverDB,
+        userId: 'user-1',
+      }),
+    ).rejects.toBeInstanceOf(WorkspaceAccessDeniedError);
+  });
+
+  it('returns the trimmed workspace id for an active member', async () => {
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce('member');
 
     await expect(
       resolveValidWorkspaceIdFromRequest({
         req: createRequest(' ws-1 '),
+        serverDB,
+        userId: 'user-1',
+      }),
+    ).resolves.toBe('ws-1');
+  });
+
+  it('returns the workspace id for any active role including viewer', async () => {
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce('viewer');
+
+    await expect(
+      resolveValidWorkspaceIdFromRequest({
+        req: createRequest('ws-1'),
         serverDB,
         userId: 'user-1',
       }),

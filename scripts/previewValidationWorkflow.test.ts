@@ -38,9 +38,10 @@ describe.each([
     expect(validate?.id).toBe('validate-manual-preview');
     expect(validate?.run).toContain(`printf 'deployment-ref=%s\\n'`);
     expect(validate?.run).toContain('>> "$GITHUB_OUTPUT"');
-    expect(validate?.run).toContain('deployments/${EXPECTED_DEPLOYMENT_ID}');
-    expect(validate?.run).toContain('Vercel deployment validation failed (HTTP $http_status');
-    expect(validate?.run).toContain('actual_url" != "$deployment_host"');
+    expect(validate?.run).toContain('deployments/${EXPECTED_DEPLOYMENT_ID}/statuses');
+    expect(validate?.run).toContain('.creator.login == "vercel[bot]"');
+    expect(validate?.run).toContain('.environment_url == $url');
+    expect(validate?.run).not.toContain('VERCEL_TOKEN');
     expect(validate?.run).not.toContain('MANUAL_DEPLOYMENT_REF');
     expect(resolve?.with?.['deployment-ref']).toBe(
       '${{ steps.validate-manual-preview.outputs.deployment-ref }}',

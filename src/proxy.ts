@@ -36,6 +36,8 @@ export const config = {
     '/settings(.*)',
     '/image',
     '/video',
+    '/invite',
+    '/invite(.*)',
     '/resource',
     '/resource(.*)',
     '/profile(.*)',

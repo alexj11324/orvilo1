@@ -1,0 +1,135 @@
+name: PR Audit Followups
+on:
+  push:
+    branches: [fix/pr-audit-20260916]
+    paths: [.github/workflows/pr-audit-followups.yml]
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pr: 26
+            base: 170542949ceed2a1b269ec0edf4cf8421474854c
+            patch: .github/scripts/pr26-followup.patch.b64
+    services:
+      postgres:
+        image: paradedb/paradedb:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
+      DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_DRIVER: node
+      TEST_SERVER_DB: '1'
+      KEY_VAULTS_SECRET: Kix2wcUONd4CX51E/ZPAd36BqM4wzJgKjPtz2sGztqQ=
+      S3_PUBLIC_DOMAIN: https://example.com
+      APP_URL: https://home.com
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Apply audited patch to immutable PR head
+        env:
+          PATCH_PATH: ${{ matrix.patch }}
+          BASE_SHA: ${{ matrix.base }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/evidence
+          git show "$GITHUB_SHA:$PATCH_PATH" > /tmp/patch.b64
+          python - <<'PY'
+          import base64,zlib
+          from pathlib import Path
+          Path('/tmp/fix.patch').write_bytes(zlib.decompress(base64.b64decode(Path('/tmp/patch.b64').read_text())))
+          PY
+          git checkout --detach "$BASE_SHA"
+          git apply --check /tmp/fix.patch
+          git apply /tmp/fix.patch
+          git add -N .
+          git diff --name-only > /tmp/evidence/changed.txt
+      - uses: ./.github/actions/setup-env
+      - name: Install dependencies
+        id: install
+        run: pnpm install
+      - name: Lint and commit exact source
+        id: source
+        run: |
+          set -euo pipefail
+          mapfile -t paths < <(grep -E '\.tsx?$' /tmp/evidence/changed.txt)
+          bun run check --lint "${paths[@]}" 2>&1 | tee /tmp/evidence/lint.log
+          mapfile -t all_paths < /tmp/evidence/changed.txt
+          git add -- "${all_paths[@]}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '🐛 fix: fence every interrupted generation and share polling deadlines'
+          git rev-parse HEAD > /tmp/evidence/source-sha.txt
+          git diff --exit-code
+      - name: Database regressions
+        id: database
+        if: ${{ !cancelled() && steps.source.outcome == 'success' }}
+        working-directory: packages/database
+        run: |
+          set -o pipefail
+          bunx vitest run --no-file-parallelism --silent='passed-only' src/models/__tests__/task.test.ts src/models/__tests__/taskDependency.test.ts src/models/__tests__/taskInterruptedRun.test.ts src/models/__tests__/taskTopic.test.ts src/models/interruptedRunFence.test.ts --reporter=default --reporter=json --outputFile=/tmp/evidence/database.json 2>&1 | tee /tmp/evidence/database.log
+      - name: Server regressions
+        id: server
+        if: ${{ !cancelled() && steps.source.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          bunx vitest run --project server --silent='passed-only' apps/server/src/services/task/index.test.ts apps/server/src/services/task/interruptedGeneration.test.ts apps/server/src/services/taskRunner/cascade.test.ts apps/server/src/services/taskLifecycle/onTopicComplete.test.ts apps/server/src/services/taskLifecycle/heartbeatRearm.test.ts --reporter=default --reporter=json --outputFile=/tmp/evidence/server.json 2>&1 | tee /tmp/evidence/server.log
+      - name: Frontend regressions
+        id: frontend
+        if: ${{ !cancelled() && steps.source.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          bunx vitest run --project app --silent='passed-only' src/store/task/slices/detail/action.test.ts src/store/task/slices/detail/polling.test.tsx src/store/task/slices/detail/pollingPolicy.test.ts --reporter=default --reporter=json --outputFile=/tmp/evidence/frontend.json 2>&1 | tee /tmp/evidence/frontend.log
+      - name: Prove original behavior fails regression cases
+        if: steps.database.outcome == 'success' && steps.server.outcome == 'success' && steps.frontend.outcome == 'success'
+        env:
+          BASE_SHA: ${{ matrix.base }}
+        run: |
+          set -euo pipefail
+          fixed=$(git rev-parse HEAD)
+          files=(packages/database/src/models/task.ts apps/server/src/services/task/index.ts apps/server/src/services/task/interruptedGeneration.ts src/store/task/slices/detail/action.ts src/store/task/slices/detail/pollingPolicy.ts)
+          trap 'git restore --source="$fixed" --worktree -- "${files[@]}"' EXIT
+          git restore --source="$BASE_SHA" --worktree -- "${files[@]}"
+          set +e
+          (cd packages/database && bunx vitest run src/models/__tests__/taskInterruptedRun.test.ts -t 'reused non-current|new current topic' --reporter=json --outputFile=/tmp/evidence/baseline-database.json) > /tmp/evidence/baseline-database.log 2>&1
+          database=$?
+          bunx vitest run --project app src/store/task/slices/detail/polling.test.tsx -t 'deadline when' --reporter=json --outputFile=/tmp/evidence/baseline-frontend.json > /tmp/evidence/baseline-frontend.log 2>&1
+          frontend=$?
+          set -e
+          test "$database" -ne 0 && test "$frontend" -ne 0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for name in ('database', 'frontend'):
+              report=json.loads(Path(f'/tmp/evidence/baseline-{name}.json').read_text())
+              assert report['numFailedTests'] > 0
+              print(name, report['numFailedTests'], 'expected failures')
+          PY
+      - name: Full repository typecheck
+        id: typecheck
+        if: ${{ !cancelled() && steps.source.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          pnpm type-check 2>&1 | tee /tmp/evidence/typecheck.log
+      - name: Publish validated commit to isolated result branch
+        if: success()
+        env:
+          PR_NUMBER: ${{ matrix.pr }}
+        run: |
+          git diff --exit-code
+          git push origin "HEAD:refs/heads/fix/audit-result-pr${PR_NUMBER}-20260917"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audit-followup-pr${{ matrix.pr }}
+          path: /tmp/evidence
+          retention-days: 5

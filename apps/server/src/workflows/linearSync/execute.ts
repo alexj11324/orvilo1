@@ -1,10 +1,9 @@
-import type { PublicServeOptions, WorkflowContext } from '@upstash/workflow';
-
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { getServerDB } from '@/database/server';
 import { LinearPlanningWorker } from '@/server/services/linearSync/planning';
 import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/provider';
 import { LinearSyncWorker } from '@/server/services/linearSync/worker';
+import type { WorkflowContext } from '@/server/workflows/context';
 
 import {
   type LinearSyncInstallationResult,
@@ -57,7 +56,3 @@ export const executeLinearSyncWorkflow = async (
 
   return { installationId: installation.id, inbox, outbox, planning };
 };
-
-export const executeLinearSyncWorkflowOptions = {
-  initialPayloadParser: (input: string) => LinearSyncWorkflowPayloadSchema.parse(JSON.parse(input)),
-} satisfies PublicServeOptions<LinearSyncWorkflowPayload>;

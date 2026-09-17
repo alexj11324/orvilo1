@@ -2,39 +2,52 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LinearSyncWorkflow } from './index';
 
-const mocks = vi.hoisted(() => ({ trigger: vi.fn() }));
+const mocks = vi.hoisted(() => ({ triggerHatchetWorkflow: vi.fn() }));
 
-vi.mock('@/libs/qstash', () => ({ workflowClient: { trigger: mocks.trigger } }));
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  triggerHatchetWorkflow: mocks.triggerHatchetWorkflow,
+}));
 vi.mock('@/libs/observability/traceparent', () => ({
   injectActiveTraceHeaders: vi.fn(),
-}));
-vi.mock('@/envs/app', () => ({
-  appEnv: { APP_URL: 'https://app.example.test', INTERNAL_APP_URL: undefined },
 }));
 
 describe('LinearSyncWorkflow', () => {
   beforeEach(() => {
-    mocks.trigger.mockReset().mockResolvedValue({ messageId: 'message-1' });
-    vi.stubEnv('QSTASH_TOKEN', 'qstash-test');
+    mocks.triggerHatchetWorkflow.mockReset().mockResolvedValue({ workflowRunId: 'run-1' });
   });
 
-  it('queues a workspace-scoped process and normalizes the flow-control key', async () => {
+  it('queues a workspace-scoped Hatchet process with normalized defaults', async () => {
     await LinearSyncWorkflow.trigger({ workspaceId: 'workspace:one', limit: 5 });
 
-    expect(mocks.trigger).toHaveBeenCalledWith(
+    expect(mocks.triggerHatchetWorkflow).toHaveBeenCalledWith(
+      '/api/workflows/linear-sync/process',
+      { dryRun: false, limit: 5, workspaceId: 'workspace:one' },
       expect.objectContaining({
-        body: { dryRun: false, limit: 5, workspaceId: 'workspace:one' },
-        flowControl: { key: 'linear-sync.workspace.workspace_one', parallelism: 1 },
-        url: 'https://app.example.test/api/workflows/linear-sync/process',
+        concurrencyKey: 'workspace:one',
+        headers: {},
       }),
     );
   });
 
-  it('rejects queueing when QStash is not configured', async () => {
-    vi.stubEnv('QSTASH_TOKEN', '');
+  it('passes delayed continuation identity to the Hatchet adapter', async () => {
+    await LinearSyncWorkflow.triggerInstallation(
+      { installationId: '00000000-0000-4000-8000-000000000001', workspaceId: 'workspace-1' },
+      { delay: 3, workflowRunId: 'continuation-1' },
+    );
 
-    await expect(LinearSyncWorkflow.trigger({ workspaceId: 'workspace-1' })).rejects.toThrow(
-      'workflow is unavailable',
+    expect(mocks.triggerHatchetWorkflow).toHaveBeenCalledWith(
+      '/api/workflows/linear-sync/execute',
+      {
+        dryRun: false,
+        installationId: '00000000-0000-4000-8000-000000000001',
+        limit: 20,
+        workspaceId: 'workspace-1',
+      },
+      expect.objectContaining({
+        concurrencyKey: 'workspace-1',
+        delayMs: 3000,
+        workflowRunId: 'continuation-1',
+      }),
     );
   });
 });

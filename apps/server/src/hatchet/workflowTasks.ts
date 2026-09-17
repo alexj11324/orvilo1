@@ -61,6 +61,8 @@ import {
 } from '@/server/workflows/context';
 import { runExpertiseHistoryWorkflow } from '@/server/workflows/expertiseHistory';
 import { runExpertiseHistoryTopicWorkflow } from '@/server/workflows/expertiseHistory/topic';
+import { executeLinearSyncWorkflow } from '@/server/workflows/linearSync/execute';
+import { processLinearSyncWorkflow } from '@/server/workflows/linearSync/process';
 import { OnboardingTaskRecommendationWorkflow } from '@/server/workflows/onboardingTaskRecommendation';
 import {
   failOnboardingTaskRecommendations,
@@ -486,6 +488,10 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
           OnboardingTaskRecommendationWorkflow.trigger(payload, options),
       },
     ),
+  '/api/workflows/linear-sync/process': (input, stepStore) =>
+    invoke(processLinearSyncWorkflow, input, stepStore),
+  '/api/workflows/linear-sync/execute': (input, stepStore) =>
+    invoke(executeLinearSyncWorkflow, input, stepStore),
   '/api/workflows/task/on-creator-complete': (input) => invokeHonoHandler(onCreatorComplete, input),
   '/api/workflows/task/on-topic-complete': (input) => invokeHonoHandler(onTopicComplete, input),
   '/api/workflows/topic-auto-summary/dispatch': (input, stepStore) =>

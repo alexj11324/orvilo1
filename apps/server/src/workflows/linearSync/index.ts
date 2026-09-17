@@ -1,39 +1,29 @@
-import { appEnv } from '@/envs/app';
 import { injectActiveTraceHeaders } from '@/libs/observability/traceparent';
-import { workflowClient } from '@/libs/qstash';
-
 import {
-  type LinearSyncWorkflowInput,
-  LinearSyncWorkflowPayloadSchema,
-} from './types';
+  type HatchetWorkflowPath,
+  triggerHatchetWorkflow,
+} from '@/server/services/hatchet/workflows';
+
+import { type LinearSyncWorkflowInput, LinearSyncWorkflowPayloadSchema } from './types';
 
 const WORKFLOW_PATHS = {
   execute: '/api/workflows/linear-sync/execute',
   process: '/api/workflows/linear-sync/process',
 } as const;
 
-const normalizeFlowControlKey = (value: string) => value.replaceAll(/[^\w.-]/g, '_');
-
-const workflowUrl = (path: string) => {
-  const baseUrl = appEnv.INTERNAL_APP_URL || appEnv.APP_URL;
-  if (!baseUrl) throw new Error('INTERNAL_APP_URL or APP_URL is required for Linear sync workflows');
-  return new URL(path, baseUrl).toString();
-};
-
-const trigger = async (path: string, payload: LinearSyncWorkflowInput) => {
-  if (!process.env.QSTASH_TOKEN) throw new Error('Linear sync workflow is unavailable');
-
+const trigger = async (
+  path: HatchetWorkflowPath,
+  payload: LinearSyncWorkflowInput,
+  options?: { delay?: number; workflowRunId?: string },
+) => {
   const headers = new Headers();
   injectActiveTraceHeaders(headers);
   const normalizedPayload = LinearSyncWorkflowPayloadSchema.parse(payload);
-  return workflowClient.trigger({
-    body: normalizedPayload,
-    flowControl: {
-      key: `linear-sync.workspace.${normalizeFlowControlKey(normalizedPayload.workspaceId)}`,
-      parallelism: 1,
-    },
+  return triggerHatchetWorkflow(path, normalizedPayload, {
+    concurrencyKey: normalizedPayload.workspaceId,
     headers: Object.fromEntries(headers.entries()),
-    url: workflowUrl(path),
+    ...(options?.delay === undefined ? {} : { delayMs: options.delay * 1000 }),
+    ...(options?.workflowRunId === undefined ? {} : { workflowRunId: options.workflowRunId }),
   });
 };
 
@@ -43,8 +33,11 @@ export class LinearSyncWorkflow {
     return trigger(WORKFLOW_PATHS.process, payload);
   }
 
-  static triggerInstallation(payload: LinearSyncWorkflowInput & { installationId: string }) {
-    return trigger(WORKFLOW_PATHS.execute, payload);
+  static triggerInstallation(
+    payload: LinearSyncWorkflowInput & { installationId: string },
+    options?: { delay?: number; workflowRunId?: string },
+  ) {
+    return trigger(WORKFLOW_PATHS.execute, payload, options);
   }
 }
 

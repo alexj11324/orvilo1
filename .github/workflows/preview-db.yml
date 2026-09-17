@@ -174,8 +174,10 @@ jobs:
             local role_name="$1"
             local role_password="$2"
             local role_exists
-            role_exists=$(psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v role_name="$role_name" \
-              -qAt -c "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'role_name'")
+            role_exists=$(psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v role_name="$role_name" -qAt <<'SQL'
+          SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'role_name';
+          SQL
+            )
             if [[ "$role_exists" != "1" ]]; then
               psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v role_name="$role_name" -v role_password="$role_password" <<'SQL'
           SELECT format(
@@ -196,17 +198,23 @@ jobs:
 
           # The migration role must exist before a new database is created so
           # the database never starts life owned by the cluster admin.
-          if ! psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v migration_role="$MIGRATION_ROLE" \
-            -c 'CREATE DATABASE :"db_name" OWNER :"migration_role"'; then
-            if ! psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" \
-              -tAc "SELECT 1 FROM pg_catalog.pg_database WHERE datname = :'db_name'" | grep -qx 1; then
+          if ! psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v migration_role="$MIGRATION_ROLE" <<'SQL'
+          SELECT format('CREATE DATABASE %I OWNER %I', :'db_name', :'migration_role') \gexec
+          SQL
+          then
+            database_exists=$(psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -qAt <<'SQL'
+          SELECT 1 FROM pg_catalog.pg_database WHERE datname = :'db_name';
+          SQL
+            )
+            if [[ "$database_exists" != "1" ]]; then
               echo "failed to create or find the Preview database" >&2
               exit 1
             fi
             echo "database=$DB_NAME already exists, reusing"
           fi
-          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v migration_role="$MIGRATION_ROLE" \
-            -c 'ALTER DATABASE :"db_name" OWNER TO :"migration_role"'
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v migration_role="$MIGRATION_ROLE" <<'SQL'
+          SELECT format('ALTER DATABASE %I OWNER TO %I', :'db_name', :'migration_role') \gexec
+          SQL
           legacy_object_count=$(psql "$PR_ADMIN_URL" -v ON_ERROR_STOP=1 -v migration_role="$MIGRATION_ROLE" -qAt <<'SQL'
           SELECT count(*)
           FROM pg_catalog.pg_class AS c
@@ -288,16 +296,20 @@ jobs:
           NODE
           )
           echo "::add-mask::$PR_ADMIN_URL"
-          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v app_role="$APP_ROLE" \
-            -c 'GRANT CONNECT ON DATABASE :"db_name" TO :"app_role"'
-          test_role_exists=$(psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v test_role="$TEST_ROLE" \
-            -qAt -c "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'test_role'")
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v app_role="$APP_ROLE" <<'SQL'
+          SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'db_name', :'app_role') \gexec
+          SQL
+          test_role_exists=$(psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v test_role="$TEST_ROLE" -qAt <<'SQL'
+          SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'test_role';
+          SQL
+          )
           if [[ "$test_role_exists" != "1" ]]; then
             echo "restricted Preview CI role is missing" >&2
             exit 1
           fi
-          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v test_role="$TEST_ROLE" \
-            -c 'GRANT CONNECT ON DATABASE :"db_name" TO :"test_role"'
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v test_role="$TEST_ROLE" <<'SQL'
+          SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'db_name', :'test_role') \gexec
+          SQL
           psql "$PR_ADMIN_URL" -v ON_ERROR_STOP=1 -v app_role="$APP_ROLE" -v test_role="$TEST_ROLE" <<'SQL'
           GRANT USAGE ON SCHEMA public TO :"app_role";
           GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"app_role";

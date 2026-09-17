@@ -54,22 +54,28 @@ jobs:
           echo "::add-mask::$ADMIN_URL"
           cleanup_failed=0
           # FORCE 断开残留连接（Postgres 13+；ParadeDB pg17 支持）
-          if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" \
-            -c 'DROP DATABASE IF EXISTS :"db_name" WITH (FORCE)'; then
+          if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" <<'SQL'
+          SELECT format('DROP DATABASE IF EXISTS %I WITH (FORCE)', :'db_name') \gexec
+          SQL
+          then
             echo "dropped database=$DB_NAME"
           else
             echo "failed to drop database=$DB_NAME" >&2
             cleanup_failed=1
           fi
-          if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v app_role="$APP_ROLE" \
-            -c 'DROP ROLE IF EXISTS :"app_role"'; then
+          if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v app_role="$APP_ROLE" <<'SQL'
+          SELECT format('DROP ROLE IF EXISTS %I', :'app_role') \gexec
+          SQL
+          then
             echo "dropped app role for database=$DB_NAME"
           else
             echo "failed to drop app role for database=$DB_NAME" >&2
             cleanup_failed=1
           fi
-          if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v migration_role="$MIGRATION_ROLE" \
-            -c 'DROP ROLE IF EXISTS :"migration_role"'; then
+          if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v migration_role="$MIGRATION_ROLE" <<'SQL'
+          SELECT format('DROP ROLE IF EXISTS %I', :'migration_role') \gexec
+          SQL
+          then
             echo "dropped migration role for database=$DB_NAME"
           else
             echo "failed to drop migration role for database=$DB_NAME" >&2

@@ -1049,7 +1049,7 @@ describe('Task Router Integration', () => {
       expect(list.data).toHaveLength(0);
     });
 
-    it('keeps every task when a workspace cleanup is still active', async () => {
+    it('deletes every task even when one workspace cleanup is incomplete', async () => {
       await caller.create({ instruction: 'Task 1' });
       await caller.create({ instruction: 'Task 2' });
       const cleanup = vi
@@ -1058,8 +1058,10 @@ describe('Task Router Integration', () => {
         .mockResolvedValueOnce(false);
 
       try {
-        await expect(caller.clearAll()).rejects.toMatchObject({ code: 'CONFLICT' });
-        expect((await caller.list({})).data).toHaveLength(2);
+        const result = await caller.clearAll();
+        expect(result.count).toBe(2);
+        expect(cleanup).toHaveBeenCalledTimes(2);
+        expect((await caller.list({})).data).toHaveLength(0);
       } finally {
         cleanup.mockRestore();
       }
@@ -1067,17 +1069,17 @@ describe('Task Router Integration', () => {
   });
 
   describe('delete', () => {
-    it('keeps the task when its workspace cleanup is still active', async () => {
+    it('commits the delete before reporting an incomplete workspace cleanup', async () => {
       const task = await caller.create({ instruction: 'Task 1' });
       const cleanup = vi
         .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
         .mockResolvedValue(false);
 
       try {
-        await expect(caller.delete({ id: task.data.id })).rejects.toMatchObject({
-          code: 'CONFLICT',
-        });
-        expect((await caller.find({ id: task.data.id })).data.id).toBe(task.data.id);
+        const result = await caller.delete({ id: task.data.id });
+        expect(result.success).toBe(true);
+        expect(cleanup).toHaveBeenCalledWith(task.data.id, expect.any(Array));
+        expect((await caller.list({})).data).toHaveLength(0);
       } finally {
         cleanup.mockRestore();
       }

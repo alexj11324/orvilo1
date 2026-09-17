@@ -232,7 +232,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
       });
       const stderr = result.stderr;
 
-      expect(result.exitCode).not.toBe(0);
+      expect(result.status).not.toBe(0);
       expect(stderr).toContain('HATCHET_CLIENT_TOKEN is required');
       expect(stderr).not.toContain('ERR_UNSUPPORTED_DIR_IMPORT');
     } finally {

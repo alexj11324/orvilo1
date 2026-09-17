@@ -17,6 +17,14 @@ import { getRouteMetaFromHandle } from '@/spa/router/routeMeta';
  * workspace mirror serves them all again under `/:workspaceSlug`, so a path list
  * would be wrong in three places the day someone adds a fourth.
  *
+ * **This is the Web half.** `usePortalColumnHost.desktop.ts` overrides it: on
+ * Electron the shell renders outside the per-tab memory routers, so `useMatches`
+ * there describes the window router (whose main-area entries are `{ element: null }`
+ * stubs) and would answer "no column" on every route. The desktop override reads
+ * the active tab's pathname and resolves it against the route table —
+ * `portalColumnForPath`, which is a pure function and therefore tested directly
+ * rather than only inside an Electron build.
+ *
  * **On its own this is not enough to stand the drawer down.** `DraggablePanel`
  * keeps its children mounted and only sizes them to zero when collapsed
  * (`@lobehub/ui` `DraggablePanel.mjs` — `height/width: isExpand ? … : 0`), so a

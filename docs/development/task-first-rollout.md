@@ -863,8 +863,20 @@ Web 侧该 index 元素被 `createHomeElement: () => <WebHomeRedirect />` 取代
   **两条「渲染 0 份」的用例根本没碰到被测代码**（连「忽略非验收视图」那条也一起空过）。
   改用真枚举后才成立。
 
-  ⚠️ **仍需 S80**：这是 happy-dom 的渲染计数，不是真实界面；`useMatches()` 在 Electron 的每标签页
-  memory router 里同样可用，但未在真实构建上看过。另外三处 `PortalContent` 宿主
+  ⚠️ **提交后自查发现 Web-only 的漏洞，已补（同日）**：`useMatches()` 在 Electron 上**读的不是当前标签页**
+  —— 外壳（含渲染抽屉的 `GlobalOverlays`）是**窗口级**，而页面在每标签页各自的 memory router 里，
+  窗口级路由的主区条目是 `{ element: null }` 桩。于是桌面端**每条路由**都会答 "没有列"，
+  抽屉照旧重复 —— 而 Web 看上去是修好的，这种 "一侧修好一侧静默不动" 最容易过检。
+  （我先前的判断「`useMatches()` 在每标签页 router 里同样可用」是错的：可用，但它不在那个 router 里。）
+  补法沿用仓库既有的平台分叉：`usePortalColumnHost.desktop.ts` 覆盖基座 hook，改读**活动标签页**的
+  pathname（`selectActiveTabUrl`，与 `useWorkspaceSyncPathname.desktop.ts` 同一做法、同一理由、同样的
+  `useSeedTabsOnBoot` 之前的窗口 URL 兜底），再交给纯函数 `portalColumnForPath(pathname)` 用
+  `matchRoutes` + `getRouteMetaFromHandle` 判表。基座仍用 `useMatches`，避免把整张路由表拉进 Web 外壳的 chunk。
+  纯函数有独立测试（11 例）：`/tasks` `/inbox` `/task/t-1` `/goal/g-1` 与工作区镜像
+  `/acme/tasks` `/acme/inbox` `/acme/task/t-1` 均命中，`/page` `/settings/memory` `/resource` `/` 均不命中。
+
+  ⚠️ **仍需 S80**：这是 happy-dom 的渲染计数，不是真实界面；Electron 那侧的 pathname 来源
+  （活动标签页 URL）只在真实构建上才能确认。另外三处 `PortalContent` 宿主
   （`AgentGoals/GoalDetailPage.tsx:423`、`AgentGoals/ProcessControl/Graph/index.tsx:881`、
   `agent/features/Portal/_layout/Desktop.tsx:6`）**未声明**该标记：它们不在那个包装路由下，
   是否也会与抽屉重复需各自判断 —— **不标只是维持现状，不会引入回归**。

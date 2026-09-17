@@ -958,6 +958,7 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
   {
     element: dynamicElement(() => import('@/routes/(main)/invite'), 'Desktop > Invite'),
     errorElement: <ErrorBoundary />,
+    handle: { meta: routeMeta({ Skeleton: RouteSegmentSkeleton }) },
     path: 'invite/:token',
   },
 

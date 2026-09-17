@@ -428,6 +428,8 @@ describe('WorkspaceMemberModel', () => {
         userId: memberId,
         workspaceId,
       });
+      // project_members FK requires the user to be a workspace member there too
+      await model.addMember({ userId: memberId, workspaceId: otherWorkspaceId });
       await pmModel.add({
         projectId: 'wm-project-other-ws',
         role: 'manager',

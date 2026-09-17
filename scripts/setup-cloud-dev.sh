@@ -476,6 +476,7 @@ vercel_env DATABASE_DRIVER node preview
 vercel_env DATABASE_SSL_CA "$DATABASE_SSL_CA" preview
 vercel_env REDIS_URL "$REDIS_URL" preview
 vercel_env REDIS_PREFIX orvilo-preview preview
+vercel_env AGENT_RUNTIME_REDIS_PREFIX orvilo-preview preview
 vercel_env REDIS_TLS 1 preview
 vercel_env REDIS_TLS_CA "$REDIS_TLS_CA" preview
 vercel_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID" preview
@@ -533,6 +534,7 @@ if confirm "把 preview 的云端连接写进本地 .env（Mode A 云开发）�
   write_env AUTH_SECRET "$PREVIEW_AUTH_SECRET"
   write_env REDIS_URL "$REDIS_URL"
   write_env REDIS_PREFIX orvilo-preview
+  write_env AGENT_RUNTIME_REDIS_PREFIX orvilo-preview
   write_env REDIS_TLS 1
   write_env REDIS_TLS_CA "$REDIS_TLS_CA"
   write_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID"

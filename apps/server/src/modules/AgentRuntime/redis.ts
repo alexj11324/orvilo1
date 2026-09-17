@@ -44,9 +44,10 @@ export const createAgentRuntimeRedisClient = (url?: string): Redis | null => {
 
   const createStart = Date.now();
   timing('Redis client creating at %d', createStart);
+  const runtimeKeyPrefix = process.env.AGENT_RUNTIME_REDIS_PREFIX?.trim();
 
   const client = new Redis(redisUrl, {
-    keyPrefix: config.prefix ? `${config.prefix}:` : undefined,
+    keyPrefix: runtimeKeyPrefix ? `${runtimeKeyPrefix}:` : undefined,
     maxRetriesPerRequest: 3,
     tls: config.tls ? { ca: config.tlsCA } : undefined,
   });

@@ -7,8 +7,16 @@ const snapshot = (events: TaskPlanningSnapshot['events']): TaskPlanningSnapshot 
   consistency: { bindingVersion: null, orchestrationPolicyRevision: null },
   dependencies: [],
   events,
+  impact: { changedTaskIds: [], scopeWide: false },
   scope: { id: 'scope-1', scopeId: 'project-1', scopeType: 'project', revision: 2 },
   tasks: [],
+  truncation: {
+    escalationRequired: false,
+    omittedDependencyCount: 0,
+    omittedEventCount: 0,
+    omittedTaskCount: 0,
+    truncated: false,
+  },
 });
 
 describe('proposeLinearPlanningReview', () => {
@@ -42,6 +50,24 @@ describe('proposeLinearPlanningReview', () => {
       actions: [{ action: 'noop', reason: 'No planning-relevant domain changes were found.' }],
       explanation: 'The scope was evaluated and no semantic task change requires replanning.',
       requiresApproval: false,
+    });
+  });
+
+  it('escalates when the bounded context was truncated', async () => {
+    await expect(
+      proposeLinearPlanningReview({
+        ...snapshot([]),
+        truncation: {
+          escalationRequired: true,
+          omittedDependencyCount: 2,
+          omittedEventCount: 1,
+          omittedTaskCount: 3,
+          truncated: true,
+        },
+      }),
+    ).resolves.toMatchObject({
+      actions: [{ action: 'escalate' }],
+      requiresApproval: true,
     });
   });
 });

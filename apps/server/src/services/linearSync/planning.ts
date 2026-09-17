@@ -1,5 +1,6 @@
 import type { TaskPlanningAction, TaskPlanningProposal, TaskPlanningTrigger } from '@orvilo/types';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { isRecord } from '@orvilo/utils';
+import { and, asc, count, eq, inArray, notInArray, or, sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { LinearSyncModel } from '@/database/models/linearSync';
@@ -13,12 +14,53 @@ import {
   tasks,
 } from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
+import {
+  createGoalTaskOwnershipAdapter,
+  projectPlannerOwnershipError,
+} from '@/server/services/goal/taskOwnership';
 import { TaskService } from '@/server/services/task';
 
 import { taskPlanningProposalSchema } from './contract';
 import { createLinearCoordinatorPlanner } from './coordinator';
 
 export { proposeLinearPlanningReview } from './defaultPlanner';
+
+const MAX_PLANNING_TASKS = 200;
+const MAX_PLANNING_DEPENDENCIES = 400;
+const MAX_PLANNING_EVENTS = 100;
+const MAX_IMPACT_DISCOVERY_TASKS = MAX_PLANNING_TASKS * 4;
+
+interface PlanningTaskRow {
+  assigneeAgentId: string | null;
+  assigneeUserId: string | null;
+  id: string;
+  instruction: string;
+  name: string | null;
+  parentTaskId: string | null;
+  priority: number | null;
+  projectId: string | null;
+  status: string;
+  updatedAt: Date;
+}
+
+const eventTaskId = (event: TaskDomainEventItem): string | undefined => {
+  if (event.taskId) return event.taskId;
+  if (!isRecord(event.payload)) return undefined;
+  if (typeof event.payload.taskId === 'string') return event.payload.taskId;
+  const task = event.payload.task;
+  return isRecord(task) && typeof task.id === 'string' ? task.id : undefined;
+};
+
+const eventTaskIds = (events: TaskDomainEventItem[]) =>
+  Array.from(new Set(events.flatMap((event) => (eventTaskId(event) ? [eventTaskId(event)!] : []))));
+
+const isScopeWideEvent = (events: TaskDomainEventItem[]) =>
+  events.some((event) => !eventTaskId(event));
+
+const compareTaskRows = (left: PlanningTaskRow, right: PlanningTaskRow) => {
+  const updatedAt = left.updatedAt.getTime() - right.updatedAt.getTime();
+  return updatedAt || left.id.localeCompare(right.id);
+};
 
 export interface TaskPlanningSnapshot {
   consistency: {
@@ -27,6 +69,10 @@ export interface TaskPlanningSnapshot {
   };
   dependencies: Array<{ dependsOnId: string; taskId: string; type: string }>;
   events: TaskDomainEventItem[];
+  impact: {
+    changedTaskIds: string[];
+    scopeWide: boolean;
+  };
   scope: {
     id: string;
     scopeId: string;
@@ -36,6 +82,8 @@ export interface TaskPlanningSnapshot {
   tasks: Array<{
     assigneeAgentId: string | null;
     assigneeUserId: string | null;
+    changed?: boolean;
+    goalId?: string | null;
     id: string;
     instruction: string;
     name: string | null;
@@ -45,6 +93,13 @@ export interface TaskPlanningSnapshot {
     status: string;
     updatedAt: string;
   }>;
+  truncation: {
+    escalationRequired: boolean;
+    omittedDependencyCount: number;
+    omittedEventCount: number;
+    omittedTaskCount: number;
+    truncated: boolean;
+  };
 }
 
 /** A planner is deliberately injected so model-backed planning cannot bypass the version gate. */
@@ -67,7 +122,11 @@ export class LinearPlanningWorker {
   private readonly model: LinearSyncModel;
   private readonly workspaceId: string;
 
-  constructor(db: LobeChatDatabase, workspaceId: string) {
+  constructor(
+    db: LobeChatDatabase,
+    workspaceId: string,
+    private readonly ownershipAdapterFactory = createGoalTaskOwnershipAdapter,
+  ) {
     this.db = db;
     this.model = new LinearSyncModel(db, workspaceId);
     this.workspaceId = workspaceId;
@@ -184,6 +243,9 @@ export class LinearPlanningWorker {
           orchestrationPolicyRevision?: number | null;
         };
         tasks?: Array<{ id: string; updatedAt: string }>;
+        truncation?: {
+          escalationRequired?: boolean;
+        };
       };
       const existingTaskIds = this.actionTaskIds(proposal.actions);
       const expectedVersions = new Map(
@@ -253,6 +315,22 @@ export class LinearPlanningWorker {
       if (scope.dirtyRevision > revision.inputRevision) {
         return supersede('A newer domain event arrived while this proposal was waiting.');
       }
+
+      if (
+        inputSnapshot.truncation?.escalationRequired &&
+        proposal.actions.some((action) => action.action !== 'noop' && action.action !== 'escalate')
+      ) {
+        return supersede(
+          'The planning context was truncated; task mutations require coordinator escalation.',
+        );
+      }
+
+      const goalOwners = await this.ownershipAdapterFactory(
+        tx as unknown as LobeChatDatabase,
+        this.workspaceId,
+      ).findOwners(existingTaskIds);
+      const ownershipError = projectPlannerOwnershipError(goalOwners);
+      if (ownershipError) return supersede(ownershipError);
 
       if (scope.scopeType === 'project' && !inputSnapshot.consistency) {
         // Revisions created before the consistency metadata was added cannot be
@@ -364,7 +442,12 @@ export class LinearPlanningWorker {
             break;
           }
           case 'request_stop': {
-            throw new Error('request_stop proposals require the task stop coordinator');
+            // C10 remains a root follow-up: TaskService's safe stop path makes
+            // an external interrupt call, while this transaction has no durable
+            // post-commit interrupter to consume a stop intent.
+            throw new Error(
+              'request_stop requires a durable post-commit stop coordinator and remains unapplied',
+            );
           }
           case 'set_dependency': {
             await this.applyDependencyAction(
@@ -481,63 +564,225 @@ export class LinearPlanningWorker {
     revision: number,
     events: TaskDomainEventItem[],
   ): Promise<TaskPlanningSnapshot> {
-    const taskRows = await this.db
-      .select({
-        assigneeAgentId: tasks.assigneeAgentId,
-        assigneeUserId: tasks.assigneeUserId,
-        id: tasks.id,
-        instruction: tasks.instruction,
-        name: tasks.name,
-        parentTaskId: tasks.parentTaskId,
-        priority: tasks.priority,
-        projectId: tasks.projectId,
-        status: tasks.status,
-        updatedAt: tasks.updatedAt,
-      })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.workspaceId, this.workspaceId),
-          scope.scopeType === 'project' ? eq(tasks.projectId, scope.scopeId) : undefined,
-        ),
-      )
-      .orderBy(tasks.updatedAt)
-      .limit(500);
+    const changedTaskIds = eventTaskIds(events);
+    const scopeWide = isScopeWideEvent(events);
+    const taskRows = scopeWide
+      ? await this.listScopeTasks(scope, changedTaskIds)
+      : await this.listAffectedTasks(scope, changedTaskIds);
+    const orderedTaskRows = this.orderTaskRows(taskRows.rows, changedTaskIds);
+    const visibleTaskRows = orderedTaskRows.slice(0, MAX_PLANNING_TASKS);
+    const visibleTaskIds = new Set(visibleTaskRows.map((task) => task.id));
+    const taskCandidateCount = taskRows.total;
+    const omittedTaskCount = Math.max(0, taskCandidateCount - visibleTaskRows.length);
 
-    const taskIds = taskRows.map((task) => task.id);
-    const dependencyRows =
-      taskIds.length === 0
-        ? []
-        : await this.db
-            .select({
-              dependsOnId: taskDependencies.dependsOnId,
-              taskId: taskDependencies.taskId,
-              type: taskDependencies.type,
-            })
-            .from(taskDependencies)
-            .where(eq(taskDependencies.workspaceId, this.workspaceId));
+    const allDependencyRows = await this.listDependencyRows(scope, taskRows.candidateIds);
+    const visibleDependencyRows = allDependencyRows.filter(
+      (dependency) =>
+        visibleTaskIds.has(dependency.taskId) && visibleTaskIds.has(dependency.dependsOnId),
+    );
+    const dependencyRows = visibleDependencyRows.slice(0, MAX_PLANNING_DEPENDENCIES);
+    const omittedDependencyCount = allDependencyRows.length - dependencyRows.length;
+    const visibleEvents = events.slice(-MAX_PLANNING_EVENTS);
+    const omittedEventCount = Math.max(0, events.length - visibleEvents.length);
+    const truncated =
+      taskRows.discoveryTruncated ||
+      omittedTaskCount > 0 ||
+      omittedDependencyCount > 0 ||
+      omittedEventCount > 0;
+    const goalOwners = await this.ownershipAdapterFactory(this.db, this.workspaceId).findOwners(
+      visibleTaskRows.map((task) => task.id),
+    );
 
     return {
       consistency:
         scope.scopeType === 'project'
           ? await this.projectConsistencySnapshot(scope.scopeId)
           : { bindingVersion: null, orchestrationPolicyRevision: null },
-      dependencies: dependencyRows.filter(
-        (dependency) =>
-          taskIds.includes(dependency.taskId) || taskIds.includes(dependency.dependsOnId),
-      ),
-      events,
+      dependencies: dependencyRows,
+      events: visibleEvents,
+      impact: { changedTaskIds, scopeWide },
       scope: {
         id: scope.id,
         scopeId: scope.scopeId,
         scopeType: scope.scopeType,
         revision,
       },
-      tasks: taskRows.map((task) => ({
+      tasks: visibleTaskRows.map((task) => ({
         ...task,
+        changed: changedTaskIds.includes(task.id),
+        goalId: goalOwners.get(task.id)?.goalId ?? null,
         updatedAt: task.updatedAt.toISOString(),
       })),
+      truncation: {
+        escalationRequired: truncated,
+        omittedDependencyCount,
+        omittedEventCount,
+        omittedTaskCount,
+        truncated,
+      },
     };
+  }
+
+  private taskScopeCondition(scope: TaskPlanningScopeItem) {
+    return and(
+      eq(tasks.workspaceId, this.workspaceId),
+      scope.scopeType === 'project' ? eq(tasks.projectId, scope.scopeId) : undefined,
+    );
+  }
+
+  private selectTaskColumns() {
+    return {
+      assigneeAgentId: tasks.assigneeAgentId,
+      assigneeUserId: tasks.assigneeUserId,
+      id: tasks.id,
+      instruction: tasks.instruction,
+      name: tasks.name,
+      parentTaskId: tasks.parentTaskId,
+      priority: tasks.priority,
+      projectId: tasks.projectId,
+      status: tasks.status,
+      updatedAt: tasks.updatedAt,
+    };
+  }
+
+  private async listScopeTasks(scope: TaskPlanningScopeItem, changedTaskIds: string[]) {
+    const condition = this.taskScopeCondition(scope);
+    const [countRow, changedRows, remainingRows] = await Promise.all([
+      this.db
+        .select({ count: count(tasks.id) })
+        .from(tasks)
+        .where(condition),
+      changedTaskIds.length === 0
+        ? Promise.resolve([] as PlanningTaskRow[])
+        : this.db
+            .select(this.selectTaskColumns())
+            .from(tasks)
+            .where(and(condition, inArray(tasks.id, changedTaskIds))),
+      this.db
+        .select(this.selectTaskColumns())
+        .from(tasks)
+        .where(
+          changedTaskIds.length > 0
+            ? and(condition, notInArray(tasks.id, changedTaskIds))
+            : condition,
+        )
+        .orderBy(asc(tasks.updatedAt), asc(tasks.id))
+        .limit(MAX_PLANNING_TASKS),
+    ]);
+
+    return {
+      candidateIds: [...changedTaskIds, ...remainingRows.map((task) => task.id)],
+      discoveryTruncated: false,
+      rows: [...changedRows, ...remainingRows],
+      total: Number(countRow[0]?.count ?? 0),
+    };
+  }
+
+  private async listAffectedTasks(scope: TaskPlanningScopeItem, changedTaskIds: string[]) {
+    const selected = new Set(changedTaskIds);
+    let frontier = [...changedTaskIds];
+    let discoveryTruncated = false;
+
+    while (frontier.length > 0 && selected.size < MAX_IMPACT_DISCOVERY_TASKS) {
+      const hierarchyRows = await this.db
+        .select({ id: tasks.id, parentTaskId: tasks.parentTaskId })
+        .from(tasks)
+        .where(
+          and(
+            this.taskScopeCondition(scope),
+            or(inArray(tasks.id, frontier), inArray(tasks.parentTaskId, frontier)),
+          ),
+        )
+        .orderBy(asc(tasks.id));
+      const dependencyRows = await this.db
+        .select({ dependsOnId: taskDependencies.dependsOnId, taskId: taskDependencies.taskId })
+        .from(taskDependencies)
+        .where(
+          and(
+            eq(taskDependencies.workspaceId, this.workspaceId),
+            or(
+              inArray(taskDependencies.taskId, frontier),
+              inArray(taskDependencies.dependsOnId, frontier),
+            ),
+          ),
+        )
+        .orderBy(asc(taskDependencies.taskId), asc(taskDependencies.dependsOnId));
+
+      const next = new Set<string>();
+      for (const row of hierarchyRows) {
+        next.add(row.id);
+        if (row.parentTaskId) next.add(row.parentTaskId);
+      }
+      for (const row of dependencyRows) {
+        next.add(row.taskId);
+        next.add(row.dependsOnId);
+      }
+
+      frontier = Array.from(next)
+        .filter((taskId) => !selected.has(taskId))
+        .sort();
+      if (selected.size + frontier.length > MAX_IMPACT_DISCOVERY_TASKS) {
+        frontier = frontier.slice(0, MAX_IMPACT_DISCOVERY_TASKS - selected.size);
+        discoveryTruncated = true;
+      }
+      for (const taskId of frontier) selected.add(taskId);
+    }
+
+    if (frontier.length > 0) discoveryTruncated = true;
+    const candidateIds = Array.from(selected);
+    const rows =
+      candidateIds.length === 0
+        ? []
+        : await this.db
+            .select(this.selectTaskColumns())
+            .from(tasks)
+            .where(and(this.taskScopeCondition(scope), inArray(tasks.id, candidateIds)))
+            .orderBy(asc(tasks.updatedAt), asc(tasks.id));
+
+    return {
+      candidateIds,
+      discoveryTruncated,
+      rows,
+      total: rows.length,
+    };
+  }
+
+  private orderTaskRows(rows: PlanningTaskRow[], changedTaskIds: string[]) {
+    const changed = new Set(changedTaskIds);
+    return [...rows].sort((left, right) => {
+      const changedOrder = Number(changed.has(right.id)) - Number(changed.has(left.id));
+      return changedOrder || compareTaskRows(left, right);
+    });
+  }
+
+  private async listDependencyRows(scope: TaskPlanningScopeItem, candidateIds: string[]) {
+    if (candidateIds.length === 0) return [];
+    const rows = await this.db
+      .select({
+        dependsOnId: taskDependencies.dependsOnId,
+        taskId: taskDependencies.taskId,
+        type: taskDependencies.type,
+      })
+      .from(taskDependencies)
+      .where(
+        and(
+          eq(taskDependencies.workspaceId, this.workspaceId),
+          or(
+            inArray(taskDependencies.taskId, candidateIds),
+            inArray(taskDependencies.dependsOnId, candidateIds),
+          ),
+        ),
+      )
+      .orderBy(
+        asc(taskDependencies.taskId),
+        asc(taskDependencies.dependsOnId),
+        asc(taskDependencies.type),
+      );
+    return scope.scopeType === 'project'
+      ? rows.filter(
+          (row) => candidateIds.includes(row.taskId) && candidateIds.includes(row.dependsOnId),
+        )
+      : rows;
   }
 
   private async projectConsistencySnapshot(projectId: string) {

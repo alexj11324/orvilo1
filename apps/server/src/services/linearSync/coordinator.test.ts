@@ -23,8 +23,16 @@ const snapshot: TaskPlanningSnapshot = {
   consistency: { bindingVersion: null, orchestrationPolicyRevision: null },
   dependencies: [],
   events: [],
+  impact: { changedTaskIds: [], scopeWide: false },
   scope: { id: 'scope-1', scopeId: 'project-1', scopeType: 'project', revision: 4 },
   tasks: [],
+  truncation: {
+    escalationRequired: false,
+    omittedDependencyCount: 0,
+    omittedEventCount: 0,
+    omittedTaskCount: 0,
+    truncated: false,
+  },
 };
 
 describe('createLinearCoordinatorPlanner', () => {

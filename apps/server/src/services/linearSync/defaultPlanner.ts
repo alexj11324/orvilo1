@@ -15,6 +15,19 @@ const semanticEventTypes = new Set([
 /** Safe review-only fallback when a project coordinator cannot be resolved. */
 export const proposeLinearPlanningReview: TaskPlanningPlanner = async (snapshot) => {
   const semanticEvents = snapshot.events.filter((event) => semanticEventTypes.has(event.type));
+  if (snapshot.truncation.escalationRequired) {
+    return {
+      actions: [
+        {
+          action: 'escalate',
+          reason: `The affected planning context was truncated (${snapshot.truncation.omittedTaskCount} task(s), ${snapshot.truncation.omittedDependencyCount} dependency edge(s), and ${snapshot.truncation.omittedEventCount} event(s) omitted).`,
+        },
+      ],
+      explanation:
+        'The bounded read did not contain the complete affected subgraph, so a coordinator must review it before any task mutation.',
+      requiresApproval: true,
+    } satisfies TaskPlanningProposal;
+  }
   const issueIds = Array.from(
     new Set(
       semanticEvents

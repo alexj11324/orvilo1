@@ -5,7 +5,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '@/database/core/getTestDB';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
-import { projects, taskPlanningRevisions, tasks, users, workspaces } from '@/database/schemas';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import {
+  projects,
+  taskDispatches,
+  taskPlanningRevisions,
+  tasks,
+  users,
+  workspaces,
+} from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 
 import { LinearPlanningWorker } from './planning';
@@ -107,6 +115,76 @@ const createRevision = async (name: string, requiresApproval: boolean, projectSc
 };
 
 describe('LinearPlanningWorker.applyProposal', () => {
+  it('C10 leaves request_stop unapplied until a durable stop coordinator exists', async () => {
+    const { revision, task } = await createRevision('Stop intent', false);
+    await db.insert(taskDispatches).values({
+      generation: task.executionGeneration,
+      id: 'planning-stop-dispatch',
+      idempotencyKey: 'planning-stop-dispatch-key',
+      operationId: 'planning-stop-operation',
+      phase: 'running',
+      policyRevision: task.policyRevision,
+      requestedBy: 'orchestrator:planning',
+      requirementRevision: task.requirementRevision,
+      taskId: task.id,
+      taskRevision: task.domainRevision,
+      workspaceId,
+    });
+    await db
+      .update(taskPlanningRevisions)
+      .set({
+        proposal: {
+          actions: [
+            {
+              action: 'request_stop',
+              reason: 'The changed requirement invalidates the active run.',
+              taskId: task.id,
+            },
+          ],
+          explanation: 'Stop the active run at its safe dispatcher boundary.',
+          requiresApproval: false,
+        },
+      })
+      .where(eq(taskPlanningRevisions.id, revision.id));
+
+    await expect(
+      new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, userId, true),
+    ).rejects.toThrow('durable post-commit stop coordinator');
+    await expect(
+      db.select().from(taskDispatches).where(eq(taskDispatches.id, 'planning-stop-dispatch')),
+    ).resolves.toMatchObject([
+      expect.objectContaining({
+        fence: 0,
+        operationId: 'planning-stop-operation',
+        phase: 'running',
+      }),
+    ]);
+    expect(
+      (
+        await db
+          .select()
+          .from(taskPlanningRevisions)
+          .where(eq(taskPlanningRevisions.id, revision.id))
+      )[0].status,
+    ).toBe('proposed');
+
+    const dispatchModel = new TaskDispatchModel(db, workspaceId);
+    for (const phase of ['cancel_requested', 'outcome_unknown'] as const) {
+      await db
+        .update(taskDispatches)
+        .set({ phase })
+        .where(eq(taskDispatches.id, 'planning-stop-dispatch'));
+      await expect(
+        dispatchModel.request({
+          idempotencyKey: `replacement:${phase}`,
+          requestedBy: 'planning-test',
+          taskId: task.id,
+          trigger: 'orchestrator',
+        }),
+      ).resolves.toMatchObject({ state: 'busy', active: { phase } });
+    }
+  });
+
   it('loads the persisted proposal and enforces explicit approval', async () => {
     const { revision, task } = await createRevision('Server-approved name', true);
     const worker = new LinearPlanningWorker(db, workspaceId);

@@ -272,6 +272,7 @@ export const runTaskDeliveryReviewSweep = async (
     const row = activeDeliveryRow(rows);
     if (!row?.topicId || !row.integration?.repo) continue;
     const record = row.integration;
+    const repo = row.integration.repo;
     result.checked += 1;
 
     if (!(await ensureReviewTaskPaused(db, task, rows, workspaceId))) {
@@ -291,13 +292,13 @@ export const runTaskDeliveryReviewSweep = async (
       let prNumber = record.prNumber;
       let prUrl = record.prUrl;
       if (!prNumber) {
-        const remoteHead = await getRemoteBranchSha(record.repo, record.branch, token);
+        const remoteHead = await getRemoteBranchSha(repo, record.branch, token);
         if (remoteHead) {
           const created = await createPullRequestForBranch({
             baseBranch: record.baseBranch,
             body: `Automated delivery for Orvilo task ${task.identifier}. This PR remains open while CI and review feedback are processed.`,
             headBranch: record.branch,
-            repo: record.repo,
+            repo,
             title: `${task.identifier}: ${task.name || task.instruction.slice(0, 80)}`,
             token,
           });
@@ -321,7 +322,7 @@ export const runTaskDeliveryReviewSweep = async (
         continue;
       }
 
-      const snapshot = await getPullRequestReviewSnapshot(record.repo, prNumber, token);
+      const snapshot = await getPullRequestReviewSnapshot(repo, prNumber, token);
       if (!snapshot) {
         await taskModel.update(task.id, {
           error: 'GitHub delivery state is temporarily unavailable; review will retry automatically.',
@@ -418,7 +419,7 @@ export const runTaskDeliveryReviewSweep = async (
         expectedHeadSha: snapshot.headSha,
         mergeMethod: 'squash',
         prNumber: snapshot.number,
-        repo: record.repo,
+        repo,
         token,
       });
       if (!merge.merged) {
@@ -434,7 +435,7 @@ export const runTaskDeliveryReviewSweep = async (
         continue;
       }
 
-      const confirmed = await getPullRequestReviewSnapshot(record.repo, snapshot.number, token);
+      const confirmed = await getPullRequestReviewSnapshot(repo, snapshot.number, token);
       if (!confirmed?.merged) {
         await taskModel.update(task.id, {
           error: 'GitHub accepted the merge request, but merge confirmation is pending.',

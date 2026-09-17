@@ -9,107 +9,74 @@ import { TaskModel } from '../task';
 
 const serverDB: LobeChatDatabase = await getTestDB();
 const userId = 'task-pr-delivery-gate-user';
-
-beforeEach(async () => {
-  await serverDB.delete(users);
-  await serverDB.insert(users).values({ id: userId });
-});
-
-afterEach(async () => {
-  await serverDB.delete(users);
-});
+beforeEach(async () => { await serverDB.delete(users); await serverDB.insert(users).values({ id: userId }); });
+afterEach(async () => { await serverDB.delete(users); });
 
 const bindGithubWorkspace = async (taskId: string, repo = 'acme/widgets') => {
-  await serverDB
-    .update(tasks)
-    .set({
-      config: {
-        workspace: {
-          provider: 'git',
-          repo,
-          repoPath: '/tmp/widgets',
-        },
-      },
-    })
-    .where(eq(tasks.id, taskId));
+  await serverDB.update(tasks).set({ config: { workspace: { provider: 'git', repo, repoPath: '/tmp/widgets' } } }).where(eq(tasks.id, taskId));
 };
 
-const addMergedDeliveryEvidence = async (taskId: string, identifier: string) => {
+const addDeliveryEvidence = async (
+  taskId: string,
+  identifier: string,
+  options: { current?: boolean; state?: 'integrated' | 'verification_pending' } = {},
+) => {
   const topicId = `topic-${identifier}`;
   await serverDB.insert(topics).values({ id: topicId, userId });
   await serverDB.insert(taskTopics).values({
     integration: {
-      attempts: 0,
-      baseBranch: 'main',
-      branch: `task/${identifier}`,
-      expectedHeadSha: 'head-sha',
-      integratedSha: 'merge-sha',
-      prNumber: 42,
-      prUrl: 'https://github.com/acme/widgets/pull/42',
-      pushedToRemote: true,
-      repo: 'acme/widgets',
-      role: 'task',
-      state: 'integrated',
+      attempts: 0, baseBranch: 'main', branch: `task/${identifier}`, expectedHeadSha: 'head-sha',
+      integratedSha: options.state === 'verification_pending' ? undefined : 'merge-sha', prNumber: 42,
+      prUrl: 'https://github.com/acme/widgets/pull/42', pushedToRemote: true, repo: 'acme/widgets', role: 'task',
+      state: options.state ?? 'integrated',
     },
-    seq: 1,
-    status: 'completed',
-    taskId,
-    topicId,
-    userId,
+    seq: 1, status: options.state === 'verification_pending' ? 'running' : 'completed', taskId, topicId, userId,
   });
+  if (options.current !== false) {
+    await serverDB.update(tasks).set({ currentTopicId: topicId }).where(eq(tasks.id, taskId));
+  }
+  return topicId;
 };
 
 describe('task PR delivery completion gate', () => {
-  it('rejects completion until a GitHub-backed task has merged PR evidence', async () => {
+  it('rejects completion until the current GitHub-backed run has merged PR evidence', async () => {
     const model = new TaskModel(serverDB, userId);
     const task = await model.create({ instruction: 'Implement the code change' });
     await bindGithubWorkspace(task.id);
+    await expect(model.updateStatus(task.id, 'completed')).rejects.toThrow(/cannot complete until its current pull request is merged/i);
+    await addDeliveryEvidence(task.id, task.identifier);
+    await expect(model.updateStatus(task.id, 'completed')).resolves.toMatchObject({ id: task.id, status: 'completed' });
+  });
 
-    await expect(model.updateStatus(task.id, 'completed')).rejects.toThrow(
-      /cannot complete until its pull request is merged/i,
-    );
-
-    await addMergedDeliveryEvidence(task.id, task.identifier);
-    await expect(model.updateStatus(task.id, 'completed')).resolves.toMatchObject({
-      id: task.id,
-      status: 'completed',
-    });
+  it('does not let an old merged PR authorize a reopened task with a pending current PR', async () => {
+    const model = new TaskModel(serverDB, userId);
+    const task = await model.create({ instruction: 'Implement, reopen, and revise' });
+    await bindGithubWorkspace(task.id);
+    await addDeliveryEvidence(task.id, `${task.identifier}-old`);
+    await expect(model.updateStatus(task.id, 'completed')).resolves.toMatchObject({ status: 'completed' });
+    await model.updateStatus(task.id, 'backlog');
+    await addDeliveryEvidence(task.id, `${task.identifier}-new`, { state: 'verification_pending' });
+    await expect(model.updateStatus(task.id, 'completed')).rejects.toThrow(/cannot complete until its current pull request is merged/i);
   });
 
   it('uses the nearest inherited git workspace when guarding a child task', async () => {
     const model = new TaskModel(serverDB, userId);
     const parent = await model.create({ instruction: 'Parent code goal' });
     await bindGithubWorkspace(parent.id);
-    const child = await model.create({
-      instruction: 'Child code task',
-      parentTaskId: parent.id,
-    });
-
-    await expect(model.updateStatus(child.id, 'completed')).rejects.toThrow(
-      /cannot complete until its pull request is merged/i,
-    );
+    const child = await model.create({ instruction: 'Child code task', parentTaskId: parent.id });
+    await expect(model.updateStatus(child.id, 'completed')).rejects.toThrow(/cannot complete until its current pull request is merged/i);
   });
 
   it('requires a GitHub repo coordinate for legacy repoPath-only git bindings', async () => {
     const model = new TaskModel(serverDB, userId);
     const task = await model.create({ instruction: 'Legacy local worktree task' });
-    await serverDB
-      .update(tasks)
-      .set({ config: { workspace: { provider: 'git', repoPath: '/tmp/widgets' } } })
-      .where(eq(tasks.id, task.id));
-
-    await expect(model.updateStatus(task.id, 'completed')).rejects.toThrow(
-      /requires config\.workspace\.repo/i,
-    );
+    await serverDB.update(tasks).set({ config: { workspace: { provider: 'git', repoPath: '/tmp/widgets' } } }).where(eq(tasks.id, task.id));
+    await expect(model.updateStatus(task.id, 'completed')).rejects.toThrow(/requires config\.workspace\.repo/i);
   });
 
   it('preserves existing completion semantics for non-repository tasks', async () => {
     const model = new TaskModel(serverDB, userId);
     const task = await model.create({ instruction: 'Write a research note' });
-
-    await expect(model.updateStatus(task.id, 'completed')).resolves.toMatchObject({
-      id: task.id,
-      status: 'completed',
-    });
+    await expect(model.updateStatus(task.id, 'completed')).resolves.toMatchObject({ id: task.id, status: 'completed' });
   });
 });

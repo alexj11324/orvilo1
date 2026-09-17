@@ -56,6 +56,7 @@ const {
     countMemberBoundDevices: vi.fn(),
     countOpenTasksAssignedTo: vi.fn(),
     countOpenTasksReviewedBy: vi.fn(),
+    findMembershipRow: vi.fn(),
     findProjectsByIds: vi.fn(),
     findUserById: vi.fn(),
     findUsersByNormalizedEmail: vi.fn(),
@@ -460,6 +461,7 @@ describe('workspaceMemberRouter.listInvitations / removalPreview', () => {
     ]);
     invitationQueries.listRecentTerminalInvitations.mockResolvedValue([]);
     memberModel.getMember.mockResolvedValue({ role: 'member' });
+    queries.findMembershipRow.mockResolvedValue({ deletedAt: null, role: 'member' });
     queries.countActiveDelegations.mockResolvedValue(1);
     queries.countMemberBoundDevices.mockResolvedValue(2);
     queries.countOpenTasksAssignedTo.mockResolvedValue(3);

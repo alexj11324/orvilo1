@@ -37,6 +37,20 @@ export const lockMembershipForUpdate = (
     .then((rows) => rows[0]);
 
 /**
+ * Non-locking read of the membership row regardless of lifecycle state —
+ * removal preview needs the row even when the member is suspended (suspended
+ * members are removable, and their impact is exactly what the preview shows).
+ */
+export const findMembershipRow = (db: LobeChatDatabase, workspaceId: string, userId: string) =>
+  db
+    .select()
+    .from(workspaceMembers)
+    .where(
+      and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)),
+    )
+    .then((rows) => rows[0]);
+
+/**
  * Lock the workspace row first in every membership mutation — the fixed lock
  * order is workspace → invitation → membership.
  */

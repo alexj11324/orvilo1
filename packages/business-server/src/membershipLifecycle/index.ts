@@ -12,6 +12,7 @@ import {
   countMemberBoundDevices,
   countOpenTasksAssignedTo,
   countOpenTasksReviewedBy,
+  findMembershipRow,
   listMembersWithProfiles,
   listOpenAssignedTaskTitles,
   lockMembershipForUpdate,
@@ -208,11 +209,12 @@ export const previewMemberRemoval = async (
   db: LobeChatDatabase,
   params: { targetUserId: string; workspaceId: string },
 ): Promise<MemberRemovalPreview> => {
-  const member = await new WorkspaceMemberModel(db, params.targetUserId).getMember(
-    params.workspaceId,
-    params.targetUserId,
-  );
-  if (!member) throw new TRPCError({ code: 'NOT_FOUND', message: 'Not an active member' });
+  // Suspended members are removable — and the preview is precisely how an
+  // admin weighs that removal — so read the row regardless of suspension.
+  const member = await findMembershipRow(db, params.workspaceId, params.targetUserId);
+  if (!member || member.deletedAt) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Not an active member' });
+  }
 
   const [
     assignedTaskCount,

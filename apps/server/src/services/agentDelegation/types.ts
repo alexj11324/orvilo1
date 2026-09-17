@@ -3,15 +3,16 @@
  * under a bounded action list, on behalf of a recorded delegation subject —
  * never under a silently substituted identity.
  */
-export type ExecutionGrantStatus = 'active' | 'expired' | 'revoked';
+export type ExecutionGrantStatus = 'active' | 'exhausted' | 'expired' | 'revoked';
 
 /**
  * Who a delegated run is attributed to. `'user'` is a concrete workspace
- * member whose current membership must validate at run time; `'policy'` is a
- * pre-approved automation rule the workspace admin registered (v1 delegates
- * always use 'user' — the column carries the contract forward).
+ * member whose current membership must validate at run time; `'automation'`
+ * is a pre-approved automation policy the workspace admin registered (v1
+ * delegates always use 'user' — the column carries the contract forward).
+ * Mirrors `ExecutionGrantDelegationSubjectType` in the schema.
  */
-export type DelegationSubjectType = 'policy' | 'user';
+export type DelegationSubjectType = 'automation' | 'user';
 
 /**
  * Actions a grant can authorize. Checked at run start against the requested
@@ -26,8 +27,15 @@ export const DEFAULT_ALLOWED_ACTIONS: readonly DelegationAction[] = ['run'] as c
 export const TASK_INPUT_INTENT_TYPES = ['comment', 'decision', 'instruction', 'proposal'] as const;
 export type TaskInputIntentType = (typeof TASK_INPUT_INTENT_TYPES)[number];
 
-/** task_inputs.status — the lifecycle an input row moves through. */
-export const TASK_INPUT_STATUSES = ['accepted', 'pending', 'rejected', 'superseded'] as const;
+/** task_inputs.status — the lifecycle an input row moves through. Mirrors the
+ * schema enum in `packages/database/src/schemas/taskInput.ts`. */
+export const TASK_INPUT_STATUSES = [
+  'accepted',
+  'conflict',
+  'consumed',
+  'pending',
+  'rejected',
+] as const;
 export type TaskInputStatus = (typeof TASK_INPUT_STATUSES)[number];
 
 export type ApprovalDecision = 'approved' | 'rejected';

@@ -38,7 +38,7 @@ export class TaskInputService {
         // Serialize input allocation per task: the task row lock turns
         // max(sequence)+1 into a true monotonic counter under concurrency.
         const [locked] = await tx
-          .select({ id: tasks.id })
+          .select({ id: tasks.id, workspaceId: tasks.workspaceId })
           .from(tasks)
           .where(eq(tasks.id, params.taskId))
           .for('update')
@@ -63,6 +63,9 @@ export class TaskInputService {
             sequence,
             status: 'pending' satisfies TaskInputStatus,
             taskId: params.taskId,
+            // Tenant anchor mirrors the locked task row — never the caller's
+            // claim — so a forged workspace selector cannot scatter inputs.
+            workspaceId: locked.workspaceId,
           })
           .onConflictDoNothing()
           .returning();
@@ -104,7 +107,7 @@ export class TaskInputService {
               sequence: row.sequence,
               taskId: params.taskId,
             },
-            workspaceId: this.workspaceId,
+            workspaceId: locked.workspaceId,
           });
         }
 

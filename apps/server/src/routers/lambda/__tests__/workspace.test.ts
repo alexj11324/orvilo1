@@ -166,7 +166,7 @@ describe('workspaceRouter', () => {
     expect(result).toEqual({ transferred: true });
     expect(audit.recordAudit).toHaveBeenCalledWith(
       fakeDb,
-      expect.objectContaining({ action: 'ownership.transferred' }),
+      expect.objectContaining({ action: 'workspace.primary_ownership_transferred' }),
     );
     expect(audit.emitWorkspaceEvent).toHaveBeenCalledWith(
       fakeDb,

@@ -566,6 +566,33 @@ export class TaskService {
     return result;
   }
 
+  private async recoverInterruptedRuns(
+    targetTasks: TaskItem[],
+    interruptedTopics: Awaited<ReturnType<TaskTopicModel['findRunningByTaskIds']>>,
+    cause: unknown,
+  ): Promise<void> {
+    const failures = [];
+    for (const topic of interruptedTopics) {
+      if (!topic.topicId) continue;
+      const snapshot = targetTasks.find(({ id }) => id === topic.taskId);
+      if (!snapshot) continue;
+      try {
+        await this.taskModel.recoverInterruptedRun({
+          currentTopicId: snapshot.currentTopicId ?? null,
+          id: snapshot.id,
+          operationId: topic.operationId ?? null,
+          reservationId: snapshot.runReservationId ?? null,
+          topicId: topic.topicId,
+        });
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    if (failures.length > 0) {
+      throw new AggregateError([cause, ...failures], 'Failed to persist interrupted task recovery');
+    }
+  }
+
   /**
    * Transition a task to a new status, cascading the side effects:
    *   - leaving `running`: interrupt + cancel still-running topics
@@ -615,65 +642,73 @@ export class TaskService {
       });
     }
 
-    if (resolved.status === 'running' && status !== 'running') {
-      const topics = await this.taskTopicModel.findByTaskId(resolved.id);
-      const aiAgentService = new AiAgentService(this.db, this.userId, {
-        workspaceId: this.workspaceId,
-      });
+    const interruptedTopics: Awaited<ReturnType<TaskTopicModel['findRunningByTaskIds']>> = [];
+    let task: TaskItem | null | undefined;
+    try {
+      if (resolved.status === 'running' && status !== 'running') {
+        const topics = await this.taskTopicModel.findByTaskId(resolved.id);
+        const aiAgentService = new AiAgentService(this.db, this.userId, {
+          workspaceId: this.workspaceId,
+        });
 
-      for (const t of topics) {
-        if (t.status !== 'running' || !t.topicId) continue;
+        for (const t of topics) {
+          if (t.status !== 'running' || !t.topicId) continue;
 
-        // Interrupt the remote operation first; if it fails, skip cancellation
-        // to avoid desynchronizing DB state from a still-running operation.
-        if (t.operationId) {
-          try {
-            await this.interruptTaskOperation(aiAgentService, t.operationId);
-          } catch (err) {
-            console.error(
-              '[TaskService.updateStatus] failed to interrupt topic %s:',
-              t.topicId,
-              err,
-            );
-            throw err;
+          // Interrupt the remote operation first; if it fails, skip cancellation
+          // to avoid desynchronizing DB state from a still-running operation.
+          if (t.operationId) {
+            try {
+              await this.interruptTaskOperation(aiAgentService, t.operationId);
+            } catch (err) {
+              console.error(
+                '[TaskService.updateStatus] failed to interrupt topic %s:',
+                t.topicId,
+                err,
+              );
+              throw err;
+            }
           }
+
+          interruptedTopics.push(t);
+          await this.taskTopicModel.cancelIfRunning(resolved.id, t.topicId);
         }
-
-        await this.taskTopicModel.cancelIfRunning(resolved.id, t.topicId);
       }
-    }
 
-    const extra: {
-      completedAt?: Date;
-      error?: string;
-      runReservationExpiresAt?: Date | null;
-      runReservationId?: string | null;
-      startedAt?: Date;
-    } = {};
-    if (status === 'running') extra.startedAt = new Date();
-    // A person changing state owns the generation boundary. Clear any dispatch
-    // or completion lease so a crashed callback cannot reclaim after their
-    // pause/restart. System-driven scheduled transitions keep the lease until
-    // lifecycle side effects (bridge/re-arm) finish.
-    if (status !== 'running' && (actor || status !== 'scheduled')) {
-      extra.runReservationExpiresAt = null;
-      extra.runReservationId = null;
-    }
-    if (status === 'completed' || status === 'failed' || status === 'canceled')
-      extra.completedAt = new Date();
-    if (errorMsg) extra.error = errorMsg;
+      const extra: {
+        completedAt?: Date;
+        error?: string;
+        runReservationExpiresAt?: Date | null;
+        runReservationId?: string | null;
+        startedAt?: Date;
+      } = {};
+      if (status === 'running') extra.startedAt = new Date();
+      // A person changing state owns the generation boundary. Clear any dispatch
+      // or completion lease so a crashed callback cannot reclaim after their
+      // pause/restart. System-driven scheduled transitions keep the lease until
+      // lifecycle side effects (bridge/re-arm) finish.
+      if (status !== 'running' && (actor || status !== 'scheduled')) {
+        extra.runReservationExpiresAt = null;
+        extra.runReservationId = null;
+      }
+      if (status === 'completed' || status === 'failed' || status === 'canceled')
+        extra.completedAt = new Date();
+      if (errorMsg) extra.error = errorMsg;
 
-    const task = actor
-      ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
-      : guard
-        ? await this.taskModel.updateStatusIfReservation(
-            resolved.id,
-            guard.reservationId,
-            guard.currentStatus,
-            status,
-            extra,
-          )
-        : await this.taskModel.updateStatus(resolved.id, status, extra);
+      task = actor
+        ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
+        : guard
+          ? await this.taskModel.updateStatusIfReservation(
+              resolved.id,
+              guard.reservationId,
+              guard.currentStatus,
+              status,
+              extra,
+            )
+          : await this.taskModel.updateStatus(resolved.id, status, extra);
+    } catch (error) {
+      await this.recoverInterruptedRuns([resolved], interruptedTopics, error);
+      throw error;
+    }
     if (!task) {
       if (guard) return null;
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
@@ -837,6 +872,7 @@ export class TaskService {
     });
 
     const runningTopics = await this.taskTopicModel.findRunningByTaskIds(targetIds);
+    let interruptedTopics: typeof runningTopics = [];
     if (runningTopics.length > 0) {
       const settled = await Promise.allSettled(
         runningTopics.map(async (topic) => {
@@ -845,16 +881,10 @@ export class TaskService {
           }
         }),
       );
+      interruptedTopics = runningTopics.filter((_, index) => settled[index].status === 'fulfilled');
       const failure = settled.find((result) => result.status === 'rejected');
       if (failure) {
-        // Persist the interrupts that did succeed before surfacing the error,
-        // so an actually-stopped operation is not left recorded as running.
-        for (const [index, topic] of runningTopics.entries()) {
-          if (settled[index].status !== 'fulfilled' || !topic.topicId) continue;
-          await this.taskTopicModel
-            .cancelIfRunning(topic.taskId, topic.topicId)
-            .catch(() => undefined);
-        }
+        await this.recoverInterruptedRuns(targetTasks, interruptedTopics, failure.reason);
         throw failure.reason;
       }
     }
@@ -862,51 +892,56 @@ export class TaskService {
     const completedAt = new Date();
     let updatedTasks: TaskItem[] = [];
     let canceledTopics: Awaited<ReturnType<TaskTopicModel['cancelRunningByTaskIds']>> = [];
-    await this.db.transaction(async (tx) => {
-      const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
-      const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
+    try {
+      await this.db.transaction(async (tx) => {
+        const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
+        const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
 
-      // Cancel by the frozen id set rather than the pre-read topic list, so a
-      // topic that started between the snapshot and this transaction is still
-      // closed together with the status update.
-      canceledTopics = await taskTopicModel.cancelRunningByTaskIds(targetIds);
-      // The pre-transaction snapshot only chose *which* tasks; what each one
-      // is leaving is read under the lock, so a collaborator's edit between
-      // the dialog and this write is logged as it really was.
-      const locked = actor ? await taskModel.lockForStatusChange(targetIds) : [];
-      updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, {
-        completedAt,
-        runReservationExpiresAt: null,
-        runReservationId: null,
-      });
+        // Cancel by the frozen id set rather than the pre-read topic list, so a
+        // topic that started between the snapshot and this transaction is still
+        // closed together with the status update.
+        canceledTopics = await taskTopicModel.cancelRunningByTaskIds(targetIds);
+        // The pre-transaction snapshot only chose *which* tasks; what each one
+        // is leaving is read under the lock, so a collaborator's edit between
+        // the dialog and this write is logged as it really was.
+        const locked = actor ? await taskModel.lockForStatusChange(targetIds) : [];
+        updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, {
+          completedAt,
+          runReservationExpiresAt: null,
+          runReservationId: null,
+        });
 
-      // The board's drop slot for the parent, stamped in the same commit as
-      // the family status — a cascade drop never lands its status without
-      // the position it was dropped into.
-      if (input.position !== undefined) {
-        const stamped = await taskModel.update(resolved.id, { position: input.position });
-        if (stamped) {
-          updatedTasks = updatedTasks.map((task) => (task.id === resolved.id ? stamped : task));
+        // The board's drop slot for the parent, stamped in the same commit as
+        // the family status — a cascade drop never lands its status without
+        // the position it was dropped into.
+        if (input.position !== undefined) {
+          const stamped = await taskModel.update(resolved.id, { position: input.position });
+          if (stamped) {
+            updatedTasks = updatedTasks.map((task) => (task.id === resolved.id ? stamped : task));
+          }
         }
-      }
 
-      // A person confirmed this for the whole family, so every member that
-      // moved gets its own row — one INSERT, not one per task.
-      if (actor) {
-        const { actorKind, ...actorColumns } = taskActivityActor(actor);
-        await taskModel.addActivities(
-          locked
-            .filter((before) => before.status !== input.status)
-            .map((before) => ({
-              ...actorColumns,
-              payload: { actorKind, from: before.status, to: input.status },
-              taskId: before.id,
-              type: 'status' as const,
-              visibility: before.visibility,
-            })),
-        );
-      }
-    });
+        // A person confirmed this for the whole family, so every member that
+        // moved gets its own row — one INSERT, not one per task.
+        if (actor) {
+          const { actorKind, ...actorColumns } = taskActivityActor(actor);
+          await taskModel.addActivities(
+            locked
+              .filter((before) => before.status !== input.status)
+              .map((before) => ({
+                ...actorColumns,
+                payload: { actorKind, from: before.status, to: input.status },
+                taskId: before.id,
+                type: 'status' as const,
+                visibility: before.visibility,
+              })),
+          );
+        }
+      });
+    } catch (error) {
+      await this.recoverInterruptedRuns(targetTasks, interruptedTopics, error);
+      throw error;
+    }
 
     // Best-effort: stop any operation discovered only inside the transaction.
     const interruptedOperationIds = new Set(runningTopics.map((topic) => topic.operationId));

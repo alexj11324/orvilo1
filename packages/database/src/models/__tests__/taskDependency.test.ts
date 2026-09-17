@@ -1,11 +1,14 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { readFileSync } from 'node:fs';
+
+import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { taskDependencies, tasks, users, workspaces } from '../../schemas';
 import { TaskModel } from '../task';
 import { TaskDependencyError } from '../taskDependency';
+import { UserModel } from '../user';
 
 const db = await getTestDB();
 const userId = 'prerequisites-user';
@@ -239,6 +242,63 @@ describe('prerequisite review regressions', () => {
     ]);
     expect(await member.areAllDependenciesCompleted(dependent.id)).toBe(false);
     expect(await owner.areAllDependenciesCompleted(dependent.id)).toBe(true);
+  });
+
+  it('dispatch discovery includes a private dependent after another member completes its public source', async () => {
+    const { owner, member } = await workspace();
+    const upstream = await member.create({ instruction: 'Public upstream' });
+    const dependent = await owner.create({
+      instruction: 'Private dependent',
+      visibility: 'private',
+    });
+    await owner.addDependency(dependent.id, upstream.id);
+    expect(await member.getUnlockedTasks(upstream.id)).toEqual([]);
+    await member.updateStatus(upstream.id, 'completed');
+    expect((await member.getUnlockedTasks(upstream.id)).map(({ id }) => id)).toEqual([
+      dependent.id,
+    ]);
+    expect(await member.findById(dependent.id)).toBeNull();
+    const personal = new TaskModel(db, otherUserId);
+    expect(await personal.getUnlockedTasks(upstream.id)).toEqual([]);
+    await owner.update(dependent.id, { isDeleted: true });
+    expect(await member.getUnlockedTasks(upstream.id)).toEqual([]);
+  });
+
+  it('does not let a caller trigger internal discovery from an inaccessible source', async () => {
+    const { owner, member } = await workspace();
+    const upstream = await owner.create({ instruction: 'Private upstream', visibility: 'private' });
+    const dependent = await owner.create({
+      instruction: 'Private dependent',
+      visibility: 'private',
+    });
+    await owner.addDependency(dependent.id, upstream.id);
+    await owner.updateStatus(upstream.id, 'completed');
+    expect(await member.getUnlockedTasks(upstream.id)).toEqual([]);
+    expect((await owner.getUnlockedTasks(upstream.id)).map(({ id }) => id)).toEqual([dependent.id]);
+  });
+
+  it('backfills legacy edge ownership idempotently before the writer deletes their account', async () => {
+    const { owner, member } = await workspace();
+    const upstream = await owner.create({ instruction: 'Upstream' });
+    const dependent = await owner.create({ instruction: 'Dependent' });
+    await member.addDependency(dependent.id, upstream.id);
+    await db
+      .update(taskDependencies)
+      .set({ userId: otherUserId })
+      .where(eq(taskDependencies.taskId, dependent.id));
+    const migration = readFileSync(
+      new URL('../../../migrations/0169_task_dependency_ownership.sql', import.meta.url),
+      'utf8',
+    );
+    await db.execute(sql.raw(migration));
+    await db.execute(sql.raw(migration));
+    await UserModel.deleteUser(db, otherUserId);
+    expect(await owner.getDependencies(dependent.id)).toMatchObject([{ userId }]);
+    await expect(owner.reserveRun(dependent.id, 'still-blocked')).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+    await owner.updateStatus(upstream.id, 'completed');
+    expect(await owner.reserveRun(dependent.id, 'now-ready')).toBe(true);
   });
 
   it('rejects creator-only clear-all when another creator has a surviving dependent', async () => {

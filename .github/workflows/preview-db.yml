@@ -332,7 +332,10 @@ jobs:
           GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"test_role";
           GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO :"test_role";
           SQL
-          echo "granted Preview database privileges host=$(node -e 'process.stdout.write(new URL(process.env.PR_ADMIN_URL).hostname)') database=$DB_NAME"
+          PR_DB_HOST=$(DATABASE_URL="$PR_ADMIN_URL" node -e '
+            process.stdout.write(new URL(process.env.DATABASE_URL).hostname);
+          ')
+          echo "granted Preview database privileges host=$PR_DB_HOST database=$DB_NAME"
 
       - name: Set Vercel branch env DATABASE_URL
         env:

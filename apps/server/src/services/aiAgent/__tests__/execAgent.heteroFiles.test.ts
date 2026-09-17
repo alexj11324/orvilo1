@@ -151,6 +151,7 @@ const topicMock = {
   appendRunningOperationChild: vi.fn().mockResolvedValue(true),
   create: vi.fn().mockResolvedValue({ id: 'topic-1', metadata: undefined }),
   findById: vi.fn().mockResolvedValue(undefined),
+  findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
   patchRunningOperation: vi.fn().mockResolvedValue(true),
   settleRunningOperation: vi.fn().mockResolvedValue({ status: 'settled' }),
   releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),

@@ -90,6 +90,7 @@ vi.mock('@/database/models/plugin', () => ({
 const topicMock = {
   create: vi.fn().mockResolvedValue({ id: 'topic-1', metadata: undefined }),
   findById: vi.fn().mockResolvedValue(undefined),
+  findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
   releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
   tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
   updateMetadata: vi.fn().mockResolvedValue(undefined),

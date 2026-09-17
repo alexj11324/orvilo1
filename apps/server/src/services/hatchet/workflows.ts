@@ -7,6 +7,8 @@ import { getServerDB } from '@/database/server';
 import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 
+import { workflowSerialKey } from './workflowConcurrency';
+
 export const HATCHET_WORKFLOW_PATHS = [
   '/api/agent/webhooks/bot-callback',
   '/api/agent/webhooks/group-member-callback',
@@ -122,6 +124,7 @@ export const triggerHatchetWorkflow = async (
 
   try {
     const providerRunId = await enqueueHatchetTask(HATCHET_TASK_NAMES.workflowDispatch, {
+      ...workflowSerialKey(path, dispatchId),
       deduplicationKey,
       dispatchId,
       laneKey,

@@ -1,16 +1,5 @@
 export default {
-  'assistant.favorite': 'Save',
-  'assistant.favoriteFailed': 'Failed to save',
-  'assistant.favoriteSuccess': 'Saved',
-  'assistant.like': 'Like',
-  'assistant.likeFailed': 'Failed to like',
-  'assistant.likeSuccess': 'Liked',
   'assistant.underReview': 'Under Review',
-  'assistant.unfavorite': 'Unsave',
-  'assistant.unfavoriteFailed': 'Failed to unsave',
-  'assistant.unfavoriteSuccess': 'Unsaved',
-  'assistant.unlike': 'Unlike',
-  'assistant.unlikeSuccess': 'Unliked',
   'assistants.addAgent': 'Add Agent',
   'assistants.addAgentAndConverse': 'Add Agent & Chat',
   'assistants.addAgentSuccess': 'Added',
@@ -128,7 +117,6 @@ export default {
   'dislike': 'Dislike',
   'filter': 'Filter',
   'filterBy.authorRange.everyone': 'All Authors',
-  'filterBy.authorRange.followed': 'Followed Authors',
   'filterBy.authorRange.title': 'Author Range',
   'filterBy.contentLength': 'Minimum Context Length',
   'filterBy.maxToken.title': 'Set Maximum Length (Token)',
@@ -1150,16 +1138,6 @@ export default {
   'user.editProfile': 'Edit Profile',
   'user.editWorkspaceProfile': 'Settings',
 
-  'user.favoriteAgents': 'Saved Agents',
-
-  'user.favoritePlugins': 'Saved Skills',
-
-  'user.follow': 'Follow',
-
-  'user.followers': 'Followers',
-
-  'user.following': 'Following',
-
   'user.forkedAgentGroups': 'Forked Agent Groups',
 
   // User fork lists
@@ -1277,10 +1255,6 @@ export default {
 
   'user.workspace.noAgents': 'This organization has not published any Agents to Community yet.',
 
-  'user.noFavoriteAgents': 'No saved Agents yet',
-
-  'user.noFavoritePlugins': 'No saved Skills yet',
-
   'user.noGroups.title': 'No Agent Groups yet',
 
   'user.workspace.noGroups':
@@ -1307,34 +1281,16 @@ export default {
   'user.statusFilter.all': 'All',
   'user.statusFilter.archived': 'Archived',
   'user.statusFilter.deprecated': 'Deprecated',
-  'user.statusFilter.favorite': 'Favorite',
   'user.statusFilter.forked': 'Forked',
   'user.statusFilter.published': 'Published',
   'user.statusFilter.unpublished': 'Under Review',
-
-  'user.tabs.favorites': 'Favorites',
 
   'user.tabs.forkedAgents': 'Forked',
 
   'user.tabs.publishedAgents': 'Created',
 
-  'user.unfavorite': 'Unsave',
-
-  'user.unfavoriteFailed': 'Failed to unsave',
-  'user.unfavoriteSuccess': 'Unsaved',
-  'user.unfollow': 'Unfollow',
   'user.website': 'Website',
 
   'user.cancel': 'Cancel',
-  'user.githubUrl': 'GitHub Repository URL',
-  'user.githubUrlInvalid': 'Please enter a valid GitHub repository URL',
-  'user.githubUrlRequired': 'Please enter a GitHub repository URL',
   'user.submit': 'Submit',
-  'user.submitRepo': 'Submit Repo',
-  'user.submitRepoDescription':
-    'Submit your GitHub repository to import your Skills or MCPs to the community.',
-  'user.submitRepoError': 'Failed to submit repository. Please try again.',
-  'user.submitRepoHint': 'The repository will be reviewed before being published.',
-  'user.submitRepoSuccess': 'Repository submitted successfully! It will be reviewed shortly.',
-  'user.submitRepoTitle': 'Submit Your Repository',
 };

@@ -640,28 +640,6 @@ export const discoverKeys = {
     locale,
     params,
   ]),
-  favoriteAgents: def('discover:favoriteAgents', (userId: number, params?: unknown) => [
-    'discover:favoriteAgents',
-    userId,
-    params,
-  ]),
-  favoritePlugins: def('discover:favoritePlugins', (userId: number, params?: unknown) => [
-    'discover:favoritePlugins',
-    userId,
-    params,
-  ]),
-  followCounts: def('discover:followCounts', (userId: number) => ['discover:followCounts', userId]),
-  followStatus: def('discover:followStatus', (userId: number) => ['discover:followStatus', userId]),
-  followers: def('discover:followers', (userId: number, params?: unknown) => [
-    'discover:followers',
-    userId,
-    params,
-  ]),
-  following: def('discover:following', (userId: number, params?: unknown) => [
-    'discover:following',
-    userId,
-    params,
-  ]),
   groupAgentCategories: def('discover:groupAgentCategories', (locale: string, params: unknown) => [
     'discover:groupAgentCategories',
     locale,
@@ -1259,15 +1237,6 @@ export const localFileKeys = {
   ]),
 };
 
-// ---- favorite status (marketplace detail headers) -----------------------
-export const favoriteKeys = {
-  status: def('favorite:status', (targetType: string, identifier: string) => [
-    'favorite:status',
-    targetType,
-    identifier,
-  ]),
-};
-
 // ---- changelog ----------------------------------------------------------
 export const changelogKeys = {
   modalIndex: def('changelog:modalIndex', () => ['changelog:modalIndex']),
@@ -1463,7 +1432,6 @@ export const swrKeys = {
   document: documentSWRKeys,
   electron: electronKeys,
   expertise: expertiseKeys,
-  favorite: favoriteKeys,
   file: fileKeys,
   fork: forkKeys,
   gateway: gatewayKeys,

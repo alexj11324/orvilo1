@@ -889,6 +889,7 @@ describe('TaskIntegrationService', () => {
         baseBranch: 'main',
         headSha: 'branch123',
         merged: true,
+        number: 7,
         sha: 'merge123',
         url: 'https://github.com/acme/widgets/pull/7',
       });
@@ -920,6 +921,7 @@ describe('TaskIntegrationService', () => {
         baseBranch: 'main',
         headSha: 'old-head',
         merged: true,
+        number: 7,
         sha: 'merge123',
         url: 'https://github.com/acme/widgets/pull/7',
       });

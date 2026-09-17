@@ -142,6 +142,7 @@ export default {
   'cmdk.aiModeHint': 'Press Enter to ask',
   'cmdk.aiModePlaceholder': 'Ask AI anything...',
   'cmdk.aiPainting': 'AI Image',
+  'cmdk.apps': 'Apps',
   'cmdk.askAI': 'Ask Agent',
   'cmdk.askAIHeading': 'Use the following features for {{query}}',
   'cmdk.askAIHeadingEmpty': 'Choose an AI feature',
@@ -172,6 +173,8 @@ export default {
   'cmdk.keywords.apikey': 'apikey api key token',
 
   'cmdk.keywords.appearance': 'common appearance theme display',
+
+  'cmdk.keywords.apps': 'apps download desktop mobile cli',
 
   'cmdk.keywords.billing': 'billing payment invoice transaction',
 
@@ -355,6 +358,7 @@ export default {
   'download': 'Download',
   'getApp': 'Get App',
   'getDesktopApp': 'Get Desktop App',
+  'getMobileApp': 'Get Mobile App',
   'goToTarget': 'Go to target',
   'duplicate': 'Duplicate',
   'edit': 'Edit',

@@ -10,14 +10,14 @@ import AsyncBoundary from '@/components/AsyncBoundary';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
 import ResourceConfigAccessGate from '@/features/ResourcePermission/ResourceConfigAccessGate';
 import { usePermission } from '@/hooks/usePermission';
+import type { SerializedPlatformDefinition } from '@/server/services/bot/platforms/types';
 import { useAgentStore } from '@/store/agent';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
 import { BOT_RUNTIME_STATUSES, type BotRuntimeStatus } from '../../../../types/botRuntimeStatus';
-import { type ChannelPlatformDefinition, COMING_SOON_PLATFORMS } from './const';
+import { visibleChannelPlatforms } from './const';
 import PlatformDetail from './detail';
-import ComingSoonDetail from './detail/ComingSoon';
 import Header from './Header';
 import PlatformGrid from './list';
 
@@ -65,29 +65,19 @@ const ChannelContent = memo(() => {
   const isLoading = platformsLoading || providersLoading;
   const error = platformsError ?? providersError;
 
-  // Both fetches carry `fallbackData: []`, so a *failed* fetch leaves
-  // `platforms = []` and `allPlatforms` collapses to just the frontend-only
-  // `COMING_SOON_PLATFORMS` — `length > 0` stays true and the surface would
-  // render a plausible coming-soon-only catalog (every real / connected channel
-  // silently dropped). So "has data" is *not* the merged length: it's whether the
-  // real fetch actually yielded platforms. Gate on the raw fetched `platforms`
-  // (never the static merge) and require the providers fetch to have not errored,
-  // so a failed load branches to an error state before we merge the static half.
+  // The platforms fetch carries `fallbackData: []`, so a *failed* fetch leaves
+  // `platforms = []` — a bare `length > 0` check can't distinguish "no
+  // platforms" from "fetch failed". Gate on the raw fetched `platforms` and
+  // require the providers fetch to have not errored, so a failed load branches
+  // to the error state instead of rendering an empty catalog.
   const hasData = (platforms?.length ?? 0) > 0 && !providersError;
 
-  // Merge server-side platforms with frontend-only coming-soon entries.
-  // Coming-soon entries shadow a server-registered platform of the same id, so a
-  // platform can be registered server-side first and stay a placeholder until
-  // the frontend reveals it. iMessage additionally honors the Labs
-  // `enableImessage` preference: off keeps the placeholder, on drops it so the
-  // real platform shows.
-  const allPlatforms = useMemo<ChannelPlatformDefinition[]>(() => {
-    const comingSoon = enableImessage
-      ? COMING_SOON_PLATFORMS.filter((p) => p.id !== 'imessage')
-      : COMING_SOON_PLATFORMS;
-    const comingSoonIds = new Set(comingSoon.map((p) => p.id));
-    return [...(platforms ?? []).filter((p) => !comingSoonIds.has(p.id)), ...comingSoon];
-  }, [platforms, enableImessage]);
+  // iMessage is registered server-side but stays behind the `enableImessage`
+  // lab flag: hidden until the flag turns the capability on.
+  const allPlatforms = useMemo<SerializedPlatformDefinition[]>(
+    () => visibleChannelPlatforms(platforms ?? [], { enableImessage }),
+    [platforms, enableImessage],
+  );
 
   const platformRuntimeStatuses = useMemo(
     () =>
@@ -155,16 +145,12 @@ const ChannelContent = memo(() => {
             </div>
           ) : activePlatformDef ? (
             <div className={styles.container}>
-              {activePlatformDef.comingSoon ? (
-                <ComingSoonDetail platformDef={activePlatformDef} />
-              ) : (
-                <PlatformDetail
-                  agentId={aid}
-                  currentConfig={currentConfig}
-                  disabled={!canEdit}
-                  platformDef={activePlatformDef}
-                />
-              )}
+              <PlatformDetail
+                agentId={aid}
+                currentConfig={currentConfig}
+                disabled={!canEdit}
+                platformDef={activePlatformDef}
+              />
             </div>
           ) : (
             <NotFound />

@@ -2,6 +2,7 @@ import { type LucideIcon } from 'lucide-react';
 import {
   AlarmClock,
   BrainCircuit,
+  Download,
   FilePenIcon,
   FolderKanbanIcon,
   Image,
@@ -144,6 +145,16 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
     path: '/automations',
     pathPrefix: '/automations',
     tier: 'primary',
+  },
+  {
+    cmdkKey: 'cmdk.apps',
+    icon: Download,
+    id: 'apps',
+    keywords: ['apps', 'download', 'desktop', 'mobile', 'cli'],
+    keywordsKey: 'cmdk.keywords.apps',
+    path: '/apps',
+    pathPrefix: '/apps',
+    tier: 'retired',
   },
   {
     cmdkKey: 'cmdk.settings',

@@ -187,7 +187,7 @@ describe('Footer help menu tracking', () => {
     const getApp = await screen.findByRole('link', { name: 'Get App' });
     const github = screen.getByRole('link', { name: 'GitHub' });
 
-    expect(getApp).toHaveAttribute('href', '/apps');
+    expect(getApp).toHaveAttribute('href', '/settings/about');
     expect(getApp.compareDocumentPosition(github) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   }, 20000);
 
@@ -197,7 +197,10 @@ describe('Footer help menu tracking', () => {
 
     await user.click(screen.getByRole('button', { name: 'Help' }));
 
-    expect(await screen.findByRole('link', { name: 'Get App' })).toHaveAttribute('href', '/apps');
+    expect(await screen.findByRole('link', { name: 'Get App' })).toHaveAttribute(
+      'href',
+      '/settings/about',
+    );
   }, 20000);
 
   it('tracks menu open with the visible item keys', async () => {

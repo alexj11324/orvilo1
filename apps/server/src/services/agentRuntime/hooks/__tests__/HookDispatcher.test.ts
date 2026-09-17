@@ -287,7 +287,7 @@ describe('HookDispatcher', () => {
       expect(mockTriggerHatchetWorkflow).toHaveBeenCalledWith(
         '/api/agent/webhooks/bot-callback',
         { a: 1 },
-        { concurrencyKey: 'hook.global.hook' },
+        { concurrencyKey: 'hook.global' },
       );
       expect(global.fetch).not.toHaveBeenCalled();
     });
@@ -303,7 +303,7 @@ describe('HookDispatcher', () => {
       expect(mockTriggerHatchetWorkflow).toHaveBeenCalledWith(
         '/api/agent/webhooks/bot-callback',
         { operationId: 'op-before-cutover' },
-        { concurrencyKey: 'hook.op-before-cutover.hook' },
+        { concurrencyKey: 'hook.op-before-cutover' },
       );
       expect(global.fetch).not.toHaveBeenCalled();
     });

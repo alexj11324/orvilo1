@@ -11,6 +11,7 @@ export const HATCHET_WORKFLOW_PATHS = [
   '/api/agent/webhooks/bot-callback',
   '/api/agent/webhooks/group-member-callback',
   '/api/agent/webhooks/subagent-callback',
+  '/api/agent/webhooks/thread-run-callback',
   '/api/workflows/agent-eval-run/on-thread-complete',
   '/api/workflows/agent-eval-run/on-trajectory-complete',
   '/api/workflows/agent-eval-run/execute-test-case',

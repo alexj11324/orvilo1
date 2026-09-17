@@ -1,6 +1,6 @@
 import type { CreateThreadParams } from '@orvilo/types';
 import { RequestTrigger, ThreadStatus } from '@orvilo/types';
-import { and, desc, eq, notExists, sql } from 'drizzle-orm';
+import { and, desc, eq, notExists, notInArray, sql } from 'drizzle-orm';
 
 import type { ThreadItem } from '../schemas';
 import { agentOperations, messages, threads } from '../schemas';
@@ -167,6 +167,37 @@ export class ThreadModel {
     return this.db
       .update(threads)
       .set({ ...value, updatedAt: new Date() })
+      .where(and(eq(threads.id, id), this.ownership()));
+  };
+
+  updateRunProgress = async (id: string, metadata: Record<string, unknown>) => {
+    return this.db
+      .update(threads)
+      .set({
+        metadata: sql`coalesce(${threads.metadata}, '{}'::jsonb) || ${JSON.stringify(metadata)}::jsonb`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(threads.id, id),
+          this.ownership(),
+          notInArray(threads.status, [
+            ThreadStatus.Cancel,
+            ThreadStatus.Completed,
+            ThreadStatus.Failed,
+          ]),
+        ),
+      );
+  };
+
+  completeRun = async (id: string, status: ThreadStatus, metadata: Record<string, unknown>) => {
+    return this.db
+      .update(threads)
+      .set({
+        metadata: sql`coalesce(${threads.metadata}, '{}'::jsonb) || ${JSON.stringify(metadata)}::jsonb`,
+        status,
+        updatedAt: new Date(),
+      })
       .where(and(eq(threads.id, id), this.ownership()));
   };
 }

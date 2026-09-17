@@ -114,7 +114,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     // This repo ships its own deploy stack, so the backfill and the sync worker are built from the
     // root Dockerfile instead of pulling the upstream LobeHub release. They must run the very same
     // tag as the app service, or the bundles could drift from the server that wrote the Outbox.
-    expect(compose.services.lobe.image).toBe('orvilo:local');
+    expect(compose.services.lobe.image).toBe('${ORVILO_IMAGE_TAG:-orvilo:local}');
     for (const service of [reindex, sync]) {
       expect(service.image).toBe(compose.services.lobe.image);
       expect(service.build).toEqual({ context: '../..', dockerfile: 'Dockerfile' });

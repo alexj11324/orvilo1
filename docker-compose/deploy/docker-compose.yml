@@ -4,7 +4,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-    image: orvilo:local
+    image: ${ORVILO_IMAGE_TAG:-orvilo:local}
     container_name: orvilo
     ports:
       - '${LOBE_PORT}:3210'
@@ -48,7 +48,9 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-    image: orvilo:local
+    # CI passes the immutable commit image through ORVILO_IMAGE_TAG. Keep the
+    # local fallback for operators who build this Compose project themselves.
+    image: ${ORVILO_IMAGE_TAG:-orvilo:local}
     container_name: orvilo-hatchet-worker
     profiles: [hatchet]
     depends_on:
@@ -247,7 +249,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-    image: orvilo:local
+    image: ${ORVILO_IMAGE_TAG:-orvilo:local}
     profiles: [elasticsearch-reindex]
     depends_on:
       postgresql:
@@ -277,7 +279,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-    image: orvilo:local
+    image: ${ORVILO_IMAGE_TAG:-orvilo:local}
     container_name: lobe-fts-search-sync
     profiles: [elasticsearch-sync]
     depends_on:

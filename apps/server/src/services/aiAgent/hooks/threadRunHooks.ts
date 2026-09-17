@@ -22,6 +22,76 @@ export function calculateTotalTokens(usage?: AgentState['usage']): number | unde
   return usage.llm?.tokens?.total;
 }
 
+const resolveThreadStatus = (reason: StepCompletionReason): ThreadStatus => {
+  switch (reason) {
+    case 'done': {
+      return ThreadStatus.Completed;
+    }
+    case 'error': {
+      return ThreadStatus.Failed;
+    }
+    case 'interrupted': {
+      return ThreadStatus.Cancel;
+    }
+    case 'waiting_for_human': {
+      return ThreadStatus.InReview;
+    }
+    default: {
+      return ThreadStatus.Completed;
+    }
+  }
+};
+
+export const updateThreadRunProgress = async (
+  threadModel: ThreadModel,
+  threadId: string,
+  startedAt: string,
+  state: AgentState,
+): Promise<void> => {
+  await threadModel.updateRunProgress(threadId, {
+    operationId: state.operationId,
+    startedAt,
+    ...(state.messages && { totalMessages: state.messages.length }),
+    totalTokens: calculateTotalTokens(state.usage),
+    totalToolCalls: state.session?.toolCalls ?? 0,
+  });
+};
+
+export const completeThreadRun = async (
+  threadModel: ThreadModel,
+  messageModel: MessageModel,
+  params: {
+    finalState: AgentState;
+    reason: StepCompletionReason;
+    sourceMessageId: string;
+    startedAt: string;
+    threadId: string;
+    totalMessages?: number;
+  },
+): Promise<void> => {
+  const { finalState, reason, sourceMessageId, startedAt, threadId, totalMessages } = params;
+  const lastAssistantMessage = finalState.messages
+    ?.slice()
+    .reverse()
+    .find((message: { role: string }) => message.role === 'assistant');
+
+  if (lastAssistantMessage?.content) {
+    await messageModel.update(sourceMessageId, { content: lastAssistantMessage.content });
+  }
+
+  await threadModel.completeRun(threadId, resolveThreadStatus(reason), {
+    completedAt: new Date().toISOString(),
+    duration: Date.now() - new Date(startedAt).getTime(),
+    error: formatErrorForMetadata(finalState.error),
+    operationId: finalState.operationId,
+    startedAt,
+    totalCost: finalState.cost?.total,
+    totalMessages: totalMessages ?? finalState.messages?.length ?? 0,
+    totalTokens: calculateTotalTokens(finalState.usage),
+    totalToolCalls: finalState.session?.toolCalls ?? 0,
+  });
+};
+
 /**
  * Create step lifecycle callbacks for updating Thread metadata
  * These callbacks accumulate metrics during execution and update Thread on completion
@@ -163,69 +233,34 @@ export function createThreadHooks(
   startedAt: string,
   sourceMessageId: string,
   logScope: 'execSubAgent' | 'execVirtualSubAgent',
+  owner: { userId: string; workspaceId?: string },
 ): AgentHook[] {
-  let accumulatedToolCalls = 0;
-
   return [
     {
       handler: async (event: AgentHookEvent) => {
         const state = event.finalState;
         if (!state) return;
 
-        // Count tool calls from step result
-        const stepToolCalls = state.session?.toolCalls || 0;
-        if (stepToolCalls > accumulatedToolCalls) {
-          accumulatedToolCalls = stepToolCalls;
-        }
-
         try {
-          await threadModel.update(threadId, {
-            metadata: {
-              operationId: event.operationId,
-              startedAt,
-              totalMessages: state.messages?.length ?? 0,
-              totalTokens: calculateTotalTokens(state.usage),
-              totalToolCalls: accumulatedToolCalls,
-            },
-          });
+          await updateThreadRunProgress(threadModel, threadId, startedAt, state);
         } catch (error) {
           log('%s: thread hook afterStep failed to update metadata: %O', logScope, error);
         }
       },
       id: 'thread-metadata-update',
       type: 'afterStep' as const,
+      webhook: {
+        body: { callbackType: 'step', startedAt, threadId, ...owner },
+        delivery: 'hatchet' as const,
+        eventFields: ['operationId', 'stepIndex'],
+        fallback: 'none' as const,
+        url: '/api/agent/webhooks/thread-run-callback',
+      },
     },
     {
       handler: async (event: AgentHookEvent) => {
         const finalState = event.finalState;
         if (!finalState) return;
-
-        const completedAt = new Date().toISOString();
-        const duration = Date.now() - new Date(startedAt).getTime();
-
-        // Map completion reason to ThreadStatus
-        let status: ThreadStatus;
-        switch (event.reason) {
-          case 'done': {
-            status = ThreadStatus.Completed;
-            break;
-          }
-          case 'error': {
-            status = ThreadStatus.Failed;
-            break;
-          }
-          case 'interrupted': {
-            status = ThreadStatus.Cancel;
-            break;
-          }
-          case 'waiting_for_human': {
-            status = ThreadStatus.InReview;
-            break;
-          }
-          default: {
-            status = ThreadStatus.Completed;
-          }
-        }
 
         if (event.reason === 'error' && finalState.error) {
           console.error(
@@ -237,40 +272,19 @@ export function createThreadHooks(
         }
 
         try {
-          // Update source message with summary
-          const lastAssistantMessage = finalState.messages
-            ?.slice()
-            .reverse()
-            .find((m: { role: string }) => m.role === 'assistant');
-
-          if (lastAssistantMessage?.content) {
-            await messageModel.update(sourceMessageId, {
-              content: lastAssistantMessage.content,
-            });
-          }
-
-          const formattedError = formatErrorForMetadata(finalState.error);
-
-          await threadModel.update(threadId, {
-            metadata: {
-              completedAt,
-              duration,
-              error: formattedError,
-              operationId: finalState.operationId,
-              startedAt,
-              totalCost: finalState.cost?.total,
-              totalMessages: finalState.messages?.length ?? 0,
-              totalTokens: calculateTotalTokens(finalState.usage),
-              totalToolCalls: accumulatedToolCalls,
-            },
-            status,
+          await completeThreadRun(threadModel, messageModel, {
+            finalState,
+            reason: event.reason ?? 'done',
+            sourceMessageId,
+            startedAt,
+            threadId,
           });
 
           log(
             '%s: thread hook onComplete thread %s status=%s reason=%s',
             logScope,
             threadId,
-            status,
+            resolveThreadStatus(event.reason ?? 'done'),
             event.reason,
           );
         } catch (error) {
@@ -279,6 +293,13 @@ export function createThreadHooks(
       },
       id: 'thread-completion',
       type: 'onComplete' as const,
+      webhook: {
+        body: { callbackType: 'completion', sourceMessageId, startedAt, threadId, ...owner },
+        delivery: 'hatchet' as const,
+        eventFields: ['operationId', 'reason'],
+        fallback: 'none' as const,
+        url: '/api/agent/webhooks/thread-run-callback',
+      },
     },
   ];
 }

@@ -119,7 +119,7 @@
     "self-hosting:docker": "docker build -t lobehub:local .",
     "self-hosting:docker-cn": "docker build -t lobehub-local --build-arg USE_CN_MIRROR=true .",
     "start": "next start -p 3210",
-    "start:hatchet": "node hatchet-worker.mjs",
+    "start:hatchet": "node hatchet-worker/worker.mjs",
     "stylelint": "stylelint \"src/**/*.{js,jsx,ts,tsx}\" --fix",
     "test": "npm run test-app && npm run test-server",
     "test:e2e": "pnpm --filter @orvilo/e2e-tests test",

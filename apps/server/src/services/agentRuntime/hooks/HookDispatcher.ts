@@ -52,10 +52,11 @@ export async function deliverWebhook(
       throw new Error(`Unsupported Hatchet internal webhook path: ${path}`);
     }
     const operationId = typeof payload.operationId === 'string' ? payload.operationId : 'global';
-    const hookId = typeof payload.hookId === 'string' ? payload.hookId : 'hook';
-    const stepIndex = typeof payload.stepIndex === 'number' ? `.${payload.stepIndex}` : '';
     await triggerHatchetWorkflow(path, payload, {
-      concurrencyKey: `hook.${operationId}.${hookId}${stepIndex}`,
+      // Lifecycle callbacks for one operation update shared thread/message
+      // state. Keep them on one lane so a delayed step callback cannot land
+      // after completion and replace terminal metadata with progress metadata.
+      concurrencyKey: `hook.${operationId}`,
     });
     log('Webhook handed off to Hatchet: %s', path);
     return;

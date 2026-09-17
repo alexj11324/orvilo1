@@ -16,6 +16,7 @@ import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
 import { botCallback } from '@/server/router-hono/agent/handlers/botCallback';
 import { groupMemberCallback } from '@/server/router-hono/agent/handlers/groupMemberCallback';
 import { subAgentCallback } from '@/server/router-hono/agent/handlers/subAgentCallback';
+import { threadRunCallback } from '@/server/router-hono/agent/handlers/threadRunCallback';
 import { onThreadComplete } from '@/server/router-hono/workflows/agent-eval-run/handlers/onThreadComplete';
 import { onTrajectoryComplete } from '@/server/router-hono/workflows/agent-eval-run/handlers/onTrajectoryComplete';
 import { executeTestCaseHandler } from '@/server/router-hono/workflows/agent-eval-run/workflows/executeTestCase';
@@ -421,6 +422,7 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
   '/api/agent/webhooks/group-member-callback': (input) =>
     invokeHonoHandler(groupMemberCallback, input),
   '/api/agent/webhooks/subagent-callback': (input) => invokeHonoHandler(subAgentCallback, input),
+  '/api/agent/webhooks/thread-run-callback': (input) => invokeHonoHandler(threadRunCallback, input),
   '/api/workflows/agent-eval-run/on-thread-complete': (input) =>
     invokeHonoHandler(onThreadComplete, input),
   '/api/workflows/agent-eval-run/on-trajectory-complete': (input) =>

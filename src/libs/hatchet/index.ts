@@ -1,5 +1,6 @@
 import {
   HatchetClient,
+  IdempotencyCollisionError,
   type InputType,
   Priority,
   type RunOpts,
@@ -77,8 +78,18 @@ export const enqueueHatchetTask = async <T extends object>(
     return `${HATCHET_SCHEDULE_PREFIX}${scheduled.metadata.id}`;
   }
 
-  const run = await client.runNoWait(taskName, input as InputType, runOptions);
-  return `${HATCHET_RUN_PREFIX}${await run.getWorkflowRunId()}`;
+  try {
+    const run = await client.runNoWait(taskName, input as InputType, runOptions);
+    return `${HATCHET_RUN_PREFIX}${await run.getWorkflowRunId()}`;
+  } catch (error) {
+    // Hatchet accepted the original task, but the caller can lose its receipt
+    // before persisting it. A replay returns the accepted run's external id;
+    // use that as the missing receipt so the database row can leave pending.
+    if (error instanceof IdempotencyCollisionError && error.existingRunExternalId) {
+      return `${HATCHET_RUN_PREFIX}${error.existingRunExternalId}`;
+    }
+    throw error;
+  }
 };
 
 export const cancelHatchetTask = async (taskId: string): Promise<void> => {

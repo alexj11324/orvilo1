@@ -12,32 +12,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Collect tracked source and review evidence
+      - name: Collect current read-only evidence
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/pr-audit/prs
-          git archive --format=tar.gz 296056a394f48ea6d047924844caef1b355ec9db > /tmp/pr-audit/source.tar.gz
-          git log --format='%H %P %aI %s' -60 origin/main > /tmp/pr-audit/main-log.txt
+          git bundle create /tmp/pr-audit/repository.bundle --all
+          git log --format='%H %P %aI %s' -40 origin/main > /tmp/pr-audit/main-log.txt
           gh api 'repos/alexj11324/orvilo1/pulls?state=all&sort=updated&direction=desc&per_page=100' --jq '[.[] | select(.updated_at >= "2026-09-16T04:00:00Z") | {number,title,state,draft,created_at,updated_at,merged_at,merge_commit_sha,head:.head.sha,branch:.head.ref,base:.base.ref}]' > /tmp/pr-audit/prs.json
           for n in $(jq -r '.[].number' /tmp/pr-audit/prs.json); do
-            gh api "repos/alexj11324/orvilo1/pulls/$n/files?per_page=100" --paginate --slurp > "/tmp/pr-audit/prs/$n-files.json"
             gh api "repos/alexj11324/orvilo1/pulls/$n/comments?per_page=100" --paginate --slurp > "/tmp/pr-audit/prs/$n-review-comments.json"
             gh api "repos/alexj11324/orvilo1/issues/$n/comments?per_page=100" --paginate --slurp > "/tmp/pr-audit/prs/$n-comments.json"
             gh api "repos/alexj11324/orvilo1/pulls/$n/reviews?per_page=100" --paginate --slurp > "/tmp/pr-audit/prs/$n-reviews.json"
             sha=$(jq -r --argjson n "$n" '.[] | select(.number==$n) | .head' /tmp/pr-audit/prs.json)
             gh api "repos/alexj11324/orvilo1/commits/$sha/check-runs?per_page=100" > "/tmp/pr-audit/prs/$n-checks.json"
-            gh api "repos/alexj11324/orvilo1/commits/$sha/status" > "/tmp/pr-audit/prs/$n-status.json"
           done
-          gh api 'repos/alexj11324/orvilo1/actions/runs?branch=main&per_page=30' > /tmp/pr-audit/main-runs.json
+          gh api 'repos/alexj11324/orvilo1/actions/runs?branch=main&per_page=20' > /tmp/pr-audit/main-runs.json
       - uses: actions/upload-artifact@v4
         with:
-          name: pr-audit-snapshot
+          name: pr-audit-current
           path: /tmp/pr-audit
           retention-days: 3

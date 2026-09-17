@@ -1,15 +1,25 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
+  LinearCommentSnapshot,
+  LinearExternalCommentOutboxPayload,
+  LinearExternalConfirmationState,
+  LinearExternalRelationOutboxPayload,
+  LinearExternalSyncOrigin,
+  LinearExternalSyncSource,
   LinearInstallationRecoveryState,
   LinearIssueLinkSyncState,
   LinearIssueSnapshot,
   LinearProjectBindingSettings,
+  LinearRelationKind,
+  LinearRelationSnapshot,
   LinearSyncConflict,
   LinearSyncInboxStatus,
   LinearSyncOutboxStatus,
   LinearSyncRecoveryKind,
   LinearSyncRecoveryRow,
+  LinearSyncTombstone,
+  LinearTombstoneKind,
   TaskDomainEventSource,
   TaskDomainEventType,
   TaskItem,
@@ -19,7 +29,7 @@ import type {
   TaskPlanningScopeType,
   TaskPlanningTrigger,
 } from '@orvilo/types';
-import { and, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
 
 import type {
   LinearSyncInboxItem,
@@ -29,8 +39,11 @@ import type {
   TaskPlanningScopeItem,
 } from '../schemas';
 import {
+  linearExternalComments,
+  linearExternalRelations,
   linearInstallations,
   linearIssueLinks,
+  linearIssueTombstones,
   linearProjectBindings,
   linearSyncImportReceipts,
   linearSyncInbox,
@@ -38,6 +51,7 @@ import {
   taskDomainEvents,
   taskPlanningRevisions,
   taskPlanningScopes,
+  tasks,
 } from '../schemas';
 import type { LobeChatDatabase } from '../type';
 
@@ -54,6 +68,7 @@ export interface RecordTaskDomainEventInput {
 
 export interface QueueLinearSyncInput {
   expectedLocalRevision: number;
+  initialStatus?: 'paused' | 'pending';
   installationId: string;
   linkId?: string | null;
   operation: string;
@@ -257,52 +272,92 @@ export class LinearSyncModel {
     accessTokenExpiresAt: Date | null;
     webhookSecretRef?: string;
   }) {
-    const [row] = await this.db
-      .insert(linearInstallations)
-      .values({
-        accessTokenCiphertext: input.accessTokenCiphertext,
-        accessTokenExpiresAt: input.accessTokenExpiresAt,
-        actor: 'app',
-        appActorId: input.appActorId,
-        appActorName: input.appActorName,
-        installedByUserId: input.installedByUserId,
-        organizationId: input.organizationId,
-        organizationName: input.organizationName,
-        oauthClientId: input.oauthClientId,
-        refreshTokenCiphertext: input.refreshTokenCiphertext,
-        scopes: input.scopes,
-        status: 'active',
-        webhookSecretRef: input.webhookSecretRef,
-        workspaceId: this.workspaceId,
-      })
-      .onConflictDoUpdate({
-        target: [linearInstallations.workspaceId, linearInstallations.organizationId],
-        set: {
+    return this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(linearInstallations)
+        .values({
           accessTokenCiphertext: input.accessTokenCiphertext,
           accessTokenExpiresAt: input.accessTokenExpiresAt,
           actor: 'app',
           appActorId: input.appActorId,
           appActorName: input.appActorName,
           installedByUserId: input.installedByUserId,
-          lastError: null,
+          organizationId: input.organizationId,
           organizationName: input.organizationName,
           oauthClientId: input.oauthClientId,
-          refreshFence: sql`${linearInstallations.refreshFence} + 1`,
-          refreshLeaseUntil: null,
-          refreshOwner: null,
           refreshTokenCiphertext: input.refreshTokenCiphertext,
-          revokedAt: null,
-          revocationReason: null,
           scopes: input.scopes,
           status: 'active',
-          tokenVersion: sql`${linearInstallations.tokenVersion} + 1`,
           webhookSecretRef: input.webhookSecretRef,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+          workspaceId: this.workspaceId,
+        })
+        .onConflictDoUpdate({
+          target: [linearInstallations.workspaceId, linearInstallations.organizationId],
+          set: {
+            accessTokenCiphertext: input.accessTokenCiphertext,
+            accessTokenExpiresAt: input.accessTokenExpiresAt,
+            actor: 'app',
+            appActorId: input.appActorId,
+            appActorName: input.appActorName,
+            installedByUserId: input.installedByUserId,
+            lastError: null,
+            organizationName: input.organizationName,
+            oauthClientId: input.oauthClientId,
+            refreshFence: sql`${linearInstallations.refreshFence} + 1`,
+            refreshLeaseUntil: null,
+            refreshOwner: null,
+            refreshTokenCiphertext: input.refreshTokenCiphertext,
+            revokedAt: null,
+            revocationReason: null,
+            scopes: input.scopes,
+            status: 'active',
+            tokenVersion: sql`${linearInstallations.tokenVersion} + 1`,
+            webhookSecretRef: input.webhookSecretRef,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
 
-    return row;
+      const now = new Date();
+      await tx
+        .update(linearSyncInbox)
+        .set({
+          availableAt: now,
+          lastError: null,
+          lockedUntil: null,
+          processedAt: null,
+          status: 'received',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(linearSyncInbox.workspaceId, this.workspaceId),
+            eq(linearSyncInbox.installationId, row.id),
+            eq(linearSyncInbox.status, 'paused'),
+            isNotNull(linearSyncInbox.lastError),
+          ),
+        );
+      await tx
+        .update(linearSyncOutbox)
+        .set({
+          availableAt: now,
+          lastError: null,
+          lockedUntil: null,
+          outcomeUnknownAt: null,
+          status: 'pending',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(linearSyncOutbox.workspaceId, this.workspaceId),
+            eq(linearSyncOutbox.installationId, row.id),
+            eq(linearSyncOutbox.status, 'paused'),
+            isNotNull(linearSyncOutbox.lastError),
+          ),
+        );
+
+      return row;
+    });
   }
 
   /** Claim one refresh owner while keeping the expected token version fenced. */
@@ -808,6 +863,22 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  async findTaskForIssueLink(issueLinkId: string) {
+    const [row] = await this.db
+      .select({ id: tasks.id, projectId: tasks.projectId })
+      .from(tasks)
+      .innerJoin(linearIssueLinks, eq(linearIssueLinks.taskId, tasks.id))
+      .where(
+        and(
+          eq(linearIssueLinks.id, issueLinkId),
+          eq(linearIssueLinks.workspaceId, this.workspaceId),
+          eq(tasks.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
   async listIssueLinks(
     input: {
       bindingId?: string;
@@ -830,7 +901,6 @@ export class LinearSyncModel {
     if (!Number.isInteger(offset) || offset < 0) {
       throw new RangeError('Linear issue link offset must be a non-negative integer');
     }
-
     return this.db
       .select()
       .from(linearIssueLinks)
@@ -876,8 +946,336 @@ export class LinearSyncModel {
         taskId: input.taskId,
         workspaceId: this.workspaceId,
       })
+      .onConflictDoNothing()
       .returning();
+    if (row) return row;
+
+    const [existing] = await this.db
+      .select()
+      .from(linearIssueLinks)
+      .where(
+        and(
+          eq(linearIssueLinks.workspaceId, this.workspaceId),
+          or(
+            eq(linearIssueLinks.taskId, input.taskId),
+            eq(linearIssueLinks.linearIssueId, input.linearIssueId),
+          ),
+        ),
+      )
+      .limit(1);
+    if (!existing) throw new Error('Failed to create Linear issue link');
+    return existing;
+  }
+
+  async findExternalCommentByRemoteId(linearCommentId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearExternalComments)
+      .where(
+        and(
+          eq(linearExternalComments.workspaceId, this.workspaceId),
+          eq(linearExternalComments.linearCommentId, linearCommentId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findExternalCommentById(id: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearExternalComments)
+      .where(
+        and(
+          eq(linearExternalComments.workspaceId, this.workspaceId),
+          eq(linearExternalComments.id, id),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findExternalCommentByLocalId(localCommentId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearExternalComments)
+      .where(
+        and(
+          eq(linearExternalComments.workspaceId, this.workspaceId),
+          eq(linearExternalComments.localCommentId, localCommentId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async listExternalComments(issueLinkId?: string) {
+    return this.db
+      .select()
+      .from(linearExternalComments)
+      .where(
+        and(
+          eq(linearExternalComments.workspaceId, this.workspaceId),
+          issueLinkId ? eq(linearExternalComments.issueLinkId, issueLinkId) : undefined,
+        ),
+      )
+      .orderBy(linearExternalComments.createdAt);
+  }
+
+  async upsertExternalComment(input: {
+    id?: string;
+    confirmationState: LinearExternalConfirmationState;
+    issueLinkId: string;
+    lastConfirmedSnapshot?: LinearCommentSnapshot | null;
+    linearCommentId?: string | null;
+    linearIssueId: string;
+    localCommentId?: string | null;
+    origin: LinearExternalSyncOrigin;
+    remoteSnapshot?: LinearCommentSnapshot | null;
+    source: LinearExternalSyncSource;
+    tombstone?: LinearSyncTombstone | null;
+    lastInboundDeliveryId?: string | null;
+  }) {
+    const existing =
+      (input.id && (await this.findExternalCommentById(input.id))) ||
+      (input.linearCommentId &&
+        (await this.findExternalCommentByRemoteId(input.linearCommentId))) ||
+      (input.localCommentId && (await this.findExternalCommentByLocalId(input.localCommentId)));
+    const values = {
+      confirmationState: input.confirmationState,
+      issueLinkId: input.issueLinkId,
+      lastConfirmedSnapshot: input.lastConfirmedSnapshot ?? null,
+      ...(input.lastInboundDeliveryId !== undefined
+        ? { lastInboundDeliveryId: input.lastInboundDeliveryId }
+        : {}),
+      linearCommentId: input.linearCommentId ?? null,
+      linearIssueId: input.linearIssueId,
+      localCommentId: input.localCommentId ?? null,
+      origin: input.origin,
+      remoteSnapshot: input.remoteSnapshot ?? null,
+      source: input.source,
+      tombstone: input.tombstone ?? null,
+      updatedAt: new Date(),
+      workspaceId: this.workspaceId,
+    };
+    if (existing) {
+      const [row] = await this.db
+        .update(linearExternalComments)
+        .set(values)
+        .where(
+          and(
+            eq(linearExternalComments.id, existing.id),
+            eq(linearExternalComments.workspaceId, this.workspaceId),
+          ),
+        )
+        .returning();
+      return row ?? existing;
+    }
+    const [row] = await this.db.insert(linearExternalComments).values(values).returning();
     return row;
+  }
+
+  async markExternalCommentOutboundOperation(mappingId: string, operationId: string) {
+    const [row] = await this.db
+      .update(linearExternalComments)
+      .set({ lastOutboundOperationId: operationId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(linearExternalComments.id, mappingId),
+          eq(linearExternalComments.workspaceId, this.workspaceId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async findExternalRelationByRemoteId(linearRelationId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearExternalRelations)
+      .where(
+        and(
+          eq(linearExternalRelations.workspaceId, this.workspaceId),
+          eq(linearExternalRelations.linearRelationId, linearRelationId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findExternalRelationById(id: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearExternalRelations)
+      .where(
+        and(
+          eq(linearExternalRelations.workspaceId, this.workspaceId),
+          eq(linearExternalRelations.id, id),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findExternalRelationByLocalKey(localRelationKey: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearExternalRelations)
+      .where(
+        and(
+          eq(linearExternalRelations.workspaceId, this.workspaceId),
+          eq(linearExternalRelations.localRelationKey, localRelationKey),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async listExternalRelationsForIssue(linearIssueId: string) {
+    return this.db
+      .select()
+      .from(linearExternalRelations)
+      .where(
+        and(
+          eq(linearExternalRelations.workspaceId, this.workspaceId),
+          or(
+            eq(linearExternalRelations.sourceIssueId, linearIssueId),
+            eq(linearExternalRelations.targetIssueId, linearIssueId),
+          ),
+        ),
+      )
+      .orderBy(linearExternalRelations.createdAt);
+  }
+
+  async upsertExternalRelation(input: {
+    confirmationState: LinearExternalConfirmationState;
+    issueLinkId?: string | null;
+    kind: LinearRelationKind;
+    lastConfirmedSnapshot?: LinearRelationSnapshot | null;
+    linearRelationId?: string | null;
+    localRelationKey: string;
+    localSourceTaskId?: string | null;
+    localTargetTaskId?: string | null;
+    origin: LinearExternalSyncOrigin;
+    remoteSnapshot?: LinearRelationSnapshot | null;
+    resolutionState: 'resolved' | 'unresolved';
+    source: LinearExternalSyncSource;
+    sourceIssueId?: string | null;
+    targetIssueId?: string | null;
+    tombstone?: LinearSyncTombstone | null;
+  }) {
+    const existing =
+      (input.linearRelationId &&
+        (await this.findExternalRelationByRemoteId(input.linearRelationId))) ||
+      (await this.findExternalRelationByLocalKey(input.localRelationKey));
+    const values = {
+      confirmationState: input.confirmationState,
+      issueLinkId: input.issueLinkId ?? null,
+      kind: input.kind,
+      lastConfirmedSnapshot: input.lastConfirmedSnapshot ?? null,
+      linearRelationId: input.linearRelationId ?? null,
+      localRelationKey: input.localRelationKey,
+      localSourceTaskId: input.localSourceTaskId ?? null,
+      localTargetTaskId: input.localTargetTaskId ?? null,
+      origin: input.origin,
+      remoteSnapshot: input.remoteSnapshot ?? null,
+      resolutionState: input.resolutionState,
+      source: input.source,
+      sourceIssueId: input.sourceIssueId ?? null,
+      targetIssueId: input.targetIssueId ?? null,
+      tombstone: input.tombstone ?? null,
+      updatedAt: new Date(),
+      workspaceId: this.workspaceId,
+    };
+    if (existing) {
+      const [row] = await this.db
+        .update(linearExternalRelations)
+        .set(values)
+        .where(
+          and(
+            eq(linearExternalRelations.id, existing.id),
+            eq(linearExternalRelations.workspaceId, this.workspaceId),
+          ),
+        )
+        .returning();
+      return row ?? existing;
+    }
+    const [row] = await this.db.insert(linearExternalRelations).values(values).returning();
+    return row;
+  }
+
+  async markExternalRelationOutboundOperation(mappingId: string, operationId: string) {
+    const [row] = await this.db
+      .update(linearExternalRelations)
+      .set({ lastOutboundOperationId: operationId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(linearExternalRelations.id, mappingId),
+          eq(linearExternalRelations.workspaceId, this.workspaceId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async recordIssueTombstone(input: {
+    deliveryId?: string | null;
+    idempotencyKey: string;
+    issueLinkId: string;
+    linearIssueId: string;
+    kind: LinearTombstoneKind;
+    origin: LinearExternalSyncOrigin;
+    reason?: string;
+    snapshot?: LinearIssueSnapshot;
+  }) {
+    const at = new Date();
+    const tombstone = {
+      at: at.toISOString(),
+      kind: input.kind,
+      ...(input.reason ? { reason: input.reason } : {}),
+      source: 'linear' as const,
+      ...(input.snapshot ? { snapshot: input.snapshot } : {}),
+    };
+    await this.db
+      .insert(linearIssueTombstones)
+      .values({
+        deliveryId: input.deliveryId,
+        idempotencyKey: input.idempotencyKey,
+        issueLinkId: input.issueLinkId,
+        kind: input.kind,
+        linearIssueId: input.linearIssueId,
+        observedAt: at,
+        origin: input.origin,
+        reason: input.reason,
+        snapshot: input.snapshot,
+        source: 'linear',
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoNothing({
+        target: [linearIssueTombstones.workspaceId, linearIssueTombstones.idempotencyKey],
+      });
+    return this.updateIssueLink(input.issueLinkId, {
+      remoteSnapshot: input.snapshot,
+      syncState: 'removed',
+      tombstone,
+    });
+  }
+
+  async listIssueTombstones(issueLinkId: string) {
+    return this.db
+      .select()
+      .from(linearIssueTombstones)
+      .where(
+        and(
+          eq(linearIssueTombstones.workspaceId, this.workspaceId),
+          eq(linearIssueTombstones.issueLinkId, issueLinkId),
+        ),
+      )
+      .orderBy(linearIssueTombstones.observedAt);
+  }
+
+  async clearIssueTombstone(id: string) {
+    return this.updateIssueLink(id, { syncState: 'synced', tombstone: null });
   }
 
   async captureDelivery(input: CaptureLinearDeliveryInput) {
@@ -1010,6 +1408,57 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  async findCreateIntentByTaskId(taskId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearSyncOutbox)
+      .where(
+        and(
+          eq(linearSyncOutbox.workspaceId, this.workspaceId),
+          eq(linearSyncOutbox.taskId, taskId),
+          eq(linearSyncOutbox.operation, `linear-issue:create:${taskId}`),
+          sql`${linearSyncOutbox.status} <> 'cancelled'`,
+        ),
+      )
+      .orderBy(desc(linearSyncOutbox.createdAt))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findCreateIntentByRemoteIssueId(remoteIssueId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearSyncOutbox)
+      .where(
+        and(
+          eq(linearSyncOutbox.workspaceId, this.workspaceId),
+          sql`${linearSyncOutbox.operation} like 'linear-issue:create:%'`,
+          sql`${linearSyncOutbox.payload}->>'remoteIssueId' = ${remoteIssueId}`,
+          sql`${linearSyncOutbox.status} <> 'cancelled'`,
+        ),
+      )
+      .orderBy(desc(linearSyncOutbox.createdAt))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async cancelOutbox(id: string, reason: string) {
+    const [row] = await this.db
+      .update(linearSyncOutbox)
+      .set({
+        availableAt: new Date(),
+        lastError: reason.slice(0, 2_000),
+        lockedUntil: null,
+        leaseOwner: null,
+        outcomeUnknownAt: null,
+        status: 'cancelled',
+        updatedAt: new Date(),
+      })
+      .where(and(eq(linearSyncOutbox.id, id), eq(linearSyncOutbox.workspaceId, this.workspaceId)))
+      .returning();
+    return row ?? null;
+  }
+
   async queueOutbox(input: QueueLinearSyncInput) {
     const installation = await this.findInstallationById(input.installationId);
     if (!installation)
@@ -1020,16 +1469,24 @@ export class LinearSyncModel {
       );
     }
 
-    if (input.linkId) {
+    if (input.linkId || input.taskId) {
       const [existing] = await this.db
         .select()
         .from(linearSyncOutbox)
         .where(
           and(
             eq(linearSyncOutbox.workspaceId, this.workspaceId),
-            eq(linearSyncOutbox.linkId, input.linkId),
+            input.linkId
+              ? eq(linearSyncOutbox.linkId, input.linkId)
+              : eq(linearSyncOutbox.taskId, input.taskId!),
             eq(linearSyncOutbox.operation, input.operation),
-            inArray(linearSyncOutbox.status, ['failed', 'pending', 'outcome_unknown']),
+            inArray(linearSyncOutbox.status, [
+              'cancelled',
+              'failed',
+              'pending',
+              'sending',
+              'outcome_unknown',
+            ]),
           ),
         )
         .orderBy(desc(linearSyncOutbox.createdAt))
@@ -1041,6 +1498,7 @@ export class LinearSyncModel {
           .set({
             availableAt: new Date(),
             expectedLocalRevision: input.expectedLocalRevision,
+            installationId: input.installationId,
             lastError: null,
             lockedUntil: null,
             leaseOwner: null,
@@ -1049,7 +1507,7 @@ export class LinearSyncModel {
               ...(existing.payload as Record<string, unknown>),
               ...input.payload,
             },
-            status: 'pending',
+            status: input.initialStatus ?? 'pending',
             updatedAt: new Date(),
           })
           .where(eq(linearSyncOutbox.id, existing.id))
@@ -1066,11 +1524,27 @@ export class LinearSyncModel {
         linkId: input.linkId,
         operation: input.operation,
         payload: input.payload,
+        status: input.initialStatus ?? 'pending',
         taskId: input.taskId,
         workspaceId: this.workspaceId,
       })
+      .onConflictDoNothing()
       .returning();
-    return row;
+    if (row) return row;
+
+    const [existing] = await this.db
+      .select()
+      .from(linearSyncOutbox)
+      .where(
+        and(
+          eq(linearSyncOutbox.workspaceId, this.workspaceId),
+          eq(linearSyncOutbox.operation, input.operation),
+        ),
+      )
+      .orderBy(desc(linearSyncOutbox.createdAt))
+      .limit(1);
+    if (!existing) throw new Error('Failed to persist Linear outbox intent');
+    return existing;
   }
 
   async listOutbox(status?: LinearSyncOutboxStatus) {
@@ -1294,39 +1768,68 @@ export class LinearSyncModel {
   ): Promise<LinearSyncOutboxItem[]> {
     const lockedUntil = new Date(Date.now() + leaseMs);
     const installationFilter = installationId
-      ? sql`AND installation_id = ${installationId}`
+      ? sql`AND candidate.installation_id = ${installationId}`
       : sql``;
     return this.db.transaction(async (tx) => {
       const result = await tx.execute(sql`
         WITH candidates AS (
-          SELECT id
-          FROM linear_sync_outbox
-          WHERE workspace_id = ${this.workspaceId}
-            AND status IN ('failed', 'pending', 'sending', 'outcome_unknown')
-            AND available_at <= now()
-            AND (locked_until IS NULL OR locked_until < now())
+          SELECT candidate.id
+          FROM linear_sync_outbox AS candidate
+          WHERE candidate.workspace_id = ${this.workspaceId}
+            AND candidate.status IN ('failed', 'pending', 'sending', 'outcome_unknown')
+            AND candidate.available_at <= now()
+            AND (candidate.locked_until IS NULL OR candidate.locked_until < now())
             AND NOT EXISTS (
               SELECT 1
               FROM linear_issue_links AS link
               JOIN linear_project_bindings AS binding ON binding.id = link.binding_id
-              WHERE link.id = linear_sync_outbox.link_id
-                AND link.workspace_id = linear_sync_outbox.workspace_id
+              WHERE link.id = candidate.link_id
+                AND link.workspace_id = candidate.workspace_id
                 AND COALESCE((binding.settings ->> 'writeEnabled')::boolean, binding.sync_enabled) = false
             )
             AND NOT EXISTS (
               SELECT 1
               FROM tasks AS task
               JOIN linear_project_bindings AS binding ON binding.project_id = task.project_id
-              WHERE linear_sync_outbox.link_id IS NULL
-                AND linear_sync_outbox.operation LIKE 'linear-issue:create:%'
-                AND task.id = linear_sync_outbox.task_id
-                AND task.workspace_id = linear_sync_outbox.workspace_id
-                AND binding.workspace_id = linear_sync_outbox.workspace_id
-                AND binding.installation_id = linear_sync_outbox.installation_id
+              WHERE candidate.link_id IS NULL
+                AND candidate.operation LIKE 'linear-issue:create:%'
+                AND task.id = candidate.task_id
+                AND task.workspace_id = candidate.workspace_id
+                AND binding.workspace_id = candidate.workspace_id
+                AND binding.installation_id = candidate.installation_id
                 AND COALESCE((binding.settings ->> 'writeEnabled')::boolean, binding.sync_enabled) = false
             )
             ${installationFilter}
-          ORDER BY created_at, id
+            AND NOT EXISTS (
+              SELECT 1
+              FROM linear_sync_outbox AS earlier
+              WHERE earlier.workspace_id = candidate.workspace_id
+                AND (
+                  (candidate.link_id IS NOT NULL AND earlier.link_id = candidate.link_id)
+                  OR (
+                    candidate.link_id IS NULL
+                    AND earlier.link_id IS NULL
+                    AND candidate.task_id IS NOT NULL
+                    AND earlier.task_id = candidate.task_id
+                  )
+                )
+                AND earlier.status IN (
+                  'dead_letter',
+                  'failed',
+                  'paused',
+                  'pending',
+                  'sending',
+                  'outcome_unknown'
+                )
+                AND (
+                  earlier.created_at < candidate.created_at
+                  OR (
+                    earlier.created_at = candidate.created_at
+                    AND earlier.id < candidate.id
+                  )
+              )
+            )
+          ORDER BY candidate.created_at, candidate.id
           LIMIT ${limit}
           FOR UPDATE SKIP LOCKED
         )
@@ -1530,6 +2033,261 @@ export class LinearSyncModel {
 
       if (!link) throw new Error('Linear issue link no longer exists');
       return { link, outbox };
+    });
+  }
+
+  async settleExternalCommentOutbox(
+    id: string,
+    lease: LinearSyncLease,
+    input: {
+      linearCommentId?: string;
+      mappingId: string;
+      remoteSnapshot?: LinearCommentSnapshot;
+      tombstone?: LinearSyncTombstone | null;
+    },
+  ) {
+    return this.db.transaction(async (tx) => {
+      const now = new Date();
+      const [outbox] = await tx
+        .update(linearSyncOutbox)
+        .set({
+          lastError: null,
+          lockedUntil: null,
+          leaseOwner: null,
+          outcomeUnknownAt: null,
+          sentAt: now,
+          status: 'sent',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(linearSyncOutbox.id, id),
+            eq(linearSyncOutbox.workspaceId, this.workspaceId),
+            eq(linearSyncOutbox.leaseOwner, lease.owner),
+            eq(linearSyncOutbox.leaseFence, lease.fence),
+          ),
+        )
+        .returning();
+      if (!outbox) return null;
+
+      const [currentMapping] = await tx
+        .select()
+        .from(linearExternalComments)
+        .where(
+          and(
+            eq(linearExternalComments.id, input.mappingId),
+            eq(linearExternalComments.workspaceId, this.workspaceId),
+          ),
+        )
+        .limit(1);
+      if (!currentMapping) throw new Error('Linear external comment mapping no longer exists');
+      const remoteIdentityConflict = Boolean(
+        currentMapping.linearCommentId &&
+        input.linearCommentId &&
+        currentMapping.linearCommentId !== input.linearCommentId,
+      );
+      const [mapping] = await tx
+        .update(linearExternalComments)
+        .set({
+          ...(input.linearCommentId
+            ? { linearCommentId: currentMapping.linearCommentId ?? input.linearCommentId }
+            : {}),
+          ...(input.remoteSnapshot
+            ? {
+                lastConfirmedSnapshot: input.remoteSnapshot,
+                remoteSnapshot: input.remoteSnapshot,
+              }
+            : {}),
+          confirmationState: input.tombstone
+            ? 'tombstoned'
+            : remoteIdentityConflict
+              ? 'conflict'
+              : 'confirmed',
+          lastOutboundOperationId: outbox.id,
+          tombstone: input.tombstone ?? null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(linearExternalComments.id, input.mappingId),
+            eq(linearExternalComments.workspaceId, this.workspaceId),
+          ),
+        )
+        .returning();
+      if (!mapping) throw new Error('Linear external comment mapping no longer exists');
+      return { mapping, outbox };
+    });
+  }
+
+  async settleCreateIssueOutbox(
+    id: string,
+    lease: LinearSyncLease,
+    input: {
+      bindingId: string;
+      installationId: string;
+      linearIdentifier: string;
+      linearIssueId: string;
+      organizationId: string;
+      remoteSnapshot: LinearIssueSnapshot;
+      taskId: string;
+    },
+  ) {
+    return this.db.transaction(async (tx) => {
+      const now = new Date();
+      const [outbox] = await tx
+        .update(linearSyncOutbox)
+        .set({
+          lastError: null,
+          lockedUntil: null,
+          leaseOwner: null,
+          outcomeUnknownAt: null,
+          sentAt: now,
+          status: 'sent',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(linearSyncOutbox.id, id),
+            eq(linearSyncOutbox.workspaceId, this.workspaceId),
+            eq(linearSyncOutbox.leaseOwner, lease.owner),
+            eq(linearSyncOutbox.leaseFence, lease.fence),
+          ),
+        )
+        .returning();
+      if (!outbox) return null;
+
+      const [link] = await tx
+        .insert(linearIssueLinks)
+        .values({
+          bindingId: input.bindingId,
+          installationId: input.installationId,
+          lastConfirmedSnapshot: input.remoteSnapshot,
+          linearIdentifier: input.linearIdentifier,
+          linearIssueId: input.linearIssueId,
+          organizationId: input.organizationId,
+          remoteSnapshot: input.remoteSnapshot,
+          syncState: 'synced',
+          taskId: input.taskId,
+          workspaceId: this.workspaceId,
+        })
+        .onConflictDoNothing({
+          target: [linearIssueLinks.workspaceId, linearIssueLinks.taskId],
+        })
+        .returning();
+      const existing =
+        link ??
+        (
+          await tx
+            .select()
+            .from(linearIssueLinks)
+            .where(
+              and(
+                eq(linearIssueLinks.workspaceId, this.workspaceId),
+                or(
+                  eq(linearIssueLinks.taskId, input.taskId),
+                  eq(linearIssueLinks.linearIssueId, input.linearIssueId),
+                ),
+              ),
+            )
+            .limit(1)
+        )[0];
+      if (!existing) throw new Error('Failed to settle Linear issue creation');
+      if (
+        existing.taskId !== input.taskId ||
+        existing.linearIssueId !== input.linearIssueId ||
+        existing.installationId !== input.installationId ||
+        existing.organizationId !== input.organizationId ||
+        existing.bindingId !== input.bindingId ||
+        input.remoteSnapshot.id !== input.linearIssueId
+      ) {
+        throw new Error('Linear issue creation identity conflicts with an existing link');
+      }
+      return { link: existing, outbox };
+    });
+  }
+
+  async settleExternalRelationOutbox(
+    id: string,
+    lease: LinearSyncLease,
+    input: {
+      linearRelationId?: string;
+      mappingId: string;
+      remoteSnapshot?: LinearRelationSnapshot;
+      tombstone?: LinearSyncTombstone | null;
+    },
+  ) {
+    return this.db.transaction(async (tx) => {
+      const now = new Date();
+      const [outbox] = await tx
+        .update(linearSyncOutbox)
+        .set({
+          lastError: null,
+          lockedUntil: null,
+          leaseOwner: null,
+          outcomeUnknownAt: null,
+          sentAt: now,
+          status: 'sent',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(linearSyncOutbox.id, id),
+            eq(linearSyncOutbox.workspaceId, this.workspaceId),
+            eq(linearSyncOutbox.leaseOwner, lease.owner),
+            eq(linearSyncOutbox.leaseFence, lease.fence),
+          ),
+        )
+        .returning();
+      if (!outbox) return null;
+
+      const [currentMapping] = await tx
+        .select()
+        .from(linearExternalRelations)
+        .where(
+          and(
+            eq(linearExternalRelations.id, input.mappingId),
+            eq(linearExternalRelations.workspaceId, this.workspaceId),
+          ),
+        )
+        .limit(1);
+      if (!currentMapping) throw new Error('Linear external relation mapping no longer exists');
+      const remoteIdentityConflict = Boolean(
+        currentMapping.linearRelationId &&
+        input.linearRelationId &&
+        currentMapping.linearRelationId !== input.linearRelationId,
+      );
+      const [mapping] = await tx
+        .update(linearExternalRelations)
+        .set({
+          ...(input.linearRelationId
+            ? {
+                linearRelationId: currentMapping.linearRelationId ?? input.linearRelationId,
+              }
+            : {}),
+          ...(input.remoteSnapshot
+            ? {
+                lastConfirmedSnapshot: input.remoteSnapshot,
+                remoteSnapshot: input.remoteSnapshot,
+              }
+            : {}),
+          confirmationState: input.tombstone
+            ? 'tombstoned'
+            : remoteIdentityConflict
+              ? 'conflict'
+              : 'confirmed',
+          lastOutboundOperationId: outbox.id,
+          tombstone: input.tombstone ?? null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(linearExternalRelations.id, input.mappingId),
+            eq(linearExternalRelations.workspaceId, this.workspaceId),
+          ),
+        )
+        .returning();
+      if (!mapping) throw new Error('Linear external relation mapping no longer exists');
+      return { mapping, outbox };
     });
   }
 
@@ -1885,7 +2643,9 @@ export class LinearSyncModel {
       changedFields: string[];
       eventId?: string;
       eventType: TaskDomainEventType;
+      externalMappingId?: string;
       idempotencyKey: string;
+      outboxPayload?: LinearExternalCommentOutboxPayload | LinearExternalRelationOutboxPayload;
       payload?: Record<string, unknown>;
       source: TaskDomainEventSource;
       suppressLinearOutbox?: boolean;
@@ -1919,15 +2679,178 @@ export class LinearSyncModel {
       return { event, link: null, outbox: null };
     }
 
-    const link = await model.findIssueLinkByTaskId(input.task.id);
-    if (!link) return { event, link: null, outbox: null };
+    let link = await model.findIssueLinkByTaskId(input.task.id);
 
-    const installation = await model.findInstallationById(link.installationId);
+    const queueCreateIntent = async (
+      binding: Awaited<ReturnType<LinearSyncModel['findBindingByProjectId']>>,
+      installation: Awaited<ReturnType<LinearSyncModel['findInstallationById']>>,
+      existingIntent?: Awaited<ReturnType<LinearSyncModel['findCreateIntentByTaskId']>>,
+    ) => {
+      if (!binding || !binding.syncEnabled || !binding.defaultTeamId) return null;
+      if (!installation || installation.status !== 'active') return null;
+      const existingRemoteIssueId = existingIntent?.payload
+        ? (existingIntent.payload as { remoteIssueId?: unknown }).remoteIssueId
+        : undefined;
+      const remoteIssueId =
+        typeof existingRemoteIssueId === 'string' ? existingRemoteIssueId : randomUUID();
+      return model.queueOutbox({
+        expectedLocalRevision: input.task.domainRevision,
+        installationId: installation.id,
+        operation: `linear-issue:create:${input.task.id}`,
+        payload: {
+          bindingId: binding.id,
+          description: input.task.instruction,
+          localTaskId: input.task.id,
+          projectId: binding.linearProjectId,
+          remoteIssueId,
+          teamId: binding.defaultTeamId,
+          title: input.task.name || input.task.identifier,
+        },
+        taskId: input.task.id,
+      });
+    };
+
+    if (!link) {
+      const binding = input.task.projectId
+        ? await model.findBindingByProjectId(input.task.projectId)
+        : null;
+      const installation = binding
+        ? await model.findInstallationById(binding.installationId)
+        : null;
+      const createIntent = await model.findCreateIntentByTaskId(input.task.id);
+
+      if (!binding || !binding.syncEnabled || !binding.defaultTeamId || !installation) {
+        if (createIntent) {
+          await model.cancelOutbox(
+            createIntent.id,
+            'Local task no longer has an active Linear project binding',
+          );
+        }
+        return { event, link: null, outbox: null };
+      }
+
+      const outbox = await queueCreateIntent(binding, installation, createIntent);
+      return { event, link: null, outbox };
+    }
+
+    let installation = await model.findInstallationById(link.installationId);
     if (!installation || installation.status !== 'active') {
       return { event, link, outbox: null };
     }
 
-    const binding = link.bindingId ? await model.findBindingById(link.bindingId) : null;
+    let binding = link.bindingId ? await model.findBindingById(link.bindingId) : null;
+    if (binding && !linearBindingWriteEnabled(binding)) return { event, link, outbox: null };
+
+    if (input.task.projectId && binding?.projectId !== input.task.projectId) {
+      const nextBinding = await model.findBindingByProjectId(input.task.projectId);
+      const nextInstallation = nextBinding
+        ? await model.findInstallationById(nextBinding.installationId)
+        : null;
+      if (
+        !nextBinding ||
+        !linearBindingWriteEnabled(nextBinding) ||
+        !nextInstallation ||
+        nextInstallation.status !== 'active' ||
+        nextInstallation.id !== installation.id ||
+        nextInstallation.organizationId !== installation.organizationId
+      ) {
+        await model.updateIssueLink(link.id, {
+          conflict: {
+            base: { projectId: binding?.projectId ?? null },
+            detectedAt: new Date().toISOString(),
+            fields: ['projectId'],
+            local: { projectId: input.task.projectId },
+            remote: { projectId: link.remoteSnapshot?.projectId ?? null },
+          },
+          syncState: 'conflict',
+        });
+        return { event, link, outbox: null };
+      }
+      const rebound = await model.updateIssueLink(link.id, {
+        bindingId: nextBinding.id,
+        syncState: 'pending',
+      });
+      if (rebound) link = rebound;
+      binding = nextBinding;
+      installation = nextInstallation;
+    }
+
+    if (input.outboxPayload?.kind === 'comment') {
+      const existing = input.externalMappingId
+        ? await model.findExternalCommentById(input.externalMappingId)
+        : await model.findExternalCommentByLocalId(input.outboxPayload.commentId);
+      if (input.outboxPayload.action === 'create' && existing?.linearCommentId) {
+        return { event, link, outbox: null };
+      }
+      const mapping = await model.upsertExternalComment({
+        id: input.externalMappingId,
+        confirmationState: 'unconfirmed',
+        issueLinkId: link.id,
+        lastConfirmedSnapshot: existing?.lastConfirmedSnapshot,
+        linearCommentId:
+          existing?.linearCommentId ??
+          (input.outboxPayload.action === 'create' ? randomUUID() : null),
+        linearIssueId: link.linearIssueId,
+        localCommentId:
+          input.outboxPayload.action === 'delete' ? null : input.outboxPayload.commentId,
+        origin: 'outbound',
+        remoteSnapshot: existing?.remoteSnapshot,
+        source: 'orvilo',
+        tombstone: null,
+      });
+      const outbox = await model.queueOutbox({
+        expectedLocalRevision: input.task.domainRevision,
+        installationId: installation.id,
+        linkId: link.id,
+        operation: `linear-comment:${input.outboxPayload.action}:${input.outboxPayload.commentId}`,
+        payload: {
+          ...input.outboxPayload,
+          mappingId: input.externalMappingId ?? mapping.id,
+          ...(mapping.linearCommentId ? { remoteCommentId: mapping.linearCommentId } : {}),
+        },
+        taskId: input.task.id,
+      });
+      await model.markExternalCommentOutboundOperation(mapping.id, outbox.id);
+      return { event, link, outbox };
+    }
+
+    if (input.outboxPayload?.kind === 'relation') {
+      const relation = input.outboxPayload.relation;
+      const existing = await model.findExternalRelationByLocalKey(relation.localRelationKey);
+      const mapping = await model.upsertExternalRelation({
+        confirmationState: 'unconfirmed',
+        issueLinkId: link.id,
+        kind: relation.kind,
+        lastConfirmedSnapshot: existing?.lastConfirmedSnapshot,
+        linearRelationId:
+          existing?.linearRelationId ??
+          (relation.kind !== 'parent' && input.outboxPayload.action === 'upsert'
+            ? randomUUID()
+            : null),
+        localRelationKey: relation.localRelationKey,
+        localSourceTaskId: relation.sourceTaskId,
+        localTargetTaskId: relation.targetTaskId,
+        origin: 'outbound',
+        remoteSnapshot: existing?.remoteSnapshot,
+        resolutionState: relation.targetTaskId ? 'resolved' : 'unresolved',
+        source: 'orvilo',
+        tombstone: null,
+      });
+      const outbox = await model.queueOutbox({
+        expectedLocalRevision: input.task.domainRevision,
+        installationId: installation.id,
+        linkId: link.id,
+        operation: `linear-relation:${input.outboxPayload.action}:${relation.localRelationKey}`,
+        payload: {
+          ...input.outboxPayload,
+          mappingId: mapping.id,
+          ...(mapping.linearRelationId ? { remoteRelationId: mapping.linearRelationId } : {}),
+        },
+        taskId: input.task.id,
+      });
+      await model.markExternalRelationOutboundOperation(mapping.id, outbox.id);
+      return { event, link, outbox };
+    }
     const settings = binding?.settings;
     const statusId = settings?.statusMappings?.find(
       (mapping) =>
@@ -1994,12 +2917,15 @@ export class LinearSyncModel {
   async updateIssueLink(
     id: string,
     patch: {
+      bindingId?: string | null;
       conflict?: LinearSyncConflict | null;
+      installationId?: string;
       lastInboundDeliveryId?: string | null;
       lastConfirmedSnapshot?: LinearIssueSnapshot;
       remoteSnapshot?: LinearIssueSnapshot | null;
       remoteUpdatedAt?: Date | null;
       syncState?: LinearIssueLinkSyncState;
+      tombstone?: LinearSyncTombstone | null;
     },
   ) {
     const [row] = await this.db

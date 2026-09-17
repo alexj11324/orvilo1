@@ -1,12 +1,20 @@
 import type {
+  LinearCommentSnapshot,
+  LinearExternalConfirmationState,
+  LinearExternalSyncOrigin,
+  LinearExternalSyncSource,
   LinearInstallationActor,
   LinearInstallationStatus,
   LinearIssueLinkSyncState,
   LinearIssueSnapshot,
   LinearProjectBindingSettings,
+  LinearRelationKind,
+  LinearRelationSnapshot,
   LinearSyncConflict,
   LinearSyncInboxStatus,
   LinearSyncOutboxStatus,
+  LinearSyncTombstone,
+  LinearTombstoneKind,
   TaskDomainEventSource,
   TaskDomainEventType,
   TaskPlanningRevisionStatus,
@@ -31,7 +39,7 @@ import {
 import { createdAt, timestamptz, updatedAt } from './_helpers';
 import { userConnectors } from './connector';
 import { projects } from './project';
-import { tasks } from './task';
+import { taskComments, tasks } from './task';
 import { users } from './user';
 import { workspaces } from './workspace';
 
@@ -188,6 +196,7 @@ export const linearIssueLinks = pgTable(
     lastConfirmedSnapshot: jsonb('last_confirmed_snapshot').$type<LinearIssueSnapshot>().notNull(),
     remoteSnapshot: jsonb('remote_snapshot').$type<LinearIssueSnapshot>(),
     conflict: jsonb('conflict').$type<LinearSyncConflict>(),
+    tombstone: jsonb('tombstone').$type<LinearSyncTombstone>(),
     syncState: text('sync_state').$type<LinearIssueLinkSyncState>().notNull().default('synced'),
     lastInboundDeliveryId: text('last_inbound_delivery_id'),
     lastOutboundRevision: bigint('last_outbound_revision', { mode: 'number' }).notNull().default(0),
@@ -204,6 +213,136 @@ export const linearIssueLinks = pgTable(
     index('linear_issue_links_installation_id_idx').on(table.installationId),
     index('linear_issue_links_task_id_idx').on(table.taskId),
     index('linear_issue_links_sync_state_idx').on(table.workspaceId, table.syncState),
+  ],
+);
+
+/** Stable mapping between one Linear comment and one local task comment. */
+export const linearExternalComments = pgTable(
+  'linear_external_comments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' })
+      .notNull(),
+    issueLinkId: uuid('issue_link_id')
+      .references(() => linearIssueLinks.id, { onDelete: 'cascade' })
+      .notNull(),
+    localCommentId: text('local_comment_id').references(() => taskComments.id, {
+      onDelete: 'set null',
+    }),
+    linearIssueId: text('linear_issue_id').notNull(),
+    linearCommentId: text('linear_comment_id'),
+    source: text('source').$type<LinearExternalSyncSource>().notNull(),
+    origin: text('origin').$type<LinearExternalSyncOrigin>().notNull(),
+    confirmationState: text('confirmation_state')
+      .$type<LinearExternalConfirmationState>()
+      .notNull()
+      .default('unconfirmed'),
+    lastConfirmedSnapshot: jsonb('last_confirmed_snapshot').$type<LinearCommentSnapshot>(),
+    remoteSnapshot: jsonb('remote_snapshot').$type<LinearCommentSnapshot>(),
+    tombstone: jsonb('tombstone').$type<LinearSyncTombstone>(),
+    lastInboundDeliveryId: text('last_inbound_delivery_id'),
+    lastOutboundOperationId: text('last_outbound_operation_id'),
+    ...createdAtColumns(),
+  },
+  (table) => [
+    uniqueIndex('linear_external_comments_workspace_remote_unique').on(
+      table.workspaceId,
+      table.linearCommentId,
+    ),
+    uniqueIndex('linear_external_comments_workspace_local_unique').on(
+      table.workspaceId,
+      table.localCommentId,
+    ),
+    index('linear_external_comments_issue_link_idx').on(table.issueLinkId),
+    index('linear_external_comments_issue_idx').on(table.workspaceId, table.linearIssueId),
+  ],
+);
+
+/** Stable mapping for parent, blocks, and relates business relations. */
+export const linearExternalRelations = pgTable(
+  'linear_external_relations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' })
+      .notNull(),
+    issueLinkId: uuid('issue_link_id').references(() => linearIssueLinks.id, {
+      onDelete: 'set null',
+    }),
+    localRelationKey: text('local_relation_key').notNull(),
+    linearRelationId: text('linear_relation_id'),
+    sourceIssueId: text('source_issue_id'),
+    targetIssueId: text('target_issue_id'),
+    localSourceTaskId: text('local_source_task_id').references(() => tasks.id, {
+      onDelete: 'set null',
+    }),
+    localTargetTaskId: text('local_target_task_id').references(() => tasks.id, {
+      onDelete: 'set null',
+    }),
+    kind: text('kind').$type<LinearRelationKind>().notNull(),
+    source: text('source').$type<LinearExternalSyncSource>().notNull(),
+    origin: text('origin').$type<LinearExternalSyncOrigin>().notNull(),
+    confirmationState: text('confirmation_state')
+      .$type<LinearExternalConfirmationState>()
+      .notNull()
+      .default('unconfirmed'),
+    resolutionState: text('resolution_state').$type<'resolved' | 'unresolved'>().notNull(),
+    lastConfirmedSnapshot: jsonb('last_confirmed_snapshot').$type<LinearRelationSnapshot>(),
+    remoteSnapshot: jsonb('remote_snapshot').$type<LinearRelationSnapshot>(),
+    tombstone: jsonb('tombstone').$type<LinearSyncTombstone>(),
+    lastInboundDeliveryId: text('last_inbound_delivery_id'),
+    lastOutboundOperationId: text('last_outbound_operation_id'),
+    ...createdAtColumns(),
+  },
+  (table) => [
+    uniqueIndex('linear_external_relations_workspace_local_unique').on(
+      table.workspaceId,
+      table.localRelationKey,
+    ),
+    uniqueIndex('linear_external_relations_workspace_remote_unique').on(
+      table.workspaceId,
+      table.linearRelationId,
+    ),
+    index('linear_external_relations_source_issue_idx').on(table.workspaceId, table.sourceIssueId),
+    index('linear_external_relations_target_issue_idx').on(table.workspaceId, table.targetIssueId),
+    index('linear_external_relations_target_task_idx').on(
+      table.workspaceId,
+      table.localTargetTaskId,
+      table.kind,
+    ),
+  ],
+);
+
+/** Append-only reason history for an issue that left the active sync scope. */
+export const linearIssueTombstones = pgTable(
+  'linear_issue_tombstones',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' })
+      .notNull(),
+    issueLinkId: uuid('issue_link_id')
+      .references(() => linearIssueLinks.id, { onDelete: 'cascade' })
+      .notNull(),
+    linearIssueId: text('linear_issue_id').notNull(),
+    kind: text('kind').$type<LinearTombstoneKind>().notNull(),
+    source: text('source').$type<LinearExternalSyncSource>().notNull(),
+    origin: text('origin').$type<LinearExternalSyncOrigin>().notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    deliveryId: text('delivery_id'),
+    reason: text('reason'),
+    snapshot: jsonb('snapshot').$type<LinearIssueSnapshot>(),
+    observedAt: timestamptz('observed_at').notNull(),
+    ...createdAtColumns(),
+  },
+  (table) => [
+    uniqueIndex('linear_issue_tombstones_workspace_idempotency_unique').on(
+      table.workspaceId,
+      table.idempotencyKey,
+    ),
+    index('linear_issue_tombstones_link_idx').on(table.issueLinkId, table.observedAt),
+    index('linear_issue_tombstones_issue_idx').on(table.workspaceId, table.linearIssueId),
   ],
 );
 
@@ -277,6 +416,9 @@ export const linearSyncOutbox = pgTable(
     index('linear_sync_outbox_link_id_idx').on(table.linkId),
     index('linear_sync_outbox_task_id_idx').on(table.taskId),
     index('linear_sync_outbox_workspace_id_idx').on(table.workspaceId),
+    uniqueIndex('linear_sync_outbox_create_operation_unique')
+      .on(table.workspaceId, table.operation)
+      .where(sql`${table.operation} like 'linear-issue:create:%'`),
   ],
 );
 
@@ -383,6 +525,12 @@ export type LinearProjectBindingItem = typeof linearProjectBindings.$inferSelect
 export type NewLinearProjectBinding = typeof linearProjectBindings.$inferInsert;
 export type LinearIssueLinkItem = typeof linearIssueLinks.$inferSelect;
 export type NewLinearIssueLink = typeof linearIssueLinks.$inferInsert;
+export type LinearExternalCommentItem = typeof linearExternalComments.$inferSelect;
+export type NewLinearExternalComment = typeof linearExternalComments.$inferInsert;
+export type LinearExternalRelationItem = typeof linearExternalRelations.$inferSelect;
+export type NewLinearExternalRelation = typeof linearExternalRelations.$inferInsert;
+export type LinearIssueTombstoneItem = typeof linearIssueTombstones.$inferSelect;
+export type NewLinearIssueTombstone = typeof linearIssueTombstones.$inferInsert;
 export type LinearSyncInboxItem = typeof linearSyncInbox.$inferSelect;
 export type NewLinearSyncInbox = typeof linearSyncInbox.$inferInsert;
 export type LinearSyncOutboxItem = typeof linearSyncOutbox.$inferSelect;

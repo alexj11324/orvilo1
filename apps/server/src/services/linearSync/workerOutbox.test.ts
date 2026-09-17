@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   findPublicTask: vi.fn(),
   hasCurrentOutboxLease: vi.fn(),
   settleOutbox: vi.fn(),
+  updateIssueLink: vi.fn(),
   updateOutbox: vi.fn(),
   validateIssueScope: vi.fn(),
 }));
@@ -24,14 +25,17 @@ vi.mock('@/database/models/linearSync', () => ({
     findIssueLinkById = mocks.findIssueLinkById;
     hasCurrentOutboxLease = mocks.hasCurrentOutboxLease;
     settleOutbox = mocks.settleOutbox;
+    updateIssueLink = mocks.updateIssueLink;
     updateOutbox = mocks.updateOutbox;
   },
+  linearBindingReadEnabled: vi.fn(() => true),
   linearBindingWriteEnabled: vi.fn(() => true),
   linearSyncRetryDelayMs: vi.fn(() => 1_000),
 }));
 vi.mock('@/database/models/task', () => ({ TaskModel: class {} }));
-vi.mock('@/database/schemas/task', () => ({ tasks: { id: 'id' } }));
-vi.mock('@/server/services/task', () => ({ TaskService: class {} }));
+vi.mock('@/database/schemas/task', () => ({
+  tasks: { domainRevision: 'domainRevision', id: 'id', workspaceId: 'workspaceId' },
+}));
 vi.mock('./integrationTask', () => ({
   LinearIntegrationTaskService: class {
     findPublicTask = mocks.findPublicTask;
@@ -72,10 +76,17 @@ describe('LinearSyncWorker.processOutbox', () => {
       id: 'link-1',
       installationId: 'installation-1',
       linearIssueId: 'linear-1',
+      lastConfirmedSnapshot: {
+        description: 'Base description',
+        id: 'linear-1',
+        identifier: 'LIN-1',
+        title: 'Old title',
+      },
       organizationId: 'organization-1',
       taskId: 'task-1',
     });
     mocks.findPublicTask.mockReset().mockResolvedValue({
+      domainRevision: 1,
       id: 'task-1',
       projectId: 'project-1',
       visibility: 'public',
@@ -84,6 +95,7 @@ describe('LinearSyncWorker.processOutbox', () => {
     mocks.settleOutbox.mockReset().mockResolvedValue({ outbox: { status: 'sent' } });
     mocks.updateOutbox.mockReset().mockResolvedValue({ id: 'outbox-1' });
     mocks.validateIssueScope.mockReset().mockResolvedValue(true);
+    mocks.updateIssueLink.mockReset().mockResolvedValue({ id: 'link-1' });
   });
 
   it('keeps a provider read failure retryable without claiming a write outcome is unknown', async () => {
@@ -162,6 +174,26 @@ describe('LinearSyncWorker.processOutbox', () => {
     expect(issueProvider.updateIssue).not.toHaveBeenCalled();
   });
 
+  it('sends only the local side of a three-way merge when the remote changed another field', async () => {
+    const issueProvider = provider();
+    const remote = {
+      description: 'Remote description',
+      id: 'linear-1',
+      identifier: 'LIN-1',
+      projectId: 'linear-project-1',
+      title: 'Old title',
+    };
+    mocks.claimOutbox.mockResolvedValueOnce([{ ...row, payload: { title: 'Local title' } }]);
+    issueProvider.getIssue.mockResolvedValue(remote);
+    issueProvider.updateIssue.mockResolvedValue({ ...remote, title: 'Local title' });
+
+    await expect(
+      new LinearSyncWorker({} as never, 'workspace-1').processOutbox(issueProvider as never),
+    ).resolves.toEqual({ failed: 0, sent: 1 });
+    expect(issueProvider.updateIssue).toHaveBeenCalledWith('linear-1', { title: 'Local title' });
+    expect(issueProvider.updateIssue.mock.calls[0][1]).not.toHaveProperty('description');
+  });
+
   it('refuses to export a private task even when a stale link exists', async () => {
     const issueProvider = provider();
     issueProvider.getIssue.mockResolvedValue({
@@ -199,5 +231,48 @@ describe('LinearSyncWorker.processOutbox', () => {
 
     expect(mocks.validateIssueScope).not.toHaveBeenCalled();
     expect(issueProvider.updateIssue).not.toHaveBeenCalled();
+  });
+
+  it('fences a three-way conflict with the current local revision and remote timestamp', async () => {
+    const issueProvider = provider();
+    const remote = {
+      id: 'linear-1',
+      identifier: 'LIN-1',
+      projectId: 'linear-project-1',
+      title: 'Remote title',
+      updatedAt: '2026-09-16T23:00:00.000Z',
+    };
+    mocks.claimOutbox.mockResolvedValueOnce([
+      {
+        ...row,
+        expectedLocalRevision: 2,
+        payload: { title: 'Local title' },
+        taskId: 'task-1',
+      },
+    ]);
+    issueProvider.getIssue.mockResolvedValue(remote);
+    mocks.findPublicTask.mockResolvedValue({
+      domainRevision: 7,
+      id: 'task-1',
+      projectId: 'project-1',
+      visibility: 'public',
+    });
+
+    await expect(
+      new LinearSyncWorker({} as never, 'workspace-1').processOutbox(issueProvider as never),
+    ).resolves.toEqual({ failed: 1, sent: 0 });
+    expect(issueProvider.updateIssue).not.toHaveBeenCalled();
+    expect(mocks.updateIssueLink).toHaveBeenCalledWith(
+      'link-1',
+      expect.objectContaining({
+        conflict: expect.objectContaining({
+          fields: ['title'],
+          localRevision: 7,
+          remoteUpdatedAt: '2026-09-16T23:00:00.000Z',
+        }),
+        remoteUpdatedAt: new Date('2026-09-16T23:00:00.000Z'),
+        syncState: 'conflict',
+      }),
+    );
   });
 });

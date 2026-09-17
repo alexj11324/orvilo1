@@ -14,7 +14,7 @@ vi.mock('@/database/models/linearSync', () => ({
   LINEAR_SYNC_MAX_ATTEMPTS: 5,
   LinearSyncModel: class {
     findBindingById = vi.fn(async () => mocks.binding);
-    findInstallationById = vi.fn(async () => ({ id: 'installation-1' }));
+    findInstallationById = vi.fn(async () => ({ id: 'installation-1', status: 'active' }));
     recordDomainEvent = mocks.recordDomainEvent;
     recordImportReceipt = mocks.recordImportReceipt;
     transaction = vi.fn(async (callback: (model: unknown, db: unknown) => unknown) =>
@@ -136,6 +136,34 @@ describe('LinearSyncWorker.importBinding', () => {
     expect(mocks.recordDomainEvent).toHaveBeenCalledTimes(1);
     expect(mocks.recordDomainEvent).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'project-1', type: 'linear.import.completed' }),
+    );
+  });
+
+  it('imports existing comments without emitting one planning event per comment', async () => {
+    const provider = {
+      listComments: vi
+        .fn()
+        .mockResolvedValue([{ body: 'Historical context', id: 'comment-1', issueId: 'issue-1' }]),
+      listRelations: vi.fn().mockResolvedValue([]),
+    };
+    const worker = new LinearSyncWorker({} as never, 'workspace-1');
+    vi.spyOn(worker as any, 'processRow').mockResolvedValue('processed');
+    const processComment = vi
+      .spyOn(worker as any, 'processCommentRow')
+      .mockResolvedValue('processed');
+
+    await (worker as any).processImportIssue(
+      { id: 'import-row-1', installationId: 'installation-1', subjectId: 'issue-1' },
+      issue('1'),
+      'initial',
+      provider,
+    );
+
+    expect(provider.listComments).toHaveBeenCalledWith('1');
+    expect(processComment).toHaveBeenCalledWith(
+      expect.objectContaining({ installationId: 'installation-1' }),
+      expect.objectContaining({ id: 'comment-1' }),
+      expect.objectContaining({ historicalImport: true }),
     );
   });
 });

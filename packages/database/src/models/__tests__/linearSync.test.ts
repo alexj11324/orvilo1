@@ -4,11 +4,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import {
+  agents,
+  linearExternalRelations,
   linearInstallations,
   linearIssueLinks,
   linearProjectBindings,
   linearSyncInbox,
   linearSyncOutbox,
+  projects,
   taskDomainEvents,
   taskPlanningRevisions,
   taskPlanningScopes,
@@ -19,6 +22,7 @@ import {
 import type { LobeChatDatabase } from '../../type';
 import { LinearSyncModel, sanitizeLinearSyncError } from '../linearSync';
 import { ProjectModel } from '../project';
+import { TaskModel } from '../task';
 
 const db: LobeChatDatabase = await getTestDB();
 const userId = 'linear-sync-model-user';
@@ -26,6 +30,7 @@ const workspaceId = 'linear-sync-model-workspace';
 const otherWorkspaceId = 'linear-sync-model-other-workspace';
 const installationId = '00000000-0000-4000-8000-000000000001';
 const otherInstallationId = '00000000-0000-4000-8000-000000000002';
+const installationId2 = otherInstallationId;
 
 const cleanup = async () => {
   await db.delete(linearSyncOutbox);
@@ -437,6 +442,252 @@ describe('LinearSyncModel', () => {
     expect(retry).toMatchObject({ attempts: 3, leaseFence: 3, status: 'processing' });
   });
 
+  it('deduplicates the same webhook delivery across replayed captures', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const captures = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        model.captureDelivery({
+          action: 'create',
+          deliveryId: 'delivery-replay-20',
+          eventType: 'Comment',
+          installationId,
+          organizationId: 'linear-org-1',
+          payload: { data: { id: 'comment-1', issueId: 'issue-1' }, type: 'Comment' },
+          subjectId: 'comment-1',
+        }),
+      ),
+    );
+
+    expect(captures.filter(({ inserted }) => inserted)).toHaveLength(1);
+    expect(
+      await db
+        .select()
+        .from(linearSyncInbox)
+        .where(eq(linearSyncInbox.deliveryId, 'delivery-replay-20')),
+    ).toHaveLength(1);
+  });
+
+  it('does not treat an unresolved external blocker as complete', async () => {
+    const task = await new TaskModel(db, userId, workspaceId).create({
+      instruction: 'Waiting on a remote blocker',
+    });
+    await db.insert(linearExternalRelations).values({
+      confirmationState: 'unresolved',
+      kind: 'blocks',
+      localRelationKey: 'remote:blocks:blocked-task',
+      localTargetTaskId: task.id,
+      origin: 'inbound',
+      resolutionState: 'unresolved',
+      source: 'linear',
+      targetIssueId: 'remote-blocked-1',
+      workspaceId,
+    });
+
+    await expect(
+      new TaskModel(db, userId, workspaceId).areAllDependenciesCompleted(task.id),
+    ).resolves.toBe(false);
+  });
+
+  it('queues and atomically settles one stable create_issue intent for an app task', async () => {
+    const projectId = 'linear-create-project';
+    const agentId = 'linear-create-agent';
+    await db.insert(agents).values({ id: agentId, slug: agentId, userId });
+    await db.insert(projects).values({
+      coordinatorAgentId: agentId,
+      id: projectId,
+      identifier: 'LCR',
+      name: 'Linear create project',
+      userId,
+      visibility: 'public',
+      workspaceId,
+    });
+    await createInstallation();
+    const [binding] = await db
+      .insert(linearProjectBindings)
+      .values({
+        defaultTeamId: 'linear-team-1',
+        installationId,
+        linearProjectId: 'linear-project-1',
+        projectId,
+        workspaceId,
+      })
+      .returning();
+
+    const task = await new TaskModel(db, userId, workspaceId).create(
+      { instruction: 'Create remotely', name: 'Create remotely', projectId },
+      { mutation: { idempotencyKey: 'b01:create-task', source: 'user' } },
+    );
+    const model = new LinearSyncModel(db, workspaceId);
+    const first = await model.listOutbox();
+    const remoteIssueId = (first[0].payload as { remoteIssueId: string }).remoteIssueId;
+    expect(first).toHaveLength(1);
+    expect(first[0]).toMatchObject({
+      operation: `linear-issue:create:${task.id}`,
+      payload: {
+        bindingId: binding.id,
+        projectId: 'linear-project-1',
+        remoteIssueId: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        ),
+        teamId: 'linear-team-1',
+      },
+      taskId: task.id,
+    });
+
+    await model.recordTaskChangeInTransaction(db, {
+      changedFields: ['created'],
+      eventType: 'task.created',
+      idempotencyKey: 'b01:create-task',
+      source: 'user',
+      task,
+    });
+    expect(await model.listOutbox()).toHaveLength(1);
+    expect((await model.listOutbox())[0].payload).toMatchObject({ remoteIssueId });
+
+    const [claimed] = await model.claimOutbox(1, 60_000, installationId, 'create-worker');
+    const remoteSnapshot = {
+      id: 'linear-created-issue-1',
+      identifier: 'ENG-1',
+      projectId: 'linear-project-1',
+      title: 'Create remotely',
+    };
+    await expect(
+      model.settleCreateIssueOutbox(
+        claimed.id,
+        { fence: claimed.leaseFence, owner: 'create-worker' },
+        {
+          bindingId: binding.id,
+          installationId,
+          linearIdentifier: remoteSnapshot.identifier,
+          linearIssueId: remoteSnapshot.id,
+          organizationId: 'linear-org-1',
+          remoteSnapshot,
+          taskId: task.id,
+        },
+      ),
+    ).resolves.toMatchObject({
+      link: { linearIssueId: remoteSnapshot.id, taskId: task.id },
+      outbox: { status: 'sent' },
+    });
+    await expect(model.findIssueLinkByTaskId(task.id)).resolves.toMatchObject({
+      linearIssueId: remoteSnapshot.id,
+      syncState: 'synced',
+    });
+  });
+
+  it('keeps forbidden and deleted issue tombstones distinct without deleting the task', async () => {
+    await createInstallation();
+    const task = await new TaskModel(db, userId, workspaceId).create({
+      instruction: 'Keep history',
+    });
+    const model = new LinearSyncModel(db, workspaceId);
+    const link = await model.createIssueLink({
+      installationId,
+      linearIdentifier: 'ENG-403',
+      linearIssueId: 'linear-issue-403',
+      organizationId: 'linear-org-1',
+      taskId: task.id,
+    });
+
+    await model.recordIssueTombstone({
+      idempotencyKey: 'b13:forbidden',
+      issueLinkId: link.id,
+      kind: 'forbidden',
+      linearIssueId: 'linear-issue-403',
+      origin: 'inbound',
+      reason: '403 from Linear',
+    });
+    await model.recordIssueTombstone({
+      idempotencyKey: 'b13:deleted',
+      issueLinkId: link.id,
+      kind: 'deleted',
+      linearIssueId: 'linear-issue-403',
+      origin: 'inbound',
+      reason: '404 from Linear',
+    });
+
+    expect(await new TaskModel(db, userId, workspaceId).findById(task.id)).toBeTruthy();
+    expect(await model.listIssueTombstones(link.id)).toMatchObject([
+      { kind: 'forbidden', reason: '403 from Linear' },
+      { kind: 'deleted', reason: '404 from Linear' },
+    ]);
+  });
+
+  it('moves a pending local create intent before any remote create can run', async () => {
+    const projectId = 'linear-move-project-a';
+    const nextProjectId = 'linear-move-project-b';
+    const agentId = 'linear-move-agent-a';
+    const nextAgentId = 'linear-move-agent-b';
+    await db.insert(agents).values([
+      { id: agentId, slug: agentId, userId },
+      { id: nextAgentId, slug: nextAgentId, userId },
+    ]);
+    await db.insert(projects).values([
+      {
+        coordinatorAgentId: agentId,
+        id: projectId,
+        identifier: 'LMA',
+        name: 'Linear move A',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        coordinatorAgentId: nextAgentId,
+        id: nextProjectId,
+        identifier: 'LMB',
+        name: 'Linear move B',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+    ]);
+    await createInstallation();
+    await db.insert(linearInstallations).values({
+      id: installationId2,
+      installedByUserId: userId,
+      organizationId: 'linear-org-2',
+      workspaceId,
+    });
+    await db.insert(linearProjectBindings).values([
+      {
+        defaultTeamId: 'linear-team-a',
+        installationId,
+        linearProjectId: 'linear-project-a',
+        projectId,
+        workspaceId,
+      },
+      {
+        defaultTeamId: 'linear-team-b',
+        installationId: installationId2,
+        linearProjectId: 'linear-project-b',
+        projectId: nextProjectId,
+        workspaceId,
+      },
+    ]);
+
+    const task = await new TaskModel(db, userId, workspaceId).create({
+      instruction: 'Move before create',
+      projectId,
+    });
+    await new TaskModel(db, userId, workspaceId).update(task.id, { projectId: nextProjectId });
+
+    const [outbox] = await new LinearSyncModel(db, workspaceId).listOutbox();
+    expect(outbox).toMatchObject({
+      installationId: installationId2,
+      payload: {
+        bindingId: expect.any(String),
+        projectId: 'linear-project-b',
+        teamId: 'linear-team-b',
+      },
+      status: 'pending',
+    });
+    expect((outbox.payload as { remoteIssueId: string }).remoteIssueId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
   it('reclaims sending and outcome_unknown outbox rows with a new fence', async () => {
     await createInstallation();
     await db.insert(linearSyncOutbox).values([
@@ -482,6 +733,49 @@ describe('LinearSyncModel', () => {
         { fence: claimed[0].leaseFence - 1, owner: 'crashed-a' },
       ),
     ).resolves.toBeNull();
+  });
+
+  it('keeps a dead-lettered mutation as an ordering barrier for later writes', async () => {
+    await createInstallation();
+    const task = await new TaskModel(db, userId, workspaceId).create({
+      instruction: 'Ordering barrier task',
+    });
+    const model = new LinearSyncModel(db, workspaceId);
+    const link = await model.createIssueLink({
+      installationId,
+      linearIdentifier: 'LIN-ORDER',
+      linearIssueId: 'linear-order',
+      organizationId: 'linear-org-1',
+      taskId: task.id,
+    });
+    await db.insert(linearSyncOutbox).values([
+      {
+        availableAt: new Date(0),
+        expectedLocalRevision: 1,
+        installationId,
+        linkId: link.id,
+        operation: 'update_issue:old',
+        payload: { title: 'Old' },
+        status: 'dead_letter',
+        taskId: task.id,
+        workspaceId,
+      },
+      {
+        availableAt: new Date(0),
+        expectedLocalRevision: 2,
+        installationId,
+        linkId: link.id,
+        operation: 'update_issue:new',
+        payload: { title: 'New' },
+        status: 'pending',
+        taskId: task.id,
+        workspaceId,
+      },
+    ]);
+
+    await expect(model.claimOutbox(2, 60_000, installationId, 'ordered-worker')).resolves.toEqual(
+      [],
+    );
   });
 
   it('reports the next retry time for a durable continuation', async () => {

@@ -1,6 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
-import type { LinearIssueSnapshot, LinearProjectBindingSettings, TaskItem } from '@orvilo/types';
+import type {
+  LinearCommentSnapshot,
+  LinearExternalCommentOutboxPayload,
+  LinearExternalRelationOutboxPayload,
+  LinearIssueSnapshot,
+  LinearProjectBindingSettings,
+  LinearRelationSnapshot,
+  LinearSyncTombstone,
+  TaskItem,
+} from '@orvilo/types';
+import { eq, inArray } from 'drizzle-orm';
 
 import {
   LINEAR_SYNC_DEFAULT_LEASE_MS,
@@ -12,6 +22,7 @@ import {
   linearSyncRetryDelayMs,
 } from '@/database/models/linearSync';
 import type { TaskModel } from '@/database/models/task';
+import { tasks } from '@/database/schemas/task';
 import type { LobeChatDatabase } from '@/database/type';
 
 import { LinearIntegrationTaskService } from './integrationTask';
@@ -19,6 +30,8 @@ import { changedLinearIssueFields, mergeLinearIssueSnapshots } from './merge';
 import {
   type LinearIssueProvider,
   type LinearIssueUpdateInput,
+  LinearRemoteAuthError,
+  LinearRemoteResourceError,
   normalizeLinearIssue,
 } from './provider';
 
@@ -33,6 +46,27 @@ class LinearSyncLeaseLostError extends Error {
   constructor() {
     super('Linear sync lease is no longer owned by this worker');
     this.name = 'LinearSyncLeaseLostError';
+  }
+}
+
+class LinearCreateOutcomeUnknownError extends Error {
+  constructor() {
+    super('Linear issue creation outcome is unknown and requires reconciliation');
+    this.name = 'LinearCreateOutcomeUnknownError';
+  }
+}
+
+class LinearSyncPausedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LinearSyncPausedError';
+  }
+}
+
+class LinearProviderWriteAttemptedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LinearProviderWriteAttemptedError';
   }
 }
 
@@ -167,6 +201,33 @@ const remoteMatchesUpdate = (remote: LinearIssueSnapshot, input: LinearIssueUpda
   });
 };
 
+export const projectLinearRelation = (input: {
+  kind: LinearRelationSnapshot['kind'];
+  sameProject: boolean;
+  sourceTaskId: string | null;
+  targetTaskId: string | null;
+}) => {
+  const resolved = Boolean(input.sameProject && input.sourceTaskId && input.targetTaskId);
+  if (!resolved)
+    return { dependency: null, parentTaskId: null, resolutionState: 'unresolved' as const };
+  if (input.kind === 'parent') {
+    return {
+      dependency: null,
+      parentTaskId: input.targetTaskId,
+      resolutionState: 'resolved' as const,
+    };
+  }
+  return {
+    dependency: {
+      dependsOnTaskId: input.kind === 'blocks' ? input.sourceTaskId : input.targetTaskId,
+      taskId: input.kind === 'blocks' ? input.targetTaskId : input.sourceTaskId,
+      type: input.kind,
+    },
+    parentTaskId: null,
+    resolutionState: 'resolved' as const,
+  };
+};
+
 const retryAt = (attempts: number) => new Date(Date.now() + linearSyncRetryDelayMs(attempts));
 
 type LinearInboundRow = {
@@ -186,6 +247,29 @@ const issueFromSignedRemovePayload = (row: LinearInboundRow): LinearIssueSnapsho
   return issue;
 };
 
+export const issueRelationsWithParent = (
+  issue: LinearIssueSnapshot,
+  relations: LinearRelationSnapshot[],
+): LinearRelationSnapshot[] => {
+  const withoutParent = relations.filter(
+    (relation) => !(relation.kind === 'parent' && relation.sourceIssueId === issue.id),
+  );
+  return issue.parentId
+    ? [
+        ...withoutParent,
+        {
+          id: `parent:${issue.id}`,
+          kind: 'parent',
+          sourceIssueId: issue.id,
+          targetIssueId: issue.parentId,
+        },
+      ]
+    : withoutParent;
+};
+
+const isRemoteRemoval = (action: string) =>
+  action === 'delete' || action === 'deleted' || action === 'remove';
+
 export class LinearSyncWorker {
   private readonly db: LobeChatDatabase;
   private readonly model: LinearSyncModel;
@@ -196,6 +280,162 @@ export class LinearSyncWorker {
     this.db = db;
     this.model = new LinearSyncModel(db, workspaceId);
     this.workspaceId = workspaceId;
+  }
+
+  private async ensureCurrentOutboxLease(
+    row: Awaited<ReturnType<LinearSyncModel['claimOutbox']>>[number],
+    lease: LinearSyncLease,
+  ) {
+    if (!(await this.model.hasCurrentOutboxLease(row.id, lease))) {
+      throw new LinearSyncLeaseLostError();
+    }
+  }
+
+  private async ensureOutboundIssueScope(
+    row: Awaited<ReturnType<LinearSyncModel['claimOutbox']>>[number],
+    issueLink: NonNullable<Awaited<ReturnType<LinearSyncModel['findIssueLinkById']>>>,
+    provider: LinearIssueProvider,
+  ) {
+    const [binding, installation] = await Promise.all([
+      this.model.findBindingById(issueLink.bindingId),
+      this.model.findInstallationById(issueLink.installationId),
+    ]);
+    if (
+      !binding ||
+      !installation ||
+      installation.status !== 'active' ||
+      row.installationId !== installation.id ||
+      binding.installationId !== installation.id ||
+      issueLink.organizationId !== installation.organizationId
+    ) {
+      throw new LinearSyncPausedError('Linear external write scope is unavailable');
+    }
+    if (!linearBindingWriteEnabled(binding)) {
+      throw new LinearSyncPausedError('Linear external write binding is disabled');
+    }
+    const remoteIssue = await provider.getIssue(issueLink.linearIssueId);
+    const integrationTasks = new LinearIntegrationTaskService(
+      this.db,
+      this.workspaceId,
+      installation.id,
+    );
+    const task = await integrationTasks.findPublicTask(issueLink.taskId);
+    if (
+      !task ||
+      task.visibility !== 'public' ||
+      task.projectId !== binding.projectId ||
+      remoteIssue.projectId !== binding.linearProjectId ||
+      !(await integrationTasks.validateIssueScope({ binding, installation, issue: remoteIssue }))
+    ) {
+      throw new Error('Linear external write is outside the validated public binding scope');
+    }
+    return { binding, installation, remoteIssue, task };
+  }
+
+  private async ensureExternalMutationAllowed(
+    row: Awaited<ReturnType<LinearSyncModel['claimOutbox']>>[number],
+    bindingId: string,
+    lease: LinearSyncLease,
+  ) {
+    await this.ensureCurrentOutboxLease(row, lease);
+    const binding = await this.model.findBindingById(bindingId);
+    if (!binding || !linearBindingWriteEnabled(binding)) {
+      throw new LinearSyncPausedError('Linear external write binding is disabled');
+    }
+  }
+
+  private async runExternalMutation<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof LinearRemoteAuthError) throw error;
+      throw new LinearProviderWriteAttemptedError(
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private async requireExternalSettlement<T>(
+    row: Awaited<ReturnType<LinearSyncModel['claimOutbox']>>[number],
+    lease: LinearSyncLease,
+    settled: T | null,
+  ): Promise<T> {
+    if (settled) return settled;
+    await this.model.markOutboxOutcomeUnknownAfterFence(row.id, lease.fence);
+    throw new LinearSyncLeaseLostError();
+  }
+
+  private async clearCrossProjectEdgesBeforeMove(
+    db: LobeChatDatabase,
+    integrationTasks: LinearIntegrationTaskService,
+    task: TaskItem,
+    destinationProjectId: string,
+    deliveryId: string,
+    historicalImport: boolean,
+  ) {
+    const [parent, dependencies, dependents] = await Promise.all([
+      task.parentTaskId
+        ? db
+            .select({ id: tasks.id, projectId: tasks.projectId })
+            .from(tasks)
+            .where(eq(tasks.id, task.parentTaskId))
+            .limit(1)
+        : Promise.resolve([]),
+      integrationTasks.getPublicDependencies(task.id),
+      integrationTasks.getPublicDependents(task.id),
+    ]);
+    const edgeTaskIds = [
+      ...parent.map(({ id }) => id),
+      ...dependencies.map(({ dependsOnId }) => dependsOnId),
+      ...dependents.map(({ taskId }) => taskId),
+    ];
+    const projectRows =
+      edgeTaskIds.length > 0
+        ? await db
+            .select({ id: tasks.id, projectId: tasks.projectId })
+            .from(tasks)
+            .where(inArray(tasks.id, edgeTaskIds))
+        : [];
+    const projectByTaskId = new Map(projectRows.map((row) => [row.id, row.projectId]));
+    const crossesBoundary = (otherTaskId: string) => {
+      const otherProjectId = projectByTaskId.get(otherTaskId);
+      return Boolean(
+        (otherProjectId || destinationProjectId) && otherProjectId !== destinationProjectId,
+      );
+    };
+    const mutationForEdge = (edgeKey: string) => ({
+      eventId: `${deliveryId}:${edgeKey}`,
+      idempotencyKey: `linear:project-move:${deliveryId}:${edgeKey}`,
+      source: 'linear' as const,
+      suppressDomainEvent: historicalImport,
+      suppressLinearOutbox: true,
+    });
+
+    if (parent[0] && crossesBoundary(parent[0].id)) {
+      await integrationTasks.updatePublicTask(
+        task.id,
+        { parentTaskId: null },
+        mutationForEdge(`parent:${task.id}:${parent[0].id}`),
+      );
+    }
+    for (const dependency of dependencies) {
+      if (crossesBoundary(dependency.dependsOnId)) {
+        await integrationTasks.removePublicDependency(
+          task.id,
+          dependency.dependsOnId,
+          mutationForEdge(`dependency:${task.id}:${dependency.dependsOnId}`),
+        );
+      }
+    }
+    for (const dependent of dependents) {
+      if (crossesBoundary(dependent.taskId)) {
+        await integrationTasks.removePublicDependency(
+          dependent.taskId,
+          task.id,
+          mutationForEdge(`dependency:${dependent.taskId}:${task.id}`),
+        );
+      }
+    }
   }
 
   async processPending(
@@ -219,22 +459,65 @@ export class LinearSyncWorker {
     for (const row of rows) {
       const lease = leaseForRow(row);
       try {
+        const installation = await this.model.findInstallationById(row.installationId);
+        if (!installation || installation.status !== 'active') {
+          const status = installation?.status === 'revoked' ? 'revoked' : 'paused';
+          await this.model.updateInbox(
+            row.id,
+            {
+              availableAt: new Date(Date.now() + 60_000),
+              lastError:
+                status === 'revoked'
+                  ? 'Linear installation is revoked; reauthorization is required'
+                  : 'Linear installation is paused',
+              lockedUntil: null,
+              processedAt: null,
+              status: 'paused',
+            },
+            lease,
+          );
+          continue;
+        }
         // Provider I/O stays outside the database transaction. Once the issue
         // snapshot is available, the Task/link/event/receipt mutations commit
         // together so a crash can only replay the complete local command.
-        let knownIssue: LinearIssueSnapshot | undefined;
-        if (row.subjectId) {
-          // A remove webhook is already authenticated and its exact body is
-          // durable in the inbox. Reconcile from that signed snapshot instead
-          // of issuing a provider read that may fail after deletion.
-          knownIssue =
-            row.action === 'remove' && row.eventType === 'Issue'
-              ? issueFromSignedRemovePayload(row)
-              : await provider.getIssue(row.subjectId);
+        let outcome: 'imported' | 'paused' | 'pending-binding' | 'processed' = 'processed';
+        if (row.eventType === 'Comment' && row.subjectId && isRemoteRemoval(row.action)) {
+          outcome = await this.model.transaction((model, db) =>
+            this.processCommentDeletionRow(row, { db, model }),
+          );
+        } else if (row.eventType === 'Comment' && row.subjectId) {
+          const comment = await provider.getComment(row.subjectId);
+          outcome = await this.model.transaction((model, db) =>
+            this.processCommentRow(row, comment, { db, model }),
+          );
+        } else if (
+          row.eventType === 'IssueRelation' &&
+          row.subjectId &&
+          isRemoteRemoval(row.action)
+        ) {
+          outcome = await this.model.transaction((model, db) =>
+            this.processRelationDeletionRow(row, { db, model }),
+          );
+        } else if (row.eventType === 'IssueRelation' && row.subjectId) {
+          const relation = await provider.getRelation(row.subjectId);
+          outcome = await this.model.transaction((model, db) =>
+            this.processRelationRow(row, relation, { db, model }),
+          );
+        } else if (row.eventType === 'Issue' && row.subjectId && isRemoteRemoval(row.action)) {
+          outcome = await this.model.transaction((model) =>
+            this.processIssueDeletionRow(row, model, issueFromSignedRemovePayload(row)),
+          );
+        } else if (row.eventType === 'Issue' && row.subjectId) {
+          const knownIssue = await provider.getIssue(row.subjectId);
+          const knownRelations = issueRelationsWithParent(
+            knownIssue,
+            await provider.listRelations(knownIssue.id),
+          );
+          outcome = await this.model.transaction((model, db) =>
+            this.processRow(row, provider, { db, knownIssue, knownRelations, model }),
+          );
         }
-        const outcome = await this.model.transaction((model, db) =>
-          this.processRow(row, provider, { db, knownIssue, model }),
-        );
         const settled = await this.model.updateInbox(
           row.id,
           {
@@ -257,6 +540,30 @@ export class LinearSyncWorker {
         if (outcome !== 'pending-binding' && outcome !== 'paused') result.processed += 1;
       } catch (error) {
         if (error instanceof LinearSyncLeaseLostError) continue;
+        if (error instanceof LinearRemoteAuthError) {
+          const settled = await this.model.updateInbox(
+            row.id,
+            {
+              availableAt: new Date(Date.now() + 60_000),
+              lastError: error.message,
+              lockedUntil: null,
+              processedAt: null,
+              status: 'paused',
+            },
+            lease,
+          );
+          if (settled) result.failed += 1;
+          continue;
+        }
+        if (await this.handleRemoteTombstone(row, error)) {
+          const settled = await this.model.updateInbox(
+            row.id,
+            { lastError: null, lockedUntil: null, processedAt: new Date(), status: 'processed' },
+            lease,
+          );
+          if (settled) result.processed += 1;
+          continue;
+        }
         const message = error instanceof Error ? error.message : String(error);
         const settled = await this.model.updateInbox(
           row.id,
@@ -303,9 +610,37 @@ export class LinearSyncWorker {
             continue;
           }
         }
+        if (row.operation?.startsWith('linear-issue:create:')) {
+          const settled = await this.processCreateIssueOutboxRow(row, provider, lease);
+          if (!settled) continue;
+          result.sent += 1;
+          continue;
+        }
+        const outboxInstallation = await this.model.findInstallationById(row.installationId);
+        if (!outboxInstallation || outboxInstallation.status !== 'active') {
+          throw new LinearSyncPausedError('Linear installation is not active');
+        }
+        if (row.operation?.startsWith('linear-comment:')) {
+          const settled = await this.processCommentOutboxRow(row, provider, lease);
+          if (!settled) continue;
+          result.sent += 1;
+          continue;
+        }
+        if (row.operation?.startsWith('linear-relation:')) {
+          const settled = await this.processRelationOutboxRow(row, provider, lease);
+          if (!settled) continue;
+          result.sent += 1;
+          continue;
+        }
         if (!row.linkId) throw new Error('Linear outbox row has no issue link');
         const issueLink = await this.model.findIssueLinkById(row.linkId);
         if (!issueLink) throw new Error('Linear issue link no longer exists');
+        if (issueLink.bindingId) {
+          const binding = await this.model.findBindingById(issueLink.bindingId);
+          if (binding && !linearBindingWriteEnabled(binding)) {
+            throw new LinearSyncPausedError('Linear project binding is disabled');
+          }
+        }
 
         const [binding, installation] = await Promise.all([
           this.model.findBindingById(issueLink.bindingId),
@@ -346,6 +681,48 @@ export class LinearSyncWorker {
         ) {
           throw new Error('Linear outbound write is outside the validated public binding scope');
         }
+
+        const base = issueLink.lastConfirmedSnapshot;
+        const local = { ...base, ...updateInput };
+        const merged = mergeLinearIssueSnapshots({ base, local, remote: current });
+        if (merged.conflicts) {
+          const conflict = {
+            ...merged.conflicts,
+            localRevision: task.domainRevision ?? row.expectedLocalRevision,
+            remoteUpdatedAt: current.updatedAt ?? null,
+          };
+          await this.model.updateIssueLink(issueLink.id, {
+            conflict,
+            remoteSnapshot: current,
+            remoteUpdatedAt: current.updatedAt ? new Date(current.updatedAt) : null,
+            syncState: 'conflict',
+          });
+          const settled = await this.model.updateOutbox(
+            row.id,
+            {
+              availableAt: new Date(),
+              lastError: `Linear issue conflict on ${conflict.fields.join(', ')}`,
+              lockedUntil: null,
+              outcomeUnknownAt: null,
+              status: 'failed',
+            },
+            lease,
+          );
+          if (settled) result.failed += 1;
+          continue;
+        }
+
+        const localChanged = changedLinearIssueFields(base, local);
+        const mergedInput = Object.fromEntries(
+          localChanged
+            .filter(
+              (field) =>
+                !remoteMatchesUpdate(current, {
+                  [field]: merged.merged[field],
+                } as LinearIssueUpdateInput),
+            )
+            .map((field) => [field, merged.merged[field]]),
+        ) as LinearIssueUpdateInput;
         const latestBinding = await this.model.findBindingById(binding.id);
         if (!latestBinding || !linearBindingWriteEnabled(latestBinding)) {
           await this.model.updateOutbox(
@@ -355,24 +732,30 @@ export class LinearSyncWorker {
           );
           continue;
         }
-        const updated = remoteMatchesUpdate(current, updateInput)
-          ? current
-          : await (async () => {
-              if (!(await this.model.hasCurrentOutboxLease(row.id, lease))) {
-                throw new LinearSyncLeaseLostError();
-              }
-              const beforeMutationBinding = await this.model.findBindingById(binding.id);
-              if (!beforeMutationBinding || !linearBindingWriteEnabled(beforeMutationBinding)) {
-                await this.model.updateOutbox(
-                  row.id,
-                  { availableAt: new Date(), lastError: null, lockedUntil: null, status: 'paused' },
-                  lease,
-                );
-                throw new LinearSyncLeaseLostError();
-              }
-              providerWriteAttempted = true;
-              return provider.updateIssue(issueLink.linearIssueId, updateInput);
-            })();
+        const updated =
+          Object.keys(mergedInput).length === 0
+            ? current
+            : await (async () => {
+                if (!(await this.model.hasCurrentOutboxLease(row.id, lease))) {
+                  throw new LinearSyncLeaseLostError();
+                }
+                const beforeMutationBinding = await this.model.findBindingById(binding.id);
+                if (!beforeMutationBinding || !linearBindingWriteEnabled(beforeMutationBinding)) {
+                  await this.model.updateOutbox(
+                    row.id,
+                    {
+                      availableAt: new Date(),
+                      lastError: null,
+                      lockedUntil: null,
+                      status: 'paused',
+                    },
+                    lease,
+                  );
+                  throw new LinearSyncLeaseLostError();
+                }
+                providerWriteAttempted = true;
+                return provider.updateIssue(issueLink.linearIssueId, mergedInput);
+              })();
 
         const settled = await this.model.settleOutbox(row.id, lease, {
           issueLinkId: issueLink.id,
@@ -392,6 +775,35 @@ export class LinearSyncWorker {
           }
           continue;
         }
+        if (error instanceof LinearRemoteAuthError) {
+          const settled = await this.model.updateOutbox(
+            row.id,
+            {
+              availableAt: new Date(Date.now() + 60_000),
+              lastError: error.message,
+              lockedUntil: null,
+              outcomeUnknownAt: null,
+              status: 'paused',
+            },
+            lease,
+          );
+          if (settled) result.failed += 1;
+          continue;
+        }
+        if (error instanceof LinearSyncPausedError) {
+          await this.model.updateOutbox(
+            row.id,
+            {
+              availableAt: new Date(Date.now() + 60_000),
+              lastError: null,
+              lockedUntil: null,
+              outcomeUnknownAt: null,
+              status: 'paused',
+            },
+            lease,
+          );
+          continue;
+        }
 
         const message = error instanceof Error ? error.message : String(error);
         const settled = await this.model.updateOutbox(
@@ -400,11 +812,18 @@ export class LinearSyncWorker {
             availableAt: retryAt(row.attempts),
             lastError: message.slice(0, 2_000),
             lockedUntil: null,
-            outcomeUnknownAt: providerWriteAttempted ? new Date() : null,
+            outcomeUnknownAt:
+              providerWriteAttempted ||
+              error instanceof LinearProviderWriteAttemptedError ||
+              error instanceof LinearCreateOutcomeUnknownError
+                ? new Date()
+                : null,
             status:
               row.attempts >= LINEAR_SYNC_MAX_ATTEMPTS
                 ? 'dead_letter'
-                : providerWriteAttempted
+                : providerWriteAttempted ||
+                    error instanceof LinearProviderWriteAttemptedError ||
+                    error instanceof LinearCreateOutcomeUnknownError
                   ? 'outcome_unknown'
                   : 'failed',
           },
@@ -417,6 +836,885 @@ export class LinearSyncWorker {
     return result;
   }
 
+  private async processCreateIssueOutboxRow(
+    row: Awaited<ReturnType<LinearSyncModel['claimOutbox']>>[number],
+    provider: LinearIssueProvider,
+    lease: LinearSyncLease,
+  ) {
+    if (!(await this.model.hasCurrentOutboxLease(row.id, lease))) {
+      throw new LinearSyncLeaseLostError();
+    }
+    const payload = row.payload as Record<string, unknown>;
+    const bindingId = typeof payload.bindingId === 'string' ? payload.bindingId : null;
+    const projectId = typeof payload.projectId === 'string' ? payload.projectId : null;
+    const teamId = typeof payload.teamId === 'string' ? payload.teamId : null;
+    const remoteIssueId = typeof payload.remoteIssueId === 'string' ? payload.remoteIssueId : null;
+    const title = typeof payload.title === 'string' ? payload.title : null;
+    const description = typeof payload.description === 'string' ? payload.description : null;
+    if (!bindingId || !projectId || !teamId || !title || !remoteIssueId || !row.taskId) {
+      throw new Error('Linear create_issue outbox payload is incomplete');
+    }
+    const binding = await this.model.findBindingById(bindingId);
+    const installation = await this.model.findInstallationById(row.installationId);
+    if (
+      !binding ||
+      !linearBindingWriteEnabled(binding) ||
+      !installation ||
+      installation.status !== 'active'
+    ) {
+      throw new LinearSyncPausedError('Linear create_issue binding is not active');
+    }
+    if (
+      binding.installationId !== installation.id ||
+      binding.linearProjectId !== projectId ||
+      !binding.teamIds.includes(teamId) ||
+      installation.organizationId.length === 0
+    ) {
+      throw new Error('Linear create_issue scope does not match the persisted public binding');
+    }
+    const integrationTasks = new LinearIntegrationTaskService(
+      this.db,
+      this.workspaceId,
+      installation.id,
+    );
+    const task = await integrationTasks.findPublicTask(row.taskId);
+    if (!task || task.visibility !== 'public' || task.projectId !== binding.projectId) {
+      throw new Error('Linear create_issue task is outside the validated public binding scope');
+    }
+    const existingIssue = await provider.findIssueById(remoteIssueId);
+    if (existingIssue) {
+      if (
+        existingIssue.id !== remoteIssueId ||
+        existingIssue.projectId !== binding.linearProjectId ||
+        !(await integrationTasks.validateIssueScope({
+          binding,
+          installation,
+          issue: existingIssue,
+        }))
+      ) {
+        throw new Error('Existing Linear create_issue identity is outside the validated scope');
+      }
+      return this.model.settleCreateIssueOutbox(row.id, lease, {
+        bindingId: binding.id,
+        installationId: installation.id,
+        linearIdentifier: existingIssue.identifier,
+        linearIssueId: existingIssue.id,
+        organizationId: installation.organizationId,
+        remoteSnapshot: existingIssue,
+        taskId: row.taskId,
+      });
+    }
+    await this.ensureCurrentOutboxLease(row, lease);
+    const latestBinding = await this.model.findBindingById(binding.id);
+    if (!latestBinding || !linearBindingWriteEnabled(latestBinding)) {
+      throw new LinearSyncPausedError('Linear create_issue binding is disabled');
+    }
+    let issue: Awaited<ReturnType<LinearIssueProvider['createIssue']>>;
+    try {
+      issue = await provider.createIssue({
+        description,
+        id: remoteIssueId,
+        projectId,
+        teamId,
+        title,
+      });
+    } catch (error) {
+      if (error instanceof LinearRemoteAuthError) throw error;
+      throw new LinearProviderWriteAttemptedError(
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    if (issue.id !== remoteIssueId) {
+      throw new LinearProviderWriteAttemptedError(
+        'Linear create_issue returned an unexpected remote identity',
+      );
+    }
+    return this.model.settleCreateIssueOutbox(row.id, lease, {
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: issue.identifier,
+      linearIssueId: issue.id,
+      organizationId: installation.organizationId,
+      remoteSnapshot: issue,
+      taskId: row.taskId,
+    });
+  }
+
+  private async processCommentOutboxRow(
+    row: Awaited<ReturnType<LinearSyncModel['claimOutbox']>>[number],
+    provider: LinearIssueProvider,
+    lease: LinearSyncLease,
+  ) {
+    const payload = row.payload as Partial<LinearExternalCommentOutboxPayload> & {
+      mappingId?: string;
+    };
+    const mappingId = typeof payload.mappingId === 'string' ? payload.mappingId : null;
+    if (!mappingId) throw new Error('Linear comment outbox has no mapping');
+    const mapping = await this.model.findExternalCommentById(mappingId);
+    if (!mapping) throw new Error('Linear external comment mapping no longer exists');
+    const issueLink = await this.model.findIssueLinkById(mapping.issueLinkId);
+    if (!issueLink) throw new Error('Linear issue link no longer exists');
+    const scope = await this.ensureOutboundIssueScope(row, issueLink, provider);
+    const action = payload.action;
+
+    if (action === 'create') {
+      if (!mapping.linearCommentId) throw new Error('Linear comment has no preallocated identity');
+      const existingComment = await provider.findCommentById(mapping.linearCommentId);
+      if (existingComment) {
+        if (existingComment.issueId !== issueLink.linearIssueId) {
+          throw new Error('Linear comment identity belongs to another issue');
+        }
+        return this.model.settleExternalCommentOutbox(row.id, lease, {
+          linearCommentId: existingComment.id,
+          mappingId,
+          remoteSnapshot: existingComment,
+        });
+      }
+      if (typeof payload.body !== 'string') throw new Error('Linear comment body is missing');
+      await this.ensureExternalMutationAllowed(row, scope.binding.id, lease);
+      const comment = await this.runExternalMutation(() =>
+        provider.createComment({
+          body: payload.body!,
+          id: mapping.linearCommentId!,
+          issueId: issueLink.linearIssueId,
+        }),
+      );
+      if (comment.id !== mapping.linearCommentId || comment.issueId !== issueLink.linearIssueId) {
+        throw new LinearProviderWriteAttemptedError(
+          'Linear commentCreate returned an unexpected remote identity',
+        );
+      }
+      return this.requireExternalSettlement(
+        row,
+        lease,
+        await this.model.settleExternalCommentOutbox(row.id, lease, {
+          linearCommentId: comment.id,
+          mappingId,
+          remoteSnapshot: comment,
+        }),
+      );
+    }
+
+    if (!mapping.linearCommentId) throw new Error('Linear comment has no remote identity');
+    if (action === 'update') {
+      if (typeof payload.body !== 'string') throw new Error('Linear comment body is missing');
+      await this.ensureExternalMutationAllowed(row, scope.binding.id, lease);
+      const comment = await this.runExternalMutation(() =>
+        provider.updateComment(mapping.linearCommentId!, { body: payload.body! }),
+      );
+      return this.requireExternalSettlement(
+        row,
+        lease,
+        await this.model.settleExternalCommentOutbox(row.id, lease, {
+          mappingId,
+          remoteSnapshot: comment,
+        }),
+      );
+    }
+    if (action !== 'delete') throw new Error('Unknown Linear comment outbox action');
+    await this.ensureExternalMutationAllowed(row, scope.binding.id, lease);
+    await this.runExternalMutation(() => provider.deleteComment(mapping.linearCommentId!));
+    const tombstone: LinearSyncTombstone = {
+      at: new Date().toISOString(),
+      kind: 'deleted',
+      source: 'orvilo',
+    };
+    return this.requireExternalSettlement(
+      row,
+      lease,
+      await this.model.settleExternalCommentOutbox(row.id, lease, { mappingId, tombstone }),
+    );
+  }
+
+  private async processCommentDeletionRow(
+    row: { id: string; installationId: string; subjectId: string | null },
+    context: { db: LobeChatDatabase; model: LinearSyncModel },
+  ): Promise<'paused' | 'processed'> {
+    if (!row.subjectId) return 'processed';
+    const { db, model } = context;
+    const mapping = await model.findExternalCommentByRemoteId(row.subjectId);
+    if (!mapping || mapping.confirmationState === 'tombstoned') return 'processed';
+    const issueLink = await model.findIssueLinkById(mapping.issueLinkId);
+    const binding = issueLink?.bindingId ? await model.findBindingById(issueLink.bindingId) : null;
+    if (binding && !linearBindingReadEnabled(binding)) return 'paused';
+    const installation = await model.findInstallationById(row.installationId);
+    if (!installation || installation.status !== 'active') {
+      throw new LinearSyncPausedError('Linear installation is not active');
+    }
+    const integrationTasks = new LinearIntegrationTaskService(
+      db,
+      this.workspaceId,
+      installation.id,
+    );
+    if (mapping.localCommentId) {
+      await integrationTasks.deletePublicComment(mapping.localCommentId, {
+        eventId: row.id,
+        idempotencyKey: `linear:comment:delete:${row.id}`,
+        source: 'linear',
+        suppressLinearOutbox: true,
+      });
+    }
+    await model.upsertExternalComment({
+      id: mapping.id,
+      confirmationState: 'tombstoned',
+      issueLinkId: mapping.issueLinkId,
+      lastConfirmedSnapshot: mapping.lastConfirmedSnapshot,
+      lastInboundDeliveryId: row.id,
+      linearCommentId: mapping.linearCommentId,
+      linearIssueId: mapping.linearIssueId,
+      localCommentId: mapping.localCommentId,
+      origin: 'inbound',
+      remoteSnapshot: mapping.remoteSnapshot,
+      source: 'linear',
+      tombstone: { at: new Date().toISOString(), kind: 'deleted', source: 'linear' },
+    });
+    return 'processed';
+  }
+
+  private async processRelationDeletionRow(
+    row: { id: string; installationId: string; subjectId: string | null },
+    context: { db: LobeChatDatabase; model: LinearSyncModel },
+  ): Promise<'paused' | 'processed'> {
+    if (!row.subjectId) return 'processed';
+    const mapping = await context.model.findExternalRelationByRemoteId(row.subjectId);
+    if (!mapping || mapping.confirmationState === 'tombstoned') return 'processed';
+    const issueLink = mapping.issueLinkId
+      ? await context.model.findIssueLinkById(mapping.issueLinkId)
+      : null;
+    const binding = issueLink?.bindingId
+      ? await context.model.findBindingById(issueLink.bindingId)
+      : null;
+    if (binding && !linearBindingReadEnabled(binding)) return 'paused';
+    const installation = await context.model.findInstallationById(row.installationId);
+    if (!installation || installation.status !== 'active') {
+      throw new LinearSyncPausedError('Linear installation is not active');
+    }
+    const integrationTasks = new LinearIntegrationTaskService(
+      context.db,
+      this.workspaceId,
+      installation.id,
+    );
+    await this.tombstoneRelationMapping(
+      context.model,
+      context.db,
+      integrationTasks,
+      mapping,
+      row.id,
+    );
+    return 'processed';
+  }
+
+  private async processIssueDeletionRow(
+    row: { id: string; subjectId: string | null },
+    model: LinearSyncModel,
+    snapshot: LinearIssueSnapshot,
+  ): Promise<'paused' | 'processed'> {
+    if (!row.subjectId) return 'processed';
+    const link = await model.findIssueLinkByExternalId(row.subjectId);
+    if (!link || link.tombstone?.kind === 'deleted') return 'processed';
+    const binding = link.bindingId ? await model.findBindingById(link.bindingId) : null;
+    if (binding && !linearBindingReadEnabled(binding)) return 'paused';
+    await model.recordIssueTombstone({
+      deliveryId: row.id,
+      idempotencyKey: `linear:tombstone:${row.id}:deleted`,
+      issueLinkId: link.id,
+      kind: 'deleted',
+      linearIssueId: row.subjectId,
+      origin: 'inbound',
+      reason: 'Linear issue removal webhook',
+      snapshot,
+    });
+    return 'processed';
+  }
+
+  private async processRelationOutboxRow(
+    row: Awaited<ReturnType<LinearSyncModel['claimOutbox']>>[number],
+    provider: LinearIssueProvider,
+    lease: LinearSyncLease,
+  ) {
+    const payload = row.payload as Partial<LinearExternalRelationOutboxPayload> & {
+      mappingId?: string;
+    };
+    const mappingId = typeof payload.mappingId === 'string' ? payload.mappingId : null;
+    if (!mappingId) throw new Error('Linear relation outbox has no mapping');
+    const mapping = await this.model.findExternalRelationById(mappingId);
+    if (!mapping) throw new Error('Linear external relation mapping no longer exists');
+    const relation = payload.relation;
+    if (!relation) throw new Error('Linear relation outbox has no relation payload');
+    const sourceLink = await this.model.findIssueLinkByTaskId(relation.sourceTaskId);
+    if (!sourceLink) throw new Error('Linear relation source issue link no longer exists');
+    const targetLink = relation.targetTaskId
+      ? await this.model.findIssueLinkByTaskId(relation.targetTaskId)
+      : null;
+    if (relation.kind !== 'parent' && !targetLink) {
+      throw new Error('Linear relation target issue link is not available');
+    }
+    const sourceScope = await this.ensureOutboundIssueScope(row, sourceLink, provider);
+    const targetScope = targetLink
+      ? await this.ensureOutboundIssueScope(row, targetLink, provider)
+      : null;
+    if (
+      targetLink &&
+      (targetScope?.binding.id !== sourceScope.binding.id ||
+        targetScope.installation.id !== sourceScope.installation.id ||
+        targetLink.organizationId !== sourceLink.organizationId)
+    ) {
+      throw new Error('Linear relation endpoints are outside one validated binding scope');
+    }
+    if (relation.kind === 'parent') {
+      await this.ensureExternalMutationAllowed(row, sourceScope.binding.id, lease);
+      const updated = await this.runExternalMutation(() =>
+        provider.updateIssue(sourceLink.linearIssueId, {
+          parentId: targetLink?.linearIssueId ?? null,
+        }),
+      );
+      if (updated.id !== sourceLink.linearIssueId) {
+        throw new LinearProviderWriteAttemptedError(
+          'Linear parent update returned an unexpected issue identity',
+        );
+      }
+      if (targetLink) {
+        return this.requireExternalSettlement(
+          row,
+          lease,
+          await this.model.settleExternalRelationOutbox(row.id, lease, {
+            mappingId,
+            remoteSnapshot: {
+              id: `parent:${sourceLink.linearIssueId}`,
+              kind: 'parent',
+              sourceIssueId: sourceLink.linearIssueId,
+              targetIssueId: targetLink.linearIssueId,
+            },
+          }),
+        );
+      }
+      return this.requireExternalSettlement(
+        row,
+        lease,
+        await this.model.settleExternalRelationOutbox(row.id, lease, {
+          mappingId,
+          tombstone: { at: new Date().toISOString(), kind: 'deleted', source: 'orvilo' },
+        }),
+      );
+    }
+
+    if (payload.action === 'upsert') {
+      if (!mapping.linearRelationId)
+        throw new Error('Linear relation has no preallocated identity');
+      const existingRelation = await provider.findRelationById(mapping.linearRelationId);
+      if (existingRelation) {
+        if (
+          existingRelation.kind !== relation.kind ||
+          existingRelation.sourceIssueId !== sourceLink.linearIssueId ||
+          existingRelation.targetIssueId !== targetLink!.linearIssueId
+        ) {
+          throw new Error('Linear relation identity belongs to different endpoints');
+        }
+        return this.requireExternalSettlement(
+          row,
+          lease,
+          await this.model.settleExternalRelationOutbox(row.id, lease, {
+            linearRelationId: existingRelation.id,
+            mappingId,
+            remoteSnapshot: existingRelation,
+          }),
+        );
+      }
+      await this.ensureExternalMutationAllowed(row, sourceScope.binding.id, lease);
+      const remote = await this.runExternalMutation(() =>
+        provider.createRelation({
+          id: mapping.linearRelationId!,
+          kind: relation.kind,
+          sourceIssueId: sourceLink.linearIssueId,
+          targetIssueId: targetLink!.linearIssueId,
+        }),
+      );
+      if (
+        remote.id !== mapping.linearRelationId ||
+        remote.kind !== relation.kind ||
+        remote.sourceIssueId !== sourceLink.linearIssueId ||
+        remote.targetIssueId !== targetLink!.linearIssueId
+      ) {
+        throw new LinearProviderWriteAttemptedError(
+          'Linear relationCreate returned an unexpected remote identity',
+        );
+      }
+      return this.requireExternalSettlement(
+        row,
+        lease,
+        await this.model.settleExternalRelationOutbox(row.id, lease, {
+          linearRelationId: remote.id,
+          mappingId,
+          remoteSnapshot: remote,
+        }),
+      );
+    }
+    if (!mapping.linearRelationId) {
+      return this.requireExternalSettlement(
+        row,
+        lease,
+        await this.model.settleExternalRelationOutbox(row.id, lease, {
+          mappingId,
+          tombstone: { at: new Date().toISOString(), kind: 'deleted', source: 'orvilo' },
+        }),
+      );
+    }
+    await this.ensureExternalMutationAllowed(row, sourceScope.binding.id, lease);
+    await this.runExternalMutation(() => provider.deleteRelation(mapping.linearRelationId!));
+    return this.requireExternalSettlement(
+      row,
+      lease,
+      await this.model.settleExternalRelationOutbox(row.id, lease, {
+        mappingId,
+        tombstone: { at: new Date().toISOString(), kind: 'deleted', source: 'orvilo' },
+      }),
+    );
+  }
+
+  private async processCommentRow(
+    row: { id: string; installationId: string },
+    comment: LinearCommentSnapshot,
+    context: { db: LobeChatDatabase; historicalImport?: boolean; model: LinearSyncModel },
+  ): Promise<'paused' | 'pending-binding' | 'processed'> {
+    const { db, model } = context;
+    const issueLink = await model.findIssueLinkByExternalId(comment.issueId);
+    if (!issueLink) return 'pending-binding';
+    const binding = issueLink.bindingId ? await model.findBindingById(issueLink.bindingId) : null;
+    if (!binding) return 'pending-binding';
+    if (binding && !linearBindingReadEnabled(binding)) return 'paused';
+    const installation = await model.findInstallationById(row.installationId);
+    if (!installation || installation.status !== 'active') {
+      throw new LinearSyncPausedError('Linear installation is not active');
+    }
+    const integrationTasks = new LinearIntegrationTaskService(
+      db,
+      this.workspaceId,
+      installation.id,
+    );
+    const existing = await model.findExternalCommentByRemoteId(comment.id);
+    const outboundEcho =
+      existing?.source === 'orvilo' && existing.confirmationState === 'unconfirmed';
+    if (comment.deletedAt) {
+      if (existing?.localCommentId) {
+        await integrationTasks.deletePublicComment(existing.localCommentId, {
+          eventId: row.id,
+          idempotencyKey: `linear:comment:delete:${row.id}`,
+          source: 'linear',
+          suppressDomainEvent: context.historicalImport,
+          suppressLinearOutbox: true,
+        });
+      }
+      await model.upsertExternalComment({
+        id: existing?.id,
+        confirmationState: 'tombstoned',
+        issueLinkId: issueLink.id,
+        lastConfirmedSnapshot: existing?.lastConfirmedSnapshot ?? comment,
+        linearCommentId: comment.id,
+        linearIssueId: comment.issueId,
+        localCommentId: existing?.localCommentId,
+        origin: 'inbound',
+        remoteSnapshot: comment,
+        source: 'linear',
+        tombstone: { at: new Date().toISOString(), kind: 'deleted', source: 'linear' },
+        lastInboundDeliveryId: row.id,
+      });
+      return 'processed';
+    }
+
+    let localCommentId = existing?.localCommentId ?? null;
+    const localComment = localCommentId
+      ? await integrationTasks.findPublicComment(localCommentId)
+      : undefined;
+    let confirmationState: 'confirmed' | 'conflict' = 'confirmed';
+    if (!localComment && outboundEcho) {
+      await model.upsertExternalComment({
+        id: existing?.id,
+        confirmationState: 'confirmed',
+        issueLinkId: issueLink.id,
+        lastConfirmedSnapshot: comment,
+        linearCommentId: comment.id,
+        linearIssueId: comment.issueId,
+        localCommentId: null,
+        origin: 'inbound',
+        remoteSnapshot: comment,
+        source: 'linear',
+        tombstone: null,
+        lastInboundDeliveryId: row.id,
+      });
+      return 'processed';
+    }
+    if (!localComment) {
+      const created = await integrationTasks.addPublicComment(issueLink.taskId, comment.body, {
+        eventId: row.id,
+        idempotencyKey: `linear:comment:create:${row.id}`,
+        source: 'linear',
+        suppressDomainEvent: context.historicalImport,
+        suppressLinearOutbox: true,
+      });
+      localCommentId = created.id;
+    } else if (localComment.content !== comment.body) {
+      const baseline = existing?.lastConfirmedSnapshot?.body;
+      if (outboundEcho) {
+        confirmationState = 'conflict';
+      } else if (baseline === undefined || localComment.content === baseline) {
+        await integrationTasks.updatePublicComment(localComment.id, comment.body, {
+          eventId: row.id,
+          idempotencyKey: `linear:comment:update:${row.id}`,
+          source: 'linear',
+          suppressDomainEvent: context.historicalImport,
+          suppressLinearOutbox: true,
+        });
+      } else {
+        confirmationState = 'conflict';
+      }
+    }
+
+    await model.upsertExternalComment({
+      id: existing?.id,
+      confirmationState,
+      issueLinkId: issueLink.id,
+      lastConfirmedSnapshot:
+        confirmationState === 'confirmed' ? comment : existing?.lastConfirmedSnapshot,
+      linearCommentId: comment.id,
+      linearIssueId: comment.issueId,
+      localCommentId,
+      origin: 'inbound',
+      remoteSnapshot: comment,
+      source: 'linear',
+      tombstone: null,
+      lastInboundDeliveryId: row.id,
+    });
+    return 'processed';
+  }
+
+  private async processRelationRow(
+    row: { id: string; installationId: string },
+    relation: LinearRelationSnapshot,
+    context: { db: LobeChatDatabase; model: LinearSyncModel },
+  ): Promise<'paused' | 'processed'> {
+    const installation = await context.model.findInstallationById(row.installationId);
+    if (!installation || installation.status !== 'active') {
+      throw new LinearSyncPausedError('Linear installation is not active');
+    }
+    const [sourceLink, targetLink] = await Promise.all([
+      context.model.findIssueLinkByExternalId(relation.sourceIssueId),
+      context.model.findIssueLinkByExternalId(relation.targetIssueId),
+    ]);
+    const bindingIds = [...new Set([sourceLink?.bindingId, targetLink?.bindingId].filter(Boolean))];
+    const bindings = await Promise.all(bindingIds.map((id) => context.model.findBindingById(id!)));
+    if (bindings.some((binding) => binding && !linearBindingReadEnabled(binding))) return 'paused';
+    const integrationTasks = new LinearIntegrationTaskService(
+      context.db,
+      this.workspaceId,
+      installation.id,
+    );
+    await this.reconcileOneRelation(
+      context.model,
+      context.db,
+      integrationTasks,
+      relation,
+      row.id,
+      false,
+    );
+    return 'processed';
+  }
+
+  private async reconcileRelationsForIssue(
+    model: LinearSyncModel,
+    db: LobeChatDatabase,
+    integrationTasks: LinearIntegrationTaskService,
+    _binding: Awaited<ReturnType<LinearSyncModel['findBindingById']>>,
+    _taskId: string,
+    issueId: string,
+    relations: LinearRelationSnapshot[],
+    deliveryId: string,
+    historicalImport = false,
+  ) {
+    const currentIds = new Set(relations.map(({ id }) => id));
+    for (const relation of relations) {
+      await this.reconcileOneRelation(
+        model,
+        db,
+        integrationTasks,
+        relation,
+        deliveryId,
+        historicalImport,
+      );
+    }
+
+    const existing = await model.listExternalRelationsForIssue(issueId);
+    for (const mapping of existing) {
+      if (
+        mapping.confirmationState === 'tombstoned' ||
+        !mapping.linearRelationId ||
+        currentIds.has(mapping.linearRelationId)
+      ) {
+        continue;
+      }
+      await this.tombstoneRelationMapping(model, db, integrationTasks, mapping, deliveryId);
+    }
+  }
+
+  private async reconcileOneRelation(
+    model: LinearSyncModel,
+    db: LobeChatDatabase,
+    integrationTasks: LinearIntegrationTaskService,
+    relation: LinearRelationSnapshot,
+    deliveryId: string,
+    historicalImport: boolean,
+    projectOverride?: { projectId: string | null; taskId: string },
+  ) {
+    const sourceLink = await model.findIssueLinkByExternalId(relation.sourceIssueId);
+    const targetLink = await model.findIssueLinkByExternalId(relation.targetIssueId);
+    const existing = await model.findExternalRelationByRemoteId(relation.id);
+    const sourceTaskId = sourceLink?.taskId ?? null;
+    const targetTaskId = targetLink?.taskId ?? null;
+    const [sourceTask] = sourceLink
+      ? await db
+          .select({ projectId: tasks.projectId })
+          .from(tasks)
+          .where(eq(tasks.id, sourceLink.taskId))
+          .limit(1)
+      : [];
+    const [targetTask] = targetLink
+      ? await db
+          .select({ projectId: tasks.projectId })
+          .from(tasks)
+          .where(eq(tasks.id, targetLink.taskId))
+          .limit(1)
+      : [];
+    const sourceProjectId =
+      sourceLink?.taskId === projectOverride?.taskId
+        ? projectOverride.projectId
+        : sourceTask?.projectId;
+    const targetProjectId =
+      targetLink?.taskId === projectOverride?.taskId
+        ? projectOverride.projectId
+        : targetTask?.projectId;
+    const sameProject = Boolean(sourceTask && targetTask && sourceProjectId === targetProjectId);
+    const projection = projectLinearRelation({
+      kind: relation.kind,
+      sameProject,
+      sourceTaskId,
+      targetTaskId,
+    });
+    const resolved = projection.resolutionState === 'resolved';
+    const localRelationKey =
+      relation.kind === 'parent'
+        ? `parent:${sourceTaskId ?? relation.sourceIssueId}`
+        : relation.kind === 'blocks'
+          ? `blocks:${sourceTaskId ?? relation.sourceIssueId}:${targetTaskId ?? relation.targetIssueId}`
+          : `relates:${[sourceTaskId ?? relation.sourceIssueId, targetTaskId ?? relation.targetIssueId].sort().join(':')}`;
+
+    if (existing?.resolutionState === 'resolved' && !resolved) {
+      await this.removeLocalRelation(db, integrationTasks, existing, deliveryId);
+    }
+    if (projection.parentTaskId && sourceLink) {
+      const [task] = await db
+        .select({ parentTaskId: tasks.parentTaskId })
+        .from(tasks)
+        .where(eq(tasks.id, sourceLink.taskId))
+        .limit(1);
+      if (task?.parentTaskId !== targetLink.taskId) {
+        await integrationTasks.updatePublicTask(
+          sourceLink.taskId,
+          { parentTaskId: projection.parentTaskId },
+          {
+            eventId: deliveryId,
+            idempotencyKey: `linear:relation:parent:${relation.id}:${deliveryId}`,
+            source: 'linear',
+            suppressLinearOutbox: true,
+            suppressDomainEvent: historicalImport,
+          },
+        );
+      }
+    } else if (projection.dependency) {
+      await integrationTasks.addPublicDependency(
+        projection.dependency.taskId,
+        projection.dependency.dependsOnTaskId,
+        projection.dependency.type,
+        {
+          eventId: deliveryId,
+          idempotencyKey: `linear:relation:${relation.id}:${deliveryId}`,
+          source: 'linear',
+          suppressDomainEvent: historicalImport,
+          suppressLinearOutbox: true,
+        },
+      );
+    }
+
+    await model.upsertExternalRelation({
+      confirmationState: 'confirmed',
+      issueLinkId: sourceLink?.id ?? targetLink?.id,
+      kind: relation.kind,
+      lastConfirmedSnapshot: relation,
+      linearRelationId: relation.id,
+      localRelationKey,
+      localSourceTaskId: sourceTaskId,
+      localTargetTaskId: targetTaskId,
+      origin: historicalImport ? 'reconciliation' : 'inbound',
+      remoteSnapshot: relation,
+      resolutionState: resolved ? 'resolved' : 'unresolved',
+      source: 'linear',
+      sourceIssueId: relation.sourceIssueId,
+      targetIssueId: relation.targetIssueId,
+      tombstone: null,
+    });
+  }
+
+  private async removeLocalRelation(
+    db: LobeChatDatabase,
+    integrationTasks: LinearIntegrationTaskService,
+    mapping: Awaited<ReturnType<LinearSyncModel['findExternalRelationById']>>,
+    deliveryId: string,
+  ) {
+    if (!mapping?.localSourceTaskId || !mapping.localTargetTaskId) return;
+    if (mapping.kind === 'parent') {
+      const [task] = await db
+        .select({ parentTaskId: tasks.parentTaskId })
+        .from(tasks)
+        .where(eq(tasks.id, mapping.localSourceTaskId))
+        .limit(1);
+      if (task?.parentTaskId === mapping.localTargetTaskId) {
+        await integrationTasks.updatePublicTask(
+          mapping.localSourceTaskId,
+          { parentTaskId: null },
+          {
+            eventId: deliveryId,
+            idempotencyKey: `linear:relation:remove:${mapping.id}:${deliveryId}`,
+            source: 'linear',
+            suppressDomainEvent: false,
+            suppressLinearOutbox: true,
+          },
+        );
+      }
+      return;
+    }
+    await integrationTasks.removePublicDependency(
+      mapping.kind === 'relates' ? mapping.localSourceTaskId : mapping.localTargetTaskId,
+      mapping.kind === 'relates' ? mapping.localTargetTaskId : mapping.localSourceTaskId,
+      {
+        eventId: deliveryId,
+        idempotencyKey: `linear:relation:remove:${mapping.id}:${deliveryId}`,
+        source: 'linear',
+        suppressDomainEvent: false,
+        suppressLinearOutbox: true,
+      },
+    );
+  }
+
+  private async tombstoneRelationMapping(
+    model: LinearSyncModel,
+    db: LobeChatDatabase,
+    integrationTasks: LinearIntegrationTaskService,
+    mapping: Awaited<ReturnType<LinearSyncModel['findExternalRelationById']>>,
+    deliveryId: string,
+  ) {
+    if (!mapping) return;
+    await this.removeLocalRelation(db, integrationTasks, mapping, deliveryId);
+    await model.upsertExternalRelation({
+      confirmationState: 'tombstoned',
+      issueLinkId: mapping.issueLinkId,
+      kind: mapping.kind,
+      lastConfirmedSnapshot: mapping.lastConfirmedSnapshot,
+      linearRelationId: mapping.linearRelationId,
+      localRelationKey: mapping.localRelationKey,
+      localSourceTaskId: mapping.localSourceTaskId,
+      localTargetTaskId: mapping.localTargetTaskId,
+      origin: 'inbound',
+      remoteSnapshot: mapping.remoteSnapshot,
+      resolutionState: mapping.resolutionState,
+      source: 'linear',
+      sourceIssueId: mapping.sourceIssueId,
+      targetIssueId: mapping.targetIssueId,
+      tombstone: { at: new Date().toISOString(), kind: 'deleted', source: 'linear' },
+    });
+  }
+
+  private async handleRemoteTombstone(
+    row: { eventType: string; id: string; installationId: string; subjectId: string | null },
+    error: unknown,
+  ) {
+    if (!(error instanceof LinearRemoteResourceError)) return false;
+    const kind = error.reason === 'forbidden' ? 'forbidden' : 'deleted';
+    if (error.resource === 'issue') {
+      const link = await this.model.findIssueLinkByExternalId(error.resourceId);
+      if (!link) return true;
+      await this.model.recordIssueTombstone({
+        deliveryId: row.id,
+        idempotencyKey: `linear:tombstone:${row.id}:${kind}`,
+        issueLinkId: link.id,
+        kind,
+        linearIssueId: error.resourceId,
+        origin: 'inbound',
+        reason: error.message,
+      });
+      return true;
+    }
+    if (error.resource === 'comment') {
+      const mapping = await this.model.findExternalCommentByRemoteId(error.resourceId);
+      if (!mapping) return true;
+      const installation = await this.model.findInstallationById(row.installationId);
+      if (kind === 'deleted' && mapping.localCommentId && installation) {
+        const integrationTasks = new LinearIntegrationTaskService(
+          this.db,
+          this.workspaceId,
+          installation.id,
+        );
+        await integrationTasks.deletePublicComment(mapping.localCommentId, {
+          source: 'linear',
+          suppressDomainEvent: false,
+          suppressLinearOutbox: true,
+        });
+      }
+      await this.model.upsertExternalComment({
+        confirmationState: kind === 'deleted' ? 'tombstoned' : 'unresolved',
+        issueLinkId: mapping.issueLinkId,
+        lastConfirmedSnapshot: mapping.lastConfirmedSnapshot,
+        linearCommentId: mapping.linearCommentId,
+        linearIssueId: mapping.linearIssueId,
+        localCommentId: mapping.localCommentId,
+        origin: 'inbound',
+        remoteSnapshot: mapping.remoteSnapshot,
+        source: 'linear',
+        tombstone: { at: new Date().toISOString(), kind, source: 'linear' },
+      });
+      return true;
+    }
+    const mapping = await this.model.findExternalRelationByRemoteId(error.resourceId);
+    if (!mapping) return true;
+    const installation = await this.model.findInstallationById(row.installationId);
+    if (installation) {
+      const integrationTasks = new LinearIntegrationTaskService(
+        this.db,
+        this.workspaceId,
+        installation.id,
+      );
+      if (kind === 'deleted') {
+        await this.tombstoneRelationMapping(this.model, this.db, integrationTasks, mapping, row.id);
+      } else {
+        await this.model.upsertExternalRelation({
+          confirmationState: 'unresolved',
+          issueLinkId: mapping.issueLinkId,
+          kind: mapping.kind,
+          lastConfirmedSnapshot: mapping.lastConfirmedSnapshot,
+          linearRelationId: mapping.linearRelationId,
+          localRelationKey: mapping.localRelationKey,
+          localSourceTaskId: mapping.localSourceTaskId,
+          localTargetTaskId: mapping.localTargetTaskId,
+          origin: 'inbound',
+          remoteSnapshot: mapping.remoteSnapshot,
+          resolutionState: 'unresolved',
+          source: 'linear',
+          sourceIssueId: mapping.sourceIssueId,
+          targetIssueId: mapping.targetIssueId,
+          tombstone: { at: new Date().toISOString(), kind, source: 'linear' },
+        });
+      }
+    }
+    return true;
+  }
+
   async importBinding(
     provider: LinearIssueProvider,
     bindingId: string,
@@ -426,6 +1724,9 @@ export class LinearSyncWorker {
     if (!binding) throw new Error('Linear project binding not found');
     const installation = await this.model.findInstallationById(binding.installationId);
     if (!installation) throw new Error('Linear installation not found');
+    if (installation.status !== 'active') {
+      throw new LinearSyncPausedError('Linear installation is not active');
+    }
 
     if (!linearBindingReadEnabled(binding)) {
       return {
@@ -555,15 +1856,33 @@ export class LinearSyncWorker {
     phase: 'initial' | 'reconciliation',
     provider: LinearIssueProvider,
   ) {
-    return this.model.transaction((model, db) =>
-      this.processRow(row, provider, {
+    const [knownComments, knownRelations] = await Promise.all([
+      provider.listComments ? provider.listComments(issue.id) : [],
+      provider.listRelations ? provider.listRelations(issue.id) : [],
+    ]);
+    return this.model.transaction(async (model, db) => {
+      const outcome = await this.processRow(row, provider, {
         db,
         historicalImport: true,
         knownIssue: issue,
+        knownRelations,
         model,
         phase,
-      }),
-    );
+      });
+      if (outcome !== 'pending-binding') {
+        for (const comment of knownComments) {
+          await this.processCommentRow(
+            {
+              id: `linear-import-comment:${row.id}:${comment.id}`,
+              installationId: row.installationId,
+            },
+            comment,
+            { db, historicalImport: true, model },
+          );
+        }
+      }
+      return outcome;
+    });
   }
 
   private async processRow(
@@ -573,6 +1892,7 @@ export class LinearSyncWorker {
       db?: LobeChatDatabase;
       historicalImport?: boolean;
       knownIssue?: LinearIssueSnapshot;
+      knownRelations?: LinearRelationSnapshot[];
       model?: LinearSyncModel;
       phase?: 'initial' | 'reconciliation';
     } = {},
@@ -582,117 +1902,69 @@ export class LinearSyncWorker {
     const db = context.db ?? this.db;
     const model = context.model ?? this.model;
     const issue = context.knownIssue ?? (await provider.getIssue(row.subjectId));
+    const knownRelations = issueRelationsWithParent(issue, context.knownRelations ?? []);
     const existingLink = await model.findIssueLinkByExternalId(issue.id);
     const installation = await model.findInstallationById(row.installationId);
-    if (!installation) throw new Error('Linear installation not found');
-    if (installation.status !== 'active') throw new Error('Linear installation is unavailable');
-
-    if (row.action === 'remove' && row.eventType === 'Issue') {
-      if (existingLink) {
-        await model.updateIssueLink(existingLink.id, {
-          conflict: null,
-          lastInboundDeliveryId: row.id,
-          remoteSnapshot: issue,
-          remoteUpdatedAt: issue.updatedAt ? new Date(issue.updatedAt) : null,
-          syncState: 'removed',
-        });
-      }
-      return 'processed';
+    if (!installation || installation.status !== 'active') {
+      throw new LinearSyncPausedError(
+        installation?.status === 'revoked'
+          ? 'Linear installation is revoked'
+          : 'Linear installation is not active',
+      );
     }
 
     const binding = issue.projectId
       ? await model.lockBindingByLinearProjectId(issue.projectId)
       : null;
-    if (!binding) return 'pending-binding';
+    if (!binding) {
+      if (existingLink) {
+        await model.recordIssueTombstone({
+          deliveryId: row.id,
+          idempotencyKey: `linear:tombstone:${row.id}:out_of_scope`,
+          issueLinkId: existingLink.id,
+          kind: 'out_of_scope',
+          linearIssueId: issue.id,
+          origin: context.historicalImport ? 'reconciliation' : 'inbound',
+          reason: 'Issue is no longer inside an enabled Linear project binding',
+          snapshot: issue,
+        });
+        return 'processed';
+      }
+      return 'pending-binding';
+    }
     if (!linearBindingReadEnabled(binding)) return 'paused';
+    if (binding.installationId !== installation.id) {
+      throw new Error('Linear issue binding belongs to another installation');
+    }
 
     const integrationTasks = new LinearIntegrationTaskService(
       db,
       this.workspaceId,
       installation.id,
     );
-    const inScope = await integrationTasks.validateIssueScope({
-      binding,
-      installation,
-      issue,
-    });
-    if (!inScope) {
+    if (!(await integrationTasks.validateIssueScope({ binding, installation, issue }))) {
       if (existingLink) {
-        await model.updateIssueLink(existingLink.id, {
-          lastInboundDeliveryId: row.id,
-          remoteSnapshot: issue,
-          remoteUpdatedAt: issue.updatedAt ? new Date(issue.updatedAt) : null,
-          syncState: 'removed',
-        });
-      }
-      if (context.phase) {
-        await model.recordImportReceipt({
-          bindingId: binding.id,
+        await model.recordIssueTombstone({
+          deliveryId: row.id,
+          idempotencyKey: `linear:tombstone:${row.id}:out_of_scope`,
+          issueLinkId: existingLink.id,
+          kind: 'out_of_scope',
           linearIssueId: issue.id,
-          phase: context.phase,
-          status: 'processed',
+          origin: context.historicalImport ? 'reconciliation' : 'inbound',
+          reason: 'Issue is outside the validated public team scope',
+          snapshot: issue,
         });
       }
       return 'processed';
     }
 
-    if (issue.archivedAt) {
-      if (existingLink) {
-        await model.updateIssueLink(existingLink.id, {
-          conflict: null,
-          lastInboundDeliveryId: row.id,
-          remoteSnapshot: issue,
-          remoteUpdatedAt: issue.updatedAt ? new Date(issue.updatedAt) : null,
-          syncState: 'removed',
-        });
-      }
-      if (context.phase) {
-        await model.recordImportReceipt({
-          bindingId: binding.id,
-          linearIssueId: issue.id,
-          phase: context.phase,
-          status: 'processed',
-        });
-      }
-      return 'processed';
-    }
-
-    if (!existingLink) {
-      const task = await integrationTasks.createPublicTask({
-        binding,
-        installation,
-        issue,
-        mutation: {
-          eventId: row.id,
-          idempotencyKey: `linear:import:${row.id}`,
-          source: 'linear',
-          suppressDomainEvent: context.historicalImport,
-          suppressLinearOutbox: true,
-        },
-      });
-      if (!task) return 'processed';
-      await model.createIssueLink({
-        bindingId: binding.id,
-        installationId: installation.id,
-        linearIdentifier: issue.identifier,
-        linearIssueId: issue.id,
-        organizationId: installation.organizationId,
-        remoteSnapshot: issue,
-        taskId: task.id,
-      });
-      if (context.phase) {
-        await model.recordImportReceipt({
-          bindingId: binding.id,
-          linearIssueId: issue.id,
-          phase: context.phase,
-          status: 'processed',
-        });
-      }
-      return 'imported';
+    if (row.action && isRemoteRemoval(row.action) && row.eventType === 'Issue') {
+      return this.processIssueDeletionRow(row, model, issue);
     }
 
     const incomingUpdatedAt = issue.updatedAt ? new Date(issue.updatedAt) : null;
     if (
+      existingLink &&
       incomingUpdatedAt &&
       Number.isFinite(incomingUpdatedAt.getTime()) &&
       existingLink.remoteUpdatedAt &&
@@ -710,8 +1982,84 @@ export class LinearSyncWorker {
       return 'processed';
     }
 
+    if (existingLink && issue.archivedAt) {
+      await model.recordIssueTombstone({
+        deliveryId: row.id,
+        idempotencyKey: `linear:tombstone:${row.id}:archived`,
+        issueLinkId: existingLink.id,
+        kind: 'archived',
+        linearIssueId: issue.id,
+        origin: context.historicalImport ? 'reconciliation' : 'inbound',
+        reason: 'Linear issue is archived',
+        snapshot: issue,
+      });
+      return 'processed';
+    }
+
+    if (!existingLink) {
+      if (issue.archivedAt) return 'processed';
+      const createIntent = await model.findCreateIntentByRemoteIssueId(issue.id);
+      const intendedTask =
+        createIntent?.taskId && createIntent.installationId === installation.id
+          ? await integrationTasks.findPublicTask(createIntent.taskId)
+          : null;
+      const task =
+        intendedTask?.projectId === binding.projectId && intendedTask.visibility === 'public'
+          ? intendedTask
+          : await integrationTasks.createPublicTask({
+              binding,
+              installation,
+              issue,
+              mutation: {
+                eventId: row.id,
+                idempotencyKey: `linear:import:${row.id}`,
+                source: 'linear',
+                suppressDomainEvent: context.historicalImport,
+                suppressLinearOutbox: true,
+              },
+            });
+      if (!task) return 'processed';
+      await model.createIssueLink({
+        bindingId: binding.id,
+        installationId: installation.id,
+        linearIdentifier: issue.identifier,
+        linearIssueId: issue.id,
+        organizationId: installation.organizationId,
+        remoteSnapshot: issue,
+        taskId: task.id,
+      });
+      await this.reconcileRelationsForIssue(
+        model,
+        db,
+        integrationTasks,
+        binding,
+        task.id,
+        issue.id,
+        knownRelations,
+        row.id,
+        context.historicalImport,
+      );
+      if (context.phase) {
+        await model.recordImportReceipt({
+          bindingId: binding.id,
+          linearIssueId: issue.id,
+          phase: context.phase,
+          status: 'processed',
+        });
+      }
+      return 'imported';
+    }
+
+    if (
+      existingLink.installationId !== installation.id ||
+      existingLink.organizationId !== installation.organizationId
+    ) {
+      throw new Error('Linear issue link installation scope does not match');
+    }
+    if (existingLink.tombstone) await model.clearIssueTombstone(existingLink.id);
+
     const task = await integrationTasks.findPublicTask(existingLink.taskId);
-    if (!task || task.projectId !== binding.projectId || task.visibility !== 'public') {
+    if (!task || task.visibility !== 'public') {
       await model.updateIssueLink(existingLink.id, {
         lastInboundDeliveryId: row.id,
         remoteSnapshot: issue,
@@ -727,6 +2075,59 @@ export class LinearSyncWorker {
         });
       }
       return 'processed';
+    }
+
+    const remoteProjectMoved =
+      issue.projectId !== existingLink.lastConfirmedSnapshot.projectId &&
+      issue.projectId !== undefined;
+    if (remoteProjectMoved) {
+      await this.clearCrossProjectEdgesBeforeMove(
+        db,
+        integrationTasks,
+        task,
+        binding.projectId,
+        row.id,
+        Boolean(context.historicalImport),
+      );
+      for (const relation of knownRelations) {
+        if (relation.sourceIssueId !== issue.id && relation.targetIssueId !== issue.id) continue;
+        await this.reconcileOneRelation(
+          model,
+          db,
+          integrationTasks,
+          relation,
+          row.id,
+          Boolean(context.historicalImport),
+          { projectId: binding.projectId, taskId: task.id },
+        );
+      }
+    }
+
+    const previousParentId = existingLink.lastConfirmedSnapshot.parentId;
+    const [currentTaskBoundaryState] = await db
+      .select({ parentTaskId: tasks.parentTaskId })
+      .from(tasks)
+      .where(eq(tasks.id, task.id))
+      .limit(1);
+    if (
+      previousParentId &&
+      issue.parentId !== previousParentId &&
+      currentTaskBoundaryState?.parentTaskId
+    ) {
+      const parentLink = await model.findIssueLinkByTaskId(currentTaskBoundaryState.parentTaskId);
+      if (parentLink?.linearIssueId === previousParentId) {
+        await integrationTasks.updatePublicTask(
+          task.id,
+          { parentTaskId: null },
+          {
+            eventId: row.id,
+            idempotencyKey: `linear:parent:clear:${row.id}`,
+            source: 'linear',
+            suppressDomainEvent: Boolean(context.historicalImport),
+            suppressLinearOutbox: true,
+          },
+        );
+      }
     }
 
     const local = taskSnapshot(task, issue, existingLink.lastConfirmedSnapshot, binding.settings);
@@ -762,8 +2163,15 @@ export class LinearSyncWorker {
       issue,
       binding.settings,
     );
+    if (
+      issue.projectId !== existingLink.lastConfirmedSnapshot.projectId &&
+      task.projectId !== binding.projectId
+    ) {
+      patch.projectId = binding.projectId;
+    }
+    let taskAfterRemote = task;
     if (Object.keys(patch).length > 0) {
-      await integrationTasks.updatePublicTask(task.id, patch, {
+      taskAfterRemote = await integrationTasks.updatePublicTask(task.id, patch, {
         eventId: row.id,
         idempotencyKey: `linear:task-update:${row.id}`,
         source: 'linear',
@@ -782,7 +2190,8 @@ export class LinearSyncWorker {
         ),
       );
       await model.queueOutbox({
-        expectedLocalRevision: task.domainRevision,
+        expectedLocalRevision: taskAfterRemote.domainRevision,
+        initialStatus: linearBindingWriteEnabled(binding) ? 'pending' : 'paused',
         installationId: installation.id,
         linkId: existingLink.id,
         operation: 'update_issue',
@@ -792,13 +2201,30 @@ export class LinearSyncWorker {
     }
 
     await model.updateIssueLink(existingLink.id, {
+      bindingId: binding.id,
       conflict: null,
       lastConfirmedSnapshot: issue,
       lastInboundDeliveryId: row.id,
       remoteSnapshot: issue,
       remoteUpdatedAt: incomingUpdatedAt,
-      syncState: localChanged.length > 0 ? 'pending' : 'synced',
+      syncState:
+        localChanged.length > 0
+          ? linearBindingWriteEnabled(binding)
+            ? 'pending'
+            : 'paused'
+          : 'synced',
     });
+    await this.reconcileRelationsForIssue(
+      model,
+      db,
+      integrationTasks,
+      binding,
+      task.id,
+      issue.id,
+      knownRelations,
+      row.id,
+      context.historicalImport,
+    );
     if (context.phase) {
       await model.recordImportReceipt({
         bindingId: binding.id,

@@ -263,9 +263,7 @@ export const taskDependencies = pgTable(
     dependsOnId: text('depends_on_id')
       .references(() => tasks.id, { onDelete: 'cascade' })
       .notNull(),
-    userId: text('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
-      .notNull(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
 
     // 'blocks' | 'relates'
@@ -480,9 +478,7 @@ export const taskComments = pgTable(
     taskId: text('task_id')
       .references(() => tasks.id, { onDelete: 'cascade' })
       .notNull(),
-    userId: text('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
-      .notNull(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
 
     // Author (user or agent, both nullable)

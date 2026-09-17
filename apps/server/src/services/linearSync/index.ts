@@ -120,15 +120,13 @@ export interface CaptureLinearWebhookResult {
   deliveryId: string;
   duplicate: boolean;
   planningRevision?: number;
-  status: 'ignored' | 'pending_binding' | 'processed' | 'queued';
+  status: 'ignored' | 'pending_binding' | 'paused' | 'processed' | 'queued' | 'revoked';
 }
 
 export class LinearSyncService {
-  private readonly db: LobeChatDatabase;
   private readonly model: LinearSyncModel;
 
   constructor(db: LobeChatDatabase, workspaceId: string) {
-    this.db = db;
     this.model = new LinearSyncModel(db, workspaceId);
   }
 
@@ -162,7 +160,7 @@ export class LinearSyncService {
     }
 
     const installation = await this.model.findInstallationByOrganization(payload.organizationId);
-    if (!installation || installation.status !== 'active') {
+    if (!installation) {
       throw new LinearWebhookError('Linear organization is not installed in this workspace', 404);
     }
 
@@ -208,7 +206,21 @@ export class LinearSyncService {
       return { deliveryId, duplicate: false, status: 'processed' };
     }
 
-    if (payload.type !== 'Issue') {
+    if (installation.status !== 'active') {
+      const status = installation.status === 'revoked' ? 'revoked' : 'paused';
+      await this.model.updateInbox(captured.row.id, {
+        availableAt: new Date(Date.now() + 60_000),
+        lastError:
+          status === 'revoked'
+            ? 'Linear installation is revoked; reauthorization is required'
+            : 'Linear installation is paused',
+        processedAt: null,
+        status: 'paused',
+      });
+      return { deliveryId, duplicate: false, status };
+    }
+
+    if (!['Issue', 'Comment', 'IssueRelation'].includes(payload.type)) {
       await this.model.updateInbox(captured.row.id, {
         processedAt: new Date(),
         status: 'ignored',
@@ -216,9 +228,29 @@ export class LinearSyncService {
       return { deliveryId, duplicate: false, status: 'ignored' };
     }
 
+    if (payload.type === 'Comment') {
+      await this.model.updateInbox(captured.row.id, {
+        processedAt: null,
+        status: 'received',
+      });
+      return { deliveryId, duplicate: false, status: 'queued' };
+    }
+
+    if (payload.type === 'IssueRelation') {
+      await this.model.updateInbox(captured.row.id, {
+        processedAt: null,
+        status: payload.data?.id ? 'received' : 'pending_binding',
+      });
+      return {
+        deliveryId,
+        duplicate: false,
+        status: payload.data?.id ? 'queued' : 'pending_binding',
+      };
+    }
+
     const subjectId = extractSubjectId(payload);
-    const linearProjectId = extractLinearProjectId(payload);
     const link = subjectId ? await this.model.findIssueLinkByExternalId(subjectId) : null;
+    const linearProjectId = extractLinearProjectId(payload);
     const binding = linearProjectId
       ? await this.model.findBindingByLinearProjectId(linearProjectId)
       : link?.bindingId
@@ -237,8 +269,6 @@ export class LinearSyncService {
       };
     }
 
-    // The inbox remains durable, but a disabled read rollout must not wake the
-    // planner or mutate any local task before the worker resumes it.
     if (!linearBindingReadEnabled(binding)) {
       await this.model.updateInbox(captured.row.id, {
         processedAt: null,
@@ -246,32 +276,15 @@ export class LinearSyncService {
       });
       return { deliveryId, duplicate: false, status: 'queued' };
     }
-
-    const event = await this.model.recordDomainEvent({
-      action: payload.action,
-      eventId: deliveryId,
-      idempotencyKey: `linear:${deliveryId}`,
-      payload: payload as unknown as Record<string, unknown>,
-      projectId: binding?.projectId,
-      source: 'linear',
-      taskId: link?.taskId,
-      type: 'linear.issue.changed',
-    });
-
-    // The delivery is durable and has woken the planner, but no task mutation
-    // has happened yet. A later worker owns reconciliation; do not mark the
-    // inbox row processed merely because the HTTP request was acknowledged.
-    const status = binding ? 'received' : 'pending_binding';
     await this.model.updateInbox(captured.row.id, {
       processedAt: null,
-      status,
+      status: 'received',
     });
 
     return {
       deliveryId,
       duplicate: false,
-      planningRevision: event.event.revision,
-      status: binding ? 'queued' : 'pending_binding',
+      status: 'queued',
     };
   }
 }

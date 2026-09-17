@@ -481,6 +481,25 @@ export const linearSyncRouter = router({
       }
     }),
 
+  externalMappings: linearSyncProcedure
+    .input(z.object({ issueLinkId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const issueLink = await ctx.linearSyncModel.findIssueLinkById(input.issueLinkId);
+        if (!issueLink) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear issue link not found' });
+        }
+        const [comments, relations, tombstones] = await Promise.all([
+          ctx.linearSyncModel.listExternalComments(issueLink.id),
+          ctx.linearSyncModel.listExternalRelationsForIssue(issueLink.linearIssueId),
+          ctx.linearSyncModel.listIssueTombstones(issueLink.id),
+        ]);
+        return { data: { comments, relations, tombstones }, success: true };
+      } catch (error) {
+        mapError(error, 'externalMappings');
+      }
+    }),
+
   planningRevisions: linearSyncProcedure
     .input(
       z.object({ limit: z.number().int().min(1).max(100).default(20), scopeId: z.string().uuid() }),

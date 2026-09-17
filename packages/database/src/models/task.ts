@@ -1,5 +1,7 @@
 import type {
   CheckpointConfig,
+  LinearExternalCommentOutboxPayload,
+  LinearExternalRelationOutboxPayload,
   NewTask,
   TaskActivityLogPayload,
   TaskActivityLogType,
@@ -163,6 +165,17 @@ export interface TaskMutationContext {
   /** Prevent a provider-originated reconciliation from echoing back out. */
   suppressLinearOutbox?: boolean;
 }
+
+const relationKey = (
+  kind: 'blocks' | 'parent' | 'relates',
+  sourceTaskId: string,
+  targetTaskId?: string | null,
+) =>
+  kind === 'parent'
+    ? `parent:${sourceTaskId}`
+    : kind === 'relates'
+      ? `relates:${[sourceTaskId, targetTaskId ?? ''].sort().join(':')}`
+      : `blocks:${sourceTaskId}:${targetTaskId ?? ''}`;
 
 const touchedColumns = <T extends readonly (keyof NewTask)[]>(data: Partial<NewTask>, columns: T) =>
   columns.filter((column) => data[column] !== undefined);
@@ -355,11 +368,18 @@ export class TaskModel {
   private readonly userId: string;
   private readonly db: LobeChatDatabase;
   private readonly workspaceId?: string;
+  private readonly managedSubject: boolean;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(
+    db: LobeChatDatabase,
+    userId: string,
+    workspaceId?: string,
+    options: { managedSubject?: boolean } = {},
+  ) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
+    this.managedSubject = options.managedSubject ?? false;
   }
 
   /**
@@ -564,7 +584,7 @@ export class TaskModel {
           source:
             options.mutation?.source ??
             (data.createdByAgentId ? 'agent' : options.creationSubject ? 'system' : 'user'),
-          suppressLinearOutbox: true,
+          suppressLinearOutbox: options.mutation?.suppressLinearOutbox,
           task,
         });
       }
@@ -720,6 +740,19 @@ export class TaskModel {
           idempotencyKey:
             mutation.idempotencyKey ??
             `task:${task.id}:revision:${task.domainRevision}:${eventType}`,
+          outboxPayload:
+            data.parentTaskId !== undefined
+              ? ({
+                  action: 'upsert',
+                  kind: 'relation',
+                  relation: {
+                    kind: 'parent',
+                    localRelationKey: relationKey('parent', task.id, data.parentTaskId),
+                    sourceTaskId: task.id,
+                    targetTaskId: data.parentTaskId ?? null,
+                  },
+                } satisfies LinearExternalRelationOutboxPayload)
+              : undefined,
           source: mutation.source ?? 'system',
           suppressLinearOutbox: mutation.suppressLinearOutbox,
           task,
@@ -2572,18 +2605,23 @@ export class TaskModel {
         );
       }
     }
+    const visibility = task.visibility;
     await this.db
       .insert(taskDependencies)
       .values({
         dependsOnId,
         taskId,
         type,
-        userId: task.createdByUserId,
-        visibility: task.visibility,
+        userId: this.managedSubject ? null : task.createdByUserId,
+        visibility,
         workspaceId: this.workspaceId ?? null,
       })
       .onConflictDoUpdate({
-        set: { type, userId: task.createdByUserId, visibility: task.visibility },
+        set: {
+          type,
+          userId: this.managedSubject ? null : task.createdByUserId,
+          visibility: task.visibility,
+        },
         target: [taskDependencies.taskId, taskDependencies.dependsOnId],
       });
 
@@ -2606,7 +2644,20 @@ export class TaskModel {
           mutation.idempotencyKey ??
           `task:${updated.id}:revision:${updated.domainRevision}:dependency:add:${dependsOnId}`,
         source: mutation.source ?? 'system',
-        suppressLinearOutbox: true,
+        outboxPayload: {
+          action: 'upsert',
+          kind: 'relation',
+          relation: {
+            kind: type === 'relates' ? 'relates' : 'blocks',
+            localRelationKey:
+              type === 'relates'
+                ? relationKey('relates', taskId, dependsOnId)
+                : relationKey('blocks', dependsOnId, taskId),
+            sourceTaskId: type === 'relates' ? taskId : dependsOnId,
+            targetTaskId: type === 'relates' ? dependsOnId : taskId,
+          },
+        } satisfies LinearExternalRelationOutboxPayload,
+        suppressLinearOutbox: mutation.suppressLinearOutbox,
         task: updated,
       });
     }
@@ -2632,7 +2683,7 @@ export class TaskModel {
           this.depsOwnership(),
         ),
       )
-      .returning({ taskId: taskDependencies.taskId });
+      .returning({ taskId: taskDependencies.taskId, type: taskDependencies.type });
     if (deleted.length === 0) return;
 
     const [updated] = await this.db
@@ -2654,7 +2705,20 @@ export class TaskModel {
           mutation.idempotencyKey ??
           `task:${updated.id}:revision:${updated.domainRevision}:dependency:remove:${dependsOnId}`,
         source: mutation.source ?? 'system',
-        suppressLinearOutbox: true,
+        outboxPayload: {
+          action: 'remove',
+          kind: 'relation',
+          relation: {
+            kind: deleted[0]?.type === 'relates' ? 'relates' : 'blocks',
+            localRelationKey:
+              deleted[0]?.type === 'relates'
+                ? relationKey('relates', taskId, dependsOnId)
+                : relationKey('blocks', dependsOnId, taskId),
+            sourceTaskId: deleted[0]?.type === 'relates' ? taskId : dependsOnId,
+            targetTaskId: deleted[0]?.type === 'relates' ? dependsOnId : taskId,
+          },
+        } satisfies LinearExternalRelationOutboxPayload,
+        suppressLinearOutbox: mutation.suppressLinearOutbox,
         task: updated,
       });
     }
@@ -2709,6 +2773,19 @@ export class TaskModel {
   }
 
   async areAllDependenciesCompleted(taskId: string): Promise<boolean> {
+    if (this.workspaceId) {
+      const unresolvedExternal = await this.db.execute(sql`
+        SELECT 1
+        FROM linear_external_relations
+        WHERE workspace_id = ${this.workspaceId}
+          AND local_target_task_id = ${taskId}
+          AND kind = 'blocks'
+          AND resolution_state = 'unresolved'
+          AND tombstone IS NULL
+        LIMIT 1
+      `);
+      if (unresolvedExternal.rows.length > 0) return false;
+    }
     return (await this.findBlockedTaskIds([taskId])).length === 0;
   }
 
@@ -2979,7 +3056,9 @@ export class TaskModel {
     runner: LobeChatDatabase,
     input: {
       action: 'created' | 'deleted' | 'updated';
+      comment?: { content: string; editorData?: unknown } | null;
       commentId: string;
+      externalMappingId?: string;
       mutation?: TaskMutationContext;
       source: TaskDomainEventSource;
       taskId: string;
@@ -3001,12 +3080,29 @@ export class TaskModel {
       changedFields: ['comments'],
       eventId: input.mutation?.eventId,
       eventType: 'task.comment.changed',
+      externalMappingId: input.externalMappingId,
       idempotencyKey:
         input.mutation?.idempotencyKey ??
         `task:${task.id}:revision:${task.domainRevision}:comment:${input.action}:${input.commentId}`,
       payload: { action: input.action, commentId: input.commentId },
       source: input.mutation?.source ?? input.source,
-      suppressLinearOutbox: true,
+      outboxPayload: input.comment
+        ? ({
+            action:
+              input.action === 'deleted'
+                ? 'delete'
+                : input.action === 'created'
+                  ? 'create'
+                  : 'update',
+            ...(input.action === 'deleted' ? {} : { body: input.comment.content }),
+            commentId: input.commentId,
+            ...(input.comment.editorData !== undefined
+              ? { editorData: input.comment.editorData }
+              : {}),
+            kind: 'comment',
+          } satisfies LinearExternalCommentOutboxPayload)
+        : undefined,
+      suppressLinearOutbox: false,
       task,
     });
     return task;
@@ -3033,6 +3129,7 @@ export class TaskModel {
         .returning();
       await this.recordCommentMutation(runner, {
         action: 'created',
+        comment,
         commentId: comment.id,
         mutation,
         source: data.authorAgentId ? 'agent' : 'user',
@@ -3062,6 +3159,9 @@ export class TaskModel {
   async deleteComment(id: string, mutation: TaskMutationContext = {}): Promise<boolean> {
     return this.db.transaction(async (tx) => {
       const runner = tx as LobeChatDatabase;
+      const externalMapping = this.workspaceId
+        ? await new LinearSyncModel(runner, this.workspaceId).findExternalCommentByLocalId(id)
+        : null;
       const [comment] = await runner
         .delete(taskComments)
         .where(and(eq(taskComments.id, id), this.commentsOwnership()))
@@ -3069,7 +3169,9 @@ export class TaskModel {
       if (!comment) return false;
       await this.recordCommentMutation(runner, {
         action: 'deleted',
+        comment,
         commentId: comment.id,
+        externalMappingId: externalMapping?.id,
         mutation,
         source: comment.authorAgentId ? 'agent' : 'user',
         taskId: comment.taskId,
@@ -3097,6 +3199,7 @@ export class TaskModel {
       if (!comment) return undefined;
       await this.recordCommentMutation(runner, {
         action: 'updated',
+        comment,
         commentId: comment.id,
         mutation: opts?.mutation,
         source: comment.authorAgentId ? 'agent' : 'user',

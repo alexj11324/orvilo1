@@ -46,7 +46,7 @@ export class LinearIntegrationTaskService {
     installationId: string,
   ) {
     this.principal = linearIntegrationPrincipal(installationId);
-    this.taskModel = new TaskModel(db, this.principal, workspaceId);
+    this.taskModel = new TaskModel(db, this.principal, workspaceId, { managedSubject: true });
   }
 
   private async validateAssignmentMappings(settings: LinearProjectBindingSettings) {
@@ -209,4 +209,29 @@ export class LinearIntegrationTaskService {
     patch: Parameters<TaskModel['update']>[1],
     mutation: TaskMutationContext,
   ) => this.taskModel.update(taskId, patch, mutation);
+
+  addPublicComment = (taskId: string, content: string, mutation: TaskMutationContext) =>
+    this.taskModel.addComment({ authorUserId: null, content, taskId, userId: null }, mutation);
+
+  findPublicComment = (commentId: string) => this.taskModel.findCommentById(commentId);
+
+  updatePublicComment = (commentId: string, content: string, mutation: TaskMutationContext) =>
+    this.taskModel.updateComment(commentId, content, { mutation });
+
+  deletePublicComment = (commentId: string, mutation: TaskMutationContext) =>
+    this.taskModel.deleteComment(commentId, mutation);
+
+  getPublicDependencies = (taskId: string) => this.taskModel.getDependencies(taskId);
+
+  getPublicDependents = (taskId: string) => this.taskModel.getDependents(taskId);
+
+  addPublicDependency = (
+    taskId: string,
+    dependsOnId: string,
+    type: string,
+    mutation: TaskMutationContext,
+  ) => this.taskModel.addDependency(taskId, dependsOnId, type, mutation);
+
+  removePublicDependency = (taskId: string, dependsOnId: string, mutation: TaskMutationContext) =>
+    this.taskModel.removeDependency(taskId, dependsOnId, mutation);
 }

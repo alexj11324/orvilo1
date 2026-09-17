@@ -5,6 +5,7 @@ import {
   LinearIssueNotFoundError,
   LinearScopeValidationError,
   normalizeLinearIssue,
+  normalizeLinearRelation,
   validateLinearProjectScope,
 } from './provider';
 
@@ -81,6 +82,49 @@ describe('normalizeLinearIssue', () => {
     await expect(provider.getIssue('missing-issue')).rejects.toBeInstanceOf(
       LinearIssueNotFoundError,
     );
+  });
+
+  it('passes a preallocated UUID and preserves the issue description', async () => {
+    const request = vi.fn().mockResolvedValue({
+      data: {
+        data: {
+          issueCreate: {
+            issue: {
+              description: 'Body',
+              id: 'issue-1',
+              identifier: 'ENG-1',
+              project: { id: 'project-1' },
+              title: 'Issue',
+            },
+            success: true,
+          },
+        },
+      },
+      status: 200,
+    });
+    const provider = new LinearGraphqlIssueProvider(
+      { getAccessToken: vi.fn().mockResolvedValue('access-token') },
+      request,
+    );
+
+    await expect(
+      provider.createIssue({
+        description: 'Body',
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        projectId: 'project-1',
+        teamId: 'team-1',
+        title: 'Issue',
+      }),
+    ).resolves.toMatchObject({ description: 'Body' });
+
+    const variables = request.mock.calls[0][1].variables;
+    expect(variables.input).toEqual({
+      description: 'Body',
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      projectId: 'project-1',
+      teamId: 'team-1',
+      title: 'Issue',
+    });
   });
 
   it('passes the cursor through the paginated issue query', async () => {
@@ -505,4 +549,85 @@ describe('normalizeLinearIssue', () => {
       }),
     );
   });
+});
+
+describe('normalizeLinearRelation', () => {
+  it('keeps blocks direction as blocker to blocked issue', () => {
+    expect(
+      normalizeLinearRelation({
+        id: 'relation-1',
+        issue: { id: 'blocker-a' },
+        relatedIssue: { id: 'blocked-b' },
+        type: 'blocks',
+      }),
+    ).toMatchObject({
+      kind: 'blocks',
+      sourceIssueId: 'blocker-a',
+      targetIssueId: 'blocked-b',
+    });
+  });
+});
+
+it('classifies a provider 401 as a reauthorization boundary', async () => {
+  const request = vi.fn().mockResolvedValue({ data: {}, status: 401 });
+  const provider = new LinearGraphqlIssueProvider(
+    { getAccessToken: vi.fn().mockResolvedValue('access-token') },
+    request,
+  );
+
+  await expect(provider.getIssue('issue-401')).rejects.toMatchObject({
+    name: 'LinearRemoteAuthError',
+    resource: 'issue',
+    resourceId: 'issue-401',
+    status: 401,
+  });
+});
+
+it('passes preallocated UUIDv4 values to comment and relation creates', async () => {
+  const request = vi
+    .fn()
+    .mockResolvedValueOnce({
+      data: {
+        data: {
+          commentCreate: {
+            comment: { body: 'Comment', id: 'comment-1', issue: { id: 'issue-1' } },
+            success: true,
+          },
+        },
+      },
+      status: 200,
+    })
+    .mockResolvedValueOnce({
+      data: {
+        data: {
+          issueRelationCreate: {
+            issueRelation: {
+              id: 'relation-1',
+              issue: { id: 'issue-1' },
+              relatedIssue: { id: 'issue-2' },
+              type: 'blocks',
+            },
+            success: true,
+          },
+        },
+      },
+      status: 200,
+    });
+  const provider = new LinearGraphqlIssueProvider(
+    { getAccessToken: vi.fn().mockResolvedValue('access-token') },
+    request,
+  );
+  const commentId = '550e8400-e29b-41d4-a716-446655440003';
+  const relationId = '550e8400-e29b-41d4-a716-446655440004';
+
+  await provider.createComment({ body: 'Comment', id: commentId, issueId: 'issue-1' });
+  await provider.createRelation({
+    id: relationId,
+    kind: 'blocks',
+    sourceIssueId: 'issue-1',
+    targetIssueId: 'issue-2',
+  });
+
+  expect(request.mock.calls[0][1].variables.input.id).toBe(commentId);
+  expect(request.mock.calls[1][1].variables.input.id).toBe(relationId);
 });

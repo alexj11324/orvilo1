@@ -10,6 +10,20 @@ export type LinearInstallationActor = 'app';
 export type LinearIssueLinkSyncState =
   'conflict' | 'outcome_unknown' | 'pending' | 'removed' | 'synced' | 'unlinked';
 
+/** Which system first created or last authored an external mapping. */
+export type LinearExternalSyncSource = 'linear' | 'orvilo';
+
+/** Which durable boundary recorded an external mapping change. */
+export type LinearExternalSyncOrigin = 'inbound' | 'outbound' | 'reconciliation';
+
+/** Whether an external mapping has a confirmed remote/local baseline. */
+export type LinearExternalConfirmationState =
+  'confirmed' | 'conflict' | 'tombstoned' | 'unconfirmed' | 'unresolved';
+
+export type LinearRelationKind = 'blocks' | 'parent' | 'relates';
+
+export type LinearTombstoneKind = 'archived' | 'deleted' | 'forbidden' | 'out_of_scope' | 'revoked';
+
 /** Durable state of a received Linear delivery. */
 export type LinearSyncInboxStatus =
   | 'dead_letter'
@@ -23,7 +37,14 @@ export type LinearSyncInboxStatus =
 
 /** Durable state of a local change waiting to reach Linear. */
 export type LinearSyncOutboxStatus =
-  'dead_letter' | 'failed' | 'outcome_unknown' | 'paused' | 'pending' | 'sent' | 'sending';
+  | 'cancelled'
+  | 'dead_letter'
+  | 'failed'
+  | 'outcome_unknown'
+  | 'paused'
+  | 'pending'
+  | 'sent'
+  | 'sending';
 
 /** Scope of a persisted planning cursor. */
 export type TaskPlanningScopeType = 'goal' | 'project' | 'workspace';
@@ -125,13 +146,72 @@ export interface LinearIssueSnapshot {
   url?: string | null;
 }
 
+/** Provider-neutral snapshot of one Linear comment. */
+export interface LinearCommentSnapshot {
+  authorId?: string | null;
+  body: string;
+  createdAt?: string | null;
+  deletedAt?: string | null;
+  id: string;
+  issueId: string;
+  updatedAt?: string | null;
+}
+
+/** Canonical relation direction: a blocker blocks a blocked issue. */
+export interface LinearRelationSnapshot {
+  createdAt?: string | null;
+  id: string;
+  kind: LinearRelationKind;
+  sourceIssueId: string;
+  targetIssueId: string;
+  updatedAt?: string | null;
+}
+
+/** Durable explanation for why a remote issue is no longer active in scope. */
+export interface LinearSyncTombstone {
+  at: string;
+  kind: LinearTombstoneKind;
+  reason?: string;
+  snapshot?: LinearIssueSnapshot;
+  source: LinearExternalSyncSource;
+}
+
+export type LinearExternalCommentOutboxPayload =
+  | {
+      action: 'create' | 'update';
+      body: string;
+      commentId: string;
+      editorData?: unknown;
+      kind: 'comment';
+      remoteCommentId?: string;
+    }
+  | {
+      action: 'delete';
+      commentId: string;
+      kind: 'comment';
+    };
+
+export interface LinearExternalRelationOutboxPayload {
+  action: 'remove' | 'upsert';
+  kind: 'relation';
+  relation: {
+    kind: LinearRelationKind;
+    localRelationKey: string;
+    sourceTaskId: string;
+    targetTaskId: string | null;
+  };
+  remoteRelationId?: string;
+}
+
 /** Three-way conflict payload kept on an issue link for user resolution. */
 export interface LinearSyncConflict {
   base: Record<string, unknown>;
   detectedAt: string;
   fields: string[];
   local: Record<string, unknown>;
+  localRevision?: number;
   remote: Record<string, unknown>;
+  remoteUpdatedAt?: string | null;
 }
 
 /** Trigger metadata stored on a planning scope. */

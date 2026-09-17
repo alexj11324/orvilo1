@@ -310,10 +310,16 @@ describe('LinearPlanningWorker incremental affected-subgraph planning', () => {
   it('C14 leaves the existing Goal path alone when project replanning is disabled', async () => {
     const project = await createProject();
     const linear = new LinearSyncModel(db, workspaceId);
-    const installation = await linear.upsertInstallation({
+    const installation = await linear.upsertOAuthInstallation({
+      accessTokenCiphertext: 'test-access-token',
+      accessTokenExpiresAt: null,
+      appActorId: 'planning-incremental-app',
       installedByUserId: userId,
+      oauthClientId: 'planning-incremental-client',
       organizationId: 'planning-incremental-org',
       organizationName: 'Planning Incremental Org',
+      refreshTokenCiphertext: 'test-refresh-token',
+      scopes: ['read', 'write'],
     });
     await linear.upsertBinding({
       installationId: installation.id,

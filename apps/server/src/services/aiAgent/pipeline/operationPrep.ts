@@ -5,9 +5,9 @@ import { getShellSyntaxGuidance } from '@orvilo/builtin-tool-local-system';
 import { builtinTools } from '@orvilo/builtin-tools';
 import type { AgentManagementContext, ProjectInstructionFile } from '@orvilo/context-engine';
 import { buildExpertiseContextSnapshot, SkillEngine } from '@orvilo/context-engine';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { buildTaskManagerDefaultsPrompt, resourcesTreePrompt } from '@orvilo/prompts';
-import type { LobeAgentAgencyConfig, WorkingDirConfig, WorkspaceInitResult } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig, WorkingDirConfig, WorkspaceInitResult } from '@orvilo/types';
 import {
   buildGoalOverviewContext,
   getActivePluginIds,
@@ -56,7 +56,7 @@ export interface HistoryLoaderInput {
  */
 export const createHistoryMessagesLoader = (
   deps: {
-    db: LobeChatDatabase;
+    db: OrviloDatabase;
     messageModel: MessageModel;
     userId: string;
     workspaceId?: string;
@@ -164,7 +164,7 @@ export interface OperationPrepDeps {
     currentWorkingDirectory?: string;
     topicId: string;
   }) => Promise<void>;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   topicModel: TopicModel;
   userId: string;
   workspaceId?: string;
@@ -218,7 +218,7 @@ const resolveWorkspaceInit = async (
   deps: OperationPrepDeps,
   params: {
     activeDeviceId: string | undefined;
-    agencyConfig?: LobeAgentAgencyConfig;
+    agencyConfig?: OrviloAgentAgencyConfig;
     topicId: string;
   },
 ): Promise<ResolvedWorkspaceInit> => {

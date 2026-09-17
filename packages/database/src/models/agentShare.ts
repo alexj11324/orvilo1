@@ -16,7 +16,7 @@ import type {
   NormalizedAgentShareConfig,
 } from '../schemas';
 import { agents, agentShares, users } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { normalizeInboxAgentAvatar, normalizeInboxAgentTitle } from '../utils/inboxAgent';
 import { isUuid } from '../utils/uuid';
 
@@ -79,10 +79,10 @@ const getShareSlugRejection = (
 };
 
 export class AgentShareModel {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private userId: string;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }
@@ -114,7 +114,7 @@ export class AgentShareModel {
    * closed on `null`.
    */
   static lockOwnedAgentRow = async (
-    tx: LobeChatDatabase,
+    tx: OrviloDatabase,
     agentId: string,
     ownerId: string,
   ): Promise<LockedAgentSnapshot | null> => {
@@ -138,7 +138,7 @@ export class AgentShareModel {
    * automatically at commit/rollback.
    */
   private static isShareSlugTaken = async (
-    tx: LobeChatDatabase,
+    tx: OrviloDatabase,
     slug: string,
     agentId: string,
   ): Promise<boolean> => {
@@ -164,7 +164,7 @@ export class AgentShareModel {
    * throws: a seed failure must not fail the share creation itself.
    */
   private static seedSlugFromAgent = async (
-    tx: LobeChatDatabase,
+    tx: OrviloDatabase,
     share: AgentShareItem,
     agentSlug: string | null,
   ): Promise<AgentShareItem> => {
@@ -185,10 +185,10 @@ export class AgentShareModel {
 
   private withOwnedPersonalAgentLock = async <T>(
     agentId: string,
-    mutation: (tx: LobeChatDatabase, agent: LockedAgentSnapshot) => Promise<T>,
+    mutation: (tx: OrviloDatabase, agent: LockedAgentSnapshot) => Promise<T>,
   ): Promise<T | null> =>
     this.db.transaction(async (transaction) => {
-      const tx = transaction as LobeChatDatabase;
+      const tx = transaction as OrviloDatabase;
       const agent = await AgentShareModel.lockOwnedAgentRow(tx, agentId, this.userId);
 
       if (!agent) return null;
@@ -417,7 +417,7 @@ export class AgentShareModel {
    * unauthorized too by the caller (fail closed, never fail open).
    */
   static isRunStillAuthorized = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     params: { agentId: string; shareId: string },
   ): Promise<boolean> => {
     const [share] = await db
@@ -437,7 +437,7 @@ export class AgentShareModel {
    * as defense in depth against a row surviving some future write path that
    * does not go through this model.
    */
-  static findByShareId = async (db: LobeChatDatabase, shareId: string) => {
+  static findByShareId = async (db: OrviloDatabase, shareId: string) => {
     if (!isUuid(shareId)) return null;
 
     const [share] = await db
@@ -489,7 +489,7 @@ export class AgentShareModel {
    * — callers must run their own access check (see
    * `findByShareIdWithAccessCheck`) before exposing the result.
    */
-  static findBySlugOrId = async (db: LobeChatDatabase, slugOrId: string) => {
+  static findBySlugOrId = async (db: OrviloDatabase, slugOrId: string) => {
     if (isUuid(slugOrId)) {
       return AgentShareModel.findByShareId(db, slugOrId);
     }
@@ -510,7 +510,7 @@ export class AgentShareModel {
   };
 
   /** Increment the successful page-view counter after access has been granted. */
-  static incrementUserViewCount = async (db: LobeChatDatabase, shareId: string) => {
+  static incrementUserViewCount = async (db: OrviloDatabase, shareId: string) => {
     await db
       .update(agentShares)
       .set({ userViewCount: sql`${agentShares.userViewCount} + 1` })
@@ -539,7 +539,7 @@ export class AgentShareModel {
 
   /** Resolve a share and enforce private-share owner access. */
   static findByShareIdWithAccessCheck = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     shareId: string,
     viewerId: string,
   ): Promise<AgentShareData> => {

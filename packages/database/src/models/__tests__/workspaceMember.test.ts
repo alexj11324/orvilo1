@@ -4,8 +4,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import {
+  agents,
   devices,
   messengerAccountLinks,
+  projectMembers,
+  projects,
   resourcePermissions,
   taskDomainEvents,
   tasks,
@@ -15,6 +18,7 @@ import {
   workspaces,
 } from '../../schemas';
 import type { LobeChatDatabase } from '../../type';
+import { ProjectMemberModel } from '../projectMember';
 import { WorkspaceMemberModel } from '../workspaceMember';
 
 const serverDB: LobeChatDatabase = await getTestDB();
@@ -389,6 +393,60 @@ describe('WorkspaceMemberModel', () => {
         ]),
       );
       expect(remaining).toHaveLength(3);
+    });
+
+    it('revokes the departing member project grants, so a re-invite does not restore them', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+      const pmModel = new ProjectMemberModel(serverDB, inviterId);
+      await model.addMember({ userId: memberId, workspaceId });
+      // projects.coordinatorAgentId is unique — each project needs its own agent.
+      await serverDB.insert(agents).values([
+        { id: 'wm-coordinator', slug: 'wm-coordinator', userId: inviterId },
+        { id: 'wm-coordinator-2', slug: 'wm-coordinator-2', userId: inviterId },
+      ]);
+      await serverDB.insert(projects).values([
+        {
+          coordinatorAgentId: 'wm-coordinator',
+          id: 'wm-project',
+          identifier: 'WMP',
+          name: 'WM project',
+          userId: inviterId,
+          workspaceId,
+        },
+        {
+          coordinatorAgentId: 'wm-coordinator-2',
+          id: 'wm-project-other-ws',
+          identifier: 'WMO',
+          name: 'Other WS project',
+          userId: inviterId,
+          workspaceId: otherWorkspaceId,
+        },
+      ]);
+      await pmModel.add({
+        projectId: 'wm-project',
+        role: 'manager',
+        userId: memberId,
+        workspaceId,
+      });
+      await pmModel.add({
+        projectId: 'wm-project-other-ws',
+        role: 'manager',
+        userId: memberId,
+        workspaceId: otherWorkspaceId,
+      });
+
+      await model.removeMember(workspaceId, memberId);
+      // re-invite revives the workspace row; the project grant must stay dead
+      await model.addMember({ userId: memberId, workspaceId });
+
+      expect(await pmModel.getRole('wm-project', memberId)).toBeNull();
+      const [removedRow] = await serverDB
+        .select()
+        .from(projectMembers)
+        .where(eq(projectMembers.projectId, 'wm-project'));
+      expect(removedRow.deletedAt).not.toBeNull();
+      // grants in another workspace are untouched
+      expect(await pmModel.getRole('wm-project-other-ws', memberId)).toBe('manager');
     });
 
     it('clears only the departing member task assignments in that workspace', async () => {

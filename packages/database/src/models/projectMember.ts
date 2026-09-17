@@ -81,6 +81,31 @@ export class ProjectMemberModel {
       .returning();
   };
 
+  /**
+   * Soft-delete every membership the user holds inside the workspace. Called
+   * from workspace-member removal: a surviving row would let a re-invite
+   * resurrect the old project role unchanged (`add` upserts on the same PK),
+   * silently bypassing the fresh grant's role and cap.
+   */
+  removeAllForWorkspaceMember = async (workspaceId: string, userId: string, tx?: Transaction) => {
+    const executor = tx ?? this.db;
+    return executor
+      .update(projectMembers)
+      .set({
+        authzVersion: sql`${projectMembers.authzVersion} + 1`,
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(projectMembers.workspaceId, workspaceId),
+          eq(projectMembers.userId, userId),
+          isNull(projectMembers.deletedAt),
+        ),
+      )
+      .returning();
+  };
+
   /** Re-grade a non-deleted member; bumps `authzVersion` like every lifecycle write. */
   changeRole = async (
     projectId: string,

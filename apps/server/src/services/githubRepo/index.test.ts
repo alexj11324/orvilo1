@@ -22,6 +22,24 @@ vi.mock('@/server/services/market', () => ({ MarketService: vi.fn() }));
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
+const openPr = () => ({
+  base: { ref: 'main', sha: 'base1' },
+  draft: false,
+  head: { sha: 'head1' },
+  html_url: 'https://github.com/acme/widgets/pull/9',
+  merge_commit_sha: null,
+  mergeable: true,
+  mergeable_state: 'clean',
+  merged: false,
+  number: 9,
+  requested_reviewers: [],
+  requested_teams: [],
+  state: 'open',
+});
+
+const emptyThreads = () =>
+  jsonResponse({ data: { repository: { pullRequest: { reviewThreads: { nodes: [] } } } } });
+
 describe('parseGithubRepo', () => {
   it.each([
     ['acme/widgets', { name: 'widgets', owner: 'acme' }],
@@ -135,31 +153,13 @@ describe('github api helpers', () => {
     ).resolves.toEqual({ number: 8, url: 'https://github.com/acme/widgets/pull/8' });
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.github.com/repos/acme/widgets/pulls',
-      expect.objectContaining({
-        body: expect.stringContaining('task/T-2'),
-        method: 'POST',
-      }),
+      expect.objectContaining({ body: expect.stringContaining('task/T-2'), method: 'POST' }),
     );
   });
 
   it('reads CI, human feedback and unresolved review threads for one head revision', async () => {
     fetchMock
-      .mockResolvedValueOnce(
-        jsonResponse({
-          base: { ref: 'main', sha: 'base1' },
-          draft: false,
-          head: { sha: 'head1' },
-          html_url: 'https://github.com/acme/widgets/pull/9',
-          merge_commit_sha: null,
-          mergeable: true,
-          mergeable_state: 'clean',
-          merged: false,
-          number: 9,
-          requested_reviewers: [],
-          requested_teams: [],
-          state: 'open',
-        }),
-      )
+      .mockResolvedValueOnce(jsonResponse(openPr()))
       .mockResolvedValueOnce(
         jsonResponse({
           check_runs: [
@@ -208,34 +208,53 @@ describe('github api helpers', () => {
     });
   });
 
-  it('refuses to call a revision green when every check was skipped', async () => {
+  it('uses the latest decisive review per actor', async () => {
     fetchMock
+      .mockResolvedValueOnce(jsonResponse(openPr()))
       .mockResolvedValueOnce(
-        jsonResponse({
-          base: { ref: 'main', sha: 'base1' },
-          draft: false,
-          head: { sha: 'head1' },
-          html_url: 'https://github.com/acme/widgets/pull/9',
-          mergeable: true,
-          merged: false,
-          number: 9,
-          requested_reviewers: [],
-          requested_teams: [],
-          state: 'open',
-        }),
+        jsonResponse({ check_runs: [{ conclusion: 'success', name: 'Typecheck', status: 'completed' }] }),
       )
       .mockResolvedValueOnce(
-        jsonResponse({ check_runs: [{ conclusion: 'skipped', name: 'E2E', status: 'completed' }] }),
+        jsonResponse([
+          { id: 31, state: 'CHANGES_REQUESTED', user: { login: 'r', type: 'User' } },
+          { id: 32, state: 'COMMENTED', user: { login: 'r', type: 'User' } },
+          { id: 33, state: 'APPROVED', user: { login: 'r', type: 'User' } },
+          { id: 34, state: 'CHANGES_REQUESTED', user: { login: 'other', type: 'User' } },
+          { id: 35, state: 'DISMISSED', user: { login: 'other', type: 'User' } },
+        ]),
       )
       .mockResolvedValueOnce(jsonResponse([]))
       .mockResolvedValueOnce(jsonResponse([]))
-      .mockResolvedValueOnce(jsonResponse([]))
-      .mockResolvedValueOnce(
-        jsonResponse({ data: { repository: { pullRequest: { reviewThreads: { nodes: [] } } } } }),
-      );
+      .mockResolvedValueOnce(emptyThreads());
 
     const snapshot = await getPullRequestReviewSnapshot('acme/widgets', 9);
-    expect(snapshot?.checks.pending).toEqual(['No CI check executed successfully for this revision']);
+    expect(snapshot?.requestedChangeReviewIds).toEqual([]);
+  });
+
+  it('does not treat the duplicate-run guard as delivery CI evidence', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(openPr()))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          check_runs: [
+            { conclusion: 'success', name: 'Check Duplicate Run', status: 'completed' },
+            { conclusion: 'skipped', name: 'Test Database', status: 'completed' },
+            { conclusion: 'skipped', name: 'Typecheck', status: 'completed' },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(emptyThreads());
+
+    const snapshot = await getPullRequestReviewSnapshot('acme/widgets', 9);
+    expect(snapshot?.checks).toEqual({
+      failed: [],
+      pending: ['No delivery CI check executed successfully for this revision'],
+      skipped: ['Check Duplicate Run', 'Test Database', 'Typecheck'],
+      successful: [],
+    });
   });
 
   it('merges only the expected reviewed head sha', async () => {

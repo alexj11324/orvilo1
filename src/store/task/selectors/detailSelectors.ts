@@ -96,12 +96,19 @@ const activeTaskError = (s: TaskStoreState) => activeTaskDetail(s)?.error;
 
 const activeTaskTopicCount = (s: TaskStoreState) => activeTaskDetail(s)?.topicCount ?? 0;
 
+const isActiveTaskBlocked = (s: TaskStoreState): boolean =>
+  activeTaskDetail(s)?.dependencies?.some(
+    (dep) => dep.type === 'blocks' && dep.status !== 'completed',
+  ) ?? false;
+
 const canRunActiveTask = (s: TaskStoreState): boolean => {
   const detail = activeTaskDetail(s);
   if (!detail) return false;
   // 'scheduled' is intentionally excluded — automation owns the next run; the
   // user can only cancel, not force an immediate run.
-  return ['backlog', 'failed', 'paused', 'completed'].includes(detail.status);
+  return (
+    !isActiveTaskBlocked(s) && ['backlog', 'failed', 'paused', 'completed'].includes(detail.status)
+  );
 };
 
 const canPauseActiveTask = (s: TaskStoreState): boolean =>
@@ -167,6 +174,7 @@ export const taskDetailSelectors = {
   canCancelActiveTask,
   canPauseActiveTask,
   canRunActiveTask,
+  isActiveTaskBlocked,
   isTaskDetailLoading,
   taskDetailById,
   taskSaveStatus,

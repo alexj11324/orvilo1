@@ -19,6 +19,7 @@ import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
+import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { LobeChatDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
@@ -132,6 +133,15 @@ export class TaskRunnerService {
     const task = await this.taskModel.resolve(idOrIdentifier);
     if (!task) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+    }
+
+    // Preflight before assignment/provisioning; reserveRun repeats this check
+    // under the dependency graph lock so a concurrent edit cannot bypass it.
+    if (!(await this.taskModel.areAllDependenciesCompleted(task.id))) {
+      throw new TaskDependencyError(
+        'Complete all prerequisite tasks before starting this task.',
+        'PRECONDITION_FAILED',
+      );
     }
 
     // The token is the only authority to release or roll back this dispatch.
@@ -660,16 +670,23 @@ export class TaskRunnerService {
     const result: CascadeResult = { failed: [], paused: [], started: [] };
 
     for (const task of unlocked) {
-      if (await this.shouldHoldForCheckpoint(task)) {
-        await this.taskModel.updateStatus(task.id, 'paused');
+      const runner =
+        task.createdByUserId && task.createdByUserId !== this.userId
+          ? new TaskRunnerService(this.db, task.createdByUserId, this.workspaceId)
+          : this;
+      if (await runner.shouldHoldForCheckpoint(task)) {
+        await runner.taskModel.updateStatusIfCurrent(task.id, 'backlog', 'paused');
         result.paused.push(task.identifier);
         continue;
       }
 
       try {
-        await this.runTask({ taskId: task.id });
+        await runner.runTask({ taskId: task.id });
         result.started.push(task.identifier);
       } catch (error) {
+        // Readiness can change after discovery. No execution happened: leave
+        // backlog intact so the next upstream completion can discover it again.
+        if (isTaskDependencyBlocked(error)) continue;
         if (error instanceof TRPCError && error.code === 'CONFLICT') {
           // Another cascade/manual request won the atomic run reservation.
           // Its task is live; the loser must not pause or relabel it.
@@ -679,7 +696,9 @@ export class TaskRunnerService {
         log('cascadeOnCompletion: runTask failed for %s: %s', task.identifier, message);
         // Best-effort: mark as paused so the user can see why it didn't run.
         try {
-          await this.taskModel.updateStatus(task.id, 'paused', { error: message });
+          await runner.taskModel.updateStatusIfCurrent(task.id, 'backlog', 'paused', {
+            error: message,
+          });
         } catch {
           /* ignore — surfaced via failed list */
         }

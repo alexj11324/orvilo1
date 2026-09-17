@@ -1,6 +1,8 @@
 import { toast } from '@lobehub/ui/base-ui';
+import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useClientDataSWR } from '@/libs/swr';
 import { taskService } from '@/services/task';
 import { workService } from '@/services/work';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -52,6 +54,30 @@ beforeEach(() => {
 });
 
 describe('TaskDetailSliceAction', () => {
+  it('refreshes an idle mounted detail even before its first collaborative dependency exists', () => {
+    useTaskStore.setState({
+      taskDetailMap: {
+        'T-1': {
+          identifier: 'T-1',
+          instruction: 'Task',
+          status: 'backlog',
+          dependencies: [],
+        } as any,
+      },
+    });
+    renderHook(() => useTaskStore.getState().useFetchTaskDetail('T-1'));
+    expect(useClientDataSWR).toHaveBeenLastCalledWith(expect.anything(), expect.any(Function), {
+      refreshInterval: 15_000,
+    });
+  });
+
+  it('does not poll without a mounted task id', () => {
+    renderHook(() => useTaskStore.getState().useFetchTaskDetail());
+    expect(useClientDataSWR).toHaveBeenLastCalledWith(null, expect.any(Function), {
+      refreshInterval: 0,
+    });
+  });
+
   describe('setActiveTaskId', () => {
     it('should set activeTaskId', () => {
       useTaskStore.getState().setActiveTaskId('T-1');

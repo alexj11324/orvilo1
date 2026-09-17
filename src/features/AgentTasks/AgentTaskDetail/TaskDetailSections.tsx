@@ -11,6 +11,7 @@ import TaskDetailTitleInput from './TaskDetailTitleInput';
 import TaskInstruction from './TaskInstruction';
 import TaskModelConfig from './TaskModelConfig';
 import TaskParentBar from './TaskParentBar';
+import TaskPrerequisites from './TaskPrerequisites';
 import TaskProperties from './TaskProperties';
 import TaskSubtasks from './TaskSubtasks';
 
@@ -35,6 +36,7 @@ const TaskDetailSections = memo(() => {
         </Flexbox>
         <div className={styles.side}>
           <TaskProperties />
+          <TaskPrerequisites />
         </div>
       </div>
       <Flexbox gap={24} style={{ paddingBottom: 120 }}>

@@ -343,11 +343,19 @@ export class TaskIntegrationService {
    * callers use that result to retain the task rows; cancel/status callers can
    * keep cleanup best-effort.
    */
-  async cleanupTaskWorktrees(taskId: string): Promise<boolean> {
+  async snapshotTaskWorktrees(taskId: string) {
+    return this.taskTopicModel.findByTaskId(taskId);
+  }
+
+  async cleanupTaskWorktrees(
+    taskId: string,
+    snapshot?: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>,
+  ): Promise<boolean> {
     const cleanupClaims = new Map<string, string>();
     let cleanupComplete = true;
+    const fromSnapshot = snapshot !== undefined;
     try {
-      const rows = await this.taskTopicModel.findByTaskId(taskId);
+      const rows = snapshot ?? (await this.taskTopicModel.findByTaskId(taskId));
       const candidates: {
         integrationPaths: string[];
         taskPaths: string[];
@@ -395,7 +403,7 @@ export class TaskIntegrationService {
             // shared `integration-<base>` path. A later claim can backfill an
             // owner marker onto that row, so the path itself is the durable
             // signal that another in-flight task may still be using it.
-            !!record.integrationOwnerTopicId &&
+            (fromSnapshot || !!record.integrationOwnerTopicId) &&
             record.integrationWorktreeCleaned !== true,
         );
         const paths = [...new Set([...taskPaths, ...integrationPaths])];
@@ -406,7 +414,7 @@ export class TaskIntegrationService {
           continue;
         }
 
-        if (!cleanupClaims.has(ownerTopicId)) {
+        if (!fromSnapshot && !cleanupClaims.has(ownerTopicId)) {
           const ownerRecord = rowsByTopicId.get(ownerTopicId)?.integration;
           if (!ownerRecord) {
             cleanupComplete = false;
@@ -465,6 +473,8 @@ export class TaskIntegrationService {
           );
         }
       }
+
+      if (fromSnapshot) return cleanupComplete;
 
       for (const { integrationPaths, taskPaths, topicId } of candidates) {
         await this.taskTopicModel

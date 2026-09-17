@@ -461,6 +461,7 @@ export interface TaskItem {
   createdByAgentId: string | null;
   createdByUserId: string;
   currentTopicId: string | null;
+  deletedAt?: Date | null;
   description: string | null;
   editorData: unknown;
   error: string | null;
@@ -469,6 +470,7 @@ export interface TaskItem {
   id: string;
   identifier: string;
   instruction: string;
+  isDeleted?: boolean | null;
   lastHeartbeatAt: Date | null;
   maxTopics: number | null;
   name: string | null;
@@ -541,6 +543,7 @@ export interface NewTask {
   createdByAgentId?: string | null;
   createdByUserId: string;
   currentTopicId?: string | null;
+  deletedAt?: Date | null;
   description?: string | null;
   editorData?: unknown;
   error?: string | null;
@@ -549,6 +552,7 @@ export interface NewTask {
   id?: string;
   identifier: string;
   instruction: string;
+  isDeleted?: boolean | null;
   lastHeartbeatAt?: Date | null;
   maxTopics?: number | null;
   name?: string | null;
@@ -768,7 +772,15 @@ export interface TaskDetailData {
   createdAt?: string;
   /** Creator of the task; used by the UI to gate creator-only actions (e.g. make private). */
   createdByUserId?: string | null;
-  dependencies?: Array<{ dependsOn: string; type: string }>;
+  dependencies?: Array<{
+    dependsOn: string;
+    /** Raw edge target, retained so an unavailable prerequisite can be removed. */
+    id?: string;
+    name?: string | null;
+    /** Null/omitted means unavailable, never implicitly completed. */
+    status?: string | null;
+    type: string;
+  }>;
   description?: string | null;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;

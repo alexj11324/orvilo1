@@ -2,6 +2,8 @@
 import { DEFAULT_BRIEF_ACTIONS, type TaskItem } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
+import { TaskDependencyError } from '@/database/models/taskDependency';
+
 import { TaskLifecycleService } from './index';
 
 const fakeScheduler = {
@@ -205,6 +207,53 @@ describe('TaskLifecycleService.onTopicComplete', () => {
   afterEach(() => {
     mockBrandingUrl.subscription = undefined;
     vi.restoreAllMocks();
+  });
+
+  describe('reopened prerequisite during completion', () => {
+    it('parks the settled run and releases only its completion lease', async () => {
+      findById.mockResolvedValue(baseTask({ parentTaskId: 'parent', automationMode: null }));
+      const model = (service as any).taskModel;
+      model.updateStatusIfReservation
+        .mockRejectedValueOnce(new TaskDependencyError('Reopened', 'PRECONDITION_FAILED'))
+        .mockResolvedValueOnce({ id: 'task-1', status: 'paused' });
+      await expect(
+        service.onTopicComplete({
+          operationId: 'op-1',
+          reason: 'done',
+          taskId: 'task-1',
+          taskIdentifier: 'TASK-1',
+          topicId: 'topic-1',
+        }),
+      ).resolves.toBeUndefined();
+      expect(model.updateStatusIfReservation).toHaveBeenLastCalledWith(
+        'task-1',
+        'completion:op-1',
+        'running',
+        'paused',
+        { error: expect.stringContaining('prerequisite') },
+      );
+      expect(model.releaseRunReservation).toHaveBeenCalledWith('task-1', 'completion:op-1');
+      expect(cascadeOnCompletion).not.toHaveBeenCalled();
+      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
+    });
+
+    it('preserves the lease for retry if the recovery write itself fails', async () => {
+      findById.mockResolvedValue(baseTask({ parentTaskId: 'parent', automationMode: null }));
+      const model = (service as any).taskModel;
+      model.updateStatusIfReservation
+        .mockRejectedValueOnce(new TaskDependencyError('Reopened', 'PRECONDITION_FAILED'))
+        .mockRejectedValueOnce(new Error('database unavailable'));
+      await expect(
+        service.onTopicComplete({
+          operationId: 'op-1',
+          reason: 'done',
+          taskId: 'task-1',
+          taskIdentifier: 'TASK-1',
+          topicId: 'topic-1',
+        }),
+      ).rejects.toThrow('database unavailable');
+      expect(model.releaseRunReservation).not.toHaveBeenCalled();
+    });
   });
 
   describe('reason=done', () => {

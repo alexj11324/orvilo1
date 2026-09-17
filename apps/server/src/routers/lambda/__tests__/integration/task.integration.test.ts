@@ -1006,7 +1006,7 @@ describe('Task Router Integration', () => {
       await caller.addDependency({ taskId: dependent.data.id, dependsOnId: upstream.data.id });
       const cleanup = vi
         .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
-        .mockResolvedValue(undefined);
+        .mockResolvedValue(true);
       try {
         await expect(caller.delete({ id: upstream.data.id })).rejects.toMatchObject({
           code: 'BAD_REQUEST',
@@ -1025,6 +1025,7 @@ describe('Task Router Integration', () => {
         .mockImplementation(async (id, snapshot) => {
           expect(await new TaskModel(serverDB, userId).findById(id)).toBeNull();
           expect(Array.isArray(snapshot)).toBe(true);
+          return true;
         });
       try {
         await caller.delete({ id: task.data.id });

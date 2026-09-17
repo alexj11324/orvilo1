@@ -115,7 +115,7 @@ const createRevision = async (name: string, requiresApproval: boolean, projectSc
 };
 
 describe('LinearPlanningWorker.applyProposal', () => {
-  it('C10 leaves request_stop unapplied until a durable stop coordinator exists', async () => {
+  it('C10 commits a fenced stop intent before the runtime interruption can be retried', async () => {
     const { revision, task } = await createRevision('Stop intent', false);
     await db.insert(taskDispatches).values({
       generation: task.executionGeneration,
@@ -142,21 +142,21 @@ describe('LinearPlanningWorker.applyProposal', () => {
             },
           ],
           explanation: 'Stop the active run at its safe dispatcher boundary.',
-          requiresApproval: false,
+          requiresApproval: true,
         },
       })
       .where(eq(taskPlanningRevisions.id, revision.id));
 
     await expect(
       new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, userId, true),
-    ).rejects.toThrow('durable post-commit stop coordinator');
+    ).resolves.toEqual({ createdTaskIds: [], stale: false, updatedTaskIds: [task.id] });
     await expect(
       db.select().from(taskDispatches).where(eq(taskDispatches.id, 'planning-stop-dispatch')),
     ).resolves.toMatchObject([
       expect.objectContaining({
-        fence: 0,
+        fence: 1,
         operationId: 'planning-stop-operation',
-        phase: 'running',
+        phase: 'cancel_requested',
       }),
     ]);
     expect(
@@ -166,7 +166,7 @@ describe('LinearPlanningWorker.applyProposal', () => {
           .from(taskPlanningRevisions)
           .where(eq(taskPlanningRevisions.id, revision.id))
       )[0].status,
-    ).toBe('proposed');
+    ).toBe('applied');
 
     const dispatchModel = new TaskDispatchModel(db, workspaceId);
     for (const phase of ['cancel_requested', 'outcome_unknown'] as const) {

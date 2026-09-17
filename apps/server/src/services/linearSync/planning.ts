@@ -5,11 +5,13 @@ import { and, asc, count, eq, inArray, notInArray, or, sql } from 'drizzle-orm';
 import { AgentModel } from '@/database/models/agent';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import type { TaskDomainEventItem, TaskPlanningScopeItem } from '@/database/schemas';
 import {
   linearProjectBindings,
   projects,
   taskDependencies,
+  taskDispatches,
   taskPlanningRevisions,
   tasks,
 } from '@/database/schemas';
@@ -19,6 +21,7 @@ import {
   projectPlannerOwnershipError,
 } from '@/server/services/goal/taskOwnership';
 import { TaskService } from '@/server/services/task';
+import { processTaskCancellation } from '@/server/services/taskCancellation';
 
 import { taskPlanningProposalSchema } from './contract';
 import { createLinearCoordinatorPlanner } from './coordinator';
@@ -216,7 +219,7 @@ export class LinearPlanningWorker {
     userId: string,
     approvalConfirmed: boolean,
   ): Promise<ApplyPlanningProposalResult> {
-    return this.db.transaction(async (tx) => {
+    const transactionResult = await this.db.transaction(async (tx) => {
       const model = new LinearSyncModel(tx, this.workspaceId);
       const [revision] = await tx
         .select()
@@ -235,6 +238,12 @@ export class LinearPlanningWorker {
       const proposal = taskPlanningProposalSchema.parse(revision.proposal);
       if (proposal.requiresApproval && !approvalConfirmed) {
         throw new Error('Planning proposal requires explicit approval');
+      }
+      if (
+        proposal.actions.some((action) => action.action === 'request_stop') &&
+        !proposal.requiresApproval
+      ) {
+        throw new Error('Planning stop proposals must require explicit approval');
       }
 
       const inputSnapshot = revision.inputSnapshot as {
@@ -307,10 +316,13 @@ export class LinearPlanningWorker {
 
       const scope = await model.lockPlanningScope(revision.scopeId);
       if (!scope) throw new Error('Planning scope no longer exists');
-      const supersede = async (error: string): Promise<ApplyPlanningProposalResult> => {
+      const supersede = async (error: string) => {
         await model.updatePlanningRevision(revision.id, { error, status: 'superseded' });
         await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
-        return { createdTaskIds: [], stale: true, updatedTaskIds: [] };
+        return {
+          result: { createdTaskIds: [], stale: true, updatedTaskIds: [] },
+          stopDispatchIds: [] as string[],
+        };
       };
       if (scope.dirtyRevision > revision.inputRevision) {
         return supersede('A newer domain event arrived while this proposal was waiting.');
@@ -376,10 +388,45 @@ export class LinearPlanningWorker {
         }
       }
 
+      const stopTaskIds = proposal.actions.flatMap((action) =>
+        action.action === 'request_stop' ? [action.taskId] : [],
+      );
+      const activeStopDispatches =
+        stopTaskIds.length === 0
+          ? []
+          : await tx
+              .select()
+              .from(taskDispatches)
+              .where(
+                and(
+                  eq(taskDispatches.workspaceId, this.workspaceId),
+                  inArray(taskDispatches.taskId, stopTaskIds),
+                  inArray(taskDispatches.phase, [
+                    'requested',
+                    'claimed',
+                    'provisioning',
+                    'dispatched',
+                    'running',
+                    'waiting',
+                    'cancel_requested',
+                    'outcome_unknown',
+                  ]),
+                ),
+              )
+              .for('update');
+      const stopDispatchByTaskId = new Map(
+        activeStopDispatches.map((dispatch) => [dispatch.taskId, dispatch]),
+      );
+      if (stopTaskIds.some((taskId) => !stopDispatchByTaskId.has(taskId))) {
+        return supersede('A requested task execution already stopped or changed ownership.');
+      }
+
       const taskModel = new TaskModel(tx, userId, this.workspaceId);
+      const dispatchModel = new TaskDispatchModel(tx, this.workspaceId);
       const taskService = new TaskService(tx, userId, this.workspaceId);
       const agentModel = new AgentModel(tx, userId, this.workspaceId);
       const createdTaskIds: string[] = [];
+      const stopDispatchIds: string[] = [];
       const updatedTaskIds: string[] = [];
 
       for (const [actionIndex, action] of proposal.actions.entries()) {
@@ -442,12 +489,23 @@ export class LinearPlanningWorker {
             break;
           }
           case 'request_stop': {
-            // C10 remains a root follow-up: TaskService's safe stop path makes
-            // an external interrupt call, while this transaction has no durable
-            // post-commit interrupter to consume a stop intent.
-            throw new Error(
-              'request_stop requires a durable post-commit stop coordinator and remains unapplied',
-            );
+            const dispatch = stopDispatchByTaskId.get(action.taskId);
+            if (!dispatch) throw new Error(`Task ${action.taskId} has no active dispatch`);
+            if (dispatch.phase !== 'cancel_requested') {
+              const stopping = await dispatchModel.requestStop({
+                dispatchId: dispatch.id,
+                fence: dispatch.fence,
+                generation: dispatch.generation,
+                operationId: dispatch.operationId,
+                reason: `planning:${revision.id}:${action.reason}`.slice(0, 500),
+              });
+              if (!stopping) {
+                throw new Error(`Task ${action.taskId} changed before stop could be fenced`);
+              }
+            }
+            stopDispatchIds.push(dispatch.id);
+            updatedTaskIds.push(action.taskId);
+            break;
           }
           case 'set_dependency': {
             await this.applyDependencyAction(
@@ -485,8 +543,26 @@ export class LinearPlanningWorker {
         status: 'applied',
       });
       await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
-      return { createdTaskIds, stale: false, updatedTaskIds };
+      return {
+        result: { createdTaskIds, stale: false, updatedTaskIds },
+        stopDispatchIds,
+      };
     });
+
+    // The stop intent and proposal receipt commit before runtime I/O. A lost
+    // wakeup is recovered by the task watchdog from the same durable row.
+    for (const dispatchId of transactionResult.stopDispatchIds) {
+      try {
+        await processTaskCancellation({
+          db: this.db,
+          dispatchId,
+          workspaceId: this.workspaceId,
+        });
+      } catch (error) {
+        console.error('[linear-planning] failed to wake task cancellation %s:', dispatchId, error);
+      }
+    }
+    return transactionResult.result;
   }
 
   private actionTaskIds(actions: TaskPlanningAction[]) {

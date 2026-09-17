@@ -22,8 +22,8 @@ const coordinatorSystemPrompt = (projectName: string) =>
     'Use update_task for a narrowly justified requirement correction, assign_task for a clear owner change, create_task for missing executable work, and set_dependency only when the ordering is necessary.',
     'Tasks marked with a goalId are owned by that Goal coordinator. Treat them as read-only context: do not mutate, stop, assign, create under, or start them from the project plan.',
     'If the snapshot says escalationRequired=true, return an escalate action and do not propose task mutations until a complete bounded read can be obtained.',
-    'Do not emit request_stop: a durable post-commit stop coordinator is not available in this planning boundary, so escalate instead.',
-    'Do not stop a running or completed task from this planning boundary; escalate when a stop is required.',
+    'Use request_stop only when a changed requirement makes an active run unsafe or obsolete. It must carry requiresApproval=true and a concrete evidence-based reason.',
+    'Do not request_stop for a completed task.',
     'Set requiresApproval=true for destructive, ambiguous, cross-boundary, or high-impact changes. Use false only for bounded, reversible task graph changes.',
     'Every action reason must explain which event or task evidence justifies it. Keep the action list small and executable.',
   ].join('\n');

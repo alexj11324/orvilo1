@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 10
     env:
       DB_NAME: orvilo_pr_${{ github.event.pull_request.number }}
-      APP_ROLE: orvilo_pr_${{ github.event.pull_request.number }}_app
+      APP_ROLE_PREFIX: orvilo_pr_${{ github.event.pull_request.number }}_app
       MIGRATION_ROLE: orvilo_pr_${{ github.event.pull_request.number }}_migrate
       DB_TLS_HOST: ${{ vars.PREVIEW_DB_TLS_HOST }}
       HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
@@ -47,7 +47,7 @@ jobs:
             url.searchParams.set("sslrootcert", process.env.CA_FILE);
             process.stdout.write(url.href);
           ')
-          if [[ ! "$DB_NAME" =~ ^orvilo_pr_[0-9]+$ || ! "$APP_ROLE" =~ ^orvilo_pr_[0-9]+_app$ || ! "$MIGRATION_ROLE" =~ ^orvilo_pr_[0-9]+_migrate$ ]]; then
+          if [[ ! "$DB_NAME" =~ ^orvilo_pr_[0-9]+$ || ! "$APP_ROLE_PREFIX" =~ ^orvilo_pr_[0-9]+_app$ || ! "$MIGRATION_ROLE" =~ ^orvilo_pr_[0-9]+_migrate$ ]]; then
             echo "invalid Preview database or role identifier" >&2
             exit 1
           fi
@@ -63,15 +63,31 @@ jobs:
             echo "failed to drop database=$DB_NAME" >&2
             cleanup_failed=1
           fi
-          if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v app_role="$APP_ROLE" <<'SQL'
+          app_roles=$(psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v app_role_prefix="$APP_ROLE_PREFIX" -qAt <<'SQL'
+          SELECT rolname
+          FROM pg_catalog.pg_roles
+          WHERE rolname = :'app_role_prefix'
+             OR strpos(rolname, :'app_role_prefix' || '_') = 1
+          ORDER BY rolname;
+          SQL
+          )
+          while IFS= read -r app_role; do
+            [[ -z "$app_role" ]] && continue
+            if [[ ! "$app_role" =~ ^orvilo_pr_[0-9]+_app(_[0-9]+_[0-9]+)?$ ]]; then
+              echo "invalid Preview app role identifier returned by PostgreSQL" >&2
+              cleanup_failed=1
+              continue
+            fi
+            if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v app_role="$app_role" <<'SQL'
           SELECT format('DROP ROLE IF EXISTS %I', :'app_role') \gexec
           SQL
-          then
-            echo "dropped app role for database=$DB_NAME"
-          else
-            echo "failed to drop app role for database=$DB_NAME" >&2
-            cleanup_failed=1
-          fi
+            then
+              echo "dropped app role=$app_role"
+            else
+              echo "failed to drop app role=$app_role" >&2
+              cleanup_failed=1
+            fi
+          done <<< "$app_roles"
           if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v migration_role="$MIGRATION_ROLE" <<'SQL'
           SELECT format('DROP ROLE IF EXISTS %I', :'migration_role') \gexec
           SQL

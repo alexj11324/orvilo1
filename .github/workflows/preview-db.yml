@@ -35,7 +35,7 @@ jobs:
     timeout-minutes: 20
     env:
       DB_NAME: orvilo_pr_${{ github.event.pull_request.number }}
-      APP_ROLE: orvilo_pr_${{ github.event.pull_request.number }}_app
+      APP_ROLE: orvilo_pr_${{ github.event.pull_request.number }}_app_${{ github.run_id }}_${{ github.run_attempt }}
       MIGRATION_ROLE: orvilo_pr_${{ github.event.pull_request.number }}_migrate
       TEST_ROLE: orvilo_preview_ci
       DB_TLS_HOST: ${{ vars.PREVIEW_DB_TLS_HOST }}
@@ -115,7 +115,7 @@ jobs:
             process.stdout.write(url.href);
           ')
           export ADMIN_URL PUBLIC_ADMIN_URL
-          if [[ ! "$APP_ROLE" =~ ^orvilo_pr_[0-9]+_app$ ]]; then
+          if [[ ! "$APP_ROLE" =~ ^orvilo_pr_[0-9]+_app_[0-9]+_[0-9]+$ ]]; then
             echo "invalid Preview app role identifier" >&2
             exit 1
           fi
@@ -153,7 +153,7 @@ jobs:
           if (!/^orvilo_pr_[0-9]+$/.test(databaseName)) {
             throw new Error('invalid Preview database identifier');
           }
-          if (!/^orvilo_pr_[0-9]+_app$/.test(appRole)) {
+          if (!/^orvilo_pr_[0-9]+_app_[0-9]+_[0-9]+$/.test(appRole)) {
             throw new Error('invalid Preview app role identifier');
           }
           if (!/^orvilo_pr_[0-9]+_migrate$/.test(migrationRole)) {

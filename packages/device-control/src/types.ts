@@ -245,7 +245,7 @@ export interface PrepareSkillDirectoryResult {
 export interface SkillDirectoryDeps {
   /** Fetch used to download skill archives. Desktop injects Electron's `net` fetch (proxy-aware); defaults to global `fetch`. */
   fetchSkillArchive?: (url: string) => Promise<Response>;
-  /** Skill zip cache root. Desktop: `<appStoragePath>/file-storage/skills`; defaults to `~/.lobehub/skills`. */
+  /** Skill zip cache root. Desktop: `<appStoragePath>/file-storage/skills`; defaults to `~/.orvilo/skills`. */
   skillCacheRoot?: string;
 }
 

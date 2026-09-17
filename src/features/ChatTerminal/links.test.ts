@@ -14,10 +14,10 @@ beforeEach(() => {
 
 describe('openTerminalLink', () => {
   it('hands http(s) links to the system browser', () => {
-    openTerminalLink('https://lobehub.com/docs?a=1#x');
+    openTerminalLink('https://orvilo.aspectlylabs.com/docs?a=1#x');
 
     expect(electronSystemService.openExternalLink).toHaveBeenCalledWith(
-      'https://lobehub.com/docs?a=1#x',
+      'https://orvilo.aspectlylabs.com/docs?a=1#x',
     );
   });
 

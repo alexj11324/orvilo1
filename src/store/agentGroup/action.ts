@@ -241,7 +241,7 @@ class ChatGroupInternalAction implements ResetableStore {
               !currentAgentInStore ||
               new Date(agent.updatedAt) > new Date(currentAgentInStore.updatedAt || 0)
             ) {
-              // AgentGroupMember extends AgentItem which shares fields with LobeAgentConfig
+              // AgentGroupMember extends AgentItem which shares fields with OrviloAgentConfig
               agentStore.internal_dispatchAgentMap(agent.id, agent as any);
             }
           }

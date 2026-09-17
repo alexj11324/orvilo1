@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createInitialSystemStatus, INITIAL_STATUS } from './initialState';
 
-const STORAGE_KEY = 'LOBE_SYSTEM_STATUS';
+const STORAGE_KEY = 'ORVILO_SYSTEM_STATUS';
 
 const seed = (value: unknown) => localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
 

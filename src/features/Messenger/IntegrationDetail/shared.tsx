@@ -280,7 +280,7 @@ export const UserAgentConnection = memo<UserAgentConnectionProps>(
     const nameTooltip = extraLabel && !hasReadableHandle ? handle : undefined;
 
     // First-level "scope" selector — personal plus every workspace the user
-    // belongs to. The bot is a single shared bot; which LobeHub context a
+    // belongs to. The bot is a single shared bot; which Orvilo context a
     // conversation runs in is the active agent's scope, so picking a scope just
     // filters the agent list below. The active scope is persisted server-side
     // only when an agent is chosen (it derives the workspace from the agent).

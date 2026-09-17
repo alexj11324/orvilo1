@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { LobeToolManifest } from '../types';
+import type { OrviloToolManifest } from '../types';
 import { filterValidManifests, normalizeToolParameters, validateManifest } from '../utils';
 
 // Mock manifest schemas
-const mockBuiltinManifest: LobeToolManifest = {
+const mockBuiltinManifest: OrviloToolManifest = {
   api: [
     {
       description: 'Built-in tool',

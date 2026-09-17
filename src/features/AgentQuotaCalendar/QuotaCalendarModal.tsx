@@ -913,7 +913,7 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
     const cost =
       spend && (spend.cost > 0 || spend.hasUnpricedTurn) ? formatTrackedCost(spend, t, true) : '';
     const tokens = spend && spend.tokens > 0 ? formatTokens(spend.tokens) : '';
-    // No ledger row (usage burned outside LobeHub) but the meter still moved.
+    // No ledger row (usage burned outside Orvilo) but the meter still moved.
     const share = !tokens && burn > 0 ? `${Math.round(burn)}%` : '';
     const fallback = tokens || share;
     return cost ? { primary: cost, secondary: fallback } : { primary: fallback, secondary: '' };

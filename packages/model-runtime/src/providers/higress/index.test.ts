@@ -3,10 +3,10 @@ import { ModelProvider } from 'model-bank';
 import { describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeHigressAI, params } from './index';
+import { OrviloHigressAI, params } from './index';
 
 testProvider({
-  Runtime: LobeHigressAI,
+  Runtime: OrviloHigressAI,
   provider: ModelProvider.Higress,
   defaultBaseURL: 'https://api.openai.com/v1',
   chatDebugEnv: 'DEBUG_HIGRESS_CHAT_COMPLETION',
@@ -19,7 +19,7 @@ testProvider({
   },
 });
 
-describe('LobeHigressAI - params', () => {
+describe('OrviloHigressAI - params', () => {
   it('should have correct baseURL default', () => {
     expect(params.provider).toBe(ModelProvider.Higress);
   });

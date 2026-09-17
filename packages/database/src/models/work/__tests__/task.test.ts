@@ -52,7 +52,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-root',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       messageId: 'msg-tool',
       toolCallId: 'tool-call-create',
       taskId: task.id,
@@ -73,7 +73,7 @@ describe('WorkModel · task', () => {
       identifier: task.identifier,
       rootOperationId: 'op-root',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       messageId: 'msg-tool',
       toolCallId: 'tool-call-create',
       status: 'backlog',
@@ -91,7 +91,7 @@ describe('WorkModel · task', () => {
       status: 'backlog',
       title: 'Work MVP plan',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       visibility: 'public',
     });
 
@@ -136,7 +136,7 @@ describe('WorkModel · task', () => {
       taskId: task.id,
       threadId,
       toolCallId: 'tool-call-origin-1',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolName: 'createTask',
       topicId,
     });
@@ -153,7 +153,7 @@ describe('WorkModel · task', () => {
       rootOperationId: 'op-origin-update',
       taskId: task.id,
       toolCallId: 'tool-call-origin-2',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolName: 'editTask',
       topicId: otherTopicId,
     });
@@ -179,7 +179,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-provenance-first',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-provenance-first',
       taskId: task.id,
       threadId,
@@ -191,7 +191,7 @@ describe('WorkModel · task', () => {
       changeType: 'updated',
       rootOperationId: 'op-provenance-second',
       toolName: 'editTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-provenance-second',
       taskIdentifier: task.identifier,
       topicId: otherTopicId,
@@ -205,7 +205,7 @@ describe('WorkModel · task', () => {
       originTopicId: topicId,
       title: 'Latest title',
       toolName: 'editTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
     });
 
     const versions = await serverDB
@@ -233,7 +233,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-fill-display',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-fill-display',
       taskId: task.id,
       topicId,
@@ -272,7 +272,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-capped-content',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-capped-content',
       taskId: task.id,
       topicId,
@@ -298,7 +298,7 @@ describe('WorkModel · task', () => {
         taskId: task.id,
         toolCallId: 'tool-call-atomic-failure',
         toolName: 'createTask',
-        toolIdentifier: 'lobe-task',
+        toolIdentifier: 'orvilo-task',
       }),
     ).rejects.toThrow();
 
@@ -316,11 +316,11 @@ describe('WorkModel · task', () => {
       rootOperationId: 'op-creator-create',
       toolName: 'createTask',
       toolCallId: 'tool-call-creator-create',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       taskId: task.id,
       topicId,
     });
-    expect(created).toMatchObject({ toolIdentifier: 'lobe-task', toolName: 'createTask' });
+    expect(created).toMatchObject({ toolIdentifier: 'orvilo-task', toolName: 'createTask' });
 
     await taskModel.update(task.id, { name: 'Creator task edited' });
 
@@ -342,7 +342,7 @@ describe('WorkModel · task', () => {
     // value passed at that registration.
     const versions = await workModel.listVersions(created!.id);
     const byToolCall = new Map(versions.map((v) => [v.toolCallId, v.toolIdentifier]));
-    expect(byToolCall.get('tool-call-creator-create')).toBe('lobe-task');
+    expect(byToolCall.get('tool-call-creator-create')).toBe('orvilo-task');
     expect(byToolCall.get('tool-call-creator-edit')).toBe('some-other-tool');
   });
 
@@ -371,7 +371,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-cumulative',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-first',
       taskId: firstTask.id,
       topicId,
@@ -380,7 +380,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-cumulative',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-second',
       taskId: secondTask.id,
       topicId,
@@ -425,7 +425,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-insert-cost',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-insert-cost',
       taskId: task.id,
       topicId,
@@ -456,7 +456,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-create',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-create',
       taskId: task.id,
       topicId,
@@ -471,7 +471,7 @@ describe('WorkModel · task', () => {
       changeType: 'updated',
       rootOperationId: 'op-edit',
       toolName: 'editTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       messageId: 'msg-tool-edit',
       toolCallId: 'tool-call-edit',
       taskIdentifier: task.identifier,
@@ -521,7 +521,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-summary-create',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-summary-create',
       taskId: task.id,
       topicId,
@@ -538,7 +538,7 @@ describe('WorkModel · task', () => {
       changeType: 'updated',
       rootOperationId: 'op-summary-edit',
       toolName: 'editTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-summary-edit',
       taskIdentifier: task.identifier,
       topicId,
@@ -576,7 +576,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-instruction-preview',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-instruction-preview',
       taskId: task.id,
       threadId,
@@ -612,7 +612,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-cost-same',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-cost-create',
       taskId: task.id,
       topicId,
@@ -622,7 +622,7 @@ describe('WorkModel · task', () => {
       changeType: 'updated',
       rootOperationId: 'op-cost-same',
       toolName: 'editTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-cost-edit',
       taskId: task.id,
       topicId,
@@ -632,7 +632,7 @@ describe('WorkModel · task', () => {
       changeType: 'updated',
       rootOperationId: 'op-cost-other',
       toolName: 'editTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-cost-other',
       taskId: task.id,
       topicId,
@@ -653,7 +653,7 @@ describe('WorkModel · task', () => {
     const work = await otherWorkModel.registerTask({
       changeType: 'created',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-other-user',
       taskIdentifier: task.identifier,
       topicId,
@@ -679,7 +679,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-other-summary',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-other-summary',
       taskId: otherTask.id,
       topicId: otherTopicId,
@@ -699,7 +699,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-delete-task',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-delete-task',
       taskId: task.id,
       threadId,
@@ -732,7 +732,7 @@ describe('WorkModel · task', () => {
       changeType: 'created',
       rootOperationId: 'op-orphan-task',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-orphan-task',
       taskId: task.id,
       threadId,
@@ -774,14 +774,14 @@ describe('WorkModel · task', () => {
     const work = await workModel.registerTask({
       changeType: 'created',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-owner-clear',
       taskId: task.id,
     });
     const otherWork = await otherWorkModel.registerTask({
       changeType: 'created',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-other-clear',
       taskId: otherTask.id,
     });
@@ -811,7 +811,7 @@ describe('WorkModel · task', () => {
     const work = await workModel.registerTask({
       changeType: 'created',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-topic-delete',
       taskId: task.id,
       topicId,
@@ -860,7 +860,7 @@ describe('WorkModel · workspace task visibility', () => {
       rootOperationId: 'op-private-visibility',
       toolCallId: 'tool-call-private-visibility',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       taskId: task.id,
       topicId,
     });
@@ -895,7 +895,7 @@ describe('WorkModel · workspace task visibility', () => {
       rootOperationId: 'op-public-visibility',
       toolCallId: 'tool-call-public-visibility',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       taskId: task.id,
       topicId,
     });
@@ -936,7 +936,7 @@ describe('WorkModel · workspace task visibility', () => {
         changeType: 'updated',
         toolCallId: 'tool-call-member-private',
         toolName: 'updateTask',
-        toolIdentifier: 'lobe-task',
+        toolIdentifier: 'orvilo-task',
         taskId: privateTask.id,
         topicId,
       }),
@@ -946,7 +946,7 @@ describe('WorkModel · workspace task visibility', () => {
       changeType: 'updated',
       toolCallId: 'tool-call-member-public',
       toolName: 'updateTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       taskId: publicTask.id,
       topicId,
     });
@@ -972,7 +972,7 @@ describe('WorkModel · workspace task visibility', () => {
       rootOperationId: 'op-orphan-visibility',
       toolCallId: 'tool-call-orphan-visibility',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       taskId: task.id,
       topicId,
     });

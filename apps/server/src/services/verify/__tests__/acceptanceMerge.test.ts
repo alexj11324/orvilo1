@@ -7,7 +7,7 @@ import type {
   VerifyCheckResultItem,
   VerifyRunItem,
 } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import {
   collectCheckIds,
@@ -92,7 +92,7 @@ const fakeDb = {
         from: () => ({ where: async () => [{ value: leftBehindRounds }] }),
       }),
     }),
-} as unknown as LobeChatDatabase;
+} as unknown as OrviloDatabase;
 
 const mergeWith = (source: AcceptanceItem, target: AcceptanceItem) =>
   mergeAcceptanceRounds({ db: fakeDb, source, target, userId: 'user-1' });

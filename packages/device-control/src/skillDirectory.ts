@@ -12,12 +12,12 @@ import type {
 } from './types';
 
 /**
- * Portable default cache root, following the CLI's `~/.lobehub` convention
+ * Portable default cache root, following the CLI's `~/.orvilo` convention
  * (see `apps/cli/src/settings`). The desktop injects its
  * `<appStoragePath>/file-storage/skills` dir instead so the gateway RPC path
  * shares one cache with the renderer-IPC path (`LocalFileCtr`).
  */
-export const defaultSkillCacheRoot = () => path.join(os.homedir(), '.lobehub', 'skills');
+export const defaultSkillCacheRoot = () => path.join(os.homedir(), '.orvilo', 'skills');
 
 /**
  * In-flight preparations keyed by extraction dir. Concurrent same-hash calls

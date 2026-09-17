@@ -34,7 +34,7 @@ export const InstallPluginInspector = memo<BuiltinInspectorProps<InstallPluginPa
       return (
         <div className={styles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-agent-management.apiName.installPlugin')}
+            {t('builtins.orvilo-agent-management.apiName.installPlugin')}
           </span>
         </div>
       );
@@ -43,7 +43,7 @@ export const InstallPluginInspector = memo<BuiltinInspectorProps<InstallPluginPa
     return (
       <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-agent-management.inspector.installPlugin.title')}
+          {t('builtins.orvilo-agent-management.inspector.installPlugin.title')}
         </span>
         {identifier && <span className={highlightTextStyles.primary}>{identifier}</span>}
       </Flexbox>

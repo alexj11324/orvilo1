@@ -35,7 +35,7 @@ import {
   userPersonaDocumentHistories,
   userPersonaDocuments,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { notShareVisitorTopic, notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { AgentService } from '@/server/services/agent';
@@ -50,8 +50,8 @@ const STRUCTURED_FIELD_LABELS: Record<SaveUserQuestionField, string> = {
   interests: 'interests',
 };
 
-const AGENT_MANAGEMENT_IDENTIFIER = 'lobe-agent-management';
-const GROUP_AGENT_BUILDER_IDENTIFIER = 'lobe-group-agent-builder';
+const AGENT_MANAGEMENT_IDENTIFIER = 'orvilo-agent-management';
+const GROUP_AGENT_BUILDER_IDENTIFIER = 'orvilo-group-agent-builder';
 const AGENT_ONBOARDING_VERSION = 1;
 
 const defaultAgentOnboardingState = (): UserAgentOnboarding => ({
@@ -133,7 +133,7 @@ export class OnboardingService {
   private readonly userModel: UserModel;
 
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     userId: string,
   ) {
     this.userId = userId;
@@ -609,7 +609,7 @@ export class OnboardingService {
         sql`SELECT pg_advisory_xact_lock(hashtext(${this.userId + ':' + input.agentId})::bigint)`,
       );
 
-      const trxDb = trx as unknown as LobeChatDatabase;
+      const trxDb = trx as unknown as OrviloDatabase;
       const trxTopicModel = new TopicModel(trxDb, this.userId);
       const trxUserModel = new UserModel(trxDb, this.userId);
 

@@ -18,7 +18,7 @@ const {
   mockMutate,
   mockSetRefreshSeed,
   mockUseFetchBriefs,
-  mockUseFetchLobehubConnectorConnections,
+  mockUseFetchOrviloConnectorConnections,
   mockUseFetchUserComposioConnections,
   mockUseResolvedInterestKeys,
   mockUseSWR,
@@ -26,7 +26,7 @@ const {
   mockMutate: vi.fn(),
   mockSetRefreshSeed: vi.fn(),
   mockUseFetchBriefs: vi.fn(),
-  mockUseFetchLobehubConnectorConnections: vi.fn(),
+  mockUseFetchOrviloConnectorConnections: vi.fn(),
   mockUseFetchUserComposioConnections: vi.fn(),
   mockUseResolvedInterestKeys: vi.fn(),
   mockUseSWR: vi.fn(),
@@ -72,7 +72,7 @@ vi.mock('@/store/brief', () => ({
 vi.mock('@/store/tool', () => ({
   useToolStore: (selector: (state: any) => unknown) =>
     selector({
-      useFetchLobehubSkillConnections: mockUseFetchLobehubConnectorConnections,
+      useFetchOrviloSkillConnections: mockUseFetchOrviloConnectorConnections,
       useFetchUserComposioConnections: mockUseFetchUserComposioConnections,
     }),
 }));
@@ -320,7 +320,7 @@ describe('useDailyBriefRecommendationsUI', () => {
 
     expect(result.current).toEqual({ mode: 'hidden' });
     expect(mockUseFetchUserComposioConnections).toHaveBeenCalledWith(false);
-    expect(mockUseFetchLobehubConnectorConnections).toHaveBeenCalledWith(false);
+    expect(mockUseFetchOrviloConnectorConnections).toHaveBeenCalledWith(false);
   });
 
   it('drops recommendations with malformed connector entries', () => {
@@ -339,13 +339,13 @@ describe('useDailyBriefRecommendationsUI', () => {
 
     expect(result.current).toEqual({ mode: 'hidden' });
     expect(mockUseFetchUserComposioConnections).toHaveBeenCalledWith(false);
-    expect(mockUseFetchLobehubConnectorConnections).toHaveBeenCalledWith(false);
+    expect(mockUseFetchOrviloConnectorConnections).toHaveBeenCalledWith(false);
   });
 
   it('drops recommendations with unknown connector identifiers', () => {
     const templateWithUnknownConnector = {
       ...template,
-      connectors: [{ identifier: 'nonexistent-x', required: true, source: 'lobehub' }],
+      connectors: [{ identifier: 'nonexistent-x', required: true, source: 'orvilo' }],
     };
     mockUseSWR.mockReturnValue({
       data: { data: [templateWithUnknownConnector], success: true },
@@ -358,7 +358,7 @@ describe('useDailyBriefRecommendationsUI', () => {
 
     expect(result.current).toEqual({ mode: 'hidden' });
     expect(mockUseFetchUserComposioConnections).toHaveBeenCalledWith(false);
-    expect(mockUseFetchLobehubConnectorConnections).toHaveBeenCalledWith(false);
+    expect(mockUseFetchOrviloConnectorConnections).toHaveBeenCalledWith(false);
   });
 
   it('treats non-array recommendation payloads as empty data', () => {
@@ -373,7 +373,7 @@ describe('useDailyBriefRecommendationsUI', () => {
 
     expect(result.current).toEqual({ mode: 'hidden' });
     expect(mockUseFetchUserComposioConnections).toHaveBeenCalledWith(false);
-    expect(mockUseFetchLobehubConnectorConnections).toHaveBeenCalledWith(false);
+    expect(mockUseFetchOrviloConnectorConnections).toHaveBeenCalledWith(false);
   });
 
   it('normalizes cached rows before removing a card', () => {
@@ -412,7 +412,7 @@ describe('useDailyBriefRecommendationsUI', () => {
       cronPattern: '0 9 * * *',
       id: 'oss-intel-daily',
       interests: ['coding'],
-      requiresSkills: [{ provider: 'github', source: 'lobehub' }],
+      requiresSkills: [{ provider: 'github', source: 'orvilo' }],
     };
     mockUseSWR.mockReturnValue({
       data: { data: [legacyServerTemplate], success: true },
@@ -425,7 +425,7 @@ describe('useDailyBriefRecommendationsUI', () => {
 
     expect(result.current).toEqual({ mode: 'hidden' });
     expect(mockUseFetchUserComposioConnections).toHaveBeenCalledWith(false);
-    expect(mockUseFetchLobehubConnectorConnections).toHaveBeenCalledWith(false);
+    expect(mockUseFetchOrviloConnectorConnections).toHaveBeenCalledWith(false);
   });
 
   it('logs recommendation request errors instead of treating them as normal empty data', async () => {

@@ -184,7 +184,7 @@
   "verify.confirm.defaultAgent": "默认 Agent",
   "verify.confirm.defaultAgentHint": "你的消息将首先路由到这里。你可以随时在机器人中通过 /agents 或在「设置 → Messenger」中切换。",
   "verify.confirm.defaultAgentPlaceholder": "请选择 Agent",
-  "verify.confirm.fields.lobeHubAccount": "Orvilo 账号",
+  "verify.confirm.fields.orviloHubAccount": "Orvilo 账号",
   "verify.confirm.fields.platformAccount": "{{platform}} 账号",
   "verify.confirm.fields.workspace": "工作区",
   "verify.confirm.noAgents": "你还没有 Agent。请先在 Orvilo 中创建一个，再回来完成绑定。",
@@ -203,7 +203,7 @@
   "verify.error.unlinkBeforeRelink": "此 Orvilo 账户已链接到当前平台上的另一个账户。请先在 设置 → Messenger 中断开后再链接新账户。",
   "verify.signInCta": "登录以继续",
   "verify.signInRequired": "请登录 Orvilo 以确认绑定。",
-  "verify.success.backToLobeHub": "回到 Orvilo",
+  "verify.success.backToOrvilo": "回到 Orvilo",
   "verify.success.description": "你的账号已连接到 {{platform}}。打开 {{platform}} 并发送你的第一条消息。",
   "verify.success.openBot": "在 {{platform}} 中打开",
   "verify.success.title": "绑定成功！"

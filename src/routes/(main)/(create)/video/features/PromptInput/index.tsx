@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import VideoFreeQuotaInfo from '@/business/client/features/VideoFreeQuotaInfo';
 import { loginRequired } from '@/components/Error/loginRequiredNotification';
-import { ModelIcon } from '@/components/LobeIcons';
+import { ModelIcon } from '@/components/OrviloIcons';
 import Action from '@/features/ChatInput/ActionBar/components/Action';
 import ModelSwitchPanel from '@/features/ModelSwitchPanel';
 import PromptTransformAction from '@/features/PromptTransform/PromptTransformAction';
@@ -383,7 +383,7 @@ const PromptInput = ({ showTitle = false }: PromptInputProps) => {
     if (promptParam && !hasProcessedPrompt.current && isLogin && canCreate) {
       // Bail WITHOUT consuming the param while the model deep-link is still settling
       // or the provider runtime config isn't ready — otherwise a valid deep link
-      // permanently skips auto-generate (see lobehub/lobehub#17400):
+      // permanently skips auto-generate (see alexj11324/orvilo1#17400):
       // 1. `?model=` still present: the model effect hasn't applied it yet, so
       //    `isModelUnavailable` in this closure is stale (from the pre-model render).
       //    Consuming now would set `hasProcessedPrompt` / clear the param before the
@@ -407,7 +407,7 @@ const PromptInput = ({ showTitle = false }: PromptInputProps) => {
 
       // Config is ready and the selected model is genuinely unavailable — this path
       // bypasses the generate button, so without the guard it would fire a request
-      // against a disabled provider (see lobehub/lobehub#17400).
+      // against a disabled provider (see alexj11324/orvilo1#17400).
       if (isModelUnavailable) return;
 
       const timeoutId = window.setTimeout(async () => {

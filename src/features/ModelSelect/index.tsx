@@ -5,8 +5,8 @@ import { type ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelIcon } from '@/components/LobeIcons';
 import { ModelItemRender, ProviderItemRender, TAG_CLASSNAME } from '@/components/ModelSelect';
+import { ModelIcon } from '@/components/OrviloIcons';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
 
@@ -19,7 +19,7 @@ const prefixCls = 'ant';
  * status is conveyed by the enable toggle (notEnabled) or the remedy row
  * (redirected), while the closed trigger keeps showing the Tag.
  */
-const STALE_TAG_CLASSNAME = 'lobe-model-select-stale-tag';
+const STALE_TAG_CLASSNAME = 'orvilo-model-select-stale-tag';
 
 /**
  * Marks the stale-model option row so the popup can hide the Select's built-in
@@ -27,17 +27,17 @@ const STALE_TAG_CLASSNAME = 'lobe-model-select-stale-tag';
  * group and (for notEnabled) renders an enable Switch, so the extra check reads
  * as contradictory and steals the row's right edge.
  */
-const STALE_OPTION_CLASSNAME = 'lobe-model-select-stale-option';
+const STALE_OPTION_CLASSNAME = 'orvilo-model-select-stale-option';
 
 /** Stable hook on every option's ItemIndicator so CSS can target it. */
-const ITEM_INDICATOR_CLASSNAME = 'lobe-model-select-item-indicator';
+const ITEM_INDICATOR_CLASSNAME = 'orvilo-model-select-item-indicator';
 
 /**
  * Sentinel option value for the redirected-model remedy row ("update to
  * successor"). Intercepted in onChange so selecting it triggers the remedy
  * instead of a value change.
  */
-const STALE_ACTION_VALUE = '__lobe_model_select_stale_action__';
+const STALE_ACTION_VALUE = '__orvilo_model_select_stale_action__';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   popup: css`

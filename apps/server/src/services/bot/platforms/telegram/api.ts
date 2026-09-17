@@ -711,7 +711,7 @@ export class TelegramApi {
         parse_mode: useHtml ? 'HTML' : undefined,
       },
       reply_markup: extra?.replyMarkup,
-      title: extra?.title ?? 'LobeHub',
+      title: extra?.title ?? 'Orvilo',
       type: 'article',
     });
 

@@ -23,7 +23,7 @@ set -euo pipefail
 
 BB_PASS="${1:?Usage: $0 <bb_password> <target_e164(+countrycode)> [message] [bb_url]}"
 TARGET="${2:?Need a target handle in E.164, e.g. +15551234567 (or an Apple ID email)}"
-MARKER="lobe-imsg-test-$(date +%s)"
+MARKER="orvilo-imsg-test-$(date +%s)"
 MESSAGE="${3:-[${MARKER}] desktop bridge → BlueBubbles → iMessage outbound check}"
 BB_URL="${4:-http://127.0.0.1:1234}"
 

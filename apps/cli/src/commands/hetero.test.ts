@@ -456,7 +456,7 @@ describe('hetero exec command', () => {
       '--model',
       'gpt-5.4',
       '--agent-arg=--tag',
-      '--agent-arg=lobe',
+      '--agent-arg=orvilo',
     ]);
 
     expect(mockResolveHeteroSpawnCommand).toHaveBeenCalledWith('droid', undefined);
@@ -465,7 +465,7 @@ describe('hetero exec command', () => {
         agentType: 'droid',
         askUserBridge: undefined,
         command: 'droid',
-        extraArgs: ['--tag', 'lobe'],
+        extraArgs: ['--tag', 'orvilo'],
         initialModel: 'gpt-5.4',
         prompt: 'do thing',
       }),

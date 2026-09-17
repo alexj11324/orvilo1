@@ -199,7 +199,7 @@ describe('GET /webapi/models/[provider]/pricing', () => {
 
     mockSsrfSafeFetch.mockRejectedValue(
       new Error(
-        'SSRF blocked: http://192.168.1.1 is not allowed. See: https://lobehub.com/docs/self-hosting/environment-variables/basic#ssrf-allow-private-ip-address',
+        'SSRF blocked: http://192.168.1.1 is not allowed. See: https://orvilo.aspectlylabs.com/docs/self-hosting/environment-variables/basic#ssrf-allow-private-ip-address',
       ),
     );
 

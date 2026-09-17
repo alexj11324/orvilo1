@@ -7,7 +7,7 @@ import { deliverWebhook } from '@/server/services/agentRuntime/hooks/HookDispatc
 import { AiAgentService } from '@/server/services/aiAgent';
 import { isQueueAgentRuntimeEnabled } from '@/server/services/queue/impls';
 
-const log = debug('lobe-server:agent:finalize-abandoned');
+const log = debug('orvilo-server:agent:finalize-abandoned');
 
 /**
  * Reverse-trigger finalization for an operation whose Vercel function was

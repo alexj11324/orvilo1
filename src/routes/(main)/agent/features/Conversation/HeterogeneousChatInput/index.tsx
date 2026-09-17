@@ -29,7 +29,7 @@ import HeteroPlus from './HeteroPlus';
 import ScheduledSendChip from './ScheduledSendChip';
 
 // Heterogeneous agents (e.g. Claude Code) bring their own toolchain and memory,
-// so most LobeHub-side pickers don't apply — no built-in left action fits, and
+// so most Orvilo-side pickers don't apply — no built-in left action fits, and
 // the bar is composed entirely from `extraActionItems`: a hetero-only `+` menu
 // (formatting toolbar + "Send later") in the input's bottom-left corner.
 // Model + thinking effort are Engine config on the agent now, so the composer

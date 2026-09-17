@@ -4,7 +4,7 @@ describe('MCP submission classifier', () => {
   it('does not classify publishing skill feedback as a new submission', () => {
     const classification = classify(
       '[MCP Submission] Feedback about the publishing skill',
-      `I am trying to publish my MCP server with the publishing skill from https://lobehub.com/publish-mcp/skill.md.
+      `I am trying to publish my MCP server with the publishing skill from https://orvilo.aspectlylabs.com/publish-mcp/skill.md.
 
 - Repo: https://github.com/example/local-mcp-server
 - Install: npx local-mcp-server

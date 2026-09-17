@@ -29,7 +29,7 @@ export const ImportSkillInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-skill-store.apiName.importSkill')}
+          {t('builtins.orvilo-skill-store.apiName.importSkill')}
         </span>
       </div>
     );
@@ -41,7 +41,7 @@ export const ImportSkillInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-skill-store.apiName.importSkill')}:{' '}
+        {t('builtins.orvilo-skill-store.apiName.importSkill')}:{' '}
       </span>
       {displayName && <span className={highlightTextStyles.primary}>{displayName}</span>}
       {!isLoading &&

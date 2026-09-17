@@ -43,7 +43,7 @@ const ActivateDevice = memo<BuiltinRenderProps<ActivateDeviceParams, ActivateDev
         <div className={styles.failure}>
           <Icon icon={AlertTriangleIcon} size={14} />
           <span>
-            {t('builtins.lobe-remote-device.render.activationFailed')}: {content}
+            {t('builtins.orvilo-remote-device.render.activationFailed')}: {content}
           </span>
         </div>
       );

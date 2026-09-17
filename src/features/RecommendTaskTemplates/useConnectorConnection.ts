@@ -2,13 +2,13 @@ import type { TaskTemplateConnectorReference } from '@orvilo/const';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { LOBEHUB_SKILL_AUTH_SUCCESS_MESSAGE } from '@/const/skillConnection';
+import { ORVILO_SKILL_AUTH_SUCCESS_MESSAGE } from '@/const/skillConnection';
 import { useMarketAuth } from '@/layout/AuthProvider/MarketAuth';
 import { useToolStore } from '@/store/tool';
 import { composioStoreSelectors } from '@/store/tool/slices/composioStore/selectors';
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore/types';
-import { lobehubSkillStoreSelectors } from '@/store/tool/slices/lobehubSkillStore/selectors';
-import { LobehubSkillStatus } from '@/store/tool/slices/lobehubSkillStore/types';
+import { orviloSkillStoreSelectors } from '@/store/tool/slices/orviloSkillStore/selectors';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 import { useUserStore } from '@/store/user';
 
 import type { ConnectorProviderMeta } from './providerMeta';
@@ -34,10 +34,10 @@ export class ConnectorConnectionPopupBlockedError extends Error {
   }
 }
 
-/** Thrown when connecting a LobeHub connector first needs Market auth. */
+/** Thrown when connecting a Orvilo connector first needs Market auth. */
 export class ConnectorConnectionMarketAuthRequiredError extends Error {
   constructor() {
-    super('Market auth required before connecting LobeHub connector');
+    super('Market auth required before connecting Orvilo connector');
     this.name = 'ConnectorConnectionMarketAuthRequiredError';
   }
 }
@@ -69,29 +69,29 @@ export interface UseConnectorConnectionResult {
  * (e.g. hiding already-connected providers from the inline auth list).
  */
 export const useIsConnectorConnected = () => {
-  const lobehubServers = useToolStore(lobehubSkillStoreSelectors.getServers);
+  const orviloServers = useToolStore(orviloSkillStoreSelectors.getServers);
   const composioServers = useToolStore(composioStoreSelectors.getServers);
 
   return useCallback(
     (spec: TaskTemplateConnectorReference): boolean => {
-      if (spec.source === 'lobehub') {
-        return lobehubServers.some(
-          (s) => s.identifier === spec.identifier && s.status === LobehubSkillStatus.CONNECTED,
+      if (spec.source === 'orvilo') {
+        return orviloServers.some(
+          (s) => s.identifier === spec.identifier && s.status === OrviloSkillStatus.CONNECTED,
         );
       }
       return composioServers.some(
         (s) => s.identifier === spec.identifier && s.status === ComposioServerStatus.ACTIVE,
       );
     },
-    [lobehubServers, composioServers],
+    [orviloServers, composioServers],
   );
 };
 
 export const useConnectorConnection = (
   specs: TaskTemplateConnectorReference[] | undefined,
 ): UseConnectorConnectionResult => {
-  const getLobehubAuth = useToolStore((s) => s.getLobehubSkillAuthorizeUrl);
-  const checkLobehubStatus = useToolStore((s) => s.checkLobehubSkillStatus);
+  const getOrviloAuth = useToolStore((s) => s.getOrviloSkillAuthorizeUrl);
+  const checkOrviloStatus = useToolStore((s) => s.checkOrviloSkillStatus);
   const createComposioConnection = useToolStore((s) => s.createComposioConnection);
   const refreshComposioConnectionStatus = useToolStore((s) => s.refreshComposioConnectionStatus);
   const { isAuthenticated: isMarketAuthenticated, signIn: signInMarket } = useMarketAuth();
@@ -151,8 +151,8 @@ export const useConnectorConnection = (
 
       pollIntervalRef.current = setInterval(async () => {
         try {
-          if (target.source === 'lobehub') {
-            await checkLobehubStatus(target.identifier);
+          if (target.source === 'orvilo') {
+            await checkOrviloStatus(target.identifier);
           } else {
             await refreshComposioConnectionStatus(target.identifier);
           }
@@ -169,7 +169,7 @@ export const useConnectorConnection = (
         setIsWaitingAuth(false);
       }, POLL_TIMEOUT_MS);
     },
-    [checkLobehubStatus, refreshComposioConnectionStatus],
+    [checkOrviloStatus, refreshComposioConnectionStatus],
   );
 
   const startWindowMonitor = useCallback(
@@ -194,8 +194,8 @@ export const useConnectorConnection = (
           // can advance to the next provider immediately, instead of waiting up
           // to 15s for fallback polling to release isWaitingAuth.
           try {
-            if (target.source === 'lobehub') {
-              await checkLobehubStatus(target.identifier);
+            if (target.source === 'orvilo') {
+              await checkOrviloStatus(target.identifier);
             } else {
               await refreshComposioConnectionStatus(target.identifier);
             }
@@ -223,7 +223,7 @@ export const useConnectorConnection = (
         setIsWaitingAuth(false);
       }, OAUTH_OVERALL_TIMEOUT_MS);
     },
-    [checkLobehubStatus, refreshComposioConnectionStatus, startFallbackPolling],
+    [checkOrviloStatus, refreshComposioConnectionStatus, startFallbackPolling],
   );
 
   const openOAuthWindow = useCallback(
@@ -244,21 +244,21 @@ export const useConnectorConnection = (
     [cleanup, startWindowMonitor],
   );
 
-  // Only LobeHub connector OAuth signals completion via postMessage; Composio relies on polling.
+  // Only Orvilo connector OAuth signals completion via postMessage; Composio relies on polling.
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       // Reject same-origin iframes / other tabs forging the success event.
       if (event.source !== oauthWindowRef.current) return;
-      if (event.data?.type !== LOBEHUB_SKILL_AUTH_SUCCESS_MESSAGE) return;
+      if (event.data?.type !== ORVILO_SKILL_AUTH_SUCCESS_MESSAGE) return;
       const provider = event.data?.provider;
       if (!provider) return;
       cleanup();
-      void checkLobehubStatus(provider);
+      void checkOrviloStatus(provider);
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [checkLobehubStatus, cleanup]);
+  }, [checkOrviloStatus, cleanup]);
 
   const connect = useCallback(async () => {
     if (isConnectingRef.current || isWaitingAuth) return;
@@ -268,7 +268,7 @@ export const useConnectorConnection = (
     isConnectingRef.current = true;
     setIsConnecting(true);
     try {
-      if (next.source === 'lobehub') {
+      if (next.source === 'orvilo') {
         if (!isMarketAuthenticated) {
           try {
             await signInMarket('connector');
@@ -281,7 +281,7 @@ export const useConnectorConnection = (
         const redirectUri = window.location.protocol.startsWith('http')
           ? `${window.location.origin}/oauth/callback/success?provider=${encodeURIComponent(next.identifier)}`
           : undefined;
-        const { authorizeUrl } = await getLobehubAuth(next.identifier, { redirectUri });
+        const { authorizeUrl } = await getOrviloAuth(next.identifier, { redirectUri });
         openOAuthWindow(authorizeUrl, next);
         return;
       }
@@ -305,7 +305,7 @@ export const useConnectorConnection = (
       }
     } catch (error) {
       if (error instanceof ConnectorConnectionMarketAuthRequiredError) throw error;
-      if (next.source === 'lobehub' && isMarketUnauthorizedError(error)) {
+      if (next.source === 'orvilo' && isMarketUnauthorizedError(error)) {
         throw new ConnectorConnectionMarketAuthRequiredError();
       }
       console.error('[useConnectorConnection] Failed to connect:', error);
@@ -319,7 +319,7 @@ export const useConnectorConnection = (
     isWaitingAuth,
     isMarketAuthenticated,
     signInMarket,
-    getLobehubAuth,
+    getOrviloAuth,
     createComposioConnection,
     refreshComposioConnectionStatus,
     openOAuthWindow,

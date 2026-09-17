@@ -1463,7 +1463,7 @@ describe('parse', () => {
               apiName: 'search',
               arguments: '{}',
               id: 'tool-call-2',
-              identifier: 'lobe-web-browsing',
+              identifier: 'orvilo-web-browsing',
               type: 'builtin',
             },
           ],

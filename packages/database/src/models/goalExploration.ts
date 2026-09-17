@@ -13,7 +13,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { goals } from '../schemas/goal';
 import { goalEvents } from '../schemas/goalGraph';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { GoalGraphModel } from './goalGraph';
 
@@ -42,12 +42,12 @@ export const goalExplorationSnapshot = (graph: GoalGraphSnapshot): string => {
 /** Lease the model call, then commit its graph patch atomically after checking its input. */
 export class GoalExplorationModel {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}
 
-  private async lock(tx: LobeChatDatabase, goalId: string) {
+  private async lock(tx: OrviloDatabase, goalId: string) {
     const [goal] = await tx
       .select()
       .from(goals)
@@ -61,14 +61,14 @@ export class GoalExplorationModel {
     return goal;
   }
 
-  private graph(tx: LobeChatDatabase) {
+  private graph(tx: OrviloDatabase) {
     return new GoalGraphModel(tx, this.userId, this.workspaceId, {
       id: GOAL_COORDINATOR_ACTOR_ID,
       type: 'system',
     });
   }
 
-  private async recordDecision(tx: LobeChatDatabase, goalId: string, reason: string) {
+  private async recordDecision(tx: OrviloDatabase, goalId: string, reason: string) {
     await tx.insert(goalEvents).values({
       actorId: GOAL_COORDINATOR_ACTOR_ID,
       actorType: 'system',
@@ -82,7 +82,7 @@ export class GoalExplorationModel {
 
   async claim(goalId: string, expectedSnapshot: string) {
     return this.db.transaction(async (transaction) => {
-      const tx = transaction as unknown as LobeChatDatabase;
+      const tx = transaction as unknown as OrviloDatabase;
       const goal = await this.lock(tx, goalId);
       if (!goal || goal.status !== 'running' || !goal.config?.exploration) return;
       const previous = goal.config.exploration.checkpoint;
@@ -107,7 +107,7 @@ export class GoalExplorationModel {
 
   async apply(goalId: string, token: string, decision: GoalExplorationDecision) {
     return this.db.transaction(async (transaction) => {
-      const tx = transaction as unknown as LobeChatDatabase;
+      const tx = transaction as unknown as OrviloDatabase;
       const goal = await this.lock(tx, goalId);
       const policy = goal?.config?.exploration;
       const checkpoint = policy?.checkpoint;
@@ -291,7 +291,7 @@ export class GoalExplorationModel {
   /** Only the owner of this still-current lease may park a failed planner. */
   async fail(goalId: string, token: string, reason: string) {
     return this.db.transaction(async (transaction) => {
-      const tx = transaction as unknown as LobeChatDatabase;
+      const tx = transaction as unknown as OrviloDatabase;
       const goal = await this.lock(tx, goalId);
       if (
         !goal ||

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createEnableChecker } from '../enableCheckerFactory';
-import type { LobeToolManifest } from '../types';
+import type { OrviloToolManifest } from '../types';
 
 const makeParams = (pluginId: string, overrides: Record<string, any> = {}) => ({
   manifest: {
@@ -9,7 +9,7 @@ const makeParams = (pluginId: string, overrides: Record<string, any> = {}) => ({
     identifier: pluginId,
     meta: {},
     type: 'builtin' as const,
-  } as LobeToolManifest,
+  } as OrviloToolManifest,
   model: 'gpt-4',
   pluginId,
   provider: 'openai',
@@ -129,7 +129,7 @@ describe('createEnableChecker', () => {
         identifier: 'test-tool',
         meta: {},
         type: 'builtin' as const,
-      } as LobeToolManifest;
+      } as OrviloToolManifest;
 
       checker({
         context: { environment: 'desktop' },
@@ -163,9 +163,9 @@ describe('createEnableChecker', () => {
       // BUG: Tools NOT in rules currently default to true,
       // but should default to false to prevent unintended tool activation
       // This is the regression test for the "all 7 builtin tools enabled" bug
-      expect(checker(makeParams('lobe-activator'))).toBe(false);
-      expect(checker(makeParams('lobe-skills'))).toBe(false);
-      expect(checker(makeParams('lobe-skill-store'))).toBe(false);
+      expect(checker(makeParams('orvilo-activator'))).toBe(false);
+      expect(checker(makeParams('orvilo-skills'))).toBe(false);
+      expect(checker(makeParams('orvilo-skill-store'))).toBe(false);
     });
   });
 
@@ -193,9 +193,9 @@ describe('createEnableChecker', () => {
       expect(checker(makeParams('memory'))).toBe(false);
 
       // Default tools NOT in rules: should be disabled
-      expect(checker(makeParams('lobe-activator'))).toBe(false);
-      expect(checker(makeParams('lobe-skills'))).toBe(false);
-      expect(checker(makeParams('lobe-skill-store'))).toBe(false);
+      expect(checker(makeParams('orvilo-activator'))).toBe(false);
+      expect(checker(makeParams('orvilo-skills'))).toBe(false);
+      expect(checker(makeParams('orvilo-skill-store'))).toBe(false);
     });
   });
 

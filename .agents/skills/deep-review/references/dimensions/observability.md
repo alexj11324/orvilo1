@@ -22,7 +22,7 @@ The bar for 2 and 3 is deliberately narrow — most changes need neither. See th
 - Hacky or surprising code without a comment stating the constraint that forces it (and a reference link when the workaround comes from an upstream issue/SO answer)
 - `catch` blocks that swallow errors: no log, no rethrow, no user feedback — silent failure is the most expensive kind
 - Key paths (payment-like flows, data migration, auth transitions, cross-system calls) with no log line at decision points — success paths matter too, not just errors
-- New logging uses the `debug` package with a proper `lobe-*` namespace, not stray `console.*`
+- New logging uses the `debug` package with a proper `orvilo-*` namespace, not stray `console.*`
 - Log lines that would be useless when read cold: no identifiers (which user? which entity?), or dumping whole objects instead of the discriminating fields
 
 ### Product analytics

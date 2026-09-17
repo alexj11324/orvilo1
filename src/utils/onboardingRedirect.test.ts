@@ -47,7 +47,7 @@ describe('toAbsoluteAuthCallbackUrl', () => {
 
   it.each([
     'https://app.example.com/workspace',
-    'com.lobehub.app:///auth/callback',
+    'com.orvilo.app:///auth/callback',
     '//evil.com/callback',
     '/\\evil.com',
   ])('should preserve non-relative callback %s', (callbackUrl) => {

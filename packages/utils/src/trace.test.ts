@@ -1,4 +1,4 @@
-import { LOBE_CHAT_TRACE_HEADER, LOBE_CHAT_TRACE_ID } from '@orvilo/const';
+import { ORVILO_TRACE_HEADER, ORVILO_TRACE_ID } from '@orvilo/const';
 import { describe, expect, it } from 'vitest';
 
 import { createTraceHeader, getTraceId, getTracePayload } from './trace';
@@ -15,7 +15,7 @@ describe('trace utilities', () => {
       const encoded = Buffer.from(JSON.stringify(payload)).toString('base64');
       const mockRequest = new Request('http://localhost', {
         headers: {
-          [LOBE_CHAT_TRACE_HEADER]: encoded,
+          [ORVILO_TRACE_HEADER]: encoded,
         },
       });
 
@@ -35,7 +35,7 @@ describe('trace utilities', () => {
     it('should handle empty trace header', () => {
       const mockRequest = new Request('http://localhost', {
         headers: {
-          [LOBE_CHAT_TRACE_HEADER]: '',
+          [ORVILO_TRACE_HEADER]: '',
         },
       });
 
@@ -57,7 +57,7 @@ describe('trace utilities', () => {
       const encoded = Buffer.from(JSON.stringify(payload)).toString('base64');
       const mockRequest = new Request('http://localhost', {
         headers: {
-          [LOBE_CHAT_TRACE_HEADER]: encoded,
+          [ORVILO_TRACE_HEADER]: encoded,
         },
       });
 
@@ -75,7 +75,7 @@ describe('trace utilities', () => {
       const encoded = Buffer.from(JSON.stringify(payload)).toString('base64');
       const mockRequest = new Request('http://localhost', {
         headers: {
-          [LOBE_CHAT_TRACE_HEADER]: encoded,
+          [ORVILO_TRACE_HEADER]: encoded,
         },
       });
 
@@ -94,7 +94,7 @@ describe('trace utilities', () => {
       const encoded = Buffer.from(JSON.stringify(payload)).toString('base64');
       const mockRequest = new Request('http://localhost', {
         headers: {
-          [LOBE_CHAT_TRACE_HEADER]: encoded,
+          [ORVILO_TRACE_HEADER]: encoded,
         },
       });
 
@@ -119,7 +119,7 @@ describe('trace utilities', () => {
       const encoded = Buffer.from(JSON.stringify(payload)).toString('base64');
       const mockRequest = new Request('http://localhost', {
         headers: {
-          [LOBE_CHAT_TRACE_HEADER]: encoded,
+          [ORVILO_TRACE_HEADER]: encoded,
         },
       });
 
@@ -134,7 +134,7 @@ describe('trace utilities', () => {
       const traceId = 'trace-xyz-789';
       const mockResponse = new Response(null, {
         headers: {
-          [LOBE_CHAT_TRACE_ID]: traceId,
+          [ORVILO_TRACE_ID]: traceId,
         },
       });
 
@@ -154,7 +154,7 @@ describe('trace utilities', () => {
     it('should handle empty trace ID', () => {
       const mockResponse = new Response(null, {
         headers: {
-          [LOBE_CHAT_TRACE_ID]: '',
+          [ORVILO_TRACE_ID]: '',
         },
       });
 
@@ -167,7 +167,7 @@ describe('trace utilities', () => {
       const traceId = 'trace-123-abc-特殊-🔥';
       const mockResponse = new Response(null, {
         headers: {
-          [LOBE_CHAT_TRACE_ID]: traceId,
+          [ORVILO_TRACE_ID]: traceId,
         },
       });
 
@@ -180,7 +180,7 @@ describe('trace utilities', () => {
       const traceId = '550e8400-e29b-41d4-a716-446655440000';
       const mockResponse = new Response(null, {
         headers: {
-          [LOBE_CHAT_TRACE_ID]: traceId,
+          [ORVILO_TRACE_ID]: traceId,
         },
       });
 
@@ -200,11 +200,11 @@ describe('trace utilities', () => {
 
       const result = createTraceHeader(payload);
 
-      expect(result).toHaveProperty(LOBE_CHAT_TRACE_HEADER);
-      expect(typeof result[LOBE_CHAT_TRACE_HEADER]).toBe('string');
+      expect(result).toHaveProperty(ORVILO_TRACE_HEADER);
+      expect(typeof result[ORVILO_TRACE_HEADER]).toBe('string');
 
       // Verify it's valid base64
-      const decoded = Buffer.from(result[LOBE_CHAT_TRACE_HEADER], 'base64').toString('utf8');
+      const decoded = Buffer.from(result[ORVILO_TRACE_HEADER], 'base64').toString('utf8');
       expect(JSON.parse(decoded)).toEqual(payload);
     });
 
@@ -213,9 +213,9 @@ describe('trace utilities', () => {
 
       const result = createTraceHeader(payload);
 
-      expect(result).toHaveProperty(LOBE_CHAT_TRACE_HEADER);
+      expect(result).toHaveProperty(ORVILO_TRACE_HEADER);
 
-      const decoded = Buffer.from(result[LOBE_CHAT_TRACE_HEADER], 'base64').toString('utf8');
+      const decoded = Buffer.from(result[ORVILO_TRACE_HEADER], 'base64').toString('utf8');
       expect(JSON.parse(decoded)).toEqual({});
     });
 
@@ -230,7 +230,7 @@ describe('trace utilities', () => {
 
       const result = createTraceHeader(payload);
 
-      const decoded = Buffer.from(result[LOBE_CHAT_TRACE_HEADER], 'base64').toString('utf8');
+      const decoded = Buffer.from(result[ORVILO_TRACE_HEADER], 'base64').toString('utf8');
       expect(JSON.parse(decoded)).toEqual(payload);
     });
 
@@ -243,7 +243,7 @@ describe('trace utilities', () => {
 
       const result = createTraceHeader(payload);
 
-      const decoded = Buffer.from(result[LOBE_CHAT_TRACE_HEADER], 'base64').toString('utf8');
+      const decoded = Buffer.from(result[ORVILO_TRACE_HEADER], 'base64').toString('utf8');
       expect(JSON.parse(decoded)).toEqual(payload);
     });
 
@@ -256,7 +256,7 @@ describe('trace utilities', () => {
 
       const result = createTraceHeader(payload);
 
-      const decoded = Buffer.from(result[LOBE_CHAT_TRACE_HEADER], 'base64').toString('utf8');
+      const decoded = Buffer.from(result[ORVILO_TRACE_HEADER], 'base64').toString('utf8');
       expect(JSON.parse(decoded)).toEqual(payload);
     });
 
@@ -268,7 +268,7 @@ describe('trace utilities', () => {
 
       const result = createTraceHeader(payload);
 
-      const decoded = Buffer.from(result[LOBE_CHAT_TRACE_HEADER], 'base64').toString('utf8');
+      const decoded = Buffer.from(result[ORVILO_TRACE_HEADER], 'base64').toString('utf8');
       expect(JSON.parse(decoded)).toEqual(payload);
     });
 
@@ -283,7 +283,7 @@ describe('trace utilities', () => {
 
       const result = createTraceHeader(payload);
 
-      const decoded = Buffer.from(result[LOBE_CHAT_TRACE_HEADER], 'base64').toString('utf8');
+      const decoded = Buffer.from(result[ORVILO_TRACE_HEADER], 'base64').toString('utf8');
       expect(JSON.parse(decoded)).toEqual(payload);
     });
 

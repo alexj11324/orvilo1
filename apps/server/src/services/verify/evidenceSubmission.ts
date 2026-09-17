@@ -5,7 +5,7 @@ import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { AgentOperationItem } from '@/database/schemas/agentOperations';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 
@@ -23,7 +23,7 @@ Call submitEvidence once for each criterion. This is evidence collection only: d
  * that can never reach `submitEvidence`.
  */
 export const recordHeterogeneousDeliverableEvidence = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   deliverable: string;
   operation: AgentOperationItem;
   plan: VerifyCheckItem[];
@@ -60,7 +60,7 @@ export const recordHeterogeneousDeliverableEvidence = async (params: {
 };
 
 export const startEvidenceSubmission = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   deliverable: string;
   goal: string;
   operation: AgentOperationItem;

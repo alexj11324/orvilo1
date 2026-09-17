@@ -6,11 +6,11 @@
 
 Only mock **three external dependencies**:
 
-| Dependency | Mock                       | Description                                             |
-| ---------- | -------------------------- | ------------------------------------------------------- |
+| Dependency | Mock                       | Description                                           |
+| ---------- | -------------------------- | ----------------------------------------------------- |
 | Database   | PGLite                     | In-memory database from `@orvilo/database/test-utils` |
-| Redis      | InMemoryAgentStateManager  | Memory implementation                                   |
-| Redis      | InMemoryStreamEventManager | Memory implementation                                   |
+| Redis      | InMemoryAgentStateManager  | Memory implementation                                 |
+| Redis      | InMemoryStreamEventManager | Memory implementation                                 |
 
 **NOT mocked:**
 
@@ -37,10 +37,10 @@ Different tests need different LLM responses. `vi.spyOn` provides:
 ### Database Setup
 
 ```typescript
-import { LobeChatDatabase } from '@orvilo/database';
+import { OrviloDatabase } from '@orvilo/database';
 import { getTestDB } from '@orvilo/database/test-utils';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 
 beforeEach(async () => {
   testDB = await getTestDB();
@@ -117,7 +117,7 @@ it('should handle tool calls', async () => {
       toolCalls: [
         {
           id: 'call_123',
-          name: 'lobe-web-browsing____search',
+          name: 'orvilo-web-browsing____search',
           arguments: JSON.stringify({ query: 'weather' }),
         },
       ],
@@ -132,4 +132,4 @@ it('should handle tool calls', async () => {
 
 1. **Test isolation**: Clean `InMemoryAgentStateManager` and `InMemoryStreamEventManager` after each test
 2. **Timeout**: E2E tests may need longer timeouts
-3. **Debug**: Use `DEBUG=lobe-server:*` for detailed logs
+3. **Debug**: Use `DEBUG=orvilo-server:*` for detailed logs

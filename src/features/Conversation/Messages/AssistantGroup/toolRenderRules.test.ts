@@ -26,7 +26,7 @@ describe('shouldRenderToolCall', () => {
     expect(
       shouldRenderToolCall({
         apiName: 'search',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
       }),
     ).toBe(true);
   });
@@ -55,7 +55,7 @@ describe('isImageBearingTool', () => {
       isImageBearingTool({
         apiName: 'generateImage',
         id: 't',
-        identifier: 'lobe-image-generation',
+        identifier: 'orvilo-image-generation',
         result: { content: 'x', id: 'r', state: { generations: [{ asset: { url: 'u' } }] } },
       } as any),
     ).toBe(true);
@@ -63,7 +63,7 @@ describe('isImageBearingTool', () => {
       isImageBearingTool({
         apiName: 'generateImage',
         id: 't',
-        identifier: 'lobe-image-generation',
+        identifier: 'orvilo-image-generation',
         result: { content: 'x', id: 'r', state: { generations: [{ asset: null }] } },
       } as any),
     ).toBe(false);

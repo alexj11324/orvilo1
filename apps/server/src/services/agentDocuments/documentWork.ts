@@ -2,7 +2,7 @@ import { buildAgentDocumentUrl } from '@orvilo/builtin-tool-agent-documents';
 
 import { WorkModel } from '@/database/models/work';
 import { WorkspaceModel } from '@/database/models/workspace';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { appEnv } from '@/envs/app';
 
 const getAgentDocumentAppUrl = (): string | undefined => {
@@ -27,7 +27,7 @@ const getAgentDocumentAppUrl = (): string | undefined => {
  * instance, so create one registrar per runtime/request and reuse it.
  */
 export const createDocumentWorkRegistrar = (deps: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   /** Log prefix identifying the call site, e.g. '[agentDocumentsRuntime]'. */
   logPrefix: string;
   userId: string;

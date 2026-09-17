@@ -181,7 +181,7 @@ vi.mock('@/utils/platform', () => ({
 }));
 
 vi.mock('@/const/env', () => ({
-  OFFICIAL_CLOUD_SERVER: 'https://lobehub-cloud.com',
+  OFFICIAL_CLOUD_SERVER: 'https://orvilo-cloud.com',
   isMac: false,
   isWindows: false,
   isLinux: false,
@@ -371,9 +371,9 @@ describe('GatewayConnectionCtr', () => {
       expect(options).not.toBeNull();
       expect(options.token).toBe('mock-access-token');
       expect(options.deviceId).toBe('stored-device-id');
-      expect(options.gatewayUrl).toBe('https://device-gateway.lobehub.com');
+      expect(options.gatewayUrl).toBe('https://device-gateway.aspectlylabs.com');
       expect(options.logger).toBeDefined();
-      expect(options.userAgent).toBe('LobeHub Desktop/1.2.3');
+      expect(options.userAgent).toBe('Orvilo Desktop/1.2.3');
     });
 
     it('should use custom gateway URL from store when set', async () => {
@@ -673,7 +673,7 @@ describe('GatewayConnectionCtr', () => {
         'runCommand',
         { argv: ['invoke', 'display.capture'] },
         'auv-command',
-        'lobe-computer-use',
+        'orvilo-computer-use',
       );
       await vi.advanceTimersByTimeAsync(0);
 
@@ -706,7 +706,7 @@ describe('GatewayConnectionCtr', () => {
         'runCommand',
         { argv: result.argv },
         'auv-failure',
-        'lobe-computer-use',
+        'orvilo-computer-use',
       );
       await vi.advanceTimersByTimeAsync(0);
       expect(client.sendToolCallResponse).toHaveBeenCalledWith({
@@ -822,7 +822,7 @@ describe('GatewayConnectionCtr', () => {
         toolCall: {
           apiName: 'readFile',
           arguments: JSON.stringify({ path: '/a.txt' }),
-          identifier: 'lobe-local-system',
+          identifier: 'orvilo-local-system',
           params: { args: [], command: 'npx', name: 'x' },
           type: 'tool',
         },
@@ -1085,12 +1085,12 @@ describe('GatewayConnectionCtr', () => {
     it('forwards ingestWorkspaceId to spawnLhHeteroExec as workspaceId', async () => {
       const client = await connectAndOpen();
       client.simulateAgentRunRequest('grok-build', 'op-ws', 'hi', 'mock-jwt', {
-        ingestWorkspaceId: 'ws-lobehub',
+        ingestWorkspaceId: 'ws-orvilo',
       });
       await vi.advanceTimersByTimeAsync(0);
 
       expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledWith(
-        expect.objectContaining({ workspaceId: 'ws-lobehub' }),
+        expect.objectContaining({ workspaceId: 'ws-orvilo' }),
       );
     });
 
@@ -1360,7 +1360,7 @@ describe('GatewayConnectionCtr', () => {
       ];
       expect(spawnCommand).toBe('/resolved/bin/openclaw');
       expect(spawnOptions.env.PATH).toBe('/resolved/bin:/usr/bin');
-      expect(spawnOptions.env.LOBEHUB_OPERATION_ID).toBe('op-1');
+      expect(spawnOptions.env.ORVILO_OPERATION_ID).toBe('op-1');
       const messageArg = spawnArgs[spawnArgs.indexOf('--message') + 1];
       expect(messageArg).toContain('hello');
       expect(messageArg).toContain('lh notify');

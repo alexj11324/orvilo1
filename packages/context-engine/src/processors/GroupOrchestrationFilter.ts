@@ -18,7 +18,7 @@ const log = debug('context-engine:processor:GroupOrchestrationFilterProcessor');
 /**
  * Default orchestration tool identifier
  */
-const DEFAULT_ORCHESTRATION_IDENTIFIER = 'lobe-group-management';
+const DEFAULT_ORCHESTRATION_IDENTIFIER = 'orvilo-group-management';
 
 /**
  * Default orchestration api names that should be filtered
@@ -67,7 +67,7 @@ export interface GroupOrchestrationFilterConfig {
   orchestrationApiNames?: string[];
   /**
    * Tool identifiers that are considered orchestration tools
-   * @default ['lobe-group-management']
+   * @default ['orvilo-group-management']
    */
   orchestrationToolIdentifiers?: string[];
 }

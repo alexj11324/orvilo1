@@ -6,10 +6,10 @@ import { matchesAgentInterventionContinuationProvenance } from '@/business/serve
 
 import { getTestDB } from '../../core/getTestDB';
 import { agentOperations, topics, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentOperationModel } from '../agentOperation';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'agent-operation-test-user-id';
 const otherUserId = 'agent-operation-test-other-user';
@@ -226,7 +226,7 @@ describe('AgentOperationModel', () => {
         },
         model: 'gpt-5.4',
         operationId,
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
       const first = {
         acceptedAt: '2026-09-01T00:00:00.000Z',
@@ -234,7 +234,7 @@ describe('AgentOperationModel', () => {
         ingress: 'openai-responses' as const,
         model: 'gpt-5.4',
         operationId,
-        provider: 'lobehub',
+        provider: 'orvilo',
       };
 
       await expect(model.recordServerDefaultRelayInvocation(operationId, first)).resolves.toEqual(
@@ -264,7 +264,7 @@ describe('AgentOperationModel', () => {
         ingress: 'openai-responses' as const,
         model: 'gpt-5.4',
         operationId: 'op-relay-authority',
-        provider: 'lobehub',
+        provider: 'orvilo',
       };
 
       await model.recordStart({

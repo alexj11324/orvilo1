@@ -199,7 +199,7 @@ describe('BrowserWindowsCtr', () => {
       const result = await runWithIpcContext(context, () =>
         browserWindowsCtr.createMultiInstanceWindow({
           inheritCurrentWindowSize: true,
-          path: '/lobe-team',
+          path: '/orvilo-team',
           templateId: 'chatSingle',
           uniqueId: 'workspace_workspace-1',
         }),
@@ -209,7 +209,7 @@ describe('BrowserWindowsCtr', () => {
       expect(mockGetWindowSize).toHaveBeenCalledWith(testSenderIdentifierString);
       expect(mockCreateMultiInstanceWindow).toHaveBeenCalledWith(
         'chatSingle',
-        '/lobe-team',
+        '/orvilo-team',
         'workspace_workspace-1',
         { height: 800, width: 1200 },
       );

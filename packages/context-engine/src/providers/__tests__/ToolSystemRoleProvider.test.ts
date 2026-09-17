@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { LobeToolManifest } from '../../engine/tools/types';
+import type { OrviloToolManifest } from '../../engine/tools/types';
 import type { PipelineContext } from '../../types';
 import { ToolSystemRoleProvider } from '../ToolSystemRole';
 
@@ -11,7 +11,7 @@ const createContext = (messages: any[]): PipelineContext => ({
   isAborted: false,
 });
 
-const createMockManifests = (identifiers: string[]): LobeToolManifest[] =>
+const createMockManifests = (identifiers: string[]): OrviloToolManifest[] =>
   identifiers.map((id) => ({
     identifier: id,
     api: [{ name: 'action', description: `${id} action`, parameters: {} }],
@@ -52,7 +52,7 @@ describe('ToolSystemRoleProvider', () => {
 
   it('should skip injection when manifests have apis but no systemRole', async () => {
     const mockIsCanUseFC = () => true;
-    const manifests: LobeToolManifest[] = [
+    const manifests: OrviloToolManifest[] = [
       {
         identifier: 'no-instructions',
         api: [{ name: 'action', description: 'some action', parameters: {} }],
@@ -151,7 +151,7 @@ describe('ToolSystemRoleProvider', () => {
     const mockIsCanUseFC = () => true;
 
     // Manifest with custom systemRole
-    const manifests: LobeToolManifest[] = [
+    const manifests: OrviloToolManifest[] = [
       {
         identifier: 'gtd-tool',
         api: [{ name: 'createTask', description: 'Create a task', parameters: {} }],
@@ -184,7 +184,7 @@ describe('ToolSystemRoleProvider', () => {
     const mockIsCanUseFC = () => true;
 
     // Manifest with systemRole but no APIs
-    const manifests: LobeToolManifest[] = [
+    const manifests: OrviloToolManifest[] = [
       {
         identifier: 'knowledge-tool',
         api: [],
@@ -217,7 +217,7 @@ describe('ToolSystemRoleProvider', () => {
     const mockIsCanUseFC = () => true;
 
     // Empty manifests (no APIs)
-    const manifests: LobeToolManifest[] = [
+    const manifests: OrviloToolManifest[] = [
       {
         identifier: 'empty-tool',
         api: [],

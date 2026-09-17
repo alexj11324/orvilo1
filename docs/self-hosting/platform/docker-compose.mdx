@@ -1,16 +1,16 @@
 ---
-title: Deploying LobeHub with Docker Compose
+title: Deploying Orvilo with Docker Compose
 description: >-
-  Learn how to deploy the LobeHub service using Docker Compose, including
+  Learn how to deploy the Orvilo service using Docker Compose, including
   configuration tutorials for various services.
 tags:
   - Docker Compose
-  - LobeHub
+  - Orvilo
   - Docker Container
   - Deployment Guide
 ---
 
-# Deploying LobeHub Server Database Version with Docker Compose
+# Deploying Orvilo Server Database Version with Docker Compose
 
 <div style={{display:"flex", gap: 4}}>
   [![][docker-release-shield]][docker-release-link]
@@ -34,16 +34,16 @@ tags:
   - Port occupation check: Ensure that ports `3210`, `9000`, and `9001` are available.
 </Callout>
 
-Execute the following commands to set up the deployment environment; the directory `lobehub` will be used to store your configuration files and subsequent database files.
+Execute the following commands to set up the deployment environment; the directory `orvilo` will be used to store your configuration files and subsequent database files.
 
 ```sh
-mkdir lobehub && cd lobehub
+mkdir orvilo && cd orvilo
 ```
 
 Fetch and execute the deployment script:
 
 ```sh
-bash <(curl -fsSL https://lobe.li/setup.sh) -l en
+bash <(curl -fsSL https://raw.githubusercontent.com/alexj11324/orvilo1/main/docker-compose/setup.sh) -l en
 ```
 
 The script supports the following deployment modes; please choose the appropriate mode based on your needs and read the rest of the documentation.
@@ -71,7 +71,7 @@ The script supports the following deployment modes; please choose the appropriat
 
   ```log
   The results of the secure key generation are as follows:
-  LobeHub:
+  Orvilo:
     - URL: http://localhost:3210
   RustFS:
     - URL: http://localhost:9000
@@ -88,7 +88,7 @@ The script supports the following deployment modes; please choose the appropriat
   ### Check Logs
 
   ```sh
-  docker logs -f lobehub
+  docker logs -f orvilo
   ```
 
   If you see the following logs in the container, it means the startup was successful:
@@ -107,7 +107,7 @@ The script supports the following deployment modes; please choose the appropriat
 
   ### Access Application
 
-  Visit your LobeHub service at [http://localhost:3210](http://localhost:3210).
+  Visit your Orvilo service at [http://localhost:3210](http://localhost:3210).
 </Steps>
 
 ### Port Mode
@@ -126,7 +126,7 @@ The script supports the following deployment modes; please choose the appropriat
 
   ```log
   The results of the secure key generation are as follows:
-  LobeHub:
+  Orvilo:
     - URL: http://your_server_ip:3210
   RustFS:
     - URL: http://your_server_ip:9000
@@ -143,7 +143,7 @@ The script supports the following deployment modes; please choose the appropriat
   ### Check Logs
 
   ```sh
-  docker logs -f lobehub
+  docker logs -f orvilo
   ```
 
   If you see the following logs in the container, it means the startup was successful:
@@ -161,7 +161,7 @@ The script supports the following deployment modes; please choose the appropriat
 
   ### Access Application
 
-  You can access your LobeHub service at `http://your_server_ip:3210`.
+  You can access your Orvilo service at `http://your_server_ip:3210`.
 </Steps>
 
 ### Domain Mode
@@ -171,17 +171,17 @@ The script supports the following deployment modes; please choose the appropriat
 
   In domain mode, you need to complete the reverse proxy configuration and ensure that the LAN/public can access the following services. Please use a reverse proxy to map the following service ports to the domain names:
 
-  | Domain              | Proxy Port | Required |
-  | ------------------- | ---------- | -------- |
-  | `lobe.example.com`  | `3210`     | Yes      |
-  | `s3.example.com`    | `9000`     | Yes      |
-  | `s3-ui.example.com` | `9001`     |          |
+  | Domain               | Proxy Port | Required |
+  | -------------------- | ---------- | -------- |
+  | `orvilo.example.com` | `3210`     | Yes      |
+  | `s3.example.com`     | `9000`     | Yes      |
+  | `s3-ui.example.com`  | `9001`     |          |
 
   ### Complete Remaining Configuration in Interactive Script
 
   In domain mode, you need to complete the following configurations based on script prompts:
 
-  - Domain setup for the LobeHub service: `lobe.example.com`
+  - Domain setup for the Orvilo service: `orvilo.example.com`
   - Domain setup for the S3 service: `s3.example.com`
   - Choose the access protocol: `http` or `https`
   - Regenerate secure keys: We highly recommend regenerating the secure keys; if you lack the key generation library required by the script, we suggest referring to the [Custom Deployment](#custom-deployment) section for key modifications.
@@ -190,8 +190,8 @@ The script supports the following deployment modes; please choose the appropriat
     **Single Domain Deployment**
     If you only have one domain, you can distinguish services by different ports:
 
-    - Domain setup for the LobeHub service: `lobe.example.com:${PORT1}`
-    - Domain setup for the S3 service: `lobe.example.com:${PORT2}`
+    - Domain setup for the Orvilo service: `orvilo.example.com:${PORT1}`
+    - Domain setup for the S3 service: `orvilo.example.com:${PORT2}`
       You need to configure forwarding rules for each port in the reverse proxy.
 
     **Port Mode vs Domain Mode:**
@@ -216,8 +216,8 @@ The script supports the following deployment modes; please choose the appropriat
 
   ```log
   The results of the secure key generation are as follows:
-  LobeHub:
-    - URL: https://lobe.example.com
+  Orvilo:
+    - URL: https://orvilo.example.com
   RustFS:
     - URL: https://s3.example.com
     - Username: admin
@@ -233,7 +233,7 @@ The script supports the following deployment modes; please choose the appropriat
   ### Check Logs
 
   ```sh
-  docker logs -f lobehub
+  docker logs -f orvilo
   ```
 
   If you see the following logs in the container, it indicates a successful startup:
@@ -251,28 +251,28 @@ The script supports the following deployment modes; please choose the appropriat
 
   ### Access Application
 
-  You can access your LobeHub service via `https://lobe.example.com`.
+  You can access your Orvilo service via `https://orvilo.example.com`.
 </Steps>
 
 ## Custom Deployment
 
-This section mainly introduces the configurations that need to be modified to customize the deployment of the LobeHub service in different network environments. Before starting, you can download the [Docker Compose configuration file](https://raw.githubusercontent.com/lobehub/lobehub/HEAD/docker-compose/deploy/docker-compose.yml) and the [environment variable configuration file](https://raw.githubusercontent.com/lobehub/lobehub/HEAD/docker-compose/deploy/.env.example).
+This section mainly introduces the configurations that need to be modified to customize the deployment of the Orvilo service in different network environments. Before starting, you can download the [Docker Compose configuration file](https://raw.githubusercontent.com/alexj11324/orvilo1/HEAD/docker-compose/deploy/docker-compose.yml) and the [environment variable configuration file](https://raw.githubusercontent.com/alexj11324/orvilo1/HEAD/docker-compose/deploy/.env.example).
 
 ```sh
-curl -O https://raw.githubusercontent.com/lobehub/lobehub/HEAD/docker-compose/deploy/docker-compose.yml
-curl -O https://raw.githubusercontent.com/lobehub/lobehub/HEAD/docker-compose/deploy/.env.example
+curl -O https://raw.githubusercontent.com/alexj11324/orvilo1/HEAD/docker-compose/deploy/docker-compose.yml
+curl -O https://raw.githubusercontent.com/alexj11324/orvilo1/HEAD/docker-compose/deploy/.env.example
 mv .env.example .env
 ```
 
 ### Prerequisites
 
-Generally, to fully run the LobeHub database version, you will need at least the following three services:
+Generally, to fully run the Orvilo database version, you will need at least the following three services:
 
-- The LobeHub database version itself
+- The Orvilo database version itself
 - PostgreSQL database with PGVector plugin
 - Object storage service that supports S3 protocol
 
-These services can be combined through self-hosting or online cloud services to meet various deployment needs. In this article, we provide a Docker Compose configuration entirely based on open-source self-hosted services, which can be used directly to start the LobeHub database version or modified to suit your requirements.
+These services can be combined through self-hosting or online cloud services to meet various deployment needs. In this article, we provide a Docker Compose configuration entirely based on open-source self-hosted services, which can be used directly to start the Orvilo database version or modified to suit your requirements.
 
 We use [RustFS](https://github.com/rustfs/rustfs) as the local S3 object storage service by default. To configure SSO authentication services, please refer to the [Authentication Services](/docs/self-hosting/auth) documentation.
 
@@ -287,7 +287,7 @@ Now, we will introduce the necessary configurations for running these services:
 
 1. S3 Object Storage
 
-LobeHub needs to provide a public access URL for object files for the LLM service provider, so you need to configure the S3 Endpoint:
+Orvilo needs to provide a public access URL for object files for the LLM service provider, so you need to configure the S3 Endpoint:
 
 <Callout type="tip">
   Using `S3_ENDPOINT=http://rustfs:9000` directly will prevent conversation image uploads from working (browser cannot resolve container names), but avatar uploads are not affected.
@@ -303,15 +303,15 @@ This configuration is found in the `docker-compose.yml` file, and you will need 
 
 ```yaml
 services:
-  lobe:
+  orvilo:
     environment:
-      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${LOBE_DB_NAME}'
+      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${ORVILO_DB_NAME}'
 ```
 
 3. Internal Communication URL (`INTERNAL_APP_URL`)
 
 <Callout type="warning">
-  `INTERNAL_APP_URL` is **required** for Docker Compose deployments. LobeHub's async features (e.g., AI image generation) require the container to make HTTP requests to itself internally. If `INTERNAL_APP_URL` is not set, the system falls back to `APP_URL`. When `APP_URL` is a host IP (e.g., `http://10.1.7.146:8080`), the container cannot reach that address internally, causing async features like image generation to silently fail.
+  `INTERNAL_APP_URL` is **required** for Docker Compose deployments. Orvilo's async features (e.g., AI image generation) require the container to make HTTP requests to itself internally. If `INTERNAL_APP_URL` is not set, the system falls back to `APP_URL`. When `APP_URL` is a host IP (e.g., `http://10.1.7.146:8080`), the container cannot reach that address internally, causing async features like image generation to silently fail.
 </Callout>
 
 ```env
@@ -322,7 +322,7 @@ INTERNAL_APP_URL=http://localhost:3210
 - `INTERNAL_APP_URL`: Used for internal server-to-server communication within the container (bypasses CDN/proxy/host network)
 
 <Callout type="tip">
-  For Docker Compose deployments, we recommend using `http://localhost:3210` (container calling itself) or `http://lobe:3210` (using service name for container-to-container communication).
+  For Docker Compose deployments, we recommend using `http://localhost:3210` (container calling itself) or `http://orvilo:3210` (using service name for container-to-container communication).
 </Callout>
 
 ## FAQ
@@ -332,7 +332,7 @@ INTERNAL_APP_URL=http://localhost:3210
 You can check the logs using the following command:
 
 ```sh
-docker logs -f lobehub
+docker logs -f orvilo
 ```
 
 <Callout type="tip">
@@ -349,14 +349,14 @@ docker compose up -d # Restart
 
 ## Reverse Proxy Configuration
 
-For production deployments with a custom domain and HTTPS, configure a reverse proxy in front of LobeHub.
+For production deployments with a custom domain and HTTPS, configure a reverse proxy in front of Orvilo.
 
 **Nginx:**
 
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name lobehub.example.com;
+    server_name orvilo.example.com;
 
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;
@@ -378,19 +378,19 @@ server {
 **Caddy** (automatically handles HTTPS with Let's Encrypt):
 
 ```caddyfile
-lobehub.example.com {
+orvilo.example.com {
     reverse_proxy localhost:3210
 }
 ```
 
-**Traefik** — add labels to the `lobe` service in `docker-compose.yml`:
+**Traefik** — add labels to the `orvilo` service in `docker-compose.yml`:
 
 ```yaml
 labels:
   - "traefik.enable=true"
-  - "traefik.http.routers.lobehub.rule=Host(`lobehub.example.com`)"
-  - "traefik.http.routers.lobehub.entrypoints=websecure"
-  - "traefik.http.routers.lobehub.tls.certresolver=letsencrypt"
+  - "traefik.http.routers.orvilo.rule=Host(`orvilo.example.com`)"
+  - "traefik.http.routers.orvilo.entrypoints=websecure"
+  - "traefik.http.routers.orvilo.tls.certresolver=letsencrypt"
 ```
 
 ## Management Commands
@@ -400,13 +400,13 @@ labels:
 docker compose logs -f
 
 # View logs for a specific service
-docker compose logs -f lobe
+docker compose logs -f orvilo
 
 # Restart all services
 docker compose restart
 
 # Restart a specific service
-docker compose restart lobe
+docker compose restart orvilo
 
 # Stop all services
 docker compose stop
@@ -420,20 +420,20 @@ docker compose pull && docker compose up -d
 **Database backup:**
 
 ```sh
-docker compose exec postgresql pg_dump -U postgres lobechat > backup.sql
+docker compose exec postgresql pg_dump -U postgres orvilo > backup.sql
 ```
 
 Restore from backup:
 
 ```sh
-docker compose exec -T postgresql psql -U postgres lobechat < backup.sql
+docker compose exec -T postgresql psql -U postgres orvilo < backup.sql
 ```
 
 **File storage (RustFS) backup:**
 
 ```sh
 docker compose exec rustfs tar czf /tmp/backup.tar.gz /data
-docker cp lobe-rustfs:/tmp/backup.tar.gz ./rustfs-backup.tar.gz
+docker cp orvilo-rustfs:/tmp/backup.tar.gz ./rustfs-backup.tar.gz
 ```
 
 **Redis** — Redis automatically persists data with AOF. To manually save:
@@ -469,7 +469,7 @@ docker compose ps
 docker compose logs [service-name]
 ```
 
-Common causes: port already in use (change `LOBE_PORT` in `.env`), insufficient disk space, or database connection failure.
+Common causes: port already in use (change `ORVILO_PORT` in `.env`), insufficient disk space, or database connection failure.
 
 **Database connection error**
 
@@ -490,7 +490,7 @@ docker compose logs rustfs
 docker compose logs rustfs-init
 ```
 
-Verify the bucket was created: `docker compose exec rustfs ls /data/lobe`
+Verify the bucket was created: `docker compose exec rustfs ls /data/orvilo`
 
 **Running out of disk space**
 
@@ -506,9 +506,9 @@ docker system prune -a --volumes
 
 To configure SSO authentication services (such as Casdoor, Logto, etc.), please refer to the [Authentication Services](/docs/self-hosting/auth) documentation.
 
-[docker-pulls-link]: https://hub.docker.com/r/lobehub/lobehub
-[docker-pulls-shield]: https://img.shields.io/docker/pulls/lobehub/lobehub?color=45cc11&labelColor=black&style=flat-square
-[docker-release-link]: https://hub.docker.com/r/lobehub/lobehub
-[docker-release-shield]: https://img.shields.io/docker/v/lobehub/lobehub?color=369eff&label=docker&labelColor=black&logo=docker&logoColor=white&style=flat-square&sort=semver
-[docker-size-link]: https://hub.docker.com/r/lobehub/lobehub
-[docker-size-shield]: https://img.shields.io/docker/image-size/lobehub/lobehub?color=369eff&labelColor=black&style=flat-square&sort=semver
+[docker-pulls-link]: https://hub.docker.com/r/alexj11324/orvilo1
+[docker-pulls-shield]: https://img.shields.io/docker/pulls/alexj11324/orvilo1?color=45cc11&labelColor=black&style=flat-square
+[docker-release-link]: https://hub.docker.com/r/alexj11324/orvilo1
+[docker-release-shield]: https://img.shields.io/docker/v/alexj11324/orvilo1?color=369eff&label=docker&labelColor=black&logo=docker&logoColor=white&style=flat-square&sort=semver
+[docker-size-link]: https://hub.docker.com/r/alexj11324/orvilo1
+[docker-size-shield]: https://img.shields.io/docker/image-size/alexj11324/orvilo1?color=369eff&labelColor=black&style=flat-square&sort=semver

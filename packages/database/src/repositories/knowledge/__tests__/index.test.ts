@@ -16,10 +16,10 @@ import {
   users,
   workspaces,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { KnowledgeRepo } from '../index';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'knowledge-repo-test-user';
 const otherUserId = 'other-knowledge-user';

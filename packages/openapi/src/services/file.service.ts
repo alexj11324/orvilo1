@@ -20,7 +20,7 @@ import {
   knowledgeBases,
   users,
 } from '@/database/schemas';
-import type { LobeChatDatabase, Transaction } from '@/database/type';
+import type { OrviloDatabase, Transaction } from '@/database/type';
 import type { S3 } from '@/server/modules/S3';
 import { FileS3 } from '@/server/modules/S3';
 import { DocumentService } from '@/server/services/document';
@@ -73,7 +73,7 @@ export class FileUploadService extends BaseService {
   // Lazy import ChunkService to avoid circular dependency overhead
   // Note: ChunkService is only available in server-side environments
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     super(db, userId, workspaceId);
     this.fileModel = new FileModel(db, userId, workspaceId);
     this.documentModel = new DocumentModel(db, userId, workspaceId);

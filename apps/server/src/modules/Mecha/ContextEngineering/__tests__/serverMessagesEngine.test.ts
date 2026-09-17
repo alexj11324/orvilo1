@@ -308,7 +308,7 @@ describe('serverMessagesEngine', () => {
         model: 'claude-fable-5',
         modelDisplayName: 'Fable 5',
         modelKnowledgeCutoff: '2026-01',
-        provider: 'lobehub',
+        provider: 'orvilo',
         systemRole: 'You are a helpful assistant',
       });
 

@@ -15,7 +15,7 @@ import {
   messageTranslates,
   messageTTS,
 } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 /** Transfer rejected: the agent already has an unfinished backfill job. */
 export const AGENT_TRANSFER_IN_PROGRESS = 'AGENT_TRANSFER_IN_PROGRESS';
@@ -38,7 +38,7 @@ export interface AgentTransferTargetScope {
   workspaceId: string | null;
 }
 
-type Executor = Pick<LobeChatDatabase, 'execute'> | Transaction;
+type Executor = Pick<OrviloDatabase, 'execute'> | Transaction;
 
 /**
  * Message child tables that denormalize the parent message's scope snapshot.
@@ -293,7 +293,7 @@ export interface AgentTransferJobProgress {
  */
 export class AgentTransferJobModel {
   static createJob = async (
-    trx: Transaction | LobeChatDatabase,
+    trx: Transaction | OrviloDatabase,
     params: CreateAgentTransferJobParams,
   ): Promise<string> => {
     const [job] = await trx
@@ -354,7 +354,7 @@ export class AgentTransferJobModel {
    * extend to agent mutations.
    */
   static hasPendingJobForAgents = async (
-    db: Transaction | LobeChatDatabase,
+    db: Transaction | OrviloDatabase,
     agentIds: string[],
   ): Promise<boolean> => {
     if (agentIds.length === 0) return false;
@@ -387,7 +387,7 @@ export class AgentTransferJobModel {
    * Guard the delete; leave the badge alone.
    */
   static hasPendingRemapForSourceAgents = async (
-    db: Transaction | LobeChatDatabase,
+    db: Transaction | OrviloDatabase,
     agentIds: string[],
   ): Promise<boolean> => {
     if (agentIds.length === 0) return false;
@@ -428,7 +428,7 @@ export class AgentTransferJobModel {
    * Type-agnostic for the same reason as {@link hasPendingJobForAgents}.
    */
   static hasPendingJobForGroups = async (
-    db: Transaction | LobeChatDatabase,
+    db: Transaction | OrviloDatabase,
     groupIds: string[],
   ): Promise<boolean> => {
     if (groupIds.length === 0) return false;
@@ -454,7 +454,7 @@ export class AgentTransferJobModel {
    * `copy` jobs are deliberately excluded — see {@link isPendingTransfer}.
    */
   static hasPendingJobTouchingUser = async (
-    db: Transaction | LobeChatDatabase,
+    db: Transaction | OrviloDatabase,
     userId: string,
   ): Promise<boolean> => {
     const [row] = await db
@@ -472,7 +472,7 @@ export class AgentTransferJobModel {
 
   /** Workspace counterpart of {@link hasPendingJobTouchingUser}. */
   static hasPendingJobTouchingWorkspace = async (
-    db: Transaction | LobeChatDatabase,
+    db: Transaction | OrviloDatabase,
     workspaceId: string,
   ): Promise<boolean> => {
     const [row] = await db
@@ -500,7 +500,7 @@ export class AgentTransferJobModel {
    * words its progress hints by.
    */
   static findPendingJobForAgent = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     agentId: string,
   ): Promise<AgentTransferJobProgress | undefined> => {
     const [row] = await db
@@ -530,7 +530,7 @@ export class AgentTransferJobModel {
    * UI words its progress hints by.
    */
   static findPendingJobForGroup = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     groupId: string,
   ): Promise<AgentTransferJobProgress | undefined> => {
     const [row] = await db
@@ -559,7 +559,7 @@ export class AgentTransferJobModel {
    * whole queue to every viewing client.
    */
   static getPendingTopicIds = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     jobId: string,
     candidateTopicIds?: string[],
   ): Promise<string[]> => {
@@ -583,7 +583,7 @@ export class AgentTransferJobModel {
    * shell needs jumping the queue just as much as a transfer's.
    */
   static findPendingJobForTopic = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     topicId: string,
   ): Promise<{ jobId: string } | undefined> => {
     const [row] = await db
@@ -605,7 +605,7 @@ export class AgentTransferJobModel {
    * Type-agnostic, like {@link findPendingJobForTopic} which selects the job
    * this then kicks.
    */
-  static prioritizeTopic = async (db: LobeChatDatabase, topicId: string): Promise<boolean> => {
+  static prioritizeTopic = async (db: OrviloDatabase, topicId: string): Promise<boolean> => {
     const rows = await db
       .update(agentHistoryJobTopics)
       .set({ priority: true })
@@ -640,7 +640,7 @@ export class AgentTransferJobModel {
    * that performed finalization).
    */
   static processNextTopic = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     jobId: string,
   ): Promise<{ done: boolean; topicId?: string }> => {
     return db.transaction(async (trx) => {
@@ -713,7 +713,7 @@ export class AgentTransferJobModel {
    * Run a job to completion. The in-process default driver calls this;
    * step-based drivers (workflows) call `processNextTopic` directly.
    */
-  static drain = async (db: LobeChatDatabase, jobId: string): Promise<void> => {
+  static drain = async (db: OrviloDatabase, jobId: string): Promise<void> => {
     while (true) {
       const { done } = await AgentTransferJobModel.processNextTopic(db, jobId);
       if (done) return;
@@ -721,7 +721,7 @@ export class AgentTransferJobModel {
   };
 
   /** Pending jobs left over from a crash/restart — the driver re-arms these. */
-  static listPendingJobIds = async (db: LobeChatDatabase): Promise<string[]> => {
+  static listPendingJobIds = async (db: OrviloDatabase): Promise<string[]> => {
     const rows = await db
       .select({ id: agentHistoryJobs.id })
       .from(agentHistoryJobs)

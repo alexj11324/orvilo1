@@ -1,12 +1,12 @@
-# LobeHub Design Values (设计价值观)
+# Orvilo Design Values (设计价值观)
 
-The philosophy behind every LobeHub interface. Read this before designing or
+The philosophy behind every Orvilo interface. Read this before designing or
 reviewing a flow; the per-aspect execution rules live in the parent
 [SKILL.md](../SKILL.md) and each checklist item is tagged with the value(s) it serves.
 
 Adapted from Ant Design's design values
 (<https://ant.design/docs/spec/values-cn>, <https://zhuanlan.zhihu.com/p/44809866>).
-LobeHub adopts all four.
+Orvilo adopts all four.
 
 ## 自然 (Natural)
 

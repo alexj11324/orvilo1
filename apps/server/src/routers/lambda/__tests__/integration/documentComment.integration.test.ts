@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import {
   documentCommentMentions,
   documentComments,
@@ -18,7 +18,7 @@ import { RbacModel } from '@/database/models/rbac';
 import { documentCommentRouter } from '../../documentComment';
 import { cleanupTestUser, createTestUser } from './setup';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 const notifyDocumentCommentActivity = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
@@ -59,7 +59,7 @@ const mentionEditorData = (...userIds: string[]) => ({
 describe('documentCommentRouter integration', () => {
   const getWorkspaceUsersPermissions = vi.spyOn(RbacModel, 'getWorkspaceUsersPermissions');
   let adminId: string;
-  let db: LobeChatDatabase;
+  let db: OrviloDatabase;
   let documentId: string;
   let memberId: string;
   let ownerId: string;

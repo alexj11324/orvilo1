@@ -2,7 +2,7 @@ import { ModelProvider } from 'model-bank';
 
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 
-export const LobeAi21AI = createOpenAICompatibleRuntime({
+export const OrviloAi21AI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.ai21.com/studio/v1',
   chatCompletion: {
     handlePayload: (payload) => {

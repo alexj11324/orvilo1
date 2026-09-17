@@ -7,7 +7,7 @@ import type { TRPCError } from '@trpc/server';
  * error monitoring. Write it via `markSilentTRPCErrorLog` below; this file
  * is the single home for both halves of the contract.
  */
-export const SILENT_TRPC_ERROR_LOG_KEY = '__lobeSilentTRPCErrorLog';
+export const SILENT_TRPC_ERROR_LOG_KEY = '__orviloSilentTRPCErrorLog';
 
 /**
  * Stamp the silent-log marker on an error so `createTRPCErrorLogger` skips

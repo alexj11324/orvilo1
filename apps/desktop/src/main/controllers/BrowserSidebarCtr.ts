@@ -31,7 +31,7 @@ const logger = createLogger('controllers:BrowserSidebarCtr');
  * Shared persistent profile: logins/cookies survive across agents and restarts,
  * mirroring a regular browser.
  */
-const BROWSER_PARTITION = 'persist:lobe-browser-app';
+const BROWSER_PARTITION = 'persist:orvilo-browser-app';
 const DEFAULT_BROWSER_URL = 'about:blank';
 const HTTP_URL_PATTERN = /^https?:\/\//i;
 const LOCAL_URL_PATTERN = /^(?:localhost|127(?:\.\d{1,3}){3}|\[?::1\]?)(?::\d+)?(?:[/?#].*)?$/i;

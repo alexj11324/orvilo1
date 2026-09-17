@@ -40,7 +40,7 @@ vi.mock('react-i18next', () => ({
           'Sign in to sync Agents, Groups, settings, and Context across all devices.',
         'screen5.methods.selfhost.description': 'Use self-hosted server',
         'screen5.selfhost.endpointPlaceholder': 'https://example.com',
-        'screen5.status.cloud.title': 'Connected to LobeHub Cloud',
+        'screen5.status.cloud.title': 'Connected to Orvilo Cloud',
         'screen5.status.description': 'Everything is syncing across all your devices.',
         'screen5.status.selfhost.description': 'Syncing with {{url}}.',
         'screen5.status.selfhost.title': 'Connected to your own server',
@@ -103,7 +103,7 @@ vi.mock('@/utils/electron/autoOidc', () => ({
   setDesktopAutoOidcFirstOpenHandled: vi.fn(),
 }));
 
-vi.mock('../components/LobeMessage', () => ({
+vi.mock('../components/OrviloMessage', () => ({
   default: ({ sentences }: { sentences: string[] }) => (
     <div>{sentences.filter(Boolean).join(' ')}</div>
   ),
@@ -158,7 +158,7 @@ describe('Desktop onboarding LoginStep', () => {
   it('renders a connection summary instead of the sign-in wizard in status mode', async () => {
     const { onNext } = await renderLoginStep({ mode: 'status' });
 
-    expect(screen.getByText('Connected to LobeHub Cloud')).toBeInTheDocument();
+    expect(screen.getByText('Connected to Orvilo Cloud')).toBeInTheDocument();
     expect(screen.getByText('Everything is syncing across all your devices.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();

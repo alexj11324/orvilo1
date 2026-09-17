@@ -3,7 +3,7 @@ import type { BuiltinToolManifest } from '@orvilo/types';
 import { systemPrompt } from './systemRole';
 import { CloudSandboxApiName } from './types';
 
-export const CloudSandboxIdentifier = 'lobe-cloud-sandbox';
+export const CloudSandboxIdentifier = 'orvilo-cloud-sandbox';
 
 export const CloudSandboxManifest: BuiltinToolManifest = {
   api: [

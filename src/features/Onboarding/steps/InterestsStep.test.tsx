@@ -41,8 +41,8 @@ vi.mock('@/store/user/selectors', () => ({
   },
 }));
 
-vi.mock('../components/LobeMessage', () => ({
-  default: () => <div>Lobe Message</div>,
+vi.mock('../components/OrviloMessage', () => ({
+  default: () => <div>Orvilo Message</div>,
 }));
 
 beforeEach(() => {

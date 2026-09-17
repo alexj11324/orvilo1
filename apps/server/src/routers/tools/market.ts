@@ -33,7 +33,7 @@ import {
   MARKET_CONNECTIONS_REQUEST_TIMEOUT_MS,
 } from './_helpers/marketConnections';
 
-const log = debug('lobe-server:tools:market');
+const log = debug('orvilo-server:tools:market');
 
 const isSandboxAuthError = (error?: { message?: string; name?: string }) => {
   const code = error?.name;
@@ -90,22 +90,22 @@ const marketToolProcedure = wsCompatProcedure
 // personal mode passes through unrestricted.
 const marketToolWriteProcedure = marketToolProcedure.use(requireWorkspaceRoleWhenScoped('member'));
 
-// ============================== LobeHub Skill Procedures ==============================
+// ============================== Orvilo Skill Procedures ==============================
 /**
- * LobeHub Skill procedure with SDK and optional auth
+ * Orvilo Skill procedure with SDK and optional auth
  * Used for routes that may work without auth (like listing providers)
  */
-const lobehubSkillBaseProcedure = authedProcedure
+const orviloSkillBaseProcedure = authedProcedure
   .use(serverDatabase)
   .use(telemetry)
   .use(marketUserInfo)
   .use(marketSDK);
 
 /**
- * LobeHub Skill procedure with required auth
+ * Orvilo Skill procedure with required auth
  * Used for routes that require user authentication
  */
-const lobehubSkillAuthProcedure = lobehubSkillBaseProcedure.use(requireMarketAuth);
+const orviloSkillAuthProcedure = orviloSkillBaseProcedure.use(requireMarketAuth);
 
 // ============================== Schema Definitions ==============================
 
@@ -223,7 +223,7 @@ const execInSandboxHandler = async ({
   try {
     let enhancedParams = params;
 
-    // Preprocess lh commands: rewrite to npx @lobehub/cli + inject auth env vars
+    // Preprocess lh commands: rewrite to npx @orvilo/cli + inject auth env vars
     //
     // The minted credential is always scoped to `ctx.userId`, i.e. the caller
     // themselves. This route is an `authedProcedure` invoked directly by a
@@ -440,11 +440,11 @@ export const marketRouter = router({
     .input(execInSandboxSchema)
     .mutation(({ input, ctx }) => execInSandboxHandler({ ctx, input })),
 
-  // ============================== LobeHub Skill ==============================
+  // ============================== Orvilo Skill ==============================
   /**
-   * Call a LobeHub Skill tool
+   * Call a Orvilo Skill tool
    */
-  connectCallTool: lobehubSkillAuthProcedure
+  connectCallTool: orviloSkillAuthProcedure
     .input(
       z.object({
         args: z.record(z.string(), z.any()).optional(),
@@ -499,7 +499,7 @@ export const marketRouter = router({
   /**
    * Get all connections health status
    */
-  connectGetAllHealth: lobehubSkillAuthProcedure.query(async ({ ctx }) => {
+  connectGetAllHealth: orviloSkillAuthProcedure.query(async ({ ctx }) => {
     log('connectGetAllHealth');
 
     try {
@@ -521,7 +521,7 @@ export const marketRouter = router({
    * Get authorize URL for a provider
    * This calls the SDK's authorize method which generates a secure authorization URL
    */
-  connectGetAuthorizeUrl: lobehubSkillAuthProcedure
+  connectGetAuthorizeUrl: orviloSkillAuthProcedure
     .input(
       z.object({
         provider: z.string(),
@@ -555,7 +555,7 @@ export const marketRouter = router({
   /**
    * Get connection status for a provider
    */
-  connectGetStatus: lobehubSkillAuthProcedure
+  connectGetStatus: orviloSkillAuthProcedure
     .input(z.object({ provider: z.string() }))
     .query(async ({ input, ctx }) => {
       log('connectGetStatus: provider=%s', input.provider);
@@ -580,7 +580,7 @@ export const marketRouter = router({
   /**
    * List all user connections
    */
-  connectListConnections: lobehubSkillBaseProcedure.query(async ({ ctx }) => {
+  connectListConnections: orviloSkillBaseProcedure.query(async ({ ctx }) => {
     log('connectListConnections');
 
     try {
@@ -612,7 +612,7 @@ export const marketRouter = router({
   /**
    * List available providers (public, no auth required)
    */
-  connectListProviders: lobehubSkillBaseProcedure.query(async ({ ctx }) => {
+  connectListProviders: orviloSkillBaseProcedure.query(async ({ ctx }) => {
     log('connectListProviders');
 
     try {
@@ -632,7 +632,7 @@ export const marketRouter = router({
   /**
    * List tools for a provider
    */
-  connectListTools: lobehubSkillBaseProcedure
+  connectListTools: orviloSkillBaseProcedure
     .input(z.object({ provider: z.string() }))
     .query(async ({ input, ctx }) => {
       log('connectListTools: provider=%s', input.provider);
@@ -665,7 +665,7 @@ export const marketRouter = router({
   /**
    * Refresh token for a provider
    */
-  connectRefresh: lobehubSkillAuthProcedure
+  connectRefresh: orviloSkillAuthProcedure
     .input(z.object({ provider: z.string() }))
     .mutation(async ({ input, ctx }) => {
       log('connectRefresh: provider=%s', input.provider);
@@ -688,7 +688,7 @@ export const marketRouter = router({
   /**
    * Revoke connection for a provider
    */
-  connectRevoke: lobehubSkillAuthProcedure
+  connectRevoke: orviloSkillAuthProcedure
     .input(z.object({ provider: z.string() }))
     .mutation(async ({ input, ctx }) => {
       log('connectRevoke: provider=%s', input.provider);

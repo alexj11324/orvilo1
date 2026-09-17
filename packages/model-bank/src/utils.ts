@@ -1,8 +1,8 @@
 import type {
   AiModelSettings,
   AiModelType,
-  LobeDefaultAiModelListItem,
   ModelSearchImplementType,
+  OrviloDefaultAiModelListItem,
 } from './types';
 
 export interface ResolveSearchDecisionInput {
@@ -93,7 +93,7 @@ export const resolveModelSearchDefaultSettings = (
   PROVIDER_SEARCH_DEFAULTS.default;
 
 export const isProviderModelAvailable = (
-  models: LobeDefaultAiModelListItem[],
+  models: OrviloDefaultAiModelListItem[],
   providerId: string,
   id: string,
   expectedType: AiModelType,

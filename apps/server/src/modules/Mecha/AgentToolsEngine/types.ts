@@ -1,9 +1,9 @@
-import { type LobeToolManifest, type PluginEnableChecker } from '@orvilo/context-engine';
+import { type OrviloToolManifest, type PluginEnableChecker } from '@orvilo/context-engine';
 import {
   type BuiltinToolResolveContext,
-  type LobeAgentAgencyConfig,
-  type LobeBuiltinTool,
-  type LobeTool,
+  type OrviloAgentAgencyConfig,
+  type OrviloBuiltinTool,
+  type OrviloTool,
 } from '@orvilo/types';
 import type { ModelAbilities } from 'model-bank';
 
@@ -12,7 +12,7 @@ import type { ExecutionPlan } from '@/helpers/executionTarget';
 /**
  * Installed plugin with manifest
  */
-export type InstalledPlugin = LobeTool;
+export type InstalledPlugin = OrviloTool;
 
 /**
  * Context for server-side tools engine
@@ -29,15 +29,15 @@ export interface ServerAgentToolsContext {
  */
 export interface ServerAgentToolsEngineConfig {
   /** Additional manifests to include (e.g., Composio tools) */
-  additionalManifests?: LobeToolManifest[];
+  additionalManifests?: OrviloToolManifest[];
   /**
    * Override the list of builtin tools fed into the engine's
    * `manifestSchemas`. Defaults to the full `builtinTools` array from
    * `@orvilo/builtin-tools`. Callers gating device tools per-turn pass
    * `buildAllowedBuiltinTools(...)` here so an external bot sender cannot
-   * resolve `lobe-remote-device` via the activator ().
+   * resolve `orvilo-remote-device` via the activator ().
    */
-  builtinTools?: readonly LobeBuiltinTool[];
+  builtinTools?: readonly OrviloBuiltinTool[];
   /** Default tool IDs that will always be added */
   defaultToolIds?: string[];
   /** Custom enable checker for plugins */
@@ -46,14 +46,14 @@ export interface ServerAgentToolsEngineConfig {
    * Identifiers to drop from `manifestSchemas` after combining plugin,
    * builtin, and additional manifests. Filtering builtins alone is not
    * enough: an installed plugin or a Skill/Composio manifest can declare
-   * `identifier: 'lobe-remote-device'` and slip past `buildAllowedBuiltinTools`.
+   * `identifier: 'orvilo-remote-device'` and slip past `buildAllowedBuiltinTools`.
    * This is the final post-merge wall referenced in .
    */
   excludeIdentifiers?: ReadonlySet<string>;
   /**
    * Runtime context for context-aware builtin manifests. When provided, each
    * builtin tool with a `resolveManifest` produces its manifest for this context
-   * (e.g. lobe-agent drops `callSubAgent` + its systemRole section inside a
+   * (e.g. orvilo-agent drops `callSubAgent` + its systemRole section inside a
    * sub-agent / group run). Omit for context-free callers — they get the full
    * static manifests. Mirrors the frontend `ToolsEngineConfig.manifestContext`.
    */
@@ -64,12 +64,12 @@ export interface ServerAgentToolsEngineConfig {
  * Parameters for createServerAgentToolsEngine
  */
 export interface ServerCreateAgentToolsEngineParams {
-  /** Additional manifests to include (e.g., LobeHub Skills) */
-  additionalManifests?: LobeToolManifest[];
+  /** Additional manifests to include (e.g., Orvilo Skills) */
+  additionalManifests?: OrviloToolManifest[];
   /** Agent configuration containing plugins array */
   agentConfig: {
     /** Agency config — execution target drives the runtime tool gate. */
-    agencyConfig?: LobeAgentAgencyConfig;
+    agencyConfig?: OrviloAgentAgencyConfig;
     /** Optional agent chat config */
     chatConfig?: {
       /**
@@ -133,7 +133,7 @@ export interface ServerCreateAgentToolsEngineParams {
   /**
    * Conversation context for context-aware builtin manifests (scope,
    * isSubAgent). Forwarded to `createServerToolsEngine` so tools like
-   * lobe-agent can self-trim — hiding `callSubAgent` (tool + systemRole)
+   * orvilo-agent can self-trim — hiding `callSubAgent` (tool + systemRole)
    * inside a sub-agent / group run.
    */
   manifestContext?: BuiltinToolResolveContext;

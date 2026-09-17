@@ -54,7 +54,7 @@ describe('MCP issue labels', () => {
 });
 
 describe('classify: marketplace listing requests (submit + rescan)', () => {
-  // Real historical issue titles from lobehub/lobehub.
+  // Real historical issue titles from alexj11324/orvilo1.
   const rescanTitles = [
     '[MCP Marketplace] Scoring stuck for @apexfdn/copilot-mcp — manual rescan needed',
     '[Request] Re-index jcdreamjc-wudao-mcp listing stale canonical cache',

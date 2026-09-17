@@ -13,7 +13,7 @@ export class FileSnapshotStore implements ISnapshotStore {
   /**
    * @param rootDir Directory `dirName` resolves against. Defaults to the cwd.
    * @param dirName Leaf directory holding the snapshots. Overridable so a host
-   *   that owns its own layout (the CLI writes to `~/.lobehub/traces`) does not
+   *   that owns its own layout (the CLI writes to `~/.orvilo/traces`) does not
    *   end up with a nested hidden `.agent-tracing/` inside it.
    */
   constructor(rootDir?: string, dirName: string = DEFAULT_DIR) {

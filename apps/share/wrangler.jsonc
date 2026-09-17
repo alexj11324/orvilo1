@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "lobehub-share",
+  "name": "orvilo-share",
   "account_id": "d35842305b91be4b48e06ff9a9ad83f5",
   "main": "./workers/app.ts",
   "compatibility_date": "2026-08-01",
@@ -12,6 +12,6 @@
   },
   "vars": {
     "SHARE_API_BASE": "https://orvilo.aspectlylabs.com",
-    "SHARE_APP_HOME": "https://lobehub.com"
+    "SHARE_APP_HOME": "https://orvilo.aspectlylabs.com"
   }
 }

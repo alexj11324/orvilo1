@@ -1,5 +1,5 @@
 import { handleGenerationPromptModerationError } from '@/business/client/handleGenerationPromptModerationError';
-import { handleLobeHubModelDeprecatedError } from '@/business/client/handleLobeHubModelDeprecatedError';
+import { handleOrviloModelDeprecatedError } from '@/business/client/handleOrviloModelDeprecatedError';
 import { imageService } from '@/services/image';
 import { type StoreSetter } from '@/store/types';
 
@@ -96,7 +96,7 @@ export class CreateImageActionImpl {
       );
     } catch (error) {
       handleGenerationPromptModerationError(error);
-      handleLobeHubModelDeprecatedError(error);
+      handleOrviloModelDeprecatedError(error);
       throw error;
     } finally {
       // 8. Reset all creating states
@@ -144,7 +144,7 @@ export class CreateImageActionImpl {
       await store.refreshGenerationBatches();
     } catch (error) {
       handleGenerationPromptModerationError(error);
-      handleLobeHubModelDeprecatedError(error);
+      handleOrviloModelDeprecatedError(error);
       throw error;
     } finally {
       this.#set({ isCreating: false }, false, 'recreateImage/endCreateImage');

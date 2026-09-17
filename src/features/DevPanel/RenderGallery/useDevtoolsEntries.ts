@@ -43,7 +43,7 @@ export interface DevtoolsEntries {
 }
 
 /** Toolsets that still ship renders but are deprecated — hidden from the gallery. */
-const DEPRECATED_TOOLSETS = new Set(['lobe-notebook']);
+const DEPRECATED_TOOLSETS = new Set(['orvilo-notebook']);
 
 /**
  * Legacy `*Local*` aliases (e.g. `grepLocalFiles`, `listLocalFiles`) only stay
@@ -52,7 +52,7 @@ const DEPRECATED_TOOLSETS = new Set(['lobe-notebook']);
  * API names carry no `Local` marker, so hiding by that marker is safe.
  */
 const isDeprecatedApi = (identifier: string, apiName: string) =>
-  identifier === 'lobe-local-system' && apiName.includes('Local');
+  identifier === 'orvilo-local-system' && apiName.includes('Local');
 
 export const toApiAnchor = (apiName: string) => `api-${apiName}`;
 

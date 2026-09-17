@@ -21,7 +21,7 @@ const { ipcMainHandleMock, loggerMock, macNotificationsMock } = vi.hoisted(() =>
     ),
     requestAuthorization: vi.fn(async () => true),
     showNotification: vi.fn(async (): Promise<{ id: string; ok: boolean; reason?: string }> => ({
-      id: 'lobehub-test-id',
+      id: 'orvilo-test-id',
       ok: true,
     })),
   },
@@ -126,7 +126,7 @@ describe('NotificationCtr.mac', () => {
     const { Notification } = await import('electron');
     mockBrowserWindow.isVisible.mockReturnValue(false);
     macNotificationsMock.showNotification.mockResolvedValueOnce({
-      id: 'lobehub-x',
+      id: 'orvilo-x',
       ok: false,
       reason: 'denied',
     });
@@ -146,13 +146,13 @@ describe('NotificationCtr.mac', () => {
       handler = listener;
       return () => {};
     });
-    macNotificationsMock.showNotification.mockResolvedValueOnce({ id: 'lobehub-nav', ok: true });
+    macNotificationsMock.showNotification.mockResolvedValueOnce({ id: 'orvilo-nav', ok: true });
     const navigate = { escape: true, path: '/agent/a1/t1' };
 
     controller.afterAppReady();
     await controller.showDesktopNotification({ ...params, navigate });
 
-    handler({ id: 'lobehub-nav', type: 'clicked' });
+    handler({ id: 'orvilo-nav', type: 'clicked' });
 
     expect(mockBrowserManager.showMainWindow).toHaveBeenCalled();
     expect(mockMainWindow.broadcast).toHaveBeenCalledWith('navigate', navigate);

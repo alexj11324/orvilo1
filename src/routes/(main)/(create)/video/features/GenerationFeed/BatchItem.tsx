@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import useRenderBusinessVideoBatchItem from '@/business/client/hooks/useRenderBusinessVideoBatchItem';
-import { ModelIcon } from '@/components/LobeIcons';
+import { ModelIcon } from '@/components/OrviloIcons';
 import { GenerationInvalidAPIKey } from '@/routes/(main)/(create)/features/GenerationInput';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useVideoStore } from '@/store/video';

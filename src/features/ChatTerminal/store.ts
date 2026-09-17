@@ -5,7 +5,7 @@ import { electronTerminalService } from '@/services/electron/terminal';
 
 import { xtermManager } from './xtermManager';
 
-const log = debug('lobe-desktop:chat-terminal');
+const log = debug('orvilo-desktop:chat-terminal');
 
 export interface TerminalPane {
   /** Relative width inside the tab — only meaningful against sibling panes */

@@ -28,7 +28,6 @@ const MessageContent = memo<UIChatMessage>(
     const showImageItems = !!imageList && imageList.length > 0;
 
     // remove \n to avoid empty content
-    // refs: https://github.com/lobehub/lobe-chat/pull/6153
     const showReasoning =
       hasRenderableReasoning(props.reasoning) || (!props.reasoning && isReasoning);
 

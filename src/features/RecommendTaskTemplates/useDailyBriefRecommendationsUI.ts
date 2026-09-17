@@ -23,7 +23,7 @@ import { authSelectors } from '@/store/user/slices/auth/selectors';
 import { getProviderMeta } from './providerMeta';
 import { useResolvedInterestKeys } from './useResolvedInterestKeys';
 
-const REFRESH_SEED_STORAGE_KEY = 'lobehub:taskTemplate:refreshSeed';
+const REFRESH_SEED_STORAGE_KEY = 'orvilo:taskTemplate:refreshSeed';
 const nextRefreshSeed = createNanoId(8);
 
 export type DailyBriefRecommendationsUIState =
@@ -46,7 +46,7 @@ const isRecord = (value: unknown): value is Record<PropertyKey, unknown> =>
   typeof value === 'object' && value !== null;
 
 const isTaskTemplateConnectorSource = (value: unknown): value is TaskTemplateConnectorSource =>
-  value === 'composio' || value === 'lobehub';
+  value === 'composio' || value === 'orvilo';
 
 const isTaskTemplateConnector = (value: unknown): value is TaskTemplateConnector => {
   if (!isRecord(value)) return false;
@@ -281,11 +281,9 @@ export function useDailyBriefRecommendationsUI(
     return sources;
   }, [templates]);
   const useFetchUserComposioConnections = useToolStore((s) => s.useFetchUserComposioConnections);
-  const useFetchLobehubConnectorConnections = useToolStore(
-    (s) => s.useFetchLobehubSkillConnections,
-  );
+  const useFetchOrviloConnectorConnections = useToolStore((s) => s.useFetchOrviloSkillConnections);
   useFetchUserComposioConnections(requiredSources.has('composio'));
-  useFetchLobehubConnectorConnections(requiredSources.has('lobehub'));
+  useFetchOrviloConnectorConnections(requiredSources.has('orvilo'));
 
   const displayMode = resolveDailyBriefRecommendationDisplayMode({
     canFetchRecommendations,

@@ -29,7 +29,7 @@ describe('qoderDriver', () => {
     const plan = await qoderDriver.buildSpawnPlan(
       buildParams({
         args: ['--verbose'],
-        mcpConfigPath: '/tmp/lobe-qoder-mcp.json',
+        mcpConfigPath: '/tmp/orvilo-qoder-mcp.json',
         resumeSessionId: 'qoder-session-1',
       }),
     );
@@ -48,7 +48,7 @@ describe('qoderDriver', () => {
         '--resume',
         'qoder-session-1',
         '--mcp-config',
-        '/tmp/lobe-qoder-mcp.json',
+        '/tmp/orvilo-qoder-mcp.json',
         '--verbose',
         '--attachment',
         '/tmp/image.png',

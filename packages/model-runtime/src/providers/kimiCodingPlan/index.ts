@@ -133,6 +133,6 @@ export const params = createAnthropicCompatibleParams({
   provider: ModelProvider.KimiCodingPlan,
 });
 
-export const LobeKimiCodingPlanAI = createAnthropicCompatibleRuntime(params);
+export const OrviloKimiCodingPlanAI = createAnthropicCompatibleRuntime(params);
 
-export default LobeKimiCodingPlanAI;
+export default OrviloKimiCodingPlanAI;

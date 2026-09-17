@@ -16,7 +16,7 @@ import type {
   SandboxServiceOptions,
 } from '../types';
 
-const log = debug('lobe-server:sandbox:onlyboxes');
+const log = debug('orvilo-server:sandbox:onlyboxes');
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const EXPORT_TASK_WAIT_MS = 60_000;
@@ -24,7 +24,7 @@ const DEFAULT_LEASE_TTL_SEC = 900;
 const DEFAULT_JIT_TTL_SEC = 1800;
 const JIT_TOKEN_PREFIX = 'obx_jit_v1.';
 const WRITE_FILE_CHUNK_BYTES = 48 * 1024;
-const SKILL_ARCHIVE_CACHE_DIR = '/tmp/lobe-skills';
+const SKILL_ARCHIVE_CACHE_DIR = '/tmp/orvilo-skills';
 
 interface OnlyboxesTaskResponse {
   error?: { code?: string; message?: string };
@@ -67,7 +67,7 @@ export class OnlyboxesSandboxProvider implements SandboxProvider {
   constructor(options: SandboxServiceOptions) {
     this.options = options;
     this.baseUrl = (sandboxEnv.ONLYBOXES_BASE_URL || '').replace(/\/+$/, '');
-    this.jitIssuer = sandboxEnv.ONLYBOXES_JIT_ISSUER || appEnv.APP_URL || 'lobehub';
+    this.jitIssuer = sandboxEnv.ONLYBOXES_JIT_ISSUER || appEnv.APP_URL || 'orvilo';
     this.jitSigningKey = sandboxEnv.ONLYBOXES_JIT_SIGNING_KEY || '';
     this.jitTTLSec = sandboxEnv.ONLYBOXES_JIT_TTL_SEC || DEFAULT_JIT_TTL_SEC;
     this.leaseTTLSec = sandboxEnv.ONLYBOXES_LEASE_TTL_SEC || DEFAULT_LEASE_TTL_SEC;
@@ -220,7 +220,7 @@ export class OnlyboxesSandboxProvider implements SandboxProvider {
 
   private get sessionId() {
     const scope = `${this.options.userId}-${this.options.topicId}`;
-    return `lobe-${scope.replaceAll(/[^\w.-]/g, '-')}`;
+    return `orvilo-${scope.replaceAll(/[^\w.-]/g, '-')}`;
   }
 
   private async executeCode(params: Record<string, unknown>): Promise<SandboxCallToolResult> {
@@ -243,7 +243,7 @@ export class OnlyboxesSandboxProvider implements SandboxProvider {
       return this.errorResult(`Unsupported code language for Onlyboxes sandbox: ${language}`);
     }
 
-    const filePath = `/tmp/lobe-code-${Date.now()}.${extensions[language]}`;
+    const filePath = `/tmp/orvilo-code-${Date.now()}.${extensions[language]}`;
     const writeResult = await this.writeTextFile({
       content: code,
       createDirectories: true,

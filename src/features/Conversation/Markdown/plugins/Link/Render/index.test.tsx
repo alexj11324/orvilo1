@@ -50,7 +50,7 @@ const mockOpenTaskDetail = vi.fn();
 const mockOpenVerifyReport = vi.fn();
 
 vi.mock('@/business/client/hooks/useWorkspaces', () => ({
-  useWorkspaces: () => [{ id: 'ws-1', slug: 'lobe-team' }],
+  useWorkspaces: () => [{ id: 'ws-1', slug: 'orvilo-team' }],
 }));
 
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
@@ -114,7 +114,7 @@ vi.mock('@/store/global', () => ({
 
 const renderLink = (properties: Record<string, unknown>) =>
   render(
-    <Render id="msg-1" node={{ properties }} tagName="lobeLink" type="element">
+    <Render id="msg-1" node={{ properties }} tagName="orviloLink" type="element">
       {null}
     </Render>,
   );
@@ -152,9 +152,9 @@ describe('Link Render — message link icon toggle', () => {
     it('renders a github link with an icon (svg)', () => {
       mockShowIcon = true;
       const { container } = renderLink({
-        linkHref: 'https://github.com/lobehub/lobehub',
+        linkHref: 'https://github.com/alexj11324/orvilo1',
         linkKind: 'github',
-        linkLabel: 'lobehub/lobehub',
+        linkLabel: 'alexj11324/orvilo1',
       });
       const anchor = container.querySelector('a')!;
       expect(anchor.querySelector('span')).toBeTruthy();
@@ -184,9 +184,9 @@ describe('Link Render — message link icon toggle', () => {
       mockShowIcon = false;
       for (const properties of [
         {
-          linkHref: 'https://github.com/lobehub/lobehub',
+          linkHref: 'https://github.com/alexj11324/orvilo1',
           linkKind: 'github',
-          linkLabel: 'lobehub/lobehub',
+          linkLabel: 'alexj11324/orvilo1',
         },
         { linkHref: 'https://linear.app/x/issue/ABC-1', linkKind: 'linear', linkLabel: 'ABC-1' },
         { linkHref: 'mailto:a@b.com', linkKind: 'email', linkLabel: 'a@b.com' },
@@ -288,17 +288,17 @@ describe('Link Render — internal entities', () => {
   });
 
   it('does not resolve titles for workspace-qualified links', () => {
-    // The ambient client reads the ACTIVE scope; /lobe-team/task/T-198 may
+    // The ambient client reads the ACTIVE scope; /orvilo-team/task/T-198 may
     // name a different entity there, so the URL stays.
     mockEntityPreview = { title: 'Wrong-scope title' };
 
     const { container } = renderLink({
-      linkHref: '/lobe-team/task/T-198',
+      linkHref: '/orvilo-team/task/T-198',
       linkKind: 'generic',
-      linkLabel: '/lobe-team/task/T-198',
+      linkLabel: '/orvilo-team/task/T-198',
     });
 
-    expect(container.querySelector('a')!.textContent).toBe('/lobe-team/task/T-198');
+    expect(container.querySelector('a')!.textContent).toBe('/orvilo-team/task/T-198');
   });
 
   it('opens acceptance links in the conversation portal', () => {
@@ -371,12 +371,12 @@ describe('Link Render — internal entities', () => {
 
   it('opens a verify link for the active workspace in the report portal', () => {
     const { getByRole } = renderLink({
-      linkHref: '/lobe-team/verify/run-1',
+      linkHref: '/orvilo-team/verify/run-1',
       linkKind: 'generic',
-      linkLabel: 'LobeHub Verify',
+      linkLabel: 'Orvilo Verify',
     });
 
-    fireEvent.click(getByRole('link', { name: 'LobeHub Verify' }));
+    fireEvent.click(getByRole('link', { name: 'Orvilo Verify' }));
 
     expect(mockOpenVerifyReport).toHaveBeenCalledWith('run-1');
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -429,9 +429,9 @@ describe('Link Render — desktop preload contract', () => {
   it('leaves external links unclaimed so the preload opens them in the system browser', () => {
     const { container } = renderLink({
       linkDomain: 'github.com',
-      linkHref: 'https://github.com/lobehub/lobehub',
+      linkHref: 'https://github.com/alexj11324/orvilo1',
       linkKind: 'github',
-      linkLabel: 'lobehub/lobehub',
+      linkLabel: 'alexj11324/orvilo1',
     });
 
     expect(container.querySelector('a')).not.toHaveAttribute(RENDERER_HANDLED_LINK_ATTR);
@@ -524,26 +524,26 @@ describe('Link Render — open an external link in the side browser', () => {
 
   it('preserves workspace prefixes for workspace-qualified SPA routes', () => {
     const { getByRole } = renderLink({
-      linkHref: '/lobe-team/tasks',
+      linkHref: '/orvilo-team/tasks',
       linkKind: 'generic',
       linkLabel: 'Workspace tasks',
     });
 
     fireEvent.click(getByRole('link', { name: 'Workspace tasks' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/lobe-team/tasks', { escape: true });
+    expect(mockNavigate).toHaveBeenCalledWith('/orvilo-team/tasks', { escape: true });
   });
 
   it('navigates workspace-qualified entities before opening a scoped portal', () => {
     const { getByRole, queryByRole } = renderLink({
-      linkHref: '/lobe-team/task/T-198',
+      linkHref: '/orvilo-team/task/T-198',
       linkKind: 'generic',
       linkLabel: 'Workspace task',
     });
 
     fireEvent.click(getByRole('link', { name: 'Workspace task' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/lobe-team/task/T-198', { escape: true });
+    expect(mockNavigate).toHaveBeenCalledWith('/orvilo-team/task/T-198', { escape: true });
     expect(mockOpenTaskDetail).not.toHaveBeenCalled();
     expect(queryByRole('dialog')).not.toBeInTheDocument();
   });

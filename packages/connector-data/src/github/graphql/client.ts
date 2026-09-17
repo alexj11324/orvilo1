@@ -6,7 +6,7 @@ import { ConnectorDataError } from '../../errors';
 import { createRecoverableMemo } from '../../memo';
 import { withConnectorRetry } from '../../retry';
 
-const log = debug('lobe-server:connector-data:github');
+const log = debug('orvilo-server:connector-data:github');
 const MAX_ISSUES = 8;
 const MAX_PATH_SEGMENTS = 8;
 const SAFE_ERROR_NAME = /^[a-z][a-z0-9]{0,63}$/i;

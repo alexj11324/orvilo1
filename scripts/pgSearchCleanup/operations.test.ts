@@ -5,7 +5,7 @@ import type { PgSearchInventory } from './inventory';
 import { PG_SEARCH_BM25_INDEXES } from './inventory';
 import {
   assertElasticsearchCutover,
-  assertOnlyLobeHubBm25Indexes,
+  assertOnlyOrviloBm25Indexes,
   runPgSearchCleanup,
 } from './operations';
 
@@ -57,7 +57,7 @@ describe('pg_search cleanup operations', () => {
     expect(() => assertElasticsearchCutover('elasticsearch')).not.toThrow();
   });
 
-  it('rejects BM25 indexes not managed by LobeHub', () => {
+  it('rejects BM25 indexes not managed by Orvilo', () => {
     const inventory = createInventory();
     inventory.bm25Indexes.push({
       name: 'custom_bm25_idx',
@@ -66,7 +66,7 @@ describe('pg_search cleanup operations', () => {
       valid: true,
     });
 
-    expect(() => assertOnlyLobeHubBm25Indexes(inventory)).toThrow(
+    expect(() => assertOnlyOrviloBm25Indexes(inventory)).toThrow(
       'Refusing to remove unrecognized BM25 indexes',
     );
   });

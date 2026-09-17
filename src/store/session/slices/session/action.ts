@@ -5,7 +5,7 @@ import { type SWRResponse } from 'swr';
 import useSWR from 'swr';
 import { type PartialDeep } from 'type-fest';
 
-import { DEFAULT_AGENT_LOBE_SESSION, INBOX_SESSION_ID } from '@/const/session';
+import { DEFAULT_AGENT_ORVILO_SESSION, INBOX_SESSION_ID } from '@/const/session';
 import { analyticsClient } from '@/libs/analytics/client';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { sessionKeys } from '@/libs/swr/keys';
@@ -19,12 +19,12 @@ import { getUserStoreState, useUserStore } from '@/store/user';
 import { settingsSelectors, userProfileSelectors } from '@/store/user/selectors';
 import {
   type ChatSessionList,
-  type LobeAgentSession,
-  type LobeSessionGroups,
-  type LobeSessions,
+  type OrviloAgentSession,
+  type OrviloSessionGroups,
+  type OrviloSessions,
   type UpdateSessionParams,
 } from '@/types/session';
-import { LobeSessionType } from '@/types/session';
+import { OrviloSessionType } from '@/types/session';
 import { merge } from '@/utils/merge';
 import { setNamespace } from '@/utils/storeDebug';
 
@@ -55,20 +55,20 @@ export class SessionActionImpl {
 
   /** @deprecated Use agentStore.createAgent instead */
   createSession = async (
-    agent?: PartialDeep<LobeAgentSession>,
+    agent?: PartialDeep<OrviloAgentSession>,
     isSwitchSession: boolean = true,
   ): Promise<string> => {
     const { switchSession, refreshSessions } = this.#get();
 
     // merge the defaultAgent in settings
     const defaultAgent = merge(
-      DEFAULT_AGENT_LOBE_SESSION,
+      DEFAULT_AGENT_ORVILO_SESSION,
       settingsSelectors.defaultAgent(useUserStore.getState()),
     );
 
-    const newSession: LobeAgentSession = merge(defaultAgent, agent);
+    const newSession: OrviloAgentSession = merge(defaultAgent, agent);
 
-    const id = await sessionService.createSession(LobeSessionType.Agent, newSession);
+    const id = await sessionService.createSession(OrviloSessionType.Agent, newSession);
     await refreshSessions();
 
     const userId = userProfileSelectors.userId(getUserStoreState());
@@ -266,7 +266,7 @@ export class SessionActionImpl {
   };
 
   useSearchSessions = (keyword?: string): SWRResponse<any> => {
-    return useSWR<LobeSessions>(
+    return useSWR<OrviloSessions>(
       sessionKeys.search(keyword),
       async () => {
         if (!keyword) return [];
@@ -292,7 +292,10 @@ export class SessionActionImpl {
     await this.#get().refreshSessions();
   };
 
-  internal_processSessions = (sessions: LobeSessions, sessionGroups: LobeSessionGroups): void => {
+  internal_processSessions = (
+    sessions: OrviloSessions,
+    sessionGroups: OrviloSessionGroups,
+  ): void => {
     const customGroups = sessionGroups.map((item) => ({
       ...item,
       children: sessions.filter((i) => i.group === item.id && !i.pinned),

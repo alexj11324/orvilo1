@@ -60,7 +60,7 @@ export interface ToolWorkRegistration {
   sourceToolCallId: string;
   /**
    * Tool/plugin identifier that produced this registration (the tool payload's
-   * `identifier`, e.g. 'lobe-task' / 'lobe-agent-documents'). Stamped onto the
+   * `identifier`, e.g. 'orvilo-task' / 'orvilo-agent-documents'). Stamped onto the
    * Work as the creator tool. Skills stamp their own provider DB-side instead.
    */
   sourceToolIdentifier: string;

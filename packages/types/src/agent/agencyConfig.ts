@@ -1,5 +1,5 @@
 import type { WorkingDirConfigValue } from '../device';
-import type { LobeAgentChatConfig } from './chatConfig';
+import type { OrviloAgentChatConfig } from './chatConfig';
 import type { AgentGraph } from './graph';
 import { hasAnyCliFlag, hasCliConfigKey, hasCliFlag } from './heteroCliArgs';
 import type { HeterogeneousAgentType, LocalHeterogeneousAgentType } from './heterogeneousAgent';
@@ -105,10 +105,10 @@ export interface HeterogeneousProviderApiConfig {
   source?: 'provider';
 }
 
-/** Legacy Claude Code request alias. Current CLIs send `lobehub/${catalogId}`. */
-export const SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS = 'lobehub-default';
+/** Legacy Claude Code request alias. Current CLIs send `aspectlylabs/${catalogId}`. */
+export const SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS = 'orvilo-default';
 
-const SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE = 'lobehub/';
+const SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE = 'aspectlylabs/';
 
 export const formatServerDefaultHeterogeneousModel = (model: string): string =>
   `${SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE}${model}`;
@@ -146,7 +146,7 @@ export const isServerDefaultHeterogeneousRelayInvocation = (
 /**
  * Map a CLI-reported server-default model back to the catalog id.
  *
- * Supported CLIs request `lobehub/${catalogId}`. Older Claude Code sessions used
+ * Supported CLIs request `aspectlylabs/${catalogId}`. Older Claude Code sessions used
  * {@link SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS}. Neither is the catalog id
  * the user picked.
  */
@@ -265,7 +265,7 @@ export const resolveHeteroCliAgentType = (
  * persona prepended for the builtin Orvilo harness only.
  *
  * External CLI harnesses keep their own identity — a raw `claude-code` agent
- * is Claude Code plus extra context, so its `systemRole` stays a LobeHub-side
+ * is Claude Code plus extra context, so its `systemRole` stays a Orvilo-side
  * display field. The builtin Orvilo harness has no identity of its own: the
  * agent's persona IS the product, so it leads the injected context.
  */
@@ -564,8 +564,8 @@ export const normalizeHeterogeneousProviderConfig = (
 };
 
 const normalizeAgencyConfigHeterogeneousProvider = (
-  agencyConfig: LobeAgentAgencyConfig | null | undefined,
-): LobeAgentAgencyConfig | undefined => {
+  agencyConfig: OrviloAgentAgencyConfig | null | undefined,
+): OrviloAgentAgencyConfig | undefined => {
   const base = agencyConfig ?? undefined;
   if (!base?.heterogeneousProvider) return base;
 
@@ -831,7 +831,7 @@ export const buildHeteroSpawnArgs = (
 /**
  * Resolve args for the `lh hetero exec` wrapper.
  *
- * Unlike `buildHeteroSpawnArgs`, these args are consumed by the LobeHub CLI
+ * Unlike `buildHeteroSpawnArgs`, these args are consumed by the Orvilo CLI
  * wrapper first, not by the native agent binary. Native provider args are
  * encoded with `--agent-arg=<arg>` so wrapper flags such as `-c, --command`
  * never collide with provider flags. Keep selector overrides in the wrapper's
@@ -1099,7 +1099,7 @@ export type AgentTopicSharePolicy = 'member' | 'restricted';
  * Agent agency configuration.
  * Contains settings for agent execution modes and device binding.
  */
-export interface LobeAgentAgencyConfig {
+export interface OrviloAgentAgencyConfig {
   /**
    * Device ID of the machine connected via `lh connect`.
    * Required when `executionTarget === 'device'`.
@@ -1176,7 +1176,7 @@ export interface LobeAgentAgencyConfig {
   modelSelectionPolicy?: AgentModelSelectionPolicy;
   /**
    * Model override for sub-agents this agent spawns via
-   * `lobe-agent.callSubAgent`. When unset (or nulled to clear a previous
+   * `orvilo-agent.callSubAgent`. When unset (or nulled to clear a previous
    * override), sub-agents follow the parent run's effective model — same
    * provider, same model. Configurable in the params panel; `null` rather than
    * `undefined` marks the cleared state because the config deep-merge skips
@@ -1190,7 +1190,7 @@ export interface LobeAgentAgencyConfig {
      * the parent model they inherit the parent's chatConfig wholesale, so the
      * effort follows automatically.
      */
-    chatConfig?: Partial<LobeAgentChatConfig> | null;
+    chatConfig?: Partial<OrviloAgentChatConfig> | null;
     model?: string | null;
     provider?: string | null;
   };
@@ -1249,7 +1249,7 @@ export const AGENT_PERMISSION_POLICY_KEYS = [
   'executionTargetSelectionPolicy',
   'modelSelectionPolicy',
   'topicSharePolicy',
-] as const satisfies readonly (keyof LobeAgentAgencyConfig)[];
+] as const satisfies readonly (keyof OrviloAgentAgencyConfig)[];
 
 /**
  * Explicit defaults written when a workspace agent is created.
@@ -1263,7 +1263,7 @@ export const DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES = {
   modelSelectionPolicy: 'member',
   topicSharePolicy: 'member',
 } as const satisfies Pick<
-  LobeAgentAgencyConfig,
+  OrviloAgentAgencyConfig,
   'executionTargetSelectionPolicy' | 'modelSelectionPolicy' | 'topicSharePolicy'
 >;
 
@@ -1284,7 +1284,7 @@ export const resolveAgentTopicSharePolicy = (
 
 /** The agent fields a topic-share decision reads. */
 export interface AgentTopicShareSubject {
-  agencyConfig?: Pick<LobeAgentAgencyConfig, 'topicSharePolicy'> | null;
+  agencyConfig?: Pick<OrviloAgentAgencyConfig, 'topicSharePolicy'> | null;
   /** Creator of the agent — always allowed to publish its topics. */
   userId?: string | null;
   workspaceId?: string | null;
@@ -1318,15 +1318,15 @@ export const canPublishAgentTopicLink = (
  * applies even while the shared policy is `fixed`.
  */
 const applyAgencyConfigOverride = (
-  base: LobeAgentAgencyConfig | undefined,
+  base: OrviloAgentAgencyConfig | undefined,
   override:
     | Pick<
-        LobeAgentAgencyConfig,
+        OrviloAgentAgencyConfig,
         'boundDeviceId' | 'executionTarget' | 'localSandbox' | 'localSandboxNetwork'
       >
     | null
     | undefined,
-): LobeAgentAgencyConfig | undefined => {
+): OrviloAgentAgencyConfig | undefined => {
   if (!override) return base;
   const hasTarget = override.executionTarget !== undefined;
   const hasDevice = override.boundDeviceId !== undefined;
@@ -1369,15 +1369,15 @@ const applyAgencyConfigOverride = (
  * user's preference.
  */
 export const resolveAgencyConfig = (
-  agencyConfig: LobeAgentAgencyConfig | null | undefined,
+  agencyConfig: OrviloAgentAgencyConfig | null | undefined,
   override:
     | Pick<
-        LobeAgentAgencyConfig,
+        OrviloAgentAgencyConfig,
         'boundDeviceId' | 'executionTarget' | 'localSandbox' | 'localSandboxNetwork'
       >
     | null
     | undefined,
-): LobeAgentAgencyConfig | undefined => {
+): OrviloAgentAgencyConfig | undefined => {
   const base = normalizeAgencyConfigHeterogeneousProvider(agencyConfig);
   if (base?.executionTargetSelectionPolicy === 'fixed') return base;
   return applyAgencyConfigOverride(base, override);
@@ -1404,16 +1404,16 @@ export interface AgentAgencyConfigContext {
  * retained only as the policy that takes effect once the Agent is published.
  */
 export const resolveAgentAgencyConfig = (
-  agencyConfig: LobeAgentAgencyConfig | null | undefined,
+  agencyConfig: OrviloAgentAgencyConfig | null | undefined,
   override:
     | Pick<
-        LobeAgentAgencyConfig,
+        OrviloAgentAgencyConfig,
         'boundDeviceId' | 'executionTarget' | 'localSandbox' | 'localSandboxNetwork'
       >
     | null
     | undefined,
   context: AgentAgencyConfigContext,
-): LobeAgentAgencyConfig | undefined => {
+): OrviloAgentAgencyConfig | undefined => {
   const base = normalizeAgencyConfigHeterogeneousProvider(agencyConfig);
   const isPublicWorkspaceAgent =
     !!context.workspaceId && context.visibility !== 'private' && context.canManage !== true;

@@ -1,4 +1,4 @@
-import type { LobeUniformTool } from '@orvilo/types';
+import type { OrviloUniformTool } from '@orvilo/types';
 
 export const SupervisorToolName = {
   create_todo: 'create_todo',
@@ -8,7 +8,7 @@ export const SupervisorToolName = {
   wait_for_user_input: 'wait_for_user_input',
 };
 
-export const SupervisorTools: LobeUniformTool[] = [
+export const SupervisorTools: OrviloUniformTool[] = [
   {
     description: 'Trigger an agent to speak (group message).',
     name: SupervisorToolName.trigger_agent,

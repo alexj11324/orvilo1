@@ -30,7 +30,7 @@ describe('man command', () => {
       .description('Generate text from a prompt')
       .option('--json', 'Output raw JSON');
 
-    program.command('login').description('Log in to LobeHub');
+    program.command('login').description('Log in to Orvilo');
 
     registerManCommand(program);
     program.exitOverride();
@@ -47,7 +47,7 @@ describe('man command', () => {
 
     expect(output).toContain('LH(1)');
     expect(output).toContain('NAME\n  lh - Sample CLI');
-    expect(output).toContain('ALIASES\n  lobe, lobehub');
+    expect(output).toContain('ALIASES\n  orvilo, orvilo');
     expect(output).toContain('SYNOPSIS\n  lh [options] [command]');
     expect(output).toContain('generate|gen [options] [command]');
     expect(output).toContain('man [options] [command...]');

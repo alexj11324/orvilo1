@@ -18,6 +18,6 @@ export const createDevtools =
     }
 
     return optionalDevtools(showDevtools)(initializer, {
-      name: `Lobe_${name}` + (isDev ? '_DEV' : ''),
+      name: `Orvilo_${name}` + (isDev ? '_DEV' : ''),
     });
   };

@@ -1,11 +1,11 @@
 /**
- * LobeHub color scales, vendored from the "@lobehub/ui/color" entry point at v5.28.0.
+ * Orvilo color scales, vendored from the "@lobehub/ui/color" entry point at v5.28.0.
  *
  * Copied rather than imported: this package is a dev-only CLI and the UI library would be
  * by far its heaviest dependency, in exchange for seven arrays of hex strings. Only the
  * scales the context map uses are kept.
  *
- * Each scale is the standard 13-step LobeHub ramp — 0 is the page background, 9 the solid
+ * Each scale is the standard 13-step Orvilo ramp — 0 is the page background, 9 the solid
  * fill, 12 the highest-contrast text. Refresh by re-reading "@lobehub/ui/color" and
  * re-emitting this file; the step indices in contextMapPalette.ts stay valid.
  */

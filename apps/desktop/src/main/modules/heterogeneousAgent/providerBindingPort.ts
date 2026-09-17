@@ -17,7 +17,7 @@ export const getProviderBindingRuntime = async (
   const serverUrl = await auth.getServerUrl();
   const accessToken = await auth.getAccessToken();
   if (!serverUrl || !accessToken) {
-    throw new Error('LobeHub Provider binding requires an authenticated Desktop session.');
+    throw new Error('Orvilo Provider binding requires an authenticated Desktop session.');
   }
 
   return callLambdaMutation<HeterogeneousProviderBindingRuntime>(
@@ -29,7 +29,7 @@ export const getProviderBindingRuntime = async (
 
 export interface ServerDefaultOperationBinding {
   endpoint: string;
-  model: 'lobehub-default';
+  model: 'orvilo-default';
   token: string;
 }
 

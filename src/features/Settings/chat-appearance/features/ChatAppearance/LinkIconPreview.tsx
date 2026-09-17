@@ -5,7 +5,7 @@ import { memo } from 'react';
 import { Trans } from 'react-i18next';
 
 import { OFFICIAL_SITE } from '@/const/url';
-import { type LobeLinkKind } from '@/features/Conversation/Markdown/plugins/Link/parse';
+import { type OrviloLinkKind } from '@/features/Conversation/Markdown/plugins/Link/parse';
 import LinkRender from '@/features/Conversation/Markdown/plugins/Link/Render';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -27,7 +27,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface SampleLinkProps {
   domain?: string;
   href: string;
-  kind: LobeLinkKind;
+  kind: OrviloLinkKind;
   label: string;
 }
 
@@ -37,7 +37,7 @@ const SampleLink = memo<SampleLinkProps>(({ kind, href, label, domain }) => (
   <LinkRender
     id={`link-icon-preview-${kind}`}
     node={{ properties: { linkDomain: domain, linkHref: href, linkKind: kind, linkLabel: label } }}
-    tagName="lobeLink"
+    tagName="orviloLink"
     type="element"
   >
     {null}
@@ -52,17 +52,17 @@ const LinkIconPreview = memo(() => (
       components={{
         repo: (
           <SampleLink
-            href="https://github.com/lobehub/lobehub"
+            href="https://github.com/alexj11324/orvilo1"
             kind="github"
-            label="lobehub/lobehub"
+            label="alexj11324/orvilo1"
           />
         ),
         site: (
           <SampleLink
-            domain="lobehub.com"
+            domain="orvilo.aspectlylabs.com"
             href={OFFICIAL_SITE}
             kind="generic"
-            label="lobehub.com"
+            label="orvilo.aspectlylabs.com"
           />
         ),
       }}

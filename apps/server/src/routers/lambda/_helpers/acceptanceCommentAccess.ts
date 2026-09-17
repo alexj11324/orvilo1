@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { AcceptanceItem } from '@/database/schemas/verify';
 import { acceptances } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { isUuid } from '@/database/utils/uuid';
 
 export interface AcceptanceCommentAccess {
@@ -46,7 +46,7 @@ export interface AcceptanceCommentAccess {
  * Missing access reads as NOT_FOUND, like the bundle, so existence never leaks.
  */
 export async function resolveAcceptanceCommentAccess(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string | null | undefined,
   acceptanceId: string,
 ): Promise<AcceptanceCommentAccess> {

@@ -427,7 +427,7 @@ describe('aiChatRouter', () => {
               apiName: 'runSkill',
               arguments: '{"name":"Grep"}',
               id: 'tool-call-1',
-              identifier: 'lobe-skills',
+              identifier: 'orvilo-skills',
               type: 'builtin',
             },
           ],
@@ -437,7 +437,7 @@ describe('aiChatRouter', () => {
           plugin: {
             apiName: 'runSkill',
             arguments: '{"name":"Grep"}',
-            identifier: 'lobe-skills',
+            identifier: 'orvilo-skills',
             type: 'builtin',
           },
           role: 'tool',
@@ -474,7 +474,7 @@ describe('aiChatRouter', () => {
         parentId: 'm-preload-assistant',
         plugin: expect.objectContaining({
           apiName: 'runSkill',
-          identifier: 'lobe-skills',
+          identifier: 'orvilo-skills',
         }),
         role: 'tool',
         sessionId: 's1',
@@ -1295,7 +1295,7 @@ describe('aiChatRouter', () => {
         throw new Error('Expected outputJSON to throw');
       } catch (error) {
         expect(error).toBeInstanceOf(TRPCError);
-        expect((runtimeError as any).__lobeSilentTRPCErrorLog).toBe(true);
+        expect((runtimeError as any).__orviloSilentTRPCErrorLog).toBe(true);
       }
     });
 
@@ -1320,7 +1320,7 @@ describe('aiChatRouter', () => {
         throw new Error('Expected outputJSON to throw');
       } catch (error) {
         expect(error).toBeInstanceOf(TRPCError);
-        expect((runtimeError as any).__lobeSilentTRPCErrorLog).toBeUndefined();
+        expect((runtimeError as any).__orviloSilentTRPCErrorLog).toBeUndefined();
       }
     });
 
@@ -1343,7 +1343,7 @@ describe('aiChatRouter', () => {
         await caller.outputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'claude-fable-5',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
         throw new Error('Expected outputJSON to throw');
       } catch (error) {
@@ -1388,7 +1388,7 @@ describe('aiChatRouter', () => {
         caller.outputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'claude-fable-5',
-          provider: 'lobehub',
+          provider: 'orvilo',
         }),
       ).rejects.toMatchObject({
         cause: accessError,
@@ -1418,7 +1418,7 @@ describe('aiChatRouter', () => {
           caller.outputJSON({
             messages: [{ content: 'test', role: 'user' }],
             model: 'claude-fable-5',
-            provider: 'lobehub',
+            provider: 'orvilo',
           }),
         ).rejects.toMatchObject({
           cause: accessError,
@@ -1446,7 +1446,7 @@ describe('aiChatRouter', () => {
         await caller.outputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'claude-fable-5',
-          provider: 'lobehub',
+          provider: 'orvilo',
           tracing: { scenario: 'input_completion' },
         });
         throw new Error('Expected outputJSON to throw');
@@ -1456,7 +1456,7 @@ describe('aiChatRouter', () => {
           code: 'SERVICE_UNAVAILABLE',
           message: runtimeError.error.message,
         });
-        expect((runtimeError as any).__lobeSilentTRPCErrorLog).toBeUndefined();
+        expect((runtimeError as any).__orviloSilentTRPCErrorLog).toBeUndefined();
       }
     });
 
@@ -1475,7 +1475,7 @@ describe('aiChatRouter', () => {
         await caller.outputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'claude-fable-5',
-          provider: 'lobehub',
+          provider: 'orvilo',
           tracing: { scenario: 'input_completion' },
         });
         throw new Error('Expected outputJSON to throw');
@@ -1483,7 +1483,7 @@ describe('aiChatRouter', () => {
         expect(error).toBeInstanceOf(TRPCError);
         expect(error).toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
         expect((error as Error).message).not.toBe(`Request failed (${errorType})`);
-        expect((runtimeError as any).__lobeSilentTRPCErrorLog).toBeUndefined();
+        expect((runtimeError as any).__orviloSilentTRPCErrorLog).toBeUndefined();
       }
     });
 

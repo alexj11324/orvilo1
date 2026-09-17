@@ -3,12 +3,12 @@
  * sidebar into the chat input. A custom (non-`Files`) type so the file-upload
  * drop zone ignores it — it only reacts to `Files`.
  */
-export const SKILL_DRAG_MIME = 'application/x-lobe-skill';
+export const SKILL_DRAG_MIME = 'application/x-orvilo-skill';
 
 /**
  * Identifier prefix for agent-document skill bundles ("Agent Skills" —
  * `agent_document` rows with `isSkillBundle=true`). Mirrors the unified VFS
- * skill namespace `./lobe/skills/agent/skills/<name>` flattened to a single
+ * skill namespace `./orvilo/skills/agent/skills/<name>` flattened to a single
  * token, so we can tell these apart from builtin / DB skill names anywhere an
  * identifier travels (SkillEngine meta, `<skill name="…">` tag, activateSkill
  * runtime resolution).

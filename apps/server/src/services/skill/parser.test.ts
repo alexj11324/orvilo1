@@ -158,12 +158,12 @@ description: test
       const data = {
         description: 'A test skill',
         name: 'test-skill',
-        repository: 'https://github.com/lobehub/skills',
+        repository: 'https://github.com/alexj11324/skills',
       };
 
       const result = parser.validateManifest(data);
 
-      expect(result.repository).toBe('https://github.com/lobehub/skills');
+      expect(result.repository).toBe('https://github.com/alexj11324/skills');
     });
 
     it('should throw for invalid author URL', () => {
@@ -472,7 +472,7 @@ Root content`;
     });
   });
 
-  // Regression tests for the ReDoS vulnerability reported in lobehub/lobehub#16494.
+  // Regression tests for the ReDoS vulnerability reported in alexj11324/orvilo1#16494.
   // `basePath` is derived from the fully user-controlled GitHub URL path segment
   // (https://github.com/owner/repo/tree/branch/<path>) and used to be interpolated
   // directly into `new RegExp('^[^/]+/<basePath>/SKILL\\.md$')` inside findSkillMd.

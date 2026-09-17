@@ -30,7 +30,7 @@ const HTTP_METHODS = new Set(['DELETE', 'GET', 'PATCH', 'POST', 'PUT']);
 // spec: the documentation routes themselves, plus the heterogeneous-agent
 // relays. The relays speak the Anthropic/OpenAI wire formats and are gated by
 // `requireHeteroModelInvocation` (operation JWT), so no API key holder can
-// call them and their schemas belong to the upstream vendors, not LobeHub.
+// call them and their schemas belong to the upstream vendors, not Orvilo.
 const SPEC_EXEMPT = new Set([
   'GET /api/v1/docs',
   'GET /api/v1/openapi.json',

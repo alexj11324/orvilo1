@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { HeteroOperationJwtClaims } from '@/libs/trpc/utils/internalJwt';
 
 import {
@@ -26,15 +26,15 @@ vi.mock('@/database/models/rbac', () => ({
 vi.mock('@/utils/rbac', () => ({ getScopePermissions: () => ['permission'] }));
 
 const claims: HeteroOperationJwtClaims = {
-  aud: 'urn:lobehub:hetero-operation',
+  aud: 'urn:orvilo:hetero-operation',
   capabilities: ['model:invoke'],
   exp: 2,
   iat: 1,
-  iss: 'urn:lobehub:internal',
+  iss: 'urn:orvilo:internal',
   jti: 'jti-1',
   model: 'model-a',
   operation_id: 'op-1',
-  provider_id: 'lobehub',
+  provider_id: 'orvilo',
   purpose: 'hetero-operation',
   sub: 'user-1',
 };
@@ -43,7 +43,7 @@ const activeOperation = (overrides: Record<string, unknown> = {}) => ({
   id: 'op-1',
   metadata: { agentType: 'kimi-code', serverDefaultHeterogeneous: true },
   model: 'model-a',
-  provider: 'lobehub',
+  provider: 'orvilo',
   status: 'running',
   userId: 'user-1',
   workspaceId: null,
@@ -56,7 +56,7 @@ const dbWithOperation = (operation: unknown) => {
     limit: vi.fn(async () => (operation ? [operation] : [])),
     where: vi.fn(() => query),
   };
-  return { select: vi.fn(() => query) } as unknown as LobeChatDatabase;
+  return { select: vi.fn(() => query) } as unknown as OrviloDatabase;
 };
 
 describe('resolveActiveHeteroOperationPrincipal', () => {

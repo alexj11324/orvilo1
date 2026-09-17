@@ -7,7 +7,7 @@ import { businessFileUploadCheck } from '@/business/server/lambda-routers/file';
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import type { FileUploadModel } from '@/database/models/fileUpload';
-import type { LobeChatDatabase, Transaction } from '@/database/type';
+import type { OrviloDatabase, Transaction } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { FileS3 } from '@/server/modules/S3';
@@ -63,7 +63,7 @@ const isMissingObject = (error: unknown) => {
 
 const reserveUpload = async (params: {
   clientIp?: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   model: FileUploadModel;
   multipartPartSize?: number;
   pathname: string;

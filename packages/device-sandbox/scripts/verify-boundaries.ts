@@ -22,7 +22,7 @@ interface VerificationCase {
 const execute = async (command: string, writableRoots: string[]): Promise<CommandResult> => {
   const launchPlan = await createSandboxLaunchPlan({
     command: { args: ['-c', command], cmd: '/bin/sh' },
-    env: { ...process.env, LOBE_TEST_SECRET: 'must-not-leak' },
+    env: { ...process.env, ORVILO_TEST_SECRET: 'must-not-leak' },
     policy: { allowNetwork: false, onUnavailable: 'deny', writableRoots },
   });
 
@@ -153,7 +153,7 @@ const main = async () => {
         linked.exitCode !== 0 && !linkedExists && linked.stderr.includes('Operation not permitted'),
     });
 
-    const secret = await execute('printf %s "${LOBE_TEST_SECRET-unset}"', [allowedRoot]);
+    const secret = await execute('printf %s "${ORVILO_TEST_SECRET-unset}"', [allowedRoot]);
     cases.push({
       actual: `exit=${secret.exitCode}; stdout=${JSON.stringify(secret.stdout)}; leaked=${secret.stdout.includes('must-not-leak')}`,
       expected: 'stdout="unset" 且 leaked=false',

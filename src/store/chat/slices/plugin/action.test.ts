@@ -293,7 +293,7 @@ describe('ChatPluginAction', () => {
       );
 
       const payload = {
-        identifier: 'lobe-agent-documents',
+        identifier: 'orvilo-agent-documents',
         apiName: 'replaceDocumentContent',
         arguments: JSON.stringify({ content: 'test', id: 'agent-document-id' }),
         type: 'builtin',
@@ -531,7 +531,7 @@ describe('ChatPluginAction', () => {
         );
 
         const payload = {
-          identifier: 'lobe-group-management',
+          identifier: 'orvilo-group-management',
           apiName: 'speak',
           arguments: JSON.stringify({ agentId: 'agent-1' }),
           type: 'builtin',
@@ -579,7 +579,7 @@ describe('ChatPluginAction', () => {
         );
 
         const payload = {
-          identifier: 'lobe-group-management',
+          identifier: 'orvilo-group-management',
           apiName: 'speak',
           arguments: JSON.stringify({ agentId: 'agent-1' }),
           type: 'builtin',
@@ -642,7 +642,7 @@ describe('ChatPluginAction', () => {
         );
 
         const payload = {
-          identifier: 'lobe-group-management',
+          identifier: 'orvilo-group-management',
           apiName: 'speak',
           arguments: JSON.stringify({ agentId: 'agent-1' }),
           type: 'builtin',
@@ -915,7 +915,7 @@ describe('ChatPluginAction', () => {
         {
           id: 'tool1',
           function: {
-            name: ['lobe-agent', 'callSubAgent', 'default'].join(PLUGIN_SCHEMA_SEPARATOR),
+            name: ['orvilo-agent', 'callSubAgent', 'default'].join(PLUGIN_SCHEMA_SEPARATOR),
             arguments: malformedArguments,
           },
           type: 'function',
@@ -928,9 +928,9 @@ describe('ChatPluginAction', () => {
           builtinTools: [
             {
               type: 'builtin',
-              identifier: 'lobe-agent',
+              identifier: 'orvilo-agent',
               manifest: {
-                identifier: 'lobe-agent',
+                identifier: 'orvilo-agent',
                 api: [
                   {
                     name: 'callSubAgent',

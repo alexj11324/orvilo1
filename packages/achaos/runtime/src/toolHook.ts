@@ -29,7 +29,7 @@ const failedToolResult = (message: string, errorType: string): ToolRunResult => 
   success: false,
 });
 
-/** Compatible with LobeHub's local beforeToolCall hook handler. */
+/** Compatible with Orvilo's local beforeToolCall hook handler. */
 export const createBeforeToolCallChaosHandler =
   (controller: RuntimeChaosController) => async (event: MutableToolCallEvent) => {
     const activations = controller.activationsFor({

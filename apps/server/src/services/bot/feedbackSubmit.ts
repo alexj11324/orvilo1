@@ -2,10 +2,10 @@ import debug from 'debug';
 import { eq } from 'drizzle-orm';
 
 import { users } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { MarketService } from '@/server/services/market';
 
-const log = debug('lobe-server:bot:feedback');
+const log = debug('orvilo-server:bot:feedback');
 
 /**
  * Maximum number of characters used to derive a feedback title from the
@@ -31,7 +31,7 @@ export interface BotFeedbackSubmitOptions {
    *  `clientInfo` so operators can correlate feedback with the originating
    *  thread without exposing it in the user-facing message. */
   threadId?: string;
-  /** LobeHub user id. Required — feedback always carries identity so it can
+  /** Orvilo user id. Required — feedback always carries identity so it can
    *  be tied back to the account / workspace. */
   userId: string;
 }
@@ -53,7 +53,7 @@ export interface BotFeedbackSubmitResult {
  * `renderCommandReply('cmdFeedbackError')`.
  */
 export async function submitBotFeedback(
-  serverDB: LobeChatDatabase,
+  serverDB: OrviloDatabase,
   options: BotFeedbackSubmitOptions,
 ): Promise<BotFeedbackSubmitResult> {
   const { applicationId, body, platform, threadId, userId } = options;

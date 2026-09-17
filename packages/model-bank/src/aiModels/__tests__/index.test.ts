@@ -1,25 +1,25 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { ModelProvider } from '../../const/modelProvider';
-import { loadModels, LOBE_DEFAULT_MODEL_LIST } from '../index';
+import { loadModels, ORVILO_DEFAULT_MODEL_LIST } from '../index';
 
 describe('loadModels', () => {
   it('returns the static model list by default', async () => {
-    await expect(loadModels()).resolves.toBe(LOBE_DEFAULT_MODEL_LIST);
+    await expect(loadModels()).resolves.toBe(ORVILO_DEFAULT_MODEL_LIST);
   });
 
   it('overrides provider models with injected async loaders', async () => {
     const loader = vi.fn().mockResolvedValue([
       {
         enabled: true,
-        id: 'injected-lobehub-model',
+        id: 'injected-orvilo-model',
         type: 'chat',
       },
     ]);
 
     const models = await loadModels({
       providerLoaders: {
-        [ModelProvider.LobeHub]: loader,
+        [ModelProvider.Orvilo]: loader,
       },
     });
 
@@ -28,8 +28,8 @@ describe('loadModels', () => {
       expect.arrayContaining([
         expect.objectContaining({
           enabled: true,
-          id: 'injected-lobehub-model',
-          providerId: ModelProvider.LobeHub,
+          id: 'injected-orvilo-model',
+          providerId: ModelProvider.Orvilo,
           source: 'builtin',
           type: 'chat',
         }),
@@ -41,10 +41,10 @@ describe('loadModels', () => {
     await expect(
       loadModels({
         providerLoaders: {
-          [ModelProvider.LobeHub]: undefined,
+          [ModelProvider.Orvilo]: undefined,
         },
       }),
-    ).resolves.toBe(LOBE_DEFAULT_MODEL_LIST);
+    ).resolves.toBe(ORVILO_DEFAULT_MODEL_LIST);
   });
 
   it('propagates injected loader errors without falling back to static models', async () => {
@@ -53,7 +53,7 @@ describe('loadModels', () => {
     await expect(
       loadModels({
         providerLoaders: {
-          [ModelProvider.LobeHub]: loader,
+          [ModelProvider.Orvilo]: loader,
         },
       }),
     ).rejects.toThrow('model config missing');
@@ -62,23 +62,23 @@ describe('loadModels', () => {
 
 describe('knowledgeCutoff backfill', () => {
   it('fills knowledgeCutoff from the canonical map for builtin models', () => {
-    const fable = LOBE_DEFAULT_MODEL_LIST.find(
+    const fable = ORVILO_DEFAULT_MODEL_LIST.find(
       (m) => m.providerId === 'anthropic' && m.id === 'claude-fable-5',
     );
     expect(fable?.knowledgeCutoff).toBe('2026-01');
 
-    const opus = LOBE_DEFAULT_MODEL_LIST.find(
+    const opus = ORVILO_DEFAULT_MODEL_LIST.find(
       (m) => m.providerId === 'anthropic' && m.id === 'claude-opus-4-8',
     );
     expect(opus?.knowledgeCutoff).toBe('2026-01');
 
     // aggregator spelling of the same model gets the same cutoff
-    const bedrockOpus = LOBE_DEFAULT_MODEL_LIST.find(
+    const bedrockOpus = ORVILO_DEFAULT_MODEL_LIST.find(
       (m) => m.providerId === 'bedrock' && m.id === 'global.anthropic.claude-opus-4-7',
     );
     expect(bedrockOpus?.knowledgeCutoff).toBe('2026-01');
 
-    const vertexGemini3Pro = LOBE_DEFAULT_MODEL_LIST.find(
+    const vertexGemini3Pro = ORVILO_DEFAULT_MODEL_LIST.find(
       (m) => m.providerId === 'vertexai' && m.id === 'gemini-3-pro-preview',
     );
     expect(vertexGemini3Pro?.knowledgeCutoff).toBe('2025-01');
@@ -91,18 +91,18 @@ describe('knowledgeCutoff backfill', () => {
     ]);
 
     const models = await loadModels({
-      providerLoaders: { [ModelProvider.LobeHub]: loader },
+      providerLoaders: { [ModelProvider.Orvilo]: loader },
     });
 
-    const lobehubModels = models.filter((m) => m.providerId === ModelProvider.LobeHub);
-    expect(lobehubModels.find((m) => m.id === 'gpt-5')?.knowledgeCutoff).toBe('2020-01');
-    expect(lobehubModels.find((m) => m.id === 'gpt-5-mini')?.knowledgeCutoff).toBe('2024-05');
+    const orviloModels = models.filter((m) => m.providerId === ModelProvider.Orvilo);
+    expect(orviloModels.find((m) => m.id === 'gpt-5')?.knowledgeCutoff).toBe('2020-01');
+    expect(orviloModels.find((m) => m.id === 'gpt-5-mini')?.knowledgeCutoff).toBe('2024-05');
   });
 });
 
 describe('ChatGPT subscription models', () => {
   it('advertises reasoning replay support', () => {
-    const models = LOBE_DEFAULT_MODEL_LIST.filter(
+    const models = ORVILO_DEFAULT_MODEL_LIST.filter(
       (model) => model.providerId === ModelProvider.ChatGPT,
     );
 
@@ -115,7 +115,7 @@ describe('ChatGPT subscription models', () => {
 
 describe('OpenAI audio models', () => {
   it('advertises native audio support for gpt-audio', () => {
-    const gptAudio = LOBE_DEFAULT_MODEL_LIST.find(
+    const gptAudio = ORVILO_DEFAULT_MODEL_LIST.find(
       (model) => model.providerId === ModelProvider.OpenAI && model.id === 'gpt-audio',
     );
 
@@ -125,7 +125,7 @@ describe('OpenAI audio models', () => {
 
 describe('OpenCode Go models', () => {
   it('registers the Muse Spark Contributor series', () => {
-    const models = LOBE_DEFAULT_MODEL_LIST.filter(
+    const models = ORVILO_DEFAULT_MODEL_LIST.filter(
       (model) =>
         model.providerId === ModelProvider.OpenCodeCodingPlan && model.id.startsWith('muse-spark-'),
     );
@@ -152,7 +152,7 @@ describe('OpenCode Go models', () => {
 
 describe('Moonshot models', () => {
   it('advertises Kimi K3 reasoning effort controls', () => {
-    const kimiK3 = LOBE_DEFAULT_MODEL_LIST.find(
+    const kimiK3 = ORVILO_DEFAULT_MODEL_LIST.find(
       (model) => model.providerId === ModelProvider.Moonshot && model.id === 'kimi-k3',
     );
 
@@ -162,7 +162,7 @@ describe('Moonshot models', () => {
 
 describe('Hunyuan models', () => {
   it('registers Hy3 with agent capabilities', () => {
-    const hy3 = LOBE_DEFAULT_MODEL_LIST.find(
+    const hy3 = ORVILO_DEFAULT_MODEL_LIST.find(
       (model) => model.providerId === ModelProvider.Hunyuan && model.id === 'hy3',
     );
 
@@ -187,7 +187,7 @@ describe('Hunyuan models', () => {
 
 describe('MiniMax video models', () => {
   it('registers MiniMax-H3 with the official v2 parameter limits', () => {
-    const h3 = LOBE_DEFAULT_MODEL_LIST.find(
+    const h3 = ORVILO_DEFAULT_MODEL_LIST.find(
       (model) => model.providerId === ModelProvider.Minimax && model.id === 'MiniMax-H3',
     );
 
@@ -207,7 +207,7 @@ describe('MiniMax video models', () => {
   });
 
   it('keeps the combined MiniMax-H3 reference capacity within the v2 limit of 9', () => {
-    const h3 = LOBE_DEFAULT_MODEL_LIST.find(
+    const h3 = ORVILO_DEFAULT_MODEL_LIST.find(
       (model) => model.providerId === ModelProvider.Minimax && model.id === 'MiniMax-H3',
     );
 
@@ -231,7 +231,7 @@ describe('MiniMax video models', () => {
 
 describe('Google rolling model aliases', () => {
   it('tracks the current Flash and Flash-Lite model versions', () => {
-    const googleModels = LOBE_DEFAULT_MODEL_LIST.filter((model) => model.providerId === 'google');
+    const googleModels = ORVILO_DEFAULT_MODEL_LIST.filter((model) => model.providerId === 'google');
     const flashLatest = googleModels.find((model) => model.id === 'gemini-flash-latest');
     const flash = googleModels.find((model) => model.id === 'gemini-3.8-flash');
     const flashLiteLatest = googleModels.find((model) => model.id === 'gemini-flash-lite-latest');
@@ -259,7 +259,7 @@ describe('Google rolling model aliases', () => {
 
 describe('Google Gemini 3.1 Flash Image models', () => {
   it('registers stable IDs without removing the preview compatibility cards', () => {
-    const googleModels = LOBE_DEFAULT_MODEL_LIST.filter(
+    const googleModels = ORVILO_DEFAULT_MODEL_LIST.filter(
       (model) => model.providerId === ModelProvider.Google,
     );
     const stableImageModel = googleModels.find(
@@ -309,7 +309,7 @@ describe('vendor provider cards', () => {
   it('advertises native search, image and video input for GLM-5.3-Flash', () => {
     // Without `video: true` the chat pipeline falls back to media analysis instead of sending
     // video to the model natively, even though the official card lists video input.
-    const glm53Flash = LOBE_DEFAULT_MODEL_LIST.find(
+    const glm53Flash = ORVILO_DEFAULT_MODEL_LIST.find(
       (m) => m.providerId === 'zhipu' && m.id === 'glm-5.3-flash',
     );
 
@@ -324,7 +324,7 @@ describe('recent direct-provider models', () => {
   it.each(['qwen3.8-max', 'qwen3.8-max-0902'])(
     'exposes exactly one %s card with effort and thinking preservation controls',
     (id) => {
-      const models = LOBE_DEFAULT_MODEL_LIST.filter(
+      const models = ORVILO_DEFAULT_MODEL_LIST.filter(
         (entry) => entry.providerId === 'qwen' && entry.id === id,
       );
       expect(models).toHaveLength(1);
@@ -343,7 +343,7 @@ describe('recent direct-provider models', () => {
     ['qwen', 'qwen3.8-max', 'qwen38ReasoningEffort'],
     ['qwen', 'qwen3.8-max-0902', 'qwen38ReasoningEffort'],
   ])('exposes %s/%s with its reasoning controls', (providerId, id, reasoningParam) => {
-    const model = LOBE_DEFAULT_MODEL_LIST.find(
+    const model = ORVILO_DEFAULT_MODEL_LIST.find(
       (entry) => entry.providerId === providerId && entry.id === id,
     );
 
@@ -358,7 +358,7 @@ describe('recent direct-provider models', () => {
 
 describe('Gemini 3.8 introductory pricing', () => {
   it.each(['google', 'vertexai'])('uses the published output rate for %s', (providerId) => {
-    const model = LOBE_DEFAULT_MODEL_LIST.find(
+    const model = ORVILO_DEFAULT_MODEL_LIST.find(
       (entry) => entry.providerId === providerId && entry.id === 'gemini-3.8-flash',
     );
     expect(model?.pricing?.units).toContainEqual({
@@ -375,7 +375,7 @@ describe('subscription model catalogs', () => {
     ['chatgpt', 'gpt-6-astra', 'gpt6ReasoningEffort'],
     ['supergrok', 'grok-4.6', 'grok4_6ReasoningEffort'],
   ])('exposes %s/%s without usage-based pricing', (providerId, id, reasoningParam) => {
-    const model = LOBE_DEFAULT_MODEL_LIST.find(
+    const model = ORVILO_DEFAULT_MODEL_LIST.find(
       (entry) => entry.providerId === providerId && entry.id === id,
     );
     expect(model).toMatchObject({ enabled: true, type: 'chat' });
@@ -384,7 +384,7 @@ describe('subscription model catalogs', () => {
   });
 
   it('keeps the ChatGPT context cap and thinking preservation', () => {
-    const model = LOBE_DEFAULT_MODEL_LIST.find(
+    const model = ORVILO_DEFAULT_MODEL_LIST.find(
       (entry) => entry.providerId === 'chatgpt' && entry.id === 'gpt-6-astra',
     );
     expect(model?.contextWindowTokens).toBe(272_000);

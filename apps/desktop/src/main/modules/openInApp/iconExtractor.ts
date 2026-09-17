@@ -48,7 +48,7 @@ const ensureTmpDir = async (): Promise<string | undefined> => {
   if (tmpDirPromise) return tmpDirPromise;
   tmpDirPromise = (async () => {
     try {
-      return await mkdtemp(path.join(tmpdir(), 'lobehub-openinapp-'));
+      return await mkdtemp(path.join(tmpdir(), 'orvilo-openinapp-'));
     } catch (error) {
       logger.debug(`failed to create tmp dir: ${(error as Error).message}`);
       return undefined;

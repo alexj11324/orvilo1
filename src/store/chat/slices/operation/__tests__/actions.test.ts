@@ -21,7 +21,7 @@ describe('Operation Actions', () => {
           {
             actionCategory: 'tool',
             actionLabel: 'Notebook',
-            actionType: 'lobe-notebook',
+            actionType: 'orvilo-notebook',
             type: 'action-tag',
           },
         ],

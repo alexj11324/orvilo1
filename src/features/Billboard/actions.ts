@@ -13,7 +13,7 @@ import { getUserStoreState } from '@/store/user';
  * of these enum values in the item's `action` field; the client runs the
  * registered handler instead of opening `linkUrl`.
  *
- * Keep in sync with the ops platform enum (`src/const/billboard.ts` in lobe-ops).
+ * Keep in sync with the ops platform enum (`src/const/billboard.ts` in orvilo-ops).
  */
 export const BILLBOARD_ACTIONS = ['openChangelog', 'openFeedback', 'resetOnboarding'] as const;
 

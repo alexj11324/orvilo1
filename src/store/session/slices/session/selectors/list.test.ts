@@ -1,6 +1,6 @@
 import { type SessionStore } from '@/store/session';
-import { type LobeAgentSession } from '@/types/session';
-import { LobeSessionType } from '@/types/session';
+import { type OrviloAgentSession } from '@/types/session';
+import { OrviloSessionType } from '@/types/session';
 
 import { sessionSelectors } from './list';
 
@@ -15,8 +15,8 @@ describe('currentSession', () => {
           params: {},
           systemRole: 'system-role',
         },
-        type: LobeSessionType.Agent,
-      } as LobeAgentSession,
+        type: OrviloSessionType.Agent,
+      } as OrviloAgentSession,
       {
         id: '2',
         config: {
@@ -24,8 +24,8 @@ describe('currentSession', () => {
           params: {},
           systemRole: 'system-role',
         },
-        type: LobeSessionType.Agent,
-      } as LobeAgentSession,
+        type: OrviloSessionType.Agent,
+      } as OrviloAgentSession,
     ],
   } as unknown as SessionStore;
 
@@ -49,8 +49,8 @@ describe('getSessionById', () => {
           params: {},
           systemRole: 'system-role',
         },
-        type: LobeSessionType.Agent,
-      } as LobeAgentSession,
+        type: OrviloSessionType.Agent,
+      } as OrviloAgentSession,
       {
         id: '2',
         config: {
@@ -58,8 +58,8 @@ describe('getSessionById', () => {
           params: {},
           systemRole: 'system-role',
         },
-        type: LobeSessionType.Agent,
-      } as LobeAgentSession,
+        type: OrviloSessionType.Agent,
+      } as OrviloAgentSession,
     ],
   } as unknown as SessionStore;
 

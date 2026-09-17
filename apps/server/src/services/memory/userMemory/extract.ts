@@ -7,12 +7,12 @@ import {
   ActivityMemoryItemSchema,
   BenchmarkLocomoContextProvider,
   type BenchmarkLocomoPart,
-  LobeChatTopicContextProvider,
-  LobeChatTopicResultRecorder,
   type MemoryExtractionAgent,
   type MemoryExtractionJob,
   type MemoryExtractionResult,
   MemoryExtractionService,
+  OrviloTopicContextProvider,
+  OrviloTopicResultRecorder,
   type PersistedMemoryResult,
   RetrievalUserMemoryContextProvider,
   RetrievalUserMemoryIdentitiesProvider,
@@ -528,7 +528,7 @@ export const resolveRuntimeAgentConfig = (
   );
 
   for (const provider of providerOrder) {
-    if (provider === 'lobehub') {
+    if (provider === 'orvilo') {
       debugRuntimeInit(agent, {
         provider,
         source: 'user-vault' as const,
@@ -577,7 +577,7 @@ export const resolveRuntimeAgentConfig = (
   });
 };
 
-const logRuntime = debug('lobe-server:memory:user-memory:runtime');
+const logRuntime = debug('orvilo-server:memory:user-memory:runtime');
 
 const debugRuntimeInit = (
   agent: MemoryAgentConfig,
@@ -1530,7 +1530,7 @@ export class MemoryExtractionExecutor {
         const startTime = Date.now();
         let extractionJob: MemoryExtractionJob | null = null;
         let extraction: MemoryExtractionResult | null = null;
-        let resultRecorder: LobeChatTopicResultRecorder | null = null;
+        let resultRecorder: OrviloTopicResultRecorder | null = null;
         let tracePayload: MemoryExtractionTracePayload<
           MemoryExtractionResult,
           MemoryExtractionJob | null,
@@ -1639,14 +1639,14 @@ export class MemoryExtractionExecutor {
 
           const messageIds = extractorConversations.map((item) => item.id);
 
-          const topicContextProvider = new LobeChatTopicContextProvider({
+          const topicContextProvider = new OrviloTopicContextProvider({
             conversations: extractorConversations,
             topic,
             topicId: topic.id,
           });
           const topicContext = await topicContextProvider.buildContext(extractionJob.userId);
 
-          resultRecorder = new LobeChatTopicResultRecorder({
+          resultRecorder = new OrviloTopicResultRecorder({
             currentMetadata: topic.metadata || {},
             database: db,
             lastMessageAt: (conversations?.at(-1)?.createdAt || topic.updatedAt).toISOString(),
@@ -2524,7 +2524,7 @@ export class MemoryExtractionExecutor {
       userId,
     };
 
-    const hooks = getBusinessModelRuntimeHooks(userId, 'lobehub');
+    const hooks = getBusinessModelRuntimeHooks(userId, 'orvilo');
 
     const runtimes: RuntimeBundle = {
       embeddings: await resolveRuntimeAgentConfig(

@@ -184,8 +184,8 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
       const inFlight = isArgumentsStreaming || isLoading;
       const label = t(
         inFlight
-          ? 'builtins.lobe-claude-code.task.create.loading'
-          : 'builtins.lobe-claude-code.task.create.completed',
+          ? 'builtins.orvilo-claude-code.task.create.loading'
+          : 'builtins.orvilo-claude-code.task.create.completed',
       );
       const text = subject ? `${label}${subject}` : label;
       return (
@@ -228,12 +228,12 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
           updateArgs?.subject;
         const verb =
           status === 'deleted'
-            ? t('builtins.lobe-claude-code.task.updateDeleted')
+            ? t('builtins.orvilo-claude-code.task.updateDeleted')
             : status === 'completed'
-              ? t('builtins.lobe-claude-code.task.updateCompleted')
+              ? t('builtins.orvilo-claude-code.task.updateCompleted')
               : status === 'in_progress'
-                ? t('builtins.lobe-claude-code.task.updateInProgress')
-                : t('builtins.lobe-claude-code.task.updatePending');
+                ? t('builtins.orvilo-claude-code.task.updateInProgress')
+                : t('builtins.orvilo-claude-code.task.updatePending');
         return (
           <div className={inspectorTextStyles.root}>
             <ProgressRing stats={stats} />
@@ -265,8 +265,8 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
         const inFlight = isArgumentsStreaming || isLoading;
         const verb = t(
           inFlight
-            ? 'builtins.lobe-claude-code.task.updateSubject.loading'
-            : 'builtins.lobe-claude-code.task.updateSubject.completed',
+            ? 'builtins.orvilo-claude-code.task.updateSubject.loading'
+            : 'builtins.orvilo-claude-code.task.updateSubject.completed',
         );
         return (
           <div className={inspectorTextStyles.root}>
@@ -296,18 +296,18 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
       const fallback = (() => {
         if (apiName === ClaudeCodeApiName.TaskUpdate) {
           const taskId = (resolvedArgs as TaskUpdateArgs | undefined)?.taskId;
-          if (!taskId) return t('builtins.lobe-claude-code.todoWrite.todos');
+          if (!taskId) return t('builtins.orvilo-claude-code.todoWrite.todos');
           return t(
             inFlight
-              ? 'builtins.lobe-claude-code.task.update.loading'
-              : 'builtins.lobe-claude-code.task.update.completed',
+              ? 'builtins.orvilo-claude-code.task.update.loading'
+              : 'builtins.orvilo-claude-code.task.update.completed',
             { taskId },
           );
         }
         return t(
           inFlight
-            ? 'builtins.lobe-claude-code.task.list.loading'
-            : 'builtins.lobe-claude-code.task.list.completed',
+            ? 'builtins.orvilo-claude-code.task.list.loading'
+            : 'builtins.orvilo-claude-code.task.list.completed',
         );
       })();
       return (
@@ -318,10 +318,10 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
     }
 
     const label = stats.inProgress
-      ? t('builtins.lobe-claude-code.todoWrite.currentStep')
+      ? t('builtins.orvilo-claude-code.todoWrite.currentStep')
       : allDone
-        ? t('builtins.lobe-claude-code.todoWrite.allDone')
-        : t('builtins.lobe-claude-code.todoWrite.todos');
+        ? t('builtins.orvilo-claude-code.todoWrite.allDone')
+        : t('builtins.orvilo-claude-code.todoWrite.todos');
 
     const detail = stats.inProgress
       ? stats.inProgress.text

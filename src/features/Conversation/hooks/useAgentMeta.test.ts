@@ -55,7 +55,7 @@ describe('useAgentMeta', () => {
   it('should preserve custom title for builtin inbox agent when set via onboarding', () => {
     const mockInboxAgentId = 'inbox-agent-id';
     const mockMeta = {
-      avatar: '/icons/icon-lobe.png',
+      avatar: '/icons/icon-orvilo.png',
       title: 'Original Inbox Title',
       description: 'Inbox description',
     };
@@ -80,7 +80,7 @@ describe('useAgentMeta', () => {
     const { result } = renderHook(() => useAgentMeta());
 
     // Should preserve custom title and avatar from DB
-    expect(result.current.avatar).toBe('/icons/icon-lobe.png');
+    expect(result.current.avatar).toBe('/icons/icon-orvilo.png');
     expect(result.current.title).toBe('Original Inbox Title');
     expect(result.current.description).toBe('Inbox description');
   });
@@ -88,7 +88,7 @@ describe('useAgentMeta', () => {
   it('should fallback to Orvilo AI title for builtin agent without custom title', () => {
     const mockInboxAgentId = 'inbox-agent-id';
     const mockMeta = {
-      avatar: '/icons/icon-lobe.png',
+      avatar: '/icons/icon-orvilo.png',
     };
 
     vi.mocked(useConversationStore).mockImplementation((selector: any) => {
@@ -110,14 +110,14 @@ describe('useAgentMeta', () => {
 
     const { result } = renderHook(() => useAgentMeta());
 
-    expect(result.current.avatar).toBe('/icons/icon-lobe.png');
+    expect(result.current.avatar).toBe('/icons/icon-orvilo.png');
     expect(result.current.title).toBe('Orvilo AI');
   });
 
   it('should preserve custom title for page agent (builtin)', () => {
     const mockPageAgentId = 'page-agent-id';
     const mockMeta = {
-      avatar: '/icons/icon-lobe.png',
+      avatar: '/icons/icon-orvilo.png',
       title: 'Page Agent Title',
     };
 
@@ -140,7 +140,7 @@ describe('useAgentMeta', () => {
 
     const { result } = renderHook(() => useAgentMeta());
 
-    expect(result.current.avatar).toBe('/icons/icon-lobe.png');
+    expect(result.current.avatar).toBe('/icons/icon-orvilo.png');
     expect(result.current.title).toBe('Page Agent Title');
   });
 

@@ -2,7 +2,7 @@ import { toast } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 
 import { handleGenerationPromptModerationError } from '@/business/client/handleGenerationPromptModerationError';
-import { handleLobeHubModelDeprecatedError } from '@/business/client/handleLobeHubModelDeprecatedError';
+import { handleOrviloModelDeprecatedError } from '@/business/client/handleOrviloModelDeprecatedError';
 import { videoService } from '@/services/video';
 import { type StoreSetter } from '@/store/types';
 
@@ -115,7 +115,7 @@ export class CreateVideoActionImpl {
       );
     } catch (error) {
       handleGenerationPromptModerationError(error);
-      handleLobeHubModelDeprecatedError(error);
+      handleOrviloModelDeprecatedError(error);
       throw error;
     } finally {
       // 7. Reset all creating states
@@ -156,7 +156,7 @@ export class CreateVideoActionImpl {
       await store.refreshGenerationBatches();
     } catch (error) {
       handleGenerationPromptModerationError(error);
-      handleLobeHubModelDeprecatedError(error);
+      handleOrviloModelDeprecatedError(error);
       throw error;
     } finally {
       this.#set({ isCreating: false }, false, 'recreateVideo/end');

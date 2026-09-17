@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 
 import {
   ElasticsearchFtsSearchBackend,
@@ -20,7 +20,7 @@ import {
 
 export interface CreateFtsSearchRepoInput {
   callerAgentVisibility?: 'private' | 'public' | null;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   options?: FtsSearchRepoOptions;
   usage: FtsSearchUsage;
   userId: string;
@@ -78,7 +78,7 @@ export class FtsSearchBackendUnavailableError extends Error {
 export const loadElasticsearchFtsSearchConfig = (): ElasticsearchFtsSearchConfig | undefined => {
   const indexNamespace =
     ftsSearchEnv.ES_INDEX_NAMESPACE ??
-    (process.env.NODE_ENV === 'development' ? 'lobehub-dev' : undefined);
+    (process.env.NODE_ENV === 'development' ? 'orvilo-dev' : undefined);
   const allowInsecureHttp = ftsSearchEnv.ES_ALLOW_INSECURE_HTTP === 'true';
   /** The Elastic Cloud path keeps requiring an API key; only the explicit insecure mode may omit it. */
   if (!ftsSearchEnv.ES_URL || !indexNamespace) return;

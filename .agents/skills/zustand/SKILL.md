@@ -4,7 +4,7 @@ description: 'Use for Zustand stores: list/detail splits, state type sources, sl
 user-invocable: false
 ---
 
-# LobeHub Zustand State Management
+# Orvilo Zustand State Management
 
 ## State Shapes and Types
 

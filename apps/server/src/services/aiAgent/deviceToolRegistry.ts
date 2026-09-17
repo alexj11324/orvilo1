@@ -15,7 +15,7 @@
  *      `ToolsEngine.manifestSchemas` or the activator-discovery
  *      `toolManifestMap`. Routing every builtin discovery through this
  *      helper closes the activator bypass documented in (an
- *      external sender could otherwise `activateTools(["lobe-remote-device"])`
+ *      external sender could otherwise `activateTools(["orvilo-remote-device"])`
  *      because the manifest was still resolvable in the engine even when
  *      the rule-layer gate denied it).
  */
@@ -52,13 +52,13 @@ export interface AllowedBuiltinToolsParams {
    * Output of `resolveDeviceAccessPolicy`. When `false`, BOTH device tools
    * (local-system and remote-device) are stripped from the returned list —
    * this is the hard wall that keeps external bot senders from reaching the
-   * owner's machine even via `lobe-activator`'s `isExplicitActivation`
+   * owner's machine even via `orvilo-activator`'s `isExplicitActivation`
    * bypass at the engine's enableChecker layer.
    */
   canUseDevice: boolean;
   /**
    * The run is locked to a specific device — routed, or explicitly bound but
-   * offline (see `isDeviceLockedPlan`). Strips `lobe-remote-device` ONLY:
+   * offline (see `isDeviceLockedPlan`). Strips `orvilo-remote-device` ONLY:
    * with no device decision left, the picker must not exist (offering
    * `activateDevice` invites redundant activation or hopping to a machine
    * the user never chose), while local-system stays for the routed device.

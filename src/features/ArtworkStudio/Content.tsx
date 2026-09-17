@@ -40,7 +40,7 @@ import { useAiInfraStore } from '@/store/aiInfra';
 import { aiProviderSelectors } from '@/store/aiInfra/selectors';
 
 const GALLERY_STYLES = AGENT_ARTWORK_STYLES;
-const LOBE_STYLE_PREVIEW =
+const ORVILO_STYLE_PREVIEW =
   CHIEF_AGENT_ARTWORKS.find((item) => item.id === 'sienna')?.avatar ??
   DEFAULT_CHIEF_AGENT_ARTWORK.avatar;
 
@@ -668,8 +668,8 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                               alt={t(`artworkStudio.style.${item}`)}
                               className={styles.galleryThumb}
                               src={
-                                item === 'lobe'
-                                  ? LOBE_STYLE_PREVIEW
+                                item === 'orvilo'
+                                  ? ORVILO_STYLE_PREVIEW
                                   : imageUrl(`agent-artwork-styles/style-${item}.webp`)
                               }
                             />

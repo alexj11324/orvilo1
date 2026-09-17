@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@orvilo/builtin-tool-skill-store', () => ({
-  SkillStoreIdentifier: 'lobe-skill-store',
+  SkillStoreIdentifier: 'orvilo-skill-store',
 }));
 
 vi.mock('@orvilo/builtin-tool-skill-store/executionRuntime', () => ({

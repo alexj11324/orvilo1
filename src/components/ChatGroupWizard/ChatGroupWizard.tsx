@@ -15,8 +15,8 @@ import GroupAvatar from '@/features/GroupAvatar';
 import ModelSelect from '@/features/ModelSelect';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 import { useSessionStore } from '@/store/session';
-import { type LobeAgentSession } from '@/types/session';
-import { LobeSessionType } from '@/types/session';
+import { type OrviloAgentSession } from '@/types/session';
+import { OrviloSessionType } from '@/types/session';
 
 import { type GroupTemplate } from './templates';
 import { useGroupTemplates } from './templates';
@@ -68,7 +68,7 @@ const TemplateItem = memo<{
 });
 
 const ExistingMemberItem = memo<{
-  agent: LobeAgentSession;
+  agent: OrviloAgentSession;
   cx: (..._args: any[]) => string;
   isSelected: boolean;
   onToggle: (_agentId: string) => void;
@@ -203,7 +203,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
     const groupTemplates = useGroupTemplates();
     const enabledModels = useEnabledChatModels();
     const agentSessions = useSessionStore((s) =>
-      (s.sessions || []).filter((session) => session.type === LobeSessionType.Agent),
+      (s.sessions || []).filter((session) => session.type === OrviloSessionType.Agent),
     );
 
     const visibleAgentSessions = useMemo(

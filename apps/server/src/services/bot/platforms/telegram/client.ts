@@ -21,7 +21,7 @@ import {
 } from '../types';
 import { formatUsageStats } from '../utils';
 import { TELEGRAM_API_BASE, TelegramApi } from './api';
-import { createLobeTelegramAdapter } from './guestAdapter';
+import { createOrviloTelegramAdapter } from './guestAdapter';
 import { deliverGuestCreate, deliverGuestEdit } from './guestOutbound';
 import { extractBotId, resolveTelegramSecretToken, setTelegramWebhook } from './helpers';
 import { markdownToTelegramHTML } from './markdownToHTML';
@@ -229,7 +229,7 @@ class TelegramWebhookClient implements PlatformClient {
 
   createAdapter(): Record<string, any> {
     return {
-      telegram: createLobeTelegramAdapter(
+      telegram: createOrviloTelegramAdapter(
         {
           botToken: this.config.credentials.botToken,
           // Always verified: the operator's secret when set, otherwise the same

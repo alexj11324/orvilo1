@@ -3,36 +3,36 @@ import { describe, expect, it } from 'vitest';
 import { ARTIFACT_TAG_REGEX } from './plugin';
 
 describe('ARTIFACT_TAG_REGEX', () => {
-  it('should match a simple lobeArtifact tag', () => {
-    const input = '<lobeArtifact>Simple content</lobeArtifact>';
+  it('should match a simple orviloArtifact tag', () => {
+    const input = '<orviloArtifact>Simple content</orviloArtifact>';
     const matches = input.match(ARTIFACT_TAG_REGEX);
     expect(matches).toHaveLength(2);
     expect(matches?.[1]).toBe('Simple content');
   });
 
-  it('should match a lobeArtifact tag with attributes', () => {
-    const input = '<lobeArtifact type="image">Content with attributes</lobeArtifact>';
+  it('should match a orviloArtifact tag with attributes', () => {
+    const input = '<orviloArtifact type="image">Content with attributes</orviloArtifact>';
     const matches = input.match(ARTIFACT_TAG_REGEX);
     expect(matches).toHaveLength(2);
     expect(matches?.[1]).toBe('Content with attributes');
   });
 
-  it('should match lobeArtifact tag with multiline content', () => {
-    const input = '<lobeArtifact>\nMultiline\ncontent\n</lobeArtifact>';
+  it('should match orviloArtifact tag with multiline content', () => {
+    const input = '<orviloArtifact>\nMultiline\ncontent\n</orviloArtifact>';
     const matches = input.match(ARTIFACT_TAG_REGEX);
     expect(matches).toHaveLength(2);
     expect(matches?.[1]).toBe('\nMultiline\ncontent\n');
   });
 
-  it('should match an unclosed lobeArtifact tag', () => {
-    const input = '<lobeArtifact>Unclosed tag';
+  it('should match an unclosed orviloArtifact tag', () => {
+    const input = '<orviloArtifact>Unclosed tag';
     const matches = input.match(ARTIFACT_TAG_REGEX);
     expect(matches).toHaveLength(2);
     expect(matches?.[1]).toBe('Unclosed tag');
   });
 
-  it('should not match when there is no lobeArtifact tag', () => {
-    const input = 'This is a text without any lobeArtifact tag';
+  it('should not match when there is no orviloArtifact tag', () => {
+    const input = 'This is a text without any orviloArtifact tag';
     const matches = input.match(ARTIFACT_TAG_REGEX);
     expect(matches).toBeNull();
   });
@@ -40,9 +40,9 @@ describe('ARTIFACT_TAG_REGEX', () => {
   it('should match', () => {
     const input = `好的,让我来为您解释"OpenAI"这个词。
 
-<lobeThinking>这个词涉及人工智能领域的一家知名公司,我需要用批判性和幽默的视角来解读它的本质。我会结合当前AI发展的现状,用隐喻的方式来表达。</lobeThinking>
+<orviloThinking>这个词涉及人工智能领域的一家知名公司,我需要用批判性和幽默的视角来解读它的本质。我会结合当前AI发展的现状,用隐喻的方式来表达。</orviloThinking>
 
-<lobeArtifact identifier="openai-new-interpretation" type="image/svg+xml" title="OpenAI 汉语新解">
+<orviloArtifact identifier="openai-new-interpretation" type="image/svg+xml" title="OpenAI 汉语新解">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
   <rect width="400" height="600" fill="#f0f0f0"/>
   <g font-family="Arial, sans-serif">
@@ -62,7 +62,7 @@ describe('ARTIFACT_TAG_REGEX', () => {
     <text x="200" y="450" font-size="14" text-anchor="middle" fill="#555">开放的盒子里装着封闭的秘密</text>
   </g>
 </svg>
-</lobeArtifact>
+</orviloArtifact>
 
 OpenAI,这个名字听起来多么崇高啊!就像是一位身披白袍、头戴光环的科技天使,降临凡间来拯救我们这些被信息海洋淹没的可怜虫。
 

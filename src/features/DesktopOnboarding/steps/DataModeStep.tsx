@@ -10,8 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
-import LobeMessage from '../components/LobeMessage';
 import OnboardingFooterActions from '../components/OnboardingFooterActions';
+import OrviloMessage from '../components/OrviloMessage';
 
 type DataMode = 'share' | 'privacy';
 
@@ -52,7 +52,7 @@ const DataModeStep = memo<DataModeStepProps>(({ onBack, onNext }) => {
   return (
     <Flexbox gap={16} style={{ height: '100%', minHeight: '100%' }}>
       <Flexbox>
-        <LobeMessage sentences={[t('screen4.title'), t('screen4.title2'), t('screen4.title3')]} />
+        <OrviloMessage sentences={[t('screen4.title'), t('screen4.title2'), t('screen4.title3')]} />
         <Text as={'p'}>{t('screen4.description')}</Text>
       </Flexbox>
       <Flexbox gap={16} style={{ width: '100%' }}>

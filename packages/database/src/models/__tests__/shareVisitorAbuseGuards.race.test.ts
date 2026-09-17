@@ -8,7 +8,7 @@ import {
 
 import { getTestDB } from '../../core/getTestDB';
 import { agents, messages, topics, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentShareModel } from '../agentShare';
 
 // Real-Postgres reproduction of the agent-share visitor abuse-cap race.
@@ -35,7 +35,7 @@ import { AgentShareModel } from '../agentShare';
 
 const ownerId = 'share-abuse-guard-race-owner';
 const visitorUserId = 'share-abuse-guard-race-visitor';
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const cleanup = async () => {
   await serverDB.delete(messages).where(eq(messages.userId, ownerId));

@@ -6,7 +6,7 @@ import debug from 'debug';
 import type { MessengerPlatform } from '@/config/messenger';
 import { AgentBotProviderModel } from '@/database/models/agentBotProvider';
 import { TopicModel } from '@/database/models/topic';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { getMessageGatewayClient } from '@/server/services/gateway/MessageGatewayClient';
@@ -42,7 +42,7 @@ import {
   splitMessage,
 } from './replyTemplate';
 
-const log = debug('lobe-server:bot:callback');
+const log = debug('orvilo-server:bot:callback');
 
 /**
  * Render a platform delivery error for production logging WITHOUT dumping
@@ -151,9 +151,9 @@ export interface BotCallbackOptions {
 // --------------- Service ---------------
 
 export class BotCallbackService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
   }
 

@@ -14,7 +14,7 @@ import {
   sessions,
   topics,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { buildWorkspaceWhere } from '../../../utils/workspace';
 
 interface ImportResult {
@@ -27,14 +27,14 @@ interface ImportResult {
 export class DeprecatedDataImporterRepos {
   private userId: string;
   private workspaceId?: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
   /**
    * The version of the importer that this module supports
    */
   supportVersion = 7;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.workspaceId = workspaceId;
     this.db = db;
@@ -145,7 +145,7 @@ export class DeprecatedDataImporterRepos {
             .values(
               shouldInsertSessionAgents.map(({ config, meta }) => ({
                 ...config,
-                // `config` is the `@orvilo/types` LobeAgentConfig shape
+                // `config` is the `@orvilo/types` OrviloAgentConfig shape
                 // (plugins: AgentPluginEntry[]); the `agents` table's
                 // `plugins` column is intentionally left typed `string[]`
                 // (only the domain types are widened for the tri-state

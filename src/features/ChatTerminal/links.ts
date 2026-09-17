@@ -2,7 +2,7 @@ import debug from 'debug';
 
 import { electronSystemService } from '@/services/electron/system';
 
-const log = debug('lobe-desktop:chat-terminal');
+const log = debug('orvilo-desktop:chat-terminal');
 
 // The main process hands this straight to shell.openExternal, and terminal
 // output is attacker-reachable — any command can print an escape sequence. So

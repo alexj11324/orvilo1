@@ -366,12 +366,12 @@ describe('runHeteroTask (openclaw)', () => {
 
     expect(resolveRemotePlatformRuntimeMock).toHaveBeenCalledWith(
       'openclaw',
-      expect.objectContaining({ LOBEHUB_OPERATION_ID: 'op-resolved' }),
+      expect.objectContaining({ ORVILO_OPERATION_ID: 'op-resolved' }),
     );
     expect(prepareSpawnMock).toHaveBeenCalledWith(
       'openclaw',
       expect.any(Array),
-      expect.objectContaining({ LOBEHUB_OPERATION_ID: 'op-resolved' }),
+      expect.objectContaining({ ORVILO_OPERATION_ID: 'op-resolved' }),
     );
     expect(spawnMock).toHaveBeenCalledWith(
       '/resolved/bin/openclaw',
@@ -435,8 +435,8 @@ describe('runHeteroTask (openclaw)', () => {
       string[],
       { env: NodeJS.ProcessEnv },
     ];
-    expect(spawnOpts.env.LOBEHUB_OPERATION_ID).toBe('op-ws');
-    expect(spawnOpts.env.LOBEHUB_WORKSPACE_ID).toBe('ws-42');
+    expect(spawnOpts.env.ORVILO_OPERATION_ID).toBe('op-ws');
+    expect(spawnOpts.env.ORVILO_WORKSPACE_ID).toBe('ws-42');
   });
 
   it('passes workspaceId to getTrpcClient when the close handler auto-notifies', async () => {
@@ -604,12 +604,12 @@ describe('runHeteroTask (hermes)', () => {
 
     expect(resolveRemotePlatformRuntimeMock).toHaveBeenCalledWith(
       'hermes',
-      expect.objectContaining({ LOBEHUB_OPERATION_ID: 'op-resolved' }),
+      expect.objectContaining({ ORVILO_OPERATION_ID: 'op-resolved' }),
     );
     expect(prepareSpawnMock).toHaveBeenCalledWith(
       'hermes',
       ['chat', '--query', 'hello', '--quiet', '--accept-hooks'],
-      expect.objectContaining({ LOBEHUB_OPERATION_ID: 'op-resolved' }),
+      expect.objectContaining({ ORVILO_OPERATION_ID: 'op-resolved' }),
     );
     expect(spawnMock).toHaveBeenCalledWith(
       '/resolved/bin/hermes',

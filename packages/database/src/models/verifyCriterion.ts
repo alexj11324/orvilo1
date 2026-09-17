@@ -7,15 +7,15 @@ import { and, arrayContains, desc, eq, ilike, inArray, isNull } from 'drizzle-or
 import { documents, files } from '../schemas/file';
 import type { NewVerifyCriterion, VerifyCriterionItem } from '../schemas/verify';
 import { verifyCriteria, verifyRubricCriteria } from '../schemas/verify';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export class VerifyCriterionModel {
-  private readonly db: LobeChatDatabase | Transaction;
+  private readonly db: OrviloDatabase | Transaction;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase | Transaction, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase | Transaction, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

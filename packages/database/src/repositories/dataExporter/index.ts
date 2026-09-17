@@ -3,7 +3,7 @@ import pMap from 'p-map';
 
 import * as EXPORT_TABLES from '../../schemas';
 import { messages } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   notShareVisitorMessage,
   notShareVisitorTopic,
@@ -113,10 +113,10 @@ export const DATA_EXPORT_CONFIG = {
 
 export class DataExporterRepos {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

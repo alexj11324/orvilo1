@@ -21,7 +21,7 @@ import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
@@ -94,7 +94,7 @@ export interface RunTaskResult extends ExecAgentResult {
 export class TaskRunnerService {
   private agentModel: AgentModel;
   private briefModel: BriefModel;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private taskLifecycle: TaskLifecycleService;
   private taskModel: TaskModel;
   private taskTopicModel: TaskTopicModel;
@@ -103,7 +103,7 @@ export class TaskRunnerService {
 
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

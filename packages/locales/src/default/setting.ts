@@ -19,7 +19,7 @@ export default {
   'completionSound.desc':
     'Play a chime when a chat finishes while Orvilo is in the foreground. The sound, volume and imports stay on this device and are not synced.',
   'completionSound.sound': 'Sound',
-  'completionSound.builtin.lobehub': 'Orvilo chime',
+  'completionSound.builtin.orvilo': 'Orvilo chime',
   'completionSound.builtin.glassBell': 'Glass bell',
   'completionSound.builtin.softTone': 'Soft tone',
   'completionSound.builtin.xylophone': 'Xylophone',
@@ -36,7 +36,7 @@ export default {
   'completionSound.banner.desc':
     'Sound the notification banner carries when a chat finishes while Orvilo is in the background. macOS Focus and per-app notification settings still apply.',
   'completionSound.banner.system': 'System default',
-  'completionSound.banner.lobehub': 'Orvilo chime',
+  'completionSound.banner.orvilo': 'Orvilo chime',
   'completionSound.banner.previewTitle': 'Notification preview',
   'completionSound.banner.previewBody': 'This is how a finished chat will sound in the background.',
   'completionSound.banner.systemMuted':
@@ -135,7 +135,7 @@ export default {
   'artworkStudio.remove': 'Remove',
   'artworkStudio.style.anime': 'Anime',
   'artworkStudio.style.lineArt': 'Hand-drawn Lines',
-  'artworkStudio.style.lobe': 'Orvilo Style',
+  'artworkStudio.style.orvilo': 'Orvilo Style',
   'artworkStudio.style.painterly': 'Hand-painted',
   'artworkStudio.style.pixel': 'Pixel Art',
   'artworkStudio.style.title': 'Style',
@@ -1454,7 +1454,7 @@ export default {
   'settingSystemTools.tools.grep.desc': 'GNU grep - standard text search tool',
   'settingSystemTools.tools.kimi.desc': 'Kimi Code - Moonshot AI agentic coding CLI',
   'settingSystemTools.tools.mdfind.desc': 'macOS Spotlight search (fast indexed search)',
-  'settingSystemTools.tools.lobehub.desc': 'Orvilo CLI - manage and connect to Orvilo services',
+  'settingSystemTools.tools.orvilo.desc': 'Orvilo CLI - manage and connect to Orvilo services',
   'settingSystemTools.tools.bun.desc': 'Bun - fast JavaScript runtime and package manager',
   'settingSystemTools.tools.bunx.desc': 'bunx - Bun package runner for executing npm packages',
   'settingSystemTools.tools.node.desc': 'Node.js - JavaScript runtime for executing JS/TS',
@@ -1506,7 +1506,7 @@ export default {
   'skillStore.search': 'Search skills by name or keyword, press Enter to search…',
   'skillStore.tabs.community': 'Community',
   'skillStore.tabs.custom': 'Custom',
-  'skillStore.tabs.lobehub': 'Orvilo',
+  'skillStore.tabs.orvilo': 'Orvilo',
   'skillStore.tabs.mcp': 'MCP',
   'skillStore.tabs.skills': 'Skills',
   'skillStore.title': 'Skill Store',
@@ -1544,7 +1544,7 @@ When I am ___, I need ___
   'storage.actions.copyOrvilo AI.button': 'Copy to…',
   'storage.actions.copyOrvilo AI.desc':
     'Keep the originals and create independent copies in another Workspace or your personal account. Topics and messages are optional.',
-  'storage.actions.copyLobeAI.title': 'Copy Agents',
+  'storage.actions.copyOrviloAI.title': 'Copy Agents',
   'storage.actions.copyAgentGroups.button': 'Copy to…',
   'storage.actions.copyAgentGroups.desc':
     'Copy agent groups and their member agents into another workspace or personal account.',
@@ -2726,38 +2726,39 @@ When I am ___, I need ___
   'workspace.general.copyOrvilo AI.modal.continue': 'Continue',
   'workspace.general.copyOrvilo AI.modal.copyOptions.config.desc':
     'Required. Copies the model, prompt, tools, and Agent profile into a new Agent.',
-  'workspace.general.copyLobeAI.modal.copyOptions.config.title': 'Agent configuration',
-  'workspace.general.copyLobeAI.modal.copyOptions.history.desc':
+  'workspace.general.copyOrviloAI.modal.copyOptions.config.title': 'Agent configuration',
+  'workspace.general.copyOrviloAI.modal.copyOptions.history.desc':
     'Optional. Copies selected Agents’ topics and messages into the new Agents.',
   'workspace.general.copyOrvilo AI.modal.copyOptions.history.title': 'Topics and messages',
   'workspace.general.copyOrvilo AI.modal.copyOptions.knowledgeBase.reason':
     'Not supported yet. Reconnect them in the target workspace or personal account after copying.',
-  'workspace.general.copyLobeAI.modal.copyOptions.knowledgeBase.title': 'Knowledge bases and files',
-  'workspace.general.copyLobeAI.modal.copyOptions.optional': 'Optional',
-  'workspace.general.copyLobeAI.modal.copyOptions.required': 'Selected by default',
-  'workspace.general.copyLobeAI.modal.copyOptions.title': 'Copy options',
-  'workspace.general.copyLobeAI.modal.copyOptions.unsupported': 'Unavailable',
-  'workspace.general.copyLobeAI.modal.create': 'Copy {{count}} agent(s)',
-  'workspace.general.copyLobeAI.modal.defaultInboxTitle': 'Orvilo AI',
-  'workspace.general.copyLobeAI.modal.done': 'Done',
-  'workspace.general.copyLobeAI.modal.failed': 'Failed to copy agents',
-  'workspace.general.copyLobeAI.modal.goToTarget': 'Go to {{target}}',
-  'workspace.general.copyLobeAI.modal.includeHistory': 'Copy topics and messages',
-  'workspace.general.copyLobeAI.modal.includeHistoryDesc':
+  'workspace.general.copyOrviloAI.modal.copyOptions.knowledgeBase.title':
+    'Knowledge bases and files',
+  'workspace.general.copyOrviloAI.modal.copyOptions.optional': 'Optional',
+  'workspace.general.copyOrviloAI.modal.copyOptions.required': 'Selected by default',
+  'workspace.general.copyOrviloAI.modal.copyOptions.title': 'Copy options',
+  'workspace.general.copyOrviloAI.modal.copyOptions.unsupported': 'Unavailable',
+  'workspace.general.copyOrviloAI.modal.create': 'Copy {{count}} agent(s)',
+  'workspace.general.copyOrviloAI.modal.defaultInboxTitle': 'Orvilo AI',
+  'workspace.general.copyOrviloAI.modal.done': 'Done',
+  'workspace.general.copyOrviloAI.modal.failed': 'Failed to copy agents',
+  'workspace.general.copyOrviloAI.modal.goToTarget': 'Go to {{target}}',
+  'workspace.general.copyOrviloAI.modal.includeHistory': 'Copy topics and messages',
+  'workspace.general.copyOrviloAI.modal.includeHistoryDesc':
     'Optional. Copies selected Agents’ conversation history into the new Agents.',
   'workspace.general.copyOrvilo AI.modal.loadFailed': 'Failed to load agents',
   'workspace.general.copyOrvilo AI.modal.noAgents': 'No agents available to copy',
   'workspace.general.copyOrvilo AI.modal.selected': 'selected',
   'workspace.general.copyOrvilo AI.modal.selectedAgent':
     'This Agent will be copied. The original stays where it is.',
-  'workspace.general.copyLobeAI.modal.selectAgents':
+  'workspace.general.copyOrviloAI.modal.selectAgents':
     'Select Agents to copy. Originals stay where they are.',
   'workspace.general.copyOrvilo AI.modal.selectPlaceholder':
     'Select workspace or personal account...',
   'workspace.general.copyOrvilo AI.modal.selectTarget':
     'You can copy to personal or workspaces that have permission to create an agent.',
-  'workspace.general.copyLobeAI.modal.success': '{{count}} agent(s) copied',
-  'workspace.general.copyLobeAI.modal.backgroundCopy':
+  'workspace.general.copyOrviloAI.modal.success': '{{count}} agent(s) copied',
+  'workspace.general.copyOrviloAI.modal.backgroundCopy':
     'Chat history is large, so it keeps copying in the background. The agents are ready to use now; conversations light up one by one as they finish.',
   'workspace.general.copyOrvilo AI.modal.title': 'Copy Agents',
   'workspace.general.copyOrvilo AI.modal.untitledAgent': 'Untitled Agent',
@@ -2844,7 +2845,7 @@ When I am ___, I need ___
   'workspace.general.url.title': 'Workspace URL',
   'workspace.slugBrandApply.button': 'Apply',
   'workspace.slugBrandApply.mailBody':
-    'Hi Orvilo team,\n\nI would like to request the workspace URL "{{slug}}" (https://lobehub.com/{{slug}}).\n\n- Brand / organization I represent:\n- Official website / domain:\n- My role in the organization:\n- Organization email (please reply from this address):\n\nThanks!',
+    'Hi Orvilo team,\n\nI would like to request the workspace URL "{{slug}}" (https://orvilo.aspectlylabs.com/{{slug}}).\n\n- Brand / organization I represent:\n- Official website / domain:\n- My role in the organization:\n- Organization email (please reply from this address):\n\nThanks!',
   'workspace.slugBrandApply.mailButton': 'Apply via email',
   'workspace.slugBrandApply.mailSubject': 'Workspace URL brand request: {{slug}}',
   'workspace.slugBrandApply.modalCreateTip':
@@ -3444,119 +3445,119 @@ When I am ___, I need ___
   'tools.builtins.groupName': 'Built-ins',
   'tools.builtins.install': 'Install',
   'tools.builtins.installed': 'Installed',
-  'tools.builtins.lobe-artifacts.description':
+  'tools.builtins.orvilo-artifacts.description':
     'Generate and preview interactive UI components and visualizations',
-  'tools.builtins.lobe-artifacts.readme':
+  'tools.builtins.orvilo-artifacts.readme':
     'Generate and live-preview interactive UI components, data visualizations, charts, SVG graphics, and web applications. Create rich visual content that users can interact with directly.',
-  'tools.builtins.lobe-artifacts.title': 'Artifacts',
-  'tools.builtins.lobe-calculator.title': 'Calculator',
-  'tools.builtins.lobe-calculator.description':
+  'tools.builtins.orvilo-artifacts.title': 'Artifacts',
+  'tools.builtins.orvilo-calculator.title': 'Calculator',
+  'tools.builtins.orvilo-calculator.description':
     'Perform mathematical calculations, solve equations, and work with symbolic expressions',
-  'tools.builtins.lobe-calculator.readme':
+  'tools.builtins.orvilo-calculator.readme':
     'Advanced mathematical calculator supporting basic arithmetic, algebraic equations, calculus operations, and symbolic math. Includes base conversion, equation solving, differentiation, integration, and more.',
-  'tools.builtins.lobe-cloud-sandbox.description':
+  'tools.builtins.orvilo-cloud-sandbox.description':
     'Execute code, run commands, and manage files in a secure cloud environment',
-  'tools.builtins.lobe-cloud-sandbox.readme':
+  'tools.builtins.orvilo-cloud-sandbox.readme':
     'Execute Python, JavaScript, and TypeScript code in an isolated cloud environment. Run shell commands, manage files, search content with regex, and export results securely.',
-  'tools.builtins.lobe-cloud-sandbox.title': 'Cloud Sandbox',
-  'tools.builtins.lobe-local-system.description':
+  'tools.builtins.orvilo-cloud-sandbox.title': 'Cloud Sandbox',
+  'tools.builtins.orvilo-local-system.description':
     'Access and manage local files, run shell commands on your desktop',
-  'tools.builtins.lobe-local-system.readme':
+  'tools.builtins.orvilo-local-system.readme':
     'Access your local filesystem on desktop. Read, write, search, and organize files. Execute shell commands with background task support and grep content with regex patterns.',
-  'tools.builtins.lobe-local-system.title': 'Local System',
-  'tools.builtins.lobe-notebook.description': 'Create and manage documents in the topic notebook',
-  'tools.builtins.lobe-notebook.readme':
+  'tools.builtins.orvilo-local-system.title': 'Local System',
+  'tools.builtins.orvilo-notebook.description': 'Create and manage documents in the topic notebook',
+  'tools.builtins.orvilo-notebook.readme':
     'Create and manage persistent documents within conversation topics. Save notes, reports, articles, and markdown content that stays accessible across sessions.',
-  'tools.builtins.lobe-notebook.title': 'Notebook',
-  'tools.builtins.lobe-user-memory.description':
+  'tools.builtins.orvilo-notebook.title': 'Notebook',
+  'tools.builtins.orvilo-user-memory.description':
     'Remember user preferences, activities, and experiences across conversations',
-  'tools.builtins.lobe-user-memory.readme':
+  'tools.builtins.orvilo-user-memory.readme':
     'Build a personalized knowledge base about you. Remember preferences, track activities and experiences, store identity information, and recall relevant context in future conversations.',
-  'tools.builtins.lobe-user-memory.title': 'Memory',
+  'tools.builtins.orvilo-user-memory.title': 'Memory',
   // ===== Additional Builtin Tools =====
-  'tools.builtins.lobe-activator.description': 'Discover and activate tools and skills',
-  'tools.builtins.lobe-activator.title': 'Tools & Skills Activator',
-  'tools.builtins.lobe-agent-builder.description':
+  'tools.builtins.orvilo-activator.description': 'Discover and activate tools and skills',
+  'tools.builtins.orvilo-activator.title': 'Tools & Skills Activator',
+  'tools.builtins.orvilo-agent-builder.description':
     'Configure agent metadata, model settings, plugins, and the system prompt',
-  'tools.builtins.lobe-agent-builder.title': 'Agent Builder',
-  'tools.builtins.lobe-agent-documents.description':
+  'tools.builtins.orvilo-agent-builder.title': 'Agent Builder',
+  'tools.builtins.orvilo-agent-documents.description':
     'Manage agent-scoped documents (list, create, read, edit, remove, rename) and load rules. Not for your uploaded files — see Knowledge Base for those.',
-  'tools.builtins.lobe-agent-documents.title': 'Documents',
-  'tools.builtins.lobe-agent-management.description': 'Create, manage, and orchestrate AI agents',
-  'tools.builtins.lobe-agent-management.title': 'Agent Management',
-  'tools.builtins.lobe-agent.description':
+  'tools.builtins.orvilo-agent-documents.title': 'Documents',
+  'tools.builtins.orvilo-agent-management.description': 'Create, manage, and orchestrate AI agents',
+  'tools.builtins.orvilo-agent-management.title': 'Agent Management',
+  'tools.builtins.orvilo-agent.description':
     'Built-in Orvilo Agent capabilities: plan and todo management, sub-agent dispatch, and multimodal media analysis',
-  'tools.builtins.lobe-agent.title': 'Orvilo Agent',
-  'tools.builtins.lobe-brief.description':
+  'tools.builtins.orvilo-agent.title': 'Orvilo Agent',
+  'tools.builtins.orvilo-brief.description':
     'Report progress, deliver results, and request user decisions',
-  'tools.builtins.lobe-brief.title': 'Brief Tools',
-  'tools.builtins.lobe-creds.description':
+  'tools.builtins.orvilo-brief.title': 'Brief Tools',
+  'tools.builtins.orvilo-creds.description':
     'Manage user credentials for authentication, environment variable injection, and API verification — handle API keys, OAuth tokens, and secrets for third-party integrations.',
-  'tools.builtins.lobe-creds.title': 'Credentials',
-  'tools.builtins.lobe-group-agent-builder.description':
+  'tools.builtins.orvilo-creds.title': 'Credentials',
+  'tools.builtins.orvilo-group-agent-builder.description':
     'Configure group metadata, members, and shared content for multi-agent groups',
-  'tools.builtins.lobe-group-agent-builder.title': 'Group Agent Builder',
-  'tools.builtins.lobe-group-management.description':
+  'tools.builtins.orvilo-group-agent-builder.title': 'Group Agent Builder',
+  'tools.builtins.orvilo-group-management.description':
     'Orchestrate and manage multi-agent group conversations',
-  'tools.builtins.lobe-group-management.title': 'Group Management',
-  'tools.builtins.lobe-knowledge-base.description':
+  'tools.builtins.orvilo-group-management.title': 'Group Management',
+  'tools.builtins.orvilo-knowledge-base.description':
     'Find, browse, and read your uploaded files, and search organized knowledge bases via semantic vector search',
-  'tools.builtins.lobe-knowledge-base.title': 'Knowledge Base',
-  'tools.builtins.lobe-message.description':
+  'tools.builtins.orvilo-knowledge-base.title': 'Knowledge Base',
+  'tools.builtins.orvilo-message.description':
     'Send, read, edit, and manage messages across multiple messaging platforms with a unified interface',
-  'tools.builtins.lobe-message.readme':
+  'tools.builtins.orvilo-message.readme':
     'Cross-platform messaging tool supporting Discord, Telegram, Slack, Google Chat, and IRC. Provides unified APIs for message operations, reactions, pins, threads, channel management, and platform-specific features like polls.',
-  'tools.builtins.lobe-message.title': 'Message',
-  'tools.builtins.lobe-page-agent.description':
+  'tools.builtins.orvilo-message.title': 'Message',
+  'tools.builtins.orvilo-page-agent.description':
     'Create, read, update, and delete nodes in XML-structured documents',
-  'tools.builtins.lobe-page-agent.readme':
+  'tools.builtins.orvilo-page-agent.readme':
     'Create and edit structured documents with precise node-level control. Initialize from Markdown, perform batch insert/modify/remove operations, and find-and-replace text across documents.',
-  'tools.builtins.lobe-page-agent.title': 'Document',
-  'tools.builtins.lobe-remote-device.description':
+  'tools.builtins.orvilo-page-agent.title': 'Document',
+  'tools.builtins.orvilo-remote-device.description':
     'Discover and manage remote desktop device connections',
-  'tools.builtins.lobe-remote-device.readme':
+  'tools.builtins.orvilo-remote-device.readme':
     'Manage connections to your desktop devices. List online devices, activate a device for remote operations, and check connection status.',
-  'tools.builtins.lobe-remote-device.title': 'Remote Device',
-  'tools.builtins.lobe-skill-store.description':
+  'tools.builtins.orvilo-remote-device.title': 'Remote Device',
+  'tools.builtins.orvilo-skill-store.description':
     'Browse and install agent skills from the Orvilo marketplace. Use this when you need extended capabilities or want to install a specific skill.',
-  'tools.builtins.lobe-skill-store.title': 'Skill Store',
-  'tools.builtins.lobe-skills.description': 'Activate and use reusable skill packages',
-  'tools.builtins.lobe-skills.title': 'Skills',
-  'tools.builtins.lobe-task.description':
+  'tools.builtins.orvilo-skill-store.title': 'Skill Store',
+  'tools.builtins.orvilo-skills.description': 'Activate and use reusable skill packages',
+  'tools.builtins.orvilo-skills.title': 'Skills',
+  'tools.builtins.orvilo-task.description':
     'Create, schedule, list, edit, and delete tasks with dependencies and review configuration',
-  'tools.builtins.lobe-task.title': 'Task Tools',
-  'tools.builtins.lobe-topic-reference.description':
+  'tools.builtins.orvilo-task.title': 'Task Tools',
+  'tools.builtins.orvilo-topic-reference.description':
     'Retrieve context from referenced topic conversations',
-  'tools.builtins.lobe-topic-reference.title': 'Topic Reference',
-  'tools.builtins.lobe-user-interaction.description':
+  'tools.builtins.orvilo-topic-reference.title': 'Topic Reference',
+  'tools.builtins.orvilo-user-interaction.description':
     'Ask users questions through UI interactions and observe their lifecycle outcomes',
-  'tools.builtins.lobe-user-interaction.title': 'User Interaction',
-  'tools.builtins.lobe-web-browsing.description':
+  'tools.builtins.orvilo-user-interaction.title': 'User Interaction',
+  'tools.builtins.orvilo-web-browsing.description':
     'Search the web for current information and crawl web pages to extract content. Supports multiple search engines, categories, and time ranges.',
-  'tools.builtins.lobe-web-browsing.readme':
+  'tools.builtins.orvilo-web-browsing.readme':
     'Search the web for current information and crawl web pages to extract content. Supports multiple search engines, categories, and time ranges for comprehensive research.',
-  'tools.builtins.lobe-web-browsing.title': 'Web Browsing',
-  'tools.builtins.lobe-image-generation.description':
+  'tools.builtins.orvilo-web-browsing.title': 'Web Browsing',
+  'tools.builtins.orvilo-image-generation.description':
     'Generate images through Orvilo providers when the current chat model has no native image output.',
-  'tools.builtins.lobe-image-generation.readme':
+  'tools.builtins.orvilo-image-generation.readme':
     'Opt-in image generation for models without native image output. Pin this tool to enable it in chat or agent mode; leave unpinned to avoid the tool schema cost.',
-  'tools.builtins.lobe-image-generation.title': 'Image Generation',
-  'tools.builtins.lobe-web-onboarding.description':
+  'tools.builtins.orvilo-image-generation.title': 'Image Generation',
+  'tools.builtins.orvilo-web-onboarding.description':
     'Drive the web onboarding flow with a controlled agent runtime',
-  'tools.builtins.lobe-web-onboarding.title': 'Web Onboarding',
+  'tools.builtins.orvilo-web-onboarding.title': 'Web Onboarding',
   // ===== Builtin Agent Skills =====
   'tools.builtins.find-skills.description':
     'Helps users discover and install agent skills when they ask "how do I do X", "find a skill for X", or want to extend capabilities',
   'tools.builtins.find-skills.title': 'Find Skills',
-  'tools.builtins.lobe-computer-use.title': 'Computer Use',
-  'tools.builtins.lobe-computer-use.description':
+  'tools.builtins.orvilo-computer-use.title': 'Computer Use',
+  'tools.builtins.orvilo-computer-use.description':
     'Use desktop applications, interact with controls, and capture the screen.',
-  'tools.builtins.lobe-agent-browser.description':
+  'tools.builtins.orvilo-agent-browser.description':
     'Browser automation CLI for AI agents. Use when tasks involve website or Electron interaction such as navigation, form filling, clicking, screenshot capture, scraping data, login flows, and end-to-end app testing.',
-  'tools.builtins.lobe-agent-browser.title': 'Agent Browser',
-  'tools.builtins.lobehub.description':
+  'tools.builtins.orvilo-agent-browser.title': 'Agent Browser',
+  'tools.builtins.orvilo.description':
     'Manage the Orvilo platform via CLI — knowledge bases, memory, agents, files, search, generation, and more.',
-  'tools.builtins.lobehub.title': 'Orvilo',
+  'tools.builtins.orvilo.title': 'Orvilo',
   'tools.builtins.task.description':
     'Task management and execution — create, track, review, and complete tasks via CLI.',
   'tools.builtins.task.title': 'Task',
@@ -3727,50 +3728,50 @@ When I am ___, I need ___
 
   'tools.composio.verifyAuth': 'I have completed authentication',
 
-  'tools.lobehubSkill.authorize': 'Authorize',
+  'tools.orviloSkill.authorize': 'Authorize',
 
-  'tools.lobehubSkill.connect': 'Connect',
+  'tools.orviloSkill.connect': 'Connect',
 
-  'tools.lobehubSkill.connected': 'Connected',
+  'tools.orviloSkill.connected': 'Connected',
 
-  'tools.lobehubSkill.disconnect': 'Disconnect',
+  'tools.orviloSkill.disconnect': 'Disconnect',
 
-  'tools.lobehubSkill.disconnectConfirm.desc':
+  'tools.orviloSkill.disconnectConfirm.desc':
     "You can still continue previous chats that reference {{name}} content. However, the assistant won't be able to access new content or perform new tasks.",
 
-  'tools.lobehubSkill.disconnectConfirm.title': 'Disconnect {{name}}?',
+  'tools.orviloSkill.disconnectConfirm.title': 'Disconnect {{name}}?',
 
-  'tools.lobehubSkill.disconnected': 'Disconnected',
+  'tools.orviloSkill.disconnected': 'Disconnected',
 
-  'tools.lobehubSkill.error': 'Error',
+  'tools.orviloSkill.error': 'Error',
   // Orvilo Skill Providers i18n
-  'tools.lobehubSkill.providers.github.description':
+  'tools.orviloSkill.providers.github.description':
     'GitHub is a platform for version control and collaboration, enabling developers to host, review, and manage code repositories.',
-  'tools.lobehubSkill.providers.github.readme':
+  'tools.orviloSkill.providers.github.readme':
     'Connect to GitHub to access your repositories, create and manage issues, review pull requests, and collaborate on code—all through natural conversation with your AI assistant.',
-  'tools.lobehubSkill.providers.linear.description':
+  'tools.orviloSkill.providers.linear.description':
     'Linear is a modern issue tracking and project management tool designed for high-performance teams to build better software faster',
-  'tools.lobehubSkill.providers.linear.readme':
+  'tools.orviloSkill.providers.linear.readme':
     'Bring the power of Linear directly into your AI assistant. Create and update issues, manage sprints, track project progress, and streamline your development workflow—all through natural conversation.',
-  'tools.lobehubSkill.providers.microsoft.description':
+  'tools.orviloSkill.providers.microsoft.description':
     'Outlook Calendar is an integrated scheduling tool within Microsoft Outlook that enables users to create appointments, organize meetings with others, and manage their time and events effectively.',
-  'tools.lobehubSkill.providers.microsoft.readme':
+  'tools.orviloSkill.providers.microsoft.readme':
     'Integrate with Outlook Calendar to view, create, and manage your events seamlessly. Schedule meetings, check availability, set reminders, and coordinate your time—all through natural language commands.',
-  'tools.lobehubSkill.providers.notion.description':
+  'tools.orviloSkill.providers.notion.description':
     'Notion is a collaborative productivity and note-taking application.',
-  'tools.lobehubSkill.providers.notion.readme':
+  'tools.orviloSkill.providers.notion.readme':
     'Connect to Notion to access and manage your workspace. Create pages, search content, update databases, and organize your knowledge base—all through natural conversation with your AI assistant.',
-  'tools.lobehubSkill.providers.posthog.description':
+  'tools.orviloSkill.providers.posthog.description':
     'PostHog is an open-source product analytics platform for analyzing events, funnels, cohorts, feature flags, experiments, and user behavior.',
-  'tools.lobehubSkill.providers.posthog.readme':
+  'tools.orviloSkill.providers.posthog.readme':
     'Connect to PostHog to query product analytics, inspect dashboards, review feature flags and experiments, and understand user behavior through natural conversation with your AI assistant.',
-  'tools.lobehubSkill.providers.twitter.description':
+  'tools.orviloSkill.providers.twitter.description':
     'X (Twitter) is a social media platform for sharing real-time updates, news, and engaging with your audience through posts, replies, and direct messages.',
-  'tools.lobehubSkill.providers.twitter.readme':
+  'tools.orviloSkill.providers.twitter.readme':
     'Connect to X (Twitter) to post tweets, manage your timeline, and engage with your audience. Create content, schedule posts, monitor mentions, and build your social media presence through conversational AI.',
-  'tools.lobehubSkill.providers.vercel.description':
+  'tools.orviloSkill.providers.vercel.description':
     'Vercel is a cloud platform for frontend developers, providing hosting and serverless functions to deploy web applications with ease.',
-  'tools.lobehubSkill.providers.vercel.readme':
+  'tools.orviloSkill.providers.vercel.readme':
     'Connect to Vercel to manage your deployments, monitor project status, and control your infrastructure. Deploy applications, check build logs, manage environment variables, and scale your projects through conversational AI.',
 
   'tools.notInstalled': 'Not Installed',

@@ -29,7 +29,7 @@ describe('getModelPricing', () => {
     ]);
   });
 
-  it('should use injected LobeHub pricing before same-id fallback pricing', async () => {
+  it('should use injected Orvilo pricing before same-id fallback pricing', async () => {
     loadModelsMock.mockResolvedValue([
       {
         id: 'injected-only-model',
@@ -43,11 +43,11 @@ describe('getModelPricing', () => {
         pricing: {
           units: [{ name: 'textInput', rate: 0.5, strategy: 'fixed', unit: 'millionTokens' }],
         },
-        providerId: 'lobehub',
+        providerId: 'orvilo',
       },
     ]);
 
-    const result = await getModelPricing('injected-only-model', 'lobehub');
+    const result = await getModelPricing('injected-only-model', 'orvilo');
 
     expect(result).toEqual({
       units: [{ name: 'textInput', rate: 0.5, strategy: 'fixed', unit: 'millionTokens' }],
@@ -57,7 +57,7 @@ describe('getModelPricing', () => {
   it('should propagate loadModels errors instead of falling back to static defaults', async () => {
     loadModelsMock.mockRejectedValue(new Error('model config missing'));
 
-    await expect(getModelPricing('injected-only-model', 'lobehub')).rejects.toThrow(
+    await expect(getModelPricing('injected-only-model', 'orvilo')).rejects.toThrow(
       'model config missing',
     );
   });

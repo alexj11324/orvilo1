@@ -5,7 +5,7 @@ import type { CompletionCallbackParams } from '../../../policies/completionPolic
 import { type AgentSignalReceiptStore, persistAgentSignalReceipts } from '../../receiptService';
 import { buildSelfIterationReceipts } from './buildSelfIterationReceipts';
 
-const log = debug('lobe-server:completion-lifecycle');
+const log = debug('orvilo-server:completion-lifecycle');
 
 export interface SelfIterationCompletionHandlerOptions {
   /** Receipt store override (defaults to the Redis store). Injected in tests. */

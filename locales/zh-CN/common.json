@@ -144,7 +144,7 @@
   "cmdk.askAIHeadingEmpty": "选择一个 AI 功能",
   "cmdk.askAgentHeading": "选择助理",
   "cmdk.askAgentPlaceholder": "向 {{agent}} 提问…",
-  "cmdk.askLobeAI": "问 Orvilo AI",
+  "cmdk.askOrviloAI": "问 Orvilo AI",
   "cmdk.automations": "自动化",
   "cmdk.community": "社区",
   "cmdk.communitySupport": "社区支持",

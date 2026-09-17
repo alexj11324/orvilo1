@@ -69,7 +69,7 @@ export const setupElectronApi = () => {
   const osInfo = os.release();
   const darwinMajorVersion = Number(osInfo.split('.')[0]);
 
-  contextBridge.exposeInMainWorld('lobeEnv', {
+  contextBridge.exposeInMainWorld('orviloEnv', {
     chromeVersion: process.versions.chrome,
     darwinMajorVersion,
     electronVersion: process.versions.electron,

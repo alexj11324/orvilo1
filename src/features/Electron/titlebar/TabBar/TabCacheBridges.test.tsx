@@ -86,7 +86,7 @@ const agentMeta: RouteMeta = {
 
 const staticMeta: RouteMeta = {
   icon: MessageSquare,
-  titleKey: 'navigation.lobehub',
+  titleKey: 'navigation.orvilo',
 };
 
 const buildRoutes = (): RouteObject[] => [

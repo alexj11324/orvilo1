@@ -1,11 +1,11 @@
 import ImageSearchRef from './ImageSearchRef';
 import Link from './Link';
-import LobeAgents from './LobeAgents';
-import LobeArtifact from './LobeArtifact';
-import LobeThinking from './LobeThinking';
 import LocalFile from './LocalFile';
 import LocalFileLink from './LocalFileLink';
 import Mention from './Mention';
+import OrviloAgents from './OrviloAgents';
+import OrviloArtifact from './OrviloArtifact';
+import OrviloThinking from './OrviloThinking';
 import Skill from './Skill';
 import Task from './Task';
 import Thinking from './Thinking';
@@ -17,8 +17,8 @@ export type { MarkdownElement } from './type';
 
 export const markdownElements: MarkdownElement[] = [
   Thinking,
-  LobeArtifact,
-  LobeThinking,
+  OrviloArtifact,
+  OrviloThinking,
   LocalFile,
   Mention,
   Skill,
@@ -26,7 +26,7 @@ export const markdownElements: MarkdownElement[] = [
   Task,
   UserFeedback,
   ImageSearchRef,
-  LobeAgents,
+  OrviloAgents,
   LocalFileLink,
   Link,
 ];

@@ -5,17 +5,17 @@ import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
 import { resolvePendingAuthTools } from './resolvePendingAuthTools';
 
 const BASE_INPUT = {
-  availability: { composio: true, lobehub: true },
+  availability: { composio: true, orvilo: true },
   composioInitialized: true,
   composioServers: [],
-  lobehubInitialized: true,
-  lobehubServers: [],
+  orviloInitialized: true,
+  orviloServers: [],
   marketAuthenticated: true,
   marketTools: [
     {
       authType: 'market' as const,
       avatar: '💻',
-      identifier: 'lobe-cloud-sandbox',
+      identifier: 'orvilo-cloud-sandbox',
       label: 'Cloud Sandbox',
     },
   ],
@@ -23,15 +23,15 @@ const BASE_INPUT = {
 
 describe('resolvePendingAuthTools', () => {
   /**
-   * @example Unqualified GitHub, Notion, and X plugins request their LobeHub connector OAuth.
+   * @example Unqualified GitHub, Notion, and X plugins request their Orvilo connector OAuth.
    */
-  it('routes overlapping plugins to their canonical LobeHub owner', () => {
+  it('routes overlapping plugins to their canonical Orvilo owner', () => {
     const result = resolvePendingAuthTools({
       ...BASE_INPUT,
       plugins: ['github', 'notion', 'twitter'],
     });
 
-    expect(result.map(({ authType }) => authType)).toEqual(['lobehub', 'lobehub', 'lobehub']);
+    expect(result.map(({ authType }) => authType)).toEqual(['orvilo', 'orvilo', 'orvilo']);
     expect(result.map((tool) => ('id' in tool ? tool.id : tool.identifier))).toEqual([
       'github',
       'notion',
@@ -42,7 +42,7 @@ describe('resolvePendingAuthTools', () => {
   /**
    * @example A stale pending Composio GitHub connection cannot override canonical ownership.
    */
-  it('routes a stale pending Composio collision to LobeHub', () => {
+  it('routes a stale pending Composio collision to Orvilo', () => {
     // ROOT CAUSE:
     //
     // A persisted Composio server does not record whether the agent plugin came
@@ -68,13 +68,13 @@ describe('resolvePendingAuthTools', () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0]?.authType).toBe('lobehub');
+    expect(result[0]?.authType).toBe('orvilo');
   });
 
   /**
    * @example An active legacy Composio collision cannot override canonical ownership after migration.
    */
-  it('routes an active legacy Composio collision to LobeHub', () => {
+  it('routes an active legacy Composio collision to Orvilo', () => {
     const result = resolvePendingAuthTools({
       ...BASE_INPUT,
       composioServers: [
@@ -92,7 +92,7 @@ describe('resolvePendingAuthTools', () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0]?.authType).toBe('lobehub');
+    expect(result[0]?.authType).toBe('orvilo');
   });
 
   /**
@@ -101,7 +101,7 @@ describe('resolvePendingAuthTools', () => {
   it('waits for the owning connector store to initialize', () => {
     const result = resolvePendingAuthTools({
       ...BASE_INPUT,
-      lobehubInitialized: false,
+      orviloInitialized: false,
       plugins: ['twitter'],
     });
 

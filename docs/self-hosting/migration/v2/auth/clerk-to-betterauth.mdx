@@ -1,7 +1,7 @@
 ---
 title: Migrating from Clerk to Better Auth
 description: >-
-  Guide for migrating your LobeHub deployment from Clerk authentication to
+  Guide for migrating your Orvilo deployment from Clerk authentication to
   Better Auth, including simple and full migration options.
 tags:
   - Authentication Service
@@ -12,19 +12,19 @@ tags:
 
 # Migrating from Clerk to Better Auth
 
-This guide helps you migrate your existing Clerk-based LobeHub deployment to Better Auth.
+This guide helps you migrate your existing Clerk-based Orvilo deployment to Better Auth.
 
 <Callout type={'info'}>
-  Better Auth is the recommended authentication solution for LobeHub. It offers simpler configuration, more SSO providers, and better self-hosting support.
+  Better Auth is the recommended authentication solution for Orvilo. It offers simpler configuration, more SSO providers, and better self-hosting support.
 </Callout>
 
 <Callout type={'error'}>
   **Important Notice**:
 
   - **Always backup your database first!** For Neon users, create a backup via [Fork Branch](https://neon.tech/docs/manage/branches#create-a-branch)
-  - LobeHub is not responsible for any data loss or issues that may occur during the migration process
+  - Orvilo is not responsible for any data loss or issues that may occur during the migration process
   - This guide is intended for users with development experience; not recommended for users without technical background
-  - If you have any questions, feel free to ask in our [Discord](https://discord.com/invite/AYFPHvv2jT) community or [GitHub Issue](https://github.com/lobehub/lobehub/issues/11707)
+  - If you have any questions, feel free to ask in our [Discord](https://discord.com/invite/AYFPHvv2jT) community or GitHub Issue
 </Callout>
 
 ## Choose Your Migration Path
@@ -51,7 +51,7 @@ For small self-hosted deployments, the simplest approach is to let users reset t
   After migrating and resetting password with `a@google.com`, logging in with `b@outlook.com` will create a **new user** instead of linking to your existing account.
 </Callout>
 
-![Profile Page - Linked Accounts](https://hub-apac-1.lobeobjects.space/docs/d9b41a1607d49319fd670e88529199cf.png)
+![Profile Page - Linked Accounts](https://hub-apac-1.objects.aspectlylabs.com/docs/d9b41a1607d49319fd670e88529199cf.png)
 
 ### Steps
 
@@ -83,7 +83,7 @@ For small self-hosted deployments, the simplest approach is to let users reset t
   See [Authentication Service Configuration](/docs/self-hosting/auth) for complete environment variables and SSO provider setup.
 </Callout>
 
-3. **Redeploy LobeHub**
+3. **Redeploy Orvilo**
 
    Deploy the new version with Better Auth enabled.
 
@@ -102,7 +102,7 @@ For small self-hosted deployments, the simplest approach is to let users reset t
    - Log in using their previously linked social account (e.g., Google, GitHub)
    - Click "Set Password" to receive an email and set a new password
 
-   ![LobeHub Login Page - Social Login Hint](https://hub-apac-1.lobeobjects.space/docs/8d0563701fcd17ad7252a72b1746dd42.png)
+   ![Orvilo Login Page - Social Login Hint](https://hub-apac-1.objects.aspectlylabs.com/docs/8d0563701fcd17ad7252a72b1746dd42.png)
 
    3. (Optional) After logging in, users can manage their account in the Profile page:
       - Linked Accounts: Link additional social accounts
@@ -139,11 +139,11 @@ For larger deployments or when you need to preserve user passwords and SSO conne
 
 **Preparation:**
 
-1. Clone the LobeHub repository and install dependencies:
+1. Clone the Orvilo repository and install dependencies:
 
    ```bash
-   git clone https://github.com/lobehub/lobehub.git
-   cd lobehub
+   git clone https://github.com/alexj11324/orvilo1.git
+   cd orvilo
    pnpm install
    ```
 
@@ -220,7 +220,7 @@ Before exporting data, disable new user registration to ensure data consistency 
 
 See [Clerk documentation](https://clerk.com/docs/guides/development/migrating/overview#export-your-users-data-from-the-clerk-dashboard) for details.
 
-![Clerk Dashboard - Export Users CSV](https://hub-apac-1.lobeobjects.space/docs/6523e1805a69d3ece3804e2bcd5d4552.png)
+![Clerk Dashboard - Export Users CSV](https://hub-apac-1.objects.aspectlylabs.com/docs/6523e1805a69d3ece3804e2bcd5d4552.png)
 
 #### Export JSON via API
 
@@ -311,9 +311,8 @@ After migration, if you encounter login issues, try clearing your browser's site
 
 1. Open browser DevTools (F12 or right-click → Inspect)
 2. Go to Application tab → Storage → Clear site data
-3. Refresh the page and try again
-
-![Clear Browser Site Data](https://hub-apac-1.lobeobjects.space/docs/733c50ee2302e5daa3d99dc0739238c8.png)
+3. Refresh the page and try aga
+   ![Clear Browser Site Data](https://hub-apac-1.objects.aspectlylabs.com/docs/733c50ee2302e5daa3d99dc0739238c8.png)
 
 ### Users can't log in after migration
 

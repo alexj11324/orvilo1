@@ -26,7 +26,7 @@ import {
   topics,
   userMemories,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { normalizeInboxAgentMeta, normalizeInboxAgentTitle } from '../../../utils/inboxAgent';
 import { searchableMessage } from '../../../utils/searchableMessage';
 import { notShareVisitorMessage, notShareVisitorTopic } from '../../../utils/shareVisitor';
@@ -87,7 +87,7 @@ const attachScores = <T extends { id: string }>(rows: T[], hits: FtsSearchCandid
 };
 
 export const hydrateUserMemories = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,
@@ -129,7 +129,7 @@ export const hydrateUserMemories = async (
 };
 
 export const hydrateAgents = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,
@@ -184,7 +184,7 @@ export const hydrateAgents = async (
 };
 
 export const hydrateChatGroups = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,
@@ -228,7 +228,7 @@ export const hydrateChatGroups = async (
 };
 
 export const hydrateTopics = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,
@@ -312,7 +312,7 @@ export const hydrateTopics = async (
 };
 
 export const hydrateMessages = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,
@@ -419,7 +419,7 @@ export const hydrateMessages = async (
  * hides the result. Authorization checks must pass scope so unrelated memberships cannot grant access.
  */
 const getKnowledgeBaseIdsByFile = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   fileIds: string[],
   scope?: FtsSearchBackendScope,
 ): Promise<Map<string, string[]>> => {
@@ -450,7 +450,7 @@ const getKnowledgeBaseIdsByFile = async (
 };
 
 export const hydrateFiles = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,
@@ -525,7 +525,7 @@ export const hydrateFiles = async (
 };
 
 export const hydrateFolders = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,
@@ -585,7 +585,7 @@ export const hydrateFolders = async (
 };
 
 export const hydratePages = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,
@@ -641,7 +641,7 @@ export const hydratePages = async (
 };
 
 export const hydrateKnowledgeBaseDocuments = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,
@@ -714,7 +714,7 @@ export const hydrateKnowledgeBaseDocuments = async (
 };
 
 export const hydrateKnowledgeBases = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   hits: FtsSearchCandidateHit[],
   scope: FtsSearchBackendScope,
   limit: number,

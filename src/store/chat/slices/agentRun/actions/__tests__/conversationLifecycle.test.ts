@@ -1,4 +1,4 @@
-import type * as LobechatConstModule from '@orvilo/const';
+import type * as OrvilochatConstModule from '@orvilo/const';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { TRPCClientError } from '@trpc/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -40,7 +40,7 @@ const mockLocalFileService = vi.hoisted(() => ({
 }));
 
 vi.mock('@orvilo/const', async (importOriginal) => {
-  const actual = await importOriginal<typeof LobechatConstModule>();
+  const actual = await importOriginal<typeof OrvilochatConstModule>();
   return {
     ...actual,
     get isDesktop() {
@@ -109,7 +109,7 @@ afterEach(() => {
   // so a cwd test that seeds a device (or a desktop path) would otherwise leak
   // a working directory into every later send in this file.
   useDeviceStore.setState({ devices: [] });
-  delete window.__LOBE_GLOBAL_AGENT_CONTEXT__;
+  delete window.__ORVILO_GLOBAL_AGENT_CONTEXT__;
   vi.restoreAllMocks();
 });
 
@@ -1846,7 +1846,7 @@ describe('ConversationLifecycle actions', () => {
         const { result } = renderHook(() => useChatStore());
         const agentId = TEST_IDS.SESSION_ID;
         const topicKey = topicMapKey({ agentId });
-        const selectedRepo = 'https://github.com/lobehub/lobehub';
+        const selectedRepo = 'https://github.com/alexj11324/orvilo1';
         let resolveGateway!: () => void;
         const gatewayPromise = new Promise<any>((resolve) => {
           resolveGateway = () =>
@@ -1935,8 +1935,8 @@ describe('ConversationLifecycle actions', () => {
       it('should bind a new gateway topic to a native agent device working directory', async () => {
         mockConstEnv.isDesktop = true;
         const deviceId = 'device-1';
-        const sourcePath = '/repo/lobehub';
-        const worktreePath = '/repo/lobehub/.worktrees/feat';
+        const sourcePath = '/repo/orvilo';
+        const worktreePath = '/repo/orvilo/.worktrees/feat';
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
@@ -2097,7 +2097,7 @@ describe('ConversationLifecycle actions', () => {
             agencyConfig: {
               boundDeviceId: deviceId,
               executionTarget: 'local',
-              workingDirByDevice: { [deviceId]: { path: '/repo/lobehub' } },
+              workingDirByDevice: { [deviceId]: { path: '/repo/orvilo' } },
             },
           },
         });
@@ -2136,8 +2136,8 @@ describe('ConversationLifecycle actions', () => {
                   executionTarget: 'local',
                   inheritWorkspaceScope: true,
                 },
-                workingDirectory: '/repo/lobehub',
-                workingDirectoryConfig: { path: '/repo/lobehub' },
+                workingDirectory: '/repo/orvilo',
+                workingDirectoryConfig: { path: '/repo/orvilo' },
               },
             }),
           }),
@@ -2153,7 +2153,7 @@ describe('ConversationLifecycle actions', () => {
             agencyConfig: {
               boundDeviceId: deviceId,
               executionTarget: 'local',
-              workingDirByDevice: { [deviceId]: { path: '/repo/lobehub' } },
+              workingDirByDevice: { [deviceId]: { path: '/repo/orvilo' } },
             },
             // No execution environment at all — a directory would be noise, and
             // By Project would file plain chats under a project they never used.
@@ -2252,7 +2252,7 @@ describe('ConversationLifecycle actions', () => {
         beforeEach(() => {
           // The desktop/home fallback is always available for a hetero CLI, so
           // every case below has something to lose to.
-          window.__LOBE_GLOBAL_AGENT_CONTEXT__ = { desktopPath: DESKTOP_PATH };
+          window.__ORVILO_GLOBAL_AGENT_CONTEXT__ = { desktopPath: DESKTOP_PATH };
         });
 
         it('snapshots the heterogeneous effort into the first-send topic', async () => {
@@ -2658,13 +2658,13 @@ describe('ConversationLifecycle actions', () => {
                       {
                         actionCategory: 'tool',
                         actionLabel: 'Notebook',
-                        actionType: 'lobe-notebook',
+                        actionType: 'orvilo-notebook',
                         type: 'action-tag',
                       },
                       {
                         actionCategory: 'tool',
                         actionLabel: 'Artifacts',
-                        actionType: 'lobe-artifacts',
+                        actionType: 'orvilo-artifacts',
                         type: 'action-tag',
                       },
                     ],
@@ -2682,9 +2682,9 @@ describe('ConversationLifecycle actions', () => {
 
         expect(requestPayload?.newUserMessage.content).toContain(TEST_CONTENT.USER_MESSAGE);
         expect(requestPayload?.newUserMessage.content).toContain('<selected_tool_context>');
-        expect(requestPayload?.newUserMessage.content).toContain('identifier="lobe-notebook"');
+        expect(requestPayload?.newUserMessage.content).toContain('identifier="orvilo-notebook"');
         expect(requestPayload?.newUserMessage.content).toContain('name="Notebook"');
-        expect(requestPayload?.newUserMessage.content).toContain('identifier="lobe-artifacts"');
+        expect(requestPayload?.newUserMessage.content).toContain('identifier="orvilo-artifacts"');
         expect(requestPayload?.newUserMessage.content).toContain('name="Artifacts"');
         expect(result.current.executeClientAgent).toHaveBeenCalled();
       });
@@ -2838,7 +2838,7 @@ describe('ConversationLifecycle actions', () => {
                   {
                     actionCategory: 'tool',
                     actionLabel: 'Notebook',
-                    actionType: 'lobe-notebook',
+                    actionType: 'orvilo-notebook',
                     type: 'action-tag',
                   },
                   { text: ' queued message', type: 'text' },
@@ -3335,7 +3335,7 @@ describe('ConversationLifecycle actions', () => {
         });
 
         expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
-          expect.objectContaining({ selectedToolIds: ['lobe-goal'] }),
+          expect.objectContaining({ selectedToolIds: ['orvilo-goal'] }),
         );
       });
 
@@ -4468,7 +4468,7 @@ describe('ConversationLifecycle actions', () => {
             apiName: 'readFile',
             arguments: { path: '/Users/me/project/foo.ts' },
             content: expect.stringContaining('export const x = 1;'),
-            identifier: 'lobe-local-system',
+            identifier: 'orvilo-local-system',
             success: true,
           },
         ]);
@@ -4478,7 +4478,7 @@ describe('ConversationLifecycle actions', () => {
         mockConstEnv.isDesktop = true;
         setupMockSelectors({
           agentConfig: {
-            plugins: ['lobe-local-system'],
+            plugins: ['orvilo-local-system'],
           },
         });
         mockLocalFileService.readLocalFile.mockResolvedValue({
@@ -4543,7 +4543,7 @@ describe('ConversationLifecycle actions', () => {
             apiName: 'readFile',
             arguments: { path: '/Users/me/project/foo.ts' },
             content: expect.stringContaining('export const x = 1;'),
-            identifier: 'lobe-local-system',
+            identifier: 'orvilo-local-system',
             success: true,
           },
         ]);
@@ -5303,7 +5303,7 @@ describe('ConversationLifecycle actions', () => {
                   apiName: 'askUserQuestion',
                   arguments: '{}',
                   id: 'tool-call-1',
-                  identifier: 'lobe-user-interaction',
+                  identifier: 'orvilo-user-interaction',
                   intervention: { status: 'pending' },
                   result_msg_id: 'tool-result-1',
                 },

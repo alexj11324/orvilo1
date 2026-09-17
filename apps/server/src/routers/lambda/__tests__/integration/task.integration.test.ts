@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -19,7 +19,7 @@ import {
 } from './setup';
 
 // Mock getServerDB
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -89,7 +89,7 @@ const flushAfterResponse = async () => {
 };
 
 describe('Task Router Integration', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let userId: string;
   let otherUserId: string | undefined;
   let testAgentId: string;

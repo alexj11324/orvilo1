@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DocumentSourceType, type LobeDocument } from '@/types/document';
+import { DocumentSourceType, type OrviloDocument } from '@/types/document';
 
 import { initialState, type PageState } from '../../initialState';
 import { initialListState } from './initialState';
@@ -16,9 +16,9 @@ vi.mock('@/store/global', () => ({
 
 const doc = (
   id: string,
-  visibility: LobeDocument['visibility'],
-  overrides: Partial<LobeDocument> = {},
-): LobeDocument => ({
+  visibility: OrviloDocument['visibility'],
+  overrides: Partial<OrviloDocument> = {},
+): OrviloDocument => ({
   content: null,
   createdAt: new Date(overrides.createdAt ?? '2026-01-01T00:00:00.000Z'),
   editorData: null,
@@ -37,7 +37,7 @@ const doc = (
   ...overrides,
 });
 
-const createState = (documents: LobeDocument[]): PageState => ({
+const createState = (documents: OrviloDocument[]): PageState => ({
   ...initialState,
   ...initialListState,
   documents,

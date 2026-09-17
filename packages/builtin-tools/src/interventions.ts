@@ -37,7 +37,7 @@ export const listBuiltinInterventionEntries = (): BuiltinInterventionRegistryEnt
 
 /**
  * Get builtin intervention component for a specific API
- * @param identifier - Tool identifier (e.g., 'lobe-local-system')
+ * @param identifier - Tool identifier (e.g., 'orvilo-local-system')
  * @param apiName - API name (e.g., 'runCommand')
  */
 export const getBuiltinIntervention = (

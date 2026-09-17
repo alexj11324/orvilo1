@@ -83,7 +83,7 @@ vi.mock('@/const/dir', () => ({
   userDataDir: '/mock/user/data',
   FILE_STORAGE_DIR: 'file-storage',
   INSTALL_PLUGINS_DIR: 'plugins',
-  LOCAL_STORAGE_URL_PREFIX: '/lobe-desktop-file',
+  LOCAL_STORAGE_URL_PREFIX: '/orvilo-desktop-file',
 }));
 
 vi.mock('@orvilo/electron-server-ipc', () => ({

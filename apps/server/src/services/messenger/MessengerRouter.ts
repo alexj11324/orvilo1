@@ -12,7 +12,7 @@ import type { SafeMessengerAccountLink } from '@/database/models/messengerAccoun
 import { MessengerAccountLinkModel } from '@/database/models/messengerAccountLink';
 import { WorkspaceModel } from '@/database/models/workspace';
 import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSettings';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { resolveToolMode } from '@/helpers/executionTarget';
 import { getServerFeatureFlagsStateFromRuntimeConfig } from '@/server/featureFlags';
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
@@ -51,7 +51,7 @@ import type {
   MessengerPlatformBinder,
 } from './types';
 
-const log = debug('lobe-server:messenger:router');
+const log = debug('orvilo-server:messenger:router');
 
 /**
  * Sentinel scope token for the Personal scope (whose real `workspaceId` is
@@ -122,7 +122,7 @@ interface MessengerCommandContext {
   /** Platform-aware reply: ephemeral on Slack slash, DM on Discord slash,
    *  `binder.sendDmText` on text dispatch. */
   reply: (text: string) => Promise<void>;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   source: 'text' | 'slash';
   tenantId: string;
   thread?: any;
@@ -202,7 +202,7 @@ const reconstructRequest = (req: Request, rawBody: string): Request =>
  * re-check before running that workspace's agent.
  */
 const userIsWorkspaceMember = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   workspaceId: string,
 ): Promise<boolean> => {
@@ -219,15 +219,15 @@ const isWorkspaceFeatureEnabledForUser = async (userId: string): Promise<boolean
 
 /**
  * Routes inbound messages from the shared Messenger bots to the right
- * LobeHub user + agent.
+ * Orvilo user + agent.
  *
  * **Multi-tenant routing (PR2)**: per-tenant platforms (Slack today) keep
  * one Chat SDK instance per `installationKey` (e.g. `slack:T0123`). Global-
  * bot platforms (Telegram, future Discord) collapse to a single bot per
  * platform via the special `telegram:singleton` key.
  *
- * Account model: each `(LobeHub user, platform, tenant_id)` triple has at
- * most one row in `messenger_account_links`, so a single LobeHub user can
+ * Account model: each `(Orvilo user, platform, tenant_id)` triple has at
+ * most one row in `messenger_account_links`, so a single Orvilo user can
  * link into multiple Slack workspaces simultaneously without collisions.
  *
  * **Platform abstraction**: command logic and tap-action handling live in a
@@ -503,7 +503,7 @@ export class MessengerRouter {
 
   private registerHandlers(
     bot: Chat<any>,
-    serverDB: LobeChatDatabase,
+    serverDB: OrviloDatabase,
     client: PlatformClient,
     binder: MessengerPlatformBinder,
     creds: InstallationCredentials,
@@ -660,7 +660,7 @@ export class MessengerRouter {
         if (!featureAccess.allowed) {
           await replyToSender(
             featureAccess.blockedMessage ??
-              'This messenger connection requires a paid plan. Upgrade in LobeHub Settings to continue.',
+              'This messenger connection requires a paid plan. Upgrade in Orvilo Settings to continue.',
           );
           return;
         }
@@ -869,7 +869,7 @@ export class MessengerRouter {
 
     // Channel-join welcome (Slack `member_joined_channel`). Counterpart to the
     // App Home `Messages`-tab welcome in `handleAppHomeOpened` — the marketplace
-    // listing reviewers also test the `/invite @LobeHub` entry point, so the
+    // listing reviewers also test the `/invite @Orvilo` entry point, so the
     // bot must speak up the first time it lands in a channel. Other events
     // (regular members joining) are filtered out by the `botUserId` check.
     bot.onMemberJoinedChannel(async (event) => {
@@ -898,7 +898,7 @@ export class MessengerRouter {
   private buildCommands(): MessengerCommand[] {
     return [
       {
-        description: 'Bind your account to LobeHub',
+        description: 'Bind your account to Orvilo',
         handler: async (ctx) => {
           const strings = getMessengerSystemStrings(ctx.platform);
           // Already-linked short-circuit: re-running `/start` while bound
@@ -1136,7 +1136,7 @@ export class MessengerRouter {
         name: 'stop',
       },
       {
-        description: 'Send feedback directly to the LobeHub team (no AI reply)',
+        description: 'Send feedback directly to the Orvilo team (no AI reply)',
         // Declaring the argument so Discord/Slack surface a `/feedback <message>`
         // prompt; without it the slash picker registers the command as zero-arg
         // and the user can't enter feedback text from the picker UI.
@@ -1150,7 +1150,7 @@ export class MessengerRouter {
         handler: async (ctx) => {
           const replyLocale = getBotReplyLocale(ctx.platform);
           const strings = getMessengerSystemStrings(ctx.platform);
-          // Feedback is tied to a LobeHub account so the team can follow up;
+          // Feedback is tied to a Orvilo account so the team can follow up;
           // an unbound user has no email/identity to attach. Mirror the
           // `/new` / `/stop` "you need to /start" guard for consistency.
           if (!ctx.link) {
@@ -1198,7 +1198,7 @@ export class MessengerRouter {
     client: PlatformClient;
     creds: InstallationCredentials;
     event: SlashCommandEvent;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
   }): Promise<void> {
     const { binder, bot, client, creds, event, serverDB } = params;
     const senderId = event.user.userId;
@@ -1387,7 +1387,7 @@ export class MessengerRouter {
         entries: this.toPickerEntries(userAgents, link.activeAgentId, strings),
         // Channel invocation → render ephemeral so only the invoker sees
         // their personal agent list (otherwise `/agents` from a public
-        // channel would broadcast everyone's `LobeAI / Claude Code / …`
+        // channel would broadcast everyone's `OrviloAI / Claude Code / …`
         // grid). DMs stay non-ephemeral so the picker persists in history.
         ephemeralTo: ctx.isDM ? undefined : ctx.authorUserId,
         // Discord-only: forward the slash interaction so the binder can
@@ -1446,7 +1446,7 @@ export class MessengerRouter {
   /**
    * `/switch` changes the active *scope* of the IM session — personal or one
    * of the workspaces the user belongs to. The bot is a single shared bot, so
-   * which LobeHub context a conversation runs in is the active agent's scope;
+   * which Orvilo context a conversation runs in is the active agent's scope;
    * switching scope clears the active agent and the user re-picks via /agents.
    *
    * Mirrors `/agents`: on platforms that implement `sendAgentPicker` the bot
@@ -1534,7 +1534,7 @@ export class MessengerRouter {
    * each workspace they belong to.
    */
   private async fetchUserScopes(
-    serverDB: LobeChatDatabase,
+    serverDB: OrviloDatabase,
     userId: string,
     platform: MessengerPlatform,
   ): Promise<{ id: string | null; name: string }[]> {
@@ -1547,12 +1547,12 @@ export class MessengerRouter {
 
   /**
    * Persist a scope switch and land on the new scope's default agent
-   * (inbox/LobeAI is pinned first by `fetchUserAgents`) so switching never
+   * (inbox/OrviloAI is pinned first by `fetchUserAgents`) so switching never
    * leaves the session agent-less. Falls back to `null` only when the target
    * scope has no agents yet.
    */
   private async applyScopeSwitch(
-    serverDB: LobeChatDatabase,
+    serverDB: OrviloDatabase,
     linkId: string,
     userId: string,
     target: { id: string | null; name: string },
@@ -1652,8 +1652,8 @@ export class MessengerRouter {
       }
 
       const text = activeAgentName
-        ? `Welcome to LobeHub! Your active agent is *${activeAgentName}*. Send a message to chat, or use \`/agents\` to switch.`
-        : 'Welcome to LobeHub! Send `/agents` to pick an active agent and start chatting.';
+        ? `Welcome to Orvilo! Your active agent is *${activeAgentName}*. Send a message to chat, or use \`/agents\` to switch.`
+        : 'Welcome to Orvilo! Send `/agents` to pick an active agent and start chatting.';
       await bot.binder.sendDmText(event.channelId, text);
     } catch (error) {
       log('handleAppHomeOpened: dispatch failed: %O', error);
@@ -1662,7 +1662,7 @@ export class MessengerRouter {
 
   /**
    * Slack `member_joined_channel` welcome. Fires the first time the bot
-   * itself joins a channel (via `/invite @LobeHub` or being added through the
+   * itself joins a channel (via `/invite @Orvilo` or being added through the
    * channel settings). Slack retries `member_joined_channel` aggressively on
    * 5xx, and re-adding-then-removing-then-re-adding a bot would fire it again,
    * so `setIfNotExists` keys on the channel id to keep the greeting one-shot.
@@ -1688,10 +1688,10 @@ export class MessengerRouter {
     }
 
     const text = [
-      ":wave: Hi, I'm *LobeHub* — your AI agent on Slack.",
+      ":wave: Hi, I'm *Orvilo* — your AI agent on Slack.",
       '',
-      '• Mention me with `@LobeHub <your question>` to chat in this channel.',
-      '• First time? Send me a *direct message* to link your LobeHub account.',
+      '• Mention me with `@Orvilo <your question>` to chat in this channel.',
+      '• First time? Send me a *direct message* to link your Orvilo account.',
       '• Use `/agents` in DM to switch the active agent.',
     ].join('\n');
 
@@ -1787,7 +1787,7 @@ export class MessengerRouter {
    * picker.
    */
   private async resolveDefaultMode(
-    serverDB: LobeChatDatabase,
+    serverDB: OrviloDatabase,
     link: SafeMessengerAccountLink,
   ): Promise<'agent' | 'chat'> {
     if (!link.activeAgentId) return 'agent';
@@ -1816,7 +1816,7 @@ export class MessengerRouter {
    * config is a better fallback than the product default.
    */
   private async resolveMemberModeChatConfig(
-    serverDB: LobeChatDatabase,
+    serverDB: OrviloDatabase,
     link: SafeMessengerAccountLink,
     agent: unknown,
   ): Promise<Record<string, unknown> | undefined> {
@@ -1991,14 +1991,14 @@ export class MessengerRouter {
   /**
    * Fetch a user's agents for `/agents`. Mirrors the web
    * verify-im picker (and the home sidebar):
-   *  - excludes virtual agents but explicitly keeps the inbox/LobeAI agent
+   *  - excludes virtual agents but explicitly keeps the inbox/OrviloAI agent
    *  - orders by `updatedAt DESC`
-   *  - pins inbox/LobeAI to the top regardless of updatedAt
-   *  - applies the LobeAI title fallback (slug='inbox') and a generic
+   *  - pins inbox/OrviloAI to the top regardless of updatedAt
+   *  - applies the OrviloAI title fallback (slug='inbox') and a generic
    *    "Custom Agent" fallback for agents without a title
    */
   private async fetchUserAgents(
-    serverDB: LobeChatDatabase,
+    serverDB: OrviloDatabase,
     userId: string,
     workspaceId?: string | null,
   ): Promise<AgentSummary[]> {
@@ -2051,7 +2051,7 @@ export class MessengerRouter {
     const bridge = new AgentBridgeService(serverDB, link.userId, link.workspaceId ?? undefined);
 
     // Messenger account-link routing already binds platform sender →
-    // LobeHub user; the dispatch only fires for the linked sender. So
+    // Orvilo user; the dispatch only fires for the linked sender. So
     // `isOwner` is true iff the inbound message's `author.userId` matches
     // the linked `platformUserId`. `buildBotContext` enforces the
     // fail-closed default (never trust when either side is missing).

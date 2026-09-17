@@ -1,7 +1,7 @@
 import { type Meta, type ToolManifest } from '@orvilo/types';
 
 import { isInstalledPluginAvailableInCurrentEnv } from '@/helpers/toolAvailability';
-import { type InstallPluginMeta, type LobeToolCustomPlugin } from '@/types/tool/plugin';
+import { type InstallPluginMeta, type OrviloToolCustomPlugin } from '@/types/tool/plugin';
 
 import { type ToolStoreState } from '../../initialState';
 
@@ -33,7 +33,7 @@ interface MarketShapedManifest {
 /**
  * Resolve the display meta of an installed plugin manifest.
  *
- * Prefers the LobeChat `manifest.meta`; when it is absent, derive it from the
+ * Prefers the Orvilo `manifest.meta`; when it is absent, derive it from the
  * marketplace shape so the row still renders its real name instead of a blank
  * label.
  */
@@ -60,7 +60,7 @@ const getPluginMetaById = (id: string) => (s: ToolStoreState) => {
 
 const getCustomPluginById = (id: string) => (s: ToolStoreState) =>
   installedPlugins(s).find((i) => i.identifier === id && i.type === 'customPlugin') as
-    LobeToolCustomPlugin | undefined;
+    OrviloToolCustomPlugin | undefined;
 
 const getToolManifestById = (id: string) => (s: ToolStoreState) =>
   getInstalledPluginById(id)(s)?.manifest;

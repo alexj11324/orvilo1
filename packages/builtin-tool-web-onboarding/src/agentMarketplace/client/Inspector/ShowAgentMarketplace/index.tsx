@@ -26,7 +26,7 @@ export const ShowAgentMarketplaceInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {tPlugin('builtins.lobe-web-onboarding.apiName.showAgentMarketplace')}
+          {tPlugin('builtins.orvilo-web-onboarding.apiName.showAgentMarketplace')}
         </span>
       </div>
     );
@@ -38,7 +38,7 @@ export const ShowAgentMarketplaceInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {tPlugin('builtins.lobe-web-onboarding.apiName.showAgentMarketplace')}
+        {tPlugin('builtins.orvilo-web-onboarding.apiName.showAgentMarketplace')}
       </span>
       {visibleHints.map((slug) => {
         const labelKey = CATEGORY_LABEL_I18N_KEYS[slug];

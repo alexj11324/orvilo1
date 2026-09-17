@@ -185,7 +185,7 @@ export const heatLevelOf = (value: number, max: number): 0 | 1 | 2 | 3 | 4 => {
 
 /**
  * Resolve calendar intensity per day without mixing incomparable units.
- * LobeHub-owned days rank by tokens; days without a ledger row fall back to
+ * Orvilo-owned days rank by tokens; days without a ledger row fall back to
  * provider-reported quota burn and rank against the other burn-only days.
  */
 export const buildDailyHeatLevels = (

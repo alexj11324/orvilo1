@@ -1,4 +1,4 @@
-import { LobeActivatorIdentifier } from '@orvilo/builtin-tool-activator';
+import { OrviloActivatorIdentifier } from '@orvilo/builtin-tool-activator';
 import { AgentBuilderIdentifier } from '@orvilo/builtin-tool-agent-builder';
 import { AgentManagementIdentifier } from '@orvilo/builtin-tool-agent-management';
 import { formatUploadedFilesPrompt } from '@orvilo/builtin-tool-cloud-sandbox';
@@ -12,7 +12,7 @@ import {
   resolveAvailableComposioServices,
 } from '@orvilo/builtin-tool-creds';
 import { GroupAgentBuilderIdentifier } from '@orvilo/builtin-tool-group-agent-builder';
-import { LobeAgentIdentifier } from '@orvilo/builtin-tool-lobe-agent';
+import { OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import { WebOnboardingIdentifier } from '@orvilo/builtin-tool-web-onboarding';
 import {
   AGENT_PLAN_FILE_TYPE,
@@ -27,10 +27,10 @@ import type {
   AgentManagementContext,
   GroupAgentBuilderContext,
   GroupOfficialToolItem,
-  LobeToolManifest,
   MemoryContext,
   OnboardingContext,
   OperationSkillSet,
+  OrviloToolManifest,
   PlanTodoConfig,
   ToolDiscoveryConfig,
   UserMemoryData,
@@ -72,7 +72,7 @@ import { getToolStoreState } from '@/store/tool';
 import {
   builtinToolSelectors,
   composioStoreSelectors,
-  lobehubSkillStoreSelectors,
+  orviloSkillStoreSelectors,
   toolSelectors,
 } from '@/store/tool/selectors';
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
@@ -124,7 +124,7 @@ interface ContextEngineeringContext {
   initialContext?: RuntimeInitialContext;
   inputTemplate?: string;
   /** Tool manifests with systemRole and API definitions */
-  manifests?: LobeToolManifest[];
+  manifests?: OrviloToolManifest[];
   /** Memory-related context for prompt/runtime behavior */
   memoryContext?: MemoryContext;
   messages: UIChatMessage[];
@@ -268,17 +268,17 @@ export const contextEngineering = async ({
           typeof window !== 'undefined' &&
           window.global_serverConfigStore?.getState()?.serverConfig?.enableComposio,
         );
-        const isLobehubSkillEnabled = Boolean(
+        const isOrviloSkillEnabled = Boolean(
           typeof window !== 'undefined' &&
-          window.global_serverConfigStore?.getState()?.serverConfig?.enableLobehubSkill,
+          window.global_serverConfigStore?.getState()?.serverConfig?.enableOrviloSkill,
         );
         const connectorCatalog = getConnectorCatalog({
           composio: isComposioEnabled,
-          lobehub: isLobehubSkillEnabled,
+          orvilo: isOrviloSkillEnabled,
         });
         const connectorIdentifiers = new Set(
           connectorCatalog.map((item) =>
-            item.type === 'lobehub' ? item.provider.id : item.serverType.identifier,
+            item.type === 'orvilo' ? item.provider.id : item.serverType.identifier,
           ),
         );
 
@@ -299,7 +299,7 @@ export const contextEngineering = async ({
         }
 
         const allComposioServers = composioStoreSelectors.getServers(toolState);
-        const allLobehubSkillServers = lobehubSkillStoreSelectors.getServers(toolState);
+        const allOrviloSkillServers = orviloSkillStoreSelectors.getServers(toolState);
         for (const connector of connectorCatalog) {
           if (connector.type === 'composio') {
             const { serverType } = connector;
@@ -307,7 +307,7 @@ export const contextEngineering = async ({
               (item) => item.identifier === serverType.identifier,
             );
             officialTools.push({
-              description: `LobeHub Mcp Server: ${serverType.label}`,
+              description: `Orvilo Mcp Server: ${serverType.label}`,
               enabled: enabledPlugins.includes(serverType.identifier),
               identifier: serverType.identifier,
               installed: !!server,
@@ -318,14 +318,14 @@ export const contextEngineering = async ({
           }
 
           const { provider } = connector;
-          const server = allLobehubSkillServers.find((item) => item.identifier === provider.id);
+          const server = allOrviloSkillServers.find((item) => item.identifier === provider.id);
           officialTools.push({
-            description: `LobeHub Skill Provider: ${provider.label}`,
+            description: `Orvilo Skill Provider: ${provider.label}`,
             enabled: enabledPlugins.includes(provider.id),
             identifier: provider.id,
             installed: !!server,
             name: provider.label,
-            type: 'lobehub-skill',
+            type: 'orvilo-skill',
           });
         }
 
@@ -372,9 +372,9 @@ export const contextEngineering = async ({
     userMemoryData = combineUserMemoryData(topicMemories, persona);
   }
 
-  // Resolve plan + todos context (now part of the lobe-agent tool).
-  // Lobe-agent must be enabled and topicId must be provided.
-  const isPlanTodoEnabled = tools?.includes(LobeAgentIdentifier) ?? false;
+  // Resolve plan + todos context (now part of the orvilo-agent tool).
+  // Orvilo-agent must be enabled and topicId must be provided.
+  const isPlanTodoEnabled = tools?.includes(OrviloAgentIdentifier) ?? false;
   let planTodoConfig: PlanTodoConfig | undefined;
 
   if (isPlanTodoEnabled && topicId) {
@@ -487,12 +487,12 @@ export const contextEngineering = async ({
         }
       : undefined;
 
-  // Build tool discovery config if lobe-activator is enabled
+  // Build tool discovery config if orvilo-activator is enabled
   const enabledToolSet = new Set(tools || []);
-  const isLobeToolsEnabled = enabledToolSet.has(LobeActivatorIdentifier);
+  const isOrviloToolsEnabled = enabledToolSet.has(OrviloActivatorIdentifier);
 
   let toolDiscoveryConfig: ToolDiscoveryConfig | undefined;
-  if (isLobeToolsEnabled) {
+  if (isOrviloToolsEnabled) {
     const toolState = getToolStoreState();
     const availableTools = toolSelectors
       .availableToolsForDiscovery(toolState)
@@ -583,24 +583,24 @@ export const contextEngineering = async ({
       typeof window !== 'undefined' &&
       window.global_serverConfigStore?.getState()?.serverConfig?.enableComposio,
     );
-    const isLobehubSkillEnabled = Boolean(
+    const isOrviloSkillEnabled = Boolean(
       typeof window !== 'undefined' &&
-      window.global_serverConfigStore?.getState()?.serverConfig?.enableLobehubSkill,
+      window.global_serverConfigStore?.getState()?.serverConfig?.enableOrviloSkill,
     );
     const connectorCatalog = getConnectorCatalog({
       composio: isComposioEnabled,
-      lobehub: isLobehubSkillEnabled,
+      orvilo: isOrviloSkillEnabled,
     });
     const connectorIdentifiers = new Set(
       connectorCatalog.map((item) =>
-        item.type === 'lobehub' ? item.provider.id : item.serverType.identifier,
+        item.type === 'orvilo' ? item.provider.id : item.serverType.identifier,
       ),
     );
     const INTERNAL_TOOLS = new Set([
-      'lobe-agent-management', // Don't show agent-management in its own context
-      'lobe-agent-builder', // Used for editing current agent, not for creating new agents
-      'lobe-group-agent-builder', // Used for editing current group, not for creating new agents
-      'lobe-page-agent', // Page-editor specific tool
+      'orvilo-agent-management', // Don't show agent-management in its own context
+      'orvilo-agent-builder', // Used for editing current agent, not for creating new agents
+      'orvilo-group-agent-builder', // Used for editing current group, not for creating new agents
+      'orvilo-page-agent', // Page-editor specific tool
     ]);
 
     for (const tool of allBuiltinTools) {
@@ -633,7 +633,7 @@ export const contextEngineering = async ({
         description: provider.description,
         identifier: provider.id,
         name: provider.label,
-        type: 'lobehub-skill' as const,
+        type: 'orvilo-skill' as const,
       });
     }
 
@@ -799,18 +799,18 @@ export const contextEngineering = async ({
           weekday: 'long',
           year: 'numeric',
         }).format(new Date()),
-      sandbox_enabled: () => String(tools?.includes('lobe-cloud-sandbox') ?? false),
+      sandbox_enabled: () => String(tools?.includes('orvilo-cloud-sandbox') ?? false),
       // NOTICE: required by builtin-tool-cloud-sandbox/src/systemRole.ts —
       // lists the topic files synced into the sandbox upload dir. Read lazily
       // from the chat store so we only pay the cost when the placeholder renders.
       sandbox_uploaded_files: () =>
-        tools?.includes('lobe-cloud-sandbox')
+        tools?.includes('orvilo-cloud-sandbox')
           ? formatUploadedFilesPrompt(chatSelectors.currentUserFiles(getChatStoreState()))
           : '',
       // NOTICE(@nekomeowww): required by builtin-tool-memory/src/systemRole.ts
       memory_effort: () => (userMemoryConfig ? (memoryContext?.effort ?? '') : ''),
-      // Current agent + topic identity — referenced by the LobeHub builtin
-      // skill (packages/builtin-skills/src/lobehub/content.ts) so the model
+      // Current agent + topic identity — referenced by the Orvilo builtin
+      // skill (packages/builtin-skills/src/orvilo/content.ts) so the model
       // can run `lh agent run -a {{agent_id}}` etc without first having to
       // search for itself. Read lazily from stores so we only pay the cost
       // when the placeholder actually appears in a rendered message.

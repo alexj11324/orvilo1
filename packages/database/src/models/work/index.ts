@@ -13,7 +13,7 @@ import {
   type WorkSkillProvider,
 } from '@orvilo/types';
 
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import type { WorkContext } from './context';
 import { registerDocumentWork } from './document';
 import { registerExternalWork } from './external';
@@ -48,7 +48,7 @@ const SKILL_TOOL_RESULT_NORMALIZERS = {
 export class WorkModel {
   private readonly ctx: WorkContext;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.ctx = { db, userId, workspaceId };
   }
 
@@ -92,7 +92,7 @@ export class WorkModel {
 
   /**
    * Register a github Work from a heterogeneous / device SHELL tool result
-   * (codex `command_execution`, claude-code `Bash`, lobe-local-system
+   * (codex `command_execution`, claude-code `Bash`, orvilo-local-system
    * `runCommand`) that ran `gh issue|pr create/edit`. Unlike
    * {@link handleSkillToolResult} the version keeps the REAL producing tool as
    * its identifier (codex / claude-code / …) instead of a skill provider —

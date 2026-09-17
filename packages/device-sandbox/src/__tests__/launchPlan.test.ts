@@ -60,10 +60,10 @@ describe('device sandbox launch plan', () => {
   it('keeps only the default environment and explicit allowlist', () => {
     expect(
       createSandboxEnv(
-        { HOME: '/Users/test', LOBE_TEST_ALLOWED: 'yes', LOBE_TEST_SECRET: 'no' },
-        { envAllowlist: ['LOBE_TEST_ALLOWED'] },
+        { HOME: '/Users/test', ORVILO_TEST_ALLOWED: 'yes', ORVILO_TEST_SECRET: 'no' },
+        { envAllowlist: ['ORVILO_TEST_ALLOWED'] },
       ),
-    ).toEqual({ HOME: '/Users/test', LOBE_TEST_ALLOWED: 'yes' });
+    ).toEqual({ HOME: '/Users/test', ORVILO_TEST_ALLOWED: 'yes' });
   });
 
   it('normalizes roots and rejects relative paths', () => {
@@ -81,7 +81,7 @@ describe('device sandbox launch plan', () => {
     );
   });
 
-  it('maps the LobeHub policy to a fail-closed Sandbox Runtime configuration', () => {
+  it('maps the Orvilo policy to a fail-closed Sandbox Runtime configuration', () => {
     const config = createSrtConfig({
       ...policy,
       allowedNetworkDomains: ['api.github.com'],

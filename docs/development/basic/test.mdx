@@ -1,10 +1,10 @@
 ---
 title: Testing Guide
 description: >-
-  Explore LobeHub's testing strategy, including unit testing with Vitest and
+  Explore Orvilo's testing strategy, including unit testing with Vitest and
   end-to-end testing with Playwright + Cucumber.
 tags:
-  - LobeHub
+  - Orvilo
   - Testing
   - Unit Testing
   - End-to-End Testing
@@ -14,7 +14,7 @@ tags:
 
 # Testing Guide
 
-LobeHub's testing strategy includes unit testing with [Vitest][vitest-url] and end-to-end (E2E) testing with Playwright + Cucumber. This guide covers how to write and run tests effectively.
+Orvilo's testing strategy includes unit testing with [Vitest][vitest-url] and end-to-end (E2E) testing with Playwright + Cucumber. This guide covers how to write and run tests effectively.
 
 ## Overview
 
@@ -294,7 +294,7 @@ e2e/
 Feature: Chat Functionality
 
   Scenario: User sends a message
-    Given I am logged in
+    Given I am logged
     And I am on the chat page
     When I type "Hello, AI!"
     And I click the send button
@@ -358,7 +358,7 @@ it('should call setState when input changes', () => {
 ### 2. Use Semantic Queries
 
 ```typescript
-// ✅ Good — accessible queries match what users see
+// ✅ Good — accessible queries match what users
 screen.getByRole('button', { name: 'Submit' });
 screen.getByLabelText('Email address');
 screen.getByText('Welcome back');

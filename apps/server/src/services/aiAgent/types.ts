@@ -3,7 +3,7 @@ import type {
   BotSenderMetadata,
   ChatTopicBotContext,
   ExecAgentParams,
-  LobeAgentChatConfig,
+  OrviloAgentChatConfig,
   RuntimeMentionedAgent,
   UserInterventionConfig,
   WorkingDirConfig,
@@ -92,7 +92,7 @@ export interface InternalExecAgentParams extends ExecAgentParams {
    * the executing agent's own chatConfig, skipping nulled keys. Internal-only:
    * set by the callSubAgent thread-run path, never client-passable.
    */
-  chatConfigOverride?: Partial<LobeAgentChatConfig> | null;
+  chatConfigOverride?: Partial<OrviloAgentChatConfig> | null;
   /**
    * Thread `execAgent` materialised from `appContext.newThread` for THIS turn.
    * Internal-only: set by the wrapper after it creates the row, never
@@ -203,7 +203,7 @@ export interface InternalExecAgentParams extends ExecAgentParams {
   }[];
   /**
    * When present, this execAgent call resumes a previous op that paused on a
-   * `humanIntervention: 'always'` tool (e.g. lobe-agent `askUserQuestion`). The
+   * `humanIntervention: 'always'` tool (e.g. orvilo-agent `askUserQuestion`). The
    * service writes the human-provided `content` as the target tool message's
    * result and resumes from `phase: 'tool_result'` — the tool is NOT
    * re-executed. `parentMessageId` must point at the pending `role='tool'`

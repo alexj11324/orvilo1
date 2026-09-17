@@ -251,7 +251,7 @@ export interface JudgeEvidence {
   accessUrl?: string;
   content?: string | null;
   description?: string | null;
-  /** Referenced LobeHub document id. Its readable content is hydrated by the verifier service. */
+  /** Referenced Orvilo document id. Its readable content is hydrated by the verifier service. */
   documentId?: string | null;
   /**
    * Stored artifact id (screenshot / video / large text). Inline judges must

@@ -42,8 +42,8 @@ export interface GroupOfficialToolItem {
   installed?: boolean;
   /** Tool display name */
   name: string;
-  /** Tool type: 'builtin' for built-in tools, 'composio' for LobeHub Mcp servers, 'lobehub-skill' for LobeHub Skill providers */
-  type: 'builtin' | 'composio' | 'lobehub-skill';
+  /** Tool type: 'builtin' for built-in tools, 'composio' for Orvilo Mcp servers, 'orvilo-skill' for Orvilo Skill providers */
+  type: 'builtin' | 'composio' | 'orvilo-skill';
 }
 
 /**
@@ -190,7 +190,7 @@ const defaultFormatGroupContext = (context: GroupAgentBuilderContext): string =>
   if (context.officialTools && context.officialTools.length > 0) {
     const builtinTools = context.officialTools.filter((t) => t.type === 'builtin');
     const composioTools = context.officialTools.filter((t) => t.type === 'composio');
-    const lobehubSkillTools = context.officialTools.filter((t) => t.type === 'lobehub-skill');
+    const orviloSkillTools = context.officialTools.filter((t) => t.type === 'orvilo-skill');
 
     const toolsSections: string[] = [];
 
@@ -222,8 +222,8 @@ const defaultFormatGroupContext = (context: GroupAgentBuilderContext): string =>
       toolsSections.push(`  <composio_tools>\n${composioItems}\n  </composio_tools>`);
     }
 
-    if (lobehubSkillTools.length > 0) {
-      const lobehubSkillItems = lobehubSkillTools
+    if (orviloSkillTools.length > 0) {
+      const orviloSkillItems = orviloSkillTools
         .map((t) => {
           const attrs = [
             `id="${t.identifier}"`,
@@ -234,7 +234,7 @@ const defaultFormatGroupContext = (context: GroupAgentBuilderContext): string =>
           return `    <tool ${attrs}>${escapeXml(t.name)}${desc}</tool>`;
         })
         .join('\n');
-      toolsSections.push(`  <lobehub_skill_tools>\n${lobehubSkillItems}\n  </lobehub_skill_tools>`);
+      toolsSections.push(`  <orvilo_skill_tools>\n${orviloSkillItems}\n  </orvilo_skill_tools>`);
     }
 
     if (toolsSections.length > 0) {

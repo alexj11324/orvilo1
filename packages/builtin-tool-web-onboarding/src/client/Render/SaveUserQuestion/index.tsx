@@ -95,7 +95,7 @@ const SaveUserQuestion = memo<BuiltinRenderProps<SaveUserQuestionInput, unknown,
         {hasAgentIdentity && (
           <Flexbox gap={8}>
             <Text className={styles.sectionLabel}>
-              {t('builtins.lobe-web-onboarding.render.agent')}
+              {t('builtins.orvilo-web-onboarding.render.agent')}
             </Text>
             <div className={styles.detailCard}>
               <Flexbox horizontal align="center" gap={12}>
@@ -109,7 +109,7 @@ const SaveUserQuestion = memo<BuiltinRenderProps<SaveUserQuestionInput, unknown,
         {hasUserProfile && (
           <Flexbox gap={8}>
             <Text className={styles.sectionLabel}>
-              {t('builtins.lobe-web-onboarding.render.fullName')}
+              {t('builtins.orvilo-web-onboarding.render.fullName')}
             </Text>
             <div className={styles.detailCard}>
               <div className={styles.value}>{fullName}</div>
@@ -120,7 +120,7 @@ const SaveUserQuestion = memo<BuiltinRenderProps<SaveUserQuestionInput, unknown,
         {hasInterests && (
           <Flexbox gap={8}>
             <Text className={styles.sectionLabel}>
-              {t('builtins.lobe-web-onboarding.render.interests')}
+              {t('builtins.orvilo-web-onboarding.render.interests')}
             </Text>
             <Flexbox horizontal style={{ flexWrap: 'wrap', gap: 8 }}>
               {interestLabels.map((label) => (

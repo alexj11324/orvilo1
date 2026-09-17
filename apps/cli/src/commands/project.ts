@@ -56,7 +56,7 @@ export function registerProjectCommand(program: Command) {
   project
     .command('create')
     .description('Create a project')
-    .requiredOption('-i, --identifier <identifier>', 'Task identifier prefix (for example LOBE)')
+    .requiredOption('-i, --identifier <identifier>', 'Task identifier prefix (for example ORVILO)')
     .requiredOption('-n, --name <name>', 'Project name')
     .option('-d, --description <description>', 'Description')
     .option('--slug <slug>', 'Project slug')

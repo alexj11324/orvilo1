@@ -9,7 +9,7 @@ export interface LongCatModelCard {
   id: string;
 }
 
-export const LobeLongCatAI = createOpenAICompatibleRuntime({
+export const OrviloLongCatAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.longcat.chat/openai/v1',
   chatCompletion: {
     handlePayload: (payload) => {

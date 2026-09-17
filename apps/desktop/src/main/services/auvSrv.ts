@@ -87,12 +87,12 @@ export interface PrivateIpcListener {
 
 const createPrivateIpcListener = async (): Promise<PrivateIpcListener> => {
   if (process.platform === 'win32') {
-    return { listener: `npipe://./pipe/lobehub-auv-${randomUUID()}` };
+    return { listener: `npipe://./pipe/orvilo-auv-${randomUUID()}` };
   }
 
   // Darwin's sockaddr_un.sun_path is only 104 bytes. A short mkdtemp path also
   // gives each app-owned child an unguessable, owner-only directory.
-  const ipcDirectory = await mkdtemp('/tmp/lobehub-auv-');
+  const ipcDirectory = await mkdtemp('/tmp/orvilo-auv-');
   await chmod(ipcDirectory, 0o700);
   return {
     cleanup: () => rmdir(ipcDirectory),
@@ -178,7 +178,7 @@ const normalizeCliArgv = (params: AuvRunCommandParams): string[] => {
   if (
     argv.some((argument) => argument === '--store-root' || argument.startsWith('--store-root='))
   ) {
-    throw new Error('AUV --store-root is managed by LobeHub');
+    throw new Error('AUV --store-root is managed by Orvilo');
   }
 
   const command = argv[1]!;

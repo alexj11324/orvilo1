@@ -54,8 +54,8 @@ vi.mock('@/libs/better-auth/utils/client', () => ({
 }));
 
 vi.mock('@orvilo/business-const', () => ({
-  BRANDING_NAME: 'LobeHub',
-  ORG_NAME: 'LobeHub',
+  BRANDING_NAME: 'Orvilo',
+  ORG_NAME: 'Orvilo',
 }));
 
 vi.mock('@/business/client/hooks/useBusinessSignin', () => ({
@@ -420,7 +420,7 @@ describe('useSignIn', () => {
     });
 
     it('should preserve a mobile app callback scheme', async () => {
-      const mobileCallbackUrl = 'com.lobehub.app:///auth/callback';
+      const mobileCallbackUrl = 'com.orvilo.app:///auth/callback';
       mockSearchParamsGet.mockImplementation((key: string) =>
         key === 'callbackUrl' ? mobileCallbackUrl : null,
       );
@@ -492,7 +492,7 @@ describe('useSignIn', () => {
         await result.current.handleSocialSignIn('google');
       });
 
-      expect(localStorage.getItem('lobehub:auth:last-provider:v1')).toBe('google');
+      expect(localStorage.getItem('orvilo:auth:last-provider:v1')).toBe('google');
     });
 
     it('should stop social sign in when business pre-check rejects', async () => {
@@ -791,13 +791,13 @@ describe('useSignIn', () => {
 
   describe('provider sorting', () => {
     it('should sort last used provider first', () => {
-      localStorage.setItem('lobehub:auth:last-provider:v1', 'github');
+      localStorage.setItem('orvilo:auth:last-provider:v1', 'github');
 
       const { result } = renderHook(() => useSignIn());
 
       expect(result.current.oAuthSSOProviders[0]).toBe('github');
 
-      localStorage.removeItem('lobehub:auth:last-provider:v1');
+      localStorage.removeItem('orvilo:auth:last-provider:v1');
     });
 
     it('should use business SSO providers when business features are enabled by server config', () => {

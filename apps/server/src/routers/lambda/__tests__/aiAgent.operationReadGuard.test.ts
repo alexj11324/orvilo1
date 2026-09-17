@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { agentOperations, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { aiAgentRouter } from '../aiAgent';
 import { cleanupTestUser, createTestUser } from './integration/setup';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -45,7 +45,7 @@ vi.mock('@/server/services/aiChat', () => ({
  * from the coordinator, so the id alone must never be enough to read them.
  */
 describe('aiAgentRouter operation read guard', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let ownerId: string;
   let visitorId: string;
   let operationId: string;

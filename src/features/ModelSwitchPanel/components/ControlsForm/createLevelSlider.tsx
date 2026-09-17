@@ -1,6 +1,6 @@
 'use client';
 
-import type { LobeAgentChatConfig } from '@orvilo/types';
+import type { OrviloAgentChatConfig } from '@orvilo/types';
 import type { CSSProperties } from 'react';
 import { memo } from 'react';
 
@@ -13,9 +13,9 @@ import LevelSlider, { type LevelSliderMark } from './LevelSlider';
 
 export interface LevelSliderConfig<T extends string> {
   /**
-   * The key in LobeAgentChatConfig to read/write
+   * The key in OrviloAgentChatConfig to read/write
    */
-  configKey: keyof LobeAgentChatConfig;
+  configKey: keyof OrviloAgentChatConfig;
   /**
    * Default value when no value is provided
    */

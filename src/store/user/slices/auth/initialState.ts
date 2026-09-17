@@ -1,6 +1,6 @@
 import { type SSOProvider } from '@orvilo/types';
 
-import { type LobeUser } from '@/types/user';
+import { type OrviloUser } from '@/types/user';
 
 export interface UserAuthState {
   authProviders?: SSOProvider[];
@@ -16,7 +16,7 @@ export interface UserAuthState {
 
   isSignedIn?: boolean;
   oAuthSSOProviders?: string[];
-  user?: LobeUser;
+  user?: OrviloUser;
 }
 
 export const initialAuthState: UserAuthState = {};

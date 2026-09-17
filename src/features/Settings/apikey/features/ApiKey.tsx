@@ -184,7 +184,7 @@ const ApiKey: FC = () => {
         // rows are masked (owners can manage them but never see the secret).
         <span onClick={(e) => e.stopPropagation()}>
           {apiKey.isMine === false ? (
-            <span style={{ opacity: 0.5 }}>{`sk-lh-${'*'.repeat(12)}`}</span>
+            <span style={{ opacity: 0.5 }}>{`sk-ov-${'*'.repeat(12)}`}</span>
           ) : apiKey.keyDecryptionFailed ? (
             <span title={t('apikey.display.unavailableDescription')}>
               {t('apikey.display.unavailable')}

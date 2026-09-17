@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { LobeAgentSettings } from '../../session';
+import type { OrviloAgentSettings } from '../../session';
 import type { UserGeneralConfig } from './general';
 import type { UserHotkeyConfig } from './hotkey';
 import type { UserImageConfig } from './image';
@@ -13,7 +13,7 @@ import type { UserServiceModelConfig } from './systemAgent';
 import type { UserToolConfig } from './tool';
 import type { UserTTSConfig } from './tts';
 
-export type UserDefaultAgent = LobeAgentSettings;
+export type UserDefaultAgent = OrviloAgentSettings;
 
 export * from './filesConfig';
 export * from './general';

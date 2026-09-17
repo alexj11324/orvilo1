@@ -224,7 +224,7 @@ export default defineConfig({
         presets: ['@babel/preset-typescript', ['@babel/preset-react', { runtime: 'automatic' }]],
       },
     }),
-    { name: 'lobe-artifact:disable-esbuild', enforce: 'post', config: () => ({ esbuild: false }) },
+    { name: 'orvilo-artifact:disable-esbuild', enforce: 'post', config: () => ({ esbuild: false }) },
   ],
   resolve: {
     alias: ${JSON.stringify(REACT_ARTIFACT_VITE_ALIASES, null, 6)},
@@ -239,7 +239,7 @@ const defaultPackageJson = (
 ) =>
   `${JSON.stringify(
     {
-      name: 'lobe-artifact-react-app',
+      name: 'orvilo-artifact-react-app',
       private: true,
       version: '0.0.0',
       type: 'module',

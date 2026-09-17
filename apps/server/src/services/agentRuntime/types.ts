@@ -2,8 +2,8 @@ import { type AgentRuntimeContext, type AgentState } from '@orvilo/agent-runtime
 import type {
   AgentGroupConfig,
   BotPlatformContext,
-  LobeToolManifest,
   OperationSkillSet,
+  OrviloToolManifest,
   ProjectInstructionFile,
   ToolExecutor,
   ToolSource,
@@ -34,7 +34,7 @@ export interface OperationToolSet {
   activatableToolIds?: string[];
   enabledToolIds?: string[];
   executorMap?: Record<string, ToolExecutor>;
-  manifestMap: Record<string, LobeToolManifest>;
+  manifestMap: Record<string, OrviloToolManifest>;
   sourceMap?: Record<string, ToolSource>;
   tools?: any[];
 }

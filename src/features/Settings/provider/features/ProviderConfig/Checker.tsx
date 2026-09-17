@@ -12,7 +12,7 @@ import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelIcon } from '@/components/LobeIcons';
+import { ModelIcon } from '@/components/OrviloIcons';
 import { usePermission } from '@/hooks/usePermission';
 import { useProviderName } from '@/hooks/useProviderName';
 import { chatService } from '@/services/chat';

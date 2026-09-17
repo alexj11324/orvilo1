@@ -35,7 +35,7 @@ describe('WorkModel · queries', () => {
       changeType: 'created',
       rootOperationId: 'op-first',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-1',
       taskId: firstTask.id,
       topicId,
@@ -44,7 +44,7 @@ describe('WorkModel · queries', () => {
       changeType: 'created',
       rootOperationId: 'op-second',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-2',
       taskId: secondTask.id,
       topicId,
@@ -69,7 +69,7 @@ describe('WorkModel · queries', () => {
       changeType: 'created',
       rootOperationId: 'op-batch-1',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-batch-1',
       taskId: firstTask.id,
       topicId,
@@ -78,7 +78,7 @@ describe('WorkModel · queries', () => {
       changeType: 'created',
       rootOperationId: 'op-batch-2',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-batch-2',
       taskId: secondTask.id,
       topicId,
@@ -116,7 +116,7 @@ describe('WorkModel · queries', () => {
       changeType: 'created',
       rootOperationId: 'op-shared-create',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-shared-1',
       taskId: task.id,
       topicId,
@@ -125,7 +125,7 @@ describe('WorkModel · queries', () => {
       changeType: 'updated',
       rootOperationId: 'op-shared-update',
       toolName: 'updateTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolCallId: 'tool-call-shared-2',
       taskId: task.id,
       topicId,
@@ -153,7 +153,7 @@ describe('WorkModel · queries', () => {
       rootOperationId: 'op-home-round',
       taskId: task.id,
       toolCallId: 'tool-call-home-1',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolName: 'createTask',
       topicId,
     });
@@ -165,7 +165,7 @@ describe('WorkModel · queries', () => {
       rootOperationId: 'op-foreign-round',
       taskId: task.id,
       toolCallId: 'tool-call-foreign-1',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolName: 'editTask',
       topicId,
     });
@@ -197,7 +197,7 @@ describe('WorkModel · queries', () => {
       changeType: 'created',
       rootOperationId: 'op-doc-clamp',
       toolName: 'createDocument',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       toolCallId: 'tool-call-doc-clamp',
       topicId,
     });
@@ -235,9 +235,9 @@ describe('WorkModel · queries', () => {
     });
     await workModel.registerExternal({
       changeType: 'created',
-      identifier: 'lobehub/lobehub#1',
+      identifier: 'alexj11324/orvilo1#1',
       patchFields: ['identifier', 'title'],
-      resourceId: 'lobehub/lobehub#1',
+      resourceId: 'alexj11324/orvilo1#1',
       resourceType: 'github_issue',
       toolCallId: 'tool-call-github-issue-1',
       toolIdentifier: 'github',
@@ -276,9 +276,9 @@ describe('WorkModel · queries', () => {
         cost: { total: 0.012 },
         usage: { llm: { tokens: { input: 900, output: 300, total: 1200 } } },
       },
-      identifier: 'lobehub/lobehub#7',
+      identifier: 'alexj11324/orvilo1#7',
       patchFields: ['identifier', 'title'],
-      resourceId: 'lobehub/lobehub#7',
+      resourceId: 'alexj11324/orvilo1#7',
       resourceType: 'github_issue',
       toolCallId: 'tool-call-origin-titled',
       toolIdentifier: 'github',
@@ -289,9 +289,9 @@ describe('WorkModel · queries', () => {
     // No topicId: origin is never stamped, so the gallery's "other" bucket case.
     await workModel.registerExternal({
       changeType: 'created',
-      identifier: 'lobehub/lobehub#8',
+      identifier: 'alexj11324/orvilo1#8',
       patchFields: ['identifier', 'title'],
-      resourceId: 'lobehub/lobehub#8',
+      resourceId: 'alexj11324/orvilo1#8',
       resourceType: 'github_issue',
       toolCallId: 'tool-call-origin-none',
       toolIdentifier: 'github',
@@ -302,7 +302,7 @@ describe('WorkModel · queries', () => {
     const workspace = await workModel.listByWorkspace({});
     const byResource = new Map(workspace.items.map((item) => [item.resourceId, item]));
 
-    expect(byResource.get('lobehub/lobehub#7')).toMatchObject({
+    expect(byResource.get('alexj11324/orvilo1#7')).toMatchObject({
       event: {
         cumulativeUsage: {
           usage: { llm: { tokens: { total: 1200 } } },
@@ -311,7 +311,7 @@ describe('WorkModel · queries', () => {
       originTopicId: titledTopicId,
       originTopicTitle: 'Origin topic',
     });
-    expect(byResource.get('lobehub/lobehub#8')).toMatchObject({
+    expect(byResource.get('alexj11324/orvilo1#8')).toMatchObject({
       originTopicId: null,
       originTopicTitle: null,
     });
@@ -325,9 +325,9 @@ describe('WorkModel · queries', () => {
       changeType: 'created',
       content,
       description: 'Bounded preview',
-      identifier: 'lobehub/lobehub#42',
+      identifier: 'alexj11324/orvilo1#42',
       patchFields: ['content', 'description', 'identifier', 'title'],
-      resourceId: 'lobehub/lobehub#42',
+      resourceId: 'alexj11324/orvilo1#42',
       resourceType: 'github_issue',
       rootOperationId: 'op-card-projection',
       toolCallId: 'tool-call-card-projection',
@@ -397,7 +397,7 @@ describe('WorkModel · queries', () => {
       rootOperationId: 'op-gate',
       taskId: task.id,
       toolCallId: 'gate-task-call',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       toolName: 'createTask',
       topicId,
     });
@@ -414,7 +414,7 @@ describe('WorkModel · queries', () => {
       rootOperationId: 'op-gate',
       title: 'report.pptx',
       toolCallId: 'op:op-gate',
-      toolIdentifier: 'lobe-cloud-sandbox',
+      toolIdentifier: 'orvilo-cloud-sandbox',
       toolName: 'writeFile',
       topicId,
       userId,

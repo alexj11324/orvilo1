@@ -65,7 +65,7 @@ interface DeviceTransportTarget {
   workspaceId?: string;
 }
 
-const RECONNECT_HINT = `Tell the user to check that the LobeHub desktop app (or the \`lh\` CLI) is running and shows as connected.`;
+const RECONNECT_HINT = `Tell the user to check that the Orvilo desktop app (or the \`lh\` CLI) is running and shows as connected.`;
 
 const describeStatus = (
   status: number,

@@ -10,7 +10,7 @@ import type { VerifyCheckDefinition } from './acceptanceFlow';
  * `@orvilo/const/verify`. The duplication is deliberate: this package is
  * replaced by a hand-written stub inside the isolated desktop workspace, so a
  * runtime value exported from here is unreachable for members of that workspace
- * (`@lobehub/cli`), while `@orvilo/types` must stay dependency-free of
+ * (`@orvilo/cli`), while `@orvilo/types` must stay dependency-free of
  * `@orvilo/const`. `packages/const/src/verify.test.ts` fails the type-check the
  * moment the two sides drift apart.
  */
@@ -394,7 +394,7 @@ export interface VerifyRunDecisionDetail {
 }
 
 /**
- * The LobeHub conversation an ingested report was authored in. Lets the report
+ * The Orvilo conversation an ingested report was authored in. Lets the report
  * link back to (and later resume) the agent session that produced it.
  */
 export interface VerifyRunOrigin {
@@ -587,8 +587,8 @@ export interface VerifyRunMetadata {
    */
   maxRepairRounds?: number;
   /**
-   * Where this report came from — the LobeHub conversation whose agent produced
-   * it. Set when the harness runs inside a LobeHub-spawned agent (the runtime
+   * Where this report came from — the Orvilo conversation whose agent produced
+   * it. Set when the harness runs inside a Orvilo-spawned agent (the runtime
    * echoes the ids into the child env; see {@link VerifyRunOrigin}).
    *
    * Deliberately *not* `verify_runs.operation_id`: that column means "this
@@ -837,7 +837,7 @@ export interface RequiredEvidenceSpec {
  * check (related through `verify_check_results`), so this table stays flat.
  *
  * The payload lives in exactly one of three places: `content` for small inline
- * text, `documentId` for a LobeHub document, or `fileId` for a stored artifact.
+ * text, `documentId` for a Orvilo document, or `fileId` for a stored artifact.
  */
 export interface VerifyEvidence {
   capturedAt?: Date | null;
@@ -850,7 +850,7 @@ export interface VerifyEvidence {
   createdAt: Date;
   /** Human-readable caption, e.g. "首页首屏完整渲染". */
   description?: string | null;
-  /** LobeHub document evidence — FK to `documents`. */
+  /** Orvilo document evidence — FK to `documents`. */
   documentId?: string | null;
   /** Stored artifact — FK to `files`, which owns mime / size / hash / url. */
   fileId?: string | null;

@@ -1,7 +1,7 @@
 import type { ChatModelCard } from '@orvilo/types';
 import { ModelProvider } from 'model-bank';
 
-import type { LobeRuntimeAI } from '../../core/BaseAI';
+import type { OrviloRuntimeAI } from '../../core/BaseAI';
 import { createCallbacksTransformer } from '../../core/streams';
 import {
   CloudflareStreamTransformer,
@@ -47,17 +47,17 @@ function extractProviderErrorMessage(err: unknown): string | undefined {
   return undefined;
 }
 
-export interface LobeCloudflareParams {
+export interface OrviloCloudflareParams {
   apiKey?: string;
   baseURLOrAccountID?: string;
 }
 
-export class LobeCloudflareAI implements LobeRuntimeAI {
+export class OrviloCloudflareAI implements OrviloRuntimeAI {
   baseURL: string;
   accountID: string;
   apiKey?: string;
 
-  constructor({ apiKey, baseURLOrAccountID }: LobeCloudflareParams = {}) {
+  constructor({ apiKey, baseURLOrAccountID }: OrviloCloudflareParams = {}) {
     if (!baseURLOrAccountID) {
       throw AgentRuntimeError.createError(AgentRuntimeErrorType.InvalidProviderAPIKey);
     }
@@ -150,7 +150,7 @@ export class LobeCloudflareAI implements LobeRuntimeAI {
   }
 
   async models(): Promise<ChatModelCard[]> {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const url = `${DEFAULT_BASE_URL_PREFIX}/client/v4/accounts/${this.accountID}/ai/models/search`;
     const response = await fetch(url, {
@@ -170,7 +170,7 @@ export class LobeCloudflareAI implements LobeRuntimeAI {
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.name.toLowerCase() === m.id.toLowerCase(),
         );
 

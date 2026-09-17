@@ -2,28 +2,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentRuntimeErrorType } from '../../types/error';
-import { LobeAzureAI } from './index';
+import { OrviloAzureAI } from './index';
 
-describe('LobeAzureAI', () => {
+describe('OrviloAzureAI', () => {
   describe('constructor', () => {
     it('should throw error when apiKey is missing', () => {
-      expect(() => new LobeAzureAI({ baseURL: 'https://test.azure.com' })).toThrow();
+      expect(() => new OrviloAzureAI({ baseURL: 'https://test.azure.com' })).toThrow();
     });
 
     it('should throw error when baseURL is missing', () => {
-      expect(() => new LobeAzureAI({ apiKey: 'test-key' })).toThrow();
+      expect(() => new OrviloAzureAI({ apiKey: 'test-key' })).toThrow();
     });
 
     it('should throw InvalidProviderAPIKey error when both apiKey and baseURL are missing', () => {
       try {
-        new LobeAzureAI();
+        new OrviloAzureAI();
       } catch (error: any) {
         expect(error.errorType).toBe(AgentRuntimeErrorType.InvalidProviderAPIKey);
       }
     });
 
     it('should initialize successfully with valid params', () => {
-      const instance = new LobeAzureAI({
+      const instance = new OrviloAzureAI({
         apiKey: 'test-key',
         baseURL: 'https://test.cognitiveservices.azure.com/openai',
       });
@@ -34,10 +34,10 @@ describe('LobeAzureAI', () => {
   });
 
   describe('chat', () => {
-    let instance: LobeAzureAI;
+    let instance: OrviloAzureAI;
 
     beforeEach(() => {
-      instance = new LobeAzureAI({
+      instance = new OrviloAzureAI({
         apiKey: 'test-key',
         baseURL: 'https://test.cognitiveservices.azure.com/openai',
       });
@@ -97,7 +97,7 @@ describe('LobeAzureAI', () => {
 
   describe('maskSensitiveUrl', () => {
     it('should mask subdomain in Azure URL', () => {
-      const instance = new LobeAzureAI({
+      const instance = new OrviloAzureAI({
         apiKey: 'test-key',
         baseURL: 'https://myresource.cognitiveservices.azure.com/openai',
       });

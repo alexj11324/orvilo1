@@ -226,7 +226,7 @@ describe('AgentDocumentInjector', () => {
       expect(result.messages[0].content).not.toContain('Full content that should NOT appear');
     });
 
-    // https://github.com/lobehub/lobehub/issues/15624 — relative times ("15m ago")
+    //  — relative times ("15m ago")
     // in the index changed the prompt prefix every minute and broke provider-side
     // prompt caching. The index must stay byte-identical as wall-clock time passes.
     it('should render a time-stable index so the prompt cache prefix survives', async () => {

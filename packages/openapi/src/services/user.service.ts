@@ -5,7 +5,7 @@ import { AGENT_TRANSFER_PENDING_OWNER_DELETE } from '@/database/models/agentTran
 import { RbacModel } from '@/database/models/rbac';
 import { UserModel } from '@/database/models/user';
 import { messages, roles, userRoles, users } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { idGenerator } from '@/database/utils/idGenerator';
 
 import { BaseService } from '../common/base.service';
@@ -27,7 +27,7 @@ import type {
  * User service implementation class
  */
 export class UserService extends BaseService {
-  constructor(db: LobeChatDatabase, userId: string | null, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string | null, workspaceId?: string) {
     super(db, userId, workspaceId);
   }
 

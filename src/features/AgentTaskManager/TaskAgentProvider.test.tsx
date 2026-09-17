@@ -217,9 +217,9 @@ describe('TaskAgentProvider', () => {
   });
 
   it('defaults to the task agent when the global active agent comes from another page', async () => {
-    mocks.agentState.activeAgentId = 'agt_lobe';
-    mocks.chatState.activeAgentId = 'agt_lobe';
-    mocks.chatState.activeTopicId = 'tpc_lobe';
+    mocks.agentState.activeAgentId = 'agt_orvilo';
+    mocks.chatState.activeAgentId = 'agt_orvilo';
+    mocks.chatState.activeTopicId = 'tpc_orvilo';
 
     render(
       <TaskAgentProvider>
@@ -316,9 +316,9 @@ describe('TaskAgentProvider', () => {
 
     firstRender.unmount();
     mocks.providerContexts = [];
-    mocks.agentState.activeAgentId = 'agt_lobe';
-    mocks.chatState.activeAgentId = 'agt_lobe';
-    mocks.chatState.activeTopicId = 'tpc_lobe';
+    mocks.agentState.activeAgentId = 'agt_orvilo';
+    mocks.chatState.activeAgentId = 'agt_orvilo';
+    mocks.chatState.activeTopicId = 'tpc_orvilo';
     mocks.chatState.switchTopic.mockClear();
 
     render(

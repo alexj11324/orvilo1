@@ -1,18 +1,18 @@
 import { type AgentState } from '@orvilo/agent-runtime';
-import { LobeActivatorIdentifier } from '@orvilo/builtin-tool-activator';
+import { OrviloActivatorIdentifier } from '@orvilo/builtin-tool-activator';
 import { dispatchWorkRegistrationIntent } from '@orvilo/builtin-tools/workRegistration';
 import { getSubAgentChatConfigOverride, resolveSubAgentModel } from '@orvilo/const';
 import { type OperationToolSet } from '@orvilo/context-engine';
 import { type ToolType } from '@orvilo/observability-otel/modules/agent-runtime';
 import {
   type ChatToolPayload,
-  type LobeAgentConfig,
+  type OrviloAgentConfig,
   type WorkRegistrationIntent,
 } from '@orvilo/types';
 import debug from 'debug';
 
 import { WorkModel } from '@/database/models/work';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import { FileService } from '@/server/services/file';
 import {
   type ServerAgentMemberRunner,
@@ -24,13 +24,13 @@ import { buildWorkVersionCumulativeUsage } from '@/utils/workCumulativeUsage';
 
 import { type RuntimeExecutorContext } from './context';
 
-export const log = debug('lobe-server:agent-runtime:streaming-executors');
-export const timing = debug('lobe-server:agent-runtime:timing');
+export const log = debug('orvilo-server:agent-runtime:streaming-executors');
+export const timing = debug('orvilo-server:agent-runtime:timing');
 
 // Tool pricing configuration (USD per call)
 export const TOOL_PRICING: Record<string, number> = {
-  'lobe-web-browsing/craw': 0,
-  'lobe-web-browsing/search': 0,
+  'orvilo-web-browsing/craw': 0,
+  'orvilo-web-browsing/search': 0,
 };
 
 export const TOOL_MAX_RETRIES = 2;
@@ -67,7 +67,7 @@ export const archiveRuntimeToolResult = async (
     agentId?: string | null;
     identifier?: string;
     limit?: number;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     toolCallId?: string;
     topicId?: string | null;
     userId?: string;
@@ -124,7 +124,7 @@ export const registerWorkFromIntent = async ({
   agentId?: string | null;
   intent: WorkRegistrationIntent;
   rootOperationId?: string;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   sourceMessageId?: string;
   sourceToolCallId?: string;
   /** Tool/plugin identifier supplied by the runtime event that produced this version. */
@@ -224,7 +224,7 @@ export const buildServerVirtualSubAgentRunner = (
   const topicId = ctx.topicId ?? state.origin?.topicId;
   if (!agentId || !topicId) return undefined;
 
-  const parentAgentConfig = state.world?.agent as LobeAgentConfig | undefined;
+  const parentAgentConfig = state.world?.agent as OrviloAgentConfig | undefined;
   // The model the parent run ACTUALLY uses. `world.agent` alone is not
   // enough: when a run continues a topic whose model was switched, execAgent
   // keeps the topic-pinned model only in `modelRuntimeConfig` while the
@@ -322,7 +322,7 @@ export const buildServerVirtualSubAgentRunner = (
 
 /**
  * Build the per-tool "call agent member" runner for the group orchestration
- * server tool (`lobe-group-management`). Mirrors {@link buildServerVirtualSubAgentRunner}
+ * server tool (`orvilo-group-management`). Mirrors {@link buildServerVirtualSubAgentRunner}
  * but for group members: it owns the group tool message (the parked tool call)
  * and the per-member anchors that drive the K=N member barrier.
  *
@@ -520,7 +520,7 @@ export const buildToolDiscoveryConfig = (
 ) => {
   const enabledToolSet = new Set(enabledToolIds);
 
-  if (!enabledToolSet.has(LobeActivatorIdentifier)) return undefined;
+  if (!enabledToolSet.has(OrviloActivatorIdentifier)) return undefined;
 
   const availableTools = Object.entries(operationToolSet.manifestMap)
     .filter(([identifier]) => !enabledToolSet.has(identifier))

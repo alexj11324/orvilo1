@@ -3,8 +3,8 @@ import { GoogleGenAI } from '@google/genai';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentRuntimeErrorType } from '../../types/error';
-import { LobeGoogleAI } from '../google';
-import { LobeVertexAI } from './index';
+import { OrviloGoogleAI } from '../google';
+import { OrviloVertexAI } from './index';
 
 // Mock dependencies
 vi.mock('@google/genai', () => ({
@@ -21,7 +21,7 @@ vi.mock('@google/genai', () => ({
 }));
 
 vi.mock('../google', () => ({
-  LobeGoogleAI: vi.fn(function () {
+  OrviloGoogleAI: vi.fn(function () {
     return {
       chat: vi.fn(),
       models: vi.fn(),
@@ -29,37 +29,37 @@ vi.mock('../google', () => ({
   }),
 }));
 
-describe('LobeVertexAI', () => {
+describe('OrviloVertexAI', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   describe('initFromVertexAI', () => {
-    it('should create LobeVertexAI instance with default location', () => {
-      const instance = LobeVertexAI.initFromVertexAI();
+    it('should create OrviloVertexAI instance with default location', () => {
+      const instance = OrviloVertexAI.initFromVertexAI();
       expect(instance).toBeDefined();
     });
 
-    it('should create LobeVertexAI instance with custom location', () => {
-      const instance = LobeVertexAI.initFromVertexAI({
+    it('should create OrviloVertexAI instance with custom location', () => {
+      const instance = OrviloVertexAI.initFromVertexAI({
         location: 'us-central1',
         project: 'test-project',
       });
       expect(instance).toBeDefined();
     });
 
-    it('should pass modelIdMapping to LobeGoogleAI without passing it to GoogleGenAI', () => {
-      LobeVertexAI.initFromVertexAI({
+    it('should pass modelIdMapping to OrviloGoogleAI without passing it to GoogleGenAI', () => {
+      OrviloVertexAI.initFromVertexAI({
         location: 'us-central1',
         modelIdMapping: { 'logical-gemini': 'vertex-upstream' },
         project: 'test-project',
       });
 
       const googleGenAIOptions = vi.mocked(GoogleGenAI).mock.calls.at(-1)?.[0] as any;
-      const lobeGoogleAIOptions = vi.mocked(LobeGoogleAI).mock.calls.at(-1)?.[0] as any;
+      const orviloGoogleAIOptions = vi.mocked(OrviloGoogleAI).mock.calls.at(-1)?.[0] as any;
 
       expect(googleGenAIOptions.modelIdMapping).toBeUndefined();
-      expect(lobeGoogleAIOptions).toMatchObject({
+      expect(orviloGoogleAIOptions).toMatchObject({
         isVertexAi: true,
         modelIdMapping: { 'logical-gemini': 'vertex-upstream' },
       });
@@ -67,7 +67,7 @@ describe('LobeVertexAI', () => {
 
     it('should throw InvalidVertexCredentials error when IllegalArgumentError occurs', () => {
       try {
-        LobeVertexAI.initFromVertexAI({
+        OrviloVertexAI.initFromVertexAI({
           location: 'error-location',
         });
         expect.fail('Should have thrown an error');

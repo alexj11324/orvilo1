@@ -1,5 +1,5 @@
 import { useGlobalStore } from '@/store/global';
-import { type LobeDocument } from '@/types/document';
+import { type OrviloDocument } from '@/types/document';
 
 import { type PageState } from '../../initialState';
 
@@ -8,7 +8,7 @@ import { type PageState } from '../../initialState';
  */
 const isDocumentsLoading = (s: PageState): boolean => s.documents === undefined;
 
-const getFilteredDocuments = (s: PageState): LobeDocument[] => {
+const getFilteredDocuments = (s: PageState): OrviloDocument[] => {
   const docs = s.documents ?? [];
 
   const { searchKeywords, showOnlyPagesNotInLibrary } = s;
@@ -16,11 +16,11 @@ const getFilteredDocuments = (s: PageState): LobeDocument[] => {
   let result = docs;
 
   // Filter out documents with sourceType='file'
-  result = result.filter((doc: LobeDocument) => doc.sourceType !== 'file');
+  result = result.filter((doc: OrviloDocument) => doc.sourceType !== 'file');
 
   // Filter by library membership
   if (showOnlyPagesNotInLibrary) {
-    result = result.filter((doc: LobeDocument) => {
+    result = result.filter((doc: OrviloDocument) => {
       // Show only pages that are NOT in any library
       // Pages in a library have metadata.knowledgeBaseId set
       return !doc.metadata?.knowledgeBaseId;
@@ -30,7 +30,7 @@ const getFilteredDocuments = (s: PageState): LobeDocument[] => {
   // Filter by search keywords
   if (searchKeywords.trim()) {
     const lowerKeywords = searchKeywords.toLowerCase();
-    result = result.filter((doc: LobeDocument) => {
+    result = result.filter((doc: OrviloDocument) => {
       const content = doc.content?.toLowerCase() || '';
       const title = doc.title?.toLowerCase() || '';
       return content.includes(lowerKeywords) || title.includes(lowerKeywords);
@@ -38,7 +38,7 @@ const getFilteredDocuments = (s: PageState): LobeDocument[] => {
   }
 
   // Sort by creation date (newest first)
-  return result.sort((a: LobeDocument, b: LobeDocument) => {
+  return result.sort((a: OrviloDocument, b: OrviloDocument) => {
     const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
     return dateB - dateA;
@@ -46,7 +46,7 @@ const getFilteredDocuments = (s: PageState): LobeDocument[] => {
 };
 
 // Limited filtered documents for sidebar display
-const getFilteredDocumentsLimited = (s: PageState): LobeDocument[] => {
+const getFilteredDocumentsLimited = (s: PageState): OrviloDocument[] => {
   const pageSize = useGlobalStore.getState().status.pagePageSize || 20;
   const allDocs = getFilteredDocuments(s);
   return allDocs.slice(0, pageSize);
@@ -55,20 +55,20 @@ const getFilteredDocumentsLimited = (s: PageState): LobeDocument[] => {
 // Workspace-mode sidebar buckets: split filtered docs into "private" (creator
 // only) and "workspace-shared". Personal-mode `visibility` is meaningless — the
 // caller decides whether to render the flat list or the dual accordion.
-const getPrivateFilteredDocuments = (s: PageState): LobeDocument[] =>
+const getPrivateFilteredDocuments = (s: PageState): OrviloDocument[] =>
   getFilteredDocuments(s).filter((doc) => doc.visibility === 'private');
 
-const getWorkspaceFilteredDocuments = (s: PageState): LobeDocument[] =>
+const getWorkspaceFilteredDocuments = (s: PageState): OrviloDocument[] =>
   getFilteredDocuments(s).filter((doc) => doc.visibility !== 'private');
 
 // Bucket-scoped, sidebar-sized page slices — mirror the Limited helper for the
 // dual-accordion Pages sidebar so each bucket paginates independently.
-const getPrivateFilteredDocumentsLimited = (s: PageState): LobeDocument[] => {
+const getPrivateFilteredDocumentsLimited = (s: PageState): OrviloDocument[] => {
   const pageSize = useGlobalStore.getState().status.pagePageSize || 20;
   return getPrivateFilteredDocuments(s).slice(0, pageSize);
 };
 
-const getWorkspaceFilteredDocumentsLimited = (s: PageState): LobeDocument[] => {
+const getWorkspaceFilteredDocumentsLimited = (s: PageState): OrviloDocument[] => {
   const pageSize = useGlobalStore.getState().status.pagePageSize || 20;
   return getWorkspaceFilteredDocuments(s).slice(0, pageSize);
 };

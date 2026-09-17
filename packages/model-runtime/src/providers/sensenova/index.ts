@@ -1,5 +1,5 @@
 import type { ChatModelCard } from '@orvilo/types';
-import { LOBE_DEFAULT_MODEL_LIST, ModelProvider } from 'model-bank';
+import { ModelProvider, ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 
 import type { OpenAICompatibleFactoryOptions } from '../../core/openaiCompatibleFactory';
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
@@ -55,7 +55,7 @@ export const params = {
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 
@@ -111,4 +111,4 @@ export const params = {
   provider: ModelProvider.SenseNova,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeSenseNovaAI = createOpenAICompatibleRuntime(params);
+export const OrviloSenseNovaAI = createOpenAICompatibleRuntime(params);

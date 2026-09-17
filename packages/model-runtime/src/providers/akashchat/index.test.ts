@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeAkashChatAI, params } from './index';
+import { OrviloAkashChatAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -15,7 +15,7 @@ const provider = ModelProvider.AkashChat;
 const defaultBaseURL = 'https://chatapi.akash.network/api/v1';
 
 testProvider({
-  Runtime: LobeAkashChatAI,
+  Runtime: OrviloAkashChatAI,
   bizErrorType: 'ProviderBizError',
   chatDebugEnv: 'DEBUG_AKASH_CHAT_COMPLETION',
   chatModel: 'llama-3.1-8b-instruct',
@@ -28,11 +28,11 @@ testProvider({
   },
 });
 
-describe('LobeAkashChatAI - custom features', () => {
-  let instance: InstanceType<typeof LobeAkashChatAI>;
+describe('OrviloAkashChatAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloAkashChatAI>;
 
   beforeEach(() => {
-    instance = new LobeAkashChatAI({ apiKey: 'test_api_key' });
+    instance = new OrviloAkashChatAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

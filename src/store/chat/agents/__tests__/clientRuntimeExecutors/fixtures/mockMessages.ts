@@ -42,7 +42,7 @@ export const createToolMessage = (overrides: Partial<UIChatMessage> = {}): UICha
     plugin: {
       apiName: 'search',
       arguments: JSON.stringify({ query: 'test' }),
-      identifier: 'lobe-web-browsing',
+      identifier: 'orvilo-web-browsing',
       type: 'default',
     },
     role: 'tool',

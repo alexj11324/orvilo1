@@ -7,7 +7,7 @@ import { globalGeneralSelectors } from '@/store/global/selectors';
 
 // @lobehub/ui's EmojiPicker bundles the emoji-mart dataset (~600 KB); load it
 // on mount so the picker never sits inside a route's static closure.
-const LobeEmojiPicker = lazy(() => import('@lobehub/ui/es/EmojiPicker/index'));
+const OrviloEmojiPicker = lazy(() => import('@lobehub/ui/es/EmojiPicker/index'));
 
 export const EmojiPicker = memo<EmojiPickerProps>(({ shape = 'square', ...rest }) => {
   const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
@@ -15,7 +15,7 @@ export const EmojiPicker = memo<EmojiPickerProps>(({ shape = 'square', ...rest }
 
   return (
     <Suspense fallback={<Skeleton height={size} width={size} />}>
-      <LobeEmojiPicker shape={shape} {...rest} defaultAvatar={null as any} locale={locale} />
+      <OrviloEmojiPicker shape={shape} {...rest} defaultAvatar={null as any} locale={locale} />
     </Suspense>
   );
 });

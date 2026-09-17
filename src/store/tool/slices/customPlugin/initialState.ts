@@ -1,10 +1,10 @@
-import { type LobeToolCustomPlugin } from '@/types/tool/plugin';
+import { type OrviloToolCustomPlugin } from '@/types/tool/plugin';
 
 export interface CustomPluginState {
   customPluginSearchKeywords?: string;
-  newCustomPlugin: Partial<LobeToolCustomPlugin>;
+  newCustomPlugin: Partial<OrviloToolCustomPlugin>;
 }
-export const defaultCustomPlugin: Partial<LobeToolCustomPlugin> = {
+export const defaultCustomPlugin: Partial<OrviloToolCustomPlugin> = {
   customParams: {
     apiMode: 'simple',
     enableSettings: false,

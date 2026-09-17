@@ -2,7 +2,7 @@ import {
   extractActivatedSkillsFromMessages,
   extractTodosFromMessages,
 } from '@orvilo/agent-runtime';
-import { LobeActivatorIdentifier } from '@orvilo/builtin-tool-activator';
+import { OrviloActivatorIdentifier } from '@orvilo/builtin-tool-activator';
 import { type StepActivatedSkill, type StepContextTodos, type UIChatMessage } from '@orvilo/types';
 
 import { chatHelpers } from '../../../helpers';
@@ -163,7 +163,7 @@ const inboxActiveTopicDbMessages = (state: ChatStoreState) => {
 // ============= Activated Tools Selectors ========== //
 
 /**
- * Accumulate activated tool identifiers from all lobe-activator messages.
+ * Accumulate activated tool identifiers from all orvilo-activator messages.
  *
  * Unlike todos (which take the latest snapshot), activated tools are
  * cumulative — once a tool is activated it stays active for the rest
@@ -180,7 +180,7 @@ export const selectActivatedToolIdsFromMessages = (
   for (const msg of messages) {
     if (
       msg.role === 'tool' &&
-      msg.plugin?.identifier === LobeActivatorIdentifier &&
+      msg.plugin?.identifier === OrviloActivatorIdentifier &&
       msg.pluginState?.activatedTools
     ) {
       const activatedTools = msg.pluginState.activatedTools as Array<{ identifier?: string }>;
@@ -219,7 +219,7 @@ export const selectActivatedSkillsFromMessages = (
  *
  * Searches messages in reverse order to find the most recent tool message
  * that carries a `pluginState.todos` payload — regardless of which tool
- * produced it. `pluginState.todos` is treated as a shared contract: lobe-agent
+ * produced it. `pluginState.todos` is treated as a shared contract: orvilo-agent
  * writes it via its client state mutation, and heterogeneous agent adapters
  * (Claude Code TodoWrite, future ACP/Codex equivalents) synthesize it onto
  * the tool_result event. Any new producer that honors the shape gets picked

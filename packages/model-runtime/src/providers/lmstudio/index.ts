@@ -15,14 +15,14 @@ export const params = {
     chatCompletion: () => process.env.DEBUG_LMSTUDIO_CHAT_COMPLETION === '1',
   },
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const modelsPage = (await client.models.list()) as any;
     const modelList: LMStudioModelCard[] = modelsPage.data;
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 
@@ -41,4 +41,4 @@ export const params = {
   provider: ModelProvider.LMStudio,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeLMStudioAI = createOpenAICompatibleRuntime(params);
+export const OrviloLMStudioAI = createOpenAICompatibleRuntime(params);

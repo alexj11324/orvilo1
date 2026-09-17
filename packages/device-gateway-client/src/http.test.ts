@@ -171,7 +171,7 @@ describe('GatewayHttpClient', () => {
 
       const result = await client.executeToolCall(
         { userId: 'user-1' },
-        { apiName: 'navigate', arguments: '{}', identifier: 'lobe-browser' },
+        { apiName: 'navigate', arguments: '{}', identifier: 'orvilo-browser' },
       );
 
       expect(result).toEqual({
@@ -749,7 +749,7 @@ describe('GatewayHttpClient', () => {
         homePath: '/home/test',
         musicPath: '/home/test/Music',
         picturesPath: '/home/test/Pictures',
-        userDataPath: '/home/test/.lobehub',
+        userDataPath: '/home/test/.orvilo',
         videosPath: '/home/test/Videos',
         workingDirectory: '/home/test',
       };

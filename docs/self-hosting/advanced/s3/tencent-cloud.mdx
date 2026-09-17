@@ -23,7 +23,7 @@ We need to configure S3 storage service for file storage in the server-side data
 
   <Image alt={'Tencent Cloud COS Storage Interface'} src={'/blog/assets0f244d5fe648127774636a54ae9ffafc.webp'} />
 
-  Name the bucket (e.g., 'lobe'). Choose 'Public Read, Private Write', select any region, and keep other settings default.
+  Name the bucket (e.g., 'orvilo'). Choose 'Public Read, Private Write', select any region, and keep other settings default.
 
   <Image alt={'COS Create Bucket'} src={'/blog/assets2ad69e4e124f49710fcedf8e9827f2f3.webp'} />
 
@@ -36,13 +36,13 @@ We need to configure S3 storage service for file storage in the server-side data
   Corresponding environment variables:
 
   ```shell
-  S3_BUCKET=lobe-130xxxxxx2
+  S3_BUCKET=orvilo-130xxxxxx2
   S3_ENDPOINT=https://cos.ap-chengdu.myqcloud.com
   S3_REGION=ap-chengdu
   ```
 
   <Callout type={'warning'}>
-    Note: `S3_ENDPOINT` should be `https://cos.ap-chengdu.myqcloud.com`, not `https://lobe-130xxxxxx2.cos.ap-chengdu.myqcloud.com`
+    Note: `S3_ENDPOINT` should be `https://cos.ap-chengdu.myqcloud.com`, not `https://orvilo-130xxxxxx2.cos.ap-chengdu.myqcloud.com`
 
     Include `https://` in the URL
   </Callout>

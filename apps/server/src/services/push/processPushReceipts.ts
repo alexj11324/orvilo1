@@ -4,11 +4,11 @@ import { Expo } from 'expo-server-sdk';
 
 import { deletePushTokensByExpoTokens } from '@/database/models/pushToken';
 import { notificationDeliveries } from '@/database/schemas/notification';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import type { PushTicketRecord } from './types';
 
-const log = debug('lobe-notification:push-receipts');
+const log = debug('orvilo-notification:push-receipts');
 
 /** Expo retains receipts for at most 24h after send */
 const RECEIPT_LOOKBACK_HOURS = 24;
@@ -36,7 +36,7 @@ export interface ProcessReceiptsResult {
 /**
  * Receipt reconciliation worker. Designed to be called from a Vercel cron
  * route (in cloud), but is pure with respect to its inputs — pass any
- * `LobeChatDatabase` instance and it works (including in tests).
+ * `OrviloDatabase` instance and it works (including in tests).
  *
  * Steps:
  *  1. Find recent `push` deliveries still in `sent` state
@@ -48,7 +48,7 @@ export interface ProcessReceiptsResult {
  *  5. Tokens whose receipt says `DeviceNotRegistered` are removed from `push_tokens`
  */
 export async function processPushReceipts(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   options: ProcessReceiptsOptions = {},
 ): Promise<ProcessReceiptsResult> {
   const {

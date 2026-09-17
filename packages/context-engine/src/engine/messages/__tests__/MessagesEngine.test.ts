@@ -366,7 +366,7 @@ describe('MessagesEngine', () => {
                 arguments: { path: '/tmp/a.ts' },
                 capturedAt: '2026-04-28T12:21:08.785Z',
                 content: 'File: /tmp/a.ts (lines 0-200)\n\nconst a = 1;\n',
-                identifier: 'lobe-local-system',
+                identifier: 'orvilo-local-system',
                 snapshotId: 'local-system-snapshot-1',
                 success: true,
                 toolCallId: 'call_local-system-snapshot-1',
@@ -398,7 +398,7 @@ describe('MessagesEngine', () => {
           {
             function: {
               arguments: '{"path":"/tmp/a.ts"}',
-              name: 'lobe-local-system____readLocalFile',
+              name: 'orvilo-local-system____readLocalFile',
             },
             id: 'call_local-system-snapshot-1',
             type: 'function',
@@ -407,7 +407,7 @@ describe('MessagesEngine', () => {
       });
       expect(result.messages).toContainEqual({
         content: 'File: /tmp/a.ts (lines 0-200)\n\nconst a = 1;\n',
-        name: 'lobe-local-system____readLocalFile',
+        name: 'orvilo-local-system____readLocalFile',
         role: 'tool',
         tool_call_id: 'call_local-system-snapshot-1',
       });
@@ -946,7 +946,7 @@ Document content here.
             {
               function: {
                 arguments: '{}',
-                name: 'lobe-page-agent____modifyNodes',
+                name: 'orvilo-page-agent____modifyNodes',
               },
               id: 'call_1',
               type: 'function',
@@ -974,8 +974,8 @@ Document content here.
       const params = createBasicParams({
         messages,
         toolsConfig: {
-          disabledToolIdentifiers: ['lobe-page-agent'],
-          tools: ['lobe-agent-documents'],
+          disabledToolIdentifiers: ['orvilo-page-agent'],
+          tools: ['orvilo-agent-documents'],
         },
       });
       const engine = new MessagesEngine(params);
@@ -986,7 +986,8 @@ Document content here.
       expect(
         result.messages.some(
           (m) =>
-            m.role === 'assistant' && JSON.stringify(m).includes('lobe-page-agent____modifyNodes'),
+            m.role === 'assistant' &&
+            JSON.stringify(m).includes('orvilo-page-agent____modifyNodes'),
         ),
       ).toBe(false);
       expect(result.metadata.disabledToolCallFilter).toEqual({

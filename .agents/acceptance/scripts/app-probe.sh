@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# app-probe.sh — standardized probes for a running LobeHub app (Electron via
+# app-probe.sh — standardized probes for a running Orvilo app (Electron via
 # CDP, or a web agent-browser session). Use these instead of hand-rolling
-# `window.__LOBE_STORES` eval snippets — especially the auth check.
+# `window.__ORVILO_STORES` eval snippets — especially the auth check.
 #
 # Usage:
 #   app-probe.sh ready             # app root and exposed-store readiness
@@ -18,7 +18,7 @@
 #
 # Target selection (default: Electron over CDP 9222):
 #   AB_TARGET="--cdp 9222"             # Electron (default; CDP_PORT also honored)
-#   AB_TARGET="--session lobehub-dev"  # web agent-browser session
+#   AB_TARGET="--session orvilo-dev"  # web agent-browser session
 #
 # Common routes (desktop SPA): /  /agent/<agentId>  /agent/<agentId>/<topicId>
 #   /task  /task/<taskId>  /page  /settings  /community
@@ -37,7 +37,7 @@ case "${1:-}" in
     run_eval << 'EVALEOF'
 (function () {
   var root = document.getElementById('root');
-  var stores = window.__LOBE_STORES;
+  var stores = window.__ORVILO_STORES;
   var storeNames = stores ? Object.keys(stores).sort() : [];
   return JSON.stringify({
     ok: !!root && root.childElementCount > 0 && storeNames.length > 0,
@@ -51,7 +51,7 @@ EVALEOF
   auth)
     run_eval << 'EVALEOF'
 (function () {
-  var stores = window.__LOBE_STORES;
+  var stores = window.__ORVILO_STORES;
   if (!stores || !stores.user) return JSON.stringify({ ok: false, reason: 'no user store — app not loaded yet?' });
   var u = stores.user();
   return JSON.stringify({ ok: !!u.isSignedIn, isSignedIn: !!u.isSignedIn, userId: (u.user && u.user.id) || null });
@@ -81,7 +81,7 @@ EVALEOF
   stores)
     run_eval << 'EVALEOF'
 (function () {
-  var stores = window.__LOBE_STORES;
+  var stores = window.__ORVILO_STORES;
   return JSON.stringify({
     ok: !!stores,
     stores: stores ? Object.keys(stores).sort() : [],
@@ -92,7 +92,7 @@ EVALEOF
   ops)
     run_eval << 'EVALEOF'
 (function () {
-  var stores = window.__LOBE_STORES;
+  var stores = window.__ORVILO_STORES;
   if (!stores || !stores.chat) return JSON.stringify({ ok: false, reason: 'no chat store — open a conversation first' });
   var ops = Object.values(stores.chat().operations || {});
   var running = ops.filter(function (o) { return o.status === 'running'; });
@@ -133,7 +133,7 @@ EVALEOF
   topic)
     run_eval << 'EVALEOF'
 (function () {
-  var stores = window.__LOBE_STORES;
+  var stores = window.__ORVILO_STORES;
   if (!stores || !stores.chat) {
     return JSON.stringify({ ok: false, reason: 'no chat store — open a conversation first' });
   }

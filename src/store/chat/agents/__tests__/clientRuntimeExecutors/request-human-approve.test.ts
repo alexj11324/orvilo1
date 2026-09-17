@@ -21,7 +21,7 @@ describe('request_human_approve executor', () => {
       const toolCalls: ChatToolPayload[] = [
         {
           id: 'tool_1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           arguments: JSON.stringify({ query: 'test' }),
           type: 'default',
@@ -91,14 +91,14 @@ describe('request_human_approve executor', () => {
       const toolCalls: ChatToolPayload[] = [
         {
           id: 'tool_1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           arguments: JSON.stringify({ query: 'test' }),
           type: 'default',
         },
         {
           id: 'tool_2',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'craw',
           arguments: JSON.stringify({ url: 'https://example.com' }),
           type: 'default',
@@ -131,7 +131,7 @@ describe('request_human_approve executor', () => {
       const toolCalls: ChatToolPayload[] = [
         {
           id: 'tool_1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           arguments: JSON.stringify({ query: 'test' }),
           type: 'default',
@@ -257,7 +257,7 @@ describe('request_human_approve executor', () => {
       const toolCalls: ChatToolPayload[] = [
         {
           id: 'tool_1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           arguments: JSON.stringify({ query: 'test' }),
           type: 'default',
@@ -313,21 +313,21 @@ describe('request_human_approve executor', () => {
       const toolCalls: ChatToolPayload[] = [
         {
           id: 'tool_1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           arguments: JSON.stringify({ query: 'test1' }),
           type: 'default',
         },
         {
           id: 'tool_2',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'craw',
           arguments: JSON.stringify({ url: 'https://example.com' }),
           type: 'default',
         },
         {
           id: 'tool_3',
-          identifier: 'lobe-image-generator',
+          identifier: 'orvilo-image-generator',
           apiName: 'generate',
           arguments: JSON.stringify({ prompt: 'test' }),
           type: 'default',
@@ -516,7 +516,7 @@ describe('request_human_approve executor', () => {
       const context = createTestContext();
       const toolCalls: ChatToolPayload[] = Array.from({ length: 50 }, (_, i) => ({
         id: `tool_${i}`,
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: `query_${i}` }),
         type: 'default' as const,

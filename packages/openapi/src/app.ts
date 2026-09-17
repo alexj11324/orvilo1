@@ -42,7 +42,7 @@ app.onError((error: Error, c) => {
 // Health check endpoint
 app.get('/health', describeRoute({ summary: 'Health check', tags: ['health'] }), (c) => {
   return c.json({
-    service: 'lobe-chat-api',
+    service: 'orvilo-api',
     status: 'ok',
     timestamp: new Date().toISOString(),
   });
@@ -63,13 +63,13 @@ type ScalarLocale = (typeof SCALAR_BUILTIN_LOCALES)[number];
 
 /**
  * Resolve the docs UI locale with the same priority the main app uses:
- * `?hl=` query > `LOBE_LOCALE` cookie > `Accept-Language` header.
+ * `?hl=` query > `ORVILO_LOCALE` cookie > `Accept-Language` header.
  * Returns undefined for English (Scalar's default) or unsupported locales.
  */
 const resolveDocsLocale = (c: Context): ScalarLocale | undefined => {
   const sources = [
     c.req.query('hl'),
-    getCookie(c, 'LOBE_LOCALE'),
+    getCookie(c, 'ORVILO_LOCALE'),
     c.req.header('Accept-Language'),
   ].filter(Boolean) as string[];
 
@@ -93,7 +93,7 @@ app.get('/docs', (c, next) => {
     customCss: SCALAR_CUSTOM_CSS,
     favicon: '/favicon.ico',
     ...(locale ? { localization: { locale } } : {}),
-    pageTitle: 'LobeHub API',
+    pageTitle: 'Orvilo API',
     // 'none' keeps the runtime bundle from injecting its own theme stylesheet
     // after our customCss, which would override every variable we set.
     theme: 'none',

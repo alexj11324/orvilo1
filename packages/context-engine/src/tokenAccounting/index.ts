@@ -51,7 +51,7 @@ type AssistantTokenBlock =
  * | source             | field on UIChatMessage                                     | sent to provider as              |
  * |--------------------|------------------------------------------------------------|----------------------------------|
  * | `content`          | `msg.content`                                              | `message.content`                |
- * | `toolCalls`        | `msg.tools[]` (lobe internal, not OpenAI's `tool_calls`)   | `message.tool_calls`             |
+ * | `toolCalls`        | `msg.tools[]` (orvilo internal, not OpenAI's `tool_calls`)   | `message.tool_calls`             |
  * | `thoughtSignature` | `msg.tools[N].thoughtSignature` (Gemini-specific)          | echoed back per tool call        |
  * | `reasoning`        | `msg.reasoning.content` / `msg.reasoning` (string variant) | echoed back next turn (thinking) |
  * | `toolCallId`       | `msg.tool_call_id` + `tools[].id` (result-bearing)     | `message.tool_call_id`           |
@@ -154,7 +154,7 @@ export const countContextTokens = ({
         // Per-field estimation
         bumpSource(bySource, 'content', estimate(message.content));
 
-        // Tool calls: lobe stores these on `msg.tools` (NOT OpenAI's `tool_calls`)
+        // Tool calls: orvilo stores these on `msg.tools` (NOT OpenAI's `tool_calls`)
         // We project to what's actually sent: id + apiName + arguments + type.
         // Skipping internal-only fields (intervention, source, executor, result_msg_id)
         // which don't ship to the provider.

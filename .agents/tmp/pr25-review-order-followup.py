@@ -51,7 +51,8 @@ replace_once(
 
 needle = """      if (!snapshot) {
         await taskModel.update(task.id, {
-          error: 'GitHub delivery state is temporarily unavailable; review will retry automatically.',
+          error:
+            'GitHub PR identity or revision could not be verified; review remains blocked and will retry.',
         });
         result.waiting.push(task.identifier);
         continue;
@@ -61,7 +62,8 @@ needle = """      if (!snapshot) {
 """
 replacement = """      if (!snapshot) {
         await taskModel.update(task.id, {
-          error: 'GitHub delivery state is temporarily unavailable; review will retry automatically.',
+          error:
+            'GitHub PR identity or revision could not be verified; review remains blocked and will retry.',
         });
         result.waiting.push(task.identifier);
         continue;

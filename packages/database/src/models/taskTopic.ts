@@ -526,7 +526,7 @@ export class TaskTopicModel {
     const claimed = await this.db.transaction(async (tx) => {
       const settled = await tx
         .update(taskTopics)
-        .set({ status })
+        .set({ runState: runStateForStatus(status), status })
         .where(
           and(
             eq(taskTopics.taskId, taskId),

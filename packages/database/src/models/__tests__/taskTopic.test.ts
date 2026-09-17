@@ -426,6 +426,7 @@ describe('TaskTopicModel', () => {
       expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
       expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
       expect((await topicModel.findByTaskId(task.id))[0].status).toBe('completed');
+      expect((await topicModel.findByTaskId(task.id))[0].runState).toBe('succeeded');
       expect((await getTopic('tpc_settle_once')).completedAt).toBeInstanceOf(Date);
     });
 

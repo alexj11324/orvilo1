@@ -240,12 +240,26 @@ type LinearInboundRow = {
   subjectId: string | null;
 };
 
-const issueFromSignedRemovePayload = (row: LinearInboundRow): LinearIssueSnapshot => {
-  const issue = normalizeLinearIssue(row.payload?.data);
-  if (issue.id !== row.subjectId) {
+type SignedIssueRemovalSnapshot = Pick<LinearIssueSnapshot, 'id'> &
+  Partial<Omit<LinearIssueSnapshot, 'id'>>;
+
+const issueFromSignedRemovePayload = (row: LinearInboundRow): SignedIssueRemovalSnapshot => {
+  const value = row.payload?.data;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Linear remove webhook payload does not contain an issue snapshot');
+  }
+  const issueId = (value as { id?: unknown }).id;
+  if (typeof issueId !== 'string' || issueId !== row.subjectId) {
     throw new Error('Linear remove webhook payload does not match its subject');
   }
-  return issue;
+  try {
+    return normalizeLinearIssue(value);
+  } catch {
+    // Remove webhooks are authenticated, but Linear may send only identity and
+    // scope fields after the remote issue has already disappeared. The durable
+    // issue link supplies the last complete snapshot in processIssueDeletionRow.
+    return { id: issueId };
+  }
 };
 
 export const issueRelationsWithParent = (
@@ -1108,13 +1122,18 @@ export class LinearSyncWorker {
   private async processIssueDeletionRow(
     row: { id: string; subjectId: string | null },
     model: LinearSyncModel,
-    snapshot: LinearIssueSnapshot,
+    snapshot: SignedIssueRemovalSnapshot,
   ): Promise<'paused' | 'processed'> {
     if (!row.subjectId) return 'processed';
     const link = await model.findIssueLinkByExternalId(row.subjectId);
     if (!link || link.tombstone?.kind === 'deleted') return 'processed';
     const binding = link.bindingId ? await model.findBindingById(link.bindingId) : null;
     if (binding && !linearBindingReadEnabled(binding)) return 'paused';
+    const tombstoneSnapshot: LinearIssueSnapshot = {
+      ...link.lastConfirmedSnapshot,
+      ...snapshot,
+      id: link.linearIssueId,
+    };
     await model.recordIssueTombstone({
       deliveryId: row.id,
       idempotencyKey: `linear:tombstone:${row.id}:deleted`,
@@ -1123,7 +1142,7 @@ export class LinearSyncWorker {
       linearIssueId: row.subjectId,
       origin: 'inbound',
       reason: 'Linear issue removal webhook',
-      snapshot,
+      snapshot: tombstoneSnapshot,
     });
     return 'processed';
   }

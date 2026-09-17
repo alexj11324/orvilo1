@@ -97,7 +97,12 @@ describe('LinearSyncWorker inbound ordering', () => {
       organizationId: installation.organizationId,
       payload: {
         action: 'remove',
-        data: issue,
+        data: {
+          id: issue.id,
+          identifier: issue.identifier,
+          project: issue.project,
+          team: issue.team,
+        },
         organizationId: installation.organizationId,
         type: 'Issue',
       },
@@ -116,7 +121,11 @@ describe('LinearSyncWorker inbound ordering', () => {
       id: link.id,
       lastInboundDeliveryId: expect.any(String),
       syncState: 'removed',
+      tombstone: expect.objectContaining({ kind: 'deleted', source: 'linear' }),
     });
+    await expect(model.listIssueTombstones(link.id)).resolves.toEqual([
+      expect.objectContaining({ kind: 'deleted', linearIssueId: issue.id }),
+    ]);
     expect(provider.getIssue).not.toHaveBeenCalled();
   });
 

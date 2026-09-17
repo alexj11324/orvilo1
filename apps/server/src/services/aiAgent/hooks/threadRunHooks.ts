@@ -22,6 +22,26 @@ export function calculateTotalTokens(usage?: AgentState['usage']): number | unde
   return usage.llm?.tokens?.total;
 }
 
+const calculateTotalToolCalls = (usage?: AgentState['usage']): number =>
+  usage?.tools?.totalCalls ?? 0;
+
+export const normalizeThreadCompletionReason = (reason?: string): StepCompletionReason => {
+  switch (reason) {
+    case 'cost_limit':
+    case 'done':
+    case 'error':
+    case 'interrupted':
+    case 'max_steps':
+    case 'waiting_for_async_tool':
+    case 'waiting_for_human': {
+      return reason;
+    }
+    default: {
+      return 'done';
+    }
+  }
+};
+
 const resolveThreadStatus = (reason: StepCompletionReason): ThreadStatus => {
   switch (reason) {
     case 'done': {
@@ -53,7 +73,7 @@ export const updateThreadRunProgress = async (
     startedAt,
     ...(state.messages && { totalMessages: state.messages.length }),
     totalTokens: calculateTotalTokens(state.usage),
-    totalToolCalls: state.session?.toolCalls ?? 0,
+    totalToolCalls: calculateTotalToolCalls(state.usage),
   });
 };
 
@@ -67,9 +87,18 @@ export const completeThreadRun = async (
     startedAt: string;
     threadId: string;
     totalMessages?: number;
+    totalToolCalls?: number;
   },
 ): Promise<void> => {
-  const { finalState, reason, sourceMessageId, startedAt, threadId, totalMessages } = params;
+  const {
+    finalState,
+    reason,
+    sourceMessageId,
+    startedAt,
+    threadId,
+    totalMessages,
+    totalToolCalls,
+  } = params;
   const lastAssistantMessage = finalState.messages
     ?.slice()
     .reverse()
@@ -88,7 +117,7 @@ export const completeThreadRun = async (
     totalCost: finalState.cost?.total,
     totalMessages: totalMessages ?? finalState.messages?.length ?? 0,
     totalTokens: calculateTotalTokens(finalState.usage),
-    totalToolCalls: finalState.session?.toolCalls ?? 0,
+    totalToolCalls: totalToolCalls ?? calculateTotalToolCalls(finalState.usage),
   });
 };
 
@@ -272,9 +301,10 @@ export function createThreadHooks(
         }
 
         try {
+          const reason = normalizeThreadCompletionReason(event.reason);
           await completeThreadRun(threadModel, messageModel, {
             finalState,
-            reason: event.reason ?? 'done',
+            reason,
             sourceMessageId,
             startedAt,
             threadId,
@@ -284,7 +314,7 @@ export function createThreadHooks(
             '%s: thread hook onComplete thread %s status=%s reason=%s',
             logScope,
             threadId,
-            resolveThreadStatus(event.reason ?? 'done'),
+            resolveThreadStatus(reason),
             event.reason,
           );
         } catch (error) {

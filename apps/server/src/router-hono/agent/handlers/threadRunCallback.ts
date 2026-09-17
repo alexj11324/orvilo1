@@ -7,23 +7,13 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { ThreadModel } from '@/database/models/thread';
 import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime';
-import type { StepCompletionReason } from '@/server/services/agentRuntime/types';
 import {
   completeThreadRun,
+  normalizeThreadCompletionReason,
   updateThreadRunProgress,
 } from '@/server/services/aiAgent/hooks/threadRunHooks';
 
 const log = debug('lobe-server:agent:thread-run-callback');
-
-const completionReasons = new Set<StepCompletionReason>([
-  'done',
-  'error',
-  'interrupted',
-  'max_steps',
-  'cost_limit',
-  'waiting_for_human',
-  'waiting_for_async_tool',
-]);
 
 /** Persist isolated-thread progress and completion after a queue worker boundary. */
 export async function threadRunCallback(c: Context): Promise<Response> {
@@ -97,21 +87,15 @@ export async function threadRunCallback(c: Context): Promise<Response> {
       cost: state?.cost ?? operation.cost,
       error: state?.error ?? operation.error,
       operationId,
-      session: {
-        ...state?.session,
-        toolCalls: state?.session?.toolCalls ?? operation.toolCalls ?? 0,
-      },
       usage: state?.usage ?? operation.usage,
     } as AgentState;
 
     if (callbackType === 'step') {
       await updateThreadRunProgress(threadModel, threadId, startedAt, durableState);
     } else {
-      const rawReason = body.reason;
-      const reason =
-        typeof rawReason === 'string' && completionReasons.has(rawReason as StepCompletionReason)
-          ? (rawReason as StepCompletionReason)
-          : 'done';
+      const reason = normalizeThreadCompletionReason(
+        operation.completionReason ?? (typeof body.reason === 'string' ? body.reason : undefined),
+      );
       const [lastAssistantMessage, totalMessages] = await Promise.all([
         operation.topicId
           ? messageModel.findLatestAssistantByOperationId({
@@ -124,11 +108,12 @@ export async function threadRunCallback(c: Context): Promise<Response> {
       durableState.messages = lastAssistantMessage ? [lastAssistantMessage as never] : [];
       await completeThreadRun(threadModel, messageModel, {
         finalState: durableState,
-        reason: (operation.completionReason as StepCompletionReason | null) ?? reason,
+        reason,
         sourceMessageId: sourceMessageId as string,
         startedAt,
         threadId,
         totalMessages,
+        totalToolCalls: operation.toolCalls ?? undefined,
       });
     }
 

@@ -208,7 +208,13 @@ const createHatchetStepStore = (
 
       const existing = await findStep(stepName);
       if (!existing) return { status: 'busy' };
-      if (existing.status === 'completed') return existing;
+      if (existing.status === 'completed') {
+        return {
+          result: existing.result,
+          resultIsUndefined: existing.resultIsUndefined,
+          status: 'completed' as const,
+        };
+      }
       if (existing.leaseExpiresAt > now) return { status: 'busy' };
 
       const [reclaimed] = await db

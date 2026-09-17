@@ -10,8 +10,7 @@ describe('durable thread run updates', () => {
     const state = {
       messages: [{ role: 'user' }, { role: 'assistant' }],
       operationId: 'op-1',
-      session: { toolCalls: 3 },
-      usage: { llm: { tokens: { total: 42 } } },
+      usage: { llm: { tokens: { total: 42 } }, tools: { totalCalls: 3 } },
     } as any;
 
     await updateThreadRunProgress(
@@ -36,7 +35,7 @@ describe('durable thread run updates', () => {
       { updateRunProgress } as any,
       'thread-1',
       '2026-09-16T00:00:00.000Z',
-      { operationId: 'op-1', session: { toolCalls: 3 } } as any,
+      { operationId: 'op-1', usage: { tools: { totalCalls: 3 } } } as any,
     );
 
     expect(updateRunProgress).toHaveBeenCalledWith(
@@ -57,8 +56,7 @@ describe('durable thread run updates', () => {
         { content: 'final answer', role: 'assistant' },
       ],
       operationId: 'op-1',
-      session: { toolCalls: 2 },
-      usage: { llm: { tokens: { total: 17 } } },
+      usage: { llm: { tokens: { total: 17 } }, tools: { totalCalls: 2 } },
     } as any;
 
     await completeThreadRun({ completeRun } as any, { update: messageUpdate } as any, {

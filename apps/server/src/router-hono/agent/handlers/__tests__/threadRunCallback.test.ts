@@ -47,6 +47,7 @@ vi.mock('@/database/models/message', () => ({
 
 vi.mock('@/server/services/aiAgent/hooks/threadRunHooks', () => ({
   completeThreadRun: mocks.completeThreadRun,
+  normalizeThreadCompletionReason: (reason?: string) => reason ?? 'done',
   updateThreadRunProgress: mocks.updateThreadRunProgress,
 }));
 
@@ -59,7 +60,7 @@ const buildContext = (body: unknown) =>
 const state = {
   messages: [{ content: 'finished answer', role: 'assistant' }],
   operationId: 'op-1',
-  session: { toolCalls: 2 },
+  usage: { tools: { totalCalls: 2 } },
 };
 
 describe('threadRunCallback', () => {
@@ -131,6 +132,7 @@ describe('threadRunCallback', () => {
       startedAt: '2026-09-16T00:00:00.000Z',
       threadId: 'thread-1',
       totalMessages: 3,
+      totalToolCalls: 2,
     });
   });
 
@@ -157,7 +159,7 @@ describe('threadRunCallback', () => {
         cost: { total: 0.04 },
         error: { message: 'failed' },
         operationId: 'op-1',
-        session: { toolCalls: 2 },
+        usage: { llm: { tokens: { total: 17 } } },
       }),
     );
   });

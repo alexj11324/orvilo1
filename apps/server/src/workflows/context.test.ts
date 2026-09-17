@@ -30,7 +30,13 @@ const createMemoryStepStore = (): WorkflowStepStore => {
         });
         return { status: 'acquired' };
       }
-      if (existing.status === 'completed') return existing;
+      if (existing.status === 'completed') {
+        return {
+          result: existing.result,
+          resultIsUndefined: existing.resultIsUndefined,
+          status: 'completed' as const,
+        };
+      }
       return { status: 'busy' };
     },
     complete: async (stepName, ownerToken, result) => {

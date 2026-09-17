@@ -1,6 +1,6 @@
 import { cloudSandboxRepoPath, type TaskItem, type TaskTopicIntegration } from '@orvilo/types';
-import { and, asc, eq, isNull, or } from 'drizzle-orm';
 import debug from 'debug';
+import { and, asc, eq, isNull, or } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
@@ -11,9 +11,10 @@ import {
   createPullRequestForBranch,
   getPullRequestReviewSnapshot,
   getRemoteBranchSha,
+  isRemotePrMergeReady,
   mergePullRequest,
-  resolveGithubAccessToken,
   type RemotePrReviewSnapshot,
+  resolveGithubAccessToken,
 } from '@/server/services/githubRepo';
 import { TaskService } from '@/server/services/task';
 import { TaskRunnerService } from '@/server/services/taskRunner';
@@ -48,20 +49,17 @@ const reviewContext = (task: TaskItem): DeliveryReviewContext => {
   return context.deliveryReview ?? {};
 };
 
-const activeDeliveryRow = (
-  rows: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>,
-) =>
-  [...rows]
-    .filter(
-      (row) =>
-        row.topicId &&
-        row.integration?.repo &&
-        row.integration.state === 'verification_pending',
-    )
+const activeDeliveryRow = (rows: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>) => {
+  // Pick the newest code delivery FIRST. Filtering by phase first can resurrect an
+  // older pending delivery after its successor has already merged, failed or started.
+  const latest = [...rows]
+    .filter((row) => row.topicId && row.integration?.repo)
     .sort((a, b) => b.seq - a.seq)[0];
+  return latest?.integration?.state === 'verification_pending' ? latest : undefined;
+};
 
 const allFeedbackIds = (snapshot: RemotePrReviewSnapshot): string[] => [
-  ...snapshot.humanCommentIds,
+  ...snapshot.humanFeedbackIds,
   ...snapshot.requestedChangeReviewIds,
   ...snapshot.unresolvedThreadIds.map((id) => `thread:${id}`),
 ];
@@ -88,21 +86,40 @@ const persistReviewContext = async (
 
 const markDeliveryMerged = async (params: {
   db: LobeChatDatabase;
-  mergeSha?: string;
   record: TaskTopicIntegration;
   snapshot: RemotePrReviewSnapshot;
   task: TaskItem;
   topicModel: TaskTopicModel;
   workspaceId?: string;
 }): Promise<void> => {
-  const { db, mergeSha, record, snapshot, task, topicModel, workspaceId } = params;
+  const { db, record, snapshot, task, topicModel, workspaceId } = params;
+  if (
+    !snapshot.merged ||
+    !snapshot.mergedAt ||
+    !snapshot.mergeCommitSha ||
+    snapshot.baseBranch !== record.baseBranch ||
+    snapshot.headBranch !== record.branch ||
+    snapshot.number !== record.prNumber ||
+    !record.expectedHeadSha ||
+    snapshot.headSha !== record.expectedHeadSha
+  ) {
+    throw new Error('Merged PR does not match the accepted delivery identity and commit');
+  }
+  let updated = 0;
   const rows = await topicModel.findByTaskId(task.id);
   for (const row of rows) {
-    if (!row.topicId || row.integration?.branch !== record.branch) continue;
-    await topicModel.updateIntegration(task.id, row.topicId, {
+    if (
+      !row.topicId ||
+      row.integration?.branch !== record.branch ||
+      row.integration.repo !== record.repo ||
+      row.integration.baseBranch !== record.baseBranch ||
+      row.integration.prNumber !== snapshot.number
+    )
+      continue;
+    const persisted = await topicModel.updateIntegration(task.id, row.topicId, {
       expectedBaseSha: snapshot.baseSha,
       expectedHeadSha: snapshot.headSha,
-      integratedSha: mergeSha ?? snapshot.mergeCommitSha,
+      integratedSha: snapshot.mergeCommitSha,
       lastError: null,
       lastErrorCode: null,
       prNumber: snapshot.number,
@@ -110,7 +127,10 @@ const markDeliveryMerged = async (params: {
       pushedToRemote: true,
       state: 'integrated',
     });
+    if (!persisted) throw new Error('Delivery proof could not be persisted');
+    updated += 1;
   }
+  if (updated === 0) throw new Error('No matching delivery row remains for merge confirmation');
 
   await new TaskService(db, task.createdByUserId, workspaceId).updateStatus({
     id: task.id,
@@ -162,34 +182,38 @@ const dispatchCorrective = async (params: {
   workspaceId?: string;
 }): Promise<void> => {
   const { db, record, row, snapshot, task, workspaceId } = params;
-  if (!record.repo || !row.topicId) throw new Error('Review delivery is missing its repository/topic');
+  if (!record.repo || !row.topicId)
+    throw new Error('Review delivery is missing its repository/topic');
   if (record.attempts >= MAX_REVIEW_CORRECTIVE_ATTEMPTS) {
-    throw new Error(`PR review still requires changes after ${MAX_REVIEW_CORRECTIVE_ATTEMPTS} corrective runs`);
+    throw new Error(
+      `PR review still requires changes after ${MAX_REVIEW_CORRECTIVE_ATTEMPTS} corrective runs`,
+    );
   }
 
   const workingDirectory = record.worktreePath ?? cloudSandboxRepoPath(record.repo);
-  const workspaceOverride = record.deviceId && record.worktreePath
-    ? {
-        workingDirectory,
-        workingDirectoryConfig: {
-          git: {
-            branch: record.branch,
-            isWorktree: true,
-            upstream: { branch: record.branch, remote: 'origin' },
+  const workspaceOverride =
+    record.deviceId && record.worktreePath
+      ? {
+          workingDirectory,
+          workingDirectoryConfig: {
+            git: {
+              branch: record.branch,
+              isWorktree: true,
+              upstream: { branch: record.branch, remote: 'origin' },
+            },
+            path: workingDirectory,
+            repoType: 'git' as const,
           },
-          path: workingDirectory,
-          repoType: 'git' as const,
-        },
-      }
-    : {
-        repos: [record.repo],
-        workingDirectory,
-        workingDirectoryConfig: {
-          git: { branch: record.branch, upstream: { branch: record.branch, remote: 'origin' } },
-          path: workingDirectory,
-          repoType: 'git' as const,
-        },
-      };
+        }
+      : {
+          repos: [record.repo],
+          workingDirectory,
+          workingDirectoryConfig: {
+            git: { branch: record.branch, upstream: { branch: record.branch, remote: 'origin' } },
+            path: workingDirectory,
+            repoType: 'git' as const,
+          },
+        };
 
   await new TaskRunnerService(db, task.createdByUserId, workspaceId).runTask({
     extraPrompt: buildCorrectivePrompt({ record, snapshot, task }),
@@ -215,8 +239,10 @@ const ensureReviewTaskPaused = async (
   rows: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>,
   workspaceId?: string,
 ): Promise<boolean> => {
+  // A paused task can still have a live topic while cancellation settles.
+  if (rows.some((row) => row.status === 'running')) return false;
   if (task.status === 'paused') return true;
-  if (task.status !== 'running' || rows.some((row) => row.status === 'running')) return false;
+  if (task.status !== 'running') return false;
   await new TaskService(db, task.createdByUserId, workspaceId).updateStatus({
     id: task.id,
     status: 'paused',
@@ -316,16 +342,22 @@ export const runTaskDeliveryReviewSweep = async (
 
       if (!prNumber) {
         await taskModel.update(task.id, {
-          error: 'Pull request required: push the delivery branch to GitHub before review can continue.',
+          error:
+            'Pull request required: push the delivery branch to GitHub before review can continue.',
         });
         result.paused.push(task.identifier);
         continue;
       }
 
-      const snapshot = await getPullRequestReviewSnapshot(repo, prNumber, token);
+      const snapshot = await getPullRequestReviewSnapshot(repo, prNumber, token, {
+        baseBranch: record.baseBranch,
+        headBranch: record.branch,
+        sameRepository: true,
+      });
       if (!snapshot) {
         await taskModel.update(task.id, {
-          error: 'GitHub delivery state is temporarily unavailable; review will retry automatically.',
+          error:
+            'GitHub PR identity or revision could not be verified; review remains blocked and will retry.',
         });
         result.waiting.push(task.identifier);
         continue;
@@ -346,8 +378,7 @@ export const runTaskDeliveryReviewSweep = async (
       if (snapshot.merged) {
         await markDeliveryMerged({
           db,
-          mergeSha: snapshot.mergeCommitSha,
-          record,
+          record: { ...record, prNumber },
           snapshot,
           task,
           topicModel,
@@ -388,9 +419,7 @@ export const runTaskDeliveryReviewSweep = async (
         await dispatchCorrective({ db, record, row, snapshot, task, workspaceId });
         await persistReviewContext(taskModel, task.id, {
           ...context,
-          handledFeedbackIds: [
-            ...new Set([...(context.handledFeedbackIds ?? []), ...newFeedback]),
-          ],
+          handledFeedbackIds: [...new Set([...(context.handledFeedbackIds ?? []), ...newFeedback])],
           lastConflictHeadSha: conflictThisHead ? snapshot.headSha : context.lastConflictHeadSha,
           lastFailedHeadSha: failedThisHead ? snapshot.headSha : context.lastFailedHeadSha,
           lastReviewedHeadSha: snapshot.headSha,
@@ -399,16 +428,7 @@ export const runTaskDeliveryReviewSweep = async (
         continue;
       }
 
-      const reviewStillBlocking =
-        snapshot.draft ||
-        snapshot.mergeable === null ||
-        snapshot.requestedChangeReviewIds.length > 0 ||
-        snapshot.requestedReviewers.length > 0 ||
-        snapshot.unresolvedThreadIds.length > 0 ||
-        snapshot.checks.pending.length > 0 ||
-        snapshot.checks.failed.length > 0 ||
-        snapshot.checks.successful.length === 0 ||
-        needsConflictRepair;
+      const reviewStillBlocking = !isRemotePrMergeReady(snapshot);
       if (reviewStillBlocking) {
         await taskModel.update(task.id, { error: null });
         result.waiting.push(task.identifier);
@@ -429,13 +449,22 @@ export const runTaskDeliveryReviewSweep = async (
           lastReviewedHeadSha: snapshot.headSha,
         });
         await taskModel.update(task.id, {
-          error: merge.message ? `Waiting to merge: ${merge.message}` : 'Waiting for GitHub merge gates.',
+          error: merge.message
+            ? `Waiting to merge: ${merge.message}`
+            : 'Waiting for GitHub merge gates.',
         });
         result.waiting.push(task.identifier);
         continue;
       }
 
-      const confirmed = await getPullRequestReviewSnapshot(repo, snapshot.number, token);
+      const confirmed = await getPullRequestReviewSnapshot(repo, snapshot.number, token, {
+        baseBranch: snapshot.baseBranch,
+        headBranch: snapshot.headBranch,
+        headSha: snapshot.headSha,
+        nodeId: snapshot.nodeId,
+        repositoryId: snapshot.repositoryId,
+        sameRepository: true,
+      });
       if (!confirmed?.merged) {
         await taskModel.update(task.id, {
           error: 'GitHub accepted the merge request, but merge confirmation is pending.',
@@ -446,8 +475,7 @@ export const runTaskDeliveryReviewSweep = async (
 
       await markDeliveryMerged({
         db,
-        mergeSha: merge.sha ?? confirmed.mergeCommitSha,
-        record,
+        record: { ...record, expectedHeadSha: snapshot.headSha, prNumber: snapshot.number },
         snapshot: confirmed,
         task,
         topicModel,

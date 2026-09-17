@@ -1,16 +1,18 @@
 name: Preview DB
 
-# PR 打开时为该 PR 在 Preview ParadeDB 实例上建独立数据库（orvilo_pr_<n>），
-# 跑完迁移后通过 Vercel API 把 DATABASE_URL 写成该分支的 branch-scoped env，
+# PR 打开或更新时为该 PR 在 Preview ParadeDB 实例上建独立数据库（orvilo_pr_<n>），
+# 由 per-PR migration role 执行迁移，再通过 Vercel API 把 DATABASE_URL 写成
+# 该分支的 branch-scoped env，
 # 让此分支的 Preview 部署指向自己的库。关闭 PR 时由 preview-cleanup.yml 清理。
 #
 # 默认不启用：把 repo variable PREVIEW_EPHEMERAL_DB_ENABLED 设为 true 才会跑。
 # 需要 secrets：PREVIEW_DB_ADMIN_URL（admin 连接串，建议指到 postgres 库）、
-# VERCEL_TOKEN、VERCEL_ORG_ID、VERCEL_PROJECT_ID。
+# PREVIEW_KEY_VAULTS_SECRET、PREVIEW_DATABASE_SSL_CA、VERCEL_TOKEN、
+# VERCEL_ORG_ID、VERCEL_PROJECT_ID。
 
 on:
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: read
@@ -22,23 +24,28 @@ concurrency:
 
 jobs:
   provision:
-    # fork PR 拿不到 secrets；同仓库 PR 才允许跑
+    # fork PR 拿不到 secrets；仅仓库所有者推动的同仓库 PR 才允许接触基础设施凭据。
     if: >-
       vars.PREVIEW_EPHEMERAL_DB_ENABLED == 'true' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner
     name: Provision per-PR database
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       DB_NAME: orvilo_pr_${{ github.event.pull_request.number }}
+      APP_ROLE: orvilo_pr_${{ github.event.pull_request.number }}_app
+      MIGRATION_ROLE: orvilo_pr_${{ github.event.pull_request.number }}_migrate
+      TEST_ROLE: orvilo_preview_ci
+      DB_TLS_HOST: ${{ vars.PREVIEW_DB_TLS_HOST }}
       HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
-      ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
@@ -46,74 +53,350 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Create database
+      - name: Validate Preview migration secrets
+        env:
+          KEY_VAULTS_SECRET: ${{ secrets.PREVIEW_KEY_VAULTS_SECRET }}
         run: |
           set -euo pipefail
-          # 重复打开 PR 时库可能已存在；CREATE 失败就确认它存在，保持幂等
-          if ! psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$DB_NAME\""; then
-            psql "$ADMIN_URL" -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1
-            echo "database $DB_NAME already exists, reusing"
+          if [[ -z "$KEY_VAULTS_SECRET" ]]; then
+            echo "KEY_VAULTS_SECRET for target=preview is missing" >&2
+            exit 1
+          fi
+          echo "::add-mask::$KEY_VAULTS_SECRET"
+
+      - name: Provision database and rotate per-PR roles
+        id: db
+        env:
+          ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
+          DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
+        run: |
+          set -euo pipefail
+          : "${ADMIN_URL:?PREVIEW_DB_ADMIN_URL is required}"
+          if [[ -n "$DATABASE_SSL_CA" ]]; then
+            pg_ca_file="$RUNNER_TEMP/orvilo-preview-postgres-ca.crt"
+            printf '%s\n' "$DATABASE_SSL_CA" > "$pg_ca_file"
+            chmod 600 "$pg_ca_file"
+            ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" CA_FILE="$pg_ca_file" node -e '
+              const url = new URL(process.env.DATABASE_URL);
+              if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
+              url.searchParams.delete("uselibpqcompat");
+              url.searchParams.set("sslmode", "verify-full");
+              url.searchParams.set("sslrootcert", process.env.CA_FILE);
+              process.stdout.write(url.href);
+            ')
+          else
+            ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" node -e '
+              const url = new URL(process.env.DATABASE_URL);
+              if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
+              url.searchParams.delete("uselibpqcompat");
+              url.searchParams.delete("sslrootcert");
+              url.searchParams.set("sslmode", "require");
+              process.stdout.write(url.href);
+            ')
+          fi
+          if [[ ! "$APP_ROLE" =~ ^orvilo_pr_[0-9]+_app$ ]]; then
+            echo "invalid Preview app role identifier" >&2
+            exit 1
+          fi
+          if [[ ! "$MIGRATION_ROLE" =~ ^orvilo_pr_[0-9]+_migrate$ ]]; then
+            echo "invalid Preview migration role identifier" >&2
+            exit 1
           fi
 
-      - name: Resolve app database URL
-        id: db
-        run: |
-          # admin URL 的库名部分换成新库；保留查询参数，并为自签名 TLS
-          # 补上 pg-connection-string 的 libpq 兼容开关。
-          PR_DB_URL=$(echo "$ADMIN_URL" | sed -E "s|/[^/?]+(\?.*)?\$|/${DB_NAME}\1|")
-          if [[ "$PR_DB_URL" == *"sslmode=require"* && "$PR_DB_URL" != *"uselibpqcompat="* ]]; then
-            if [[ "$PR_DB_URL" == *"?"* ]]; then PR_DB_URL="${PR_DB_URL}&uselibpqcompat=true"; else PR_DB_URL="${PR_DB_URL}?uselibpqcompat=true"; fi
+          APP_PASSWORD=$(openssl rand -hex 32)
+          MIGRATION_PASSWORD=$(openssl rand -hex 32)
+          export APP_PASSWORD
+          export MIGRATION_PASSWORD
+          echo "::add-mask::$APP_PASSWORD"
+          echo "::add-mask::$MIGRATION_PASSWORD"
+          url_json=$(node <<'NODE'
+          const adminUrl = new URL(process.env.ADMIN_URL);
+          const allowedProtocols = new Set(['postgres:', 'postgresql:']);
+          if (!allowedProtocols.has(adminUrl.protocol) || !adminUrl.hostname) {
+            throw new Error('PREVIEW_DB_ADMIN_URL must be a PostgreSQL URL with a hostname');
+          }
+
+          const databaseName = process.env.DB_NAME;
+          const appRole = process.env.APP_ROLE;
+          const migrationRole = process.env.MIGRATION_ROLE;
+          const appPassword = process.env.APP_PASSWORD;
+          const migrationPassword = process.env.MIGRATION_PASSWORD;
+          if (!appPassword) throw new Error('failed to generate Preview app password');
+          if (!migrationPassword) throw new Error('failed to generate Preview migration password');
+          if (!/^orvilo_pr_[0-9]+$/.test(databaseName)) {
+            throw new Error('invalid Preview database identifier');
+          }
+          if (!/^orvilo_pr_[0-9]+_app$/.test(appRole)) {
+            throw new Error('invalid Preview app role identifier');
+          }
+          if (!/^orvilo_pr_[0-9]+_migrate$/.test(migrationRole)) {
+            throw new Error('invalid Preview migration role identifier');
+          }
+
+          adminUrl.pathname = `/${encodeURIComponent(databaseName)}`;
+          // psql rejects the Node-only compatibility query parameter. Keep it
+          // only on URLs consumed by the Node migration/app runtime.
+          adminUrl.searchParams.delete('uselibpqcompat');
+          const runtimeUrl = new URL(adminUrl.href);
+          runtimeUrl.searchParams.delete('sslrootcert');
+          runtimeUrl.searchParams.set('sslmode', 'require');
+          if (process.env.DB_TLS_HOST) runtimeUrl.hostname = process.env.DB_TLS_HOST;
+          if (runtimeUrl.searchParams.get('sslmode') === 'require' && !runtimeUrl.searchParams.has('uselibpqcompat')) {
+            runtimeUrl.searchParams.set('uselibpqcompat', 'true');
+          }
+
+          const appUrl = new URL(runtimeUrl.href);
+          appUrl.username = appRole;
+          appUrl.password = appPassword;
+          const migrationUrl = new URL(runtimeUrl.href);
+          migrationUrl.username = migrationRole;
+          migrationUrl.password = migrationPassword;
+
+          process.stdout.write(JSON.stringify({
+            adminUrl: adminUrl.href,
+            appUrl: appUrl.href,
+            migrationUrl: migrationUrl.href,
+            hostname: appUrl.hostname,
+          }));
+          NODE
+          )
+          PR_ADMIN_URL=$(jq -er '.adminUrl' <<< "$url_json")
+          APP_DB_URL=$(jq -er '.appUrl' <<< "$url_json")
+          MIGRATION_DB_URL=$(jq -er '.migrationUrl' <<< "$url_json")
+          DB_HOST=$(jq -er '.hostname' <<< "$url_json")
+
+          echo "::add-mask::$ADMIN_URL"
+          echo "::add-mask::$PR_ADMIN_URL"
+          echo "::add-mask::$APP_DB_URL"
+          echo "::add-mask::$MIGRATION_DB_URL"
+
+          ensure_login_role() {
+            local role_name="$1"
+            local role_password="$2"
+            local role_exists
+            role_exists=$(psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v role_name="$role_name" \
+              -qAt -c "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'role_name'")
+            if [[ "$role_exists" != "1" ]]; then
+              psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v role_name="$role_name" -v role_password="$role_password" <<'SQL'
+          SELECT format(
+            'CREATE ROLE %I WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L',
+            :'role_name', :'role_password'
+          ) \gexec
+          SQL
+            fi
+            psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v role_name="$role_name" -v role_password="$role_password" <<'SQL'
+          SELECT format(
+            'ALTER ROLE %I WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L',
+            :'role_name', :'role_password'
+          ) \gexec
+          SQL
+          }
+          ensure_login_role "$MIGRATION_ROLE" "$MIGRATION_PASSWORD"
+          ensure_login_role "$APP_ROLE" "$APP_PASSWORD"
+
+          # The migration role must exist before a new database is created so
+          # the database never starts life owned by the cluster admin.
+          if ! psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v migration_role="$MIGRATION_ROLE" \
+            -c 'CREATE DATABASE :"db_name" OWNER :"migration_role"'; then
+            if ! psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" \
+              -tAc "SELECT 1 FROM pg_catalog.pg_database WHERE datname = :'db_name'" | grep -qx 1; then
+              echo "failed to create or find the Preview database" >&2
+              exit 1
+            fi
+            echo "database=$DB_NAME already exists, reusing"
           fi
-          echo "::add-mask::$PR_DB_URL"
-          echo "url=$PR_DB_URL" >> "$GITHUB_OUTPUT"
-          echo "app database: ${PR_DB_URL%%\?*} (credentials hidden)"
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v migration_role="$MIGRATION_ROLE" \
+            -c 'ALTER DATABASE :"db_name" OWNER TO :"migration_role"'
+          legacy_object_count=$(psql "$PR_ADMIN_URL" -v ON_ERROR_STOP=1 -v migration_role="$MIGRATION_ROLE" -qAt <<'SQL'
+          SELECT count(*)
+          FROM pg_catalog.pg_class AS c
+          JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public'
+            AND c.relkind IN ('r', 'p', 'S', 'v', 'm', 'f')
+            AND c.relowner <> (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = :'migration_role')
+            AND NOT EXISTS (
+              SELECT 1
+              FROM pg_catalog.pg_depend AS dependency
+              JOIN pg_catalog.pg_extension AS extension
+                ON extension.oid = dependency.refobjid
+              WHERE dependency.classid = 'pg_catalog.pg_class'::regclass
+                AND dependency.objid = c.oid
+                AND dependency.deptype = 'e'
+            );
+          SQL
+          )
+          if [[ "$legacy_object_count" != "0" ]]; then
+            echo "existing Preview database contains objects with a different owner; refusing automatic ownership transfer" >&2
+            exit 1
+          fi
+
+          {
+            printf 'app-url=%s\n' "$APP_DB_URL"
+            printf 'migration-url=%s\n' "$MIGRATION_DB_URL"
+          } >> "$GITHUB_OUTPUT"
+          echo "prepared Preview database host=$DB_HOST database=$DB_NAME"
 
       - name: Run migrations
         env:
-          DATABASE_URL: ${{ steps.db.outputs.url }}
+          DATABASE_URL: ${{ steps.db.outputs.migration-url }}
           DATABASE_DRIVER: node
+          KEY_VAULTS_SECRET: ${{ secrets.PREVIEW_KEY_VAULTS_SECRET }}
+          DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
         run: bun run db:migrate
+
+      - name: Grant app database privileges
+        env:
+          ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
+          DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$DATABASE_SSL_CA" ]]; then
+            pg_ca_file="$RUNNER_TEMP/orvilo-preview-postgres-ca.crt"
+            printf '%s\n' "$DATABASE_SSL_CA" > "$pg_ca_file"
+            chmod 600 "$pg_ca_file"
+            ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" CA_FILE="$pg_ca_file" node -e '
+              const url = new URL(process.env.DATABASE_URL);
+              if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
+              url.searchParams.delete("uselibpqcompat");
+              url.searchParams.set("sslmode", "verify-full");
+              url.searchParams.set("sslrootcert", process.env.CA_FILE);
+              process.stdout.write(url.href);
+            ')
+          else
+            ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" node -e '
+              const url = new URL(process.env.DATABASE_URL);
+              if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
+              url.searchParams.delete("uselibpqcompat");
+              url.searchParams.delete("sslrootcert");
+              url.searchParams.set("sslmode", "require");
+              process.stdout.write(url.href);
+            ')
+          fi
+          echo "::add-mask::$ADMIN_URL"
+          PR_ADMIN_URL=$(node <<'NODE'
+          const url = new URL(process.env.ADMIN_URL);
+          if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname) {
+            throw new Error('PREVIEW_DB_ADMIN_URL must be a PostgreSQL URL with a hostname');
+          }
+          const databaseName = process.env.DB_NAME;
+          if (!/^orvilo_pr_[0-9]+$/.test(databaseName)) {
+            throw new Error('invalid Preview database identifier');
+          }
+          url.pathname = `/${encodeURIComponent(databaseName)}`;
+          url.searchParams.delete('uselibpqcompat');
+          process.stdout.write(url.href);
+          NODE
+          )
+          echo "::add-mask::$PR_ADMIN_URL"
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v app_role="$APP_ROLE" \
+            -c 'GRANT CONNECT ON DATABASE :"db_name" TO :"app_role"'
+          test_role_exists=$(psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v test_role="$TEST_ROLE" \
+            -qAt -c "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'test_role'")
+          if [[ "$test_role_exists" != "1" ]]; then
+            echo "restricted Preview CI role is missing" >&2
+            exit 1
+          fi
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v test_role="$TEST_ROLE" \
+            -c 'GRANT CONNECT ON DATABASE :"db_name" TO :"test_role"'
+          psql "$PR_ADMIN_URL" -v ON_ERROR_STOP=1 -v app_role="$APP_ROLE" -v test_role="$TEST_ROLE" <<'SQL'
+          GRANT USAGE ON SCHEMA public TO :"app_role";
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"app_role";
+          GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO :"app_role";
+          GRANT USAGE ON SCHEMA public TO :"test_role";
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"test_role";
+          GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO :"test_role";
+          SQL
+          echo "granted Preview database privileges host=$(node -e 'process.stdout.write(new URL(process.env.PR_ADMIN_URL).hostname)') database=$DB_NAME"
 
       - name: Set Vercel branch env DATABASE_URL
         env:
-          PR_DB_URL: ${{ steps.db.outputs.url }}
+          APP_DB_URL: ${{ steps.db.outputs.app-url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
-          curl -fsS -X POST \
+          echo "::add-mask::$APP_DB_URL"
+          response=$(curl -fsS -X POST \
             "https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env?upsert=true&teamId=${VERCEL_ORG_ID}" \
             -H "Authorization: Bearer ${VERCEL_TOKEN}" \
             -H 'Content-Type: application/json' \
-            -d "$(jq -n --arg v "$PR_DB_URL" --arg b "$HEAD_BRANCH" '{
+            -d "$(jq -n --arg v "$APP_DB_URL" --arg b "$HEAD_BRANCH" '{
               key: "DATABASE_URL",
               value: $v,
               type: "encrypted",
               target: ["preview"],
               gitBranch: $b
-            }')" | jq -r '.key + " → preview@" + .gitBranch'
+            }')")
+          if ! jq -e --arg b "$HEAD_BRANCH" \
+            '.key == "DATABASE_URL" and .gitBranch == $b and (((.target // []) | index("preview")) != null)' \
+            <<< "$response" > /dev/null; then
+            echo "Vercel did not confirm the branch-scoped DATABASE_URL" >&2
+            exit 1
+          fi
+          echo "set branch-scoped DATABASE_URL for branch=$HEAD_BRANCH database=$DB_NAME"
 
-      - name: Redeploy latest preview deployment for branch
-        # 首个部署可能早于 env 写入；尽量触发一次 redeploy 让它吃到新 DATABASE_URL。
-        # 还没有部署就跳过 —— 下一次 push 自然会用到新 env。
+      - name: Find and redeploy current preview deployment
         env:
-          PR_DB_URL: ${{ steps.db.outputs.url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
-          PROJECT_NAME=$(curl -fsS \
-            "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}?teamId=${VERCEL_ORG_ID}" \
-            -H "Authorization: Bearer ${VERCEL_TOKEN}" | jq -r '.name')
-          DEPLOYMENT_ID=$(curl -fsS \
-            "https://api.vercel.com/v6/deployments?projectId=${VERCEL_PROJECT_ID}&teamId=${VERCEL_ORG_ID}&meta-githubCommitRef=${HEAD_BRANCH}&target=preview&limit=1" \
-            -H "Authorization: Bearer ${VERCEL_TOKEN}" | jq -r '.deployments[0].uid // empty')
-          if [ -z "$DEPLOYMENT_ID" ]; then
-            echo "no existing preview deployment for $HEAD_BRANCH yet; nothing to redeploy"
-            exit 0
+          : "${HEAD_BRANCH:?Preview branch is required}"
+          : "${HEAD_SHA:?Preview head SHA is required}"
+          poll_attempts=40
+          poll_interval=15
+          deployment_json=''
+          echo "polling Vercel for branch=$HEAD_BRANCH sha=$HEAD_SHA (timeout 10m)"
+          for ((attempt = 1; attempt <= poll_attempts; attempt++)); do
+            deployments=$(curl -fsS --get \
+              "https://api.vercel.com/v6/deployments" \
+              --data-urlencode "projectId=${VERCEL_PROJECT_ID}" \
+              --data-urlencode "teamId=${VERCEL_ORG_ID}" \
+              --data-urlencode 'target=preview' \
+              --data-urlencode "meta-githubCommitRef=${HEAD_BRANCH}" \
+              --data-urlencode "meta-githubCommitSha=${HEAD_SHA}" \
+              --data-urlencode 'limit=100' \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}")
+            deployment_json=$(jq -c --arg branch "$HEAD_BRANCH" --arg sha "$HEAD_SHA" '
+              [.deployments[]?
+                | select(.target == "preview")
+                | select((.meta.githubCommitRef // "") == $branch)
+                | select((.meta.githubCommitSha // "") == $sha)
+              ]
+              | sort_by(.createdAt // 0)
+              | if length == 0 then empty else .[-1] end
+            ' <<< "$deployments")
+            if [[ -n "$deployment_json" ]]; then
+              break
+            fi
+            if (( attempt < poll_attempts )); then
+              sleep "$poll_interval"
+            fi
+          done
+          if [[ -z "$deployment_json" ]]; then
+            echo "no Vercel Preview deployment matched branch=$HEAD_BRANCH sha=$HEAD_SHA within 10m" >&2
+            exit 1
           fi
-          curl -fsS -X POST \
+
+          deployment_id=$(jq -er '.uid // .id // empty' <<< "$deployment_json")
+          deployment_name=$(jq -er '.name // empty' <<< "$deployment_json")
+          deployment_state=$(jq -r '.state // "unknown"' <<< "$deployment_json")
+          echo "matched Vercel deployment id=$deployment_id state=$deployment_state branch=$HEAD_BRANCH sha=$HEAD_SHA"
+
+          redeploy_response=$(curl -fsS -X POST \
             "https://api.vercel.com/v13/deployments?teamId=${VERCEL_ORG_ID}&forceNew=1" \
             -H "Authorization: Bearer ${VERCEL_TOKEN}" \
             -H 'Content-Type: application/json' \
-            -d "$(jq -n --arg name "$PROJECT_NAME" --arg id "$DEPLOYMENT_ID" '{
+            -d "$(jq -n --arg name "$deployment_name" --arg id "$deployment_id" '{
               name: $name,
               deploymentId: $id,
               target: "preview"
-            }')" | jq -r '"redeployed: " + .url'
+            }')")
+          if ! jq -e '(.uid // .id // .url) != null' <<< "$redeploy_response" > /dev/null; then
+            echo "Vercel did not confirm the redeploy request" >&2
+            exit 1
+          fi
+          redeployed_id=$(jq -r '.uid // .id // "accepted"' <<< "$redeploy_response")
+          echo "redeploy requested for deployment=$deployment_id new_deployment=$redeployed_id"

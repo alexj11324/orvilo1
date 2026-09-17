@@ -4,6 +4,7 @@ export type RedisConfig = {
   password?: string;
   prefix: string;
   tls: boolean;
+  tlsCA?: string;
   url: string;
   username?: string;
 };

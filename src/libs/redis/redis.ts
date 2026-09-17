@@ -36,7 +36,7 @@ export class IoRedisRedisProvider implements BaseRedisProvider {
       lazyConnect: true,
       maxRetriesPerRequest: 2,
       password: this.config.password,
-      tls: this.config.tls ? {} : undefined,
+      tls: this.config.tls ? { ca: this.config.tlsCA } : undefined,
       username: this.config.username,
     });
 

@@ -220,15 +220,51 @@ vercel_env() {
 
 # try_pg URL SQL — run SQL against a specific connection URL (psql → bun+pg).
 try_pg() {
-  local url="$1" sql="$2"
+  local url="$1" sql="$2" ca_file=""
   if command -v psql >/dev/null 2>&1; then
-    psql "$url" -v ON_ERROR_STOP=1 -tAc "$sql"
-    return
+    local psql_url
+    if [[ -n "${DATABASE_SSL_CA:-}" ]]; then
+      ca_file=$(mktemp)
+      CA_VALUE="$DATABASE_SSL_CA" node -e '
+        process.stdout.write(process.env.CA_VALUE.replaceAll("\\n", "\n"));
+      ' > "$ca_file"
+      chmod 600 "$ca_file"
+    fi
+    psql_url=$(DB_URL="$url" DB_HOST="${PREVIEW_DB_TLS_HOST:-}" CA_FILE="$ca_file" node -e '
+      const parsed = new URL(process.env.DB_URL);
+      if (process.env.DB_HOST) parsed.hostname = process.env.DB_HOST;
+      parsed.searchParams.delete("uselibpqcompat");
+      if (process.env.CA_FILE) {
+        parsed.searchParams.set("sslmode", "verify-full");
+        parsed.searchParams.set("sslrootcert", process.env.CA_FILE);
+      }
+      process.stdout.write(parsed.toString());
+    ')
+    if psql "$psql_url" -v ON_ERROR_STOP=1 -tAc "$sql"; then
+      [[ -z "$ca_file" ]] || rm -f "$ca_file"
+      return 0
+    fi
+    local status=$?
+    [[ -z "$ca_file" ]] || rm -f "$ca_file"
+    return "$status"
   fi
   if [[ -d node_modules ]]; then
-    PG_SQL="$sql" DB_URL="$url" bun -e '
+    PG_SQL="$sql" DB_URL="$url" DB_HOST="${PREVIEW_DB_TLS_HOST:-}" \
+      DB_CA="${DATABASE_SSL_CA:-}" bun -e '
       import pg from "pg";
-      const c = new pg.Client({ connectionString: process.env.DB_URL });
+      const url = new URL(process.env.DB_URL);
+      if (process.env.DB_HOST) url.hostname = process.env.DB_HOST;
+      let ssl;
+      if (process.env.DB_CA) {
+        for (const key of ["sslmode", "sslcert", "sslkey", "sslrootcert", "uselibpqcompat"]) {
+          url.searchParams.delete(key);
+        }
+        ssl = {
+          ca: process.env.DB_CA.replaceAll("\\n", "\n"),
+          rejectUnauthorized: true,
+        };
+      }
+      const c = new pg.Client({ connectionString: url.href, ssl });
       await c.connect();
       await c.query(process.env.PG_SQL);
       await c.end();
@@ -241,18 +277,23 @@ try_pg() {
 # pg_admin SQL — run SQL against PREVIEW_DB_ADMIN_URL.
 pg_admin() { try_pg "$PREVIEW_DB_ADMIN_URL" "$1"; }
 
-# app_db_url DBNAME — derive an app connection string from the admin URL.
-app_db_url() {
+# admin_db_url DBNAME — derive an admin URL for one database without logging it.
+admin_db_url() {
   local url
-  url=$(echo "$PREVIEW_DB_ADMIN_URL" | sed -E "s|/[^/?]+(\?.*)?\$|/$1\1|")
-  # pg-connection-string treats sslmode=require as verify-full unless its
-  # libpq-compatible mode is requested. The preview database uses a
-  # self-signed certificate, so retain TLS while disabling CA verification.
+  url=$(ADMIN_URL="$PREVIEW_DB_ADMIN_URL" DB_NAME="$1" node -e '
+    const parsed = new URL(process.env.ADMIN_URL);
+    parsed.pathname = `/${process.env.DB_NAME}`;
+    process.stdout.write(parsed.toString());
+  ')
+  # The Node runtime receives DATABASE_SSL_CA separately. Keep the compatibility
+  # flag on its URL; psql removes that flag and verifies the private CA in try_pg.
   if [[ "$url" == *"sslmode=require"* && "$url" != *"uselibpqcompat="* ]]; then
     if [[ "$url" == *"?"* ]]; then url="${url}&uselibpqcompat=true"; else url="${url}?uselibpqcompat=true"; fi
   fi
   echo "$url"
 }
+
+gen_secret() { openssl rand -base64 32; }
 
 banner "Orvilo 云开发环境迁移"
 
@@ -305,7 +346,7 @@ set_secret VERCEL_AUTOMATION_BYPASS_SECRET "$VERCEL_AUTOMATION_BYPASS_SECRET"
 stage "远程 ParadeDB（pgvector + pg_search）"
 say "普通 Neon/Supabase 不行 —— 需要 paradedb/paradedb 镜像（pg_search）。"
 say "当前已 provision：OCI Always-Free 主机上独立容器 orvilo-preview-pg"
-say "（paradedb/paradedb:latest-pg17，公网端口 25432，SSL=on 自签证书）。"
+say "（paradedb/paradedb:latest-pg17，公网端口 25432，SSL=on 私有 CA 证书）。"
 say "若要重建或迁到别的平台，参考命令："
 say "    docker run -d --name orvilo-preview-pg --restart always --memory 2g \\"
 say "      -p 25432:5432 -e POSTGRES_DB=orvilo_preview \\"
@@ -318,57 +359,95 @@ say "      -c ssl_key_file=/pgssl/server.key \\"
 say "      -c shared_buffers=256MB -c max_connections=50"
 note "记得同步开 NSG/安全组 + 主机防火墙对应端口"
 ask_secret PREVIEW_DB_ADMIN_URL "粘贴 admin 连接串（指到 postgres 库，如 postgresql://postgres:PASS@host:25432/postgres?sslmode=require）："
+ask_secret DATABASE_SSL_CA "粘贴 PostgreSQL 私有 CA PEM（可用 \\n 表示换行）："
+[[ -n "$DATABASE_SSL_CA" ]] || { warn "DATABASE_SSL_CA 不能为空"; exit 1; }
+ask PREVIEW_DB_TLS_HOST "PostgreSQL 证书里的 DNS 主机名："
+[[ -n "$PREVIEW_DB_TLS_HOST" ]] || { warn "PREVIEW_DB_TLS_HOST 不能为空"; exit 1; }
+PREVIEW_DB_ADMIN_URL=$(DATABASE_URL="$PREVIEW_DB_ADMIN_URL" DATABASE_HOST="$PREVIEW_DB_TLS_HOST" node -e '
+  const url = new URL(process.env.DATABASE_URL);
+  url.hostname = process.env.DATABASE_HOST;
+  url.searchParams.delete("uselibpqcompat");
+  url.searchParams.set("sslmode", "require");
+  process.stdout.write(url.href);
+')
 
-say "创建 orvilo_preview / orvilo_production 两个数据库…"
-for db in orvilo_preview orvilo_production; do
-  if pg_admin "CREATE DATABASE \"$db\"" >/dev/null 2>&1; then
-    printf '  %s✓ created%s %s\n' "$GREEN" "$RESET" "$db"
-  elif try_pg "$(app_db_url "$db")" "SELECT 1" >/dev/null 2>&1; then
-    note "  $db 已存在，复用"
+say "创建 orvilo_preview 数据库…"
+if pg_admin 'CREATE DATABASE "orvilo_preview"' >/dev/null 2>&1; then
+  printf '  %s✓ created%s orvilo_preview\n' "$GREEN" "$RESET"
+elif try_pg "$(admin_db_url orvilo_preview)" "SELECT 1" >/dev/null 2>&1; then
+  note "  orvilo_preview 已存在，复用"
+else
+  warn "无法自动建库。请在 provider 的 SQL 控制台执行 CREATE DATABASE orvilo_preview;"
+  SKIPPED+=("CREATE DATABASE orvilo_preview")
+fi
+
+PREVIEW_DB_MIGRATION_URL=$(admin_db_url orvilo_preview)
+PREVIEW_KEY_VAULTS_SECRET=$(_existing KEY_VAULTS_SECRET || true)
+[[ -n "$PREVIEW_KEY_VAULTS_SECRET" ]] || PREVIEW_KEY_VAULTS_SECRET=$(gen_secret)
+if [[ -d node_modules ]] && confirm "现在对 Preview 库跑 bun run db:migrate？"; then
+  if DATABASE_URL="$PREVIEW_DB_MIGRATION_URL" DATABASE_DRIVER=node \
+    DATABASE_SSL_CA="$DATABASE_SSL_CA" KEY_VAULTS_SECRET="$PREVIEW_KEY_VAULTS_SECRET" \
+    bun run db:migrate; then
+    printf '  %s✓ migrated%s preview\n' "$GREEN" "$RESET"
   else
-    warn "无法自动建库。请在 provider 的 SQL 控制台执行："
-    say "    CREATE DATABASE $db;"
-    SKIPPED+=("CREATE DATABASE $db")
+    warn "Preview 迁移失败 —— 之后用 db-migrate.yml workflow 补跑"
+    SKIPPED+=("migrate preview database")
   fi
-done
-
-PREVIEW_DATABASE_URL=$(app_db_url orvilo_preview)
-PRODUCTION_DATABASE_URL=$(app_db_url orvilo_production)
-
-if [[ -d node_modules ]] && confirm "现在对两个库跑 bun run db:migrate？"; then
-  for pair in "preview:$PREVIEW_DATABASE_URL" "production:$PRODUCTION_DATABASE_URL"; do
-    name="${pair%%:*}"; url="${pair#*:}"
-    say "迁移 $name …"
-    if DATABASE_URL="$url" DATABASE_DRIVER=node bun run db:migrate; then
-      printf '  %s✓ migrated%s %s\n' "$GREEN" "$RESET" "$name"
-    else
-      warn "$name 迁移失败 —— 之后用 db-migrate.yml workflow 补跑"
-      SKIPPED+=("migrate $name database")
-    fi
-  done
 else
   warn "跳过迁移（node_modules 不存在或选择跳过）。之后可用 .github/workflows/db-migrate.yml 补跑"
-  SKIPPED+=("db:migrate preview + production")
+  SKIPPED+=("db:migrate preview")
 fi
+say "为应用创建只对 orvilo_preview 有 CONNECT/表与序列读写权限的非管理员 LOGIN role。"
+ask_secret PREVIEW_DATABASE_URL "粘贴该最小权限角色的 Preview 连接串："
+ask_secret PREVIEW_TEST_DATABASE_URL "粘贴受限 CI role 的 Preview 连接串："
+ADMIN_USERNAME=$(ADMIN_URL="$PREVIEW_DB_ADMIN_URL" node -e 'process.stdout.write(new URL(process.env.ADMIN_URL).username)')
+APP_USERNAME=$(APP_URL="$PREVIEW_DATABASE_URL" node -e 'process.stdout.write(new URL(process.env.APP_URL).username)')
+[[ -n "$APP_USERNAME" && "$APP_USERNAME" != "$ADMIN_USERNAME" ]] || {
+  warn "Preview 应用连接串不能继续使用管理员角色"
+  exit 1
+}
+TEST_USERNAME=$(APP_URL="$PREVIEW_TEST_DATABASE_URL" node -e 'process.stdout.write(new URL(process.env.APP_URL).username)')
+[[ -n "$TEST_USERNAME" && "$TEST_USERNAME" != "$ADMIN_USERNAME" && "$TEST_USERNAME" != "$APP_USERNAME" ]] || {
+  warn "Preview CI 连接串必须使用独立的非管理员角色"
+  exit 1
+}
+RESTRICTED_ROLE_CHECK="DO \$role_check\$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_catalog.pg_roles
+    WHERE rolname = current_user
+      AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)
+  ) OR has_schema_privilege(current_user, 'public', 'CREATE') THEN
+    RAISE EXCEPTION 'current role is not restricted';
+  END IF;
+END
+\$role_check\$;"
+try_pg "$PREVIEW_DATABASE_URL" "$RESTRICTED_ROLE_CHECK" >/dev/null || {
+  warn "Preview 应用连接串无法连接，或该角色仍有管理员/schema CREATE 权限"
+  exit 1
+}
+try_pg "$PREVIEW_TEST_DATABASE_URL" "$RESTRICTED_ROLE_CHECK" >/dev/null || {
+  warn "Preview CI 连接串无法连接，或该角色仍有管理员/schema CREATE 权限"
+  exit 1
+}
 
 # ── Stage 4 · Redis ─────────────────────────────────────────────────────────
 stage "Redis（与 ParadeDB 同机的独立容器）"
-say "当前已 provision：OCI 主机上 orvilo-preview-redis（redis:7-alpine，"
-say "公网端口 26379，--requirepass 强密码，AOF 持久化）。"
-say "应用用 ioredis 裸 TCP，REDIS_TLS 只能配 rejectUnauthorized=true ——"
-say "自签证书会拒连，所以 preview 用明文 + 强密码（仅存缓存类数据）。"
-say "重建命令："
-say "    docker run -d --name orvilo-preview-redis --restart always \\"
-say "      --memory 256m -p 26379:6379 -v orvilo-preview-redisdata:/data \\"
-say "      redis:7-alpine redis-server --requirepass <strong> --appendonly yes"
-ask_secret REDIS_URL "粘贴 Redis URL（redis://default:<pass>@<host>:26379）："
+say "公网 Redis 必须只开放 TLS 端口，并让应用固定信任专用 CA。"
+say "不要把带密码的 redis:// 明文端口暴露到公网。"
+say "推荐让 TLS 终止层监听公网 26380，并只在 Docker 内网连接 Redis 6379。"
+say "切换验证通过后，移除 Redis 容器的公网 26379 映射及对应防火墙/NSG 规则。"
+ask_secret REDIS_URL "粘贴 Redis TLS URL（rediss://default:<pass>@<host>:26380）："
+ask_secret REDIS_TLS_CA "粘贴 Redis CA PEM（可用 \\n 表示换行）："
+[[ "$REDIS_URL" == rediss://* ]] || { warn "REDIS_URL 必须使用 rediss://"; exit 1; }
+[[ -n "$REDIS_TLS_CA" ]] || { warn "REDIS_TLS_CA 不能为空"; exit 1; }
 note "QStash 已跳过 —— agent 异步运行时正迁往 Hatchet，不配 QStash 时步骤同步执行。"
 
 # ── Stage 5 · Cloudflare R2 ─────────────────────────────────────────────────
 stage "Cloudflare R2（替代 RustFS）"
 open_url "https://dash.cloudflare.com/?to=/:account/r2/new"
-step "建两个 bucket：orvilo-preview、orvilo-production"
-step "R2 → Manage R2 API Tokens → Create API Token（Object Read & Write，限定这两个 bucket）"
+step "建立 bucket：orvilo-preview"
+step "R2 → Manage R2 API Tokens → Create API Token（Object Read & Write，只限定 orvilo-preview）"
 step "记下 Account ID（bucket 页 URL 里有）"
 ask R2_ACCOUNT_ID "Account ID："
 ask_secret S3_ACCESS_KEY_ID "R2 Access Key ID："
@@ -376,58 +455,41 @@ ask_secret S3_SECRET_ACCESS_KEY "R2 Secret Access Key："
 S3_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
 # ── Stage 6 · 生成应用密钥 ──────────────────────────────────────────────────
-stage "生成应用密钥（preview / production 各一套）"
-gen_secret() { openssl rand -base64 32; }
-PREVIEW_AUTH_SECRET=$(gen_secret)
-PROD_AUTH_SECRET=$(gen_secret)
-PREVIEW_KEY_VAULTS_SECRET=$(gen_secret)
-PROD_KEY_VAULTS_SECRET=$(gen_secret)
+stage "生成 Preview 应用密钥"
+PREVIEW_AUTH_SECRET=$(_existing AUTH_SECRET || true)
+[[ -n "$PREVIEW_AUTH_SECRET" ]] || PREVIEW_AUTH_SECRET=$(gen_secret)
 say "生成 JWKS（OIDC 签名密钥对）…"
-PREVIEW_JWKS_KEY=$(node scripts/generate-oidc-jwk.mjs 2>/dev/null | head -n1)
-PROD_JWKS_KEY=$(node scripts/generate-oidc-jwk.mjs 2>/dev/null | head -n1)
-if [[ -z "$PREVIEW_JWKS_KEY" || -z "$PROD_JWKS_KEY" ]]; then
-  warn "JWKS 生成失败（缺依赖就先 pnpm install）；留空，之后手动跑 node scripts/generate-oidc-jwk.mjs"
-  SKIPPED+=("JWKS_KEY ×2")
+PREVIEW_JWKS_KEY=$(_existing JWKS_KEY || true)
+if [[ -z "$PREVIEW_JWKS_KEY" ]]; then
+  if generated_jwks=$(node scripts/generate-oidc-jwk.mjs 2>/dev/null | head -n1); then
+    PREVIEW_JWKS_KEY="$generated_jwks"
+  else
+    warn "JWKS 生成失败（缺依赖就先 pnpm install）；之后手动跑 node scripts/generate-oidc-jwk.mjs"
+    SKIPPED+=("JWKS_KEY")
+  fi
 fi
-printf '  %s✓%s 已生成 AUTH_SECRET / KEY_VAULTS_SECRET / JWKS_KEY 各两套\n' "$GREEN" "$RESET"
+printf '  %s✓%s Preview AUTH_SECRET / KEY_VAULTS_SECRET 已就绪\n' "$GREEN" "$RESET"
 
 # ── Stage 7 · 写入 Vercel env ───────────────────────────────────────────────
 stage "写入 Vercel 环境变量"
+say "只写 Preview scope；production 凭据必须走独立发布流程。"
 say "Preview 不写 APP_URL —— VERCEL_BRANCH_URL 会自动解析出稳定的分支域名。"
-for t in preview production; do
-  say "── scope: $t"
-  if [[ "$t" == preview ]]; then
-    vercel_env DATABASE_URL "$PREVIEW_DATABASE_URL" preview
-    vercel_env DATABASE_DRIVER node preview
-    vercel_env REDIS_URL "$REDIS_URL" preview
-    vercel_env REDIS_PREFIX orvilo-preview preview
-    vercel_env REDIS_TLS 0 preview
-    vercel_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID" preview
-    vercel_env S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY" preview
-    vercel_env S3_ENDPOINT "$S3_ENDPOINT" preview
-    vercel_env S3_BUCKET orvilo-preview preview
-    vercel_env S3_REGION auto preview
-    vercel_env S3_SET_ACL 0 preview
-    vercel_env AUTH_SECRET "$PREVIEW_AUTH_SECRET" preview
-    vercel_env KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET" preview
-    [[ -n "$PREVIEW_JWKS_KEY" ]] && vercel_env JWKS_KEY "$PREVIEW_JWKS_KEY" preview
-  else
-    vercel_env DATABASE_URL "$PRODUCTION_DATABASE_URL" production
-    vercel_env DATABASE_DRIVER node production
-    vercel_env REDIS_URL "$REDIS_URL" production
-    vercel_env REDIS_PREFIX orvilo-prod production
-    vercel_env REDIS_TLS 0 production
-    vercel_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID" production
-    vercel_env S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY" production
-    vercel_env S3_ENDPOINT "$S3_ENDPOINT" production
-    vercel_env S3_BUCKET orvilo-production production
-    vercel_env S3_REGION auto production
-    vercel_env S3_SET_ACL 0 production
-    vercel_env AUTH_SECRET "$PROD_AUTH_SECRET" production
-    vercel_env KEY_VAULTS_SECRET "$PROD_KEY_VAULTS_SECRET" production
-    [[ -n "$PROD_JWKS_KEY" ]] && vercel_env JWKS_KEY "$PROD_JWKS_KEY" production
-  fi
-done
+vercel_env DATABASE_URL "$PREVIEW_DATABASE_URL" preview
+vercel_env DATABASE_DRIVER node preview
+vercel_env DATABASE_SSL_CA "$DATABASE_SSL_CA" preview
+vercel_env REDIS_URL "$REDIS_URL" preview
+vercel_env REDIS_PREFIX orvilo-preview preview
+vercel_env REDIS_TLS 1 preview
+vercel_env REDIS_TLS_CA "$REDIS_TLS_CA" preview
+vercel_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID" preview
+vercel_env S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY" preview
+vercel_env S3_ENDPOINT "$S3_ENDPOINT" preview
+vercel_env S3_BUCKET orvilo-preview preview
+vercel_env S3_REGION auto preview
+vercel_env S3_SET_ACL 0 preview
+vercel_env AUTH_SECRET "$PREVIEW_AUTH_SECRET" preview
+vercel_env KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET" preview
+[[ -n "$PREVIEW_JWKS_KEY" ]] && vercel_env JWKS_KEY "$PREVIEW_JWKS_KEY" preview
 
 # ── Stage 8 · GitHub secrets + variables ────────────────────────────────────
 stage "写入 GitHub secrets / variables"
@@ -435,16 +497,27 @@ set_secret VERCEL_TOKEN "$VERCEL_TOKEN"
 set_secret VERCEL_ORG_ID "$VERCEL_ORG_ID"
 set_secret VERCEL_PROJECT_ID "$VERCEL_PROJECT_ID"
 set_secret PREVIEW_DATABASE_URL "$PREVIEW_DATABASE_URL"
+set_secret PREVIEW_TEST_DATABASE_URL "$PREVIEW_TEST_DATABASE_URL"
 set_secret PREVIEW_DB_ADMIN_URL "$PREVIEW_DB_ADMIN_URL"
-set_secret PRODUCTION_DATABASE_URL "$PRODUCTION_DATABASE_URL"
+set_secret PREVIEW_DATABASE_SSL_CA "$DATABASE_SSL_CA"
+set_secret PREVIEW_KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET"
+set_var PREVIEW_DB_TLS_HOST "$PREVIEW_DB_TLS_HOST"
+if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+  configured_secrets=$(gh secret list --json name --jq '.[].name')
+  for required_secret in ORACLE_HOST ORACLE_SSH_KEY ORACLE_SSH_KNOWN_HOSTS; do
+    if ! grep -qx "$required_secret" <<< "$configured_secrets"; then
+      warn "缺少 GitHub secret $required_secret；Preview Smoke/E2E 不会启动"
+      SKIPPED+=("GitHub secret $required_secret")
+    fi
+  done
+fi
 say "可选开关：每 PR 独立数据库（preview-db.yml / preview-cleanup.yml）"
 if confirm "现在开启 PREVIEW_EPHEMERAL_DB_ENABLED？"; then
   set_var PREVIEW_EPHEMERAL_DB_ENABLED true
 else
   note "之后想开：gh variable set PREVIEW_EPHEMERAL_DB_ENABLED --body true"
 fi
-say "建议：GitHub → Settings → Environments → 建 production environment"
-say "      并加 required reviewers（db-migrate.yml 的 production 门禁用它）"
+say "Production 后续单独配置：独立数据库角色、独立 R2 token，并在 GitHub environment 加 required reviewers。"
 
 # ── Stage 9 · 验证 ──────────────────────────────────────────────────────────
 stage "验证"
@@ -458,9 +531,13 @@ say "之后本机开发不再需要 Docker：.env 里改成云端值即可（见
 if confirm "把 preview 的云端连接写进本地 .env（Mode A 云开发）？"; then
   write_env DATABASE_URL "$PREVIEW_DATABASE_URL"
   write_env DATABASE_DRIVER node
+  write_env DATABASE_SSL_CA "$DATABASE_SSL_CA"
+  write_env KEY_VAULTS_SECRET "$PREVIEW_KEY_VAULTS_SECRET"
+  write_env AUTH_SECRET "$PREVIEW_AUTH_SECRET"
   write_env REDIS_URL "$REDIS_URL"
   write_env REDIS_PREFIX orvilo-preview
-  write_env REDIS_TLS 0
+  write_env REDIS_TLS 1
+  write_env REDIS_TLS_CA "$REDIS_TLS_CA"
   write_env S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID"
   write_env S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY"
   write_env S3_ENDPOINT "$S3_ENDPOINT"

@@ -1,7 +1,7 @@
 import debug from 'debug';
 import Redis from 'ioredis';
 
-import { redisEnv } from '@/envs/redis';
+import { getRedisConfig, redisEnv } from '@/envs/redis';
 import { isRedisDisabledByEnv } from '@/libs/redis';
 
 const log = debug('lobe-server:agent-runtime:redis');
@@ -32,6 +32,7 @@ const getRedisConnectionDescription = (url: string): string => {
 export const createAgentRuntimeRedisClient = (url?: string): Redis | null => {
   if (isRedisDisabledByEnv()) return null;
 
+  const config = getRedisConfig();
   const redisUrl = url || getRedisUrl();
 
   if (!redisUrl) {
@@ -45,7 +46,9 @@ export const createAgentRuntimeRedisClient = (url?: string): Redis | null => {
   timing('Redis client creating at %d', createStart);
 
   const client = new Redis(redisUrl, {
+    keyPrefix: config.prefix ? `${config.prefix}:` : undefined,
     maxRetriesPerRequest: 3,
+    tls: config.tls ? { ca: config.tlsCA } : undefined,
   });
 
   client.on('connect', () => {

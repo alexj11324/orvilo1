@@ -15,6 +15,7 @@ const buildRedisConfig = (): RedisConfig | null => {
     password: process.env.REDIS_PASSWORD,
     prefix: process.env.REDIS_PREFIX ?? 'lobe-chat-test',
     tls: process.env.REDIS_TLS === 'true',
+    tlsCA: process.env.REDIS_TLS_CA,
     url,
     username: process.env.REDIS_USERNAME,
   };
@@ -22,7 +23,7 @@ const buildRedisConfig = (): RedisConfig | null => {
 
 const loadRedisProvider = async () => (await import('./redis')).IoRedisRedisProvider;
 
-const createMockedProvider = async () => {
+const createMockedProvider = async (configOverrides: Partial<RedisConfig> = {}) => {
   const instances: Array<{ options: Record<PropertyKey, unknown>; url: string }> = [];
 
   const createPipelineMock = () => {
@@ -116,6 +117,7 @@ const createMockedProvider = async () => {
     prefix: 'mock',
     tls: false,
     url: 'redis://localhost:6379',
+    ...configOverrides,
   });
 
   await provider.initialize();
@@ -181,6 +183,15 @@ describe('mocked', () => {
       },
       url: 'redis://localhost:6379',
     });
+
+    await provider.disconnect();
+  });
+
+  it('passes the pinned CA to ioredis for TLS connections', async () => {
+    const tlsCA = '-----BEGIN CERTIFICATE-----\npreview-ca\n-----END CERTIFICATE-----';
+    const { instances, provider } = await createMockedProvider({ tls: true, tlsCA });
+
+    expect(instances[0]?.options).toMatchObject({ tls: { ca: tlsCA } });
 
     await provider.disconnect();
   });

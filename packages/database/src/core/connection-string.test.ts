@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeNodePostgresConnectionString } from './connection-string';
+import {
+  normalizeNodePostgresConnectionString,
+  removeNodePostgresSslParameters,
+} from './connection-string';
 
 describe('normalizeNodePostgresConnectionString', () => {
   it('adds libpq compatibility for an explicitly allowed Preview URL', () => {
@@ -28,5 +31,15 @@ describe('normalizeNodePostgresConnectionString', () => {
     expect(
       normalizeNodePostgresConnectionString(`${connectionString}&uselibpqcompat=false`, true),
     ).toBe(`${connectionString}&uselibpqcompat=false`);
+  });
+});
+
+describe('removeNodePostgresSslParameters', () => {
+  it('removes URL SSL overrides while preserving other parameters and credentials', () => {
+    expect(
+      removeNodePostgresSslParameters(
+        'postgresql://user:p%40ss@example.com/db?sslmode=require&uselibpqcompat=true&connect_timeout=10',
+      ),
+    ).toBe('postgresql://user:p%40ss@example.com/db?connect_timeout=10');
   });
 });

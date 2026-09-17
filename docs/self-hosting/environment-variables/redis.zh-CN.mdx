@@ -45,6 +45,16 @@ LobeHub 使用 Redis 作为高性能缓存和会话存储服务。配置 Redis �
   云服务商提供的 Redis 服务通常需要启用 TLS 以确保数据传输安全。
 </Callout>
 
+### `REDIS_TLS_CA`
+
+- 类型：可选
+- 描述：用于验证私有或自托管 Redis TLS 端点的 PEM CA 证书
+- 默认值：系统信任库
+- 示例：`-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----`
+
+字面量 `\n` 会被转换为换行，因此可以把证书保存到只支持单行值的环境变量服务中。Redis
+连接经过公网时应保持证书验证开启。
+
 ### `REDIS_PASSWORD`
 
 - 类型：可选

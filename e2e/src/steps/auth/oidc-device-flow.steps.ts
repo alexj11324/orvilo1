@@ -211,15 +211,9 @@ Then('CLI 应取得 access token 与 refresh token', async function (this: Custo
   const issuerUrl = new URL(claims.iss!);
   expect(issuerUrl.protocol).toBe(new URL(verificationUrl).protocol);
   expect(issuerUrl.pathname).toBe('/oidc');
-
-  // Vercel may serve the confirmation page through a deployment URL while
-  // the provider advertises the stable branch alias as its issuer. Keep
-  // exact-origin validation for non-Vercel environments, where both values
-  // are expected to come from the same configured application URL.
-  if (!verificationUrl.includes('.vercel.app')) {
-    expect(issuerUrl.origin).toBe(verificationOrigin);
-  } else {
-    expect(issuerUrl.hostname).toMatch(/\.vercel\.app$/);
-  }
+  // The verification URI is emitted by the same provider as the token, so it
+  // remains stable even when the browser later lands on an immutable Vercel
+  // deployment URL. Require that exact provider origin.
+  expect(issuerUrl.origin).toBe(verificationOrigin);
   expect(claims.sub).toBe(TEST_USER.id);
 });

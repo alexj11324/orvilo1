@@ -18,3 +18,16 @@ export const normalizeNodePostgresConnectionString = (
 
   return `${connectionString}${connectionString.includes('?') ? '&' : '?'}uselibpqcompat=true`;
 };
+
+/**
+ * node-postgres replaces an explicit `ssl` object when SSL parameters are also
+ * present in the connection string. Remove only those parameters when a pinned
+ * CA is supplied separately, preserving every other connection option.
+ */
+export const removeNodePostgresSslParameters = (connectionString: string): string => {
+  const url = new URL(connectionString);
+  for (const key of ['sslmode', 'sslcert', 'sslkey', 'sslrootcert', 'uselibpqcompat']) {
+    url.searchParams.delete(key);
+  }
+  return url.toString();
+};

@@ -2,7 +2,8 @@ name: Preview Smoke
 
 # Vercel Git integration 每次部署都会产生 deployment_status 事件；
 # 只在 Preview 部署成功后对部署 URL 跑 @smoke 测试。
-# 需要 secrets：PREVIEW_DATABASE_URL、VERCEL_AUTOMATION_BYPASS_SECRET、
+# 需要 secrets：PREVIEW_DATABASE_URL、VERCEL_TOKEN、VERCEL_ORG_ID、
+# VERCEL_PROJECT_ID、VERCEL_AUTOMATION_BYPASS_SECRET、
 # ORACLE_HOST、ORACLE_SSH_KEY、ORACLE_SSH_KNOWN_HOSTS
 # （见 .env.example.preview 末尾的 CI-side secrets 一节）。
 
@@ -12,6 +13,10 @@ on:
     inputs:
       base_url:
         description: Existing orvilo1 Vercel deployment URL to validate
+        required: true
+        type: string
+      deployment_sha:
+        description: Full Git commit SHA used to build that deployment
         required: true
         type: string
 
@@ -35,23 +40,65 @@ jobs:
     timeout-minutes: 20
     env:
       BASE_URL: ${{ inputs.base_url || github.event.deployment_status.target_url }}
-      DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - name: Validate manual Preview URL
         if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ inputs.deployment_sha }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
+          set -euo pipefail
           preview_url="${BASE_URL%/}"
           if [[ ! "$preview_url" =~ ^https://orvilo1-[a-z0-9]+-alexs-projects-078b8b0b\.vercel\.app$ ]]; then
             echo "base_url must be an immutable orvilo1 deployment URL" >&2
             exit 1
           fi
+          if [[ ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "deployment_sha must be a full lowercase Git commit SHA" >&2
+            exit 1
+          fi
+          deployment_host="${preview_url#https://}"
+          deployment=$(curl -fsS --get \
+            "https://api.vercel.com/v13/deployments/${deployment_host}" \
+            --data-urlencode "teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}")
+          actual_sha=$(jq -er '.meta.githubCommitSha // empty' <<< "$deployment")
+          actual_project=$(jq -er '.projectId // empty' <<< "$deployment")
+          deployment_ref=$(jq -er '.meta.githubCommitRef // empty' <<< "$deployment")
+          if [[ "$actual_sha" != "$EXPECTED_SHA" || "$actual_project" != "$VERCEL_PROJECT_ID" ]]; then
+            echo "manual URL does not match the requested commit and Vercel project" >&2
+            exit 1
+          fi
           echo "BASE_URL=$preview_url" >> "$GITHUB_ENV"
+          echo "MANUAL_DEPLOYMENT_REF=$deployment_ref" >> "$GITHUB_ENV"
+
+      - name: Open trusted Preview database tunnel
+        env:
+          ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+          ORACLE_KNOWN_HOSTS: ${{ secrets.ORACLE_SSH_KNOWN_HOSTS }}
+          ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          ssh_dir="$RUNNER_TEMP/orvilo-preview-ssh"
+          install -d -m 700 "$ssh_dir"
+          printf '%s\n' "$ORACLE_SSH_KEY" > "$ssh_dir/id_ed25519"
+          printf '%s\n' "$ORACLE_KNOWN_HOSTS" > "$ssh_dir/known_hosts"
+          chmod 600 "$ssh_dir/id_ed25519" "$ssh_dir/known_hosts"
+          ssh -i "$ssh_dir/id_ed25519" -o BatchMode=yes -o ConnectTimeout=15 \
+            -o ExitOnForwardFailure=yes -o IdentitiesOnly=yes -o ServerAliveCountMax=3 \
+            -o ServerAliveInterval=30 -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$ssh_dir/known_hosts" -fNT \
+            -L 127.0.0.1:35432:127.0.0.1:25432 "ubuntu@$ORACLE_HOST"
+          rm -f -- "$ssh_dir/id_ed25519" "$ssh_dir/known_hosts"
+          rmdir "$ssh_dir"
 
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.deployment.sha || github.sha }}
+          persist-credentials: false
+          ref: ${{ inputs.deployment_sha || github.event.deployment.sha || github.sha }}
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
@@ -59,18 +106,43 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Setup Preview database tunnel
-        uses: ./.github/actions/setup-preview-db-tunnel
+      - name: Resolve Preview database URL
+        id: resolve-preview-database
+        uses: ./.github/actions/resolve-preview-database
         with:
-          database-url: ${{ secrets.PREVIEW_DATABASE_URL }}
-          oracle-host: ${{ secrets.ORACLE_HOST }}
-          oracle-known-hosts: ${{ secrets.ORACLE_SSH_KNOWN_HOSTS }}
-          oracle-ssh-key: ${{ secrets.ORACLE_SSH_KEY }}
+          deployment-ref: ${{ github.event.deployment.ref || env.MANUAL_DEPLOYMENT_REF || '' }}
+          ephemeral-enabled: ${{ vars.PREVIEW_EPHEMERAL_DB_ENABLED == 'true' }}
+          fallback-url: ${{ secrets.PREVIEW_DATABASE_URL }}
+          per-pr-base-url: ${{ secrets.PREVIEW_TEST_DATABASE_URL }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+
+      - name: Route database URL through trusted tunnel
+        env:
+          RESOLVED_DATABASE_URL: ${{ steps.resolve-preview-database.outputs.database-url }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$RESOLVED_DATABASE_URL"
+          DATABASE_URL="$RESOLVED_DATABASE_URL" node <<'NODE'
+          const fs = require('node:fs');
+          const url = new URL(process.env.DATABASE_URL);
+          url.hostname = '127.0.0.1';
+          url.port = '35432';
+          url.searchParams.delete('sslrootcert');
+          url.searchParams.set('sslmode', 'require');
+          url.searchParams.set('uselibpqcompat', 'true');
+          fs.appendFileSync(process.env.GITHUB_ENV, `DATABASE_URL=${url.toString()}\n`);
+          NODE
 
       - name: Install Playwright browsers (with system deps)
         run: bunx playwright install --with-deps chromium
 
       - name: Check preview environment
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: bun scripts/ci/checkPreviewEnv.mts
 
       - name: Run smoke tests
@@ -79,6 +151,7 @@ jobs:
         env:
           E2E_PARALLEL: '1'
           HEADLESS: 'true'
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
       - name: Upload E2E test artifacts (on failure)
         if: failure()

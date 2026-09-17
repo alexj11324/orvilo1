@@ -1,10 +1,12 @@
 name: Database Migration
 
-# Vercel build 不再跑 db:migrate（build:vercel 只构建）。数据库迁移由这个
-# 手动 workflow 执行：production 走 GitHub environment 保护，preview 用于
-# 共享 Preview 库的日常推进。
+# Vercel Preview 构建不跑 db:migrate；Production 构建仍在发布前执行迁移。
+# 这个手动 workflow 用于显式推进数据库：production 走 GitHub environment
+# 保护，preview 用于共享 Preview 库的日常推进。
 #
-# 需要 secrets：PRODUCTION_DATABASE_URL、PREVIEW_DATABASE_URL。
+# 需要 secrets：PRODUCTION_DATABASE_URL、PREVIEW_DB_ADMIN_URL、
+# PRODUCTION_KEY_VAULTS_SECRET、PREVIEW_KEY_VAULTS_SECRET；
+# DATABASE_SSL_CA 对 preview/production 可选配置。
 # 建议在 GitHub → Environments → production 上配置 required reviewers。
 
 on:
@@ -13,6 +15,7 @@ on:
       target:
         description: '迁移目标环境'
         type: choice
+        required: true
         options:
           - preview
           - production
@@ -37,8 +40,78 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Select migration database secret
+        env:
+          TARGET: ${{ inputs.target }}
+          PREVIEW_DATABASE_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
+          PREVIEW_DB_TLS_HOST: ${{ vars.PREVIEW_DB_TLS_HOST }}
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PREVIEW_KEY_VAULTS_SECRET: ${{ secrets.PREVIEW_KEY_VAULTS_SECRET }}
+          PRODUCTION_KEY_VAULTS_SECRET: ${{ secrets.PRODUCTION_KEY_VAULTS_SECRET }}
+          PREVIEW_DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
+          PRODUCTION_DATABASE_SSL_CA: ${{ secrets.PRODUCTION_DATABASE_SSL_CA }}
+        run: |
+          set -euo pipefail
+          case "$TARGET" in
+            preview)
+              selected_url="$PREVIEW_DATABASE_URL"
+              selected_key_vaults_secret="$PREVIEW_KEY_VAULTS_SECRET"
+              selected_ssl_ca="$PREVIEW_DATABASE_SSL_CA"
+              ;;
+            production)
+              selected_url="$PRODUCTION_DATABASE_URL"
+              selected_key_vaults_secret="$PRODUCTION_KEY_VAULTS_SECRET"
+              selected_ssl_ca="$PRODUCTION_DATABASE_SSL_CA"
+              ;;
+            *)
+              echo "unsupported migration target: $TARGET" >&2
+              exit 1
+              ;;
+          esac
+          if [[ -z "$selected_url" ]]; then
+            echo "database secret for target=$TARGET is missing" >&2
+            exit 1
+          fi
+          if [[ -z "$selected_key_vaults_secret" ]]; then
+            echo "KEY_VAULTS_SECRET for target=$TARGET is missing" >&2
+            exit 1
+          fi
+          if [[ "$selected_url" == *$'\n'* || "$selected_url" == *$'\r'* ]]; then
+            echo "selected DATABASE_URL contains a newline" >&2
+            exit 1
+          fi
+          if [[ "$TARGET" == "preview" && -n "$PREVIEW_DB_TLS_HOST" ]]; then
+            selected_url=$(DATABASE_URL="$selected_url" DATABASE_HOST="$PREVIEW_DB_TLS_HOST" node -e '
+              const url = new URL(process.env.DATABASE_URL);
+              url.hostname = process.env.DATABASE_HOST;
+              if (url.searchParams.get("sslmode") === "require" && !url.searchParams.has("uselibpqcompat")) {
+                url.searchParams.set("uselibpqcompat", "true");
+              }
+              process.stdout.write(url.href);
+            ')
+          elif [[ "$TARGET" == "preview" ]]; then
+            selected_url=$(DATABASE_URL="$selected_url" node -e '
+              const url = new URL(process.env.DATABASE_URL);
+              if (url.searchParams.get("sslmode") === "require" && !url.searchParams.has("uselibpqcompat")) {
+                url.searchParams.set("uselibpqcompat", "true");
+              }
+              process.stdout.write(url.href);
+            ')
+          fi
+          echo "::add-mask::$selected_url"
+          echo "::add-mask::$selected_key_vaults_secret"
+          {
+            printf 'DATABASE_URL=%s\n' "$selected_url"
+            printf 'KEY_VAULTS_SECRET=%s\n' "$selected_key_vaults_secret"
+            if [[ -n "$selected_ssl_ca" ]]; then
+              ssl_ca_delimiter="__DATABASE_SSL_CA_${GITHUB_RUN_ID:-$$}__"
+              printf 'DATABASE_SSL_CA<<%s\n' "$ssl_ca_delimiter"
+              printf '%s\n' "$selected_ssl_ca"
+              printf '%s\n' "$ssl_ca_delimiter"
+            fi
+          } >> "$GITHUB_ENV"
+
       - name: Run migrations
         run: bun run db:migrate
         env:
-          DATABASE_URL: ${{ inputs.target == 'production' && secrets.PRODUCTION_DATABASE_URL || secrets.PREVIEW_DATABASE_URL }}
           DATABASE_DRIVER: node

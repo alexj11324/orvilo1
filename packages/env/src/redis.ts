@@ -17,6 +17,8 @@ const parseRedisTls = (value?: string) => {
   return normalized === 'true' || normalized === '1';
 };
 
+const parseRedisTlsCA = (value?: string) => value?.replaceAll('\\n', '\n');
+
 export const getRedisEnv = () => {
   return createEnv({
     runtimeEnv: {
@@ -24,6 +26,7 @@ export const getRedisEnv = () => {
       REDIS_PASSWORD: process.env.REDIS_PASSWORD,
       REDIS_PREFIX: process.env.REDIS_PREFIX || 'lobechat',
       REDIS_TLS: parseRedisTls(process.env.REDIS_TLS),
+      REDIS_TLS_CA: parseRedisTlsCA(process.env.REDIS_TLS_CA),
       REDIS_URL: process.env.REDIS_URL,
       REDIS_USERNAME: process.env.REDIS_USERNAME,
     },
@@ -32,6 +35,7 @@ export const getRedisEnv = () => {
       REDIS_PASSWORD: z.string().optional(),
       REDIS_PREFIX: z.string(),
       REDIS_TLS: z.boolean().default(false),
+      REDIS_TLS_CA: z.string().optional(),
       // NOTE: don't use z.string().url() because docker will pass empty string when not set
       REDIS_URL: z.string().optional(),
       REDIS_USERNAME: z.string().optional(),
@@ -57,6 +61,7 @@ export const getRedisConfig = (): RedisConfig => {
     password: redisEnv.REDIS_PASSWORD,
     prefix: redisEnv.REDIS_PREFIX,
     tls: redisEnv.REDIS_TLS,
+    tlsCA: redisEnv.REDIS_TLS_CA,
     url: redisEnv.REDIS_URL,
     username: redisEnv.REDIS_USERNAME,
   };

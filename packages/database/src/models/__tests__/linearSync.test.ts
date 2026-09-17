@@ -882,6 +882,83 @@ describe('LinearSyncModel', () => {
     );
   });
 
+  it('replaces a conflicted update with the exact resolved payload', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'RES',
+      name: 'Conflict Resolution Project',
+    });
+    const binding = await model.upsertBinding({
+      installationId,
+      linearProjectId: 'linear-project-resolution',
+      projectId: project.id,
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'RES-1',
+        instruction: 'Local body',
+        projectId: project.id,
+        seq: 1,
+        workspaceId,
+      })
+      .returning();
+    const link = await model.createIssueLink({
+      bindingId: binding.id,
+      installationId,
+      linearIdentifier: 'ENG-RES',
+      linearIssueId: 'linear-resolution',
+      organizationId: 'linear-org-1',
+      taskId: task.id,
+    });
+    await model.updateIssueLink(link.id, {
+      conflict: {
+        base: { title: 'Base' },
+        detectedAt: '2026-09-17T10:00:00.000Z',
+        fields: ['title'],
+        local: { title: 'Local' },
+        localRevision: 3,
+        remote: { title: 'Remote' },
+        remoteUpdatedAt: '2026-09-17T09:59:00.000Z',
+      },
+      syncState: 'conflict',
+    });
+    const failed = await model.queueOutbox({
+      expectedLocalRevision: 3,
+      installationId,
+      linkId: link.id,
+      operation: 'update_issue',
+      payload: { description: 'stale body', title: 'Local' },
+      taskId: task.id,
+    });
+    await model.updateOutbox(failed.id, { status: 'failed' });
+
+    await expect(model.listIssueConflicts(binding.id, 10)).resolves.toHaveLength(1);
+    await model.replaceIssueConflictOutbox({
+      expectedLocalRevision: 3,
+      initialStatus: 'pending',
+      installationId,
+      linkId: link.id,
+      payload: { title: 'Local' },
+      reason: 'resolved',
+      taskId: task.id,
+    });
+
+    const rows = await db
+      .select()
+      .from(linearSyncOutbox)
+      .where(eq(linearSyncOutbox.linkId, link.id));
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: failed.id, status: 'cancelled' }),
+        expect.objectContaining({ payload: { title: 'Local' }, status: 'pending' }),
+      ]),
+    );
+    expect(rows.find((row) => row.status === 'pending')?.payload).not.toHaveProperty('description');
+  });
+
   it('fences Linear token refresh owners and rejects stale token versions', async () => {
     await db.insert(linearInstallations).values({
       accessTokenCiphertext: 'cipher:access-v1',

@@ -1313,6 +1313,7 @@ export class LinearSyncModel {
         target: [linearIssueTombstones.workspaceId, linearIssueTombstones.idempotencyKey],
       });
     return this.updateIssueLink(input.issueLinkId, {
+      lastInboundDeliveryId: input.deliveryId,
       remoteSnapshot: input.snapshot,
       syncState: 'removed',
       tombstone,
@@ -1615,13 +1616,7 @@ export class LinearSyncModel {
               ? eq(linearSyncOutbox.linkId, input.linkId)
               : eq(linearSyncOutbox.taskId, input.taskId!),
             eq(linearSyncOutbox.operation, input.operation),
-            inArray(linearSyncOutbox.status, [
-              'cancelled',
-              'failed',
-              'pending',
-              'sending',
-              'outcome_unknown',
-            ]),
+            inArray(linearSyncOutbox.status, ['cancelled', 'failed', 'paused', 'pending']),
           ),
         )
         .orderBy(desc(linearSyncOutbox.createdAt))
@@ -1957,14 +1952,20 @@ export class LinearSyncModel {
                   'outcome_unknown'
                 )
                 AND (
-                  earlier.created_at < candidate.created_at
+                  earlier.expected_local_revision < candidate.expected_local_revision
                   OR (
-                    earlier.created_at = candidate.created_at
-                    AND earlier.id < candidate.id
+                    earlier.expected_local_revision = candidate.expected_local_revision
+                    AND (
+                      earlier.created_at < candidate.created_at
+                      OR (
+                        earlier.created_at = candidate.created_at
+                        AND earlier.id < candidate.id
+                      )
+                    )
                   )
               )
             )
-          ORDER BY candidate.created_at, candidate.id
+          ORDER BY candidate.expected_local_revision, candidate.created_at, candidate.id
           LIMIT ${limit}
           FOR UPDATE SKIP LOCKED
         )

@@ -185,6 +185,7 @@ describe('LinearSyncWorker inbound ordering', () => {
         teamId: 'linear-team-1',
         updatedAt: '2026-09-16T11:59:59.000Z',
       }),
+      listRelations: vi.fn().mockResolvedValue([]),
     };
 
     await expect(
@@ -266,6 +267,7 @@ describe('LinearSyncWorker inbound ordering', () => {
         labelIds: ['new-remote-label-uuid'],
         updatedAt: '2026-09-16T12:01:00.000Z',
       }),
+      listRelations: vi.fn().mockResolvedValue([]),
     };
 
     await expect(
@@ -327,6 +329,7 @@ describe('LinearSyncWorker inbound ordering', () => {
         teamId: 'linear-team-1',
         title: 'Service-authored task',
       }),
+      listRelations: vi.fn().mockResolvedValue([]),
     };
 
     await expect(
@@ -409,6 +412,7 @@ describe('LinearSyncWorker inbound ordering', () => {
         teamId: 'linear-team-1',
         title: 'Remote title must not enter private task',
       }),
+      listRelations: vi.fn().mockResolvedValue([]),
     };
 
     await expect(
@@ -495,6 +499,7 @@ describe('LinearSyncWorker inbound ordering', () => {
         title: 'Workflow task',
         updatedAt: '2026-09-16T12:01:00.000Z',
       }),
+      listRelations: vi.fn().mockResolvedValue([]),
     };
 
     await expect(

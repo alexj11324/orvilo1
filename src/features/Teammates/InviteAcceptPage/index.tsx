@@ -99,9 +99,9 @@ const InviteAcceptPage = memo(() => {
   if (isLoading) {
     return (
       <Flexbox className={styles.card} gap={16}>
-        <SkeletonText active style={{ width: 200 }} />
-        <SkeletonText active style={{ width: 320 }} />
-        <SkeletonText active style={{ width: 120 }} />
+        <SkeletonText style={{ width: 200 }} />
+        <SkeletonText style={{ width: 320 }} />
+        <SkeletonText style={{ width: 120 }} />
       </Flexbox>
     );
   }

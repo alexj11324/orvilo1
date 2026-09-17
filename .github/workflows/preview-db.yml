@@ -415,7 +415,7 @@ jobs:
             | select(type == "number")
           ' <<< "$project")
           payload=$(bun scripts/ci/createVercelPreviewDeploymentPayload.ts \
-            "$project_name" "$repository_id" "$HEAD_BRANCH" "$HEAD_SHA" "$PR_NUMBER")
+            "$project_name" "$VERCEL_PROJECT_ID" "$repository_id" "$HEAD_BRANCH" "$HEAD_SHA" "$PR_NUMBER")
 
           response_file=$(mktemp)
           http_status=$(curl -sS -o "$response_file" -w '%{http_code}' -X POST \

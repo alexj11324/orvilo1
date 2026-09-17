@@ -2,6 +2,7 @@ import { stdout } from 'node:process';
 
 export const createVercelPreviewDeploymentPayload = (
   projectName: string,
+  projectId: string,
   repositoryId: number,
   branch: string,
   sha: string,
@@ -20,6 +21,7 @@ export const createVercelPreviewDeploymentPayload = (
     githubRepoId: String(repositoryId),
   },
   name: projectName,
+  project: projectId,
   projectSettings: {
     // Vercel proceeds with the build when the ignore command exits non-zero.
     // The project-level command intentionally skips automatic Preview builds;
@@ -29,13 +31,14 @@ export const createVercelPreviewDeploymentPayload = (
 });
 
 const main = () => {
-  const [projectName, repositoryIdValue, branch, sha, pullRequestNumberValue] =
+  const [projectName, projectId, repositoryIdValue, branch, sha, pullRequestNumberValue] =
     process.argv.slice(2);
   const repositoryId = Number(repositoryIdValue);
   const pullRequestNumber = Number(pullRequestNumberValue);
 
   if (
     !projectName ||
+    !/^prj_[A-Za-z0-9]+$/.test(projectId ?? '') ||
     !Number.isSafeInteger(repositoryId) ||
     repositoryId <= 0 ||
     !branch ||
@@ -44,7 +47,7 @@ const main = () => {
     pullRequestNumber <= 0
   ) {
     throw new Error(
-      'usage: createVercelPreviewDeploymentPayload.ts <project-name> <repository-id> <branch> <sha> <pull-request-number>',
+      'usage: createVercelPreviewDeploymentPayload.ts <project-name> <project-id> <repository-id> <branch> <sha> <pull-request-number>',
     );
   }
 
@@ -52,6 +55,7 @@ const main = () => {
     JSON.stringify(
       createVercelPreviewDeploymentPayload(
         projectName,
+        projectId,
         repositoryId,
         branch,
         sha,

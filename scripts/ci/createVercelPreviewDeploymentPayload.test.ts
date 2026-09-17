@@ -7,6 +7,7 @@ describe('createVercelPreviewDeploymentPayload', () => {
     expect(
       createVercelPreviewDeploymentPayload(
         'orvilo1',
+        'prj_example123',
         1_370_358_179,
         'feat/preview',
         '0123456789abcdef0123456789abcdef01234567',
@@ -26,6 +27,7 @@ describe('createVercelPreviewDeploymentPayload', () => {
         githubRepoId: '1370358179',
       },
       name: 'orvilo1',
+      project: 'prj_example123',
       projectSettings: { commandForIgnoringBuildStep: 'exit 1' },
     });
   });

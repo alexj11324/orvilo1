@@ -219,10 +219,15 @@ export const removeProjectMember = async (
   });
 
   return db.transaction(async (tx) => {
-    await new ProjectMemberModel(tx, params.actorUserId).remove(
+    const removed = await new ProjectMemberModel(tx, params.actorUserId).remove(
       params.projectId,
       params.targetUserId,
     );
+    // No row removed → nothing happened: recording audit/event here would
+    // fabricate history for a removal of a never- (or already-) member.
+    if (removed.length === 0) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Project member not found' });
+    }
     await recordAudit(tx, {
       action: 'project_member.removed',
       ipAddress: params.ipAddress,

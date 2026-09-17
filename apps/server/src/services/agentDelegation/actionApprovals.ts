@@ -71,15 +71,13 @@ export class ActionApprovalService {
       }
 
       // The world the approval was requested against must be the world the
-      // decision lands on: a drifted base version or external SHA revokes the
-      // request rather than approving unseen state.
+      // decision lands on. A recorded base must be echoed back exactly —
+      // omitting it would bypass the only drift check, so a missing echo is
+      // treated the same as a mismatched one. An unanchored request (null
+      // base) carries nothing to verify.
       if (
-        (input.baseVersion !== undefined &&
-          approval.baseVersion !== null &&
-          input.baseVersion !== approval.baseVersion) ||
-        (input.baseSha !== undefined &&
-          approval.baseSha !== null &&
-          input.baseSha !== approval.baseSha)
+        (approval.baseVersion !== null && input.baseVersion !== approval.baseVersion) ||
+        (approval.baseSha !== null && input.baseSha !== approval.baseSha)
       ) {
         throw new TRPCError({ code: 'CONFLICT', message: APPROVAL_STALE });
       }

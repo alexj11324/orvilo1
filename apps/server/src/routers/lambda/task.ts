@@ -287,8 +287,10 @@ async function resolveOrThrow(model: TaskModel, id: string) {
 /**
  * Task-steering capability for `instruction` inputs: the assignee or reviewer
  * steers by role on the task, a project manager steers inside their project,
- * and a workspace owner/admin steers anywhere in the workspace. Other members
- * may still submit comments, proposals and decisions.
+ * and a workspace owner/admin steers anywhere in the workspace. Members
+ * without steering rights may still submit comments, proposals and decisions
+ * (the procedure's `agent:update` gate already admits them); workspace
+ * viewers are read-only and submit nothing.
  */
 async function assertTaskSteeringCapability(
   ctx: {

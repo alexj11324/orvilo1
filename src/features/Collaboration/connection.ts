@@ -80,6 +80,18 @@ const teardown = (key: string, record: RoomConnection): void => {
   }
 };
 
+/**
+ * Authorize failures that no retry can fix: the tenant context is missing,
+ * the caller is not a member, or the room is gone. Retrying these just spams
+ * the API forever — park the room instead.
+ */
+const PERMANENT_AUTHORIZE_CODES = new Set(['BAD_REQUEST', 'FORBIDDEN', 'NOT_FOUND', 'UNAUTHORIZED']);
+
+const isPermanentAuthorizeFailure = (error: unknown): boolean => {
+  const code = (error as { data?: { code?: string } } | null)?.data?.code;
+  return typeof code === 'string' && PERMANENT_AUTHORIZE_CODES.has(code);
+};
+
 const scheduleReconnect = (key: string, record: RoomConnection): void => {
   if (record.refCount <= 0 || record.reconnectTimer) return;
   getCollaborationStoreState().setRoomStatus(key, 'reconnecting');
@@ -184,8 +196,16 @@ const connect = async (key: string, record: RoomConnection): Promise<void> => {
       // The close event follows; reconnect policy lives there.
     };
   } catch (error) {
+    if (record.generation !== generation) return;
+    if (isPermanentAuthorizeFailure(error)) {
+      // Terminal denial — same end state as a server `revoked`: no socket,
+      // no reconnect loop, the room just stays unauthorized.
+      teardown(key, record);
+      store.setRoomStatus(key, 'revoked');
+      return;
+    }
     console.error('[Collaboration] authorize/connect failed', error);
-    if (record.generation === generation) scheduleReconnect(key, record);
+    scheduleReconnect(key, record);
   }
 };
 

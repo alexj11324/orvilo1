@@ -16,7 +16,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/database/models/workspace')>()),
-  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('admin'),
 }));
 
 vi.mock('@/database/models/linearSync', () => ({

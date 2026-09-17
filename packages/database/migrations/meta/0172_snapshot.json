@@ -33114,7 +33114,7 @@
           "name": "workspace_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "task_id": {
           "name": "task_id",

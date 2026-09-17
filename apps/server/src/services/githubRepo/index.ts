@@ -332,9 +332,20 @@ export const getPullRequestReviewSnapshot = async (
   }
 
   const reviews = Array.isArray(reviewsRes.json) ? reviewsRes.json : [];
-  const requestedChangeReviewIds = reviews
-    .filter((review: any) => review?.state === 'CHANGES_REQUESTED' && humanActor(review?.user))
+  // GitHub returns the review history, not just the current decision. Keep the
+  // latest decisive (APPROVED/CHANGES_REQUESTED) review per actor so an old
+  // change request cannot block the PR forever after that reviewer approves a
+  // later revision. COMMENTED reviews deliberately do not clear a decision.
+  const latestDecisiveReviewByActor = new Map<string, any>();
+  for (const review of reviews) {
+    if (!humanActor(review?.user)) continue;
+    if (review?.state !== 'APPROVED' && review?.state !== 'CHANGES_REQUESTED') continue;
+    latestDecisiveReviewByActor.set(review.user.login, review);
+  }
+  const requestedChangeReviewIds = [...latestDecisiveReviewByActor.values()]
+    .filter((review: any) => review.state === 'CHANGES_REQUESTED')
     .map((review: any) => `review:${review.id}`);
+
   const inlineComments = Array.isArray(inlineRes.json) ? inlineRes.json : [];
   const issueComments = Array.isArray(issueRes.json) ? issueRes.json : [];
   const humanCommentIds = [

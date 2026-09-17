@@ -192,9 +192,7 @@ export class LinearIntegrationTaskService {
         projectId: binding.projectId,
         teamId: input.localTeamId ?? null,
         visibility: 'public',
-        // Prefer the synced team state's category; fall back to the project
-        // binding's status mappings, then backlog.
-        workflowCategory: input.workflowCategory ?? workflowMapping?.workflowCategory ?? 'backlog',
+        workflowCategory: workflowMapping?.workflowCategory ?? 'backlog',
         workflowStateId: issue.stateId ?? null,
         workflowStateRefId: input.workflowStateRefId ?? null,
       },

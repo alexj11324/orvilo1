@@ -29,6 +29,7 @@ import {
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { cancelHatchetWorkflow } from '@/server/services/hatchet/workflows';
+import { disableUserMemoryExtraction } from '@/server/services/memory/userMemory/gate';
 
 const userMemoryProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -89,6 +90,14 @@ export const userMemoryRouter = router({
   deleteAll: userMemoryWriteProcedure.mutation(async ({ ctx }) => {
     await ctx.userMemoryModel.deleteAll();
     await ctx.personaModel.deletePersona();
+
+    // Purging while production stays enabled would let an already-fanned-out
+    // hourly step (processTopic / personaUpdate runs owned by the service user,
+    // invisible to the ownership-scoped task lookup below) re-materialize the
+    // profile after this returns. Opt the user out of production instead: every
+    // stage checks the same flag, so in-flight and future work both stop. The
+    // settings toggle is the deliberate path back on.
+    await disableUserMemoryExtraction(ctx.userId, ctx.serverDB);
 
     // NOTICE: Do NOT reset topic extraction markers here. Re-opening every
     // historical chat for re-extraction would silently rebuild the profile the

@@ -80,36 +80,40 @@ export const useCategory = (): CategoryGroup[] => {
       }),
     ];
 
-    const usageAndCost: CategoryItem[] = enableBusinessFeatures
-      ? [
-          makeItem({
-            icon: ChartColumnBigIcon,
-            key: SettingsTabs.Stats,
-            label: t('auth:tab.stats'),
-          }),
-          makeItem({ icon: Map, key: SettingsTabs.Plans, label: t('subscription:tab.plans') }),
-          makeItem({
-            icon: ChartColumnBigIcon,
-            key: SettingsTabs.Usage,
-            label: t('setting:tab.usage'),
-          }),
-          makeItem({
-            icon: Coins,
-            key: SettingsTabs.Credits,
-            label: t('subscription:tab.credits'),
-          }),
-          makeItem({
-            icon: CreditCard,
-            key: SettingsTabs.Billing,
-            label: t('subscription:tab.billing'),
-          }),
-          makeItem({
-            icon: Gift,
-            key: SettingsTabs.Referral,
-            label: t('subscription:tab.referral'),
-          }),
-        ]
-      : [];
+    const usageAndCost: CategoryItem[] = [
+      // Stats is the ungated head of this group on every deployment — same as
+      // desktop: what it reports is usage and spend regardless of who reads it.
+      makeItem({
+        icon: ChartColumnBigIcon,
+        key: SettingsTabs.Stats,
+        label: t('auth:tab.stats'),
+      }),
+      ...(enableBusinessFeatures
+        ? [
+            makeItem({ icon: Map, key: SettingsTabs.Plans, label: t('subscription:tab.plans') }),
+            makeItem({
+              icon: ChartColumnBigIcon,
+              key: SettingsTabs.Usage,
+              label: t('setting:tab.usage'),
+            }),
+            makeItem({
+              icon: Coins,
+              key: SettingsTabs.Credits,
+              label: t('subscription:tab.credits'),
+            }),
+            makeItem({
+              icon: CreditCard,
+              key: SettingsTabs.Billing,
+              label: t('subscription:tab.billing'),
+            }),
+            makeItem({
+              icon: Gift,
+              key: SettingsTabs.Referral,
+              label: t('subscription:tab.referral'),
+            }),
+          ]
+        : []),
+    ];
 
     const agent: CategoryItem[] = [
       // Provider settings should not depend on Advanced tools: new users may need

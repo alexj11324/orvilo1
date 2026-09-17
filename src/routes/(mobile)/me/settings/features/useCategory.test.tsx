@@ -6,6 +6,7 @@ import { mapFeatureFlagsEnvToState } from '@/config/featureFlags';
 import { SettingsTabs } from '@/store/global/initialState';
 import { initServerConfigStore, Provider } from '@/store/serverConfig/store';
 import { useUserStore } from '@/store/user';
+import { type GlobalServerConfig } from '@/types/serverConfig';
 
 import { SettingsGroupKey, useCategory } from './useCategory';
 
@@ -26,7 +27,11 @@ vi.mock('react-router', () => ({
   useNavigate: () => navigate,
 }));
 
-const createWrapper = (showProvider: boolean, extraFlags: Record<string, unknown> = {}) => {
+const createWrapper = (
+  showProvider: boolean,
+  extraFlags: Record<string, unknown> = {},
+  serverConfig: Partial<GlobalServerConfig> = {},
+) => {
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <Provider
       createStore={() =>
@@ -38,6 +43,7 @@ const createWrapper = (showProvider: boolean, extraFlags: Record<string, unknown
             showProvider,
             ...extraFlags,
           },
+          serverConfig: { aiProvider: {}, telemetry: {}, ...serverConfig },
         })
       }
     >
@@ -110,6 +116,45 @@ describe('mobile settings useCategory', () => {
 
     expect(toolsGroup?.items.map((item) => item.key)).toContain(SettingsTabs.OAuthApps);
     expect(developerGroup?.items.map((item) => item.key)).not.toContain(SettingsTabs.OAuthApps);
+  });
+
+  // Regression: Stats was bundled inside the `enableBusinessFeatures` gate, so
+  // self-hosted/non-business deployments lost their usage-and-cost overview.
+  // Stats is the ungated head of the group (same as desktop); only the
+  // business-only entries stay behind the flag.
+  it('keeps Stats visible without business features while gating plans and billing', () => {
+    const { result } = renderHook(() => useCategory(), {
+      wrapper: createWrapper(true),
+    });
+
+    const usageAndCost = result.current.find(
+      (group) => group.key === SettingsGroupKey.UsageAndCost,
+    );
+    const keys = usageAndCost?.items.map((item) => item.key) ?? [];
+
+    expect(keys).toEqual([SettingsTabs.Stats]);
+  });
+
+  it('adds the business entries after Stats when business features are enabled', () => {
+    const { result } = renderHook(() => useCategory(), {
+      wrapper: createWrapper(true, {}, { enableBusinessFeatures: true }),
+    });
+
+    const usageAndCost = result.current.find(
+      (group) => group.key === SettingsGroupKey.UsageAndCost,
+    );
+    const keys = usageAndCost?.items.map((item) => item.key) ?? [];
+
+    expect(keys[0]).toBe(SettingsTabs.Stats);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        SettingsTabs.Plans,
+        SettingsTabs.Usage,
+        SettingsTabs.Credits,
+        SettingsTabs.Billing,
+        SettingsTabs.Referral,
+      ]),
+    );
   });
 
   // Regression: API Key was reachable from two gates — `showApiKeyManage` beside

@@ -14,8 +14,9 @@ const mockDeleteAll = vi.fn();
 const mockDeletePersona = vi.fn();
 const mockListPersonaVersions = vi.fn();
 const mockRestorePersonaVersion = vi.fn();
-const { mockCancelHatchetWorkflow } = vi.hoisted(() => ({
+const { mockCancelHatchetWorkflow, mockDisableUserMemoryExtraction } = vi.hoisted(() => ({
   mockCancelHatchetWorkflow: vi.fn(),
+  mockDisableUserMemoryExtraction: vi.fn(),
 }));
 
 vi.mock('@/database/models/asyncTask', () => ({
@@ -69,6 +70,10 @@ vi.mock('@/server/services/hatchet/workflows', () => ({
   cancelHatchetWorkflow: mockCancelHatchetWorkflow,
 }));
 
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  disableUserMemoryExtraction: mockDisableUserMemoryExtraction,
+}));
+
 const createCaller = (ctxOverrides: Partial<any> = {}) => {
   const ctx = {
     serverDB: {} as any,
@@ -104,6 +109,23 @@ describe('userMemoryRouter.deleteAll', () => {
     expect(mockDeleteAll).toHaveBeenCalledOnce();
     expect(mockDeletePersona).toHaveBeenCalledOnce();
     expect(result).toEqual({ success: true });
+  });
+
+  it('opts the user out of memory production so in-flight workflows cannot rebuild the profile', async () => {
+    mockDeleteAll.mockResolvedValue(undefined);
+    mockDeletePersona.mockResolvedValue(undefined);
+    mockFindActiveByType.mockResolvedValue(undefined);
+    mockDisableUserMemoryExtraction.mockResolvedValue(undefined);
+
+    const caller = createCaller();
+    await caller.deleteAll();
+
+    // Hourly fan-out and persona-update steps are owned by the service user,
+    // so the ownership-scoped task lookup below can never see them. Flipping
+    // `memory.enabled` — the flag every production stage already checks — is
+    // what actually stops an already-running step from re-materializing the
+    // purged memories.
+    expect(mockDisableUserMemoryExtraction).toHaveBeenCalledWith('user-1', {});
   });
 
   it('does not re-open topics for re-extraction after purge', async () => {

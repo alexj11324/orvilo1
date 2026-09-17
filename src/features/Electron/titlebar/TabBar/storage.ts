@@ -1,5 +1,4 @@
-import { RETIRED_ROUTE_PREFIXES } from '@/config/routes';
-
+import { isRetiredProductUrl } from '../retiredProductUrl';
 import { type TabScope, tabScopeKey } from './scope';
 import { type TabItem } from './types';
 
@@ -24,29 +23,13 @@ const isTabItem = (item: unknown): item is TabItem =>
   typeof (item as TabItem).url === 'string' &&
   typeof (item as TabItem).lastVisited === 'number';
 
-/**
- * Whether a stored tab points at a product that no longer exists.
- *
- * This list is the only thing between a tab pinned to `/image` before that
- * surface was retired and it being restored onto a path nothing resolves.
- * Workspace URLs mirror the same segments one level deeper (`/{slug}/image`),
- * so the first two segments are checked.
- */
-export const isRetiredTabUrl = (url: string): boolean => {
-  let pathname: string;
-  try {
-    pathname = new URL(url, 'http://localhost').pathname;
-  } catch {
-    return false;
-  }
-
-  return pathname
-    .split('/')
-    .filter(Boolean)
-    .slice(0, 2)
-    .some((segment) => RETIRED_ROUTE_PREFIXES.has(`/${segment}`));
-};
-
+// Stored tabs pointing at withdrawn surfaces are filtered through
+// `isRetiredProductUrl` so the same registry-derived dead list and the same
+// workspace-slug handling apply everywhere stored URLs are filtered. It is
+// the only thing between a tab pinned to `/image` before retirement and it
+// being restored onto a path nothing resolves; retired-but-resolving
+// prefixes like `/memory` keep their tabs because the preferences manager
+// still lives there.
 export const getTabPages = (scope: TabScope): TabPagesStorageData => {
   if (typeof window === 'undefined') return EMPTY;
 
@@ -64,7 +47,7 @@ export const getTabPages = (scope: TabScope): TabPagesStorageData => {
     // loses its parameter type entirely. Reading the payload as `unknown` is the
     // boundary this value deserves anyway — it is whatever the last write left.
     const storedTabs: unknown[] = Array.isArray(stored.tabs) ? stored.tabs : [];
-    const tabs = storedTabs.filter(isTabItem).filter((tab) => !isRetiredTabUrl(tab.url));
+    const tabs = storedTabs.filter(isTabItem).filter((tab) => !isRetiredProductUrl(tab.url, scope));
     // Dropping the active tab would leave an `activeTabId` naming nothing, so
     // the selection falls back to what is left rather than to a dangling id.
     const requestedActiveId = typeof stored.activeTabId === 'string' ? stored.activeTabId : null;

@@ -65,3 +65,34 @@ export const filterMemoryExtractionEnabledUsers = async (
     skippedUserIds: ids.filter((id) => disabledIds.has(id)),
   };
 };
+
+/**
+ * Opts a user out of memory production by merging `enabled: false` into their
+ * stored `memory` settings column.
+ *
+ * Used by `userMemory.deleteAll`: a purge that leaves production running would
+ * let an already-fanned-out hourly `processTopic` / `personaUpdate` step (or
+ * any later sweep) re-materialize the profile the user just deleted. Flipping
+ * the same flag every stage already checks closes that window without any new
+ * machinery. The user opts back in through the memory settings toggle, which
+ * is a deliberate client action rather than a silent rebuild.
+ *
+ * The jsonb `||` merge runs inside the ON CONFLICT clause so concurrent
+ * settings writes serialize on the row instead of a lost-update race, and it
+ * preserves sibling keys (`effort`, …) unlike a column-level overwrite.
+ */
+export const disableUserMemoryExtraction = async (
+  userId: string,
+  db?: LobeChatDatabase,
+): Promise<void> => {
+  const database = db ?? (await getServerDB());
+  await database
+    .insert(userSettings)
+    .values({ id: userId, memory: { enabled: false } })
+    .onConflictDoUpdate({
+      set: {
+        memory: sql`coalesce(${userSettings.memory}, '{}'::jsonb) || jsonb_build_object('enabled', false)`,
+      },
+      target: userSettings.id,
+    });
+};

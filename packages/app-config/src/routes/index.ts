@@ -48,6 +48,14 @@ export interface NavigationRoute {
   path: string;
   /** Path prefix for checking current location */
   pathPrefix: string;
+  /**
+   * Set on a retired entry whose stored URLs still land on live product —
+   * the prefix is shared with a surviving surface or kept as an honest
+   * redirect — so persisted references (Electron tabs, Recently Viewed) are
+   * kept rather than purged. Absent means retiring the nav entry retires the
+   * stored URLs too.
+   */
+  stillResolves?: boolean;
   /** Position in the product's information architecture */
   tier: NavigationTier;
   /** Whether route supports dynamic titles (for specific items) */
@@ -103,6 +111,9 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
     id: 'memory',
     path: '/memory',
     pathPrefix: '/memory',
+    // The browsing center is gone but `/memory/preferences` still hosts the
+    // manager users need to read, correct and delete stored memories.
+    stillResolves: true,
     tier: 'retired',
   },
   {
@@ -143,6 +154,10 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
     keywordsKey: 'cmdk.keywords.apps',
     path: '/apps',
     pathPrefix: '/apps',
+    // The promo page folded into Settings > About, which now hosts the
+    // download links; `/apps` redirects there, so stored references still
+    // land on the same capability.
+    stillResolves: true,
     tier: 'retired',
   },
   {
@@ -158,17 +173,25 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
 ];
 
 /**
- * Path prefixes owned by a product that has been withdrawn — derived from the
- * registry rather than listed again, so retiring a route retires its stored
- * URLs in the same edit.
+ * Path prefixes whose stored URLs no longer resolve to live product —
+ * derived from the registry rather than listed again, so retiring a route
+ * retires its stored URLs in the same edit.
+ *
+ * This is deliberately not every `retired`-tier entry: the tier says the
+ * surface is unlisted, while a `stillResolves` flag says its URLs keep
+ * landing somewhere honest (`/memory` hosts the surviving preferences
+ * manager, `/apps` redirects to Settings > About). Only prefixes that are
+ * dead ends belong here.
  *
  * Retirement has to reach persisted state, not only the surfaces that build
  * their entries from this registry. Electron keeps one tab list per scope in
  * `localStorage`, and a tab pinned before retirement would otherwise be
  * restored onto a path nothing resolves any more.
  */
-export const RETIRED_ROUTE_PREFIXES: Set<string> = new Set(
-  NAVIGATION_ROUTES.filter((route) => route.tier === 'retired').map((route) => route.pathPrefix),
+export const DEAD_ROUTE_PREFIXES: Set<string> = new Set(
+  NAVIGATION_ROUTES.filter((route) => route.tier === 'retired' && !route.stillResolves).map(
+    (route) => route.pathPrefix,
+  ),
 );
 
 /**

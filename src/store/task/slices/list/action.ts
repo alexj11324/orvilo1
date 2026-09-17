@@ -439,8 +439,8 @@ export class TaskListSliceActionImpl {
   };
 
   /**
-   * The automated-task roll-up behind Home's "Scheduled" section, the Tasks
-   * page's scheduled collection and the Automations list.
+   * The automated-task roll-up behind the Tasks page's scheduled collection
+   * and the Automations list.
    *
    * A single roll-up on purpose. This used to be two hooks under two key roots,
    * so two callers asking the same question — same scope, same limit, same

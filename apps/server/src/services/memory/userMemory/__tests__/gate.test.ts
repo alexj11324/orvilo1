@@ -1,7 +1,11 @@
 import type { LobeChatDatabase } from '@orvilo/database';
 import { describe, expect, it, vi } from 'vitest';
 
-import { filterMemoryExtractionEnabledUsers, isUserMemoryExtractionEnabled } from '../gate';
+import {
+  disableUserMemoryExtraction,
+  filterMemoryExtractionEnabledUsers,
+  isUserMemoryExtractionEnabled,
+} from '../gate';
 
 /**
  * The gate is pure server-side: it only reads `userSettings.memory.enabled`
@@ -75,5 +79,25 @@ describe('filterMemoryExtractionEnabledUsers', () => {
     const result = await filterMemoryExtractionEnabledUsers(['u1', 'u1', '', 'u2'], db);
 
     expect(result).toEqual({ enabledUserIds: ['u1', 'u2'], skippedUserIds: [] });
+  });
+});
+
+describe('disableUserMemoryExtraction', () => {
+  it('upserts `memory.enabled = false` so every production stage sees the opt-out', async () => {
+    const onConflictDoUpdate = vi.fn(async () => undefined);
+    const values = vi.fn(() => ({ onConflictDoUpdate }));
+    const insert = vi.fn(() => ({ values }));
+    const db = { insert } as unknown as LobeChatDatabase;
+
+    await disableUserMemoryExtraction('u1', db);
+
+    expect(values).toHaveBeenCalledWith({ id: 'u1', memory: { enabled: false } });
+    // The conflict clause merges via jsonb `||` rather than overwriting the
+    // column, so sibling memory settings (effort, …) survive the opt-out.
+    expect(onConflictDoUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        set: expect.objectContaining({ memory: expect.anything() }),
+      }),
+    );
   });
 });

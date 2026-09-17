@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   getTabPages,
-  isRetiredTabUrl,
   saveTabPages,
   TAB_PAGES_STORAGE_KEY_V1,
   TAB_PAGES_STORAGE_KEY_V2,
@@ -99,13 +98,50 @@ describe('TabBar storage', () => {
       saveTabPages(
         acmeScope,
         [
-          { id: 'memory-tab', lastVisited: 2, url: '/acme/memory' },
+          { id: 'community-tab', lastVisited: 2, url: '/acme/community' },
           { id: 'tasks-tab', lastVisited: 1, url: '/acme/tasks' },
         ],
         'tasks-tab',
       );
 
       expect(getTabPages(acmeScope).tabs.map((tab) => tab.id)).toEqual(['tasks-tab']);
+    });
+
+    it('keeps tabs on retired-but-resolving prefixes like /memory and /apps', () => {
+      // `/memory` no longer appears in navigation, but `/memory/preferences`
+      // still hosts the manager; `/apps` redirects to Settings > About.
+      // Purging either would strand a tab the user pinned on purpose.
+      saveTabPages(
+        personalScope,
+        [
+          { id: 'memory-tab', lastVisited: 3, url: '/memory/preferences' },
+          { id: 'apps-tab', lastVisited: 2, url: '/apps' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/tasks' },
+        ],
+        'memory-tab',
+      );
+
+      expect(getTabPages(personalScope)).toEqual({
+        activeTabId: 'memory-tab',
+        tabs: [
+          { id: 'memory-tab', lastVisited: 3, url: '/memory/preferences' },
+          { id: 'apps-tab', lastVisited: 2, url: '/apps' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/tasks' },
+        ],
+      });
+    });
+
+    it('keeps a workspace-scoped memory tab too', () => {
+      saveTabPages(
+        acmeScope,
+        [
+          { id: 'memory-tab', lastVisited: 2, url: '/acme/memory/preferences' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/acme/tasks' },
+        ],
+        'memory-tab',
+      );
+
+      expect(getTabPages(acmeScope).tabs.map((tab) => tab.id)).toEqual(['memory-tab', 'tasks-tab']);
     });
 
     it('reports no selection when every stored tab was retired', () => {
@@ -116,20 +152,6 @@ describe('TabBar storage', () => {
       );
 
       expect(getTabPages(acmeScope)).toEqual({ activeTabId: null, tabs: [] });
-    });
-
-    it('matches a path segment, never a word that merely starts the same', () => {
-      // `/resource/images` is a resource-library category, not the retired
-      // generation workbench; a raw `startsWith` would drop the tab.
-      expect(isRetiredTabUrl('/images')).toBe(false);
-      expect(isRetiredTabUrl('/resource/images')).toBe(false);
-      expect(isRetiredTabUrl('/resource/videos')).toBe(false);
-      expect(isRetiredTabUrl('/tasks')).toBe(false);
-    });
-
-    it('reads the path out of an absolute tab URL', () => {
-      expect(isRetiredTabUrl('https://app.example.com/image/123')).toBe(true);
-      expect(isRetiredTabUrl('https://app.example.com/acme/page/doc-1')).toBe(true);
     });
   });
 });

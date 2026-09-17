@@ -7,6 +7,13 @@ vi.mock('@/database/core/db-adaptor', () => ({
   }),
 }));
 
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
+
 // Surface the permission requested by the procedure so this test catches
 // invalid or task-router-inconsistent RBAC actions before they reach cloud.
 vi.mock('@/business/server/trpc-middlewares/rbacPermission', () => ({

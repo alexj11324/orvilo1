@@ -85,8 +85,8 @@ export const resolveWorkspaceMembership = async (
  * workspace named by `X-Workspace-Id`.
  *
  * - No `X-Workspace-Id` → personal mode: passes through with
- *   `workspaceRole: null` (the caller is the implicit owner of their personal
- *   space) and no membership.
+ *   `workspaceRole: undefined` (the caller is the implicit owner of their
+ *   personal space) and no membership.
  * - `X-Workspace-Id` present → the caller must be an active member, otherwise
  *   the request is rejected with FORBIDDEN. It is *never* silently downgraded
  *   to personal — that would mis-target reads and writes at the wrong tenant.
@@ -104,7 +104,7 @@ export const cloudWorkspaceAuth = trpc.middleware(async (opts) => {
     return opts.next({
       ctx: {
         membership: null,
-        workspaceRole: null,
+        workspaceRole: undefined,
         workspaceSlug: undefined as string | undefined,
       },
     });
@@ -116,6 +116,7 @@ export const cloudWorkspaceAuth = trpc.middleware(async (opts) => {
   return opts.next({
     ctx: {
       membership,
+      workspaceId: ctx.workspaceId,
       workspaceRole: membership.role,
       workspaceSlug: undefined as string | undefined,
     },
@@ -137,7 +138,7 @@ export const requireWorkspaceRole = (minRole: WorkspaceRole) =>
     const { ctx } = opts;
 
     if (!ctx.workspaceId) {
-      return opts.next({ ctx: { membership: null, workspaceRole: null } });
+      return opts.next({ ctx: { membership: null, workspaceRole: undefined } });
     }
 
     const membership = await resolveWorkspaceMembership(ctx);
@@ -148,7 +149,9 @@ export const requireWorkspaceRole = (minRole: WorkspaceRole) =>
       });
     }
 
-    return opts.next({ ctx: { membership, workspaceRole: membership.role } });
+    return opts.next({
+      ctx: { membership, workspaceId: ctx.workspaceId, workspaceRole: membership.role },
+    });
   });
 
 // Same semantics as `requireWorkspaceRole`: enforce the role only when the
@@ -172,7 +175,9 @@ const requireActiveWorkspaceMembership = trpc.middleware(async (opts) => {
   const membership = await resolveWorkspaceMembership(ctx);
   if (!membership) throw notAMember();
 
-  return opts.next({ ctx: { membership, workspaceRole: membership.role } });
+  return opts.next({
+    ctx: { membership, workspaceId: ctx.workspaceId, workspaceRole: membership.role },
+  });
 });
 
 export const wsProcedure = authedProcedure.use(requireActiveWorkspaceMembership);

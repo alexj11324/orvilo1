@@ -976,11 +976,18 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
-  async listTeamLinks() {
+  async listTeamLinks(filter: { installationId?: string } = {}) {
     return this.db
       .select()
       .from(linearTeamLinks)
-      .where(eq(linearTeamLinks.workspaceId, this.workspaceId));
+      .where(
+        and(
+          eq(linearTeamLinks.workspaceId, this.workspaceId),
+          filter.installationId
+            ? eq(linearTeamLinks.installationId, filter.installationId)
+            : undefined,
+        ),
+      );
   }
 
   async upsertTeamLink(input: {

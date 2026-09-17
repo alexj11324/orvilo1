@@ -30,7 +30,7 @@ const ProjectConversation = memo(() => {
     topicId ? topicSelectors.getTopicById(topicId)(s)?.title : undefined,
   );
 
-  useInitAgentConfig(coordinatorAgentId);
+  useInitAgentConfig(coordinatorAgentId ?? undefined);
 
   useLayoutEffect(() => {
     if (!coordinatorAgentId) return;

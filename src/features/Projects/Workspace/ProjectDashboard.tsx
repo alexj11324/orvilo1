@@ -153,7 +153,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
     () =>
       workService.listByWorkspace({
         limit: 4,
-        originAgentId: coordinatorAgentId,
+        originAgentId: coordinatorAgentId ?? undefined,
       }),
   );
 

@@ -5,6 +5,7 @@ import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPer
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { TaskModel } from '@/database/models/task';
 import { TeamModel } from '@/database/models/team';
+import { hasWorkspaceAdminAccess } from '@/database/models/workspace';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
@@ -57,6 +58,11 @@ export const teamRouter = router({
   }),
 
   team: teamProcedure.input(teamIdInput).query(async ({ ctx, input }) => {
+    // Private teams are readable by their members (and workspace admins) only —
+    // a miss is reported as NOT_FOUND so existence does not leak.
+    if (!(await ctx.teamModel.hasReadAccess(input.teamId))) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
+    }
     const team = await ctx.teamModel.findById(input.teamId);
     if (!team) throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
     const [members, workflowStates, cycles, projectIds] = await Promise.all([
@@ -80,6 +86,15 @@ export const teamRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // PERMISSIONS: creating a team is a workspace-admin operation.
+      if (
+        !(await hasWorkspaceAdminAccess(ctx.serverDB, {
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        }))
+      ) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace admin required' });
+      }
       const team = await ctx.teamModel.create(input);
       return { data: team, message: 'Team created', success: true };
     }),
@@ -97,6 +112,9 @@ export const teamRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
+      }
       const { teamId, ...patch } = input;
       const team = await ctx.teamModel.update(teamId, patch);
       if (!team) throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
@@ -111,6 +129,9 @@ export const teamRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
+      }
       const member = await ctx.teamModel.addMember(input.teamId, input.userId, input.role);
       return { data: member, message: 'Team member added', success: true };
     }),
@@ -118,6 +139,9 @@ export const teamRouter = router({
   removeMember: teamWriteProcedure
     .input(teamIdInput.extend({ userId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
+      }
       await ctx.teamModel.removeMember(input.teamId, input.userId);
       return { message: 'Team member removed', success: true };
     }),
@@ -125,6 +149,9 @@ export const teamRouter = router({
   linkProject: teamWriteProcedure
     .input(teamIdInput.extend({ projectId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
+      }
       await ctx.teamModel.linkProject(input.projectId, input.teamId);
       return { message: 'Project linked to team', success: true };
     }),
@@ -132,6 +159,9 @@ export const teamRouter = router({
   unlinkProject: teamWriteProcedure
     .input(teamIdInput.extend({ projectId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
+      }
       await ctx.teamModel.unlinkProject(input.projectId, input.teamId);
       return { message: 'Project unlinked from team', success: true };
     }),
@@ -143,6 +173,15 @@ export const teamRouter = router({
   moveTaskToTeam: teamWriteProcedure
     .input(z.object({ taskId: z.string().min(1), teamId: z.string().min(1).nullable() }))
     .mutation(async ({ ctx, input }) => {
+      // PERMISSIONS: the target team must be visible and writable, and moving
+      // out of the current team requires write access there too.
+      const current = await ctx.taskModel.findById(input.taskId);
+      if (!current) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      for (const teamId of new Set([current.teamId, input.teamId].filter(Boolean) as string[])) {
+        if (!(await ctx.teamModel.hasWriteAccess(teamId))) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Team write access required' });
+        }
+      }
       const task = await ctx.taskModel.moveToTeam(input.taskId, input.teamId, {
         source: 'user',
       });

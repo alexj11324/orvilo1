@@ -3148,7 +3148,7 @@ table projects {
   name varchar(255) [not null]
   description text
   avatar text
-  coordinator_agent_id text [not null]
+  coordinator_agent_id text
   status text [not null, default: 'backlog']
   user_id text
   workspace_id text
@@ -3968,8 +3968,8 @@ table tasks {
   editor_data jsonb
   status text [not null, default: 'backlog']
   workflow_state_id text
-  workflow_state_ref_id text
-  cycle_ref_id text
+  workflow_state_ref_id uuid
+  cycle_ref_id uuid
   workflow_category text [not null, default: 'backlog']
   domain_revision integer [not null, default: 1]
   requirement_revision integer [not null, default: 1]

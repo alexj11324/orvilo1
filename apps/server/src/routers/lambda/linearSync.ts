@@ -559,16 +559,21 @@ export const linearSyncRouter = router({
           settings: input.settings,
         });
         if (input.startImport) {
-          await ctx.linearSyncModel.updateScopeImportState(scope.id, {
-            cursors: {},
-            importCompletedAt: null,
-            importPhase: 'teams',
-            issuesFailed: 0,
-            issuesImported: 0,
-            projectsLinked: 0,
-            status: 'importing',
-            teamsLinked: 0,
-          });
+          // Resetting cursors while an import is mid-flight would interleave
+          // with the worker's own phase/cursor writes — only reset when the
+          // scope is not actively importing.
+          if (scope.status !== 'importing') {
+            await ctx.linearSyncModel.updateScopeImportState(scope.id, {
+              cursors: {},
+              importCompletedAt: null,
+              importPhase: 'teams',
+              issuesFailed: 0,
+              issuesImported: 0,
+              projectsLinked: 0,
+              status: 'importing',
+              teamsLinked: 0,
+            });
+          }
           await LinearSyncWorkflow.triggerInstallation({
             installationId: input.installationId,
             limit: 20,

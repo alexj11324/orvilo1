@@ -344,25 +344,30 @@ export class LinearSyncWorker {
     issueLink: NonNullable<Awaited<ReturnType<LinearSyncModel['findIssueLinkById']>>>,
     provider: LinearIssueProvider,
   ) {
-    if (!issueLink.bindingId) {
-      throw new LinearSyncPausedError('Linear issue link has no project binding');
-    }
-    const [binding, installation] = await Promise.all([
-      this.model.findBindingById(issueLink.bindingId),
+    const [binding, installation, teamLink] = await Promise.all([
+      issueLink.bindingId ? this.model.findBindingById(issueLink.bindingId) : Promise.resolve(null),
       this.model.findInstallationById(issueLink.installationId),
+      // Team-scope links carry bindingId = null — their write scope is the
+      // team link established by the workspace import, not a project binding.
+      !issueLink.bindingId && issueLink.linearTeamId
+        ? this.model.findTeamLinkByLinearTeamId(issueLink.linearTeamId)
+        : Promise.resolve(null),
     ]);
     if (
-      !binding ||
+      (!binding && !teamLink) ||
       !installation ||
       installation.status !== 'active' ||
       row.installationId !== installation.id ||
-      binding.installationId !== installation.id ||
+      (binding && binding.installationId !== installation.id) ||
       issueLink.organizationId !== installation.organizationId
     ) {
       throw new LinearSyncPausedError('Linear external write scope is unavailable');
     }
-    if (!linearBindingWriteEnabled(binding)) {
+    if (binding && !linearBindingWriteEnabled(binding)) {
       throw new LinearSyncPausedError('Linear external write binding is disabled');
+    }
+    if (!binding && teamLink!.syncState !== 'synced') {
+      throw new LinearSyncPausedError('Linear external write team link is not synced');
     }
     const remoteIssue = await provider.getIssue(issueLink.linearIssueId);
     const integrationTasks = new LinearIntegrationTaskService(
@@ -371,27 +376,53 @@ export class LinearSyncWorker {
       installation.id,
     );
     const task = await integrationTasks.findPublicTask(issueLink.taskId);
-    if (
-      !task ||
-      task.visibility !== 'public' ||
-      task.projectId !== binding.projectId ||
-      remoteIssue.projectId !== binding.linearProjectId ||
-      !(await integrationTasks.validateIssueScope({ binding, installation, issue: remoteIssue }))
-    ) {
-      throw new Error('Linear external write is outside the validated public binding scope');
+    if (binding) {
+      if (
+        !task ||
+        task.visibility !== 'public' ||
+        task.projectId !== binding.projectId ||
+        remoteIssue.projectId !== binding.linearProjectId ||
+        !(await integrationTasks.validateIssueScope({ binding, installation, issue: remoteIssue }))
+      ) {
+        throw new Error('Linear external write is outside the validated public binding scope');
+      }
+    } else {
+      if (
+        !task ||
+        task.visibility !== 'public' ||
+        task.teamId !== teamLink!.teamId ||
+        remoteIssue.teamId !== teamLink!.linearTeamId
+      ) {
+        throw new Error('Linear external write is outside the validated team scope');
+      }
+      if (remoteIssue.projectId) {
+        // The remote issue moved into a Linear project — pause until the
+        // inbound pass attaches a binding to the link, then write through
+        // the binding path.
+        throw new LinearSyncPausedError('Linear issue moved into a project scope');
+      }
     }
-    return { binding, installation, remoteIssue, task };
+    return { binding, installation, remoteIssue, task, teamLink };
   }
 
   private async ensureExternalMutationAllowed(
     row: Awaited<ReturnType<LinearSyncModel['claimOutbox']>>[number],
-    bindingId: string,
+    scope: Awaited<ReturnType<LinearSyncWorker['ensureOutboundIssueScope']>>,
     lease: LinearSyncLease,
   ) {
     await this.ensureCurrentOutboxLease(row, lease);
-    const binding = await this.model.findBindingById(bindingId);
-    if (!binding || !linearBindingWriteEnabled(binding)) {
-      throw new LinearSyncPausedError('Linear external write binding is disabled');
+    if (scope.binding) {
+      const binding = await this.model.findBindingById(scope.binding.id);
+      if (!binding || !linearBindingWriteEnabled(binding)) {
+        throw new LinearSyncPausedError('Linear external write binding is disabled');
+      }
+      return;
+    }
+    if (scope.teamLink) {
+      const teamLink = await this.model.findTeamLinkByLinearTeamId(scope.teamLink.linearTeamId);
+      if (!teamLink || teamLink.syncState !== 'synced') {
+        throw new LinearSyncPausedError('Linear external write team link is not synced');
+      }
     }
   }
 
@@ -829,9 +860,15 @@ export class LinearSyncWorker {
                 const beforeMutationBinding = binding
                   ? await this.model.findBindingById(binding.id)
                   : null;
+                const beforeMutationTeamLink = teamLink
+                  ? await this.model.findTeamLinkByLinearTeamId(teamLink.linearTeamId)
+                  : null;
                 if (
-                  binding &&
-                  (!beforeMutationBinding || !linearBindingWriteEnabled(beforeMutationBinding))
+                  (binding &&
+                    (!beforeMutationBinding ||
+                      !linearBindingWriteEnabled(beforeMutationBinding))) ||
+                  (teamLink &&
+                    (!beforeMutationTeamLink || beforeMutationTeamLink.syncState !== 'synced'))
                 ) {
                   await this.model.updateOutbox(
                     row.id,
@@ -1063,7 +1100,7 @@ export class LinearSyncWorker {
         });
       }
       if (typeof payload.body !== 'string') throw new Error('Linear comment body is missing');
-      await this.ensureExternalMutationAllowed(row, scope.binding.id, lease);
+      await this.ensureExternalMutationAllowed(row, scope, lease);
       const comment = await this.runExternalMutation(() =>
         provider.createComment({
           body: payload.body!,
@@ -1090,7 +1127,7 @@ export class LinearSyncWorker {
     if (!mapping.linearCommentId) throw new Error('Linear comment has no remote identity');
     if (action === 'update') {
       if (typeof payload.body !== 'string') throw new Error('Linear comment body is missing');
-      await this.ensureExternalMutationAllowed(row, scope.binding.id, lease);
+      await this.ensureExternalMutationAllowed(row, scope, lease);
       const comment = await this.runExternalMutation(() =>
         provider.updateComment(mapping.linearCommentId!, { body: payload.body! }),
       );
@@ -1104,7 +1141,7 @@ export class LinearSyncWorker {
       );
     }
     if (action !== 'delete') throw new Error('Unknown Linear comment outbox action');
-    await this.ensureExternalMutationAllowed(row, scope.binding.id, lease);
+    await this.ensureExternalMutationAllowed(row, scope, lease);
     await this.runExternalMutation(() => provider.deleteComment(mapping.linearCommentId!));
     const tombstone: LinearSyncTombstone = {
       at: new Date().toISOString(),
@@ -1252,14 +1289,15 @@ export class LinearSyncWorker {
       : null;
     if (
       targetLink &&
-      (targetScope?.binding.id !== sourceScope.binding.id ||
+      ((targetScope?.binding?.id ?? null) !== (sourceScope.binding?.id ?? null) ||
+        (targetScope?.teamLink?.id ?? null) !== (sourceScope.teamLink?.id ?? null) ||
         targetScope.installation.id !== sourceScope.installation.id ||
         targetLink.organizationId !== sourceLink.organizationId)
     ) {
       throw new Error('Linear relation endpoints are outside one validated binding scope');
     }
     if (relation.kind === 'parent') {
-      await this.ensureExternalMutationAllowed(row, sourceScope.binding.id, lease);
+      await this.ensureExternalMutationAllowed(row, sourceScope, lease);
       const updated = await this.runExternalMutation(() =>
         provider.updateIssue(sourceLink.linearIssueId, {
           parentId: targetLink?.linearIssueId ?? null,
@@ -1317,7 +1355,7 @@ export class LinearSyncWorker {
           }),
         );
       }
-      await this.ensureExternalMutationAllowed(row, sourceScope.binding.id, lease);
+      await this.ensureExternalMutationAllowed(row, sourceScope, lease);
       const remote = await this.runExternalMutation(() =>
         provider.createRelation({
           id: mapping.linearRelationId!,
@@ -1356,7 +1394,7 @@ export class LinearSyncWorker {
         }),
       );
     }
-    await this.ensureExternalMutationAllowed(row, sourceScope.binding.id, lease);
+    await this.ensureExternalMutationAllowed(row, sourceScope, lease);
     await this.runExternalMutation(() => provider.deleteRelation(mapping.linearRelationId!));
     return this.requireExternalSettlement(
       row,
@@ -2132,7 +2170,7 @@ export class LinearSyncWorker {
         approved === undefined || project.teamIds.some((teamId) => approved.includes(teamId)),
     );
     const teamLinks = new Map(
-      (await this.model.listTeamLinks())
+      (await this.model.listTeamLinks({ installationId: installation.id }))
         .filter((link) => link.syncState === 'synced')
         .map((link) => [link.linearTeamId, link.teamId]),
     );
@@ -2235,7 +2273,7 @@ export class LinearSyncWorker {
       phase: sweep === 'initial' ? 'issues' : 'reconciliation',
       processed: 0,
     };
-    const teamLinks = (await this.model.listTeamLinks())
+    const teamLinks = (await this.model.listTeamLinks({ installationId: installation.id }))
       .filter((link) => link.syncState === 'synced')
       .sort((a, b) => a.linearTeamId.localeCompare(b.linearTeamId));
     const issuesByTeam = { ...scope.cursors?.issuesByTeam };

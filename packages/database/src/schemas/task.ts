@@ -109,11 +109,11 @@ export const tasks = pgTable(
      */
     workflowStateId: text('workflow_state_id'),
     /** Local workflow-state pointer; resolved alongside the projection above. */
-    workflowStateRefId: text('workflow_state_ref_id').references(() => teamWorkflowStates.id, {
+    workflowStateRefId: uuid('workflow_state_ref_id').references(() => teamWorkflowStates.id, {
       onDelete: 'set null',
     }),
     /** Local team-cycle pointer (`team_cycles`), when the task sits in a cycle. */
-    cycleRefId: text('cycle_ref_id').references(() => teamCycles.id, {
+    cycleRefId: uuid('cycle_ref_id').references(() => teamCycles.id, {
       onDelete: 'set null',
     }),
     workflowCategory: text('workflow_category')

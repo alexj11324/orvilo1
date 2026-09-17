@@ -82,6 +82,7 @@
   "orchestration.coordinatorHint": "协调者负责规划工作，且必须是已启用的项目参与者。",
   "orchestration.coordinatorLabel": "协调者智能体",
   "orchestration.coordinatorPlaceholder": "选择协调者",
+  "orchestration.coordinatorRequired": "保存前请先选择协调 Agent。",
   "orchestration.description": "限定哪些智能体可以执行项目工作，以及重规划如何进入执行。",
   "orchestration.executionTitle": "执行预算",
   "orchestration.humanReviewHint": "在确认项目完成前要求人工决定。",

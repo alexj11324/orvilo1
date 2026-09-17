@@ -75,9 +75,11 @@ export const createLinearCoordinatorPlanner =
       .limit(1);
     if (!project?.userId) return proposeLinearPlanningReview(snapshot);
 
-    const agent = await new AgentModel(db, project.userId, workspaceId).getAgentConfig(
-      project.coordinatorAgentId,
-    );
+    const agent = project.coordinatorAgentId
+      ? await new AgentModel(db, project.userId, workspaceId).getAgentConfig(
+          project.coordinatorAgentId,
+        )
+      : null;
     if (!agent?.model || !agent.provider) return proposeLinearPlanningReview(snapshot);
 
     const generated = await new AiGenerationService(db, project.userId, workspaceId).generateObject(

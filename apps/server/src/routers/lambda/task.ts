@@ -20,6 +20,7 @@ import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/li
 import { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import type { LobeChatDatabase } from '@/database/type';
@@ -59,6 +60,7 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
       taskIntegration: new TaskIntegrationService(ctx.serverDB, ctx.userId, wsId),
       taskLifecycle: new TaskLifecycleService(ctx.serverDB, ctx.userId, wsId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, wsId),
+      teamModel: new TeamModel(ctx.serverDB, ctx.userId, wsId),
       taskIntentService: new TaskIntentService(ctx.serverDB, ctx.userId, wsId),
       taskService: new TaskService(ctx.serverDB, ctx.userId, wsId),
       taskTopicModel: new TaskTopicModel(ctx.serverDB, ctx.userId, wsId),
@@ -1700,7 +1702,12 @@ export const taskRouter = router({
         const resolved = await resolveOrThrow(model, id);
 
         let workflowPatch:
-          { workflowCategory: TaskWorkflowCategory; workflowStateId: string } | undefined;
+          | {
+              workflowCategory: TaskWorkflowCategory;
+              workflowStateId: string;
+              workflowStateRefId?: string | null;
+            }
+          | undefined;
         if (data.workflowCategory !== undefined) {
           if (!ctx.workspaceId || !resolved.workflowStateId) {
             throw new TRPCError({
@@ -1714,32 +1721,67 @@ export const taskRouter = router({
           const binding = issueLink?.bindingId
             ? await linearSyncModel.findBindingById(issueLink.bindingId)
             : null;
-          if (!issueLink || !binding || !linearBindingWriteEnabled(binding)) {
+          if (issueLink && binding) {
+            if (!linearBindingWriteEnabled(binding)) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: 'Linear workflow writes are unavailable for this task',
+              });
+            }
+
+            const targetMappings = (binding.settings.statusMappings ?? []).filter(
+              (mapping) => mapping.workflowCategory === data.workflowCategory,
+            );
+            if (targetMappings.length === 0) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: `No Linear state is mapped to ${data.workflowCategory}`,
+              });
+            }
+            if (targetMappings.length > 1) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: `Multiple Linear states are mapped to ${data.workflowCategory}; choose one in workspace settings`,
+              });
+            }
+            workflowPatch = {
+              workflowCategory: data.workflowCategory,
+              workflowStateId: targetMappings[0].linearStateId,
+            };
+          } else if (issueLink?.linearTeamId && resolved.teamId) {
+            // Team-scope links carry no project binding — category moves resolve
+            // through the team's imported workflow states (lowest position wins).
+            const teamLink = await linearSyncModel.findTeamLinkByLinearTeamId(
+              issueLink.linearTeamId,
+            );
+            if (!teamLink || teamLink.syncState !== 'synced') {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: 'Linear workflow writes are unavailable for this task',
+              });
+            }
+            const [targetState] = (await ctx.teamModel.listWorkflowStates(resolved.teamId))
+              .filter(
+                (state) => state.category === data.workflowCategory && state.remoteStateId !== null,
+              )
+              .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+            if (!targetState) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: `No Linear state is mapped to ${data.workflowCategory}`,
+              });
+            }
+            workflowPatch = {
+              workflowCategory: data.workflowCategory,
+              workflowStateId: targetState.remoteStateId!,
+              workflowStateRefId: targetState.id,
+            };
+          } else {
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
               message: 'Linear workflow writes are unavailable for this task',
             });
           }
-
-          const targetMappings = (binding.settings.statusMappings ?? []).filter(
-            (mapping) => mapping.workflowCategory === data.workflowCategory,
-          );
-          if (targetMappings.length === 0) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message: `No Linear state is mapped to ${data.workflowCategory}`,
-            });
-          }
-          if (targetMappings.length > 1) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message: `Multiple Linear states are mapped to ${data.workflowCategory}; choose one in workspace settings`,
-            });
-          }
-          workflowPatch = {
-            workflowCategory: data.workflowCategory,
-            workflowStateId: targetMappings[0].linearStateId,
-          };
         }
 
         // Collaborative edit lock: reject writes to a workspace task another member

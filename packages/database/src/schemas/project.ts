@@ -50,10 +50,15 @@ export const projects = pgTable(
     description: text('description'),
     avatar: text('avatar'),
 
-    /** Dedicated agent that coordinates all conversations and work inside this project. */
-    coordinatorAgentId: text('coordinator_agent_id')
-      .references(() => agents.id, { onDelete: 'restrict' })
-      .notNull(),
+    /**
+     * Dedicated agent that coordinates all conversations and work inside this
+     * project. Nullable (linear-workspace-v3): with `user_id` surviving owner
+     * removal via SET NULL, a restricted coordinator FK would block deleting
+     * the owner account outright — the coordinator clears instead.
+     */
+    coordinatorAgentId: text('coordinator_agent_id').references(() => agents.id, {
+      onDelete: 'set null',
+    }),
 
     status: text('status').$type<ProjectStatus>().notNull().default('backlog'),
 

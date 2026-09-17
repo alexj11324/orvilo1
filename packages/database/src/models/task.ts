@@ -714,7 +714,7 @@ export class TaskModel {
         data.projectId !== undefined ||
         data.visibility !== undefined)
     ) {
-      return this.withDependencyLock((model) => model.update(id, data));
+      return this.withDependencyLock((model) => model.update(id, data, mutation));
     }
     await this.assertDependenciesForStatus([id], data.status);
 

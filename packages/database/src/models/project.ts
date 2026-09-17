@@ -52,7 +52,7 @@ export interface ProjectOrchestrationPolicyUpdateInput {
 }
 
 export interface ProjectOrchestrationPolicyView {
-  coordinatorAgentId: string;
+  coordinatorAgentId: string | null;
   orchestrationPolicy: ProjectOrchestrationPolicy;
   orchestrationPolicyRevision: number;
   requireHumanReviewRequired: boolean;
@@ -272,9 +272,11 @@ export class ProjectModel {
         .delete(projects)
         .where(and(eq(projects.id, id), this.manageable()))
         .returning();
-      await new AgentModel(tx as LobeChatDatabase, this.userId, this.workspaceId).delete(
-        project.coordinatorAgentId,
-      );
+      if (project.coordinatorAgentId) {
+        await new AgentModel(tx as LobeChatDatabase, this.userId, this.workspaceId).delete(
+          project.coordinatorAgentId,
+        );
+      }
       return deleted ?? null;
     });
   }

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -1342,5 +1342,64 @@ describe('LinearSyncModel', () => {
     expect(await model.retryOutbox(firstCreate.id, firstCreate.updatedAt)).toMatchObject({
       id: firstCreate.id,
     });
+  });
+
+  it('does not echo a Linear-originated project move back to Linear', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const taskModel = new TaskModel(db, userId, workspaceId);
+    const projectA = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'MOVEA',
+      name: 'Origin project',
+    });
+    const projectB = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'MOVEB',
+      name: 'Destination project',
+    });
+    const binding = await model.upsertBinding({
+      installationId,
+      linearProjectId: 'linear-project-move',
+      projectId: projectB.id,
+      settings: { readEnabled: true, writeEnabled: true },
+    });
+    const task = await taskModel.create({
+      instruction: 'Track the remote move',
+      name: 'Track the remote move',
+      projectId: projectA.id,
+    });
+    await model.createIssueLink({
+      bindingId: binding.id,
+      installationId,
+      linearIdentifier: 'MV-1',
+      linearIssueId: 'linear-issue-move',
+      organizationId: 'linear-org-1',
+      taskId: task.id,
+    });
+    // Isolate the assertion from create-intent rows: only what the move writes
+    // may appear in the outbox.
+    await db.delete(linearSyncOutbox);
+
+    // TaskModel.update re-enters through the dependency lock when projectId
+    // changes; the mutation context must survive that hop so an inbound Linear
+    // move never writes back to Linear.
+    await taskModel.update(
+      task.id,
+      { projectId: projectB.id },
+      {
+        eventId: 'linear-delivery-move-1',
+        idempotencyKey: 'linear:issue:moved:1',
+        source: 'linear',
+        suppressLinearOutbox: true,
+      },
+    );
+
+    expect(await model.listOutbox()).toHaveLength(0);
+    const [event] = await db
+      .select()
+      .from(taskDomainEvents)
+      .where(eq(taskDomainEvents.taskId, task.id))
+      .orderBy(desc(taskDomainEvents.revision))
+      .limit(1);
+    expect(event.source).toBe('linear');
   });
 });

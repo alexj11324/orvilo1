@@ -11,9 +11,8 @@ const log = debug('lobe-server:workflows:verify:sweep');
  * {@link sweepStuckVerifyRuns} for what strands them and how each shape is
  * recovered.
  *
- * No per-user authentication: this is a global scan registered as a QStash
- * Schedule (cron). Signature verification is handled by the `qstashAuth`
- * middleware mounted on the route.
+ * No per-user authentication: this is a global scan registered as a Hatchet
+ * cron task and invoked directly by the worker.
  */
 export async function sweep(c: Context) {
   try {

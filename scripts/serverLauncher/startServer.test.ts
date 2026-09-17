@@ -92,6 +92,25 @@ describe('Docker startup migrations', () => {
     ]);
   });
 
+  it('starts the Hatchet worker beside the server in queue mode', async () => {
+    const result = await launch({
+      AGENT_RUNTIME_MODE: 'queue',
+      HATCHET_CLIENT_TOKEN: 'hatchet-token',
+    });
+
+    expect(result.commands.map((command) => command[1])).toEqual([
+      '/app/hatchet-worker/worker.mjs',
+      '/app/server.js',
+    ]);
+    expect(result.exits).toEqual([]);
+  });
+
+  it('fails fast when queue mode has no Hatchet token', async () => {
+    await expect(launch({ AGENT_RUNTIME_MODE: 'queue' })).rejects.toThrow(
+      'HATCHET_CLIENT_TOKEN is required when AGENT_RUNTIME_MODE=queue',
+    );
+  });
+
   it.each(['/app/docker.cjs', '/app/fts-search-elasticsearch-reindex.cjs'])(
     'does not serve requests when %s fails',
     async (script) => {

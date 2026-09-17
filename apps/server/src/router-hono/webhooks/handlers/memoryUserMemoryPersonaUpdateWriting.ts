@@ -41,7 +41,7 @@ const normalizeUserPersonaPayload = (
  * inline. Header auth is applied by the `memoryWebhookAuth` middleware.
  */
 export const memoryUserMemoryPersonaUpdateWriting = async (c: Context) => {
-  const { upstashWorkflowExtraHeaders, webhook } = parseMemoryExtractionConfig();
+  const { workflowExtraHeaders, webhook } = parseMemoryExtractionConfig();
 
   try {
     const json = await c.req.json();
@@ -58,7 +58,7 @@ export const memoryUserMemoryPersonaUpdateWriting = async (c: Context) => {
           const { workflowRunId } = await MemoryExtractionWorkflowService.triggerPersonaUpdate(
             userId,
             params.baseUrl,
-            { extraHeaders: upstashWorkflowExtraHeaders },
+            { extraHeaders: workflowExtraHeaders },
           );
 
           return { userId, workflowRunId };

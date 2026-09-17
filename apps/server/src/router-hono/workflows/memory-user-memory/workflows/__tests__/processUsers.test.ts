@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/server/globalConfig/parseMemoryExtractionConfig', () => ({
-  parseMemoryExtractionConfig: () => ({ upstashWorkflowExtraHeaders: {} }),
+  parseMemoryExtractionConfig: () => ({ workflowExtraHeaders: {} }),
 }));
 
 vi.mock('@/server/services/memory/userMemory/extract', () => ({

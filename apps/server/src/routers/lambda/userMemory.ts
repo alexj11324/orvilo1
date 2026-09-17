@@ -302,7 +302,7 @@ export const userMemoryRouter = router({
         };
       }
 
-      const { webhook, upstashWorkflowExtraHeaders } = parseMemoryExtractionConfig();
+      const { webhook, workflowExtraHeaders } = parseMemoryExtractionConfig();
       const baseUrl = webhook.baseUrl || appEnv.INTERNAL_APP_URL || appEnv.APP_URL;
 
       try {
@@ -321,14 +321,14 @@ export const userMemoryRouter = router({
               userInitiated: true,
             }),
           ),
-          { extraHeaders: upstashWorkflowExtraHeaders },
+          { extraHeaders: workflowExtraHeaders },
         );
 
         await ctx.asyncTaskModel.update(taskId, {
           metadata: {
             ...metadata,
             control: {
-              upstash: {
+              hatchet: {
                 workflowRunIds: workflowRunId ? [workflowRunId] : [],
               },
             },

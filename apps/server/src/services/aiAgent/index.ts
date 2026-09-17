@@ -201,6 +201,7 @@ export class AiAgentService {
       messageModel: this.messageModel,
       threadModel: this.threadModel,
       userId: this.userId,
+      workspaceId: this.workspaceId,
     };
   }
 

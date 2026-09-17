@@ -17,13 +17,13 @@ const getVercelUrl = () => {
   return `https://${process.env.VERCEL_BRANCH_URL}`;
 };
 
-const APP_URL = process.env.APP_URL
-  ? process.env.APP_URL
-  : isInVercel
+const APP_URL =
+  process.env.APP_URL ||
+  (isInVercel
     ? getVercelUrl()
     : process.env.NODE_ENV === 'development'
       ? `http://localhost:${process.env.PORT || 3010}`
-      : `http://localhost:${process.env.PORT || 3210}`;
+      : `http://localhost:${process.env.PORT || 3210}`);
 
 // INTERNAL_APP_URL is used for server-to-server calls to bypass CDN/proxy
 // Falls back to APP_URL if not set
@@ -80,7 +80,7 @@ export const getAppConfig = () => {
       AGENT_GATEWAY_URL: z.string().url().optional(),
       /**
        * Enable Queue-based Agent Runtime
-       * When true, use QStash for async agent execution (production)
+       * When true, use Hatchet for async agent execution (production)
        * When false, execute agent steps synchronously in current process (development)
        * @default false
        */

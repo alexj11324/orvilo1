@@ -1,9 +1,7 @@
-import type { FlowControl } from '@upstash/qstash';
 import debug from 'debug';
 
-import { appEnv } from '@/envs/app';
 import { injectActiveTraceHeaders } from '@/libs/observability/traceparent';
-import { qstashClient, workflowClient } from '@/libs/qstash';
+import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
 
 const log = debug('lobe-server:workflows:agent-signal:nightly-review');
 
@@ -96,16 +94,6 @@ export interface ExecuteNightlyReviewUserPayload {
   user: NightlyReviewWorkflowUser;
 }
 
-const getWorkflowUrl = (path: string): string => {
-  const baseUrl = appEnv.INTERNAL_APP_URL || appEnv.APP_URL;
-
-  if (!baseUrl) {
-    throw new Error('INTERNAL_APP_URL or APP_URL is required to trigger nightly review workflows');
-  }
-
-  return new URL(path, baseUrl).toString();
-};
-
 const getTriggerHeaders = (): Record<string, string> => {
   const headers = new Headers();
 
@@ -167,14 +155,7 @@ const withPublishTimeout = async <T>(publish: Promise<T>, label: string): Promis
  *         -> executeNightlyReviewUser
  */
 export class AgentSignalNightlyReviewWorkflow {
-  /**
-   * Starts the pagination tree from the hourly cron entry.
-   *
-   * Publishes through `@upstash/qstash` rather than the workflow client's `trigger()`: `serve()`
-   * treats a plain POST as a first invocation, and this is the publish path the task crons have
-   * been running in production without ever landing in the DLQ. The timeout keeps the cron
-   * handler inside Cloudflare's 100s origin budget no matter how the outbound call behaves.
-   */
+  /** Starts the pagination tree from the hourly cron entry. */
   static publishPaginateUsersEntry(payload: PaginateNightlyReviewUsersPayload) {
     log('Publishing nightly review cron entry payload=%O', {
       pageSize: payload.pageSize,
@@ -182,14 +163,9 @@ export class AgentSignalNightlyReviewWorkflow {
     });
 
     return withPublishTimeout(
-      qstashClient.publishJSON({
-        body: payload,
-        flowControl: {
-          key: NIGHTLY_REVIEW_PAGINATE_FLOW_CONTROL_KEY,
-          parallelism: 1,
-        } satisfies FlowControl,
+      triggerHatchetWorkflow(WORKFLOW_PATHS.paginateUsers, payload, {
+        concurrencyKey: NIGHTLY_REVIEW_PAGINATE_FLOW_CONTROL_KEY,
         headers: getTriggerHeaders(),
-        url: getWorkflowUrl(WORKFLOW_PATHS.paginateUsers),
       }),
       'nightly review cron publish',
     );
@@ -204,14 +180,9 @@ export class AgentSignalNightlyReviewWorkflow {
     });
 
     return withPublishTimeout(
-      workflowClient.trigger({
-        body: payload,
-        flowControl: {
-          key: NIGHTLY_REVIEW_PAGINATE_FLOW_CONTROL_KEY,
-          parallelism: 1,
-        } satisfies FlowControl,
+      triggerHatchetWorkflow(WORKFLOW_PATHS.paginateUsers, payload, {
+        concurrencyKey: NIGHTLY_REVIEW_PAGINATE_FLOW_CONTROL_KEY,
         headers: getTriggerHeaders(),
-        url: getWorkflowUrl(WORKFLOW_PATHS.paginateUsers),
       }),
       'nightly review pagination trigger',
     );
@@ -222,14 +193,9 @@ export class AgentSignalNightlyReviewWorkflow {
     log('Triggering nightly review execution userId=%s', payload.user.id);
 
     return withPublishTimeout(
-      workflowClient.trigger({
-        body: payload,
-        flowControl: {
-          key: NIGHTLY_REVIEW_EXECUTE_FLOW_CONTROL_KEY,
-          parallelism: 5,
-        } satisfies FlowControl,
+      triggerHatchetWorkflow(WORKFLOW_PATHS.executeUser, payload, {
+        concurrencyKey: `${NIGHTLY_REVIEW_EXECUTE_FLOW_CONTROL_KEY}.${payload.user.id}`,
         headers: getTriggerHeaders(),
-        url: getWorkflowUrl(WORKFLOW_PATHS.executeUser),
       }),
       'nightly review execution trigger',
     );

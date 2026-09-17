@@ -10,13 +10,13 @@ import {
 } from '@/server/services/memory/userMemory/extract';
 
 /**
- * Entry point for memory extraction: either schedules the Upstash workflow or
+ * Entry point for memory extraction: either schedules the Hatchet workflow or
  * runs the extraction inline, depending on the payload `mode`.
  *
  * Header auth is applied by the `memoryWebhookAuth` middleware.
  */
 export const memoryExtractionWebhook = async (c: Context) => {
-  const { upstashWorkflowExtraHeaders } = parseMemoryExtractionConfig();
+  const { workflowExtraHeaders } = parseMemoryExtractionConfig();
 
   try {
     const json = await c.req.json();
@@ -34,7 +34,7 @@ export const memoryExtractionWebhook = async (c: Context) => {
     if (params.mode === 'workflow') {
       const { workflowRunId } = await MemoryExtractionWorkflowService.triggerProcessUsers(
         buildWorkflowPayloadInput(params),
-        { extraHeaders: upstashWorkflowExtraHeaders },
+        { extraHeaders: workflowExtraHeaders },
       );
 
       return c.json({ message: 'Memory extraction scheduled via workflow.', workflowRunId }, 202);

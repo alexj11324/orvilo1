@@ -1,5 +1,4 @@
 import { errorNameFrom } from '@orvilo/utils';
-import type { PublicServeOptions, WorkflowContext } from '@upstash/workflow';
 
 import { getServerDB } from '@/database/server';
 import { publishOnboardingGenerationProgress } from '@/server/services/onboardingProgress';
@@ -8,6 +7,7 @@ import {
   type TaskRecommendationProviderResult,
   type TaskRecommendationService,
 } from '@/server/services/taskRecommendation/service';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 import {
@@ -99,20 +99,3 @@ export const failOnboardingTaskRecommendations = async (
   if (failed) await publishOnboardingGenerationProgress(payload.userId, payload.topicId);
   return failed;
 };
-
-/** Upstash parser and failure callback for the recommendation workflow endpoint. */
-export const processOnboardingTaskRecommendationWorkflowOptions = {
-  failureFunction: async ({
-    context: { requestPayload },
-  }: {
-    context: { requestPayload?: unknown };
-  }) => {
-    const parsed = ProcessOnboardingTaskRecommendationPayloadSchema.safeParse(requestPayload);
-    if (!parsed.success) return 'invalid-payload';
-    return (await failOnboardingTaskRecommendations(parsed.data))
-      ? 'session-failed'
-      : 'not-current';
-  },
-  initialPayloadParser: (input: string) =>
-    ProcessOnboardingTaskRecommendationPayloadSchema.parse(JSON.parse(input)),
-} satisfies PublicServeOptions<ProcessOnboardingTaskRecommendationPayload>;

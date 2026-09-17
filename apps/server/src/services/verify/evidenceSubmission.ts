@@ -100,7 +100,7 @@ export const startEvidenceSubmission = async (params: {
           userId,
           ...(workspaceId ? { workspaceId } : {}),
         },
-        delivery: 'qstash',
+        delivery: 'hatchet',
         fallback: 'none',
         url: '/api/workflows/verify/on-evidence-complete',
       },

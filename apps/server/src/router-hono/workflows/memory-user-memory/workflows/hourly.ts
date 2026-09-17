@@ -1,5 +1,4 @@
 import { MemorySourceType } from '@orvilo/types';
-import { type WorkflowContext } from '@upstash/workflow';
 import { chunk } from 'es-toolkit/compat';
 
 import { appEnv } from '@/envs/app';
@@ -11,6 +10,7 @@ import {
   MemoryExtractionWorkflowService,
   normalizeMemoryExtractionPayload,
 } from '@/server/services/memory/userMemory/extract';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 
 import { checkGuard, ensureWorkflowStarted } from './runGuard';
@@ -25,7 +25,7 @@ const USER_PAGE_SIZE = 200;
 const USER_BATCH_SIZE = 20;
 const WORKFLOW_PATH = 'api/workflows/memory-user-memory/call-cron-hourly-analysis';
 
-const { webhook, upstashWorkflowExtraHeaders } = parseMemoryExtractionConfig();
+const { webhook, workflowExtraHeaders } = parseMemoryExtractionConfig();
 
 const resolveBaseUrl = () => webhook.baseUrl || appEnv.INTERNAL_APP_URL || appEnv.APP_URL;
 
@@ -66,7 +66,7 @@ export const hourlyWorkflowHandler = async (
         },
         {
           entryWorkflowRunId: context.workflowRunId,
-          extraHeaders: upstashWorkflowExtraHeaders,
+          extraHeaders: workflowExtraHeaders,
         },
       ),
     );
@@ -159,7 +159,7 @@ export const hourlyWorkflowHandler = async (
               userIds: batchUserIds,
             }),
           ),
-          { extraHeaders: upstashWorkflowExtraHeaders },
+          { extraHeaders: workflowExtraHeaders },
         ),
       );
       await appendHourlyWorkflowRunId(hourlyTaskId, result.workflowRunId);
@@ -200,7 +200,7 @@ export const hourlyWorkflowHandler = async (
           dryRun,
           hourlyTaskId,
         },
-        { extraHeaders: upstashWorkflowExtraHeaders },
+        { extraHeaders: workflowExtraHeaders },
       ),
     );
     await appendHourlyWorkflowRunId(hourlyTaskId, result.workflowRunId);
@@ -220,12 +220,4 @@ export const hourlyWorkflowHandler = async (
     processedUsers: userIds.length,
     scheduledBatches: batches.length,
   };
-};
-
-export const hourlyWorkflowOptions = {
-  flowControl: {
-    key: 'memory-user-memory.call-cron-hourly-analysis',
-    parallelism: 1,
-    ratePerSecond: 1,
-  },
 };

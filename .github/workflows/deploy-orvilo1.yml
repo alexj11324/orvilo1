@@ -113,9 +113,13 @@ jobs:
             }
           "
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            'sudo docker stop orvilo-hatchet-worker 2>/dev/null || true'
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             "cd $COMPOSE_DIR && \
-             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull lobe && \
-             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d"
+             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull lobe hatchet-worker"
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            "cd $COMPOSE_DIR && \
+             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d lobe"
 
       - name: Verify
         env:
@@ -130,6 +134,21 @@ jobs:
               break
             fi
             [ "$i" = 30 ] && { echo "超时：未看到 migration pass"; exit 1; }
+            sleep 6
+          done
+          # Start the worker only after the app container has completed its
+          # database migrations. This prevents Hatchet cron/sweep tasks from
+          # reaching new dispatch tables before they exist.
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            "cd $COMPOSE_DIR && \
+             sudo ORVILO_IMAGE_TAG='ghcr.io/${{ github.repository }}:sha-${{ github.sha }}' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d hatchet-worker"
+          for i in $(seq 1 30); do
+            if ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+                 'sudo docker logs orvilo-hatchet-worker 2>&1 | tail -80' | grep -Eq 'Worker .* listening for actions'; then
+              echo "Hatchet worker 已注册"
+              break
+            fi
+            [ "$i" = 30 ] && { echo "超时：Hatchet worker 未注册"; exit 1; }
             sleep 6
           done
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \

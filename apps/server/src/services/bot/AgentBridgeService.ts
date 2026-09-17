@@ -1166,7 +1166,7 @@ export class AgentBridgeService {
               type: 'afterStep',
               webhook: {
                 body: { ...webhookBody, type: 'step' },
-                delivery: 'qstash',
+                delivery: 'hatchet',
                 url: callbackUrl,
               },
             },
@@ -1185,7 +1185,7 @@ export class AgentBridgeService {
                   })
                 : {
                     body: { ...webhookBody, type: 'completion', userPrompt: prompt },
-                    delivery: 'qstash',
+                    delivery: 'hatchet',
                     fallback: 'none',
                     url: callbackUrl,
                   },
@@ -1422,7 +1422,7 @@ export class AgentBridgeService {
               type: 'afterStep' as const,
               webhook: {
                 body: { ...webhookBody, type: 'step' },
-                delivery: 'qstash' as const,
+                delivery: 'hatchet' as const,
                 url: callbackUrl,
               },
             },
@@ -1605,7 +1605,7 @@ export class AgentBridgeService {
                   })
                 : {
                     body: { ...webhookBody, type: 'completion', userPrompt: prompt },
-                    delivery: 'qstash' as const,
+                    delivery: 'hatchet' as const,
                     fallback: 'none' as const,
                     url: callbackUrl,
                   },

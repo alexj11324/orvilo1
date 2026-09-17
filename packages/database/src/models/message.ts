@@ -2584,6 +2584,14 @@ export class MessageModel {
     });
   };
 
+  countByThreadId = async (threadId: string): Promise<number> => {
+    const [row] = await this.db
+      .select({ count: count(messages.id) })
+      .from(messages)
+      .where(and(eq(messages.threadId, threadId), this.ownership()));
+    return Number(row?.count ?? 0);
+  };
+
   /**
    * Ids among `ids` that resolve to an agent-share VISITOR message under this
    * owner — the inverse of the `notShareVisitorMessage()` predicate every

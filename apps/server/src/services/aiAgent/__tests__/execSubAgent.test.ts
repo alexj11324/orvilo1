@@ -542,6 +542,24 @@ describe('AiAgentService.execSubAgent', () => {
 
       expect(onCompleteHook).toBeDefined();
       expect(onCompleteHook!.handler).toBeInstanceOf(Function);
+      expect(onCompleteHook!.webhook).toMatchObject({
+        body: {
+          callbackType: 'completion',
+          sourceMessageId: 'parent-msg-1',
+          threadId: 'thread-123',
+        },
+        delivery: 'hatchet',
+        fallback: 'none',
+        url: '/api/agent/webhooks/thread-run-callback',
+      });
+
+      const afterStepHook = callArgs.hooks?.find((h: any) => h.id === 'thread-metadata-update');
+      expect(afterStepHook!.webhook).toMatchObject({
+        body: { callbackType: 'step', threadId: 'thread-123' },
+        delivery: 'hatchet',
+        fallback: 'none',
+        url: '/api/agent/webhooks/thread-run-callback',
+      });
     });
   });
 });

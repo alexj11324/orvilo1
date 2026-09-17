@@ -20,7 +20,7 @@ const DEFAULT_WORKFLOW_PROCESS_USER_TOPICS_PARALLELISM = 25;
 
 // NOTICE: Hard per-user, per-run fan-out ceiling. A single user with a large backlog of
 // un-extracted topics must never enqueue an unbounded flood of process-topic runs (we have seen a
-// single user back up 650k+ QStash messages). flowControl only caps concurrency, not queue depth,
+// single user back up 650k+ queued messages). flowControl only caps concurrency, not queue depth,
 // so this count cap is the actual backlog guard. Remaining topics stay "un-extracted" and are
 // picked up by later hourly runs, so the cap self-drains without dropping data.
 const DEFAULT_WORKFLOW_MAX_TOPICS_PER_USER_PER_RUN = 100;
@@ -89,18 +89,18 @@ export interface MemoryExtractionPrivateConfig {
     region?: string;
     secretAccessKey?: string;
   };
-  upstashWorkflowExtraHeaders?: Record<string, string>;
   webhook: {
     baseUrl?: string;
     headers?: Record<string, string>;
   };
   whitelistUsers?: string[];
   workflow?: {
-    /** Hard cap on topics fanned out per user per run; guards against QStash backlog storms. */
+    /** Hard cap on topics fanned out per user per run; guards against queue backlog storms. */
     maxTopicsPerUserPerRun: number;
     /** Maximum active process-user-topics workflow workers across all users. */
     processUserTopicsParallelism: number;
   };
+  workflowExtraHeaders?: Record<string, string>;
 }
 
 const parseGateKeeperAgent = (): MemoryAgentConfig => {
@@ -297,9 +297,7 @@ export const parseMemoryExtractionConfig = (): MemoryExtractionPrivateConfig => 
       return acc;
     }, {});
 
-  const upstashWorkflowExtraHeaders = process.env.MEMORY_USER_MEMORY_WORKFLOW_EXTRA_HEADERS?.split(
-    ',',
-  )
+  const workflowExtraHeaders = process.env.MEMORY_USER_MEMORY_WORKFLOW_EXTRA_HEADERS?.split(',')
     .filter(Boolean)
     .reduce<Record<string, string>>((acc, pair) => {
       const [key, value] = pair.split('=').map((s) => s.trim());
@@ -343,7 +341,7 @@ export const parseMemoryExtractionConfig = (): MemoryExtractionPrivateConfig => 
     embeddingPreferredProviders,
     featureFlags,
     observabilityS3: extractorObservabilityS3,
-    upstashWorkflowExtraHeaders,
+    workflowExtraHeaders,
     webhook: {
       baseUrl: process.env.MEMORY_USER_MEMORY_WEBHOOK_BASE_URL,
       headers: webhookHeaders,

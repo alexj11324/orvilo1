@@ -25,7 +25,7 @@ export interface WorkflowCursorLike {
  *
  * Use when:
  * - Scheduling a child workflow with a pagination cursor
- * - Passing cursor data across Upstash Workflow JSON boundaries
+ * - Passing cursor data across durable workflow JSON boundaries
  *
  * Expects:
  * - `createdAt` is either a valid Date or an ISO-compatible date string
@@ -45,7 +45,7 @@ export const serializeWorkflowCursor = (
   errorMessage = 'Invalid workflow cursor date',
 ) => ({
   // NOTICE:
-  // Upstash Workflow persists step results as JSON and restores Date values as strings.
+  // Durable workers persist step results as JSON and restore Date values as strings.
   // This cursor can come from a live DB result or a restored step result.
   createdAt: parseWorkflowDate(cursor.createdAt, errorMessage).toISOString(),
   id: cursor.id,
@@ -87,7 +87,7 @@ export const isHourlyMemoryExtractionCancelled = async (hourlyTaskId?: string) =
  *
  * Use when:
  * - A workflow fan-out trigger returns a child `workflowRunId`
- * - The hourly async task should retain known Upstash workflow run ids for cancellation
+ * - The hourly async task should retain known Hatchet workflow run ids for cancellation
  *
  * Expects:
  * - `hourlyTaskId` is optional because the same workflow handlers support non-hourly entrypoints

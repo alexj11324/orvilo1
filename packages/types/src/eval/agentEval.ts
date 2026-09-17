@@ -97,7 +97,7 @@ export interface EvalRunConfig {
   agentSnapshot?: EvalRunAgentSnapshot;
   caseSelection?: EvalCaseSelection;
   /**
-   * Immutable snapshot of how the run executes: 'internal' (QStash workflow,
+   * Immutable snapshot of how the run executes: 'internal' (durable Hatchet workflow,
    * topics pre-created) or 'external' (worker-driven, on-demand). Written at
    * creation; never inferred from status.
    */

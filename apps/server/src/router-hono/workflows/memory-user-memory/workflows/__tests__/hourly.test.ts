@@ -25,7 +25,7 @@ vi.mock('@/envs/app', () => ({
 
 vi.mock('@/server/globalConfig/parseMemoryExtractionConfig', () => ({
   parseMemoryExtractionConfig: () => ({
-    upstashWorkflowExtraHeaders: {},
+    workflowExtraHeaders: {},
     webhook: { baseUrl: 'https://app.example.com' },
   }),
 }));

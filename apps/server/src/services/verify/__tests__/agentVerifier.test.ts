@@ -130,7 +130,7 @@ describe('createVerifierAgentRunner', () => {
             userId: 'u',
             workspaceId: 'ws-1',
           },
-          delivery: 'qstash',
+          delivery: 'hatchet',
           url: '/api/workflows/verify/on-verifier-complete',
         }),
       }),

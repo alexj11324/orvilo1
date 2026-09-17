@@ -1182,7 +1182,7 @@ export class AgentRuntimeService {
           : undefined;
         // Both local and queue modes use scheduleMessage
         // LocalQueueServiceImpl uses setTimeout + callback mechanism
-        // QStashQueueServiceImpl schedules HTTP requests
+        // HatchetQueueServiceImpl schedules the durable worker task
         messageId = await this.queueService.scheduleMessage({
           context: initialContext,
           deduplicationId,

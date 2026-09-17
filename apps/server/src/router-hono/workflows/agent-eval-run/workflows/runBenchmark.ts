@@ -1,10 +1,10 @@
-import { type WorkflowContext } from '@upstash/workflow';
 import debug from 'debug';
 
 import { AgentEvalRunModel, AgentEvalTestCaseModel } from '@/database/models/agentEval';
 import { getServerDB } from '@/database/server';
 import { AgentEvalRunWorkflow, type RunBenchmarkPayload } from '@/server/workflows/agentEvalRun';
 import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/utils';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 const log = debug('lobe-server:workflows:run-benchmark');
@@ -125,8 +125,4 @@ export const runBenchmarkHandler = async (context: WorkflowContext<RunBenchmarkP
     ...result,
     message: `Triggered pagination for ${testCaseIds.length} test cases`,
   };
-};
-
-export const runBenchmarkWorkflowOptions = {
-  flowControl: { key: 'agent-eval-run.process-run', parallelism: 100, rate: 1 },
 };

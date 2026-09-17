@@ -36,6 +36,7 @@ export interface SubAgentRunDeps {
   messageModel: MessageModel;
   threadModel: ThreadModel;
   userId: string;
+  workspaceId?: string;
 }
 
 export interface ExecAgentThreadRunOptions {
@@ -141,6 +142,7 @@ export const execAgentThreadRun = async (
     startedAt,
     parentMessageId,
     options.logScope,
+    { userId: deps.userId, workspaceId: deps.workspaceId },
   );
   // For the virtual sub-agent path, also register the completion bridge that
   // backfills the parent's placeholder tool message and resumes the parked

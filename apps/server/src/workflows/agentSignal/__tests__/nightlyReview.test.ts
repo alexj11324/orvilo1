@@ -7,34 +7,20 @@ const mocks = vi.hoisted(() => ({
   injectActiveTraceHeaders: vi.fn((headers: Headers) => {
     headers.set('traceparent', '00-trace-parent');
   }),
-  publishJSON: vi.fn(),
   trigger: vi.fn(),
-}));
-
-vi.mock('@/envs/app', () => ({
-  appEnv: {
-    APP_URL: 'https://public.example.com',
-    INTERNAL_APP_URL: 'https://internal.example.com',
-  },
 }));
 
 vi.mock('@/libs/observability/traceparent', () => ({
   injectActiveTraceHeaders: mocks.injectActiveTraceHeaders,
 }));
 
-vi.mock('@/libs/qstash', () => ({
-  qstashClient: {
-    publishJSON: mocks.publishJSON,
-  },
-  workflowClient: {
-    trigger: mocks.trigger,
-  },
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  triggerHatchetWorkflow: mocks.trigger,
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.trigger.mockResolvedValue({ workflowRunId: 'workflow-1' });
-  mocks.publishJSON.mockResolvedValue({ messageId: 'message-1' });
 });
 
 describe('AgentSignalNightlyReviewWorkflow cron entry', () => {
@@ -44,24 +30,19 @@ describe('AgentSignalNightlyReviewWorkflow cron entry', () => {
     targetLimit: 20,
   };
 
-  it('publishes the cron entry through the qstash client', async () => {
-    /**
-     * @example
-     * expect(publishJSON).toHaveBeenCalledWith(expect.objectContaining({ flowControl }));
-     */
+  it('publishes the cron entry through Hatchet', async () => {
     await expect(
       AgentSignalNightlyReviewWorkflow.publishPaginateUsersEntry(payload),
-    ).resolves.toEqual({ messageId: 'message-1' });
+    ).resolves.toEqual({ workflowRunId: 'workflow-1' });
 
-    expect(mocks.publishJSON).toHaveBeenCalledWith({
-      body: payload,
-      flowControl: {
-        key: 'agent-signal.nightly-review.paginate-users',
-        parallelism: 1,
+    expect(mocks.trigger).toHaveBeenCalledWith(
+      '/api/workflows/agent-signal/paginate-nightly-review-users',
+      payload,
+      {
+        concurrencyKey: 'agent-signal.nightly-review.paginate-users',
+        headers: { traceparent: '00-trace-parent' },
       },
-      headers: { traceparent: '00-trace-parent' },
-      url: 'https://internal.example.com/api/workflows/agent-signal/paginate-nightly-review-users',
-    });
+    );
   });
 
   it('fails fast instead of hanging when the outbound publish stalls', async () => {
@@ -73,7 +54,7 @@ describe('AgentSignalNightlyReviewWorkflow cron entry', () => {
      * await expect(publishPaginateUsersEntry(payload)).rejects.toThrow('timed out');
      */
     vi.useFakeTimers();
-    mocks.publishJSON.mockReturnValue(new Promise(() => {}));
+    mocks.trigger.mockReturnValue(new Promise(() => {}));
 
     try {
       const assertion = expect(
@@ -97,7 +78,7 @@ describe('AgentSignalNightlyReviewWorkflow cron entry', () => {
     vi.useFakeTimers();
 
     let rejectPublish: ((error: Error) => void) | undefined;
-    mocks.publishJSON.mockReturnValue(
+    mocks.trigger.mockReturnValue(
       new Promise((_, reject) => {
         rejectPublish = reject;
       }),
@@ -141,15 +122,14 @@ describe('AgentSignalNightlyReviewWorkflow', () => {
     await expect(AgentSignalNightlyReviewWorkflow.triggerPaginateUsers(payload)).resolves.toEqual({
       workflowRunId: 'workflow-1',
     });
-    expect(mocks.trigger).toHaveBeenCalledWith({
-      body: payload,
-      flowControl: {
-        key: 'agent-signal.nightly-review.paginate-users',
-        parallelism: 1,
+    expect(mocks.trigger).toHaveBeenCalledWith(
+      '/api/workflows/agent-signal/paginate-nightly-review-users',
+      payload,
+      {
+        concurrencyKey: 'agent-signal.nightly-review.paginate-users',
+        headers: { traceparent: '00-trace-parent' },
       },
-      headers: { traceparent: '00-trace-parent' },
-      url: 'https://internal.example.com/api/workflows/agent-signal/paginate-nightly-review-users',
-    });
+    );
   });
 
   it('triggers one user execution with bounded concurrency', async () => {
@@ -170,14 +150,13 @@ describe('AgentSignalNightlyReviewWorkflow', () => {
     await expect(AgentSignalNightlyReviewWorkflow.triggerExecuteUser(payload)).resolves.toEqual({
       workflowRunId: 'workflow-1',
     });
-    expect(mocks.trigger).toHaveBeenCalledWith({
-      body: payload,
-      flowControl: {
-        key: 'agent-signal.nightly-review.execute-user',
-        parallelism: 5,
+    expect(mocks.trigger).toHaveBeenCalledWith(
+      '/api/workflows/agent-signal/execute-nightly-review-user',
+      payload,
+      {
+        concurrencyKey: 'agent-signal.nightly-review.execute-user.user-1',
+        headers: { traceparent: '00-trace-parent' },
       },
-      headers: { traceparent: '00-trace-parent' },
-      url: 'https://internal.example.com/api/workflows/agent-signal/execute-nightly-review-user',
-    });
+    );
   });
 });

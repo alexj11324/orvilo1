@@ -83,8 +83,8 @@ function buildContext(opts: {
     req: {
       header: (name: string) => {
         const normalized = name.toLowerCase();
-        if (normalized === 'upstash-retried') return opts.retried;
-        if (normalized === 'upstash-message-id') return opts.messageId;
+        if (normalized === 'retry-count') return opts.retried;
+        if (normalized === 'message-id') return opts.messageId;
         return undefined;
       },
       json: opts.jsonThrows
@@ -165,12 +165,12 @@ describe('runStep handler', () => {
       metadataPresent: false,
       operationId: 'op-1',
       stepIndex: 2,
-      upstashRetried: null,
+      retryCount: null,
     });
     warnSpy.mockRestore();
   });
 
-  it('includes QStash retry and message IDs in missing metadata diagnostics', async () => {
+  it('includes Hatchet retry and message IDs in missing metadata diagnostics', async () => {
     mockGetOperationMetadata.mockResolvedValue({});
     mockGetServerDB.mockResolvedValue(buildOperationDiagnosticDB());
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(function () {});
@@ -190,9 +190,9 @@ describe('runStep handler', () => {
       metadataHasUserId: false,
       metadataPresent: true,
       operationId: 'op-1',
-      qstashMessageId: 'msg-123',
+      queueMessageId: 'msg-123',
       stepIndex: 2,
-      upstashRetried: '3',
+      retryCount: '3',
     });
     warnSpy.mockRestore();
   });
@@ -200,7 +200,7 @@ describe('runStep handler', () => {
   it('steps through AiAgentService scoped to the operation workspace', async () => {
     // Regression (two invariants in one path):
     // 1. workspaceId — a workspace-scoped binding (e.g. Discord bot active agent)
-    //    runs its steps through this QStash worker. Dropping it makes the runtime
+    //    runs its steps through this Hatchet worker. Dropping it makes the runtime
     //    personal-scoped, so the parent-message lookup misses the workspace-scoped
     //    row → ConversationParentMissing.
     // 2. sub-agent forking — stepping MUST go through AiAgentService (not a bare
@@ -301,7 +301,7 @@ describe('runStep handler', () => {
     expect(captured.headers).toEqual({ 'Retry-After': '37' });
   });
 
-  it('forwards the upstash-retried header to executeStep as externalRetryCount', async () => {
+  it('forwards the Hatchet retry count to executeStep as externalRetryCount', async () => {
     mockGetOperationMetadata.mockResolvedValue({ userId: 'user-1' });
     mockExecuteStep.mockResolvedValue({
       nextStepScheduled: false,
@@ -317,7 +317,7 @@ describe('runStep handler', () => {
     );
   });
 
-  it('unwraps QStash `body.payload` resume/intervention fields into executeStep', async () => {
+  it('unwraps Hatchet `body.payload` resume/intervention fields into executeStep', async () => {
     mockGetOperationMetadata.mockResolvedValue({ userId: 'user-1' });
     mockExecuteStep.mockResolvedValue({
       nextStepScheduled: false,
@@ -325,7 +325,7 @@ describe('runStep handler', () => {
       success: true,
     });
 
-    // QStash nests these under `body.payload`, not the top level.
+    // Hatchet nests these under `body.payload`, not the top level.
     const { ctx } = buildContext({
       body: {
         context: { foo: 'bar' },

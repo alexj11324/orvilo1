@@ -2004,6 +2004,44 @@ table goal_traces {
   }
 }
 
+table hatchet_dispatches {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  deduplication_key text [not null]
+  status text [not null, default: 'pending']
+  lane_key text [not null]
+  payload jsonb [not null]
+  provider_run_id text
+  error text
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (status, updated_at) [name: 'hatchet_dispatches_status_updated_at_idx']
+    deduplication_key [name: 'hatchet_dispatches_active_deduplication_key_unique', unique]
+  }
+}
+
+table hatchet_workflow_steps {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  dispatch_id uuid [not null]
+  step_name text [not null]
+  status text [not null, default: 'running']
+  owner_token text [not null]
+  lease_expires_at "timestamp with time zone" [not null]
+  result jsonb
+  result_is_undefined boolean [not null, default: false]
+  completed_at "timestamp with time zone"
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (dispatch_id, step_name) [unique, name: 'hatchet_workflow_steps_dispatch_id_step_name_unique']
+    (status, lease_expires_at) [name: 'hatchet_workflow_steps_lease_idx']
+  }
+}
+
 table llm_generation_tracing {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   scenario text [not null]

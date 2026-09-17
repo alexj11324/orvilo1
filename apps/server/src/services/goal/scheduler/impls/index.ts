@@ -1,8 +1,7 @@
 import { appEnv } from '@/envs/app';
-import { qstashClient } from '@/libs/qstash';
 
+import { HatchetGoalScheduler } from './hatchet';
 import { LocalGoalScheduler } from './local';
-import { QStashGoalScheduler } from './qstash';
 import type { GoalSchedulerImpl } from './type';
 
 let cached: GoalSchedulerImpl | null = null;
@@ -10,7 +9,7 @@ let cached: GoalSchedulerImpl | null = null;
 /**
  * The singleton goal scheduler.
  *
- * - `AGENT_RUNTIME_MODE=queue`: QStash (production)
+ * - `AGENT_RUNTIME_MODE=queue`: Hatchet (production)
  * - otherwise: in-process timers (dev / desktop)
  *
  * Singleton because the local implementation holds pending timers; a
@@ -20,9 +19,7 @@ export const createGoalSchedulerModule = (): GoalSchedulerImpl => {
   if (cached) return cached;
 
   if (appEnv.enableQueueAgentRuntime) {
-    const baseUrl = process.env.APP_URL;
-    if (!baseUrl) throw new Error('APP_URL is required to schedule goal advances via QStash');
-    cached = new QStashGoalScheduler({ baseUrl, qstashClient });
+    cached = new HatchetGoalScheduler();
     return cached;
   }
 
@@ -30,7 +27,6 @@ export const createGoalSchedulerModule = (): GoalSchedulerImpl => {
   return cached;
 };
 
+export { HatchetGoalScheduler } from './hatchet';
 export { LocalGoalScheduler } from './local';
-export { GOAL_ADVANCE_PATH } from './qstash';
-export { QStashGoalScheduler } from './qstash';
 export type { GoalSchedulerImpl, ScheduleGoalAdvanceParams } from './type';

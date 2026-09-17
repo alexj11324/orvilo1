@@ -11,7 +11,7 @@ const log = debug('lobe-server:agent:subagent-callback');
  * Sub-agent completion bridge webhook (queue mode).
  *
  * When a server sub-agent op — spawned by a parent parked on `callSubAgent` —
- * reaches a terminal state, its `onComplete` hook is delivered here via QStash
+ * reaches a terminal state, its `onComplete` hook is delivered here by Hatchet
  * (in-memory handler hooks don't survive queue mode's cross-process steps).
  * Backfills the parent's placeholder tool message and barrier-resumes the
  * parked parent op via `completeSubAgentBridge`.
@@ -20,7 +20,6 @@ const log = debug('lobe-server:agent:subagent-callback');
  * — event fields from the hook dispatch plus the bridge params from
  * `webhook.body`.
  *
- * Auth: `qstashAuth` on the route — QStash signature required.
  */
 export async function subAgentCallback(c: Context): Promise<Response> {
   let body: any;
@@ -48,8 +47,8 @@ export async function subAgentCallback(c: Context): Promise<Response> {
   }
 
   try {
-    // Resolve userId from the child operation's metadata — same trust chain as
-    // /run: the body is QStash-signature-verified, the operation must exist.
+    // Resolve userId from the child operation metadata. The worker supplies
+    // only internal dispatch payloads, and the operation must exist.
     const coordinator = new AgentRuntimeCoordinator();
     const metadata = await coordinator.getOperationMetadata(operationId);
 
@@ -84,7 +83,7 @@ export async function subAgentCallback(c: Context): Promise<Response> {
     return c.json({ operationId, parentOperationId, resumed, success: true });
   } catch (error) {
     console.error('subagent-callback error:', error);
-    // Non-2xx → QStash redelivers, covering transient DB/Redis failures.
+    // Surface failures so Hatchet retries transient DB/Redis failures.
     return c.json({ error: error instanceof Error ? error.message : 'Internal error' }, 500);
   }
 }

@@ -24,11 +24,10 @@ vi.mock('@/server/services/queue/impls', () => ({
   isQueueAgentRuntimeEnabled: vi.fn(() => false),
 }));
 
-const mockPublishJSON = vi.hoisted(() => vi.fn());
-vi.mock('@upstash/qstash', () => ({
-  Client: class {
-    publishJSON = mockPublishJSON;
-  },
+const mockTriggerHatchetWorkflow = vi.hoisted(() => vi.fn());
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  triggerHatchetWorkflow: mockTriggerHatchetWorkflow,
+  isHatchetWorkflowPath: () => true,
 }));
 
 const { isQueueAgentRuntimeEnabled } = await import('@/server/services/queue/impls');
@@ -811,7 +810,6 @@ describe('HeterogeneousAgentService', () => {
   // link that, if broken, leaves a finished hetero task's `task_topics.status`
   // stuck at `running` because `onTopicComplete` never fires.
   describe('heteroFinish — queue-mode terminal webhook delivery (regression guard)', () => {
-    const originalToken = process.env.QSTASH_TOKEN;
     const originalAppUrl = process.env.APP_URL;
 
     const taskHook: SerializedHook = {
@@ -819,7 +817,7 @@ describe('HeterogeneousAgentService', () => {
       type: 'onComplete',
       webhook: {
         body: { taskId: 'task_q', taskIdentifier: 'T-Q', userId: 'user-test' },
-        delivery: 'qstash',
+        delivery: 'hatchet',
         url: '/api/workflows/task/on-topic-complete',
       },
     };
@@ -856,16 +854,12 @@ describe('HeterogeneousAgentService', () => {
 
     beforeEach(() => {
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(true);
-      mockPublishJSON.mockReset();
-      mockPublishJSON.mockResolvedValue(undefined);
-      process.env.QSTASH_TOKEN = 'test-token';
+      mockTriggerHatchetWorkflow.mockReset().mockResolvedValue(undefined);
       process.env.APP_URL = 'https://app.test';
     });
 
     afterEach(() => {
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(false);
-      if (originalToken === undefined) delete process.env.QSTASH_TOKEN;
-      else process.env.QSTASH_TOKEN = originalToken;
       if (originalAppUrl === undefined) delete process.env.APP_URL;
       else process.env.APP_URL = originalAppUrl;
     });
@@ -880,10 +874,10 @@ describe('HeterogeneousAgentService', () => {
         topicId: 'topic-q',
       });
 
-      expect(mockPublishJSON).toHaveBeenCalledTimes(1);
-      const arg = mockPublishJSON.mock.calls[0][0];
-      expect(arg.url).toContain('/api/workflows/task/on-topic-complete');
-      expect(arg.body).toMatchObject({
+      expect(mockTriggerHatchetWorkflow).toHaveBeenCalledTimes(1);
+      const [path, body] = mockTriggerHatchetWorkflow.mock.calls[0];
+      expect(path).toBe('/api/workflows/task/on-topic-complete');
+      expect(body).toMatchObject({
         hookId: 'task-on-complete',
         hookType: 'onComplete',
         reason: 'done',
@@ -905,8 +899,8 @@ describe('HeterogeneousAgentService', () => {
         topicId: 'topic-q',
       });
 
-      expect(mockPublishJSON).toHaveBeenCalledTimes(1);
-      expect(mockPublishJSON.mock.calls[0][0].body).toMatchObject({
+      expect(mockTriggerHatchetWorkflow).toHaveBeenCalledTimes(1);
+      expect(mockTriggerHatchetWorkflow.mock.calls[0][1]).toMatchObject({
         hookId: 'task-on-complete',
         topicId: 'topic-q',
       });
@@ -922,7 +916,7 @@ describe('HeterogeneousAgentService', () => {
         topicId: 'topic-q',
       });
 
-      expect(mockPublishJSON).not.toHaveBeenCalled();
+      expect(mockTriggerHatchetWorkflow).not.toHaveBeenCalled();
     });
   });
 
@@ -935,7 +929,6 @@ describe('HeterogeneousAgentService', () => {
   // hand-wave, and lets us reproduce the production "stuck task_topics" symptom
   // by injecting the suspected lost-update race on topic.metadata.
   describe('heteroFinish — seed→read→deliver round-trip + lost-update repro', () => {
-    const originalToken = process.env.QSTASH_TOKEN;
     const originalAppUrl = process.env.APP_URL;
     const TOPIC = 'topic-int';
 
@@ -946,7 +939,7 @@ describe('HeterogeneousAgentService', () => {
       type: 'onComplete',
       webhook: {
         body: { taskId: 'task_x', taskIdentifier: 'T-X', userId: 'user-test' },
-        delivery: 'qstash',
+        delivery: 'hatchet',
         url: '/api/workflows/task/on-topic-complete',
       },
     };
@@ -1029,17 +1022,13 @@ describe('HeterogeneousAgentService', () => {
 
     beforeEach(() => {
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(true);
-      mockPublishJSON.mockReset();
-      mockPublishJSON.mockResolvedValue(undefined);
-      process.env.QSTASH_TOKEN = 'test-token';
+      mockTriggerHatchetWorkflow.mockReset().mockResolvedValue(undefined);
       process.env.APP_URL = 'https://app.test';
     });
 
     afterEach(() => {
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(false);
       hookDispatcher.unregister('op-int');
-      if (originalToken === undefined) delete process.env.QSTASH_TOKEN;
-      else process.env.QSTASH_TOKEN = originalToken;
       if (originalAppUrl === undefined) delete process.env.APP_URL;
       else process.env.APP_URL = originalAppUrl;
     });
@@ -1068,8 +1057,8 @@ describe('HeterogeneousAgentService', () => {
         topicId: TOPIC,
       });
 
-      expect(mockPublishJSON).toHaveBeenCalledTimes(1);
-      expect(mockPublishJSON.mock.calls[0][0].url).toContain(
+      expect(mockTriggerHatchetWorkflow).toHaveBeenCalledTimes(1);
+      expect(mockTriggerHatchetWorkflow.mock.calls[0][0]).toBe(
         '/api/workflows/task/on-topic-complete',
       );
     });
@@ -1105,7 +1094,7 @@ describe('HeterogeneousAgentService', () => {
       // Exactly the production failure: the run finished, but the terminal hook
       // had nothing to deliver, so onTopicComplete never fires and the task
       // topic is stranded at `running`.
-      expect(mockPublishJSON).not.toHaveBeenCalled();
+      expect(mockTriggerHatchetWorkflow).not.toHaveBeenCalled();
     });
   });
 });

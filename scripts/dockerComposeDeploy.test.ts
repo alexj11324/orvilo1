@@ -45,7 +45,9 @@ describe('deploy docker-compose optional Elasticsearch', () => {
   } = compose.services;
 
   it('keeps every Elasticsearch service behind an opt-in profile so the default deployment is unchanged', () => {
-    const profiled = Object.entries(compose.services).filter(([, service]) => service.profiles);
+    const profiled = Object.entries(compose.services).filter(([, service]) =>
+      service.profiles?.some((profile) => ELASTICSEARCH_PROFILES.includes(profile)),
+    );
     expect(profiled.map(([name]) => name).sort()).toEqual([
       'elasticsearch',
       'fts-search-reindex',
@@ -112,7 +114,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     // This repo ships its own deploy stack, so the backfill and the sync worker are built from the
     // root Dockerfile instead of pulling the upstream LobeHub release. They must run the very same
     // tag as the app service, or the bundles could drift from the server that wrote the Outbox.
-    expect(compose.services.lobe.image).toBe('orvilo:local');
+    expect(compose.services.lobe.image).toBe('${ORVILO_IMAGE_TAG:-orvilo:local}');
     for (const service of [reindex, sync]) {
       expect(service.image).toBe(compose.services.lobe.image);
       expect(service.build).toEqual({ context: '../..', dockerfile: 'Dockerfile' });
@@ -155,6 +157,29 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     );
   });
 
+  it('packages the Hatchet worker in the deployment image and keeps it out of the web container', () => {
+    const worker = compose.services['hatchet-worker'];
+
+    expect(worker.image).toBe(compose.services.lobe.image);
+    expect(worker.build).toEqual({ context: '../..', dockerfile: 'Dockerfile' });
+    expect(worker.profiles).toEqual(['hatchet']);
+    expect(worker.entrypoint).toEqual(['/bin/node', '/app/hatchet-worker/worker.mjs']);
+    expect(compose.services.lobe.environment).toContain('HATCHET_WORKER_ENABLED=0');
+    expect(dockerfile).toContain(
+      'RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker',
+    );
+    expect(dockerfile).toContain('--out-extension:.js=.mjs');
+    expect(dockerfile).toContain('--external:sharp');
+    expect(dockerfile).toContain(
+      '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
+    );
+    expect(dockerfile).toContain('COPY --from=builder /app/hatchet-worker /app/hatchet-worker');
+    expect(dockerfile).toContain('pnpm add pg drizzle-orm @neondatabase/serverless sharp');
+    expect(dockerfile).toContain(
+      'COPY --from=builder /deps/node_modules/sharp /app/node_modules/sharp',
+    );
+  });
+
   it('never switches the search provider on behalf of the operator', () => {
     for (const service of [elasticsearch, reindex, sync, compose.services.lobe]) {
       expect(
@@ -176,6 +201,12 @@ describe('deploy docker-compose optional Elasticsearch', () => {
       expect(envExample).not.toMatch(/^#?\s*ES_API_KEY=/m);
       // Every optional line stays commented so the default deployment ignores the whole block.
       expect(envExample).not.toMatch(/^(COMPOSE_PROFILES|ES_[A-Z_]+)=/m);
+    }
+  });
+
+  it('documents the plain-gRPC TLS override for self-hosted Hatchet in both env examples', () => {
+    for (const envExample of envExamples) {
+      expect(envExample).toContain('# HATCHET_CLIENT_TLS_STRATEGY=none');
     }
   });
 

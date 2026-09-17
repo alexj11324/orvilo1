@@ -369,6 +369,36 @@ describe('ThreadModel', () => {
       expect(updated?.status).toBe(ThreadStatus.Completed);
     });
 
+    it('keeps terminal run metadata when delayed progress arrives', async () => {
+      await serverDB.insert(threads).values({
+        id: 'thread-terminal-progress',
+        metadata: { startedAt: '2026-09-16T00:00:00.000Z' },
+        status: ThreadStatus.Processing,
+        topicId,
+        type: ThreadType.Isolation,
+        userId,
+      });
+
+      await threadModel.completeRun('thread-terminal-progress', ThreadStatus.Completed, {
+        completedAt: '2026-09-16T00:01:00.000Z',
+        totalMessages: 4,
+      });
+      await threadModel.updateRunProgress('thread-terminal-progress', {
+        totalMessages: 2,
+        totalTokens: 10,
+      });
+
+      const updated = await threadModel.findById('thread-terminal-progress');
+      expect(updated).toMatchObject({
+        metadata: {
+          completedAt: '2026-09-16T00:01:00.000Z',
+          startedAt: '2026-09-16T00:00:00.000Z',
+          totalMessages: 4,
+        },
+        status: ThreadStatus.Completed,
+      });
+    });
+
     it('should not update thread belonging to another user', async () => {
       await serverDB.transaction(async (tx) => {
         await tx.insert(topics).values({ id: 'other-topic', userId: otherUserId });

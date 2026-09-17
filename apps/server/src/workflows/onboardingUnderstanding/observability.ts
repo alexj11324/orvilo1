@@ -11,13 +11,13 @@ interface WorkflowTraceContext {
 }
 
 /**
- * Restores QStash trace context and observes one Understanding workflow delivery.
+ * Restores trace context and observes one Understanding workflow delivery.
  *
  * Use when:
  * - Entering an onboarding Understanding Hono workflow handler
  *
  * Expects:
- * - QStash request headers are available when the delivery carries `traceparent`
+ * - Delivery headers are available when the delivery carries `traceparent`
  *
  * Returns:
  * - The workflow callback result under the restored distributed trace
@@ -29,7 +29,7 @@ export const observeOnboardingUnderstandingWorkflow = async <Result>(
 ): Promise<Result> => {
   // NOTICE:
   // Hono workflow routes bypass the backend middleware that normally extracts traceparent.
-  // QStash forwards trigger headers, but the workflow handler must restore them before spans open.
+  // Hatchet forwards trigger headers, but the workflow handler must restore them before spans open.
   // Source/context: `apps/server/src/workflows/agentSignal/run.ts` uses the same extraction boundary.
   // Removal condition: a shared Hono workflow middleware guarantees trace-context extraction.
   const traceContext = context.headers ? extractTraceContext(context.headers) : otContext.active();
@@ -48,7 +48,7 @@ export const observeOnboardingUnderstandingWorkflow = async <Result>(
  * - An active span exists when distributed trace continuity is required
  *
  * Returns:
- * - Headers suitable for the Upstash Workflow invoke options
+ * - Headers suitable for a durable workflow invocation
  */
 export const getOnboardingUnderstandingTraceHeaders = (): Record<string, string> => {
   const headers = new Headers();

@@ -61,8 +61,9 @@ AGENT_RUNTIME_MODE=queue bun run dev
 # Without root .env:
 .agents/acceptance/scripts/init-dev-env.sh dev
 
-# Local QStash. Run in a separate terminal only when testing workflow paths.
-.agents/acceptance/scripts/init-dev-env.sh qstash
+# Hatchet worker. Configure HATCHET_CLIENT_TOKEN and run this in a separate
+# terminal when testing queue-mode workflow paths.
+.agents/acceptance/scripts/init-dev-env.sh hatchet
 
 # Restart — required to pick up server-side code changes.
 # For a no-.env server started by init-dev-env.sh, stop only its owned process tree:
@@ -86,14 +87,14 @@ in doubt.
 
 ## Troubleshooting
 
-| Issue                     | Solution                                                                                        |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| `ECONNREFUSED`            | Server not running — start it                                                                   |
-| `EADDRINUSE` on the port  | Inspect the listener; stop it only if this run owns it. Never kill an unknown PID by port alone |
-| Stale data / old behavior | Server needs a restart to pick up code changes                                                  |
-| Agent call runs inline    | Set `AGENT_RUNTIME_MODE=queue`, make sure `REDIS_URL` is configured, then restart the server    |
-| Queue mode needs Redis    | Run `init-dev-env.sh setup-db`, or provide `REDIS_URL=redis://...` for an existing Redis        |
-| QStash workflow failures  | Start `init-dev-env.sh qstash` and make sure dev server inherited the script's `QSTASH_*` env   |
+| Issue                     | Solution                                                                                              |
+| ------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `ECONNREFUSED`            | Server not running — start it                                                                         |
+| `EADDRINUSE` on the port  | Inspect the listener; stop it only if this run owns it. Never kill an unknown PID by port alone       |
+| Stale data / old behavior | Server needs a restart to pick up code changes                                                        |
+| Agent call runs inline    | Set `AGENT_RUNTIME_MODE=queue`, make sure `REDIS_URL` is configured, then restart the server          |
+| Queue mode needs Redis    | Run `init-dev-env.sh setup-db`, or provide `REDIS_URL=redis://...` for an existing Redis              |
+| Hatchet workflow failures | Start `init-dev-env.sh hatchet`, verify `HATCHET_CLIENT_TOKEN`, and make sure the worker is connected |
 
 Marketplace/community endpoints are not part of the local agent-testing auth
 gate. Do not block local product-chain verification on marketplace API auth

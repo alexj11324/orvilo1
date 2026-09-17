@@ -1,11 +1,9 @@
 import { SpanStatusCode } from '@orvilo/observability-otel/api';
 import {
-  buildUpstashWorkflowMetricAttributes,
-  tracer as upstashWorkflowTracer,
-} from '@orvilo/observability-otel/modules/upstash-workflow';
+  buildHatchetWorkflowMetricAttributes,
+  tracer as hatchetWorkflowTracer,
+} from '@orvilo/observability-otel/modules/hatchet-workflow';
 import { LayersEnum, MemorySourceType } from '@orvilo/types';
-import { type WorkflowContext } from '@upstash/workflow';
-import { WorkflowAbort } from '@upstash/workflow';
 
 import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { getServerDB } from '@/database/server';
@@ -16,12 +14,14 @@ import {
   MemoryExtractionWorkflowService,
   normalizeMemoryExtractionPayload,
 } from '@/server/services/memory/userMemory/extract';
+import type { WorkflowContext } from '@/server/workflows/context';
+import { WorkflowAbort } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 import { checkGuard, ensureWorkflowStarted } from './runGuard';
 import { appendHourlyWorkflowRunId, isHourlyMemoryExtractionCancelled } from './utils';
 
-const { upstashWorkflowExtraHeaders } = parseMemoryExtractionConfig();
+const { workflowExtraHeaders } = parseMemoryExtractionConfig();
 const WORKFLOW_PATH = 'api/workflows/memory-user-memory/pipelines/chat-topic/process-topics';
 
 const CEPA_LAYERS: LayersEnum[] = [
@@ -33,7 +33,7 @@ const CEPA_LAYERS: LayersEnum[] = [
 const IDENTITY_LAYERS: LayersEnum[] = [LayersEnum.Identity];
 
 export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPayloadInput>) =>
-  upstashWorkflowTracer.startActiveSpan(
+  hatchetWorkflowTracer.startActiveSpan(
     'workflow:memory-user-memory:process-topics',
     async (span) => {
       await ensureWorkflowStarted(context, WORKFLOW_PATH);
@@ -41,7 +41,7 @@ export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPa
       const payload = normalizeMemoryExtractionPayload(context.requestPayload || {});
 
       span.setAttributes({
-        ...buildUpstashWorkflowMetricAttributes(context),
+        ...buildHatchetWorkflowMetricAttributes(context),
         'workflow.memory_user_memory.force_all': payload.forceAll,
         'workflow.memory_user_memory.force_topics': payload.forceTopics,
         'workflow.memory_user_memory.layers': payload.layers.join(','),
@@ -53,7 +53,7 @@ export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPa
 
       try {
         // NOTICE: Return (never throw) on a guard match — a throw before the first step makes
-        // Upstash re-enqueue the run, turning a "disable" guard into an infinite retry storm.
+        // Hatchet re-enqueues the run, turning a "disable" guard into an infinite retry storm.
         const entryGuard = await checkGuard(context, WORKFLOW_PATH, {
           response: { processedTopics: 0, processedUsers: 0 },
         });
@@ -173,7 +173,7 @@ export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPa
                 userId,
                 userIds: [userId],
               },
-              { extraHeaders: upstashWorkflowExtraHeaders },
+              { extraHeaders: workflowExtraHeaders },
             ),
           );
           await appendHourlyWorkflowRunId(payload.hourlyTaskId, result.workflowRunId);
@@ -218,7 +218,7 @@ export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPa
 
         const personaUpdateResult = await runStep(context, personaUpdateStepName, async () => {
           return MemoryExtractionWorkflowService.triggerPersonaUpdate(userId, payload.baseUrl, {
-            extraHeaders: upstashWorkflowExtraHeaders,
+            extraHeaders: workflowExtraHeaders,
             hourlyTaskId: payload.hourlyTaskId,
           });
         });
@@ -231,7 +231,7 @@ export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPa
           processedUsers: payload.userIds.length,
         };
       } catch (error) {
-        // NOTICE: Let WorkflowAbort bubble up (used internally by Upstash); record others
+        // NOTICE: Let WorkflowAbort bubble up (used internally by the worker); record others
         if (error instanceof WorkflowAbort) {
           console.warn('workflow aborted:', error.message);
           throw error;
@@ -249,18 +249,3 @@ export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPa
       }
     },
   );
-
-// NOTICE: Serve-side flow control governs a running workflow's own step-continuation messages
-// (the QStash callbacks that advance each `context.run`). Without it, every process-topics step
-// callback is published with NO flow-control key and lands in the shared "$" (unbound) bucket,
-// which floods when steps retry (e.g. the auth-failure retry storm). `triggerProcessTopics`
-// additionally sets a per-user key for the *initial* delivery; serve-side flow control can only
-// use a static (config-time) key, so this global key bounds concurrent step execution and, more
-// importantly, keeps step callbacks out of "$". Parallelism is a conservative global cap — the
-// per-user trigger key (parallelism 20) remains the primary per-user throttle.
-export const processTopicsWorkflowOptions = {
-  flowControl: {
-    key: 'memory-user-memory.pipelines.chat-topic.process-topics',
-    parallelism: 20,
-  },
-};

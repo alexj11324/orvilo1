@@ -39,6 +39,7 @@ childConcurrency: 1
 
 allowBuilds:
   '@google/genai': true
+  '@hatchet-dev/typescript-sdk': false
   '@lobehub/editor': true
   '@sentry/cli': true
   '@vercel/speed-insights': true
@@ -70,6 +71,3 @@ overrides:
   typescript: 6.0.3
   vitest: 5.0.0
   'zod@^4': 4.5.4
-
-patchedDependencies:
-  '@upstash/qstash': patches/@upstash__qstash.patch

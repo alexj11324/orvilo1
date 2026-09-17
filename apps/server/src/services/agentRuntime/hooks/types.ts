@@ -43,11 +43,8 @@ export interface AgentHookWebhook extends Omit<AgentHookWebhookConfig, 'eventFie
   eventFields?: (keyof AgentHookEvent)[];
 
   /**
-   * Behavior when QStash delivery fails (publish error or missing
-   * QSTASH_TOKEN). 'fetch' (default, legacy) retries as a plain unsigned
-   * POST; 'none' throws instead. Use 'none' for endpoints behind QStash
-   * signature auth — an unsigned fallback can never authenticate there, so
-   * it only masks the delivery failure as a silently-dropped 401.
+   * Behavior when webhook delivery fails. Hatchet callbacks are always
+   * restricted to the server's fixed internal handler allowlist.
    */
   fallback?: 'fetch' | 'none';
 }

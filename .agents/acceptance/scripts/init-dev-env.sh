@@ -15,9 +15,9 @@
 #   init-dev-env.sh setup-db         # start local Postgres/Redis and run migrations
 #   init-dev-env.sh migrate          # run DB migrations against the configured DB
 #   init-dev-env.sh seed-user        # seed the baseline test user + CLI API key
-#   init-dev-env.sh qstash           # run local Upstash QStash dev server
+#   init-dev-env.sh hatchet          # run the Hatchet worker against configured Hatchet
 #   init-dev-env.sh s3               # run local s3rver object storage
-#   init-dev-env.sh preflight        # check agent-runtime prerequisites (QStash + S3)
+#   init-dev-env.sh preflight        # check agent-runtime prerequisites (Hatchet + S3)
 #   init-dev-env.sh dev-next         # exec `pnpm run dev:next` with this env
 #   init-dev-env.sh dev              # exec `bun run dev` with this env
 #   init-dev-env.sh stop-dev         # stop the dev server (Next + Vite) started by `dev`
@@ -26,7 +26,7 @@
 #   init-dev-env.sh clean-db         # remove the managed Postgres/Redis containers
 #
 # Overrides:
-#   SERVER_PORT=3010 DB_PORT=5433 DB_CONTAINER=lobehub-agent-testing-postgres REDIS_PORT=6380 REDIS_CONTAINER=lobehub-agent-testing-redis QSTASH_DEV_PORT=8080 S3_DEV_PORT=29000
+#   SERVER_PORT=3010 DB_PORT=5433 DB_CONTAINER=lobehub-agent-testing-postgres REDIS_PORT=6380 REDIS_CONTAINER=lobehub-agent-testing-redis S3_DEV_PORT=29000
 #   AGENT_TESTING_DEV_STATE_FILE=.records/runtime/agent-testing-dev.state
 
 set -euo pipefail
@@ -104,10 +104,14 @@ ENV_FILE_DEFAULT="$WORKSPACE_ROOT/.records/env/agent-testing-dev.env"
 CLI_ENV_FILE_DEFAULT="$WORKSPACE_ROOT/.records/env/agent-testing-cli.env"
 JWKS_FILE_DEFAULT="$WORKSPACE_ROOT/.records/env/agent-testing-jwks.json"
 AGENT_TESTING_API_KEY="${AGENT_TESTING_API_KEY:-sk-lh-agenttesting0001}"
-QSTASH_DEV_PORT="${QSTASH_DEV_PORT:-8080}"
-QSTASH_LOCAL_TOKEN="${QSTASH_LOCAL_TOKEN:-eyJVc2VySUQiOiJkZWZhdWx0VXNlciIsIlBhc3N3b3JkIjoiZGVmYXVsdFBhc3N3b3JkIn0=}"
-QSTASH_LOCAL_CURRENT_SIGNING_KEY="${QSTASH_LOCAL_CURRENT_SIGNING_KEY:-sig_7kYjw48mhY7kAjqNGcy6cr29RJ6r}"
-QSTASH_LOCAL_NEXT_SIGNING_KEY="${QSTASH_LOCAL_NEXT_SIGNING_KEY:-sig_5ZB6DVzB1wjE8S6rZ7eenA8Pdnhs}"
+HATCHET_CLIENT_TOKEN="${HATCHET_CLIENT_TOKEN:-}"
+HATCHET_CLIENT_HOST_PORT="${HATCHET_CLIENT_HOST_PORT:-}"
+HATCHET_CLIENT_API_URL="${HATCHET_CLIENT_API_URL:-}"
+HATCHET_CLIENT_NAMESPACE="${HATCHET_CLIENT_NAMESPACE:-}"
+HATCHET_CLIENT_TLS_STRATEGY="${HATCHET_CLIENT_TLS_STRATEGY:-}"
+HATCHET_WORKER_ENABLED="${HATCHET_WORKER_ENABLED:-1}"
+HATCHET_WORKER_NAME="${HATCHET_WORKER_NAME:-orvilo-core}"
+HATCHET_WORKER_SLOTS="${HATCHET_WORKER_SLOTS:-20}"
 S3_DEV_PORT="${S3_DEV_PORT:-29000}"
 S3_DATA_DIR="${S3_DATA_DIR:-$WORKSPACE_ROOT/.records/data/agent-testing-s3}"
 
@@ -140,22 +144,67 @@ _http_reachable() {
   [[ -n "$code" && "$code" != "000" ]]
 }
 
-# QStash-specific probe. 8080 is a common dev port, so "something answers HTTP"
-# is not enough — a foreign listener would make preflight green while `agent
-# run` later publishes to a non-QStash endpoint and fails. Key on QStash's REST
-# contract instead: `/v2/schedules` rejects a tokenless request with 401 and
-# answers the configured bearer with 200. A bare/foreign server fails one leg
-# (catch-all 200 servers don't 401; 404/other servers don't 200), and a wrong
-# token also fails (surfacing auth misconfig). Returns 2 when curl is absent.
-_qstash_reachable() {
+_hatchet_configured() {
+  [[ -n "${HATCHET_CLIENT_TOKEN:-}" ]]
+}
+
+_hatchet_token_claim() {
+  local claim="$1"
+  [[ -n "${HATCHET_CLIENT_TOKEN:-}" ]] || return 1
+
+  # Hatchet tokens carry the REST and gRPC addresses used by the SDK. Keep the
+  # token on stdin so it never appears in a child process argument list.
+  printf '%s' "$HATCHET_CLIENT_TOKEN" | HATCHET_TOKEN_CLAIM="$claim" node -e '
+    const fs = require("node:fs");
+    const token = fs.readFileSync(0, "utf8").trim();
+    const payload = token.split(".")[1];
+
+    if (!payload) process.exit(1);
+
+    try {
+      const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+      const value = claims[process.env.HATCHET_TOKEN_CLAIM];
+      if (typeof value !== "string" || value.length === 0) process.exit(1);
+      process.stdout.write(value);
+    } catch {
+      process.exit(1);
+    }
+  '
+}
+
+_hatchet_api_url() {
+  if [[ -n "${HATCHET_CLIENT_API_URL:-}" ]]; then
+    printf '%s\n' "$HATCHET_CLIENT_API_URL"
+  else
+    _hatchet_token_claim server_url
+  fi
+}
+
+_hatchet_host_port() {
+  if [[ -n "${HATCHET_CLIENT_HOST_PORT:-}" ]]; then
+    printf '%s\n' "$HATCHET_CLIENT_HOST_PORT"
+  else
+    _hatchet_token_claim grpc_broadcast_address
+  fi
+}
+
+_hatchet_reachable() {
+  local api_url
+  api_url="$(_hatchet_api_url 2> /dev/null || true)"
+  [[ -n "$api_url" ]] || return 1
   command -v curl > /dev/null 2>&1 || return 2
-  local base="${QSTASH_URL%/}" unauth auth
-  unauth="$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$base/v2/schedules" 2>/dev/null || true)"
-  [[ "$unauth" == "401" ]] || return 1
-  auth="$(curl -s -o /dev/null -m 3 \
-    -H "Authorization: Bearer ${QSTASH_TOKEN:-}" \
-    -w '%{http_code}' "$base/v2/schedules" 2>/dev/null || true)"
-  [[ "$auth" == "200" ]]
+  [[ "$(curl -s -o /dev/null -m 3 -w '%{http_code}' \
+    -H "Authorization: Bearer ${HATCHET_CLIENT_TOKEN}" \
+    "${api_url%/}/api/ready" 2>/dev/null || true)" == "200" ]]
+}
+
+_hatchet_grpc_reachable() {
+  local host_port
+  host_port="$(_hatchet_host_port 2> /dev/null || true)"
+  [[ -n "$host_port" ]] || return 1
+  command -v nc > /dev/null 2>&1 || return 2
+  local host="${host_port%:*}" port="${host_port##*:}"
+  [[ -n "$host" && -n "$port" ]] && nc -z -w 3 "$host" "$port" > /dev/null 2>&1
 }
 
 guard_no_root_env() {
@@ -181,11 +230,23 @@ apply_env() {
   export NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION="${NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION:-0}"
   export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=6144}"
   export PORT="${PORT:-$SERVER_PORT}"
-  export QSTASH_CURRENT_SIGNING_KEY="${QSTASH_CURRENT_SIGNING_KEY:-$QSTASH_LOCAL_CURRENT_SIGNING_KEY}"
-  export QSTASH_DEV_PORT
-  export QSTASH_NEXT_SIGNING_KEY="${QSTASH_NEXT_SIGNING_KEY:-$QSTASH_LOCAL_NEXT_SIGNING_KEY}"
-  export QSTASH_TOKEN="${QSTASH_TOKEN:-$QSTASH_LOCAL_TOKEN}"
-  export QSTASH_URL="${QSTASH_URL:-http://127.0.0.1:${QSTASH_DEV_PORT}}"
+  # Empty optional values must stay unset. The Hatchet SDK uses nullish
+  # fallback to read server and gRPC addresses from the JWT; exporting an empty
+  # string wins that lookup and leaves the worker pointed at no endpoint.
+  local hatchet_key
+  for hatchet_key in HATCHET_CLIENT_API_URL HATCHET_CLIENT_HOST_PORT HATCHET_CLIENT_NAMESPACE HATCHET_CLIENT_TLS_STRATEGY; do
+    if [[ -n "${!hatchet_key:-}" ]]; then
+      case "$hatchet_key" in
+        HATCHET_CLIENT_API_URL) export HATCHET_CLIENT_API_URL ;;
+        HATCHET_CLIENT_HOST_PORT) export HATCHET_CLIENT_HOST_PORT ;;
+        HATCHET_CLIENT_NAMESPACE) export HATCHET_CLIENT_NAMESPACE ;;
+        HATCHET_CLIENT_TLS_STRATEGY) export HATCHET_CLIENT_TLS_STRATEGY ;;
+      esac
+    else
+      unset "$hatchet_key"
+    fi
+  done
+  export HATCHET_CLIENT_TOKEN HATCHET_WORKER_ENABLED HATCHET_WORKER_NAME HATCHET_WORKER_SLOTS
   export REDIS_URL
   export S3_ACCESS_KEY_ID="${S3_ACCESS_KEY_ID:-S3RVER}"
   export S3_BUCKET="${S3_BUCKET:-agent-testing-bucket}"
@@ -227,11 +288,14 @@ env_keys() {
     NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION \
     NODE_OPTIONS \
     PORT \
-    QSTASH_CURRENT_SIGNING_KEY \
-    QSTASH_DEV_PORT \
-    QSTASH_NEXT_SIGNING_KEY \
-    QSTASH_TOKEN \
-    QSTASH_URL \
+    HATCHET_CLIENT_API_URL \
+    HATCHET_CLIENT_HOST_PORT \
+    HATCHET_CLIENT_NAMESPACE \
+    HATCHET_CLIENT_TLS_STRATEGY \
+    HATCHET_CLIENT_TOKEN \
+    HATCHET_WORKER_ENABLED \
+    HATCHET_WORKER_NAME \
+    HATCHET_WORKER_SLOTS \
     REDIS_URL \
     S3_ACCESS_KEY_ID \
     S3_BUCKET \
@@ -250,10 +314,27 @@ env_keys() {
     AGENT_TESTING_DISABLE_CHAT_SECURITY
 }
 
+is_optional_hatchet_key() {
+  case "$1" in
+    HATCHET_CLIENT_API_URL|HATCHET_CLIENT_HOST_PORT|HATCHET_CLIENT_NAMESPACE|HATCHET_CLIENT_TLS_STRATEGY)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 print_env() {
   apply_env
+  local key value
   while IFS= read -r key; do
-    printf 'export %s=%q\n' "$key" "${!key}"
+    value="${!key-}"
+    if [[ -z "$value" ]] && is_optional_hatchet_key "$key"; then
+      printf 'unset %s\n' "$key"
+    else
+      printf 'export %s=%q\n' "$key" "$value"
+    fi
   done < <(env_keys)
 }
 
@@ -264,8 +345,14 @@ write_env() {
   {
     printf '# Source this file before starting LobeHub local dev server.\n'
     printf '# Generated by %s\n' "$0"
+    local key value
     while IFS= read -r key; do
-      printf 'export %s=%q\n' "$key" "${!key}"
+      value="${!key-}"
+      if [[ -z "$value" ]] && is_optional_hatchet_key "$key"; then
+        printf 'unset %s\n' "$key"
+      else
+        printf 'export %s=%q\n' "$key" "$value"
+      fi
     done < <(env_keys)
   } > "$file"
   ok "wrote env file: $file"
@@ -525,7 +612,7 @@ cmd_status() {
   note "AGENT_RUNTIME_MODE=$AGENT_RUNTIME_MODE"
   note "DATABASE_URL=$DATABASE_URL"
   note "PORT=$PORT"
-  note "QSTASH_URL=$QSTASH_URL"
+  note "HATCHET_CLIENT_API_URL=${HATCHET_CLIENT_API_URL:-<sdk default>}"
   note "REDIS_URL=$REDIS_URL"
   if command -v docker > /dev/null 2>&1; then
     ok "docker CLI available"
@@ -542,10 +629,10 @@ cmd_status() {
   else
     bad "docker CLI is not available"
   fi
-  if _qstash_reachable; then
-    ok "QStash reachable: $QSTASH_URL"
+  if _hatchet_configured; then
+    ok "Hatchet client configured"
   else
-    note "QStash is not answering as QStash at $QSTASH_URL (needed for agent-runtime / queue mode)"
+    note "Hatchet client token is not configured (required for queue mode)"
   fi
   if node "$REPO_ROOT/.agents/acceptance/scripts/check-s3.mjs" > /dev/null 2>&1; then
     ok "S3 reachable and writable: $S3_ENDPOINT/$S3_BUCKET"
@@ -554,11 +641,10 @@ cmd_status() {
   fi
 }
 
-# Prerequisite gate for agent-runtime tests. In queue mode (the default here and
-# in production) creating an agent operation POSTs to QStash; if QStash is down
-# the run fails with `ECONNREFUSED 127.0.0.1:8080 / fetch failed` at operation
-# creation — before any LLM call, so no trace is ever recorded. Run this before
-# `lh agent run` (or any durable-op path) and start `qstash` if it fails.
+# Prerequisite gate for agent-runtime tests. In queue mode (the production
+# path), the server requires a Hatchet client token and a reachable Hatchet
+# deployment before an operation can start. Run this before `lh agent run` (or
+# any durable-op path).
 cmd_preflight() {
   apply_env
   local failed=0
@@ -574,15 +660,16 @@ cmd_preflight() {
   fi
 
   if [[ "$AGENT_RUNTIME_MODE" == "queue" ]]; then
-    if _qstash_reachable; then
-      ok "QStash reachable: $QSTASH_URL (operation dispatch)"
+    if _hatchet_configured && _hatchet_reachable && _hatchet_grpc_reachable; then
+      ok "Hatchet control plane and worker endpoint reachable (operation dispatch)"
     else
-      bad "QStash NOT answering as QStash at $QSTASH_URL — agent runs will fail with 'fetch failed' (ECONNREFUSED) or auth errors"
-      note "start it in a separate terminal: $0 qstash"
+      bad "Hatchet is not configured or ready — queue-mode agent runs cannot start"
+      note "set HATCHET_CLIENT_TOKEN; endpoint variables may be omitted when the token carries them"
+      note "or use AGENT_RUNTIME_MODE=local"
       failed=1
     fi
   else
-    note "AGENT_RUNTIME_MODE=$AGENT_RUNTIME_MODE (not queue) — QStash not required"
+    note "AGENT_RUNTIME_MODE=$AGENT_RUNTIME_MODE (local execution)"
   fi
 
   if node "$REPO_ROOT/.agents/acceptance/scripts/check-s3.mjs" > /dev/null 2>&1; then
@@ -606,12 +693,17 @@ cmd_preflight() {
   ok "preflight passed — safe to run agent-runtime tests"
 }
 
-cmd_qstash() {
+cmd_hatchet() {
   apply_env
+  if ! _hatchet_configured; then
+    bad "HATCHET_CLIENT_TOKEN is missing"
+    note "Set the token and any endpoint/namespace variables before starting the worker."
+    return 1
+  fi
   cd "$REPO_ROOT"
-  note "starting local QStash dev server at $QSTASH_URL"
-  note "keep this process running while testing workflow paths"
-  exec pnpm run qstash -- -port "$QSTASH_DEV_PORT"
+  note "starting Hatchet worker: $HATCHET_WORKER_NAME"
+  note "the Hatchet control plane must already be reachable"
+  exec bun run dev:hatchet
 }
 
 process_start() {
@@ -804,7 +896,7 @@ case "$COMMAND" in
     ;;
   migrate) migrate_db ;;
   seed-user) seed_user ;;
-  qstash) cmd_qstash ;;
+  hatchet) cmd_hatchet ;;
   s3) cmd_s3 ;;
   preflight) cmd_preflight ;;
   dev-next) cmd_dev_next ;;

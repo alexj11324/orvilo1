@@ -1,7 +1,6 @@
-import type { WorkflowContext } from '@upstash/workflow';
-
 import { getServerDB } from '@/database/server';
 import { ExpertiseIngestionService } from '@/server/services/expertise/ingestion';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 import { ExpertiseHistoryWorkflow } from '.';

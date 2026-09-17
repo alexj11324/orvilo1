@@ -87,7 +87,7 @@ RUN set -e && \
     mkdir -p /deps && \
     cd /deps && \
     echo '{"name":"deps","private":true}' > package.json && \
-    pnpm add pg drizzle-orm @neondatabase/serverless
+    pnpm add pg drizzle-orm @neondatabase/serverless sharp
 
 COPY . .
 
@@ -101,6 +101,9 @@ RUN pnpm exec esbuild scripts/elasticsearchReindex/index.ts --bundle --platform=
 RUN pnpm exec esbuild scripts/elasticsearchSync/cli.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-elasticsearch-sync.cjs --external:pg --external:drizzle-orm '--external:drizzle-orm/*'
 RUN pnpm exec esbuild scripts/elasticsearchCleanupIneligibleMessages/cli.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-ineligible-message-cleanup.cjs --external:pg --external:drizzle-orm '--external:drizzle-orm/*'
 RUN pnpm exec esbuild scripts/pgSearchCleanup/index.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-pg-search-cleanup.cjs --external:pg
+# Preserve ESM module boundaries so circular top-level-await initializers settle before the worker
+# starts. Native sharp stays external and is copied with its platform package into the runtime.
+RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker --entry-names=worker '--chunk-names=chunks/[name]-[hash]' --out-extension:.js=.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*' --external:sharp --banner:js='import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);'
 
 # Preserve SWC helpers referenced through pnpm virtual-store symlinks by Next.js.
 RUN mkdir -p /runtime-deps && cp -a node_modules/.pnpm/@swc+helpers@* /runtime-deps/
@@ -126,6 +129,7 @@ COPY --from=builder /app/fts-search-elasticsearch-reindex.cjs /app/fts-search-el
 COPY --from=builder /app/fts-search-elasticsearch-sync.cjs /app/fts-search-elasticsearch-sync.cjs
 COPY --from=builder /app/fts-search-ineligible-message-cleanup.cjs /app/fts-search-ineligible-message-cleanup.cjs
 COPY --from=builder /app/fts-search-pg-search-cleanup.cjs /app/fts-search-pg-search-cleanup.cjs
+COPY --from=builder /app/hatchet-worker /app/hatchet-worker
 
 # copy dependencies
 COPY --from=builder /deps/node_modules/.pnpm /app/node_modules/.pnpm
@@ -133,6 +137,7 @@ COPY --from=builder /deps/node_modules/pg /app/node_modules/pg
 COPY --from=builder /runtime-deps/ /app/node_modules/.pnpm/
 COPY --from=builder /deps/node_modules/drizzle-orm /app/node_modules/drizzle-orm
 COPY --from=builder /deps/node_modules/@neondatabase /app/node_modules/@neondatabase
+COPY --from=builder /deps/node_modules/sharp /app/node_modules/sharp
 
 # Copy server launcher and shared scripts
 COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.js
@@ -169,6 +174,11 @@ ENV HOSTNAME="0.0.0.0" \
 
 # General Variables
 ENV APP_URL="" \
+    HATCHET_CLIENT_TOKEN="" \
+    HATCHET_CLIENT_NAMESPACE="" \
+    HATCHET_WORKER_ENABLED="" \
+    HATCHET_WORKER_NAME="" \
+    HATCHET_WORKER_SLOTS="" \
     API_KEY_SELECT_MODE="" \
     DEFAULT_AGENT_CONFIG="" \
     SYSTEM_AGENT="" \

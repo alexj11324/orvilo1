@@ -202,6 +202,9 @@ const connect = async (key: string, record: RoomConnection): Promise<void> => {
       // no reconnect loop, the room just stays unauthorized.
       teardown(key, record);
       store.setRoomStatus(key, 'revoked');
+      // The grant behind this denial may be gone — refresh the real data so
+      // member/workspace lists reflect it instead of trusting the dead room.
+      void refreshAuthzData();
       return;
     }
     console.error('[Collaboration] authorize/connect failed', error);

@@ -25,7 +25,6 @@ import { createTaskModal } from '../CreateTaskModal';
 import Breadcrumb from '../shared/Breadcrumb';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import CreateTaskInlineEntry from './CreateTaskInlineEntry';
-import EmptyState from './EmptyState';
 import KanbanBoard from './KanbanBoard';
 import type { TaskListViewOptions } from './listViewOptions';
 import { getVisibleTaskStatuses, normalizeTaskListViewOptions } from './listViewOptions';
@@ -37,15 +36,21 @@ import TasksGroupConfig from './TasksGroupConfig';
 interface TaskCreateActionBehaviorParams {
   canCreateTask: boolean;
   inlineCollapsed: boolean;
-  viewMode: TaskViewMode;
+  /**
+   * Whether the surface on screen is the board — the stored kanban mode, or an
+   * empty ordinary collection that falls back to the board. The inline
+   * composer lives on the list surface only, so on a board the header create
+   * opens the modal instead of expanding a composer that is not there.
+   */
+  isBoardSurface: boolean;
 }
 
 export const getTaskCreateActionBehavior = ({
   canCreateTask,
   inlineCollapsed,
-  viewMode,
+  isBoardSurface,
 }: TaskCreateActionBehaviorParams) => {
-  const shouldExpandInline = inlineCollapsed && viewMode === 'list';
+  const shouldExpandInline = inlineCollapsed && !isBoardSurface;
 
   return {
     disabled: shouldExpandInline ? false : !canCreateTask,
@@ -55,26 +60,23 @@ export const getTaskCreateActionBehavior = ({
 
 interface TaskPageHeaderVisibilityParams {
   agentId?: string;
-  isEmptyHero: boolean;
   isMobile: boolean;
   projectId?: string;
 }
 
 export const getTaskPageHeaderVisibility = ({
   agentId,
-  isEmptyHero,
   isMobile,
   projectId,
 }: TaskPageHeaderVisibilityParams) => {
   // The global page's own crumb is the `tasks` tab, so the breadcrumb only
   // earns its place once the list is scoped to an agent or a project.
   const isScoped = !!(agentId || projectId);
-  const isGlobalEmpty = !isScoped && isEmptyHero;
 
   return {
     showBreadcrumb: isScoped,
-    showTaskAgentPanelToggle: !isGlobalEmpty && shouldRenderTaskAgentPanelToggle(isMobile),
-    showViewOptions: !isGlobalEmpty,
+    showTaskAgentPanelToggle: shouldRenderTaskAgentPanelToggle(isMobile),
+    showViewOptions: true,
   };
 };
 
@@ -166,6 +168,18 @@ export const resolveTaskCollectionView = (
   viewMode: TaskViewMode,
 ): 'board' | 'list' => (collection !== 'scheduled' && viewMode === 'kanban' ? 'board' : 'list');
 
+/**
+ * The ordinary collection's surface. The kanban board doubles as its empty
+ * state — a settled empty list lands on the board whatever the stored view
+ * mode says — so the list surface only renders when there is something to
+ * list in list mode.
+ */
+export const resolveOrdinaryCollectionSurface = (
+  viewMode: TaskViewMode,
+  isListEmpty: boolean,
+): 'board' | 'list' =>
+  resolveTaskCollectionView('tasks', viewMode) === 'board' || isListEmpty ? 'board' : 'list';
+
 const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
@@ -199,7 +213,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   // than the newest 50 once the workspace grows past that. The scheduled and
   // "My tasks" tabs render their own paginated collections, so the fetch is
   // gated to the ordinary tab; and the kanban view fetches its own server
-  // groups, so there only the single page behind the empty-hero decision runs.
+  // groups, so there only the single page behind the empty-board decision runs.
   const isListView = !isBoardView;
   const { error, isLoading, mutate } = useFetchTaskList(
     projectId
@@ -229,7 +243,12 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   // signal never disagrees with the emptiness signal. Still resets to false on a
   // failed first load, so we surface loading only while there's no error (below).
   const isTaskListInit = useTaskStore(taskListSelectors.isTaskListInit);
-  const isEmptyHero = useTaskStore(taskListSelectors.isListEmpty);
+  const isListEmpty = useTaskStore(taskListSelectors.isListEmpty);
+  // The board doubles as the ordinary collection's empty state, so an empty
+  // collection renders the board surface — and follows its create affordance —
+  // whatever the stored view mode says.
+  const ordinarySurface = resolveOrdinaryCollectionSurface(viewMode, isListEmpty);
+  const isBoardSurface = isMineBoard || (isOrdinaryCollection && ordinarySurface === 'board');
   const useFetchScheduledTaskList = useTaskStore((s) => s.useFetchScheduledTaskList);
   const scheduledSWR = useFetchScheduledTaskList({
     agentId,
@@ -289,9 +308,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
       getTaskCreateActionBehavior({
         canCreateTask,
         inlineCollapsed,
-        viewMode,
+        isBoardSurface,
       }),
-    [canCreateTask, inlineCollapsed, viewMode],
+    [canCreateTask, inlineCollapsed, isBoardSurface],
   );
 
   const handleCreateTask = useCallback(() => {
@@ -347,7 +366,6 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
 
   const headerVisibility = getTaskPageHeaderVisibility({
     agentId,
-    isEmptyHero: isOrdinaryCollection ? isEmptyHero : false,
     isMobile,
     projectId,
   });
@@ -389,7 +407,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
           right={
             <Flexbox horizontal align={'center'} gap={4}>
               {isOrdinaryCollection && !agentId && !projectId && <TaskListVisibilityFilter />}
-              {isOrdinaryCollection && (inlineCollapsed || viewMode === 'kanban') && (
+              {isOrdinaryCollection && (inlineCollapsed || isBoardSurface) && (
                 <ActionIcon
                   disabled={createActionBehavior.disabled}
                   icon={Plus}
@@ -472,9 +490,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
               </Flexbox>
             )}
           </WideScreenContainer>
-        ) : isEmptyHero ? (
-          <EmptyState agentId={agentId} projectId={projectId} />
-        ) : isBoardView ? (
+        ) : ordinarySurface === 'board' ? (
           <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
             <KanbanBoard
               agentId={agentId}

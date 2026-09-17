@@ -77,7 +77,7 @@ runs:
           if (!/^\d+$/.test(process.env.PR_NUMBER)) throw new Error('invalid PR number');
           url.pathname = `/orvilo_pr_${process.env.PR_NUMBER}`;
           process.stdout.write(url.href);
-          NODE
+        NODE
           )
           database_source="restricted CI role for PR #$pr_number"
         fi

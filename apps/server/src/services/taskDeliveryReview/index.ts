@@ -1,5 +1,5 @@
 import { cloudSandboxRepoPath, type TaskItem, type TaskTopicIntegration } from '@orvilo/types';
-import { and, eq, isNull, or } from 'drizzle-orm';
+import { and, asc, eq, isNull, or } from 'drizzle-orm';
 import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
@@ -133,14 +133,18 @@ const buildCorrectivePrompt = (params: {
   const changeRequests = snapshot.requestedChangeReviewIds.length
     ? `\nFormal change-request reviews: ${snapshot.requestedChangeReviewIds.join(', ')}`
     : '';
+  const mergeState = snapshot.mergeableState
+    ? `\nGitHub mergeability state: ${snapshot.mergeableState}`
+    : '';
 
   return [
     `[PR review corrective run] Continue delivery for ${task.identifier} on the EXISTING PR ${snapshot.url}.`,
     `Repository: ${record.repo}. Base: ${record.baseBranch}. Delivery branch: ${record.branch}.`,
     'Do not create a new issue, task, branch, or pull request. Do not merge the PR yourself.',
     `Start by fetching the remote and checking out ${record.branch}; make sure the checkout is based on origin/${record.branch}, not a stale local branch.`,
+    `If the PR is behind or conflicted, update ${record.branch} with the current origin/${record.baseBranch}, resolve conflicts on the delivery branch, and never push the base branch.`,
     'Read the PR conversation, inline review comments, formal reviews, and current CI output before editing. Treat the task instruction and existing accepted scope as authoritative.',
-    `${failed}${changeRequests}${threads}`.trim(),
+    `${failed}${changeRequests}${threads}${mergeState}`.trim(),
     'Fix the actionable findings only, run the focused tests plus any checks required by the repository, commit, and push back to the SAME delivery branch.',
     'For each addressed inline review thread, reply with the concrete fix/evidence. Resolve a GitHub review thread only after its requested change is actually satisfied; use the thread node id above with the GitHub GraphQL resolveReviewThread mutation when appropriate.',
     'Leave the PR open. The Orvilo delivery controller will re-read the new head SHA, wait for CI/review gates, and perform the merge only when every gate is satisfied.',
@@ -168,7 +172,11 @@ const dispatchCorrective = async (params: {
     ? {
         workingDirectory,
         workingDirectoryConfig: {
-          git: { branch: record.branch, isWorktree: true, upstream: { branch: record.branch, remote: 'origin' } },
+          git: {
+            branch: record.branch,
+            isWorktree: true,
+            upstream: { branch: record.branch, remote: 'origin' },
+          },
           path: workingDirectory,
           repoType: 'git' as const,
         },
@@ -221,10 +229,11 @@ const ensureReviewTaskPaused = async (
  * Pending Review state; only a task with a `verification_pending` integration
  * row participates, so ordinary manual pauses are never auto-resumed or merged.
  *
- * The controller is deliberately pull-based in addition to webhook-friendly:
- * every pass re-reads GitHub's authoritative PR revision, CI, comments and
- * review threads. Repeated executions are idempotent through persisted feedback
- * ids/head SHAs and the TaskRunner single-writer reservation.
+ * Every pass re-reads GitHub's authoritative PR revision, CI, comments and
+ * review threads. The scan is oldest-first so the bounded batch cannot starve
+ * long-waiting reviews. Feedback is acknowledged only after the corrective run
+ * was successfully reserved/dispatched, preventing lost comments on dispatch
+ * failures.
  */
 export const runTaskDeliveryReviewSweep = async (
   db: LobeChatDatabase,
@@ -236,10 +245,17 @@ export const runTaskDeliveryReviewSweep = async (
   ];
   if (options.createdByUserId) {
     filters.push(eq(tasks.createdByUserId, options.createdByUserId));
-    filters.push(options.workspaceId ? eq(tasks.workspaceId, options.workspaceId) : isNull(tasks.workspaceId));
+    filters.push(
+      options.workspaceId ? eq(tasks.workspaceId, options.workspaceId) : isNull(tasks.workspaceId),
+    );
   }
 
-  const candidates = await db.select().from(tasks).where(and(...filters)).limit(REVIEW_SCAN_LIMIT);
+  const candidates = await db
+    .select()
+    .from(tasks)
+    .where(and(...filters))
+    .orderBy(asc(tasks.updatedAt))
+    .limit(REVIEW_SCAN_LIMIT);
   const result: TaskDeliveryReviewSweepResult = {
     checked: 0,
     corrected: [],
@@ -354,22 +370,30 @@ export const runTaskDeliveryReviewSweep = async (
       const feedback = allFeedbackIds(snapshot);
       const newFeedback = feedback.filter((id) => !handled.has(id));
       const needsConflictRepair =
-        snapshot.mergeable === false || snapshot.mergeableState === 'dirty' || snapshot.mergeableState === 'behind';
-      const failedThisHead = snapshot.checks.failed.length > 0 && context.lastFailedHeadSha !== snapshot.headSha;
-      const conflictThisHead = needsConflictRepair && context.lastConflictHeadSha !== snapshot.headSha;
+        snapshot.mergeable === false ||
+        snapshot.mergeableState === 'dirty' ||
+        snapshot.mergeableState === 'behind';
+      const failedThisHead =
+        snapshot.checks.failed.length > 0 && context.lastFailedHeadSha !== snapshot.headSha;
+      const conflictThisHead =
+        needsConflictRepair && context.lastConflictHeadSha !== snapshot.headSha;
       const needsCorrection = newFeedback.length > 0 || failedThisHead || conflictThisHead;
 
       if (needsCorrection) {
-        const nextContext: DeliveryReviewContext = {
+        // Dispatch first. Only after TaskRunner accepted the corrective attempt
+        // do we advance the dedupe cursor; otherwise a transient dispatch error
+        // would permanently hide the CI failure/review comment.
+        await taskModel.update(task.id, { error: null });
+        await dispatchCorrective({ db, record, row, snapshot, task, workspaceId });
+        await persistReviewContext(taskModel, task.id, {
           ...context,
-          handledFeedbackIds: [...new Set([...(context.handledFeedbackIds ?? []), ...newFeedback])],
+          handledFeedbackIds: [
+            ...new Set([...(context.handledFeedbackIds ?? []), ...newFeedback]),
+          ],
           lastConflictHeadSha: conflictThisHead ? snapshot.headSha : context.lastConflictHeadSha,
           lastFailedHeadSha: failedThisHead ? snapshot.headSha : context.lastFailedHeadSha,
           lastReviewedHeadSha: snapshot.headSha,
-        };
-        await persistReviewContext(taskModel, task.id, nextContext);
-        await taskModel.update(task.id, { error: null });
-        await dispatchCorrective({ db, record, row, snapshot, task, workspaceId });
+        });
         result.corrected.push(task.identifier);
         continue;
       }
@@ -432,7 +456,9 @@ export const runTaskDeliveryReviewSweep = async (
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       log('review sweep failed for %s — %s', task.identifier, message);
-      await taskModel.update(task.id, { error: `PR review orchestration: ${message}` }).catch(() => null);
+      await taskModel
+        .update(task.id, { error: `PR review orchestration: ${message}` })
+        .catch(() => null);
       result.waiting.push(task.identifier);
     }
   }

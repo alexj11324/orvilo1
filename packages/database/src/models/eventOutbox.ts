@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { and, asc, eq, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 
 import type { EventOutboxItem } from '../schemas/eventOutbox';
 import { eventOutbox } from '../schemas/eventOutbox';
@@ -69,6 +69,44 @@ export class EventOutboxModel {
       )
       .orderBy(asc(eventOutbox.createdAt), asc(eventOutbox.id))
       .limit(params.limit);
+  };
+
+  /**
+   * Atomically claim due pending rows for one worker tick: each claimed row's
+   * `nextAttemptAt` becomes a visibility timeout so a concurrent or rescheduled
+   * sweep skips it. `FOR UPDATE SKIP LOCKED` makes the selection race-safe —
+   * two overlapping workers never take the same row. A worker that dies before
+   * finishing simply lets the timeout expire and the row resurfaces
+   * (at-least-once); `markFailed`/`markDelivered` proceed unchanged.
+   */
+  claimPending = async (params: {
+    limit: number;
+    now?: Date;
+    visibilityTimeoutMs: number;
+  }): Promise<EventOutboxItem[]> => {
+    const now = params.now ?? new Date();
+    const visibleUntil = new Date(now.getTime() + params.visibilityTimeoutMs);
+    return this.db
+      .update(eventOutbox)
+      .set({ nextAttemptAt: visibleUntil })
+      .where(
+        inArray(
+          eventOutbox.id,
+          this.db
+            .select({ id: eventOutbox.id })
+            .from(eventOutbox)
+            .where(
+              and(
+                eq(eventOutbox.status, 'pending'),
+                or(isNull(eventOutbox.nextAttemptAt), lt(eventOutbox.nextAttemptAt, now)),
+              ),
+            )
+            .orderBy(asc(eventOutbox.createdAt), asc(eventOutbox.id))
+            .limit(params.limit)
+            .for('update', { skipLocked: true }),
+        ),
+      )
+      .returning();
   };
 
   /** pending → delivered, stamping the delivery time. No-op on other statuses. */

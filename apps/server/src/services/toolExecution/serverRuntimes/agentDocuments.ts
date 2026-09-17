@@ -11,6 +11,23 @@ import { emitAgentDocumentToolOutcomeSafely } from '@/server/services/agentDocum
 
 import { type ServerRuntimeRegistration } from './types';
 
+/**
+ * The only thing attaching needs from a produced document: the `documents` row
+ * id. Kept structural rather than generic so `withDocumentOutcome` can stay
+ * unconstrained in `T` — constraining it to "has a documentId" made the compiler
+ * infer that constraint (instead of each service method's real return type) as
+ * the handler's return type, which no longer satisfied
+ * `AgentDocumentsExecutionRuntime`. It also rejected `removeDocumentById`, whose
+ * outcome is a `boolean`.
+ */
+interface AttachableDocument {
+  documentId?: string;
+}
+
+/** True for the outcome shapes that carry a document: every mutating API but `removeDocument`. */
+const isAttachableDocument = (value: unknown): value is AttachableDocument =>
+  typeof value === 'object' && value !== null && 'documentId' in value;
+
 export const agentDocumentsRuntime: ServerRuntimeRegistration = {
   factory: (context) => {
     if (!context.userId || !context.serverDB) {
@@ -62,7 +79,7 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
       });
     };
 
-    const withDocumentOutcome = async <T extends { documentId?: string } | undefined>(
+    const withDocumentOutcome = async <T>(
       input: {
         agentId?: string;
         getAgentDocumentId?: (result: T) => string | undefined;
@@ -89,11 +106,13 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
         // `attachToTask` reports rather than throws: the document exists either
         // way, and the recovery is an idempotent re-attach through
         // `task.pinDocument` (which generates nothing), not a new run.
-        const { attachError, doc } =
-          input.relation === 'created' ? await attachToTask(result) : { doc: result };
+        const attachError =
+          input.relation === 'created' && isAttachableDocument(result)
+            ? await attachToTask(result)
+            : undefined;
         await emitDocumentOutcome({
           agentId: input.agentId,
-          agentDocumentId: input.getAgentDocumentId?.(doc),
+          agentDocumentId: input.getAgentDocumentId?.(result),
           apiName: input.apiName,
           hintIsSkill: input.hintIsSkill,
           relation: input.relation,
@@ -103,7 +122,7 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
             : input.summary,
           toolAction: input.toolAction,
         });
-        return doc;
+        return result;
       } catch (error) {
         await emitDocumentOutcome({
           agentId: input.agentId,
@@ -122,12 +141,10 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
     /**
      * Attach a produced document to the owning task, when the run has one.
      * Never throws: the caller records the failure against an outcome that still
-     * says the document was created.
+     * says the document was created. Returns the failure's message, if any.
      */
-    const attachToTask = async <T extends { documentId?: string } | undefined>(
-      doc: T,
-    ): Promise<{ attachError?: string; doc: T }> => {
-      if (!taskId || !doc?.documentId) return { doc };
+    const attachToTask = async (doc: AttachableDocument): Promise<string | undefined> => {
+      if (!taskId || !doc.documentId) return undefined;
 
       try {
         // Prefer the workspaceId already threaded through the pipeline; fall
@@ -143,9 +160,9 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
         }
         const taskModel = new TaskModel(db, userId, wsId);
         await taskModel.pinDocument(taskId, doc.documentId, 'agent');
-        return { doc };
+        return undefined;
       } catch (error) {
-        return { attachError: (error as Error).message, doc };
+        return (error as Error).message;
       }
     };
 

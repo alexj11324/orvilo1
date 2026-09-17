@@ -21,9 +21,9 @@ import type { AgentSignalReceiptView } from '../hooks/useAgentSignalReceipts';
  * browsing surfaces that have been retired, so a receipt for one of them has no
  * destination and renders as a status card instead of an "Open".
  */
-const MEMORY_ROUTE_BY_LAYER = {
+const MEMORY_ROUTE_BY_LAYER: Partial<Record<LayersEnum, { idParam: string; path: string }>> = {
   [LayersEnum.Preference]: { idParam: 'preferenceId', path: '/memory/preferences' },
-} satisfies Partial<Record<LayersEnum, { idParam: string; path: string }>>;
+};
 
 const styles = createStaticStyles(({ css }) => ({
   list: css`

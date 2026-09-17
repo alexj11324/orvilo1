@@ -1,3 +1,5 @@
+import { type TFunction } from 'i18next';
+
 /**
  * Section labels per polarity: `bad` writes wrong/why/breaks/correct, `good` good/works/dont,
  * `rule` rule/why/how/limits. One map covers all three so every surface labels them the same.
@@ -44,7 +46,10 @@ export const previewSections = (sections: { body: string; key: string }[] = []) 
 export const describeRecent = (
   recent: { pass: boolean }[],
   taughtByUser: boolean,
-  t: (key: string, options?: Record<string, unknown>) => string,
+  // The real `TFunction`, not a hand-written `(key, options?) => string` — the
+  // narrower shape is not a supertype of i18next's overloaded one, so passing a
+  // `t` from `useTranslation` to it is a type error at every call site.
+  t: TFunction<'selfLearning'>,
 ) => {
   if (recent.length === 0)
     return t(taughtByUser ? 'habit.hint.taughtPending' : 'habit.recentTip.none');

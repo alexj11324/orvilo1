@@ -54,15 +54,20 @@ export const getTabPages = (scope: TabScope): TabPagesStorageData => {
     const data = window.localStorage.getItem(tabPagesStorageKey(scope));
     if (!data) return EMPTY;
 
-    const parsed = JSON.parse(data);
+    const parsed: unknown = JSON.parse(data);
     if (!parsed || typeof parsed !== 'object') return EMPTY;
 
-    const tabs = Array.isArray(parsed.tabs)
-      ? parsed.tabs.filter(isTabItem).filter((tab) => !isRetiredTabUrl(tab.url))
-      : [];
+    const stored = parsed as { activeTabId?: unknown; tabs?: unknown };
+    // Typed as `unknown[]` before filtering, not left as the `any` that
+    // `Array.isArray` narrows an `any` to: on `any[]`, `.filter(isTabItem)`
+    // resolves to `any` rather than `TabItem[]`, and the following `.filter`
+    // loses its parameter type entirely. Reading the payload as `unknown` is the
+    // boundary this value deserves anyway — it is whatever the last write left.
+    const storedTabs: unknown[] = Array.isArray(stored.tabs) ? stored.tabs : [];
+    const tabs = storedTabs.filter(isTabItem).filter((tab) => !isRetiredTabUrl(tab.url));
     // Dropping the active tab would leave an `activeTabId` naming nothing, so
     // the selection falls back to what is left rather than to a dangling id.
-    const requestedActiveId = typeof parsed.activeTabId === 'string' ? parsed.activeTabId : null;
+    const requestedActiveId = typeof stored.activeTabId === 'string' ? stored.activeTabId : null;
     const activeTabId = tabs.some((tab) => tab.id === requestedActiveId)
       ? requestedActiveId
       : (tabs[0]?.id ?? null);

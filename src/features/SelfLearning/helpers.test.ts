@@ -1,9 +1,19 @@
+import { type TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 
 import { describeRecent, previewSections } from './helpers';
 
 const p = { pass: true };
 const v = { pass: false };
+
+/**
+ * `describeRecent` takes the real `TFunction<'selfLearning'>` so a mistyped key is
+ * a compile error at the one production call site. Its `options` parameter is an
+ * overloaded i18next type that a hand-rolled mock cannot satisfy, so the mock is
+ * bridged here — the same cast `SkillDetail/localization.test.ts` uses. The mock
+ * itself stays untyped so the assertions can still inspect its calls.
+ */
+const translator = (mock: unknown) => mock as unknown as TFunction<'selfLearning'>;
 
 describe('describeRecent', () => {
   // The surfaces used to grade this — 老毛病 / 还不稳 / 已养成. The counts are what actually
@@ -13,7 +23,7 @@ describe('describeRecent', () => {
       key === 'habit.recentTip.title' ? `title:${options?.count}:${options?.list}` : key,
     );
 
-    expect(describeRecent([p, v, p], false, t)).toBe(
+    expect(describeRecent([p, v, p], false, translator(t))).toBe(
       'title:3:habit.recentTip.pass habit.recentTip.violation habit.recentTip.pass',
     );
   });
@@ -21,7 +31,7 @@ describe('describeRecent', () => {
   it('says a rule has not been tested rather than reporting an empty history', () => {
     const t = vi.fn((key: string) => key);
 
-    expect(describeRecent([], false, t)).toBe('habit.recentTip.none');
+    expect(describeRecent([], false, translator(t))).toBe('habit.recentTip.none');
     expect(t).toHaveBeenCalledWith('habit.recentTip.none');
   });
 
@@ -30,7 +40,7 @@ describe('describeRecent', () => {
   it('tells a hand-taught rule apart from one with an empty history', () => {
     const t = vi.fn((key: string) => key);
 
-    expect(describeRecent([], true, t)).toBe('habit.hint.taughtPending');
+    expect(describeRecent([], true, translator(t))).toBe('habit.hint.taughtPending');
   });
 });
 

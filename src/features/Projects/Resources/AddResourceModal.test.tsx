@@ -88,7 +88,11 @@ describe('add project resource picker', () => {
   });
 
   it('marks libraries the project already references', () => {
-    mocks.swr = { data: [library('kb_1', 'Alpha'), library('kb_2', 'Beta')], isLoading: false };
+    mocks.swr = {
+      data: [library('kb_1', 'Alpha'), library('kb_2', 'Beta')],
+      isLoading: false,
+      isValidating: false,
+    };
 
     renderPicker(['kb_1']);
 
@@ -98,7 +102,7 @@ describe('add project resource picker', () => {
   });
 
   it('adds a library, marks it, and asks the page to refresh', async () => {
-    mocks.swr = { data: [library('kb_2', 'Beta')], isLoading: false };
+    mocks.swr = { data: [library('kb_2', 'Beta')], isLoading: false, isValidating: false };
     const onAdded = renderPicker();
 
     fireEvent.click(screen.getByRole('button'));
@@ -112,7 +116,7 @@ describe('add project resource picker', () => {
 
   it('keeps the row actionable and reports a failed add', async () => {
     mocks.addKnowledgeBase.mockRejectedValue(new Error('nope'));
-    mocks.swr = { data: [library('kb_2', 'Beta')], isLoading: false };
+    mocks.swr = { data: [library('kb_2', 'Beta')], isLoading: false, isValidating: false };
     const onAdded = renderPicker();
 
     fireEvent.click(screen.getByRole('button'));

@@ -9,7 +9,7 @@ import { users } from '../schemas/user';
 import { workspaceInvitations, workspaceMembers } from '../schemas/workspace';
 import type { LobeChatDatabase } from '../type';
 import { ResourcePermissionModel } from './resourcePermission';
-import { recordBulkTaskMutation } from './taskDomainMutation';
+import { detachMemberFromTasks } from './taskDomainMutation';
 import { WorkspaceInvitationModel } from './workspaceInvitation';
 
 type MemberRole = 'admin' | 'member' | 'viewer';
@@ -215,38 +215,12 @@ export class WorkspaceMemberModel {
 
       // The two responsibility fields detach independently: clearing both
       // wherever EITHER matched would strip the surviving teammate's role
-      // alongside the departing member's. One scoped update per field, so a
-      // task where the member was assignee keeps its reviewer and vice versa.
-      const detachedAssignees = await tx
-        .update(tasks)
-        .set({
-          assigneeUserId: null,
-          domainRevision: sql`${tasks.domainRevision} + 1`,
-          policyRevision: sql`${tasks.policyRevision} + 1`,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.assigneeUserId, userId)))
-        .returning();
-      await recordBulkTaskMutation(tx, detachedAssignees, {
-        changedFields: ['assigneeUserId'],
-        eventType: 'task.assigned',
+      // alongside the departing member's. A task where the member was
+      // assignee keeps its reviewer and vice versa.
+      await detachMemberFromTasks(tx, {
         idempotencyKeyPrefix: `workspace-member-removed:${workspaceId}:${userId}`,
-      });
-
-      const detachedReviewers = await tx
-        .update(tasks)
-        .set({
-          domainRevision: sql`${tasks.domainRevision} + 1`,
-          policyRevision: sql`${tasks.policyRevision} + 1`,
-          reviewerUserId: null,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.reviewerUserId, userId)))
-        .returning();
-      await recordBulkTaskMutation(tx, detachedReviewers, {
-        changedFields: ['reviewerUserId'],
-        eventType: 'task.requirement.changed',
-        idempotencyKeyPrefix: `workspace-member-removed:${workspaceId}:${userId}`,
+        userId,
+        workspaceId,
       });
     });
 
@@ -277,36 +251,10 @@ export class WorkspaceMemberModel {
       if (updatedMembers.length > 0 && !canWorkspaceRoleBeTaskAssignee(role)) {
         // Same per-field detach as `removeMember`: downgrading must not clear
         // a reviewer slot held by a different member (and vice versa).
-        const detachedAssignees = await tx
-          .update(tasks)
-          .set({
-            assigneeUserId: null,
-            domainRevision: sql`${tasks.domainRevision} + 1`,
-            policyRevision: sql`${tasks.policyRevision} + 1`,
-            updatedAt: new Date(),
-          })
-          .where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.assigneeUserId, userId)))
-          .returning();
-        await recordBulkTaskMutation(tx, detachedAssignees, {
-          changedFields: ['assigneeUserId'],
-          eventType: 'task.assigned',
+        await detachMemberFromTasks(tx, {
           idempotencyKeyPrefix: `workspace-member-role:${workspaceId}:${userId}:${role}`,
-        });
-
-        const detachedReviewers = await tx
-          .update(tasks)
-          .set({
-            domainRevision: sql`${tasks.domainRevision} + 1`,
-            policyRevision: sql`${tasks.policyRevision} + 1`,
-            reviewerUserId: null,
-            updatedAt: new Date(),
-          })
-          .where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.reviewerUserId, userId)))
-          .returning();
-        await recordBulkTaskMutation(tx, detachedReviewers, {
-          changedFields: ['reviewerUserId'],
-          eventType: 'task.requirement.changed',
-          idempotencyKeyPrefix: `workspace-member-role:${workspaceId}:${userId}:${role}`,
+          userId,
+          workspaceId,
         });
       }
 

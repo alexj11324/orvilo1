@@ -20,7 +20,10 @@ import {
 } from '@/server/services/linearSync/oauth';
 import { saveLinearOAuthState } from '@/server/services/linearSync/oauthState';
 import { LinearPlanningWorker } from '@/server/services/linearSync/planning';
-import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/provider';
+import {
+  createLinearGraphqlIssueProvider,
+  LinearScopeValidationError,
+} from '@/server/services/linearSync/provider';
 import { LinearSyncWorker } from '@/server/services/linearSync/worker';
 import { LinearSyncWorkflow } from '@/server/workflows/linearSync';
 
@@ -216,12 +219,24 @@ export const linearSyncRouter = router({
           organizationId: installation.organizationId,
           workspaceId: ctx.workspaceId!,
         });
-        const scope = await provider.validateProjectScope!({
-          defaultTeamId: input.defaultTeamId,
-          organizationId: installation.organizationId,
-          projectId: input.linearProjectId,
-          teamIds: input.teamIds,
-        });
+        const [scope, members] = await Promise.all([
+          provider.validateProjectScope!({
+            defaultTeamId: input.defaultTeamId,
+            organizationId: installation.organizationId,
+            projectId: input.linearProjectId,
+            teamIds: input.teamIds,
+          }),
+          provider.listMembers(),
+        ]);
+        const visibleMemberIds = new Set(members.map((member) => member.id));
+        const invalidAssignment = input.settings?.assignmentMappings?.find(
+          (mapping) => !visibleMemberIds.has(mapping.linearUserId),
+        );
+        if (invalidAssignment) {
+          throw new LinearScopeValidationError(
+            `Linear assignment user ${invalidAssignment.linearUserId} is not visible in the installed organization`,
+          );
+        }
 
         const binding = await ctx.linearSyncModel.upsertBinding({
           defaultTeamId: input.defaultTeamId,

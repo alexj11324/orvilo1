@@ -10,7 +10,7 @@ import type {
   TeamVisibility,
   TeamWorkflowStateItem,
 } from '@orvilo/types';
-import { and, asc, eq, exists, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, or, sql } from 'drizzle-orm';
 
 import { projectTeams, teamCycles, teamMembers, teams, teamWorkflowStates } from '../schemas/team';
 import type { LobeChatDatabase } from '../type';
@@ -302,6 +302,15 @@ export class TeamModel {
       })
       .returning();
     return toCycleItem(cycle);
+  };
+
+  listCycles = async (teamId: string) => {
+    const rows = await this.db
+      .select()
+      .from(teamCycles)
+      .where(and(eq(teamCycles.teamId, teamId), eq(teamCycles.workspaceId, this.workspaceId)))
+      .orderBy(desc(teamCycles.startsAt), asc(teamCycles.name));
+    return rows.map(toCycleItem);
   };
 
   findCycleByRemoteId = async (teamId: string, remoteCycleId: string) => {

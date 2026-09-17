@@ -2793,7 +2793,13 @@ export class LinearSyncModel {
           eq(taskDomainEvents.workspaceId, this.workspaceId),
           gt(taskDomainEvents.revision, fromRevision),
           lte(taskDomainEvents.revision, toRevision),
-          scope.scopeType === 'project' ? eq(taskDomainEvents.projectId, scope.scopeId) : undefined,
+          // A project task's events stay in its project scope even when a team
+          // is set — the team scope owns only projectless work.
+          scope.scopeType === 'project'
+            ? eq(taskDomainEvents.projectId, scope.scopeId)
+            : scope.scopeType === 'team'
+              ? and(eq(taskDomainEvents.teamId, scope.scopeId), isNull(taskDomainEvents.projectId))
+              : undefined,
         ),
       )
       .orderBy(taskDomainEvents.revision);
@@ -3337,6 +3343,7 @@ export class LinearSyncModel {
       installationId?: string;
       lastInboundDeliveryId?: string | null;
       lastConfirmedSnapshot?: LinearIssueSnapshot;
+      linearTeamId?: string | null;
       remoteSnapshot?: LinearIssueSnapshot | null;
       remoteUpdatedAt?: Date | null;
       syncState?: LinearIssueLinkSyncState;

@@ -82,6 +82,7 @@ import { projectRouter } from './project';
 import { pushTokenRouter } from './pushToken';
 import { ragEvalRouter } from './ragEval';
 import { recentRouter } from './recent';
+import { repositoryRouter } from './repository';
 import { resourcePermissionRouter } from './resourcePermission';
 import { resourceTransferRequestRouter } from './resourceTransferRequest';
 import { searchRouter } from './search';
@@ -90,6 +91,7 @@ import { sessionGroupRouter } from './sessionGroup';
 import { shareRouter } from './share';
 import { shareChatRouter } from './shareChat';
 import { taskRouter } from './task';
+import { teamRouter } from './team';
 import { threadRouter } from './thread';
 import { topicRouter } from './topic';
 import { topicCommentRouter } from './topicComment';
@@ -169,6 +171,7 @@ export const lambdaRouter = router({
   pushToken: pushTokenRouter,
   ragEval: ragEvalRouter,
   recent: recentRouter,
+  repository: repositoryRouter,
   resourcePermission: resourcePermissionRouter,
   resourceTransferRequest: resourceTransferRequestRouter,
   search: searchRouter,
@@ -177,6 +180,7 @@ export const lambdaRouter = router({
   share: shareRouter,
   shareChat: shareChatRouter,
   task: taskRouter,
+  team: teamRouter,
   thread: threadRouter,
   topic: topicRouter,
   topicComment: topicCommentRouter,

@@ -106,6 +106,53 @@ export const getRepoDefaultBranch = async (
   return typeof branch === 'string' && branch ? branch : undefined;
 };
 
+export interface VerifiedGithubRepository {
+  coordinate: { cloneUrl?: string; name: string; owner: string; url: string };
+  defaultBranch?: string;
+  isFork: boolean;
+  parent?: { name: string; owner: string; url: string };
+  /** Stable provider-side repository id — the identity, never the slug. */
+  remoteRepositoryId: string;
+}
+
+/**
+ * Verify a GitHub repository through the provider API and return its stable
+ * remote identity. `undefined` when the repo is unreachable (private repo
+ * without a credential, wrong slug, or API failure) — callers must treat the
+ * registration as unverifiable rather than minting a synthetic remote id.
+ */
+export const verifyGithubRepository = async (
+  repo: string,
+  token?: string,
+): Promise<VerifiedGithubRepository | undefined> => {
+  const coordinate = parseGithubRepo(repo);
+  if (!coordinate) return undefined;
+  const res = await githubFetch(`/repos/${coordinate.owner}/${coordinate.name}`, token);
+  if (!res.ok || typeof res.json?.id !== 'number') return undefined;
+
+  const parent =
+    res.json.parent && typeof res.json.parent.full_name === 'string'
+      ? {
+          name: res.json.parent.name as string,
+          owner: res.json.parent.owner?.login as string,
+          url: res.json.parent.html_url as string,
+        }
+      : undefined;
+
+  return {
+    coordinate: {
+      cloneUrl: res.json.clone_url,
+      name: res.json.name,
+      owner: res.json.owner?.login ?? coordinate.owner,
+      url: res.json.html_url,
+    },
+    defaultBranch: res.json.default_branch,
+    isFork: res.json.fork === true,
+    parent,
+    remoteRepositoryId: String(res.json.id),
+  };
+};
+
 export interface RemotePrInfo {
   /** Target branch recorded on the pull request. */
   baseBranch: string;

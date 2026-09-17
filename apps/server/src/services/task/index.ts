@@ -110,6 +110,11 @@ export interface CreateTaskInput {
   schedulePattern?: string;
   scheduleTimezone?: string;
   sortOrder?: number;
+  /**
+   * Owning team for workspace-mode tasks (linear-workspace-v3). TaskModel
+   * allocates the identifier from the team's `next_issue_seq` counter.
+   */
+  teamId?: string;
   // Explicit visibility for the new task. When omitted, the service derives it
   // from `parentTaskId` (if present) or `assigneeAgentId`'s visibility, and
   // finally falls back to the schema default ('public').

@@ -246,8 +246,14 @@ export type TaskPlanningAction =
       name: string;
       parentTaskId?: string | null;
       priority?: number;
-      projectId: string;
+      /**
+       * Project the task belongs to — required inside a project scope, absent
+       * for projectless team-scope tasks.
+       */
+      projectId?: string;
       reason: string;
+      /** Owning team — set by team-scope planning (linear-workspace-v3). */
+      teamId?: string;
     }
   | {
       action: 'escalate';

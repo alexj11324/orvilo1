@@ -25,14 +25,29 @@ export type TeamMembershipRole = 'lead' | 'member';
  */
 export type TeamAssignmentSource = 'default' | 'import' | 'manual' | 'planning';
 
-/** Execution policy a team applies to projectless work in its scope. */
+/**
+ * Execution policy a team applies to projectless work in its scope. Shares the
+ * project policy vocabulary (`replanMode`, budgets, allowed agents) so one
+ * normalization path serves both scopes — `defaultAgentId` is the team-only
+ * fallback assignee.
+ */
 export interface TeamOrchestrationPolicy {
+  allowedAgentIds?: string[];
+  allowedRoles?: string[];
   /** Whether the team planner may auto-dispatch ready work. */
   autoDispatch?: boolean;
   /** Cap on concurrently running tasks inside this team's scope. */
   concurrencyLimit?: number;
   /** Agent picked when a task in this team has no explicit assignee. */
   defaultAgentId?: string;
+  executionBudget?: {
+    maxCost?: number;
+    maxRuns?: number;
+  };
+  planningBudget?: {
+    maxRevisions?: number;
+  };
+  replanMode?: 'disabled' | 'observe' | 'suggest' | 'apply';
   /** Whether human review is required before work in this team closes. */
   requireHumanReview?: boolean;
 }

@@ -1,6 +1,6 @@
 import type { TaskPlanningAction, TaskPlanningProposal, TaskPlanningTrigger } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils';
-import { and, asc, count, eq, inArray, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, notInArray, or, sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { LinearSyncModel } from '@/database/models/linearSync';
@@ -15,6 +15,7 @@ import {
   taskDispatches,
   taskPlanningRevisions,
   tasks,
+  teams,
 } from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 import {
@@ -176,7 +177,11 @@ export class LinearPlanningWorker {
             ? await this.model.findBindingByProjectId(scope.scopeId)
             : null;
         const control =
-          scope.scopeType === 'project' ? await this.projectPlanningControl(scope.scopeId) : null;
+          scope.scopeType === 'project'
+            ? await this.projectPlanningControl(scope.scopeId)
+            : scope.scopeType === 'team'
+              ? await this.teamPlanningControl(scope.scopeId)
+              : null;
         if (revision.proposal && revision.status === 'proposed') {
           const persistedProposal = taskPlanningProposalSchema.parse(revision.proposal);
           const autoApplyPersisted = Boolean(
@@ -438,6 +443,14 @@ export class LinearPlanningWorker {
           .limit(1);
         bindingVersion = binding?.version ?? null;
         orchestrationPolicyRevision = project?.orchestrationPolicyRevision ?? null;
+      } else if (scopeSnapshot.scopeType === 'team') {
+        const [team] = await tx
+          .select({ policyRevision: teams.policyRevision })
+          .from(teams)
+          .where(and(eq(teams.id, scopeSnapshot.scopeId), eq(teams.workspaceId, this.workspaceId)))
+          .for('update')
+          .limit(1);
+        orchestrationPolicyRevision = team?.policyRevision ?? null;
       }
 
       const scope = await model.lockPlanningScope(revision.scopeId);
@@ -489,18 +502,21 @@ export class LinearPlanningWorker {
       const ownershipError = projectPlannerOwnershipError(goalOwners);
       if (ownershipError) return supersede(ownershipError);
 
-      if (scope.scopeType === 'project' && !inputSnapshot.consistency) {
+      if (
+        (scope.scopeType === 'project' || scope.scopeType === 'team') &&
+        !inputSnapshot.consistency
+      ) {
         // Revisions created before the consistency metadata was added cannot be
         // safely compared with the current project policy, so force a fresh plan.
         return supersede('This planning proposal is missing its consistency snapshot.');
       }
-      if (scope.scopeType === 'project') {
+      if (scope.scopeType === 'project' || scope.scopeType === 'team') {
         const expectedConsistency = inputSnapshot.consistency!;
         if (
           bindingVersion !== (expectedConsistency.bindingVersion ?? null) ||
           orchestrationPolicyRevision !== (expectedConsistency.orchestrationPolicyRevision ?? null)
         ) {
-          return supersede('The Linear binding or project policy changed after planning.');
+          return supersede('The Linear binding or scope policy changed after planning.');
         }
       }
 
@@ -617,6 +633,13 @@ export class LinearPlanningWorker {
             if (scope.scopeType === 'project' && action.projectId !== scope.scopeId) {
               throw new Error('Planning proposal cannot create a task outside its project scope');
             }
+            if (
+              scope.scopeType === 'team' &&
+              (action.projectId !== undefined ||
+                (action.teamId !== undefined && action.teamId !== scope.scopeId))
+            ) {
+              throw new Error('Planning proposal cannot create a task outside its team scope');
+            }
             const created = await taskService.createTask(
               {
                 description: action.description,
@@ -625,6 +648,7 @@ export class LinearPlanningWorker {
                 parentTaskId: action.parentTaskId ?? undefined,
                 priority: action.priority,
                 projectId: action.projectId,
+                teamId: action.teamId ?? (scope.scopeType === 'team' ? scope.scopeId : undefined),
                 visibility: 'public',
               },
               {
@@ -703,8 +727,14 @@ export class LinearPlanningWorker {
         resumedTaskIds.add(action.taskId);
         const task = await taskModel.findById(action.taskId);
         if (!task) throw new Error(`Task ${action.taskId} is not available to this approver`);
-        if (scope.scopeType !== 'project' || !task.projectId || task.projectId !== scope.scopeId) {
-          throw new Error('Planning resume requires a task in the active project scope');
+        const inScope =
+          scope.scopeType === 'project'
+            ? task.projectId === scope.scopeId
+            : scope.scopeType === 'team'
+              ? task.teamId === scope.scopeId && !task.projectId
+              : false;
+        if (!inScope) {
+          throw new Error('Planning resume requires a task in the active scope');
         }
         if (!['backlog', 'failed', 'paused'].includes(task.status)) {
           throw new Error(`Task ${action.taskId} is not ready to resume from ${task.status}`);
@@ -918,7 +948,9 @@ export class LinearPlanningWorker {
       consistency:
         scope.scopeType === 'project'
           ? await this.projectConsistencySnapshot(scope.scopeId)
-          : { bindingVersion: null, orchestrationPolicyRevision: null },
+          : scope.scopeType === 'team'
+            ? await this.teamConsistencySnapshot(scope.scopeId)
+            : { bindingVersion: null, orchestrationPolicyRevision: null },
       dependencies: dependencyRows,
       events: visibleEvents,
       impact: { changedTaskIds, scopeWide },
@@ -947,7 +979,14 @@ export class LinearPlanningWorker {
   private taskScopeCondition(scope: TaskPlanningScopeItem) {
     return and(
       eq(tasks.workspaceId, this.workspaceId),
-      scope.scopeType === 'project' ? eq(tasks.projectId, scope.scopeId) : undefined,
+      // Single-dispatch-owner: the team scope loads only projectless tasks —
+      // project tasks keep planning under their project scope even when a
+      // team is assigned.
+      scope.scopeType === 'project'
+        ? eq(tasks.projectId, scope.scopeId)
+        : scope.scopeType === 'team'
+          ? and(eq(tasks.teamId, scope.scopeId), isNull(tasks.projectId))
+          : undefined,
     );
   }
 
@@ -1120,6 +1159,28 @@ export class LinearPlanningWorker {
       : null;
   }
 
+  /**
+   * Team-scope planning control: the team's creator owns dispatch for
+   * projectless work (imported tasks carry `createdByUserId = null`), and the
+   * shared normalizer turns the team policy into the same control contract.
+   */
+  private async teamPlanningControl(teamId: string) {
+    const [team] = await this.db
+      .select({
+        createdByUserId: teams.createdByUserId,
+        orchestrationPolicy: teams.orchestrationPolicy,
+      })
+      .from(teams)
+      .where(and(eq(teams.id, teamId), eq(teams.workspaceId, this.workspaceId)))
+      .limit(1);
+    return team
+      ? {
+          policy: normalizeProjectOrchestrationPolicy(team.orchestrationPolicy),
+          userId: team.createdByUserId,
+        }
+      : null;
+  }
+
   private async projectConsistencySnapshot(projectId: string) {
     const [[binding], [project]] = await Promise.all([
       this.db
@@ -1142,6 +1203,23 @@ export class LinearPlanningWorker {
     return {
       bindingVersion: binding?.version ?? null,
       orchestrationPolicyRevision: project?.orchestrationPolicyRevision ?? null,
+    };
+  }
+
+  /**
+   * Team-scope consistency is the team's `policyRevision` — there is no
+   * binding, so `bindingVersion` stays null and the same comparison shape is
+   * reused.
+   */
+  private async teamConsistencySnapshot(teamId: string) {
+    const [team] = await this.db
+      .select({ policyRevision: teams.policyRevision })
+      .from(teams)
+      .where(and(eq(teams.id, teamId), eq(teams.workspaceId, this.workspaceId)))
+      .limit(1);
+    return {
+      bindingVersion: null,
+      orchestrationPolicyRevision: team?.policyRevision ?? null,
     };
   }
 }

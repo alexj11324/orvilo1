@@ -2541,6 +2541,7 @@ export class LinearSyncWorker {
         conflict: null,
         lastConfirmedSnapshot: issue,
         lastInboundDeliveryId: row.id,
+        linearTeamId: issue.teamId ?? existingLink.linearTeamId,
         remoteSnapshot: issue,
         remoteUpdatedAt: incomingUpdatedAt,
         syncState: binding && localChanged.length > 0 ? 'pending' : 'synced',

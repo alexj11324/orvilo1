@@ -27,6 +27,7 @@ import { useTaskItemContextMenu } from '../features/useTaskItemContextMenu';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import TaskWorkflowBadge from '../shared/TaskWorkflowBadge';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   /* Cordy keeps the empty-assign affordance hidden until the card is hovered —
@@ -307,6 +308,11 @@ const TaskBoardCard = memo<TaskBoardCardProps>(({ overlay, routeScope = 'agent',
       >
         <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
         <LinearTaskSyncStatus taskId={task.id} />
+        <TaskWorkflowBadge
+          executionStatus={task.status}
+          workflowCategory={task.workflowCategory}
+          workflowStateId={task.workflowStateId}
+        />
         {task.automationMode ? (
           <TaskTriggerTag
             automationMode={task.automationMode}

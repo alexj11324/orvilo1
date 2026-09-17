@@ -101,7 +101,7 @@ export class TaskTopicModel {
       integration?: TaskTopicIntegration;
       operationId?: string;
       seq: number;
-      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal';
+      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
     },
   ): Promise<void> {
     const visibility = await this.getTaskVisibility(taskId);
@@ -147,7 +147,7 @@ export class TaskTopicModel {
       integration?: TaskTopicIntegration;
       operationId: string;
       seq: number;
-      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal';
+      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
     },
   ): Promise<void> {
     const visibility = await this.getTaskVisibility(taskId);
@@ -647,7 +647,10 @@ export class TaskTopicModel {
    */
   async countByTask(
     taskId: string,
-    options?: { since?: Date; triggers?: Array<'manual' | 'schedule' | 'heartbeat' | 'goal'> },
+    options?: {
+      since?: Date;
+      triggers?: Array<'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator'>;
+    },
   ): Promise<number> {
     const conditions = [eq(taskTopics.taskId, taskId), this.ownership()];
     if (options?.since) conditions.push(gte(taskTopics.createdAt, options.since));

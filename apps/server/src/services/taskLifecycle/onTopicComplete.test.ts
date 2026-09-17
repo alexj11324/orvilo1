@@ -24,7 +24,7 @@ const {
   deferredVerifyDrive: vi.fn().mockResolvedValue(undefined),
   integrateOnComplete: vi.fn().mockResolvedValue('settled'),
   runTaskMock: vi.fn().mockResolvedValue({ success: true }),
-  settleDispatch: vi.fn().mockResolvedValue({ currentGeneration: true }),
+  settleDispatch: vi.fn().mockResolvedValue({ currentContract: true, currentGeneration: true }),
 }));
 
 vi.mock('@/database/models/taskDispatch', () => ({
@@ -156,7 +156,9 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     deferredVerifyDrive.mockReset().mockResolvedValue(undefined);
     captureRemoteIdentityOnComplete.mockReset().mockResolvedValue(true);
     integrateOnComplete.mockReset().mockResolvedValue('settled');
-    settleDispatch.mockReset().mockResolvedValue({ currentGeneration: true, state: 'settled' });
+    settleDispatch
+      .mockReset()
+      .mockResolvedValue({ currentContract: true, currentGeneration: true, state: 'settled' });
 
     service = new TaskLifecycleService({} as any, 'user-1');
 
@@ -309,7 +311,11 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     });
 
     it('archives a stale generation result without advancing the current task', async () => {
-      settleDispatch.mockResolvedValue({ currentGeneration: false, state: 'settled' });
+      settleDispatch.mockResolvedValue({
+        currentContract: false,
+        currentGeneration: false,
+        state: 'settled',
+      });
 
       await service.onTopicComplete({
         dispatchFence: 3,

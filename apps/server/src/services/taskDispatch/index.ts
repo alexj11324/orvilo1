@@ -61,7 +61,7 @@ export class TaskDispatchService {
     planRevision?: number;
     requestedBy: string;
     task: TaskItem;
-    trigger: TaskRunTrigger | 'orchestrator';
+    trigger: TaskRunTrigger;
   }): Promise<PreparedTaskDispatch> {
     let requested;
     try {
@@ -93,10 +93,7 @@ export class TaskDispatchService {
         dispatch.id,
       );
     }
-    if (
-      !dispatch.agentId &&
-      !TaskDispatchService.allowsInboxFallback(currentTask, input.trigger as TaskRunTrigger)
-    ) {
+    if (!dispatch.agentId && !TaskDispatchService.allowsInboxFallback(currentTask, input.trigger)) {
       await this.model.markWaiting(dispatch.id, 'no_eligible_agent');
       throw new TaskDispatchWaitingError('Task has no eligible execution Agent', dispatch.id);
     }

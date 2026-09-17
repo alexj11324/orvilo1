@@ -1,13 +1,15 @@
 // @vitest-environment node
 import { eq, sql } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import {
+  agents,
   linearInstallations,
+  projectAgents,
   projects,
   taskDispatches,
   taskPlanningRevisions,
@@ -18,6 +20,14 @@ import {
 import type { LobeChatDatabase } from '@/database/type';
 
 import { LinearPlanningWorker } from './planning';
+
+const runTask = vi.hoisted(() => vi.fn());
+
+vi.mock('@/server/services/taskRunner', () => ({
+  TaskRunnerService: vi.fn(function () {
+    return { runTask };
+  }),
+}));
 
 const db: LobeChatDatabase = await getTestDB();
 const userId = 'planning-apply-user';
@@ -30,6 +40,8 @@ const cleanup = async () => {
 };
 
 beforeEach(async () => {
+  vi.clearAllMocks();
+  runTask.mockResolvedValue({ success: true });
   await cleanup();
   await db.insert(users).values({ id: userId });
   await db.insert(workspaces).values({
@@ -122,6 +134,125 @@ const createRevision = async (name: string, requiresApproval: boolean, projectSc
 };
 
 describe('LinearPlanningWorker.applyProposal', () => {
+  it('rejects request_resume outside a project planning scope', async () => {
+    const { revision, task } = await createRevision('Workspace resume', false);
+    await db
+      .update(taskPlanningRevisions)
+      .set({
+        proposal: {
+          actions: [
+            {
+              action: 'request_resume',
+              instruction: 'Do not start without project policy.',
+              reason: 'Exercise the workspace-scope guard.',
+              taskId: task.id,
+            },
+          ],
+          explanation: 'A workspace plan cannot auto-execute a task.',
+          requiresApproval: false,
+        },
+      })
+      .where(eq(taskPlanningRevisions.id, revision.id));
+
+    await expect(
+      new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, userId, true),
+    ).rejects.toThrow('requires a task in the active project scope');
+    await expect(
+      db.select().from(taskDispatches).where(eq(taskDispatches.taskId, task.id)),
+    ).resolves.toHaveLength(0);
+  });
+
+  it('C08 commits a stable auto-dispatch intent before waking the task runner', async () => {
+    const { project, revision, task } = await createRevision('Resume intent', false, true);
+    const agentId = 'planning-resume-agent';
+    await db.insert(agents).values({ id: agentId, userId, workspaceId });
+    await db.insert(projectAgents).values({
+      agentId,
+      enabled: true,
+      projectId: project!.id,
+      workspaceId,
+    });
+    await db
+      .update(projects)
+      .set({
+        orchestrationPolicy: {
+          ...project!.orchestrationPolicy,
+          autoDispatch: true,
+          replanMode: 'apply',
+        },
+      })
+      .where(eq(projects.id, project!.id));
+    const [assignedTask] = await db
+      .update(tasks)
+      .set({ assigneeAgentId: agentId })
+      .where(eq(tasks.id, task.id))
+      .returning();
+    await db
+      .update(taskPlanningRevisions)
+      .set({
+        inputSnapshot: {
+          consistency: {
+            bindingVersion: 1,
+            orchestrationPolicyRevision: project!.orchestrationPolicyRevision,
+          },
+          tasks: [{ id: task.id, updatedAt: assignedTask.updatedAt.toISOString() }],
+        },
+        proposal: {
+          actions: [
+            {
+              action: 'request_resume',
+              instruction: 'Continue from the reconciled Linear requirement.',
+              reason: 'The task is ready and its dependencies are complete.',
+              taskId: task.id,
+            },
+            {
+              action: 'update_task',
+              patch: { name: 'Updated before dispatch' },
+              reason: 'The final execution contract needs the reconciled title.',
+              taskId: task.id,
+            },
+          ],
+          explanation: 'Resume the ready task through the durable dispatcher.',
+          requiresApproval: false,
+        },
+      })
+      .where(eq(taskPlanningRevisions.id, revision.id));
+
+    await expect(
+      new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, userId, true),
+    ).resolves.toEqual({ createdTaskIds: [], stale: false, updatedTaskIds: [task.id] });
+    const [finalTask] = await db.select().from(tasks).where(eq(tasks.id, task.id));
+    expect(finalTask.name).toBe('Updated before dispatch');
+    await expect(
+      db.select().from(taskDispatches).where(eq(taskDispatches.taskId, task.id)),
+    ).resolves.toMatchObject([
+      expect.objectContaining({
+        agentId,
+        idempotencyKey: `planning:${revision.id}:resume:${task.id}`,
+        phase: 'requested',
+        planRevision: revision.inputRevision,
+        requirementRevision: finalTask.requirementRevision,
+      }),
+    ]);
+    await expect(TaskDispatchModel.findPlanningStartCandidates(db)).resolves.toContainEqual({
+      dispatchId: expect.any(String),
+      idempotencyKey: `planning:${revision.id}:resume:${task.id}`,
+      planRevision: revision.inputRevision,
+      requestedBy: `orchestrator:planning:${revision.id}`,
+      taskId: task.id,
+      userId,
+      workspaceId,
+    });
+    expect(runTask).toHaveBeenCalledWith({
+      extraPrompt: 'Continue from the reconciled Linear requirement.',
+      idempotencyKey: `planning:${revision.id}:resume:${task.id}`,
+      planRevision: revision.inputRevision,
+      requestedBy: `planning:${revision.id}`,
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+  });
+
   it('C10 commits a fenced stop intent before the runtime interruption can be retried', async () => {
     const { revision, task } = await createRevision('Stop intent', false);
     await db.insert(taskDispatches).values({

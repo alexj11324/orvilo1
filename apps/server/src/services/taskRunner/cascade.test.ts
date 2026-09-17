@@ -56,4 +56,34 @@ describe('prerequisite completion cascade', () => {
     expect((await runner.cascadeOnCompletionMany(['public-upstream'])).started).toEqual(['T-4']);
     expect(identities).toEqual(['owner']);
   });
+
+  it('routes an unlocked dependent through the orchestrator dispatch gate', async () => {
+    const task = {
+      domainRevision: 3,
+      executionGeneration: 2,
+      id: 'task-child',
+      identifier: 'TASK-2',
+      parentTaskId: null,
+    } as TaskItem;
+    const service = new TaskRunnerService({} as any, 'user-1', 'workspace-1');
+    (service as any).taskModel = {
+      getUnlockedTasksForMany: vi.fn().mockResolvedValue([task]),
+    };
+    const runTask = vi.spyOn(service, 'runTask').mockResolvedValue({
+      operationId: 'operation-1',
+      success: true,
+      taskId: task.id,
+      taskIdentifier: task.identifier,
+      topicId: 'topic-1',
+    } as any);
+
+    await expect(service.cascadeOnCompletionMany(['task-parent'])).resolves.toEqual({
+      failed: [],
+      paused: [],
+      started: ['TASK-2'],
+    });
+    expect(runTask).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: task.id, trigger: 'orchestrator' }),
+    );
+  });
 });

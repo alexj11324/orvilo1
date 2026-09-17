@@ -23,6 +23,7 @@ import {
 } from '@/server/services/goal/taskOwnership';
 import { TaskService } from '@/server/services/task';
 import { processTaskCancellation } from '@/server/services/taskCancellation';
+import { TaskRunnerService } from '@/server/services/taskRunner';
 
 import { taskPlanningProposalSchema } from './contract';
 import { createLinearCoordinatorPlanner } from './coordinator';
@@ -121,6 +122,8 @@ export interface ApplyPlanningProposalResult {
   updatedTaskIds: string[];
 }
 
+class PlanningLeaseLostError extends Error {}
+
 export class LinearPlanningWorker {
   private readonly db: LobeChatDatabase;
   private readonly model: LinearSyncModel;
@@ -146,6 +149,8 @@ export class LinearPlanningWorker {
 
     for (const scope of scopes) {
       try {
+        if (!scope.lockedUntil) throw new PlanningLeaseLostError('Planning scope lease is missing');
+        const planningLease = { lockedUntil: scope.lockedUntil, scopeId: scope.id };
         const inputRevision = scope.dirtyRevision;
         const events = await this.model.listDomainEventsForPlanning(
           scope,
@@ -166,32 +171,69 @@ export class LinearPlanningWorker {
           trigger,
         });
 
-        if (revision.proposal && revision.status === 'proposed') {
-          await this.model.finishPlanningScope(scope.id, inputRevision, 'idle');
-          result.proposed += 1;
-          result.processed += 1;
-          continue;
-        }
-
         const binding =
           scope.scopeType === 'project'
             ? await this.model.findBindingByProjectId(scope.scopeId)
             : null;
         const control =
           scope.scopeType === 'project' ? await this.projectPlanningControl(scope.scopeId) : null;
+        if (revision.proposal && revision.status === 'proposed') {
+          const persistedProposal = taskPlanningProposalSchema.parse(revision.proposal);
+          const autoApplyPersisted = Boolean(
+            control &&
+            !persistedProposal.requiresApproval &&
+            ((binding && !binding.replanningEnabled) ||
+              ['apply', 'disabled', 'observe'].includes(control.policy.replanMode)),
+          );
+          if (autoApplyPersisted && control) {
+            try {
+              await this.applyProposal(revision.id, control.userId, false, planningLease);
+            } catch (error) {
+              if (!(error instanceof PlanningLeaseLostError)) {
+                await this.model.updatePlanningRevision(
+                  revision.id,
+                  {
+                    error: error instanceof Error ? error.message.slice(0, 2_000) : String(error),
+                    status: 'failed',
+                  },
+                  planningLease,
+                );
+              }
+              throw error;
+            }
+          } else {
+            const finished = await this.model.finishPlanningScope(
+              scope.id,
+              inputRevision,
+              'idle',
+              planningLease.lockedUntil,
+            );
+            if (!finished) throw new PlanningLeaseLostError('Planning scope lease was replaced');
+          }
+          result.proposed += 1;
+          result.processed += 1;
+          continue;
+        }
+
         const recentRevisions = control
           ? await this.model.listPlanningRevisions(
               scope.id,
               (control.policy.planningBudget?.maxRevisions ?? 20) + 1,
             )
           : [];
-        const previousReceipt = recentRevisions.findIndex(
-          (candidate) => candidate.id !== revision.id && candidate.status === 'applied',
+        const previousHumanReceipt = recentRevisions.findIndex(
+          (candidate) =>
+            candidate.id !== revision.id &&
+            candidate.status === 'applied' &&
+            isRecord(candidate.proposal) &&
+            candidate.proposal.requiresApproval === true,
         );
-        const automaticAttempts = previousReceipt < 0 ? recentRevisions.length : previousReceipt;
+        const automaticAttempts = recentRevisions
+          .slice(0, previousHumanReceipt < 0 ? undefined : previousHumanReceipt)
+          .filter((candidate) => candidate.id !== revision.id).length;
         const planningBudgetExceeded = Boolean(
           control?.policy.planningBudget?.maxRevisions &&
-          automaticAttempts > control.policy.planningBudget.maxRevisions,
+          automaticAttempts >= control.policy.planningBudget.maxRevisions,
         );
 
         let proposal: TaskPlanningProposal;
@@ -244,20 +286,47 @@ export class LinearPlanningWorker {
           autoApply = control?.policy.replanMode === 'apply' && !proposal.requiresApproval;
         }
         const validatedProposal = taskPlanningProposalSchema.parse(proposal);
-        await this.model.updatePlanningRevision(revision.id, {
-          proposal: validatedProposal,
-          status: 'proposed',
-        });
-        await this.model.finishPlanningScope(scope.id, inputRevision, 'idle');
+        const proposed = await this.model.updatePlanningRevision(
+          revision.id,
+          {
+            proposal: validatedProposal,
+            status: 'proposed',
+          },
+          planningLease,
+        );
+        if (!proposed) throw new PlanningLeaseLostError('Planning scope lease was replaced');
         if (autoApply && control) {
-          await this.applyProposal(revision.id, control.userId, false);
+          try {
+            await this.applyProposal(revision.id, control.userId, false, planningLease);
+          } catch (error) {
+            if (!(error instanceof PlanningLeaseLostError)) {
+              await this.model.updatePlanningRevision(
+                revision.id,
+                {
+                  error: error instanceof Error ? error.message.slice(0, 2_000) : String(error),
+                  status: 'failed',
+                },
+                planningLease,
+              );
+            }
+            throw error;
+          }
+        } else {
+          const finished = await this.model.finishPlanningScope(
+            scope.id,
+            inputRevision,
+            'idle',
+            planningLease.lockedUntil,
+          );
+          if (!finished) throw new PlanningLeaseLostError('Planning scope lease was replaced');
         }
         result.proposed += 1;
         result.processed += 1;
       } catch (error) {
+        if (error instanceof PlanningLeaseLostError) continue;
         result.failed += 1;
         const message = error instanceof Error ? error.message : String(error);
-        await this.model.failPlanningScope(scope.id, message);
+        await this.model.failPlanningScope(scope.id, message, scope.lockedUntil ?? undefined);
       }
     }
 
@@ -274,6 +343,7 @@ export class LinearPlanningWorker {
     revisionId: string,
     userId: string,
     approvalConfirmed: boolean,
+    planningLease?: { lockedUntil: Date; scopeId: string },
   ): Promise<ApplyPlanningProposalResult> {
     const transactionResult = await this.db.transaction(async (tx) => {
       const model = new LinearSyncModel(tx, this.workspaceId);
@@ -372,11 +442,30 @@ export class LinearPlanningWorker {
 
       const scope = await model.lockPlanningScope(revision.scopeId);
       if (!scope) throw new Error('Planning scope no longer exists');
+      if (
+        planningLease &&
+        (planningLease.scopeId !== scope.id ||
+          scope.status !== 'running' ||
+          scope.lockedUntil?.getTime() !== planningLease.lockedUntil.getTime())
+      ) {
+        throw new PlanningLeaseLostError('Planning scope lease was replaced');
+      }
       const supersede = async (error: string) => {
         await model.updatePlanningRevision(revision.id, { error, status: 'superseded' });
-        await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
+        await model.finishPlanningScope(
+          scope.id,
+          revision.inputRevision,
+          'idle',
+          planningLease?.lockedUntil,
+        );
         return {
           result: { createdTaskIds: [], stale: true, updatedTaskIds: [] },
+          runIntents: [] as Array<{
+            idempotencyKey: string;
+            instruction: string;
+            planRevision: number;
+            taskId: string;
+          }>,
           stopDispatchIds: [] as string[],
         };
       };
@@ -482,6 +571,12 @@ export class LinearPlanningWorker {
       const taskService = new TaskService(tx, userId, this.workspaceId);
       const agentModel = new AgentModel(tx, userId, this.workspaceId);
       const createdTaskIds: string[] = [];
+      const runIntents: Array<{
+        idempotencyKey: string;
+        instruction: string;
+        planRevision: number;
+        taskId: string;
+      }> = [];
       const stopDispatchIds: string[] = [];
       const updatedTaskIds: string[] = [];
 
@@ -563,6 +658,12 @@ export class LinearPlanningWorker {
             updatedTaskIds.push(action.taskId);
             break;
           }
+          case 'request_resume': {
+            // Dispatch intents are created after every graph/requirement action
+            // so their contract snapshots the final state independent of the
+            // model-provided action order.
+            break;
+          }
           case 'set_dependency': {
             await this.applyDependencyAction(
               tx,
@@ -593,14 +694,87 @@ export class LinearPlanningWorker {
         }
       }
 
+      const resumedTaskIds = new Set<string>();
+      for (const action of proposal.actions) {
+        if (action.action !== 'request_resume') continue;
+        if (resumedTaskIds.has(action.taskId)) {
+          throw new Error(`Task ${action.taskId} has more than one resume action`);
+        }
+        resumedTaskIds.add(action.taskId);
+        const task = await taskModel.findById(action.taskId);
+        if (!task) throw new Error(`Task ${action.taskId} is not available to this approver`);
+        if (scope.scopeType !== 'project' || !task.projectId || task.projectId !== scope.scopeId) {
+          throw new Error('Planning resume requires a task in the active project scope');
+        }
+        if (!['backlog', 'failed', 'paused'].includes(task.status)) {
+          throw new Error(`Task ${action.taskId} is not ready to resume from ${task.status}`);
+        }
+        if (!(await taskModel.areAllDependenciesCompleted(task.id))) {
+          throw new Error(`Task ${action.taskId} still has incomplete dependencies`);
+        }
+        const idempotencyKey = `planning:${revision.id}:resume:${task.id}`;
+        const requested = await dispatchModel.request({
+          idempotencyKey,
+          planRevision: revision.inputRevision,
+          requestedBy: `planning:${revision.id}`,
+          taskId: task.id,
+          trigger: 'orchestrator',
+        });
+        if (requested.state === 'busy') {
+          throw new Error(`Task ${task.id} already has active dispatch ${requested.active.id}`);
+        }
+        let dispatch = requested.dispatch;
+        if (!dispatch.agentId && dispatch.phase === 'requested') {
+          dispatch =
+            (await dispatchModel.markWaiting(dispatch.id, 'no_eligible_agent')) ?? dispatch;
+        }
+        if (dispatch.phase === 'requested') {
+          let instruction = action.instruction;
+          if (dispatch.idempotencyKey !== idempotencyKey && dispatch.planRevision !== null) {
+            const originalRevision = await model.findPlanningRevisionByInputRevision(
+              dispatch.planRevision,
+            );
+            const originalProposal = taskPlanningProposalSchema.safeParse(
+              originalRevision?.proposal,
+            );
+            const originalResume = originalProposal.success
+              ? originalProposal.data.actions.find(
+                  (candidate) =>
+                    candidate.action === 'request_resume' && candidate.taskId === task.id,
+                )
+              : undefined;
+            if (originalResume?.action === 'request_resume') {
+              instruction = originalResume.instruction;
+            }
+          }
+          runIntents.push({
+            idempotencyKey: dispatch.idempotencyKey,
+            instruction,
+            planRevision: dispatch.planRevision ?? revision.inputRevision,
+            taskId: task.id,
+          });
+        }
+        updatedTaskIds.push(task.id);
+      }
+
       await model.updatePlanningRevision(revision.id, {
         appliedAt: new Date(),
         error: null,
         status: 'applied',
       });
-      await model.finishPlanningScope(scope.id, revision.inputRevision, 'idle');
+      await model.finishPlanningScope(
+        scope.id,
+        revision.inputRevision,
+        'idle',
+        planningLease?.lockedUntil,
+      );
       return {
-        result: { createdTaskIds, stale: false, updatedTaskIds },
+        result: {
+          createdTaskIds,
+          stale: false,
+          updatedTaskIds: Array.from(new Set(updatedTaskIds)),
+        },
+        runIntents,
         stopDispatchIds,
       };
     });
@@ -618,6 +792,20 @@ export class LinearPlanningWorker {
         console.error('[linear-planning] failed to wake task cancellation %s:', dispatchId, error);
       }
     }
+    for (const intent of transactionResult.runIntents) {
+      try {
+        await new TaskRunnerService(this.db, userId, this.workspaceId).runTask({
+          extraPrompt: intent.instruction,
+          idempotencyKey: intent.idempotencyKey,
+          planRevision: intent.planRevision,
+          requestedBy: `planning:${revisionId}`,
+          taskId: intent.taskId,
+          trigger: 'orchestrator',
+        });
+      } catch (error) {
+        console.error('[linear-planning] failed to wake task dispatch %s:', intent.taskId, error);
+      }
+    }
     return transactionResult.result;
   }
 
@@ -627,6 +815,7 @@ export class LinearPlanningWorker {
         actions.flatMap((action) => {
           switch (action.action) {
             case 'assign_task':
+            case 'request_resume':
             case 'request_stop':
             case 'update_task': {
               return [action.taskId];

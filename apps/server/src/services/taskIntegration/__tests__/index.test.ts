@@ -246,6 +246,48 @@ describe('TaskIntegrationService', () => {
     );
   });
 
+  it('does not invalidate integration for an execution-only domain revision', async () => {
+    mockTaskModel.findById.mockResolvedValue(baseTask({ domainRevision: 2 }));
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+    vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+      sha: 'status-only123',
+      state: 'merged',
+      success: true,
+    });
+
+    await expect(
+      service.integrateOnComplete({
+        task: baseTask({ domainRevision: 2 }),
+        taskTopicId: 'topic_1',
+      }),
+    ).resolves.toBe('settled');
+    expect(deviceGateway.mergeGitBranch).toHaveBeenCalled();
+  });
+
+  it('rejects integration after the assigned Agent changes', async () => {
+    mockTaskModel.findById.mockResolvedValue(baseTask({ assigneeAgentId: 'agent-new' }));
+    mockTaskDispatchModel.findById.mockResolvedValue({
+      agentId: 'agent-old',
+      fence: 1,
+      generation: 1,
+      id: 'dispatch-1',
+      phase: 'succeeded',
+      policyRevision: 1,
+      requirementRevision: 1,
+      taskId: 'task_1',
+      taskRevision: 1,
+    });
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+
+    await expect(
+      service.integrateOnComplete({
+        task: baseTask({ assigneeAgentId: 'agent-old' }),
+        taskTopicId: 'topic_1',
+      }),
+    ).resolves.toBe('stale');
+    expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+  });
+
   it('lets only one duplicate completion callback process an integration state', async () => {
     mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
     mockTaskTopicModel.claimIntegration.mockResolvedValue(false);

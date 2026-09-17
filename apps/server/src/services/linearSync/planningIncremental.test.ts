@@ -12,6 +12,7 @@ import {
   projects,
   taskDependencies,
   taskPlanningRevisions,
+  taskPlanningScopes,
   tasks,
   users,
   workspaces,
@@ -305,6 +306,189 @@ describe('LinearPlanningWorker incremental affected-subgraph planning', () => {
     expect(revision.eventIds).toHaveLength(2);
     expect(currentScope?.status).toBe('queued');
     expect(currentScope!.dirtyRevision).toBeGreaterThan(currentScope!.plannedRevision);
+  });
+
+  it('keeps a live planning lease during new events and rejects stale lease completion', async () => {
+    const project = await createProject();
+    const task = await createTask(project.id);
+    await recordEvent({ projectId: project.id, taskId: task.id });
+    const linear = new LinearSyncModel(db, workspaceId);
+    const [firstClaim] = await linear.claimPlanningScopes(1, 1_234);
+    expect(firstClaim).toMatchObject({ status: 'running' });
+    expect(firstClaim.lockedUntil).toBeInstanceOf(Date);
+
+    await recordEvent({ projectId: project.id, taskId: task.id, type: 'task.status.changed' });
+    const active = await linear.findPlanningScopeById(firstClaim.id);
+    expect(active).toMatchObject({ status: 'running' });
+    expect(active?.lockedUntil).toEqual(firstClaim.lockedUntil);
+    await expect(linear.claimPlanningScopes(1, 90_000)).resolves.toHaveLength(0);
+
+    await db
+      .update(taskPlanningScopes)
+      .set({ lockedUntil: new Date('2000-01-01T00:00:00.000Z') })
+      .where(eq(taskPlanningScopes.id, firstClaim.id));
+    const [reclaimed] = await linear.claimPlanningScopes(1, 90_000);
+    expect(reclaimed.id).toBe(firstClaim.id);
+    expect(reclaimed.lockedUntil).not.toEqual(firstClaim.lockedUntil);
+
+    await expect(
+      linear.finishPlanningScope(
+        firstClaim.id,
+        firstClaim.dirtyRevision,
+        'idle',
+        firstClaim.lockedUntil!,
+      ),
+    ).resolves.toBeNull();
+    await expect(
+      linear.failPlanningScope(firstClaim.id, 'stale worker', firstClaim.lockedUntil!),
+    ).resolves.toBeNull();
+    await expect(linear.findPlanningScopeById(firstClaim.id)).resolves.toMatchObject({
+      lockedUntil: reclaimed.lockedUntil,
+      status: 'running',
+    });
+  });
+
+  it('D06 keeps a failed auto-apply revision retryable without a duplicate planning receipt', async () => {
+    const project = await createProject();
+    await db
+      .update(projects)
+      .set({
+        orchestrationPolicy: {
+          ...project.orchestrationPolicy,
+          autoDispatch: true,
+          replanMode: 'apply',
+        },
+      })
+      .where(eq(projects.id, project.id));
+    const task = await createTask(project.id);
+    await recordEvent({ projectId: project.id, taskId: task.id });
+    const planner = vi
+      .fn<TaskPlanningPlanner>()
+      .mockResolvedValueOnce({
+        actions: [
+          {
+            action: 'request_stop',
+            reason: 'Exercise the failed auto-apply path.',
+            taskId: task.id,
+          },
+        ],
+        explanation: 'This invalid automatic stop must fail at the apply boundary.',
+        requiresApproval: false,
+      })
+      .mockResolvedValueOnce(noopProposal());
+    const worker = new LinearPlanningWorker(db, workspaceId);
+
+    await expect(worker.processPending(planner)).resolves.toMatchObject({ failed: 1 });
+    const failed = await latestRevisionForProject(project.id);
+    expect(failed.revision.status).toBe('failed');
+    expect(failed.scope.plannedRevision).toBeLessThan(failed.scope.dirtyRevision);
+
+    await new LinearSyncModel(db, workspaceId).requeuePlanningScope(failed.scope.id);
+    await expect(worker.processPending(planner)).resolves.toMatchObject({
+      failed: 0,
+      processed: 1,
+    });
+    const retried = await latestRevisionForProject(project.id);
+    expect(retried.revision.id).toBe(failed.revision.id);
+    expect(retried.revision.status).toBe('applied');
+    expect(planner).toHaveBeenCalledTimes(2);
+  });
+
+  it('D06 resumes a committed auto-apply proposal after a crash before its wakeup', async () => {
+    const project = await createProject();
+    await db
+      .update(projects)
+      .set({
+        orchestrationPolicy: {
+          ...project.orchestrationPolicy,
+          autoDispatch: true,
+          replanMode: 'apply',
+        },
+      })
+      .where(eq(projects.id, project.id));
+    const task = await createTask(project.id);
+    const change = await recordEvent({ projectId: project.id, taskId: task.id });
+    const linear = new LinearSyncModel(db, workspaceId);
+    const revision = await linear.createPlanningRevision({
+      eventIds: [change.event.id],
+      inputRevision: change.event.revision,
+      inputSnapshot: {
+        consistency: {
+          bindingVersion: null,
+          orchestrationPolicyRevision: project.orchestrationPolicyRevision,
+        },
+        tasks: [{ id: task.id, updatedAt: task.updatedAt.toISOString() }],
+      },
+      proposal: {
+        actions: [
+          {
+            action: 'update_task',
+            patch: { name: 'Recovered auto-apply' },
+            reason: 'The persisted proposal must survive a worker exit.',
+            taskId: task.id,
+          },
+        ],
+        explanation: 'Apply the proposal already committed before the crash.',
+        requiresApproval: false,
+      },
+      scopeId: change.scope!.id,
+      status: 'proposed',
+      trigger: change.scope!.lastTrigger!,
+    });
+    const planner = vi.fn<TaskPlanningPlanner>(async () => noopProposal());
+
+    await expect(
+      new LinearPlanningWorker(db, workspaceId).processPending(planner),
+    ).resolves.toMatchObject({ failed: 0, processed: 1 });
+    expect(planner).not.toHaveBeenCalled();
+    expect((await db.select().from(tasks).where(eq(tasks.id, task.id)))[0].name).toBe(
+      'Recovered auto-apply',
+    );
+    expect(
+      (
+        await db
+          .select()
+          .from(taskPlanningRevisions)
+          .where(eq(taskPlanningRevisions.id, revision.id))
+      )[0].status,
+    ).toBe('applied');
+  });
+
+  it('C13 bounds automatic planning until a human-approved receipt resets the budget', async () => {
+    const project = await createProject();
+    await db
+      .update(projects)
+      .set({
+        orchestrationPolicy: {
+          ...project.orchestrationPolicy,
+          autoDispatch: true,
+          planningBudget: { maxRevisions: 1 },
+          replanMode: 'apply',
+        },
+      })
+      .where(eq(projects.id, project.id));
+    const task = await createTask(project.id);
+    const planner = vi.fn<TaskPlanningPlanner>(async () => noopProposal());
+    const worker = new LinearPlanningWorker(db, workspaceId);
+
+    await recordEvent({ projectId: project.id, taskId: task.id });
+    await worker.processPending(planner);
+    expect((await latestRevisionForProject(project.id)).revision.status).toBe('applied');
+
+    await recordEvent({ projectId: project.id, taskId: task.id });
+    await worker.processPending(planner);
+    const budgetRevision = (await latestRevisionForProject(project.id)).revision;
+    expect(budgetRevision.proposal).toMatchObject({
+      actions: [{ action: 'escalate' }],
+      requiresApproval: true,
+    });
+    expect(planner).toHaveBeenCalledTimes(1);
+
+    await worker.applyProposal(budgetRevision.id, userId, true);
+    await recordEvent({ projectId: project.id, taskId: task.id });
+    await worker.processPending(planner);
+    expect(planner).toHaveBeenCalledTimes(2);
+    expect((await latestRevisionForProject(project.id)).revision.status).toBe('applied');
   });
 
   it('C14 leaves the existing Goal path alone when project replanning is disabled', async () => {

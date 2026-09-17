@@ -91,6 +91,14 @@ const taskPriority = (priority: number | null | undefined) => {
   return Math.max(0, Math.min(4, priority));
 };
 
+const isLinearFieldHumanLocked = (task: TaskItem, field: keyof LinearIssueSnapshot) => {
+  if (field === 'title' || field === 'description') return task.requirementLocked;
+  if (field === 'assigneeId') return task.assigneeLocked;
+  if (field === 'priority') return task.priorityLocked;
+  if (field === 'stateId') return task.workflowLocked;
+  return false;
+};
+
 const remoteTaskPatch = (
   task: TaskItem,
   merged: LinearIssueSnapshot,
@@ -105,18 +113,34 @@ const remoteTaskPatch = (
     changedLinearIssueFields(base, local).filter((field) => field !== 'labelIds'),
   );
 
-  if (remoteChanged.includes('title') && !localChanged.has('title')) {
+  if (
+    remoteChanged.includes('title') &&
+    !localChanged.has('title') &&
+    !isLinearFieldHumanLocked(task, 'title')
+  ) {
     patch.name = merged.title;
   }
-  if (remoteChanged.includes('description') && !localChanged.has('description')) {
+  if (
+    remoteChanged.includes('description') &&
+    !localChanged.has('description') &&
+    !isLinearFieldHumanLocked(task, 'description')
+  ) {
     patch.description = merged.description?.slice(0, 255);
     patch.editorData = null;
     patch.instruction = merged.description ?? '';
   }
-  if (remoteChanged.includes('priority') && !localChanged.has('priority')) {
+  if (
+    remoteChanged.includes('priority') &&
+    !localChanged.has('priority') &&
+    !isLinearFieldHumanLocked(task, 'priority')
+  ) {
     patch.priority = taskPriority(merged.priority);
   }
-  if (remoteChanged.includes('stateId') && !localChanged.has('stateId')) {
+  if (
+    remoteChanged.includes('stateId') &&
+    !localChanged.has('stateId') &&
+    !isLinearFieldHumanLocked(task, 'stateId')
+  ) {
     const statusMapping = settings.statusMappings?.find(
       (mapping) => mapping.linearStateId === merged.stateId,
     );
@@ -125,7 +149,11 @@ const remoteTaskPatch = (
       patch.workflowCategory = statusMapping.workflowCategory;
     }
   }
-  if (remoteChanged.includes('assigneeId') && !localChanged.has('assigneeId')) {
+  if (
+    remoteChanged.includes('assigneeId') &&
+    !localChanged.has('assigneeId') &&
+    !isLinearFieldHumanLocked(task, 'assigneeId')
+  ) {
     if (merged.assigneeId === null) {
       patch.assigneeAgentId = null;
       patch.assigneeUserId = null;
@@ -2162,9 +2190,14 @@ export class LinearSyncWorker {
       });
     }
 
-    const localChanged = changedLinearIssueFields(existingLink.lastConfirmedSnapshot, local).filter(
-      (field) => field !== 'labelIds',
-    );
+    const localChanged = Array.from(
+      new Set([
+        ...changedLinearIssueFields(existingLink.lastConfirmedSnapshot, local),
+        ...changedLinearIssueFields(existingLink.lastConfirmedSnapshot, issue).filter((field) =>
+          isLinearFieldHumanLocked(task, field),
+        ),
+      ]),
+    ).filter((field) => field !== 'labelIds');
     if (localChanged.length > 0) {
       const payload = Object.fromEntries(
         localChanged.flatMap((field) =>

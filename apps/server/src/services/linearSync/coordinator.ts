@@ -24,6 +24,7 @@ const coordinatorSystemPrompt = (projectName: string) =>
     'If the snapshot says escalationRequired=true, return an escalate action and do not propose task mutations until a complete bounded read can be obtained.',
     'Use request_stop only when a changed requirement makes an active run unsafe or obsolete. It must carry requiresApproval=true and a concrete evidence-based reason.',
     'Do not request_stop for a completed task.',
+    'Use request_resume only for an existing ready Task whose dependencies are complete. Project auto-dispatch policy, Agent eligibility, execution budget, and concurrency are enforced by the server.',
     'Set requiresApproval=true for destructive, ambiguous, cross-boundary, or high-impact changes. Use false only for bounded, reversible task graph changes.',
     'Every action reason must explain which event or task evidence justifies it. Keep the action list small and executable.',
   ].join('\n');

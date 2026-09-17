@@ -366,9 +366,9 @@ export class TaskIntegrationService {
       topic.taskRevision === dispatch.taskRevision &&
       topic.requirementRevision === dispatch.requirementRevision &&
       topic.policyRevision === dispatch.policyRevision &&
-      task.domainRevision === dispatch.taskRevision &&
       task.requirementRevision === dispatch.requirementRevision &&
-      task.policyRevision === dispatch.policyRevision;
+      task.policyRevision === dispatch.policyRevision &&
+      task.assigneeAgentId === dispatch.agentId;
 
     return ownsCurrentDispatch ? { task, topic } : null;
   }

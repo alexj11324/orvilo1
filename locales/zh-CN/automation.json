@@ -78,6 +78,7 @@
   "run_source.goal": "目标",
   "run_source.heartbeat": "周期",
   "run_source.manual": "手动",
+  "run_source.orchestrator": "协调器",
   "run_source.schedule": "定时",
   "run_source.webhook": "Webhook",
   "run_status.canceled": "已取消",

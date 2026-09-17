@@ -39,6 +39,12 @@ export const taskPlanningActionSchema = z.discriminatedUnion('action', [
     taskId: z.string().min(1),
   }),
   z.object({
+    action: z.literal('request_resume'),
+    instruction: z.string().trim().min(1).max(50_000),
+    reason: z.string().trim().min(1).max(8_000),
+    taskId: z.string().min(1),
+  }),
+  z.object({
     action: z.literal('set_dependency'),
     dependsOnTaskId: z.string().min(1),
     operation: z.enum(['add', 'remove']),
@@ -127,6 +133,17 @@ export const taskPlanningProposalJsonSchema = {
                 taskId: { minLength: 1, type: 'string' },
               },
               required: ['action', 'taskId', 'reason'],
+              type: 'object',
+            },
+            {
+              additionalProperties: false,
+              properties: {
+                action: { const: 'request_resume', type: 'string' },
+                instruction: { maxLength: 50_000, minLength: 1, type: 'string' },
+                reason: { maxLength: 8_000, minLength: 1, type: 'string' },
+                taskId: { minLength: 1, type: 'string' },
+              },
+              required: ['action', 'taskId', 'instruction', 'reason'],
               type: 'object',
             },
             {

@@ -94,7 +94,7 @@ export const runDuration = (
 };
 
 /** Run sources with `run_source.*` locale keys — the literal union keeps `t()` typed. */
-export type RunSource = 'goal' | 'heartbeat' | 'manual' | 'schedule';
+export type RunSource = 'goal' | 'heartbeat' | 'manual' | 'orchestrator' | 'schedule';
 
 /** Label of what fired a run — falls back to "Manual" for API/goal sources. */
 export const runTriggerLabel = (trigger: TaskRunTrigger | string | null | undefined): RunSource => {
@@ -107,6 +107,9 @@ export const runTriggerLabel = (trigger: TaskRunTrigger | string | null | undefi
     }
     case 'goal': {
       return 'goal';
+    }
+    case 'orchestrator': {
+      return 'orchestrator';
     }
     default: {
       return 'manual';

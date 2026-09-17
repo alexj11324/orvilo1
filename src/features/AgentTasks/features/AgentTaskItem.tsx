@@ -14,6 +14,7 @@ import type { TaskListItem } from '@/store/task/slices/list/initialState';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import TaskWorkflowBadge from '../shared/TaskWorkflowBadge';
 import AssigneeAgentSelector from './AssigneeAgentSelector';
 import AssigneeAvatar from './AssigneeAvatar';
 import AssigneeMemberSelector from './AssigneeMemberSelector';
@@ -121,6 +122,11 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
       <TaskStatusTag status={status} taskIdentifier={task.identifier} />
       <LinearTaskSyncStatus taskId={task.id} />
+      <TaskWorkflowBadge
+        executionStatus={task.status}
+        workflowCategory={task.workflowCategory}
+        workflowStateId={task.workflowStateId}
+      />
       {privacyBadge}
       {hasName ? (
         <>

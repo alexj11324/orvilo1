@@ -135,8 +135,10 @@ export type TaskAutomationMode = 'heartbeat' | 'schedule';
  * - `heartbeat` — a heartbeat interval tick fired the run.
  * - `goal`      — the Goal coordinator started this Work attempt.
  *                 Like `manual`, it never counts against automation quotas.
+ * - `orchestrator` — the dependency/project planner started this run. Project
+ *                    dispatch policy and execution budgets apply.
  */
-export type TaskRunTrigger = 'manual' | 'schedule' | 'heartbeat' | 'goal';
+export type TaskRunTrigger = 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
 
 /**
  * A clarifying question the intent reader wants answered before an agent
@@ -921,6 +923,10 @@ export interface TaskDetailData {
   /** Visibility within a workspace. 'public' is workspace-shared (default);
    *  'private' is only visible to the creator. Ignored in personal mode. */
   visibility?: 'private' | 'public';
+  /** Provider workflow grouping, independent from Orvilo execution and delivery state. */
+  workflowCategory?: TaskWorkflowCategory;
+  /** Exact provider workflow-state identity; null means the task has no external workflow state. */
+  workflowStateId?: string | null;
   workspace?: TaskDetailWorkspaceNode[];
   /** Owning workspace; null for personal (non-workspace) tasks. */
   workspaceId?: string | null;

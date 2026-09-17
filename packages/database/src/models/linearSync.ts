@@ -2501,6 +2501,20 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  async findPlanningRevisionByInputRevision(inputRevision: number) {
+    const [row] = await this.db
+      .select()
+      .from(taskPlanningRevisions)
+      .where(
+        and(
+          eq(taskPlanningRevisions.workspaceId, this.workspaceId),
+          eq(taskPlanningRevisions.inputRevision, inputRevision),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
   /** Claim queued scopes without holding a database connection during planning. */
   async claimPlanningScopes(limit = 10, leaseMs = 120_000): Promise<TaskPlanningScopeItem[]> {
     const lockedUntil = new Date(Date.now() + leaseMs);
@@ -2612,6 +2626,7 @@ export class LinearSyncModel {
       proposal?: TaskPlanningProposal;
       status?: TaskPlanningRevisionStatus;
     },
+    lease?: { lockedUntil: Date; scopeId: string },
   ) {
     const [row] = await this.db
       .update(taskPlanningRevisions)
@@ -2620,6 +2635,16 @@ export class LinearSyncModel {
         and(
           eq(taskPlanningRevisions.id, id),
           eq(taskPlanningRevisions.workspaceId, this.workspaceId),
+          lease
+            ? sql`exists (
+                select 1
+                from ${taskPlanningScopes}
+                where ${taskPlanningScopes.id} = ${lease.scopeId}
+                  and ${taskPlanningScopes.workspaceId} = ${this.workspaceId}
+                  and ${taskPlanningScopes.status} = 'running'
+                  and ${taskPlanningScopes.lockedUntil} = ${lease.lockedUntil}
+              )`
+            : undefined,
         ),
       )
       .returning();
@@ -2631,6 +2656,7 @@ export class LinearSyncModel {
     scopeId: string,
     inputRevision: number,
     status: TaskPlanningScopeStatus,
+    expectedLockedUntil?: Date,
   ) {
     const [row] = await this.db
       .update(taskPlanningScopes)
@@ -2646,13 +2672,15 @@ export class LinearSyncModel {
         and(
           eq(taskPlanningScopes.id, scopeId),
           eq(taskPlanningScopes.workspaceId, this.workspaceId),
+          expectedLockedUntil ? eq(taskPlanningScopes.status, 'running') : undefined,
+          expectedLockedUntil ? eq(taskPlanningScopes.lockedUntil, expectedLockedUntil) : undefined,
         ),
       )
       .returning();
     return row ?? null;
   }
 
-  async failPlanningScope(scopeId: string, error: string) {
+  async failPlanningScope(scopeId: string, error: string, expectedLockedUntil?: Date) {
     const [row] = await this.db
       .update(taskPlanningScopes)
       .set({
@@ -2665,6 +2693,8 @@ export class LinearSyncModel {
         and(
           eq(taskPlanningScopes.id, scopeId),
           eq(taskPlanningScopes.workspaceId, this.workspaceId),
+          expectedLockedUntil ? eq(taskPlanningScopes.status, 'running') : undefined,
+          expectedLockedUntil ? eq(taskPlanningScopes.lockedUntil, expectedLockedUntil) : undefined,
         ),
       )
       .returning();
@@ -2763,7 +2793,12 @@ export class LinearSyncModel {
           dirtyRevision: sql`greatest(${taskPlanningScopes.dirtyRevision}, ${event.revision})`,
           lastError: null,
           lastTrigger: trigger,
-          status: 'queued',
+          status: sql`case
+            when ${taskPlanningScopes.status} = 'running'
+              and ${taskPlanningScopes.lockedUntil} >= now()
+            then 'running'
+            else 'queued'
+          end`,
           updatedAt: new Date(),
         },
       })
@@ -2998,23 +3033,36 @@ export class LinearSyncModel {
         mapping.orviloAgentId === input.task.assigneeAgentId ||
         mapping.orviloUserId === input.task.assigneeUserId,
     )?.linearUserId;
+    const changedFields = new Set(input.changedFields);
+    const assignmentChanged =
+      changedFields.has('assigneeAgentId') || changedFields.has('assigneeUserId');
     const shouldClearAssignment =
+      assignmentChanged &&
       !input.task.assigneeAgentId &&
       !input.task.assigneeUserId &&
       Boolean(link.remoteSnapshot?.assigneeId);
+    const workflowChanged =
+      changedFields.has('workflowCategory') || changedFields.has('workflowStateId');
 
     const payload = {
-      ...(assignmentId !== undefined || shouldClearAssignment
+      ...(assignmentChanged && (assignmentId !== undefined || shouldClearAssignment)
         ? { assigneeId: assignmentId ?? null }
         : {}),
-      description: input.task.instruction,
-      priority: input.task.priority,
+      ...(changedFields.has('description') ||
+      changedFields.has('editorData') ||
+      changedFields.has('instruction')
+        ? { description: input.task.instruction }
+        : {}),
+      ...(changedFields.has('priority') ? { priority: input.task.priority } : {}),
       // Task.projectId is local to Orvilo. A Linear issue update must carry
       // the bound remote project UUID instead of leaking the local id.
-      projectId: binding?.linearProjectId ?? link.remoteSnapshot?.projectId ?? null,
-      ...(statusId !== undefined ? { stateId: statusId } : {}),
-      title: input.task.name || input.task.identifier,
+      ...(changedFields.has('projectId')
+        ? { projectId: binding?.linearProjectId ?? link.remoteSnapshot?.projectId ?? null }
+        : {}),
+      ...(workflowChanged && statusId !== undefined ? { stateId: statusId } : {}),
+      ...(changedFields.has('name') ? { title: input.task.name || input.task.identifier } : {}),
     };
+    if (Object.keys(payload).length === 0) return { event, link, outbox: null };
     const outbox = await model.queueOutbox({
       expectedLocalRevision: input.task.domainRevision,
       installationId: installation.id,

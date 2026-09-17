@@ -133,7 +133,6 @@ const TASK_REQUIREMENT_COLUMNS = [
   'instruction',
   'name',
   'parentTaskId',
-  'priority',
   'projectId',
 ] as const satisfies readonly (keyof NewTask)[];
 
@@ -2159,6 +2158,68 @@ export class TaskModel {
       .returning({ id: tasks.id });
 
     return released.length > 0;
+  }
+
+  /**
+   * Transition execution state only while the Task still matches the immutable
+   * contract captured by its dispatch. Verification can finish well after the
+   * builder run, so a plain status CAS is insufficient: a changed requirement,
+   * policy, generation, or assignee must keep the old verdict historical.
+   */
+  async updateStatusForExecutionContract(
+    id: string,
+    status: string,
+    expected: {
+      assigneeAgentId: string | null;
+      executionGeneration: number;
+      policyRevision: number;
+      requirementRevision: number;
+      status?: string;
+    },
+    extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
+    mutation: TaskMutationContext = {},
+  ): Promise<TaskItem | null> {
+    return this.db.transaction(async (tx) => {
+      const runner = tx as LobeChatDatabase;
+      const [task] = await runner
+        .update(tasks)
+        .set({
+          status,
+          updatedAt: new Date(),
+          ...extra,
+          ...TaskModel.reviewerBackfillSet(status),
+          domainRevision: sql`${tasks.domainRevision} + 1`,
+        })
+        .where(
+          and(
+            eq(tasks.id, id),
+            eq(tasks.executionGeneration, expected.executionGeneration),
+            eq(tasks.policyRevision, expected.policyRevision),
+            eq(tasks.requirementRevision, expected.requirementRevision),
+            expected.status ? eq(tasks.status, expected.status) : undefined,
+            expected.assigneeAgentId === null
+              ? isNull(tasks.assigneeAgentId)
+              : eq(tasks.assigneeAgentId, expected.assigneeAgentId),
+            this.ownership(),
+          ),
+        )
+        .returning();
+      if (!task) return null;
+      if (this.workspaceId && !mutation.suppressDomainEvent) {
+        await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
+          changedFields: ['status'],
+          eventId: mutation.eventId,
+          eventType: 'task.status.changed',
+          idempotencyKey:
+            mutation.idempotencyKey ??
+            `task:${task.id}:revision:${task.domainRevision}:task.status.changed`,
+          source: mutation.source ?? 'system',
+          suppressLinearOutbox: mutation.suppressLinearOutbox,
+          task,
+        });
+      }
+      return task;
+    });
   }
 
   async batchUpdateStatus(ids: string[], status: string): Promise<number> {

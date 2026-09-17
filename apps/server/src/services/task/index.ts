@@ -469,6 +469,27 @@ export class TaskService {
     });
 
     if (running && needsInterrupt) {
+      const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
+      let stoppingDispatch;
+      if (
+        target.dispatchId &&
+        target.dispatchFence !== null &&
+        target.executionGeneration !== null
+      ) {
+        stoppingDispatch = await dispatchModel.requestStop({
+          dispatchId: target.dispatchId,
+          fence: target.dispatchFence,
+          generation: target.executionGeneration,
+          operationId,
+          reason: 'steer_interrupt',
+        });
+        if (!stoppingDispatch) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Task execution changed before the steer interrupt could be fenced.',
+          });
+        }
+      }
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
@@ -476,6 +497,22 @@ export class TaskService {
       // Settle the interrupted segment so the continuation can claim the
       // topic (`runTask` refuses a 'running' continue target).
       await this.taskTopicModel.updateStatus(task.id, input.topicId, 'canceled');
+      if (stoppingDispatch) {
+        const settled = await dispatchModel.settle({
+          dispatchId: stoppingDispatch.id,
+          expected: ['cancel_requested'],
+          fence: stoppingDispatch.fence,
+          generation: stoppingDispatch.generation,
+          operationId: stoppingDispatch.operationId ?? undefined,
+          phase: 'canceled',
+        });
+        if (!settled) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Task execution changed before the steer interrupt settled.',
+          });
+        }
+      }
     } else if (running) {
       return { messageId: steerMessage.id, mode: 'injected' };
     }
@@ -626,6 +663,13 @@ export class TaskService {
   async updateStatus(
     input: {
       error?: string;
+      expectedContract?: {
+        assigneeAgentId: string | null;
+        executionGeneration: number;
+        policyRevision: number;
+        requirementRevision: number;
+        status?: string;
+      };
       id: string;
       status: TaskStatus;
     },
@@ -637,16 +681,38 @@ export class TaskService {
     actor?: { agentId?: string | null; userId?: string | null },
   ): Promise<UpdateStatusResult>;
   async updateStatus(
-    input: { error?: string; id: string; status: TaskStatus },
+    input: {
+      error?: string;
+      expectedContract?: {
+        assigneeAgentId: string | null;
+        executionGeneration: number;
+        policyRevision: number;
+        requirementRevision: number;
+        status?: string;
+      };
+      id: string;
+      status: TaskStatus;
+    },
     actor: undefined,
     guard: { currentStatus: TaskStatus; reservationId: string },
   ): Promise<UpdateStatusResult | null>;
   async updateStatus(
-    input: { error?: string; id: string; status: TaskStatus },
+    input: {
+      error?: string;
+      expectedContract?: {
+        assigneeAgentId: string | null;
+        executionGeneration: number;
+        policyRevision: number;
+        requirementRevision: number;
+        status?: string;
+      };
+      id: string;
+      status: TaskStatus;
+    },
     actor?: { agentId?: string | null; userId?: string | null },
     guard?: { currentStatus: TaskStatus; reservationId: string },
   ): Promise<UpdateStatusResult | null> {
-    const { id, status, error: errorMsg } = input;
+    const { expectedContract, id, status, error: errorMsg } = input;
 
     if (errorMsg && status !== 'failed') {
       throw new TRPCError({
@@ -671,9 +737,27 @@ export class TaskService {
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
+      const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
 
       for (const t of topics) {
         if (t.status !== 'running' || !t.topicId) continue;
+
+        let stoppingDispatch;
+        if (t.dispatchId && t.dispatchFence !== null && t.executionGeneration !== null) {
+          stoppingDispatch = await dispatchModel.requestStop({
+            dispatchId: t.dispatchId,
+            fence: t.dispatchFence,
+            generation: t.executionGeneration,
+            operationId: t.operationId,
+            reason: `task_status:${status}`,
+          });
+          if (!stoppingDispatch) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task execution changed before the status transition could be fenced.',
+            });
+          }
+        }
 
         // Interrupt the remote operation first; if it fails, skip cancellation
         // to avoid desynchronizing DB state from a still-running operation.
@@ -691,6 +775,22 @@ export class TaskService {
         }
 
         await this.taskTopicModel.cancelIfRunning(resolved.id, t.topicId);
+        if (stoppingDispatch) {
+          const settled = await dispatchModel.settle({
+            dispatchId: stoppingDispatch.id,
+            expected: ['cancel_requested'],
+            fence: stoppingDispatch.fence,
+            generation: stoppingDispatch.generation,
+            operationId: stoppingDispatch.operationId ?? undefined,
+            phase: 'canceled',
+          });
+          if (!settled) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task execution changed before the status transition settled.',
+            });
+          }
+        }
       }
     }
 
@@ -714,20 +814,24 @@ export class TaskService {
       extra.completedAt = new Date();
     if (errorMsg) extra.error = errorMsg;
 
-    const task = actor
-      ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
-      : guard
-        ? await this.taskModel.updateStatusIfReservation(
-            resolved.id,
-            guard.reservationId,
-            guard.currentStatus,
-            status,
-            extra,
-          )
+    const task = expectedContract
+      ? await this.taskModel.updateStatusForExecutionContract(
+          resolved.id,
+          status,
+          expectedContract,
+          extra,
+        )
+      : actor
+        ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
         : await this.taskModel.updateStatus(resolved.id, status, extra);
     if (!task) {
       if (guard) return null;
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      throw new TRPCError({
+        code: expectedContract ? 'CONFLICT' : 'NOT_FOUND',
+        message: expectedContract
+          ? 'Task execution contract changed before the status transition.'
+          : 'Task not found',
+      });
     }
 
     // A terminal transition abandons the task's merge pipeline — tear down
@@ -1686,6 +1790,8 @@ export class TaskService {
         ? { ...acceptance.config, requirement: acceptance.requirement }
         : this.taskModel.getVerifyConfig(task),
       visibility: task.visibility,
+      workflowCategory: task.workflowCategory,
+      workflowStateId: task.workflowStateId,
       subtasks,
       activities: activities.length > 0 ? activities : undefined,
       topicCount: topics.length > 0 ? topics.length : undefined,

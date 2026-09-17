@@ -117,6 +117,60 @@ describe('task domain contract', () => {
     });
   });
 
+  it('publishes priority changes without invalidating the active requirement contract', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create(
+      { instruction: 'Stable requirement', priority: 1 },
+      { mutation: { idempotencyKey: 'command:create:priority', source: 'user' } },
+    );
+
+    const changed = await model.update(
+      task.id,
+      { priority: 3 },
+      { idempotencyKey: 'command:update:priority', source: 'user' },
+    );
+
+    expect(changed).toMatchObject({
+      domainRevision: task.domainRevision + 1,
+      priority: 3,
+      requirementRevision: task.requirementRevision,
+    });
+    const [event] = await db
+      .select()
+      .from(taskDomainEvents)
+      .where(eq(taskDomainEvents.idempotencyKey, 'command:update:priority'));
+    expect(event).toMatchObject({
+      payload: expect.objectContaining({ changedFields: ['priority'] }),
+      type: 'task.requirement.changed',
+    });
+  });
+
+  it('does not let a late verifier complete a task that was manually paused', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create(
+      { instruction: 'Verify this run' },
+      { mutation: { idempotencyKey: 'command:create:verify-race', source: 'user' } },
+    );
+    const [running] = await db
+      .update(tasks)
+      .set({ status: 'running' })
+      .where(eq(tasks.id, task.id))
+      .returning();
+    const expected = {
+      assigneeAgentId: running.assigneeAgentId,
+      executionGeneration: running.executionGeneration,
+      policyRevision: running.policyRevision,
+      requirementRevision: running.requirementRevision,
+      status: 'running',
+    };
+    await db.update(tasks).set({ status: 'paused' }).where(eq(tasks.id, task.id));
+
+    await expect(
+      model.updateStatusForExecutionContract(task.id, 'completed', expected),
+    ).resolves.toBeNull();
+    await expect(model.findById(task.id)).resolves.toMatchObject({ status: 'paused' });
+  });
+
   it('publishes dependency changes once and advances the execution contract revision', async () => {
     const model = new TaskModel(db, userId, workspaceId);
     const task = await model.create(

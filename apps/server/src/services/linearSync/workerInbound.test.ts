@@ -6,6 +6,7 @@ import { getTestDB } from '@/database/core/getTestDB';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import {
+  agents,
   linearInstallations,
   linearSyncOutbox,
   tasks,
@@ -201,6 +202,113 @@ describe('LinearSyncWorker inbound ordering', () => {
     const link = await model.findIssueLinkByExternalId('linear-issue-inbound');
     expect(link?.lastConfirmedSnapshot).toMatchObject({ title: 'Newest title' });
     expect(link?.lastInboundDeliveryId).toBeTruthy();
+  });
+
+  it('C05 preserves human-locked fields and queues their local values back to Linear', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'LCK',
+      name: 'Locked Fields Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'linear-org-locked', workspaceId })
+      .returning();
+    const agentId = 'linear-locked-agent';
+    await db.insert(agents).values({ id: agentId, userId, workspaceId });
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-locked',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-locked',
+      projectId: project.id,
+      settings: {
+        assignmentMappings: [{ linearUserId: 'linear-assignee-local', orviloAgentId: agentId }],
+        writeEnabled: true,
+      },
+      teamIds: ['linear-team-locked'],
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        assigneeAgentId: agentId,
+        assigneeLocked: true,
+        createdByUserId: userId,
+        identifier: 'LCK-1',
+        instruction: 'Locked requirement',
+        name: 'Locked title',
+        priority: 2,
+        priorityLocked: true,
+        projectId: project.id,
+        requirementLocked: true,
+        seq: 1,
+        visibility: 'public',
+        workspaceId,
+      })
+      .returning();
+    const base = {
+      assigneeId: 'linear-assignee-local',
+      description: 'Locked requirement',
+      id: 'linear-issue-locked',
+      identifier: 'LCK-1',
+      priority: 2,
+      projectId: binding.linearProjectId,
+      teamId: 'linear-team-locked',
+      title: 'Locked title',
+      updatedAt: '2026-09-16T12:00:00.000Z',
+    };
+    const link = await model.createIssueLink({
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: base.identifier,
+      linearIssueId: base.id,
+      organizationId: installation.organizationId,
+      remoteSnapshot: base,
+      taskId: task.id,
+    });
+    await model.captureDelivery({
+      action: 'update',
+      deliveryId: 'locked-fields-delivery',
+      eventType: 'Issue',
+      installationId: installation.id,
+      organizationId: installation.organizationId,
+      payload: { id: base.id },
+      subjectId: base.id,
+    });
+    const provider = {
+      getIssue: vi.fn().mockResolvedValue({
+        ...base,
+        assigneeId: null,
+        description: 'Remote replacement requirement',
+        priority: 4,
+        title: 'Remote replacement title',
+        updatedAt: '2026-09-16T12:01:00.000Z',
+      }),
+      listRelations: vi.fn().mockResolvedValue([]),
+    };
+
+    await expect(
+      new LinearSyncWorker(db, workspaceId).processPending(provider as never, 20, installation.id),
+    ).resolves.toMatchObject({ failed: 0, processed: 1 });
+
+    await expect(db.select().from(tasks).where(eq(tasks.id, task.id))).resolves.toMatchObject([
+      expect.objectContaining({
+        assigneeAgentId: agentId,
+        instruction: 'Locked requirement',
+        name: 'Locked title',
+        priority: 2,
+      }),
+    ]);
+    const [outbox] = await db
+      .select({ payload: linearSyncOutbox.payload })
+      .from(linearSyncOutbox)
+      .where(eq(linearSyncOutbox.linkId, link.id));
+    expect(outbox.payload).toMatchObject({
+      assigneeId: 'linear-assignee-local',
+      description: 'Locked requirement',
+      priority: 2,
+      title: 'Locked title',
+    });
+    expect((await model.findIssueLinkByExternalId(base.id))?.syncState).toBe('pending');
   });
 
   it('keeps unknown remote labels in the baseline while exporting unrelated local changes', async () => {

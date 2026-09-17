@@ -1,12 +1,13 @@
 import type {
   TaskDispatchPhase,
   TaskExecutionEnvironmentSnapshot,
+  TaskItem,
   TaskRunTrigger,
 } from '@orvilo/types';
-import { and, asc, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
 
 import { projectAgents, projects } from '../schemas/project';
-import type { TaskDispatchItem, TaskItem, TaskTopicItem } from '../schemas/task';
+import type { TaskDispatchItem, TaskTopicItem } from '../schemas/task';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
 import type { LobeChatDatabase } from '../type';
@@ -37,6 +38,17 @@ const PROJECT_CONCURRENCY_PHASES: TaskDispatchPhase[] = [
 
 const PROVISIONABLE_PHASES: TaskDispatchPhase[] = ['requested', 'claimed'];
 
+const matchesDispatchAssignee = (task: TaskItem, dispatch: TaskDispatchItem) =>
+  task.assigneeAgentId === dispatch.agentId ||
+  (dispatch.agentId !== null &&
+    dispatch.requestedBy.startsWith('manual:') &&
+    task.assigneeAgentId === null &&
+    task.assigneeUserId !== null &&
+    task.assignmentMode === 'manual' &&
+    task.orchestrationOwner === 'manual' &&
+    task.createdBySubjectKind !== 'integration' &&
+    task.createdBySubjectKind !== 'system');
+
 export class TaskDispatchNotFoundError extends Error {}
 export class TaskDispatchIdempotencyConflictError extends Error {}
 
@@ -46,7 +58,7 @@ export interface RequestTaskDispatchInput {
   planRevision?: number | null;
   requestedBy: string;
   taskId: string;
-  trigger: TaskRunTrigger | 'orchestrator';
+  trigger: TaskRunTrigger;
 }
 
 export type RequestTaskDispatchResult =
@@ -64,6 +76,26 @@ export interface TaskCancellationClaim extends TaskDispatchLease {
 
 export interface TaskCancellationCandidate {
   dispatchId: string;
+  workspaceId: string | null;
+}
+
+export interface TaskDispatchRecoveryClaim extends TaskDispatchLease {
+  task: TaskItem;
+  topic?: TaskTopicItem;
+}
+
+export interface TaskDispatchRecoveryCandidate {
+  dispatchId: string;
+  workspaceId: string | null;
+}
+
+export interface TaskPlanningDispatchCandidate {
+  dispatchId: string;
+  idempotencyKey: string;
+  planRevision: number;
+  requestedBy: string;
+  taskId: string;
+  userId: string;
   workspaceId: string | null;
 }
 
@@ -96,10 +128,12 @@ export class TaskDispatchModel {
   private async projectDispatchWaitingReason(
     db: LobeChatDatabase,
     task: TaskItem,
-    trigger: TaskRunTrigger | 'orchestrator',
+    trigger: TaskRunTrigger,
     excludeDispatchId?: string,
   ): Promise<string | null> {
-    if (trigger !== 'orchestrator' || !task.projectId || !this.workspaceId) return null;
+    const appliesProjectPolicy =
+      trigger === 'orchestrator' || trigger === 'schedule' || trigger === 'heartbeat';
+    if (!appliesProjectPolicy || !task.projectId || !this.workspaceId) return null;
 
     const [project] = await db
       .select({ orchestrationPolicy: projects.orchestrationPolicy })
@@ -199,6 +233,65 @@ export class TaskDispatchModel {
       .limit(limit);
   }
 
+  /** Discover expired execution leases that must be reconciled by stable operation identity. */
+  static async findRecoveryCandidates(
+    db: LobeChatDatabase,
+    input: { limit?: number; now?: Date } = {},
+  ): Promise<TaskDispatchRecoveryCandidate[]> {
+    const now = input.now ?? new Date();
+    const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
+    return db
+      .select({ dispatchId: taskDispatches.id, workspaceId: taskDispatches.workspaceId })
+      .from(taskDispatches)
+      .where(
+        and(
+          inArray(taskDispatches.phase, [
+            'provisioning',
+            'dispatched',
+            'running',
+            'outcome_unknown',
+          ]),
+          or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+        ),
+      )
+      .orderBy(asc(taskDispatches.updatedAt), asc(taskDispatches.id))
+      .limit(limit);
+  }
+
+  /** Discover committed planner dispatch intents whose post-commit wakeup was lost. */
+  static async findPlanningStartCandidates(
+    db: LobeChatDatabase,
+    input: { limit?: number } = {},
+  ): Promise<TaskPlanningDispatchCandidate[]> {
+    const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
+    const rows = await db
+      .select({
+        dispatchId: taskDispatches.id,
+        idempotencyKey: taskDispatches.idempotencyKey,
+        planRevision: taskDispatches.planRevision,
+        requestedBy: taskDispatches.requestedBy,
+        taskId: taskDispatches.taskId,
+        userId: projects.userId,
+        workspaceId: taskDispatches.workspaceId,
+      })
+      .from(taskDispatches)
+      .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
+      .innerJoin(projects, eq(projects.id, tasks.projectId))
+      .where(
+        and(
+          eq(taskDispatches.phase, 'requested'),
+          isNotNull(taskDispatches.planRevision),
+          isNotNull(taskDispatches.workspaceId),
+          like(taskDispatches.requestedBy, 'orchestrator:planning:%'),
+        ),
+      )
+      .orderBy(asc(taskDispatches.updatedAt), asc(taskDispatches.id))
+      .limit(limit);
+    return rows.flatMap((row) =>
+      row.planRevision === null ? [] : [{ ...row, planRevision: row.planRevision }],
+    );
+  }
+
   async request(input: RequestTaskDispatchInput): Promise<RequestTaskDispatchResult> {
     return this.db.transaction(async (tx) => {
       const [task] = await tx
@@ -222,7 +315,12 @@ export class TaskDispatchModel {
       if (existing) {
         this.assertIdempotencyTarget(existing, input.taskId);
         let resumedWaitingReason: string | null | undefined;
-        if (existing.phase === 'waiting' && input.trigger === 'orchestrator' && task.projectId) {
+        if (
+          existing.phase === 'waiting' &&
+          input.trigger !== 'manual' &&
+          input.trigger !== 'goal' &&
+          task.projectId
+        ) {
           resumedWaitingReason = await this.projectDispatchWaitingReason(
             tx,
             task,
@@ -270,7 +368,45 @@ export class TaskDispatchModel {
         .where(
           and(eq(taskDispatches.taskId, task.id), inArray(taskDispatches.phase, ACTIVE_PHASES)),
         )
-        .limit(1);
+        .limit(1)
+        .for('update');
+      if (active?.phase === 'waiting') {
+        const requestedTrigger = active.requestedBy.split(':', 1)[0];
+        const activeTrigger = (
+          ['goal', 'heartbeat', 'manual', 'orchestrator', 'schedule'] as const
+        ).includes(requestedTrigger as TaskRunTrigger)
+          ? (requestedTrigger as TaskRunTrigger)
+          : input.trigger;
+        const policyWaitingReason = await this.projectDispatchWaitingReason(
+          tx,
+          task,
+          activeTrigger,
+          active.id,
+        );
+        const waitingReason =
+          policyWaitingReason ?? (task.assigneeAgentId ? null : 'no_eligible_agent');
+        if (waitingReason) {
+          const [waiting] = await tx
+            .update(taskDispatches)
+            .set({ waitingReason })
+            .where(and(eq(taskDispatches.id, active.id), eq(taskDispatches.phase, 'waiting')))
+            .returning();
+          return { dispatch: waiting ?? active, state: 'existing' as const, task };
+        }
+        const [resumed] = await tx
+          .update(taskDispatches)
+          .set({
+            agentId: task.assigneeAgentId,
+            phase: 'requested',
+            policyRevision: task.policyRevision,
+            requirementRevision: task.requirementRevision,
+            taskRevision: task.domainRevision,
+            waitingReason: null,
+          })
+          .where(and(eq(taskDispatches.id, active.id), eq(taskDispatches.phase, 'waiting')))
+          .returning();
+        return { dispatch: resumed ?? active, state: 'existing' as const, task };
+      }
       if (active) return { active, state: 'busy' as const, task };
 
       const waitingReason = await this.projectDispatchWaitingReason(tx, task, input.trigger);
@@ -333,10 +469,9 @@ export class TaskDispatchModel {
         task &&
         task.workspaceId === (this.workspaceId ?? null) &&
         task.executionGeneration === dispatch.generation &&
-        task.domainRevision === dispatch.taskRevision &&
         task.requirementRevision === dispatch.requirementRevision &&
         task.policyRevision === dispatch.policyRevision &&
-        task.assigneeAgentId === dispatch.agentId;
+        matchesDispatchAssignee(task, dispatch);
       if (!isCurrent) {
         await tx
           .update(taskDispatches)
@@ -374,31 +509,85 @@ export class TaskDispatchModel {
     dispatchId: string,
     owner: string,
     leaseMs: number,
-  ): Promise<TaskDispatchLease | null> {
-    const now = new Date();
-    const [dispatch] = await this.db
+  ): Promise<TaskDispatchRecoveryClaim | null> {
+    return this.db.transaction(async (tx) => {
+      const now = new Date();
+      const [dispatch] = await tx
+        .select()
+        .from(taskDispatches)
+        .where(and(eq(taskDispatches.id, dispatchId), this.scopeCondition()))
+        .limit(1)
+        .for('update');
+      if (
+        !dispatch ||
+        !['provisioning', 'dispatched', 'running', 'outcome_unknown'].includes(dispatch.phase) ||
+        (dispatch.leaseExpiresAt && dispatch.leaseExpiresAt >= now)
+      ) {
+        return null;
+      }
+
+      const [claimed] = await tx
+        .update(taskDispatches)
+        .set({
+          leaseExpiresAt: new Date(now.getTime() + leaseMs),
+          leaseOwner: owner,
+          phase: 'outcome_unknown',
+        })
+        .where(
+          and(
+            eq(taskDispatches.id, dispatch.id),
+            eq(taskDispatches.fence, dispatch.fence),
+            inArray(taskDispatches.phase, [
+              'provisioning',
+              'dispatched',
+              'running',
+              'outcome_unknown',
+            ]),
+            or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+          ),
+        )
+        .returning();
+      if (!claimed) return null;
+
+      const [task] = await tx.select().from(tasks).where(eq(tasks.id, claimed.taskId)).limit(1);
+      if (!task || task.workspaceId !== (this.workspaceId ?? null)) return null;
+      const [topic] = await tx
+        .select()
+        .from(taskTopics)
+        .where(eq(taskTopics.dispatchId, claimed.id))
+        .limit(1);
+      return { dispatch: claimed, fence: claimed.fence, task, topic };
+    });
+  }
+
+  /** Release a reconciliation lease without changing the execution fence or operation identity. */
+  async releaseRecovery(input: {
+    dispatchId: string;
+    fence: number;
+    owner: string;
+    phase: Extract<TaskDispatchPhase, 'outcome_unknown' | 'running'>;
+    reason: string | null;
+    retryAfterMs: number;
+  }): Promise<boolean> {
+    const [updated] = await this.db
       .update(taskDispatches)
       .set({
-        fence: sql`${taskDispatches.fence} + 1`,
-        leaseExpiresAt: new Date(now.getTime() + leaseMs),
-        leaseOwner: owner,
-        phase: 'outcome_unknown',
+        leaseExpiresAt: new Date(Date.now() + Math.max(1, input.retryAfterMs)),
+        leaseOwner: null,
+        phase: input.phase,
+        waitingReason: input.reason,
       })
       .where(
         and(
-          eq(taskDispatches.id, dispatchId),
+          eq(taskDispatches.id, input.dispatchId),
           this.scopeCondition(),
-          inArray(taskDispatches.phase, [
-            'provisioning',
-            'dispatched',
-            'running',
-            'outcome_unknown',
-          ]),
-          or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+          eq(taskDispatches.phase, 'outcome_unknown'),
+          eq(taskDispatches.fence, input.fence),
+          eq(taskDispatches.leaseOwner, input.owner),
         ),
       )
-      .returning();
-    return dispatch ? { dispatch, fence: dispatch.fence } : null;
+      .returning({ id: taskDispatches.id });
+    return Boolean(updated);
   }
 
   async transition(input: {
@@ -413,27 +602,91 @@ export class TaskDispatchModel {
     phase: TaskDispatchPhase;
     waitingReason?: string | null;
   }): Promise<TaskDispatchItem | null> {
-    const [updated] = await this.db
-      .update(taskDispatches)
-      .set({
-        agentId: input.agentId,
-        environmentSnapshot: input.environmentSnapshot,
-        leaseExpiresAt: input.leaseExpiresAt,
-        operationId: input.operationId,
-        phase: input.phase,
-        waitingReason: input.waitingReason,
-      })
-      .where(
-        and(
-          eq(taskDispatches.id, input.dispatchId),
-          this.scopeCondition(),
-          eq(taskDispatches.leaseOwner, input.owner),
-          eq(taskDispatches.fence, input.fence),
-          inArray(taskDispatches.phase, input.expected),
-        ),
-      )
-      .returning();
-    return updated ?? null;
+    return this.db.transaction(async (tx) => {
+      const [dispatch] = await tx
+        .select()
+        .from(taskDispatches)
+        .where(
+          and(
+            eq(taskDispatches.id, input.dispatchId),
+            this.scopeCondition(),
+            eq(taskDispatches.leaseOwner, input.owner),
+            eq(taskDispatches.fence, input.fence),
+            inArray(taskDispatches.phase, input.expected),
+          ),
+        )
+        .for('update')
+        .limit(1);
+      if (!dispatch) return null;
+
+      if (['provisioning', 'dispatched', 'running'].includes(input.phase)) {
+        const [task] = await tx
+          .select()
+          .from(tasks)
+          .where(eq(tasks.id, dispatch.taskId))
+          .for('update')
+          .limit(1);
+        const currentContract = Boolean(
+          task &&
+          task.workspaceId === (this.workspaceId ?? null) &&
+          task.executionGeneration === dispatch.generation &&
+          task.requirementRevision === dispatch.requirementRevision &&
+          task.policyRevision === dispatch.policyRevision &&
+          matchesDispatchAssignee(task, dispatch),
+        );
+        const requestedTrigger = dispatch.requestedBy.split(':', 1)[0];
+        const automatedTrigger = ['heartbeat', 'orchestrator', 'schedule'].includes(
+          requestedTrigger,
+        )
+          ? (requestedTrigger as Extract<TaskRunTrigger, 'heartbeat' | 'orchestrator' | 'schedule'>)
+          : null;
+        const policyWaitingReason =
+          currentContract && task && automatedTrigger
+            ? await this.projectDispatchWaitingReason(tx, task, automatedTrigger, dispatch.id)
+            : null;
+        if (!currentContract || policyWaitingReason) {
+          await tx
+            .update(taskDispatches)
+            .set({
+              fence: sql`${taskDispatches.fence} + 1`,
+              leaseExpiresAt: null,
+              leaseOwner: null,
+              phase: 'canceled',
+              waitingReason: policyWaitingReason ?? `superseded_before_${input.phase}`,
+            })
+            .where(
+              and(
+                eq(taskDispatches.id, dispatch.id),
+                eq(taskDispatches.fence, input.fence),
+                eq(taskDispatches.leaseOwner, input.owner),
+                inArray(taskDispatches.phase, input.expected),
+              ),
+            );
+          return null;
+        }
+      }
+
+      const [updated] = await tx
+        .update(taskDispatches)
+        .set({
+          agentId: input.agentId,
+          environmentSnapshot: input.environmentSnapshot,
+          leaseExpiresAt: input.leaseExpiresAt,
+          operationId: input.operationId,
+          phase: input.phase,
+          waitingReason: input.waitingReason,
+        })
+        .where(
+          and(
+            eq(taskDispatches.id, dispatch.id),
+            eq(taskDispatches.leaseOwner, input.owner),
+            eq(taskDispatches.fence, input.fence),
+            inArray(taskDispatches.phase, input.expected),
+          ),
+        )
+        .returning();
+      return updated ?? null;
+    });
   }
 
   async requestStop(input: {
@@ -749,6 +1002,64 @@ export class TaskDispatchModel {
     );
   }
 
+  /** Verify a settled run still owns the Task contract its evidence describes. */
+  async isCurrentContract(input: {
+    dispatchId: string;
+    fence: number;
+    generation: number;
+    operationId: string;
+    policyRevision: number;
+    requirementRevision: number;
+    taskId: string;
+  }): Promise<boolean> {
+    const [owner] = await this.db
+      .select({
+        dispatchAgentId: taskDispatches.agentId,
+        dispatchFence: taskDispatches.fence,
+        dispatchGeneration: taskDispatches.generation,
+        dispatchOperationId: taskDispatches.operationId,
+        dispatchPhase: taskDispatches.phase,
+        dispatchPolicyRevision: taskDispatches.policyRevision,
+        dispatchRequestedBy: taskDispatches.requestedBy,
+        dispatchRequirementRevision: taskDispatches.requirementRevision,
+        taskAgentId: tasks.assigneeAgentId,
+        taskAssigneeUserId: tasks.assigneeUserId,
+        taskAssignmentMode: tasks.assignmentMode,
+        taskCreatedBySubjectKind: tasks.createdBySubjectKind,
+        taskGeneration: tasks.executionGeneration,
+        taskId: tasks.id,
+        taskOrchestrationOwner: tasks.orchestrationOwner,
+        taskPolicyRevision: tasks.policyRevision,
+        taskRequirementRevision: tasks.requirementRevision,
+      })
+      .from(taskDispatches)
+      .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
+      .where(and(eq(taskDispatches.id, input.dispatchId), this.scopeCondition()))
+      .limit(1);
+    return Boolean(
+      owner &&
+      owner.dispatchPhase === 'succeeded' &&
+      owner.taskId === input.taskId &&
+      owner.dispatchFence === input.fence &&
+      owner.dispatchGeneration === input.generation &&
+      owner.dispatchOperationId === input.operationId &&
+      owner.dispatchPolicyRevision === input.policyRevision &&
+      owner.dispatchRequirementRevision === input.requirementRevision &&
+      owner.taskGeneration === input.generation &&
+      owner.taskPolicyRevision === input.policyRevision &&
+      owner.taskRequirementRevision === input.requirementRevision &&
+      (owner.taskAgentId === owner.dispatchAgentId ||
+        (owner.dispatchAgentId !== null &&
+          owner.dispatchRequestedBy.startsWith('manual:') &&
+          owner.taskAgentId === null &&
+          owner.taskAssigneeUserId !== null &&
+          owner.taskAssignmentMode === 'manual' &&
+          owner.taskOrchestrationOwner === 'manual' &&
+          owner.taskCreatedBySubjectKind !== 'integration' &&
+          owner.taskCreatedBySubjectKind !== 'system')),
+    );
+  }
+
   async settle(input: {
     dispatchId: string;
     expected: TaskDispatchPhase[];
@@ -757,6 +1068,7 @@ export class TaskDispatchModel {
     operationId?: string;
     phase: Extract<TaskDispatchPhase, 'canceled' | 'failed' | 'succeeded'>;
   }): Promise<{
+    currentContract: boolean;
     currentGeneration: boolean;
     dispatch: TaskDispatchItem;
     state: 'already_settled' | 'settled';
@@ -773,16 +1085,24 @@ export class TaskDispatchModel {
       if (input.operationId && dispatch.operationId !== input.operationId) return null;
 
       const [task] = await tx
-        .select({ executionGeneration: tasks.executionGeneration })
+        .select()
         .from(tasks)
         .where(eq(tasks.id, dispatch.taskId))
         .limit(1)
         .for('update');
       if (!task) return null;
 
+      const currentGeneration = task.executionGeneration === dispatch.generation;
+      const currentContract =
+        currentGeneration &&
+        task.requirementRevision === dispatch.requirementRevision &&
+        task.policyRevision === dispatch.policyRevision &&
+        matchesDispatchAssignee(task, dispatch);
+
       if (['canceled', 'failed', 'succeeded'].includes(dispatch.phase)) {
         return {
-          currentGeneration: task.executionGeneration === dispatch.generation,
+          currentContract,
+          currentGeneration,
           dispatch,
           state: 'already_settled' as const,
         };
@@ -802,8 +1122,50 @@ export class TaskDispatchModel {
         )
         .returning();
       if (!settled) return null;
+
+      // The execution generation can still be current while its requirement,
+      // policy, or assignee snapshot is obsolete. Park that exact run while the
+      // Task row is still locked so a successor dispatch cannot start between
+      // settlement and the protective status transition.
+      if (currentGeneration && !currentContract && task.status === 'running') {
+        const [parked] = await tx
+          .update(tasks)
+          .set({
+            domainRevision: sql`${tasks.domainRevision} + 1`,
+            error: 'Task changed while this run was active; review before retrying.',
+            reviewerUserId: sql<string | null>`coalesce(
+              ${tasks.reviewerUserId},
+              ${tasks.assigneeUserId},
+              ${tasks.createdByUserId}
+            )`,
+            status: 'paused',
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(tasks.id, task.id),
+              eq(tasks.executionGeneration, dispatch.generation),
+              eq(tasks.status, 'running'),
+            ),
+          )
+          .returning();
+        if (parked && this.workspaceId) {
+          await new LinearSyncModel(
+            tx as LobeChatDatabase,
+            this.workspaceId,
+          ).recordTaskChangeInTransaction(tx as LobeChatDatabase, {
+            changedFields: ['status'],
+            eventType: 'task.status.changed',
+            idempotencyKey: `task:${task.id}:dispatch:${dispatch.id}:stale-contract`,
+            source: 'system',
+            suppressLinearOutbox: true,
+            task: parked,
+          });
+        }
+      }
       return {
-        currentGeneration: task.executionGeneration === dispatch.generation,
+        currentContract,
+        currentGeneration,
         dispatch: settled,
         state: 'settled' as const,
       };

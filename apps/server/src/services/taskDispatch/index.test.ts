@@ -133,7 +133,7 @@ describe('TaskDispatchService', () => {
     ).rejects.toBeInstanceOf(TaskDispatchWaitingError);
   });
 
-  it('keeps the explicit manual compatibility fallback claimable', async () => {
+  it('allows an explicit manual task to resolve the personal inbox Agent at runtime', async () => {
     const [task] = await db
       .insert(tasks)
       .values({
@@ -146,15 +146,17 @@ describe('TaskDispatchService', () => {
       .returning();
 
     const service = new TaskDispatchService(db, workspaceId);
-    const prepared = await service.prepare({
-      idempotencyKey: 'manual:MAN-1:request-1',
-      requestedBy: userId,
-      task,
-      trigger: 'manual',
-    });
-
-    expect(prepared.dispatch).toMatchObject({ generation: 1, phase: 'claimed' });
-    expect(prepared.fence).toBe(1);
+    await expect(
+      service.prepare({
+        idempotencyKey: 'manual:MAN-1:request-1',
+        requestedBy: userId,
+        task,
+        trigger: 'manual',
+      }),
+    ).resolves.toMatchObject({ dispatch: { agentId: null, phase: 'claimed' } });
+    await expect(db.select().from(taskDispatches)).resolves.toMatchObject([
+      { agentId: null, phase: 'claimed', waitingReason: null },
+    ]);
   });
 
   it('claims the current Agent instead of the stale caller snapshot', async () => {
@@ -187,6 +189,56 @@ describe('TaskDispatchService', () => {
 
     expect(prepared.dispatch.agentId).toBe('dispatch-service-new');
     expect(prepared.task.assigneeAgentId).toBe('dispatch-service-new');
+  });
+
+  it('claims the original waiting dispatch when a repaired task is retried with a new key', async () => {
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        assignmentMode: 'orchestrated',
+        createdByUserId: userId,
+        identifier: 'REPAIR-1',
+        instruction: 'Resume after assignment repair',
+        orchestrationOwner: 'project:repair-project',
+        seq: 5,
+        workspaceId,
+      })
+      .returning();
+    const service = new TaskDispatchService(db, workspaceId);
+    await expect(
+      service.prepare({
+        idempotencyKey: 'orchestrator:REPAIR-1:plan-1',
+        requestedBy: 'planning:first',
+        task,
+        trigger: 'orchestrator',
+      }),
+    ).rejects.toBeInstanceOf(TaskDispatchWaitingError);
+    const [waiting] = await db
+      .select()
+      .from(taskDispatches)
+      .where(eq(taskDispatches.taskId, task.id));
+    await db.insert(agents).values({ id: 'repair-agent', userId, workspaceId });
+    const [repaired] = await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'repair-agent' })
+      .where(eq(tasks.id, task.id))
+      .returning();
+
+    await expect(
+      service.prepare({
+        idempotencyKey: 'orchestrator:REPAIR-1:plan-2',
+        requestedBy: 'planning:second',
+        task: repaired,
+        trigger: 'orchestrator',
+      }),
+    ).resolves.toMatchObject({
+      dispatch: {
+        agentId: 'repair-agent',
+        id: waiting.id,
+        idempotencyKey: 'orchestrator:REPAIR-1:plan-1',
+        phase: 'claimed',
+      },
+    });
   });
 
   it('parks orchestrator work while project auto-dispatch is disabled and resumes after policy changes', async () => {
@@ -238,6 +290,47 @@ describe('TaskDispatchService', () => {
         trigger: 'orchestrator',
       }),
     ).resolves.toMatchObject({ dispatch: { phase: 'claimed' } });
+  });
+
+  it('cancels an automated dispatch when project policy closes during provisioning', async () => {
+    const project = await createPolicyProject({ autoDispatch: true });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        assigneeAgentId: 'dispatch-policy-agent',
+        createdByUserId: userId,
+        identifier: 'POL-1B',
+        instruction: 'Policy changes while the workspace is provisioning',
+        projectId: project.id,
+        seq: 51,
+        workspaceId,
+      })
+      .returning();
+    const service = new TaskDispatchService(db, workspaceId);
+    const prepared = await service.prepare({
+      idempotencyKey: 'policy:POL-1B:revision-1',
+      requestedBy: 'planner',
+      task,
+      trigger: 'orchestrator',
+    });
+    await service.transition(prepared, { expected: ['claimed'], phase: 'provisioning' });
+
+    await db
+      .update(projects)
+      .set({ orchestrationPolicy: { ...project.orchestrationPolicy, autoDispatch: false } })
+      .where(eq(projects.id, project.id));
+
+    await expect(
+      service.transition(prepared, { expected: ['provisioning'], phase: 'dispatched' }),
+    ).rejects.toMatchObject({ dispatchId: prepared.dispatch.id });
+    await expect(
+      db.select().from(taskDispatches).where(eq(taskDispatches.id, prepared.dispatch.id)),
+    ).resolves.toMatchObject([
+      expect.objectContaining({
+        phase: 'canceled',
+        waitingReason: 'project_auto_dispatch_disabled',
+      }),
+    ]);
   });
 
   it('serializes project auto-dispatch at the configured concurrency limit', async () => {
@@ -454,6 +547,58 @@ describe('TaskDispatchService', () => {
           trigger: 'orchestrator',
         }),
       ).rejects.toMatchObject({ message: expectedReason });
+    },
+  );
+
+  it.each(['schedule', 'heartbeat'] as const)(
+    'applies project execution budgets to %s runs',
+    async (trigger) => {
+      const project = await createPolicyProject({
+        autoDispatch: true,
+        executionBudget: { maxCost: 100, maxRuns: 1 },
+      });
+      const [completedTask, nextTask] = await db
+        .insert(tasks)
+        .values([
+          {
+            assigneeAgentId: 'dispatch-policy-agent',
+            createdByUserId: userId,
+            identifier: `AUTO-${trigger}-1`,
+            instruction: 'Completed automatic run',
+            projectId: project.id,
+            seq: trigger === 'schedule' ? 13 : 15,
+            workspaceId,
+          },
+          {
+            assigneeAgentId: 'dispatch-policy-agent',
+            createdByUserId: userId,
+            identifier: `AUTO-${trigger}-2`,
+            instruction: 'Next automatic run',
+            projectId: project.id,
+            seq: trigger === 'schedule' ? 14 : 16,
+            workspaceId,
+          },
+        ])
+        .returning();
+      const [topic] = await db.insert(topics).values({ userId, workspaceId }).returning();
+      await db.insert(taskTopics).values({
+        seq: 1,
+        status: 'completed',
+        taskId: completedTask.id,
+        topicId: topic.id,
+        trigger,
+        userId,
+        workspaceId,
+      });
+
+      await expect(
+        new TaskDispatchService(db, workspaceId).prepare({
+          idempotencyKey: `${trigger}:${nextTask.id}:tick-1`,
+          requestedBy: 'scheduler',
+          task: nextTask,
+          trigger,
+        }),
+      ).rejects.toMatchObject({ message: 'project_run_budget_exhausted' });
     },
   );
 });

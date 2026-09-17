@@ -20,6 +20,10 @@ const activeTaskName = (s: TaskStoreState) => activeTaskDetail(s)?.name;
 
 const activeTaskStatus = (s: TaskStoreState) => activeTaskDetail(s)?.status;
 
+const activeTaskWorkflowCategory = (s: TaskStoreState) => activeTaskDetail(s)?.workflowCategory;
+
+const activeTaskWorkflowStateId = (s: TaskStoreState) => activeTaskDetail(s)?.workflowStateId;
+
 const activeTaskPriority = (s: TaskStoreState) => activeTaskDetail(s)?.priority ?? 0;
 
 const activeTaskVisibility = (s: TaskStoreState): 'private' | 'public' =>
@@ -170,6 +174,8 @@ export const taskDetailSelectors = {
   activeTaskVisibility,
   activeTaskWorkspace,
   activeTaskWorkspaceId,
+  activeTaskWorkflowCategory,
+  activeTaskWorkflowStateId,
   activeTopicDrawerTopicId,
   canCancelActiveTask,
   canPauseActiveTask,

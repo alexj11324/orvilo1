@@ -576,6 +576,62 @@ describe('LinearSyncModel', () => {
     });
   });
 
+  it('does not send a Linear workflow state for an execution-status-only event', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'STATE',
+      name: 'Workflow state project',
+    });
+    const binding = await model.upsertBinding({
+      installationId,
+      linearProjectId: 'linear-project-state',
+      projectId: project.id,
+      settings: {
+        statusMappings: [{ linearStateId: 'linear-state-backlog', workflowCategory: 'backlog' }],
+      },
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'STATE-1',
+        instruction: 'Keep the remote workflow unchanged',
+        projectId: project.id,
+        seq: 1,
+        status: 'running',
+        workflowCategory: 'backlog',
+        workspaceId,
+      })
+      .returning();
+    await model.createIssueLink({
+      bindingId: binding.id,
+      installationId,
+      linearIdentifier: 'ENG-STATE',
+      linearIssueId: 'linear-issue-state',
+      organizationId: 'linear-org-1',
+      remoteSnapshot: {
+        id: 'linear-issue-state',
+        identifier: 'ENG-STATE',
+        projectId: binding.linearProjectId,
+        stateId: 'linear-state-todo',
+        title: task.name ?? task.identifier,
+      },
+      taskId: task.id,
+    });
+
+    const recorded = await model.recordTaskChangeInTransaction(db, {
+      changedFields: ['status'],
+      eventType: 'task.status.changed',
+      idempotencyKey: 'state-only:running',
+      source: 'system',
+      task,
+    });
+
+    expect(recorded.outbox).toBeNull();
+    await expect(model.listOutbox()).resolves.toHaveLength(0);
+  });
+
   it('keeps forbidden and deleted issue tombstones distinct without deleting the task', async () => {
     await createInstallation();
     const task = await new TaskModel(db, userId, workspaceId).create({

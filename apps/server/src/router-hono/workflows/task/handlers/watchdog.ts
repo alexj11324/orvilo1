@@ -1,8 +1,10 @@
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/server';
-import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 import { sweepTaskCancellations } from '@/server/services/taskCancellation';
+import { sweepTaskDispatchRecovery } from '@/server/services/taskDispatchRecovery';
+import { sweepPlanningTaskDispatchStarts } from '@/server/services/taskDispatchStart';
+import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 
 /**
  * Cron-style watchdog. Scans all `running` tasks where
@@ -15,6 +17,26 @@ import { sweepTaskCancellations } from '@/server/services/taskCancellation';
 export async function watchdog(c: Context) {
   try {
     const db = await getServerDB();
+    const plannedStartOutcomes = await sweepPlanningTaskDispatchStarts({ db });
+    const plannedStarts = plannedStartOutcomes.filter(
+      (outcome) => outcome.outcome === 'started',
+    ).length;
+    const plannedStartRetries = plannedStartOutcomes.filter(
+      (outcome) => outcome.outcome === 'retry',
+    ).length;
+    const plannedStartWaits = plannedStartOutcomes.filter(
+      (outcome) => outcome.outcome === 'waiting',
+    ).length;
+    const dispatchRecoveryOutcomes = await sweepTaskDispatchRecovery({ db });
+    const activeDispatches = dispatchRecoveryOutcomes.filter(
+      (outcome) => outcome.outcome === 'active',
+    ).length;
+    const recoveredDispatches = dispatchRecoveryOutcomes.filter(
+      (outcome) => outcome.outcome === 'settled',
+    ).length;
+    const dispatchRecoveryRetries = dispatchRecoveryOutcomes.filter(
+      (outcome) => outcome.outcome === 'retry',
+    ).length;
     const cancellationOutcomes = await sweepTaskCancellations({ db });
     const result = await runTaskWatchdog(db);
     const canceledDispatches = cancellationOutcomes.filter(
@@ -25,9 +47,15 @@ export async function watchdog(c: Context) {
     ).length;
 
     return c.json({
+      activeDispatches,
       canceledDispatches,
       cancellationRetries,
+      dispatchRecoveryRetries,
       ...result,
+      plannedStartRetries,
+      plannedStarts,
+      plannedStartWaits,
+      recoveredDispatches,
       success: true,
     });
   } catch (error) {

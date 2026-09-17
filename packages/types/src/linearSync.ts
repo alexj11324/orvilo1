@@ -255,6 +255,12 @@ export type TaskPlanningAction =
       taskId: string;
     }
   | {
+      action: 'request_resume';
+      instruction: string;
+      reason: string;
+      taskId: string;
+    }
+  | {
       action: 'set_dependency';
       dependsOnTaskId: string;
       operation: 'add' | 'remove';

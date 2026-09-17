@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -128,6 +128,53 @@ describe('TaskDispatchModel', () => {
     expect(updatedTask.executionGeneration).toBe(1);
   });
 
+  it('keeps a manually assigned member run current while the inbox Agent executes ephemerally', async () => {
+    const task = await createTask('RUN-2B', 21);
+    await db.insert(agents).values({ id: 'manual-inbox-agent', userId, workspaceId });
+    await db.update(tasks).set({ assigneeUserId: userId }).where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'manual:RUN-2B:request-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'manual-runner', 60_000);
+    if (!claim) throw new Error('dispatch was not claimed');
+    await expect(
+      model.transition({
+        agentId: 'manual-inbox-agent',
+        dispatchId: claim.dispatch.id,
+        expected: ['claimed'],
+        fence: claim.fence,
+        owner: 'manual-runner',
+        phase: 'claimed',
+      }),
+    ).resolves.toMatchObject({ agentId: 'manual-inbox-agent', phase: 'claimed' });
+    await expect(
+      model.transition({
+        agentId: 'manual-inbox-agent',
+        dispatchId: claim.dispatch.id,
+        expected: ['claimed'],
+        fence: claim.fence,
+        operationId: 'manual-operation',
+        owner: 'manual-runner',
+        phase: 'running',
+      }),
+    ).resolves.toMatchObject({ phase: 'running' });
+    await expect(
+      model.settle({
+        dispatchId: claim.dispatch.id,
+        expected: ['running'],
+        fence: claim.fence,
+        generation: claim.dispatch.generation,
+        operationId: 'manual-operation',
+        phase: 'succeeded',
+      }),
+    ).resolves.toMatchObject({ currentContract: true, currentGeneration: true });
+  });
+
   it('converges concurrent retries on one stable dispatch', async () => {
     const task = await createTask('RUN-2B', 22);
     const model = new TaskDispatchModel(db, workspaceId);
@@ -166,7 +213,7 @@ describe('TaskDispatchModel', () => {
     ).rejects.toBeInstanceOf(TaskDispatchIdempotencyConflictError);
   });
 
-  it('fences an expired dispatch worker before it can write a later phase', async () => {
+  it('leases an expired dispatch for reconciliation without invalidating its callback fence', async () => {
     const task = await createTask('RUN-3', 3);
     const model = new TaskDispatchModel(db, workspaceId);
     const requested = await model.request({
@@ -189,7 +236,7 @@ describe('TaskDispatchModel', () => {
     });
 
     const recovery = await model.claimForRecovery(requested.dispatch.id, 'worker-b', 1000);
-    expect(recovery?.fence).toBe(firstLease!.fence + 1);
+    expect(recovery?.fence).toBe(firstLease!.fence);
     const staleWrite = await model.transition({
       dispatchId: requested.dispatch.id,
       expected: ['outcome_unknown'],
@@ -198,6 +245,23 @@ describe('TaskDispatchModel', () => {
       phase: 'running',
     });
     expect(staleWrite).toBeNull();
+
+    await expect(
+      model.releaseRecovery({
+        dispatchId: requested.dispatch.id,
+        fence: recovery!.fence,
+        owner: 'worker-b',
+        phase: 'running',
+        reason: 'runtime_running',
+        retryAfterMs: 1000,
+      }),
+    ).resolves.toBe(true);
+    await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
+      fence: firstLease!.fence,
+      leaseOwner: null,
+      phase: 'running',
+      waitingReason: 'runtime_running',
+    });
   });
 
   it('identifies a late completion from an old execution generation', async () => {
@@ -237,6 +301,68 @@ describe('TaskDispatchModel', () => {
     expect(late?.state).toBe('already_settled');
     expect(late?.dispatch.phase).toBe('failed');
     expect(second.dispatch.generation).toBe(first.dispatch.generation + 1);
+  });
+
+  it('parks a current-generation result when its requirement contract changed in flight', async () => {
+    const task = await createTask('RUN-4B', 41);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'manual:RUN-4B:request-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    await db
+      .update(tasks)
+      .set({ requirementRevision: 2, status: 'running' })
+      .where(eq(tasks.id, task.id));
+
+    const settled = await model.settle({
+      dispatchId: requested.dispatch.id,
+      expected: ['requested'],
+      fence: requested.dispatch.fence,
+      generation: requested.dispatch.generation,
+      phase: 'succeeded',
+    });
+
+    expect(settled).toMatchObject({
+      currentContract: false,
+      currentGeneration: true,
+      dispatch: { phase: 'succeeded' },
+    });
+    await expect(db.select().from(tasks).where(eq(tasks.id, task.id))).resolves.toMatchObject([
+      {
+        error: 'Task changed while this run was active; review before retrying.',
+        status: 'paused',
+      },
+    ]);
+  });
+
+  it('keeps a result current across execution-only status revisions', async () => {
+    const task = await createTask('RUN-4C', 42);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'manual:RUN-4C:request-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    await db
+      .update(tasks)
+      .set({ domainRevision: task.domainRevision + 1, status: 'running' })
+      .where(eq(tasks.id, task.id));
+
+    await expect(
+      model.settle({
+        dispatchId: requested.dispatch.id,
+        expected: ['requested'],
+        fence: requested.dispatch.fence,
+        generation: requested.dispatch.generation,
+        phase: 'succeeded',
+      }),
+    ).resolves.toMatchObject({ currentContract: true, currentGeneration: true });
   });
 
   it('does not expose a dispatch or task from another workspace', async () => {
@@ -301,6 +427,42 @@ describe('TaskDispatchModel', () => {
     });
   });
 
+  it('resumes a repaired waiting dispatch for a new request key without replacing its identity', async () => {
+    const task = await createTask('RUN-6B', 61);
+    await db.insert(agents).values({ id: 'dispatch-agent-2', userId, workspaceId });
+    const model = new TaskDispatchModel(db, workspaceId);
+    const first = await model.request({
+      idempotencyKey: 'orchestrator:RUN-6B:plan-1',
+      requestedBy: 'planning:first',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (first.state === 'busy') throw new Error('unexpected busy');
+    await model.markWaiting(first.dispatch.id, 'no_eligible_agent');
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'dispatch-agent-2' })
+      .where(eq(tasks.id, task.id));
+
+    const resumed = await model.request({
+      idempotencyKey: 'orchestrator:RUN-6B:plan-2',
+      requestedBy: 'planning:second',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (resumed.state === 'busy') throw new Error('waiting dispatch was not reconsidered');
+    expect(resumed).toMatchObject({
+      dispatch: {
+        agentId: 'dispatch-agent-2',
+        id: first.dispatch.id,
+        idempotencyKey: 'orchestrator:RUN-6B:plan-1',
+        phase: 'requested',
+        waitingReason: null,
+      },
+      state: 'existing',
+    });
+  });
+
   it('cancels a dispatch whose assigned Agent changed before claim', async () => {
     await db.insert(agents).values([
       { id: 'dispatch-agent-old', userId, workspaceId },
@@ -331,6 +493,87 @@ describe('TaskDispatchModel', () => {
       phase: 'canceled',
       waitingReason: 'superseded_before_claim',
     });
+  });
+
+  it('cancels a claimed dispatch when its execution contract changes during provisioning', async () => {
+    await db.insert(agents).values({ id: 'dispatch-agent-contract', userId, workspaceId });
+    const task = await createTask('RUN-7B', 72);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'dispatch-agent-contract' })
+      .where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'manual:RUN-7B:request-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    expect(claim).not.toBeNull();
+    await expect(
+      model.transition({
+        dispatchId: requested.dispatch.id,
+        expected: ['claimed'],
+        fence: claim!.fence,
+        owner: 'worker-a',
+        phase: 'provisioning',
+      }),
+    ).resolves.toMatchObject({ phase: 'provisioning' });
+
+    await db
+      .update(tasks)
+      .set({ requirementRevision: sql`${tasks.requirementRevision} + 1` })
+      .where(eq(tasks.id, task.id));
+
+    await expect(
+      model.transition({
+        dispatchId: requested.dispatch.id,
+        expected: ['provisioning'],
+        fence: claim!.fence,
+        owner: 'worker-a',
+        phase: 'dispatched',
+      }),
+    ).resolves.toBeNull();
+    await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
+      fence: claim!.fence + 1,
+      phase: 'canceled',
+      waitingReason: 'superseded_before_dispatched',
+    });
+  });
+
+  it('keeps a dispatch valid across status-only domain revisions', async () => {
+    await db.insert(agents).values({ id: 'dispatch-agent-status', userId, workspaceId });
+    const task = await createTask('RUN-7C', 73);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'dispatch-agent-status' })
+      .where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'manual:RUN-7C:request-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    await db
+      .update(tasks)
+      .set({ domainRevision: sql`${tasks.domainRevision} + 1`, status: 'running' })
+      .where(eq(tasks.id, task.id));
+
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    expect(claim).not.toBeNull();
+    await expect(
+      model.transition({
+        dispatchId: requested.dispatch.id,
+        expected: ['claimed'],
+        fence: claim!.fence,
+        owner: 'worker-a',
+        phase: 'dispatched',
+      }),
+    ).resolves.toMatchObject({ phase: 'dispatched' });
   });
 
   it('fences cancellation and makes completion replay idempotent', async () => {

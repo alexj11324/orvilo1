@@ -833,6 +833,7 @@ export class TaskRunnerService {
             taskRevision: task.domainRevision ?? 0,
           }),
           taskId: task.id,
+          trigger: 'orchestrator',
         });
         result.started.push(task.identifier);
       } catch (error) {

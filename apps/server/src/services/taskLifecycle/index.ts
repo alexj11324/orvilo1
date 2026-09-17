@@ -196,7 +196,7 @@ export class TaskLifecycleService {
         );
         return;
       }
-      if (!settlement.currentGeneration) {
+      if (!settlement.currentGeneration || !settlement.currentContract) {
         if (topicId) {
           const historicalStatus =
             reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed';
@@ -213,7 +213,7 @@ export class TaskLifecycleService {
           );
         }
         log(
-          'Ignored stale generation completion: task=%s dispatch=%s generation=%s',
+          'Ignored stale execution contract completion: task=%s dispatch=%s generation=%s',
           taskId,
           params.dispatchId,
           params.executionGeneration,

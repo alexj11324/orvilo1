@@ -22,11 +22,21 @@ import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
+import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
 import type { LobeChatDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
+import {
+  ActionApprovalService,
+  AgentDelegationService,
+  DELEGATION_ACTIONS,
+  ProjectMemberModel,
+  TASK_INPUT_INTENT_TYPES,
+  TASK_INPUT_STATUSES,
+  TaskInputService,
+} from '@/server/services/agentDelegation';
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
@@ -54,8 +64,11 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
   return opts.next({
     ctx: {
       agentModel: new AgentModel(ctx.serverDB, ctx.userId, wsId),
+      approvals: new ActionApprovalService(ctx.serverDB, ctx.userId, wsId),
       briefModel: new BriefModel(ctx.serverDB, ctx.userId, wsId),
+      delegation: new AgentDelegationService(ctx.serverDB, ctx.userId, wsId),
       editLockService: new EditLockService(ctx.userId),
+      taskInputs: new TaskInputService(ctx.serverDB, ctx.userId, wsId),
       taskIntegration: new TaskIntegrationService(ctx.serverDB, ctx.userId, wsId),
       taskLifecycle: new TaskLifecycleService(ctx.serverDB, ctx.userId, wsId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, wsId),
@@ -269,6 +282,52 @@ async function resolveOrThrow(model: TaskModel, id: string) {
   const task = await model.resolve(id);
   if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
   return task;
+}
+
+/**
+ * Task-steering capability for `instruction` inputs: the assignee or reviewer
+ * steers by role on the task, a project manager steers inside their project,
+ * and a workspace owner/admin steers anywhere in the workspace. Other members
+ * may still submit comments, proposals and decisions.
+ */
+async function assertTaskSteeringCapability(
+  ctx: {
+    serverDB: LobeChatDatabase;
+    userId: string;
+    workspaceId?: string;
+  },
+  task: {
+    assigneeUserId: string | null;
+    projectId: string | null;
+    reviewerUserId: string | null;
+    workspaceId: string | null;
+  },
+) {
+  if (task.assigneeUserId === ctx.userId || task.reviewerUserId === ctx.userId) return;
+
+  const workspaceId = task.workspaceId ?? ctx.workspaceId;
+  if (workspaceId) {
+    const role = await getActiveWorkspaceMembershipRole(ctx.serverDB, {
+      userId: ctx.userId,
+      workspaceId,
+    });
+    if (role === 'owner' || role === 'admin') return;
+
+    if (task.projectId) {
+      const projectRole = await new ProjectMemberModel(
+        ctx.serverDB,
+        ctx.userId,
+        workspaceId,
+      ).getRole(task.projectId, ctx.userId);
+      if (projectRole === 'manager') return;
+    }
+  }
+
+  throw new TRPCError({
+    code: 'FORBIDDEN',
+    message:
+      'Instruction inputs require assignee, reviewer, project-manager or workspace-admin steering capability',
+  });
 }
 
 /**
@@ -1287,6 +1346,7 @@ export const taskRouter = router({
       idInput.merge(
         z.object({
           continueTopicId: z.string().optional(),
+          delegationGrantId: z.string().optional(),
           idempotencyKey: z.string().min(1).max(255).optional(),
           prompt: z.string().optional(),
         }),
@@ -1295,6 +1355,18 @@ export const taskRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const task = await resolveOrThrow(ctx.taskModel, input.id);
+
+        // Delegated run: the grant must be live, unexpired, action-permitted
+        // and bound to THIS task — a grant for another task stays invisible.
+        if (input.delegationGrantId) {
+          const grant = await ctx.delegation.validateGrantForRun({
+            action: 'run',
+            grantId: input.delegationGrantId,
+          });
+          if (grant.taskId !== task.id) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+          }
+        }
 
         const runner = new TaskRunnerService(
           ctx.serverDB,
@@ -2249,5 +2321,121 @@ export const taskRouter = router({
         ctx.userId,
         input.targetVisibility,
       );
+    }),
+
+  // ---------------------------------------------------------------------
+  // Agent delegation + multi-user task inputs (teammates collaboration)
+  // ---------------------------------------------------------------------
+
+  // Server-authoritative input queue: the author is always the caller, the
+  // sequence is allocated per task inside the write transaction, and a replayed
+  // idempotency key returns the original row instead of appending a twin.
+  submitTaskInput: taskProcedureWrite
+    .input(
+      z.object({
+        baseTaskVersion: z.number().int().optional(),
+        idempotencyKey: z.string().min(1).max(255),
+        intentType: z.enum(TASK_INPUT_INTENT_TYPES),
+        payload: z.record(z.string(), z.unknown()),
+        taskId: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.taskId);
+
+      if (input.intentType === 'instruction') {
+        await assertTaskSteeringCapability(
+          { serverDB: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+          task,
+        );
+      }
+
+      return ctx.taskInputs.submit({
+        baseTaskVersion: input.baseTaskVersion,
+        idempotencyKey: input.idempotencyKey,
+        intentType: input.intentType,
+        payload: input.payload,
+        taskId: task.id,
+      });
+    }),
+
+  listTaskInputs: taskProcedure
+    .input(
+      z.object({
+        status: z.enum(TASK_INPUT_STATUSES).optional(),
+        taskId: z.string(),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.taskId);
+      return ctx.taskInputs.list({ status: input.status, taskId: task.id });
+    }),
+
+  // Delegating an agent onto a task consumes the caller's run capability (the
+  // `agent:update` gate on taskProcedureWrite) plus the same usable-agent
+  // predicate every other agent binding goes through.
+  delegateAgent: taskProcedureWrite
+    .input(
+      z.object({
+        agentId: z.string(),
+        allowedActions: z.array(z.enum(DELEGATION_ACTIONS)).max(32).optional(),
+        expiresAt: z.coerce.date().optional(),
+        taskId: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.taskId);
+      if (!task.workspaceId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Agent delegation requires a workspace task',
+        });
+      }
+
+      await assertAgentUsableBy(ctx.serverDB, input.agentId, {
+        userId: ctx.userId,
+        workspaceId: task.workspaceId,
+      });
+
+      return ctx.delegation.createGrant({
+        agentId: input.agentId,
+        allowedActions: input.allowedActions,
+        expiresAt: input.expiresAt,
+        task: { id: task.id, projectId: task.projectId, workspaceId: task.workspaceId },
+      });
+    }),
+
+  revokeDelegation: taskProcedureWrite
+    .input(z.object({ grantId: z.string() }))
+    .mutation(async ({ input, ctx }) => ctx.delegation.revokeGrant(input.grantId)),
+
+  // Approvals live on taskProcedure (not Write): the decider is bound by the
+  // recorded approver or a workspace-admin role, not by generic task-write
+  // permission — an approver who is a viewer must still be able to reject.
+  approveAction: taskProcedure
+    .input(
+      z.object({
+        approvalId: z.string(),
+        baseSha: z.string().optional(),
+        baseVersion: z.number().int().optional(),
+        decision: z.enum(['approved', 'rejected']),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.workspaceId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'workspaceId is required' });
+      }
+      const role = await getActiveWorkspaceMembershipRole(ctx.serverDB, {
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
+
+      return ctx.approvals.decide({
+        approvalId: input.approvalId,
+        baseSha: input.baseSha,
+        baseVersion: input.baseVersion,
+        callerIsWorkspaceAdmin: role === 'owner' || role === 'admin',
+        decision: input.decision,
+      });
     }),
 });

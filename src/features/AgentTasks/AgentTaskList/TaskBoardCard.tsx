@@ -24,6 +24,7 @@ import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from '../features/useTaskItemContextMenu';
+import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
 
@@ -305,6 +306,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(({ overlay, routeScope = 'agent',
         wrap={'wrap'}
       >
         <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+        <LinearTaskSyncStatus taskId={task.id} />
         {task.automationMode ? (
           <TaskTriggerTag
             automationMode={task.automationMode}

@@ -11,6 +11,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
+import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import AssigneeAgentSelector from './AssigneeAgentSelector';
@@ -119,6 +120,7 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
       <TaskStatusTag status={status} taskIdentifier={task.identifier} />
+      <LinearTaskSyncStatus taskId={task.id} />
       {privacyBadge}
       {hasName ? (
         <>

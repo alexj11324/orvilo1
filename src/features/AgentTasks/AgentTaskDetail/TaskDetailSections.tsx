@@ -1,6 +1,8 @@
 import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
+import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
+
 import TaskAcceptance from './TaskAcceptance';
 import TaskActivities from './TaskActivities';
 import TaskArtifacts from './TaskArtifacts';
@@ -23,30 +25,32 @@ import TaskSubtasks from './TaskSubtasks';
  */
 const TaskDetailSections = memo(() => {
   return (
-    <div className={styles.root}>
-      <div className={styles.header}>
-        <Flexbox className={styles.main} gap={12}>
-          <TaskParentBar />
-          <TaskDetailTitleInput />
-          <Flexbox horizontal align={'center'} gap={8} style={{ maxWidth: '100%' }} wrap={'wrap'}>
-            <TaskDetailRunPauseAction />
-            <TaskDetailAssignee />
-            <TaskModelConfig />
+    <LinearTaskSyncProvider>
+      <div className={styles.root}>
+        <div className={styles.header}>
+          <Flexbox className={styles.main} gap={12}>
+            <TaskParentBar />
+            <TaskDetailTitleInput />
+            <Flexbox horizontal align={'center'} gap={8} style={{ maxWidth: '100%' }} wrap={'wrap'}>
+              <TaskDetailRunPauseAction />
+              <TaskDetailAssignee />
+              <TaskModelConfig />
+            </Flexbox>
           </Flexbox>
-        </Flexbox>
         <div className={styles.side}>
           <TaskProperties />
           <TaskPrerequisites />
         </div>
+        </div>
+        <Flexbox gap={24} style={{ paddingBottom: 120 }}>
+          <TaskInstruction />
+          <TaskAcceptance />
+          <TaskSubtasks />
+          <TaskArtifacts />
+          <TaskActivities />
+        </Flexbox>
       </div>
-      <Flexbox gap={24} style={{ paddingBottom: 120 }}>
-        <TaskInstruction />
-        <TaskAcceptance />
-        <TaskSubtasks />
-        <TaskArtifacts />
-        <TaskActivities />
-      </Flexbox>
-    </div>
+    </LinearTaskSyncProvider>
   );
 });
 

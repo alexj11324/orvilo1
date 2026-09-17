@@ -3436,6 +3436,104 @@ When I am ___, I need ___
   'workspaceSetting.linear.runWorker': 'Run sync now',
   'workspaceSetting.linear.workerSuccess': 'Linear sync workers completed',
   'workspaceSetting.linear.workerFailed': 'Linear sync workers failed',
+  'workspaceSetting.linear.continue': 'Continue',
+  'workspaceSetting.linear.installationIdentity': 'Save this verified installation identity',
+  'workspaceSetting.linear.organizationCatalogOnly':
+    'Organizations come from the verified Linear catalog. Organization IDs cannot be entered manually.',
+  'workspaceSetting.linear.organizationScopedTo': 'Catalog scope: {{organization}}',
+  'workspaceSetting.linear.teamTitle': 'Team',
+  'workspaceSetting.linear.teamPlaceholder': 'Select a Linear team',
+  'workspaceSetting.linear.remoteProjectTitle': 'Linear project',
+  'workspaceSetting.linear.localProjectTitle': 'Orvilo project',
+  'workspaceSetting.linear.bindingSyncDisabledUntilStep':
+    'Saving the binding does not enable synchronization. Enable it in the next stage after reviewing the import.',
+  'workspaceSetting.linear.scopeCatalogEmpty':
+    'The verified installation returned no matching teams or projects for this scope.',
+  'workspaceSetting.linear.status.active': 'Active',
+  'workspaceSetting.linear.status.error': 'Error',
+  'workspaceSetting.linear.status.paused': 'Paused',
+  'workspaceSetting.linear.status.revoked': 'Revoked',
+  'workspaceSetting.linear.installationAction.error':
+    'Reconnect Linear to repair this installation. Existing bindings stay visible until the connection is restored.',
+  'workspaceSetting.linear.installationAction.paused':
+    'Synchronization is paused. Reconnect or resume it from the provider account before enabling sync.',
+  'workspaceSetting.linear.installationAction.revoked':
+    'Linear revoked this installation. Reconnect to authorize it again before syncing.',
+  'workspaceSetting.linear.lastSync': 'Last sync: {{time}}',
+  'workspaceSetting.linear.retryLoad': 'Retry loading',
+  'workspaceSetting.linear.issueLinksLoadFailed': 'Could not load Linear issue links',
+  'workspaceSetting.linear.mappingReadOnlyTitle': 'Mapping catalog is not available yet',
+  'workspaceSetting.linear.mappingCatalogUnavailable':
+    'The current catalog contract does not expose Linear workflow states or members. Saved mappings and observed IDs are shown for review; editing stays locked until those verified options are available.',
+  'workspaceSetting.linear.statusMappingsTitle': 'Status mappings',
+  'workspaceSetting.linear.assigneeMappingsTitle': 'Assignee mappings',
+  'workspaceSetting.linear.unmapped': 'Unmapped',
+  'workspaceSetting.linear.noMappingsYet': 'No saved or observed mappings for this binding yet.',
+  'workspaceSetting.linear.importComplete': 'Import complete',
+  'workspaceSetting.linear.importInProgress': 'Import in progress',
+  'workspaceSetting.linear.importReady': 'Ready to import',
+  'workspaceSetting.linear.importNotRun': 'No import has run for this binding.',
+  'workspaceSetting.linear.importBatch': '{{imported}} imported · {{failed}} failed',
+  'workspaceSetting.linear.loadingIssueLinks': 'Loading linked issues…',
+  'workspaceSetting.linear.importPreviewEmpty':
+    'No linked issues are visible for this binding yet.',
+  'workspaceSetting.linear.import.total': 'Linked issues',
+  'workspaceSetting.linear.import.synced': 'Synced',
+  'workspaceSetting.linear.import.pending': 'Pending',
+  'workspaceSetting.linear.import.conflict': 'Conflicts',
+  'workspaceSetting.linear.import.outcomeUnknown': 'Outcome unknown',
+  'workspaceSetting.linear.import.removed': 'Removed',
+  'workspaceSetting.linear.syncEnabled': 'Sync enabled',
+  'workspaceSetting.linear.syncDisabled': 'Sync disabled',
+  'workspaceSetting.linear.noSyncRecorded': 'No sync run recorded yet.',
+  'workspaceSetting.linear.syncEnableNote':
+    'Sync status reflects durable issue links. A queued or pending item is not presented as completed.',
+  'workspaceSetting.linear.enableSync': 'Enable sync',
+  'workspaceSetting.linear.disableSync': 'Disable sync',
+  'workspaceSetting.linear.replanningGateTitle': 'Allow replanning proposals',
+  'workspaceSetting.linear.replanningGateDescription':
+    'Issue changes can create version-checked proposals for explicit review.',
+  'workspaceSetting.linear.saveReplanning': 'Save replanning gate',
+  'workspaceSetting.linear.autoExecutionGateTitle': 'Allow bounded auto-execution',
+  'workspaceSetting.linear.autoExecutionGateDescription':
+    'Keep this permission separate. It does not approve a proposal or bypass version checks.',
+  'workspaceSetting.linear.saveAutoExecution': 'Save auto-execution gate',
+  'workspaceSetting.linear.wizard.progress': 'Linear synchronization setup stages',
+  'workspaceSetting.linear.wizard.installationTitle': 'Installation',
+  'workspaceSetting.linear.wizard.installationDescription':
+    'Authorize Linear and confirm the verified workspace installation identity.',
+  'workspaceSetting.linear.wizard.installationRequired':
+    'Connect Linear first. The next stage uses only organizations returned by the verified catalog.',
+  'workspaceSetting.linear.wizard.scopeTitle': 'Organization and scope',
+  'workspaceSetting.linear.wizard.scopeDescription':
+    'Choose the organization, team, and project scope from the provider catalog.',
+  'workspaceSetting.linear.wizard.completeInstallation':
+    'Complete an active installation before choosing a synchronization scope.',
+  'workspaceSetting.linear.wizard.bindingTitle': 'Local project binding',
+  'workspaceSetting.linear.wizard.bindingDescription':
+    'Bind one existing Orvilo project to the selected Linear project.',
+  'workspaceSetting.linear.wizard.completeScope': 'Choose a valid team and Linear project first.',
+  'workspaceSetting.linear.wizard.mappingTitle': 'Status and assignee mappings',
+  'workspaceSetting.linear.wizard.mappingDescription':
+    'Review explicit mappings before any issue is imported into the shared task view.',
+  'workspaceSetting.linear.wizard.completeBinding': 'Save the local project binding first.',
+  'workspaceSetting.linear.wizard.importTitle': 'Import preview and status',
+  'workspaceSetting.linear.wizard.importDescription':
+    'Review linked issues and durable import state before turning synchronization on.',
+  'workspaceSetting.linear.wizard.syncTitle': 'Enable synchronization',
+  'workspaceSetting.linear.wizard.syncDescription':
+    'Turn on inbound and outbound synchronization for this binding, then inspect its run state.',
+  'workspaceSetting.linear.wizard.automationTitle': 'Replanning and auto-execution',
+  'workspaceSetting.linear.wizard.automationDescription':
+    'Gate replanning proposals and automatic execution independently after sync is enabled.',
+  'workspaceSetting.linear.wizard.enableSyncFirst':
+    'Enable synchronization before opening either automation gate.',
+  'workspaceSetting.linear.wizard.complete': 'Complete',
+  'workspaceSetting.linear.wizard.open': 'Available',
+  'workspaceSetting.linear.wizard.locked': 'Locked',
+  'workspaceSetting.linear.wizard.scopeBoundaryTitle': 'One shared task view',
+  'workspaceSetting.linear.wizard.scopeBoundary':
+    'Linear-linked issues continue to use the existing Workspace, Project, and Agent task views. This setup does not create a second task pool or route.',
   'workspaceSetting.labels.actions.archive': 'Archive',
   'workspaceSetting.labels.actions.create': 'New label',
   'workspaceSetting.labels.actions.unarchive': 'Restore',

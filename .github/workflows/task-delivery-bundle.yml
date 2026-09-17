@@ -1,0 +1,27 @@
+name: Task Delivery Integration Snapshot
+on:
+  push:
+    branches: [ci/task-delivery-validation-20260917]
+    paths: [.github/workflows/task-delivery-bundle.yml]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Export public Git objects without credentials or working data
+        shell: bash
+        run: |
+          set -euo pipefail
+          git bundle create /tmp/orvilo1-delivery.bundle --all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: task-delivery-git-bundle
+          path: /tmp/orvilo1-delivery.bundle
+          retention-days: 3
+          if-no-files-found: error

@@ -1,0 +1,118 @@
+name: PR Audit Validation
+on:
+  push:
+    branches: [fix/pr-audit-20260916]
+    paths: [.github/workflows/pr-audit-validation.yml]
+permissions:
+  contents: write
+concurrency:
+  group: pr-audit-validation
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: paradedb/paradedb:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
+      DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_DRIVER: node
+      TEST_SERVER_DB: '1'
+      KEY_VAULTS_SECRET: Kix2wcUONd4CX51E/ZPAd36BqM4wzJgKjPtz2sGztqQ=
+      S3_PUBLIC_DOMAIN: https://example.com
+      APP_URL: https://home.com
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-env
+      - name: Prepare source and tests
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/audit-evidence
+          python .github/scripts/apply-pr-audit.py
+          python .github/scripts/add-pr-audit-tests.py
+          git add -N packages/database/migrations/0169_task_dependency_ownership.sql packages/database/src/models/__tests__/taskInterruptedRun.test.ts src/store/task/slices/detail/polling.test.tsx
+          git diff --name-only > /tmp/audit-evidence/changed.txt
+          git diff --check
+      - name: Install dependencies
+        run: pnpm install
+      - name: Scoped lint and formatting
+        run: |
+          set -euo pipefail
+          mapfile -t paths < <(grep -E '\.tsx?$' /tmp/audit-evidence/changed.txt)
+          bun run check --lint "${paths[@]}" 2>&1 | tee /tmp/audit-evidence/lint.log
+          git diff --check
+      - name: Commit source on isolated branch
+        run: |
+          set -euo pipefail
+          mapfile -t paths < /tmp/audit-evidence/changed.txt
+          git add -- "${paths[@]}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '🐛 fix: close prerequisite recovery and private cascade gaps'
+          git push origin HEAD:fix/pr-audit-20260916
+          git rev-parse HEAD > /tmp/audit-evidence/source-sha.txt
+          git diff 296056a394f48ea6d047924844caef1b355ec9db HEAD -- apps/server packages/database src/store/task > /tmp/audit-evidence/validated.patch
+      - name: Database regressions
+        id: database
+        if: ${{ !cancelled() }}
+        working-directory: packages/database
+        run: |
+          set -o pipefail
+          bunx vitest run --no-file-parallelism --silent='passed-only' src/models/__tests__/taskDependency.test.ts src/models/__tests__/taskInterruptedRun.test.ts src/models/__tests__/taskTopic.test.ts --reporter=default --reporter=json --outputFile=/tmp/audit-evidence/database.json 2>&1 | tee /tmp/audit-evidence/database.log
+      - name: Server regressions
+        id: server
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bunx vitest run --project server --silent='passed-only' apps/server/src/services/task/index.test.ts apps/server/src/services/taskRunner/cascade.test.ts apps/server/src/services/taskLifecycle/index.test.ts --reporter=default --reporter=json --outputFile=/tmp/audit-evidence/server.json 2>&1 | tee /tmp/audit-evidence/server.log
+      - name: Frontend regressions
+        id: frontend
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bunx vitest run --project app --silent='passed-only' src/store/task/slices/detail/action.test.ts src/store/task/slices/detail/polling.test.tsx --reporter=default --reporter=json --outputFile=/tmp/audit-evidence/frontend.json 2>&1 | tee /tmp/audit-evidence/frontend.log
+      - name: Prove original behavior fails the new regressions
+        if: steps.database.outcome == 'success' && steps.server.outcome == 'success' && steps.frontend.outcome == 'success'
+        run: |
+          set -euo pipefail
+          fixed=$(git rev-parse HEAD)
+          files=(packages/database/src/models/task.ts apps/server/src/services/task/index.ts apps/server/src/services/taskRunner/index.ts src/store/task/slices/detail/action.ts packages/database/migrations/meta/_journal.json)
+          trap 'git restore --source="$fixed" --worktree -- "${files[@]}" packages/database/migrations/0169_task_dependency_ownership.sql' EXIT
+          git restore --source=296056a394f48ea6d047924844caef1b355ec9db --worktree -- "${files[@]}"
+          printf 'SELECT 1;\n' > packages/database/migrations/0169_task_dependency_ownership.sql
+          set +e
+          bunx vitest run --project server apps/server/src/services/task/index.test.ts apps/server/src/services/taskRunner/cascade.test.ts -t 'interrupted state-change recovery|private dependency dispatch' --reporter=json --outputFile=/tmp/audit-evidence/baseline-server.json > /tmp/audit-evidence/baseline-server.log 2>&1
+          server=$?
+          (cd packages/database && bunx vitest run --no-file-parallelism src/models/__tests__/taskDependency.test.ts -t 'dispatch discovery includes|backfills legacy' --reporter=json --outputFile=/tmp/audit-evidence/baseline-database.json) > /tmp/audit-evidence/baseline-database.log 2>&1
+          database=$?
+          bunx vitest run --project app src/store/task/slices/detail/polling.test.tsx --reporter=json --outputFile=/tmp/audit-evidence/baseline-frontend.json > /tmp/audit-evidence/baseline-frontend.log 2>&1
+          frontend=$?
+          set -e
+          test "$server" -ne 0 && test "$database" -ne 0 && test "$frontend" -ne 0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for name in ('server', 'database', 'frontend'):
+              report=json.loads(Path(f'/tmp/audit-evidence/baseline-{name}.json').read_text())
+              assert report['numFailedTests'] > 0, (name, report)
+              print(name, 'expected original-code failures:', report['numFailedTests'])
+          PY
+      - name: Full repository typecheck
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          pnpm type-check 2>&1 | tee /tmp/audit-evidence/typecheck.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-audit-validation
+          path: /tmp/audit-evidence
+          retention-days: 5

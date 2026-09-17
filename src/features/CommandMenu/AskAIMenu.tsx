@@ -2,7 +2,7 @@ import { GroupBotSquareIcon } from '@lobehub/ui/icons';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { Command } from 'cmdk';
-import { Bot, Image } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,7 +19,7 @@ import { useCommandMenu } from './useCommandMenu';
 const AskAIMenu = memo(() => {
   const { t } = useTranslation(['common', 'chat', 'home']);
   const navigate = useWorkspaceAwareNavigate();
-  const { handleAskLobeAI, handleAIPainting, closeCommandMenu } = useCommandMenu();
+  const { handleAskLobeAI, closeCommandMenu } = useCommandMenu();
   const { search } = useCommandMenuContext();
 
   // Get agent list (limit to first 20 items for simplicity)
@@ -76,12 +76,6 @@ const AskAIMenu = memo(() => {
         <GroupBotSquareIcon className={styles.icon} />
         <div className={styles.itemContent}>
           <div className={styles.itemLabel}>{t('starter.createGroup', { ns: 'home' })}</div>
-        </div>
-      </Command.Item>
-      <Command.Item value="ai-painting" onSelect={handleAIPainting}>
-        <Image className={styles.icon} />
-        <div className={styles.itemContent}>
-          <div className={styles.itemLabel}>{t('cmdk.aiPainting')}</div>
         </div>
       </Command.Item>
 

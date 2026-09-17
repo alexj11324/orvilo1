@@ -50,12 +50,11 @@ The CommandMenu automatically detects what page you're on and shows relevant com
 
 ```typescript
 // Supported contexts
-type ContextType = 'agent' | 'painting' | 'settings' | 'resource' | 'page';
+type ContextType = 'agent' | 'group' | 'settings' | 'resource' | 'memory';
 
 // Context detection based on pathname
 const CONTEXT_CONFIGS: ContextConfig[] = [
   { matcher: /^\/agent\/[^/]+$/, name: 'Agent', type: 'agent' },
-  { matcher: /^\/image$/, name: 'Painting', type: 'painting' },
   {
     matcher: /^\/settings(?:\/([^/]+))?/,
     name: 'Settings',
@@ -412,7 +411,7 @@ const { t } = useTranslation('common');
 
 ```typescript
 export type ContextType =
-  'agent' | 'painting' | 'settings' | 'resource' | 'page' | 'your-new-context'; // Add this
+  'agent' | 'group' | 'settings' | 'resource' | 'memory' | 'your-new-context'; // Add this
 ```
 
 **Step 2**: Add detection rule to `utils/context.ts`:

@@ -17,6 +17,27 @@ describe('NAVIGATION_ROUTES', () => {
       expect(getRouteById(route.id)).toBeDefined();
     }
   });
+
+  it('carries no command-palette wiring on retired routes', () => {
+    // A withdrawn surface has no palette entry, so it must not keep cmdk i18n
+    // keys or search keywords — stale pointers would dangle after the locale
+    // keys for those entries are removed.
+    const retired = NAVIGATION_ROUTES.filter((route) => route.tier === 'retired');
+
+    for (const route of retired) {
+      expect(route.cmdkKey).toBeUndefined();
+      expect(route.keywordsKey).toBeUndefined();
+      expect(route.keywords).toBeUndefined();
+    }
+  });
+
+  it('keeps command-palette wiring on every navigable route', () => {
+    // The palette renders `t(route.cmdkKey)` for every route it offers — a
+    // missing key would render an empty label.
+    for (const route of getNavigableRoutes()) {
+      expect(route.cmdkKey).toBeTruthy();
+    }
+  });
 });
 
 describe('getNavigableRoutes', () => {

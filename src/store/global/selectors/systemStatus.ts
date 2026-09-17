@@ -462,8 +462,6 @@ const showTerminalPanel = (s: GlobalState) => s.status.showTerminalPanel;
 const terminalPanelHeight = (s: GlobalState) => s.status.terminalPanelHeight || 320;
 const showFilePanel = (s: GlobalState) => s.status.showFilePanel;
 const showVerifyReportPanel = (s: GlobalState) => s.status.showVerifyReportPanel ?? true;
-const showImagePanel = (s: GlobalState) => s.status.showImagePanel;
-const showImageTopicPanel = (s: GlobalState) => s.status.showImageTopicPanel;
 const hidePWAInstaller = (s: GlobalState) => s.status.hidePWAInstaller;
 const isShowCredit = (s: GlobalState) => s.status.isShowCredit;
 const language = (s: GlobalState) => s.status.language || 'auto';
@@ -485,20 +483,12 @@ const portalWidth = (s: GlobalState) => s.status.portalWidth || 400;
 const portalWidths = (s: GlobalState) => s.status.portalWidths;
 const filePanelWidth = (s: GlobalState) => s.status.filePanelWidth;
 const groupAgentBuilderPanelWidth = (s: GlobalState) => s.status.groupAgentBuilderPanelWidth || 360;
-const imagePanelWidth = (s: GlobalState) => s.status.imagePanelWidth;
 const agentListViewMode = (s: GlobalState) => s.status.agentListViewMode || 'list';
 const agentListViewOptions = (s: GlobalState) => s.status.agentListViewOptions;
 const agentListExpandedGroupKeys = (s: GlobalState) => s.status.agentListExpandedGroupKeys ?? [];
 const agentListSidebarSectionCollapsed = (s: GlobalState) =>
   s.status.agentListSidebarSectionCollapsed ?? false;
-const imageTopicViewMode = (s: GlobalState) => s.status.imageTopicViewMode || 'grid';
-const imageTopicPanelWidth = (s: GlobalState) => s.status.imageTopicPanelWidth;
 const verifyReportPanelWidth = (s: GlobalState) => s.status.verifyReportPanelWidth || 300;
-const videoPanelWidth = (s: GlobalState) => s.status.videoPanelWidth;
-const videoTopicViewMode = (s: GlobalState) => s.status.videoTopicViewMode || 'grid';
-const videoTopicPanelWidth = (s: GlobalState) => s.status.videoTopicPanelWidth;
-const showVideoPanel = (s: GlobalState) => s.status.showVideoPanel;
-const showVideoTopicPanel = (s: GlobalState) => s.status.showVideoTopicPanel;
 const wideScreen = (s: GlobalState) => !s.status.noWideScreen;
 const chatInputHeight = (s: GlobalState) => s.status.chatInputHeight || 64;
 const expandInputActionbar = (s: GlobalState) => s.status.expandInputActionbar;
@@ -554,9 +544,6 @@ export const systemStatusSelectors = {
   homeRecentsCount,
   homeSelectedAgentId,
   homeTaskCount,
-  imagePanelWidth,
-  imageTopicViewMode,
-  imageTopicPanelWidth,
   isBannerDismissed,
   isNotificationRead,
   isShowCredit,
@@ -586,8 +573,6 @@ export const systemStatusSelectors = {
   showAgentBuilderPanel,
   showFilePanel,
   showHomeRail,
-  showImagePanel,
-  showImageTopicPanel,
   showLeftPanel,
   showPageAgentPanel,
   showRightPanel,
@@ -595,17 +580,12 @@ export const systemStatusSelectors = {
   showTaskAgentPanel,
   showTerminalPanel,
   showVerifyReportPanel,
-  showVideoPanel,
-  showVideoTopicPanel,
   systemStatus,
   terminalPanelHeight,
   verifyReportPanelWidth,
   tokenDisplayFormatShort,
   collapsedTopicGroupKeys,
   topicPageSize,
-  videoPanelWidth,
-  videoTopicViewMode,
-  videoTopicPanelWidth,
   wideScreen,
   workingSidebarWidth,
 };

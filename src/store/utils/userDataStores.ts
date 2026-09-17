@@ -7,7 +7,6 @@ import { useDiscoverStore } from '@/store/discover';
 import { useDocumentStore } from '@/store/document';
 import { useFileStore } from '@/store/file';
 import { useHomeStore } from '@/store/home';
-import { useImageStore } from '@/store/image';
 import { useKnowledgeBaseStore } from '@/store/library';
 import { useMentionStore } from '@/store/mention';
 import { useNotebookStore } from '@/store/notebook';
@@ -18,7 +17,6 @@ import { useToolStore } from '@/store/tool';
 import { useUserStore } from '@/store/user';
 import { useUserMemoryStore } from '@/store/userMemory';
 import type { ResetableStore } from '@/store/utils/resetableStore';
-import { useVideoStore } from '@/store/video';
 
 interface ResetableStoreApi {
   getState: () => ResetableStore;
@@ -32,7 +30,6 @@ const resetableStores: ResetableStoreApi[] = [
   useDocumentStore,
   useFileStore,
   useHomeStore,
-  useImageStore,
   useKnowledgeBaseStore,
   useMentionStore,
   useNotebookStore,
@@ -42,7 +39,6 @@ const resetableStores: ResetableStoreApi[] = [
   useToolStore,
   useUserMemoryStore,
   useUserStore,
-  useVideoStore,
 ];
 
 export interface StoreActions extends ResetableStore {}

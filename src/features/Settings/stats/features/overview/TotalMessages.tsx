@@ -11,9 +11,7 @@ import { messageService } from '@/services/message';
 import { formatIntergerNumber } from '@/utils/format';
 import { lastMonth } from '@/utils/time';
 
-import TotalCard from './TotalCard';
-
-const TotalMessages = memo<{ inShare?: boolean; mobile?: boolean }>(({ inShare }) => {
+const TotalMessages = memo<{ mobile?: boolean }>(() => {
   const { t } = useTranslation('auth');
   const { data, isLoading, error, mutate } = useClientDataSWR(statsKeys.messages(), async () => {
     // The total is a planner estimate, but the last-month baseline is derived
@@ -28,14 +26,6 @@ const TotalMessages = memo<{ inShare?: boolean; mobile?: boolean }>(({ inShare }
 
     return { count, prevCount: Math.max(count - sinceLastMonth, 0) };
   });
-
-  if (inShare)
-    return (
-      <TotalCard
-        count={formatIntergerNumber(data?.prevCount) || '--'}
-        title={t('stats.messages')}
-      />
-    );
 
   return (
     <AsyncBoundary data={data} error={error} errorVariant={'metric'} onRetry={() => mutate()}>

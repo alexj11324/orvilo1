@@ -120,7 +120,6 @@ export class CommonActionImpl {
             // merge settings
             const serverSettings: PartialDeep<UserSettings> = {
               defaultAgent: serverConfig.defaultAgent,
-              image: serverConfig.image,
               systemAgent: serverConfig.systemAgent,
             };
 

@@ -31,6 +31,17 @@ describe('isMobileNavRoute', () => {
     expect(isMobileNavRoute('/agent/some-agent', null)).toBe(false);
   });
 
+  it('hides the tab bar on retired surfaces', () => {
+    // /community (and its sub-pages), /image, /video and /eval are withdrawn —
+    // a tab bar rendered on their tombstones would offer navigation into
+    // products that no longer resolve.
+    expect(isMobileNavRoute('/community', null)).toBe(false);
+    expect(isMobileNavRoute('/community/agent', null)).toBe(false);
+    expect(isMobileNavRoute('/image', null)).toBe(false);
+    expect(isMobileNavRoute('/video', null)).toBe(false);
+    expect(isMobileNavRoute('/eval', null)).toBe(false);
+  });
+
   it('does not treat an unrelated slug prefix as its own workspace', () => {
     // `/lobe-teamwork` must not have `lobe-team` carved off the front of it.
     expect(isMobileNavRoute('/lobe-teamwork/tasks', 'lobe-team')).toBe(false);

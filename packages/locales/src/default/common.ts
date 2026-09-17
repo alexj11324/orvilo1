@@ -141,7 +141,6 @@ export default {
   'cmdk.aiModeEmptyState': 'Type your question above to start chatting with AI',
   'cmdk.aiModeHint': 'Press Enter to ask',
   'cmdk.aiModePlaceholder': 'Ask AI anything...',
-  'cmdk.aiPainting': 'AI Image',
   'cmdk.askAI': 'Ask Agent',
   'cmdk.askAIHeading': 'Use the following features for {{query}}',
   'cmdk.askAIHeadingEmpty': 'Choose an AI feature',
@@ -149,16 +148,12 @@ export default {
   'cmdk.askAgentPlaceholder': 'Ask {{agent}} something...',
   'cmdk.askLobeAI': 'Ask Orvilo AI',
   'cmdk.automations': 'Automations',
-  'cmdk.community': 'Community',
   'cmdk.communitySupport': 'Community Support',
   'cmdk.contactUs': 'Contact Us',
   'cmdk.context.agent': 'Agent',
-  'cmdk.context.community': 'Community',
   'cmdk.context.general': 'General',
   'cmdk.context.group': 'Group',
   'cmdk.context.memory': 'Memory',
-  'cmdk.context.page': 'Page',
-  'cmdk.context.painting': 'Image',
   'cmdk.context.resource': 'Resource',
   'cmdk.context.settings': 'Settings',
   'cmdk.discover': 'Discover',
@@ -175,24 +170,12 @@ export default {
 
   'cmdk.keywords.billing': 'billing payment invoice transaction',
 
-  'cmdk.keywords.community': 'discover market assistant model provider mcp',
-
   // CMDK search keywords (space-separated for i18n)
   'cmdk.keywords.contactUs': 'feedback issue bug problem',
 
   'cmdk.keywords.discord': 'discord help support customer service',
 
-  'cmdk.keywords.funds': 'funds balance credit money',
-
   'cmdk.keywords.hotkey': 'hotkey shortcut keyboard',
-
-  'cmdk.keywords.image': 'image picture photo',
-
-  'cmdk.keywords.memory': 'identities contexts preferences experiences',
-
-  'cmdk.keywords.pages': 'documents write notes',
-
-  'cmdk.keywords.painting': 'painting art generate draw',
 
   'cmdk.keywords.plans': 'subscription plan upgrade pricing',
 
@@ -220,10 +203,6 @@ export default {
 
   'cmdk.keywords.usage': 'usage statistics consumption quota',
 
-  'cmdk.keywords.video': 'video,generate,seedance,kling',
-
-  'cmdk.memory': 'Memory',
-
   'cmdk.mentionAgent': 'Mention Agent',
 
   'cmdk.navigate': 'Navigate',
@@ -243,10 +222,6 @@ export default {
   'cmdk.noResults': 'No Results found',
 
   'cmdk.openSettings': 'Open Settings',
-
-  'cmdk.pages': 'Pages',
-
-  'cmdk.painting': 'Image',
 
   'cmdk.project': 'Projects',
 
@@ -310,8 +285,6 @@ export default {
   'cmdk.themeLight': 'Light',
   'cmdk.toOpen': 'Open',
   'cmdk.toSelect': 'Select',
-
-  'cmdk.video': 'AI Video',
 
   'betaFeedback.collapse': 'Collapse',
   'betaFeedback.desc':
@@ -612,28 +585,21 @@ export default {
   'taskTemplate.schedule.weekly': 'Every {{weekday}} at {{time}}',
   'taskTemplate.section.title': 'Try these scheduled tasks',
   'tab.automations': 'Automations',
-  'tab.image': 'Image',
-  'tab.audio': 'Audio',
   'tab.chat': 'Chat',
   'recents': 'Recents',
-  'tab.community': 'Community',
   'tab.create': 'Create',
   'tab.discover': 'Discover',
-  'tab.eval': 'Eval Lab',
   'tab.files': 'Files',
   'tab.generation': 'Generation',
   'tab.home': 'Home',
   'tab.knowledgeBase': 'Library',
-  'tab.marketplace': 'Marketplace',
   'tab.me': 'Me',
   'tab.memory': 'Memory',
-  'tab.pages': 'Pages',
   'tab.project': 'Projects',
   'tab.resource': 'Resources',
   'tab.search': 'Search',
   'tab.setting': 'Settings',
   'tab.tasks': 'Tasks',
-  'tab.video': 'Video',
   'taskDock.activeOf': '{{active}} running · {{total}} total',
   'taskDock.cancelAll': 'Cancel all',
   'taskDock.collapse': 'Collapse',

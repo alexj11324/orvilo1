@@ -16,6 +16,13 @@ vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn().mockResolvedValue(mockServerDB),
 }));
 
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
+
 vi.mock('@/server/services/agentSignal', () => ({
   enqueueAgentSignalSourceEvent: vi
     .fn()

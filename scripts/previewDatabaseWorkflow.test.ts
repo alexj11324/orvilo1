@@ -34,6 +34,21 @@ describe('Preview database workflow', () => {
     expect(grant?.run).not.toContain('process.env.PR_ADMIN_URL');
   });
 
+  it('probes the deployed app role through its own restricted connection', () => {
+    const grant = provisionWorkflow.jobs.provision.steps.find(
+      (step) => step.name === 'Grant app database privileges',
+    );
+
+    expect(grant?.run).toContain('role_probe=$(psql "$APP_PROBE_URL"');
+    expect(grant?.run).toContain("has_schema_privilege(current_user, 'public', 'CREATE')");
+    expect(grant?.run).toContain(
+      "has_database_privilege(current_user, current_database(), 'CREATE')",
+    );
+    expect(grant?.run).toContain('probe_database" != "$DB_NAME"');
+    expect(grant?.run).toContain('probe_role" != "$APP_ROLE"');
+    expect(grant?.run).toContain('unexpected elevated privilege');
+  });
+
   it('uses a distinct app role for every provisioning attempt', () => {
     const provision = provisionWorkflow.jobs.provision;
     const prepare = provision.steps.find(

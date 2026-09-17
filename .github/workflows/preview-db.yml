@@ -283,6 +283,7 @@ jobs:
       - name: Grant app database privileges
         env:
           ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
+          APP_DB_URL: ${{ steps.db.outputs.app-url }}
         run: |
           set -euo pipefail
           ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" node -e '
@@ -310,6 +311,16 @@ jobs:
           NODE
           )
           echo "::add-mask::$PR_ADMIN_URL"
+          APP_PROBE_URL=$(DATABASE_URL="$APP_DB_URL" node -e '
+            const url = new URL(process.env.DATABASE_URL);
+            url.hostname = "127.0.0.1";
+            url.port = "35432";
+            url.searchParams.delete("sslrootcert");
+            url.searchParams.delete("uselibpqcompat");
+            url.searchParams.set("sslmode", "require");
+            process.stdout.write(url.href);
+          ')
+          echo "::add-mask::$APP_PROBE_URL"
           psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" -v app_role="$APP_ROLE" <<'SQL'
           SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'db_name', :'app_role') \gexec
           SQL
@@ -332,10 +343,39 @@ jobs:
           GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"test_role";
           GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO :"test_role";
           SQL
+          role_probe=$(psql "$APP_PROBE_URL" -v ON_ERROR_STOP=1 -qAt -F '|' <<'SQL'
+          SELECT
+            current_database(),
+            current_user,
+            rol.rolsuper,
+            rol.rolcreatedb,
+            rol.rolcreaterole,
+            rol.rolreplication,
+            rol.rolbypassrls,
+            has_schema_privilege(current_user, 'public', 'CREATE'),
+            has_database_privilege(current_user, current_database(), 'CREATE')
+          FROM pg_catalog.pg_roles AS rol
+          WHERE rol.rolname = current_user;
+          SQL
+          )
+          IFS='|' read -r probe_database probe_role probe_super probe_createdb probe_createrole \
+            probe_replication probe_bypassrls probe_schema_create probe_database_create <<< "$role_probe"
+          if [[ "$probe_database" != "$DB_NAME" || "$probe_role" != "$APP_ROLE" ]]; then
+            echo "Preview app role connected to an unexpected database or role" >&2
+            exit 1
+          fi
+          for privilege in "$probe_super" "$probe_createdb" "$probe_createrole" \
+            "$probe_replication" "$probe_bypassrls" "$probe_schema_create" "$probe_database_create"; do
+            if [[ "$privilege" != "f" ]]; then
+              echo "Preview app role has an unexpected elevated privilege" >&2
+              exit 1
+            fi
+          done
           PR_DB_HOST=$(DATABASE_URL="$PR_ADMIN_URL" node -e '
             process.stdout.write(new URL(process.env.DATABASE_URL).hostname);
           ')
           echo "granted Preview database privileges host=$PR_DB_HOST database=$DB_NAME"
+          echo "verified restricted Preview app role database=$probe_database role=$probe_role superuser=false createdb=false createrole=false replication=false bypassrls=false schema_create=false database_create=false"
 
       - name: Set Vercel branch env DATABASE_URL
         env:

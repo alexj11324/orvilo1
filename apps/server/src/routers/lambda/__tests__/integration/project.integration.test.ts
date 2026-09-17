@@ -107,7 +107,7 @@ describe('Project Router Integration', () => {
     );
 
     const stale = await caller.updateOrchestrationPolicy({
-      coordinatorAgentId: project.data.coordinatorAgentId,
+      coordinatorAgentId: project.data.coordinatorAgentId!,
       expectedRevision: initial.data.orchestrationPolicyRevision,
       id: project.data.id,
       orchestrationPolicy: {

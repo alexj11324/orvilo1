@@ -33271,13 +33271,13 @@
         },
         "workflow_state_ref_id": {
           "name": "workflow_state_ref_id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
         "cycle_ref_id": {
           "name": "cycle_ref_id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },

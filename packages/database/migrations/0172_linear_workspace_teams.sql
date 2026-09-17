@@ -221,8 +221,8 @@ ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "created_by_subject_id" text;-->
 ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "created_by_snapshot" jsonb;--> statement-breakpoint
 ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "migration_class" text DEFAULT 'undetermined' NOT NULL;--> statement-breakpoint
 ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "team_id" text;--> statement-breakpoint
-ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "workflow_state_ref_id" text;--> statement-breakpoint
-ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "cycle_ref_id" text;--> statement-breakpoint
+ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "workflow_state_ref_id" uuid;--> statement-breakpoint
+ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "cycle_ref_id" uuid;--> statement-breakpoint
 ALTER TABLE "linear_sync_scopes" DROP CONSTRAINT IF EXISTS "linear_sync_scopes_workspace_id_workspaces_id_fk";--> statement-breakpoint
 ALTER TABLE "linear_sync_scopes" ADD CONSTRAINT "linear_sync_scopes_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "linear_sync_scopes" DROP CONSTRAINT IF EXISTS "linear_sync_scopes_installation_id_linear_installations_id_fk";--> statement-breakpoint

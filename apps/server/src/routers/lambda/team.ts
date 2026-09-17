@@ -90,7 +90,7 @@ export const teamRouter = router({
       if (
         !(await hasWorkspaceAdminAccess(ctx.serverDB, {
           userId: ctx.userId,
-          workspaceId: ctx.workspaceId,
+          workspaceId: ctx.workspaceId!,
         }))
       ) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace admin required' });

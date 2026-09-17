@@ -1218,13 +1218,6 @@
       "when": 1789676160281,
       "tag": "0173_projects_coordinator_set_null",
       "breakpoints": true
-    },
-    {
-      "idx": 174,
-      "version": "7",
-      "when": 1789676224426,
-      "tag": "0174_task_ref_columns_uuid",
-      "breakpoints": true
     }
   ],
   "version": "6"

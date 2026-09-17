@@ -1291,7 +1291,7 @@ export class LinearSyncWorker {
       targetLink &&
       ((targetScope?.binding?.id ?? null) !== (sourceScope.binding?.id ?? null) ||
         (targetScope?.teamLink?.id ?? null) !== (sourceScope.teamLink?.id ?? null) ||
-        targetScope.installation.id !== sourceScope.installation.id ||
+        targetScope?.installation.id !== sourceScope.installation.id ||
         targetLink.organizationId !== sourceLink.organizationId)
     ) {
       throw new Error('Linear relation endpoints are outside one validated binding scope');

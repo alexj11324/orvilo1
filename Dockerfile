@@ -64,7 +64,6 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml ./
 COPY .npmrc ./
 COPY packages ./packages
-COPY patches ./patches
 # workspace manifests must exist before pnpm i so --filter can resolve them
 COPY apps/desktop/src/main/package.json ./apps/desktop/src/main/package.json
 COPY apps/share/package.json ./apps/share/package.json

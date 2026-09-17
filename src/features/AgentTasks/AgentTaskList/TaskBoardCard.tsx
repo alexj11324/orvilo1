@@ -269,6 +269,8 @@ const TaskBoardCard = memo<TaskBoardCardProps>(({ overlay, routeScope = 'agent',
     <div
       data-task-board-card
       className={cx(styles.card, overlay && styles.cardOverlay)}
+      data-collab-id={`task:${task.id}`}
+      data-collab-id-alt={`task:${task.identifier}`}
       onClick={overlay ? undefined : handleClick}
     >
       {/* Row 1 — identifier + executor (Cordy: issue identifier top-left,
@@ -285,7 +287,11 @@ const TaskBoardCard = memo<TaskBoardCardProps>(({ overlay, routeScope = 'agent',
 
       {/* Row 2 — status glyph + title, two lines max. */}
       <Flexbox horizontal align={'flex-start'} gap={6} style={{ marginTop: 4, minWidth: 0 }}>
-        <span style={{ flex: 'none', marginTop: 2 }}>
+        <span
+          data-collab-id={`task:${task.id}:status`}
+          data-collab-id-alt={`task:${task.identifier}:status`}
+          style={{ flex: 'none', marginTop: 2 }}
+        >
           <TaskStatusIcon size={14} status={status} />
         </span>
         <span className={styles.title}>{hasName ? task.name : task.identifier}</span>
@@ -336,7 +342,14 @@ const TaskBoardCard = memo<TaskBoardCardProps>(({ overlay, routeScope = 'agent',
         gap={8}
         style={{ marginTop: 6, minHeight: 24, minWidth: 0 }}
       >
-        <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
+        <Flexbox
+          horizontal
+          align={'center'}
+          data-collab-id={`task:${task.id}:assignee`}
+          data-collab-id-alt={`task:${task.identifier}:assignee`}
+          flex={'none'}
+          gap={4}
+        >
           {ownerNode}
         </Flexbox>
         {time ? (

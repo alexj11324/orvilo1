@@ -18,6 +18,7 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import AsyncError from '@/components/AsyncError';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
@@ -28,6 +29,9 @@ import {
   getProjectTasksPath,
 } from '@/features/Projects/Layout/navigation';
 import OrchestrationPolicyCard from '@/features/Projects/Workspace/OrchestrationPolicyCard';
+import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
+import { openInviteTeammateModal } from '@/features/Teammates/InviteTeammateModal';
+import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import WorkSummaryCard from '@/features/Work/WorkSummaryCard';
 import { useOpenWork } from '@/features/WorkGallery/useOpenWork';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -141,6 +145,9 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
   const navigate = useWorkspaceAwareNavigate();
   const openWork = useOpenWork();
   const workspaceId = useActiveWorkspaceId();
+  const teammatesEnabled = useTeammatesEnabled();
+  const capabilities = useWorkspaceCapabilities();
+  const { data: projectMembers } = useProjectMembersQuery(projectId, teammatesEnabled);
   const goalScope = `project:${projectId}`;
   const goals = useGoalStore(goalSelectors.goalList(goalScope));
   const goalSWR = useGoalStore((s) => s.useFetchGoals)(undefined, projectId);
@@ -331,6 +338,31 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
             <Text>{detail.knowledgeBases?.length ?? 0}</Text>
           </Flexbox>
         </Flexbox>
+
+        {teammatesEnabled && (
+          <Flexbox className={styles.railCard} gap={12}>
+            <SectionTitle
+              count={projectMembers?.length}
+              title={t('sections.teammates', { defaultValue: 'Teammates' })}
+            />
+            <Flexbox horizontal align={'center'} justify={'space-between'}>
+              <Text fontSize={13} type={'secondary'}>
+                {t('sections.teammatesHint', {
+                  defaultValue: 'People collaborating in this project',
+                })}
+              </Text>
+              {capabilities.canInvite && (
+                <Button
+                  size={'small'}
+                  type={'text'}
+                  onClick={() => openInviteTeammateModal({ defaultProjectIds: [projectId] })}
+                >
+                  {t('sections.invite', { defaultValue: 'Invite' })}
+                </Button>
+              )}
+            </Flexbox>
+          </Flexbox>
+        )}
       </Flexbox>
     </div>
   );

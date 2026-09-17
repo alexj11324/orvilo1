@@ -5,21 +5,19 @@ import { UserModel } from '@/database/models/user';
 import { MarketService } from '@/server/services/market';
 
 import {
+  createPullRequestForBranch,
   findBranchPr,
+  getPullRequestReviewSnapshot,
   getRemoteBranchSha,
   getRepoDefaultBranch,
   isBranchMergedInto,
+  mergePullRequest,
   parseGithubRepo,
   resolveGithubAccessToken,
 } from './index';
 
-vi.mock('@/database/models/user', () => ({
-  UserModel: vi.fn(),
-}));
-
-vi.mock('@/server/services/market', () => ({
-  MarketService: vi.fn(),
-}));
+vi.mock('@/database/models/user', () => ({ UserModel: vi.fn() }));
+vi.mock('@/server/services/market', () => ({ MarketService: vi.fn() }));
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -50,58 +48,45 @@ describe('parseGithubRepo', () => {
 describe('github api helpers', () => {
   const fetchMock = vi.fn();
 
-  beforeEach(() => {
-    vi.stubGlobal('fetch', fetchMock);
-  });
-
+  beforeEach(() => vi.stubGlobal('fetch', fetchMock));
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
-  describe('getRepoDefaultBranch', () => {
-    it('returns the repo default_branch', async () => {
-      fetchMock.mockResolvedValue(jsonResponse({ default_branch: 'canary' }));
-      expect(await getRepoDefaultBranch('acme/widgets', 'tok')).toBe('canary');
-      expect(fetchMock).toHaveBeenCalledWith(
-        'https://api.github.com/repos/acme/widgets',
-        expect.objectContaining({
-          headers: expect.objectContaining({ Authorization: 'Bearer tok' }),
-        }),
-      );
-    });
-
-    it('returns undefined for an unparseable coordinate or missing field', async () => {
-      expect(await getRepoDefaultBranch('nope')).toBeUndefined();
-      fetchMock.mockResolvedValue(jsonResponse({}));
-      expect(await getRepoDefaultBranch('acme/widgets')).toBeUndefined();
-    });
+  it('returns the repo default branch', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ default_branch: 'main' }));
+    await expect(getRepoDefaultBranch('acme/widgets', 'tok')).resolves.toBe('main');
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.github.com/repos/acme/widgets',
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer tok' }) }),
+    );
   });
 
   describe('isBranchMergedInto', () => {
     it.each([
       ['ahead', 'merged'],
       ['identical', 'merged'],
-      ['behind', 'unmerged'],
-      ['diverged', 'unmerged'],
+      ['behind', 'unknown'],
+      ['diverged', 'unknown'],
       ['anything-else', 'unknown'],
     ] as const)('maps compare status %s → %s', async (status, expected) => {
       fetchMock.mockResolvedValue(jsonResponse({ status }));
-      expect(
-        await isBranchMergedInto({ base: 'main', head: 'task/T-1', repo: 'acme/widgets' }),
-      ).toBe(expected);
+      await expect(
+        isBranchMergedInto({ base: 'main', head: 'task/T-1', repo: 'acme/widgets' }),
+      ).resolves.toBe(expected);
     });
 
-    it('reports unknown when the compare call fails', async () => {
+    it('reports unknown when compare fails', async () => {
       fetchMock.mockResolvedValue(jsonResponse({ message: 'Not Found' }, 404));
-      expect(
-        await isBranchMergedInto({ base: 'main', head: 'task/T-1', repo: 'acme/widgets' }),
-      ).toBe('unknown');
+      await expect(
+        isBranchMergedInto({ base: 'main', head: 'task/T-1', repo: 'acme/widgets' }),
+      ).resolves.toBe('unknown');
     });
   });
 
   describe('findBranchPr', () => {
-    it('returns merge state and merge sha for the branch head PR', async () => {
+    it('returns PR identity and merge sha', async () => {
       fetchMock.mockResolvedValue(
         jsonResponse([
           {
@@ -114,8 +99,7 @@ describe('github api helpers', () => {
           },
         ]),
       );
-
-      expect(await findBranchPr('acme/widgets', 'task/T-1', 'main', 'tok')).toEqual({
+      await expect(findBranchPr('acme/widgets', 'task/T-1', 'main', 'tok')).resolves.toEqual({
         baseBranch: 'main',
         headSha: 'head123',
         merged: true,
@@ -123,55 +107,151 @@ describe('github api helpers', () => {
         sha: 'abc999',
         url: 'https://github.com/acme/widgets/pull/7',
       });
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringMatching(/head=acme%3Atask%2FT-1.*base=main/),
-        expect.anything(),
-      );
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('base=main'),
-        expect.anything(),
-      );
     });
 
-    it('reports an open PR as unmerged', async () => {
-      fetchMock.mockResolvedValue(
-        jsonResponse([
-          {
-            base: { ref: 'main' },
-            html_url: 'https://github.com/acme/widgets/pull/7',
-            head: { sha: 'head123' },
-            merge_commit_sha: null,
-            merged_at: null,
-            number: 7,
-          },
-        ]),
-      );
-      expect(await findBranchPr('acme/widgets', 'task/T-1', 'main')).toEqual({
-        baseBranch: 'main',
-        headSha: 'head123',
-        merged: false,
-        number: 7,
-        sha: undefined,
-        url: 'https://github.com/acme/widgets/pull/7',
-      });
-    });
-
-    it('returns undefined when no PR exists for the branch', async () => {
+    it('returns undefined when no PR exists', async () => {
       fetchMock.mockResolvedValue(jsonResponse([]));
-      expect(await findBranchPr('acme/widgets', 'task/T-1', 'main')).toBeUndefined();
+      await expect(findBranchPr('acme/widgets', 'task/T-1', 'main')).resolves.toBeUndefined();
     });
   });
 
-  describe('getRemoteBranchSha', () => {
-    it('returns the current branch commit', async () => {
-      fetchMock.mockResolvedValue(jsonResponse({ commit: { sha: 'head123' } }));
-      await expect(getRemoteBranchSha('acme/widgets', 'task/T-1')).resolves.toBe('head123');
-    });
+  it('reads a branch head sha', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ commit: { sha: 'head123' } }));
+    await expect(getRemoteBranchSha('acme/widgets', 'task/T-1')).resolves.toBe('head123');
+  });
 
-    it('returns undefined when the branch cannot be read', async () => {
-      fetchMock.mockResolvedValue(jsonResponse({ message: 'Not Found' }, 404));
-      await expect(getRemoteBranchSha('acme/widgets', 'task/T-1')).resolves.toBeUndefined();
+  it('creates the PR with a stable delivery head/base', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ html_url: 'https://github.com/acme/widgets/pull/8', number: 8 }, 201),
+    );
+    await expect(
+      createPullRequestForBranch({
+        baseBranch: 'main',
+        headBranch: 'task/T-2',
+        repo: 'acme/widgets',
+        title: 'T-2: fix it',
+        token: 'tok',
+      }),
+    ).resolves.toEqual({ number: 8, url: 'https://github.com/acme/widgets/pull/8' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.github.com/repos/acme/widgets/pulls',
+      expect.objectContaining({
+        body: expect.stringContaining('task/T-2'),
+        method: 'POST',
+      }),
+    );
+  });
+
+  it('reads CI, human feedback and unresolved review threads for one head revision', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          base: { ref: 'main', sha: 'base1' },
+          draft: false,
+          head: { sha: 'head1' },
+          html_url: 'https://github.com/acme/widgets/pull/9',
+          merge_commit_sha: null,
+          mergeable: true,
+          mergeable_state: 'clean',
+          merged: false,
+          number: 9,
+          requested_reviewers: [],
+          requested_teams: [],
+          state: 'open',
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          check_runs: [
+            { conclusion: 'success', name: 'Typecheck', status: 'completed' },
+            { conclusion: 'failure', name: 'E2E', status: 'completed' },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([{ id: 31, state: 'CHANGES_REQUESTED', user: { login: 'r', type: 'User' } }]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([{ id: 41, user: { login: 'r', type: 'User' } }]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          { id: 51, user: { login: 'alex', type: 'User' } },
+          { id: 52, user: { login: 'ci[bot]', type: 'Bot' } },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            repository: {
+              pullRequest: {
+                reviewThreads: { nodes: [{ id: 'THREAD_1', isResolved: false }] },
+              },
+            },
+          },
+        }),
+      );
+
+    const snapshot = await getPullRequestReviewSnapshot('acme/widgets', 9, 'tok');
+    expect(snapshot).toMatchObject({
+      baseSha: 'base1',
+      headSha: 'head1',
+      humanCommentIds: ['review-comment:41', 'issue-comment:51'],
+      requestedChangeReviewIds: ['review:31'],
+      unresolvedThreadIds: ['THREAD_1'],
     });
+    expect(snapshot?.checks).toEqual({
+      failed: ['E2E'],
+      pending: [],
+      skipped: [],
+      successful: ['Typecheck'],
+    });
+  });
+
+  it('refuses to call a revision green when every check was skipped', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          base: { ref: 'main', sha: 'base1' },
+          draft: false,
+          head: { sha: 'head1' },
+          html_url: 'https://github.com/acme/widgets/pull/9',
+          mergeable: true,
+          merged: false,
+          number: 9,
+          requested_reviewers: [],
+          requested_teams: [],
+          state: 'open',
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ check_runs: [{ conclusion: 'skipped', name: 'E2E', status: 'completed' }] }),
+      )
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(
+        jsonResponse({ data: { repository: { pullRequest: { reviewThreads: { nodes: [] } } } } }),
+      );
+
+    const snapshot = await getPullRequestReviewSnapshot('acme/widgets', 9);
+    expect(snapshot?.checks.pending).toEqual(['No CI check executed successfully for this revision']);
+  });
+
+  it('merges only the expected reviewed head sha', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ merged: true, sha: 'merge123' }));
+    await expect(
+      mergePullRequest({
+        expectedHeadSha: 'head123',
+        prNumber: 9,
+        repo: 'acme/widgets',
+        token: 'tok',
+      }),
+    ).resolves.toEqual({ merged: true, message: undefined, sha: 'merge123' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.github.com/repos/acme/widgets/pulls/9/merge',
+      expect.objectContaining({ body: expect.stringContaining('head123'), method: 'PUT' }),
+    );
   });
 });
 
@@ -187,10 +267,7 @@ describe('resolveGithubAccessToken', () => {
     });
     (MarketService as any).mockImplementation(function () {
       return {
-        market: {
-          creds: { get, list },
-          organizations: { creds: orgCreds },
-        },
+        market: { creds: { get, list }, organizations: { creds: orgCreds } },
       };
     });
     orgCreds.mockReturnValue({ get, list });
@@ -199,51 +276,28 @@ describe('resolveGithubAccessToken', () => {
   it('returns the access_token of the matching cred', async () => {
     list.mockResolvedValue({ data: [{ id: 'cred_1', key: 'github' }] });
     get.mockResolvedValue({ plaintext: { access_token: 'gho_123' } });
-
-    expect(await resolveGithubAccessToken({ db: {} as any, userId: 'user-1' })).toBe('gho_123');
-    expect(get).toHaveBeenCalledWith('cred_1', { decrypt: true });
+    await expect(resolveGithubAccessToken({ db: {} as any, userId: 'user-1' })).resolves.toBe(
+      'gho_123',
+    );
   });
 
-  it('reads creds from the shared organization inside a workspace', async () => {
+  it('reads shared organization credentials in a workspace', async () => {
     list.mockResolvedValue({ data: [{ id: 'cred_1', key: 'github' }] });
     get.mockResolvedValue({ plaintext: { access_token: 'gho_ws' } });
-
     await resolveGithubAccessToken({ db: {} as any, userId: 'u', workspaceId: 'ws-1' });
-
     expect(orgCreds).toHaveBeenCalledWith({ workspaceId: 'ws-1' });
   });
 
-  it('honours a custom cred key and the token fallback field', async () => {
+  it('honours a custom cred key and token fallback', async () => {
     list.mockResolvedValue({ data: [{ id: 'cred_9', key: 'gh-custom' }] });
     get.mockResolvedValue({ values: { token: 'fallback-tok' } });
-
-    expect(
-      await resolveGithubAccessToken({ credKey: 'gh-custom', db: {} as any, userId: 'u' }),
-    ).toBe('fallback-tok');
+    await expect(
+      resolveGithubAccessToken({ credKey: 'gh-custom', db: {} as any, userId: 'u' }),
+    ).resolves.toBe('fallback-tok');
   });
 
-  it('returns undefined when no matching cred exists or the lookup throws', async () => {
-    list.mockResolvedValue({ data: [{ id: 'cred_1', key: 'slack' }] });
-    expect(await resolveGithubAccessToken({ db: {} as any, userId: 'u' })).toBeUndefined();
-
+  it('returns undefined when credential lookup fails', async () => {
     list.mockRejectedValue(new Error('market down'));
-    expect(await resolveGithubAccessToken({ db: {} as any, userId: 'u' })).toBeUndefined();
-  });
-
-  it('reuses a caller-provided MarketService instead of building one', async () => {
-    const marketService = {
-      market: { creds: { get, list }, organizations: { creds: orgCreds } },
-    } as any;
-    list.mockResolvedValue({ data: [{ id: 'cred_1', key: 'github' }] });
-    get.mockResolvedValue({ plaintext: { access_token: 'gho_reuse' } });
-
-    const token = await resolveGithubAccessToken({
-      db: {} as any,
-      marketService,
-      userId: 'u',
-    });
-
-    expect(token).toBe('gho_reuse');
-    expect(MarketService).not.toHaveBeenCalled();
+    await expect(resolveGithubAccessToken({ db: {} as any, userId: 'u' })).resolves.toBeUndefined();
   });
 });

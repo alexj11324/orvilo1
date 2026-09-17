@@ -1,0 +1,35 @@
+name: Task Delivery Workbench
+on:
+  push:
+    branches: [ci/task-delivery-validation-20260917]
+    paths: [.github/workflows/task-delivery-workbench.yml]
+permissions:
+  contents: read
+concurrency:
+  group: task-delivery-workbench
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Archive tracked source and integration metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/task-delivery-source
+          git archive --format=tar HEAD | gzip > /tmp/task-delivery-source/source.tar.gz
+          git rev-parse HEAD > /tmp/task-delivery-source/head.txt
+          git rev-parse origin/main > /tmp/task-delivery-source/main.txt
+          git log -12 --format='%h %s' origin/main > /tmp/task-delivery-source/main-log.txt
+          git diff --name-status HEAD...origin/main > /tmp/task-delivery-source/main-changes.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: task-delivery-source
+          path: /tmp/task-delivery-source
+          retention-days: 3
+          if-no-files-found: error

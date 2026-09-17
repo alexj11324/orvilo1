@@ -5,6 +5,7 @@ import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/p
 import { LinearSyncWorker } from '@/server/services/linearSync/worker';
 import type { WorkflowContext } from '@/server/workflows/context';
 import { LinearSyncWorkflow } from '@/server/workflows/linearSync';
+import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 
 import {
   type LinearSyncInstallationResult,
@@ -56,15 +57,19 @@ export const executeLinearSyncWorkflow = async (
   const planning = await context.run('linear-sync:process-planning', () =>
     new LinearPlanningWorker(db, payload.workspaceId).processPending(undefined, payload.limit),
   );
-  const nextWakeAt = await context.run('linear-sync:next-wake-at', () =>
+  const nextWakeAt = await runStep(context, 'linear-sync:next-wake-at', () =>
     model.nextSyncWakeAt(installation.id),
   );
   if (nextWakeAt) {
-    const delay = Math.max(0, Math.ceil((nextWakeAt.getTime() - Date.now()) / 1000));
+    const nextWakeDate = parseWorkflowDate(nextWakeAt);
+    const delay = Math.max(0, Math.ceil((nextWakeDate.getTime() - Date.now()) / 1000));
     await context.run('linear-sync:schedule-continuation', () =>
       LinearSyncWorkflow.triggerInstallation(
         { ...payload, installationId: installation.id },
-        { delay },
+        {
+          delay,
+          workflowRunId: `linear-sync:${installation.id}:${nextWakeDate.toISOString()}`,
+        },
       ),
     );
   }
@@ -73,7 +78,7 @@ export const executeLinearSyncWorkflow = async (
     continuationScheduled: Boolean(nextWakeAt),
     inbox,
     installationId: installation.id,
-    nextWakeAt: nextWakeAt?.toISOString() ?? null,
+    nextWakeAt: nextWakeAt ? parseWorkflowDate(nextWakeAt).toISOString() : null,
     outbox,
     planning,
   };

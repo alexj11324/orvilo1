@@ -57,11 +57,10 @@ describe('LinearSyncWorkflow', () => {
       { delay: 12 },
     );
 
-    expect(mocks.trigger).toHaveBeenCalledWith(
-      expect.objectContaining({
-        delay: 12,
-        url: 'https://app.example.test/api/workflows/linear-sync/execute',
-      }),
+    expect(mocks.triggerHatchetWorkflow).toHaveBeenCalledWith(
+      '/api/workflows/linear-sync/execute',
+      expect.objectContaining({ installationId: '00000000-0000-4000-8000-000000000001' }),
+      expect.objectContaining({ delayMs: 12_000 }),
     );
   });
 });

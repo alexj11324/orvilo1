@@ -4,6 +4,7 @@ export const HATCHET_TASK_NAMES = {
   botReplay: 'orvilo-bot-replay',
   goalAdvance: 'orvilo-goal-advance',
   goalSweep: 'orvilo-goal-sweep',
+  linearSyncSweep: 'orvilo-linear-sync-sweep',
   taskHeartbeat: 'orvilo-task-heartbeat',
   taskScheduleDispatch: 'orvilo-task-schedule-dispatch',
   taskScheduleExecute: 'orvilo-task-schedule-execute',

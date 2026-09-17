@@ -393,8 +393,9 @@ jobs:
           fi
           echo "set branch-scoped DATABASE_URL for branch=$HEAD_BRANCH database=$DB_NAME"
 
-      - name: Find and redeploy current preview deployment
+      - name: Create exact Preview deployment
         env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -402,51 +403,42 @@ jobs:
           set -euo pipefail
           : "${HEAD_BRANCH:?Preview branch is required}"
           : "${HEAD_SHA:?Preview head SHA is required}"
-          poll_attempts=40
-          poll_interval=15
-          deployment_json=''
-          echo "polling Vercel for branch=$HEAD_BRANCH sha=$HEAD_SHA (timeout 10m)"
-          for ((attempt = 1; attempt <= poll_attempts; attempt++)); do
-            deployments=$(curl -fsS --get \
-              "https://api.vercel.com/v6/deployments" \
-              --data-urlencode "projectId=${VERCEL_PROJECT_ID}" \
-              --data-urlencode "teamId=${VERCEL_ORG_ID}" \
-              --data-urlencode 'target=preview' \
-              --data-urlencode "meta-githubCommitRef=${HEAD_BRANCH}" \
-              --data-urlencode "meta-githubCommitSha=${HEAD_SHA}" \
-              --data-urlencode 'limit=100' \
-              -H "Authorization: Bearer ${VERCEL_TOKEN}")
-            deployment_json=$(bun scripts/ci/selectPreviewDeployment.ts \
-              "$HEAD_BRANCH" "$HEAD_SHA" <<< "$deployments")
-            if [[ -n "$deployment_json" ]]; then
-              break
-            fi
-            if (( attempt < poll_attempts )); then
-              sleep "$poll_interval"
-            fi
-          done
-          if [[ -z "$deployment_json" ]]; then
-            echo "no Vercel Preview deployment matched branch=$HEAD_BRANCH sha=$HEAD_SHA within 10m" >&2
-            exit 1
-          fi
+          : "${PR_NUMBER:?Preview pull request number is required}"
 
-          deployment_id=$(jq -er '.uid // .id // empty' <<< "$deployment_json")
-          deployment_name=$(jq -er '.name // empty' <<< "$deployment_json")
-          deployment_state=$(jq -r '.state // "unknown"' <<< "$deployment_json")
-          echo "matched Vercel deployment id=$deployment_id state=$deployment_state branch=$HEAD_BRANCH sha=$HEAD_SHA"
+          project=$(curl -fsS \
+            "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}")
+          project_name=$(jq -er '.name // empty' <<< "$project")
+          repository_id=$(jq -er '
+            select(.link.type == "github")
+            | .link.repoId
+            | select(type == "number")
+          ' <<< "$project")
+          payload=$(bun scripts/ci/createVercelPreviewDeploymentPayload.ts \
+            "$project_name" "$repository_id" "$HEAD_BRANCH" "$HEAD_SHA" "$PR_NUMBER")
 
-          redeploy_response=$(curl -fsS -X POST \
+          response_file=$(mktemp)
+          http_status=$(curl -sS -o "$response_file" -w '%{http_code}' -X POST \
             "https://api.vercel.com/v13/deployments?teamId=${VERCEL_ORG_ID}&forceNew=1" \
             -H "Authorization: Bearer ${VERCEL_TOKEN}" \
             -H 'Content-Type: application/json' \
-            -d "$(jq -n --arg name "$deployment_name" --arg id "$deployment_id" '{
-              name: $name,
-              deploymentId: $id,
-              target: "preview"
-            }')")
-          if ! jq -e '(.uid // .id // .url) != null' <<< "$redeploy_response" > /dev/null; then
-            echo "Vercel did not confirm the redeploy request" >&2
+            -d "$payload")
+          response=$(<"$response_file")
+          rm -f "$response_file"
+          if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
+            error_code=$(jq -r '.error.code // "unknown"' <<< "$response")
+            error_message=$(jq -r '.error.message // "no message"' <<< "$response")
+            echo "Vercel Preview deployment creation failed (HTTP $http_status, code=$error_code): $error_message" >&2
             exit 1
           fi
-          redeployed_id=$(jq -r '.uid // .id // "accepted"' <<< "$redeploy_response")
-          echo "redeploy requested for deployment=$deployment_id new_deployment=$redeployed_id"
+          if ! jq -e --arg branch "$HEAD_BRANCH" --arg sha "$HEAD_SHA" '
+            (.uid // .id // empty) != ""
+            and .gitSource.ref == $branch
+            and .gitSource.sha == $sha
+          ' <<< "$response" > /dev/null; then
+            echo "Vercel did not confirm an exact Git deployment for branch=$HEAD_BRANCH sha=$HEAD_SHA" >&2
+            exit 1
+          fi
+          deployment_id=$(jq -er '.uid // .id // empty' <<< "$response")
+          deployment_url=$(jq -er '.url // empty' <<< "$response")
+          echo "created Vercel Preview deployment id=$deployment_id url=$deployment_url branch=$HEAD_BRANCH sha=$HEAD_SHA"

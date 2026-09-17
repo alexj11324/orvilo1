@@ -292,11 +292,19 @@ export class WorkspaceModel {
 
       await tx
         .update(workspaceMembers)
-        .set({ role: 'admin' })
+        .set({
+          authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
+          role: 'admin',
+          updatedAt: new Date(),
+        })
         .where(and(eq(workspaceMembers.workspaceId, id), eq(workspaceMembers.userId, this.userId)));
       await tx
         .update(workspaceMembers)
-        .set({ role: 'owner' })
+        .set({
+          authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
+          role: 'owner',
+          updatedAt: new Date(),
+        })
         .where(
           and(
             eq(workspaceMembers.workspaceId, id),

@@ -1,5 +1,6 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
+import { projects } from '../schemas/project';
 import type { ProjectMemberItem, ProjectMemberRole } from '../schemas/projectMember';
 import { projectMembers } from '../schemas/projectMember';
 import type { LobeChatDatabase, Transaction } from '../type';
@@ -37,6 +38,19 @@ export class ProjectMemberModel {
     tx?: Transaction,
   ): Promise<ProjectMemberItem> => {
     const executor = tx ?? this.db;
+    // `projectId` and `workspaceId` are persisted independently, so without
+    // this check a caller could record a workspace-A membership against a
+    // workspace-B project and `getRole` would return the cross-tenant role.
+    // Projects never move workspaces, so the transaction-local read is
+    // authoritative.
+    const [project] = await executor
+      .select({ workspaceId: projects.workspaceId })
+      .from(projects)
+      .where(eq(projects.id, params.projectId))
+      .limit(1);
+    if (!project || project.workspaceId !== params.workspaceId) {
+      throw new Error('Project does not belong to the supplied workspace');
+    }
     const [result] = await executor
       .insert(projectMembers)
       .values({

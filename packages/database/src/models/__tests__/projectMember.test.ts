@@ -117,7 +117,8 @@ describe('ProjectMemberModel', () => {
       expect(restored.deletedAt).toBeNull();
       expect(restored.suspendedAt).toBeNull();
       expect(restored.role).toBe('commenter');
-      expect(restored.authzVersion).toBe(4);
+      // add(1) → remove(2) → restore(3); the raw suspendedAt write did not bump.
+      expect(restored.authzVersion).toBe(3);
     });
   });
 

@@ -2078,7 +2078,7 @@ export class LinearSyncWorker {
     }
     if (existingLink.tombstone) await model.clearIssueTombstone(existingLink.id);
 
-    const task = await integrationTasks.findPublicTask(existingLink.taskId);
+    let task = await integrationTasks.findPublicTask(existingLink.taskId);
     if (!task || task.visibility !== 'public') {
       await model.updateIssueLink(existingLink.id, {
         lastInboundDeliveryId: row.id,
@@ -2149,6 +2149,14 @@ export class LinearSyncWorker {
         );
       }
     }
+
+    // Parent/dependency reconciliation above is itself a task mutation. Read
+    // the task again before building a conflict or remote patch so the saved
+    // localRevision fences the current task contract rather than the snapshot
+    // from before that reconciliation.
+    const refreshedTask = await integrationTasks.findPublicTask(existingLink.taskId);
+    if (!refreshedTask) return 'processed';
+    task = refreshedTask;
 
     const local = taskLinearIssueSnapshot(
       task,

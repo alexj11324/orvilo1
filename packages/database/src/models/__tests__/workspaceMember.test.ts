@@ -441,6 +441,74 @@ describe('WorkspaceMemberModel', () => {
         memberId,
       );
     });
+
+    // Regression: the old OR-predicate update cleared BOTH responsibility
+    // fields wherever EITHER matched, so removing an assignee also clobbered
+    // a different member's reviewer slot (and vice versa).
+    it('keeps a different teammate reviewer when only the assignee departs', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+      await model.addMember({ userId: memberId, workspaceId });
+      await model.addMember({ userId: otherUserId, workspaceId });
+      await serverDB.insert(tasks).values({
+        assigneeUserId: memberId,
+        createdByUserId: inviterId,
+        id: 'wm-task-split-assignee',
+        identifier: 'WM-SPLIT-1',
+        instruction: 'Sam assigns, Alex reviews',
+        reviewerUserId: otherUserId,
+        seq: 1,
+        workspaceId,
+      });
+
+      await model.removeMember(workspaceId, memberId);
+
+      const [task] = await serverDB
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, 'wm-task-split-assignee'));
+      expect(task.assigneeUserId).toBeNull();
+      expect(task.reviewerUserId).toBe(otherUserId);
+    });
+
+    it('keeps a different teammate assignee when only the reviewer departs', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+      await model.addMember({ userId: memberId, workspaceId });
+      await model.addMember({ userId: otherUserId, workspaceId });
+      await serverDB.insert(tasks).values({
+        assigneeUserId: otherUserId,
+        createdByUserId: inviterId,
+        id: 'wm-task-split-reviewer',
+        identifier: 'WM-SPLIT-2',
+        instruction: 'Alex assigns, Sam reviews',
+        reviewerUserId: memberId,
+        seq: 1,
+        workspaceId,
+      });
+
+      await model.removeMember(workspaceId, memberId);
+
+      const [task] = await serverDB
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, 'wm-task-split-reviewer'));
+      expect(task.assigneeUserId).toBe(otherUserId);
+      expect(task.reviewerUserId).toBeNull();
+    });
+
+    it('bumps authzVersion so cached authorizations invalidate on removal', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+      await model.addMember({ userId: memberId, workspaceId });
+
+      await model.removeMember(workspaceId, memberId);
+
+      const [row] = await serverDB
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, memberId)),
+        );
+      expect(row.authzVersion).toBe(2);
+    });
   });
 
   describe('updateMemberRole', () => {
@@ -519,6 +587,88 @@ describe('WorkspaceMemberModel', () => {
       expect(task.assigneeUserId).toBe(memberId);
       expect(task.reviewerUserId).toBe(memberId);
     });
+
+    // Same independent-detach regression as removeMember: downgrading the
+    // assignee must not clobber a different member's reviewer slot.
+    it('keeps a different teammate reviewer when the assignee is downgraded', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+      await model.addMember({ role: 'member', userId: memberId, workspaceId });
+      await model.addMember({ role: 'member', userId: otherUserId, workspaceId });
+      await serverDB.insert(tasks).values({
+        assigneeUserId: memberId,
+        createdByUserId: inviterId,
+        id: 'wm-task-role-split',
+        identifier: 'WM-ROLE-3',
+        instruction: 'Sam assigned, Alex reviewing',
+        reviewerUserId: otherUserId,
+        seq: 1,
+        workspaceId,
+      });
+
+      await model.updateMemberRole(workspaceId, memberId, 'viewer');
+
+      const [task] = await serverDB.select().from(tasks).where(eq(tasks.id, 'wm-task-role-split'));
+      expect(task.assigneeUserId).toBeNull();
+      expect(task.reviewerUserId).toBe(otherUserId);
+    });
+  });
+
+  describe('suspendMember / resumeMember', () => {
+    it('suspends an active member so authorization checks fail while the row stays', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+      await model.addMember({ userId: memberId, workspaceId });
+
+      const suspended = await model.suspendMember(workspaceId, memberId);
+
+      expect(suspended).toHaveLength(1);
+      expect(suspended[0].suspendedAt).not.toBeNull();
+      expect(suspended[0].authzVersion).toBe(2);
+      expect(suspended[0].deletedAt).toBeNull();
+      // The permission-checking read must fail closed on suspension.
+      expect(await model.getMember(workspaceId, memberId)).toBeUndefined();
+      // Active-member listing hides the suspended row too …
+      expect(
+        (await model.listMembers(workspaceId)).find((row) => row.userId === memberId),
+      ).toBeUndefined();
+      // …while the raw row is still there for management views.
+      const rows = await model.listMembers(workspaceId, { includeDeleted: true });
+      expect(rows.find((row) => row.userId === memberId)?.suspendedAt).not.toBeNull();
+    });
+
+    it('resumes a suspended member and bumps authzVersion again', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+      await model.addMember({ userId: memberId, workspaceId });
+      await model.suspendMember(workspaceId, memberId);
+
+      const resumed = await model.resumeMember(workspaceId, memberId);
+
+      expect(resumed).toHaveLength(1);
+      expect(resumed[0].suspendedAt).toBeNull();
+      expect(resumed[0].authzVersion).toBe(3);
+      expect((await model.getMember(workspaceId, memberId))?.userId).toBe(memberId);
+    });
+
+    it('re-adding a removed member clears suspension state and bumps authzVersion', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+      await model.addMember({ role: 'admin', userId: memberId, workspaceId });
+      await model.suspendMember(workspaceId, memberId);
+      await model.removeMember(workspaceId, memberId);
+
+      const readded = await model.addMember({ role: 'viewer', userId: memberId, workspaceId });
+
+      expect(readded.deletedAt).toBeNull();
+      expect(readded.suspendedAt).toBeNull();
+      expect(readded.role).toBe('viewer');
+      expect(readded.authzVersion).toBe(4);
+    });
+
+    it('is a no-op when suspending an already suspended member', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+      await model.addMember({ userId: memberId, workspaceId });
+      await model.suspendMember(workspaceId, memberId);
+
+      expect(await model.suspendMember(workspaceId, memberId)).toHaveLength(0);
+    });
   });
 
   describe('createInvitation', () => {
@@ -532,7 +682,24 @@ describe('WorkspaceMemberModel', () => {
       expect(result.email).toBe('a@b.com');
       expect(result.role).toBe('member');
       expect(result.status).toBe('pending');
-      expect(result.token).toHaveLength(32);
+      // 32 random bytes, base64url-encoded — returned exactly once.
+      expect(result.token).toHaveLength(43);
+    });
+
+    it('persists only the token digest, never the raw bearer token', async () => {
+      const model = new WorkspaceMemberModel(serverDB, inviterId);
+
+      const result = await model.createInvitation({ email: 'Hash@Test.com ', workspaceId });
+
+      const [row] = await serverDB
+        .select()
+        .from(workspaceInvitations)
+        .where(eq(workspaceInvitations.id, result.id));
+      expect(row.token).toBeNull();
+      expect(row.tokenHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(row.tokenHash).not.toBe(result.token);
+      expect(row.emailNormalized).toBe('hash@test.com');
+      expect(row.generation).toBe(1);
     });
 
     it('creates an invitation with an explicit role and an expiry INVITATION_EXPIRY_DAYS out', async () => {

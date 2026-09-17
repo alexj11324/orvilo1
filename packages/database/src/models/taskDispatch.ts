@@ -3,12 +3,14 @@ import type {
   TaskExecutionEnvironmentSnapshot,
   TaskRunTrigger,
 } from '@orvilo/types';
-import { and, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 
-import type { TaskDispatchItem, TaskItem } from '../schemas/task';
-import { taskDispatches, tasks } from '../schemas/task';
+import type { TaskDispatchItem, TaskItem, TaskTopicItem } from '../schemas/task';
+import { taskDispatches, tasks, taskTopics } from '../schemas/task';
+import { topics } from '../schemas/topic';
 import type { LobeChatDatabase } from '../type';
 import { idGenerator } from '../utils/idGenerator';
+import { LinearSyncModel } from './linearSync';
 
 const ACTIVE_PHASES: TaskDispatchPhase[] = [
   'requested',
@@ -44,6 +46,15 @@ export interface TaskDispatchLease {
   fence: number;
 }
 
+export interface TaskCancellationClaim extends TaskDispatchLease {
+  topic?: TaskTopicItem;
+}
+
+export interface TaskCancellationCandidate {
+  dispatchId: string;
+  workspaceId: string | null;
+}
+
 /**
  * Durable arbiter for Task execution. Every automated entry point must request
  * a dispatch before provisioning an environment or calling the agent runtime.
@@ -68,6 +79,30 @@ export class TaskDispatchModel {
         `Idempotency key already belongs to Task ${existing.taskId}`,
       );
     }
+  }
+
+  /**
+   * Discover durable stop intents whose worker lease is available. The global
+   * watchdog uses this read-only scan, then each workspace-scoped model claims
+   * one row with compare-and-set before doing any remote interruption.
+   */
+  static async findCancellationCandidates(
+    db: LobeChatDatabase,
+    input: { limit?: number; now?: Date } = {},
+  ): Promise<TaskCancellationCandidate[]> {
+    const now = input.now ?? new Date();
+    const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
+    return db
+      .select({ dispatchId: taskDispatches.id, workspaceId: taskDispatches.workspaceId })
+      .from(taskDispatches)
+      .where(
+        and(
+          eq(taskDispatches.phase, 'cancel_requested'),
+          or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+        ),
+      )
+      .orderBy(asc(taskDispatches.updatedAt), asc(taskDispatches.id))
+      .limit(limit);
   }
 
   async request(input: RequestTaskDispatchInput): Promise<RequestTaskDispatchResult> {
@@ -335,6 +370,219 @@ export class TaskDispatchModel {
       )
       .limit(1);
     return existing ?? null;
+  }
+
+  /**
+   * Lease one persisted stop intent. requestStop already advanced the fence,
+   * so claiming the worker must not mint another fence: completion callbacks
+   * carrying the run's old fence are already stale, while a crashed stop
+   * worker can safely retry the same interrupt identity after lease expiry.
+   */
+  async claimCancellation(
+    dispatchId: string,
+    owner: string,
+    leaseMs: number,
+  ): Promise<TaskCancellationClaim | null> {
+    return this.db.transaction(async (tx) => {
+      const now = new Date();
+      const [dispatch] = await tx
+        .select()
+        .from(taskDispatches)
+        .where(and(eq(taskDispatches.id, dispatchId), this.scopeCondition()))
+        .limit(1)
+        .for('update');
+      if (
+        !dispatch ||
+        dispatch.phase !== 'cancel_requested' ||
+        (dispatch.leaseExpiresAt && dispatch.leaseExpiresAt >= now)
+      ) {
+        return null;
+      }
+
+      const [claimed] = await tx
+        .update(taskDispatches)
+        .set({
+          leaseExpiresAt: new Date(now.getTime() + leaseMs),
+          leaseOwner: owner,
+        })
+        .where(
+          and(
+            eq(taskDispatches.id, dispatch.id),
+            eq(taskDispatches.phase, 'cancel_requested'),
+            eq(taskDispatches.fence, dispatch.fence),
+            or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+          ),
+        )
+        .returning();
+      if (!claimed) return null;
+
+      const [topic] = await tx
+        .select()
+        .from(taskTopics)
+        .where(eq(taskTopics.dispatchId, claimed.id))
+        .limit(1);
+      return { dispatch: claimed, fence: claimed.fence, topic };
+    });
+  }
+
+  /** Keep a failed interrupt durable and back it off without releasing its fence. */
+  async retryCancellation(input: {
+    dispatchId: string;
+    fence: number;
+    owner: string;
+    reason: string;
+    retryAfterMs: number;
+  }): Promise<boolean> {
+    const [updated] = await this.db
+      .update(taskDispatches)
+      .set({
+        leaseExpiresAt: new Date(Date.now() + Math.max(1, input.retryAfterMs)),
+        leaseOwner: null,
+        waitingReason: input.reason,
+      })
+      .where(
+        and(
+          eq(taskDispatches.id, input.dispatchId),
+          this.scopeCondition(),
+          eq(taskDispatches.phase, 'cancel_requested'),
+          eq(taskDispatches.fence, input.fence),
+          eq(taskDispatches.leaseOwner, input.owner),
+        ),
+      )
+      .returning({ id: taskDispatches.id });
+    return Boolean(updated);
+  }
+
+  /**
+   * Settle the exact leased stop intent and its local run state atomically.
+   * The remote interrupt happens before this transaction; if the process dies
+   * in between, the same operationId is retried and the terminal write remains
+   * idempotent.
+   */
+  async settleCancellation(input: {
+    dispatchId: string;
+    fence: number;
+    generation: number;
+    operationId?: string | null;
+    owner: string;
+  }): Promise<{
+    currentGeneration: boolean;
+    dispatch: TaskDispatchItem;
+    topicId: string | null;
+  } | null> {
+    return this.db.transaction(async (tx) => {
+      const runner = tx as LobeChatDatabase;
+      const [dispatch] = await runner
+        .select()
+        .from(taskDispatches)
+        .where(and(eq(taskDispatches.id, input.dispatchId), this.scopeCondition()))
+        .limit(1)
+        .for('update');
+      if (
+        !dispatch ||
+        dispatch.phase !== 'cancel_requested' ||
+        dispatch.fence !== input.fence ||
+        dispatch.generation !== input.generation ||
+        dispatch.leaseOwner !== input.owner ||
+        (input.operationId && dispatch.operationId !== input.operationId)
+      ) {
+        return null;
+      }
+
+      const [task] = await runner
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, dispatch.taskId))
+        .limit(1)
+        .for('update');
+      if (!task || task.workspaceId !== (this.workspaceId ?? null)) return null;
+
+      const currentGeneration = task.executionGeneration === dispatch.generation;
+      const [topic] = await runner
+        .select()
+        .from(taskTopics)
+        .where(eq(taskTopics.dispatchId, dispatch.id))
+        .limit(1)
+        .for('update');
+      if (dispatch.operationId && (!topic || topic.operationId !== dispatch.operationId)) {
+        return null;
+      }
+
+      if (topic) {
+        await runner
+          .update(taskTopics)
+          .set({ runState: 'canceled', status: 'canceled' })
+          .where(
+            and(
+              eq(taskTopics.id, topic.id),
+              eq(taskTopics.dispatchId, dispatch.id),
+              eq(taskTopics.executionGeneration, dispatch.generation),
+            ),
+          );
+        if (topic.topicId) {
+          await runner
+            .update(topics)
+            .set({ completedAt: new Date() })
+            .where(eq(topics.id, topic.topicId));
+        }
+      }
+
+      if (currentGeneration && task.status === 'running') {
+        const [paused] = await runner
+          .update(tasks)
+          .set({
+            domainRevision: sql`${tasks.domainRevision} + 1`,
+            reviewerUserId: sql<string | null>`coalesce(
+              ${tasks.reviewerUserId},
+              ${tasks.assigneeUserId},
+              ${tasks.createdByUserId}
+            )`,
+            status: 'paused',
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(tasks.id, task.id),
+              eq(tasks.executionGeneration, dispatch.generation),
+              eq(tasks.status, 'running'),
+            ),
+          )
+          .returning();
+        if (!paused) return null;
+        if (this.workspaceId) {
+          await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(
+            runner,
+            {
+              changedFields: ['status'],
+              eventType: 'task.status.changed',
+              idempotencyKey: `task:${paused.id}:revision:${paused.domainRevision}:task.status.changed`,
+              source: 'system',
+              // Runtime cancellation is execution state. Linear workflow state
+              // has its own field and must not be echoed back from this write.
+              suppressLinearOutbox: true,
+              task: paused,
+            },
+          );
+        }
+      }
+
+      const [settled] = await runner
+        .update(taskDispatches)
+        .set({ leaseExpiresAt: null, leaseOwner: null, phase: 'canceled' })
+        .where(
+          and(
+            eq(taskDispatches.id, dispatch.id),
+            eq(taskDispatches.phase, 'cancel_requested'),
+            eq(taskDispatches.fence, input.fence),
+            eq(taskDispatches.generation, input.generation),
+            eq(taskDispatches.leaseOwner, input.owner),
+          ),
+        )
+        .returning();
+      return settled
+        ? { currentGeneration, dispatch: settled, topicId: topic?.topicId ?? null }
+        : null;
+    });
   }
 
   async markWaiting(dispatchId: string, reason: string): Promise<TaskDispatchItem | null> {

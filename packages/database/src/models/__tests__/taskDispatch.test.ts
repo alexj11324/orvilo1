@@ -391,4 +391,89 @@ describe('TaskDispatchModel', () => {
       }),
     ).resolves.toMatchObject({ dispatch: { phase: 'canceled' }, state: 'already_settled' });
   });
+
+  it('leases and atomically settles a durable cancellation without a runtime operation', async () => {
+    const task = await createTask('RUN-9', 9);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:RUN-9:plan-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    const provision = await model.claimForProvisioning(
+      requested.dispatch.id,
+      'runner-worker',
+      60_000,
+    );
+    const running = await model.transition({
+      dispatchId: requested.dispatch.id,
+      expected: ['claimed'],
+      fence: provision!.fence,
+      owner: 'runner-worker',
+      phase: 'running',
+    });
+    await db.update(tasks).set({ status: 'running' }).where(eq(tasks.id, task.id));
+
+    const stopping = await model.requestStop({
+      dispatchId: requested.dispatch.id,
+      fence: running!.fence,
+      generation: running!.generation,
+      reason: 'planning_request_stop',
+    });
+    expect(stopping).toMatchObject({ phase: 'cancel_requested' });
+    await expect(TaskDispatchModel.findCancellationCandidates(db)).resolves.toContainEqual({
+      dispatchId: requested.dispatch.id,
+      workspaceId,
+    });
+
+    const firstClaim = await model.claimCancellation(
+      requested.dispatch.id,
+      'cancel-worker-a',
+      1000,
+    );
+    expect(firstClaim?.fence).toBe(stopping!.fence);
+    await expect(
+      model.claimCancellation(requested.dispatch.id, 'cancel-worker-b', 1000),
+    ).resolves.toBeNull();
+    await expect(
+      model.retryCancellation({
+        dispatchId: requested.dispatch.id,
+        fence: firstClaim!.fence,
+        owner: 'cancel-worker-a',
+        reason: 'cancel_retry:temporary gateway failure',
+        retryAfterMs: 1000,
+      }),
+    ).resolves.toBe(true);
+    await db
+      .update(taskDispatches)
+      .set({ leaseExpiresAt: new Date(0) })
+      .where(eq(taskDispatches.id, requested.dispatch.id));
+
+    const retryClaim = await model.claimCancellation(
+      requested.dispatch.id,
+      'cancel-worker-b',
+      1000,
+    );
+    const settled = await model.settleCancellation({
+      dispatchId: requested.dispatch.id,
+      fence: retryClaim!.fence,
+      generation: retryClaim!.dispatch.generation,
+      owner: 'cancel-worker-b',
+    });
+    expect(settled).toMatchObject({
+      currentGeneration: true,
+      dispatch: { phase: 'canceled' },
+      topicId: null,
+    });
+    await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
+      leaseExpiresAt: null,
+      leaseOwner: null,
+      phase: 'canceled',
+    });
+    await expect(db.select().from(tasks).where(eq(tasks.id, task.id))).resolves.toMatchObject([
+      { status: 'paused' },
+    ]);
+  });
 });

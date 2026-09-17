@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/server';
 import { runTaskWatchdog } from '@/server/services/taskWatchdog';
+import { sweepTaskCancellations } from '@/server/services/taskCancellation';
 
 /**
  * Cron-style watchdog. Scans all `running` tasks where
@@ -14,7 +15,21 @@ import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 export async function watchdog(c: Context) {
   try {
     const db = await getServerDB();
-    return c.json(await runTaskWatchdog(db));
+    const cancellationOutcomes = await sweepTaskCancellations({ db });
+    const result = await runTaskWatchdog(db);
+    const canceledDispatches = cancellationOutcomes.filter(
+      (outcome) => outcome.outcome === 'canceled',
+    ).length;
+    const cancellationRetries = cancellationOutcomes.filter(
+      (outcome) => outcome.outcome === 'retry',
+    ).length;
+
+    return c.json({
+      canceledDispatches,
+      cancellationRetries,
+      ...result,
+      success: true,
+    });
   } catch (error) {
     console.error('[task/watchdog] Error:', error);
     return c.json({ error: error instanceof Error ? error.message : 'Internal error' }, 500);

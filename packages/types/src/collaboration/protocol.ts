@@ -85,7 +85,8 @@ export interface RoomTicketClaims {
 }
 
 export interface RoomAuthorization {
-  expiresAt: number;
+  /** ISO-8601 expiry of the minted ticket — clients `Date.parse` it. */
+  expiresAt: string;
   gatewayUrl: string;
   token: string;
 }

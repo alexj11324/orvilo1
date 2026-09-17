@@ -60,7 +60,7 @@ export class CollaborationService {
       workspaceId: this.workspaceId,
     });
 
-    return { expiresAt, gatewayUrl: gatewayConnectUrl(), token };
+    return { expiresAt: new Date(expiresAt).toISOString(), gatewayUrl: gatewayConnectUrl(), token };
   };
 
   /**

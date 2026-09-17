@@ -1263,10 +1263,6 @@ export default {
   'settingGroupMembers.remove': 'Remove Member',
   'settingGroupMembers.removeFromGroup': 'Remove from Group',
   'settingGroupMembers.you': 'You',
-  'settingImage.defaultCount.desc':
-    'Set the default number of images generated when creating a new task in the image generation panel.',
-  'settingImage.defaultCount.label': 'Default Image Count',
-  'settingImage.defaultCount.title': 'Generation',
   'settingModel.enableContextCompression.desc':
     'Automatically compress historical messages into summaries when conversation exceeds 64,000 tokens, saving 60-80% token usage',
   'settingModel.enableContextCompression.title': 'Enable Auto Context Compression',
@@ -1721,7 +1717,6 @@ When I am ___, I need ___
   'tab.devices': 'Devices',
   'tab.experiment': 'Experiment',
   'tab.hotkey': 'Hotkeys',
-  'tab.image': 'Image Generation',
   'tab.importFromGithub': 'Import from GitHub',
   'tab.importFromGithub.desc': 'Import from a public GitHub repository',
   'tab.importFromUrl': 'Import from URL',

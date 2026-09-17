@@ -25,16 +25,6 @@ const CONTEXT_CONFIGS: ContextConfig[] = [
     type: 'group',
   },
   {
-    matcher: /^\/image$/,
-    name: 'Painting',
-    type: 'painting',
-  },
-  {
-    matcher: /^\/video$/,
-    name: 'Video',
-    type: 'video',
-  },
-  {
     captureSubPath: true,
     matcher: /^\/settings(?:\/([^/]+))?/,
     name: 'Settings',
@@ -42,7 +32,9 @@ const CONTEXT_CONFIGS: ContextConfig[] = [
   },
   {
     captureSubPath: true,
-    matcher: /^\/memory(?:\/([^/]+))?/,
+    // Anchored: without `/?$` the retired `/memory-center` path would match
+    // the `/memory` prefix and inherit a context it no longer belongs to.
+    matcher: /^\/memory(?:\/([^/]+))?\/?$/,
     name: 'Memory',
     type: 'memory',
   },

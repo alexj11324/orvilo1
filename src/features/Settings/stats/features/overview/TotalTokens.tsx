@@ -13,7 +13,6 @@ import { formatShortenNumber } from '@/utils/format';
 import { lastMonth } from '@/utils/time';
 
 import { HeatmapType } from '../../types';
-import TotalCard from './TotalCard';
 
 /**
  * Cumulative token count. Derived from the daily token-heatmap series (same SWR
@@ -21,7 +20,7 @@ import TotalCard from './TotalCard';
  * `count` sums the whole window and `prevCount` sums up to the end of last month
  * so the card shows the same month-over-month delta as its siblings.
  */
-const TotalTokens = memo<{ inShare?: boolean }>(({ inShare }) => {
+const TotalTokens = memo(() => {
   const { t } = useTranslation('auth');
 
   const { data, isLoading, error, mutate } = useClientDataSWR(
@@ -41,14 +40,6 @@ const TotalTokens = memo<{ inShare?: boolean }>(({ inShare }) => {
     }
     return { count, prevCount };
   }, [data]);
-
-  if (inShare)
-    return (
-      <TotalCard
-        count={formatShortenNumber(prevCount) || '--'}
-        title={t('stats.heatmapStats.totalTokens')}
-      />
-    );
 
   // Metric variant: a failed fetch must never fall through to a confident `$0`
   // — show a failed marker + Retry where the number would sit (ux Read §1.1).

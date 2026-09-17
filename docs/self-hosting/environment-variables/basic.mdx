@@ -268,18 +268,6 @@ For migration compatibility, `VISUAL_UNDERSTANDING_PROVIDER` and `VISUAL_UNDERST
 
 When this feature is enabled, users can upload audio, images, or videos while using a model that does not have the corresponding native multimodal capability, as long as the active model supports tool use. File upload still requires the normal file storage configuration for your deployment.
 
-## AI Image
-
-### `AI_IMAGE_DEFAULT_IMAGE_NUM`
-
-- Type: Optional
-- Description: Sets the default number of images to generate for AI image generation. Users can still override this value in their settings.
-- Default: `2`
-- Example: `6`
-- Range: `1-20`
-
-This environment variable allows administrators to customize the default image generation count for their deployment. The value must be between 1 and 20. If not set, it defaults to 2. Users can still adjust this value in their personal settings.
-
 ## Plugin Service
 
 ### `TOOL_NAME_MAX_LENGTH`

@@ -142,15 +142,6 @@ export const useCommandMenu = () => {
     }
   }, [inboxAgentId, search, navigate, onClose]);
 
-  const handleAIPainting = useCallback(() => {
-    // Navigate to painting page with search as prompt
-    if (search.trim()) {
-      const prompt = encodeURIComponent(search.trim());
-      navigate(`/image?prompt=${prompt}`);
-      onClose();
-    }
-  }, [search, navigate, onClose]);
-
   const handleBack = useCallback(() => {
     setPages((prev) => prev.slice(0, -1));
   }, [setPages]);
@@ -229,7 +220,6 @@ export const useCommandMenu = () => {
 
   return {
     closeCommandMenu,
-    handleAIPainting,
     handleAskLobeAI,
     handleBack,
     handleCreateAgentTeam,

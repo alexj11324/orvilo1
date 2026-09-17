@@ -62,12 +62,6 @@ const mockGlobalConfigDependencies = (
     fileEnv: {},
   }));
 
-  vi.doMock('@/envs/image', () => ({
-    imageEnv: {
-      AI_IMAGE_DEFAULT_IMAGE_NUM: undefined,
-    },
-  }));
-
   vi.doMock('@/envs/knowledge', () => ({
     knowledgeEnv: {
       DEFAULT_FILES_CONFIG: undefined,

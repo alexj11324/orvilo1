@@ -30,8 +30,12 @@ import {
 export type NavigationTier = 'primary' | 'retired' | 'secondary';
 
 export interface NavigationRoute {
-  /** CMDK i18n key in common namespace */
-  cmdkKey: string;
+  /**
+   * CMDK i18n key in common namespace.
+   * Absent on retired routes — a withdrawn surface has no palette entry, so it
+   * carries no palette wiring.
+   */
+  cmdkKey?: string;
   /** Route icon component */
   icon: LucideIcon;
   /** Unique route identifier */
@@ -56,31 +60,22 @@ export interface NavigationRoute {
  */
 export const NAVIGATION_ROUTES: NavigationRoute[] = [
   {
-    cmdkKey: 'cmdk.community',
     icon: ShapesIcon,
     id: 'community',
-    keywords: ['discover', 'market', 'assistant', 'model', 'provider', 'mcp'],
-    keywordsKey: 'cmdk.keywords.community',
     path: '/community',
     pathPrefix: '/community',
     tier: 'retired',
   },
   {
-    cmdkKey: 'cmdk.video',
     icon: Video,
     id: 'video',
-    keywords: ['video', 'generate', 'seedance', 'kling'],
-    keywordsKey: 'cmdk.keywords.video',
     path: '/video',
     pathPrefix: '/video',
     tier: 'retired',
   },
   {
-    cmdkKey: 'cmdk.painting',
     icon: Image,
     id: 'image',
-    keywords: ['painting', 'art', 'generate', 'draw'],
-    keywordsKey: 'cmdk.keywords.painting',
     path: '/image',
     pathPrefix: '/image',
     tier: 'retired',
@@ -96,22 +91,16 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
     tier: 'secondary',
   },
   {
-    cmdkKey: 'cmdk.pages',
     icon: FilePenIcon,
     id: 'page',
-    keywords: ['documents', 'write', 'notes'],
-    keywordsKey: 'cmdk.keywords.pages',
     path: '/page',
     pathPrefix: '/page',
     tier: 'retired',
     useDynamicTitle: true,
   },
   {
-    cmdkKey: 'cmdk.memory',
     icon: BrainCircuit,
     id: 'memory',
-    keywords: ['identities', 'contexts', 'preferences', 'experiences'],
-    keywordsKey: 'cmdk.keywords.memory',
     path: '/memory',
     pathPrefix: '/memory',
     tier: 'retired',

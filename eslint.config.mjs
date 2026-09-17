@@ -341,8 +341,6 @@ export default eslint(
   },
   {
     // Sidebar/titlebar/command-menu trees the desktop shell renders outside TabHost.
-    // GenerationLayout is split deliberately: Body and Header are portal'd into the
-    // sidebar, while the layout root stays in the route tree and owns the url sync.
     files: [
       'src/features/AgentSidebar/**/*.{ts,tsx}',
       'src/features/CommandMenu/**/*.{ts,tsx}',
@@ -350,8 +348,6 @@ export default eslint(
       'src/features/HomeSidebar/**/*.{ts,tsx}',
       'src/features/Pages/PageLayout/Sidebar.{ts,tsx}',
       'src/features/WorkspaceSetting/SideBar/**/*.{ts,tsx}',
-      'src/routes/(main)/(create)/features/GenerationLayout/Body/**/*.{ts,tsx}',
-      'src/routes/(main)/(create)/features/GenerationLayout/Header/**/*.{ts,tsx}',
     ],
     rules: {
       'no-restricted-imports': createRestrictedImportRule({
@@ -523,15 +519,6 @@ export default eslint(
       'no-undef': 0,
       'react/jsx-no-undef': 0,
       'react/no-unescaped-entities': 0,
-    },
-  },
-  // Store/image and types/generation - disable sorting
-  {
-    files: ['src/store/image/**/*', 'src/types/generation/**/*'],
-    rules: {
-      'perfectionist/sort-interfaces': 0,
-      'perfectionist/sort-object-types': 0,
-      'perfectionist/sort-objects': 0,
     },
   },
   // model-bank aiModels - enforce English-only descriptions

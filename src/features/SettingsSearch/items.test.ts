@@ -21,7 +21,6 @@ const webContext: SettingsSearchContext = {
   isDesktop: false,
   isLogin: true,
   isWindows: false,
-  showAiImage: true,
 };
 
 describe('settings search index', () => {
@@ -44,6 +43,12 @@ describe('settings search index', () => {
 
   it('indexes the inbox notification channel', () => {
     expect(SETTINGS_SEARCH_ITEMS.some((item) => item.anchor === 'notification-inbox')).toBe(true);
+  });
+
+  it('does not index the retired image-generation settings entry', () => {
+    // The /image workbench settings were retired; a stale anchor would degrade
+    // to a plain tab switch and keep dead locale keys reachable.
+    expect(SETTINGS_SEARCH_ITEMS.some((item) => item.anchor === 'service-model-image')).toBe(false);
   });
 
   it('keeps an English floor for labs and oauth apps tabs', () => {

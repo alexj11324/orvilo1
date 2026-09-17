@@ -10,7 +10,6 @@ import {
 import { createTRPCReact } from '@trpc/react-query';
 import { observable } from '@trpc/server/observable';
 import debug from 'debug';
-import { type ModelProvider } from 'model-bank';
 import superjson from 'superjson';
 
 import { isDesktop } from '@/const/version';
@@ -164,20 +163,7 @@ const linkOptions = {
     // dynamic import to avoid circular dependency
     const { createHeaderWithAuth } = await import('@/services/_auth');
 
-    let provider: ModelProvider | undefined;
-    // for image page, we need to get the provider from the store
-    log('Getting provider from store for image page: %s', location.pathname);
-    if (location.pathname === '/image') {
-      const { getImageStoreState } = await import('@/store/image');
-      const { imageGenerationConfigSelectors } =
-        await import('@/store/image/slices/generationConfig/selectors');
-      provider = imageGenerationConfigSelectors.provider(getImageStoreState()) as ModelProvider;
-      log('Getting provider from store for image page: %s', provider);
-    }
-
-    // Only include provider in JWT for image operations
-    // For other operations (like knowledge base embedding), let server use its own config
-    const headers = await createHeaderWithAuth(provider ? { provider } : undefined);
+    const headers = await createHeaderWithAuth();
 
     // Let business layer contribute extra headers (e.g. workspace context in Cloud).
     // Community ships an empty stub at this slot.

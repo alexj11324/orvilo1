@@ -14,6 +14,10 @@ import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
+import {
+  LinearConflictResolutionError,
+  LinearConflictResolutionService,
+} from '@/server/services/linearSync/conflictResolution';
 import { LinearIntegrationTaskService } from '@/server/services/linearSync/integrationTask';
 import {
   buildLinearAuthorizationUrl,
@@ -134,6 +138,24 @@ export const linearSyncRouter = router({
     }
   }),
 
+  conflicts: linearSyncAdminProcedure
+    .input(
+      z.object({
+        bindingId: z.string().uuid().optional(),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        return {
+          data: await ctx.linearSyncModel.listIssueConflicts(input.bindingId, input.limit),
+          success: true,
+        };
+      } catch (error) {
+        mapError(error, 'listConflicts');
+      }
+    }),
+
   installationRecovery: linearSyncAdminProcedure.query(async ({ ctx }) => {
     try {
       return { data: await ctx.linearSyncModel.listInstallationRecoveryState(), success: true };
@@ -191,6 +213,39 @@ export const linearSyncRouter = router({
         };
       } catch (error) {
         mapError(error, 'retryOperation');
+      }
+    }),
+
+  resolveConflict: linearSyncAdminProcedure
+    .input(
+      z.object({
+        expectedDetectedAt: z.string().datetime(),
+        expectedLocalRevision: z.number().int().nonnegative(),
+        expectedRemoteUpdatedAt: z.string().datetime().nullable(),
+        fieldSources: z.record(z.string(), z.enum(['linear', 'local'])).optional(),
+        issueLinkId: z.string().uuid(),
+        strategy: z.enum(['keep_linear', 'keep_local', 'merge']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await new LinearConflictResolutionService(
+          ctx.serverDB,
+          ctx.workspaceId!,
+        ).resolve(input);
+        if (data.outboxQueued) {
+          await LinearSyncWorkflow.triggerInstallation({
+            installationId: data.installationId,
+            limit: 20,
+            workspaceId: ctx.workspaceId!,
+          });
+        }
+        return { data, message: 'Linear conflict resolved', success: true };
+      } catch (error) {
+        if (error instanceof LinearConflictResolutionError) {
+          throw new TRPCError({ code: error.code, message: error.message });
+        }
+        mapError(error, 'resolveConflict');
       }
     }),
 

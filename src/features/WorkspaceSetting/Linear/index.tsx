@@ -230,6 +230,40 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     text-overflow: ellipsis;
     white-space: nowrap;
   `,
+  conflictCard: css`
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    padding: 12px;
+    border: 1px solid ${cssVar.colorWarningBorder};
+    border-radius: ${cssVar.borderRadius};
+
+    background: ${cssVar.colorWarningBg};
+  `,
+  conflictField: css`
+    display: grid;
+    grid-template-columns: minmax(100px, 0.7fr) minmax(0, 1fr) minmax(0, 1fr) minmax(140px, 0.8fr);
+    gap: 8px;
+    align-items: center;
+
+    @media (width <= 680px) {
+      grid-template-columns: 1fr;
+    }
+  `,
+  conflictValue: css`
+    overflow: hidden;
+
+    padding-block: 6px;
+    padding-inline: 8px;
+    border-radius: ${cssVar.borderRadiusSM};
+
+    color: ${cssVar.colorTextSecondary};
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    background: ${cssVar.colorFillQuaternary};
+  `,
   statusCell: css`
     display: flex;
     flex-direction: column;
@@ -466,6 +500,10 @@ const LinearWorkspaceSettings = memo(() => {
   const [action, setAction] = useState<Action | null>(null);
   const [issueLinksLoading, setIssueLinksLoading] = useState(false);
   const [lastImport, setLastImport] = useState<ImportResult | null>(null);
+  const [conflictChoices, setConflictChoices] = useState<
+    Record<string, Record<string, 'linear' | 'local'>>
+  >({});
+  const [resolvingConflictId, setResolvingConflictId] = useState<string | null>(null);
   const isConnected = installations.some((installation) => installation.status === 'active');
 
   const selectedInstallation = installations.find((item) => item.id === selectedInstallationId);
@@ -699,6 +737,46 @@ const LinearWorkspaceSettings = memo(() => {
     }
   };
 
+  const resolveConflict = async (
+    link: LinearIssueLinkView,
+    strategy: 'keep_linear' | 'keep_local' | 'merge',
+  ) => {
+    if (!canManage || !link.conflict || link.conflict.localRevision === undefined) return;
+    const fieldSources = conflictChoices[link.id] ?? {};
+    if (strategy === 'merge' && link.conflict.fields.some((field) => !fieldSources[field])) return;
+
+    setResolvingConflictId(link.id);
+    try {
+      await lambdaClient.linearSync.resolveConflict.mutate({
+        expectedDetectedAt: link.conflict.detectedAt,
+        expectedLocalRevision: link.conflict.localRevision,
+        expectedRemoteUpdatedAt:
+          link.conflict.remoteUpdatedAt ?? link.remoteSnapshot?.updatedAt ?? null,
+        ...(strategy === 'merge' ? { fieldSources } : {}),
+        issueLinkId: link.id,
+        strategy,
+      });
+      setConflictChoices((current) => {
+        const next = { ...current };
+        delete next[link.id];
+        return next;
+      });
+      if (selectedBinding) await loadIssueLinks(selectedBinding.id);
+      toast.success(t('workspaceSetting.linear.conflicts.resolveSuccess'));
+    } catch (error) {
+      toast.error(errorMessage(error, t('workspaceSetting.linear.conflicts.resolveFailed')));
+    } finally {
+      setResolvingConflictId(null);
+    }
+  };
+
+  const updateConflictChoice = (issueLinkId: string, field: string, source: 'linear' | 'local') => {
+    setConflictChoices((current) => ({
+      ...current,
+      [issueLinkId]: { ...current[issueLinkId], [field]: source },
+    }));
+  };
+
   const persistBinding = async (input: {
     action: Action;
     autoExecutionEnabled?: boolean;
@@ -899,6 +977,14 @@ const LinearWorkspaceSettings = memo(() => {
 
   const renderOperations = () => {
     const recoverySummary = getLinearRecoverySummary(recoveryRows);
+    const conflicts = issueLinks.filter((link) => link.syncState === 'conflict' && link.conflict);
+    const valueLabel = (value: unknown) => {
+      if (value === undefined) return t('workspaceSetting.linear.conflicts.missing');
+      if (value === null) return t('workspaceSetting.linear.conflicts.empty');
+      const serialized =
+        typeof value === 'string' ? value : (JSON.stringify(value) ?? String(value));
+      return serialized.length > 120 ? `${serialized.slice(0, 117)}…` : serialized;
+    };
     return (
       <StepCard
         description={t('workspaceSetting.linear.operations.description')}
@@ -985,6 +1071,113 @@ const LinearWorkspaceSettings = memo(() => {
                 </div>
               ))}
             </div>
+          )}
+          <Flexbox gap={8}>
+            <Text strong>{t('workspaceSetting.linear.conflicts.title')}</Text>
+            <Text type={'secondary'}>{t('workspaceSetting.linear.conflicts.description')}</Text>
+          </Flexbox>
+          {conflicts.length === 0 ? (
+            <Text className={styles.muted}>
+              {t('workspaceSetting.linear.conflicts.emptyState')}
+            </Text>
+          ) : (
+            <Flexbox gap={12}>
+              {conflicts.map((link) => {
+                const conflict = link.conflict!;
+                const selections = conflictChoices[link.id] ?? {};
+                const mergeReady =
+                  conflict.localRevision !== undefined &&
+                  conflict.fields.every((field) => Boolean(selections[field]));
+                return (
+                  <div className={styles.conflictCard} key={link.id}>
+                    <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
+                      <Flexbox gap={2} style={{ minWidth: 0 }}>
+                        <Text strong>{link.linearIdentifier}</Text>
+                        <Text className={styles.muted} fontSize={12}>
+                          {t('workspaceSetting.linear.conflicts.detectedAt', {
+                            time: dateLabel(conflict.detectedAt, i18n.language),
+                          })}
+                        </Text>
+                      </Flexbox>
+                      <Tag size={'small'}>{t('workspaceSetting.linear.import.conflict')}</Tag>
+                    </Flexbox>
+                    {conflict.fields.map((field) => (
+                      <div className={styles.conflictField} key={field}>
+                        <Text weight={500}>{field}</Text>
+                        <Text
+                          className={styles.conflictValue}
+                          title={valueLabel(conflict.local[field])}
+                        >
+                          {t('workspaceSetting.linear.conflicts.localValue', {
+                            value: valueLabel(conflict.local[field]),
+                          })}
+                        </Text>
+                        <Text
+                          className={styles.conflictValue}
+                          title={valueLabel(conflict.remote[field])}
+                        >
+                          {t('workspaceSetting.linear.conflicts.linearValue', {
+                            value: valueLabel(conflict.remote[field]),
+                          })}
+                        </Text>
+                        <Select
+                          placeholder={t('workspaceSetting.linear.conflicts.chooseField')}
+                          value={selections[field]}
+                          options={[
+                            {
+                              label: t('workspaceSetting.linear.conflicts.chooseLocal'),
+                              value: 'local',
+                            },
+                            {
+                              label: t('workspaceSetting.linear.conflicts.chooseLinear'),
+                              value: 'linear',
+                            },
+                          ]}
+                          onChange={(value) =>
+                            updateConflictChoice(link.id, field, value as 'linear' | 'local')
+                          }
+                        />
+                      </div>
+                    ))}
+                    {conflict.localRevision === undefined ? (
+                      <Alert
+                        showIcon
+                        description={t('workspaceSetting.linear.conflicts.refreshRequired')}
+                        type={'warning'}
+                      />
+                    ) : (
+                      <Flexbox horizontal gap={8} justify={'flex-end'} wrap={'wrap'}>
+                        <Button
+                          disabled={!canManage}
+                          loading={resolvingConflictId === link.id}
+                          size={'small'}
+                          onClick={() => void resolveConflict(link, 'keep_local')}
+                        >
+                          {t('workspaceSetting.linear.conflicts.keepLocal')}
+                        </Button>
+                        <Button
+                          disabled={!canManage}
+                          loading={resolvingConflictId === link.id}
+                          size={'small'}
+                          onClick={() => void resolveConflict(link, 'keep_linear')}
+                        >
+                          {t('workspaceSetting.linear.conflicts.keepLinear')}
+                        </Button>
+                        <Button
+                          disabled={!canManage || !mergeReady}
+                          loading={resolvingConflictId === link.id}
+                          size={'small'}
+                          type={'primary'}
+                          onClick={() => void resolveConflict(link, 'merge')}
+                        >
+                          {t('workspaceSetting.linear.conflicts.merge')}
+                        </Button>
+                      </Flexbox>
+                    )}
+                  </div>
+                );
+              })}
+            </Flexbox>
           )}
         </Flexbox>
       </StepCard>

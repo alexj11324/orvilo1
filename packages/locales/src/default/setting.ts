@@ -3543,6 +3543,25 @@ When I am ___, I need ___
   'workspaceSetting.linear.wizard.scopeBoundaryTitle': 'One shared task view',
   'workspaceSetting.linear.wizard.scopeBoundary':
     'Linear-linked issues continue to use the existing Workspace, Project, and Agent task views. This setup does not create a second task pool or route.',
+  'workspaceSetting.linear.conflicts.title': 'Synchronization conflicts',
+  'workspaceSetting.linear.conflicts.description':
+    'Review both values. Keep one side or choose a source for every field before merging.',
+  'workspaceSetting.linear.conflicts.emptyState': 'No Linear conflicts need attention.',
+  'workspaceSetting.linear.conflicts.detectedAt': 'Detected {{time}}',
+  'workspaceSetting.linear.conflicts.localValue': 'Local: {{value}}',
+  'workspaceSetting.linear.conflicts.linearValue': 'Linear: {{value}}',
+  'workspaceSetting.linear.conflicts.chooseField': 'Choose a value',
+  'workspaceSetting.linear.conflicts.chooseLocal': 'Use local',
+  'workspaceSetting.linear.conflicts.chooseLinear': 'Use Linear',
+  'workspaceSetting.linear.conflicts.keepLocal': 'Keep local',
+  'workspaceSetting.linear.conflicts.keepLinear': 'Keep Linear',
+  'workspaceSetting.linear.conflicts.merge': 'Merge selected',
+  'workspaceSetting.linear.conflicts.missing': 'Missing',
+  'workspaceSetting.linear.conflicts.empty': 'Empty',
+  'workspaceSetting.linear.conflicts.refreshRequired':
+    'This conflict predates versioned resolution. Refresh it through synchronization before resolving.',
+  'workspaceSetting.linear.conflicts.resolveSuccess': 'Linear conflict resolved',
+  'workspaceSetting.linear.conflicts.resolveFailed': 'Could not resolve the Linear conflict',
   'workspaceSetting.linear.operations.title': 'Linear operations recovery',
   'workspaceSetting.linear.operations.description':
     'Review failed durable work and safely retry rows that are no longer running.',

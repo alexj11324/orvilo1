@@ -530,6 +530,21 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  async lockBindingByProjectId(projectId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearProjectBindings)
+      .where(
+        and(
+          eq(linearProjectBindings.workspaceId, this.workspaceId),
+          eq(linearProjectBindings.projectId, projectId),
+        ),
+      )
+      .for('update')
+      .limit(1);
+    return row ?? null;
+  }
+
   async findBindingByTaskId(taskId: string) {
     const [row] = await this.db
       .select({ binding: linearProjectBindings })
@@ -914,6 +929,49 @@ export class LinearSyncModel {
       .orderBy(desc(linearIssueLinks.updatedAt))
       .limit(limit)
       .offset(offset);
+  }
+
+  async listIssueConflicts(bindingId?: string, limit = 50) {
+    const boundedLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
+    return this.db
+      .select()
+      .from(linearIssueLinks)
+      .where(
+        and(
+          eq(linearIssueLinks.workspaceId, this.workspaceId),
+          eq(linearIssueLinks.syncState, 'conflict'),
+          isNotNull(linearIssueLinks.conflict),
+          bindingId ? eq(linearIssueLinks.bindingId, bindingId) : undefined,
+        ),
+      )
+      .orderBy(desc(linearIssueLinks.updatedAt))
+      .limit(boundedLimit);
+  }
+
+  /** Lock every local row whose versions fence a manual conflict resolution. */
+  async lockIssueConflictContext(issueLinkId: string) {
+    const [row] = await this.db
+      .select({
+        binding: linearProjectBindings,
+        installation: linearInstallations,
+        issueLink: linearIssueLinks,
+        task: tasks,
+      })
+      .from(linearIssueLinks)
+      .innerJoin(tasks, eq(tasks.id, linearIssueLinks.taskId))
+      .innerJoin(linearInstallations, eq(linearInstallations.id, linearIssueLinks.installationId))
+      .innerJoin(linearProjectBindings, eq(linearProjectBindings.id, linearIssueLinks.bindingId))
+      .where(
+        and(
+          eq(linearIssueLinks.id, issueLinkId),
+          eq(linearIssueLinks.workspaceId, this.workspaceId),
+          eq(tasks.workspaceId, this.workspaceId),
+          eq(linearInstallations.workspaceId, this.workspaceId),
+        ),
+      )
+      .for('update')
+      .limit(1);
+    return row ?? null;
   }
 
   async createIssueLink(input: {
@@ -1457,6 +1515,83 @@ export class LinearSyncModel {
       .where(and(eq(linearSyncOutbox.id, id), eq(linearSyncOutbox.workspaceId, this.workspaceId)))
       .returning();
     return row ?? null;
+  }
+
+  /**
+   * Replace the failed update that produced a conflict with the exact patch
+   * chosen by the user. A provider mutation already in flight is a hard fence:
+   * its outcome must be reconciled before a manual resolution can continue.
+   */
+  async replaceIssueConflictOutbox(input: {
+    expectedLocalRevision: number;
+    initialStatus: 'paused' | 'pending';
+    installationId: string;
+    linkId: string;
+    payload: Record<string, unknown> | null;
+    reason: string;
+    taskId: string;
+  }) {
+    const activeRows = await this.db
+      .select({ id: linearSyncOutbox.id, status: linearSyncOutbox.status })
+      .from(linearSyncOutbox)
+      .where(
+        and(
+          eq(linearSyncOutbox.workspaceId, this.workspaceId),
+          eq(linearSyncOutbox.linkId, input.linkId),
+          eq(linearSyncOutbox.operation, 'update_issue'),
+          inArray(linearSyncOutbox.status, [
+            'dead_letter',
+            'failed',
+            'outcome_unknown',
+            'paused',
+            'pending',
+            'sending',
+          ]),
+        ),
+      )
+      .for('update');
+
+    if (activeRows.some((row) => row.status === 'sending' || row.status === 'outcome_unknown')) {
+      throw new Error('Linear conflict has an in-flight or unknown write outcome');
+    }
+
+    const cancellableIds = activeRows.map((row) => row.id);
+    if (cancellableIds.length > 0) {
+      await this.db
+        .update(linearSyncOutbox)
+        .set({
+          availableAt: new Date(),
+          lastError: input.reason.slice(0, 2_000),
+          lockedUntil: null,
+          leaseOwner: null,
+          outcomeUnknownAt: null,
+          status: 'cancelled',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(linearSyncOutbox.workspaceId, this.workspaceId),
+            inArray(linearSyncOutbox.id, cancellableIds),
+          ),
+        );
+    }
+
+    if (!input.payload || Object.keys(input.payload).length === 0) return null;
+    const [outbox] = await this.db
+      .insert(linearSyncOutbox)
+      .values({
+        expectedLocalRevision: input.expectedLocalRevision,
+        installationId: input.installationId,
+        linkId: input.linkId,
+        operation: 'update_issue',
+        payload: input.payload,
+        status: input.initialStatus,
+        taskId: input.taskId,
+        workspaceId: this.workspaceId,
+      })
+      .returning();
+    if (!outbox) throw new Error('Failed to persist resolved Linear outbox intent');
+    return outbox;
   }
 
   async queueOutbox(input: QueueLinearSyncInput) {

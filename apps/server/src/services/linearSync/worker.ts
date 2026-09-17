@@ -26,7 +26,11 @@ import { tasks } from '@/database/schemas/task';
 import type { LobeChatDatabase } from '@/database/type';
 
 import { LinearIntegrationTaskService } from './integrationTask';
-import { changedLinearIssueFields, mergeLinearIssueSnapshots } from './merge';
+import {
+  changedLinearIssueFields,
+  mergeLinearIssueSnapshots,
+  taskLinearIssueSnapshot,
+} from './merge';
 import {
   type LinearIssueProvider,
   type LinearIssueUpdateInput,
@@ -86,37 +90,6 @@ const taskPriority = (priority: number | null | undefined) => {
   if (priority === null || priority === undefined) return 0;
   return Math.max(0, Math.min(4, priority));
 };
-
-const taskSnapshot = (
-  task: TaskItem,
-  issue: LinearIssueSnapshot,
-  baseline: LinearIssueSnapshot,
-  settings: LinearProjectBindingSettings,
-): LinearIssueSnapshot => ({
-  assigneeId:
-    settings.assignmentMappings?.find(
-      (mapping) =>
-        mapping.orviloAgentId === task.assigneeAgentId ||
-        mapping.orviloUserId === task.assigneeUserId,
-    )?.linearUserId ?? issue.assigneeId,
-  id: issue.id,
-  identifier: issue.identifier,
-  description: task.instruction,
-  priority: task.priority,
-  // Task.projectId is an Orvilo project id. The snapshot field is a Linear
-  // project id, so it must remain on the remote identity side of the binding.
-  projectId: issue.projectId,
-  stateId:
-    settings.statusMappings?.find(
-      (mapping) =>
-        mapping.workflowCategory === task.workflowCategory ||
-        (!mapping.workflowCategory && mapping.localStatus === task.status),
-    )?.linearStateId ??
-    task.workflowStateId ??
-    issue.stateId,
-  title: task.name || task.identifier,
-  ...(Array.isArray(baseline.labelIds) ? { labelIds: baseline.labelIds } : {}),
-});
 
 const remoteTaskPatch = (
   task: TaskItem,
@@ -2130,7 +2103,12 @@ export class LinearSyncWorker {
       }
     }
 
-    const local = taskSnapshot(task, issue, existingLink.lastConfirmedSnapshot, binding.settings);
+    const local = taskLinearIssueSnapshot(
+      task,
+      issue,
+      existingLink.lastConfirmedSnapshot,
+      binding.settings,
+    );
     const merged = mergeLinearIssueSnapshots({
       base: existingLink.lastConfirmedSnapshot,
       local,
@@ -2138,7 +2116,11 @@ export class LinearSyncWorker {
     });
     if (merged.conflicts) {
       await model.updateIssueLink(existingLink.id, {
-        conflict: merged.conflicts,
+        conflict: {
+          ...merged.conflicts,
+          localRevision: task.domainRevision,
+          remoteUpdatedAt: issue.updatedAt ?? null,
+        },
         lastInboundDeliveryId: row.id,
         remoteSnapshot: issue,
         remoteUpdatedAt: incomingUpdatedAt,

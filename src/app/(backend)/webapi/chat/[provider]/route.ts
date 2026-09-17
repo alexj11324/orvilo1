@@ -9,7 +9,10 @@ import { type ChatStreamPayload } from '@/types/openai/chat';
 import { createErrorResponse } from '@/utils/errorResponse';
 import { getTracePayload } from '@/utils/trace';
 
-import { resolveValidWorkspaceIdFromRequest } from '../../_utils/workspace';
+import {
+  resolveValidWorkspaceIdFromRequest,
+  WorkspaceAccessDeniedError,
+} from '../../_utils/workspace';
 
 // If user don't use fluid compute, will build  failed
 // this enforce user to enable fluid compute
@@ -43,6 +46,12 @@ export const POST = checkAuth(async (req: Request, { params, userId, serverDB })
       signal: req.signal,
     });
   } catch (e) {
+    // An explicitly addressed workspace the caller can't access is rejected —
+    // never silently served from personal space.
+    if (e instanceof WorkspaceAccessDeniedError) {
+      return createErrorResponse(ChatErrorType.ContentNotFound, { error: e, provider });
+    }
+
     const {
       errorType = ChatErrorType.InternalServerError,
       error: errorContent,

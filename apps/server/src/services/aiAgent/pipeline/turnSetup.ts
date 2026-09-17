@@ -11,7 +11,6 @@ import type {
 } from '@orvilo/types';
 import {
   applyTopicExecutionConfig,
-  ChatErrorType,
   RequestTrigger,
   resolveHeterogeneousProviderTopicModel,
   snapshotTopicExecutionConfig,
@@ -34,8 +33,6 @@ import { markdownToTxt } from '@/utils/markdownToTxt';
 import type { DeviceAccessReason } from '../deviceAccessPolicy';
 import { resolveDeviceAccessPolicy } from '../deviceAccessPolicy';
 import { ingestAttachment } from '../ingestAttachment';
-import type { AgentShareGate } from '../shareGate';
-import { reserveShareVisitorTopic, reserveShareVisitorTurn } from '../shareVisitorAbuseGuards';
 import type { InternalExecAgentParams } from '../types';
 
 const log = debug('lobe-server:ai-agent-service');
@@ -338,8 +335,6 @@ export interface TurnSetupInput {
   /** Raw resume flag — a resume run must land on an existing topic. */
   resume?: boolean;
   runFromHistory: boolean;
-  /** Shared-agent visitor gate — set only by the shareChat router. */
-  shareGate?: AgentShareGate;
   throwIfExecutionAborted: (stage: string) => Promise<void>;
   title?: string;
   trigger?: string;
@@ -410,7 +405,6 @@ export const setupTurn = async (
     resolvedAgentId,
     resume,
     runFromHistory,
-    shareGate,
     throwIfExecutionAborted,
     title,
     trigger,
@@ -439,19 +433,6 @@ export const setupTurn = async (
   let provider = agentConfig.provider!;
   const heterogeneousProvider = agentConfig.agencyConfig?.heterogeneousProvider;
   let pinnedHeterogeneousTopicModel: HeterogeneousTopicPin | undefined;
-
-  // Share-visitor fail-closed gate — reject a heterogeneous (Claude Code /
-  // Codex / …) agent BEFORE any topic/message row is written. Heterogeneous
-  // agents are not available for shared visitor runs. Checked here (using the
-  // agent-level config, before any topic-pinned model override) rather than
-  // at the later hetero-detection site (`isHeteroAgent`) so it runs ahead of
-  // ALL row creation, not just the message rows.
-  if (shareGate && (heterogeneousProvider?.type || isHeterogeneousAgentModelId(model))) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: ChatErrorType.ShareHeterogeneousAgentUnsupported,
-    });
-  }
 
   if (!topicId) {
     if (resume) {
@@ -508,39 +489,13 @@ export const setupTurn = async (
       // Snapshot the effective model as the topic's pinned model (config).
       model: snapshot.model,
       provider: snapshot.provider,
-      // Share-visitor runs: the topic row belongs to the creator
-      // (`deps.userId`), but stamping the visitor's id here is what
-      // `TopicModel`'s creator-facing reads (`query`, `count`, `queryTopics`,
-      // `queryRecent`, `rank`) filter out via `notShareVisitorTopic()`, and
-      // what lets shareChat scope reads per visitor (`queryBySender` /
-      // `countBySender`). There is no share-instance column — a visitor
-      // topic is tied to its share purely through `(agentId, senderId)`,
-      // which is unambiguous because `agent_shares` is 1:1 per agent.
-      senderId: shareGate?.visitorUserId,
       title:
         title !== undefined
           ? title
           : fallbackTitleSource.slice(0, 50) + (fallbackTitleSource.length > 50 ? '...' : ''),
       trigger,
     };
-    // Share-visitor runs must reserve the `maxTopicsPerVisitor` slot and
-    // insert the topic in ONE locked transaction — see
-    // `reserveShareVisitorTopic`'s JSDoc for the race this closes. Non-share
-    // runs (no per-visitor cap to enforce) keep the plain unlocked insert.
-    const newTopic = shareGate
-      ? await reserveShareVisitorTopic(
-          {
-            agentId: resolvedAgentId,
-            db: deps.db,
-            expectedShareId: shareGate.shareId,
-            ownerId: deps.userId,
-            visitorUserId: shareGate.visitorUserId,
-            workspaceId: deps.workspaceId,
-          },
-          newTopicParams,
-          clientIds?.topicId,
-        )
-      : await deps.topicModel.create(newTopicParams, clientIds?.topicId);
+    const newTopic = await deps.topicModel.create(newTopicParams, clientIds?.topicId);
     topicId = newTopic.id;
     log(
       'execAgent: created new topic %s with trigger %s, groupId %s, cronJobId %s',
@@ -559,20 +514,27 @@ export const setupTurn = async (
     // (config source of truth), NOT in metadata.
     const existingTopic = await deps.topicModel.findById(topicId);
 
-    // Fail-closed guard: a non-share run must never operate on a share-visitor
-    // topic. `findById` is ownership-scoped but deliberately does NOT exclude
-    // visitor topics (see its JSDoc) — they carry the CREATOR's own userId for
-    // billing attribution, so `deps.userId`'s ownership check alone lets a
-    // creator-authenticated but non-share call (e.g. hitting `aiAgent.execAgent`
-    // directly with a leaked/guessed visitor topicId) load a visitor
-    // conversation as if it were their own. A share visitor's own run is
-    // authorized separately via `shareGate` — already re-validated upstream by
-    // `findVisitorTopicOrThrow` in `shareChat.ts` — and must keep working.
-    if (!shareGate && existingTopic?.senderId) {
+    // Fail-closed guard: no run may ever operate on a share-visitor topic.
+    // Visitor topics carry the CREATOR's `userId` for billing attribution, so
+    // a creator-scoped but generic call — a scheduled retry/continuation
+    // handler, or `aiAgent.execAgent` hit directly with a leaked/guessed
+    // visitor topicId — could otherwise run the visitor's conversation as if
+    // it were the creator's own, now that the authorized entry point
+    // (`shareChat.execAgent`) is retired. `findById` usually filters visitor
+    // rows out entirely (default scope), so the miss case is probed through
+    // `findShareVisitorTopicIds` — a second `senderId` check catches an
+    // `includeShareVisitor`-scoped model being reused for execution.
+    if (existingTopic?.senderId) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found' });
     }
+    if (!existingTopic) {
+      const visitorTopicIds = await deps.topicModel.findShareVisitorTopicIds([topicId]);
+      if (visitorTopicIds.length > 0) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found' });
+      }
+    }
 
-    if (existingTopic && !shareGate) {
+    if (existingTopic) {
       let executionConfig = existingTopic.metadata?.executionConfig;
       if (!executionConfig) {
         const fallback = snapshotTopicExecutionConfig({
@@ -622,15 +584,6 @@ export const setupTurn = async (
         effort: pinnedHeteroEffort,
       };
     }
-
-    // Re-assert the share restriction after topic overrides are applied.
-    // Heterogeneous agents are not available for shared visitor runs.
-    if (shareGate && isHeterogeneousAgentModelId(model)) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: ChatErrorType.ShareHeterogeneousAgentUnsupported,
-      });
-    }
   }
 
   await throwIfExecutionAborted('topic setup');
@@ -644,7 +597,6 @@ export const setupTurn = async (
   // chat) and stops the device list from leaking into the LLM context.
   const { canUseDevice, reason: deviceAccessReason } = resolveDeviceAccessPolicy({
     botContext,
-    shareVisitor: !!shareGate,
   });
   log(
     'execAgent: device access policy → canUseDevice=%s, reason=%s, hasBotContext=%s',
@@ -735,33 +687,13 @@ export const setupTurn = async (
     threadId: appContext?.threadId ?? undefined,
     topicId,
   };
-  // Share-visitor runs must reserve the `maxTurnsPerTopic` slot and insert
-  // the user message in ONE locked transaction — see
-  // `reserveShareVisitorTurn`'s JSDoc for the race this closes (same class of
-  // count-then-act bug as the topic cap above). Harmless no-op on a topic
-  // this same call just created (count is 0). Non-share runs (no per-turn
-  // cap) keep the plain unlocked insert.
   const userMessageRecord = runFromHistory
     ? undefined
-    : shareGate
-      ? await reserveShareVisitorTurn(
-          {
-            agentId: shareGate.agentId,
-            db: deps.db,
-            expectedShareId: shareGate.shareId,
-            ownerId: deps.userId,
-            topicId,
-            workspaceId: deps.workspaceId,
-          },
-          userMessageParams,
-          // The id the client's optimistic user row already renders under.
-          clientIds?.userMessageId,
-        )
-      : await deps.messageModel.create(
-          userMessageParams,
-          // The id the client's optimistic user row already renders under.
-          clientIds?.userMessageId,
-        );
+    : await deps.messageModel.create(
+        userMessageParams,
+        // The id the client's optimistic user row already renders under.
+        clientIds?.userMessageId,
+      );
   if (userMessageRecord) {
     selfMessageIds.add(userMessageRecord.id);
     log('execAgent: created user message %s', userMessageRecord.id);
@@ -838,21 +770,9 @@ export const setupTurn = async (
   // only applies to the server-side LLM pipeline, so it is intentionally NOT
   // enqueued for hetero runs (which hand off to an external CLI). Skip when this
   // invocation is itself an Agent Signal background run to avoid recursion.
-  //
-  // Share-visitor fail-closed gate — never enqueue this event for a
-  // share-visitor turn. `enqueueAgentSignalSourceEvent` is always called with
-  // `userId: deps.userId`, which is the share CREATOR (this service is
-  // instantiated with `share.ownerId` for every visitor run — see
-  // `shareChat.ts`), never `shareGate.visitorUserId`. The `agent.user.message`
-  // event it produces feeds policies that can reach the `userMemory` action
-  // and WRITE to the creator's memory. `allowReadMemory` only grants READING
-  // the creator's memory through the visible memory tool, so this gate must
-  // never be conditional on it: any share configuration would otherwise let a
-  // link visitor mutate the creator's account via this out-of-band channel.
   if (
     userMessageRecord &&
     !isHeteroAgent &&
-    !shareGate &&
     !shouldSuppressSignal({ appContext, slug: agentSlug ?? undefined })
   ) {
     void enqueueAgentSignalSourceEvent(

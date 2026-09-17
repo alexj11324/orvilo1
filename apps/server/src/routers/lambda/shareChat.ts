@@ -1,25 +1,18 @@
-import {
-  AGENT_SHARE_DEFAULT_MAX_TOPICS_PER_VISITOR,
-  AGENT_SHARE_DEFAULT_MAX_TURNS_PER_TOPIC,
-  SHARE_VISITOR_PROMPT_MAX_LENGTH,
-} from '@orvilo/const';
-import type { ChatMessageError } from '@orvilo/types';
-import { ChatErrorType, entityIdPattern, RequestTrigger } from '@orvilo/types';
+import { SHARE_VISITOR_PROMPT_MAX_LENGTH } from '@orvilo/const';
+import type { ChatMessageError, ExecAgentResult } from '@orvilo/types';
+import { entityIdPattern } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { z } from 'zod';
 
-import { checkAgentShareSpendAllowance } from '@/business/server/agent-share/spendGate';
 import { AgentShareModel } from '@/database/models/agentShare';
 import { MessageModel, sanitizeVisitorError } from '@/database/models/message';
 import { TopicModel } from '@/database/models/topic';
-import { UserModel } from '@/database/models/user';
 import type { LobeChatDatabase } from '@/database/type';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { signUserJWT } from '@/libs/trpc/utils/internalJwt';
 import { AiAgentService } from '@/server/services/aiAgent';
-import type { AgentShareGate } from '@/server/services/aiAgent/shareGate';
 import { FileService } from '@/server/services/file';
 
 import {
@@ -30,7 +23,12 @@ import {
 const log = debug('lobe-server:router:shareChat');
 
 /**
- * Visitor-facing execution chain for shared agents (Agent Share).
+ * Visitor-facing lifecycle surface for shared agents (Agent Share).
+ *
+ * Visitor EXECUTION is retired — `execAgent` refuses unconditionally — so
+ * what remains serves the visitor topics/runs persisted while execution
+ * existed: transcript reads, interrupting a still-running operation, and the
+ * gateway tokens those streams authenticate under.
  *
  * All procedures authenticate the VISITOR (ctx.userId) but operate on
  * CREATOR-owned rows: topics/messages of a share conversation carry the
@@ -43,12 +41,10 @@ const log = debug('lobe-server:router:shareChat');
  *
  * There is no share-instance column on `topics`: a visitor topic is tied to
  * its share purely through `(agentId, senderId)`, which is unambiguous because
- * `agent_shares` is 1:1 per agent. The known consequence is that a visitor's
- * own older topics resurface after an owner disables and re-enables the share
- * (a pause that keeps the same row, so nothing marks the topics as belonging
- * to an earlier run of it). That crosses no identity boundary — it is the same
- * visitor's own prior conversation with the same agent — but it does mean the
- * per-visitor topic cap counts them.
+ * `agent_shares` is 1:1 per agent. A visitor's own older topics resurface
+ * after an owner disables and re-enables the share — that crosses no identity
+ * boundary (it is the same visitor's own prior conversation with the same
+ * agent).
  *
  * Agent sharing is personal-only (workspace agents cannot be shared), so no
  * workspaceId is ever threaded into the creator-scoped models/services.
@@ -110,9 +106,9 @@ const findVisitorTopicOrThrow = async (
 /**
  * Convert an internal startup failure into a visitor-safe `TRPCError` — reuses
  * `sanitizeVisitorError` (`packages/database/src/models/message.ts`) instead of
- * a third ad-hoc redaction. `execAgent`/`interruptTask` can throw BEFORE any
- * Gateway streaming starts (e.g. the queue or runtime backend returns a
- * diagnostic), a failure surface neither existing visitor projection covers —
+ * a third ad-hoc redaction. `interruptTask` can throw BEFORE any Gateway
+ * streaming starts (e.g. the queue or runtime backend returns a diagnostic),
+ * a failure surface neither existing visitor projection covers —
  * `toVisitorMessage` only runs over persisted rows and the Gateway event
  * sanitizer only runs over live stream events — so without this, the raw
  * `error.message` (which can carry the creator's provider/infra diagnostic,
@@ -123,12 +119,6 @@ const findVisitorTopicOrThrow = async (
  *
  * `showErrorDetails` (the owner's opt-in on the share config) bypasses the
  * projection, exactly as it does for persisted rows and live stream events.
- *
- * Also the sink for a RESOLVED (not thrown) `{ success: false, error }` from
- * `AiAgentService.execAgent` — a `createOperation` startup failure resolves
- * rather than rejects there, so the visitor-facing `execAgent` handler below
- * re-throws that case through this same function instead of letting the raw
- * message escape via a normal `return`.
  */
 const toVisitorSafeStartupError = (
   context: string,
@@ -162,9 +152,14 @@ const toVisitorSafeStartupError = (
 
 export const shareChatRouter = router({
   /**
-   * Execute a shared agent as a visitor — the gateway-transport mirror of
-   * `aiAgent.execAgent`, restricted to the share surface: fixed agent, no
-   * device/local targets, share-config tool allowlist, per-visitor caps.
+   * Execute a shared agent as a visitor — RETIRED.
+   *
+   * The procedure and its input schema stay so a stale client or a still-valid
+   * visitor token reaches a clean refusal rather than a parse error. The
+   * refusal runs before anything is resolved, spend-checked, or written, so no
+   * topic/message/runtime row can be created by this path. See
+   * `assertAgentShareVisitorExecutionEnabled`'s JSDoc for why this is a
+   * complete choke point.
    */
   execAgent: shareChatProcedure
     .input(
@@ -180,187 +175,17 @@ export const shareChatRouter = router({
         /** See `SHARE_VISITOR_PROMPT_MAX_LENGTH`'s JSDoc for the size-bound rationale. */
         prompt: z.string().max(SHARE_VISITOR_PROMPT_MAX_LENGTH),
         shareId: z.string(),
-        /** Absent → the run creates a new visitor topic (counted against the topic cap). */
+        /** Retired field — kept only so stale clients pass schema validation. */
         topicId: z.string().nullish(),
       }),
     )
-    .mutation(async ({ input, ctx }) => {
-      // Before anything is resolved, spend-checked or written: visitor execution
-      // is retired, and this is the only entry point that can start a run.
-      assertAgentShareVisitorExecutionEnabled();
-
-      const share = await resolveLinkShareOrThrow(ctx.serverDB, input.shareId, ctx.userId);
-
-      // Spend admission runs FIRST, before any row is created: a run rejected
-      // by the runtime billing path instead fails mid-run, after the topic and
-      // placeholder messages have persisted, leaving junk topics with a "..."
-      // assistant row. No-op in deployments that do not meter share spend.
-      const spendGate = await checkAgentShareSpendAllowance({
-        agentId: share.agentId,
-        monthlySpendLimit: share.shareConfig.monthlySpendLimit,
-        ownerUserId: share.ownerId,
-        shareId: share.shareId,
-        visitorUserId: ctx.userId,
-      });
-      if (!spendGate.allowed) {
-        throw new TRPCError({
-          code: 'TOO_MANY_REQUESTS',
-          message: ChatErrorType.ShareSpendLimitExceeded,
-        });
-      }
-
-      // Runtime-normalized (findByShareIdWithAccessCheck fills defaults), but
-      // the config TYPE keeps every field optional — re-apply the same default
-      // constants rather than asserting non-null.
-      const maxTopicsPerVisitor =
-        share.shareConfig.maxTopicsPerVisitor ?? AGENT_SHARE_DEFAULT_MAX_TOPICS_PER_VISITOR;
-      const maxTurnsPerTopic =
-        share.shareConfig.maxTurnsPerTopic ?? AGENT_SHARE_DEFAULT_MAX_TURNS_PER_TOPIC;
-      const topicModel = new TopicModel(ctx.serverDB, share.ownerId, undefined, undefined, {
-        includeShareVisitor: true,
-      });
-      const messageModel = new MessageModel(ctx.serverDB, share.ownerId, undefined, undefined, {
-        includeShareVisitor: true,
-      });
-
-      // Fast, UX-only pre-check for both caps: reject an obviously-over-cap
-      // request BEFORE paying for agent-config/tool resolution, instead of only
-      // at dispatch. This is NOT the enforcement: it is a plain unlocked count,
-      // so a burst of concurrent requests can all read the same pre-insert
-      // count and all pass. The atomic, authoritative gate is
-      // `reserveShareVisitorTopicOrThrow` / `reserveShareVisitorTurnOrThrow`
-      // (`apps/server/src/services/aiAgent/shareVisitorAbuseGuards.ts`), which
-      // locks and re-checks the same counters immediately around the real
-      // topic/message INSERT inside `AiAgentService.execAgent`.
-      if (input.topicId) {
-        await findVisitorTopicOrThrow(topicModel, {
-          agentId: share.agentId,
-          topicId: input.topicId,
-          visitorUserId: ctx.userId,
-        });
-
-        const turnCount = await messageModel.countByTopic({
-          role: 'user',
-          topicId: input.topicId,
-        });
-        if (turnCount >= maxTurnsPerTopic) {
-          throw new TRPCError({
-            code: 'TOO_MANY_REQUESTS',
-            message: ChatErrorType.ShareTurnLimitExceeded,
-          });
-        }
-      } else {
-        const topicCount = await topicModel.countBySender({
-          agentId: share.agentId,
-          senderId: ctx.userId,
-        });
-        if (topicCount >= maxTopicsPerVisitor) {
-          throw new TRPCError({
-            code: 'TOO_MANY_REQUESTS',
-            message: ChatErrorType.ShareTopicLimitExceeded,
-          });
-        }
-      }
-
-      // Creator-scoped service: the run executes under the creator's identity
-      // (their agent config, connectors, billing context). The shareGate strips
-      // everything the share config doesn't grant.
-      const shareGate: AgentShareGate = {
-        agentId: share.agentId,
-        shareConfig: share.shareConfig,
-        // See `AgentShareGate.shareId`'s JSDoc — the share instance this run is
-        // authorized against, and the token every later revalidation compares.
-        shareId: share.shareId,
-        visitorUserId: ctx.userId,
-      };
-
-      // Creator's Market access token, mirroring aiAgentProcedure — the
-      // server-side tool runtime authenticates against the Market API with it.
-      let marketAccessToken: string | undefined;
-      try {
-        const userModel = new UserModel(ctx.serverDB, share.ownerId);
-        const settings = await userModel.getUserSettings();
-        marketAccessToken = (settings?.market as any)?.accessToken;
-      } catch {
-        // non-fatal — MarketService falls back to trustedClientToken
-      }
-
-      const aiAgentService = new AiAgentService(ctx.serverDB, share.ownerId, {
-        // Share visitor turns persist under the creator's `userId` — the
-        // service's internal `messageModel`/`topicModel`/runtime must be
-        // constructed with the visitor scope so reads/writes on
-        // `topics.senderId <> NULL` rows aren't filtered out.
-        includeShareVisitor: true,
-        marketAccessToken,
-      });
-
-      log('execAgent: share=%s visitor=%s topic=%s', input.shareId, ctx.userId, input.topicId);
-
-      try {
-        const result = await aiAgentService.execAgent({
-          agentId: share.agentId,
-          appContext: { topicId: input.topicId },
-          clientIds: input.clientIds,
-          clientIp: ctx.clientIp ?? undefined,
-          // `interactiveStart: true` (the `aiAgent.execAgent` owner path's
-          // default) makes `TopicModel.tryReserveTaskCallback` skip its
-          // `runningOperation` liveness check entirely — a policy that is safe
-          // there ONLY because the owner's OWN client serializes sends.
-          //
-          // An untrusted visitor has no such client-side gate: firing two
-          // concurrent `execAgent` mutations for the SAME topic would let both
-          // pass the reservation (each only contends on the short-lived
-          // `taskCallbackReservation`, released right after the first operation
-          // is CREATED, long before it finishes streaming), so both would
-          // create creator-credentialed operations. The second operation's
-          // `runningOperation` marker write then overwrites the first's,
-          // leaving the first unreachable by `shareChat.interruptTask` (which
-          // matches on the topic's current marker) — an orphaned run that keeps
-          // using tools and the creator's budget until it finishes on its own.
-          //
-          // Leaving this `false` routes visitor sends through the SAME
-          // liveness-checked reservation every non-interactive start uses: a
-          // second concurrent send for a topic with a live operation is
-          // rejected instead of silently displacing the first.
-          interactiveStart: false,
-          prompt: input.prompt,
-          shareGate,
-          // Not `RequestTrigger.Chat`: a share run is billed to the CREATOR,
-          // so its spend rows must be separable from the creator's own chat
-          // spend (they land on the same account). The trigger rides
-          // `state.origin.trigger` all the way into the spend-log metadata.
-          trigger: RequestTrigger.AgentShare,
-          userAgent: ctx.userAgent ?? undefined,
-        });
-
-        // `AiAgentService.execAgent` RESOLVES (does not throw) when
-        // `createOperation` itself fails to start (e.g. the queue/runtime
-        // backend is unavailable). That `error` is the same raw
-        // `error.message` the thrown path guards against, so it must go through
-        // the exact same projection instead of reaching the visitor verbatim.
-        //
-        // Reject rather than sanitize-and-return: the Gateway client never
-        // checks `result.success` — it unconditionally treats the resolved
-        // value as a live operation and connects with its
-        // `operationId`/`token`. A sanitized `success: false` object would
-        // still be consumed as if the run started, opening a WebSocket for an
-        // operation that never began.
-        if (!result.success) {
-          throw toVisitorSafeStartupError(
-            'execAgent',
-            { message: result.error },
-            { showErrorDetails: share.shareConfig.showErrorDetails },
-          );
-        }
-
-        return result;
-      } catch (error: any) {
-        if (error instanceof TRPCError) throw error;
-
-        throw toVisitorSafeStartupError('execAgent', error, {
-          showErrorDetails: share.shareConfig.showErrorDetails,
-        });
-      }
+    .mutation(async (): Promise<ExecAgentResult> => {
+      // `never`-typed: control flow provably ends here. The `return` of a
+      // `never` value satisfies the declared `Promise<ExecAgentResult>` under
+      // every checker, and the annotation keeps the procedure's pre-retirement
+      // output contract so a stale client's `ExecAgentResult` handling still
+      // type-checks.
+      return assertAgentShareVisitorExecutionEnabled();
     }),
 
   /** Messages of one visitor-owned share topic. */
@@ -406,12 +231,12 @@ export const shareChatRouter = router({
     .query(async ({ input, ctx }) => {
       const share = await resolveLinkShareOrThrow(ctx.serverDB, input.shareId, ctx.userId);
 
-      // The list is intentionally NOT bounded by the share's live
-      // `maxTopicsPerVisitor`: that cap gates ADMISSION of new topics (the
-      // COUNT check in `execAgent` above), and a creator may lower it below
-      // what a visitor already created. Tying the page size to it would hide
-      // those older conversations with no pagination or deep link to reach
-      // them, so the model applies its own fixed, generous list bound instead.
+      // The list is intentionally NOT bounded by the share's
+      // `maxTopicsPerVisitor`: that cap gated admission of new topics back when
+      // visitor execution existed, and a creator may lower it below what a
+      // visitor already created. Tying the page size to it would hide those
+      // older conversations with no pagination or deep link to reach them, so
+      // the model applies its own fixed, generous list bound instead.
       const topicModel = new TopicModel(ctx.serverDB, share.ownerId, undefined, undefined, {
         includeShareVisitor: true,
       });
@@ -458,9 +283,9 @@ export const shareChatRouter = router({
         });
       }
 
-      // Creator-scoped service, same as `execAgent` — the run's operation /
-      // thread rows were written under the creator's identity, so the
-      // underlying `interruptTask` implementation must resolve them there.
+      // Creator-scoped service — the run's operation / thread rows were
+      // written under the creator's identity, so the underlying
+      // `interruptTask` implementation must resolve them there.
       const aiAgentService = new AiAgentService(ctx.serverDB, share.ownerId, {
         includeShareVisitor: true,
       });

@@ -169,10 +169,11 @@ export const runtimeManagedToolIds = [
 
 /**
  * Master allowlist of builtin tool identifiers a share visitor's run may ever
- * touch, at BOTH the tool-set-assembly layer (server
- * `applyShareGateToToolSet`) and the dispatch layer (server
- * `isShareBlockedDataToolCall`) — see
- * `apps/server/src/services/aiAgent/shareGate.ts`. Also the single source of
+ * touch, enforced at the dispatch layer (server
+ * `isShareBlockedDataToolCall` / `isShareBlockedBuiltinDispatch`) — see
+ * `apps/server/src/services/aiAgent/shareGate.ts`. Visitor execution is
+ * retired, so the only callers left are tool calls dispatched by visitor
+ * operations persisted before retirement. Also the single source of
  * truth for the agent-owner-facing share settings tool picker, which must
  * show a builtin tool as unavailable-to-visitors rather than let the owner
  * select (and the UI silently confirm) a grant the server gate can never
@@ -243,8 +244,8 @@ export const AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS = new Set<string>([
  * to be blocked outright by `DATA_TOOL_ACCESS_RULES` in
  * `apps/server/src/services/aiAgent/shareGate.ts`, for every API and no matter
  * what the share config says. There is no knowledge-base or agent-file grant
- * in `AgentShareConfig` at all (see `applyShareGateToAgentConfig`), so a
- * visitor run can never reach either store.
+ * in `AgentShareConfig` at all, so a visitor run can never reach either
+ * store.
  *
  * Memory is deliberately NOT here: its grant is conditional on
  * `allowReadMemory`, so the owner enabling that switch does change what a

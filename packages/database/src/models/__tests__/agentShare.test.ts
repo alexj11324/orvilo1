@@ -557,33 +557,6 @@ describe('AgentShareModel', () => {
     });
   });
 
-  describe('readCurrentVisitorCaps', () => {
-    it('reads fresh caps and the live shareId', async () => {
-      const created = await agentShareModel.create(agentId);
-      await agentShareModel.updateConfig(agentId, {
-        maxTopicsPerVisitor: 3,
-        maxTurnsPerTopic: 8,
-        monthlySpendLimit: 2.5,
-      });
-
-      await expect(AgentShareModel.readCurrentVisitorCaps(serverDB, agentId)).resolves.toEqual({
-        maxTopicsPerVisitor: 3,
-        maxTurnsPerTopic: 8,
-        monthlySpendLimit: 2.5,
-        shareId: created!.id,
-      });
-    });
-
-    it('falls back to defaults and a null shareId when there is no share', async () => {
-      await expect(AgentShareModel.readCurrentVisitorCaps(serverDB, agentId)).resolves.toEqual({
-        maxTopicsPerVisitor: 5,
-        maxTurnsPerTopic: 20,
-        monthlySpendLimit: 10,
-        shareId: null,
-      });
-    });
-  });
-
   describe('incrementUserViewCount', () => {
     it('atomically records successful page views', async () => {
       const created = await agentShareModel.create(agentId);

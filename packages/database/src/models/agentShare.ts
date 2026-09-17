@@ -384,43 +384,6 @@ export class AgentShareModel {
     });
 
   /**
-   * Read the CURRENT `maxTopicsPerVisitor` / `maxTurnsPerTopic` caps for an
-   * agent's share, bypassing any snapshot a caller might already be holding —
-   * intended to be called from inside the SAME locked transaction a
-   * visitor-abuse guard uses to recount and insert, so a cap reduction the
-   * owner just made is always the number actually enforced, not a stale value
-   * read earlier in the request. `shareId` is returned alongside for the same
-   * staleness reason: it identifies which live share instance a newly created
-   * visitor topic should be scoped to.
-   *
-   * Falls back to `normalizeAgentShareConfig`'s defaults exactly like every
-   * other reader of `agentShares.shareConfig`.
-   */
-  static readCurrentVisitorCaps = async (
-    db: LobeChatDatabase,
-    agentId: string,
-  ): Promise<
-    Required<
-      Pick<AgentShareConfig, 'maxTopicsPerVisitor' | 'maxTurnsPerTopic' | 'monthlySpendLimit'>
-    > & {
-      shareId: string | null;
-    }
-  > => {
-    const [row] = await db
-      .select({ id: agentShares.id, shareConfig: agentShares.shareConfig })
-      .from(agentShares)
-      .where(eq(agentShares.agentId, agentId));
-
-    const normalized = normalizeAgentShareConfig(row?.shareConfig ?? null);
-    return {
-      maxTopicsPerVisitor: normalized.maxTopicsPerVisitor!,
-      maxTurnsPerTopic: normalized.maxTurnsPerTopic!,
-      monthlySpendLimit: normalized.monthlySpendLimit!,
-      shareId: row?.id ?? null,
-    };
-  };
-
-  /**
    * Whether an in-flight visitor run is STILL authorized to continue: the
    * agent's share row must exist, still be the SAME instance the run was
    * authorized against (`shareId`), and still be `link`.

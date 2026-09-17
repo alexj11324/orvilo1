@@ -213,9 +213,10 @@ export const buildServerVirtualSubAgentRunner = (
   parentMessageId: string,
 ): ServerSubAgentRunner | undefined => {
   // Share-visitor runs never get a sub-agent runner: the child run spawned
-  // here does not thread the parent's shareGate, so it would execute with the
-  // creator's full unrestricted tool surface. Same fail-closed stance as
-  // `ServerSubAgentTransport` and the `isShareBlockedBuiltinDispatch` gate.
+  // here does not inherit the parent's share restrictions, so it would execute
+  // with the creator's full unrestricted tool surface. Same fail-closed stance
+  // as `ServerSubAgentTransport` and the `isShareBlockedBuiltinDispatch` gate.
+  // (Retained for visitor ops persisted before visitor execution was retired.)
   if (ctx.agentShareVisitor) return undefined;
   const execVirtualSubAgent = ctx.execVirtualSubAgent;
   if (!execVirtualSubAgent) return undefined;
@@ -345,7 +346,7 @@ export const buildServerAgentMemberRunner = (
   parentMessageId: string,
 ): ServerAgentMemberRunner | undefined => {
   // Same share-visitor fail-close as `buildServerVirtualSubAgentRunner`:
-  // member runs would not inherit the parent's shareGate.
+  // member runs would not inherit the parent's share restrictions.
   if (ctx.agentShareVisitor) return undefined;
   const execGroupMember = ctx.execGroupMember;
   if (!execGroupMember) return undefined;

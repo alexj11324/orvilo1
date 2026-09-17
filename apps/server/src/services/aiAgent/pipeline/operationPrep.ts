@@ -33,7 +33,6 @@ import { FileService } from '@/server/services/file';
 
 import { pruneRegeneratedBranch } from '../pruneRegeneratedBranch';
 import { resolveDeviceWorkingDirectoryConfig } from '../resolveDeviceWorkingDirectory';
-import { applyShareGateToToolSet, filterPluginsByShareGate } from '../shareGate';
 import type { ExecRunContext, InternalExecAgentParams, ResolvedWorkspaceInit } from '../types';
 import { isWorkspaceCacheFresh, upsertWorkspaceScan } from '../workspaceInitCache';
 import type { ToolDiscoveryResult } from './toolDiscovery';
@@ -58,7 +57,6 @@ export interface HistoryLoaderInput {
 export const createHistoryMessagesLoader = (
   deps: {
     db: LobeChatDatabase;
-    isShareVisitorRun: boolean;
     messageModel: MessageModel;
     userId: string;
     workspaceId?: string;
@@ -79,17 +77,14 @@ export const createHistoryMessagesLoader = (
   const postProcessUrl = (path: string | null, file: { id?: string | null }) =>
     fileService.getFileAccessUrl({ id: file.id, url: path });
   let historyMessagesCache: any[] | undefined;
-  // The run's own topic was resolved and authorized upstream (a share visitor
-  // run reaches here through `findVisitorTopicOrThrow`), and it executes under
-  // the CREATOR's identity — so an AUTHORIZED share run must opt out of
-  // `query()`'s creator-facing agent-share exclusion or the agent loses its
-  // history. A non-share run must NOT get this opt-out: `turnSetup`'s
-  // visitor-topic guard rejects a non-share run whose `appContext.topicId`
-  // resolves to a visitor topic, but this loader is cheap defense-in-depth in
-  // case that guard is ever bypassed or a future call site skips it — without
-  // it, a non-share run pointed at a leaked visitor topicId would still load
-  // the visitor's transcript into the owner's model context.
-  const historyQueryOptions = { allowShareVisitor: deps.isShareVisitorRun, postProcessUrl };
+  // `allowShareVisitor` stays off: `turnSetup`'s visitor-topic guard rejects
+  // every run whose `appContext.topicId` resolves to a visitor topic now that
+  // visitor execution is retired, so no legitimate run can ever need the
+  // opt-out — and keeping it off is cheap defense-in-depth in case that guard
+  // is ever bypassed or a future call site skips it (a run pointed at a
+  // leaked visitor topicId would otherwise load the visitor's transcript
+  // into the owner's model context).
+  const historyQueryOptions = { allowShareVisitor: false, postProcessUrl };
 
   return async () => {
     if (historyMessagesCache) return historyMessagesCache;
@@ -351,7 +346,6 @@ export const prepareOperation = async (
     prompt,
     provider,
     resolvedAgentId,
-    shareGate,
     topicId,
     userMessageId,
   } = ctx;
@@ -675,31 +669,6 @@ export const prepareOperation = async (
         }).enabledToolIds
       : [];
 
-  // Final share-gate allowlist enforcement — run once here, after every
-  // manifest/default/dynamic-activation source (installed plugins, LobeHub
-  // Skills, Composio, real-MCP connectors, always-on builtin defaults) has
-  // been merged into `toolManifestMap` / `toolsResult.enabledToolIds` /
-  // `tools` / `activatableToolIds` by `toolDiscovery` and the historical
-  // re-activation pass above. `filterPluginsByShareGate` in `toolDiscovery`
-  // only trimmed the initial candidate id list — it does not stop
-  // `lobe-activator` from dynamically activating (and `ToolExecutionService`
-  // from executing, with the CREATOR's credentials) a creator-connected tool
-  // that was never in `shareConfig.toolGrants`. Mutates the discovery maps
-  // in place, so the `toolSet` handed to `createOperation` is the pruned one.
-  if (shareGate) {
-    applyShareGateToToolSet(
-      {
-        activatableToolIds,
-        enabledToolIds: toolsResult.enabledToolIds,
-        executorMap: discovery.toolExecutorMap,
-        manifestMap: discovery.toolManifestMap,
-        sourceMap: discovery.toolSourceMap,
-        tools,
-      },
-      shareGate,
-    );
-  }
-
   log('execAgent: prepared evalContext for executor');
 
   await throwIfExecutionAborted('operation preparation');
@@ -956,28 +925,10 @@ export const prepareOperation = async (
     // against, so a disabled identifier absent here is neither listed nor
     // activatable — mirrors the tool-manifest treatment above (installedPlugins/
     // additionalManifests), which this array had never received.
-    //
-    // Shared runs only see skills allowed by the share configuration. The
-    // candidate pool must be trimmed here rather than left to
-    // `SkillEngine.generate`, which annotates activation state on its input
-    // rather than shrinking it. Reuse `filterPluginsByShareGate` (id-list
-    // intersection, not tool-specific) to keep this pool the single
-    // enforcement point — an empty/missing allowlist collapses it to nothing.
-    const shareAllowedSkillIds = shareGate
-      ? new Set(
-          filterPluginsByShareGate(
-            [...projectMetas, ...dbMetas, ...agentSkillMetas, ...builtinMetas].map(
-              (skill) => skill.identifier,
-            ),
-            shareGate,
-          ),
-        )
-      : undefined;
     const seenNames = new Set<string>();
     const skills = [...projectMetas, ...dbMetas, ...agentSkillMetas, ...builtinMetas].filter(
       (skill) => {
         if (disabledPluginIds.includes(skill.identifier)) return false;
-        if (shareAllowedSkillIds && !shareAllowedSkillIds.has(skill.identifier)) return false;
         if (seenNames.has(skill.name)) return false;
         seenNames.add(skill.name);
         return true;

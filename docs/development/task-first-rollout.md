@@ -1268,6 +1268,29 @@ slice，`evalKeys` 的唯一消费者也是它们 —— 三者的消费者**互
 （`apps/share/app/routes.ts`），`grep -i agent` 在目录内**零命中** —— 它本来就不含任何 agent 分享面。
 所以「不删」不是我对方案的偏离，**而是照方案执行**。`apps/share`（65 文件）原样保留。
 
+**R40 收口（本分支）：§6.5 最后一步「依赖清零后删代码」已在本仓完成，但保留了「在途运行」这一层。**
+上面「仍未做」列的三样里，`execAgent` 实现体已删（过程与输入 schema 保留，函数体只剩无条件拒绝，
+且标注 `Promise<ExecAgentResult>` 保住旧客户端的输出契约）；`shareGate.ts` 的工具白名单只删了
+**装配期**那一半（`AgentShareGate`、`filterPluginsByShareGate`、`applyShareGateTo*`、技能 / 插件交集、
+`shareVisitorAbuseGuards.ts` 整文件随删），**派发期**另一半（`isShareBlockedBuiltinDispatch` /
+`isShareBlockedDataToolCall` 与数据工具规则）刻意保留 —— 因为退役前持久化的访客 op 仍带
+`agentShareVisitor` 标记，它们的流式、结算、续跑每一步都要继续过同一道门。
+`AgentRuntime` 的访客分支同理：新建侧（`startOperation` 写 `agentShareVisitor`/`visitorRedaction`/
+`streamOwnerUserId`）已删，读取与执行侧（`executeStep` 每步 `isRunStillAuthorized` 复核、
+`BuiltinToolsExecutor`/`ServerSubAgentTransport`/`executorHelpers`/`serverCallLlmContextBuilder` 的
+访客分支、`streamOwnerUserId` 元数据的回读）保留 —— 它们只服务在途 op 的完成 / 取消 / 结算。
+
+**顺手关掉的两个复活路径**（生命周期审计补的洞）：`turnSetup` 对任何 `senderId` 话题一律
+NOT\_FOUND（兜住直接打 `aiAgent.execAgent` 的泄露 topicId，以及 `includeShareVisitor` 作用域模型
+被拿去跑新运行的情况），定时派发器在认领前丢弃访客话题上的停泊计划（退役前的
+`delayed_start`/`resume_after_rate_limit` 续跑否则每 tick 都会复活一次）。
+i18n 侧只删了**只服务访客运行启动**的 `share.visitor.*` 键（composer、开始对话 CTA、
+发送期报错、开始前条款、会话 starters、`topics.new`，共 26 个，en-US/zh-CN/default 三处同步）；
+读路径（`access.*`、`topics.*`、profile/metrics、privacyNotice）与在途生命周期
+（`input.stop`、`errors.stopFailed`、`errors.unavailable`）以及 `share.settings.*` 所有者管理键
+全部保留 —— 它们的消费者在下游私有层的留存面上。`src/services/agentShare.ts` 零消费者但属
+「下游私有层提供消费者」一类，按上表处置为保留。
+
 ### 2.6 S50 实施记录
 
 先做了一次**已有的能力审计**，因为 §8 的规矩是「能复用就零新增表」—— 判断缺口在哪一层，比设计关系模型更省事。结论：

@@ -1242,7 +1242,7 @@ export class MessageModel {
   };
 
   /**
-   * Exact per-topic turn count for one role, used by `maxTurnsPerTopic`.
+   * Exact per-topic turn count for one role.
    *
    * MUST NOT reuse {@link MessageModel.count}: its `analyticsConditions()` ANDs
    * in `notShareVisitorMessage()`, which excludes every message whose topic has
@@ -1251,10 +1251,10 @@ export class MessageModel {
    * separately), but it would make `count()` return 0 forever for a share
    * topic, silently disabling the turn cap.
    *
-   * Safe without a visitor/ownership check here: the caller (shareChat router /
-   * `reserveShareVisitorTurn`) already resolved and authorized the topic, and
-   * `this.ownership()` matches because share messages carry the creator's
-   * `userId` (the model is constructed with `share.ownerId`).
+   * Safe without a visitor/ownership check here: callers already resolved
+   * and authorized the topic, and `this.ownership()` matches because share
+   * messages carry the creator's `userId` (a share-runtime model is
+   * constructed with `share.ownerId`).
    */
   countByTopic = async ({ role, topicId }: { role: string; topicId: string }): Promise<number> => {
     const result = await this.db

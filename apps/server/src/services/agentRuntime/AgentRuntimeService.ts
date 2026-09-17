@@ -856,7 +856,6 @@ export class AgentRuntimeService {
       initialContext,
       agentConfig,
       agentGroup,
-      agentShareVisitor,
       modelRuntimeConfig,
       userId,
       autoStart = true,
@@ -1063,7 +1062,6 @@ export class AgentRuntimeService {
           actor: {
             bot: botContext,
             deviceScope: activeDeviceScope,
-            shareVisitor: agentShareVisitor,
           },
           audit: { clientIp: appContext?.clientIp, userAgent: appContext?.userAgent },
           policy: { deviceAccess: deviceAccessPolicy },
@@ -1097,20 +1095,8 @@ export class AgentRuntimeService {
         appContext?.orchestrationRole === 'member' ? (parentOperationId ?? undefined) : undefined;
       await this.coordinator.createAgentOperation(operationId, {
         agentConfig,
-        // Persisted so a queue worker that never ran this op's init still
-        // applies the owner-configured visitor redaction policy instead of the
-        // fail-closed full strip. See `gatewayVisitorRedaction.ts`.
-        visitorRedaction: agentShareVisitor
-          ? {
-              showErrorDetails: agentShareVisitor.showErrorDetails,
-              showModelInfo: agentShareVisitor.showModelInfo,
-            }
-          : undefined,
         mirrorToOperationId,
         modelRuntimeConfig,
-        // Share-visitor runs execute as the creator (`userId`) but stream only
-        // to the visitor — the gateway registers the WS channel under this id.
-        streamOwnerUserId: agentShareVisitor?.visitorUserId,
         userId,
         workspaceId: this.workspaceId,
       });

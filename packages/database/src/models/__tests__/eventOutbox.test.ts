@@ -92,6 +92,52 @@ describe('EventOutboxModel', () => {
     });
   });
 
+  describe('claimPending', () => {
+    it('claims due rows and hides them from a concurrent claim until the timeout lapses', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const row = await model.insertOutboxEvent(serverDB, {
+        aggregateId: 'a',
+        aggregateType: 'task',
+        eventId: newEventId(),
+        eventType: 'task.one',
+        workspaceId,
+      });
+
+      const claimed = await model.claimPending({ limit: 10, visibilityTimeoutMs: 60_000 });
+      expect(claimed.map((r) => r.id)).toEqual([row.id]);
+      // The claim stamps nextAttemptAt as the visibility timeout.
+      expect(claimed[0].nextAttemptAt!.getTime()).toBeGreaterThan(Date.now() + 30_000);
+
+      // A second overlapping sweep sees nothing.
+      expect(await model.claimPending({ limit: 10, visibilityTimeoutMs: 60_000 })).toHaveLength(0);
+
+      // Once the timeout lapses the row resurfaces (dead-worker recovery).
+      const reclaimed = await model.claimPending({
+        limit: 10,
+        now: new Date(Date.now() + 61_000),
+        visibilityTimeoutMs: 60_000,
+      });
+      expect(reclaimed.map((r) => r.id)).toEqual([row.id]);
+    });
+
+    it('lets a claimed row be delivered and failed normally', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const row = await model.insertOutboxEvent(serverDB, {
+        aggregateId: 'a',
+        aggregateType: 'task',
+        eventId: newEventId(),
+        eventType: 'task.one',
+        workspaceId,
+      });
+
+      await model.claimPending({ limit: 10, visibilityTimeoutMs: 60_000 });
+
+      expect(await model.markDelivered(row.id)).toBe(true);
+      const [stored] = await serverDB.select().from(eventOutbox).where(eq(eventOutbox.id, row.id));
+      expect(stored.status).toBe('delivered');
+    });
+  });
+
   describe('markDelivered', () => {
     it('marks a pending row delivered exactly once', async () => {
       const model = new EventOutboxModel(serverDB);

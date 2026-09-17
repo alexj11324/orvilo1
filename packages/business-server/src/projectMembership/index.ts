@@ -175,11 +175,16 @@ export const changeProjectMemberRole = async (
   const role = capProjectRole(target.role as WorkspaceRoleName, params.role);
 
   return db.transaction(async (tx) => {
-    await new ProjectMemberModel(tx, params.actorUserId).changeRole(
+    const changed = await new ProjectMemberModel(tx, params.actorUserId).changeRole(
       params.projectId,
       params.targetUserId,
       role,
     );
+    // No row updated → nothing happened: recording audit/event here would
+    // fabricate history for a never- (or already-removed) project member.
+    if (changed.length === 0) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Project member not found' });
+    }
     await recordAudit(tx, {
       action: 'project_member.role_changed',
       ipAddress: params.ipAddress,

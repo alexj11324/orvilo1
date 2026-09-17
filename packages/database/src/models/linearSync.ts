@@ -78,6 +78,9 @@ export const LINEAR_SYNC_DEFAULT_LEASE_MS = 60_000;
 export const LINEAR_SYNC_MAX_ATTEMPTS = 5;
 export const LINEAR_SYNC_RETRY_BASE_MS = 1_000;
 export const LINEAR_SYNC_RETRY_MAX_MS = 60_000;
+/** Maximum number of task ids accepted by a task-scoped link lookup. */
+export const LINEAR_ISSUE_LINK_TASK_ID_CAP = 100;
+export const LINEAR_ISSUE_LINK_LIST_DEFAULT_LIMIT = 100;
 
 /** Deterministic backoff keeps retries bounded and makes queue behavior testable. */
 export const linearSyncRetryDelayMs = (attempts: number) =>
@@ -571,7 +574,29 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
-  async listIssueLinks(bindingId?: string) {
+  async listIssueLinks(
+    input: {
+      bindingId?: string;
+      limit?: number;
+      offset?: number;
+      taskIds?: readonly string[];
+    } = {},
+  ) {
+    const { bindingId, limit = LINEAR_ISSUE_LINK_LIST_DEFAULT_LIMIT, offset = 0, taskIds } = input;
+    if (taskIds && (taskIds.length === 0 || taskIds.length > LINEAR_ISSUE_LINK_TASK_ID_CAP)) {
+      throw new RangeError(
+        `Linear issue link taskIds must contain 1-${LINEAR_ISSUE_LINK_TASK_ID_CAP} items`,
+      );
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > LINEAR_ISSUE_LINK_TASK_ID_CAP) {
+      throw new RangeError(
+        `Linear issue link limit must be between 1 and ${LINEAR_ISSUE_LINK_TASK_ID_CAP}`,
+      );
+    }
+    if (!Number.isInteger(offset) || offset < 0) {
+      throw new RangeError('Linear issue link offset must be a non-negative integer');
+    }
+
     return this.db
       .select()
       .from(linearIssueLinks)
@@ -579,9 +604,12 @@ export class LinearSyncModel {
         and(
           eq(linearIssueLinks.workspaceId, this.workspaceId),
           bindingId ? eq(linearIssueLinks.bindingId, bindingId) : undefined,
+          taskIds ? inArray(linearIssueLinks.taskId, taskIds) : undefined,
         ),
       )
-      .orderBy(desc(linearIssueLinks.updatedAt));
+      .orderBy(desc(linearIssueLinks.updatedAt))
+      .limit(limit)
+      .offset(offset);
   }
 
   async createIssueLink(input: {

@@ -23,7 +23,9 @@ import { ProjectModel } from '../project';
 const db: LobeChatDatabase = await getTestDB();
 const userId = 'linear-sync-model-user';
 const workspaceId = 'linear-sync-model-workspace';
+const otherWorkspaceId = 'linear-sync-model-other-workspace';
 const installationId = '00000000-0000-4000-8000-000000000001';
+const otherInstallationId = '00000000-0000-4000-8000-000000000002';
 
 const cleanup = async () => {
   await db.delete(linearSyncOutbox);
@@ -33,6 +35,7 @@ const cleanup = async () => {
   await db.delete(taskDomainEvents);
   await db.delete(linearProjectBindings);
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+  await db.delete(workspaces).where(eq(workspaces.id, otherWorkspaceId));
   await db.delete(users).where(eq(users.id, userId));
 };
 
@@ -58,6 +61,91 @@ const createInstallation = () =>
   });
 
 describe('LinearSyncModel', () => {
+  it('bounds task-scoped issue links and keeps the workspace scope', async () => {
+    await createInstallation();
+    await db.insert(workspaces).values({
+      id: otherWorkspaceId,
+      name: 'Other Linear Sync Test Workspace',
+      primaryOwnerId: userId,
+      slug: otherWorkspaceId,
+    });
+    await db.insert(linearInstallations).values({
+      id: otherInstallationId,
+      organizationId: 'linear-org-other',
+      workspaceId: otherWorkspaceId,
+    });
+
+    const [taskOne, taskTwo, otherTask] = await db
+      .insert(tasks)
+      .values([
+        {
+          createdByUserId: userId,
+          identifier: 'LINK-1',
+          instruction: 'one',
+          seq: 1,
+          workspaceId,
+        },
+        {
+          createdByUserId: userId,
+          identifier: 'LINK-2',
+          instruction: 'two',
+          seq: 2,
+          workspaceId,
+        },
+        {
+          createdByUserId: userId,
+          identifier: 'OTHER-1',
+          instruction: 'other',
+          seq: 1,
+          workspaceId: otherWorkspaceId,
+        },
+      ])
+      .returning();
+    const linkSnapshot = (id: string, identifier: string) => ({
+      id,
+      identifier,
+      title: identifier,
+    });
+
+    await new LinearSyncModel(db, workspaceId).createIssueLink({
+      installationId,
+      linearIdentifier: 'ENG-1',
+      linearIssueId: 'linear-issue-1',
+      organizationId: 'linear-org-1',
+      remoteSnapshot: linkSnapshot('linear-issue-1', 'ENG-1'),
+      taskId: taskOne.id,
+    });
+    await new LinearSyncModel(db, workspaceId).createIssueLink({
+      installationId,
+      linearIdentifier: 'ENG-2',
+      linearIssueId: 'linear-issue-2',
+      organizationId: 'linear-org-1',
+      remoteSnapshot: linkSnapshot('linear-issue-2', 'ENG-2'),
+      taskId: taskTwo.id,
+    });
+    await new LinearSyncModel(db, otherWorkspaceId).createIssueLink({
+      installationId: otherInstallationId,
+      linearIdentifier: 'OTHER-1',
+      linearIssueId: 'linear-issue-other',
+      organizationId: 'linear-org-other',
+      remoteSnapshot: linkSnapshot('linear-issue-other', 'OTHER-1'),
+      taskId: otherTask.id,
+    });
+
+    const model = new LinearSyncModel(db, workspaceId);
+    await expect(model.listIssueLinks({ taskIds: [] })).rejects.toThrow(/taskIds/);
+    await expect(
+      model.listIssueLinks({ taskIds: Array.from({ length: 101 }, (_, i) => `task-${i}`) }),
+    ).rejects.toThrow(/taskIds/);
+    await expect(model.listIssueLinks({ taskIds: [otherTask.id] })).resolves.toEqual([]);
+    await expect(
+      model.listIssueLinks({ taskIds: [taskOne.id, taskTwo.id], limit: 1, offset: 1 }),
+    ).resolves.toHaveLength(1);
+    await expect(model.listIssueLinks({ taskIds: [taskOne.id] })).resolves.toMatchObject([
+      { taskId: taskOne.id },
+    ]);
+  });
+
   it('coalesces planning wakeups while keeping the first domain event idempotent', async () => {
     const model = new LinearSyncModel(db, workspaceId);
     const first = await model.recordDomainEvent({

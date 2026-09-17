@@ -4,7 +4,11 @@ import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
-import { LinearSyncModel } from '@/database/models/linearSync';
+import {
+  LINEAR_ISSUE_LINK_LIST_DEFAULT_LIMIT,
+  LINEAR_ISSUE_LINK_TASK_ID_CAP,
+  LinearSyncModel,
+} from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
@@ -356,11 +360,23 @@ export const linearSyncRouter = router({
     }),
 
   issueLinks: linearSyncProcedure
-    .input(z.object({ bindingId: z.string().uuid().optional() }))
+    .input(
+      z.object({
+        bindingId: z.string().uuid().optional(),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(LINEAR_ISSUE_LINK_TASK_ID_CAP)
+          .default(LINEAR_ISSUE_LINK_LIST_DEFAULT_LIMIT),
+        offset: z.number().int().min(0).default(0),
+        taskIds: z.array(z.string().min(1)).min(1).max(LINEAR_ISSUE_LINK_TASK_ID_CAP).optional(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       try {
         return {
-          data: await ctx.linearSyncModel.listIssueLinks(input.bindingId),
+          data: await ctx.linearSyncModel.listIssueLinks(input),
           success: true,
         };
       } catch (error) {

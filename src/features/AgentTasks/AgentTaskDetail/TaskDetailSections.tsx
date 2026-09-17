@@ -2,6 +2,8 @@ import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
+import { useTaskStore } from '@/store/task';
+import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskAcceptance from './TaskAcceptance';
 import TaskActivities from './TaskActivities';
@@ -24,8 +26,10 @@ import TaskSubtasks from './TaskSubtasks';
  * `activeTaskId` (e.g. via `setActiveTaskId`) before rendering this.
  */
 const TaskDetailSections = memo(() => {
+  const taskId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
+
   return (
-    <LinearTaskSyncProvider>
+    <LinearTaskSyncProvider taskIds={taskId ? [taskId] : []}>
       <div className={styles.root}>
         <div className={styles.header}>
           <Flexbox className={styles.main} gap={12}>

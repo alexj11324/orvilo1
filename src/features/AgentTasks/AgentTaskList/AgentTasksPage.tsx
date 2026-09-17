@@ -376,7 +376,13 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   );
 
   return (
-    <LinearTaskSyncProvider>
+    <LinearTaskSyncProvider
+      taskIds={
+        isMineCollection || isScheduledCollection
+          ? collectionTasks.map((task) => task.id)
+          : undefined
+      }
+    >
       <Flexbox flex={1} height={'100%'}>
         <NavHeader
           left={headerLeft}

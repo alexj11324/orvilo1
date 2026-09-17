@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useClientDataSWR } from '@/libs/swr';
 import { lambdaClient } from '@/libs/trpc/client';
+import { useTaskStore } from '@/store/task';
+import { taskListSelectors } from '@/store/task/selectors';
 
 import { getIssueLinkUrl, type LinearIssueLinkView } from './linearSyncViewModel';
 
@@ -56,12 +58,39 @@ type LinearTaskSyncContextValue = {
 
 const LinearTaskSyncContext = createContext<LinearTaskSyncContextValue | null>(null);
 
-export const LinearTaskSyncProvider = ({ children }: PropsWithChildren) => {
+const LINEAR_ISSUE_LINK_TASK_ID_CAP = 100;
+
+type LinearTaskSyncProviderProps = PropsWithChildren<{
+  /** Explicitly scope a host such as a paginated collection or task detail. */
+  taskIds?: readonly string[];
+}>;
+
+export const LinearTaskSyncProvider = ({
+  children,
+  taskIds: explicitTaskIds,
+}: LinearTaskSyncProviderProps) => {
   const workspaceId = useActiveWorkspaceId();
+  const taskList = useTaskStore(taskListSelectors.taskList);
+  const taskGroups = useTaskStore(taskListSelectors.taskGroups);
+  const taskIds = useMemo(() => {
+    if (explicitTaskIds) {
+      return [...new Set(explicitTaskIds.filter(Boolean))].slice(0, LINEAR_ISSUE_LINK_TASK_ID_CAP);
+    }
+
+    return [
+      ...new Set([
+        ...taskList.map((task) => task.id),
+        ...taskGroups.flatMap((group) => group.tasks.map((task) => task.id)),
+      ]),
+    ].slice(0, LINEAR_ISSUE_LINK_TASK_ID_CAP);
+  }, [explicitTaskIds, taskGroups, taskList]);
+  const taskIdsKey = taskIds.join(',');
   const { data } = useClientDataSWR(
-    workspaceId ? `linear-sync/issue-links/${workspaceId}` : null,
+    workspaceId && taskIds.length > 0
+      ? `linear-sync/issue-links/${workspaceId}/${taskIdsKey}`
+      : null,
     async () => {
-      const response = await lambdaClient.linearSync.issueLinks.query({});
+      const response = await lambdaClient.linearSync.issueLinks.query({ taskIds });
       return (response?.data ?? []) as LinearIssueLinkView[];
     },
     { dedupingInterval: 30_000, refreshInterval: 30_000 },

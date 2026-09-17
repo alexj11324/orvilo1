@@ -2,6 +2,7 @@ import { relations } from 'drizzle-orm';
 import { index, pgTable, primaryKey, text, uuid, varchar } from 'drizzle-orm/pg-core';
 
 import { createdAt } from './_helpers';
+import { actionApprovals } from './actionApproval';
 import { agents, agentsFiles, agentsKnowledgeBases } from './agent';
 import {
   agentEvalBenchmarks,
@@ -16,15 +17,22 @@ import { chatGroups, chatGroupsAgents } from './chatGroup';
 import { documentCommentMentions, documentComments } from './documentComment';
 import { documentHistories } from './documentHistory';
 import { documentLikes } from './documentLike';
+import { eventOutbox } from './eventOutbox';
+import { executionGrants } from './executionGrant';
 import { documents, files, knowledgeBases } from './file';
 import { generationBatches, generations, generationTopics } from './generation';
 import { messageGroups, messages, messagesFiles, messageTranslates } from './message';
+import { projects } from './project';
+import { projectMembers } from './projectMember';
 import { chunks, documentChunks, unstructuredChunks } from './rag';
 import { sessionGroups, sessions } from './session';
+import { tasks, taskTopics } from './task';
+import { taskInputs } from './taskInput';
 import { threads, topicDocuments, topics } from './topic';
 import { topicCommentMentions, topicComments } from './topicComment';
 import { users } from './user';
-import { workspaces } from './workspace';
+import { workspaceInvitations, workspaceMembers, workspaces } from './workspace';
+import { workspaceInvitationProjects } from './workspaceInvitationProject';
 
 export const agentsToSessions = pgTable(
   'agents_to_sessions',
@@ -507,5 +515,123 @@ export const agentEvalRunTopicsRelations = relations(agentEvalRunTopics, ({ one 
   testCase: one(agentEvalTestCases, {
     fields: [agentEvalRunTopics.testCaseId],
     references: [agentEvalTestCases.id],
+  }),
+}));
+
+// Teammates / multi-user collaboration tables
+export const workspaceInvitationsRelations = relations(workspaceInvitations, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [workspaceInvitations.workspaceId],
+    references: [workspaces.id],
+  }),
+  inviter: one(users, {
+    fields: [workspaceInvitations.inviterId],
+    references: [users.id],
+  }),
+  projectGrants: many(workspaceInvitationProjects),
+}));
+
+export const workspaceInvitationProjectsRelations = relations(
+  workspaceInvitationProjects,
+  ({ one }) => ({
+    invitation: one(workspaceInvitations, {
+      fields: [workspaceInvitationProjects.invitationId],
+      references: [workspaceInvitations.id],
+    }),
+    project: one(projects, {
+      fields: [workspaceInvitationProjects.projectId],
+      references: [projects.id],
+    }),
+  }),
+);
+
+export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [projectMembers.workspaceId],
+    references: [workspaces.id],
+  }),
+  project: one(projects, {
+    fields: [projectMembers.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [projectMembers.userId],
+    references: [users.id],
+  }),
+  workspaceMember: one(workspaceMembers, {
+    fields: [projectMembers.workspaceId, projectMembers.userId],
+    references: [workspaceMembers.workspaceId, workspaceMembers.userId],
+  }),
+}));
+
+export const eventOutboxRelations = relations(eventOutbox, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [eventOutbox.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
+export const taskInputsRelations = relations(taskInputs, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [taskInputs.workspaceId],
+    references: [workspaces.id],
+  }),
+  task: one(tasks, {
+    fields: [taskInputs.taskId],
+    references: [tasks.id],
+  }),
+  author: one(users, {
+    fields: [taskInputs.authorUserId],
+    references: [users.id],
+    relationName: 'taskInputAuthor',
+  }),
+  decidedByUser: one(users, {
+    fields: [taskInputs.decidedBy],
+    references: [users.id],
+    relationName: 'taskInputDecidedBy',
+  }),
+}));
+
+export const executionGrantsRelations = relations(executionGrants, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [executionGrants.workspaceId],
+    references: [workspaces.id],
+  }),
+  project: one(projects, {
+    fields: [executionGrants.projectId],
+    references: [projects.id],
+  }),
+  task: one(tasks, {
+    fields: [executionGrants.taskId],
+    references: [tasks.id],
+  }),
+  taskTopic: one(taskTopics, {
+    fields: [executionGrants.taskTopicId],
+    references: [taskTopics.id],
+  }),
+  agent: one(agents, {
+    fields: [executionGrants.agentId],
+    references: [agents.id],
+  }),
+  initiator: one(users, {
+    fields: [executionGrants.initiatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const actionApprovalsRelations = relations(actionApprovals, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [actionApprovals.workspaceId],
+    references: [workspaces.id],
+  }),
+  requester: one(users, {
+    fields: [actionApprovals.requestedBy],
+    references: [users.id],
+    relationName: 'actionApprovalRequester',
+  }),
+  approver: one(users, {
+    fields: [actionApprovals.approverUserId],
+    references: [users.id],
+    relationName: 'actionApprovalApprover',
   }),
 }));

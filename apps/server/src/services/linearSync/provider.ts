@@ -21,6 +21,7 @@ const ISSUE_FIELDS = `
   team { id }
   state { id type }
   assignee { id }
+  labels { nodes { id } }
 `;
 
 const PAGE_INFO_FIELDS = `pageInfo { endCursor hasNextPage }`;
@@ -40,6 +41,7 @@ export interface LinearIssueCreateInput {
 export interface LinearIssueUpdateInput {
   assigneeId?: string | null;
   description?: string | null;
+  labelIds?: string[];
   priority?: number | null;
   projectId?: string | null;
   stateId?: string | null;
@@ -169,7 +171,7 @@ export const normalizeLinearIssue = (value: unknown): LinearIssueSnapshot => {
   if (!id || !identifier || !title) throw new Error('Linear API issue is missing identity fields');
 
   const state = isRecord(value.state) ? value.state : undefined;
-  return {
+  const snapshot: LinearIssueSnapshot = {
     archivedAt: typeof value.archivedAt === 'string' ? value.archivedAt : null,
     assigneeId: nestedId(value.assignee),
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : null,
@@ -186,6 +188,15 @@ export const normalizeLinearIssue = (value: unknown): LinearIssueSnapshot => {
     updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : null,
     url: typeof value.url === 'string' ? value.url : null,
   };
+
+  if (Object.hasOwn(value, 'labels') && isRecord(value.labels)) {
+    snapshot.labelIds = readConnectionPage(value.labels).nodes.flatMap((label) => {
+      const id = nestedId(label);
+      return id ? [id] : [];
+    });
+  }
+
+  return snapshot;
 };
 
 export class LinearGraphqlError extends Error {

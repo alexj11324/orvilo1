@@ -5,7 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTestDB } from '@/database/core/getTestDB';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
-import { linearInstallations, tasks, users, workspaces } from '@/database/schemas';
+import {
+  linearInstallations,
+  linearSyncOutbox,
+  tasks,
+  users,
+  workspaces,
+} from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 
 import { LinearSyncWorker } from './worker';
@@ -194,6 +200,90 @@ describe('LinearSyncWorker inbound ordering', () => {
     const link = await model.findIssueLinkByExternalId('linear-issue-inbound');
     expect(link?.lastConfirmedSnapshot).toMatchObject({ title: 'Newest title' });
     expect(link?.lastInboundDeliveryId).toBeTruthy();
+  });
+
+  it('keeps unknown remote labels in the baseline while exporting unrelated local changes', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'LBL',
+      name: 'Label Preservation Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'linear-org-labels', workspaceId })
+      .returning();
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-labels',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-labels',
+      projectId: project.id,
+      teamIds: ['linear-team-labels'],
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'LBL-1',
+        instruction: 'Local description',
+        name: 'Local title',
+        projectId: project.id,
+        seq: 1,
+        visibility: 'public',
+        workspaceId,
+      })
+      .returning();
+    const base = {
+      description: 'Base description',
+      id: 'linear-issue-labels',
+      identifier: 'LBL-1',
+      labelIds: ['remote-label-uuid'],
+      projectId: binding.linearProjectId,
+      teamId: 'linear-team-labels',
+      title: 'Base title',
+      updatedAt: '2026-09-16T12:00:00.000Z',
+    };
+    await model.createIssueLink({
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: base.identifier,
+      linearIssueId: base.id,
+      organizationId: installation.organizationId,
+      remoteSnapshot: base,
+      taskId: task.id,
+    });
+    await model.captureDelivery({
+      action: 'update',
+      deliveryId: 'label-preservation-delivery',
+      eventType: 'Issue',
+      installationId: installation.id,
+      organizationId: installation.organizationId,
+      payload: { id: base.id },
+      subjectId: base.id,
+    });
+    const provider = {
+      getIssue: vi.fn().mockResolvedValue({
+        ...base,
+        labelIds: ['new-remote-label-uuid'],
+        updatedAt: '2026-09-16T12:01:00.000Z',
+      }),
+    };
+
+    await expect(
+      new LinearSyncWorker(db, workspaceId).processPending(provider as never, 20, installation.id),
+    ).resolves.toMatchObject({ failed: 0, processed: 1 });
+
+    const [outbox] = await db
+      .select({ payload: linearSyncOutbox.payload })
+      .from(linearSyncOutbox)
+      .where(eq(linearSyncOutbox.linkId, (await model.findIssueLinkByExternalId(base.id))!.id));
+    expect(outbox.payload).toMatchObject({
+      description: 'Local description',
+      title: 'Local title',
+    });
+    expect(outbox.payload).not.toHaveProperty('labelIds');
+    expect((await model.findIssueLinkByExternalId(base.id))?.lastConfirmedSnapshot).toMatchObject({
+      labelIds: ['new-remote-label-uuid'],
+    });
   });
 
   it('imports with a service subject after the installer is deleted', async () => {

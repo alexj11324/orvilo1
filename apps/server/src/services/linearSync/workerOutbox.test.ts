@@ -142,6 +142,26 @@ describe('LinearSyncWorker.processOutbox', () => {
     );
   });
 
+  it('compares an explicit label update as a set during response reconciliation', async () => {
+    mocks.claimOutbox.mockResolvedValue([
+      { ...row, payload: { labelIds: ['label-b', 'label-a'] } },
+    ]);
+    const issueProvider = provider();
+    const remote = {
+      id: 'linear-1',
+      identifier: 'LIN-1',
+      labelIds: ['label-a', 'label-b'],
+      projectId: 'linear-project-1',
+      title: 'Old title',
+    };
+    issueProvider.getIssue.mockResolvedValue(remote);
+
+    await expect(
+      new LinearSyncWorker({} as never, 'workspace-1').processOutbox(issueProvider as never),
+    ).resolves.toEqual({ failed: 0, sent: 1 });
+    expect(issueProvider.updateIssue).not.toHaveBeenCalled();
+  });
+
   it('refuses to export a private task even when a stale link exists', async () => {
     const issueProvider = provider();
     issueProvider.getIssue.mockResolvedValue({

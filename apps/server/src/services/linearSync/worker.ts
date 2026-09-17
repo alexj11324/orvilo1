@@ -56,6 +56,7 @@ const taskPriority = (priority: number | null | undefined) => {
 const taskSnapshot = (
   task: TaskItem,
   issue: LinearIssueSnapshot,
+  baseline: LinearIssueSnapshot,
   settings: LinearProjectBindingSettings,
 ): LinearIssueSnapshot => ({
   assigneeId:
@@ -80,6 +81,7 @@ const taskSnapshot = (
     task.workflowStateId ??
     issue.stateId,
   title: task.name || task.identifier,
+  ...(Array.isArray(baseline.labelIds) ? { labelIds: baseline.labelIds } : {}),
 });
 
 const remoteTaskPatch = (
@@ -92,7 +94,9 @@ const remoteTaskPatch = (
 ): Parameters<TaskModel['update']>[1] => {
   const patch: Parameters<TaskModel['update']>[1] = {};
   const remoteChanged = changedLinearIssueFields(base, remote);
-  const localChanged = new Set(changedLinearIssueFields(base, local));
+  const localChanged = new Set(
+    changedLinearIssueFields(base, local).filter((field) => field !== 'labelIds'),
+  );
 
   if (remoteChanged.includes('title') && !localChanged.has('title')) {
     patch.name = merged.title;
@@ -141,6 +145,7 @@ const remoteMatchesUpdate = (remote: LinearIssueSnapshot, input: LinearIssueUpda
   const fields: (keyof LinearIssueUpdateInput)[] = [
     'assigneeId',
     'description',
+    'labelIds',
     'priority',
     'projectId',
     'stateId',
@@ -149,6 +154,15 @@ const remoteMatchesUpdate = (remote: LinearIssueSnapshot, input: LinearIssueUpda
 
   return fields.every((field) => {
     if (!(field in input)) return true;
+    if (field === 'labelIds') {
+      const remoteIds = remote.labelIds;
+      const inputIds = input.labelIds;
+      if (!Array.isArray(remoteIds) || !Array.isArray(inputIds)) return remoteIds === inputIds;
+      return (
+        JSON.stringify([...new Set(remoteIds)].sort()) ===
+        JSON.stringify([...new Set(inputIds)].sort())
+      );
+    }
     return remote[field] === input[field];
   });
 };
@@ -758,10 +772,14 @@ export class LinearSyncWorker {
       });
     }
 
-    const localChanged = changedLinearIssueFields(existingLink.lastConfirmedSnapshot, local);
+    const localChanged = changedLinearIssueFields(existingLink.lastConfirmedSnapshot, local).filter(
+      (field) => field !== 'labelIds',
+    );
     if (localChanged.length > 0) {
       const payload = Object.fromEntries(
-        localChanged.map((field) => [field, local[field] ?? null]),
+        localChanged.flatMap((field) =>
+          local[field] === undefined ? [] : [[field, local[field]]],
+        ),
       );
       await model.queueOutbox({
         expectedLocalRevision: task.domainRevision,

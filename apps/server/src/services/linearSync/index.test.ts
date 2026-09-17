@@ -8,7 +8,7 @@ import {
   parseLinearWebhookPayload,
   verifyLinearWebhookSignature,
 } from './index';
-import { mergeLinearIssueSnapshots } from './merge';
+import { changedLinearIssueFields, mergeLinearIssueSnapshots } from './merge';
 
 const modelMocks = vi.hoisted(() => ({
   captureDelivery: vi.fn(),
@@ -271,5 +271,26 @@ describe('mergeLinearIssueSnapshots', () => {
       local: { title: 'Local title' },
       remote: { title: 'Remote title' },
     });
+  });
+
+  it('treats missing labels and explicit empty labels as different values', () => {
+    const result = mergeLinearIssueSnapshots({
+      base: snapshot(),
+      local: snapshot(),
+      remote: snapshot({ labelIds: [] }),
+    });
+
+    expect(result.conflicts).toBeNull();
+    expect(result.merged.labelIds).toEqual([]);
+    expect(changedLinearIssueFields(snapshot(), snapshot({ labelIds: [] }))).toContain('labelIds');
+  });
+
+  it('compares label UUID arrays as normalized sets', () => {
+    expect(
+      changedLinearIssueFields(
+        snapshot({ labelIds: ['label-1', 'label-2'] }),
+        snapshot({ labelIds: ['label-2', 'label-1', 'label-1'] }),
+      ),
+    ).not.toContain('labelIds');
   });
 });

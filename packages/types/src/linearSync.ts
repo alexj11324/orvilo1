@@ -112,6 +112,8 @@ export interface LinearIssueSnapshot {
   description?: string | null;
   id: string;
   identifier: string;
+  /** Exact remote Linear label UUIDs; omitted when the provider did not return labels. */
+  labelIds?: string[];
   parentId?: string | null;
   priority?: number | null;
   projectId?: string | null;

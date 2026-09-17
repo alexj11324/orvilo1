@@ -4,6 +4,7 @@ export const LINEAR_SYNC_FIELDS = [
   'archivedAt',
   'assigneeId',
   'description',
+  'labelIds',
   'parentId',
   'priority',
   'projectId',
@@ -14,7 +15,20 @@ export const LINEAR_SYNC_FIELDS = [
   'url',
 ] as const satisfies readonly (keyof LinearIssueSnapshot)[];
 
-const equal = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
+const normalizeLabelIds = (value: unknown) => {
+  if (!Array.isArray(value) || value.some((id) => typeof id !== 'string')) return value;
+  return [...new Set(value)].sort();
+};
+
+export const equalLinearIssueFieldValues = (
+  field: keyof LinearIssueSnapshot,
+  left: unknown,
+  right: unknown,
+) => {
+  const leftValue = field === 'labelIds' ? normalizeLabelIds(left) : left;
+  const rightValue = field === 'labelIds' ? normalizeLabelIds(right) : right;
+  return JSON.stringify(leftValue) === JSON.stringify(rightValue);
+};
 
 export interface LinearIssueMergeResult {
   conflicts: LinearSyncConflict | null;
@@ -44,12 +58,19 @@ export const mergeLinearIssueSnapshots = (input: {
     const localValue = field in input.local ? input.local[field] : baseValue;
     const remoteValue = field in input.remote ? input.remote[field] : baseValue;
 
-    if (equal(localValue, baseValue) && !equal(remoteValue, baseValue)) {
+    if (
+      equalLinearIssueFieldValues(field, localValue, baseValue) &&
+      !equalLinearIssueFieldValues(field, remoteValue, baseValue)
+    ) {
       merged[field] = remoteValue as never;
       continue;
     }
 
-    if (equal(remoteValue, baseValue) || equal(localValue, remoteValue)) continue;
+    if (
+      equalLinearIssueFieldValues(field, remoteValue, baseValue) ||
+      equalLinearIssueFieldValues(field, localValue, remoteValue)
+    )
+      continue;
 
     conflicts.push(field);
     baseValues[field] = baseValue;
@@ -76,5 +97,5 @@ export const changedLinearIssueFields = (base: LinearIssueSnapshot, current: Lin
   LINEAR_SYNC_FIELDS.filter((field) => {
     const baseValue = base[field];
     const currentValue = field in current ? current[field] : baseValue;
-    return !equal(baseValue, currentValue);
+    return !equalLinearIssueFieldValues(field, baseValue, currentValue);
   });

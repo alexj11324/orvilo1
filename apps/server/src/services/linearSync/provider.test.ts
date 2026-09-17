@@ -36,6 +36,30 @@ describe('normalizeLinearIssue', () => {
     });
   });
 
+  it('preserves exact remote label UUIDs while distinguishing missing labels from empty labels', () => {
+    const withLabels = normalizeLinearIssue({
+      id: 'issue-1',
+      identifier: 'ENG-1',
+      labels: { nodes: [{ id: 'label-2' }, { id: 'label-1' }] },
+      title: 'Issue',
+    });
+    const withoutLabels = normalizeLinearIssue({
+      id: 'issue-2',
+      identifier: 'ENG-2',
+      title: 'Issue',
+    });
+    const emptyLabels = normalizeLinearIssue({
+      id: 'issue-3',
+      identifier: 'ENG-3',
+      labels: { nodes: [] },
+      title: 'Issue',
+    });
+
+    expect(withLabels.labelIds).toEqual(['label-2', 'label-1']);
+    expect(withoutLabels).not.toHaveProperty('labelIds');
+    expect(emptyLabels.labelIds).toEqual([]);
+  });
+
   it('rejects a provider response without stable identity fields', () => {
     expect(() => normalizeLinearIssue({ id: 'issue-1', title: 'Missing identifier' })).toThrow(
       'missing identity fields',
@@ -442,6 +466,43 @@ describe('normalizeLinearIssue', () => {
     expect(request).toHaveBeenCalledWith(
       'access-token',
       expect.objectContaining({ variables: { after: 'members-cursor' } }),
+    );
+  });
+
+  it('round-trips explicitly supplied label IDs through the GraphQL update input', async () => {
+    const request = vi.fn().mockResolvedValue({
+      data: {
+        data: {
+          issueUpdate: {
+            issue: {
+              id: 'issue-1',
+              identifier: 'ENG-1',
+              labels: { nodes: [{ id: 'label-2' }, { id: 'label-1' }] },
+              title: 'Issue',
+            },
+            success: true,
+          },
+        },
+      },
+      status: 200,
+    });
+    const provider = new LinearGraphqlIssueProvider(
+      {
+        getAccessToken: vi.fn().mockResolvedValue('access-token'),
+      },
+      request,
+    );
+
+    await expect(
+      provider.updateIssue('issue-1', { labelIds: ['label-1', 'label-2'] }),
+    ).resolves.toMatchObject({
+      labelIds: ['label-2', 'label-1'],
+    });
+    expect(request).toHaveBeenCalledWith(
+      'access-token',
+      expect.objectContaining({
+        variables: { id: 'issue-1', input: { labelIds: ['label-1', 'label-2'] } },
+      }),
     );
   });
 });

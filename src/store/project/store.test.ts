@@ -241,6 +241,7 @@ describe('project store cache scope', () => {
         orchestrationPolicyRevision: 2,
         requireHumanReviewRequired: false,
       },
+      message: 'Project orchestration policy updated',
       success: true,
     });
     useProjectStore.setState({

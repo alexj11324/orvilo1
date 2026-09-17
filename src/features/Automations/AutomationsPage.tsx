@@ -121,8 +121,9 @@ const resolveStatusFilter = (params: URLSearchParams): StatusFilter => {
   return value === 'active' || value === 'paused' ? value : 'all';
 };
 
-const CreatedByCell = memo<{ userId: string }>(({ userId }) => {
+const CreatedByCell = memo<{ userId: string | null }>(({ userId }) => {
   const meta = useUserDisplayMeta(userId);
+  if (!userId) return null;
   return (
     <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
       <AssigneeUserAvatar size={16} userId={userId} />

@@ -6,6 +6,7 @@ import type {
   LinearExternalRelationOutboxPayload,
   LinearIssueSnapshot,
   LinearProjectBindingSettings,
+  LinearRelationKind,
   LinearRelationSnapshot,
   LinearSyncTombstone,
   TaskItem,
@@ -222,7 +223,7 @@ export const projectLinearRelation = (input: {
     dependency: {
       dependsOnTaskId: input.kind === 'blocks' ? input.sourceTaskId : input.targetTaskId,
       taskId: input.kind === 'blocks' ? input.targetTaskId : input.sourceTaskId,
-      type: input.kind,
+      type: input.kind as Exclude<LinearRelationKind, 'parent'>,
     },
     parentTaskId: null,
     resolutionState: 'resolved' as const,
@@ -236,7 +237,7 @@ type LinearInboundRow = {
   eventType?: string;
   id: string;
   installationId: string;
-  payload?: Record<string, unknown>;
+  payload?: unknown;
   subjectId: string | null;
 };
 
@@ -244,7 +245,11 @@ type SignedIssueRemovalSnapshot = Pick<LinearIssueSnapshot, 'id'> &
   Partial<Omit<LinearIssueSnapshot, 'id'>>;
 
 const issueFromSignedRemovePayload = (row: LinearInboundRow): SignedIssueRemovalSnapshot => {
-  const value = row.payload?.data;
+  const payload = row.payload;
+  const value =
+    payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>).data
+      : undefined;
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('Linear remove webhook payload does not contain an issue snapshot');
   }
@@ -311,6 +316,9 @@ export class LinearSyncWorker {
     issueLink: NonNullable<Awaited<ReturnType<LinearSyncModel['findIssueLinkById']>>>,
     provider: LinearIssueProvider,
   ) {
+    if (!issueLink.bindingId) {
+      throw new LinearSyncPausedError('Linear issue link has no project binding');
+    }
     const [binding, installation] = await Promise.all([
       this.model.findBindingById(issueLink.bindingId),
       this.model.findInstallationById(issueLink.installationId),
@@ -657,6 +665,7 @@ export class LinearSyncWorker {
           }
         }
 
+        if (!issueLink.bindingId) throw new Error('Linear issue link has no project binding');
         const [binding, installation] = await Promise.all([
           this.model.findBindingById(issueLink.bindingId),
           this.model.findInstallationById(issueLink.installationId),
@@ -1244,7 +1253,7 @@ export class LinearSyncWorker {
       const remote = await this.runExternalMutation(() =>
         provider.createRelation({
           id: mapping.linearRelationId!,
-          kind: relation.kind,
+          kind: relation.kind === 'parent' ? 'relates' : relation.kind,
           sourceIssueId: sourceLink.linearIssueId,
           targetIssueId: targetLink!.linearIssueId,
         }),
@@ -2208,13 +2217,15 @@ export class LinearSyncWorker {
     }
     let taskAfterRemote = task;
     if (Object.keys(patch).length > 0) {
-      taskAfterRemote = await integrationTasks.updatePublicTask(task.id, patch, {
+      const updatedTask = await integrationTasks.updatePublicTask(task.id, patch, {
         eventId: row.id,
         idempotencyKey: `linear:task-update:${row.id}`,
         source: 'linear',
         suppressDomainEvent: context.historicalImport,
         suppressLinearOutbox: true,
       });
+      if (!updatedTask) throw new Error('Linear task update did not return a task');
+      taskAfterRemote = updatedTask;
     }
 
     const localChanged = Array.from(
@@ -2249,12 +2260,7 @@ export class LinearSyncWorker {
       lastInboundDeliveryId: row.id,
       remoteSnapshot: issue,
       remoteUpdatedAt: incomingUpdatedAt,
-      syncState:
-        localChanged.length > 0
-          ? linearBindingWriteEnabled(binding)
-            ? 'pending'
-            : 'paused'
-          : 'synced',
+      syncState: localChanged.length > 0 ? 'pending' : 'synced',
     });
     await this.reconcileRelationsForIssue(
       model,

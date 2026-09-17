@@ -528,7 +528,7 @@ describe('TaskDispatchService', () => {
         .returning();
       const [topic] = await db
         .insert(topics)
-        .values({ totalCost, userId, workspaceId })
+        .values({ totalCost: Number(totalCost), userId, workspaceId })
         .returning();
       await db.insert(taskTopics).values({
         seq: 1,

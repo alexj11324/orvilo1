@@ -196,7 +196,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: ${cssVar.borderRadius};
 
-    background: ${cssVar.colorBgContainerSecondary};
+    background: ${cssVar.colorBgContainer};
   `,
   statusGrid: css`
     display: grid;
@@ -311,7 +311,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     padding: 16px;
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorBgContainerSecondary};
+    background: ${cssVar.colorBgContainer};
   `,
 }));
 
@@ -592,9 +592,10 @@ const LinearWorkspaceSettings = memo(() => {
       installationResponse.data.find((item) => item.status === 'active') ??
       installationResponse.data[0];
     setSelectedInstallationId(nextInstallation?.id ?? '');
+    const nextInstallationId = nextInstallation?.id;
     setCatalog(
-      nextInstallation
-        ? ((await lambdaClient.linearSync.catalog.query({ installationId: nextInstallation.id }))
+      nextInstallationId
+        ? ((await lambdaClient.linearSync.catalog.query({ installationId: nextInstallationId }))
             .data ?? {
             members: [],
             organizations: [],
@@ -706,6 +707,7 @@ const LinearWorkspaceSettings = memo(() => {
       const response = await lambdaClient.linearSync.startOAuth.mutate({
         returnTo: window.location.pathname,
       });
+      if (!response?.authorizationUrl) throw new Error('Linear OAuth URL was not returned');
       popup.location.href = response.authorizationUrl;
       await waitForPopup(popup);
       await refresh();

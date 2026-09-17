@@ -95,9 +95,11 @@ describe('linearSyncRouter recovery operations', () => {
 
   it('returns safe operation metadata without a payload field', async () => {
     const result = await caller().operations({ limit: 10 });
+    if (!result) throw new Error('Expected operations result');
 
     expect(result.data).toEqual([expect.objectContaining({ kind: 'outbox', status: 'failed' })]);
-    expect(result.data[0]).not.toHaveProperty('payload');
+    const [operation] = result.data;
+    expect(operation).not.toHaveProperty('payload');
     expect(mockModel.listRecoveryRows).toHaveBeenCalledWith(10);
   });
 
@@ -107,6 +109,7 @@ describe('linearSyncRouter recovery operations', () => {
       id: '00000000-0000-4000-8000-000000000001',
       kind: 'outbox',
     });
+    if (!result) throw new Error('Expected retry result');
 
     expect(result.success).toBe(true);
     expect(mockModel.retryRecoveryRow).toHaveBeenCalledWith({
@@ -141,6 +144,7 @@ describe('linearSyncRouter recovery operations', () => {
       issueLinkId: '00000000-0000-4000-8000-000000000003',
       strategy: 'keep_local',
     });
+    if (!result) throw new Error('Expected conflict result');
 
     expect(result.success).toBe(true);
     expect(mockResolveConflict).toHaveBeenCalledWith({

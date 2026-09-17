@@ -100,8 +100,8 @@ describe('LinearSyncWorker inbound ordering', () => {
         data: {
           id: issue.id,
           identifier: issue.identifier,
-          project: issue.project,
-          team: issue.team,
+          project: { id: issue.projectId },
+          team: { id: issue.teamId },
         },
         organizationId: installation.organizationId,
         type: 'Issue',

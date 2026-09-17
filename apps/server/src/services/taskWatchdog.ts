@@ -42,9 +42,10 @@ export async function runTaskWatchdog(
   const canceled: string[] = [];
 
   for (const task of stuckTasks) {
+    const taskOwnerId = task.createdByUserId ?? task.createdBySubjectId ?? 'system';
     const wsId = task.workspaceId ?? undefined;
-    const taskModel = new TaskModel(db, task.createdByUserId, wsId);
-    const taskTopicModel = new TaskTopicModel(db, task.createdByUserId, wsId);
+    const taskModel = new TaskModel(db, taskOwnerId, wsId);
+    const taskTopicModel = new TaskTopicModel(db, taskOwnerId, wsId);
     const runningTopics = (await taskTopicModel.findByTaskId(task.id)).filter(
       (topic) => topic.status === 'running',
     );
@@ -52,7 +53,7 @@ export async function runTaskWatchdog(
       // A heartbeat deadline does not prove the external writer exited. Stop
       // every owned operation first; only an acknowledged interruption lets
       // the watchdog cancel its topic and reclaim run-owned worktrees.
-      const aiAgentService = new AiAgentService(db, task.createdByUserId, {
+      const aiAgentService = new AiAgentService(db, taskOwnerId, {
         workspaceId: wsId,
       });
       const operationIds = [
@@ -105,7 +106,6 @@ export async function runTaskWatchdog(
         cancellationRequired.push(task.identifier);
         continue;
       }
-
     }
 
     const failureExtra = {
@@ -128,11 +128,9 @@ export async function runTaskWatchdog(
       continue;
     }
 
-    await new TaskIntegrationService(db, task.createdByUserId, wsId).cleanupTaskWorktrees(
-      task.id,
-    );
+    await new TaskIntegrationService(db, taskOwnerId, wsId).cleanupTaskWorktrees(task.id);
 
-    const briefModel = new BriefModel(db, task.createdByUserId, wsId);
+    const briefModel = new BriefModel(db, taskOwnerId, wsId);
     await briefModel.create({
       agentId: task.assigneeAgentId || undefined,
       priority: 'urgent',

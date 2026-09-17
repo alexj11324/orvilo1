@@ -2832,7 +2832,7 @@ describe('TaskModel', () => {
       const own = await ownModel.create({ instruction: 'Own stuck task' });
       const foreign = await foreignModel.create({ instruction: 'Foreign stuck task' });
       for (const task of [own, foreign]) {
-        await new TaskModel(serverDB, task.createdByUserId).update(task.id, {
+        await new TaskModel(serverDB, task.createdByUserId ?? userId).update(task.id, {
           heartbeatTimeout: 1,
           status: 'running',
         });

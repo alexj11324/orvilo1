@@ -238,7 +238,8 @@ export const buildLinearConflictResolution = (input: {
           : input.fieldSources?.[field];
     if (!source) throw new Error(`A merge source is required for ${field}`);
     const values = source === 'local' ? input.conflict.local : input.conflict.remote;
-    merged[field] = (field in values ? values[field] : input[source][field]) as never;
+    const fallback = source === 'local' ? input.local : input.remote;
+    merged[field] = (field in values ? values[field] : fallback[field]) as never;
   }
 
   const outboundPatch = Object.fromEntries(

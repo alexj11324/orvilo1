@@ -1854,7 +1854,7 @@ describe('Task Router Integration', () => {
       });
       await wsOtherCaller.create({ instruction: 'Others unassigned', name: 'Others unassigned' });
 
-      const groups = () => ({ groups: [{ key: 'backlog', statuses: ['backlog'] }] });
+      const groups = () => ({ groups: [{ key: 'backlog', statuses: ['backlog' as const] }] });
       const idsIn = (result: { data: Array<{ tasks: Array<{ id: string }> }> }) =>
         result.data.flatMap((group) => group.tasks.map((task) => task.id));
 

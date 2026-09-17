@@ -36,6 +36,16 @@ export interface PreparedTaskDispatch {
   task: TaskItem;
 }
 
+type TaskDispatchTransitionInput = {
+  agentId?: string | null;
+  environmentSnapshot?: TaskExecutionEnvironmentSnapshot;
+  expected: TaskDispatchPhase[];
+  leaseExpiresAt?: Date | null;
+  operationId?: string | null;
+  phase: TaskDispatchPhase;
+  waitingReason?: string | null;
+};
+
 export class TaskDispatchService {
   private readonly model: TaskDispatchModel;
 
@@ -115,14 +125,7 @@ export class TaskDispatchService {
     return { dispatch: lease.dispatch, fence: lease.fence, owner, task: currentTask };
   }
 
-  async transition(
-    prepared: PreparedTaskDispatch,
-    input: Parameters<TaskDispatchModel['transition']>[0] & {
-      dispatchId?: never;
-      fence?: never;
-      owner?: never;
-    },
-  ) {
+  async transition(prepared: PreparedTaskDispatch, input: TaskDispatchTransitionInput) {
     const updated = await this.model.transition({
       ...input,
       dispatchId: prepared.dispatch.id,

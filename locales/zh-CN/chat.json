@@ -1808,6 +1808,7 @@
   "taskDetail.runTask": "运行",
   "taskDetail.runTrigger.goal": "目标驱动",
   "taskDetail.runTrigger.heartbeat": "心跳触发",
+  "taskDetail.runTrigger.orchestrator": "编排器触发",
   "taskDetail.runTrigger.schedule": "定时触发",
   "taskDetail.runVerify.checklist": "验收检查项",
   "taskDetail.runVerify.errored": "验证异常",

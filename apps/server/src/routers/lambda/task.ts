@@ -279,7 +279,7 @@ async function resolveOrThrow(model: TaskModel, id: string) {
 function collectTaskCommentRecipients(params: {
   actorUserId: string;
   mentionedUserIds: string[];
-  task: { assigneeUserId: string | null; createdByUserId: string };
+  task: { assigneeUserId: string | null; createdByUserId: string | null };
 }): TaskCommentActivityRecipient[] {
   const { actorUserId, mentionedUserIds, task } = params;
   const byUserId = new Map<string, TaskCommentActivityRecipient['kind']>();
@@ -298,7 +298,7 @@ function collectTaskCommentRecipients(params: {
  * check (`filterActiveWorkspaceMemberIds`).
  */
 function isTaskHiddenFrom(
-  task: { createdByUserId: string; visibility: 'private' | 'public' },
+  task: { createdByUserId: string | null; visibility: 'private' | 'public' },
   userId: string,
 ): boolean {
   return task.visibility === 'private' && task.createdByUserId !== userId;
@@ -1769,7 +1769,7 @@ export const taskRouter = router({
         ctx.taskService.assertAssigneeUserVisibilityCompat(
           resolved.visibility,
           data.assigneeUserId,
-          resolved.createdByUserId,
+          resolved.createdByUserId ?? ctx.userId,
         );
 
         // The reviewer is the human accountable at review — same workspace
@@ -1779,7 +1779,7 @@ export const taskRouter = router({
         ctx.taskService.assertAssigneeUserVisibilityCompat(
           resolved.visibility,
           data.reviewerUserId,
-          resolved.createdByUserId,
+          resolved.createdByUserId ?? ctx.userId,
         );
 
         const resolvedParentTaskId =
@@ -1924,7 +1924,7 @@ export const taskRouter = router({
         if (input.visibility === 'private') {
           const hasOtherCreators = await ctx.taskModel.subtreeHasOtherCreators(
             resolved.id,
-            resolved.createdByUserId,
+            resolved.createdByUserId ?? ctx.userId,
           );
           if (hasOtherCreators) {
             throw new TRPCError({
@@ -1942,7 +1942,7 @@ export const taskRouter = router({
           ctx.taskService.assertAssigneeUserVisibilityCompat(
             input.visibility,
             resolved.assigneeUserId,
-            resolved.createdByUserId,
+            resolved.createdByUserId ?? ctx.userId,
           );
         }
 

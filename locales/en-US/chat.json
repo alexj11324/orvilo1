@@ -1809,6 +1809,7 @@
   "taskDetail.runTask": "Run",
   "taskDetail.runTrigger.goal": "Goal loop",
   "taskDetail.runTrigger.heartbeat": "Heartbeat",
+  "taskDetail.runTrigger.orchestrator": "Orchestrator",
   "taskDetail.runTrigger.schedule": "Scheduled",
   "taskDetail.runVerify.checklist": "Acceptance checks",
   "taskDetail.runVerify.errored": "Verification errored",

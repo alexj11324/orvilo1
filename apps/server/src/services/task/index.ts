@@ -1118,7 +1118,7 @@ export class TaskService {
    */
   async runReadySubtasks(
     idOrIdentifier: string,
-    requestId = randomUUID(),
+    requestId: string = randomUUID(),
   ): Promise<RunReadySubtasksResult> {
     const parent = await this.resolveOrThrow(idOrIdentifier);
     const graph = new TaskGraphService(this.db, this.userId, this.workspaceId);
@@ -1468,7 +1468,7 @@ export class TaskService {
           assigneeUserId: s.assigneeUserId,
           automationMode: s.automationMode,
           blockedBy: depMap.get(s.id),
-          createdByUserId: s.createdByUserId,
+          createdByUserId: s.createdByUserId ?? undefined,
           visibility: s.visibility,
           children: buildSubtaskTree(s.id),
           ...(s.heartbeatInterval != null ? { heartbeat: { interval: s.heartbeatInterval } } : {}),

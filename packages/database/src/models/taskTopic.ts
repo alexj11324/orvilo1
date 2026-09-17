@@ -517,7 +517,7 @@ export class TaskTopicModel {
     taskId: string,
     topicId: string,
     operationId: string,
-    status: 'completed' | 'failed',
+    status: 'canceled' | 'completed' | 'failed',
   ): Promise<string | null> {
     const now = new Date();
     const reservationPrefix = `completion:${operationId}:`;

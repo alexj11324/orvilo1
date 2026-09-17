@@ -38,7 +38,6 @@ const capture = async (payload: Record<string, unknown>) => {
   const rawBody = JSON.stringify({ ...payload, webhookTimestamp: timestamp });
   const signature = createHmac('sha256', secret).update(rawBody).digest('hex');
   return new LinearSyncService({} as never, 'workspace-1').captureWebhook({
-    deliveryId: String(payload.data && (payload.data as Record<string, unknown>).id),
     now: timestamp,
     rawBody,
     secret,

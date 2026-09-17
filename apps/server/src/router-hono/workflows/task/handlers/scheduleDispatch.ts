@@ -53,6 +53,7 @@ export const runScheduleDispatch = async ({ dryRun = false }: ScheduleDispatchPa
   const due: DueTask[] = [];
   for (const task of tasks) {
     if (!task.schedulePattern) continue;
+    if (!task.createdByUserId) continue;
     const matches = isExecutionTime({
       cronPattern: task.schedulePattern,
       currentTime: now,

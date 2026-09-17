@@ -1760,6 +1760,7 @@ export default {
   'taskDetail.topicMenu.stopConfirm.title': 'Stop Run?',
   'taskDetail.runTrigger.goal': 'Goal loop',
   'taskDetail.runTrigger.heartbeat': 'Heartbeat',
+  'taskDetail.runTrigger.orchestrator': 'Orchestrator',
   'taskDetail.runTrigger.schedule': 'Scheduled',
   'taskDetail.integration.attempts_one': '{{count}} merge attempt',
   'taskDetail.integration.attempts_other': '{{count}} merge attempts',

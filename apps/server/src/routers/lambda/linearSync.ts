@@ -199,6 +199,12 @@ export const linearSyncRouter = router({
         if (input.kind === 'planning') {
           await LinearSyncWorkflow.trigger({ workspaceId: ctx.workspaceId!, limit: 20 });
         } else {
+          if (!retried.installationId) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'The Linear recovery row has no installation to retry',
+            });
+          }
           await LinearSyncWorkflow.triggerInstallation({
             installationId: retried.installationId,
             limit: 20,

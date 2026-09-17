@@ -133,6 +133,12 @@ export class LinearConflictResolutionService {
       const choosesLocalProject =
         conflict.fields.includes('projectId') && projectSource(input) === 'local';
       if (choosesLocalProject) {
+        if (!task.projectId) {
+          throw new LinearConflictResolutionError(
+            'PRECONDITION_FAILED',
+            'The local task has no project binding to resolve',
+          );
+        }
         const localBinding = await model.lockBindingByProjectId(task.projectId);
         if (!localBinding || localBinding.installationId !== installation.id) {
           throw new LinearConflictResolutionError(

@@ -128,7 +128,10 @@ describe('LinearSyncWorker.importBinding', () => {
     expect(provider.listIssues).toHaveBeenNthCalledWith(1, 'linear-project-1', 1, null);
     expect(provider.listIssues).toHaveBeenNthCalledWith(2, 'linear-project-1', 1, 'cursor-1');
     expect(provider.listIssues).toHaveBeenNthCalledWith(3, 'linear-project-1', 1, null);
-    expect(processIssue.mock.calls.map(([row, remote]) => [row.subjectId, remote.id])).toEqual([
+    const processCalls = processIssue.mock.calls as Array<
+      [{ subjectId: string | null }, { id: string }]
+    >;
+    expect(processCalls.map(([row, remote]) => [row.subjectId, remote.id])).toEqual([
       ['1', '1'],
       ['2', '2'],
       ['1', '1'],

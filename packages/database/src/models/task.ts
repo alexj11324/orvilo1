@@ -61,8 +61,8 @@ import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
 import type { LobeChatDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
-import { TaskDependencyError } from './taskDependency';
 import { LinearSyncModel } from './linearSync';
+import { TaskDependencyError } from './taskDependency';
 
 /** Columns whose change is worth a line in the task activity feed. */
 const TRACKED_TASK_COLUMNS = [
@@ -847,7 +847,9 @@ export class TaskModel {
       await this.recordTaskDeleted(this.db, task, {
         ...mutation,
         idempotencyKey:
-          mutation.idempotencyKey === undefined ? undefined : `${mutation.idempotencyKey}:${task.id}`,
+          mutation.idempotencyKey === undefined
+            ? undefined
+            : `${mutation.idempotencyKey}:${task.id}`,
       });
     }
     const deleted = await this.db
@@ -1940,7 +1942,13 @@ export class TaskModel {
     id: string,
     currentStatus: string,
     status: string,
-    extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
+    extra?: {
+      completedAt?: Date;
+      error?: string | null;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    },
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (!this.dependencyLockHeld) {
@@ -2198,7 +2206,13 @@ export class TaskModel {
       requirementRevision: number;
       status?: string;
     },
-    extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
+    extra?: {
+      completedAt?: Date;
+      error?: string | null;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    },
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     return this.db.transaction(async (tx) => {
@@ -2272,7 +2286,9 @@ export class TaskModel {
   ): Promise<TaskItem[]> {
     if (ids.length === 0) return [];
     if (!this.dependencyLockHeld) {
-      return this.withDependencyLock((model) => model.updateStatusForIds(ids, status, extra, mutation));
+      return this.withDependencyLock((model) =>
+        model.updateStatusForIds(ids, status, extra, mutation),
+      );
     }
     await this.assertDependenciesForStatus(ids, status);
     const updated = await this.db
@@ -2907,9 +2923,11 @@ export class TaskModel {
       .where(and(inArray(tasks.id, dependentIds), eq(tasks.status, 'backlog'), this.ownership()));
     const byOwner = new Map<string, string[]>();
     for (const task of candidates) {
-      const ids = byOwner.get(task.createdByUserId) ?? [];
+      const ownerId = task.createdByUserId ?? task.createdBySubjectId;
+      if (!ownerId) continue;
+      const ids = byOwner.get(ownerId) ?? [];
       ids.push(task.id);
-      byOwner.set(task.createdByUserId, ids);
+      byOwner.set(ownerId, ids);
     }
     const blockedIds = new Set(
       (
@@ -3169,22 +3187,20 @@ export class TaskModel {
         `task:${task.id}:revision:${task.domainRevision}:comment:${input.action}:${input.commentId}`,
       payload: { action: input.action, commentId: input.commentId },
       source: input.mutation?.source ?? input.source,
-      outboxPayload: input.comment
-        ? ({
-            action:
-              input.action === 'deleted'
-                ? 'delete'
-                : input.action === 'created'
-                  ? 'create'
-                  : 'update',
-            ...(input.action === 'deleted' ? {} : { body: input.comment.content }),
-            commentId: input.commentId,
-            ...(input.comment.editorData !== undefined
-              ? { editorData: input.comment.editorData }
-              : {}),
-            kind: 'comment',
-          } satisfies LinearExternalCommentOutboxPayload)
-        : undefined,
+      outboxPayload:
+        input.action === 'deleted'
+          ? { action: 'delete', commentId: input.commentId, kind: 'comment' }
+          : input.comment
+            ? ({
+                action: input.action === 'created' ? 'create' : 'update',
+                body: input.comment.content,
+                commentId: input.commentId,
+                ...(input.comment.editorData !== undefined
+                  ? { editorData: input.comment.editorData }
+                  : {}),
+                kind: 'comment',
+              } satisfies LinearExternalCommentOutboxPayload)
+            : undefined,
       suppressLinearOutbox: false,
       task,
     });

@@ -104,7 +104,9 @@ describe('LinearSyncModel', () => {
       writeEnabled: false,
     });
     expect(disabled?.settings).toMatchObject({ writeEnabled: false });
-    expect(await model.claimOutbox(1, 60_000, installationId, 'paused-worker')).toHaveLength(0);
+    expect(
+      await model.claimOutbox(1, 60_000, installationId, '00000000-0000-4000-8000-000000000101'),
+    ).toHaveLength(0);
     const pausedOutbox = await model.listOutbox('paused');
     expect(pausedOutbox).toHaveLength(1);
     expect(pausedOutbox[0]).toMatchObject({ attempts: 0, status: 'paused' });
@@ -115,7 +117,12 @@ describe('LinearSyncModel', () => {
       writeEnabled: true,
     });
     expect(reenabled?.settings).toMatchObject({ writeEnabled: true });
-    const resumedOutbox = await model.claimOutbox(1, 60_000, installationId, 'resumed-worker');
+    const resumedOutbox = await model.claimOutbox(
+      1,
+      60_000,
+      installationId,
+      '00000000-0000-4000-8000-000000000102',
+    );
     expect(resumedOutbox).toHaveLength(1);
     expect(resumedOutbox[0]).toMatchObject({ attempts: 1, status: 'sending' });
   });
@@ -148,7 +155,9 @@ describe('LinearSyncModel', () => {
       id: binding.id,
       readEnabled: false,
     });
-    expect(await model.claimInbox(1, 60_000, installationId, 'paused-reader')).toHaveLength(0);
+    expect(
+      await model.claimInbox(1, 60_000, installationId, '00000000-0000-4000-8000-000000000103'),
+    ).toHaveLength(0);
     const pausedInbox = await db
       .select()
       .from(linearSyncInbox)
@@ -162,7 +171,12 @@ describe('LinearSyncModel', () => {
       id: binding.id,
       readEnabled: true,
     });
-    const resumedInbox = await model.claimInbox(1, 60_000, installationId, 'resumed-reader');
+    const resumedInbox = await model.claimInbox(
+      1,
+      60_000,
+      installationId,
+      '00000000-0000-4000-8000-000000000104',
+    );
     expect(resumedInbox).toHaveLength(1);
     expect(resumedInbox[0]).toMatchObject({ attempts: 1, status: 'processing' });
   });
@@ -413,32 +427,51 @@ describe('LinearSyncModel', () => {
       organizationId: 'linear-org-1',
       payload: { id: 'issue-1' },
     });
-    const [first] = await model.claimInbox(1, 60_000, installationId, 'worker-a');
+    const [first] = await model.claimInbox(
+      1,
+      60_000,
+      installationId,
+      '00000000-0000-4000-8000-000000000105',
+    );
     expect(first).toMatchObject({ attempts: 1, leaseFence: 1, status: 'processing' });
 
     await db
       .update(linearSyncInbox)
       .set({ lockedUntil: new Date(0) })
       .where(eq(linearSyncInbox.id, captured.row!.id));
-    const [reclaimed] = await model.claimInbox(1, 60_000, installationId, 'worker-b');
-    expect(reclaimed).toMatchObject({ attempts: 2, leaseFence: 2, leaseOwner: 'worker-b' });
+    const [reclaimed] = await model.claimInbox(
+      1,
+      60_000,
+      installationId,
+      '00000000-0000-4000-8000-000000000106',
+    );
+    expect(reclaimed).toMatchObject({
+      attempts: 2,
+      leaseFence: 2,
+      leaseOwner: '00000000-0000-4000-8000-000000000106',
+    });
 
     await expect(
       model.updateInbox(
         first.id,
         { lockedUntil: null, processedAt: new Date(), status: 'processed' },
-        { fence: first.leaseFence, owner: 'worker-a' },
+        { fence: first.leaseFence, owner: '00000000-0000-4000-8000-000000000105' },
       ),
     ).resolves.toBeNull();
     await expect(
       model.updateInbox(
         reclaimed.id,
         { availableAt: new Date(0), lockedUntil: null, status: 'failed' },
-        { fence: reclaimed.leaseFence, owner: 'worker-b' },
+        { fence: reclaimed.leaseFence, owner: '00000000-0000-4000-8000-000000000106' },
       ),
     ).resolves.toMatchObject({ status: 'failed' });
 
-    const [retry] = await model.claimInbox(1, 60_000, installationId, 'worker-c');
+    const [retry] = await model.claimInbox(
+      1,
+      60_000,
+      installationId,
+      '00000000-0000-4000-8000-000000000107',
+    );
     expect(retry).toMatchObject({ attempts: 3, leaseFence: 3, status: 'processing' });
   });
 
@@ -545,7 +578,12 @@ describe('LinearSyncModel', () => {
     expect(await model.listOutbox()).toHaveLength(1);
     expect((await model.listOutbox())[0].payload).toMatchObject({ remoteIssueId });
 
-    const [claimed] = await model.claimOutbox(1, 60_000, installationId, 'create-worker');
+    const [claimed] = await model.claimOutbox(
+      1,
+      60_000,
+      installationId,
+      '00000000-0000-4000-8000-000000000108',
+    );
     const remoteSnapshot = {
       id: 'linear-created-issue-1',
       identifier: 'ENG-1',
@@ -555,7 +593,7 @@ describe('LinearSyncModel', () => {
     await expect(
       model.settleCreateIssueOutbox(
         claimed.id,
-        { fence: claimed.leaseFence, owner: 'create-worker' },
+        { fence: claimed.leaseFence, owner: '00000000-0000-4000-8000-000000000108' },
         {
           bindingId: binding.id,
           installationId,
@@ -774,12 +812,25 @@ describe('LinearSyncModel', () => {
     ]);
     const model = new LinearSyncModel(db, workspaceId);
 
-    const claimed = await model.claimOutbox(2, 60_000, installationId, 'worker-new');
+    const claimed = await model.claimOutbox(
+      2,
+      60_000,
+      installationId,
+      '00000000-0000-4000-8000-000000000109',
+    );
     expect(claimed).toHaveLength(2);
     expect(claimed).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ leaseFence: 2, leaseOwner: 'worker-new', status: 'sending' }),
-        expect.objectContaining({ leaseFence: 4, leaseOwner: 'worker-new', status: 'sending' }),
+        expect.objectContaining({
+          leaseFence: 2,
+          leaseOwner: '00000000-0000-4000-8000-000000000109',
+          status: 'sending',
+        }),
+        expect.objectContaining({
+          leaseFence: 4,
+          leaseOwner: '00000000-0000-4000-8000-000000000109',
+          status: 'sending',
+        }),
       ]),
     );
     await expect(
@@ -829,9 +880,9 @@ describe('LinearSyncModel', () => {
       },
     ]);
 
-    await expect(model.claimOutbox(2, 60_000, installationId, 'ordered-worker')).resolves.toEqual(
-      [],
-    );
+    await expect(
+      model.claimOutbox(2, 60_000, installationId, '00000000-0000-4000-8000-000000000110'),
+    ).resolves.toEqual([]);
   });
 
   it('reports the next retry time for a durable continuation', async () => {
@@ -898,7 +949,12 @@ describe('LinearSyncModel', () => {
       payload: { title: 'v12' },
       taskId: task.id,
     });
-    const [claimed] = await model.claimOutbox(1, 60_000, installationId, 'worker-v12');
+    const [claimed] = await model.claimOutbox(
+      1,
+      60_000,
+      installationId,
+      '00000000-0000-4000-8000-000000000111',
+    );
     await model.queueOutbox({
       expectedLocalRevision: 13,
       installationId,
@@ -910,7 +966,7 @@ describe('LinearSyncModel', () => {
 
     await model.settleOutbox(
       claimed.id,
-      { fence: claimed.leaseFence, owner: 'worker-v12' },
+      { fence: claimed.leaseFence, owner: '00000000-0000-4000-8000-000000000111' },
       {
         issueLinkId: link.id,
         remoteSnapshot: { ...snapshot, title: 'v12', updatedAt: '2026-09-16T12:00:00.000Z' },
@@ -1030,16 +1086,26 @@ describe('LinearSyncModel', () => {
     });
     const model = new LinearSyncModel(db, workspaceId);
 
-    const first = await model.claimTokenRefresh(installationId, 0, 'worker-a');
-    expect(first).toMatchObject({ refreshFence: 1, refreshOwner: 'worker-a', tokenVersion: 0 });
-    await expect(model.claimTokenRefresh(installationId, 0, 'worker-b')).resolves.toBeNull();
+    const first = await model.claimTokenRefresh(
+      installationId,
+      0,
+      '00000000-0000-4000-8000-000000000105',
+    );
+    expect(first).toMatchObject({
+      refreshFence: 1,
+      refreshOwner: '00000000-0000-4000-8000-000000000105',
+      tokenVersion: 0,
+    });
+    await expect(
+      model.claimTokenRefresh(installationId, 0, '00000000-0000-4000-8000-000000000106'),
+    ).resolves.toBeNull();
     await expect(
       model.persistTokenRefresh({
         accessTokenCiphertext: 'cipher:stale',
         accessTokenExpiresAt: new Date(),
         expectedTokenVersion: 0,
         id: installationId,
-        owner: 'worker-b',
+        owner: '00000000-0000-4000-8000-000000000106',
         refreshFence: first!.refreshFence,
         refreshTokenCiphertext: 'cipher:stale',
         scopes: ['read', 'write'],
@@ -1052,7 +1118,7 @@ describe('LinearSyncModel', () => {
         accessTokenExpiresAt: new Date(Date.now() + 3_600_000),
         expectedTokenVersion: 0,
         id: installationId,
-        owner: 'worker-a',
+        owner: '00000000-0000-4000-8000-000000000105',
         refreshFence: first!.refreshFence,
         refreshTokenCiphertext: 'cipher:refresh-v2',
         scopes: ['read', 'write'],
@@ -1143,7 +1209,11 @@ describe('LinearSyncModel', () => {
 
     const [runningOutbox] = await db
       .update(linearSyncOutbox)
-      .set({ lockedUntil: new Date(Date.now() + 60_000), leaseOwner: 'worker', status: 'sending' })
+      .set({
+        lockedUntil: new Date(Date.now() + 60_000),
+        leaseOwner: '00000000-0000-4000-8000-000000000112',
+        status: 'sending',
+      })
       .where(eq(linearSyncOutbox.id, outbox.id))
       .returning();
     expect(await model.retryOutbox(outbox.id, runningOutbox.updatedAt)).toBeNull();

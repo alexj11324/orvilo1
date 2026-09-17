@@ -1,0 +1,13 @@
+name: PR26 Race Validation
+on:
+  push:
+    branches: [fix/task-pr-audit-20260916]
+    paths: [.github/workflows/pr26-race-validation.yml]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: echo 'temporary validation harness'

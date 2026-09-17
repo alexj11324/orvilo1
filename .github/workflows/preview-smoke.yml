@@ -64,10 +64,19 @@ jobs:
             exit 1
           fi
           deployment_host="${preview_url#https://}"
-          deployment=$(curl -fsS --get \
+          response_file=$(mktemp)
+          http_status=$(curl -sS -o "$response_file" -w '%{http_code}' --get \
             "https://api.vercel.com/v13/deployments/${EXPECTED_DEPLOYMENT_ID}" \
             --data-urlencode "teamId=${VERCEL_ORG_ID}" \
             -H "Authorization: Bearer ${VERCEL_TOKEN}")
+          deployment=$(<"$response_file")
+          rm -f "$response_file"
+          if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
+            error_code=$(jq -r '.error.code // "unknown"' <<< "$deployment")
+            error_message=$(jq -r '.error.message // "no message"' <<< "$deployment")
+            echo "Vercel deployment validation failed (HTTP $http_status, code=$error_code): $error_message" >&2
+            exit 1
+          fi
           actual_sha=$(jq -er '.meta.githubCommitSha // empty' <<< "$deployment")
           actual_project=$(jq -er '.projectId // empty' <<< "$deployment")
           actual_url=$(jq -er '.url // empty' <<< "$deployment")

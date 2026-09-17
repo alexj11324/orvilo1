@@ -1,11 +1,11 @@
-import { and, asc, eq } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
+import { and, asc, eq } from 'drizzle-orm';
 
-import { agents, projectAgents, projects } from '@orvilo/database/schemas';
-import { UserModel } from '@/database/models/user';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { UserModel } from '@/database/models/user';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { agents, projectAgents, projects } from '@orvilo/database/schemas';
 
 /** `workspaceAgent.list` — one row per agent participating in this workspace's projects. */
 export interface WorkspaceAgentSummary {

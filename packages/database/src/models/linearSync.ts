@@ -90,7 +90,7 @@ export const sanitizeLinearSyncError = (value: string | null | undefined) => {
   if (!value) return null;
   const normalized = value.toLowerCase();
   if (
-    /oauth|authorization|access[_ -]?token|refresh[_ -]?token|invalid[_ -]?grant|\b401\b|\b403\b/i.test(
+    /oauth|authorization|bearer|access[_ -]?token|refresh[_ -]?token|invalid[_ -]?grant|\b401\b|\b403\b/i.test(
       normalized,
     )
   ) {

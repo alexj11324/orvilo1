@@ -11,6 +11,8 @@ vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(() => ({})),
 }));
 vi.mock('@/database/models/linearSync', () => ({
+  LINEAR_ISSUE_LINK_LIST_DEFAULT_LIMIT: 100,
+  LINEAR_ISSUE_LINK_TASK_ID_CAP: 100,
   LinearSyncModel: vi.fn(function () {
     return mockModel;
   }),

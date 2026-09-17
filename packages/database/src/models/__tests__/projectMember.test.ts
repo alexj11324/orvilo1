@@ -22,6 +22,7 @@ const workspaceId = 'pm-workspace';
 const projectId = 'pm-project';
 const otherProjectId = 'pm-other-project';
 const coordinatorAgentId = 'pm-coordinator';
+const otherCoordinatorAgentId = 'pm-coordinator-2';
 
 beforeEach(async () => {
   await serverDB.delete(users);
@@ -34,9 +35,11 @@ beforeEach(async () => {
     { role: 'member', userId: memberId, workspaceId },
     { role: 'member', userId: otherUserId, workspaceId },
   ]);
-  await serverDB
-    .insert(agents)
-    .values({ id: coordinatorAgentId, slug: coordinatorAgentId, userId: ownerId });
+  // projects.coordinatorAgentId is unique — each project needs its own agent.
+  await serverDB.insert(agents).values([
+    { id: coordinatorAgentId, slug: coordinatorAgentId, userId: ownerId },
+    { id: otherCoordinatorAgentId, slug: otherCoordinatorAgentId, userId: ownerId },
+  ]);
   await serverDB.insert(projects).values([
     {
       coordinatorAgentId,
@@ -47,7 +50,7 @@ beforeEach(async () => {
       workspaceId,
     },
     {
-      coordinatorAgentId,
+      coordinatorAgentId: otherCoordinatorAgentId,
       id: otherProjectId,
       identifier: 'PMO',
       name: 'Other project',

@@ -23,7 +23,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Apply review-order fixes
-        run: python .agents/tmp/pr25-review-order-fix.py
+        run: |
+          python .agents/tmp/pr25-review-order-fix.py
+          python .agents/tmp/pr25-review-order-followup.py
       - name: Focused lint
         run: bun run check --lint apps/server/src/services/taskDeliveryReview/index.ts apps/server/src/services/taskDeliveryReview/__tests__/reviewController.cases.ts apps/server/src/services/taskDeliveryReview/index.test.ts
       - name: Review lifecycle regressions
@@ -51,7 +53,7 @@ jobs:
           set -euo pipefail
           git config user.name 'ChatGPT Delivery Repair'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm .agents/tmp/pr25-review-order-fix.py .github/workflows/pr25-review-order-validation.yml
+          git rm .agents/tmp/pr25-review-order-fix.py .agents/tmp/pr25-review-order-followup.py .github/workflows/pr25-review-order-validation.yml
           git add apps/server/src/services/taskDeliveryReview
           git diff --cached --check
           git commit -m '🐛 fix(tasks): bind PR before review'

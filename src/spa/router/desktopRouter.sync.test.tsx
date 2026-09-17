@@ -26,7 +26,6 @@ import AppShellSkeleton from '@/spa/BootShell/AppShellSkeleton';
 import { createTabRouter } from '@/spa/router/tabRouter';
 import { resolveRouteSkeleton } from '@/spa/router/useRouteSkeleton';
 
-import DesktopHomeRoute from './DesktopHomeRoute';
 import {
   createMainAreaChildren as createWebMainAreaChildren,
   desktopRoutes as webDesktopRoutes,
@@ -569,12 +568,37 @@ describe('desktop router shared definition', () => {
     // the workspace tree has to answer it too — otherwise `/:slug` lands on the
     // chat Home while `/` lands on the task list.
     expect(landingTypes(webChildren, webWorkspace)).toEqual([WebHomeRedirect, WebHomeRedirect]);
-    // Electron keeps its own element: each tab owns a router, so the slot is
-    // that tab's opening screen rather than the app's.
+    // Electron lands its tabs on the same element: each tab owns a memory
+    // router, so a fresh `/` (or `/:workspaceSlug`) tab redirects inside that
+    // router to the same `/tasks` board Web opens on.
     expect(landingTypes(electronChildren, electronWorkspace)).toEqual([
-      DesktopHomeRoute,
-      DesktopHomeRoute,
+      WebHomeRedirect,
+      WebHomeRedirect,
     ]);
+  });
+
+  it('lands an empty Electron tab on the task board while explicit urls keep their route', () => {
+    // The tab router is what a new empty tab and a bare-root boot both paint:
+    // its index match must be the redirect that lands the tab on `/tasks`,
+    // not a second home surface.
+    const tabRoutes = createTabRouter('/').routes;
+    const indexMatch = matchRoutes(tabRoutes, '/')?.at(-1);
+    const indexFactory = (indexMatch?.route.element as ReactElement).type as () => ReactElement;
+
+    expect(indexMatch?.route.index).toBe(true);
+    expect(indexFactory().type).toBe(WebHomeRedirect);
+
+    const workspaceMatch = matchRoutes(tabRoutes, '/acme')?.at(-1);
+    const workspaceFactory = (workspaceMatch?.route.element as ReactElement)
+      .type as () => ReactElement;
+
+    expect(workspaceMatch?.params).toMatchObject({ workspaceSlug: 'acme' });
+    expect(workspaceFactory().type).toBe(WebHomeRedirect);
+
+    // An explicit deep link never touches the index slot: the task detail and
+    // the tasks board resolve to their own routes.
+    expect(matchRoutes(tabRoutes, '/task/task-1')?.at(-1)?.route.path).toBe(':taskId/:slug?');
+    expect(matchRoutes(tabRoutes, '/tasks')?.at(-1)?.route.index).toBe(true);
   });
 
   it.each(mainAreaVariants)(

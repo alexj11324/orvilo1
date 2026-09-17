@@ -19,7 +19,11 @@ import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath
  * auth callback or invitation can sanitize down to `/` — and dropping them here
  * would let the landing redirect silently steal a deep link.
  *
- * Electron keeps its own `createHomeElement`, so this never runs there.
+ * Electron uses the same element for its `createHomeElement`: each tab owns a
+ * memory router, so the index slot of a fresh `/` (or `/:workspaceSlug`) tab
+ * redirects inside that tab to the same `/tasks` board Web lands on. Explicit
+ * tab urls never touch this slot, so a deep link or a restored tab keeps its
+ * own target.
  */
 const WebHomeRedirect: FC = () => {
   const { workspaceSlug } = useParams();

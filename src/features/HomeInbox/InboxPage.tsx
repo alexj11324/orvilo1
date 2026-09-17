@@ -35,10 +35,11 @@ import WideScreenContainer from '@/features/WideScreenContainer';
  * slot (`HomeInbox/index.tsx:206`) — and nothing else: the briefs, the daily
  * brief, goals and the unread/running topics are gated by `inlineRail` and by the
  * host's props. Worth knowing for two reasons. It is why this page cannot go
- * blank no matter what was hidden, and on Web the preference has **no writer at
- * all** — its only UI is `CustomizeButton`, which lives on the Electron-only
- * `/home` route — so a stored value can suppress those two blocks here with no
- * way to undo it. Severity and the options are in the rollout doc §2.2.
+ * blank no matter what was hidden, and the preference now has **no writer at
+ * all** — its only UI was `CustomizeButton`, which retired with the Home page
+ * when the task board became the landing surface on both runtimes — so a
+ * stored value can suppress those two blocks here with no way to undo it.
+ * Severity and the options are in the rollout doc §2.2.
  */
 const InboxPage = memo(() => {
   const { t } = useTranslation('electron');

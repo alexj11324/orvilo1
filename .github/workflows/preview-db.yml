@@ -431,14 +431,28 @@ jobs:
             echo "Vercel Preview deployment creation failed (HTTP $http_status, code=$error_code): $error_message" >&2
             exit 1
           fi
-          if ! jq -e --arg branch "$HEAD_BRANCH" --arg sha "$HEAD_SHA" '
-            (.uid // .id // empty) != ""
-            and .gitSource.ref == $branch
-            and .gitSource.sha == $sha
-          ' <<< "$response" > /dev/null; then
+          if ! jq -e '(.id // .uid // empty) != ""' <<< "$response" > /dev/null; then
+            echo "Vercel did not confirm the Preview deployment request" >&2
+            exit 1
+          fi
+          deployment_id=$(jq -er '.id // .uid // empty' <<< "$response")
+          deployment=$(curl -fsS \
+            "https://api.vercel.com/v13/deployments/${deployment_id}?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}")
+          if ! jq -e \
+            --arg branch "$HEAD_BRANCH" \
+            --arg project_id "$VERCEL_PROJECT_ID" \
+            --arg sha "$HEAD_SHA" \
+            --argjson repository_id "$repository_id" '
+              .projectId == $project_id
+              and .target == null
+              and .gitSource.type == "github"
+              and .gitSource.repoId == $repository_id
+              and .gitSource.ref == $branch
+              and .gitSource.sha == $sha
+            ' <<< "$deployment" > /dev/null; then
             echo "Vercel did not confirm an exact Git deployment for branch=$HEAD_BRANCH sha=$HEAD_SHA" >&2
             exit 1
           fi
-          deployment_id=$(jq -er '.uid // .id // empty' <<< "$response")
-          deployment_url=$(jq -er '.url // empty' <<< "$response")
+          deployment_url=$(jq -er '.url // empty' <<< "$deployment")
           echo "created Vercel Preview deployment id=$deployment_id url=$deployment_url branch=$HEAD_BRANCH sha=$HEAD_SHA"

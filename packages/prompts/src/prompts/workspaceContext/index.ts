@@ -6,7 +6,7 @@ export interface WorkspaceContextWorkspace {
 }
 
 export interface WorkspaceContextInfo {
-  /** App origin the user is browsing, e.g. `https://app.lobehub.com`. */
+  /** App origin the user is browsing, e.g. `https://orvilo.aspectlylabs.com`. */
   appUrl?: string | null;
   /**
    * The workspace the conversation runs in. Absent for the user's personal

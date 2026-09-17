@@ -61,18 +61,20 @@ describe('OIDC Provider - Market Client Integration', () => {
     it('should accept both Cloud desktop callback origins during the apex migration', async () => {
       vi.doMock('@/envs/app', () => ({
         appEnv: {
-          APP_URL: 'https://app.lobehub.com',
+          APP_URL: 'https://orvilo.aspectlylabs.com',
           MARKET_BASE_URL: undefined,
         },
       }));
 
       const { default: Provider } = await import('oidc-provider');
       const { defaultClients } = await import('./config');
-      const provider = new Provider('https://app.lobehub.com/oidc', { clients: defaultClients });
+      const provider = new Provider('https://orvilo.aspectlylabs.com/oidc', {
+        clients: defaultClients,
+      });
       const desktopClient = await provider.Client.find('lobehub-desktop');
 
       expect(
-        desktopClient?.redirectUriAllowed('https://app.lobehub.com/oidc/callback/desktop'),
+        desktopClient?.redirectUriAllowed('https://orvilo.aspectlylabs.com/oidc/callback/desktop'),
       ).toBe(true);
       expect(desktopClient?.redirectUriAllowed('https://lobehub.com/oidc/callback/desktop')).toBe(
         true,

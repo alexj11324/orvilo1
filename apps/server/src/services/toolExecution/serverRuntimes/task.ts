@@ -347,12 +347,21 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       if (!task) return { content: `Task not found: ${args.identifier}`, success: false };
 
       // Tear down provisioned run worktrees before the task_topics rows
-      // cascade away with the task. Best-effort — never blocks the delete.
+      // cascade away with the task. Keep the task when cleanup is incomplete
+      // so the remaining device checkout stays discoverable and retryable.
       if (deps.db && deps.userId) {
         const workspaceId = deps.workspaceId ?? (await resolveWorkspaceId(deps.db, task.id));
-        await new TaskIntegrationService(deps.db, deps.userId, workspaceId).cleanupTaskWorktrees(
-          task.id,
-        );
+        const cleanupComplete = await new TaskIntegrationService(
+          deps.db,
+          deps.userId,
+          workspaceId,
+        ).cleanupTaskWorktrees(task.id);
+        if (!cleanupComplete) {
+          return {
+            content: `Task workspace cleanup is still active: ${task.identifier}`,
+            success: false,
+          };
+        }
       }
 
       await taskModel().delete(task.id);

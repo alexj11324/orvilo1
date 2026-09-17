@@ -46,13 +46,14 @@ const AutomationCreatePage = memo(() => {
   const [draft, setDraft] = useState<TriggerDraft | null>(() =>
     template
       ? {
-        kind: 'schedule',
-        pattern: template.pattern,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      }
+          kind: 'schedule',
+          pattern: template.pattern,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }
       : null,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [createdIdentifier, setCreatedIdentifier] = useState<string>();
   const assigneeMeta = useAgentDisplayMeta(assigneeAgentId ?? undefined);
 
   const createTask = useTaskStore((s) => s.createTask);
@@ -61,38 +62,50 @@ const AutomationCreatePage = memo(() => {
   const submit = useCallback(async () => {
     if (!canCreate || submitting) return;
     const trimmedName = name.trim();
-    if (!trimmedName) {
-      toast.error(t('create.title_required'));
-      return;
-    }
-    if (!draft) {
-      toast.error(t('create.trigger_required'));
-      return;
+    if (!createdIdentifier) {
+      if (!trimmedName) {
+        toast.error(t('create.title_required'));
+        return;
+      }
+      if (!draft) {
+        toast.error(t('create.trigger_required'));
+        return;
+      }
     }
     setSubmitting(true);
+    let taskCreated = !!createdIdentifier;
     try {
-      const created = await createTask({
-        assigneeAgentId: assigneeAgentId ?? undefined,
-        automationMode: draft.kind,
-        heartbeatInterval:
-          draft.kind === 'heartbeat' ? (draft.heartbeatInterval ?? 3600) : undefined,
-        instruction: instructions.trim() || trimmedName,
-        name: trimmedName,
-        schedulePattern: draft.kind === 'schedule' ? (draft.pattern ?? undefined) : undefined,
-        scheduleTimezone: draft.kind === 'schedule' ? (draft.timezone ?? undefined) : undefined,
-      });
-      if (created?.identifier) {
-        await updateTaskStatus(created.identifier, 'scheduled');
-        navigate(automationDetailPath(created.identifier), { replace: true });
+      let identifier = createdIdentifier;
+      if (!identifier) {
+        const created = await createTask({
+          assigneeAgentId: assigneeAgentId ?? undefined,
+          automationMode: draft!.kind,
+          heartbeatInterval:
+            draft!.kind === 'heartbeat' ? (draft!.heartbeatInterval ?? 3600) : undefined,
+          instruction: instructions.trim() || trimmedName,
+          name: trimmedName,
+          schedulePattern: draft!.kind === 'schedule' ? (draft!.pattern ?? undefined) : undefined,
+          scheduleTimezone: draft!.kind === 'schedule' ? (draft!.timezone ?? undefined) : undefined,
+        });
+        identifier = created?.identifier;
+        if (identifier) {
+          taskCreated = true;
+          setCreatedIdentifier(identifier);
+        }
+      }
+      if (identifier) {
+        await updateTaskStatus(identifier, 'scheduled');
+        navigate(automationDetailPath(identifier), { replace: true });
       } else {
         navigate('/automations', { replace: true });
       }
     } catch {
-      toast.error(t('create.submit_failed'));
+      toast.error(t(taskCreated ? 'create.enable_failed' : 'create.submit_failed'));
       setSubmitting(false);
     }
   }, [
     canCreate,
+    createdIdentifier,
     submitting,
     name,
     draft,
@@ -139,7 +152,7 @@ const AutomationCreatePage = memo(() => {
             type={'primary'}
             onClick={submit}
           >
-            {t('create.submit')}
+            {t(createdIdentifier ? 'create.retry_enable' : 'create.submit')}
           </Button>
         }
       />

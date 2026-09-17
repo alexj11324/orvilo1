@@ -107,7 +107,9 @@ export const getRepoDefaultBranch = async (
 };
 
 export interface RemotePrInfo {
+  /** Target branch recorded on the pull request. */
   baseBranch: string;
+  /** Source commit recorded on the pull request. */
   headSha: string;
   merged: boolean;
   number: number;
@@ -168,6 +170,29 @@ export const getRemoteBranchSha = async (
 };
 
 export type RemoteMergeState = 'merged' | 'unmerged' | 'unknown';
+
+export interface RemoteBranchHead {
+  sha?: string;
+  state: 'found' | 'missing' | 'unknown';
+}
+
+/** Resolve the current remote branch tip while preserving 404 vs API failure. */
+export const getBranchHead = async (
+  repo: string,
+  branch: string,
+  token?: string,
+): Promise<RemoteBranchHead> => {
+  const coordinate = parseGithubRepo(repo);
+  if (!coordinate) return { state: 'unknown' };
+  const res = await githubFetch(
+    `/repos/${coordinate.owner}/${coordinate.name}/branches/${encodeURIComponent(branch)}`,
+    token,
+  );
+  if (res.status === 404) return { state: 'missing' };
+  if (!res.ok) return { state: 'unknown' };
+  const sha = res.json?.commit?.sha;
+  return typeof sha === 'string' && sha ? { sha, state: 'found' } : { state: 'unknown' };
+};
 
 /**
  * Whether `head` (a task branch) is fully contained in `base` on the remote —

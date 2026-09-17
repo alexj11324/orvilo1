@@ -189,11 +189,26 @@ export interface TaskTopicIntegration {
   expectedHeadSha?: string;
   /** Merge commit SHA once `state` reaches 'integrated'. */
   integratedSha?: string;
+  /** Topic that owns the integration worktree. */
+  integrationOwnerTopicId?: string;
+  /** True once the topic-owned integration worktree was removed. */
+  integrationWorktreeCleaned?: boolean;
   /** Path of the detached integration worktree on the device. */
   integrationWorktreePath?: string;
   lastError?: null | string;
+  /** Machine-readable recovery reason used by the task UI. */
+  lastErrorCode?:
+    | 'authorization_required'
+    | 'merge_conflict'
+    | 'publish_failed'
+    | 'remote_verification_unavailable'
+    | 'workspace_unavailable'
+    | null;
   /** Pull request number bound to this delivery, when known. */
   prNumber?: number;
+  /** Short lease protecting completion/retry handling from duplicate delivery. */
+  processingStartedAt?: string | null;
+  processingToken?: string | null;
   /** URL of the pull request opened for {@link branch}, when known. */
   prUrl?: string;
   /** True once the merge result was pushed to `origin/<baseBranch>`. */
@@ -216,8 +231,16 @@ export interface TaskTopicIntegration {
    * record can be advanced once the merge lands.
    */
   runTopicId?: string;
-  /** pending → merging → integrated | conflict | blocked | skipped */
-  state: 'pending' | 'merging' | 'integrated' | 'conflict' | 'blocked' | 'skipped';
+  /** pending → merging → integrated | recoverable failure | blocked | skipped */
+  state:
+    | 'pending'
+    | 'merging'
+    | 'integrated'
+    | 'conflict'
+    | 'publish_failed'
+    | 'verification_pending'
+    | 'blocked'
+    | 'skipped';
   /**
    * Original verified delivery waiting for this corrective integration chain.
    * Once the chain settles, the lifecycle re-drives that Verify run so task

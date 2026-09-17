@@ -82,7 +82,7 @@ that leads the row; keep Retry as secondary only for transient causes. _(Done �
 completion event's structured `errorType` is threaded through both `onTopicComplete`
 callers into the brief; billing causes get an `upgrade` link action + `metadata.error.code`,
 and `BriefCardActions` was fixed so a link-type primary navigates. Verified via agent-testing
-T-220: budget card renders 忽略 + 升级方案 → app.lobehub.com/settings/plans, no 重试.)_
+T-220: budget card renders 忽略 + 升级方案 → orvilo.aspectlylabs.com/settings/plans, no 重试.)_
 
 **③ The card doesn't read AS an error — severity legibility (Certainty)** 🟠 The only status
 cue is the meta-row `StatusGlyph`, driven by **task status** — but on error the task is set to

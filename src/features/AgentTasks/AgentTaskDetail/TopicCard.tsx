@@ -353,7 +353,11 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           {!verifyDetailOpen && <RunVerifyTag verify={activity.verify} />}
           {/* Where the run's branch stands on its way back onto the base —
               nothing renders for runs that never provisioned a worktree. */}
-          <RunIntegrationTag integration={activity.integration} />
+          <RunIntegrationTag
+            integration={activity.integration}
+            taskId={runTaskId}
+            topicId={activity.id}
+          />
         </Flexbox>
 
         <Flexbox horizontal align={'center'} flex={'none'} gap={8}>

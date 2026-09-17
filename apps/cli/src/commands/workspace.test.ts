@@ -41,7 +41,7 @@ vi.mock('../auth/identity', () => ({
   resolveIdentityFingerprint: mockResolveIdentityFingerprint,
 }));
 vi.mock('../settings', () => ({
-  resolveServerUrl: () => 'https://app.lobehub.com',
+  resolveServerUrl: () => 'https://orvilo.aspectlylabs.com',
   saveActiveWorkspace: mockSaveActiveWorkspace,
 }));
 
@@ -136,7 +136,7 @@ describe('workspace command', () => {
 
       expect(mockSaveActiveWorkspace).toHaveBeenCalledWith({
         identity: 'user:u1',
-        serverUrl: 'https://app.lobehub.com',
+        serverUrl: 'https://orvilo.aspectlylabs.com',
         workspaceId: 'ws_1',
       });
     });

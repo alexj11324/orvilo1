@@ -11,6 +11,7 @@ const {
   evidenceListByRun,
   findByOperation,
   operationFindById,
+  taskTopicFindByOperationId,
   finalizeVerifyRun,
   recordHeterogeneousDeliverableEvidence,
   startEvidenceSubmission,
@@ -23,6 +24,7 @@ const {
   finalizeVerifyRun: vi.fn(),
   findByOperation: vi.fn(),
   operationFindById: vi.fn(),
+  taskTopicFindByOperationId: vi.fn(),
   recordHeterogeneousDeliverableEvidence: vi.fn(),
   startEvidenceSubmission: vi.fn(),
   updateStatus: vi.fn(),
@@ -58,6 +60,11 @@ vi.mock('@/database/models/task', () => ({
       getPinnedDocuments: vi.fn().mockResolvedValue([]),
       resolveVerifyConfig: vi.fn().mockResolvedValue(null),
     };
+  }),
+}));
+vi.mock('@/database/models/taskTopic', () => ({
+  TaskTopicModel: vi.fn(function () {
+    return { findByOperationId: taskTopicFindByOperationId };
   }),
 }));
 vi.mock('../statusService', () => ({
@@ -107,14 +114,29 @@ describe('runVerifyOnCompletion — verification claim', () => {
       finalizeVerifyRun,
       findByOperation,
       operationFindById,
+      taskTopicFindByOperationId,
       recordHeterogeneousDeliverableEvidence,
       startEvidenceSubmission,
       updateStatus,
     ].forEach((m) => m.mockReset());
     findByOperation.mockResolvedValue(confirmedRun);
     operationFindById.mockResolvedValue({ id: 'op-1', model: 'm', provider: 'p', taskId: null });
+    taskTopicFindByOperationId.mockResolvedValue(null);
     claimVerifying.mockResolvedValue(true);
     evidenceListByRun.mockResolvedValue([]);
+  });
+
+  it('defers task verification while its workspace integration is unresolved', async () => {
+    operationFindById.mockResolvedValue({ id: 'op-1', taskId: 'task-1' });
+    taskTopicFindByOperationId.mockResolvedValue({
+      integration: { role: 'task', state: 'publish_failed' },
+    });
+
+    await runVerifyOnCompletion(db, 'u1', params);
+
+    expect(claimEvidenceCollection).not.toHaveBeenCalled();
+    expect(claimVerifying).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
   });
 
   it('still collects when the builder covered only part of a multi-criterion plan', async () => {

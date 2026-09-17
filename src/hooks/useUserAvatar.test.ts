@@ -17,7 +17,7 @@ vi.mock('@orvilo/const', async (importOriginal) => {
       return mockConstEnv.isDesktop;
     },
     DEFAULT_USER_AVATAR: 'default-avatar.png',
-    OFFICIAL_URL: 'https://app.lobehub.com',
+    OFFICIAL_URL: 'https://orvilo.aspectlylabs.com',
   };
 });
 
@@ -124,7 +124,7 @@ describe('useUserAvatar', () => {
     const { result } = renderHook(() => useUserAvatar());
 
     // In cloud mode, selector returns OFFICIAL_URL regardless of remoteServerUrl config
-    expect(result.current).toBe('https://app.lobehub.com/api/avatar.png');
+    expect(result.current).toBe('https://orvilo.aspectlylabs.com/api/avatar.png');
   });
 
   it('should return original avatar when storageMode is selfHost but no URL configured', () => {

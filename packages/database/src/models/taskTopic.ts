@@ -127,6 +127,95 @@ export class TaskTopicModel {
     return updated.length > 0;
   }
 
+  /** Atomically lease one integration-state transition across duplicate callbacks/retries. */
+  async claimIntegration(
+    taskId: string,
+    topicId: string,
+    expectedState: TaskTopicIntegration['state'],
+    token: string,
+    staleBefore: Date,
+    leaseTopicId = topicId,
+  ): Promise<boolean> {
+    const claimed = await this.db
+      .update(taskTopics)
+      .set({
+        integration: sql`coalesce(${taskTopics.integration}, '{}'::jsonb) || jsonb_build_object('integrationOwnerTopicId', ${leaseTopicId}::text, 'processingToken', ${token}::text, 'processingStartedAt', ${new Date().toISOString()}::text)`,
+      })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, leaseTopicId),
+          this.ownership(),
+          ...(leaseTopicId === topicId
+            ? [sql`${taskTopics.integration}->>'state' = ${expectedState}`]
+            : []),
+          or(
+            sql`not coalesce((${taskTopics.integration}->>'worktreeCleaned')::boolean, false)`,
+            and(
+              sql`not coalesce((${taskTopics.integration}->>'integrationWorktreeCleaned')::boolean, false)`,
+              sql`coalesce(${taskTopics.integration}->>'integrationWorktreePath', '') <> ''`,
+            ),
+          ),
+          or(
+            sql`not coalesce(jsonb_exists(${taskTopics.integration}, 'processingToken'), false)`,
+            sql`coalesce((${taskTopics.integration}->>'processingStartedAt')::timestamptz, '-infinity'::timestamptz) < ${staleBefore}`,
+          ),
+        ),
+      )
+      .returning({ id: taskTopics.id });
+    if (claimed.length === 0) return false;
+
+    // A corrective chain leases its original task-run row. Backfill the
+    // callback's owner with an atomic JSONB patch and require its state to
+    // remain processable after acquiring that shared lease.
+    if (leaseTopicId !== topicId) {
+      const current = await this.db
+        .update(taskTopics)
+        .set({
+          integration: sql`coalesce(${taskTopics.integration}, '{}'::jsonb) || jsonb_build_object('integrationOwnerTopicId', ${leaseTopicId}::text)`,
+        })
+        .where(
+          and(
+            eq(taskTopics.taskId, taskId),
+            eq(taskTopics.topicId, topicId),
+            this.ownership(),
+            sql`${taskTopics.integration}->>'state' = ${expectedState}`,
+            or(
+              sql`not coalesce((${taskTopics.integration}->>'worktreeCleaned')::boolean, false)`,
+              and(
+                sql`not coalesce((${taskTopics.integration}->>'integrationWorktreeCleaned')::boolean, false)`,
+                sql`coalesce(${taskTopics.integration}->>'integrationWorktreePath', '') <> ''`,
+              ),
+            ),
+          ),
+        )
+        .returning({ id: taskTopics.id });
+      if (current.length === 0) {
+        await this.releaseIntegration(taskId, leaseTopicId, token);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /** Release only the integration lease owned by this invocation. */
+  async releaseIntegration(taskId: string, topicId: string, token: string): Promise<void> {
+    await this.db
+      .update(taskTopics)
+      .set({
+        integration: sql`coalesce(${taskTopics.integration}, '{}'::jsonb) - 'processingToken' - 'processingStartedAt'`,
+      })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, topicId),
+          this.ownership(),
+          sql`${taskTopics.integration}->>'processingToken' = ${token}`,
+        ),
+      );
+  }
+
   async updateStatus(taskId: string, topicId: string, status: string): Promise<void> {
     await this.db
       .update(taskTopics)
@@ -284,6 +373,15 @@ export class TaskTopicModel {
       .where(and(eq(taskTopics.topicId, topicId), this.ownership()))
       .limit(1);
     return result[0] || null;
+  }
+
+  async findByOperationId(operationId: string): Promise<TaskTopicItem | null> {
+    const result = await this.db
+      .select()
+      .from(taskTopics)
+      .where(and(eq(taskTopics.operationId, operationId), this.ownership()))
+      .limit(1);
+    return result[0] ?? null;
   }
 
   /**

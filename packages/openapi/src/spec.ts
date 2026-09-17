@@ -754,7 +754,7 @@ export const buildSpecDocument = async (app: GenerateSpecsApp) => {
         version: '1.0.0',
       },
       security: [{ bearerAuth: [] }],
-      servers: [{ description: 'LobeHub Cloud', url: 'https://app.lobehub.com' }],
+      servers: [{ description: 'LobeHub Cloud', url: 'https://orvilo.aspectlylabs.com' }],
     },
   });
 

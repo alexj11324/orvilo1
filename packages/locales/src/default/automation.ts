@@ -14,8 +14,10 @@ export default {
 
   'create.add_trigger': 'Add trigger',
   'create.draft': 'Draft',
+  'create.enable_failed': 'Automation was created, but could not be enabled. Retry enabling it.',
   'create.instructions_placeholder': 'Describe what this automation should do each time it runs…',
   'create.submit': 'Create automation',
+  'create.retry_enable': 'Retry enable',
   'create.submit_failed': 'Failed to create automation',
   'create.title_placeholder': 'Automation name',
   'create.title_required': 'Name the automation before creating it',

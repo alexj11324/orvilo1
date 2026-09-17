@@ -38,7 +38,7 @@ describe('WorkspaceContextInjector', () => {
   it('appends the workspace scope and slug-prefixed link rule to the system message', async () => {
     const provider = new WorkspaceContextInjector({
       context: {
-        appUrl: 'https://app.lobehub.com',
+        appUrl: 'https://orvilo.aspectlylabs.com',
         workspace: { slug: 'lobehub' },
       },
     });
@@ -51,14 +51,14 @@ describe('WorkspaceContextInjector', () => {
     expect(result.messages[0].content).toContain('<workspace_context>');
     expect(result.messages[0].content).toContain('<workspace_slug>lobehub</workspace_slug>');
     expect(result.messages[0].content).toContain(
-      '<link_base>https://app.lobehub.com/lobehub</link_base>',
+      '<link_base>https://orvilo.aspectlylabs.com/lobehub</link_base>',
     );
     expect(result.metadata.workspaceContextInjected).toBe(true);
   });
 
   it('creates a system message when none exists', async () => {
     const provider = new WorkspaceContextInjector({
-      context: { appUrl: 'https://app.lobehub.com' },
+      context: { appUrl: 'https://orvilo.aspectlylabs.com' },
     });
 
     const result = await provider.process(createContext([userMessage]) as any);
@@ -70,7 +70,7 @@ describe('WorkspaceContextInjector', () => {
 
   it('skips injection when disabled', async () => {
     const provider = new WorkspaceContextInjector({
-      context: { appUrl: 'https://app.lobehub.com', workspace: { slug: 'lobehub' } },
+      context: { appUrl: 'https://orvilo.aspectlylabs.com', workspace: { slug: 'lobehub' } },
       enabled: false,
     });
 

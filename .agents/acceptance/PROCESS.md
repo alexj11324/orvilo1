@@ -261,17 +261,20 @@ What is specific to this repository:
   (`check.json` + `seed/`). Execution outputs stay in the round's `assets/` and are
   never copied back into a fixture.
 
-- **Publish against PRODUCTION defaults, not the local dev profile.** The product
+- **Publish against the Orvilo production origin, not the local dev profile.** The product
   under test runs locally, but publishing there yields a URL nobody can open and a
   stub bucket that silently drops evidence uploads. Strip the local overrides:
 
   ```bash
-  env -u LOBEHUB_SERVER -u LOBE_API_KEY -u LOBEHUB_CLI_API_KEY -u LOBEHUB_CLI_HOME \
+  env -u LOBE_API_KEY -u LOBEHUB_CLI_API_KEY -u LOBEHUB_CLI_HOME \
+    LOBEHUB_SERVER=https://orvilo.aspectlylabs.com \
     lh acceptance run ingest "$DIR" --source agent-testing --subject "$SUBJECT" \
     --requirement "$REQUIREMENT" --open --json
   ```
 
-  Verify auth in the same clean env first; if it reports no authentication, have
+  Never unset `LOBEHUB_SERVER` for a production publish: keeping the destination
+  explicit prevents an installed or cached upstream CLI default from redirecting
+  evidence outside Orvilo. Verify auth in the same clean env first; if it reports no authentication, have
   the user run `lh login`. If a publish flag is rejected as an unknown option, the
   `lh` on PATH is stale — publish through `npx @lobehub/cli@latest` instead.
 
@@ -289,7 +292,7 @@ What is specific to this repository:
   `lh acceptance view "$SUBJECT" --json`. Omit accepted checks, repair non-stale
   rejects under their exact stable ids, and carry every `supersedes` chain forward.
 
-- **The final reply exposes only `https://app.lobehub.com/acceptance/<id>`** (add
+- **The final reply exposes only `https://orvilo.aspectlylabs.com/acceptance/<id>`** (add
   `?r=<roundIndex>` for this round's snapshot). No images, local paths, or internal
   run-page paths. Leave whitespace between the URL and any following text — CJK
   punctuation glued to it gets swallowed into the href.

@@ -44,7 +44,7 @@ describe('POST /oidc/consent', () => {
       prompt: { details: {}, name: 'login' },
     });
     mocks.getInteractionResult.mockResolvedValue(
-      'https://app.lobehub.com/oidc/auth/uid-1?resume=1',
+      'https://orvilo.aspectlylabs.com/oidc/auth/uid-1?resume=1',
     );
   });
 

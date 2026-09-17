@@ -69,8 +69,8 @@ describe('login command', () => {
         expires_in: 600,
         interval: 1,
         user_code: 'USER-CODE',
-        verification_uri: 'https://app.lobehub.com/verify',
-        verification_uri_complete: 'https://app.lobehub.com/verify?code=USER-CODE',
+        verification_uri: 'https://orvilo.aspectlylabs.com/verify',
+        verification_uri_complete: 'https://orvilo.aspectlylabs.com/verify?code=USER-CODE',
         ...overrides,
       }),
       ok: true,
@@ -128,7 +128,7 @@ describe('login command', () => {
         refreshToken: 'refresh-tok',
       }),
     );
-    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://app.lobehub.com' });
+    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://orvilo.aspectlylabs.com' });
     expect(log.info).toHaveBeenCalledWith(expect.stringContaining('Login successful'));
   });
 
@@ -139,9 +139,12 @@ describe('login command', () => {
     const program = createProgram();
     await runLogin(program);
 
-    expect(getUserIdFromApiKey).toHaveBeenCalledWith('sk-lh-env-test', 'https://app.lobehub.com');
+    expect(getUserIdFromApiKey).toHaveBeenCalledWith(
+      'sk-lh-env-test',
+      'https://orvilo.aspectlylabs.com',
+    );
     expect(saveCredentials).not.toHaveBeenCalled();
-    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://app.lobehub.com' });
+    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://orvilo.aspectlylabs.com' });
     expect(log.info).toHaveBeenCalledWith(expect.stringContaining('Login successful'));
   });
 

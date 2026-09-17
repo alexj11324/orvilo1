@@ -979,7 +979,7 @@ security:
   - bearerAuth: []
 servers:
   - description: LobeHub Cloud
-    url: https://app.lobehub.com
+    url: https://orvilo.aspectlylabs.com
 paths:
   /api/v1/health:
     get:

@@ -219,11 +219,12 @@ export const pullGitBranch = async (payload: { path: string }): Promise<GitPullR
  * integration worktree lands its merge result onto `origin/<base>`.
  */
 export const pushGitBranch = async (payload: {
+  expectedSha?: string;
   path: string;
   remoteBranch?: string;
   sourceRef?: string;
 }): Promise<GitPushResult> => {
-  const { path: dirPath, remoteBranch, sourceRef = 'HEAD' } = payload;
+  const { path: dirPath, expectedSha, remoteBranch, sourceRef = 'HEAD' } = payload;
   if (remoteBranch && isInvalidBranchRef(remoteBranch)) {
     return { error: `Invalid remote branch name: ${remoteBranch}`, success: false };
   }
@@ -236,6 +237,15 @@ export const pushGitBranch = async (payload: {
   }
   const refspec = remoteBranch ? `${sourceRef}:refs/heads/${remoteBranch}` : sourceRef;
   try {
+    if (expectedSha) {
+      const sourceSha = await readRevisionSha(dirPath, sourceRef);
+      if (sourceSha !== expectedSha) {
+        return {
+          error: `Refusing to publish unexpected source ${sourceSha ?? 'unknown'}; expected ${expectedSha}`,
+          success: false,
+        };
+      }
+    }
     const { stderr } = await execFileAsync('git', ['push', '-u', 'origin', refspec], {
       cwd: dirPath,
       timeout: 60_000,

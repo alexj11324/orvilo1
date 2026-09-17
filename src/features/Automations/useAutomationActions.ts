@@ -38,9 +38,10 @@ export const useAutomationActions = () => {
       if (shouldPersistFallbackAssignee(task.assigneeAgentId, task.assigneeUserId, inboxAgentId)) {
         await updateTask(task.identifier, { assigneeAgentId: inboxAgentId });
       }
-      await runTask(task.identifier);
+      const result = await runTask(task.identifier, undefined, { throwOnError: true });
+      if (!result) throw new Error(t('detail.toast_trigger_failed'));
     },
-    [inboxAgentId, runTask, updateTask],
+    [inboxAgentId, runTask, t, updateTask],
   );
 
   const remove = useCallback(async (identifier: string) => deleteTask(identifier), [deleteTask]);

@@ -206,7 +206,7 @@ describe('normalizeLinearIssue', () => {
     ).toEqual({ teamIds: ['team-public'] });
   });
 
-  it('exposes only the installed organization catalog with public teams, states, and members', async () => {
+  it('exposes the installed organization catalog including private teams for the worker policy', async () => {
     const request = vi.fn().mockImplementation(async (_token, body: { query: string }) => {
       if (body.query.includes('ListOrganizations')) {
         return {
@@ -328,6 +328,7 @@ describe('normalizeLinearIssue', () => {
     ]);
     await expect(provider.listTeams()).resolves.toEqual([
       {
+        cycles: [],
         id: 'team-public',
         key: 'ENG',
         name: 'Engineering',
@@ -340,6 +341,25 @@ describe('normalizeLinearIssue', () => {
             position: 1,
             teamId: 'team-public',
             type: 'unstarted',
+          },
+        ],
+      },
+      // Private teams remain visible to the provider; the sync scope's
+      // privateTeamPolicy (import_restricted | skip) is applied by the worker.
+      {
+        cycles: [],
+        id: 'team-private',
+        key: 'SEC',
+        name: 'Security',
+        organizationId: 'org-1',
+        visibility: 'private',
+        workflowStates: [
+          {
+            id: 'state-private',
+            name: 'Todo',
+            position: 1,
+            teamId: 'team-private',
+            type: null,
           },
         ],
       },

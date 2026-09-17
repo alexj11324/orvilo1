@@ -13,7 +13,6 @@ const DocumentPermission = () => {
   return (
     <ResourceAccessPage
       copy={{
-        collaboratorsDesc: t('permission.collaborators.documentDesc'),
         generalAccessDesc: t('permission.page.documentGeneralAccessDesc'),
         privateHint: t('permission.page.documentAccessLevelPrivateHint'),
         privateNotice: t('permission.page.documentPrivateNotice'),

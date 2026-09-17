@@ -1,0 +1,71 @@
+name: Task Delivery Baseline
+on:
+  push:
+    branches: [ci/task-delivery-validation-20260917]
+    paths: [.github/workflows/task-delivery-baseline.yml]
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: paradedb/paradedb:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_DRIVER: node
+      S3_PUBLIC_DOMAIN: https://example.com
+      APP_URL: https://example.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Integrate fixed main snapshot locally
+        run: |
+          git config user.name 'Delivery Validation'
+          git config user.email 'noreply@users.noreply.github.com'
+          git -c core.hooksPath=/dev/null merge --no-edit 75367ebabb93fb85f44525c6220eea5cf60b800e
+          mkdir -p /tmp/delivery-baseline
+          git rev-parse HEAD > /tmp/delivery-baseline/source.txt
+      - uses: ./.github/actions/setup-env
+      - run: pnpm install --frozen-lockfile
+      - name: Create ephemeral test encryption key
+        run: echo "KEY_VAULTS_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - name: Server delivery regression tests
+        id: server
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bunx vitest run --project server --silent=passed-only apps/server/src/services/githubRepo apps/server/src/services/taskDeliveryReview apps/server/src/services/taskWorkspace apps/server/src/services/taskIntegration apps/server/src/services/taskLifecycle apps/server/src/services/taskRunner 2>&1 | tee /tmp/delivery-baseline/server.log
+      - name: PostgreSQL delivery gate tests
+        id: database
+        continue-on-error: true
+        working-directory: packages/database
+        run: |
+          set -o pipefail
+          bunx vitest run --config vitest.config.server.mts --silent=passed-only src/models/__tests__/taskPrDeliveryGate.test.ts 2>&1 | tee /tmp/delivery-baseline/database.log
+      - name: Repository typecheck
+        id: typecheck
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          pnpm run type-check 2>&1 | tee /tmp/delivery-baseline/typecheck.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: task-delivery-baseline-results
+          path: /tmp/delivery-baseline
+          retention-days: 3
+      - name: Gate all executed validations
+        if: always()
+        env:
+          SERVER: ${{ steps.server.outcome }}
+          DATABASE: ${{ steps.database.outcome }}
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+        run: test "$SERVER" = success && test "$DATABASE" = success && test "$TYPECHECK" = success

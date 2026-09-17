@@ -201,10 +201,10 @@ vercel_env() {
   local payload
   if [[ -n "$branch" ]]; then
     payload=$(jq -n --arg k "$key" --arg v "$value" --arg t "$target" --arg b "$branch" \
-      '{key:$k, value:$v, type:"encrypted", target:[$t], gitBranch:$b}')
+      '{key:$k, value:$v, type:"sensitive", target:[$t], gitBranch:$b}')
   else
     payload=$(jq -n --arg k "$key" --arg v "$value" --arg t "$target" \
-      '{key:$k, value:$v, type:"encrypted", target:[$t]}')
+      '{key:$k, value:$v, type:"sensitive", target:[$t]}')
   fi
   if curl -fsS -X POST \
       "https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env?${qs}" \

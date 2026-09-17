@@ -329,19 +329,56 @@ jobs:
         run: |
           set -euo pipefail
           echo "::add-mask::$APP_DB_URL"
-          response=$(curl -fsS -X POST \
-            "https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env?upsert=true&teamId=${VERCEL_ORG_ID}" \
+          payload=$(jq -n --arg v "$APP_DB_URL" --arg b "$HEAD_BRANCH" '{
+            key: "DATABASE_URL",
+            value: $v,
+            type: "sensitive",
+            target: ["preview"],
+            gitBranch: $b
+          }')
+          env_list=$(curl -fsS \
+            "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}")
+          existing_ids=$(jq -r --arg b "$HEAD_BRANCH" '
+            [.envs[]?
+              | select(.key == "DATABASE_URL")
+              | select((.gitBranch // "") == $b)
+              | select(((.target // []) | index("preview")) != null)
+              | .id
+            ]
+          ' <<< "$env_list")
+          existing_count=$(jq 'length' <<< "$existing_ids")
+          if [[ "$existing_count" -gt 1 ]]; then
+            echo "multiple branch-scoped DATABASE_URL variables exist for branch=$HEAD_BRANCH" >&2
+            exit 1
+          fi
+          existing_id=$(jq -r '.[0] // empty' <<< "$existing_ids")
+          response_file=$(mktemp)
+          if [[ -n "$existing_id" ]]; then
+            env_endpoint="https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env/${existing_id}?teamId=${VERCEL_ORG_ID}"
+            env_method=PATCH
+          else
+            env_endpoint="https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}"
+            env_method=POST
+          fi
+          http_status=$(curl -sS -o "$response_file" -w '%{http_code}' -X "$env_method" \
+            "$env_endpoint" \
             -H "Authorization: Bearer ${VERCEL_TOKEN}" \
             -H 'Content-Type: application/json' \
-            -d "$(jq -n --arg v "$APP_DB_URL" --arg b "$HEAD_BRANCH" '{
-              key: "DATABASE_URL",
-              value: $v,
-              type: "encrypted",
-              target: ["preview"],
-              gitBranch: $b
-            }')")
+            -d "$payload")
+          response=$(<"$response_file")
+          rm -f "$response_file"
+          if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
+            error_code=$(jq -r '.error.code // .failed[0].error.code // "unknown"' <<< "$response")
+            error_message=$(jq -r '.error.message // .failed[0].error.message // "no message"' <<< "$response")
+            echo "Vercel branch env update failed (HTTP $http_status, code=$error_code): $error_message" >&2
+            exit 1
+          fi
           if ! jq -e --arg b "$HEAD_BRANCH" \
-            '.key == "DATABASE_URL" and .gitBranch == $b and (((.target // []) | index("preview")) != null)' \
+            '(.created // .) as $env
+              | $env.key == "DATABASE_URL"
+              and $env.gitBranch == $b
+              and ((($env.target // []) | index("preview")) != null)' \
             <<< "$response" > /dev/null; then
             echo "Vercel did not confirm the branch-scoped DATABASE_URL" >&2
             exit 1

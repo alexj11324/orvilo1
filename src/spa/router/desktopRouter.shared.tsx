@@ -797,7 +797,12 @@ export const sharedMainAreaChildren: RouteObject[] = [
   {
     children: [
       {
-        element: redirectElement('tasks'),
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]'),
+          'Desktop > Project Overview',
+          { preloadId: 'project' },
+        ),
+        handle: { meta: projectsRouteMeta },
         index: true,
       },
       {

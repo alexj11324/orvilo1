@@ -1,7 +1,7 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { ClipboardCheckIcon, ListTodoIcon, TargetIcon } from 'lucide-react';
+import { ClipboardCheckIcon, HouseIcon, ListTodoIcon, TargetIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
@@ -14,7 +14,12 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 
-import { getProjectAcceptancePath, getProjectGoalsPath, getProjectTasksPath } from './navigation';
+import {
+  getProjectAcceptancePath,
+  getProjectGoalsPath,
+  getProjectOverviewPath,
+  getProjectTasksPath,
+} from './navigation';
 import ProjectHeader from './ProjectHeader';
 
 const ProjectSidebarContent = memo(() => {
@@ -24,6 +29,7 @@ const ProjectSidebarContent = memo(() => {
   const { pathname } = useLocation();
   const detail = useCurrentProjectDetail(projectId);
   const detailSWR = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
+  const projectOverviewPath = getProjectOverviewPath(projectId!);
   const projectTasksPath = getProjectTasksPath(projectId!);
   const projectGoalsPath = getProjectGoalsPath(projectId!);
   const projectAcceptancePath = getProjectAcceptancePath(projectId!);
@@ -43,6 +49,12 @@ const ProjectSidebarContent = memo(() => {
       header={header}
       body={
         <Flexbox gap={8} paddingInline={4}>
+          <NavItem
+            active={pathname === projectOverviewPath}
+            icon={HouseIcon}
+            title={t('sections.home')}
+            onClick={() => navigate(projectOverviewPath)}
+          />
           <NavItem
             active={pathname === projectTasksPath}
             icon={ListTodoIcon}

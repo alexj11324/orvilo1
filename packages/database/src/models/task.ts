@@ -13,6 +13,7 @@ import type {
   TaskMoveScope,
   TaskSubtaskProgress,
   TaskVerifyConfig,
+  TaskWorkflowCategory,
   WorkspaceData,
   WorkspaceDocNode,
   WorkspaceTreeNode,
@@ -1129,7 +1130,8 @@ export class TaskModel {
         key: string;
         limit?: number;
         offset?: number;
-        statuses: string[];
+        statuses?: string[];
+        workflowCategories?: TaskWorkflowCategory[];
       }>;
     },
   ): Promise<
@@ -1389,25 +1391,41 @@ export class TaskModel {
     } else {
       const statusGroups = (groups ?? []).map((group) => ({
         ...group,
-        statuses: Array.from(new Set(group.statuses)),
+        statuses: Array.from(new Set(group.statuses ?? [])),
+        workflowCategories: Array.from(new Set(group.workflowCategories ?? [])),
       }));
-      const allStatuses = Array.from(new Set(statusGroups.flatMap((group) => group.statuses)));
-      const countQuery = this.db
-        .select({ count: sql<number>`count(*)`, status: tasks.status })
-        .from(tasks)
-        .where(and(...baseConditions, inArray(tasks.status, allStatuses)))
-        .groupBy(tasks.status);
       const taskQueries = statusGroups.map(async (group) => {
-        const conditions = [inArray(tasks.status, group.statuses)];
+        const linkedWorkflowCondition =
+          group.workflowCategories.length > 0
+            ? and(
+                isNotNull(tasks.workflowStateId),
+                inArray(tasks.workflowCategory, group.workflowCategories),
+              )
+            : undefined;
+        const legacyStatusCondition =
+          group.statuses.length > 0
+            ? group.workflowCategories.length > 0
+              ? and(isNull(tasks.workflowStateId), inArray(tasks.status, group.statuses))
+              : inArray(tasks.status, group.statuses)
+            : undefined;
+        const membership = or(linkedWorkflowCondition, legacyStatusCondition);
+        if (!membership) throw new Error(`Task group ${group.key} has no membership criteria`);
+        const conditions = [membership];
         const limit = group.limit ?? 50;
         const offset = group.offset ?? 0;
-        const prefetchedTasks = await this.db
-          .select()
-          .from(tasks)
-          .where(and(...baseConditions, ...conditions))
-          .orderBy(...TASK_BOARD_ORDER)
-          .limit(limit)
-          .offset(offset);
+        const [countResult, prefetchedTasks] = await Promise.all([
+          this.db
+            .select({ count: sql<number>`count(*)` })
+            .from(tasks)
+            .where(and(...baseConditions, ...conditions)),
+          this.db
+            .select()
+            .from(tasks)
+            .where(and(...baseConditions, ...conditions))
+            .orderBy(...TASK_BOARD_ORDER)
+            .limit(limit)
+            .offset(offset),
+        ]);
 
         return {
           conditions,
@@ -1415,20 +1433,10 @@ export class TaskModel {
           limit,
           offset,
           prefetchedTasks,
-          statuses: group.statuses,
-          total: 0,
+          total: Number(countResult[0]?.count ?? 0),
         };
       });
-      const [countResult, queriedGroups] = await Promise.all([
-        countQuery,
-        Promise.all(taskQueries),
-      ]);
-      const countByStatus = new Map(countResult.map((row) => [row.status, Number(row.count)]));
-
-      groupQueries = queriedGroups.map(({ statuses, ...group }) => ({
-        ...group,
-        total: statuses.reduce((sum, status) => sum + (countByStatus.get(status) ?? 0), 0),
-      }));
+      groupQueries = await Promise.all(taskQueries);
     }
 
     const results = await Promise.all(
@@ -1686,7 +1694,21 @@ export class TaskModel {
    */
   private moveScopeConditions(scope: TaskMoveScope): SQL[] {
     const conditions: SQL[] = [];
-    if (scope.statuses?.length) conditions.push(inArray(tasks.status, scope.statuses));
+    if (scope.workflowCategories?.length) {
+      conditions.push(
+        or(
+          and(
+            isNotNull(tasks.workflowStateId),
+            inArray(tasks.workflowCategory, scope.workflowCategories),
+          ),
+          scope.statuses?.length
+            ? and(isNull(tasks.workflowStateId), inArray(tasks.status, scope.statuses))
+            : undefined,
+        ) as SQL,
+      );
+    } else if (scope.statuses?.length) {
+      conditions.push(inArray(tasks.status, scope.statuses));
+    }
     if ('assigneeAgentId' in scope) {
       conditions.push(
         scope.assigneeAgentId == null

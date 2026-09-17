@@ -4,6 +4,8 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
+import { LinearSyncModel } from '@/database/models/linearSync';
+import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TaskService } from '@/server/services/task';
@@ -246,6 +248,96 @@ describe('Task Router Integration', () => {
       const persisted = await new TaskModel(serverDB, userId).findById(task.data.id);
       expect(persisted?.name).toBe('Original');
       expect(persisted?.status).toBe('backlog');
+    });
+
+    it('should move a linked task to the exact mapped workflow state without changing execution', async () => {
+      const workspaceId = 'task-workflow-board-workspace';
+      const { workspaces, workspaceMembers } = await import('@/database/schemas');
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Workflow Board Workspace',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+      const wsCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
+      const project = await new ProjectModel(serverDB, userId, workspaceId).create({
+        identifier: 'WFLOW',
+        name: 'Workflow board project',
+      });
+      const created = await wsCaller.create({
+        instruction: 'Move the business state only',
+        projectId: project.id,
+      });
+
+      const linear = new LinearSyncModel(serverDB, workspaceId);
+      const installation = await linear.upsertOAuthInstallation({
+        accessTokenCiphertext: 'encrypted-access',
+        accessTokenExpiresAt: null,
+        appActorId: 'linear-app',
+        installedByUserId: userId,
+        oauthClientId: 'linear-client',
+        organizationId: 'linear-org',
+        refreshTokenCiphertext: 'encrypted-refresh',
+        scopes: ['read', 'write'],
+      });
+      const binding = await linear.upsertBinding({
+        defaultTeamId: 'linear-team',
+        installationId: installation.id,
+        linearProjectId: 'linear-project',
+        projectId: project.id,
+        settings: {
+          statusMappings: [
+            { linearStateId: 'linear-state-backlog', workflowCategory: 'backlog' },
+            { linearStateId: 'linear-state-done', workflowCategory: 'done' },
+          ],
+          writeEnabled: true,
+        },
+        teamIds: ['linear-team'],
+      });
+      await linear.createIssueLink({
+        bindingId: binding.id,
+        installationId: installation.id,
+        linearIdentifier: 'ENG-42',
+        linearIssueId: 'linear-issue-42',
+        organizationId: 'linear-org',
+        remoteSnapshot: {
+          id: 'linear-issue-42',
+          identifier: 'ENG-42',
+          projectId: 'linear-project',
+          stateId: 'linear-state-backlog',
+          teamId: 'linear-team',
+          title: 'Move the business state only',
+        },
+        taskId: created.data.id,
+      });
+      await new TaskModel(serverDB, userId, workspaceId).update(
+        created.data.id,
+        { workflowCategory: 'backlog', workflowStateId: 'linear-state-backlog' },
+        { source: 'linear', suppressLinearOutbox: true },
+      );
+
+      const moved = await wsCaller.update({
+        id: created.data.id,
+        workflowCategory: 'done',
+      });
+
+      expect(moved.data).toMatchObject({
+        status: 'backlog',
+        workflowCategory: 'done',
+        workflowStateId: 'linear-state-done',
+      });
+      const outbox = await linear.listOutbox();
+      expect(outbox).toHaveLength(1);
+      expect(outbox[0]).toMatchObject({
+        operation: 'update_issue',
+        payload: { stateId: 'linear-state-done' },
+        taskId: created.data.id,
+      });
+
+      await expect(
+        wsCaller.update({ id: created.data.id, workflowCategory: 'todo' }),
+      ).rejects.toThrow('No Linear state is mapped to todo');
     });
   });
 

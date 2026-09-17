@@ -2314,6 +2314,8 @@ export default {
   'taskList.kanban.needsInput': 'Pending review',
   'taskList.kanban.running': 'In progress',
   'taskList.kanban.showColumn': 'Show column',
+  'taskList.kanban.todo': 'Todo',
+  'taskList.kanban.triage': 'Triage',
   'taskList.view.board': 'Board',
   'taskList.view.list': 'List',
   'taskList.viewAll': 'View all',

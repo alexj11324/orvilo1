@@ -818,6 +818,47 @@ describe('TaskModel', () => {
       expect(done.tasks).toHaveLength(1);
     });
 
+    it('should group linked tasks by business workflow and legacy tasks by execution status', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const linkedDone = await model.create({ instruction: 'Linked delivery pending' });
+      await model.updateStatus(linkedDone.id, 'paused');
+      await model.update(linkedDone.id, {
+        workflowCategory: 'done',
+        workflowStateId: 'linear-state-done',
+      });
+      const legacyPaused = await model.create({ instruction: 'Legacy review pending' });
+      await model.updateStatus(legacyPaused.id, 'paused');
+
+      const groups = await model.groupList({
+        groups: [
+          {
+            key: 'needsInput',
+            statuses: ['paused', 'failed'],
+            workflowCategories: ['in_review'],
+          },
+          { key: 'done', statuses: ['completed'], workflowCategories: ['done'] },
+          { key: 'triage', workflowCategories: ['triage'] },
+        ],
+      });
+
+      expect(groups.find(({ key }) => key === 'done')?.tasks.map(({ id }) => id)).toEqual([
+        linkedDone.id,
+      ]);
+      expect(groups.find(({ key }) => key === 'needsInput')?.tasks.map(({ id }) => id)).toEqual([
+        legacyPaused.id,
+      ]);
+      expect(groups.find(({ key }) => key === 'triage')?.total).toBe(0);
+
+      // Callers that have not opted into workflow categories retain the raw
+      // status grouping contract.
+      const [rawPaused] = await model.groupList({
+        groups: [{ key: 'paused', statuses: ['paused'] }],
+      });
+      expect(rawPaused.tasks.map(({ id }) => id).sort()).toEqual(
+        [legacyPaused.id, linkedDone.id].sort(),
+      );
+    });
+
     it('should support per-group pagination', async () => {
       const model = new TaskModel(serverDB, userId);
 

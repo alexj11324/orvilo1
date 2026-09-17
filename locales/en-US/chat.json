@@ -1947,6 +1947,8 @@
   "taskList.kanban.needsInput": "Pending review",
   "taskList.kanban.running": "In progress",
   "taskList.kanban.showColumn": "Show column",
+  "taskList.kanban.todo": "Todo",
+  "taskList.kanban.triage": "Triage",
   "taskList.mine.assigned": "Assigned",
   "taskList.mine.created": "Created",
   "taskList.mine.emptyAssigned": "No tasks assigned to you yet",

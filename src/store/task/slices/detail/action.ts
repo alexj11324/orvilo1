@@ -5,6 +5,7 @@ import type {
   TaskDetailSubtask,
   TaskMoveScope,
   TaskStatus,
+  TaskWorkflowCategory,
 } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
@@ -65,6 +66,8 @@ export interface TaskUpdatePayload {
    * `updateTaskStatus` remains the path for standalone status changes.
    */
   status?: TaskStatus;
+  /** Business-workflow target; resolved to an exact provider state by the server. */
+  workflowCategory?: TaskWorkflowCategory;
 }
 
 export interface TaskUpdateOptions {

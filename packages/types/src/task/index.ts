@@ -611,8 +611,10 @@ export interface TaskMoveScope {
   assigneeUserId?: string | null;
   /** The column's priority value; the `priority:0` column also holds NULLs. */
   priority?: number;
-  /** The merged status column's member statuses (needsInput → paused+failed). */
+  /** Legacy execution statuses represented by a business-workflow column. */
   statuses?: TaskStatus[];
+  /** Business categories represented by a workflow-aware board column. */
+  workflowCategories?: TaskWorkflowCategory[];
 }
 
 export interface NewTask {

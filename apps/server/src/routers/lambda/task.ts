@@ -1,6 +1,11 @@
 import { TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
-import type { TaskListItem, TaskParticipant, TaskVerifyConfig } from '@orvilo/types';
+import type {
+  TaskListItem,
+  TaskParticipant,
+  TaskVerifyConfig,
+  TaskWorkflowCategory,
+} from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -11,6 +16,7 @@ import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPer
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
+import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/linearSync';
 import { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
@@ -69,6 +75,16 @@ const taskProcedureWrite = taskProcedure.use(withScopedPermission('agent:update'
 // All procedures that take an id accept either raw id (task_xxx) or identifier (TASK-1)
 // Resolution happens in the model layer via model.resolve()
 const idInput = z.object({ id: z.string() });
+
+const TASK_WORKFLOW_CATEGORIES = [
+  'triage',
+  'backlog',
+  'todo',
+  'in_progress',
+  'in_review',
+  'done',
+  'canceled',
+] as const satisfies readonly TaskWorkflowCategory[];
 
 const taskVerifyConfigPatchSchema = z.object({
   enabled: z.boolean().nullish(),
@@ -161,6 +177,7 @@ const updateSchema = z.object({
       assigneeUserId: z.string().nullish(),
       priority: z.number().min(0).max(4).optional(),
       statuses: z.array(z.enum(TASK_STATUSES)).max(10).optional(),
+      workflowCategories: z.array(z.enum(TASK_WORKFLOW_CATEGORIES)).max(7).optional(),
     })
     .optional(),
   name: z.string().optional(),
@@ -173,6 +190,8 @@ const updateSchema = z.object({
   schedulePattern: z.string().nullish(),
   scheduleTimezone: z.string().nullish(),
   status: z.enum(TASK_STATUSES).optional(),
+  /** Business-workflow board target. The server resolves its exact mapped state id. */
+  workflowCategory: z.enum(TASK_WORKFLOW_CATEGORIES).optional(),
 });
 
 const listSchema = z.object({
@@ -217,12 +236,19 @@ const groupListSchema = z
     groupLimits: z.record(z.string(), z.number().int().min(1).max(500)).optional(),
     groups: z
       .array(
-        z.object({
-          key: z.string(),
-          limit: z.number().min(1).max(100).default(50),
-          offset: z.number().min(0).default(0),
-          statuses: z.array(z.string()).min(1).max(10),
-        }),
+        z
+          .object({
+            key: z.string(),
+            limit: z.number().min(1).max(100).default(50),
+            offset: z.number().min(0).default(0),
+            statuses: z.array(z.enum(TASK_STATUSES)).max(10).optional(),
+            workflowCategories: z.array(z.enum(TASK_WORKFLOW_CATEGORIES)).max(7).optional(),
+          })
+          .refine(
+            ({ statuses, workflowCategories }) =>
+              Boolean(statuses?.length) || Boolean(workflowCategories?.length),
+            { message: 'A task group needs statuses or workflow categories' },
+          ),
       )
       .min(1)
       .max(10)
@@ -1673,6 +1699,49 @@ export const taskRouter = router({
         );
         const resolved = await resolveOrThrow(model, id);
 
+        let workflowPatch:
+          { workflowCategory: TaskWorkflowCategory; workflowStateId: string } | undefined;
+        if (data.workflowCategory !== undefined) {
+          if (!ctx.workspaceId || !resolved.workflowStateId) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Business workflow moves require a linked Linear issue',
+            });
+          }
+
+          const linearSyncModel = new LinearSyncModel(ctx.serverDB, ctx.workspaceId);
+          const issueLink = await linearSyncModel.findIssueLinkByTaskId(resolved.id);
+          const binding = issueLink?.bindingId
+            ? await linearSyncModel.findBindingById(issueLink.bindingId)
+            : null;
+          if (!issueLink || !binding || !linearBindingWriteEnabled(binding)) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Linear workflow writes are unavailable for this task',
+            });
+          }
+
+          const targetMappings = (binding.settings.statusMappings ?? []).filter(
+            (mapping) => mapping.workflowCategory === data.workflowCategory,
+          );
+          if (targetMappings.length === 0) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: `No Linear state is mapped to ${data.workflowCategory}`,
+            });
+          }
+          if (targetMappings.length > 1) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: `Multiple Linear states are mapped to ${data.workflowCategory}; choose one in workspace settings`,
+            });
+          }
+          workflowPatch = {
+            workflowCategory: data.workflowCategory,
+            workflowStateId: targetMappings[0].linearStateId,
+          };
+        }
+
         // Collaborative edit lock: reject writes to a workspace task another member
         // is actively editing. Inert until a client acquires the lock.
         if (ctx.workspaceId) {
@@ -1728,8 +1797,11 @@ export const taskRouter = router({
           ctx.taskService.assertParentVisibilityCompat(resolved.visibility, newParent?.visibility);
         }
 
-        const updateData =
-          parentTaskId === undefined ? data : { ...data, parentTaskId: resolvedParentTaskId };
+        const updateData = {
+          ...data,
+          ...workflowPatch,
+          ...(parentTaskId === undefined ? {} : { parentTaskId: resolvedParentTaskId }),
+        };
         // `instruction` is the markdown source of truth while `editorData` is its
         // rich-text mirror. Text-only callers (for example the editTask builtin)
         // cannot produce Lexical JSON, so discard the stale mirror and let the

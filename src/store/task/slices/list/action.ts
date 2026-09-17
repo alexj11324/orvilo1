@@ -54,19 +54,26 @@ const effectiveGroupVisibility = (
   visibility: TaskListVisibilityFilter,
 ): TaskListVisibilityFilter => (isMineListKey(listKey) ? 'all' : visibility);
 
-// Default kanban groups: 5 columns
-// 'scheduled' shares the 'running' column — both represent "automation in
-// progress" from the user's perspective (one is mid-tick, the other is
-// waiting for the next tick).
-// `needsInput` is intentionally first: in the list view it surfaces the
-// actionable items at the top of the page.
+// Shared business-workflow board. Linked tasks use the normalized Linear
+// category; legacy tasks without an exact workflow state retain the execution
+// projection they used before the workflow split.
 const DEFAULT_KANBAN_GROUPS = [
-  { key: 'needsInput', statuses: ['paused', 'failed'] },
-  { key: 'backlog', statuses: ['backlog'] },
-  { key: 'running', statuses: ['running', 'scheduled'] },
-  { key: 'done', statuses: ['completed'] },
-  { key: 'canceled', statuses: ['canceled'] },
-];
+  { key: 'triage', workflowCategories: ['triage'] },
+  { key: 'backlog', statuses: ['backlog'], workflowCategories: ['backlog'] },
+  { key: 'todo', workflowCategories: ['todo'] },
+  {
+    key: 'running',
+    statuses: ['running', 'scheduled'],
+    workflowCategories: ['in_progress'],
+  },
+  {
+    key: 'needsInput',
+    statuses: ['paused', 'failed'],
+    workflowCategories: ['in_review'],
+  },
+  { key: 'done', statuses: ['completed'], workflowCategories: ['done'] },
+  { key: 'canceled', statuses: ['canceled'], workflowCategories: ['canceled'] },
+] as const;
 
 /**
  * First page each board column loads. "Load more" grows a column by another
@@ -393,6 +400,8 @@ export class TaskListSliceActionImpl {
                 groups: DEFAULT_KANBAN_GROUPS.map((group) => ({
                   ...group,
                   limit: groupLimits[group.key] ?? KANBAN_GROUP_PAGE_SIZE,
+                  statuses: 'statuses' in group ? [...group.statuses] : undefined,
+                  workflowCategories: [...group.workflowCategories],
                 })),
               }
             : {

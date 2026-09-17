@@ -5,6 +5,7 @@ import type {
   TaskIntentAnalysis,
   TaskMoveScope,
   TaskStatus,
+  TaskWorkflowCategory,
 } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
@@ -45,7 +46,8 @@ class TaskService {
       key: string;
       limit?: number;
       offset?: number;
-      statuses: string[];
+      statuses?: TaskStatus[];
+      workflowCategories?: TaskWorkflowCategory[];
     }>;
     parentTaskId?: string | null;
     projectId?: string;
@@ -191,6 +193,8 @@ class TaskService {
        * with `updateStatusCascade` — callers check subtasks first.
        */
       status?: TaskStatus;
+      /** Business-workflow target; the server resolves the exact mapped Linear state. */
+      workflowCategory?: TaskWorkflowCategory;
     },
   ) => lambdaClient.task.update.mutate({ id, ...data });
 

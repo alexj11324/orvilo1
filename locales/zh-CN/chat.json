@@ -1946,6 +1946,8 @@
   "taskList.kanban.needsInput": "待审阅",
   "taskList.kanban.running": "进行中",
   "taskList.kanban.showColumn": "显示分组",
+  "taskList.kanban.todo": "待处理",
+  "taskList.kanban.triage": "待分流",
   "taskList.mine.assigned": "分配给我",
   "taskList.mine.created": "我创建的",
   "taskList.mine.emptyAssigned": "暂无分配给你的任务",

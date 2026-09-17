@@ -169,10 +169,11 @@ export const getBranchHead = async (
 };
 
 /**
- * A contained branch is merged. An ordinary unmerged PR branch intentionally
- * returns `unknown` so the task integration layer holds instead of taking its
- * legacy direct-merge corrective path; TaskDeliveryReviewService then owns CI,
- * review feedback and the actual GitHub merge.
+ * PR-first delivery intentionally does not accept ancestry as merge proof.
+ * TaskIntegrationService calls this only after checking for a merged PR; if the
+ * PR is absent/open we return `unknown`, which advances the integration row to
+ * `verification_pending` for TaskDeliveryReviewService. This prevents a direct
+ * push/merge into the base branch from bypassing CI/review/PR identity gates.
  */
 export const isBranchMergedInto = async (params: {
   base: string;
@@ -182,13 +183,14 @@ export const isBranchMergedInto = async (params: {
 }): Promise<RemoteMergeState> => {
   const coordinate = parseGithubRepo(params.repo);
   if (!coordinate) return 'unknown';
-  const res = await githubFetch(
+
+  // Still probe the compare endpoint so an unavailable/private repository is
+  // distinguishable in logs and exercises the same credential path, but a
+  // successful ancestry relation is no longer authoritative for completion.
+  await githubFetch(
     `/repos/${coordinate.owner}/${coordinate.name}/compare/${encodeURIComponent(params.head)}...${encodeURIComponent(params.base)}`,
     params.token,
   );
-  if (!res.ok) return 'unknown';
-  const status = res.json?.status;
-  if (status === 'ahead' || status === 'identical') return 'merged';
   return 'unknown';
 };
 

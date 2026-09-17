@@ -207,6 +207,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   brief: rw('chat:read', 'chat:write'),
   changelog: 'open',
   chunk: rw('knowledge:read', 'knowledge:write'),
+  // room tickets/snapshots stay inside the caller's verified membership —
+  // the ticket itself grants nothing beyond it
+  collaboration: { any: 'workspace:read' },
   comfyui: rw('model:read', 'model:write'),
   // third-party integrations hold external credentials
   composio: 'blocked',

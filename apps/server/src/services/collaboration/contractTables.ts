@@ -9,6 +9,7 @@ export {
   tasks,
   users,
   workspaceMembers,
+  workspaces,
 } from '@/database/schemas';
 export { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
 export { ProjectMemberModel } from '@/database/models/projectMember';

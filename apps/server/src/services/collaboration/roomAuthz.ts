@@ -58,7 +58,7 @@ export const assertRoomAccess = async (
 
       // Restricted/private reach: an explicit project membership row grants
       // room access without widening the project's content visibility.
-      const projectMemberModel = new ProjectMemberModel(db, ctx.userId, ctx.workspaceId);
+      const projectMemberModel = new ProjectMemberModel(db, ctx.userId);
       const projectRole = await projectMemberModel.getRole(room.id, ctx.userId);
       if (!projectRole) throw NOT_FOUND();
       return;

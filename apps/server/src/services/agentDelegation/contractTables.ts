@@ -5,6 +5,7 @@
  */
 export {
   actionApprovals,
+  agents,
   executionGrants,
   projectMembers,
   taskInputs,

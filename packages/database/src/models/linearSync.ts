@@ -63,6 +63,8 @@ export interface RecordTaskDomainEventInput {
   projectId?: string | null;
   source: TaskDomainEventSource;
   taskId?: string | null;
+  /** Team scope the event affects (linear-workspace-v3). */
+  teamId?: string | null;
   type: TaskDomainEventType;
 }
 
@@ -2747,6 +2749,7 @@ export class LinearSyncModel {
         projectId: input.projectId,
         source: input.source,
         taskId: input.taskId,
+        teamId: input.teamId,
         type: input.type,
         workspaceId: this.workspaceId,
       })
@@ -2772,8 +2775,14 @@ export class LinearSyncModel {
 
     if (!event) throw new Error('Failed to persist task domain event');
 
-    const scopeType: TaskPlanningScopeType = input.projectId ? 'project' : 'workspace';
-    const scopeId = input.projectId ?? this.workspaceId;
+    // A task with both a project and a team is planned by its project scope —
+    // the team scope only owns projectless work (single-dispatch-owner rule).
+    const scopeType: TaskPlanningScopeType = input.projectId
+      ? 'project'
+      : input.teamId
+        ? 'team'
+        : 'workspace';
+    const scopeId = input.projectId ?? input.teamId ?? this.workspaceId;
     const trigger: TaskPlanningTrigger = {
       ...(input.action ? { action: input.action } : {}),
       ...(input.eventId ? { eventId: input.eventId } : {}),
@@ -2852,6 +2861,7 @@ export class LinearSyncModel {
       projectId: input.task.projectId,
       source: input.source,
       taskId: input.task.id,
+      teamId: input.task.teamId,
       type: input.eventType,
     });
 

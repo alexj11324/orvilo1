@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
 import type { LinearIssueSnapshot, LinearProjectBindingSettings, TaskItem } from '@orvilo/types';
-import { and, eq } from 'drizzle-orm';
 
 import {
   LINEAR_SYNC_DEFAULT_LEASE_MS,
@@ -10,11 +9,10 @@ import {
   LinearSyncModel,
   linearSyncRetryDelayMs,
 } from '@/database/models/linearSync';
-import { TaskModel } from '@/database/models/task';
-import { tasks } from '@/database/schemas/task';
+import type { TaskModel } from '@/database/models/task';
 import type { LobeChatDatabase } from '@/database/type';
-import { TaskService } from '@/server/services/task';
 
+import { LinearIntegrationTaskService } from './integrationTask';
 import { changedLinearIssueFields, mergeLinearIssueSnapshots } from './merge';
 import type { LinearIssueProvider, LinearIssueUpdateInput } from './provider';
 
@@ -452,53 +450,50 @@ export class LinearSyncWorker {
     }
 
     const installation = await model.findInstallationById(row.installationId);
-    if (!installation?.installedByUserId) {
-      throw new Error('Linear installation has no active Orvilo owner');
+    if (!installation) throw new Error('Linear installation not found');
+    if (installation.status !== 'active') throw new Error('Linear installation is unavailable');
+    const integrationTasks = new LinearIntegrationTaskService(
+      db,
+      this.workspaceId,
+      installation.id,
+    );
+    const inScope = await integrationTasks.validateIssueScope({
+      binding,
+      installation,
+      issue,
+    });
+    if (!inScope) {
+      if (context.phase) {
+        await model.recordImportReceipt({
+          bindingId: binding.id,
+          linearIssueId: issue.id,
+          phase: context.phase,
+          status: 'processed',
+        });
+      }
+      return 'processed';
     }
 
     const existingLink = await model.findIssueLinkByExternalId(issue.id);
     if (!existingLink) {
-      if (!binding.defaultTeamId) {
-        throw new Error('Linear project binding has no default team');
-      }
-
-      const task = await new TaskService(
-        db,
-        installation.installedByUserId,
-        this.workspaceId,
-      ).createTask(
-        {
-          assigneeAgentId: settingsAssignmentAgent(binding.settings, issue.assigneeId),
-          assigneeUserId: settingsAssignmentUser(binding.settings, issue.assigneeId),
-          creationSubject: {
-            id: installation.id,
-            kind: 'integration',
-            snapshot: {
-              displayName: installation.organizationName || 'Linear',
-              externalId: installation.organizationId,
-              kind: 'integration',
-            },
-          },
-          description: issue.description?.slice(0, 255),
-          instruction: issue.description || issue.title,
-          name: issue.title,
-          priority: taskPriority(issue.priority),
-          projectId: binding.projectId,
-          visibility: 'public',
-        },
-        {
+      const task = await integrationTasks.createPublicTask({
+        binding,
+        installation,
+        issue,
+        mutation: {
           eventId: row.id,
           idempotencyKey: `linear:import:${row.id}`,
           source: 'linear',
           suppressDomainEvent: context.historicalImport,
           suppressLinearOutbox: true,
         },
-      );
+      });
+      if (!task) return 'processed';
       const initialStatus = binding.settings.statusMappings?.find(
         (mapping) => mapping.linearStateId === issue.stateId,
       )?.localStatus;
       if (initialStatus) {
-        await new TaskModel(db, installation.installedByUserId, this.workspaceId).update(
+        await integrationTasks.updatePublicTask(
           task.id,
           { status: initialStatus },
           {
@@ -549,12 +544,8 @@ export class LinearSyncWorker {
       return 'processed';
     }
 
-    const [task] = await db
-      .select()
-      .from(tasks)
-      .where(and(eq(tasks.id, existingLink.taskId), eq(tasks.workspaceId, this.workspaceId)))
-      .limit(1);
-    if (!task) {
+    const task = await integrationTasks.findPublicTask(existingLink.taskId);
+    if (!task || task.projectId !== binding.projectId || task.visibility !== 'public') {
       await model.updateIssueLink(existingLink.id, {
         lastInboundDeliveryId: row.id,
         remoteSnapshot: issue,
@@ -597,7 +588,6 @@ export class LinearSyncWorker {
       return 'processed';
     }
 
-    const taskModel = new TaskModel(db, task.createdByUserId, this.workspaceId);
     const patch = remoteTaskPatch(
       task,
       merged.merged,
@@ -607,7 +597,7 @@ export class LinearSyncWorker {
       binding.settings,
     );
     if (Object.keys(patch).length > 0) {
-      await taskModel.update(task.id, patch, {
+      await integrationTasks.updatePublicTask(task.id, patch, {
         eventId: row.id,
         idempotencyKey: `linear:task-update:${row.id}`,
         source: 'linear',
@@ -650,17 +640,3 @@ export class LinearSyncWorker {
     return 'processed';
   }
 }
-
-const settingsAssignmentAgent = (
-  settings: LinearProjectBindingSettings,
-  linearUserId?: string | null,
-) =>
-  settings.assignmentMappings?.find((mapping) => mapping.linearUserId === linearUserId)
-    ?.orviloAgentId;
-
-const settingsAssignmentUser = (
-  settings: LinearProjectBindingSettings,
-  linearUserId?: string | null,
-) =>
-  settings.assignmentMappings?.find((mapping) => mapping.linearUserId === linearUserId)
-    ?.orviloUserId;

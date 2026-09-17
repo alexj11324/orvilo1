@@ -16,7 +16,7 @@ import type {
   TaskPlanningScopeType,
   TaskPlanningTrigger,
 } from '@orvilo/types';
-import { and, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
 import type {
   LinearSyncInboxItem,
@@ -86,6 +86,39 @@ export const linearSyncRetryDelayMs = (attempts: number) =>
     LINEAR_SYNC_RETRY_BASE_MS * 2 ** Math.max(0, Math.min(attempts, 16) - 1),
   );
 
+export class LinearInstallationUnavailableError extends Error {
+  readonly code = 'LINEAR_INSTALLATION_UNAVAILABLE';
+
+  constructor(message = 'Linear installation is not active') {
+    super(message);
+    this.name = 'LinearInstallationUnavailableError';
+  }
+}
+
+const linearInstallationPublicSelection = {
+  accessTokenExpiresAt: linearInstallations.accessTokenExpiresAt,
+  actor: linearInstallations.actor,
+  appActorId: linearInstallations.appActorId,
+  appActorName: linearInstallations.appActorName,
+  connectorId: linearInstallations.connectorId,
+  createdAt: linearInstallations.createdAt,
+  id: linearInstallations.id,
+  installedByUserId: linearInstallations.installedByUserId,
+  lastError: linearInstallations.lastError,
+  lastSyncAt: linearInstallations.lastSyncAt,
+  oauthClientId: linearInstallations.oauthClientId,
+  organizationId: linearInstallations.organizationId,
+  organizationName: linearInstallations.organizationName,
+  refreshFence: linearInstallations.refreshFence,
+  revokedAt: linearInstallations.revokedAt,
+  revocationReason: linearInstallations.revocationReason,
+  scopes: linearInstallations.scopes,
+  status: linearInstallations.status,
+  tokenVersion: linearInstallations.tokenVersion,
+  updatedAt: linearInstallations.updatedAt,
+  workspaceId: linearInstallations.workspaceId,
+};
+
 export class LinearSyncModel {
   private readonly db: LobeChatDatabase;
   private readonly workspaceId: string;
@@ -97,7 +130,7 @@ export class LinearSyncModel {
 
   async findInstallationByOrganization(organizationId: string) {
     const [row] = await this.db
-      .select()
+      .select(linearInstallationPublicSelection)
       .from(linearInstallations)
       .where(
         and(
@@ -111,7 +144,7 @@ export class LinearSyncModel {
 
   async findInstallationById(id: string) {
     const [row] = await this.db
-      .select()
+      .select(linearInstallationPublicSelection)
       .from(linearInstallations)
       .where(
         and(eq(linearInstallations.id, id), eq(linearInstallations.workspaceId, this.workspaceId)),
@@ -122,35 +155,88 @@ export class LinearSyncModel {
 
   async listInstallations() {
     return this.db
-      .select()
+      .select(linearInstallationPublicSelection)
       .from(linearInstallations)
       .where(eq(linearInstallations.workspaceId, this.workspaceId))
       .orderBy(desc(linearInstallations.createdAt));
   }
 
-  async upsertInstallation(input: {
-    connectorId?: string;
+  /** Server-only webhook verification candidates; never return secret refs to clients. */
+  async listInstallationWebhookCandidates() {
+    return this.db
+      .select({
+        id: linearInstallations.id,
+        status: linearInstallations.status,
+        webhookSecretRef: linearInstallations.webhookSecretRef,
+      })
+      .from(linearInstallations)
+      .where(eq(linearInstallations.workspaceId, this.workspaceId));
+  }
+
+  /** Full installation row for server-side credential resolution only. */
+  async findInstallationForAuth(id: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearInstallations)
+      .where(
+        and(eq(linearInstallations.id, id), eq(linearInstallations.workspaceId, this.workspaceId)),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async upsertOAuthInstallation(input: {
     installedByUserId: string;
     organizationId: string;
     organizationName?: string;
+    oauthClientId: string;
+    appActorId: string;
+    appActorName?: string;
+    scopes: string[];
+    accessTokenCiphertext: string;
+    refreshTokenCiphertext: string;
+    accessTokenExpiresAt: Date | null;
     webhookSecretRef?: string;
   }) {
     const [row] = await this.db
       .insert(linearInstallations)
       .values({
-        connectorId: input.connectorId,
+        accessTokenCiphertext: input.accessTokenCiphertext,
+        accessTokenExpiresAt: input.accessTokenExpiresAt,
+        actor: 'app',
+        appActorId: input.appActorId,
+        appActorName: input.appActorName,
         installedByUserId: input.installedByUserId,
         organizationId: input.organizationId,
         organizationName: input.organizationName,
+        oauthClientId: input.oauthClientId,
+        refreshTokenCiphertext: input.refreshTokenCiphertext,
+        scopes: input.scopes,
+        status: 'active',
         webhookSecretRef: input.webhookSecretRef,
         workspaceId: this.workspaceId,
       })
       .onConflictDoUpdate({
         target: [linearInstallations.workspaceId, linearInstallations.organizationId],
         set: {
-          connectorId: input.connectorId,
+          accessTokenCiphertext: input.accessTokenCiphertext,
+          accessTokenExpiresAt: input.accessTokenExpiresAt,
+          actor: 'app',
+          appActorId: input.appActorId,
+          appActorName: input.appActorName,
+          installedByUserId: input.installedByUserId,
+          lastError: null,
           organizationName: input.organizationName,
+          oauthClientId: input.oauthClientId,
+          refreshFence: sql`${linearInstallations.refreshFence} + 1`,
+          refreshLeaseUntil: null,
+          refreshOwner: null,
+          refreshTokenCiphertext: input.refreshTokenCiphertext,
+          revokedAt: null,
+          revocationReason: null,
+          scopes: input.scopes,
           status: 'active',
+          tokenVersion: sql`${linearInstallations.tokenVersion} + 1`,
           webhookSecretRef: input.webhookSecretRef,
           updatedAt: new Date(),
         },
@@ -158,6 +244,118 @@ export class LinearSyncModel {
       .returning();
 
     return row;
+  }
+
+  /** Claim one refresh owner while keeping the expected token version fenced. */
+  async claimTokenRefresh(
+    id: string,
+    expectedTokenVersion: number,
+    owner: string,
+    leaseMs = 120_000,
+  ) {
+    const leaseUntil = new Date(Date.now() + leaseMs);
+    const [row] = await this.db
+      .update(linearInstallations)
+      .set({
+        refreshFence: sql`${linearInstallations.refreshFence} + 1`,
+        refreshLeaseUntil: leaseUntil,
+        refreshOwner: owner,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(linearInstallations.id, id),
+          eq(linearInstallations.workspaceId, this.workspaceId),
+          eq(linearInstallations.status, 'active'),
+          eq(linearInstallations.tokenVersion, expectedTokenVersion),
+          or(
+            isNull(linearInstallations.refreshOwner),
+            lte(linearInstallations.refreshLeaseUntil, new Date()),
+          ),
+        ),
+      )
+      .returning({
+        refreshFence: linearInstallations.refreshFence,
+        refreshLeaseUntil: linearInstallations.refreshLeaseUntil,
+        refreshOwner: linearInstallations.refreshOwner,
+        tokenVersion: linearInstallations.tokenVersion,
+      });
+    return row ?? null;
+  }
+
+  /** Persist a refresh response only if this owner still holds the fence. */
+  async persistTokenRefresh(input: {
+    accessTokenCiphertext: string;
+    accessTokenExpiresAt: Date | null;
+    expectedTokenVersion: number;
+    id: string;
+    owner: string;
+    refreshFence: number;
+    refreshTokenCiphertext: string;
+    scopes: string[];
+  }) {
+    const [row] = await this.db
+      .update(linearInstallations)
+      .set({
+        accessTokenCiphertext: input.accessTokenCiphertext,
+        accessTokenExpiresAt: input.accessTokenExpiresAt,
+        lastError: null,
+        refreshLeaseUntil: null,
+        refreshOwner: null,
+        refreshTokenCiphertext: input.refreshTokenCiphertext,
+        scopes: input.scopes,
+        tokenVersion: input.expectedTokenVersion + 1,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(linearInstallations.id, input.id),
+          eq(linearInstallations.workspaceId, this.workspaceId),
+          eq(linearInstallations.status, 'active'),
+          eq(linearInstallations.tokenVersion, input.expectedTokenVersion),
+          eq(linearInstallations.refreshOwner, input.owner),
+          eq(linearInstallations.refreshFence, input.refreshFence),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async releaseTokenRefresh(id: string, owner: string, refreshFence: number) {
+    await this.db
+      .update(linearInstallations)
+      .set({ refreshLeaseUntil: null, refreshOwner: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(linearInstallations.id, id),
+          eq(linearInstallations.workspaceId, this.workspaceId),
+          eq(linearInstallations.refreshOwner, owner),
+          eq(linearInstallations.refreshFence, refreshFence),
+        ),
+      );
+  }
+
+  /** Stop new provider work while preserving credentials and sync records. */
+  async markInstallationUnavailable(
+    id: string,
+    input: { reason: string; status: 'error' | 'revoked'; message: string },
+  ) {
+    const [row] = await this.db
+      .update(linearInstallations)
+      .set({
+        lastError: input.message.slice(0, 2_000),
+        refreshLeaseUntil: null,
+        refreshOwner: null,
+        revokedAt: input.status === 'revoked' ? new Date() : undefined,
+        revocationReason: input.reason,
+        status: input.status,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(linearInstallations.id, id), eq(linearInstallations.workspaceId, this.workspaceId)),
+      )
+      .returning(linearInstallationPublicSelection);
+    return row ?? null;
   }
 
   async findBindingById(id: string) {
@@ -535,6 +733,15 @@ export class LinearSyncModel {
   }
 
   async queueOutbox(input: QueueLinearSyncInput) {
+    const installation = await this.findInstallationById(input.installationId);
+    if (!installation)
+      throw new LinearInstallationUnavailableError('Linear installation not found');
+    if (installation.status !== 'active') {
+      throw new LinearInstallationUnavailableError(
+        `Linear installation is ${installation.status} and cannot accept new sync work`,
+      );
+    }
+
     if (input.linkId) {
       const [existing] = await this.db
         .select()

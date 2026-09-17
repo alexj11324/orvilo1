@@ -5,23 +5,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTestDB } from '@/database/core/getTestDB';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
-import { tasks, users, workspaces } from '@/database/schemas';
+import { linearInstallations, tasks, users, workspaces } from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 
 import { LinearSyncWorker } from './worker';
 
 const db: LobeChatDatabase = await getTestDB();
 const userId = 'linear-inbound-user';
+const installerId = 'linear-inbound-installer';
 const workspaceId = 'linear-inbound-workspace';
 
 const cleanup = async () => {
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   await db.delete(users).where(eq(users.id, userId));
+  await db.delete(users).where(eq(users.id, installerId));
 };
 
 beforeEach(async () => {
   await cleanup();
-  await db.insert(users).values({ id: userId });
+  await db.insert(users).values([{ id: userId }, { id: installerId }]);
   await db.insert(workspaces).values({
     id: workspaceId,
     name: 'Linear Inbound Workspace',
@@ -39,15 +41,20 @@ describe('LinearSyncWorker inbound ordering', () => {
       identifier: 'INB',
       name: 'Inbound Project',
     });
-    const installation = await model.upsertInstallation({
-      installedByUserId: userId,
-      organizationId: 'linear-org-inbound',
-    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({
+        installedByUserId: installerId,
+        organizationId: 'linear-org-inbound',
+        workspaceId,
+      })
+      .returning();
     const binding = await model.upsertBinding({
       defaultTeamId: 'linear-team-1',
       installationId: installation.id,
       linearProjectId: 'linear-project-inbound',
       projectId: project.id,
+      teamIds: ['linear-team-1'],
     });
     const [task] = await db
       .insert(tasks)
@@ -91,6 +98,7 @@ describe('LinearSyncWorker inbound ordering', () => {
         identifier: 'ENG-1',
         projectId: binding.linearProjectId,
         title: 'Older title',
+        teamId: 'linear-team-1',
         updatedAt: '2026-09-16T11:59:59.000Z',
       }),
     };
@@ -108,5 +116,142 @@ describe('LinearSyncWorker inbound ordering', () => {
     const link = await model.findIssueLinkByExternalId('linear-issue-inbound');
     expect(link?.lastConfirmedSnapshot).toMatchObject({ title: 'Newest title' });
     expect(link?.lastInboundDeliveryId).toBeTruthy();
+  });
+
+  it('imports with a service subject after the installer is deleted', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'OWN',
+      name: 'Installer Independent Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({
+        installedByUserId: installerId,
+        organizationId: 'linear-org-installer',
+        workspaceId,
+      })
+      .returning();
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-1',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-installer',
+      projectId: project.id,
+      teamIds: ['linear-team-1'],
+    });
+    await db.delete(users).where(eq(users.id, installerId));
+
+    await model.captureDelivery({
+      action: 'create',
+      deliveryId: 'installer-deleted-delivery',
+      eventType: 'Issue',
+      installationId: installation.id,
+      organizationId: installation.organizationId,
+      payload: { id: 'linear-issue-installer' },
+      subjectId: 'linear-issue-installer',
+    });
+    const provider = {
+      getIssue: vi.fn().mockResolvedValue({
+        description: 'Imported without installer authority',
+        id: 'linear-issue-installer',
+        identifier: 'ENG-2',
+        projectId: binding.linearProjectId,
+        teamId: 'linear-team-1',
+        title: 'Service-authored task',
+      }),
+    };
+
+    await expect(
+      new LinearSyncWorker(db, workspaceId).processPending(provider as never, 20, installation.id),
+    ).resolves.toMatchObject({ failed: 0, imported: 1 });
+
+    const [imported] = await db.select().from(tasks).where(eq(tasks.identifier, 'OWN-1'));
+    expect(imported).toMatchObject({
+      createdBySubjectId: `linear-installation:${installation.id}`,
+      createdBySubjectKind: 'integration',
+      createdByUserId: null,
+      visibility: 'public',
+    });
+    const [storedInstallation] = await db
+      .select({ installedByUserId: linearInstallations.installedByUserId })
+      .from(linearInstallations)
+      .where(eq(linearInstallations.id, installation.id));
+    expect(storedInstallation.installedByUserId).toBeNull();
+  });
+
+  it('does not read or update a private task through the integration principal', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'PRV',
+      name: 'Private Boundary Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'linear-org-private', workspaceId })
+      .returning();
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-1',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-private',
+      projectId: project.id,
+      teamIds: ['linear-team-1'],
+    });
+    const [privateTask] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'PRV-1',
+        instruction: 'Private instruction must remain untouched',
+        name: 'Private task',
+        projectId: project.id,
+        seq: 1,
+        visibility: 'private',
+        workspaceId,
+      })
+      .returning();
+    await model.createIssueLink({
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: 'ENG-3',
+      linearIssueId: 'linear-issue-private',
+      organizationId: installation.organizationId,
+      remoteSnapshot: {
+        id: 'linear-issue-private',
+        identifier: 'ENG-3',
+        projectId: binding.linearProjectId,
+        teamId: 'linear-team-1',
+        title: 'Base title',
+      },
+      taskId: privateTask.id,
+    });
+    await model.captureDelivery({
+      action: 'update',
+      deliveryId: 'private-task-delivery',
+      eventType: 'Issue',
+      installationId: installation.id,
+      organizationId: installation.organizationId,
+      payload: { id: 'linear-issue-private' },
+      subjectId: 'linear-issue-private',
+    });
+    const provider = {
+      getIssue: vi.fn().mockResolvedValue({
+        id: 'linear-issue-private',
+        identifier: 'ENG-3',
+        projectId: binding.linearProjectId,
+        teamId: 'linear-team-1',
+        title: 'Remote title must not enter private task',
+      }),
+    };
+
+    await expect(
+      new LinearSyncWorker(db, workspaceId).processPending(provider as never, 20, installation.id),
+    ).resolves.toMatchObject({ failed: 0, processed: 1 });
+
+    const [unchanged] = await db.select().from(tasks).where(eq(tasks.id, privateTask.id));
+    expect(unchanged).toMatchObject({
+      instruction: 'Private instruction must remain untouched',
+      name: 'Private task',
+      visibility: 'private',
+    });
   });
 });

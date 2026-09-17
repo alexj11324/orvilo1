@@ -26,7 +26,6 @@ import {
   getInstallationTone,
   getScopedProjects,
   getWizardStepStates,
-  isCatalogOrganization,
   type LinearBindingView,
   type LinearImportSummary,
   type LinearInstallationView,
@@ -36,8 +35,6 @@ import {
 } from '@/features/AgentTasks/shared/linearSyncViewModel';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
-import { useToolStore } from '@/store/tool';
-import { lobehubSkillStoreSelectors } from '@/store/tool/selectors';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -256,9 +253,20 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 type Catalog = {
+  members: Array<{ id: string; name: string }>;
   organizations: Array<{ id: string; name: string; url?: string | null }>;
   projects: Array<{ id: string; name: string; state?: string | null; teamIds: string[] }>;
   teams: Array<{ id: string; key: string; name: string }>;
+  workflowStates: Record<
+    string,
+    Array<{
+      id: string;
+      name: string;
+      position: number | null;
+      teamId: string;
+      type: string | null;
+    }>
+  >;
 };
 
 type LocalProject = { id: string; identifier: string; name: string };
@@ -399,9 +407,6 @@ const StepCard = ({ action, children, description, title }: StepCardProps) => (
 const LinearWorkspaceSettings = memo(() => {
   const { t, i18n } = useTranslation('setting');
   const { allowed: canManage, reason } = usePermission('manage_settings');
-  const linearServer = useToolStore(lobehubSkillStoreSelectors.getServerByIdentifier('linear'));
-  const getAuthorizeUrl = useToolStore((state) => state.getLobehubSkillAuthorizeUrl);
-  const checkStatus = useToolStore((state) => state.checkLobehubSkillStatus);
 
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -412,7 +417,6 @@ const LinearWorkspaceSettings = memo(() => {
   const [issueLinksError, setIssueLinksError] = useState<string | null>(null);
   const [planningScopes, setPlanningScopes] = useState<PlanningScope[]>([]);
   const [planningRevisions, setPlanningRevisions] = useState<PlanningRevision[]>([]);
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState('');
   const [selectedInstallationId, setSelectedInstallationId] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -424,6 +428,7 @@ const LinearWorkspaceSettings = memo(() => {
   const [action, setAction] = useState<Action | null>(null);
   const [issueLinksLoading, setIssueLinksLoading] = useState(false);
   const [lastImport, setLastImport] = useState<ImportResult | null>(null);
+  const isConnected = installations.some((installation) => installation.status === 'active');
 
   const selectedInstallation = installations.find((item) => item.id === selectedInstallationId);
   const selectedRemoteProject = catalog?.projects.find(
@@ -446,7 +451,6 @@ const LinearWorkspaceSettings = memo(() => {
   );
   const hasScope = Boolean(
     selectedInstallation?.status === 'active' &&
-    selectedOrganizationId === selectedInstallation.organizationId &&
     selectedTeamId &&
     selectedRemoteProject?.teamIds.includes(selectedTeamId),
   );
@@ -459,7 +463,7 @@ const LinearWorkspaceSettings = memo(() => {
     hasBinding,
     hasScope,
     installationIsActive: selectedInstallation?.status === 'active',
-    isConnected: Boolean(linearServer?.isConnected),
+    isConnected,
     isSyncEnabled: hasBinding && syncEnabled,
   });
   const latestProposalRevision = planningRevisions.find(
@@ -467,17 +471,14 @@ const LinearWorkspaceSettings = memo(() => {
   );
 
   const refresh = useCallback(async () => {
-    if (!linearServer?.isConnected) return;
-    const [catalogResponse, installationResponse, projectResponse, bindingResponse, scopeResponse] =
+    const [installationResponse, projectResponse, bindingResponse, scopeResponse] =
       await Promise.all([
-        lambdaClient.linearSync.catalog.query(),
         lambdaClient.linearSync.installations.query(),
         lambdaClient.linearSync.projects.query(),
         lambdaClient.linearSync.bindings.query(),
         lambdaClient.linearSync.planningScopes.query(),
       ]);
     if (
-      !catalogResponse?.data ||
       !installationResponse?.data ||
       !projectResponse?.data ||
       !bindingResponse?.data ||
@@ -486,7 +487,6 @@ const LinearWorkspaceSettings = memo(() => {
       throw new Error('Linear workspace settings returned an incomplete response');
     }
 
-    setCatalog(catalogResponse.data);
     setInstallations(installationResponse.data as LinearInstallationView[]);
     setLocalProjects(projectResponse.data);
     setBindings(bindingResponse.data as LinearBindingView[]);
@@ -494,12 +494,22 @@ const LinearWorkspaceSettings = memo(() => {
 
     const nextInstallation =
       installationResponse.data.find((item) => item.id === selectedInstallationId) ??
+      installationResponse.data.find((item) => item.status === 'active') ??
       installationResponse.data[0];
     setSelectedInstallationId(nextInstallation?.id ?? '');
-    setSelectedOrganizationId(
-      nextInstallation?.organizationId ?? catalogResponse.data.organizations[0]?.id ?? '',
+    setCatalog(
+      nextInstallation
+        ? ((await lambdaClient.linearSync.catalog.query({ installationId: nextInstallation.id }))
+            .data ?? {
+            members: [],
+            organizations: [],
+            projects: [],
+            teams: [],
+            workflowStates: {},
+          })
+        : { members: [], organizations: [], projects: [], teams: [], workflowStates: {} },
     );
-  }, [linearServer?.isConnected, selectedInstallationId]);
+  }, [selectedInstallationId]);
 
   const loadCatalog = useCallback(async () => {
     setAction('load');
@@ -516,13 +526,8 @@ const LinearWorkspaceSettings = memo(() => {
   }, [refresh, t]);
 
   useEffect(() => {
-    if (!linearServer?.isConnected) {
-      setCatalog(null);
-      setCatalogError(null);
-      return;
-    }
     void loadCatalog();
-  }, [linearServer?.isConnected, loadCatalog]);
+  }, [loadCatalog]);
 
   useEffect(() => {
     const binding = bindings.find((item) => item.projectId === selectedProjectId);
@@ -599,49 +604,17 @@ const LinearWorkspaceSettings = memo(() => {
     }
     setAction('connect');
     try {
-      const { authorizeUrl } = await getAuthorizeUrl('linear', {
-        redirectUri: `${window.location.origin}/oauth/callback/success?provider=linear`,
+      const response = await lambdaClient.linearSync.startOAuth.mutate({
+        returnTo: window.location.pathname,
       });
-      popup.location.href = authorizeUrl;
+      popup.location.href = response.authorizationUrl;
       await waitForPopup(popup);
-      await checkStatus('linear');
+      await refresh();
       toast.success(t('workspaceSetting.linear.connected'));
       setActiveStep('installation');
     } catch (error) {
       popup.close();
       toast.error(errorMessage(error, t('workspaceSetting.linear.connectFailed')));
-    } finally {
-      setAction(null);
-    }
-  };
-
-  const saveInstallation = async () => {
-    if (
-      !canManage ||
-      !catalog ||
-      !isCatalogOrganization(catalog.organizations, selectedOrganizationId)
-    ) {
-      return;
-    }
-    const organization = catalog.organizations.find((item) => item.id === selectedOrganizationId);
-    setAction('installation');
-    try {
-      const response = await lambdaClient.linearSync.upsertInstallation.mutate({
-        organizationId: organization!.id,
-        organizationName: organization!.name,
-      });
-      if (!response?.data) throw new Error('Linear installation response is empty');
-      const installation = response.data as LinearInstallationView;
-      setInstallations((current) => [
-        installation,
-        ...current.filter((item) => item.id !== installation.id),
-      ]);
-      setSelectedInstallationId(installation.id);
-      setSelectedOrganizationId(installation.organizationId);
-      setActiveStep('scope');
-      toast.success(t('workspaceSetting.linear.installationSaved'));
-    } catch (error) {
-      toast.error(errorMessage(error, t('workspaceSetting.linear.saveFailed')));
     } finally {
       setAction(null);
     }
@@ -805,6 +778,19 @@ const LinearWorkspaceSettings = memo(() => {
       ].filter((id): id is string => Boolean(id)),
     [issueLinks, selectedBinding?.settings.assignmentMappings],
   );
+  const catalogWorkflowStatesById = useMemo(
+    () =>
+      new Map(
+        Object.values(catalog?.workflowStates ?? {})
+          .flat()
+          .map((state) => [state.id, state]),
+      ),
+    [catalog?.workflowStates],
+  );
+  const catalogMembersById = useMemo(
+    () => new Map((catalog?.members ?? []).map((member) => [member.id, member])),
+    [catalog?.members],
+  );
 
   const renderInstallation = () => (
     <StepCard
@@ -818,7 +804,7 @@ const LinearWorkspaceSettings = memo(() => {
           title={!canManage ? reason : undefined}
           onClick={connect}
         >
-          {linearServer?.isConnected
+          {isConnected
             ? t('workspaceSetting.linear.reconnect')
             : t('workspaceSetting.linear.connect')}
         </Button>
@@ -826,14 +812,11 @@ const LinearWorkspaceSettings = memo(() => {
     >
       <Flexbox gap={12}>
         <Text className={styles.description}>
-          {linearServer?.isConnected
-            ? t('workspaceSetting.linear.connectedAs', {
-                name:
-                  linearServer.providerUsername || t('workspaceSetting.linear.connectedAccount'),
-              })
+          {isConnected
+            ? t('workspaceSetting.linear.connectedAccount')
             : t('workspaceSetting.linear.connectionDescription')}
         </Text>
-        {!linearServer?.isConnected ? (
+        {!isConnected ? (
           <Alert
             showIcon
             description={t('workspaceSetting.linear.wizard.installationRequired')}
@@ -853,38 +836,11 @@ const LinearWorkspaceSettings = memo(() => {
           />
         ) : (
           <>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>
-                {t('workspaceSetting.linear.organizationTitle')}
-              </Text>
-              <Select
-                disabled={!catalog || !canManage}
-                loading={action === 'load'}
-                placeholder={t('workspaceSetting.linear.organizationPlaceholder')}
-                value={selectedOrganizationId || undefined}
-                options={(catalog?.organizations ?? []).map((organization) => ({
-                  label: organization.name,
-                  value: organization.id,
-                }))}
-                onChange={(value) => setSelectedOrganizationId(value)}
-              />
-              <Text className={styles.muted} fontSize={12}>
-                {t('workspaceSetting.linear.organizationCatalogOnly')}
-              </Text>
-            </div>
             <div className={styles.row}>
               <Text type={'secondary'}>{t('workspaceSetting.linear.installationIdentity')}</Text>
-              <Button
-                loading={action === 'installation'}
-                disabled={
-                  !canManage ||
-                  !catalog ||
-                  !isCatalogOrganization(catalog.organizations, selectedOrganizationId)
-                }
-                onClick={() => void saveInstallation()}
-              >
-                {t('workspaceSetting.linear.saveOrganization')}
-              </Button>
+              <Text type={'secondary'}>
+                {selectedInstallation?.organizationName || selectedInstallation?.organizationId}
+              </Text>
             </div>
             {selectedInstallation && (
               <div className={styles.statusPanel}>
@@ -1097,7 +1053,10 @@ const LinearWorkspaceSettings = memo(() => {
                   );
                   return (
                     <div className={styles.mappingRow} key={stateId}>
-                      <Text style={{ wordBreak: 'break-all' }}>{stateId}</Text>
+                      <Text style={{ wordBreak: 'break-all' }}>
+                        {catalogWorkflowStatesById.get(stateId)?.name ?? stateId}
+                        {catalogWorkflowStatesById.has(stateId) ? ` (${stateId})` : ''}
+                      </Text>
                       <Text type={mapping ? undefined : 'secondary'}>
                         {mapping?.localStatus ?? t('workspaceSetting.linear.unmapped')}
                       </Text>
@@ -1118,7 +1077,10 @@ const LinearWorkspaceSettings = memo(() => {
                   const target = mapping?.orviloAgentId || mapping?.orviloUserId;
                   return (
                     <div className={styles.mappingRow} key={linearUserId}>
-                      <Text style={{ wordBreak: 'break-all' }}>{linearUserId}</Text>
+                      <Text style={{ wordBreak: 'break-all' }}>
+                        {catalogMembersById.get(linearUserId)?.name ?? linearUserId}
+                        {catalogMembersById.has(linearUserId) ? ` (${linearUserId})` : ''}
+                      </Text>
                       <Text type={target ? undefined : 'secondary'}>
                         {target ?? t('workspaceSetting.linear.unmapped')}
                       </Text>

@@ -1218,6 +1218,13 @@
       "when": 1789597686876,
       "tag": "0172_linear_import_resume",
       "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1789602418647,
+      "tag": "0173_linear_oauth_installation",
+      "breakpoints": true
     }
   ],
   "version": "6"

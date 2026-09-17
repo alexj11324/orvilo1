@@ -7,6 +7,7 @@ import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import {
+  linearInstallations,
   projects,
   taskDispatches,
   taskPlanningRevisions,
@@ -50,11 +51,17 @@ const createRevision = async (name: string, requiresApproval: boolean, projectSc
       })
     : null;
   const installation = project
-    ? await linearModel.upsertInstallation({
-        installedByUserId: userId,
-        organizationId: `planning-org-${project.id}`,
-        organizationName: 'Planning Apply Organization',
-      })
+    ? (
+        await db
+          .insert(linearInstallations)
+          .values({
+            installedByUserId: userId,
+            organizationId: `planning-org-${project.id}`,
+            organizationName: 'Planning Apply Organization',
+            workspaceId,
+          })
+          .returning()
+      )[0]
     : null;
   const binding =
     project && installation

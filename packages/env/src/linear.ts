@@ -7,9 +7,15 @@ const emptyStringToUndefined = (value: unknown) => (value === '' ? undefined : v
 export const getLinearConfig = () =>
   createEnv({
     runtimeEnv: {
+      LINEAR_OAUTH_CLIENT_ID: process.env.LINEAR_OAUTH_CLIENT_ID,
+      LINEAR_OAUTH_CLIENT_SECRET: process.env.LINEAR_OAUTH_CLIENT_SECRET,
+      LINEAR_OAUTH_SCOPES: process.env.LINEAR_OAUTH_SCOPES,
       LINEAR_WEBHOOK_SIGNING_SECRET: process.env.LINEAR_WEBHOOK_SIGNING_SECRET,
     },
     server: {
+      LINEAR_OAUTH_CLIENT_ID: z.preprocess(emptyStringToUndefined, z.string().optional()),
+      LINEAR_OAUTH_CLIENT_SECRET: z.preprocess(emptyStringToUndefined, z.string().optional()),
+      LINEAR_OAUTH_SCOPES: z.preprocess(emptyStringToUndefined, z.string().optional()),
       LINEAR_WEBHOOK_SIGNING_SECRET: z.preprocess(emptyStringToUndefined, z.string().optional()),
     },
   });

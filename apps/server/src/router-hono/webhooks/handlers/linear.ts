@@ -7,6 +7,7 @@ import {
   LinearSyncService,
   LinearWebhookError,
   parseLinearWebhookPayload,
+  verifyLinearWebhookSignature,
 } from '@/server/services/linearSync';
 import { LinearSyncWorkflow } from '@/server/workflows/linearSync';
 
@@ -22,7 +23,9 @@ export const linearWebhook = async (c: Context): Promise<Response> => {
   const workspaceId = c.req.param('workspaceId');
   if (!workspaceId) return c.json({ error: 'workspaceId is required' }, 400);
 
-  const rawBody = await c.req.raw.text();
+  // Keep the original request bytes. Linear signs the exact body, so parsing
+  // or re-serializing JSON before verification would change the message.
+  const rawBody = new Uint8Array(await c.req.raw.arrayBuffer());
   const signature = c.req.header('linear-signature');
   const deliveryId = c.req.header('linear-delivery');
   const timestampHeader = c.req.header('linear-timestamp');
@@ -34,21 +37,60 @@ export const linearWebhook = async (c: Context): Promise<Response> => {
 
   try {
     const db = await getServerDB();
+    const installationModel = new LinearSyncModel(db, workspaceId);
+    const installations = await installationModel.listInstallationWebhookCandidates();
+    const verificationCandidates = [
+      ...(linearEnv.LINEAR_WEBHOOK_SIGNING_SECRET
+        ? [{ installationId: null, secret: linearEnv.LINEAR_WEBHOOK_SIGNING_SECRET }]
+        : []),
+      ...installations.flatMap((candidate) => {
+        if (candidate.status !== 'active' || !candidate.webhookSecretRef) return [];
+        const secret = process.env[candidate.webhookSecretRef];
+        return secret ? [{ installationId: candidate.id, secret }] : [];
+      }),
+    ];
+    if (verificationCandidates.length === 0) {
+      console.error('[linear:webhook] webhook secret is not configured');
+      return c.json({ error: 'Linear webhook verification is not configured' }, 503);
+    }
+
+    const verifiedCandidates = verificationCandidates.filter(({ secret }) =>
+      verifyLinearWebhookSignature({
+        now: Date.now(),
+        rawBody,
+        secret,
+        signature,
+        timestamp,
+      }),
+    );
+    if (verifiedCandidates.length === 0) {
+      return c.json({ error: 'Linear webhook signature or timestamp is invalid' }, 401);
+    }
+
+    // Only now is organizationId trusted for installation lookup. If a
+    // workspace uses per-installation secrets, the authenticated candidate
+    // must also be the organization selected by the signed payload.
     const payload = parseLinearWebhookPayload(rawBody);
-    const installation = await new LinearSyncModel(db, workspaceId).findInstallationByOrganization(
+    const installation = await installationModel.findInstallationByOrganization(
       payload.organizationId,
     );
     if (!installation) {
       return c.json({ error: 'Linear organization is not installed in this workspace' }, 404);
     }
-
-    const secret = installation.webhookSecretRef
-      ? process.env[installation.webhookSecretRef]
-      : linearEnv.LINEAR_WEBHOOK_SIGNING_SECRET;
-    if (!secret) {
-      console.error('[linear:webhook] webhook secret is not configured for installation');
-      return c.json({ error: 'Linear webhook verification is not configured' }, 503);
+    if (installation.status !== 'active') {
+      return c.json({ error: 'Linear installation is unavailable' }, 404);
     }
+    const globalCandidate = verifiedCandidates.find(
+      ({ installationId }) => installationId === null,
+    );
+    const installationCandidate = verifiedCandidates.find(
+      ({ installationId }) => installationId === installation.id,
+    );
+    if (!globalCandidate && !installationCandidate) {
+      return c.json({ error: 'Linear webhook organization is not authenticated' }, 401);
+    }
+    const secret = installationCandidate?.secret ?? globalCandidate?.secret;
+    if (!secret) return c.json({ error: 'Linear webhook signature is invalid' }, 401);
 
     const result = await new LinearSyncService(db, workspaceId).captureWebhook({
       deliveryId,

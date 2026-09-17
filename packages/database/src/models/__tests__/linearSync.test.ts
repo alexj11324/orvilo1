@@ -336,4 +336,67 @@ describe('LinearSyncModel', () => {
       ]),
     );
   });
+
+  it('fences Linear token refresh owners and rejects stale token versions', async () => {
+    await db.insert(linearInstallations).values({
+      accessTokenCiphertext: 'cipher:access-v1',
+      accessTokenExpiresAt: new Date(0),
+      appActorId: 'app-user-1',
+      oauthClientId: 'linear-client-1',
+      refreshTokenCiphertext: 'cipher:refresh-v1',
+      scopes: ['read', 'write'],
+      id: installationId,
+      installedByUserId: userId,
+      organizationId: 'linear-org-1',
+      workspaceId,
+    });
+    const model = new LinearSyncModel(db, workspaceId);
+
+    const first = await model.claimTokenRefresh(installationId, 0, 'worker-a');
+    expect(first).toMatchObject({ refreshFence: 1, refreshOwner: 'worker-a', tokenVersion: 0 });
+    await expect(model.claimTokenRefresh(installationId, 0, 'worker-b')).resolves.toBeNull();
+    await expect(
+      model.persistTokenRefresh({
+        accessTokenCiphertext: 'cipher:stale',
+        accessTokenExpiresAt: new Date(),
+        expectedTokenVersion: 0,
+        id: installationId,
+        owner: 'worker-b',
+        refreshFence: first!.refreshFence,
+        refreshTokenCiphertext: 'cipher:stale',
+        scopes: ['read', 'write'],
+      }),
+    ).resolves.toBeNull();
+
+    await expect(
+      model.persistTokenRefresh({
+        accessTokenCiphertext: 'cipher:access-v2',
+        accessTokenExpiresAt: new Date(Date.now() + 3_600_000),
+        expectedTokenVersion: 0,
+        id: installationId,
+        owner: 'worker-a',
+        refreshFence: first!.refreshFence,
+        refreshTokenCiphertext: 'cipher:refresh-v2',
+        scopes: ['read', 'write'],
+      }),
+    ).resolves.toMatchObject({ tokenVersion: 1 });
+
+    const stored = await model.findInstallationForAuth(installationId);
+    expect(stored).toMatchObject({
+      accessTokenCiphertext: 'cipher:access-v2',
+      refreshTokenCiphertext: 'cipher:refresh-v2',
+      tokenVersion: 1,
+    });
+    const publicInstallation = await model.findInstallationById(installationId);
+    expect(publicInstallation).not.toHaveProperty('accessTokenCiphertext');
+    expect(publicInstallation).not.toHaveProperty('refreshTokenCiphertext');
+    expect(publicInstallation).not.toHaveProperty('webhookSecretRef');
+    await expect(model.listInstallationWebhookCandidates()).resolves.toEqual([
+      expect.objectContaining({
+        id: installationId,
+        status: 'active',
+        webhookSecretRef: null,
+      }),
+    ]);
+  });
 });

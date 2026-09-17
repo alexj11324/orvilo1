@@ -4,12 +4,21 @@ import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
-import { ConnectorModel } from '@/database/models/connector';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
+import {
+  buildLinearAuthorizationUrl,
+  createLinearPkcePair,
+  generateLinearOAuthState,
+  getLinearOAuthConfig,
+  getLinearOAuthRedirectUri,
+  revokeLinearToken,
+} from '@/server/services/linearSync/oauth';
+import { saveLinearOAuthState } from '@/server/services/linearSync/oauthState';
 import { LinearPlanningWorker } from '@/server/services/linearSync/planning';
 import { createLinearGraphqlIssueProvider } from '@/server/services/linearSync/provider';
 import { LinearSyncWorker } from '@/server/services/linearSync/worker';
@@ -23,7 +32,6 @@ const linearSyncProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
 
   return opts.next({
     ctx: {
-      connectorModel: new ConnectorModel(ctx.serverDB, ctx.userId, ctx.workspaceId),
       linearSyncModel: new LinearSyncModel(ctx.serverDB, ctx.workspaceId),
       projectModel: new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, ctx.workspaceId),
@@ -87,22 +95,49 @@ export const linearSyncRouter = router({
     }
   }),
 
-  catalog: linearSyncProcedure.query(async ({ ctx }) => {
-    try {
-      const provider = createLinearGraphqlIssueProvider({
-        userId: ctx.userId,
-        workspaceId: ctx.workspaceId!,
-      });
-      const [organizations, projects, teams] = await Promise.all([
-        provider.listOrganizations(),
-        provider.listProjects(),
-        provider.listTeams(),
-      ]);
-      return { data: { organizations, projects, teams }, success: true };
-    } catch (error) {
-      mapError(error, 'catalog');
-    }
-  }),
+  catalog: linearSyncProcedure
+    .input(z.object({ installationId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const installation = await ctx.linearSyncModel.findInstallationById(input.installationId);
+        if (!installation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
+        }
+        if (installation.status !== 'active') {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Linear installation is unavailable',
+          });
+        }
+        const provider = createLinearGraphqlIssueProvider({
+          db: ctx.serverDB,
+          installationId: installation.id,
+          organizationId: installation.organizationId,
+          workspaceId: ctx.workspaceId!,
+        });
+        const [organizations, projects, teams, members] = await Promise.all([
+          provider.listOrganizations(),
+          provider.listProjects(),
+          provider.listTeams(),
+          provider.listMembers(),
+        ]);
+        const workflowStates = Object.fromEntries(
+          teams.map((team) => [team.id, team.workflowStates ?? []]),
+        );
+        return {
+          data: {
+            members,
+            organizations,
+            projects,
+            teams: teams.map(({ id, key, name }) => ({ id, key, name })),
+            workflowStates,
+          },
+          success: true,
+        };
+      } catch (error) {
+        mapError(error, 'catalog');
+      }
+    }),
 
   createIssueLink: linearSyncWriteProcedure
     .input(
@@ -166,8 +201,27 @@ export const linearSyncRouter = router({
         if (!installation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
         }
+        if (installation.status !== 'active') {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Linear installation is unavailable',
+          });
+        }
         const project = await ctx.projectModel.findManageableById(input.projectId);
         if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
+
+        const provider = createLinearGraphqlIssueProvider({
+          db: ctx.serverDB,
+          installationId: installation.id,
+          organizationId: installation.organizationId,
+          workspaceId: ctx.workspaceId!,
+        });
+        const scope = await provider.validateProjectScope!({
+          defaultTeamId: input.defaultTeamId,
+          organizationId: installation.organizationId,
+          projectId: input.linearProjectId,
+          teamIds: input.teamIds,
+        });
 
         const binding = await ctx.linearSyncModel.upsertBinding({
           defaultTeamId: input.defaultTeamId,
@@ -176,7 +230,7 @@ export const linearSyncRouter = router({
           projectId: project.id,
           settings: input.settings,
           syncEnabled: input.syncEnabled,
-          teamIds: input.teamIds,
+          teamIds: scope.teamIds,
         });
         await LinearSyncWorkflow.triggerInstallation({
           installationId: installation.id,
@@ -220,7 +274,9 @@ export const linearSyncRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
         }
         const provider = createLinearGraphqlIssueProvider({
-          userId: installation.installedByUserId ?? ctx.userId,
+          db: ctx.serverDB,
+          installationId: installation.id,
+          organizationId: installation.organizationId,
           workspaceId: ctx.workspaceId!,
         });
         const data = await new LinearSyncWorker(ctx.serverDB, ctx.workspaceId!).importBinding(
@@ -296,7 +352,9 @@ export const linearSyncRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
         }
         const provider = createLinearGraphqlIssueProvider({
-          userId: installation.installedByUserId ?? ctx.userId,
+          db: ctx.serverDB,
+          installationId: installation.id,
+          organizationId: installation.organizationId,
           workspaceId: ctx.workspaceId!,
         });
         const data = await new LinearSyncWorker(ctx.serverDB, ctx.workspaceId!).processPending(
@@ -324,7 +382,9 @@ export const linearSyncRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
         }
         const provider = createLinearGraphqlIssueProvider({
-          userId: installation.installedByUserId ?? ctx.userId,
+          db: ctx.serverDB,
+          installationId: installation.id,
+          organizationId: installation.organizationId,
           workspaceId: ctx.workspaceId!,
         });
         const data = await new LinearSyncWorker(ctx.serverDB, ctx.workspaceId!).processOutbox(
@@ -390,39 +450,86 @@ export const linearSyncRouter = router({
       }
     }),
 
-  upsertInstallation: linearSyncWriteProcedure
+  startOAuth: linearSyncWriteProcedure
     .input(
       z.object({
-        connectorId: z.string().uuid().optional(),
-        organizationId: z.string().min(1),
-        organizationName: z.string().optional(),
-        webhookSecretRef: z.string().min(1).optional(),
+        returnTo: z
+          .string()
+          .regex(/^\//, 'returnTo must be a relative application path')
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        let connectorId: string | undefined;
-        if (input.connectorId) {
-          const connector = await ctx.connectorModel.findPublicById(input.connectorId);
-          if (!connector || connector.identifier !== 'linear') {
-            throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear connector not found' });
-          }
-          connectorId = connector.id;
-        }
+        const config = getLinearOAuthConfig();
+        const redirectUri = getLinearOAuthRedirectUri();
+        const state = generateLinearOAuthState();
+        const { challenge, verifier } = createLinearPkcePair();
+        await saveLinearOAuthState(state, {
+          actor: 'app',
+          clientId: config.clientId,
+          codeVerifier: verifier,
+          lobeUserId: ctx.userId,
+          redirectUri,
+          returnTo: input.returnTo,
+          scopes: config.scopes,
+          workspaceId: ctx.workspaceId!,
+        });
 
         return {
-          data: await ctx.linearSyncModel.upsertInstallation({
-            connectorId,
-            installedByUserId: ctx.userId,
-            organizationId: input.organizationId,
-            organizationName: input.organizationName,
-            webhookSecretRef: input.webhookSecretRef,
+          authorizationUrl: buildLinearAuthorizationUrl({
+            clientId: config.clientId,
+            codeChallenge: challenge,
+            redirectUri,
+            scopes: config.scopes,
+            state,
           }),
-          message: 'Linear installation saved',
+        };
+      } catch (error) {
+        mapError(error, 'startOAuth');
+      }
+    }),
+
+  revokeInstallation: linearSyncWriteProcedure
+    .input(z.object({ installationId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const installation = await ctx.linearSyncModel.findInstallationForAuth(
+          input.installationId,
+        );
+        if (!installation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
+        }
+        const config = getLinearOAuthConfig();
+        const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+        if (installation.accessTokenCiphertext) {
+          const accessToken = await gateKeeper.decrypt(installation.accessTokenCiphertext);
+          if (!accessToken.wasAuthentic || !accessToken.plaintext) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Linear installation credentials are invalid',
+            });
+          }
+          await revokeLinearToken({
+            clientId: config.clientId,
+            clientSecret: config.clientSecret,
+            token: accessToken.plaintext,
+            tokenTypeHint: 'access_token',
+          });
+        }
+        await ctx.linearSyncModel.markInstallationUnavailable(input.installationId, {
+          message: 'Linear installation revoked by workspace user',
+          reason: 'user_revoked',
+          status: 'revoked',
+        });
+
+        return {
+          data: { installationId: input.installationId, status: 'revoked' },
+          message: 'Linear installation revoked',
           success: true,
         };
       } catch (error) {
-        mapError(error, 'upsertInstallation');
+        mapError(error, 'revokeInstallation');
       }
     }),
 });

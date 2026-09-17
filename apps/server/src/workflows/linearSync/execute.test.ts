@@ -52,7 +52,7 @@ describe('executeLinearSyncWorkflow', () => {
     vi.setSystemTime(new Date('2026-09-16T20:00:00.000Z'));
     mocks.findInstallationById.mockReset().mockResolvedValue({
       id: '00000000-0000-4000-8000-000000000001',
-      installedByUserId: 'user-1',
+      organizationId: 'org-1',
       status: 'active',
     });
     mocks.processInbox

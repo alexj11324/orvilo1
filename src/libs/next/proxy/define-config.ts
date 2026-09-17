@@ -48,10 +48,17 @@ const persistLocaleCookie = (
 };
 
 export function defineConfig() {
-  // `/oauth/connector` is a backend route handler (custom connector OAuth callback);
-  // the rest of `/oauth/*` (e.g. /oauth/callback/success) are SPA pages, so scope
-  // the passthrough to the connector subtree only.
-  const backendApiEndpoints = ['/api', '/trpc', '/webapi', '/oidc', '/oauth/connector'];
+  // OAuth callback subtrees are backend route handlers; the rest of `/oauth/*`
+  // (e.g. /oauth/callback/success) are SPA pages, so scope the passthrough to
+  // the callback subtrees only.
+  const backendApiEndpoints = [
+    '/api',
+    '/trpc',
+    '/webapi',
+    '/oidc',
+    '/oauth/connector',
+    '/oauth/linear',
+  ];
 
   const defaultMiddleware = (request: NextRequest) => {
     const url = new URL(request.url);
@@ -236,6 +243,10 @@ export function defineConfig() {
     // Custom connector OAuth callback — hit via a cross-site redirect from the
     // provider, carries its own code+state, so it must not be session-gated.
     '/oauth/connector/callback',
+    // Linear app-install OAuth callback carries a server-issued state and PKCE
+    // verifier, so the provider can redirect here before a browser session is
+    // re-established.
+    '/oauth/linear/callback',
     '/oidc/handoff',
     '/oidc/device/auth',
     '/oidc/token',

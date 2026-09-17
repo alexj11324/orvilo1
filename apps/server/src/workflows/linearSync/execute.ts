@@ -40,10 +40,10 @@ export const executeLinearSyncWorkflow = async (
       planning: { failed: 0, processed: 0, proposed: 0 },
     };
   }
-  if (!installation.installedByUserId) throw new Error('Linear installation has no active owner');
-
   const provider = createLinearGraphqlIssueProvider({
-    userId: installation.installedByUserId,
+    db,
+    installationId: installation.id,
+    organizationId: installation.organizationId,
     workspaceId: payload.workspaceId,
   });
   const syncWorker = new LinearSyncWorker(db, payload.workspaceId);

@@ -3,6 +3,9 @@ import type { TaskStatus } from './task';
 /** Lifecycle of a workspace's Linear installation. */
 export type LinearInstallationStatus = 'active' | 'error' | 'paused' | 'revoked';
 
+/** Authentication actor persisted for a Linear installation. */
+export type LinearInstallationActor = 'app';
+
 /** State of one Orvilo task ↔ Linear issue binding. */
 export type LinearIssueLinkSyncState =
   'conflict' | 'outcome_unknown' | 'pending' | 'removed' | 'synced' | 'unlinked';

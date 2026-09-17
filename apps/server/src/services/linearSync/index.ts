@@ -7,6 +7,8 @@ import type { LobeChatDatabase } from '@/database/type';
 
 const DEFAULT_WEBHOOK_MAX_AGE_MS = 60_000;
 
+export type LinearWebhookRawBody = string | Uint8Array;
+
 export interface LinearWebhookPayload {
   action: string;
   actor?: Record<string, unknown> | null;
@@ -37,10 +39,13 @@ const requiredString = (value: unknown, field: string) => {
   return value;
 };
 
-export const parseLinearWebhookPayload = (rawBody: string): LinearWebhookPayload => {
+const decodeLinearWebhookBody = (rawBody: LinearWebhookRawBody): string =>
+  typeof rawBody === 'string' ? rawBody : new TextDecoder().decode(rawBody);
+
+export const parseLinearWebhookPayload = (rawBody: LinearWebhookRawBody): LinearWebhookPayload => {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(rawBody);
+    parsed = JSON.parse(decodeLinearWebhookBody(rawBody));
   } catch {
     throw new LinearWebhookError('Linear webhook body is not valid JSON', 400);
   }
@@ -70,7 +75,7 @@ export const parseLinearWebhookPayload = (rawBody: string): LinearWebhookPayload
 
 export const verifyLinearWebhookSignature = (input: {
   now?: number;
-  rawBody: string;
+  rawBody: LinearWebhookRawBody;
   secret: string;
   signature?: string | null;
   timestamp: number;
@@ -122,15 +127,11 @@ export class LinearSyncService {
     deliveryId: string;
     maxAgeMs?: number;
     now?: number;
-    rawBody: string;
+    rawBody: LinearWebhookRawBody;
     secret: string;
     signature?: string | null;
     timestamp: number;
   }): Promise<CaptureLinearWebhookResult> {
-    const payload = parseLinearWebhookPayload(input.rawBody);
-    if (Math.abs(payload.webhookTimestamp - input.timestamp) > 1_000) {
-      throw new LinearWebhookError('Linear webhook timestamp headers do not match', 401);
-    }
     if (
       !verifyLinearWebhookSignature({
         maxAgeMs: input.maxAgeMs,
@@ -144,8 +145,15 @@ export class LinearSyncService {
       throw new LinearWebhookError('Linear webhook signature or timestamp is invalid', 401);
     }
 
+    // Authenticate the exact request bytes before parsing organizationId or
+    // using it to select an installation-specific secret.
+    const payload = parseLinearWebhookPayload(input.rawBody);
+    if (Math.abs(payload.webhookTimestamp - input.timestamp) > 1_000) {
+      throw new LinearWebhookError('Linear webhook timestamp headers do not match', 401);
+    }
+
     const installation = await this.model.findInstallationByOrganization(payload.organizationId);
-    if (!installation) {
+    if (!installation || installation.status !== 'active') {
       throw new LinearWebhookError('Linear organization is not installed in this workspace', 404);
     }
 

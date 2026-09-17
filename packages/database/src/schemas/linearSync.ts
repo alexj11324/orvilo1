@@ -1,4 +1,5 @@
 import type {
+  LinearInstallationActor,
   LinearInstallationStatus,
   LinearIssueLinkSyncState,
   LinearIssueSnapshot,
@@ -45,9 +46,30 @@ export const linearInstallations = pgTable(
     workspaceId: text('workspace_id')
       .references(() => workspaces.id, { onDelete: 'cascade' })
       .notNull(),
-    connectorId: uuid('connector_id').references(() => userConnectors.id, { onDelete: 'cascade' }),
+    // Legacy connector link is optional compatibility metadata. Linear auth is
+    // owned by this installation, so deleting a user connector must not delete
+    // the workspace installation or its durable app credentials.
+    connectorId: uuid('connector_id').references(() => userConnectors.id, { onDelete: 'set null' }),
     organizationId: text('organization_id').notNull(),
     organizationName: text('organization_name'),
+    /** OAuth client that owns the app/service identity in Linear. */
+    oauthClientId: text('oauth_client_id'),
+    /** Workspace-specific Linear app user returned by `viewer` after actor=app OAuth. */
+    appActorId: text('app_actor_id'),
+    appActorName: text('app_actor_name'),
+    actor: text('actor').$type<LinearInstallationActor>().notNull().default('app'),
+    /** Effective scopes returned by Linear, never a client-supplied scope claim. */
+    scopes: text('scopes').array().notNull().default([]),
+    /** AES-GCM ciphertexts owned by this durable installation, never sent to clients. */
+    accessTokenCiphertext: text('access_token_ciphertext'),
+    refreshTokenCiphertext: text('refresh_token_ciphertext'),
+    accessTokenExpiresAt: timestamptz('access_token_expires_at'),
+    /** CAS version for refresh-token rotation. */
+    tokenVersion: integer('token_version').notNull().default(0),
+    /** Short-lived single-owner refresh lease and its fence. */
+    refreshOwner: text('refresh_owner'),
+    refreshLeaseUntil: timestamptz('refresh_lease_until'),
+    refreshFence: integer('refresh_fence').notNull().default(0),
     /** Name of the secret in the deployment secret store, never the secret itself. */
     webhookSecretRef: text('webhook_secret_ref'),
     installedByUserId: text('installed_by_user_id').references(() => users.id, {
@@ -55,6 +77,8 @@ export const linearInstallations = pgTable(
     }),
     status: text('status').$type<LinearInstallationStatus>().notNull().default('active'),
     lastError: text('last_error'),
+    revokedAt: timestamptz('revoked_at'),
+    revocationReason: text('revocation_reason'),
     lastSyncAt: timestamptz('last_sync_at'),
     ...createdAtColumns(),
   },

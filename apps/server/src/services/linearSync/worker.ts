@@ -693,21 +693,32 @@ export class LinearSyncWorker {
           }
         }
 
-        if (!issueLink.bindingId) throw new Error('Linear issue link has no project binding');
         const [binding, installation] = await Promise.all([
-          this.model.findBindingById(issueLink.bindingId),
+          issueLink.bindingId
+            ? this.model.findBindingById(issueLink.bindingId)
+            : Promise.resolve(null),
           this.model.findInstallationById(issueLink.installationId),
         ]);
-        if (!binding || !installation || installation.status !== 'active') {
+        // Team-scope links carry bindingId = null — their write scope is the
+        // team link established by the workspace import, not a project binding.
+        const teamLink =
+          !binding && issueLink.linearTeamId
+            ? await this.model.findTeamLinkByLinearTeamId(issueLink.linearTeamId)
+            : null;
+        if ((!binding && !teamLink) || !installation || installation.status !== 'active') {
           throw new Error('Linear issue link scope is unavailable');
         }
         if (
-          binding.installationId !== installation.id ||
-          issueLink.organizationId !== installation.organizationId
+          binding &&
+          (binding.installationId !== installation.id ||
+            issueLink.organizationId !== installation.organizationId)
         ) {
           throw new Error('Linear issue link installation scope does not match');
         }
-        if (!linearBindingWriteEnabled(binding)) {
+        const writeEnabled = binding
+          ? linearBindingWriteEnabled(binding)
+          : teamLink!.syncState === 'synced';
+        if (!writeEnabled) {
           await this.model.updateOutbox(
             row.id,
             { availableAt: new Date(), lastError: null, lockedUntil: null, status: 'paused' },
@@ -724,14 +735,36 @@ export class LinearSyncWorker {
           installation.id,
         );
         const task = await integrationTasks.findPublicTask(issueLink.taskId);
-        if (
-          !task ||
-          task.visibility !== 'public' ||
-          task.projectId !== binding.projectId ||
-          current.projectId !== binding.linearProjectId ||
-          !(await integrationTasks.validateIssueScope({ binding, installation, issue: current }))
-        ) {
-          throw new Error('Linear outbound write is outside the validated public binding scope');
+        if (binding) {
+          if (
+            !task ||
+            task.visibility !== 'public' ||
+            task.projectId !== binding.projectId ||
+            current.projectId !== binding.linearProjectId ||
+            !(await integrationTasks.validateIssueScope({ binding, installation, issue: current }))
+          ) {
+            throw new Error('Linear outbound write is outside the validated public binding scope');
+          }
+        } else {
+          if (
+            !task ||
+            task.visibility !== 'public' ||
+            task.teamId !== teamLink!.teamId ||
+            current.teamId !== teamLink!.linearTeamId
+          ) {
+            throw new Error('Linear outbound write is outside the validated team scope');
+          }
+          if (current.projectId) {
+            // The remote issue moved into a Linear project — pause until the
+            // inbound pass attaches a binding to the link, then write through
+            // the binding path.
+            await this.model.updateOutbox(
+              row.id,
+              { availableAt: new Date(), lastError: null, lockedUntil: null, status: 'paused' },
+              lease,
+            );
+            continue;
+          }
         }
 
         const base = issueLink.lastConfirmedSnapshot;
@@ -1336,8 +1369,10 @@ export class LinearSyncWorker {
     const { db, model } = context;
     const issueLink = await model.findIssueLinkByExternalId(comment.issueId);
     if (!issueLink) return 'pending-binding';
+    // Team-scope links have bindingId = null — their scope gate was the team
+    // link at import time, so comments proceed without a binding.
     const binding = issueLink.bindingId ? await model.findBindingById(issueLink.bindingId) : null;
-    if (!binding) return 'pending-binding';
+    if (issueLink.bindingId && !binding) return 'pending-binding';
     if (binding && !linearBindingReadEnabled(binding)) return 'paused';
     const installation = await model.findInstallationById(row.installationId);
     if (!installation || installation.status !== 'active') {
@@ -2049,6 +2084,16 @@ export class LinearSyncWorker {
           teamId: localTeamId,
         });
       }
+      for (const cycle of remote.cycles ?? []) {
+        await teamModel.upsertCycleByRemoteId({
+          endsAt: cycle.endsAt ? new Date(cycle.endsAt) : null,
+          name: cycle.name,
+          number: cycle.number,
+          remoteCycleId: cycle.id,
+          startsAt: cycle.startsAt ? new Date(cycle.startsAt) : null,
+          teamId: localTeamId,
+        });
+      }
       await this.model.upsertTeamLink({
         installationId: installation.id,
         linearTeamId: remote.id,
@@ -2401,6 +2446,10 @@ export class LinearSyncWorker {
           ? ((await teamModel.findWorkflowStateByRemoteId(teamLink.teamId, issue.stateId))?.id ??
             null)
           : null;
+      const cycleRefId =
+        issue.cycleId && teamModel
+          ? ((await teamModel.findCycleByRemoteId(teamLink.teamId, issue.cycleId))?.id ?? null)
+          : null;
       const mutation = {
         eventId: row.id,
         idempotencyKey: `linear:import:${row.id}`,
@@ -2412,6 +2461,7 @@ export class LinearSyncWorker {
       if (!existingLink) {
         if (issue.archivedAt) return 'processed';
         const task = await integrationTasks.createTeamScopedTask({
+          cycleRefId,
           installation,
           issue,
           localTeamId: teamLink.teamId,
@@ -2492,11 +2542,11 @@ export class LinearSyncWorker {
       if (binding && issue.projectId !== existingLink.lastConfirmedSnapshot.projectId) {
         patch.projectId = binding.projectId;
       }
-      if (task.teamId !== teamLink.teamId) {
-        patch.teamId = teamLink.teamId;
-      }
       if (workflowStateRefId && task.workflowStateRefId !== workflowStateRefId) {
         patch.workflowStateRefId = workflowStateRefId;
+      }
+      if (task.cycleRefId !== cycleRefId) {
+        patch.cycleRefId = cycleRefId;
       }
       let taskAfterRemote = task;
       if (Object.keys(patch).length > 0) {
@@ -2510,6 +2560,23 @@ export class LinearSyncWorker {
         if (!updatedTask) throw new Error('Linear task update did not return a task');
         taskAfterRemote = updatedTask;
       }
+      // A Linear-side team transfer goes through `moveToTeam` — not the field
+      // patch — so the old and new planning scopes are both dirtied and the
+      // move is recorded as a `task.moved` domain event.
+      if (taskAfterRemote.teamId !== teamLink.teamId) {
+        const moved = await integrationTasks.movePublicTaskToTeam(
+          taskAfterRemote.id,
+          teamLink.teamId,
+          {
+            eventId: row.id,
+            idempotencyKey: `linear:task-move:${row.id}`,
+            source: 'linear',
+            suppressDomainEvent: historicalImport,
+            suppressLinearOutbox: true,
+          },
+        );
+        if (moved) taskAfterRemote = moved;
+      }
 
       const localChanged = Array.from(
         new Set([
@@ -2519,15 +2586,18 @@ export class LinearSyncWorker {
           ),
         ]),
       ).filter((field) => field !== 'labelIds');
-      if (binding && localChanged.length > 0) {
+      if (localChanged.length > 0 && !historicalImport) {
         const payload = Object.fromEntries(
           localChanged.flatMap((field) =>
             local[field] === undefined ? [] : [[field, local[field]]],
           ),
         );
+        const writeEnabled = binding
+          ? linearBindingWriteEnabled(binding)
+          : teamLink.syncState === 'synced';
         await model.queueOutbox({
           expectedLocalRevision: taskAfterRemote.domainRevision,
-          initialStatus: linearBindingWriteEnabled(binding) ? 'pending' : 'paused',
+          initialStatus: writeEnabled ? 'pending' : 'paused',
           installationId: installation.id,
           linkId: existingLink.id,
           operation: 'update_issue',
@@ -2537,14 +2607,16 @@ export class LinearSyncWorker {
       }
 
       await model.updateIssueLink(existingLink.id, {
-        bindingId: binding?.id ?? existingLink.bindingId,
+        // When the remote issue left its Linear project, the link must not
+        // keep a stale binding — it falls back to pure team scope.
+        bindingId: issue.projectId ? (binding?.id ?? existingLink.bindingId) : null,
         conflict: null,
         lastConfirmedSnapshot: issue,
         lastInboundDeliveryId: row.id,
         linearTeamId: issue.teamId ?? existingLink.linearTeamId,
         remoteSnapshot: issue,
         remoteUpdatedAt: incomingUpdatedAt,
-        syncState: binding && localChanged.length > 0 ? 'pending' : 'synced',
+        syncState: localChanged.length > 0 && !historicalImport ? 'pending' : 'synced',
       });
       await this.reconcileRelationsForIssue(
         model,
@@ -2753,13 +2825,29 @@ export class LinearSyncWorker {
         createIntent?.taskId && createIntent.installationId === installation.id
           ? await integrationTasks.findPublicTask(createIntent.taskId)
           : null;
+      const createTeamLink = issue.teamId
+        ? await model.findTeamLinkByLinearTeamId(issue.teamId)
+        : null;
+      const createTeamModel = installation.installedByUserId
+        ? new TeamModel(db, installation.installedByUserId, this.workspaceId)
+        : null;
       const task =
         intendedTask?.projectId === binding.projectId && intendedTask.visibility === 'public'
           ? intendedTask
           : await integrationTasks.createPublicTask({
               binding,
+              cycleRefId:
+                issue.cycleId && createTeamLink && createTeamModel
+                  ? ((
+                      await createTeamModel.findCycleByRemoteId(
+                        createTeamLink.teamId,
+                        issue.cycleId,
+                      )
+                    )?.id ?? null)
+                  : null,
               installation,
               issue,
+              localTeamId: createTeamLink?.teamId ?? null,
               mutation: {
                 eventId: row.id,
                 idempotencyKey: `linear:import:${row.id}`,
@@ -2767,13 +2855,24 @@ export class LinearSyncWorker {
                 suppressDomainEvent: context.historicalImport,
                 suppressLinearOutbox: true,
               },
+              workflowStateRefId:
+                issue.stateId && createTeamLink && createTeamModel
+                  ? ((
+                      await createTeamModel.findWorkflowStateByRemoteId(
+                        createTeamLink.teamId,
+                        issue.stateId,
+                      )
+                    )?.id ?? null)
+                  : null,
             });
       if (!task) return 'processed';
       await model.createIssueLink({
+        aliasIdentifiers: issue.identifier ? [issue.identifier] : [],
         bindingId: binding.id,
         installationId: installation.id,
         linearIdentifier: issue.identifier,
         linearIssueId: issue.id,
+        linearTeamId: issue.teamId,
         organizationId: installation.organizationId,
         remoteSnapshot: issue,
         taskId: task.id,
@@ -2936,6 +3035,28 @@ export class LinearSyncWorker {
     ) {
       patch.projectId = binding.projectId;
     }
+    // Mirror remote team/state/cycle refs for binding-scope issues too: a
+    // Linear-side team transfer keeps the same project, and workflow-state /
+    // cycle mirrors live on the owning team.
+    const remoteTeamLink = issue.teamId
+      ? await model.findTeamLinkByLinearTeamId(issue.teamId)
+      : null;
+    const remoteTeamModel = installation.installedByUserId
+      ? new TeamModel(db, installation.installedByUserId, this.workspaceId)
+      : null;
+    if (issue.stateId && remoteTeamLink && remoteTeamModel) {
+      const refId =
+        (await remoteTeamModel.findWorkflowStateByRemoteId(remoteTeamLink.teamId, issue.stateId))
+          ?.id ?? null;
+      if (refId && task.workflowStateRefId !== refId) patch.workflowStateRefId = refId;
+    }
+    if (remoteTeamLink && remoteTeamModel) {
+      const cycleRef = issue.cycleId
+        ? ((await remoteTeamModel.findCycleByRemoteId(remoteTeamLink.teamId, issue.cycleId))?.id ??
+          null)
+        : null;
+      if (task.cycleRefId !== cycleRef) patch.cycleRefId = cycleRef;
+    }
     let taskAfterRemote = task;
     if (Object.keys(patch).length > 0) {
       const updatedTask = await integrationTasks.updatePublicTask(task.id, patch, {
@@ -2947,6 +3068,24 @@ export class LinearSyncWorker {
       });
       if (!updatedTask) throw new Error('Linear task update did not return a task');
       taskAfterRemote = updatedTask;
+    }
+    if (
+      remoteTeamLink &&
+      taskAfterRemote.teamId !== remoteTeamLink.teamId &&
+      issue.teamId !== existingLink.linearTeamId
+    ) {
+      const moved = await integrationTasks.movePublicTaskToTeam(
+        taskAfterRemote.id,
+        remoteTeamLink.teamId,
+        {
+          eventId: row.id,
+          idempotencyKey: `linear:task-move:${row.id}`,
+          source: 'linear',
+          suppressDomainEvent: context.historicalImport,
+          suppressLinearOutbox: true,
+        },
+      );
+      if (moved) taskAfterRemote = moved;
     }
 
     const localChanged = Array.from(
@@ -2979,6 +3118,7 @@ export class LinearSyncWorker {
       conflict: null,
       lastConfirmedSnapshot: issue,
       lastInboundDeliveryId: row.id,
+      linearTeamId: issue.teamId ?? existingLink.linearTeamId,
       remoteSnapshot: issue,
       remoteUpdatedAt: incomingUpdatedAt,
       syncState: localChanged.length > 0 ? 'pending' : 'synced',

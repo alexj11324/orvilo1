@@ -156,9 +156,12 @@ export class LinearIntegrationTaskService {
 
   async createPublicTask(input: {
     binding: LinearBinding;
+    cycleRefId?: string | null;
     installation: LinearInstallation;
     issue: LinearIssueSnapshot;
+    localTeamId?: string | null;
     mutation: TaskMutationContext;
+    workflowStateRefId?: string | null;
   }) {
     const scope = await this.validateScope(input);
     if (!scope.inScope) return null;
@@ -176,15 +179,18 @@ export class LinearIntegrationTaskService {
         assigneeUserId: binding.settings.assignmentMappings?.find(
           (mapping) => mapping.linearUserId === issue.assigneeId,
         )?.orviloUserId,
+        cycleRefId: input.cycleRefId ?? null,
         description: issue.description?.slice(0, 255),
         identifierPrefix: scope.identifierPrefix,
         instruction: issue.description || issue.title,
         name: issue.title,
         priority: issue.priority ?? 0,
         projectId: binding.projectId,
+        teamId: input.localTeamId ?? null,
         visibility: 'public',
         workflowCategory: workflowMapping?.workflowCategory ?? 'backlog',
         workflowStateId: issue.stateId ?? null,
+        workflowStateRefId: input.workflowStateRefId ?? null,
       },
       {
         creationSubject: {
@@ -209,6 +215,7 @@ export class LinearIntegrationTaskService {
    * counter inside `TaskModel.create`.
    */
   async createTeamScopedTask(input: {
+    cycleRefId?: string | null;
     installation: LinearInstallation;
     issue: LinearIssueSnapshot;
     localTeamId: string;
@@ -234,6 +241,7 @@ export class LinearIntegrationTaskService {
         assigneeUserId: settings?.assignmentMappings?.find(
           (mapping) => mapping.linearUserId === issue.assigneeId,
         )?.orviloUserId,
+        cycleRefId: input.cycleRefId ?? null,
         description: issue.description?.slice(0, 255),
         instruction: issue.description || issue.title,
         name: issue.title,
@@ -268,6 +276,10 @@ export class LinearIntegrationTaskService {
     patch: Parameters<TaskModel['update']>[1],
     mutation: TaskMutationContext,
   ) => this.taskModel.update(taskId, patch, mutation);
+
+  /** Linear-side team transfer — dirties both planning scopes via moveToTeam. */
+  movePublicTaskToTeam = (taskId: string, teamId: string | null, mutation: TaskMutationContext) =>
+    this.taskModel.moveToTeam(taskId, teamId, mutation);
 
   addPublicComment = (taskId: string, content: string, mutation: TaskMutationContext) =>
     this.taskModel.addComment({ authorUserId: null, content, taskId, userId: null }, mutation);

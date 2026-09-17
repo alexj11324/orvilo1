@@ -321,12 +321,23 @@ export interface LinearProjectSnapshot {
 
 /** Canonical Linear team snapshot including its workflow states. */
 export interface LinearTeamSnapshot {
+  cycles?: LinearCycleSnapshot[];
   id: string;
   key: string;
   name: string;
   organizationId: string | null;
   visibility: string | null;
   workflowStates?: LinearWorkflowStateSnapshot[];
+}
+
+/** Canonical Linear cycle snapshot (sprint iteration inside a team). */
+export interface LinearCycleSnapshot {
+  endsAt: string | null;
+  id: string;
+  name: string;
+  number: number | null;
+  startsAt: string | null;
+  teamId: string;
 }
 
 /** Canonical Linear workflow-state snapshot (exact remote UUID + type). */

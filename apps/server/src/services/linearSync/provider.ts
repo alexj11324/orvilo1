@@ -69,7 +69,7 @@ const ORGANIZATION_FIELDS = `id name urlKey`;
 const CATALOG_PAGE_SIZE = 100;
 const MEMBER_PAGE_SIZE = 250;
 const PROJECT_FIELDS = `id name state organization { id } teams(first: ${CATALOG_PAGE_SIZE}) { nodes { id visibility organization { id } } ${PAGE_INFO_FIELDS} }`;
-const TEAM_FIELDS = `id key name visibility organization { id } states(first: ${CATALOG_PAGE_SIZE}) { nodes { id name type position } ${PAGE_INFO_FIELDS} }`;
+const TEAM_FIELDS = `id key name visibility organization { id } states(first: ${CATALOG_PAGE_SIZE}) { nodes { id name type position } ${PAGE_INFO_FIELDS} } cycles(first: ${CATALOG_PAGE_SIZE}) { nodes { id name number startsAt endsAt } ${PAGE_INFO_FIELDS} }`;
 
 export interface LinearIssueCreateInput {
   description?: string | null;
@@ -741,14 +741,10 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
       const key = stringValue(value.key);
       const name = stringValue(value.name);
       const organizationId = nestedId(value.organization);
-      if (
-        !id ||
-        !key ||
-        !name ||
-        !this.isInstalledOrganization(organizationId) ||
-        value.visibility !== 'public'
-      )
-        continue;
+      // Private teams stay in the snapshot — the sync scope's
+      // `privateTeamPolicy` (import_restricted | skip) decides whether they
+      // are mirrored; the provider reports what the organization contains.
+      if (!id || !key || !name || !this.isInstalledOrganization(organizationId)) continue;
       const stateNodes = isRecord(value.states)
         ? await collectConnectionNodes(async (after) => {
             const data = await this.requestData<{ team: { states?: unknown } | null }>({
@@ -765,7 +761,39 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
             return data.team?.states;
           }, value.states)
         : [];
+      const cycleNodes = isRecord(value.cycles)
+        ? await collectConnectionNodes(async (after) => {
+            const data = await this.requestData<{ team: { cycles?: unknown } | null }>({
+              query: `query ListTeamCycles($teamId: String!, $after: String) {
+                  team(id: $teamId) {
+                    cycles(first: ${CATALOG_PAGE_SIZE}, after: $after) {
+                      nodes { id name number startsAt endsAt }
+                      ${PAGE_INFO_FIELDS}
+                    }
+                  }
+                }`,
+              variables: { after, teamId: id },
+            });
+            return data.team?.cycles;
+          }, value.cycles)
+        : [];
       teams.push({
+        cycles: cycleNodes.flatMap((cycle) => {
+          if (!isRecord(cycle)) return [];
+          const cycleId = stringValue(cycle.id);
+          const cycleName = stringValue(cycle.name);
+          if (!cycleId || !cycleName) return [];
+          return [
+            {
+              endsAt: stringValue(cycle.endsAt),
+              id: cycleId,
+              name: cycleName,
+              number: typeof cycle.number === 'number' ? cycle.number : null,
+              startsAt: stringValue(cycle.startsAt),
+              teamId: id,
+            },
+          ];
+        }),
         id,
         key,
         name,

@@ -4,6 +4,8 @@ import { executeLinearSyncWorkflow } from './execute';
 
 const mocks = vi.hoisted(() => ({
   findInstallationById: vi.fn(),
+  findScopeByInstallation: vi.fn(),
+  importScope: vi.fn(),
   nextSyncWakeAt: vi.fn(),
   processInbox: vi.fn(),
   processOutbox: vi.fn(),
@@ -15,6 +17,7 @@ vi.mock('@/database/server', () => ({ getServerDB: vi.fn(async () => ({})) }));
 vi.mock('@/database/models/linearSync', () => ({
   LinearSyncModel: class {
     findInstallationById = mocks.findInstallationById;
+    findScopeByInstallation = mocks.findScopeByInstallation;
     nextSyncWakeAt = mocks.nextSyncWakeAt;
   },
 }));
@@ -23,6 +26,7 @@ vi.mock('@/server/services/linearSync/provider', () => ({
 }));
 vi.mock('@/server/services/linearSync/worker', () => ({
   LinearSyncWorker: class {
+    importScope = mocks.importScope;
     processOutbox = mocks.processOutbox;
     processPending = mocks.processInbox;
   },
@@ -60,6 +64,8 @@ describe('executeLinearSyncWorkflow', () => {
       .mockResolvedValue({ failed: 0, imported: 0, pendingBinding: 0, processed: 20 });
     mocks.processOutbox.mockReset().mockResolvedValue({ failed: 0, sent: 20 });
     mocks.processPlanning.mockReset().mockResolvedValue({ failed: 0, processed: 1, proposed: 1 });
+    mocks.findScopeByInstallation.mockReset().mockResolvedValue(null);
+    mocks.importScope.mockReset().mockResolvedValue({ completed: true });
     mocks.nextSyncWakeAt.mockReset().mockResolvedValue(null);
     mocks.triggerInstallation.mockReset().mockResolvedValue({ workflowRunId: 'continuation-1' });
   });

@@ -13,7 +13,6 @@ import {
   type CreateTopicParams,
   type QueryTopicParams,
   type RecentTopic,
-  type TopicRankItem,
 } from '@/types/topic';
 
 /**
@@ -121,10 +120,6 @@ export class TopicService {
     startDate?: string;
   }): Promise<number> => {
     return lambdaClient.topic.countTopics.query(params);
-  };
-
-  rankTopics = async (limit?: number): Promise<TopicRankItem[]> => {
-    return lambdaClient.topic.rankTopics.query(limit);
   };
 
   getMaxTaskDuration = async (): Promise<number> => {

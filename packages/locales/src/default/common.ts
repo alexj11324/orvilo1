@@ -198,6 +198,8 @@ export default {
 
   'cmdk.keywords.profile': 'profile user account personal',
 
+  'cmdk.keywords.project': 'project projects workspace board',
+
   'cmdk.keywords.provider': 'provider llm model ai',
 
   'cmdk.keywords.proxy': 'proxy network connection',
@@ -234,6 +236,8 @@ export default {
 
   'cmdk.newPage': 'Create New Page',
 
+  'cmdk.newTask': 'Create New Task',
+
   'cmdk.newTopic': 'New Topic in Current Agent',
 
   'cmdk.noResults': 'No Results found',
@@ -243,6 +247,8 @@ export default {
   'cmdk.pages': 'Pages',
 
   'cmdk.painting': 'Image',
+
+  'cmdk.project': 'Projects',
 
   'cmdk.resource': 'Resources',
 
@@ -622,6 +628,7 @@ export default {
   'tab.me': 'Me',
   'tab.memory': 'Memory',
   'tab.pages': 'Pages',
+  'tab.project': 'Projects',
   'tab.resource': 'Resources',
   'tab.search': 'Search',
   'tab.setting': 'Settings',

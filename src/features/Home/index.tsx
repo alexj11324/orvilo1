@@ -5,34 +5,32 @@ import { createStaticStyles, cx } from 'antd-style';
 import { lazy, memo, Suspense, useCallback, useEffect, useState } from 'react';
 
 import { useHomeUsageWidgetActive } from '@/business/client/features/HomeUsageWidget';
-import { useHomePromoLine } from '@/business/client/features/useHomePromoLine';
 import { useChatStore } from '@/store/chat';
-import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
-import { useTaskStore } from '@/store/task';
-import { taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/slices/auth/selectors';
 
-import { isAcceptancePortalView } from './acceptancePortalView';
 import { isHomeMinimalLayout } from './CustomizeModal/config';
 import HomeHeader from './HomeHeader';
 import HomeModeContent from './HomeModeContent';
-import HomePortrait from './HomePortrait';
 import InputArea from './InputArea';
-import PortraitBubble from './PortraitBubble';
-import {
-  getHomePortraitOverlap,
-  HOME_PORTRAIT_CARD_GAP,
-  HOME_PORTRAIT_HEIGHT,
-  HOME_PORTRAIT_INSET,
-  HOME_PORTRAIT_WIDTH,
-} from './portraitFraming';
 import { RAIL_INBOX_PROPS, resolveRailVisibility } from './railVisibility';
 import type { HomeMode } from './types';
 
-export const DEFAULT_HOME_MODE: HomeMode = 'chat';
+/**
+ * The task board, not the chat composer. S20 L214 requires that login, workspace
+ * creation and onboarding stop landing on the chat-style home; on Web the root
+ * redirects to `/tasks` and never mounts this page, so the mode that matters is
+ * Electron's, where Home *is* the index slot. Task mode is what the post-onboarding
+ * entry already asks for via `?onboarding=task`, so the bare landing was the only
+ * path still disagreeing with it.
+ *
+ * The model shortcuts are not a casualty of this: `InputArea` renders them from
+ * the `showNewModelShortcuts` prop (`InputArea/index.tsx:117`) and never looks at
+ * the mode.
+ */
+export const DEFAULT_HOME_MODE: HomeMode = 'task';
 export const ONBOARDING_HOME_MODE_PARAM = 'onboarding';
 export const ONBOARDING_HOME_MODE_TASK_VALUE = 'task';
 
@@ -53,13 +51,6 @@ const clearOnboardingHomeModeParam = () => {
   window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
 };
 
-// The "View run" button on brief cards only writes drawer state to the task
-// store — some component must mount the drawer shell that reacts to it.
-// TaskDetailPage mounts its own; home needs one too, or the click is a silent
-// no-op. Lazy so the home bundle doesn't pay for the chat stack until a run is
-// actually opened.
-const TopicChatDrawer = lazy(() => import('@/features/AgentTasks/AgentTaskDetail/TopicChatDrawer'));
-const AcceptancePortalDrawer = lazy(() => import('./AcceptancePortalDrawer'));
 // The inbox renders markdown, briefs and an editor; keeping it lazy leaves the
 // greeting and the input box as the only static content of the home route.
 const HomeInbox = lazy(() => import('@/features/HomeInbox'));
@@ -70,23 +61,10 @@ const RAIL_CARD_WIDTH = 380;
 const RAIL_COLUMN_GAP = 28;
 const RAIL_EXIT_OFFSET = 24;
 const RAIL_TRANSITION_DURATION = 220;
+/** The card column, its gutter and the gap that separates it from the main one. */
 const RAIL_RECLAIMED_WIDTH = RAIL_CARD_WIDTH + RAIL_GUTTER + RAIL_COLUMN_GAP;
-/** Portrait width plus its inline inset and the gap it keeps from the text. */
-const PORTRAIT_LANE = HOME_PORTRAIT_WIDTH + HOME_PORTRAIT_INSET + 16;
-/** Reclaim the artwork's full lane so collapsing never narrows the text above. */
-const COLLAPSED_CONTENT_GAIN = PORTRAIT_LANE;
-const COLLAPSED_CONTENT_OFFSET = (RAIL_RECLAIMED_WIDTH - COLLAPSED_CONTENT_GAIN) / 2;
-const SPEECH_BUBBLE_MIN = 320;
-const SPEECH_GREETING_GAP = 24;
-const SPEECH_GREETING_MIN = 320;
-const SPEECH_RESERVED_WIDTH =
-  COLLAPSED_CONTENT_OFFSET * 2 + SPEECH_GREETING_GAP + SPEECH_BUBBLE_MIN + PORTRAIT_LANE;
-/** Use the tighter rail state so its animation cannot switch rows or rewrap text. */
-const SPEECH_INLINE_MIN = SPEECH_RESERVED_WIDTH + SPEECH_GREETING_MIN;
-const COMPACT_PORTRAIT_HEIGHT = 150;
-const COMPACT_PORTRAIT_WIDTH =
-  HOME_PORTRAIT_WIDTH * (COMPACT_PORTRAIT_HEIGHT / HOME_PORTRAIT_HEIGHT);
-const COMPACT_PORTRAIT_OVERLAP = getHomePortraitOverlap(COMPACT_PORTRAIT_HEIGHT);
+/** Space between the greeting row and the rows that follow it. */
+const ROW_GAP = 24;
 const MINIMAL_STACK_GAP = 24;
 /**
  * The minimal header stacks the agent switcher (24px avatar + 2px paddings,
@@ -113,7 +91,7 @@ const styles = createStaticStyles(({ css }) => ({
     display: grid;
     grid-template-columns: minmax(0, 1fr) ${RAIL_CARD_WIDTH + RAIL_GUTTER}px;
     grid-template-rows: auto auto;
-    gap: ${HOME_PORTRAIT_CARD_GAP}px ${RAIL_COLUMN_GAP}px;
+    gap: ${ROW_GAP}px ${RAIL_COLUMN_GAP}px;
 
     width: 100%;
 
@@ -125,126 +103,31 @@ const styles = createStaticStyles(({ css }) => ({
   content: css`
     /* An explicit width is what makes the collapse animate: the stretched
        default computes to "auto", which cannot interpolate against a length,
-       so the width would snap while the transform slid. */
+       so the width would snap instead of sliding open. */
     width: 100%;
-    transition:
-      transform ${RAIL_TRANSITION_DURATION}ms ease-out,
-      width ${RAIL_TRANSITION_DURATION}ms ease-out;
+    transition: width ${RAIL_TRANSITION_DURATION}ms ease-out;
 
     @media (prefers-reduced-motion: reduce) {
       transition: none;
     }
   `,
-  // Collapsed, the content takes part of the vacated rail track and re-centers
-  // on what is left, so the page reads wider without going full-bleed.
+  // Collapsed, the rail's whole track is handed to the content, which keeps its
+  // inline start and simply reads wider.
   contentCollapsed: css`
     @media (width > 1100px) {
-      transform: translateX(${COLLAPSED_CONTENT_OFFSET}px);
-      width: calc(100% + ${COLLAPSED_CONTENT_GAIN}px);
-
-      &:dir(rtl) {
-        transform: translateX(-${COLLAPSED_CONTENT_OFFSET}px);
-      }
+      width: calc(100% + ${RAIL_RECLAIMED_WIDTH}px);
     }
   `,
   hero: css`
     display: grid;
     grid-area: 1 / 1 / 2 / -1;
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    align-items: end;
 
     width: 100%;
     min-width: 0;
-
-    transition: transform ${RAIL_TRANSITION_DURATION}ms ease-out;
-
-    @media (width > 1100px) {
-      width: calc(100% - ${COLLAPSED_CONTENT_OFFSET * 2}px);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  heroCollapsed: css`
-    @media (width > 1100px) {
-      transform: translateX(${COLLAPSED_CONTENT_OFFSET}px);
-
-      &:dir(rtl) {
-        transform: translateX(-${COLLAPSED_CONTENT_OFFSET}px);
-      }
-    }
-  `,
-  heroWithSpeech: css`
-    @container home (width >= ${SPEECH_INLINE_MIN}px) {
-      /* Size both text columns in a stable frame; only artwork placement
-         moves when the rail toggles. Short speech leaves room for the name. */
-      grid-template-columns: minmax(0, 1fr) max-content;
-      column-gap: ${SPEECH_GREETING_GAP}px;
-    }
   `,
   header: css`
     min-width: 0;
-  `,
-  speech: css`
-    --home-portrait-width: ${COMPACT_PORTRAIT_WIDTH}px;
-    --home-portrait-height: ${COMPACT_PORTRAIT_HEIGHT}px;
-    --home-portrait-overlap: -${COMPACT_PORTRAIT_OVERLAP}px;
-
-    display: flex;
-    gap: 16px;
-    align-items: flex-end;
-    justify-self: end;
-
-    width: max-content;
-    max-width: 100%;
-    min-height: ${COMPACT_PORTRAIT_HEIGHT - COMPACT_PORTRAIT_OVERLAP}px;
-
-    transition: transform ${RAIL_TRANSITION_DURATION}ms ease-out;
-
-    @media (width > 1100px) {
-      transform: translateX(${COLLAPSED_CONTENT_OFFSET * 2}px);
-
-      &:dir(rtl) {
-        transform: translateX(-${COLLAPSED_CONTENT_OFFSET * 2}px);
-      }
-
-      &[data-collapsed='true'] {
-        transform: none;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-
-    @container home (width >= ${SPEECH_INLINE_MIN}px) {
-      --home-portrait-width: ${HOME_PORTRAIT_WIDTH}px;
-      --home-portrait-height: ${HOME_PORTRAIT_HEIGHT}px;
-      --home-portrait-overlap: -${getHomePortraitOverlap(HOME_PORTRAIT_HEIGHT)}px;
-
-      grid-area: 1 / 2;
-      align-self: stretch;
-
-      /* Use all room left by the greeting in the tighter rail state. */
-      max-width: calc(
-        100cqw - ${COLLAPSED_CONTENT_OFFSET * 2 + SPEECH_GREETING_MIN + SPEECH_GREETING_GAP}px
-      );
-      min-height: 0;
-    }
-  `,
-  bubbleSlot: css`
-    width: max-content;
-    min-width: 0;
-    max-width: 100%;
-    margin-block-end: 4px;
-  `,
-  portrait: css`
-    pointer-events: none;
-    flex: none;
-    align-self: stretch;
-    width: calc(var(--home-portrait-width) + ${HOME_PORTRAIT_INSET}px);
   `,
   inputArea: css`
     position: relative;
@@ -303,9 +186,9 @@ const styles = createStaticStyles(({ css }) => ({
       }
     }
   `,
-  // Above the portrait so the agent stands behind the glass, not on top of it.
-  // The trailing gutter keeps the cards short of the column edge, so they stop
-  // where the main column's rows stop instead of running to the page margin.
+  // Above the main column, and with a trailing gutter that keeps the cards
+  // short of the column edge, so they stop where the main column's rows stop
+  // instead of running to the page margin.
   rail: css`
     position: relative;
     z-index: 1;
@@ -328,31 +211,16 @@ const styles = createStaticStyles(({ css }) => ({
 const Home = memo(() => {
   const isLogin = useUserStore(authSelectors.isLogin);
   const showHomeRail = useGlobalStore(systemStatusSelectors.showHomeRail);
-  const showHomePortrait = useGlobalStore(systemStatusSelectors.showHomePortrait);
   const hiddenWidgets = useGlobalStore(systemStatusSelectors.hiddenHomeWidgets);
-  const promo = useHomePromoLine();
   const usageActive = useHomeUsageWidgetActive();
-  const minimal = isHomeMinimalLayout(
-    { hiddenWidgets, showPortrait: showHomePortrait },
-    usageActive,
-  );
+  const minimal = isHomeMinimalLayout(hiddenWidgets, usageActive);
   const [mode, setMode] = useState<HomeMode>(() =>
     resolveInitialHomeMode(typeof window === 'undefined' ? '' : window.location.search),
   );
   const [inputValue, setInputValue] = useState('');
 
-  const drawerTopicId = useTaskStore(taskDetailSelectors.activeTopicDrawerTopicId);
-  const portalViewType = useChatStore(chatPortalSelectors.currentViewType);
-  const acceptancePortalOpen = isAcceptancePortalView(portalViewType);
-  // Mount the drawer on first open and keep it mounted afterwards, so its
-  // close animation can play instead of the panel vanishing with the state.
-  const [drawerMounted, setDrawerMounted] = useState(false);
-  if (drawerTopicId && !drawerMounted) setDrawerMounted(true);
-  const [acceptanceDrawerMounted, setAcceptanceDrawerMounted] = useState(false);
-  if (acceptancePortalOpen && !acceptanceDrawerMounted) setAcceptanceDrawerMounted(true);
   const railVisible = resolveRailVisibility({ hiddenWidgets, isLogin, showHomeRail, usageActive });
   const railCollapsed = !railVisible;
-  const portraitVisible = Boolean(isLogin && showHomePortrait);
 
   useEffect(() => {
     clearOnboardingHomeModeParam();
@@ -391,27 +259,10 @@ const Home = memo(() => {
 
   return (
     <Flexbox className={styles.grid}>
-      <div
-        className={cx(
-          styles.hero,
-          portraitVisible && styles.heroWithSpeech,
-          railCollapsed && styles.heroCollapsed,
-        )}
-      >
+      <div className={styles.hero}>
         <div className={styles.header}>
           <HomeHeader />
         </div>
-        {portraitVisible && (
-          <div className={styles.speech} data-collapsed={railCollapsed}>
-            {/* Keep the agent's line and artwork together in both header layouts. */}
-            <div className={styles.bubbleSlot}>
-              <PortraitBubble promo={promo} />
-            </div>
-            <div className={styles.portrait}>
-              <HomePortrait />
-            </div>
-          </div>
-        )}
       </div>
 
       <Flexbox
@@ -448,19 +299,6 @@ const Home = memo(() => {
             <HomeInbox {...RAIL_INBOX_PROPS} variant={'rail'} />
           </Suspense>
         </aside>
-      )}
-
-      {/* FloatingPanel portals to the app element, so where this sits in the
-          tree doesn't affect its viewport-anchored position. */}
-      {drawerMounted && (
-        <Suspense fallback={null}>
-          <TopicChatDrawer />
-        </Suspense>
-      )}
-      {acceptanceDrawerMounted && (
-        <Suspense fallback={null}>
-          <AcceptancePortalDrawer />
-        </Suspense>
       )}
     </Flexbox>
   );

@@ -11,7 +11,7 @@ import { agentService } from '@/services/agent';
 import { formatIntergerNumber } from '@/utils/format';
 import { lastMonth } from '@/utils/time';
 
-import TotalCard from './ShareButton/TotalCard';
+import TotalCard from './TotalCard';
 
 const TotalMessages = memo<{ inShare?: boolean; mobile?: boolean }>(({ inShare }) => {
   const { t } = useTranslation('auth');

@@ -42,9 +42,7 @@ const CustomizeModalContent = memo(() => {
     reset,
     setRecentsCount,
     setTaskCount,
-    showPortrait,
     taskCount,
-    togglePortrait,
     toggleWidget,
     usageActive,
   } = useHomeCustomization();
@@ -72,21 +70,6 @@ const CustomizeModalContent = memo(() => {
       <Flexbox className={styles.body} gap={20}>
         <SettingRow title={t('dashboard.customize.preset.label')}>
           <PresetBar value={preset} onChange={applyPreset} />
-        </SettingRow>
-
-        {/* No heading: the groups below name parts of the page, and a heading
-            over this single row would promise a category that has one member
-            and no page to point at. Its own label and description say enough. */}
-        <SettingRow
-          description={t('dashboard.customize.portrait.desc')}
-          title={t('dashboard.customize.portrait.title')}
-        >
-          <Switch
-            aria-label={t('dashboard.customize.portrait.title')}
-            checked={showPortrait}
-            size={'small'}
-            onChange={togglePortrait}
-          />
         </SettingRow>
 
         {HOME_WIDGET_GROUPS.map((group) => (

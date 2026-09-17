@@ -22,11 +22,10 @@ describe('createInitialSystemStatus', () => {
   });
 
   it('restores the Home customizations that decide layout on first paint', () => {
-    seed({ hiddenHomeWidgets: ['news', 'suggestions'], showHomePortrait: false });
+    seed({ hiddenHomeWidgets: ['news', 'suggestions'] });
 
     const status = createInitialSystemStatus();
 
-    expect(status.showHomePortrait).toBe(false);
     expect(status.hiddenHomeWidgets).toEqual(['news', 'suggestions']);
   });
 
@@ -36,7 +35,6 @@ describe('createInitialSystemStatus', () => {
     expect(status.leftPanelWidth).toBe(INITIAL_STATUS.leftPanelWidth);
     expect(status.showHomeRail).toBe(INITIAL_STATUS.showHomeRail);
     expect(status.showLeftPanel).toBe(INITIAL_STATUS.showLeftPanel);
-    expect(status.showHomePortrait).toBe(INITIAL_STATUS.showHomePortrait);
     expect(status.hiddenHomeWidgets).toEqual(INITIAL_STATUS.hiddenHomeWidgets);
   });
 
@@ -44,7 +42,6 @@ describe('createInitialSystemStatus', () => {
     seed({
       hiddenHomeWidgets: 'news',
       leftPanelWidth: '360',
-      showHomePortrait: 'false',
       showLeftPanel: 'false',
     });
 
@@ -52,7 +49,6 @@ describe('createInitialSystemStatus', () => {
 
     expect(status.leftPanelWidth).toBe(INITIAL_STATUS.leftPanelWidth);
     expect(status.showLeftPanel).toBe(INITIAL_STATUS.showLeftPanel);
-    expect(status.showHomePortrait).toBe(INITIAL_STATUS.showHomePortrait);
     expect(status.hiddenHomeWidgets).toEqual(INITIAL_STATUS.hiddenHomeWidgets);
   });
 

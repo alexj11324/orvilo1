@@ -3070,10 +3070,20 @@ export class TaskModel {
       SELECT td.*, tt.id as source_task_id, tt.identifier as source_task_identifier,
              d.id as document_ref_id,
              d.title as document_title, d.file_type as document_file_type, d.parent_id as document_parent_id,
-             d.total_char_count as document_char_count, d.updated_at as document_updated_at
+             d.total_char_count as document_char_count, d.updated_at as document_updated_at,
+             w.origin_topic_id as source_topic_id, wt.title as source_topic_title
       FROM task_documents td
       JOIN task_tree tt ON td.task_id = tt.id
       LEFT JOIN documents d ON td.document_id = d.id AND ${documentVisibility}
+      -- The run that produced the document, read off the Work it registered: a
+      -- document Work keys its resource by the document id, and (resourceType,
+      -- resourceId, userId) is unique, so this cannot duplicate a document row.
+      -- A hand-pinned document has no Work and joins as NULL.
+      -- No backticks in these comments: they would close the template literal.
+      LEFT JOIN works w ON w.resource_id = td.document_id
+                       AND w.type = 'document'
+                       AND w.user_id = ${this.userId}
+      LEFT JOIN topics wt ON wt.id = w.origin_topic_id
       WHERE ${docsOwnership}
       ORDER BY td.created_at
     `);
@@ -3099,6 +3109,8 @@ export class TaskModel {
         pinnedBy: row.pinned_by,
         sourceTaskId: row.source_task_id,
         sourceTaskIdentifier: row.source_task_id !== rootTaskId ? row.source_task_identifier : null,
+        sourceTopicId: row.source_topic_id ?? null,
+        sourceTopicTitle: row.source_topic_title ?? null,
         title: inaccessible ? '' : row.document_title || 'Untitled',
         updatedAt: inaccessible ? null : row.document_updated_at,
       };

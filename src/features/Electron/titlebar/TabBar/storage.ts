@@ -1,4 +1,5 @@
-import { isRetiredProductUrl } from '../retiredProductUrl';
+import { RETIRED_ROUTE_PREFIXES } from '@/config/routes';
+
 import { type TabScope, tabScopeKey } from './scope';
 import { type TabItem } from './types';
 
@@ -23,6 +24,29 @@ const isTabItem = (item: unknown): item is TabItem =>
   typeof (item as TabItem).url === 'string' &&
   typeof (item as TabItem).lastVisited === 'number';
 
+/**
+ * Whether a stored tab points at a product that no longer exists.
+ *
+ * This list is the only thing between a tab pinned to `/image` before that
+ * surface was retired and it being restored onto a path nothing resolves.
+ * Workspace URLs mirror the same segments one level deeper (`/{slug}/image`),
+ * so the first two segments are checked.
+ */
+export const isRetiredTabUrl = (url: string): boolean => {
+  let pathname: string;
+  try {
+    pathname = new URL(url, 'http://localhost').pathname;
+  } catch {
+    return false;
+  }
+
+  return pathname
+    .split('/')
+    .filter(Boolean)
+    .slice(0, 2)
+    .some((segment) => RETIRED_ROUTE_PREFIXES.has(`/${segment}`));
+};
+
 export const getTabPages = (scope: TabScope): TabPagesStorageData => {
   if (typeof window === 'undefined') return EMPTY;
 
@@ -30,21 +54,25 @@ export const getTabPages = (scope: TabScope): TabPagesStorageData => {
     const data = window.localStorage.getItem(tabPagesStorageKey(scope));
     if (!data) return EMPTY;
 
-    const parsed = JSON.parse(data) as Partial<TabPagesStorageData>;
+    const parsed: unknown = JSON.parse(data);
     if (!parsed || typeof parsed !== 'object') return EMPTY;
 
-    const tabs = Array.isArray(parsed.tabs)
-      ? parsed.tabs.filter(isTabItem).filter((tab) => !isRetiredProductUrl(tab.url, scope))
-      : [];
-    const activeTabId =
-      typeof parsed.activeTabId === 'string' && tabs.some((tab) => tab.id === parsed.activeTabId)
-        ? parsed.activeTabId
-        : null;
+    const stored = parsed as { activeTabId?: unknown; tabs?: unknown };
+    // Typed as `unknown[]` before filtering, not left as the `any` that
+    // `Array.isArray` narrows an `any` to: on `any[]`, `.filter(isTabItem)`
+    // resolves to `any` rather than `TabItem[]`, and the following `.filter`
+    // loses its parameter type entirely. Reading the payload as `unknown` is the
+    // boundary this value deserves anyway — it is whatever the last write left.
+    const storedTabs: unknown[] = Array.isArray(stored.tabs) ? stored.tabs : [];
+    const tabs = storedTabs.filter(isTabItem).filter((tab) => !isRetiredTabUrl(tab.url));
+    // Dropping the active tab would leave an `activeTabId` naming nothing, so
+    // the selection falls back to what is left rather than to a dangling id.
+    const requestedActiveId = typeof stored.activeTabId === 'string' ? stored.activeTabId : null;
+    const activeTabId = tabs.some((tab) => tab.id === requestedActiveId)
+      ? requestedActiveId
+      : (tabs[0]?.id ?? null);
 
-    return {
-      activeTabId,
-      tabs,
-    };
+    return { activeTabId, tabs };
   } catch {
     return EMPTY;
   }

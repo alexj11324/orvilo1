@@ -5,7 +5,6 @@ import { useAgentGroupStore } from '@/store/agentGroup';
 import { useChatStore } from '@/store/chat';
 import { useDiscoverStore } from '@/store/discover';
 import { useDocumentStore } from '@/store/document';
-import { useEvalStore } from '@/store/eval';
 import { useFileStore } from '@/store/file';
 import { useHomeStore } from '@/store/home';
 import { useImageStore } from '@/store/image';
@@ -31,7 +30,6 @@ const resetableStores: ResetableStoreApi[] = [
   useChatStore,
   useDiscoverStore,
   useDocumentStore,
-  useEvalStore,
   useFileStore,
   useHomeStore,
   useImageStore,

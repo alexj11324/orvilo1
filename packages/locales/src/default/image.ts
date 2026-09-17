@@ -57,18 +57,6 @@ export default {
   'generationTopic.notFound.desc':
     'This generation does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'generationTopic.notFound.title': 'Generation Unavailable',
-  'notSupportGuide.desc':
-    'The current deployment mode does not support AI image generation. Switch to the <1>server database deployment mode</1>, or use <3>Orvilo Cloud</3>.',
-  'notSupportGuide.features.fileIntegration.desc':
-    'Deep integration with the file management system; generated images are automatically saved to the file system for unified management and organization.',
-  'notSupportGuide.features.fileIntegration.title': 'File System Integration',
-  'notSupportGuide.features.llmAssisted.desc':
-    'Combines large language model capabilities to intelligently optimize and expand prompts, enhancing image generation quality (Coming Soon).',
-  'notSupportGuide.features.llmAssisted.title': 'LLM-Assisted Image Generation',
-  'notSupportGuide.features.multiProviders.desc':
-    'Supports multiple AI image generation providers, including OpenAI gpt-image-1, Google Imagen, FAL.ai, and more, offering a wide selection of models.',
-  'notSupportGuide.features.multiProviders.title': 'Multi-Provider Support',
-  'notSupportGuide.title': 'Current Deployment Mode Does Not Support AI Image Generation',
   'notice.modelRemoved':
     'The current model is no longer available from {{name}}. Please switch to an available model.',
   'notice.providerDisabled':

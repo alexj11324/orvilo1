@@ -33,6 +33,32 @@ export const automationStatusesFor = (
   filter === 'active' ? AUTOMATION_ACTIVE_STATUSES : filter === 'paused' ? ['paused'] : undefined;
 
 /**
+ * Whose automations the surface lists: the whole workspace, or only the ones
+ * the caller created. Read from the shared `scope` query param — the same
+ * param carries "My tasks"' `assigned`/`created` member scoping, and both
+ * readings agree on `created`.
+ */
+export type AutomationScope = 'all' | 'created';
+
+export type AutomationStatusFilter = 'all' | AutomationStatus;
+
+export const resolveAutomationScope = (params: URLSearchParams): AutomationScope =>
+  params.get('scope') === 'created' ? 'created' : 'all';
+
+export const resolveAutomationStatusFilter = (params: URLSearchParams): AutomationStatusFilter => {
+  const value = params.get('status');
+  return value === 'active' || value === 'paused' ? value : 'all';
+};
+
+/**
+ * One page size for every mount of the scheduled-task surface. The Tasks page's
+ * automations tab and the Automations page are two doors into the same list, so
+ * a shared page size is what lets them land on one SWR cache entry instead of
+ * paging the same rows twice under different keys.
+ */
+export const SCHEDULED_TASKS_PAGE_SIZE = 25;
+
+/**
  * `formatScheduleDescription`/`formatIntervalLabel` emit `taskSchedule.*` keys
  * that live in the `chat` namespace. An `automation`-bound `t` cannot reach them
  * — react-i18next binds lookups to the FIRST requested namespace only — so each

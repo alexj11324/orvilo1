@@ -12,9 +12,10 @@ import {
   type WorkVisibility,
 } from '@orvilo/types';
 import type { SQL } from 'drizzle-orm';
-import { and, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm';
+import { and, desc, eq, exists, inArray, isNull, lt, or } from 'drizzle-orm';
 
 import { documents } from '../../schemas/file';
+import { projectWorks } from '../../schemas/projectWork';
 import { tasks } from '../../schemas/task';
 import { topics } from '../../schemas/topic';
 import { works, workVersions } from '../../schemas/work';
@@ -272,6 +273,14 @@ export interface ListByWorkspaceParams {
   limit?: number;
   /** Narrow results to Works first produced by one agent. */
   originAgentId?: string | null;
+  /**
+   * Narrow to the Works a project is associated with. The association lives in
+   * `project_works` — `works` carries no project column, and one Work may
+   * participate in several projects — so this filters through that table rather
+   * than a column. Ownership is still enforced on the Work itself: a project id
+   * belonging to someone else simply matches no visible Work.
+   */
+  projectId?: string | null;
   /** Narrow the `external` type to a single skill provider's resource types. */
   provider?: WorkSkillProvider | null;
   type?: WorkType | null;
@@ -331,6 +340,20 @@ export const listByWorkspace = async (
   ];
   if (params.type) filters.push(eq(works.type, params.type));
   if (params.originAgentId) filters.push(eq(works.originAgentId, params.originAgentId));
+  if (params.projectId)
+    filters.push(
+      // `exists` rather than an inner join: the row shape, the keyset cursor and
+      // the limit all stay untouched, and a Work bound to the project more than
+      // once cannot duplicate a page row.
+      exists(
+        ctx.db
+          .select({ id: projectWorks.id })
+          .from(projectWorks)
+          .where(
+            and(eq(projectWorks.projectId, params.projectId), eq(projectWorks.workId, works.id)),
+          ),
+      ),
+    );
   if (ctx.workspaceId && params.visibility) filters.push(eq(works.visibility, params.visibility));
   // User-visible gallery tabs stay per-provider (Linear / GitHub) but filter by
   // provider — its resource types — over the unified `external` Work type.

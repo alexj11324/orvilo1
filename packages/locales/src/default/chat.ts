@@ -2265,8 +2265,11 @@ export default {
   'taskList.mine.emptyAssigned': 'No tasks assigned to you yet',
   'taskList.mine.emptyCreated': "You haven't created any tasks yet",
   'taskList.mine.title': 'My tasks',
-  'taskList.scheduled.empty': 'No scheduled tasks yet',
-  'taskList.scheduled.title': 'Scheduled tasks',
+  'taskList.scheduled.empty': 'No automations yet',
+  // The collection keeps the `scheduled` identifier — it names a query and a
+  // route, and renaming it would break stored deep links. The product calls the
+  // surface "Automations".
+  'taskList.scheduled.title': 'Automations',
   'taskList.subtaskProgress.loadFailed':
     "Couldn't load sub-tasks. Click the progress badge to retry.",
   'taskList.title': 'Tasks',

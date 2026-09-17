@@ -300,8 +300,15 @@ export default {
   'agentTab.opening': 'Opening Settings',
   'agentTab.plugin': 'Skill Settings',
   'agentTab.prompt': 'Agent Profile',
+  'agentTab.rules': 'Rules & experience',
   'agentTab.selfIteration': 'Self-Iteration',
   'agentTab.tts': 'Voice Service',
+  'agentRules.domainMeta': '{{habits}} rules · {{runs}} practices',
+  'agentRules.empty': 'It has not learned any rules for this agent yet.',
+  'agentRules.loading': 'Loading rules…',
+  'agentRules.open': 'Open rules',
+  'agentRules.summary': '{{count}} rules in use',
+
   'permission.accessTag.useOnlyTip':
     'Your member permission here is "Can use" — you can view and use it, but not edit. Ask the creator or a workspace owner for edit access.',
   'permission.accessTag.viewOnlyTip':
@@ -767,10 +774,14 @@ export default {
   'defaultAgent.model.desc': 'Model used when creating new agents',
   'defaultAgent.model.title': 'Model',
   'defaultAgent.title': 'New Agent',
-  'group.aiConfig': 'Agent',
-  'group.common': 'General',
+  'group.aiConfig': 'Agent & runtime',
+  'group.channels': 'Notifications & channels',
+  'group.data': 'Data',
+  'group.security': 'Security & access',
+  'group.tools': 'Tools & connectors',
+  'group.usageAndCost': 'Usage & cost',
+
   'group.developer': 'Developer',
-  'group.personal': 'Personal',
   'group.profile': 'Account',
   'group.subscription': 'Plans',
   'group.system': 'System',
@@ -1541,8 +1552,8 @@ When I am ___, I need ___
   'storage.actions.transferAgentGroups.desc':
     'Move groups, member Agents, and group conversation data to another Workspace or your personal account.',
   'storage.actions.transferAgentGroups.title': 'Move Groups',
-  'storage.actions.copyOrvilo AI.button': 'Copy to…',
-  'storage.actions.copyOrvilo AI.desc':
+  'storage.actions.copyLobeAI.button': 'Copy to…',
+  'storage.actions.copyLobeAI.desc':
     'Keep the originals and create independent copies in another Workspace or your personal account. Topics and messages are optional.',
   'storage.actions.copyLobeAI.title': 'Copy Agents',
   'storage.actions.copyAgentGroups.button': 'Copy to…',
@@ -2722,15 +2733,15 @@ When I am ___, I need ___
   'workspace.general.transferAgentGroups.modal.title': 'Move Agent Groups',
   'workspace.general.transferAgentGroups.modal.transfer': 'Move {{count}} agent group(s)',
   'workspace.general.transferAgentGroups.modal.untitledGroup': 'Untitled Agent Group',
-  'workspace.general.copyOrvilo AI.modal.back': 'Back',
-  'workspace.general.copyOrvilo AI.modal.continue': 'Continue',
-  'workspace.general.copyOrvilo AI.modal.copyOptions.config.desc':
+  'workspace.general.copyLobeAI.modal.back': 'Back',
+  'workspace.general.copyLobeAI.modal.continue': 'Continue',
+  'workspace.general.copyLobeAI.modal.copyOptions.config.desc':
     'Required. Copies the model, prompt, tools, and Agent profile into a new Agent.',
   'workspace.general.copyLobeAI.modal.copyOptions.config.title': 'Agent configuration',
   'workspace.general.copyLobeAI.modal.copyOptions.history.desc':
     'Optional. Copies selected Agents’ topics and messages into the new Agents.',
-  'workspace.general.copyOrvilo AI.modal.copyOptions.history.title': 'Topics and messages',
-  'workspace.general.copyOrvilo AI.modal.copyOptions.knowledgeBase.reason':
+  'workspace.general.copyLobeAI.modal.copyOptions.history.title': 'Topics and messages',
+  'workspace.general.copyLobeAI.modal.copyOptions.knowledgeBase.reason':
     'Not supported yet. Reconnect them in the target workspace or personal account after copying.',
   'workspace.general.copyLobeAI.modal.copyOptions.knowledgeBase.title': 'Knowledge bases and files',
   'workspace.general.copyLobeAI.modal.copyOptions.optional': 'Optional',
@@ -2745,22 +2756,21 @@ When I am ___, I need ___
   'workspace.general.copyLobeAI.modal.includeHistory': 'Copy topics and messages',
   'workspace.general.copyLobeAI.modal.includeHistoryDesc':
     'Optional. Copies selected Agents’ conversation history into the new Agents.',
-  'workspace.general.copyOrvilo AI.modal.loadFailed': 'Failed to load agents',
-  'workspace.general.copyOrvilo AI.modal.noAgents': 'No agents available to copy',
-  'workspace.general.copyOrvilo AI.modal.selected': 'selected',
-  'workspace.general.copyOrvilo AI.modal.selectedAgent':
+  'workspace.general.copyLobeAI.modal.loadFailed': 'Failed to load agents',
+  'workspace.general.copyLobeAI.modal.noAgents': 'No agents available to copy',
+  'workspace.general.copyLobeAI.modal.selected': 'selected',
+  'workspace.general.copyLobeAI.modal.selectedAgent':
     'This Agent will be copied. The original stays where it is.',
   'workspace.general.copyLobeAI.modal.selectAgents':
     'Select Agents to copy. Originals stay where they are.',
-  'workspace.general.copyOrvilo AI.modal.selectPlaceholder':
-    'Select workspace or personal account...',
-  'workspace.general.copyOrvilo AI.modal.selectTarget':
+  'workspace.general.copyLobeAI.modal.selectPlaceholder': 'Select workspace or personal account...',
+  'workspace.general.copyLobeAI.modal.selectTarget':
     'You can copy to personal or workspaces that have permission to create an agent.',
   'workspace.general.copyLobeAI.modal.success': '{{count}} agent(s) copied',
   'workspace.general.copyLobeAI.modal.backgroundCopy':
     'Chat history is large, so it keeps copying in the background. The agents are ready to use now; conversations light up one by one as they finish.',
-  'workspace.general.copyOrvilo AI.modal.title': 'Copy Agents',
-  'workspace.general.copyOrvilo AI.modal.untitledAgent': 'Untitled Agent',
+  'workspace.general.copyLobeAI.modal.title': 'Copy Agents',
+  'workspace.general.copyLobeAI.modal.untitledAgent': 'Untitled Agent',
   'workspace.general.copyAgentGroups.modal.back': 'Back',
   'workspace.general.copyAgentGroups.modal.backgroundCopy':
     'Chat history is large, so it keeps copying in the background. The agent group is ready to use now; conversations light up one by one as they finish.',

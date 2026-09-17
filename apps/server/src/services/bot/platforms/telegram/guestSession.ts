@@ -1,4 +1,4 @@
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 import type { BotReplyLocale } from '../const';
 

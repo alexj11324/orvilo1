@@ -15,7 +15,7 @@ import {
   createConversationParentMissingError,
   isMidOperationReferenceMissingError,
 } from '../messagePersistErrors';
-import { unwrapPgError } from '../pgError';
+import { unwrapPgError } from '../../AgentExecution/pgError';
 
 /**
  * Server {@link MessageTransport} adapter — delegates to `MessageModel` (DB).

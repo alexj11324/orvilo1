@@ -10,8 +10,8 @@ import {
 import { createRuntimeExecutors } from '@/server/modules/AgentRuntime/RuntimeExecutors';
 
 import { AgentRuntimeService } from '../AgentRuntimeService';
-import { CriticalAgentInterventionPersistenceError } from '../CompletionLifecycle';
-import { hookDispatcher } from '../hooks';
+import { CriticalAgentInterventionPersistenceError } from '../../agentExecution/CompletionLifecycle';
+import { hookDispatcher } from '../../agentExecution/hooks';
 
 // Mock all heavy dependencies to isolate executeStep logic
 vi.mock('@/envs/app', () => ({ appEnv: { APP_URL: 'http://localhost:3010' } }));

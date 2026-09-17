@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { hookDispatcher } from '@/server/services/agentRuntime/hooks';
-import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
+import { hookDispatcher } from '@/server/services/agentExecution/hooks';
+import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
 
 // serverDatabase middleware calls getServerDB(); stub it (our model mocks
 // ignore the db handle anyway).
@@ -76,7 +76,7 @@ vi.mock('@/server/services/aiAgent', () => ({
 
 const mockPublishAgentRuntimeEnd = vi.fn();
 const mockPublishStreamEvent = vi.fn();
-vi.mock('@/server/modules/AgentRuntime/factory', async (orig) => ({
+vi.mock('@/server/modules/AgentExecution/factory', async (orig) => ({
   ...(await (orig as () => Promise<Record<string, unknown>>)()),
   createStreamEventManager: vi.fn(function () {
     return {
@@ -87,7 +87,7 @@ vi.mock('@/server/modules/AgentRuntime/factory', async (orig) => ({
 }));
 
 // Imported after the mocks above are registered.
-const { CompletionLifecycle } = await import('@/server/services/agentRuntime/CompletionLifecycle');
+const { CompletionLifecycle } = await import('@/server/services/agentExecution/CompletionLifecycle');
 const { agentNotifyRouter } = await import('../agentNotify');
 
 const OP = 'op-remote-1';

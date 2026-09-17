@@ -41,7 +41,7 @@ import {
 import type { MessageModel } from '@/database/models/message';
 import type { ThreadModel } from '@/database/models/thread';
 import type { TopicModel } from '@/database/models/topic';
-import { formatErrorForState } from '@/server/modules/AgentRuntime/formatErrorForState';
+import { formatErrorForState } from '@/server/modules/AgentExecution/formatErrorForState';
 
 const log = debug('lobe-server:hetero-agent:persistence');
 

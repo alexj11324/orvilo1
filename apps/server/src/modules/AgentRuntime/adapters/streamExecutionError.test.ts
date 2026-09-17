@@ -1,7 +1,7 @@
 import { AgentRuntimeErrorType } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
-import { formatErrorForState } from '../formatErrorForState';
+import { formatErrorForState } from '../../AgentExecution/formatErrorForState';
 import { createStreamExecutionError } from './serverCallLlmAttempt';
 
 describe('createStreamExecutionError', () => {

@@ -309,7 +309,7 @@ describe('AgentRuntimeService Agent Signal hook integration', () => {
       }),
     };
 
-    const { hookDispatcher } = await import('../hooks');
+    const { hookDispatcher } = await import('../../agentExecution/hooks');
     const dispatchSpy = vi
       .spyOn(hookDispatcher, 'dispatch')
       .mockRejectedValueOnce(new Error('hook boom'));

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { CompletionLifecycle } from '@/server/services/agentRuntime/CompletionLifecycle';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { AiAgentService } from '../index';
 
@@ -45,7 +45,7 @@ const {
 // publishAgentRuntimeInit so the agent-gateway DO reports `running` on a later reconnect. Stub the factory so
 // the assertion below can verify the init, and so the real one (which probes
 // Redis synchronously) doesn't throw a server-env error in the test env.
-vi.mock('@/server/modules/AgentRuntime/factory', () => ({
+vi.mock('@/server/modules/AgentExecution/factory', () => ({
   createAgentStateManager: vi.fn(function () {
     return {
       createOperationMetadata: mockCreateOperationMetadata,

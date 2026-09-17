@@ -6,7 +6,7 @@ import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { AgentOperationItem } from '@/database/schemas/agentOperations';
 import type { LobeChatDatabase } from '@/database/type';
-import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
+import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 const buildEvidencePrompt = (

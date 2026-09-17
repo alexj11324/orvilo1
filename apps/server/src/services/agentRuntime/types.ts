@@ -25,7 +25,7 @@ import type {
 import type { AgentSignalOperationMarker } from '@/server/services/agentSignal/operationMarker';
 import type { DeviceAccessReason } from '@/server/services/aiAgent/deviceAccessPolicy';
 
-import { type AgentHook } from './hooks/types';
+import { type AgentHook } from '../agentExecution/hooks/types';
 
 // ==================== Operation Tool Set ====================
 

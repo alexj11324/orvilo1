@@ -15,9 +15,9 @@ import type { LobeChatDatabase } from '@/database/type';
 // its workspace-package transitive deps in the unit-test environment.
 import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime/AgentRuntimeCoordinator';
 
-import { CompletionLifecycle } from './CompletionLifecycle';
+import { CompletionLifecycle } from '../agentExecution/CompletionLifecycle';
 import { OperationTraceRecorder } from './OperationTraceRecorder';
-import { createDefaultSnapshotStore } from './snapshotStore';
+import { createDefaultSnapshotStore } from '../agentExecution/snapshotStore';
 
 const log = debug('lobe-server:abandon-operation');
 

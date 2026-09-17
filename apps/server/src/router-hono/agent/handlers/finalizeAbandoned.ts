@@ -3,7 +3,7 @@ import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/core/db-adaptor';
 import { AbandonOperationService } from '@/server/services/agentRuntime';
-import { deliverWebhook } from '@/server/services/agentRuntime/hooks/HookDispatcher';
+import { deliverWebhook } from '@/server/services/agentExecution/hooks/HookDispatcher';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 const log = debug('lobe-server:agent:finalize-abandoned');

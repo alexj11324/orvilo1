@@ -56,13 +56,13 @@ import { type LobeChatDatabase } from '@/database/type';
 import { appEnv } from '@/envs/app';
 import { type AgentRuntimeCoordinatorOptions } from '@/server/modules/AgentRuntime';
 import { AgentRuntimeCoordinator, createStreamEventManager } from '@/server/modules/AgentRuntime';
-import { formatErrorForState } from '@/server/modules/AgentRuntime/formatErrorForState';
-import { hasNonPersistedMessage } from '@/server/modules/AgentRuntime/messagePersistence';
+import { formatErrorForState } from '@/server/modules/AgentExecution/formatErrorForState';
+import { hasNonPersistedMessage } from '@/server/modules/AgentExecution/messagePersistence';
 import {
   createRuntimeExecutors,
   type RuntimeExecutorContext,
 } from '@/server/modules/AgentRuntime/RuntimeExecutors';
-import { type IStreamEventManager } from '@/server/modules/AgentRuntime/types';
+import { type IStreamEventManager } from '@/server/modules/AgentExecution/types';
 import { emitAgentSignalSourceEvent } from '@/server/services/agentSignal';
 import { toAgentSignalTraceEvents } from '@/server/services/agentSignal/observability/traceEvents';
 import { FileService } from '@/server/services/file';
@@ -74,7 +74,7 @@ import { ToolExecutionService } from '@/server/services/toolExecution';
 import { BuiltinToolsExecutor } from '@/server/services/toolExecution/builtin';
 import { stateHasEntityFileEdits } from '@/server/services/workRegistration';
 
-import { isAbortError, throwIfAborted } from './abort';
+import { isAbortError, throwIfAborted } from '../agentExecution/abort';
 import {
   CompletionLifecycle,
   CriticalAgentInterventionPersistenceError,
@@ -83,12 +83,12 @@ import {
   isAgentShareRun,
   isSuccessLikeCompletionReason,
   normalizeCompletionMessages,
-} from './CompletionLifecycle';
+} from '../agentExecution/CompletionLifecycle';
 import { logToolCallPc } from './formalObservation';
-import { type AgentHook, hookDispatcher } from './hooks';
+import { type AgentHook, hookDispatcher } from '../agentExecution/hooks';
 import { HumanInterventionHandler } from './HumanInterventionHandler';
 import { OperationTraceRecorder } from './OperationTraceRecorder';
-import { createDefaultSnapshotStore } from './snapshotStore';
+import { createDefaultSnapshotStore } from '../agentExecution/snapshotStore';
 import { buildStepPresentation, formatTokenCount } from './stepPresentation';
 import {
   type AgentExecutionParams,

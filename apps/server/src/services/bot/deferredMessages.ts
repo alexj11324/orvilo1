@@ -1,7 +1,7 @@
 import type { Message } from 'chat';
 import debug from 'debug';
 
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 const log = debug('lobe-server:bot:deferred-messages');
 

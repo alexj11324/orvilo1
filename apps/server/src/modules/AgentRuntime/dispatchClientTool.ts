@@ -3,11 +3,11 @@ import debug from 'debug';
 
 import type { ToolExecutionResultResponse } from '@/server/services/toolExecution/types';
 
-import { getAgentRuntimeRedisClient } from './redis';
+import { getAgentRuntimeRedisClient } from '../AgentExecution/redis';
 import { GLOBAL_DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, MIN_TIMEOUT_MS } from './resolveToolTimeout';
 import type { ToolResultPayload } from './ToolResultWaiter';
 import { ToolResultWaiter } from './ToolResultWaiter';
-import type { IStreamEventManager } from './types';
+import type { IStreamEventManager } from '../AgentExecution/types';
 
 const log = debug('lobe-server:agent-runtime:dispatch-client-tool');
 

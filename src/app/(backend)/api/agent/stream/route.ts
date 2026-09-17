@@ -4,7 +4,7 @@ import { type NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { createLambdaContext } from '@/libs/trpc/lambda/context';
-import { createAgentStateManager, createStreamEventManager } from '@/server/modules/AgentRuntime';
+import { createAgentStateManager, createStreamEventManager } from '@/server/modules/AgentExecution';
 
 const log = debug('api-route:agent:stream');
 const timing = debug('lobe-server:agent-runtime:timing');

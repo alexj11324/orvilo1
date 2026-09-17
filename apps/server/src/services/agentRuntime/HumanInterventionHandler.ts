@@ -4,7 +4,7 @@ import debug from 'debug';
 import type { MessageModel } from '@/database/models/message';
 import type { LobeChatDatabase } from '@/database/type';
 
-import { hookDispatcher } from './hooks';
+import { hookDispatcher } from '../agentExecution/hooks';
 
 const log = debug('lobe-server:human-intervention-handler');
 

@@ -1,7 +1,7 @@
 import debug from 'debug';
 import type Redis from 'ioredis';
 
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 import { buildRuntimeKey, parseRuntimeKey } from '@/server/services/bot/platforms';
 
 const log = debug('lobe-server:bot:connect-queue');

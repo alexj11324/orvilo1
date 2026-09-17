@@ -5,7 +5,7 @@ import { MessageModel } from '@/database/models/message';
 import { TopicModel } from '@/database/models/topic';
 
 import { AbandonOperationService } from '../AbandonOperationService';
-import { CompletionLifecycle } from '../CompletionLifecycle';
+import { CompletionLifecycle } from '../../agentExecution/CompletionLifecycle';
 
 const buildStore = () => ({
   get: vi.fn(),
@@ -48,7 +48,7 @@ vi.mock('@/database/models/agentOperation', () => ({
 }));
 
 const dispatchHooksMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('../CompletionLifecycle', () => ({
+vi.mock('../../agentExecution/CompletionLifecycle', () => ({
   CompletionLifecycle: vi.fn().mockImplementation(function () {
     return {
       dispatchHooks: dispatchHooksMock,

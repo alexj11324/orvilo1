@@ -10,6 +10,8 @@ import {
   projects,
   taskDispatches,
   tasks,
+  taskTopics,
+  topics,
   users,
   workspaces,
 } from '@/database/schemas';
@@ -47,6 +49,7 @@ describe('TaskDispatchService', () => {
   const createPolicyProject = async (input: {
     autoDispatch: boolean;
     concurrencyLimit?: number;
+    executionBudget?: { maxCost: number; maxRuns: number };
   }) => {
     await db.insert(agents).values({ id: 'dispatch-policy-agent', userId, workspaceId });
     const [project] = await db
@@ -58,7 +61,7 @@ describe('TaskDispatchService', () => {
         orchestrationPolicy: {
           autoDispatch: input.autoDispatch,
           concurrencyLimit: input.concurrencyLimit,
-          executionBudget: { maxCost: 25, maxRuns: 10 },
+          executionBudget: input.executionBudget ?? { maxCost: 25, maxRuns: 10 },
           planningBudget: { maxRevisions: 20 },
           replanMode: 'apply',
           requireHumanReview: true,
@@ -391,4 +394,66 @@ describe('TaskDispatchService', () => {
       }),
     ).rejects.toMatchObject({ message: 'project_auto_dispatch_disabled' });
   });
+
+  it.each([
+    {
+      budget: { maxCost: 100, maxRuns: 1 },
+      expectedReason: 'project_run_budget_exhausted',
+      totalCost: '1',
+    },
+    {
+      budget: { maxCost: 25, maxRuns: 10 },
+      expectedReason: 'project_cost_budget_exhausted',
+      totalCost: '25',
+    },
+  ])(
+    'parks orchestrator work when $expectedReason',
+    async ({ budget, expectedReason, totalCost }) => {
+      const project = await createPolicyProject({ autoDispatch: true, executionBudget: budget });
+      const [completedTask, nextTask] = await db
+        .insert(tasks)
+        .values([
+          {
+            assigneeAgentId: 'dispatch-policy-agent',
+            createdByUserId: userId,
+            identifier: 'POL-7',
+            instruction: 'Completed policy run',
+            projectId: project.id,
+            seq: 11,
+            workspaceId,
+          },
+          {
+            assigneeAgentId: 'dispatch-policy-agent',
+            createdByUserId: userId,
+            identifier: 'POL-8',
+            instruction: 'Next policy run',
+            projectId: project.id,
+            seq: 12,
+            workspaceId,
+          },
+        ])
+        .returning();
+      const [topic] = await db
+        .insert(topics)
+        .values({ totalCost, userId, workspaceId })
+        .returning();
+      await db.insert(taskTopics).values({
+        seq: 1,
+        status: 'completed',
+        taskId: completedTask.id,
+        topicId: topic.id,
+        userId,
+        workspaceId,
+      });
+
+      await expect(
+        new TaskDispatchService(db, workspaceId).prepare({
+          idempotencyKey: `policy:${nextTask.identifier}:revision-1`,
+          requestedBy: 'planner',
+          task: nextTask,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toMatchObject({ message: expectedReason });
+    },
+  );
 });

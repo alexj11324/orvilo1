@@ -204,16 +204,22 @@ Then('CLI 应取得 access token 与 refresh token', async function (this: Custo
   const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
   expect(audiences).toContain(RESOURCE);
 
-  const verificationUrl = this.testContext.oidcVerificationUrl as string | undefined;
-  if (!verificationUrl) throw new Error('OIDC verification URL is unavailable');
+  const discoveryResponse = await this.browserContext.request.get(
+    '/oidc/.well-known/openid-configuration',
+  );
+  const discoveryBody = await discoveryResponse.text();
+  expect(
+    discoveryResponse.ok(),
+    `OIDC discovery failed with ${discoveryResponse.status()}: ${discoveryBody}`,
+  ).toBe(true);
+  const discovery = JSON.parse(discoveryBody) as { issuer?: string };
+  expect(discovery.issuer).toBeTruthy();
 
-  const verificationOrigin = new URL(verificationUrl).origin;
   const issuerUrl = new URL(claims.iss!);
-  expect(issuerUrl.protocol).toBe(new URL(verificationUrl).protocol);
   expect(issuerUrl.pathname).toBe('/oidc');
-  // The verification URI is emitted by the same provider as the token, so it
-  // remains stable even when the browser later lands on an immutable Vercel
-  // deployment URL. Require that exact provider origin.
-  expect(issuerUrl.origin).toBe(verificationOrigin);
+  // Vercel immutable deployment URLs share one stable branch-level OIDC issuer.
+  // Validate the token against the provider's discovery document instead of
+  // assuming that issuer and browser origins must be identical.
+  expect(claims.iss).toBe(discovery.issuer);
   expect(claims.sub).toBe(TEST_USER.id);
 });

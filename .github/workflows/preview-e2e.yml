@@ -93,17 +93,11 @@ jobs:
           rm -f -- "$ssh_dir/id_ed25519" "$ssh_dir/known_hosts"
           rmdir "$ssh_dir"
 
-      - name: Checkout
+      - name: Checkout validation workflow
         uses: actions/checkout@v6
         with:
           persist-credentials: false
-          ref: ${{ inputs.deployment_sha || github.event.deployment.sha || github.sha }}
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-env
-
-      - name: Install dependencies
-        run: pnpm install
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.deployment.sha || github.sha }}
 
       - name: Resolve Preview database URL
         id: resolve-preview-database
@@ -118,6 +112,18 @@ jobs:
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+
+      - name: Checkout deployment source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.deployment_sha || github.event.deployment.sha || github.sha }}
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Route database URL through trusted tunnel
         env:

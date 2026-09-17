@@ -94,8 +94,8 @@ const {
   topicDeleteMock,
   topicFindByIdMock,
 } = vi.hoisted(() => ({
-  cascadeManyMock: vi.fn(),
-  cascadeMock: vi.fn(),
+  cascadeManyMock: vi.fn().mockResolvedValue({ paused: [], started: [] }),
+  cascadeMock: vi.fn().mockResolvedValue({ paused: [], started: [] }),
   latestNonToolMock: vi.fn(),
   latestSpineMock: vi.fn(),
   messageCreateMock: vi.fn(),
@@ -197,6 +197,7 @@ describe('TaskService', () => {
     update: vi.fn(),
     updateContext: vi.fn(),
     updateStatus: vi.fn(),
+    updateStatusForExecutionContract: vi.fn(),
     updateStatusIfReservation: vi.fn(),
   };
 
@@ -1905,23 +1906,31 @@ describe('TaskService', () => {
         status: 'scheduled',
       });
       mockTaskModel.resolve.mockResolvedValue(prev);
-      mockTaskModel.updateStatusIfReservation.mockResolvedValue(null);
+      mockTaskModel.updateStatusForExecutionContract.mockResolvedValue(null);
 
-      const result = await new TaskService(db, userId).updateStatus(
-        { id: 'T-1', status: 'completed' as any },
-        undefined,
-        {
-          currentStatus: 'scheduled' as any,
-          reservationId: 'completion:op-1:old',
-        },
-      );
-
-      expect(result).toBeNull();
-      expect(mockTaskModel.updateStatusIfReservation).toHaveBeenCalledWith(
+      await expect(
+        new TaskService(db, userId).updateStatus({
+          expectedContract: {
+            assigneeAgentId: null,
+            executionGeneration: 0,
+            policyRevision: 0,
+            requirementRevision: 0,
+            status: 'scheduled',
+          },
+          id: 'T-1',
+          status: 'completed' as any,
+        }),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(mockTaskModel.updateStatusForExecutionContract).toHaveBeenCalledWith(
         'task-1',
-        'completion:op-1:old',
-        'scheduled',
         'completed',
+        expect.objectContaining({
+          assigneeAgentId: null,
+          executionGeneration: 0,
+          policyRevision: 0,
+          requirementRevision: 0,
+          status: 'scheduled',
+        }),
         expect.objectContaining({
           completedAt: expect.any(Date),
           runReservationExpiresAt: null,
@@ -1987,6 +1996,7 @@ describe('TaskService', () => {
       });
       expect(mockTaskModel.create).toHaveBeenCalledWith(
         expect.objectContaining({ visibility: 'private' }),
+        expect.anything(),
       );
     });
 
@@ -2004,6 +2014,7 @@ describe('TaskService', () => {
       });
       expect(mockTaskModel.create).toHaveBeenCalledWith(
         expect.objectContaining({ visibility: 'private' }),
+        expect.anything(),
       );
     });
 
@@ -2061,6 +2072,7 @@ describe('TaskService', () => {
       });
       expect(mockTaskModel.create).toHaveBeenCalledWith(
         expect.objectContaining({ visibility: 'private' }),
+        expect.anything(),
       );
     });
 
@@ -2327,6 +2339,7 @@ describe('TaskService', () => {
         'task_001',
         { assigneeAgentId: 'agt_new' },
         { agentId: 'agt_actor', userId: 'user_actor' },
+        expect.anything(),
       );
     });
 
@@ -2347,6 +2360,7 @@ describe('TaskService', () => {
           runReservationId: null,
         },
         { userId: 'user_actor' },
+        expect.anything(),
       );
     });
 

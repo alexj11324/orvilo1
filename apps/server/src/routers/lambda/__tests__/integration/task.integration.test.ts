@@ -1020,7 +1020,7 @@ describe('Task Router Integration', () => {
       await caller.run({ id: task.data.id });
 
       // Second run should fail with CONFLICT
-      await expect(caller.run({ id: task.data.id })).rejects.toThrow(/already has a running topic/);
+      await expect(caller.run({ id: task.data.id })).rejects.toThrow(/active dispatch/);
     });
 
     it('should reject continue on already running topic', async () => {
@@ -1032,7 +1032,7 @@ describe('Task Router Integration', () => {
       await caller.run({ id: task.data.id });
 
       await expect(caller.run({ continueTopicId: 'tpc_test', id: task.data.id })).rejects.toThrow(
-        /already running/,
+        /active dispatch/,
       );
     });
   });

@@ -190,6 +190,21 @@ export class TaskRunnerService {
     let preparedDispatch: PreparedTaskDispatch | undefined;
     let runtimeDispatchStarted = false;
 
+    // Persist the agent's model snapshot before the dispatch contract is
+    // captured. updateTaskConfig is a task policy mutation; doing it after
+    // prepare() would advance policyRevision and make this same run look
+    // stale at the first dispatch transition.
+    if (task.assigneeAgentId) {
+      const taskConfig = (task.config ?? {}) as Record<string, unknown>;
+      if (typeof taskConfig.model !== 'string' || typeof taskConfig.provider !== 'string') {
+        const snapshot = await this.agentModel.getAgentModelConfig(task.assigneeAgentId);
+        if (snapshot) {
+          const updated = await this.taskModel.updateTaskConfig(task.id, snapshot);
+          if (updated) task = updated;
+        }
+      }
+    }
+
     try {
       try {
         preparedDispatch = await this.taskDispatch.prepare({
@@ -472,18 +487,6 @@ export class TaskRunnerService {
         repo: runIntegration?.repo,
         workingDirectory: initialWorkingDirectory ?? initialWorkingDirectoryConfig?.path,
       };
-
-      // Backfill model snapshot for tasks created before the snapshot logic
-      // landed, or whose assignee was set after creation. Once written, the
-      // task is pinned to this model regardless of later agent default changes.
-      if (typeof taskConfig.model !== 'string' || typeof taskConfig.provider !== 'string') {
-        const snapshot = await this.agentModel.getAgentModelConfig(agentRef);
-        if (snapshot) {
-          await this.taskModel.updateTaskConfig(task.id, snapshot);
-          taskConfig.model = snapshot.model;
-          taskConfig.provider = snapshot.provider;
-        }
-      }
 
       log('runTask: %s (continue=%s)', taskIdentifier, continueTopicId);
 

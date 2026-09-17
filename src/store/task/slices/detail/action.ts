@@ -28,6 +28,7 @@ import {
   buildOptimisticCommentActivity,
   buildOptimisticPropertyActivity,
 } from './optimisticActivity';
+import { resolveTaskDetailPolling } from './pollingPolicy';
 import type { TaskDetailDispatch } from './reducer';
 import { findSubtaskParentId, taskDetailReducer } from './reducer';
 
@@ -610,13 +611,11 @@ export class TaskDetailSliceActionImpl {
       );
     });
 
+    const polling = resolveTaskDetailPolling(Boolean(taskId), shouldPoll);
     return useClientPollingSWR(
       taskId ? taskKeys.detail(taskId) : null,
       async ([, id]: [string, string]) => this.fetchTaskDetail(id),
-      {
-        dedupingInterval: 1_000,
-        refreshInterval: shouldPoll ? TASK_DETAIL_POLL_INTERVAL : taskId ? 15_000 : 0,
-      },
+      polling,
     );
   };
 

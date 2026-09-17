@@ -67,7 +67,7 @@ describe('TaskDetailSliceAction', () => {
     });
     renderHook(() => useTaskStore.getState().useFetchTaskDetail('T-1'));
     expect(useClientPollingSWR).toHaveBeenLastCalledWith(expect.anything(), expect.any(Function), {
-      dedupingInterval: 1_000,
+      dedupingInterval: 15_000,
       refreshInterval: 15_000,
     });
   });
@@ -75,7 +75,7 @@ describe('TaskDetailSliceAction', () => {
   it('does not poll without a mounted task id', () => {
     renderHook(() => useTaskStore.getState().useFetchTaskDetail());
     expect(useClientPollingSWR).toHaveBeenLastCalledWith(null, expect.any(Function), {
-      dedupingInterval: 1_000,
+      dedupingInterval: 0,
       refreshInterval: 0,
     });
   });

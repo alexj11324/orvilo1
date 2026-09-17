@@ -56,6 +56,7 @@ import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
 import type { LobeChatDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { shouldParkInterruptedTask } from './interruptedRunFence';
 import { TaskDependencyError } from './taskDependency';
 import { TaskTopicModel } from './taskTopic';
 
@@ -2225,7 +2226,19 @@ export class TaskModel {
       input.id,
       input.topicId,
     );
-    if (input.currentTopicId !== null && input.currentTopicId !== input.topicId) return false;
+    // A stopped historical/non-current topic must never inherit the task's
+    // current reservation. Only the exact current topic generation may park
+    // task-level state; otherwise recovery is topic-local.
+    const [taskState] = await this.db
+      .select({
+        currentTopicId: tasks.currentTopicId,
+        runReservationId: tasks.runReservationId,
+        status: tasks.status,
+      })
+      .from(tasks)
+      .where(and(eq(tasks.id, input.id), this.ownership()))
+      .for('update');
+    if (!taskState || !shouldParkInterruptedTask(taskState, input)) return false;
     const recovered = await this.db
       .update(tasks)
       .set({
@@ -2238,9 +2251,7 @@ export class TaskModel {
         and(
           eq(tasks.id, input.id),
           eq(tasks.status, 'running'),
-          input.currentTopicId === null
-            ? isNull(tasks.currentTopicId)
-            : eq(tasks.currentTopicId, input.currentTopicId),
+          eq(tasks.currentTopicId, input.currentTopicId!),
           input.reservationId === null
             ? isNull(tasks.runReservationId)
             : eq(tasks.runReservationId, input.reservationId),

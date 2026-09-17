@@ -56,8 +56,14 @@ describe('task detail shared polling', () => {
       await vi.advanceTimersByTimeAsync(50);
     });
     expect(taskService.getDetail).toHaveBeenCalledTimes(1);
+    // A second subscriber arriving anywhere inside the 15s idle cadence must
+    // share the existing request/cache rather than create another transport.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(15_000);
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(taskService.getDetail).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
     });
     expect(taskService.getDetail).toHaveBeenCalledTimes(2);
     page.unmount();

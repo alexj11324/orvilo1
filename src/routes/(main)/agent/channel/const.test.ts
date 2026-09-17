@@ -4,8 +4,12 @@ import type { SerializedPlatformDefinition } from '@/server/services/bot/platfor
 
 import { visibleChannelPlatforms } from './const';
 
-const platform = (id: string): SerializedPlatformDefinition =>
-  ({ id, name: id, schema: [] }) as SerializedPlatformDefinition;
+const platform = (id: string): SerializedPlatformDefinition => ({
+  connectionMode: 'webhook',
+  id,
+  name: id,
+  schema: [],
+});
 
 describe('visibleChannelPlatforms', () => {
   const platforms = [platform('telegram'), platform('imessage'), platform('slack')];

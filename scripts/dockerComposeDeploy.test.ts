@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -187,6 +189,56 @@ describe('deploy docker-compose optional Elasticsearch', () => {
       'COPY --from=builder /deps/node_modules/@grpc /app/node_modules/@grpc',
     );
   });
+
+  it('loads the split Hatchet worker bundle with the external SDK', () => {
+    const outputDirectory = mkdtempSync(path.join(os.tmpdir(), 'orvilo-hatchet-worker-'));
+
+    try {
+      execFileSync(
+        path.resolve('node_modules/.bin/esbuild'),
+        [
+          'apps/server/src/hatchet/worker.ts',
+          '--bundle',
+          '--platform=node',
+          '--format=esm',
+          '--splitting',
+          `--outdir=${outputDirectory}`,
+          '--entry-names=worker',
+          '--chunk-names=chunks/[name]-[hash]',
+          '--out-extension:.js=.mjs',
+          '--loader:.md=text',
+          '--external:pg',
+          '--external:drizzle-orm',
+          '--external:drizzle-orm/*',
+          '--external:sharp',
+          '--external:@hatchet-dev/typescript-sdk',
+          '--banner:js=import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);',
+        ],
+        { stdio: 'ignore' },
+      );
+
+      // The production image copies the runtime dependency tree next to the bundle. Recreate that
+      // layout here so Node exercises the same ESM package resolution as the distroless worker.
+      symlinkSync(path.resolve('node_modules'), path.join(outputDirectory, 'node_modules'), 'dir');
+      const worker = path.join(outputDirectory, 'worker.mjs');
+      const result = spawnSync(process.execPath, [worker], {
+        env: {
+          ...process.env,
+          AGENT_RUNTIME_MODE: 'queue',
+          HATCHET_CLIENT_TOKEN: '',
+          NODE_ENV: 'test',
+        },
+        encoding: 'utf8',
+      });
+      const stderr = result.stderr;
+
+      expect(result.exitCode).not.toBe(0);
+      expect(stderr).toContain('HATCHET_CLIENT_TOKEN is required');
+      expect(stderr).not.toContain('ERR_UNSUPPORTED_DIR_IMPORT');
+    } finally {
+      rmSync(outputDirectory, { force: true, recursive: true });
+    }
+  }, 60_000);
 
   it('never switches the search provider on behalf of the operator', () => {
     for (const service of [elasticsearch, reindex, sync, compose.services.lobe]) {

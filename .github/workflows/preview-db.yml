@@ -329,13 +329,6 @@ jobs:
         run: |
           set -euo pipefail
           echo "::add-mask::$APP_DB_URL"
-          payload=$(jq -n --arg v "$APP_DB_URL" --arg b "$HEAD_BRANCH" '{
-            key: "DATABASE_URL",
-            value: $v,
-            type: "sensitive",
-            target: ["preview"],
-            gitBranch: $b
-          }')
           env_list=$(curl -fsS \
             "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}" \
             -H "Authorization: Bearer ${VERCEL_TOKEN}")
@@ -361,6 +354,7 @@ jobs:
             env_endpoint="https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}"
             env_method=POST
           fi
+          payload=$(bun scripts/ci/createVercelBranchEnvPayload.ts "$HEAD_BRANCH" "$env_method")
           http_status=$(curl -sS -o "$response_file" -w '%{http_code}' -X "$env_method" \
             "$env_endpoint" \
             -H "Authorization: Bearer ${VERCEL_TOKEN}" \

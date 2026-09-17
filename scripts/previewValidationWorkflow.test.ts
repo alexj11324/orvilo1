@@ -14,6 +14,7 @@ interface WorkflowStep {
 
 interface Workflow {
   jobs: Record<string, { steps: WorkflowStep[] }>;
+  on?: Record<string, unknown>;
 }
 
 const workflowDirectory = path.resolve(import.meta.dirname, '../.github/workflows');
@@ -25,6 +26,11 @@ describe.each([
   const workflow = parse(readFileSync(path.join(workflowDirectory, file), 'utf8')) as Workflow;
   const steps = workflow.jobs[jobName].steps;
 
+  it('accepts only explicitly validated workflow dispatches', () => {
+    expect(workflow.on).toHaveProperty('workflow_dispatch');
+    expect(workflow.on).not.toHaveProperty('deployment_status');
+  });
+
   it('passes the validated deployment ref through a step output', () => {
     const validate = steps.find((step) => step.name === 'Validate manual Preview URL');
     const resolve = steps.find((step) => step.name === 'Resolve Preview database URL');
@@ -34,7 +40,7 @@ describe.each([
     expect(validate?.run).toContain('>> "$GITHUB_OUTPUT"');
     expect(validate?.run).not.toContain('MANUAL_DEPLOYMENT_REF');
     expect(resolve?.with?.['deployment-ref']).toBe(
-      "${{ github.event.deployment.ref || steps.validate-manual-preview.outputs.deployment-ref || '' }}",
+      '${{ steps.validate-manual-preview.outputs.deployment-ref }}',
     );
   });
 
@@ -50,11 +56,7 @@ describe.each([
     expect(validationCheckoutIndex).toBeGreaterThan(-1);
     expect(resolveIndex).toBeGreaterThan(validationCheckoutIndex);
     expect(deploymentCheckoutIndex).toBeGreaterThan(resolveIndex);
-    expect(steps[validationCheckoutIndex].with?.ref).toBe(
-      "${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.deployment.sha || github.sha }}",
-    );
-    expect(steps[deploymentCheckoutIndex].with?.ref).toBe(
-      '${{ inputs.deployment_sha || github.event.deployment.sha || github.sha }}',
-    );
+    expect(steps[validationCheckoutIndex].with?.ref).toBe('${{ github.sha }}');
+    expect(steps[deploymentCheckoutIndex].with?.ref).toBe('${{ inputs.deployment_sha }}');
   });
 });

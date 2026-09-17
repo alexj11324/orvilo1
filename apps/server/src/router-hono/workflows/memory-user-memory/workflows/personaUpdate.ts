@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { getServerDB } from '@/database/server';
+import { isUserMemoryExtractionEnabled } from '@/server/services/memory/userMemory/gate';
 import {
   buildUserPersonaJobInput,
   UserPersonaService,
@@ -49,6 +50,20 @@ export const personaUpdateHandler = async (context: WorkflowContext) => {
   let processedUsers = 0;
 
   for (const userId of userIds) {
+    // Unified production gate: persona writing is memory production too, so a
+    // user who disabled memory is skipped here just like in extraction stages.
+    const memoryEnabledStepName = `memory:pipelines:persona:update-writing:users:${userId}:memory-enabled-check`;
+    const memoryEnabledGuard = await checkGuard(context, WORKFLOW_PATH, {
+      response: { processedUsers },
+      stepName: memoryEnabledStepName,
+    });
+    if (!memoryEnabledGuard.result) return memoryEnabledGuard.response;
+
+    const memoryEnabled = await runStep(context, memoryEnabledStepName, () =>
+      isUserMemoryExtractionEnabled(userId, db),
+    );
+    if (!memoryEnabled) continue;
+
     const hourlyCancellationStepName = `memory:pipelines:persona:update-writing:users:${userId}:cancel-check:hourly`;
     const hourlyCancellationGuard = await checkGuard(context, WORKFLOW_PATH, {
       response: { processedUsers: 0 },

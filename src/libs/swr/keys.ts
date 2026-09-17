@@ -902,10 +902,6 @@ export const deviceKeys = {
 // ---- user memory --------------------------------------------------------
 export const userMemoryKeys = {
   activities: def('userMemory:activities', (params: unknown) => ['userMemory:activities', params]),
-  analysisTask: def('userMemory:analysisTask', (taskId?: string) => [
-    'userMemory:analysisTask',
-    taskId,
-  ]),
   contexts: def('userMemory:contexts', (params: unknown) => ['userMemory:contexts', params]),
   experiences: def('userMemory:experiences', (params: unknown) => [
     'userMemory:experiences',

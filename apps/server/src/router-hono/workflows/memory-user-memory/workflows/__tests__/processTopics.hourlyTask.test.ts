@@ -8,6 +8,7 @@ import { processTopicsHandler } from '../processTopics';
 const mocks = vi.hoisted(() => ({
   appendUserMemoryWorkflowRunIds: vi.fn(),
   isHourlyMemoryExtractionCancellationRequested: vi.fn(),
+  isUserMemoryExtractionEnabled: vi.fn(),
   triggerPersonaUpdate: vi.fn(),
   triggerProcessTopic: vi.fn(),
 }));
@@ -73,6 +74,10 @@ vi.mock('@/database/server', () => ({
   })),
 }));
 
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  isUserMemoryExtractionEnabled: mocks.isUserMemoryExtractionEnabled,
+}));
+
 vi.mock('../runGuard', () => ({
   checkGuard: vi.fn().mockResolvedValue({ result: true }),
   ensureWorkflowStarted: vi.fn().mockResolvedValue({ started: true }),
@@ -88,6 +93,7 @@ describe('processTopicsHandler hourly task behavior', () => {
     vi.clearAllMocks();
     mocks.appendUserMemoryWorkflowRunIds.mockResolvedValue(undefined);
     mocks.isHourlyMemoryExtractionCancellationRequested.mockResolvedValue(false);
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(true);
     mocks.triggerPersonaUpdate.mockResolvedValue({ workflowRunId: 'persona-update-run' });
     mocks.triggerProcessTopic.mockResolvedValue({ workflowRunId: 'process-topic-run' });
   });
@@ -149,6 +155,31 @@ describe('processTopicsHandler hourly task behavior', () => {
 
     await expect(processTopicsHandler(context as never)).resolves.toEqual({
       message: 'Hourly memory extraction task cancellation requested, skip topic batch.',
+      processedTopics: 0,
+      processedUsers: 0,
+      skipped: true,
+    });
+    expect(mocks.triggerProcessTopic).not.toHaveBeenCalled();
+    expect(mocks.triggerPersonaUpdate).not.toHaveBeenCalled();
+  });
+
+  it('skips topic fan-out and persona update for a user who disabled memory', async () => {
+    /**
+     * @example
+     * await expect(processTopicsHandler(context)).resolves.toMatchObject({ skipped: true });
+     */
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(false);
+
+    const context = createContext({
+      baseUrl: 'https://app.example.com',
+      hourlyTaskId: '00000000-0000-4000-8000-000000000001',
+      sources: [MemorySourceType.ChatTopic],
+      topicIds: ['t1'],
+      userIds: ['u1'],
+    });
+
+    await expect(processTopicsHandler(context as never)).resolves.toEqual({
+      message: 'User memory is disabled, skip topic batch.',
       processedTopics: 0,
       processedUsers: 0,
       skipped: true,

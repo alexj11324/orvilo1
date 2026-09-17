@@ -7,6 +7,7 @@ import {
   buildHeteroSpawnArgs,
   canPublishAgentTopicLink,
   formatServerDefaultHeterogeneousModel,
+  getOrviloEngineCapabilities,
   isServerDefaultHeterogeneousModel,
   isServerDefaultHeterogeneousRelayInvocation,
   normalizeHeterogeneousProviderConfig,
@@ -1292,6 +1293,17 @@ describe('orvilo engine helpers', () => {
     expect(resolveOrviloCliAgentType('claude-sdk')).toBe('claude-code');
     expect(resolveOrviloCliAgentType('codex-app-server')).toBe('codex');
     expect(resolveOrviloCliAgentType(undefined)).toBe('claude-code');
+  });
+
+  it('exposes the managed transport capability gap', () => {
+    expect(getOrviloEngineCapabilities('claude-sdk')).toEqual({
+      builtinTools: true,
+      userQuestions: true,
+    });
+    expect(getOrviloEngineCapabilities('codex-app-server')).toEqual({
+      builtinTools: false,
+      userQuestions: false,
+    });
   });
 
   it('resolves the execution family for any provider config', () => {

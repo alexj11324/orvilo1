@@ -25,7 +25,7 @@ vi.mock('../api/client', () => ({ getTrpcClient: mockGetTrpcClient }));
 // must not leak the developer's own machine state into these assertions.
 vi.mock('../settings', () => ({
   loadActiveWorkspace: () => undefined,
-  resolveServerUrl: () => 'https://app.lobehub.com',
+  resolveServerUrl: () => 'https://orvilo.aspectlylabs.com',
 }));
 describe('config command', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>;

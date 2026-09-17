@@ -284,7 +284,11 @@ const TopicChatDrawer = memo(() => {
           #{activity.seq}
         </Text>
       )}
-      <RunIntegrationTag integration={activity?.integration} />
+      <RunIntegrationTag
+        integration={activity?.integration}
+        taskId={drawerTaskId ?? activeTaskId}
+        topicId={topicId}
+      />
       <DropdownMenu items={menuItems}>
         <ActionIcon icon={MoreHorizontal} size={'small'} />
       </DropdownMenu>

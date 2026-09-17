@@ -182,7 +182,7 @@ export const createAuthRrConfig = ({
     };
   };
 
-  const proxyTarget = process.env.AUTH_API_PROXY || 'https://app.lobehub.com';
+  const proxyTarget = process.env.AUTH_API_PROXY || 'https://orvilo.aspectlylabs.com';
   const backendProxy = Object.fromEntries(
     ['/api', '/oidc', '/trpc', '/webapi'].map((prefix) => [
       prefix,

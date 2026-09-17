@@ -938,7 +938,7 @@ describe('messengerRouter.sendMessengerPush', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSendMessengerPush.mockResolvedValue({ status: 'sent' });
-    mockGetFileAccessUrl.mockResolvedValue('https://app.lobehub.com/f/file-1');
+    mockGetFileAccessUrl.mockResolvedValue('https://orvilo.aspectlylabs.com/f/file-1');
     mockFindFileById.mockResolvedValue({
       fileType: 'application/pdf',
       id: 'file-1',
@@ -964,7 +964,7 @@ describe('messengerRouter.sendMessengerPush', () => {
       expect.objectContaining({
         attachments: [
           {
-            fetchUrl: 'https://app.lobehub.com/f/file-1',
+            fetchUrl: 'https://orvilo.aspectlylabs.com/f/file-1',
             mimeType: 'application/pdf',
             name: 'report.pdf',
             size: 123_456,

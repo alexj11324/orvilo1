@@ -41,16 +41,16 @@ describe('collectAttachmentUrlsFromEditorData', () => {
       root: {
         children: [
           {
-            children: [image('https://app.lobehub.com/f/file_nested')],
+            children: [image('https://orvilo.aspectlylabs.com/f/file_nested')],
             type: 'paragraph',
           },
-          file('https://app.lobehub.com/f/file_pdf', 'doc.pdf'),
+          file('https://orvilo.aspectlylabs.com/f/file_pdf', 'doc.pdf'),
         ],
       },
     };
     expect(collectAttachmentUrlsFromEditorData(json)).toEqual([
-      'https://app.lobehub.com/f/file_nested',
-      'https://app.lobehub.com/f/file_pdf',
+      'https://orvilo.aspectlylabs.com/f/file_nested',
+      'https://orvilo.aspectlylabs.com/f/file_pdf',
     ]);
   });
 
@@ -85,7 +85,7 @@ describe('extractFileIdsFromEditorData', () => {
         children: [
           image('http://localhost:3010/f/file_a'),
           file('http://localhost:3010/f/file_b', 'b.pdf'),
-          image(`https://app.lobehub.com/f/${uuid}`),
+          image(`https://orvilo.aspectlylabs.com/f/${uuid}`),
         ],
       },
     };

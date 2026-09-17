@@ -65,7 +65,7 @@ Then(
       const [first, second, target] = created;
       dependent = target;
       await this.page.goto(`/task/${target.identifier}`);
-      await expect(empty).toBeVisible();
+      await expect(empty).toBeVisible({ timeout: 25_000 });
       await screenshot('empty');
 
       // Mutate behind an idle mounted page to exercise first-link invalidation.

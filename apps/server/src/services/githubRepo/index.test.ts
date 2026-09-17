@@ -106,8 +106,8 @@ describe('github api helpers', () => {
         jsonResponse([
           {
             base: { ref: 'main' },
-            head: { sha: 'head123' },
             html_url: 'https://github.com/acme/widgets/pull/7',
+            head: { sha: 'head123' },
             merge_commit_sha: 'abc999',
             merged_at: '2026-01-01T00:00:00Z',
             number: 7,
@@ -124,7 +124,7 @@ describe('github api helpers', () => {
         url: 'https://github.com/acme/widgets/pull/7',
       });
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('head=acme%3Atask%2FT-1'),
+        expect.stringMatching(/head=acme%3Atask%2FT-1.*base=main/),
         expect.anything(),
       );
       expect(fetchMock).toHaveBeenCalledWith(
@@ -138,8 +138,8 @@ describe('github api helpers', () => {
         jsonResponse([
           {
             base: { ref: 'main' },
-            head: { sha: 'head123' },
             html_url: 'https://github.com/acme/widgets/pull/7',
+            head: { sha: 'head123' },
             merge_commit_sha: null,
             merged_at: null,
             number: 7,

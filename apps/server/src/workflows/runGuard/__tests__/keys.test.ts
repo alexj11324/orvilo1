@@ -16,7 +16,7 @@ describe('workflow run guard keys', () => {
   it('normalizes workflow paths without origin or leading slash', () => {
     expect(
       normalizeWorkflowRunGuardPath(
-        'https://app.lobehub.com/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic',
+        'https://orvilo.aspectlylabs.com/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic',
       ),
     ).toBe('api/workflows/memory-user-memory/pipelines/chat-topic/process-topic');
 

@@ -299,7 +299,7 @@ page + production login + local Vite modules), needing a screenshot of the app a
 has finished loading.
 
 **Doesn't work:** treating the resulting `ErrorBoundary` ("页面暂时不可用") as a defect in
-the change under test. The document origin is `https://app.lobehub.com`, and dynamic
+the change under test. The document origin is `https://orvilo.aspectlylabs.com`, and dynamic
 `import()` of workspace modules served from `http://localhost:9876` — `packages/builtin-tools/src/register.ts`,
 and intermittently `src/routes/**` — fails with `Failed to fetch dynamically imported module`.
 The same URLs return **200** to `curl` and to an in-page `fetch()`; only module scripts
@@ -1885,7 +1885,7 @@ create or mutate product objects (labels, groups, agents, forwarded topics, save
 
 **Doesn't work:** assuming the instance talks to a local backend because the run also started one.
 The seeded login snapshot carries its own target, and `{"storageMode":"cloud","active":true}` means
-the renderer runs your working-tree code while every request goes to `app.lobehub.com` with the
+the renderer runs your working-tree code while every request goes to `orvilo.aspectlylabs.com` with the
 user's real account. `app-probe.sh server-auth` returns 200, which reads as "the local stack is
 wired up" and encourages exactly the writes that then land in production. The local dev server the
 run started sits unused.

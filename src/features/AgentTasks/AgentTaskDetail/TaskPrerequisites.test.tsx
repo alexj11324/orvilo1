@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { TaskDetailData } from '@orvilo/types';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TaskStore } from '@/store/task';
@@ -22,7 +22,10 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => mocks.navigate,
 }));
 vi.mock('@/hooks/usePermission', () => ({
-  usePermission: () => ({ allowed: mocks.allowed, reason: mocks.allowed ? undefined : 'Read only' }),
+  usePermission: () => ({
+    allowed: mocks.allowed,
+    reason: mocks.allowed ? undefined : 'Read only',
+  }),
 }));
 vi.mock('@/store/task', () => ({
   useTaskStore: (selector: (state: TaskStore) => unknown) => selector(mocks.state),

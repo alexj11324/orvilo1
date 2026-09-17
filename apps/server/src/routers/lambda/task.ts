@@ -1293,6 +1293,35 @@ export const taskRouter = router({
       }
     }),
 
+  retryIntegration: taskProcedureWrite
+    .input(z.object({ id: z.string(), topicId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      const topic = await ctx.taskTopicModel.findByTopicId(input.topicId);
+      if (!topic || topic.taskId !== task.id || !topic.integration) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Integration run not found' });
+      }
+      if (
+        topic.integration.state !== 'publish_failed' &&
+        topic.integration.state !== 'verification_pending'
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `Integration is not retryable from ${topic.integration.state}`,
+        });
+      }
+
+      await ctx.taskLifecycle.onTopicComplete({
+        operationId: topic.operationId ?? `integration-retry:${input.topicId}`,
+        reason: 'done',
+        runTrigger: topic.trigger ?? 'manual',
+        taskId: task.id,
+        taskIdentifier: task.identifier,
+        topicId: input.topicId,
+      });
+      return { success: true };
+    }),
+
   pinDocument: taskProcedureWrite
     .input(
       z.object({

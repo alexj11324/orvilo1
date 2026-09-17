@@ -12,9 +12,9 @@ describe('getNotificationAgentId', () => {
   });
 
   it('supports absolute notification links', () => {
-    expect(getNotificationAgentId('https://app.lobehub.com/acme/agent/agent-3/topic-3')).toBe(
-      'agent-3',
-    );
+    expect(
+      getNotificationAgentId('https://orvilo.aspectlylabs.com/acme/agent/agent-3/topic-3'),
+    ).toBe('agent-3');
   });
 
   it.each([undefined, null, '/image?topic=topic-1', '/agent', '/system'])(

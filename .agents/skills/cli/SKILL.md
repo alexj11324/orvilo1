@@ -282,7 +282,7 @@ cd apps/cli && bun run dev -- agent list
 # Dev mode (local server) — uses .lobehub-dev/
 cd apps/cli && bun run dev -- <command>
 
-# Production (app.lobehub.com) — uses ~/.lobehub/
+# Production (orvilo.aspectlylabs.com) — uses ~/.lobehub/
 lh <command>
 ```
 

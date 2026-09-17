@@ -11,9 +11,9 @@ vi.mock('./refresh', () => ({
   getValidToken: vi.fn(),
 }));
 vi.mock('../settings', () => ({
-  loadSettings: vi.fn().mockReturnValue({ serverUrl: 'https://app.lobehub.com' }),
+  loadSettings: vi.fn().mockReturnValue({ serverUrl: 'https://orvilo.aspectlylabs.com' }),
   resolveServerUrl: vi.fn(() =>
-    (process.env.LOBEHUB_SERVER || 'https://app.lobehub.com').replace(/\/$/, ''),
+    (process.env.LOBEHUB_SERVER || 'https://orvilo.aspectlylabs.com').replace(/\/$/, ''),
   ),
 }));
 // Helper to create a valid JWT with sub claim
@@ -52,7 +52,7 @@ describe('resolveToken', () => {
       const result = await resolveToken({ token });
 
       expect(result).toEqual({
-        serverUrl: 'https://app.lobehub.com',
+        serverUrl: 'https://orvilo.aspectlylabs.com',
         token,
         tokenType: 'jwt',
         userId: 'user-123',
@@ -82,7 +82,7 @@ describe('resolveToken', () => {
       });
 
       expect(result).toEqual({
-        serverUrl: 'https://app.lobehub.com',
+        serverUrl: 'https://orvilo.aspectlylabs.com',
         token: 'svc-token',
         tokenType: 'serviceToken',
         userId: 'user-456',
@@ -102,9 +102,12 @@ describe('resolveToken', () => {
 
       const result = await resolveToken({});
 
-      expect(getUserIdFromApiKey).toHaveBeenCalledWith('sk-lh-test', 'https://app.lobehub.com');
+      expect(getUserIdFromApiKey).toHaveBeenCalledWith(
+        'sk-lh-test',
+        'https://orvilo.aspectlylabs.com',
+      );
       expect(result).toEqual({
-        serverUrl: 'https://app.lobehub.com',
+        serverUrl: 'https://orvilo.aspectlylabs.com',
         token: 'sk-lh-test',
         tokenType: 'apiKey',
         userId: 'user-789',
@@ -138,7 +141,7 @@ describe('resolveToken', () => {
       const result = await resolveToken({});
 
       expect(result).toEqual({
-        serverUrl: 'https://app.lobehub.com',
+        serverUrl: 'https://orvilo.aspectlylabs.com',
         token,
         tokenType: 'jwt',
         userId: 'stored-user',

@@ -13,10 +13,10 @@ describe('downloadPreviewImage', () => {
   });
 
   it('opens the proxy download response for a file proxy url', async () => {
-    await downloadPreviewImage('https://app.lobehub.com/f/file_abc');
+    await downloadPreviewImage('https://orvilo.aspectlylabs.com/f/file_abc');
 
     expect(window.open).toHaveBeenCalledWith(
-      'https://app.lobehub.com/f/file_abc?download=1',
+      'https://orvilo.aspectlylabs.com/f/file_abc?download=1',
       '_blank',
       'noopener,noreferrer',
     );

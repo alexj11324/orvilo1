@@ -306,10 +306,14 @@ export class TaskDetailSliceActionImpl {
     this.#set({ isCreatingTask: true }, false, 'createTask/start');
     try {
       const result = await taskService.create(params);
-      await this.#get().refreshTaskList();
-      if (params.parentTaskId) {
-        await this.internal_refreshTaskDetail(params.parentTaskId);
-      }
+      // The server creation is the durable boundary. Cache refresh failures
+      // must not turn a successful insert into a rejected create call: callers
+      // would otherwise retry and create a duplicate task because they never
+      // received the identifier that was already committed.
+      await Promise.allSettled([
+        this.#get().refreshTaskList(),
+        ...(params.parentTaskId ? [this.internal_refreshTaskDetail(params.parentTaskId)] : []),
+      ]);
       return result.data ?? null;
     } finally {
       this.#set({ isCreatingTask: false }, false, 'createTask/end');

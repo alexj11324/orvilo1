@@ -185,11 +185,11 @@ describe('TaskWorkspaceService', () => {
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
 
-    it('blocks when no concrete device can be resolved', async () => {
+    it('fails when a bound device workspace has no concrete device', async () => {
       mockAgentModel.getAgentConfig.mockResolvedValue({ agencyConfig: {} });
       const task = baseTask({ config: { workspace: workspaceConfig } });
       await expect(service.provision({ seq: 1, task })).rejects.toThrow(
-        'no available device or sandbox execution target',
+        'Workspace device is unavailable',
       );
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
@@ -205,14 +205,13 @@ describe('TaskWorkspaceService', () => {
       );
     });
 
-    it('falls back to HEAD when no remote default branch resolves', async () => {
+    it('fails when no remote default branch resolves on the device', async () => {
       vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([]);
       const task = baseTask({ config: { workspace: workspaceConfig } });
-      const result = await service.provision({ seq: 1, task });
-      expect(result?.baseBranch).toBe('HEAD');
-      expect(deviceGateway.addGitWorktree).toHaveBeenCalledWith(
-        expect.objectContaining({ ref: undefined }),
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'configure baseBranch explicitly',
       );
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
   });
 
@@ -282,11 +281,12 @@ describe('TaskWorkspaceService', () => {
       expect(getRepoDefaultBranch).not.toHaveBeenCalled();
     });
 
-    it("falls back to 'main' when the API cannot resolve a default branch", async () => {
+    it('fails when the API cannot resolve a default branch', async () => {
       vi.mocked(getRepoDefaultBranch).mockResolvedValue(undefined);
       const task = baseTask({ config: { workspace: remoteWorkspaceConfig } });
-      const result = await service.provision({ seq: 1, task });
-      expect(result?.baseBranch).toBe('main');
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'Could not resolve the default branch',
+      );
     });
 
     it('accepts a full GitHub URL and derives the same sandbox path', async () => {
@@ -300,14 +300,14 @@ describe('TaskWorkspaceService', () => {
       expect(result?.repos).toEqual(['https://github.com/acme/widgets.git']);
     });
 
-    it('blocks when the assignee does not resolve to the sandbox', async () => {
+    it('fails when the assignee does not resolve to the sandbox', async () => {
       mockAgentModel.getAgentConfig.mockResolvedValue({
         agencyConfig: { executionTarget: 'none' },
       });
       const task = baseTask({ config: { workspace: remoteWorkspaceConfig } });
 
       await expect(service.provision({ seq: 1, task })).rejects.toThrow(
-        'no available device or sandbox execution target',
+        'does not match the selected execution target',
       );
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
@@ -352,7 +352,7 @@ describe('TaskWorkspaceService', () => {
       }
     });
 
-    it('blocks a non-hetero assignee that cannot honor the remote contract', async () => {
+    it('fails a remote binding for a non-hetero assignee', async () => {
       // `repos` pre-clone + GITHUB_TOKEN only exist on the hetero sandbox path;
       // a plain agent on 'sandbox' could never honour the contract.
       mockAgentModel.getAgentConfig.mockResolvedValue({
@@ -361,24 +361,28 @@ describe('TaskWorkspaceService', () => {
       const task = baseTask({ config: { workspace: remoteWorkspaceConfig } });
 
       await expect(service.provision({ seq: 1, task })).rejects.toThrow(
-        'no available device or sandbox execution target',
+        'does not match the selected execution target',
       );
     });
 
-    it('blocks when the repo coordinate is unparseable', async () => {
+    it('fails when the repo coordinate is unparseable', async () => {
       const task = baseTask({
         config: { workspace: { provider: 'git', repo: 'not-a-repo' } },
       });
       await expect(service.provision({ seq: 1, task })).rejects.toThrow(
-        'no available device or sandbox execution target',
+        'not a valid GitHub coordinate',
       );
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
 
-    it('treats a binding with neither repoPath nor repo as absent', async () => {
+    it('fails a git binding with neither repoPath nor repo', async () => {
       const task = baseTask({ config: { workspace: { provider: 'git' } } });
-      expect(await service.resolveWorkspaceConfig(task)).toBeUndefined();
-      expect(await service.provision({ seq: 1, task })).toBeUndefined();
+      await expect(service.resolveWorkspaceConfig(task)).rejects.toThrow(
+        'must provide repoPath or repo',
+      );
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'must provide repoPath or repo',
+      );
     });
   });
 });

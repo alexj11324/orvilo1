@@ -265,7 +265,7 @@ no API caller can create the under-composed shape.
 or Topic is absent from production; the link dies with the environment.
 
 **Rule:** create a production Task or Topic as the anchor and publish in a clean
-environment against `app.lobehub.com`. A local ingest may supplement, never
+environment against `orvilo.aspectlylabs.com`. A local ingest may supplement, never
 replace.
 
 ### L-D6 — Giving a master-detail page ambiguous scroll ownership

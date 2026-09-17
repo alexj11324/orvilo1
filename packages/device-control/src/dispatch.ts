@@ -251,7 +251,7 @@ export const executeDeviceRpc = async (
     }
 
     case 'removeGitWorktree': {
-      return removeGitWorktree(params as { path: string; worktreePath: string });
+      return removeGitWorktree(params as { force?: boolean; path: string; worktreePath: string });
     }
 
     case 'addGitWorktree': {
@@ -279,7 +279,14 @@ export const executeDeviceRpc = async (
     }
 
     case 'pushGitBranch': {
-      return pushGitBranch(params as { path: string; remoteBranch?: string; sourceRef?: string });
+      return pushGitBranch(
+        params as {
+          expectedSha?: string;
+          path: string;
+          remoteBranch?: string;
+          sourceRef?: string;
+        },
+      );
     }
 
     case 'revertGitFile': {

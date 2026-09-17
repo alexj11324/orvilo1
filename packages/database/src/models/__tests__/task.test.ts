@@ -53,6 +53,41 @@ describe('TaskModel', () => {
     });
   });
 
+  describe('run kickoff claim', () => {
+    it('allows only one concurrent owner and releases only for that owner', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Claim once' });
+      const staleBefore = new Date(Date.now() - 60_000);
+
+      const results = await Promise.all([
+        model.claimRunKickoff(task.id, 'owner-a', staleBefore),
+        model.claimRunKickoff(task.id, 'owner-b', staleBefore),
+      ]);
+
+      expect(results.filter(Boolean)).toHaveLength(1);
+      const owner = results[0] ? 'owner-a' : 'owner-b';
+      const other = owner === 'owner-a' ? 'owner-b' : 'owner-a';
+
+      await model.releaseRunKickoff(task.id, other);
+      await expect(model.claimRunKickoff(task.id, 'owner-c', staleBefore)).resolves.toBe(false);
+
+      await model.releaseRunKickoff(task.id, owner);
+      await expect(model.claimRunKickoff(task.id, 'owner-c', staleBefore)).resolves.toBe(true);
+    });
+
+    it('reclaims a stale kickoff owner', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Reclaim stale' });
+
+      await expect(
+        model.claimRunKickoff(task.id, 'stale-owner', new Date(Date.now() - 60_000)),
+      ).resolves.toBe(true);
+      await expect(
+        model.claimRunKickoff(task.id, 'new-owner', new Date(Date.now() + 60_000)),
+      ).resolves.toBe(true);
+    });
+  });
+
   describe('create', () => {
     it('should create a task with auto-generated identifier', async () => {
       const model = new TaskModel(serverDB, userId);

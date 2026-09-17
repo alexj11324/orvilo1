@@ -115,7 +115,7 @@ export const taskDetailHref = (identifier: string, baseUrl?: string): string => 
   return baseUrl ? `${baseUrl.replace(/\/$/, '')}${path}` : path;
 };
 
-/** Markdown-link form of a task identifier, e.g. `[T-198](https://app.lobehub.com/task/T-198)`. */
+/** Markdown-link form of a task identifier, e.g. `[T-198](https://orvilo.aspectlylabs.com/task/T-198)`. */
 export const taskRef = (identifier: string, baseUrl?: string): string =>
   `[${identifier}](${taskDetailHref(identifier, baseUrl)})`;
 

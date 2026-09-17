@@ -62,7 +62,7 @@ vi.mock('@/server/routers/lambda/task', () => ({
 // reading `appEnv.APP_URL` would throw. Stub it — createTask embeds it as the
 // base URL for absolute task deep-links (so IM / mobile links are clickable).
 vi.mock('@/envs/app', () => ({
-  appEnv: { APP_URL: 'https://app.lobehub.com' },
+  appEnv: { APP_URL: 'https://orvilo.aspectlylabs.com' },
 }));
 
 // TaskService's transitive deps (taskReview → ModelRuntime) call getLLMConfig
@@ -259,7 +259,7 @@ describe('createTaskRuntime', () => {
       expect(result.success).toBe(true);
       // The identifier is an absolute markdown link so it stays clickable when
       // the tool result is delivered to an IM channel / mobile.
-      expect(result.content).toContain('[T-1](https://app.lobehub.com/task/T-1)');
+      expect(result.content).toContain('[T-1](https://orvilo.aspectlylabs.com/task/T-1)');
       expect(deps.taskService.createTask).toHaveBeenCalledWith(
         expect.objectContaining({
           assigneeAgentId: 'agt-xyz',
@@ -274,7 +274,7 @@ describe('createTaskRuntime', () => {
       const runtime = createTaskRuntime({
         agentModel: deps.agentModel as any,
         // The factory supplies this; for a workspace task it prefixes `/{slug}`.
-        resolveLinkBaseUrl: async () => 'https://app.lobehub.com/acme',
+        resolveLinkBaseUrl: async () => 'https://orvilo.aspectlylabs.com/acme',
         taskCaller: deps.taskCaller,
         taskModel: deps.taskModel as any,
         taskService: deps.taskService as any,
@@ -283,7 +283,7 @@ describe('createTaskRuntime', () => {
       const result = await runtime.createTask({ instruction: 'Do something', name: 'Test' });
 
       expect(result.success).toBe(true);
-      expect(result.content).toContain('[T-1](https://app.lobehub.com/acme/task/T-1)');
+      expect(result.content).toContain('[T-1](https://orvilo.aspectlylabs.com/acme/task/T-1)');
     });
 
     it('surfaces the created task identity in state (the dispatch-layer registration source)', async () => {
@@ -681,8 +681,8 @@ describe('createTaskRuntime', () => {
       expect(result.content).toContain('Created 2 tasks');
       // Identifiers are rendered as absolute markdown links so they stay
       // clickable when the message is delivered to IM / mobile.
-      expect(result.content).toContain('[T-A](https://app.lobehub.com/task/T-A)');
-      expect(result.content).toContain('[T-B](https://app.lobehub.com/task/T-B)');
+      expect(result.content).toContain('[T-A](https://orvilo.aspectlylabs.com/task/T-A)');
+      expect(result.content).toContain('[T-B](https://orvilo.aspectlylabs.com/task/T-B)');
       expect(result.content).toContain('T-A');
       expect(result.content).toContain('T-B');
       // State parity with the client executor: the dispatch-layer registration

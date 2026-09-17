@@ -21,24 +21,24 @@ describe('task deep-links', () => {
   });
 
   it('taskDetailHref returns an absolute url with baseUrl (and strips trailing slash)', () => {
-    expect(taskDetailHref('T-198', 'https://app.lobehub.com')).toBe(
-      'https://app.lobehub.com/task/T-198',
+    expect(taskDetailHref('T-198', 'https://orvilo.aspectlylabs.com')).toBe(
+      'https://orvilo.aspectlylabs.com/task/T-198',
     );
-    expect(taskDetailHref('T-198', 'https://app.lobehub.com/')).toBe(
-      'https://app.lobehub.com/task/T-198',
+    expect(taskDetailHref('T-198', 'https://orvilo.aspectlylabs.com/')).toBe(
+      'https://orvilo.aspectlylabs.com/task/T-198',
     );
   });
 
   it('taskRef renders a markdown link', () => {
     expect(taskRef('T-199')).toBe('[T-199](/task/T-199)');
-    expect(taskRef('T-199', 'https://app.lobehub.com')).toBe(
-      '[T-199](https://app.lobehub.com/task/T-199)',
+    expect(taskRef('T-199', 'https://orvilo.aspectlylabs.com')).toBe(
+      '[T-199](https://orvilo.aspectlylabs.com/task/T-199)',
     );
   });
 
   it('formatTaskCreated links identifier + parent, absolute when baseUrl is given (IM/bot)', () => {
     const out = formatTaskCreated({
-      baseUrl: 'https://app.lobehub.com',
+      baseUrl: 'https://orvilo.aspectlylabs.com',
       identifier: 'T-198',
       instruction: 'do it',
       name: 'Parent task',
@@ -47,9 +47,9 @@ describe('task deep-links', () => {
       status: 'backlog',
     });
     expect(out).toContain(
-      'Task created: [T-198](https://app.lobehub.com/task/T-198) "Parent task"',
+      'Task created: [T-198](https://orvilo.aspectlylabs.com/task/T-198) "Parent task"',
     );
-    expect(out).toContain('Parent: [T-100](https://app.lobehub.com/task/T-100)');
+    expect(out).toContain('Parent: [T-100](https://orvilo.aspectlylabs.com/task/T-100)');
   });
 
   it('formatTasksCreated renders a header + linked lines (relative without baseUrl)', () => {
@@ -72,10 +72,10 @@ describe('task deep-links', () => {
         { identifier: 'T-1', name: 'A', success: true },
         { error: 'boom', name: 'B', success: false },
       ],
-      'https://app.lobehub.com',
+      'https://orvilo.aspectlylabs.com',
     );
     expect(out).toContain('Created 1/2 tasks (1 failed):');
-    expect(out).toContain('1. [T-1](https://app.lobehub.com/task/T-1) "A" — created');
+    expect(out).toContain('1. [T-1](https://orvilo.aspectlylabs.com/task/T-1) "A" — created');
     expect(out).toContain('2. "B" — failed: boom');
   });
 });

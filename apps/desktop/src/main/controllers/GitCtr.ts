@@ -187,6 +187,7 @@ export default class GitController extends ControllerModule {
 
   @IpcMethod()
   async pushGitBranch(payload: {
+    expectedSha?: string;
     path: string;
     remoteBranch?: string;
     sourceRef?: string;

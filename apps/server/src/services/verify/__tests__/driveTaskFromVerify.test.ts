@@ -32,6 +32,7 @@ const {
   opFindById,
   taskFindById,
   taskReleaseRunReservation,
+  taskTopicFindByOperationId,
   taskUpdateStatus,
   taskUpdateStatusIfReservation,
   briefModelConstruct,
@@ -62,6 +63,7 @@ const {
   statusRecompute: vi.fn(),
   taskFindById: vi.fn(),
   taskReleaseRunReservation: vi.fn(),
+  taskTopicFindByOperationId: vi.fn(),
   taskUpdateStatus: vi.fn(),
   taskUpdateStatusIfReservation: vi.fn(),
   topicFindByTopicId: vi.fn(),
@@ -87,7 +89,10 @@ vi.mock('@/database/models/verifyRun', () => ({
 }));
 vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn(function () {
-    return { findByTopicId: topicFindByTopicId };
+    return {
+      findByOperationId: taskTopicFindByOperationId,
+      findByTopicId: topicFindByTopicId,
+    };
   }),
 }));
 vi.mock('@/database/models/agentOperation', () => ({
@@ -259,6 +264,7 @@ describe('driveTaskFromVerify', () => {
       opFindById,
       taskFindById,
       taskReleaseRunReservation,
+      taskTopicFindByOperationId,
       taskUpdateStatus,
       taskUpdateStatusIfReservation,
       briefModelConstruct,
@@ -295,6 +301,7 @@ describe('driveTaskFromVerify', () => {
       runReservationId: 'completion:op-1:lease-1',
       status: 'running',
     });
+    taskTopicFindByOperationId.mockResolvedValue(null);
   });
   afterEach(() => vi.restoreAllMocks());
 

@@ -27,7 +27,7 @@ vi.mock('@/database/models/workspace', () => ({
 }));
 
 vi.mock('@/envs/app', () => ({
-  appEnv: { APP_URL: 'https://app.lobehub.com' },
+  appEnv: { APP_URL: 'https://orvilo.aspectlylabs.com' },
 }));
 
 vi.mock('@/server/services/market', () => ({
@@ -203,7 +203,7 @@ describe('buildServerCallLlmContext - workspace context', () => {
     expect(serverMessagesEngineMock).toHaveBeenCalledWith(
       expect.objectContaining({
         workspaceContext: {
-          appUrl: 'https://app.lobehub.com',
+          appUrl: 'https://orvilo.aspectlylabs.com',
           workspace: { slug: 'lobehub' },
         },
       }),
@@ -226,7 +226,7 @@ describe('buildServerCallLlmContext - workspace context', () => {
     expect(serverMessagesEngineMock).toHaveBeenCalledWith(
       expect.objectContaining({
         workspaceContext: {
-          appUrl: 'https://app.lobehub.com',
+          appUrl: 'https://orvilo.aspectlylabs.com',
           workspace: { slug: 'acme' },
         },
       }),
@@ -245,7 +245,7 @@ describe('buildServerCallLlmContext - workspace context', () => {
 
     expect(workspaceFindByIdMock).not.toHaveBeenCalled();
     expect(serverMessagesEngineMock).toHaveBeenCalledWith(
-      expect.objectContaining({ workspaceContext: { appUrl: 'https://app.lobehub.com' } }),
+      expect.objectContaining({ workspaceContext: { appUrl: 'https://orvilo.aspectlylabs.com' } }),
     );
   });
 

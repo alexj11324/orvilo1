@@ -1,10 +1,10 @@
 /**
  * @vitest-environment happy-dom
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AutomationCreatePage from './AutomationCreatePage';
 
@@ -92,6 +92,10 @@ const renderPage = (entry: string) =>
   );
 
 describe('AutomationCreatePage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('fills the template title once the namespace loads instead of freezing the raw key', async () => {
     renderPage('/automations/new?template=investigate_top_datadog_errors');
 
@@ -112,5 +116,21 @@ describe('AutomationCreatePage', () => {
 
     const input = await screen.findByPlaceholderText('Automation title');
     expect(input).toHaveValue('');
+  });
+
+  it('retries enabling the created task without creating a duplicate', async () => {
+    mocks.createTask.mockResolvedValue({ identifier: 'T-42' });
+    mocks.updateTaskStatus.mockRejectedValueOnce(new Error('scheduler offline'));
+    mocks.updateTaskStatus.mockResolvedValueOnce(undefined);
+    renderPage('/automations/new?template=investigate_top_datadog_errors');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'create.submit' }));
+    await waitFor(() => expect(mocks.updateTaskStatus).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'create.retry_enable' }));
+    await waitFor(() => expect(mocks.updateTaskStatus).toHaveBeenCalledTimes(2));
+
+    expect(mocks.createTask).toHaveBeenCalledTimes(1);
+    expect(mocks.navigate).toHaveBeenCalledWith('/automations/T-42', { replace: true });
   });
 });

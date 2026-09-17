@@ -30,7 +30,7 @@ describe('workflow run guard qstash cancel', () => {
   /**
    * @example
    * cancelWorkflowRunsByGuardPolicy({
-   *   appUrl: 'https://app.lobehub.com',
+   *   appUrl: 'https://orvilo.aspectlylabs.com',
    *   workflowPath: 'api/workflows/memory-user-memory',
    * })
    * // cancels pending and active workflows whose URL starts with the workflow prefix
@@ -38,19 +38,19 @@ describe('workflow run guard qstash cancel', () => {
   it('cancels workflows using the REST URL-prefix body shape expected by QStash', async () => {
     await expect(
       cancelWorkflowRunsByGuardPolicy({
-        appUrl: 'https://app.lobehub.com',
+        appUrl: 'https://orvilo.aspectlylabs.com',
         workflowPath: 'api/workflows/memory-user-memory',
       }),
     ).resolves.toEqual({
       cancelled: 12,
-      workflowUrlPrefix: 'https://app.lobehub.com/api/workflows/memory-user-memory',
+      workflowUrlPrefix: 'https://orvilo.aspectlylabs.com/api/workflows/memory-user-memory',
     });
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       new URL('/v2/workflows/runs', 'https://qstash.upstash.io'),
       {
         body: JSON.stringify({
-          workflowUrl: ['https://app.lobehub.com/api/workflows/memory-user-memory'],
+          workflowUrl: ['https://orvilo.aspectlylabs.com/api/workflows/memory-user-memory'],
         }),
         headers: {
           'Authorization': 'Bearer test-token',
@@ -64,7 +64,7 @@ describe('workflow run guard qstash cancel', () => {
   /**
    * @example
    * cancelWorkflowRunsByGuardPolicy({
-   *   appUrl: 'https://app.lobehub.com/',
+   *   appUrl: 'https://orvilo.aspectlylabs.com/',
    *   workflowPath: '/api/workflows/memory-user-memory/?cursor=1#hash',
    * })
    * // normalizes the URL prefix before cancellation
@@ -79,19 +79,19 @@ describe('workflow run guard qstash cancel', () => {
 
     await expect(
       cancelWorkflowRunsByGuardPolicy({
-        appUrl: 'https://app.lobehub.com/',
+        appUrl: 'https://orvilo.aspectlylabs.com/',
         workflowPath: '/api/workflows/memory-user-memory/?cursor=1#hash',
       }),
     ).resolves.toEqual({
       cancelled: 1,
-      workflowUrlPrefix: 'https://app.lobehub.com/api/workflows/memory-user-memory',
+      workflowUrlPrefix: 'https://orvilo.aspectlylabs.com/api/workflows/memory-user-memory',
     });
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       new URL('/v2/workflows/runs', 'https://qstash.upstash.io'),
       expect.objectContaining({
         body: JSON.stringify({
-          workflowUrl: ['https://app.lobehub.com/api/workflows/memory-user-memory'],
+          workflowUrl: ['https://orvilo.aspectlylabs.com/api/workflows/memory-user-memory'],
         }),
       }),
     );
@@ -100,7 +100,7 @@ describe('workflow run guard qstash cancel', () => {
   /**
    * @example
    * cancelWorkflowRunsByGuardPolicy({
-   *   appUrl: 'https://app.lobehub.com',
+   *   appUrl: 'https://orvilo.aspectlylabs.com',
    *   workflowPath: 'api/workflows/memory-user-memory',
    * })
    * // returns the SDK cancellation count, including zero
@@ -115,19 +115,19 @@ describe('workflow run guard qstash cancel', () => {
 
     await expect(
       cancelWorkflowRunsByGuardPolicy({
-        appUrl: 'https://app.lobehub.com',
+        appUrl: 'https://orvilo.aspectlylabs.com',
         workflowPath: 'api/workflows/memory-user-memory',
       }),
     ).resolves.toEqual({
       cancelled: 0,
-      workflowUrlPrefix: 'https://app.lobehub.com/api/workflows/memory-user-memory',
+      workflowUrlPrefix: 'https://orvilo.aspectlylabs.com/api/workflows/memory-user-memory',
     });
   });
 
   /**
    * @example
    * cancelWorkflowRunsByGuardPolicy({
-   *   appUrl: 'https://app.lobehub.com',
+   *   appUrl: 'https://orvilo.aspectlylabs.com',
    *   workflowPath: 'api/workflows/memory-user-memory',
    * })
    * // throws when QSTASH_TOKEN is not configured
@@ -137,7 +137,7 @@ describe('workflow run guard qstash cancel', () => {
 
     await expect(
       cancelWorkflowRunsByGuardPolicy({
-        appUrl: 'https://app.lobehub.com',
+        appUrl: 'https://orvilo.aspectlylabs.com',
         workflowPath: 'api/workflows/memory-user-memory',
       }),
     ).rejects.toThrow('QSTASH_TOKEN is required to cancel workflow runs');

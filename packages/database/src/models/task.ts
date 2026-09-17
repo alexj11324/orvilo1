@@ -1914,6 +1914,47 @@ export class TaskModel {
   // ========== Context (runtime state) ==========
 
   /**
+   * Atomically claim the short task-run kickoff window. The claim only spans
+   * stale-run recovery, workspace provisioning, and agent dispatch; once the
+   * new task_topics row exists, that row is the durable in-flight guard.
+   */
+  async claimRunKickoff(id: string, token: string, staleBefore: Date): Promise<boolean> {
+    const claim = JSON.stringify({ claimedAt: new Date().toISOString(), token });
+    const claimed = await this.db
+      .update(tasks)
+      .set({
+        context: sql`jsonb_set(coalesce(${tasks.context}, '{}'::jsonb), '{runKickoffClaim}', ${claim}::jsonb, true)`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          this.ownership(),
+          or(
+            sql`not coalesce(jsonb_exists(${tasks.context}, 'runKickoffClaim'), false)`,
+            sql`coalesce((${tasks.context}->'runKickoffClaim'->>'claimedAt')::timestamptz, '-infinity'::timestamptz) < ${staleBefore}`,
+          ),
+        ),
+      )
+      .returning({ id: tasks.id });
+    return claimed.length > 0;
+  }
+
+  /** Release a kickoff claim only when it is still owned by this invocation. */
+  async releaseRunKickoff(id: string, token: string): Promise<void> {
+    await this.db
+      .update(tasks)
+      .set({ context: sql`coalesce(${tasks.context}, '{}'::jsonb) - 'runKickoffClaim'` })
+      .where(
+        and(
+          eq(tasks.id, id),
+          this.ownership(),
+          sql`${tasks.context}->'runKickoffClaim'->>'token' = ${token}`,
+        ),
+      );
+  }
+
+  /**
    * Deep-merge into the task's context JSONB. Used by the heartbeat scheduler
    * to update `context.scheduler.{tickMessageId, consecutiveFailures, ...}`
    * without disturbing other namespaces under context.

@@ -34,7 +34,7 @@ jobs:
           mkdir -p /tmp/delivery-baseline
           git rev-parse HEAD > /tmp/delivery-baseline/source.txt
       - uses: ./.github/actions/setup-env
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - name: Create ephemeral test encryption key
         run: echo "KEY_VAULTS_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - name: Server delivery regression tests

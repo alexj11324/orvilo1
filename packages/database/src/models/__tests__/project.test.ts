@@ -226,6 +226,131 @@ describe('ProjectModel', () => {
     expect(await model.removeKnowledgeBase(project.id, knowledgeBase.id)).toBe(false);
   });
 
+  it('saves a bounded orchestration policy with revision fencing and participant validation', async () => {
+    const project = await createProject(model, { name: 'Orchestration' });
+    const [agent] = await serverDB
+      .insert(agents)
+      .values({ title: 'Implementer', userId })
+      .returning();
+    await model.addAgent(project.id, { agentId: agent.id, role: 'implementer' });
+
+    const initial = await model.getOrchestrationPolicy(project.id);
+    expect(initial).toEqual(
+      expect.objectContaining({
+        coordinatorAgentId: project.coordinatorAgentId,
+        orchestrationPolicy: expect.objectContaining({
+          concurrencyLimit: 1,
+          executionBudget: { maxCost: 25, maxRuns: 10 },
+        }),
+        orchestrationPolicyRevision: 1,
+      }),
+    );
+
+    const updated = await model.updateOrchestrationPolicy(project.id, {
+      coordinatorAgentId: agent.id,
+      expectedRevision: initial!.orchestrationPolicyRevision,
+      orchestrationPolicy: {
+        allowedAgentIds: [agent.id],
+        allowedRoles: ['implementer'],
+        autoDispatch: true,
+        concurrencyLimit: 2,
+        executionBudget: { maxCost: 25, maxRuns: 10 },
+        replanMode: 'suggest',
+        requireHumanReview: true,
+      },
+    });
+    expect(updated).toEqual(
+      expect.objectContaining({
+        coordinatorAgentId: agent.id,
+        orchestrationPolicy: expect.objectContaining({ autoDispatch: true }),
+        orchestrationPolicyRevision: 2,
+      }),
+    );
+
+    const stale = await model.updateOrchestrationPolicy(project.id, {
+      coordinatorAgentId: project.coordinatorAgentId,
+      expectedRevision: 1,
+      orchestrationPolicy: {
+        ...updated!.orchestrationPolicy,
+        autoDispatch: false,
+      },
+    });
+    expect(stale).toEqual(expect.objectContaining({ stale: true, orchestrationPolicyRevision: 2 }));
+    expect((await model.getOrchestrationPolicy(project.id))?.orchestrationPolicy.autoDispatch).toBe(
+      true,
+    );
+
+    await expect(
+      model.updateOrchestrationPolicy(project.id, {
+        coordinatorAgentId: agent.id,
+        expectedRevision: 2,
+        orchestrationPolicy: {
+          ...updated!.orchestrationPolicy,
+          concurrencyLimit: 101,
+        },
+      }),
+    ).rejects.toThrow('Concurrency limit must be an integer between 1 and 100');
+    expect((await model.getOrchestrationPolicy(project.id))?.orchestrationPolicyRevision).toBe(2);
+
+    const [foreignAgent] = await serverDB
+      .insert(agents)
+      .values({ title: 'Foreign', userId: otherUserId })
+      .returning();
+    await expect(
+      model.updateOrchestrationPolicy(project.id, {
+        coordinatorAgentId: foreignAgent.id,
+        expectedRevision: 2,
+        orchestrationPolicy: updated!.orchestrationPolicy,
+      }),
+    ).rejects.toThrow('Coordinator agent must be an enabled project participant');
+  });
+
+  it('keeps human review enabled while a project is completing', async () => {
+    const project = await createProject(model, { name: 'Review gate' });
+    await model.updateStatus(project.id, 'active');
+    await model.requestCompletion(project.id);
+
+    const policy = await model.getOrchestrationPolicy(project.id);
+    expect(policy?.requireHumanReviewRequired).toBe(true);
+    await expect(
+      model.updateOrchestrationPolicy(project.id, {
+        coordinatorAgentId: project.coordinatorAgentId,
+        expectedRevision: policy!.orchestrationPolicyRevision,
+        orchestrationPolicy: {
+          ...policy!.orchestrationPolicy,
+          requireHumanReview: false,
+        },
+      }),
+    ).rejects.toThrow('Human review is required');
+  });
+
+  it('lets a workspace admin manage policy without broadening other project writes', async () => {
+    const workspaceId = 'project-policy-admin-workspace';
+    await serverDB.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Policy Admin Workspace',
+      primaryOwnerId: userId,
+      slug: workspaceId,
+    });
+    const ownerModel = new ProjectModel(serverDB, userId, workspaceId);
+    const adminModel = new ProjectModel(serverDB, otherUserId, workspaceId, {
+      canManageAll: true,
+    });
+    const project = await createProject(ownerModel, { name: 'Admin policy' });
+
+    expect(await adminModel.getOrchestrationPolicy(project.id)).toEqual(
+      expect.objectContaining({ orchestrationPolicyRevision: 1 }),
+    );
+    await expect(
+      adminModel.updateOrchestrationPolicy(project.id, {
+        coordinatorAgentId: project.coordinatorAgentId,
+        expectedRevision: 1,
+        orchestrationPolicy: project.orchestrationPolicy,
+      }),
+    ).resolves.toEqual(expect.objectContaining({ orchestrationPolicyRevision: 2 }));
+    expect(await adminModel.update(project.id, { name: 'No broad update' })).toBeNull();
+  });
+
   it('returns null or false for binding operations on inaccessible projects and resources', async () => {
     const foreignProject = await createProject(otherModel, { name: 'Foreign' });
     const [foreignKnowledgeBase] = await serverDB

@@ -1,4 +1,4 @@
-import type { ProjectStatus, ProjectVisibility } from '@orvilo/types';
+import type { ProjectOrchestrationPolicy, ProjectStatus, ProjectVisibility } from '@orvilo/types';
 
 import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 
@@ -28,6 +28,9 @@ class ProjectService {
 
   detail = async (id: string) => lambdaClient.project.detail.query({ id });
 
+  getOrchestrationPolicy = async (id: string) =>
+    lambdaClient.project.getOrchestrationPolicy.query({ id });
+
   delete = async (id: string) => lambdaClient.project.delete.mutate({ id });
 
   create = async (
@@ -54,6 +57,15 @@ class ProjectService {
 
   update = async (id: string, input: { name?: string }) =>
     lambdaClient.project.update.mutate({ id, ...input });
+
+  updateOrchestrationPolicy = async (
+    id: string,
+    input: {
+      coordinatorAgentId: string;
+      expectedRevision: number;
+      orchestrationPolicy: ProjectOrchestrationPolicy;
+    },
+  ) => lambdaClient.project.updateOrchestrationPolicy.mutate({ id, ...input });
 
   updateStatus = async (id: string, status: 'active' | 'archived' | 'backlog' | 'paused') =>
     lambdaClient.project.updateStatus.mutate({ id, status });

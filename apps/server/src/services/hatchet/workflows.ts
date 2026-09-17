@@ -7,7 +7,7 @@ import { getServerDB } from '@/database/server';
 import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 
-import { workflowSerialKey } from './workflowConcurrency';
+import { workflowConcurrencyKeys } from './workflowConcurrency';
 
 export const HATCHET_WORKFLOW_PATHS = [
   '/api/agent/webhooks/bot-callback',
@@ -69,7 +69,12 @@ export const triggerHatchetWorkflow = async (
   const requestId = options.workflowRunId ?? stableKey(JSON.stringify(payload));
   const proposedDispatchId = randomUUID();
   const deduplicationKey = stableKey(`${path}\0${requestId}`);
-  const laneKey = stableKey(options.concurrencyKey ?? requestId);
+  const { laneKey } = workflowConcurrencyKeys(
+    path,
+    proposedDispatchId,
+    payload,
+    stableKey(options.concurrencyKey ?? requestId),
+  );
   const db = await getServerDB();
   const values = {
     deduplicationKey,
@@ -124,7 +129,7 @@ export const triggerHatchetWorkflow = async (
 
   try {
     const providerRunId = await enqueueHatchetTask(HATCHET_TASK_NAMES.workflowDispatch, {
-      ...workflowSerialKey(path, dispatchId),
+      ...workflowConcurrencyKeys(path, dispatchId, payload, laneKey),
       deduplicationKey,
       dispatchId,
       laneKey,
@@ -200,16 +205,12 @@ export const cancelHatchetWorkflow = async (workflowRunId: string): Promise<bool
     )
     .returning({ providerRunId: hatchetDispatches.providerRunId });
 
-  if (cancelled?.providerRunId) {
-    await cancelHatchetTask(cancelled.providerRunId).catch((error) => {
-      console.error('[hatchet] provider cancellation failed', { dispatchId, error });
-    });
-  } else if (dispatch.status === 'cancelled' && dispatch.providerRunId) {
-    // A concurrent caller may have won the database transition. Keep provider
-    // cancellation idempotent for that case as well.
-    await cancelHatchetTask(dispatch.providerRunId).catch((error) => {
-      console.error('[hatchet] provider cancellation retry failed', { dispatchId, error });
-    });
+  const providerRunId =
+    cancelled?.providerRunId ?? (dispatch.status === 'cancelled' ? dispatch.providerRunId : null);
+  if (providerRunId) {
+    // Persist the cooperative stop first, but never report provider failure as
+    // success. A repeated request can retry the retained provider receipt.
+    await cancelHatchetTask(providerRunId);
   }
 
   return Boolean(cancelled || dispatch.status === 'cancelled');

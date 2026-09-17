@@ -48,7 +48,7 @@ import { onVerifierComplete } from '@/server/router-hono/workflows/verify/handle
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import {
   WORKFLOW_DISPATCH_CONCURRENCY,
-  workflowSerialKey,
+  workflowConcurrencyKeys,
 } from '@/server/services/hatchet/workflowConcurrency';
 import {
   HATCHET_WORKFLOW_PATHS,
@@ -549,15 +549,21 @@ const isWorkflowPath = (path: string): path is HatchetWorkflowPath =>
   HATCHET_WORKFLOW_PATHS.includes(path as HatchetWorkflowPath);
 
 export const enqueueStoredDispatch = async (dispatch: typeof hatchetDispatches.$inferSelect) => {
+  const keys = workflowConcurrencyKeys(
+    dispatch.payload.path,
+    dispatch.id,
+    dispatch.payload.body,
+    dispatch.laneKey,
+  );
   const providerRunId = await enqueueHatchetTask(HATCHET_TASK_NAMES.workflowDispatch, {
-    ...workflowSerialKey(dispatch.payload.path, dispatch.id),
+    ...keys,
     deduplicationKey: createHash('sha256')
       .update(dispatch.payload.path)
       .update('\0')
       .update(dispatch.payload.workflowRunId)
+      .update(keys.serialKey ? '\0user-lane-v2' : '')
       .digest('hex'),
     dispatchId: dispatch.id,
-    laneKey: dispatch.laneKey,
   });
   const db = await getServerDB();
   // Store the provider receipt before attempting pending→queued. The worker
@@ -565,7 +571,7 @@ export const enqueueStoredDispatch = async (dispatch: typeof hatchetDispatches.$
   // cancellation still needs the receipt in that race.
   await db
     .update(hatchetDispatches)
-    .set({ providerRunId, updatedAt: new Date() })
+    .set({ laneKey: keys.laneKey, providerRunId, updatedAt: new Date() })
     .where(eq(hatchetDispatches.id, dispatch.id));
   const [transitioned] = await db
     .update(hatchetDispatches)
@@ -630,6 +636,39 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
             ),
           );
         throw new NonRetryableError(`Unsupported Hatchet workflow path: ${dispatch.payload.path}`);
+      }
+
+      const canonicalKeys = workflowConcurrencyKeys(
+        dispatch.payload.path,
+        dispatch.id,
+        dispatch.payload.body,
+        dispatch.laneKey,
+      );
+      if (
+        canonicalKeys.serialKey &&
+        (input.serialKey !== canonicalKeys.serialKey || input.laneKey !== canonicalKeys.laneKey)
+      ) {
+        // Already-queued messages can carry a pre-migration per-topic lane.
+        // Normalize before business execution, not after acquiring its slot.
+        try {
+          await enqueueStoredDispatch(dispatch);
+        } catch (error) {
+          await db
+            .update(hatchetDispatches)
+            .set({
+              error: 'Failed to normalize legacy workflow concurrency',
+              status: 'pending',
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(hatchetDispatches.id, dispatch.id),
+                inArray(hatchetDispatches.status, ['pending', 'queued']),
+              ),
+            );
+          throw error;
+        }
+        return { rerouted: true, success: true };
       }
 
       const claimableStatuses: Array<'pending' | 'queued' | 'running'> =

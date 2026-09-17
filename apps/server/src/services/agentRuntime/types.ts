@@ -9,7 +9,6 @@ import type {
   ToolSource,
 } from '@orvilo/context-engine';
 import type {
-  AgentShareVisitorContext,
   ChatTopicBotContext,
   EvalToolForwardingConfig,
   ExpertiseContextSnapshot,
@@ -402,14 +401,6 @@ export interface OperationCreationParams {
    * `agt_*` IDs) — no per-step DB lookup, mirroring `botContext`.
    */
   agentGroup?: AgentGroupConfig;
-  /**
-   * Shared-agent visitor marker. Persisted to
-   * `state.principal.actor.shareVisitor` so every later step can re-derive the
-   * share's restrictions without re-reading the share, and so
-   * `AgentRuntimeService.executeStep` can re-prove the run's authorization at
-   * each step boundary.
-   */
-  agentShareVisitor?: AgentShareVisitorContext;
   appContext: {
     agentId?: string;
     /**

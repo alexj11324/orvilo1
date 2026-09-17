@@ -170,11 +170,11 @@ export const buildServerCallLlmContext = async ({
   }
 
   // Fetch agent documents for context injection.
-  // A share visitor run never sees the creator's agent context documents.
-  // `applyShareGateToAgentConfig` already blanks `agentConfig.files` /
-  // `knowledgeBases`, but this source is fetched independently of agentConfig,
-  // so it needs its own gate. Fail closed unconditionally: the share config has
-  // no setting that could grant file access.
+  // A share visitor run never sees the creator's agent context documents:
+  // this source is fetched independently of agentConfig, so it needs its own
+  // gate. Fail closed unconditionally: the share config has no setting that
+  // could grant file access. (Retained for visitor runs persisted before
+  // visitor execution was retired — no new run can set `agentShareVisitor`.)
   const agentDocumentsAllowedForShare = !ctx.agentShareVisitor;
   let agentDocuments: AgentContextDocument[] | undefined;
   const agentId = state.origin?.agentId;

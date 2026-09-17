@@ -75,10 +75,8 @@ vi.mock('@/database/models/thread', () => ({
   }),
 }));
 
-// `UserModel` here is what actually resolves `userTimezone`. Constructed with
-// the userId it was called with, so the test can distinguish "read the
-// creator's settings" from "read the visitor's settings" purely by which id
-// the call site passed in.
+// `UserModel` here is what actually resolves `userTimezone` — constructed
+// with the caller's userId, which is whose settings the run must read.
 vi.mock('@/database/models/user', () => ({
   UserModel: vi.fn().mockImplementation(function (_db: unknown, userId: string) {
     return {
@@ -139,13 +137,6 @@ vi.mock('@/server/modules/ModelRuntime', () => ({
   initModelRuntimeFromDB: vi.fn(),
 }));
 
-// The share path's atomic cap reservations open real DB transactions — stub
-// them so the forced-headless test below can drive execAgent with a bare mock db.
-vi.mock('../shareVisitorAbuseGuards', () => ({
-  reserveShareVisitorTopic: vi.fn().mockResolvedValue({ id: 'topic-1' }),
-  reserveShareVisitorTurn: vi.fn().mockResolvedValue({ id: 'msg-1' }),
-}));
-
 vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
@@ -160,11 +151,10 @@ vi.mock('model-bank', async (importOriginal) => {
   };
 });
 
-describe('AiAgentService.execAgent - share-visitor timezone resolution', () => {
+describe('AiAgentService.execAgent - user timezone resolution', () => {
   let service: AiAgentService;
   const mockDb = {} as any;
-  const creatorId = 'creator-1';
-  const visitorId = 'visitor-1';
+  const userId = 'user-1';
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -183,15 +173,13 @@ describe('AiAgentService.execAgent - share-visitor timezone resolution', () => {
       provider: 'openai',
       systemRole: '',
     });
-    mockGetUserSettings.mockImplementation(function (userId: string) {
-      return Promise.resolve({
-        general: { timezone: userId === creatorId ? 'America/Los_Angeles' : 'Asia/Tokyo' },
-      });
+    mockGetUserSettings.mockResolvedValue({
+      general: { timezone: 'America/Los_Angeles' },
     });
-    service = new AiAgentService(mockDb, creatorId);
+    service = new AiAgentService(mockDb, userId);
   });
 
-  it('reads the timezone from the CREATOR when the run is not a share-visitor run', async () => {
+  it("reads the timezone from the caller's settings", async () => {
     await service.execAgent({
       agentId: 'agent-1',
       prompt: 'Hello',
@@ -200,24 +188,6 @@ describe('AiAgentService.execAgent - share-visitor timezone resolution', () => {
     expect(mockCreateOperation).toHaveBeenCalledTimes(1);
     const callArgs = mockCreateOperation.mock.calls[0][0];
     expect(callArgs.userTimezone).toBe('America/Los_Angeles');
-  });
-
-  it('reads the timezone from the VISITOR, not the creator, on a share-visitor run', async () => {
-    // The creator's timezone must never leak into a link visitor's session-date
-    // placeholder — the visitor is the person actually conversing.
-    await service.execAgent({
-      agentId: 'agent-1',
-      prompt: 'Hello',
-      shareGate: {
-        agentId: 'agent-1',
-        shareConfig: { toolGrants: [] },
-        shareId: 'share-1',
-        visitorUserId: visitorId,
-      },
-    });
-
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.userTimezone).toBe('Asia/Tokyo');
+    expect(mockGetUserSettings).toHaveBeenCalledWith(userId);
   });
 });

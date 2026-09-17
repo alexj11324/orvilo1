@@ -40,8 +40,11 @@ const refusalNote =
 /**
  * Gates every path that publishes an agent to visitors or re-enables an existing
  * share (`agentShare.enableShare`, `agentShare.updateVisibility` to `link`).
+ *
+ * `never` return type is the type-level statement of "no flag/token branch":
+ * callers can rely on control flow ending here rather than on a sentinel.
  */
-export const assertAgentShareCreationEnabled = () => {
+export const assertAgentShareCreationEnabled = (): never => {
   throw new TRPCError({
     code: 'FORBIDDEN',
     message: `Publishing an agent to external visitors is no longer available. ${refusalNote}`,
@@ -49,20 +52,26 @@ export const assertAgentShareCreationEnabled = () => {
 };
 
 /**
- * Gates the only entry point that starts a visitor run (`shareChat.execAgent`).
+ * Gates the only entry point that ever started a visitor run
+ * (`shareChat.execAgent`).
  *
- * This is a complete choke point rather than one of several: every visitor-run
- * marker in the runtime derives from the `shareGate` built inside `execAgent`
- * (`services/aiAgent/pipeline/startOperation.ts` reads it into
- * `agentShareVisitor`), and `execAgent` is the only place that builds one. A run
- * therefore cannot be started by any other procedure, including a superseded
- * client or a token that is still valid.
+ * This is a complete choke point rather than one of several: `execAgent` was
+ * the sole procedure that could authorize a run on a visitor topic, and its
+ * body is now exactly this refusal — nothing is resolved, spend-checked, or
+ * written first. Defense in depth backs it up for non-visitor callers:
+ * `turnSetup` fails closed on any `senderId`-marked topic reached through a
+ * generic `AiAgentService.execAgent` call (a leaked topicId, a scheduled
+ * retry), and the scheduled-run dispatcher drops visitor-topic schedules
+ * before claiming. A stale client, a still-valid visitor token, or a parked
+ * continuation therefore cannot start a new visitor run either.
  *
- * Refusing here also refuses everything a run could do — streaming input,
- * continue-generation, async dispatch and tool calls are all downstream of a run
- * that cannot start.
+ * Refusing here also refuses everything a NEW run could do — streaming input,
+ * continue-generation, async dispatch and tool calls are all downstream of a
+ * run that cannot start. Runs persisted BEFORE retirement keep their own
+ * `agentShareVisitor` marker and per-step revalidation, and finish or cancel
+ * through the retained lifecycle paths.
  */
-export const assertAgentShareVisitorExecutionEnabled = () => {
+export const assertAgentShareVisitorExecutionEnabled = (): never => {
   throw new TRPCError({
     code: 'FORBIDDEN',
     message: `Running a shared agent as a visitor is no longer available. ${refusalNote}`,

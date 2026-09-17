@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 
 import {
-  ConcurrencyLimitStrategy,
   type HatchetClient,
   type InputType,
   NonRetryableError,
@@ -47,6 +46,10 @@ import { executeTopicAutoSummary } from '@/server/router-hono/workflows/topic-au
 import { onEvidenceComplete } from '@/server/router-hono/workflows/verify/handlers/onEvidenceComplete';
 import { onVerifierComplete } from '@/server/router-hono/workflows/verify/handlers/onVerifierComplete';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
+import {
+  WORKFLOW_DISPATCH_CONCURRENCY,
+  workflowSerialKey,
+} from '@/server/services/hatchet/workflowConcurrency';
 import {
   HATCHET_WORKFLOW_PATHS,
   type HatchetWorkflowPath,
@@ -503,6 +506,7 @@ const workflowDispatchInput = z.object({
   deduplicationKey: z.string().min(1),
   dispatchId: z.string().uuid(),
   laneKey: z.string().length(64),
+  serialKey: z.string().uuid().optional(),
 });
 
 export const scheduleWorkflowCoordinationRetry = (
@@ -513,6 +517,7 @@ export const scheduleWorkflowCoordinationRetry = (
     HATCHET_TASK_NAMES.workflowDispatch,
     {
       coordinationRetry: true,
+      ...(input.serialKey ? { serialKey: input.serialKey } : {}),
       deduplicationKey: `${input.deduplicationKey}:coordination:${retryCount}`,
       dispatchId: input.dispatchId,
       laneKey: input.laneKey,
@@ -543,8 +548,9 @@ export const markCoordinationRetryPending = async (
 const isWorkflowPath = (path: string): path is HatchetWorkflowPath =>
   HATCHET_WORKFLOW_PATHS.includes(path as HatchetWorkflowPath);
 
-const enqueueStoredDispatch = async (dispatch: typeof hatchetDispatches.$inferSelect) => {
+export const enqueueStoredDispatch = async (dispatch: typeof hatchetDispatches.$inferSelect) => {
   const providerRunId = await enqueueHatchetTask(HATCHET_TASK_NAMES.workflowDispatch, {
+    ...workflowSerialKey(dispatch.payload.path, dispatch.id),
     deduplicationKey: createHash('sha256')
       .update(dispatch.payload.path)
       .update('\0')
@@ -589,11 +595,7 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
   const workflowDispatch = hatchet.task({
     name: HATCHET_TASK_NAMES.workflowDispatch,
     backoff: { factor: 2, maxSeconds: 300 },
-    concurrency: {
-      expression: 'input.laneKey',
-      limitStrategy: ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
-      maxRuns: 1,
-    },
+    concurrency: WORKFLOW_DISPATCH_CONCURRENCY,
     executionTimeout: '30m',
     fn: async (rawInput: z.infer<typeof workflowDispatchInput> & InputType, hatchetContext) => {
       const input = workflowDispatchInput.parse(rawInput);

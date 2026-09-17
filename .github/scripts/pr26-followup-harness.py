@@ -1,10 +1,22 @@
 from pathlib import Path
-p = Path('src/libs/swr/useSharedPollingSWR.ts')
-p.write_text(p.read_text().replace('unstable_serialize(augmentKey(key, workspaceId))', 'unstable_serialize(augmentKey(key, workspaceId) as Key)'))
-p = Path('src/store/task/slices/detail/action.ts')
-s = p.read_text()
 import re
-s = re.sub(r'^const TASK_DETAIL_POLL_INTERVAL = .*;\n', '', s, flags=re.M)
+p = Path('src/libs/swr/useSharedPollingSWR.ts')
+s = p.read_text().replace('unstable_serialize(augmentKey(key, workspaceId))', 'unstable_serialize(augmentKey(key, workspaceId) as Key)')
+a = s.index('  const state = useRef(')
+b = s.index('  const interval = ', a)
+s = s[:a] + '''  const state = useRef({
+    error: response.error, isValidating: response.isValidating,
+    isVisible, isOnline, mutate: response.mutate,
+  });
+  state.current = { error: response.error, isValidating: response.isValidating,
+    isVisible, isOnline, mutate: response.mutate };
+''' + s[b:]
+s = s.replace('isVisible() && isOnline() && !state.current.error && !state.current.isValidating', 'state.current.isVisible() && state.current.isOnline() && !state.current.error && !state.current.isValidating')
+s = s.replace('refresh: () => mutate(),', 'refresh: () => state.current.mutate(),')
+s = s.replace('[entries, scopedKey, interval, mutate, isVisible, isOnline]', '[entries, scopedKey, interval]')
+p.write_text(s)
+p = Path('src/store/task/slices/detail/action.ts')
+s = re.sub(r'^const TASK_DETAIL_POLL_INTERVAL = .*;\n', '', p.read_text(), flags=re.M)
 p.write_text(s)
 p = Path('src/store/task/slices/detail/polling.test.tsx')
 s = p.read_text().replace('act, cleanup, renderHook', 'act, cleanup, render, renderHook')
@@ -15,7 +27,6 @@ s = s[:start] + '''      const tree = (page: boolean, drawer: boolean) => create
         page ? createElement(PollingConsumer, { key: 'page' }) : null,
         drawer ? createElement(PollingConsumer, { key: 'drawer' }) : null,
       );
-      // One provider owns the page and drawer subscriptions, as in the app.
       const view = render(tree(true, false));
       await act(async () => { await vi.advanceTimersByTimeAsync(period - 1_000); });
       expect(taskService.getDetail).toHaveBeenCalledTimes(1);

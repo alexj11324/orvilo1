@@ -1968,3 +1968,152 @@ agent 冲突的风险，也等于对他的工作做重复判断。
 | **CI（目标提交 `bb7ccebe`）**                          | **Test CI 12/12 job 全绿**；E2E 83 场景中 2 条失败，均为 §7.6.4 的文稿场景（非本轮，且失败集合在两次运行间漂移）                                           |
 | 全仓类型检查 / 全量测试 / 生产构建 / Docker / 桌面打包 | **未在本机执行**（§13.1）                                                                                                                                  |
 | 产品级验收                                             | **BLOCKED**（§7.4）                                                                                                                                        |
+
+## 8. 交付产物（方案 §16 明文要求的部分）
+
+方案 §16 规定交付报告 "必须包含" 若干产物。本节补齐原先缺的几类，并标明哪些是本机可精确计算的、哪些不是。
+
+### 8.1 精确变更清单
+
+见 [`task-first-changes.md`](./task-first-changes.md)：精确删除清单（304，**按删除它的提交分组**，因此每条都能追到所属 stage）、精确新增清单（41）、精确重命名清单（7）、精确修改清单（169）。
+
+⚠️ 该清单的口径是 `origin/main...HEAD`（三点比较）。**早先用的 `58d79735..HEAD` 是错的**：那个范围里混着 main 自己的提交（例如 `ea01df13` 删的 8 个文件），会把它们算成本分支的改动。真正的分叉点是 `ea01df13`（`HEAD` 与 `origin/main` 的 merge-base），不是 `58d79735`。
+
+### 8.2 仍保留的共享运行 / API / 历史兼容项
+
+逐条核验过存在性（不是照抄计划措辞）：
+
+| 保留项                                                      | 位置                                           | 为什么保留                                                                                                                                                                   |
+| ----------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/share` 应用                                           | 目录存在                                       | §6.5 L295 明文保留；它只服务主题 / 页面 / 产物三类分享，目录内对 agent 分享零引用                                                                                            |
+| 图片 / 视频生成的**后端链**                                 | `apps/server/src/services/imageGeneration*` 等 | 退役的是「独立工作台」这个页面；生成能力归属 agent 工具，工具会调它                                                                                                          |
+| 评测的**服务端**能力                                        | `agentEval` / `ragEval` router 仍在            | 退役的是独立评测工作台（UI + 浏览器客户端）。浏览器侧客户端与 `src/store/eval` 及其注册已在后续提交 `cc3b9489` 一并删除，**未留悬空引用**（`userDataStores.ts` 中已无 eval） |
+| `TopicShareModel` / 会话分享                                | `apps/server/src`                              | 会话分享与 agent 分享是**两个能力**，前者未退役，四个分享类别在代码里保持可区分                                                                                              |
+| `shareChat.interruptTask` 与 gateway-token 过程             | `shareChat.ts`                                 | 在途运行要能结束或取消，其产物与费用不能丢                                                                                                                                   |
+| `AgentShareModel` 的读路径                                  | `apps/server/src`                              | 既有分享仍可被所有者查看与撤回（拒绝信息本身承诺了这一点，并有测试钉住）                                                                                                     |
+| `src/proxy.ts` matcher 保留 `/eval` `/image` `/video`       | `src/proxy.ts`                                 | 它**不是**鉴权白名单，而是决定中间件处理哪些路径。删掉会把「旧深链接进入 SPA 后重定向」变成框架层硬 404                                                                      |
+| `enableEvalCapture` 偏好字段                                | `packages/database` 等                         | 旧存储中的偏好必须继续校验通过（§12.1：偏好迁移不能强制重置）                                                                                                                |
+| 共享运行表（任务 / 会话 / 记忆上下文 / 文件 / 审计 / 生成） | —                                              | §12.1 明文：无关产品已删除**不要求**共享运行表也被删除；合法保留的共享表不算未完成清理                                                                                       |
+
+### 8.3 UI 偏好与数据迁移结果
+
+| 偏好 / 数据                                            | 迁移动作                                                         | 幂等                                                | 覆盖面                        | 证据                                                                                                              |
+| ------------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `status.sidebarItems`                                  | 读路径上移除退役键（`image` / `community` / `pages` / `memory`） | ✅ 无退役键时**返回原引用**，不破坏下游引用相等优化 | 个人 + workspace overlay 两处 | `systemStatus.test.ts` 新增「retired sidebar items」组（含幂等、旧客户端回写、workspace overlay、无退役项时不动） |
+| `hiddenSidebarSections`                                | 同上                                                             | ✅                                                  | 同上                          | 同上                                                                                                              |
+| `sidebarExpandedKeys`                                  | 同上                                                             | ✅                                                  | 同上                          | 同上                                                                                                              |
+| 导航注册表条目                                         | **保留而非删除**                                                 | —                                                   | —                             | `getRouteById()` 仍需解析旧深链接与旧持久化偏好里的 id；删条目会让 `useNavLayout` 的断言在运行时崩                |
+| `showHomePortrait`                                     | 字段从代码移除（全仓 grep 为 0）                                 | —                                                   | —                             | 旧存储中会残留该 key，但**无任何读路径**，因此不生效。⚠️ **未验证**：持久化层是否会剔除未知键 —— 我没查到底       |
+| 桌面固定标签页 `lobechat:desktop:tab-pages:v3:<scope>` | 退役产品的标签被丢弃；`activeTabId` 重锚，避免指向已被丢弃的 tab | —                                                   | Electron 各 scope             | `TabBar/storage.test.ts`                                                                                          |
+| `sidebarSectionOrder`（legacy）                        | 保留一次性迁移                                                   | —                                                   | —                             | §1.2 记录的既有迁移路径                                                                                           |
+
+**两类闸门缺一不可**：渲染闸门（`useNavLayout` 不渲染退役项）只管新渲染；持久化里老用户仍存着退役键，所以必须有数据闸门（读路径正规化）。只有前者会让老用户存储里的键一直留着，只有后者会让各渲染面各自为政。见 §2.1。
+
+### 8.4 后台作业处理说明
+
+**承重结论（已独立复核）：本轮 304 个删除全部落在 `src/`，`apps/server/**` 与 `packages/**` 零删除。**
+按顶层目录分布：`src/routes` 255、`src/features` 27、`src/store` 20、`src/services` 1、`src/components` 1。
+因此**本轮没有停止、也没有修改任何服务端后台作业** —— 退役的是界面与浏览器侧客户端。
+
+- 队列引擎：**Upstash QStash + `@upstash/workflow`**。全仓无 Hatchet / Inngest / BullMQ / `scheduleTask`。
+- 作业注册总表：`apps/server/src/router-hono/workflows/index.ts`；异步 tRPC 作业：`apps/server/src/routers/async/index.ts`。
+
+| 作业                                                                                                                       | 定义位置                                                          | 触发                                                       | 涉及本轮退役面？                   | 现状                                                                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agent-eval-run/*`（8 个子流程）                                                                                           | `router-hono/workflows/agent-eval-run/index.ts:38-120`            | QStash `trigger()`                                         | 是（评测工作台）                   | **保留且仍可达**：生产者为 lambda `agentEval.ts:933,981,1016`、OpenAPI `eval.service.ts:142`、CLI `commands/eval.ts:849`。**被删的只是浏览器侧调用方**（`src/services/agentEval.ts`、`src/store/eval/**`，`cc3b9489`），故该流程现在是无头的 |
+| `agent-signal/*` + `cron-hourly-nightly-self-review`                                                                       | `workflows/agent-signal/index.ts:20-58`                           | **Cron**（外部 QStash Schedule）                           | 部分（自我学习 UI 裁剪，引擎未动） | 保留                                                                                                                                                                                                                                         |
+| `expertise-history/run`                                                                                                    | `workflows/expertise-history/index.ts:12-30`                      | QStash `trigger()`，入口 `routers/lambda/expertise.ts:281` | 是（成长画像 UI）                  | 保留（服务端）                                                                                                                                                                                                                               |
+| `memory-user-memory/call-cron-hourly-analysis`                                                                             | `workflows/memory-user-memory/index.ts:18-29`                     | **Cron**                                                   | 是（`/memory` 浏览层）             | **刻意保留**（§2.5：读者无法从客户端代码证伪，故不停任何生产者）                                                                                                                                                                             |
+| `memory-user-memory/pipelines/persona/update-writing`                                                                      | 同上 `:31-39`                                                     | QStash workflow                                            | 是（画像面）                       | 保留；另有 webhook 入口 `webhooks/index.ts:26-29`                                                                                                                                                                                            |
+| `memory-user-memory/pipelines/chat-topic/*`                                                                                | 同上 `:41-85`                                                     | QStash，由 `services/memory/userMemory/extract.ts` 扇出    | 间接（喂 Agent 上下文）            | 保留                                                                                                                                                                                                                                         |
+| `POST /api/webhooks/video/:provider`                                                                                       | `webhooks/index.ts:37`                                            | 供应商异步回调                                             | 是（视频工作台）                   | **保留且仍可达**：CLI `commands/generate/video.ts:48` → `lambda/video/index.ts:81` → webhook 或进程内轮询（`after()`，`:296-302`）。被删的只是 Web 工作台                                                                                    |
+| `task/schedule-dispatch`、`task/scheduled-topic-dispatch`、`task/heartbeat-tick`、`task/watchdog`、`task/schedule-execute` | `workflows/task/index.ts:14-20`                                   | Cron / QStash 事件                                         | 否（task-first 核心）              | 保留                                                                                                                                                                                                                                         |
+| `verify/*`、`goal/advance`、`goal/sweep`                                                                                   | `workflows/verify/index.ts:10-12`、`workflows/goal/index.ts:9-10` | QStash Schedule / 事件                                     | 否                                 | 保留                                                                                                                                                                                                                                         |
+| tRPC async `image` / `video`                                                                                               | `routers/async/index.ts:13,15`                                    | 进程内 async caller                                        | 是（图 / 视频工作台）              | 保留；`image` 仍有 Agent 工具生产者（`serverRuntimes/imageGeneration.ts:53,64`），`video` 转为 CLI 为主                                                                                                                                      |
+| tRPC async `ragEval`                                                                                                       | `routers/async/index.ts:14`                                       | 进程内 async caller                                        | 知识库 RAG 评测                    | 服务端保留；**唯一前端入口 `src/store/library/slices/ragEval/actions/evaluation.ts:45` 的 `runEvaluation` 已无调用者**（死代码）                                                                                                             |
+| tRPC async `document`                                                                                                      | `routers/async/index.ts:10`                                       | —                                                          | 文稿处理                           | **注册但空**：`routers/async/document.ts` 体内只剩一句 "不再需要压缩" 的注释，不暴露任何 procedure                                                                                                                                           |
+| `ftsSearchSync` 出站同步                                                                                                   | `services/ftsSearchSync/**`                                       | 长驻 worker + DB outbox                                    | 否                                 | 保留                                                                                                                                                                                                                                         |
+
+**需要人工确认的异常（本轮**未动 \*\*，仅登记）\*\*
+
+1. **`agent_cron_jobs` 表：生产者与消费者都没了。** schema 自带弃用横幅（`packages/database/src/schemas/agentCronJob.ts:16-29`：「新代码通过 `tasks` 调度；不要新增写入者」）；旧扫描器的读入口 `AgentCronJobModel.getEnabledJobs`（`models/agentCronJob.ts:76`）**无生产调用者**（全仓只剩它自己的测试）。现存的活跃引用只有归属更新（`models/agent.ts:2393,2732`、`models/chatGroup.ts:993`）。
+2. **`expertise_domain_snapshots` 的 fit 列：没有生产者（实测复核）。** 对 `fitComputedAt` 的全仓非测试命中只有 4 处：读取方 `routers/lambda/expertise.ts:44,56`、schema 定义 `packages/database/src/schemas/expertise.ts:612`、注释 `:575`、局部索引 `:651`（`WHERE fit_computed_at IS NULL`）。schema 注释声称 "拟合部分由 6 小时定时作业回填"，但**该作业不存在，且 `vercel.json` 没有 `crons` 键**。后果：`expertise.ts:56` 永远返回 `{ reason: 'pending' }`。**这是本轮之前就有的缺陷**；本轮删掉了它的消费 UI，于是变成生产者与消费者双缺。
+3. **图 / 视频的 `asyncTasks` 仍在产生**，而批量展示它们的 Web 工作台已删；`useFetchAiVideoConfig` / `useFetchAiImageConfig` 现为无引用钩子。
+
+**本机无法确定（BLOCKED）**
+
+- **外部调度器是否真的配置存在**：仓库内**没有**任何 schedule 注册代码（`schedules.create` / `createSchedule` / `QstashSchedule` 在 `apps/src/packages` 中只命中的是内存版 `Local*Scheduler`）。上表每一行 "Cron" 都只是代码注释声称 "注册为 QStash Schedule"，实际配置在 Upstash 控制台 —— 我看到了**仓库内不存在**，不等于**部署中不存在**。
+- `GET /api/agent/gateway`（`router-hono/agent/index.ts:54-59`）是否为 cron 驱动：处理函数注释说 Vercel cron，但 `vercel.json` 无 `crons` 键。
+- `topic-auto-summary/dispatch` 的初始触发者（仓内只有自续调用）。
+- persona 链是否仍有**服务端读者**（本轮只确认 `/memory` 浏览 UI 被移除）。
+- `agent_cron_jobs` /fit 列的 "行无人产生" 是从代码推断的，**没有连库观测**。
+
+### 8.5 生产发布注意事项
+
+#### 8.5.1 §12.1 三类处理的实际执行
+
+| 类型                                   | 本轮实际                                                               | 依据                                             |
+| -------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------ |
+| UI 偏好与入口迁移                      | **已执行**：版本化、幂等正规化，保留有效偏好                           | §8.3                                             |
+| 新关联 / 兼容字段的加法式迁移          | **无** —— 本轮零新增表、零新增列（S50 复用既有 `works.originTopicId`） | §2.6                                             |
+| 历史表 / 对象 / 外部账户的**物理删除** | **未执行**，且本轮不提供自动执行                                       | §12.1 要求单独盘点、保留策略、恢复证明与明确授权 |
+
+#### 8.5.2 §12.2「停止后台生产」清单 —— 本轮**不适用**，理由与将来的手册
+
+§12.2 要求任何 "停止后台生产" 的变更给出 8 项。**本轮没有这类变更**：304 个删除全部在 `src/`，
+`apps/server/**` 与 `packages/**` 零删除（§8.4 已复核）。所以下面的 8 项不是 "已执行的停止操作"，
+而是**留给将来真要停 §8.4 那 2 个孤儿项的人**的操作手册。**本轮不通过代码自动停止任何生产作业**（§12.2 明文）。
+
+以 §8.4 登记的两个候选为例：
+
+| §12.2 要求             | `agent_cron_jobs`                                                      | `expertise_domain_snapshots` 的 fit 回填                                                                                                            |
+| ---------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 触发点                 | 旧路径是某个外部 Schedule 扫描 enabled 行；**仓内已无扫描者**          | 注释声称 6 小时定时作业；仓内**从来不存在**，`vercel.json` 无 `crons` 键                                                                            |
+| 目标作业类型           | 旧 per-agent 调度行（已被 `tasks` 上的调度取代）                       | 对 `fit_computed_at IS NULL` 的行做拟合回填                                                                                                         |
+| 过滤条件               | `enabled` 行为真                                                       | `fit_computed_at IS NULL`（已有局部索引 `expertise.ts:651`）                                                                                        |
+| 活跃作业数量的读取方式 | `select count(*) from agent_cron_jobs where enabled`                   | `select count(*) from expertise_domain_snapshots where fit_computed_at is null` ⚠️ **这两条查询我没有执行过**（无库访问），给的是自然读法而非实测值 |
+| 取消 / 完成策略        | 停止外部 Schedule，并确认无在途扫描；仓内已无需改代码                  | 该作业不存在，故 "停止" 这一步无可执行对象                                                                                                          |
+| 迟到回调处理           | QStash 重投递；这两项均无在途回调                                      | 同左                                                                                                                                                |
+| 历史查看方式           | 直接查该表                                                             | 直接查该表                                                                                                                                          |
+| 回滚限制               | 删表 / 删列**不可靠 `git revert` 恢复**（§12.4），需真实备份与恢复演练 | 同左                                                                                                                                                |
+
+#### 8.5.3 §12.3 构建与数据库
+
+- `package.json` 的 `build:vercel` 含 `db:migrate`（§0.2 已核实）。**测试部署不得不加检查地直接使用该脚本**；数据库必须是测试空间，禁止读取生产连接串。
+- 本轮**未执行**任何迁移，未触碰生产数据；§0.1 的 `db:migrate` 禁令全程有效。
+
+#### 8.5.4 §12.4 回滚
+
+- 代码回滚按阶段提交回退（本分支 88 个提交按 stage 组织，`task-first-changes.md` 可定位每个文件属于哪一步）。
+- 本轮**无**新关系 / 新兼容字段，因此不需要向后兼容读取的额外安排。
+- ⚠️ **已撤销的公共访客执行权限不因应用回滚自动恢复**：`c95f9ba6` 的拒绝是无条件的（flag 分支是删除而非反转），`git revert` 会恢复代码，但**产品决策**仍需重新做出。
+- ⚠️ 物理删除无法靠 `git revert` 恢复 —— 本轮未做物理删除，故不涉及。
+- 数据关联（任务 ↔ 文档的 pin）采用可验证映射：重新执行 pin 是幂等的（`task.pinDocument`），回滚不会重复创建运行。
+
+## 9. 方案 §15 完成定义与禁止捷径・逐条对照
+
+### 9.1 完成定义（§15.1–§15.7）
+
+| #   | 定义                                                                          | 判定         | 依据                                                                                                                                                                                                                     |
+| --- | ----------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | 新产品默认路径确实是任务看板，入口权重一致                                    | **满足**     | Web `/` 由 `WebHomeRedirect` 落任务列表（`spa/router/desktopRouter.config.tsx`）；Electron 的 index 槽位由 `DEFAULT_HOME_MODE='task'` 落地；入口权重来自导航注册表 `tier` 单一来源（§2.1）。⚠️ 开屏观感属真机项，BLOCKED |
+| 2   | 需退役的独立功能在 UI、路由、专用写入口三层按定义完成；共享能力保留理由可追踪 | **满足**     | 保留项与理由见 §8.2；三层改动见各 stage 记录与 `task-first-changes.md`                                                                                                                                                   |
+| 3   | 下沉的周期任务 / 资源 / Goal / 规则 / 相关对话有真实新入口，核心操作未丢      | **满足**     | §2.3（自动化）、§2.6（资源）、§2.7（Goal 与规则）                                                                                                                                                                        |
+| 4   | 历史标识、深链接、权限与用户偏好正确兼容；已有数据不被无授权删除              | **部分满足** | 偏好迁移见 §8.3（幂等、个人与 workspace 双覆盖）；注册表条目**保留**以解析旧 id；旧路由映射见 §3；**本轮未执行任何物理删除**（§12.1 要求，且不自动清库）。缺口：与另一 agent 的并行退役机制待合并期收敛（§4.1）          |
+| 5   | 保护的执行链路未被削弱，已声明的验收均有真实证据                              | **不满足**   | 链路未削弱有据（§0.1 与各 stage），但**产品级验收 BLOCKED**（§7.4）—— 已声明的验收并非都有真实证据                                                                                                                       |
+| 6   | 没有因功能裁剪重新引入第二套任务 / 聊天 / 文件 / 评测产品                     | **满足**     | S40 复用既有任务与周期任务数据层；S50 复用 `works.originTopicId`、**零新增表**；未新建模拟数据表                                                                                                                         |
+| 7   | 所有尚未完成 / 未验证项逐项列出，不在总结中隐藏                               | **满足**     | §4、§5、§7.4、§7.7 与本节的 BLOCKED 表                                                                                                                                                                                   |
+
+### 9.2 禁止的捷径（§15）逐条自查
+
+| 捷径                                                                                                     | 是否触犯               | 依据                                                                                                                                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 仅设 `hidden: true`，旧路由与创建操作照常可达                                                            | **否**                 | 退役走注册表 `tier` + 读路径数据闸门；创建入口（agent 分享发布）在服务端被**无条件**拒绝且有测试钉住（§7.6.2）                                                                                                                                                 |
+| 直接删除 `apps/share` / `ResourceManager` / `generation*` / `memory*` / `document*` 或整包而无消费者证据 | **否**                 | 这些全部保留（§8.2，逐条核验存在）；删掉的 304 个文件全部在附录清单里可核                                                                                                                                                                                      |
+| 把任务完成列直接映射到「成功」，绕开验收 / 集成状态                                                      | **否**                 | 本轮未改看板的完成语义（BOARD-\* 未改动）                                                                                                                                                                                                                      |
+| 用新建模拟数据表或 mock 列表替换真实来源                                                                 | **否**                 | S50 零新增表；S40 复用既有数据层                                                                                                                                                                                                                               |
+| 为修断链把每个旧链接都重定向 `/tasks` 并丢掉对象 ID                                                      | **否**                 | `WebHomeRedirect` 保留 query 且有测试；`/task/:id`、`/goal/:id` 等深链接仍在路由表中                                                                                                                                                                           |
+| 把普通成员 / Agent / 执行操作 / 外部访客当同一主体                                                       | **否**                 | 访客能力是被**退役**而非合并主体；`TopicShareModel` 与 `AgentShareModel` 保持可区分                                                                                                                                                                            |
+| 复制源码创建「精简版后端」，新旧同时写同一数据                                                           | **否**                 | 未新增后端服务                                                                                                                                                                                                                                                 |
+| 对所有历史用户强制重置偏好，或仅迁移本地而无视远端回写                                                   | **否**                 | `withoutRetiredItems()` 只删退役键、其余保留；workspace overlay 一并覆盖（§8.3）                                                                                                                                                                               |
+| 本地跑全仓 CI、偷连生产服务、或以移除测试换取通过                                                        | **否，但有一处需明示** | 全仓类型检查在 CI 跑（本机无合规途径，§7.6.1）；本机未连任何生产服务。⚠️ **本轮确实退役了 2 条 E2E 场景**（`HOME-LAYOUT-RAIL-001`、`HOME-CHAT-COLD-001`）—— 这不是 "以移除测试换通过"，而是被退役界面的断言；处置与替代覆盖位置见 §7.6.3，我不敢把它当作没发生 |

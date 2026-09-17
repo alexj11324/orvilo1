@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -19,7 +19,7 @@ const createDbWithMemory = (memory: unknown) =>
         findFirst: vi.fn(async () => (memory === undefined ? undefined : { memory })),
       },
     },
-  }) as unknown as LobeChatDatabase;
+  }) as unknown as OrviloDatabase;
 
 const createDbWithDisabledIds = (disabledIds: string[]) =>
   ({
@@ -28,7 +28,7 @@ const createDbWithDisabledIds = (disabledIds: string[]) =>
         where: vi.fn(async () => disabledIds.map((id) => ({ id }))),
       })),
     })),
-  }) as unknown as LobeChatDatabase;
+  }) as unknown as OrviloDatabase;
 
 describe('isUserMemoryExtractionEnabled', () => {
   it('returns true when the user has no settings row', async () => {
@@ -87,7 +87,7 @@ describe('disableUserMemoryExtraction', () => {
     const onConflictDoUpdate = vi.fn(async () => undefined);
     const values = vi.fn(() => ({ onConflictDoUpdate }));
     const insert = vi.fn(() => ({ values }));
-    const db = { insert } as unknown as LobeChatDatabase;
+    const db = { insert } as unknown as OrviloDatabase;
 
     await disableUserMemoryExtraction('u1', db);
 

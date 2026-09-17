@@ -6,7 +6,7 @@ import { getTestDB } from '@/database/core/getTestDB';
 import { DocumentModel } from '@/database/models/document';
 import { TaskModel } from '@/database/models/task';
 import { documents, taskDocuments, users } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { assertDocumentsNotPinnedToTasks } from './taskReferences';
 
@@ -19,7 +19,7 @@ import { assertDocumentsNotPinnedToTasks } from './taskReferences';
  * `tasks` each carry several NOT NULL columns, and the production paths are what
  * fill them.
  */
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'doc-ref-user';
 
 const documentId = 'docs_pinned';

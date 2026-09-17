@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { count, inArray } from 'drizzle-orm';
 
 import { taskDocuments } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 /**
  * A document that a task lists as an artifact cannot be hard-deleted from the
@@ -23,7 +23,7 @@ import type { LobeChatDatabase } from '@/database/type';
  * is therefore not caught here.
  */
 export const assertDocumentsNotPinnedToTasks = async (
-  ctx: { serverDB: LobeChatDatabase },
+  ctx: { serverDB: OrviloDatabase },
   ids: string[],
 ): Promise<void> => {
   // Only `docs_` ids can be document rows; the sibling guard splits the same way

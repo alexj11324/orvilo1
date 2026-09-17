@@ -13,11 +13,11 @@ import {
   users,
   workspaces,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { LinearSyncWorker } from './worker';
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 const userId = 'linear-inbound-user';
 const installerId = 'linear-inbound-installer';
 const workspaceId = 'linear-inbound-workspace';

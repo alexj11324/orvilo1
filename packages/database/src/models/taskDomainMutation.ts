@@ -1,6 +1,6 @@
 import type { TaskDomainEventType, TaskItem } from '@orvilo/types';
 
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { LinearSyncModel } from './linearSync';
 
 /**
@@ -13,7 +13,7 @@ import { LinearSyncModel } from './linearSync';
  * task command.
  */
 export const recordBulkTaskMutation = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   taskRows: TaskItem[],
   input: {
     changedFields: string[];

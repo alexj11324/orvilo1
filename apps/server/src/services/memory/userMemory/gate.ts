@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { userSettings } from '@/database/schemas';
@@ -19,7 +19,7 @@ import { getServerDB } from '@/database/server';
  */
 export const isUserMemoryExtractionEnabled = async (
   userId: string,
-  db?: LobeChatDatabase,
+  db?: OrviloDatabase,
 ): Promise<boolean> => {
   const database = db ?? (await getServerDB());
   const row = await database.query.userSettings.findFirst({
@@ -40,7 +40,7 @@ export const isUserMemoryExtractionEnabled = async (
  */
 export const filterMemoryExtractionEnabledUsers = async (
   userIds: string[],
-  db?: LobeChatDatabase,
+  db?: OrviloDatabase,
 ): Promise<{ enabledUserIds: string[]; skippedUserIds: string[] }> => {
   const ids = Array.from(new Set(userIds.filter(Boolean)));
   if (!ids.length) return { enabledUserIds: [], skippedUserIds: [] };
@@ -83,7 +83,7 @@ export const filterMemoryExtractionEnabledUsers = async (
  */
 export const disableUserMemoryExtraction = async (
   userId: string,
-  db?: LobeChatDatabase,
+  db?: OrviloDatabase,
 ): Promise<void> => {
   const database = db ?? (await getServerDB());
   await database

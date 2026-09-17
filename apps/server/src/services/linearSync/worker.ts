@@ -24,7 +24,7 @@ import {
 } from '@/database/models/linearSync';
 import type { TaskModel } from '@/database/models/task';
 import { tasks } from '@/database/schemas/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { LinearIntegrationTaskService } from './integrationTask';
 import {
@@ -291,12 +291,12 @@ const isRemoteRemoval = (action: string) =>
   action === 'delete' || action === 'deleted' || action === 'remove';
 
 export class LinearSyncWorker {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly model: LinearSyncModel;
   private readonly workspaceId: string;
   private readonly leaseOwner = randomUUID();
 
-  constructor(db: LobeChatDatabase, workspaceId: string) {
+  constructor(db: OrviloDatabase, workspaceId: string) {
     this.db = db;
     this.model = new LinearSyncModel(db, workspaceId);
     this.workspaceId = workspaceId;
@@ -389,7 +389,7 @@ export class LinearSyncWorker {
   }
 
   private async clearCrossProjectEdgesBeforeMove(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     integrationTasks: LinearIntegrationTaskService,
     task: TaskItem,
     destinationProjectId: string,
@@ -1052,7 +1052,7 @@ export class LinearSyncWorker {
 
   private async processCommentDeletionRow(
     row: { id: string; installationId: string; subjectId: string | null },
-    context: { db: LobeChatDatabase; model: LinearSyncModel },
+    context: { db: OrviloDatabase; model: LinearSyncModel },
   ): Promise<'paused' | 'processed'> {
     if (!row.subjectId) return 'processed';
     const { db, model } = context;
@@ -1097,7 +1097,7 @@ export class LinearSyncWorker {
 
   private async processRelationDeletionRow(
     row: { id: string; installationId: string; subjectId: string | null },
-    context: { db: LobeChatDatabase; model: LinearSyncModel },
+    context: { db: OrviloDatabase; model: LinearSyncModel },
   ): Promise<'paused' | 'processed'> {
     if (!row.subjectId) return 'processed';
     const mapping = await context.model.findExternalRelationByRemoteId(row.subjectId);
@@ -1303,7 +1303,7 @@ export class LinearSyncWorker {
   private async processCommentRow(
     row: { id: string; installationId: string },
     comment: LinearCommentSnapshot,
-    context: { db: LobeChatDatabase; historicalImport?: boolean; model: LinearSyncModel },
+    context: { db: OrviloDatabase; historicalImport?: boolean; model: LinearSyncModel },
   ): Promise<'paused' | 'pending-binding' | 'processed'> {
     const { db, model } = context;
     const issueLink = await model.findIssueLinkByExternalId(comment.issueId);
@@ -1419,7 +1419,7 @@ export class LinearSyncWorker {
   private async processRelationRow(
     row: { id: string; installationId: string },
     relation: LinearRelationSnapshot,
-    context: { db: LobeChatDatabase; model: LinearSyncModel },
+    context: { db: OrviloDatabase; model: LinearSyncModel },
   ): Promise<'paused' | 'processed'> {
     const installation = await context.model.findInstallationById(row.installationId);
     if (!installation || installation.status !== 'active') {
@@ -1450,7 +1450,7 @@ export class LinearSyncWorker {
 
   private async reconcileRelationsForIssue(
     model: LinearSyncModel,
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     integrationTasks: LinearIntegrationTaskService,
     _binding: Awaited<ReturnType<LinearSyncModel['findBindingById']>>,
     _taskId: string,
@@ -1486,7 +1486,7 @@ export class LinearSyncWorker {
 
   private async reconcileOneRelation(
     model: LinearSyncModel,
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     integrationTasks: LinearIntegrationTaskService,
     relation: LinearRelationSnapshot,
     deliveryId: string,
@@ -1595,7 +1595,7 @@ export class LinearSyncWorker {
   }
 
   private async removeLocalRelation(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     integrationTasks: LinearIntegrationTaskService,
     mapping: Awaited<ReturnType<LinearSyncModel['findExternalRelationById']>>,
     deliveryId: string,
@@ -1637,7 +1637,7 @@ export class LinearSyncWorker {
 
   private async tombstoneRelationMapping(
     model: LinearSyncModel,
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     integrationTasks: LinearIntegrationTaskService,
     mapping: Awaited<ReturnType<LinearSyncModel['findExternalRelationById']>>,
     deliveryId: string,
@@ -1921,7 +1921,7 @@ export class LinearSyncWorker {
     row: LinearInboundRow,
     provider: LinearIssueProvider,
     context: {
-      db?: LobeChatDatabase;
+      db?: OrviloDatabase;
       historicalImport?: boolean;
       knownIssue?: LinearIssueSnapshot;
       knownRelations?: LinearRelationSnapshot[];

@@ -107,7 +107,7 @@ export class TaskInputService {
               sequence: row.sequence,
               taskId: params.taskId,
             },
-            workspaceId: locked.workspaceId,
+            workspaceId: locked.workspaceId ?? undefined,
           });
         }
 

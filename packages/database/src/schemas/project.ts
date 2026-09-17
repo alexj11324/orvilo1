@@ -1,5 +1,6 @@
 import type {
   ProjectCompletionDecision,
+  ProjectOrchestrationPolicy,
   ProjectStatus,
   ProjectVisibility,
   ProjectWorkingDirectoryPermission,
@@ -10,6 +11,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   uniqueIndex,
@@ -57,6 +59,15 @@ export const projects = pgTable(
       .notNull(),
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     visibility: text('visibility').$type<ProjectVisibility>().notNull().default('public'),
+    orchestrationPolicy: jsonb('orchestration_policy')
+      .$type<ProjectOrchestrationPolicy>()
+      .notNull()
+      .default({
+        autoDispatch: false,
+        requireHumanReview: true,
+        replanMode: 'disabled',
+      }),
+    orchestrationPolicyRevision: integer('orchestration_policy_revision').notNull().default(1),
 
     /**
      * The accepted completion review that currently closes this project. Soft

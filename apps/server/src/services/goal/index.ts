@@ -38,6 +38,7 @@ import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime/AgentRunt
 
 import { TaskService } from '../task';
 import { TaskRunnerService } from '../taskRunner';
+import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { AcceptanceService } from '../verify/acceptanceService';
 import { VerifyPlanGeneratorService } from '../verify/planGenerator';
 import { GoalCriteriaGeneratorService, type GoalDecompositionDraft } from './criteriaGenerator';
@@ -1840,6 +1841,12 @@ export class GoalService {
             ? graph.goal.config.managerState.submitted.reason
             : undefined),
         maxSteps: resolveTaskMaxSteps(graph.goal),
+        idempotencyKey: taskRunIdempotencyKey.goalTaskAttempt({
+          executionGeneration: task.executionGeneration ?? 0,
+          goalId: graph.goal.id,
+          taskId: task.id,
+          taskRevision: task.domainRevision ?? 0,
+        }),
         taskId: task.id,
         trigger: 'goal',
       });

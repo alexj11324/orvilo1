@@ -797,7 +797,12 @@ export const sharedMainAreaChildren: RouteObject[] = [
   {
     children: [
       {
-        element: redirectElement('tasks'),
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]'),
+          'Desktop > Project Overview',
+          { preloadId: 'project' },
+        ),
+        handle: { meta: projectsRouteMeta },
         index: true,
       },
       {
@@ -1083,6 +1088,15 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
             ),
             handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
             path: 'connector',
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/[workspaceSlug]/settings/linear'),
+              'Desktop > Workspace > Settings > Linear',
+              { preloadId: 'settings' },
+            ),
+            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
+            path: 'linear',
           },
           // Padded tabs share a centered, max-width container layout.
           {

@@ -52,6 +52,15 @@ describe('defineConfig locale path-traversal hardening', () => {
       /^\/spa\/[^/]+\/oauth-preview-e2e-20260716\/settings\/oauth-apps$/,
     );
   });
+
+  it('passes the Linear OAuth callback through to the Next route handler', async () => {
+    const response = await middleware(
+      new NextRequest('http://localhost:3010/oauth/linear/callback?code=code&state=state'),
+    );
+
+    expect(response?.headers.get('x-middleware-next')).toBe('1');
+    expect(response?.headers.get('x-middleware-rewrite')).toBeNull();
+  });
 });
 
 describe('defineConfig Workbench SPA rewrite', () => {

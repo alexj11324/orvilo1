@@ -1,6 +1,10 @@
 import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
+import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
+import { useTaskStore } from '@/store/task';
+import { taskDetailSelectors } from '@/store/task/selectors';
+
 import TaskAcceptance from './TaskAcceptance';
 import TaskActivities from './TaskActivities';
 import TaskArtifacts from './TaskArtifacts';
@@ -22,31 +26,35 @@ import TaskSubtasks from './TaskSubtasks';
  * `activeTaskId` (e.g. via `setActiveTaskId`) before rendering this.
  */
 const TaskDetailSections = memo(() => {
+  const taskId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
+
   return (
-    <div className={styles.root}>
-      <div className={styles.header}>
-        <Flexbox className={styles.main} gap={12}>
-          <TaskParentBar />
-          <TaskDetailTitleInput />
-          <Flexbox horizontal align={'center'} gap={8} style={{ maxWidth: '100%' }} wrap={'wrap'}>
-            <TaskDetailRunPauseAction />
-            <TaskDetailAssignee />
-            <TaskModelConfig />
+    <LinearTaskSyncProvider taskIds={taskId ? [taskId] : []}>
+      <div className={styles.root}>
+        <div className={styles.header}>
+          <Flexbox className={styles.main} gap={12}>
+            <TaskParentBar />
+            <TaskDetailTitleInput />
+            <Flexbox horizontal align={'center'} gap={8} style={{ maxWidth: '100%' }} wrap={'wrap'}>
+              <TaskDetailRunPauseAction />
+              <TaskDetailAssignee />
+              <TaskModelConfig />
+            </Flexbox>
           </Flexbox>
-        </Flexbox>
         <div className={styles.side}>
           <TaskProperties />
           <TaskPrerequisites />
         </div>
+        </div>
+        <Flexbox gap={24} style={{ paddingBottom: 120 }}>
+          <TaskInstruction />
+          <TaskAcceptance />
+          <TaskSubtasks />
+          <TaskArtifacts />
+          <TaskActivities />
+        </Flexbox>
       </div>
-      <Flexbox gap={24} style={{ paddingBottom: 120 }}>
-        <TaskInstruction />
-        <TaskAcceptance />
-        <TaskSubtasks />
-        <TaskArtifacts />
-        <TaskActivities />
-      </Flexbox>
-    </div>
+    </LinearTaskSyncProvider>
   );
 });
 

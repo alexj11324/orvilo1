@@ -29,7 +29,9 @@ import {
   isTaskIdentifierUniqueViolation,
   taskActivityActor,
   TaskModel,
+  type TaskMutationContext,
 } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
@@ -44,6 +46,7 @@ import { type SubtaskGraphPlan, TaskGraphService } from '../taskGraph';
 import { TaskIntegrationService } from '../taskIntegration';
 import { type ReviewResult, TaskReviewService } from '../taskReview';
 import { TaskRunnerService } from '../taskRunner';
+import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { createTaskSchedulerModule } from '../taskScheduler';
 import { resolveTaskAcceptance } from '../verify/taskAcceptance';
 import { collapseActivityLog } from './collapseActivityLog';
@@ -86,6 +89,15 @@ export interface CreateTaskInput {
   // creation to record `context.origin` — the creator conversation pointer.
   context?: TaskContext;
   createdByAgentId?: string;
+  creationSubject?: {
+    id?: string;
+    kind: 'integration' | 'system';
+    snapshot?: {
+      displayName?: string;
+      externalId?: string;
+      kind: 'integration' | 'system';
+    };
+  };
   description?: string;
   editorData?: unknown;
   fileIds?: string[];
@@ -163,7 +175,7 @@ export class TaskService {
    * current model/provider into `task.config` so later changes to the agent's
    * default model don't silently affect this task.
    */
-  async createTask(input: CreateTaskInput): Promise<TaskItem> {
+  async createTask(input: CreateTaskInput, mutation: TaskMutationContext = {}): Promise<TaskItem> {
     await this.assertAssigneeAgentBelongsToUser(input.assigneeAgentId);
 
     const taskInput = input;
@@ -236,7 +248,7 @@ export class TaskService {
     // produce a `Private parent + Public child` combo if the caller insists.
     this.assertParentVisibilityCompat(createData.visibility, parentVisibility);
 
-    const task = await this.createTaskWithAssigneeLock(createData);
+    const task = await this.createTaskWithAssigneeLock(createData, mutation);
 
     return task;
   }
@@ -333,6 +345,23 @@ export class TaskService {
       });
     }
 
+    let stoppingDispatch;
+    if (target.dispatchId && target.dispatchFence !== null && target.executionGeneration !== null) {
+      stoppingDispatch = await new TaskDispatchModel(this.db, this.workspaceId).requestStop({
+        dispatchId: target.dispatchId,
+        fence: target.dispatchFence,
+        generation: target.executionGeneration,
+        operationId: target.operationId,
+        reason: 'user_cancel',
+      });
+      if (!stoppingDispatch) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task execution changed before cancellation could be fenced.',
+        });
+      }
+    }
+
     if (target.operationId) {
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
@@ -342,6 +371,23 @@ export class TaskService {
 
     await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
     await this.taskModel.updateStatus(target.taskId, 'paused');
+
+    if (stoppingDispatch) {
+      const settled = await new TaskDispatchModel(this.db, this.workspaceId).settle({
+        dispatchId: stoppingDispatch.id,
+        expected: ['cancel_requested'],
+        fence: stoppingDispatch.fence,
+        generation: stoppingDispatch.generation,
+        operationId: stoppingDispatch.operationId ?? undefined,
+        phase: 'canceled',
+      });
+      if (!settled) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task cancellation lost dispatch ownership before settlement.',
+        });
+      }
+    }
 
     // The canceled run's provisioned worktrees are abandoned — tear them down
     // best-effort; a cleanup failure must not break the cancel.
@@ -423,6 +469,27 @@ export class TaskService {
     });
 
     if (running && needsInterrupt) {
+      const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
+      let stoppingDispatch;
+      if (
+        target.dispatchId &&
+        target.dispatchFence !== null &&
+        target.executionGeneration !== null
+      ) {
+        stoppingDispatch = await dispatchModel.requestStop({
+          dispatchId: target.dispatchId,
+          fence: target.dispatchFence,
+          generation: target.executionGeneration,
+          operationId,
+          reason: 'steer_interrupt',
+        });
+        if (!stoppingDispatch) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Task execution changed before the steer interrupt could be fenced.',
+          });
+        }
+      }
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
@@ -430,6 +497,22 @@ export class TaskService {
       // Settle the interrupted segment so the continuation can claim the
       // topic (`runTask` refuses a 'running' continue target).
       await this.taskTopicModel.updateStatus(task.id, input.topicId, 'canceled');
+      if (stoppingDispatch) {
+        const settled = await dispatchModel.settle({
+          dispatchId: stoppingDispatch.id,
+          expected: ['cancel_requested'],
+          fence: stoppingDispatch.fence,
+          generation: stoppingDispatch.generation,
+          operationId: stoppingDispatch.operationId ?? undefined,
+          phase: 'canceled',
+        });
+        if (!settled) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Task execution changed before the steer interrupt settled.',
+          });
+        }
+      }
     } else if (running) {
       return { messageId: steerMessage.id, mode: 'injected' };
     }
@@ -454,6 +537,11 @@ export class TaskService {
       await runner.runTask({
         continueFromMessageId: steerMessage.id,
         continueTopicId: input.topicId,
+        idempotencyKey: taskRunIdempotencyKey.steerContinuation({
+          messageId: steerMessage.id,
+          taskId: task.id,
+          topicId: input.topicId,
+        }),
         taskId: task.id,
       });
     } catch (error) {
@@ -575,6 +663,13 @@ export class TaskService {
   async updateStatus(
     input: {
       error?: string;
+      expectedContract?: {
+        assigneeAgentId: string | null;
+        executionGeneration: number;
+        policyRevision: number;
+        requirementRevision: number;
+        status?: string;
+      };
       id: string;
       status: TaskStatus;
     },
@@ -586,16 +681,38 @@ export class TaskService {
     actor?: { agentId?: string | null; userId?: string | null },
   ): Promise<UpdateStatusResult>;
   async updateStatus(
-    input: { error?: string; id: string; status: TaskStatus },
+    input: {
+      error?: string;
+      expectedContract?: {
+        assigneeAgentId: string | null;
+        executionGeneration: number;
+        policyRevision: number;
+        requirementRevision: number;
+        status?: string;
+      };
+      id: string;
+      status: TaskStatus;
+    },
     actor: undefined,
     guard: { currentStatus: TaskStatus; reservationId: string },
   ): Promise<UpdateStatusResult | null>;
   async updateStatus(
-    input: { error?: string; id: string; status: TaskStatus },
+    input: {
+      error?: string;
+      expectedContract?: {
+        assigneeAgentId: string | null;
+        executionGeneration: number;
+        policyRevision: number;
+        requirementRevision: number;
+        status?: string;
+      };
+      id: string;
+      status: TaskStatus;
+    },
     actor?: { agentId?: string | null; userId?: string | null },
     guard?: { currentStatus: TaskStatus; reservationId: string },
   ): Promise<UpdateStatusResult | null> {
-    const { id, status, error: errorMsg } = input;
+    const { expectedContract, id, status, error: errorMsg } = input;
 
     if (errorMsg && status !== 'failed') {
       throw new TRPCError({
@@ -620,9 +737,27 @@ export class TaskService {
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
+      const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
 
       for (const t of topics) {
         if (t.status !== 'running' || !t.topicId) continue;
+
+        let stoppingDispatch;
+        if (t.dispatchId && t.dispatchFence !== null && t.executionGeneration !== null) {
+          stoppingDispatch = await dispatchModel.requestStop({
+            dispatchId: t.dispatchId,
+            fence: t.dispatchFence,
+            generation: t.executionGeneration,
+            operationId: t.operationId,
+            reason: `task_status:${status}`,
+          });
+          if (!stoppingDispatch) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task execution changed before the status transition could be fenced.',
+            });
+          }
+        }
 
         // Interrupt the remote operation first; if it fails, skip cancellation
         // to avoid desynchronizing DB state from a still-running operation.
@@ -640,6 +775,22 @@ export class TaskService {
         }
 
         await this.taskTopicModel.cancelIfRunning(resolved.id, t.topicId);
+        if (stoppingDispatch) {
+          const settled = await dispatchModel.settle({
+            dispatchId: stoppingDispatch.id,
+            expected: ['cancel_requested'],
+            fence: stoppingDispatch.fence,
+            generation: stoppingDispatch.generation,
+            operationId: stoppingDispatch.operationId ?? undefined,
+            phase: 'canceled',
+          });
+          if (!settled) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task execution changed before the status transition settled.',
+            });
+          }
+        }
       }
     }
 
@@ -663,20 +814,24 @@ export class TaskService {
       extra.completedAt = new Date();
     if (errorMsg) extra.error = errorMsg;
 
-    const task = actor
-      ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
-      : guard
-        ? await this.taskModel.updateStatusIfReservation(
-            resolved.id,
-            guard.reservationId,
-            guard.currentStatus,
-            status,
-            extra,
-          )
+    const task = expectedContract
+      ? await this.taskModel.updateStatusForExecutionContract(
+          resolved.id,
+          status,
+          expectedContract,
+          extra,
+        )
+      : actor
+        ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
         : await this.taskModel.updateStatus(resolved.id, status, extra);
     if (!task) {
       if (guard) return null;
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      throw new TRPCError({
+        code: expectedContract ? 'CONFLICT' : 'NOT_FOUND',
+        message: expectedContract
+          ? 'Task execution contract changed before the status transition.'
+          : 'Task not found',
+      });
     }
 
     // A terminal transition abandons the task's merge pipeline — tear down
@@ -720,14 +875,15 @@ export class TaskService {
       const schedulerContext = (resolved.context as TaskContext | null)?.scheduler as
         TaskSchedulerContext | undefined;
       const previousTickMessageId = schedulerContext?.tickMessageId;
-      const tickToken = randomUUID();
+      const tickRevision = (schedulerContext?.tickRevision ?? 0) + 1;
+      const tickToken = `heartbeat:task:${task.id}:revision:${tickRevision}`;
       let tickMessageId: string | undefined;
 
       try {
         // Invalidate the previous generation before publishing. This closes
         // the race where an old QStash delivery arrives while the replacement
         // message is being created.
-        await this.taskModel.updateContext(task.id, { scheduler: { tickToken } });
+        await this.taskModel.updateContext(task.id, { scheduler: { tickRevision, tickToken } });
         tickMessageId = await scheduler.scheduleNextTopic({
           delay: task.heartbeatInterval,
           taskId: task.id,
@@ -740,6 +896,7 @@ export class TaskService {
             consecutiveFailures: schedulerContext?.consecutiveFailures ?? 0,
             scheduledAt: new Date().toISOString(),
             tickMessageId,
+            tickRevision,
             tickToken,
           },
         });
@@ -959,7 +1116,10 @@ export class TaskService {
    * Subsequent layers fire automatically through
    * `TaskRunnerService.cascadeOnCompletion` as each upstream finishes.
    */
-  async runReadySubtasks(idOrIdentifier: string): Promise<RunReadySubtasksResult> {
+  async runReadySubtasks(
+    idOrIdentifier: string,
+    requestId: string = randomUUID(),
+  ): Promise<RunReadySubtasksResult> {
     const parent = await this.resolveOrThrow(idOrIdentifier);
     const graph = new TaskGraphService(this.db, this.userId, this.workspaceId);
     const { descendants, plan } = await graph.planForParent(parent.id);
@@ -984,7 +1144,14 @@ export class TaskService {
       firstLayer.map(async (identifier) => {
         const id = identifierToId.get(identifier);
         if (!id) throw new Error(`Subtask ${identifier} not found`);
-        await runner.runTask({ taskId: id });
+        await runner.runTask({
+          idempotencyKey: taskRunIdempotencyKey.readySubtask({
+            parentTaskId: parent.id,
+            requestId,
+            taskId: id,
+          }),
+          taskId: id,
+        });
         return identifier;
       }),
     );
@@ -1081,10 +1248,12 @@ export class TaskService {
 
   private async createTaskWithAssigneeLock(
     createData: CreateTaskInput & { config?: Record<string, unknown> },
+    mutation: TaskMutationContext,
   ): Promise<TaskItem> {
+    const { creationSubject, ...taskData } = createData;
     if (!createData.assigneeUserId || !this.workspaceId) {
       await this.assertAssigneeUserAssignable(createData.assigneeUserId);
-      return this.taskModel.create(createData);
+      return this.taskModel.create(taskData, { creationSubject, mutation });
     }
 
     // TaskModel's normal retry loop cannot continue after a unique violation
@@ -1095,7 +1264,11 @@ export class TaskService {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         return await this.withAssigneeUserLock(createData.assigneeUserId, (db) =>
-          new TaskModel(db, this.userId, this.workspaceId).create(createData, { maxRetries: 1 }),
+          new TaskModel(db, this.userId, this.workspaceId).create(taskData, {
+            creationSubject,
+            maxRetries: 1,
+            mutation,
+          }),
         );
       } catch (error) {
         if (!isTaskIdentifierUniqueViolation(error) || attempt === maxRetries - 1) throw error;
@@ -1109,6 +1282,7 @@ export class TaskService {
     taskId: string,
     data: Parameters<TaskModel['update']>[1],
     actor: { agentId?: string | null; userId?: string | null } = {},
+    mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     const invalidatesActiveRun = [
       'automationMode',
@@ -1122,7 +1296,12 @@ export class TaskService {
       : data;
 
     return this.withAssigneeUserLock(data.assigneeUserId, (db) =>
-      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(taskId, guardedData, actor),
+      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(
+        taskId,
+        guardedData,
+        actor,
+        mutation,
+      ),
     );
   }
 
@@ -1289,7 +1468,7 @@ export class TaskService {
           assigneeUserId: s.assigneeUserId,
           automationMode: s.automationMode,
           blockedBy: depMap.get(s.id),
-          createdByUserId: s.createdByUserId,
+          createdByUserId: s.createdByUserId ?? undefined,
           visibility: s.visibility,
           children: buildSubtaskTree(s.id),
           ...(s.heartbeatInterval != null ? { heartbeat: { interval: s.heartbeatInterval } } : {}),
@@ -1568,8 +1747,8 @@ export class TaskService {
       dependencies: dependencies.map((d) => {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
-          dependsOn: info?.identifier ?? d.dependsOnId,
-          id: d.dependsOnId,
+          dependsOn: info?.identifier ?? 'Unavailable prerequisite',
+          ...(info ? { id: d.dependsOnId } : {}),
           name: info?.name,
           status: info?.status ?? null,
           type: d.type,
@@ -1611,6 +1790,8 @@ export class TaskService {
         ? { ...acceptance.config, requirement: acceptance.requirement }
         : this.taskModel.getVerifyConfig(task),
       visibility: task.visibility,
+      workflowCategory: task.workflowCategory,
+      workflowStateId: task.workflowStateId,
       subtasks,
       activities: activities.length > 0 ? activities : undefined,
       topicCount: topics.length > 0 ? topics.length : undefined,

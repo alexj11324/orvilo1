@@ -6,6 +6,7 @@ import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import type {
   ExecAgentResult,
+  TaskExecutionEnvironmentSnapshot,
   TaskItem,
   TaskRunTrigger,
   TaskTopicIntegration,
@@ -23,10 +24,17 @@ import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { LobeChatDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
+import {
+  type PreparedTaskDispatch,
+  TaskDispatchConflictError,
+  TaskDispatchService,
+  TaskDispatchWaitingError,
+} from '@/server/services/taskDispatch';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 import { buildTaskPrompt } from './buildTaskPrompt';
+import { taskRunIdempotencyKey } from './idempotency';
 
 const log = debug('task-runner');
 const RUN_KICKOFF_CLAIM_TTL_MS = 15 * 60 * 1000;
@@ -41,6 +49,8 @@ export interface RunTaskParams {
   continueFromMessageId?: string;
   continueTopicId?: string;
   extraPrompt?: string;
+  /** Stable identity supplied by the originating command or scheduler tick. */
+  idempotencyKey?: string;
   /**
    * Workspace-integration record persisted on this run's task_topics row —
    * set by the workspace provisioner or by TaskIntegrationService when it
@@ -51,8 +61,10 @@ export interface RunTaskParams {
   maxSteps?: number;
   /** Parent delivery operation for internal corrective runs. */
   parentOperationId?: string;
+  planRevision?: number;
   /** Atomically transfer a completion lease into this continuation dispatch. */
   replaceReservationId?: string;
+  requestedBy?: string;
   /** Internal corrective runs stay bound to the original task Verify plan. */
   skipTaskVerification?: boolean;
   taskId: string;
@@ -96,6 +108,7 @@ export class TaskRunnerService {
   private briefModel: BriefModel;
   private db: LobeChatDatabase;
   private taskLifecycle: TaskLifecycleService;
+  private taskDispatch: TaskDispatchService;
   private taskModel: TaskModel;
   private taskTopicModel: TaskTopicModel;
   private taskWorkspace: TaskWorkspaceService;
@@ -112,6 +125,7 @@ export class TaskRunnerService {
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.briefModel = new BriefModel(db, userId, workspaceId);
     this.taskLifecycle = new TaskLifecycleService(db, userId, workspaceId);
+    this.taskDispatch = new TaskDispatchService(db, workspaceId);
     this.taskWorkspace = new TaskWorkspaceService(db, userId, workspaceId);
   }
 
@@ -122,17 +136,32 @@ export class TaskRunnerService {
       continueTopicId,
       extraPrompt,
       integrationSeed,
+      idempotencyKey,
       maxSteps,
       parentOperationId,
+      planRevision,
       replaceReservationId,
+      requestedBy = this.userId,
       skipTaskVerification,
       trigger = 'manual',
       workspaceOverride,
     } = params;
 
-    const task = await this.taskModel.resolve(idOrIdentifier);
-    if (!task) {
+    const resolvedTask = await this.taskModel.resolve(idOrIdentifier);
+    if (!resolvedTask) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+    }
+    let task: TaskItem = resolvedTask;
+
+    // Automated callers must provide a durable command identity. Manual
+    // callers retain one-request-per-click behavior for older clients.
+    const resolvedIdempotencyKey =
+      idempotencyKey ?? (trigger === 'manual' ? `manual:${task.id}:${randomUUID()}` : undefined);
+    if (!resolvedIdempotencyKey) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Task runs triggered by ${trigger} require a stable idempotency key`,
+      });
     }
 
     // Preflight before assignment/provisioning; reserveRun repeats this check
@@ -158,8 +187,46 @@ export class TaskRunnerService {
     // generations during the watchdog transition.
     const kickoffClaimToken = randomUUID();
     let ownsKickoffClaim = false;
+    let preparedDispatch: PreparedTaskDispatch | undefined;
+    let runtimeDispatchStarted = false;
+
+    // Persist the agent's model snapshot before the dispatch contract is
+    // captured. updateTaskConfig is a task policy mutation; doing it after
+    // prepare() would advance policyRevision and make this same run look
+    // stale at the first dispatch transition.
+    if (task.assigneeAgentId) {
+      const taskConfig = (task.config ?? {}) as Record<string, unknown>;
+      if (typeof taskConfig.model !== 'string' || typeof taskConfig.provider !== 'string') {
+        const snapshot = await this.agentModel.getAgentModelConfig(task.assigneeAgentId);
+        if (snapshot) {
+          const updated = await this.taskModel.updateTaskConfig(task.id, snapshot);
+          if (updated) task = updated;
+        }
+      }
+    }
 
     try {
+      try {
+        preparedDispatch = await this.taskDispatch.prepare({
+          idempotencyKey: resolvedIdempotencyKey,
+          planRevision,
+          requestedBy,
+          task,
+          trigger,
+        });
+      } catch (error) {
+        if (error instanceof TaskDispatchConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        if (error instanceof TaskDispatchWaitingError) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+        }
+        throw error;
+      }
+      // prepare() re-reads and locks the Task. Continue only with that
+      // authoritative assignee/revision snapshot, never the earlier resolve.
+      task = preparedDispatch!.task;
+
       if (!task.assigneeAgentId) {
         const inboxAgent = await this.agentModel.getBuiltinAgent(INBOX_SESSION_ID);
         if (!inboxAgent) {
@@ -179,6 +246,11 @@ export class TaskRunnerService {
           await this.taskModel.updateWithLog(task.id, { assigneeAgentId: inboxAgent.id }, {});
         }
         task.assigneeAgentId = inboxAgent.id;
+        await this.taskDispatch.transition(preparedDispatch!, {
+          agentId: inboxAgent.id,
+          expected: ['claimed'],
+          phase: 'claimed',
+        });
       }
 
       ownsKickoffClaim = await this.taskModel.claimRunKickoff(
@@ -235,6 +307,9 @@ export class TaskRunnerService {
           });
         }
       }
+      const continuedTopic = continueTopicId
+        ? existingTopics.find((topic) => topic.topicId === continueTopicId)
+        : undefined;
 
       // A `continueFromMessageId` continuation answers a user row that is
       // already persisted in the target topic — validate the anchor before
@@ -260,8 +335,7 @@ export class TaskRunnerService {
       }
 
       if (continueTopicId) {
-        const target = existingTopics.find((t) => t.topicId === continueTopicId);
-        if (target?.status === 'running') {
+        if (continuedTopic?.status === 'running') {
           throw new TRPCError({
             code: 'CONFLICT',
             message: `Topic ${continueTopicId} is already running.`,
@@ -303,6 +377,10 @@ export class TaskRunnerService {
       // building so the contract can ride into the prompt via extraPrompt.
       if (!workspaceOverride && !continueTopicId) {
         try {
+          await this.taskDispatch.transition(preparedDispatch!, {
+            expected: ['claimed'],
+            phase: 'provisioning',
+          });
           provisioned = await this.taskWorkspace.provision({
             seq: (task.totalTopics || 0) + 1,
             task,
@@ -344,8 +422,11 @@ export class TaskRunnerService {
       let registrationComplete = false;
       let earlyCompletion:
         | {
+            dispatchFence?: number;
+            dispatchId?: string;
             errorCode?: string;
             errorMessage?: string;
+            executionGeneration?: number;
             lastAssistantContent?: string;
             operationId: string;
             reason: string;
@@ -354,8 +435,11 @@ export class TaskRunnerService {
         | undefined;
       const handleCompletion = async (event: NonNullable<typeof earlyCompletion>) => {
         await taskLifecycle.onTopicComplete({
+          dispatchFence: event.dispatchFence,
+          dispatchId: event.dispatchId,
           errorCode: event.errorCode,
           errorMessage: event.errorMessage,
+          executionGeneration: event.executionGeneration,
           lastAssistantContent: event.lastAssistantContent,
           operationId: event.operationId,
           reason: event.reason,
@@ -397,20 +481,21 @@ export class TaskRunnerService {
         workspaceOverride?.workingDirectoryConfig ?? provisioned?.workingDirectoryConfig;
       const initialRepos = workspaceOverride?.repos ?? provisioned?.repos;
       const runIntegration = integrationSeed ?? provisioned?.integration;
-
-      // Backfill model snapshot for tasks created before the snapshot logic
-      // landed, or whose assignee was set after creation. Once written, the
-      // task is pinned to this model regardless of later agent default changes.
-      if (typeof taskConfig.model !== 'string' || typeof taskConfig.provider !== 'string') {
-        const snapshot = await this.agentModel.getAgentModelConfig(agentRef);
-        if (snapshot) {
-          await this.taskModel.updateTaskConfig(task.id, snapshot);
-          taskConfig.model = snapshot.model;
-          taskConfig.provider = snapshot.provider;
-        }
-      }
+      const environmentSnapshot: TaskExecutionEnvironmentSnapshot = {
+        branch: runIntegration?.branch,
+        deviceId: runIntegration?.deviceId,
+        repo: runIntegration?.repo,
+        workingDirectory: initialWorkingDirectory ?? initialWorkingDirectoryConfig?.path,
+      };
 
       log('runTask: %s (continue=%s)', taskIdentifier, continueTopicId);
+
+      await this.taskDispatch.transition(preparedDispatch!, {
+        environmentSnapshot,
+        expected: ['claimed', 'provisioning'],
+        phase: 'dispatched',
+      });
+      let taskTopicStarted = false;
 
       if (!(await this.taskModel.renewRunReservation(task.id, reservationId))) {
         throw new TRPCError({
@@ -431,12 +516,44 @@ export class TaskRunnerService {
         ...(typeof taskConfig.model === 'string' && { model: taskConfig.model }),
         ...(typeof taskConfig.provider === 'string' && { provider: taskConfig.provider }),
         skipTaskVerification,
+        beforeOperationStart: async ({ operationId, topicId }) => {
+          await this.db.transaction(async (tx) => {
+            const dispatch = new TaskDispatchService(tx, this.workspaceId);
+            const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
+            const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
+
+            await dispatch.transition(preparedDispatch!, {
+              environmentSnapshot,
+              expected: ['dispatched'],
+              operationId,
+              phase: 'running',
+            });
+            await taskTopicModel.startRun(task.id, topicId, {
+              dispatch: {
+                ...preparedDispatch!.dispatch,
+                fence: preparedDispatch!.fence,
+              },
+              environmentSnapshot,
+              integration: runIntegration,
+              operationId,
+              seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
+              trigger,
+            });
+            if (!continueTopicId) await taskModel.incrementTopicCount(task.id);
+            await taskModel.updateCurrentTopic(task.id, topicId);
+          });
+          taskTopicStarted = true;
+          runtimeDispatchStarted = true;
+        },
         hooks: [
           {
             handler: async (event) => {
               const completion = {
+                dispatchFence: preparedDispatch!.fence,
+                dispatchId: preparedDispatch!.dispatch.id,
                 errorCode: event.errorType,
                 errorMessage: event.errorMessage,
+                executionGeneration: preparedDispatch!.dispatch.generation,
                 lastAssistantContent: event.lastAssistantContent,
                 operationId: event.operationId,
                 reason:
@@ -457,7 +574,15 @@ export class TaskRunnerService {
               // `runTrigger` rides in the static body so the production webhook
               // callback (which reconstructs onTopicComplete params server-side)
               // knows whether this was a manual run or an automation tick.
-              body: { runTrigger: trigger, taskId, taskIdentifier, userId },
+              body: {
+                dispatchFence: preparedDispatch!.fence,
+                dispatchId: preparedDispatch!.dispatch.id,
+                executionGeneration: preparedDispatch!.dispatch.generation,
+                runTrigger: trigger,
+                taskId,
+                taskIdentifier,
+                userId,
+              },
               delivery: 'hatchet' as const,
               fallback: 'none' as const,
               url: '/api/workflows/task/on-topic-complete',
@@ -476,23 +601,23 @@ export class TaskRunnerService {
             : task.name || task.identifier,
         trigger: TopicTrigger.RunTask,
         userInterventionConfig: { approvalMode: 'headless' },
-        ...(continueTopicId ||
-        initialWorkingDirectory ||
-        initialWorkingDirectoryConfig ||
-        initialRepos?.length
-          ? {
-              appContext: {
-                ...(continueTopicId ? { topicId: continueTopicId } : {}),
-                initialTopicMetadata: {
-                  ...(initialRepos?.length ? { repos: initialRepos } : {}),
-                  ...(initialWorkingDirectory ? { workingDirectory: initialWorkingDirectory } : {}),
-                  ...(initialWorkingDirectoryConfig
-                    ? { workingDirectoryConfig: initialWorkingDirectoryConfig }
-                    : {}),
-                },
-              },
-            }
-          : {}),
+        appContext: {
+          dispatchFence: preparedDispatch!.fence,
+          dispatchId: preparedDispatch!.dispatch.id,
+          executionGeneration: preparedDispatch!.dispatch.generation,
+          ...(continueTopicId ? { topicId: continueTopicId } : {}),
+          ...((initialWorkingDirectory ||
+            initialWorkingDirectoryConfig ||
+            initialRepos?.length) && {
+            initialTopicMetadata: {
+              ...(initialRepos?.length ? { repos: initialRepos } : {}),
+              ...(initialWorkingDirectory ? { workingDirectory: initialWorkingDirectory } : {}),
+              ...(initialWorkingDirectoryConfig
+                ? { workingDirectoryConfig: initialWorkingDirectoryConfig }
+                : {}),
+            },
+          }),
+        },
       });
       dispatchedOperationId = result.operationId;
       dispatchedTopicId = result.topicId;
@@ -511,43 +636,53 @@ export class TaskRunnerService {
         // the Task looking in flight — a goal coordinator would even record a
         // `started_run` for it — with nothing left to ever settle it. Keep the
         // attempt visible as a failed run, then fail the kickoff like any other.
-        if (result.topicId && !continueTopicId) {
-          await this.taskModel.incrementTopicCount(task.id);
+        if (result.topicId && !taskTopicStarted) {
           await this.taskModel.updateCurrentTopic(task.id, result.topicId);
-          await this.taskTopicModel.add(task.id, result.topicId, {
+          await this.taskTopicModel.startRun(task.id, result.topicId, {
+            dispatch: {
+              ...preparedDispatch!.dispatch,
+              fence: preparedDispatch!.fence,
+            },
+            environmentSnapshot,
             integration: runIntegration,
             operationId: result.operationId,
-            seq: (task.totalTopics || 0) + 1,
+            seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
             trigger,
           });
           provisionedRegistered = true;
+          if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
+          taskTopicStarted = true;
         }
         if (result.topicId) {
           await this.taskTopicModel.updateStatus(task.id, result.topicId, 'failed');
         }
+        await this.taskDispatch.settle(preparedDispatch!, 'failed');
+        runtimeDispatchStarted = false;
         throw new Error(result.error || result.message || 'Agent run failed to start');
       }
 
-      if (result.topicId) {
-        if (continueTopicId) {
-          await this.taskTopicModel.updateStatus(task.id, continueTopicId, 'running');
-          await this.taskTopicModel.updateOperationId(task.id, continueTopicId, result.operationId);
-          await this.taskModel.updateCurrentTopic(task.id, continueTopicId);
-        } else {
-          await this.taskModel.incrementTopicCount(task.id);
-          await this.taskModel.updateCurrentTopic(task.id, result.topicId);
-          await this.taskTopicModel.add(task.id, result.topicId, {
-            integration: runIntegration,
-            operationId: result.operationId,
-            seq: (task.totalTopics || 0) + 1,
-            trigger,
-          });
-          provisionedRegistered = true;
-        }
-      } else {
-        throw new Error('Agent run started without a topic id');
+      if (!taskTopicStarted) {
+        if (!result.topicId) throw new Error('Agent run started without a topic id');
+        await this.taskDispatch.transition(preparedDispatch!, {
+          environmentSnapshot,
+          expected: ['dispatched'],
+          operationId: result.operationId,
+          phase: 'running',
+        });
+        await this.taskModel.updateCurrentTopic(task.id, result.topicId);
+        await this.taskTopicModel.startRun(task.id, result.topicId, {
+          dispatch: { ...preparedDispatch!.dispatch, fence: preparedDispatch!.fence },
+          environmentSnapshot,
+          integration: runIntegration,
+          operationId: result.operationId,
+          seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
+          trigger,
+        });
+        if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
+        taskTopicStarted = true;
+        runtimeDispatchStarted = true;
+        provisionedRegistered = true;
       }
-
       await this.taskModel.updateHeartbeat(task.id);
       registrationComplete = true;
       if (earlyCompletion) await handleCompletion(earlyCompletion);
@@ -566,6 +701,21 @@ export class TaskRunnerService {
         taskIdentifier: task.identifier,
       };
     } catch (error) {
+      if (preparedDispatch) {
+        try {
+          if (runtimeDispatchStarted) {
+            await this.taskDispatch.transition(preparedDispatch, {
+              expected: ['dispatched', 'running'],
+              phase: 'outcome_unknown',
+              waitingReason: error instanceof Error ? error.message : 'Dispatch outcome unknown',
+            });
+          } else {
+            await this.taskDispatch.settle(preparedDispatch, 'failed');
+          }
+        } catch {
+          // Preserve the original runner error; recovery will reconcile the dispatch.
+        }
+      }
       if (ownsKickoffClaim) {
         await this.taskModel
           .releaseRunKickoff(task.id, kickoffClaimToken)
@@ -681,7 +831,16 @@ export class TaskRunnerService {
       }
 
       try {
-        await runner.runTask({ taskId: task.id });
+        await runner.runTask({
+          idempotencyKey: taskRunIdempotencyKey.dependencyCascade({
+            completedTaskIds,
+            executionGeneration: task.executionGeneration ?? 0,
+            taskId: task.id,
+            taskRevision: task.domainRevision ?? 0,
+          }),
+          taskId: task.id,
+          trigger: 'orchestrator',
+        });
         result.started.push(task.identifier);
       } catch (error) {
         // Readiness can change after discovery. No execution happened: leave

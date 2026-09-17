@@ -96,6 +96,27 @@ describe('triggerHatchetWorkflow', () => {
     expect(mocks.cancelHatchetTask).not.toHaveBeenCalled();
   });
 
+  it('preserves a delayed provider schedule for workflow continuations', async () => {
+    await triggerHatchetWorkflow(
+      '/api/workflows/agent-signal/run',
+      { userId: 'user-1' },
+      {
+        delayMs: 30_000,
+        workflowRunId: 'continuation-1',
+      },
+    );
+
+    expect(mocks.enqueueHatchetTask).toHaveBeenCalledWith(
+      HATCHET_TASK_NAMES.workflowDispatch,
+      expect.objectContaining({
+        deduplicationKey: expect.stringMatching(/^[a-f\d]{64}$/),
+        dispatchId: expect.any(String),
+        laneKey: expect.stringMatching(/^[a-f\d]{64}$/),
+      }),
+      { delayMs: 30_000 },
+    );
+  });
+
   it('cancels a provider run when cancellation wins after publish', async () => {
     mocks.updateReturning.mockResolvedValueOnce([]);
     mocks.selectLimit.mockResolvedValueOnce([{ status: 'cancelled' }]);

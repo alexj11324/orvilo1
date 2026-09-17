@@ -6,6 +6,69 @@ import type { ChatFileItem } from '../message/ui/chat';
 export type TaskStatus =
   'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running' | 'scheduled';
 
+/**
+ * Business workflow is independent from execution. `workflowStateId` keeps the
+ * exact provider/team state while this category gives the shared board a
+ * stable local grouping.
+ */
+export type TaskWorkflowCategory =
+  'triage' | 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled';
+
+export type TaskAssignmentMode = 'manual' | 'rules' | 'orchestrated';
+
+export type TaskOrchestrationOwner = 'manual' | `goal:${string}` | `project:${string}`;
+
+export type TaskCreationSubjectKind = 'agent' | 'integration' | 'system' | 'user';
+
+export type TaskLockField = 'assignee' | 'priority' | 'requirement' | 'workflow';
+
+export interface TaskHumanLock {
+  actorId?: string;
+  actorKind: 'agent' | 'system' | 'user';
+  at: string;
+  reason?: string;
+  revision: number;
+}
+
+export interface TaskCreationSubjectSnapshot {
+  displayName?: string;
+  externalId?: string;
+  kind: TaskCreationSubjectKind;
+}
+
+export type TaskRunState =
+  | 'queued'
+  | 'provisioning'
+  | 'running'
+  | 'waiting'
+  | 'cancel_requested'
+  | 'canceled'
+  | 'failed'
+  | 'succeeded'
+  | 'outcome_unknown';
+
+export type TaskDispatchPhase =
+  | 'requested'
+  | 'claimed'
+  | 'provisioning'
+  | 'dispatched'
+  | 'running'
+  | 'waiting'
+  | 'cancel_requested'
+  | 'canceled'
+  | 'failed'
+  | 'succeeded'
+  | 'outcome_unknown';
+
+export interface TaskExecutionEnvironmentSnapshot {
+  branch?: string;
+  deviceId?: string;
+  provider?: string;
+  repo?: string;
+  workingDirectory?: string;
+  workingDirectoryId?: string;
+}
+
 export type TaskPriority = 0 | 1 | 2 | 3 | 4;
 
 export type TaskActivityType =
@@ -72,8 +135,10 @@ export type TaskAutomationMode = 'heartbeat' | 'schedule';
  * - `heartbeat` — a heartbeat interval tick fired the run.
  * - `goal`      — the Goal coordinator started this Work attempt.
  *                 Like `manual`, it never counts against automation quotas.
+ * - `orchestrator` — the dependency/project planner started this run. Project
+ *                    dispatch policy and execution budgets apply.
  */
-export type TaskRunTrigger = 'manual' | 'schedule' | 'heartbeat' | 'goal';
+export type TaskRunTrigger = 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
 
 /**
  * A clarifying question the intent reader wants answered before an agent
@@ -372,6 +437,9 @@ export interface TaskSchedulerContext {
   // Provider message id (or LocalScheduler scheduleId) for the next tick. Used
   // to cancel when the user wants an interval change to take effect immediately.
   tickMessageId?: string;
+  // Monotonic scheduler generation. It gives each user restart / lifecycle
+  // re-arm a durable identity without relying on wall-clock time or UUIDs.
+  tickRevision?: number;
   // Generation token carried by the currently active tick. A delivered tick
   // must match this value so a failed best-effort cancellation cannot create
   // a second heartbeat chain.
@@ -452,19 +520,26 @@ export interface TaskSubtaskProgress {
 export interface TaskItem {
   accessedAt: Date;
   assigneeAgentId: string | null;
+  assigneeLocked: boolean;
   assigneeUserId: string | null;
+  assignmentMode: TaskAssignmentMode;
   automationMode: TaskAutomationMode | null;
   completedAt: Date | null;
   config: unknown;
   context: unknown;
   createdAt: Date;
   createdByAgentId: string | null;
-  createdByUserId: string;
+  createdBySnapshot: TaskCreationSubjectSnapshot | null;
+  createdBySubjectId: string | null;
+  createdBySubjectKind: TaskCreationSubjectKind;
+  createdByUserId: string | null;
   currentTopicId: string | null;
   deletedAt?: Date | null;
   description: string | null;
+  domainRevision: number;
   editorData: unknown;
   error: string | null;
+  executionGeneration: number;
   heartbeatInterval: number | null;
   heartbeatTimeout: number | null;
   id: string;
@@ -472,9 +547,12 @@ export interface TaskItem {
   instruction: string;
   isDeleted?: boolean | null;
   lastHeartbeatAt: Date | null;
+  lockMetadata: Partial<Record<TaskLockField, TaskHumanLock>>;
   maxTopics: number | null;
   name: string | null;
+  orchestrationOwner: TaskOrchestrationOwner;
   parentTaskId: string | null;
+  policyRevision: number;
   /**
    * Kanban board ordering key (fractional indexing): lower renders earlier in
    * a column. NULL means "never dragged" — board reads fall back to
@@ -483,7 +561,10 @@ export interface TaskItem {
    */
   position: number | null;
   priority: number | null;
+  priorityLocked: boolean;
   projectId: string | null;
+  requirementLocked: boolean;
+  requirementRevision: number;
   /**
    * The human accountable while the task sits in 'paused' ("pending review").
    * Stamped when a run hands off for review; the assignees stay the executors.
@@ -509,6 +590,9 @@ export interface TaskItem {
   // 'public' (default) tasks are visible to every workspace member.
   // The column is ignored in personal mode (no workspace).
   visibility: 'private' | 'public';
+  workflowCategory: TaskWorkflowCategory;
+  workflowLocked: boolean;
+  workflowStateId: string | null;
   workspaceId: string | null;
 }
 
@@ -527,26 +611,35 @@ export interface TaskMoveScope {
   assigneeUserId?: string | null;
   /** The column's priority value; the `priority:0` column also holds NULLs. */
   priority?: number;
-  /** The merged status column's member statuses (needsInput → paused+failed). */
+  /** Legacy execution statuses represented by a business-workflow column. */
   statuses?: TaskStatus[];
+  /** Business categories represented by a workflow-aware board column. */
+  workflowCategories?: TaskWorkflowCategory[];
 }
 
 export interface NewTask {
   accessedAt?: Date;
   assigneeAgentId?: string | null;
+  assigneeLocked?: boolean;
   assigneeUserId?: string | null;
+  assignmentMode?: TaskAssignmentMode;
   automationMode?: TaskAutomationMode | null;
   completedAt?: Date | null;
   config?: unknown;
   context?: unknown;
   createdAt?: Date;
   createdByAgentId?: string | null;
-  createdByUserId: string;
+  createdBySnapshot?: TaskCreationSubjectSnapshot | null;
+  createdBySubjectId?: string | null;
+  createdBySubjectKind?: TaskCreationSubjectKind;
+  createdByUserId?: string | null;
   currentTopicId?: string | null;
   deletedAt?: Date | null;
   description?: string | null;
+  domainRevision?: number;
   editorData?: unknown;
   error?: string | null;
+  executionGeneration?: number;
   heartbeatInterval?: number | null;
   heartbeatTimeout?: number | null;
   id?: string;
@@ -554,12 +647,18 @@ export interface NewTask {
   instruction: string;
   isDeleted?: boolean | null;
   lastHeartbeatAt?: Date | null;
+  lockMetadata?: Partial<Record<TaskLockField, TaskHumanLock>>;
   maxTopics?: number | null;
   name?: string | null;
+  orchestrationOwner?: TaskOrchestrationOwner;
   parentTaskId?: string | null;
+  policyRevision?: number;
   position?: number | null;
   priority?: number | null;
+  priorityLocked?: boolean;
   projectId?: string | null;
+  requirementLocked?: boolean;
+  requirementRevision?: number;
   reviewerUserId?: string | null;
   schedulePattern?: string | null;
   scheduleTimezone?: string | null;
@@ -570,6 +669,9 @@ export interface NewTask {
   totalTopics?: number | null;
   updatedAt?: Date;
   visibility?: 'private' | 'public';
+  workflowCategory?: TaskWorkflowCategory;
+  workflowLocked?: boolean;
+  workflowStateId?: string | null;
   workspaceId?: string | null;
 }
 
@@ -823,6 +925,10 @@ export interface TaskDetailData {
   /** Visibility within a workspace. 'public' is workspace-shared (default);
    *  'private' is only visible to the creator. Ignored in personal mode. */
   visibility?: 'private' | 'public';
+  /** Provider workflow grouping, independent from Orvilo execution and delivery state. */
+  workflowCategory?: TaskWorkflowCategory;
+  /** Exact provider workflow-state identity; null means the task has no external workflow state. */
+  workflowStateId?: string | null;
   workspace?: TaskDetailWorkspaceNode[];
   /** Owning workspace; null for personal (non-workspace) tasks. */
   workspaceId?: string | null;

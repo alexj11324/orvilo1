@@ -17,12 +17,20 @@ const {
   deferredVerifyDrive,
   integrateOnComplete,
   runTaskMock,
+  settleDispatch,
 } = vi.hoisted(() => ({
   captureRemoteIdentityOnComplete: vi.fn().mockResolvedValue(true),
   cascadeOnCompletion: vi.fn().mockResolvedValue({ failed: [], paused: [], started: [] }),
   deferredVerifyDrive: vi.fn().mockResolvedValue(undefined),
   integrateOnComplete: vi.fn().mockResolvedValue('settled'),
   runTaskMock: vi.fn().mockResolvedValue({ success: true }),
+  settleDispatch: vi.fn().mockResolvedValue({ currentContract: true, currentGeneration: true }),
+}));
+
+vi.mock('@/database/models/taskDispatch', () => ({
+  TaskDispatchModel: vi.fn(function () {
+    return { settle: settleDispatch };
+  }),
 }));
 
 vi.mock('@/server/services/verify/settle', () => ({ driveTaskFromVerify: deferredVerifyDrive }));
@@ -125,7 +133,9 @@ describe('TaskLifecycleService.onTopicComplete', () => {
   let updateStatusIfCurrent: AnyMock;
   let updateContext: AnyMock;
   let findById: AnyMock;
+  let updateHeartbeat: AnyMock;
   let updateTopicStatus: AnyMock;
+  let settleHistoricalRun: AnyMock;
   let createBrief: AnyMock;
   let getReviewConfig: AnyMock;
 
@@ -146,6 +156,9 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     deferredVerifyDrive.mockReset().mockResolvedValue(undefined);
     captureRemoteIdentityOnComplete.mockReset().mockResolvedValue(true);
     integrateOnComplete.mockReset().mockResolvedValue('settled');
+    settleDispatch
+      .mockReset()
+      .mockResolvedValue({ currentContract: true, currentGeneration: true, state: 'settled' });
 
     service = new TaskLifecycleService({} as any, 'user-1');
 
@@ -153,7 +166,9 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     updateStatusIfCurrent = vi.fn<(...args: unknown[]) => unknown>();
     updateContext = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(null);
     findById = vi.fn<(...args: unknown[]) => unknown>();
+    updateHeartbeat = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(undefined);
     updateTopicStatus = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(undefined);
+    settleHistoricalRun = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(true);
     createBrief = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(undefined);
     getReviewConfig = vi.fn<(...args: unknown[]) => unknown>().mockReturnValue(undefined);
     verifyFindByOperation.mockReset().mockResolvedValue(undefined);
@@ -193,6 +208,8 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     // Avoid generateHandoff side effects by skipping when lastAssistantContent is undefined
     (service as any).taskTopicModel.settleIfRunning =
       updateTopicStatus.mockResolvedValue('completion:op-1');
+    (service as any).taskTopicModel.updateStatus = updateTopicStatus;
+    (service as any).taskTopicModel.settleHistoricalRun = settleHistoricalRun;
     (service as any).taskTopicModel.findByTopicId = vi.fn().mockResolvedValue({
       integration: undefined,
       topicId: 'topic-1',
@@ -291,6 +308,68 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         error: 'Workspace merge could not be completed',
       });
       expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
+    });
+
+    it('archives a stale generation result without advancing the current task', async () => {
+      settleDispatch.mockResolvedValue({
+        currentContract: false,
+        currentGeneration: false,
+        state: 'settled',
+      });
+
+      await service.onTopicComplete({
+        dispatchFence: 3,
+        dispatchId: 'dispatch-old',
+        executionGeneration: 7,
+        lastAssistantContent: 'Historical result',
+        operationId: 'op-old',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-old',
+      });
+
+      expect(settleDispatch).toHaveBeenCalledWith({
+        dispatchId: 'dispatch-old',
+        expected: ['dispatched', 'running', 'cancel_requested', 'outcome_unknown'],
+        fence: 3,
+        generation: 7,
+        operationId: 'op-old',
+        phase: 'succeeded',
+      });
+      expect(settleHistoricalRun).toHaveBeenCalledWith(
+        'task-1',
+        'topic-old',
+        { dispatchId: 'dispatch-old', fence: 3, generation: 7 },
+        'completed',
+        'Historical result',
+      );
+      expect(updateTopicStatus).not.toHaveBeenCalled();
+      expect(updateHeartbeat).not.toHaveBeenCalled();
+      expect(findById).not.toHaveBeenCalled();
+      expect(updateStatus).not.toHaveBeenCalled();
+      expect(updateStatusIfCurrent).not.toHaveBeenCalled();
+      expect(cascadeOnCompletion).not.toHaveBeenCalled();
+    });
+
+    it('ignores a replay after the dispatch already reached a terminal phase', async () => {
+      settleDispatch.mockResolvedValue({ currentGeneration: true, state: 'already_settled' });
+
+      await service.onTopicComplete({
+        dispatchFence: 3,
+        dispatchId: 'dispatch-complete',
+        executionGeneration: 7,
+        operationId: 'op-complete',
+        reason: 'done',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-complete',
+      });
+
+      expect(updateTopicStatus).not.toHaveBeenCalled();
+      expect(updateHeartbeat).not.toHaveBeenCalled();
+      expect(findById).not.toHaveBeenCalled();
+      expect(createBrief).not.toHaveBeenCalled();
     });
 
     it('automation task → status="scheduled" (not paused)', async () => {
@@ -540,6 +619,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         expect.objectContaining({
           continueFromMessageId: 'msg-steer',
           continueTopicId: 'topic-1',
+          idempotencyKey: 'steer:task-1:topic:topic-1:message:msg-steer',
           taskId: 'task-1',
         }),
       );

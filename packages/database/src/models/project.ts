@@ -1,5 +1,5 @@
 import { createProjectCoordinatorAgentConfig } from '@orvilo/builtin-agents';
-import type { ProjectStatus, ProjectVisibility } from '@orvilo/types';
+import type { ProjectOrchestrationPolicy, ProjectStatus, ProjectVisibility } from '@orvilo/types';
 import { and, asc, desc, eq, inArray, isNull, max, or, sql } from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
@@ -34,6 +34,25 @@ export interface UpdateProjectInput {
   visibility?: ProjectVisibility;
 }
 
+export interface ProjectOrchestrationPolicyUpdateInput {
+  coordinatorAgentId: string;
+  expectedRevision: number;
+  orchestrationPolicy: ProjectOrchestrationPolicy;
+}
+
+export interface ProjectOrchestrationPolicyView {
+  coordinatorAgentId: string;
+  orchestrationPolicy: ProjectOrchestrationPolicy;
+  orchestrationPolicyRevision: number;
+  requireHumanReviewRequired: boolean;
+  stale?: boolean;
+}
+
+export interface ProjectModelOptions {
+  /** Workspace administrators may manage shared projects they did not create. */
+  canManageAll?: boolean;
+}
+
 export interface ProjectAgentInput {
   agentId: string;
   enabled?: boolean;
@@ -53,12 +72,112 @@ export interface ProjectWorkInput {
   workId: string;
 }
 
+export const DEFAULT_PROJECT_ORCHESTRATION_POLICY: ProjectOrchestrationPolicy = {
+  autoDispatch: false,
+  concurrencyLimit: 1,
+  executionBudget: { maxCost: 25, maxRuns: 10 },
+  planningBudget: { maxRevisions: 20 },
+  replanMode: 'disabled',
+  requireHumanReview: true,
+};
+
+export const normalizeProjectOrchestrationPolicy = (
+  policy: Partial<ProjectOrchestrationPolicy> | null | undefined,
+): ProjectOrchestrationPolicy => ({
+  allowedAgentIds:
+    policy?.allowedAgentIds === undefined
+      ? undefined
+      : [...new Set(policy.allowedAgentIds.filter(Boolean))],
+  allowedRoles:
+    policy?.allowedRoles === undefined
+      ? undefined
+      : [...new Set(policy.allowedRoles.map((role) => role.trim()).filter(Boolean))],
+  autoDispatch: policy?.autoDispatch ?? DEFAULT_PROJECT_ORCHESTRATION_POLICY.autoDispatch,
+  concurrencyLimit:
+    policy?.concurrencyLimit ?? DEFAULT_PROJECT_ORCHESTRATION_POLICY.concurrencyLimit,
+  executionBudget: {
+    maxCost:
+      policy?.executionBudget?.maxCost ??
+      DEFAULT_PROJECT_ORCHESTRATION_POLICY.executionBudget!.maxCost,
+    maxRuns:
+      policy?.executionBudget?.maxRuns ??
+      DEFAULT_PROJECT_ORCHESTRATION_POLICY.executionBudget!.maxRuns,
+  },
+  planningBudget: {
+    maxRevisions:
+      policy?.planningBudget?.maxRevisions ??
+      DEFAULT_PROJECT_ORCHESTRATION_POLICY.planningBudget!.maxRevisions,
+  },
+  replanMode: policy?.replanMode ?? DEFAULT_PROJECT_ORCHESTRATION_POLICY.replanMode,
+  requireHumanReview:
+    policy?.requireHumanReview ?? DEFAULT_PROJECT_ORCHESTRATION_POLICY.requireHumanReview,
+});
+
+const validateOrchestrationPolicy = (policy: ProjectOrchestrationPolicy) => {
+  if (
+    policy.concurrencyLimit !== undefined &&
+    (!Number.isInteger(policy.concurrencyLimit) ||
+      policy.concurrencyLimit < 1 ||
+      policy.concurrencyLimit > 100)
+  ) {
+    throw new Error('Concurrency limit must be an integer between 1 and 100');
+  }
+
+  const maxRuns = policy.executionBudget?.maxRuns;
+  if (maxRuns !== undefined && (!Number.isInteger(maxRuns) || maxRuns < 1 || maxRuns > 1000)) {
+    throw new Error('Maximum runs must be an integer between 1 and 1000');
+  }
+
+  const maxCost = policy.executionBudget?.maxCost;
+  if (maxCost !== undefined && (!Number.isFinite(maxCost) || maxCost < 0 || maxCost > 100_000)) {
+    throw new Error('Maximum cost must be a finite number between 0 and 100000');
+  }
+
+  const maxRevisions = policy.planningBudget?.maxRevisions;
+  if (
+    maxRevisions !== undefined &&
+    (!Number.isInteger(maxRevisions) || maxRevisions < 1 || maxRevisions > 1000)
+  ) {
+    throw new Error('Maximum planning revisions must be an integer between 1 and 1000');
+  }
+
+  if (!['disabled', 'observe', 'suggest', 'apply'].includes(policy.replanMode)) {
+    throw new Error('Invalid replanning mode');
+  }
+};
+
+type ProjectPolicyRow = Pick<
+  typeof projects.$inferSelect,
+  | 'coordinatorAgentId'
+  | 'orchestrationPolicy'
+  | 'orchestrationPolicyRevision'
+  | 'status'
+  | 'completedReviewId'
+>;
+
+const projectRequiresHumanReview = (project: ProjectPolicyRow) =>
+  project.status === 'reviewing' ||
+  project.status === 'completed' ||
+  project.completedReviewId !== null;
+
+const toOrchestrationPolicyView = (project: ProjectPolicyRow): ProjectOrchestrationPolicyView => ({
+  coordinatorAgentId: project.coordinatorAgentId,
+  orchestrationPolicy: normalizeProjectOrchestrationPolicy(project.orchestrationPolicy),
+  orchestrationPolicyRevision: project.orchestrationPolicyRevision,
+  requireHumanReviewRequired: projectRequiresHumanReview(project),
+});
+
 export class ProjectModel {
+  private readonly canManageAll: boolean;
+
   constructor(
     private readonly db: LobeChatDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
-  ) {}
+    options: ProjectModelOptions = {},
+  ) {
+    this.canManageAll = Boolean(options.canManageAll && workspaceId);
+  }
 
   private readable() {
     return buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, projects);
@@ -66,6 +185,12 @@ export class ProjectModel {
 
   private manageable() {
     return and(this.readable(), eq(projects.userId, this.userId));
+  }
+
+  private orchestrationPolicyManageable() {
+    return this.canManageAll
+      ? this.readable()
+      : and(this.readable(), eq(projects.userId, this.userId));
   }
 
   async create(input: CreateProjectInput) {
@@ -96,7 +221,12 @@ export class ProjectModel {
         .values(
           buildWorkspacePayload(
             { userId: this.userId, workspaceId: this.workspaceId },
-            { ...input, coordinatorAgentId: coordinator.id, identifier },
+            {
+              ...input,
+              coordinatorAgentId: coordinator.id,
+              identifier,
+              orchestrationPolicy: DEFAULT_PROJECT_ORCHESTRATION_POLICY,
+            },
           ),
         )
         .returning();
@@ -179,6 +309,108 @@ export class ProjectModel {
       .where(and(eq(projects.id, id), this.manageable()))
       .returning();
     return project ?? null;
+  }
+
+  async getOrchestrationPolicy(id: string) {
+    const [project] = await this.db
+      .select({
+        completedReviewId: projects.completedReviewId,
+        coordinatorAgentId: projects.coordinatorAgentId,
+        orchestrationPolicy: projects.orchestrationPolicy,
+        orchestrationPolicyRevision: projects.orchestrationPolicyRevision,
+        status: projects.status,
+      })
+      .from(projects)
+      .where(and(eq(projects.id, id), this.orchestrationPolicyManageable()))
+      .limit(1);
+
+    return project ? toOrchestrationPolicyView(project) : null;
+  }
+
+  async updateOrchestrationPolicy(
+    id: string,
+    input: ProjectOrchestrationPolicyUpdateInput,
+  ): Promise<ProjectOrchestrationPolicyView | null> {
+    if (!Number.isInteger(input.expectedRevision) || input.expectedRevision < 1) {
+      throw new Error('Expected orchestration policy revision must be a positive integer');
+    }
+
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select()
+        .from(projects)
+        .where(and(eq(projects.id, id), this.orchestrationPolicyManageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      const current = toOrchestrationPolicyView(project);
+      if (project.orchestrationPolicyRevision !== input.expectedRevision) {
+        return { ...current, stale: true };
+      }
+
+      const policy = normalizeProjectOrchestrationPolicy(input.orchestrationPolicy);
+      validateOrchestrationPolicy(policy);
+      if (!policy.requireHumanReview && projectRequiresHumanReview(project)) {
+        throw new Error('Human review is required while the project is completing or completed');
+      }
+
+      const projectAgentScope = project.workspaceId
+        ? and(
+            eq(agents.workspaceId, project.workspaceId),
+            eq(projectAgents.workspaceId, project.workspaceId),
+          )
+        : and(
+            eq(agents.userId, project.userId),
+            isNull(agents.workspaceId),
+            isNull(projectAgents.workspaceId),
+          );
+      const participants = await tx
+        .select({
+          agentId: projectAgents.agentId,
+          enabled: projectAgents.enabled,
+          role: projectAgents.role,
+        })
+        .from(projectAgents)
+        .innerJoin(agents, eq(projectAgents.agentId, agents.id))
+        .where(and(eq(projectAgents.projectId, id), projectAgentScope));
+      const eligibleParticipants = participants.filter(({ enabled }) => enabled);
+      const eligibleAgentIds = new Set(eligibleParticipants.map(({ agentId }) => agentId));
+
+      if (!eligibleAgentIds.has(input.coordinatorAgentId)) {
+        throw new Error('Coordinator agent must be an enabled project participant');
+      }
+
+      if (policy.allowedAgentIds?.some((agentId) => !eligibleAgentIds.has(agentId))) {
+        throw new Error('Allowed agents must be enabled project participants in this workspace');
+      }
+
+      const eligibleRoles = new Set(
+        eligibleParticipants.flatMap(({ role }) => (role ? [role] : [])),
+      );
+      if (policy.allowedRoles?.some((role) => !eligibleRoles.has(role))) {
+        throw new Error('Allowed roles must belong to enabled project participants');
+      }
+
+      const [updated] = await tx
+        .update(projects)
+        .set({
+          coordinatorAgentId: input.coordinatorAgentId,
+          orchestrationPolicy: policy,
+          orchestrationPolicyRevision: sql`${projects.orchestrationPolicyRevision} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(projects.id, id))
+        .returning({
+          completedReviewId: projects.completedReviewId,
+          coordinatorAgentId: projects.coordinatorAgentId,
+          orchestrationPolicy: projects.orchestrationPolicy,
+          orchestrationPolicyRevision: projects.orchestrationPolicyRevision,
+          status: projects.status,
+        });
+
+      return updated ? toOrchestrationPolicyView(updated) : null;
+    });
   }
 
   async updateStatus(id: string, status: ProjectStatus) {

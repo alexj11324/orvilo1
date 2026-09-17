@@ -53,6 +53,7 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'hotkey',
   'labels',
   'labs',
+  'linear',
   'members',
   'messenger',
   'notification',

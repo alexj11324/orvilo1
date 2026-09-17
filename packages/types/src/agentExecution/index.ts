@@ -76,6 +76,9 @@ export interface ExecAgentAppContext {
   conversationAgentId?: string;
   /** Optional default assignee candidate for task manager prompts */
   defaultTaskAssigneeAgentId?: string;
+  /** Durable Task dispatch claim carried into completion callbacks. */
+  dispatchFence?: number;
+  dispatchId?: string;
   /** Current document ID for page-scoped conversations */
   documentId?: string | null;
   /**
@@ -98,6 +101,7 @@ export interface ExecAgentAppContext {
    * group-agent-builder tool runtime and its context injector read this field.
    */
   editingGroupId?: string;
+  executionGeneration?: number;
   /** Group ID for group chat */
   groupId?: string | null;
   /**

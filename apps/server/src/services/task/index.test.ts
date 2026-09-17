@@ -6,6 +6,7 @@ import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { RbacModel } from '@/database/models/rbac';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { UserModel } from '@/database/models/user';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
@@ -33,6 +34,16 @@ vi.mock('@/database/models/task', () => ({
 
 vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn(),
+}));
+
+const { requestDispatchStopMock, settleDispatchMock } = vi.hoisted(() => ({
+  requestDispatchStopMock: vi.fn(),
+  settleDispatchMock: vi.fn(),
+}));
+vi.mock('@/database/models/taskDispatch', () => ({
+  TaskDispatchModel: vi.fn().mockImplementation(function () {
+    return { requestStop: requestDispatchStopMock, settle: settleDispatchMock };
+  }),
 }));
 
 vi.mock('@/database/models/brief', () => ({
@@ -83,8 +94,8 @@ const {
   topicDeleteMock,
   topicFindByIdMock,
 } = vi.hoisted(() => ({
-  cascadeManyMock: vi.fn(),
-  cascadeMock: vi.fn(),
+  cascadeManyMock: vi.fn().mockResolvedValue({ paused: [], started: [] }),
+  cascadeMock: vi.fn().mockResolvedValue({ paused: [], started: [] }),
   latestNonToolMock: vi.fn(),
   latestSpineMock: vi.fn(),
   messageCreateMock: vi.fn(),
@@ -186,6 +197,7 @@ describe('TaskService', () => {
     update: vi.fn(),
     updateContext: vi.fn(),
     updateStatus: vi.fn(),
+    updateStatusForExecutionContract: vi.fn(),
     updateStatusIfReservation: vi.fn(),
   };
 
@@ -341,6 +353,8 @@ describe('TaskService', () => {
         startedAt: new Date('2024-01-01T00:02:00Z'),
         status: 'todo',
         totalTopics: 0,
+        workflowCategory: 'done',
+        workflowStateId: 'linear-state-done',
       };
 
       mockTaskModel.resolve.mockResolvedValue(task);
@@ -365,6 +379,8 @@ describe('TaskService', () => {
       expect(result?.priority).toBe('normal');
       expect(result?.agentId).toBe('agent-1');
       expect(result?.userId).toBe('user-1');
+      expect(result?.workflowCategory).toBe('done');
+      expect(result?.workflowStateId).toBe('linear-state-done');
       expect(result?.createdAt).toBe('2024-01-01T00:00:00.000Z');
       expect(result?.startedAt).toBe('2024-01-01T00:02:00.000Z');
       expect(result?.subtasks).toEqual([]);
@@ -773,7 +789,7 @@ describe('TaskService', () => {
       ]);
     });
 
-    it('should fall back to raw dependsOnId when dep task is not found', async () => {
+    it('should redact an unavailable dependency instead of exposing its id', async () => {
       const task = {
         assigneeAgentId: null,
         assigneeUserId: null,
@@ -811,8 +827,7 @@ describe('TaskService', () => {
 
       expect(result?.dependencies).toEqual([
         {
-          dependsOn: 'task_missing',
-          id: 'task_missing',
+          dependsOn: 'Unavailable prerequisite',
           name: undefined,
           status: null,
           type: 'blocks',
@@ -1611,6 +1626,49 @@ describe('TaskService', () => {
         expect(mockTaskTopicModel.cancelIfRunning).not.toHaveBeenCalled();
       },
     );
+
+    it('fences and settles the exact dispatch before a manual pause changes task status', async () => {
+      mockTaskModel.resolve.mockResolvedValue({ id: 'task-live', status: 'running' });
+      mockTaskModel.updateStatus.mockResolvedValue({ id: 'task-live', status: 'paused' });
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([
+        {
+          dispatchFence: 7,
+          dispatchId: 'dispatch-live',
+          executionGeneration: 3,
+          operationId: 'op-live',
+          status: 'running',
+          topicId: 'topic-live',
+        },
+      ]);
+      requestDispatchStopMock.mockResolvedValue({
+        fence: 8,
+        generation: 3,
+        id: 'dispatch-live',
+        operationId: 'op-live',
+      });
+      settleDispatchMock.mockResolvedValue({ state: 'settled' });
+
+      await new TaskService(db, userId).updateStatus({ id: 'task-live', status: 'paused' });
+
+      expect(requestDispatchStopMock).toHaveBeenCalledWith({
+        dispatchId: 'dispatch-live',
+        fence: 7,
+        generation: 3,
+        operationId: 'op-live',
+        reason: 'task_status:paused',
+      });
+      expect(settleDispatchMock).toHaveBeenCalledWith({
+        dispatchId: 'dispatch-live',
+        expected: ['cancel_requested'],
+        fence: 8,
+        generation: 3,
+        operationId: 'op-live',
+        phase: 'canceled',
+      });
+      expect(settleDispatchMock.mock.invocationCallOrder[0]).toBeLessThan(
+        mockTaskModel.updateStatus.mock.invocationCallOrder[0],
+      );
+    });
   });
 
   describe('prerequisite gating', () => {
@@ -1713,6 +1771,7 @@ describe('TaskService', () => {
           consecutiveFailures: 0,
           scheduledAt: expect.any(String),
           tickMessageId: 'tick-new',
+          tickRevision: 1,
           tickToken: expect.any(String),
         },
       });
@@ -1769,7 +1828,7 @@ describe('TaskService', () => {
       expect(mockTaskModel.updateStatus).toHaveBeenNthCalledWith(1, 'task-1', 'scheduled', {});
       expect(mockTaskModel.updateStatus).toHaveBeenNthCalledWith(2, 'task-1', 'paused');
       expect(mockTaskModel.updateContext).toHaveBeenCalledWith('task-1', {
-        scheduler: { tickToken: expect.any(String) },
+        scheduler: { tickRevision: 1, tickToken: expect.any(String) },
       });
       expect(mockTaskModel.update).toHaveBeenCalledWith('task-1', { context: {} });
     });
@@ -1847,23 +1906,31 @@ describe('TaskService', () => {
         status: 'scheduled',
       });
       mockTaskModel.resolve.mockResolvedValue(prev);
-      mockTaskModel.updateStatusIfReservation.mockResolvedValue(null);
+      mockTaskModel.updateStatusForExecutionContract.mockResolvedValue(null);
 
-      const result = await new TaskService(db, userId).updateStatus(
-        { id: 'T-1', status: 'completed' as any },
-        undefined,
-        {
-          currentStatus: 'scheduled' as any,
-          reservationId: 'completion:op-1:old',
-        },
-      );
-
-      expect(result).toBeNull();
-      expect(mockTaskModel.updateStatusIfReservation).toHaveBeenCalledWith(
+      await expect(
+        new TaskService(db, userId).updateStatus({
+          expectedContract: {
+            assigneeAgentId: null,
+            executionGeneration: 0,
+            policyRevision: 0,
+            requirementRevision: 0,
+            status: 'scheduled',
+          },
+          id: 'T-1',
+          status: 'completed' as any,
+        }),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(mockTaskModel.updateStatusForExecutionContract).toHaveBeenCalledWith(
         'task-1',
-        'completion:op-1:old',
-        'scheduled',
         'completed',
+        expect.objectContaining({
+          assigneeAgentId: null,
+          executionGeneration: 0,
+          policyRevision: 0,
+          requirementRevision: 0,
+          status: 'scheduled',
+        }),
         expect.objectContaining({
           completedAt: expect.any(Date),
           runReservationExpiresAt: null,
@@ -1929,6 +1996,7 @@ describe('TaskService', () => {
       });
       expect(mockTaskModel.create).toHaveBeenCalledWith(
         expect.objectContaining({ visibility: 'private' }),
+        expect.anything(),
       );
     });
 
@@ -1946,6 +2014,7 @@ describe('TaskService', () => {
       });
       expect(mockTaskModel.create).toHaveBeenCalledWith(
         expect.objectContaining({ visibility: 'private' }),
+        expect.anything(),
       );
     });
 
@@ -2003,6 +2072,7 @@ describe('TaskService', () => {
       });
       expect(mockTaskModel.create).toHaveBeenCalledWith(
         expect.objectContaining({ visibility: 'private' }),
+        expect.anything(),
       );
     });
 
@@ -2269,6 +2339,7 @@ describe('TaskService', () => {
         'task_001',
         { assigneeAgentId: 'agt_new' },
         { agentId: 'agt_actor', userId: 'user_actor' },
+        expect.anything(),
       );
     });
 
@@ -2289,6 +2360,7 @@ describe('TaskService', () => {
           runReservationId: null,
         },
         { userId: 'user_actor' },
+        expect.anything(),
       );
     });
 
@@ -2370,6 +2442,9 @@ describe('TaskService', () => {
     };
 
     const runningLink = {
+      dispatchFence: 3,
+      dispatchId: 'dispatch-1',
+      executionGeneration: 2,
       operationId: 'op-1',
       status: 'running',
       taskId: 'task-1',
@@ -2387,6 +2462,13 @@ describe('TaskService', () => {
       latestSpineMock.mockResolvedValue('msg-parent');
       latestNonToolMock.mockResolvedValue(null);
       messageCreateMock.mockResolvedValue({ id: 'msg-steer' });
+      requestDispatchStopMock.mockResolvedValue({
+        fence: 4,
+        generation: 2,
+        id: 'dispatch-1',
+        operationId: 'op-1',
+      });
+      settleDispatchMock.mockResolvedValue({ state: 'settled' });
       runTaskMock.mockResolvedValue({ success: true, taskId: 'task-1' });
     });
 
@@ -2461,11 +2543,28 @@ describe('TaskService', () => {
       });
 
       expect(interruptTaskMock).toHaveBeenCalledWith({ operationId: 'op-1' });
+      expect(TaskDispatchModel).toHaveBeenCalledWith(db, undefined);
+      expect(requestDispatchStopMock).toHaveBeenCalledWith({
+        dispatchId: 'dispatch-1',
+        fence: 3,
+        generation: 2,
+        operationId: 'op-1',
+        reason: 'steer_interrupt',
+      });
+      expect(settleDispatchMock).toHaveBeenCalledWith({
+        dispatchId: 'dispatch-1',
+        expected: ['cancel_requested'],
+        fence: 4,
+        generation: 2,
+        operationId: 'op-1',
+        phase: 'canceled',
+      });
       expect(mockTaskTopicModel.updateStatus).toHaveBeenCalledWith('task-1', 'topic-1', 'canceled');
       expect(runTaskMock).toHaveBeenCalledWith(
         expect.objectContaining({
           continueFromMessageId: 'msg-steer',
           continueTopicId: 'topic-1',
+          idempotencyKey: 'steer:task-1:topic:topic-1:message:msg-steer',
           taskId: 'task-1',
         }),
       );
@@ -2491,6 +2590,7 @@ describe('TaskService', () => {
         expect.objectContaining({
           continueFromMessageId: 'msg-steer',
           continueTopicId: 'topic-1',
+          idempotencyKey: 'steer:task-1:topic:topic-1:message:msg-steer',
         }),
       );
     });

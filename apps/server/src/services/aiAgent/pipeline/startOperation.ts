@@ -29,6 +29,7 @@ export interface StartOperationInput {
   approvalSourceOperationId?: string;
   approvalSourceToolMessageIds: string[];
   autoStart: boolean;
+  beforeOperationStart?: InternalExecAgentParams['beforeOperationStart'];
   botContext?: InternalExecAgentParams['botContext'];
   botPlatformContext?: InternalExecAgentParams['botPlatformContext'];
   clientIp?: string;
@@ -95,6 +96,7 @@ export const startOperation = async (
     autoStart,
     botContext,
     botPlatformContext,
+    beforeOperationStart,
     clientIp,
     discordContext,
     discovery,
@@ -135,6 +137,7 @@ export const startOperation = async (
   // Wrap in try-catch to handle operation startup failures (e.g., QStash unavailable)
   // If createOperation fails, we still have valid messages that need error info
   try {
+    await beforeOperationStart?.({ operationId, topicId });
     const result = await deps.agentRuntimeService.createOperation({
       activeDeviceId: discovery.activeDeviceId,
       activeDeviceScope: discovery.activeDeviceScope,

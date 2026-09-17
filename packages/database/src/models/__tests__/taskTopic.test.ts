@@ -3,7 +3,15 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, tasks, taskTopics, topics, users, workspaces } from '../../schemas';
+import {
+  agents,
+  taskDispatches,
+  tasks,
+  taskTopics,
+  topics,
+  users,
+  workspaces,
+} from '../../schemas';
 import type { LobeChatDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskTopicModel } from '../taskTopic';
@@ -61,6 +69,80 @@ describe('TaskTopicModel', () => {
 
       const topics = await topicModel.findByTaskId(task.id);
       expect(topics).toHaveLength(1);
+    });
+
+    it('rebinds a continued topic before start and fences an old completion', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Continue safely' });
+      await createTopic('tpc_continue_fenced');
+      const dispatchBase = {
+        policyRevision: 1,
+        requestedBy: `manual:${userId}`,
+        requirementRevision: 1,
+        taskId: task.id,
+        taskRevision: 1,
+      };
+      await serverDB.insert(taskDispatches).values([
+        {
+          ...dispatchBase,
+          generation: 1,
+          id: 'dispatch-topic-old',
+          idempotencyKey: 'topic-old',
+          phase: 'succeeded',
+        },
+        {
+          ...dispatchBase,
+          generation: 2,
+          id: 'dispatch-topic-new',
+          idempotencyKey: 'topic-new',
+        },
+      ]);
+
+      await topicModel.startRun(task.id, 'tpc_continue_fenced', {
+        dispatch: {
+          fence: 1,
+          generation: 1,
+          id: 'dispatch-topic-old',
+          planRevision: null,
+          policyRevision: 1,
+          requirementRevision: 1,
+          taskRevision: 1,
+        },
+        operationId: 'operation-old',
+        seq: 1,
+      });
+      await topicModel.updateStatus(task.id, 'tpc_continue_fenced', 'completed');
+      await topicModel.startRun(task.id, 'tpc_continue_fenced', {
+        dispatch: {
+          fence: 2,
+          generation: 2,
+          id: 'dispatch-topic-new',
+          planRevision: null,
+          policyRevision: 1,
+          requirementRevision: 1,
+          taskRevision: 1,
+        },
+        operationId: 'operation-new',
+        seq: 1,
+      });
+
+      await expect(
+        topicModel.settleHistoricalRun(
+          task.id,
+          'tpc_continue_fenced',
+          { dispatchId: 'dispatch-topic-old', fence: 1, generation: 1 },
+          'failed',
+          'late old output',
+        ),
+      ).resolves.toBe(false);
+      await expect(topicModel.findByTopicId('tpc_continue_fenced')).resolves.toMatchObject({
+        dispatchFence: 2,
+        dispatchId: 'dispatch-topic-new',
+        executionGeneration: 2,
+        operationId: 'operation-new',
+        status: 'running',
+      });
     });
 
     it('should find running topics for multiple tasks within the current owner scope', async () => {
@@ -344,6 +426,7 @@ describe('TaskTopicModel', () => {
       expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
       expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
       expect((await topicModel.findByTaskId(task.id))[0].status).toBe('completed');
+      expect((await topicModel.findByTaskId(task.id))[0].runState).toBe('succeeded');
       expect((await getTopic('tpc_settle_once')).completedAt).toBeInstanceOf(Date);
     });
 

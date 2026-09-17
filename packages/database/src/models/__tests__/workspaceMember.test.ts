@@ -7,6 +7,7 @@ import {
   devices,
   messengerAccountLinks,
   resourcePermissions,
+  taskDomainEvents,
   tasks,
   users,
   workspaceInvitations,
@@ -488,7 +489,11 @@ describe('WorkspaceMemberModel', () => {
         .from(tasks)
         .where(eq(tasks.id, 'wm-task-role-downgrade'));
       expect(task.assigneeUserId).toBeNull();
+      expect(task.domainRevision).toBe(2);
       expect(task.reviewerUserId).toBeNull();
+      await expect(
+        serverDB.select().from(taskDomainEvents).where(eq(taskDomainEvents.taskId, task.id)),
+      ).resolves.toEqual([expect.objectContaining({ source: 'system', type: 'task.assigned' })]);
     });
 
     it('preserves task assignments when a member changes to another eligible role', async () => {

@@ -15,6 +15,7 @@ import {
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
   KANBAN_STATUS_COLUMN_KEY,
+  KANBAN_WORKFLOW_COLUMN_KEY,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
   kanbanStatusColumnsExcludedBy,
@@ -196,7 +197,7 @@ describe('kanbanBoardModel', () => {
   });
 
   describe('status columns', () => {
-    it('maps every task status into one of the five merged columns', () => {
+    it('keeps legacy execution statuses in their merged columns', () => {
       expect(KANBAN_STATUS_COLUMN_KEY.failed).toBe('needsInput');
       expect(KANBAN_STATUS_COLUMN_KEY.paused).toBe('needsInput');
       expect(KANBAN_STATUS_COLUMN_KEY.scheduled).toBe('running');
@@ -206,14 +207,36 @@ describe('kanbanBoardModel', () => {
       );
     });
 
-    it('marks running non-droppable and writes paused for needsInput drops', () => {
+    it('uses business workflow categories for linked tasks even when execution disagrees', () => {
+      const linkedDone = task('linked', null, null, {
+        status: 'paused',
+        workflowCategory: 'done',
+        workflowStateId: 'linear-state-done',
+      });
+
+      expect(KANBAN_WORKFLOW_COLUMN_KEY.done).toBe('done');
+      expect(taskKanbanColumnKey(linkedDone, 'status')).toBe('done');
+      expect(taskMatchesKanbanColumn(linkedDone, 'status', 'needsInput')).toBe(false);
+    });
+
+    it('keeps execution-only running closed while linked tasks can target mapped workflow states', () => {
       const running = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'running')!;
       const needsInput = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'needsInput')!;
+      const legacyTask = task('legacy');
+      const linkedTask = task('linked', null, null, {
+        workflowCategory: 'backlog',
+        workflowStateId: 'linear-state-backlog',
+      });
 
-      expect(running.droppable).toBe(false);
+      expect(running.droppable).toBe(true);
       expect(running.targetStatus).toBeNull();
+      expect(canDropTaskIntoKanbanColumn(legacyTask, 'status', running)).toBe(false);
+      expect(canDropTaskIntoKanbanColumn(linkedTask, 'status', running)).toBe(true);
       expect(needsInput.droppable).toBe(true);
       expect(needsInput.targetStatus).toBe('paused');
+      expect(getKanbanTaskPatch('status', needsInput, linkedTask)).toEqual({
+        workflowCategory: 'in_review',
+      });
     });
 
     it('treats a failed task dropped back on needsInput as already inside — no status rewrite', () => {
@@ -446,7 +469,7 @@ describe('kanbanBoardModel', () => {
       );
     });
 
-    it('rejects a release over a non-droppable column even when the card is parked there', () => {
+    it('rejects a legacy release over a column with no execution-status target', () => {
       // The preview moved the id into `running` before the last over was
       // rejected — the release column is still the truth.
       const columns = { backlog: [], done: [], running: ['T-1'] };
@@ -456,8 +479,8 @@ describe('kanbanBoardModel', () => {
     });
 
     it('keeps a same-column reorder inside `running` legal', () => {
-      // `running` is closed to incoming status writes, but reordering a member
-      // writes position only — membership is checked before the droppable gate.
+      // `running` is closed to incoming legacy status writes, but reordering a
+      // member writes position only — membership is checked first.
       const columns = { running: ['T-1', 'T-2'] };
       expect(
         resolveKanbanDropColumn(
@@ -478,10 +501,11 @@ describe('kanbanBoardModel', () => {
   });
 
   describe('kanbanColumnMoveScope', () => {
-    it('scopes a merged status column by its member statuses', () => {
+    it('scopes a workflow column by linked category or legacy execution statuses', () => {
       const column = STATUS_KANBAN_COLUMNS.find((c) => c.key === 'needsInput')!;
       expect(kanbanColumnMoveScope('status', column)).toEqual({
         statuses: ['paused', 'failed'],
+        workflowCategories: ['in_review'],
       });
     });
 

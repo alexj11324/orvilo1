@@ -3,10 +3,22 @@ import type {
   BriefMetadata,
   TaskActivityLogPayload,
   TaskActivityLogType,
+  TaskAssignmentMode,
+  TaskCreationSubjectKind,
+  TaskCreationSubjectSnapshot,
+  TaskDispatchPhase,
+  TaskExecutionEnvironmentSnapshot,
+  TaskHumanLock,
+  TaskLockField,
+  TaskOrchestrationOwner,
+  TaskRunState,
   TaskTopicIntegration,
+  TaskWorkflowCategory,
 } from '@orvilo/types';
-import { isNotNull, isNull } from 'drizzle-orm';
+import { isNotNull, isNull, sql } from 'drizzle-orm';
 import {
+  boolean,
+  check,
   doublePrecision,
   foreignKey,
   index,
@@ -42,9 +54,15 @@ export const tasks = pgTable(
     identifier: text('identifier').notNull(),
     seq: integer('seq').notNull(),
     // Creator (user or agent)
-    createdByUserId: text('created_by_user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
-      .notNull(),
+    createdByUserId: text('created_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdBySubjectKind: text('created_by_subject_kind')
+      .$type<TaskCreationSubjectKind>()
+      .notNull()
+      .default('user'),
+    createdBySubjectId: text('created_by_subject_id'),
+    createdBySnapshot: jsonb('created_by_snapshot').$type<TaskCreationSubjectSnapshot>(),
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
     createdByAgentId: text('created_by_agent_id').references(() => agents.id, {
@@ -76,6 +94,28 @@ export const tasks = pgTable(
     // Lifecycle (same state machine for user and agent)
     // 'backlog' | 'running' | 'paused' | 'completed' | 'failed' | 'canceled'
     status: text('status').notNull().default('backlog'),
+    workflowStateId: text('workflow_state_id'),
+    workflowCategory: text('workflow_category')
+      .$type<TaskWorkflowCategory>()
+      .notNull()
+      .default('backlog'),
+    domainRevision: integer('domain_revision').notNull().default(1),
+    requirementRevision: integer('requirement_revision').notNull().default(1),
+    policyRevision: integer('policy_revision').notNull().default(1),
+    executionGeneration: integer('execution_generation').notNull().default(0),
+    assignmentMode: text('assignment_mode').$type<TaskAssignmentMode>().notNull().default('manual'),
+    orchestrationOwner: text('orchestration_owner')
+      .$type<TaskOrchestrationOwner>()
+      .notNull()
+      .default('manual'),
+    assigneeLocked: boolean('assignee_locked').notNull().default(false),
+    priorityLocked: boolean('priority_locked').notNull().default(false),
+    workflowLocked: boolean('workflow_locked').notNull().default(false),
+    requirementLocked: boolean('requirement_locked').notNull().default(false),
+    lockMetadata: jsonb('lock_metadata')
+      .$type<Partial<Record<TaskLockField, TaskHumanLock>>>()
+      .notNull()
+      .default({}),
     priority: integer('priority').default(0), // 'no' | 'urgent' | 'high' | 'normal' | 'low'
     sortOrder: integer('sort_order').default(0), // manual sort within parent, lower = higher
     /**
@@ -144,6 +184,8 @@ export const tasks = pgTable(
     index('tasks_assignee_agent_id_idx').on(t.assigneeAgentId),
     index('tasks_parent_task_id_idx').on(t.parentTaskId),
     index('tasks_status_idx').on(t.status),
+    index('tasks_workflow_category_idx').on(t.workflowCategory),
+    index('tasks_orchestration_owner_idx').on(t.orchestrationOwner),
     index('tasks_priority_idx').on(t.priority),
     index('tasks_automation_mode_idx').on(t.automationMode),
     index('tasks_heartbeat_idx').on(t.status, t.lastHeartbeatAt),
@@ -153,8 +195,68 @@ export const tasks = pgTable(
     uniqueIndex('tasks_identifier_workspace_id_unique')
       .on(t.workspaceId, t.identifier)
       .where(isNotNull(t.workspaceId)),
+    uniqueIndex('tasks_id_workspace_id_unique').on(t.id, t.workspaceId),
+    check(
+      'tasks_managed_creator_requires_workspace',
+      sql`${t.createdBySubjectKind} NOT IN ('integration', 'system') OR ${t.workspaceId} IS NOT NULL`,
+    ),
   ],
 );
+
+// ── Durable dispatch claims ─────────────────────────────
+
+export const taskDispatches = pgTable(
+  'task_dispatches',
+  {
+    id: text('id').primaryKey().notNull(),
+    taskId: text('task_id').notNull(),
+    workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
+    phase: text('phase').$type<TaskDispatchPhase>().notNull().default('requested'),
+    generation: integer('generation').notNull(),
+    taskRevision: integer('task_revision').notNull(),
+    requirementRevision: integer('requirement_revision').notNull(),
+    policyRevision: integer('policy_revision').notNull(),
+    planRevision: integer('plan_revision'),
+    fence: integer('fence').notNull().default(0),
+    operationId: text('operation_id'),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestedBy: text('requested_by').notNull(),
+    leaseOwner: text('lease_owner'),
+    leaseExpiresAt: timestamptz('lease_expires_at'),
+    waitingReason: text('waiting_reason'),
+    environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
+    ...timestamps,
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.taskId],
+      foreignColumns: [tasks.id],
+      name: 'task_dispatches_task_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [t.taskId, t.workspaceId],
+      foreignColumns: [tasks.id, tasks.workspaceId],
+      name: 'task_dispatches_task_workspace_fk',
+    }).onDelete('cascade'),
+    uniqueIndex('task_dispatches_workspace_idempotency_unique').on(t.workspaceId, t.idempotencyKey),
+    uniqueIndex('task_dispatches_personal_idempotency_unique')
+      .on(t.idempotencyKey)
+      .where(isNull(t.workspaceId)),
+    uniqueIndex('task_dispatches_one_active_task_unique')
+      .on(t.taskId)
+      .where(
+        sql`${t.phase} IN ('requested', 'claimed', 'provisioning', 'dispatched', 'running', 'waiting', 'cancel_requested', 'outcome_unknown')`,
+      ),
+    index('task_dispatches_task_generation_idx').on(t.taskId, t.generation),
+    index('task_dispatches_lease_idx').on(t.phase, t.leaseExpiresAt),
+    index('task_dispatches_workspace_id_idx').on(t.workspaceId),
+  ],
+);
+
+export type NewTaskDispatch = typeof taskDispatches.$inferInsert;
+export type TaskDispatchItem = typeof taskDispatches.$inferSelect;
 
 // ── Task Dependencies ────────────────────────────────────
 
@@ -169,9 +271,7 @@ export const taskDependencies = pgTable(
     dependsOnId: text('depends_on_id')
       .references(() => tasks.id, { onDelete: 'cascade' })
       .notNull(),
-    userId: text('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
-      .notNull(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
 
     // 'blocks' | 'relates'
@@ -262,12 +362,21 @@ export const taskTopics = pgTable(
     operationId: text('operation_id'), // agent execution operation ID
     // 'running' | 'completed' | 'failed' | 'timeout' | 'canceled'
     status: text('status').notNull().default('running'),
+    runState: text('run_state').$type<TaskRunState>().notNull().default('running'),
+    dispatchId: text('dispatch_id').references(() => taskDispatches.id, { onDelete: 'set null' }),
+    taskRevision: integer('task_revision'),
+    requirementRevision: integer('requirement_revision'),
+    policyRevision: integer('policy_revision'),
+    planRevision: integer('plan_revision'),
+    executionGeneration: integer('execution_generation'),
+    dispatchFence: integer('dispatch_fence'),
+    environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
 
     // What triggered this run: 'manual' (ad-hoc run-now / agent tool call),
     // 'schedule' (cron tick) or 'heartbeat' (interval tick). Null for legacy
     // rows created before this column existed. Used so the maxExecutions quota
     // counts only automation ticks, not manual runs.
-    trigger: text('trigger').$type<'manual' | 'schedule' | 'heartbeat' | 'goal'>(),
+    trigger: text('trigger').$type<'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator'>(),
 
     // Handoff (populated after topic completes via LLM summarization)
     // { title, summary, keyFindings: string[], nextAction }
@@ -300,6 +409,8 @@ export const taskTopics = pgTable(
     index('task_topics_topic_id_idx').on(t.topicId),
     index('task_topics_user_id_idx').on(t.userId),
     index('task_topics_status_idx').on(t.taskId, t.status),
+    uniqueIndex('task_topics_dispatch_id_unique').on(t.dispatchId).where(isNotNull(t.dispatchId)),
+    index('task_topics_generation_idx').on(t.taskId, t.executionGeneration),
     index('task_topics_workspace_id_idx').on(t.workspaceId),
     index('task_topics_workspace_visibility_idx').on(t.workspaceId, t.visibility, t.userId),
   ],
@@ -375,9 +486,7 @@ export const taskComments = pgTable(
     taskId: text('task_id')
       .references(() => tasks.id, { onDelete: 'cascade' })
       .notNull(),
-    userId: text('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
-      .notNull(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
 
     // Author (user or agent, both nullable)

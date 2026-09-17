@@ -181,6 +181,8 @@ export const COLUMN_I18N_KEYS: Record<string, string> = {
   done: 'taskList.kanban.done',
   needsInput: 'taskList.kanban.needsInput',
   running: 'taskList.kanban.running',
+  todo: 'taskList.kanban.todo',
+  triage: 'taskList.kanban.triage',
 };
 
 export const COLUMN_STATUS_ICON: Record<string, TaskStatus> = {
@@ -189,6 +191,8 @@ export const COLUMN_STATUS_ICON: Record<string, TaskStatus> = {
   done: 'completed',
   needsInput: 'paused',
   running: 'running',
+  todo: 'backlog',
+  triage: 'backlog',
 };
 
 interface KanbanColumnProps {

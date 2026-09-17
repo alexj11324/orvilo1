@@ -10,6 +10,7 @@ import debug from 'debug';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { GoalModel } from '@/database/models/goal';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { LobeChatDatabase } from '@/database/type';
@@ -216,9 +217,43 @@ export const driveTaskFromVerify = async (
       return;
     }
 
-    // Claim only after every completion gate is satisfied. A deferred
-    // integration must leave the drive claim available for the later retry.
-    if (!(await runModel.claimTaskDrive(run.id))) return;
+    const dispatchTopic = taskOperation.topicId
+      ? await new TaskTopicModel(db, userId, workspaceId).findByTopicId(taskOperation.topicId)
+      : null;
+    if (
+      !dispatchTopic?.dispatchId ||
+      dispatchTopic.dispatchFence === null ||
+      dispatchTopic.executionGeneration === null ||
+      dispatchTopic.policyRevision === null ||
+      dispatchTopic.requirementRevision === null ||
+      dispatchTopic.operationId !== taskOperation.id
+    ) {
+      return;
+    }
+    const expectedContract = {
+      assigneeAgentId: task.assigneeAgentId,
+      executionGeneration: dispatchTopic.executionGeneration,
+      policyRevision: dispatchTopic.policyRevision,
+      requirementRevision: dispatchTopic.requirementRevision,
+      status: 'running',
+    };
+    const dispatchContract = {
+      dispatchId: dispatchTopic.dispatchId,
+      fence: dispatchTopic.dispatchFence,
+      generation: dispatchTopic.executionGeneration,
+      operationId: taskOperation.id,
+      policyRevision: dispatchTopic.policyRevision,
+      requirementRevision: dispatchTopic.requirementRevision,
+      taskId: taskOperation.taskId,
+    };
+
+    // The task-drive lease claimed above serializes verifier callbacks while
+    // this authoritative contract read fences stale generations.
+    const dispatchModel = new TaskDispatchModel(db, workspaceId);
+    if (!(await dispatchModel.isCurrentContract(dispatchContract))) {
+      log('ignored stale verify result for operation %s', operationId);
+      return;
+    }
 
     // The review already retries a check whose review could not run. An
     // `errored` result here is the reviewer's problem, and another builder
@@ -330,19 +365,11 @@ export const driveTaskFromVerify = async (
         // The verify → TaskService → aiAgent → agentRuntime completion → verify
         // cycle is safe statically since every use is call-time (inside this fn).
         await renewTaskDrive();
-        const completion = completionReservationId
-          ? await new TaskService(db, userId, workspaceId).updateStatus(
-              { id: taskOperation.taskId, status: 'completed' },
-              undefined,
-              {
-                currentStatus: currentTask.status as TaskStatus,
-                reservationId: completionReservationId,
-              },
-            )
-          : await new TaskService(db, userId, workspaceId).updateStatus({
-              id: taskOperation.taskId,
-              status: 'completed',
-            });
+        const completion = await new TaskService(db, userId, workspaceId).updateStatus({
+          expectedContract,
+          id: taskOperation.taskId,
+          status: 'completed',
+        });
         if (!completion) {
           await retireSupersededDrive();
           return;
@@ -394,19 +421,16 @@ export const driveTaskFromVerify = async (
         // Verification outcomes belong to the task itself. Do not create an inbox
         // brief here: a verifier rejection/error is not a separate user todo.
         await renewTaskDrive();
-        const paused = completionReservationId
-          ? await taskModel.updateStatusIfReservation(
-              taskOperation.taskId,
-              completionReservationId,
-              currentTask.status,
-              'paused',
-              {
-                error: pauseSummary,
-                runReservationExpiresAt: null,
-                runReservationId: null,
-              },
-            )
-          : await taskModel.updateStatus(taskOperation.taskId, 'paused', { error: pauseSummary });
+        const paused = await taskModel.updateStatusForExecutionContract(
+          taskOperation.taskId,
+          'paused',
+          expectedContract,
+          {
+            error: pauseSummary,
+            runReservationExpiresAt: null,
+            runReservationId: null,
+          },
+        );
         if (!paused) {
           await retireSupersededDrive();
           return;
@@ -416,6 +440,14 @@ export const driveTaskFromVerify = async (
           taskOperation.taskId,
         );
       }
+    }
+
+    if (task.automationMode && !(await dispatchModel.isCurrentContract(dispatchContract))) {
+      log(
+        'ignored recurring verify result after task contract changed for operation %s',
+        operationId,
+      );
+      return;
     }
 
     // Deferred creator callback: verify-bound runs defer

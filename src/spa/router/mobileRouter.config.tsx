@@ -438,6 +438,13 @@ export const mobileRoutes: RouteObject[] = [
                 ),
                 path: 'provider',
               },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/linear'),
+                  'Mobile > Workspace > Settings > Linear',
+                ),
+                path: 'linear',
+              },
               // Path-shaped provider deep-links (`/:slug/settings/provider/:id`)
               // redirect to the query form the workspace provider page uses, so
               // they don't fall through to the catch-all and leave the workspace.

@@ -357,7 +357,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
 
       // The model checks dependencies atomically. Never destroy worktrees or
       // report a successful deletion when that guard rejects or the row is gone.
-      const deleted = await taskModel().delete(task.id);
+      const deleted = await taskModel().delete(task.id, { source: agentId ? 'agent' : 'user' });
       if (!deleted) return { content: `Task not found: ${args.identifier}`, success: false };
       if (integration && snapshot) await integration.cleanupTaskWorktrees(task.id, snapshot);
 
@@ -483,7 +483,10 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         depResults.push(
           applyDeps(
             args.addDependencies,
-            (depId) => taskModel().addDependency(task.id, depId),
+            (depId) =>
+              taskModel().addDependency(task.id, depId, 'blocks', {
+                source: agentId ? 'agent' : 'user',
+              }),
             (depIdentifier) => changes.push(formatDependencyAdded(task.identifier, depIdentifier)),
           ),
         );
@@ -492,7 +495,10 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         depResults.push(
           applyDeps(
             args.removeDependencies,
-            (depId) => taskModel().removeDependency(task.id, depId),
+            (depId) =>
+              taskModel().removeDependency(task.id, depId, {
+                source: agentId ? 'agent' : 'user',
+              }),
             (depIdentifier) =>
               changes.push(formatDependencyRemoved(task.identifier, depIdentifier)),
           ),

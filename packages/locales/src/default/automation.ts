@@ -88,6 +88,7 @@ export default {
   'run_source.goal': 'Goal',
   'run_source.heartbeat': 'Interval',
   'run_source.manual': 'Manual',
+  'run_source.orchestrator': 'Orchestrator',
   'run_source.schedule': 'Schedule',
   'run_source.webhook': 'Webhook',
 

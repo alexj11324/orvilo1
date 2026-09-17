@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { messages, nextauthAccounts, topics, users, userSettings } from '../../schemas';
+import { messages, nextauthAccounts, tasks, topics, users, userSettings } from '../../schemas';
 import type { LobeChatDatabase } from '../../type';
 import type { ListUsersForMemoryExtractorCursor } from '../user';
 import { UserModel, UserNotFoundError } from '../user';
@@ -637,6 +637,14 @@ describe('UserModel', () => {
 
     describe('deleteUser', () => {
       it('should delete a user', async () => {
+        await serverDB.insert(tasks).values({
+          createdByUserId: userId,
+          id: 'personal-task-deleted-with-user',
+          identifier: 'PERSONAL-DELETE',
+          instruction: 'Personal task content',
+          seq: 1,
+        });
+
         await UserModel.deleteUser(serverDB, userId);
 
         const user = await serverDB.query.users.findFirst({
@@ -644,6 +652,11 @@ describe('UserModel', () => {
         });
 
         expect(user).toBeUndefined();
+        await expect(
+          serverDB.query.tasks.findFirst({
+            where: eq(tasks.id, 'personal-task-deleted-with-user'),
+          }),
+        ).resolves.toBeUndefined();
       });
 
       it('purges share-visitor topics and messages when the visitor is deleted', async () => {

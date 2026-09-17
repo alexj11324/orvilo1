@@ -85,7 +85,7 @@ export const registerTaskWork = async (ctx: WorkContext, params: RegisterTaskWor
       resourceId: task.id,
       resourceType: 'task',
       type: 'task',
-      userId: task.createdByUserId,
+      userId: task.createdByUserId ?? task.createdBySubjectId ?? 'system',
       visibility: task.visibility,
     },
     params,

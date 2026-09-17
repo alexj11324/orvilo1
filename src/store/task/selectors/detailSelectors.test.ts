@@ -21,6 +21,8 @@ const mockDetail: TaskDetailData = {
   status: 'running',
   subtasks: [{ identifier: 'T-1-1', name: 'Sub', status: 'backlog' }],
   topicCount: 3,
+  workflowCategory: 'done',
+  workflowStateId: 'linear-state-done',
   workspace: [],
 };
 
@@ -58,6 +60,11 @@ describe('taskDetailSelectors', () => {
 
     it('should return activeTaskStatus', () => {
       expect(taskDetailSelectors.activeTaskStatus(state)).toBe('running');
+    });
+
+    it('should return the independent business workflow state', () => {
+      expect(taskDetailSelectors.activeTaskWorkflowCategory(state)).toBe('done');
+      expect(taskDetailSelectors.activeTaskWorkflowStateId(state)).toBe('linear-state-done');
     });
 
     it('should return activeTaskPriority', () => {

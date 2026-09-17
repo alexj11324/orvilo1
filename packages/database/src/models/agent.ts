@@ -96,6 +96,7 @@ import {
   rewriteMessageScopeForTopics,
   rewriteResidualMessageScope,
 } from './agentTransferJob';
+import { recordBulkTaskMutation } from './taskDomainMutation';
 import {
   hasForeignTopicComments,
   syncTopicCommentsOnTopicTransfer,
@@ -2406,6 +2407,8 @@ export class AgentModel {
         .update(tasks)
         .set({
           createdByUserId: targetUserId,
+          domainRevision: sql`${tasks.domainRevision} + 1`,
+          policyRevision: sql`${tasks.policyRevision} + 1`,
           updatedAt: tasks.updatedAt,
           workspaceId: targetWorkspaceId,
           ...visibilityUpdate,
@@ -2413,8 +2416,14 @@ export class AgentModel {
         .where(
           or(inArray(tasks.assigneeAgentId, agentIds), inArray(tasks.createdByAgentId, agentIds)),
         )
-        .returning({ id: tasks.id });
+        .returning();
       const movedTaskIds = movedTasks.map((task) => task.id);
+
+      await recordBulkTaskMutation(trx, movedTasks, {
+        changedFields: ['createdByUserId', 'visibility', 'workspaceId'],
+        eventType: 'task.scope.changed',
+        idempotencyKeyPrefix: `agent-scope-transfer:${agentIds.toSorted().join(',')}:${targetWorkspaceId ?? 'personal'}:${targetUserId}`,
+      });
 
       if (movedTaskIds.length > 0) {
         await trx
@@ -2760,10 +2769,21 @@ export class AgentModel {
     // quiet (visible in the task list) rather than erroring; a public agent's
     // tasks keep working and are left untouched.
     if (agent.visibility === 'private') {
-      await trx
+      const detachedTasks = await trx
         .update(tasks)
-        .set({ assigneeAgentId: null, updatedAt: tasks.updatedAt })
-        .where(and(eq(tasks.assigneeAgentId, agentId), ne(tasks.createdByUserId, toUserId)));
+        .set({
+          assigneeAgentId: null,
+          domainRevision: sql`${tasks.domainRevision} + 1`,
+          policyRevision: sql`${tasks.policyRevision} + 1`,
+          updatedAt: tasks.updatedAt,
+        })
+        .where(and(eq(tasks.assigneeAgentId, agentId), ne(tasks.createdByUserId, toUserId)))
+        .returning();
+      await recordBulkTaskMutation(trx, detachedTasks, {
+        changedFields: ['assigneeAgentId'],
+        eventType: 'task.assigned',
+        idempotencyKeyPrefix: `agent-owner-transfer:${agentId}:${fromUserId}:${toUserId}`,
+      });
     }
 
     // Knowledge mounts whose KB / file the recipient cannot access (private to

@@ -37,6 +37,8 @@ export const HATCHET_WORKFLOW_PATHS = [
   '/api/workflows/onboarding/understanding/process-collected',
   '/api/workflows/onboarding/understanding/process-detailed-persona',
   '/api/workflows/onboarding/understanding/process-providers',
+  '/api/workflows/linear-sync/process',
+  '/api/workflows/linear-sync/execute',
   '/api/workflows/task/on-creator-complete',
   '/api/workflows/task/on-topic-complete',
   '/api/workflows/topic-auto-summary/dispatch',
@@ -52,6 +54,7 @@ export const isHatchetWorkflowPath = (path: string): path is HatchetWorkflowPath
 
 interface TriggerHatchetWorkflowOptions {
   concurrencyKey?: string;
+  delayMs?: number;
   headers?: Record<string, string>;
   workflowRunId?: string;
 }
@@ -121,11 +124,22 @@ export const triggerHatchetWorkflow = async (
   }
 
   try {
-    const providerRunId = await enqueueHatchetTask(HATCHET_TASK_NAMES.workflowDispatch, {
-      deduplicationKey,
-      dispatchId,
-      laneKey,
-    });
+    const providerRunId =
+      options.delayMs === undefined
+        ? await enqueueHatchetTask(HATCHET_TASK_NAMES.workflowDispatch, {
+            deduplicationKey,
+            dispatchId,
+            laneKey,
+          })
+        : await enqueueHatchetTask(
+            HATCHET_TASK_NAMES.workflowDispatch,
+            {
+              deduplicationKey,
+              dispatchId,
+              laneKey,
+            },
+            { delayMs: options.delayMs },
+          );
     // Persist the provider receipt independently of the state transition. The
     // worker can claim and finish the row before the publisher gets scheduled
     // again; losing this id would make a later cancellation unable to reach

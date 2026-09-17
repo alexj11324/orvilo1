@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { casdoorWebhook } from './handlers/casdoor';
+import { linearWebhook } from './handlers/linear';
 import { logtoWebhook } from './handlers/logto';
 import { memoryExtractionWebhook } from './handlers/memoryExtraction';
 import { memoryExtractionBenchmarkLocomo } from './handlers/memoryExtractionBenchmarkLocomo';
@@ -14,6 +15,7 @@ const app = new Hono().basePath('/api/webhooks');
 // Identity provider webhooks — each verifies its own provider signature.
 app.post('/casdoor', casdoorWebhook);
 app.post('/logto', logtoWebhook);
+app.post('/linear/:workspaceId', linearWebhook);
 
 // Memory pipeline webhooks — share the configured static-header guard.
 app.post('/memory-extraction', memoryWebhookAuth(), memoryExtractionWebhook);

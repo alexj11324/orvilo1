@@ -5,6 +5,7 @@ import type {
   TaskIntentAnalysis,
   TaskMoveScope,
   TaskStatus,
+  TaskWorkflowCategory,
 } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
@@ -45,7 +46,8 @@ class TaskService {
       key: string;
       limit?: number;
       offset?: number;
-      statuses: string[];
+      statuses?: TaskStatus[];
+      workflowCategories?: TaskWorkflowCategory[];
     }>;
     parentTaskId?: string | null;
     projectId?: string;
@@ -191,6 +193,8 @@ class TaskService {
        * with `updateStatusCascade` — callers check subtasks first.
        */
       status?: TaskStatus;
+      /** Business-workflow target; the server resolves the exact mapped Linear state. */
+      workflowCategory?: TaskWorkflowCategory;
     },
   ) => lambdaClient.task.update.mutate({ id, ...data });
 
@@ -227,15 +231,23 @@ class TaskService {
     },
   ) => lambdaClient.task.updateStatusCascade.mutate({ id, status, ...move });
 
-  run = async (id: string, params?: { continueTopicId?: string; prompt?: string }) =>
-    lambdaClient.task.run.mutate({ id, ...params });
+  run = async (
+    id: string,
+    params?: { continueTopicId?: string; idempotencyKey?: string; prompt?: string },
+  ) =>
+    lambdaClient.task.run.mutate({
+      id,
+      idempotencyKey: params?.idempotencyKey ?? crypto.randomUUID(),
+      ...params,
+    });
 
   retryIntegration = async (id: string, topicId: string) =>
     lambdaClient.task.retryIntegration.mutate({ id, topicId });
 
   previewSubtaskLayers = async (id: string) => lambdaClient.task.previewSubtaskLayers.query({ id });
 
-  runReadySubtasks = async (id: string) => lambdaClient.task.runReadySubtasks.mutate({ id });
+  runReadySubtasks = async (id: string, requestId = crypto.randomUUID()) =>
+    lambdaClient.task.runReadySubtasks.mutate({ id, requestId });
 
   addComment = async (
     id: string,

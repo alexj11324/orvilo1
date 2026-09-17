@@ -27,6 +27,7 @@ import {
   getProjectGoalsPath,
   getProjectTasksPath,
 } from '@/features/Projects/Layout/navigation';
+import OrchestrationPolicyCard from '@/features/Projects/Workspace/OrchestrationPolicyCard';
 import WorkSummaryCard from '@/features/Work/WorkSummaryCard';
 import { useOpenWork } from '@/features/WorkGallery/useOpenWork';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -223,6 +224,8 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
             </Flexbox>
           )}
         </Flexbox>
+
+        <OrchestrationPolicyCard detail={detail} projectId={projectId} />
 
         <Flexbox className={styles.section} gap={8}>
           <SectionTitle

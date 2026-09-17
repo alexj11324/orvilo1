@@ -2,6 +2,8 @@ export * from './core/db-adaptor';
 export * from './models/agentCopyJob';
 export * from './models/agentHistoryJob';
 export * from './models/agentTransferJob';
+export * from './models/linearSync';
+export * from './models/taskDispatch';
 export * from './repositories/compression';
 export * from './repositories/onboardingUnderstanding';
 export * from './type';

@@ -1,6 +1,6 @@
 import { closestCenter, type CollisionDetection, pointerWithin } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import type { TaskMoveScope, TaskStatus } from '@orvilo/types';
+import type { TaskMoveScope, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 
 import type {
   TaskGroupItem,
@@ -22,6 +22,8 @@ export interface KanbanColumnDefinition {
   groupMeta?: TaskGroupMeta;
   key: string;
   targetStatus: 'backlog' | 'canceled' | 'completed' | 'paused' | null;
+  targetWorkflowCategory?: TaskWorkflowCategory;
+  workflowCategories?: TaskWorkflowCategory[];
 }
 
 export interface KanbanAssigneeUpdate {
@@ -43,13 +45,57 @@ export const getKanbanColumnHeaderVariant = ({
 };
 
 export const STATUS_KANBAN_COLUMNS: KanbanColumnDefinition[] = [
-  { droppable: true, key: 'backlog', targetStatus: 'backlog' },
-  { droppable: false, key: 'running', targetStatus: null },
+  {
+    droppable: true,
+    key: 'triage',
+    targetStatus: null,
+    targetWorkflowCategory: 'triage',
+    workflowCategories: ['triage'],
+  },
+  {
+    droppable: true,
+    key: 'backlog',
+    targetStatus: 'backlog',
+    targetWorkflowCategory: 'backlog',
+    workflowCategories: ['backlog'],
+  },
+  {
+    droppable: true,
+    key: 'todo',
+    targetStatus: null,
+    targetWorkflowCategory: 'todo',
+    workflowCategories: ['todo'],
+  },
+  {
+    droppable: true,
+    key: 'running',
+    targetStatus: null,
+    targetWorkflowCategory: 'in_progress',
+    workflowCategories: ['in_progress'],
+  },
   // The column mixes paused + failed; a drop from outside lands on `paused`,
   // the user-selectable representative ("Pending review").
-  { droppable: true, key: 'needsInput', targetStatus: 'paused' },
-  { droppable: true, key: 'done', targetStatus: 'completed' },
-  { droppable: true, key: 'canceled', targetStatus: 'canceled' },
+  {
+    droppable: true,
+    key: 'needsInput',
+    targetStatus: 'paused',
+    targetWorkflowCategory: 'in_review',
+    workflowCategories: ['in_review'],
+  },
+  {
+    droppable: true,
+    key: 'done',
+    targetStatus: 'completed',
+    targetWorkflowCategory: 'done',
+    workflowCategories: ['done'],
+  },
+  {
+    droppable: true,
+    key: 'canceled',
+    targetStatus: 'canceled',
+    targetWorkflowCategory: 'canceled',
+    workflowCategories: ['canceled'],
+  },
 ];
 
 /** Raw statuses bucketed inside each merged status column. */
@@ -171,6 +217,7 @@ export const getKanbanAssigneeUpdate = (
 export const getKanbanTaskPatch = (
   groupBy: TaskKanbanGroupBy,
   column: KanbanColumnDefinition,
+  task?: TaskListItem,
 ): Partial<TaskListItem> | undefined => {
   if (groupBy === 'assignee' && column.groupMeta?.groupBy === 'assignee') {
     return { assigneeAgentId: column.groupMeta.assigneeId ?? null };
@@ -180,6 +227,9 @@ export const getKanbanTaskPatch = (
   }
   if (groupBy === 'priority' && column.groupMeta?.groupBy === 'priority') {
     return { priority: column.groupMeta.priority ?? 0 };
+  }
+  if (groupBy === 'status' && task?.workflowStateId && column.targetWorkflowCategory) {
+    return { workflowCategory: column.targetWorkflowCategory };
   }
   if (groupBy === 'status' && column.targetStatus) {
     return { status: column.targetStatus as TaskStatus };
@@ -192,6 +242,11 @@ export const canDropTaskIntoKanbanColumn = (
   column: KanbanColumnDefinition,
 ): boolean => {
   if (!column.droppable) return false;
+  if (groupBy === 'status') {
+    return task.workflowStateId
+      ? Boolean(column.targetWorkflowCategory)
+      : Boolean(column.targetStatus);
+  }
   if (groupBy !== 'member' || column.groupMeta?.groupBy !== 'member') return true;
 
   const targetAssigneeUserId = column.groupMeta.assigneeUserId;
@@ -212,7 +267,9 @@ export const kanbanColumnMoveScope = (
 ): TaskMoveScope | undefined => {
   if (groupBy === 'status') {
     const statuses = KANBAN_COLUMN_STATUSES[column.key];
-    return statuses ? { statuses } : undefined;
+    return statuses || column.workflowCategories
+      ? { statuses, workflowCategories: column.workflowCategories }
+      : undefined;
   }
   const meta = column.groupMeta;
   if (!meta) return undefined;
@@ -246,6 +303,17 @@ export const KANBAN_STATUS_COLUMN_KEY: Record<TaskStatus, string> = {
   scheduled: 'running',
 };
 
+/** Business workflow category → shared board column. */
+export const KANBAN_WORKFLOW_COLUMN_KEY: Record<TaskWorkflowCategory, string> = {
+  backlog: 'backlog',
+  canceled: 'canceled',
+  done: 'done',
+  in_progress: 'running',
+  in_review: 'needsInput',
+  todo: 'todo',
+  triage: 'triage',
+};
+
 /**
  * The column key a task buckets under for the current grouping. For status
  * boards this is the merged column (`task.status` → column key); for the
@@ -253,7 +321,12 @@ export const KANBAN_STATUS_COLUMN_KEY: Record<TaskStatus, string> = {
  * server returns as the group key.
  */
 export const taskKanbanColumnKey = (task: TaskListItem, groupBy: TaskKanbanGroupBy): string => {
-  if (groupBy === 'status') return KANBAN_STATUS_COLUMN_KEY[task.status as TaskStatus] ?? 'backlog';
+  if (groupBy === 'status') {
+    if (task.workflowStateId) {
+      return KANBAN_WORKFLOW_COLUMN_KEY[task.workflowCategory] ?? 'backlog';
+    }
+    return KANBAN_STATUS_COLUMN_KEY[task.status as TaskStatus] ?? 'backlog';
+  }
   return getTaskGroupMeta(task, groupBy).key;
 };
 

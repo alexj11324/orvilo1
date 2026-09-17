@@ -8,14 +8,14 @@ import type {
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import dayjs from 'dayjs';
-import { and, asc, eq, gt, inArray, max, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, max, or, sql } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
 
 import { merge } from '@/utils/merge';
 import { today } from '@/utils/time';
 
 import type { NewUser, UserItem, UserSettingsItem } from '../schemas';
-import { messages, nextauthAccounts, topics, users, userSettings } from '../schemas';
+import { messages, nextauthAccounts, tasks, topics, users, userSettings } from '../schemas';
 import type { LobeChatDatabase } from '../type';
 import { AGENT_TRANSFER_PENDING_OWNER_DELETE, AgentTransferJobModel } from './agentTransferJob';
 
@@ -461,6 +461,9 @@ export class UserModel {
     return db.transaction(async (tx) => {
       // Purge share-visitor topics authored by this user under any creator.
       await tx.delete(topics).where(eq(topics.senderId, id));
+      // Personal tasks are owned by the account. Workspace tasks keep their
+      // history and rely on the nullable creator FK when the user leaves.
+      await tx.delete(tasks).where(and(eq(tasks.createdByUserId, id), isNull(tasks.workspaceId)));
       return tx.delete(users).where(eq(users.id, id));
     });
   };

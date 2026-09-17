@@ -9,6 +9,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { tasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 
+import { taskRunIdempotencyKey } from './idempotency';
 import { TaskRunnerService } from './index';
 
 const log = debug('task-runner:schedule-tick');
@@ -40,6 +41,7 @@ export type ScheduleTickSkipReason =
 export async function runScheduleTick(
   taskId: string,
   userId: string,
+  tickToken?: string,
 ): Promise<ScheduleTickOutcome> {
   const db = await getServerDB();
 
@@ -129,13 +131,25 @@ export async function runScheduleTick(
 
   const runner = new TaskRunnerService(db, userId, wsId);
   try {
-    await runner.runTask({ taskId, trigger: 'schedule' });
+    await runner.runTask({
+      idempotencyKey: taskRunIdempotencyKey.automationTick({
+        executionGeneration: task.executionGeneration ?? 0,
+        kind: 'schedule',
+        taskId,
+        tickToken,
+      }),
+      taskId,
+      trigger: 'schedule',
+    });
   } catch (e) {
     if (isTaskDependencyBlocked(e)) return { ran: false, reason: 'dependencies-blocked' };
     // Concurrent tick / manual run already running this task — graceful skip.
     if (e instanceof TRPCError && e.code === 'CONFLICT') {
       log('skip task=%s reason=in-flight', taskId);
       return { ran: false, reason: 'in-flight' };
+    }
+    if (e instanceof TRPCError && e.code === 'PRECONDITION_FAILED') {
+      return { ran: false, reason: 'human-waiting' };
     }
     throw e;
   }

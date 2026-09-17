@@ -77,6 +77,51 @@ describe('Project Router Integration', () => {
     expect(reopened.data.status).toBe('active');
   });
 
+  it('reads and fences project orchestration policy writes', async () => {
+    const project = await caller.create({ identifier: 'POLICY', name: 'Policy project' });
+    const [agent] = await serverDB
+      .insert(agents)
+      .values({ title: 'Implementer', userId })
+      .returning();
+    await caller.addAgent({ agentId: agent.id, id: project.data.id, role: 'implementer' });
+
+    const initial = await caller.getOrchestrationPolicy({ id: project.data.id });
+    expect(initial.data.orchestrationPolicyRevision).toBe(1);
+
+    const saved = await caller.updateOrchestrationPolicy({
+      coordinatorAgentId: agent.id,
+      expectedRevision: initial.data.orchestrationPolicyRevision,
+      id: project.data.id,
+      orchestrationPolicy: {
+        allowedAgentIds: [agent.id],
+        allowedRoles: ['implementer'],
+        autoDispatch: true,
+        concurrencyLimit: 2,
+        executionBudget: { maxRuns: 5 },
+        replanMode: 'suggest',
+        requireHumanReview: true,
+      },
+    });
+    expect(saved.data).toEqual(
+      expect.objectContaining({ coordinatorAgentId: agent.id, orchestrationPolicyRevision: 2 }),
+    );
+
+    const stale = await caller.updateOrchestrationPolicy({
+      coordinatorAgentId: project.data.coordinatorAgentId,
+      expectedRevision: initial.data.orchestrationPolicyRevision,
+      id: project.data.id,
+      orchestrationPolicy: {
+        ...saved.data.orchestrationPolicy,
+        autoDispatch: false,
+      },
+    });
+    expect(stale.data).toEqual(expect.objectContaining({ stale: true }));
+    expect(
+      (await caller.getOrchestrationPolicy({ id: project.data.id })).data.orchestrationPolicy
+        .autoDispatch,
+    ).toBe(true);
+  });
+
   it('rejects cross-project task dependencies', async () => {
     const first = await caller.create({ identifier: 'FIRST', name: 'First' });
     const second = await caller.create({ identifier: 'SECOND', name: 'Second' });

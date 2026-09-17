@@ -11,6 +11,7 @@ import {
   ActionIcon,
   Text,
 } from '@lobehub/ui/base-ui';
+import type { TaskStatus } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { ArrowRight } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
@@ -26,7 +27,7 @@ import type { TaskGroupItem } from '@/store/task/slices/list/initialState';
 
 import StatusGroup from './StatusGroup';
 
-const SIDEBAR_GROUPS = [
+const SIDEBAR_GROUPS: Array<{ key: string; statuses: TaskStatus[] }> = [
   { key: 'needsInput', statuses: ['paused', 'failed'] },
   { key: 'backlog', statuses: ['backlog'] },
   { key: 'running', statuses: ['running', 'scheduled'] },

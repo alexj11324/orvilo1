@@ -23,6 +23,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
+import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useTaskStore } from '@/store/task';
@@ -385,6 +386,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const { t } = useTranslation('chat');
   const activities = useTaskStore(taskActivitySelectors.activeTaskActivities);
   const activeTaskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const activeTaskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -494,7 +496,14 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   // Leaving a note for the next run is one of the report's own actions, which
   // opens the editor on demand instead of parking an empty box under every
   // report.
-  if (variant === 'result') return <Flexbox gap={12}>{rows}</Flexbox>;
+  if (variant === 'result') {
+    return (
+      <Flexbox gap={12}>
+        <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
+        {rows}
+      </Flexbox>
+    );
+  }
 
   return (
     <Flexbox gap={8}>
@@ -513,6 +522,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
           {t('taskDetail.activities')}
         </Text>
+        <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
         <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
       </Block>
       <Collapsible open={isExpanded}>

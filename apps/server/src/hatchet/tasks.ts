@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { runStep } from '@/server/router-hono/agent/handlers/runStep';
 import { runScheduleNightlyReview } from '@/server/router-hono/workflows/agent-signal/handlers/scheduleNightlyReview';
 import { runGoalSweep } from '@/server/router-hono/workflows/goal/handlers/sweep';
+import { sweep as linearSyncSweepHandler } from '@/server/router-hono/workflows/linear-sync/handlers/sweep';
 import { runScheduleDispatch } from '@/server/router-hono/workflows/task/handlers/scheduleDispatch';
 import { scheduledTopicDispatch } from '@/server/router-hono/workflows/task/handlers/scheduledTopicDispatch';
 import { watchdog } from '@/server/router-hono/workflows/task/handlers/watchdog';
@@ -49,7 +50,7 @@ const taskHeartbeatInput = z.object({
   userId: z.string().min(1),
 });
 
-const taskScheduleExecuteInput = taskHeartbeatInput.omit({ tickToken: true });
+const taskScheduleExecuteInput = taskHeartbeatInput;
 
 const agentStepInput = z.object({
   context: z.unknown().optional(),
@@ -213,8 +214,8 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     name: HATCHET_TASK_NAMES.taskScheduleExecute,
     backoff: { factor: 2, maxSeconds: 300 },
     executionTimeout: '15m',
-    fn: async ({ taskId, userId }: Omit<TaskHeartbeatInput, 'tickToken'>) =>
-      runScheduleTick(taskId, userId),
+    fn: async ({ taskId, tickToken, userId }: TaskHeartbeatInput & InputType) =>
+      runScheduleTick(taskId, userId, tickToken),
     inputValidator: taskScheduleExecuteInput,
     retries: 5,
   });
@@ -259,12 +260,21 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     retries: 3,
   });
 
+  const linearSyncSweep = hatchet.task({
+    name: HATCHET_TASK_NAMES.linearSyncSweep,
+    executionTimeout: '15m',
+    fn: async () => runInternalHandler(linearSyncSweepHandler),
+    onCrons: ['* * * * *'],
+    retries: 3,
+  });
+
   return [
     agentStep,
     agentSignalNightlySchedule,
     botReplay,
     goalAdvance,
     goalSweep,
+    linearSyncSweep,
     taskHeartbeat,
     taskScheduleDispatch,
     taskScheduleExecute,

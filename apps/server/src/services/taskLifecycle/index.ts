@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { BRANDING_URL } from '@orvilo/business-const';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
@@ -39,6 +37,7 @@ import { GoalModel } from '@/database/models/goal';
 import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
@@ -48,6 +47,7 @@ import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { SystemAgentService } from '@/server/services/systemAgent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
+import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 import { createTaskSchedulerModule } from '@/server/services/taskScheduler';
 
 import {
@@ -100,10 +100,13 @@ const BILLING_ERROR_CODES = new Set<string>([
 ]);
 
 export interface TopicCompleteParams {
+  dispatchFence?: number;
+  dispatchId?: string;
   /** Structured terminal error type (e.g. `InsufficientBudgetForModel`) from the
    *  completion lifecycle event, used to pick the error brief's remedy action. */
   errorCode?: string;
   errorMessage?: string;
+  executionGeneration?: number;
   lastAssistantContent?: string;
   operationId: string;
   reason: string; // 'done' | 'error' | 'interrupted' | ...
@@ -161,9 +164,67 @@ export class TaskLifecycleService {
     } = params;
     const reason = rawReason === 'max_steps' || rawReason === 'cost_limit' ? 'done' : rawReason;
 
+    const hasDispatchClaim =
+      params.dispatchId !== undefined ||
+      params.dispatchFence !== undefined ||
+      params.executionGeneration !== undefined;
+    if (hasDispatchClaim) {
+      if (
+        !params.dispatchId ||
+        params.dispatchFence === undefined ||
+        params.executionGeneration === undefined
+      ) {
+        throw new Error('Incomplete Task dispatch claim on completion');
+      }
+      const terminalPhase =
+        reason === 'done' ? 'succeeded' : reason === 'interrupted' ? 'canceled' : 'failed';
+      const settlement = await new TaskDispatchModel(this.db, this.workspaceId).settle({
+        dispatchId: params.dispatchId,
+        expected: ['dispatched', 'running', 'cancel_requested', 'outcome_unknown'],
+        fence: params.dispatchFence,
+        generation: params.executionGeneration,
+        operationId: params.operationId,
+        phase: terminalPhase,
+      });
+      if (!settlement) throw new Error('Task dispatch claim is stale or does not match this run');
+      if (settlement.state === 'already_settled') {
+        log(
+          'Ignored replayed completion: task=%s dispatch=%s generation=%s',
+          taskId,
+          params.dispatchId,
+          params.executionGeneration,
+        );
+        return;
+      }
+      if (!settlement.currentGeneration || !settlement.currentContract) {
+        if (topicId) {
+          const historicalStatus =
+            reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed';
+          await this.taskTopicModel.settleHistoricalRun(
+            taskId,
+            topicId,
+            {
+              dispatchId: params.dispatchId,
+              fence: params.dispatchFence,
+              generation: params.executionGeneration,
+            },
+            historicalStatus,
+            lastAssistantContent,
+          );
+        }
+        log(
+          'Ignored stale execution contract completion: task=%s dispatch=%s generation=%s',
+          taskId,
+          params.dispatchId,
+          params.executionGeneration,
+        );
+        return;
+      }
+    }
+
     log('onTopicComplete: task=%s topic=%s reason=%s', taskIdentifier, topicId, reason);
 
-    if (reason !== 'done' && reason !== 'error') {
+    if (reason !== 'done' && reason !== 'error' && reason !== 'interrupted') {
       log('onTopicComplete: non-terminal task callback ignored reason=%s', reason);
       return;
     }
@@ -180,7 +241,7 @@ export class TaskLifecycleService {
       taskId,
       topicId,
       params.operationId,
-      reason === 'done' ? 'completed' : 'failed',
+      reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed',
     );
     if (!claimed) {
       log(
@@ -189,6 +250,11 @@ export class TaskLifecycleService {
         currentTask.currentTopicId,
         topicId,
       );
+      return;
+    }
+
+    if (reason === 'interrupted') {
+      log('onTopicComplete: interrupted run settled without advancing task=%s', taskIdentifier);
       return;
     }
 
@@ -296,6 +362,11 @@ export class TaskLifecycleService {
               await new TaskRunnerService(this.db, this.userId, this.workspaceId).runTask({
                 continueFromMessageId: steerMessageId,
                 continueTopicId: topicId,
+                idempotencyKey: taskRunIdempotencyKey.steerContinuation({
+                  messageId: steerMessageId,
+                  taskId,
+                  topicId,
+                }),
                 replaceReservationId: claimed,
                 taskId,
                 trigger: params.runTrigger,
@@ -349,7 +420,7 @@ export class TaskLifecycleService {
             });
             return;
           }
-          if (integrationOutcome === 'hold') return;
+        if (integrationOutcome === 'hold' || integrationOutcome === 'stale') return;
         }
 
         // 3. Delivery acceptance now runs through Verify: the verify
@@ -988,7 +1059,8 @@ export class TaskLifecycleService {
 
     try {
       const scheduler = createTaskSchedulerModule();
-      const tickToken = randomUUID();
+      const tickRevision = (sched.tickRevision ?? 0) + 1;
+      const tickToken = `heartbeat:task:${task.id}:revision:${tickRevision}`;
 
       // Cancel any prior tick (defensive — we usually wouldn't have one
       // pending here, since the prior tick has already fired to bring us
@@ -1009,6 +1081,7 @@ export class TaskLifecycleService {
           consecutiveFailures,
           scheduledAt: new Date().toISOString(),
           tickMessageId,
+          tickRevision,
           tickToken,
         },
       };

@@ -18,6 +18,7 @@ import {
   KeyboardIcon,
   KeyIcon,
   KeyRound,
+  Link2,
   Map,
   MessageCircleIcon,
   MonitorSmartphoneIcon,
@@ -227,6 +228,11 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: Blocks,
               key: WorkspaceSettingsTabs.Connector,
               label: t('workspaceSetting.tab.connector'),
+            },
+            {
+              icon: Link2,
+              key: WorkspaceSettingsTabs.Linear,
+              label: t('workspaceSetting.tab.linear'),
             },
             {
               icon: KeyRound,

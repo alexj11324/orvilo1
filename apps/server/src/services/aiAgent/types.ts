@@ -78,6 +78,8 @@ export interface InternalExecAgentParams extends ExecAgentParams {
    * continuation has been scheduled. Never client-passable.
    */
   approvalSourceOperationId?: string;
+  /** Persist caller-owned run metadata before createOperation can execute. */
+  beforeOperationStart?: (input: { operationId: string; topicId: string }) => Promise<void>;
   /** Bot context for topic metadata (platform, applicationId, platformThreadId) */
   botContext?: ChatTopicBotContext;
   /** Bot platform context for injecting platform capabilities (e.g. markdown support) */

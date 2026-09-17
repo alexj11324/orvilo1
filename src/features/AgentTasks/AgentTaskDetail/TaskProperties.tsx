@@ -16,6 +16,7 @@ import TaskStatusTag from '../features/TaskStatusTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
+import TaskWorkflowBadge from '../shared/TaskWorkflowBadge';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
@@ -52,6 +53,8 @@ const TaskProperties = memo(() => {
 
   const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
   const status = useTaskStore(taskDetailSelectors.activeTaskStatus) as TaskStatus | undefined;
+  const workflowCategory = useTaskStore(taskDetailSelectors.activeTaskWorkflowCategory);
+  const workflowStateId = useTaskStore(taskDetailSelectors.activeTaskWorkflowStateId);
   const priority = useTaskStore(taskDetailSelectors.activeTaskPriority);
   const assigneeUserId = useTaskStore(taskDetailSelectors.activeTaskAssigneeUserId);
   const reviewerUserId = useTaskStore(taskDetailSelectors.activeTaskReviewerUserId);
@@ -86,6 +89,22 @@ const TaskProperties = memo(() => {
           <Text weight={500}>{t(`taskDetail.${statusMeta.labelKey}` as never)}</Text>
         </Block>
       </TaskStatusTag>
+
+      {status && workflowStateId && (
+        <Block
+          horizontal
+          align="center"
+          className={styles.propertyItem}
+          gap={8}
+          variant={'borderless'}
+        >
+          <TaskWorkflowBadge
+            executionStatus={status}
+            workflowCategory={workflowCategory}
+            workflowStateId={workflowStateId}
+          />
+        </Block>
+      )}
 
       {/* The human layer: whether the delivery is accepted. Read-only here —
           the decision itself is made on the acceptance page this links to.

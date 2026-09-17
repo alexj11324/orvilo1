@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import type { BriefDecision, TaskTopicHandoff, TaskTopicIntegration } from '@orvilo/types';
+import type {
+  BriefDecision,
+  TaskExecutionEnvironmentSnapshot,
+  TaskTopicHandoff,
+  TaskTopicIntegration,
+} from '@orvilo/types';
 import { and, count, desc, eq, exists, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import type { TaskTopicItem } from '../schemas/task';
@@ -10,6 +15,13 @@ import type { LobeChatDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 const TERMINAL_TOPIC_STATUSES = new Set(['canceled', 'completed', 'failed', 'timeout']);
+
+const runStateForStatus = (status: string) => {
+  if (status === 'completed') return 'succeeded' as const;
+  if (status === 'canceled') return 'canceled' as const;
+  if (status === 'failed' || status === 'timeout') return 'failed' as const;
+  return 'running' as const;
+};
 
 export class TaskTopicModel {
   private readonly userId: string;
@@ -76,20 +88,38 @@ export class TaskTopicModel {
     taskId: string,
     topicId: string,
     params: {
+      dispatch?: {
+        fence: number;
+        generation: number;
+        id: string;
+        planRevision: number | null;
+        policyRevision: number;
+        requirementRevision: number;
+        taskRevision: number;
+      };
+      environmentSnapshot?: TaskExecutionEnvironmentSnapshot;
       integration?: TaskTopicIntegration;
       operationId?: string;
       seq: number;
-      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal';
+      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
     },
   ): Promise<void> {
     const visibility = await this.getTaskVisibility(taskId);
     await this.db
       .insert(taskTopics)
       .values({
+        dispatchFence: params.dispatch?.fence,
+        dispatchId: params.dispatch?.id,
+        environmentSnapshot: params.environmentSnapshot,
+        executionGeneration: params.dispatch?.generation,
         integration: params.integration,
         operationId: params.operationId,
+        planRevision: params.dispatch?.planRevision,
+        policyRevision: params.dispatch?.policyRevision,
+        requirementRevision: params.dispatch?.requirementRevision,
         seq: params.seq,
         taskId,
+        taskRevision: params.dispatch?.taskRevision,
         topicId,
         trigger: params.trigger,
         userId: this.userId,
@@ -97,6 +127,98 @@ export class TaskTopicModel {
         workspaceId: this.workspaceId ?? null,
       })
       .onConflictDoNothing();
+  }
+
+  /** Persist the exact dispatch owner before the runtime is allowed to start. */
+  async startRun(
+    taskId: string,
+    topicId: string,
+    params: {
+      dispatch: {
+        fence: number;
+        generation: number;
+        id: string;
+        planRevision: number | null;
+        policyRevision: number;
+        requirementRevision: number;
+        taskRevision: number;
+      };
+      environmentSnapshot?: TaskExecutionEnvironmentSnapshot;
+      integration?: TaskTopicIntegration;
+      operationId: string;
+      seq: number;
+      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
+    },
+  ): Promise<void> {
+    const visibility = await this.getTaskVisibility(taskId);
+    const run = {
+      dispatchFence: params.dispatch.fence,
+      dispatchId: params.dispatch.id,
+      environmentSnapshot: params.environmentSnapshot,
+      executionGeneration: params.dispatch.generation,
+      operationId: params.operationId,
+      planRevision: params.dispatch.planRevision,
+      policyRevision: params.dispatch.policyRevision,
+      requirementRevision: params.dispatch.requirementRevision,
+      runState: 'running' as const,
+      status: 'running',
+      taskRevision: params.dispatch.taskRevision,
+      trigger: params.trigger,
+    };
+    await this.db
+      .insert(taskTopics)
+      .values({
+        ...run,
+        integration: params.integration,
+        seq: params.seq,
+        taskId,
+        topicId,
+        userId: this.userId,
+        visibility,
+        workspaceId: this.workspaceId ?? null,
+      })
+      .onConflictDoUpdate({
+        set: {
+          ...run,
+          ...(params.integration === undefined ? {} : { integration: params.integration }),
+        },
+        target: [taskTopics.taskId, taskTopics.topicId],
+      });
+  }
+
+  /** Settle history only while the topic row still belongs to that dispatch. */
+  async settleHistoricalRun(
+    taskId: string,
+    topicId: string,
+    claim: { dispatchId: string; fence: number; generation: number },
+    status: 'canceled' | 'completed' | 'failed',
+    lastAssistantContent?: string,
+  ): Promise<boolean> {
+    const [updated] = await this.db
+      .update(taskTopics)
+      .set({
+        ...(lastAssistantContent
+          ? {
+              handoff: sql`jsonb_set(COALESCE(${taskTopics.handoff}, '{}'::jsonb), '{content}', ${JSON.stringify(lastAssistantContent)}::jsonb)`,
+            }
+          : {}),
+        runState: runStateForStatus(status),
+        status,
+      })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, topicId),
+          eq(taskTopics.dispatchId, claim.dispatchId),
+          eq(taskTopics.dispatchFence, claim.fence),
+          eq(taskTopics.executionGeneration, claim.generation),
+          this.ownership(),
+        ),
+      )
+      .returning({ topicId: taskTopics.topicId });
+    if (!updated) return false;
+    await this.markTopicEnded(topicId, status);
+    return true;
   }
 
   /**
@@ -219,7 +341,7 @@ export class TaskTopicModel {
   async updateStatus(taskId: string, topicId: string, status: string): Promise<void> {
     await this.db
       .update(taskTopics)
-      .set({ status })
+      .set({ runState: runStateForStatus(status), status })
       .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
 
     if (TERMINAL_TOPIC_STATUSES.has(status)) {
@@ -234,7 +356,7 @@ export class TaskTopicModel {
   async cancelIfRunning(taskId: string, topicId: string): Promise<boolean> {
     const result = await this.db
       .update(taskTopics)
-      .set({ status: 'canceled' })
+      .set({ runState: 'canceled', status: 'canceled' })
       .where(
         and(
           eq(taskTopics.taskId, taskId),
@@ -261,7 +383,7 @@ export class TaskTopicModel {
 
     const canceled = await this.db
       .update(taskTopics)
-      .set({ status: 'canceled' })
+      .set({ runState: 'canceled', status: 'canceled' })
       .where(
         and(
           inArray(taskTopics.taskId, taskIds),
@@ -352,7 +474,7 @@ export class TaskTopicModel {
   async timeoutRunning(taskId: string): Promise<number> {
     const result = await this.db
       .update(taskTopics)
-      .set({ status: 'timeout' })
+      .set({ runState: 'failed', status: 'timeout' })
       .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.status, 'running'), this.ownership()))
       .returning({ topicId: taskTopics.topicId });
 
@@ -395,7 +517,7 @@ export class TaskTopicModel {
     taskId: string,
     topicId: string,
     operationId: string,
-    status: 'completed' | 'failed',
+    status: 'canceled' | 'completed' | 'failed',
   ): Promise<string | null> {
     const now = new Date();
     const reservationPrefix = `completion:${operationId}:`;
@@ -404,7 +526,7 @@ export class TaskTopicModel {
     const claimed = await this.db.transaction(async (tx) => {
       const settled = await tx
         .update(taskTopics)
-        .set({ status })
+        .set({ runState: runStateForStatus(status), status })
         .where(
           and(
             eq(taskTopics.taskId, taskId),
@@ -525,7 +647,10 @@ export class TaskTopicModel {
    */
   async countByTask(
     taskId: string,
-    options?: { since?: Date; triggers?: Array<'manual' | 'schedule' | 'heartbeat' | 'goal'> },
+    options?: {
+      since?: Date;
+      triggers?: Array<'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator'>;
+    },
   ): Promise<number> {
     const conditions = [eq(taskTopics.taskId, taskId), this.ownership()];
     if (options?.since) conditions.push(gte(taskTopics.createdAt, options.since));

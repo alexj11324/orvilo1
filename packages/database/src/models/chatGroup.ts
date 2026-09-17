@@ -40,6 +40,7 @@ import { normalizeInboxAgentAvatar } from '../utils/inboxAgent';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AGENT_COPY_IN_PROGRESS, AgentCopyJobModel } from './agentCopyJob';
 import { AGENT_TRANSFER_IN_PROGRESS, AgentTransferJobModel } from './agentTransferJob';
+import { recordBulkTaskMutation } from './taskDomainMutation';
 
 /** Slugs owned by builtin provisioning; a group delete must never reach one. */
 const RESERVED_BUILTIN_AGENT_SLUGS: string[] = Object.values(BUILTIN_AGENT_SLUGS);
@@ -1028,15 +1029,26 @@ export class ChatGroupModel {
         .filter((row) => row.visibility === 'private')
         .map((row) => row.id);
       if (privateOwnedIds.length > 0) {
-        await trx
+        const detachedTasks = await trx
           .update(tasks)
-          .set({ assigneeAgentId: null, updatedAt: tasks.updatedAt })
+          .set({
+            assigneeAgentId: null,
+            domainRevision: sql`${tasks.domainRevision} + 1`,
+            policyRevision: sql`${tasks.policyRevision} + 1`,
+            updatedAt: tasks.updatedAt,
+          })
           .where(
             and(
               inArray(tasks.assigneeAgentId, privateOwnedIds),
               ne(tasks.createdByUserId, toUserId),
             ),
-          );
+          )
+          .returning();
+        await recordBulkTaskMutation(trx, detachedTasks, {
+          changedFields: ['assigneeAgentId'],
+          eventType: 'task.assigned',
+          idempotencyKeyPrefix: `group-owner-transfer:${privateOwnedIds.toSorted().join(',')}:${fromUserId}:${toUserId}`,
+        });
 
         // Private owned agents also leave other members' PROJECTS explicitly —
         // project agent listings apply member-agent visibility, so those

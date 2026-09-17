@@ -287,6 +287,19 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       const memberAlready = taskMatchesKanbanColumn(task, groupBy, column.key);
 
       if (groupBy === 'status') {
+        if (task.workflowStateId) {
+          const targetWorkflowCategory = column.targetWorkflowCategory;
+          if (!targetWorkflowCategory || memberAlready) {
+            await updateTask(task.identifier, anchors);
+            return true;
+          }
+          await updateTask(task.identifier, {
+            ...anchors,
+            workflowCategory: targetWorkflowCategory,
+          });
+          return true;
+        }
+
         const targetStatus = column.targetStatus;
         // The column writes no status (running), or the task already buckets
         // inside it (a `failed` card in `needsInput`) → pure reorder.
@@ -453,7 +466,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         return;
       }
 
-      const patch = getKanbanTaskPatch(groupBy, finalDef) ?? {};
+      const patch = getKanbanTaskPatch(groupBy, finalDef, frozenTask) ?? {};
       const assigneeUpdate =
         groupBy === 'assignee' || groupBy === 'member'
           ? getKanbanAssigneeUpdate(frozenTask, patch)

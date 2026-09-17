@@ -151,7 +151,9 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     // The sync bundle keeps drizzle-orm external, and drizzle-orm/neon-serverless requires
     // @neondatabase/serverless at load time even though DATABASE_DRIVER=node never uses it, so the
     // image must ship that package next to pg and drizzle-orm or the container crash-loops.
-    expect(dockerfile).toContain('pnpm add pg drizzle-orm @neondatabase/serverless');
+    expect(dockerfile).toContain(
+      'pnpm add --allow-build=sharp pg drizzle-orm @neondatabase/serverless sharp@0.34.5',
+    );
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/@neondatabase /app/node_modules/@neondatabase',
     );
@@ -174,9 +176,6 @@ describe('deploy docker-compose optional Elasticsearch', () => {
       '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
     );
     expect(dockerfile).toContain('COPY --from=builder /app/hatchet-worker /app/hatchet-worker');
-    expect(dockerfile).toContain(
-      'pnpm add --allow-build=sharp pg drizzle-orm @neondatabase/serverless sharp@0.34.5',
-    );
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/sharp /app/node_modules/sharp',
     );

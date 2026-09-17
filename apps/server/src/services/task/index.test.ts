@@ -158,7 +158,9 @@ describe('TaskService', () => {
   };
 
   const mockTaskModel = {
+    acquireDependencyLockForTransaction: vi.fn().mockResolvedValue(undefined),
     areAllDependenciesCompleted: vi.fn().mockResolvedValue(true),
+    recoverInterruptedRun: vi.fn().mockResolvedValue(true),
     findBlockedTaskIds: vi.fn().mockResolvedValue([]),
     addActivities: vi.fn(),
     addActivity: vi.fn(),
@@ -1611,6 +1613,120 @@ describe('TaskService', () => {
         expect(mockTaskTopicModel.cancelIfRunning).not.toHaveBeenCalled();
       },
     );
+  });
+
+  describe('interrupted state-change recovery', () => {
+    const snapshot = {
+      currentTopicId: 'topic-1',
+      id: 'task-1',
+      identifier: 'T-1',
+      runReservationId: 'run-1',
+      status: 'running',
+    };
+    const running = {
+      taskId: 'task-1',
+      topicId: 'topic-1',
+      operationId: 'op-1',
+      status: 'running',
+    };
+    const expectedRecovery = {
+      currentTopicId: 'topic-1',
+      id: 'task-1',
+      operationId: 'op-1',
+      reservationId: 'run-1',
+      topicId: 'topic-1',
+    };
+    const rejected = new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Upstream reopened' });
+
+    it.each(['single', 'cascade'])(
+      'recovers the confirmed generation when %s completion is reblocked after interruption',
+      async (path) => {
+        mockTaskModel.resolve.mockResolvedValue(snapshot);
+        mockTaskModel.findAllDescendants.mockResolvedValue([]);
+        mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([running]);
+        mockTaskTopicModel.findByTaskId.mockResolvedValue([running]);
+        mockTaskTopicModel.cancelRunningByTaskIds.mockResolvedValue([running]);
+        mockTaskModel.updateStatus.mockRejectedValueOnce(rejected);
+        mockTaskModel.updateStatusForIds.mockImplementationOnce(() => {
+          throw rejected;
+        });
+        db.transaction = vi.fn(async (fn: any) => fn(db)) as any;
+        const service = new TaskService(db, userId);
+        const write =
+          path === 'single'
+            ? service.updateStatus({ id: 'T-1', status: 'completed' })
+            : service.updateStatusCascade({ id: 'T-1', status: 'completed' });
+        await expect(write).rejects.toBe(rejected);
+        expect(interruptTaskMock).toHaveBeenCalledWith(
+          expect.objectContaining({ operationId: 'op-1' }),
+        );
+        expect(mockTaskModel.recoverInterruptedRun).toHaveBeenCalledExactlyOnceWith(
+          expectedRecovery,
+        );
+        if (path === 'cascade') {
+          expect(mockTaskModel.acquireDependencyLockForTransaction).toHaveBeenCalledTimes(1);
+          expect(
+            mockTaskModel.acquireDependencyLockForTransaction.mock.invocationCallOrder[0],
+          ).toBeLessThan(mockTaskTopicModel.cancelRunningByTaskIds.mock.invocationCallOrder[0]);
+        }
+        expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
+        expect(cascadeManyMock).not.toHaveBeenCalled();
+        mockTaskModel.updateStatus.mockReset();
+        mockTaskModel.updateStatusForIds.mockReset();
+      },
+    );
+
+    it('recovers only confirmed interruptions after a partial family failure', async () => {
+      mockTaskModel.resolve.mockResolvedValue(snapshot);
+      mockTaskModel.findAllDescendants.mockResolvedValue([
+        { ...snapshot, id: 'task-2', currentTopicId: 'topic-2' },
+      ]);
+      mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([
+        running,
+        { ...running, taskId: 'task-2', topicId: 'topic-2', operationId: 'op-2' },
+      ]);
+      interruptTaskMock
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false });
+      await expect(
+        new TaskService(db, userId).updateStatusCascade({ id: 'T-1', status: 'completed' }),
+      ).rejects.toThrow('Task interruption was not confirmed');
+      expect(mockTaskModel.recoverInterruptedRun).toHaveBeenCalledExactlyOnceWith(expectedRecovery);
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+      expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
+    });
+
+    it('does not park a task when only one of its own running operations was interrupted', async () => {
+      mockTaskModel.resolve.mockResolvedValue(snapshot);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([
+        running,
+        { ...running, topicId: 'topic-2', operationId: 'op-2' },
+      ]);
+      interruptTaskMock
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false });
+      await expect(
+        new TaskService(db, userId).updateStatusCascade({ id: 'T-1', status: 'completed' }),
+      ).rejects.toThrow('Task interruption was not confirmed');
+      expect(mockTaskModel.recoverInterruptedRun).toHaveBeenCalledExactlyOnceWith({
+        ...expectedRecovery,
+        parkTask: false,
+      });
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a failed recovery rather than silently leaving a stopped run live', async () => {
+      mockTaskModel.resolve.mockResolvedValue(snapshot);
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([running]);
+      mockTaskModel.updateStatus.mockRejectedValueOnce(rejected);
+      mockTaskModel.recoverInterruptedRun.mockRejectedValueOnce(
+        new Error('Recovery database unavailable'),
+      );
+      await expect(
+        new TaskService(db, userId).updateStatus({ id: 'T-1', status: 'completed' }),
+      ).rejects.toMatchObject({ errors: [rejected, expect.any(Error)] });
+    });
   });
 
   describe('prerequisite gating', () => {

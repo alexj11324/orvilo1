@@ -17,6 +17,7 @@ import {
   and,
   desc,
   eq,
+  exists,
   getTableColumns,
   gt,
   gte,
@@ -54,9 +55,12 @@ import {
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
+import { workspaceMembers } from '../schemas/workspace';
 import type { LobeChatDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { shouldParkInterruptedTask } from './interruptedRunFence';
 import { TaskDependencyError } from './taskDependency';
+import { TaskTopicModel } from './taskTopic';
 
 /** Columns whose change is worth a line in the task activity feed. */
 const TRACKED_TASK_COLUMNS = [
@@ -373,10 +377,20 @@ export class TaskModel {
     if (this.dependencyLockHeld) return work(this);
     return this.db.transaction(async (tx) => {
       const model = new TaskModel(tx as LobeChatDatabase, this.userId, this.workspaceId);
-      await model.lockDependencyGraph();
-      model.dependencyLockHeld = true;
+      await model.acquireDependencyLockForTransaction();
       return work(model);
     });
+  }
+
+  /**
+   * Acquire the prerequisite graph lock inside an already-open transaction.
+   * Callers that also mutate task/topic rows must take this lock first so
+   * recovery and status cascades share one global lock order.
+   */
+  async acquireDependencyLockForTransaction(): Promise<void> {
+    if (this.dependencyLockHeld) return;
+    await this.lockDependencyGraph();
+    this.dependencyLockHeld = true;
   }
 
   /** Guard every advancing writer; cancellation/pause remain available for recovery. */
@@ -2190,6 +2204,81 @@ export class TaskModel {
       );
   }
 
+  /** Persist a confirmed interruption after its requested state change failed.
+   * The operation, topic and reservation fences leave a successor untouched.
+   * No remote I/O runs while the dependency graph transaction is held.
+   */
+  async recoverInterruptedRun(input: {
+    currentTopicId: string | null;
+    id: string;
+    operationId: string | null;
+    parkTask?: boolean;
+    reservationId: string | null;
+    topicId: string;
+  }): Promise<boolean> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.recoverInterruptedRun(input));
+    }
+    // Lock and validate the task generation before touching its topic. A
+    // continuation can reuse a topic before it swaps operationId; canceling the
+    // topic first would otherwise kill that successor generation.
+    const [taskState] = await this.db
+      .select({
+        currentTopicId: tasks.currentTopicId,
+        runReservationId: tasks.runReservationId,
+        status: tasks.status,
+      })
+      .from(tasks)
+      .where(and(eq(tasks.id, input.id), this.ownership()))
+      .for('update');
+    if (!taskState) return false;
+    const ownsTaskGeneration = shouldParkInterruptedTask(taskState, input);
+    if (taskState.currentTopicId === input.topicId && !ownsTaskGeneration) return false;
+
+    const [interrupted] = await this.db
+      .select({ id: taskTopics.id })
+      .from(taskTopics)
+      .where(
+        and(
+          eq(taskTopics.taskId, input.id),
+          eq(taskTopics.topicId, input.topicId),
+          input.operationId === null
+            ? isNull(taskTopics.operationId)
+            : eq(taskTopics.operationId, input.operationId),
+          inArray(taskTopics.status, ['running', 'canceled']),
+          this.topicsOwnership(),
+        ),
+      )
+      .for('update');
+    if (!interrupted) return false;
+    await new TaskTopicModel(this.db, this.userId, this.workspaceId).cancelIfRunning(
+      input.id,
+      input.topicId,
+    );
+    if (!ownsTaskGeneration || input.parkTask === false) return false;
+    const recovered = await this.db
+      .update(tasks)
+      .set({
+        runReservationExpiresAt: null,
+        runReservationId: null,
+        status: 'paused',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tasks.id, input.id),
+          eq(tasks.status, 'running'),
+          eq(tasks.currentTopicId, input.currentTopicId!),
+          input.reservationId === null
+            ? isNull(tasks.runReservationId)
+            : eq(tasks.runReservationId, input.reservationId),
+          this.ownership(),
+        ),
+      )
+      .returning({ id: tasks.id });
+    return recovered.length > 0;
+  }
+
   // ========== Dependencies ==========
 
   // Authorize through the dependent, not the member who originally added the
@@ -2359,26 +2448,60 @@ export class TaskModel {
   async getUnlockedTasksForMany(settledTaskIds: string[]): Promise<TaskItem[]> {
     if (settledTaskIds.length === 0) return [];
 
-    // All tasks that depend on any of the completed tasks
+    // Only a visible, completed source may trigger internal dispatch. Targets
+    // are discovered across this workspace, then evaluated as their creators.
+    // This method is internal to the runner; never return its rows from an API.
+    const sources = await this.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(
+        and(inArray(tasks.id, settledTaskIds), eq(tasks.status, 'completed'), this.ownership()),
+      );
+    if (sources.length === 0) return [];
     const dependents = await this.db
       .select({ taskId: taskDependencies.taskId })
       .from(taskDependencies)
       .where(
         and(
-          inArray(taskDependencies.dependsOnId, settledTaskIds),
+          inArray(
+            taskDependencies.dependsOnId,
+            sources.map(({ id }) => id),
+          ),
           eq(taskDependencies.type, 'blocks'),
-          this.depsOwnership(),
+          this.workspaceId
+            ? eq(taskDependencies.workspaceId, this.workspaceId)
+            : and(isNull(taskDependencies.workspaceId), eq(taskDependencies.userId, this.userId)),
         ),
       );
     const dependentIds = [...new Set(dependents.map(({ taskId }) => taskId))];
     if (dependentIds.length === 0) return [];
 
-    // Discovery remains caller-visible. Evaluate each candidate in its owner's
-    // scope: the last completing member need not see every private prerequisite.
     const candidates = await this.db
       .select()
       .from(tasks)
-      .where(and(inArray(tasks.id, dependentIds), eq(tasks.status, 'backlog'), this.ownership()));
+      .where(
+        and(
+          inArray(tasks.id, dependentIds),
+          eq(tasks.status, 'backlog'),
+          isNull(tasks.deletedAt),
+          sql`${tasks.isDeleted} IS NOT TRUE`,
+          this.seqOwnership(),
+          this.workspaceId
+            ? exists(
+                this.db
+                  .select({ one: sql`1` })
+                  .from(workspaceMembers)
+                  .where(
+                    and(
+                      eq(workspaceMembers.workspaceId, this.workspaceId),
+                      eq(workspaceMembers.userId, tasks.createdByUserId),
+                      isNull(workspaceMembers.deletedAt),
+                    ),
+                  ),
+              )
+            : undefined,
+        ),
+      );
     const byOwner = new Map<string, string[]>();
     for (const task of candidates) {
       const ids = byOwner.get(task.createdByUserId) ?? [];

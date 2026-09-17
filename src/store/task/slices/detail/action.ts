@@ -9,7 +9,7 @@ import type {
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 
-import { mutate, useClientDataSWR } from '@/libs/swr';
+import { mutate, useClientPollingSWR } from '@/libs/swr';
 import { taskKeys } from '@/libs/swr/keys';
 import { taskService } from '@/services/task';
 import { workService } from '@/services/work';
@@ -28,6 +28,7 @@ import {
   buildOptimisticCommentActivity,
   buildOptimisticPropertyActivity,
 } from './optimisticActivity';
+import { resolveTaskDetailPolling } from './pollingPolicy';
 import type { TaskDetailDispatch } from './reducer';
 import { findSubtaskParentId, taskDetailReducer } from './reducer';
 
@@ -610,10 +611,11 @@ export class TaskDetailSliceActionImpl {
       );
     });
 
-    return useClientDataSWR(
+    const polling = resolveTaskDetailPolling(Boolean(taskId), shouldPoll);
+    return useClientPollingSWR(
       taskId ? taskKeys.detail(taskId) : null,
       async ([, id]: [string, string]) => this.fetchTaskDetail(id),
-      { refreshInterval: shouldPoll ? TASK_DETAIL_POLL_INTERVAL : taskId ? 15_000 : 0 },
+      polling,
     );
   };
 

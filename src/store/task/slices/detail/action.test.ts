@@ -2,7 +2,7 @@ import { toast } from '@lobehub/ui/base-ui';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useClientDataSWR } from '@/libs/swr';
+import { useClientPollingSWR } from '@/libs/swr';
 import { taskService } from '@/services/task';
 import { workService } from '@/services/work';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -33,7 +33,7 @@ vi.mock('@/services/work', () => ({
 
 vi.mock('@/libs/swr', () => ({
   mutate: vi.fn(),
-  useClientDataSWR: vi.fn(),
+  useClientPollingSWR: vi.fn(),
 }));
 
 vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
@@ -66,14 +66,16 @@ describe('TaskDetailSliceAction', () => {
       },
     });
     renderHook(() => useTaskStore.getState().useFetchTaskDetail('T-1'));
-    expect(useClientDataSWR).toHaveBeenLastCalledWith(expect.anything(), expect.any(Function), {
+    expect(useClientPollingSWR).toHaveBeenLastCalledWith(expect.anything(), expect.any(Function), {
+      dedupingInterval: 15_000,
       refreshInterval: 15_000,
     });
   });
 
   it('does not poll without a mounted task id', () => {
     renderHook(() => useTaskStore.getState().useFetchTaskDetail());
-    expect(useClientDataSWR).toHaveBeenLastCalledWith(null, expect.any(Function), {
+    expect(useClientPollingSWR).toHaveBeenLastCalledWith(null, expect.any(Function), {
+      dedupingInterval: 0,
       refreshInterval: 0,
     });
   });

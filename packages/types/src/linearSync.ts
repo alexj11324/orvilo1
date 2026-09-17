@@ -37,7 +37,9 @@ export type TaskDomainEventType =
   | 'linear.issue.changed'
   | 'linear.import.completed'
   | 'task.assigned'
+  | 'task.comment.changed'
   | 'task.created'
+  | 'task.deleted'
   | 'task.dependency.changed'
   | 'task.requirement.changed'
   | 'task.status.changed';

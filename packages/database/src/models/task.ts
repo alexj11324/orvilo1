@@ -5,6 +5,8 @@ import type {
   TaskActivityLogType,
   TaskAutomationMode,
   TaskAutomationSnapshot,
+  TaskDomainEventSource,
+  TaskDomainEventType,
   TaskItem,
   TaskMoveScope,
   TaskSubtaskProgress,
@@ -85,6 +87,101 @@ const LINEAR_SYNC_TASK_COLUMNS = [
   'priority',
   'projectId',
 ] as const;
+
+/**
+ * Columns that describe the task as a business object. Runtime bookkeeping
+ * such as heartbeat timestamps, topic counters and scheduler context is
+ * deliberately absent: those writes must not invalidate a planner read-set.
+ */
+const TASK_DOMAIN_COLUMNS = [
+  'assigneeAgentId',
+  'assigneeLocked',
+  'assigneeUserId',
+  'assignmentMode',
+  'automationMode',
+  'config',
+  'description',
+  'editorData',
+  'heartbeatInterval',
+  'heartbeatTimeout',
+  'instruction',
+  'lockMetadata',
+  'maxTopics',
+  'name',
+  'orchestrationOwner',
+  'parentTaskId',
+  'priority',
+  'priorityLocked',
+  'projectId',
+  'requirementLocked',
+  'reviewerUserId',
+  'schedulePattern',
+  'scheduleTimezone',
+  'sortOrder',
+  'status',
+  'visibility',
+  'workflowCategory',
+  'workflowLocked',
+  'workflowStateId',
+] as const satisfies readonly (keyof NewTask)[];
+
+const TASK_REQUIREMENT_COLUMNS = [
+  'description',
+  'editorData',
+  'instruction',
+  'name',
+  'parentTaskId',
+  'priority',
+  'projectId',
+] as const satisfies readonly (keyof NewTask)[];
+
+const TASK_POLICY_COLUMNS = [
+  'assigneeLocked',
+  'assignmentMode',
+  'automationMode',
+  'config',
+  'heartbeatInterval',
+  'heartbeatTimeout',
+  'lockMetadata',
+  'maxTopics',
+  'orchestrationOwner',
+  'priorityLocked',
+  'requirementLocked',
+  'schedulePattern',
+  'scheduleTimezone',
+  'workflowLocked',
+] as const satisfies readonly (keyof NewTask)[];
+
+export interface TaskMutationContext {
+  /** External event/delivery id carried into planner diagnostics. */
+  eventId?: string;
+  /** Stable caller key when the write is a replayable command or delivery. */
+  idempotencyKey?: string;
+  source?: TaskDomainEventSource;
+  /** Bulk/bootstrap paths may publish one scope fact after all row writes commit. */
+  suppressDomainEvent?: boolean;
+  /** Prevent a provider-originated reconciliation from echoing back out. */
+  suppressLinearOutbox?: boolean;
+}
+
+const touchedColumns = <T extends readonly (keyof NewTask)[]>(data: Partial<NewTask>, columns: T) =>
+  columns.filter((column) => data[column] !== undefined);
+
+const taskMutationEventType = (data: Partial<NewTask>): TaskDomainEventType | undefined => {
+  if (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) {
+    return 'task.assigned';
+  }
+  if (
+    data.status !== undefined ||
+    data.workflowCategory !== undefined ||
+    data.workflowStateId !== undefined
+  ) {
+    return 'task.status.changed';
+  }
+  return touchedColumns(data, TASK_DOMAIN_COLUMNS).length > 0
+    ? 'task.requirement.changed'
+    : undefined;
+};
 
 /** The automation columns folded into one value — see `TaskAutomationSnapshot`. */
 /**
@@ -416,50 +513,72 @@ export class TaskModel {
         snapshot?: NewTask['createdBySnapshot'];
       };
       maxRetries?: number;
+      mutation?: TaskMutationContext;
     } = {},
   ): Promise<TaskItem> {
     const { identifierPrefix = 'T', ...rest } = data;
+
+    const createInDatabase = async (runner: LobeChatDatabase): Promise<TaskItem> => {
+      // Seq is allocated per ownership scope: workspace-wide in team mode,
+      // user-private in personal mode. This keeps `T-N` identifiers stable
+      // within the surface the user actually sees.
+      //
+      // Note: this uses `seqOwnership` (visibility-blind), NOT the regular
+      // `ownership()`, because the `(workspace_id, identifier)` unique
+      // constraint is workspace-wide and ignores visibility. If we let the
+      // seq lookup filter out private rows, a private creator would compute
+      // a max seq that skips another member's existing identifier and hit
+      // PG error 23505 on insert.
+      const seqResult = await runner
+        .select({ maxSeq: sql<number>`COALESCE(MAX(${tasks.seq}), 0)` })
+        .from(tasks)
+        .where(this.seqOwnership());
+
+      const nextSeq = Number(seqResult[0].maxSeq) + 1;
+      const identifier = `${identifierPrefix}-${nextSeq}`;
+
+      const [task] = await runner
+        .insert(tasks)
+        .values({
+          ...rest,
+          createdBySnapshot: options.creationSubject?.snapshot ?? {
+            kind: data.createdByAgentId ? 'agent' : 'user',
+          },
+          createdBySubjectId: options.creationSubject?.id ?? data.createdByAgentId ?? this.userId,
+          createdBySubjectKind:
+            options.creationSubject?.kind ?? (data.createdByAgentId ? 'agent' : 'user'),
+          createdByUserId: options.creationSubject ? null : this.userId,
+          identifier,
+          seq: nextSeq,
+          workspaceId: this.workspaceId ?? null,
+        } as NewTask)
+        .returning();
+
+      if (this.workspaceId && !options.mutation?.suppressDomainEvent) {
+        await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
+          changedFields: ['created'],
+          eventId: options.mutation?.eventId,
+          eventType: 'task.created',
+          idempotencyKey:
+            options.mutation?.idempotencyKey ?? `task:${task.id}:revision:${task.domainRevision}`,
+          source:
+            options.mutation?.source ??
+            (data.createdByAgentId ? 'agent' : options.creationSubject ? 'system' : 'user'),
+          suppressLinearOutbox: true,
+          task,
+        });
+      }
+
+      return task;
+    };
 
     // Retry loop to handle concurrent creates (parallel tool calls)
     const maxRetries = options.maxRetries ?? 5;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        // Seq is allocated per ownership scope: workspace-wide in team mode,
-        // user-private in personal mode. This keeps `T-N` identifiers stable
-        // within the surface the user actually sees.
-        //
-        // Note: this uses `seqOwnership` (visibility-blind), NOT the regular
-        // `ownership()`, because the `(workspace_id, identifier)` unique
-        // constraint is workspace-wide and ignores visibility. If we let the
-        // seq lookup filter out private rows, a private creator would compute
-        // a max seq that skips another member's existing identifier and hit
-        // PG error 23505 on insert.
-        const seqResult = await this.db
-          .select({ maxSeq: sql<number>`COALESCE(MAX(${tasks.seq}), 0)` })
-          .from(tasks)
-          .where(this.seqOwnership());
-
-        const nextSeq = Number(seqResult[0].maxSeq) + 1;
-        const identifier = `${identifierPrefix}-${nextSeq}`;
-
-        const [task] = await this.db
-          .insert(tasks)
-          .values({
-            ...rest,
-            createdBySnapshot: options.creationSubject?.snapshot ?? {
-              kind: data.createdByAgentId ? 'agent' : 'user',
-            },
-            createdBySubjectId: options.creationSubject?.id ?? data.createdByAgentId ?? this.userId,
-            createdBySubjectKind:
-              options.creationSubject?.kind ?? (data.createdByAgentId ? 'agent' : 'user'),
-            createdByUserId: options.creationSubject ? null : this.userId,
-            identifier,
-            seq: nextSeq,
-            workspaceId: this.workspaceId ?? null,
-          } as NewTask)
-          .returning();
-
-        return task;
+        return this.workspaceId
+          ? await this.db.transaction((tx) => createInDatabase(tx as LobeChatDatabase))
+          : await createInDatabase(this.db);
       } catch (error: any) {
         // Retry on unique constraint violation (concurrent seq conflict)
         // Check error itself, cause, and stringified message for PG error code 23505
@@ -542,6 +661,7 @@ export class TaskModel {
   async update(
     id: string,
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
+    mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (Object.keys(data).length === 0) return this.findById(id);
     if (
@@ -556,16 +676,58 @@ export class TaskModel {
     }
     await this.assertDependenciesForStatus([id], data.status);
 
-    const updated = await this.db
-      .update(tasks)
-      .set({
-        ...data,
-        ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(tasks.id, id), this.ownership()))
-      .returning();
-    return updated[0] || null;
+    const eventType = taskMutationEventType(data);
+    if (!eventType) {
+      const updated = await this.db
+        .update(tasks)
+        .set({
+          ...data,
+          ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(tasks.id, id), this.ownership()))
+        .returning();
+      return updated[0] || null;
+    }
+
+    const changedFields = touchedColumns(data, TASK_DOMAIN_COLUMNS).map(String);
+    const changesRequirement = touchedColumns(data, TASK_REQUIREMENT_COLUMNS).length > 0;
+    const changesPolicy = touchedColumns(data, TASK_POLICY_COLUMNS).length > 0;
+
+    return this.db.transaction(async (tx) => {
+      const runner = tx as LobeChatDatabase;
+      const [task] = await runner
+        .update(tasks)
+        .set({
+          ...data,
+          ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
+          domainRevision: sql`${tasks.domainRevision} + 1`,
+          ...(changesPolicy ? { policyRevision: sql`${tasks.policyRevision} + 1` } : {}),
+          ...(changesRequirement
+            ? { requirementRevision: sql`${tasks.requirementRevision} + 1` }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(tasks.id, id), this.ownership()))
+        .returning();
+      if (!task) return null;
+
+      if (this.workspaceId && !mutation.suppressDomainEvent) {
+        await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
+          changedFields,
+          eventId: mutation.eventId,
+          eventType,
+          idempotencyKey:
+            mutation.idempotencyKey ??
+            `task:${task.id}:revision:${task.domainRevision}:${eventType}`,
+          source: mutation.source ?? 'system',
+          suppressLinearOutbox: mutation.suppressLinearOutbox,
+          task,
+        });
+      }
+
+      return task;
+    });
   }
 
   /**
@@ -575,8 +737,36 @@ export class TaskModel {
    * (UI / CLI / deleteAll) deliberately leave the Work as an orphan for the UI
    * to render as "resource deleted" from its version snapshot. See.
    */
-  async delete(id: string): Promise<boolean> {
-    return (await this.deleteMany([id])).length > 0;
+  private async recordTaskDeleted(
+    runner: LobeChatDatabase,
+    task: TaskItem,
+    mutation: TaskMutationContext,
+  ) {
+    if (!this.workspaceId || mutation.suppressDomainEvent) return;
+    await new LinearSyncModel(runner, this.workspaceId).recordDomainEventInTransaction(runner, {
+      eventId: mutation.eventId,
+      idempotencyKey:
+        mutation.idempotencyKey ??
+        `task:${task.id}:revision:${task.domainRevision + 1}:task.deleted`,
+      payload: {
+        aggregateRevision: task.domainRevision + 1,
+        changedFields: ['deleted'],
+        task: {
+          identifier: task.identifier,
+          projectId: task.projectId,
+          requirementRevision: task.requirementRevision,
+          visibility: task.visibility,
+        },
+      },
+      projectId: task.projectId,
+      source: mutation.source ?? 'system',
+      taskId: task.id,
+      type: 'task.deleted',
+    });
+  }
+
+  async delete(id: string, mutation: TaskMutationContext = {}): Promise<boolean> {
+    return (await this.deleteMany([id], mutation)).length > 0;
   }
 
   /** Validate the entire frozen deletion set before any rows disappear. */
@@ -613,12 +803,20 @@ export class TaskModel {
   }
 
   /** Delete exactly these accessible tasks; return only ids actually deleted. */
-  async deleteMany(ids: string[]): Promise<string[]> {
-    if (!this.dependencyLockHeld) return this.withDependencyLock((model) => model.deleteMany(ids));
+  async deleteMany(ids: string[], mutation: TaskMutationContext = {}): Promise<string[]> {
+    if (!this.dependencyLockHeld)
+      return this.withDependencyLock((model) => model.deleteMany(ids, mutation));
     const accessible = await this.findByIds(ids);
     const liveIds = accessible.map(({ id }) => id);
     if (liveIds.length === 0) return [];
     await this.assertCanDeleteTasks(liveIds);
+    for (const task of accessible) {
+      await this.recordTaskDeleted(this.db, task, {
+        ...mutation,
+        idempotencyKey:
+          mutation.idempotencyKey === undefined ? undefined : `${mutation.idempotencyKey}:${task.id}`,
+      });
+    }
     const deleted = await this.db
       .delete(tasks)
       .where(and(inArray(tasks.id, liveIds), this.ownership()))
@@ -650,9 +848,13 @@ export class TaskModel {
    * (either missing or owned by another workspace member). Callers should
    * gate authorization (creator-only / admin) before invoking this.
    */
-  async updateVisibility(id: string, visibility: 'private' | 'public'): Promise<TaskItem | null> {
+  async updateVisibility(
+    id: string,
+    visibility: 'private' | 'public',
+    mutation: TaskMutationContext = {},
+  ): Promise<TaskItem | null> {
     if (!this.dependencyLockHeld) {
-      return this.withDependencyLock((model) => model.updateVisibility(id, visibility));
+      return this.withDependencyLock((model) => model.updateVisibility(id, visibility, mutation));
     }
     const root = await this.findById(id);
     if (!root) return null;
@@ -672,16 +874,28 @@ export class TaskModel {
       // write succeeded.
       const [updated] = await tx
         .update(tasks)
-        .set({ updatedAt: stamp, visibility })
+        .set({
+          domainRevision: sql`${tasks.domainRevision} + 1`,
+          policyRevision: sql`${tasks.policyRevision} + 1`,
+          updatedAt: stamp,
+          visibility,
+        })
         .where(and(eq(tasks.id, root.id), this.ownership()))
         .returning();
 
       const descendantIds = descendants.map((d) => d.id);
+      let updatedDescendants: TaskItem[] = [];
       if (descendantIds.length > 0) {
-        await tx
+        updatedDescendants = await tx
           .update(tasks)
-          .set({ updatedAt: stamp, visibility })
-          .where(and(inArray(tasks.id, descendantIds), this.ownership()));
+          .set({
+            domainRevision: sql`${tasks.domainRevision} + 1`,
+            policyRevision: sql`${tasks.policyRevision} + 1`,
+            updatedAt: stamp,
+            visibility,
+          })
+          .where(and(inArray(tasks.id, descendantIds), this.ownership()))
+          .returning();
       }
 
       await tx
@@ -729,6 +943,24 @@ export class TaskModel {
           .update(taskActivities)
           .set({ visibility })
           .where(and(inArray(taskActivities.taskId, taskIds), this.activitiesOwnership()));
+      }
+
+      if (this.workspaceId && updated) {
+        const model = new LinearSyncModel(tx as LobeChatDatabase, this.workspaceId);
+        for (const task of [updated, ...updatedDescendants]) {
+          await model.recordTaskChangeInTransaction(tx as LobeChatDatabase, {
+            changedFields: ['visibility'],
+            eventId: mutation.eventId,
+            eventType: 'task.requirement.changed',
+            idempotencyKey:
+              mutation.idempotencyKey === undefined
+                ? `task:${task.id}:revision:${task.domainRevision}:visibility`
+                : `${mutation.idempotencyKey}:${task.id}`,
+            source: mutation.source ?? 'user',
+            suppressLinearOutbox: true,
+            task,
+          });
+        }
       }
 
       return updated ?? null;
@@ -792,23 +1024,41 @@ export class TaskModel {
   }
 
   /** See {@link delete}: bulk task deletion likewise leaves Work artifacts intact. */
-  async deleteAll(options?: { restrictToCreator?: boolean }): Promise<number> {
+  async deleteAll(options?: {
+    mutation?: TaskMutationContext;
+    restrictToCreator?: boolean;
+  }): Promise<number> {
     if (!this.dependencyLockHeld)
       return this.withDependencyLock((model) => model.deleteAll(options));
     const ids = await this.getTaskIdsForDeletion(options?.restrictToCreator);
-    return (await this.deleteMany(ids)).length;
+    return (await this.deleteMany(ids, options?.mutation)).length;
   }
 
   /** Delete a task and every descendant in one transaction. */
-  async deleteSubtree(rootTaskId: string): Promise<number> {
+  async deleteSubtree(rootTaskId: string, mutation: TaskMutationContext = {}): Promise<number> {
     if (!this.dependencyLockHeld)
-      return this.withDependencyLock((model) => model.deleteSubtree(rootTaskId));
+      return this.withDependencyLock((model) => model.deleteSubtree(rootTaskId, mutation));
     if (!(await this.findById(rootTaskId))) return 0;
     const descendants = await this.findAllDescendants(rootTaskId);
     const taskIds = [rootTaskId, ...descendants.map(({ id }) => id)];
     await this.assertCanDeleteTasks(taskIds);
 
     return this.db.transaction(async (tx) => {
+      const runner = tx as LobeChatDatabase;
+      const doomed = await runner
+        .select()
+        .from(tasks)
+        .where(and(inArray(tasks.id, taskIds), this.ownership()))
+        .for('update');
+      for (const task of doomed) {
+        await this.recordTaskDeleted(runner, task, {
+          ...mutation,
+          idempotencyKey:
+            mutation.idempotencyKey === undefined
+              ? undefined
+              : `${mutation.idempotencyKey}:${task.id}`,
+        });
+      }
       await tx
         .delete(acceptances)
         .where(
@@ -1637,10 +1887,11 @@ export class TaskModel {
     currentStatus: string,
     status: string,
     extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
+    mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) =>
-        model.updateStatusIfCurrent(id, currentStatus, status, extra),
+        model.updateStatusIfCurrent(id, currentStatus, status, extra, mutation),
       );
     }
     const current = await this.findById(id);
@@ -1653,11 +1904,25 @@ export class TaskModel {
         updatedAt: new Date(),
         ...extra,
         ...TaskModel.reviewerBackfillSet(status),
+        domainRevision: sql`${tasks.domainRevision} + 1`,
       })
       .where(and(eq(tasks.id, id), eq(tasks.status, currentStatus), this.ownership()))
       .returning();
-
-    return task ?? null;
+    if (!task) return null;
+    if (this.workspaceId && !mutation.suppressDomainEvent) {
+      await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
+        changedFields: ['status'],
+        eventId: mutation.eventId,
+        eventType: 'task.status.changed',
+        idempotencyKey:
+          mutation.idempotencyKey ??
+          `task:${task.id}:revision:${task.domainRevision}:task.status.changed`,
+        source: mutation.source ?? 'system',
+        suppressLinearOutbox: mutation.suppressLinearOutbox,
+        task,
+      });
+    }
+    return task;
   }
 
   /**
@@ -1868,14 +2133,7 @@ export class TaskModel {
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) => model.batchUpdateStatus(ids, status));
     }
-    await this.assertDependenciesForStatus(ids, status);
-    const result = await this.db
-      .update(tasks)
-      .set({ status, updatedAt: new Date(), ...TaskModel.reviewerBackfillSet(status) })
-      .where(and(inArray(tasks.id, ids), this.ownership()))
-      .returning();
-
-    return result.length;
+    return (await this.updateStatusForIds(ids, status)).length;
   }
 
   /**
@@ -1894,22 +2152,42 @@ export class TaskModel {
       runReservationId?: string | null;
       startedAt?: Date;
     },
+    mutation: TaskMutationContext = {},
   ): Promise<TaskItem[]> {
     if (ids.length === 0) return [];
     if (!this.dependencyLockHeld) {
-      return this.withDependencyLock((model) => model.updateStatusForIds(ids, status, extra));
+      return this.withDependencyLock((model) => model.updateStatusForIds(ids, status, extra, mutation));
     }
     await this.assertDependenciesForStatus(ids, status);
-    return this.db
+    const updated = await this.db
       .update(tasks)
       .set({
         status,
         updatedAt: new Date(),
         ...extra,
         ...TaskModel.reviewerBackfillSet(status),
+        domainRevision: sql`${tasks.domainRevision} + 1`,
       })
       .where(and(inArray(tasks.id, ids), this.ownership()))
       .returning();
+    if (this.workspaceId && !mutation.suppressDomainEvent) {
+      const model = new LinearSyncModel(this.db, this.workspaceId);
+      for (const task of updated) {
+        await model.recordTaskChangeInTransaction(this.db, {
+          changedFields: ['status'],
+          eventId: mutation.eventId,
+          eventType: 'task.status.changed',
+          idempotencyKey:
+            mutation.idempotencyKey === undefined
+              ? `task:${task.id}:revision:${task.domainRevision}:task.status.changed`
+              : `${mutation.idempotencyKey}:${task.id}`,
+          source: mutation.source ?? 'system',
+          suppressLinearOutbox: mutation.suppressLinearOutbox,
+          task,
+        });
+      }
+    }
+    return updated;
   }
 
   // ========== Config ==========
@@ -2234,9 +2512,16 @@ export class TaskModel {
       workspaceId: taskTopics.workspaceId,
     });
 
-  async addDependency(taskId: string, dependsOnId: string, type: string = 'blocks'): Promise<void> {
+  async addDependency(
+    taskId: string,
+    dependsOnId: string,
+    type: string = 'blocks',
+    mutation: TaskMutationContext = {},
+  ): Promise<void> {
     if (!this.dependencyLockHeld) {
-      return this.withDependencyLock((model) => model.addDependency(taskId, dependsOnId, type));
+      return this.withDependencyLock((model) =>
+        model.addDependency(taskId, dependsOnId, type, mutation),
+      );
     }
     if (taskId === dependsOnId) throw new TaskDependencyError('A task cannot depend on itself.');
     if (type !== 'blocks' && type !== 'relates')
@@ -2301,14 +2586,44 @@ export class TaskModel {
         set: { type, userId: task.createdByUserId, visibility: task.visibility },
         target: [taskDependencies.taskId, taskDependencies.dependsOnId],
       });
+
+    const [updated] = await this.db
+      .update(tasks)
+      .set({
+        domainRevision: sql`${tasks.domainRevision} + 1`,
+        requirementRevision: sql`${tasks.requirementRevision} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tasks.id, taskId), this.ownership()))
+      .returning();
+    if (!updated) throw new TaskDependencyError('Task not found or unavailable.');
+    if (this.workspaceId && !mutation.suppressDomainEvent) {
+      await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
+        changedFields: ['dependencies'],
+        eventId: mutation.eventId,
+        eventType: 'task.dependency.changed',
+        idempotencyKey:
+          mutation.idempotencyKey ??
+          `task:${updated.id}:revision:${updated.domainRevision}:dependency:add:${dependsOnId}`,
+        source: mutation.source ?? 'system',
+        suppressLinearOutbox: true,
+        task: updated,
+      });
+    }
   }
 
-  async removeDependency(taskId: string, dependsOnId: string): Promise<void> {
+  async removeDependency(
+    taskId: string,
+    dependsOnId: string,
+    mutation: TaskMutationContext = {},
+  ): Promise<void> {
     if (!this.dependencyLockHeld) {
-      return this.withDependencyLock((model) => model.removeDependency(taskId, dependsOnId));
+      return this.withDependencyLock((model) =>
+        model.removeDependency(taskId, dependsOnId, mutation),
+      );
     }
     if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
-    await this.db
+    const deleted = await this.db
       .delete(taskDependencies)
       .where(
         and(
@@ -2316,7 +2631,33 @@ export class TaskModel {
           eq(taskDependencies.dependsOnId, dependsOnId),
           this.depsOwnership(),
         ),
-      );
+      )
+      .returning({ taskId: taskDependencies.taskId });
+    if (deleted.length === 0) return;
+
+    const [updated] = await this.db
+      .update(tasks)
+      .set({
+        domainRevision: sql`${tasks.domainRevision} + 1`,
+        requirementRevision: sql`${tasks.requirementRevision} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tasks.id, taskId), this.ownership()))
+      .returning();
+    if (!updated) throw new TaskDependencyError('Task not found.');
+    if (this.workspaceId && !mutation.suppressDomainEvent) {
+      await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
+        changedFields: ['dependencies'],
+        eventId: mutation.eventId,
+        eventType: 'task.dependency.changed',
+        idempotencyKey:
+          mutation.idempotencyKey ??
+          `task:${updated.id}:revision:${updated.domainRevision}:dependency:remove:${dependsOnId}`,
+        source: mutation.source ?? 'system',
+        suppressLinearOutbox: true,
+        task: updated,
+      });
+    }
   }
 
   async getDependencies(taskId: string) {
@@ -2634,17 +2975,71 @@ export class TaskModel {
       workspaceId: taskComments.workspaceId,
     });
 
-  async addComment(data: Omit<NewTaskComment, 'id'>): Promise<TaskCommentItem> {
+  private async recordCommentMutation(
+    runner: LobeChatDatabase,
+    input: {
+      action: 'created' | 'deleted' | 'updated';
+      commentId: string;
+      mutation?: TaskMutationContext;
+      source: TaskDomainEventSource;
+      taskId: string;
+    },
+  ) {
+    const [task] = await runner
+      .update(tasks)
+      .set({
+        domainRevision: sql`${tasks.domainRevision} + 1`,
+        requirementRevision: sql`${tasks.requirementRevision} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tasks.id, input.taskId), this.ownership()))
+      .returning();
+    if (!task) throw new Error('Task not found');
+    if (!this.workspaceId || input.mutation?.suppressDomainEvent) return task;
+
+    await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
+      changedFields: ['comments'],
+      eventId: input.mutation?.eventId,
+      eventType: 'task.comment.changed',
+      idempotencyKey:
+        input.mutation?.idempotencyKey ??
+        `task:${task.id}:revision:${task.domainRevision}:comment:${input.action}:${input.commentId}`,
+      payload: { action: input.action, commentId: input.commentId },
+      source: input.mutation?.source ?? input.source,
+      suppressLinearOutbox: true,
+      task,
+    });
+    return task;
+  }
+
+  async addComment(
+    data: Omit<NewTaskComment, 'id'>,
+    mutation: TaskMutationContext = {},
+  ): Promise<TaskCommentItem> {
     // Mirror the parent task's visibility onto the comment so subsequent
     // reads/writes can be filtered without a JOIN. Falls back to 'public'
     // if the task is somehow not visible (defensive — the caller should
     // already have validated the task via `resolveOrThrow`).
-    const visibility = await this.getTaskVisibility(data.taskId);
-    const [comment] = await this.db
-      .insert(taskComments)
-      .values({ ...data, visibility, workspaceId: this.workspaceId ?? null })
-      .returning();
-    return comment;
+    return this.db.transaction(async (tx) => {
+      const runner = tx as LobeChatDatabase;
+      const visibility = await new TaskModel(
+        runner,
+        this.userId,
+        this.workspaceId,
+      ).getTaskVisibility(data.taskId);
+      const [comment] = await runner
+        .insert(taskComments)
+        .values({ ...data, visibility, workspaceId: this.workspaceId ?? null })
+        .returning();
+      await this.recordCommentMutation(runner, {
+        action: 'created',
+        commentId: comment.id,
+        mutation,
+        source: data.authorAgentId ? 'agent' : 'user',
+        taskId: data.taskId,
+      });
+      return comment;
+    });
   }
 
   async findCommentById(id: string): Promise<TaskCommentItem | undefined> {
@@ -2664,29 +3059,51 @@ export class TaskModel {
       .orderBy(taskComments.createdAt);
   }
 
-  async deleteComment(id: string): Promise<boolean> {
-    const result = await this.db
-      .delete(taskComments)
-      .where(and(eq(taskComments.id, id), this.commentsOwnership()))
-      .returning();
-    return result.length > 0;
+  async deleteComment(id: string, mutation: TaskMutationContext = {}): Promise<boolean> {
+    return this.db.transaction(async (tx) => {
+      const runner = tx as LobeChatDatabase;
+      const [comment] = await runner
+        .delete(taskComments)
+        .where(and(eq(taskComments.id, id), this.commentsOwnership()))
+        .returning();
+      if (!comment) return false;
+      await this.recordCommentMutation(runner, {
+        action: 'deleted',
+        commentId: comment.id,
+        mutation,
+        source: comment.authorAgentId ? 'agent' : 'user',
+        taskId: comment.taskId,
+      });
+      return true;
+    });
   }
 
   async updateComment(
     id: string,
     content: string,
-    opts?: { editorData?: unknown },
+    opts?: { editorData?: unknown; mutation?: TaskMutationContext },
   ): Promise<TaskCommentItem | undefined> {
-    const [comment] = await this.db
-      .update(taskComments)
-      .set({
-        content,
-        ...(opts?.editorData !== undefined ? { editorData: opts.editorData as never } : {}),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(taskComments.id, id), this.commentsOwnership()))
-      .returning();
-    return comment;
+    return this.db.transaction(async (tx) => {
+      const runner = tx as LobeChatDatabase;
+      const [comment] = await runner
+        .update(taskComments)
+        .set({
+          content,
+          ...(opts?.editorData !== undefined ? { editorData: opts.editorData as never } : {}),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(taskComments.id, id), this.commentsOwnership()))
+        .returning();
+      if (!comment) return undefined;
+      await this.recordCommentMutation(runner, {
+        action: 'updated',
+        commentId: comment.id,
+        mutation: opts?.mutation,
+        source: comment.authorAgentId ? 'agent' : 'user',
+        taskId: comment.taskId,
+      });
+      return comment;
+    });
   }
 
   // ========== Activities ==========
@@ -2778,6 +3195,7 @@ export class TaskModel {
     id: string,
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
     actor: { agentId?: string | null; userId?: string | null },
+    mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     const touched =
       TRACKED_TASK_COLUMNS.some((col) => data[col] !== undefined) ||
@@ -2810,7 +3228,11 @@ export class TaskModel {
         .limit(1);
       if (!before) return null;
 
-      const updated = await scoped.update(id, data);
+      const source = actor.agentId ? 'agent' : actor.userId ? 'user' : 'system';
+      const updated = await scoped.update(id, data, {
+        ...mutation,
+        source: mutation.source ?? source,
+      });
       if (!updated) return null;
 
       const events: { payload: TaskActivityLogPayload; type: TaskActivityLogType }[] = [];
@@ -2864,19 +3286,6 @@ export class TaskModel {
           payload: { ...event.payload, actorKind },
           taskId: id,
           type: event.type,
-        });
-      }
-
-      if (this.workspaceId) {
-        const source = actor.agentId ? 'agent' : actor.userId ? 'user' : 'system';
-        const eventType =
-          data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined
-            ? 'task.assigned'
-            : 'task.requirement.changed';
-        await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
-          eventType,
-          source,
-          task: updated,
         });
       }
 

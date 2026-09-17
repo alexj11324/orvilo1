@@ -304,7 +304,7 @@ export class LinearPlanningWorker {
       const createdTaskIds: string[] = [];
       const updatedTaskIds: string[] = [];
 
-      for (const action of proposal.actions) {
+      for (const [actionIndex, action] of proposal.actions.entries()) {
         switch (action.action) {
           case 'assign_task': {
             const task = await taskModel.findById(action.taskId);
@@ -328,23 +328,12 @@ export class LinearPlanningWorker {
                 assigneeUserId: action.assigneeUserId,
               },
               { userId },
+              {
+                idempotencyKey: `planning:${revision.id}:assigned:${action.taskId}`,
+                source: 'user',
+              },
             );
             if (!updated) throw new Error(`Task ${action.taskId} could not be assigned`);
-            const syncChange = await model.recordTaskChangeInTransaction(tx, {
-              eventType: 'task.assigned',
-              source: 'user',
-              task: updated,
-            });
-            if (!syncChange) {
-              await model.recordDomainEventInTransaction(tx, {
-                idempotencyKey: `planning:${revision.id}:assigned:${updated.id}`,
-                payload: { taskId: updated.id },
-                projectId: updated.projectId,
-                source: 'user',
-                taskId: updated.id,
-                type: 'task.assigned',
-              });
-            }
             updatedTaskIds.push(updated.id);
             break;
           }
@@ -352,23 +341,21 @@ export class LinearPlanningWorker {
             if (scope.scopeType === 'project' && action.projectId !== scope.scopeId) {
               throw new Error('Planning proposal cannot create a task outside its project scope');
             }
-            const created = await taskService.createTask({
-              description: action.description,
-              instruction: action.instruction,
-              name: action.name,
-              parentTaskId: action.parentTaskId ?? undefined,
-              priority: action.priority,
-              projectId: action.projectId,
-              visibility: 'public',
-            });
-            await model.recordDomainEventInTransaction(tx, {
-              idempotencyKey: `planning:${revision.id}:task-created:${created.id}`,
-              payload: { taskId: created.id, reason: action.reason },
-              projectId: created.projectId,
-              source: 'user',
-              taskId: created.id,
-              type: 'task.created',
-            });
+            const created = await taskService.createTask(
+              {
+                description: action.description,
+                instruction: action.instruction,
+                name: action.name,
+                parentTaskId: action.parentTaskId ?? undefined,
+                priority: action.priority,
+                projectId: action.projectId,
+                visibility: 'public',
+              },
+              {
+                idempotencyKey: `planning:${revision.id}:task-created:${actionIndex}`,
+                source: 'user',
+              },
+            );
             createdTaskIds.push(created.id);
             break;
           }
@@ -380,15 +367,12 @@ export class LinearPlanningWorker {
             throw new Error('request_stop proposals require the task stop coordinator');
           }
           case 'set_dependency': {
-            await this.applyDependencyAction(tx, taskModel, action, userId);
-            await model.recordDomainEventInTransaction(tx, {
-              idempotencyKey: `planning:${revision.id}:dependency:${action.taskId}:${action.dependsOnTaskId}:${action.operation}`,
-              payload: action,
-              projectId: scope.scopeType === 'project' ? scope.scopeId : undefined,
-              source: 'user',
-              taskId: action.taskId,
-              type: 'task.dependency.changed',
-            });
+            await this.applyDependencyAction(
+              tx,
+              taskModel,
+              action,
+              `planning:${revision.id}:dependency:${action.taskId}:${action.dependsOnTaskId}:${action.operation}`,
+            );
             break;
           }
           case 'update_task': {
@@ -400,23 +384,12 @@ export class LinearPlanningWorker {
                 priority: action.patch.priority,
               },
               { userId },
+              {
+                idempotencyKey: `planning:${revision.id}:updated:${action.taskId}`,
+                source: 'user',
+              },
             );
             if (!updated) throw new Error(`Task ${action.taskId} could not be updated`);
-            const syncChange = await model.recordTaskChangeInTransaction(tx, {
-              eventType: 'task.requirement.changed',
-              source: 'user',
-              task: updated,
-            });
-            if (!syncChange) {
-              await model.recordDomainEventInTransaction(tx, {
-                idempotencyKey: `planning:${revision.id}:updated:${updated.id}`,
-                payload: { taskId: updated.id, patch: action.patch },
-                projectId: updated.projectId,
-                source: 'user',
-                taskId: updated.id,
-                type: 'task.requirement.changed',
-              });
-            }
             updatedTaskIds.push(updated.id);
             break;
           }
@@ -462,7 +435,7 @@ export class LinearPlanningWorker {
     tx: LobeChatDatabase,
     taskModel: TaskModel,
     action: Extract<TaskPlanningAction, { action: 'set_dependency' }>,
-    userId: string,
+    idempotencyKey: string,
   ) {
     const [task, dependency] = await Promise.all([
       taskModel.findById(action.taskId),
@@ -474,15 +447,10 @@ export class LinearPlanningWorker {
     }
 
     if (action.operation === 'remove') {
-      await tx
-        .delete(taskDependencies)
-        .where(
-          and(
-            eq(taskDependencies.workspaceId, this.workspaceId),
-            eq(taskDependencies.taskId, action.taskId),
-            eq(taskDependencies.dependsOnId, action.dependsOnTaskId),
-          ),
-        );
+      await taskModel.removeDependency(action.taskId, action.dependsOnTaskId, {
+        idempotencyKey,
+        source: 'user',
+      });
       return;
     }
 
@@ -502,17 +470,10 @@ export class LinearPlanningWorker {
     `);
     if (cycle.rows.length > 0) throw new Error('Planning proposal would create a dependency cycle');
 
-    await tx
-      .insert(taskDependencies)
-      .values({
-        dependsOnId: action.dependsOnTaskId,
-        taskId: action.taskId,
-        type: 'blocks',
-        userId,
-        visibility: task.visibility,
-        workspaceId: this.workspaceId,
-      })
-      .onConflictDoNothing({ target: [taskDependencies.taskId, taskDependencies.dependsOnId] });
+    await taskModel.addDependency(action.taskId, action.dependsOnTaskId, 'blocks', {
+      idempotencyKey,
+      source: 'user',
+    });
   }
 
   private async snapshot(

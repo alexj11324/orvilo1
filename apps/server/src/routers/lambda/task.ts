@@ -750,7 +750,7 @@ export const taskRouter = router({
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.taskId);
         const dep = await resolveOrThrow(model, input.dependsOnId);
-        await model.addDependency(task.id, dep.id, input.type);
+        await model.addDependency(task.id, dep.id, input.type, { source: 'user' });
         return { message: 'Dependency added', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -908,7 +908,7 @@ export const taskRouter = router({
           ids.map(async (id) => [id, await ctx.taskIntegration.snapshotTaskWorktrees(id)] as const),
         ),
       );
-      const deletedIds = await model.deleteMany(ids);
+      const deletedIds = await model.deleteMany(ids, { source: 'user' });
       await Promise.allSettled(
         deletedIds.map((id) => ctx.taskIntegration.cleanupTaskWorktrees(id, snapshots.get(id)!)),
       );
@@ -934,7 +934,7 @@ export const taskRouter = router({
       const task = await resolveOrThrow(model, input.id);
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
       const snapshot = await ctx.taskIntegration.snapshotTaskWorktrees(task.id);
-      const deleted = await model.delete(task.id);
+      const deleted = await model.delete(task.id, { source: 'user' });
       if (deleted) await ctx.taskIntegration.cleanupTaskWorktrees(task.id, snapshot);
       return { data: task, message: 'Task deleted', success: true };
     } catch (error) {
@@ -1363,7 +1363,7 @@ export const taskRouter = router({
         const depId = input.dependsOnId.startsWith('task_')
           ? input.dependsOnId
           : (await resolveOrThrow(model, input.dependsOnId)).id;
-        await model.removeDependency(task.id, depId);
+        await model.removeDependency(task.id, depId, { source: 'user' });
         return { message: 'Dependency removed', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -1891,7 +1891,9 @@ export const taskRouter = router({
           ctx.taskService.assertParentVisibilityCompat(input.visibility, parent?.visibility);
         }
 
-        const updated = await ctx.taskModel.updateVisibility(resolved.id, input.visibility);
+        const updated = await ctx.taskModel.updateVisibility(resolved.id, input.visibility, {
+          source: 'user',
+        });
         if (!updated) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return { data: updated, message: 'Task visibility updated', success: true };
       } catch (error) {

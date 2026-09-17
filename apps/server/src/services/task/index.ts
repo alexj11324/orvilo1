@@ -29,6 +29,7 @@ import {
   isTaskIdentifierUniqueViolation,
   taskActivityActor,
   TaskModel,
+  type TaskMutationContext,
 } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
@@ -174,7 +175,7 @@ export class TaskService {
    * current model/provider into `task.config` so later changes to the agent's
    * default model don't silently affect this task.
    */
-  async createTask(input: CreateTaskInput): Promise<TaskItem> {
+  async createTask(input: CreateTaskInput, mutation: TaskMutationContext = {}): Promise<TaskItem> {
     await this.assertAssigneeAgentBelongsToUser(input.assigneeAgentId);
 
     const taskInput = input;
@@ -247,7 +248,7 @@ export class TaskService {
     // produce a `Private parent + Public child` combo if the caller insists.
     this.assertParentVisibilityCompat(createData.visibility, parentVisibility);
 
-    const task = await this.createTaskWithAssigneeLock(createData);
+    const task = await this.createTaskWithAssigneeLock(createData, mutation);
 
     return task;
   }
@@ -1143,11 +1144,12 @@ export class TaskService {
 
   private async createTaskWithAssigneeLock(
     createData: CreateTaskInput & { config?: Record<string, unknown> },
+    mutation: TaskMutationContext,
   ): Promise<TaskItem> {
     const { creationSubject, ...taskData } = createData;
     if (!createData.assigneeUserId || !this.workspaceId) {
       await this.assertAssigneeUserAssignable(createData.assigneeUserId);
-      return this.taskModel.create(taskData, { creationSubject });
+      return this.taskModel.create(taskData, { creationSubject, mutation });
     }
 
     // TaskModel's normal retry loop cannot continue after a unique violation
@@ -1161,6 +1163,7 @@ export class TaskService {
           new TaskModel(db, this.userId, this.workspaceId).create(taskData, {
             creationSubject,
             maxRetries: 1,
+            mutation,
           }),
         );
       } catch (error) {
@@ -1175,6 +1178,7 @@ export class TaskService {
     taskId: string,
     data: Parameters<TaskModel['update']>[1],
     actor: { agentId?: string | null; userId?: string | null } = {},
+    mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     const invalidatesActiveRun = [
       'automationMode',
@@ -1188,7 +1192,12 @@ export class TaskService {
       : data;
 
     return this.withAssigneeUserLock(data.assigneeUserId, (db) =>
-      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(taskId, guardedData, actor),
+      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(
+        taskId,
+        guardedData,
+        actor,
+        mutation,
+      ),
     );
   }
 

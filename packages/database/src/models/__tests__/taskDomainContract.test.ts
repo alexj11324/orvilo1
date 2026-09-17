@@ -3,8 +3,16 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { tasks, users, workspaces } from '../../schemas';
+import {
+  taskDependencies,
+  taskDomainEvents,
+  taskPlanningScopes,
+  tasks,
+  users,
+  workspaces,
+} from '../../schemas';
 import type { LobeChatDatabase } from '../../type';
+import { TaskModel } from '../task';
 
 const db: LobeChatDatabase = await getTestDB();
 const userId = 'task-domain-user';
@@ -66,5 +74,158 @@ describe('task domain contract', () => {
         seq: 1,
       }),
     ).rejects.toThrow();
+  });
+
+  it('atomically versions and publishes every unlinked task command', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create(
+      { instruction: 'Initial requirement', name: 'Initial task' },
+      { mutation: { idempotencyKey: 'command:create', source: 'user' } },
+    );
+    const changed = await model.update(
+      task.id,
+      { instruction: 'Revised requirement', priority: 2 },
+      { idempotencyKey: 'command:update', source: 'user' },
+    );
+
+    expect(changed).toMatchObject({ domainRevision: 2, requirementRevision: 2 });
+    const events = await db
+      .select()
+      .from(taskDomainEvents)
+      .where(eq(taskDomainEvents.workspaceId, workspaceId));
+    expect(events).toHaveLength(2);
+    expect(
+      events.map(({ idempotencyKey, source, type }) => ({ idempotencyKey, source, type })),
+    ).toEqual([
+      { idempotencyKey: 'command:create', source: 'user', type: 'task.created' },
+      { idempotencyKey: 'command:update', source: 'user', type: 'task.requirement.changed' },
+    ]);
+    expect(events[1]?.payload).toMatchObject({
+      aggregateRevision: 2,
+      changedFields: ['instruction', 'priority'],
+    });
+
+    const [scope] = await db
+      .select()
+      .from(taskPlanningScopes)
+      .where(eq(taskPlanningScopes.workspaceId, workspaceId));
+    expect(scope).toMatchObject({
+      dirtyRevision: events[1]?.revision,
+      scopeId: workspaceId,
+      scopeType: 'workspace',
+      status: 'queued',
+    });
+  });
+
+  it('publishes dependency changes once and advances the execution contract revision', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create(
+      { instruction: 'Downstream' },
+      { mutation: { idempotencyKey: 'command:create:downstream', source: 'user' } },
+    );
+    const dependency = await model.create(
+      { instruction: 'Upstream' },
+      { mutation: { idempotencyKey: 'command:create:upstream', source: 'user' } },
+    );
+
+    await model.addDependency(task.id, dependency.id, 'blocks', {
+      idempotencyKey: 'command:dependency:add',
+      source: 'user',
+    });
+    await model.addDependency(task.id, dependency.id, 'blocks', {
+      idempotencyKey: 'command:dependency:add:duplicate',
+      source: 'user',
+    });
+
+    const afterAdd = await model.findById(task.id);
+    expect(afterAdd).toMatchObject({ domainRevision: 2, requirementRevision: 2 });
+    expect(
+      await db.select().from(taskDependencies).where(eq(taskDependencies.taskId, task.id)),
+    ).toHaveLength(1);
+
+    await model.removeDependency(task.id, dependency.id, {
+      idempotencyKey: 'command:dependency:remove',
+      source: 'user',
+    });
+    const afterRemove = await model.findById(task.id);
+    expect(afterRemove).toMatchObject({ domainRevision: 3, requirementRevision: 3 });
+
+    const dependencyEvents = (
+      await db.select().from(taskDomainEvents).where(eq(taskDomainEvents.workspaceId, workspaceId))
+    ).filter(({ type }) => type === 'task.dependency.changed');
+    expect(dependencyEvents.map(({ idempotencyKey }) => idempotencyKey)).toEqual([
+      'command:dependency:add',
+      'command:dependency:remove',
+    ]);
+  });
+
+  it('versions comment commands without storing comment bodies in domain events', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create(
+      { instruction: 'Discuss this task' },
+      { mutation: { idempotencyKey: 'command:create:comment-task', source: 'user' } },
+    );
+    const comment = await model.addComment(
+      {
+        authorUserId: userId,
+        content: 'Private comment body',
+        taskId: task.id,
+        userId,
+      },
+      { idempotencyKey: 'command:comment:create', source: 'user' },
+    );
+    await model.updateComment(comment.id, 'Edited private body', {
+      mutation: { idempotencyKey: 'command:comment:update', source: 'user' },
+    });
+    await model.deleteComment(comment.id, {
+      idempotencyKey: 'command:comment:delete',
+      source: 'user',
+    });
+
+    expect(await model.findById(task.id)).toMatchObject({
+      domainRevision: 4,
+      requirementRevision: 4,
+    });
+    const events = (
+      await db.select().from(taskDomainEvents).where(eq(taskDomainEvents.workspaceId, workspaceId))
+    ).filter(({ type }) => type === 'task.comment.changed');
+    expect(events.map(({ idempotencyKey }) => idempotencyKey)).toEqual([
+      'command:comment:create',
+      'command:comment:update',
+      'command:comment:delete',
+    ]);
+    expect(JSON.stringify(events)).not.toContain('Private comment body');
+    expect(JSON.stringify(events)).not.toContain('Edited private body');
+  });
+
+  it('keeps an auditable planner fact after a task row is deleted', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create(
+      { instruction: 'Delete me', projectId: undefined },
+      { mutation: { idempotencyKey: 'command:create:deleted-task', source: 'user' } },
+    );
+
+    expect(
+      await model.delete(task.id, {
+        idempotencyKey: 'command:delete:task',
+        source: 'user',
+      }),
+    ).toBe(true);
+    expect(await model.findById(task.id)).toBeNull();
+
+    const [event] = await db
+      .select()
+      .from(taskDomainEvents)
+      .where(eq(taskDomainEvents.idempotencyKey, 'command:delete:task'));
+    expect(event).toMatchObject({
+      source: 'user',
+      taskId: null,
+      type: 'task.deleted',
+    });
+    expect(event.payload).toMatchObject({
+      aggregateRevision: 2,
+      changedFields: ['deleted'],
+      task: { identifier: task.identifier, visibility: task.visibility },
+    });
   });
 });

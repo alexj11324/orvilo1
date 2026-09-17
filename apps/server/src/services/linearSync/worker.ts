@@ -176,7 +176,13 @@ export class LinearSyncWorker {
     for (const row of rows) {
       const lease = leaseForRow(row);
       try {
-        const outcome = await this.processRow(row, provider);
+        // Provider I/O stays outside the database transaction. Once the issue
+        // snapshot is available, the Task/link/event/receipt mutations commit
+        // together so a crash can only replay the complete local command.
+        const knownIssue = row.subjectId ? await provider.getIssue(row.subjectId) : undefined;
+        const outcome = await this.model.transaction((model, db) =>
+          this.processRow(row, provider, { db, knownIssue, model }),
+        );
         const settled = await this.model.updateInbox(
           row.id,
           {
@@ -460,32 +466,49 @@ export class LinearSyncWorker {
         db,
         installation.installedByUserId,
         this.workspaceId,
-      ).createTask({
-        assigneeAgentId: settingsAssignmentAgent(binding.settings, issue.assigneeId),
-        assigneeUserId: settingsAssignmentUser(binding.settings, issue.assigneeId),
-        creationSubject: {
-          id: installation.id,
-          kind: 'integration',
-          snapshot: {
-            displayName: installation.organizationName || 'Linear',
-            externalId: installation.organizationId,
+      ).createTask(
+        {
+          assigneeAgentId: settingsAssignmentAgent(binding.settings, issue.assigneeId),
+          assigneeUserId: settingsAssignmentUser(binding.settings, issue.assigneeId),
+          creationSubject: {
+            id: installation.id,
             kind: 'integration',
+            snapshot: {
+              displayName: installation.organizationName || 'Linear',
+              externalId: installation.organizationId,
+              kind: 'integration',
+            },
           },
+          description: issue.description?.slice(0, 255),
+          instruction: issue.description || issue.title,
+          name: issue.title,
+          priority: taskPriority(issue.priority),
+          projectId: binding.projectId,
+          visibility: 'public',
         },
-        description: issue.description?.slice(0, 255),
-        instruction: issue.description || issue.title,
-        name: issue.title,
-        priority: taskPriority(issue.priority),
-        projectId: binding.projectId,
-        visibility: 'public',
-      });
+        {
+          eventId: row.id,
+          idempotencyKey: `linear:import:${row.id}`,
+          source: 'linear',
+          suppressDomainEvent: context.historicalImport,
+          suppressLinearOutbox: true,
+        },
+      );
       const initialStatus = binding.settings.statusMappings?.find(
         (mapping) => mapping.linearStateId === issue.stateId,
       )?.localStatus;
       if (initialStatus) {
-        await new TaskModel(db, installation.installedByUserId, this.workspaceId).update(task.id, {
-          status: initialStatus,
-        });
+        await new TaskModel(db, installation.installedByUserId, this.workspaceId).update(
+          task.id,
+          { status: initialStatus },
+          {
+            eventId: row.id,
+            idempotencyKey: `linear:initial-status:${row.id}`,
+            source: 'linear',
+            suppressDomainEvent: context.historicalImport,
+            suppressLinearOutbox: true,
+          },
+        );
       }
       await model.createIssueLink({
         bindingId: binding.id,
@@ -496,16 +519,6 @@ export class LinearSyncWorker {
         remoteSnapshot: issue,
         taskId: task.id,
       });
-      if (!context.historicalImport)
-        await model.recordDomainEvent({
-          eventId: row.id,
-          idempotencyKey: `linear:import:${row.id}`,
-          payload: { issueId: issue.id, taskId: task.id },
-          projectId: binding.projectId,
-          source: 'linear',
-          taskId: task.id,
-          type: 'task.created',
-        });
       if (context.phase) {
         await model.recordImportReceipt({
           bindingId: binding.id,
@@ -573,25 +586,13 @@ export class LinearSyncWorker {
       binding.settings,
     );
     if (Object.keys(patch).length > 0) {
-      const updatedTask = await taskModel.update(task.id, patch);
-      if (updatedTask) {
-        const eventType =
-          patch.assigneeAgentId !== undefined || patch.assigneeUserId !== undefined
-            ? 'task.assigned'
-            : patch.status !== undefined
-              ? 'task.status.changed'
-              : 'task.requirement.changed';
-        if (!context.historicalImport)
-          await model.recordDomainEvent({
-            eventId: row.id,
-            idempotencyKey: `linear:task-update:${row.id}`,
-            payload: { issueId: issue.id, patch },
-            projectId: binding.projectId,
-            source: 'linear',
-            taskId: task.id,
-            type: eventType,
-          });
-      }
+      await taskModel.update(task.id, patch, {
+        eventId: row.id,
+        idempotencyKey: `linear:task-update:${row.id}`,
+        source: 'linear',
+        suppressDomainEvent: context.historicalImport,
+        suppressLinearOutbox: true,
+      });
     }
 
     const localChanged = changedLinearIssueFields(existingLink.lastConfirmedSnapshot, local);
@@ -600,7 +601,7 @@ export class LinearSyncWorker {
         localChanged.map((field) => [field, local[field] ?? null]),
       );
       await model.queueOutbox({
-        expectedLocalRevision: task.updatedAt.getTime(),
+        expectedLocalRevision: task.domainRevision,
         installationId: installation.id,
         linkId: existingLink.id,
         operation: 'update_issue',

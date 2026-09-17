@@ -1125,19 +1125,53 @@ export class LinearSyncModel {
   async recordTaskChangeInTransaction(
     db: LobeChatDatabase,
     input: {
+      changedFields: string[];
+      eventId?: string;
       eventType: TaskDomainEventType;
+      idempotencyKey: string;
+      payload?: Record<string, unknown>;
       source: TaskDomainEventSource;
+      suppressLinearOutbox?: boolean;
       task: TaskItem;
     },
   ) {
-    const link = await this.findIssueLinkByTaskId(input.task.id);
-    if (!link) return null;
+    const model = new LinearSyncModel(db, this.workspaceId);
+    const event = await model.recordDomainEventInTransaction(db, {
+      eventId: input.eventId,
+      idempotencyKey: input.idempotencyKey,
+      payload: {
+        aggregateRevision: input.task.domainRevision,
+        changedFields: input.changedFields,
+        ...input.payload,
+        task: {
+          assigneeAgentId: input.task.assigneeAgentId,
+          assigneeUserId: input.task.assigneeUserId,
+          executionGeneration: input.task.executionGeneration,
+          policyRevision: input.task.policyRevision,
+          requirementRevision: input.task.requirementRevision,
+          status: input.task.status,
+        },
+      },
+      projectId: input.task.projectId,
+      source: input.source,
+      taskId: input.task.id,
+      type: input.eventType,
+    });
 
-    const installation = await this.findInstallationById(link.installationId);
-    if (!installation) return null;
+    if (input.suppressLinearOutbox || input.source === 'linear') {
+      return { event, link: null, outbox: null };
+    }
 
-    const binding = link.bindingId ? await this.findBindingById(link.bindingId) : null;
-    if (binding && !binding.syncEnabled) return null;
+    const link = await model.findIssueLinkByTaskId(input.task.id);
+    if (!link) return { event, link: null, outbox: null };
+
+    const installation = await model.findInstallationById(link.installationId);
+    if (!installation || installation.status !== 'active') {
+      return { event, link, outbox: null };
+    }
+
+    const binding = link.bindingId ? await model.findBindingById(link.bindingId) : null;
+    if (binding && !binding.syncEnabled) return { event, link, outbox: null };
 
     const settings = binding?.settings;
     const statusId = settings?.statusMappings?.find(
@@ -1165,16 +1199,8 @@ export class LinearSyncModel {
       ...(statusId !== undefined ? { stateId: statusId } : {}),
       title: input.task.name || input.task.identifier,
     };
-    const event = await this.recordDomainEventInDatabase(db, {
-      idempotencyKey: `task:${input.task.id}:${input.task.updatedAt.toISOString()}`,
-      payload,
-      projectId: input.task.projectId,
-      source: input.source,
-      taskId: input.task.id,
-      type: input.eventType,
-    });
-    const outbox = await this.queueOutbox({
-      expectedLocalRevision: input.task.updatedAt.getTime(),
+    const outbox = await model.queueOutbox({
+      expectedLocalRevision: input.task.domainRevision,
       installationId: installation.id,
       linkId: link.id,
       operation: 'update_issue',

@@ -2103,7 +2103,7 @@ table linear_external_relations {
 table linear_installations {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   workspace_id text [not null]
-  connector_id uuid [not null]
+  connector_id uuid
   organization_id text [not null]
   organization_name text
   oauth_client_id text
@@ -2147,6 +2147,7 @@ table linear_issue_links {
   last_confirmed_snapshot jsonb [not null]
   remote_snapshot jsonb
   conflict jsonb
+  tombstone jsonb
   sync_state text [not null, default: 'synced']
   last_inbound_delivery_id text
   last_outbound_revision bigint [not null, default: 0]
@@ -2164,6 +2165,29 @@ table linear_issue_links {
   }
 }
 
+table linear_issue_tombstones {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text [not null]
+  issue_link_id uuid [not null]
+  linear_issue_id text [not null]
+  kind text [not null]
+  source text [not null]
+  origin text [not null]
+  idempotency_key text [not null]
+  delivery_id text
+  reason text
+  snapshot jsonb
+  observed_at "timestamp with time zone" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (workspace_id, idempotency_key) [name: 'linear_issue_tombstones_workspace_idempotency_unique', unique]
+    (issue_link_id, observed_at) [name: 'linear_issue_tombstones_link_idx']
+    (workspace_id, linear_issue_id) [name: 'linear_issue_tombstones_issue_idx']
+  }
+}
+
 table linear_project_bindings {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   workspace_id text [not null]
@@ -2174,15 +2198,15 @@ table linear_project_bindings {
   team_ids text[] [not null, default: `[]`]
   settings jsonb [not null, default: `{}`]
   sync_enabled boolean [not null, default: true]
-   auto_execution_enabled boolean [not null, default: false]
-   replanning_enabled boolean [not null, default: false]
-   version integer [not null, default: 1]
-   import_cursor text
-   import_phase text [not null, default: 'initial']
-   import_reconciliation_cursor text
-   import_started_at "timestamp with time zone"
-   import_completed_at "timestamp with time zone"
-   created_at "timestamp with time zone" [not null, default: `now()`]
+  auto_execution_enabled boolean [not null, default: false]
+  replanning_enabled boolean [not null, default: false]
+  version integer [not null, default: 1]
+  import_cursor text
+  import_phase text [not null, default: 'initial']
+  import_reconciliation_cursor text
+  import_started_at "timestamp with time zone"
+  import_completed_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
   updated_at "timestamp with time zone" [not null, default: `now()`]
 
   indexes {
@@ -2266,6 +2290,7 @@ table linear_sync_outbox {
     link_id [name: 'linear_sync_outbox_link_id_idx']
     task_id [name: 'linear_sync_outbox_task_id_idx']
     workspace_id [name: 'linear_sync_outbox_workspace_id_idx']
+    (workspace_id, operation) [name: 'linear_sync_outbox_create_operation_unique', unique]
   }
 }
 
@@ -3586,7 +3611,7 @@ table task_activities {
 table task_comments {
   id text [pk, not null]
   task_id text [not null]
-  user_id text [not null]
+  user_id text
   workspace_id text
   author_user_id text
   author_agent_id text
@@ -3615,7 +3640,7 @@ table task_dependencies {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   task_id text [not null]
   depends_on_id text [not null]
-  user_id text [not null]
+  user_id text
   workspace_id text
   type text [not null, default: 'blocks']
   visibility text [not null, default: 'public']

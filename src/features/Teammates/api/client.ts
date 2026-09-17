@@ -57,6 +57,7 @@ interface TeammatesLambdaContract {
     preview: QueryProc<
       { token: string },
       {
+        acceptedByCurrentUser?: boolean;
         emailHint?: string;
         expiresAt: string;
         inviter: { avatar: string | null; name: string | null };

@@ -14,7 +14,12 @@ import type { LobeChatDatabase } from '@/database/type';
 
 import { LinearIntegrationTaskService } from './integrationTask';
 import { changedLinearIssueFields, mergeLinearIssueSnapshots } from './merge';
-import type { LinearIssueProvider, LinearIssueUpdateInput } from './provider';
+import {
+  LinearIssueNotFoundError,
+  type LinearIssueProvider,
+  type LinearIssueUpdateInput,
+  normalizeLinearIssue,
+} from './provider';
 
 export class LinearBindingPendingError extends Error {
   constructor(message: string) {
@@ -149,6 +154,23 @@ const remoteMatchesUpdate = (remote: LinearIssueSnapshot, input: LinearIssueUpda
 
 const retryAt = (attempts: number) => new Date(Date.now() + linearSyncRetryDelayMs(attempts));
 
+type LinearInboundRow = {
+  action?: string;
+  eventType?: string;
+  id: string;
+  installationId: string;
+  payload?: Record<string, unknown>;
+  subjectId: string | null;
+};
+
+const issueFromSignedRemovePayload = (row: LinearInboundRow): LinearIssueSnapshot => {
+  const issue = normalizeLinearIssue(row.payload?.data);
+  if (issue.id !== row.subjectId) {
+    throw new Error('Linear remove webhook payload does not match its subject');
+  }
+  return issue;
+};
+
 export class LinearSyncWorker {
   private readonly db: LobeChatDatabase;
   private readonly model: LinearSyncModel;
@@ -185,7 +207,25 @@ export class LinearSyncWorker {
         // Provider I/O stays outside the database transaction. Once the issue
         // snapshot is available, the Task/link/event/receipt mutations commit
         // together so a crash can only replay the complete local command.
-        const knownIssue = row.subjectId ? await provider.getIssue(row.subjectId) : undefined;
+        let knownIssue: LinearIssueSnapshot | undefined;
+        if (row.subjectId) {
+          try {
+            knownIssue = await provider.getIssue(row.subjectId);
+          } catch (error) {
+            if (
+              row.action === 'remove' &&
+              row.eventType === 'Issue' &&
+              error instanceof LinearIssueNotFoundError
+            ) {
+              // A remove webhook is already authenticated and its body is
+              // durable in the inbox. The remote issue can disappear before
+              // the worker reads it, so reconcile from that signed snapshot.
+              knownIssue = issueFromSignedRemovePayload(row);
+            } else {
+              throw error;
+            }
+          }
+        }
         const outcome = await this.model.transaction((model, db) =>
           this.processRow(row, provider, { db, knownIssue, model }),
         );
@@ -455,7 +495,7 @@ export class LinearSyncWorker {
   }
 
   private async processRow(
-    row: { installationId: string; subjectId: string | null; id: string },
+    row: LinearInboundRow,
     provider: LinearIssueProvider,
     context: {
       db?: LobeChatDatabase;
@@ -470,6 +510,24 @@ export class LinearSyncWorker {
     const db = context.db ?? this.db;
     const model = context.model ?? this.model;
     const issue = context.knownIssue ?? (await provider.getIssue(row.subjectId));
+    const existingLink = await model.findIssueLinkByExternalId(issue.id);
+    const installation = await model.findInstallationById(row.installationId);
+    if (!installation) throw new Error('Linear installation not found');
+    if (installation.status !== 'active') throw new Error('Linear installation is unavailable');
+
+    if (row.action === 'remove' && row.eventType === 'Issue') {
+      if (existingLink) {
+        await model.updateIssueLink(existingLink.id, {
+          conflict: null,
+          lastInboundDeliveryId: row.id,
+          remoteSnapshot: issue,
+          remoteUpdatedAt: issue.updatedAt ? new Date(issue.updatedAt) : null,
+          syncState: 'removed',
+        });
+      }
+      return 'processed';
+    }
+
     const binding = issue.projectId
       ? await model.findBindingByLinearProjectId(issue.projectId)
       : null;
@@ -486,10 +544,6 @@ export class LinearSyncWorker {
       return 'processed';
     }
 
-    const installation = await model.findInstallationById(row.installationId);
-    if (!installation) throw new Error('Linear installation not found');
-    if (installation.status !== 'active') throw new Error('Linear installation is unavailable');
-    const existingLink = await model.findIssueLinkByExternalId(issue.id);
     const integrationTasks = new LinearIntegrationTaskService(
       db,
       this.workspaceId,

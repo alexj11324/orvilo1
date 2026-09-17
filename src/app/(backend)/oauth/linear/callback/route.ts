@@ -12,6 +12,7 @@ import {
   validateLinearOAuthInstallation,
 } from '@/server/services/linearSync/oauth';
 import { consumeLinearOAuthState } from '@/server/services/linearSync/oauthState';
+import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
 
 const log = debug('orvilo-server:linear:oauth-callback');
 
@@ -61,6 +62,23 @@ export const GET = async (request: NextRequest) => {
   if (!state) return renderResultPage({ error: 'missing_state', success: false });
   const statePayload = await consumeLinearOAuthState(state);
   if (!statePayload) return renderResultPage({ error: 'invalid_or_expired_state', success: false });
+
+  // OAuth state is short-lived, but the installer’s authorization can change
+  // while Linear’s consent screen is open. Re-check the live workspace grant
+  // before exchanging or persisting any provider credential.
+  const hasCurrentWorkspaceSettingsPermission = () =>
+    hasWorkspaceScopedPermission({
+      action: 'WORKSPACE_SETTINGS_UPDATE',
+      db: serverDB,
+      scopes: ['ALL'],
+      userId: statePayload.lobeUserId,
+      workspaceId: statePayload.workspaceId,
+    });
+  const canManageInstallation = await hasCurrentWorkspaceSettingsPermission();
+  if (!canManageInstallation) {
+    return renderResultPage({ error: 'workspace_access_denied', success: false });
+  }
+
   if (providerError) return renderResultPage({ error: 'authorization_denied', success: false });
   if (!code) return renderResultPage({ error: 'missing_code', success: false });
 
@@ -90,6 +108,9 @@ export const GET = async (request: NextRequest) => {
     const scopes = normalizeLinearScopes(tokens.scope, statePayload.scopes);
     if (!scopes.includes('read') || !scopes.includes('write')) {
       return renderResultPage({ error: 'insufficient_scope', success: false });
+    }
+    if (!(await hasCurrentWorkspaceSettingsPermission())) {
+      return renderResultPage({ error: 'workspace_access_denied', success: false });
     }
 
     const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();

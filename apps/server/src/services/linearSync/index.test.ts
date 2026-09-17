@@ -1,9 +1,32 @@
 import { createHmac } from 'node:crypto';
 
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { parseLinearWebhookPayload, verifyLinearWebhookSignature } from './index';
+import {
+  deriveLinearWebhookDeliveryId,
+  LinearSyncService,
+  parseLinearWebhookPayload,
+  verifyLinearWebhookSignature,
+} from './index';
 import { mergeLinearIssueSnapshots } from './merge';
+
+const modelMocks = vi.hoisted(() => ({
+  captureDelivery: vi.fn(),
+  findBindingByLinearProjectId: vi.fn(),
+  findInstallationByOrganization: vi.fn(),
+  findIssueLinkByExternalId: vi.fn(),
+  markInstallationUnavailable: vi.fn(),
+  recordDomainEvent: vi.fn(),
+  updateInbox: vi.fn(),
+}));
+
+vi.mock('@/database/models/linearSync', () => ({
+  LinearSyncModel: class {
+    constructor() {
+      Object.assign(this, modelMocks);
+    }
+  },
+}));
 
 const payload = JSON.stringify({
   action: 'update',
@@ -14,6 +37,10 @@ const payload = JSON.stringify({
 });
 
 describe('Linear webhook verification', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('verifies the raw body and rejects a stale delivery', () => {
     const secret = 'test-secret';
     const signature = createHmac('sha256', secret).update(payload).digest('hex');
@@ -74,6 +101,97 @@ describe('Linear webhook verification', () => {
         '{"action":"update","type":"Issue","webhookTimestamp":1700000000000}',
       ),
     ).toThrow('organizationId');
+  });
+
+  it('derives receipt identity from authenticated body bytes instead of transport headers', () => {
+    const first = deriveLinearWebhookDeliveryId(payload);
+    const replay = deriveLinearWebhookDeliveryId(payload);
+
+    expect(first).toBe(replay);
+    expect(first).toMatch(/^body:[0-9a-f]{64}$/);
+  });
+
+  it('deduplicates a signed body replay from the authenticated body bytes', async () => {
+    const now = 1_700_000_000_000;
+    const secret = 'test-secret';
+    const signature = createHmac('sha256', secret).update(payload).digest('hex');
+    modelMocks.findInstallationByOrganization.mockResolvedValue({
+      id: 'installation-1',
+      oauthClientId: 'client-1',
+      status: 'active',
+    });
+    modelMocks.findBindingByLinearProjectId.mockResolvedValue(null);
+    modelMocks.captureDelivery
+      .mockResolvedValueOnce({ inserted: true, row: { id: 'inbox-1' } })
+      .mockResolvedValueOnce({ inserted: false, row: { id: 'inbox-1', status: 'received' } });
+    modelMocks.updateInbox.mockResolvedValue(undefined);
+
+    const service = new LinearSyncService({} as never, 'workspace-1');
+    const input = {
+      now,
+      rawBody: payload,
+      secret,
+      signature,
+      timestamp: now,
+    };
+    const first = await service.captureWebhook(input);
+    const replay = await service.captureWebhook(input);
+
+    expect(first).toMatchObject({
+      deliveryId: deriveLinearWebhookDeliveryId(payload),
+      duplicate: false,
+      status: 'pending_binding',
+    });
+    expect(replay).toMatchObject({
+      deliveryId: first.deliveryId,
+      duplicate: true,
+      status: 'queued',
+    });
+    expect(modelMocks.captureDelivery).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ deliveryId: first.deliveryId }),
+    );
+    expect(modelMocks.captureDelivery).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ deliveryId: first.deliveryId }),
+    );
+  });
+
+  it('marks a matching OAuthApp revoked event as processed and revokes the installation', async () => {
+    const revokedPayload = JSON.stringify({
+      action: 'revoked',
+      oauthClientId: 'client-1',
+      organizationId: 'org-1',
+      type: 'OAuthApp',
+      webhookTimestamp: 1_700_000_000_000,
+    });
+    const secret = 'test-secret';
+    modelMocks.findInstallationByOrganization.mockResolvedValue({
+      id: 'installation-1',
+      oauthClientId: 'client-1',
+      status: 'active',
+    });
+    modelMocks.captureDelivery.mockResolvedValue({ inserted: true, row: { id: 'inbox-1' } });
+    modelMocks.updateInbox.mockResolvedValue(undefined);
+
+    const result = await new LinearSyncService({} as never, 'workspace-1').captureWebhook({
+      now: 1_700_000_000_000,
+      rawBody: revokedPayload,
+      secret,
+      signature: createHmac('sha256', secret).update(revokedPayload).digest('hex'),
+      timestamp: 1_700_000_000_000,
+    });
+
+    expect(result).toMatchObject({ duplicate: false, status: 'processed' });
+    expect(modelMocks.markInstallationUnavailable).toHaveBeenCalledWith('installation-1', {
+      message: 'Linear OAuth app authorization was revoked by the organization',
+      reason: 'oauth_app_revoked',
+      status: 'revoked',
+    });
+    expect(modelMocks.updateInbox).toHaveBeenCalledWith('inbox-1', {
+      processedAt: expect.any(Date),
+      status: 'processed',
+    });
   });
 });
 

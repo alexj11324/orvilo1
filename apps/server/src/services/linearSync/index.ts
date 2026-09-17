@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 import { isRecord } from '@orvilo/utils';
 
@@ -14,6 +14,7 @@ export interface LinearWebhookPayload {
   actor?: Record<string, unknown> | null;
   createdAt?: string;
   data?: Record<string, unknown>;
+  oauthClientId?: string;
   organizationId: string;
   type: string;
   updatedFrom?: Record<string, unknown>;
@@ -65,6 +66,7 @@ export const parseLinearWebhookPayload = (rawBody: LinearWebhookRawBody): Linear
     createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined,
     data: isRecord(parsed.data) ? parsed.data : undefined,
     organizationId: requiredString(parsed.organizationId, 'organizationId'),
+    oauthClientId: typeof parsed.oauthClientId === 'string' ? parsed.oauthClientId : undefined,
     type: requiredString(parsed.type, 'type'),
     updatedFrom: isRecord(parsed.updatedFrom) ? parsed.updatedFrom : undefined,
     url: typeof parsed.url === 'string' ? parsed.url : undefined,
@@ -72,6 +74,13 @@ export const parseLinearWebhookPayload = (rawBody: LinearWebhookRawBody): Linear
     webhookTimestamp,
   };
 };
+
+/**
+ * Linear-Delivery is transport metadata and is not covered by the HMAC. Use
+ * the authenticated request bytes as the durable receipt identity instead.
+ */
+export const deriveLinearWebhookDeliveryId = (rawBody: LinearWebhookRawBody): string =>
+  `body:${createHash('sha256').update(rawBody).digest('hex')}`;
 
 export const verifyLinearWebhookSignature = (input: {
   now?: number;
@@ -111,7 +120,7 @@ export interface CaptureLinearWebhookResult {
   deliveryId: string;
   duplicate: boolean;
   planningRevision?: number;
-  status: 'ignored' | 'pending_binding' | 'queued';
+  status: 'ignored' | 'pending_binding' | 'processed' | 'queued';
 }
 
 export class LinearSyncService {
@@ -124,7 +133,6 @@ export class LinearSyncService {
   }
 
   async captureWebhook(input: {
-    deliveryId: string;
     maxAgeMs?: number;
     now?: number;
     rawBody: LinearWebhookRawBody;
@@ -148,6 +156,7 @@ export class LinearSyncService {
     // Authenticate the exact request bytes before parsing organizationId or
     // using it to select an installation-specific secret.
     const payload = parseLinearWebhookPayload(input.rawBody);
+    const deliveryId = deriveLinearWebhookDeliveryId(input.rawBody);
     if (Math.abs(payload.webhookTimestamp - input.timestamp) > 1_000) {
       throw new LinearWebhookError('Linear webhook timestamp headers do not match', 401);
     }
@@ -159,7 +168,7 @@ export class LinearSyncService {
 
     const captured = await this.model.captureDelivery({
       action: payload.action,
-      deliveryId: input.deliveryId,
+      deliveryId,
       eventType: payload.type,
       installationId: installation.id,
       organizationId: payload.organizationId,
@@ -170,10 +179,33 @@ export class LinearSyncService {
 
     if (!captured.inserted) {
       return {
-        deliveryId: input.deliveryId,
+        deliveryId,
         duplicate: true,
-        status: captured.row?.status === 'ignored' ? 'ignored' : 'queued',
+        status:
+          captured.row?.status === 'ignored'
+            ? 'ignored'
+            : captured.row?.status === 'processed'
+              ? 'processed'
+              : 'queued',
       };
+    }
+
+    if (
+      payload.type === 'OAuthApp' &&
+      payload.action === 'revoked' &&
+      payload.oauthClientId &&
+      payload.oauthClientId === installation.oauthClientId
+    ) {
+      await this.model.markInstallationUnavailable(installation.id, {
+        message: 'Linear OAuth app authorization was revoked by the organization',
+        reason: 'oauth_app_revoked',
+        status: 'revoked',
+      });
+      await this.model.updateInbox(captured.row.id, {
+        processedAt: new Date(),
+        status: 'processed',
+      });
+      return { deliveryId, duplicate: false, status: 'processed' };
     }
 
     if (payload.type !== 'Issue') {
@@ -181,7 +213,7 @@ export class LinearSyncService {
         processedAt: new Date(),
         status: 'ignored',
       });
-      return { deliveryId: input.deliveryId, duplicate: false, status: 'ignored' };
+      return { deliveryId, duplicate: false, status: 'ignored' };
     }
 
     const subjectId = extractSubjectId(payload);
@@ -197,7 +229,7 @@ export class LinearSyncService {
         status: 'pending_binding',
       });
       return {
-        deliveryId: input.deliveryId,
+        deliveryId,
         duplicate: false,
         status: 'pending_binding',
       };
@@ -205,8 +237,8 @@ export class LinearSyncService {
 
     const event = await this.model.recordDomainEvent({
       action: payload.action,
-      eventId: input.deliveryId,
-      idempotencyKey: `linear:${input.deliveryId}`,
+      eventId: deliveryId,
+      idempotencyKey: `linear:${deliveryId}`,
       payload: payload as unknown as Record<string, unknown>,
       projectId: binding?.projectId,
       source: 'linear',
@@ -224,7 +256,7 @@ export class LinearSyncService {
     });
 
     return {
-      deliveryId: input.deliveryId,
+      deliveryId,
       duplicate: false,
       planningRevision: event.event.revision,
       status: binding ? 'queued' : 'pending_binding',

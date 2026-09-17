@@ -27,11 +27,10 @@ export const linearWebhook = async (c: Context): Promise<Response> => {
   // or re-serializing JSON before verification would change the message.
   const rawBody = new Uint8Array(await c.req.raw.arrayBuffer());
   const signature = c.req.header('linear-signature');
-  const deliveryId = c.req.header('linear-delivery');
   const timestampHeader = c.req.header('linear-timestamp');
   const timestamp = Number(timestampHeader);
 
-  if (!deliveryId || !timestampHeader || !Number.isFinite(timestamp)) {
+  if (!timestampHeader || !Number.isFinite(timestamp)) {
     return c.json({ error: 'Linear webhook headers are incomplete' }, 400);
   }
 
@@ -93,7 +92,6 @@ export const linearWebhook = async (c: Context): Promise<Response> => {
     if (!secret) return c.json({ error: 'Linear webhook signature is invalid' }, 401);
 
     const result = await new LinearSyncService(db, workspaceId).captureWebhook({
-      deliveryId,
       now: Date.now(),
       rawBody,
       secret,
@@ -104,15 +102,17 @@ export const linearWebhook = async (c: Context): Promise<Response> => {
     // Await the durable enqueue before acknowledging. If enqueueing fails,
     // Linear retries the same delivery; captureWebhook is idempotent, so that
     // retry schedules the already-persisted inbox row without duplicating it.
-    try {
-      await LinearSyncWorkflow.trigger({
-        installationId: installation.id,
-        limit: 20,
-        workspaceId,
-      });
-    } catch (error) {
-      console.error('[linear:webhook] failed to schedule durable sync worker', error);
-      return c.json({ error: 'Linear delivery was captured but could not be scheduled' }, 503);
+    if (result.status === 'queued' || result.status === 'pending_binding') {
+      try {
+        await LinearSyncWorkflow.trigger({
+          installationId: installation.id,
+          limit: 20,
+          workspaceId,
+        });
+      } catch (error) {
+        console.error('[linear:webhook] failed to schedule durable sync worker', error);
+        return c.json({ error: 'Linear delivery was captured but could not be scheduled' }, 503);
+      }
     }
 
     // Linear retries non-2xx deliveries even when the inbox row was durably

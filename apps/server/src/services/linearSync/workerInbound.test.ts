@@ -8,6 +8,7 @@ import { ProjectModel } from '@/database/models/project';
 import { linearInstallations, tasks, users, workspaces } from '@/database/schemas';
 import type { LobeChatDatabase } from '@/database/type';
 
+import { LinearIssueNotFoundError } from './provider';
 import { LinearSyncWorker } from './worker';
 
 const db: LobeChatDatabase = await getTestDB();
@@ -35,6 +36,84 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe('LinearSyncWorker inbound ordering', () => {
+  it('tombstones an issue from the signed remove payload when the remote issue is gone', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'DEL',
+      name: 'Removal Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'linear-org-remove', workspaceId })
+      .returning();
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-remove',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-remove',
+      projectId: project.id,
+      teamIds: ['linear-team-remove'],
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'DEL-1',
+        instruction: 'Keep local tombstone',
+        name: 'Removed issue',
+        projectId: project.id,
+        seq: 1,
+        visibility: 'public',
+        workspaceId,
+      })
+      .returning();
+    const issue = {
+      id: 'linear-issue-removed',
+      identifier: 'DEL-1',
+      projectId: binding.linearProjectId,
+      teamId: 'linear-team-remove',
+      title: 'Removed issue',
+      updatedAt: '2026-09-16T12:01:00.000Z',
+    };
+    const link = await model.createIssueLink({
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: issue.identifier,
+      linearIssueId: issue.id,
+      organizationId: installation.organizationId,
+      remoteSnapshot: issue,
+      taskId: task.id,
+    });
+    await model.captureDelivery({
+      action: 'remove',
+      deliveryId: 'signed-remove-delivery',
+      eventType: 'Issue',
+      installationId: installation.id,
+      organizationId: installation.organizationId,
+      payload: {
+        action: 'remove',
+        data: issue,
+        organizationId: installation.organizationId,
+        type: 'Issue',
+      },
+      subjectId: issue.id,
+    });
+    const provider = {
+      getIssue: vi.fn().mockRejectedValue(new LinearIssueNotFoundError(issue.id)),
+    };
+
+    await expect(
+      new LinearSyncWorker(db, workspaceId).processPending(provider as never, 20, installation.id),
+    ).resolves.toMatchObject({ failed: 0, processed: 1 });
+
+    const removed = await model.findIssueLinkByExternalId(issue.id);
+    expect(removed).toMatchObject({
+      id: link.id,
+      lastInboundDeliveryId: expect.any(String),
+      syncState: 'removed',
+    });
+    expect(provider.getIssue).toHaveBeenCalledWith(issue.id);
+  });
+
   it('does not let an older remote update roll a task back', async () => {
     const model = new LinearSyncModel(db, workspaceId);
     const project = await new ProjectModel(db, userId, workspaceId).create({

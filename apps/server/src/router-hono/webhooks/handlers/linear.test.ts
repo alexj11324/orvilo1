@@ -97,6 +97,49 @@ describe('linear webhook handler', () => {
     });
   });
 
+  it('does not require unsigned Linear-Delivery metadata to authenticate a body', async () => {
+    const app = new Hono();
+    app.post('/linear/:workspaceId', linearWebhook);
+
+    const timestamp = Date.now();
+    const body = JSON.stringify({
+      action: 'update',
+      organizationId: 'org-1',
+      type: 'Issue',
+      webhookTimestamp: timestamp,
+    });
+    const request = signedRequest(body, 'secret', timestamp);
+    request.headers.delete('linear-delivery');
+
+    await expect(app.fetch(request)).resolves.toMatchObject({ status: 200 });
+    expect(mocks.captureWebhook).toHaveBeenCalledWith(
+      expect.not.objectContaining({ deliveryId: expect.anything() }),
+    );
+  });
+
+  it('does not schedule a worker for an OAuthApp revocation already processed durably', async () => {
+    mocks.captureWebhook.mockResolvedValue({
+      deliveryId: 'body:revoked',
+      duplicate: false,
+      status: 'processed',
+    });
+    const app = new Hono();
+    app.post('/linear/:workspaceId', linearWebhook);
+
+    const timestamp = Date.now();
+    const body = JSON.stringify({
+      action: 'revoked',
+      oauthClientId: 'client-1',
+      organizationId: 'org-1',
+      type: 'OAuthApp',
+      webhookTimestamp: timestamp,
+    });
+    const response = await app.fetch(signedRequest(body, 'secret', timestamp));
+
+    expect(response.status).toBe(200);
+    expect(mocks.trigger).not.toHaveBeenCalled();
+  });
+
   it('asks Linear to retry when the durable workflow enqueue fails', async () => {
     mocks.trigger.mockRejectedValue(new Error('QStash unavailable'));
     const app = new Hono();

@@ -77,18 +77,20 @@ export class LinearInstallationAuth {
     const status = error instanceof LinearOAuthError ? error.status : undefined;
     const invalidGrant = error instanceof LinearOAuthError && error.errorCode === 'invalid_grant';
     const message = error instanceof Error ? error.message : 'Linear token refresh failed';
-    if (invalidGrant || status === 401) {
+    if (invalidGrant) {
       await this.model.markInstallationUnavailable(this.installationId, {
         message,
         reason: 'refresh_token_revoked',
         status: 'revoked',
       });
-    } else if (status === 403) {
+    } else if (status === 401 || status === 403) {
       // A provider-level forbidden response is a confirmed permission loss;
-      // keep it distinct from a transient refresh transport failure.
+      // keep it distinct from a transient refresh transport failure. A 401
+      // invalid_client response describes this app's credentials, not the
+      // installing user's grant, so it must never revoke the installation.
       await this.model.markInstallationUnavailable(this.installationId, {
         message,
-        reason: 'refresh_permission_denied',
+        reason: status === 401 ? 'refresh_client_rejected' : 'refresh_permission_denied',
         status: 'error',
       });
     }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   LinearGraphqlIssueProvider,
+  LinearIssueNotFoundError,
   LinearScopeValidationError,
   normalizeLinearIssue,
   validateLinearProjectScope,
@@ -38,6 +39,23 @@ describe('normalizeLinearIssue', () => {
   it('rejects a provider response without stable identity fields', () => {
     expect(() => normalizeLinearIssue({ id: 'issue-1', title: 'Missing identifier' })).toThrow(
       'missing identity fields',
+    );
+  });
+
+  it('distinguishes a missing remote issue from another GraphQL failure', async () => {
+    const request = vi.fn().mockResolvedValue({
+      data: { data: { issue: null } },
+      status: 200,
+    });
+    const provider = new LinearGraphqlIssueProvider(
+      {
+        getAccessToken: vi.fn().mockResolvedValue('access-token'),
+      },
+      request,
+    );
+
+    await expect(provider.getIssue('missing-issue')).rejects.toBeInstanceOf(
+      LinearIssueNotFoundError,
     );
   });
 
@@ -258,5 +276,172 @@ describe('normalizeLinearIssue', () => {
       },
     ]);
     await expect(provider.listMembers()).resolves.toEqual([{ id: 'member-1', name: 'Ada' }]);
+  });
+
+  it('walks every catalog cursor, including nested workflow states and members', async () => {
+    const request = vi.fn().mockImplementation(
+      async (
+        _token,
+        body: {
+          query: string;
+          variables?: Record<string, unknown>;
+        },
+      ) => {
+        const after = body.variables?.after ?? null;
+        if (body.query.includes('ListProjectTeams')) {
+          return {
+            data: {
+              data: {
+                project: {
+                  teams: {
+                    nodes: [{ id: 'team-2', organization: { id: 'org-1' }, visibility: 'public' }],
+                    pageInfo: { endCursor: null, hasNextPage: false },
+                  },
+                },
+              },
+            },
+            status: 200,
+          };
+        }
+        if (body.query.includes('ListTeamStates')) {
+          return {
+            data: {
+              data: {
+                team: {
+                  states: {
+                    nodes: [{ id: 'state-2', name: 'Done', position: 2, type: 'completed' }],
+                    pageInfo: { endCursor: null, hasNextPage: false },
+                  },
+                },
+              },
+            },
+            status: 200,
+          };
+        }
+        if (body.query.includes('ListProjects')) {
+          const secondPage = after === 'projects-cursor';
+          return {
+            data: {
+              data: {
+                projects: {
+                  nodes: [
+                    {
+                      id: secondPage ? 'project-2' : 'project-1',
+                      name: secondPage ? 'Second project' : 'First project',
+                      organization: { id: 'org-1' },
+                      state: null,
+                      teams: {
+                        nodes: secondPage
+                          ? [{ id: 'team-3', organization: { id: 'org-1' }, visibility: 'public' }]
+                          : [{ id: 'team-1', organization: { id: 'org-1' }, visibility: 'public' }],
+                        pageInfo: secondPage
+                          ? { endCursor: null, hasNextPage: false }
+                          : { endCursor: 'project-teams-cursor', hasNextPage: true },
+                      },
+                    },
+                  ],
+                  pageInfo: secondPage
+                    ? { endCursor: null, hasNextPage: false }
+                    : { endCursor: 'projects-cursor', hasNextPage: true },
+                },
+              },
+            },
+            status: 200,
+          };
+        }
+        if (body.query.includes('ListTeams')) {
+          const secondPage = after === 'teams-cursor';
+          return {
+            data: {
+              data: {
+                teams: {
+                  nodes: [
+                    {
+                      id: secondPage ? 'team-2' : 'team-1',
+                      key: secondPage ? 'OPS' : 'ENG',
+                      name: secondPage ? 'Operations' : 'Engineering',
+                      organization: { id: 'org-1' },
+                      states: {
+                        nodes: secondPage
+                          ? [{ id: 'state-3', name: 'Todo', position: 1, type: 'unstarted' }]
+                          : [{ id: 'state-1', name: 'In Progress', position: 1, type: 'started' }],
+                        pageInfo: secondPage
+                          ? { endCursor: null, hasNextPage: false }
+                          : { endCursor: 'states-cursor', hasNextPage: true },
+                      },
+                      visibility: 'public',
+                    },
+                  ],
+                  pageInfo: secondPage
+                    ? { endCursor: null, hasNextPage: false }
+                    : { endCursor: 'teams-cursor', hasNextPage: true },
+                },
+              },
+            },
+            status: 200,
+          };
+        }
+        const secondPage = after === 'members-cursor';
+        return {
+          data: {
+            data: {
+              organization: {
+                id: 'org-1',
+                users: {
+                  nodes: [
+                    secondPage
+                      ? { id: 'member-2', name: 'Grace' }
+                      : { id: 'member-1', name: 'Ada' },
+                  ],
+                  pageInfo: secondPage
+                    ? { endCursor: null, hasNextPage: false }
+                    : { endCursor: 'members-cursor', hasNextPage: true },
+                },
+              },
+            },
+          },
+          status: 200,
+        };
+      },
+    );
+    const provider = new LinearGraphqlIssueProvider(
+      { getAccessToken: vi.fn().mockResolvedValue('access-token') },
+      request,
+      'org-1',
+    );
+
+    await expect(provider.listProjects()).resolves.toEqual([
+      expect.objectContaining({ id: 'project-1', teamIds: ['team-1', 'team-2'] }),
+      expect.objectContaining({ id: 'project-2', teamIds: ['team-3'] }),
+    ]);
+    await expect(provider.listTeams()).resolves.toEqual([
+      expect.objectContaining({
+        id: 'team-1',
+        workflowStates: expect.arrayContaining([
+          expect.objectContaining({ id: 'state-1' }),
+          expect.objectContaining({ id: 'state-2' }),
+        ]),
+      }),
+      expect.objectContaining({ id: 'team-2' }),
+    ]);
+    await expect(provider.listMembers()).resolves.toEqual([
+      { id: 'member-1', name: 'Ada' },
+      { id: 'member-2', name: 'Grace' },
+    ]);
+
+    expect(request).toHaveBeenCalledWith(
+      'access-token',
+      expect.objectContaining({
+        variables: { after: 'project-teams-cursor', projectId: 'project-1' },
+      }),
+    );
+    expect(request).toHaveBeenCalledWith(
+      'access-token',
+      expect.objectContaining({ variables: { after: 'states-cursor', teamId: 'team-1' } }),
+    );
+    expect(request).toHaveBeenCalledWith(
+      'access-token',
+      expect.objectContaining({ variables: { after: 'members-cursor' } }),
+    );
   });
 });

@@ -25,8 +25,10 @@ const ISSUE_FIELDS = `
 
 const PAGE_INFO_FIELDS = `pageInfo { endCursor hasNextPage }`;
 const ORGANIZATION_FIELDS = `id name urlKey`;
-const PROJECT_FIELDS = `id name state organization { id } teams { nodes { id visibility organization { id } } }`;
-const TEAM_FIELDS = `id key name visibility organization { id } states(first: 100) { nodes { id name type position } }`;
+const CATALOG_PAGE_SIZE = 100;
+const MEMBER_PAGE_SIZE = 250;
+const PROJECT_FIELDS = `id name state organization { id } teams(first: ${CATALOG_PAGE_SIZE}) { nodes { id visibility organization { id } } ${PAGE_INFO_FIELDS} }`;
+const TEAM_FIELDS = `id key name visibility organization { id } states(first: ${CATALOG_PAGE_SIZE}) { nodes { id name type position } ${PAGE_INFO_FIELDS} }`;
 
 export interface LinearIssueCreateInput {
   description?: string | null;
@@ -120,6 +122,43 @@ const stringValue = (value: unknown): string | null =>
 const nestedId = (value: unknown): string | null =>
   isRecord(value) ? stringValue(value.id) : null;
 
+interface ConnectionPage {
+  endCursor: string | null;
+  hasNextPage: boolean;
+  nodes: unknown[];
+}
+
+const readConnectionPage = (value: unknown): ConnectionPage => {
+  if (!isRecord(value)) return { endCursor: null, hasNextPage: false, nodes: [] };
+  const pageInfo = isRecord(value.pageInfo) ? value.pageInfo : {};
+  return {
+    endCursor: typeof pageInfo.endCursor === 'string' ? pageInfo.endCursor : null,
+    hasNextPage: pageInfo.hasNextPage === true,
+    nodes: Array.isArray(value.nodes) ? value.nodes : [],
+  };
+};
+
+const collectConnectionNodes = async (
+  load: (after: string | null) => Promise<unknown>,
+  firstPage?: unknown,
+): Promise<unknown[]> => {
+  const nodes: unknown[] = [];
+  let page = readConnectionPage(firstPage);
+  let after: string | null = null;
+
+  if (firstPage === undefined) page = readConnectionPage(await load(null));
+
+  while (true) {
+    nodes.push(...page.nodes);
+    if (!page.hasNextPage) return nodes;
+    if (!page.endCursor || page.endCursor === after) {
+      throw new Error('Linear API returned an invalid pagination cursor');
+    }
+    after = page.endCursor;
+    page = readConnectionPage(await load(after));
+  }
+};
+
 /** Convert a GraphQL Issue node into the provider-neutral sync snapshot. */
 export const normalizeLinearIssue = (value: unknown): LinearIssueSnapshot => {
   if (!isRecord(value)) throw new Error('Linear API returned an invalid issue');
@@ -156,6 +195,13 @@ export class LinearGraphqlError extends Error {
     super(message);
     this.name = 'LinearGraphqlError';
     this.status = status;
+  }
+}
+
+export class LinearIssueNotFoundError extends Error {
+  constructor(issueId: string) {
+    super(`Linear issue ${issueId} was not found`);
+    this.name = 'LinearIssueNotFoundError';
   }
 }
 
@@ -280,6 +326,9 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
       query: `query GetIssue($id: String!) { issue(id: $id) { ${ISSUE_FIELDS} } }`,
       variables: { id },
     });
+    if (data.issue === null || data.issue === undefined) {
+      throw new LinearIssueNotFoundError(id);
+    }
     return normalizeLinearIssue(data.issue);
   }
 
@@ -316,40 +365,73 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
   }
 
   async listProjects(): Promise<LinearProjectSnapshot[]> {
-    const data = await this.requestData<{ projects: { nodes: unknown[] } }>({
-      query: `query ListProjects { projects { nodes { ${PROJECT_FIELDS} } } }`,
+    const projectNodes = await collectConnectionNodes(async (after) => {
+      const data = await this.requestData<{ projects: unknown }>({
+        query: `query ListProjects($after: String) {
+          projects(first: ${CATALOG_PAGE_SIZE}, after: $after) {
+            nodes { ${PROJECT_FIELDS} }
+            ${PAGE_INFO_FIELDS}
+          }
+        }`,
+        variables: { after },
+      });
+      return data.projects;
     });
-    return data.projects.nodes.flatMap((value) => {
-      if (!isRecord(value)) return [];
+    const projects: LinearProjectSnapshot[] = [];
+    for (const value of projectNodes) {
+      if (!isRecord(value)) continue;
       const id = stringValue(value.id);
       const name = stringValue(value.name);
       const organizationId = nestedId(value.organization);
-      if (!id || !name || !this.isInstalledOrganization(organizationId)) return [];
-      const teams =
-        isRecord(value.teams) && Array.isArray(value.teams.nodes) ? value.teams.nodes : [];
-      return [
-        {
-          id,
-          name,
-          organizationId,
-          state: typeof value.state === 'string' ? value.state : null,
-          teamIds: teams.flatMap((team) => {
-            if (!isRecord(team) || team.visibility !== 'public') return [];
-            const teamId = stringValue(team.id);
-            const teamOrganizationId = nestedId(team.organization);
-            return teamId && this.isInstalledOrganization(teamOrganizationId) ? [teamId] : [];
-          }),
-        },
-      ];
-    });
+      if (!id || !name || !this.isInstalledOrganization(organizationId)) continue;
+      const teamNodes = isRecord(value.teams)
+        ? await collectConnectionNodes(async (after) => {
+            const data = await this.requestData<{ project: { teams?: unknown } | null }>({
+              query: `query ListProjectTeams($projectId: String!, $after: String) {
+                  project(id: $projectId) {
+                    teams(first: ${CATALOG_PAGE_SIZE}, after: $after) {
+                      nodes { id visibility organization { id } }
+                      ${PAGE_INFO_FIELDS}
+                    }
+                  }
+                }`,
+              variables: { after, projectId: id },
+            });
+            return data.project?.teams;
+          }, value.teams)
+        : [];
+      projects.push({
+        id,
+        name,
+        organizationId,
+        state: typeof value.state === 'string' ? value.state : null,
+        teamIds: teamNodes.flatMap((team) => {
+          if (!isRecord(team) || team.visibility !== 'public') return [];
+          const teamId = stringValue(team.id);
+          const teamOrganizationId = nestedId(team.organization);
+          return teamId && this.isInstalledOrganization(teamOrganizationId) ? [teamId] : [];
+        }),
+      });
+    }
+    return projects;
   }
 
   async listTeams(): Promise<LinearTeamSnapshot[]> {
-    const data = await this.requestData<{ teams: { nodes: unknown[] } }>({
-      query: `query ListTeams { teams { nodes { ${TEAM_FIELDS} } } }`,
+    const teamNodes = await collectConnectionNodes(async (after) => {
+      const data = await this.requestData<{ teams: unknown }>({
+        query: `query ListTeams($after: String) {
+          teams(first: ${CATALOG_PAGE_SIZE}, after: $after) {
+            nodes { ${TEAM_FIELDS} }
+            ${PAGE_INFO_FIELDS}
+          }
+        }`,
+        variables: { after },
+      });
+      return data.teams;
     });
-    return data.teams.nodes.flatMap((value) => {
-      if (!isRecord(value)) return [];
+    const teams: LinearTeamSnapshot[] = [];
+    for (const value of teamNodes) {
+      if (!isRecord(value)) continue;
       const id = stringValue(value.id);
       const key = stringValue(value.key);
       const name = stringValue(value.name);
@@ -361,49 +443,70 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
         !this.isInstalledOrganization(organizationId) ||
         value.visibility !== 'public'
       )
-        return [];
-      const states =
-        isRecord(value.states) && Array.isArray(value.states.nodes) ? value.states.nodes : [];
-      return [
-        {
-          id,
-          key,
-          name,
-          organizationId,
-          visibility: typeof value.visibility === 'string' ? value.visibility : null,
-          workflowStates: states.flatMap((state) => {
-            if (!isRecord(state)) return [];
-            const stateId = stringValue(state.id);
-            const stateName = stringValue(state.name);
-            if (!stateId || !stateName) return [];
-            return [
-              {
-                id: stateId,
-                name: stateName,
-                position: typeof state.position === 'number' ? state.position : null,
-                teamId: id,
-                type: stringValue(state.type),
-              },
-            ];
-          }),
-        },
-      ];
-    });
+        continue;
+      const stateNodes = isRecord(value.states)
+        ? await collectConnectionNodes(async (after) => {
+            const data = await this.requestData<{ team: { states?: unknown } | null }>({
+              query: `query ListTeamStates($teamId: String!, $after: String) {
+                  team(id: $teamId) {
+                    states(first: ${CATALOG_PAGE_SIZE}, after: $after) {
+                      nodes { id name type position }
+                      ${PAGE_INFO_FIELDS}
+                    }
+                  }
+                }`,
+              variables: { after, teamId: id },
+            });
+            return data.team?.states;
+          }, value.states)
+        : [];
+      teams.push({
+        id,
+        key,
+        name,
+        organizationId,
+        visibility: typeof value.visibility === 'string' ? value.visibility : null,
+        workflowStates: stateNodes.flatMap((state) => {
+          if (!isRecord(state)) return [];
+          const stateId = stringValue(state.id);
+          const stateName = stringValue(state.name);
+          if (!stateId || !stateName) return [];
+          return [
+            {
+              id: stateId,
+              name: stateName,
+              position: typeof state.position === 'number' ? state.position : null,
+              teamId: id,
+              type: stringValue(state.type),
+            },
+          ];
+        }),
+      });
+    }
+    return teams;
   }
 
   async listMembers(): Promise<LinearMemberSnapshot[]> {
-    const data = await this.requestData<{
-      organization: { id?: unknown; users?: { nodes: unknown[] } } | null;
-    }>({
-      query: `query ListOrganizationMembers {
-        organization {
-          id
-          users(first: 250) { nodes { id name } }
-        }
-      }`,
+    let organizationId: string | null = null;
+    const nodes = await collectConnectionNodes(async (after) => {
+      const data = await this.requestData<{
+        organization: { id?: unknown; users?: unknown } | null;
+      }>({
+        query: `query ListOrganizationMembers($after: String) {
+          organization {
+            id
+            users(first: ${MEMBER_PAGE_SIZE}, after: $after) {
+              nodes { id name }
+              ${PAGE_INFO_FIELDS}
+            }
+          }
+        }`,
+        variables: { after },
+      });
+      organizationId ??= stringValue(data.organization?.id);
+      return data.organization?.users;
     });
-    if (!this.isInstalledOrganization(stringValue(data.organization?.id))) return [];
-    const nodes = data.organization?.users?.nodes ?? [];
+    if (!this.isInstalledOrganization(organizationId)) return [];
     return nodes.flatMap((value) => {
       if (!isRecord(value)) return [];
       const id = stringValue(value.id);

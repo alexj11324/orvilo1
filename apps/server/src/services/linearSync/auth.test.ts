@@ -22,6 +22,12 @@ vi.mock('./oauth', () => ({
   LinearOAuthError: class LinearOAuthError extends Error {
     status?: number;
     errorCode?: string;
+
+    constructor(message: string, options: { errorCode?: string; status?: number } = {}) {
+      super(message);
+      this.status = options.status;
+      this.errorCode = options.errorCode;
+    }
   },
   getLinearOAuthConfig: () => ({ clientId: 'client-1', clientSecret: 'secret-1' }),
   normalizeLinearScopes: (scope: unknown, fallback: string[]) =>
@@ -157,6 +163,75 @@ describe('LinearInstallationAuth', () => {
     expect(model.persistTokenRefresh).toHaveBeenCalledWith(
       expect.objectContaining({ expectedTokenVersion: 3, refreshFence: 9 }),
     );
+  });
+
+  it('does not revoke the user grant for a refresh 401 invalid_client response', async () => {
+    model.findInstallationForAuth.mockResolvedValue(expiredInstallation);
+    model.claimTokenRefresh.mockResolvedValue({ refreshFence: 8, tokenVersion: 3 });
+    refresh.mockRejectedValue(
+      new (await import('./oauth')).LinearOAuthError('client rejected', {
+        errorCode: 'invalid_client',
+        status: 401,
+      }),
+    );
+
+    const auth = new LinearInstallationAuth('db' as never, 'workspace-1', 'installation-1', {
+      gateKeeper,
+      now: () => 100_000,
+      refresh,
+    });
+
+    await expect(auth.getAccessToken()).rejects.toThrow('client rejected');
+    expect(model.markInstallationUnavailable).toHaveBeenCalledWith('installation-1', {
+      message: 'client rejected',
+      reason: 'refresh_client_rejected',
+      status: 'error',
+    });
+  });
+
+  it('revokes only when Linear explicitly reports invalid_grant', async () => {
+    model.findInstallationForAuth.mockResolvedValue(expiredInstallation);
+    model.claimTokenRefresh.mockResolvedValue({ refreshFence: 8, tokenVersion: 3 });
+    refresh.mockRejectedValue(
+      new (await import('./oauth')).LinearOAuthError('grant revoked', {
+        errorCode: 'invalid_grant',
+        status: 400,
+      }),
+    );
+
+    const auth = new LinearInstallationAuth('db' as never, 'workspace-1', 'installation-1', {
+      gateKeeper,
+      now: () => 100_000,
+      refresh,
+    });
+
+    await expect(auth.getAccessToken()).rejects.toThrow('grant revoked');
+    expect(model.markInstallationUnavailable).toHaveBeenCalledWith('installation-1', {
+      message: 'grant revoked',
+      reason: 'refresh_token_revoked',
+      status: 'revoked',
+    });
+  });
+
+  it('marks a refresh 403 as an installation error without revoking the grant', async () => {
+    model.findInstallationForAuth.mockResolvedValue(expiredInstallation);
+    model.claimTokenRefresh.mockResolvedValue({ refreshFence: 8, tokenVersion: 3 });
+    refresh.mockRejectedValue(
+      new (await import('./oauth')).LinearOAuthError('forbidden', { status: 403 }),
+    );
+
+    const auth = new LinearInstallationAuth('db' as never, 'workspace-1', 'installation-1', {
+      gateKeeper,
+      now: () => 100_000,
+      refresh,
+    });
+
+    await expect(auth.getAccessToken()).rejects.toThrow('forbidden');
+    expect(model.markInstallationUnavailable).toHaveBeenCalledWith('installation-1', {
+      message: 'forbidden',
+      reason: 'refresh_permission_denied',
+      status: 'error',
+    });
   });
 
   it('stops provider authentication for a revoked installation', async () => {

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET } from './route';
 
 const mocks = vi.hoisted(() => ({
+  canManageInstallation: vi.fn(),
   consume: vi.fn(),
   exchange: vi.fn(),
   validate: vi.fn(),
@@ -22,6 +23,9 @@ vi.mock('@/server/modules/KeyVaultsEncrypt', () => ({
 vi.mock('@/server/services/linearSync/oauthState', () => ({
   consumeLinearOAuthState: mocks.consume,
 }));
+vi.mock('@/server/services/workspacePermission', () => ({
+  hasWorkspaceScopedPermission: mocks.canManageInstallation,
+}));
 vi.mock('@/server/services/linearSync/oauth', () => ({
   exchangeLinearAuthorizationCode: mocks.exchange,
   getLinearOAuthConfig: vi.fn(() => ({ clientId: 'client-1', scopes: ['read', 'write'] })),
@@ -37,6 +41,7 @@ vi.mock('@/database/models/linearSync', () => ({
 describe('Linear OAuth callback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.canManageInstallation.mockResolvedValue(true);
     mocks.consume.mockResolvedValue({
       actor: 'app',
       clientId: 'client-1',
@@ -85,5 +90,38 @@ describe('Linear OAuth callback', () => {
         refreshTokenCiphertext: 'cipher:refresh-secret',
       }),
     );
+  });
+
+  it('rechecks live workspace settings permission before exchanging the code', async () => {
+    mocks.canManageInstallation.mockResolvedValue(false);
+
+    const response = await GET(
+      new NextRequest('https://orvilo.example/oauth/linear/callback?code=code-1&state=state-1'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('workspace_access_denied');
+    expect(mocks.canManageInstallation).toHaveBeenCalledWith({
+      action: 'WORKSPACE_SETTINGS_UPDATE',
+      db: {},
+      scopes: ['ALL'],
+      userId: 'user-1',
+      workspaceId: 'workspace-1',
+    });
+    expect(mocks.exchange).not.toHaveBeenCalled();
+    expect(mocks.upsert).not.toHaveBeenCalled();
+  });
+
+  it('rechecks permission again before persisting a completed exchange', async () => {
+    mocks.canManageInstallation.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+    const response = await GET(
+      new NextRequest('https://orvilo.example/oauth/linear/callback?code=code-1&state=state-1'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('workspace_access_denied');
+    expect(mocks.exchange).toHaveBeenCalledOnce();
+    expect(mocks.upsert).not.toHaveBeenCalled();
   });
 });

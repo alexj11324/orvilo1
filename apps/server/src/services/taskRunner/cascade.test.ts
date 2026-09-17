@@ -18,6 +18,7 @@ const candidate = {
   identifier: 'T-4',
   status: 'backlog',
   createdByUserId: 'owner',
+  visibility: 'public',
 } as TaskItem;
 
 describe('prerequisite completion cascade', () => {
@@ -55,5 +56,48 @@ describe('prerequisite completion cascade', () => {
     const runner = new TaskRunnerService({} as never, 'other-member', 'workspace');
     expect((await runner.cascadeOnCompletionMany(['public-upstream'])).started).toEqual(['T-4']);
     expect(identities).toEqual(['owner']);
+  });
+});
+
+describe('private dependency dispatch', () => {
+  it.each(['started', 'paused', 'failed'] as const)(
+    'does not expose %s private tasks to the completing member',
+    async (outcome) => {
+      const hidden = {
+        ...candidate,
+        visibility: 'private' as const,
+        parentTaskId: outcome === 'paused' ? 'parent' : null,
+      };
+      vi.spyOn(TaskModel.prototype, 'getUnlockedTasksForMany').mockResolvedValue([hidden]);
+      vi.spyOn(TaskModel.prototype, 'findById').mockResolvedValue({ id: 'parent' } as TaskItem);
+      vi.spyOn(TaskModel.prototype, 'shouldPauseBeforeStart').mockReturnValue(outcome === 'paused');
+      const pause = vi.spyOn(TaskModel.prototype, 'updateStatusIfCurrent').mockResolvedValue(null);
+      const run = vi.spyOn(TaskRunnerService.prototype, 'runTask');
+      if (outcome === 'failed') run.mockRejectedValue(new Error('private execution details'));
+      else run.mockResolvedValue({ success: true } as never);
+      const result = await new TaskRunnerService(
+        {} as never,
+        'other-member',
+        'workspace',
+      ).cascadeOnCompletionMany(['public-upstream']);
+      expect(result).toEqual({ failed: [], paused: [], started: [] });
+      if (outcome === 'paused') expect(run).not.toHaveBeenCalled();
+      else expect(run).toHaveBeenCalledWith({ taskId: hidden.id });
+      if (outcome !== 'started') expect(pause).toHaveBeenCalled();
+    },
+  );
+
+  it('still reports private dispatch to the dependent owner', async () => {
+    vi.spyOn(TaskModel.prototype, 'getUnlockedTasksForMany').mockResolvedValue([
+      { ...candidate, visibility: 'private' },
+    ]);
+    vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({ success: true } as never);
+    expect(
+      (
+        await new TaskRunnerService({} as never, 'owner', 'workspace').cascadeOnCompletionMany([
+          'public-upstream',
+        ])
+      ).started,
+    ).toEqual(['T-4']);
   });
 });

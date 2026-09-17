@@ -670,19 +670,22 @@ export class TaskRunnerService {
     const result: CascadeResult = { failed: [], paused: [], started: [] };
 
     for (const task of unlocked) {
+      // Internal owner-scoped dispatch may see private dependents. The caller's
+      // response must not reveal their identifiers or execution errors.
+      const canReport = task.visibility === 'public' || task.createdByUserId === this.userId;
       const runner =
         task.createdByUserId && task.createdByUserId !== this.userId
           ? new TaskRunnerService(this.db, task.createdByUserId, this.workspaceId)
           : this;
       if (await runner.shouldHoldForCheckpoint(task)) {
         await runner.taskModel.updateStatusIfCurrent(task.id, 'backlog', 'paused');
-        result.paused.push(task.identifier);
+        if (canReport) result.paused.push(task.identifier);
         continue;
       }
 
       try {
         await runner.runTask({ taskId: task.id });
-        result.started.push(task.identifier);
+        if (canReport) result.started.push(task.identifier);
       } catch (error) {
         // Readiness can change after discovery. No execution happened: leave
         // backlog intact so the next upstream completion can discover it again.
@@ -702,7 +705,7 @@ export class TaskRunnerService {
         } catch {
           /* ignore — surfaced via failed list */
         }
-        result.failed.push({ error: message, identifier: task.identifier });
+        if (canReport) result.failed.push({ error: message, identifier: task.identifier });
       }
     }
 

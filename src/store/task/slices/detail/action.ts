@@ -9,7 +9,7 @@ import type {
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 
-import { mutate, useClientDataSWR } from '@/libs/swr';
+import { mutate, useClientPollingSWR } from '@/libs/swr';
 import { taskKeys } from '@/libs/swr/keys';
 import { taskService } from '@/services/task';
 import { workService } from '@/services/work';
@@ -610,10 +610,13 @@ export class TaskDetailSliceActionImpl {
       );
     });
 
-    return useClientDataSWR(
+    return useClientPollingSWR(
       taskId ? taskKeys.detail(taskId) : null,
       async ([, id]: [string, string]) => this.fetchTaskDetail(id),
-      { refreshInterval: shouldPoll ? TASK_DETAIL_POLL_INTERVAL : taskId ? 15_000 : 0 },
+      {
+        dedupingInterval: 1_000,
+        refreshInterval: shouldPoll ? TASK_DETAIL_POLL_INTERVAL : taskId ? 15_000 : 0,
+      },
     );
   };
 

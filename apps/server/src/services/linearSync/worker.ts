@@ -452,6 +452,7 @@ export class LinearSyncWorker {
     const installation = await model.findInstallationById(row.installationId);
     if (!installation) throw new Error('Linear installation not found');
     if (installation.status !== 'active') throw new Error('Linear installation is unavailable');
+    const existingLink = await model.findIssueLinkByExternalId(issue.id);
     const integrationTasks = new LinearIntegrationTaskService(
       db,
       this.workspaceId,
@@ -463,6 +464,14 @@ export class LinearSyncWorker {
       issue,
     });
     if (!inScope) {
+      if (existingLink) {
+        await model.updateIssueLink(existingLink.id, {
+          lastInboundDeliveryId: row.id,
+          remoteSnapshot: issue,
+          remoteUpdatedAt: issue.updatedAt ? new Date(issue.updatedAt) : null,
+          syncState: 'removed',
+        });
+      }
       if (context.phase) {
         await model.recordImportReceipt({
           bindingId: binding.id,
@@ -474,7 +483,27 @@ export class LinearSyncWorker {
       return 'processed';
     }
 
-    const existingLink = await model.findIssueLinkByExternalId(issue.id);
+    if (issue.archivedAt) {
+      if (existingLink) {
+        await model.updateIssueLink(existingLink.id, {
+          conflict: null,
+          lastInboundDeliveryId: row.id,
+          remoteSnapshot: issue,
+          remoteUpdatedAt: issue.updatedAt ? new Date(issue.updatedAt) : null,
+          syncState: 'removed',
+        });
+      }
+      if (context.phase) {
+        await model.recordImportReceipt({
+          bindingId: binding.id,
+          linearIssueId: issue.id,
+          phase: context.phase,
+          status: 'processed',
+        });
+      }
+      return 'processed';
+    }
+
     if (!existingLink) {
       const task = await integrationTasks.createPublicTask({
         binding,

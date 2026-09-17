@@ -8,8 +8,8 @@ import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import type { TaskTopicItem } from '@/database/schemas/task';
 import { VerifyRunModel } from '@/database/models/verifyRun';
+import type { TaskTopicItem } from '@/database/schemas/task';
 import type { LobeChatDatabase } from '@/database/type';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import {
@@ -124,16 +124,14 @@ export class TaskIntegrationService {
 
     const initialTopic = await this.taskTopicModel.findByTopicId(taskTopicId);
     const initialRecord = initialTopic?.integration;
-    if (
-      !initialRecord ||
-      !initialTopic?.topicId ||
-      (initialRecord.role === 'task' &&
-        initialRecord.state !== 'pending' &&
-        initialRecord.state !== 'conflict')
-    ) {
-      return 'settled';
-    }
-    if (initialRecord.role === 'integrate' && initialRecord.state !== 'merging') {
+    const initialStateIsProcessable =
+      !!initialRecord &&
+      (initialRecord.state === 'publish_failed' ||
+        initialRecord.state === 'verification_pending' ||
+        initialRecord.state === 'conflict' ||
+        initialRecord.state === 'merging' ||
+        (initialRecord.role === 'task' && initialRecord.state === 'pending'));
+    if (!initialTopic?.topicId || !initialStateIsProcessable) {
       return 'settled';
     }
 

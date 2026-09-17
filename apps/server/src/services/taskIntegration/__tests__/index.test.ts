@@ -439,6 +439,7 @@ describe('TaskIntegrationService', () => {
 
   it('resumes a confirmed Verify plan after the initial clean merge publishes', async () => {
     const record = seedRecord();
+    mockTaskModel.findById.mockResolvedValue(baseTask({ instruction: 'ship it' }));
     mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
     mockTaskTopicModel.findByTaskId.mockResolvedValue([
       {

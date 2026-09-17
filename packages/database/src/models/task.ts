@@ -364,7 +364,7 @@ export class TaskModel {
    * (or personal owner). This serializes cycle checks and closes add-vs-start
    * races. Acquire it BEFORE task row locks to keep lock ordering consistent.
    */
-  private async lockDependencyGraph(): Promise<void> {
+  async lockDependencyGraph(): Promise<void> {
     const scope = this.workspaceId ? `workspace:${this.workspaceId}` : `user:${this.userId}`;
     await this.db.execute(
       sql`select pg_advisory_xact_lock(hashtext('task-prerequisites'), hashtext(${scope}))`,
@@ -2206,6 +2206,24 @@ export class TaskModel {
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) => model.recoverInterruptedRun(input));
     }
+    // Lock and validate task generation before mutating its topic. A successor
+    // may reuse the same topic between interruption and compensation; checking
+    // the topic first could cancel that successor before the reservation fence
+    // notices it. Lock order is graph -> task -> topic everywhere.
+    const [taskState] = await this.db
+      .select({
+        currentTopicId: tasks.currentTopicId,
+        runReservationId: tasks.runReservationId,
+        status: tasks.status,
+      })
+      .from(tasks)
+      .where(and(eq(tasks.id, input.id), this.ownership()))
+      .for('update');
+    if (!taskState) return false;
+    const parksTask = shouldParkInterruptedTask(taskState, input);
+    if (input.currentTopicId !== null && !parksTask) return false;
+    if (input.currentTopicId === null && taskState.currentTopicId === input.topicId) return false;
+
     const [interrupted] = await this.db
       .select({ id: taskTopics.id })
       .from(taskTopics)
@@ -2226,19 +2244,7 @@ export class TaskModel {
       input.id,
       input.topicId,
     );
-    // A stopped historical/non-current topic must never inherit the task's
-    // current reservation. Only the exact current topic generation may park
-    // task-level state; otherwise recovery is topic-local.
-    const [taskState] = await this.db
-      .select({
-        currentTopicId: tasks.currentTopicId,
-        runReservationId: tasks.runReservationId,
-        status: tasks.status,
-      })
-      .from(tasks)
-      .where(and(eq(tasks.id, input.id), this.ownership()))
-      .for('update');
-    if (!taskState || !shouldParkInterruptedTask(taskState, input)) return false;
+    if (!parksTask) return false;
     const recovered = await this.db
       .update(tasks)
       .set({

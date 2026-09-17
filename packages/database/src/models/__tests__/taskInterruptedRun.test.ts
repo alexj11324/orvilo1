@@ -116,8 +116,22 @@ describe('confirmed interruption compensation', () => {
       status: 'running',
     });
     expect(
-      (await topicModel.findByTaskId(input.id)).find((topic) => topic.topicId === 'topic-old')?.status,
+      (await topicModel.findByTaskId(input.id)).find((topic) => topic.topicId === 'topic-old')
+        ?.status,
     ).toBe('canceled');
+  });
+
+  it('does not cancel a successor that has reused the interrupted topic', async () => {
+    const input = await seed();
+    await db.update(tasks).set({ runReservationId: 'run-2' }).where(eq(tasks.id, input.id));
+    await db.update(taskTopics).set({ status: 'running' }).where(eq(taskTopics.taskId, input.id));
+    expect(await model.recoverInterruptedRun(input)).toBe(false);
+    expect(await model.findById(input.id)).toMatchObject({
+      currentTopicId: 'topic-1',
+      runReservationId: 'run-2',
+      status: 'running',
+    });
+    expect((await topicModel.findByTaskId(input.id))[0].status).toBe('running');
   });
 
   it('does not alter another owner task or topic', async () => {

@@ -894,6 +894,10 @@ export class TaskService {
         const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
         const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
 
+        // Establish the graph lock before touching topic rows. Recovery also
+        // starts with this advisory lock, so concurrent cascade/recovery paths
+        // cannot form a topic-row <-> graph-lock cycle.
+        await taskModel.lockDependencyGraph();
         // Cancel by the frozen id set rather than the pre-read topic list, so a
         // topic that started between the snapshot and this transaction is still
         // closed together with the status update.

@@ -160,6 +160,7 @@ describe('TaskService', () => {
   const mockTaskModel = {
     areAllDependenciesCompleted: vi.fn().mockResolvedValue(true),
     recoverInterruptedRun: vi.fn().mockResolvedValue(true),
+    lockDependencyGraph: vi.fn().mockResolvedValue(undefined),
     findBlockedTaskIds: vi.fn().mockResolvedValue([]),
     addActivities: vi.fn(),
     addActivity: vi.fn(),
@@ -1612,6 +1613,29 @@ describe('TaskService', () => {
         expect(mockTaskTopicModel.cancelIfRunning).not.toHaveBeenCalled();
       },
     );
+  });
+
+  describe('dependency lock ordering', () => {
+    it('acquires the graph lock before touching running topic rows in a cascade', async () => {
+      const order: string[] = [];
+      mockTaskModel.resolve.mockResolvedValue({
+        id: 'task-1',
+        identifier: 'T-1',
+        status: 'running',
+      });
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.lockDependencyGraph.mockImplementation(async () => {
+        order.push('graph');
+      });
+      mockTaskTopicModel.cancelRunningByTaskIds.mockImplementation(async () => {
+        order.push('topics');
+        return [];
+      });
+      mockTaskModel.updateStatusForIds.mockResolvedValue([{ id: 'task-1', status: 'paused' }]);
+      db.transaction = vi.fn(async (fn: any) => fn(db)) as any;
+      await new TaskService(db, userId).updateStatusCascade({ id: 'T-1', status: 'paused' });
+      expect(order.slice(0, 2)).toEqual(['graph', 'topics']);
+    });
   });
 
   describe('interrupted state-change recovery', () => {

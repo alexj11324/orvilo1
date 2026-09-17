@@ -26,6 +26,7 @@ vi.mock('@/database/models/linearSync', () => ({
     settleOutbox = mocks.settleOutbox;
     updateOutbox = mocks.updateOutbox;
   },
+  linearBindingWriteEnabled: vi.fn(() => true),
   linearSyncRetryDelayMs: vi.fn(() => 1_000),
 }));
 vi.mock('@/database/models/task', () => ({ TaskModel: class {} }));

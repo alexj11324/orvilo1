@@ -204,11 +204,11 @@ export interface TaskTopicIntegration {
     | 'remote_verification_unavailable'
     | 'workspace_unavailable'
     | null;
+  /** Pull request number bound to this delivery, when known. */
+  prNumber?: number;
   /** Short lease protecting completion/retry handling from duplicate delivery. */
   processingStartedAt?: string | null;
   processingToken?: string | null;
-  /** Pull request number bound to this delivery, when known. */
-  prNumber?: number;
   /** URL of the pull request opened for {@link branch}, when known. */
   prUrl?: string;
   /** True once the merge result was pushed to `origin/<baseBranch>`. */

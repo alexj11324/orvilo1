@@ -936,13 +936,13 @@ export class DeviceGateway {
     userId: string;
     workspaceId?: string;
   }): Promise<DeviceGitSyncResult> {
-      const {
-        userId,
-        deviceId,
-        expectedSha,
-        path,
-        remoteBranch,
-        sourceRef,
+    const {
+      userId,
+      deviceId,
+      expectedSha,
+      path,
+      remoteBranch,
+      sourceRef,
       timeout = 65_000,
       workspaceId,
     } = params;

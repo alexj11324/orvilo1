@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { DEFAULT_BRIEF_ACTIONS, type TaskItem } from '@orvilo/types';
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { TaskLifecycleService } from './index';
 
@@ -272,12 +272,9 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      expect(updateStatusIfCurrent).toHaveBeenCalledWith(
-        'task-1',
-        'scheduled',
-        'scheduled',
-        { error: null },
-      );
+      expect(updateStatusIfCurrent).toHaveBeenCalledWith('task-1', 'scheduled', 'scheduled', {
+        error: null,
+      });
     });
 
     it.each(['max_steps', 'cost_limit'])('%s is a successful task completion', async (reason) => {

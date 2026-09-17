@@ -203,10 +203,10 @@ export const driveTaskFromVerify = async (
       }
     };
 
-    const taskTopic = await new TaskTopicModel(db, userId, workspaceId).findByOperationId(
+    const operationTaskTopic = await new TaskTopicModel(db, userId, workspaceId).findByOperationId(
       taskOperation.id,
     );
-    const integration = taskTopic?.integration;
+    const integration = operationTaskTopic?.integration;
     if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
       log(
         'verify settled for op %s but workspace integration is %s; task remains open',

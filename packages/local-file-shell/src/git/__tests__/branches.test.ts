@@ -506,6 +506,7 @@ describe('finalizeGitMerge', () => {
     git(repo, 'checkout', '-b', 'task/T-5');
     await writeFile(path.join(repo, 'a.txt'), 'task side\n');
     git(repo, 'commit', '-am', 'task side');
+    const taskHead = git(repo, 'rev-parse', 'HEAD');
     git(repo, 'checkout', 'main');
     await writeFile(path.join(repo, 'a.txt'), 'base side\n');
     git(repo, 'commit', '-am', 'base side');
@@ -519,7 +520,7 @@ describe('finalizeGitMerge', () => {
     await writeFile(path.join(repo, 'a.txt'), 'resolved\n');
     git(repo, 'add', 'a.txt');
 
-    const result = await finalizeGitMerge({ expectedHead: 'task/T-5', path: repo });
+    const result = await finalizeGitMerge({ expectedHead: taskHead, path: repo });
     expect(result.state).toBe('integrated');
     expect(result.sha).toBe(git(repo, 'rev-parse', 'HEAD'));
     expect(await readFile(path.join(repo, 'a.txt'), 'utf8')).toBe('resolved\n');

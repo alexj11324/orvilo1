@@ -12,7 +12,6 @@ import type { LobeChatDatabase } from '@/database/type';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import {
   findBranchPr,
-  getBranchHead,
   getRemoteBranchSha,
   isBranchMergedInto,
   parseGithubRepo,
@@ -645,7 +644,7 @@ export class TaskIntegrationService {
     if (check.error) {
       patch.lastError = check.error;
       patch.lastErrorCode = 'remote_verification_unavailable';
-      patch.state = 'verification_pending';
+      patch.state = check.fatal ? 'blocked' : 'verification_pending';
     }
     if (Object.keys(patch).length > 0) {
       await this.updateIntegrationOrThrow(task.id, topicId, patch);
@@ -658,7 +657,7 @@ export class TaskIntegrationService {
       await this.updateIntegrationOrThrow(task.id, topicId, {
         ...patch,
       });
-      return 'hold';
+      return check.fatal ? 'blocked' : 'hold';
     }
     return this.dispatchCorrective(
       task,
@@ -685,7 +684,7 @@ export class TaskIntegrationService {
     if (check.error) {
       patch.lastError = check.error;
       patch.lastErrorCode = 'remote_verification_unavailable';
-      patch.state = 'verification_pending';
+      patch.state = check.fatal ? 'blocked' : 'verification_pending';
     }
 
     if (check.merged) {
@@ -694,24 +693,14 @@ export class TaskIntegrationService {
     }
 
     if (check.error) {
-      await this.taskTopicModel.updateIntegration(task.id, topicId, patch);
-      return 'hold';
-    }
-
-    if (check.error) {
-      const lastError = check.error;
-      await this.updateIntegrationOrThrow(task.id, topicId, {
-        ...patch,
-        lastError,
-        state: 'blocked',
-      });
-      if (record.runTopicId) {
+      await this.updateIntegrationOrThrow(task.id, topicId, patch);
+      if (check.fatal && record.runTopicId) {
         await this.updateIntegrationOrThrow(task.id, record.runTopicId, {
-          lastError,
+          lastError: check.error,
           state: 'blocked',
         });
       }
-      return 'blocked';
+      return check.fatal ? 'blocked' : 'hold';
     }
 
     if (record.attempts >= MAX_CORRECTIVE_ATTEMPTS) {
@@ -750,6 +739,7 @@ export class TaskIntegrationService {
     error?: string;
     expectedBaseSha?: string;
     expectedHeadSha?: string;
+    fatal?: boolean;
     merged: boolean;
     prNumber?: number;
     prUrl?: string;
@@ -798,6 +788,7 @@ export class TaskIntegrationService {
       return {
         ...identity,
         error: `Task branch advanced from accepted commit ${record.expectedHeadSha} to ${currentHeadSha}`,
+        fatal: true,
         merged: false,
       };
     }
@@ -805,6 +796,7 @@ export class TaskIntegrationService {
       return {
         ...identity,
         error: `Task delivery is bound to PR #${record.prNumber}, not PR #${pr.number}`,
+        fatal: true,
         merged: false,
       };
     }
@@ -813,6 +805,7 @@ export class TaskIntegrationService {
         return {
           ...identity,
           error: `Merged PR #${pr.number} contains ${pr.headSha}, not accepted commit ${expectedHeadSha}`,
+          fatal: true,
           merged: false,
         };
       }
@@ -899,7 +892,7 @@ export class TaskIntegrationService {
     });
 
     if (finalized.state === 'integrated' && finalized.validatedExpectedHead) {
-      return this.publishAndCleanup(task.id, record, finalized.sha);
+      return this.landMerge(task, topicId, record, finalized.sha);
     }
 
     if (finalized.state === 'integrated') {
@@ -1023,7 +1016,8 @@ export class TaskIntegrationService {
         workspaceId: this.workspaceId,
       });
       if (!pushed.success || pushed.pushedSourceRef !== sha) {
-        const reason = pushed.success
+        const immutableSourceUnconfirmed = pushed.success && pushed.pushedSourceRef !== sha;
+        const reason = immutableSourceUnconfirmed
           ? 'device client did not confirm the immutable source commit'
           : (pushed.error ?? 'unknown');
         const lastError = `Merged locally; push to origin/${record.baseBranch} failed: ${reason}`;
@@ -1036,10 +1030,11 @@ export class TaskIntegrationService {
         await updateRelated({
           integratedSha: sha,
           lastError,
-          lastErrorCode: 'publish_failed',
+          lastErrorCode: immutableSourceUnconfirmed ? 'workspace_unavailable' : 'publish_failed',
           pushedToRemote: false,
-          state: 'publish_failed',
+          state: immutableSourceUnconfirmed ? 'blocked' : 'publish_failed',
         });
+        if (immutableSourceUnconfirmed) return 'blocked';
         await this.cleanupTaskRunWorktrees(taskId, record.branch);
         return 'hold';
       }
@@ -1054,7 +1049,6 @@ export class TaskIntegrationService {
       pushedToRemote,
       state: 'integrated',
     });
-    await this.cleanupTaskWorktrees(taskId);
     return 'settled';
   }
 

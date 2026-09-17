@@ -48,12 +48,12 @@ export interface RunTaskParams {
   integrationSeed?: TaskTopicIntegration;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
+  /** Parent delivery operation for internal corrective runs. */
+  parentOperationId?: string;
   /** Atomically transfer a completion lease into this continuation dispatch. */
   replaceReservationId?: string;
   /** Internal corrective runs stay bound to the original task Verify plan. */
   skipTaskVerification?: boolean;
-  /** Parent delivery operation for internal corrective runs. */
-  parentOperationId?: string;
   taskId: string;
   /**
    * What triggered this run. Defaults to `'manual'` — the ad-hoc "run now"

@@ -89,7 +89,10 @@ vi.mock('@/database/models/verifyRun', () => ({
 }));
 vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn(function () {
-    return { findByTopicId: topicFindByTopicId };
+    return {
+      findByOperationId: taskTopicFindByOperationId,
+      findByTopicId: topicFindByTopicId,
+    };
   }),
 }));
 vi.mock('@/database/models/agentOperation', () => ({
@@ -105,11 +108,6 @@ vi.mock('@/database/models/task', () => ({
       updateStatus: taskUpdateStatus,
       updateStatusIfReservation: taskUpdateStatusIfReservation,
     };
-  }),
-}));
-vi.mock('@/database/models/taskTopic', () => ({
-  TaskTopicModel: vi.fn(function () {
-    return { findByOperationId: taskTopicFindByOperationId };
   }),
 }));
 vi.mock('@/database/models/brief', () => ({

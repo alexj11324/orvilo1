@@ -2020,13 +2020,9 @@ export class TaskModel {
       .where(
         and(
           eq(tasks.status, 'running'),
-          options.createdByUserId
-            ? eq(tasks.createdByUserId, options.createdByUserId)
-            : undefined,
+          options.createdByUserId ? eq(tasks.createdByUserId, options.createdByUserId) : undefined,
           options.workspaceId ? eq(tasks.workspaceId, options.workspaceId) : undefined,
-          options.createdByUserId && !options.workspaceId
-            ? isNull(tasks.workspaceId)
-            : undefined,
+          options.createdByUserId && !options.workspaceId ? isNull(tasks.workspaceId) : undefined,
           isNotNull(tasks.lastHeartbeatAt),
           isNotNull(tasks.heartbeatTimeout),
           sql`${tasks.lastHeartbeatAt} < now() - make_interval(secs => ${tasks.heartbeatTimeout})`,

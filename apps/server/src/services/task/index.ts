@@ -321,7 +321,15 @@ export class TaskService {
 
   private interruptTaskOperation = async (service: AiAgentService, operationId: string) => {
     const result = await service.interruptTask({ operationId });
-    if (!result.success || result.deviceCancellationConfirmed === false) {
+    // `cancelState === 'unknown'` means the stop signal never provably landed —
+    // the remote writer may still be active. `requested` is allowed through:
+    // the signal was durably dispatched and the run's terminal callback
+    // resolves it.
+    const unconfirmed =
+      result.cancelState !== undefined
+        ? result.cancelState === 'unknown'
+        : !result.success || result.deviceCancellationConfirmed === false;
+    if (unconfirmed) {
       throw new TRPCError({
         code: 'CONFLICT',
         message:

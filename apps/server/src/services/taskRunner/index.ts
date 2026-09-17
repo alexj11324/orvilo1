@@ -23,6 +23,7 @@ import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
+import { AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
 import {
   type PreparedTaskDispatch,
@@ -30,7 +31,6 @@ import {
   TaskDispatchService,
   TaskDispatchWaitingError,
 } from '@/server/services/taskDispatch';
-import { AgentDelegationService } from '@/server/services/agentDelegation';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
@@ -794,11 +794,18 @@ export class TaskRunnerService {
             operationId: dispatchedOperationId,
             topicId: dispatchedTopicId,
           });
+          // Prefer the P20 cancel tri-state when present: only `confirmed`
+          // satisfies a physical-exit requirement; `unknown` (signal never
+          // provably landed) must preserve the worktree either way.
           orphanInterruptionConfirmed =
             interruption.success &&
-            (requiresPhysicalExitConfirmation
-              ? interruption.deviceCancellationConfirmed === true
-              : interruption.deviceCancellationConfirmed !== false);
+            (interruption.cancelState !== undefined
+              ? requiresPhysicalExitConfirmation
+                ? interruption.cancelState === 'confirmed'
+                : interruption.cancelState !== 'unknown'
+              : requiresPhysicalExitConfirmation
+                ? interruption.deviceCancellationConfirmed === true
+                : interruption.deviceCancellationConfirmed !== false);
           if (!orphanInterruptionConfirmed) {
             log(
               'runTask: orphaned operation %s did not confirm interruption; preserving worktree',

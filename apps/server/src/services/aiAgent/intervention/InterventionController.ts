@@ -20,6 +20,11 @@ import type { ThreadModel } from '@/database/models/thread';
 import type { TopicModel } from '@/database/models/topic';
 import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { deviceGateway } from '@/server/services/deviceGateway';
+import {
+  markRemoteCancelRequested,
+  readRemoteRunAdmission,
+  resolveRemoteCancel,
+} from '@/server/services/heterogeneousAgent/runAdmission';
 
 import { STOPPED_TOOL_CONTENT } from '../helpers/agentFactory';
 
@@ -74,6 +79,7 @@ export class InterventionController {
     threadId?: string;
     topicId?: string;
   }): Promise<{
+    cancelState: 'confirmed' | 'none' | 'requested' | 'unknown';
     deviceCancellationConfirmed?: boolean;
     operationId?: string;
     success: boolean;
@@ -100,20 +106,27 @@ export class InterventionController {
       throw new Error('Operation ID not found');
     }
 
-    // Not every cancellation entry point knows the topic (reconnect, task,
-    // bot/messenger stop). Recover it from the owner-scoped operation row so
-    // device cancellation is symmetric across every caller.
-    let durableOperation: Awaited<ReturnType<AgentOperationModel['findById']>>;
-    let resolvedTopicId = topicId;
-    if (!resolvedTopicId) {
-      durableOperation = await this.deps.agentOperationModel.findById(resolvedOperationId);
-      resolvedTopicId = durableOperation?.topicId ?? undefined;
-    }
+    // One owner-scoped read covers every downstream need: the topic fallback
+    // for callers that don't know it, the durable admission ledger (the pinned
+    // execution host + cancel tri-state), and the terminal-state check.
+    const durableOperation = await this.deps.agentOperationModel.findById(resolvedOperationId);
+    const resolvedTopicId = topicId ?? durableOperation?.topicId ?? undefined;
+    const admission = readRemoteRunAdmission(durableOperation?.metadata);
 
-    // 2. Cancel a device-hosted hetero process if applicable.
-    // Check topic.metadata.runningOperation for device + heteroType info seeded by execAgent.
-    // This runs regardless of whether interruptOperation succeeds — the remote process
-    // is independent of the local operation registry.
+    // 2. Resolve the device-hosted process target. Prefer the topic's
+    // runningOperation marker (heteroType tells us a device process exists);
+    // fall back to the durable admission record, which pins the exact device
+    // the run was admitted on — the marker may already be gone when an
+    // ambiguous run keeps executing after a reconnect.
+    let deviceTarget:
+      | {
+          deviceId: string;
+          deviceUserId?: string;
+          deviceWorkspaceId?: string;
+          taskId: string;
+        }
+      | undefined;
+
     if (resolvedTopicId) {
       const topic = await this.deps.topicModel.findById(resolvedTopicId);
       const runningOp = (topic?.metadata as any)?.runningOperation as
@@ -146,65 +159,116 @@ export class InterventionController {
           // CLI family — runningOperation keeps the declared 'orvilo' type.
           isBuiltinHeterogeneousType(targetOperation.heteroType))
       ) {
-        const taskId = targetOperation.operationId ?? resolvedOperationId;
+        deviceTarget = {
+          deviceId: targetOperation.deviceId,
+          deviceUserId: targetOperation.deviceUserId,
+          deviceWorkspaceId: targetOperation.deviceWorkspaceId,
+          taskId: targetOperation.operationId ?? resolvedOperationId,
+        };
+      }
+    }
+
+    if (
+      !deviceTarget &&
+      admission?.deviceId &&
+      admission.state !== 'offline' &&
+      admission.state !== 'rejected'
+    ) {
+      // The admission's idempotency key IS the device-side task id
+      // (idempotencyKey === operationId === taskId by construction).
+      deviceTarget = {
+        deviceId: admission.deviceId,
+        deviceUserId: admission.deviceUserId,
+        deviceWorkspaceId: admission.deviceWorkspaceId,
+        taskId: resolvedOperationId,
+      };
+    }
+
+    if (deviceTarget) {
+      log(
+        'interruptTask: cancelling device hetero process deviceId=%s taskId=%s',
+        deviceTarget.deviceId,
+        deviceTarget.taskId,
+      );
+
+      // Persist the cancel intent BEFORE the signal leaves the server — an
+      // ambiguous transport outcome must never look like "no cancel sent".
+      await markRemoteCancelRequested(this.deps.db, resolvedOperationId, 'interruptTask').catch(
+        (err) =>
+          log('interruptTask: cancel ledger write failed op=%s: %O', resolvedOperationId, err),
+      );
+
+      const cancelWorkspaceId =
+        deviceTarget.deviceWorkspaceId ??
+        (await this.deps.resolveDeviceWorkspaceId(deviceTarget.deviceId));
+      const cancelResult = await deviceGateway.executeToolCall(
+        {
+          deviceId: deviceTarget.deviceId,
+          userId: deviceTarget.deviceUserId ?? this.deps.userId,
+          workspaceId: cancelWorkspaceId,
+        },
+        {
+          apiName: 'cancelHeteroTask',
+          arguments: JSON.stringify({ signal: 'SIGINT', taskId: deviceTarget.taskId }),
+          identifier: 'cancelHeteroTask',
+        },
+        // The device first gives the wrapper/native CLI 2s to stop
+        // cooperatively, then escalates and drains its terminal callback.
+        10_000,
+      );
+
+      deviceCancellationConfirmed =
+        cancelResult.success && isRecord(cancelResult.state) && cancelResult.state.exited === true;
+
+      if (deviceCancellationConfirmed === true) {
+        await resolveRemoteCancel(
+          this.deps.db,
+          resolvedOperationId,
+          'confirmed',
+          'device confirmed process exit',
+        ).catch((err) =>
+          log('interruptTask: cancel confirm write failed op=%s: %O', resolvedOperationId, err),
+        );
+      }
+
+      if (!cancelResult.success || deviceCancellationConfirmed === false) {
         log(
-          'interruptTask: cancelling device hetero process heteroType=%s deviceId=%s taskId=%s',
-          targetOperation.heteroType,
-          targetOperation.deviceId,
-          taskId,
+          'interruptTask: device cancellation unconfirmed taskId=%s success=%s state=%O error=%s',
+          deviceTarget.taskId,
+          cancelResult.success,
+          cancelResult.state,
+          cancelResult.error,
         );
-        const cancelWorkspaceId =
-          targetOperation.deviceWorkspaceId ??
-          (await this.deps.resolveDeviceWorkspaceId(targetOperation.deviceId));
-        const cancelResult = await deviceGateway.executeToolCall(
-          {
-            deviceId: targetOperation.deviceId,
-            userId: targetOperation.deviceUserId ?? this.deps.userId,
-            workspaceId: cancelWorkspaceId,
-          },
-          {
-            apiName: 'cancelHeteroTask',
-            arguments: JSON.stringify({ signal: 'SIGINT', taskId }),
-            identifier: 'cancelHeteroTask',
-          },
-          // The device first gives the wrapper/native CLI 2s to stop
-          // cooperatively, then escalates and drains its terminal callback.
-          10_000,
+        await resolveRemoteCancel(
+          this.deps.db,
+          resolvedOperationId,
+          'unknown',
+          'cancel signal unconfirmed',
+        ).catch((err) =>
+          log('interruptTask: cancel unknown write failed op=%s: %O', resolvedOperationId, err),
         );
-
-        if (
-          isRemoteHeterogeneousType(targetOperation.heteroType) ||
-          isLocalHeterogeneousType(targetOperation.heteroType) ||
-          isBuiltinHeterogeneousType(targetOperation.heteroType)
-        ) {
-          deviceCancellationConfirmed =
-            cancelResult.success &&
-            isRecord(cancelResult.state) &&
-            cancelResult.state.exited === true;
-        }
-
-        if (!cancelResult.success || deviceCancellationConfirmed === false) {
-          log(
-            'interruptTask: device cancellation unconfirmed taskId=%s success=%s state=%O error=%s',
-            taskId,
-            cancelResult.success,
-            cancelResult.state,
-            cancelResult.error,
-          );
-          // Preserve the runtime and topic's device identity until the writer
-          // actually exits, so a retry can still address the same process.
-          return {
-            deviceCancellationConfirmed,
-            operationId: resolvedOperationId,
-            success: false,
-            threadId: thread?.id,
-          };
-        }
+        // Preserve the runtime and topic's device identity until the writer
+        // actually exits, so a retry can still address the same process.
+        return {
+          cancelState: 'unknown',
+          deviceCancellationConfirmed,
+          operationId: resolvedOperationId,
+          success: false,
+          threadId: thread?.id,
+        };
       }
     }
 
     // 3. Interrupt the runtime operation first. Only mark the thread cancelled
-    // after the runtime acknowledges the interrupt to avoid unlocking a live task.
+    // after the runtime acknowledges the interrupt to avoid unlocking a live
+    // task. For remote-admitted runs without a device target (cloud sandbox),
+    // this IS the cancel signal — persist the intent before dispatching it.
+    if (!deviceTarget) {
+      await markRemoteCancelRequested(this.deps.db, resolvedOperationId, 'interruptTask').catch(
+        (err) =>
+          log('interruptTask: cancel ledger write failed op=%s: %O', resolvedOperationId, err),
+      );
+    }
     const interrupted = await this.deps.agentRuntimeService.interruptOperation(resolvedOperationId);
     log(
       'interruptTask: interruptOperation=%s for operationId=%s',
@@ -228,17 +292,24 @@ export class InterventionController {
 
     if (!interrupted && deviceCancellationConfirmed !== true) {
       const alreadyCancelled = thread?.status === ThreadStatus.Cancel;
-      durableOperation ??= await this.deps.agentOperationModel.findById(resolvedOperationId);
       const durableAlreadyTerminal =
         durableOperation?.status === 'abandoned' ||
         durableOperation?.status === 'done' ||
         durableOperation?.status === 'error' ||
         durableOperation?.status === 'interrupted';
+      const success = alreadyCancelled || durableAlreadyTerminal;
+
+      // A terminal durable row means the host already reported terminal —
+      // confirmed. Otherwise the signal never landed: unknown, not a silent
+      // success. A remote-admitted run keeps its live `requested`/`unknown`
+      // ledger state for the terminal callback or watchdog to resolve.
+      const cancelState = success ? 'confirmed' : 'unknown';
 
       return {
+        cancelState,
         deviceCancellationConfirmed,
         operationId: resolvedOperationId,
-        success: alreadyCancelled || durableAlreadyTerminal,
+        success,
         threadId: thread?.id,
       };
     }
@@ -254,7 +325,15 @@ export class InterventionController {
       });
     }
 
+    // Cancel lifecycle: the host's own ack (device exited) or an in-process
+    // runtime interrupt is `confirmed`. A remote-admitted run whose signal was
+    // dispatched but whose host has not yet reported terminal is `requested` —
+    // its terminal callback resolves the ledger to `confirmed`.
+    const cancelState =
+      deviceCancellationConfirmed === true || !admission ? 'confirmed' : 'requested';
+
     return {
+      cancelState,
       deviceCancellationConfirmed,
       operationId: resolvedOperationId,
       success: true,

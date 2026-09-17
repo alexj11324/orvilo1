@@ -241,6 +241,13 @@ export interface AgentRunRequestMessage {
   assistantMessageId?: string;
   cwd?: string;
   /**
+   * Server-side idempotency key for admission. Always equals `operationId`
+   * (the device-side task id): a gateway or device retry carrying the same key
+   * must not spawn a second execution of the same logical run. Optional for
+   * compatibility with older servers; absent means "no dedupe hint sent".
+   */
+  idempotencyKey?: string;
+  /**
    * Image attachments from the user message, as URLs the device can fetch
    * (signed S3 URLs). Appended as image content blocks after the prompt so
    * the CLI gets vision input — mirrors the desktop local-mode
@@ -265,6 +272,12 @@ export interface AgentRunRequestMessage {
   resumeFallbackSystemContext?: string;
   resumeSessionId?: string;
   /**
+   * Run generation/fence minted at admission. A re-admitted operation bumps it,
+   * so a device-side ack or cancel that names an older generation is stale.
+   * Optional for compatibility with older servers/devices.
+   */
+  runGeneration?: number;
+  /**
    * Static context injected before the user prompt (workspace conventions,
    * selected context). The desktop sends it to `lh hetero exec` as the first
    * text block of a content-block array. Optional — omitted for older servers
@@ -287,6 +300,17 @@ export interface AgentRunRequestMessage {
 export interface AgentRunAckMessage {
   operationId: string;
   reason?: string;
+  /**
+   * Echo of the dispatched run generation so the server can detect an ack
+   * landing for a fenced (older) admission. Optional — older devices omit it.
+   */
+  runGeneration?: number;
+  /**
+   * Native/ACP session id the device agent established for this run, when the
+   * ack is produced after session handshake. Distinct from `operationId`.
+   * Optional — older devices omit it.
+   */
+  sessionId?: string;
   status: 'accepted' | 'rejected';
   type: 'agent_run_ack';
 }

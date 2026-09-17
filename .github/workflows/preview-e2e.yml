@@ -1,7 +1,8 @@
 name: Preview E2E
 
 # 与 preview-smoke 同一触发时机，但跑完整的 @P0 用户旅程套件。
-# 需要 secrets：PREVIEW_DATABASE_URL、VERCEL_AUTOMATION_BYPASS_SECRET。
+# 需要 secrets：PREVIEW_DATABASE_URL、VERCEL_AUTOMATION_BYPASS_SECRET、
+# ORACLE_HOST、ORACLE_SSH_KEY、ORACLE_SSH_KNOWN_HOSTS。
 
 on:
   deployment_status: {}
@@ -39,20 +40,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Normalize preview PostgreSQL TLS URL
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const connectionString = process.env.DATABASE_URL;
-          if (!connectionString) process.exit(0);
-          if (
-            /(?:\?|&)sslmode=require(?:&|$)/.test(connectionString) &&
-            !/(?:\?|&)uselibpqcompat=/.test(connectionString)
-          ) {
-            const normalized = `${connectionString}${connectionString.includes('?') ? '&' : '?'}uselibpqcompat=true`;
-            fs.appendFileSync(process.env.GITHUB_ENV, `DATABASE_URL=${normalized}\n`);
-          }
-          NODE
+      - name: Setup Preview database tunnel
+        uses: ./.github/actions/setup-preview-db-tunnel
+        with:
+          database-url: ${{ secrets.PREVIEW_DATABASE_URL }}
+          oracle-host: ${{ secrets.ORACLE_HOST }}
+          oracle-known-hosts: ${{ secrets.ORACLE_SSH_KNOWN_HOSTS }}
+          oracle-ssh-key: ${{ secrets.ORACLE_SSH_KEY }}
 
       - name: Install Playwright browsers (with system deps)
         run: bunx playwright install --with-deps chromium

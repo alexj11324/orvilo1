@@ -2,7 +2,12 @@
 
 import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Alert, Button, Select, Switch, Tag, Text, toast } from '@lobehub/ui/base-ui';
-import type { LinearProjectBindingSettings, TaskPlanningProposal } from '@orvilo/types';
+import type {
+  LinearInstallationRecoveryState,
+  LinearProjectBindingSettings,
+  LinearSyncRecoveryRow,
+  TaskPlanningProposal,
+} from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import {
   Check,
@@ -24,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   getInstallationTone,
+  getLinearRecoverySummary,
   getScopedProjects,
   getWizardStepStates,
   type LinearBindingView,
@@ -201,6 +207,29 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   `,
+  operationRow: css`
+    display: grid;
+    grid-template-columns: minmax(90px, auto) minmax(80px, auto) minmax(80px, auto) 1fr auto;
+    gap: 10px;
+    align-items: center;
+
+    padding-block: 10px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+
+    &:last-child {
+      border-block-end: 0;
+    }
+
+    @media (width <= 680px) {
+      grid-template-columns: 1fr auto;
+    }
+  `,
+  operationError: css`
+    overflow: hidden;
+    color: ${cssVar.colorTextSecondary};
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  `,
   statusCell: css`
     display: flex;
     flex-direction: column;
@@ -294,6 +323,7 @@ type Action =
   | 'load'
   | 'proposal'
   | 'replanning'
+  | 'retry'
   | 'sync'
   | 'worker';
 
@@ -417,6 +447,10 @@ const LinearWorkspaceSettings = memo(() => {
   const [issueLinksError, setIssueLinksError] = useState<string | null>(null);
   const [planningScopes, setPlanningScopes] = useState<PlanningScope[]>([]);
   const [planningRevisions, setPlanningRevisions] = useState<PlanningRevision[]>([]);
+  const [recoveryRows, setRecoveryRows] = useState<LinearSyncRecoveryRow[]>([]);
+  const [installationRecovery, setInstallationRecovery] = useState<
+    LinearInstallationRecoveryState[]
+  >([]);
   const [selectedInstallationId, setSelectedInstallationId] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -431,6 +465,9 @@ const LinearWorkspaceSettings = memo(() => {
   const isConnected = installations.some((installation) => installation.status === 'active');
 
   const selectedInstallation = installations.find((item) => item.id === selectedInstallationId);
+  const selectedInstallationRecovery = installationRecovery.find(
+    (item) => item.id === selectedInstallationId,
+  );
   const selectedRemoteProject = catalog?.projects.find(
     (item) => item.id === selectedLinearProjectId,
   );
@@ -471,18 +508,32 @@ const LinearWorkspaceSettings = memo(() => {
   );
 
   const refresh = useCallback(async () => {
-    const [installationResponse, projectResponse, bindingResponse, scopeResponse] =
-      await Promise.all([
-        lambdaClient.linearSync.installations.query(),
-        lambdaClient.linearSync.projects.query(),
-        lambdaClient.linearSync.bindings.query(),
-        lambdaClient.linearSync.planningScopes.query(),
-      ]);
+    const [
+      installationResponse,
+      projectResponse,
+      bindingResponse,
+      scopeResponse,
+      operationsResponse,
+      installationRecoveryResponse,
+    ] = await Promise.all([
+      lambdaClient.linearSync.installations.query(),
+      lambdaClient.linearSync.projects.query(),
+      lambdaClient.linearSync.bindings.query(),
+      lambdaClient.linearSync.planningScopes.query(),
+      canManage
+        ? lambdaClient.linearSync.operations.query({ limit: 50 })
+        : Promise.resolve({ data: [] }),
+      canManage
+        ? lambdaClient.linearSync.installationRecovery.query()
+        : Promise.resolve({ data: [] }),
+    ]);
     if (
       !installationResponse?.data ||
       !projectResponse?.data ||
       !bindingResponse?.data ||
-      !scopeResponse?.data
+      !scopeResponse?.data ||
+      !operationsResponse?.data ||
+      !installationRecoveryResponse?.data
     ) {
       throw new Error('Linear workspace settings returned an incomplete response');
     }
@@ -491,6 +542,8 @@ const LinearWorkspaceSettings = memo(() => {
     setLocalProjects(projectResponse.data);
     setBindings(bindingResponse.data as LinearBindingView[]);
     setPlanningScopes(scopeResponse.data);
+    setRecoveryRows(operationsResponse.data as LinearSyncRecoveryRow[]);
+    setInstallationRecovery(installationRecoveryResponse.data as LinearInstallationRecoveryState[]);
 
     const nextInstallation =
       installationResponse.data.find((item) => item.id === selectedInstallationId) ??
@@ -509,7 +562,7 @@ const LinearWorkspaceSettings = memo(() => {
           })
         : { members: [], organizations: [], projects: [], teams: [], workflowStates: {} },
     );
-  }, [selectedInstallationId]);
+  }, [canManage, selectedInstallationId]);
 
   const loadCatalog = useCallback(async () => {
     setAction('load');
@@ -615,6 +668,24 @@ const LinearWorkspaceSettings = memo(() => {
     } catch (error) {
       popup.close();
       toast.error(errorMessage(error, t('workspaceSetting.linear.connectFailed')));
+    } finally {
+      setAction(null);
+    }
+  };
+
+  const retryRecoveryRow = async (row: LinearSyncRecoveryRow) => {
+    if (!canManage) return;
+    setAction('retry');
+    try {
+      await lambdaClient.linearSync.retryOperation.mutate({
+        expectedUpdatedAt: new Date(row.updatedAt).toISOString(),
+        id: row.id,
+        kind: row.kind,
+      });
+      await refresh();
+      toast.success(t('workspaceSetting.linear.operations.retrySuccess'));
+    } catch (error) {
+      toast.error(errorMessage(error, t('workspaceSetting.linear.operations.retryFailed')));
     } finally {
       setAction(null);
     }
@@ -792,6 +863,100 @@ const LinearWorkspaceSettings = memo(() => {
     [catalog?.members],
   );
 
+  const renderOperations = () => {
+    const recoverySummary = getLinearRecoverySummary(recoveryRows);
+    return (
+      <StepCard
+        description={t('workspaceSetting.linear.operations.description')}
+        title={t('workspaceSetting.linear.operations.title')}
+        action={
+          selectedInstallationRecovery?.reauthRequired ? (
+            <Button
+              disabled={!canManage}
+              icon={Link2}
+              loading={action === 'connect'}
+              onClick={connect}
+            >
+              {t('workspaceSetting.linear.operations.reconnect')}
+            </Button>
+          ) : undefined
+        }
+      >
+        <Flexbox gap={12}>
+          <div className={styles.statusGrid}>
+            <div className={styles.statusCell}>
+              <Text type={'secondary'}>{t('workspaceSetting.linear.operations.status')}</Text>
+              <Text>
+                {selectedInstallationRecovery
+                  ? t(
+                      `workspaceSetting.linear.status.${selectedInstallationRecovery.status}` as never,
+                    )
+                  : '—'}
+              </Text>
+            </div>
+            <div className={styles.statusCell}>
+              <Text type={'secondary'}>{t('workspaceSetting.linear.operations.failed')}</Text>
+              <Text>{recoverySummary.failed}</Text>
+            </div>
+            <div className={styles.statusCell}>
+              <Text type={'secondary'}>{t('workspaceSetting.linear.operations.deadLetter')}</Text>
+              <Text>{recoverySummary.deadLetter}</Text>
+            </div>
+            <div className={styles.statusCell}>
+              <Text type={'secondary'}>
+                {t('workspaceSetting.linear.operations.outcomeUnknown')}
+              </Text>
+              <Text>{recoverySummary.outcomeUnknown}</Text>
+            </div>
+          </div>
+          {selectedInstallationRecovery?.lastError && (
+            <Alert
+              showIcon
+              description={selectedInstallationRecovery.lastError}
+              title={t('workspaceSetting.linear.operations.lastSafeError')}
+              type={'error'}
+            />
+          )}
+          {recoveryRows.length === 0 ? (
+            <Text className={styles.muted}>{t('workspaceSetting.linear.operations.empty')}</Text>
+          ) : (
+            <div>
+              {recoveryRows.map((row) => (
+                <div className={styles.operationRow} key={`${row.kind}-${row.id}`}>
+                  <Tag size={'small'}>
+                    {t(`workspaceSetting.linear.operations.kind.${row.kind}` as never)}
+                  </Tag>
+                  <Text type={'secondary'}>{row.status}</Text>
+                  <Text type={'secondary'}>
+                    {t('workspaceSetting.linear.operations.attempts', { count: row.attempts })}
+                  </Text>
+                  <Text className={styles.operationError} title={row.lastError ?? undefined}>
+                    {row.lastError ?? t('workspaceSetting.linear.operations.noError')}
+                  </Text>
+                  <Flexbox horizontal align={'center'} gap={8}>
+                    <Text className={styles.muted} fontSize={12}>
+                      {t('workspaceSetting.linear.operations.age', {
+                        time: dateLabel(row.createdAt, i18n.language),
+                      })}
+                    </Text>
+                    <Button
+                      disabled={!canManage}
+                      loading={action === 'retry'}
+                      size={'small'}
+                      onClick={() => void retryRecoveryRow(row)}
+                    >
+                      {t('workspaceSetting.linear.operations.retry')}
+                    </Button>
+                  </Flexbox>
+                </div>
+              ))}
+            </div>
+          )}
+        </Flexbox>
+      </StepCard>
+    );
+  };
+
   const renderInstallation = () => (
     <StepCard
       description={t(STEP_COPY.installation.description as never)}
@@ -855,9 +1020,9 @@ const LinearWorkspaceSettings = memo(() => {
                     })}
                   </Text>
                 )}
-                {selectedInstallation.lastError && (
+                {selectedInstallationRecovery?.lastError && (
                   <Text style={{ flexBasis: '100%' }} type={'danger'}>
-                    {selectedInstallation.lastError}
+                    {selectedInstallationRecovery.lastError}
                   </Text>
                 )}
                 {selectedInstallation.status !== 'active' && (
@@ -1411,6 +1576,8 @@ const LinearWorkspaceSettings = memo(() => {
         </div>
 
         {stepContent[activeStep]}
+
+        {renderOperations()}
 
         <Alert
           description={t('workspaceSetting.linear.wizard.scopeBoundary')}

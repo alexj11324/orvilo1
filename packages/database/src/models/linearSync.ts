@@ -1,12 +1,15 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
+  LinearInstallationRecoveryState,
   LinearIssueLinkSyncState,
   LinearIssueSnapshot,
   LinearProjectBindingSettings,
   LinearSyncConflict,
   LinearSyncInboxStatus,
   LinearSyncOutboxStatus,
+  LinearSyncRecoveryKind,
+  LinearSyncRecoveryRow,
   TaskDomainEventSource,
   TaskDomainEventType,
   TaskItem,
@@ -16,7 +19,7 @@ import type {
   TaskPlanningScopeType,
   TaskPlanningTrigger,
 } from '@orvilo/types';
-import { and, desc, eq, gt, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 
 import type {
   LinearSyncInboxItem,
@@ -82,6 +85,25 @@ export const LINEAR_SYNC_RETRY_MAX_MS = 60_000;
 export const LINEAR_ISSUE_LINK_TASK_ID_CAP = 100;
 export const LINEAR_ISSUE_LINK_LIST_DEFAULT_LIMIT = 100;
 
+/** Provider errors are user-visible diagnostics; expose only a safe classification. */
+export const sanitizeLinearSyncError = (value: string | null | undefined) => {
+  if (!value) return null;
+  const normalized = value.toLowerCase();
+  if (
+    /oauth|authorization|access[_ -]?token|refresh[_ -]?token|invalid[_ -]?grant|\b401\b|\b403\b/i.test(
+      normalized,
+    )
+  ) {
+    return 'Linear authorization required';
+  }
+  if (/timeout|timed out|rate limit|\b429\b|unavailable|network/i.test(normalized)) {
+    return 'Linear provider unavailable';
+  }
+  if (/outcome[_ -]?unknown/i.test(normalized)) return 'Linear write outcome is unknown';
+  if (/conflict/i.test(normalized)) return 'Linear synchronization conflict';
+  return 'Linear synchronization failed';
+};
+
 /** Deterministic backoff keeps retries bounded and makes queue behavior testable. */
 export const linearSyncRetryDelayMs = (attempts: number) =>
   Math.min(
@@ -142,7 +164,7 @@ export class LinearSyncModel {
         ),
       )
       .limit(1);
-    return row ?? null;
+    return row ? { ...row, lastError: sanitizeLinearSyncError(row.lastError) } : null;
   }
 
   async findInstallationById(id: string) {
@@ -153,15 +175,38 @@ export class LinearSyncModel {
         and(eq(linearInstallations.id, id), eq(linearInstallations.workspaceId, this.workspaceId)),
       )
       .limit(1);
-    return row ?? null;
+    return row ? { ...row, lastError: sanitizeLinearSyncError(row.lastError) } : null;
   }
 
   async listInstallations() {
-    return this.db
+    const rows = await this.db
       .select(linearInstallationPublicSelection)
       .from(linearInstallations)
       .where(eq(linearInstallations.workspaceId, this.workspaceId))
       .orderBy(desc(linearInstallations.createdAt));
+    return rows.map((row) => ({ ...row, lastError: sanitizeLinearSyncError(row.lastError) }));
+  }
+
+  async listInstallationRecoveryState(): Promise<LinearInstallationRecoveryState[]> {
+    const rows = await this.db
+      .select({
+        accessTokenExpiresAt: linearInstallations.accessTokenExpiresAt,
+        id: linearInstallations.id,
+        lastError: linearInstallations.lastError,
+        lastSyncAt: linearInstallations.lastSyncAt,
+        organizationId: linearInstallations.organizationId,
+        organizationName: linearInstallations.organizationName,
+        status: linearInstallations.status,
+      })
+      .from(linearInstallations)
+      .where(eq(linearInstallations.workspaceId, this.workspaceId))
+      .orderBy(desc(linearInstallations.updatedAt));
+
+    return rows.map((row) => ({
+      ...row,
+      lastError: sanitizeLinearSyncError(row.lastError),
+      reauthRequired: row.status !== 'active',
+    }));
   }
 
   /** Server-only webhook verification candidates; never return secret refs to clients. */
@@ -836,6 +881,206 @@ export class LinearSyncModel {
       .orderBy(linearSyncOutbox.createdAt);
   }
 
+  /** Return only safe operational metadata; queue payloads never leave the server. */
+  async listRecoveryRows(limit = 50): Promise<LinearSyncRecoveryRow[]> {
+    const boundedLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
+    const [inboxRows, outboxRows, planningRows] = await Promise.all([
+      this.db
+        .select({
+          availableAt: linearSyncInbox.availableAt,
+          attempts: linearSyncInbox.attempts,
+          createdAt: linearSyncInbox.createdAt,
+          id: linearSyncInbox.id,
+          installationId: linearSyncInbox.installationId,
+          lastError: linearSyncInbox.lastError,
+          status: linearSyncInbox.status,
+          updatedAt: linearSyncInbox.updatedAt,
+        })
+        .from(linearSyncInbox)
+        .where(
+          and(
+            eq(linearSyncInbox.workspaceId, this.workspaceId),
+            inArray(linearSyncInbox.status, ['failed', 'dead_letter']),
+          ),
+        )
+        .orderBy(desc(linearSyncInbox.updatedAt))
+        .limit(boundedLimit),
+      this.db
+        .select({
+          availableAt: linearSyncOutbox.availableAt,
+          attempts: linearSyncOutbox.attempts,
+          createdAt: linearSyncOutbox.createdAt,
+          id: linearSyncOutbox.id,
+          installationId: linearSyncOutbox.installationId,
+          lastError: linearSyncOutbox.lastError,
+          status: linearSyncOutbox.status,
+          updatedAt: linearSyncOutbox.updatedAt,
+        })
+        .from(linearSyncOutbox)
+        .where(
+          and(
+            eq(linearSyncOutbox.workspaceId, this.workspaceId),
+            inArray(linearSyncOutbox.status, ['failed', 'dead_letter', 'outcome_unknown']),
+          ),
+        )
+        .orderBy(desc(linearSyncOutbox.updatedAt))
+        .limit(boundedLimit),
+      this.db
+        .select({
+          attempts: sql<number>`0`,
+          createdAt: taskPlanningScopes.createdAt,
+          id: taskPlanningScopes.id,
+          lastError: taskPlanningScopes.lastError,
+          scopeId: taskPlanningScopes.id,
+          status: taskPlanningScopes.status,
+          updatedAt: taskPlanningScopes.updatedAt,
+        })
+        .from(taskPlanningScopes)
+        .where(
+          and(
+            eq(taskPlanningScopes.workspaceId, this.workspaceId),
+            eq(taskPlanningScopes.status, 'failed'),
+          ),
+        )
+        .orderBy(desc(taskPlanningScopes.updatedAt))
+        .limit(boundedLimit),
+    ]);
+
+    return [
+      ...inboxRows.map((row) => ({
+        ...row,
+        kind: 'inbox' as const,
+        lastError: sanitizeLinearSyncError(row.lastError),
+        scopeId: null,
+      })),
+      ...outboxRows.map((row) => ({
+        ...row,
+        kind: 'outbox' as const,
+        lastError: sanitizeLinearSyncError(row.lastError),
+        scopeId: null,
+      })),
+      ...planningRows.map((row) => ({
+        availableAt: null,
+        ...row,
+        installationId: null,
+        kind: 'planning' as const,
+        lastError: sanitizeLinearSyncError(row.lastError),
+      })),
+    ]
+      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
+      .slice(0, boundedLimit);
+  }
+
+  async retryInbox(id: string, expectedUpdatedAt: Date) {
+    const now = new Date();
+    const [row] = await this.db
+      .update(linearSyncInbox)
+      .set({
+        availableAt: now,
+        attempts: 0,
+        lastError: null,
+        leaseFence: sql`${linearSyncInbox.leaseFence} + 1`,
+        leaseOwner: null,
+        lockedUntil: null,
+        status: 'received',
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(linearSyncInbox.id, id),
+          eq(linearSyncInbox.workspaceId, this.workspaceId),
+          inArray(linearSyncInbox.status, ['failed', 'dead_letter']),
+          eq(linearSyncInbox.updatedAt, expectedUpdatedAt),
+          or(isNull(linearSyncInbox.lockedUntil), lt(linearSyncInbox.lockedUntil, now)),
+        ),
+      )
+      .returning({ id: linearSyncInbox.id, installationId: linearSyncInbox.installationId });
+    return row ?? null;
+  }
+
+  async retryOutbox(id: string, expectedUpdatedAt: Date) {
+    const now = new Date();
+    const [row] = await this.db
+      .update(linearSyncOutbox)
+      .set({
+        availableAt: now,
+        attempts: 0,
+        lastError: null,
+        leaseFence: sql`${linearSyncOutbox.leaseFence} + 1`,
+        leaseOwner: null,
+        lockedUntil: null,
+        outcomeUnknownAt: null,
+        sentAt: null,
+        status: 'pending',
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(linearSyncOutbox.id, id),
+          eq(linearSyncOutbox.workspaceId, this.workspaceId),
+          inArray(linearSyncOutbox.status, ['failed', 'dead_letter', 'outcome_unknown']),
+          eq(linearSyncOutbox.updatedAt, expectedUpdatedAt),
+          or(isNull(linearSyncOutbox.lockedUntil), lt(linearSyncOutbox.lockedUntil, now)),
+          sql`NOT EXISTS (
+            SELECT 1
+            FROM linear_sync_outbox AS earlier
+            WHERE earlier.workspace_id = ${this.workspaceId}
+              AND (
+                (
+                  linear_sync_outbox.link_id IS NOT NULL
+                  AND earlier.link_id = linear_sync_outbox.link_id
+                )
+                OR (
+                  linear_sync_outbox.link_id IS NULL
+                  AND linear_sync_outbox.task_id IS NOT NULL
+                  AND earlier.link_id IS NULL
+                  AND earlier.task_id = linear_sync_outbox.task_id
+                )
+              )
+              AND (
+                earlier.created_at < linear_sync_outbox.created_at
+                OR (
+                  earlier.created_at = linear_sync_outbox.created_at
+                  AND earlier.id < linear_sync_outbox.id
+                )
+              )
+              AND earlier.status IN ('pending', 'sending', 'failed', 'dead_letter', 'outcome_unknown')
+          )`,
+        ),
+      )
+      .returning({ id: linearSyncOutbox.id, installationId: linearSyncOutbox.installationId });
+    return row ?? null;
+  }
+
+  async retryPlanningScope(id: string, expectedUpdatedAt: Date) {
+    const now = new Date();
+    const [row] = await this.db
+      .update(taskPlanningScopes)
+      .set({ lastError: null, lockedUntil: null, status: 'queued', updatedAt: now })
+      .where(
+        and(
+          eq(taskPlanningScopes.id, id),
+          eq(taskPlanningScopes.workspaceId, this.workspaceId),
+          eq(taskPlanningScopes.status, 'failed'),
+          gt(taskPlanningScopes.dirtyRevision, taskPlanningScopes.plannedRevision),
+          eq(taskPlanningScopes.updatedAt, expectedUpdatedAt),
+          or(isNull(taskPlanningScopes.lockedUntil), lt(taskPlanningScopes.lockedUntil, now)),
+        ),
+      )
+      .returning({ id: taskPlanningScopes.id, installationId: sql<string | null>`null` });
+    return row ?? null;
+  }
+
+  async retryRecoveryRow(input: {
+    expectedUpdatedAt: Date;
+    id: string;
+    kind: LinearSyncRecoveryKind;
+  }) {
+    if (input.kind === 'inbox') return this.retryInbox(input.id, input.expectedUpdatedAt);
+    if (input.kind === 'outbox') return this.retryOutbox(input.id, input.expectedUpdatedAt);
+    return this.retryPlanningScope(input.id, input.expectedUpdatedAt);
+  }
+
   async claimOutbox(
     limit = 20,
     leaseMs = LINEAR_SYNC_DEFAULT_LEASE_MS,
@@ -856,7 +1101,7 @@ export class LinearSyncModel {
             AND available_at <= now()
             AND (locked_until IS NULL OR locked_until < now())
             ${installationFilter}
-          ORDER BY created_at
+          ORDER BY created_at, id
           LIMIT ${limit}
           FOR UPDATE SKIP LOCKED
         )

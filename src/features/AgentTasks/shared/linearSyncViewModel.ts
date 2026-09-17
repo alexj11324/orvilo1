@@ -1,9 +1,11 @@
 import type {
+  LinearInstallationRecoveryState,
   LinearInstallationStatus,
   LinearIssueLinkSyncState,
   LinearIssueSnapshot,
   LinearProjectBindingSettings,
   LinearSyncConflict,
+  LinearSyncRecoveryRow,
 } from '@orvilo/types';
 
 export const LINEAR_SYNC_STATES: LinearIssueLinkSyncState[] = [
@@ -33,6 +35,16 @@ export type LinearInstallationView = {
   organizationName: string | null;
   status: LinearInstallationStatus;
 };
+
+export type LinearRecoveryRowView = LinearSyncRecoveryRow;
+export type LinearInstallationRecoveryView = LinearInstallationRecoveryState;
+
+export const getLinearRecoverySummary = (rows: LinearRecoveryRowView[]) => ({
+  deadLetter: rows.filter((row) => row.status === 'dead_letter').length,
+  failed: rows.filter((row) => row.status === 'failed').length,
+  outcomeUnknown: rows.filter((row) => row.status === 'outcome_unknown').length,
+  total: rows.length,
+});
 
 export type LinearBindingView = {
   autoExecutionEnabled: boolean;

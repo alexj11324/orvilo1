@@ -17,7 +17,7 @@ import {
   workspaces,
 } from '../../schemas';
 import type { LobeChatDatabase } from '../../type';
-import { LinearSyncModel } from '../linearSync';
+import { LinearSyncModel, sanitizeLinearSyncError } from '../linearSync';
 import { ProjectModel } from '../project';
 
 const db: LobeChatDatabase = await getTestDB();
@@ -486,5 +486,201 @@ describe('LinearSyncModel', () => {
         webhookSecretRef: null,
       }),
     ]);
+  });
+
+  it('lists sanitized recovery metadata and compare-and-set retries only idle failed rows', async () => {
+    await createInstallation();
+    const [inbox] = await db
+      .insert(linearSyncInbox)
+      .values({
+        action: 'update',
+        deliveryId: 'recovery-inbox',
+        eventType: 'Issue',
+        installationId,
+        lastError: 'provider token=secret-value payload={"title":"private"}',
+        organizationId: 'linear-org-1',
+        payload: { private: 'do not return' },
+        status: 'failed',
+        workspaceId,
+      })
+      .returning();
+    const [outbox] = await db
+      .insert(linearSyncOutbox)
+      .values({
+        expectedLocalRevision: 1,
+        installationId,
+        lastError: 'remote outcome unknown',
+        operation: 'update',
+        payload: { private: 'do not return' },
+        status: 'outcome_unknown',
+        workspaceId,
+      })
+      .returning();
+    await db.insert(taskPlanningScopes).values({
+      dirtyRevision: 2,
+      lastError: 'planner failed',
+      plannedRevision: 1,
+      scopeId: workspaceId,
+      scopeType: 'workspace',
+      status: 'failed',
+      workspaceId,
+    });
+
+    const model = new LinearSyncModel(db, workspaceId);
+    const rows = await model.listRecoveryRows();
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: inbox.id,
+          kind: 'inbox',
+          lastError: 'Linear synchronization failed',
+          status: 'failed',
+        }),
+        expect.objectContaining({ id: outbox.id, kind: 'outbox', status: 'outcome_unknown' }),
+        expect.objectContaining({ kind: 'planning', status: 'failed' }),
+      ]),
+    );
+    expect(rows[0]).not.toHaveProperty('payload');
+
+    const retried = await model.retryInbox(inbox.id, inbox.updatedAt);
+    expect(retried).toMatchObject({ id: inbox.id, installationId });
+    const [retriedInbox] = await db
+      .select()
+      .from(linearSyncInbox)
+      .where(eq(linearSyncInbox.id, inbox.id));
+    expect(retriedInbox).toMatchObject({ attempts: 0, leaseFence: 1, status: 'received' });
+    expect(await model.retryInbox(inbox.id, inbox.updatedAt)).toBeNull();
+
+    const [runningOutbox] = await db
+      .update(linearSyncOutbox)
+      .set({ lockedUntil: new Date(Date.now() + 60_000), leaseOwner: 'worker', status: 'sending' })
+      .where(eq(linearSyncOutbox.id, outbox.id))
+      .returning();
+    expect(await model.retryOutbox(outbox.id, runningOutbox.updatedAt)).toBeNull();
+    const [eligibleOutbox] = await db
+      .update(linearSyncOutbox)
+      .set({ lockedUntil: null, leaseOwner: null, status: 'outcome_unknown' })
+      .where(eq(linearSyncOutbox.id, outbox.id))
+      .returning();
+    expect(await model.retryOutbox(outbox.id, eligibleOutbox.updatedAt)).toMatchObject({
+      id: outbox.id,
+    });
+    const [retriedOutbox] = await db
+      .select()
+      .from(linearSyncOutbox)
+      .where(eq(linearSyncOutbox.id, outbox.id));
+    expect(retriedOutbox).toMatchObject({ attempts: 0, leaseFence: 1, status: 'pending' });
+  });
+
+  it('never returns token, JWT, body, or URL-like provider details', () => {
+    for (const error of [
+      'access_token=secret-value',
+      'Bearer fixture.jwt.signature',
+      'body={"refresh_token":"secret-value"}',
+      'https://linear.app/api?access_token=secret-value',
+    ]) {
+      expect(sanitizeLinearSyncError(error)).not.toContain('secret-value');
+      expect(sanitizeLinearSyncError(error)).not.toContain('fixture.jwt.signature');
+      expect(sanitizeLinearSyncError(error)).not.toContain('https://');
+      expect(sanitizeLinearSyncError(error)).toBe('Linear authorization required');
+    }
+    expect(sanitizeLinearSyncError('unexpected provider response with private data')).toBe(
+      'Linear synchronization failed',
+    );
+  });
+
+  it('does not retry a later dead-letter outbox row ahead of an earlier same-link row', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'ORDER',
+      name: 'Ordering Project',
+    });
+    const binding = await model.upsertBinding({
+      installationId,
+      linearProjectId: 'linear-order-project',
+      projectId: project.id,
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'ORDER-1',
+        instruction: 'Ordering task',
+        projectId: project.id,
+        seq: 1,
+        workspaceId,
+      })
+      .returning();
+    const link = await model.createIssueLink({
+      bindingId: binding.id,
+      installationId,
+      linearIdentifier: 'ORD-1',
+      linearIssueId: 'linear-order-issue',
+      organizationId: 'linear-org-1',
+      remoteSnapshot: { id: 'linear-order-issue', identifier: 'ORD-1', title: 'Order' },
+      taskId: task.id,
+    });
+    const [earlier, later] = await db
+      .insert(linearSyncOutbox)
+      .values([
+        {
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          expectedLocalRevision: 7,
+          installationId,
+          linkId: link.id,
+          operation: 'comment',
+          payload: { body: 'first' },
+          status: 'dead_letter',
+          workspaceId,
+        },
+        {
+          createdAt: new Date('2026-01-01T00:00:01.000Z'),
+          expectedLocalRevision: 7,
+          installationId,
+          linkId: link.id,
+          operation: 'relation',
+          payload: { relation: 'second' },
+          status: 'dead_letter',
+          workspaceId,
+        },
+      ])
+      .returning();
+
+    expect(await model.retryOutbox(later.id, later.updatedAt)).toBeNull();
+    expect(await model.retryOutbox(earlier.id, earlier.updatedAt)).toMatchObject({
+      id: earlier.id,
+    });
+
+    const [firstCreate, secondCreate] = await db
+      .insert(linearSyncOutbox)
+      .values([
+        {
+          createdAt: new Date('2026-01-02T00:00:00.000Z'),
+          expectedLocalRevision: 8,
+          installationId,
+          operation: 'create_comment',
+          payload: { body: 'first create' },
+          status: 'dead_letter',
+          taskId: task.id,
+          workspaceId,
+        },
+        {
+          createdAt: new Date('2026-01-02T00:00:01.000Z'),
+          expectedLocalRevision: 8,
+          installationId,
+          operation: 'create_relation',
+          payload: { relation: 'second create' },
+          status: 'dead_letter',
+          taskId: task.id,
+          workspaceId,
+        },
+      ])
+      .returning();
+
+    expect(await model.retryOutbox(secondCreate.id, secondCreate.updatedAt)).toBeNull();
+    expect(await model.retryOutbox(firstCreate.id, firstCreate.updatedAt)).toMatchObject({
+      id: firstCreate.id,
+    });
   });
 });

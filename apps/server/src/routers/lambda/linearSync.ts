@@ -51,6 +51,10 @@ const linearSyncWriteProcedure = linearSyncProcedure.use(
   withScopedPermission('workspace:settings_update'),
 );
 
+const linearSyncAdminProcedure = linearSyncProcedure.use(
+  withScopedPermission('workspace:settings_update'),
+);
+
 const settingsSchema = z.object({
   assignmentMappings: z
     .array(
@@ -116,6 +120,66 @@ export const linearSyncRouter = router({
       mapError(error, 'listBindings');
     }
   }),
+
+  installationRecovery: linearSyncAdminProcedure.query(async ({ ctx }) => {
+    try {
+      return { data: await ctx.linearSyncModel.listInstallationRecoveryState(), success: true };
+    } catch (error) {
+      mapError(error, 'installationRecovery');
+    }
+  }),
+
+  operations: linearSyncAdminProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(50) }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return { data: await ctx.linearSyncModel.listRecoveryRows(input.limit), success: true };
+      } catch (error) {
+        mapError(error, 'operations');
+      }
+    }),
+
+  retryOperation: linearSyncAdminProcedure
+    .input(
+      z.object({
+        expectedUpdatedAt: z.string().datetime(),
+        id: z.string().uuid(),
+        kind: z.enum(['inbox', 'outbox', 'planning']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const retried = await ctx.linearSyncModel.retryRecoveryRow({
+          expectedUpdatedAt: new Date(input.expectedUpdatedAt),
+          id: input.id,
+          kind: input.kind,
+        });
+        if (!retried) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'The Linear operation changed or is currently running',
+          });
+        }
+
+        if (input.kind === 'planning') {
+          await LinearSyncWorkflow.trigger({ workspaceId: ctx.workspaceId!, limit: 20 });
+        } else {
+          await LinearSyncWorkflow.triggerInstallation({
+            installationId: retried.installationId,
+            limit: 20,
+            workspaceId: ctx.workspaceId!,
+          });
+        }
+
+        return {
+          data: { id: retried.id, kind: input.kind },
+          message: 'Linear retry queued',
+          success: true,
+        };
+      } catch (error) {
+        mapError(error, 'retryOperation');
+      }
+    }),
 
   catalog: linearSyncProcedure
     .input(z.object({ installationId: z.string().uuid() }))

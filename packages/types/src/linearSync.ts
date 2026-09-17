@@ -33,6 +33,33 @@ export type TaskPlanningScopeStatus = 'failed' | 'idle' | 'queued' | 'running';
 export type TaskPlanningRevisionStatus =
   'applied' | 'failed' | 'proposed' | 'running' | 'superseded';
 
+/** Safe queue records exposed to workspace administrators for recovery. */
+export type LinearSyncRecoveryKind = 'inbox' | 'outbox' | 'planning';
+
+export interface LinearSyncRecoveryRow {
+  attempts: number;
+  availableAt: string | Date | null;
+  createdAt: string | Date;
+  id: string;
+  installationId: string | null;
+  kind: LinearSyncRecoveryKind;
+  lastError: string | null;
+  scopeId: string | null;
+  status: string;
+  updatedAt: string | Date;
+}
+
+export interface LinearInstallationRecoveryState {
+  accessTokenExpiresAt: string | Date | null;
+  id: string;
+  lastError: string | null;
+  lastSyncAt: string | Date | null;
+  organizationId: string;
+  organizationName: string | null;
+  reauthRequired: boolean;
+  status: LinearInstallationStatus;
+}
+
 /** Which boundary produced a domain change. */
 export type TaskDomainEventSource = 'agent' | 'linear' | 'system' | 'user';
 

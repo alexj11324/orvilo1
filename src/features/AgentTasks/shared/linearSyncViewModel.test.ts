@@ -2,6 +2,7 @@ import type { LinearIssueLinkSyncState } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import {
+  getLinearRecoverySummary,
   getScopedProjects,
   getWizardStepStates,
   isCatalogOrganization,
@@ -18,6 +19,16 @@ const link = (syncState: LinearIssueLinkSyncState) =>
   }) as any;
 
 describe('linear sync view model', () => {
+  it('summarizes safe recovery rows by actionable status', () => {
+    expect(
+      getLinearRecoverySummary([
+        { status: 'failed' },
+        { status: 'dead_letter' },
+        { status: 'outcome_unknown' },
+        { status: 'failed' },
+      ] as any),
+    ).toEqual({ deadLetter: 1, failed: 2, outcomeUnknown: 1, total: 4 });
+  });
   it('requires a catalog organization instead of accepting a typed id', () => {
     expect(isCatalogOrganization([{ id: 'org-1' }], 'org-1')).toBe(true);
     expect(isCatalogOrganization([{ id: 'org-1' }], 'org-typed-by-user')).toBe(false);

@@ -202,6 +202,42 @@ describe('memory extraction cancel route', () => {
     );
   });
 
+  it('reports every partial Hatchet cancellation failure without hiding successful siblings', async () => {
+    mocks.findFirst.mockResolvedValue({
+      id: '00000000-0000-4000-8000-000000000004',
+      metadata: {
+        control: {
+          hatchet: {
+            workflowRunIds: ['hatchet-dispatch:ok', 'hatchet-dispatch:boom', 'legacy-run'],
+          },
+        },
+      },
+      type: AsyncTaskType.UserMemoryExtractionWithChatTopic,
+      userId: 'user-1',
+      workspaceId: null,
+    });
+    mocks.cancel.mockImplementation(async (id: string) => {
+      if (id === 'hatchet-dispatch:boom') throw new Error('provider unavailable');
+      return id === 'hatchet-dispatch:ok';
+    });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const response = await app.fetch(
+      createRequest({ taskId: '00000000-0000-4000-8000-000000000004' }),
+    );
+    await expect(response.json()).resolves.toMatchObject({
+      cancelledWorkflowRuns: 1,
+      failedWorkflowRunIds: ['hatchet-dispatch:boom', 'legacy-run'],
+      status: AsyncTaskStatus.Error,
+    });
+    expect(response.status).toBe(200);
+    expect(mocks.cancel).toHaveBeenCalledTimes(3);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('workflow cancellation failed'),
+      expect.objectContaining({ workflowRunId: 'hatchet-dispatch:boom' }),
+    );
+    error.mockRestore();
+  });
+
   it('normalizes hourly tasks with missing metadata before cancellation', async () => {
     /**
      * @example

@@ -295,6 +295,14 @@ export const isShareBlockedBuiltinDispatch = (
   apiName: string,
   args?: any,
 ): boolean => {
+  // Sub-agent dispatch has no humanIntervention config to catch it, and the
+  // server sub-agent runner spawns the child via a plain `execAgent` call
+  // that does NOT re-derive the parent's share restrictions — the child would
+  // run with the creator's full, unrestricted tool surface. Checked before the
+  // builtin-allowlist gate so the legacy `lobe-agent` identifier (which no
+  // longer exists in the builtin registry post-rename) is still caught.
+  if (SUB_AGENT_DISPATCH_APIS[identifier] === apiName) return true;
+
   if (!isGovernedByBuiltinAllowlist(identifier)) return false;
 
   if (!SHARE_VISITOR_ALLOWED_IDENTIFIERS.has(identifier)) return true;
@@ -303,12 +311,6 @@ export const isShareBlockedBuiltinDispatch = (
   // the same identifier does not authorize this call.
   if (!isShareToolApiGranted(resolveShareToolGrants(agentShare.toolGrants), identifier, apiName))
     return true;
-
-  // Sub-agent dispatch has no humanIntervention config to catch it, and the
-  // server sub-agent runner spawns the child via a plain `execAgent` call
-  // that does NOT re-derive the parent's share restrictions — the child would
-  // run with the creator's full, unrestricted tool surface.
-  if (SUB_AGENT_DISPATCH_APIS[identifier] === apiName) return true;
 
   const manifest = builtinTools.find((tool) => tool.identifier === identifier)?.manifest;
   const toolLevelHumanIntervention = (manifest as { humanIntervention?: unknown } | undefined)

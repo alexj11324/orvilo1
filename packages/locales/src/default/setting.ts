@@ -1525,8 +1525,8 @@ When I am ___, I need ___
   'storage.actions.transferAgentGroups.desc':
     'Move groups, member Agents, and group conversation data to another Workspace or your personal account.',
   'storage.actions.transferAgentGroups.title': 'Move Groups',
-  'storage.actions.copyLobeAI.button': 'Copy to…',
-  'storage.actions.copyLobeAI.desc':
+  'storage.actions.copyOrviloAI.button': 'Copy to…',
+  'storage.actions.copyOrviloAI.desc':
     'Keep the originals and create independent copies in another Workspace or your personal account. Topics and messages are optional.',
   'storage.actions.copyOrviloAI.title': 'Copy Agents',
   'storage.actions.copyAgentGroups.button': 'Copy to…',
@@ -2705,15 +2705,15 @@ When I am ___, I need ___
   'workspace.general.transferAgentGroups.modal.title': 'Move Agent Groups',
   'workspace.general.transferAgentGroups.modal.transfer': 'Move {{count}} agent group(s)',
   'workspace.general.transferAgentGroups.modal.untitledGroup': 'Untitled Agent Group',
-  'workspace.general.copyLobeAI.modal.back': 'Back',
-  'workspace.general.copyLobeAI.modal.continue': 'Continue',
-  'workspace.general.copyLobeAI.modal.copyOptions.config.desc':
+  'workspace.general.copyOrviloAI.modal.back': 'Back',
+  'workspace.general.copyOrviloAI.modal.continue': 'Continue',
+  'workspace.general.copyOrviloAI.modal.copyOptions.config.desc':
     'Required. Copies the model, prompt, tools, and Agent profile into a new Agent.',
   'workspace.general.copyOrviloAI.modal.copyOptions.config.title': 'Agent configuration',
   'workspace.general.copyOrviloAI.modal.copyOptions.history.desc':
     'Optional. Copies selected Agents’ topics and messages into the new Agents.',
-  'workspace.general.copyLobeAI.modal.copyOptions.history.title': 'Topics and messages',
-  'workspace.general.copyLobeAI.modal.copyOptions.knowledgeBase.reason':
+  'workspace.general.copyOrviloAI.modal.copyOptions.history.title': 'Topics and messages',
+  'workspace.general.copyOrviloAI.modal.copyOptions.knowledgeBase.reason':
     'Not supported yet. Reconnect them in the target workspace or personal account after copying.',
   'workspace.general.copyOrviloAI.modal.copyOptions.knowledgeBase.title':
     'Knowledge bases and files',
@@ -2729,21 +2729,21 @@ When I am ___, I need ___
   'workspace.general.copyOrviloAI.modal.includeHistory': 'Copy topics and messages',
   'workspace.general.copyOrviloAI.modal.includeHistoryDesc':
     'Optional. Copies selected Agents’ conversation history into the new Agents.',
-  'workspace.general.copyLobeAI.modal.loadFailed': 'Failed to load agents',
-  'workspace.general.copyLobeAI.modal.noAgents': 'No agents available to copy',
-  'workspace.general.copyLobeAI.modal.selected': 'selected',
-  'workspace.general.copyLobeAI.modal.selectedAgent':
+  'workspace.general.copyOrviloAI.modal.loadFailed': 'Failed to load agents',
+  'workspace.general.copyOrviloAI.modal.noAgents': 'No agents available to copy',
+  'workspace.general.copyOrviloAI.modal.selected': 'selected',
+  'workspace.general.copyOrviloAI.modal.selectedAgent':
     'This Agent will be copied. The original stays where it is.',
   'workspace.general.copyOrviloAI.modal.selectAgents':
     'Select Agents to copy. Originals stay where they are.',
-  'workspace.general.copyLobeAI.modal.selectPlaceholder': 'Select workspace or personal account...',
-  'workspace.general.copyLobeAI.modal.selectTarget':
+  'workspace.general.copyOrviloAI.modal.selectPlaceholder': 'Select workspace or personal account...',
+  'workspace.general.copyOrviloAI.modal.selectTarget':
     'You can copy to personal or workspaces that have permission to create an agent.',
   'workspace.general.copyOrviloAI.modal.success': '{{count}} agent(s) copied',
   'workspace.general.copyOrviloAI.modal.backgroundCopy':
     'Chat history is large, so it keeps copying in the background. The agents are ready to use now; conversations light up one by one as they finish.',
-  'workspace.general.copyLobeAI.modal.title': 'Copy Agents',
-  'workspace.general.copyLobeAI.modal.untitledAgent': 'Untitled Agent',
+  'workspace.general.copyOrviloAI.modal.title': 'Copy Agents',
+  'workspace.general.copyOrviloAI.modal.untitledAgent': 'Untitled Agent',
   'workspace.general.copyAgentGroups.modal.back': 'Back',
   'workspace.general.copyAgentGroups.modal.backgroundCopy':
     'Chat history is large, so it keeps copying in the background. The agent group is ready to use now; conversations light up one by one as they finish.',

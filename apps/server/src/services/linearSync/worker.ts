@@ -121,12 +121,32 @@ const linearStateCategory = (type: string | null): TaskWorkflowCategory => {
   }
 };
 
+/**
+ * Teams whose issues may materialize as tasks: approved and public. Private
+ * Linear teams are never issue-importable today — `tasks.visibility` cannot
+ * express Linear's team-scoped ACL, so their content is quarantined instead
+ * of leaking to every workspace member (PERMISSIONS.md §4).
+ */
 export const isLinearScopeTeamImportable = (
   team: { id: string; visibility: string | null },
   settings: LinearSyncScopeSettings,
 ) =>
   team.visibility === 'public' &&
   (settings.approvedTeamIds === undefined || settings.approvedTeamIds.includes(team.id));
+
+/**
+ * Teams eligible for a sync link: every importable team, plus private teams
+ * when `privateTeamPolicy === 'import_restricted'`. A linked-but-restricted
+ * team keeps its structure mirrored (states/cycles, admin-visible audit)
+ * while its issues are quarantined by {@link isLinearScopeTeamImportable}
+ * and the private-team tombstone gate in `processScopeIssue`.
+ */
+export const isLinearScopeTeamLinkable = (
+  team: { id: string; visibility: string | null },
+  settings: LinearSyncScopeSettings,
+) =>
+  (settings.approvedTeamIds === undefined || settings.approvedTeamIds.includes(team.id)) &&
+  (team.visibility === 'public' || settings.privateTeamPolicy === 'import_restricted');
 
 const isLinearFieldHumanLocked = (task: TaskItem, field: keyof LinearIssueSnapshot) => {
   if (field === 'title' || field === 'description') return task.requirementLocked;
@@ -2118,12 +2138,15 @@ export class LinearSyncWorker {
   ) {
     const remoteTeams = await provider.listTeams();
     const settings = scope.settings ?? {};
+    // `linkable` — teams that get a sync link row (importable ∪ restricted
+    // private teams); `importable` — teams whose issues may become tasks.
+    const linkable = remoteTeams.filter((team) => isLinearScopeTeamLinkable(team, settings));
     const eligible = remoteTeams.filter((team) => isLinearScopeTeamImportable(team, settings));
 
     const installer = installation.installedByUserId;
     const teamModel = installer ? new TeamModel(this.db, installer, this.workspaceId) : null;
     let linked = 0;
-    for (const remote of eligible) {
+    for (const remote of linkable) {
       const existingLink = await this.model.findTeamLinkByLinearTeamId(remote.id);
       let localTeamId = existingLink?.teamId;
       if (!localTeamId && teamModel) {
@@ -2181,7 +2204,7 @@ export class LinearSyncWorker {
     // stop syncing — team-scope outbound writes are gated on 'synced'.
     await this.model.markTeamLinksUnlinkedOutsideScope({
       installationId: installation.id,
-      keepLinearTeamIds: eligible.map((team) => team.id),
+      keepLinearTeamIds: linkable.map((team) => team.id),
     });
 
     await this.model.transaction(async (model) => {
@@ -2222,7 +2245,12 @@ export class LinearSyncWorker {
     );
     const teamLinks = new Map(
       (await this.model.listTeamLinks({ installationId: installation.id }))
-        .filter((link) => link.syncState === 'synced')
+        // Private teams may hold a synced link (import_restricted audit) but
+        // must never widen a binding's issue scope — otherwise their issues
+        // would pass `validateIssueScope` and import as public tasks.
+        .filter(
+          (link) => link.syncState === 'synced' && link.remoteSnapshot?.visibility !== 'private',
+        )
         .map((link) => [link.linearTeamId, link.teamId]),
     );
 
@@ -2464,6 +2492,45 @@ export class LinearSyncWorker {
       const binding = issue.projectId
         ? await model.lockBindingByLinearProjectId(issue.projectId)
         : null;
+      // Private Linear teams may carry a synced link under `import_restricted`
+      // (structure + audit only) — their issues are quarantined because task
+      // visibility cannot reproduce Linear's team-scoped ACL. Runs before the
+      // binding gate so private issues can never wedge the page on
+      // 'pending-binding'. Linked rows tombstone; unlinked ones never
+      // materialize.
+      if (teamLink?.syncState === 'synced' && teamLink.remoteSnapshot?.visibility === 'private') {
+        if (existingLink) {
+          await model.recordIssueTombstone({
+            deliveryId: row.id,
+            idempotencyKey: `linear:tombstone:${row.id}:private_team`,
+            issueLinkId: existingLink.id,
+            kind: 'forbidden',
+            linearIssueId: issue.id,
+            origin: historicalImport ? 'reconciliation' : 'inbound',
+            reason: 'Issue belongs to a private Linear team; content is quarantined',
+            snapshot: issue,
+          });
+          // Quarantine the mirrored task as well — a tombstone alone leaves
+          // the public task row (title/description) visible to every member
+          // when a team flips private after import.
+          await new LinearIntegrationTaskService(
+            db,
+            this.workspaceId,
+            installation.id,
+          ).updatePublicTask(
+            existingLink.taskId,
+            { visibility: 'private' },
+            {
+              eventId: row.id,
+              idempotencyKey: `linear:quarantine:${row.id}`,
+              source: 'linear',
+              suppressDomainEvent: historicalImport,
+              suppressLinearOutbox: true,
+            },
+          );
+        }
+        return 'processed';
+      }
       if (!teamLink || teamLink.syncState !== 'synced' || (issue.projectId && !binding)) {
         if (existingLink) {
           await model.recordIssueTombstone({

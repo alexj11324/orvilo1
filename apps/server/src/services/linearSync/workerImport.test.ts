@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { isLinearScopeTeamImportable, LinearSyncWorker } from './worker';
+import { isLinearScopeTeamImportable, isLinearScopeTeamLinkable, LinearSyncWorker } from './worker';
 
 const mocks = vi.hoisted(() => ({
   binding: null as any,
@@ -28,9 +28,22 @@ vi.mock('@/database/models/linearSync', () => ({
     binding.settings?.writeEnabled ?? binding.syncEnabled ?? true,
   linearSyncRetryDelayMs: vi.fn(() => 1_000),
 }));
+vi.mock('@/database/models/project', () => ({ ProjectModel: class {} }));
 vi.mock('@/database/models/task', () => ({ TaskModel: class {} }));
+vi.mock('@/database/models/team', () => ({ TeamModel: class {} }));
 vi.mock('@/database/schemas/task', () => ({ tasks: { id: 'id', workspaceId: 'workspaceId' } }));
 vi.mock('@/server/services/task', () => ({ TaskService: class {} }));
+vi.mock('./integrationTask', () => ({
+  LinearIntegrationTaskService: class {
+    addPublicComment = vi.fn();
+    createPublicTask = vi.fn(async () => ({ id: 'task-new' }));
+    createTeamScopedTask = vi.fn(async () => ({ id: 'task-new' }));
+    findPublicTask = vi.fn();
+    movePublicTaskToTeam = vi.fn();
+    updatePublicTask = vi.fn();
+    validateIssueScope = vi.fn(async () => true);
+  },
+}));
 
 const issue = (id: string, updatedAt?: string) => ({
   id,
@@ -82,6 +95,28 @@ describe('LinearSyncWorker.importBinding', () => {
         { approvedTeamIds: ['public-team'] },
       ),
     ).toBe(false);
+  });
+
+  it('links private teams for audit under import_restricted but not under skip', () => {
+    const privateTeam = { id: 'private-team', visibility: 'private' };
+    expect(isLinearScopeTeamLinkable(privateTeam, { privateTeamPolicy: 'import_restricted' })).toBe(
+      true,
+    );
+    expect(isLinearScopeTeamLinkable(privateTeam, { privateTeamPolicy: 'skip' })).toBe(false);
+    expect(isLinearScopeTeamLinkable(privateTeam, {})).toBe(false);
+    // Approval still applies to restricted links.
+    expect(
+      isLinearScopeTeamLinkable(privateTeam, {
+        approvedTeamIds: ['other-team'],
+        privateTeamPolicy: 'import_restricted',
+      }),
+    ).toBe(false);
+    expect(
+      isLinearScopeTeamLinkable(
+        { id: 'public-team', visibility: 'public' },
+        { approvedTeamIds: ['public-team'], privateTeamPolicy: 'skip' },
+      ),
+    ).toBe(true);
   });
 
   it('holds the page cursor when one issue fails, then resumes the same page', async () => {

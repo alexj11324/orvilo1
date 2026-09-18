@@ -398,7 +398,12 @@ export interface LinearSyncScopeSettings {
   approvedTeamIds?: string[];
   /** Whether issues without a Linear project are imported (default true). */
   includeProjectlessIssues?: boolean;
-  /** Private-team handling: `skip` never imports them at all. */
+  /**
+   * Private-team handling. `skip` never imports them at all.
+   * `import_restricted` links the team for structure + admin audit but
+   * quarantines its issues — `tasks.visibility` cannot reproduce Linear's
+   * team-scoped ACL, so private-team content never materializes as tasks.
+   */
   privateTeamPolicy?: 'import_restricted' | 'skip';
   /** Outbound policy — nothing is published unless explicitly approved. */
   publication?: {

@@ -3492,11 +3492,13 @@ export class LinearSyncModel {
   async updateIssueLink(
     id: string,
     patch: {
+      aliasIdentifiers?: string[];
       bindingId?: string | null;
       conflict?: LinearSyncConflict | null;
       installationId?: string;
       lastInboundDeliveryId?: string | null;
       lastConfirmedSnapshot?: LinearIssueSnapshot;
+      linearIdentifier?: string;
       linearTeamId?: string | null;
       remoteSnapshot?: LinearIssueSnapshot | null;
       remoteUpdatedAt?: Date | null;

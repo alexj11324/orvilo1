@@ -466,11 +466,16 @@ export class RepositoryModel {
         decision.relation === 'project_repository' &&
         decision.sourceKind === 'project'
       ) {
+        // The row's provenance names which decision wrote it, but any applied
+        // sibling with the same quad backs it too — and `otherAppliedDecision`
+        // already proved none exists. A non-null provenance can therefore only
+        // point at this or another non-applied decision, so it is safe to
+        // remove; a null provenance is a manual link and must survive.
         await tx
           .delete(projectRepositories)
           .where(
             and(
-              eq(projectRepositories.associationDecisionId, decision.id),
+              isNotNull(projectRepositories.associationDecisionId),
               eq(projectRepositories.projectId, decision.sourceId),
               eq(projectRepositories.repositoryId, decision.targetRepositoryId),
               eq(projectRepositories.workspaceId, this.workspaceId),
@@ -486,7 +491,7 @@ export class RepositoryModel {
           .delete(teamRepoDefaults)
           .where(
             and(
-              eq(teamRepoDefaults.associationDecisionId, decision.id),
+              isNotNull(teamRepoDefaults.associationDecisionId),
               eq(teamRepoDefaults.teamId, decision.sourceId),
               eq(teamRepoDefaults.repositoryId, decision.targetRepositoryId),
               eq(teamRepoDefaults.workspaceId, this.workspaceId),

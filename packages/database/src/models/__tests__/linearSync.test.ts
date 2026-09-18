@@ -1486,4 +1486,34 @@ describe('LinearSyncModel', () => {
       .where(eq(linearSyncOutbox.operation, 'linear-issue:update:test-sec'));
     expect(outboxRow.status).toBe('pending');
   });
+
+  it('rejects upsertScope for an installation owned by another workspace', async () => {
+    await createInstallation();
+    await db.insert(workspaces).values({
+      id: otherWorkspaceId,
+      name: 'Other Workspace',
+      primaryOwnerId: userId,
+      slug: otherWorkspaceId,
+    });
+    await db.insert(linearInstallations).values({
+      id: otherInstallationId,
+      installedByUserId: userId,
+      organizationId: 'linear-org-2',
+      workspaceId: otherWorkspaceId,
+    });
+
+    // Same-workspace installation attaches a scope normally.
+    const scope = await new LinearSyncModel(db, workspaceId).upsertScope({ installationId });
+    expect(scope.workspaceId).toBe(workspaceId);
+
+    // Cross-workspace installation must be refused — a scope row binds the
+    // whole import/sync pipeline to `workspace_id`, so accepting it would
+    // let one workspace's worker import another workspace's Linear org.
+    await expect(
+      new LinearSyncModel(db, workspaceId).upsertScope({ installationId: otherInstallationId }),
+    ).rejects.toThrow('does not belong to this workspace');
+    await expect(
+      new LinearSyncModel(db, otherWorkspaceId).upsertScope({ installationId }),
+    ).rejects.toThrow('does not belong to this workspace');
+  });
 });

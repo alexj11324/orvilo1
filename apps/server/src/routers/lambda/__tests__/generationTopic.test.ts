@@ -7,6 +7,13 @@ import { GenerationService } from '@/server/services/generation';
 
 import { generationTopicRouter } from '../generationTopic';
 
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
+
 vi.mock('@/database/models/generationTopic');
 vi.mock('@/server/services/file');
 vi.mock('@/server/services/generation');

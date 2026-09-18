@@ -1,11 +1,10 @@
 import debug from 'debug';
-import { and, eq, isNull } from 'drizzle-orm';
 import type { Context, Next } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 
 import { canUseWorkspaceApiKeys } from '@/business/server/workspaceApiKey';
 import { getServerDB } from '@/database/core/db-adaptor';
-import { workspaceMembers, workspaces } from '@/database/schemas';
+import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
 
 const log = debug('orvilo-hono:workspace-middleware');
 
@@ -50,13 +49,14 @@ const hasMinWorkspaceRole = (role: string | undefined, minRole: string) =>
  * Require at least `minRole` for workspace-scoped requests; personal requests
  * pass through untouched.
  *
- * `workspaceAuthMiddleware` only enforces the admin role for `apikey` auth, so
- * without this an OIDC/session-authenticated member could reach routes whose
- * models use a workspace-wide (not row-owner) predicate. Mirrors the tRPC
- * `requireWorkspaceRoleWhenScoped` guard so both transports gate identically.
+ * `workspaceAuthMiddleware` verifies active membership for every auth type,
+ * so without this an OIDC/session-authenticated member could reach routes
+ * whose models use a workspace-wide (not row-owner) predicate. Mirrors the
+ * tRPC `requireWorkspaceRoleWhenScoped` guard so both transports gate
+ * identically.
  */
 export const requireWorkspaceRoleWhenScoped =
-  (minRole: 'admin' | 'owner') => async (c: Context, next: Next) => {
+  (minRole: 'admin' | 'member' | 'owner' | 'viewer') => async (c: Context, next: Next) => {
     if (!c.get('workspaceId')) return next();
 
     if (!hasMinWorkspaceRole(c.get('workspaceRole'), minRole)) {
@@ -82,31 +82,18 @@ export const workspaceAuthMiddleware = async (c: Context, next: Next) => {
     });
   }
 
+  // `X-Workspace-Id` is a selector, not proof of membership — verify it for
+  // every auth type. `getActiveWorkspaceMembershipRole` reports non-member,
+  // suspended, removed, and unknown workspaces identically as `null` (and
+  // applies the primaryOwner binding to the `owner` label), so a single 404
+  // covers every rejection without leaking workspace existence.
   const serverDB = await getServerDB();
-  const workspace = await serverDB.query.workspaces.findFirst({
-    columns: { id: true },
-    where: eq(workspaces.id, workspaceId),
-  });
+  const role = await getActiveWorkspaceMembershipRole(serverDB, { userId, workspaceId });
 
-  if (!workspace) {
+  if (!role) {
+    log('Workspace membership check failed for user %s workspace %s', userId, workspaceId);
     throw new HTTPException(404, {
       message: 'Workspace not found',
-    });
-  }
-
-  const membership = await serverDB.query.workspaceMembers.findFirst({
-    columns: { role: true },
-    where: and(
-      eq(workspaceMembers.workspaceId, workspaceId),
-      eq(workspaceMembers.userId, userId),
-      isNull(workspaceMembers.deletedAt),
-    ),
-  });
-
-  if (!membership) {
-    log('Workspace membership check failed for user %s workspace %s', userId, workspaceId);
-    throw new HTTPException(403, {
-      message: 'Not a member of this workspace',
     });
   }
 
@@ -117,6 +104,6 @@ export const workspaceAuthMiddleware = async (c: Context, next: Next) => {
   }
 
   c.set('workspaceId', workspaceId);
-  c.set('workspaceRole', membership.role);
+  c.set('workspaceRole', role);
   return next();
 };

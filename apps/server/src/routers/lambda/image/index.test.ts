@@ -133,6 +133,14 @@ vi.mock('@/database/schemas', () => ({
   generations: { id: 'generations.id', userId: 'generations.userId' },
 }));
 
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam. Mocked without importOriginal so the
+// workspace model's transitive schema imports stay out of this partial
+// schemas mock.
+vi.mock('@/database/models/workspace', () => ({
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
+
 // Mock seed generator
 vi.mock('@/utils/number', () => ({
   generateUniqueSeeds: vi.fn(function (count: number) {

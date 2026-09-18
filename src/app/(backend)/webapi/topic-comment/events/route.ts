@@ -6,7 +6,10 @@ import { checkAuth } from '@/app/(backend)/middleware/auth';
 import { assertTopicCommentReadAccess } from '@/server/routers/lambda/_helpers/topicCommentAccess';
 import { subscribeResourceEvents } from '@/server/services/resourceEvents';
 
-import { resolveValidWorkspaceIdFromRequest } from '../../_utils/workspace';
+import {
+  resolveValidWorkspaceIdFromRequest,
+  WorkspaceAccessDeniedError,
+} from '../../_utils/workspace';
 
 const log = debug('api-route:topic-comment:events');
 
@@ -23,7 +26,15 @@ export const GET = checkAuth(async (req, { userId, serverDB }) => {
   const topicId = new URL(req.url).searchParams.get('topicId');
   if (!topicId) return jsonError('topicId is required', 400);
 
-  const workspaceId = await resolveValidWorkspaceIdFromRequest({ req, serverDB, userId });
+  // An explicitly addressed workspace the caller can't access reads as "not
+  // found" — never silently treated as personal space.
+  let workspaceId: string | undefined;
+  try {
+    workspaceId = await resolveValidWorkspaceIdFromRequest({ req, serverDB, userId });
+  } catch (error) {
+    if (error instanceof WorkspaceAccessDeniedError) return jsonError('resource not found', 404);
+    throw error;
+  }
   if (!workspaceId) return jsonError('resource not found', 404);
 
   try {

@@ -1,7 +1,12 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { workspaceRouter } from '@/business/server/lambda-routers/workspace';
+
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
 
 describe('workspaceRouter.getById', () => {
   it('returns null in the community build', async () => {

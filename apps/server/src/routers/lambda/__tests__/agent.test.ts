@@ -32,6 +32,12 @@ import { KnowledgeType } from '@/types/knowledgeBase';
 import { agentRouter } from '../agent';
 
 vi.mock('@/server/services/resourceEvents', () => ({ publishResourceEvent: vi.fn() }));
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
 vi.mock('../_helpers/workspaceAgentGuard', () => ({
   getWorkspaceAgentParentGroupIds: vi.fn().mockResolvedValue([]),
 }));

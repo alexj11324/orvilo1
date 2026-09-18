@@ -6,7 +6,10 @@ import { checkAuth } from '@/app/(backend)/middleware/auth';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { createErrorResponse } from '@/utils/errorResponse';
 
-import { resolveValidWorkspaceIdFromRequest } from '../../_utils/workspace';
+import {
+  resolveValidWorkspaceIdFromRequest,
+  WorkspaceAccessDeniedError,
+} from '../../_utils/workspace';
 
 const getMessageFromError = (error: unknown): string | undefined => {
   if (error === null || error === undefined) return;
@@ -63,6 +66,12 @@ export const GET = checkAuth(async (req, { params, userId, serverDB }) => {
 
     return NextResponse.json(list);
   } catch (e) {
+    // An explicitly addressed workspace the caller can't access is rejected —
+    // never silently served from personal space.
+    if (e instanceof WorkspaceAccessDeniedError) {
+      return createErrorResponse(ChatErrorType.ContentNotFound, { error: e, provider });
+    }
+
     return createModelListErrorResponse(provider, e);
   }
 });

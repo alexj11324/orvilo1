@@ -499,6 +499,9 @@ describe('desktop router shared definition', () => {
       // The inbox is a thin route over the capability the old Home used to host;
       // asserted here so it cannot be registered without a skeleton of its own.
       ['/inbox', createSurfaceSkeleton('list')],
+      ['/my-work', createSurfaceSkeleton('list')],
+      ['/views', createSurfaceSkeleton('list')],
+      ['/teams', createSurfaceSkeleton('list')],
     ] as const) {
       const matches = matchRoutes(getRoutes(pathname), pathname);
       expect(
@@ -630,9 +633,7 @@ describe('desktop router shared definition', () => {
       // the workspace settings root instead of the `*` catch-all.
       for (const matches of [listMatches, detailMatches, serviceModelMatches]) {
         const leaf = matches?.at(-1)?.route;
-        expect(
-          (leaf?.element as { props?: { to?: string } } | undefined)?.props?.to,
-        ).toBe('..');
+        expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe('..');
       }
     },
   );

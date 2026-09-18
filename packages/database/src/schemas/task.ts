@@ -86,6 +86,14 @@ export const tasks = pgTable(
     // ("pending review"). Stamped when a run finishes and hands off for
     // review; the assignees above stay the executors.
     reviewerUserId: text('reviewer_user_id').references(() => users.id, { onDelete: 'set null' }),
+    /**
+     * Team intake state. NULL means the task is not in triage (legacy and
+     * already-accepted work). Existing backlog rows are never backfilled to
+     * `untriaged`.
+     */
+    triageStatus: text('triage_status').$type<
+      'accepted' | 'declined' | 'duplicate' | 'untriaged'
+    >(),
 
     // Tree structure (self-referencing, no depth limit)
     parentTaskId: text('parent_task_id'),
@@ -213,6 +221,7 @@ export const tasks = pgTable(
     index('tasks_workspace_id_idx').on(t.workspaceId),
     index('tasks_project_id_status_idx').on(t.projectId, t.status),
     index('tasks_team_id_status_idx').on(t.teamId, t.status),
+    index('tasks_team_id_triage_idx').on(t.teamId, t.triageStatus),
     index('tasks_workflow_state_ref_idx').on(t.workflowStateRefId),
     index('tasks_cycle_ref_idx').on(t.cycleRefId),
     index('tasks_workspace_visibility_idx').on(t.workspaceId, t.visibility, t.createdByUserId),

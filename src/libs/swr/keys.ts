@@ -1149,6 +1149,44 @@ export const inboxKeys = {
     'inbox:unreadCount',
     workspaceId,
   ]),
+  feed: def(
+    'inbox:feed',
+    (
+      workspaceId: string | null,
+      kind: string | undefined,
+      filter: string | undefined,
+      cursor: string | undefined,
+    ) => ['inbox:feed', workspaceId, kind, filter, cursor],
+  ),
+  feedSummary: def('inbox:feedSummary', (workspaceId: string | null) => [
+    'inbox:feedSummary',
+    workspaceId,
+  ]),
+};
+
+export const workAttentionKeys = {
+  favorites: def('workAttention:favorites', (workspaceId: string | null) => [
+    'workAttention:favorites',
+    workspaceId,
+  ]),
+  myWork: def('workAttention:myWork', (workspaceId: string | null, mode: string) => [
+    'workAttention:myWork',
+    workspaceId,
+    mode,
+  ]),
+  savedView: def('workAttention:savedView', (workspaceId: string | null, viewId: string) => [
+    'workAttention:savedView',
+    workspaceId,
+    viewId,
+  ]),
+  savedViews: def('workAttention:savedViews', (workspaceId: string | null) => [
+    'workAttention:savedViews',
+    workspaceId,
+  ]),
+  teams: def('workAttention:teams', (workspaceId: string | null) => [
+    'workAttention:teams',
+    workspaceId,
+  ]),
 };
 
 // ---- share (shared agent / topic / page) ---------------------------------
@@ -1454,4 +1492,5 @@ export const swrKeys = {
   userMemory: userMemoryKeys,
   verify: verifyKeys,
   video: videoKeys,
+  workAttention: workAttentionKeys,
 };

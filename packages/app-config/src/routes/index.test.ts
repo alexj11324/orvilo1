@@ -52,7 +52,11 @@ describe('getNavigableRoutes', () => {
   it('offers the primary working destinations', () => {
     const offered = getNavigableRoutes().map((route) => route.id);
 
+    expect(offered).toContain('workInbox');
+    expect(offered).toContain('myWork');
     expect(offered).toContain('tasks');
+    expect(offered).toContain('savedViews');
+    expect(offered).toContain('teams');
     expect(offered).toContain('project');
     expect(offered).toContain('automations');
   });

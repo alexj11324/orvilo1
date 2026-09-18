@@ -157,6 +157,7 @@ export default {
   'cmdk.context.resource': 'Resource',
   'cmdk.context.settings': 'Settings',
   'cmdk.discover': 'Discover',
+  'cmdk.inbox': 'Inbox',
   'cmdk.keyboard.ESC': 'ESC',
   'cmdk.keyboard.Enter': 'Enter',
   'cmdk.keyboard.Tab': 'Tab',
@@ -176,6 +177,8 @@ export default {
   'cmdk.keywords.discord': 'discord help support customer service',
 
   'cmdk.keywords.hotkey': 'hotkey shortcut keyboard',
+  'cmdk.keywords.inbox': 'inbox notifications attention',
+  'cmdk.keywords.myWork': 'my work assigned delegated review',
 
   'cmdk.keywords.plans': 'subscription plan upgrade pricing',
 
@@ -200,10 +203,13 @@ export default {
   'cmdk.keywords.submitIssue': 'issue bug problem feedback',
 
   'cmdk.keywords.tasks': 'tasks todo agent kanban',
-
+  'cmdk.keywords.teams': 'teams triage members',
   'cmdk.keywords.usage': 'usage statistics consumption quota',
+  'cmdk.keywords.views': 'views saved filters',
 
   'cmdk.mentionAgent': 'Mention Agent',
+
+  'cmdk.myWork': 'My Work',
 
   'cmdk.navigate': 'Navigate',
 
@@ -278,6 +284,7 @@ export default {
   'cmdk.starOnGitHub': 'Star us on GitHub',
   'cmdk.submitIssue': 'Submit Issue',
   'cmdk.tasks': 'Tasks',
+  'cmdk.teams': 'Teams',
   'cmdk.theme': 'Theme',
   'cmdk.themeAuto': 'Auto',
   'cmdk.themeCurrent': 'Current',
@@ -285,6 +292,7 @@ export default {
   'cmdk.themeLight': 'Light',
   'cmdk.toOpen': 'Open',
   'cmdk.toSelect': 'Select',
+  'cmdk.views': 'Views',
 
   'betaFeedback.collapse': 'Collapse',
   'betaFeedback.desc':
@@ -593,14 +601,45 @@ export default {
   'tab.files': 'Files',
   'tab.generation': 'Generation',
   'tab.home': 'Home',
+  'tab.inbox': 'Inbox',
+  'tab.favorites': 'Favorites',
   'tab.knowledgeBase': 'Library',
   'tab.me': 'Me',
   'tab.memory': 'Memory',
+  'tab.myWork': 'My Work',
   'tab.project': 'Projects',
   'tab.resource': 'Resources',
   'tab.search': 'Search',
   'tab.setting': 'Settings',
   'tab.tasks': 'Tasks',
+  'tab.teams': 'Teams',
+  'tab.views': 'Views',
+  'favorites.empty': 'No favorites yet',
+  'myWork.assigned': 'Assigned to me',
+  'myWork.created': 'Created by me',
+  'myWork.delegated': 'Delegated by me',
+  'myWork.empty': 'Nothing in this list yet',
+  'myWork.loading': 'Loading your work…',
+  'myWork.review': 'To review',
+  'myWork.subscribed': 'Subscribed',
+  'savedViews.assignedDefaultName': 'Assigned to me',
+  'savedViews.empty': 'No saved views yet',
+  'savedViews.emptyResults': 'No matching work',
+  'savedViews.loading': 'Loading view…',
+  'savedViews.needsRepair': 'This view needs to be repaired',
+  'savedViews.needsRepairDesc':
+    'A filter is no longer valid. The view will not silently fall back to the whole workspace.',
+  'savedViews.needsRepairEmpty': 'Fix the view before it can show results',
+  'savedViews.saveAssigned': 'Save “Assigned to me”',
+  'teams.accept': 'Accept',
+  'teams.decline': 'Decline',
+  'teams.empty': 'No teams in this workspace',
+  'teams.loading': 'Loading teams…',
+  'teams.personal': 'Switch to a workspace to see teams',
+  'teams.triage': 'Triage',
+  'teams.triageEmpty': 'Nothing waiting to be triaged',
+  'teams.triageFailed': 'Could not update triage',
+  'teams.triageUpdated': 'Triage updated',
   'taskDock.activeOf': '{{active}} running · {{total}} total',
   'taskDock.cancelAll': 'Cancel all',
   'taskDock.collapse': 'Collapse',

@@ -154,6 +154,70 @@ export const sharedMainAreaChildren: RouteObject[] = [
         errorElement: <ErrorBoundary resetPath="../tasks" />,
         path: 'agent',
       },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/inbox'), 'Mobile > Inbox', {
+              preloadId: 'mobile-inbox',
+            }),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'inbox',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/my-work'), 'Mobile > My Work', {
+              preloadId: 'mobile-my-work',
+            }),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-work',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/views'), 'Mobile > Views', {
+              preloadId: 'mobile-views',
+            }),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/views/[viewId]'),
+              'Mobile > Saved View',
+              { preloadId: 'mobile-views' },
+            ),
+            path: ':viewId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'views',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/teams'), 'Mobile > Teams', {
+              preloadId: 'mobile-teams',
+            }),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/teams/[teamId]'),
+              'Mobile > Team',
+              { preloadId: 'mobile-teams' },
+            ),
+            path: ':teamId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'teams',
+      },
     ],
     element: dynamicLayout(
       () => import('@/routes/(main)/(task-workspace)/_layout'),

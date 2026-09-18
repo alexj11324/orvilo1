@@ -5,6 +5,7 @@ import { getTestDB } from '../../core/getTestDB';
 import { NotificationModel } from '../../models/notification';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
 import { users } from '../../schemas/user';
+import { notificationFeedState } from '../../schemas/workAttention';
 import { workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 
@@ -548,6 +549,85 @@ describe('NotificationModel (integration)', () => {
       await scoped.archive(personalRow.id);
 
       expect((await personal.list()).map((row) => row.title)).toEqual(['personal']);
+    });
+  });
+
+  describe('versioned read and archive', () => {
+    it('keeps a newer activityVersion unread when the caller marks an older one', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({
+          activityVersion: 6,
+          dedupeKey: 'v-read',
+          latestFeedRevision: 6,
+          readVersion: 0,
+        }),
+      );
+      await model.markReadObserved(created!.id, 5);
+      const [row] = await model.list();
+      expect(row.isRead).toBe(false);
+      expect(row.readVersion).toBe(0);
+
+      await model.markReadObserved(created!.id, 6);
+      const [read] = await model.list();
+      expect(read.isRead).toBe(true);
+      expect(read.readVersion).toBe(6);
+    });
+
+    it('does not archive unresolved action cards in archiveAll', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'update-1',
+          kind: 'update',
+          title: 'Just an update',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          actionRequestId: 'apr_1',
+          category: 'pending',
+          dedupeKey: 'action-1',
+          kind: 'action',
+          title: 'Approve this',
+          type: 'acp_permission',
+        }),
+      );
+
+      await model.archiveAll();
+      const remaining = await model.list();
+      expect(remaining.map((row) => row.title)).toEqual(['Approve this']);
+    });
+
+    it('does not mark later feed revisions read during mark-all', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'old-rev',
+          isRead: false,
+          latestFeedRevision: 5,
+          title: 'Old',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          dedupeKey: 'new-rev',
+          isRead: false,
+          latestFeedRevision: 7,
+          title: 'New',
+        }),
+      );
+
+      await serverDB.insert(notificationFeedState).values({
+        revision: 5,
+        scopeKey: 'personal',
+        userId,
+      });
+
+      await model.markAllAsRead();
+      const rows = await model.list();
+      expect(rows.find((row) => row.title === 'Old')?.isRead).toBe(true);
+      expect(rows.find((row) => row.title === 'New')?.isRead).toBe(false);
     });
   });
 });

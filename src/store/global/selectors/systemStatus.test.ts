@@ -264,7 +264,12 @@ describe('systemStatusSelectors', () => {
         status: { sidebarItems: stored },
       });
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
+        'inbox',
+        'my-work',
+        'views',
         'automations',
+        'teams',
+        'favorites',
         'private',
         'agent',
         'recents',
@@ -290,10 +295,15 @@ describe('systemStatusSelectors', () => {
       const s: GlobalState = merge(initialState, {
         status: { sidebarItems: stored },
       });
-      // `automations` is a newer default — backfilled immediately before the
+      // Newer primary destinations are backfilled immediately before the
       // accordion block.
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
+        'inbox',
+        'my-work',
+        'views',
         'automations',
+        'teams',
+        'favorites',
         'project',
         'recents',
         'private',
@@ -324,7 +334,12 @@ describe('systemStatusSelectors', () => {
       });
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
         'tasks',
+        'inbox',
+        'my-work',
+        'views',
         'automations',
+        'teams',
+        'favorites',
         'recents',
         'project',
         'private',
@@ -342,8 +357,13 @@ describe('systemStatusSelectors', () => {
       const spacerIdx = items.indexOf(SIDEBAR_SPACER_ID);
       // every surviving key is backfilled, and no retired key is reintroduced
       expect(items).toEqual([
+        'inbox',
+        'my-work',
         'tasks',
+        'views',
         'automations',
+        'teams',
+        'favorites',
         'private',
         'agent',
         'recents',
@@ -374,8 +394,13 @@ describe('systemStatusSelectors', () => {
       // block — is backfilled as a missing top-group default ahead of the block.
       // Retired keys never enter the layout at all.
       expect(items).toEqual([
+        'inbox',
+        'my-work',
         'tasks',
+        'views',
         'automations',
+        'teams',
+        'favorites',
         'private',
         'agent',
         'recents',
@@ -393,8 +418,13 @@ describe('systemStatusSelectors', () => {
       // recents/agent keep their legacy order; `project` is backfilled right after
       // `recents` and `private` ahead of the block (see the note above).
       expect(items).toEqual([
+        'inbox',
+        'my-work',
         'tasks',
+        'views',
         'automations',
+        'teams',
+        'favorites',
         'private',
         'recents',
         'project',
@@ -465,16 +495,7 @@ describe('systemStatusSelectors', () => {
     });
 
     it('leaves a preference that names no retired item untouched', () => {
-      const clean = [
-        'tasks',
-        'automations',
-        'resource',
-        'recents',
-        'project',
-        'private',
-        'agent',
-        SIDEBAR_SPACER_ID,
-      ];
+      const clean = [...DEFAULT_SIDEBAR_ITEMS];
 
       expect(
         systemStatusSelectors.sidebarItems(null)(

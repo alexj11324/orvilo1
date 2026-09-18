@@ -1,8 +1,14 @@
+import type { NotificationFeedKind, NotificationPresentationFilter } from '@orvilo/types';
 import { and, count, desc, eq, inArray, isNull, lt, or, type SQL, sql } from 'drizzle-orm';
 
 import type { NewNotification, NewNotificationDelivery } from '../schemas/notification';
 import { notificationDeliveries, notifications } from '../schemas/notification';
-import type { OrviloDatabase } from '../type';
+import { projects } from '../schemas/project';
+import { tasks } from '../schemas/task';
+import { notificationEventReceipts } from '../schemas/workAttention';
+import type { OrviloDatabase, Transaction } from '../type';
+import { buildWorkspaceWhere } from '../utils/workspace';
+import { currentFeedRevision } from './notificationFeed';
 
 export interface NotificationModelOptions {
   /**
@@ -33,6 +39,59 @@ export class NotificationModel {
     if (this.workspaceId === null) conditions.push(isNull(notifications.workspaceId));
     else if (this.workspaceId) conditions.push(eq(notifications.workspaceId, this.workspaceId));
     return conditions;
+  };
+
+  /**
+   * Live ACL: a historical delivery is not proof the recipient can still read
+   * the object. Missing/unknown resource types stay visible (system cards).
+   */
+  private resourceReadable = (): SQL => {
+    const taskVisible = buildWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId ?? undefined },
+      {
+        userId: tasks.createdByUserId,
+        visibility: tasks.visibility,
+        workspaceId: tasks.workspaceId,
+      },
+    );
+    const projectVisible = this.workspaceId
+      ? eq(projects.workspaceId, this.workspaceId)
+      : and(eq(projects.userId, this.userId), isNull(projects.workspaceId))!;
+    return or(
+      isNull(notifications.resourceType),
+      sql`${notifications.resourceType} not in ('task', 'project')`,
+      sql`(${notifications.resourceType} = 'task' and exists (select 1 from ${tasks} where ${tasks.id} = ${notifications.resourceId} and ${taskVisible}))`,
+      sql`(${notifications.resourceType} = 'project' and exists (select 1 from ${projects} where ${projects.id} = ${notifications.resourceId} and ${projectVisible}))`,
+    )!;
+  };
+
+  private presentationWhere = (filter?: NotificationPresentationFilter): SQL[] => {
+    const now = new Date();
+    switch (filter) {
+      case 'unread': {
+        return [
+          eq(notifications.isArchived, false),
+          or(
+            eq(notifications.isRead, false),
+            and(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt)),
+          )!,
+        ];
+      }
+      case 'archived': {
+        return [eq(notifications.isArchived, true)];
+      }
+      case 'snoozed': {
+        return [
+          sql`${notifications.snoozedUntil} is not null and ${notifications.snoozedUntil} > ${now}`,
+        ];
+      }
+      case 'mentions': {
+        return [eq(notifications.isArchived, false), eq(notifications.category, 'mention')];
+      }
+      default: {
+        return [eq(notifications.isArchived, false)];
+      }
+    }
   };
 
   async list(
@@ -158,10 +217,102 @@ export class NotificationModel {
       .select({ count: count() })
       .from(notifications)
       .where(
-        and(...this.scope(), eq(notifications.isRead, false), eq(notifications.isArchived, false)),
+        and(
+          ...this.scope(),
+          this.resourceReadable(),
+          eq(notifications.isRead, false),
+          eq(notifications.isArchived, false),
+          or(
+            isNull(notifications.snoozedUntil),
+            sql`${notifications.snoozedUntil} <= ${new Date()}`,
+          )!,
+        ),
       );
 
     return result?.count ?? 0;
+  }
+
+  async getFeedSummary() {
+    const now = new Date();
+    const [row] = await this.db
+      .select({
+        pendingActionCount: count(
+          sql`case when ${notifications.kind} = 'action' and ${notifications.resolvedAt} is null then 1 end`,
+        ),
+        snoozedPendingCount: count(
+          sql`case when ${notifications.kind} = 'action' and ${notifications.resolvedAt} is null and ${notifications.snoozedUntil} is not null and ${notifications.snoozedUntil} > ${now} then 1 end`,
+        ),
+        unreadBadgeCount: count(
+          sql`case when ${notifications.isArchived} = false and (${notifications.isRead} = false or (${notifications.kind} = 'action' and ${notifications.resolvedAt} is null)) and (${notifications.snoozedUntil} is null or ${notifications.snoozedUntil} <= ${now}) then 1 end`,
+        ),
+        unreadUpdateCount: count(
+          sql`case when ${notifications.kind} = 'update' and ${notifications.isRead} = false and ${notifications.isArchived} = false then 1 end`,
+        ),
+      })
+      .from(notifications)
+      .where(and(...this.scope(), this.resourceReadable()));
+
+    return {
+      pendingActionCount: Number(row?.pendingActionCount ?? 0),
+      snoozedPendingCount: Number(row?.snoozedPendingCount ?? 0),
+      unreadBadgeCount: Number(row?.unreadBadgeCount ?? 0),
+      unreadUpdateCount: Number(row?.unreadUpdateCount ?? 0),
+    };
+  }
+
+  async listFeed(
+    opts: {
+      cursor?: string;
+      filter?: NotificationPresentationFilter;
+      kind?: NotificationFeedKind;
+      limit?: number;
+    } = {},
+  ) {
+    const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
+    const conditions: SQL[] = [
+      ...this.scope(),
+      this.resourceReadable(),
+      ...this.presentationWhere(opts.filter),
+    ];
+    if (opts.kind) conditions.push(eq(notifications.kind, opts.kind));
+    // Action tab keeps unresolved requests even after personal archive.
+    if (opts.kind === 'action') {
+      conditions.push(isNull(notifications.resolvedAt));
+    }
+
+    if (opts.cursor) {
+      const cursorRow = await this.db
+        .select({
+          id: notifications.id,
+          lastActivityAt: notifications.lastActivityAt,
+        })
+        .from(notifications)
+        .where(and(eq(notifications.id, opts.cursor), ...this.scope()))
+        .limit(1);
+      if (cursorRow[0]) {
+        const cursorTime = cursorRow[0].lastActivityAt ?? new Date(0);
+        conditions.push(
+          or(
+            lt(notifications.lastActivityAt, cursorTime),
+            and(
+              eq(notifications.lastActivityAt, cursorTime),
+              lt(notifications.id, cursorRow[0].id),
+            ),
+          )!,
+        );
+      }
+    }
+
+    return this.db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(
+        desc(notifications.lastActivityAt),
+        desc(notifications.createdAt),
+        desc(notifications.id),
+      )
+      .limit(limit);
   }
 
   async markAsRead(ids: string[]) {
@@ -174,26 +325,110 @@ export class NotificationModel {
   }
 
   async markAllAsRead() {
-    return this.db
-      .update(notifications)
-      .set({ isRead: true, updatedAt: new Date() })
-      .where(
-        and(...this.scope(), eq(notifications.isRead, false), eq(notifications.isArchived, false)),
-      );
+    return this.markAllAsReadSnapshot();
   }
 
   async archive(id: string) {
     return this.db
       .update(notifications)
-      .set({ isArchived: true, updatedAt: new Date() })
+      .set({ archivedAt: new Date(), isArchived: true, updatedAt: new Date() })
       .where(and(eq(notifications.id, id), ...this.scope()));
   }
 
   async archiveAll() {
     return this.db
       .update(notifications)
-      .set({ isArchived: true, updatedAt: new Date() })
-      .where(and(...this.scope(), eq(notifications.isArchived, false)));
+      .set({ archivedAt: new Date(), isArchived: true, updatedAt: new Date() })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.isArchived, false),
+          or(eq(notifications.kind, 'update'), sql`${notifications.resolvedAt} is not null`)!,
+        ),
+      );
+  }
+
+  /**
+   * Confirm only the activityVersion the caller actually displayed. A newer
+   * event that landed as v6 while the user marked v5 stays unread.
+   */
+  async markReadObserved(id: string, observedVersion: number) {
+    const now = new Date();
+    return this.db
+      .update(notifications)
+      .set({
+        isRead: sql`${notifications.activityVersion} <= ${observedVersion}`,
+        readVersion: sql`GREATEST(${notifications.readVersion}, ${observedVersion})`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.id, id),
+          sql`${notifications.readVersion} < ${observedVersion}`,
+        ),
+      );
+  }
+
+  /**
+   * Mark-all uses a statement snapshot of the current feed revision so events
+   * that commit after this statement started are not cleared.
+   */
+  async markAllAsReadSnapshot() {
+    const now = new Date();
+    const feedRevision = await currentFeedRevision(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    const cutoff =
+      feedRevision > 0
+        ? sql`${feedRevision}`
+        : sql`(
+      SELECT COALESCE(MAX(${notifications.latestFeedRevision}), 0)
+      FROM ${notifications}
+      WHERE ${and(...this.scope())}
+    )`;
+    return this.db
+      .update(notifications)
+      .set({
+        isRead: true,
+        readVersion: sql`${notifications.activityVersion}`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.isRead, false),
+          eq(notifications.isArchived, false),
+          sql`${notifications.latestFeedRevision} <= ${cutoff}`,
+        ),
+      );
+  }
+
+  async snooze(id: string, until: Date, expectedVersion: number) {
+    return this.db
+      .update(notifications)
+      .set({ snoozedUntil: until, updatedAt: new Date() })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.id, id),
+          eq(notifications.activityVersion, expectedVersion),
+        ),
+      );
+  }
+
+  async markUnreadObserved(id: string, expectedVersion: number) {
+    return this.db
+      .update(notifications)
+      .set({ isRead: false, readVersion: 0, updatedAt: new Date() })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.id, id),
+          eq(notifications.activityVersion, expectedVersion),
+        ),
+      );
   }
 
   // ─── Write-side (used by NotificationService in cloud) ─────────
@@ -201,7 +436,11 @@ export class NotificationModel {
   async create(data: Omit<NewNotification, 'userId'>) {
     const [result] = await this.db
       .insert(notifications)
-      .values({ ...data, userId: this.userId })
+      .values({
+        ...data,
+        lastActivityAt: data.lastActivityAt ?? new Date(),
+        userId: this.userId,
+      })
       .onConflictDoNothing({
         target: [notifications.userId, notifications.dedupeKey],
       })
@@ -214,5 +453,76 @@ export class NotificationModel {
     const [result] = await this.db.insert(notificationDeliveries).values(data).returning();
 
     return result;
+  }
+
+  async recordEventReceipt(
+    executor: Transaction | OrviloDatabase,
+    params: {
+      consumer: string;
+      eventId: string;
+      kind: string;
+      notificationId?: string;
+      recipientUserId: string;
+    },
+  ): Promise<boolean> {
+    const inserted = await executor
+      .insert(notificationEventReceipts)
+      .values({
+        consumer: params.consumer,
+        eventId: params.eventId,
+        kind: params.kind,
+        notificationId: params.notificationId,
+        recipientUserId: params.recipientUserId,
+      })
+      .onConflictDoNothing({
+        target: [
+          notificationEventReceipts.consumer,
+          notificationEventReceipts.eventId,
+          notificationEventReceipts.recipientUserId,
+          notificationEventReceipts.kind,
+        ],
+      })
+      .returning({ id: notificationEventReceipts.id });
+    return inserted.length > 0;
+  }
+
+  async bumpEpisode(
+    executor: Transaction | OrviloDatabase,
+    params: {
+      episodeKey: string;
+      feedRevision: number;
+      recipientUserId: string;
+      title?: string;
+      content?: string;
+    },
+  ) {
+    const now = new Date();
+    const [row] = await executor
+      .update(notifications)
+      .set({
+        activityVersion: sql`${notifications.activityVersion} + 1`,
+        ...(params.content !== undefined ? { content: params.content } : {}),
+        isArchived: false,
+        isRead: false,
+        lastActivityAt: now,
+        latestFeedRevision: params.feedRevision,
+        ...(params.title !== undefined ? { title: params.title } : {}),
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(notifications.userId, params.recipientUserId),
+          eq(notifications.episodeKey, params.episodeKey),
+        ),
+      )
+      .returning();
+    return row;
+  }
+
+  async resolveAction(requestId: string) {
+    return this.db
+      .update(notifications)
+      .set({ resolvedAt: new Date(), updatedAt: new Date() })
+      .where(and(...this.scope(), eq(notifications.actionRequestId, requestId)));
   }
 }

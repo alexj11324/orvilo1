@@ -6,6 +6,7 @@ import { NotificationModel } from '@/database/models/notification';
 import { ResourceTransferRequestModel } from '@/database/models/resourceTransferRequest';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { toFeedCard } from '@/server/services/workAttention';
 
 const notificationProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -21,8 +22,11 @@ const notificationProcedure = wsCompatProcedure.use(serverDatabase).use(async (o
     },
   });
 });
+const notificationReadProcedure = notificationProcedure.use(
+  withScopedPermission('notification:read'),
+);
 const notificationWriteProcedure = notificationProcedure.use(
-  withScopedPermission('message:create'),
+  withScopedPermission('notification:organize'),
 );
 
 /**
@@ -55,7 +59,61 @@ export const notificationRouter = router({
     return ctx.notificationModel.archiveAll();
   }),
 
-  navigationCounts: notificationProcedure.query(async ({ ctx }) => {
+  feed: notificationReadProcedure
+    .input(
+      z.object({
+        cursor: z.string().optional(),
+        filter: z.enum(['all', 'archived', 'mentions', 'snoozed', 'unread']).optional(),
+        kind: z.enum(['action', 'update']).optional(),
+        limit: z.number().min(1).max(50).default(20),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.notificationModel.listFeed(input);
+      return rows.map(toFeedCard);
+    }),
+
+  feedSummary: notificationReadProcedure.query(async ({ ctx }) => {
+    return ctx.notificationModel.getFeedSummary();
+  }),
+
+  list: notificationReadProcedure
+    .input(
+      z.object({
+        category: z.string().optional(),
+        cursor: z.string().optional(),
+        isRead: z.boolean().optional(),
+        limit: z.number().min(1).max(50).default(20),
+        unreadOnly: z.boolean().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.notificationModel.list(input);
+    }),
+
+  markAllAsRead: notificationWriteProcedure.mutation(async ({ ctx }) => {
+    return ctx.notificationModel.markAllAsRead();
+  }),
+
+  markAsRead: notificationWriteProcedure
+    .input(z.object({ ids: z.array(z.string()).min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.notificationModel.markAsRead(input.ids);
+    }),
+
+  markReadObserved: notificationWriteProcedure
+    .input(z.object({ id: z.string(), observedVersion: z.number().int().min(0) }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.notificationModel.markReadObserved(input.id, input.observedVersion);
+    }),
+
+  markUnread: notificationWriteProcedure
+    .input(z.object({ expectedVersion: z.number().int().min(0), id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.notificationModel.markUnreadObserved(input.id, input.expectedVersion);
+    }),
+
+  navigationCounts: notificationReadProcedure.query(async ({ ctx }) => {
     // The pending category is action-driven, not read-driven: while a
     // transfer request awaits the user, its count must keep prompting even
     // after the linked inbox row was read. Swap the linked rows out of the
@@ -94,42 +152,30 @@ export const notificationRouter = router({
     return counts;
   }),
 
-  list: notificationProcedure
+  snooze: notificationWriteProcedure
     .input(
       z.object({
-        category: z.string().optional(),
-        cursor: z.string().optional(),
-        isRead: z.boolean().optional(),
-        limit: z.number().min(1).max(50).default(20),
-        unreadOnly: z.boolean().optional(),
+        expectedVersion: z.number().int().min(0),
+        id: z.string(),
+        until: z.string().datetime(),
       }),
     )
-    .query(async ({ ctx, input }) => {
-      return ctx.notificationModel.list(input);
-    }),
-
-  markAllAsRead: notificationWriteProcedure.mutation(async ({ ctx }) => {
-    return ctx.notificationModel.markAllAsRead();
-  }),
-
-  markAsRead: notificationWriteProcedure
-    .input(z.object({ ids: z.array(z.string()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.notificationModel.markAsRead(input.ids);
+      return ctx.notificationModel.snooze(input.id, new Date(input.until), input.expectedVersion);
     }),
 
-  unreadCount: notificationProcedure.query(async ({ ctx }) => {
-    // The header bell must keep prompting while a transfer awaits the user —
-    // even if the linked row was read/archived or its delivery failed — so
-    // apply the same live-transfer reconciliation as `navigationCounts`.
+  unreadCount: notificationReadProcedure.query(async ({ ctx }) => {
+    // Badge is the unique active, currently-readable card set, plus live
+    // transfer requests that still need a decision even if the linked row
+    // was read or never projected.
     const cards = await listLiveTransferCards(ctx);
-    const unread = await ctx.notificationModel.getUnreadCount();
-    if (cards.length === 0) return unread;
+    const summary = await ctx.notificationModel.getFeedSummary();
+    if (cards.length === 0) return summary.unreadBadgeCount;
 
     const linked = await ctx.notificationModel.countLinkedToTransfers(
       cards.map((request) => request.id),
     );
-    return Math.max(0, unread + cards.length - linked.unread);
+    return Math.max(0, summary.unreadBadgeCount + cards.length - linked.unread);
   }),
 });
 

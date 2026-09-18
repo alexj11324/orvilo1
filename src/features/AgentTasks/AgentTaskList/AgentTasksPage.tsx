@@ -23,6 +23,7 @@ import {
 } from '@/features/Automations/shared';
 import { useScheduledTaskPage } from '@/features/Automations/useScheduledTaskPage';
 import { CollaborationOverlay, CollaborationProvider } from '@/features/Collaboration';
+import { resolveMineCollectionRedirect } from '@/features/MyWork/mineCollectionRedirect';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -206,6 +207,15 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [collectionPage, setCollectionPage] = useState(1);
   const activeWorkspaceId = useActiveWorkspaceId();
+  const mineRedirect = resolveMineCollectionRedirect({
+    agentId,
+    collection: searchParams.get('collection'),
+    projectId,
+    scope: searchParams.get('scope'),
+  });
+  useEffect(() => {
+    if (mineRedirect) navigate(mineRedirect, { replace: true });
+  }, [mineRedirect, navigate]);
   // Member assignment is a workspace concept (a task now carries a member
   // owner alongside its executor agent), so "My tasks" only earns its tab on
   // the global page of a workspace: personal mode has no members, and the
@@ -495,7 +505,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
                 {!isScheduledCollection && headerVisibility.showViewOptions && (
                   <TasksGroupConfig
                     options={viewOptions}
-                    pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
+                    pinnedOptions={
+                      isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined
+                    }
                     setOptions={setViewOptions}
                   />
                 )}
@@ -564,7 +576,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
               <TaskList
                 data={isCollectionListInit || undefined}
                 error={collectionSWR.error}
-                isLoading={collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)}
+                isLoading={
+                  collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
+                }
                 items={collectionTasks}
                 options={myTaskViewOptions}
                 routeScope={routeScope}

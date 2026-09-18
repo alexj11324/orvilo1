@@ -45,14 +45,17 @@ import {
   automationRunsRouteMeta,
   automationsRouteMeta,
 } from '@/features/Automations/routeMeta';
-import { inboxRouteMeta } from '@/features/HomeInbox/routeMeta';
+import { myWorkRouteMeta } from '@/features/MyWork/routeMeta';
 import {
   projectLibraryRouteMeta,
   projectResourcesRouteMeta,
   projectsRouteMeta,
 } from '@/features/Projects/routeMeta';
+import { savedViewsRouteMeta } from '@/features/SavedViews/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
+import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
 import { workspaceHomeRouteMeta } from '@/features/Workspace/routeMeta';
+import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
 import {
   agentChannelRouteMeta,
   agentPermissionRouteMeta,
@@ -714,6 +717,63 @@ export const sharedMainAreaChildren: RouteObject[] = [
       {
         children: [
           {
+            element: dynamicElement(() => import('@/routes/(main)/my-work'), 'Desktop > My Work', {
+              preloadId: 'my-work',
+            }),
+            handle: { meta: myWorkRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-work',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/views'), 'Desktop > Views', {
+              preloadId: 'views',
+            }),
+            handle: { meta: savedViewsRouteMeta },
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/views/[viewId]'),
+              'Desktop > Saved View',
+              { preloadId: 'views' },
+            ),
+            handle: { meta: savedViewsRouteMeta },
+            path: ':viewId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'views',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/teams'), 'Desktop > Teams', {
+              preloadId: 'teams',
+            }),
+            handle: { meta: teamsRouteMeta },
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/teams/[teamId]'),
+              'Desktop > Team',
+              { preloadId: 'teams' },
+            ),
+            handle: { meta: teamsRouteMeta },
+            path: ':teamId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'teams',
+      },
+      {
+        children: [
+          {
             element: dynamicElement(
               () => import('@/routes/(main)/task/[taskId]'),
               'Desktop > Task Detail',
@@ -746,7 +806,8 @@ export const sharedMainAreaChildren: RouteObject[] = [
       'Desktop > Task Workspace > Layout',
       { preloadId: 'tasks' },
     ),
-    // This one wrapper carries `/tasks`, `/inbox`, `/task/*` and `/goal/*`, and
+    // This one wrapper carries `/tasks`, `/inbox`, `/my-work`, `/views`,
+    // `/teams`, `/task/*` and `/goal/*`, and
     // every one of them mounts the portal column (`TaskWorkspaceLayout` renders
     // `AgentTaskManager` or `MobilePortal`). Declaring it once here is what lets
     // the acceptance drawer know it would be a second host; see `RouteMeta`.

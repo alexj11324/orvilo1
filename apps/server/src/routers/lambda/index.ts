@@ -107,6 +107,7 @@ import { verifyRouter } from './verify';
 import { videoRouter } from './video';
 import { webBrowsingRouter } from './webBrowsing';
 import { workRouter } from './work';
+import { workAttentionRouter } from './workAttention';
 import { workspaceUserSettingsRouter } from './workspaceUserSettings';
 
 export const lambdaRouter = router({
@@ -198,6 +199,7 @@ export const lambdaRouter = router({
   video: videoRouter,
   webBrowsing: webBrowsingRouter,
   work: workRouter,
+  workAttention: workAttentionRouter,
   workspace: workspaceRouter,
   workspaceAgent: workspaceAgentRouter,
   workspaceAuditLog: workspaceAuditLogRouter,

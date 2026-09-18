@@ -33,6 +33,7 @@ export const RESERVED_FIRST_SEGMENTS = new Set([
   'group',
   'inbox',
   'memory',
+  'my-work',
   'page',
   'project',
   'projects',
@@ -42,6 +43,8 @@ export const RESERVED_FIRST_SEGMENTS = new Set([
   'eval',
   'tasks',
   'task',
+  'teams',
+  'views',
   // Personal-only:
   'a',
   'apps',

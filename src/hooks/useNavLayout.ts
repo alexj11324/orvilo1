@@ -1,4 +1,11 @@
-import { HomeIcon, SearchIcon } from 'lucide-react';
+import {
+  HomeIcon,
+  InboxIcon,
+  LayoutListIcon,
+  SearchIcon,
+  SquareUserIcon,
+  UsersIcon,
+} from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -53,16 +60,40 @@ export const useNavLayout = (): NavLayout => {
           url: '/',
         },
         {
+          icon: InboxIcon,
+          key: SidebarTabKey.Inbox,
+          title: t('tab.inbox'),
+          url: '/inbox',
+        },
+        {
+          icon: SquareUserIcon,
+          key: SidebarTabKey.MyWork,
+          title: t('tab.myWork'),
+          url: '/my-work',
+        },
+        {
           icon: getRouteById('tasks')!.icon,
           key: SidebarTabKey.Tasks,
           title: t('tab.tasks'),
           url: '/tasks',
         },
         {
+          icon: LayoutListIcon,
+          key: SidebarTabKey.Views,
+          title: t('tab.views'),
+          url: '/views',
+        },
+        {
           icon: getRouteById('automations')!.icon,
           key: SidebarTabKey.Automations,
           title: t('tab.automations'),
           url: '/automations',
+        },
+        {
+          icon: UsersIcon,
+          key: SidebarTabKey.Teams,
+          title: t('tab.teams'),
+          url: '/teams',
         },
         {
           icon: getRouteById('resource')!.icon,

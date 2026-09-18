@@ -48,6 +48,10 @@ describe('mobileRouter task routes', () => {
     expect(source).toContain("import('@/routes/(main)/agent/task/[taskId]')");
     expect(source).toContain("path: 'tasks'");
     expect(source).toContain("path: 'task'");
+    expect(source).toContain("path: 'inbox'");
+    expect(source).toContain("path: 'my-work'");
+    expect(source).toContain("path: 'views'");
+    expect(source).toContain("path: 'teams'");
     // The `:slug?` tail is the readable title segment; it never resolves the
     // task, so pre-slug links keep matching the same route.
     expect(source).toContain("path: ':taskId/:slug?'");

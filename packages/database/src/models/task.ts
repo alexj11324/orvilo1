@@ -79,6 +79,7 @@ const TRACKED_TASK_COLUMNS = [
   'schedulePattern',
   'scheduleTimezone',
   'status',
+  'triageStatus',
 ] as const;
 
 /** Task fields that must wake a linked Linear issue even without an activity row. */

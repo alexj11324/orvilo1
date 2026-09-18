@@ -11,11 +11,15 @@ export enum SidebarTabKey {
   Automations = 'automations',
   Chat = 'chat',
   Home = 'home',
+  Inbox = 'inbox',
   Knowledge = 'knowledge',
   Me = 'me',
+  MyWork = 'my-work',
   Resource = 'resource',
   Setting = 'settings',
   Tasks = 'tasks',
+  Teams = 'teams',
+  Views = 'views',
 }
 
 export enum ChatSettingsTabs {

@@ -7,15 +7,16 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
-import { openInboxModal } from './InboxModal';
 import { useInboxUnreadCount } from './useInboxUnreadCount';
 
 const InboxButton = memo(() => {
   const { t } = useTranslation('notification');
+  const navigate = useWorkspaceAwareNavigate();
   const { enabled, unreadCount } = useInboxUnreadCount();
 
-  const handleOpen = useCallback(() => openInboxModal(), []);
+  const handleOpen = useCallback(() => navigate('/inbox'), [navigate]);
 
   if (!enabled) return null;
 

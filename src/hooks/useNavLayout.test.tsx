@@ -34,23 +34,17 @@ describe('useNavLayout', () => {
     expect(await renderedKeys()).not.toContain(key);
   });
 
-  it('keeps the task destination reachable', async () => {
+  it('keeps inbox, my work, tasks and automation reachable', async () => {
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());
 
-    const tasksItem = result.current.topNavItems.find((item) => item.key === 'tasks');
-
-    expect(tasksItem).toBeDefined();
-    expect(tasksItem?.url).toBe('/tasks');
-  });
-
-  it('keeps the automation destination reachable', async () => {
-    const { useNavLayout } = await import('./useNavLayout');
-    const { result } = renderHook(() => useNavLayout());
-
-    const automationsItem = result.current.topNavItems.find((item) => item.key === 'automations');
-
-    expect(automationsItem).toBeDefined();
-    expect(automationsItem?.url).toBe('/automations');
+    expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
+    expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe('/my-work');
+    expect(result.current.topNavItems.find((item) => item.key === 'tasks')?.url).toBe('/tasks');
+    expect(result.current.topNavItems.find((item) => item.key === 'views')?.url).toBe('/views');
+    expect(result.current.topNavItems.find((item) => item.key === 'automations')?.url).toBe(
+      '/automations',
+    );
+    expect(result.current.topNavItems.find((item) => item.key === 'teams')?.url).toBe('/teams');
   });
 });

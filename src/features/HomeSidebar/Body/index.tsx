@@ -29,9 +29,11 @@ import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
 import Private from './Private';
 import Project from './Project';
 import { useSyncWorkspaceSidebarPreference } from './useSyncWorkspaceSidebarPreference';
+import WorkFavorites from './WorkFavorites';
 
 export enum GroupKey {
   Agent = 'agent',
+  Favorites = 'favorites',
   Private = 'private',
   Project = 'project',
   Recents = 'recents',
@@ -39,6 +41,7 @@ export enum GroupKey {
 }
 
 const ACCORDION_KEYS = new Set<string>([
+  GroupKey.Favorites,
   GroupKey.Project,
   GroupKey.Recents,
   GroupKey.Agent,
@@ -51,6 +54,7 @@ const HEADER_KEYS = new Set<string>(['home', 'search']);
 
 const accordionComponents: Record<string, (key: string) => ReactElement> = {
   [GroupKey.Agent]: (key) => <Agent itemKey={key} key={key} />,
+  [GroupKey.Favorites]: (key) => <WorkFavorites itemKey={key} key={key} />,
   [GroupKey.Private]: (key) => <Private itemKey={key} key={key} />,
   [GroupKey.Project]: (key) => <Project itemKey={key} key={key} />,
   [GroupKey.Recents]: (key) => <Recents itemKey={key} key={key} />,
@@ -144,6 +148,7 @@ const Body = memo(() => {
       // empty section.
       if (k === GroupKey.Private && !activeWorkspaceId) return false;
       if (k === GroupKey.Project && !enableProjects) return false;
+      if (k === 'teams' && !activeWorkspaceId) return false;
       return k === GroupKey.Agent || k === SIDEBAR_SPACER_ID || !hiddenSections.includes(k);
     },
     [hiddenSections, activeWorkspaceId, enableProjects],

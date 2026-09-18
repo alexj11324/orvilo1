@@ -70,6 +70,7 @@ export const executionGrants = pgTable(
     index('execution_grants_task_id_idx').on(t.taskId),
     index('execution_grants_task_topic_id_idx').on(t.taskTopicId),
     index('execution_grants_agent_id_idx').on(t.agentId),
+    index('execution_grants_initiated_by_idx').on(t.initiatedBy, t.status),
   ],
 );
 

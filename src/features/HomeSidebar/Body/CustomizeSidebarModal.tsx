@@ -63,8 +63,13 @@ export interface SidebarItemConfig {
 }
 
 const ALL_SIDEBAR_ITEMS: SidebarItemConfig[] = [
+  { id: 'inbox', labelKey: 'tab.inbox', routeId: 'workInbox' },
+  { id: 'my-work', labelKey: 'tab.myWork', routeId: 'myWork' },
   { id: 'tasks', labelKey: 'tab.tasks', routeId: 'tasks' },
+  { id: 'views', labelKey: 'tab.views', routeId: 'savedViews' },
   { id: 'automations', labelKey: 'tab.automations', routeId: 'automations' },
+  { id: 'teams', labelKey: 'tab.teams', routeId: 'teams' },
+  { id: 'favorites', labelKey: 'tab.favorites' },
   { id: 'recents', labelKey: 'recents' },
   { id: 'project', labelKey: 'project:sidebar.title' },
   { id: 'private', labelKey: 'navPanel.privateAgents' },
@@ -89,6 +94,7 @@ export const getAvailableSidebarItems = (isWorkspaceMode: boolean): SidebarItemC
     // hardcoded roster is one more place that has to be edited in step.
     if (item.routeId && getRouteById(item.routeId)?.tier === 'retired') return false;
     if (!isWorkspaceMode && item.id === 'private') return false;
+    if (!isWorkspaceMode && item.id === 'teams') return false;
     return true;
   });
 

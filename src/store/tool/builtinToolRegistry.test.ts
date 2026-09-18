@@ -26,8 +26,6 @@ import {
 } from '@orvilo/builtin-tool-local-system/client';
 import { OrviloAgentApiName, OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import { RemoteDeviceApiName, RemoteDeviceIdentifier } from '@orvilo/builtin-tool-remote-device';
-import { SkillStoreApiName, SkillStoreIdentifier } from '@orvilo/builtin-tool-skill-store';
-import { SkillStoreInspectors, SkillStoreRenders } from '@orvilo/builtin-tool-skill-store/client';
 import {
   UserInteractionApiName,
   UserInteractionIdentifier,
@@ -57,10 +55,6 @@ describe('builtin tool registry', () => {
 
   beforeAll(() => {
     registerBuiltinToolSurfaces();
-  });
-
-  it('includes skill store in builtin identifiers', () => {
-    expect(builtinToolIdentifiers).toContain(SkillStoreIdentifier);
   });
 
   it('includes web onboarding in builtin identifiers', () => {
@@ -314,13 +308,6 @@ describe('builtin tool registry', () => {
 
   it('keeps Computer Use out of the always-on tools', () => {
     expect(alwaysOnToolIds).not.toContain(AuvIdentifier);
-  });
-
-  it('registers skill store inspectors and renders for market flows', () => {
-    expect(SkillStoreInspectors[SkillStoreApiName.importFromMarket]).toBeDefined();
-    expect(SkillStoreInspectors[SkillStoreApiName.searchSkill]).toBeDefined();
-    expect(SkillStoreRenders[SkillStoreApiName.importFromMarket]).toBeDefined();
-    expect(SkillStoreRenders[SkillStoreApiName.searchSkill]).toBeDefined();
   });
 
   it('registers group agent builder createGroup inspector', () => {

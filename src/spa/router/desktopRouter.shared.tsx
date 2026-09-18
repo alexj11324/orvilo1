@@ -34,7 +34,8 @@ import MemorySkeleton from '@/components/Skeleton/Memory';
 import ResourceHomeSkeleton from '@/components/Skeleton/ResourceHome';
 import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
-import { acceptanceRouteMeta } from '@/features/Acceptance/routeMeta';
+import { RESERVED_RETIRED_ROOTS } from '@/config/routes';
+import { WORKSPACE_SETTINGS_ALIASES } from '@/config/routes/settings';
 import { agentDocumentRouteMeta } from '@/features/AgentDocumentPage/routeMeta';
 import { goalDetailRouteMeta, goalsRouteMeta } from '@/features/AgentGoals/routeMeta';
 import { taskRouteMeta, tasksRouteMeta } from '@/features/AgentTasks/routeMeta';
@@ -134,9 +135,16 @@ const deferPlatformElement = (factory?: () => ReactElement) =>
  * correctly under both `/` (→ `/`) and `/:workspaceSlug` (→ `/:workspaceSlug`).
  */
 export const sharedMainAreaChildren: RouteObject[] = [
-  // Retired Community and standalone Pages URLs return to the current scope root.
+  // Retired roots come first, because they are the paths a dynamic segment
+  // would otherwise claim: without them `/video` resolves as workspace `video`
+  // and answers "no such workspace" instead of "this surface is gone". Derived
+  // from the navigation registry, so retiring a route reserves its root.
+  ...RESERVED_RETIRED_ROOTS.map((path): RouteObject => ({
+    element: redirectElement('..'),
+    path,
+  })),
+  // Deeper URLs of the retired Community and standalone Pages surfaces.
   ...[
-    'community',
     ...[
       'agent',
       'group_agent',
@@ -149,7 +157,6 @@ export const sharedMainAreaChildren: RouteObject[] = [
       'workspace',
     ].flatMap((type) => [`community/${type}`, `community/${type}/:slug`]),
     'community/workspace/settings',
-    'page',
     'page/:id',
     'page/:id/permission',
   ].map((path): RouteObject => ({ element: redirectElement('..'), path })),
@@ -653,23 +660,6 @@ export const sharedMainAreaChildren: RouteObject[] = [
         handle: { meta: projectLibraryRouteMeta },
         path: 'library/:id',
       },
-      {
-        children: [
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/acceptance/empty'),
-              'Desktop > Project Acceptance > Empty',
-            ),
-            index: true,
-          },
-        ],
-        element: dynamicLayout(
-          () => import('@/routes/(main)/project/[projectId]/acceptance'),
-          'Desktop > Project Acceptance',
-        ),
-        handle: { meta: acceptanceRouteMeta },
-        path: 'acceptance',
-      },
     ],
     element: dynamicLayout(
       () => import('@/routes/(main)/project/_layout'),
@@ -805,6 +795,24 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
     path: 'apps',
   },
 
+  // Retired standalone Acceptance / Verify platform. Every acceptance is now an
+  // object under the task (or run) that owns it, and the `/acceptance/*` and
+  // `/verify/*` roots no longer resolve to a product surface — the former
+  // check/report pages are the task panel now. They are registered explicitly
+  // rather than left to the catch-all for one reason: a retired root must stay
+  // a reserved word. Without an entry here `/:workspaceSlug` would claim
+  // `acceptance` / `verify` and parse the stored link's next segment as a
+  // workspace path. Both land on the task board, which is where the acceptance
+  // they were looking for is reachable from.
+  {
+    element: redirectElement('/tasks'),
+    path: 'acceptance/*',
+  },
+  {
+    element: redirectElement('/tasks'),
+    path: 'verify/*',
+  },
+
   // Workspace invitation landing (token-bound — never mirrored under /:workspaceSlug)
   {
     element: dynamicElement(() => import('@/routes/(main)/invite'), 'Desktop > Invite'),
@@ -893,27 +901,18 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
               redirectElement('general'),
             index: true,
           },
+          // Legacy `/<slug>/settings/<alias>` deep links. They are relative and
+          // resolve against the current URL, so they can sit together here
+          // regardless of which group their live destination lives in.
+          ...WORKSPACE_SETTINGS_ALIASES.flatMap(({ alias, subPaths, target }): RouteObject[] => {
+            const element = redirectElement(target === 'root' ? '..' : `../${target}`);
+            return [
+              { element, path: alias },
+              ...(subPaths ? [{ element, path: `${alias}/:sub` }] : []),
+            ];
+          }),
           // Full-bleed tabs render directly inside the workspace settings
           // shell (sidebar + outlet) — they own their internal layout.
-          // Retired workspace LLM Provider surface — deep-links land on the
-          // workspace settings root.
-          {
-            element: redirectElement('..'),
-            path: 'provider',
-          },
-          {
-            element: redirectElement('..'),
-            path: 'provider/:providerId',
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/[workspaceSlug]/settings/skill'),
-              'Desktop > Workspace > Settings > Skill',
-              { preloadId: 'settings' },
-            ),
-            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-            path: 'skill',
-          },
           {
             element: dynamicElement(
               () => import('@/routes/(main)/[workspaceSlug]/settings/connector'),
@@ -977,11 +976,6 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
                 handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('grid') }) },
                 path: 'statistics',
               },
-              // Legacy `/:slug/settings/stats` URLs — kept for deep-links.
-              {
-                element: redirectElement('../statistics'),
-                path: 'stats',
-              },
               {
                 element: dynamicElement(
                   () => import('@/routes/(main)/[workspaceSlug]/settings/plans'),
@@ -1022,12 +1016,6 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
                 handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('grid') }) },
                 path: 'usage',
               },
-              // Retired service-model assignment surface — legacy deep-links
-              // land on the workspace settings root.
-              {
-                element: redirectElement('..'),
-                path: 'service-model',
-              },
               {
                 element: dynamicElement(
                   () => import('@/routes/(main)/[workspaceSlug]/settings/credential'),
@@ -1036,11 +1024,6 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
                 handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
                 path: 'credential',
               },
-              // Legacy `/:slug/settings/creds` URLs — kept for deep-links.
-              {
-                element: redirectElement('../credential'),
-                path: 'creds',
-              },
               {
                 element: dynamicElement(
                   () => import('@/routes/(main)/[workspaceSlug]/settings/apikey'),
@@ -1048,22 +1031,6 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
                 ),
                 handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
                 path: 'apikey',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/oauth-apps'),
-                  'Desktop > Workspace > Settings > OAuth Apps',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'oauth-apps',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/oauth-apps'),
-                  'Desktop > Workspace > Settings > OAuth App Detail',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'oauth-apps/:sub',
               },
               {
                 element: dynamicElement(

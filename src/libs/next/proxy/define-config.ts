@@ -14,7 +14,7 @@ import { DEFAULT_LANG, locales, RouteVariants } from '@/utils/server/routeVarian
 
 import { authSpaRoutes, nextjsOnlyRoutes } from '../nextjsOnlyRoutes';
 import { isShareSpaRoute } from '../shareRoutes';
-import { isAlwaysWorkbenchSpaRoute, isWorkbenchSpaRoute } from '../workbenchRoutes';
+import { isWorkbenchSpaRoute } from '../workbenchRoutes';
 import { createRouteMatcher } from './createRouteMatcher';
 
 // Create debug logger instances
@@ -69,9 +69,6 @@ export function defineConfig() {
   const defaultMiddleware = (request: NextRequest) => {
     const url = new URL(request.url);
     logDefault('Processing request: %s %s', request.method, request.url);
-
-    // Public installation instructions must remain readable by coding agents.
-    if (url.pathname === '/acceptance/skill.md') return NextResponse.next();
 
     // skip all api requests
     if (backendApiEndpoints.some((path) => url.pathname.startsWith(path))) {
@@ -168,10 +165,11 @@ export function defineConfig() {
       return response;
     }
 
-    if (
-      isAlwaysWorkbenchSpaRoute(url.pathname) ||
-      (device.type === 'mobile' && isWorkbenchSpaRoute(url.pathname))
-    ) {
+    // Workbench is the mobile bundle's agent document reader. Desktop and
+    // Electron serve the same route from the main router, and the `/verify`
+    // tree it used to own unconditionally is retired, so the rewrite is
+    // device-gated on the one route it still owns.
+    if (device.type === 'mobile' && isWorkbenchSpaRoute(url.pathname)) {
       const workbenchPath = `/spa-workbench/${safeLocale}${url.pathname}`;
       logDefault('Workbench SPA route, rewriting to: %s', workbenchPath);
       url.pathname = workbenchPath;
@@ -268,13 +266,6 @@ export function defineConfig() {
     '/market/(.*)',
     // public share pages
     '/share(.*)',
-    // standalone verification report viewer — the run id in the URL is the
-    // read-only capability for viewing the report without a signed-in session.
-    '/verify/(.*)',
-    // acceptance decision page — same shape as /verify/:id: the id is the
-    // capability; the tRPC layer enforces the aggregate's `visibility` (a
-    // private aggregate 404s for anyone but the owner / workspace members).
-    '/acceptance/(.*)',
     // messenger verify-im — page itself handles unauth (in-page sign-in CTA)
     // and the random_id token is the actual capability check; no need for
     // session-protected access at the middleware layer.

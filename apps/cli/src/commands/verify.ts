@@ -4,8 +4,6 @@ import pc from 'picocolors';
 import { getTrpcClient } from '../api/client';
 import { confirm, outputJson, printTable, timeAgo, truncate } from '../utils/format';
 import { log } from '../utils/logger';
-import { attachDeprecatedVerifyRunAliases } from './acceptanceRun';
-import { registerAcceptanceCommands } from './verifyAcceptance';
 import {
   assertEnum,
   ON_FAIL,
@@ -27,13 +25,11 @@ export function registerVerifyCommand(program: Command) {
     .command('verify')
     .description('Agent Run verification machinery — criteria, rubrics, and per-run check plans');
 
-  // `verify acceptance …` — legacy alias; the canonical group is the first-class
-  // `lh acceptance`.
-  registerAcceptanceCommands(verify, { deprecated: true });
-
-  // Deprecated `lh verify …` spellings for the run/result/evidence/report/install
-  // commands now living under `lh acceptance`. Kept for a few releases.
-  attachDeprecatedVerifyRunAliases(verify);
+  // The `lh acceptance …` group and its `lh verify` spellings (acceptance,
+  // init/install, ingest-report, run/result/decision/evidence/report) were
+  // retired with the standalone Acceptance / Verify platform. What stays is the
+  // criterion / rubric / plan machinery the task runtime actually reads —
+  // `lh verify plan state` is quoted to the agent by the task prompt.
   // ════════════ criteria ════════════
   const criterion = verify.command('criterion').description('Reusable pass/fail standards');
 

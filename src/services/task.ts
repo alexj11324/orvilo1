@@ -280,11 +280,6 @@ class TaskService {
 
   cancelTopic = async (topicId: string) => lambdaClient.task.cancelTopic.mutate({ topicId });
 
-  steerTopic = async (
-    id: string,
-    params: { fileIds?: string[]; interrupt?: boolean; message: string; topicId: string },
-  ) => lambdaClient.task.steer.mutate({ id, ...params });
-
   deleteTopic = async (topicId: string) => lambdaClient.task.deleteTopic.mutate({ topicId });
 
   // Safely merges config without overwriting other config fields such as checkpoint/review

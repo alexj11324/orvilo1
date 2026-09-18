@@ -1,11 +1,11 @@
 # Orvilo Acceptance Mistakes
 
-Project-specific mistakes only. Read this with the acceptance skill's generic
-`references/common-mistakes.md`; stable ids use the `L-` prefix so they cannot be
-confused with the generic `M` catalogue. The generic file's "How this file is
-injected" applies here unchanged: **read the Checklist in full** once the target
-is known and again before marking any case `pass`; pull an **entry by id** only
-when its line applies (`rg -n '^### L-' <file>`, then `sed -n`).
+Project-specific mistakes only, with `L-` ids. There used to be a generic
+`M` catalogue beside it in the acceptance skill; that skill was retired with the
+standalone acceptance platform, so this file is now the whole checklist.
+**Read it in full** once the target is known and again before marking any case
+`pass`; pull an **entry by id** only when its line applies
+(`rg -n '^### L-' <file>`, then `sed -n`).
 
 Only judgment rules live here. Every entry carries `since` and `holds-while` —
 the mechanism it depends on. When that mechanism moves into a script default or
@@ -149,9 +149,11 @@ materially new delivery; reopen only on explicit user request.
 replace the Task provider or model, so the observed behavior belongs to a
 fallback.
 
-**Rule:** after every assignment or Task edit, verify the persisted
-provider/model and the first completed assistant message metadata; attach the
-runtime identity to the round.
+**Rule:** after every assignment or Task edit, verify the persisted runtime
+identity — for agent runs that is the ACP / heterogeneous provider the agent
+actually executes on; the LLM provider/model surface is retired (P50), so
+those fields no longer tell you what ran — and the first completed assistant
+message metadata; attach that identity to the round.
 
 ### L-E11 — Declaring an ingest done without reconciling its evidence count
 

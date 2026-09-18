@@ -5,6 +5,7 @@ import {
   canInviteMembers,
   canInviteToProject,
   canManageMember,
+  canRequestOwnershipTransfer,
   changeableRolesFor,
   grantableWorkspaceRoles,
   isAdminRole,
@@ -127,7 +128,44 @@ describe('canInviteToProject', () => {
   });
 
   it('denies private invites when the caller identity is missing', () => {
-    expect(canInviteToProject(true, { userId: 'me', visibility: 'private' }, undefined)).toBe(false);
+    expect(canInviteToProject(true, { userId: 'me', visibility: 'private' }, undefined)).toBe(
+      false,
+    );
     expect(canInviteToProject(true, { userId: 'me', visibility: 'private' }, null)).toBe(false);
+  });
+});
+
+describe('canRequestOwnershipTransfer', () => {
+  const admin = { role: 'admin', userId: 'u-admin' };
+
+  it('lets the owner offer a transfer to an active admin', () => {
+    expect(canRequestOwnershipTransfer('owner', admin, 'u-owner', false)).toBe(true);
+  });
+
+  it('is never offered to non-owners or while a transfer is pending', () => {
+    expect(canRequestOwnershipTransfer('admin', admin, 'u-admin2', false)).toBe(false);
+    expect(canRequestOwnershipTransfer('member', admin, 'u-m', false)).toBe(false);
+    expect(canRequestOwnershipTransfer('owner', admin, 'u-owner', true)).toBe(false);
+  });
+
+  it('requires an active admin recipient — not self, member, viewer, or suspended', () => {
+    expect(canRequestOwnershipTransfer('owner', { role: 'admin', userId: 'me' }, 'me', false)).toBe(
+      false,
+    );
+    expect(canRequestOwnershipTransfer('owner', { role: 'member', userId: 'm' }, 'me', false)).toBe(
+      false,
+    );
+    expect(
+      canRequestOwnershipTransfer(
+        'owner',
+        { role: 'admin', suspendedAt: new Date(), userId: 's' },
+        'me',
+        false,
+      ),
+    ).toBe(false);
+    // A legacy non-primary owner row still counts as admin for the swap.
+    expect(canRequestOwnershipTransfer('owner', { role: 'owner', userId: 'co' }, 'me', false)).toBe(
+      true,
+    );
   });
 });

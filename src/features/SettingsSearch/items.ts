@@ -41,9 +41,9 @@ export interface SettingsSearchItem {
  * Canonical English keywords per tab, indexed in every locale. The localized
  * strings from TAB_SEARCH_KEYWORDS_KEYS are translations that usually replace
  * the English terms (zh-CN: `用量,消耗,配额…`), which made English queries like
- * `usage` or `skill` miss on non-English UIs. English is the lingua franca for
- * technical terms — it must always stay searchable; localized keywords enrich
- * on top of this floor.
+ * `usage` or `billing` miss on non-English UIs. English is the lingua franca
+ * for technical terms — it must always stay searchable; localized keywords
+ * enrich on top of this floor.
  */
 export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
   [SettingsTabs.About]: ['about', 'version', 'changelog', 'feedback', 'help'],
@@ -88,7 +88,6 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
     'discord',
     'wechat',
   ],
-  [SettingsTabs.OAuthApps]: ['oauth', 'oauth apps', 'developer apps'],
   [SettingsTabs.Plans]: ['subscription', 'plan', 'upgrade', 'pricing', 'membership'],
   [SettingsTabs.Profile]: [
     'profile',
@@ -101,8 +100,6 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
     'logout',
   ],
   [SettingsTabs.Proxy]: ['proxy', 'network', 'connection', 'proxy settings'],
-  [SettingsTabs.Referral]: ['referral', 'invite', 'rewards', 'bonus'],
-  [SettingsTabs.Skill]: ['skill', 'skills', 'plugins', 'tools'],
   [SettingsTabs.Stats]: ['analytics', 'statistics', 'stats'],
   [SettingsTabs.Storage]: [
     'storage',
@@ -152,12 +149,9 @@ export const TAB_SEARCH_KEYWORDS_KEYS: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.Memory]: 'settingsSearch.tabKeywords.memory',
   [SettingsTabs.Messenger]: 'settingsSearch.tabKeywords.messenger',
   [SettingsTabs.Notification]: 'settingsSearch.tabKeywords.notification',
-  [SettingsTabs.OAuthApps]: 'settingsSearch.tabKeywords.oauthApps',
   [SettingsTabs.Plans]: 'settingsSearch.tabKeywords.plans',
   [SettingsTabs.Profile]: 'settingsSearch.tabKeywords.profile',
   [SettingsTabs.Proxy]: 'settingsSearch.tabKeywords.proxy',
-  [SettingsTabs.Referral]: 'settingsSearch.tabKeywords.referral',
-  [SettingsTabs.Skill]: 'settingsSearch.tabKeywords.skill',
   [SettingsTabs.Stats]: 'settingsSearch.tabKeywords.stats',
   [SettingsTabs.Storage]: 'settingsSearch.tabKeywords.storage',
   [SettingsTabs.SystemTools]: 'settingsSearch.tabKeywords.systemTools',
@@ -553,43 +547,9 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     ns: 'subscription',
     tab: SettingsTabs.Plans,
   },
-  // Referral
-  {
-    anchor: 'referral-invite-link',
-    keywords: ['invite link', 'share'],
-    labelKey: 'referral.inviteLink.title',
-    ns: 'subscription',
-    tab: SettingsTabs.Referral,
-  },
-  {
-    anchor: 'referral-invite-code',
-    keywords: ['invite code', 'referral code'],
-    labelKey: 'referral.inviteCode.title',
-    ns: 'subscription',
-    tab: SettingsTabs.Referral,
-  },
-  {
-    anchor: 'referral-stats',
-    keywords: ['rewards', 'invites'],
-    labelKey: 'referral.stats.title',
-    ns: 'subscription',
-    tab: SettingsTabs.Referral,
-  },
-  {
-    anchor: 'referral-table',
-    keywords: ['referral history'],
-    labelKey: 'referral.table.title',
-    ns: 'subscription',
-    tab: SettingsTabs.Referral,
-  },
-  {
-    anchor: 'referral-rules',
-    descKey: 'referral.rules.description',
-    keywords: ['rules'],
-    labelKey: 'referral.rules.title',
-    ns: 'subscription',
-    tab: SettingsTabs.Referral,
-  },
+  // No Referral entries: the page they anchored into was an empty shell that
+  // has been retired, so every one of these was an index entry pointing at a
+  // not-found.
   // Usage
   {
     anchor: 'usage-spend',

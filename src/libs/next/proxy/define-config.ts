@@ -60,9 +60,9 @@ export function defineConfig() {
     '/oauth/linear',
     // The whole `(backend)/market` subtree is Bearer-token API, not SPA. The
     // trailing slash matters: `/market-auth-callback` is an auth SPA page that
-    // shares the `/market` prefix and must still be rewritten. Needed because
-    // the proxy matcher's `/:workspaceSlug/agent(.*)` entry matches
-    // `/market/agent/**` (first segment `market` parses as the slug).
+    // shares the `/market` prefix and must still be rewritten. The matcher's
+    // workspace-slug lookahead already keeps `/market/*` unmatched; this is
+    // the safety net so the Bearer API survives a matcher regression.
     '/market/',
   ];
 
@@ -262,9 +262,9 @@ export function defineConfig() {
     '/market-auth-callback',
     // `(backend)/market` API subtree — auth is Bearer/trusted-client-token in
     // the handlers (`MarketService.createFromRequest`), never the better-auth
-    // session, so session-gating would 302 API clients to /signin. Previously
-    // unreachable by the matcher; `/:workspaceSlug/agent(.*)` now covers
-    // `/market/agent/**`, so the exemption must be explicit.
+    // session, so session-gating would 302 API clients to /signin. The
+    // matcher's workspace-slug lookahead keeps `/market/*` unmatched today;
+    // the explicit exemption is the safety net for a matcher regression.
     '/market/(.*)',
     // public share pages
     '/share(.*)',

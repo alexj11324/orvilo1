@@ -68,6 +68,7 @@
   "inbox.actionRecorded": "Decision recorded.",
   "inbox.actionStale": "This request changed. Refresh and decide on the current version.",
   "inbox.actionTab": "Needs you",
+  "inbox.actionUnknown": "The original request did not confirm the outcome. Refresh and try from the source, without repeating the action.",
   "inbox.activityTab": "Activity",
   "inbox.all": "All notifications",
   "inbox.allStatus": "All",

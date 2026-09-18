@@ -78,6 +78,22 @@ describe('toFeedCard', () => {
     expect(card.safeNavigation).toEqual({ kind: 'url', url: '/settings/members' });
   });
 
+  it('keeps decide on ACP intervention cards', () => {
+    const card = toFeedCard(
+      row({
+        actionKind: 'acp_intervention',
+        actionRequestId: '11111111-1111-1111-1111-111111111111',
+        kind: 'action',
+        type: 'acp_intervention',
+      }),
+    );
+    expect(card.availableActions).toContain('decide');
+    expect(card.actionRef).toEqual({
+      kind: 'acp_intervention',
+      requestId: '11111111-1111-1111-1111-111111111111',
+    });
+  });
+
   it('does not treat an archived-but-unresolved action as already decided', () => {
     const card = toFeedCard(
       row({

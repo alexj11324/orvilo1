@@ -68,6 +68,8 @@ export default {
   'inbox.actionFailed': 'Could not update notifications. Please try again.',
   'inbox.actionRecorded': 'Decision recorded.',
   'inbox.actionStale': 'This request changed. Refresh and decide on the current version.',
+  'inbox.actionUnknown':
+    'The original request did not confirm the outcome. Refresh and try from the source, without repeating the action.',
   'inbox.actionTab': 'Needs you',
   'inbox.activityTab': 'Activity',
   'inbox.all': 'All notifications',

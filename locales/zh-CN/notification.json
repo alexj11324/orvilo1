@@ -68,6 +68,7 @@
   "inbox.actionRecorded": "决定已记录。",
   "inbox.actionStale": "请求已变化。请刷新后对当前版本做决定。",
   "inbox.actionTab": "待你处理",
+  "inbox.actionUnknown": "原请求没有确认结果。请刷新后从源对象处理，不要重复放行。",
   "inbox.activityTab": "动态",
   "inbox.all": "全部通知",
   "inbox.allStatus": "全部",

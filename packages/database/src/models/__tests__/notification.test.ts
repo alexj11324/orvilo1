@@ -646,6 +646,34 @@ describe('NotificationModel (integration)', () => {
       expect(activityFeed.map((row) => row.title)).not.toContain('Still needs a decision');
     });
 
+    it('repairs a missing live-source card without duplicating an existing one', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.ensureActionCards([
+        {
+          actionKind: 'resource_transfer',
+          content: 'Resource transfer request',
+          requestId: 'rtr_missing',
+          title: 'Resource transfer request',
+        },
+      ]);
+      await model.ensureActionCards([
+        {
+          actionKind: 'resource_transfer',
+          content: 'Should not clone',
+          requestId: 'rtr_missing',
+          title: 'Should not clone',
+        },
+      ]);
+
+      const actionFeed = await model.listFeed({ kind: 'action' });
+      expect(actionFeed).toHaveLength(1);
+      expect(actionFeed[0]).toMatchObject({
+        actionKind: 'resource_transfer',
+        actionRequestId: 'rtr_missing',
+        title: 'Resource transfer request',
+      });
+    });
+
     it('does not mark later feed revisions read during mark-all', async () => {
       const model = new NotificationModel(serverDB, userId, { workspaceId: null });
       await model.create(

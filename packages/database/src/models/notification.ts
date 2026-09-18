@@ -1,4 +1,8 @@
-import type { NotificationFeedKind, NotificationPresentationFilter } from '@orvilo/types';
+import type {
+  ActionSourceKind,
+  NotificationFeedKind,
+  NotificationPresentationFilter,
+} from '@orvilo/types';
 import { and, count, desc, eq, inArray, isNull, lt, or, type SQL, sql } from 'drizzle-orm';
 
 import type { NewNotification, NewNotificationDelivery } from '../schemas/notification';
@@ -8,7 +12,7 @@ import { tasks } from '../schemas/task';
 import { notificationEventReceipts } from '../schemas/workAttention';
 import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
-import { currentFeedRevision } from './notificationFeed';
+import { allocateFeedRevision, currentFeedRevision } from './notificationFeed';
 
 export interface NotificationModelOptions {
   /**
@@ -517,5 +521,61 @@ export class NotificationModel {
       .update(notifications)
       .set({ resolvedAt: new Date(), updatedAt: new Date() })
       .where(and(...this.scope(), eq(notifications.actionRequestId, requestId)));
+  }
+
+  /**
+   * Repair missing Inbox projections from live source requests. Existing
+   * cards (including archived unresolved actions) are left in place.
+   */
+  async ensureActionCards(
+    items: Array<{
+      actionKind: ActionSourceKind;
+      content: string;
+      requestId: string;
+      resourceId?: string;
+      resourceType?: string;
+      title: string;
+    }>,
+  ) {
+    if (items.length === 0) return;
+
+    const existing = await this.db
+      .select({ actionRequestId: notifications.actionRequestId })
+      .from(notifications)
+      .where(
+        and(
+          ...this.scope(),
+          inArray(
+            notifications.actionRequestId,
+            items.map((item) => item.requestId),
+          ),
+        ),
+      );
+    const have = new Set(existing.map((row) => row.actionRequestId));
+
+    for (const item of items) {
+      if (have.has(item.requestId)) continue;
+      const revision = await allocateFeedRevision(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+      await this.create({
+        actionKind: item.actionKind,
+        actionRequestId: item.requestId,
+        activityVersion: 1,
+        category: 'pending',
+        content: item.content,
+        dedupeKey: `action:${item.actionKind}:${item.requestId}:${this.userId}`,
+        episodeKey: `action:${item.requestId}`,
+        kind: 'action',
+        lastActivityAt: new Date(),
+        latestFeedRevision: revision,
+        resourceId: item.resourceId,
+        resourceType: item.resourceType,
+        title: item.title,
+        type: item.actionKind,
+        ...(typeof this.workspaceId === 'string' ? { workspaceId: this.workspaceId } : {}),
+      });
+    }
   }
 }

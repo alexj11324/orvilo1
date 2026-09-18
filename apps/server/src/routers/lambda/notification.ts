@@ -6,13 +6,19 @@ import { NotificationModel } from '@/database/models/notification';
 import { ResourceTransferRequestModel } from '@/database/models/resourceTransferRequest';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { toFeedCard } from '@/server/services/workAttention';
+import { ActionSourceRegistry, toFeedCard } from '@/server/services/workAttention';
 
 const notificationProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
 
   return opts.next({
     ctx: {
+      actionSources: new ActionSourceRegistry(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+        ctx.workspaceRole === 'owner' || ctx.workspaceRole === 'admin',
+      ),
       // Scope the inbox to the request context: workspace mode only sees that
       // workspace's notifications, personal mode only sees personal ones
       // (`workspace_id IS NULL`) — the two contexts never leak into each other.
@@ -69,11 +75,13 @@ export const notificationRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
       const rows = await ctx.notificationModel.listFeed(input);
       return rows.map(toFeedCard);
     }),
 
   feedSummary: notificationReadProcedure.query(async ({ ctx }) => {
+    await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
     return ctx.notificationModel.getFeedSummary();
   }),
 
@@ -165,17 +173,12 @@ export const notificationRouter = router({
     }),
 
   unreadCount: notificationReadProcedure.query(async ({ ctx }) => {
-    // Badge is the unique active, currently-readable card set, plus live
-    // transfer requests that still need a decision even if the linked row
-    // was read or never projected.
-    const cards = await listLiveTransferCards(ctx);
+    // Same union as the sidebar badge / Inbox header after source repair:
+    // unread updates plus unresolved actions, including live transfers that
+    // never got a projection row.
+    await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
     const summary = await ctx.notificationModel.getFeedSummary();
-    if (cards.length === 0) return summary.unreadBadgeCount;
-
-    const linked = await ctx.notificationModel.countLinkedToTransfers(
-      cards.map((request) => request.id),
-    );
-    return Math.max(0, summary.unreadBadgeCount + cards.length - linked.unread);
+    return summary.unreadBadgeCount;
   }),
 });
 

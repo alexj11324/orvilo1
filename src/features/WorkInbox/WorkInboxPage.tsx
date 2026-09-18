@@ -24,6 +24,8 @@ import { inboxKeys } from '@/libs/swr/keys';
 import { notificationService } from '@/services/notification';
 import { workAttentionService } from '@/services/workAttention';
 
+import { useInboxListKeyboard } from './useInboxListKeyboard';
+
 const styles = createStaticStyles(({ css }) => ({
   list: css`
     overflow: auto;
@@ -72,6 +74,7 @@ const WorkInboxPage = memo(() => {
     () => cards.find((card) => card.notificationId === selectedId) ?? cards[0],
     [cards, selectedId],
   );
+  const cardIds = useMemo(() => cards.map((card) => card.notificationId), [cards]);
 
   useEffect(() => {
     if (!selected) return;
@@ -98,6 +101,8 @@ const WorkInboxPage = memo(() => {
         const status = result.data.status;
         if (status === 'stale' || status === 'expired') {
           toast.error(t('inbox.actionStale'));
+        } else if (status === 'outcome_unknown') {
+          toast.error(t('inbox.actionUnknown'));
         } else if (status === 'source_accepted' || status === 'source_confirmed') {
           toast.success(t('inbox.actionAccepted'));
         } else if (status === 'already_decided') {
@@ -124,6 +129,15 @@ const WorkInboxPage = memo(() => {
     },
     [navigate],
   );
+
+  useInboxListKeyboard({
+    ids: cardIds,
+    onOpen: () => {
+      if (selected) openTarget(selected);
+    },
+    onSelect: setSelectedId,
+    selectedId: selected?.notificationId ?? null,
+  });
 
   return (
     <Flexbox flex={1} height="100%">
@@ -160,6 +174,7 @@ const WorkInboxPage = memo(() => {
               <div
                 className={styles.row}
                 data-active={card.notificationId === selected?.notificationId}
+                data-inbox-id={card.notificationId}
                 key={card.notificationId}
                 onClick={() => setSelectedId(card.notificationId)}
               >

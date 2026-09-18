@@ -202,11 +202,13 @@ export const workAttentionRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
       const rows = await ctx.notificationModel.listFeed(input);
       return { data: rows.map(toFeedCard), success: true };
     }),
 
   feedSummary: workAttentionProcedure.query(async ({ ctx }) => {
+    await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
     return { data: await ctx.notificationModel.getFeedSummary(), success: true };
   }),
 

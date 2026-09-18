@@ -47,6 +47,8 @@ export interface PreSignedUpload {
 export class S3 {
   private readonly client: S3Client;
 
+  private readonly presignClient: S3Client;
+
   private readonly bucket: string;
 
   private readonly setAcl: boolean;
@@ -58,6 +60,7 @@ export class S3 {
     options?: {
       bucket?: string;
       forcePathStyle?: boolean;
+      presignEndpoint?: string;
       region?: string;
       setAcl?: boolean;
     },
@@ -69,17 +72,23 @@ export class S3 {
     this.bucket = options?.bucket;
     this.setAcl = options?.setAcl || false;
 
-    this.client = new S3Client({
+    const clientConfig = {
       credentials: {
         accessKeyId,
         secretAccessKey,
       },
-      endpoint,
       forcePathStyle: options?.forcePathStyle,
       region: options?.region || DEFAULT_S3_REGION,
-      requestChecksumCalculation: 'WHEN_REQUIRED',
-      responseChecksumValidation: 'WHEN_REQUIRED',
-    });
+      requestChecksumCalculation: 'WHEN_REQUIRED' as const,
+      responseChecksumValidation: 'WHEN_REQUIRED' as const,
+    };
+
+    this.client = new S3Client({ ...clientConfig, endpoint });
+    // Presigned URLs embed the endpoint host in the signature, so they must be
+    // signed against the client-reachable endpoint, not the internal one.
+    this.presignClient = options?.presignEndpoint
+      ? new S3Client({ ...clientConfig, endpoint: options.presignEndpoint })
+      : this.client;
   }
 
   public async deleteFile(key: string) {
@@ -178,7 +187,7 @@ export class S3 {
       Key: key,
     });
 
-    const url = await getSignedUrl(this.client, command, { expiresIn: 3600 });
+    const url = await getSignedUrl(this.presignClient, command, { expiresIn: 3600 });
 
     return {
       headers: this.setAcl ? { 'x-amz-acl': PUBLIC_READ_ACL_HEADER } : undefined,
@@ -215,7 +224,7 @@ export class S3 {
       UploadId: uploadId,
     });
 
-    return getSignedUrl(this.client, command, { expiresIn: 3600 });
+    return getSignedUrl(this.presignClient, command, { expiresIn: 3600 });
   }
 
   public async completeMultipartUpload(
@@ -293,7 +302,7 @@ export class S3 {
       Key: key,
     });
 
-    return getSignedUrl(this.client, command, {
+    return getSignedUrl(this.presignClient, command, {
       expiresIn: expiresIn ?? fileEnv.S3_PREVIEW_URL_EXPIRE_IN,
     });
   }
@@ -309,7 +318,7 @@ export class S3 {
       ResponseContentDisposition: `attachment; filename*=UTF-8''${encodeContentDispositionFilename(fileName)}`,
     });
 
-    return getSignedUrl(this.client, command, {
+    return getSignedUrl(this.presignClient, command, {
       expiresIn: expiresIn ?? fileEnv.S3_PREVIEW_URL_EXPIRE_IN,
     });
   }
@@ -369,6 +378,7 @@ export class FileS3 extends S3 {
     super(fileEnv.S3_ACCESS_KEY_ID, fileEnv.S3_SECRET_ACCESS_KEY, fileEnv.S3_ENDPOINT, {
       bucket: fileEnv.S3_BUCKET,
       forcePathStyle: fileEnv.S3_ENABLE_PATH_STYLE,
+      presignEndpoint: fileEnv.S3_PRESIGN_ENDPOINT,
       region: fileEnv.S3_REGION,
       setAcl: fileEnv.S3_SET_ACL,
     });

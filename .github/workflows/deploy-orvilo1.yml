@@ -23,6 +23,9 @@ on:
         description: '构建完成后部署到生产主机'
         type: boolean
         default: false
+      retag_main_from:
+        description: '可选：把 :main 浮动标签指到这个已有 sha-* 镜像（不动构建/部署，用于修正污染的标签）'
+        required: false
 
 permissions:
   contents: read
@@ -33,12 +36,33 @@ env:
   COMPOSE_DIR: /var/lib/orvilo1/docker-compose/deploy
 
 jobs:
+  retag-main:
+    if: github.event_name == 'workflow_dispatch' && inputs.retag_main_from != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Repoint :main to existing sha image
+        run: |
+          docker buildx imagetools inspect "${IMAGE}:sha-${{ inputs.retag_main_from }}"
+          docker buildx imagetools create \
+            -t "${IMAGE}:main" \
+            "${IMAGE}:sha-${{ inputs.retag_main_from }}"
+          echo ":main -> sha-${{ inputs.retag_main_from }}"
+
   build:
     # push 才构建。手动部署不需要重建 —— 镜像按 commit 不可变，同一个 sha
     # 的镜像内容必然相同，而一次 Next.js 生产构建要十几分钟。
     # 例外：workflow_dispatch 显式勾 build，用于给没有 push 构建产物的
     # 分支（验收部署等）产出 sha-<commit> 镜像。
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.build)
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.build && inputs.retag_main_from == '')
     # 部署目标是 aarch64，这里用 GitHub 的 arm64 runner 原生构建，
     # 不走 QEMU —— 那会让一次 Next.js 生产构建慢到不可接受。
     runs-on: ubuntu-24.04-arm
@@ -64,7 +88,7 @@ jobs:
           {
             echo "tags<<EOF"
             echo "${IMAGE}:sha-${GITHUB_SHA}"
-            if [ "${{ github.event_name }}" = "push" ]; then
+            if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
               echo "${IMAGE}:main"
             fi
             echo "EOF"
@@ -101,7 +125,7 @@ jobs:
     # build 未勾选时它会被 skipped —— 部署已有镜像仍要允许；只有 build
     # 真跑了且失败时才不该部署。always() 让 skipped 不阻塞本 job。
     needs: build
-    if: always() && github.event_name == 'workflow_dispatch' && inputs.deploy && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    if: always() && github.event_name == 'workflow_dispatch' && inputs.deploy && inputs.retag_main_from == '' && (needs.build.result == 'success' || needs.build.result == 'skipped')
     runs-on: ubuntu-latest
     environment: production
     steps:

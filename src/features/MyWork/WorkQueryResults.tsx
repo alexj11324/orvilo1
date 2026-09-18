@@ -2,7 +2,13 @@
 
 import { Empty, Flexbox } from '@lobehub/ui';
 import { Button, Text, toast } from '@lobehub/ui/base-ui';
-import type { WorkQueryExternalReview, WorkQueryGroupBy, WorkQueryLayout } from '@orvilo/types';
+import {
+  type TaskWorkflowCategory,
+  WORKFLOW_STATE_REQUIRED,
+  type WorkQueryExternalReview,
+  type WorkQueryGroupBy,
+  type WorkQueryLayout,
+} from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,8 +19,9 @@ import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { taskService } from '@/services/task';
 import { workAttentionService } from '@/services/workAttention';
-import { isTrpcErrorCode } from '@/utils/trpcError';
+import { isTrpcErrorCode, trpcErrorMessage } from '@/utils/trpcError';
 
+import { createWorkflowStatePickerModal } from './WorkflowStatePickerModal';
 import {
   parseWorkQueryBoardPayload,
   WORK_QUERY_BOARD_MIME,
@@ -87,9 +94,49 @@ const asBoardTask = (task: WorkQueryResultTask): WorkQueryBoardTask => ({
   identifier: task.identifier,
   name: task.name,
   status: task.status,
+  teamId: task.teamId,
   workflowCategory: task.workflowCategory,
   workflowStateId: task.workflowStateId,
 });
+
+const moveBoardMaybePickingState = async (input: {
+  expectedDomainRevision: number;
+  groupBy: 'status' | 'workflowCategory';
+  targetKey: string;
+  taskId: string;
+  teamId?: string | null;
+}) => {
+  try {
+    await workAttentionService.moveBoard({
+      expectedDomainRevision: input.expectedDomainRevision,
+      groupBy: input.groupBy,
+      targetKey: input.targetKey,
+      taskId: input.taskId,
+    });
+    return true;
+  } catch (error) {
+    if (
+      !input.teamId ||
+      !isTrpcErrorCode(error, 'PRECONDITION_FAILED') ||
+      trpcErrorMessage(error) !== WORKFLOW_STATE_REQUIRED
+    ) {
+      throw error;
+    }
+    const picked = await createWorkflowStatePickerModal({
+      category: input.targetKey as TaskWorkflowCategory,
+      teamId: input.teamId,
+    });
+    if (!picked) return false;
+    await workAttentionService.moveBoard({
+      expectedDomainRevision: input.expectedDomainRevision,
+      groupBy: input.groupBy,
+      targetKey: input.targetKey,
+      taskId: input.taskId,
+      targetWorkflowStateRefId: picked,
+    });
+    return true;
+  }
+};
 
 const WorkQueryTaskRow = memo(
   ({
@@ -150,9 +197,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
         });
         try {
           if (plan.type === 'noop') return;
-          if (plan.type === 'linear-category') {
-            await taskService.update(plan.task.id, { workflowCategory: plan.workflowCategory });
-          } else if (plan.type === 'cascade') {
+          if (plan.type === 'cascade') {
             const tree = await taskService.getTaskTree(plan.task.identifier);
             const root = tree.data.find(
               (item) => item.id === plan.task.id || item.identifier === plan.task.identifier,
@@ -169,44 +214,43 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   plan.task.identifier,
                   plan.status,
                 );
-                const revision = result.data.task.domainRevision;
-                if (boardGroupBy === 'workflowCategory') {
-                  await workAttentionService.moveBoard({
-                    expectedDomainRevision: revision,
-                    groupBy: 'workflowCategory',
-                    targetKey,
-                    taskId: plan.task.id,
-                  });
-                }
-                return;
+                return result.data.task.domainRevision;
               }
               await taskService.update(plan.task.id, { status: plan.status });
-              if (boardGroupBy === 'workflowCategory') {
-                const current = await taskService.find(plan.task.id);
-                await workAttentionService.moveBoard({
-                  expectedDomainRevision: current.data.domainRevision,
-                  groupBy: 'workflowCategory',
-                  targetKey,
-                  taskId: plan.task.id,
-                });
-              }
+              const current = await taskService.find(plan.task.id);
+              return current.data.domainRevision;
             };
+            let revision: number | undefined;
             if (openSubtasks.length > 0) {
-              await createTaskStatusCascadeModal({
-                onApply: applyStatus,
+              const confirmed = await createTaskStatusCascadeModal({
+                onApply: async (includeSubtasks) => {
+                  revision = await applyStatus(includeSubtasks);
+                },
                 subtasks: openSubtasks,
                 targetStatus: plan.status,
               });
+              if (!confirmed || revision === undefined) return;
             } else {
-              await applyStatus(false);
+              revision = await applyStatus(false);
+            }
+            if (boardGroupBy === 'workflowCategory') {
+              await moveBoardMaybePickingState({
+                expectedDomainRevision: revision,
+                groupBy: 'workflowCategory',
+                targetKey,
+                taskId: plan.task.id,
+                teamId: plan.task.teamId,
+              });
             }
           } else {
-            await workAttentionService.moveBoard({
+            const moved = await moveBoardMaybePickingState({
               expectedDomainRevision: plan.expectedDomainRevision,
               groupBy: plan.groupBy,
               targetKey: plan.targetKey,
               taskId: task.id,
+              teamId: task.teamId,
             });
+            if (!moved) return;
           }
           onMoved?.();
         } catch (error) {

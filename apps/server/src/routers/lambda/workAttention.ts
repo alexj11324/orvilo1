@@ -8,6 +8,7 @@ import {
   WORK_QUERY_MAX_IN_VALUES,
   WORK_QUERY_STATUS_COLUMNS,
   WORK_QUERY_WORKFLOW_COLUMNS,
+  WORKFLOW_STATE_REQUIRED,
   type WorkQuery,
   type WorkQueryFilter,
   type WorkQueryPredicate,
@@ -31,6 +32,7 @@ import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TeamModel } from '@/database/models/team';
+import { resolveWorkflowMove } from '@/database/models/workflowMove';
 import {
   applyWorkQueryLayout,
   myWorkQueryForMode,
@@ -591,6 +593,7 @@ export const workAttentionRouter = router({
         expectedDomainRevision: z.number().int().min(1),
         groupBy: z.enum(['status', 'workflowCategory']),
         targetKey: z.string().min(1),
+        targetWorkflowStateRefId: z.string().min(1).optional(),
         taskId: z.string().min(1),
       }),
     )
@@ -601,19 +604,43 @@ export const workAttentionRouter = router({
         if (!(WORK_QUERY_WORKFLOW_COLUMNS as readonly string[]).includes(input.targetKey)) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown workflow column' });
         }
-        if (task.workflowStateId) {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'Business workflow moves require a linked Linear issue',
-          });
-        }
       } else if (!(WORK_QUERY_STATUS_COLUMNS as readonly string[]).includes(input.targetKey)) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown status column' });
       }
-      const patch =
+
+      let patch: {
+        status?: TaskStatus;
+        workflowCategory?: TaskWorkflowCategory;
+        workflowStateId?: string | null;
+        workflowStateRefId?: string | null;
+      } =
         input.groupBy === 'workflowCategory'
           ? { workflowCategory: input.targetKey as TaskWorkflowCategory }
           : { status: input.targetKey as TaskStatus };
+
+      if (input.groupBy === 'workflowCategory' && task.teamId && ctx.teamModel) {
+        const resolved = resolveWorkflowMove({
+          category: input.targetKey as TaskWorkflowCategory,
+          states: await ctx.teamModel.listWorkflowStates(task.teamId),
+          targetWorkflowStateRefId: input.targetWorkflowStateRefId,
+        });
+        if (resolved.type === 'required') {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: WORKFLOW_STATE_REQUIRED });
+        }
+        if (resolved.type === 'invalid') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown workflow state' });
+        }
+        if (resolved.type === 'exact') {
+          patch = {
+            workflowCategory: resolved.workflowCategory,
+            workflowStateId: resolved.workflowStateId,
+            workflowStateRefId: resolved.workflowStateRefId,
+          };
+        }
+      } else if (input.targetWorkflowStateRefId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown workflow state' });
+      }
+
       try {
         const updated = await ctx.taskModel.update(input.taskId, patch, {
           expectedDomainRevision: input.expectedDomainRevision,

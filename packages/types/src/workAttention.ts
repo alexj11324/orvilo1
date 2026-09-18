@@ -272,6 +272,12 @@ export const WORK_QUERY_MAX_IN_VALUES = 100;
 export const NOTIFICATION_BULK_PREPARE_LIMIT = 20;
 export const NOTIFICATION_BULK_PREPARE_WINDOW_MS = 60_000;
 
+/**
+ * Board category drop landed on a team column with more than one workflow
+ * state. The client must pick `targetWorkflowStateRefId` and retry.
+ */
+export const WORKFLOW_STATE_REQUIRED = 'WORKFLOW_STATE_REQUIRED';
+
 export type MyWorkMode = 'assigned' | 'created' | 'delegated' | 'review' | 'subscribed';
 
 export type SavedViewVisibility = 'private' | 'team' | 'workspace';

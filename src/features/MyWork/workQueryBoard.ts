@@ -1,4 +1,3 @@
-import type { TaskWorkflowCategory } from '@orvilo/types';
 import { WORK_QUERY_WORKFLOW_COLUMNS } from '@orvilo/types';
 
 export const MY_WORK_BOARD_MODES = ['assigned', 'delegated'] as const;
@@ -14,6 +13,7 @@ export interface WorkQueryBoardTask {
   identifier: string;
   name?: string | null;
   status?: string | null;
+  teamId?: string | null;
   workflowCategory?: string | null;
   workflowStateId?: string | null;
 }
@@ -31,8 +31,7 @@ export type WorkQueryMovePlan =
       targetKey: string;
       type: 'local';
     }
-  | { status: 'canceled' | 'completed'; task: WorkQueryBoardTask; type: 'cascade' }
-  | { task: WorkQueryBoardTask; type: 'linear-category'; workflowCategory: TaskWorkflowCategory };
+  | { status: 'canceled' | 'completed'; task: WorkQueryBoardTask; type: 'cascade' };
 
 export const parseWorkQueryBoardPayload = (raw: string): WorkQueryBoardPayload | null => {
   try {
@@ -70,15 +69,11 @@ export const workQueryMovePlan = (input: {
   if (taskBoardGroupKey(input.task, input.groupBy) === input.targetKey) {
     return { type: 'noop' };
   }
-  if (input.groupBy === 'workflowCategory' && input.task.workflowStateId) {
-    if (!(WORK_QUERY_WORKFLOW_COLUMNS as readonly string[]).includes(input.targetKey)) {
-      return { type: 'noop' };
-    }
-    return {
-      task: input.task,
-      type: 'linear-category',
-      workflowCategory: input.targetKey as TaskWorkflowCategory,
-    };
+  if (
+    input.groupBy === 'workflowCategory' &&
+    !(WORK_QUERY_WORKFLOW_COLUMNS as readonly string[]).includes(input.targetKey)
+  ) {
+    return { type: 'noop' };
   }
   const cascade = cascadeStatusForBoardKey(input.groupBy, input.targetKey);
   if (cascade && !input.task.workflowStateId) {

@@ -642,6 +642,10 @@ export default {
   'myWork.moveBlocked': 'Finish blocking work before moving this to Done',
   'myWork.moveConflict': 'This task changed. Refresh and move it again.',
   'myWork.moveFailed': 'Could not move this task',
+  'myWork.pickWorkflowState': 'Choose a workflow state',
+  'myWork.pickWorkflowStateConfirm': 'Move',
+  'myWork.pickWorkflowStateDescription': 'This column has more than one state. Pick the exact one.',
+  'myWork.pickWorkflowStateEmpty': 'No workflow states are available in this column.',
   'myWork.noProject': 'No project',
   'myWork.externalReviews': 'Pull requests',
   'myWork.externalReviewsEmpty':

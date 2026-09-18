@@ -12,8 +12,9 @@ const task = {
   id: 'tsk_1',
   identifier: 'T-1',
   status: 'backlog',
+  teamId: 'team_1',
   workflowCategory: 'todo',
-  workflowStateId: null,
+  workflowStateId: null as string | null,
 };
 
 describe('isMyWorkBoardMode', () => {
@@ -25,7 +26,7 @@ describe('isMyWorkBoardMode', () => {
 });
 
 describe('workQueryMovePlan', () => {
-  it('keeps Linear-linked category moves on the existing task command', () => {
+  it('sends Linear-linked category moves through the versioned board command', () => {
     expect(
       workQueryMovePlan({
         groupBy: 'workflowCategory',
@@ -33,9 +34,25 @@ describe('workQueryMovePlan', () => {
         task: { ...task, workflowStateId: 'state-1' },
       }),
     ).toEqual({
-      task: { ...task, workflowStateId: 'state-1' },
-      type: 'linear-category',
-      workflowCategory: 'in_review',
+      expectedDomainRevision: 3,
+      groupBy: 'workflowCategory',
+      targetKey: 'in_review',
+      type: 'local',
+    });
+  });
+
+  it('does not cascade Linear-linked Done drops so the exact state can be chosen', () => {
+    expect(
+      workQueryMovePlan({
+        groupBy: 'workflowCategory',
+        targetKey: 'done',
+        task: { ...task, workflowStateId: 'state-1' },
+      }),
+    ).toEqual({
+      expectedDomainRevision: 3,
+      groupBy: 'workflowCategory',
+      targetKey: 'done',
+      type: 'local',
     });
   });
 

@@ -278,7 +278,7 @@ function StepperTrigger({ className, children, tabIndex, render, ...props }: Ste
 
   const defaultProps = {
     id,
-    'aria-current': isSelected ? 'step' : undefined,
+    'aria-current': isSelected ? ('step' as const) : undefined,
     'tabIndex': typeof tabIndex === 'number' ? tabIndex : isSelected ? 0 : -1,
     'data-slot': 'stepper-trigger',
     'data-state': state,

@@ -25,6 +25,21 @@ export interface NormalizeImageOptions {
   fetcher?: typeof fetch;
 }
 
+/**
+ * Options for prompt builders that normalize agent image inputs.
+ *
+ * Under the unified ACP path every prompt builder consumes the same
+ * normalization options; the name is kept for API stability.
+ */
+export interface BuildAgentInputOptions extends NormalizeImageOptions {
+  /**
+   * Directory used to materialize images for path-based agents. When unset,
+   * falls back to `cacheDir`, then to a per-agent subdirectory under the OS
+   * tmpdir. Path-input images skip materialization entirely.
+   */
+  imageMaterializeDir?: string;
+}
+
 const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 const EXT_BY_MEDIA_TYPE: Record<string, string> = {

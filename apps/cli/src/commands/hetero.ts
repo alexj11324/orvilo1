@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createWriteStream } from 'node:fs';
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import os from 'node:os';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
@@ -55,22 +54,25 @@ const CODEX_REASONING_EFFORT_CONFIG_KEY = 'model_reasoning_effort';
 const CODEX_SERVICE_TIER_CONFIG_KEY = 'service_tier';
 
 /**
- * Patterns that indicate a `--resume <sessionId>` run should be retried
- * without `--resume`.  Two classes of failure:
+ * Patterns that indicate a `--resume <sessionId>` run (an ACP `session/load`
+ * request under the hood) should be retried without resuming.  Two classes of
+ * failure:
  *
  *   1. Session file missing (sandbox recycled): the container is ephemeral
- *      (~1 h idle TTL), so a new sandbox has an empty `~/.claude/projects/`
- *      and the stored session id is stale.
+ *      (~1 h idle TTL), so a new sandbox has an empty session store and the
+ *      stored session id is stale.
  *
  *   2. Context overflow (long conversation): the resumed session carries all
  *      accumulated history; when the combined token count exceeds the model's
- *      context window the API rejects the request immediately after CC
- *      initialises.  Starting fresh (no `--resume`) drops the old history and
- *      lets CC respond to the new prompt alone.
+ *      context window the agent rejects the request immediately after the
+ *      session loads.  Starting fresh drops the old history and lets the agent
+ *      respond to the new prompt alone.
  *
  * Checked against:
- *   - `error` stream events emitted by the CC adapter from CC's result event
- *   - Accumulated stderr output (fallback when CC exits without a result event)
+ *   - `error` stream events emitted by the session adapter (including ACP
+ *     `session/load` RPC errors)
+ *   - Accumulated stderr output (fallback when the agent exits without a
+ *     structured result event)
  */
 const RESUME_RETRY_PATTERNS = [
   // Session file missing — sandbox was recycled
@@ -102,7 +104,8 @@ interface ExecOptions {
   effort?: string;
   /**
    * Builtin Orvilo engine selection (`--type orvilo` only): `claude-sdk` or
-   * `codex-app-server`. Resolves to the engine's CLI family for this exec.
+   * `codex-app-server`. Resolves to the engine's ACP runtime (`claude-code` →
+   * `claude-agent-acp`, `codex` → `codex-acp`) for this exec.
    */
   engine?: string;
   image?: string[];
@@ -113,8 +116,8 @@ interface ExecOptions {
   operationId?: string;
   prompt?: string;
   /**
-   * When set, persist the agent process's RAW stdout/stderr (pre-adapter
-   * stream-json) under `<rawDump>/<timestamp>-<operationId>/` for debugging.
+   * When set, persist the agent process's RAW stdout/stderr (pre-adapter ACP
+   * wire traffic) under `<rawDump>/<timestamp>-<operationId>/` for debugging.
    * Independent of `--render` and the server ingest path.
    */
   rawDump?: string;
@@ -330,10 +333,10 @@ interface RawStreamDumpAttempt {
 }
 
 /**
- * Persists the agent process's RAW stdout/stderr — the untouched stream-json,
- * BEFORE the adapter — to disk for post-hoc debugging. The adapted/ingested
- * view can't tell a CC-side empty `tool_result` apart from an adapter
- * extraction bug; the raw dump can.
+ * Persists the agent process's RAW stdout/stderr — the untouched ACP wire
+ * traffic, BEFORE the adapter — to disk for post-hoc debugging. The
+ * adapted/ingested view can't tell an agent-side empty `tool_result` apart
+ * from an adapter extraction bug; the raw dump can.
  *
  * Enabled via `lh hetero exec --raw-dump <dir>`. Each exec gets its own
  * `<dir>/<timestamp>-<operationId>/` session folder; each spawn attempt (the
@@ -541,7 +544,9 @@ const exec = async (options: ExecOptions): Promise<void> => {
   const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
   let askServer: OrviloBuiltinMcpServer | undefined;
   let askBridge: AskUserBridge | undefined;
-  let askMcpConfigPath: string | undefined;
+  // ACP `session/new` `mcpServers` entries — the `orvilo_cc` AskUserQuestion /
+  // browser-tools HTTP server mounted for agents that speak MCP over ACP.
+  let askMcpServers: Record<string, unknown>[] | undefined;
   const askPollAbort = new AbortController();
   if (
     serverIngest &&
@@ -569,20 +574,15 @@ const exec = async (options: ExecOptions): Promise<void> => {
         operationId,
         new AskUserBridge(operationId, { identifier: agentType, provider: agentType }),
       );
-      askMcpConfigPath = path.join(os.tmpdir(), `orvilo-cc-mcp-${operationId}.json`);
-      await writeFile(
-        askMcpConfigPath,
-        JSON.stringify({
-          mcpServers: {
-            orvilo_cc: {
-              alwaysLoad: true,
-              type: 'http',
-              url: askServer.urlForOperation(operationId),
-            },
-          },
-        }),
-        'utf8',
-      );
+      // Standard-ACP agents mount the server through `session/new`'s
+      // `mcpServers` — no temp `mcp.json` file.
+      askMcpServers = [
+        {
+          name: 'orvilo_cc',
+          type: 'http',
+          url: askServer.urlForOperation(operationId),
+        },
+      ];
     }
 
     // (i) Forward every bridge event into the same ordered durable ingest path
@@ -912,15 +912,14 @@ const exec = async (options: ExecOptions): Promise<void> => {
     };
   };
 
-  // ─── First run (with --resume if provided) ───────────────────────────────
+  // ─── First run (ACP session/load when --resume is provided) ──────────────
 
   const interceptResume = !!options.resume;
   const extraArgs = [
     // Selector args (model/effort/speed) translate against the CLI family — for
     // orvilo the engine already resolved `agentType` to `claude-code`/`codex`.
     ...(buildExtraArgs({ ...options, type: agentType }) ?? []),
-    // Point the supported CLI at the orvilo_cc AskUserQuestion MCP server we just mounted.
-    ...(askMcpConfigPath ? ['--mcp-config', askMcpConfigPath] : []),
+
   ];
   // Resolve the CLI binary once, up front, and reuse it for both the initial
   // run and the resume-retry. For each provider's default bare command
@@ -943,12 +942,8 @@ const exec = async (options: ExecOptions): Promise<void> => {
       detached: process.env[HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV] !== '1',
       env: commandEnv,
       extraArgs,
+      mcpServers: askMcpServers,
       permissionMode,
-      // Device and sandbox executions are observed through the same gateway
-      // stream as native server agents. Ask Claude Code for content-block
-      // deltas so the current conversation receives text while the process is
-      // running instead of seeing only the terminal assistant snapshot.
-      includePartialMessages: agentType === 'claude-code',
       initialModel:
         agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
           ? options.model
@@ -962,19 +957,19 @@ const exec = async (options: ExecOptions): Promise<void> => {
     'attempt-1',
   );
 
-  // ─── Auto-retry without --resume when the session cannot be used ─────────
+  // ─── Auto-retry without resume when the ACP session cannot be loaded ─────
   //
   // Two classes of failure detected via `RESUME_RETRY_PATTERNS`:
   //   A. Sandbox recycled: container is ephemeral (~1 h idle TTL); new sandbox
-  //      has no CC session files so `--resume <staleId>` is rejected with a
-  //      "no conversation found" error.
+  //      has no agent session files so ACP `session/load` is rejected with a
+  //      "session not found" error.
   //   B. Context overflow: the resumed session carries accumulated history that
-  //      pushes the combined token count past the model limit; the API rejects
-  //      the call with a "prompt is too long" error.
+  //      pushes the combined token count past the model limit; the agent
+  //      rejects the call with a "prompt is too long" error.
   //
-  // In both cases we transparently restart CC without `--resume` so it starts a
-  // fresh session.  The server's `heteroSessionId` is updated with the new id,
-  // breaking the stale-session loop.
+  // In both cases we transparently restart the agent without `session/load` so
+  // it starts a fresh session.  The server's `heteroSessionId` is updated with
+  // the new id, breaking the stale-session loop.
   let result = first;
   if (!first.cancelled && first.resumeNotFound) {
     log.info('Resume failed (session not found or context overflow) — retrying without --resume');
@@ -987,11 +982,11 @@ const exec = async (options: ExecOptions): Promise<void> => {
         detached: process.env[HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV] !== '1',
         env: commandEnv,
         extraArgs,
-        includePartialMessages: agentType === 'claude-code',
         initialModel:
           agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
             ? options.model
             : undefined,
+        mcpServers: askMcpServers,
         operationId,
         permissionMode,
         prompt: resolved.resumeFallbackPrompt ?? resolved.prompt,
@@ -1082,14 +1077,13 @@ const exec = async (options: ExecOptions): Promise<void> => {
   operationTokenRenewal?.stop();
 
   // Tear down the AskUserQuestion MCP: stop polling, cancel any in-flight
-  // pending (→ CC's tool returns cleanly), close the server, drop the temp
-  // config. Best-effort — the process is about to exit anyway.
+  // pending (→ CC's tool returns cleanly), close the server. Best-effort —
+  // the process is about to exit anyway.
   askPollAbort.abort();
   if (askServer) {
     askServer.unregisterOperation(operationId);
     await askServer.stop().catch(() => {});
   } else askBridge?.cancelAll('session_ended');
-  if (askMcpConfigPath) await unlink(askMcpConfigPath).catch(() => {});
 
   if (code !== null) {
     const hasRunError =
@@ -1161,7 +1155,7 @@ export function registerHeteroCommand(program: Command) {
     )
     .option(
       '--raw-dump <dir>',
-      'Persist the agent process RAW stdout/stderr (pre-adapter stream-json) under <dir>/<timestamp>-<operationId>/ for debugging. Each spawn attempt writes its own .stdout.jsonl / .stderr.log. Best-effort; never affects the run.',
+      'Persist the agent process RAW stdout/stderr (pre-adapter ACP wire traffic) under <dir>/<timestamp>-<operationId>/ for debugging. Each spawn attempt writes its own .stdout.jsonl / .stderr.log. Best-effort; never affects the run.',
     )
     .action(exec);
 }

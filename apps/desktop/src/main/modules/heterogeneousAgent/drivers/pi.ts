@@ -1,10 +1,9 @@
 import path from 'node:path';
 
 import type { HeterogeneousProviderBindingProtocol } from '@orvilo/heterogeneous-agents';
-import { PI_BASE_ARGS } from '@orvilo/heterogeneous-agents/spawn';
 import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
-import type { HeterogeneousAgentBuildPlanParams, HeterogeneousAgentDriver } from '../types';
+import type { HeterogeneousAgentDriver } from '../types';
 
 const HOST_API_KEY_ENV = 'ORVILO_PI_API_KEY';
 const MODELS_FILE = 'models.json';
@@ -60,24 +59,6 @@ const sanitizePiProviderBindingEnv = (source: Record<string, string> | undefined
 };
 
 export const piDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan({
-    args,
-    helpers,
-    promptInput,
-    resumeSessionId,
-  }: HeterogeneousAgentBuildPlanParams) {
-    const inputPlan = await helpers.buildAgentInput('pi', promptInput);
-
-    return {
-      args: [
-        ...PI_BASE_ARGS,
-        ...(resumeSessionId ? ['--session-id', resumeSessionId] : []),
-        ...args,
-        ...inputPlan.args,
-      ],
-      stdinPayload: inputPlan.stdin,
-    };
-  },
   prepareProviderBinding({ args, env, profileDir, resolution }) {
     if (!resolution.endpoint) throw new Error('Pi provider binding requires an API endpoint.');
 

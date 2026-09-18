@@ -1,24 +1,5 @@
-import { OPENCODE_BASE_ARGS } from '@orvilo/heterogeneous-agents/spawn';
+import type { HeterogeneousAgentDriver } from '../types';
 
-import type { HeterogeneousAgentBuildPlanParams, HeterogeneousAgentDriver } from '../types';
-
-export const opencodeDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan({
-    args,
-    helpers,
-    promptInput,
-    resumeSessionId,
-  }: HeterogeneousAgentBuildPlanParams) {
-    const inputPlan = await helpers.buildAgentInput('opencode', promptInput);
-
-    return {
-      args: [
-        ...OPENCODE_BASE_ARGS,
-        ...(resumeSessionId ? ['--session', resumeSessionId] : []),
-        ...args,
-        ...inputPlan.args,
-      ],
-      stdinPayload: inputPlan.stdin,
-    };
-  },
-};
+// OpenCode executes through its native `opencode acp` mode and exposes no
+// LobeHub provider/server-default binding, so the driver is intentionally empty.
+export const opencodeDriver: HeterogeneousAgentDriver = {};

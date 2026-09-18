@@ -537,7 +537,7 @@ export default {
   'agentEngine.harness.localGroup': 'Local CLI',
   'agentEngine.harness.remoteGroup': 'Platform agent',
   'agentEngine.engine.label': 'Engine',
-  'agentEngine.engine.claudeSdk': 'Claude Agent SDK',
+  'agentEngine.engine.claudeSdk': 'Claude Code',
   'agentEngine.engine.codexAppServer': 'Codex',
   'agentEngine.engine.limitedCapabilities':
     'This engine cannot ask questions during a run or use Orvilo builtin tools yet.',

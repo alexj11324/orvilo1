@@ -135,7 +135,9 @@ const HeteroControlBar = memo(() => {
   const [runtimeStatus, setRuntimeStatus] = useState<HeterogeneousAgentRuntimeStatus>();
 
   useWatchBroadcast('heteroAgentRuntimeStatus', (status) => {
-    if (status.transport !== 'claude-sdk') return;
+    // 'claude-sdk' is the legacy in-process transport label kept for archived
+    // statuses; live Claude Code ACP runs report 'claude-code-acp'.
+    if (status.transport !== 'claude-sdk' && status.transport !== 'claude-code-acp') return;
     setRuntimeStatus(status);
   });
 
@@ -224,14 +226,14 @@ const HeteroControlBar = memo(() => {
     </div>
   );
   // Codex quota still needs the local CLI (spawned over IPC), so it stays
-  // desktop-local; the SDK runtime badge likewise reports this desktop's own
-  // in-process runtime, not a remote device's.
+  // desktop-local; the runtime badge likewise reports this desktop's own ACP
+  // runtime, not a remote device's.
   const shouldShowCodexQuota =
     isSubscriptionAuth && heteroCliType === 'codex' && isLocalHeteroExecution;
   const shouldShowSdkRuntime =
     heteroCliType === 'claude-code' &&
     isLocalHeteroExecution &&
-    runtimeStatus?.transport === 'claude-sdk' &&
+    (runtimeStatus?.transport === 'claude-sdk' || runtimeStatus?.transport === 'claude-code-acp') &&
     visibleSdkRuntimeStates.has(runtimeStatus.state);
   const sdkRuntimeClassName =
     runtimeStatus?.state === 'monitoring'

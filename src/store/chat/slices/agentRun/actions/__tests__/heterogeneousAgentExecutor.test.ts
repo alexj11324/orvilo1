@@ -16,14 +16,13 @@ import path from 'node:path';
 import type * as OrviloConst from '@orvilo/const';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
 import type { AgentEventAdapter } from '@orvilo/heterogeneous-agents';
-import { createAdapter } from '@orvilo/heterogeneous-agents';
+import { ClaudeCodeAdapter, CodexAdapter, GrokBuildAdapter } from '@orvilo/heterogeneous-agents';
 import type { ChatTopicMetadata, HeterogeneousProviderConfig } from '@orvilo/types';
 import { ThreadStatus } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAiInfraStore } from '@/store/aiInfra';
 import { useChatStore } from '@/store/chat/store';
-import { useUserStore } from '@/store/user';
 
 import { createGatewayEventHandler } from '../transports/gateway/gatewayEventHandler';
 import type { HeterogeneousAgentExecutorParams } from '../transports/hetero/heterogeneousAgentExecutor';
@@ -172,6 +171,17 @@ function setupIpcCapture() {
    */
   const adapters = new Map<string, AgentEventAdapter>();
   /**
+   * Fixtures replay legacy vendor stream shapes (CC/Codex/Grok stream-json),
+   * so the harness uses the archived vendor adapters directly — `createAdapter`
+   * now resolves live agent types to the ACP adapters. Live runs produce the
+   * same adapted events through `StandardAcpSession` + `TraeAcpAdapter`.
+   */
+  const LEGACY_ADAPTERS: Record<string, () => AgentEventAdapter> = {
+    'claude-code': () => new ClaudeCodeAdapter(),
+    'codex': () => new CodexAdapter(),
+    'grok-build': () => new GrokBuildAdapter(),
+  };
+  /**
    * IPC-session → agent type. Defaults to `claude-code` so tests that don't
    * explicitly register codex still work; the multi-session resume test (and
    * any codex-only suite) registers explicitly via `setAgentType`.
@@ -180,7 +190,10 @@ function setupIpcCapture() {
 
   const getAdapter = (sessionId: string) => {
     if (!adapters.has(sessionId)) {
-      adapters.set(sessionId, createAdapter(sessionAgentType.get(sessionId) ?? 'claude-code'));
+      const agentType = sessionAgentType.get(sessionId) ?? 'claude-code';
+      const create = LEGACY_ADAPTERS[agentType];
+      if (!create) throw new Error(`No test adapter registered for agent type "${agentType}"`);
+      adapters.set(sessionId, create());
     }
     return adapters.get(sessionId)!;
   };
@@ -2232,33 +2245,6 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
           agentType: 'codex',
           command: '/usr/local/bin/custom-codex',
         }),
-      );
-    });
-
-    it('should pass the Codex app-server lab preference to the desktop session', async () => {
-      const store = createMockStore();
-      const get = vi.fn(() => store);
-      const previousLab = useUserStore.getState().preference.lab;
-      useUserStore.setState((state) => ({
-        preference: {
-          ...state.preference,
-          lab: { ...state.preference.lab, enableCodexAppServer: true },
-        },
-      }));
-
-      try {
-        await executeHeterogeneousAgent(get, {
-          ...defaultParams,
-          heterogeneousProvider: { command: 'codex', type: 'codex' as const },
-        });
-      } finally {
-        useUserStore.setState((state) => ({
-          preference: { ...state.preference, lab: previousLab },
-        }));
-      }
-
-      expect(mockStartSession).toHaveBeenCalledWith(
-        expect.objectContaining({ useCodexAppServer: true }),
       );
     });
 

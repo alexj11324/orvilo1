@@ -488,15 +488,14 @@ describe('hetero exec command', () => {
 
     const call = mockSpawnAgent.mock.calls[0][0];
     expect(call.operationId).toBe('op-server-allocated');
-    expect(call.includePartialMessages).toBe(true);
   });
 
-  it('does not request Claude partial-message framing for other heterogeneous agents', async () => {
+  it('passes no ACP mcpServers without server-ingest mode', async () => {
     mockSpawnAgent.mockReturnValue(createFakeHandle());
 
     await runCmd(['hetero', 'exec', '--type', 'codex', '--prompt', 'hi']);
 
-    expect(mockSpawnAgent.mock.calls[0][0].includePartialMessages).toBe(false);
+    expect(mockSpawnAgent.mock.calls[0][0].mcpServers).toBeUndefined();
   });
 
   it('passes Claude Code --model and --effort through as spawnAgent extraArgs', async () => {

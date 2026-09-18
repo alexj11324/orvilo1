@@ -1,7 +1,4 @@
 import type { HeterogeneousAgentDriver } from '../types';
 
-export const devinDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan() {
-    throw new Error('Devin prompts must run through the native ACP session');
-  },
-};
+/** Devin prompts run through `DevinAcpSession`; no provider binding. */
+export const devinDriver: HeterogeneousAgentDriver = {};

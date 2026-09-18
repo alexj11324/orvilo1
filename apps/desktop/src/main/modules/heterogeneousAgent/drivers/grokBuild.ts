@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 
 import type { HeterogeneousProviderBindingProtocol } from '@orvilo/heterogeneous-agents';
-import { buildGrokAcpArgs } from '@orvilo/heterogeneous-agents/spawn';
 import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
 import type { HeterogeneousAgentDriver } from '../types';
@@ -125,16 +124,10 @@ const sanitizeGrokProviderBindingEnv = (
 };
 
 /**
- * Grok Build uses the bidirectional ACP stdio transport in the controller.
- * Its spawn plan is only a diagnostic representation and is never passed to
- * the generic one-shot path; provider binding preparation is still owned here.
+ * Grok Build executes through `GrokAcpSession`; provider binding preparation
+ * is still owned here — its env/profile files flow into the ACP session env.
  */
 export const grokBuildDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan({ args }) {
-    return {
-      args: buildGrokAcpArgs(args),
-    };
-  },
   prepareProviderBinding({ args, env, profileDir, resolution }) {
     if (!resolution.endpoint) {
       throw new Error('Grok Build provider binding requires an API endpoint.');

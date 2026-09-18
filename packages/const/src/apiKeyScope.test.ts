@@ -117,10 +117,6 @@ describe('requiredApiKeyScopeForTrpc', () => {
     expect(requiredApiKeyScopeForTrpc('aiAgent.execAgent', 'mutation')).toEqual({
       scopes: ['agent:write', 'chat:write', 'model:invoke'],
     });
-    // provider connectivity test sends a real model request
-    expect(requiredApiKeyScopeForTrpc('aiProvider.checkProviderConnectivity', 'mutation')).toEqual({
-      scopes: ['model:write', 'model:invoke'],
-    });
     // MCP tool execution needs agent:write on top of the model tier
     expect(requiredApiKeyScopeForTrpc('mcp.callTool', 'mutation')).toEqual({
       scopes: ['model:invoke', 'agent:write'],

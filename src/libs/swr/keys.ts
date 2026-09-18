@@ -569,12 +569,6 @@ export const agentConfigKeys = {
 
 // ---- aiModel ------------------------------------------------------------
 export const aiModelKeys = {
-  disabledModelsPage: def('aiModel:disabledModelsPage', (providerId: string, offset: number) => [
-    'aiModel:disabledModelsPage',
-    providerId,
-    offset,
-  ]),
-  list: def('aiModel:list', (provider: string | undefined) => ['aiModel:list', provider]),
   reasoningConfig: def('aiModel:reasoningConfig', (provider: string, model: string) => [
     'aiModel:reasoningConfig',
     provider,
@@ -1274,9 +1268,6 @@ export const agentSignalKeys = {
 };
 
 // ---- misc UI singletons -------------------------------------------------
-export const ollamaKeys = {
-  downloadModel: def('ollama:downloadModel', (model: string) => ['ollama:downloadModel', model]),
-};
 export const authKeys = {
   oauthAppById: def('auth:oauthAppById', (id: string) => ['auth:oauthAppById', id]),
   oauthAppList: def('auth:oauthAppList', () => ['auth:oauthAppList']),
@@ -1351,9 +1342,6 @@ export const resourceKeys = {
     params,
     workspaceId,
   ]),
-};
-export const providerKeys = {
-  clientConfig: def('provider:clientConfig', (id: string) => ['provider:clientConfig', id]),
 };
 export const recommendationsKeys = {
   heteroDetections: def('recommendations:heteroDetections', () => [
@@ -1441,11 +1429,9 @@ export const swrKeys = {
   message: messageKeys,
   messenger: messengerKeys,
   notebook: notebookSWRKeys,
-  ollama: ollamaKeys,
   onboarding: onboardingKeys,
   openInApp: openInAppKeys,
   portal: portalKeys,
-  provider: providerKeys,
   ragEval: ragEvalKeys,
   recent: recentKeys,
   recommendations: recommendationsKeys,

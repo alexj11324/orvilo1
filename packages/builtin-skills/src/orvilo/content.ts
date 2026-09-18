@@ -55,8 +55,6 @@ run commands.
 | \`lh gen\` | Content generation (text, image, video, TTS, ASR) |
 | \`lh message\` | Message management and search |
 | \`lh skill\` | Skill management (install, create, manage) |
-| \`lh model\` | AI model management |
-| \`lh provider\` | AI provider management |
 | \`lh plugin\` | Plugin management |
 | \`lh bot\` | Bot integration management (Discord, Slack, Telegram, etc.) |
 | \`lh eval\` | Evaluation workflow management |

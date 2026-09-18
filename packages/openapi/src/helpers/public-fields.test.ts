@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AgentItem, AiProviderSelectItem, FileItem, UserItem } from '@/database/schemas';
+import type { AgentItem, FileItem, UserItem } from '@/database/schemas';
 
 import {
   projectPublicAgent,
   projectPublicFile,
-  projectPublicProvider,
   projectPublicUser,
   PUBLIC_AGENT_FIELDS,
 } from './public-fields';
@@ -35,23 +34,6 @@ describe('public response field projections', () => {
     expect(Object.keys(projected).sort()).toEqual([...PUBLIC_AGENT_FIELDS, 'plugins'].sort());
     expect(projected).not.toHaveProperty('clientId');
     expect(projected).not.toHaveProperty('marketIdentifier');
-    expect(projected).not.toHaveProperty('userId');
-    expect(projected).not.toHaveProperty('workspaceId');
-  });
-
-  it('never returns Provider ownership fields, surrogate ids, or credentials', () => {
-    const projected = projectPublicProvider({
-      _id: 'internal-id',
-      createdAt: new Date(),
-      id: 'openai',
-      keyVaults: 'encrypted-secret',
-      updatedAt: new Date(),
-      userId: 'user-1',
-      workspaceId: 'workspace-1',
-    } as unknown as AiProviderSelectItem);
-
-    expect(projected).not.toHaveProperty('_id');
-    expect(projected).not.toHaveProperty('keyVaults');
     expect(projected).not.toHaveProperty('userId');
     expect(projected).not.toHaveProperty('workspaceId');
   });

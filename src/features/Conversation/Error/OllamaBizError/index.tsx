@@ -9,8 +9,6 @@ const loading = () => <Skeleton style={{ width: 300 }} />;
 
 const SetupGuide = dynamic(() => import('../OllamaSetupGuide'), { loading, ssr: false });
 
-const InvalidModel = dynamic(() => import('./InvalidOllamaModel'), { loading, ssr: false });
-
 interface OllamaError {
   code: string | null;
   message: string;
@@ -22,9 +20,6 @@ interface OllamaErrorResponse {
   error: OllamaError;
 }
 
-// eslint-disable-next-line regexp/no-dupe-characters-character-class, regexp/no-obscure-range
-const UNRESOLVED_MODEL_REGEXP = /model "([\w+,-_]+)" not found/;
-
 interface OllamaBizErrorProps {
   alertError?: AlertProps;
   error?: ChatMessageError | null;
@@ -35,12 +30,6 @@ const OllamaBizError = memo<OllamaBizErrorProps>(({ alertError, error, id }) => 
   const errorBody: OllamaErrorResponse = (error as any)?.body;
 
   const errorMessage = errorBody.error?.message;
-
-  // error of not pull the model
-  const unresolvedModel = errorMessage?.match(UNRESOLVED_MODEL_REGEXP)?.[1];
-  if (unresolvedModel) {
-    return <InvalidModel id={id} model={unresolvedModel} />;
-  }
 
   // error of not enable model or not set the CORS rules
   if (errorMessage?.includes('Failed to fetch')) {

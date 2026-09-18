@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { getHeterogeneousAgentDriver } from '../index';
-import type { PrepareProviderBindingContext } from '../types';
 import { sanitizeTraeProviderBindingArgs, traeDriver } from './trae';
 
 vi.mock('@/utils/logger', () => ({
@@ -14,76 +13,9 @@ vi.mock('@/utils/logger', () => ({
   }),
 }));
 
-const bindingContext = (): PrepareProviderBindingContext => ({
-  args: [
-    '--model',
-    'stale-model',
-    '--profile',
-    'personal',
-    '-c',
-    'model_provider="other"',
-    '-c',
-    'model_reasoning_effort="high"',
-  ],
-  env: {
-    KEEP_ME: 'yes',
-    ORVILO_TRAE_API_KEY: 'stale-host-key',
-    OPENAI_API_KEY: 'stale-openai-key',
-    TRAE_HOME: '/user/trae',
-  },
-  profileDir: '/managed/trae',
-  reference: {
-    apiConfig: { model: 'bound-model', providerId: 'responses-provider' },
-    kind: 'provider',
-  },
-  resolution: {
-    agentType: 'trae',
-    apiConfig: { model: 'bound-model', providerId: 'responses-provider' },
-    endpoint: 'https://responses.example.com/v1',
-    protocol: 'openai-responses',
-    providerId: 'responses-provider',
-    runtimeConfig: {
-      config: { enableResponseApi: true },
-      keyVaults: { apiKey: 'bound-key', baseURL: 'https://responses.example.com/v1' },
-      settings: { sdkType: 'openai', supportResponsesApi: true },
-    },
-  },
-  runDir: '/managed/run',
-});
-
 describe('traeDriver', () => {
   it('is registered for the trae agent type', () => {
     expect(getHeterogeneousAgentDriver('trae')).toBe(traeDriver);
-  });
-
-  it('applies a secret-free Responses provider override and preserves TRAE identity auth', async () => {
-    const plan = await traeDriver.prepareProviderBinding!(bindingContext());
-
-    expect(plan.args).toEqual([
-      '-c',
-      'model_reasoning_effort="high"',
-      '-c',
-      'model="bound-model"',
-      '-c',
-      'model_provider="orvilo"',
-      '-c',
-      'model_providers.orvilo.name="Orvilo Provider"',
-      '-c',
-      'model_providers.orvilo.base_url="https://responses.example.com/v1"',
-      '-c',
-      'model_providers.orvilo.env_key="ORVILO_TRAE_API_KEY"',
-      '-c',
-      'model_providers.orvilo.wire_api="responses"',
-      '-c',
-      'model_providers.orvilo.requires_openai_auth=false',
-    ]);
-    expect(plan.env).toEqual({
-      KEEP_ME: 'yes',
-      ORVILO_TRAE_API_KEY: 'bound-key',
-      TRAE_HOME: '/user/trae',
-    });
-    expect(plan.args.join(' ')).not.toContain('bound-key');
-    expect(plan.profileFiles).toBeUndefined();
   });
 
   it('overrides the server-default provider without persisting the operation token', async () => {
@@ -130,19 +62,5 @@ describe('traeDriver', () => {
         'model_reasoning_effort="high"',
       ]),
     ).toEqual(['-c', 'model_reasoning_effort="high"']);
-  });
-
-  it('rejects a binding without Responses transport or credentials', async () => {
-    const chatContext = bindingContext();
-    chatContext.resolution.protocol = 'openai-chat-completions';
-    expect(() => traeDriver.prepareProviderBinding!(chatContext)).toThrow(
-      'TRAE provider binding requires a Responses API endpoint.',
-    );
-
-    const withoutKey = bindingContext();
-    withoutKey.resolution.runtimeConfig.keyVaults.apiKey = ' ';
-    expect(() => traeDriver.prepareProviderBinding!(withoutKey)).toThrow(
-      'TRAE provider binding requires an API key.',
-    );
   });
 });

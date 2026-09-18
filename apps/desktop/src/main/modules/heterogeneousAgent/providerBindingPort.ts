@@ -1,31 +1,10 @@
-import type {
-  HeterogeneousProviderBindingReference,
-  HeterogeneousProviderBindingRuntime,
-  ServerDefaultHeterogeneousAgentType,
-} from '@orvilo/heterogeneous-agents';
+import type { ServerDefaultHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import type { ServerDefaultHeterogeneousRelayInvocation } from '@orvilo/types';
 
 import {
   callLambdaMutation,
   type RemoteServerAuth,
 } from '@/modules/heterogeneousAgent/fileStorePort';
-
-export const getProviderBindingRuntime = async (
-  auth: RemoteServerAuth,
-  reference: Extract<HeterogeneousProviderBindingReference, { kind: 'provider' }>,
-): Promise<HeterogeneousProviderBindingRuntime> => {
-  const serverUrl = await auth.getServerUrl();
-  const accessToken = await auth.getAccessToken();
-  if (!serverUrl || !accessToken) {
-    throw new Error('Orvilo Provider binding requires an authenticated Desktop session.');
-  }
-
-  return callLambdaMutation<HeterogeneousProviderBindingRuntime>(
-    { accessToken, serverUrl },
-    'aiProvider.getProviderBindingRuntime',
-    { id: reference.apiConfig.providerId },
-  );
-};
 
 export interface ServerDefaultOperationBinding {
   endpoint: string;

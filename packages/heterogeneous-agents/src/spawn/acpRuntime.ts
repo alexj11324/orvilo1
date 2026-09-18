@@ -1,4 +1,4 @@
-import { homedir, platform } from 'node:os';
+import os from 'node:os';
 import path from 'node:path';
 
 import type { LocalHeterogeneousAgentType } from '../config';
@@ -161,17 +161,17 @@ export const isAcpBridgeAgent = (agentType: string): boolean =>
  * fallback (npm/bun/pnpm global bin dirs an Electron parent never sees).
  */
 const getWellKnownBridgeCommandPaths = (command: string): string[] => {
-  if (platform() === 'win32') {
+  if (os.platform() === 'win32') {
     const appData = process.env.APPDATA;
     return appData ? [path.win32.join(appData, 'npm', `${command}.cmd`)] : [];
   }
-  if (platform() !== 'darwin' && platform() !== 'linux') return [];
+  if (os.platform() !== 'darwin' && os.platform() !== 'linux') return [];
 
   return [
-    path.join(homedir(), '.local', 'bin', command),
-    path.join(homedir(), '.bun', 'bin', command),
-    path.join(homedir(), '.npm-global', 'bin', command),
-    path.join(homedir(), 'Library', 'pnpm', command),
+    path.join(os.homedir(), '.local', 'bin', command),
+    path.join(os.homedir(), '.bun', 'bin', command),
+    path.join(os.homedir(), '.npm-global', 'bin', command),
+    path.join(os.homedir(), 'Library', 'pnpm', command),
     path.join('/usr', 'local', 'bin', command),
     path.join('/opt', 'homebrew', 'bin', command),
   ];

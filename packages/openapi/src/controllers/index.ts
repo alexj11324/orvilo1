@@ -9,7 +9,6 @@ export * from './message.controller';
 export * from './message-translation.controller';
 export * from './model.controller';
 export * from './permission.controller';
-export * from './provider.controller';
 export * from './role.controller';
 export * from './topic.controller';
 export * from './usage.controller';

@@ -1,6 +1,3 @@
-import path from 'node:path';
-
-import type { HeterogeneousProviderBindingProtocol } from '@orvilo/heterogeneous-agents';
 import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
 import type { HeterogeneousAgentDriver } from '../types';
@@ -9,13 +6,6 @@ const HOST_API_KEY_ENV = 'ORVILO_PI_API_KEY';
 const MODELS_FILE = 'models.json';
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 16_384;
-
-const PI_API_BY_PROTOCOL = {
-  'anthropic-messages': 'anthropic-messages',
-  'google-generative-ai': 'google-generative-ai',
-  'openai-chat-completions': 'openai-completions',
-  'openai-responses': 'openai-responses',
-} as const satisfies Record<HeterogeneousProviderBindingProtocol, string>;
 
 const CONTROLLED_FLAGS = [
   '--api-key',
@@ -59,55 +49,6 @@ const sanitizePiProviderBindingEnv = (source: Record<string, string> | undefined
 };
 
 export const piDriver: HeterogeneousAgentDriver = {
-  prepareProviderBinding({ args, env, profileDir, resolution }) {
-    if (!resolution.endpoint) throw new Error('Pi provider binding requires an API endpoint.');
-
-    const apiKey = resolution.runtimeConfig.keyVaults.apiKey?.trim();
-    if (!apiKey) throw new Error('Pi provider binding requires an API key.');
-
-    const model = resolution.apiConfig.model;
-    const metadata = resolution.modelMetadata;
-    const providerId = `orvilo-${path.basename(profileDir)}`;
-    const contextWindow =
-      metadata?.contextWindowTokens && metadata.contextWindowTokens > 0
-        ? metadata.contextWindowTokens
-        : DEFAULT_CONTEXT_WINDOW;
-    const maxTokens =
-      metadata?.maxOutput && metadata.maxOutput > 0 ? metadata.maxOutput : DEFAULT_MAX_TOKENS;
-    const modelsConfig = {
-      providers: {
-        [providerId]: {
-          api: PI_API_BY_PROTOCOL[resolution.protocol],
-          apiKey: `$${HOST_API_KEY_ENV}`,
-          baseUrl: resolution.endpoint,
-          models: [
-            {
-              contextWindow,
-              cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0 },
-              id: model,
-              input: metadata?.abilities?.vision ? ['text', 'image'] : ['text'],
-              maxTokens,
-              name: metadata?.displayName?.trim() || model,
-              reasoning: metadata?.abilities?.reasoning === true,
-            },
-          ],
-          name: 'Orvilo Provider',
-        },
-      },
-    };
-
-    return {
-      // Keep host-authoritative routing before caller args. In particular, a
-      // caller-provided `--` ends Pi option parsing but cannot hide these flags.
-      args: ['--provider', providerId, '--model', model, ...sanitizePiProviderBindingArgs(args)],
-      env: {
-        ...sanitizePiProviderBindingEnv(env),
-        [HOST_API_KEY_ENV]: apiKey,
-        PI_CODING_AGENT_DIR: profileDir,
-      },
-      profileFiles: [{ content: `${JSON.stringify(modelsConfig, null, 2)}\n`, path: MODELS_FILE }],
-    };
-  },
   prepareServerDefaultBinding({ args, endpoint, env, model, profileDir }) {
     const providerId = 'orvilo-server-default';
     const requestModel = formatServerDefaultHeterogeneousModel(model);

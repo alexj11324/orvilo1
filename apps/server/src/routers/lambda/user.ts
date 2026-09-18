@@ -844,15 +844,16 @@ export const userRouter = router({
   }),
 
   updateSettings: userProcedure.input(UserSettingsSchema).mutation(async ({ ctx, input }) => {
-    const { keyVaults, ...res } = input as Partial<UserSettings>;
-    // presence, not truthiness: `keyVaults: null` is an explicit credential clear
-    const hasKeyVaultsUpdate = 'keyVaults' in (input as Partial<UserSettings>);
+    // `keyVaults` (provider/tool credentials) is retired: the field is still
+    // accepted for wire compatibility but never persisted — stored creds stay
+    // frozen and readable only by the runtime's existing-row path.
+    const { keyVaults: _ignoredKeyVaults, ...res } = input as Partial<UserSettings>;
 
-    // credential-bearing settings: `keyVaults` holds provider/tool credentials,
-    // `market` holds Marketplace OAuth access/refresh tokens. A restricted key
-    // needs `model:write` on top of the namespace's `user:write` to touch (or
-    // clear) either; full-access keys pass through.
-    const touchedCredentialFields = ['keyVaults', 'market'].filter(
+    // credential-bearing settings: `market` holds Marketplace OAuth
+    // access/refresh tokens. A restricted key needs `model:write` on top of
+    // the namespace's `user:write` to touch (or clear) it; full-access keys
+    // pass through.
+    const touchedCredentialFields = ['market'].filter(
       (field) => field in (input as Partial<UserSettings>),
     );
     if (
@@ -885,25 +886,7 @@ export const userRouter = router({
       }
     }
 
-    // Encrypt keyVaults; only touch the column when the caller sent the field,
-    // so a settings update without `keyVaults` no longer clears stored creds
-    const nextValue: Record<string, unknown> = { ...res };
-
-    if (hasKeyVaultsUpdate) {
-      let encryptedKeyVaults: string | null = null;
-
-      if (keyVaults) {
-        // TODO: better to add a validation
-        const data = JSON.stringify(keyVaults);
-        const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
-
-        encryptedKeyVaults = await gateKeeper.encrypt(data);
-      }
-
-      nextValue.keyVaults = encryptedKeyVaults;
-    }
-
-    return ctx.userModel.updateSetting(nextValue);
+    return ctx.userModel.updateSetting(res);
   }),
 
   updateToolIntervention: userProcedure

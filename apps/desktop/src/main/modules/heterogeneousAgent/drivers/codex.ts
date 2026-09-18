@@ -163,36 +163,6 @@ const buildServerDefaultModelCatalog = (
 };
 
 export const codexDriver: HeterogeneousAgentDriver = {
-  prepareProviderBinding({ args, env, profileDir, resolution }) {
-    if (resolution.protocol !== 'openai-responses' || !resolution.endpoint) {
-      throw new Error('Codex provider binding requires a Responses API endpoint.');
-    }
-
-    const apiKey = resolution.runtimeConfig.keyVaults.apiKey?.trim();
-    if (!apiKey) throw new Error('Codex provider binding requires an API key.');
-
-    const config = [
-      `model_provider = ${tomlString(HOST_PROVIDER_ID)}`,
-      '',
-      `[model_providers.${HOST_PROVIDER_ID}]`,
-      `name = ${tomlString('Orvilo Provider')}`,
-      `base_url = ${tomlString(resolution.endpoint)}`,
-      `env_key = ${tomlString(HOST_API_KEY_ENV)}`,
-      'wire_api = "responses"',
-      'requires_openai_auth = false',
-      '',
-    ].join('\n');
-
-    return {
-      args: [...sanitizeCodexProviderBindingArgs(args), '--model', resolution.apiConfig.model],
-      env: {
-        ...sanitizeCodexProviderBindingEnv(env),
-        CODEX_HOME: profileDir,
-        [HOST_API_KEY_ENV]: apiKey,
-      },
-      profileFiles: [{ content: config, path: 'config.toml' }],
-    };
-  },
   prepareServerDefaultBinding({ args, endpoint, env, model, profileDir }) {
     const requestModel = formatServerDefaultHeterogeneousModel(model);
     const customModel = isCodexServerDefaultCustomModel(model) ? model : undefined;

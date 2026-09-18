@@ -85,19 +85,16 @@ const { loggerInfoMock } = vi.hoisted(() => ({
 
 const {
   beginServerDefaultOperationMock,
-  getProviderBindingRuntimeMock,
   getServerDefaultEndpointMock,
   settleServerDefaultOperationMock,
 } = vi.hoisted(() => ({
   beginServerDefaultOperationMock: vi.fn(),
-  getProviderBindingRuntimeMock: vi.fn(),
   getServerDefaultEndpointMock: vi.fn(),
   settleServerDefaultOperationMock: vi.fn(),
 }));
 
 vi.mock('@/modules/heterogeneousAgent/providerBindingPort', () => ({
   beginServerDefaultOperation: beginServerDefaultOperationMock,
-  getProviderBindingRuntime: getProviderBindingRuntimeMock,
   getServerDefaultEndpoint: getServerDefaultEndpointMock,
   settleServerDefaultOperation: settleServerDefaultOperationMock,
 }));
@@ -572,15 +569,6 @@ describe('HeterogeneousAgentCtr', () => {
       endpoint: 'https://app.example.com',
       model: 'orvilo-default',
       token: 'operation-token',
-    });
-    getProviderBindingRuntimeMock.mockReset();
-    getProviderBindingRuntimeMock.mockResolvedValue({
-      enabled: true,
-      runtimeConfig: {
-        config: { enableResponseApi: true },
-        keyVaults: { apiKey: 'provider-secret' },
-        settings: { sdkType: 'openai', supportResponsesApi: true },
-      },
     });
     getServerDefaultEndpointMock.mockReset();
     getServerDefaultEndpointMock.mockResolvedValue('https://app.example.com');
@@ -1740,66 +1728,23 @@ describe('HeterogeneousAgentCtr', () => {
       expect(send).toHaveBeenCalledWith('heteroAgentSessionComplete', { sessionId });
     });
 
-    it('launches provider-bound Grok with a managed secret-free profile', async () => {
+    it('rejects a retired user-provider (BYOK) binding instead of running unbound', async () => {
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
       } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'grok-build',
-        args: ['--model', 'stale-model', '--effort', 'high'],
-        command: 'grok',
-        env: {
-          GROK_CODE_XAI_API_KEY: 'stale-legacy-key',
-          GROK_CONFIG: 'untrusted',
-          XAI_API_KEY: 'stale-key',
-        },
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-        },
-      });
 
-      const originalLegacyApiKey = process.env.GROK_CODE_XAI_API_KEY;
-      const originalXaiApiKey = process.env.XAI_API_KEY;
-      process.env.GROK_CODE_XAI_API_KEY = 'inherited-legacy-key';
-      process.env.XAI_API_KEY = 'inherited-xai-key';
-      try {
-        await ctr.sendPrompt({ operationId: 'op-grok-provider', prompt: 'hello', sessionId });
-      } finally {
-        if (originalLegacyApiKey === undefined) delete process.env.GROK_CODE_XAI_API_KEY;
-        else process.env.GROK_CODE_XAI_API_KEY = originalLegacyApiKey;
-        if (originalXaiApiKey === undefined) delete process.env.XAI_API_KEY;
-        else process.env.XAI_API_KEY = originalXaiApiKey;
-      }
-
-      const options = grokAcpSessionConstructMock.mock.calls.at(-1)?.[0];
-      expect(options.args).toEqual([
-        '--effort',
-        'high',
-        '--model',
-        expect.stringMatching(/^orvilo-provider-[\da-f]{16}$/),
-      ]);
-      expect(options.env).toEqual(
-        expect.objectContaining({
-          GROK_CONFIG: '',
-          GROK_DEFAULT_MODEL: '',
-          GROK_HOME: expect.stringContaining('/heteroAgent/bindings/grok-build/'),
-          ORVILO_GROK_API_KEY: 'provider-secret',
+      await expect(
+        ctr.startSession({
+          agentType: 'grok-build',
+          command: 'grok',
+          providerBinding: {
+            apiConfig: { model: 'gpt-test', providerId: 'openai' },
+            kind: 'provider',
+          } as any,
         }),
-      );
-      expect(options.env).not.toHaveProperty('GROK_CODE_XAI_API_KEY');
-      expect(options.env).not.toHaveProperty('XAI_API_KEY');
-
-      const bindingsDir = path.join(appStoragePath, 'heteroAgent', 'bindings', 'grok-build');
-      const [bindingDir] = await readdir(bindingsDir);
-      const config = await readFile(path.join(bindingsDir, bindingDir, 'config.toml'), 'utf8');
-      expect(config).toContain('model = "gpt-test"');
-      expect(config).toContain('base_url = "https://api.openai.com/v1"');
-      expect(config).toContain('api_backend = "responses"');
-      expect(config).not.toContain('provider-secret');
-      expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('provider-secret');
-      expect(await readdir(path.join(appStoragePath, 'heteroAgent', 'runs'))).toEqual([]);
+      ).rejects.toThrow('Orvilo Provider bindings are no longer supported.');
+      expect(grokAcpSessionConstructMock).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -1963,167 +1908,6 @@ describe('HeterogeneousAgentCtr', () => {
       });
 
       expect(payload).toBe(promptError.message);
-    });
-  });
-
-  describe('sendPrompt (kimi-code provider binding)', () => {
-    let originalKimiBaseURL: string | undefined;
-
-    beforeEach(() => {
-      originalKimiBaseURL = process.env.KIMI_MODEL_BASE_URL;
-      process.env.KIMI_MODEL_BASE_URL = 'https://stale-or-attacker.example/v1';
-      spawnCalls.length = 0;
-      execFileMock.mockReset();
-      getProviderBindingRuntimeMock.mockResolvedValue({
-        enabled: true,
-        runtimeConfig: {
-          config: {},
-          keyVaults: {
-            apiKey: 'kimi-provider-secret',
-            baseURL: 'https://gateway.example.com/v1/',
-          },
-          settings: { sdkType: 'openai' },
-        },
-      });
-    });
-
-    afterEach(() => {
-      if (originalKimiBaseURL === undefined) delete process.env.KIMI_MODEL_BASE_URL;
-      else process.env.KIMI_MODEL_BASE_URL = originalKimiBaseURL;
-    });
-
-    it('requires Kimi Code 0.6.0 for provider binding but not subscription mode', async () => {
-      const detect = vi.fn().mockResolvedValue({ available: true, version: '0.5.0' });
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        binaryManager: { detect },
-        storeManager: { get: vi.fn() },
-      } as any);
-      const providerSession = await ctr.startSession({
-        agentType: 'kimi-code',
-        command: 'kimi',
-        providerBinding: {
-          apiConfig: { model: 'upstream-model', providerId: 'custom-openai' },
-          kind: 'provider',
-        },
-      });
-
-      await expect(
-        ctr.sendPrompt({
-          operationId: 'op-kimi-old-provider',
-          prompt: 'provider prompt',
-          sessionId: providerSession.sessionId,
-        }),
-      ).rejects.toThrow(
-        'Kimi Code 0.6.0 or newer is required to use a Orvilo provider. Installed version: 0.5.0.',
-      );
-      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
-
-      const subscriptionSession = await ctr.startSession({
-        agentType: 'kimi-code',
-        command: 'kimi',
-      });
-      await ctr.sendPrompt({
-        operationId: 'op-kimi-old-subscription',
-        prompt: 'subscription prompt',
-        sessionId: subscriptionSession.sessionId,
-      });
-
-      expect(standardAcpSessionConstructMock).toHaveBeenCalledOnce();
-    });
-
-    it('keeps the env-only binding across fresh and resumed runs without persisting the key', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const providerBinding = {
-        apiConfig: { model: 'upstream-model', providerId: 'custom-openai' },
-        kind: 'provider' as const,
-      };
-
-      const fresh = await ctr.startSession({
-        agentType: 'kimi-code',
-        args: [
-          '--continue',
-          '-c',
-          '-C',
-          '--model',
-          'stale-model',
-          '--session=stale-session',
-          '--verbose',
-        ],
-        command: 'kimi',
-        env: {
-          KIMI_CODE_HOME: '/user/kimi',
-          KIMI_MODEL_API_KEY: 'stale-key',
-          KIMI_MODEL_BASE_URL: 'https://stale.example.com',
-        },
-        providerBinding,
-      });
-      await ctr.sendPrompt({
-        operationId: 'op-kimi-fresh',
-        prompt: 'fresh private prompt',
-        sessionId: fresh.sessionId,
-      });
-
-      const [freshAgentType, freshOptions, freshConfig] =
-        standardAcpSessionConstructMock.mock.calls.at(-1)!;
-      expect(freshAgentType).toBe('kimi-code');
-      // Native ACP mode: `kimi acp`, user args sanitized by the binding then
-      // appended; the prompt travels as ACP content blocks, never in argv.
-      expect(freshOptions.commandPath).toBe('kimi');
-      expect(freshConfig.args).toEqual(['acp', '--verbose']);
-      expect(freshOptions.prompt).toEqual([{ text: 'fresh private prompt', type: 'text' }]);
-      expect(freshOptions.env).toEqual(
-        expect.objectContaining({
-          KIMI_CODE_HOME: expect.stringContaining('/heteroAgent/bindings/kimi-code/'),
-          KIMI_MODEL_API_KEY: expect.any(String),
-          KIMI_MODEL_BASE_URL: expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/v1$/),
-          KIMI_MODEL_NAME: 'upstream-model',
-          KIMI_MODEL_PROVIDER_TYPE: 'openai',
-          NO_PROXY: expect.stringContaining('127.0.0.1'),
-          no_proxy: expect.stringContaining('127.0.0.1'),
-        }),
-      );
-
-      const resumed = await ctr.startSession({
-        agentType: 'kimi-code',
-        command: 'kimi',
-        providerBinding: { ...providerBinding, resumeBindingKey: fresh.providerBindingKey },
-        resumeSessionId: 'kimi-native-session',
-      });
-      await ctr.sendPrompt({
-        operationId: 'op-kimi-resume',
-        prompt: 'resume private prompt',
-        sessionId: resumed.sessionId,
-      });
-
-      const [, resumedOptions] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
-      // Resume goes through ACP `session/load`, not a CLI `--session` flag.
-      expect(resumedOptions.resumeSessionId).toBe('kimi-native-session');
-      expect(resumedOptions.env).toEqual(
-        expect.objectContaining({
-          KIMI_MODEL_API_KEY: expect.any(String),
-          KIMI_MODEL_BASE_URL: expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/v1$/),
-          KIMI_MODEL_NAME: 'upstream-model',
-          KIMI_MODEL_PROVIDER_TYPE: 'openai',
-        }),
-      );
-      const allOptions = standardAcpSessionConstructMock.mock.calls.map(([, options]) => options);
-      expect(allOptions[0].env.KIMI_MODEL_API_KEY).not.toBe('kimi-provider-secret');
-      expect(allOptions[1].env.KIMI_MODEL_API_KEY).not.toBe('kimi-provider-secret');
-      expect(JSON.stringify(allOptions)).not.toContain('kimi-provider-secret');
-      expect(JSON.stringify(allOptions)).not.toContain('stale-or-attacker.example');
-      expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('kimi-provider-secret');
-
-      const bindingsRoot = path.join(appStoragePath, 'heteroAgent', 'bindings', 'kimi-code');
-      const [bindingDir] = await readdir(bindingsRoot);
-      const profileFiles = await readdir(path.join(bindingsRoot, bindingDir));
-      expect(profileFiles).toEqual(['.orvilo-last-used']);
-      expect(
-        await readFile(path.join(bindingsRoot, bindingDir, '.orvilo-last-used'), 'utf8'),
-      ).not.toContain('kimi-provider-secret');
     });
   });
 
@@ -2408,167 +2192,6 @@ describe('HeterogeneousAgentCtr', () => {
 
       expect(detect).toHaveBeenCalledWith('codex');
       expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
-    });
-
-    it('rejects a binding whose model the server reports as disabled, even when the renderer sent it', async () => {
-      getProviderBindingRuntimeMock.mockResolvedValue({
-        enabled: true,
-        enabledModels: [{ id: 'another-model', providerId: 'openai', type: 'chat' }],
-        runtimeConfig: {
-          config: { enableResponseApi: true },
-          keyVaults: { apiKey: 'provider-secret' },
-          settings: { sdkType: 'openai', supportResponsesApi: true },
-        },
-      });
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-
-      await expect(
-        ctr.startSession({
-          agentType: 'codex',
-          command: 'codex',
-          providerBinding: {
-            apiConfig: { model: 'gpt-test', providerId: 'openai' },
-            kind: 'provider',
-          },
-        }),
-      ).rejects.toThrow('Model "openai/gpt-test" is disabled or unavailable.');
-    });
-
-    it('cleans provider-binding run state when CLI preflight fails', async () => {
-      const detect = vi.fn().mockResolvedValue({ available: false });
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        binaryManager: { detect },
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-        },
-      });
-      const runsDir = path.join(appStoragePath, 'heteroAgent', 'runs');
-      expect(await readdir(runsDir)).toEqual([sessionId]);
-
-      await expect(
-        ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId }),
-      ).rejects.toThrow('Codex CLI was not found');
-
-      expect(await readdir(runsDir)).toEqual([]);
-    });
-
-    it('routes provider-bound Codex through codex-acp with a managed, secret-free profile', async () => {
-      const { options, sessionId } = await runSendPrompt('provider-bound prompt', {
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-        },
-      });
-
-      expect(spawnCalls).toHaveLength(0);
-      expect(options.commandPath).toBe('/mock-bridges/codex-acp');
-      expect(options.initialModel).toBe('gpt-test');
-      expect(options.env).toEqual(
-        expect.objectContaining({
-          CODEX_HOME: expect.stringContaining('/heteroAgent/bindings/codex/'),
-          ORVILO_CODEX_API_KEY: 'provider-secret',
-        }),
-      );
-      expect(JSON.stringify(options.args)).not.toContain('provider-secret');
-      expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('provider-secret');
-
-      const codexBindingsDir = path.join(appStoragePath, 'heteroAgent', 'bindings', 'codex');
-      const [bindingDir] = await readdir(codexBindingsDir);
-      const config = await readFile(path.join(codexBindingsDir, bindingDir, 'config.toml'), 'utf8');
-      expect(config).toContain('wire_api = "responses"');
-      expect(config).not.toContain('provider-secret');
-      await expect(
-        readdir(path.join(appStoragePath, 'heteroAgent', 'runs', sessionId)),
-      ).rejects.toThrow();
-    });
-
-    it('cleans provider-binding run state when ACP target resolution fails', async () => {
-      resolveAcpSpawnTargetMock.mockRejectedValueOnce(new Error('bridge probe failed'));
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-        },
-      });
-
-      await expect(
-        ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId }),
-      ).rejects.toThrow();
-      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
-      await expect(
-        readdir(path.join(appStoragePath, 'heteroAgent', 'runs', sessionId)),
-      ).rejects.toThrow();
-    });
-
-    it('resumes a provider-bound session only when the resolved binding key matches', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const first = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-        },
-      });
-      const legacy = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-        },
-        resumeSessionId: 'thread-without-binding-key',
-      });
-      const rejected = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-          resumeBindingKey: 'provider-binding:v1:different',
-        },
-        resumeSessionId: 'thread-rejected',
-      });
-      const accepted = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-          resumeBindingKey: first.providerBindingKey,
-        },
-        resumeSessionId: 'thread-accepted',
-      });
-
-      await expect(ctr.getSessionInfo({ sessionId: legacy.sessionId })).resolves.toEqual({
-        agentSessionId: undefined,
-      });
-      await expect(ctr.getSessionInfo({ sessionId: rejected.sessionId })).resolves.toEqual({
-        agentSessionId: undefined,
-      });
-      await expect(ctr.getSessionInfo({ sessionId: accepted.sessionId })).resolves.toEqual({
-        agentSessionId: 'thread-accepted',
-      });
-      expect(accepted.providerBindingKey).toBe(first.providerBindingKey);
     });
 
     it('validates the default desktop directory when the session cwd is omitted', async () => {
@@ -3411,175 +3034,6 @@ describe('HeterogeneousAgentCtr', () => {
         transport: 'trae-acp',
       });
       expect(send).toHaveBeenCalledWith('heteroAgentSessionComplete', { sessionId });
-    });
-
-    it('launches a provider-bound TRAE session with invocation-local config and existing auth', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'trae',
-        args: ['--model', 'stale-model', '--profile', 'personal', '--permission-mode', 'auto'],
-        command: 'traecli',
-        env: {
-          ORVILO_TRAE_API_KEY: 'stale-host-key',
-          OPENAI_API_KEY: 'stale-openai-key',
-          TRAE_HOME: '/user/trae',
-        },
-        initialModel: 'stale-native-model',
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-        },
-      });
-
-      await ctr.sendPrompt({ operationId: 'op-trae-provider', prompt: 'hello', sessionId });
-
-      const options = traeAcpSessionConstructMock.mock.calls.at(-1)?.[0];
-      expect(options.args).toEqual([
-        '--permission-mode',
-        'auto',
-        '-c',
-        'model="gpt-test"',
-        '-c',
-        'model_provider="orvilo"',
-        '-c',
-        'model_providers.orvilo.name="Orvilo Provider"',
-        '-c',
-        'model_providers.orvilo.base_url="https://api.openai.com/v1"',
-        '-c',
-        'model_providers.orvilo.env_key="ORVILO_TRAE_API_KEY"',
-        '-c',
-        'model_providers.orvilo.wire_api="responses"',
-        '-c',
-        'model_providers.orvilo.requires_openai_auth=false',
-      ]);
-      expect(options.initialModel).toBeUndefined();
-      expect(options.env).toEqual(
-        expect.objectContaining({
-          ORVILO_TRAE_API_KEY: 'provider-secret',
-          TRAE_HOME: '/user/trae',
-        }),
-      );
-      expect(options.env).not.toHaveProperty('OPENAI_API_KEY');
-      expect(options.args.join(' ')).not.toContain('provider-secret');
-
-      const bindingsDir = path.join(appStoragePath, 'heteroAgent', 'bindings', 'trae');
-      const [bindingDir] = await readdir(bindingsDir);
-      expect(await readdir(path.join(bindingsDir, bindingDir))).toEqual(['.orvilo-last-used']);
-      expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('provider-secret');
-      expect(await readdir(path.join(appStoragePath, 'heteroAgent', 'runs'))).toEqual([]);
-    });
-
-    it('uses invocation-local TRAE config and existing auth for server-default runs', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'trae',
-        command: 'traecli',
-        env: {
-          ORVILO_TRAE_API_KEY: 'stale-host-key',
-          OPENAI_API_KEY: 'stale-openai-key',
-          TRAE_HOME: '/user/trae',
-        },
-        providerBinding: {
-          apiConfig: { model: 'gpt-5.4', source: 'server-default' },
-          kind: 'server-default',
-        },
-      });
-
-      await ctr.sendPrompt({
-        operationId: 'op-trae-server-default',
-        prompt: 'hello',
-        sessionId,
-        topicId: 'topic-1',
-      });
-
-      expect(beginServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
-        agentId: undefined,
-        agentType: 'trae',
-        model: 'gpt-5.4',
-        operationId: 'op-trae-server-default',
-        topicId: 'topic-1',
-      });
-      const options = traeAcpSessionConstructMock.mock.calls.at(-1)?.[0];
-      expect(options.args).toEqual([
-        '-c',
-        'model="aspectlylabs/gpt-5.4"',
-        '-c',
-        'model_provider="orvilo"',
-        '-c',
-        'model_providers.orvilo.name="Orvilo Provider"',
-        '-c',
-        'model_providers.orvilo.base_url="https://app.example.com/api/v1/openai/v1"',
-        '-c',
-        'model_providers.orvilo.env_key="ORVILO_TRAE_API_KEY"',
-        '-c',
-        'model_providers.orvilo.wire_api="responses"',
-        '-c',
-        'model_providers.orvilo.requires_openai_auth=false',
-      ]);
-      expect(options.env).toEqual(
-        expect.objectContaining({
-          ORVILO_TRAE_API_KEY: 'operation-token',
-          TRAE_HOME: '/user/trae',
-        }),
-      );
-      expect(options.env).not.toHaveProperty('OPENAI_API_KEY');
-      expect(options.args.join(' ')).not.toContain('operation-token');
-
-      const bindingsDir = path.join(appStoragePath, 'heteroAgent', 'bindings', 'trae');
-      const [bindingDir] = await readdir(bindingsDir);
-      expect(await readdir(path.join(bindingsDir, bindingDir))).toEqual(['.orvilo-last-used']);
-      expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('operation-token');
-      expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
-        cancelled: false,
-        operationId: 'op-trae-server-default',
-        result: 'done',
-      });
-    });
-
-    it('requires TRAE CLI 0.201.2 for provider binding but not subscription mode', async () => {
-      const detect = vi.fn().mockResolvedValue({ available: true, version: '0.201.1' });
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        binaryManager: { detect },
-        storeManager: { get: vi.fn() },
-      } as any);
-      const providerSession = await ctr.startSession({
-        agentType: 'trae',
-        command: 'traecli',
-        providerBinding: {
-          apiConfig: { model: 'gpt-test', providerId: 'openai' },
-          kind: 'provider',
-        },
-      });
-
-      await expect(
-        ctr.sendPrompt({
-          operationId: 'op-trae-old-provider',
-          prompt: 'provider prompt',
-          sessionId: providerSession.sessionId,
-        }),
-      ).rejects.toThrow(
-        'TRAE CLI 0.201.2 or newer is required to use a Orvilo provider. Installed version: 0.201.1.',
-      );
-      expect(traeAcpSessionConstructMock).not.toHaveBeenCalled();
-
-      const subscriptionSession = await ctr.startSession({
-        agentType: 'trae',
-        command: 'traecli',
-      });
-      await ctr.sendPrompt({
-        operationId: 'op-trae-old-subscription',
-        prompt: 'subscription prompt',
-        sessionId: subscriptionSession.sessionId,
-      });
-
-      expect(traeAcpSessionConstructMock).toHaveBeenCalledOnce();
     });
 
     it('classifies authentication diagnostics emitted only on ACP stderr', async () => {

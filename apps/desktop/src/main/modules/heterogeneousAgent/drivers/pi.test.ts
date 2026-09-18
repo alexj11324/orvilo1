@@ -1,59 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { getHeterogeneousAgentDriver } from '../index';
-import type { PrepareProviderBindingContext } from '../types';
 import { piDriver, sanitizePiProviderBindingArgs } from './pi';
-
-const bindingContext = (
-  protocol: PrepareProviderBindingContext['resolution']['protocol'] = 'openai-chat-completions',
-): PrepareProviderBindingContext => ({
-  args: [
-    '--provider',
-    'stale-provider',
-    '--model=stale-model',
-    '--models',
-    'other/*',
-    '--api-key=argv-secret',
-    '--session-dir',
-    '/unmanaged/sessions',
-    '--no-session',
-    '--thinking',
-    'high',
-  ],
-  env: {
-    KEEP_ME: 'yes',
-    ORVILO_PI_API_KEY: 'stale-key',
-    PI_CODING_AGENT_DIR: '/user/pi',
-    PI_CODING_AGENT_SESSION_DIR: '/user/sessions',
-  },
-  profileDir: '/managed/pi/profile-digest',
-  reference: {
-    apiConfig: { model: 'vendor/model-test', providerId: 'provider-test' },
-    kind: 'provider',
-  },
-  resolution: {
-    agentType: 'pi',
-    apiConfig: { model: 'vendor/model-test', providerId: 'provider-test' },
-    endpoint: 'https://gateway.example.com/v1',
-    modelMetadata: {
-      abilities: { reasoning: true, vision: true },
-      contextWindowTokens: 200_000,
-      displayName: 'Provider model',
-      id: 'vendor/model-test',
-      maxOutput: 32_000,
-      providerId: 'provider-test',
-      type: 'chat',
-    },
-    protocol,
-    providerId: 'provider-test',
-    runtimeConfig: {
-      config: {},
-      keyVaults: { apiKey: 'bound-key', baseURL: 'https://gateway.example.com/v1' },
-      settings: { sdkType: 'openai' },
-    },
-  },
-  runDir: '/managed/run',
-});
 
 describe('piDriver', () => {
   it('writes a secret-free server-default Responses profile', async () => {
@@ -97,73 +45,6 @@ describe('piDriver', () => {
     expect(getHeterogeneousAgentDriver('pi')).toBe(piDriver);
   });
 
-  it.each([
-    ['openai-chat-completions', 'openai-completions'],
-    ['openai-responses', 'openai-responses'],
-    ['anthropic-messages', 'anthropic-messages'],
-    ['google-generative-ai', 'google-generative-ai'],
-  ] as const)('maps %s to the Pi custom-provider API %s', async (protocol, expectedApi) => {
-    const plan = await piDriver.prepareProviderBinding!(bindingContext(protocol));
-    const config = JSON.parse(plan.profileFiles?.[0]?.content ?? '{}');
-
-    expect(config.providers['orvilo-profile-digest'].api).toBe(expectedApi);
-  });
-
-  it('writes a secret-free managed profile and forces its provider/model through env and argv', async () => {
-    const plan = await piDriver.prepareProviderBinding!(bindingContext());
-    const content = plan.profileFiles?.[0]?.content ?? '';
-    const config = JSON.parse(content);
-    const provider = config.providers['orvilo-profile-digest'];
-
-    expect(plan.args).toEqual([
-      '--provider',
-      'orvilo-profile-digest',
-      '--model',
-      'vendor/model-test',
-      '--thinking',
-      'high',
-    ]);
-    expect(plan.env).toEqual({
-      KEEP_ME: 'yes',
-      ORVILO_PI_API_KEY: 'bound-key',
-      PI_CODING_AGENT_DIR: '/managed/pi/profile-digest',
-    });
-    expect(plan.profileFiles?.[0]?.path).toBe('models.json');
-    expect(provider).toMatchObject({
-      api: 'openai-completions',
-      apiKey: '$ORVILO_PI_API_KEY',
-      baseUrl: 'https://gateway.example.com/v1',
-      models: [
-        {
-          contextWindow: 200_000,
-          id: 'vendor/model-test',
-          input: ['text', 'image'],
-          maxTokens: 32_000,
-          name: 'Provider model',
-          reasoning: true,
-        },
-      ],
-      name: 'Orvilo Provider',
-    });
-    expect(content).not.toContain('bound-key');
-    expect(content).not.toContain('argv-secret');
-  });
-
-  it('uses conservative Pi metadata defaults when server model metadata is unavailable', async () => {
-    const context = bindingContext();
-    context.resolution.modelMetadata = undefined;
-    const plan = await piDriver.prepareProviderBinding!(context);
-    const config = JSON.parse(plan.profileFiles?.[0]?.content ?? '{}');
-    const model = config.providers['orvilo-profile-digest'].models[0];
-
-    expect(model).toMatchObject({
-      contextWindow: 128_000,
-      input: ['text'],
-      maxTokens: 16_384,
-      reasoning: false,
-    });
-  });
-
   it('removes binding and session overrides without removing unrelated args', () => {
     expect(
       sanitizePiProviderBindingArgs([
@@ -190,31 +71,20 @@ describe('piDriver', () => {
   });
 
   it('keeps managed routing effective before a caller option terminator', async () => {
-    const context = bindingContext();
-    context.args = ['--', '--provider', 'message-provider'];
-
-    const plan = await piDriver.prepareProviderBinding!(context);
+    const plan = await piDriver.prepareServerDefaultBinding!({
+      args: ['--', '--provider', 'message-provider'],
+      endpoint: 'https://app.example.com',
+      env: {},
+      model: 'kimi-k2.6',
+      profileDir: '/managed/pi',
+    });
 
     expect(plan.args).toEqual([
       '--provider',
-      'orvilo-profile-digest',
+      'orvilo-server-default',
       '--model',
-      'vendor/model-test',
+      'aspectlylabs/kimi-k2.6',
       '--',
     ]);
-  });
-
-  it('rejects a binding without an endpoint or API key', () => {
-    const withoutEndpoint = bindingContext();
-    withoutEndpoint.resolution.endpoint = undefined;
-    expect(() => piDriver.prepareProviderBinding!(withoutEndpoint)).toThrow(
-      'Pi provider binding requires an API endpoint.',
-    );
-
-    const withoutKey = bindingContext();
-    withoutKey.resolution.runtimeConfig.keyVaults = {};
-    expect(() => piDriver.prepareProviderBinding!(withoutKey)).toThrow(
-      'Pi provider binding requires an API key.',
-    );
   });
 });

@@ -165,13 +165,11 @@ export default {
   'ModelSelect.removed':
     'The model is not in the list. It will be automatically removed if deselected.',
   'ModelSelect.staleModel.current': 'Current selection',
-  'ModelSelect.staleModel.notEnabled.action': 'Enable this model',
-  'ModelSelect.staleModel.notEnabled.actionFailed': 'Failed to enable the model. Please try again.',
   'ModelSelect.staleModel.notEnabled.hint':
-    'This model is not enabled. Features using it keep working; switch it on here or choose another model.',
+    'This model is not enabled. Features using it keep working; choose another model here.',
   'ModelSelect.staleModel.notEnabled.tag': 'Not enabled',
   'ModelSelect.staleModel.notEnabled.tooltip':
-    'This model is not enabled in its provider. Features using it keep working; switch it on in the list or choose another model.',
+    'This model is not enabled in its provider. Features using it keep working; choose another model.',
   'ModelSelect.staleModel.redirected.action': 'Update to {{successorName}}',
   'ModelSelect.staleModel.redirected.hint':
     'Requests are actually served by {{successorName}}. Update to it, or choose another model.',

@@ -75,28 +75,6 @@ const buildTraeProviderArgs = (params: { baseURL: string; model: string }): stri
  * (`-c key=value`) are appended to the ACP-mode argv by the controller.
  */
 export const traeDriver: HeterogeneousAgentDriver = {
-  prepareProviderBinding({ args, env, resolution }) {
-    if (resolution.protocol !== 'openai-responses' || !resolution.endpoint) {
-      throw new Error('TRAE provider binding requires a Responses API endpoint.');
-    }
-
-    const apiKey = resolution.runtimeConfig.keyVaults.apiKey?.trim();
-    if (!apiKey) throw new Error('TRAE provider binding requires an API key.');
-
-    return {
-      args: [
-        ...sanitizeTraeProviderBindingArgs(args),
-        ...buildTraeProviderArgs({
-          baseURL: resolution.endpoint,
-          model: resolution.apiConfig.model,
-        }),
-      ],
-      env: {
-        ...sanitizeTraeProviderBindingEnv(env),
-        [HOST_API_KEY_ENV]: apiKey,
-      },
-    };
-  },
   prepareServerDefaultBinding({ args, endpoint, env, model }) {
     const requestModel = formatServerDefaultHeterogeneousModel(model);
     return {

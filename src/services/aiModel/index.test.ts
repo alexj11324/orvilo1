@@ -12,7 +12,6 @@ import { AiModelService, aiModelService } from './index';
 const mockLambdaClient = vi.hoisted(() => ({
   aiModel: {
     getAiModelReasoningConfig: { query: vi.fn() },
-    toggleModelEnabled: { mutate: vi.fn() },
     updateAiModelReasoningConfig: { mutate: vi.fn() },
   },
 }));
@@ -27,14 +26,6 @@ beforeEach(() => {
 
 describe('AiModelService', () => {
   testService(AiModelService);
-
-  describe('toggleModelEnabled', () => {
-    it('calls the toggleModelEnabled mutation', async () => {
-      const params = { enabled: true, id: 'gpt-5.2', providerId: 'openai' };
-      await aiModelService.toggleModelEnabled(params as any);
-      expect(mockLambdaClient.aiModel.toggleModelEnabled.mutate).toHaveBeenCalledWith(params);
-    });
-  });
 
   describe('getAiModelReasoningConfig', () => {
     it('queries the reasoning config', async () => {

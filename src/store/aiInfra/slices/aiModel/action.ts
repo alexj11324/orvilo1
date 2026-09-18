@@ -1,7 +1,7 @@
 import { toast } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
-import type { AiModelReasoningConfig, ToggleAiModelEnableParams } from 'model-bank';
+import type { AiModelReasoningConfig } from 'model-bank';
 import type { SWRResponse } from 'swr';
 
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -26,34 +26,6 @@ export class AiModelActionImpl {
     this.#set = set;
     this.#get = get;
   }
-
-  internal_toggleAiModelLoading = (id: string, loading: boolean): void => {
-    this.#set(
-      (state) => {
-        if (loading) return { aiModelLoadingIds: [...state.aiModelLoadingIds, id] };
-
-        return { aiModelLoadingIds: state.aiModelLoadingIds.filter((i) => i !== id) };
-      },
-      false,
-      'toggleAiModelLoading',
-    );
-  };
-
-  /**
-   * Toggle a model of an arbitrary provider, without requiring the provider settings
-   * page context (`activeAiProvider`). Used by ModelSelect to re-enable a persisted
-   * model that is no longer in the enabled list.
-   */
-  toggleProviderModelEnabled = async (params: ToggleAiModelEnableParams): Promise<void> => {
-    this.#get().internal_toggleAiModelLoading(params.id, true);
-
-    try {
-      await aiModelService.toggleModelEnabled(params);
-      await this.#get().refreshAiProviderRuntimeState();
-    } finally {
-      this.#get().internal_toggleAiModelLoading(params.id, false);
-    }
-  };
 
   /**
    * Optimistically saves the user's per-model-instance reasoning defaults
@@ -188,7 +160,6 @@ export class AiModelActionImpl {
       },
     );
   };
-
 }
 
 export type AiModelAction = Pick<AiModelActionImpl, keyof AiModelActionImpl>;

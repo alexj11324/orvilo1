@@ -347,17 +347,6 @@ export class AiProviderActionImpl {
     ]);
   };
 
-  /**
-   * Enable a provider from chat-facing surfaces (ModelSelect / ChatInput
-   * notice). Provider management UI is retired; this only flips the server-side
-   * enabled flag and refreshes the runtime state so the enabled model lists
-   * converge.
-   */
-  toggleProviderEnabled = async (id: string, enabled: boolean): Promise<void> => {
-    await aiProviderService.toggleProviderEnabled(id, enabled);
-    await this.#get().refreshAiProviderRuntimeState();
-  };
-
   useFetchAiProviderRuntimeState = (
     isLoginOnInit: boolean | undefined,
     isSyncActive?: boolean,

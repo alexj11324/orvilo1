@@ -7,13 +7,7 @@ import { BaseService } from '../common/base.service';
 import { processPaginationConditions } from '../helpers/pagination';
 import { projectPublicModel } from '../helpers/public-fields';
 import type { ServiceResult } from '../types';
-import type {
-  CreateModelRequest,
-  GetModelsResponse,
-  ModelDetailResponse,
-  ModelsListQuery,
-  UpdateModelRequest,
-} from '../types/model.type';
+import type { GetModelsResponse, ModelDetailResponse, ModelsListQuery } from '../types/model.type';
 
 // `stt` was renamed to the standard `asr`. Old rows / deprecated API inputs are
 // normalized at the service boundary instead of running a bulk data migration —
@@ -143,134 +137,6 @@ export class ModelService extends BaseService {
       return projectPublicModel({ ...model, type: normalizeModelType(model.type) });
     } catch (error) {
       this.handleServiceError(error, '获取模型详情');
-    }
-  }
-
-  /**
-   * Create a model
-   */
-  async createModel(payload: CreateModelRequest): ServiceResult<ModelDetailResponse> {
-    this.log('info', '创建模型', { payload, userId: this.userId });
-
-    try {
-      const permissionResult = await this.resolveOperationPermission('AI_MODEL_CREATE');
-      if (!permissionResult.isPermitted) {
-        throw this.createAuthorizationError(permissionResult.message || '无权创建模型');
-      }
-
-      if (!this.userId) {
-        throw this.createAuthError('用户未认证');
-      }
-
-      return await this.db.transaction(async (tx) => {
-        const existingModel = await tx.query.aiModels.findFirst({
-          where: and(
-            eq(aiModels.id, payload.id),
-            eq(aiModels.providerId, payload.providerId),
-            this.buildWorkspaceWhere(aiModels),
-          ),
-        });
-
-        if (existingModel) {
-          throw this.createBusinessError(`模型 ${payload.providerId}/${payload.id} 已存在`);
-        }
-
-        const [created] = await tx
-          .insert(aiModels)
-          .values({
-            abilities: payload.abilities ?? {},
-            config: payload.config ?? null,
-            contextWindowTokens: payload.contextWindowTokens ?? null,
-            description: payload.description ?? null,
-            displayName: payload.displayName,
-            enabled: payload.enabled ?? true,
-            id: payload.id,
-            organization: payload.organization ?? null,
-            parameters: payload.parameters ?? {},
-            pricing: payload.pricing ?? null,
-            providerId: payload.providerId,
-            releasedAt: payload.releasedAt ?? null,
-            sort: payload.sort ?? null,
-            source: payload.source ?? null,
-            type: normalizeModelType(payload.type ?? 'chat'),
-            ...this.buildWorkspacePayload({}),
-          })
-          .returning();
-
-        return projectPublicModel(created);
-      });
-    } catch (error) {
-      this.handleServiceError(error, '创建模型');
-    }
-  }
-
-  /**
-   * Update a model
-   */
-  async updateModel(
-    providerId: string,
-    modelId: string,
-    payload: UpdateModelRequest,
-  ): ServiceResult<ModelDetailResponse> {
-    this.log('info', '更新模型', { modelId, payload, providerId, userId: this.userId });
-
-    try {
-      const permissionResult = await this.resolveOperationPermission('AI_MODEL_UPDATE', {
-        targetModelId: modelId,
-      });
-
-      if (!permissionResult.isPermitted) {
-        throw this.createAuthorizationError(permissionResult.message || '无权更新模型');
-      }
-
-      const conditions = [eq(aiModels.providerId, providerId), eq(aiModels.id, modelId)];
-      const permissionWhere = this.buildPermissionWhere(aiModels, permissionResult.condition);
-      if (permissionWhere) conditions.push(permissionWhere);
-
-      return await this.db.transaction(async (tx) => {
-        const existingModel = await tx.query.aiModels.findFirst({ where: and(...conditions) });
-
-        if (!existingModel) {
-          throw this.createNotFoundError(`模型 ${providerId}/${modelId} 不存在`);
-        }
-
-        const updateFields = {
-          ...(payload.abilities !== undefined && { abilities: payload.abilities }),
-          ...(payload.config !== undefined && { config: payload.config }),
-          ...(payload.contextWindowTokens !== undefined && {
-            contextWindowTokens: payload.contextWindowTokens,
-          }),
-          ...(payload.description !== undefined && { description: payload.description }),
-          ...(payload.displayName !== undefined && { displayName: payload.displayName }),
-          ...(payload.enabled !== undefined && { enabled: payload.enabled }),
-          ...(payload.organization !== undefined && { organization: payload.organization }),
-          ...(payload.parameters !== undefined && { parameters: payload.parameters }),
-          ...(payload.pricing !== undefined && { pricing: payload.pricing }),
-          ...(payload.releasedAt !== undefined && { releasedAt: payload.releasedAt }),
-          ...(payload.sort !== undefined && { sort: payload.sort }),
-          ...(payload.source !== undefined && { source: payload.source }),
-          ...(payload.type !== undefined && { type: normalizeModelType(payload.type) }),
-          updatedAt: new Date(),
-        } as Record<string, unknown>;
-
-        if (Object.keys(updateFields).length === 1) {
-          throw this.createBusinessError('未提供需要更新的字段');
-        }
-
-        const [updated] = await tx
-          .update(aiModels)
-          .set(updateFields)
-          .where(and(...conditions))
-          .returning();
-
-        if (!updated) {
-          throw this.createBusinessError('更新模型失败');
-        }
-
-        return projectPublicModel(updated);
-      });
-    } catch (error) {
-      this.handleServiceError(error, '更新模型');
     }
   }
 }

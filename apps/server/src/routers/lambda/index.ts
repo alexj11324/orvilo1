@@ -80,7 +80,6 @@ import { metricRouter } from './metric';
 import { notebookRouter } from './notebook';
 import { notificationRouter } from './notification';
 import { oauthAppRouter } from './oauthApp';
-import { oauthDeviceFlowRouter } from './oauthDeviceFlow';
 import { pluginRouter } from './plugin';
 import { projectRouter } from './project';
 import { pushTokenRouter } from './pushToken';
@@ -171,7 +170,6 @@ export const lambdaRouter = router({
   notebook: notebookRouter,
   notification: notificationRouter,
   oauthApp: oauthAppRouter,
-  oauthDeviceFlow: oauthDeviceFlowRouter,
   plugin: pluginRouter,
   project: projectRouter,
   projectMember: projectMemberRouter,

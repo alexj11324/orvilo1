@@ -38,7 +38,9 @@ describe('generate-openapi', () => {
     expect(spec.components.schemas.Agent.properties).not.toHaveProperty('marketIdentifier');
     expect(spec.components.schemas.Agent.properties).not.toHaveProperty('userId');
     expect(spec.components.schemas.Agent.properties).not.toHaveProperty('workspaceId');
-    expect(spec.components.schemas.Provider.properties).not.toHaveProperty('keyVaults');
+    // Provider management is retired — the public spec must not expose a
+    // `Provider` component at all (user keyVaults can never leak through it).
+    expect(spec.components.schemas.Provider).toBeUndefined();
     expect(spec.components.schemas.ChatResponse.additionalProperties).toBe(false);
     expect(spec.components.schemas.McpServer.properties).not.toHaveProperty('credentials');
     expect(spec.components.schemas.McpServer.properties).not.toHaveProperty('oidcConfig');

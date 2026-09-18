@@ -7,11 +7,6 @@ export const API_ENDPOINTS = {
   // chat
   chat: (provider: string) => `/webapi/chat/${provider}`,
 
-  // models
-  models: (provider: string) => `/webapi/models/${provider}`,
-  modelPull: (provider: string) => `/webapi/models/${provider}/pull`,
-  pricing: (provider: string) => `/webapi/models/${provider}/pricing`,
-
   // TTS
   tts: (provider: string) => `/webapi/tts/${provider}`,
 };

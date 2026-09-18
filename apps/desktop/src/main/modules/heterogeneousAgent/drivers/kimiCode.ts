@@ -1,6 +1,5 @@
 import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
-import { startProviderBindingProxy } from '../providerBindingProxy';
 import type { HeterogeneousAgentDriver } from '../types';
 
 const KIMI_CODE_PROVIDER_BINDING_ENV_KEYS = [
@@ -49,35 +48,6 @@ const sanitizeKimiCodeProviderBindingEnv = (source: Record<string, string> | und
 };
 
 export const kimiCodeDriver: HeterogeneousAgentDriver = {
-  async prepareProviderBinding({ args, env, profileDir, resolution }) {
-    const protocol = resolution.protocol;
-    if (protocol !== 'anthropic-messages' && protocol !== 'openai-chat-completions') {
-      throw new Error(`Kimi Code cannot use ${protocol}.`);
-    }
-    const providerType = protocol === 'anthropic-messages' ? 'anthropic' : 'openai';
-
-    const apiKey = resolution.runtimeConfig.keyVaults.apiKey?.trim();
-    if (!apiKey) throw new Error('Kimi Code provider binding requires an API key.');
-    const proxy = await startProviderBindingProxy({
-      apiKey,
-      endpoint: resolution.endpoint,
-      protocol,
-    });
-
-    return {
-      args: sanitizeKimiCodeProviderBindingArgs(args),
-      cleanup: proxy.close,
-      cleanupSync: proxy.closeSync,
-      env: {
-        ...sanitizeKimiCodeProviderBindingEnv(env),
-        KIMI_CODE_HOME: profileDir,
-        KIMI_MODEL_API_KEY: proxy.clientApiKey,
-        KIMI_MODEL_BASE_URL: proxy.endpoint,
-        KIMI_MODEL_NAME: resolution.apiConfig.model,
-        KIMI_MODEL_PROVIDER_TYPE: providerType,
-      },
-    };
-  },
   prepareServerDefaultBinding({ args, endpoint, env, model, profileDir }) {
     const requestModel = formatServerDefaultHeterogeneousModel(model);
     return {

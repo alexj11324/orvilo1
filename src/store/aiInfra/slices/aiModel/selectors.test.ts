@@ -7,7 +7,6 @@ import { aiModelSelectors } from './selectors';
 describe('aiModelSelectors', () => {
   const mockState: AIProviderStoreState = {
     builtinAiModelList: [],
-    aiModelLoadingIds: ['model2'],
     enabledAiModels: [
       {
         id: 'model1',
@@ -41,18 +40,6 @@ describe('aiModelSelectors', () => {
     modelReasoningConfigUpdatingKeys: [],
     providerBindingAgentTypes: {},
   };
-
-  describe('isModelLoading', () => {
-    it('should return true for loading model', () => {
-      const result = aiModelSelectors.isModelLoading('model2')(mockState);
-      expect(result).toBe(true);
-    });
-
-    it('should return false for non-loading model', () => {
-      const result = aiModelSelectors.isModelLoading('model1')(mockState);
-      expect(result).toBe(false);
-    });
-  });
 
   describe('model capability checks', () => {
     it('should check tool use support', () => {

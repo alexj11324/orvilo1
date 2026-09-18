@@ -10,9 +10,6 @@ const getModelCard = (model: string, provider: string) => (s: AIProviderStoreSta
     (item) => item.id === model && (provider ? item.providerId === provider : true),
   ) || s.builtinAiModelList.find((item) => item.id === model && item.providerId === provider);
 
-const isModelLoading = (id: string) => (s: AIProviderStoreState) =>
-  s.aiModelLoadingIds.includes(id);
-
 const getEnabledModelById = (id: string, provider: string) => (s: AIProviderStoreState) =>
   s.enabledAiModels?.find((i) => i.id === id && (provider ? provider === i.providerId : true));
 
@@ -172,7 +169,6 @@ export const aiModelSelectors = {
   isModelHasExtendParams,
   isModelHasNonReasoningExtendParams,
   isModelHasReasoningExtendParams,
-  isModelLoading,
   isModelReasoningConfigLoaded,
   isModelReasoningConfigUpdating,
   isModelSupportAudio,

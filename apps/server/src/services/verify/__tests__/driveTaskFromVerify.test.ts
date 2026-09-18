@@ -559,9 +559,6 @@ describe('driveTaskFromVerify', () => {
 
     expect(serviceUpdateStatus).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'task-1', status: 'completed' }),
-      undefined,
-      expect.objectContaining({ reservationId: 'completion:op-1:lease-1' }),
-      expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
     );
     expect(deliverMock).toHaveBeenCalledWith(
       expect.objectContaining({

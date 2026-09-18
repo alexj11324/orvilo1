@@ -1904,7 +1904,7 @@ describe('TaskService', () => {
       );
     });
 
-    it('does not complete when the owning run reservation was superseded', async () => {
+    it('returns no transition when the owning run reservation was superseded', async () => {
       const prev = baseTask({
         runReservationId: 'completion:op-1:old',
         status: 'scheduled',
@@ -1931,7 +1931,7 @@ describe('TaskService', () => {
             reservationId: 'completion:op-1:old',
           },
         ),
-      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      ).resolves.toBeNull();
       expect(mockTaskModel.updateStatusForExecutionContract).toHaveBeenCalledWith(
         'task-1',
         'completed',

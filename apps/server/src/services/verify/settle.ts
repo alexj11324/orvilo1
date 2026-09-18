@@ -187,12 +187,10 @@ export const driveTaskFromVerify = async (
       }
     };
     const renewCompletionReservation = async () => {
-      if (
-        completionReservationId &&
-        completionReservationActive &&
-        !(await taskModel.renewRunReservation(taskOperation.taskId, completionReservationId)) &&
-        completionReservationActive
-      ) {
+      const reservationId = completionReservationId;
+      if (!reservationId || !completionReservationActive) return;
+      const renewed = await taskModel.renewRunReservation(taskOperation.taskId, reservationId);
+      if (!renewed && completionReservationActive) {
         throw new CompletionReservationLostError(
           'Task completion reservation ownership was lost',
         );

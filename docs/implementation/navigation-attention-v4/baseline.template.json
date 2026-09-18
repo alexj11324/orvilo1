@@ -1,0 +1,18 @@
+{
+  "activeWriterCountAllProjects": null,
+  "actualBaseSha": null,
+  "approvedPreview": null,
+  "ciOnlyValidation": true,
+  "commonDirConfirmedIndependent": false,
+  "currentAcpEntryPoint": null,
+  "implementationClone": null,
+  "notificationImplementationReuse": [],
+  "observedAt": null,
+  "openPrCollisionInventory": [],
+  "productionSecretsPresent": false,
+  "protectedRoot": "/Users/alexjiang/Desktop/vibe/orvilo1",
+  "researchSha": "d2c522fd8bf37448dccd86eacc6442a580d55cbd",
+  "retiredSurfaceRulesVerified": false,
+  "sourcePermissionReviewComplete": false,
+  "sourceProducerConsumerInventory": []
+}

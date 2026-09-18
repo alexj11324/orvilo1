@@ -1,0 +1,280 @@
+{
+  "canonical_worktree_root": null,
+  "default_target_branch": "canary",
+  "local_compile_tests_allowed": false,
+  "max_concurrent_writers_global": 3,
+  "packages": [
+    {
+      "id": "N00",
+      "title": "基线与复用清单",
+      "owner": "S",
+      "depends_on": [],
+      "status": "PLANNED",
+      "deliverables": [
+        "base/HEAD差异及开放PR碰撞表",
+        "保护目录/ACP/退休面/CI限制确认",
+        "所有生产者/消费者和权限接缝清单"
+      ],
+      "validation": "CONTRACT_OR_REVIEW",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": ["END05"]
+    },
+    {
+      "id": "N01",
+      "title": "冻结域/API/权限/路由合同",
+      "owner": "D",
+      "depends_on": ["N00"],
+      "status": "PLANNED",
+      "deliverables": [
+        "状态分离与feed版本算法",
+        "事件扇出/receipt合同和错误码",
+        "类型化query/route fixtures与唯一owner"
+      ],
+      "validation": "CONTRACT_OR_REVIEW",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": [],
+      "acceptance_gate": "Contract accepted by S and reviewed by T; implementation-dependent AC tracked downstream."
+    },
+    {
+      "id": "N02",
+      "title": "数据库扩展与授权模型",
+      "owner": "D",
+      "depends_on": ["N01"],
+      "status": "PLANNED",
+      "deliverables": [
+        "兼容schema与单一journal migration",
+        "通知状态/回执/查询存储/订阅底层",
+        "跨user/scope/资源权限与CI回归"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": [],
+      "acceptance_gate": "Contract accepted by S and reviewed by T; implementation-dependent AC tracked downstream."
+    },
+    {
+      "id": "N03",
+      "title": "统一查询、My Work、视图与分诊后端",
+      "owner": "Q",
+      "depends_on": ["N02"],
+      "status": "PLANNED",
+      "deliverables": [
+        "task/project query及同口径counts/facets",
+        "My Work真实责任/审核适配读接口",
+        "Saved Views/Favorites/Triage真实命令"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": [
+        "WORK01",
+        "WORK02",
+        "WORK03",
+        "WORK04",
+        "WORK07",
+        "VIEW01",
+        "VIEW02",
+        "VIEW03",
+        "VIEW04",
+        "VIEW05",
+        "VIEW06",
+        "VIEW07",
+        "TRI01",
+        "TRI02",
+        "TRI03",
+        "TRI06",
+        "TRI08",
+        "SEC08"
+      ]
+    },
+    {
+      "id": "N04",
+      "title": "通知投影与可靠投递",
+      "owner": "N",
+      "depends_on": ["N02"],
+      "status": "PLANNED",
+      "deliverables": [
+        "业务事件到canonical通知episode",
+        "独立consumer ACK/retry+legacy producer兼容",
+        "批量快照/已读并发/源权限"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": [
+        "NOT01",
+        "NOT02",
+        "NOT03",
+        "NOT05",
+        "NOT06",
+        "NOT08",
+        "SEC02",
+        "SEC04",
+        "SEC05",
+        "SEC06"
+      ]
+    },
+    {
+      "id": "N05",
+      "title": "统一动作与结果回执",
+      "owner": "N",
+      "depends_on": ["N04"],
+      "status": "PLANNED",
+      "deliverables": [
+        "ACP approval/input与PR审核适配",
+        "资源转移/冲突/撤销/过期适配",
+        "result_unknown、重试与exact-generation校验"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": [
+        "NOT07",
+        "ACT01",
+        "ACT02",
+        "ACT03",
+        "ACT04",
+        "ACT05",
+        "ACT06",
+        "ACT07",
+        "ACT08",
+        "SEC01"
+      ]
+    },
+    {
+      "id": "N06",
+      "title": "Inbox交互合同与夹具UI",
+      "owner": "U",
+      "depends_on": ["N01"],
+      "status": "PLANNED",
+      "deliverables": [
+        "复用旧modal能力而非新增第三套",
+        "分栏/移动/键盘/空错态",
+        "mock仅作为fixture，标UI_CONTRACT_READY"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": [],
+      "acceptance_gate": "Contract accepted by S and reviewed by T; implementation-dependent AC tracked downstream."
+    },
+    {
+      "id": "N07",
+      "title": "My Work及个人页面真实接线",
+      "owner": "U",
+      "depends_on": ["N03", "N05", "N06"],
+      "status": "PLANNED",
+      "deliverables": [
+        "我负责/委派/待审核与创建/订阅筛选",
+        "Inbox动作真实回执+source fallback",
+        "精确旧mine路径映射与scope隔离"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": ["NAV04", "WORK05", "WORK06", "WORK08"]
+    },
+    {
+      "id": "N08",
+      "title": "Team、Saved Views、Favorites UI",
+      "owner": "V",
+      "depends_on": ["N03"],
+      "status": "PLANNED",
+      "deliverables": [
+        "Team跨项目与分诊",
+        "保存编辑共享收藏及query版本",
+        "共用Task列表/看板与拖动门禁"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": ["NAV05", "NAV06", "VIEW08", "TRI04", "TRI05", "TRI07"]
+    },
+    {
+      "id": "N09",
+      "title": "导航、搜索、多端与文案整合",
+      "owner": "V",
+      "depends_on": ["N07", "N08"],
+      "status": "PLANNED",
+      "deliverables": [
+        "新增一级路由且保留Tasks/Automation",
+        "铃铛/CommandMenu/最近访问/原生入口同口径",
+        "三份i18n/legacy path/keyboard回归"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": ["NAV01", "NAV02", "NAV03", "NAV07", "NAV08", "SEC03"]
+    },
+    {
+      "id": "N10",
+      "title": "历史回填与切换/回滚",
+      "owner": "D",
+      "depends_on": ["N03", "N05"],
+      "status": "PLANNED",
+      "deliverables": [
+        "保留旧通知ID/read/archive",
+        "恢复仍有效待处理来源；shadow不投递",
+        "producer/consumer一次切换、回滚不丢审批"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": ["NOT04", "SEC07", "END01", "END02"]
+    },
+    {
+      "id": "N11",
+      "title": "集成CI与故障/迁移/权限测试",
+      "owner": "T",
+      "depends_on": ["N09", "N10"],
+      "status": "PLANNED",
+      "deliverables": [
+        "准确组合head完整CI",
+        "AC矩阵的CI层证据",
+        "失败返回owner修复不在review支偷偷改"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": ["END08"]
+    },
+    {
+      "id": "N12",
+      "title": "真实外部闭环验收",
+      "owner": "T",
+      "depends_on": ["N11"],
+      "status": "PLANNED",
+      "deliverables": [
+        "测试Linear/GitHub/ACP installation",
+        "审查CI失败与同PR修复闭环",
+        "缺授权明确BLOCKED，不用mock顶替"
+      ],
+      "validation": "CI_ONLY",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": ["END06", "END07"]
+    },
+    {
+      "id": "N13",
+      "title": "独立审查、文档和灰度交接",
+      "owner": "S",
+      "depends_on": ["N12"],
+      "status": "PLANNED",
+      "deliverables": ["精确head独立审查与证据索引", "说明书/回滚/发布门禁", "不自行越权合并部署"],
+      "validation": "CONTRACT_OR_REVIEW",
+      "requires_own_worktree": true,
+      "may_merge_production": false,
+      "acceptance_ids": ["END03", "END04"]
+    }
+  ],
+  "plan_id": "orvilo-navigation-attention-v4",
+  "protected_paths": ["/Users/alexjiang/Desktop/vibe/orvilo1"],
+  "repository": "alexj11324/orvilo1",
+  "required_startup_refetch": true,
+  "research_base_sha": "d2c522fd8bf37448dccd86eacc6442a580d55cbd",
+  "research_date": "2026-09-18",
+  "roles": ["S", "D", "N", "Q", "U", "V", "T"],
+  "schema_version": 1
+}

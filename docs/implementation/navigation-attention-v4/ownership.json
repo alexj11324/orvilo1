@@ -1,0 +1,228 @@
+{
+  "ownership": [
+    {
+      "owner": "S",
+      "pattern": "packages/*/package.json",
+      "status": "SHARED_DEPENDENCIES"
+    },
+    {
+      "owner": "S",
+      "pattern": "package.json",
+      "status": "SHARED_DEPENDENCIES"
+    },
+    {
+      "owner": "S",
+      "pattern": "pnpm-lock.yaml",
+      "status": "SHARED_DEPENDENCIES"
+    },
+    {
+      "owner": "S",
+      "pattern": "apps/server/src/routers/lambda/index.ts",
+      "status": "VERIFY_ACTUAL_ROOT_IN_N00"
+    },
+    {
+      "owner": "D",
+      "pattern": "packages/database/src/schemas/notification.ts",
+      "status": "EXISTING"
+    },
+    {
+      "owner": "D",
+      "pattern": "packages/database/src/schemas/eventOutbox.ts",
+      "status": "EXISTING"
+    },
+    {
+      "owner": "D",
+      "pattern": "packages/database/src/schemas/actionApproval.ts",
+      "status": "EXISTING_CHANGE_ONLY_IF_REQUIRED"
+    },
+    {
+      "owner": "D",
+      "pattern": "packages/database/src/schemas/team.ts",
+      "status": "EXISTING_CHANGE_ONLY_IF_REQUIRED"
+    },
+    {
+      "owner": "D",
+      "pattern": "packages/database/src/models/notification.ts",
+      "status": "EXISTING"
+    },
+    {
+      "owner": "D",
+      "pattern": "packages/database/src/models/task.ts",
+      "status": "EXISTING_ONLY_OWNER_IF_CHANGE_NEEDED"
+    },
+    {
+      "owner": "D",
+      "pattern": "packages/database/src/models/team.ts",
+      "status": "EXISTING_ONLY_OWNER_IF_CHANGE_NEEDED"
+    },
+    {
+      "owner": "D",
+      "pattern": "packages/database/migrations/**",
+      "status": "EXISTING_SINGLE_MIGRATION_WRITER"
+    },
+    {
+      "owner": "D",
+      "pattern": "packages/types/src/**",
+      "status": "SHARED_TYPES"
+    },
+    {
+      "owner": "N",
+      "pattern": "apps/server/src/routers/lambda/notification.ts",
+      "status": "EXISTING"
+    },
+    {
+      "owner": "N",
+      "pattern": "apps/server/src/services/attention/**",
+      "status": "PROPOSED_VERIFY_REUSE"
+    },
+    {
+      "owner": "N",
+      "pattern": "apps/server/src/services/notification/**",
+      "status": "LOCATE_ACTUAL_IN_N00"
+    },
+    {
+      "owner": "N",
+      "pattern": "apps/server/src/routers/lambda/attention.ts",
+      "status": "PROPOSED"
+    },
+    {
+      "owner": "N",
+      "pattern": "src/services/notification.ts",
+      "status": "EXISTING"
+    },
+    {
+      "owner": "Q",
+      "pattern": "apps/server/src/services/workQuery/**",
+      "status": "PROPOSED"
+    },
+    {
+      "owner": "Q",
+      "pattern": "apps/server/src/services/myWork/**",
+      "status": "PROPOSED"
+    },
+    {
+      "owner": "Q",
+      "pattern": "apps/server/src/services/savedView/**",
+      "status": "PROPOSED"
+    },
+    {
+      "owner": "Q",
+      "pattern": "apps/server/src/services/navigationFavorites/**",
+      "status": "PROPOSED_VERIFY_REUSE"
+    },
+    {
+      "owner": "Q",
+      "pattern": "apps/server/src/routers/lambda/team.ts",
+      "status": "EXISTING"
+    },
+    {
+      "owner": "Q",
+      "pattern": "apps/server/src/routers/lambda/myWork.ts",
+      "status": "PROPOSED"
+    },
+    {
+      "owner": "Q",
+      "pattern": "apps/server/src/routers/lambda/savedView.ts",
+      "status": "PROPOSED"
+    },
+    {
+      "owner": "Q",
+      "pattern": "packages/database/src/models/savedView.ts",
+      "status": "PROPOSED_AFTER_D_CONTRACT"
+    },
+    {
+      "owner": "U",
+      "pattern": "src/features/Inbox/**",
+      "status": "PROPOSED_REUSE_OLD_MODAL"
+    },
+    {
+      "owner": "U",
+      "pattern": "src/features/MyWork/**",
+      "status": "PROPOSED"
+    },
+    {
+      "owner": "U",
+      "pattern": "src/features/HomeInbox/**",
+      "status": "EXISTING_KEEP_RETAINED_ONLY"
+    },
+    {
+      "owner": "U",
+      "pattern": "src/features/HomeSidebar/Header/components/InboxModal/**",
+      "status": "EXISTING"
+    },
+    {
+      "owner": "V",
+      "pattern": "src/features/Teams/**",
+      "status": "LOCATE_VERIFY_EXISTING"
+    },
+    {
+      "owner": "V",
+      "pattern": "src/features/Views/**",
+      "status": "PROPOSED"
+    },
+    {
+      "owner": "V",
+      "pattern": "src/features/NavigationFavorites/**",
+      "status": "PROPOSED_VERIFY_REUSE"
+    },
+    {
+      "owner": "V",
+      "pattern": "src/features/AgentTasks/AgentTaskList/**",
+      "status": "EXISTING_SHARED_RENDERER_OWNER"
+    },
+    {
+      "owner": "V",
+      "pattern": "packages/app-config/src/routes/index.ts",
+      "status": "EXISTING"
+    },
+    {
+      "owner": "V",
+      "pattern": "src/spa/router/**",
+      "status": "EXISTING_NAV_INTEGRATOR"
+    },
+    {
+      "owner": "V",
+      "pattern": "src/features/CommandMenu/**",
+      "status": "EXISTING"
+    },
+    {
+      "owner": "V",
+      "pattern": "src/libs/swr/keys.ts",
+      "status": "EXISTING_CACHE_CONTRACT"
+    },
+    {
+      "owner": "V",
+      "pattern": "packages/locales/src/default/**",
+      "status": "EXISTING_ONLY_NEW_FEATURE_KEYS"
+    },
+    {
+      "owner": "V",
+      "pattern": "locales/en-US/**",
+      "status": "EXISTING_ONLY_NEW_FEATURE_KEYS"
+    },
+    {
+      "owner": "V",
+      "pattern": "locales/zh-CN/**",
+      "status": "EXISTING_ONLY_NEW_FEATURE_KEYS"
+    },
+    {
+      "owner": "T",
+      "pattern": ".github/workflows/**",
+      "status": "COORDINATE_EXISTING_CI_OWNER"
+    },
+    {
+      "owner": "T",
+      "pattern": "e2e/features/navigation-attention/**",
+      "status": "PROPOSED_VERIFY_LAYOUT"
+    },
+    {
+      "owner": "T",
+      "pattern": "e2e/steps/navigation-attention/**",
+      "status": "PROPOSED_VERIFY_LAYOUT"
+    }
+  ],
+  "rule": "Exactly one current writer per file. This is a scope contract, not a filesystem security boundary. Runtime concrete leases from N00 take precedence over patterns.",
+  "schema_version": 1,
+  "shared_tests": "Colocated tests are written by the file owner; T submits added tests via explicit lease or a separate test file.",
+  "unlisted_paths": "Request from S before editing; do not assume permission."
+}

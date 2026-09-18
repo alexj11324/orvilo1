@@ -192,5 +192,3 @@ export interface NavigationFavorite {
 }
 
 export type TeamTriageAction = 'accept' | 'decline' | 'duplicate' | 'reassign';
-
-export type TaskTriageStatus = 'accepted' | 'declined' | 'duplicate' | 'untriaged';

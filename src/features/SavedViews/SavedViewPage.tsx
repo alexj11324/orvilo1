@@ -54,7 +54,7 @@ const SavedViewPage = memo(() => {
           tasks.map((task) => (
             <WorkspaceLink
               key={task.id}
-              to={taskDetailPath(task.id, task.assigneeAgentId, task.name)}
+              to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
             >
               <Text weight={500}>{task.name ?? task.instruction}</Text>
             </WorkspaceLink>

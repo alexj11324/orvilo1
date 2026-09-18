@@ -71,7 +71,9 @@ const TeamPage = memo(() => {
         ) : (
           tasks.map((task) => (
             <Flexbox horizontal align="center" gap={8} key={task.id}>
-              <WorkspaceLink to={taskDetailPath(task.id, task.assigneeAgentId, task.name)}>
+              <WorkspaceLink
+                to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
+              >
                 <Text weight={500}>{task.name ?? task.instruction}</Text>
               </WorkspaceLink>
               <Button size="small" type="primary" onClick={() => void act(task.id, 'accept')}>

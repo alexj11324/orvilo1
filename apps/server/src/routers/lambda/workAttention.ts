@@ -91,7 +91,7 @@ const mapQueryError = (error: unknown): never => {
 const workAttentionProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
   const workspaceId = ctx.workspaceId ?? undefined;
-  const role = ctx.membership?.role;
+  const role = ctx.workspaceRole;
   return opts.next({
     ctx: {
       actionSources: new ActionSourceRegistry(

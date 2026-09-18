@@ -80,7 +80,7 @@ const TRACKED_TASK_COLUMNS = [
   'scheduleTimezone',
   'status',
   'triageStatus',
-] as const;
+] as const satisfies readonly (keyof NewTask)[];
 
 /** Task fields that must wake a linked Linear issue even without an activity row. */
 const LINEAR_SYNC_TASK_COLUMNS = [
@@ -126,6 +126,7 @@ const TASK_DOMAIN_COLUMNS = [
   'sortOrder',
   'status',
   'teamId',
+  'triageStatus',
   'visibility',
   'workflowCategory',
   'workflowLocked',

@@ -13,6 +13,7 @@ import type {
   TaskOrchestrationOwner,
   TaskRunState,
   TaskTopicIntegration,
+  TaskTriageStatus,
   TaskWorkflowCategory,
 } from '@orvilo/types';
 import { isNotNull, isNull, sql } from 'drizzle-orm';
@@ -91,9 +92,7 @@ export const tasks = pgTable(
      * already-accepted work). Existing backlog rows are never backfilled to
      * `untriaged`.
      */
-    triageStatus: text('triage_status').$type<
-      'accepted' | 'declined' | 'duplicate' | 'untriaged'
-    >(),
+    triageStatus: text('triage_status').$type<TaskTriageStatus>(),
 
     // Tree structure (self-referencing, no depth limit)
     parentTaskId: text('parent_task_id'),

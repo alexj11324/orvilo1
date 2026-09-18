@@ -390,9 +390,15 @@ const settleRemoteDispatchOutcome = async (
     if (currentState === 'rejected' || currentState === 'offline') {
       return { admissionState: currentState, outcome: 'terminal' };
     }
-    // 'unknown' / missing record — the dispatch failure could not be ruled
-    // out, but neither can delivery. Fall through to the unknown path.
-    return { admissionState: 'unknown', outcome: 'unknown' };
+    if (currentState === 'unknown') {
+      // An ambiguous signal was already recorded — keep the run open.
+      return { admissionState: 'unknown', outcome: 'unknown' };
+    }
+    // Record missing or unreadable: the transport still gave a DEFINITE
+    // answer (`rejected`/`offline` — nothing launched), and no ledger state
+    // contradicts it. Treat as terminal rather than parking the run on an
+    // admission that may not even exist.
+    return { admissionState, outcome: 'terminal' };
   }
 
   if (await hasHeteroRunStarted(deps, { operationId, topicId })) {

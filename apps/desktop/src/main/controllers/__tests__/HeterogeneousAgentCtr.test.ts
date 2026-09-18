@@ -200,7 +200,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     interrupt() {
-      standardAcpSessionInterruptMock();
+      return standardAcpSessionInterruptMock();
     }
 
     async run() {
@@ -248,7 +248,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     interrupt() {
-      grokAcpSessionInterruptMock();
+      return grokAcpSessionInterruptMock();
     }
 
     run() {
@@ -266,7 +266,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     interrupt() {
-      cursorAcpSessionInterruptMock();
+      return cursorAcpSessionInterruptMock();
     }
 
     async run() {
@@ -313,7 +313,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     interrupt() {
-      devinAcpSessionInterruptMock();
+      return devinAcpSessionInterruptMock();
     }
 
     async run() {
@@ -361,7 +361,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     async interrupt() {
-      traeAcpSessionInterruptMock();
+      return traeAcpSessionInterruptMock();
     }
 
     async run() {
@@ -408,7 +408,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     interrupt() {
-      droidAcpSessionInterruptMock();
+      return droidAcpSessionInterruptMock();
     }
 
     async run() {
@@ -502,6 +502,7 @@ describe('HeterogeneousAgentCtr', () => {
     standardAcpSessionCloseMock.mockReset();
     standardAcpSessionConstructMock.mockReset();
     standardAcpSessionInterruptMock.mockReset();
+    standardAcpSessionInterruptMock.mockResolvedValue(true);
     standardAcpSessionRunMock.mockReset();
     resolveAcpSpawnTargetMock.mockReset();
     // Default target resolution: natives keep the vendor command (+ ACP
@@ -524,14 +525,17 @@ describe('HeterogeneousAgentCtr', () => {
     cursorAcpSessionCloseMock.mockReset();
     cursorAcpSessionConstructMock.mockReset();
     cursorAcpSessionInterruptMock.mockReset();
+    cursorAcpSessionInterruptMock.mockResolvedValue(true);
     cursorAcpSessionRunMock.mockReset();
     devinAcpSessionCloseMock.mockReset();
     devinAcpSessionConstructMock.mockReset();
     devinAcpSessionInterruptMock.mockReset();
+    devinAcpSessionInterruptMock.mockResolvedValue(true);
     devinAcpSessionRunMock.mockReset();
     grokAcpSessionCloseMock.mockReset();
     grokAcpSessionConstructMock.mockReset();
     grokAcpSessionInterruptMock.mockReset();
+    grokAcpSessionInterruptMock.mockResolvedValue(true);
     grokAcpSessionRunMock.mockReset();
     grokAcpSessionRunMock.mockImplementation(async (options) => {
       const now = Date.now();
@@ -585,10 +589,12 @@ describe('HeterogeneousAgentCtr', () => {
     traeAcpSessionCloseMock.mockReset();
     traeAcpSessionConstructMock.mockReset();
     traeAcpSessionInterruptMock.mockReset();
+    traeAcpSessionInterruptMock.mockResolvedValue(true);
     traeAcpSessionRunMock.mockReset();
     droidAcpSessionCloseMock.mockReset();
     droidAcpSessionConstructMock.mockReset();
     droidAcpSessionInterruptMock.mockReset();
+    droidAcpSessionInterruptMock.mockResolvedValue(true);
     droidAcpSessionRunMock.mockReset();
     mockGetAllWindows.mockReset();
     platformMock.mockReturnValue('linux');

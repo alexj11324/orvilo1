@@ -123,7 +123,11 @@ export class AgentDelegationService {
         ? input.allowedActions
         : [...DEFAULT_ALLOWED_ACTIONS];
 
-    const member = await this.memberModel.getMember(workspaceId, subjectId);
+    // Only user subjects carry a membership authzVersion to fence on —
+    // recording one for a non-user subject would mint a grant the commit
+    // fence can never satisfy (it only evaluates member rows for 'user').
+    const member =
+      subjectType === 'user' ? await this.memberModel.getMember(workspaceId, subjectId) : undefined;
 
     const [grant] = await this.db.transaction(async (tx) => {
       const [created] = await tx
@@ -330,63 +334,68 @@ export class AgentDelegationService {
   /**
    * Fencing claim: bind a grant to a task_topics run and advance the row's
    * execution epoch — but only while the grant is still claimable. The grant
-   * row is locked FOR UPDATE inside the caller's transaction, so a revoke
-   * racing the claim serializes on that row instead of slipping a dead grant
-   * under a fresh epoch. The returned epoch is the fencing token — anything
-   * still holding the previous epoch is stale, regardless of lease timers.
-   * Runs are keyed by the table's unique (taskId, topicId) pair — that's what
-   * the runner holds when the row is created. Pass `tx` to make the claim
-   * atomic with the transaction that creates the run row.
+   * row is locked FOR UPDATE for the whole check-and-bump: pass `tx` to ride
+   * the caller's transaction, otherwise the claim opens its own — a bare
+   * executor would release the lock before the epoch UPDATE runs and a
+   * racing revoke could slip a dead grant under a fresh epoch. The returned
+   * epoch is the fencing token — anything still holding the previous epoch
+   * is stale, regardless of lease timers. Runs are keyed by the table's
+   * unique (taskId, topicId) pair — that's what the runner holds when the
+   * row is created.
    */
   claimExecutionEpoch = async (
     params: { grantId: string; taskId: string; topicId: string },
-    executor: OrviloDatabase | Transaction = this.db,
+    executor?: Transaction,
   ) => {
     const workspaceId = this.workspaceId;
     if (!workspaceId) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'workspaceId is required' });
     }
 
-    const [grant] = await executor
-      .select()
-      .from(executionGrants)
-      .where(eq(executionGrants.id, params.grantId))
-      .for('update')
-      .limit(1);
+    const claim = async (tx: Transaction) => {
+      const [grant] = await tx
+        .select()
+        .from(executionGrants)
+        .where(eq(executionGrants.id, params.grantId))
+        .for('update')
+        .limit(1);
 
-    // A grant minted for another task never binds this task's run — same
-    // invisibility rule the run route applies at validateGrantForRun.
-    if (grant && grant.taskId && grant.taskId !== params.taskId) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
-    }
+      // A grant minted for another task never binds this task's run — same
+      // invisibility rule the run route applies at validateGrantForRun.
+      if (grant && grant.taskId && grant.taskId !== params.taskId) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      }
 
-    const { verdict } = await this.evaluateGrantLiveness(grant, {
-      action: 'run',
-      executor,
-      workspaceId,
-    });
-    if (!verdict.ok) {
-      throw new TRPCError({
-        code: verdict.denial === 'foreign_workspace' ? 'NOT_FOUND' : 'FORBIDDEN',
-        message: `Execution grant denied: ${verdict.denial}`,
+      const { verdict } = await this.evaluateGrantLiveness(grant, {
+        action: 'run',
+        executor: tx,
+        workspaceId,
       });
-    }
+      if (!verdict.ok) {
+        throw new TRPCError({
+          code: verdict.denial === 'foreign_workspace' ? 'NOT_FOUND' : 'FORBIDDEN',
+          message: `Execution grant denied: ${verdict.denial}`,
+        });
+      }
 
-    const [row] = await executor
-      .update(taskTopics)
-      .set({
-        executionEpoch: sql`coalesce(${taskTopics.executionEpoch}, 0) + 1`,
-        executionGrantId: params.grantId,
-      })
-      .where(
-        and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)),
-      )
-      .returning({ executionEpoch: taskTopics.executionEpoch });
+      const [row] = await tx
+        .update(taskTopics)
+        .set({
+          executionEpoch: sql`coalesce(${taskTopics.executionEpoch}, 0) + 1`,
+          executionGrantId: params.grantId,
+        })
+        .where(
+          and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)),
+        )
+        .returning({ executionEpoch: taskTopics.executionEpoch });
 
-    if (!row) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Task run not found' });
-    }
-    return row.executionEpoch as number;
+      if (!row) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Task run not found' });
+      }
+      return row.executionEpoch as number;
+    };
+
+    return executor ? claim(executor) : this.db.transaction(claim);
   };
 
   /**

@@ -685,11 +685,22 @@ export class TaskRunnerService {
           trigger,
         });
         if (delegation) {
-          delegatedEpoch = await this.delegationService.claimExecutionEpoch({
-            grantId: delegation.grantId,
-            taskId: task.id,
-            topicId: result.topicId,
-          });
+          try {
+            delegatedEpoch = await this.delegationService.claimExecutionEpoch({
+              grantId: delegation.grantId,
+              taskId: task.id,
+              topicId: result.topicId,
+            });
+          } catch (claimError) {
+            // The topic row already says 'running' — a grant that died
+            // between validateGrantForRun and registration must still settle
+            // it, or the row lingers until the watchdog reaps it. Dispatch
+            // settle/reservation bookkeeping stays with the outer catch.
+            await this.taskTopicModel
+              .updateStatus(task.id, result.topicId, 'failed')
+              .catch(() => {});
+            throw claimError;
+          }
         }
         provisionedRegistered = true;
         if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);

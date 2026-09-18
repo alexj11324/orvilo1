@@ -7,9 +7,9 @@ import { Loader2, MoreVerticalIcon, Plus, Unplug } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { itemStyles } from '@/features/SkillStore/SkillList/style';
 import { usePermission } from '@/hooks/usePermission';
 
+import { itemStyles } from './style';
 import { useAgentComposioConnect } from './useAgentComposioConnect';
 
 interface ItemProps {

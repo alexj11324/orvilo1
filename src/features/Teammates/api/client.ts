@@ -4,6 +4,8 @@ import type {
   CollaborationRoom,
   CollaborationTicket,
   InviteBatchResult,
+  OwnershipTransferRequestResult,
+  OwnershipTransferState,
   ProjectMemberSummary,
   ProjectRole,
   RemovalPreview,
@@ -77,13 +79,16 @@ interface TeammatesLambdaContract {
     remove: MutateProc<{ projectId: string; userId: string }, void>;
   };
   workspace: {
+    cancelOwnershipTransfer: MutateProc<void, { cancelled: boolean }>;
     checkSlugAvailable: QueryProc<{ slug: string }, { available: boolean }>;
     create: MutateProc<
       { avatar?: string; description?: string; name: string; slug: string },
       WorkspaceMembershipSummary
     >;
     list: QueryProc<void, WorkspaceMembershipSummary[]>;
-    transferOwnership: MutateProc<{ newOwnerUserId: string }, void>;
+    pendingOwnershipTransfer: QueryProc<void, OwnershipTransferState | null>;
+    respondOwnershipTransfer: MutateProc<{ accept: boolean }, { accepted: boolean }>;
+    transferOwnership: MutateProc<{ newOwnerUserId: string }, OwnershipTransferRequestResult>;
   };
   workspaceAgent: {
     list: QueryProc<void, WorkspaceAgentSummary[]>;

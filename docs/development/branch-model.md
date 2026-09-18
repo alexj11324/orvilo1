@@ -129,6 +129,11 @@ Release 的实际代价有三条，接受它们是因为省去了一整套对象
 - 禁止直接 push，只能通过 PR。
 - 禁止 force push（`non_fast_forward`）。
 - 禁止删除分支（`deletion`）。
+- PR 只要修改产品源代码，就必须同时修改 `docs/`；缺少文档更新时
+  `Documentation Required` 检查失败，规则集会拒绝合并。产品源代码范围为
+  `apps/`、`packages/`、`plugins/`、`src/`、`server/`、根目录的应用入口页及运行时配置，
+  其中测试、fixture、mock 与 Markdown 文件不触发此要求。纯文档、CI、工具和测试改动可以
+  单独合并。超出 GitHub 3,000 个文件 API 上限的 PR 会失败，直到拆分为可审计的改动。
 - **不设必需批准数**：仓库只有一个 maintainer，而 GitHub 不允许自我批准，
   设成 1 会把所有人都锁死。
 
@@ -141,6 +146,6 @@ owner organization`。该能力只对 organization 级 ruleset 开放。
 > push** 写回分支，在本规则下会被挡。两者当前都是 disabled 状态，所以不影响
 > 现状；**启用前必须先改造成通过 PR 提交**。
 
-尚未加入必需状态检查（`required_status_checks`）：`test.yml` 的检查名带矩阵
-变量（如 `Test App (shard ${{ matrix.shard }}/2)`），硬编码进去会让 PR 永远
-无法合并。等检查名稳定后再加。
+`trunk-branches` 把 `Documentation Required` 设为必需状态检查。该检查使用
+`pull_request_target`，只读取 PR 的改动清单，并从受保护目标分支运行门禁脚本；
+PR 不能通过修改自身的 workflow 或脚本绕过它。

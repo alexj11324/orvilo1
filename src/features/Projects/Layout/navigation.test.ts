@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  getProjectAcceptancePath,
   getProjectAgentPath,
   getProjectConversationPath,
   getProjectConversationStartPath,
@@ -20,7 +19,17 @@ describe('project workspace navigation', () => {
     expect(getProjectTasksPath('prj_1')).toBe('/project/prj_1/tasks');
     expect(getProjectGoalsPath('prj_1')).toBe('/project/prj_1/goals');
     expect(getProjectResourcesPath('prj_1')).toBe('/project/prj_1/resources');
-    expect(getProjectAcceptancePath('prj_1')).toBe('/project/prj_1/acceptance');
+  });
+
+  // The project-level acceptance module was retired. There is no
+  // `getProjectAcceptancePath` to assert: the route, the sidebar entry and the
+  // dashboard button all went with it. Leaving a path builder here is how a
+  // dead link survives — the sidebar would keep navigating and the user would
+  // land back on the app root instead of the project.
+  it('exposes no path builder for the retired project acceptance module', async () => {
+    const navigation = await import('./navigation');
+
+    expect(navigation).not.toHaveProperty('getProjectAcceptancePath');
   });
 
   it('builds new and existing conversation routes inside the project', () => {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LinearSyncWorker } from './worker';
+import { isLinearScopeTeamImportable, LinearSyncWorker } from './worker';
 
 const mocks = vi.hoisted(() => ({
   binding: null as any,
@@ -61,6 +61,27 @@ describe('LinearSyncWorker.importBinding', () => {
       mocks.binding = { ...mocks.binding, ...patch };
       return mocks.binding;
     });
+  });
+
+  it('quarantines private teams because task visibility cannot reproduce team ACLs', () => {
+    expect(
+      isLinearScopeTeamImportable(
+        { id: 'private-team', visibility: 'private' },
+        { privateTeamPolicy: 'import_restricted' },
+      ),
+    ).toBe(false);
+    expect(
+      isLinearScopeTeamImportable(
+        { id: 'public-team', visibility: 'public' },
+        { approvedTeamIds: ['public-team'] },
+      ),
+    ).toBe(true);
+    expect(
+      isLinearScopeTeamImportable(
+        { id: 'other-team', visibility: 'public' },
+        { approvedTeamIds: ['public-team'] },
+      ),
+    ).toBe(false);
   });
 
   it('holds the page cursor when one issue fails, then resumes the same page', async () => {

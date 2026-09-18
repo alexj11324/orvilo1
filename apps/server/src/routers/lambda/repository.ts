@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { RepositoryModel } from '@/database/models/repository';
+import { TeamModel } from '@/database/models/team';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { resolveGithubAccessToken, verifyGithubRepository } from '@/server/services/githubRepo';
@@ -22,6 +23,7 @@ const repositoryProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
   return opts.next({
     ctx: {
       repositoryModel: new RepositoryModel(ctx.serverDB, ctx.userId, ctx.workspaceId),
+      teamModel: new TeamModel(ctx.serverDB, ctx.userId, ctx.workspaceId),
     },
   });
 });
@@ -55,7 +57,18 @@ export const repositoryRouter = router({
     const repository = await ctx.repositoryModel.findById(input.repositoryId);
     if (!repository) throw new TRPCError({ code: 'NOT_FOUND', message: 'Repository not found' });
     const checkouts = await ctx.repositoryModel.listCheckouts(repository.id);
-    return { data: { checkouts, repository }, success: true };
+    const safeCheckouts = checkouts.map((checkout) => ({
+      createdAt: checkout.createdAt,
+      id: checkout.id,
+      lastVerifiedAt: checkout.lastVerifiedAt,
+      remoteRepositoryId: checkout.remoteRepositoryId,
+      remoteRole: checkout.remoteRole,
+      repositoryId: checkout.repositoryId,
+      status: checkout.status,
+      updatedAt: checkout.updatedAt,
+      workspaceId: checkout.workspaceId,
+    }));
+    return { data: { checkouts: safeCheckouts, repository }, success: true };
   }),
 
   /**
@@ -166,6 +179,9 @@ export const repositoryRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (!(await ctx.teamModel.hasAdminAccess(input.teamId))) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team admin required' });
+      }
       await ctx.repositoryModel.setTeamDefault(
         input.teamId,
         input.repositoryId,

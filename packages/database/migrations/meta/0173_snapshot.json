@@ -1,5 +1,5 @@
 {
-  "id": "4284a649-b5dd-4c52-9991-7be75c524c1f",
+  "id": "dca00b5b-4a9b-4c3e-83ad-2d8e66bd372e",
   "prevId": "021812ad-42e4-43ec-b8a0-3b6c4c6b9593",
   "version": "7",
   "dialect": "postgresql",
@@ -32157,6 +32157,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "association_decision_id": {
+          "name": "association_decision_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "accessed_at": {
           "name": "accessed_at",
           "type": "timestamp with time zone",
@@ -32756,6 +32762,12 @@
         "added_by_user_id": {
           "name": "added_by_user_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "association_decision_id": {
+          "name": "association_decision_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },

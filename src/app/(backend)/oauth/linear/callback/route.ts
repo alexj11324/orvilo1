@@ -139,7 +139,7 @@ export const GET = async (request: NextRequest) => {
     // The workspace sync scope exists from the moment the installation lands;
     // mirroring still waits for the approved team/project intent delivered
     // through `upsertSyncScope`.
-    await model.upsertScope({ installationId: installation.id, settings: {} });
+    await model.upsertScope({ installationId: installation.id });
 
     return renderResultPage(request, { installationId: installation.id, success: true });
   } catch (error) {

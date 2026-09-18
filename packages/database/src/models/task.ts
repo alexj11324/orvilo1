@@ -561,9 +561,32 @@ export class TaskModel {
       if (rest.teamId && this.workspaceId) {
         // Team-owned issue: allocate `<teamKey>-<n>` through the transactional
         // `teams.next_issue_seq` counter — never `max(seq)+1` across rows.
+        // Seed the counter from pre-existing workspace identifiers while the
+        // team row is locked. A team can be introduced after imported/project
+        // tasks already use the same key prefix.
+        const [team] = await runner
+          .select({ key: teams.key, nextIssueSeq: teams.nextIssueSeq })
+          .from(teams)
+          .where(and(eq(teams.id, rest.teamId), eq(teams.workspaceId, this.workspaceId)))
+          .for('update')
+          .limit(1);
+        if (!team) throw new Error(`Team not found: ${rest.teamId}`);
+        const [existingPrefix] = await runner
+          .select({ maxSeq: sql<number>`COALESCE(MAX(${tasks.seq}), 0)` })
+          .from(tasks)
+          .where(
+            and(
+              eq(tasks.workspaceId, this.workspaceId),
+              sql`${tasks.identifier} LIKE ${`${team.key}-%`}`,
+            ),
+          );
+        const firstAvailableSeq = Math.max(
+          Number(team.nextIssueSeq),
+          Number(existingPrefix.maxSeq) + 1,
+        );
         const [allocated] = await runner
           .update(teams)
-          .set({ nextIssueSeq: sql`${teams.nextIssueSeq} + 1` })
+          .set({ nextIssueSeq: firstAvailableSeq + 1 })
           .where(and(eq(teams.id, rest.teamId), eq(teams.workspaceId, this.workspaceId)))
           .returning({ key: teams.key, seq: teams.nextIssueSeq });
         if (!allocated) throw new Error(`Team not found: ${rest.teamId}`);
@@ -3718,11 +3741,7 @@ export class TaskModel {
         targetWorkspaceId && targetVisibility ? { visibility: targetVisibility } : {};
 
       // Reallocate identifier + seq in target scope to avoid collisions.
-      const baseSeq = await this.nextSeqIn(
-        trx as OrviloDatabase,
-        targetWorkspaceId,
-        targetUserId,
-      );
+      const baseSeq = await this.nextSeqIn(trx as OrviloDatabase, targetWorkspaceId, targetUserId);
       // Update each task individually because identifier/seq are per-row.
       for (const [idx, task] of subtree.entries()) {
         const seq = baseSeq + idx;

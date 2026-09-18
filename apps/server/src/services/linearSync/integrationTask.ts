@@ -226,6 +226,7 @@ export class LinearIntegrationTaskService {
     mutation: TaskMutationContext;
     projectId?: string | null;
     settings?: LinearProjectBindingSettings;
+    visibility?: 'private' | 'public';
     workflowCategory?: TaskWorkflowCategory;
     workflowStateRefId?: string | null;
   }) {
@@ -253,7 +254,7 @@ export class LinearIntegrationTaskService {
         priority: issue.priority ?? 0,
         projectId: input.projectId ?? null,
         teamId: input.localTeamId,
-        visibility: 'public',
+        visibility: input.visibility ?? 'public',
         // Prefer the synced team state's category; fall back to the project
         // binding's status mappings, then backlog.
         workflowCategory: input.workflowCategory ?? workflowMapping?.workflowCategory ?? 'backlog',

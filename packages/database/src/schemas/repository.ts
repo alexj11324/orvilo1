@@ -140,6 +140,8 @@ export const projectRepositories = pgTable(
     addedByUserId: text('added_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
+    /** Decision that created this relation; null means manual/direct link. */
+    associationDecisionId: uuid('association_decision_id'),
 
     ...timestamps,
   },
@@ -167,6 +169,8 @@ export const teamRepoDefaults = pgTable(
     addedByUserId: text('added_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
+    /** Decision that created this default; null means manual/direct link. */
+    associationDecisionId: uuid('association_decision_id'),
     isPrimary: boolean('is_primary').notNull().default(false),
     sortOrder: integer('sort_order').notNull().default(0),
 

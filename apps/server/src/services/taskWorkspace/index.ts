@@ -129,10 +129,33 @@ export class TaskWorkspaceService {
       const resolution = await repositoryModel.resolveForTask(task.id);
       if (resolution.ok) {
         const repository = await repositoryModel.findById(resolution.repositoryId);
-        const { owner, name, defaultBranch } = repository?.coordinate ?? {};
-        if (owner && name) {
+        if (!repository) return undefined;
+
+        const boundDeviceId = task.assigneeAgentId
+          ? (await this.agentModel.getAgentConfig(task.assigneeAgentId))?.agencyConfig
+              ?.boundDeviceId
+          : undefined;
+        const checkouts = await repositoryModel.listCheckouts(repository.id);
+        const checkout =
+          checkouts.find(
+            (candidate) => boundDeviceId !== undefined && candidate.deviceId === boundDeviceId,
+          ) ?? (checkouts.length === 1 ? checkouts[0] : undefined);
+        if (checkout) {
           return {
-            baseBranch: defaultBranch ?? undefined,
+            baseBranch: repository.coordinate.defaultBranch ?? undefined,
+            deviceId: checkout.deviceId ?? undefined,
+            provider: 'git',
+            repoPath: checkout.canonicalPath,
+          };
+        }
+
+        // A coordinate without a verified remote identity is only a display
+        // snapshot. Never turn a local-only repository name into a GitHub clone
+        // target; require an authorized checkout or a verified remote row.
+        const { owner, name } = repository.coordinate;
+        if (repository.remoteRepositoryId && owner && name) {
+          return {
+            baseBranch: repository.coordinate.defaultBranch ?? undefined,
             provider: 'git',
             repo: `${owner}/${name}`,
           };

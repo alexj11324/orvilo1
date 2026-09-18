@@ -3647,6 +3647,7 @@ table project_repositories {
   repository_id text [not null]
   workspace_id text [not null]
   added_by_user_id text
+  association_decision_id uuid
   accessed_at "timestamp with time zone" [not null, default: `now()`]
   created_at "timestamp with time zone" [not null, default: `now()`]
   updated_at "timestamp with time zone" [not null, default: `now()`]
@@ -3712,6 +3713,7 @@ table team_repo_defaults {
   repository_id text [not null]
   workspace_id text [not null]
   added_by_user_id text
+  association_decision_id uuid
   is_primary boolean [not null, default: false]
   sort_order integer [not null, default: 0]
   accessed_at "timestamp with time zone" [not null, default: `now()`]

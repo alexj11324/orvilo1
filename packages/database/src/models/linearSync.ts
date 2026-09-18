@@ -872,6 +872,20 @@ export class LinearSyncModel {
     settings?: LinearSyncScopeSettings;
     status?: LinearSyncScopeStatus;
   }) {
+    const [installation] = await this.db
+      .select({ id: linearInstallations.id })
+      .from(linearInstallations)
+      .where(
+        and(
+          eq(linearInstallations.id, input.installationId),
+          eq(linearInstallations.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1);
+    if (!installation) {
+      throw new Error('Linear installation does not belong to this workspace');
+    }
+
     const [row] = await this.db
       .insert(linearSyncScopes)
       .values({
@@ -1116,7 +1130,27 @@ export class LinearSyncModel {
             AND link.workspace_id = ${this.workspaceId}
             AND link.linear_team_id = ${linearTeamId}
         )
-    `);
+      `);
+  }
+
+  async listIssueLinksOutsideTeamScope(input: {
+    installationId: string;
+    keepLinearTeamIds: string[];
+  }) {
+    return this.db
+      .select()
+      .from(linearIssueLinks)
+      .where(
+        and(
+          eq(linearIssueLinks.workspaceId, this.workspaceId),
+          eq(linearIssueLinks.installationId, input.installationId),
+          isNotNull(linearIssueLinks.linearTeamId),
+          ne(linearIssueLinks.syncState, 'removed'),
+          input.keepLinearTeamIds.length
+            ? notInArray(linearIssueLinks.linearTeamId, input.keepLinearTeamIds)
+            : sql`true`,
+        ),
+      );
   }
 
   async transaction<T>(callback: (model: LinearSyncModel, db: OrviloDatabase) => Promise<T>) {

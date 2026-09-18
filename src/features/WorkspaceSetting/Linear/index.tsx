@@ -676,11 +676,11 @@ const LinearWorkspaceSettings = memo(() => {
   }, [loadCatalog]);
 
   /** Load the workspace sync scope + team links for the selected installation. */
-  const loadScope = useCallback(async () => {
+  const loadScope = useCallback(async (): Promise<boolean> => {
     if (!selectedInstallationId) {
       setSyncScope(null);
       setTeamLinks([]);
-      return;
+      return true;
     }
     try {
       const [scopeResponse, teamLinkResponse] = await Promise.all([
@@ -689,8 +689,10 @@ const LinearWorkspaceSettings = memo(() => {
       ]);
       setSyncScope((scopeResponse?.data as LinearSyncScopeView | null) ?? null);
       setTeamLinks((teamLinkResponse?.data as LinearTeamLinkView[]) ?? []);
+      return true;
     } catch (error) {
       console.error('[LinearWorkspaceSettings] Failed to load sync scope', error);
+      return false;
     }
   }, [selectedInstallationId]);
 
@@ -705,14 +707,44 @@ const LinearWorkspaceSettings = memo(() => {
     setScopeApprovedTeamIds(settings?.approvedTeamIds ?? null);
     setScopeIncludeProjectless(settings?.includeProjectlessIssues !== false);
     setScopePrivateTeamPolicy(settings?.privateTeamPolicy ?? 'import_restricted');
-  }, [syncScope?.id]);
+  }, [syncScope?.id, syncScope?.settings]);
 
   // While an import runs, poll the durable scope row — the server keeps
   // stepping even if this page closes.
   useEffect(() => {
     if (syncScope?.status !== 'importing') return;
-    const timer = setInterval(() => void loadScope(), 3_000);
-    return () => clearInterval(timer);
+    let cancelled = false;
+    let delay = 3_000;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const schedule = () => {
+      timer = setTimeout(async () => {
+        if (cancelled) return;
+        if (document.visibilityState === 'hidden') {
+          delay = Math.min(delay * 2, 30_000);
+          schedule();
+          return;
+        }
+        const succeeded = await loadScope();
+        delay = succeeded ? 3_000 : Math.min(delay * 2, 30_000);
+        schedule();
+      }, delay);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        delay = 3_000;
+        void loadScope();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    schedule();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [syncScope?.status, loadScope]);
 
   const startWorkspaceImport = async () => {

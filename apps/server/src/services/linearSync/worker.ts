@@ -9,6 +9,7 @@ import type {
   LinearProjectSnapshot,
   LinearRelationKind,
   LinearRelationSnapshot,
+  LinearSyncScopeSettings,
   LinearSyncTombstone,
   TaskItem,
   TaskWorkflowCategory,
@@ -119,6 +120,13 @@ const linearStateCategory = (type: string | null): TaskWorkflowCategory => {
     }
   }
 };
+
+export const isLinearScopeTeamImportable = (
+  team: { id: string; visibility: string | null },
+  settings: LinearSyncScopeSettings,
+) =>
+  team.visibility === 'public' &&
+  (settings.approvedTeamIds === undefined || settings.approvedTeamIds.includes(team.id));
 
 const isLinearFieldHumanLocked = (task: TaskItem, field: keyof LinearIssueSnapshot) => {
   if (field === 'title' || field === 'description') return task.requirementLocked;
@@ -2110,11 +2118,7 @@ export class LinearSyncWorker {
   ) {
     const remoteTeams = await provider.listTeams();
     const settings = scope.settings ?? {};
-    const eligible = remoteTeams.filter(
-      (team) =>
-        (settings.approvedTeamIds === undefined || settings.approvedTeamIds.includes(team.id)) &&
-        !(settings.privateTeamPolicy === 'skip' && team.visibility === 'private'),
-    );
+    const eligible = remoteTeams.filter((team) => isLinearScopeTeamImportable(team, settings));
 
     const installer = installation.installedByUserId;
     const teamModel = installer ? new TeamModel(this.db, installer, this.workspaceId) : null;
@@ -2180,6 +2184,24 @@ export class LinearSyncWorker {
       keepLinearTeamIds: eligible.map((team) => team.id),
     });
 
+    await this.model.transaction(async (model) => {
+      const retiredLinks = await model.listIssueLinksOutsideTeamScope({
+        installationId: installation.id,
+        keepLinearTeamIds: eligible.map((team) => team.id),
+      });
+      for (const link of retiredLinks) {
+        await model.recordIssueTombstone({
+          idempotencyKey: `linear:tombstone:team-scope:${scope.id}:${link.linearIssueId}:${scope.scopeRevision}`,
+          issueLinkId: link.id,
+          kind: 'out_of_scope',
+          linearIssueId: link.linearIssueId,
+          origin: 'reconciliation',
+          reason: 'Linear team is no longer inside the approved sync scope',
+          snapshot: link.remoteSnapshot ?? undefined,
+        });
+      }
+    });
+
     await this.model.updateScopeImportState(scope.id, {
       importPhase: 'projects',
       teamsLinked: linked,
@@ -2209,6 +2231,11 @@ export class LinearSyncWorker {
     const projectModel = installer ? new ProjectModel(this.db, installer, this.workspaceId) : null;
     let linked = 0;
     for (const remote of eligible) {
+      const allowedTeamIds = remote.teamIds.filter((teamId) => teamLinks.has(teamId));
+      // A project whose only teams were filtered out must not create an empty
+      // binding. Keeping it pending would make every continuation retry the
+      // same page forever while still exposing a project shell.
+      if (allowedTeamIds.length === 0) continue;
       const existing = await this.model.findBindingByLinearProjectId(remote.id);
       let localProjectId: string | undefined = existing?.projectId;
       if (!localProjectId && projectModel) {
@@ -2217,16 +2244,16 @@ export class LinearSyncWorker {
       if (!localProjectId) continue;
 
       await this.model.upsertBinding({
-        defaultTeamId: remote.teamIds.find((teamId) => teamLinks.has(teamId)),
+        defaultTeamId: allowedTeamIds[0],
         installationId: installation.id,
         linearProjectId: remote.id,
         projectId: localProjectId,
         remoteSnapshot: remote,
         scopeId: scope.id,
-        teamIds: remote.teamIds,
+        teamIds: allowedTeamIds,
       });
       if (teamModel) {
-        for (const remoteTeamId of remote.teamIds) {
+        for (const remoteTeamId of allowedTeamIds) {
           const localTeamId = teamLinks.get(remoteTeamId);
           if (localTeamId) await teamModel.linkProject(localProjectId, localTeamId);
         }
@@ -2437,7 +2464,7 @@ export class LinearSyncWorker {
       const binding = issue.projectId
         ? await model.lockBindingByLinearProjectId(issue.projectId)
         : null;
-      if (!teamLink || (issue.projectId && !binding)) {
+      if (!teamLink || teamLink.syncState !== 'synced' || (issue.projectId && !binding)) {
         if (existingLink) {
           await model.recordIssueTombstone({
             deliveryId: row.id,
@@ -2543,6 +2570,7 @@ export class LinearSyncWorker {
           mutation,
           projectId: binding?.projectId ?? null,
           settings: binding?.settings,
+          visibility: teamLink.remoteSnapshot?.visibility === 'private' ? 'private' : 'public',
           workflowCategory: workflowState?.category,
           workflowStateRefId,
         });
@@ -2657,6 +2685,14 @@ export class LinearSyncWorker {
         if (moved) taskAfterRemote = moved;
       }
 
+      const identifierChanged =
+        Boolean(issue.identifier) && issue.identifier !== existingLink.linearIdentifier;
+      const aliasIdentifiers = identifierChanged
+        ? Array.from(
+            new Set([...(existingLink.aliasIdentifiers ?? []), existingLink.linearIdentifier]),
+          )
+        : existingLink.aliasIdentifiers;
+
       const localChanged = Array.from(
         new Set([
           ...changedLinearIssueFields(existingLink.lastConfirmedSnapshot, local),
@@ -2692,6 +2728,8 @@ export class LinearSyncWorker {
         conflict: null,
         lastConfirmedSnapshot: issue,
         lastInboundDeliveryId: row.id,
+        aliasIdentifiers,
+        linearIdentifier: issue.identifier || existingLink.linearIdentifier,
         linearTeamId: issue.teamId ?? existingLink.linearTeamId,
         remoteSnapshot: issue,
         remoteUpdatedAt: incomingUpdatedAt,

@@ -238,7 +238,8 @@ export class RepositoryModel {
         repositoryId,
         workspaceId: this.workspaceId,
       })
-      .onConflictDoNothing({
+      .onConflictDoUpdate({
+        set: { associationDecisionId: null, updatedAt: new Date() },
         target: [projectRepositories.projectId, projectRepositories.repositoryId],
       });
   };
@@ -273,7 +274,7 @@ export class RepositoryModel {
           workspaceId: this.workspaceId,
         })
         .onConflictDoUpdate({
-          set: { isPrimary },
+          set: { associationDecisionId: null, isPrimary },
           target: [teamRepoDefaults.teamId, teamRepoDefaults.repositoryId],
         });
     });
@@ -373,15 +374,18 @@ export class RepositoryModel {
             eq(associationDecisions.workspaceId, this.workspaceId),
           ),
         )
+        .for('update')
         .limit(1);
       if (!decision) return null;
       if (decision.status === 'applied') return toDecisionItem(decision);
+      if (decision.status !== 'proposed') return null;
 
       if (decision.relation === 'project_repository' && decision.sourceKind === 'project') {
         await tx
           .insert(projectRepositories)
           .values({
             addedByUserId: this.userId,
+            associationDecisionId: decision.id,
             projectId: decision.sourceId,
             repositoryId: decision.targetRepositoryId,
             workspaceId: this.workspaceId,
@@ -395,6 +399,7 @@ export class RepositoryModel {
           .insert(teamRepoDefaults)
           .values({
             addedByUserId: this.userId,
+            associationDecisionId: decision.id,
             repositoryId: decision.targetRepositoryId,
             teamId: decision.sourceId,
             workspaceId: this.workspaceId,
@@ -412,7 +417,9 @@ export class RepositoryModel {
           decisionRevision: sql`${associationDecisions.decisionRevision} + 1`,
           status: 'applied',
         })
-        .where(eq(associationDecisions.id, decisionId))
+        .where(
+          and(eq(associationDecisions.id, decisionId), eq(associationDecisions.status, 'proposed')),
+        )
         .returning();
       return updated ? toDecisionItem(updated) : null;
     });
@@ -438,22 +445,48 @@ export class RepositoryModel {
         .limit(1);
       if (!decision) return null;
 
-      if (decision.relation === 'project_repository' && decision.sourceKind === 'project') {
+      const [otherAppliedDecision] = await tx
+        .select({ id: associationDecisions.id })
+        .from(associationDecisions)
+        .where(
+          and(
+            eq(associationDecisions.workspaceId, this.workspaceId),
+            eq(associationDecisions.sourceKind, decision.sourceKind),
+            eq(associationDecisions.sourceId, decision.sourceId),
+            eq(associationDecisions.relation, decision.relation),
+            eq(associationDecisions.targetRepositoryId, decision.targetRepositoryId),
+            eq(associationDecisions.status, 'applied'),
+            ne(associationDecisions.id, decision.id),
+          ),
+        )
+        .limit(1);
+
+      if (
+        !otherAppliedDecision &&
+        decision.relation === 'project_repository' &&
+        decision.sourceKind === 'project'
+      ) {
         await tx
           .delete(projectRepositories)
           .where(
             and(
+              eq(projectRepositories.associationDecisionId, decision.id),
               eq(projectRepositories.projectId, decision.sourceId),
               eq(projectRepositories.repositoryId, decision.targetRepositoryId),
               eq(projectRepositories.workspaceId, this.workspaceId),
             ),
           );
       }
-      if (decision.relation === 'team_repository_default' && decision.sourceKind === 'team') {
+      if (
+        !otherAppliedDecision &&
+        decision.relation === 'team_repository_default' &&
+        decision.sourceKind === 'team'
+      ) {
         await tx
           .delete(teamRepoDefaults)
           .where(
             and(
+              eq(teamRepoDefaults.associationDecisionId, decision.id),
               eq(teamRepoDefaults.teamId, decision.sourceId),
               eq(teamRepoDefaults.repositoryId, decision.targetRepositoryId),
               eq(teamRepoDefaults.workspaceId, this.workspaceId),
@@ -611,6 +644,6 @@ export class RepositoryModel {
           eq(associationDecisions.status, 'applied'),
         ),
       );
-    return rows.map((r) => r.targetRepositoryId);
+    return [...new Set(rows.map((r) => r.targetRepositoryId))];
   };
 }

@@ -71,6 +71,7 @@ CREATE TABLE "project_repositories" (
 	"repository_id" text NOT NULL,
 	"workspace_id" text NOT NULL,
 	"added_by_user_id" text,
+	"association_decision_id" uuid,
 	"accessed_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -117,6 +118,7 @@ CREATE TABLE "team_repo_defaults" (
 	"repository_id" text NOT NULL,
 	"workspace_id" text NOT NULL,
 	"added_by_user_id" text,
+	"association_decision_id" uuid,
 	"is_primary" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"accessed_at" timestamp with time zone DEFAULT now() NOT NULL,

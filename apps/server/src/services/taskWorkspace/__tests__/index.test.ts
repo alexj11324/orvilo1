@@ -3,6 +3,7 @@ import type { TaskItem } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
+import { RepositoryModel } from '@/database/models/repository';
 import { TaskModel } from '@/database/models/task';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { getRepoDefaultBranch, resolveGithubAccessToken } from '@/server/services/githubRepo';
@@ -15,6 +16,11 @@ const mockTaskModel = {
 const mockAgentModel = {
   getAgentConfig: vi.fn(),
 };
+const mockRepositoryModel = {
+  findById: vi.fn(),
+  listCheckouts: vi.fn(),
+  resolveForTask: vi.fn(),
+};
 
 vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(),
@@ -22,6 +28,10 @@ vi.mock('@/database/models/task', () => ({
 
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn(),
+}));
+
+vi.mock('@/database/models/repository', () => ({
+  RepositoryModel: vi.fn(),
 }));
 
 vi.mock('@/server/services/deviceGateway', () => ({
@@ -80,10 +90,16 @@ describe('TaskWorkspaceService', () => {
     (AgentModel as any).mockImplementation(function () {
       return mockAgentModel;
     });
+    (RepositoryModel as any).mockImplementation(function () {
+      return mockRepositoryModel;
+    });
     service = new TaskWorkspaceService({} as any, 'user-1', 'ws-1');
     mockAgentModel.getAgentConfig.mockResolvedValue({
       agencyConfig: { boundDeviceId: 'dev-1' },
     });
+    mockRepositoryModel.resolveForTask.mockReset();
+    mockRepositoryModel.findById.mockReset();
+    mockRepositoryModel.listCheckouts.mockReset();
     vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
       { isDefault: true, name: 'origin/main' },
     ]);
@@ -114,6 +130,29 @@ describe('TaskWorkspaceService', () => {
     it('ignores malformed workspace configs', async () => {
       const task = baseTask({ config: { workspace: { provider: 's3', repoPath: '/x' } } });
       expect(await service.resolveWorkspaceConfig(task)).toBeUndefined();
+    });
+
+    it('uses an authorized local checkout instead of cloning a local-only coordinate', async () => {
+      mockRepositoryModel.resolveForTask.mockResolvedValue({
+        ok: true,
+        repositoryId: 'repo-local',
+      });
+      mockRepositoryModel.findById.mockResolvedValue({
+        coordinate: { defaultBranch: 'main', name: 'widgets', owner: 'acme' },
+        remoteRepositoryId: null,
+      });
+      mockRepositoryModel.listCheckouts.mockResolvedValue([
+        { canonicalPath: '/authorized/widgets', deviceId: 'dev-1' },
+      ]);
+
+      await expect(
+        service.resolveWorkspaceConfig(baseTask({ projectId: 'project-1' })),
+      ).resolves.toEqual({
+        baseBranch: 'main',
+        deviceId: 'dev-1',
+        provider: 'git',
+        repoPath: '/authorized/widgets',
+      });
     });
   });
 

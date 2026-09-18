@@ -141,3 +141,25 @@ describe('Acceptance installation guide', () => {
     expect(guide).toContain('.agents/skills/acceptance/SKILL.md');
   });
 });
+
+describe('defineConfig backend subtrees reached by the workspace matcher', () => {
+  // `/:workspaceSlug/agent(.*)` in `config.matcher` parses the first segment as
+  // the slug, so it also matches `/market/agent/**` and `/api/agent/**`. Those
+  // are Bearer-token APIs (`MarketService`, Hono) whose auth lives in the route
+  // handlers — the middleware must hand them through untouched, and an
+  // unauthenticated API client must never see a 302 to /signin.
+  it('passes /market/agent and /api/agent through without rewrite or session gate', async () => {
+    const { auth } = await import('@/auth');
+    vi.mocked(auth.api.getSession).mockClear();
+
+    for (const pathname of ['/market/agent', '/market/agent/agent-1', '/api/agent/abc']) {
+      const response = await middleware(new NextRequest(`http://localhost:3010${pathname}`));
+
+      expect(response?.headers.get('x-middleware-next'), pathname).toBe('1');
+      expect(response?.headers.get('x-middleware-rewrite'), pathname).toBeNull();
+      expect(response?.headers.get('location'), pathname).toBeNull();
+    }
+
+    expect(auth.api.getSession).not.toHaveBeenCalled();
+  });
+});

@@ -424,10 +424,13 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       // A revalidation-triggered load already consulted upstream within this
       // window — the settled snapshot is as fresh as the provider can tell us
       // even when its `updatedAt` still reads the older persisted receipt.
-      if (currentTime - lastRevalidateAtRef.current <= staleMs) return;
+      // Strict `<`: a trigger landing exactly one window after the consult is
+      // due again — `<=` would halve the effective poll cadence, and a tick
+      // landing exactly `staleMs` after the snapshot stamp must still fire.
+      if (currentTime - lastRevalidateAtRef.current < staleMs) return;
 
       const current = quotaRef.current;
-      if (current && currentTime - current.updatedAt <= staleMs) return;
+      if (current && currentTime - current.updatedAt < staleMs) return;
 
       if (inFlightRef.current) {
         // One coalesced pending run; the strictest (smallest) window wins so a

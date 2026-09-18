@@ -104,6 +104,7 @@ export function OnboardingStepper({
   steps: OnboardingStep[];
 }) {
   const { t } = useTranslation('onboarding');
+  const translate = t as unknown as (key: string) => string;
 
   return (
     <Stepper
@@ -116,7 +117,7 @@ export function OnboardingStepper({
     >
       <StepperNav aria-label={t('reui.stepper.ariaLabel')} className="w-full">
         {steps.map((step) => {
-          const description = t(`reui.stepper.${step.id}`);
+          const description = translate(`reui.stepper.${step.id}`);
 
           return (
             <StepperItem

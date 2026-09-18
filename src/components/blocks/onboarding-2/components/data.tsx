@@ -81,6 +81,13 @@ export type InviteRow = {
 export type OnboardingTranslate = TFunction<'onboarding'>;
 type HugeIcon = ComponentProps<typeof HugeiconsIcon>['icon'];
 
+// These keys are assembled from closed unions above, but i18next cannot
+// represent the template-literal relationship in its generated resource key
+// union. Keep the dynamic lookup at this boundary and preserve the string
+// contract consumed by the onboarding components.
+const translateOnboardingKey = (t: OnboardingTranslate, key: string): string =>
+  (t as unknown as (key: string) => string)(key);
+
 export const createOnboardingData = (t: OnboardingTranslate) => ({
   discoverySourceOptions: (
     [
@@ -100,8 +107,8 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[DiscoverySourceValue, HugeIcon]>
   ).map(([value, Icon]) => ({
     value: value as DiscoverySourceValue,
-    label: t(`reui.source.${value}.label`),
-    description: t(`reui.source.${value}.description`),
+    label: translateOnboardingKey(t, `reui.source.${value}.label`),
+    description: translateOnboardingKey(t, `reui.source.${value}.description`),
     icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={Icon} />,
   })),
   goalOptions: (
@@ -114,14 +121,14 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[GoalValue, LucideIcon]>
   ).map(([value, Icon]) => ({
     value: value as GoalValue,
-    label: t(`reui.goal.${value}.label`),
-    description: t(`reui.goal.${value}.description`),
+    label: translateOnboardingKey(t, `reui.goal.${value}.label`),
+    description: translateOnboardingKey(t, `reui.goal.${value}.description`),
     icon: <Icon aria-hidden="true" />,
   })),
   inviteRoleOptions: (['guest', 'member', 'admin'] as InviteRoleValue[]).map((value) => ({
     value,
-    label: t(`reui.inviteRole.${value}.label`),
-    description: t(`reui.inviteRole.${value}.description`),
+    label: translateOnboardingKey(t, `reui.inviteRole.${value}.label`),
+    description: translateOnboardingKey(t, `reui.inviteRole.${value}.description`),
   })),
   roleOptions: (
     [
@@ -134,8 +141,8 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[RoleValue, LucideIcon]>
   ).map(([value, Icon]) => ({
     value: value as RoleValue,
-    label: t(`reui.role.${value}.label`),
-    description: t(`reui.role.${value}.description`),
+    label: translateOnboardingKey(t, `reui.role.${value}.label`),
+    description: translateOnboardingKey(t, `reui.role.${value}.description`),
     icon: <Icon aria-hidden="true" />,
     ...(value === 'developer' ? { recommended: true } : {}),
   })),
@@ -149,9 +156,9 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
   ].map(([id, value]) => ({
     id: id as string,
     value: value as number,
-    label: t(`reui.step.${id}.label`),
-    title: t(`reui.step.${id}.title`),
-    description: t(`reui.step.${id}.description`),
+    label: translateOnboardingKey(t, `reui.step.${id}.label`),
+    title: translateOnboardingKey(t, `reui.step.${id}.title`),
+    description: translateOnboardingKey(t, `reui.step.${id}.description`),
     ...(['source', 'invite'].includes(id as string) ? { optional: true } : {}),
   })),
   teamSizeOptions: (
@@ -167,8 +174,8 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[TeamSizeValue, string]>
   ).map(([value, key]) => ({
     value: value as TeamSizeValue,
-    label: t(`reui.teamSize.${key}.label`),
-    description: t(`reui.teamSize.${key}.description`),
+    label: translateOnboardingKey(t, `reui.teamSize.${key}.label`),
+    description: translateOnboardingKey(t, `reui.teamSize.${key}.description`),
     ...(value === 'team' ? { recommended: true } : {}),
   })),
 });

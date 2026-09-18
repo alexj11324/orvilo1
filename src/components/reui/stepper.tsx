@@ -298,7 +298,10 @@ function StepperTrigger({ className, children, tabIndex, render, ...props }: Ste
     defaultTagName: 'button',
     render,
     ref: btnRef,
-    props: mergeProps<'button'>(defaultProps, props),
+    props: mergeProps<'button'>(
+      defaultProps as React.ComponentPropsWithRef<'button'>,
+      props,
+    ),
   });
 }
 

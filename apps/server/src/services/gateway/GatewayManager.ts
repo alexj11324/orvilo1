@@ -7,7 +7,7 @@ import {
 import { getServerDB } from '@/database/core/db-adaptor';
 import type { DecryptedBotProvider } from '@/database/models/agentBotProvider';
 import { AgentBotProviderModel } from '@/database/models/agentBotProvider';
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import {
   type BotPlatformRuntimeContext,

@@ -12,10 +12,10 @@ import { MessageModel } from '@/database/models/message';
 import { TopicModel } from '@/database/models/topic';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { createStreamEventManager } from '@/server/modules/AgentRuntime/factory';
+import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
-import { CompletionLifecycle } from '@/server/services/agentRuntime/CompletionLifecycle';
-import type { SerializedHook } from '@/server/services/agentRuntime/hooks/types';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+import type { SerializedHook } from '@/server/services/agentExecution/hooks/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { instantiateVerifyPlanOnStart } from '@/server/services/verify';
 

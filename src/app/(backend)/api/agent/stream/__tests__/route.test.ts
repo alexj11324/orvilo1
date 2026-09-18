@@ -16,7 +16,7 @@ const mockAgentStateManager = {
 
 const mockCreateLambdaContext = vi.fn();
 
-vi.mock('@/server/modules/AgentRuntime', () => ({
+vi.mock('@/server/modules/AgentExecution', () => ({
   createAgentStateManager: vi.fn(() => mockAgentStateManager),
   createStreamEventManager: vi.fn(() => mockStreamEventManager),
 }));

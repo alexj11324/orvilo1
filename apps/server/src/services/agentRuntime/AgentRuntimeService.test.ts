@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 
 import { AgentRuntimeService, createEvalToolForwardingHook } from './AgentRuntimeService';
-import { hookDispatcher } from './hooks';
+import { hookDispatcher } from '../agentExecution/hooks';
 import {
   type AgentExecutionParams,
   type OperationCreationParams,
@@ -91,11 +91,11 @@ vi.mock('@/server/services/search', () => ({
 
 // Mock factory and redis dependencies to break env import chains,
 // so the barrel can be imported with real AgentRuntimeCoordinator + InMemory backends
-vi.mock('@/server/modules/AgentRuntime/factory', async () => {
+vi.mock('@/server/modules/AgentExecution/factory', async () => {
   const { InMemoryAgentStateManager } =
-    await import('@/server/modules/AgentRuntime/InMemoryAgentStateManager');
+    await import('@/server/modules/AgentExecution/InMemoryAgentStateManager');
   const { InMemoryStreamEventManager } =
-    await import('@/server/modules/AgentRuntime/InMemoryStreamEventManager');
+    await import('@/server/modules/AgentExecution/InMemoryStreamEventManager');
   return {
     createAgentStateManager: () => new InMemoryAgentStateManager(),
     createStreamEventManager: () => new InMemoryStreamEventManager(),
@@ -103,7 +103,7 @@ vi.mock('@/server/modules/AgentRuntime/factory', async () => {
   };
 });
 
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   createAgentRuntimeRedisClient: vi.fn().mockReturnValue(null),
   getAgentRuntimeRedisClient: vi.fn().mockReturnValue(null),
 }));

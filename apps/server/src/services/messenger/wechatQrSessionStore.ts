@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 const SESSION_TTL_SECONDS = 5 * 60;
 const FINALIZE_LOCK_TTL_SECONDS = 30;

@@ -15,7 +15,7 @@ import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSetti
 import type { OrviloDatabase } from '@/database/type';
 import { resolveToolMode } from '@/helpers/executionTarget';
 import { getServerFeatureFlagsStateFromRuntimeConfig } from '@/server/featureFlags';
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { AgentBridgeService } from '@/server/services/bot/AgentBridgeService';
 import { buildBotContext } from '@/server/services/bot/buildBotContext';

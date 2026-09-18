@@ -1,10 +1,10 @@
 import type { AgentState } from '@orvilo/agent-runtime';
 
-import { InMemoryStreamEventManager } from '@/server/modules/AgentRuntime/InMemoryStreamEventManager';
+import { InMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
 import type {
   StreamChunkData,
   StreamEvent,
-} from '@/server/modules/AgentRuntime/StreamEventManager';
+} from '@/server/modules/AgentExecution/StreamEventManager';
 import { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { AiAgentService } from '@/server/services/aiAgent';
 

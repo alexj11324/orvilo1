@@ -19,7 +19,7 @@ import { type OrviloDatabase } from '@/database/type';
 import {
   formatErrorForState,
   readErrorBudgetContext,
-} from '@/server/modules/AgentRuntime/formatErrorForState';
+} from '@/server/modules/AgentExecution/formatErrorForState';
 import { buildFinalSnapshotKey } from '@/server/modules/AgentTracing';
 import { emitAgentSignalSourceEvent } from '@/server/services/agentSignal';
 import { toAgentSignalTraceEvents } from '@/server/services/agentSignal/observability/traceEvents';

@@ -12,8 +12,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { AgentRuntimeService } from '../AgentRuntimeService';
-import { hookDispatcher } from '../hooks';
-import type { AgentHookEvent } from '../hooks/types';
+import { hookDispatcher } from '../../agentExecution/hooks';
+import type { AgentHookEvent } from '../../agentExecution/hooks/types';
 
 // ── Mocks ──────────────────────────────────────────
 vi.mock('@/envs/app', () => ({ appEnv: { APP_URL: 'http://localhost:3010' } }));

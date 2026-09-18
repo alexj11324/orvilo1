@@ -6,7 +6,7 @@ import type {
 } from '@orvilo/agent-runtime';
 
 import { formatErrorEventData } from '../formatErrorEventData';
-import { type IStreamEventManager } from '../types';
+import { type IStreamEventManager } from '../../AgentExecution/types';
 
 /**
  * Server {@link StreamSink} adapter — forwards runtime stream events/chunks to

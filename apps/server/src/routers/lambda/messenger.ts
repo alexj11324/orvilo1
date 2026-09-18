@@ -35,7 +35,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { authedProcedure, publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerFeatureFlagsStateFromRuntimeConfig } from '@/server/featureFlags';
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { SlackApi } from '@/server/services/bot/platforms/slack/api';
 import type { BotMessageAttachment } from '@/server/services/bot/platforms/types';

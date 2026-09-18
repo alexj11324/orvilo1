@@ -4,7 +4,7 @@ import type {
   ToolCallMockResult,
 } from '@orvilo/agent-runtime';
 
-import { type HookDispatcher } from '@/server/services/agentRuntime/hooks/HookDispatcher';
+import { type HookDispatcher } from '@/server/services/agentExecution/hooks/HookDispatcher';
 
 /**
  * Server {@link LifecycleSink} adapter — forwards runtime lifecycle dispatches

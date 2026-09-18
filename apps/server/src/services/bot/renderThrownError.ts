@@ -1,7 +1,7 @@
 import {
   formatErrorForState,
   readErrorBudgetContext,
-} from '@/server/modules/AgentRuntime/formatErrorForState';
+} from '@/server/modules/AgentExecution/formatErrorForState';
 
 import type { BotReplyLocale } from './platforms';
 import { renderAgentError } from './replyTemplate';

@@ -60,8 +60,8 @@ import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { signHeteroOperationJWT, signUserJWT } from '@/libs/trpc/utils/internalJwt';
-import { createStreamEventManager } from '@/server/modules/AgentRuntime/factory';
-import { unwrapPgError } from '@/server/modules/AgentRuntime/pgError';
+import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
+import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
 import {
   getServerDefaultHeterogeneousModels,
   initModelRuntimeFromServerConfig,

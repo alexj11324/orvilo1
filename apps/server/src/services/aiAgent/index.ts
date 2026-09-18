@@ -43,7 +43,7 @@ import type {
   SubAgentBridgeParams,
 } from '@/server/services/agentRuntime';
 import { AgentRuntimeService } from '@/server/services/agentRuntime';
-import { getAbortError, throwIfAborted } from '@/server/services/agentRuntime/abort';
+import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,

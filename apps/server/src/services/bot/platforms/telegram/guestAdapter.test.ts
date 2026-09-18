@@ -9,7 +9,7 @@ import {
 } from './guestSession';
 import { isGuestTelegramThreadId } from './threadId';
 
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => null,
 }));
 

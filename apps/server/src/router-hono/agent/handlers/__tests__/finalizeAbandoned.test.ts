@@ -18,7 +18,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime/hooks/HookDispatcher', () => ({
+vi.mock('@/server/services/agentExecution/hooks/HookDispatcher', () => ({
   deliverWebhook: mockDeliverWebhook,
 }));
 

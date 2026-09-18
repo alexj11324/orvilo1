@@ -5,7 +5,7 @@ import type { AcpRpcMessage } from './acpStdioClient';
 import { AcpStdioClient } from './acpStdioClient';
 import type { AgentStreamPipelineOptions } from './agentStreamPipeline';
 import { AgentStreamPipeline } from './agentStreamPipeline';
-import type { HeterogeneousAgentRuntimeStatus } from './claudeAgentSdkSession';
+import type { HeterogeneousAgentRuntimeStatus } from './runtimeStatus';
 
 /** The ACP major protocol version this client speaks (https://agentclientprotocol.com). */
 export const ACP_PROTOCOL_VERSION = 1;

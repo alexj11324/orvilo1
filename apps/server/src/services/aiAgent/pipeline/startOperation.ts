@@ -5,7 +5,7 @@ import type { MessageModel } from '@/database/models/message';
 import type { TopicModel } from '@/database/models/topic';
 import { signUserJWT } from '@/libs/trpc/utils/internalJwt';
 import type { AgentRuntimeService } from '@/server/services/agentRuntime';
-import { isAbortError } from '@/server/services/agentRuntime/abort';
+import { isAbortError } from '@/server/services/agentExecution/abort';
 
 import type { ExecRunContext, InternalExecAgentParams } from '../types';
 import type { ApprovalClaimState } from './approvalResume';

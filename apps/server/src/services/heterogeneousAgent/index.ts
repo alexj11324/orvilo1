@@ -14,11 +14,11 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
-import { createStreamEventManager } from '@/server/modules/AgentRuntime/factory';
-import { type IStreamEventManager } from '@/server/modules/AgentRuntime/types';
-import { CompletionLifecycle } from '@/server/services/agentRuntime/CompletionLifecycle';
-import type { SerializedHook } from '@/server/services/agentRuntime/hooks/types';
-import { createDefaultSnapshotStore } from '@/server/services/agentRuntime/snapshotStore';
+import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
+import { type IStreamEventManager } from '@/server/modules/AgentExecution/types';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+import type { SerializedHook } from '@/server/services/agentExecution/hooks/types';
+import { createDefaultSnapshotStore } from '@/server/services/agentExecution/snapshotStore';
 import { instantiateVerifyPlanOnStart } from '@/server/services/verify';
 
 import {

@@ -58,10 +58,12 @@ export {
   buildClaudeSdkUserMessageFromStreamJson,
   ClaudeAgentSdkSession,
   type ClaudeAgentSdkSessionOptions,
-  type HeterogeneousAgentRuntimeState,
-  type HeterogeneousAgentRuntimeStatus,
-  type HeterogeneousAgentRuntimeTask,
 } from './claudeAgentSdkSession';
+export type {
+  HeterogeneousAgentRuntimeState,
+  HeterogeneousAgentRuntimeStatus,
+  HeterogeneousAgentRuntimeTask,
+} from './runtimeStatus';
 export { type CliSpawnPlan, resolveCliSpawnPlan } from './cliSpawn';
 export { CodexFileChangeTracker } from './codexFileChangeTracker';
 export {

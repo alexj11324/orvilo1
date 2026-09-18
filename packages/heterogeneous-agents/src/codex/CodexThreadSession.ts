@@ -2,7 +2,7 @@ import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { isRecord, pickString } from '@orvilo/utils/object';
 
 import { CodexAppServerAdapter } from '../adapters/codexAppServer';
-import type { HeterogeneousAgentRuntimeStatus } from '../spawn/claudeAgentSdkSession';
+import type { HeterogeneousAgentRuntimeStatus } from '../spawn/runtimeStatus';
 import { toStreamEvent } from '../spawn/streamEvent';
 import type { UsageData } from '../types';
 import type { CodexAppServerClient } from './CodexAppServerClient';

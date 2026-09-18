@@ -58,6 +58,26 @@ describe('toFeedCard', () => {
     expect(action.actionRef).toEqual({ kind: 'acp_permission', requestId: 'apr_1' });
   });
 
+  it('keeps decide on ownership-transfer cards and opens members settings', () => {
+    const card = toFeedCard(
+      row({
+        actionKind: 'workspace_ownership_transfer',
+        actionRequestId: 'tr_1',
+        actionUrl: null,
+        kind: 'action',
+        resourceId: 'ws1',
+        resourceType: 'workspace',
+        type: 'workspace_ownership_transfer',
+      }),
+    );
+    expect(card.availableActions).toContain('decide');
+    expect(card.actionRef).toEqual({
+      kind: 'workspace_ownership_transfer',
+      requestId: 'tr_1',
+    });
+    expect(card.safeNavigation).toEqual({ kind: 'url', url: '/settings/members' });
+  });
+
   it('does not treat an archived-but-unresolved action as already decided', () => {
     const card = toFeedCard(
       row({

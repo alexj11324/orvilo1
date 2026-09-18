@@ -38,8 +38,16 @@ export type AttentionErrorCode =
   | 'STALE_REVISION'
   | 'UNAUTHENTICATED';
 
-export type ActionSourceKind =
-  'acp_input' | 'acp_intervention' | 'acp_permission' | 'resource_transfer' | 'task_review';
+export const ACTION_SOURCE_KINDS = [
+  'acp_input',
+  'acp_intervention',
+  'acp_permission',
+  'resource_transfer',
+  'task_review',
+  'workspace_ownership_transfer',
+] as const;
+
+export type ActionSourceKind = (typeof ACTION_SOURCE_KINDS)[number];
 
 export interface ActionRef {
   executionGeneration?: number | null;

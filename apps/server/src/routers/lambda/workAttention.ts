@@ -1,4 +1,10 @@
-import type { MyWorkMode, WorkQuery, WorkQueryFilter, WorkQueryPredicate } from '@orvilo/types';
+import {
+  ACTION_SOURCE_KINDS,
+  type MyWorkMode,
+  type WorkQuery,
+  type WorkQueryFilter,
+  type WorkQueryPredicate,
+} from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -122,13 +128,7 @@ export const workAttentionRouter = router({
       z.object({
         actionRef: z.object({
           executionGeneration: z.number().int().nullable().optional(),
-          kind: z.enum([
-            'acp_input',
-            'acp_intervention',
-            'acp_permission',
-            'resource_transfer',
-            'task_review',
-          ]),
+          kind: z.enum(ACTION_SOURCE_KINDS),
           requestId: z.string().min(1),
           sourceRevision: z.union([z.number(), z.string()]).nullable().optional(),
         }),

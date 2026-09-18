@@ -31,12 +31,14 @@ const asString = (value: unknown): string | undefined =>
 const payloadRecord = (payload: unknown): Record<string, unknown> =>
   isRecord(payload) ? payload : {};
 
-const resolveTargets = (row: EventOutboxItem): ProjectionTarget[] => {
+export const resolveNotificationTargets = (row: EventOutboxItem): ProjectionTarget[] => {
   const payload = payloadRecord(row.payload);
   const actorId = asString(payload.userId) ?? asString(payload.memberUserId);
   const assignee = asString(payload.assigneeUserId) ?? asString(payload.toId);
   const approver = asString(payload.approverUserId);
   const recipient = asString(payload.recipientId) ?? asString(payload.recipientUserId);
+  const toUserId = asString(payload.toUserId);
+  const transferId = asString(payload.transferId);
   const taskId = row.aggregateType === 'task' ? row.aggregateId : asString(payload.taskId);
   const title = asString(payload.title) ?? row.eventType;
   const content = asString(payload.content) ?? asString(payload.action) ?? row.eventType;
@@ -59,6 +61,28 @@ const resolveTargets = (row: EventOutboxItem): ProjectionTarget[] => {
       title: title === row.eventType ? 'Approval required' : title,
       type: 'acp_permission',
     });
+    return targets;
+  }
+
+  // Ownership-transfer events must not fall through to resource_transfer:
+  // eventType contains "transfer" and the payload uses toUserId/transferId.
+  if (
+    row.eventType.startsWith('workspace.ownership_transfer') ||
+    row.eventType === 'workspace.ownership.transferred'
+  ) {
+    if (row.eventType === 'workspace.ownership_transfer.requested') {
+      push(toUserId, {
+        actionKind: 'workspace_ownership_transfer',
+        actionRequestId: transferId ?? row.eventId,
+        content,
+        episodeKey: `workspace-ownership:${transferId ?? row.eventId}`,
+        kind: 'action',
+        resourceId: row.workspaceId ?? row.aggregateId,
+        resourceType: 'workspace',
+        title: 'Workspace ownership transfer request',
+        type: 'workspace_ownership_transfer',
+      });
+    }
     return targets;
   }
 
@@ -140,7 +164,7 @@ export class NotificationProjectionService {
       .limit(1);
     if (!row) return;
 
-    const targets = resolveTargets(row);
+    const targets = resolveNotificationTargets(row);
     for (const target of targets) {
       await this.db.transaction(async (tx) => {
         const model = new NotificationModel(tx as typeof this.db, target.recipientUserId, {

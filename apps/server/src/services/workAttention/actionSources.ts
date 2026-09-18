@@ -2,8 +2,16 @@ import type { ActionRef, DecisionReceipt, DecisionVerb, VersionedDecision } from
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 
+import {
+  cancelOwnershipTransfer,
+  respondOwnershipTransfer,
+} from '@/business/server/membershipLifecycle/ownershipTransfer';
 import { ResourceTransferRequestModel } from '@/database/models/resourceTransferRequest';
 import { actionApprovals } from '@/database/schemas/actionApproval';
+import {
+  type WorkspaceOwnershipTransferItem,
+  workspaceOwnershipTransfers,
+} from '@/database/schemas/workspace';
 import type { OrviloDatabase } from '@/database/type';
 import { ActionApprovalService } from '@/server/services/agentDelegation/actionApprovals';
 import { TaskInputService } from '@/server/services/agentDelegation/taskInputs';
@@ -81,6 +89,21 @@ export class ActionSourceRegistry {
       }
       return row;
     }
+    if (ref.kind === 'workspace_ownership_transfer') {
+      if (!this.workspaceId) throw new TRPCError({ code: 'NOT_FOUND', message: 'Not found' });
+      const [row] = await this.db
+        .select()
+        .from(workspaceOwnershipTransfers)
+        .where(eq(workspaceOwnershipTransfers.id, ref.requestId))
+        .limit(1);
+      if (!row || row.workspaceId !== this.workspaceId) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Ownership transfer not found' });
+      }
+      if (row.fromUserId !== this.userId && row.toUserId !== this.userId) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a party to this transfer' });
+      }
+      return row;
+    }
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Unknown action source' });
   };
 
@@ -142,6 +165,67 @@ export class ActionSourceRegistry {
       if (command.decision === 'cancel') {
         await model.cancel(actionRef.requestId, this.userId);
         return { executionStarted: false, sourceState: 'cancelled', status: 'source_rejected' };
+      }
+    }
+
+    if (actionRef.kind === 'workspace_ownership_transfer') {
+      if (!this.workspaceId)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'workspace required' });
+      const row = (await this.getAuthorized(actionRef)) as WorkspaceOwnershipTransferItem;
+      if (row.status !== 'pending') {
+        if (row.status === 'expired') {
+          return { executionStarted: false, sourceState: row.status, status: 'expired' };
+        }
+        return { executionStarted: false, sourceState: row.status, status: 'already_decided' };
+      }
+      if (command.expectedSourceRevision && command.expectedSourceRevision !== row.id) {
+        return { executionStarted: false, sourceState: row.status, status: 'stale' };
+      }
+
+      if (command.decision === 'cancel') {
+        if (row.fromUserId !== this.userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only the owner who initiated the transfer can cancel it',
+          });
+        }
+        await cancelOwnershipTransfer(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        });
+        return { executionStarted: false, sourceState: 'cancelled', status: 'source_rejected' };
+      }
+
+      if (
+        command.decision === 'approve' ||
+        command.decision === 'decline' ||
+        command.decision === 'reject'
+      ) {
+        if (row.toUserId !== this.userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only the invited member can respond to this transfer',
+          });
+        }
+        try {
+          const outcome = await respondOwnershipTransfer(this.db, {
+            accept: command.decision === 'approve',
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+          });
+          if (outcome.accepted) {
+            return { executionStarted: false, sourceState: 'accepted', status: 'source_accepted' };
+          }
+          return { executionStarted: false, sourceState: 'declined', status: 'source_rejected' };
+        } catch (error) {
+          if (error instanceof TRPCError && error.code === 'BAD_REQUEST') {
+            return { executionStarted: false, sourceState: 'expired', status: 'expired' };
+          }
+          if (error instanceof TRPCError && error.code === 'NOT_FOUND') {
+            return { executionStarted: false, status: 'already_decided' };
+          }
+          throw error;
+        }
       }
     }
 

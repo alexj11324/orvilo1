@@ -1,14 +1,13 @@
-import type { ActionSourceKind, NotificationFeedCard, TypedNavigationTarget } from '@orvilo/types';
+import {
+  ACTION_SOURCE_KINDS,
+  type ActionSourceKind,
+  type NotificationFeedCard,
+  type TypedNavigationTarget,
+} from '@orvilo/types';
 
 import type { NotificationItem } from '@/database/schemas/notification';
 
-const ACTION_KINDS = new Set<ActionSourceKind>([
-  'acp_input',
-  'acp_intervention',
-  'acp_permission',
-  'resource_transfer',
-  'task_review',
-]);
+const ACTION_KINDS = new Set<ActionSourceKind>(ACTION_SOURCE_KINDS);
 
 const asActionKind = (value: string | null | undefined): ActionSourceKind | null =>
   value && ACTION_KINDS.has(value as ActionSourceKind) ? (value as ActionSourceKind) : null;
@@ -19,6 +18,9 @@ const navigationFor = (row: NotificationItem): TypedNavigationTarget => {
   }
   if (row.resourceType === 'project' && row.resourceId) {
     return { kind: 'project', projectId: row.resourceId };
+  }
+  if (row.actionKind === 'workspace_ownership_transfer') {
+    return { kind: 'url', url: '/settings/members' };
   }
   if (row.actionUrl) {
     return { kind: 'url', url: row.actionUrl };

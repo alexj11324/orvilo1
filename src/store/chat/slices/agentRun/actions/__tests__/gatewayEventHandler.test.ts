@@ -1,4 +1,5 @@
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
+import { createAdapter } from '@orvilo/heterogeneous-agents';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { messageService } from '@/services/message';
@@ -862,18 +863,27 @@ describe('createGatewayEventHandler', () => {
       const handler = createHandler(store);
       const onAfterCall = vi.fn().mockResolvedValue(undefined);
       getExecutorMock.mockReturnValueOnce({ onAfterCall });
-      // Live kimi-code runs emit ACP-adapted tool_end events; the adapter
-      // round-trip is incidental to this dispatch contract, so feed the
-      // handler the adapted payload directly.
-      handler(
-        makeEvent('tool_end', {
-          apiName: 'Shell',
-          identifier: 'kimi-code',
-          params: { command: 'git worktree add /tmp/kimi-wt' },
-          result: { content: 'created', success: true },
-          toolCallId: 'kimi-shell-1',
-        }),
-      );
+      const adapter = createAdapter('kimi-code');
+
+      adapter.adapt({
+        role: 'assistant',
+        tool_calls: [
+          {
+            function: {
+              arguments: JSON.stringify({ command: 'git worktree add /tmp/kimi-wt' }),
+              name: 'Shell',
+            },
+            id: 'kimi-shell-1',
+            type: 'function',
+          },
+        ],
+      });
+      const toolEnd = adapter
+        .adapt({ content: 'created', role: 'tool', tool_call_id: 'kimi-shell-1' })
+        .find((event) => event.type === 'tool_end');
+
+      expect(toolEnd).toBeDefined();
+      handler(makeEvent('tool_end', toolEnd!.data));
       await flush();
 
       expect(getExecutorMock).toHaveBeenCalledWith('kimi-code');

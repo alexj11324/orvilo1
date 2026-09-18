@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { ConcurrencyLimitStrategy } from '@hatchet-dev/typescript-sdk/v1';
+import { ConcurrencyLimitStrategy } from '@hatchet-dev/typescript-sdk/v1/index.js';
 
 const MEMORY_TOPIC_PATH = '/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic';
 

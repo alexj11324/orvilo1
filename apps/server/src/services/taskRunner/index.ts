@@ -793,14 +793,16 @@ export class TaskRunnerService {
         provisionedRegistered = true;
       }
       // Commit fence for delegated runs: the epoch claimed on this run's
-      // task_topics row must still be current before the registration becomes
-      // durable — a superseding delegation (newer claim on the row) fences
-      // this dispatch off here, and the catch below interrupts the orphan.
+      // task_topics row must still be current AND the grant still live before
+      // the registration becomes durable — a superseding delegation fences
+      // this dispatch off here, and a revoke/expiry/membership loss that
+      // landed after the claim is caught by the grant revalidation inside
+      // assertMayCommit. The catch below interrupts the orphan.
       if (delegation) {
         if (delegatedEpoch === undefined || !dispatchedTopicId) {
           throw new Error('Delegated run registered no execution epoch');
         }
-        await this.delegationService.assertExecutionEpoch({
+        await this.delegationService.assertMayCommit({
           epoch: delegatedEpoch,
           grantId: delegation.grantId,
           taskId: task.id,

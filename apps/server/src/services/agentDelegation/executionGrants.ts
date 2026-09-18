@@ -64,6 +64,40 @@ export class AgentDelegationService {
   };
 
   /**
+   * Shared liveness evaluation for a fetched grant row — status, expiry,
+   * workspace binding and the action allowlist — plus, for user subjects, the
+   * member row it was issued under. Returns the member alongside the verdict
+   * so callers can also compare the recorded authorization version.
+   * `executor` scopes the membership probe to a caller's transaction so a
+   * claim sees the same snapshot it commits against.
+   */
+  private evaluateGrantLiveness = async (
+    grant: typeof executionGrants.$inferSelect | null | undefined,
+    input: {
+      action: DelegationAction | string;
+      executor?: OrviloDatabase | Transaction;
+      workspaceId: string;
+    },
+  ) => {
+    const memberModel = input.executor
+      ? new WorkspaceMemberModel(input.executor as OrviloDatabase, this.userId)
+      : this.memberModel;
+    const member =
+      grant?.delegationSubjectType === 'user' && grant.delegationSubjectId
+        ? await memberModel.getMember(input.workspaceId, grant.delegationSubjectId)
+        : undefined;
+
+    const verdict = evaluateGrant(grant, {
+      action: input.action,
+      now: new Date(),
+      subjectActive: ACTIVE_MEMBER_STATUSES(member),
+      workspaceId: input.workspaceId,
+    });
+
+    return { member, verdict };
+  };
+
+  /**
    * Mint a grant on `task` for `agentId`. The delegation subject defaults to
    * the caller — the human whose authority the agent borrows. Callers verify
    * task visibility and run-capability before reaching this service.
@@ -295,16 +329,49 @@ export class AgentDelegationService {
 
   /**
    * Fencing claim: bind a grant to a task_topics run and advance the row's
-   * execution epoch. The returned epoch is the fencing token — anything still
-   * holding the previous epoch is stale, regardless of lease timers. Runs are
-   * keyed by the table's unique (taskId, topicId) pair — that's what the
-   * runner holds when the row is created. Pass `tx` to make the claim
+   * execution epoch — but only while the grant is still claimable. The grant
+   * row is locked FOR UPDATE inside the caller's transaction, so a revoke
+   * racing the claim serializes on that row instead of slipping a dead grant
+   * under a fresh epoch. The returned epoch is the fencing token — anything
+   * still holding the previous epoch is stale, regardless of lease timers.
+   * Runs are keyed by the table's unique (taskId, topicId) pair — that's what
+   * the runner holds when the row is created. Pass `tx` to make the claim
    * atomic with the transaction that creates the run row.
    */
   claimExecutionEpoch = async (
     params: { grantId: string; taskId: string; topicId: string },
     executor: OrviloDatabase | Transaction = this.db,
   ) => {
+    const workspaceId = this.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'workspaceId is required' });
+    }
+
+    const [grant] = await executor
+      .select()
+      .from(executionGrants)
+      .where(eq(executionGrants.id, params.grantId))
+      .for('update')
+      .limit(1);
+
+    // A grant minted for another task never binds this task's run — same
+    // invisibility rule the run route applies at validateGrantForRun.
+    if (grant && grant.taskId && grant.taskId !== params.taskId) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+    }
+
+    const { verdict } = await this.evaluateGrantLiveness(grant, {
+      action: 'run',
+      executor,
+      workspaceId,
+    });
+    if (!verdict.ok) {
+      throw new TRPCError({
+        code: verdict.denial === 'foreign_workspace' ? 'NOT_FOUND' : 'FORBIDDEN',
+        message: `Execution grant denied: ${verdict.denial}`,
+      });
+    }
+
     const [row] = await executor
       .update(taskTopics)
       .set({
@@ -323,30 +390,68 @@ export class AgentDelegationService {
   };
 
   /**
-   * Fencing check before a delegated run commits work: the epoch it claimed
-   * must still be current on the task_topics row and still bound to its grant.
+   * Commit fence for a delegated run. The epoch it claimed must still be
+   * current on the task_topics row AND still bound to its grant — and the
+   * grant itself must still be live: active, unexpired, action-permitted,
+   * with its delegation subject an active member under the same recorded
+   * authorization version. A revoke, lapse, membership loss or re-invite that
+   * lands after the claim closes the window the epoch check alone left open.
    */
-  assertExecutionEpoch = async (params: {
+  assertMayCommit = async (params: {
+    action?: DelegationAction | string;
     epoch: number;
     grantId: string;
     taskId: string;
     topicId: string;
   }) => {
-    const [topic] = await this.db
+    const workspaceId = this.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'workspaceId is required' });
+    }
+
+    const [row] = await this.db
       .select({
         executionEpoch: taskTopics.executionEpoch,
         executionGrantId: taskTopics.executionGrantId,
+        grant: executionGrants,
       })
       .from(taskTopics)
+      .leftJoin(executionGrants, eq(executionGrants.id, taskTopics.executionGrantId))
       .where(
         and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)),
       )
       .limit(1);
 
-    if (!isEpochCurrent(topic, { epoch: params.epoch, grantId: params.grantId })) {
+    if (!row || !isEpochCurrent(row, { epoch: params.epoch, grantId: params.grantId })) {
       throw new TRPCError({
         code: 'CONFLICT',
         message: 'Execution superseded by a newer delegation epoch',
+      });
+    }
+
+    const { member, verdict } = await this.evaluateGrantLiveness(row.grant, {
+      action: params.action ?? 'run',
+      workspaceId,
+    });
+    if (!verdict.ok) {
+      throw new TRPCError({
+        code: verdict.denial === 'foreign_workspace' ? 'NOT_FOUND' : 'FORBIDDEN',
+        message: `Execution grant denied: ${verdict.denial}`,
+      });
+    }
+
+    // Authorization-version fence: the grant records the subject's membership
+    // authzVersion at issuance. A role change, re-invite or suspension replay
+    // bumps that version, and a grant minted under the old one must not keep
+    // committing under authority that no longer matches.
+    const recordedAuthzVersion = row.grant?.authzVersions?.workspaceAuthzVersion;
+    if (
+      recordedAuthzVersion !== undefined &&
+      (!member || member.authzVersion !== recordedAuthzVersion)
+    ) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Execution grant denied: authorization_version_changed',
       });
     }
   };

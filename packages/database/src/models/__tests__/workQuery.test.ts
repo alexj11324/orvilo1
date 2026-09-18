@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import type { tasks } from '../../schemas';
-import { agents, projects, users, workspaces } from '../../schemas';
+import { agents, projects, teamCycles, teams, users, workspaces } from '../../schemas';
 import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
 import { tasks as tasksTable } from '../../schemas/task';
@@ -234,5 +234,41 @@ describe('WorkQueryModel', () => {
     expect(paged).toEqual(created.map((row) => row.id).sort());
     expect(second.tasks[0]!.id).not.toBe(first.tasks[0]!.id);
     expect(second.tasks[0]!.id).not.toBe(first.tasks[1]!.id);
+  });
+
+  it('filters by an existing cycle id and treats missing cycle as isNull', async () => {
+    await serverDB.insert(teams).values({
+      createdByUserId: userId,
+      id: 'wq-team',
+      key: 'WQ',
+      name: 'Query team',
+      workspaceId,
+    });
+    const [cycle] = await serverDB
+      .insert(teamCycles)
+      .values({ name: 'Cycle 1', teamId: 'wq-team', workspaceId })
+      .returning();
+    const inCycle = await createTask(userId, { cycleRefId: cycle!.id, name: 'In cycle' });
+    const loose = await createTask(userId, { name: 'No cycle' });
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+
+    const matched = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'cycleId', op: 'eq', value: cycle!.id }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(matched.tasks.map((row) => row.id)).toEqual([inCycle.id]);
+
+    const none = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'cycleId', op: 'isNull' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(none.tasks.map((row) => row.id)).toContain(loose.id);
+    expect(none.tasks.map((row) => row.id)).not.toContain(inCycle.id);
   });
 });

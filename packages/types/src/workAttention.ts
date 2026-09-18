@@ -130,6 +130,7 @@ export type WorkQueryEntityType = 'project' | 'task';
 export type WorkQueryField =
   | 'assigneeUserId'
   | 'createdByUserId'
+  | 'cycleId'
   | 'delegatedByUserId'
   | 'id'
   | 'priority'

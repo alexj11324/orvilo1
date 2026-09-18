@@ -49,6 +49,7 @@ export class WorkQueryError extends Error {
 const TASK_FIELDS = new Set<WorkQueryField>([
   'assigneeUserId',
   'createdByUserId',
+  'cycleId',
   'delegatedByUserId',
   'id',
   'priority',
@@ -95,6 +96,9 @@ const taskColumn = (field: WorkQueryField) => {
     }
     case 'createdByUserId': {
       return tasks.createdByUserId;
+    }
+    case 'cycleId': {
+      return tasks.cycleRefId;
     }
     case 'id': {
       return tasks.id;
@@ -340,6 +344,7 @@ const sortValue = (
 ): Date | number | string | null => {
   if (field === 'updatedAt') return row.updatedAt;
   if (field === 'id') return row.id;
+  if (field === 'cycleId') return row.cycleRefId;
   if (field === 'delegatedByUserId' || field === 'reviewerUserId') {
     throw new WorkQueryError('INVALID_QUERY', 'Cannot sort by a virtual field');
   }

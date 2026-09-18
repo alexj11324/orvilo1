@@ -5,7 +5,20 @@ import type {
   NotificationPresentationFilter,
 } from '@orvilo/types';
 import { notificationScopeKey } from '@orvilo/types';
-import { and, count, desc, eq, gt, inArray, isNull, lt, or, type SQL, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lt,
+  notInArray,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 
 import type { NewNotification, NewNotificationDelivery } from '../schemas/notification';
 import { notificationDeliveries, notifications } from '../schemas/notification';
@@ -237,12 +250,17 @@ export class NotificationModel {
     return summary.unreadBadgeCount;
   }
 
-  async getFeedSummary() {
+  async getFeedSummary(opts?: { excludePendingActionRequestIds?: string[] }) {
     const now = new Date();
+    const excluded = opts?.excludePendingActionRequestIds?.filter(Boolean) ?? [];
+    const pendingExclude =
+      excluded.length > 0
+        ? sql`and (${notifications.actionRequestId} is null or ${notInArray(notifications.actionRequestId, excluded)})`
+        : sql``;
     const [row] = await this.db
       .select({
         pendingActionCount: count(
-          sql`case when ${notifications.kind} = 'action' and ${notifications.resolvedAt} is null then 1 end`,
+          sql`case when ${notifications.kind} = 'action' and ${notifications.resolvedAt} is null ${pendingExclude} then 1 end`,
         ),
         snoozedPendingCount: count(
           sql`case when ${notifications.kind} = 'action' and ${notifications.resolvedAt} is null and ${notifications.snoozedUntil} is not null and ${notifications.snoozedUntil} > ${now} then 1 end`,

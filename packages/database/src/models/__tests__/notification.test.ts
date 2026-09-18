@@ -261,6 +261,37 @@ describe('NotificationModel (integration)', () => {
       expect(await model.getUnreadCount()).toBe(0);
     });
 
+    it('does not count an outgoing transfer as a pending-for-me action', async () => {
+      const model = new NotificationModel(serverDB, userId);
+      await model.create(
+        baseNotification({
+          actionRequestId: 'xfer_in',
+          category: 'pending',
+          dedupeKey: 'action-in',
+          kind: 'action',
+          title: 'Incoming transfer',
+          type: 'resource_transfer',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          actionRequestId: 'xfer_out',
+          category: 'pending',
+          dedupeKey: 'action-out',
+          kind: 'action',
+          title: 'Outgoing transfer',
+          type: 'resource_transfer',
+        }),
+      );
+
+      await expect(
+        model.getFeedSummary({ excludePendingActionRequestIds: ['xfer_out'] }),
+      ).resolves.toMatchObject({
+        pendingActionCount: 1,
+        unreadBadgeCount: 2,
+      });
+    });
+
     it('keeps a read but unresolved action on the badge with feedSummary', async () => {
       const model = new NotificationModel(serverDB, userId);
       const action = await model.create(

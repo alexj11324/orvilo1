@@ -25,6 +25,7 @@ const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.object({
   field: z.enum([
     'assigneeUserId',
     'createdByUserId',
+    'cycleId',
     'delegatedByUserId',
     'id',
     'priority',
@@ -68,6 +69,7 @@ const workQuerySchema: z.ZodType<WorkQuery> = z.object({
         field: z.enum([
           'assigneeUserId',
           'createdByUserId',
+          'cycleId',
           'delegatedByUserId',
           'id',
           'priority',
@@ -209,8 +211,7 @@ export const workAttentionRouter = router({
     }),
 
   feedSummary: workAttentionProcedure.query(async ({ ctx }) => {
-    await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
-    return { data: await ctx.notificationModel.getFeedSummary(), success: true };
+    return { data: await ctx.actionSources.summarizeFeed(ctx.notificationModel), success: true };
   }),
 
   myWork: workAttentionProcedure
@@ -318,7 +319,10 @@ export const workAttentionRouter = router({
           limit: input.limit,
           queryHash: input.queryHash,
         });
-        return { data: { evaluation, view }, success: true };
+        return {
+          data: { evaluation, view: await ctx.savedViewModel.present(view) },
+          success: true,
+        };
       } catch (error) {
         return mapQueryError(error);
       }
@@ -329,11 +333,15 @@ export const workAttentionRouter = router({
     .query(async ({ ctx, input }) => {
       const view = await ctx.savedViewModel.findById(input.id);
       if (!view) throw new TRPCError({ code: 'NOT_FOUND', message: 'View not found' });
-      return { data: view, success: true };
+      return { data: await ctx.savedViewModel.present(view), success: true };
     }),
 
   savedViewList: workAttentionProcedure.query(async ({ ctx }) => {
-    return { data: await ctx.savedViewModel.list(), success: true };
+    const rows = await ctx.savedViewModel.list();
+    return {
+      data: await Promise.all(rows.map((row) => ctx.savedViewModel.present(row))),
+      success: true,
+    };
   }),
 
   savedViewUpdate: taskWriteProcedure

@@ -150,4 +150,39 @@ describe('SavedViewModel', () => {
     ).resolves.toBeUndefined();
     expect((await ownerViews.findById(view.id))?.name).toBe('Owner view');
   });
+
+  it('redacts private task ids from a shared view definition', async () => {
+    const ownerTasks = new TaskModel(serverDB, ownerId, workspaceId);
+    const secret = await ownerTasks.create({
+      instruction: 'Keep this title off the visitor AST',
+      name: 'Secret task',
+      visibility: 'private',
+    });
+    const open = await ownerTasks.create({
+      instruction: 'Visible work',
+      name: 'Open task',
+      visibility: 'public',
+    });
+    const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
+    const view = await ownerViews.create({
+      entityType: 'task',
+      name: 'Mixed ids',
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'id', op: 'in', value: [secret.id, open.id] }] },
+        schemaVersion: 1,
+      },
+      visibility: 'workspace',
+    });
+
+    const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
+    const presented = await visitorViews.present((await visitorViews.findById(view.id))!);
+    const serialized = JSON.stringify(presented.queryAst);
+    expect(serialized).not.toContain(secret.id);
+    expect(serialized).toContain(open.id);
+
+    const asVisitor = await visitorViews.evaluate((await visitorViews.findById(view.id))!);
+    expect(asVisitor.tasks?.map((row) => row.id)).toEqual([open.id]);
+    expect(asVisitor.tasks?.map((row) => row.name)).not.toContain('Secret task');
+  });
 });

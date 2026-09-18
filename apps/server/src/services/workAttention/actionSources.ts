@@ -255,6 +255,20 @@ export class ActionSourceRegistry {
     await notificationModel.ensureActionCards(await this.listPendingForActor());
   };
 
+  /**
+   * Needs-you (`pendingActionCount`) excludes outgoing transfers the actor
+   * can only withdraw. Those cards still sit in `unreadBadgeCount`.
+   */
+  summarizeFeed = async (notificationModel: NotificationModel) => {
+    const pending = await this.listPendingForActor();
+    await notificationModel.ensureActionCards(pending);
+    return notificationModel.getFeedSummary({
+      excludePendingActionRequestIds: pending
+        .filter((card) => card.outgoing)
+        .map((card) => card.requestId),
+    });
+  };
+
   getAuthorized = async (ref: ActionRef) => {
     if (ref.kind === 'acp_permission' || ref.kind === 'task_review') {
       const [row] = await this.db

@@ -3,7 +3,10 @@ import type {
   SavedViewVisibility,
   WorkQuery,
   WorkQueryEntityType,
+  WorkQueryField,
+  WorkQueryFilter,
   WorkQueryLayout,
+  WorkQueryPredicate,
 } from '@orvilo/types';
 import { notificationScopeKey } from '@orvilo/types';
 import { and, desc, eq, or, type SQL, sql } from 'drizzle-orm';
@@ -39,6 +42,84 @@ export class SavedViewConflictError extends Error {
     this.name = 'SavedViewConflictError';
   }
 }
+
+const UNREADABLE_ID = '';
+const ID_LOOKUP_CHUNK = 100;
+
+const isPredicate = (node: WorkQueryFilter | WorkQueryPredicate): node is WorkQueryPredicate =>
+  'field' in node && 'op' in node;
+
+const collectScalarIds = (
+  node: WorkQueryFilter | undefined,
+  field: WorkQueryField,
+  into: Set<string>,
+) => {
+  if (!node) return;
+  for (const child of [...(node.all ?? []), ...(node.any ?? [])]) {
+    if (isPredicate(child)) {
+      if (child.field !== field) continue;
+      if (typeof child.value === 'string') into.add(child.value);
+      if (Array.isArray(child.value)) {
+        for (const item of child.value) {
+          if (typeof item === 'string') into.add(item);
+        }
+      }
+      continue;
+    }
+    collectScalarIds(child, field, into);
+  }
+};
+
+const chunkIds = (ids: string[]) => {
+  const chunks: string[][] = [];
+  for (let index = 0; index < ids.length; index += ID_LOOKUP_CHUNK) {
+    chunks.push(ids.slice(index, index + ID_LOOKUP_CHUNK));
+  }
+  return chunks;
+};
+
+const redactPredicate = (
+  predicate: WorkQueryPredicate,
+  readable: { id: Set<string>; projectId: Set<string> },
+): WorkQueryPredicate => {
+  const allowed =
+    predicate.field === 'id'
+      ? readable.id
+      : predicate.field === 'projectId'
+        ? readable.projectId
+        : null;
+  if (!allowed) return predicate;
+  if (predicate.op === 'eq' && typeof predicate.value === 'string') {
+    return allowed.has(predicate.value) ? predicate : { ...predicate, value: UNREADABLE_ID };
+  }
+  if ((predicate.op === 'in' || predicate.op === 'notIn') && Array.isArray(predicate.value)) {
+    const kept = predicate.value.filter(
+      (item): item is string => typeof item === 'string' && allowed.has(item),
+    );
+    if (kept.length === 0) {
+      return predicate.op === 'in'
+        ? { field: predicate.field, op: 'eq', value: UNREADABLE_ID }
+        : { field: predicate.field, op: 'notIn', value: [UNREADABLE_ID] };
+    }
+    return { ...predicate, value: kept };
+  }
+  return predicate;
+};
+
+const redactFilter = (
+  node: WorkQueryFilter | undefined,
+  readable: { id: Set<string>; projectId: Set<string> },
+): WorkQueryFilter | undefined => {
+  if (!node) return node;
+  return {
+    all: node.all?.map((child) =>
+      isPredicate(child) ? redactPredicate(child, readable) : redactFilter(child, readable)!,
+    ),
+    any: node.any?.map((child) =>
+      isPredicate(child) ? redactPredicate(child, readable) : redactFilter(child, readable)!,
+    ),
+  };
+};
 
 /**
  * Saved views store query configuration, not a copy of tasks. Evaluation always
@@ -81,6 +162,52 @@ export class SavedViewModel {
       .where(and(eq(savedViews.id, id), this.readable()))
       .limit(1);
     return row;
+  };
+
+  /**
+   * Visitors see the query shape without identifiers they cannot read.
+   * Owners keep the stored AST so CAS updates still round-trip.
+   */
+  present = async (view: SavedViewItem): Promise<SavedViewItem> => {
+    if (view.ownerUserId === this.userId) return view;
+    return { ...view, queryAst: await this.redactQuery(view.queryAst) };
+  };
+
+  private redactQuery = async (query: WorkQuery): Promise<WorkQuery> => {
+    const taskIds = new Set<string>();
+    const projectIds = new Set<string>();
+    collectScalarIds(query.filter, 'id', query.entityType === 'project' ? projectIds : taskIds);
+    collectScalarIds(query.filter, 'projectId', projectIds);
+
+    const readable = { id: new Set<string>(), projectId: new Set<string>() };
+    const kernel = new WorkQueryModel(this.db, this.userId, this.workspaceId);
+    for (const chunk of chunkIds([...taskIds])) {
+      const result = await kernel.queryTasks({
+        limit: ID_LOOKUP_CHUNK,
+        query: {
+          entityType: 'task',
+          filter: { all: [{ field: 'id', op: 'in', value: chunk }] },
+          schemaVersion: 1,
+        },
+      });
+      for (const task of result.tasks) readable.id.add(task.id);
+    }
+    for (const chunk of chunkIds([...projectIds])) {
+      const result = await kernel.queryProjects({
+        limit: ID_LOOKUP_CHUNK,
+        query: {
+          entityType: 'project',
+          filter: { all: [{ field: 'id', op: 'in', value: chunk }] },
+          schemaVersion: 1,
+        },
+      });
+      for (const project of result.projects) {
+        readable.id.add(project.id);
+        readable.projectId.add(project.id);
+      }
+    }
+
+    return { ...query, filter: redactFilter(query.filter, readable) };
   };
 
   create = async (params: {

@@ -125,8 +125,7 @@ export const notificationRouter = router({
     }),
 
   feedSummary: notificationReadProcedure.query(async ({ ctx }) => {
-    await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
-    return ctx.notificationModel.getFeedSummary();
+    return ctx.actionSources.summarizeFeed(ctx.notificationModel);
   }),
 
   list: notificationReadProcedure

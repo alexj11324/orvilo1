@@ -62,6 +62,15 @@ interface StandardAcpPromptResult {
 /** One `session/set_config_option` application, applied after session setup. */
 export interface StandardAcpConfigOption {
   configId: string;
+  /**
+   * Selector-derived preferences are optional: they are skipped when the
+   * session's advertised `configOptions` lack the configId (or constrain the
+   * value to a different set), and a rejected application is logged and
+   * dropped instead of failing the run — bridge vocabularies drift across
+   * versions. The factory's permission presets omit the flag and stay
+   * required, since they encode the headless run posture.
+   */
+  optional?: boolean;
   value: boolean | string;
 }
 
@@ -149,6 +158,36 @@ const AUTO_PERMISSION_PREFERENCES = [
 ];
 
 /**
+ * Parse the `configOptions` list carried by `session/new` / `session/load` /
+ * `session/set_config_option` results into `configId → allowed select values`.
+ * Both field spellings are accepted (`id` in protocol v1, `configId` in v2);
+ * an entry with no enumerated `options` maps to `undefined` (unconstrained).
+ */
+const parseAdvertisedConfigOptions = (
+  value: unknown,
+): Map<string, Set<string> | undefined> => {
+  const advertised = new Map<string, Set<string> | undefined>();
+  if (!Array.isArray(value)) return advertised;
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const id = entry.configId ?? entry.id;
+    if (typeof id !== 'string' || !id) continue;
+    const allowed =
+      Array.isArray(entry.options) && entry.options.length > 0
+        ? new Set(
+            entry.options.flatMap((variant) => {
+              const optionValue = isRecord(variant) ? variant.value : undefined;
+              if (typeof optionValue === 'boolean') return [String(optionValue)];
+              return typeof optionValue === 'string' && optionValue ? [optionValue] : [];
+            }),
+          )
+        : undefined;
+    advertised.set(id, allowed);
+  }
+  return advertised;
+};
+
+/**
  * Shared ACP v1 session for every agent reached through
  * {@link ../acpRuntime!ACP_AGENT_RUNTIMES} — native `*-acp` modes and upstream
  * bridge binaries alike.
@@ -175,6 +214,13 @@ export class StandardAcpSession extends AcpAgentSession<
   StandardAcpSessionOptions
 > {
   private acceptUpdates = false;
+  /**
+   * Latest `configId → allowed values` snapshot the agent advertised — seeded
+   * from `session/new`/`session/load` and refreshed by every
+   * `session/set_config_option` response, so options applied later (e.g. a
+   * model-gated `effort`) gate on the post-set vocabulary.
+   */
+  private advertisedConfigOptions = new Map<string, Set<string> | undefined>();
   private modelDiscovery?: StandardAcpSession;
   private resolvedPrompt: StandardAcpPromptBlock[] = [];
 
@@ -286,14 +332,9 @@ export class StandardAcpSession extends AcpAgentSession<
     if (!sessionId) throw new Error(`${spec.label} returned no session id`);
     this.options.onSessionId(sessionId);
 
+    this.mergeAdvertisedConfigOptions(sessionResult.configOptions);
     const model = await this.applyInitialModel(sessionId, sessionResult);
-    for (const option of this.sessionConfig.configOptions ?? []) {
-      await this.client.request<StandardAcpSetConfigOptionResult>('session/set_config_option', {
-        configId: option.configId,
-        sessionId,
-        value: option.value,
-      });
-    }
+    await this.applySessionConfigOptions(sessionId);
     if (model) {
       this.pipeline.configureSession({ model });
       this.options.onModel?.(model);
@@ -411,6 +452,7 @@ export class StandardAcpSession extends AcpAgentSession<
         'session/set_config_option',
         { configId: catalog?.configId ?? 'model', sessionId, value },
       );
+      this.mergeAdvertisedConfigOptions(response?.configOptions);
       return (
         parseTraeAcpModelCatalog({ configOptions: response?.configOptions })?.currentModelId ??
         value
@@ -419,6 +461,73 @@ export class StandardAcpSession extends AcpAgentSession<
 
     await this.client.request('session/set_model', { modelId: value, sessionId });
     return value;
+  }
+
+  /**
+   * Apply the queued `session/set_config_option` applications in order.
+   *
+   * Required options (the factory's permission presets) apply unconditionally —
+   * a rejection fails the run because they encode the headless posture.
+   * `optional` selector-derived options are gated on what the agent actually
+   * advertised: skipped when a non-empty `configOptions` list lacks the
+   * configId or constrains the value elsewhere, attempted-and-tolerated when
+   * nothing was advertised (`session/load` may omit the list entirely). A
+   * rejected optional application lands in the stderr trace, never fails the
+   * session.
+   */
+  private async applySessionConfigOptions(sessionId: string): Promise<void> {
+    const pending = this.sessionConfig.configOptions ?? [];
+    if (pending.length === 0) return;
+
+    for (const option of pending) {
+      // Read the latest snapshot per iteration — `mergeAdvertisedConfigOptions`
+      // replaces the map, so a set applied earlier in this loop may have
+      // refreshed the vocabulary (e.g. a model-gated `effort` option).
+      const advertised = this.advertisedConfigOptions;
+      if (option.optional && advertised.size > 0) {
+        const allowed = advertised.get(option.configId);
+        if (allowed === undefined && !advertised.has(option.configId)) {
+          this.noteSkippedConfigOption(option, 'not advertised by the agent');
+          continue;
+        }
+        if (allowed !== undefined && !allowed.has(String(option.value))) {
+          this.noteSkippedConfigOption(option, 'value not among the advertised options');
+          continue;
+        }
+      }
+
+      try {
+        const response = await this.client.request<StandardAcpSetConfigOptionResult>(
+          'session/set_config_option',
+          { configId: option.configId, sessionId, value: option.value },
+        );
+        // The response carries the full updated list — refresh the advertised
+        // snapshot so later options gate on the post-set state.
+        this.mergeAdvertisedConfigOptions(response?.configOptions);
+      } catch (error) {
+        if (!option.optional) throw error;
+        this.noteSkippedConfigOption(
+          option,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
+  }
+
+  /** Refresh the advertised config vocabulary; an absent/empty list keeps the last known one. */
+  private mergeAdvertisedConfigOptions(value: unknown): void {
+    const parsed = parseAdvertisedConfigOptions(value);
+    if (parsed.size > 0) this.advertisedConfigOptions = parsed;
+  }
+
+  /** Drop a diagnostic line into the stderr sink; the run's trace records why a selector no-oped. */
+  private noteSkippedConfigOption(option: StandardAcpConfigOption, reason: string): void {
+    void Promise.resolve(
+      this.options.onStderr(
+        `[${this.sessionConfig.spec.label}] skipped session config option ` +
+          `"${option.configId}=${String(option.value)}": ${reason}\n`,
+      ),
+    ).catch(() => {});
   }
 
   /**

@@ -37,6 +37,8 @@ export interface SpawnAgentOptions {
   /**
    * Additional `session/set_config_option` applications merged after the
    * agent's defaults (e.g. `reasoning_effort`, `effort`, `fast-mode`).
+   * Caller-supplied entries are required — a rejection fails the run; selector
+   * flags lifted out of `extraArgs` arrive pre-marked `optional` instead.
    * Standard-ACP agents only.
    */
   configOptions?: StandardAcpConfigOption[];
@@ -46,7 +48,12 @@ export interface SpawnAgentOptions {
   detached?: boolean;
   /** Extra environment variables merged on top of `process.env`. */
   env?: Record<string, string>;
-  /** Extra CLI arguments appended after the agent's ACP-mode flags (native runtimes only). */
+  /**
+   * Extra CLI arguments appended after the agent's ACP-mode flags (native
+   * runtimes only — bridge binaries own their argv). Selector flags such as
+   * `--model`, `--effort`, `--mode`, and codex `-c key=value` are lifted onto
+   * `session/set_config_option` by `extractStandardAcpSelectors` before spawn.
+   */
   extraArgs?: string[];
   /** Initial model selected through the agent protocol after session setup. */
   initialModel?: string;

@@ -137,12 +137,15 @@ const createGrokAcpProc = ({
  * initialize → session/new | session/load → set_config_option → session/prompt.
  */
 const createStandardAcpProc = ({
+  extraConfigOptions,
   loadError = false,
   modelOptions,
   promptAutoComplete = true,
   responseText = 'ACP response',
   sessionId = 'acp-session-1',
 }: {
+  /** Additional advertised `configOptions` entries (e.g. `effort`, `reasoning_effort`). */
+  extraConfigOptions?: Record<string, unknown>[];
   loadError?: boolean;
   /** Extra entries merged into the fake `model` config-option catalog. */
   modelOptions?: Array<{ name: string; value: string }>;
@@ -206,6 +209,7 @@ const createStandardAcpProc = ({
                     ],
                     type: 'select',
                   },
+                  ...(extraConfigOptions ?? []),
                 ],
                 sessionId,
               },
@@ -1221,6 +1225,26 @@ describe('spawnAgent', () => {
 
   it('maps codex -c reasoning/service-tier selectors onto ACP config options', async () => {
     const fake = createStandardAcpProc({
+      extraConfigOptions: [
+        {
+          id: 'reasoning_effort',
+          name: 'Reasoning Effort',
+          options: [
+            { name: 'High', value: 'high' },
+            { name: 'Extra High', value: 'xhigh' },
+          ],
+          type: 'select',
+        },
+        {
+          id: 'fast-mode',
+          name: 'Fast Mode',
+          options: [
+            { name: 'Off', value: 'off' },
+            { name: 'On', value: 'on' },
+          ],
+          type: 'select',
+        },
+      ],
       modelOptions: [{ name: 'GPT 5.5', value: 'gpt-5.5' }],
     });
     nextFakeProc = fake.proc;
@@ -1257,6 +1281,124 @@ describe('spawnAgent', () => {
           ['fast-mode', 'on'],
         ]),
       );
+    } finally {
+      killSpy.mockRestore();
+    }
+  });
+
+  it('lifts an amp --mode selector onto the advertised amp-mode config option', async () => {
+    const fake = createStandardAcpProc({
+      extraConfigOptions: [
+        {
+          id: 'amp-mode',
+          name: 'Amp Mode',
+          options: [
+            { name: 'Medium', value: 'medium' },
+            { name: 'High', value: 'high' },
+          ],
+          type: 'select',
+        },
+      ],
+    });
+    nextFakeProc = fake.proc;
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    try {
+      const { spawnAgent } = await import('./spawnAgent');
+      const handle = await spawnAgent({
+        agentType: 'amp',
+        extraArgs: ['--mode', 'high'],
+        operationId: 'op-amp-mode',
+        prompt: 'hello',
+      });
+      for await (const _event of handle.events) {
+        // drain
+      }
+      await handle.exit;
+
+      // The bridge argv stays clean — the selector rides the session surface.
+      expect(spawnCalls[0]).toMatchObject({ args: [], command: 'amp-acp' });
+      const configValues = fake.requests
+        .filter(({ method }) => method === 'session/set_config_option')
+        .map(({ params }) => [params?.configId, params?.value]);
+      expect(configValues).toEqual(
+        expect.arrayContaining([
+          ['permission', 'bypass'],
+          ['amp-mode', 'high'],
+        ]),
+      );
+    } finally {
+      killSpy.mockRestore();
+    }
+  });
+
+  it('lifts a claude-code --effort selector onto the advertised effort config option', async () => {
+    const fake = createStandardAcpProc({
+      extraConfigOptions: [
+        {
+          id: 'effort',
+          name: 'Effort',
+          options: [
+            { name: 'Medium', value: 'medium' },
+            { name: 'High', value: 'high' },
+          ],
+          type: 'select',
+        },
+      ],
+    });
+    nextFakeProc = fake.proc;
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    try {
+      const { spawnAgent } = await import('./spawnAgent');
+      const handle = await spawnAgent({
+        agentType: 'claude-code',
+        extraArgs: ['--effort', 'high'],
+        operationId: 'op-cc-effort',
+        prompt: 'hello',
+      });
+      for await (const _event of handle.events) {
+        // drain
+      }
+      await handle.exit;
+
+      const configValues = fake.requests
+        .filter(({ method }) => method === 'session/set_config_option')
+        .map(({ params }) => [params?.configId, params?.value]);
+      expect(configValues).toEqual(expect.arrayContaining([['effort', 'high']]));
+    } finally {
+      killSpy.mockRestore();
+    }
+  });
+
+  it('skips a selector config option the agent never advertised and notes it on stderr', async () => {
+    // The fake advertises only `model`; `effort` is not in the vocabulary.
+    const fake = createStandardAcpProc();
+    nextFakeProc = fake.proc;
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    try {
+      const { spawnAgent } = await import('./spawnAgent');
+      const handle = await spawnAgent({
+        agentType: 'claude-code',
+        extraArgs: ['--effort', 'high'],
+        operationId: 'op-cc-effort-skip',
+        prompt: 'hello',
+      });
+      const stderrChunks: string[] = [];
+      handle.stderr.on('data', (chunk) => stderrChunks.push(String(chunk)));
+      for await (const _event of handle.events) {
+        // drain
+      }
+      await handle.exit;
+
+      const configIds = fake.requests
+        .filter(({ method }) => method === 'session/set_config_option')
+        .map(({ params }) => params?.configId);
+      expect(configIds).not.toContain('effort');
+      // The required permission preset still lands unconditionally.
+      expect(configIds).toContain('mode');
+      expect(stderrChunks.join('')).toContain('skipped session config option "effort=high"');
     } finally {
       killSpy.mockRestore();
     }

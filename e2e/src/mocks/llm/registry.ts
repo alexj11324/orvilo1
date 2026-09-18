@@ -32,6 +32,15 @@ export interface MockLLMTimingConfig {
 export interface MockLLMWorkerState {
   customResponseFragments: Record<string, string>;
   customResponses: Record<string, string>;
+  /**
+   * Timing overrides keyed by last-user-message fragment. Scenario-scoped —
+   * unlike the shared global config, a slow/fast stream only applies to the
+   * prompts a scenario actually sends, so parallel workers can never collapse
+   * each other's timing windows (e.g. a sibling's `resetConfig` shrinking the
+   * scroll test's 4s head delay, or a one-shot `streamChunkSize` finishing a
+   * stream before a mid-stream scroll assertion runs).
+   */
+  timingFragments?: Record<string, Partial<MockLLMTimingConfig>>;
 }
 
 /** Merged view consumed by the standalone server. */
@@ -180,4 +189,25 @@ export const resolveMockResponse = (
   }
 
   return state.config.defaultResponse;
+};
+
+/**
+ * Resolve the stream timing for a request: global config overlaid with any
+ * timing fragment matching the last user message. Returns the global config
+ * untouched when nothing matches.
+ */
+export const resolveMockTiming = (
+  messages: MockLLMChatMessage[],
+  state: MockLLMState,
+): MockLLMTimingConfig => {
+  const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
+  if (!lastUserMessage) return state.config;
+
+  const key = contentToText(lastUserMessage.content).toLowerCase().trim();
+  for (const worker of Object.values(state.workers)) {
+    for (const [fragment, timing] of Object.entries(worker.timingFragments ?? {})) {
+      if (fragment && key.includes(fragment)) return { ...state.config, ...timing };
+    }
+  }
+  return state.config;
 };

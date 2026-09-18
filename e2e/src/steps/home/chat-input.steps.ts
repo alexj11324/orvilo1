@@ -42,7 +42,10 @@ Given(
   async function (this: CustomWorld) {
     console.log('   📍 Step: 设置快速 LLM mock...');
     llmMockManager.clearResponses();
-    llmMockManager.setConfig({
+    // Fragment-scoped timing: a one-shot 1024-byte chunk would collapse the
+    // stream for any concurrent worker's mid-stream assertions if written to
+    // the shared global config.
+    llmMockManager.setTimingForFragment('cold route home message', {
       responseDelay: 0,
       streamChunkSize: 1024,
       streamDelay: 0,

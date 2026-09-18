@@ -250,7 +250,14 @@ Given('流式响应被放慢以模拟长文输出', async function (this: Custom
   // assistant placeholder is mounted but no tokens have streamed yet. Make that
   // window generous and keep the stream itself brisk — a slow per-chunk stream
   // would push a full turn past `等待流式响应结束`'s timeout on a loaded CI box.
-  llmMockManager.setConfig({ responseDelay: 4000, streamChunkSize: 40, streamDelay: 25 });
+  // Scoped to the long-article prompts via a fragment — the shared global
+  // config would race with sibling workers' setConfig/resetConfig calls and
+  // could collapse this window (or slow unrelated sends) mid-flight.
+  llmMockManager.setTimingForFragment('很长的文章', {
+    responseDelay: 4000,
+    streamChunkSize: 40,
+    streamDelay: 25,
+  });
   this.testContext.scrollMockAdjusted = true;
 });
 

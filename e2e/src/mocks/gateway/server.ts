@@ -76,7 +76,9 @@ export const startFakeGateway = (
   options: FakeGatewayOptions = {},
 ): unknown => {
   const orviloBaseUrl = options.orviloBaseUrl ?? 'http://localhost:3006';
-  const serviceToken = options.serviceToken ?? process.env.AGENT_GATEWAY_SERVICE_TOKEN;
+  // Default matches the token setup.ts / e2e.yml hand to the Orvilo server.
+  const serviceToken =
+    options.serviceToken ?? process.env.AGENT_GATEWAY_SERVICE_TOKEN ?? 'e2e-mock-service-token';
 
   const operations = new Map<string, OperationState>();
   const subscribers = new Map<string, Set<WsLike>>();
@@ -100,10 +102,14 @@ export const startFakeGateway = (
     // Cap the replay buffer — long runs only need recent history for reconnect.
     if (op.events.length > 500) op.events.splice(0, op.events.length - 500);
 
-    if (event.type === 'agent_runtime_end') {
+    // Mirrored member events ride a supervisor's channel while keeping their
+    // own operationId — only this op's own terminal flips its stored status,
+    // else a member finishing would false-complete the supervisor on resume.
+    const ownEvent = !event.operationId || event.operationId === operationId;
+    if (ownEvent && event.type === 'agent_runtime_end') {
       const reason = (event.data as Record<string, unknown> | undefined)?.reason;
       op.status = STATUS_BY_END_REASON[String(reason ?? 'completed')] ?? 'completed';
-    } else if (event.type === 'error') {
+    } else if (ownEvent && event.type === 'error') {
       op.status = 'error';
     }
     return id;
@@ -131,6 +137,17 @@ export const startFakeGateway = (
 
       if (req.method === 'GET' && path === '/health') {
         return json({ ok: true });
+      }
+
+      // The real gateway requires the service token on server pushes —
+      // enforce it when configured so a missing AGENT_GATEWAY_SERVICE_TOKEN
+      // on the Orvilo side can't false-green the suite.
+      if (
+        path.startsWith('/api/operations/') &&
+        serviceToken &&
+        req.headers.get('authorization') !== `Bearer ${serviceToken}`
+      ) {
+        return json({ error: 'unauthorized' }, 401);
       }
 
       if (req.method === 'POST' && path === '/api/operations/init') {

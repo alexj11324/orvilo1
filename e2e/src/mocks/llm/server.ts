@@ -23,6 +23,7 @@ import {
   type MockLLMState,
   readMockLLMState,
   resolveMockResponse,
+  resolveMockTiming,
 } from './registry';
 
 const FALLBACK_STATE: MockLLMState = {
@@ -66,6 +67,7 @@ const openAiChunk = (id: string, model: string, delta: Record<string, unknown>) 
   })}\n\n`;
 
 const writeChatCompletions = async (
+  req: http.IncomingMessage,
   res: http.ServerResponse,
   body: {
     messages?: MockLLMChatMessage[];
@@ -76,6 +78,7 @@ const writeChatCompletions = async (
 ): Promise<void> => {
   const state = readMockLLMState() ?? FALLBACK_STATE;
   const messages = body.messages ?? [];
+  const timing = resolveMockTiming(messages, state);
   const model = body.model ?? 'deepseek-v4-flash';
   const content =
     synthesizeJsonResponse(body.response_format) ?? resolveMockResponse(messages, state);
@@ -87,7 +90,7 @@ const writeChatCompletions = async (
     return;
   }
 
-  await sleep(state.config.responseDelay);
+  await sleep(timing.responseDelay);
 
   if (body.stream) {
     res.writeHead(200, {
@@ -97,10 +100,14 @@ const writeChatCompletions = async (
 
     res.write(openAiChunk(id, model, { role: 'assistant' }));
 
-    const size = Math.max(1, state.config.streamChunkSize);
+    const size = Math.max(1, timing.streamChunkSize);
     for (let i = 0; i < content.length; i += size) {
+      // A canceled run aborts the connection mid-stream — stop instead of
+      // EPIPE-ing. Note `req.destroyed` is already true once the body is fully
+      // consumed (stream autoDestroy), so check the socket/response side.
+      if (req.socket.destroyed || res.destroyed || res.writableEnded) return;
       res.write(openAiChunk(id, model, { content: content.slice(i, i + size) }));
-      if (i + size < content.length) await sleep(state.config.streamDelay);
+      if (i + size < content.length) await sleep(timing.streamDelay);
     }
 
     // Final chunk: finish_reason + usage (OpenAI `stream_options.include_usage`
@@ -186,9 +193,10 @@ export const createMockLLMServer = (): http.Server =>
         try {
           const raw = await readBody(req);
           const body = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
-          await writeChatCompletions(res, body);
+          await writeChatCompletions(req, res, body);
         } catch (error) {
           console.error('[e2e-llm-mock] request failed:', error);
+          if (res.writableEnded || res.destroyed) return;
           if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: { message: String(error), type: 'mock_error' } }));
         }

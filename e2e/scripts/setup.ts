@@ -19,6 +19,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+import { clearAllMockLLMState } from '../src/mocks/llm/registry';
 import { createTestOidcJwks } from '../src/support/oidcTestKey';
 
 // ============================================================================
@@ -322,6 +323,9 @@ function getServerEnv(port: number): Record<string, string> {
  * need. Idempotent — skips the spawn when both ports already answer /health.
  */
 async function startMockServices(): Promise<void> {
+  const llmPort = Number(process.env.E2E_MOCK_LLM_PORT || 3406);
+  const gatewayPort = Number(process.env.E2E_MOCK_GATEWAY_PORT || 3407);
+
   const isHealthy = async (port: number) => {
     try {
       const res = await fetch(`http://localhost:${port}/health`, {
@@ -333,8 +337,11 @@ async function startMockServices(): Promise<void> {
     }
   };
 
-  if ((await isHealthy(3406)) && (await isHealthy(3407))) {
-    log('✅', 'E2E mock services already running (LLM :3406, gateway :3407)');
+  if ((await isHealthy(llmPort)) && (await isHealthy(gatewayPort))) {
+    // Services already up (e.g. a long-lived local pair) — still wipe stale
+    // worker-state files so a previous run's responses can't shadow this one.
+    clearAllMockLLMState();
+    log('✅', `E2E mock services already running (LLM :${llmPort}, gateway :${gatewayPort})`);
     return;
   }
 
@@ -348,15 +355,15 @@ async function startMockServices(): Promise<void> {
   child.unref();
 
   const isReady = await waitForCondition(
-    async () => (await isHealthy(3406)) && (await isHealthy(3407)),
+    async () => (await isHealthy(llmPort)) && (await isHealthy(gatewayPort)),
     15_000,
     500,
   );
 
   if (!isReady) {
-    throw new Error('E2E mock services (LLM :3406, gateway :3407) failed to start');
+    throw new Error(`E2E mock services (LLM :${llmPort}, gateway :${gatewayPort}) failed to start`);
   }
-  log('✅', 'E2E mock services started (LLM :3406, gateway :3407)');
+  log('✅', `E2E mock services started (LLM :${llmPort}, gateway :${gatewayPort})`);
 }
 
 async function startServer(port: number): Promise<void> {

@@ -117,6 +117,11 @@ export class LLMMockManager {
   private config: LLMMockConfig;
   private customResponseFragments: Map<string, string> = new Map();
   private customResponses: Map<string, string> = new Map();
+  /**
+   * Per-fragment stream timing — scenario-scoped so parallel workers never
+   * collapse each other's timing windows through the shared global config.
+   */
+  private timingFragments: Map<string, Partial<LLMMockConfig>> = new Map();
 
   constructor(config: Partial<LLMMockConfig> = {}) {
     this.config = { ...defaultConfig, ...config };
@@ -132,6 +137,7 @@ export class LLMMockManager {
     persistMockLLMResponses({
       customResponseFragments: Object.fromEntries(this.customResponseFragments),
       customResponses: Object.fromEntries(this.customResponses),
+      timingFragments: Object.fromEntries(this.timingFragments),
     });
   }
 
@@ -158,8 +164,10 @@ export class LLMMockManager {
   }
 
   /**
-   * Merge partial config overrides. Used by tests that need a slower or faster
-   * stream than the defaults (e.g. to simulate mid-stream user interactions).
+   * Merge partial config overrides — global, last write wins across workers.
+   * Prefer `setTimingForFragment` for scenario timing: the global file is
+   * shared, so a sibling's `resetConfig` can silently undo a scenario's
+   * override mid-flight.
    */
   setConfig(partial: Partial<LLMMockConfig>): void {
     this.config = { ...this.config, ...partial };
@@ -167,12 +175,26 @@ export class LLMMockManager {
   }
 
   /**
-   * Reset config to factory defaults. Call from `After` hooks so a test's
-   * timing overrides do not bleed into the next scenario.
+   * Scope stream timing to requests whose last user message contains the
+   * fragment. This is the parallel-safe way to slow/speed a stream for one
+   * scenario — only matching prompts get the override, regardless of what
+   * other workers write to the shared config.
+   */
+  setTimingForFragment(userMessageFragment: string, timing: Partial<LLMMockConfig>): void {
+    this.timingFragments.set(userMessageFragment.toLowerCase().trim(), timing);
+    this.persistResponses();
+  }
+
+  /**
+   * Reset config to factory defaults and drop this worker's timing fragments.
+   * Call from `After` hooks so a test's overrides do not bleed into the next
+   * scenario.
    */
   resetConfig(): void {
     this.config = { ...defaultConfig };
+    this.timingFragments.clear();
     this.persistConfig();
+    this.persistResponses();
   }
 
   /**
@@ -338,10 +360,12 @@ export class LLMMockManager {
   }
 
   /**
-   * Disable LLM mocking
+   * Disable LLM mocking — persisted so the standalone mock server answers 503
+   * too, not just the in-page interceptor.
    */
   disable(): void {
     this.config.enabled = false;
+    this.persistConfig();
   }
 
   /**
@@ -349,6 +373,7 @@ export class LLMMockManager {
    */
   enable(): void {
     this.config.enabled = true;
+    this.persistConfig();
   }
 }
 

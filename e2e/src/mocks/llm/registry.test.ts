@@ -99,6 +99,51 @@ describe('resolveMockResponse', () => {
   });
 });
 
+describe('resolveMockTiming', () => {
+  it('overlays a matching timing fragment on the global config', async () => {
+    const { resolveMockTiming, DEFAULT_MOCK_LLM_CONFIG } = await importRegistry();
+    const state = {
+      config: DEFAULT_MOCK_LLM_CONFIG,
+      workers: {
+        '0': {
+          customResponseFragments: {},
+          customResponses: {},
+          timingFragments: { 很长的文章: { responseDelay: 4000, streamChunkSize: 40 } },
+        },
+      },
+    };
+
+    const timing = resolveMockTiming([{ content: '请输出一篇很长的文章', role: 'user' }], state);
+    expect(timing.responseDelay).toBe(4000);
+    expect(timing.streamChunkSize).toBe(40);
+    expect(timing.streamDelay).toBe(DEFAULT_MOCK_LLM_CONFIG.streamDelay);
+
+    // Non-matching prompts get the untouched global config.
+    expect(resolveMockTiming([{ content: 'hello', role: 'user' }], state)).toBe(
+      DEFAULT_MOCK_LLM_CONFIG,
+    );
+  });
+
+  it('ignores empty fragments and missing workers map', async () => {
+    const { resolveMockTiming, DEFAULT_MOCK_LLM_CONFIG } = await importRegistry();
+    const state = {
+      config: DEFAULT_MOCK_LLM_CONFIG,
+      workers: {
+        '0': {
+          customResponseFragments: {},
+          customResponses: {},
+          timingFragments: { '': { responseDelay: 9999 } },
+        },
+        '1': { customResponseFragments: {}, customResponses: {} },
+      },
+    };
+
+    expect(resolveMockTiming([{ content: 'anything', role: 'user' }], state).responseDelay).toBe(
+      DEFAULT_MOCK_LLM_CONFIG.responseDelay,
+    );
+  });
+});
+
 describe('worker state files', () => {
   it('persists per-worker files and merges them on read', async () => {
     const registry = await importRegistry();

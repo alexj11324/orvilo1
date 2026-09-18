@@ -29,7 +29,7 @@ const { memberModel, queries, audit, workspaceModel } = vi.hoisted(() => ({
     findPendingOwnershipTransfer: vi.fn(),
     findProjectsByIds: vi.fn(),
     findUserById: vi.fn(),
-    findUserProfiles: vi.fn(async () => []),
+    findUserProfiles: vi.fn(async (): Promise<any[]> => []),
     findUsersByNormalizedEmail: vi.fn(),
     insertOwnershipTransfer: vi.fn(),
     listMembersWithProfiles: vi.fn(),

@@ -8,6 +8,7 @@ import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
+import { TaskSubscriptionModel } from '../taskSubscription';
 import { myWorkQueryForMode, WorkQueryError, WorkQueryModel } from '../workQuery';
 
 const serverDB: OrviloDatabase = await getTestDB();
@@ -112,5 +113,32 @@ describe('WorkQueryModel', () => {
     });
 
     expect(result.tasks.map((row) => row.id)).toContain(reviewed.id);
+  });
+
+  it('keeps assigned and review lists after unsubscribe', async () => {
+    const task = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Followed then not',
+      reviewerUserId: userId,
+    });
+    const follows = new TaskSubscriptionModel(serverDB, userId, workspaceId);
+    await follows.subscribe(task.id);
+    await follows.unsubscribe(task.id);
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const assigned = await model.queryTasks({
+      query: myWorkQueryForMode('assigned'),
+    });
+    const review = await model.queryTasks({
+      query: myWorkQueryForMode('review'),
+    });
+    const subscribed = await model.queryTasks({
+      mode: 'subscribed',
+      query: myWorkQueryForMode('subscribed'),
+    });
+
+    expect(assigned.tasks.map((row) => row.id)).toContain(task.id);
+    expect(review.tasks.map((row) => row.id)).toContain(task.id);
+    expect(subscribed.tasks.map((row) => row.id)).not.toContain(task.id);
   });
 });

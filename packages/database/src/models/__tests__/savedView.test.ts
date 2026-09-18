@@ -108,6 +108,34 @@ describe('SavedViewModel', () => {
     expect(current?.definitionVersion).toBe(2);
   });
 
+  it('saves a repaired query AST under CAS instead of last-write-wins', async () => {
+    const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
+    const view = await ownerViews.create({
+      entityType: 'task',
+      name: 'Broken then fixed',
+      query: { entityType: 'task', schemaVersion: 1 },
+    });
+    const repaired = await ownerViews.update(view.id, {
+      expectedDefinitionVersion: 1,
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(repaired?.definitionVersion).toBe(2);
+    expect(repaired?.queryAst.filter).toEqual({
+      all: [{ field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } }],
+    });
+
+    await expect(
+      ownerViews.update(view.id, {
+        expectedDefinitionVersion: 1,
+        query: { entityType: 'task', schemaVersion: 1 },
+      }),
+    ).rejects.toBeInstanceOf(SavedViewConflictError);
+  });
+
   it('does not let a visitor update another owners view', async () => {
     const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
     const view = await ownerViews.create({

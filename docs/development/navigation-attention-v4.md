@@ -38,17 +38,17 @@ This branch's schema increment is **`0175_work_attention`**. Do not reuse `0174`
 
 ## Reuse inventory
 
-| Exists                                                                                   | Connect                                                                                         |
-| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `notifications` + `notification_deliveries`                                              | versioned read (`activityVersion`/`readVersion`), resource ACL, self-organize permission        |
-| `InboxModal` + `/inbox` (WorkInbox)                                                      | `/inbox` is the work inbox; HomeInbox stays a chat-summary capability, not a third center       |
-| `event_outbox` single `delivered` flag + `CollaborationOutboxProjector`                  | fan-out `event_consumer_receipts` so collaboration and notification consumers ACK independently |
-| `action_approvals`, `task_inputs`, `agent_interventions`, resource + ownership transfers | `ActionSourceRegistry` adapters; Inbox never patches notification rows to approve               |
-| `execution_grants.initiatedBy`                                                           | **My Work → 我委派** (explicit grant, not agent owner)                                          |
-| `tasks.reviewerUserId` + pending approvals/interventions                                 | **My Work → 待审核**                                                                            |
-| Team API / schema / workflow / project\_teams                                            | nav + Team Triage commands; no new Team model                                                   |
-| `/tasks?collection=mine&scope=assigned\|created`                                         | exact redirect to My Work tabs; other task URLs unchanged                                       |
-| Agent/group/session pins, Electron pinned pages                                          | new `navigation_favorites` for typed workspace targets (not Electron tab pins)                  |
+| Exists                                                                                   | Connect                                                                                              |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `notifications` + `notification_deliveries`                                              | versioned read (`activityVersion`/`readVersion`), resource ACL, self-organize permission             |
+| leftover `InboxModal` opener + `/inbox` (WorkInbox)                                      | `/inbox` is the work inbox; leftover modal list UI is deleted so it cannot remount as a third center |
+| `event_outbox` single `delivered` flag + `CollaborationOutboxProjector`                  | fan-out `event_consumer_receipts` so collaboration and notification consumers ACK independently      |
+| `action_approvals`, `task_inputs`, `agent_interventions`, resource + ownership transfers | `ActionSourceRegistry` adapters; Inbox never patches notification rows to approve                    |
+| `execution_grants.initiatedBy`                                                           | **My Work → 我委派** (explicit grant, not agent owner)                                               |
+| `tasks.reviewerUserId` + pending approvals/interventions                                 | **My Work → 待审核**                                                                                 |
+| Team API / schema / workflow / project\_teams                                            | nav + Team Triage commands; no new Team model                                                        |
+| `/tasks?collection=mine&scope=assigned\|created`                                         | exact redirect to My Work tabs; other task URLs unchanged                                            |
+| Agent/group/session pins, Electron pinned pages                                          | new `navigation_favorites` for typed workspace targets (not Electron tab pins)                       |
 
 ## Frozen decisions (see also DECISIONS.md in the v4 packet)
 
@@ -65,4 +65,4 @@ Single implementation clone at `/workspace` on `cursor/navigation-attention-v4-a
 
 ## Not claimed complete
 
-N12 real Linear/GitHub/ACP installation loops stay `BLOCKED_EXTERNAL_VERIFICATION` until an approved Preview exists. Shadow dual-write is not enabled on production. Native human-approval banners click through to `/inbox` (workspace-prefixed when a slug is present), not a second chat inbox. Signed Orvilo API keys (`/settings/apikey`) stay; `/settings/provider` stays retired.
+N12 real Linear/GitHub/ACP installation loops stay `BLOCKED_EXTERNAL_VERIFICATION` until an approved Preview exists. Shadow dual-write is not enabled on production. Native human-approval banners click through to `/inbox` (workspace-prefixed when a slug is present), not a second chat inbox. Signed Orvilo API keys (`/settings/apikey`) stay; `/settings/provider` stays retired. Task subscribe/unsubscribe is a follow row on a readable task — not a model-provider key and not a chat mute.

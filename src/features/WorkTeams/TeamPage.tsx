@@ -17,9 +17,11 @@ import { workAttentionService } from '@/services/workAttention';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { otherTeamOptions } from './otherTeamOptions';
+import { reassignMemberOptions } from './reassignMemberOptions';
 
 type TeamTriageTask = {
   assigneeAgentId?: string | null;
+  assigneeUserId?: string | null;
   id: string;
   instruction?: string | null;
   name?: string | null;
@@ -27,66 +29,105 @@ type TeamTriageTask = {
 
 const TeamTriageRow = memo<{
   destinations: Array<{ label: string; value: string }>;
+  members: Array<{ userId: string }>;
   onAccept: (taskId: string) => void;
   onDecline: (taskId: string) => void;
   onDuplicate: (taskId: string) => void;
+  onReassign: (taskId: string, assigneeUserId: string) => void;
   onTransferred: () => void;
   task: TeamTriageTask;
-}>(({ destinations, onAccept, onDecline, onDuplicate, onTransferred, task }) => {
-  const { t } = useTranslation('common');
-  const [destination, setDestination] = useState<string | undefined>();
-  const selected = destination ?? destinations[0]?.value;
+}>(
+  ({
+    destinations,
+    members,
+    onAccept,
+    onDecline,
+    onDuplicate,
+    onReassign,
+    onTransferred,
+    task,
+  }) => {
+    const { t } = useTranslation('common');
+    const [destination, setDestination] = useState<string | undefined>();
+    const [assigneeUserId, setAssigneeUserId] = useState<string | undefined>();
+    const selected = destination ?? destinations[0]?.value;
+    const memberOptions = reassignMemberOptions(members, task.assigneeUserId);
+    const selectedAssignee = assigneeUserId ?? memberOptions[0]?.value;
 
-  const transfer = useCallback(async () => {
-    if (!selected) return;
-    try {
-      await lambdaClient.team.moveTaskToTeam.mutate({ taskId: task.id, teamId: selected });
-      onTransferred();
-      toast.success(t('teams.transferUpdated'));
-    } catch (error) {
-      toast.error(
-        isTrpcErrorCode(error, 'PRECONDITION_FAILED')
-          ? t('teams.transferLinear')
-          : t('teams.transferFailed'),
-      );
-    }
-  }, [onTransferred, selected, t, task.id]);
+    const transfer = useCallback(async () => {
+      if (!selected) return;
+      try {
+        await lambdaClient.team.moveTaskToTeam.mutate({ taskId: task.id, teamId: selected });
+        onTransferred();
+        toast.success(t('teams.transferUpdated'));
+      } catch (error) {
+        toast.error(
+          isTrpcErrorCode(error, 'PRECONDITION_FAILED')
+            ? t('teams.transferLinear')
+            : t('teams.transferFailed'),
+        );
+      }
+    }, [onTransferred, selected, t, task.id]);
 
-  return (
-    <Flexbox horizontal align="center" gap={8} wrap="wrap">
-      <WorkspaceLink to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}>
-        <Text weight={500}>{task.name ?? task.instruction}</Text>
-      </WorkspaceLink>
-      <Button size="small" type="primary" onClick={() => onAccept(task.id)}>
-        {t('teams.accept')}
-      </Button>
-      <Button size="small" onClick={() => onDecline(task.id)}>
-        {t('teams.decline')}
-      </Button>
-      <Button size="small" onClick={() => onDuplicate(task.id)}>
-        {t('teams.markDuplicate')}
-      </Button>
-      {destinations.length > 0 ? (
-        <>
-          <Select
-            aria-label={t('teams.transferTo')}
-            options={destinations}
-            placeholder={t('teams.transferTo')}
-            size="small"
-            style={{ minWidth: 140 }}
-            value={selected}
-            onChange={(next) => {
-              if (typeof next === 'string') setDestination(next);
-            }}
-          />
-          <Button size="small" onClick={() => void transfer()}>
-            {t('teams.transfer')}
-          </Button>
-        </>
-      ) : null}
-    </Flexbox>
-  );
-});
+    return (
+      <Flexbox horizontal align="center" gap={8} wrap="wrap">
+        <WorkspaceLink to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}>
+          <Text weight={500}>{task.name ?? task.instruction}</Text>
+        </WorkspaceLink>
+        <Button size="small" type="primary" onClick={() => onAccept(task.id)}>
+          {t('teams.accept')}
+        </Button>
+        <Button size="small" onClick={() => onDecline(task.id)}>
+          {t('teams.decline')}
+        </Button>
+        <Button size="small" onClick={() => onDuplicate(task.id)}>
+          {t('teams.markDuplicate')}
+        </Button>
+        {destinations.length > 0 ? (
+          <>
+            <Select
+              aria-label={t('teams.transferTo')}
+              options={destinations}
+              placeholder={t('teams.transferTo')}
+              size="small"
+              style={{ minWidth: 140 }}
+              value={selected}
+              onChange={(next) => {
+                if (typeof next === 'string') setDestination(next);
+              }}
+            />
+            <Button size="small" onClick={() => void transfer()}>
+              {t('teams.transfer')}
+            </Button>
+          </>
+        ) : null}
+        {memberOptions.length > 0 ? (
+          <>
+            <Select
+              aria-label={t('teams.reassignTo')}
+              options={memberOptions}
+              placeholder={t('teams.reassignTo')}
+              size="small"
+              style={{ minWidth: 140 }}
+              value={selectedAssignee}
+              onChange={(next) => {
+                if (typeof next === 'string') setAssigneeUserId(next);
+              }}
+            />
+            <Button
+              size="small"
+              onClick={() => {
+                if (selectedAssignee) onReassign(task.id, selectedAssignee);
+              }}
+            >
+              {t('teams.reassign')}
+            </Button>
+          </>
+        ) : null}
+      </Flexbox>
+    );
+  },
+);
 
 TeamTriageRow.displayName = 'TeamTriageRow';
 
@@ -122,9 +163,18 @@ const TeamPage = memo(() => {
   const destinations = otherTeamOptions(teamsData?.data ?? [], teamId ?? '');
 
   const act = useCallback(
-    async (taskId: string, action: 'accept' | 'decline' | 'duplicate') => {
+    async (
+      taskId: string,
+      action: 'accept' | 'decline' | 'duplicate' | 'reassign',
+      assigneeUserId?: string,
+    ) => {
       try {
-        await workAttentionService.triage({ action, taskId, teamId: teamId! });
+        await workAttentionService.triage({
+          action,
+          taskId,
+          teamId: teamId!,
+          ...(assigneeUserId ? { assigneeUserId } : {}),
+        });
         await mutate(['team-triage', workspaceId, teamId]);
         toast.success(t('teams.triageUpdated'));
       } catch {
@@ -158,10 +208,12 @@ const TeamPage = memo(() => {
             <TeamTriageRow
               destinations={destinations}
               key={task.id}
+              members={teamData?.data.members ?? []}
               task={task}
               onAccept={(id) => void act(id, 'accept')}
               onDecline={(id) => void act(id, 'decline')}
               onDuplicate={(id) => void act(id, 'duplicate')}
+              onReassign={(id, assigneeUserId) => void act(id, 'reassign', assigneeUserId)}
               onTransferred={refreshTriage}
             />
           ))

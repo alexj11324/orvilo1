@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import type { TaskSubscriptionItem } from '../schemas/workAttention';
 import { taskSubscriptions } from '../schemas/workAttention';
@@ -49,6 +49,21 @@ export class TaskSubscriptionModel {
       .from(taskSubscriptions)
       .where(
         and(eq(taskSubscriptions.userId, this.userId), isNull(taskSubscriptions.unsubscribedAt)),
+      );
+    return rows.map((row) => row.taskId);
+  };
+
+  listActiveForTaskIds = async (taskIds: string[]): Promise<string[]> => {
+    if (taskIds.length === 0) return [];
+    const rows = await this.db
+      .select({ taskId: taskSubscriptions.taskId })
+      .from(taskSubscriptions)
+      .where(
+        and(
+          eq(taskSubscriptions.userId, this.userId),
+          isNull(taskSubscriptions.unsubscribedAt),
+          inArray(taskSubscriptions.taskId, taskIds),
+        ),
       );
     return rows.map((row) => row.taskId);
   };

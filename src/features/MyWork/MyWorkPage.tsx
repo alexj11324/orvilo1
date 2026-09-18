@@ -25,6 +25,7 @@ import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
 
 import { isMyWorkSaveableMode, myWorkSaveAsQuery } from './myWorkSaveAs';
+import { isTaskFollowed } from './myWorkSubscribe';
 
 const PRIMARY_TABS: MyWorkMode[] = ['assigned', 'delegated', 'review'];
 const SECONDARY_TABS: MyWorkMode[] = ['created', 'subscribed'];
@@ -47,6 +48,7 @@ const MyWorkPage = memo(() => {
     workAttentionService.myWork({ mode }),
   );
   const tasks = data?.data.tasks ?? [];
+  const subscribedTaskIds = data?.data.subscribedTaskIds ?? [];
   const canSaveAs = isMyWorkSaveableMode(mode);
 
   const tabs = useMemo(
@@ -56,6 +58,22 @@ const MyWorkPage = memo(() => {
         label: t(`myWork.${item}`),
       })),
     [t],
+  );
+
+  const toggleFollow = useCallback(
+    async (taskId: string, followed: boolean) => {
+      try {
+        if (followed) {
+          await workAttentionService.unsubscribe(taskId);
+        } else {
+          await workAttentionService.subscribe(taskId);
+        }
+        await mutate(workAttentionKeys.myWork(workspaceId, mode));
+      } catch {
+        toast.error(t(followed ? 'myWork.unsubscribeFailed' : 'myWork.subscribeFailed'));
+      }
+    },
+    [mode, t, workspaceId],
   );
 
   const saveCopy = useCallback(async () => {
@@ -109,14 +127,21 @@ const MyWorkPage = memo(() => {
         ) : tasks.length === 0 ? (
           <Empty description={t('myWork.empty')} />
         ) : (
-          tasks.map((task) => (
-            <WorkspaceLink
-              key={task.id}
-              to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
-            >
-              <Text weight={500}>{task.name ?? task.instruction}</Text>
-            </WorkspaceLink>
-          ))
+          tasks.map((task) => {
+            const followed = isTaskFollowed(task.id, mode, subscribedTaskIds);
+            return (
+              <Flexbox horizontal align="center" gap={8} key={task.id} wrap="wrap">
+                <WorkspaceLink
+                  to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
+                >
+                  <Text weight={500}>{task.name ?? task.instruction}</Text>
+                </WorkspaceLink>
+                <Button size="small" onClick={() => void toggleFollow(task.id, followed)}>
+                  {followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
+                </Button>
+              </Flexbox>
+            );
+          })
         )}
       </Flexbox>
     </Flexbox>

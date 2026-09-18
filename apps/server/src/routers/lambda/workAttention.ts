@@ -230,7 +230,10 @@ export const workAttentionRouter = router({
           mode: input.mode,
           query,
         });
-        return { data: result, success: true };
+        const subscribedTaskIds = await ctx.subscriptionModel.listActiveForTaskIds(
+          result.tasks.map((task) => task.id),
+        );
+        return { data: { ...result, subscribedTaskIds }, success: true };
       } catch (error) {
         return mapQueryError(error);
       }
@@ -359,6 +362,8 @@ export const workAttentionRouter = router({
   subscribe: organizeProcedure
     .input(z.object({ taskId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      const task = await ctx.taskModel.findById(input.taskId);
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
       const row = await ctx.subscriptionModel.subscribe(input.taskId);
       return { data: row, message: 'Subscribed', success: true };
     }),
@@ -383,6 +388,15 @@ export const workAttentionRouter = router({
       if (!task || task.teamId !== input.teamId) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
       }
+      if (input.action === 'reassign') {
+        if (!input.assigneeUserId) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'reassign requires assigneeUserId' });
+        }
+        const members = await ctx.teamModel.listMembers(input.teamId);
+        if (!members.some((member) => member.userId === input.assigneeUserId)) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'assignee must be a team member' });
+        }
+      }
       const triageStatus =
         input.action === 'accept'
           ? 'accepted'
@@ -403,6 +417,8 @@ export const workAttentionRouter = router({
   unsubscribe: organizeProcedure
     .input(z.object({ taskId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      const task = await ctx.taskModel.findById(input.taskId);
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
       await ctx.subscriptionModel.unsubscribe(input.taskId);
       return { message: 'Unsubscribed', success: true };
     }),

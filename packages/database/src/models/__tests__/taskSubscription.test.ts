@@ -34,12 +34,30 @@ describe('TaskSubscriptionModel', () => {
     });
     const model = new TaskSubscriptionModel(serverDB, userId, workspaceId);
     await model.subscribe(task.id);
-    expect(await model.listActiveTaskIds()).toEqual([task.id]);
+    expect(await model.listActiveForTaskIds([task.id, 'missing'])).toEqual([task.id]);
 
     expect(await model.unsubscribe(task.id)).toBe(true);
     expect(await model.listActiveTaskIds()).toEqual([]);
 
     await model.subscribe(task.id);
     expect(await model.listActiveTaskIds()).toEqual([task.id]);
+  });
+
+  it('does not clear assignee or reviewer when the follow is removed', async () => {
+    const tasks = new TaskModel(serverDB, userId, workspaceId);
+    const task = await tasks.create({
+      assigneeUserId: userId,
+      instruction: 'Stay mine',
+      name: 'Still assigned',
+      reviewerUserId: userId,
+    });
+    const model = new TaskSubscriptionModel(serverDB, userId, workspaceId);
+    await model.subscribe(task.id);
+    expect(await model.unsubscribe(task.id)).toBe(true);
+
+    const after = await tasks.findById(task.id);
+    expect(after?.assigneeUserId).toBe(userId);
+    expect(after?.reviewerUserId).toBe(userId);
+    expect(await model.listActiveTaskIds()).toEqual([]);
   });
 });

@@ -21,8 +21,8 @@ RedirectToWorkInbox.displayName = 'RedirectToWorkInbox';
 
 /**
  * Legacy opener. Bell, CMDK, and the mobile tab already land on `/inbox`.
- * Leftover callers must redirect — remounting the old modal would be a third
- * notification center.
+ * Leftover callers must redirect — the old modal list UI was removed so it
+ * cannot be remounted as a third notification center.
  */
 export const InboxModalContent = RedirectToWorkInbox;
 

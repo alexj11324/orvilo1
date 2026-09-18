@@ -1,7 +1,7 @@
 'use client';
 
 import { Empty, Flexbox, Input } from '@lobehub/ui';
-import { Alert, Button, Select, Text, toast } from '@lobehub/ui/base-ui';
+import { Alert, Button, Select, Text, TextArea, toast } from '@lobehub/ui/base-ui';
 import type { SavedViewVisibility } from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,7 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
+import { stringifyWorkQueryDraft, workQueryFromDraft } from './savedViewQueryDraft';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
 
 const SavedViewPage = memo(() => {
@@ -44,9 +45,11 @@ const SavedViewPage = memo(() => {
   const tasks = evaluation?.tasks ?? [];
   const isOwner = Boolean(currentUserId && view && view.ownerUserId === currentUserId);
   const [name, setName] = useState('');
+  const [queryDraft, setQueryDraft] = useState('');
   const [visibility, setVisibility] = useState<SavedViewVisibility>('private');
   const [teamId, setTeamId] = useState<string | null>(null);
   const viewName = view?.name;
+  const viewQueryAst = view?.queryAst;
   const viewVisibility = view?.visibility;
   const viewTeamId = view?.teamId;
   const viewIdValue = view?.id;
@@ -55,9 +58,10 @@ const SavedViewPage = memo(() => {
   useEffect(() => {
     if (!viewIdValue) return;
     setName(viewName ?? '');
+    setQueryDraft(viewQueryAst ? stringifyWorkQueryDraft(viewQueryAst) : '');
     setVisibility(viewVisibility ?? 'private');
     setTeamId(viewTeamId ?? null);
-  }, [definitionVersion, viewIdValue, viewName, viewTeamId, viewVisibility]);
+  }, [definitionVersion, viewIdValue, viewName, viewQueryAst, viewTeamId, viewVisibility]);
 
   const pinned = useMemo(
     () =>
@@ -112,11 +116,17 @@ const SavedViewPage = memo(() => {
     if (!viewId || !view || !shareReady) return;
     const trimmed = name.trim();
     if (!trimmed) return;
+    const query = workQueryFromDraft(queryDraft, view.entityType);
+    if (!query) {
+      toast.error(t('savedViews.queryInvalid'));
+      return;
+    }
     try {
       await workAttentionService.savedViewUpdate({
         expectedDefinitionVersion: view.definitionVersion,
         id: viewId,
         name: trimmed,
+        query,
         ...savedViewSharePatch(visibility, teamId),
       });
       await refreshView();
@@ -129,16 +139,21 @@ const SavedViewPage = memo(() => {
       );
       await refreshView();
     }
-  }, [name, refreshView, shareReady, t, teamId, view, viewId, visibility]);
+  }, [name, queryDraft, refreshView, shareReady, t, teamId, view, viewId, visibility]);
 
   const saveCopy = useCallback(async () => {
     if (!view) return;
+    const query = workQueryFromDraft(queryDraft, view.entityType) ?? view.queryAst;
+    if (!query) {
+      toast.error(t('savedViews.queryInvalid'));
+      return;
+    }
     try {
       const created = await workAttentionService.savedViewCreate({
         entityType: view.entityType,
         layout: view.layout,
         name: savedViewCopyName(name || view.name, t('copy')),
-        query: view.queryAst,
+        query,
         visibility: 'private',
       });
       await mutate(workAttentionKeys.savedViews(workspaceId));
@@ -146,7 +161,7 @@ const SavedViewPage = memo(() => {
     } catch {
       toast.error(t('savedViews.saveAsFailed'));
     }
-  }, [name, navigate, t, view, workspaceId]);
+  }, [name, navigate, queryDraft, t, view, workspaceId]);
 
   const deleteView = useCallback(async () => {
     if (!viewId) return;
@@ -202,6 +217,13 @@ const SavedViewPage = memo(() => {
               size="small"
               value={name}
               onChange={(event) => setName(event.target.value)}
+            />
+            <TextArea
+              aria-label={t('savedViews.query')}
+              autoSize={{ minRows: 6, maxRows: 16 }}
+              placeholder={t('savedViews.query')}
+              value={queryDraft}
+              onChange={(event) => setQueryDraft(event.target.value)}
             />
             <Flexbox horizontal gap={8} wrap="wrap">
               <Select

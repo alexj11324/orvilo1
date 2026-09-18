@@ -35,14 +35,16 @@ invocation:
 each by its own retrieval shape (the shape is defined in the generic file's
 "How this file is injected"):
 
-- **`common-mistakes.md` — the Checklist in full**, both layers: generic
-  `.agents/skills/acceptance/references/common-mistakes.md` (read-only here) and
-  project [`common-mistakes.md`](./common-mistakes.md). Re-read both checklists
-  before marking any case `pass`; pull an entry by id only when its line applies.
-- **`probe-mock-patterns.md` — index first, entries on demand**, both layers:
-  generic `.agents/skills/acceptance/references/probe-mock-patterns.md` and
-  project [`probe-mock-patterns.md`](./probe-mock-patterns.md). The headings are
-  the index; a round needs a handful of the \~100 recipes, not all of them.
+- **`common-mistakes.md` — the Checklist in full**: project
+  [`common-mistakes.md`](./common-mistakes.md). Re-read it before marking any
+  case `pass`; pull an entry by id only when its line applies.
+  (There used to be a second, generic layer at
+  `.agents/skills/acceptance/references/common-mistakes.md`; that skill was
+  retired with the standalone acceptance platform — see
+  `docs/development/hidden-surface-retirement.md`.)
+- **`probe-mock-patterns.md` — index first, entries on demand**: project
+  [`probe-mock-patterns.md`](./probe-mock-patterns.md). The headings are the
+  index; a round needs a handful of the \~100 recipes, not all of them.
 
 ```bash
 P=.agents/acceptance/probe-mock-patterns.md
@@ -96,8 +98,7 @@ Skip to Step 2 if this is a re-run after a fix, the plan is already agreed, or
 the user gave exact commands. Skip straight to Step 5 when the delivery was
 already verified on the real product earlier in this session: the run's own
 observations, logs, command output, and captures are the evidence, and the
-round is written from them and ingested without re-execution or a checker stage
-(SKILL.md → Decide whether to execute).
+round is written from them without re-execution and without a checker stage.
 
 Draft the surface, cases, expected evidence, assumptions, and deliverable — but
 do not send it for review yet: Step 2 must establish real environment state
@@ -138,14 +139,18 @@ regardless.
 
 ### The plan gate
 
-At the end of Step 2, for the **first round of every Acceptance** — including a
-standalone authored round whose Acceptance only comes into being at ingest — write
-the plan feedback (format and status markers:
+At the end of Step 2, for the **first round of every Acceptance**, write the plan
+feedback (format and status markers:
 [`references/plan-feedback.md`](./references/plan-feedback.md)) into the round's
-review notes and hand it to the **acceptance-checker** for plan review, per the skill's
-`references/acceptance-checker.md`. The acceptance-checker's "ready" decision — or its material
-findings resolved — is the gate; execution starts without asking the user. Do
-not present the plan to the user for confirmation.
+review notes and review it against that file's own criteria before executing. A
+"ready" verdict — or its material findings resolved — is the gate; execution
+starts without asking the user. Do not present the plan to the user for
+confirmation.
+
+> The separate **acceptance-checker** role, and the skill document that defined
+> it (`references/acceptance-checker.md`), were retired with the standalone
+> acceptance platform. The review still has to happen; it is now the author's,
+> held against `references/plan-feedback.md`.
 
 The user is asked only for a **user-owned prerequisite** (a secret, a device/2FA
 approval, a permission only they can grant, a destructive action) or a product
@@ -223,13 +228,12 @@ TRACE="$DIR/interaction-trace.jsonl"
   --confidence 0.75 --reason "First view requires reading state and choosing the next action"
 ```
 
-Leave the trace in the report directory — `acceptance run ingest` prices it with
-the platform's timing model. There is no analyze step, and no cost is published
-when no trace exists. Contract:
-`.agents/skills/acceptance/references/interaction-cost.md`.
+Leave the trace in the report directory: it is the record the round's interaction
+cost is read from. There is no analyze step, and no cost is reported when no
+trace exists.
 
 **Rules that hold under pressure.** Not judgment calls — each excuse below was
-made in a real Orvilo round. The generic set is in the skill's SKILL.md.
+made in a real Orvilo round.
 
 | Excuse                                                                    | Reality                                                                                                                                                                                                                                                                                                                        |
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -238,13 +242,22 @@ made in a real Orvilo round. The generic set is in the skill's SKILL.md.
 | "My change has no effect — must be the Vite cache" / "the app won't open" | Another session may have stashed the whole tree (`pre-rebase2-<pr>-<sha>`) or left conflict markers. Confirm your file is in `git status` with a unique marker before and after capture; recover only your file with `git checkout stash@{n} -- <file>`; never pop or drop their stash or resolve their conflicts. (was L-S13) |
 | "The fix is in and the tests are green"                                   | Reproduce the failure's precondition first (here: the empty→non-empty task-list transition swaps the composer instance). A run that cannot fail proves nothing; when the mocked seam is the suspect, drop the mock and drive the real kernel. (was L-S18, now generic M31)                                                     |
 
-### Step 5 — Report and publish
+### Step 5 — Report and deliver evidence
 
-The report schema, the language rule, visual/dual-text/structured-visualization
-evidence rules, and the immutable-round rules are the skill's
-`references/report.md`. **Read it before writing the first line of
-`result.json`** — a field in the wrong shape is dropped on ingest, so the round
-publishes green with its evidence silently degraded.
+> **Publishing to a standalone acceptance site was retired** with the platform
+> (`docs/development/hidden-surface-retirement.md`, HS-01 … HS-13). There is no
+> `lh acceptance run ingest`, no `lh acceptance view`, and no
+> `https://orvilo.aspectlylabs.com/acceptance/<id>` URL any more. The report
+> schema and the round rules that used to live in the skill's
+> `references/report.md` went with it — **this section is now the whole
+> contract**, so read it before writing the first line of `result.json`.
+>
+> Evidence for a run-scoped acceptance still goes through the retained channel:
+> the in-app acceptance panel on the task detail page, and the
+> `orvilo-acceptance-evidence` builtin tool (`listCriteria` / `submitEvidence`)
+> for the criteria of the run you are working in. For a PR, attach the
+> observations and captures to the PR itself and name the commit SHA they were
+> produced on (`AGENTS.md` → Verification Evidence).
 
 What is specific to this repository:
 
@@ -261,41 +274,22 @@ What is specific to this repository:
   (`check.json` + `seed/`). Execution outputs stay in the round's `assets/` and are
   never copied back into a fixture.
 
-- **Publish against the Orvilo production origin, not the local dev profile.** The product
-  under test runs locally, but publishing there yields a URL nobody can open and a
-  stub bucket that silently drops evidence uploads. Strip the local overrides:
+- **The subject must be an object that already exists.** Prefer, in order: an
+  explicit instruction; the current conversation's `topic:<id>` (the default for
+  iterative fixes and review follow-ups); an existing `task:<id>` that already
+  owns the deliverable; or `document:<id>` when the document is the subject.
+  Never invent a new Task just to have somewhere to attach a round. A terminal
+  Acceptance on the right Topic means a **new Acceptance on that same Topic**,
+  never a new Task created to dodge it.
 
-  ```bash
-  env -u ORVILO_API_KEY -u ORVILO_CLI_API_KEY -u ORVILO_CLI_HOME \
-    ORVILO_SERVER=https://orvilo.aspectlylabs.com \
-    lh acceptance run ingest "$DIR" --source agent-testing --subject "$SUBJECT" \
-    --requirement "$REQUIREMENT" --open --json
-  ```
+- **Before a follow-up round**, read the current state rather than memory — from
+  the in-app acceptance panel on the subject's task detail page. Omit accepted
+  checks, repair non-stale rejects under their exact stable ids, and carry every
+  `supersedes` chain forward.
 
-  Never unset `ORVILO_SERVER` for a production publish: keeping the destination
-  explicit prevents an installed or cached upstream CLI default from redirecting
-  evidence outside Orvilo. Verify auth in the same clean env first; if it reports no authentication, have
-  the user run `lh login`. If a publish flag is rejected as an unknown option, the
-  `lh` on PATH is stale — publish through `npx @orvilo/cli@latest` instead.
-
-- **Choose the subject by business continuity**, not by what is easiest to create:
-  an explicit instruction first; else the current conversation's `topic:<id>` (the
-  default for iterative fixes and review follow-ups); else an existing `task:<id>`
-  that already owns the deliverable; else `document:<id>` when the document is the
-  subject; and only then a new Task via `lh task create`. When the run was started
-  from a conversation, ingest attaches to it on its own — pass `--subject` only to
-  override that, and never ask the user for an id the CLI already resolves. A
-  terminal Acceptance on the right Topic means a **new Acceptance on that same
-  Topic**, never a new Task invented to dodge it.
-
-- **Before a follow-up round**, read the current state rather than memory:
-  `lh acceptance view "$SUBJECT" --json`. Omit accepted checks, repair non-stale
-  rejects under their exact stable ids, and carry every `supersedes` chain forward.
-
-- **The final reply exposes only `https://orvilo.aspectlylabs.com/acceptance/<id>`** (add
-  `?r=<roundIndex>` for this round's snapshot). No images, local paths, or internal
-  run-page paths. Leave whitespace between the URL and any following text — CJK
-  punctuation glued to it gets swallowed into the href.
+- **The final reply carries no publish URL.** That URL is gone with the platform.
+  Report what was observed and where the evidence lives; do not present local
+  file paths as if they were shareable links.
 
 ## Phase 3 — Finish
 

@@ -1,9 +1,11 @@
 # Orvilo Probe & Mock Guide
 
-This is the project-layer entry point for Orvilo acceptance probes. Read it
-together with the agent-testing skill's generic `references/probe-mock-patterns.md`.
-Product-independent rules belong upstream; Orvilo routes, stores, services, env
-variables, and fixtures belong here.
+This is the entry point for Orvilo acceptance probes. It used to sit on top of a
+generic `references/probe-mock-patterns.md` in the agent-testing skill; that skill
+was retired with the standalone acceptance platform, so this file now carries the
+whole catalogue. Product-independent rules still belong upstream (in the skill
+that replaces it), not here; Orvilo routes, stores, services, env variables, and
+fixtures belong here.
 
 ## Index
 
@@ -1971,13 +1973,13 @@ repair lifecycle.
 
 **Doesn't work:** `lh task run <id> --follow` switches to `/webapi/*`, which
 requires OIDC and rejects API-key auth after the task has already started.
-Likewise, `lh acceptance view task:T-N` does not currently resolve a task
-identifier to its internal subject id.
+Subject ids do not resolve by task identifier either — `task:T-N` is not a
+subject key the aggregate accepts.
 
-**Works:** Start the task without `--follow`, poll with `lh task view T-N`, and
-query the aggregate with `lh acceptance view task:<internal-task-id>`. The start
-response and task activity expose the operation and topic ids; the Acceptance
-bundle exposes the repair round and final rollup.
+**Works:** Start the task without `--follow` and poll with `lh task view T-N`.
+The start response and task activity expose the operation and topic ids; the
+acceptance bundle for the internal subject id is read from the in-app acceptance
+panel on the task detail page.
 
 The same identifier/internal-id gap exists on the WRITE path: a local
 `acceptance run ingest --subject task:T-N` stores the literal `T-N` as

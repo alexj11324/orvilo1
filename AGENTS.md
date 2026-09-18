@@ -61,19 +61,25 @@ Open this URL to develop locally against the production backend (orvilo.aspectly
 - Use rebase for `git pull`
 - Commit messages: prefix with gitmoji
 - Branch format: `<type>/<feature-name>`
-- Both `canary` and `main` are protected — direct pushes are blocked and PRs are the only way in. GitHub Actions is exempt so release automation can write back.
+- Both `canary` and `main` are protected — direct pushes are blocked and PRs are the only way in, including for GitHub Actions.
 
 ### Cutting a Release
 
 Run `bun run release:branch`. It fetches `origin/canary`, computes the next version,
-creates `release/vX.Y.Z`, and opens a `🚀 release: vX.Y.Z` PR against `main`.
+creates `release/vX.Y.Z`, commits the version and changelog, and opens a
+`🚀 release: vX.Y.Z` PR against `main`.
 
-Merging that PR triggers `auto-tag-release.yml`, which bumps `package.json`, generates
-the changelog, creates the tag and GitHub Release, and syncs `main` back to `canary`.
-**Do not hand-edit the root `package.json` version** — the tag workflow owns it.
+After review changes, run `bun run release:branch --prepare` (or
+`bun run hotfix:branch --prepare`) on that clean branch, then push before merging.
+Merging triggers `auto-tag-release.yml`, which validates the committed version,
+tags that PR's merge commit, publishes the GitHub Release, and opens a sync PR
+back to `canary`. `GH_TOKEN` is required for tag/release events to trigger the
+downstream publish workflows. **Do not hand-edit the root `package.json` version**
+— the release/hotfix scripts prepare it on the PR branch.
 
 An urgent fix to an already-released version goes through `hotfix/<name>` branched from
-`main`; the same workflow picks it up as a patch bump.
+`main`; `bun run hotfix:branch` prepares the patch version and changelog before
+the same tag workflow publishes it.
 
 ### Package Management
 

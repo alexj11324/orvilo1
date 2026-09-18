@@ -69,14 +69,14 @@ jobs:
       - name: Resolve update server base URL
         id: server
         env:
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
         run: |
           set -euo pipefail
-          UPDATE_SERVER_BASE_URL="${UPDATE_SERVER_URL%/}"
-          case "$UPDATE_SERVER_BASE_URL" in
-            */stable|*/nightly|*/canary|*/beta) UPDATE_SERVER_BASE_URL="${UPDATE_SERVER_BASE_URL%/*}" ;;
+          RENDERER_OTA_SERVER_BASE_URL="${RENDERER_OTA_SERVER_URL%/}"
+          case "$RENDERER_OTA_SERVER_BASE_URL" in
+            */stable|*/nightly|*/canary|*/beta) RENDERER_OTA_SERVER_BASE_URL="${RENDERER_OTA_SERVER_BASE_URL%/*}" ;;
           esac
-          echo "UPDATE_SERVER_BASE_URL=$UPDATE_SERVER_BASE_URL" >> "$GITHUB_ENV"
+          echo "RENDERER_OTA_SERVER_BASE_URL=$RENDERER_OTA_SERVER_BASE_URL" >> "$GITHUB_ENV"
 
       - name: Load shipped base
         id: base
@@ -86,7 +86,7 @@ jobs:
           set -euo pipefail
           HTTP_STATUS=$(curl -sS --connect-timeout 10 --max-time 30 \
             -o "$RUNNER_TEMP/renderer-base.json" -w '%{http_code}' \
-            "$UPDATE_SERVER_BASE_URL/$CHANNEL/base.json")
+            "$RENDERER_OTA_SERVER_BASE_URL/$CHANNEL/base.json")
           echo "Renderer base HTTP status: $HTTP_STATUS"
           if [ "$HTTP_STATUS" = "404" ]; then
             echo "::warning::no renderer OTA base metadata found; run a full release first"
@@ -143,7 +143,7 @@ jobs:
           BASE_MAIN_HASH: ${{ steps.base.outputs.main_hash }}
           RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           UPDATE_CHANNEL: ${{ inputs.channel }}
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
         run: |
           set -euo pipefail
           MAIN_HASH=$(node apps/desktop/scripts/mainHash.mjs)
@@ -155,7 +155,7 @@ jobs:
             echo "::warning::main changed since last full release — renderer patch is not allowed, run a full release instead"
             echo "allowed=false" >> "$GITHUB_OUTPUT"
             echo "reason=main-changed" >> "$GITHUB_OUTPUT"
-            if curl -fsS --connect-timeout 10 --max-time 30 "$UPDATE_SERVER_BASE_URL/$CHANNEL/$APP_VERSION/renderer/v2/mainhash-inputs.json" -o "$RUNNER_TEMP/base-mainhash-inputs.json"; then
+            if curl -fsS --connect-timeout 10 --max-time 30 "$RENDERER_OTA_SERVER_BASE_URL/$CHANNEL/$APP_VERSION/renderer/v2/mainhash-inputs.json" -o "$RUNNER_TEMP/base-mainhash-inputs.json"; then
               node --input-type=module > "$RUNNER_TEMP/renderer-mainhash-diff.txt" <<'NODE' || echo "::warning::Input manifest diff unavailable"
           import { readFile } from 'node:fs/promises';
           import { diffInputs } from './apps/desktop/scripts/validateMainHash.mjs';
@@ -178,7 +178,7 @@ jobs:
           APP_VERSION: ${{ steps.base.outputs.app_version }}
           CHANNEL: ${{ inputs.channel }}
         run: |
-          CURRENT=$(curl -sf "$UPDATE_SERVER_BASE_URL/$CHANNEL/$APP_VERSION/renderer/v2/latest.json" | node -e "
+          CURRENT=$(curl -sf "$RENDERER_OTA_SERVER_BASE_URL/$CHANNEL/$APP_VERSION/renderer/v2/latest.json" | node -e "
             let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{
               try { console.log(JSON.parse(d).version) } catch { console.log('r0') }
             })" || echo "r0")
@@ -192,7 +192,7 @@ jobs:
         run: npm run build:renderer --prefix=./apps/desktop
         env:
           UPDATE_CHANNEL: ${{ inputs.channel }}
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='
@@ -215,7 +215,7 @@ jobs:
             --channel=${{ inputs.channel }} \
             --version=${{ steps.version.outputs.version }} \
             --mainHash=${{ steps.gate.outputs.main_hash }} \
-            --feed-url="$UPDATE_SERVER_BASE_URL/$CHANNEL/$APP_VERSION/renderer/v2"
+            --feed-url="$RENDERER_OTA_SERVER_BASE_URL/$CHANNEL/$APP_VERSION/renderer/v2"
 
       - name: Upload to S3
         id: publish

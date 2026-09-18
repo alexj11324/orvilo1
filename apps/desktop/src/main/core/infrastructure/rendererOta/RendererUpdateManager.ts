@@ -11,8 +11,8 @@ import { isDev } from '@/const/env';
 import {
   BUILD_CHANNEL,
   coerceStoredUpdateChannel,
+  RENDERER_OTA_SERVER_URL,
   UPDATE_CHANNEL,
-  UPDATE_SERVER_URL,
 } from '@/modules/updater/configs';
 import { createLogger } from '@/utils/logger';
 
@@ -44,7 +44,8 @@ const APP_VERSION = electronApp.getVersion();
 const MAIN_HASH = process.env.MAIN_HASH || '';
 const PUBLIC_KEY = process.env.RENDERER_OTA_PUBLIC_KEY || '';
 const UPDATE_SERVER_BASE_URL =
-  UPDATE_SERVER_URL?.replace(/\/(stable|nightly|canary|beta)\/?$/, '').replace(/\/$/, '') || '';
+  RENDERER_OTA_SERVER_URL?.replace(/\/(stable|nightly|canary|beta)\/?$/, '').replace(/\/$/, '') ||
+  '';
 // Local e2e escape hatches (never set in packaged builds): force-enable in
 // dev and shorten the first scheduled check.
 const FORCE_IN_DEV = process.env['RENDERER_OTA_FORCE'] === '1';
@@ -89,7 +90,7 @@ export class RendererUpdateManager {
       isDev && !FORCE_IN_DEV && 'development-build',
       !MAIN_HASH && 'missing-main-hash',
       !PUBLIC_KEY && 'missing-public-key',
-      !UPDATE_SERVER_URL && 'missing-server-url',
+      !RENDERER_OTA_SERVER_URL && 'missing-server-url',
     ].filter(Boolean);
   }
 
@@ -123,7 +124,7 @@ export class RendererUpdateManager {
       disabledReasons: this.disabledReasons,
       enabled: this.enabled,
       hasPublicKey: !!PUBLIC_KEY,
-      hasServerUrl: !!UPDATE_SERVER_URL,
+      hasServerUrl: !!RENDERER_OTA_SERVER_URL,
       mainHash: MAIN_HASH,
       platform: process.platform,
     });

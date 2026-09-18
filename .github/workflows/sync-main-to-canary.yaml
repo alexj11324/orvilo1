@@ -1,5 +1,19 @@
 name: 🔄 Branch Synchronization
 
+# Brings `main` back into `canary` after a release lands, so the two lines do
+# not drift apart.
+#
+# It opens a pull request rather than pushing. The original version tried a
+# fast-forward push, fell back to a merge push, and only opened a PR when both
+# failed — but `canary` is covered by the `trunk-branches` ruleset, which
+# forbids direct pushes, and a personal-account repository ruleset cannot grant
+# GitHub Actions a bypass. So every direct-push path was going to be rejected;
+# the PR path is the only one that works.
+#
+# The PR is deliberately NOT auto-merged. canary and main have drifted (179
+# conflicted files as of 2026-09-18), so a merge normally needs a human to
+# resolve it. Auto-merging would either fail or silently pick a side.
+
 on:
   workflow_dispatch: {}
   push:
@@ -22,108 +36,69 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.GH_TOKEN }}
 
       - name: Set up Git
         run: |
-          git config --global user.name 'orvilobot'
-          git config --global user.email 'i@orvilo.aspectlylabs.com'
+          git config user.name 'orvilobot'
+          git config user.email 'i@orvilo.aspectlylabs.com'
 
-      - name: Sync main to canary
-        if: github.ref == 'refs/heads/main'
+      # NOTE: this uses the built-in GITHUB_TOKEN, which is enough to push the
+      # sync branch (it is not protected) and to open the PR. The trade-off is
+      # that PR workflows require a maintainer to approve their runs. Review
+      # and pass those checks before merging; this workflow never auto-merges.
+      - name: Open or refresh the sync pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Find existing open sync PR by head branch prefix
-          EXISTING_PR=$(gh pr list --base canary --state open --json number,headRefName \
-            --jq '[.[] | select(.headRefName | startswith("sync/main-to-canary-"))][0] // empty')
-          EXISTING_PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.number // empty' 2>/dev/null)
+          set -euo pipefail
 
-          # Refresh remote refs to avoid stale comparisons
           git fetch origin canary main
 
-          # Check if there are actual changes to sync
-          if [ "$(git rev-parse origin/main)" = "$(git rev-parse origin/canary)" ]; then
-            echo "No changes to sync"
+          if git merge-base --is-ancestor origin/main origin/canary; then
+            echo "canary already contains main — nothing to sync."
             exit 0
           fi
 
-          close_stale_pr() {
-            if [ -n "$EXISTING_PR_NUMBER" ]; then
-              gh pr close "$EXISTING_PR_NUMBER" --comment "Superseded by $1." --delete-branch || true
-            fi
-          }
+          # Keep at most one open sync PR; refresh it instead of stacking more.
+          EXISTING_PR=$(gh pr list --base canary --state open \
+            --json number,headRefName \
+            --jq '[.[] | select(.headRefName | startswith("sync/main-to-canary-"))][0].number // empty')
 
-          # 1) Fast-forward: canary is ancestor of main → just move canary pointer
-          if git merge-base --is-ancestor origin/canary origin/main; then
-            echo "canary is ancestor of main, fast-forwarding"
-            git checkout canary
-            git reset --hard origin/main
-            if git push origin canary; then
-              close_stale_pr "fast-forward push"
-              exit 0
-            fi
-            echo "Fast-forward push failed, falling back to merge"
+          if [ -n "$EXISTING_PR" ]; then
+            gh pr comment "$EXISTING_PR" \
+              --body "New commits landed on \`main\`. Pull \`origin/main\` into this branch to include them."
+            echo "Refreshed existing sync PR #$EXISTING_PR"
+            exit 0
           fi
 
-          # 2) Merge: canary has unique commits but no conflicts
-          git checkout canary
-          git reset --hard origin/canary
+          SYNC_BRANCH="sync/main-to-canary-$(date +'%Y%m%d')-${GITHUB_RUN_ID}"
+          git checkout -B "$SYNC_BRANCH" origin/canary
+          PR_OPTIONS=()
+          RESOLUTION_NOTE="The merge is clean. Review and pass CI before merging."
+
           if git merge origin/main --no-edit; then
-            echo "Merge succeeded, pushing directly"
-            if git push origin canary; then
-              close_stale_pr "direct merge push"
-              exit 0
-            fi
-
-            # Direct push failed (e.g. non-fast-forward race), fall back to PR
-            echo "Direct push failed, falling back to PR"
-            SYNC_BRANCH="sync/main-to-canary-$(date +'%Y%m%d')-${GITHUB_RUN_ID}"
-            git checkout -B "$SYNC_BRANCH"
-            git push origin "$SYNC_BRANCH" -f
-            gh pr create \
-              --base canary \
-              --head "$SYNC_BRANCH" \
-              --title "🚀 release: sync main branch to canary" \
-              --body "Automatic sync from main to canary. Direct push failed, please merge this PR." || true
-            exit 0
-          fi
-
-          # 3) Conflicts: create or update PR for manual resolution
-          echo "Merge conflicts detected, creating PR"
-          git merge --abort
-
-          if [ -n "$EXISTING_PR_NUMBER" ]; then
-            gh pr comment "$EXISTING_PR_NUMBER" --body "New commits on \`main\`. Please pull latest \`origin/main\` into this branch to include them."
-            echo "Commented on existing PR #$EXISTING_PR_NUMBER"
+            echo "Merge is clean."
           else
-            SYNC_BRANCH="sync/main-to-canary-$(date +'%Y%m%d')-${GITHUB_RUN_ID}"
-            git checkout -B "$SYNC_BRANCH" origin/canary
-            if ! git merge origin/main --no-edit; then
-              git add -A
-              git commit --no-edit -m "chore: merge main into canary (has conflicts to resolve)"
-            fi
-            git push origin "$SYNC_BRANCH" -f
-
-            printf '%s\n' \
-              'Automatic sync from main to canary. Merge conflicts detected.' \
-              '' \
-              '**Resolution steps:**' \
-              '```bash' \
-              'git fetch origin' \
-              "git checkout $SYNC_BRANCH" \
-              'git merge origin/main' \
-              '# Resolve conflicts' \
-              'git add -A && git commit' \
-              'git push' \
-              '```' \
-              '' \
-              '> Do NOT merge canary into a main-based branch — always merge main INTO the canary-based branch to keep a clean commit graph.' \
-              > /tmp/pr-body.md
-
-            gh pr create \
-              --base canary \
-              --head "$SYNC_BRANCH" \
-              --title "🚀 release: sync main branch to canary" \
-              --body-file /tmp/pr-body.md
+            # Never commit conflict markers. Keep main's actual tree so GitHub
+            # can detect the conflicts against canary on a draft pull request.
+            git merge --abort
+            git checkout -B "$SYNC_BRANCH" origin/main
+            PR_OPTIONS=(--draft)
+            RESOLUTION_NOTE="This draft preserves main's tree because the merge conflicts. Merge origin/canary into this branch, resolve each conflict, commit, push, and pass CI before marking it ready."
+            echo "Merge has conflicts — opening a draft for manual resolution."
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+          git push origin "$SYNC_BRANCH"
+
+          gh pr create \
+            "${PR_OPTIONS[@]}" \
+            --base canary \
+            --head "$SYNC_BRANCH" \
+            --title "🔄 sync: main → canary" \
+            --body "Automatic sync of \`main\` back into \`canary\`.
+
+          $RESOLUTION_NOTE
+
+          Workflows opened with GITHUB_TOKEN require a maintainer to approve their runs. Do not merge without passing CI."
+
+          echo "✅ Opened sync PR from $SYNC_BRANCH"

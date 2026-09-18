@@ -4,6 +4,13 @@ import { confirm, select } from '@inquirer/prompts';
 import { consola } from 'consola';
 import * as semver from 'semver';
 
+import {
+  assertCleanWorkingTree,
+  getCurrentBranch,
+  getExpectedVersionFromBranch,
+  prepareRelease,
+} from './releasePreparation';
+
 // Version type
 type VersionType = 'patch' | 'minor' | 'major';
 
@@ -142,6 +149,43 @@ function createReleaseBranch(version: string): void {
   }
 }
 
+function prepareReleaseCommit(version: string): void {
+  try {
+    prepareRelease(version);
+  } catch (error) {
+    consola.error('❌ Failed to prepare the release commit');
+    consola.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
+function requireCleanWorkingTree(): void {
+  try {
+    assertCleanWorkingTree();
+  } catch (error) {
+    consola.error('❌ Release requires a clean working tree');
+    consola.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
+function finalizeRelease(): void {
+  const branch = getCurrentBranch();
+  if (!branch.startsWith('release/')) {
+    consola.error(`❌ --prepare must run on a release branch, not "${branch}"`);
+    process.exit(1);
+  }
+
+  const version = getExpectedVersionFromBranch(branch);
+  if (!version) {
+    consola.error(`❌ Unable to read a valid version from release branch "${branch}"`);
+    process.exit(1);
+  }
+
+  prepareReleaseCommit(version);
+  consola.success(`✅ Release v${version} finalized on ${branch}`);
+}
+
 // Push branch to remote
 function pushBranch(version: string): void {
   const branchName = `release/v${version}`;
@@ -172,6 +216,10 @@ This branch contains changes for the upcoming v${version} release.
 2. ✅ Pushed to remote
 3. 🔄 Waiting for PR review and merge
 4. ⏳ Release workflow triggered after merge
+
+### Finalize after review
+After review commits land, run \`bun run release:branch --prepare\` on this branch
+to regenerate the version and changelog before merging.
 
 ---
 Created by release script`;
@@ -241,6 +289,17 @@ async function main(): Promise<void> {
   // 1. Check Git repository
   checkGitRepo();
 
+  // `--prepare` finalizes an existing release branch after review commits.
+  // It intentionally does not fetch, switch branches, push, or create a PR.
+  if (process.argv.slice(2).includes('--prepare')) {
+    requireCleanWorkingTree();
+    finalizeRelease();
+    return;
+  }
+
+  // All subsequent release steps either update refs or change the checkout.
+  requireCleanWorkingTree();
+
   // 2. Fetch latest canary (ensure we have the latest version to bump from)
   fetchCanary();
 
@@ -267,13 +326,16 @@ async function main(): Promise<void> {
   // 6. Create release branch
   createReleaseBranch(newVersion);
 
-  // 7. Push to remote
+  // 7. Commit the version bump and changelog on that branch
+  prepareReleaseCommit(newVersion);
+
+  // 8. Push to remote
   pushBranch(newVersion);
 
-  // 8. Create PR
+  // 9. Create PR
   createPullRequest(newVersion);
 
-  // 9. Show completion info
+  // 10. Show completion info
   showCompletion(newVersion);
 }
 

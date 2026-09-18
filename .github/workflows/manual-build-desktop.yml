@@ -121,10 +121,36 @@ jobs:
             echo "MAC_PROVISIONING_PROFILE=$RUNNER_TEMP/orvilo.provisionprofile" >> "$GITHUB_ENV"
           fi
 
+      - name: Prepare macOS notarization API key
+        if: runner.os == 'macOS'
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APPLE_API_KEY_BASE64" ]; then
+            echo "No App Store Connect API key provided; preserving Apple ID notarization fallback."
+            exit 0
+          fi
+          : "${APPLE_API_KEY_ID:?APPLE_API_KEY_ID is required with APPLE_API_KEY_BASE64}"
+          : "${APPLE_API_ISSUER:?APPLE_API_ISSUER is required with APPLE_API_KEY_BASE64}"
+          umask 077
+          key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+          printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$key_path"
+          {
+            echo "APPLE_API_KEY=$key_path"
+            echo "APPLE_API_KEY_ID=$APPLE_API_KEY_ID"
+            echo "APPLE_API_ISSUER=$APPLE_API_ISSUER"
+            echo "ORVILO_APPLE_API_KEY_PATH=$key_path"
+          } >> "$GITHUB_ENV"
+
       - name: Build artifact on macOS
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: ${{ inputs.channel }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='
@@ -136,6 +162,15 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Clean up macOS notarization API key
+        if: always() && runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          key_path="${ORVILO_APPLE_API_KEY_PATH:-}"
+          if [ -n "$key_path" ] && [[ "$key_path" == "$RUNNER_TEMP/AuthKey_"*.p8 ]]; then
+            rm -f -- "$key_path"
+          fi
 
       - name: Rename macOS latest-mac.yml for multi-architecture support
         if: runner.os == 'macOS'
@@ -195,6 +230,8 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: ${{ inputs.channel }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='
@@ -241,6 +278,8 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: ${{ inputs.channel }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='

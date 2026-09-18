@@ -9,7 +9,7 @@ name: Release Desktop Stable
 #   1. 仅响应 stable 版本 tag (不含任何 '-' 后缀)
 #   2. 使用 STABLE 专用的 Umami 配置
 #   3. 额外上传到 S3 更新服务器
-#   4. 构建时注入 UPDATE_SERVER_URL 让客户端从 S3 检查更新
+#   4. 构建时注入 RENDERER_OTA_SERVER_URL 让 Renderer OTA 从静态存储检查更新
 #
 # 需要配置的 Secrets (S3 相关, 统一 UPDATE_ 前缀):
 #   - UPDATE_AWS_ACCESS_KEY_ID
@@ -17,7 +17,7 @@ name: Release Desktop Stable
 #   - UPDATE_S3_BUCKET (S3 存储桶名称)
 #   - UPDATE_S3_REGION (可选, 默认 us-east-1)
 #   - UPDATE_S3_ENDPOINT (可选, 用于 R2/MinIO 等 S3 兼容服务)
-#   - UPDATE_SERVER_URL (客户端检查更新的 URL)
+#   - RENDERER_OTA_SERVER_URL (Renderer OTA 检查更新的 URL)
 # ============================================
 
 on:
@@ -128,9 +128,16 @@ jobs:
           CLOUD_TOKEN: ${{ secrets.ORVILO_CLOUD_TOKEN }}
         run: |
           set -euo pipefail
-          : "${CLOUD_REPOSITORY:?OVERLAY_REPOSITORY repository variable is not set}"
-          # checkout persist-credentials extraheader would send GITHUB_TOKEN and 404 the private cloud repo
-          cloud_ref=$(git -c http.https://github.com/.extraheader= ls-remote "https://x-access-token:${CLOUD_TOKEN}@github.com/${CLOUD_REPOSITORY}.git" HEAD | cut -f1)
+          if [[ -z "$CLOUD_REPOSITORY" && -z "$CLOUD_TOKEN" ]]; then
+            cloud_ref="$GITHUB_SHA"
+            echo "Using OSS-only desktop build; no Cloud overlay credentials were provided."
+          elif [[ -z "$CLOUD_REPOSITORY" || -z "$CLOUD_TOKEN" ]]; then
+            echo "::error::OVERLAY_REPOSITORY and ORVILO_CLOUD_TOKEN must be provided together"
+            exit 1
+          else
+            # checkout persist-credentials extraheader would send GITHUB_TOKEN and 404 the private cloud repo
+            cloud_ref=$(git -c http.https://github.com/.extraheader= ls-remote "https://x-access-token:${CLOUD_TOKEN}@github.com/${CLOUD_REPOSITORY}.git" HEAD | cut -f1)
+          fi
           if [[ ! "$cloud_ref" =~ ^[0-9a-f]{40}$ ]]; then
             echo "Unable to resolve Cloud revision"
             exit 1
@@ -235,6 +242,31 @@ jobs:
             echo "MAC_PROVISIONING_PROFILE=$RUNNER_TEMP/orvilo.provisionprofile" >> "$GITHUB_ENV"
           fi
 
+      - name: Prepare macOS notarization API key
+        if: runner.os == 'macOS'
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APPLE_API_KEY_BASE64" ]; then
+            echo "No App Store Connect API key provided; preserving Apple ID notarization fallback."
+            exit 0
+          fi
+          : "${APPLE_API_KEY_ID:?APPLE_API_KEY_ID is required with APPLE_API_KEY_BASE64}"
+          : "${APPLE_API_ISSUER:?APPLE_API_ISSUER is required with APPLE_API_KEY_BASE64}"
+          umask 077
+          key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+          printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$key_path"
+          chmod 600 "$key_path"
+          {
+            echo "APPLE_API_KEY=$key_path"
+            echo "APPLE_API_KEY_ID=$APPLE_API_KEY_ID"
+            echo "APPLE_API_ISSUER=$APPLE_API_ISSUER"
+            echo "ORVILO_APPLE_API_KEY_PATH=$key_path"
+          } >> "$GITHUB_ENV"
+
       # macOS 构建
       - name: Build artifact on macOS
         id: build_macos
@@ -242,7 +274,7 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: stable
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
           RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           RELEASE_NOTES: ${{ needs.check-stable.outputs.release_notes }}
           APP_URL: http://localhost:3015
@@ -259,6 +291,15 @@ jobs:
           # Debug hdiutil issues (https://github.com/electron-userland/electron-builder/issues/8415)
           DEBUG_DMG: true
 
+      - name: Clean up macOS notarization API key
+        if: always() && runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          key_path="${ORVILO_APPLE_API_KEY_PATH:-}"
+          if [ -n "$key_path" ] && [[ "$key_path" == "$RUNNER_TEMP/AuthKey_"*.p8 ]]; then
+            rm -f -- "$key_path"
+          fi
+
       # Windows 构建
       - name: Build artifact on Windows
         id: build_windows
@@ -266,7 +307,7 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: stable
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
           RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           RELEASE_NOTES: ${{ needs.check-stable.outputs.release_notes }}
           APP_URL: http://localhost:3015
@@ -284,7 +325,7 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: stable
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
           RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           RELEASE_NOTES: ${{ needs.check-stable.outputs.release_notes }}
           APP_URL: http://localhost:3015
@@ -390,7 +431,7 @@ jobs:
         run: ls -R release
 
       - name: Upload to Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           # 手动触发时使用输入的版本号创建 tag
           tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', needs.check-stable.outputs.version) || github.event.release.tag_name }}
@@ -426,6 +467,7 @@ jobs:
           channel: stable
           cloud-ref: ${{ needs.check-stable.outputs.cloud_ref }}
           version: ${{ needs.check-stable.outputs.version }}
+          upload-release-files: false
           aws-access-key-id: ${{ secrets.UPDATE_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.UPDATE_AWS_SECRET_ACCESS_KEY }}
           s3-bucket: ${{ secrets.UPDATE_S3_BUCKET }}

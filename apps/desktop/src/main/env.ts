@@ -55,6 +55,7 @@ const getRuntimeEnv = () => ({
   ...process.env,
   DESKTOP_BACKEND_PROXY_RETHROW_ERRORS: process.env.DESKTOP_BACKEND_PROXY_RETHROW_ERRORS,
   DESKTOP_EXTERNAL_NAVIGATION_HOSTS: process.env.DESKTOP_EXTERNAL_NAVIGATION_HOSTS,
+  RENDERER_OTA_SERVER_URL: process.env.RENDERER_OTA_SERVER_URL,
   UPDATE_CHANNEL: process.env.UPDATE_CHANNEL,
   UPDATE_SERVER_URL: process.env.UPDATE_SERVER_URL,
 });
@@ -110,6 +111,9 @@ export const getDesktopEnv = memoize(() =>
       // Custom update server URL (for stable channel)
       // e.g., https://releases.aspectlylabs.com/stable or https://your-bucket.s3.amazonaws.com/releases
       UPDATE_SERVER_URL: z.string().optional().default(process.env.UPDATE_SERVER_URL),
+
+      // Renderer OTA can use a static object store while installers use GitHub Releases.
+      RENDERER_OTA_SERVER_URL: z.string().optional().default(process.env.RENDERER_OTA_SERVER_URL),
 
       // Vercel JWT for bypassing deployment protection (dev only)
       VERCEL_JWT: z.string().optional(),

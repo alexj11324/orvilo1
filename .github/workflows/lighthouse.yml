@@ -1,8 +1,14 @@
 name: Lighthouse Badger
 
+# NOTE: disabled for now. Before enabling it:
+#   1. create a `lighthouse` branch to hold the badges. The inherited config
+#      pointed at `aspectlylabs/orvilo`, a repository that does not exist, so
+#      the checkout could never have succeeded.
+#   2. provide GH_TOKEN with push access — the nightly badge commit lands on
+#      that branch, and the built-in token is not used here.
 env:
   TOKEN_NAME: 'GH_TOKEN'
-  REPO_BRANCH: 'aspectlylabs/orvilo lighthouse'
+  REPO_BRANCH: 'alexj11324/orvilo1 lighthouse'
   USER_NAME: 'orvilobot'
   USER_EMAIL: 'i@orvilo.aspectlylabs.com'
   AUDIT_TYPE: 'both'
@@ -41,11 +47,11 @@ jobs:
           echo "REPOSITORY=$REPOSITORY" >> $GITHUB_ENV
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
         env:
-          REPO_BRANCH: ${{ matrix.REPO_BRANCH || env.REPO_BRANCH }}
+          REPO_BRANCH: ${{ env.REPO_BRANCH }}
       - uses: actions/checkout@v6
         with:
           repository: ${{ env.REPOSITORY }}
-          token: ${{ secrets[matrix.TOKEN_NAME] || secrets[env.TOKEN_NAME] }}
+          token: ${{ secrets[env.TOKEN_NAME] }}
           ref: ${{ env.BRANCH }}
       - uses: actions/checkout@v6
         with:
@@ -55,10 +61,10 @@ jobs:
         with:
           urls: ${{ matrix.URLS }}
           badges_args: ${{ matrix.BADGES_ARGS }}
-          audit_type: ${{ matrix.AUDIT_TYPE || env.AUDIT_TYPE }}
-          mobile_lighthouse_params: ${{ matrix.MOBILE_LIGHTHOUSE_PARAMS || env.MOBILE_LIGHTHOUSE_PARAMS }}
-          desktop_lighthouse_params: ${{ matrix.DESKTOP_LIGHTHOUSE_PARAMS || env.DESKTOP_LIGHTHOUSE_PARAMS }}
-          user_name: ${{ matrix.USER_NAME || env.USER_NAME }}
-          user_email: ${{ matrix.USER_EMAIL || env.USER_EMAIL }}
+          audit_type: ${{ env.AUDIT_TYPE }}
+          mobile_lighthouse_params: ${{ env.MOBILE_LIGHTHOUSE_PARAMS }}
+          desktop_lighthouse_params: ${{ env.DESKTOP_LIGHTHOUSE_PARAMS }}
+          user_name: ${{ env.USER_NAME }}
+          user_email: ${{ env.USER_EMAIL }}
           commit_message: ${{ matrix.COMMIT_MESSAGE || env.COMMIT_MESSAGE }}
           max_push_attempts: 5

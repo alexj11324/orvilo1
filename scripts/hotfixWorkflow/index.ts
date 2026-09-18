@@ -1,10 +1,17 @@
 import { execFileSync, execSync } from 'node:child_process';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
+import path from 'node:path';
 
 import { confirm, input } from '@inquirer/prompts';
 import { consola } from 'consola';
 import * as semver from 'semver';
+
+import {
+  assertCleanWorkingTree,
+  getCurrentBranch,
+  getExpectedHotfixVersion,
+  prepareRelease,
+} from '../releaseWorkflow/releasePreparation';
 
 const ROOT_DIR = process.cwd();
 const PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'package.json');
@@ -14,15 +21,6 @@ function checkGitRepo(): void {
     execSync('git rev-parse --git-dir', { stdio: 'ignore' });
   } catch {
     consola.error('❌ Current directory is not a Git repository');
-    process.exit(1);
-  }
-}
-
-function getCurrentBranch(): string {
-  try {
-    return execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
-  } catch {
-    consola.error('❌ Unable to determine current branch');
     process.exit(1);
   }
 }
@@ -125,6 +123,26 @@ function createHotfixBranch(branchName: string): void {
   }
 }
 
+function prepareReleaseCommit(version: string): void {
+  try {
+    prepareRelease(version);
+  } catch (error) {
+    consola.error('❌ Failed to prepare the hotfix commit');
+    consola.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
+function requireCleanWorkingTree(): void {
+  try {
+    assertCleanWorkingTree();
+  } catch (error) {
+    consola.error('❌ Hotfix requires a clean working tree');
+    consola.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
 function pushBranch(branchName: string): void {
   try {
     consola.info('📤 Pushing branch to remote...');
@@ -151,6 +169,10 @@ This PR starts a hotfix release from \`main\`.
 2. ✅ Pushed to remote
 3. 🔄 Waiting for PR review and merge
 4. ⏳ Auto tag + GitHub Release will be created after merge
+
+### Finalize after review
+After review commits land, run \`bun run hotfix:branch --prepare\` on this branch
+to regenerate the version and changelog before merging.
 
 ---
 Created by hotfix script`;
@@ -194,19 +216,34 @@ Next steps:
   );
 }
 
-function extractVersionFromBranch(branchName: string): string | null {
-  const match = branchName.match(/^hotfix\/v(.+?)(?:-[a-f0-9]+)?$/);
-  return match ? match[1] : null;
-}
-
 async function main(): Promise<void> {
   consola.info('🩹 Orvilo Hotfix Script\n');
 
   checkGitRepo();
 
+  const prepareOnly = process.argv.slice(2).includes('--prepare');
   const currentBranch = getCurrentBranch();
   const isOnMain = currentBranch === 'main';
   const isOnHotfix = currentBranch.startsWith('hotfix/');
+
+  if (prepareOnly) {
+    requireCleanWorkingTree();
+
+    if (!isOnHotfix) {
+      consola.error(`❌ --prepare must run on a hotfix branch, not "${currentBranch}"`);
+      process.exit(1);
+    }
+
+    const version = getExpectedHotfixVersion(currentBranch);
+    if (!version) {
+      consola.error(`❌ Unable to read a valid version from hotfix branch "${currentBranch}"`);
+      process.exit(1);
+    }
+
+    prepareReleaseCommit(version);
+    consola.success(`✅ Hotfix v${version} finalized on ${currentBranch}`);
+    return;
+  }
 
   if (!isOnMain && !isOnHotfix) {
     consola.error(`❌ Current branch "${currentBranch}" is neither main nor a hotfix branch`);
@@ -215,10 +252,15 @@ async function main(): Promise<void> {
   }
 
   if (isOnHotfix) {
+    requireCleanWorkingTree();
     consola.info(`🔍 Detected existing hotfix branch: ${currentBranch}`);
 
     const currentVersion = getCurrentVersion();
-    const version = extractVersionFromBranch(currentBranch) ?? bumpPatchVersion(currentVersion);
+    const version = getExpectedHotfixVersion(currentBranch);
+    if (!version) {
+      consola.error(`❌ Unable to read a valid version from hotfix branch "${currentBranch}"`);
+      process.exit(1);
+    }
 
     const confirmed = await confirmHotfix({
       branchName: currentBranch,
@@ -231,10 +273,12 @@ async function main(): Promise<void> {
       process.exit(0);
     }
 
+    prepareReleaseCommit(version);
     pushBranch(currentBranch);
     await createPullRequest(version, currentBranch);
     showCompletion(version, currentBranch);
   } else {
+    requireCleanWorkingTree();
     consola.info('📥 Pulling latest main branch...');
     execSync('git pull --rebase origin main', { stdio: 'inherit' });
 
@@ -254,6 +298,7 @@ async function main(): Promise<void> {
     }
 
     createHotfixBranch(branchName);
+    prepareReleaseCommit(newVersion);
     pushBranch(branchName);
     await createPullRequest(newVersion, branchName);
     showCompletion(newVersion, branchName);

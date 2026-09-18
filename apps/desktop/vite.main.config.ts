@@ -120,6 +120,7 @@ export default defineConfig(async (env) => {
       'process.env.DESKTOP_EXTERNAL_NAVIGATION_HOSTS': JSON.stringify(externalNavigationHosts),
       'process.env.MAIN_HASH': JSON.stringify(mainHash),
       'process.env.RENDERER_OTA_PUBLIC_KEY': JSON.stringify(process.env.RENDERER_OTA_PUBLIC_KEY),
+      'process.env.RENDERER_OTA_SERVER_URL': JSON.stringify(process.env.RENDERER_OTA_SERVER_URL),
       'process.env.UPDATE_CHANNEL': JSON.stringify(process.env.UPDATE_CHANNEL),
       'process.env.UPDATE_SERVER_URL': JSON.stringify(process.env.UPDATE_SERVER_URL),
     },

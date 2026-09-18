@@ -7,8 +7,7 @@ inputs:
     required: true
   cloud-repository:
     description: >-
-      Overlay repository (owner/name) for commercial desktop builds — pass the
-      OVERLAY_REPOSITORY repository variable; deliberately no hardcoded default.
+      Overlay repository (owner/name) for commercial desktop builds — pass the OVERLAY_REPOSITORY repository variable; deliberately no hardcoded default.
     required: false
     default: ''
   cloud-ref:
@@ -28,8 +27,15 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
+    - name: Validate optional Cloud overlay inputs
+      if: (inputs.cloud-token == '') != (inputs.cloud-repository == '')
+      shell: bash
+      run: |
+        echo "::error::cloud-token and cloud-repository must be provided together"
+        exit 1
+
     - name: Overlay Cloud repository for desktop build
-      if: inputs.cloud-token != ''
+      if: inputs.cloud-token != '' && inputs.cloud-repository != ''
       shell: bash
       env:
         CLOUD_CHECKOUT: ${{ runner.temp }}/orvilo-cloud
@@ -39,9 +45,6 @@ runs:
         CLOUD_TOKEN: ${{ inputs.cloud-token }}
       run: |
         set -euo pipefail
-        # Fail loudly rather than silently shipping an OSS-only commercial build.
-        : "${CLOUD_REPOSITORY:?cloud-repository input is empty — pass the OVERLAY_REPOSITORY repository variable}"
-
         cloud_root="$(cd "$GITHUB_WORKSPACE/.." && pwd)"
         cloud_checkout="$RUNNER_TEMP/orvilo-cloud"
 

@@ -122,11 +122,6 @@ import {
   selfFeedbackIntentManifest,
 } from '@orvilo/builtin-tool-self-iteration/client';
 import {
-  SkillStoreInspectors,
-  SkillStoreManifest,
-  SkillStoreRenders,
-} from '@orvilo/builtin-tool-skill-store/client';
-import {
   SkillsInspectors,
   SkillsManifest,
   SkillsRenders,
@@ -289,7 +284,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     [NotebookIdentifier]: NotebookRenders,
     [PageAgentManifest.identifier]: PageAgentRenders as Record<string, BuiltinRender>,
     [RemoteDeviceManifest.identifier]: RemoteDeviceRenders as Record<string, BuiltinRender>,
-    [SkillStoreManifest.identifier]: SkillStoreRenders as Record<string, BuiltinRender>,
     [SkillsManifest.identifier]: SkillsRenders as Record<string, BuiltinRender>,
     [TaskManifest.identifier]: TaskRenders as Record<string, BuiltinRender>,
     [UserInteractionIdentifier]: UserInteractionRenders as Record<string, BuiltinRender>,
@@ -365,7 +359,6 @@ export const registerBuiltinToolSurfaces = (): void => {
       string,
       BuiltinInspector
     >,
-    [SkillStoreManifest.identifier]: SkillStoreInspectors as Record<string, BuiltinInspector>,
     [SkillsManifest.identifier]: SkillsInspectors as Record<string, BuiltinInspector>,
     [TaskManifest.identifier]: TaskInspectors as Record<string, BuiltinInspector>,
     [UserInteractionIdentifier]: UserInteractionInspectors as Record<string, BuiltinInspector>,

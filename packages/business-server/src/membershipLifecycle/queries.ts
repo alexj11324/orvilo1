@@ -1,15 +1,26 @@
 import type { OrviloDatabase } from '@orvilo/database';
-import type { UserItem, WorkspaceItem, WorkspaceMemberItem } from '@orvilo/database/schemas';
+import type {
+  NewWorkspaceOwnershipTransfer,
+  UserItem,
+  WorkspaceItem,
+  WorkspaceMemberItem,
+  WorkspaceOwnershipTransferItem,
+} from '@orvilo/database/schemas';
+import {
+  devices,
+  executionGrants,
+  projectMembers,
+  projects,
+  tasks,
+  users,
+  workspaceMembers,
+  workspaceOwnershipTransfers,
+  workspaces,
+} from '@orvilo/database/schemas';
 import type { TaskItem } from '@orvilo/types';
 import { and, asc, count, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
 import { recordBulkTaskMutation } from '@/database/models/taskDomainMutation';
-import { devices } from '@orvilo/database/schemas';
-import { executionGrants } from '@orvilo/database/schemas';
-import { projects } from '@orvilo/database/schemas';
-import { tasks } from '@orvilo/database/schemas';
-import { users } from '@orvilo/database/schemas';
-import { workspaceMembers, workspaces } from '@orvilo/database/schemas';
 
 /** Task statuses that still carry a live responsibility; terminal states are not reassigned or counted. */
 const OPEN_TASK_STATUSES = ['backlog', 'paused', 'running'] as const;
@@ -22,17 +33,11 @@ const MEMBER_LIST_LIMIT = 500;
  * accept/remove flow can serialize on it. `getMemberForUpdate` on the model
  * filters `deleted_at IS NULL`, which cannot lock a removed member's row.
  */
-export const lockMembershipForUpdate = (
-  db: OrviloDatabase,
-  workspaceId: string,
-  userId: string,
-) =>
+export const lockMembershipForUpdate = (db: OrviloDatabase, workspaceId: string, userId: string) =>
   db
     .select()
     .from(workspaceMembers)
-    .where(
-      and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)),
-    )
+    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
     .for('update')
     .then((rows) => rows[0]);
 
@@ -45,9 +50,7 @@ export const findMembershipRow = (db: OrviloDatabase, workspaceId: string, userI
   db
     .select()
     .from(workspaceMembers)
-    .where(
-      and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)),
-    )
+    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
     .then((rows) => rows[0]);
 
 /**
@@ -66,20 +69,14 @@ export const lockWorkspaceForUpdate = (db: OrviloDatabase, workspaceId: string) 
  * Monotonic bump of the member's authorization version: revocation, suspend
  * and role-change paths all invalidate cached grants through this counter.
  */
-export const bumpAuthzVersion = async (
-  db: OrviloDatabase,
-  workspaceId: string,
-  userId: string,
-) => {
+export const bumpAuthzVersion = async (db: OrviloDatabase, workspaceId: string, userId: string) => {
   await db
     .update(workspaceMembers)
     .set({
       authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
       updatedAt: new Date(),
     })
-    .where(
-      and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)),
-    );
+    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)));
 };
 
 export interface MemberWithProfile {
@@ -147,6 +144,76 @@ export const countOpenTasksReviewedBy = async (
   return Number(row?.total ?? 0);
 };
 
+export interface MemberWorkload {
+  openAssignedCount: number;
+  openReviewingCount: number;
+  projectCount: number;
+}
+
+const EMPTY_WORKLOAD: MemberWorkload = {
+  openAssignedCount: 0,
+  openReviewingCount: 0,
+  projectCount: 0,
+};
+
+/**
+ * Per-member workload for the whole roster in three grouped aggregates —
+ * project memberships, open assignee tasks, open reviewer tasks. One row per
+ * member would N+1 the directory; grouping in SQL keeps it at three queries.
+ */
+export const countMemberWorkload = async (
+  db: OrviloDatabase,
+  workspaceId: string,
+): Promise<Map<string, MemberWorkload>> => {
+  const [projectRows, assignedRows, reviewingRows] = await Promise.all([
+    db
+      .select({ total: count(), userId: projectMembers.userId })
+      .from(projectMembers)
+      .where(
+        and(
+          eq(projectMembers.workspaceId, workspaceId),
+          isNull(projectMembers.deletedAt),
+          isNull(projectMembers.suspendedAt),
+        ),
+      )
+      .groupBy(projectMembers.userId),
+    db
+      .select({ total: count(), userId: tasks.assigneeUserId })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.workspaceId, workspaceId),
+          inArray(tasks.status, [...OPEN_TASK_STATUSES]),
+          isNull(tasks.deletedAt),
+          isNotNull(tasks.assigneeUserId),
+        ),
+      )
+      .groupBy(tasks.assigneeUserId),
+    db
+      .select({ total: count(), userId: tasks.reviewerUserId })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.workspaceId, workspaceId),
+          inArray(tasks.status, [...OPEN_TASK_STATUSES]),
+          isNull(tasks.deletedAt),
+          isNotNull(tasks.reviewerUserId),
+        ),
+      )
+      .groupBy(tasks.reviewerUserId),
+  ]);
+
+  const workload = new Map<string, MemberWorkload>();
+  const merge = (userId: string | null, patch: Partial<MemberWorkload>) => {
+    if (!userId) return;
+    workload.set(userId, { ...(workload.get(userId) ?? EMPTY_WORKLOAD), ...patch });
+  };
+  for (const row of projectRows) merge(row.userId, { projectCount: Number(row.total) });
+  for (const row of assignedRows) merge(row.userId, { openAssignedCount: Number(row.total) });
+  for (const row of reviewingRows) merge(row.userId, { openReviewingCount: Number(row.total) });
+  return workload;
+};
+
 export const listOpenAssignedTaskTitles = async (
   db: OrviloDatabase,
   workspaceId: string,
@@ -177,7 +244,10 @@ export const countActiveDelegations = async (
     .where(
       and(
         eq(executionGrants.workspaceId, workspaceId),
-        or(eq(executionGrants.initiatedBy, userId), eq(executionGrants.delegationSubjectId, userId)),
+        or(
+          eq(executionGrants.initiatedBy, userId),
+          eq(executionGrants.delegationSubjectId, userId),
+        ),
         eq(executionGrants.status, 'active'),
       ),
     );
@@ -235,6 +305,74 @@ export const reassignOpenAssignedTasks = async (
 
   return moved.length;
 };
+
+/** The workspace's live hand-off request, if one exists (at most one — partial unique index). */
+export const findPendingOwnershipTransfer = (
+  db: OrviloDatabase,
+  workspaceId: string,
+): Promise<WorkspaceOwnershipTransferItem | undefined> =>
+  db
+    .select()
+    .from(workspaceOwnershipTransfers)
+    .where(
+      and(
+        eq(workspaceOwnershipTransfers.workspaceId, workspaceId),
+        eq(workspaceOwnershipTransfers.status, 'pending'),
+      ),
+    )
+    .then((rows) => rows[0]);
+
+/** Same lookup under a row lock — respond/cancel paths serialize on it. */
+export const lockPendingOwnershipTransferForUpdate = (
+  db: OrviloDatabase,
+  workspaceId: string,
+): Promise<WorkspaceOwnershipTransferItem | undefined> =>
+  db
+    .select()
+    .from(workspaceOwnershipTransfers)
+    .where(
+      and(
+        eq(workspaceOwnershipTransfers.workspaceId, workspaceId),
+        eq(workspaceOwnershipTransfers.status, 'pending'),
+      ),
+    )
+    .for('update')
+    .then((rows) => rows[0]);
+
+export const insertOwnershipTransfer = (
+  db: OrviloDatabase,
+  row: Omit<NewWorkspaceOwnershipTransfer, 'id'>,
+): Promise<WorkspaceOwnershipTransferItem> =>
+  db
+    .insert(workspaceOwnershipTransfers)
+    .values(row)
+    .returning()
+    .then((rows) => rows[0]);
+
+/** Terminal write for a pending transfer — pending → decided status. */
+export const decideOwnershipTransfer = (
+  db: OrviloDatabase,
+  transferId: string,
+  status: 'accepted' | 'cancelled' | 'declined' | 'expired',
+) =>
+  db
+    .update(workspaceOwnershipTransfers)
+    .set({ decidedAt: new Date(), status })
+    .where(eq(workspaceOwnershipTransfers.id, transferId));
+
+/** Public profile fields for a list of user ids — transfer counterparty display. */
+export const findUserProfiles = (db: OrviloDatabase, userIds: string[]) =>
+  userIds.length === 0
+    ? Promise.resolve([])
+    : db
+        .select({
+          avatar: users.avatar,
+          fullName: users.fullName,
+          id: users.id,
+          username: users.username,
+        })
+        .from(users)
+        .where(inArray(users.id, userIds));
 
 export const findUserById = (db: OrviloDatabase, userId: string) =>
   db

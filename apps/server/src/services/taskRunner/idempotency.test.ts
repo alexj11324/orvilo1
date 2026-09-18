@@ -32,13 +32,6 @@ describe('taskRunIdempotencyKey', () => {
       }),
     ).toBe('dependency-cascade:task-a,task-b:task:task-child:generation:1:revision:2');
     expect(
-      taskRunIdempotencyKey.steerContinuation({
-        messageId: 'message-1',
-        taskId: 'task-1',
-        topicId: 'topic-1',
-      }),
-    ).toBe('steer:task-1:topic:topic-1:message:message-1');
-    expect(
       taskRunIdempotencyKey.readySubtask({
         parentTaskId: 'parent-1',
         requestId: 'click-1',

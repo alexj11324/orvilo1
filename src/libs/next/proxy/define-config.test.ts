@@ -1,8 +1,6 @@
 /**
  * @vitest-environment node
  */
-import { readFile } from 'node:fs/promises';
-
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -64,15 +62,21 @@ describe('defineConfig locale path-traversal hardening', () => {
 });
 
 describe('defineConfig Workbench SPA rewrite', () => {
-  it('routes verify through Workbench for every user agent', async () => {
+  // The standalone `/verify` tree used to be rewritten to Workbench for every
+  // user agent. It is retired, so the path no longer reaches Workbench on any
+  // device; it falls through to the main SPA, whose retired-root reservation
+  // guard owns it (see `sharedMainAreaChildren`).
+  it('no longer routes the retired verify tree to Workbench', async () => {
     const mobileVerify = await run(
       'http://localhost:3010/verify/run-1?hl=en-US',
       MOBILE_USER_AGENT,
     );
     const desktopVerify = await run('http://localhost:3010/verify/run-1?hl=en-US');
 
-    expect(new URL(mobileVerify!).pathname).toBe('/spa-workbench/en-US/verify/run-1');
-    expect(new URL(desktopVerify!).pathname).toBe('/spa-workbench/en-US/verify/run-1');
+    for (const rewritten of [mobileVerify, desktopVerify]) {
+      expect(new URL(rewritten!).pathname).toMatch(/^\/spa\/[^/]+\/verify\/run-1$/);
+      expect(new URL(rewritten!).pathname).not.toContain('/spa-workbench/');
+    }
   });
 
   it('keeps acceptance on the main SPA', async () => {
@@ -123,27 +127,6 @@ describe('defineConfig Share SPA rewrite', () => {
   });
 });
 
-describe('Acceptance installation guide', () => {
-  it('serves the public Markdown asset without authentication or SPA rewrites', async () => {
-    const { auth } = await import('@/auth');
-    vi.mocked(auth.api.getSession).mockClear();
-    const response = await middleware(new NextRequest('http://localhost:3010/acceptance/skill.md'));
-
-    expect(response?.headers.get('x-middleware-next')).toBe('1');
-    expect(response?.headers.get('x-middleware-rewrite')).toBeNull();
-    expect(response?.headers.get('location')).toBeNull();
-    expect(auth.api.getSession).not.toHaveBeenCalled();
-
-    const guide = await readFile('public/acceptance/skill.md', 'utf8');
-    expect(guide).toContain('npm install -g @orvilo/cli');
-    expect(guide).toContain('lh login');
-    // Server-side bundle distribution is retired — the guide must point at the
-    // vendored skill copy, not the removed `lh acceptance install` pull.
-    expect(guide).not.toContain('```sh\nlh acceptance install');
-    expect(guide).toContain('.agents/skills/acceptance/SKILL.md');
-  });
-});
-
 describe('defineConfig backend subtree pass-through', () => {
   // The matcher's workspace-slug lookahead keeps `/market/agent/**` and
   // `/api/agent/**` unmatched today — this locks the middleware-level contract
@@ -164,5 +147,16 @@ describe('defineConfig backend subtree pass-through', () => {
     }
 
     expect(auth.api.getSession).not.toHaveBeenCalled();
+  });
+});
+
+describe('retired acceptance installation guide', () => {
+  it('no longer bypasses the proxy for the withdrawn asset', async () => {
+    const response = await middleware(new NextRequest('http://localhost:3010/acceptance/skill.md'));
+
+    // The public install guide was retired with the standalone Acceptance
+    // platform. The path must fall through to normal SPA handling instead of
+    // keeping the removed unauthenticated pass-through from `public/acceptance/`.
+    expect(response?.headers.get('x-middleware-next')).not.toBe('1');
   });
 });

@@ -25,6 +25,7 @@ import { useWorkspaceSyncPathname } from './useWorkspaceSyncPathname';
  */
 export const RESERVED_FIRST_SEGMENTS = new Set([
   // Shared (mirrored under /:workspaceSlug too):
+  'acceptance',
   'agent',
   'agents',
   'automations',
@@ -42,6 +43,7 @@ export const RESERVED_FIRST_SEGMENTS = new Set([
   'eval',
   'tasks',
   'task',
+  'verify',
   // Personal-only:
   'a',
   'apps',

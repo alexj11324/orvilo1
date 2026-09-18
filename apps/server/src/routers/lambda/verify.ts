@@ -664,22 +664,6 @@ export const verifyRouter = router({
       };
     }),
 
-  /**
-   * Retired. Server-side skill distribution (`lh acceptance install` pulling a
-   * `SKILL.md` bundle) is gone — the acceptance skill ships vendored in the
-   * repository under `.agents/skills/acceptance`, so there is nothing to pull.
-   * The procedure stays on the contract so released CLI versions get an
-   * explicit retired error instead of an opaque "procedure not found".
-   */
-  getSkillBundle: verifyProcedure.input(z.object({ identifier: z.string() })).query(({ input }) => {
-    throw new TRPCError({
-      code: 'NOT_FOUND',
-      message:
-        `Skill bundle distribution is retired — "${input.identifier}" is no longer served. ` +
-        'The acceptance skill ships vendored under .agents/skills/acceptance in the repository.',
-    });
-  }),
-
   getVerifyState: verifyProcedure
     .input(z.object({ operationId: z.string() }))
     .query(async ({ ctx, input }) => ctx.runModel.getStateByOperation(input.operationId)),
@@ -1168,8 +1152,10 @@ export const verifyRouter = router({
    * Flip who can read this round's report page beyond its creator. Creation
    * defaults are scope-dependent (personal → public, workspace → private) and
    * acceptance-attached rounds inherit their aggregate; this is the deliberate
-   * per-round override. Note `acceptance.setVisibility` cascades over rounds,
-   * so the aggregate flip wins over earlier per-round choices.
+   * per-round override. The acceptance-level flip (`acceptance.setVisibility`)
+   * used to cascade over rounds; it was retired with the standalone Acceptance
+   * platform, so this per-round override is now the only way to publish a
+   * report beyond its creator.
    */
   setRunVisibility: verifyWriteProcedure
     .input(z.object({ verifyRunId: z.string(), visibility: z.enum(verifyVisibilities) }))

@@ -9,7 +9,6 @@ import { extractUuid } from '../utils';
 import { AcceptanceOverview } from './AcceptanceOverview';
 import { AcceptanceBundleGate, AcceptanceScope } from './AcceptanceScope';
 import { FlowPanelHostContext } from './Flow/FlowPanelHost';
-import AcceptanceFocusWorkspace from './Focus/AcceptanceFocusWorkspace';
 import AcceptanceLedgerRail from './History/AcceptanceLedgerRail';
 import { acceptanceScrollLayout } from './layout';
 
@@ -53,20 +52,28 @@ interface AcceptancePageProps {
   onDraftToComposer?: (text: string) => boolean;
 }
 
+/**
+ * The acceptance reader.
+ *
+ * It is hosted by the portal (`Portal/Acceptance`), which mounts it against an
+ * explicit `acceptanceId` — the acceptance a task panel is showing. The
+ * standalone `/acceptance/:id` page and its `…/check/:checkId` second level
+ * were retired with the standalone platform, so there is no non-embedded,
+ * route-driven mount left: an acceptance is always read inside the object that
+ * owns it, never as a page of its own.
+ */
 const AcceptancePage = ({
   acceptanceId: explicitAcceptanceId,
   onDraftToComposer,
 }: AcceptancePageProps) => {
-  const params = useParams<{ acceptanceId: string; checkId: string }>();
+  const params = useParams<{ acceptanceId: string }>();
   const acceptanceId = explicitAcceptanceId ?? extractUuid(params.acceptanceId);
   const [flowPanelHost, setFlowPanelHostContext] = useState<HTMLDivElement | null>(null);
-  const embedded = Boolean(explicitAcceptanceId);
-  const focused = !embedded && Boolean(params.checkId);
 
   if (!acceptanceId) return null;
 
   return (
-    <AcceptanceScope acceptanceId={acceptanceId} embedded={embedded}>
+    <AcceptanceScope embedded acceptanceId={acceptanceId}>
       <AcceptanceBundleGate>
         <FlowPanelHostContext value={flowPanelHost}>
           <Flexbox horizontal className={styles.page}>
@@ -76,14 +83,9 @@ const AcceptancePage = ({
               style={{ minHeight: 0, minWidth: 0, position: 'relative' }}
             >
               <Flexbox className={styles.contentFrame} flex={1} style={{ minWidth: 0 }}>
-                <Flexbox
-                  flex={focused ? 1 : undefined}
-                  gap={16}
-                  style={{ minHeight: focused ? 0 : undefined, width: '100%' }}
-                >
-                  {focused ? <AcceptanceFocusWorkspace /> : null}
+                <Flexbox gap={16} style={{ width: '100%' }}>
+                  <AcceptanceOverview onDraftToComposer={onDraftToComposer} />
                 </Flexbox>
-                {!focused && <AcceptanceOverview onDraftToComposer={onDraftToComposer} />}
               </Flexbox>
               <AcceptanceLedgerRail />
             </Flexbox>

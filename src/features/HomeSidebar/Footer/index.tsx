@@ -11,7 +11,6 @@ import {
   Download,
   Feather,
   FileClockIcon,
-  Send,
   Settings2,
   SettingsIcon,
 } from 'lucide-react';
@@ -29,7 +28,6 @@ import ThemeButton from '@/features/User/UserPanel/ThemeButton';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useNavLayout } from '@/hooks/useNavLayout';
 import { useAnalytics } from '@/libs/analytics/client';
-import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors/general';
 
@@ -81,7 +79,6 @@ const Footer = memo(() => {
   const activeNavKey = useActiveNavKey();
   const isHomeSidebar = activeNavKey === 'home';
   const billboardMenuItems = useBillboardMenuItems();
-  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
 
   const trackMenuClick = useCallback(
@@ -120,17 +117,6 @@ const Footer = memo(() => {
             },
             {
               type: 'divider' as const,
-            },
-          ]
-        : []),
-      ...(enableBusinessFeatures
-        ? [
-            {
-              icon: <Icon icon={Send} />,
-              key: 'inviteFriend',
-              label: (
-                <WorkspaceLink to="/settings/referral">{t('userPanel.inviteFriend')}</WorkspaceLink>
-              ),
             },
           ]
         : []),
@@ -214,7 +200,6 @@ const Footer = memo(() => {
     footer.showSettingsEntry,
     footer.layout,
     footer.hideGitHub,
-    enableBusinessFeatures,
     handleOpenChangelogModal,
     handleOpenFeedbackModal,
     isDevMode,

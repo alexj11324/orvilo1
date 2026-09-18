@@ -148,4 +148,91 @@ describe('RoomHub', () => {
 
     expect(hub.presence('task:task-1')).toHaveLength(0);
   });
+
+  it('drops malformed cursor and selection fields instead of trusting them', () => {
+    const hub = new RoomHub();
+    const a = fakeConnection({ connectionId: 'a' });
+    const b = fakeConnection({ connectionId: 'b', userId: 'user-2' });
+    hub.join(a.connection);
+    hub.join(b.connection);
+
+    hub.updatePresence('a', 'task:task-1', {
+      // u must be a finite number — a string slips past an unchecked cast but
+      // is rejected by the schema validation.
+      cursor: { entityId: 'task-1', entityType: 'task', u: 'fast', v: 0.5 },
+      selection: { entityId: 42, entityType: 'task' },
+      typing: 'yes',
+    });
+
+    // Every malformed field is dropped — garbage never reaches peers.
+    expect(b.sent).toEqual([
+      {
+        actor: { id: 'user-1', kind: 'human' },
+        connectionId: 'a',
+        state: {},
+        type: 'presence',
+      },
+    ]);
+    expect(hub.presence('task:task-1')).toEqual([
+      { actor: { id: 'user-1', kind: 'human' }, connectionId: 'a', state: {} },
+    ]);
+  });
+
+  it('keeps valid presence fields when a sibling field is malformed', () => {
+    const hub = new RoomHub();
+    const a = fakeConnection({ connectionId: 'a' });
+    const b = fakeConnection({ connectionId: 'b', userId: 'user-2' });
+    hub.join(a.connection);
+    hub.join(b.connection);
+
+    hub.updatePresence('a', 'task:task-1', {
+      cursor: { entityId: 'task-1', entityType: 'task', u: Number.POSITIVE_INFINITY, v: 0 },
+      selection: { anchor: 'task:task-1:title', entityId: 'task-1', entityType: 'task' },
+      typing: true,
+    });
+
+    // A bad cursor never takes down the valid selection.
+    expect(b.sent).toEqual([
+      {
+        actor: { id: 'user-1', kind: 'human' },
+        connectionId: 'a',
+        state: {
+          selection: { anchor: 'task:task-1:title', entityId: 'task-1', entityType: 'task' },
+          typing: true,
+        },
+        type: 'presence',
+      },
+    ]);
+  });
+
+  it('caps overlong strings rather than broadcasting them', () => {
+    const hub = new RoomHub();
+    const a = fakeConnection({ connectionId: 'a' });
+    const b = fakeConnection({ connectionId: 'b', userId: 'user-2' });
+    hub.join(a.connection);
+    hub.join(b.connection);
+
+    const huge = 'x'.repeat(10_000);
+    hub.updatePresence('a', 'task:task-1', {
+      cursor: {
+        // Overlong OPTIONAL field → dropped; the cursor itself survives.
+        anchor: huge,
+        entityId: 'task-1',
+        entityType: 'task',
+        u: 0.1,
+        v: 0.2,
+      },
+      // Overlong REQUIRED field → the whole selection is dropped.
+      selection: { entityId: huge, entityType: 'task' },
+    });
+
+    expect(b.sent).toEqual([
+      {
+        actor: { id: 'user-1', kind: 'human' },
+        connectionId: 'a',
+        state: { cursor: { entityId: 'task-1', entityType: 'task', u: 0.1, v: 0.2 } },
+        type: 'presence',
+      },
+    ]);
+  });
 });

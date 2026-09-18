@@ -97,8 +97,14 @@ export const createRoomPublisher = (gatewayUrl = process.env.COLLABORATION_GATEW
 /** Resolved per call so dev env changes (and tests) don't require a reload. */
 export const getRoomPublisher = (): RoomPublisher => createRoomPublisher();
 
-/** Public URL clients dial — what `collaboration.authorize` hands back. */
-export const gatewayConnectUrl = () =>
-  process.env.COLLABORATION_GATEWAY_PUBLIC_URL ??
-  process.env.COLLABORATION_GATEWAY_URL ??
-  'ws://localhost:3012/collaboration';
+/**
+ * Public URL clients dial — what `collaboration.authorize` hands back.
+ * Returns `null` when no gateway is configured: outside development an
+ * unset gateway must fail closed, because the `localhost` default would send
+ * a production browser to a WebSocket on the user's own machine. Callers must
+ * treat `null` as "collaboration unavailable", not as a URL to ship.
+ */
+export const gatewayConnectUrl = (): string | null =>
+  process.env.COLLABORATION_GATEWAY_PUBLIC_URL ||
+  process.env.COLLABORATION_GATEWAY_URL ||
+  (process.env.NODE_ENV === 'development' ? 'ws://localhost:3012/collaboration' : null);

@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import type { CollaborationRoom, RoomAuthorization, RoomSnapshotResult } from '@orvilo/types';
@@ -32,6 +33,17 @@ export class CollaborationService {
    * onto every frame and ignore any actor fields the client supplies.
    */
   authorize = async (room: CollaborationRoom): Promise<RoomAuthorization> => {
+    // Fail closed before any authz work: an unconfigured gateway must never
+    // mint a ticket that sends a browser to a bogus URL (the old localhost
+    // fallback pointed production clients at their own machine).
+    const gatewayUrl = gatewayConnectUrl();
+    if (!gatewayUrl) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'collaboration gateway not configured',
+      });
+    }
+
     await assertRoomAccess(this.db, { userId: this.userId, workspaceId: this.workspaceId }, room);
 
     const [profile] = await this.db
@@ -60,7 +72,7 @@ export class CollaborationService {
       workspaceId: this.workspaceId,
     });
 
-    return { expiresAt: new Date(expiresAt).toISOString(), gatewayUrl: gatewayConnectUrl(), token };
+    return { expiresAt: new Date(expiresAt).toISOString(), gatewayUrl, token };
   };
 
   /**

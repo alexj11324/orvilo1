@@ -1,11 +1,13 @@
 // @vitest-environment node
+import { inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import type { tasks } from '../../schemas';
-import { agents, users, workspaces } from '../../schemas';
+import { agents, projects, users, workspaces } from '../../schemas';
 import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
+import { tasks as tasksTable } from '../../schemas/task';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskSubscriptionModel } from '../taskSubscription';
@@ -140,5 +142,97 @@ describe('WorkQueryModel', () => {
     expect(assigned.tasks.map((row) => row.id)).toContain(task.id);
     expect(review.tasks.map((row) => row.id)).toContain(task.id);
     expect(subscribed.tasks.map((row) => row.id)).not.toContain(task.id);
+  });
+
+  it('treats projectId isNull as distinct from an empty in-list', async () => {
+    await serverDB.insert(projects).values({
+      id: 'wq-project',
+      identifier: 'WQ01',
+      name: 'Query project',
+      userId,
+      workspaceId,
+    });
+    const loose = await createTask(userId, { name: 'No project' });
+    const bound = await createTask(userId, { name: 'In a project', projectId: 'wq-project' });
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+
+    const nullProject = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'projectId', op: 'isNull' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(nullProject.tasks.map((row) => row.id)).toContain(loose.id);
+    expect(nullProject.tasks.map((row) => row.id)).not.toContain(bound.id);
+
+    await expect(
+      model.queryTasks({
+        query: {
+          entityType: 'task',
+          filter: { all: [{ field: 'projectId', op: 'in', value: [] }] },
+          schemaVersion: 1,
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_QUERY' });
+  });
+
+  it('pages with a queryHash-bound keyset and does not shrink total', async () => {
+    const created = await Promise.all([
+      createTask(userId, { name: 'A' }),
+      createTask(userId, { name: 'B' }),
+      createTask(userId, { name: 'C' }),
+    ]);
+    const stamp = new Date('2026-09-18T12:00:00Z');
+    await serverDB
+      .update(tasksTable)
+      .set({ updatedAt: stamp })
+      .where(
+        inArray(
+          tasksTable.id,
+          created.map((row) => row.id),
+        ),
+      );
+
+    const query = {
+      entityType: 'task' as const,
+      filter: {
+        all: [{ field: 'id' as const, op: 'in' as const, value: created.map((row) => row.id) }],
+      },
+      schemaVersion: 1 as const,
+      sort: [
+        { direction: 'desc' as const, field: 'updatedAt' as const },
+        { direction: 'asc' as const, field: 'id' as const },
+      ],
+    };
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const first = await model.queryTasks({ limit: 2, query });
+    expect(first.total).toBe(3);
+    expect(first.tasks).toHaveLength(2);
+
+    await expect(
+      model.queryTasks({ afterId: first.tasks[1]!.id, limit: 2, query }),
+    ).rejects.toMatchObject({ code: 'CURSOR_INVALID' });
+    await expect(
+      model.queryTasks({
+        afterId: first.tasks[1]!.id,
+        limit: 2,
+        query,
+        queryHash: 'not-this-query',
+      }),
+    ).rejects.toMatchObject({ code: 'CURSOR_INVALID' });
+
+    const second = await model.queryTasks({
+      afterId: first.tasks[1]!.id,
+      limit: 2,
+      query,
+      queryHash: first.queryHash,
+    });
+    expect(second.total).toBe(3);
+    expect(second.tasks).toHaveLength(1);
+    const paged = [...first.tasks, ...second.tasks].map((row) => row.id).sort();
+    expect(paged).toEqual(created.map((row) => row.id).sort());
+    expect(second.tasks[0]!.id).not.toBe(first.tasks[0]!.id);
+    expect(second.tasks[0]!.id).not.toBe(first.tasks[1]!.id);
   });
 });

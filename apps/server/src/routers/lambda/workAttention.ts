@@ -13,7 +13,7 @@ import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceA
 import { NavigationFavoriteModel } from '@/database/models/navigationFavorite';
 import { NotificationModel } from '@/database/models/notification';
 import { SavedViewConflictError, SavedViewModel } from '@/database/models/savedView';
-import { TaskModel } from '@/database/models/task';
+import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
 import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TeamModel } from '@/database/models/team';
 import { myWorkQueryForMode, WorkQueryError, WorkQueryModel } from '@/database/models/workQuery';
@@ -87,8 +87,8 @@ const workQuerySchema: z.ZodType<WorkQuery> = z.object({
 const mapQueryError = (error: unknown): never => {
   if (error instanceof WorkQueryError) {
     throw new TRPCError({
-      code: error.code === 'CURSOR_INVALID' ? 'BAD_REQUEST' : 'BAD_REQUEST',
-      message: error.message,
+      code: 'BAD_REQUEST',
+      message: error.code === 'CURSOR_INVALID' ? error.code : error.message,
     });
   }
   throw error;
@@ -216,9 +216,10 @@ export const workAttentionRouter = router({
   myWork: workAttentionProcedure
     .input(
       z.object({
-        afterId: z.string().optional(),
+        afterId: z.string().min(1).optional(),
         limit: z.number().min(1).max(100).default(50),
         mode: z.enum(['assigned', 'created', 'delegated', 'review', 'subscribed']),
+        queryHash: z.string().min(1).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -229,6 +230,7 @@ export const workAttentionRouter = router({
           limit: input.limit,
           mode: input.mode,
           query,
+          queryHash: input.queryHash,
         });
         const subscribedTaskIds = await ctx.subscriptionModel.listActiveForTaskIds(
           result.tasks.map((task) => task.id),
@@ -242,9 +244,10 @@ export const workAttentionRouter = router({
   query: workAttentionProcedure
     .input(
       z.object({
-        afterId: z.string().optional(),
+        afterId: z.string().min(1).optional(),
         limit: z.number().min(1).max(100).default(50),
         query: workQuerySchema,
+        queryHash: z.string().min(1).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -260,6 +263,7 @@ export const workAttentionRouter = router({
           afterId: input.afterId,
           limit: input.limit,
           query: input.query,
+          queryHash: input.queryHash,
         });
         return { data: result, success: true };
       } catch (error) {
@@ -299,19 +303,25 @@ export const workAttentionRouter = router({
   savedViewEvaluate: workAttentionProcedure
     .input(
       z.object({
-        afterId: z.string().optional(),
+        afterId: z.string().min(1).optional(),
         id: z.string().min(1),
         limit: z.number().min(1).max(100).default(50),
+        queryHash: z.string().min(1).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const view = await ctx.savedViewModel.findById(input.id);
       if (!view) throw new TRPCError({ code: 'NOT_FOUND', message: 'View not found' });
-      const evaluation = await ctx.savedViewModel.evaluate(view, {
-        afterId: input.afterId,
-        limit: input.limit,
-      });
-      return { data: { evaluation, view }, success: true };
+      try {
+        const evaluation = await ctx.savedViewModel.evaluate(view, {
+          afterId: input.afterId,
+          limit: input.limit,
+          queryHash: input.queryHash,
+        });
+        return { data: { evaluation, view }, success: true };
+      } catch (error) {
+        return mapQueryError(error);
+      }
     }),
 
   savedViewGet: workAttentionProcedure
@@ -374,6 +384,7 @@ export const workAttentionRouter = router({
         action: z.enum(['accept', 'decline', 'duplicate', 'reassign']),
         assigneeUserId: z.string().min(1).optional(),
         canonicalTaskId: z.string().min(1).optional(),
+        expectedDomainRevision: z.number().int().min(1),
         taskId: z.string().min(1),
         teamId: z.string().min(1),
       }),
@@ -427,16 +438,27 @@ export const workAttentionRouter = router({
             : input.action === 'duplicate'
               ? 'duplicate'
               : 'accepted';
-      const updated = await ctx.taskModel.update(input.taskId, {
-        triageStatus,
-        ...(input.action === 'duplicate' && input.canonicalTaskId
-          ? { duplicateOfTaskId: input.canonicalTaskId }
-          : {}),
-        ...(input.action === 'reassign' && input.assigneeUserId
-          ? { assigneeUserId: input.assigneeUserId }
-          : {}),
-      });
-      return { data: updated, message: 'Triage updated', success: true };
+      try {
+        const updated = await ctx.taskModel.update(
+          input.taskId,
+          {
+            triageStatus,
+            ...(input.action === 'duplicate' && input.canonicalTaskId
+              ? { duplicateOfTaskId: input.canonicalTaskId }
+              : {}),
+            ...(input.action === 'reassign' && input.assigneeUserId
+              ? { assigneeUserId: input.assigneeUserId }
+              : {}),
+          },
+          { expectedDomainRevision: input.expectedDomainRevision, source: 'user' },
+        );
+        return { data: updated, message: 'Triage updated', success: true };
+      } catch (error) {
+        if (error instanceof TaskRevisionConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        throw error;
+      }
     }),
 
   unsubscribe: organizeProcedure

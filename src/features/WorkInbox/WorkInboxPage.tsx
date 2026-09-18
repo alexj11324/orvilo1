@@ -31,6 +31,7 @@ import {
   INBOX_FILTER_CHIPS,
   inboxBulkFingerprint,
   type InboxFilterChip,
+  inboxUrlOpenMode,
   snoozeUntilIso,
 } from './inboxOrganize';
 import { inboxSurface, shouldMarkInboxCardRead } from './inboxSurface';
@@ -222,7 +223,11 @@ const WorkInboxPage = memo(() => {
         navigate(taskDetailPath(nav.taskId, undefined, card.title));
         return;
       }
-      if (nav?.kind === 'url' && nav.url) navigate(nav.url);
+      if (nav?.kind === 'url' && nav.url) {
+        const mode = inboxUrlOpenMode(nav.url);
+        if (mode === 'internal') navigate(nav.url);
+        if (mode === 'external') window.open(nav.url, '_blank', 'noopener,noreferrer');
+      }
     },
     [navigate],
   );

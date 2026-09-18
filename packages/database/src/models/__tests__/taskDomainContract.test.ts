@@ -337,4 +337,18 @@ describe('task domain contract', () => {
     await expect(model.update(copy.id, { duplicateOfTaskId: copy.id })).rejects.toThrow();
     expect(await model.findById(copy.id)).toMatchObject({ duplicateOfTaskId: canonical.id });
   });
+
+  it('rejects a stale triage update when expectedDomainRevision does not match', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create({ instruction: 'Triage me' });
+    await model.update(task.id, { triageStatus: 'accepted' }, { expectedDomainRevision: 1 });
+    await expect(
+      model.update(
+        task.id,
+        { triageStatus: 'declined' },
+        { expectedDomainRevision: 1, source: 'user' },
+      ),
+    ).rejects.toBeInstanceOf(TaskRevisionConflictError);
+    expect(await model.findById(task.id)).toMatchObject({ triageStatus: 'accepted' });
+  });
 });

@@ -20,10 +20,10 @@ class WorkAttentionService {
 
   feedSummary = () => lambdaClient.workAttention.feedSummary.query();
 
-  myWork = (input: { afterId?: string; limit?: number; mode: MyWorkMode }) =>
+  myWork = (input: { afterId?: string; limit?: number; mode: MyWorkMode; queryHash?: string }) =>
     lambdaClient.workAttention.myWork.query(input);
 
-  query = (input: { afterId?: string; limit?: number; query: WorkQuery }) =>
+  query = (input: { afterId?: string; limit?: number; query: WorkQuery; queryHash?: string }) =>
     lambdaClient.workAttention.query.query(input);
 
   savedViewCreate = (
@@ -32,8 +32,12 @@ class WorkAttentionService {
 
   savedViewDelete = (id: string) => lambdaClient.workAttention.savedViewDelete.mutate({ id });
 
-  savedViewEvaluate = (input: { afterId?: string; id: string; limit?: number }) =>
-    lambdaClient.workAttention.savedViewEvaluate.query(input);
+  savedViewEvaluate = (input: {
+    afterId?: string;
+    id: string;
+    limit?: number;
+    queryHash?: string;
+  }) => lambdaClient.workAttention.savedViewEvaluate.query(input);
 
   savedViewGet = (id: string) => lambdaClient.workAttention.savedViewGet.query({ id });
 

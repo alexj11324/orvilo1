@@ -13,6 +13,54 @@ const ACTION_KINDS = new Set<ActionSourceKind>(ACTION_SOURCE_KINDS);
 const asActionKind = (value: string | null | undefined): ActionSourceKind | null =>
   value && ACTION_KINDS.has(value as ActionSourceKind) ? (value as ActionSourceKind) : null;
 
+const ALLOWED_HTTPS_HOSTS = new Set(['github.com', 'linear.app']);
+
+const isAllowedHttpsHost = (hostname: string) => {
+  const host = hostname.toLowerCase();
+  return [...ALLOWED_HTTPS_HOSTS].some(
+    (allowed) => host === allowed || host.endsWith(`.${allowed}`),
+  );
+};
+
+const hasUnsafeUrlChar = (value: string) => {
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    if (code <= 0x1f || code === 0x7f || char === '\\') return true;
+  }
+  return false;
+};
+
+/**
+ * Inbox may only open same-app relative paths or an allowlisted https host.
+ * javascript:/data:/protocol-relative URLs fall back to the inbox itself.
+ */
+export const safeInboxActionUrl = (raw: string | null | undefined): string | null => {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed || hasUnsafeUrlChar(trimmed)) return null;
+
+  if (trimmed.startsWith('/')) {
+    if (trimmed.startsWith('//') || trimmed.includes('://')) return null;
+    try {
+      const parsed = new URL(trimmed, 'https://orvilo.invalid');
+      if (parsed.username || parsed.password || parsed.hostname !== 'orvilo.invalid') return null;
+      if (!parsed.pathname.startsWith('/') || parsed.pathname.startsWith('//')) return null;
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return null;
+    if (!isAllowedHttpsHost(parsed.hostname)) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
+
 const navigationFor = (row: NotificationItem): TypedNavigationTarget => {
   if (row.resourceType === 'task' && row.resourceId) {
     return { kind: 'task', taskId: row.resourceId };
@@ -23,8 +71,9 @@ const navigationFor = (row: NotificationItem): TypedNavigationTarget => {
   if (row.actionKind === 'workspace_ownership_transfer') {
     return { kind: 'url', url: '/settings/members' };
   }
-  if (row.actionUrl) {
-    return { kind: 'url', url: row.actionUrl };
+  const url = safeInboxActionUrl(row.actionUrl);
+  if (url) {
+    return { kind: 'url', url };
   }
   return { kind: 'inbox' };
 };

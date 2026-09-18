@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { NotificationItem } from '@/database/schemas/notification';
 
-import { toFeedCard } from '../feedCard';
+import { safeInboxActionUrl, toFeedCard } from '../feedCard';
 
 const row = (overrides: Partial<NotificationItem> = {}): NotificationItem =>
   ({
@@ -138,5 +138,26 @@ describe('toFeedCard', () => {
       }),
     );
     expect(card.decisionVerbs).toEqual(['submit_input']);
+  });
+
+  it('drops javascript and off-site actionUrl instead of navigating there', () => {
+    expect(safeInboxActionUrl('javascript:alert(1)')).toBeNull();
+    expect(safeInboxActionUrl('https://evil.example/phish')).toBeNull();
+    expect(safeInboxActionUrl('//evil.example/phish')).toBeNull();
+    expect(safeInboxActionUrl('/inbox?tab=action')).toBe('/inbox?tab=action');
+    expect(safeInboxActionUrl('https://github.com/org/repo/pull/1')).toBe(
+      'https://github.com/org/repo/pull/1',
+    );
+    expect(safeInboxActionUrl('/inbox\u0000/escape')).toBeNull();
+    expect(safeInboxActionUrl('/inbox\\x')).toBeNull();
+
+    const card = toFeedCard(
+      row({
+        actionUrl: 'javascript:alert(1)',
+        resourceId: null,
+        resourceType: null,
+      }),
+    );
+    expect(card.safeNavigation).toEqual({ kind: 'inbox' });
   });
 });

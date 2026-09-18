@@ -6,6 +6,7 @@ import type {
   WorkQueryFilter,
   WorkQueryOp,
   WorkQueryPredicate,
+  WorkQuerySort,
 } from '@orvilo/types';
 import { WORK_QUERY_MAX_DEPTH, WORK_QUERY_MAX_PREDICATES } from '@orvilo/types';
 import {
@@ -13,9 +14,11 @@ import {
   asc,
   desc,
   eq,
+  gt,
   inArray,
   isNotNull,
   isNull,
+  lt,
   ne,
   notInArray,
   or,
@@ -307,7 +310,60 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
   }
 };
 
-const hashQuery = (query: WorkQuery) => JSON.stringify(query);
+export const hashQuery = (query: WorkQuery) => JSON.stringify(query);
+
+const DEFAULT_TASK_SORT: WorkQuerySort[] = [
+  { direction: 'desc', field: 'updatedAt' },
+  { direction: 'asc', field: 'id' },
+];
+
+const normalizeTaskSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[] => {
+  const next = sort?.length ? [...sort] : [...DEFAULT_TASK_SORT];
+  if (next.some((item) => item.field === 'delegatedByUserId' || item.field === 'reviewerUserId')) {
+    throw new WorkQueryError('INVALID_QUERY', 'Cannot sort by a virtual field');
+  }
+  if (next.at(-1)?.field !== 'id') {
+    next.push({ direction: 'asc', field: 'id' });
+  }
+  return next;
+};
+
+const sortColumn = (field: WorkQuerySort['field']) => {
+  if (field === 'updatedAt') return tasks.updatedAt;
+  if (field === 'id') return tasks.id;
+  return taskColumn(field);
+};
+
+const sortValue = (
+  row: typeof tasks.$inferSelect,
+  field: WorkQuerySort['field'],
+): Date | number | string | null => {
+  if (field === 'updatedAt') return row.updatedAt;
+  if (field === 'id') return row.id;
+  if (field === 'delegatedByUserId' || field === 'reviewerUserId') {
+    throw new WorkQueryError('INVALID_QUERY', 'Cannot sort by a virtual field');
+  }
+  return row[field];
+};
+
+/** Keyset: (c1, c2, …, id) compared with the cursor row using each column's direction. */
+const keysetAfter = (sort: WorkQuerySort[], cursor: typeof tasks.$inferSelect): SQL => {
+  const parts: SQL[] = [];
+  for (let index = 0; index < sort.length; index += 1) {
+    const equalities: SQL[] = [];
+    for (let prior = 0; prior < index; prior += 1) {
+      const field = sort[prior]!.field;
+      equalities.push(eq(sortColumn(field), sortValue(cursor, field) as never));
+    }
+    const current = sort[index]!;
+    const column = sortColumn(current.field);
+    const value = sortValue(cursor, current.field);
+    const cmp =
+      current.direction === 'desc' ? lt(column, value as never) : gt(column, value as never);
+    parts.push(equalities.length ? and(...equalities, cmp)! : cmp);
+  }
+  return or(...parts)!;
+};
 
 export class WorkQueryModel {
   constructor(
@@ -331,6 +387,7 @@ export class WorkQueryModel {
     limit?: number;
     mode?: MyWorkMode;
     query: WorkQuery;
+    queryHash?: string;
   }) => {
     const query = params.query;
     validateWorkQuery(query);
@@ -353,27 +410,27 @@ export class WorkQueryModel {
     }
 
     const queryHash = hashQuery(query);
+    const sort = normalizeTaskSort(query.sort);
+    const listConditions = [...conditions];
+
     if (params.afterId) {
-      // Stable cursor: last sort tuple must include id, bound to this queryHash.
-      conditions.push(sql`${tasks.id} < ${params.afterId}`);
+      if (!params.queryHash || params.queryHash !== queryHash) {
+        throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+      }
+      const [cursor] = await this.db
+        .select()
+        .from(tasks)
+        .where(and(...conditions, eq(tasks.id, params.afterId)))
+        .limit(1);
+      if (!cursor) {
+        throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+      }
+      listConditions.push(keysetAfter(sort, cursor));
     }
 
-    const sort = query.sort?.length
-      ? query.sort
-      : [
-          { direction: 'desc' as const, field: 'updatedAt' as const },
-          { direction: 'asc' as const, field: 'id' as const },
-        ];
-
-    const orderBy = sort.map((item) => {
-      const column =
-        item.field === 'updatedAt'
-          ? tasks.updatedAt
-          : item.field === 'id'
-            ? tasks.id
-            : taskColumn(item.field as WorkQueryField);
-      return item.direction === 'desc' ? desc(column) : asc(column);
-    });
+    const orderBy = sort.map((item) =>
+      item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
+    );
 
     const [countRow] = await this.db
       .select({ count: sql<number>`count(*)` })
@@ -383,7 +440,7 @@ export class WorkQueryModel {
     const rows = await this.db
       .select()
       .from(tasks)
-      .where(and(...conditions))
+      .where(and(...listConditions))
       .orderBy(...orderBy)
       .limit(limit);
 

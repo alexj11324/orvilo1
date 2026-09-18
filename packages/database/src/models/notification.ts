@@ -222,6 +222,7 @@ export class NotificationModel {
           ...this.scope(),
           eq(notifications.category, 'pending'),
           eq(notifications.isArchived, false),
+          this.resourceReadable(),
           inArray(sql`${notifications.metadata} -> 'transfer' ->> 'requestId'`, requestIds),
         ),
       );

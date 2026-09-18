@@ -361,6 +361,20 @@ describe('NotificationModel (integration)', () => {
       expect(await model.countLinkedToTransfers(['req-2'])).toEqual({ total: 1, unread: 0 });
       expect(await model.countLinkedToTransfers([])).toEqual({ total: 0, unread: 0 });
     });
+
+    it('does not count a linked row whose resource is no longer readable', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          category: 'pending',
+          metadata: { transfer: { requestId: 'req-secret' } },
+          resourceId: 'task_missing',
+          resourceType: 'task',
+          title: 'Secret task title',
+        }),
+      );
+      expect(await model.countLinkedToTransfers(['req-secret'])).toEqual({ total: 0, unread: 0 });
+    });
   });
 
   describe('markAsRead', () => {

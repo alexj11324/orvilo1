@@ -167,7 +167,7 @@ export class SavedViewModel {
 
   evaluate = async (
     view: SavedViewItem,
-    params: { afterId?: string; limit?: number } = {},
+    params: { afterId?: string; limit?: number; queryHash?: string } = {},
   ): Promise<SavedViewEvaluation> => {
     const query = view.queryAst;
     const kernel = new WorkQueryModel(this.db, this.userId, this.workspaceId);
@@ -186,6 +186,7 @@ export class SavedViewModel {
         afterId: params.afterId,
         limit: params.limit,
         query,
+        queryHash: params.queryHash,
       });
       return {
         needsRepair: false,
@@ -195,6 +196,7 @@ export class SavedViewModel {
       };
     } catch (error) {
       if (error instanceof WorkQueryError) {
+        if (error.code === 'CURSOR_INVALID') throw error;
         return {
           needsRepair: true,
           needsRepairReason: isKnownRepair(error),

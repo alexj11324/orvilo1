@@ -760,6 +760,27 @@ export class TaskModel {
     await this.assertDependenciesForStatus([id], data.status);
 
     const eventType = taskMutationEventType(data);
+    const updateWhere = [eq(tasks.id, id), this.ownership()];
+    if (mutation.expectedDomainRevision !== undefined) {
+      updateWhere.push(eq(tasks.domainRevision, mutation.expectedDomainRevision));
+    }
+
+    const resolveUpdate = async (
+      runner: OrviloDatabase,
+      updated: TaskItem | undefined,
+    ): Promise<TaskItem | null> => {
+      if (updated) return updated;
+      if (mutation.expectedDomainRevision !== undefined) {
+        const [current] = await runner
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(and(eq(tasks.id, id), this.ownership()))
+          .limit(1);
+        if (current) throw new TaskRevisionConflictError();
+      }
+      return null;
+    };
+
     if (!eventType) {
       const updated = await this.db
         .update(tasks)
@@ -768,9 +789,9 @@ export class TaskModel {
           ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
           updatedAt: new Date(),
         })
-        .where(and(eq(tasks.id, id), this.ownership()))
+        .where(and(...updateWhere))
         .returning();
-      return updated[0] || null;
+      return resolveUpdate(this.db, updated[0]);
     }
 
     const changedFields = touchedColumns(data, TASK_DOMAIN_COLUMNS).map(String);
@@ -779,7 +800,7 @@ export class TaskModel {
 
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
-      const [task] = await runner
+      const [updated] = await runner
         .update(tasks)
         .set({
           ...data,
@@ -791,8 +812,9 @@ export class TaskModel {
             : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(tasks.id, id), this.ownership()))
+        .where(and(...updateWhere))
         .returning();
+      const task = await resolveUpdate(runner, updated);
       if (!task) return null;
 
       if (this.workspaceId && !mutation.suppressDomainEvent) {

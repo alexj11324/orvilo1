@@ -17,3 +17,22 @@ export const inboxBulkFingerprint = (
   action: 'archive' | 'mark_read',
   chip: InboxFilterChip,
 ): string => `${action}:${chip}`;
+
+const ALLOWED_HTTPS_HOSTS = ['github.com', 'linear.app'] as const;
+
+const isAllowedHttpsHost = (hostname: string) => {
+  const host = hostname.toLowerCase();
+  return ALLOWED_HTTPS_HOSTS.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+};
+
+/** Same-app relative paths navigate in-app; allowlisted https opens a new tab. */
+export const inboxUrlOpenMode = (url: string): 'external' | 'internal' | 'reject' => {
+  if (url.startsWith('/') && !url.startsWith('//')) return 'internal';
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'https:' && isAllowedHttpsHost(parsed.hostname)) return 'external';
+  } catch {
+    return 'reject';
+  }
+  return 'reject';
+};

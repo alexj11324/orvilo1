@@ -210,14 +210,16 @@ const TeamPage = memo(() => {
 
   const act = useCallback(
     async (
-      taskId: string,
+      task: TeamTriageTask,
       action: 'accept' | 'decline' | 'duplicate' | 'reassign',
       extra?: { assigneeUserId?: string; canonicalTaskId?: string },
     ) => {
+      if (task.domainRevision === undefined) return;
       try {
         await workAttentionService.triage({
           action,
-          taskId,
+          expectedDomainRevision: task.domainRevision,
+          taskId: task.id,
           teamId: teamId!,
           ...(extra?.assigneeUserId ? { assigneeUserId: extra.assigneeUserId } : {}),
           ...(extra?.canonicalTaskId ? { canonicalTaskId: extra.canonicalTaskId } : {}),
@@ -227,8 +229,12 @@ const TeamPage = memo(() => {
           mutate(['team-tasks', workspaceId, teamId]),
         ]);
         toast.success(t('teams.triageUpdated'));
-      } catch {
-        toast.error(t('teams.triageFailed'));
+      } catch (error) {
+        toast.error(
+          isTrpcErrorCode(error, 'CONFLICT')
+            ? t('teams.transferConflict')
+            : t('teams.triageFailed'),
+        );
       }
     },
     [t, teamId, workspaceId],
@@ -264,11 +270,13 @@ const TeamPage = memo(() => {
               key={task.id}
               members={teamData?.data.members ?? []}
               task={task}
-              onAccept={(id) => void act(id, 'accept')}
-              onDecline={(id) => void act(id, 'decline')}
-              onDuplicate={(id, canonicalTaskId) => void act(id, 'duplicate', { canonicalTaskId })}
-              onReassign={(id, assigneeUserId) => void act(id, 'reassign', { assigneeUserId })}
+              onAccept={() => void act(task, 'accept')}
+              onDecline={() => void act(task, 'decline')}
+              onReassign={(_id, assigneeUserId) => void act(task, 'reassign', { assigneeUserId })}
               onTransferred={refreshTriage}
+              onDuplicate={(_id, canonicalTaskId) =>
+                void act(task, 'duplicate', { canonicalTaskId })
+              }
             />
           ))
         )}

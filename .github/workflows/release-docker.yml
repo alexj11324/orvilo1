@@ -1,6 +1,14 @@
 name: Publish Docker Image
+
 permissions:
   contents: read
+  # GHCR authenticates with the built-in token, so this workflow needs no
+  # registry secret. It previously targeted Docker Hub via
+  # DOCKER_REGISTRY_USER / DOCKER_REGISTRY_PASSWORD, which do not exist in this
+  # repository — pr-build-docker.yml had already moved to GHCR for exactly that
+  # reason, which left the two Docker workflows publishing to different
+  # registries.
+  packages: write
 
 on:
   workflow_dispatch: {}
@@ -12,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGISTRY_IMAGE: alexj11324/orvilo1
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
   build:
@@ -51,8 +59,9 @@ jobs:
       - name: Docker login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_REGISTRY_USER }}
-          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get commit SHA
         if: github.ref == 'refs/heads/main'
@@ -118,13 +127,14 @@ jobs:
       - name: Docker login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_REGISTRY_USER }}
-          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          # 过滤掉带 v 前缀的 tag（如 alexj11324/orvilo1:v2.1.29），只保留无 v 前缀的版本号和 latest
+          # 过滤掉带 v 前缀的 tag（如 orvilo1:v2.1.29），只保留无 v 前缀的版本号和 latest
           TAGS=$(jq -cr '.tags | map(select(test(":v\\d") | not)) | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON")
           docker buildx imagetools create $TAGS \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)

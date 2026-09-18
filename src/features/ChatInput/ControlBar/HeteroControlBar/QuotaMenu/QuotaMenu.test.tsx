@@ -797,6 +797,98 @@ describe('ClaudeCodeQuotaMenu', () => {
     expect(mockService.getClaudeCodeQuota).toHaveBeenCalledWith({ env: undefined });
   });
 
+  it('revalidates after the in-flight load settles when focus lands mid-request', async () => {
+    // Regression: the focus listener used to bail on `loading` — a focus that
+    // landed while the mount request was still in flight was dropped outright,
+    // and nothing re-checked once the request settled. CI observed exactly
+    // that: persisted data painted, focus fired, zero live calls.
+    mockQuotaService.listAccounts.mockResolvedValue([persistedAccount(Date.now() - 90_000)]);
+    let resolveReadings: (readings: unknown[]) => void = () => {};
+    mockQuotaService.getLatestReadings.mockImplementationOnce(
+      () =>
+        new Promise<unknown[]>((resolve) => {
+          resolveReadings = resolve;
+        }),
+    );
+    mockService.getClaudeCodeQuota.mockResolvedValue(claudeSnapshot());
+
+    render(<ClaudeCodeQuotaMenu />);
+
+    // The mount request is still awaiting its persisted readings → in flight.
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    await act(async () => {
+      resolveReadings([persistedSessionReading(Date.now() - 90_000)]);
+    });
+
+    // The parked revalidation drains after settle: the just-painted snapshot is
+    // 90 s old — past the 60 s focus gate — so the live API is hit once.
+    await waitFor(() => expect(mockService.getClaudeCodeQuota).toHaveBeenCalledTimes(1));
+    expect(mockService.getClaudeCodeQuota).toHaveBeenCalledWith({ env: undefined });
+  });
+
+  it('coalesces a focus + visibilitychange pair into a single live call', async () => {
+    mockQuotaService.listAccounts.mockResolvedValue([persistedAccount(Date.now() - 90_000)]);
+    mockQuotaService.getLatestReadings.mockResolvedValue([
+      persistedSessionReading(Date.now() - 90_000),
+    ]);
+    mockService.getClaudeCodeQuota.mockResolvedValue(claudeSnapshot());
+
+    render(<ClaudeCodeQuotaMenu />);
+    expect(await screen.findByText('92%')).toBeTruthy();
+
+    // A real focus regain fires both events together; they must collapse into
+    // one revalidation, not race two live fetches.
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    await waitFor(() => expect(mockService.getClaudeCodeQuota).toHaveBeenCalledTimes(1));
+  });
+
+  it('drops a revalidation parked under the previous source when the device switches', async () => {
+    // device-a's mount request stays in flight forever (the device path never
+    // resolves an account before its first live sample, so `listAccounts` is
+    // the earliest await point); its settle is irrelevant — the sourceKey
+    // guards discard whatever it eventually returns.
+    mockQuotaService.listAccounts
+      .mockImplementationOnce(() => new Promise<unknown[]>(() => {}))
+      .mockResolvedValue([persistedAccount(Date.now() - 90_000)]);
+    mockLambdaDeviceQuota.mockResolvedValue(
+      claudeSnapshot({
+        identity: { externalAccountId: 'ext-1' },
+        readings: [liveSessionReading(Date.now())],
+      }),
+    );
+
+    const { rerender } = render(<ClaudeCodeQuotaMenu deviceId="device-a" />);
+
+    // Park a revalidation under device-a's still-running mount request…
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    // …then switch source before it settles. The parked intent belonged to the
+    // old source and must be discarded, not replayed.
+    await act(async () => {
+      rerender(<ClaudeCodeQuotaMenu deviceId="device-b" />);
+    });
+
+    await waitFor(() =>
+      expect(mockLambdaDeviceQuota).toHaveBeenCalledWith({
+        deviceId: 'device-b',
+        env: undefined,
+      }),
+    );
+    // No replayed revalidation, and no local-IPC fetch the new source never
+    // asked for.
+    expect(mockService.getClaudeCodeQuota).not.toHaveBeenCalled();
+    expect(mockLambdaDeviceQuota).toHaveBeenCalledTimes(1);
+  });
+
   it('samples through the device gateway RPC when a deviceId is provided', async () => {
     mockLambdaDeviceQuota.mockResolvedValue(
       claudeSnapshot({ session: { resetsAt: null, usedPercent: 8, windowMinutes: 300 } }),

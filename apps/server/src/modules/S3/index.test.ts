@@ -55,8 +55,11 @@ describe('S3', () => {
 
     // Setup S3Client mock
     mockS3ClientSend = vi.fn();
-    (S3Client as unknown as ReturnType<typeof vi.fn>).mockImplementation(function () {
+    (S3Client as unknown as ReturnType<typeof vi.fn>).mockImplementation(function (
+      config: unknown,
+    ) {
       return {
+        _config: config,
         send: mockS3ClientSend,
       };
     });
@@ -134,6 +137,28 @@ describe('S3', () => {
         }),
       );
     });
+
+    it('should sign presigned URLs against the public endpoint when configured', async () => {
+      const s3 = new S3('test-access-key', 'test-secret-key', 'http://internal-s3:9000', {
+        bucket: 'test-bucket',
+        forcePathStyle: true,
+        publicEndpoint: 'https://files.example.com',
+      });
+
+      await s3.createPreSignedUrlForPreview('files/a.png');
+
+      expect(S3Client).toHaveBeenCalledTimes(2);
+      expect(S3Client).toHaveBeenLastCalledWith(
+        expect.objectContaining({ endpoint: 'https://files.example.com' }),
+      );
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          _config: expect.objectContaining({ endpoint: 'https://files.example.com' }),
+        }),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
   });
 });
 
@@ -146,8 +171,11 @@ describe('FileS3', () => {
 
     // Setup S3Client mock
     mockS3ClientSend = vi.fn();
-    (S3Client as unknown as ReturnType<typeof vi.fn>).mockImplementation(function () {
+    (S3Client as unknown as ReturnType<typeof vi.fn>).mockImplementation(function (
+      config: unknown,
+    ) {
       return {
+        _config: config,
         send: mockS3ClientSend,
       };
     });

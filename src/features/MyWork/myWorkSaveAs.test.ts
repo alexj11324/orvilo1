@@ -17,5 +17,7 @@ describe('myWorkSaveAsQuery', () => {
     expect(myWorkSaveAsQuery('review').filter).toEqual({
       all: [{ field: 'reviewerUserId', op: 'eq', value: { ref: 'currentUser' } }],
     });
+    expect(myWorkSaveAsQuery('assigned', 'board').layout).toBe('board');
+    expect(myWorkSaveAsQuery('assigned', 'board').groupBy).toBe('workflowCategory');
   });
 });

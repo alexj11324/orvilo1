@@ -1,6 +1,10 @@
 import {
   ACTION_SOURCE_KINDS,
   type MyWorkMode,
+  type TaskStatus,
+  type TaskWorkflowCategory,
+  WORK_QUERY_STATUS_COLUMNS,
+  WORK_QUERY_WORKFLOW_COLUMNS,
   type WorkQuery,
   type WorkQueryFilter,
   type WorkQueryPredicate,
@@ -14,9 +18,15 @@ import { NavigationFavoriteModel } from '@/database/models/navigationFavorite';
 import { NotificationModel } from '@/database/models/notification';
 import { SavedViewConflictError, SavedViewModel } from '@/database/models/savedView';
 import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
+import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TeamModel } from '@/database/models/team';
-import { myWorkQueryForMode, WorkQueryError, WorkQueryModel } from '@/database/models/workQuery';
+import {
+  applyWorkQueryLayout,
+  myWorkQueryForMode,
+  WorkQueryError,
+  WorkQueryModel,
+} from '@/database/models/workQuery';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { ActionSourceRegistry, mapFeedWithLiveActions } from '@/server/services/workAttention';
@@ -218,6 +228,9 @@ export const workAttentionRouter = router({
     .input(
       z.object({
         afterId: z.string().min(1).optional(),
+        groupBy: z.enum(['none', 'status', 'workflowCategory']).optional(),
+        groupKey: z.string().min(1).optional(),
+        layout: z.enum(['board', 'list']).optional(),
         limit: z.number().min(1).max(100).default(50),
         mode: z.enum(['assigned', 'created', 'delegated', 'review', 'subscribed']),
         queryHash: z.string().min(1).optional(),
@@ -225,9 +238,14 @@ export const workAttentionRouter = router({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const query = myWorkQueryForMode(input.mode as MyWorkMode);
+        const query = applyWorkQueryLayout(
+          myWorkQueryForMode(input.mode as MyWorkMode),
+          input.layout,
+          input.groupBy,
+        );
         const result = await ctx.workQueryModel.queryTasks({
           afterId: input.afterId,
+          groupKey: input.groupKey,
           limit: input.limit,
           mode: input.mode,
           query,
@@ -236,7 +254,9 @@ export const workAttentionRouter = router({
         const subscribedTaskIds = await ctx.subscriptionModel.listActiveForTaskIds(
           result.tasks.map((task) => task.id),
         );
-        return { data: { ...result, subscribedTaskIds }, success: true };
+        const externalReviews =
+          input.mode === 'review' ? await ctx.workQueryModel.queryExternalReviews() : [];
+        return { data: { ...result, externalReviews, subscribedTaskIds }, success: true };
       } catch (error) {
         return mapQueryError(error);
       }
@@ -246,6 +266,7 @@ export const workAttentionRouter = router({
     .input(
       z.object({
         afterId: z.string().min(1).optional(),
+        groupKey: z.string().min(1).optional(),
         limit: z.number().min(1).max(100).default(50),
         query: workQuerySchema,
         queryHash: z.string().min(1).optional(),
@@ -262,6 +283,7 @@ export const workAttentionRouter = router({
         }
         const result = await ctx.workQueryModel.queryTasks({
           afterId: input.afterId,
+          groupKey: input.groupKey,
           limit: input.limit,
           query: input.query,
           queryHash: input.queryHash,
@@ -305,6 +327,7 @@ export const workAttentionRouter = router({
     .input(
       z.object({
         afterId: z.string().min(1).optional(),
+        groupKey: z.string().min(1).optional(),
         id: z.string().min(1),
         limit: z.number().min(1).max(100).default(50),
         queryHash: z.string().min(1).optional(),
@@ -316,6 +339,7 @@ export const workAttentionRouter = router({
       try {
         const evaluation = await ctx.savedViewModel.evaluate(view, {
           afterId: input.afterId,
+          groupKey: input.groupKey,
           limit: input.limit,
           queryHash: input.queryHash,
         });
@@ -384,6 +408,56 @@ export const workAttentionRouter = router({
       if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
       const row = await ctx.subscriptionModel.subscribe(input.taskId);
       return { data: row, message: 'Subscribed', success: true };
+    }),
+
+  moveBoard: taskWriteProcedure
+    .input(
+      z.object({
+        expectedDomainRevision: z.number().int().min(1),
+        groupBy: z.enum(['status', 'workflowCategory']),
+        targetKey: z.string().min(1),
+        taskId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const task = await ctx.taskModel.findById(input.taskId);
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      if (input.groupBy === 'workflowCategory') {
+        if (!(WORK_QUERY_WORKFLOW_COLUMNS as readonly string[]).includes(input.targetKey)) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown workflow column' });
+        }
+        if (task.workflowStateId) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Business workflow moves require a linked Linear issue',
+          });
+        }
+      } else if (!(WORK_QUERY_STATUS_COLUMNS as readonly string[]).includes(input.targetKey)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown status column' });
+      }
+      const patch =
+        input.groupBy === 'workflowCategory'
+          ? { workflowCategory: input.targetKey as TaskWorkflowCategory }
+          : { status: input.targetKey as TaskStatus };
+      try {
+        const updated = await ctx.taskModel.update(input.taskId, patch, {
+          expectedDomainRevision: input.expectedDomainRevision,
+          source: 'user',
+        });
+        return { data: updated, message: 'Moved', success: true };
+      } catch (error) {
+        if (error instanceof TaskRevisionConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({
+            cause: error,
+            code: error.code,
+            message: error.message,
+          });
+        }
+        throw error;
+      }
     }),
 
   triage: taskWriteProcedure

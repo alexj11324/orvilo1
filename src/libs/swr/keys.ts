@@ -1126,11 +1126,15 @@ export const workAttentionKeys = {
     'workAttention:favorites',
     workspaceId,
   ]),
-  myWork: def('workAttention:myWork', (workspaceId: string | null, mode: string) => [
+  myWork: def(
     'workAttention:myWork',
-    workspaceId,
-    mode,
-  ]),
+    (workspaceId: string | null, mode: string, layout = 'list') => [
+      'workAttention:myWork',
+      workspaceId,
+      mode,
+      layout,
+    ],
+  ),
   savedView: def('workAttention:savedView', (workspaceId: string | null, viewId: string) => [
     'workAttention:savedView',
     workspaceId,

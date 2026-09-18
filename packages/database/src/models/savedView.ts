@@ -15,9 +15,17 @@ import { teamMembers } from '../schemas/team';
 import type { NewSavedView, SavedViewItem } from '../schemas/workAttention';
 import { savedViews } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
-import { validateWorkQuery, WorkQueryError, WorkQueryModel } from './workQuery';
+import {
+  applyWorkQueryLayout,
+  validateWorkQuery,
+  WorkQueryError,
+  WorkQueryModel,
+} from './workQuery';
 
 export interface SavedViewEvaluation {
+  groupBy?: Awaited<ReturnType<WorkQueryModel['queryTasks']>>['groupBy'];
+  groups?: Awaited<ReturnType<WorkQueryModel['queryTasks']>>['groups'];
+  layout?: Awaited<ReturnType<WorkQueryModel['queryTasks']>>['layout'];
   needsRepair: boolean;
   needsRepairReason?: SavedViewNeedsRepairReason;
   projects?: Awaited<ReturnType<WorkQueryModel['queryProjects']>>['projects'];
@@ -294,15 +302,16 @@ export class SavedViewModel {
 
   evaluate = async (
     view: SavedViewItem,
-    params: { afterId?: string; limit?: number; queryHash?: string } = {},
+    params: { afterId?: string; groupKey?: string; limit?: number; queryHash?: string } = {},
   ): Promise<SavedViewEvaluation> => {
-    const query = view.queryAst;
+    const query = applyWorkQueryLayout(view.queryAst, view.layout, view.queryAst.groupBy);
     const kernel = new WorkQueryModel(this.db, this.userId, this.workspaceId);
     try {
       validateWorkQuery(query);
       if (query.entityType === 'project') {
         const result = await kernel.queryProjects({ limit: params.limit, query });
         return {
+          layout: 'list',
           needsRepair: false,
           projects: result.projects,
           queryHash: result.queryHash,
@@ -311,11 +320,15 @@ export class SavedViewModel {
       }
       const result = await kernel.queryTasks({
         afterId: params.afterId,
+        groupKey: params.groupKey,
         limit: params.limit,
         query,
         queryHash: params.queryHash,
       });
       return {
+        groupBy: result.groupBy,
+        groups: result.groups,
+        layout: result.layout,
         needsRepair: false,
         queryHash: result.queryHash,
         tasks: result.tasks,

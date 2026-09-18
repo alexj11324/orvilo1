@@ -2,17 +2,16 @@
 
 import { Empty, Flexbox, Input } from '@lobehub/ui';
 import { Alert, Button, Select, Text, TextArea, toast } from '@lobehub/ui/base-ui';
-import type { SavedViewVisibility } from '@orvilo/types';
+import type { SavedViewVisibility, WorkQueryLayout } from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
-import { mergeWorkQueryPage, workQueryHasMore } from '@/features/MyWork/workQueryPaging';
+import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/workQueryPaging';
+import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -44,21 +43,26 @@ const SavedViewPage = memo(() => {
   const view = data?.data.view;
   const evaluation = data?.data.evaluation;
   const firstTasks = evaluation?.tasks ?? [];
+  const firstGroups = evaluation?.groups ?? [];
   const queryHash = evaluation?.queryHash;
   const [tail, setTail] = useState<typeof firstTasks>([]);
+  const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
   useEffect(() => {
     setTail([]);
+    setGroupTail([]);
   }, [queryHash, viewId, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, tail);
-  const hasMore = workQueryHasMore(tasks.length, evaluation?.total);
+  const groups = mergeWorkQueryGroups(firstGroups, groupTail);
   const isOwner = Boolean(currentUserId && view && view.ownerUserId === currentUserId);
   const [name, setName] = useState('');
   const [queryDraft, setQueryDraft] = useState('');
   const [visibility, setVisibility] = useState<SavedViewVisibility>('private');
+  const [layout, setLayout] = useState<WorkQueryLayout>('list');
   const [teamId, setTeamId] = useState<string | null>(null);
   const viewName = view?.name;
   const viewQueryAst = view?.queryAst;
   const viewVisibility = view?.visibility;
+  const viewLayout = view?.layout;
   const viewTeamId = view?.teamId;
   const viewIdValue = view?.id;
   const definitionVersion = view?.definitionVersion;
@@ -68,8 +72,17 @@ const SavedViewPage = memo(() => {
     setName(viewName ?? '');
     setQueryDraft(viewQueryAst ? stringifyWorkQueryDraft(viewQueryAst) : '');
     setVisibility(viewVisibility ?? 'private');
+    setLayout(viewLayout ?? 'list');
     setTeamId(viewTeamId ?? null);
-  }, [definitionVersion, viewIdValue, viewName, viewQueryAst, viewTeamId, viewVisibility]);
+  }, [
+    definitionVersion,
+    viewIdValue,
+    viewLayout,
+    viewName,
+    viewQueryAst,
+    viewTeamId,
+    viewVisibility,
+  ]);
 
   const pinned = useMemo(
     () =>
@@ -97,6 +110,13 @@ const SavedViewPage = memo(() => {
     ],
     [t, workspaceId],
   );
+  const layoutOptions = useMemo(
+    () => [
+      { label: t('savedViews.layoutList'), value: 'list' },
+      { label: t('savedViews.layoutBoard'), value: 'board' },
+    ],
+    [t],
+  );
   const shareReady = isSavedViewShareReady(visibility, teamId);
 
   const refreshView = useCallback(async () => {
@@ -116,6 +136,22 @@ const SavedViewPage = memo(() => {
     });
     setTail((current) => mergeWorkQueryPage(current, next.data.evaluation.tasks ?? []));
   }, [queryHash, tasks, viewId]);
+
+  const loadMoreGroup = useCallback(
+    async (groupKey: string) => {
+      const column = groups.find((group) => group.key === groupKey);
+      const last = column?.tasks.at(-1);
+      if (!last || !queryHash || !viewId) return;
+      const next = await workAttentionService.savedViewEvaluate({
+        afterId: last.id,
+        groupKey,
+        id: viewId,
+        queryHash,
+      });
+      setGroupTail((current) => mergeWorkQueryGroups(current, next.data.evaluation.groups ?? []));
+    },
+    [groups, queryHash, viewId],
+  );
 
   const toggleFavorite = useCallback(async () => {
     if (!viewId) return;
@@ -144,6 +180,7 @@ const SavedViewPage = memo(() => {
       await workAttentionService.savedViewUpdate({
         expectedDefinitionVersion: view.definitionVersion,
         id: viewId,
+        layout,
         name: trimmed,
         query,
         ...savedViewSharePatch(visibility, teamId),
@@ -158,7 +195,7 @@ const SavedViewPage = memo(() => {
       );
       await refreshView();
     }
-  }, [name, queryDraft, refreshView, shareReady, t, teamId, view, viewId, visibility]);
+  }, [layout, name, queryDraft, refreshView, shareReady, t, teamId, view, viewId, visibility]);
 
   const saveCopy = useCallback(async () => {
     if (!view) return;
@@ -170,7 +207,7 @@ const SavedViewPage = memo(() => {
     try {
       const created = await workAttentionService.savedViewCreate({
         entityType: view.entityType,
-        layout: view.layout,
+        layout,
         name: savedViewCopyName(name || view.name, t('copy')),
         query,
         visibility: 'private',
@@ -180,7 +217,7 @@ const SavedViewPage = memo(() => {
     } catch {
       toast.error(t('savedViews.saveAsFailed'));
     }
-  }, [name, navigate, queryDraft, t, view, workspaceId]);
+  }, [layout, name, navigate, queryDraft, t, view, workspaceId]);
 
   const deleteView = useCallback(async () => {
     if (!viewId) return;
@@ -246,6 +283,15 @@ const SavedViewPage = memo(() => {
             />
             <Flexbox horizontal gap={8} wrap="wrap">
               <Select
+                options={layoutOptions}
+                size="small"
+                style={{ minWidth: 160 }}
+                value={layout}
+                onChange={(next) => {
+                  if (next === 'board' || next === 'list') setLayout(next);
+                }}
+              />
+              <Select
                 options={visibilityOptions}
                 size="small"
                 style={{ minWidth: 160 }}
@@ -280,27 +326,35 @@ const SavedViewPage = memo(() => {
             type="warning"
           />
         ) : null}
-        {isLoading ? (
-          <Text type="secondary">{t('savedViews.loading')}</Text>
-        ) : evaluation?.needsRepair ? (
-          <Empty description={t('savedViews.needsRepairEmpty')} />
-        ) : tasks.length === 0 ? (
-          <Empty description={t('savedViews.emptyResults')} />
+        {evaluation?.needsRepair ? (
+          isLoading ? (
+            <Text type="secondary">{t('savedViews.loading')}</Text>
+          ) : (
+            <Empty description={t('savedViews.needsRepairEmpty')} />
+          )
         ) : (
-          tasks.map((task) => (
-            <WorkspaceLink
-              key={task.id}
-              to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
-            >
-              <Text weight={500}>{task.name ?? task.instruction}</Text>
-            </WorkspaceLink>
-          ))
+          <WorkQueryResults
+            emptyLabel={t('savedViews.emptyResults')}
+            groupBy={evaluation?.groupBy}
+            groups={groups}
+            layout={evaluation?.layout ?? viewLayout ?? 'list'}
+            loadMoreLabel={t('savedViews.loadMore')}
+            loading={isLoading}
+            loadingLabel={t('savedViews.loading')}
+            movable={(evaluation?.layout ?? viewLayout) === 'board'}
+            tasks={tasks}
+            total={evaluation?.total}
+            onMoved={() => void refreshView()}
+            onLoadMore={
+              (evaluation?.layout ?? viewLayout) === 'list' ? () => void loadMore() : undefined
+            }
+            onLoadMoreGroup={
+              (evaluation?.layout ?? viewLayout) === 'board'
+                ? (key) => void loadMoreGroup(key)
+                : undefined
+            }
+          />
         )}
-        {hasMore ? (
-          <Button size="small" onClick={() => void loadMore()}>
-            {t('savedViews.loadMore')}
-          </Button>
-        ) : null}
       </Flexbox>
     </Flexbox>
   );

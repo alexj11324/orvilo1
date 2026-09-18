@@ -633,6 +633,14 @@ export default {
   'myWork.subscribed': 'Subscribed',
   'myWork.unsubscribe': 'Unsubscribe',
   'myWork.unsubscribeFailed': 'Could not unsubscribe from this task',
+  'myWork.layoutBoard': 'Board',
+  'myWork.layoutList': 'List',
+  'myWork.moveBlocked': 'Finish blocking work before moving this to Done',
+  'myWork.moveConflict': 'This task changed. Refresh and move it again.',
+  'myWork.moveFailed': 'Could not move this task',
+  'myWork.externalReviews': 'Pull requests',
+  'myWork.externalReviewsEmpty':
+    'Readable GitHub or Linear review requests appear here. Tasks are not created just to fill this list.',
   'savedViews.assignedDefaultName': 'Assigned to me',
   'savedViews.copyName': '{{name}} copy',
   'savedViews.delete': 'Delete view',
@@ -643,6 +651,8 @@ export default {
   'savedViews.favoriteFailed': 'Could not update favorites',
   'savedViews.loading': 'Loading view…',
   'savedViews.loadMore': 'Load more',
+  'savedViews.layoutBoard': 'Board',
+  'savedViews.layoutList': 'List',
   'savedViews.name': 'View name',
   'savedViews.needsRepair': 'This view needs to be repaired',
   'savedViews.needsRepairDesc':

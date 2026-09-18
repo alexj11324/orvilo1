@@ -1,6 +1,6 @@
 'use client';
 
-import { Empty, Flexbox } from '@lobehub/ui';
+import { Flexbox } from '@lobehub/ui';
 import {
   Button,
   TabsIndicator,
@@ -10,23 +10,23 @@ import {
   Text,
   toast,
 } from '@lobehub/ui/base-ui';
-import type { MyWorkMode } from '@orvilo/types';
+import type { MyWorkMode, WorkQueryLayout } from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
 
 import { isMyWorkSaveableMode, myWorkSaveAsQuery } from './myWorkSaveAs';
 import { isTaskFollowed } from './myWorkSubscribe';
-import { mergeWorkQueryPage, workQueryHasMore } from './workQueryPaging';
+import { isMyWorkBoardMode } from './workQueryBoard';
+import { mergeWorkQueryGroups, mergeWorkQueryPage } from './workQueryPaging';
+import WorkQueryResults from './WorkQueryResults';
 
 const PRIMARY_TABS: MyWorkMode[] = ['assigned', 'delegated', 'review'];
 const SECONDARY_TABS: MyWorkMode[] = ['created', 'subscribed'];
@@ -38,40 +38,74 @@ const resolveMode = (value: string | null): MyWorkMode => {
   return 'assigned';
 };
 
+const resolveLayout = (mode: MyWorkMode, value: string | null): WorkQueryLayout => {
+  if (!isMyWorkBoardMode(mode)) return 'list';
+  return value === 'board' ? 'board' : 'list';
+};
+
 const MyWorkPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = resolveMode(searchParams.get('tab'));
+  const layout = resolveLayout(mode, searchParams.get('layout'));
+  const canBoard = isMyWorkBoardMode(mode);
 
-  const { data, isLoading } = useClientDataSWR(workAttentionKeys.myWork(workspaceId, mode), () =>
-    workAttentionService.myWork({ mode }),
+  const { data, isLoading } = useClientDataSWR(
+    workAttentionKeys.myWork(workspaceId, mode, layout),
+    () => workAttentionService.myWork({ layout: canBoard ? layout : 'list', mode }),
   );
   const firstTasks = data?.data.tasks ?? [];
+  const firstGroups = data?.data.groups ?? [];
   const queryHash = data?.data.queryHash;
   const [tail, setTail] = useState<typeof firstTasks>([]);
+  const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
   const [extraSubscribed, setExtraSubscribed] = useState<string[]>([]);
   useEffect(() => {
     setTail([]);
+    setGroupTail([]);
     setExtraSubscribed([]);
-  }, [mode, queryHash, workspaceId]);
+  }, [layout, mode, queryHash, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, tail);
+  const groups = mergeWorkQueryGroups(firstGroups, groupTail);
   const subscribedTaskIds = [...(data?.data.subscribedTaskIds ?? []), ...extraSubscribed];
   const canSaveAs = isMyWorkSaveableMode(mode);
-  const hasMore = workQueryHasMore(tasks.length, data?.data.total);
+
+  const refresh = useCallback(async () => {
+    await mutate(workAttentionKeys.myWork(workspaceId, mode, layout));
+  }, [layout, mode, workspaceId]);
 
   const loadMore = useCallback(async () => {
     const last = tasks.at(-1);
     if (!last || !queryHash) return;
     const next = await workAttentionService.myWork({
       afterId: last.id,
+      layout: canBoard ? layout : 'list',
       mode,
       queryHash,
     });
     setTail((current) => mergeWorkQueryPage(current, next.data.tasks));
     setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
-  }, [mode, queryHash, tasks]);
+  }, [canBoard, layout, mode, queryHash, tasks]);
+
+  const loadMoreGroup = useCallback(
+    async (groupKey: string) => {
+      const column = groups.find((group) => group.key === groupKey);
+      const last = column?.tasks.at(-1);
+      if (!last || !queryHash) return;
+      const next = await workAttentionService.myWork({
+        afterId: last.id,
+        groupKey,
+        layout: 'board',
+        mode,
+        queryHash,
+      });
+      setGroupTail((current) => mergeWorkQueryGroups(current, next.data.groups ?? []));
+      setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
+    },
+    [groups, mode, queryHash],
+  );
 
   const tabs = useMemo(
     () =>
@@ -90,12 +124,12 @@ const MyWorkPage = memo(() => {
         } else {
           await workAttentionService.subscribe(taskId);
         }
-        await mutate(workAttentionKeys.myWork(workspaceId, mode));
+        await refresh();
       } catch {
         toast.error(t(followed ? 'myWork.unsubscribeFailed' : 'myWork.subscribeFailed'));
       }
     },
-    [mode, t, workspaceId],
+    [refresh, t],
   );
 
   const saveCopy = useCallback(async () => {
@@ -103,8 +137,9 @@ const MyWorkPage = memo(() => {
     try {
       const created = await workAttentionService.savedViewCreate({
         entityType: 'task',
+        layout: canBoard ? layout : 'list',
         name: t(`myWork.${mode}`),
-        query: myWorkSaveAsQuery(mode),
+        query: myWorkSaveAsQuery(mode, canBoard ? layout : 'list'),
         visibility: 'private',
       });
       await mutate(workAttentionKeys.savedViews(workspaceId));
@@ -112,7 +147,7 @@ const MyWorkPage = memo(() => {
     } catch {
       toast.error(t('myWork.saveAsFailed'));
     }
-  }, [mode, navigate, t, workspaceId]);
+  }, [canBoard, layout, mode, navigate, t, workspaceId]);
 
   return (
     <Flexbox flex={1} height="100%">
@@ -123,17 +158,37 @@ const MyWorkPage = memo(() => {
           </Text>
         }
         right={
-          canSaveAs ? (
-            <Button size="small" onClick={() => void saveCopy()}>
-              {t('myWork.saveAs')}
-            </Button>
-          ) : null
+          <Flexbox horizontal gap={8}>
+            {canBoard ? (
+              <Button
+                size="small"
+                onClick={() =>
+                  setSearchParams(
+                    { layout: layout === 'board' ? 'list' : 'board', tab: mode },
+                    { replace: true },
+                  )
+                }
+              >
+                {layout === 'board' ? t('myWork.layoutList') : t('myWork.layoutBoard')}
+              </Button>
+            ) : null}
+            {canSaveAs ? (
+              <Button size="small" onClick={() => void saveCopy()}>
+                {t('myWork.saveAs')}
+              </Button>
+            ) : null}
+          </Flexbox>
         }
       />
       <Flexbox gap={16} padding={16} style={{ overflow: 'auto' }}>
         <TabsRoot
           value={mode}
-          onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}
+          onValueChange={(value) =>
+            setSearchParams(
+              { tab: value, ...(canBoard && layout === 'board' ? { layout: 'board' } : {}) },
+              { replace: true },
+            )
+          }
         >
           <TabsList>
             <TabsIndicator />
@@ -144,32 +199,24 @@ const MyWorkPage = memo(() => {
             ))}
           </TabsList>
         </TabsRoot>
-        {isLoading ? (
-          <Text type="secondary">{t('myWork.loading')}</Text>
-        ) : tasks.length === 0 ? (
-          <Empty description={t('myWork.empty')} />
-        ) : (
-          tasks.map((task) => {
-            const followed = isTaskFollowed(task.id, mode, subscribedTaskIds);
-            return (
-              <Flexbox horizontal align="center" gap={8} key={task.id} wrap="wrap">
-                <WorkspaceLink
-                  to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
-                >
-                  <Text weight={500}>{task.name ?? task.instruction}</Text>
-                </WorkspaceLink>
-                <Button size="small" onClick={() => void toggleFollow(task.id, followed)}>
-                  {followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
-                </Button>
-              </Flexbox>
-            );
-          })
-        )}
-        {hasMore ? (
-          <Button size="small" onClick={() => void loadMore()}>
-            {t('myWork.loadMore')}
-          </Button>
-        ) : null}
+        <WorkQueryResults
+          emptyLabel={t('myWork.empty')}
+          externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
+          groupBy={data?.data.groupBy}
+          groups={groups}
+          isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
+          layout={layout}
+          loadMoreLabel={t('myWork.loadMore')}
+          loading={isLoading}
+          loadingLabel={t('myWork.loading')}
+          movable={canBoard && layout === 'board'}
+          tasks={tasks}
+          total={data?.data.total}
+          onLoadMore={layout === 'list' ? () => void loadMore() : undefined}
+          onLoadMoreGroup={layout === 'board' ? (key) => void loadMoreGroup(key) : undefined}
+          onMoved={() => void refresh()}
+          onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
+        />
       </Flexbox>
     </Flexbox>
   );

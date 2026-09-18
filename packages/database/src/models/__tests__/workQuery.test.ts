@@ -271,4 +271,110 @@ describe('WorkQueryModel', () => {
     expect(none.tasks.map((row) => row.id)).toContain(loose.id);
     expect(none.tasks.map((row) => row.id)).not.toContain(inCycle.id);
   });
+
+  it('groups a board in the database so a later column is not dropped by the page', async () => {
+    const stamp = new Date('2026-09-18T15:00:00Z');
+    const todoA = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Todo A',
+      workflowCategory: 'todo',
+    });
+    const todoB = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Todo B',
+      workflowCategory: 'todo',
+    });
+    const todoC = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Todo C',
+      workflowCategory: 'todo',
+    });
+    const child = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Child in progress',
+      parentTaskId: todoA.id,
+      workflowCategory: 'in_progress',
+    });
+    const done = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Done later',
+      workflowCategory: 'done',
+    });
+    await serverDB
+      .update(tasksTable)
+      .set({ updatedAt: stamp })
+      .where(inArray(tasksTable.id, [todoA.id, todoB.id, todoC.id, child.id, done.id]));
+
+    const query = {
+      ...myWorkQueryForMode('assigned'),
+      groupBy: 'workflowCategory' as const,
+      layout: 'board' as const,
+    };
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const first = await model.queryTasks({ limit: 2, query });
+
+    expect(first.layout).toBe('board');
+    expect(first.total).toBe(5);
+    const byKey = new Map(first.groups?.map((group) => [group.key, group]));
+    expect(byKey.get('todo')?.total).toBe(3);
+    expect(byKey.get('todo')?.tasks).toHaveLength(2);
+    expect(byKey.get('in_progress')?.tasks.map((row) => row.id)).toEqual([child.id]);
+    expect(byKey.get('done')?.tasks.map((row) => row.id)).toEqual([done.id]);
+
+    await expect(
+      model.queryTasks({
+        afterId: byKey.get('todo')!.tasks[1]!.id,
+        limit: 2,
+        query,
+        queryHash: first.queryHash,
+      }),
+    ).rejects.toMatchObject({ code: 'CURSOR_INVALID' });
+
+    const second = await model.queryTasks({
+      afterId: byKey.get('todo')!.tasks[1]!.id,
+      groupKey: 'todo',
+      limit: 2,
+      query,
+      queryHash: first.queryHash,
+    });
+    expect(second.total).toBe(5);
+    const todoPage = second.groups?.find((group) => group.key === 'todo');
+    expect(todoPage?.total).toBe(3);
+    expect(todoPage?.tasks).toHaveLength(1);
+    expect(todoPage?.tasks[0]!.id).not.toBe(byKey.get('todo')!.tasks[0]!.id);
+    expect(todoPage?.tasks[0]!.id).not.toBe(byKey.get('todo')!.tasks[1]!.id);
+    expect(second.groups?.find((group) => group.key === 'done')?.total).toBe(1);
+  });
+
+  it('lists a readable PR review without creating a Task', async () => {
+    const before = await serverDB.select({ id: tasksTable.id }).from(tasksTable);
+    await serverDB.insert(actionApprovals).values({
+      actionSummary: { title: 'Review the checkout PR' },
+      actionType: 'github.pull_request.review',
+      approverUserId: userId,
+      id: 'apr_pr_review',
+      status: 'pending',
+      targetId: 'https://github.com/orvilo/app/pull/12',
+      targetType: 'github_pull_request',
+      workspaceId,
+    });
+    await serverDB.insert(actionApprovals).values({
+      actionSummary: { title: 'Task approval stays on the task list' },
+      actionType: 'tool.danger',
+      approverUserId: userId,
+      id: 'apr_task_review',
+      status: 'pending',
+      targetId: 'task_not_a_pr',
+      targetType: 'task',
+      workspaceId,
+    });
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const reviews = await model.queryExternalReviews();
+    const after = await serverDB.select({ id: tasksTable.id }).from(tasksTable);
+
+    expect(reviews.map((row) => row.targetType)).toEqual(['github_pull_request']);
+    expect(reviews[0]?.title).toBe('Review the checkout PR');
+    expect(after.map((row) => row.id).sort()).toEqual(before.map((row) => row.id).sort());
+  });
 });

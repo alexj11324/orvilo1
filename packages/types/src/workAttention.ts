@@ -165,13 +165,45 @@ export interface WorkQuerySort {
 
 export type WorkQueryLayout = 'board' | 'list';
 
+export type WorkQueryGroupBy = 'none' | 'status' | 'workflowCategory';
+
+/** Cross-team board columns. Exact Team workflow states stay on the Team surface. */
+export const WORK_QUERY_WORKFLOW_COLUMNS = [
+  'triage',
+  'backlog',
+  'todo',
+  'in_progress',
+  'in_review',
+  'done',
+  'canceled',
+] as const;
+
+export const WORK_QUERY_STATUS_COLUMNS = [
+  'backlog',
+  'scheduled',
+  'running',
+  'paused',
+  'failed',
+  'completed',
+  'canceled',
+] as const;
+
 export interface WorkQuery {
   entityType: WorkQueryEntityType;
   filter?: WorkQueryFilter;
-  groupBy?: 'none' | 'status' | 'workflowCategory';
+  groupBy?: WorkQueryGroupBy;
   layout?: WorkQueryLayout;
   schemaVersion: 1;
   sort?: WorkQuerySort[];
+}
+
+/** Pending review that is not a Task — never materialized as a Task just to fill My Work. */
+export interface WorkQueryExternalReview {
+  actionType: string;
+  id: string;
+  targetId: string | null;
+  targetType: string;
+  title: string;
 }
 
 export const WORK_QUERY_MAX_DEPTH = 3;

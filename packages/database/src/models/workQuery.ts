@@ -2,13 +2,21 @@ import type {
   MyWorkMode,
   WorkQuery,
   WorkQueryEntityType,
+  WorkQueryExternalReview,
   WorkQueryField,
   WorkQueryFilter,
+  WorkQueryGroupBy,
+  WorkQueryLayout,
   WorkQueryOp,
   WorkQueryPredicate,
   WorkQuerySort,
 } from '@orvilo/types';
-import { WORK_QUERY_MAX_DEPTH, WORK_QUERY_MAX_PREDICATES } from '@orvilo/types';
+import {
+  WORK_QUERY_MAX_DEPTH,
+  WORK_QUERY_MAX_PREDICATES,
+  WORK_QUERY_STATUS_COLUMNS,
+  WORK_QUERY_WORKFLOW_COLUMNS,
+} from '@orvilo/types';
 import {
   and,
   asc,
@@ -316,6 +324,48 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
 
 export const hashQuery = (query: WorkQuery) => JSON.stringify(query);
 
+export const applyWorkQueryLayout = (
+  query: WorkQuery,
+  layout?: WorkQueryLayout,
+  groupBy?: WorkQueryGroupBy,
+): WorkQuery => {
+  const nextLayout = layout ?? query.layout ?? 'list';
+  if (nextLayout !== 'board') {
+    if (!layout && !groupBy && query.layout !== 'board') return query;
+    return {
+      ...query,
+      ...(groupBy ? { groupBy } : {}),
+      layout: 'list',
+    };
+  }
+  return {
+    ...query,
+    groupBy: groupBy ?? query.groupBy ?? 'workflowCategory',
+    layout: 'board',
+  };
+};
+
+export const workQueryBoardGroupBy = (
+  query: WorkQuery,
+): 'status' | 'workflowCategory' | undefined => {
+  if (query.layout !== 'board') return undefined;
+  return query.groupBy === 'status' ? 'status' : 'workflowCategory';
+};
+
+const boardColumnFor = (groupBy: 'status' | 'workflowCategory') =>
+  groupBy === 'status' ? tasks.status : tasks.workflowCategory;
+
+const stableBoardKeys = (groupBy: 'status' | 'workflowCategory'): readonly string[] =>
+  groupBy === 'status' ? WORK_QUERY_STATUS_COLUMNS : WORK_QUERY_WORKFLOW_COLUMNS;
+
+const externalReviewTitle = (summary: unknown, actionType: string) => {
+  if (summary && typeof summary === 'object' && 'title' in summary) {
+    const title = (summary as { title?: unknown }).title;
+    if (typeof title === 'string' && title.trim()) return title;
+  }
+  return actionType;
+};
+
 const DEFAULT_TASK_SORT: WorkQuerySort[] = [
   { direction: 'desc', field: 'updatedAt' },
   { direction: 'asc', field: 'id' },
@@ -387,8 +437,24 @@ export class WorkQueryModel {
       },
     );
 
+  private taskConditions = (query: WorkQuery, mode?: MyWorkMode) => {
+    const conditions: SQL[] = [this.ownership()];
+    const filterSql = compileFilter(query.filter, {
+      currentUserId: this.userId,
+      entityType: 'task',
+    });
+    if (filterSql) conditions.push(filterSql);
+    if (mode === 'subscribed') {
+      conditions.push(
+        sql`exists (select 1 from ${taskSubscriptions} where ${taskSubscriptions.taskId} = ${tasks.id} and ${taskSubscriptions.userId} = ${this.userId} and ${taskSubscriptions.unsubscribedAt} is null)`,
+      );
+    }
+    return conditions;
+  };
+
   queryTasks = async (params: {
     afterId?: string;
+    groupKey?: string;
     limit?: number;
     mode?: MyWorkMode;
     query: WorkQuery;
@@ -401,21 +467,24 @@ export class WorkQueryModel {
     }
 
     const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
-    const conditions: SQL[] = [this.ownership()];
-    const filterSql = compileFilter(query.filter, {
-      currentUserId: this.userId,
-      entityType: 'task',
-    });
-    if (filterSql) conditions.push(filterSql);
-
-    if (params.mode === 'subscribed') {
-      conditions.push(
-        sql`exists (select 1 from ${taskSubscriptions} where ${taskSubscriptions.taskId} = ${tasks.id} and ${taskSubscriptions.userId} = ${this.userId} and ${taskSubscriptions.unsubscribedAt} is null)`,
-      );
-    }
-
+    const conditions = this.taskConditions(query, params.mode);
     const queryHash = hashQuery(query);
     const sort = normalizeTaskSort(query.sort);
+    const groupBy = workQueryBoardGroupBy(query);
+
+    if (groupBy) {
+      return this.queryTaskBoard({
+        afterId: params.afterId,
+        conditions,
+        groupBy,
+        groupKey: params.groupKey,
+        limit,
+        queryHash,
+        requestedHash: params.queryHash,
+        sort,
+      });
+    }
+
     const listConditions = [...conditions];
 
     if (params.afterId) {
@@ -450,10 +519,144 @@ export class WorkQueryModel {
       .limit(limit);
 
     return {
+      groupBy: 'none' as const,
+      groups: undefined,
+      layout: 'list' as const,
       queryHash,
       tasks: rows,
       total: Number(countRow?.count ?? 0),
     };
+  };
+
+  /**
+   * Server-side board: each column is filtered and paged in the database.
+   * Totals cover the full matching set, not the current page. Parent and
+   * child tasks that match the filter both appear — grouping never drops
+   * subtasks.
+   */
+  private queryTaskBoard = async (params: {
+    afterId?: string;
+    conditions: SQL[];
+    groupBy: 'status' | 'workflowCategory';
+    groupKey?: string;
+    limit: number;
+    queryHash: string;
+    requestedHash?: string;
+    sort: WorkQuerySort[];
+  }) => {
+    if (params.afterId && !params.groupKey) {
+      throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+    }
+    if (params.afterId && (!params.requestedHash || params.requestedHash !== params.queryHash)) {
+      throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+    }
+
+    const column = boardColumnFor(params.groupBy);
+    const countRows = await this.db
+      .select({ count: sql<number>`count(*)`, key: column })
+      .from(tasks)
+      .where(and(...params.conditions))
+      .groupBy(column);
+
+    const countByKey = new Map<string, number>();
+    for (const row of countRows) {
+      countByKey.set(String(row.key), Number(row.count));
+    }
+    const total = [...countByKey.values()].reduce((sum, count) => sum + count, 0);
+
+    const stable = stableBoardKeys(params.groupBy);
+    const extra = [...countByKey.keys()]
+      .filter((key) => !(stable as readonly string[]).includes(key))
+      .sort();
+    const totalsKeys = [...stable, ...extra];
+
+    const orderBy = params.sort.map((item) =>
+      item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
+    );
+
+    const groups = await Promise.all(
+      totalsKeys.map(async (key) => {
+        const groupTotal = countByKey.get(key) ?? 0;
+        if (params.groupKey && key !== params.groupKey) {
+          return { hasMore: groupTotal > 0, key, tasks: [], total: groupTotal };
+        }
+
+        const groupConditions: SQL[] = [...params.conditions, eq(column, key as never)];
+        if (params.afterId) {
+          const [cursor] = await this.db
+            .select()
+            .from(tasks)
+            .where(and(...groupConditions, eq(tasks.id, params.afterId)))
+            .limit(1);
+          if (!cursor) {
+            throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+          }
+          groupConditions.push(keysetAfter(params.sort, cursor));
+        }
+
+        const rows = await this.db
+          .select()
+          .from(tasks)
+          .where(and(...groupConditions))
+          .orderBy(...orderBy)
+          .limit(params.limit);
+
+        return {
+          hasMore: params.afterId ? rows.length === params.limit : rows.length < groupTotal,
+          key,
+          tasks: rows,
+          total: groupTotal,
+        };
+      }),
+    );
+
+    return {
+      groupBy: params.groupBy,
+      groups,
+      layout: 'board' as const,
+      queryHash: params.queryHash,
+      tasks: groups.flatMap((group) => group.tasks),
+      total,
+    };
+  };
+
+  /**
+   * Readable pending reviews that are not Tasks. Never inserts a Task row.
+   */
+  queryExternalReviews = async (): Promise<WorkQueryExternalReview[]> => {
+    if (!this.workspaceId) return [];
+    const rows = await this.db
+      .select({
+        actionSummary: actionApprovals.actionSummary,
+        actionType: actionApprovals.actionType,
+        id: actionApprovals.id,
+        targetId: actionApprovals.targetId,
+        targetType: actionApprovals.targetType,
+      })
+      .from(actionApprovals)
+      .where(
+        and(
+          eq(actionApprovals.workspaceId, this.workspaceId),
+          eq(actionApprovals.approverUserId, this.userId),
+          eq(actionApprovals.status, 'pending'),
+          isNotNull(actionApprovals.targetType),
+          ne(actionApprovals.targetType, 'task'),
+        ),
+      )
+      .limit(50);
+
+    return rows.flatMap((row) => {
+      if (!row.targetType) return [];
+      return [
+        {
+          actionType: row.actionType,
+          id: row.id,
+          targetId: row.targetId,
+          targetType: row.targetType,
+          title: externalReviewTitle(row.actionSummary, row.actionType),
+        },
+      ];
+    });
   };
 
   queryProjects = async (params: { limit?: number; query: WorkQuery }) => {

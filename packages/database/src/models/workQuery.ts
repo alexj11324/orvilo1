@@ -1,8 +1,12 @@
 import type {
   MyWorkMode,
   WorkQuery,
+  WorkQueryCountResult,
   WorkQueryEntityType,
   WorkQueryExternalReview,
+  WorkQueryFacetBucket,
+  WorkQueryFacetField,
+  WorkQueryFacetResult,
   WorkQueryField,
   WorkQueryFilter,
   WorkQueryGroupBy,
@@ -12,6 +16,7 @@ import type {
   WorkQuerySort,
 } from '@orvilo/types';
 import {
+  WORK_QUERY_FACET_FIELDS,
   WORK_QUERY_MAX_DEPTH,
   WORK_QUERY_MAX_PREDICATES,
   WORK_QUERY_STATUS_COLUMNS,
@@ -43,6 +48,7 @@ import { projectTeams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { ProjectModel } from './project';
 import { TeamModel } from './team';
 
 export class WorkQueryError extends Error {
@@ -792,6 +798,122 @@ export class WorkQueryModel {
       queryHash: hashQuery(params.query),
       total: Number(countRow?.count ?? 0),
     };
+  };
+
+  /** Same ACL as `queryTasks`. Does not download the page. */
+  countTasks = async (params: {
+    mode?: MyWorkMode;
+    query: WorkQuery;
+  }): Promise<WorkQueryCountResult> => {
+    const query = params.query;
+    validateWorkQuery(query);
+    if (query.entityType !== 'task') {
+      throw new WorkQueryError('INVALID_QUERY', 'This kernel currently counts task queries');
+    }
+    const readableTeamIds = filterHasTeamId(query.filter)
+      ? await this.listReadableTeamIds()
+      : new Set<string>();
+    const conditions = this.taskConditions(query, params.mode, readableTeamIds);
+    const [countRow] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(tasks)
+      .where(and(...conditions));
+    return { queryHash: hashQuery(query), total: Number(countRow?.count ?? 0) };
+  };
+
+  /**
+   * Same ACL as `queryTasks`. Unreadable team/project ids are counted in
+   * `restrictedCount` and never returned as names or guessed keys.
+   */
+  facetTasks = async (params: {
+    field: WorkQueryFacetField;
+    mode?: MyWorkMode;
+    query: WorkQuery;
+  }): Promise<WorkQueryFacetResult> => {
+    const query = params.query;
+    validateWorkQuery(query);
+    if (query.entityType !== 'task') {
+      throw new WorkQueryError('INVALID_QUERY', 'This kernel currently facets task queries');
+    }
+    if (!(WORK_QUERY_FACET_FIELDS as readonly string[]).includes(params.field)) {
+      throw new WorkQueryError('INVALID_QUERY', `Unknown facet field: ${params.field}`);
+    }
+
+    const needsTeams = params.field === 'teamId' || filterHasTeamId(query.filter);
+    const readableTeams = needsTeams
+      ? this.workspaceId
+        ? await new TeamModel(this.db, this.userId, this.workspaceId).listReadable()
+        : []
+      : [];
+    const readableTeamIds = new Set(readableTeams.map((row) => row.id));
+    const conditions = this.taskConditions(query, params.mode, readableTeamIds);
+    const column =
+      params.field === 'projectId'
+        ? tasks.projectId
+        : params.field === 'teamId'
+          ? tasks.teamId
+          : params.field === 'status'
+            ? tasks.status
+            : tasks.workflowCategory;
+
+    const rows = await this.db
+      .select({ count: sql<number>`count(*)`, key: column })
+      .from(tasks)
+      .where(and(...conditions))
+      .groupBy(column);
+
+    const total = rows.reduce((sum, row) => sum + Number(row.count), 0);
+    const queryHash = hashQuery(query);
+
+    if (params.field === 'status' || params.field === 'workflowCategory') {
+      return {
+        buckets: rows
+          .map((row) => ({
+            count: Number(row.count),
+            key: row.key == null ? null : String(row.key),
+          }))
+          .sort((left, right) => (left.key ?? '').localeCompare(right.key ?? '')),
+        field: params.field,
+        queryHash,
+        restrictedCount: 0,
+        total,
+      };
+    }
+
+    const names = new Map<string, string>();
+    if (params.field === 'teamId') {
+      for (const team of readableTeams) names.set(team.id, team.name);
+    } else {
+      const ids = rows.flatMap((row) => (row.key == null ? [] : [String(row.key)]));
+      const readableProjects = await new ProjectModel(
+        this.db,
+        this.userId,
+        this.workspaceId,
+      ).findByIds(ids);
+      for (const project of readableProjects) names.set(project.id, project.name);
+    }
+
+    let restrictedCount = 0;
+    const buckets: WorkQueryFacetBucket[] = [];
+    for (const row of rows) {
+      const count = Number(row.count);
+      if (row.key == null) {
+        buckets.push({ count, key: null });
+        continue;
+      }
+      const key = String(row.key);
+      const name = names.get(key);
+      if (name === undefined) {
+        restrictedCount += count;
+        continue;
+      }
+      buckets.push({ count, key, name });
+    }
+    buckets.sort((left, right) =>
+      (left.name ?? left.key ?? '').localeCompare(right.name ?? right.key ?? ''),
+    );
+
+    return { buckets, field: params.field, queryHash, restrictedCount, total };
   };
 
   /**

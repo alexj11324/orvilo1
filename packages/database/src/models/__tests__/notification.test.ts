@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { NotificationBulkError, NotificationModel } from '../../models/notification';
+import { TaskModel } from '../../models/task';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
+import { tasks as tasksTable } from '../../schemas/task';
 import { users } from '../../schemas/user';
 import { notificationBulkSnapshots, notificationFeedState } from '../../schemas/workAttention';
 import { workspaces } from '../../schemas/workspace';
@@ -925,6 +927,42 @@ describe('NotificationModel (integration)', () => {
 
       expect((await model.list()).map((row) => row.title)).toEqual(['System card']);
       expect((await model.listFeed()).map((row) => row.title)).toEqual(['System card']);
+    });
+
+    it('stops listing a title after workspace visibility is revoked', async () => {
+      const workspaceId = 'notification-acl-ws';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'ACL WS',
+        primaryOwnerId: userId,
+        slug: 'acl-ws',
+      });
+      const task = await new TaskModel(serverDB, userId, workspaceId).create({
+        instruction: 'Hidden later',
+        name: 'Hidden later',
+        visibility: 'public',
+      });
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
+      await viewer.create(
+        baseNotification({
+          dedupeKey: 'revoked-title',
+          resourceId: task.id,
+          resourceType: 'task',
+          title: 'Hidden later',
+          workspaceId,
+        }),
+      );
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual(['Hidden later']);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
+
+      await serverDB
+        .update(tasksTable)
+        .set({ visibility: 'private' })
+        .where(eq(tasksTable.id, task.id));
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
     });
   });
 });

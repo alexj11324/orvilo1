@@ -1,8 +1,10 @@
 import {
   ACTION_SOURCE_KINDS,
+  applyNoProjectFilter,
   type MyWorkMode,
   type TaskStatus,
   type TaskWorkflowCategory,
+  WORK_QUERY_FACET_FIELDS,
   WORK_QUERY_STATUS_COLUMNS,
   WORK_QUERY_WORKFLOW_COLUMNS,
   type WorkQuery,
@@ -247,15 +249,19 @@ export const workAttentionRouter = router({
         layout: z.enum(['board', 'list']).optional(),
         limit: z.number().min(1).max(100).default(50),
         mode: z.enum(['assigned', 'created', 'delegated', 'review', 'subscribed']),
+        noProject: z.boolean().optional(),
         queryHash: z.string().min(1).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       try {
-        const query = applyWorkQueryLayout(
-          myWorkQueryForMode(input.mode as MyWorkMode),
-          input.layout,
-          input.groupBy,
+        const query = applyNoProjectFilter(
+          applyWorkQueryLayout(
+            myWorkQueryForMode(input.mode as MyWorkMode),
+            input.layout,
+            input.groupBy,
+          ),
+          Boolean(input.noProject),
         );
         const result = await ctx.workQueryModel.queryTasks({
           afterId: input.afterId,
@@ -301,6 +307,46 @@ export const workAttentionRouter = router({
           limit: input.limit,
           query: input.query,
           queryHash: input.queryHash,
+        });
+        return { data: result, success: true };
+      } catch (error) {
+        return mapQueryError(error);
+      }
+    }),
+
+  count: workAttentionProcedure
+    .input(z.object({ query: workQuerySchema }))
+    .query(async ({ ctx, input }) => {
+      try {
+        if (input.query.entityType === 'project') {
+          const result = await ctx.workQueryModel.queryProjects({
+            limit: 1,
+            query: input.query,
+          });
+          return {
+            data: { queryHash: result.queryHash, total: result.total },
+            success: true,
+          };
+        }
+        const result = await ctx.workQueryModel.countTasks({ query: input.query });
+        return { data: result, success: true };
+      } catch (error) {
+        return mapQueryError(error);
+      }
+    }),
+
+  facet: workAttentionProcedure
+    .input(
+      z.object({
+        field: z.enum(WORK_QUERY_FACET_FIELDS),
+        query: workQuerySchema,
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const result = await ctx.workQueryModel.facetTasks({
+          field: input.field,
+          query: input.query,
         });
         return { data: result, success: true };
       } catch (error) {

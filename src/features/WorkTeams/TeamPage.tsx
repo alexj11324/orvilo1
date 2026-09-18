@@ -170,6 +170,7 @@ const TeamPage = memo(() => {
   const { teamId } = useParams<{ teamId: string }>();
   const workspaceId = useActiveWorkspaceId();
   const [cycleId, setCycleId] = useState(ALL_TEAM_CYCLES);
+  const [noProject, setNoProject] = useState(false);
   const { data: teamData } = useClientDataSWR(
     teamId && workspaceId ? ['team', workspaceId, teamId] : null,
     () => lambdaClient.team.team.query({ teamId: teamId! }),
@@ -179,17 +180,17 @@ const TeamPage = memo(() => {
     () => lambdaClient.team.teams.query(),
   );
   const { data: triageData, isLoading } = useClientDataSWR(
-    teamId && workspaceId ? ['team-triage', workspaceId, teamId, cycleId] : null,
+    teamId && workspaceId ? ['team-triage', workspaceId, teamId, cycleId, noProject] : null,
     () =>
       workAttentionService.query({
-        query: teamTriageQuery(teamId!, cycleId),
+        query: teamTriageQuery(teamId!, cycleId, noProject),
       }),
   );
   const { data: teamTasksData } = useClientDataSWR(
-    teamId && workspaceId ? ['team-tasks', workspaceId, teamId, cycleId] : null,
+    teamId && workspaceId ? ['team-tasks', workspaceId, teamId, cycleId, noProject] : null,
     () =>
       workAttentionService.query({
-        query: teamTaskQuery(teamId!, cycleId),
+        query: teamTaskQuery(teamId!, cycleId, noProject),
       }),
   );
   const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
@@ -214,8 +215,8 @@ const TeamPage = memo(() => {
           ...(extra?.canonicalTaskId ? { canonicalTaskId: extra.canonicalTaskId } : {}),
         });
         await Promise.all([
-          mutate(['team-triage', workspaceId, teamId, cycleId]),
-          mutate(['team-tasks', workspaceId, teamId, cycleId]),
+          mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
+          mutate(['team-tasks', workspaceId, teamId, cycleId, noProject]),
         ]);
         toast.success(t('teams.triageUpdated'));
       } catch (error) {
@@ -226,15 +227,15 @@ const TeamPage = memo(() => {
         );
       }
     },
-    [cycleId, t, teamId, workspaceId],
+    [cycleId, noProject, t, teamId, workspaceId],
   );
 
   const refreshTriage = useCallback(() => {
     void Promise.all([
-      mutate(['team-triage', workspaceId, teamId, cycleId]),
-      mutate(['team-tasks', workspaceId, teamId, cycleId]),
+      mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
+      mutate(['team-tasks', workspaceId, teamId, cycleId, noProject]),
     ]);
-  }, [cycleId, teamId, workspaceId]);
+  }, [cycleId, noProject, teamId, workspaceId]);
 
   const cycleOptions = useMemo(
     () => [
@@ -257,18 +258,27 @@ const TeamPage = memo(() => {
         }
       />
       <Flexbox gap={12} padding={16} style={{ overflow: 'auto' }}>
-        {cycleOptions.length > 1 ? (
-          <Select
-            aria-label={t('teams.cycle')}
-            options={cycleOptions}
+        <Flexbox horizontal gap={8} wrap="wrap">
+          {cycleOptions.length > 1 ? (
+            <Select
+              aria-label={t('teams.cycle')}
+              options={cycleOptions}
+              size="small"
+              style={{ maxWidth: 280 }}
+              value={cycleId}
+              onChange={(next) => {
+                if (typeof next === 'string') setCycleId(next);
+              }}
+            />
+          ) : null}
+          <Button
             size="small"
-            style={{ maxWidth: 280 }}
-            value={cycleId}
-            onChange={(next) => {
-              if (typeof next === 'string') setCycleId(next);
-            }}
-          />
-        ) : null}
+            type={noProject ? 'primary' : undefined}
+            onClick={() => setNoProject((current) => !current)}
+          >
+            {t('teams.noProject')}
+          </Button>
+        </Flexbox>
         <Text weight={500}>{t('teams.triage')}</Text>
         {isLoading ? (
           <Text type="secondary">{t('teams.loading')}</Text>

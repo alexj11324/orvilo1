@@ -10,7 +10,7 @@ import {
   Text,
   toast,
 } from '@lobehub/ui/base-ui';
-import type { MyWorkMode, WorkQueryLayout } from '@orvilo/types';
+import { applyNoProjectFilter, type MyWorkMode, type WorkQueryLayout } from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
@@ -50,11 +50,12 @@ const MyWorkPage = memo(() => {
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = resolveMode(searchParams.get('tab'));
   const layout = resolveLayout(mode, searchParams.get('layout'));
+  const noProject = searchParams.get('noProject') === '1';
   const canBoard = isMyWorkBoardMode(mode);
 
   const { data, isLoading } = useClientDataSWR(
-    workAttentionKeys.myWork(workspaceId, mode, layout),
-    () => workAttentionService.myWork({ layout: canBoard ? layout : 'list', mode }),
+    workAttentionKeys.myWork(workspaceId, mode, layout, noProject),
+    () => workAttentionService.myWork({ layout: canBoard ? layout : 'list', mode, noProject }),
   );
   const firstTasks = data?.data.tasks ?? [];
   const firstGroups = data?.data.groups ?? [];
@@ -66,15 +67,15 @@ const MyWorkPage = memo(() => {
     setTail([]);
     setGroupTail([]);
     setExtraSubscribed([]);
-  }, [layout, mode, queryHash, workspaceId]);
+  }, [layout, mode, noProject, queryHash, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, tail);
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);
   const subscribedTaskIds = [...(data?.data.subscribedTaskIds ?? []), ...extraSubscribed];
   const canSaveAs = isMyWorkSaveableMode(mode);
 
   const refresh = useCallback(async () => {
-    await mutate(workAttentionKeys.myWork(workspaceId, mode, layout));
-  }, [layout, mode, workspaceId]);
+    await mutate(workAttentionKeys.myWork(workspaceId, mode, layout, noProject));
+  }, [layout, mode, noProject, workspaceId]);
 
   const loadMore = useCallback(async () => {
     const last = tasks.at(-1);
@@ -83,11 +84,12 @@ const MyWorkPage = memo(() => {
       afterId: last.id,
       layout: canBoard ? layout : 'list',
       mode,
+      noProject,
       queryHash,
     });
     setTail((current) => mergeWorkQueryPage(current, next.data.tasks));
     setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
-  }, [canBoard, layout, mode, queryHash, tasks]);
+  }, [canBoard, layout, mode, noProject, queryHash, tasks]);
 
   const loadMoreGroup = useCallback(
     async (groupKey: string) => {
@@ -99,12 +101,13 @@ const MyWorkPage = memo(() => {
         groupKey,
         layout: 'board',
         mode,
+        noProject,
         queryHash,
       });
       setGroupTail((current) => mergeWorkQueryGroups(current, next.data.groups ?? []));
       setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
     },
-    [groups, mode, queryHash],
+    [groups, mode, noProject, queryHash],
   );
 
   const tabs = useMemo(
@@ -139,7 +142,7 @@ const MyWorkPage = memo(() => {
         entityType: 'task',
         layout: canBoard ? layout : 'list',
         name: t(`myWork.${mode}`),
-        query: myWorkSaveAsQuery(mode, canBoard ? layout : 'list'),
+        query: applyNoProjectFilter(myWorkSaveAsQuery(mode, canBoard ? layout : 'list'), noProject),
         visibility: 'private',
       });
       await mutate(workAttentionKeys.savedViews(workspaceId));
@@ -147,7 +150,23 @@ const MyWorkPage = memo(() => {
     } catch {
       toast.error(t('myWork.saveAsFailed'));
     }
-  }, [canBoard, layout, mode, navigate, t, workspaceId]);
+  }, [canBoard, layout, mode, navigate, noProject, t, workspaceId]);
+
+  const writeParams = (patch: { layout?: WorkQueryLayout; noProject?: boolean; tab?: string }) => {
+    const nextTab = patch.tab ?? mode;
+    const nextLayout = patch.layout ?? layout;
+    const nextNoProject = patch.noProject ?? noProject;
+    setSearchParams(
+      {
+        tab: nextTab,
+        ...(isMyWorkBoardMode(nextTab as MyWorkMode) && nextLayout === 'board'
+          ? { layout: 'board' }
+          : {}),
+        ...(nextNoProject ? { noProject: '1' } : {}),
+      },
+      { replace: true },
+    );
+  };
 
   return (
     <Flexbox flex={1} height="100%">
@@ -162,12 +181,7 @@ const MyWorkPage = memo(() => {
             {canBoard ? (
               <Button
                 size="small"
-                onClick={() =>
-                  setSearchParams(
-                    { layout: layout === 'board' ? 'list' : 'board', tab: mode },
-                    { replace: true },
-                  )
-                }
+                onClick={() => writeParams({ layout: layout === 'board' ? 'list' : 'board' })}
               >
                 {layout === 'board' ? t('myWork.layoutList') : t('myWork.layoutBoard')}
               </Button>
@@ -181,15 +195,7 @@ const MyWorkPage = memo(() => {
         }
       />
       <Flexbox gap={16} padding={16} style={{ overflow: 'auto' }}>
-        <TabsRoot
-          value={mode}
-          onValueChange={(value) =>
-            setSearchParams(
-              { tab: value, ...(canBoard && layout === 'board' ? { layout: 'board' } : {}) },
-              { replace: true },
-            )
-          }
-        >
+        <TabsRoot value={mode} onValueChange={(value) => writeParams({ tab: value })}>
           <TabsList>
             <TabsIndicator />
             {tabs.map((item) => (
@@ -199,6 +205,15 @@ const MyWorkPage = memo(() => {
             ))}
           </TabsList>
         </TabsRoot>
+        <Flexbox horizontal>
+          <Button
+            size="small"
+            type={noProject ? 'primary' : undefined}
+            onClick={() => writeParams({ noProject: !noProject })}
+          >
+            {t('myWork.noProject')}
+          </Button>
+        </Flexbox>
         <WorkQueryResults
           emptyLabel={t('myWork.empty')}
           externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}

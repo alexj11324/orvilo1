@@ -197,6 +197,63 @@ export interface WorkQuery {
   sort?: WorkQuerySort[];
 }
 
+export const NO_PROJECT_PREDICATE = {
+  field: 'projectId',
+  op: 'isNull',
+} as const satisfies WorkQueryPredicate;
+
+const isNoProjectPredicate = (node: WorkQueryFilter | WorkQueryPredicate): boolean =>
+  'field' in node && node.field === 'projectId' && node.op === 'isNull';
+
+/** AND `projectId isNull` onto a query. Does not assign a default project. */
+export const applyNoProjectFilter = (query: WorkQuery, enabled: boolean): WorkQuery => {
+  const any = query.filter?.any;
+  const all = (query.filter?.all ?? []).filter((node) => !isNoProjectPredicate(node));
+  if (enabled) all.push(NO_PROJECT_PREDICATE);
+  if (all.length === 0 && (!any || any.length === 0)) {
+    if (!query.filter) return query;
+    const { filter: _omit, ...rest } = query;
+    return rest;
+  }
+  return {
+    ...query,
+    filter: {
+      ...(any && any.length > 0 ? { any } : {}),
+      ...(all.length > 0 ? { all } : {}),
+    },
+  };
+};
+
+export const WORK_QUERY_FACET_FIELDS = [
+  'projectId',
+  'status',
+  'teamId',
+  'workflowCategory',
+] as const;
+
+export type WorkQueryFacetField = (typeof WORK_QUERY_FACET_FIELDS)[number];
+
+export interface WorkQueryFacetBucket {
+  count: number;
+  key: string | null;
+  /** Set only when the visitor may read this team/project. */
+  name?: string;
+}
+
+export interface WorkQueryFacetResult {
+  buckets: WorkQueryFacetBucket[];
+  field: WorkQueryFacetField;
+  queryHash: string;
+  /** Matching rows whose facet key the visitor must not learn. */
+  restrictedCount: number;
+  total: number;
+}
+
+export interface WorkQueryCountResult {
+  queryHash: string;
+  total: number;
+}
+
 /** Pending review that is not a Task — never materialized as a Task just to fill My Work. */
 export interface WorkQueryExternalReview {
   actionType: string;

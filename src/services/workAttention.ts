@@ -30,8 +30,16 @@ class WorkAttentionService {
     layout?: 'board' | 'list';
     limit?: number;
     mode: MyWorkMode;
+    noProject?: boolean;
     queryHash?: string;
   }) => lambdaClient.workAttention.myWork.query(input);
+
+  count = (input: { query: WorkQuery }) => lambdaClient.workAttention.count.query(input);
+
+  facet = (input: {
+    field: 'projectId' | 'status' | 'teamId' | 'workflowCategory';
+    query: WorkQuery;
+  }) => lambdaClient.workAttention.facet.query(input);
 
   query = (input: {
     afterId?: string;

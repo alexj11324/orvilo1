@@ -642,6 +642,7 @@ export default {
   'myWork.moveBlocked': 'Finish blocking work before moving this to Done',
   'myWork.moveConflict': 'This task changed. Refresh and move it again.',
   'myWork.moveFailed': 'Could not move this task',
+  'myWork.noProject': 'No project',
   'myWork.externalReviews': 'Pull requests',
   'myWork.externalReviewsEmpty':
     'Readable GitHub or Linear review requests appear here. Tasks are not created just to fill this list.',
@@ -688,6 +689,7 @@ export default {
   'teams.empty': 'No teams in this workspace',
   'teams.loading': 'Loading teams…',
   'teams.markDuplicate': 'Mark duplicate',
+  'teams.noProject': 'No project',
   'teams.canonical': 'Canonical task',
   'teams.personal': 'Switch to a workspace to see teams',
   'teams.reassign': 'Reassign',

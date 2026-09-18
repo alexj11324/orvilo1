@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { applyNoProjectFilter } from '@orvilo/types';
 import { inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -473,5 +474,82 @@ describe('WorkQueryModel', () => {
     expect(byTeam.tasks).toEqual([]);
     expect(byTeam.total).toBe(0);
     expect(byTeam.tasks.map((row) => row.teamId)).not.toContain('wq-hidden-team');
+  });
+
+  it('does not treat integration-imported tasks as created by the installer', async () => {
+    const imported = await new TaskModel(serverDB, userId, workspaceId).create(
+      { instruction: 'From Linear', name: 'Imported issue' },
+      {
+        creationSubject: {
+          id: 'linear-installation:wq',
+          kind: 'integration',
+          snapshot: { displayName: 'Linear', kind: 'integration' },
+        },
+      },
+    );
+    const mine = await createTask(userId, { name: 'I filed this' });
+    expect(imported.createdByUserId).toBeNull();
+    expect(mine.createdByUserId).toBe(userId);
+
+    const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
+      query: myWorkQueryForMode('created'),
+    });
+    expect(result.tasks.map((row) => row.id)).toContain(mine.id);
+    expect(result.tasks.map((row) => row.id)).not.toContain(imported.id);
+  });
+
+  it('keeps projectless assigned work visible and does not invent a default project', async () => {
+    const loose = await createTask(userId, { assigneeUserId: userId, name: 'Loose work' });
+    expect(loose.projectId).toBeNull();
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const assigned = await model.queryTasks({ query: myWorkQueryForMode('assigned') });
+    expect(assigned.tasks.map((row) => row.id)).toContain(loose.id);
+
+    const noProject = await model.queryTasks({
+      query: applyNoProjectFilter(myWorkQueryForMode('assigned'), true),
+    });
+    expect(noProject.tasks.map((row) => row.id)).toContain(loose.id);
+    expect(noProject.tasks.every((row) => row.projectId == null)).toBe(true);
+  });
+
+  it('counts and facets with the same ACL as the list, without private team names', async () => {
+    await serverDB.insert(teams).values({
+      createdByUserId: userId,
+      id: 'wq-facet-team',
+      key: 'FAC',
+      name: 'Secret Facet Team',
+      visibility: 'private',
+      workspaceId,
+    });
+    await serverDB.insert(teamMembers).values({
+      role: 'lead',
+      teamId: 'wq-facet-team',
+      userId,
+      workspaceId,
+    });
+    const assigned = await createTask(userId, {
+      assigneeUserId: otherUserId,
+      name: 'Assigned on a private team',
+      teamId: 'wq-facet-team',
+      visibility: 'public',
+    });
+
+    const outsider = new WorkQueryModel(serverDB, otherUserId, workspaceId);
+    const query = myWorkQueryForMode('assigned');
+    const list = await outsider.queryTasks({ query });
+    const count = await outsider.countTasks({ query });
+    const facet = await outsider.facetTasks({ field: 'teamId', query });
+
+    expect(list.tasks.map((row) => row.id)).toContain(assigned.id);
+    expect(count.total).toBe(list.total);
+    expect(facet.total).toBe(list.total);
+    expect(count.queryHash).toBe(list.queryHash);
+    expect(facet.buckets.map((bucket) => bucket.name)).not.toContain('Secret Facet Team');
+    expect(facet.buckets.map((bucket) => bucket.key)).not.toContain('wq-facet-team');
+    expect(facet.restrictedCount).toBeGreaterThan(0);
+    expect(
+      facet.restrictedCount + facet.buckets.reduce((sum, bucket) => sum + bucket.count, 0),
+    ).toBe(facet.total);
   });
 });

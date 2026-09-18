@@ -1,4 +1,4 @@
-import type { WorkQuery, WorkQueryPredicate } from '@orvilo/types';
+import { applyNoProjectFilter, type WorkQuery, type WorkQueryPredicate } from '@orvilo/types';
 
 export const ALL_TEAM_CYCLES = '__all__';
 
@@ -9,28 +9,39 @@ export const teamCyclePredicate = (
   return { field: 'cycleId', op: 'eq', value: cycleId };
 };
 
-export const teamTaskQuery = (teamId: string, cycleId?: string | null): WorkQuery => {
+const withTeamScope = (
+  teamId: string,
+  extra: WorkQueryPredicate[],
+  cycleId?: string | null,
+  noProject = false,
+): WorkQuery => {
   const cycle = teamCyclePredicate(cycleId);
-  return {
-    entityType: 'task',
-    filter: {
-      all: [{ field: 'teamId', op: 'eq', value: teamId }, ...(cycle ? [cycle] : [])],
+  return applyNoProjectFilter(
+    {
+      entityType: 'task',
+      filter: {
+        all: [{ field: 'teamId', op: 'eq', value: teamId }, ...extra, ...(cycle ? [cycle] : [])],
+      },
+      schemaVersion: 1,
     },
-    schemaVersion: 1,
-  };
+    noProject,
+  );
 };
 
-export const teamTriageQuery = (teamId: string, cycleId?: string | null): WorkQuery => {
-  const cycle = teamCyclePredicate(cycleId);
-  return {
-    entityType: 'task',
-    filter: {
-      all: [
-        { field: 'teamId', op: 'eq', value: teamId },
-        { field: 'triageStatus', op: 'eq', value: 'untriaged' },
-        ...(cycle ? [cycle] : []),
-      ],
-    },
-    schemaVersion: 1,
-  };
-};
+export const teamTaskQuery = (
+  teamId: string,
+  cycleId?: string | null,
+  noProject = false,
+): WorkQuery => withTeamScope(teamId, [], cycleId, noProject);
+
+export const teamTriageQuery = (
+  teamId: string,
+  cycleId?: string | null,
+  noProject = false,
+): WorkQuery =>
+  withTeamScope(
+    teamId,
+    [{ field: 'triageStatus', op: 'eq', value: 'untriaged' }],
+    cycleId,
+    noProject,
+  );

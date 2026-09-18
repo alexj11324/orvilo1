@@ -153,10 +153,19 @@ export interface HeterogeneousAgentRuntimeStatus {
   state: HeterogeneousAgentRuntimeState;
   transport:
     | 'acp-stdio'
+    | 'amp-acp'
+    | 'claude-code-acp'
     | 'claude-sdk'
     | 'cli-spawn'
+    | 'codebuddy-acp'
+    | 'codex-acp'
     | 'codex-app-server'
     | 'cursor-acp'
     | 'droid-acp'
+    | 'devin-acp'
+    | 'kimi-code-acp'
+    | 'opencode-acp'
+    | 'pi-acp'
+    | 'qoder-acp'
     | 'trae-acp';
 }

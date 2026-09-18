@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { ClaudeCodeAdapter, CodexAdapter } from '../adapters';
 import { AgentStreamPipeline } from './agentStreamPipeline';
 
 const init = (sessionId = 'cc-1') =>
@@ -55,6 +56,7 @@ const contentOf = (events: { data?: any; type: string }[]) =>
 describe('AgentStreamPipeline', () => {
   it('runs JSONL → adapter → toStreamEvent and stamps operationId', async () => {
     const pipeline = new AgentStreamPipeline({
+      adapter: new ClaudeCodeAdapter(),
       agentType: 'claude-code',
       operationId: 'op-42',
     });
@@ -70,6 +72,7 @@ describe('AgentStreamPipeline', () => {
 
   it('exposes the adapter session id once the init event is parsed', async () => {
     const pipeline = new AgentStreamPipeline({
+      adapter: new ClaudeCodeAdapter(),
       agentType: 'claude-code',
       operationId: 'op-1',
     });
@@ -81,16 +84,25 @@ describe('AgentStreamPipeline', () => {
 
   it('auto-wires the Codex file-change tracker for codex agents only', async () => {
     // claude-code → no codex tracker, file_change payloads pass through untouched
-    const claude = new AgentStreamPipeline({ agentType: 'claude-code', operationId: 'op-1' });
+    const claude = new AgentStreamPipeline({
+      adapter: new ClaudeCodeAdapter(),
+      agentType: 'claude-code',
+      operationId: 'op-1',
+    });
     expect((claude as any).codexTracker).toBeUndefined();
 
     // codex → tracker is instantiated automatically; consumers stay agent-agnostic
-    const codex = new AgentStreamPipeline({ agentType: 'codex', operationId: 'op-1' });
+    const codex = new AgentStreamPipeline({
+      adapter: new CodexAdapter(),
+      agentType: 'codex',
+      operationId: 'op-1',
+    });
     expect((codex as any).codexTracker).toBeDefined();
   });
 
   it('emits an initial Codex model metadata event before stdout-derived events', async () => {
     const pipeline = new AgentStreamPipeline({
+      adapter: new CodexAdapter(),
       agentType: 'codex',
       initialModel: 'gpt-5.5',
       operationId: 'op-codex',
@@ -117,6 +129,7 @@ describe('AgentStreamPipeline', () => {
 
   it('passes initial Codex cumulative usage into the adapter for resumed turns', async () => {
     const pipeline = new AgentStreamPipeline({
+      adapter: new CodexAdapter(),
       agentType: 'codex',
       initialCumulativeUsage: {
         inputCacheMissTokens: 100,
@@ -155,6 +168,7 @@ describe('AgentStreamPipeline', () => {
 
   it('drops non-JSON noise lines instead of throwing', async () => {
     const pipeline = new AgentStreamPipeline({
+      adapter: new ClaudeCodeAdapter(),
       agentType: 'claude-code',
       operationId: 'op-1',
     });
@@ -167,6 +181,7 @@ describe('AgentStreamPipeline', () => {
 
   it('flushes adapter-buffered events on stream end', async () => {
     const pipeline = new AgentStreamPipeline({
+      adapter: new ClaudeCodeAdapter(),
       agentType: 'claude-code',
       operationId: 'op-1',
     });
@@ -179,10 +194,9 @@ describe('AgentStreamPipeline', () => {
 
   describe('tool_result image upload ()', () => {
     it('rewrites base64 pluginState.images into uploaded references', async () => {
-      const uploadImage = vi
-        .fn()
-        .mockResolvedValue({ fileId: 'file_1', url: 'https://cdn/x.png' });
+      const uploadImage = vi.fn().mockResolvedValue({ fileId: 'file_1', url: 'https://cdn/x.png' });
       const pipeline = new AgentStreamPipeline({
+        adapter: new ClaudeCodeAdapter(),
         agentType: 'claude-code',
         operationId: 'op-1',
         uploadImage,
@@ -203,6 +217,7 @@ describe('AgentStreamPipeline', () => {
 
     it('drops the image when no uploader is injected (base64 never persisted)', async () => {
       const pipeline = new AgentStreamPipeline({
+        adapter: new ClaudeCodeAdapter(),
         agentType: 'claude-code',
         operationId: 'op-1',
       });
@@ -215,6 +230,7 @@ describe('AgentStreamPipeline', () => {
     it('drops the image and keeps streaming when the uploader throws', async () => {
       const uploadImage = vi.fn().mockRejectedValue(new Error('boom'));
       const pipeline = new AgentStreamPipeline({
+        adapter: new ClaudeCodeAdapter(),
         agentType: 'claude-code',
         operationId: 'op-1',
         uploadImage,
@@ -225,12 +241,15 @@ describe('AgentStreamPipeline', () => {
       expect(uploadImage).toHaveBeenCalledTimes(1);
       expect(imagesOf(events)).toBeUndefined();
       // The `[Image: …]` placeholder is still the content fallback.
-      expect(events.find((e) => e.type === 'tool_result')?.data?.content).toBe('[Image: image/png]');
+      expect(events.find((e) => e.type === 'tool_result')?.data?.content).toBe(
+        '[Image: image/png]',
+      );
     });
 
     it('drops the image when the uploader declines (returns undefined)', async () => {
       const uploadImage = vi.fn().mockResolvedValue(undefined);
       const pipeline = new AgentStreamPipeline({
+        adapter: new ClaudeCodeAdapter(),
         agentType: 'claude-code',
         operationId: 'op-1',
         uploadImage,

@@ -12,19 +12,7 @@
  * `@orvilo/agent-gateway-client` (which is a browser-side WebSocket client
  * that producers have no business pulling in).
  */
-export {
-  buildCodexAppServerArgs,
-  buildCodexAppServerInput,
-  buildCodexAppServerThreadParams,
-  CodexAppServerClient,
-  type CodexAppServerClientOptions,
-  CodexAppServerConnectionError,
-  CodexAppServerRpcError,
-  CodexThreadSession,
-  type CodexThreadSessionOptions,
-  getCodexAppServerUnsupportedArgs,
-  isCodexAppServerCompatibilityError,
-} from '../codex';
+export { buildCodexAppServerArgs } from '../codex';
 export type { UsageData } from '../types';
 export {
   ACP_PROTOCOL_VERSION,
@@ -54,16 +42,6 @@ export {
   HETERO_WORKING_DIRECTORY_NOT_FOUND,
   isHeteroStatusGuideErrorData,
 } from './classifyProcessFailure';
-export {
-  buildClaudeSdkUserMessageFromStreamJson,
-  ClaudeAgentSdkSession,
-  type ClaudeAgentSdkSessionOptions,
-} from './claudeAgentSdkSession';
-export type {
-  HeterogeneousAgentRuntimeState,
-  HeterogeneousAgentRuntimeStatus,
-  HeterogeneousAgentRuntimeTask,
-} from './runtimeStatus';
 export { type CliSpawnPlan, resolveCliSpawnPlan } from './cliSpawn';
 export { CodexFileChangeTracker } from './codexFileChangeTracker';
 export {
@@ -125,10 +103,8 @@ export {
   type AgentContentBlock,
   type AgentImageBlock,
   type AgentImageSource,
-  type AgentInputPlan,
   type AgentPromptInput,
   type AgentTextBlock,
-  buildAgentInput,
   type BuildAgentInputOptions,
   buildHeteroExecStdinPayload,
   type HeteroExecImageRef,
@@ -138,6 +114,11 @@ export {
   type NormalizeImageOptions,
 } from './input';
 export { JsonlStreamProcessor } from './jsonlProcessor';
+export type {
+  HeterogeneousAgentRuntimeState,
+  HeterogeneousAgentRuntimeStatus,
+  HeterogeneousAgentRuntimeTask,
+} from './runtimeStatus';
 // NOTE: `resolveCliCommand` is intentionally NOT re-exported here. It runs
 // `promisify(execFile)` at module load, which throws under a partial
 // `node:child_process` mock — and this barrel is widely imported (e.g. for
@@ -145,30 +126,50 @@ export { JsonlStreamProcessor } from './jsonlProcessor';
 // import time. Import it from the dedicated `@orvilo/heterogeneous-agents/
 // resolveCliCommand` subpath instead.
 export {
+  ACP_AGENT_RUNTIMES,
+  ACP_RUNTIME_AGENT_TYPES,
+  type AcpAgentRuntimeSpec,
+  type AcpBridgeRunnerTarget,
+  type AcpBridgeSpec,
+  buildAcpBridgeNotFoundError,
+  detectAcpBridgeCommand,
+  detectAcpBridgeRunner,
+  getAcpAgentRuntime,
+  isAcpBridgeAgent,
+} from './acpRuntime';
+export {
   ensureClaudeCodeResumeTranscript,
   type EnsureResumeTranscriptReason,
   type EnsureResumeTranscriptResult,
   resolveClaudeCodeTranscriptPath,
 } from './ensureResumeTranscript';
 export {
-  AMP_BASE_ARGS,
-  buildQoderArgs,
-  CLAUDE_CODE_BASE_ARGS,
-  CODEBUDDY_BASE_ARGS,
-  CODEX_BYPASS_APPROVALS_AND_SANDBOX_ARG,
-  CODEX_DEFAULT_EXECUTION_ARGS,
-  CODEX_EXECUTION_MODE_FLAGS,
-  CODEX_REQUIRED_ARGS,
-  KIMI_CODE_BASE_ARGS,
-  OPENCODE_BASE_ARGS,
-  PI_BASE_ARGS,
-  QODER_BASE_ARGS,
-  type QoderSpawnArgsOptions,
   spawnAgent,
   type SpawnAgentHandle,
   type SpawnAgentOptions,
   spawnTraeAcpAgent,
 } from './spawnAgent';
+export {
+  type AcpSpawnTarget,
+  buildStandardAcpArgs,
+  createStandardAcpSession,
+  extractStandardAcpSelectors,
+  listStandardAcpModels,
+  type ListStandardAcpModelsOptions,
+  resolveAcpSpawnTarget,
+  type StandardAcpSelectors,
+} from './standardAcpAgents';
+export {
+  buildStandardAcpPrompt,
+  isStandardAcpSessionNotFoundError,
+  type StandardAcpConfigOption,
+  type StandardAcpImagePromptBlock,
+  type StandardAcpPromptBlock,
+  StandardAcpSession,
+  type StandardAcpSessionConfig,
+  type StandardAcpSessionOptions,
+  type StandardAcpTextPromptBlock,
+} from './standardAcpSession';
 export { toStreamEvent } from './streamEvent';
 export {
   buildTraeAcpArgs,

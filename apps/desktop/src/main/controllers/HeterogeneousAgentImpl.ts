@@ -1,12 +1,9 @@
 import type { ChildProcess } from 'node:child_process';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, unlinkSync } from 'node:fs';
-import { access, appendFile, mkdir, unlink, writeFile } from 'node:fs/promises';
-import os from 'node:os';
+import { existsSync } from 'node:fs';
+import { access, appendFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Readable, Writable } from 'node:stream';
-import { finished as streamFinished } from 'node:stream/promises';
 
 import type {
   ClaudeCodeQuotaSnapshot,
@@ -52,14 +49,11 @@ import {
   readClaudeCodeIdentity,
 } from '@orvilo/heterogeneous-agents/quota-sampler';
 import { isLoginShellTimeoutStatus } from '@orvilo/heterogeneous-agents/resolveCliCommand';
-import type { AgentStreamEvent, UsageData } from '@orvilo/heterogeneous-agents/spawn';
 import {
+  ACP_RUNTIME_AGENT_TYPES,
+  type AcpAgentRuntimeSpec,
   AcpRpcResponseError,
-  AgentStreamPipeline,
-  buildAgentInput,
-  buildCodexAppServerArgs,
-  buildCodexAppServerInput,
-  buildCodexAppServerThreadParams,
+  type AcpSpawnTarget,
   buildCursorAcpArgs,
   buildCursorAcpPrompt,
   buildDevinAcpArgs,
@@ -68,28 +62,29 @@ import {
   buildDroidAcpPrompt,
   buildGrokAcpArgs,
   buildGrokAcpPrompt,
+  buildStandardAcpArgs,
+  buildStandardAcpPrompt,
   buildTraeAcpArgs,
   buildTraeAcpPrompt,
-  ClaudeAgentSdkSession,
-  CodexAppServerClient,
-  CodexThreadSession,
   createFileStoreImageUploader,
+  createStandardAcpSession,
   CursorAcpSession,
   DevinAcpSession,
   DroidAcpSession,
   ensureClaudeCodeResumeTranscript,
-  getCodexAppServerUnsupportedArgs,
+  extractStandardAcpSelectors,
+  getAcpAgentRuntime,
   GrokAcpSession,
-  isCodexAppServerCompatibilityError,
+  type HeterogeneousAgentRuntimeStatus,
   isCursorAcpSessionNotFoundError,
   isDevinAcpSessionNotFoundError,
   isDroidAcpSessionNotFoundError,
+  isStandardAcpSessionNotFoundError,
   readCodexSessionModel,
-  resolveCliSpawnPlan,
-  resolveCodexInitialModel,
+  resolveAcpSpawnTarget,
+  type StandardAcpSession,
   TraeAcpSession,
 } from '@orvilo/heterogeneous-agents/spawn';
-import { truncateTitle } from '@orvilo/heterogeneous-agents/transcript';
 import {
   describeUnusableWorkingDirectory,
   isSpawnableDirectory,
@@ -135,10 +130,7 @@ import {
   type ServerDefaultOperationSettlement,
   settleServerDefaultOperation,
 } from '@/modules/heterogeneousAgent/providerBindingPort';
-import type {
-  HeterogeneousAgentBuildPlan,
-  HeterogeneousAgentImageAttachment,
-} from '@/modules/heterogeneousAgent/types';
+import type { HeterogeneousAgentImageAttachment } from '@/modules/heterogeneousAgent/types';
 import { buildProxyEnv } from '@/modules/networkProxy/envBuilder';
 import { createLogger } from '@/utils/logger';
 
@@ -204,15 +196,6 @@ const CODEX_RESUME_CWD_MISMATCH_PATTERNS = [
 /** Directory under appStoragePath for caching downloaded files */
 const FILE_CACHE_DIR = HETERO_AGENT_FILES_DIR;
 const CLI_TRACE_DIR = '.heerogeneous-tracing';
-const CODEX_STDERR_STATUS_LINE = 'Reading prompt from stdin...';
-const CODEX_WARN_LOG_PATTERN = /^\d{4}-\d{2}-\d{2}T\S+\s+WARN\s+/;
-const CODEX_LOG_PATTERN = /^\d{4}-\d{2}-\d{2}T\S+\s+(?:DEBUG|ERROR|INFO|TRACE|WARN)\s+/;
-const CLI_ERROR_LINE_PATTERN = /^(?:error:|Error:|Usage:)/;
-const HETERO_SESSION_COMPLETE_GRACE_MS = 1_000;
-const HETERO_RUNTIME_LAB_ENABLED_VALUES = new Set(['1', 'true', 'yes', 'on']);
-
-const waitForHeteroSessionCompleteGrace = () =>
-  new Promise<void>((resolve) => setTimeout(resolve, HETERO_SESSION_COMPLETE_GRACE_MS));
 
 export const redactPromptArgs = (
   args: string[],
@@ -246,7 +229,7 @@ interface StartSessionParams {
    * Agent type key (e.g., 'claude-code'). Defaults to 'claude-code'. May carry
    * the builtin harness type `'orvilo'`; the session then resolves the
    * engine's CLI family (`claude-code` / `codex`) for spawn/preflight while
-   * `orviloEngine` pins the managed transport.
+   * `orviloEngine` records which engine the harness runs on.
    */
   agentType?: BuiltinHeterogeneousAgentType | HeterogeneousCliAgentType;
   /** Additional CLI arguments */
@@ -257,23 +240,18 @@ interface StartSessionParams {
   cwd?: string;
   /** Environment variables */
   env?: Record<string, string>;
-  /** Protocol-native model selected after session setup (TRAE ACP only). */
+  /** Protocol-native model selected after session setup (ACP sessions). */
   initialModel?: string;
   /**
-   * Builtin Orvilo engine selection. When set, the session MUST run on the
-   * managed transport for that engine — `claude-sdk` forces
-   * `sendPromptWithClaudeSdk`, `codex-app-server` forces
-   * `sendPromptWithCodexAppServer` — regardless of the Labs toggles.
+   * Builtin Orvilo engine selection. When set, the session runs the engine's
+   * CLI family (`claude-sdk` → claude-code, `codex-app-server` → codex) over
+   * its ACP transport (`claude-agent-acp` / `codex-acp`).
    */
   orviloEngine?: OrviloEngineKind;
   /** Credential-free Orvilo Provider reference. Desktop main resolves its secrets. */
   providerBinding?: HeterogeneousProviderBindingReference;
   /** Session ID to resume (for multi-turn) */
   resumeSessionId?: string;
-  /** Run claude-code prompts through the Claude Agent SDK instead of CLI spawn (lab preference) */
-  useClaudeCodeSdk?: boolean;
-  /** Run Codex prompts through codex app-server instead of one-shot codex exec (lab preference) */
-  useCodexAppServer?: boolean;
 }
 
 export interface StartSessionResult {
@@ -307,8 +285,8 @@ interface SendPromptParams {
    * Prior conversation turns used to rebuild a Claude Code transcript that the
    * CLI garbage-collected (`cleanupPeriodDays`, default 30 days). Only consumed
    * when resuming and the on-disk transcript is missing — see
-   * `ensureClaudeCodeResumeTranscript`. Without it, `--resume <staleId>` fails
-   * with "No conversation found with session ID".
+   * `ensureClaudeCodeResumeTranscript`. Without it, `session/load <staleId>`
+   * fails with "No conversation found with session ID".
    */
   resumeReplayMessages?: HeteroSessionImportMessage[];
   sessionId: string;
@@ -377,10 +355,9 @@ interface AgentSession {
   /**
    * Resolved CLI family this session executes through. For the builtin
    * `'orvilo'` harness this is the engine's family (`claude-code` / `codex`) —
-   * `orviloEngine` below then selects the managed transport.
+   * `orviloEngine` below records which engine it came from.
    */
   agentType: HeterogeneousCliAgentType;
-  appServerSession?: CodexThreadSession;
   args: string[];
   /**
    * True when *we* initiated the kill (cancelSession / stopSession / before-quit).
@@ -390,7 +367,6 @@ interface AgentSession {
    * intentional, not agent failures.
    */
   cancelledByUs?: boolean;
-  codexAppServerFallback?: boolean;
   command: string;
   cursorAcpSession?: CursorAcpSession;
   cwd?: string;
@@ -401,14 +377,12 @@ interface AgentSession {
   hostedProviderBinding?: HostedProviderBinding;
   model?: string;
   modelSource?: string;
-  modelVerificationLastAttemptAt?: number;
-  modelVerificationLastAttemptSessionId?: string;
   /**
-   * Set only for builtin-Orvilo sessions: forces the engine's managed
-   * transport (Claude Agent SDK / Codex app-server) without the Labs toggles.
+   * Set only for builtin-Orvilo sessions: records which engine family the
+   * harness runs on (`claude-sdk` → claude-code ACP, `codex-app-server` →
+   * codex ACP).
    */
   orviloEngine?: OrviloEngineKind;
-  process?: ChildProcess;
   /**
    * Absolute CLI path resolved by spawn preflight detection. Used for spawn()
    * when the configured command is bare: detection can find the CLI through
@@ -425,19 +399,12 @@ interface AgentSession {
    */
   resolvedCommandSearchPath?: string;
   resumeSessionId?: string;
-  sdkSession?: ClaudeAgentSdkSession;
   /** Present iff the session runs on the server-default (Orvilo) binding. */
   serverDefaultApiConfig?: HeterogeneousServerDefaultApiConfig;
   serverOperationToken?: string;
   sessionId: string;
+  standardAcpSession?: StandardAcpSession;
   traeAcpSession?: TraeAcpSession;
-  useClaudeCodeSdk?: boolean;
-  useCodexAppServer?: boolean;
-  verifiedModel?: string;
-  verifiedModelContextWindow?: number;
-  verifiedModelProvider?: string;
-  verifiedModelSessionId?: string;
-  verifiedModelSourceFile?: string;
 }
 
 type SessionErrorPayload = HeterogeneousAgentSessionError | string;
@@ -473,8 +440,6 @@ interface InterventionSlot {
   bridge: AskUserBridge;
   /** Resolves once bridge.events() iterator ends (after `cancelAll`). */
   pumpDone?: Promise<void>;
-  /** Path to the per-op temp `mcp.json` we wrote for `--mcp-config`. */
-  tmpConfigPath?: string;
 }
 
 export default class HeterogeneousAgentCtr {
@@ -519,8 +484,6 @@ export default class HeterogeneousAgentCtr {
   /** Lazy single MCP server, started on first claude-code prompt. */
   private builtinMcpServer?: OrviloBuiltinMcpServer;
   private builtinMcpStartPromise?: Promise<OrviloBuiltinMcpServer>;
-  /** One lazy, long-lived native Codex app-server connection shared by thread sessions. */
-  private codexAppServerClient?: CodexAppServerClient;
   // Fresh window sits under the renderer's 2-minute auto-refresh so each
   // scheduled poll reaches the usage API instead of a cache echo.
   private readonly claudeCodeQuotaCache = new QuotaSnapshotCache<ClaudeCodeQuotaSnapshot>({
@@ -760,6 +723,38 @@ export default class HeterogeneousAgentCtr {
     };
   }
 
+  /**
+   * Standard-ACP agents report a stale resume as a `session/load` RPC error —
+   * map it to the same structured payload the dedicated ACP sessions produce.
+   */
+  private getStandardAcpResumeError(
+    error: unknown,
+    session: AgentSession,
+  ): HeterogeneousAgentSessionError | undefined {
+    if (
+      !ACP_RUNTIME_AGENT_TYPES.has(session.agentType) ||
+      !session.resumeSessionId ||
+      !isStandardAcpSessionNotFoundError(error)
+    ) {
+      return;
+    }
+
+    const label = getAcpAgentRuntime(session.agentType)?.label ?? session.agentType;
+    return {
+      agentType: session.agentType,
+      code: HeterogeneousAgentSessionErrorCode.ResumeThreadNotFound,
+      command: session.command,
+      details: {
+        code: error.rpcError.code,
+        data: error.rpcError.data,
+      },
+      message: `The saved ${label} session could not be found, so it can no longer be resumed.`,
+      resumeSessionId: session.resumeSessionId,
+      stderr: error.message,
+      workingDirectory: session.cwd,
+    };
+  }
+
   private getCliAuthRequiredError(
     error: unknown,
     session: AgentSession,
@@ -788,56 +783,14 @@ export default class HeterogeneousAgentCtr {
       this.getDroidResumeError(error, session) ??
       this.getGrokResumeError(error, session) ??
       this.getCursorResumeError(error, session) ??
-      this.getDevinResumeError(error, session);
+      this.getDevinResumeError(error, session) ??
+      this.getStandardAcpResumeError(error, session);
     if (resumeError) return resumeError;
 
     const authRequiredError = this.getCliAuthRequiredError(error, session);
     if (authRequiredError) return authRequiredError;
 
     return error instanceof Error ? error.message : String(error);
-  }
-
-  private getRelevantCodexStderr(stderr: string): string {
-    const keptLines: string[] = [];
-    let droppingWarnBlock = false;
-
-    for (const line of stderr.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed === CODEX_STDERR_STATUS_LINE) {
-        continue;
-      }
-
-      if (CODEX_WARN_LOG_PATTERN.test(trimmed)) {
-        droppingWarnBlock = true;
-        continue;
-      }
-
-      if (CODEX_LOG_PATTERN.test(trimmed)) {
-        droppingWarnBlock = false;
-        keptLines.push(line);
-        continue;
-      }
-
-      if (droppingWarnBlock && !CLI_ERROR_LINE_PATTERN.test(trimmed)) {
-        continue;
-      }
-
-      droppingWarnBlock = false;
-      keptLines.push(line);
-    }
-
-    return keptLines.join('\n').trim();
-  }
-
-  private getExitErrorMessage(
-    code: number | null,
-    session: AgentSession,
-    stderrOutput: string,
-  ): string {
-    const relevantStderr =
-      session.agentType === 'codex' ? this.getRelevantCodexStderr(stderrOutput) : stderrOutput;
-
-    return relevantStderr || `Agent exited with code ${code}`;
   }
 
   private async getSpawnPreflightError(
@@ -919,23 +872,6 @@ export default class HeterogeneousAgentCtr {
     }
 
     return this.buildCliMissingError(session);
-  }
-
-  /**
-   * Global env override (`ORVILO_CLAUDE_CODE_SDK`) for the SDK runtime; the
-   * per-user Labs toggle arrives per session as `session.useClaudeCodeSdk`.
-   */
-  private get isClaudeCodeSdkLabEnabled(): boolean {
-    return HETERO_RUNTIME_LAB_ENABLED_VALUES.has(
-      String(process.env.ORVILO_CLAUDE_CODE_SDK ?? '').toLowerCase(),
-    );
-  }
-
-  /** Environment override for development and automated app-server verification. */
-  private get isCodexAppServerLabEnabled(): boolean {
-    return HETERO_RUNTIME_LAB_ENABLED_VALUES.has(
-      String(process.env.ORVILO_CODEX_APP_SERVER ?? '').toLowerCase(),
-    );
   }
 
   private buildSessionSpawnEnv(session: AgentSession): NodeJS.ProcessEnv {
@@ -1105,11 +1041,6 @@ export default class HeterogeneousAgentCtr {
             stdinFile: stdinPayload === undefined ? undefined : 'stdin.txt',
             stderrFile: 'stderr.log',
             stdoutFile: 'stdout.jsonl',
-            verifiedModel: session.verifiedModel,
-            verifiedModelContextWindow: session.verifiedModelContextWindow,
-            verifiedModelProvider: session.verifiedModelProvider,
-            verifiedModelSessionId: session.verifiedModelSessionId,
-            verifiedModelSourceFile: session.verifiedModelSourceFile,
           },
           null,
           2,
@@ -1254,16 +1185,31 @@ export default class HeterogeneousAgentCtr {
   }
 
   /**
-   * Register a per-op AskUserQuestion bridge, write its temp `mcp.json`,
-   * and stash it for the spawn path. The actual bridge event pump is started
-   * from `handleSpawnedAgentProcess`, where it can share the stdout broadcast
-   * queue instead of racing the adapter pipeline as a second producer.
+   * Register a per-op bridge for a standard-ACP session. The bridge answers
+   * `session/request_permission` + `elicitation/create` directly and also
+   * backs the `lobe_cc` MCP server when the agent mounts it (`session/new`'s
+   * `mcpServers` carries the per-op HTTP URL — no temp `mcp.json` file).
    */
-  private async setupInterventionForOp(
+  private async setupStandardAcpInterventionForOp(
     operationId: string,
-    provider: 'claude-code' | 'qoder',
+    session: AgentSession,
     browserBinding?: BrowserRunBinding,
-  ): Promise<{ bridge: AskUserBridge; cleanup: () => Promise<void>; tmpConfigPath: string }> {
+  ): Promise<{
+    bridge: AskUserBridge;
+    cleanup: () => Promise<void>;
+    mcpServers?: Record<string, unknown>[];
+  }> {
+    const provider = session.agentType as NonNullable<AskUserBridgeOptions['provider']>;
+    // claude-code / qoder mount the lobe_cc MCP server for the
+    // `ask_user_question` tool + in-app browser tools (the builtin Orvilo
+    // claude-sdk engine resolves to the claude-code family, so it is covered
+    // here; the codex engine historically exposes no builtin tools). Other
+    // agents only need the native permission/elicitation bridge.
+    const mountsBuiltinMcp = session.agentType === 'claude-code' || session.agentType === 'qoder';
+    if (!mountsBuiltinMcp) {
+      return this.setupAcpInterventionForOp(operationId, session.sessionId, provider);
+    }
+
     const server = await this.ensureBuiltinMcpServerStarted();
     const bridge = server.registerOperation(
       operationId,
@@ -1272,39 +1218,34 @@ export default class HeterogeneousAgentCtr {
     if (browserBinding?.agentId || browserBinding?.topicId) {
       this.opIdToBrowserBinding.set(operationId, browserBinding);
     }
-    const tmpConfigPath = path.join(os.tmpdir(), `orvilo-cc-mcp-${operationId}.json`);
-
-    // `alwaysLoad: true` is the undocumented CC flag that promotes our
-    // server's tool out of the deferred set so the model calls it directly
-    // (no ToolSearch hop). See spike notes — falls back to the
-    // 2-hop ToolSearch path if a future CC drops the flag, no breakage.
-    const config = {
-      mcpServers: {
-        orvilo_cc: {
-          alwaysLoad: true,
-          type: 'http' as const,
-          url: server.urlForOperation(operationId),
-        },
-      },
-    };
-    await writeFile(tmpConfigPath, JSON.stringify(config), 'utf8');
-
-    const slot: InterventionSlot = { bridge, tmpConfigPath };
+    const pumpDone = (async () => {
+      for await (const event of bridge.events()) {
+        this.broadcast('heteroAgentEvent', { event, sessionId: session.sessionId });
+      }
+    })().catch((error) => {
+      logger.warn('ACP AskUserQuestion bridge pump error:', error);
+    });
+    const slot: InterventionSlot = { bridge, pumpDone };
     this.opIdToIntervention.set(operationId, slot);
 
-    const cleanup = async () => {
-      // Unregistering on the server cancels all bridge pendings AND closes
-      // the events iterator (cancelAll fires from within unregisterOperation).
-      this.builtinMcpServer?.unregisterOperation(operationId);
-      await slot.pumpDone;
-      this.opIdToIntervention.delete(operationId);
-      this.opIdToBrowserBinding.delete(operationId);
-      await unlink(tmpConfigPath).catch(() => {
-        /* file may already be gone if app crashed mid-prompt */
-      });
+    return {
+      bridge,
+      cleanup: async () => {
+        // Unregistering on the server cancels all bridge pendings AND closes
+        // the events iterator (cancelAll fires from within unregisterOperation).
+        this.builtinMcpServer?.unregisterOperation(operationId);
+        await pumpDone;
+        this.opIdToIntervention.delete(operationId);
+        this.opIdToBrowserBinding.delete(operationId);
+      },
+      mcpServers: [
+        {
+          name: 'lobe_cc',
+          type: 'http',
+          url: server.urlForOperation(operationId),
+        },
+      ],
     };
-
-    return { bridge, cleanup, tmpConfigPath };
   }
 
   /**
@@ -1359,23 +1300,6 @@ export default class HeterogeneousAgentCtr {
     return path.join(this.app.appStoragePath, FILE_CACHE_DIR);
   }
 
-  /**
-   * Build a Claude Code stream-json user message with text + base64 images.
-   * Semantic context is assembled by the shared prompt engine before the
-   * provider-specific serializer runs.
-   */
-  private async buildStreamJsonInput(
-    prompt: string,
-    imageList: HeterogeneousAgentImageAttachment[] = [],
-    systemContext?: string,
-  ): Promise<string> {
-    const promptInput = buildHeterogeneousPrompt({ imageList, prompt, systemContext });
-    const plan = await buildAgentInput('claude-code', promptInput, {
-      cacheDir: this.fileCacheDir,
-    });
-    return plan.stdin;
-  }
-
   // ─── IPC methods ───
 
   /**
@@ -1388,8 +1312,7 @@ export default class HeterogeneousAgentCtr {
     // implicitly via `orviloEngine`); it has no executable of its own. Resolve
     // the engine's CLI family once so every downstream gate — driver, command
     // resolution, provider bindings, preflight, error classification — works
-    // in family terms. `orviloEngine` on the session keeps the managed
-    // transport selection.
+    // in family terms. `orviloEngine` on the session records the engine.
     const orviloEngine =
       declaredAgentType === 'orvilo' || params.orviloEngine !== undefined
         ? resolveOrviloEngine(params.orviloEngine)
@@ -1459,7 +1382,7 @@ export default class HeterogeneousAgentCtr {
         : undefined;
 
     this.sessions.set(sessionId, {
-      // If resuming, pre-set the agent session ID so sendPrompt adds --resume
+      // If resuming, pre-set the agent session ID so sendPrompt issues ACP session/load
       agentSessionId: resumeSessionId,
       agentType,
       args: hostedProviderBinding?.args ?? params.args ?? [],
@@ -1475,8 +1398,6 @@ export default class HeterogeneousAgentCtr {
       orviloEngine,
       sessionId,
       resumeSessionId,
-      useClaudeCodeSdk: params.useClaudeCodeSdk,
-      useCodexAppServer: params.useCodexAppServer,
     });
 
     logger.info('Session created:', {
@@ -1490,9 +1411,10 @@ export default class HeterogeneousAgentCtr {
   /**
    * Send a prompt to an agent session.
    *
-   * Spawns the CLI process with preset flags. Pipes each stdout chunk through
-   * the shared `AgentStreamPipeline` (JSONL → adapter → toStreamEvent) and
-   * broadcasts the resulting `AgentStreamEvent`s on `heteroAgentEvent`.
+   * Every transport is an ACP v1 session: the session pipes `session/update`
+   * notifications through its internal `AgentStreamPipeline` (adapter →
+   * toStreamEvent) and this controller broadcasts the resulting
+   * `AgentStreamEvent`s on `heteroAgentEvent`.
    */
   async sendPrompt(params: SendPromptParams): Promise<ServerDefaultOperationSettlement | void> {
     const session = this.sessions.get(params.sessionId);
@@ -1560,10 +1482,9 @@ export default class HeterogeneousAgentCtr {
     // Revive a Claude Code session whose local transcript the CLI already
     // garbage-collected (`cleanupPeriodDays`, default 30 days). Rebuilding it
     // from the turns Orvilo still holds turns a hard
-    // "No conversation found with session ID" into a normal `--resume` that
-    // hydrates the native history. No-ops when the transcript still exists.
-    // MUST run before the Claude SDK early return — both transports read the
-    // same on-disk transcript for resume.
+    // "No conversation found with session ID" into a normal `session/load`
+    // that hydrates the native history. No-ops when the transcript still
+    // exists — claude-agent-acp reads the same on-disk transcripts for resume.
     if (
       session.agentType === 'claude-code' &&
       session.agentSessionId &&
@@ -1588,52 +1509,6 @@ export default class HeterogeneousAgentCtr {
       }
     }
 
-    if (
-      session.agentType === 'claude-code' &&
-      (session.orviloEngine === 'claude-sdk' ||
-        session.useClaudeCodeSdk ||
-        this.isClaudeCodeSdkLabEnabled)
-    ) {
-      try {
-        return await this.sendPromptWithClaudeSdk(params, session);
-      } finally {
-        // The SDK helper owns cleanup once `run()` starts; this outer guard
-        // also covers input/trace/session construction failures before that try/finally.
-        await session.hostedProviderBinding?.cleanup();
-      }
-    }
-
-    // Codex runs are non-interactive on every transport: the app-server thread
-    // starts with approvalPolicy 'never' (no AskUser/MCP intervention bridge,
-    // unlike the Claude SDK path) and the exec fallback is one-shot. An Orvilo
-    // agent on the codex engine therefore cannot ask the user mid-run or call
-    // the orvilo_cc builtin tools — a known v1 asymmetry between the engines.
-    if (
-      session.agentType === 'codex' &&
-      !session.hostedProviderBinding &&
-      !session.codexAppServerFallback &&
-      (session.orviloEngine === 'codex-app-server' ||
-        session.useCodexAppServer ||
-        this.isCodexAppServerLabEnabled)
-    ) {
-      const unsupportedArgs = getCodexAppServerUnsupportedArgs(session.args, {
-        resume: !!session.agentSessionId,
-      });
-      if (unsupportedArgs.length === 0) {
-        if (await this.sendPromptWithCodexAppServer(params, session)) return;
-      } else if (session.agentSessionId) {
-        const message = `Codex app-server cannot safely resume this session without dropping CLI arguments: ${unsupportedArgs.join(', ')}`;
-        this.broadcast('heteroAgentSessionError', { error: message, sessionId: session.sessionId });
-        throw new Error(message);
-      } else {
-        session.codexAppServerFallback = true;
-        logger.warn('Falling back to codex exec because app-server cannot preserve CLI args:', {
-          sessionId: session.sessionId,
-          unsupportedArgs,
-        });
-      }
-    }
-
     if (session.agentType === 'grok-build') {
       return this.sendPromptWithGrokAcp(params, session);
     }
@@ -1654,520 +1529,26 @@ export default class HeterogeneousAgentCtr {
       return this.sendPromptWithTraeAcp(params, session);
     }
 
-    // Stand up the AskUserQuestion MCP bridge for supported prompts BEFORE
-    // building the spawn plan so the driver can wire the temp config path
-    // into `--mcp-config`. Other agents skip this entirely.
-    const intervention =
-      session.agentType === 'claude-code' || session.agentType === 'qoder'
-        ? await this.setupInterventionForOp(params.operationId, session.agentType, {
-            agentId: params.agentId,
-            topicId: params.topicId,
-          }).catch((err) => {
-            logger.warn('Failed to set up AskUserQuestion bridge — proceeding without it:', err);
-            return undefined;
-          })
-        : undefined;
-
-    let spawnPlan;
-    let traceSession;
-    let cwd: string;
-    let initialCumulativeUsage: UsageData | undefined;
-    let resolvedCliSpawnPlan;
-    let spawnEnv: NodeJS.ProcessEnv;
-    try {
-      const driver = getHeterogeneousAgentDriver(session.agentType);
-      const promptInput = buildHeterogeneousPrompt({
-        imageList: params.imageList,
-        prompt: params.prompt,
-        systemContext: params.systemContext,
-      });
-      spawnPlan = await driver.buildSpawnPlan({
-        args: session.args,
-        helpers: {
-          buildAgentInput: async (agentType, input) => {
-            try {
-              return await buildAgentInput(agentType, input, { cacheDir: this.fileCacheDir });
-            } catch (error) {
-              logger.error('Failed to prepare heterogeneous agent input:', error);
-              throw new Error(
-                `Failed to attach image(s) to CLI: ${this.getErrorMessage(error) || 'Unknown error'}`,
-                { cause: error },
-              );
-            }
-          },
-        },
-        mcpConfigPath: intervention?.tmpConfigPath,
-        promptInput,
-        resumeSessionId: session.agentSessionId,
-      });
-
-      const spawnArgs =
-        spawnPlan.argvPayload === undefined
-          ? spawnPlan.args
-          : [...spawnPlan.args, spawnPlan.argvPayload];
-      resolvedCliSpawnPlan = await resolveCliSpawnPlan(
-        session.resolvedCommandPath ?? session.command,
-        spawnArgs,
-      );
-
-      // Fall back to the user's Desktop so the process never inherits
-      // the Electron parent's cwd (which is `/` when launched from Finder).
-      cwd = session.cwd || electronApp.getPath('desktop');
-
-      spawnEnv = this.buildSessionSpawnEnv(session);
-
-      if (session.agentType === 'codex') {
-        const initialModel = await resolveCodexInitialModel({
-          args: spawnPlan.args,
-          env: spawnEnv,
-        });
-        if (initialModel?.model) {
-          session.model = initialModel.model;
-          session.modelSource = initialModel.source;
-        }
-
-        if (session.agentSessionId) {
-          initialCumulativeUsage = (
-            await readCodexSessionModel(session.agentSessionId, { env: spawnEnv })
-          )?.cumulativeUsage;
-        }
+    // Every remaining local agent executes through the shared standard-ACP
+    // session — native `*-acp` modes and upstream bridge binaries alike. The
+    // builtin-Orvilo engines land here too: `claude-sdk` resolves to
+    // claude-code → claude-agent-acp, `codex-app-server` to codex → codex-acp.
+    if (ACP_RUNTIME_AGENT_TYPES.has(session.agentType)) {
+      try {
+        return await this.sendPromptWithStandardAcp(params, session);
+      } finally {
+        // The ACP helper owns cleanup once `run()` starts; this outer guard
+        // also covers input/trace/session construction failures before that try/finally.
+        await session.hostedProviderBinding?.cleanup();
       }
-
-      traceSession = await this.createCliTraceSession({
-        cliArgs: spawnPlan.args,
-        cwd,
-        imageList: params.imageList ?? [],
-        session,
-        stdinPayload: spawnPlan.stdinPayload,
-      });
-    } catch (err) {
-      // We never made it to spawn — the `proc.on('exit')` cleanup path
-      // won't run, so tear the intervention bridge down right here.
-      if (intervention) {
-        await intervention.cleanup().catch((cleanupErr) => {
-          logger.warn('AskUserQuestion cleanup error during pre-spawn failure:', cleanupErr);
-        });
-      }
-      await session.hostedProviderBinding?.cleanup();
-      throw err;
     }
 
-    if (session.cancelledByUs) {
-      await intervention?.cleanup().catch((cleanupError) => {
-        logger.warn('AskUserQuestion cleanup error after pre-launch cancellation:', cleanupError);
-      });
-      await this.completeCancelledSessionBeforeLaunch(session);
-      return;
-    }
-
-    const useStdin = spawnPlan.stdinPayload !== undefined;
-
-    logger.info(
-      'Spawning agent:',
-      resolvedCliSpawnPlan.command,
-      [
-        ...redactPromptArgs(spawnPlan.args, session.agentType),
-        ...(spawnPlan.argvPayload === undefined ? [] : ['<argv payload redacted>']),
-      ].join(' '),
-      `(cwd: ${cwd})`,
-    );
-
-    // `detached: true` on Unix puts the child in a new process group so we
-    // can SIGINT/SIGKILL the whole tree (claude + any tool subprocesses)
-    // via `process.kill(-pid, sig)` on cancel. Without this, SIGINT to just
-    // the claude binary can leave bash/grep/etc. tool children running and
-    // the CLI hung waiting on them. Windows has different semantics — use
-    // taskkill /T /F there; no detached flag needed.
-    const spawnOptions = {
-      cwd,
-      detached: process.platform !== 'win32',
-      // Strip host Anthropic creds from the inherited env so a developer's
-      // shell `ANTHROPIC_API_KEY` can't hijack the CLI's own auth. `session.env`
-      // is spread last, so an agent that explicitly configures a key still wins.
-      env: spawnEnv,
-      stdio: [useStdin ? 'pipe' : 'ignore', 'pipe', 'pipe'] as ['pipe' | 'ignore', 'pipe', 'pipe'],
-    };
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const proc = spawn(resolvedCliSpawnPlan.command, resolvedCliSpawnPlan.args, spawnOptions);
-        this.handleSpawnedAgentProcess({
-          cwd,
-          intervention,
-          params,
-          proc,
-          reject,
-          resolve,
-          session,
-          initialCumulativeUsage,
-          spawnEnv,
-          traceSession,
-          useStdin,
-          spawnPlan,
-        });
-      });
-    } catch (error) {
-      // A synchronous spawn failure has no process event to own teardown.
-      // Process-emitted failures may already have cleaned these resources;
-      // both cleanup operations are intentionally idempotent.
-      await intervention?.cleanup().catch((cleanupError) => {
-        logger.warn('AskUserQuestion cleanup error after process failure:', cleanupError);
-      });
-      await session.hostedProviderBinding?.cleanup();
-      throw error;
-    }
+    throw new Error(`Unsupported heterogeneous agent type: ${session.agentType}`);
   }
 
   private async completeCancelledSessionBeforeLaunch(session: AgentSession): Promise<void> {
     await session.hostedProviderBinding?.cleanup();
     this.broadcast('heteroAgentSessionComplete', { sessionId: session.sessionId });
-  }
-
-  private async sendPromptWithClaudeSdk(
-    params: SendPromptParams,
-    session: AgentSession,
-  ): Promise<void> {
-    const cwd = session.cwd || electronApp.getPath('desktop');
-    const spawnEnv = this.buildSessionSpawnEnv(session);
-    const commandPath = session.resolvedCommandPath ?? this.resolveSessionCommand(session);
-    const stdinPayload = await this.buildStreamJsonInput(
-      params.prompt,
-      params.imageList ?? [],
-      params.systemContext,
-    );
-    const traceSession = await this.createCliTraceSession({
-      cliArgs: ['sdk-stream', ...session.args],
-      cwd,
-      imageList: params.imageList ?? [],
-      session,
-      stdinPayload,
-    });
-
-    void this.writeCliTraceFile(traceSession, 'stdin.txt', stdinPayload);
-
-    if (session.cancelledByUs) {
-      await this.completeCancelledSessionBeforeLaunch(session);
-      return;
-    }
-
-    // Builtin-Orvilo sessions mount the `orvilo_cc` builtin MCP server through
-    // the SDK's `mcpServers` option — the CLI-spawn path wires the same server
-    // via `--mcp-config`. The bridge's event pump has no child-process stdout
-    // queue to share, so it starts here and is torn down with the run.
-    const sdkIntervention =
-      session.orviloEngine === 'claude-sdk'
-        ? await this.setupInterventionForOp(params.operationId, 'claude-code', {
-            agentId: params.agentId,
-            topicId: params.topicId,
-          }).catch((err) => {
-            logger.warn(
-              'Failed to set up AskUserQuestion bridge for Orvilo SDK session — proceeding without it:',
-              err,
-            );
-            return undefined;
-          })
-        : undefined;
-    if (sdkIntervention) {
-      const pumpDone = (async () => {
-        for await (const event of sdkIntervention.bridge.events()) {
-          this.broadcast('heteroAgentEvent', { event, sessionId: session.sessionId });
-        }
-      })().catch((error) => {
-        logger.warn('Orvilo SDK AskUserQuestion bridge pump error:', error);
-      });
-      const slot = this.opIdToIntervention.get(params.operationId);
-      if (slot) slot.pumpDone = pumpDone;
-    }
-    const sdkMcpServers =
-      sdkIntervention && this.builtinMcpServer
-        ? {
-            orvilo_cc: {
-              alwaysLoad: true,
-              type: 'http' as const,
-              url: this.builtinMcpServer.urlForOperation(params.operationId),
-            },
-          }
-        : undefined;
-
-    let sdkSession: ClaudeAgentSdkSession;
-    try {
-      sdkSession = new ClaudeAgentSdkSession({
-        args: session.args,
-        commandPath,
-        cwd,
-        env: spawnEnv,
-        ...(sdkMcpServers ? { mcpServers: sdkMcpServers } : {}),
-        onEvents: async (events) => {
-          for (const event of events) {
-            this.broadcast('heteroAgentEvent', {
-              event,
-              sessionId: session.sessionId,
-            });
-          }
-        },
-        onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
-        onRuntimeStatus: (status) => {
-          this.broadcast('heteroAgentRuntimeStatus', status);
-        },
-        onSessionId: (agentSessionId) => {
-          if (agentSessionId !== session.agentSessionId) session.agentSessionId = agentSessionId;
-        },
-        onStderr: (data) => this.appendCliTraceFile(traceSession, 'stderr.log', data),
-        operationId: params.operationId,
-        resumeSessionId: session.agentSessionId,
-        sessionId: session.sessionId,
-        stdinPayload,
-        uploadImage: this.uploadResultImage,
-      });
-    } catch (error) {
-      // Construction failed before run() took over — the intervention bridge
-      // and its tmp config are not covered by the run's finally below.
-      await sdkIntervention?.cleanup().catch((cleanupError) => {
-        logger.warn('Orvilo SDK intervention cleanup failed:', cleanupError);
-      });
-      throw error;
-    }
-
-    session.sdkSession = sdkSession;
-
-    logger.info('Starting Claude Code SDK session:', {
-      commandPath,
-      cwd,
-      sessionId: session.sessionId,
-    });
-
-    try {
-      await sdkSession.run();
-      session.sdkSession = undefined;
-      void this.writeCliTraceJson(traceSession, 'exit.json', {
-        finishedAt: new Date().toISOString(),
-        transport: 'claude-sdk',
-      });
-      await this.flushCliTrace(traceSession);
-      this.broadcast('heteroAgentSessionComplete', { sessionId: session.sessionId });
-    } catch (error) {
-      session.sdkSession = undefined;
-      logger.error('Claude SDK session error:', error);
-      void this.writeCliTraceJson(traceSession, 'process-error.json', {
-        message: error instanceof Error ? error.message : String(error),
-        name: error instanceof Error ? error.name : 'Error',
-        transport: 'claude-sdk',
-      });
-      await this.flushCliTrace(traceSession);
-
-      if (session.cancelledByUs) {
-        this.broadcast('heteroAgentSessionComplete', { sessionId: session.sessionId });
-        return;
-      }
-
-      const sessionError = this.getSessionErrorPayload(error, session);
-      this.broadcast('heteroAgentSessionError', {
-        error: sessionError,
-        sessionId: session.sessionId,
-      });
-      throw new Error(typeof sessionError === 'string' ? sessionError : sessionError.message, {
-        cause: error,
-      });
-    } finally {
-      await sdkIntervention?.cleanup().catch((cleanupError) => {
-        logger.warn('Orvilo SDK intervention cleanup failed:', cleanupError);
-      });
-      await session.hostedProviderBinding?.cleanup();
-    }
-  }
-
-  private async sendPromptWithCodexAppServer(
-    params: SendPromptParams,
-    session: AgentSession,
-  ): Promise<boolean> {
-    const cwd = session.cwd || electronApp.getPath('desktop');
-    const spawnEnv = this.buildSessionSpawnEnv(session);
-    const commandPath = session.resolvedCommandPath ?? this.resolveSessionCommand(session);
-    const promptInput = buildHeterogeneousPrompt({
-      imageList: params.imageList,
-      prompt: params.prompt,
-      systemContext: params.systemContext,
-    });
-    let inputPlan;
-    try {
-      inputPlan = await buildAgentInput('codex', promptInput, { cacheDir: this.fileCacheDir });
-    } catch (error) {
-      logger.error('Failed to prepare Codex app-server input:', error);
-      throw new Error(
-        `Failed to attach image(s) to Codex app-server: ${this.getErrorMessage(error) || 'Unknown error'}`,
-        { cause: error },
-      );
-    }
-
-    const input = buildCodexAppServerInput(inputPlan);
-    const appServerArgs = buildCodexAppServerArgs(session.args);
-    const initialModel = await resolveCodexInitialModel({ args: session.args, env: spawnEnv });
-    if (initialModel?.model) {
-      session.model = initialModel.model;
-      session.modelSource = initialModel.source;
-    }
-    const initialCumulativeUsage = session.agentSessionId
-      ? (await readCodexSessionModel(session.agentSessionId, { env: spawnEnv }))?.cumulativeUsage
-      : undefined;
-    const inputPayload = `${JSON.stringify(input)}\n`;
-    const traceSession = await this.createCliTraceSession({
-      cliArgs: appServerArgs,
-      cwd,
-      imageList: params.imageList ?? [],
-      session,
-      stdinPayload: inputPayload,
-    });
-    void this.writeCliTraceFile(traceSession, 'stdin.txt', inputPayload);
-
-    if (session.cancelledByUs) {
-      await this.completeCancelledSessionBeforeLaunch(session);
-      return true;
-    }
-
-    const clientOptions = {
-      // `buildCodexAppServerArgs` ends with the 'app-server' subcommand, which
-      // the client re-appends itself — strip it here.
-      args: appServerArgs.filter((arg) => arg !== 'app-server'),
-      clientVersion: electronApp.getVersion(),
-      commandPath,
-      cwd,
-      env: spawnEnv,
-    };
-    const existingClient = this.codexAppServerClient;
-    if (existingClient && !existingClient.canReuseFor(clientOptions)) {
-      if (!existingClient.hasConsumers) {
-        existingClient.close();
-        if (this.codexAppServerClient === existingClient) this.codexAppServerClient = undefined;
-      } else {
-        const message =
-          'The running Codex app-server uses a different binary, global configuration, or environment';
-        logger.error('Cannot reuse the native Codex app-server client:', {
-          sessionId: session.sessionId,
-        });
-        void this.writeCliTraceJson(traceSession, 'process-error.json', {
-          message,
-          transport: 'codex-app-server',
-        });
-        await this.flushCliTrace(traceSession);
-        this.broadcast('heteroAgentSessionError', {
-          error: message,
-          sessionId: session.sessionId,
-        });
-        throw new Error(message);
-      }
-    }
-
-    const client =
-      this.codexAppServerClient ??
-      (this.codexAppServerClient = new CodexAppServerClient(clientOptions));
-    const appServerSession =
-      session.appServerSession ??
-      new CodexThreadSession({
-        client,
-        initialCumulativeUsage,
-        initialModel: session.model,
-        initialThreadId: session.agentSessionId,
-        threadName: truncateTitle(params.prompt),
-        onEvents: async (events) => {
-          for (const event of events) {
-            this.broadcast('heteroAgentEvent', {
-              event,
-              sessionId: session.sessionId,
-            });
-          }
-        },
-        onModel: (model) => {
-          session.model = model;
-          session.modelSource = 'codex-app-server';
-        },
-        onRuntimeStatus: (status) => {
-          this.broadcast('heteroAgentRuntimeStatus', status);
-        },
-        onSessionId: (agentSessionId) => {
-          if (agentSessionId !== session.agentSessionId) session.agentSessionId = agentSessionId;
-        },
-        sessionId: session.sessionId,
-        threadParams: buildCodexAppServerThreadParams(session.args, cwd, session.model),
-      });
-    session.appServerSession = appServerSession;
-
-    logger.info('Starting Codex app-server session:', {
-      commandPath,
-      cwd,
-      sessionId: session.sessionId,
-    });
-
-    try {
-      await appServerSession.run({
-        input,
-        onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
-        operationId: params.operationId,
-      });
-      void this.writeCliTraceJson(traceSession, 'exit.json', {
-        finishedAt: new Date().toISOString(),
-        transport: 'codex-app-server',
-      });
-      await this.flushCliTrace(traceSession);
-      this.broadcast('heteroAgentSessionComplete', { sessionId: session.sessionId });
-      return true;
-    } catch (error) {
-      if (appServerSession.canFallbackToExec && isCodexAppServerCompatibilityError(error)) {
-        session.codexAppServerFallback = true;
-        logger.warn('Falling back to codex exec because native app-server is unavailable:', {
-          message: this.getErrorMessage(error),
-          sessionId: session.sessionId,
-        });
-        void this.writeCliTraceJson(traceSession, 'fallback.json', {
-          message: this.getErrorMessage(error),
-          transport: 'codex-app-server',
-        });
-        await this.flushCliTrace(traceSession);
-        this.broadcast('heteroAgentEvent', {
-          event: {
-            data: {
-              message:
-                'Codex app-server is unavailable or incompatible. Upgrade Codex to use the Labs transport; continuing with codex exec.',
-            },
-            operationId: params.operationId,
-            stepIndex: 0,
-            timestamp: Date.now(),
-            type: 'stream_retry',
-          } satisfies AgentStreamEvent,
-          sessionId: session.sessionId,
-        });
-        appServerSession.close();
-        if (session.appServerSession === appServerSession) session.appServerSession = undefined;
-        if (!client.hasConsumers) {
-          client.close();
-          if (this.codexAppServerClient === client) this.codexAppServerClient = undefined;
-        }
-        return false;
-      }
-
-      logger.error('Codex app-server session error:', error);
-      appServerSession.close();
-      if (session.appServerSession === appServerSession) session.appServerSession = undefined;
-      void this.writeCliTraceJson(traceSession, 'process-error.json', {
-        message: error instanceof Error ? error.message : String(error),
-        name: error instanceof Error ? error.name : 'Error',
-        transport: 'codex-app-server',
-      });
-      await this.flushCliTrace(traceSession);
-
-      if (session.cancelledByUs) {
-        this.broadcast('heteroAgentSessionComplete', { sessionId: session.sessionId });
-        return true;
-      }
-
-      const sessionError = this.getSessionErrorPayload(error, session);
-      this.broadcast('heteroAgentSessionError', {
-        error: sessionError,
-        sessionId: session.sessionId,
-      });
-      throw new Error(typeof sessionError === 'string' ? sessionError : sessionError.message, {
-        cause: error,
-      });
-    }
   }
 
   private async sendPromptWithGrokAcp(
@@ -2550,13 +1931,14 @@ export default class HeterogeneousAgentCtr {
     transport,
   }: {
     acpSession: InteractiveAcpSession;
-    activeSessionKey: 'cursorAcpSession' | 'devinAcpSession' | 'traeAcpSession';
+    activeSessionKey:
+      'cursorAcpSession' | 'devinAcpSession' | 'standardAcpSession' | 'traeAcpSession';
     cleanup?: () => Promise<void>;
     isResumeError?: (error: unknown) => boolean;
     session: AgentSession;
     stderrChunks: string[];
     traceSession: CliTraceSession | undefined;
-    transport: 'cursor-acp' | 'devin-acp' | 'trae-acp';
+    transport: HeterogeneousAgentRuntimeStatus['transport'];
   }): Promise<void> {
     try {
       await acpSession.run();
@@ -2600,6 +1982,11 @@ export default class HeterogeneousAgentCtr {
         session.devinAcpSession = undefined;
       } else if (activeSessionKey === 'traeAcpSession' && session.traeAcpSession === acpSession) {
         session.traeAcpSession = undefined;
+      } else if (
+        activeSessionKey === 'standardAcpSession' &&
+        session.standardAcpSession === acpSession
+      ) {
+        session.standardAcpSession = undefined;
       }
     }
   }
@@ -2679,282 +2066,160 @@ export default class HeterogeneousAgentCtr {
     });
   }
 
-  private async verifyCodexSessionModel({
-    env,
-    pipeline,
-    session,
-    traceSession,
-  }: {
-    env: NodeJS.ProcessEnv;
-    pipeline: AgentStreamPipeline;
-    session: AgentSession;
-    traceSession: CliTraceSession | undefined;
-  }): Promise<AgentStreamEvent[]> {
-    if (
-      session.agentType !== 'codex' ||
-      !pipeline.sessionId ||
-      session.verifiedModelSessionId === pipeline.sessionId
-    ) {
-      return [];
+  /**
+   * Localized strings for the ACP interactive permission card. Falls back to
+   * the package's English defaults when i18n is not initialized yet (the card
+   * still renders — the strings just stay English).
+   */
+  private getAcpPermissionCardStrings(
+    spec: AcpAgentRuntimeSpec | undefined,
+  ): { fallbackTitle: string; header: string } | undefined {
+    try {
+      const label = spec?.label ?? 'the agent';
+      return {
+        fallbackTitle: this.app.i18n.t('heteroAgent.permission.allowToContinue', {
+          label,
+          ns: 'common',
+        }),
+        header: this.app.i18n.t('heteroAgent.permission.header', { ns: 'common' }),
+      };
+    } catch {
+      return undefined;
     }
-
-    const now = Date.now();
-    if (
-      session.modelVerificationLastAttemptSessionId === pipeline.sessionId &&
-      session.modelVerificationLastAttemptAt &&
-      now - session.modelVerificationLastAttemptAt < 1000
-    ) {
-      return [];
-    }
-    session.modelVerificationLastAttemptSessionId = pipeline.sessionId;
-    session.modelVerificationLastAttemptAt = now;
-
-    const sessionModel = await readCodexSessionModel(pipeline.sessionId, { env });
-    if (!sessionModel?.model) return [];
-
-    const previousModel = session.model;
-    session.verifiedModel = sessionModel.model;
-    session.verifiedModelContextWindow = sessionModel.contextWindow;
-    session.verifiedModelProvider = sessionModel.provider;
-    session.verifiedModelSessionId = pipeline.sessionId;
-    session.verifiedModelSourceFile = sessionModel.sourceFile;
-
-    void this.writeCliTraceJson(traceSession, 'model.json', {
-      initialModel: previousModel,
-      initialModelSource: session.modelSource,
-      sessionId: pipeline.sessionId,
-      verifiedAt: new Date().toISOString(),
-      verifiedContextWindow: sessionModel.contextWindow,
-      verifiedLine: sessionModel.line,
-      verifiedModel: sessionModel.model,
-      verifiedModelProvider: sessionModel.provider,
-      verifiedSourceFile: sessionModel.sourceFile,
-    });
-
-    if (previousModel === sessionModel.model) return [];
-
-    session.model = sessionModel.model;
-    session.modelSource = 'codex-session';
-    return pipeline.configureSession({ model: sessionModel.model });
   }
 
-  private handleSpawnedAgentProcess({
-    cwd,
-    initialCumulativeUsage,
-    intervention,
-    params,
-    proc,
-    reject,
-    resolve,
-    session,
-    spawnEnv,
-    spawnPlan,
-    traceSession,
-    useStdin,
-  }: {
-    cwd: string;
-    intervention?: Awaited<ReturnType<HeterogeneousAgentCtr['setupInterventionForOp']>>;
-    params: SendPromptParams;
-    proc: ChildProcess;
-    reject: (reason?: unknown) => void;
-    resolve: () => void;
-    session: AgentSession;
-    initialCumulativeUsage?: UsageData | undefined;
-    spawnEnv: NodeJS.ProcessEnv;
-    spawnPlan: HeterogeneousAgentBuildPlan;
-    traceSession: CliTraceSession | undefined;
-    useStdin: boolean;
-  }) {
-    proc.on('error', (err) => {
-      logger.error('Agent process error:', err);
-      void this.writeCliTraceJson(traceSession, 'process-error.json', {
-        message: err.message,
-        name: err.name,
-      });
-      void this.flushCliTrace(traceSession);
-      const sessionError = this.getSessionErrorPayload(err, session);
+  /**
+   * Shared ACP path for every `ACP_RUNTIME_AGENT_TYPES` agent — native
+   * `*-acp` modes (kimi, opencode, qoder, codebuddy) and upstream bridge
+   * binaries (claude-agent-acp, codex-acp, amp-acp, pi-acp) alike.
+   */
+  private async sendPromptWithStandardAcp(
+    params: SendPromptParams,
+    session: AgentSession,
+  ): Promise<void> {
+    const agentType = session.agentType;
+    const spec = getAcpAgentRuntime(agentType);
+    const transport: HeterogeneousAgentRuntimeStatus['transport'] = spec?.transport ?? 'acp-stdio';
+    const cwd = this.resolveSessionWorkingDirectory(session);
+    const spawnEnv = this.buildSessionSpawnEnv(session);
+    const vendorCommand = session.resolvedCommandPath ?? this.resolveSessionCommand(session);
+
+    // Resolve the process that actually speaks ACP: native runtimes keep the
+    // vendor command (their `acp`/`--acp` prefix is applied by the session
+    // factory); bridge agents probe for the upstream `*-acp` binary and
+    // forward the resolved vendor command through the bridge's env contract.
+    let target: AcpSpawnTarget;
+    try {
+      target = await resolveAcpSpawnTarget(agentType, vendorCommand, spawnEnv);
+    } catch (error) {
+      const sessionError = this.getSessionErrorPayload(error, session);
       this.broadcast('heteroAgentSessionError', {
         error: sessionError,
         sessionId: session.sessionId,
       });
-      void session.hostedProviderBinding?.cleanup();
-      reject(new Error(typeof sessionError === 'string' ? sessionError : sessionError.message));
-    });
-
-    // In stdin mode, write the prepared payload and close stdin.
-    if (useStdin && spawnPlan.stdinPayload !== undefined && proc.stdin) {
-      void this.writeCliTraceFile(traceSession, 'stdin.txt', spawnPlan.stdinPayload);
-      const stdin = proc.stdin as Writable;
-      stdin.write(spawnPlan.stdinPayload, () => {
-        stdin.end();
+      throw new Error(typeof sessionError === 'string' ? sessionError : sessionError.message, {
+        cause: error,
       });
     }
 
-    session.process = proc;
+    // Codex rollouts still report cumulative usage; seed the pipeline so a
+    // resumed turn continues the counters instead of restarting at zero.
+    const initialCumulativeUsage =
+      agentType === 'codex' && session.agentSessionId
+        ? (await readCodexSessionModel(session.agentSessionId, { env: spawnEnv }))?.cumulativeUsage
+        : undefined;
 
-    // Producer-side conversion (V3 contract): JSONL framing + adapter +
-    // toStreamEvent all run inside the shared pipeline, so renderer + future
-    // server `heteroIngest` see the same `AgentStreamEvent` wire shape with
-    // no per-consumer adapter. The pipeline auto-wires the Codex
-    // file-change diff/stat tracker when `agentType === 'codex'`, so this
-    // controller stays agent-agnostic.
-    const pipeline = new AgentStreamPipeline({
-      agentType: session.agentType,
+    // Legacy selector flags (`--model`, codex `-c key=value`, …) are lifted
+    // onto the ACP session-config surface — bridge binaries own their own
+    // argv, so vendor flags can't ride along.
+    const selectors = extractStandardAcpSelectors(agentType, session.args);
+    const promptInput = buildHeterogeneousPrompt({
+      imageList: params.imageList,
+      prompt: params.prompt,
+      systemContext: params.systemContext,
+    });
+    let prompt;
+    try {
+      prompt = await buildStandardAcpPrompt(promptInput, { cacheDir: this.fileCacheDir });
+    } catch (error) {
+      logger.error(`Failed to prepare ${spec?.label ?? agentType} ACP input:`, error);
+      throw new Error(
+        `Failed to attach image(s) to ${spec?.label ?? agentType}: ${this.getErrorMessage(error) || 'Unknown error'}`,
+        { cause: error },
+      );
+    }
+    const tracePayload = `${JSON.stringify(prompt)}\n`;
+    const traceSession = await this.createCliTraceSession({
+      cliArgs: [...target.commandArgs, ...buildStandardAcpArgs(agentType, selectors.args)],
       cwd,
+      imageList: params.imageList ?? [],
+      session,
+      stdinPayload: tracePayload,
+    });
+    void this.writeCliTraceFile(traceSession, 'stdin.txt', tracePayload);
+
+    if (session.cancelledByUs) {
+      await this.completeCancelledSessionBeforeLaunch(session);
+      return;
+    }
+
+    const stderrChunks: string[] = [];
+    const intervention = await this.setupStandardAcpInterventionForOp(params.operationId, session, {
+      agentId: params.agentId,
+      topicId: params.topicId,
+    });
+
+    const acpSession = createStandardAcpSession(agentType, {
+      args: selectors.args,
+      askUserBridge: intervention.bridge,
+      clientVersion: electronApp.getVersion(),
+      commandArgs: target.commandArgs,
+      commandPath: target.commandPath,
+      configOptions: selectors.configOptions,
+      cwd,
+      env: target.env,
       initialCumulativeUsage,
-      initialModel: session.model,
+      initialModel: session.model ?? selectors.initialModel,
+      mcpServers: intervention.mcpServers,
+      onEvents: async (events) => {
+        for (const event of events) {
+          this.broadcast('heteroAgentEvent', { event, sessionId: session.sessionId });
+        }
+      },
+      onModel: (model) => {
+        session.model = model;
+        session.modelSource = transport;
+      },
+      onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
+      onSessionId: (agentSessionId) => {
+        session.agentSessionId = agentSessionId;
+      },
+      onStderr: (data) => {
+        stderrChunks.push(data);
+        return this.appendCliTraceFile(traceSession, 'stderr.log', data);
+      },
       operationId: params.operationId,
+      permissionCardStrings: this.getAcpPermissionCardStrings(spec),
+      prompt,
+      resumeSessionId: session.agentSessionId,
+      sessionId: session.sessionId,
       uploadImage: this.uploadResultImage,
     });
-    let stdoutBroadcastQueue: Promise<void> = Promise.resolve();
+    session.standardAcpSession = acpSession;
 
-    const broadcastStreamEvents = (events: AgentStreamEvent[]) => {
-      for (const event of events) {
-        this.broadcast('heteroAgentEvent', {
-          event,
-          sessionId: session.sessionId,
-        });
-      }
-    };
-
-    const broadcastPipelineBatch = (produce: () => ReturnType<AgentStreamPipeline['push']>) => {
-      stdoutBroadcastQueue = stdoutBroadcastQueue
-        .then(async () => {
-          const events = await produce();
-          // Adapter-extracted CC/Codex session id powers `--resume` on the
-          // next prompt; surface it through the existing `getSessionInfo`
-          // IPC by mirroring the freshest value onto the session record.
-          if (pipeline.sessionId && pipeline.sessionId !== session.agentSessionId) {
-            session.agentSessionId = pipeline.sessionId;
-          }
-          events.push(
-            ...(await this.verifyCodexSessionModel({
-              env: spawnEnv,
-              pipeline,
-              session,
-              traceSession,
-            })),
-          );
-          broadcastStreamEvents(events);
-        })
-        .catch((error) => {
-          logger.error('Failed to broadcast agent stream batch:', error);
-        });
-    };
-
-    const broadcastBridgeEvent = (event: AgentStreamEvent) => {
-      stdoutBroadcastQueue = stdoutBroadcastQueue
-        .then(() => {
-          broadcastStreamEvents([event]);
-        })
-        .catch((error) => {
-          logger.error('Failed to broadcast AskUserQuestion bridge event:', error);
-        });
-    };
-
-    if (intervention) {
-      const pumpDone = (async () => {
-        for await (const event of intervention.bridge.events()) {
-          broadcastBridgeEvent(event);
-        }
-        await stdoutBroadcastQueue;
-      })().catch((err) => {
-        logger.warn('AskUserQuestion bridge pump error:', err);
-      });
-      const slot = this.opIdToIntervention.get(params.operationId);
-      if (slot) slot.pumpDone = pumpDone;
-    }
-
-    // Stream stdout events through the producer pipeline.
-    const stdout = proc.stdout as Readable;
-    stdout.on('data', (chunk: Buffer) => {
-      void this.appendCliTraceFile(traceSession, 'stdout.jsonl', chunk);
-      broadcastPipelineBatch(() => pipeline.push(chunk));
-    });
-    stdout.on('end', () => {
-      broadcastPipelineBatch(() => pipeline.flush());
-    });
-
-    // Capture stderr
-    const stderrChunks: string[] = [];
-    const stderr = proc.stderr as Readable;
-    stderr.on('data', (chunk: Buffer) => {
-      void this.appendCliTraceFile(traceSession, 'stderr.log', chunk);
-      stderrChunks.push(chunk.toString('utf8'));
-    });
-
-    proc.on('exit', (code, signal) => {
-      // Node may emit `'exit'` BEFORE stdio finishes draining (documented:
-      // child_process docs note "stdio streams might still be open" at exit
-      // time). Wait for stdout to fully end/close so the `stdout.on('end')`
-      // handler has scheduled `pipeline.flush()` onto `stdoutBroadcastQueue`,
-      // THEN wait for the queue itself to settle. Without this two-step
-      // gate, trailing flushed events (final synthesized tool_end /
-      // tool_result) would race against — and lose to — the
-      // `heteroAgentSessionComplete` broadcast, leaving renderer-side
-      // persistence to finalize on incomplete state.
-      const stdoutDrained = streamFinished(stdout, { writable: false }).catch(() => {
-        /* end / close / error are all "done"; we still want to settle. */
-      });
-
-      void stdoutDrained
-        .then(() => stdoutBroadcastQueue)
-        .finally(async () => {
-          // Tear down the AskUserQuestion bridge / temp `mcp.json` for this
-          // op. Pending MCP handlers get a `session_ended` cancellation so
-          // they return cleanly even if CC was killed mid-tool-call.
-          if (intervention) {
-            await intervention.cleanup().catch((err) => {
-              logger.warn('AskUserQuestion cleanup error:', err);
-            });
-          }
-          await session.hostedProviderBinding?.cleanup();
-
-          void this.writeCliTraceJson(traceSession, 'exit.json', {
-            code,
-            finishedAt: new Date().toISOString(),
-            signal,
-          });
-          await this.flushCliTrace(traceSession);
-          await waitForHeteroSessionCompleteGrace();
-
-          logger.info('Agent process exited:', { code, sessionId: session.sessionId, signal });
-          session.process = undefined;
-
-          // If *we* killed it (cancel / stop / before-quit), treat the non-zero
-          // exit as a clean shutdown — surfacing it as an error would make a
-          // user-initiated cancel look like an agent failure, and an Electron
-          // shutdown affecting OTHER running CC sessions would pollute their
-          // topics with a misleading "Agent exited with code 143" message.
-          if (session.cancelledByUs) {
-            this.broadcast('heteroAgentSessionComplete', { sessionId: session.sessionId });
-            resolve();
-            return;
-          }
-
-          if (code === 0) {
-            broadcastStreamEvents(pipeline.validateCompletion());
-            this.broadcast('heteroAgentSessionComplete', { sessionId: session.sessionId });
-            resolve();
-          } else {
-            const stderrOutput = stderrChunks.join('').trim();
-            const errorMsg = this.getExitErrorMessage(code, session, stderrOutput);
-            const sessionError = this.getSessionErrorPayload(errorMsg, session);
-            this.broadcast('heteroAgentSessionError', {
-              error: sessionError,
-              sessionId: session.sessionId,
-            });
-            reject(
-              new Error(typeof sessionError === 'string' ? sessionError : sessionError.message),
-            );
-          }
-        });
+    await this.runInteractiveAcpSession({
+      acpSession,
+      activeSessionKey: 'standardAcpSession',
+      cleanup: intervention.cleanup,
+      isResumeError: isStandardAcpSessionNotFoundError,
+      session,
+      stderrChunks,
+      traceSession,
+      transport,
     });
   }
 
-  /**
-   * Get session info (agent's internal session ID for multi-turn resume).
-   */
   async getSessionInfo(params: GetSessionInfoParams): Promise<SessionInfo> {
     const session = this.sessions.get(params.sessionId);
     return { agentSessionId: session?.agentSessionId };
@@ -3131,42 +2396,9 @@ export default class HeterogeneousAgentCtr {
   }
 
   /**
-   * Waits for a spawned CLI process to release its OS process handle.
-   *
-   * Use when:
-   * - A cancellation caller must not start another writer until this child exits.
-   * - A graceful signal needs a bounded wait before escalation.
-   *
-   * Expects:
-   * - `proc` is a child owned by the current heterogeneous-agent session.
-   * - `timeoutMs` bounds only this wait and does not signal the process itself.
-   *
-   * Returns:
-   * - `true` after an observed exit, otherwise `false` after the timeout.
-   */
-  private waitForProcessExit(proc: ChildProcess, timeoutMs: number): Promise<boolean> {
-    if (proc.exitCode !== null && proc.exitCode !== undefined) return Promise.resolve(true);
-    if (proc.signalCode !== null && proc.signalCode !== undefined) return Promise.resolve(true);
-
-    return new Promise((resolve) => {
-      let settled = false;
-      const finish = (exited: boolean) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        proc.off('exit', onExit);
-        resolve(exited);
-      };
-      const onExit = () => finish(true);
-      const timer = setTimeout(() => finish(false), timeoutMs);
-
-      proc.once('exit', onExit);
-    });
-  }
-
-  /**
-   * Cancels an ongoing heterogeneous-agent session and waits for its native
-   * writer to stop before returning.
+   * Cancels an ongoing heterogeneous-agent session. Every transport is an ACP
+   * session, so interruption means `session/cancel` (SIGINT semantics) —
+   * the session force-closes itself if the agent ignores the cancel.
    *
    * Call stack:
    *
@@ -3174,8 +2406,7 @@ export default class HeterogeneousAgentCtr {
    *   -> cancelOperation
    *     -> renderer onOperationCancel hook
    *       -> {@link HeterogeneousAgentCtr.cancelSession}
-   *         -> {@link HeterogeneousAgentCtr.killProcessTree}
-   *         -> {@link HeterogeneousAgentCtr.waitForProcessExit}
+   *         -> AcpAgentSession.interrupt()
    *
    * Use when:
    * - The user stops an active local heterogeneous-agent run.
@@ -3183,72 +2414,31 @@ export default class HeterogeneousAgentCtr {
    *
    * Expects:
    * - `params.sessionId` identifies a session owned by this controller.
-   *
-   * Returns:
-   * - Only after the transport accepted interruption and, for CLI processes,
-   *   the process exit was observed.
-   *
-   * Throws:
-   * - When a CLI process remains active after the bounded SIGKILL escalation.
    */
   async cancelSession(params: CancelSessionParams): Promise<void> {
     const session = this.sessions.get(params.sessionId);
     if (!session) return;
 
     session.cancelledByUs = true;
-    if (session.devinAcpSession) {
-      session.devinAcpSession.interrupt();
-      return;
-    }
-    if (session.grokAcpSession) {
-      session.grokAcpSession.interrupt();
-      return;
-    }
-    if (session.cursorAcpSession) {
-      session.cursorAcpSession.interrupt();
-      return;
-    }
-    if (session.droidAcpSession) {
-      session.droidAcpSession.interrupt();
-      return;
-    }
-    if (session.appServerSession) {
-      const appServerSession = session.appServerSession;
-      try {
-        await appServerSession.interrupt();
-      } catch (error) {
-        logger.warn('Codex app-server interrupt failed; closing session:', error);
-        appServerSession.close();
-        if (session.appServerSession === appServerSession) session.appServerSession = undefined;
+    const acpSession =
+      session.devinAcpSession ??
+      session.grokAcpSession ??
+      session.cursorAcpSession ??
+      session.droidAcpSession ??
+      session.traeAcpSession ??
+      session.standardAcpSession;
+    if (acpSession) {
+      // A cancelled run must be confirmed dead before the renderer may send a
+      // replacement prompt into the same worktree — `interrupt()` only reports
+      // confirmed once the child actually exited (grace → SIGTERM → SIGKILL).
+      const exited = await acpSession.interrupt();
+      if (!exited) {
+        throw new Error(`Session ${params.sessionId} did not exit after cancellation escalation`);
       }
       return;
     }
-    if (session.traeAcpSession) {
-      await session.traeAcpSession.interrupt();
-      return;
-    }
-    if (session.sdkSession) {
-      session.sdkSession.close();
-      return;
-    }
 
-    if (!session.process || session.process.killed) {
-      await session.hostedProviderBinding?.cleanup();
-      return;
-    }
-    const proc = session.process;
-    const gracefulExit = this.waitForProcessExit(proc, 2000);
-    this.killProcessTree(proc, 'SIGINT');
-
-    if (await gracefulExit) return;
-    if (session.process !== proc) return;
-
-    logger.warn('Session did not exit after SIGINT, escalating to SIGKILL:', params.sessionId);
-    const forcedExit = this.waitForProcessExit(proc, 2000);
-    this.killProcessTree(proc, 'SIGKILL');
-    if (!(await forcedExit)) {
-      throw new Error(`Session ${params.sessionId} did not exit after SIGKILL`);
-    }
+    await session.hostedProviderBinding?.cleanup();
   }
 
   /**
@@ -3278,35 +2468,14 @@ export default class HeterogeneousAgentCtr {
       session.droidAcpSession.close();
     }
 
-    if (session.appServerSession) {
-      session.cancelledByUs = true;
-      try {
-        await session.appServerSession.interrupt();
-      } catch (error) {
-        logger.warn('Codex app-server interrupt failed while stopping the session:', error);
-      }
-      session.appServerSession.close();
-    }
-
     if (session.traeAcpSession) {
       session.cancelledByUs = true;
       session.traeAcpSession.close();
     }
 
-    if (session.sdkSession) {
+    if (session.standardAcpSession) {
       session.cancelledByUs = true;
-      session.sdkSession.close();
-    }
-
-    if (session.process && !session.process.killed) {
-      session.cancelledByUs = true;
-      const proc = session.process;
-      this.killProcessTree(proc, 'SIGTERM');
-      setTimeout(() => {
-        if (session.process === proc && !proc.killed) {
-          this.killProcessTree(proc, 'SIGKILL');
-        }
-      }, 3000);
+      session.standardAcpSession.close();
     }
 
     await session.hostedProviderBinding?.cleanup();
@@ -3341,31 +2510,12 @@ export default class HeterogeneousAgentCtr {
   }
 
   /**
-   * Synchronously unlink every pending intervention's temp `mcp.json`. The
-   * async exit-handler cleanup loses to Electron's main-process teardown
-   * often enough that we'd leak `orvilo-cc-mcp-<opId>.json` files into
-   * `os.tmpdir()` on real shutdowns; sync unlink here is the only reliable
-   * guarantee. Safe to call multiple times.
-   */
-  private unlinkPendingInterventionConfigsSync = (): void => {
-    for (const [, intervention] of this.opIdToIntervention) {
-      if (!intervention.tmpConfigPath) continue;
-      try {
-        unlinkSync(intervention.tmpConfigPath);
-      } catch {
-        /* file may already be gone — fine */
-      }
-    }
-  };
-
-  /**
    * Cleanup on app quit. `before-quit` covers the user-driven Cmd+Q /
    * `app.quit()` path; SIGTERM / SIGINT cover external kills (test
    * harnesses, OS shutdown) where Electron's lifecycle events never fire.
    */
   afterAppReady() {
     electronApp.on('before-quit', () => {
-      this.unlinkPendingInterventionConfigsSync();
       for (const [, session] of this.sessions) {
         session.hostedProviderBinding?.cleanupSync();
         if (session.devinAcpSession) {
@@ -3384,25 +2534,15 @@ export default class HeterogeneousAgentCtr {
           session.cancelledByUs = true;
           session.droidAcpSession.close();
         }
-        if (session.appServerSession) {
-          session.cancelledByUs = true;
-          session.appServerSession.close();
-        }
         if (session.traeAcpSession) {
           session.cancelledByUs = true;
           session.traeAcpSession.close();
         }
-        if (session.sdkSession) {
+        if (session.standardAcpSession) {
           session.cancelledByUs = true;
-          session.sdkSession.close();
-        }
-        if (session.process && !session.process.killed) {
-          session.cancelledByUs = true;
-          this.killProcessTree(session.process, 'SIGTERM');
+          session.standardAcpSession.close();
         }
       }
-      this.codexAppServerClient?.close();
-      this.codexAppServerClient = undefined;
       this.sessions.clear();
       // The exit handlers will tear each per-op intervention down, but if
       // CC's stdio close races shutdown we'd leave the MCP server bound to
@@ -3414,7 +2554,6 @@ export default class HeterogeneousAgentCtr {
     });
 
     const onSignal = (signal: NodeJS.Signals) => {
-      this.unlinkPendingInterventionConfigsSync();
       // Defer to Electron's normal quit flow so the rest of the app gets a
       // chance to tear down. The `before-quit` handler above is idempotent.
       try {
@@ -3493,7 +2632,7 @@ export default class HeterogeneousAgentCtr {
 
     // When CLI tracing is enabled (dev builds, or the Help-menu toggle in
     // packaged builds), have `lh hetero exec` persist the agent process's RAW
-    // stream-json (pre-adapter) on this device. The remote-device path
+    // ACP wire stream (pre-adapter) on this device. The remote-device path
     // otherwise leaves no local record — the CLI consumes stdout internally and
     // only POSTs adapted events to the server — so without this there's nothing
     // to inspect when a remote run misbehaves. Do not pass a cwd-relative dump

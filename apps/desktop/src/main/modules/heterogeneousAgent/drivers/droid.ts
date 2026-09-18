@@ -1,10 +1,4 @@
-import { buildDroidAcpArgs } from '@orvilo/heterogeneous-agents/spawn';
-
 import type { HeterogeneousAgentDriver } from '../types';
 
-/** Factory Droid prompts run through its native bidirectional ACP session. */
-export const droidDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan({ args }) {
-    return { args: buildDroidAcpArgs(args) };
-  },
-};
+/** Factory Droid prompts run through `DroidAcpSession`; no provider binding. */
+export const droidDriver: HeterogeneousAgentDriver = {};

@@ -52,16 +52,8 @@ const bindingContext = (): PrepareProviderBindingContext => ({
 });
 
 describe('traeDriver', () => {
-  it('is registered and preserves user ACP Server argument placement', async () => {
+  it('is registered for the trae agent type', () => {
     expect(getHeterogeneousAgentDriver('trae')).toBe(traeDriver);
-
-    await expect(
-      traeDriver.buildSpawnPlan({
-        args: ['--feature=test'],
-        helpers: { buildAgentInput: async () => ({ args: [], stdin: '' }) },
-        promptInput: 'hello',
-      }),
-    ).resolves.toEqual({ args: ['acp', 'serve', '--yolo', '--feature=test'] });
   });
 
   it('applies a secret-free Responses provider override and preserves TRAE identity auth', async () => {

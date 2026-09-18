@@ -162,14 +162,6 @@ export const UserLabSchema = z.object({
    */
   enableArtifactDeployment: z.boolean().optional(),
   /**
-   * run Claude Code hetero sessions through the Claude Agent SDK instead of CLI spawn
-   */
-  enableClaudeCodeSdk: z.boolean().optional(),
-  /**
-   * run Codex hetero sessions through codex app-server instead of one-shot CLI spawn
-   */
-  enableCodexAppServer: z.boolean().optional(),
-  /**
    * enable displaying two desktop tabs side by side
    */
   enableDesktopSplitView: z.boolean().optional(),

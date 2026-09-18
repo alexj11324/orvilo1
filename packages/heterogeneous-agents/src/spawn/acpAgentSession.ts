@@ -99,7 +99,6 @@ export abstract class AcpAgentSession<
 
   private readonly cancelGraceMs: number;
   private readonly transport: HeterogeneousAgentRuntimeStatus['transport'];
-  private cancelTimer?: ReturnType<typeof setTimeout>;
   private hostClosed = false;
   private lastStatus?: HeterogeneousAgentRuntimeStatus['state'];
 
@@ -163,7 +162,6 @@ export abstract class AcpAgentSession<
       this.emitStatus('error');
       throw error;
     } finally {
-      if (this.cancelTimer) clearTimeout(this.cancelTimer);
       this.client.close();
       this.emitStatus('closed');
     }
@@ -172,17 +170,38 @@ export abstract class AcpAgentSession<
   /**
    * Request graceful cancellation via the `session/cancel` notification; the
    * agent is expected to resolve the pending `session/prompt` with the
-   * `cancelled` stop reason. Force-closes after the grace period.
+   * `cancelled` stop reason. Then confirm the child actually exited: bounded
+   * grace → SIGTERM → bounded wait → SIGKILL → bounded wait.
+   *
+   * Resolves `true` only once the process is gone — callers deciding whether
+   * a replacement writer may start ("Send now") get a real answer instead of
+   * an optimistic ack. Never rejects; a `false` result means the child
+   * survived SIGKILL and the caller should surface the cancel as unconfirmed.
    */
-  interrupt(): void {
+  async interrupt(): Promise<boolean> {
     const sessionId = this.acpSessionId;
     if (!sessionId) {
       this.close();
-      return;
+      return true;
     }
     this.client.notify('session/cancel', this.buildCancelParams(sessionId));
-    this.cancelTimer ??= setTimeout(() => this.close(), this.cancelGraceMs);
-    this.cancelTimer.unref?.();
+    if (await this.waitForExit(this.cancelGraceMs)) return true;
+
+    this.close('SIGTERM');
+    if (await this.waitForExit(this.cancelGraceMs)) return true;
+
+    this.client.signal('SIGKILL');
+    return this.waitForExit(this.cancelGraceMs);
+  }
+
+  private waitForExit(ms: number): Promise<boolean> {
+    return Promise.race([
+      this.client.exited.then(() => true as const),
+      new Promise<false>((resolve) => {
+        const timer = setTimeout(() => resolve(false), ms);
+        timer.unref?.();
+      }),
+    ]);
   }
 
   /** Host-forced shutdown: suppresses further events and kills the child. */

@@ -3,12 +3,11 @@ import { existsSync, statSync } from 'node:fs';
 import { access, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import * as os from 'node:os';
 import path from 'node:path';
-import { PassThrough } from 'node:stream';
 
 import type { CodexQuotaSnapshot } from '@orvilo/electron-client-ipc';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
 import { HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV } from '@orvilo/heterogeneous-agents/protocol';
-import { AcpRpcResponseError } from '@orvilo/heterogeneous-agents/spawn';
+import { AcpRpcResponseError, getAcpAgentRuntime } from '@orvilo/heterogeneous-agents/spawn';
 // `electron` is mocked below; this binding is the mock object so tests can
 // flip `isPackaged` to exercise the packaged-build tracing gate.
 import { app as electronAppMock } from 'electron';
@@ -126,19 +125,6 @@ vi.mock('@/utils/logger', () => ({
 }));
 
 const {
-  claudeSdkSessionCloseMock,
-  claudeSdkSessionConstructMock,
-  codexAppServerCanReuse,
-  codexAppServerClientCloseMock,
-  codexAppServerClientConstructMock,
-  codexAppServerCloseMock,
-  codexAppServerConsumerCount,
-  codexAppServerConstructMock,
-  codexAppServerInterruptMock,
-  codexAppServerRunMock,
-  codexAppServerShouldFailAfterThread,
-  codexAppServerShouldFailResume,
-  codexAppServerShouldFallback,
   cursorAcpSessionCloseMock,
   cursorAcpSessionConstructMock,
   cursorAcpSessionInterruptMock,
@@ -155,24 +141,16 @@ const {
   grokAcpSessionConstructMock,
   grokAcpSessionInterruptMock,
   grokAcpSessionRunMock,
+  resolveAcpSpawnTargetMock,
+  standardAcpSessionCloseMock,
+  standardAcpSessionConstructMock,
+  standardAcpSessionInterruptMock,
+  standardAcpSessionRunMock,
   traeAcpSessionCloseMock,
   traeAcpSessionConstructMock,
   traeAcpSessionInterruptMock,
   traeAcpSessionRunMock,
 } = vi.hoisted(() => ({
-  claudeSdkSessionCloseMock: vi.fn(),
-  claudeSdkSessionConstructMock: vi.fn(),
-  codexAppServerCanReuse: { value: true },
-  codexAppServerClientCloseMock: vi.fn(),
-  codexAppServerClientConstructMock: vi.fn(),
-  codexAppServerCloseMock: vi.fn(),
-  codexAppServerConsumerCount: { value: 0 },
-  codexAppServerConstructMock: vi.fn(),
-  codexAppServerInterruptMock: vi.fn(),
-  codexAppServerRunMock: vi.fn(),
-  codexAppServerShouldFailAfterThread: { value: false },
-  codexAppServerShouldFailResume: { value: false },
-  codexAppServerShouldFallback: { value: false },
   cursorAcpSessionCloseMock: vi.fn(),
   cursorAcpSessionConstructMock: vi.fn(),
   cursorAcpSessionInterruptMock: vi.fn(),
@@ -189,6 +167,11 @@ const {
   grokAcpSessionConstructMock: vi.fn(),
   grokAcpSessionInterruptMock: vi.fn(),
   grokAcpSessionRunMock: vi.fn(),
+  resolveAcpSpawnTargetMock: vi.fn(),
+  standardAcpSessionCloseMock: vi.fn(),
+  standardAcpSessionConstructMock: vi.fn(),
+  standardAcpSessionInterruptMock: vi.fn(),
+  standardAcpSessionRunMock: vi.fn(),
   traeAcpSessionCloseMock: vi.fn(),
   traeAcpSessionConstructMock: vi.fn(),
   traeAcpSessionInterruptMock: vi.fn(),
@@ -198,124 +181,47 @@ const {
 vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
 
-  class MockClaudeAgentSdkSession {
-    constructor(private readonly options: any) {
-      claudeSdkSessionConstructMock(options);
+  /**
+   * Shared stand-in for every `ACP_RUNTIME_AGENT_TYPES` session. The real
+   * `createStandardAcpSession` injects the agent's runtime spec + ACP argv
+   * through a config object; the mock mirrors that so tests can assert both
+   * the forwarded options and the resolved spec/args.
+   */
+  class MockStandardAcpSession {
+    constructor(
+      private readonly options: any,
+      private readonly config: any,
+    ) {
+      standardAcpSessionConstructMock(this.config.agentType, this.options, this.config);
     }
 
     close() {
-      claudeSdkSessionCloseMock();
+      standardAcpSessionCloseMock();
+    }
+
+    interrupt() {
+      return standardAcpSessionInterruptMock();
     }
 
     async run() {
+      if (standardAcpSessionRunMock.getMockImplementation()) {
+        return standardAcpSessionRunMock(this.options, this.config);
+      }
       const now = Date.now();
+      const transport = this.config.spec.transport;
       this.options.onRuntimeStatus({
-        activeTasks: [
-          {
-            lastEventAt: now,
-            startedAt: now,
-            taskId: 'task_1',
-          },
-        ],
+        activeTasks: [],
         lastEventAt: now,
         operationId: this.options.operationId,
         sessionId: this.options.sessionId,
-        staleDeadlineAt: now + 300_000,
-        state: 'monitoring',
-        transport: 'claude-sdk',
-      });
-      this.options.onSessionId('sess_sdk');
-      await this.options.onEvents([
-        {
-          data: { reason: 'complete', transport: 'claude-sdk' },
-          stepIndex: 0,
-          timestamp: now,
-          type: 'agent_runtime_end',
-        },
-      ]);
-      this.options.onRuntimeStatus({
-        activeTasks: [],
-        lastEventAt: now,
-        sessionId: this.options.sessionId,
-        state: 'closed',
-        transport: 'claude-sdk',
-      });
-    }
-  }
-
-  class MockCodexAppServerClient {
-    constructor(options: any) {
-      codexAppServerClientConstructMock(options);
-    }
-
-    canReuseFor() {
-      return codexAppServerCanReuse.value;
-    }
-
-    get hasConsumers() {
-      return codexAppServerConsumerCount.value > 0;
-    }
-
-    close() {
-      codexAppServerClientCloseMock();
-    }
-  }
-
-  class MockCodexThreadSession {
-    canFallbackToExec = true;
-    private closed = false;
-
-    constructor(private readonly options: any) {
-      codexAppServerConsumerCount.value += 1;
-      codexAppServerConstructMock(options);
-    }
-
-    close() {
-      if (!this.closed) {
-        this.closed = true;
-        codexAppServerConsumerCount.value -= 1;
-      }
-      codexAppServerCloseMock();
-    }
-
-    async interrupt() {
-      return codexAppServerInterruptMock();
-    }
-
-    async run(runOptions: any) {
-      codexAppServerRunMock(runOptions);
-      if (codexAppServerShouldFailResume.value && this.options.initialThreadId) {
-        this.canFallbackToExec = false;
-        const error = new Error('Thread not found');
-        error.name = 'CodexAppServerConnectionError';
-        throw error;
-      }
-      if (codexAppServerShouldFallback.value) {
-        const error = new Error('Method not found: initialize');
-        error.name = 'CodexAppServerConnectionError';
-        throw error;
-      }
-
-      const now = Date.now();
-      this.canFallbackToExec = false;
-      if (codexAppServerShouldFailAfterThread.value) {
-        const error = new Error('Codex app-server disconnected');
-        error.name = 'CodexAppServerConnectionError';
-        throw error;
-      }
-      this.options.onRuntimeStatus({
-        activeTasks: [],
-        lastEventAt: now,
-        operationId: runOptions.operationId,
-        sessionId: this.options.sessionId,
         state: 'running',
-        transport: 'codex-app-server',
+        transport,
       });
-      this.options.onSessionId('thread_app_server');
+      this.options.onSessionId(`${this.config.agentType}-native-session`);
       await this.options.onEvents([
         {
-          data: { reason: 'complete', transport: 'codex-app-server' },
-          operationId: runOptions.operationId,
+          data: { stopReason: 'end_turn' },
+          operationId: this.options.operationId,
           stepIndex: 0,
           timestamp: now,
           type: 'agent_runtime_end',
@@ -324,9 +230,10 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
       this.options.onRuntimeStatus({
         activeTasks: [],
         lastEventAt: now,
+        operationId: this.options.operationId,
         sessionId: this.options.sessionId,
         state: 'closed',
-        transport: 'codex-app-server',
+        transport,
       });
     }
   }
@@ -341,7 +248,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     interrupt() {
-      grokAcpSessionInterruptMock();
+      return grokAcpSessionInterruptMock();
     }
 
     run() {
@@ -359,7 +266,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     interrupt() {
-      cursorAcpSessionInterruptMock();
+      return cursorAcpSessionInterruptMock();
     }
 
     async run() {
@@ -406,7 +313,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     interrupt() {
-      devinAcpSessionInterruptMock();
+      return devinAcpSessionInterruptMock();
     }
 
     async run() {
@@ -454,7 +361,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     async interrupt() {
-      traeAcpSessionInterruptMock();
+      return traeAcpSessionInterruptMock();
     }
 
     async run() {
@@ -501,7 +408,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     }
 
     interrupt() {
-      droidAcpSessionInterruptMock();
+      return droidAcpSessionInterruptMock();
     }
 
     async run() {
@@ -532,15 +439,25 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
 
   return {
     ...actual,
-    ClaudeAgentSdkSession: MockClaudeAgentSdkSession,
-    CodexAppServerClient: MockCodexAppServerClient,
-    CodexThreadSession: MockCodexThreadSession,
+    createStandardAcpSession: (agentType: string, options: any) =>
+      new MockStandardAcpSession(options, {
+        agentType,
+        args: [
+          ...(options.commandArgs ?? []),
+          ...(actual as any).buildStandardAcpArgs(agentType, options.args),
+        ],
+        configOptions: options.configOptions ?? [],
+        spec: (actual as any).getAcpAgentRuntime(agentType),
+      }),
     CursorAcpSession: MockCursorAcpSession,
     DroidAcpSession: MockDroidAcpSession,
     DevinAcpSession: MockDevinAcpSession,
-    isCodexAppServerCompatibilityError: (error: Error) =>
-      error.name === 'CodexAppServerConnectionError',
     GrokAcpSession: MockGrokAcpSession,
+    // Bridge detection shells out to the filesystem; tests stub the resolver
+    // instead so no `*-acp` binary has to exist on the runner.
+    resolveAcpSpawnTarget: (...args: any[]) => resolveAcpSpawnTargetMock(...args),
+    // Codex cumulative-usage seeding probes the real CLI; never do that in tests.
+    readCodexSessionModel: vi.fn(async () => undefined),
     TraeAcpSession: MockTraeAcpSession,
   };
 });
@@ -575,93 +492,50 @@ vi.mock('node:child_process', async (importOriginal) => {
   };
 });
 
-/**
- * Build a fake ChildProcess that immediately exits cleanly. Records every
- * stdin write on the returned `writes` array so tests can inspect the payload.
- */
-const createFakeProc = ({
-  exitCode = 0,
-  stderrLines = [],
-  stdoutLines = [],
-}: {
-  exitCode?: number;
-  stderrLines?: string[];
-  stdoutLines?: string[];
-} = {}) => {
-  const proc = new EventEmitter() as any;
-  const stdout = new PassThrough();
-  const stderr = new PassThrough();
-  const writes: string[] = [];
-  proc.stdout = stdout;
-  proc.stderr = stderr;
-  proc.stdin = {
-    end: vi.fn(),
-    write: vi.fn((chunk: string, cb?: () => void) => {
-      writes.push(chunk);
-      cb?.();
-      return true;
-    }),
-  };
-  proc.kill = vi.fn();
-  proc.killed = false;
-  let started = false;
-  proc.__start = () => {
-    if (started) return;
-    started = true;
-    // Exit asynchronously so the Promise returned by sendPrompt resolves cleanly.
-    setImmediate(() => {
-      for (const line of stdoutLines) {
-        stdout.write(line);
-      }
-      for (const line of stderrLines) {
-        stderr.write(line);
-      }
-      stdout.end();
-      stderr.end();
-      proc.emit('exit', exitCode);
-    });
-  };
-  return { proc, writes };
-};
-
-const getFlagValues = (args: string[], flag: string) =>
-  args.flatMap((arg, index) => (arg === flag ? [args[index + 1]] : []));
-
 describe('HeterogeneousAgentCtr', () => {
   let appStoragePath: string;
-  let originalClaudeSdkLabEnv: string | undefined;
-  let originalCodexAppServerLabEnv: string | undefined;
 
   beforeEach(async () => {
-    originalClaudeSdkLabEnv = process.env.ORVILO_CLAUDE_CODE_SDK;
-    originalCodexAppServerLabEnv = process.env.ORVILO_CODEX_APP_SERVER;
     appStoragePath = await mkdtemp(path.join(os.tmpdir(), 'orvilo-hetero-'));
     consumeCodexRateLimitResetCreditMock.mockReset();
     fetchCodexQuotaMock.mockReset();
-    claudeSdkSessionCloseMock.mockReset();
-    claudeSdkSessionConstructMock.mockReset();
-    codexAppServerCanReuse.value = true;
-    codexAppServerClientCloseMock.mockReset();
-    codexAppServerClientConstructMock.mockReset();
-    codexAppServerCloseMock.mockReset();
-    codexAppServerConsumerCount.value = 0;
-    codexAppServerConstructMock.mockReset();
-    codexAppServerInterruptMock.mockReset();
-    codexAppServerRunMock.mockReset();
-    codexAppServerShouldFailAfterThread.value = false;
-    codexAppServerShouldFailResume.value = false;
-    codexAppServerShouldFallback.value = false;
+    standardAcpSessionCloseMock.mockReset();
+    standardAcpSessionConstructMock.mockReset();
+    standardAcpSessionInterruptMock.mockReset();
+    standardAcpSessionInterruptMock.mockResolvedValue(true);
+    standardAcpSessionRunMock.mockReset();
+    resolveAcpSpawnTargetMock.mockReset();
+    // Default target resolution: natives keep the vendor command (+ ACP
+    // prefix); bridges get a deterministic stand-in path and the vendor
+    // command forwarded through the bridge's native-command env contract.
+    resolveAcpSpawnTargetMock.mockImplementation(
+      async (agentType: string, vendorCommand: string, env: NodeJS.ProcessEnv = {}) => {
+        const spec = getAcpAgentRuntime(agentType);
+        if (!spec) throw new Error(`No ACP runtime is registered for agent type "${agentType}"`);
+        if (!spec.bridge) {
+          return { commandArgs: [], commandPath: vendorCommand, env };
+        }
+        return {
+          commandArgs: [],
+          commandPath: `/mock-bridges/${spec.bridge.command}`,
+          env: { ...env, [spec.bridge.nativeCommandEnv]: vendorCommand },
+        };
+      },
+    );
     cursorAcpSessionCloseMock.mockReset();
     cursorAcpSessionConstructMock.mockReset();
     cursorAcpSessionInterruptMock.mockReset();
+    cursorAcpSessionInterruptMock.mockResolvedValue(true);
     cursorAcpSessionRunMock.mockReset();
     devinAcpSessionCloseMock.mockReset();
     devinAcpSessionConstructMock.mockReset();
     devinAcpSessionInterruptMock.mockReset();
+    devinAcpSessionInterruptMock.mockResolvedValue(true);
     devinAcpSessionRunMock.mockReset();
     grokAcpSessionCloseMock.mockReset();
     grokAcpSessionConstructMock.mockReset();
     grokAcpSessionInterruptMock.mockReset();
+    grokAcpSessionInterruptMock.mockResolvedValue(true);
     grokAcpSessionRunMock.mockReset();
     grokAcpSessionRunMock.mockImplementation(async (options) => {
       const now = Date.now();
@@ -715,45 +589,35 @@ describe('HeterogeneousAgentCtr', () => {
     traeAcpSessionCloseMock.mockReset();
     traeAcpSessionConstructMock.mockReset();
     traeAcpSessionInterruptMock.mockReset();
+    traeAcpSessionInterruptMock.mockResolvedValue(true);
     traeAcpSessionRunMock.mockReset();
     droidAcpSessionCloseMock.mockReset();
     droidAcpSessionConstructMock.mockReset();
     droidAcpSessionInterruptMock.mockReset();
+    droidAcpSessionInterruptMock.mockResolvedValue(true);
     droidAcpSessionRunMock.mockReset();
     mockGetAllWindows.mockReset();
     platformMock.mockReturnValue('linux');
     vi.mocked(existsSync).mockReturnValue(true);
     vi.mocked(statSync).mockReturnValue(asDirectory);
-    delete process.env.ORVILO_CLAUDE_CODE_SDK;
-    delete process.env.ORVILO_CODEX_APP_SERVER;
   });
 
   afterEach(async () => {
-    if (originalClaudeSdkLabEnv === undefined) delete process.env.ORVILO_CLAUDE_CODE_SDK;
-    else process.env.ORVILO_CLAUDE_CODE_SDK = originalClaudeSdkLabEnv;
-    if (originalCodexAppServerLabEnv === undefined) delete process.env.ORVILO_CODEX_APP_SERVER;
-    else process.env.ORVILO_CODEX_APP_SERVER = originalCodexAppServerLabEnv;
     await rm(appStoragePath, { force: true, recursive: true });
   });
 
   describe('cancelSession', () => {
     /**
-     * @example A replacement local Codex turn starts only after the interrupted CLI exits.
+     * @example A cancelled ACP turn resolves once `session/cancel` lands.
      */
-    it('does not resolve CLI cancellation until the native process exits', async () => {
-      // ROOT CAUSE:
-      //
-      // cancelSession previously sent SIGINT and returned immediately. “Send now”
-      // could then start a second `codex exec resume` while the first process still
-      // owned the thread writer.
-      //
-      // Before: signal the child and schedule a detached escalation timer.
-      // After: signal, await exit, and synchronously escalate after a bounded wait.
-      const { proc } = createFakeProc();
-      proc.__start = vi.fn();
-      proc.exitCode = null;
-      proc.signalCode = null;
-      nextFakeProc = proc;
+    it('delegates cancellation to the active standard ACP session', async () => {
+      let resolveRun: (() => void) | undefined;
+      standardAcpSessionRunMock.mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveRun = resolve;
+          }),
+      );
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -767,82 +631,71 @@ describe('HeterogeneousAgentCtr', () => {
         prompt: 'sleep 60',
         sessionId,
       });
-      await vi.waitFor(() => expect(spawnCalls).toHaveLength(1));
+      await vi.waitFor(() => expect(standardAcpSessionConstructMock).toHaveBeenCalledOnce());
 
-      let cancellationSettled = false;
-      const cancellation = ctr.cancelSession({ sessionId }).then(() => {
-        cancellationSettled = true;
-      });
-      await Promise.resolve();
+      await ctr.cancelSession({ sessionId });
 
-      expect(cancellationSettled).toBe(false);
-
-      proc.stdout.end();
-      proc.stderr.end();
-      proc.signalCode = 'SIGINT';
-      proc.emit('exit', null, 'SIGINT');
-
-      await cancellation;
+      expect(standardAcpSessionInterruptMock).toHaveBeenCalledOnce();
+      expect(spawnCalls).toHaveLength(0);
+      resolveRun?.();
       await prompt;
     });
 
-    /**
-     * @example A wedged native process ignores both graceful and forced termination.
-     */
-    it('rejects cancellation when process exit is not observed after SIGKILL', async () => {
-      // ROOT CAUSE:
-      //
-      // cancelSession awaited the post-SIGKILL timeout but discarded its false
-      // result. Callers therefore started replacement turns even though the old
-      // process could still own the native Codex thread writer.
-      //
-      // Before: await forcedExit; return undefined.
-      // After: throw when forcedExit resolves false.
-      const processKill = vi.spyOn(process, 'kill').mockReturnValue(true);
+    it('marks the session cancelled so a late failure completes quietly', async () => {
+      // Safety net: if the session ever launches, its run fails — the point of
+      // this test is that the pre-launch `cancelledByUs` check short-circuits
+      // first. (`sendPrompt` clears the flag on entry, so the cancel has to
+      // land while preparation is still in flight.)
+      standardAcpSessionRunMock.mockImplementation(async () => {
+        throw new Error('session/prompt cancelled');
+      });
+      const send = vi.fn();
+      mockGetAllWindows.mockReturnValue([
+        {
+          isDestroyed: () => false,
+          webContents: { send },
+        },
+      ]);
+      const ctr = new HeterogeneousAgentCtr({
+        appStoragePath,
+        storeManager: { get: vi.fn() },
+      } as any);
+      const { sessionId } = await ctr.startSession({
+        agentType: 'codex',
+        command: 'codex',
+      });
 
-      try {
-        const { proc } = createFakeProc();
-        proc.__start = vi.fn();
-        proc.exitCode = null;
-        proc.pid = 4242;
-        proc.signalCode = null;
-        nextFakeProc = proc;
-        const ctr = new HeterogeneousAgentCtr({
-          appStoragePath,
-          storeManager: { get: vi.fn() },
-        } as unknown as ConstructorParameters<typeof HeterogeneousAgentCtr>[0]);
-        const { sessionId } = await ctr.startSession({
-          agentType: 'codex',
-          command: 'codex',
-        });
-        const spawnCount = spawnCalls.length;
-        const prompt = ctr.sendPrompt({
-          operationId: 'op-cancel-timeout',
-          prompt: 'ignore termination',
-          sessionId,
-        });
-        await vi.waitFor(() => expect(spawnCalls).toHaveLength(spawnCount + 1));
-
-        vi.useFakeTimers();
-        const cancellation = expect(ctr.cancelSession({ sessionId })).rejects.toThrow(
-          `Session ${sessionId} did not exit after SIGKILL`,
+      // Park sendPrompt inside trace-session creation, cancel underneath it,
+      // then release — the pre-launch check completes quietly instead of
+      // constructing and running the ACP session.
+      let completePreparation!: () => void;
+      const createTraceSession = vi
+        .spyOn(ctr as any, 'createCliTraceSession')
+        .mockImplementationOnce(
+          () =>
+            new Promise<void>((resolve) => {
+              completePreparation = resolve;
+            }),
         );
-        await vi.advanceTimersByTimeAsync(4000);
-        await cancellation;
 
-        expect(processKill).toHaveBeenNthCalledWith(1, -4242, 'SIGINT');
-        expect(processKill).toHaveBeenNthCalledWith(2, -4242, 'SIGKILL');
+      const prompt = ctr.sendPrompt({
+        operationId: 'op-cancelled-run',
+        prompt: 'hello',
+        sessionId,
+      });
+      await vi.waitFor(() => expect(createTraceSession).toHaveBeenCalledOnce());
 
-        vi.useRealTimers();
-        proc.stdout.end();
-        proc.stderr.end();
-        proc.signalCode = 'SIGKILL';
-        proc.emit('exit', null, 'SIGKILL');
-        await prompt;
-      } finally {
-        processKill.mockRestore();
-        vi.useRealTimers();
-      }
+      await ctr.cancelSession({ sessionId });
+      completePreparation();
+      await prompt;
+
+      // Cancelled-during-preparation short-circuits without a session.
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
+      expect(send).toHaveBeenCalledWith('heteroAgentSessionComplete', { sessionId });
+      expect(send).not.toHaveBeenCalledWith(
+        'heteroAgentSessionError',
+        expect.objectContaining({ sessionId }),
+      );
     });
   });
 
@@ -1152,18 +1005,15 @@ describe('HeterogeneousAgentCtr', () => {
     const runSendPrompt = async (
       prompt: string,
       sessionOverrides: Record<string, any> = {},
-      stdoutLines: string[] = [],
       sendPromptOverrides: Partial<{
         imageList: Array<{ id: string; url: string }>;
         systemContext: string;
       }> = {},
+      storeGet?: (key: string, defaultValue?: any) => any,
     ) => {
-      const { proc, writes } = createFakeProc({ stdoutLines });
-      nextFakeProc = proc;
-
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
-        storeManager: { get: vi.fn() },
+        storeManager: { get: storeGet ? vi.fn(storeGet) : vi.fn() },
       } as any);
       const { sessionId } = await ctr.startSession({
         agentType: 'claude-code',
@@ -1172,90 +1022,13 @@ describe('HeterogeneousAgentCtr', () => {
       });
       await ctr.sendPrompt({ operationId: 'op-test', prompt, sessionId, ...sendPromptOverrides });
 
-      const { args: cliArgs, command, options } = spawnCalls[0];
-      return { cliArgs, command, ctr, options, sessionId, writes };
+      const call = standardAcpSessionConstructMock.mock.calls.at(-1);
+      expect(call).toBeDefined();
+      const [agentType, options, config] = call!;
+      return { agentType, config, ctr, options, sessionId };
     };
 
-    it('passes prompt via stdin stream-json — never as a positional arg', async () => {
-      const prompt = '-- 这是破折号测试 --help';
-      const { cliArgs, writes } = await runSendPrompt(prompt);
-
-      // Prompt must never appear in argv (that is what previously broke CC's arg parser).
-      expect(cliArgs).not.toContain(prompt);
-
-      // Stream-json input must be wired up.
-      expect(cliArgs).toContain('--input-format');
-      expect(cliArgs).toContain('--output-format');
-      expect(cliArgs.filter((a) => a === 'stream-json')).toHaveLength(2);
-
-      // Exactly one stdin write, carrying the prompt as a user message JSON line.
-      expect(writes).toHaveLength(1);
-      const line = writes[0].trimEnd();
-      expect(line.endsWith('\n') || writes[0].endsWith('\n')).toBe(true);
-      const msg = JSON.parse(line);
-      expect(msg).toMatchObject({
-        message: {
-          content: [{ text: prompt, type: 'text' }],
-          role: 'user',
-        },
-        type: 'user',
-      });
-    });
-
-    it('places system context before the user prompt in stream-json content blocks', async () => {
-      const { writes } = await runSendPrompt('user task', {}, [], {
-        systemContext: 'selected code context',
-      });
-
-      expect(writes).toHaveLength(1);
-      const msg = JSON.parse(writes[0].trimEnd());
-      expect(msg.message.content).toEqual([
-        { text: 'selected code context', type: 'text' },
-        { text: 'user task', type: 'text' },
-      ]);
-    });
-
-    it('cleans up the intervention when Windows command-line validation rejects before spawn', async () => {
-      platformMock.mockReturnValue('win32');
-      const operationId = 'op-oversized-windows-argv';
-      const tmpConfigPath = path.join(os.tmpdir(), `orvilo-cc-mcp-${operationId}.json`);
-      await rm(tmpConfigPath, { force: true });
-
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        binaryManager: {
-          detect: vi.fn().mockResolvedValue({
-            available: true,
-            path: 'C:\\claude.exe',
-          }),
-        },
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'claude-code',
-        args: ['a'.repeat(32_767)],
-        command: 'claude',
-      });
-
-      await expect(
-        ctr.sendPrompt({
-          agentId: 'agent-1',
-          operationId,
-          prompt: 'hello',
-          sessionId,
-          topicId: 'topic-1',
-        }),
-      ).rejects.toThrow(/resolved Windows command line requires/);
-
-      expect(spawnCalls).toHaveLength(0);
-      expect((ctr as any).opIdToIntervention.has(operationId)).toBe(false);
-      expect((ctr as any).opIdToBrowserBinding.has(operationId)).toBe(false);
-      expect((ctr as any).builtinMcpServer.hasOperation(operationId)).toBe(false);
-      await expect(access(tmpConfigPath)).rejects.toThrow();
-    });
-
-    it('uses Claude SDK streaming lab instead of spawning claude -p', async () => {
-      process.env.ORVILO_CLAUDE_CODE_SDK = '1';
+    it('runs through the claude-agent-acp bridge and never spawns a vendor CLI process', async () => {
       const send = vi.fn();
       mockGetAllWindows.mockReturnValue([
         {
@@ -1263,50 +1036,95 @@ describe('HeterogeneousAgentCtr', () => {
           webContents: { send },
         },
       ]);
+      const prompt = '-- 这是破折号测试 --help';
+      const { agentType, config, ctr, options, sessionId } = await runSendPrompt(prompt);
+
+      expect(spawnCalls).toHaveLength(0);
+      expect(agentType).toBe('claude-code');
+      // The upstream bridge binary owns argv; the resolved vendor CLI is
+      // forwarded through the bridge's native-command env contract.
+      expect(options.commandPath).toBe('/mock-bridges/claude-agent-acp');
+      expect(options.env.CLAUDE_CODE_EXECUTABLE).toBe('claude');
+      expect(config.args).toEqual([]);
+      expect(config.spec.transport).toBe('claude-code-acp');
+      expect(options.prompt).toEqual([{ text: prompt, type: 'text' }]);
+      await expect(ctr.getSessionInfo({ sessionId })).resolves.toEqual({
+        agentSessionId: 'claude-code-native-session',
+      });
+      expect(send).toHaveBeenCalledWith(
+        'heteroAgentRuntimeStatus',
+        expect.objectContaining({ state: 'running', transport: 'claude-code-acp' }),
+      );
+      expect(send).toHaveBeenCalledWith('heteroAgentSessionComplete', { sessionId });
+    });
+
+    it('places system context before the user prompt in ACP content blocks', async () => {
+      const { options } = await runSendPrompt(
+        'user task',
+        {},
+        {
+          systemContext: 'selected code context',
+        },
+      );
+
+      expect(options.prompt).toEqual([
+        { text: 'selected code context', type: 'text' },
+        { text: 'user task', type: 'text' },
+      ]);
+    });
+
+    it('mounts the lobe_cc MCP server through session/new mcpServers', async () => {
+      const operationId = 'op-mcp-mount';
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
       } as any);
       const { sessionId } = await ctr.startSession({
         agentType: 'claude-code',
-        args: ['--model', 'claude-sonnet-4-6', '--effort', 'medium'],
         command: 'claude',
       });
 
-      await ctr.sendPrompt({ operationId: 'op-test', prompt: 'watch ci', sessionId });
-
-      expect(spawnCalls).toHaveLength(0);
-      expect(claudeSdkSessionConstructMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: ['--model', 'claude-sonnet-4-6', '--effort', 'medium'],
-          commandPath: 'claude',
-          cwd: FAKE_DESKTOP_PATH,
-          operationId: 'op-test',
-          stdinPayload: expect.stringContaining('watch ci'),
-          // `Read` on an image echoes base64; without this the SDK path would
-          // persist an `[Image: …]` placeholder instead of a thumbnail.
-          uploadImage: expect.any(Function),
-        }),
-      );
-
-      const statusPayloads = send.mock.calls
-        .filter(([channel]) => channel === 'heteroAgentRuntimeStatus')
-        .map(([, payload]) => payload);
-      expect(statusPayloads.some((payload) => payload.state === 'monitoring')).toBe(true);
-      expect(statusPayloads.at(-1)).toMatchObject({
-        state: 'closed',
-        transport: 'claude-sdk',
+      await ctr.sendPrompt({
+        agentId: 'agent-1',
+        operationId,
+        prompt: 'hello',
+        sessionId,
+        topicId: 'topic-1',
       });
 
-      const streamEvents = send.mock.calls
-        .filter(([channel]) => channel === 'heteroAgentEvent')
-        .map(([, payload]) => payload.event);
-      expect(streamEvents.some((event) => event.type === 'agent_runtime_end')).toBe(true);
-      expect(send).toHaveBeenCalledWith('heteroAgentSessionComplete', { sessionId });
+      const [, options] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      expect(options.mcpServers).toEqual([
+        expect.objectContaining({ name: 'lobe_cc', type: 'http' }),
+      ]);
+      expect(options.mcpServers[0].url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\//);
+      expect(options.askUserBridge).toBeDefined();
+      // No temp mcp.json files are written for the standard ACP path.
+      expect(
+        (await readdir(os.tmpdir())).filter((name) => name.startsWith('lobe-cc-mcp-')),
+      ).toEqual([]);
+      // The intervention slot is cleaned up once the run settles.
+      expect((ctr as any).opIdToIntervention.has(operationId)).toBe(false);
     });
 
-    it('does not start the Claude SDK when server-default execution is cancelled during preparation', async () => {
-      process.env.ORVILO_CLAUDE_CODE_SDK = '1';
+    it('does not mount the builtin MCP server for agents without AskUserQuestion tools', async () => {
+      const ctr = new HeterogeneousAgentCtr({
+        appStoragePath,
+        storeManager: { get: vi.fn() },
+      } as any);
+      const { sessionId } = await ctr.startSession({
+        agentType: 'codex',
+        command: 'codex',
+      });
+
+      await ctr.sendPrompt({ operationId: 'op-no-mcp', prompt: 'hello', sessionId });
+
+      const [, options] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      expect(options.mcpServers).toBeUndefined();
+      // The native permission/elicitation bridge is still attached.
+      expect(options.askUserBridge).toBeDefined();
+    });
+
+    it('does not start the ACP session when server-default execution is cancelled during preparation', async () => {
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -1331,7 +1149,7 @@ describe('HeterogeneousAgentCtr', () => {
 
       const sendPrompt = ctr.sendPrompt({
         agentId: 'agent-1',
-        operationId: 'op-cancel-sdk-preparation',
+        operationId: 'op-cancel-acp-preparation',
         prompt: 'watch ci',
         sessionId,
         topicId: 'topic-1',
@@ -1342,11 +1160,11 @@ describe('HeterogeneousAgentCtr', () => {
       completePreparation();
       await sendPrompt;
 
-      expect(claudeSdkSessionConstructMock).not.toHaveBeenCalled();
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
       expect(spawnCalls).toHaveLength(0);
       expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
         cancelled: true,
-        operationId: 'op-cancel-sdk-preparation',
+        operationId: 'op-cancel-acp-preparation',
         result: 'error',
       });
     });
@@ -1357,13 +1175,10 @@ describe('HeterogeneousAgentCtr', () => {
       '- dash at start',
       '-p -- mixed',
       'normal prompt with -dash- inside',
-    ])('accepts dash-containing prompt without leaking to argv: %s', async (prompt) => {
-      const { cliArgs, writes } = await runSendPrompt(prompt);
+    ])('accepts dash-containing prompt as a plain ACP text block: %s', async (prompt) => {
+      const { options } = await runSendPrompt(prompt);
 
-      expect(cliArgs).not.toContain(prompt);
-      expect(writes).toHaveLength(1);
-      const msg = JSON.parse(writes[0].trimEnd());
-      expect(msg.message.content[0].text).toBe(prompt);
+      expect(options.prompt).toEqual([{ text: prompt, type: 'text' }]);
     });
 
     it('falls back to the user Desktop when no cwd is supplied', async () => {
@@ -1383,27 +1198,25 @@ describe('HeterogeneousAgentCtr', () => {
     });
 
     it('omits the empty text block when only images are attached', async () => {
-      const { writes } = await runSendPrompt('', {}, [], {
-        imageList: [{ id: 'image-1', url: 'data:image/png;base64,UE5HX1RFU1Q=' }],
-      });
+      const { options } = await runSendPrompt(
+        '',
+        {},
+        {
+          imageList: [{ id: 'image-1', url: 'data:image/png;base64,UE5HX1RFU1Q=' }],
+        },
+      );
 
-      expect(writes).toHaveLength(1);
-      const msg = JSON.parse(writes[0].trimEnd());
       // Anthropic rejects `{ text: '', type: 'text' }` with
       // "messages: text content blocks must be non-empty".
-      expect(msg.message.content).toEqual([
-        {
-          source: { data: 'UE5HX1RFU1Q=', media_type: 'image/png', type: 'base64' },
-          type: 'image',
-        },
+      expect(options.prompt).toEqual([
+        { data: 'UE5HX1RFU1Q=', mimeType: 'image/png', type: 'image' },
       ]);
     });
 
-    it('does not leak host Anthropic auth env into the spawned CLI', async () => {
+    it('does not leak host Anthropic auth env into the ACP child env', async () => {
       // A developer with these exported in their shell would otherwise have them
-      // forwarded to `claude`, overriding its subscription login and surfacing
-      // as a baffling "Invalid API key" / non-zero exit. Regression guard for
-      // that env-leak.
+      // forwarded to the bridge — and through it to `claude` — overriding its
+      // subscription login and surfacing as a baffling "Invalid API key".
       const original = {
         ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
         ANTHROPIC_AUTH_TOKEN: process.env.ANTHROPIC_AUTH_TOKEN,
@@ -1447,33 +1260,34 @@ describe('HeterogeneousAgentCtr', () => {
     });
 
     it('disables CodeBuddy background tasks in the spawned environment', async () => {
-      const { cliArgs, options } = await runSendPrompt('hello', {
+      const { config, options } = await runSendPrompt('hello', {
         agentType: 'codebuddy',
         command: 'codebuddy',
       });
 
-      expect(cliArgs).toContain('--include-partial-messages');
+      // Native ACP mode: the vendor binary itself is spawned with `--acp`.
+      expect(options.commandPath).toBe('codebuddy');
+      expect(config.args).toEqual(['--acp']);
       expect(options.env.CODEBUDDY_CODE_DISABLE_BACKGROUND_TASKS).toBe('1');
     });
 
-    it('passes the selected model to the native CodeBuddy process', async () => {
-      const { cliArgs } = await runSendPrompt('hello', {
+    it('lifts the selected model onto the ACP session config for CodeBuddy', async () => {
+      const { config, options } = await runSendPrompt('hello', {
         agentType: 'codebuddy',
         args: ['--model', 'gpt-5.4'],
         command: 'codebuddy',
       });
 
-      expect(cliArgs).toContain('--model');
-      expect(cliArgs[cliArgs.indexOf('--model') + 1]).toBe('gpt-5.4');
+      expect(options.initialModel).toBe('gpt-5.4');
+      expect(options.args).toEqual([]);
+      expect(config.args).toEqual(['--acp']);
     });
 
-    it('captures the Claude Code session id from stream-json init events', async () => {
-      const { ctr, sessionId } = await runSendPrompt('hello', {}, [
-        `${JSON.stringify({ session_id: 'sess_cc_123', subtype: 'init', type: 'system' })}\n`,
-      ]);
+    it('captures the native ACP session id for later resume', async () => {
+      const { ctr, sessionId } = await runSendPrompt('hello');
 
       await expect(ctr.getSessionInfo({ sessionId })).resolves.toEqual({
-        agentSessionId: 'sess_cc_123',
+        agentSessionId: 'claude-code-native-session',
       });
     });
   });
@@ -2203,9 +2017,8 @@ describe('HeterogeneousAgentCtr', () => {
       ).rejects.toThrow(
         'Kimi Code 0.6.0 or newer is required to use a Orvilo provider. Installed version: 0.5.0.',
       );
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
 
-      nextFakeProc = createFakeProc().proc;
       const subscriptionSession = await ctr.startSession({
         agentType: 'kimi-code',
         command: 'kimi',
@@ -2216,7 +2029,7 @@ describe('HeterogeneousAgentCtr', () => {
         sessionId: subscriptionSession.sessionId,
       });
 
-      expect(spawnCalls).toHaveLength(1);
+      expect(standardAcpSessionConstructMock).toHaveBeenCalledOnce();
     });
 
     it('keeps the env-only binding across fresh and resumed runs without persisting the key', async () => {
@@ -2229,7 +2042,6 @@ describe('HeterogeneousAgentCtr', () => {
         kind: 'provider' as const,
       };
 
-      nextFakeProc = createFakeProc().proc;
       const fresh = await ctr.startSession({
         agentType: 'kimi-code',
         args: [
@@ -2255,14 +2067,15 @@ describe('HeterogeneousAgentCtr', () => {
         sessionId: fresh.sessionId,
       });
 
-      expect(spawnCalls[0].args).toEqual([
-        '--output-format',
-        'stream-json',
-        '--verbose',
-        '--prompt',
-        'fresh private prompt',
-      ]);
-      expect(spawnCalls[0].options.env).toEqual(
+      const [freshAgentType, freshOptions, freshConfig] =
+        standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      expect(freshAgentType).toBe('kimi-code');
+      // Native ACP mode: `kimi acp`, user args sanitized by the binding then
+      // appended; the prompt travels as ACP content blocks, never in argv.
+      expect(freshOptions.commandPath).toBe('kimi');
+      expect(freshConfig.args).toEqual(['acp', '--verbose']);
+      expect(freshOptions.prompt).toEqual([{ text: 'fresh private prompt', type: 'text' }]);
+      expect(freshOptions.env).toEqual(
         expect.objectContaining({
           KIMI_CODE_HOME: expect.stringContaining('/heteroAgent/bindings/kimi-code/'),
           KIMI_MODEL_API_KEY: expect.any(String),
@@ -2274,7 +2087,6 @@ describe('HeterogeneousAgentCtr', () => {
         }),
       );
 
-      nextFakeProc = createFakeProc().proc;
       const resumed = await ctr.startSession({
         agentType: 'kimi-code',
         command: 'kimi',
@@ -2287,15 +2099,10 @@ describe('HeterogeneousAgentCtr', () => {
         sessionId: resumed.sessionId,
       });
 
-      expect(spawnCalls[1].args).toEqual([
-        '--output-format',
-        'stream-json',
-        '--session',
-        'kimi-native-session',
-        '--prompt',
-        'resume private prompt',
-      ]);
-      expect(spawnCalls[1].options.env).toEqual(
+      const [, resumedOptions] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      // Resume goes through ACP `session/load`, not a CLI `--session` flag.
+      expect(resumedOptions.resumeSessionId).toBe('kimi-native-session');
+      expect(resumedOptions.env).toEqual(
         expect.objectContaining({
           KIMI_MODEL_API_KEY: expect.any(String),
           KIMI_MODEL_BASE_URL: expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/v1$/),
@@ -2303,11 +2110,11 @@ describe('HeterogeneousAgentCtr', () => {
           KIMI_MODEL_PROVIDER_TYPE: 'openai',
         }),
       );
-      expect(spawnCalls[0].options.env.KIMI_MODEL_API_KEY).not.toBe('kimi-provider-secret');
-      expect(spawnCalls[1].options.env.KIMI_MODEL_API_KEY).not.toBe('kimi-provider-secret');
-      expect(spawnCalls.flatMap(({ args }) => args)).not.toContain('kimi-provider-secret');
-      expect(JSON.stringify(spawnCalls)).not.toContain('kimi-provider-secret');
-      expect(JSON.stringify(spawnCalls)).not.toContain('stale-or-attacker.example');
+      const allOptions = standardAcpSessionConstructMock.mock.calls.map(([, options]) => options);
+      expect(allOptions[0].env.KIMI_MODEL_API_KEY).not.toBe('kimi-provider-secret');
+      expect(allOptions[1].env.KIMI_MODEL_API_KEY).not.toBe('kimi-provider-secret');
+      expect(JSON.stringify(allOptions)).not.toContain('kimi-provider-secret');
+      expect(JSON.stringify(allOptions)).not.toContain('stale-or-attacker.example');
       expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('kimi-provider-secret');
 
       const bindingsRoot = path.join(appStoragePath, 'heteroAgent', 'bindings', 'kimi-code');
@@ -2329,16 +2136,12 @@ describe('HeterogeneousAgentCtr', () => {
     const runSendPrompt = async (
       prompt: string,
       sessionOverrides: Record<string, any> = {},
-      stdoutLines: string[] = [],
       sendPromptOverrides: Partial<{
         imageList: Array<{ id: string; url: string }>;
         systemContext: string;
       }> = {},
       storeGet?: (key: string, defaultValue?: any) => any,
     ) => {
-      const { proc, writes } = createFakeProc({ stdoutLines });
-      nextFakeProc = proc;
-
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: storeGet ? vi.fn(storeGet) : vi.fn() },
@@ -2350,13 +2153,13 @@ describe('HeterogeneousAgentCtr', () => {
       });
       await ctr.sendPrompt({ operationId: 'op-test', prompt, sessionId, ...sendPromptOverrides });
 
-      const { args: cliArgs, command, options } = spawnCalls[0];
-      return { cliArgs, command, ctr, options, sessionId, writes };
+      const call = standardAcpSessionConstructMock.mock.calls.at(-1);
+      expect(call).toBeDefined();
+      const [agentType, options, config] = call!;
+      return { agentType, config, ctr, options, sessionId };
     };
 
     it('identifies Codex when beginning a server-default operation', async () => {
-      const { proc } = createFakeProc();
-      nextFakeProc = proc;
       const relayInvocation = {
         acceptedAt: '2026-09-01T00:00:00.000Z',
         agentType: 'codex',
@@ -2397,10 +2200,10 @@ describe('HeterogeneousAgentCtr', () => {
         operationId: 'op-server-default',
         topicId: 'topic-1',
       });
-      expect(spawnCalls[0].args).toEqual(
-        expect.arrayContaining(['--model', 'aspectlylabs/gpt-5.4']),
-      );
-      expect(spawnCalls[0].options.env.ORVILO_HETERO_TOKEN).toBe('operation-token');
+      const [, options] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      // The binding's `--model` flag is lifted onto the ACP session config.
+      expect(options.initialModel).toBe('aspectlylabs/gpt-5.4');
+      expect(options.env.ORVILO_HETERO_TOKEN).toBe('operation-token');
       expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
         cancelled: false,
         operationId: 'op-server-default',
@@ -2410,7 +2213,6 @@ describe('HeterogeneousAgentCtr', () => {
     });
 
     it('injects a Kimi operation token into its Anthropic credential env', async () => {
-      nextFakeProc = createFakeProc().proc;
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -2438,17 +2240,16 @@ describe('HeterogeneousAgentCtr', () => {
         operationId: 'op-server-default-kimi',
         topicId: 'topic-1',
       });
-      expect(spawnCalls[0]).toMatchObject({
-        command: 'kimi',
-        options: {
-          env: {
-            KIMI_MODEL_API_KEY: 'operation-token',
-            KIMI_MODEL_BASE_URL: 'https://app.example.com/api/v1/anthropic',
-            KIMI_MODEL_NAME: 'aspectlylabs/kimi-k2.6',
-            KIMI_MODEL_PROVIDER_TYPE: 'anthropic',
-          },
-        },
-      });
+      const [, options] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      expect(options.commandPath).toBe('kimi');
+      expect(options.env).toEqual(
+        expect.objectContaining({
+          KIMI_MODEL_API_KEY: 'operation-token',
+          KIMI_MODEL_BASE_URL: 'https://app.example.com/api/v1/anthropic',
+          KIMI_MODEL_NAME: 'aspectlylabs/kimi-k2.6',
+          KIMI_MODEL_PROVIDER_TYPE: 'anthropic',
+        }),
+      );
       expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
         cancelled: false,
         operationId: 'op-server-default-kimi',
@@ -2457,7 +2258,6 @@ describe('HeterogeneousAgentCtr', () => {
     });
 
     it('injects a Pi operation token into its Responses credential env', async () => {
-      nextFakeProc = createFakeProc().proc;
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -2485,15 +2285,10 @@ describe('HeterogeneousAgentCtr', () => {
         operationId: 'op-server-default-pi',
         topicId: 'topic-1',
       });
-      expect(spawnCalls[0].args).toEqual(
-        expect.arrayContaining([
-          '--provider',
-          'orvilo-server-default',
-          '--model',
-          'aspectlylabs/kimi-k2.6',
-        ]),
-      );
-      expect(spawnCalls[0].options.env.ORVILO_PI_API_KEY).toBe('operation-token');
+      const [, options] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      // Pi folds `--provider` + `--model` into its `provider/model` catalog id.
+      expect(options.initialModel).toBe('orvilo-server-default/aspectlylabs/kimi-k2.6');
+      expect(options.env.ORVILO_PI_API_KEY).toBe('operation-token');
       expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
         cancelled: false,
         operationId: 'op-server-default-pi',
@@ -2513,7 +2308,6 @@ describe('HeterogeneousAgentCtr', () => {
             resolveBegin = resolve;
           }),
       );
-      nextFakeProc = createFakeProc().proc;
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -2544,7 +2338,7 @@ describe('HeterogeneousAgentCtr', () => {
       });
       await sendPrompt;
 
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
       expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
         cancelled: true,
         operationId: 'op-cancel-authorization',
@@ -2553,7 +2347,6 @@ describe('HeterogeneousAgentCtr', () => {
     });
 
     it('does not launch server-default Codex when cancelled during spawn preparation', async () => {
-      nextFakeProc = createFakeProc().proc;
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -2589,7 +2382,7 @@ describe('HeterogeneousAgentCtr', () => {
       completePreparation();
       await sendPrompt;
 
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
       expect(settleServerDefaultOperationMock).toHaveBeenCalledWith(expect.any(Object), {
         cancelled: true,
         operationId: 'op-cancel-preflight',
@@ -2614,7 +2407,7 @@ describe('HeterogeneousAgentCtr', () => {
       ).rejects.toThrow('Codex CLI was not found');
 
       expect(detect).toHaveBeenCalledWith('codex');
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
     });
 
     it('rejects a binding whose model the server reports as disabled, even when the renderer sent it', async () => {
@@ -2669,24 +2462,24 @@ describe('HeterogeneousAgentCtr', () => {
       expect(await readdir(runsDir)).toEqual([]);
     });
 
-    it('forces provider-bound Codex through exec without persisting or logging its secret', async () => {
-      const { cliArgs, options, sessionId } = await runSendPrompt('provider-bound prompt', {
+    it('routes provider-bound Codex through codex-acp with a managed, secret-free profile', async () => {
+      const { options, sessionId } = await runSendPrompt('provider-bound prompt', {
         providerBinding: {
           apiConfig: { model: 'gpt-test', providerId: 'openai' },
           kind: 'provider',
         },
-        useCodexAppServer: true,
       });
 
-      expect(cliArgs[0]).toBe('exec');
-      expect(codexAppServerConstructMock).not.toHaveBeenCalled();
+      expect(spawnCalls).toHaveLength(0);
+      expect(options.commandPath).toBe('/mock-bridges/codex-acp');
+      expect(options.initialModel).toBe('gpt-test');
       expect(options.env).toEqual(
         expect.objectContaining({
           CODEX_HOME: expect.stringContaining('/heteroAgent/bindings/codex/'),
           ORVILO_CODEX_API_KEY: 'provider-secret',
         }),
       );
-      expect(JSON.stringify(cliArgs)).not.toContain('provider-secret');
+      expect(JSON.stringify(options.args)).not.toContain('provider-secret');
       expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('provider-secret');
 
       const codexBindingsDir = path.join(appStoragePath, 'heteroAgent', 'bindings', 'codex');
@@ -2699,12 +2492,8 @@ describe('HeterogeneousAgentCtr', () => {
       ).rejects.toThrow();
     });
 
-    it('cleans provider-binding run state when spawn throws synchronously', async () => {
-      nextFakeProc = {
-        __start: () => {
-          throw new Error('spawn failed');
-        },
-      };
+    it('cleans provider-binding run state when ACP target resolution fails', async () => {
+      resolveAcpSpawnTargetMock.mockRejectedValueOnce(new Error('bridge probe failed'));
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -2720,7 +2509,8 @@ describe('HeterogeneousAgentCtr', () => {
 
       await expect(
         ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId }),
-      ).rejects.toThrow('spawn failed');
+      ).rejects.toThrow();
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
       await expect(
         readdir(path.join(appStoragePath, 'heteroAgent', 'runs', sessionId)),
       ).rejects.toThrow();
@@ -2827,7 +2617,7 @@ describe('HeterogeneousAgentCtr', () => {
       ).rejects.toThrow(`Working directory does not exist: ${missingCwd}`);
 
       expect(detect).not.toHaveBeenCalled();
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
     });
 
     it('fails fast when Claude Code CLI is unavailable instead of attempting spawn', async () => {
@@ -2847,7 +2637,7 @@ describe('HeterogeneousAgentCtr', () => {
       ).rejects.toThrow('Claude Code CLI was not found');
 
       expect(detect).toHaveBeenCalledWith('claude');
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
     });
 
     it('fails fast with CodeBuddy install guidance when CodeBuddy is unavailable', async () => {
@@ -2867,7 +2657,7 @@ describe('HeterogeneousAgentCtr', () => {
       ).rejects.toThrow('CodeBuddy CLI was not found');
 
       expect(detect).toHaveBeenCalledWith('codebuddy');
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
     });
 
     it('fails fast with AMP-specific install guidance when AMP is unavailable', async () => {
@@ -2884,7 +2674,7 @@ describe('HeterogeneousAgentCtr', () => {
       ).rejects.toThrow('Amp CLI was not found');
 
       expect(detect).toHaveBeenCalledWith('amp');
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
     });
 
     it('fails fast with OpenCode install guidance when OpenCode is unavailable', async () => {
@@ -2904,7 +2694,7 @@ describe('HeterogeneousAgentCtr', () => {
       ).rejects.toThrow('OpenCode CLI was not found');
 
       expect(detect).toHaveBeenCalledWith('opencode');
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
     });
 
     it('fails fast when a customized Claude command is unavailable instead of checking the default detector', async () => {
@@ -2942,17 +2732,15 @@ describe('HeterogeneousAgentCtr', () => {
       ).rejects.toThrow('Claude Code CLI was not found');
 
       expect(detect).not.toHaveBeenCalled();
-      expect(spawnCalls).toHaveLength(0);
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
     });
 
-    it('spawns through the detector-resolved absolute path when the bare command is off PATH', async () => {
+    it('forwards the detector-resolved vendor path to the bridge when the bare command is off PATH', async () => {
       // Codex desktop app case: `codex` is not on PATH, but the preflight
-      // detector finds the CLI bundled inside ChatGPT.app. Spawning the bare
-      // command would ENOENT — spawn must use the resolved absolute path.
+      // detector finds the CLI bundled inside ChatGPT.app. The bridge must
+      // drive that absolute path, not a bare `codex` that would ENOENT.
       const resolvedPath = '/Applications/ChatGPT.app/Contents/Resources/codex';
       const detect = vi.fn().mockResolvedValue({ available: true, path: resolvedPath });
-      const { proc } = createFakeProc();
-      nextFakeProc = proc;
 
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
@@ -2965,10 +2753,17 @@ describe('HeterogeneousAgentCtr', () => {
       });
       await ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId });
 
-      expect(spawnCalls[0].command).toBe(resolvedPath);
+      expect(resolveAcpSpawnTargetMock).toHaveBeenCalledWith(
+        'codex',
+        resolvedPath,
+        expect.anything(),
+      );
+      const [, options] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      expect(options.commandPath).toBe('/mock-bridges/codex-acp');
+      expect(options.env.CODEX_PATH).toBe(resolvedPath);
     });
 
-    it('carries the detector login-shell PATH into the spawn env for `env node` shims', async () => {
+    it('carries the detector login-shell PATH into the ACP child env for `env node` shims', async () => {
       // `codex` resolved via the login-shell PATH (mise/nvm). Spawning the
       // absolute shim under the leaner inherited PATH would fail at its
       // `#!/usr/bin/env node` shebang — the resolved PATH must reach the child.
@@ -2977,8 +2772,6 @@ describe('HeterogeneousAgentCtr', () => {
       const detect = vi
         .fn()
         .mockResolvedValue({ available: true, path: resolvedPath, resolvedPathEnv: searchPath });
-      const { proc } = createFakeProc();
-      nextFakeProc = proc;
 
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
@@ -2988,11 +2781,12 @@ describe('HeterogeneousAgentCtr', () => {
       const { sessionId } = await ctr.startSession({ agentType: 'codex', command: 'codex' });
       await ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId });
 
-      expect(spawnCalls[0].command).toBe(resolvedPath);
-      expect(spawnCalls[0].options.env.PATH).toBe(searchPath);
+      const [, options] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      expect(options.env.CODEX_PATH).toBe(resolvedPath);
+      expect(options.env.PATH).toBe(searchPath);
     });
 
-    it('keeps an explicit path-like command for spawn instead of the detector result', async () => {
+    it('keeps an explicit path-like command for the bridge instead of the detector result', async () => {
       // detectHeterogeneousCliCommand validates the custom path via --version.
       execFileMock.mockImplementation(
         (
@@ -3008,8 +2802,6 @@ describe('HeterogeneousAgentCtr', () => {
       );
 
       const detect = vi.fn();
-      const { proc } = createFakeProc();
-      nextFakeProc = proc;
 
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
@@ -3023,411 +2815,66 @@ describe('HeterogeneousAgentCtr', () => {
       await ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId });
 
       expect(detect).not.toHaveBeenCalled();
-      expect(spawnCalls[0].command).toBe('/custom/bin/codex');
+      expect(resolveAcpSpawnTargetMock).toHaveBeenCalledWith(
+        'codex',
+        '/custom/bin/codex',
+        expect.anything(),
+      );
     });
 
-    it('passes prompt via stdin to codex exec instead of argv', async () => {
+    it('sends the prompt as ACP content blocks — never as bridge argv', async () => {
       const prompt = '--run a shell-like prompt safely';
-      const { cliArgs, command, writes } = await runSendPrompt(prompt);
+      const { config, options } = await runSendPrompt(prompt);
 
-      expect(command).toBe('codex');
-      expect(cliArgs).not.toContain(prompt);
-      expect(cliArgs).toEqual(
-        expect.arrayContaining([
-          'exec',
-          '--json',
-          '--skip-git-repo-check',
-          '--dangerously-bypass-approvals-and-sandbox',
-        ]),
-      );
-      expect(cliArgs).not.toContain('--full-auto');
-      expect(cliArgs).not.toContain('-');
-      expect(writes).toEqual([prompt]);
+      expect(options.commandPath).toBe('/mock-bridges/codex-acp');
+      // Bridge binaries own their argv outright — no vendor flags ride along.
+      expect(config.args).toEqual([]);
+      expect(options.prompt).toEqual([{ text: prompt, type: 'text' }]);
     });
 
-    it('uses Codex app-server lab instead of spawning codex exec', async () => {
-      const send = vi.fn();
-      mockGetAllWindows.mockReturnValue([
-        {
-          isDestroyed: () => false,
-          webContents: { send },
-        },
+    it('resumes an existing Codex thread through ACP session/load', async () => {
+      const { options } = await runSendPrompt('continue', { resumeSessionId: 'thread_abc' });
+
+      expect(options.resumeSessionId).toBe('thread_abc');
+    });
+
+    it('lifts Codex effort and service-tier selectors onto ACP config options', async () => {
+      const { options } = await runSendPrompt('hello', {
+        args: ['-c', 'model_reasoning_effort="high"', '-c', 'service_tier="fast"'],
+      });
+
+      expect(options.configOptions).toEqual([
+        { configId: 'reasoning_effort', optional: true, value: 'high' },
+        { configId: 'fast-mode', optional: true, value: 'on' },
       ]);
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        args: ['--model', 'gpt-5.5-codex'],
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-
-      await ctr.sendPrompt({ operationId: 'op-test', prompt: 'stream this', sessionId });
-
-      expect(spawnCalls).toHaveLength(0);
-      expect(codexAppServerClientConstructMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: [],
-          clientVersion: '1.0.0-test',
-          commandPath: 'codex',
-          cwd: FAKE_DESKTOP_PATH,
-        }),
-      );
-      expect(codexAppServerConstructMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          threadName: 'stream this',
-          threadParams: expect.objectContaining({
-            cwd: FAKE_DESKTOP_PATH,
-            model: 'gpt-5.5-codex',
-          }),
-        }),
-      );
-      expect(codexAppServerRunMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          input: [{ text: 'stream this', text_elements: [], type: 'text' }],
-          operationId: 'op-test',
-        }),
-      );
-      await expect(ctr.getSessionInfo({ sessionId })).resolves.toEqual({
-        agentSessionId: 'thread_app_server',
-      });
-      expect(send).toHaveBeenCalledWith('heteroAgentSessionComplete', { sessionId });
+      expect(options.args).toEqual([]);
     });
 
-    it('reuses one native app-server client for multiple new Codex sessions', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const first = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-      const second = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-
-      await ctr.sendPrompt({ operationId: 'op-1', prompt: 'first', sessionId: first.sessionId });
-      await ctr.sendPrompt({ operationId: 'op-2', prompt: 'second', sessionId: second.sessionId });
-
-      expect(codexAppServerClientConstructMock).toHaveBeenCalledTimes(1);
-      expect(codexAppServerConstructMock).toHaveBeenCalledTimes(2);
-    });
-
-    it('reuses one native thread session across multiple turns', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-
-      await ctr.sendPrompt({ operationId: 'op-1', prompt: 'first', sessionId });
-      await ctr.sendPrompt({ operationId: 'op-2', prompt: 'second', sessionId });
-
-      expect(codexAppServerClientConstructMock).toHaveBeenCalledTimes(1);
-      expect(codexAppServerConstructMock).toHaveBeenCalledTimes(1);
-      expect(codexAppServerRunMock.mock.calls.map(([options]) => options.operationId)).toEqual([
-        'op-1',
-        'op-2',
-      ]);
-    });
-
-    it('does not switch to exec when the shared native client is incompatible', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const first = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-      const second = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-      await ctr.sendPrompt({ operationId: 'op-1', prompt: 'first', sessionId: first.sessionId });
-
-      codexAppServerCanReuse.value = false;
-      await expect(
-        ctr.sendPrompt({ operationId: 'op-2', prompt: 'second', sessionId: second.sessionId }),
-      ).rejects.toThrow('different binary, global configuration, or environment');
-
-      expect(codexAppServerClientConstructMock).toHaveBeenCalledTimes(1);
-      expect(codexAppServerConstructMock).toHaveBeenCalledTimes(1);
-      expect(spawnCalls).toHaveLength(0);
-    });
-
-    it('replaces an incompatible shared client after its last thread session closes', async () => {
-      codexAppServerShouldFailAfterThread.value = true;
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const first = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-      await expect(
-        ctr.sendPrompt({ operationId: 'op-1', prompt: 'fail', sessionId: first.sessionId }),
-      ).rejects.toThrow('Codex app-server disconnected');
-      expect(codexAppServerConsumerCount.value).toBe(0);
-
-      codexAppServerShouldFailAfterThread.value = false;
-      codexAppServerCanReuse.value = false;
-      const second = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-      await ctr.sendPrompt({ operationId: 'op-2', prompt: 'retry', sessionId: second.sessionId });
-
-      expect(codexAppServerClientCloseMock).toHaveBeenCalledOnce();
-      expect(codexAppServerClientConstructMock).toHaveBeenCalledTimes(2);
-      expect(codexAppServerConstructMock).toHaveBeenCalledTimes(2);
-    });
-
-    it.each([
-      { args: ['--profile', 'work'], label: 'profile' },
-      { args: ['-a', 'on-request'], label: 'interactive approval policy' },
-    ])('keeps unsupported Codex $label arguments on exec', async ({ args }) => {
-      const { proc } = createFakeProc();
-      nextFakeProc = proc;
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        args,
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-
-      await ctr.sendPrompt({ operationId: 'op-test', prompt: 'preserve CLI semantics', sessionId });
-
-      expect(codexAppServerClientConstructMock).not.toHaveBeenCalled();
-      expect(codexAppServerConstructMock).not.toHaveBeenCalled();
-      expect(spawnCalls).toHaveLength(1);
-      expect(spawnCalls[0].args).toEqual(expect.arrayContaining(args));
-    });
-
-    it('does not replay an existing thread through exec when its arguments are unsupported', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        args: ['--profile', 'work'],
-        command: 'codex',
-        resumeSessionId: 'thread-existing',
-        useCodexAppServer: true,
-      });
-
-      await expect(
-        ctr.sendPrompt({ operationId: 'op-test', prompt: 'preserve CLI semantics', sessionId }),
-      ).rejects.toThrow('cannot safely resume this session');
-
-      expect(codexAppServerClientConstructMock).not.toHaveBeenCalled();
-      expect(codexAppServerConstructMock).not.toHaveBeenCalled();
-      expect(spawnCalls).toHaveLength(0);
-    });
-
-    it('falls back to codex exec when the native handshake is incompatible', async () => {
-      const send = vi.fn();
-      mockGetAllWindows.mockReturnValue([
-        {
-          isDestroyed: () => false,
-          webContents: { send },
-        },
-      ]);
-      const { proc } = createFakeProc();
-      nextFakeProc = proc;
-      codexAppServerShouldFallback.value = true;
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-
-      await ctr.sendPrompt({ operationId: 'op-test', prompt: 'fallback safely', sessionId });
-
-      expect(codexAppServerClientConstructMock).toHaveBeenCalledTimes(1);
-      expect(codexAppServerClientCloseMock).toHaveBeenCalledTimes(1);
-      expect(spawnCalls).toHaveLength(1);
-      expect(spawnCalls[0].args).toEqual(expect.arrayContaining(['exec', '--json']));
-      expect(send).toHaveBeenCalledWith('heteroAgentEvent', {
-        event: expect.objectContaining({
-          data: expect.objectContaining({ message: expect.stringContaining('Upgrade Codex') }),
-          operationId: 'op-test',
-          type: 'stream_retry',
-        }),
-        sessionId,
-      });
-
-      codexAppServerShouldFallback.value = false;
-      const { proc: retryProc } = createFakeProc();
-      nextFakeProc = retryProc;
-      await ctr.sendPrompt({ operationId: 'op-retry', prompt: 'stay on exec', sessionId });
-
-      expect(codexAppServerClientConstructMock).toHaveBeenCalledTimes(1);
-      expect(spawnCalls).toHaveLength(2);
-    });
-
-    it('does not fall back to exec after the native thread is established', async () => {
-      codexAppServerShouldFailAfterThread.value = true;
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-
-      await expect(
-        ctr.sendPrompt({ operationId: 'op-test', prompt: 'do not replay', sessionId }),
-      ).rejects.toThrow('Codex app-server disconnected');
-
-      expect(codexAppServerClientCloseMock).not.toHaveBeenCalled();
-      expect(codexAppServerCloseMock).toHaveBeenCalledOnce();
-      expect(spawnCalls).toHaveLength(0);
-
-      codexAppServerShouldFailAfterThread.value = false;
-      await ctr.sendPrompt({ operationId: 'op-retry', prompt: 'resume natively', sessionId });
-      expect(codexAppServerConstructMock).toHaveBeenCalledTimes(2);
-    });
-
-    it('clears a closed native thread session after a genuine interrupt failure', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        useCodexAppServer: true,
-      });
-      await ctr.sendPrompt({ operationId: 'op-1', prompt: 'first', sessionId });
-      codexAppServerInterruptMock.mockRejectedValueOnce(new Error('Interrupt rejected'));
-
-      await ctr.cancelSession({ sessionId });
-      await ctr.sendPrompt({ operationId: 'op-2', prompt: 'continue', sessionId });
-
-      expect(codexAppServerCloseMock).toHaveBeenCalledOnce();
-      expect(codexAppServerConstructMock).toHaveBeenCalledTimes(2);
-      expect(codexAppServerClientConstructMock).toHaveBeenCalledOnce();
-    });
-
-    it('resumes existing Codex threads through native app-server', async () => {
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        resumeSessionId: 'thread-existing',
-        useCodexAppServer: true,
-      });
-
-      await ctr.sendPrompt({ operationId: 'op-test', prompt: 'continue', sessionId });
-
-      expect(codexAppServerConstructMock).toHaveBeenCalledWith(
-        expect.objectContaining({ initialThreadId: 'thread-existing' }),
-      );
-      expect(codexAppServerRunMock).toHaveBeenCalledTimes(1);
-      expect(spawnCalls).toHaveLength(0);
-    });
-
-    it('does not replay an existing Codex thread through exec when thread/resume fails', async () => {
-      codexAppServerShouldFailResume.value = true;
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({
-        agentType: 'codex',
-        command: 'codex',
-        resumeSessionId: 'thread-existing',
-        useCodexAppServer: true,
-      });
-
-      await expect(
-        ctr.sendPrompt({ operationId: 'op-test', prompt: 'continue', sessionId }),
-      ).rejects.toThrow('saved Codex thread could not be found');
-
-      expect(codexAppServerRunMock).toHaveBeenCalledTimes(1);
-      expect(codexAppServerClientCloseMock).not.toHaveBeenCalled();
-      expect(spawnCalls).toHaveLength(0);
-    });
-
-    it('places system context before the user prompt in codex stdin', async () => {
-      const { writes } = await runSendPrompt('user task', {}, [], {
-        systemContext: 'selected code context',
-      });
-
-      expect(writes).toEqual(['selected code context\n\nuser task']);
-    });
-
-    it('materializes image attachments into local files and forwards them via --image', async () => {
+    it('materializes image attachments into ACP image blocks', async () => {
       const imageList = [
         { id: 'image-1', url: 'data:image/png;base64,UE5HX1RFU1Q=' },
         { id: 'image-2', url: 'data:image/jpeg;base64,SlBFR19URVNU' },
       ];
-      const { cliArgs, writes } = await runSendPrompt('describe these screenshots', {}, [], {
-        imageList,
-      });
+      const { options } = await runSendPrompt('describe these screenshots', {}, { imageList });
 
-      const imagePaths = getFlagValues(cliArgs, '--image');
-
-      expect(cliArgs).not.toContain('describe these screenshots');
-      expect(cliArgs).not.toContain('-');
-      expect(cliArgs.filter((arg) => arg === '--image')).toHaveLength(2);
-      expect(imagePaths).toHaveLength(2);
-      expect(imagePaths).not.toContain('-');
-      expect(cliArgs.at(-1)).toBe(imagePaths[1]);
-      expect(imagePaths[0]).toMatch(/\.png$/);
-      expect(imagePaths[1]).toMatch(/\.jpg$/);
-      expect(
-        imagePaths.every((filePath) =>
-          filePath.startsWith(path.join(appStoragePath, 'heteroAgent/files')),
-        ),
-      ).toBe(true);
-      await expect(
-        Promise.all(imagePaths.map((filePath) => readFile(filePath, 'utf8'))),
-      ).resolves.toEqual(['PNG_TEST', 'JPEG_TEST']);
-      expect(writes).toEqual(['describe these screenshots']);
+      expect(options.prompt).toEqual([
+        { text: 'describe these screenshots', type: 'text' },
+        { data: 'UE5HX1RFU1Q=', mimeType: 'image/png', type: 'image' },
+        { data: 'SlBFR19URVNU', mimeType: 'image/jpeg', type: 'image' },
+      ]);
     });
 
-    it('normalizes parameterized image MIME types before choosing the CLI file extension', async () => {
+    it('normalizes parameterized image MIME types', async () => {
       const imageList = [
         { id: 'image-with-params', url: 'data:image/png;charset=utf-8;base64,UE5HX1RFU1Q=' },
       ];
-      const { cliArgs } = await runSendPrompt('describe this screenshot', {}, [], { imageList });
+      const { options } = await runSendPrompt('describe this screenshot', {}, { imageList });
 
-      const imagePaths = getFlagValues(cliArgs, '--image');
-
-      expect(imagePaths).toHaveLength(1);
-      expect(imagePaths[0]).toMatch(/\.png$/);
-      await expect(readFile(imagePaths[0], 'utf8')).resolves.toBe('PNG_TEST');
+      expect(options.prompt.at(-1)).toEqual({
+        data: 'UE5HX1RFU1Q=',
+        mimeType: 'image/png',
+        type: 'image',
+      });
     });
 
     it('sniffs image bytes when MIME and URL do not expose a usable extension', async () => {
@@ -3441,22 +2888,20 @@ describe('HeterogeneousAgentCtr', () => {
           url: `data:application/octet-stream;base64,${pngBytes.toString('base64')}`,
         },
       ];
-      const { cliArgs } = await runSendPrompt('describe this screenshot', {}, [], { imageList });
+      const { options } = await runSendPrompt('describe this screenshot', {}, { imageList });
 
-      const imagePaths = getFlagValues(cliArgs, '--image');
-
-      expect(imagePaths).toHaveLength(1);
-      expect(imagePaths[0]).toMatch(/\.png$/);
-      await expect(readFile(imagePaths[0])).resolves.toEqual(pngBytes);
+      expect(options.prompt.at(-1)).toEqual({
+        data: pngBytes.toString('base64'),
+        mimeType: 'image/png',
+        type: 'image',
+      });
     });
 
-    it('fails before spawning Codex when any image cannot be materialized', async () => {
+    it('fails before creating the ACP session when any image cannot be materialized', async () => {
       const imageList = [
         { id: 'good-image', url: 'data:image/png;base64,VkFMSURfSU1BR0U=' },
         { id: 'bad-image', url: 'bad://broken-image' },
       ];
-      const { proc } = createFakeProc();
-      nextFakeProc = proc;
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -3473,27 +2918,26 @@ describe('HeterogeneousAgentCtr', () => {
           prompt: 'inspect the screenshots',
           sessionId,
         }),
-      ).rejects.toThrow('Failed to attach image(s) to CLI');
-      expect(spawnCalls).toHaveLength(0);
+      ).rejects.toThrow('Failed to attach image(s)');
+      expect(standardAcpSessionConstructMock).not.toHaveBeenCalled();
     });
 
-    it('does not surface Codex stderr status and warn logs as the terminal error', async () => {
-      const { proc } = createFakeProc({
-        exitCode: 1,
-        stderrLines: [
-          'Reading prompt from stdin...\n',
-          '2026-04-25T09:24:08.165782Z  WARN codex_core::session_startup_prewarm: startup websocket prewarm setup failed\n',
-          '<html>\n',
-          '  <body>challenge page</body>\n',
-          '</html>\n',
-        ],
-        stdoutLines: [
-          `${JSON.stringify({ thread_id: 'thread_codex_123', type: 'thread.started' })}\n`,
-          `${JSON.stringify({ type: 'turn.started' })}\n`,
-          `${JSON.stringify({ message: 'real Codex JSONL error', type: 'error' })}\n`,
-        ],
+    it('does not surface Codex bridge stderr noise as the terminal error', async () => {
+      const send = vi.fn();
+      mockGetAllWindows.mockReturnValue([
+        {
+          isDestroyed: () => false,
+          webContents: { send },
+        },
+      ]);
+      standardAcpSessionRunMock.mockImplementation(async (options) => {
+        await options.onStderr(
+          'Reading prompt from stdin...\n' +
+            '2026-04-25T09:24:08Z  WARN codex_core::session_startup_prewarm: prewarm failed\n' +
+            'real Codex bridge error\n',
+        );
+        throw new Error('Codex ACP exited unexpectedly (code 1, signal null)');
       });
-      nextFakeProc = proc;
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
@@ -3505,32 +2949,45 @@ describe('HeterogeneousAgentCtr', () => {
 
       await expect(
         ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId }),
-      ).rejects.toThrow('Agent exited with code 1');
+      ).rejects.toThrow(/Codex ACP exited unexpectedly/);
+      expect(send).toHaveBeenCalledWith(
+        'heteroAgentSessionError',
+        expect.objectContaining({ sessionId }),
+      );
     });
 
-    it('uses codex exec resume syntax when continuing an existing thread', async () => {
-      const { cliArgs } = await runSendPrompt('continue', { resumeSessionId: 'thread_abc' });
-
-      expect(cliArgs.slice(0, 2)).toEqual(['exec', 'resume']);
-      expect(cliArgs).toContain('thread_abc');
-      expect(cliArgs).not.toContain('--resume');
-      expect(cliArgs.at(-2)).toBe('thread_abc');
-      expect(cliArgs.at(-1)).toBe('-');
-    });
-
-    it('writes raw CLI streams to a dev trace directory grouped by agent type', async () => {
+    it('writes raw ACP streams to a dev trace directory grouped by agent type', async () => {
       const originalNodeEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
       try {
         const prompt = 'trace this run';
         const rawLine = `${JSON.stringify({
-          thread_id: 'thread_codex_trace',
-          type: 'thread.started',
+          method: 'session/update',
+          params: { update: { sessionUpdate: 'agent_message_chunk' } },
         })}\n`;
-        const { sessionId } = await runSendPrompt(prompt, { cwd: appStoragePath }, [rawLine], {
-          imageList: [{ id: 'image-1', url: 'data:image/png;base64,UE5HX1RFU1Q=' }],
+        standardAcpSessionRunMock.mockImplementation(async (options) => {
+          const now = Date.now();
+          options.onRawMessage?.(rawLine);
+          options.onSessionId?.('codex-native-session');
+          await options.onEvents?.([
+            {
+              data: { stopReason: 'end_turn' },
+              operationId: options.operationId,
+              stepIndex: 0,
+              timestamp: now,
+              type: 'agent_runtime_end',
+            },
+          ]);
         });
+
+        const { sessionId } = await runSendPrompt(
+          prompt,
+          { cwd: appStoragePath },
+          {
+            imageList: [{ id: 'image-1', url: 'data:image/png;base64,UE5HX1RFU1Q=' }],
+          },
+        );
         const traceRoot = path.join(appStoragePath, '.heerogeneous-tracing');
         const agentTraceRoot = path.join(traceRoot, 'codex');
         const traceDirs = await readdir(agentTraceRoot);
@@ -3542,11 +2999,15 @@ describe('HeterogeneousAgentCtr', () => {
         await expect(readFile(path.join(traceRoot, '.last-live-trace'), 'utf8')).resolves.toBe(
           `${traceDir}\n`,
         );
-        await expect(readFile(path.join(traceDir, 'stdin.txt'), 'utf8')).resolves.toBe(prompt);
+        const stdinPayload = await readFile(path.join(traceDir, 'stdin.txt'), 'utf8');
+        expect(JSON.parse(stdinPayload)).toEqual([
+          { text: 'trace this run', type: 'text' },
+          { data: 'UE5HX1RFU1Q=', mimeType: 'image/png', type: 'image' },
+        ]);
         await expect(readFile(path.join(traceDir, 'stdout.jsonl'), 'utf8')).resolves.toBe(rawLine);
         await expect(readFile(path.join(traceDir, 'stderr.log'), 'utf8')).resolves.toBe('');
         await expect(readFile(path.join(traceDir, 'exit.json'), 'utf8')).resolves.toContain(
-          '"code": 0',
+          '"transport": "codex-acp"',
         );
 
         const meta = JSON.parse(await readFile(path.join(traceDir, 'meta.json'), 'utf8'));
@@ -3556,10 +3017,8 @@ describe('HeterogeneousAgentCtr', () => {
           command: 'codex',
           cwd: appStoragePath,
           sessionId,
-          stdinBytes: Buffer.byteLength(prompt),
           stdoutFile: 'stdout.jsonl',
         });
-        expect(meta.args).not.toContain('-');
         expect(meta.attachments).toEqual([{ id: 'image-1', urlKind: 'data' }]);
       } finally {
         process.env.NODE_ENV = originalNodeEnv;
@@ -3572,13 +3031,11 @@ describe('HeterogeneousAgentCtr', () => {
       process.env.NODE_ENV = 'development';
 
       try {
-        const prompt = 'trace this opted-in dev run';
-        const rawLine = `${JSON.stringify({
-          thread_id: 'thread_codex_dev_optin',
-          type: 'thread.started',
-        })}\n`;
-        await runSendPrompt(prompt, { cwd: appStoragePath }, [rawLine], {}, (key: string) =>
-          key === 'heteroTracingEnabled' ? true : undefined,
+        await runSendPrompt(
+          'trace this opted-in dev run',
+          { cwd: appStoragePath },
+          {},
+          (key: string) => (key === 'heteroTracingEnabled' ? true : undefined),
         );
 
         const agentTraceRoot = path.join(appStoragePath, 'heteroAgent', 'tracing', 'codex');
@@ -3600,13 +3057,19 @@ describe('HeterogeneousAgentCtr', () => {
       (electronAppMock as any).isPackaged = true;
 
       try {
-        const prompt = 'trace this packaged run';
         const rawLine = `${JSON.stringify({
-          thread_id: 'thread_codex_packaged',
-          type: 'thread.started',
+          method: 'session/update',
+          params: { update: { sessionUpdate: 'agent_message_chunk' } },
         })}\n`;
-        await runSendPrompt(prompt, { cwd: appStoragePath }, [rawLine], {}, (key: string) =>
-          key === 'heteroTracingEnabled' ? true : undefined,
+        standardAcpSessionRunMock.mockImplementation(async (options) => {
+          options.onRawMessage?.(rawLine);
+        });
+
+        await runSendPrompt(
+          'trace this packaged run',
+          { cwd: appStoragePath },
+          {},
+          (key: string) => (key === 'heteroTracingEnabled' ? true : undefined),
         );
 
         // Centralized under appStoragePath/heteroAgent/tracing — NOT in the cwd.
@@ -3632,7 +3095,7 @@ describe('HeterogeneousAgentCtr', () => {
       (electronAppMock as any).isPackaged = true;
 
       try {
-        await runSendPrompt('no trace please', { cwd: appStoragePath }, [], {}, (key: string) =>
+        await runSendPrompt('no trace please', { cwd: appStoragePath }, {}, (key: string) =>
           key === 'heteroTracingEnabled' ? false : undefined,
         );
 
@@ -3660,13 +3123,11 @@ describe('HeterogeneousAgentCtr', () => {
       }
     });
 
-    it('captures the Codex thread id from json output for later resume', async () => {
-      const { ctr, sessionId } = await runSendPrompt('hello', {}, [
-        `${JSON.stringify({ thread_id: 'thread_codex_123', type: 'thread.started' })}\n`,
-      ]);
+    it('persists the native ACP session id for later resume', async () => {
+      const { ctr, sessionId } = await runSendPrompt('hello');
 
       await expect(ctr.getSessionInfo({ sessionId })).resolves.toEqual({
-        agentSessionId: 'thread_codex_123',
+        agentSessionId: 'codex-native-session',
       });
     });
 
@@ -3698,6 +3159,46 @@ describe('HeterogeneousAgentCtr', () => {
         stderr: 'No conversation found for thread thread_stale_123',
         workingDirectory: '/Users/fake/projects/repo',
       });
+    });
+
+    it('classifies a missing ACP session/load as a structured resume error', async () => {
+      const send = vi.fn();
+      mockGetAllWindows.mockReturnValue([
+        {
+          isDestroyed: () => false,
+          webContents: { send },
+        },
+      ]);
+      const missingSessionError = new AcpRpcResponseError('session/load', {
+        code: -32_603,
+        data: { code: 'FS_NOT_FOUND', detail: '/sessions/thread_stale_123' },
+        message: 'Path not found.',
+      });
+      standardAcpSessionRunMock.mockRejectedValue(missingSessionError);
+      const ctr = new HeterogeneousAgentCtr({
+        appStoragePath,
+        storeManager: { get: vi.fn() },
+      } as any);
+      const { sessionId } = await ctr.startSession({
+        agentType: 'codex',
+        command: 'codex',
+        cwd: '/Users/fake/projects/repo',
+        resumeSessionId: 'thread_stale_123',
+      });
+
+      await expect(
+        ctr.sendPrompt({ operationId: 'op-resume', prompt: 'continue', sessionId }),
+      ).rejects.toThrow('could not be found');
+      expect(send).toHaveBeenCalledWith(
+        'heteroAgentSessionError',
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: HeterogeneousAgentSessionErrorCode.ResumeThreadNotFound,
+          }),
+          sessionId,
+        }),
+      );
+      expect(send).not.toHaveBeenCalledWith('heteroAgentSessionComplete', { sessionId });
     });
 
     it('classifies CLI authentication failures as auth-required errors', () => {
@@ -4127,10 +3628,16 @@ describe('HeterogeneousAgentCtr', () => {
       {
         agentType: 'codex',
         command: 'codex',
-        constructMock: codexAppServerConstructMock,
-        label: 'Codex app-server',
-        runMock: codexAppServerRunMock,
-        useCodexAppServer: true,
+        constructMock: standardAcpSessionConstructMock,
+        label: 'Codex ACP',
+        runMock: standardAcpSessionRunMock,
+      },
+      {
+        agentType: 'claude-code',
+        command: 'claude',
+        constructMock: standardAcpSessionConstructMock,
+        label: 'Claude Code ACP',
+        runMock: standardAcpSessionRunMock,
       },
       {
         agentType: 'grok-build',
@@ -4138,7 +3645,6 @@ describe('HeterogeneousAgentCtr', () => {
         constructMock: grokAcpSessionConstructMock,
         label: 'Grok ACP',
         runMock: grokAcpSessionRunMock,
-        useCodexAppServer: false,
       },
       {
         agentType: 'cursor',
@@ -4146,7 +3652,6 @@ describe('HeterogeneousAgentCtr', () => {
         constructMock: cursorAcpSessionConstructMock,
         label: 'Cursor ACP',
         runMock: cursorAcpSessionRunMock,
-        useCodexAppServer: false,
       },
       {
         agentType: 'devin',
@@ -4154,7 +3659,6 @@ describe('HeterogeneousAgentCtr', () => {
         constructMock: devinAcpSessionConstructMock,
         label: 'Devin ACP',
         runMock: devinAcpSessionRunMock,
-        useCodexAppServer: false,
       },
       {
         agentType: 'trae',
@@ -4162,11 +3666,10 @@ describe('HeterogeneousAgentCtr', () => {
         constructMock: traeAcpSessionConstructMock,
         label: 'TRAE ACP',
         runMock: traeAcpSessionRunMock,
-        useCodexAppServer: false,
       },
     ] as const)(
       'does not start $label when cancelled during transport preparation',
-      async ({ agentType, command, constructMock, runMock, useCodexAppServer }) => {
+      async ({ agentType, command, constructMock, runMock }) => {
         const send = vi.fn();
         mockGetAllWindows.mockReturnValue([
           {
@@ -4181,7 +3684,6 @@ describe('HeterogeneousAgentCtr', () => {
         const { sessionId } = await ctr.startSession({
           agentType,
           command,
-          useCodexAppServer,
         });
         let completePreparation!: () => void;
         const createTraceSession = vi
@@ -4496,7 +3998,13 @@ describe('HeterogeneousAgentCtr', () => {
    * `stdout.on('end')` handler can schedule `pipeline.flush()` onto the
    * broadcast queue), then drain the queue, then broadcast complete.
    */
-  describe('exit-before-end ordering (phase 0 race)', () => {
+  /**
+   * ACP sessions own their stream pipeline internally — `run()` only resolves
+   * after the adapter has flushed trailing events (e.g. Codex's synthesized
+   * `tool_end` for unfinished tool calls), so every event this controller
+   * broadcasts necessarily lands before `heteroAgentSessionComplete`.
+   */
+  describe('event ordering', () => {
     let broadcasts: Array<{ channel: string; data: any }>;
 
     beforeEach(() => {
@@ -4518,50 +4026,27 @@ describe('HeterogeneousAgentCtr', () => {
       mockGetAllWindows.mockReturnValue([]);
     });
 
-    it('delivers pipeline.flush() events BEFORE heteroAgentSessionComplete even when proc exit precedes stdout end', async () => {
-      // Codex `item.started` for a tool — adapter buffers it as a pending
-      // tool call. On flush, adapter synthesizes a trailing `tool_end`. This
-      // is exactly the kind of event the race would lose against complete.
-      const itemStarted = `${JSON.stringify({
-        item: {
-          aggregated_output: '',
-          command: 'echo hi',
-          id: 'cmd-1',
-          status: 'in_progress',
-          type: 'command_execution',
-        },
-        type: 'item.started',
-      })}\n`;
-      const threadStarted = `${JSON.stringify({ thread_id: 't1', type: 'thread.started' })}\n`;
-
-      const proc = new EventEmitter() as any;
-      const stdout = new PassThrough();
-      const stderr = new PassThrough();
-      proc.stdout = stdout;
-      proc.stderr = stderr;
-      proc.stdin = {
-        end: vi.fn(),
-        write: vi.fn((_chunk: any, cb?: () => void) => {
-          cb?.();
-          return true;
-        }),
-      };
-      proc.kill = vi.fn();
-      proc.killed = false;
-      proc.__start = () => {
-        setImmediate(() => {
-          stdout.write(threadStarted);
-          stdout.write(itemStarted);
-          stderr.end();
-          // ⚠️ Reproduce the documented Node race: emit exit BEFORE stdout
-          // ends. Without the streamFinished gate in the controller, the
-          // broadcast queue settles immediately (no flush queued yet) and
-          // complete fires before the trailing tool_end ever broadcasts.
-          proc.emit('exit', 0);
-          setImmediate(() => stdout.end());
-        });
-      };
-      nextFakeProc = proc;
+    it('delivers every session event BEFORE heteroAgentSessionComplete', async () => {
+      standardAcpSessionRunMock.mockImplementation(async (options) => {
+        const now = Date.now();
+        options.onSessionId?.('codex-native-session');
+        await options.onEvents?.([
+          {
+            data: { content: 'Final report.', contentType: 'text' },
+            operationId: options.operationId,
+            stepIndex: 0,
+            timestamp: now,
+            type: 'stream_chunk',
+          },
+          {
+            data: { stopReason: 'end_turn' },
+            operationId: options.operationId,
+            stepIndex: 1,
+            timestamp: now,
+            type: 'agent_runtime_end',
+          },
+        ]);
+      });
 
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
@@ -4570,268 +4055,22 @@ describe('HeterogeneousAgentCtr', () => {
       const { sessionId } = await ctr.startSession({ agentType: 'codex', command: 'codex' });
       await ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId });
 
-      const events = broadcasts.filter((b) => b.channel === 'heteroAgentEvent');
       const completeIdx = broadcasts.findIndex((b) => b.channel === 'heteroAgentSessionComplete');
       const lastEventIdx = broadcasts.findLastIndex((b) => b.channel === 'heteroAgentEvent');
 
       expect(completeIdx).toBeGreaterThan(-1);
-      expect(events.length).toBeGreaterThan(0);
-      // Every stream event must land before complete — no trailing events
-      // sneak in after the renderer has been told the session is done.
+      expect(lastEventIdx).toBeGreaterThan(-1);
+      // No trailing events sneak in after the renderer has been told the
+      // session is done.
       expect(lastEventIdx).toBeLessThan(completeIdx);
-
-      // Specifically: the synthesized tool_end for the pending command
-      // execution (emitted only by adapter.flush()) is in the broadcast.
-      const toolEnds = events.filter((b) => (b.data as any)?.event?.type === 'tool_end');
-      expect(toolEnds.length).toBeGreaterThan(0);
-    });
-
-    it('broadcasts an Amp protocol error before completion when exit zero has no result', async () => {
-      const initLine = `${JSON.stringify({
-        session_id: 'T-amp-missing-result',
-        subtype: 'init',
-        type: 'system',
-      })}\n`;
-      const assistantLine = `${JSON.stringify({
-        message: {
-          content: [{ text: 'Incomplete answer', type: 'text' }],
-          role: 'assistant',
-        },
-        type: 'assistant',
-      })}\n`;
-      nextFakeProc = createFakeProc({ stdoutLines: [initLine, assistantLine] }).proc;
-
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({ agentType: 'amp', command: 'amp' });
-      await ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId });
-
-      const errorIdx = broadcasts.findIndex(
-        (broadcast) =>
-          broadcast.channel === 'heteroAgentEvent' &&
-          (broadcast.data as any)?.event?.type === 'error' &&
-          (broadcast.data as any)?.event?.data?.code === 'protocol_error',
-      );
-      const completeIdx = broadcasts.findIndex(
-        (broadcast) => broadcast.channel === 'heteroAgentSessionComplete',
-      );
-      const runtimeEnd = broadcasts.find(
-        (broadcast) =>
-          broadcast.channel === 'heteroAgentEvent' &&
-          (broadcast.data as any)?.event?.type === 'agent_runtime_end',
-      );
-
-      expect(errorIdx).toBeGreaterThan(-1);
-      expect(errorIdx).toBeLessThan(completeIdx);
-      expect(runtimeEnd).toBeUndefined();
-    });
-
-    it('delivers late final Codex stdout chunks BEFORE heteroAgentSessionComplete', async () => {
-      const threadStarted = `${JSON.stringify({ thread_id: 't1', type: 'thread.started' })}\n`;
-      const turnStarted = `${JSON.stringify({ type: 'turn.started' })}\n`;
-      const finalMessage = `${JSON.stringify({
-        item: {
-          id: 'item_103',
-          text: 'Final report after late stdout.',
-          type: 'agent_message',
-        },
-        type: 'item.completed',
-      })}\n`;
-      const turnCompleted = `${JSON.stringify({
-        type: 'turn.completed',
-        usage: { input_tokens: 10, output_tokens: 5 },
-      })}\n`;
-
-      const proc = new EventEmitter() as any;
-      const stdout = new PassThrough();
-      const stderr = new PassThrough();
-      proc.stdout = stdout;
-      proc.stderr = stderr;
-      proc.stdin = {
-        end: vi.fn(),
-        write: vi.fn((_chunk: any, cb?: () => void) => {
-          cb?.();
-          return true;
-        }),
-      };
-      proc.kill = vi.fn();
-      proc.killed = false;
-      proc.__start = () => {
-        setImmediate(() => {
-          stdout.write(threadStarted);
-          stdout.write(turnStarted);
-          stderr.end();
-          proc.emit('exit', 0);
-          setImmediate(() => {
-            stdout.write(finalMessage);
-            stdout.write(turnCompleted);
-            stdout.end();
-          });
-        });
-      };
-      nextFakeProc = proc;
-
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const { sessionId } = await ctr.startSession({ agentType: 'codex', command: 'codex' });
-      const sendStartedAt = Date.now();
-      await ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId });
-      const sendDurationMs = Date.now() - sendStartedAt;
-
-      const completeIdx = broadcasts.findIndex((b) => b.channel === 'heteroAgentSessionComplete');
-      const finalChunkIdx = broadcasts.findIndex(
-        (b) =>
-          b.channel === 'heteroAgentEvent' &&
-          (b.data as any)?.event?.type === 'stream_chunk' &&
-          (b.data as any)?.event?.data?.content === 'Final report after late stdout.',
-      );
-      const runtimeEndIdx = broadcasts.findIndex(
-        (b) =>
-          b.channel === 'heteroAgentEvent' && (b.data as any)?.event?.type === 'agent_runtime_end',
-      );
-
-      expect(completeIdx).toBeGreaterThan(-1);
-      expect(finalChunkIdx).toBeGreaterThan(-1);
-      expect(runtimeEndIdx).toBeGreaterThan(-1);
-      expect(finalChunkIdx).toBeLessThan(completeIdx);
-      expect(runtimeEndIdx).toBeLessThan(completeIdx);
-      expect(sendDurationMs).toBeGreaterThanOrEqual(900);
-    });
-
-    it('serializes AskUserQuestion bridge events behind already-queued stdout tool events', async () => {
-      const initLine = `${JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        session_id: 'cc-session-1',
-        subtype: 'init',
-        type: 'system',
-      })}\n`;
-      const askToolUseLine = `${JSON.stringify({
-        message: {
-          content: [
-            {
-              id: 'toolu_ask',
-              input: {
-                questions: [
-                  {
-                    header: 'Scope',
-                    options: [
-                      { description: 'Keep it narrow', label: 'Small' },
-                      { description: 'Do all of it', label: 'All' },
-                    ],
-                    question: 'How much should I do?',
-                  },
-                ],
-              },
-              name: 'mcp__orvilo_cc__ask_user_question',
-              type: 'tool_use',
-            },
-          ],
-          id: 'msg_ask',
-          model: 'claude-sonnet-4-6',
-          role: 'assistant',
-        },
-        type: 'assistant',
-      })}\n`;
-
-      const proc = new EventEmitter() as any;
-      const stdout = new PassThrough();
-      const stderr = new PassThrough();
-      proc.stdout = stdout;
-      proc.stderr = stderr;
-      proc.stdin = {
-        end: vi.fn(),
-        write: vi.fn((_chunk: any, cb?: () => void) => {
-          cb?.();
-          return true;
-        }),
-      };
-      proc.kill = vi.fn();
-      proc.killed = false;
-
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-
-      proc.__start = () => {
-        setImmediate(() => {
-          stdout.write(initLine);
-          stdout.write(askToolUseLine);
-
-          const bridge = (ctr as any).opIdToIntervention.get('op-test')?.bridge;
-          void bridge?.pending({
-            arguments: {
-              questions: [
-                {
-                  header: 'Scope',
-                  options: [
-                    { description: 'Keep it narrow', label: 'Small' },
-                    { description: 'Do all of it', label: 'All' },
-                  ],
-                  question: 'How much should I do?',
-                },
-              ],
-            },
-            toolCallId: 'toolu_ask',
-          });
-
-          stderr.end();
-          stdout.end();
-          proc.emit('exit', 0);
-        });
-      };
-      nextFakeProc = proc;
-
-      const { sessionId } = await ctr.startSession({ agentType: 'claude-code', command: 'claude' });
-      await ctr.sendPrompt({ operationId: 'op-test', prompt: 'hello', sessionId });
-
-      const toolEventIdx = broadcasts.findIndex(
-        (b) =>
-          b.channel === 'heteroAgentEvent' &&
-          (b.data as any)?.event?.type === 'stream_chunk' &&
-          (b.data as any)?.event?.data?.toolsCalling?.some((tool: any) => tool.id === 'toolu_ask'),
-      );
-      const interventionIdx = broadcasts.findIndex(
-        (b) =>
-          b.channel === 'heteroAgentEvent' &&
-          (b.data as any)?.event?.type === 'agent_intervention_request' &&
-          (b.data as any)?.event?.data?.toolCallId === 'toolu_ask',
-      );
-
-      expect(toolEventIdx).toBeGreaterThan(-1);
-      expect(interventionIdx).toBeGreaterThan(-1);
-      expect(toolEventIdx).toBeLessThan(interventionIdx);
     });
   });
 
-  describe('app-quit cleanup of AskUserQuestion temp configs ()', () => {
-    // The async exit-handler cleanup races Electron's main-process teardown
-    // and used to leak `orvilo-cc-mcp-<opId>.json` files in `os.tmpdir()` on
-    // every quit. The controller now unlinks pending intervention temp
-    // configs *synchronously* from `before-quit` AND from process signal
-    // handlers (SIGTERM / SIGINT — `before-quit` doesn't fire on external
-    // kills). These tests exercise both paths against real files.
-
-    /**
-     * Drop a temp `orvilo-cc-mcp-<id>.json` and stash it on the controller's
-     * `opIdToIntervention` map under the same key, so the quit hook treats
-     * it like a real pending intervention and tries to unlink it.
-     */
-    const seedPendingIntervention = async (ctr: HeterogeneousAgentCtr, opId: string) => {
-      const tmpConfigPath = path.join(os.tmpdir(), `orvilo-cc-mcp-test-${opId}.json`);
-      await writeFile(tmpConfigPath, '{"mcpServers":{}}');
-      const slot = {
-        bridge: {} as any,
-        pumpDone: Promise.resolve(),
-        tmpConfigPath,
-      };
-      (ctr as any).opIdToIntervention.set(opId, slot);
-      return tmpConfigPath;
-    };
+  describe('app-quit cleanup', () => {
+    // `before-quit` covers the user-driven Cmd+Q / `app.quit()` path; SIGTERM /
+    // SIGINT cover external kills (test harnesses, OS shutdown) where Electron's
+    // lifecycle events never fire. Active ACP sessions must be closed so their
+    // vendor children don't outlive the host.
 
     const captureRegisteredHandler = (
       registerSpy: ReturnType<typeof vi.fn> | ReturnType<typeof vi.spyOn>,
@@ -4863,95 +4102,39 @@ describe('HeterogeneousAgentCtr', () => {
       expect((ctr as any).sessions.has(sessionId)).toBe(false);
     });
 
-    it('before-quit synchronously unlinks every pending intervention temp config', async () => {
+    it('before-quit closes a running standard ACP session', async () => {
       const electron = (await import('electron')) as any;
       electron.app.on.mockClear();
-
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
       } as any);
-
-      const fileA = await seedPendingIntervention(ctr, 'opA');
-      const fileB = await seedPendingIntervention(ctr, 'opB');
+      const { sessionId } = await ctr.startSession({ agentType: 'codex', command: 'codex' });
+      const session = (ctr as any).sessions.get(sessionId);
+      session.standardAcpSession = { close: standardAcpSessionCloseMock };
 
       ctr.afterAppReady();
       const beforeQuit = captureRegisteredHandler(electron.app.on, 'before-quit');
       beforeQuit();
 
-      await expect(access(fileA)).rejects.toThrow();
-      await expect(access(fileB)).rejects.toThrow();
+      expect(standardAcpSessionCloseMock).toHaveBeenCalledOnce();
+      expect(session.cancelledByUs).toBe(true);
+      expect((ctr as any).sessions.has(sessionId)).toBe(false);
     });
 
-    it('SIGTERM handler unlinks pending intervention temp configs (external-kill path)', async () => {
-      // External kills (test harness, OS shutdown) skip Electron's lifecycle
-      // events entirely — `before-quit` never fires, so the controller has to
-      // hook the raw process signal too. Stub `process.on` so the handler is
-      // *recorded* but never actually attached to the test runner's process
-      // (otherwise the test leaks a SIGTERM listener that survives the test).
-      // Same for `process.exit` — the controller's fail-safe shouldn't get a
-      // chance to actually exit the worker if its `setTimeout(...).unref()`
-      // ever fires before mockRestore.
-      const electron = (await import('electron')) as any;
-      electron.app.on.mockClear();
-      const processOnSpy = vi.spyOn(process, 'on').mockImplementation(() => process);
-      const processExitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-
+    it('stopSession closes the active standard ACP session', async () => {
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
         storeManager: { get: vi.fn() },
       } as any);
-      const file = await seedPendingIntervention(ctr, 'opSigterm');
+      const { sessionId } = await ctr.startSession({ agentType: 'codex', command: 'codex' });
+      const session = (ctr as any).sessions.get(sessionId);
+      session.standardAcpSession = { close: standardAcpSessionCloseMock };
 
-      ctr.afterAppReady();
-      const sigterm = captureRegisteredHandler(processOnSpy, 'SIGTERM');
-      sigterm();
+      await ctr.stopSession({ sessionId });
 
-      await expect(access(file)).rejects.toThrow();
-
-      processOnSpy.mockRestore();
-      processExitSpy.mockRestore();
-    });
-
-    it('SIGINT handler unlinks pending intervention temp configs (Ctrl-C path)', async () => {
-      const electron = (await import('electron')) as any;
-      electron.app.on.mockClear();
-      const processOnSpy = vi.spyOn(process, 'on').mockImplementation(() => process);
-      const processExitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const file = await seedPendingIntervention(ctr, 'opSigint');
-
-      ctr.afterAppReady();
-      const sigint = captureRegisteredHandler(processOnSpy, 'SIGINT');
-      sigint();
-
-      await expect(access(file)).rejects.toThrow();
-
-      processOnSpy.mockRestore();
-      processExitSpy.mockRestore();
-    });
-
-    it('cleanup is idempotent — already-deleted files do not throw', async () => {
-      const electron = (await import('electron')) as any;
-      electron.app.on.mockClear();
-
-      const ctr = new HeterogeneousAgentCtr({
-        appStoragePath,
-        storeManager: { get: vi.fn() },
-      } as any);
-      const file = await seedPendingIntervention(ctr, 'opIdempotent');
-
-      // Pre-delete the file out from under the controller — simulates a
-      // partial cleanup race where the async exit handler beat us to it.
-      await unlink(file);
-
-      ctr.afterAppReady();
-      const beforeQuit = captureRegisteredHandler(electron.app.on, 'before-quit');
-      expect(() => beforeQuit()).not.toThrow();
+      expect(standardAcpSessionCloseMock).toHaveBeenCalledOnce();
+      expect((ctr as any).sessions.has(sessionId)).toBe(false);
     });
   });
 });

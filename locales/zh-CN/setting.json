@@ -145,7 +145,7 @@
   "agentDocuments.overwriteConfirm.warning": "同名文档将被替换。",
   "agentDocuments.title": "助理文档",
   "agentEngine.effort.label": "推理强度",
-  "agentEngine.engine.claudeSdk": "Claude Agent SDK",
+  "agentEngine.engine.claudeSdk": "Claude Code",
   "agentEngine.engine.codexAppServer": "Codex",
   "agentEngine.engine.label": "引擎",
   "agentEngine.engine.limitedCapabilities": "此引擎暂时无法在运行中提问，也无法使用 Orvilo 内置工具。",

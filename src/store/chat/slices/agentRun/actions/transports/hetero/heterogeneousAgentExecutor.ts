@@ -77,8 +77,6 @@ import {
 import { type ChatStore, useChatStore } from '@/store/chat/store';
 import { notifyDesktopHumanApprovalRequired } from '@/store/chat/utils/desktopNotification';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 import { buildRunLifecycle } from '../../lifecycle/buildRunLifecycle';
 import type { RunScope } from '../../lifecycle/types';
@@ -1964,8 +1962,6 @@ export const executeHeterogeneousAgent = async (
       orviloEngine,
       providerBinding,
       resumeSessionId,
-      useClaudeCodeSdk: labPreferSelectors.enableClaudeCodeSdk(useUserStore.getState()),
-      useCodexAppServer: labPreferSelectors.enableCodexAppServer(useUserStore.getState()),
     });
     activeSessionBindingKey =
       result.providerBindingKey ?? getNativeHeteroSessionBindingKey(adapterType);

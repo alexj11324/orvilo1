@@ -1,14 +1,30 @@
 'use client';
 
 import { type PropsWithChildren } from 'react';
+import { useInRouterContext } from 'react-router';
 
 import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoading';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
+import { useWorkspaceSyncPathname } from '@/features/Workspace/useWorkspaceSyncPathname';
 import {
   isWorkspaceSlugCandidatePath,
   useWorkspaceUrlSync,
 } from '@/features/Workspace/useWorkspaceUrlSync';
-import { useWorkspaceSyncPathname } from '@/features/Workspace/useWorkspaceSyncPathname';
+
+/**
+ * The URL sync proper — mounted only inside a real `<Router>`. Tests and
+ * embedders that render a bare subtree without routing still get a working
+ * slot (children pass straight through) instead of a `useLocation` invariant.
+ */
+const RouterBoundWorkspaceSync = ({ children }: PropsWithChildren) => {
+  useWorkspaceUrlSync();
+  const pathname = useWorkspaceSyncPathname();
+  const isLoading = useIsWorkspaceLoading();
+
+  if (isLoading && isWorkspaceSlugCandidatePath(pathname)) return <RouteLoading />;
+
+  return children;
+};
 
 /**
  * Mounts workspace context for the whole subtree: keeps the active workspace
@@ -20,11 +36,9 @@ import { useWorkspaceSyncPathname } from '@/features/Workspace/useWorkspaceSyncP
  * blocking wait. `WorkspaceSlugBoundary` still owns the unknown-slug 404.
  */
 export default function WorkspaceContextSlot({ children }: PropsWithChildren) {
-  useWorkspaceUrlSync();
-  const pathname = useWorkspaceSyncPathname();
-  const isLoading = useIsWorkspaceLoading();
+  const inRouter = useInRouterContext();
 
-  if (isLoading && isWorkspaceSlugCandidatePath(pathname)) return <RouteLoading />;
+  if (!inRouter) return children;
 
-  return children;
+  return <RouterBoundWorkspaceSync>{children}</RouterBoundWorkspaceSync>;
 }

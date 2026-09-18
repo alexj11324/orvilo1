@@ -2,9 +2,9 @@
 
 import { useLayoutEffect } from 'react';
 
+import type { WorkspaceListItem } from '@/business/client/hooks/useActiveWorkspace';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
-import type { WorkspaceListItem } from '@/business/client/hooks/useActiveWorkspace';
 import { useFetchWorkspaces } from '@/business/client/hooks/useFetchWorkspaces';
 import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoading';
 import { useSilentSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';

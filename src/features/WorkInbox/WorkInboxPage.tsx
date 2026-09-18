@@ -92,13 +92,13 @@ const WorkInboxPage = memo(() => {
   );
   const cardIds = useMemo(() => cards.map((card) => card.notificationId), [cards]);
   const surface = inboxSurface(isMobile, detailOpen);
-  const markSelectedRead =
-    Boolean(selected) &&
-    shouldMarkInboxCardRead({
-      cardId: selected?.notificationId ?? '',
-      selectedId,
-      surface,
-    });
+  const selectedNotificationId = selected?.notificationId;
+  const selectedActivityVersion = selected?.activityVersion;
+  const markSelectedRead = shouldMarkInboxCardRead({
+    cardId: selectedNotificationId ?? '',
+    selectedId,
+    surface,
+  });
 
   useEffect(() => {
     if (selectedId && !cards.some((card) => card.notificationId === selectedId)) {
@@ -108,9 +108,11 @@ const WorkInboxPage = memo(() => {
   }, [cards, selectedId]);
 
   useEffect(() => {
-    if (!markSelectedRead || !selected) return;
-    void notificationService.markReadObserved(selected.notificationId, selected.activityVersion);
-  }, [markSelectedRead, selected?.activityVersion, selected?.notificationId]);
+    if (!markSelectedRead || !selectedNotificationId || selectedActivityVersion === undefined) {
+      return;
+    }
+    void notificationService.markReadObserved(selectedNotificationId, selectedActivityVersion);
+  }, [markSelectedRead, selectedActivityVersion, selectedNotificationId]);
 
   const refresh = useCallback(async () => {
     await Promise.all([

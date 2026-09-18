@@ -60,9 +60,10 @@ If the underlying surface is gone and the skill hasn't been edited in 3+ months 
 
 ### 4b — Living-log freshness (`common-mistakes.md`, `probe-mock-patterns.md`)
 
-Both layers (`.agents/skills/acceptance/references/` generic, `.agents/acceptance/`
-project) are injected into every acceptance round, so a stale entry is a stale
-instruction. For each entry:
+`.agents/acceptance/` is injected into every acceptance round, so a stale entry is
+a stale instruction. (The generic layer that used to sit beside it at
+`.agents/skills/acceptance/references/` was retired with the standalone acceptance
+platform, so the project layer is now the only one.) For each entry:
 
 ```bash
 rg -n '^`since|holds-while' .agents/acceptance/common-mistakes.md        # every entry must carry both

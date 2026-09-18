@@ -72,6 +72,24 @@ export const changeableRolesFor = (
   targetRole: string,
 ): WorkspaceRole[] => grantableWorkspaceRoles(callerRole).filter((role) => role !== targetRole);
 
+/**
+ * Whether the "transfer ownership" item may be OFFERED on this row. Mirrors
+ * the server's request-time checks: only the current owner can initiate, the
+ * recipient must be an active admin (or a legacy co-owner), and the
+ * partial-unique index allows at most one pending request per workspace.
+ */
+export const canRequestOwnershipTransfer = (
+  callerRole: string | null | undefined,
+  target: { deletedAt?: Date | null; role: string; suspendedAt?: Date | null; userId: string },
+  callerUserId: string | undefined,
+  hasPendingTransfer: boolean,
+): boolean =>
+  callerRole === 'owner' &&
+  !hasPendingTransfer &&
+  target.userId !== callerUserId &&
+  memberStatus(target) === 'active' &&
+  (target.role === 'admin' || target.role === 'owner');
+
 export const PROJECT_ROLE_ORDER: readonly ProjectRole[] = [
   'manager',
   'contributor',

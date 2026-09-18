@@ -1,6 +1,5 @@
 import { MarketSDK, type OrgRef, orgRefToPathSegment } from '@lobehub/market-sdk';
 import { type OrviloToolManifest } from '@orvilo/context-engine';
-import { CacheRevalidate, CacheTag } from '@orvilo/types';
 import debug from 'debug';
 import { type NextRequest } from 'next/server';
 
@@ -530,113 +529,6 @@ export class MarketService {
    */
   async registerUser(params: { followUserId?: string; registerUserId: string }): Promise<void> {
     await this.market.user.register(params);
-  }
-
-  // ============================== Skills Methods (using SDK) ==============================
-
-  /**
-   * Search for skills in the Orvilo Market
-   */
-  async searchSkill(params: {
-    category?: string;
-    locale?: string;
-    order?: 'asc' | 'desc';
-    page?: number;
-    pageSize?: number;
-    q?: string;
-    sort?:
-      | 'createdAt'
-      | 'forks'
-      | 'installCount'
-      | 'name'
-      | 'recommended'
-      | 'relevance'
-      | 'stars'
-      | 'updatedAt'
-      | 'watchers';
-  }) {
-    log('searchSkill: %O', params);
-
-    // Cache the catalogue the same way every other discover list is cached
-    // (see DiscoverService.getMcpList). Without this the skill store was the one
-    // browse surface that hit Market on every open and every page, which is why
-    // it — alone among the store's tabs — went down whenever the upstream was
-    // throttled or a credential went stale. The MCP tab looked healthy through
-    // the same incidents only because it was being served from this cache.
-    const result = await this.market.marketSkills.getSkillList(params, {
-      next: {
-        revalidate: CacheRevalidate.List,
-        tags: [CacheTag.Discover, CacheTag.Skills],
-      },
-    });
-
-    log('searchSkill response: %O', result);
-
-    return result;
-  }
-
-  /**
-   * Get skill detail from market
-   */
-  async getSkillDetail(identifier: string, options?: { locale?: string; version?: string }) {
-    log('getSkillDetail: %s, options: %O', identifier, options);
-
-    const result = await this.market.marketSkills.getSkillDetail(identifier, options);
-
-    log('getSkillDetail response: %O', result);
-
-    return result;
-  }
-
-  /**
-   * Get skill comments from market
-   */
-  async getSkillComments(
-    identifier: string,
-    params?: {
-      order?: 'asc' | 'desc';
-      page?: number;
-      pageSize?: number;
-      sort?: 'createdAt' | 'upvotes';
-    },
-  ) {
-    log('getSkillComments: %s, params: %O', identifier, params);
-
-    return this.market.marketSkills.getComments(identifier, params);
-  }
-
-  /**
-   * Get skill rating distribution from market
-   */
-  async getSkillRatingDistribution(identifier: string) {
-    log('getSkillRatingDistribution: %s', identifier);
-
-    return this.market.marketSkills.getRatingDistribution(identifier);
-  }
-
-  /**
-   * Get skill download URL from market
-   */
-  getSkillDownloadUrl(identifier: string, version?: string): string {
-    return this.market.marketSkills.getDownloadUrl(identifier, version);
-  }
-
-  /**
-   * Download skill ZIP directly
-   */
-  async downloadSkill(identifier: string, version?: string) {
-    log('downloadSkill: %s, version: %s', identifier, version);
-
-    return this.market.marketSkills.downloadSkill(identifier, version);
-  }
-
-  /**
-   * Get skill categories
-   */
-  async getSkillCategories() {
-    log('getSkillCategories');
-
-    return this.market.marketSkills.getCategories();
   }
 
   /**

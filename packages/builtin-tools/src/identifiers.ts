@@ -25,7 +25,6 @@ import { NotebookManifest } from '@orvilo/builtin-tool-notebook';
 import { OrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration';
-import { SkillStoreManifest } from '@orvilo/builtin-tool-skill-store';
 import { SkillsManifest } from '@orvilo/builtin-tool-skills';
 import { TopicReferenceManifest } from '@orvilo/builtin-tool-topic-reference';
 import { UserInteractionManifest } from '@orvilo/builtin-tool-user-interaction';
@@ -59,7 +58,6 @@ export const builtinToolIdentifiers: string[] = [
   agentSignalFeedbackIntentManifest.identifier,
   agentSignalSkillManagementManifest.identifier,
   SkillsManifest.identifier,
-  SkillStoreManifest.identifier,
   TopicReferenceManifest.identifier,
   OrviloActivatorManifest.identifier,
   WebBrowsingManifest.identifier,

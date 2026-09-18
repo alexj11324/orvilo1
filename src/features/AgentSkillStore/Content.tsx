@@ -6,12 +6,12 @@ import { COMPOSIO_APP_TYPES } from '@orvilo/const';
 import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { gridStyles } from '@/features/SkillStore/SkillList/style';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 
 import Item from './Item';
+import { gridStyles } from './style';
 
 /**
  * "Connect new tool" store for a single agent — a trimmed, agent-scoped mirror

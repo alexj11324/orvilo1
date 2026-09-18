@@ -57,7 +57,6 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'members',
   'messenger',
   'notification',
-  'oauth-apps',
   'plans',
   'profile',
   // Retired LLM Provider / service-model surfaces — the routers keep redirect
@@ -65,7 +64,6 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   // land on `/:slug/settings` instead of escaping to personal settings.
   'provider',
   'service-model',
-  'skill',
   'statistics',
   // Legacy alias for `statistics` — the routers keep a redirect, so prefixed
   // deep-links still land on `/:slug/settings/statistics`.

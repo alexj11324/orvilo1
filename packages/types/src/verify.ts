@@ -425,7 +425,7 @@ export interface VerifyCodingScope {
   branch?: string;
   /** Git commit (short sha) of the code under test. */
   commit?: string;
-  /** Entry point / command exercised, e.g. "lh verify ingest-report". */
+  /** Entry point / command exercised, e.g. "npm run dev". */
   entry?: string;
   /** Associated pull request, when the verification run has one. */
   pullRequest?: VerifyCodingPullRequest;

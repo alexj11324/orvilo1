@@ -14,6 +14,13 @@ const RETIRED_KEY_ROOTS = [
   // `/agent/:aid/topics` management page — removed; its per-agent detail
   // payloads have no remaining reader.
   'topic:agentView',
+  // Standalone Acceptance workspace — the list panel, its paged scroll feed and
+  // the per-subject status read were the only readers of these roots. The
+  // surface is retired, so a persisted page would otherwise hydrate into memory
+  // on every boot with nothing left to render it.
+  'verify:acceptances',
+  'verify:acceptancePage',
+  'verify:acceptanceStatuses',
 ] as const;
 
 const retiredPrefixes = RETIRED_KEY_ROOTS.map((root) => unstable_serialize([root]));

@@ -487,12 +487,14 @@ const exec = async (options: ExecOptions): Promise<void> => {
   let uploadImage: UploadHeterogeneousImage | undefined;
   if (serverIngest) {
     const client = await getTrpcClient();
+    const runGenerationEnv = Number.parseInt(process.env.ORVILO_RUN_GENERATION ?? '', 10);
     sink = new TrpcIngestSink(
       client,
       agentType,
       operationId,
       options.topic!,
       process.env.ORVILO_ASSISTANT_MESSAGE_ID,
+      Number.isNaN(runGenerationEnv) ? undefined : runGenerationEnv,
     );
     serverIngester = new CoalescingBatchIngester(sink);
 

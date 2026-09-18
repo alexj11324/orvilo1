@@ -239,6 +239,12 @@ export interface AgentRunCancelRecord {
 export interface RemoteExecutionStatus {
   admission: AgentRunAdmissionRecord;
   cancel?: AgentRunCancelRecord;
+  /**
+   * Durable operation status — the authoritative terminal signal. Admission
+   * stays `running` after a normal completion, so consumers must check this
+   * before treating an admission as live.
+   */
+  durableStatus?: string;
   /** Tail of the op's event stream — the resume cursor for a reconnect. */
   eventCursor?: string;
 }

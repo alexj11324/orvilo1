@@ -3452,6 +3452,8 @@ export default class HeterogeneousAgentCtr {
     prompt: string;
     resumeFallbackSystemContext?: string;
     resumeSessionId?: string;
+    /** Admission fence relayed to `lh hetero exec` via `ORVILO_RUN_GENERATION`. */
+    runGeneration?: number;
     serverUrl: string;
     systemContext?: string;
     topicId: string;
@@ -3476,6 +3478,7 @@ export default class HeterogeneousAgentCtr {
       prompt,
       resumeFallbackSystemContext,
       resumeSessionId,
+      runGeneration,
       serverUrl,
       systemContext,
       topicId,
@@ -3540,6 +3543,7 @@ export default class HeterogeneousAgentCtr {
       [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
       ORVILO_JWT: jwt,
       ...(assistantMessageId ? { ORVILO_ASSISTANT_MESSAGE_ID: assistantMessageId } : {}),
+      ...(runGeneration != null ? { ORVILO_RUN_GENERATION: String(runGeneration) } : {}),
       ORVILO_SERVER: serverUrl,
       // Same reason `runHeteroTask` injects this for notify: without it the
       // CLI's heteroIngest/heteroFinish fall back to personal scope and the

@@ -80,8 +80,12 @@ export const classifyRemoteDispatchFailure = (
   errorCode?: string,
 ): Extract<AgentRunAdmissionState, 'offline' | 'rejected' | 'unknown'> => {
   switch (errorCode) {
+    // DEVICE_GATEWAY_UNREACHABLE is only emitted for provably pre-connect
+    // failures (DNS/refused) — the request never left this process, so the
+    // device provably did not run it. See describeGatewayRequestFailure.
     case TransportCode.DeviceChannelUnavailable:
     case TransportCode.DeviceNotFound:
+    case TransportCode.GatewayUnreachable:
     case 'GATEWAY_NOT_CONFIGURED': {
       return 'offline';
     }
@@ -90,9 +94,9 @@ export const classifyRemoteDispatchFailure = (
     case TransportCode.Unauthorized: {
       return 'rejected';
     }
-    // DEVICE_RESPONSE_TIMEOUT / DEVICE_GATEWAY_ERROR /
-    // DEVICE_GATEWAY_UNREACHABLE — and anything unrecognized — are ambiguous:
-    // the request may have been delivered before the failure was observed.
+    // DEVICE_RESPONSE_TIMEOUT / DEVICE_GATEWAY_ERROR — and anything
+    // unrecognized — are ambiguous: the request may have been delivered
+    // before the failure was observed.
     default: {
       return 'unknown';
     }
@@ -410,6 +414,7 @@ export const loadRemoteExecutionStatus = async (
   return {
     admission: record.admission,
     cancel: record.cancel,
+    durableStatus: record.status,
     eventCursor,
   };
 };

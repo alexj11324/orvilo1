@@ -140,11 +140,32 @@ describe('describeGatewayRequestFailure', () => {
   });
 
   it('reports a dead gateway host as an undelivered call', () => {
-    const failure = describeGatewayRequestFailure(new TypeError('fetch failed'), 'tool call');
+    // Real undici failures always carry a cause; a pre-connect code means the
+    // request provably never left this process.
+    const failure = describeGatewayRequestFailure(
+      Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } }),
+      'tool call',
+    );
 
     expect(failure.code).toBe(DeviceTransportErrorCode.GatewayUnreachable);
     expect(failure.content).toContain('never ran on the device');
     expect(failure.error).toContain('fetch failed');
+  });
+
+  it('keeps a cause-less transport failure ambiguous — it may have been mid-request', () => {
+    const failure = describeGatewayRequestFailure(new TypeError('fetch failed'), 'tool call');
+
+    expect(failure.code).toBe(DeviceTransportErrorCode.GatewayError);
+    expect(failure.content).toContain('unclear whether the device ran it');
+  });
+
+  it('keeps mid-request resets ambiguous', () => {
+    const failure = describeGatewayRequestFailure(
+      Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNRESET' } }),
+      'tool call',
+    );
+
+    expect(failure.code).toBe(DeviceTransportErrorCode.GatewayError);
   });
 
   it('recognises a plain-English connection failure', () => {

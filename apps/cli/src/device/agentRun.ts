@@ -24,6 +24,8 @@ export interface SpawnHeteroAgentRunParams {
   /** System context used only by the automatic retry without native resume. */
   resumeFallbackSystemContext?: string;
   resumeSessionId?: string;
+  /** Admission fence relayed to `lh hetero exec` via `ORVILO_RUN_GENERATION`. */
+  runGeneration?: number;
   serverUrl: string;
   systemContext?: string;
   topicId: string;
@@ -71,6 +73,7 @@ export function spawnHeteroAgentRun(
     prompt,
     resumeFallbackSystemContext,
     resumeSessionId,
+    runGeneration,
     serverUrl,
     systemContext,
     topicId,
@@ -122,6 +125,7 @@ export function spawnHeteroAgentRun(
   for (const key of [
     'ORVILO_AGENT_ID',
     'ORVILO_ASSISTANT_MESSAGE_ID',
+    'ORVILO_RUN_GENERATION',
     'ORVILO_TASK_ID',
     'ORVILO_WORKSPACE_ID',
   ]) {
@@ -146,6 +150,7 @@ export function spawnHeteroAgentRun(
         [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
         ORVILO_JWT: jwt,
         ORVILO_OPERATION_ID: operationId,
+        ...(runGeneration != null ? { ORVILO_RUN_GENERATION: String(runGeneration) } : {}),
         ORVILO_SERVER: serverUrl,
         ORVILO_TOPIC_ID: topicId,
         ...(workspaceId ? { ORVILO_WORKSPACE_ID: workspaceId } : {}),
@@ -167,6 +172,7 @@ export function spawnHeteroAgentRun(
           agentType,
           operationId,
           pid,
+          runGeneration,
           startedAt: new Date().toISOString(),
           taskId: operationId,
           topicId,

@@ -52,6 +52,7 @@ import { buildRemoteDeviceHeteroContext } from '@/server/services/heterogeneousA
 import {
   classifyRemoteDispatchFailure,
   createRemoteRunAdmission,
+  loadRemoteRunRecord,
   markRemoteRunRunning,
   readRemoteRunAdmission,
   type RemoteRunChannel,
@@ -357,13 +358,42 @@ const settleRemoteDispatchOutcome = async (
   // No transport code means the device produced an authoritative answer
   // (explicit rejection / tool failure) — definite, not ambiguous.
   const admissionState = errorCode ? classifyRemoteDispatchFailure(errorCode) : 'rejected';
-  await writeRemoteRunAdmission(deps.db, operationId, {
+  const failureWriteApplied = await writeRemoteRunAdmission(deps.db, operationId, {
     errorCode: errorCode ?? params.error,
     reason: params.error,
     state: admissionState,
-  }).catch((err) => log('remoteAdmission failure write failed op=%s: %O', operationId, err));
+  }).catch((err) => {
+    log('remoteAdmission failure write failed op=%s: %O', operationId, err);
+    return false;
+  });
 
-  if (admissionState !== 'unknown') return { admissionState, outcome: 'terminal' };
+  if (admissionState !== 'unknown') {
+    if (failureWriteApplied) return { admissionState, outcome: 'terminal' };
+
+    // The guarded write was refused: the ledger is already ahead of this
+    // failure signal — either a producer callback already proved liveness
+    // (running/acknowledged — this failure is stale and must NOT finalize the
+    // run) or a terminal verdict was already recorded (idempotent).
+    const record = await loadRemoteRunRecord(deps.db, operationId).catch((err) => {
+      log('remoteAdmission re-read failed op=%s: %O', operationId, err);
+      return undefined;
+    });
+    const currentState = record?.admission?.state;
+    if (currentState === 'running' || currentState === 'acknowledged') {
+      log(
+        'remoteAdmission failure signal dropped op=%s — ledger already %s',
+        operationId,
+        currentState,
+      );
+      return { admissionState: currentState, outcome: 'acknowledged' };
+    }
+    if (currentState === 'rejected' || currentState === 'offline') {
+      return { admissionState: currentState, outcome: 'terminal' };
+    }
+    // 'unknown' / missing record — the dispatch failure could not be ruled
+    // out, but neither can delivery. Fall through to the unknown path.
+    return { admissionState: 'unknown', outcome: 'unknown' };
+  }
 
   if (await hasHeteroRunStarted(deps, { operationId, topicId })) {
     await markRemoteRunRunning(deps.db, operationId).catch((err) =>

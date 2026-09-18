@@ -15,6 +15,8 @@ export interface TaskEntry {
   operationId: string;
   parentOperationId?: string;
   pid: number;
+  /** Admission fence echoed back on notify callbacks for this operation. */
+  runGeneration?: number;
   startedAt: string;
   taskId: string;
   topicId: string;

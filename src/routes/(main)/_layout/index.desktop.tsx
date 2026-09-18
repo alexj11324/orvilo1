@@ -9,7 +9,6 @@ import { Suspense } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
 
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
-import DesktopBrowserGatewayBridge from '@/features/DesktopBrowserGatewayBridge';
 import DesktopFileMenuBridge from '@/features/DesktopFileMenuBridge';
 import DesktopLayoutContainer from '@/features/DesktopLayoutContainer';
 import DesktopNavigationBridge from '@/features/DesktopNavigationBridge';
@@ -70,7 +69,6 @@ const Layout: FC = () => {
           <Suspense fallback={null}>
             <DesktopNavigationBridge />
             <DesktopFileMenuBridge />
-            <DesktopBrowserGatewayBridge />
             <OverlaySnapshotPublisher />
             <OverlayCaptureUploader />
             <OverlayMessageDispatcher />

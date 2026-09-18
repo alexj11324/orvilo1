@@ -1,6 +1,5 @@
 export * from './binary';
 export * from './bootstrap';
-export * from './browserControl';
 export * from './browserSidebar';
 export * from './contextMenu';
 export * from './dataSync';

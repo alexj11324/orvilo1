@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "Neu laden",
   "workingPanel.browser.actions.stop": "Laden stoppen",
   "workingPanel.browser.addressPlaceholder": "Suchen oder Adresse eingeben",
-  "workingPanel.browser.agentControlling": "Agent verwendet den Browser",
-  "workingPanel.browser.agentCursor": "Agent",
   "workingPanel.browser.context.elementAdded": "Element zum Chat-Kontext hinzugefügt",
   "workingPanel.browser.context.elementTitle": "Element",
   "workingPanel.browser.context.failed": "Element-Kontext konnte nicht hinzugefügt werden",

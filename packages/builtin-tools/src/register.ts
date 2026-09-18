@@ -24,11 +24,6 @@ import {
 } from '@orvilo/builtin-tool-agent-management/client';
 import { AuvIdentifier, AuvInspectors } from '@orvilo/builtin-tool-auv/client';
 import {
-  BrowserInspectors,
-  BrowserManifest,
-  BrowserRenders,
-} from '@orvilo/builtin-tool-browser/client';
-import {
   ClaudeCodeApiName,
   ClaudeCodeIdentifier,
   ClaudeCodeInspectors,
@@ -282,7 +277,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     [ImageGenerationManifest.identifier]: ImageGenerationRenders as Record<string, BuiltinRender>,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseRenders as Record<string, BuiltinRender>,
     [OrviloAgentManifest.identifier]: OrviloAgentRenders as Record<string, BuiltinRender>,
-    [BrowserManifest.identifier]: BrowserRenders as Record<string, BuiltinRender>,
     [LocalSystemManifest.identifier]: LocalSystemRenders as Record<string, BuiltinRender>,
     [MemoryManifest.identifier]: MemoryRenders as Record<string, BuiltinRender>,
     [MessageManifest.identifier]: MessageRenders as Record<string, BuiltinRender>,
@@ -351,7 +345,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     >,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseInspectors as Record<string, BuiltinInspector>,
     [OrviloAgentManifest.identifier]: OrviloAgentInspectors as Record<string, BuiltinInspector>,
-    [BrowserManifest.identifier]: BrowserInspectors as Record<string, BuiltinInspector>,
     [LocalSystemManifest.identifier]: LocalSystemInspectors as Record<string, BuiltinInspector>,
     [MemoryManifest.identifier]: MemoryInspectors as Record<string, BuiltinInspector>,
     [MessageManifest.identifier]: MessageInspectors as Record<string, BuiltinInspector>,

@@ -32,7 +32,6 @@ vi.mock('./style', () => ({ styles: {} }));
 vi.mock('react-router', () => ({ Outlet: () => null }));
 
 vi.mock('@/components/Skeleton/RouteSegment', nullComponent);
-vi.mock('@/features/DesktopBrowserGatewayBridge', nullComponent);
 vi.mock('@/features/DesktopFileMenuBridge', nullComponent);
 vi.mock('@/features/DesktopLayoutContainer', passthrough);
 vi.mock('@/features/DesktopNavigationBridge', nullComponent);

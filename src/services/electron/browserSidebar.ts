@@ -2,7 +2,6 @@ import type {
   BrowserSidebarCaptureResult,
   BrowserSidebarImportResult,
   BrowserSidebarNavigateParams,
-  BrowserSidebarOverlayLabelsParams,
   BrowserSidebarPickElementParams,
   BrowserSidebarPickElementResult,
   BrowserSidebarResult,
@@ -58,10 +57,6 @@ class ElectronBrowserSidebarService {
 
   reload(params: BrowserSidebarSessionParams): Promise<BrowserSidebarResult> {
     return this.ipc.browserSidebar.reload(params);
-  }
-
-  setOverlayLabels(params: BrowserSidebarOverlayLabelsParams): Promise<BrowserSidebarResult> {
-    return this.ipc.browserSidebar.setOverlayLabels(params);
   }
 
   stop(params: BrowserSidebarSessionParams): Promise<BrowserSidebarResult> {

@@ -19,7 +19,6 @@ import { agentSignalReviewRuntime } from './agentSignalReview';
 import { agentSignalSkillManagementRuntime } from './agentSignalSkillManagement';
 import { auvRuntime } from './auv';
 import { briefRuntime } from './brief';
-import { browserRuntime } from './browser';
 import { calculatorRuntime } from './calculator';
 import { cloudSandboxRuntime } from './cloudSandbox';
 import { credsRuntime } from './creds';
@@ -80,7 +79,6 @@ registerRuntimes([
   activatorRuntime,
   messageRuntime,
   localSystemRuntime,
-  browserRuntime,
   remoteDeviceRuntime,
   briefRuntime,
   taskRuntime,

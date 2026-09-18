@@ -10,7 +10,6 @@ import {
   agentSignalSkillManagementManifest,
 } from '@orvilo/builtin-tool-agent-signal';
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
-import { BrowserManifest } from '@orvilo/builtin-tool-browser';
 import { CalculatorManifest } from '@orvilo/builtin-tool-calculator/manifest';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { CredsManifest } from '@orvilo/builtin-tool-creds';
@@ -48,7 +47,6 @@ export const builtinToolIdentifiers: string[] = [
   GoalSupervisorManifest.identifier,
   ImageGenerationManifest.identifier,
   KnowledgeBaseManifest.identifier,
-  BrowserManifest.identifier,
   LocalSystemManifest.identifier,
   MemoryManifest.identifier,
   NotebookManifest.identifier,

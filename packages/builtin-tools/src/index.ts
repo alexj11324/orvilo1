@@ -14,7 +14,6 @@ import {
 } from '@orvilo/builtin-tool-agent-signal';
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
 import { BriefManifest } from '@orvilo/builtin-tool-brief';
-import { BrowserManifest } from '@orvilo/builtin-tool-browser';
 import { CalculatorManifest } from '@orvilo/builtin-tool-calculator/manifest';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { CredsManifest } from '@orvilo/builtin-tool-creds';
@@ -54,7 +53,6 @@ export const defaultToolIds = [
   KnowledgeBaseManifest.identifier,
   MemoryManifest.identifier,
   LocalSystemManifest.identifier,
-  BrowserManifest.identifier,
   CloudSandboxManifest.identifier,
   TopicReferenceManifest.identifier,
   AgentDocumentsManifest.identifier,
@@ -157,7 +155,6 @@ export const groupSupervisorToolIds = [GroupManagementManifest.identifier];
  * `src/helpers/toolEngineering/index.ts`.
  */
 export const runtimeManagedToolIds = [
-  BrowserManifest.identifier,
   CloudSandboxManifest.identifier,
   KnowledgeBaseManifest.identifier,
   LocalSystemManifest.identifier,
@@ -208,7 +205,7 @@ export const runtimeManagedToolIds = [
  * `orvilo-skill-store`, `orvilo-agent-builder`, `orvilo-skills`,
  * `orvilo-group-agent-builder`, `orvilo-group-management`, `agent-signal-review`,
  * `orvilo-user-interaction`, `orvilo-activator`,
- * `orvilo-local-system`, `orvilo-browser`, `orvilo-remote-device`,
+ * `orvilo-local-system`, `orvilo-remote-device`,
  * `orvilo-topic-reference`, and the hidden system-only self-iteration tools),
  * see the denied-bucket doc block at the bottom of
  * `apps/server/src/services/aiAgent/shareGate.ts`.
@@ -342,13 +339,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     hidden: true,
     identifier: agentSignalSkillManagementManifest.identifier,
     manifest: agentSignalSkillManagementManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: isDesktop,
-    hidden: true,
-    identifier: BrowserManifest.identifier,
-    manifest: BrowserManifest,
     type: 'builtin',
   },
   {

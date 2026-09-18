@@ -171,7 +171,7 @@ describe('GatewayHttpClient', () => {
 
       const result = await client.executeToolCall(
         { userId: 'user-1' },
-        { apiName: 'navigate', arguments: '{}', identifier: 'orvilo-browser' },
+        { apiName: 'navigate', arguments: '{}', identifier: 'orvilo-local-system' },
       );
 
       expect(result).toEqual({

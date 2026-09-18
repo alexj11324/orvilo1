@@ -1,12 +1,6 @@
 import { WEB_ONBOARDING } from '@orvilo/builtin-agents';
 import { AuvApiName, AuvIdentifier, AuvManifest } from '@orvilo/builtin-tool-auv/client';
 import {
-  BrowserApiName,
-  BrowserIdentifier,
-  BrowserInspectors,
-  BrowserRenders,
-} from '@orvilo/builtin-tool-browser/client';
-import {
   ClaudeCodeIdentifier as ClaudeCodeToolIdentifier,
   ClaudeCodeInspectors,
   ClaudeCodeInterventions,
@@ -353,15 +347,6 @@ describe('builtin tool registry', () => {
 
   it('registers the Codex error inspector', () => {
     expect(getBuiltinInspector('codex', 'error')).toBeDefined();
-  });
-
-  it('registers inspectors and renders for every in-app browser API', () => {
-    for (const apiName of Object.values(BrowserApiName)) {
-      expect(BrowserInspectors[apiName]).toBeDefined();
-      expect(BrowserRenders[apiName]).toBeDefined();
-      expect(getBuiltinInspector(BrowserIdentifier, apiName)).toBe(BrowserInspectors[apiName]);
-      expect(getBuiltinRender(BrowserIdentifier, apiName)).toBe(BrowserRenders[apiName]);
-    }
   });
 
   it.each(['opencode', 'pi'])('registers shared file and shell surfaces for %s', (identifier) => {

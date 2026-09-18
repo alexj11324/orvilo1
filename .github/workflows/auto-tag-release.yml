@@ -141,7 +141,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync main back to canary
+      # The step name is the contract with tests/github-scripts/releaseSyncWorkflow.test.ts,
+      # which locates this step by name and asserts the dispatch carries --ref main.
+      # Do not rename it without updating that test.
+      - name: Sync main to canary
         if: steps.version.outputs.should_tag == 'true'
         run: |
           gh workflow run sync-main-to-canary.yaml --ref main

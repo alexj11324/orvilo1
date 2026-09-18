@@ -138,6 +138,14 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, selectedIdentifier }
     [allOrviloSkillServers],
   );
 
+  // Component scope, not memo scope: the rendered `ComposioSkillItem` below
+  // resolves its server through this too, and a resolver defined inside the
+  // memo is invisible to the JSX that renders the memo's output.
+  const getComposioServerByIdentifier = useCallback(
+    (identifier: string) => allComposioServers.find((server) => server.identifier === identifier),
+    [allComposioServers],
+  );
+
   // Separate the inventory into three categories:
   // 1. Integrations (builtin tools plus Orvilo and Composio connectors)
   // 2. Community MCP Tools (type === 'plugin')
@@ -145,8 +153,6 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, selectedIdentifier }
   const { integrations, communityMCPs, customMCPs } = useMemo(() => {
     // Local resolvers, derived from the props of this memo so the dependency
     // array stays exactly the values the computation reads.
-    const getComposioServerByIdentifier = (identifier: string) =>
-      allComposioServers.find((server) => server.identifier === identifier);
     const getBuiltinToolByIdentifier = (identifier: string) =>
       allBuiltinTools.find((tool) => tool.identifier === identifier);
     const isBuiltinToolInstalled = (identifier: string) =>
@@ -258,10 +264,10 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, selectedIdentifier }
     installedPluginList,
     isOrviloSkillEnabled,
     isComposioEnabled,
-    allComposioServers,
     allBuiltinTools,
     uninstalledBuiltinTools,
     getOrviloSkillServerByProvider,
+    getComposioServerByIdentifier,
   ]);
 
   const hasAnyConnectors =

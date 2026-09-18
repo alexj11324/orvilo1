@@ -193,6 +193,25 @@ agent/:aid/docs/:docId       → 与主应用重复（见下）
 三处已删，并新增门禁「每个退役 tab 不得出现在任一设置侧栏（双壳层）」。
 **已证伪**：还原含 Referral 的移动端文件后，门禁转红并点名文件与 tab；改回后 10 passed。
 
+### 全仓类型检查（第三轮，判据 3 的硬证据）
+
+方案判据 3 是「正式构建不携带其实现」。本轮补跑了全仓 `tsgo --noEmit`（直接调用编译器；仓库的 `bun run type-check` 包装脚本在非 CI 下**故意** `exit 1`，因为 tsgo 在开发机上会 OOM，本机实测约 22 分钟、峰值 RSS 约 640MB，可跑完）。
+
+**结论：`929106de` 当时有 3 个类型错误 —— 也就是说那个提交的正式构建根本编译不过。**
+249 个测试与 lint 全绿都没发现，原因分别是：vitest 不做类型检查；lint 的 `no-unused-vars` 只看「定义了没用」，不看「用了没有」。
+**这是本次唯一一个 lint 与测试都无法覆盖的缺陷类别，只能靠类型检查兜住。**
+
+| 文件                                                    | 错误                                                                                                                              | 归属                   |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `Settings/connector/features/ConnectorList.tsx:408`     | `Cannot find name 'getComposioServerByIdentifier'` —— 解析器定义在 145–332 的 `useMemo` **回调内**，而该 JSX 在组件体里，看不到它 | **本波次新增文件**     |
+| `packages/app-config/src/routes/settings.test.ts:15,34` | `enableOAuthApps` 已不属于 `SettingsCapabilityContext`                                                                            | 本波次（G01 删该字段） |
+| `Settings/hooks/useSettingsCapability.test.ts:36`       | `Provider` 的 `children` 是必需 prop，`createElement` 的 children 实参重载不匹配                                                  | 本波次                 |
+
+修法：把 `getComposioServerByIdentifier` 提升为组件级 `useCallback`，与紧邻的 `getOrviloSkillServerByProvider` 对称（并相应替换 memo 依赖项）；其余两处按其类型契约改。
+**修后全仓 `tsgo --noEmit` 0 错误。**
+
+> 注：`ConnectorList.tsx:408` 那条一旦触发就是运行时的 `ReferenceError`，但该分支没有测试覆盖 —— 单测绿并不代表这条路径可达。
+
 ### 判定为「不做」并附理由
 
 | 项                                                           | 理由                                                                                                                                                                                                                                                                                                 |

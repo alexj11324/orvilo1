@@ -30,18 +30,18 @@ const createWrapper = (
   extraFlags: Record<string, unknown> = {},
   serverConfig: Partial<GlobalServerConfig> = {},
 ) => {
+  // `children` goes in the props object rather than as `createElement`'s third
+  // argument: `Provider` declares it as a required prop, so the children-arg
+  // overload does not typecheck. The `.tsx` siblings can just use JSX.
   const Wrapper = ({ children }: { children: ReactNode }) =>
-    createElement(
-      Provider,
-      {
-        createStore: () =>
-          initServerConfigStore({
-            featureFlags: { ...mapFeatureFlagsEnvToState({}), ...extraFlags },
-            serverConfig: { aiProvider: {}, telemetry: {}, ...serverConfig },
-          }),
-      },
+    createElement(Provider, {
       children,
-    );
+      createStore: () =>
+        initServerConfigStore({
+          featureFlags: { ...mapFeatureFlagsEnvToState({}), ...extraFlags },
+          serverConfig: { aiProvider: {}, telemetry: {}, ...serverConfig },
+        }),
+    });
 
   return Wrapper;
 };

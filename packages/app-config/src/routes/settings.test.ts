@@ -12,7 +12,6 @@ import {
 
 const BASE_CONTEXT: SettingsCapabilityContext = {
   enableBusinessFeatures: true,
-  enableOAuthApps: true,
   hideDocs: false,
   isDesktop: true,
   isDevMode: true,
@@ -31,7 +30,6 @@ const context = (
 const contextMatrix = (): SettingsCapabilityContext[] => {
   const flags = [
     'enableBusinessFeatures',
-    'enableOAuthApps',
     'hideDocs',
     'isDesktop',
     'isDevMode',

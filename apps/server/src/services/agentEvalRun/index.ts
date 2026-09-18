@@ -2439,23 +2439,10 @@ export class AgentEvalRunService {
     const timedOutRows = await this.runTopicModel.batchMarkTimeout(run.id, perCaseTimeout);
     if (timedOutRows.length === 0) return false;
 
-    // Interrupt running agents before writing timeout state (best-effort).
-    // interruptTask (not bare interruptOperation) so device-hosted runs also
-    // get their process cancelled through the admission ledger path.
-    const aiAgentService = new AiAgentService(this.db, this.userId, {
-      workspaceId: this.workspaceId,
-    });
-    for (const row of timedOutRows) {
-      const opId = (row.evalResult as EvalRunTopicResult)?.operationId;
-      if (opId) {
-        try {
-          await aiAgentService.interruptTask({ operationId: opId, topicId: row.topicId });
-        } catch {
-          // best effort — don't block timeout handling
-        }
-      }
-    }
-
+    // Persist the durable timeout state BEFORE any cancellation waits:
+    // interruptTask can block ~10s per unresponsive device-hosted run, and
+    // batchMarkTimeout only selects `running` rows — a crash mid-interrupt
+    // would leave the run stuck with rows already flipped but no results.
     // Write evalResult with duration for each timed-out topic
     for (const row of timedOutRows) {
       const duration = row.createdAt ? now - new Date(row.createdAt).getTime() : undefined;
@@ -2514,6 +2501,23 @@ export class AgentEvalRunService {
           timeoutCases,
         },
       });
+    }
+
+    // Interrupt running agents last (best-effort). interruptTask — not bare
+    // interruptOperation — so device-hosted runs also get their process
+    // cancelled through the admission ledger path.
+    const aiAgentService = new AiAgentService(this.db, this.userId, {
+      workspaceId: this.workspaceId,
+    });
+    for (const row of timedOutRows) {
+      const opId = (row.evalResult as EvalRunTopicResult)?.operationId;
+      if (opId) {
+        try {
+          await aiAgentService.interruptTask({ operationId: opId, topicId: row.topicId });
+        } catch {
+          // best effort — don't block timeout handling
+        }
+      }
     }
 
     return true;

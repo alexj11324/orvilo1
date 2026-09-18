@@ -226,8 +226,18 @@ export const runMemoryActionAgent = async (
     plugins: [MemoryIdentifier],
   };
 
+  // The synthetic memory writer is always a linear GeneralChatAgent — strip any
+  // graph config inherited from the source agent (agencyConfig and the legacy
+  // chatConfig fallback) so the graph-aware factory never builds a GraphAgent
+  // that would ignore the memory prompt/tool set.
   const memoryRuntimeAgentConfig = {
     ...agentConfig,
+    agencyConfig: agentConfig.agencyConfig
+      ? { ...agentConfig.agencyConfig, enableGraphMode: false, graph: undefined }
+      : agentConfig.agencyConfig,
+    chatConfig: agentConfig.chatConfig
+      ? { ...agentConfig.chatConfig, enableGraphMode: false, graph: undefined }
+      : agentConfig.chatConfig,
     plugins: [MemoryIdentifier],
     systemRole: createAgentSignalMemoryWriterSystemRole({ memoryLanguage }),
   };

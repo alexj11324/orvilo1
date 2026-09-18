@@ -5,6 +5,7 @@ import type {
   StreamChunkData,
   StreamEvent,
 } from '@/server/modules/AgentExecution/StreamEventManager';
+import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { BaseService } from '../common/base.service';
@@ -18,6 +19,21 @@ import type {
   ResponseUsage,
   Tool,
 } from '../types/responses.type';
+
+/**
+ * How long to wait for a delegated run (callAgent / callSubAgent) to resume
+ * the parked parent out-of-band before reporting it as `incomplete`. The
+ * child run resumes the parent through the shared state manager in whichever
+ * process handles the completion callback, so polling durable state is the
+ * only way to observe it.
+ */
+const DELEGATED_RUN_WAIT_MS = 5 * 60_000;
+const DELEGATED_RUN_POLL_MS = 2_000;
+
+// Mirrors `isParkedStatus` in @orvilo/agent-runtime — kept local because this
+// package must not take a runtime dependency on the server-side runtime bundle.
+const isParked = (status: AgentState['status']): boolean =>
+  status === 'waiting_for_human' || status === 'waiting_for_async_tool';
 
 /**
  * Response API Service
@@ -255,6 +271,35 @@ export class ResponsesService extends BaseService {
   }
 
   /**
+   * Wait for a delegated run (callAgent / callSubAgent) to leave its parked
+   * state. The child completes out-of-band and resumes the parent through the
+   * shared state manager — `executeSync` cannot resume it itself, so poll the
+   * durable state until the run turns terminal (or the wait budget expires).
+   * `client_tool_execution` parks return immediately: they resume from the
+   * caller, not the server.
+   */
+  private async awaitDelegatedRun(
+    agentRuntimeService: AgentRuntimeService,
+    operationId: string,
+    state: AgentState,
+  ): Promise<AgentState> {
+    const deadline = Date.now() + DELEGATED_RUN_WAIT_MS;
+    let current = state;
+
+    while (
+      isParked(current.status) &&
+      current.interruption?.reason !== 'client_tool_execution' &&
+      Date.now() < deadline
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, DELEGATED_RUN_POLL_MS));
+      const refreshed = await agentRuntimeService.getCoordinator().loadAgentState(operationId);
+      if (refreshed) current = refreshed;
+    }
+
+    return current;
+  }
+
+  /**
    * Create a response (non-streaming)
    * Calls execAgent with autoStart: false, then executeSync to wait for completion
    */
@@ -317,25 +362,30 @@ export class ResponsesService extends BaseService {
       const agentRuntimeService = aiAgentService.createIsolatedRuntime({
         queueService: null,
       });
-      const finalState = await agentRuntimeService.executeSync(execResult.operationId);
+      let finalState = await agentRuntimeService.executeSync(execResult.operationId);
+      finalState = await this.awaitDelegatedRun(
+        agentRuntimeService,
+        execResult.operationId,
+        finalState,
+      );
 
       // 3. Extract results from final state
       const { output, outputText } = this.extractOutputItems(finalState, responseId);
       const usage = this.extractUsage(finalState);
 
-      const isClientToolInterrupt =
-        finalState.status === 'waiting_for_async_tool' &&
-        finalState.interruption?.reason === 'client_tool_execution';
+      const parkedReason = isParked(finalState.status)
+        ? (finalState.interruption?.reason ?? finalState.status)
+        : undefined;
 
       return this.buildResponseObject({
-        completedAt: isClientToolInterrupt ? null : Math.floor(Date.now() / 1000),
+        completedAt: parkedReason ? null : Math.floor(Date.now() / 1000),
         createdAt,
         id: responseId,
-        incompleteDetails: isClientToolInterrupt ? { reason: 'client_tool_execution' } : undefined,
+        incompleteDetails: parkedReason ? { reason: parkedReason } : undefined,
         output,
         outputText,
         params,
-        status: isClientToolInterrupt
+        status: parkedReason
           ? 'incomplete'
           : finalState.status === 'error'
             ? 'failed'
@@ -742,6 +792,10 @@ export class ResponsesService extends BaseService {
       await executionPromise;
       unsubscribe();
 
+      if (finalState) {
+        finalState = await this.awaitDelegatedRun(agentRuntimeService, operationId, finalState);
+      }
+
       // If no text came through streaming, extract from final state
       if (!accumulatedText && finalState) {
         accumulatedText = this.extractAssistantContent(finalState);
@@ -756,17 +810,19 @@ export class ResponsesService extends BaseService {
         ? this.extractOutputItems(finalState, responseId)
         : { output: [], outputText: accumulatedText };
 
-      // Determine if agent was interrupted for client tool execution
-      const isClientToolInterrupt =
-        finalState?.status === 'waiting_for_async_tool' &&
-        finalState?.interruption?.reason === 'client_tool_execution';
+      // Any still-parked run is nonterminal — delegated children resume the
+      // parent out-of-band, client tools resume from the caller.
+      const parkedReason =
+        finalState && isParked(finalState.status)
+          ? (finalState.interruption?.reason ?? finalState.status)
+          : undefined;
 
-      if (isClientToolInterrupt) {
+      if (parkedReason) {
         yield {
           response: {
             ...response,
             completed_at: null,
-            incomplete_details: { reason: 'client_tool_execution' },
+            incomplete_details: { reason: parkedReason },
             output: fullOutput.output,
             output_text: fullOutput.outputText || accumulatedText,
             status: 'incomplete' as any,

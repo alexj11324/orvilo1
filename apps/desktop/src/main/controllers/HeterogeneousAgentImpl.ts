@@ -2395,28 +2395,21 @@ export default class HeterogeneousAgentCtr {
     if (!session) return;
 
     session.cancelledByUs = true;
-    if (session.devinAcpSession) {
-      session.devinAcpSession.interrupt();
-      return;
-    }
-    if (session.grokAcpSession) {
-      session.grokAcpSession.interrupt();
-      return;
-    }
-    if (session.cursorAcpSession) {
-      session.cursorAcpSession.interrupt();
-      return;
-    }
-    if (session.droidAcpSession) {
-      session.droidAcpSession.interrupt();
-      return;
-    }
-    if (session.traeAcpSession) {
-      await session.traeAcpSession.interrupt();
-      return;
-    }
-    if (session.standardAcpSession) {
-      session.standardAcpSession.interrupt();
+    const acpSession =
+      session.devinAcpSession ??
+      session.grokAcpSession ??
+      session.cursorAcpSession ??
+      session.droidAcpSession ??
+      session.traeAcpSession ??
+      session.standardAcpSession;
+    if (acpSession) {
+      // A cancelled run must be confirmed dead before the renderer may send a
+      // replacement prompt into the same worktree — `interrupt()` only reports
+      // confirmed once the child actually exited (grace → SIGTERM → SIGKILL).
+      const exited = await acpSession.interrupt();
+      if (!exited) {
+        throw new Error(`Session ${params.sessionId} did not exit after cancellation escalation`);
+      }
       return;
     }
 

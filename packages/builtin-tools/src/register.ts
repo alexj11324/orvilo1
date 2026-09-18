@@ -192,6 +192,43 @@ const QODER_IDENTIFIER = 'qoder';
 const OPENCODE_IDENTIFIER = 'opencode';
 const PI_IDENTIFIER = 'pi';
 const KIMI_CODE_IDENTIFIER = 'kimi-code';
+const AMP_IDENTIFIER = 'amp';
+const CODEBUDDY_IDENTIFIER = 'codebuddy';
+const CODEX_IDENTIFIER = 'codex';
+
+/**
+ * Standard-ACP providers whose permission/elicitation requests surface as
+ * `askUserQuestion` tool calls stamped with the provider identifier — the
+ * AskUserBridge reuses the Claude Code form for all of them.
+ */
+const STANDARD_ACP_ASK_USER_IDENTIFIERS = [
+  AMP_IDENTIFIER,
+  CODEBUDDY_IDENTIFIER,
+  CODEX_IDENTIFIER,
+  KIMI_CODE_IDENTIFIER,
+  OPENCODE_IDENTIFIER,
+  PI_IDENTIFIER,
+];
+
+/** Per-identifier apiName map carrying just the shared askUserQuestion surface. */
+const standardAcpAskUserSurfaces = <T>(surface: T): Record<string, Record<string, T>> =>
+  Object.fromEntries(
+    STANDARD_ACP_ASK_USER_IDENTIFIERS.map((identifier) => [
+      identifier,
+      { [ClaudeCodeApiName.AskUserQuestion]: surface },
+    ]),
+  );
+
+/** Merge the shared askUserQuestion surface into an identifier's existing apiName map. */
+const withAskUserQuestion = <T>(surface: T, existing?: Record<string, T>): Record<string, T> => ({
+  ...existing,
+  [ClaudeCodeApiName.AskUserQuestion]: surface,
+});
+
+const askUserQuestionRender = ClaudeCodeRenders[ClaudeCodeApiName.AskUserQuestion] as BuiltinRender;
+const askUserQuestionInspector = ClaudeCodeInspectors[
+  ClaudeCodeApiName.AskUserQuestion
+] as BuiltinInspector;
 
 const heterogeneousCliInspectors: Record<string, BuiltinInspector> = {
   bash: createRunCommandInspector(
@@ -233,6 +270,8 @@ export const registerBuiltinToolSurfaces = (): void => {
       [ClaudeCodeApiName.AskUserQuestion]: ClaudeCodeRenders[ClaudeCodeApiName.AskUserQuestion],
     },
     [QODER_IDENTIFIER]: ClaudeCodeRenders as Record<string, BuiltinRender>,
+    [AMP_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender),
+    [CODEBUDDY_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender),
     [CloudSandboxManifest.identifier]: CloudSandboxRenders as Record<string, BuiltinRender>,
     [GroupAgentBuilderManifest.identifier]: GroupAgentBuilderRenders as Record<
       string,
@@ -257,13 +296,16 @@ export const registerBuiltinToolSurfaces = (): void => {
     [OrviloActivatorManifest.identifier]: OrviloActivatorRenders as Record<string, BuiltinRender>,
     [WebBrowsingManifest.identifier]: WebBrowsingRenders as Record<string, BuiltinRender>,
     [WebOnboardingManifest.identifier]: WebOnboardingRenders as Record<string, BuiltinRender>,
-    [OPENCODE_IDENTIFIER]: heterogeneousCliRenders,
-    [PI_IDENTIFIER]: heterogeneousCliRenders,
-    [KIMI_CODE_IDENTIFIER]: KimiCodeRenders as Record<string, BuiltinRender>,
-    codex: {
+    [OPENCODE_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender, heterogeneousCliRenders),
+    [PI_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender, heterogeneousCliRenders),
+    [KIMI_CODE_IDENTIFIER]: withAskUserQuestion(
+      askUserQuestionRender,
+      KimiCodeRenders as Record<string, BuiltinRender>,
+    ),
+    codex: withAskUserQuestion(askUserQuestionRender, {
       ...CodexRenders,
       command_execution: RunCommandRender as BuiltinRender,
-    },
+    }),
     [GithubIdentifier]: GithubRenders,
     [LinearIdentifier]: LinearRenders,
   });
@@ -290,6 +332,8 @@ export const registerBuiltinToolSurfaces = (): void => {
       [ClaudeCodeApiName.AskUserQuestion]: ClaudeCodeInspectors[ClaudeCodeApiName.AskUserQuestion],
     },
     [QODER_IDENTIFIER]: ClaudeCodeInspectors as Record<string, BuiltinInspector>,
+    [AMP_IDENTIFIER]: withAskUserQuestion(askUserQuestionInspector),
+    [CODEBUDDY_IDENTIFIER]: withAskUserQuestion(askUserQuestionInspector),
     [CloudSandboxManifest.identifier]: CloudSandboxInspectors as Record<string, BuiltinInspector>,
     [GroupAgentBuilderManifest.identifier]: GroupAgentBuilderInspectors as Record<
       string,
@@ -327,10 +371,13 @@ export const registerBuiltinToolSurfaces = (): void => {
     [UserInteractionIdentifier]: UserInteractionInspectors as Record<string, BuiltinInspector>,
     [WebBrowsingManifest.identifier]: WebBrowsingInspectors as Record<string, BuiltinInspector>,
     [WebOnboardingManifest.identifier]: WebOnboardingInspectors as Record<string, BuiltinInspector>,
-    [OPENCODE_IDENTIFIER]: heterogeneousCliInspectors,
-    [PI_IDENTIFIER]: heterogeneousCliInspectors,
-    [KIMI_CODE_IDENTIFIER]: KimiCodeInspectors,
-    'codex': CodexInspectors,
+    [OPENCODE_IDENTIFIER]: withAskUserQuestion(
+      askUserQuestionInspector,
+      heterogeneousCliInspectors,
+    ),
+    [PI_IDENTIFIER]: withAskUserQuestion(askUserQuestionInspector, heterogeneousCliInspectors),
+    [KIMI_CODE_IDENTIFIER]: withAskUserQuestion(askUserQuestionInspector, KimiCodeInspectors),
+    'codex': withAskUserQuestion(askUserQuestionInspector, CodexInspectors),
     [GithubIdentifier]: GithubInspectors,
     [LinearIdentifier]: LinearInspectors,
     [TwitterIdentifier]: TwitterInspectors,
@@ -381,6 +428,9 @@ export const registerBuiltinToolSurfaces = (): void => {
         ClaudeCodeInterventions[ClaudeCodeApiName.AskUserQuestion],
     },
     [QODER_IDENTIFIER]: ClaudeCodeInterventions as Record<string, BuiltinIntervention>,
+    ...standardAcpAskUserSurfaces(
+      ClaudeCodeInterventions[ClaudeCodeApiName.AskUserQuestion] as BuiltinIntervention,
+    ),
     [CloudSandboxManifest.identifier]: CloudSandboxInterventions as Record<
       string,
       BuiltinIntervention

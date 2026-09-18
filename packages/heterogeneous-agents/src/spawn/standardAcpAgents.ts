@@ -3,6 +3,7 @@ import type { HeterogeneousAgentModel } from '@orvilo/types';
 import {
   buildAcpBridgeNotFoundError,
   detectAcpBridgeCommand,
+  detectAcpBridgeRunner,
   getAcpAgentRuntime,
 } from './acpRuntime';
 import type { StandardAcpConfigOption, StandardAcpSessionOptions } from './standardAcpSession';
@@ -83,7 +84,24 @@ export const resolveAcpSpawnTarget = async (
   }
 
   const status = await detectAcpBridgeCommand(spec.bridge, env);
-  if (!status.available || !status.path) throw buildAcpBridgeNotFoundError(agentType);
+  if (!status.available || !status.path) {
+    // Rollout-compatible fallback: installs that predate the bridge
+    // requirement can still launch through an on-machine package runner
+    // (bunx/npx fetches and caches the bridge package) instead of failing
+    // every prompt until the user hand-installs the bridge.
+    const runner = await detectAcpBridgeRunner(spec.bridge, env);
+    if (!runner) throw buildAcpBridgeNotFoundError(agentType);
+
+    return {
+      args: runner.args,
+      commandPath: runner.commandPath,
+      env: {
+        ...env,
+        [spec.bridge.nativeCommandEnv]: vendorCommand,
+        ...(runner.resolvedPathEnv ? { PATH: runner.resolvedPathEnv } : {}),
+      },
+    };
+  }
 
   return {
     args: [],

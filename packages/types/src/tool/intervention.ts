@@ -163,20 +163,32 @@ export type ToolInterventionPresentation = {
 };
 
 const ASK_USER_QUESTION_IDENTIFIERS = new Set([
+  'amp',
   'claude-code',
+  'codebuddy',
+  'codex',
   'cursor',
   'devin',
   'droid',
+  'kimi-code',
+  'opencode',
   'orvilo-agent',
   'orvilo-user-interaction',
+  'pi',
   'qoder',
 ]);
 
 const HETEROGENEOUS_CUSTOM_INTERACTION_IDENTIFIERS = new Set([
+  'amp',
   'claude-code',
+  'codebuddy',
+  'codex',
   'cursor',
   'devin',
   'droid',
+  'kimi-code',
+  'opencode',
+  'pi',
   'qoder',
 ]);
 

@@ -88,7 +88,17 @@ export class AcpStdioClient {
   private fatalError?: Error;
   private messageQueue = Promise.resolve();
   private nextRequestId = 0;
+  private resolveExited?: () => void;
   private stdoutBuffer = '';
+
+  /**
+   * Resolves once the spawned child has fully exited — including when the
+   * exit is host-initiated via {@link close}/{@link signal}. Cancellation
+   * flows await this to confirm termination before reporting success.
+   */
+  readonly exited: Promise<void> = new Promise((resolve) => {
+    this.resolveExited = resolve;
+  });
 
   constructor(private readonly options: AcpStdioClientOptions) {}
 
@@ -126,6 +136,8 @@ export class AcpStdioClient {
     });
     child.once('error', (error) => this.fail(error));
     child.once('close', (code, signal) => {
+      this.child = undefined;
+      this.resolveExited?.();
       if (this.closed) return;
       const error = new Error(
         `${this.options.processLabel ?? 'ACP process'} exited unexpectedly (code ${code ?? 'null'}, signal ${signal ?? 'null'})`,
@@ -181,6 +193,16 @@ export class AcpStdioClient {
     this.stdoutBuffer = '';
     this.rejectPendingRequests(new Error('ACP stdio client closed by host'));
     this.shutdownProcess(signal);
+  }
+
+  /**
+   * Re-signal the child after {@link close} — the escalation path for a
+   * process that ignored the first signal. No-op once the child has exited.
+   */
+  signal(signal: NodeJS.Signals): void {
+    const child = this.child;
+    if (!child || child.exitCode !== null || child.signalCode !== null) return;
+    this.sendSignal(child, signal);
   }
 
   private consumeStdout(chunk: Buffer): void {
@@ -301,9 +323,18 @@ export class AcpStdioClient {
 
   private shutdownProcess(signal: NodeJS.Signals): void {
     const child = this.child;
-    this.child = undefined;
-    if (!child?.pid || child.killed) return;
+    // Keep `this.child` until the 'close' event so {@link signal} can
+    // escalate; resolve `exited` immediately when nothing was spawned.
+    if (!child) {
+      this.resolveExited?.();
+      return;
+    }
+    if (!child.pid || child.killed) return;
 
+    this.sendSignal(child, signal);
+  }
+
+  private sendSignal(child: ChildProcess, signal: NodeJS.Signals): void {
     if (process.platform === 'win32') {
       try {
         spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
@@ -318,7 +349,7 @@ export class AcpStdioClient {
     }
 
     const detached = this.options.detached ?? true;
-    if (detached) {
+    if (child.pid !== undefined && detached) {
       try {
         process.kill(-child.pid, signal);
         return;

@@ -325,7 +325,7 @@ G02 删该工具时把两处也删了，于是 auto 模式下它变成「可配�
 - `Typecheck` 带条件 `if: needs.check-duplicate-run.outputs.should_skip != 'true'`，而 canary 最近 **6 次 push 它全是 `skipped`** —— 「canary 是绿的」这个前提**无法从近期 run 推出来**，中间落地的提交全仓类型检查一次都没真跑过。
 - 改判据：同期**真正执行过**它的分支里，`82d1f429`（我的 base 的后代）与多个 `fix/audit-*` 都是 `success`；且成功那两次该步骤耗时 **88s / 83s**，我这次 **95s** —— 同一量级，排除「快速失败 / OOM / 脚本早退」。故判定为**本提交引入**。
 
-**根因**：`src/features/ChatInput/ActionBar/Tools/useControls.tsx`（13 处）与 `src/features/ProfileEditor/AgentTool.tsx`（9 处）把 `t('skillStore.tabs.orvilo' | '.custom' | '.community')` 当 `sourceLabel` —— **工具详情浮层的「来源」标签，是活 UI**；`t()` 的键有类型，删键即编译错误。同一个浮层里另有一个**动态拼接**的键 `tools.builtins.${item.identifier}.description`，它是带 `as any` 传的，所以那边删键不报错 —— 这也解释了为什么偏偏是这 3 个静态键出事。
+**根因**：`src/features/ChatInput/ActionBar/Tools/useControls.tsx`（13 个）与 `src/features/ProfileEditor/AgentTool.tsx`（8 个）把 `t('skillStore.tabs.orvilo' | '.custom' | '.community')` 当 `sourceLabel` —— **工具详情浮层的「来源」标签，是活 UI**，共 **21 个调用点**；`t()` 的键有类型，删键即编译错误。（**21** 这个数按编译器的报错逐条对齐过：`useControls.tsx` 13 条 + `AgentTool.tsx` 8 条 TS2345，与字面匹配数一致。仓库自带的 `chatgpt-codex-connector` 自动评审独立指出了同一问题，它给的数是 19 —— 以编译器为准。）同一个浮层里另有一个**动态拼接**的键 `tools.builtins.${item.identifier}.description`，它是带 `as any` 传的，所以那边删键不报错 —— 这也解释了为什么偏偏是这 3 个静态键出事。
 
 **修法**：从 `origin/canary` 逐字节取回这 3 个键（不手打，直接 diff 验与原值一致）。名字 `skillStore.tabs.*` 是历史遗留，**用法是活的**；改名是另一件事，不在本 PR 范围。
 
@@ -338,6 +338,8 @@ G02 删该工具时把两处也删了，于是 auto 模式下它变成「可配�
 **为什么本机永远发现不了这一点**：`bun run lint` 在非 CI 下**故意** `exit 1`（`scripts/type-check.mjs` 拒绝在开发机跑 tsgo，怕 OOM），报「Full-repo type-check runs in CI only」。于是我只看到 `lint` 整体红，**分辨不出它红在第几段** —— 本地这条命令的失败是恒定的，不含信息。这与本仓那条「本地绿 ≠ 仓库完整」是镜像：这里是**本地红也不含信息**。
 
 **顺带记录的判据**：`bun run check` 的 lint 是**改动文件范围**，`bun run lint` 是**全仓**；前者绿不蕴含后者绿。判一个「lint 会不会红」必须对准 CI 真正跑的那条命令。
+
+**另一个容易误判的「合不了」**：两条 `Required Quality Gate` 都 `success`、分支也知道与 base 同步（`ce58d1ae`）之后，PR 仍停在 `mergeStateStatus: BLOCKED` 且 `mergeable: MERGEABLE`。原因不在检查，而在 ruleset 的 **`pull_request` 规则**：`required_review_thread_resolution: true` —— 仓库自带的 `chatgpt-codex-connector` 自动评审在这个 PR 上留了一条**未解决**的 review 线程（它独立指出了上面同一个缺陷，判 P2）。回复说明已在 `6069e5af` 修复并 resolve 后，状态变为 `UNSTABLE`（= 可合并，只因**非必需**检查 `Check all PR gates before Vercel` 仍红）。**判据**：`BLOCKED` 要先分清是**检查**没绿还是**线程**没解决 —— 用 `repos/…/rules/branches/canary` 看 `pull_request` 规则的参数，而不是盯着 check-runs。
 
 ### 已知的既有问题（非本次引入，已在基线验证）
 

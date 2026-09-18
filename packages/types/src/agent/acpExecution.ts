@@ -18,7 +18,19 @@
  *   or any path back into the retired LLM-provider execution chain.
  */
 
-import type { HeterogeneousAgentType } from './heterogeneousAgent';
+import type {
+  LocalHeterogeneousAgentType,
+  RemoteHeterogeneousAgentType,
+} from './heterogeneousAgent';
+
+/**
+ * Agent kinds that can back an ACP installation ref: real installable external
+ * agents (local CLI/desktop or remote platform). Builtin managed engines
+ * (e.g. 'orvilo') have no binary to pin and are excluded by construction.
+ */
+export type AcpInstallableAgentType =
+  | LocalHeterogeneousAgentType
+  | RemoteHeterogeneousAgentType;
 
 /** The only execution protocol at the Orvilo → external-Agent boundary. */
 export type AgentExecutionProtocol = 'acp';
@@ -30,11 +42,11 @@ export type AgentExecutionProtocol = 'acp';
  */
 export interface AgentInstallationRef {
   /** Installed agent kind (registry type — e.g. 'claude-code', 'codex'). */
-  agentType: HeterogeneousAgentType;
+  agentType: AcpInstallableAgentType;
   /** Revision of the binding/launch config used for this run. */
-  configRevision?: string;
-  /** Install descriptor id on the execution machine, when known. */
-  installationId?: string;
+  configRevision: string;
+  /** Install descriptor id on the execution machine. */
+  installationId: string;
 }
 
 /**
@@ -116,7 +128,7 @@ export interface AgentRunApprovalRef {
   /** Device where the action will execute. */
   deviceId?: string;
   /** Run generation the approval is valid for; stale generations can't reuse it. */
-  generation?: number;
+  generation: number;
   operationId: string;
   /** Host-assigned request id (e.g. ACP `session/request_permission` id). */
   requestId: string;

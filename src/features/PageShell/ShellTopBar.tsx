@@ -13,7 +13,11 @@ import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCa
 import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
 import Avatar from '@/components/Avatar';
 import { ProductLogo } from '@/components/Branding';
-import { PresenceAvatarStack, useRoomConnection } from '@/features/Collaboration';
+import {
+  PresenceAvatarStack,
+  usePresenceEnabled,
+  useRoomConnection,
+} from '@/features/Collaboration';
 import { openInviteTeammateModal, useTeammatesEnabled } from '@/features/Teammates';
 import UserAvatar from '@/features/User/UserAvatar';
 
@@ -106,8 +110,11 @@ const styles = createStaticStyles(({ css }) => ({
  */
 const WorkspacePresence = memo<{ workspaceId: string }>(({ workspaceId }) => {
   const room = { id: workspaceId, scope: 'workspace' as const };
-  useRoomConnection(room);
-  return <PresenceAvatarStack room={room} />;
+  // Same `collaboration.presence` flag the cursor channel reads — the stack
+  // must not hold a socket when presence is switched off server-side.
+  const enabled = usePresenceEnabled();
+  useRoomConnection(room, enabled);
+  return enabled ? <PresenceAvatarStack room={room} /> : null;
 });
 
 WorkspacePresence.displayName = 'WorkspacePresence';

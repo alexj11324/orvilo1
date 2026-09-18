@@ -95,7 +95,7 @@ jobs:
           done
 
       - name: Upload coverage to Codecov
-        if: always()
+        if: ${{ always() && secrets.CODECOV_TOKEN != '' }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
@@ -218,6 +218,7 @@ jobs:
         run: bunx vitest --merge-reports --reporter=default --coverage
 
       - name: Upload App Coverage to Codecov
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -293,6 +294,7 @@ jobs:
         working-directory: apps/desktop
 
       - name: Upload Desktop App Coverage to Codecov
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -372,6 +374,7 @@ jobs:
         run: bunx vitest --merge-reports --reporter=default --coverage --coverage.reportsDirectory=./apps/server/coverage
 
       - name: Upload Server coverage to Codecov
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

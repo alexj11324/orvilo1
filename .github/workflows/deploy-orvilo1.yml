@@ -64,7 +64,7 @@ jobs:
           {
             echo "tags<<EOF"
             echo "${IMAGE}:sha-${GITHUB_SHA}"
-            if [ "${{ github.event_name }}" = "push" ]; then
+            if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
               echo "${IMAGE}:main"
             fi
             echo "EOF"

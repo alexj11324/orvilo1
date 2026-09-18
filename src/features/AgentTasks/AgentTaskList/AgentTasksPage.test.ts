@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { TaskViewMode } from '@/store/global/initialState';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
 import {
@@ -112,6 +113,19 @@ describe('AgentTasksPage', () => {
       // count. Empty list mode renders the list's own empty state.
       expect(resolveOrdinaryCollectionSurface('list')).toBe('list');
       expect(resolveOrdinaryCollectionSurface('kanban')).toBe('board');
+    });
+
+    it('keeps an empty list-mode collection on the list — the count must not vote', () => {
+      // The pre-fix signature took `isListEmpty` and forced the board whenever
+      // the collection was empty. Calling through the legacy two-argument
+      // shape proves the empty condition is no longer read at all — this case
+      // returns 'board' on the parent implementation and fails there.
+      const legacyCall = resolveOrdinaryCollectionSurface as (
+        viewMode: TaskViewMode,
+        isListEmpty?: boolean,
+      ) => 'board' | 'list';
+      expect(legacyCall('list', true)).toBe('list');
+      expect(legacyCall('kanban', true)).toBe('board');
     });
   });
 

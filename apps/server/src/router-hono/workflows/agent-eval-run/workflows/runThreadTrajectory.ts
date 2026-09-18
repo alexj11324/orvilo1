@@ -10,7 +10,7 @@ import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/ut
 import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
-const log = debug('lobe-server:workflows:run-thread-trajectory');
+const log = debug('orvilo-server:workflows:run-thread-trajectory');
 
 /**
  * Run thread trajectory workflow - executes a single agent runtime call within a thread (for pass@k).

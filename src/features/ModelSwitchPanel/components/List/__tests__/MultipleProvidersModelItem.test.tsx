@@ -46,10 +46,10 @@ vi.mock('@lobehub/ui/base-ui', () => ({
 }));
 
 vi.mock('@lobehub/icons', () => ({
-  LobeHub: { Morden: () => <span /> },
+  Orvilo: { Morden: () => <span /> },
 }));
 
-vi.mock('@/components/LobeIcons', () => ({
+vi.mock('@/components/OrviloIcons', () => ({
   ModelIcon: () => <span />,
   ProviderIcon: () => <span />,
 }));
@@ -124,7 +124,7 @@ describe('MultipleProvidersModelItem', () => {
   it('renders model detail panel even when info tags are hidden', () => {
     render(
       <MultipleProvidersModelItem
-        activeKey="lobehub/gpt-5.4"
+        activeKey="orvilo/gpt-5.4"
         newLabel="new"
         showInfoTag={false}
         data={{
@@ -135,7 +135,7 @@ describe('MultipleProvidersModelItem', () => {
             id: 'gpt-5.4',
           } as any,
           providers: [
-            { id: 'lobehub', name: 'LobeHub' },
+            { id: 'orvilo', name: 'Orvilo' },
             { id: 'openai', name: 'OpenAI' },
           ],
         }}
@@ -144,7 +144,7 @@ describe('MultipleProvidersModelItem', () => {
       />,
     );
 
-    expect(screen.getByTestId('model-detail-panel')).toHaveTextContent('lobehub/gpt-5.4');
+    expect(screen.getByTestId('model-detail-panel')).toHaveTextContent('orvilo/gpt-5.4');
     expect(screen.getByText('ModelSwitchPanel.useModelFrom')).toBeInTheDocument();
   });
 
@@ -167,12 +167,12 @@ describe('MultipleProvidersModelItem', () => {
             id: 'claude-opus-4-7',
           } as any,
           providers: [
-            { id: 'lobehub', name: 'LobeHub' },
+            { id: 'orvilo', name: 'Orvilo' },
             { id: 'anthropic', name: 'Anthropic' },
           ],
         }}
         isModelRestricted={(modelId, providerId) =>
-          modelId === 'claude-opus-4-7' && providerId === 'lobehub'
+          modelId === 'claude-opus-4-7' && providerId === 'orvilo'
         }
         onClose={onClose}
         onModelChange={onModelChange}
@@ -203,7 +203,7 @@ describe('MultipleProvidersModelItem', () => {
             displayName: 'Claude Opus 4.8',
             id: 'claude-opus-4-8',
           } as any,
-          providers: [{ id: 'lobehub', name: 'LobeHub' }],
+          providers: [{ id: 'orvilo', name: 'Orvilo' }],
         }}
         onBeforeModelSelect={onBeforeModelSelect}
         onClose={vi.fn()}
@@ -213,7 +213,7 @@ describe('MultipleProvidersModelItem', () => {
 
     fireEvent.click(screen.getByText('Claude Opus 4.8'));
 
-    expect(onBeforeModelSelect).toHaveBeenCalledWith('claude-opus-4-8', 'lobehub');
+    expect(onBeforeModelSelect).toHaveBeenCalledWith('claude-opus-4-8', 'orvilo');
     await vi.waitFor(() => expect(onModelChange).not.toHaveBeenCalled());
   });
 });

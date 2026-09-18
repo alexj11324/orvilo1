@@ -10,11 +10,11 @@ export default defineConfig({
   plugins: [
     {
       enforce: 'pre',
-      name: 'stub-lobehub-ui-motion-provider',
+      name: 'stub-orvilo-ui-motion-provider',
       resolveId(id, importer) {
         if (!importer || !importer.includes('/@lobehub/ui/')) return null;
         if (/MotionProvider(?:\/index(?:\.(?:mjs|js|tsx))?)?$/.test(id))
-          return path.resolve(repoRoot, 'tests/mocks/lobehubUiMotionProvider.tsx');
+          return path.resolve(repoRoot, 'tests/mocks/orviloUiMotionProvider.tsx');
         return null;
       },
     },

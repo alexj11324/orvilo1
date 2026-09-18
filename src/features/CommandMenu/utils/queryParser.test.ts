@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildQueryWithType, parseSearchQuery } from './queryParser';
+import { buildQueryWithType, parseSearchQuery, VALID_TYPES } from './queryParser';
 
 describe('parseSearchQuery', () => {
   it('should parse query without type filter', () => {
@@ -90,18 +90,9 @@ describe('parseSearchQuery', () => {
   });
 
   it('should handle all valid types', () => {
-    const types = [
-      'agent',
-      'chatGroup',
-      'topic',
-      'message',
-      'file',
-      'folder',
-      'memory',
-      'knowledgeBase',
-    ];
-
-    for (const type of types) {
+    // Derived from the parser's own list: a restated copy is how `memory` kept
+    // being asserted long after the surface behind it was retired.
+    for (const type of VALID_TYPES) {
       const result = parseSearchQuery(`type:${type} search`);
       expect(result.typeFilter).toBe(type);
       expect(result.cleanQuery).toBe('search');

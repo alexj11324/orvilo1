@@ -69,7 +69,7 @@ export const useMediaUploadAbility = (model: string, provider: string, agentId?:
   // can parse any file via scripts/terminal, so the upload should not be gated on the model's
   // own multimodal ability. Mirror the store's `enforceFileTypeWhitelist` bypass in
   // `uploadChatFiles` so the input UI doesn't silently drop audio/video/image the agent could
-  // still handle (e.g. .m4a on a non-audio model). See lobehub/lobehub#15770.
+  // still handle (e.g. .m4a on a non-audio model). See alexj11324/orvilo1#15770.
   const bypassMediaGate = useAgentStore(
     (s) =>
       !!agentId &&
@@ -81,7 +81,7 @@ export const useMediaUploadAbility = (model: string, provider: string, agentId?:
     return {
       canUploadAudio: true,
       // Kimi's one-shot `--prompt` mode has no attachment argument, and ReadMediaFile is only
-      // registered for vision-capable local models, which LobeHub cannot determine beforehand.
+      // registered for vision-capable local models, which Orvilo cannot determine beforehand.
       canUploadImage: heterogeneousAgentType !== 'kimi-code',
       canUploadVideo: true,
     };

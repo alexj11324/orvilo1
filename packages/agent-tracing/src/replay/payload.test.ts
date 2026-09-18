@@ -16,7 +16,7 @@ const snapshot = (steps: Partial<ExecutionSnapshot['steps'][number]>[]): Executi
     completedAt: 2,
     model: 'deepseek-v4-flash',
     operationId: 'op_1_agt_a_tpc_b_c',
-    provider: 'lobehub',
+    provider: 'orvilo',
     startedAt: 1,
     steps: steps.map((step, index) => ({
       completedAt: 2,
@@ -108,8 +108,8 @@ describe('parseModelTargets', () => {
   });
 
   it('falls back to the snapshot provider for a bare model name', () => {
-    expect(parseModelTargets('gpt-5', 'lobehub')).toEqual([
-      { label: 'lobehub/gpt-5', model: 'gpt-5', provider: 'lobehub' },
+    expect(parseModelTargets('gpt-5', 'orvilo')).toEqual([
+      { label: 'aspectlylabs/gpt-5', model: 'gpt-5', provider: 'orvilo' },
     ]);
   });
 

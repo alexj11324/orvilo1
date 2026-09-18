@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { TransferErrorCode } from '@/types/transferError';
 
 import { assertTransferRecipientValid, executeAcceptedTransfer } from './index';
@@ -20,7 +20,7 @@ const getMember = vi.fn();
 
 const baseParams = {
   currentOwnerId: 'owner-1',
-  db: {} as LobeChatDatabase,
+  db: {} as OrviloDatabase,
   initiatorId: 'initiator-1',
   recipientId: 'recipient-1',
   workspaceId: 'ws-1',
@@ -91,7 +91,7 @@ describe('executeAcceptedTransfer recipient recheck', () => {
             }),
           }),
         }),
-    }) as unknown as LobeChatDatabase;
+    }) as unknown as OrviloDatabase;
 
   it('refuses acceptance when the recipient was downgraded to viewer during the pending window', async () => {
     await expect(

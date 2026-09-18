@@ -1,13 +1,13 @@
 import { and, eq, isNull } from 'drizzle-orm';
 
 import { workspaceMembers, workspaces } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 export const WORKSPACE_ID_HEADER = 'X-Workspace-Id';
 
 export const resolveValidWorkspaceIdFromRequest = async (params: {
   req: Request;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   userId: string;
 }): Promise<string | undefined> => {
   const workspaceId = params.req.headers.get(WORKSPACE_ID_HEADER)?.trim();

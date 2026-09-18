@@ -122,7 +122,7 @@ describe('WorkModel · linear', () => {
         team: 'Engineering',
         teamId: 'team-1',
         title: 'Linear Work issue',
-        url: 'https://linear.app/lobehub/issue/LINEAR-10966/linear-work-issue',
+        url: 'https://linear.app/orvilo/issue/LINEAR-10966/linear-work-issue',
       },
       rootOperationId: 'op-linear-issue-create',
       toolCallId: 'tool-call-linear-issue-create',
@@ -178,7 +178,7 @@ describe('WorkModel · linear', () => {
       identifier: 'LINEAR-10966',
       status: 'In Progress',
       title: 'Linear Work issue',
-      url: 'https://linear.app/lobehub/issue/LINEAR-10966/linear-work-issue',
+      url: 'https://linear.app/orvilo/issue/LINEAR-10966/linear-work-issue',
     });
     expect(versions[1]).toMatchObject({
       status: 'Backlog',
@@ -238,7 +238,7 @@ describe('WorkModel · linear', () => {
           id: 'doc-1',
           slug: 'linear-document',
           title: 'Linear document',
-          url: 'https://linear.app/lobehub/document/linear-document',
+          url: 'https://linear.app/orvilo/document/linear-document',
         },
       }),
       rootOperationId: 'op-linear-document-create',
@@ -254,7 +254,7 @@ describe('WorkModel · linear', () => {
         id: 'doc-1',
         slugId: '8298fa69b2e3',
         title: 'Linear document updated',
-        url: 'https://linear.app/lobehub/document/linear-document-8298fa69b2e3',
+        url: 'https://linear.app/orvilo/document/linear-document-8298fa69b2e3',
       },
       rootOperationId: 'op-linear-document-edit',
       toolCallId: 'tool-call-linear-document-edit',
@@ -282,7 +282,7 @@ describe('WorkModel · linear', () => {
       data: {
         body: 'Looks good',
         id: 'comment-1',
-        url: 'https://linear.app/lobehub/issue/LINEAR-10966#comment-1',
+        url: 'https://linear.app/orvilo/issue/LINEAR-10966#comment-1',
       },
       rootOperationId: 'op-linear-comment-create',
       toolCallId: 'tool-call-linear-comment-create',
@@ -307,7 +307,7 @@ describe('WorkModel · linear', () => {
       description: 'Partial body',
       identifier: 'linear-document-8298fa69b2e3',
       title: 'Linear document updated',
-      url: 'https://linear.app/lobehub/document/linear-document-8298fa69b2e3',
+      url: 'https://linear.app/orvilo/document/linear-document-8298fa69b2e3',
     });
 
     await workModel.handleSkillToolResult({
@@ -342,7 +342,7 @@ describe('WorkModel · linear', () => {
         id: 'shared-issue-uuid',
         identifier: 'LINEAR-10966',
         title: 'Owner issue title',
-        url: 'https://linear.app/lobehub/issue/LINEAR-10966/shared-issue',
+        url: 'https://linear.app/orvilo/issue/LINEAR-10966/shared-issue',
       },
       toolCallId: 'tool-call-linear-owner-issue',
       toolName: 'save_issue',
@@ -355,7 +355,7 @@ describe('WorkModel · linear', () => {
         id: 'shared-issue-uuid',
         identifier: 'LINEAR-10966',
         title: 'Other user issue title',
-        url: 'https://linear.app/lobehub/issue/LINEAR-10966/shared-issue',
+        url: 'https://linear.app/orvilo/issue/LINEAR-10966/shared-issue',
       },
       toolCallId: 'tool-call-linear-other-issue',
       toolName: 'save_issue',
@@ -405,14 +405,14 @@ describe('normalizeLinearToolResult (url scheme allowlist)', () => {
   );
 
   it('keeps a whitespace-padded https url after trimming', () => {
-    const operation = registerIssueWithUrl('  https://linear.app/lobehub/issue/TODO-LINEAR-1  ');
+    const operation = registerIssueWithUrl('  https://linear.app/orvilo/issue/TODO-LINEAR-1  ');
 
-    expect(operation?.params.url).toBe('https://linear.app/lobehub/issue/TODO-LINEAR-1');
+    expect(operation?.params.url).toBe('https://linear.app/orvilo/issue/TODO-LINEAR-1');
   });
 
   it('keeps a plain https url', () => {
-    const operation = registerIssueWithUrl('https://linear.app/lobehub/issue/TODO-LINEAR-1');
+    const operation = registerIssueWithUrl('https://linear.app/orvilo/issue/TODO-LINEAR-1');
 
-    expect(operation?.params.url).toBe('https://linear.app/lobehub/issue/TODO-LINEAR-1');
+    expect(operation?.params.url).toBe('https://linear.app/orvilo/issue/TODO-LINEAR-1');
   });
 });

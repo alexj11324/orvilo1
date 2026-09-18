@@ -1,13 +1,13 @@
 import { defineCase, errorStep, llmStep, toolStep } from '../../builders/defineCase';
 
 // ---------------------------------------------------------------------------
-// Helpers — all mapped to lobe-agent
+// Helpers — all mapped to orvilo-agent
 // ---------------------------------------------------------------------------
 
-/** lobe-agent / createTodos */
+/** orvilo-agent / createTodos */
 const createTodos = (items: string[], durationMs = 60) =>
   toolStep({
-    identifier: 'lobe-agent',
+    identifier: 'orvilo-agent',
     apiName: 'createTodos',
     arguments: JSON.stringify({ adds: items }),
     result: {
@@ -20,14 +20,14 @@ const createTodos = (items: string[], durationMs = 60) =>
     durationMs,
   });
 
-/** lobe-agent / updateTodos — batch operations */
+/** orvilo-agent / updateTodos — batch operations */
 const updateTodos = (
   operations: Array<{ type: string; index?: number; newText?: string; status?: string }>,
   currentItems: Array<{ text: string; status: string }>,
   durationMs = 60,
 ) =>
   toolStep({
-    identifier: 'lobe-agent',
+    identifier: 'orvilo-agent',
     apiName: 'updateTodos',
     arguments: JSON.stringify({ operations }),
     result: {
@@ -40,7 +40,7 @@ const updateTodos = (
     durationMs,
   });
 
-/** lobe-agent / createPlan */
+/** orvilo-agent / createPlan */
 const createPlan = (
   goal: string,
   description: string,
@@ -49,7 +49,7 @@ const createPlan = (
   durationMs = 80,
 ) =>
   toolStep({
-    identifier: 'lobe-agent',
+    identifier: 'orvilo-agent',
     apiName: 'createPlan',
     arguments: JSON.stringify({ goal, description, context }),
     result: {
@@ -66,14 +66,14 @@ const createPlan = (
     durationMs,
   });
 
-/** lobe-agent / updatePlan */
+/** orvilo-agent / updatePlan */
 const updatePlan = (
   planId: string,
   set: { goal?: string; description?: string; context?: string; completed?: boolean },
   durationMs = 60,
 ) =>
   toolStep({
-    identifier: 'lobe-agent',
+    identifier: 'orvilo-agent',
     apiName: 'updatePlan',
     arguments: JSON.stringify({ planId, ...set }),
     result: {
@@ -90,10 +90,10 @@ const updatePlan = (
     durationMs,
   });
 
-/** lobe-agent / callSubAgent */
+/** orvilo-agent / callSubAgent */
 const callSubAgent = (description: string, instruction: string, durationMs = 200) =>
   toolStep({
-    identifier: 'lobe-agent',
+    identifier: 'orvilo-agent',
     apiName: 'callSubAgent',
     arguments: JSON.stringify({ description, instruction }),
     result: {
@@ -108,14 +108,14 @@ const callSubAgent = (description: string, instruction: string, durationMs = 200
 const breathe = (text: string, durationMs = 250) => llmStep({ text, durationMs });
 
 // ---------------------------------------------------------------------------
-// The main case — ~200 lobe-agent tool calls across 8 phases
+// The main case — ~200 orvilo-agent tool calls across 8 phases
 // ---------------------------------------------------------------------------
 
 export const todoWriteStress = defineCase({
   id: 'todo-write-stress',
   name: 'TodoWrite × 200 (complex)',
   description:
-    '~200 lobe-agent tool calls across 8 realistic phases: discovery, schema audit, store migration, ' +
+    '~200 orvilo-agent tool calls across 8 realistic phases: discovery, schema audit, store migration, ' +
     'TRPC refactor, i18n extraction, component rewrites, testing, and final verification.',
   tags: ['stress', 'todo', 'builtin'],
 
@@ -137,8 +137,8 @@ export const todoWriteStress = defineCase({
       text: '第一阶段：全面盘点现有代码结构。创建总体计划，再拆解为 15 个待办事项。',
       reasoning: '先创建一个顶层计划文档，再将盘点工作拆解为具体的 todo 项。',
       toolsCalling: [
-        { id: 'tc-plan-1', identifier: 'lobe-agent', apiName: 'createPlan', arguments: '{}' },
-        { id: 'tc-todos-1', identifier: 'lobe-agent', apiName: 'createTodos', arguments: '{}' },
+        { id: 'tc-plan-1', identifier: 'orvilo-agent', apiName: 'createPlan', arguments: '{}' },
+        { id: 'tc-todos-1', identifier: 'orvilo-agent', apiName: 'createTodos', arguments: '{}' },
       ],
       durationMs: 600,
     }),
@@ -810,7 +810,7 @@ export const todoWriteStress = defineCase({
     // Done
     // =====================================================================
     llmStep({
-      text: '全部 8 个阶段完成。共执行约 200 个 lobe-agent 工具调用，涵盖计划创建、待办管理、任务执行和错误恢复。迁移已通过 type-check、单测、E2E 和安全审计。',
+      text: '全部 8 个阶段完成。共执行约 200 个 orvilo-agent 工具调用，涵盖计划创建、待办管理、任务执行和错误恢复。迁移已通过 type-check、单测、E2E 和安全审计。',
       reasoning: '确认所有 todo 已标记完成，所有 plan 已标记 completed，汇总执行统计。',
       durationMs: 600,
     }),

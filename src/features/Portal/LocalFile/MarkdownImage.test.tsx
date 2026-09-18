@@ -32,7 +32,7 @@ vi.mock('@lobehub/ui', () => ({
         alt={alt}
         className={classNames?.image}
         data-object-fit={objectFit}
-        data-testid="lobe-image"
+        data-testid="orvilo-image"
         data-variant={variant}
         src={src}
         style={styles?.image}
@@ -61,7 +61,7 @@ describe('MarkdownImage', () => {
     });
   });
 
-  it('renders remote markdown images with the LobeHub Image component', () => {
+  it('renders remote markdown images with the Orvilo Image component', () => {
     mockUseClientDataSWR.mockReturnValue({});
 
     render(
@@ -75,7 +75,7 @@ describe('MarkdownImage', () => {
       />,
     );
 
-    const image = screen.getByTestId('lobe-image');
+    const image = screen.getByTestId('orvilo-image');
     expect(image).toHaveAttribute('src', 'https://example.com/screenshot.png');
     expect(image).toHaveClass('markdown-img');
     expect(image).toHaveStyle({ maxWidth: '100%', width: '320px' });
@@ -91,7 +91,7 @@ describe('MarkdownImage', () => {
     });
   });
 
-  it('resolves relative markdown images and renders the loaded blob through LobeHub Image', () => {
+  it('resolves relative markdown images and renders the loaded blob through Orvilo Image', () => {
     mockUseClientDataSWR.mockReturnValue({
       data: {
         blob: new Blob(['image']),
@@ -109,7 +109,7 @@ describe('MarkdownImage', () => {
       />,
     );
 
-    expect(screen.getByTestId('lobe-image')).toHaveAttribute('src', 'blob:markdown-image');
+    expect(screen.getByTestId('orvilo-image')).toHaveAttribute('src', 'blob:markdown-image');
     expect(mockUseClientDataSWR).toHaveBeenCalledWith(
       localFileKeys.preview({
         accept: 'image',
@@ -134,7 +134,7 @@ describe('MarkdownImage', () => {
       />,
     );
 
-    expect(screen.queryByTestId('lobe-image')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('orvilo-image')).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'local' })).toBeInTheDocument();
   });
 });

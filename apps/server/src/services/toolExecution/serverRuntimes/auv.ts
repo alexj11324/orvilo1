@@ -23,11 +23,11 @@ export const auvRuntime: ServerRuntimeRegistration = {
        * Triggering workflow:
        *
        * `BuiltinToolsExecutor.execute`
-       *   -> `lobe-computer-use/runCommand`
+       *   -> `orvilo-computer-use/runCommand`
        *     -> {@link deviceGateway.executeToolCall}
        *
        * Upstream:
-       * - Server-side builtin tool execution for `lobe-computer-use/runCommand`
+       * - Server-side builtin tool execution for `orvilo-computer-use/runCommand`
        *
        * Downstream:
        * - {@link deviceGateway.queryDeviceSystemInfo}

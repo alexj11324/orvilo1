@@ -4,7 +4,7 @@ import { type AgentContextDocument } from '@orvilo/context-engine';
 import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import {
   isChatGroupSessionId,
-  type LobeAgentAgencyConfig,
+  type OrviloAgentAgencyConfig,
   pruneWorkingDirByDeviceDeletes,
 } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -35,8 +35,8 @@ import { getUserStoreState } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import type {
   AgentItem,
-  LobeAgentChatConfig,
-  LobeAgentConfig,
+  OrviloAgentChatConfig,
+  OrviloAgentConfig,
   RuntimeEnvConfig,
 } from '@/types/agent';
 import { merge } from '@/utils/merge';
@@ -61,7 +61,7 @@ type AgentMetaUpdate = Partial<
     | 'title'
   >
 >;
-type AgencyConfigPatch = PartialDeep<LobeAgentAgencyConfig>;
+type AgencyConfigPatch = PartialDeep<OrviloAgentAgencyConfig>;
 
 interface AgentConfigUpdateOptions {
   /** Propagate the persistence failure so a scoped editor can render failed + Retry. */
@@ -71,7 +71,7 @@ interface AgentConfigUpdateOptions {
 }
 
 const preserveWorkingDirDeleteMarkers = (
-  merged: LobeAgentAgencyConfig,
+  merged: OrviloAgentAgencyConfig,
   patch: AgencyConfigPatch,
 ): void => {
   const incoming = patch.workingDirByDevice;
@@ -286,7 +286,7 @@ export class AgentSliceActionImpl {
   };
 
   updateAgentChatConfig = async (
-    config: Partial<LobeAgentChatConfig>,
+    config: Partial<OrviloAgentChatConfig>,
     options?: AgentConfigUpdateOptions,
   ): Promise<void> => {
     const { activeAgentId } = this.#get();
@@ -298,7 +298,7 @@ export class AgentSliceActionImpl {
 
   updateAgentChatConfigById = async (
     agentId: string,
-    config: Partial<LobeAgentChatConfig>,
+    config: Partial<OrviloAgentChatConfig>,
     options?: AgentConfigUpdateOptions,
   ): Promise<void> => {
     if (!agentId) return;
@@ -307,7 +307,7 @@ export class AgentSliceActionImpl {
   };
 
   updateAgentConfig = async (
-    config: PartialDeep<LobeAgentConfig>,
+    config: PartialDeep<OrviloAgentConfig>,
     options?: AgentConfigUpdateOptions,
   ): Promise<void> => {
     const { activeAgentId } = this.#get();
@@ -319,7 +319,7 @@ export class AgentSliceActionImpl {
 
   updateAgentConfigById = async (
     agentId: string,
-    config: PartialDeep<LobeAgentConfig>,
+    config: PartialDeep<OrviloAgentConfig>,
     options?: AgentConfigUpdateOptions,
   ): Promise<void> => {
     if (!agentId) return;
@@ -409,17 +409,17 @@ export class AgentSliceActionImpl {
   useFetchAgentConfig = (
     isLogin: boolean | undefined,
     agentId: string,
-  ): SWRResponse<LobeAgentConfig> => {
+  ): SWRResponse<OrviloAgentConfig> => {
     const swrKey =
       isLogin === true && agentId && !isChatGroupSessionId(agentId)
         ? agentConfigKeys.config(agentId)
         : null;
 
-    return useClientDataSWRWithSync<LobeAgentConfig>(
+    return useClientDataSWRWithSync<OrviloAgentConfig>(
       swrKey,
       async () => {
         const data = await agentService.getAgentConfigById(agentId);
-        return data as LobeAgentConfig;
+        return data as OrviloAgentConfig;
       },
       {
         onData: (data) => {
@@ -545,17 +545,17 @@ export class AgentSliceActionImpl {
   useHydrateAgentConfig = (
     isLogin: boolean | undefined,
     agentId: string,
-  ): SWRResponse<LobeAgentConfig> => {
+  ): SWRResponse<OrviloAgentConfig> => {
     const swrKey =
       isLogin === true && agentId && !isChatGroupSessionId(agentId)
         ? agentConfigKeys.config(agentId)
         : null;
 
-    return useClientDataSWRWithSync<LobeAgentConfig>(
+    return useClientDataSWRWithSync<OrviloAgentConfig>(
       swrKey,
       async () => {
         const data = await agentService.getAgentConfigById(agentId);
-        return data as LobeAgentConfig;
+        return data as OrviloAgentConfig;
       },
       {
         onData: (data) => {
@@ -626,7 +626,7 @@ export class AgentSliceActionImpl {
     return request;
   };
 
-  internal_dispatchAgentMap = (id: string, config: PartialDeep<LobeAgentConfig>): void => {
+  internal_dispatchAgentMap = (id: string, config: PartialDeep<OrviloAgentConfig>): void => {
     const agentMap = produce(this.#get().agentMap, (draft) => {
       if (!draft[id]) {
         draft[id] = config;
@@ -649,8 +649,8 @@ export class AgentSliceActionImpl {
 
   #mergeLatestAgencyConfigPatch = (
     id: string,
-    data: PartialDeep<LobeAgentConfig>,
-  ): PartialDeep<LobeAgentConfig> => {
+    data: PartialDeep<OrviloAgentConfig>,
+  ): PartialDeep<OrviloAgentConfig> => {
     const agencyConfigPatch = data.agencyConfig;
     if (!agencyConfigPatch) return data;
 
@@ -658,7 +658,7 @@ export class AgentSliceActionImpl {
     const agencyConfig = merge(
       currentAgencyConfig ?? {},
       agencyConfigPatch,
-    ) as LobeAgentAgencyConfig;
+    ) as OrviloAgentAgencyConfig;
 
     pruneWorkingDirByDeviceDeletes(agencyConfig, agencyConfigPatch);
     preserveWorkingDirDeleteMarkers(agencyConfig, agencyConfigPatch);
@@ -668,7 +668,7 @@ export class AgentSliceActionImpl {
 
   optimisticUpdateAgentConfig = async (
     id: string,
-    data: PartialDeep<LobeAgentConfig>,
+    data: PartialDeep<OrviloAgentConfig>,
     signal?: AbortSignal,
     options?: AgentConfigUpdateOptions,
   ): Promise<void> => {
@@ -725,7 +725,7 @@ export class AgentSliceActionImpl {
     const scope = getCacheScope();
 
     // 1. Optimistic update - meta fields are at the top level of agent config
-    internal_dispatchAgentMap(id, meta as PartialDeep<LobeAgentConfig>);
+    internal_dispatchAgentMap(id, meta as PartialDeep<OrviloAgentConfig>);
     updateSaveStatus('saving');
 
     try {
@@ -752,7 +752,7 @@ export class AgentSliceActionImpl {
 
   internal_refreshAgentConfig = async (
     id: string,
-    updatedAgent?: LobeAgentConfig,
+    updatedAgent?: OrviloAgentConfig,
   ): Promise<void> => {
     /** Keep related agent and builtin-agent snapshots current after a successful edit. */
     const slugs = Object.entries(this.#get().builtinAgentIdMap)

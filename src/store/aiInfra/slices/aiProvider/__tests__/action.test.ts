@@ -63,8 +63,8 @@ describe('aiProvider action helpers', () => {
 
   describe('filterHiddenBuiltinModels', () => {
     const models = [
-      createChatModel({ id: 'public-model', providerId: 'lobehub' }),
-      createChatModel({ id: 'hidden-model', providerId: 'lobehub' }),
+      createChatModel({ id: 'public-model', providerId: 'orvilo' }),
+      createChatModel({ id: 'hidden-model', providerId: 'orvilo' }),
       createChatModel({ id: 'hidden-model', providerId: 'openai' }),
     ];
 
@@ -78,7 +78,7 @@ describe('aiProvider action helpers', () => {
 
     it('filters a matching provider and model id without mutating the cached array', () => {
       const result = filterHiddenBuiltinModels(models, [
-        { id: 'hidden-model', providerId: 'lobehub' },
+        { id: 'hidden-model', providerId: 'orvilo' },
       ]);
 
       expect(result).toEqual([models[0], models[2]]);
@@ -89,7 +89,7 @@ describe('aiProvider action helpers', () => {
   describe('resolveUserScopedBuiltinModelState', () => {
     it('does not rebuild complete client caches when the server policy is unresolved', () => {
       const allBuiltinAiModels = [
-        createChatModel({ enabled: false, id: 'disabled-model', providerId: 'lobehub' }),
+        createChatModel({ enabled: false, id: 'disabled-model', providerId: 'orvilo' }),
       ];
       const runtimeState = {
         enabledAiModels: [],
@@ -111,13 +111,13 @@ describe('aiProvider action helpers', () => {
 
   describe('filterEnabledProvidersByModelType', () => {
     const providers = [
-      { id: 'lobehub', source: 'builtin' as const },
+      { id: 'orvilo', source: 'builtin' as const },
       { id: 'openai', source: 'builtin' as const },
     ];
 
     it('removes providers without a visible model of the requested type', () => {
       const models = [
-        createChatModel({ providerId: 'lobehub' }),
+        createChatModel({ providerId: 'orvilo' }),
         createImageModel({ providerId: 'openai' }),
       ];
 
@@ -149,7 +149,7 @@ describe('aiProvider action helpers', () => {
         units: [{ name: 'textInput', rate: 1.25, strategy: 'fixed', unit: 'millionTokens' }],
       };
       const model = {
-        ...createChatModel({ id: 'online-chat-model', providerId: 'lobehub' }),
+        ...createChatModel({ id: 'online-chat-model', providerId: 'orvilo' }),
         description: 'Inline description',
         knowledgeCutoff: '2024-06',
         pricing,
@@ -328,16 +328,16 @@ describe('aiProvider action helpers', () => {
           createChatModel({
             displayName: 'Visible Model',
             id: 'visible-model',
-            providerId: 'lobehub',
+            providerId: 'orvilo',
           }),
           createChatModel({
             displayName: 'Onboarding Alias',
-            id: 'lobehub-onboarding-v1',
-            providerId: 'lobehub',
+            id: 'orvilo-onboarding-v1',
+            providerId: 'orvilo',
             visible: false,
           }),
         ],
-        'lobehub',
+        'orvilo',
       );
 
       expect(result.map((model) => model.id)).toEqual(['visible-model']);

@@ -34,13 +34,13 @@ import type {
   VerifyCheckResultItem,
   VerifyRunItem,
 } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { TaskService } from '@/server/services/task';
 
 import { type AcceptanceMergeSummary, mergeAcceptanceRounds } from './acceptanceMerge';
 import { computeFalseFlags } from './feedbackService';
 
-const log = debug('lobe-server:verify-acceptance');
+const log = debug('orvilo-server:verify-acceptance');
 
 // ============================================
 // Union view — the cross-round check merge (P-14: the complete inventory of
@@ -434,7 +434,7 @@ const statusesForFilter = (filter: AcceptanceListFilter): AcceptanceStatus[] | u
 };
 
 export class AcceptanceService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
@@ -457,7 +457,7 @@ export class AcceptanceService {
   private readonly actorUserId: string;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     options?: { actorUserId?: string },
@@ -484,7 +484,7 @@ export class AcceptanceService {
   ): Promise<void> => {
     // Standalone acceptances are the subject themselves. They deliberately do
     // not require a Task/Topic/Document row, which keeps external repositories
-    // from having to manufacture a LobeHub task before publishing evidence.
+    // from having to manufacture a Orvilo task before publishing evidence.
     if (subjectType === 'standalone') return;
 
     const found = await this.findSubject(subjectType, subjectId);

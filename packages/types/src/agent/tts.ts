@@ -1,6 +1,6 @@
 export type TTSServer = 'openai';
 
-export interface LobeAgentTTSConfig {
+export interface OrviloAgentTTSConfig {
   showAllLocaleVoice?: boolean;
   sttLocale: 'auto' | string;
   ttsService: TTSServer;

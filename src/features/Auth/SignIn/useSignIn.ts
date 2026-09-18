@@ -19,7 +19,7 @@ import {
 
 import { EMAIL_REGEX, USERNAME_REGEX } from './SignInEmailStep';
 
-const LAST_AUTH_PROVIDER_KEY = 'lobehub:auth:last-provider:v1';
+const LAST_AUTH_PROVIDER_KEY = 'orvilo:auth:last-provider:v1';
 
 type Step = 'email' | 'password' | 'emailSent';
 

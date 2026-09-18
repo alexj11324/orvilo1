@@ -53,7 +53,7 @@ describe('HeterogeneousAgentCtr lazy implementation', () => {
   it('injects remote-server auth resolved on the eager side of the lazy boundary', async () => {
     const remoteServerConfigCtr = {
       getAccessToken: vi.fn(async () => 'token-1'),
-      getRemoteServerUrl: vi.fn(async () => 'https://cloud.lobehub.com'),
+      getRemoteServerUrl: vi.fn(async () => 'https://cloud.aspectlylabs.com'),
     };
     const getController = vi.fn(() => remoteServerConfigCtr as any);
     const app = { getController } as unknown as App;
@@ -63,7 +63,7 @@ describe('HeterogeneousAgentCtr lazy implementation', () => {
 
     const auth = implementationMocks.constructor.mock.calls[0][1] as RemoteServerAuth;
 
-    await expect(auth.getServerUrl()).resolves.toBe('https://cloud.lobehub.com');
+    await expect(auth.getServerUrl()).resolves.toBe('https://cloud.aspectlylabs.com');
     await expect(auth.getAccessToken()).resolves.toBe('token-1');
 
     // A registry lookup that comes back empty must degrade to "no authed remote

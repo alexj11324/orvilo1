@@ -1,4 +1,4 @@
-const LOCAL_AGENT_WORKING_DIRECTORY_KEY = 'lobechat-local-agent-working-directories';
+const LOCAL_AGENT_WORKING_DIRECTORY_KEY = 'orvilo-local-agent-working-directories';
 
 const getStorage = (): Storage | undefined => {
   if (typeof window === 'undefined') return;

@@ -68,7 +68,7 @@ eq(totals.M, 2, 'M');
 eq(totals.T_chars, 5, 'T_chars');
 eq(totals.R_ms, 2000, 'R_ms');
 eq(events[0].phase.id, 'first', 'first phase');
-eq(events[0].schema, 'lobehub.agentBrowserKlmTrace@1', 'schema tag');
+eq(events[0].schema, 'orvilo.agentBrowserKlmTrace@1', 'schema tag');
 JS
 
 grep -Fq -- "--session app click @e1" "$AGENT_BROWSER_STUB_LOG" || fail "wrapper did not forward click"

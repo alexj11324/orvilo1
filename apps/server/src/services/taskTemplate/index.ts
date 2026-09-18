@@ -3,14 +3,14 @@ import { createHash } from 'node:crypto';
 import type { TaskTemplate, TaskTemplateConnector } from '@orvilo/const';
 import {
   getComposioAppByIdentifier,
-  getLobehubConnectorProviderById,
+  getOrviloConnectorProviderById,
   INTEREST_AREA_KEYS,
   TASK_TEMPLATE_CATEGORIES,
   TASK_TEMPLATE_ICONS,
   TASK_TEMPLATE_RECOMMEND_COUNT,
   TASK_TEMPLATE_RECOMMEND_MAX_COUNT,
 } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { z } from 'zod';
 
 import { UserModel } from '@/database/models/user';
@@ -69,12 +69,12 @@ const taskTemplateConnectorSchema: z.ZodType<TaskTemplateConnector> = z
   .object({
     identifier: z.string(),
     required: z.boolean(),
-    source: z.enum(['composio', 'lobehub']),
+    source: z.enum(['composio', 'orvilo']),
   })
   .refine(
     (connector) =>
-      connector.source === 'lobehub'
-        ? !!getLobehubConnectorProviderById(connector.identifier)
+      connector.source === 'orvilo'
+        ? !!getOrviloConnectorProviderById(connector.identifier)
         : !!getComposioAppByIdentifier(connector.identifier),
     { message: 'Unknown task template connector' },
   );
@@ -117,7 +117,7 @@ export class TaskTemplateService {
 
   constructor(
     private userId: string,
-    private db?: LobeChatDatabase,
+    private db?: OrviloDatabase,
   ) {}
 
   private async getMarketService(): Promise<MarketService> {

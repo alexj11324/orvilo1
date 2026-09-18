@@ -71,7 +71,6 @@ export const HotkeyScopeEnum = {
   Chat: 'chat',
   Files: 'files',
   Global: 'global',
-  Image: 'image',
 } as const satisfies Record<string, HotkeyScopeId>;
 
 // mod is the command key on Mac, alt is the ctrl key on Windows

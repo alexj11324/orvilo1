@@ -5,7 +5,7 @@ import { agentDocuments } from '../../schemas/agentDocuments';
 import { documents } from '../../schemas/file';
 import { tasks } from '../../schemas/task';
 import { works } from '../../schemas/work';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
 /**
@@ -15,7 +15,7 @@ import { buildWorkspaceWhere } from '../../utils/workspace';
  * acyclic).
  */
 export interface WorkContext {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   userId: string;
   workspaceId?: string;
 }

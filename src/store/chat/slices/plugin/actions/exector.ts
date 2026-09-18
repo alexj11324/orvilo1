@@ -73,16 +73,16 @@ export const composioExecutor: RemoteToolExecutor = async (p, _context) => {
   return createFailedResult('Composio tool returned empty result');
 };
 
-export const lobehubSkillExecutor: RemoteToolExecutor = async (p, context) => {
+export const orviloSkillExecutor: RemoteToolExecutor = async (p, context) => {
   // payload.identifier is the provider id (e.g., 'linear', 'microsoft')
   const provider = p.identifier;
 
   // Parse arguments
   const args = safeParseJSON(p.arguments) || {};
 
-  // Call LobeHub Skill tool via store action
+  // Call Orvilo Skill tool via store action
   // topicId comes from message context, not global active state
-  const result = await useToolStore.getState().callLobehubSkillTool({
+  const result = await useToolStore.getState().callOrviloSkillTool({
     args,
     provider,
     toolName: p.apiName,
@@ -91,7 +91,7 @@ export const lobehubSkillExecutor: RemoteToolExecutor = async (p, context) => {
 
   if (!result.success) {
     return createFailedResult(
-      result.error || `LobeHub Skill tool ${provider} ${p.apiName} execution failed`,
+      result.error || `Orvilo Skill tool ${provider} ${p.apiName} execution failed`,
     );
   }
 

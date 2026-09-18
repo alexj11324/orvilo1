@@ -5,7 +5,7 @@ import {
   linearBindingWriteEnabled,
   LinearSyncModel,
 } from '@/database/models/linearSync';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { LinearIntegrationTaskService } from './integrationTask';
 import {
@@ -56,13 +56,13 @@ const projectSource = (input: ResolveLinearConflictInput): LinearConflictFieldSo
 
 export class LinearConflictResolutionService {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly workspaceId: string,
   ) {}
 
   async resolve(input: ResolveLinearConflictInput) {
     return this.db.transaction(async (tx) => {
-      const db = tx as unknown as LobeChatDatabase;
+      const db = tx as unknown as OrviloDatabase;
       const model = new LinearSyncModel(db, this.workspaceId);
       const context = await model.lockIssueConflictContext(input.issueLinkId);
       if (!context) {

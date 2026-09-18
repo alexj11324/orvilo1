@@ -33,21 +33,21 @@ describe('codexDriver provider binding', () => {
     const plan = await codexDriver.prepareServerDefaultBinding!({
       args: [],
       endpoint: 'https://app.example.com',
-      env: { LOBEHUB_HETERO_TOKEN: 'stale' },
+      env: { ORVILO_HETERO_TOKEN: 'stale' },
       model: 'gpt-5.4',
       profileDir: '/tmp/profile',
     });
     const config = plan.profileFiles?.[0]?.content ?? '';
 
-    expect(plan.args).toEqual(['--model', 'lobehub/gpt-5.4']);
-    expect(config).toContain('model = "lobehub/gpt-5.4"');
+    expect(plan.args).toEqual(['--model', 'aspectlylabs/gpt-5.4']);
+    expect(config).toContain('model = "aspectlylabs/gpt-5.4"');
     expect(config).toContain('base_url = "https://app.example.com/api/v1/openai/v1"');
-    expect(config).toContain('env_key = "LOBEHUB_HETERO_TOKEN"');
+    expect(config).toContain('env_key = "ORVILO_HETERO_TOKEN"');
     expect(config).not.toContain('model_catalog_json');
     expect(plan.profileFiles).toHaveLength(1);
     expect(config).not.toContain('stale');
-    expect(plan.operationTokenEnvKey).toBe('LOBEHUB_HETERO_TOKEN');
-    expect(plan.env.LOBEHUB_HETERO_TOKEN).toBeUndefined();
+    expect(plan.operationTokenEnvKey).toBe('ORVILO_HETERO_TOKEN');
+    expect(plan.env.ORVILO_HETERO_TOKEN).toBeUndefined();
   });
 
   it.each([
@@ -70,7 +70,7 @@ describe('codexDriver provider binding', () => {
       const catalog = JSON.parse(catalogContent ?? '{}');
       const model = catalog.models?.[0];
 
-      expect(plan.args).toEqual(['--model', `lobehub/${selectedModel}`]);
+      expect(plan.args).toEqual(['--model', `aspectlylabs/${selectedModel}`]);
       expect(config).toContain(
         `model_catalog_json = ${JSON.stringify(path.join(profileDir, 'models.json'))}`,
       );
@@ -81,7 +81,7 @@ describe('codexDriver provider binding', () => {
         default_reasoning_level: defaultReasoningLevel,
         max_context_window: 1_048_576,
         shell_type: 'unified_exec',
-        slug: `lobehub/${selectedModel}`,
+        slug: `aspectlylabs/${selectedModel}`,
         supports_parallel_tool_calls: true,
         supports_reasoning_summary_parameter: false,
         truncation_policy: { limit: 10_000, mode: truncationMode },
@@ -131,11 +131,11 @@ describe('codexDriver provider binding', () => {
     expect(plan.env).toEqual({
       CODEX_HOME: '/managed/codex',
       KEEP_ME: 'yes',
-      LOBEHUB_CODEX_API_KEY: 'bound-key',
+      ORVILO_CODEX_API_KEY: 'bound-key',
     });
-    expect(config).toContain('model_provider = "lobehub"');
+    expect(config).toContain('model_provider = "orvilo"');
     expect(config).toContain('base_url = "https://responses.example.com/v1"');
-    expect(config).toContain('env_key = "LOBEHUB_CODEX_API_KEY"');
+    expect(config).toContain('env_key = "ORVILO_CODEX_API_KEY"');
     expect(config).toContain('wire_api = "responses"');
     expect(config).not.toContain('bound-key');
   });

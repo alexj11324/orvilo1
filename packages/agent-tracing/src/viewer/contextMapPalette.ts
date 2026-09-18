@@ -2,7 +2,7 @@ import type { SegmentKind } from '../analysis/contextMap';
 import { blue, type ColorScale, green, orange, red, sand, slate } from './contextMapScales';
 
 /**
- * Palette for the context map, built from the LobeHub scales (vendored in
+ * Palette for the context map, built from the Orvilo scales (vendored in
  * `contextMapScales.ts`) so the report reads as part of the product rather than a one-off
  * chart theme. Every value below is a step index into a scale — nothing is hand-picked.
  *

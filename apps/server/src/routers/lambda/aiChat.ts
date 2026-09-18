@@ -28,7 +28,7 @@ import { AiGenerationService } from '@/server/services/aiGeneration';
 import { FileService } from '@/server/services/file';
 import { archiveToolResultIfNeeded } from '@/server/services/toolExecution/archiveToolResult';
 
-const log = debug('lobe-lambda-router:ai-chat');
+const log = debug('orvilo-lambda-router:ai-chat');
 
 const PG_UNIQUE_VIOLATION = '23505';
 
@@ -52,7 +52,7 @@ const rethrowIdConflict = (error: unknown): never => {
   throw error;
 };
 const { createPrefixedTimingContext, logTiming, runTimedStage } = createTimingHelpers(
-  'lobe-server:chat:lobehub:timing',
+  'orvilo-server:chat:orvilo:timing',
 );
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 type TRPCStatusCode = Parameters<typeof getStatusKeyFromCode>[0];
@@ -193,7 +193,7 @@ export const aiChatRouter = router({
     .input(AiSendMessageServerSchema)
     .mutation(async ({ input, ctx }) => {
       const timingContext =
-        input.newAssistantMessage.provider === 'lobehub'
+        input.newAssistantMessage.provider === 'orvilo'
           ? { requestId: createTimingRequestId(), startedAt: Date.now() }
           : undefined;
       logTiming(timingContext, 'lambda.aiChat.sendMessageInServer:start', {

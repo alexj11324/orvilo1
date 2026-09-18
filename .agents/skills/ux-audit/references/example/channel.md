@@ -1,8 +1,8 @@
 # Worked example — Channel (bot/messenger 接入) audit
 
 A real run of this skill against the per-agent channel-connect surface
-(`/agent/:aid/channel` → `src/routes/(main)/agent/channel`), 2026-07-02 (LOBE-11216, under the
-Chat / 会话 UX-Audit parent LOBE-11145). Use it as a **template for the output shape**, not as
+(`/agent/:aid/channel` → `src/routes/(main)/agent/channel`), 2026-07-02 (ORVILO-11216, under the
+Chat / 会话 UX-Audit parent ORVILO-11145). Use it as a **template for the output shape**, not as
 current-state truth (the code moves; re-verify before citing).
 
 Surface = a **master-detail settings console** for connecting one agent to messaging
@@ -127,7 +127,7 @@ draft model.
 **③ Channel config export/import handles plaintext secrets casually + partial-import on
 failure — ux Act (secret handling / partial failure)** 🟠 "Export config" writes **every
 provider's `credentials`** (bot tokens, signing secrets) to a plaintext JSON download
-`lobehub-channels-<agentId>.json` (`list.tsx:98-102`) with **no warning** the file contains
+`orvilo-channels-<agentId>.json` (`list.tsx:98-102`) with **no warning** the file contains
 cleartext secrets and no re-mask — a store of secrets that were entered as masked
 `FormPassword` fields is re-revealed in bulk to a file. And "Import config" loops
 `createBotProvider` (+ optional `connectBot`) over the file (`list.tsx:127-159`); a mid-loop

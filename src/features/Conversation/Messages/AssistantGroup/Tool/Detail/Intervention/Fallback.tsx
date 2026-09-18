@@ -3,7 +3,7 @@ import { ActionIcon, Avatar } from '@lobehub/ui/base-ui';
 import {
   type ActivateToolsParams,
   ActivatorApiName,
-  LobeActivatorIdentifier,
+  OrviloActivatorIdentifier,
 } from '@orvilo/builtin-tool-activator';
 import { builtinToolIdentifiers } from '@orvilo/builtin-tools/identifiers';
 import { safeParseJSON } from '@orvilo/utils';
@@ -106,7 +106,7 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
     );
     const argCount = typeof parsedArgs === 'object' ? Object.keys(parsedArgs).length : 0;
     const isActivateToolsIntervention =
-      identifier === LobeActivatorIdentifier && apiName === ActivatorApiName.activateTools;
+      identifier === OrviloActivatorIdentifier && apiName === ActivatorApiName.activateTools;
     const requestedToolIdentifiers = useMemo(() => {
       if (!isActivateToolsIntervention) return [];
 

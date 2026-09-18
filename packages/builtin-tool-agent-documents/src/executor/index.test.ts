@@ -15,7 +15,7 @@ const makeExecutor = (onDocumentsMutated: () => void) => {
 const ctx = (apiName: string, success: boolean): ToolAfterCallContext =>
   ({
     apiName,
-    identifier: 'lobe-agent-documents',
+    identifier: 'orvilo-agent-documents',
     params: {},
     result: { success },
     toolCallId: 'call_1',

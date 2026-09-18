@@ -29,7 +29,7 @@ export interface BillboardItem {
   description: string;
   /**
    * Override copy per locale. Falls back to the default fields (title / description / linkLabel) when missing.
-   * Keys use LobeHub locale codes (e.g. `zh-CN`, `en-US`, `ja-JP`).
+   * Keys use Orvilo locale codes (e.g. `zh-CN`, `en-US`, `ja-JP`).
    */
   i18n?: Record<string, BillboardItemLocaleFields>;
   id: number;
@@ -51,7 +51,7 @@ export interface BillboardLocaleFields {
  * actual display is also constrained by the startAt / endAt time window.
  */
 export interface BillboardSet {
-  /** ISO timestamp — end of the display time window; LobeHub stops showing after this time */
+  /** ISO timestamp — end of the display time window; Orvilo stops showing after this time */
   endAt: string;
   /**
    * Override billboard-level copy per locale (currently only title, used for the ? menu).
@@ -61,7 +61,7 @@ export interface BillboardSet {
   items: BillboardItem[];
   /** Unique identifier */
   slug: string;
-  /** ISO timestamp — start of the display time window; LobeHub does not show before this time */
+  /** ISO timestamp — start of the display time window; Orvilo does not show before this time */
   startAt: string;
   /** Used for display in the ? menu */
   title: string;
@@ -87,7 +87,7 @@ export interface EdgeConfigData extends BusinessEdgeConfigData {
 
   /**
    * Billboard snapshot. Each Vercel deployment reads the `billboards` key from its own store —
-   * dev deployments point to the dev store, prod deployments point to the prod store, transparent to the LobeHub side.
+   * dev deployments point to the dev store, prod deployments point to the prod store, transparent to the Orvilo side.
    */
   billboards?: BillboardSnapshot;
 

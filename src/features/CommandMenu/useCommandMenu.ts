@@ -28,6 +28,7 @@ import { type ThemeMode } from './types';
  */
 export const useCommandMenu = () => {
   const [open] = useGlobalStore((s) => [s.status.showCommandMenu]);
+  const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const {
     mounted,
     onClose,
@@ -132,7 +133,7 @@ export const useCommandMenu = () => {
     [setTheme, onClose],
   );
 
-  const handleAskLobeAI = useCallback(() => {
+  const handleAskOrviloAI = useCallback(() => {
     // Navigate to inbox agent with the message query parameter
     if (inboxAgentId && search.trim()) {
       const message = encodeURIComponent(search.trim());
@@ -140,15 +141,6 @@ export const useCommandMenu = () => {
       onClose();
     }
   }, [inboxAgentId, search, navigate, onClose]);
-
-  const handleAIPainting = useCallback(() => {
-    // Navigate to painting page with search as prompt
-    if (search.trim()) {
-      const prompt = encodeURIComponent(search.trim());
-      navigate(`/image?prompt=${prompt}`);
-      onClose();
-    }
-  }, [search, navigate, onClose]);
 
   const handleBack = useCallback(() => {
     setPages((prev) => prev.slice(0, -1));
@@ -201,6 +193,17 @@ export const useCommandMenu = () => {
     });
   }, [canCreate, onClose, openCreateLibraryModal, navigate]);
 
+  const handleCreateTask = useCallback(() => {
+    if (!canCreate) return;
+
+    // Expanding the inline composer *before* navigating means the task page opens
+    // ready to type. This deliberately reuses the same status flag the task page's
+    // own "+" toggles, so there is no second task-creation path to keep in sync.
+    updateSystemStatus({ taskCreateInlineCollapsed: false }, 'expandTaskCreateInline');
+    navigate('/tasks');
+    onClose();
+  }, [canCreate, navigate, onClose, updateSystemStatus]);
+
   const handleCreateAgentTeam = useCallback(() => {
     if (!canCreate) return;
 
@@ -217,12 +220,12 @@ export const useCommandMenu = () => {
 
   return {
     closeCommandMenu,
-    handleAIPainting,
-    handleAskLobeAI,
+    handleAskOrviloAI,
     handleBack,
     handleCreateAgentTeam,
     handleCreateLibrary,
     handleCreateSession,
+    handleCreateTask,
     handleCreateTopic,
     handleExternalLink,
     handleNavigate,

@@ -1,6 +1,6 @@
 import type { MarkdownPatchHunk } from '@orvilo/markdown-patch';
 
-export const WebOnboardingIdentifier = 'lobe-web-onboarding';
+export const WebOnboardingIdentifier = 'orvilo-web-onboarding';
 
 export const WebOnboardingApiName = {
   finishOnboarding: 'finishOnboarding',

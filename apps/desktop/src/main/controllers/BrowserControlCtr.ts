@@ -42,7 +42,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Runs inside the guest page. Builds a compact interactive-element snapshot and
- * caches the elements on `window.__lobeBrowserRefs` so later actions can
+ * caches the elements on `window.__orviloBrowserRefs` so later actions can
  * resolve `ref` ids without re-querying.
  */
 const SNAPSHOT_SCRIPT = `(() => {
@@ -102,12 +102,12 @@ const SNAPSHOT_SCRIPT = `(() => {
     if ((role === 'checkbox' || role === 'radio') && el.checked) line += ' [checked]';
     lines.push(line);
   }
-  window.__lobeBrowserRefs = refs;
+  window.__orviloBrowserRefs = refs;
   return JSON.stringify({ snapshot: lines.join('\\n'), title: document.title, url: location.href });
 })()`;
 
 const resolveRefScript = (ref: string) => `((ref) => {
-  const el = window.__lobeBrowserRefs && window.__lobeBrowserRefs[ref];
+  const el = window.__orviloBrowserRefs && window.__orviloBrowserRefs[ref];
   if (!el || !el.isConnected) return JSON.stringify({ error: 'ref not found — take a new snapshot first' });
   el.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
   const r = el.getBoundingClientRect();
@@ -115,7 +115,7 @@ const resolveRefScript = (ref: string) => `((ref) => {
 })(${JSON.stringify(ref)})`;
 
 const fillScript = (ref: string, text: string) => `((ref, text) => {
-  const el = window.__lobeBrowserRefs && window.__lobeBrowserRefs[ref];
+  const el = window.__orviloBrowserRefs && window.__orviloBrowserRefs[ref];
   if (!el || !el.isConnected) return JSON.stringify({ error: 'ref not found — take a new snapshot first' });
   el.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
   el.focus();

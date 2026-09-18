@@ -3,7 +3,7 @@ import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 
 import type { MetricItem, MetricPointItem, NewMetricPoint } from '../schemas/metric';
 import { metricPoints, metrics } from '../schemas/metric';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export interface EnsureMetricParams {
@@ -56,11 +56,11 @@ const DEFAULT_POINT_LIMIT = 2000;
  * denormalized ownership columns so they never need the join.
  */
 export class MetricModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

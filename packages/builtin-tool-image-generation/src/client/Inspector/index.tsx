@@ -94,7 +94,7 @@ const ImageGenerationInspector = memo<BuiltinInspectorProps<ImageGenerationInspe
     const generationId = stringValue(currentArgs.generationId);
     const meta = apiMeta[apiName as ImageGenerationApiName] ?? apiMeta.generateImage;
     const imageNum = typeof currentArgs.imageNum === 'number' ? currentArgs.imageNum : undefined;
-    const label = t(`builtins.lobe-image-generation.apiName.${apiName}`, {
+    const label = t(`builtins.orvilo-image-generation.apiName.${apiName}`, {
       defaultValue: meta.defaultLabel,
     });
     const Icon = meta.Icon;
@@ -115,7 +115,7 @@ const ImageGenerationInspector = memo<BuiltinInspectorProps<ImageGenerationInspe
         )}
         {apiName === ImageGenerationApiName.generateImage && imageNum && imageNum > 1 && (
           <span className={styles.chip}>
-            {t('builtins.lobe-image-generation.render.generatedCount', {
+            {t('builtins.orvilo-image-generation.render.generatedCount', {
               count: imageNum,
               defaultValue: '{{count}} images',
             })}

@@ -1,8 +1,8 @@
 import { type BuiltinAgentSlug } from '@orvilo/builtin-agents';
 import { BUILTIN_AGENTS } from '@orvilo/builtin-agents';
 import { DEFAULT_AGENT_CONFIG } from '@orvilo/const';
-import { type LobeChatDatabase } from '@orvilo/database';
-import { type AgentItem, type LobeAgentChatConfig, type LobeAgentConfig } from '@orvilo/types';
+import { type OrviloDatabase } from '@orvilo/database';
+import { type AgentItem, type OrviloAgentChatConfig, type OrviloAgentConfig } from '@orvilo/types';
 import { cleanObject, merge } from '@orvilo/utils';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
@@ -24,20 +24,20 @@ import { getServerDefaultAgentConfig } from '@/server/globalConfig';
 
 import { type UpdateAgentResult } from './type';
 
-const log = debug('lobe-agent:service');
+const log = debug('orvilo-agent:service');
 
 /**
  * Agent config with required id field.
  * Used when returning agent config from database (id is always present).
  */
-export type AgentConfigWithId = LobeAgentConfig &
+export type AgentConfigWithId = OrviloAgentConfig &
   Pick<AgentItem, 'id' | 'slug' | 'userId' | 'visibility' | 'workspaceId'> & {
     /**
      * Raw callSubAgent chatConfig override, stamped by execAgent alongside the
      * merged chatConfig. The LLM context hints need it to re-apply explicit
      * sub-agent reasoning choices over the user's model-instance defaults.
      */
-    subAgentChatConfigOverride?: Partial<LobeAgentChatConfig>;
+    subAgentChatConfigOverride?: Partial<OrviloAgentChatConfig>;
   };
 
 interface AgentWelcomeData {
@@ -53,12 +53,12 @@ interface AgentWelcomeData {
  */
 export class AgentService {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly agentModel: AgentModel;
   private readonly userModel: UserModel;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -106,7 +106,7 @@ export class AgentService {
    * and replaces its cached entry, so a snapshot missing the avatar clobbers a
    * previously correct one and the UI falls back to the default robot avatar.
    */
-  private applyBuiltinIdentity<T extends LobeAgentConfig>(config: T, fallbackSlug?: string): T {
+  private applyBuiltinIdentity<T extends OrviloAgentConfig>(config: T, fallbackSlug?: string): T {
     const slug = (config as { slug?: string | null }).slug ?? fallbackSlug;
     const identity = { slug };
     const normalizedConfig = {
@@ -221,7 +221,7 @@ export class AgentService {
   private mergeDefaultConfig(
     agent: any,
     defaultAgentConfig: Awaited<ReturnType<UserModel['getUserSettingsDefaultAgentConfig']>>,
-  ): LobeAgentConfig | null {
+  ): OrviloAgentConfig | null {
     if (!agent) return null;
 
     // Merge configs in order: DEFAULT -> server -> [user] -> agent
@@ -234,7 +234,7 @@ export class AgentService {
     }
 
     const userDefaultAgentConfig =
-      (defaultAgentConfig as { config?: PartialDeep<LobeAgentConfig> })?.config || {};
+      (defaultAgentConfig as { config?: PartialDeep<OrviloAgentConfig> })?.config || {};
     const withUserConfig = merge(baseConfig, userDefaultAgentConfig);
 
     return merge(withUserConfig, cleanObject(agent));

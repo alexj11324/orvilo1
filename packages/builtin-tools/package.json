@@ -21,6 +21,7 @@
   "main": "./src/index.ts",
   "dependencies": {
     "@icons-pack/react-simple-icons": "^13.13.0",
+    "@lobehub/icons": "^5.11.0",
     "@orvilo/builtin-tool-acceptance-evidence": "workspace:*",
     "@orvilo/builtin-tool-activator": "workspace:*",
     "@orvilo/builtin-tool-agent-builder": "workspace:*",
@@ -38,11 +39,11 @@
     "@orvilo/builtin-tool-group-management": "workspace:*",
     "@orvilo/builtin-tool-image-generation": "workspace:*",
     "@orvilo/builtin-tool-knowledge-base": "workspace:*",
-    "@orvilo/builtin-tool-lobe-agent": "workspace:*",
     "@orvilo/builtin-tool-local-system": "workspace:*",
     "@orvilo/builtin-tool-memory": "workspace:*",
     "@orvilo/builtin-tool-message": "workspace:*",
     "@orvilo/builtin-tool-notebook": "workspace:*",
+    "@orvilo/builtin-tool-orvilo-agent": "workspace:*",
     "@orvilo/builtin-tool-page-agent": "workspace:*",
     "@orvilo/builtin-tool-remote-device": "workspace:*",
     "@orvilo/builtin-tool-self-iteration": "workspace:*",
@@ -55,8 +56,7 @@
     "@orvilo/builtin-tool-verify": "workspace:*",
     "@orvilo/builtin-tool-web-browsing": "workspace:*",
     "@orvilo/builtin-tool-web-onboarding": "workspace:*",
-    "@orvilo/const": "workspace:*",
-    "@lobehub/icons": "^5.11.0"
+    "@orvilo/const": "workspace:*"
   },
   "devDependencies": {
     "@orvilo/types": "workspace:*",

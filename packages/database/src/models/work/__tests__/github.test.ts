@@ -22,11 +22,11 @@ describe('WorkModel · github', () => {
 
     const first = await workModel.handleSkillToolResult({
       provider: 'github',
-      args: { owner: 'lobehub', repo: 'lobehub', title: 'GitHub Work issue' },
+      args: { owner: 'alexj11324', repo: 'orvilo1', title: 'GitHub Work issue' },
       data: {
         assignees: [{ login: 'arvinxx' }],
         body: 'Track GitHub issue as Work',
-        html_url: 'https://github.com/lobehub/lobehub/issues/123',
+        html_url: 'https://github.com/alexj11324/orvilo1/issues/123',
         id: 3_001,
         labels: [{ name: 'enhancement' }],
         node_id: 'I_kwDOJj1234',
@@ -50,9 +50,9 @@ describe('WorkModel · github', () => {
 
     const second = await workModel.handleSkillToolResult({
       provider: 'github',
-      args: { issue_number: 123, owner: 'lobehub', repo: 'lobehub', state: 'closed' },
+      args: { issue_number: 123, owner: 'alexj11324', repo: 'orvilo1', state: 'closed' },
       data: {
-        html_url: 'https://github.com/lobehub/lobehub/issues/123',
+        html_url: 'https://github.com/alexj11324/orvilo1/issues/123',
         node_id: 'I_kwDOJj1234',
         number: 123,
         state: 'closed',
@@ -66,7 +66,7 @@ describe('WorkModel · github', () => {
     });
     const replay = await workModel.handleSkillToolResult({
       provider: 'github',
-      args: { issue_number: 123, owner: 'lobehub', repo: 'lobehub', state: 'closed' },
+      args: { issue_number: 123, owner: 'alexj11324', repo: 'orvilo1', state: 'closed' },
       data: {
         node_id: 'I_kwDOJj1234',
         number: 123,
@@ -83,7 +83,7 @@ describe('WorkModel · github', () => {
     // `owner/repo#number` is the canonical identity across API and gh surfaces.
     expect(second).toMatchObject({
       description: 'Track GitHub issue as Work',
-      resourceId: 'lobehub/lobehub#123',
+      resourceId: 'alexj11324/orvilo1#123',
       resourceType: 'github_issue',
       title: 'GitHub Work issue',
       type: 'external',
@@ -95,10 +95,10 @@ describe('WorkModel · github', () => {
       changeType: 'updated',
       content: 'Track GitHub issue as Work',
       description: 'Track GitHub issue as Work',
-      identifier: 'lobehub/lobehub#123',
+      identifier: 'alexj11324/orvilo1#123',
       status: 'closed',
       title: 'GitHub Work issue',
-      url: 'https://github.com/lobehub/lobehub/issues/123',
+      url: 'https://github.com/alexj11324/orvilo1/issues/123',
     });
     expect(versions[1]).toMatchObject({ status: 'open', title: 'GitHub Work issue' });
 
@@ -108,14 +108,14 @@ describe('WorkModel · github', () => {
     expect(byOperation['op-github-issue-create']).toEqual([]);
     const issueSummary = expectExternalSummaryItem(byOperation['op-github-issue-edit']?.[0]);
     expect(issueSummary).toMatchObject({
-      identifier: 'lobehub/lobehub#123',
+      identifier: 'alexj11324/orvilo1#123',
       status: 'closed',
     });
 
     const byConversation = await workModel.listByConversation({ topicId });
     expect(byConversation).toHaveLength(1);
     expect(byConversation[0]).toMatchObject({
-      identifier: 'lobehub/lobehub#123',
+      identifier: 'alexj11324/orvilo1#123',
       resourceType: 'github_issue',
       type: 'external',
     });
@@ -148,13 +148,13 @@ describe('WorkModel · github', () => {
 
     const pullRequest = await workModel.handleSkillToolResult({
       provider: 'github',
-      args: { base: 'canary', head: 'feat/work-registry', owner: 'lobehub', repo: 'lobehub' },
+      args: { base: 'canary', head: 'feat/work-registry', owner: 'alexj11324', repo: 'orvilo1' },
       data: JSON.stringify({
-        base: { ref: 'canary', repo: { full_name: 'lobehub/lobehub' } },
+        base: { ref: 'canary', repo: { full_name: 'alexj11324/orvilo1' } },
         body: 'Adds the Work registry',
         draft: false,
         head: { ref: 'feat/work-registry' },
-        html_url: 'https://github.com/lobehub/lobehub/pull/456',
+        html_url: 'https://github.com/alexj11324/orvilo1/pull/456',
         id: 9_001,
         merged: false,
         node_id: 'PR_kwDOJj5678',
@@ -170,7 +170,7 @@ describe('WorkModel · github', () => {
     });
 
     expect(pullRequest).toMatchObject({
-      resourceId: 'lobehub/lobehub#456',
+      resourceId: 'alexj11324/orvilo1#456',
       resourceType: 'github_pull_request',
       type: 'external',
     });
@@ -179,7 +179,7 @@ describe('WorkModel · github', () => {
     // the same `owner/repo#number` identity and lands on the existing Work.
     const merged = await workModel.handleSkillToolResult({
       provider: 'github',
-      args: { owner: 'lobehub', pull_number: 456, repo: 'lobehub' },
+      args: { owner: 'alexj11324', pull_number: 456, repo: 'orvilo1' },
       data: {
         merged: true,
         message: 'Pull Request successfully merged',
@@ -199,23 +199,23 @@ describe('WorkModel · github', () => {
     expect(versions[0]).toMatchObject({
       content: 'Adds the Work registry',
       description: 'Adds the Work registry',
-      identifier: 'lobehub/lobehub#456',
+      identifier: 'alexj11324/orvilo1#456',
       status: 'merged',
       title: 'feat: add work registry',
-      url: 'https://github.com/lobehub/lobehub/pull/456',
+      url: 'https://github.com/alexj11324/orvilo1/pull/456',
     });
 
     // An update addressing an entity not registered before still creates its
     // own Work row keyed by identity (consistent with the Linear adaptation).
     const unknownTarget = await workModel.handleSkillToolResult({
       provider: 'github',
-      args: { owner: 'lobehub', pull_number: 999, repo: 'lobehub' },
+      args: { owner: 'alexj11324', pull_number: 999, repo: 'orvilo1' },
       data: { merged: true, sha: 'fff000' },
       toolCallId: 'tool-call-github-pr-unknown',
       toolName: 'update_pull_request',
       topicId,
     });
-    expect(unknownTarget?.resourceId).toBe('lobehub/lobehub#999');
+    expect(unknownTarget?.resourceId).toBe('alexj11324/orvilo1#999');
     expect(unknownTarget?.id).not.toBe(pullRequest?.id);
 
     // A result with no resolvable `owner/repo#number` identity is skipped.
@@ -245,14 +245,14 @@ describe('WorkModel · github', () => {
       provider: 'github',
       args: {
         command:
-          'issue create -R lobehub-biz/lobehub-cloud --title "CLI Issue" --body "created from sandbox"',
+          'issue create -R orvilo-biz/orvilo-cloud --title "CLI Issue" --body "created from sandbox"',
         description: 'Create a test issue',
       },
       data: {
         command:
-          'gh issue create -R lobehub-biz/lobehub-cloud --title "CLI Issue" --body "created from sandbox"',
+          'gh issue create -R orvilo-biz/orvilo-cloud --title "CLI Issue" --body "created from sandbox"',
         exitCode: 0,
-        output: 'https://github.com/lobehub-biz/lobehub-cloud/issues/952\n',
+        output: 'https://github.com/orvilo-biz/orvilo-cloud/issues/952\n',
       },
       rootOperationId: 'op-github-cli-create',
       toolCallId: 'tool-call-github-cli-create',
@@ -262,7 +262,7 @@ describe('WorkModel · github', () => {
 
     expect(created).toMatchObject({
       description: 'created from sandbox',
-      resourceId: 'lobehub-biz/lobehub-cloud#952',
+      resourceId: 'orvilo-biz/orvilo-cloud#952',
       resourceType: 'github_issue',
       title: 'CLI Issue',
       type: 'external',
@@ -272,10 +272,9 @@ describe('WorkModel · github', () => {
     const edited = await workModel.handleSkillToolResult({
       provider: 'github',
       data: {
-        command:
-          'git status && gh issue edit 952 -R lobehub-biz/lobehub-cloud --body "updated body"',
+        command: 'git status && gh issue edit 952 -R orvilo-biz/orvilo-cloud --body "updated body"',
         exitCode: 0,
-        output: 'On branch main\nhttps://github.com/lobehub-biz/lobehub-cloud/issues/952\n',
+        output: 'On branch main\nhttps://github.com/orvilo-biz/orvilo-cloud/issues/952\n',
       },
       rootOperationId: 'op-github-cli-edit',
       toolCallId: 'tool-call-github-cli-edit',
@@ -291,19 +290,19 @@ describe('WorkModel · github', () => {
       changeType: 'updated',
       content: 'updated body',
       description: 'updated body',
-      identifier: 'lobehub-biz/lobehub-cloud#952',
+      identifier: 'orvilo-biz/orvilo-cloud#952',
       status: 'open',
       title: 'CLI Issue',
-      url: 'https://github.com/lobehub-biz/lobehub-cloud/issues/952',
+      url: 'https://github.com/orvilo-biz/orvilo-cloud/issues/952',
     });
 
     const pullRequest = await workModel.handleSkillToolResult({
       provider: 'github',
       data: {
         command:
-          'gh pr create -R lobehub-biz/lobehub-cloud --title "CLI PR" --body "pr body" --base main --head feat/cli --draft',
+          'gh pr create -R orvilo-biz/orvilo-cloud --title "CLI PR" --body "pr body" --base main --head feat/cli --draft',
         exitCode: 0,
-        output: 'https://github.com/lobehub-biz/lobehub-cloud/pull/953\n',
+        output: 'https://github.com/orvilo-biz/orvilo-cloud/pull/953\n',
       },
       toolCallId: 'tool-call-github-cli-pr',
       toolName: 'runCommand',
@@ -311,7 +310,7 @@ describe('WorkModel · github', () => {
     });
     expect(pullRequest).toMatchObject({
       description: 'pr body',
-      resourceId: 'lobehub-biz/lobehub-cloud#953',
+      resourceId: 'orvilo-biz/orvilo-cloud#953',
       resourceType: 'github_pull_request',
       title: 'CLI PR',
     });
@@ -326,7 +325,7 @@ describe('WorkModel · github', () => {
     const failed = await workModel.handleSkillToolResult({
       provider: 'github',
       data: {
-        command: 'gh issue create -R lobehub-biz/lobehub-cloud --title X',
+        command: 'gh issue create -R orvilo-biz/orvilo-cloud --title X',
         exitCode: 1,
         output: 'GraphQL: Resource not accessible',
       },
@@ -337,9 +336,9 @@ describe('WorkModel · github', () => {
     const readOnly = await workModel.handleSkillToolResult({
       provider: 'github',
       data: {
-        command: 'gh issue view 952 -R lobehub-biz/lobehub-cloud',
+        command: 'gh issue view 952 -R orvilo-biz/orvilo-cloud',
         exitCode: 0,
-        output: 'CLI Issue #952\nhttps://github.com/lobehub-biz/lobehub-cloud/issues/952',
+        output: 'CLI Issue #952\nhttps://github.com/orvilo-biz/orvilo-cloud/issues/952',
       },
       toolCallId: 'tool-call-github-cli-view',
       toolName: 'runCommand',

@@ -7,7 +7,7 @@ vi.mock('@/database/models/topicDocument');
 
 describe('notebookRuntime', () => {
   it('should have correct identifier', () => {
-    expect(notebookRuntime.identifier).toBe('lobe-notebook');
+    expect(notebookRuntime.identifier).toBe('orvilo-notebook');
   });
 
   it('should create runtime from factory with valid context', () => {

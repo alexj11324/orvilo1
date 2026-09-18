@@ -39,7 +39,7 @@ const CliTestSection = memo(() => {
       <Flexbox horizontal gap={8} wrap="wrap">
         {presetCommands.map((cmd) => (
           <Button key={cmd} loading={running} size="small" onClick={() => runCommand(cmd)}>
-            lobehub {cmd}
+            orvilo {cmd}
           </Button>
         ))}
       </Flexbox>
@@ -76,7 +76,7 @@ const CliTestSection = memo(() => {
           }}
         >
           <Text style={{ color: 'var(--ant-color-primary)', fontWeight: 600 }}>
-            $ lobehub {r.args} (exit: {r.exitCode})
+            $ orvilo {r.args} (exit: {r.exitCode})
           </Text>
           {r.stdout && (
             <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>

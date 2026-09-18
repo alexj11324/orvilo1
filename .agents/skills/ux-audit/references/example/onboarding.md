@@ -148,7 +148,7 @@ connections fetch silently shows every integration as unconnected — "load fail
 "nothing connected." Not a dead-end (optional step). (pending L2 for per-item render.)
 
 **⑩ Agent conversation subtree fails to a blank — ux Feedback §4.2** 🟡 The conversation is
-wrapped in `<ErrorBoundary fallbackRender={() => null}>` (`Agent/index.tsx:372`), so a throw in
+wrapped in `<ErrorBoundary fallbackRender={() => null}>` (`Agent/index.tsx:372`), so a throw
 the chat subtree renders **nothing** — no error, no retry. The larger per-turn failure surface
 is the cost the Agent flow pays for its richness; it deserves a visible error + recovery (or to
 reuse the bootstrap-error → Classic degrade path, which is the ✅ 亮点 sibling above). Surfaced
@@ -188,15 +188,15 @@ its ✅ one. Both landed from this run:
 
 ## 6 — Land the findings (queue)
 
-Landed as **LOBE-11138** ("Onboarding UX Audit", container under the UX-audit parent
-**LOBE-11078**), split into the sub-issues below. Class-norm gaps (③⑤) also 回灌 'd into `ux`
+Landed as **ORVILO-11138** ("Onboarding UX Audit", container under the UX-audit parent
+**ORVILO-11078**), split into the sub-issues below. Class-norm gaps (③⑤) also 回灌 'd into `ux`
 Grow §5.2; the awaited-write rule (①) into Feedback §4.2 — see §4.
 
-| Sub-issue      | Finding(s)                                                                   | Kind       |
-| -------------- | ---------------------------------------------------------------------------- | ---------- |
-| **LOBE-11154** | ① language-gate stuck step (add `finally` + retry)                           | bug 🔴     |
-| **LOBE-11155** | ②④ AgentPicker: install-fail silent finish + load-fail no retry              | bug 🔴     |
-| **LOBE-11156** | ③ progress / Sequence Map absent                                             | bug + 回灌 |
-| **LOBE-11157** | ⑤ mandatory FullName / no escape hatch                                       | bug + 回灌 |
-| **LOBE-11158** | ⑥⑦⑧⑨ fire-and-forget writes / draft-loss / silent step-sync / composio state | bug 🟡     |
-| _unfiled_      | ⑩ Agent conversation `ErrorBoundary` → blank (fold into LOBE-11155 or new)   | bug 🟡     |
+| Sub-issue        | Finding(s)                                                                   | Kind       |
+| ---------------- | ---------------------------------------------------------------------------- | ---------- |
+| **ORVILO-11154** | ① language-gate stuck step (add `finally` + retry)                           | bug 🔴     |
+| **ORVILO-11155** | ②④ AgentPicker: install-fail silent finish + load-fail no retry              | bug 🔴     |
+| **ORVILO-11156** | ③ progress / Sequence Map absent                                             | bug + 回灌 |
+| **ORVILO-11157** | ⑤ mandatory FullName / no escape hatch                                       | bug + 回灌 |
+| **ORVILO-11158** | ⑥⑦⑧⑨ fire-and-forget writes / draft-loss / silent step-sync / composio state | bug 🟡     |
+| _unfiled_        | ⑩ Agent conversation `ErrorBoundary` → blank (fold into ORVILO-11155 or new) | bug 🟡     |

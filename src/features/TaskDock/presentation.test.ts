@@ -84,7 +84,7 @@ describe('shouldAutoDismiss', () => {
   });
 
   it('keeps a success that left a result', () => {
-    expect(shouldAutoDismiss(task('success', { result: { label: 'lobe.link/x' } }))).toBe(false);
+    expect(shouldAutoDismiss(task('success', { result: { label: 'orvilo.link/x' } }))).toBe(false);
   });
 
   it('never clears a failure or an active task', () => {

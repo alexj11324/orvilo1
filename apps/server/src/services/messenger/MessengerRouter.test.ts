@@ -914,7 +914,7 @@ describe('MessengerRouter member_joined_channel welcome', () => {
     expect(mockSetIfNotExists).toHaveBeenCalledWith('channel_welcomed:C_GENERAL', '1');
     expect(mockSlackBinder.sendDmText).toHaveBeenCalledTimes(1);
     expect(mockSlackBinder.sendDmText.mock.calls[0][0]).toBe('C_GENERAL');
-    expect(mockSlackBinder.sendDmText.mock.calls[0][1]).toMatch(/LobeHub/);
+    expect(mockSlackBinder.sendDmText.mock.calls[0][1]).toMatch(/Orvilo/);
   });
 
   it('does nothing when a regular user (not the bot) joins the channel', async () => {
@@ -1842,7 +1842,7 @@ describe('MessengerRouter /agents private vs workspace grouping', () => {
   it('splits the text list into workspace/private sections with continuous numbering', async () => {
     vi.spyOn(MessengerRouter.prototype as any, 'fetchUserAgents').mockResolvedValue([
       { id: 'agt_shared', isPrivate: false, title: 'Lobo' },
-      { id: 'agt_shared2', isPrivate: false, title: 'LobeBuilder' },
+      { id: 'agt_shared2', isPrivate: false, title: 'OrviloBuilder' },
       { id: 'agt_private', isPrivate: true, title: '私人助理' },
     ]);
     await loadWechatBot();
@@ -1856,7 +1856,7 @@ describe('MessengerRouter /agents private vs workspace grouping', () => {
 
     const text = mockWechatBinder.sendDmText.mock.calls[0][1];
     expect(text).toMatch(
-      /工作区 Agent：\n1\. Lobo \(当前\)\n2\. LobeBuilder\n\n私人 Agent：\n3\. 私人助理/,
+      /工作区 Agent：\n1\. Lobo \(当前\)\n2\. OrviloBuilder\n\n私人 Agent：\n3\. 私人助理/,
     );
     expect(text).not.toContain('你的 Agent：');
   });
@@ -2046,9 +2046,9 @@ describe('MessengerRouter /switch', () => {
     mockListUserWorkspaces.mockResolvedValue([
       { id: 'workspace-1', name: 'Workspace 1', role: 'owner' },
     ]);
-    // `fetchUserAgents` pins the inbox/LobeAI first; the switch lands on it.
+    // `fetchUserAgents` pins the inbox/OrviloAI first; the switch lands on it.
     vi.spyOn(MessengerRouter.prototype as any, 'fetchUserAgents').mockResolvedValue([
-      { id: 'agt_inbox', isPrivate: false, title: 'LobeAI' },
+      { id: 'agt_inbox', isPrivate: false, title: 'OrviloAI' },
     ]);
 
     const router = new MessengerRouter();
@@ -2149,7 +2149,7 @@ describe('MessengerRouter Telegram Guest command privacy', () => {
     expect(mockTelegramBinder.replyToMessage.mock.calls).toEqual([
       [
         message,
-        `Open your direct message with the LobeHub bot and send \`${text.split(' ')[0]}\` there.`,
+        `Open your direct message with the Orvilo bot and send \`${text.split(' ')[0]}\` there.`,
       ],
     ]);
     /** @example No picker or extra DM is sent while answering the Guest query. */

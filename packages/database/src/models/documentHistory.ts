@@ -2,7 +2,7 @@ import { and, desc, eq, lt, or } from 'drizzle-orm';
 
 import type { DocumentHistoryItem, NewDocumentHistory } from '../schemas';
 import { documentHistories, documents } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export interface QueryDocumentHistoryParams {
@@ -15,9 +15,9 @@ export interface QueryDocumentHistoryParams {
 export class DocumentHistoryModel {
   private userId: string;
   private workspaceId?: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.workspaceId = workspaceId;
     this.db = db;

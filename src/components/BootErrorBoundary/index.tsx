@@ -19,8 +19,8 @@ interface BootErrorBoundaryState {
 }
 
 const DEFAULT_MAX_RELOADS = 1;
-const RELOAD_SESSION_KEY = 'lobe:boot:hard-reload-attempts';
-const FORCE_RELOAD_QUERY_KEY = '__lobe_force_reload';
+const RELOAD_SESSION_KEY = 'orvilo:boot:hard-reload-attempts';
+const FORCE_RELOAD_QUERY_KEY = '__orvilo_force_reload';
 
 /**
  * BootErrorBoundary guards the SPA bootstrap process. If we hit an error before

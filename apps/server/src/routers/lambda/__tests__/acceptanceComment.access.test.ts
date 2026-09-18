@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto';
 
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   acceptances,
   agents,
@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { acceptanceCommentRouter } from '../acceptanceComment';
 import { cleanupTestUser, createTestUser } from './integration/setup';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(() => testDB),
 }));
@@ -29,7 +29,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
  * workspace.
  */
 describe('acceptanceCommentRouter access', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let ownerId: string;
   let visitorId: string;
   let publicAcceptanceId: string;
@@ -225,7 +225,7 @@ describe('acceptanceCommentRouter access', () => {
  * hand them the right to post under them.
  */
 describe('acceptanceCommentRouter workspace scoping', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let ownerId: string;
   let viewerId: string;
   let visitorId: string;

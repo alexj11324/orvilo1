@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { type UserGeneralConfig } from '@orvilo/types';
 
 import { UserModel } from '@/database/models/user';
@@ -7,7 +7,7 @@ import { appEnv } from '@/envs/app';
 import { trpc } from '../init';
 
 export interface TelemetryContext {
-  serverDB?: LobeChatDatabase;
+  serverDB?: OrviloDatabase;
   userId?: string | null;
 }
 

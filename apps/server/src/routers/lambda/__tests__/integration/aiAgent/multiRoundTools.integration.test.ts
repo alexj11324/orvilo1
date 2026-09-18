@@ -6,7 +6,7 @@
  * Note: AgentStateManager and StreamEventManager will automatically use
  * InMemory implementations when Redis is not available (test environment).
  */
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { agents, messages } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
@@ -25,7 +25,7 @@ import { createMockResponsesStream, waitForOperationComplete } from './helpers';
 process.env.OPENAI_API_KEY = 'sk-test-fake-api-key-for-testing';
 
 // Mock getServerDB to return our test database instance
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -45,7 +45,7 @@ vi.mock('@/server/services/file', () => ({
 
 let mockResponsesCreate: any;
 
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 let userId: string;
 let testAgentWithToolsId: string;
 
@@ -99,7 +99,7 @@ const createMockResponseWithMultipleTools = (roundNum: number) => {
       item: {
         type: 'function_call',
         call_id: toolCallId1,
-        name: 'lobe-web-browsing____search',
+        name: 'orvilo-web-browsing____search',
         arguments: JSON.stringify({ query: `query_round${roundNum}` }),
       },
     },
@@ -109,7 +109,7 @@ const createMockResponseWithMultipleTools = (roundNum: number) => {
       item: {
         type: 'function_call',
         call_id: toolCallId2,
-        name: 'lobe-web-browsing____crawlSinglePage',
+        name: 'orvilo-web-browsing____crawlSinglePage',
         arguments: JSON.stringify({ url: `https://example.com/page${roundNum}` }),
       },
     },
@@ -137,13 +137,13 @@ const createMockResponseWithMultipleTools = (roundNum: number) => {
           {
             type: 'function_call',
             call_id: toolCallId1,
-            name: 'lobe-web-browsing____search',
+            name: 'orvilo-web-browsing____search',
             arguments: JSON.stringify({ query: `query_round${roundNum}` }),
           },
           {
             type: 'function_call',
             call_id: toolCallId2,
-            name: 'lobe-web-browsing____crawlSinglePage',
+            name: 'orvilo-web-browsing____crawlSinglePage',
             arguments: JSON.stringify({ url: `https://example.com/page${roundNum}` }),
           },
         ],

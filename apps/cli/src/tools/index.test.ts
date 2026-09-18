@@ -166,7 +166,7 @@ describe('executeToolCall', () => {
     const pattern = `findme-${process.pid}`;
     await writeFile(path.join(tmpDir, 'grep.txt'), `${pattern} here`);
 
-    vi.stubEnv('LOBEHUB_CLI_TOOL_WORKER', '1');
+    vi.stubEnv('ORVILO_CLI_TOOL_WORKER', '1');
     const result = await executeToolCall(
       'grepContent',
       // Use the manifest-facing `scope` field. `directory` is a runtime-only

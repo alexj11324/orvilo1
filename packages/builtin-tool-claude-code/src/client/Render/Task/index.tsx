@@ -169,10 +169,10 @@ const TaskHeader = memo<TaskHeaderProps>(({ completed, total, inProgress, overri
   const label =
     override?.label ??
     (inProgress
-      ? t('builtins.lobe-claude-code.todoWrite.currentStep')
+      ? t('builtins.orvilo-claude-code.todoWrite.currentStep')
       : allDone
-        ? t('builtins.lobe-claude-code.todoWrite.allDone')
-        : t('builtins.lobe-claude-code.todoWrite.todos'));
+        ? t('builtins.orvilo-claude-code.todoWrite.allDone')
+        : t('builtins.orvilo-claude-code.todoWrite.todos'));
   const detail = override ? override.detail : inProgress?.text;
 
   return (
@@ -242,22 +242,22 @@ const Task = memo<BuiltinRenderProps<TaskUpdateArgs | undefined, TaskPluginState
           completed: {
             color: cssVar.colorSuccess,
             icon: CircleCheckBig,
-            label: t('builtins.lobe-claude-code.task.updateCompleted'),
+            label: t('builtins.orvilo-claude-code.task.updateCompleted'),
           },
           deleted: {
             color: cssVar.colorError,
             icon: CircleX,
-            label: t('builtins.lobe-claude-code.task.updateDeleted'),
+            label: t('builtins.orvilo-claude-code.task.updateDeleted'),
           },
           in_progress: {
             color: cssVar.colorInfo,
             icon: CircleArrowRight,
-            label: t('builtins.lobe-claude-code.task.updateInProgress'),
+            label: t('builtins.orvilo-claude-code.task.updateInProgress'),
           },
           pending: {
             color: cssVar.colorTextSecondary,
             icon: RotateCcw,
-            label: t('builtins.lobe-claude-code.task.updatePending'),
+            label: t('builtins.orvilo-claude-code.task.updatePending'),
           },
         } as const;
         const entry = map[status];
@@ -271,7 +271,7 @@ const Task = memo<BuiltinRenderProps<TaskUpdateArgs | undefined, TaskPluginState
           color: cssVar.colorTextSecondary,
           detail: resolvedSubject,
           icon: ListTodo,
-          label: t('builtins.lobe-claude-code.task.updateSubject.completed'),
+          label: t('builtins.orvilo-claude-code.task.updateSubject.completed'),
         };
       }
       return undefined;

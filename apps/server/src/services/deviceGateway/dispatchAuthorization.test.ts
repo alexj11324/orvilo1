@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ findWorkspaceDeviceById: vi.fn() }));
@@ -12,7 +12,7 @@ vi.mock('@/database/models/device', () => ({
 }));
 
 const { resolveDeviceDispatchAuthorizationFailure } = await import('./dispatchAuthorization');
-const serverDB = {} as LobeChatDatabase;
+const serverDB = {} as OrviloDatabase;
 
 describe('resolveDeviceDispatchAuthorizationFailure', () => {
   beforeEach(() => vi.clearAllMocks());

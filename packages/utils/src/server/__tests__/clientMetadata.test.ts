@@ -6,7 +6,7 @@ import { parseClientMetadata } from '../clientMetadata';
 describe('parseClientMetadata', () => {
   it('should parse the current iOS mobile user agent', () => {
     const headers = new Headers({
-      'user-agent': 'LobeHub-Mobile/ios-v1.2.0',
+      'user-agent': 'Orvilo-Mobile/ios-v1.2.0',
     });
 
     expect(parseClientMetadata(headers)).toEqual({
@@ -18,7 +18,7 @@ describe('parseClientMetadata', () => {
 
   it('should parse the current Android mobile user agent', () => {
     const headers = new Headers({
-      'user-agent': 'LobeHub-Mobile/android-v2.0.0-beta.1',
+      'user-agent': 'Orvilo-Mobile/android-v2.0.0-beta.1',
     });
 
     expect(parseClientMetadata(headers)).toEqual({
@@ -30,7 +30,7 @@ describe('parseClientMetadata', () => {
 
   it('should parse the desktop user agent', () => {
     const headers = new Headers({
-      'user-agent': 'LobeHub Desktop/1.2.3',
+      'user-agent': 'Orvilo Desktop/1.2.3',
     });
 
     expect(parseClientMetadata(headers)).toEqual({
@@ -40,8 +40,8 @@ describe('parseClientMetadata', () => {
   });
 
   it.each([
-    ['LobeHub-iOS/2.0', '2.0'],
-    ['LobeHub/1 CFNetwork/3860.300.31 Darwin/25.3.0', '1'],
+    ['Orvilo-iOS/2.0', '2.0'],
+    ['Orvilo/1 CFNetwork/3860.300.31 Darwin/25.3.0', '1'],
   ])('should parse a legacy iOS user agent', (userAgent, version) => {
     expect(parseClientMetadata(new Headers({ 'user-agent': userAgent }))).toEqual({
       platform: 'ios',
@@ -74,7 +74,7 @@ describe('parseClientMetadata', () => {
   it('should prefer a native user agent over the web version header', () => {
     const headers = new Headers({
       [CLIENT_VERSION_HEADER]: '2.2.10',
-      'user-agent': 'LobeHub Desktop/1.2.3',
+      'user-agent': 'Orvilo Desktop/1.2.3',
     });
 
     expect(parseClientMetadata(headers)).toEqual({

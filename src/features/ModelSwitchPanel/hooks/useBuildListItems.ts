@@ -45,12 +45,12 @@ export const buildListItems = (
     return text.toLowerCase().includes(keyword);
   };
 
-  // lobehub first, then others
+  // orvilo first, then others
   const sortedProviders = [...enabledList].sort((a, b) => {
-    const aIsLobehub = a.id === 'lobehub';
-    const bIsLobehub = b.id === 'lobehub';
-    if (aIsLobehub && !bIsLobehub) return -1;
-    if (!aIsLobehub && bIsLobehub) return 1;
+    const aIsOrvilo = a.id === 'orvilo';
+    const bIsOrvilo = b.id === 'orvilo';
+    if (aIsOrvilo && !bIsOrvilo) return -1;
+    if (!aIsOrvilo && bIsOrvilo) return 1;
     return 0;
   });
 
@@ -83,14 +83,14 @@ export const buildListItems = (
       }
     }
 
-    // lobehub first
+    // orvilo first
     const modelArray = Array.from(modelMap.values());
     for (const model of modelArray) {
       model.providers.sort((a, b) => {
-        const aIsLobehub = a.id === 'lobehub';
-        const bIsLobehub = b.id === 'lobehub';
-        if (aIsLobehub && !bIsLobehub) return -1;
-        if (!aIsLobehub && bIsLobehub) return 1;
+        const aIsOrvilo = a.id === 'orvilo';
+        const bIsOrvilo = b.id === 'orvilo';
+        if (aIsOrvilo && !bIsOrvilo) return -1;
+        if (!aIsOrvilo && bIsOrvilo) return 1;
         return 0;
       });
     }

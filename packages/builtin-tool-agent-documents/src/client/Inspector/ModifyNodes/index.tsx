@@ -26,7 +26,7 @@ export const ModifyNodesInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-documents.apiName.modifyNodes')}
+          {t('builtins.orvilo-agent-documents.apiName.modifyNodes')}
         </span>
       </div>
     );
@@ -35,7 +35,7 @@ export const ModifyNodesInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-documents.apiName.modifyNodes')}
+        {t('builtins.orvilo-agent-documents.apiName.modifyNodes')}
       </span>
       {id && <span className={styles.idChip}>{formatDocumentId(id)}</span>}
       {(typeof totalCount === 'number' || opCount > 0) && (
@@ -43,11 +43,11 @@ export const ModifyNodesInspector = memo<
           <span className={styles.separator}>·</span>
           <span className={styles.subdued}>
             {typeof successCount === 'number' && typeof totalCount === 'number'
-              ? t('builtins.lobe-agent-documents.inspector.opsResult', {
+              ? t('builtins.orvilo-agent-documents.inspector.opsResult', {
                   success: successCount,
                   total: totalCount,
                 })
-              : t('builtins.lobe-agent-documents.inspector.opsCount', { count: opCount })}
+              : t('builtins.orvilo-agent-documents.inspector.opsCount', { count: opCount })}
           </span>
         </>
       )}

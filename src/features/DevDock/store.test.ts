@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { MIN_PANEL_HEIGHT, useDevDockStore } from './store';
 
-const STORAGE_KEY = 'LOBE_DEV_DOCK_UI';
+const STORAGE_KEY = 'ORVILO_DEV_DOCK_UI';
 
 const readPersisted = () => JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
 

@@ -35,7 +35,7 @@ const ALIASES_WITH_DEPRECATED_GENERATION_PARAMS = new Set([
 
 const IMAGE_RESPONSE_MODEL_ALIASES = new Set(['gemini-2.0-flash-exp', 'nano-banana-pro-preview']);
 
-const LOBE_IMAGE_MODEL_ID_SUFFIX = ':image';
+const ORVILO_IMAGE_MODEL_ID_SUFFIX = ':image';
 
 const NANO_BANANA_MODEL_ALIASES = new Set([
   'gemini-2.5-flash-image-preview',
@@ -108,9 +108,9 @@ const normalizeGoogleModelIdForAlias = (model: string): string | undefined => {
   const normalizedModelId = normalizeGoogleModelId(model);
   if (!normalizedModelId) return;
 
-  // Lobe image model cards append `:image`, e.g. gemini-3.1-flash-lite-image:image.
-  return normalizedModelId.endsWith(LOBE_IMAGE_MODEL_ID_SUFFIX)
-    ? normalizedModelId.slice(0, -LOBE_IMAGE_MODEL_ID_SUFFIX.length)
+  // Orvilo image model cards append `:image`, e.g. gemini-3.1-flash-lite-image:image.
+  return normalizedModelId.endsWith(ORVILO_IMAGE_MODEL_ID_SUFFIX)
+    ? normalizedModelId.slice(0, -ORVILO_IMAGE_MODEL_ID_SUFFIX.length)
     : normalizedModelId;
 };
 

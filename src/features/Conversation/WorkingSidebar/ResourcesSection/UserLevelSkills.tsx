@@ -46,7 +46,7 @@ const openSkillDetailModal = (skillId: string) =>
 /**
  * Reads user-installed skills (entries in the `agent_skill` table — market
  * imports plus user-created customs) into the `SkillsList` row shape. Builtin
- * tools and LobeHub MCP servers are intentionally excluded — those belong in
+ * tools and Orvilo MCP servers are intentionally excluded — those belong in
  * the Tools popover, not in the per-user skill inventory.
  *
  * Also triggers the underlying SWR fetch so the working sidebar surfaces the

@@ -14,7 +14,7 @@
  * Services must be injected via constructor for runtime-agnostic usage
  * (e.g., server-side services vs client-side services).
  */
-import type { ComposioAppType, LobehubSkillProviderType } from '@orvilo/const';
+import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
 import {
   marketToolsResultsPrompt,
@@ -36,13 +36,13 @@ import { getToolStoreState } from '@/store/tool';
 import {
   builtinToolSelectors,
   composioStoreSelectors,
-  lobehubSkillStoreSelectors,
+  orviloSkillStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
 import type { ComposioServer } from '@/store/tool/slices/composioStore/types';
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore/types';
-import type { LobehubSkillServer } from '@/store/tool/slices/lobehubSkillStore/types';
-import { LobehubSkillStatus } from '@/store/tool/slices/lobehubSkillStore/types';
+import type { OrviloSkillServer } from '@/store/tool/slices/orviloSkillStore/types';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 import { getUserStoreState } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -320,7 +320,7 @@ export class AgentManagerRuntime {
       }
 
       // The merged config may contain extra fields from the DB agent row
-      // (e.g., description, tags) that aren't on LobeAgentConfig type
+      // (e.g., description, tags) that aren't on OrviloAgentConfig type
       const raw = config as Record<string, any>;
 
       // Heterogeneous agents (Claude Code / Codex / …) bring their own toolset
@@ -735,12 +735,12 @@ export class AgentManagerRuntime {
         const isComposioEnabled =
           typeof window !== 'undefined' &&
           window.global_serverConfigStore?.getState()?.serverConfig?.enableComposio;
-        const isLobehubSkillEnabled =
+        const isOrviloSkillEnabled =
           typeof window !== 'undefined' &&
-          window.global_serverConfigStore?.getState()?.serverConfig?.enableLobehubSkill;
+          window.global_serverConfigStore?.getState()?.serverConfig?.enableOrviloSkill;
         const connector = resolveConnectorCatalogItem(identifier, {
           composio: Boolean(isComposioEnabled),
-          lobehub: Boolean(isLobehubSkillEnabled),
+          orvilo: Boolean(isOrviloSkillEnabled),
         });
 
         if (connector?.type === 'composio') {
@@ -755,15 +755,15 @@ export class AgentManagerRuntime {
           );
         }
 
-        if (connector?.type === 'lobehub') {
-          const lobehubSkillServer = lobehubSkillStoreSelectors
+        if (connector?.type === 'orvilo') {
+          const orviloSkillServer = orviloSkillStoreSelectors
             .getServers(toolState)
             .find((s) => s.identifier === identifier);
-          return this.handleLobehubSkillInstall(
+          return this.handleOrviloSkillInstall(
             agentId,
             identifier,
             connector.provider,
-            lobehubSkillServer,
+            orviloSkillServer,
           );
         }
 
@@ -958,19 +958,19 @@ export class AgentManagerRuntime {
     };
   }
 
-  private async handleLobehubSkillInstall(
+  private async handleOrviloSkillInstall(
     agentId: string,
     identifier: string,
-    providerInfo: LobehubSkillProviderType,
-    server?: LobehubSkillServer,
+    providerInfo: OrviloSkillProviderType,
+    server?: OrviloSkillServer,
   ): Promise<BuiltinToolResult> {
-    if (server?.status === LobehubSkillStatus.CONNECTED) {
+    if (server?.status === OrviloSkillStatus.CONNECTED) {
       await this.enablePluginForAgent(agentId, identifier);
       return {
-        content: `Successfully enabled LobehubSkill provider: ${providerInfo.label}`,
+        content: `Successfully enabled OrviloSkill provider: ${providerInfo.label}`,
         state: {
           installed: true,
-          isLobehubSkill: true,
+          isOrviloSkill: true,
           pluginId: identifier,
           pluginName: providerInfo.label,
           serverStatus: 'connected',
@@ -986,16 +986,16 @@ export class AgentManagerRuntime {
       typeof window !== 'undefined' && window.location.protocol.startsWith('http')
         ? `${window.location.origin}/oauth/callback/success?provider=${encodeURIComponent(identifier)}`
         : undefined;
-    const authInfo = await getToolStoreState().getLobehubSkillAuthorizeUrl(identifier, {
+    const authInfo = await getToolStoreState().getOrviloSkillAuthorizeUrl(identifier, {
       redirectUri,
     });
 
     if (!authInfo.authorizeUrl) {
       return {
-        content: `LobehubSkill provider "${providerInfo.label}" requires OAuth authorization but no authorization URL is available.`,
+        content: `OrviloSkill provider "${providerInfo.label}" requires OAuth authorization but no authorization URL is available.`,
         state: {
           installed: false,
-          isLobehubSkill: true,
+          isOrviloSkill: true,
           pluginId: identifier,
           pluginName: providerInfo.label,
           serverStatus: 'not_connected',
@@ -1005,7 +1005,7 @@ export class AgentManagerRuntime {
       };
     }
 
-    const authResult = await this.openLobehubSkillOAuthWindowAndWait(
+    const authResult = await this.openOrviloSkillOAuthWindowAndWait(
       authInfo.authorizeUrl,
       identifier,
     );
@@ -1013,10 +1013,10 @@ export class AgentManagerRuntime {
     if (authResult.success) {
       await this.enablePluginForAgent(agentId, identifier);
       return {
-        content: `Successfully connected and enabled LobehubSkill provider: ${providerInfo.label}`,
+        content: `Successfully connected and enabled OrviloSkill provider: ${providerInfo.label}`,
         state: {
           installed: true,
-          isLobehubSkill: true,
+          isOrviloSkill: true,
           pluginId: identifier,
           pluginName: providerInfo.label,
           serverStatus: 'connected',
@@ -1027,10 +1027,10 @@ export class AgentManagerRuntime {
     }
 
     return {
-      content: `OAuth authorization was cancelled or failed for LobehubSkill provider: ${providerInfo.label}. Please try again.`,
+      content: `OAuth authorization was cancelled or failed for OrviloSkill provider: ${providerInfo.label}. Please try again.`,
       state: {
         installed: false,
-        isLobehubSkill: true,
+        isOrviloSkill: true,
         pluginId: identifier,
         pluginName: providerInfo.label,
         serverStatus: 'not_connected',
@@ -1181,14 +1181,14 @@ export class AgentManagerRuntime {
     });
   }
 
-  private openLobehubSkillOAuthWindowAndWait(
+  private openOrviloSkillOAuthWindowAndWait(
     redirectUrl: string,
     provider: string,
   ): Promise<{ cancelled: boolean; success: boolean }> {
     const checkAuthStatus = async (): Promise<boolean> => {
       try {
-        const server = await getToolStoreState().checkLobehubSkillStatus(provider);
-        return server?.status === LobehubSkillStatus.CONNECTED;
+        const server = await getToolStoreState().checkOrviloSkillStatus(provider);
+        return server?.status === OrviloSkillStatus.CONNECTED;
       } catch {
         return false;
       }
@@ -1221,12 +1221,9 @@ export class AgentManagerRuntime {
 
       messageHandler = async (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return;
-        if (
-          event.data?.type === 'LOBEHUB_SKILL_AUTH_SUCCESS' &&
-          event.data?.provider === provider
-        ) {
-          const server = await getToolStoreState().checkLobehubSkillStatus(provider);
-          const isConnected = server?.status === LobehubSkillStatus.CONNECTED;
+        if (event.data?.type === 'ORVILO_SKILL_AUTH_SUCCESS' && event.data?.provider === provider) {
+          const server = await getToolStoreState().checkOrviloSkillStatus(provider);
+          const isConnected = server?.status === OrviloSkillStatus.CONNECTED;
           resolveOnce({ cancelled: false, success: isConnected });
         }
       };

@@ -9,7 +9,7 @@ import { getServerDB } from '@/database/server';
 
 import { dispatchScheduledRun } from './scheduledRunKinds';
 
-const log = debug('lobe-server:workflows:task:scheduled-topic-dispatch');
+const log = debug('orvilo-server:workflows:task:scheduled-topic-dispatch');
 
 /** How long a claim lease is held before another tick may re-claim the topic. */
 const CLAIM_LEASE_MS = 5 * 60 * 1000;
@@ -62,6 +62,21 @@ export async function scheduledTopicDispatch(c: Context) {
     let dispatched = 0;
     let discarded = 0;
     for (const topic of due) {
+      // Agent-share visitor topics (`senderId` marks them — the row itself
+      // belongs to the creator for billing) can never dispatch: visitor
+      // execution is retired, and re-entering `AiAgentService.execAgent`
+      // creator-scoped would run the visitor's conversation with no share
+      // gate at all. A parked continuation from before retirement would
+      // otherwise re-surface on every tick forever, so drop the schedule the
+      // same way an unparseable payload is dropped — the topic and its
+      // history stay readable through the share's read paths.
+      if (topic.senderId) {
+        log('discarding scheduled run on share-visitor topic=%s', topic.id);
+        await TopicModel.clearScheduledRun(db, topic.id, 'active').catch(() => undefined);
+        discarded += 1;
+        continue;
+      }
+
       // Reads the current payload and the pre-`kind` legacy one alike — the due
       // query selects both, so this must dispatch both.
       const run = parseTopicScheduledRun(topic.metadata?.scheduledRun);

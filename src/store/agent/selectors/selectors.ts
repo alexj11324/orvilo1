@@ -13,9 +13,9 @@ import {
   type AgentMode,
   type AgentProfile,
   type KnowledgeItem,
-  type LobeAgentConfig,
-  type LobeAgentTTSConfig,
   type MetaData,
+  type OrviloAgentConfig,
+  type OrviloAgentTTSConfig,
   type RuntimeEnvConfig,
 } from '@orvilo/types';
 import {
@@ -138,16 +138,16 @@ const inboxAgentConfig = (s: AgentStoreState) => {
   const id = builtinAgentSelectors.inboxAgentId(s);
   // Server returns inbox config already merged with DEFAULT_AGENT_CONFIG and serverDefaultAgentConfig,
   // so we can directly use it. Fallback to DEFAULT_AGENT_CONFIG if not initialized yet.
-  return id ? (s.agentMap[id] as LobeAgentConfig) : DEFAULT_AGENT_CONFIG;
+  return id ? (s.agentMap[id] as OrviloAgentConfig) : DEFAULT_AGENT_CONFIG;
 };
 const inboxAgentModel = (s: AgentStoreState) => inboxAgentConfig(s).model;
 
 const getAgentConfigById =
   (agentId: string) =>
-  (s: AgentStoreState): LobeAgentConfig =>
-    s.agentMap[agentId] as LobeAgentConfig;
+  (s: AgentStoreState): OrviloAgentConfig =>
+    s.agentMap[agentId] as OrviloAgentConfig;
 
-export const currentAgentConfig = (s: AgentStoreState): LobeAgentConfig =>
+export const currentAgentConfig = (s: AgentStoreState): OrviloAgentConfig =>
   getAgentConfigById(s.activeAgentId || '')(s);
 
 const currentAgentSystemRole = (s: AgentStoreState) => {
@@ -212,7 +212,7 @@ const currentAgentFiles = (s: AgentStoreState) => {
   return config?.files || [];
 };
 
-const currentAgentTTS = (s: AgentStoreState): LobeAgentTTSConfig => {
+const currentAgentTTS = (s: AgentStoreState): OrviloAgentTTSConfig => {
   const config = currentAgentConfig(s);
 
   return config?.tts || DEFAUTT_AGENT_TTS_CONFIG;
@@ -359,7 +359,7 @@ const isCurrentAgentExternal = (s: AgentStoreState): boolean => !currentAgentDat
 
 /**
  * Whether current agent is driven by an external heterogeneous runtime
- * (e.g. Claude Code). These agents skip LobeHub's message-channel / model
+ * (e.g. Claude Code). These agents skip Orvilo's message-channel / model
  * pickers because their toolchain is owned by the external runtime.
  */
 const isCurrentAgentHeterogeneous = (s: AgentStoreState): boolean =>

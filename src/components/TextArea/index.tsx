@@ -1,5 +1,5 @@
 import { type TextAreaProps as Props } from '@lobehub/ui';
-import { TextArea as LobeTextArea } from '@lobehub/ui';
+import { TextArea as OrviloTextArea } from '@lobehub/ui';
 import { type TextAreaRef } from 'antd/es/input/TextArea';
 import { memo, useRef, useState } from 'react';
 
@@ -16,7 +16,7 @@ const TextArea = memo<TextAreaProps>(({ onChange, value: defaultValue, ...props 
   const [value, setValue] = useState(defaultValue as string);
 
   return (
-    <LobeTextArea
+    <OrviloTextArea
       ref={ref}
       onBlur={() => {
         onChange?.(value);

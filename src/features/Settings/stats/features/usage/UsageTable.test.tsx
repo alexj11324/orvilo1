@@ -17,7 +17,7 @@ import UsageTable from './UsageTable';
 
 vi.unmock('react-i18next');
 
-vi.mock('@/components/LobeIcons', () => ({
+vi.mock('@/components/OrviloIcons', () => ({
   ProviderIcon: ({ provider }: { provider: string }) => <span>{provider}</span>,
 }));
 

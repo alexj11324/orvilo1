@@ -2,14 +2,14 @@
 
 import { Center, Empty } from '@lobehub/ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
-import type { ComposioAppType, LobehubSkillProviderType } from '@orvilo/const';
+import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
 import {
   getConnectorCatalog,
   RECOMMENDED_SKILLS,
   RecommendedSkillType,
   resolveConnectorCatalogItem,
 } from '@orvilo/const';
-import type { BuiltinSkillManifest, LobeBuiltinTool } from '@orvilo/types';
+import type { BuiltinSkillManifest, OrviloBuiltinTool } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
@@ -25,20 +25,20 @@ import {
   agentSkillsSelectors,
   builtinToolSelectors,
   composioStoreSelectors,
-  lobehubSkillStoreSelectors,
+  orviloSkillStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
 import { connectorSelectors } from '@/store/tool/slices/connector';
-import { LobehubSkillStatus } from '@/store/tool/slices/lobehubSkillStore/types';
-import { type LobeToolType } from '@/types/tool/tool';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
+import { type OrviloToolType } from '@/types/tool/tool';
 
 import AgentConnectorItem from './AgentConnectorItem';
 import AgentSkillItem from './AgentSkillItem';
 import BuiltinSkillItem from './BuiltinSkillItem';
 import ComposioSkillItem from './ComposioSkillItem';
-import LobehubSkillItem from './LobehubSkillItem';
 import McpSkillItem from './McpSkillItem';
+import OrviloSkillItem from './OrviloSkillItem';
 import type { ToolDetailType } from './SkillDetail';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -91,9 +91,9 @@ const SkillList = memo<SkillListProps>(
     const { t } = useTranslation('setting');
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-    const isLobehubSkillEnabled = useServerConfigStore(serverConfigSelectors.enableLobehubSkill);
+    const isOrviloSkillEnabled = useServerConfigStore(serverConfigSelectors.enableOrviloSkill);
     const isComposioEnabled = useServerConfigStore(serverConfigSelectors.enableComposio);
-    const allLobehubSkillServers = useToolStore(lobehubSkillStoreSelectors.getServers, isEqual);
+    const allOrviloSkillServers = useToolStore(orviloSkillStoreSelectors.getServers, isEqual);
     const allComposioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
     const installedPluginList = useToolStore(pluginSelectors.installedPluginMetaList, isEqual);
     const marketAgentSkills = useToolStore(agentSkillsSelectors.getMarketAgentSkills, isEqual);
@@ -112,12 +112,12 @@ const SkillList = memo<SkillListProps>(
     );
 
     const [
-      useFetchLobehubSkillConnections,
+      useFetchOrviloSkillConnections,
       useFetchUserComposioConnections,
       useFetchAgentSkills,
       useFetchUninstalledBuiltinTools,
     ] = useToolStore((s) => [
-      s.useFetchLobehubSkillConnections,
+      s.useFetchOrviloSkillConnections,
       s.useFetchUserComposioConnections,
       s.useFetchAgentSkills,
       s.useFetchUninstalledBuiltinTools,
@@ -127,14 +127,14 @@ const SkillList = memo<SkillListProps>(
     // Keep each SWR handle so a failed skill fetch surfaces error + Retry instead
     // of a fake-empty list (each hook syncs into the store only on success —
     //
-    const lobehubSkillsSWR = useFetchLobehubSkillConnections(isLobehubSkillEnabled);
+    const orviloSkillsSWR = useFetchOrviloSkillConnections(isOrviloSkillEnabled);
     const composioSWR = useFetchUserComposioConnections(isComposioEnabled);
     const agentSkillsSWR = useFetchAgentSkills(true);
     const builtinToolsSWR = useFetchUninstalledBuiltinTools(true);
     const skillsError =
-      lobehubSkillsSWR.error ?? composioSWR.error ?? agentSkillsSWR.error ?? builtinToolsSWR.error;
+      orviloSkillsSWR.error ?? composioSWR.error ?? agentSkillsSWR.error ?? builtinToolsSWR.error;
     const reloadSkills = () => {
-      void lobehubSkillsSWR.mutate();
+      void orviloSkillsSWR.mutate();
       void composioSWR.mutate();
       void agentSkillsSWR.mutate();
       void builtinToolsSWR.mutate();
@@ -153,8 +153,8 @@ const SkillList = memo<SkillListProps>(
       if (isConnectorView && !isAgentBoundInit) fetchAgentBoundConnectors();
     }, [isConnectorView, isAgentBoundInit, fetchAgentBoundConnectors]);
 
-    const getLobehubSkillServerByProvider = (providerId: string) => {
-      return allLobehubSkillServers.find((server) => server.identifier === providerId);
+    const getOrviloSkillServerByProvider = (providerId: string) => {
+      return allOrviloSkillServers.find((server) => server.identifier === providerId);
     };
 
     const getComposioServerByIdentifier = (identifier: string) => {
@@ -170,14 +170,14 @@ const SkillList = memo<SkillListProps>(
     };
 
     // Separate skills into three categories:
-    // 1. Integrations (Builtin, LobeHub and Composio skills)
+    // 1. Integrations (Builtin, Orvilo and Composio skills)
     // 2. Community MCP Tools (type === 'plugin')
     // 3. Custom MCP Tools (type === 'customPlugin')
     const { integrations, communityMCPs, customMCPs } = useMemo(() => {
       type IntegrationItem =
         | { builtinAgentSkill: BuiltinSkillManifest; type: 'builtinAgent' }
-        | { builtinTool: LobeBuiltinTool; type: 'builtin' }
-        | { provider: LobehubSkillProviderType; type: 'lobehub' }
+        | { builtinTool: OrviloBuiltinTool; type: 'builtin' }
+        | { provider: OrviloSkillProviderType; type: 'orvilo' }
         | { serverType: ComposioAppType; type: 'composio' };
 
       let integrationItems: IntegrationItem[] = [];
@@ -191,7 +191,7 @@ const SkillList = memo<SkillListProps>(
       const addedConnectorIds = new Set<string>();
       const connectorAvailability = {
         composio: isComposioEnabled,
-        lobehub: isLobehubSkillEnabled,
+        orvilo: isOrviloSkillEnabled,
       };
 
       // If RECOMMENDED_SKILLS is configured, use it to build the list
@@ -225,10 +225,10 @@ const SkillList = memo<SkillListProps>(
 
         // Add every remaining connector through the shared ownership resolver.
         // This keeps discovery complete without rendering one identifier through
-        // both LobeHub and Composio authorization systems.
+        // both Orvilo and Composio authorization systems.
         for (const connector of getConnectorCatalog(connectorAvailability)) {
           const identifier =
-            connector.type === 'lobehub' ? connector.provider.id : connector.serverType.identifier;
+            connector.type === 'orvilo' ? connector.provider.id : connector.serverType.identifier;
           if (!addedConnectorIds.has(identifier)) {
             integrationItems.push(connector);
             addedConnectorIds.add(identifier);
@@ -244,9 +244,9 @@ const SkillList = memo<SkillListProps>(
 
         integrationItems.push(...getConnectorCatalog(connectorAvailability));
 
-        // Filter integrations: show all builtin and lobehub skills, but only connected composio
+        // Filter integrations: show all builtin and orvilo skills, but only connected composio
         integrationItems = integrationItems.filter((item) => {
-          if (item.type === 'builtinAgent' || item.type === 'builtin' || item.type === 'lobehub') {
+          if (item.type === 'builtinAgent' || item.type === 'builtin' || item.type === 'orvilo') {
             return true;
           }
           return (
@@ -265,10 +265,10 @@ const SkillList = memo<SkillListProps>(
           case 'builtin': {
             return isBuiltinToolInstalled(item.builtinTool.identifier);
           }
-          case 'lobehub': {
+          case 'orvilo': {
             return (
-              getLobehubSkillServerByProvider(item.provider.id)?.status ===
-              LobehubSkillStatus.CONNECTED
+              getOrviloSkillServerByProvider(item.provider.id)?.status ===
+              OrviloSkillStatus.CONNECTED
             );
           }
           case 'composio': {
@@ -299,9 +299,9 @@ const SkillList = memo<SkillListProps>(
       };
     }, [
       installedPluginList,
-      isLobehubSkillEnabled,
+      isOrviloSkillEnabled,
       isComposioEnabled,
-      allLobehubSkillServers,
+      allOrviloSkillServers,
       allComposioServers,
       allBuiltinTools,
       uninstalledBuiltinTools,
@@ -365,7 +365,7 @@ const SkillList = memo<SkillListProps>(
           key={plugin.identifier}
           runtimeType={plugin.runtimeType}
           title={plugin.title || plugin.identifier}
-          type={plugin.type as LobeToolType}
+          type={plugin.type as OrviloToolType}
           onSelect={onSelect ? () => onSelect(plugin.identifier, 'plugin') : undefined}
         />
       ));
@@ -380,7 +380,7 @@ const SkillList = memo<SkillListProps>(
           key={plugin.identifier}
           runtimeType={plugin.runtimeType}
           title={plugin.title || plugin.identifier}
-          type={plugin.type as LobeToolType}
+          type={plugin.type as OrviloToolType}
           onSelect={onSelect ? () => onSelect(plugin.identifier, 'mcp-connector') : undefined}
         />
       ));
@@ -394,7 +394,7 @@ const SkillList = memo<SkillListProps>(
           key={c.id}
           runtimeType="mcp"
           title={c.name || c.identifier}
-          type={'customPlugin' as LobeToolType}
+          type={'customPlugin' as OrviloToolType}
           onSelect={onSelect ? () => onSelect(c.identifier, 'mcp-connector') : undefined}
         />
       ));
@@ -403,7 +403,7 @@ const SkillList = memo<SkillListProps>(
     const builtinToolItems = integrations.filter((i) => i.type === 'builtin');
     const builtinSkillItems = integrations.filter((i) => i.type === 'builtinAgent');
     const communitySkillItems = integrations.filter(
-      (i) => i.type === 'lobehub' || i.type === 'composio',
+      (i) => i.type === 'orvilo' || i.type === 'composio',
     );
 
     const toggleSection = (key: string) => {
@@ -432,7 +432,7 @@ const SkillList = memo<SkillListProps>(
     // Skills tab: prompt/agent-based skills (show description/content)
     const hasBuiltinTools = builtinToolItems.length > 0 && isConnectorView;
     const hasBuiltinSkills = builtinSkillItems.length > 0 && !isConnectorView;
-    // Skills tab only shows agent-based community skills; Lobehub/Composio OAuth
+    // Skills tab only shows agent-based community skills; Orvilo/Composio OAuth
     // connectors live exclusively in the Connectors view (hasCommunityConnectors).
     const hasCommunitySkills = !isConnectorView && marketAgentSkills.length > 0;
     const hasCommunityTools = communityMCPs.length > 0 && isConnectorView;
@@ -441,7 +441,7 @@ const SkillList = memo<SkillListProps>(
     const hasCustomConnectors =
       isConnectorView && (customMCPs.length > 0 || customConnectors.length > 0);
     const hasCustomSkills = userAgentSkills.length > 0 && !isConnectorView;
-    // Lobehub/Composio OAuth skills go in Connectors tab (they provide tools)
+    // Orvilo/Composio OAuth skills go in Connectors tab (they provide tools)
     const hasCommunityConnectors = communitySkillItems.length > 0 && isConnectorView;
     // Agent-owned connectors (across all agents) — connector view only.
     const hasAgentConnectors = isConnectorView && agentBoundConnectors.length > 0;
@@ -493,22 +493,22 @@ const SkillList = memo<SkillListProps>(
             }),
           )}
 
-        {/* Connector view: Lobehub/Composio OAuth connectors */}
+        {/* Connector view: Orvilo/Composio OAuth connectors */}
         {hasCommunityConnectors &&
           renderSection(
             'communityConnectors',
             t('skillGroup.communityConnectors', 'OAuth Connectors'),
             communitySkillItems.map((item) => {
-              if (item.type === 'lobehub') {
+              if (item.type === 'orvilo') {
                 return (
-                  <LobehubSkillItem
+                  <OrviloSkillItem
                     isSelected={selectedIdentifier === item.provider.id}
                     key={item.provider.id}
                     provider={item.provider}
-                    server={getLobehubSkillServerByProvider(item.provider.id)}
+                    server={getOrviloSkillServerByProvider(item.provider.id)}
                     onDelete={onDeleteSelected}
                     onSelect={
-                      onSelect ? () => onSelect(item.provider.id, 'lobehub-connector') : undefined
+                      onSelect ? () => onSelect(item.provider.id, 'orvilo-connector') : undefined
                     }
                   />
                 );

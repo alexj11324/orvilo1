@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 
-const SHELL_PATH_DELIMITER = '__LOBE_SHELL_PATH__';
+const SHELL_PATH_DELIMITER = '__ORVILO_SHELL_PATH__';
 const SHELL_PATH_TIMEOUT_MS = 5000;
 
 const runLoginShell = (shell: string): Promise<string> =>

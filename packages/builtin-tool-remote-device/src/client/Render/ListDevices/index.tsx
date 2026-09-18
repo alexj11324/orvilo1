@@ -40,7 +40,7 @@ const ListDevices = memo<BuiltinRenderProps<undefined, ListOnlineDevicesState>>(
     if (devices.length === 0) {
       return (
         <div className={styles.empty}>
-          {t('builtins.lobe-remote-device.render.noOnlineDevices')}
+          {t('builtins.orvilo-remote-device.render.noOnlineDevices')}
         </div>
       );
     }

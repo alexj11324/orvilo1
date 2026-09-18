@@ -133,7 +133,7 @@ describe('computeChatPricing', () => {
     });
   });
 
-  describe('LobeHub-hosted DeepSeek', () => {
+  describe('Orvilo-hosted DeepSeek', () => {
     interface HostedPricingCase {
       expectedCredits: Record<string, number>;
       expectedUnits: Pricing['units'];
@@ -224,7 +224,7 @@ describe('computeChatPricing', () => {
     ] satisfies HostedPricingCase[];
 
     it.each(hostedPricingCases)(
-      'applies LobeHub-hosted official pricing for $modelId',
+      'applies Orvilo-hosted official pricing for $modelId',
       ({ expectedCredits, expectedUnits }) => {
         const pricing: Pricing = { units: expectedUnits };
 

@@ -1,4 +1,4 @@
-import { INBOX_SESSION_ID, LOBE_CHAT_OBSERVATION_ID, LOBE_CHAT_TRACE_ID } from '@orvilo/const';
+import { INBOX_SESSION_ID, ORVILO_OBSERVATION_ID, ORVILO_TRACE_ID } from '@orvilo/const';
 import { type ChatStreamCallbacks, type ChatStreamPayload } from '@orvilo/model-runtime';
 import { type TracePayload } from '@orvilo/types';
 import { TraceTagMap } from '@orvilo/types';
@@ -46,11 +46,11 @@ export const createTraceOptions = (
   const headers = new Headers();
 
   if (trace?.id) {
-    headers.set(LOBE_CHAT_TRACE_ID, trace.id);
+    headers.set(ORVILO_TRACE_ID, trace.id);
   }
 
   if (generation?.id) {
-    headers.set(LOBE_CHAT_OBSERVATION_ID, generation.id);
+    headers.set(ORVILO_OBSERVATION_ID, generation.id);
   }
 
   return {

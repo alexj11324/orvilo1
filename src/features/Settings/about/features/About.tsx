@@ -8,7 +8,7 @@ import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { BLOG, mailTo, OFFICIAL_SITE, PRIVACY_URL, TERMS_URL } from '@/const/url';
+import { BLOG, DOWNLOAD_URL, mailTo, OFFICIAL_SITE, PRIVACY_URL, TERMS_URL } from '@/const/url';
 
 import AboutList from './AboutList';
 import ItemCard from './ItemCard';
@@ -71,6 +71,23 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
               icon: SiYoutube,
               label: 'YouTube',
               value: 'youtube',
+            },
+          ]}
+        />
+        <Divider style={{ marginBlock: 0 }} />
+        <div className={styles.title}>{t('getApp')}</div>
+        <AboutList
+          ItemRender={ItemLink}
+          items={[
+            {
+              href: DOWNLOAD_URL.default,
+              label: t('getDesktopApp'),
+              value: 'desktop',
+            },
+            {
+              href: DOWNLOAD_URL.mobile,
+              label: t('getMobileApp'),
+              value: 'mobile',
             },
           ]}
         />

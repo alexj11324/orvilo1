@@ -2,7 +2,7 @@ import type { AiProviderModelListItem } from 'model-bank';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { AiInfraRepos } from '../index';
 
 const userId = 'test-user-id';
@@ -12,13 +12,13 @@ const mockProviderConfigs = {
 };
 
 vi.mock('@orvilo/business-model-bank/model-config', async () => {
-  const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+  const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
   return {
-    loadModels: vi.fn().mockResolvedValue(LOBE_DEFAULT_MODEL_LIST),
+    loadModels: vi.fn().mockResolvedValue(ORVILO_DEFAULT_MODEL_LIST),
   };
 });
 
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 let repo: AiInfraRepos;
 
 beforeAll(async () => {
@@ -162,9 +162,9 @@ describe('AiInfraRepos', () => {
     });
 
     it('should filter hidden builtin models before applying pagination', async () => {
-      const providerId = 'lobehub';
+      const providerId = 'orvilo';
       const builtinModels = [
-        { enabled: true, id: 'lobehub-onboarding-v1', type: 'chat', visible: false },
+        { enabled: true, id: 'orvilo-onboarding-v1', type: 'chat', visible: false },
         { enabled: true, id: 'deepseek-v4-pro', type: 'chat' },
         { enabled: true, id: 'gpt-5.5', type: 'chat' },
       ] as AiProviderModelListItem[];

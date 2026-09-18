@@ -819,7 +819,7 @@ describe('ClaudeCodeAdapter', () => {
       expect(toolStart).toBeDefined();
     });
 
-    it('rewrites mcp__lobe_cc__ask_user_question to apiName=askUserQuestion', () => {
+    it('rewrites mcp__orvilo_cc__ask_user_question to apiName=askUserQuestion', () => {
       const adapter = new ClaudeCodeAdapter();
       adapter.adapt({ subtype: 'init', type: 'system' });
 
@@ -843,7 +843,7 @@ describe('ClaudeCodeAdapter', () => {
             {
               id: 'tu_aq_1',
               input: askInput,
-              name: 'mcp__lobe_cc__ask_user_question',
+              name: 'mcp__orvilo_cc__ask_user_question',
               type: 'tool_use',
             },
           ],
@@ -3233,7 +3233,7 @@ describe('ClaudeCodeAdapter', () => {
         mainAssistant('msg_main', {
           id: 'toolu_agent',
           input: {
-            description: 'Find git remote url lobe-chat',
+            description: 'Find git remote url orvilo',
             prompt: 'locate the remote',
             subagent_type: 'Explore',
           },
@@ -3250,7 +3250,7 @@ describe('ClaudeCodeAdapter', () => {
         (e) => e.type === 'stream_chunk' && e.data.chunkType === 'reasoning',
       );
       expect(reasoningChunk!.data.subagent.spawnMetadata).toEqual({
-        description: 'Find git remote url lobe-chat',
+        description: 'Find git remote url orvilo',
         prompt: 'locate the remote',
         subagentType: 'Explore',
       });
@@ -3282,7 +3282,7 @@ describe('ClaudeCodeAdapter', () => {
         mainAssistant('msg_main', {
           id: 'toolu_agent',
           input: {
-            description: 'Find git remote url lobe-chat',
+            description: 'Find git remote url orvilo',
             prompt: 'locate the remote',
             subagent_type: 'Explore',
           },
@@ -3307,7 +3307,7 @@ describe('ClaudeCodeAdapter', () => {
         (e) => e.type === 'stream_chunk' && e.data.chunkType === 'reasoning',
       );
       expect(reasoningChunk!.data.subagent.spawnMetadata).toEqual({
-        description: 'Find git remote url lobe-chat',
+        description: 'Find git remote url orvilo',
         prompt: 'locate the remote',
         subagentType: 'Explore',
       });

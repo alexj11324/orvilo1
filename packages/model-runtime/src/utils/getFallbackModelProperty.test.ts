@@ -65,34 +65,34 @@ describe('getModelPropertyWithFallback', () => {
   });
 
   describe('when providerId is specified', () => {
-    it('should use injected LobeHub model config before static fallback', async () => {
+    it('should use injected Orvilo model config before static fallback', async () => {
       loadModelsMock.mockResolvedValue([
         ...mockModelList,
         {
-          providerId: 'lobehub',
+          providerId: 'orvilo',
           source: 'builtin',
           enabled: true,
           id: 'injected-model',
           type: 'chat',
-          displayName: 'Injected LobeHub Model',
+          displayName: 'Injected Orvilo Model',
         },
       ]);
 
-      const result = await getModelPropertyWithFallback('injected-model', 'displayName', 'lobehub');
+      const result = await getModelPropertyWithFallback('injected-model', 'displayName', 'orvilo');
 
       expect(loadModelsMock).toHaveBeenCalledTimes(1);
-      expect(result).toBe('Injected LobeHub Model');
+      expect(result).toBe('Injected Orvilo Model');
     });
 
     it('should propagate loadModels errors instead of falling back to static defaults', async () => {
       loadModelsMock.mockRejectedValue(new Error('model config missing'));
 
       await expect(
-        getModelPropertyWithFallback('injected-model', 'displayName', 'lobehub'),
+        getModelPropertyWithFallback('injected-model', 'displayName', 'orvilo'),
       ).rejects.toThrow('model config missing');
     });
 
-    it('should prefer the injected LobeHub model over another provider with the same id', async () => {
+    it('should prefer the injected Orvilo model over another provider with the same id', async () => {
       loadModelsMock.mockResolvedValue([
         {
           displayName: 'Static Same ID',
@@ -101,15 +101,15 @@ describe('getModelPropertyWithFallback', () => {
           type: 'chat',
         },
         {
-          displayName: 'Injected LobeHub Model',
+          displayName: 'Injected Orvilo Model',
           id: 'same-model',
-          providerId: 'lobehub',
+          providerId: 'orvilo',
           type: 'chat',
         },
       ]);
 
-      const result = await getModelPropertyWithFallback('same-model', 'displayName', 'lobehub');
-      expect(result).toBe('Injected LobeHub Model');
+      const result = await getModelPropertyWithFallback('same-model', 'displayName', 'orvilo');
+      expect(result).toBe('Injected Orvilo Model');
     });
 
     it('should return exact match value when model exists with specified provider', async () => {

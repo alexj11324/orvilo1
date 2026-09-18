@@ -1,9 +1,9 @@
-import { type LobeDefaultAiModelListItem } from 'model-bank';
+import { type OrviloDefaultAiModelListItem } from 'model-bank';
 
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
 
 export interface StaleModelState {
-  meta?: LobeDefaultAiModelListItem;
+  meta?: OrviloDefaultAiModelListItem;
   /**
    * `notEnabled`: the model exists in the builtin bank but is not enabled —
    * still routable server-side, so features using it keep working.
@@ -13,13 +13,13 @@ export interface StaleModelState {
    */
   status: 'notEnabled' | 'redirected' | 'removed';
   /** The successor model's metadata; only set for `redirected`. */
-  successor?: LobeDefaultAiModelListItem;
+  successor?: OrviloDefaultAiModelListItem;
   /** The successor model's id; only set for `redirected`. */
   successorId?: string;
 }
 
 export interface ResolveStaleModelStateContext {
-  builtinAiModelList: LobeDefaultAiModelListItem[];
+  builtinAiModelList: OrviloDefaultAiModelListItem[];
   enabledList: EnabledProviderWithModels[];
   modelRedirects?: Record<string, string>;
   modelType: 'chat' | 'embedding';

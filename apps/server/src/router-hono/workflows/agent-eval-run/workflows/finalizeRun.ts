@@ -8,7 +8,7 @@ import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/ut
 import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
-const log = debug('lobe-server:workflows:finalize-run');
+const log = debug('orvilo-server:workflows:finalize-run');
 
 /**
  * Finalize run workflow - aggregates per-case evaluation results and updates run metrics

@@ -1,5 +1,5 @@
 import { type ProviderConfig } from '@orvilo/types';
-import { type AiFullModelCard, type LobeDefaultAiModelListItem, ModelProvider } from 'model-bank';
+import { type AiFullModelCard, ModelProvider, type OrviloDefaultAiModelListItem } from 'model-bank';
 import * as AiModels from 'model-bank';
 
 import { loadModels } from '@/business/client/model-bank/loadModels';
@@ -14,7 +14,7 @@ export interface ProviderSpecificConfig {
   withDeploymentName?: boolean;
 }
 
-const groupModelsByProvider = (models: LobeDefaultAiModelListItem[]) =>
+const groupModelsByProvider = (models: OrviloDefaultAiModelListItem[]) =>
   models.reduce<Record<string, AiFullModelCard[]>>((map, model) => {
     const providerModels = map[model.providerId] ?? [];
     providerModels.push(model);
@@ -37,7 +37,7 @@ export const genServerAiProvidersConfig = async (
       const staticProviderModels = hasStaticModels ? staticModels[provider] : undefined;
       const aiModels = builtinModels[provider] ?? staticProviderModels ?? [];
 
-      if (provider !== ModelProvider.LobeHub && !hasStaticModels)
+      if (provider !== ModelProvider.Orvilo && !hasStaticModels)
         throw new Error(
           `Provider [${provider}] not found in aiModels, please make sure you have exported the provider in the \`aiModels/index.ts\``,
         );

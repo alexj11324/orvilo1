@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { LinearSyncModel } from '@/database/models/linearSync';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
 import {
@@ -49,7 +49,7 @@ export class LinearInstallationAuth {
   private gateKeeperPromise: Promise<LinearCredentialGateKeeper> | undefined;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     private readonly workspaceId: string,
     private readonly installationId: string,
     options: LinearInstallationAuthOptions = {},
@@ -202,7 +202,7 @@ export class LinearInstallationAuth {
 }
 
 export const createLinearInstallationAuth = (input: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   installationId: string;
   options?: LinearInstallationAuthOptions;
   workspaceId: string;

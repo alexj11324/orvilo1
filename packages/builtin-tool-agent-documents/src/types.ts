@@ -1,4 +1,4 @@
-export const AgentDocumentsIdentifier = 'lobe-agent-documents';
+export const AgentDocumentsIdentifier = 'orvilo-agent-documents';
 
 export const AgentDocumentsApiName = {
   createDocument: 'createDocument',

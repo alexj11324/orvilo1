@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { mcpService } from '@/services/mcp';
 import { pluginService } from '@/services/plugin';
-import { type LobeToolCustomPlugin } from '@/types/tool/plugin';
+import { type OrviloToolCustomPlugin } from '@/types/tool/plugin';
 
 import { useToolStore } from '../../store';
 import { defaultCustomPlugin } from './initialState';
@@ -39,7 +39,7 @@ describe('useToolStore:customPlugin', () => {
       act(() => {
         useToolStore.setState({
           // ...其他状态
-          installedPlugins: [{ identifier: 'test-plugin' } as LobeToolCustomPlugin],
+          installedPlugins: [{ identifier: 'test-plugin' } as OrviloToolCustomPlugin],
         });
       });
 
@@ -62,7 +62,7 @@ describe('useToolStore:customPlugin', () => {
           identifier: 'plugin2',
           meta: { title: 'New Plugin' },
         },
-      } as LobeToolCustomPlugin;
+      } as OrviloToolCustomPlugin;
       act(() => {
         useToolStore.setState({
           installedPlugins: [],
@@ -90,7 +90,7 @@ describe('useToolStore:customPlugin', () => {
           identifier: pluginId,
           meta: { title: 'Old Plugin', avatar: '🍎' },
         },
-      } as LobeToolCustomPlugin;
+      } as OrviloToolCustomPlugin;
 
       act(() => {
         useToolStore.setState({
@@ -107,7 +107,7 @@ describe('useToolStore:customPlugin', () => {
           meta: { title: 'Updated Plugin', avatar: '🥒' },
         },
         identifier: pluginId,
-      } as LobeToolCustomPlugin;
+      } as OrviloToolCustomPlugin;
 
       await act(async () => {
         await result.current.updateCustomPlugin(pluginId, updatedPlugin);
@@ -132,7 +132,7 @@ describe('useToolStore:customPlugin', () => {
               customParams: { mcp: { url: 'https://mcp.example.com' } },
               identifier: pluginId,
               type: 'customPlugin',
-            } as LobeToolCustomPlugin,
+            } as OrviloToolCustomPlugin,
           ],
           pluginInstallErrors: {},
         });
@@ -160,8 +160,8 @@ describe('useToolStore:customPlugin', () => {
           identifier: 'plugin3',
           meta: { title: 'Initial Plugin' },
         },
-      } as LobeToolCustomPlugin;
-      const updates = { meta: { title: 'Updated Name' } } as Partial<LobeToolCustomPlugin>;
+      } as OrviloToolCustomPlugin;
+      const updates = { meta: { title: 'Updated Name' } } as Partial<OrviloToolCustomPlugin>;
       const expectedNewCustomPlugin = { ...initialNewCustomPlugin, ...updates };
 
       act(() => {

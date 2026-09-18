@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { userService } from '@/services/user';
 import { useUserStore } from '@/store/user';
-import type { LobeAgentSettings } from '@/types/session';
+import type { OrviloAgentSettings } from '@/types/session';
 import type { UserSettings } from '@/types/user/settings';
 import { merge } from '@/utils/merge';
 
@@ -239,7 +239,7 @@ describe('SettingsAction', () => {
   describe('updateDefaultAgent', () => {
     it('should update default agent settings', async () => {
       const { result } = renderHook(() => useUserStore());
-      const updatedAgent: Partial<LobeAgentSettings> = {
+      const updatedAgent: Partial<OrviloAgentSettings> = {
         meta: { title: 'docs' },
       };
 

@@ -1,6 +1,6 @@
 import { REALTIME_ASR_AUDIO } from './contract';
 
-const WORKLET_NAME = 'lobe-realtime-asr-pcm';
+const WORKLET_NAME = 'orvilo-realtime-asr-pcm';
 
 export class PcmFrameProcessor {
   inputBuffer: number[] = [];

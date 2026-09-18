@@ -32,7 +32,7 @@ export interface AskUserQuestionItem {
 
 /**
  * `AskUserQuestion` tool arguments — 1-4 questions per call. Shared across the
- * Claude Code intervention and the builtin `user-interaction` / `lobe-agent`
+ * Claude Code intervention and the builtin `user-interaction` / `orvilo-agent`
  * clarification surfaces so the model's prompts and the UI stay identical.
  */
 export interface AskUserQuestionArgs {

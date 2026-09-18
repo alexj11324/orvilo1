@@ -47,7 +47,7 @@ const waitForOAuthPopup = (popup: Window, connectorId: string): Promise<OAuthPop
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       const data = event.data;
-      if (!data || data.type !== 'lobe-connector-oauth') return;
+      if (!data || data.type !== 'orvilo-connector-oauth') return;
       if (data.connectorId && data.connectorId !== connectorId) return;
       cleanup();
       resolve(
@@ -134,7 +134,7 @@ const AddConnectorModal = memo<AddConnectorModalProps>(({ open, onClose, connect
     // Open the popup synchronously within the click handler, otherwise the
     // browser blocks it once we cross the first `await` below. It's navigated to
     // the real authorize URL after the connector + OAuth-start mutations resolve.
-    const popup = window.open('about:blank', 'lobe-connector-oauth', 'width=600,height=720');
+    const popup = window.open('about:blank', 'orvilo-connector-oauth', 'width=600,height=720');
     if (!popup) {
       toast.error(
         t('connector.add.popupBlocked', 'Please allow popups for this site and try again.'),
@@ -227,7 +227,7 @@ const AddConnectorModal = memo<AddConnectorModalProps>(({ open, onClose, connect
 
     let popup: Window | null = null;
     if (needsReAuth) {
-      popup = window.open('about:blank', 'lobe-connector-oauth', 'width=600,height=720');
+      popup = window.open('about:blank', 'orvilo-connector-oauth', 'width=600,height=720');
       if (!popup) {
         toast.error(
           t('connector.add.popupBlocked', 'Please allow popups for this site and try again.'),

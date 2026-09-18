@@ -13,7 +13,7 @@ import {
 import { markdownToTelegramHTML } from './markdownToHTML';
 import { decodeGuestInlineMessageId, encodeGuestInlineMessageId } from './threadId';
 
-const log = debug('lobe-server:bot:telegram-guest-outbound');
+const log = debug('orvilo-server:bot:telegram-guest-outbound');
 
 const TELEGRAM_CAPTION_LIMIT = 1024;
 const TELEGRAM_TEXT_LIMIT = 4096;

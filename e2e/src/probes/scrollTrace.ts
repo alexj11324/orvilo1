@@ -10,7 +10,7 @@ export interface ScrollTraceSummary {
   travel: number;
 }
 
-const TRACE_KEY = '__lobehubE2EScrollTrace';
+const TRACE_KEY = '__orviloE2EScrollTrace';
 const MIN_SLIDE_FRAMES = 4;
 const JUMP_SHARE = 0.9;
 

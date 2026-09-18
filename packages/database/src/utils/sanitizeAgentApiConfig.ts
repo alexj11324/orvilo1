@@ -1,10 +1,10 @@
-import type { HeterogeneousApiConfig, LobeAgentAgencyConfig } from '@orvilo/types';
+import type { HeterogeneousApiConfig, OrviloAgentAgencyConfig } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 
 /** Keep provider credentials and arbitrary client fields out of persisted Agent API bindings. */
 export const sanitizeAgentApiConfig = (
-  agencyConfig: LobeAgentAgencyConfig | null | undefined,
-): LobeAgentAgencyConfig | null | undefined => {
+  agencyConfig: OrviloAgentAgencyConfig | null | undefined,
+): OrviloAgentAgencyConfig | null | undefined => {
   const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
   if (!heterogeneousProvider || !Object.hasOwn(heterogeneousProvider, 'apiConfig')) {
     return agencyConfig;

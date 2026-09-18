@@ -231,7 +231,7 @@ Pickers must list every valid target. Watch for options dropped by backend list 
 (pagination, `virtual` flags, scope filters) and add them back. An empty picker must
 mean "genuinely none", never "we filtered out the only option".
 
-> ✅ The default "LobeAI" (inbox) agent is `virtual` and excluded from the sidebar list, so the move picker re-adds it.
+> ✅ The default "OrviloAI" (inbox) agent is `virtual` and excluded from the sidebar list, so the move picker re-adds it.
 
 **Checklist**
 
@@ -452,7 +452,7 @@ UX consequence — a bespoke row is a visible consistency + craft regression.)
 > ❌ **Verify report sidebar** (the since-removed `features/Verify/Workspace/ReportListPanel.tsx`) hand-rolls the
 > entire panel: a raw grid `<div className={styles.item}>` row with `data-active` +
 > `colorFillSecondary` (instead of `NavItem` / `Block variant`), a bordered `<label>` + `<input>`
-> search box, a raw `<input>` inline-rename, an `opacity`-toggled action reveal re-implemented in
+> search box, a raw `<input>` inline-rename, an `opacity`-toggled action reveal re-implemented
 > CSS, and a **flat, ungrouped** list — so the hover box misaligns from the text, content bleeds
 > to the panel edge, and the surface reads as off-rhythm next to the topic sidebar it sits beside.
 

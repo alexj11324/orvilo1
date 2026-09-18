@@ -1,4 +1,4 @@
-import type { LobeAgentChatConfig } from '../agent/chatConfig';
+import type { OrviloAgentChatConfig } from '../agent/chatConfig';
 import type { CreateThreadWithMessageParams } from '../aiChat';
 import type { DeviceUnavailableErrorData, WorkingDirConfig } from '../device';
 import type { TaskDetail, UIChatMessage } from '../message';
@@ -455,7 +455,7 @@ export interface ExecSubAgentParams {
 }
 
 /**
- * Parameters for execVirtualSubAgent - execute a `lobe-agent.callSubAgent`
+ * Parameters for execVirtualSubAgent - execute a `orvilo-agent.callSubAgent`
  * child run.
  *
  * Virtual sub-agents are tool-created isolated runs. They are marked with
@@ -471,7 +471,7 @@ export interface ExecVirtualSubAgentParams {
    * sub-agent run, from the parent agent's `agencyConfig.subagent.chatConfig`.
    * Merged over the executing agent's own chatConfig, skipping nulled keys.
    */
-  chatConfig?: Partial<LobeAgentChatConfig> | null;
+  chatConfig?: Partial<OrviloAgentChatConfig> | null;
   /** The Group ID inherited from the parent operation, when present */
   groupId?: string;
   /** Instruction/prompt for the virtual sub-agent */
@@ -532,7 +532,7 @@ export interface TaskCurrentActivity {
   apiName?: string;
   /** Content preview (truncated) */
   contentPreview?: string;
-  /** Plugin identifier, e.g. "lobe-web-browsing" */
+  /** Plugin identifier, e.g. "orvilo-web-browsing" */
   identifier?: string;
   /** Activity type */
   type: 'tool_calling' | 'tool_result' | 'generating';

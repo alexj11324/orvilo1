@@ -9,7 +9,7 @@
  *
  * Names are deliberately plain and common: they should read as a person, not as
  * a product. Nothing here may collide with an assistant brand (Siri, Alexa,
- * Claude, Gemini, ...) or with LobeHub's own naming.
+ * Claude, Gemini, ...) or with Orvilo's own naming.
  *
  * Chinese names are composed from surname + given-name pools so the result
  * varies in length (2–4 characters); every other language draws from a flat

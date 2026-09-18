@@ -73,7 +73,7 @@ const AttachmentMenu = memo<AttachmentMenuProps>(
               },
             },
           ],
-          extra: <Icon className={'lobe-submenu-chevron'} icon={ChevronRight} size={16} />,
+          extra: <Icon className={'orvilo-submenu-chevron'} icon={ChevronRight} size={16} />,
           icon: LibraryBig,
           key: 'attachments',
           label: t('plus.addAttachments', { ns: 'chat' }),

@@ -7,10 +7,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../../core/getTestDB';
 import * as schema from '../../../schemas';
 import { messagePlugins, messages, threads, topics, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { MessageModel } from '../../message';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'plugins-for-op-user';
 const otherUserId = 'plugins-for-op-other';
@@ -47,7 +47,7 @@ const seedToolCall = async (opts: {
     apiName: opts.apiName ?? 'writeFile',
     arguments: JSON.stringify({ path: `/mnt/data/${opts.id}.pptx` }),
     id: opts.id,
-    identifier: 'lobe-cloud-sandbox',
+    identifier: 'orvilo-cloud-sandbox',
     state: { path: `/mnt/data/${opts.id}.pptx`, success: true },
     toolCallId: opts.toolCallId ?? `tc-${opts.id}`,
     userId: owner,
@@ -70,18 +70,16 @@ interface CapturedStatement {
  * the predicates are OR-ed or split.
  */
 const captureEmittedSql = async (
-  run: (db: LobeChatDatabase) => Promise<void>,
+  run: (db: OrviloDatabase) => Promise<void>,
 ): Promise<CapturedStatement[]> => {
   const captured: CapturedStatement[] = [];
   const logger = {
     logQuery: (sql: string, params: unknown[]) => captured.push({ params, sql }),
   };
   const client = (serverDB as unknown as { $client: { waitReady?: unknown } }).$client;
-  const db = (
-    'waitReady' in (client ?? {})
-      ? pgliteDrizzle({ client: client as any, logger, schema })
-      : nodeDrizzle(client as any, { logger, schema })
-  ) as unknown as LobeChatDatabase;
+  const db = ('waitReady' in (client ?? {})
+    ? pgliteDrizzle({ client: client as any, logger, schema })
+    : nodeDrizzle(client as any, { logger, schema })) as unknown as OrviloDatabase;
   await run(db);
   return captured;
 };
@@ -130,7 +128,7 @@ describe('MessageModel.listMessagePluginsForOperation', () => {
     });
 
     expect(rows.map((r) => r.id)).toEqual(['m-a', 'm-b']);
-    expect(rows[0]).toMatchObject({ apiName: 'writeFile', identifier: 'lobe-cloud-sandbox' });
+    expect(rows[0]).toMatchObject({ apiName: 'writeFile', identifier: 'orvilo-cloud-sandbox' });
     expect(rows[0].createdAt.getTime()).toBe(T1.getTime());
   });
 
@@ -268,8 +266,18 @@ describe('MessageModel.listMessagePluginsForOperation', () => {
           userId,
         })),
       );
-      await seedToolCall({ createdAt: T1, id: 'in-window', threadId: 'thread1', topicId: 'topic1' });
-      await seedToolCall({ createdAt: T2, id: 'in-window-2', threadId: 'thread1', topicId: 'topic1' });
+      await seedToolCall({
+        createdAt: T1,
+        id: 'in-window',
+        threadId: 'thread1',
+        topicId: 'topic1',
+      });
+      await seedToolCall({
+        createdAt: T2,
+        id: 'in-window-2',
+        threadId: 'thread1',
+        topicId: 'topic1',
+      });
       await seedToolCall({
         createdAt: new Date('2027-01-01T00:00:00.000Z'),
         id: 'hetero',

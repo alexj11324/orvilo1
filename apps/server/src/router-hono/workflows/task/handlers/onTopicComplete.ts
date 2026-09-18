@@ -7,7 +7,7 @@ import { agentOperations, taskDispatches, tasks, taskTopics } from '@/database/s
 import { getServerDB } from '@/database/server';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 
-const log = debug('lobe-server:workflows:task:on-topic-complete');
+const log = debug('orvilo-server:workflows:task:on-topic-complete');
 
 export interface OnTopicCompletePayload {
   dispatchFence?: number;

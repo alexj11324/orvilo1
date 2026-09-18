@@ -6,7 +6,7 @@ import debug from 'debug';
 import { workService } from '@/services/work';
 import { buildWorkVersionCumulativeUsage } from '@/utils/workCumulativeUsage';
 
-const log = debug('lobe-store:client-work-registration');
+const log = debug('orvilo-store:client-work-registration');
 
 interface RegisterClientWorkFromIntentParams {
   agentId?: string | null;

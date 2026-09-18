@@ -166,7 +166,7 @@ export interface SubmoduleWorkingTreePatches {
   name: string;
   /** Per-file diff blocks inside this submodule, same ordering as the parent's `patches`. */
   patches: GitWorkingTreePatch[];
-  /** Path relative to the parent repo root (e.g. `lobehub` or `packages/foo`). */
+  /** Path relative to the parent repo root (e.g. `orvilo` or `packages/foo`). */
   relativePath: string;
 }
 

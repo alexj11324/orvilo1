@@ -160,7 +160,7 @@ describe('GitStatus', () => {
           number: 123,
           state: 'OPEN',
           title: 'Improve worktree handling',
-          url: 'https://github.com/lobehub/lobehub/pull/123',
+          url: 'https://github.com/alexj11324/orvilo1/pull/123',
         },
         pullRequestStatus: 'ok',
       },
@@ -183,7 +183,7 @@ describe('GitStatus', () => {
     // whole cluster used to collapse, while the sidebar hover card (which reads
     // the same persisted snapshot, no probe) still showed branch + PR.
     const fallbackGit = {
-      activeWorktree: '/tmp/lobehub-wt-subtask',
+      activeWorktree: '/tmp/orvilo-wt-subtask',
       branch: 'feat/task-list-subtask-nesting',
       isWorktree: true,
     };
@@ -203,7 +203,7 @@ describe('GitStatus', () => {
           isGithub
           agentId="agent-1"
           fallbackGit={fallbackGit}
-          path="/tmp/lobehub-wt-subtask"
+          path="/tmp/orvilo-wt-subtask"
           sourcePath="/repo"
         />,
       );
@@ -221,13 +221,13 @@ describe('GitStatus', () => {
           isGithub
           agentId="agent-1"
           fallbackGit={fallbackGit}
-          path="/tmp/lobehub-wt-subtask"
+          path="/tmp/orvilo-wt-subtask"
         />,
       );
 
       expect(gitHookMocks.useFetchGitLinkedPR).toHaveBeenCalledWith(
         undefined,
-        '/tmp/lobehub-wt-subtask',
+        '/tmp/orvilo-wt-subtask',
         undefined,
         true,
       );
@@ -244,7 +244,7 @@ describe('GitStatus', () => {
           isGithub
           agentId="agent-1"
           fallbackGit={fallbackGit}
-          path="/tmp/lobehub-wt-subtask"
+          path="/tmp/orvilo-wt-subtask"
         />,
       );
 
@@ -253,7 +253,7 @@ describe('GitStatus', () => {
 
     it('renders nothing when the topic carries no git snapshot either', () => {
       const { container } = render(
-        <GitStatus isGithub agentId="agent-1" path="/tmp/lobehub-wt-subtask" />,
+        <GitStatus isGithub agentId="agent-1" path="/tmp/orvilo-wt-subtask" />,
       );
 
       expect(container).toBeEmptyDOMElement();
@@ -265,14 +265,14 @@ describe('GitStatus', () => {
           isGithub
           agentId="agent-1"
           fallbackGit={fallbackGit}
-          path="/tmp/lobehub-wt-subtask"
+          path="/tmp/orvilo-wt-subtask"
         />,
       );
 
       // Left enabled, the diff poll alone keeps shelling out to git every 10s
       // against a path that cannot be read.
       expect(gitHookMocks.useReviewPatches).toHaveBeenCalledWith(
-        '/tmp/lobehub-wt-subtask',
+        '/tmp/orvilo-wt-subtask',
         'unstaged',
         undefined,
         undefined,
@@ -295,7 +295,7 @@ describe('GitStatus', () => {
           agentId="agent-1"
           deviceId="device-1"
           fallbackGit={fallbackGit}
-          path="/tmp/lobehub-wt-subtask"
+          path="/tmp/orvilo-wt-subtask"
         />,
       );
 
@@ -303,7 +303,7 @@ describe('GitStatus', () => {
       // …and the reads stay enabled, so the cluster comes back on reconnect.
       expect(gitHookMocks.useFetchGitWorktrees).toHaveBeenCalledWith(
         'device-1',
-        '/tmp/lobehub-wt-subtask',
+        '/tmp/orvilo-wt-subtask',
       );
     });
 
@@ -316,7 +316,7 @@ describe('GitStatus', () => {
           agentId="agent-1"
           deviceId="device-1"
           fallbackGit={fallbackGit}
-          path="/tmp/lobehub-wt-subtask"
+          path="/tmp/orvilo-wt-subtask"
         />,
       );
 

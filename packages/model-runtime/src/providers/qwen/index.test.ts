@@ -2,9 +2,9 @@
 import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeQwenAI, params } from './index';
+import { OrviloQwenAI, params } from './index';
 
 // Avoid pulling the real business model-config module (it may resolve to a
 // server-only implementation under pnpm overrides)
@@ -16,7 +16,7 @@ const provider = ModelProvider.Qwen;
 const defaultBaseURL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
 testProvider({
-  Runtime: LobeQwenAI,
+  Runtime: OrviloQwenAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_QWEN_CHAT_COMPLETION',
@@ -26,17 +26,17 @@ testProvider({
   },
 });
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeQwenAI({ apiKey: 'test' });
+  instance = new OrviloQwenAI({ apiKey: 'test' });
 
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
     new ReadableStream() as any,
   );
 });
 
-describe('LobeQwenAI - custom features', () => {
+describe('OrviloQwenAI - custom features', () => {
   describe('prompt_cache_key', () => {
     it('should not inject Moonshot prompt_cache_key for Kimi model ids', async () => {
       await instance.chat(

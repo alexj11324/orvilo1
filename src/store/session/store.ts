@@ -44,7 +44,7 @@ const devtools = createDevtools('session');
 export const useSessionStore = createWithEqualityFn<SessionStore>()(
   subscribeWithSelector(
     devtools(createStore, {
-      name: 'LobeChat_Session' + (isDev ? '_DEV' : ''),
+      name: 'Orvilo_Session' + (isDev ? '_DEV' : ''),
     }),
   ),
   shallow,

@@ -1,4 +1,4 @@
-export { LobeActivatorManifest } from './manifest';
+export { OrviloActivatorManifest } from './manifest';
 export { systemPrompt } from './systemRole';
 export {
   type ActivatedToolInfo,
@@ -8,5 +8,5 @@ export {
   type ActivateToolsParams,
   type ActivateToolsState,
   ActivatorApiName,
-  LobeActivatorIdentifier,
+  OrviloActivatorIdentifier,
 } from './types';

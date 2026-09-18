@@ -12,11 +12,11 @@ import type { TaskInstructionSynthesis, TaskIntentAnalysis } from '@orvilo/types
 import debug from 'debug';
 import { z } from 'zod';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 import { resolveGoalModelConfig } from '@/server/services/goal/modelConfig';
 
-const log = debug('lobe-server:task-intent');
+const log = debug('orvilo-server:task-intent');
 
 const MAX_CLARIFICATIONS = 3;
 
@@ -59,7 +59,7 @@ const synthesisSchema = z.object({
  */
 export class TaskIntentService {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}

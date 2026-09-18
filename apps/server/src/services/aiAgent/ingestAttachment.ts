@@ -6,7 +6,7 @@ import { businessFileUploadCheck } from '@/business/server/lambda-routers/file';
 import type { Transaction } from '@/database/type';
 import type { FileService } from '@/server/services/file';
 
-const log = debug('lobe-server:file-ingestion');
+const log = debug('orvilo-server:file-ingestion');
 
 // --------------- Constants ---------------
 

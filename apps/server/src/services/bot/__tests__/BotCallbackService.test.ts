@@ -90,6 +90,7 @@ vi.mock('@/database/models/agentBotProvider', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       findById: mockFindById,
       update: mockTopicUpdate,
     };

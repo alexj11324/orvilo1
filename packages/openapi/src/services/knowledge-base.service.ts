@@ -3,7 +3,7 @@ import { and, count, desc, eq, ilike, or } from 'drizzle-orm';
 import { KnowledgeBaseModel } from '@/database/models/knowledgeBase';
 import type { KnowledgeBaseItem } from '@/database/schemas';
 import { knowledgeBases } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { FileService as CoreFileService } from '@/server/services/file';
 
 import { BaseService } from '../common/base.service';
@@ -28,7 +28,7 @@ import type {
 export class KnowledgeBaseService extends BaseService {
   private knowledgeBaseModel: KnowledgeBaseModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     super(db, userId, workspaceId);
     this.knowledgeBaseModel = new KnowledgeBaseModel(db, userId, workspaceId);
   }

@@ -61,9 +61,9 @@ APP="$(responsible_app)"
 
 # --- layer 1: TCC permission via CGPreflightScreenCaptureAccess (no prompt, no display) ---
 perm="unknown"
-bin="${TMPDIR:-/tmp}/lobehub-scrcheck"
+bin="${TMPDIR:-/tmp}/orvilo-scrcheck"
 if [[ ! -x "$bin" ]] && command -v clang >/dev/null 2>&1; then
-  src="${TMPDIR:-/tmp}/lobehub-scrcheck.c"
+  src="${TMPDIR:-/tmp}/orvilo-scrcheck.c"
   cat > "$src" <<'EOF'
 #include <CoreGraphics/CoreGraphics.h>
 #include <stdio.h>
@@ -86,8 +86,8 @@ fi
 # lit chrome (menu bar / cursor / window), a blocked/asleep capture is uniformly ~0.
 capture="unknown"; maxv=""
 if command -v screencapture >/dev/null 2>&1; then
-  shot="${TMPDIR:-/tmp}/lobehub-scrlive.png"
-  small="${TMPDIR:-/tmp}/lobehub-scrlive.bmp"
+  shot="${TMPDIR:-/tmp}/orvilo-scrlive.png"
+  small="${TMPDIR:-/tmp}/orvilo-scrlive.bmp"
   rm -f "$shot" "$small"
   screencapture -x "$shot" 2>/dev/null || true
   if [[ -s "$shot" ]] && command -v sips >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then

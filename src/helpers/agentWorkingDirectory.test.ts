@@ -1,4 +1,4 @@
-import type { LobeAgentAgencyConfig } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -8,7 +8,7 @@ import {
   resolveTargetDeviceId,
 } from './agentWorkingDirectory';
 
-const cfg = (over: Partial<LobeAgentAgencyConfig> = {}): LobeAgentAgencyConfig => ({ ...over });
+const cfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({ ...over });
 
 describe('resolveTargetDeviceId', () => {
   it('uses boundDeviceId when executionTarget is `device`', () => {

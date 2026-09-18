@@ -1,25 +1,25 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeSearch1API, params } from './index';
+import { OrviloSearch1API, params } from './index';
 
 testProvider({
   provider: 'search1api',
   defaultBaseURL: 'https://api.search1api.com/v1',
   chatModel: 'gpt-4o-mini',
-  Runtime: LobeSearch1API,
+  Runtime: OrviloSearch1API,
   chatDebugEnv: 'DEBUG_SEARCH1API_CHAT_COMPLETION',
 });
 
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeSearch1API({ apiKey: 'test' });
+  instance = new OrviloSearch1API({ apiKey: 'test' });
 
   // Use vi.spyOn to mock chat.completions.create method
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -31,7 +31,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeSearch1API - custom features', () => {
+describe('OrviloSearch1API - custom features', () => {
   describe('Debug Configuration', () => {
     it('should disable debug by default', () => {
       delete process.env.DEBUG_SEARCH1API_CHAT_COMPLETION;
@@ -753,7 +753,7 @@ describe('LobeSearch1API - custom features', () => {
       const models = await params.models({ client: mockClient as any });
 
       expect(models).toHaveLength(1);
-      // Should have properties from LOBE_DEFAULT_MODEL_LIST
+      // Should have properties from ORVILO_DEFAULT_MODEL_LIST
       expect(models[0].displayName).toBeDefined();
       expect(models[0].contextWindowTokens).toBeDefined();
       expect(models[0].functionCall).toBe(true);
@@ -771,7 +771,7 @@ describe('LobeSearch1API - custom features', () => {
 
       expect(models).toHaveLength(1);
       expect(models[0].id).toBe('GPT-4O-MINI');
-      // Should match with lowercase in LOBE_DEFAULT_MODEL_LIST
+      // Should match with lowercase in ORVILO_DEFAULT_MODEL_LIST
       expect(models[0].displayName).toBeDefined();
       expect(models[0].enabled).toBeDefined();
     });
@@ -1080,13 +1080,13 @@ describe('LobeSearch1API - custom features', () => {
 
   describe('Runtime instantiation', () => {
     it('should create runtime instance with apiKey', () => {
-      const runtime = new LobeSearch1API({ apiKey: 'test-key' });
+      const runtime = new OrviloSearch1API({ apiKey: 'test-key' });
       expect(runtime).toBeDefined();
-      expect(runtime).toBeInstanceOf(LobeSearch1API);
+      expect(runtime).toBeInstanceOf(OrviloSearch1API);
     });
 
     it('should create runtime instance with baseURL', () => {
-      const runtime = new LobeSearch1API({
+      const runtime = new OrviloSearch1API({
         apiKey: 'test-key',
         baseURL: 'https://custom.api.com/v1',
       });
@@ -1094,7 +1094,7 @@ describe('LobeSearch1API - custom features', () => {
     });
 
     it('should create runtime instance with all options', () => {
-      const runtime = new LobeSearch1API({
+      const runtime = new OrviloSearch1API({
         apiKey: 'test-key',
         baseURL: 'https://custom.api.com/v1',
         dangerouslyAllowBrowser: true,

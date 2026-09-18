@@ -11,7 +11,7 @@ const request = ({
   if (cookie) headers.set('cookie', cookie);
   if (language) headers.set('accept-language', language);
 
-  return new Request(url ?? 'https://lobehub.com/share/t/abc', { headers });
+  return new Request(url ?? 'https://orvilo.aspectlylabs.com/share/t/abc', { headers });
 };
 
 describe('resolveRequestLocale', () => {
@@ -19,29 +19,29 @@ describe('resolveRequestLocale', () => {
     expect(
       resolveRequestLocale(
         request({
-          cookie: 'LOBE_LOCALE=ja-JP',
+          cookie: 'ORVILO_LOCALE=ja-JP',
           language: 'ko-KR',
-          url: 'https://lobehub.com/share/t/abc?hl=zh-CN',
+          url: 'https://orvilo.aspectlylabs.com/share/t/abc?hl=zh-CN',
         }),
       ),
     ).toBe('zh-CN');
   });
 
   it('prefers the cookie over the browser', () => {
-    expect(resolveRequestLocale(request({ cookie: 'LOBE_LOCALE=ja-JP', language: 'ko-KR' }))).toBe(
-      'ja-JP',
-    );
+    expect(
+      resolveRequestLocale(request({ cookie: 'ORVILO_LOCALE=ja-JP', language: 'ko-KR' })),
+    ).toBe('ja-JP');
   });
 
   it('reads the cookie among other cookies and decodes it', () => {
     expect(
-      resolveRequestLocale(request({ cookie: 'foo=1; LOBE_LOCALE=zh-CN; NEXT_LOCALE=en' })),
+      resolveRequestLocale(request({ cookie: 'foo=1; ORVILO_LOCALE=zh-CN; NEXT_LOCALE=en' })),
     ).toBe('zh-CN');
-    expect(resolveRequestLocale(request({ cookie: 'LOBE_LOCALE=zh%2DCN' }))).toBe('zh-CN');
+    expect(resolveRequestLocale(request({ cookie: 'ORVILO_LOCALE=zh%2DCN' }))).toBe('zh-CN');
   });
 
   it('survives a cookie with a malformed percent-escape', () => {
-    expect(resolveRequestLocale(request({ cookie: 'LOBE_LOCALE=%E0%A4%A' }))).toBe('en-US');
+    expect(resolveRequestLocale(request({ cookie: 'ORVILO_LOCALE=%E0%A4%A' }))).toBe('en-US');
   });
 
   it('honours Accept-Language quality weights over header order', () => {
@@ -66,21 +66,24 @@ describe('resolveRequestLocale', () => {
   it('falls back to the default for an explicit locale that is not supported', () => {
     expect(
       resolveRequestLocale(
-        request({ language: 'zh-CN', url: 'https://lobehub.com/share/t/abc?hl=klingon' }),
+        request({
+          language: 'zh-CN',
+          url: 'https://orvilo.aspectlylabs.com/share/t/abc?hl=klingon',
+        }),
       ),
     ).toBe('en-US');
     expect(
-      resolveRequestLocale(request({ cookie: 'LOBE_LOCALE=klingon', language: 'zh-CN' })),
+      resolveRequestLocale(request({ cookie: 'ORVILO_LOCALE=klingon', language: 'zh-CN' })),
     ).toBe('en-US');
   });
 
   it('defers to the browser when the explicit locale is auto', () => {
-    expect(resolveRequestLocale(request({ cookie: 'LOBE_LOCALE=auto', language: 'ja-JP' }))).toBe(
+    expect(resolveRequestLocale(request({ cookie: 'ORVILO_LOCALE=auto', language: 'ja-JP' }))).toBe(
       'ja-JP',
     );
     expect(
       resolveRequestLocale(
-        request({ language: 'ja-JP', url: 'https://lobehub.com/share/t/abc?hl=auto' }),
+        request({ language: 'ja-JP', url: 'https://orvilo.aspectlylabs.com/share/t/abc?hl=auto' }),
       ),
     ).toBe('ja-JP');
   });

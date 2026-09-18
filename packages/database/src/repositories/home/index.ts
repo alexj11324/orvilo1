@@ -16,7 +16,7 @@ import {
   sessionGroups,
   topics,
 } from '../../schemas';
-import { type LobeChatDatabase } from '../../type';
+import { type OrviloDatabase } from '../../type';
 import { sanitizeBm25Query } from '../../utils/bm25';
 import { normalizeInboxAgentMeta } from '../../utils/inboxAgent';
 import { inJsonStringArray } from '../../utils/inJsonStringArray';
@@ -43,11 +43,11 @@ export type {
 export class HomeRepository {
   private userId: string;
   private workspaceId?: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private ftsSearchCandidateSource?: FtsSearchCandidateSource;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     ftsSearchCandidateSource?: FtsSearchCandidateSource,

@@ -1,7 +1,7 @@
 import { toast } from '@lobehub/ui/base-ui';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from '@orvilo/business-const';
 import { TOPIC_TITLE_JSON_SCHEMA } from '@orvilo/prompts';
-import type { LobeUser, UIChatMessage } from '@orvilo/types';
+import type { OrviloUser, UIChatMessage } from '@orvilo/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { type Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -97,7 +97,7 @@ beforeEach(() => {
     false,
   );
   useAgentStore.setState({ agentDocumentsMap: {} });
-  useUserStore.setState({ user: { id: 'user-1' } as LobeUser });
+  useUserStore.setState({ user: { id: 'user-1' } as OrviloUser });
   useSessionStore.setState(
     {
       activeId: 'inbox',
@@ -330,7 +330,7 @@ describe('topic action', () => {
                 {
                   id: 'builder-topic',
                   model: 'glm-5.2',
-                  provider: 'lobehub',
+                  provider: 'orvilo',
                   title: 'Builder chat',
                 } as ChatTopic,
               ],
@@ -350,13 +350,13 @@ describe('topic action', () => {
       await act(async () => {
         await result.current.updateTopicModel('builder-topic', {
           model: 'deepseek-v4-flash',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
       expect(useChatStore.getState().topicDataMap[BUILDER_KEY].items[0]).toMatchObject({
         model: 'deepseek-v4-flash',
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
     });
 
@@ -369,7 +369,7 @@ describe('topic action', () => {
       await act(async () => {
         await result.current.updateTopicModel('builder-topic', {
           model: 'deepseek-v4-flash',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
@@ -393,14 +393,14 @@ describe('topic action', () => {
       await act(async () => {
         await result.current.updateTopicModel('builder-topic', {
           model: 'deepseek-v4-flash',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
       expect(spy).toHaveBeenCalledWith('builder-topic', {
         metadata: { reasoningConfig: { deepseekV4GAReasoningEffort: 'high' } },
         model: 'deepseek-v4-flash',
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
       expect(useChatStore.getState().topicDataMap[BUILDER_KEY].items[0]).toMatchObject({
         metadata: { reasoningConfig: { deepseekV4GAReasoningEffort: 'high' } },
@@ -437,14 +437,14 @@ describe('topic action', () => {
       await act(async () => {
         await result.current.updateTopicModel('builder-topic', {
           model: 'plain-model',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
       expect(spy).toHaveBeenCalledWith('builder-topic', {
         metadata: undefined,
         model: 'plain-model',
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
       expect(useChatStore.getState().topicDataMap[BUILDER_KEY].items[0].metadata).toEqual({
         workingDirectory: '/w',
@@ -2654,7 +2654,7 @@ describe('topic action', () => {
       number: 123,
       state: 'OPEN',
       title: 'fix: stop stale running topics',
-      url: 'https://github.com/lobehub/lobehub/pull/123',
+      url: 'https://github.com/alexj11324/orvilo1/pull/123',
     };
     const mergedPR = {
       ...stalePR,
@@ -2768,7 +2768,7 @@ describe('topic action', () => {
             pullRequest: {
               ...mergedPR,
               number: 456,
-              url: 'https://github.com/lobehub/lobehub/pull/456',
+              url: 'https://github.com/alexj11324/orvilo1/pull/456',
             },
             pullRequestStatus: 'ok',
           },

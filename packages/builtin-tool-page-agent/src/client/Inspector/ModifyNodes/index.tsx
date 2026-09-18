@@ -67,7 +67,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
       return (
         <div className={oneLineEllipsis}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-page-agent.apiName.modifyNodes.init')}
+            {t('builtins.orvilo-page-agent.apiName.modifyNodes.init')}
           </span>
         </div>
       );
@@ -103,7 +103,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
     return (
       <div className={oneLineEllipsis}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-page-agent.apiName.modifyNodes')}
+          {t('builtins.orvilo-page-agent.apiName.modifyNodes')}
         </span>
         {statsParts.length > 0 && (
           <>

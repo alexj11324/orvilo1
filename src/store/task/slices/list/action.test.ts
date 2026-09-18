@@ -452,7 +452,7 @@ describe('TaskListSliceAction', () => {
       useTaskStore.getState().useFetchScheduledTaskList({ limit: 50, offset: 50 });
 
       expect(useClientDataSWR).toHaveBeenCalledWith(
-        ['task:scheduledList', '__all__', 'all', { limit: 50, offset: 50 }],
+        ['task:scheduledList', '__all__', 'all', { limit: 50, offset: 50 }, 'all', 'all'],
         expect.any(Function),
         expect.any(Object),
       );
@@ -470,7 +470,7 @@ describe('TaskListSliceAction', () => {
       useTaskStore.getState().useFetchScheduledTaskList({ agentId: 'agent-1', limit: 50 });
 
       expect(useClientDataSWR).toHaveBeenCalledWith(
-        ['task:scheduledList', 'agent-1', 'all', { limit: 50, offset: undefined }],
+        ['task:scheduledList', 'agent-1', 'all', { limit: 50, offset: undefined }, 'all', 'all'],
         expect.any(Function),
         expect.any(Object),
       );
@@ -488,7 +488,14 @@ describe('TaskListSliceAction', () => {
       useTaskStore.getState().useFetchScheduledTaskList({ limit: 50, projectId: 'project-1' });
 
       expect(useClientDataSWR).toHaveBeenCalledWith(
-        ['task:scheduledList', '__project__:project-1', 'all', { limit: 50, offset: undefined }],
+        [
+          'task:scheduledList',
+          '__project__:project-1',
+          'all',
+          { limit: 50, offset: undefined },
+          'all',
+          'all',
+        ],
         expect.any(Function),
         expect.any(Object),
       );
@@ -506,9 +513,58 @@ describe('TaskListSliceAction', () => {
       useTaskStore.getState().useFetchScheduledTaskList({ limit: 50, offset: 50 });
 
       expect(vi.mocked(useClientDataSWR).mock.calls.map(([key]) => key)).toEqual([
-        ['task:scheduledList', '__all__', 'all', { limit: 5, offset: undefined }],
-        ['task:scheduledList', '__all__', 'all', { limit: 50, offset: 50 }],
+        ['task:scheduledList', '__all__', 'all', { limit: 5, offset: undefined }, 'all', 'all'],
+        ['task:scheduledList', '__all__', 'all', { limit: 50, offset: 50 }, 'all', 'all'],
       ]);
+    });
+
+    it('narrows by created-by-me scope and by status, in both key and request', async () => {
+      const { useClientDataSWR } = await import('@/libs/swr');
+      const { taskService } = await import('@/services/task');
+
+      useTaskStore.getState().useFetchScheduledTaskList({
+        limit: 25,
+        scope: 'created',
+        statuses: ['paused', 'scheduled'],
+      });
+
+      expect(useClientDataSWR).toHaveBeenCalledWith(
+        [
+          'task:scheduledList',
+          '__all__',
+          'all',
+          { limit: 25, offset: undefined },
+          'created',
+          // Sorted, so the same set in a different order is the same entry.
+          'paused,scheduled',
+        ],
+        expect.any(Function),
+        expect.any(Object),
+      );
+
+      const fetcher = vi.mocked(useClientDataSWR).mock.calls[0][1] as () => Promise<unknown>;
+      await fetcher();
+      expect(taskService.list).toHaveBeenCalledWith(
+        expect.objectContaining({
+          automated: true,
+          scope: 'created',
+          statuses: ['paused', 'scheduled'],
+        }),
+      );
+    });
+
+    it('gives two callers the same question one shared cache entry', async () => {
+      const { useClientDataSWR } = await import('@/libs/swr');
+
+      // The Automations list and the Tasks page's scheduled collection ask the
+      // same thing when no filter is on. They used to sit under separate key
+      // roots and hold two copies of one page; collapsing the roots is what
+      // makes this an equality rather than a coincidence.
+      useTaskStore.getState().useFetchScheduledTaskList({ limit: 25, offset: 0, scope: 'all' });
+      useTaskStore.getState().useFetchScheduledTaskList({ limit: 25, offset: 0 });
+
+      const keys = vi.mocked(useClientDataSWR).mock.calls.map(([key]) => key);
+      expect(keys[0]).toEqual(keys[1]);
     });
   });
 

@@ -11,6 +11,7 @@ import {
   normalizeMemoryExtractionPayload,
   type UserPaginationResult,
 } from '@/server/services/memory/userMemory/extract';
+import { filterMemoryExtractionEnabledUsers } from '@/server/services/memory/userMemory/gate';
 import type { WorkflowContext } from '@/server/workflows/context';
 import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 
@@ -100,11 +101,17 @@ export const processUsersHandler = async (
   // NOTICE: the explicit type argument keeps both ternary branches on one shape. Left to inference
   // the step returns a union, and `'cursor' in userBatch` then narrows against a member that has no
   // `cursor` at all, which erases the cursor's own type.
-  const userBatch = await runStep<UserPaginationResult>(context, getUsersStepName, () =>
-    params.userIds.length > 0
-      ? { ids: params.userIds }
-      : executor.getUsers(USER_PAGE_SIZE, userCursor),
-  );
+  const userBatch = await runStep<UserPaginationResult>(context, getUsersStepName, async () => {
+    if (params.userIds.length > 0) {
+      // Unified production gate: explicit targets that disabled memory are
+      // dropped here and re-checked per stage downstream. Paged sweeps are
+      // gated inside the user listing itself.
+      const { enabledUserIds } = await filterMemoryExtractionEnabledUsers(params.userIds);
+      return { ids: enabledUserIds };
+    }
+
+    return executor.getUsers(USER_PAGE_SIZE, userCursor);
+  });
 
   const ids = userBatch.ids;
   if (ids.length === 0) {

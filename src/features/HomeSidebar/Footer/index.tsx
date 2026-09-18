@@ -11,7 +11,6 @@ import {
   Download,
   Feather,
   FileClockIcon,
-  FlaskConical,
   Send,
   Settings2,
   SettingsIcon,
@@ -182,11 +181,7 @@ const Footer = memo(() => {
             {
               icon: <Icon icon={Download} />,
               key: 'get-app',
-              label: (
-                <WorkspaceLink escape to="/apps">
-                  {t('getApp')}
-                </WorkspaceLink>
-              ),
+              label: <WorkspaceLink to="/settings/about">{t('getApp')}</WorkspaceLink>,
             },
           ]
         : []),
@@ -200,15 +195,6 @@ const Footer = memo(() => {
                   GitHub
                 </a>
               ),
-            },
-          ]
-        : []),
-      ...(footer.showEvalEntry && footer.layout === 'compact'
-        ? [
-            {
-              icon: <Icon icon={FlaskConical} />,
-              key: 'eval',
-              label: <WorkspaceLink to="/eval">Evaluation Lab</WorkspaceLink>,
             },
           ]
         : []),
@@ -228,7 +214,6 @@ const Footer = memo(() => {
     footer.showSettingsEntry,
     footer.layout,
     footer.hideGitHub,
-    footer.showEvalEntry,
     enableBusinessFeatures,
     handleOpenChangelogModal,
     handleOpenFeedbackModal,
@@ -276,9 +261,6 @@ const Footer = memo(() => {
                 <ActionIcon icon={GithubIcon} size={16} title={'GitHub'} />
               </a>
             )}
-            <WorkspaceLink to="/eval">
-              <ActionIcon icon={FlaskConical} size={16} title="Evaluation Lab" />
-            </WorkspaceLink>
           </Flexbox>
           <ThemeButton placement={'topCenter'} size={16} />
         </Flexbox>

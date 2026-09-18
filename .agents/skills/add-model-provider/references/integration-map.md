@@ -22,7 +22,7 @@ Use this map to locate the current code. Verify paths and consumers before editi
 | New parameter controls        | `packages/model-bank/src/types/aiModel.ts`, `packages/types/src/agent/chatConfig.ts`, `src/services/chat/mecha/modelParamsResolver.ts` | Trace consumers into controls and translations; avoid changing types alone    |
 | Default list consumption      | `packages/database/src/repositories/aiInfra/index.ts`, `src/store/aiInfra/slices/aiProvider/selectors.ts`                              | Built-in order versus enabled-provider custom sort                            |
 
-Provider-specific `*_MODEL_LIST` and `*_PROXY_URL` may be consumed dynamically. Trace the configuration path before adding redundant schema entries or documenting an unsupported variable. The deprecated `LOBE_DEFAULT_MODEL_LIST` is not a substitute for the modern model map; inspect actual consumers before changing it.
+Provider-specific `*_MODEL_LIST` and `*_PROXY_URL` may be consumed dynamically. Trace the configuration path before adding redundant schema entries or documenting an unsupported variable. The deprecated `ORVILO_DEFAULT_MODEL_LIST` is not a substitute for the modern model map; inspect actual consumers before changing it.
 
 Provider description translations live in `locales/en-US/providers.json` and `locales/zh-CN/providers.json` as flat `<provider-id>.description` keys. `packages/locales/src/default/providers.ts` derives defaults from the cards and is not a per-provider manual registry. Verify these translations even if the precedent PR omitted them.
 
@@ -30,9 +30,9 @@ Provider description translations live in `locales/en-US/providers.json` and `lo
 
 Read these as evidence of different integration shapes, not as code to copy wholesale. Use the latest source and relevant official API documentation for a new provider.
 
-- [PR lobehub#17527](https://github.com/lobehub/lobehub/pull/17527), ChatGPT subscription authentication: a provider with OAuth device authorization, account metadata and Responses support. The diff also extends reasoning-signature transport and structured generation. It does not establish that all providers need OAuth, private protocol headers, or shared streaming changes. Its reported public endpoint checks are not proof of live authenticated inference.
-- [PR lobehub#13713](https://github.com/lobehub/lobehub/pull/13713), AntGroup: a conventional API-key provider using the OpenAI-compatible factory, environment bindings, separate model/provider cards and provider-specific reasoning controls. Missing runtime tests or setup documentation in an older diff do not exempt a new integration from validation or documentation.
-- [PR lobehub#19152](https://github.com/lobehub/lobehub/pull/19152), Meta: Responses-only chat and structured generation, explicit RouterRuntime registration and package export, independent provider/model branding, and deliberate list placement. This was an open PR when inspected on 2026-09-06; verify which changes exist in the checkout before reusing them. Its shared error-translation and Workbench fixes are conditional regression lessons, not files every provider must modify.
+- PR orvilo#17527, ChatGPT subscription authentication: a provider with OAuth device authorization, account metadata and Responses support. The diff also extends reasoning-signature transport and structured generation. It does not establish that all providers need OAuth, private protocol headers, or shared streaming changes. Its reported public endpoint checks are not proof of live authenticated inference.
+- PR orvilo#13713, AntGroup: a conventional API-key provider using the OpenAI-compatible factory, environment bindings, separate model/provider cards and provider-specific reasoning controls. Missing runtime tests or setup documentation in an older diff do not exempt a new integration from validation or documentation.
+- PR orvilo#19152, Meta: Responses-only chat and structured generation, explicit RouterRuntime registration and package export, independent provider/model branding, and deliberate list placement. This was an open PR when inspected on 2026-09-06; verify which changes exist in the checkout before reusing them. Its shared error-translation and Workbench fixes are conditional regression lessons, not files every provider must modify.
 
 ## Focused Regression Lessons
 

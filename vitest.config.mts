@@ -20,10 +20,7 @@ const alias = {
     __dirname,
     './packages/business/model-bank/src/model-config.ts',
   ),
-  '@orvilo/business-model-bank': resolve(
-    __dirname,
-    './packages/business/model-bank/src/index.ts',
-  ),
+  '@orvilo/business-model-bank': resolve(__dirname, './packages/business/model-bank/src/index.ts'),
   '@emoji-mart/data': resolve(__dirname, './tests/mocks/emojiMartData.mjs'),
   '@emoji-mart/react': resolve(__dirname, './tests/mocks/emojiMartReact.mjs'),
   '@/utils/client/switchLang': resolve(__dirname, './src/utils/client/switchLang'),
@@ -104,17 +101,17 @@ export default defineConfig({
      */
     {
       enforce: 'pre',
-      name: 'stub-lobehub-ui-motion-provider',
+      name: 'stub-orvilo-ui-motion-provider',
       resolveId(id, importer) {
         if (!importer || !importer.includes('/@lobehub/ui/')) return null;
         if (id.endsWith('/MotionProvider/index.mjs') || id.endsWith('/MotionProvider/index.js'))
-          return resolve(__dirname, './tests/mocks/lobehubUiMotionProvider.tsx');
+          return resolve(__dirname, './tests/mocks/orviloUiMotionProvider.tsx');
         return null;
       },
     },
     {
       enforce: 'pre',
-      name: 'fix-lobehub-fluent-emoji-style-import',
+      name: 'fix-orvilo-fluent-emoji-style-import',
       resolveId(id, importer) {
         if (!importer) return null;
 
@@ -146,7 +143,6 @@ export default defineConfig({
     alias,
     coverage: {
       exclude: [
-        // https://github.com/lobehub/lobe-chat/pull/7265
         // Vitest 4+ ships an empty `coverageConfigDefaults.exclude`; keep the previous
         // default exclusions explicitly so the coverage set does not silently grow.
         '**/node_modules/**',
@@ -213,13 +209,13 @@ export default defineConfig({
             // Dep optimization bypasses Vite plugins, so mirror the resolveId hacks here.
             plugins: [
               {
-                name: 'stub-lobehub-ui-motion-provider',
+                name: 'stub-orvilo-ui-motion-provider',
                 resolveId(source: string, importer: string | undefined) {
                   if (
                     /MotionProvider\/index\.m?js$/.test(source) &&
                     importer?.includes('/@lobehub/ui/')
                   ) {
-                    return resolve(__dirname, './tests/mocks/lobehubUiMotionProvider.tsx');
+                    return resolve(__dirname, './tests/mocks/orviloUiMotionProvider.tsx');
                   }
                   if (
                     source === './style/index.js' &&

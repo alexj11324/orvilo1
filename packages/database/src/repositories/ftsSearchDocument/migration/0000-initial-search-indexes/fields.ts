@@ -1,20 +1,20 @@
-export const mixedText = { analyzer: 'lobehub_icu_english', type: 'text' } as const;
-export const memoryText = { analyzer: 'lobehub_cjk_bigram_english', type: 'text' } as const;
+export const mixedText = { analyzer: 'orvilo_icu_english', type: 'text' } as const;
+export const memoryText = { analyzer: 'orvilo_cjk_bigram_english', type: 'text' } as const;
 export const memoryTextWithRaw = {
-  analyzer: 'lobehub_cjk_bigram_english',
+  analyzer: 'orvilo_cjk_bigram_english',
   fields: { raw: { ignore_above: 256, type: 'keyword' } },
   type: 'text',
 } as const;
 export const fileNameText = {
-  analyzer: 'lobehub_filename',
+  analyzer: 'orvilo_filename',
   fields: {
     raw: { ignore_above: 256, type: 'keyword' },
-    words: { analyzer: 'lobehub_icu', type: 'text' },
+    words: { analyzer: 'orvilo_icu', type: 'text' },
   },
   type: 'text',
 } as const;
 export const icuText = {
-  analyzer: 'lobehub_icu',
+  analyzer: 'orvilo_icu',
   fields: { raw: { ignore_above: 256, type: 'keyword' } },
   type: 'text',
 } as const;

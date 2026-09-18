@@ -9,7 +9,7 @@ import { FileS3 } from '@/server/modules/S3';
 const compressZstd = promisify(zstdCompress);
 const decompressZstd = promisify(zstdDecompress);
 
-const log = debug('lobe-server:goal-tracing:s3');
+const log = debug('orvilo-server:goal-tracing:s3');
 
 const TRACE_PREFIX = 'goal-traces';
 const TRAJECTORY_SUFFIX = '.json.zst';

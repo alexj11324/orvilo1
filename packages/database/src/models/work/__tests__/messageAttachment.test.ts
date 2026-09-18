@@ -48,7 +48,7 @@ describe('MessageModel · work summary attachment', () => {
       changeType: 'created',
       rootOperationId: 'op-root',
       toolName: 'createTask',
-      toolIdentifier: 'lobe-task',
+      toolIdentifier: 'orvilo-task',
       messageId: 'msg-tool',
       toolCallId: 'tool-call-create',
       taskId: task.id,

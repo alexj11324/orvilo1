@@ -1,7 +1,7 @@
 import {
   AgentTransferJobModel,
   drainAgentHistoryJob,
-  type LobeChatDatabase,
+  type OrviloDatabase,
 } from '@orvilo/database';
 
 /**
@@ -27,7 +27,7 @@ const RETRY_DELAY_MS = 5000;
 
 const running = new Set<string>();
 
-const drainWithRetry = async (db: LobeChatDatabase, jobId: string): Promise<void> => {
+const drainWithRetry = async (db: OrviloDatabase, jobId: string): Promise<void> => {
   try {
     // Type-dispatching drain: the same runner serves transfer and copy jobs.
     await drainAgentHistoryJob(db, jobId);
@@ -40,7 +40,7 @@ const drainWithRetry = async (db: LobeChatDatabase, jobId: string): Promise<void
   }
 };
 
-export const startAgentTransferJob = (db: LobeChatDatabase, jobId: string): void => {
+export const startAgentTransferJob = (db: OrviloDatabase, jobId: string): void => {
   if (running.has(jobId)) return;
   running.add(jobId);
 
@@ -50,7 +50,7 @@ export const startAgentTransferJob = (db: LobeChatDatabase, jobId: string): void
 };
 
 export const prioritizeAgentTransferTopic = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   topicId: string,
 ): Promise<boolean> => {
   const flagged = await AgentTransferJobModel.prioritizeTopic(db, topicId);
@@ -62,7 +62,7 @@ export const prioritizeAgentTransferTopic = async (
 };
 
 /** Re-arm jobs left over from a restart. Callers may invoke this at boot. */
-export const resumePendingAgentTransferJobs = async (db: LobeChatDatabase): Promise<void> => {
+export const resumePendingAgentTransferJobs = async (db: OrviloDatabase): Promise<void> => {
   const jobIds = await AgentTransferJobModel.listPendingJobIds(db);
   for (const jobId of jobIds) startAgentTransferJob(db, jobId);
 };

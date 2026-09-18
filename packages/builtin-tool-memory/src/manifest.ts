@@ -14,7 +14,7 @@ import type { JSONSchema7 } from 'json-schema';
 import { systemPrompt } from './systemRole';
 import { MemoryApiName } from './types';
 
-export const MemoryIdentifier = 'lobe-user-memory';
+export const MemoryIdentifier = 'orvilo-user-memory';
 
 const timeIntentSelectorEnum = [
   'today',
@@ -997,7 +997,7 @@ export const MemoryManifest: BuiltinToolManifest = {
       },
     },
   ],
-  identifier: 'lobe-user-memory',
+  identifier: 'orvilo-user-memory',
   meta: {
     avatar: '🧠',
     description:

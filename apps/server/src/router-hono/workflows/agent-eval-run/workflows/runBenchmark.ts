@@ -7,7 +7,7 @@ import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/ut
 import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
-const log = debug('lobe-server:workflows:run-benchmark');
+const log = debug('orvilo-server:workflows:run-benchmark');
 
 /**
  * Run benchmark workflow - entry point for agent eval run execution

@@ -38,7 +38,7 @@ function systemctl(args: string[], stdio: 'pipe' | 'inherit' = 'pipe'): string {
 
 function getUserServiceDir(): string {
   return (
-    process.env.LOBEHUB_CONNECT_SERVICE_UNIT_DIR ||
+    process.env.ORVILO_CONNECT_SERVICE_UNIT_DIR ||
     path.join(os.homedir(), '.config', 'systemd', 'user')
   );
 }
@@ -87,7 +87,7 @@ function renderUnit(): string {
     `WorkingDirectory=${homeDir}`,
     `EnvironmentFile=${envFilePath}`,
     `Environment=HOME=${escapeSystemdEnvValue(homeDir)}`,
-    'Environment=LOBEHUB_CONNECT_SERVICE=1',
+    'Environment=ORVILO_CONNECT_SERVICE=1',
     `ExecStart=${execStart}`,
     `StandardOutput=append:${logPath}`,
     `StandardError=append:${logPath}`,
@@ -165,7 +165,7 @@ function assertNoConnectDaemonRunning(): void {
 }
 
 function assertConnectServiceAuthAvailable(): void {
-  if (process.env.LOBEHUB_JWT || readCliApiKeyEnv() || loadCredentials()) return;
+  if (process.env.ORVILO_JWT || readCliApiKeyEnv() || loadCredentials()) return;
 
   throw new Error(
     `No authentication found. Run '${CLI_PRIMARY_BIN} login' first, or set ${CLI_API_KEY_ENV} before starting the connect service.`,

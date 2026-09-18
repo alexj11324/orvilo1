@@ -1,8 +1,8 @@
 import type {
   AgentProfile,
-  LobeAgentAgencyConfig,
-  LobeAgentChatConfig,
-  LobeAgentTTSConfig,
+  OrviloAgentAgencyConfig,
+  OrviloAgentChatConfig,
+  OrviloAgentTTSConfig,
 } from '@orvilo/types';
 import { AgentChatConfigSchema } from '@orvilo/types';
 import { isNotNull, isNull } from 'drizzle-orm';
@@ -80,15 +80,15 @@ export const agents = pgTable(
       .notNull(),
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
 
-    agencyConfig: jsonb('agency_config').$type<LobeAgentAgencyConfig>(),
-    chatConfig: jsonb('chat_config').$type<LobeAgentChatConfig>(),
+    agencyConfig: jsonb('agency_config').$type<OrviloAgentAgencyConfig>(),
+    chatConfig: jsonb('chat_config').$type<OrviloAgentChatConfig>(),
 
     fewShots: jsonb('few_shots'),
     model: text('model'),
     params: jsonb('params').default({}),
     provider: text('provider'),
     systemRole: text('system_role'),
-    tts: jsonb('tts').$type<LobeAgentTTSConfig>(),
+    tts: jsonb('tts').$type<OrviloAgentTTSConfig>(),
 
     virtual: boolean('virtual').default(false),
     pinned: boolean('pinned'),
@@ -130,7 +130,7 @@ export const agents = pgTable(
 
 /** @deprecated Use CreateAgentSchema from @orvilo/types instead */
 export const insertAgentSchema = createInsertSchema(agents, {
-  agencyConfig: z.custom<LobeAgentAgencyConfig>().nullish(),
+  agencyConfig: z.custom<OrviloAgentAgencyConfig>().nullish(),
   // Override chatConfig type to use the proper schema
   chatConfig: AgentChatConfigSchema.nullish(),
   // See insertSessionGroupSchema: Zod 4 + drizzle-zod text-enum inference pollution.

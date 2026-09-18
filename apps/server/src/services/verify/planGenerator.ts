@@ -16,12 +16,12 @@ import { VerifyCriterionModel } from '@/database/models/verifyCriterion';
 import { VerifyRubricModel } from '@/database/models/verifyRubric';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { VerifyCriterionItem } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { RawGeneratedCriteriaSchema } from './schema';
 
-const log = debug('lobe-server:verify-plan-generator');
+const log = debug('orvilo-server:verify-plan-generator');
 
 const DEFAULT_MAX_AI_CRITERIA = 4;
 
@@ -131,7 +131,7 @@ const criterionToCheckItem = (
 });
 
 export class VerifyPlanGeneratorService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly criterionModel: VerifyCriterionModel;
   private readonly rubricModel: VerifyRubricModel;
@@ -146,7 +146,7 @@ export class VerifyPlanGeneratorService {
   private readonly callerAgentVisibility?: 'private' | 'public' | null;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     callerAgentVisibility?: 'private' | 'public' | null,

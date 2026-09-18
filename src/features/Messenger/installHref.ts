@@ -2,7 +2,7 @@ import urlJoin from 'url-join';
 
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 
-/** Platforms whose "Connect" flow starts at the LobeHub OAuth install endpoint. */
+/** Platforms whose "Connect" flow starts at the Orvilo OAuth install endpoint. */
 export type MessengerOAuthInstallPlatform = 'discord' | 'slack';
 
 const MESSENGER_INSTALL_PATHS: Record<MessengerOAuthInstallPlatform, string> = {

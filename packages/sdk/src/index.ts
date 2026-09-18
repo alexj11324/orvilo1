@@ -1,30 +1,30 @@
 import type { Config } from './generated/client';
 import { createClient, createConfig } from './generated/client';
-import { LobeHub } from './generated/sdk.gen';
+import { Orvilo } from './generated/sdk.gen';
 
 export const DEFAULT_BASE_URL = 'https://orvilo.aspectlylabs.com';
 
-export interface LobeHubOptions extends Omit<Config, 'auth' | 'baseUrl'> {
-  /** LobeHub API Key (`sk-lh-...`) or an OIDC JWT */
+export interface OrviloOptions extends Omit<Config, 'auth' | 'baseUrl'> {
+  /** Orvilo API Key (`sk-ov-...`) or an OIDC JWT */
   apiKey: string;
-  /** API origin, defaults to LobeHub Cloud (`https://orvilo.aspectlylabs.com`) */
+  /** API origin, defaults to Orvilo Cloud (`https://orvilo.aspectlylabs.com`) */
   baseURL?: string;
 }
 
 /**
- * Create a resource-style LobeHub API client: `lobehub.agents.list()`,
- * `lobehub.files.uploadBatch()`, `lobehub.users.me()`, …
+ * Create a resource-style Orvilo API client: `orvilo.agents.list()`,
+ * `orvilo.files.uploadBatch()`, `orvilo.users.me()`, …
  *
  * Resources, methods, and schemas are generated from
  * `packages/openapi/openapi.yml` — run `bun generate` after the spec changes.
  */
-export const createLobeHub = (options: LobeHubOptions): LobeHub => {
+export const createOrvilo = (options: OrviloOptions): Orvilo => {
   const { apiKey, baseURL = DEFAULT_BASE_URL, ...clientConfig } = options;
   const config: Config = { ...clientConfig, auth: () => apiKey, baseUrl: baseURL };
 
-  return new LobeHub({ client: createClient(createConfig(config)) });
+  return new Orvilo({ client: createClient(createConfig(config)) });
 };
 
 export type { Client, Config } from './generated/client';
-export { LobeHub } from './generated/sdk.gen';
+export { Orvilo } from './generated/sdk.gen';
 export type * from './generated/types.gen';

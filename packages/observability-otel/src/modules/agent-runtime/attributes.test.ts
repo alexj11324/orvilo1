@@ -33,8 +33,8 @@ describe('agent-runtime attribute builders', () => {
       'gen_ai.provider.name': 'openai',
       'gen_ai.request.model': 'gpt-5',
       'gen_ai.conversation.id': 'topic_abc',
-      'lobehub.agent.operation.id': 'op_xyz',
-      'lobehub.agent.step.index': 0,
+      'orvilo.agent.operation.id': 'op_xyz',
+      'orvilo.agent.step.index': 0,
     });
     expect(attrs).not.toHaveProperty('gen_ai.agent.description');
   });
@@ -50,8 +50,8 @@ describe('agent-runtime attribute builders', () => {
     expect(attrs).toEqual({
       'gen_ai.usage.input_tokens': 1000,
       'gen_ai.usage.output_tokens': 200,
-      'lobehub.agent.step.count': 5,
-      'lobehub.agent.completion_reason': 'done',
+      'orvilo.agent.step.count': 5,
+      'orvilo.agent.completion_reason': 'done',
     });
   });
 
@@ -111,9 +111,9 @@ describe('agent-runtime attribute builders', () => {
       'gen_ai.tool.name': 'web_search',
       'gen_ai.tool.type': 'function',
       'gen_ai.tool.call.id': 'call_42',
-      'lobehub.tool.source': 'builtin',
-      'lobehub.agent.operation.id': 'op_xyz',
-      'lobehub.agent.step.index': 1,
+      'orvilo.tool.source': 'builtin',
+      'orvilo.agent.operation.id': 'op_xyz',
+      'orvilo.agent.step.index': 1,
     });
   });
 
@@ -124,8 +124,8 @@ describe('agent-runtime attribute builders', () => {
     });
 
     expect(attrs).toEqual({
-      'lobehub.tool.success': false,
-      'lobehub.tool.attempts': 2,
+      'orvilo.tool.success': false,
+      'orvilo.tool.attempts': 2,
     });
   });
 
@@ -144,19 +144,19 @@ describe('agent-runtime attribute builders', () => {
     });
 
     expect(attrs).toMatchObject({
-      'lobehub.context.message_count': 12,
-      'lobehub.context.knowledge_injected': true,
-      'lobehub.context.knowledge_count': 3,
-      'lobehub.context.history_compressed': false,
-      'lobehub.context.memory_injected': true,
-      'lobehub.context.system_role_length': 1024,
-      'lobehub.context.tool_count': 7,
-      'lobehub.context.has_images': true,
-      'lobehub.agent.operation.id': 'op_xyz',
-      'lobehub.agent.step.index': 0,
+      'orvilo.context.message_count': 12,
+      'orvilo.context.knowledge_injected': true,
+      'orvilo.context.knowledge_count': 3,
+      'orvilo.context.history_compressed': false,
+      'orvilo.context.memory_injected': true,
+      'orvilo.context.system_role_length': 1024,
+      'orvilo.context.tool_count': 7,
+      'orvilo.context.has_images': true,
+      'orvilo.agent.operation.id': 'op_xyz',
+      'orvilo.agent.step.index': 0,
     });
-    expect(attrs).not.toHaveProperty('lobehub.context.token_usage');
-    expect(attrs).not.toHaveProperty('lobehub.context.window_ratio');
+    expect(attrs).not.toHaveProperty('orvilo.context.token_usage');
+    expect(attrs).not.toHaveProperty('orvilo.context.window_ratio');
   });
 
   it('formats span names per gen_ai convention', () => {

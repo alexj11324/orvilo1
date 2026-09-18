@@ -2,7 +2,7 @@ import { ModelProvider } from 'model-bank';
 
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 
-export const LobeAntGroupAI = createOpenAICompatibleRuntime({
+export const OrviloAntGroupAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.ant-ling.com/v1',
   chatCompletion: {
     handlePayload: (payload) => {

@@ -8,13 +8,13 @@ import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyRubricModel } from '@/database/models/verifyRubric';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { VerifyCheckResultItem } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { AcceptanceService } from './acceptanceService';
 import { VerifyStatusService } from './statusService';
 
-const log = debug('lobe-server:verify-repair');
+const log = debug('orvilo-server:verify-repair');
 
 /**
  * Resolve the run's repair-round cap. A per-run override on the session metadata
@@ -25,7 +25,7 @@ const log = debug('lobe-server:verify-repair');
  * agent-generated / rubric-less plans.
  */
 const resolveMaxRepairRounds = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   plan: VerifyCheckItem[],
   metadata: VerifyRunMetadata | null | undefined,
@@ -83,7 +83,7 @@ const countRepairRounds = async (
  */
 export const createRepairRunner = (params: {
   agentId?: string | null;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   maxRepairRounds: number;
   model?: string | null;
   provider?: string | null;
@@ -164,7 +164,7 @@ export const createRepairRunner = (params: {
  * the run's own agent/topic/model so the fix is produced by the original agent.
  */
 export const maybeAutoRepair = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   operationId: string,
   workspaceId?: string,
@@ -239,7 +239,7 @@ export class VerifyRepairService {
   private readonly resultModel: VerifyCheckResultModel;
   private readonly statusService: VerifyStatusService;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.messageModel = new MessageModel(db, userId, workspaceId);
     this.runModel = new VerifyRunModel(db, userId, workspaceId);
     this.resultModel = new VerifyCheckResultModel(db, userId, workspaceId);

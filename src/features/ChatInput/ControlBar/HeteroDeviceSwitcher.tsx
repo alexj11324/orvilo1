@@ -421,7 +421,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
         if (isDesktop && deviceId === currentDeviceId) {
           await useElectronStore.getState().connectGateway();
         } else {
-          window.location.href = `lobehub://device/reconnect?deviceId=${encodeURIComponent(deviceId)}`;
+          window.location.href = `orvilo://device/reconnect?deviceId=${encodeURIComponent(deviceId)}`;
         }
 
         // The deep link crosses browser → desktop → gateway → server, so give

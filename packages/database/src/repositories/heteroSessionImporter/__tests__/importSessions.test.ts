@@ -12,12 +12,12 @@ import {
   users,
   workspaces,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { HeteroSessionImporterRepo } from '../index';
 
 const userId = 'session-importer-user';
 const agentId = 'session-importer-agent';
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 
 const basePayload = (): HeteroSessionImportPayload => ({
   messages: [
@@ -390,7 +390,7 @@ describe('HeteroSessionImporterRepo.importSessions', () => {
   });
 
   describe('getImportStatus', () => {
-    it('reports imported topics and flags LobeHub-originated sessions as linked', async () => {
+    it('reports imported topics and flags Orvilo-originated sessions as linked', async () => {
       const repo = new HeteroSessionImporterRepo(serverDB, userId);
       await repo.importSessions({ agentId, sessions: [basePayload()] });
       // a live-run topic carries heteroSessionId in metadata but has no import clientId

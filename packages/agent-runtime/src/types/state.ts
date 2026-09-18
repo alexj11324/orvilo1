@@ -20,8 +20,8 @@ import type {
   EvalToolForwardingConfig,
   ExecutionPlan,
   ExpertiseContextSnapshot,
-  LobeAgentChatConfig,
-  LobeAgentConfig,
+  OrviloAgentChatConfig,
+  OrviloAgentConfig,
   SecurityBlacklistConfig,
   SerializedAgentHook,
   UserInterventionConfig,
@@ -183,7 +183,7 @@ export interface SearchDecisionSnapshot {
  * fields and the sub-agent override are run-level facts the host stamps on
  * top of the stored agent config.
  */
-export interface RunAgentSnapshot extends Partial<LobeAgentConfig> {
+export interface RunAgentSnapshot extends Partial<OrviloAgentConfig> {
   /** Agent-row description; surfaces in tracing spans and skill placeholders. */
   description?: string | null;
   id?: string;
@@ -193,7 +193,7 @@ export interface RunAgentSnapshot extends Partial<LobeAgentConfig> {
    * chatConfig so explicit sub-agent reasoning choices can be re-applied over
    * the user's model-instance defaults.
    */
-  subAgentChatConfigOverride?: Partial<LobeAgentChatConfig>;
+  subAgentChatConfigOverride?: Partial<OrviloAgentChatConfig>;
 }
 
 /**

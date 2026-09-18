@@ -30,7 +30,7 @@ export class SkillReferenceResolver {
       return {
         id: agentSkill.id,
         kind: 'agent-skill',
-        rootPath: `./lobe/skills/agent/skills/${agentSkill.id}`,
+        rootPath: `./orvilo/skills/agent/skills/${agentSkill.id}`,
         scope: 'agent',
         writable: true,
       };

@@ -1,7 +1,7 @@
 import { TwitterInspector } from '@orvilo/shared-tool-ui/inspectors';
 import type { BuiltinInspector } from '@orvilo/types';
 
-// LobeHub X (Twitter) skill: tool calls arrive with `identifier='twitter'`
+// Orvilo X (Twitter) skill: tool calls arrive with `identifier='twitter'`
 // and bare verb_noun apiNames (`get_tweet`, `get_user`, `post_tweet`,
 // `search_tweets`, …). The MCP surface isn't fixed in this repo, so we
 // register the inspector through a Proxy that returns it for any apiName

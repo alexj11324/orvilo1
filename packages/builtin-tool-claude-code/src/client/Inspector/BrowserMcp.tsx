@@ -122,8 +122,8 @@ const getChipValue = (api: BrowserMcpApi, args: BrowserMcpArgs): string => {
 };
 
 /**
- * One inspector for every `mcp__lobe_cc__browser_*` call. Without it the row
- * falls back to the raw wire name (`claude-code > mcp__lobe_cc__browser_navigate`),
+ * One inspector for every `mcp__orvilo_cc__browser_*` call. Without it the row
+ * falls back to the raw wire name (`claude-code > mcp__orvilo_cc__browser_navigate`),
  * which reads like an internal identifier rather than "the agent opened a page".
  */
 const BrowserMcpInspector = memo<BuiltinInspectorProps<BrowserMcpArgs>>(

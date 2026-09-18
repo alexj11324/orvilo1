@@ -201,7 +201,7 @@ describe('extractActivatedSkillsFromMessages', () => {
   it('should return undefined when no skill activations exist', () => {
     const messages = [
       createMessage({ content: 'hi', role: 'user' } as any),
-      createToolMessage({ plugin: { apiName: 'execScript', identifier: 'lobe-skills' } } as any),
+      createToolMessage({ plugin: { apiName: 'execScript', identifier: 'orvilo-skills' } } as any),
     ];
 
     expect(extractActivatedSkillsFromMessages(messages)).toBeUndefined();
@@ -210,7 +210,7 @@ describe('extractActivatedSkillsFromMessages', () => {
   it('should extract skills from direct activateSkill results', () => {
     const messages = [
       createToolMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-skills' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-skills' },
         pluginState: { description: 'PDF tools', id: 'skl_1', name: 'pdf' },
       } as any),
     ];
@@ -223,11 +223,11 @@ describe('extractActivatedSkillsFromMessages', () => {
   it('should extract skills from activator activateSkill and activateTools results', () => {
     const messages = [
       createToolMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-activator' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-activator' },
         pluginState: { id: 'skl_1', name: 'pdf' },
       } as any),
       createToolMessage({
-        plugin: { apiName: 'activateTools', identifier: 'lobe-activator' },
+        plugin: { apiName: 'activateTools', identifier: 'orvilo-activator' },
         pluginState: {
           activatedSkills: [
             { description: 'sheets', id: 'skl_2', name: 'xlsx' },
@@ -246,11 +246,11 @@ describe('extractActivatedSkillsFromMessages', () => {
   it('should deduplicate by skill id with later activations winning', () => {
     const messages = [
       createToolMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-skills' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-skills' },
         pluginState: { description: 'old', id: 'skl_1', name: 'pdf' },
       } as any),
       createToolMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-skills' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-skills' },
         pluginState: { description: 'new', id: 'skl_1', name: 'pdf' },
       } as any),
     ];
@@ -265,7 +265,7 @@ describe('extractActivatedSkillsFromMessages', () => {
   it('should move a reactivated skill to the end of the activation order', () => {
     const activate = (id: string, name: string) =>
       createToolMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-skills' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-skills' },
         pluginState: { id, name },
       } as any);
 
@@ -287,7 +287,7 @@ describe('extractActivatedSkillsFromMessages', () => {
   it('should keep activateSkill states without an id (filesystem/builtin skills)', () => {
     const messages = [
       createToolMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-skills' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-skills' },
         pluginState: {
           hasResources: false,
           location: '/repo/.agents/skills/foo/SKILL.md',
@@ -296,7 +296,7 @@ describe('extractActivatedSkillsFromMessages', () => {
         },
       } as any),
       createToolMessage({
-        plugin: { apiName: 'activateTools', identifier: 'lobe-activator' },
+        plugin: { apiName: 'activateTools', identifier: 'orvilo-activator' },
         pluginState: { activatedSkills: [{ description: 'builtin', name: 'bar' }] },
       } as any),
     ];
@@ -310,11 +310,11 @@ describe('extractActivatedSkillsFromMessages', () => {
   it('should deduplicate id-less activations by name with later activations winning', () => {
     const messages = [
       createToolMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-skills' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-skills' },
         pluginState: { name: 'foo', source: 'project' },
       } as any),
       createToolMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-skills' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-skills' },
         pluginState: { description: 'reactivated', name: 'foo', source: 'project' },
       } as any),
     ];
@@ -327,12 +327,12 @@ describe('extractActivatedSkillsFromMessages', () => {
   it('should ignore non-tool roles and other tool identifiers', () => {
     const messages = [
       createMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-skills' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-skills' },
         pluginState: { id: 'skl_1', name: 'pdf' },
         role: 'assistant',
       } as any),
       createToolMessage({
-        plugin: { apiName: 'activateSkill', identifier: 'lobe-web-browsing' },
+        plugin: { apiName: 'activateSkill', identifier: 'orvilo-web-browsing' },
         pluginState: { id: 'skl_2', name: 'web' },
       } as any),
     ];
@@ -357,7 +357,7 @@ describe('extractActivatedSkillsFromMessages', () => {
                 apiName: 'activateSkill',
                 arguments: '{"name":"xlsx"}',
                 id: 'call_1',
-                identifier: 'lobe-skills',
+                identifier: 'orvilo-skills',
                 result: {
                   content: 'activated',
                   id: 'msg-tool-1',
@@ -373,7 +373,7 @@ describe('extractActivatedSkillsFromMessages', () => {
               {
                 apiName: 'execScript',
                 id: 'call_2',
-                identifier: 'lobe-skills',
+                identifier: 'orvilo-skills',
                 result: { content: 'ok', id: 'msg-tool-2', state: { executionEnv: 'device' } },
               },
             ],
@@ -400,7 +400,7 @@ describe('extractActivatedSkillsFromMessages', () => {
               {
                 apiName: 'activateTools',
                 id: 'call_1',
-                identifier: 'lobe-activator',
+                identifier: 'orvilo-activator',
                 result: {
                   content: 'activated',
                   id: 'msg-tool-1',
@@ -432,7 +432,7 @@ describe('extractActivatedSkillsFromMessages', () => {
                   {
                     apiName: 'activateSkill',
                     id: 'call_1',
-                    identifier: 'lobe-skills',
+                    identifier: 'orvilo-skills',
                     result: {
                       content: 'ok',
                       id: 'msg-tool-1',
@@ -463,12 +463,12 @@ describe('extractActivatedSkillsFromMessages', () => {
             id: 'msg-asst-1',
             tools: [
               // Tool without a captured result (still pending)
-              { apiName: 'activateSkill', id: 'call_1', identifier: 'lobe-skills' },
+              { apiName: 'activateSkill', id: 'call_1', identifier: 'orvilo-skills' },
               // Non-skill identifier
               {
                 apiName: 'activateSkill',
                 id: 'call_2',
-                identifier: 'lobe-web-browsing',
+                identifier: 'orvilo-web-browsing',
                 result: { content: 'ok', id: 'msg-tool-2', state: { id: 'skl_9', name: 'web' } },
               },
             ],
@@ -486,18 +486,21 @@ describe('extractActivatedToolIdsFromMessages', () => {
   it('should accumulate and deduplicate tools from activator results', () => {
     const messages = [
       createToolMessage({
-        plugin: { apiName: 'activateTools', identifier: 'lobe-activator' },
+        plugin: { apiName: 'activateTools', identifier: 'orvilo-activator' },
         pluginState: {
-          activatedTools: [{ identifier: 'lobe-task' }, { identifier: 'lobe-calendar' }],
+          activatedTools: [{ identifier: 'orvilo-task' }, { identifier: 'orvilo-calendar' }],
         },
       } as any),
       createToolMessage({
-        plugin: { apiName: 'activateTools', identifier: 'lobe-activator' },
-        pluginState: { activatedTools: [{ identifier: 'lobe-task' }] },
+        plugin: { apiName: 'activateTools', identifier: 'orvilo-activator' },
+        pluginState: { activatedTools: [{ identifier: 'orvilo-task' }] },
       } as any),
     ];
 
-    expect(extractActivatedToolIdsFromMessages(messages)).toEqual(['lobe-task', 'lobe-calendar']);
+    expect(extractActivatedToolIdsFromMessages(messages)).toEqual([
+      'orvilo-task',
+      'orvilo-calendar',
+    ]);
   });
 
   it('should restore tools folded into an assistantGroup', () => {
@@ -511,11 +514,11 @@ describe('extractActivatedToolIdsFromMessages', () => {
               {
                 apiName: 'activateTools',
                 id: 'call-1',
-                identifier: 'lobe-activator',
+                identifier: 'orvilo-activator',
                 result: {
                   content: 'activated',
                   id: 'msg-tool-1',
-                  state: { activatedTools: [{ identifier: 'lobe-task' }] },
+                  state: { activatedTools: [{ identifier: 'orvilo-task' }] },
                 },
               },
             ],
@@ -525,18 +528,18 @@ describe('extractActivatedToolIdsFromMessages', () => {
       } as any),
     ];
 
-    expect(extractActivatedToolIdsFromMessages(messages)).toEqual(['lobe-task']);
+    expect(extractActivatedToolIdsFromMessages(messages)).toEqual(['orvilo-task']);
   });
 
   it('should ignore failed or unrelated tool results', () => {
     const messages = [
       createToolMessage({
         plugin: { apiName: 'activateTools', identifier: 'another-tool' },
-        pluginState: { activatedTools: [{ identifier: 'lobe-task' }] },
+        pluginState: { activatedTools: [{ identifier: 'orvilo-task' }] },
       } as any),
       createToolMessage({
-        plugin: { apiName: 'activateTools', identifier: 'lobe-activator' },
-        pluginState: { notFound: ['lobe-task'] },
+        plugin: { apiName: 'activateTools', identifier: 'orvilo-activator' },
+        pluginState: { notFound: ['orvilo-task'] },
       } as any),
     ];
 

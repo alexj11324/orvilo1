@@ -85,8 +85,8 @@ export const params = {
   },
   constructorOptions: {
     defaultHeaders: {
-      'HTTP-Referer': 'https://lobehub.com',
-      'X-Title': 'LobeHub',
+      'HTTP-Referer': 'https://orvilo.aspectlylabs.com',
+      'X-Title': 'Orvilo',
     },
   },
   debug: {
@@ -202,4 +202,4 @@ export const params = {
   provider: ModelProvider.OpenRouter,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeOpenRouterAI = createOpenAICompatibleRuntime(params);
+export const OrviloOpenRouterAI = createOpenAICompatibleRuntime(params);

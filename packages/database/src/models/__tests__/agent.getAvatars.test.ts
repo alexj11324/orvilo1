@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { agents, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'avatar-test-user-id';
 const userId2 = 'avatar-test-user-id-2';
@@ -78,7 +78,7 @@ describe('AgentModel.getAgentAvatarsByIds', () => {
     expect(result[0].id).toBe('agent-mine');
   });
 
-  it('should fallback to LobeAI defaults for inbox agent without avatar/title', async () => {
+  it('should fallback to OrviloAI defaults for inbox agent without avatar/title', async () => {
     await serverDB.insert(agents).values({
       avatar: null,
       backgroundColor: null,

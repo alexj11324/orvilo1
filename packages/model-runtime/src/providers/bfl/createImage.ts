@@ -11,7 +11,7 @@ import { parseDataUri } from '../../utils/uriParser';
 import type { BflAsyncResponse, BflModelId, BflRequest, BflResultResponse } from './types';
 import { BFL_ENDPOINTS, BflStatusResponse } from './types';
 
-const log = createDebug('lobe-image:bfl');
+const log = createDebug('orvilo-image:bfl');
 
 const BASE_URL = 'https://api.bfl.ai';
 

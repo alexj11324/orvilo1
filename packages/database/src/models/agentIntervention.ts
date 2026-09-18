@@ -29,7 +29,7 @@ import {
   messages,
   userSettings,
 } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 export const AGENT_INTERVENTION_INVALID_REVIEW_TOKEN_HASH =
   'AGENT_INTERVENTION_INVALID_REVIEW_TOKEN_HASH';
@@ -543,7 +543,7 @@ export type AgentInterventionBatchMutationResult =
  */
 export class AgentInterventionModel {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}
@@ -571,7 +571,7 @@ export class AgentInterventionModel {
    * render content, action capability, token hash, or resolution payload.
    */
   static locateByReviewTokenHash = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     reviewTokenHash: string,
   ): Promise<AgentInterventionLocator | undefined> => {
     if (!HASH_PATTERN.test(reviewTokenHash)) return undefined;
@@ -602,7 +602,7 @@ export class AgentInterventionModel {
    * owner/workspace-scoped model before reading or claiming the batch.
    */
   static locateByOperationAndToolCall = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     operationId: string,
     toolCallId: string,
   ): Promise<AgentInterventionLocator | undefined> => {
@@ -634,7 +634,7 @@ export class AgentInterventionModel {
 
   /** System-only owner/workspace recovery for post-claim delivery callbacks. */
   static locateByResolutionRequestId = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     resolutionRequestId: string,
   ): Promise<AgentInterventionResolutionLocator | undefined> => {
     if (!UUID_PATTERN.test(resolutionRequestId)) return undefined;

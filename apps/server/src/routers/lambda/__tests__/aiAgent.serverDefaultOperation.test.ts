@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { agentOperations } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
@@ -10,7 +10,7 @@ import type * as InternalJwtModule from '@/libs/trpc/utils/internalJwt';
 import { aiAgentRouter } from '../aiAgent';
 import { cleanupTestUser, createTestTopic, createTestUser } from './integration/setup';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 
 const { getSupportedModels, initRuntime, resolveModel, signOperationToken } = vi.hoisted(() => ({
   getSupportedModels: vi.fn(),
@@ -74,7 +74,7 @@ describe('server-default heterogeneous operation control', () => {
       'pi': [{ model: 'kimi-k2.6' }],
       'trae': [{ model: 'kimi-k2.6' }],
     });
-    resolveModel.mockResolvedValue({ model: 'gpt-5.4', provider: 'lobehub' });
+    resolveModel.mockResolvedValue({ model: 'gpt-5.4', provider: 'orvilo' });
     initRuntime.mockResolvedValue({});
     signOperationToken.mockResolvedValue('operation-token');
   });
@@ -88,7 +88,7 @@ describe('server-default heterogeneous operation control', () => {
   it('persists the scoped operation before minting a model-invocation token', async () => {
     await expect(
       caller().beginServerDefaultHeterogeneousOperation(operationInput('desktop-operation-1')),
-    ).resolves.toMatchObject({ model: 'lobehub-default', token: 'operation-token' });
+    ).resolves.toMatchObject({ model: 'orvilo-default', token: 'operation-token' });
 
     const [operation] = await testDB
       .select()
@@ -97,7 +97,7 @@ describe('server-default heterogeneous operation control', () => {
     expect(operation).toMatchObject({
       metadata: { agentType: 'codex', serverDefaultHeterogeneous: true },
       model: 'gpt-5.4',
-      provider: 'lobehub',
+      provider: 'orvilo',
       status: 'running',
       topicId,
       userId,
@@ -107,7 +107,7 @@ describe('server-default heterogeneous operation control', () => {
       capabilities: ['model:invoke'],
       model: 'gpt-5.4',
       operationId: 'desktop-operation-1',
-      providerId: 'lobehub',
+      providerId: 'orvilo',
       userId,
       workspaceId: undefined,
     });
@@ -119,7 +119,7 @@ describe('server-default heterogeneous operation control', () => {
   });
 
   it('accepts and persists a newly supported Kimi Code operation', async () => {
-    resolveModel.mockResolvedValueOnce({ model: 'kimi-k2.6', provider: 'lobehub' });
+    resolveModel.mockResolvedValueOnce({ model: 'kimi-k2.6', provider: 'orvilo' });
 
     await expect(
       caller().beginServerDefaultHeterogeneousOperation({
@@ -128,7 +128,7 @@ describe('server-default heterogeneous operation control', () => {
         operationId: 'desktop-operation-kimi',
         topicId,
       }),
-    ).resolves.toMatchObject({ model: 'lobehub-default', token: 'operation-token' });
+    ).resolves.toMatchObject({ model: 'orvilo-default', token: 'operation-token' });
 
     const [operation] = await testDB
       .select()
@@ -137,7 +137,7 @@ describe('server-default heterogeneous operation control', () => {
     expect(operation).toMatchObject({
       metadata: { agentType: 'kimi-code', serverDefaultHeterogeneous: true },
       model: 'kimi-k2.6',
-      provider: 'lobehub',
+      provider: 'orvilo',
       status: 'running',
     });
     expect(resolveModel).toHaveBeenCalledWith('kimi-code', 'kimi-k2.6');
@@ -232,7 +232,7 @@ describe('server-default heterogeneous operation control', () => {
       ingress: 'openai-responses',
       model: 'gpt-5.4',
       operationId,
-      provider: 'lobehub',
+      provider: 'orvilo',
     };
     await caller().beginServerDefaultHeterogeneousOperation(operationInput(operationId));
     await testDB
@@ -262,7 +262,7 @@ describe('server-default heterogeneous operation control', () => {
       ingress: 'openai-responses',
       model: 'gpt-5.4',
       operationId,
-      provider: 'lobehub',
+      provider: 'orvilo',
     };
     await caller().beginServerDefaultHeterogeneousOperation(operationInput(operationId));
     await testDB

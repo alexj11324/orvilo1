@@ -41,11 +41,11 @@ export const ListOnlineDevicesInspector = memo<
     <div className={cx(inspectorTextStyles.root, styles.root)}>
       <Icon className={styles.icon} icon={MonitorIcon} size={14} />
       <span className={cx(isPending && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-remote-device.apiName.listOnlineDevices')}
+        {t('builtins.orvilo-remote-device.apiName.listOnlineDevices')}
       </span>
       {!isPending && deviceCount !== undefined && (
         <span className={styles.count}>
-          {t('builtins.lobe-remote-device.inspector.onlineCount', { count: deviceCount })}
+          {t('builtins.orvilo-remote-device.inspector.onlineCount', { count: deviceCount })}
         </span>
       )}
     </div>

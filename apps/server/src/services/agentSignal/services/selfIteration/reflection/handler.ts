@@ -4,7 +4,7 @@ import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { createAgentSignalSelfIterationPrompt } from '@orvilo/prompts';
 import { isNonEmptyString } from '@orvilo/utils';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { defineSourceHandler } from '../../../runtime/middleware';
 import { enqueueSelfIterationRun } from '../dispatch/enqueueSelfIterationRun';
@@ -122,7 +122,7 @@ export interface CreateSelfReflectionSourceHandlerDependencies {
     input: CollectSelfReflectionContextInput,
   ) => Promise<SelfReflectionReviewContext>;
   /** Postgres handle used by the dispatch helper to enqueue the execAgent run. */
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   /** Enqueues the async self-iteration run. Overridable for tests. */
   dispatch?: typeof enqueueSelfIterationRun;
   /**

@@ -3239,7 +3239,7 @@
         "Fix function message style, fix mobile padding of plugin dev modal, improve settings display, Update tool style."
       ],
       "features": [
-        "Introduce plugin detail modal, support OpenAI plugin manifest, support OpenAPI Authentication, support OpenAPI schema in lobe plugin, support parse openapi schema."
+        "Introduce plugin detail modal, support OpenAI plugin manifest, support OpenAPI Authentication, support OpenAPI schema in orvilo plugin, support parse openapi schema."
       ],
       "fixes": [
         "Fix function apiName length, try with node mode plugins."

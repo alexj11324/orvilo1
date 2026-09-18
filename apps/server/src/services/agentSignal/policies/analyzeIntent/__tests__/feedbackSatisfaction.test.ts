@@ -3,7 +3,7 @@ import type { SourceAgentUserMessage } from '@orvilo/agent-signal/source';
 import { RequestTrigger } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 
 import { createRuntimeProcessorContext } from '../../../runtime/context';
@@ -126,7 +126,7 @@ describe('feedbackSatisfactionJudge', () => {
     });
 
     const processor = createFeedbackSatisfactionJudgeProcessor({
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       model: 'gpt-test',
       provider: 'openai',
       userId: 'user_1',
@@ -137,7 +137,7 @@ describe('feedbackSatisfactionJudge', () => {
     );
 
     expect(initModelRuntimeFromDB).toHaveBeenCalledWith(
-      {} as LobeChatDatabase,
+      {} as OrviloDatabase,
       'user_1',
       'openai',
       undefined,

@@ -123,9 +123,9 @@ vi.mock('model-bank', async (importOriginal) => ({
   // read on the real MODEL_REASONING_EXTEND_PARAMS list
   MODEL_REASONING_EXTEND_PARAMS: (await importOriginal<typeof ModelBank>())
     .MODEL_REASONING_EXTEND_PARAMS,
-  LOBE_DEFAULT_MODEL_LIST: mockBuiltinModels,
+  ORVILO_DEFAULT_MODEL_LIST: mockBuiltinModels,
   ModelProvider: {
-    LobeHub: 'lobehub',
+    Orvilo: 'orvilo',
   },
 }));
 
@@ -1045,9 +1045,9 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         );
       });
 
-      it('should force assistant reasoning replay for Kimi K2.7 Code under aggregation provider (e.g. lobehub) even when preserveThinking is disabled', async () => {
+      it('should force assistant reasoning replay for Kimi K2.7 Code under aggregation provider (e.g. orvilo) even when preserveThinking is disabled', async () => {
         const mockChat = vi.fn().mockImplementation(async (_payload, options) => {
-          await options?.callback?.onThinking?.('kimi preserved reasoning from lobehub');
+          await options?.callback?.onThinking?.('kimi preserved reasoning from orvilo');
           await options?.callback?.onText?.('answer');
           return new Response('done');
         });
@@ -1085,7 +1085,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         const assistant = result.newState.messages.at(-1) as any;
 
         expect(assistant.reasoning).toEqual({
-          content: 'kimi preserved reasoning from lobehub',
+          content: 'kimi preserved reasoning from orvilo',
         });
         expect(mockChat).toHaveBeenCalledWith(
           expect.objectContaining({ preserveThinking: true }),
@@ -1262,7 +1262,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
           payload: {
             messages: [{ content: 'Hello', role: 'user' }],
             model: 'deepseek-v4-pro',
-            provider: 'lobehub',
+            provider: 'orvilo',
             tools: [],
           },
           type: 'call_llm' as const,
@@ -2197,10 +2197,10 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         engineSpy.mockRestore();
       });
 
-      const stateWithLobeAgent = (overrides?: Partial<AgentState>) =>
+      const stateWithOrviloAgent = (overrides?: Partial<AgentState>) =>
         createMockState({
           operationToolSet: {
-            enabledToolIds: ['lobe-agent'],
+            enabledToolIds: ['orvilo-agent'],
             executorMap: {},
             manifestMap: {},
             sourceMap: {},
@@ -2257,7 +2257,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
             },
             { content: 'Continue', role: 'user' },
           ],
-          stateWithLobeAgent(),
+          stateWithOrviloAgent(),
         );
 
         expect(content).toContain('New task');
@@ -2283,7 +2283,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
               { content: 'cleared', pluginState: { todos }, role: 'tool' },
               { content: 'Continue', role: 'user' },
             ],
-            stateWithLobeAgent(),
+            stateWithOrviloAgent(),
           );
 
           expect(content).not.toContain('<todo_context>');
@@ -2305,7 +2305,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
 
         const content = await callWithMessages(
           [{ content: 'Continue', role: 'user' }],
-          stateWithLobeAgent(),
+          stateWithOrviloAgent(),
         );
 
         expect(content).toContain('metadata task');
@@ -2321,7 +2321,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
 
         const content = await callWithMessages(
           [{ content: 'Continue', role: 'user' }],
-          stateWithLobeAgent(),
+          stateWithOrviloAgent(),
         );
 
         expect(content).not.toContain('<todo_context>');
@@ -2340,7 +2340,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
 
         const content = await callWithMessages(
           [{ content: 'Continue', role: 'user' }],
-          stateWithLobeAgent({ origin: { agentId: 'agent-123' } }),
+          stateWithOrviloAgent({ origin: { agentId: 'agent-123' } }),
           { topicId: 'context-topic' },
         );
 
@@ -2350,7 +2350,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         });
       });
 
-      it('does not query Notebook when lobe-agent is disabled', async () => {
+      it('does not query Notebook when orvilo-agent is disabled', async () => {
         await callWithMessages([{ content: 'Continue', role: 'user' }], createMockState());
 
         expect(mockFindPlanDocuments).not.toHaveBeenCalled();
@@ -2361,7 +2361,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
 
         const content = await callWithMessages(
           [{ content: 'Continue', role: 'user' }],
-          stateWithLobeAgent(),
+          stateWithOrviloAgent(),
         );
 
         expect(content).toContain('Continue');
@@ -2481,7 +2481,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         );
       });
 
-      it('should resolve LobeHub routed model knowledge cutoff by model id fallback', async () => {
+      it('should resolve Orvilo routed model knowledge cutoff by model id fallback', async () => {
         const ctxWithConfig: RuntimeExecutorContext = {
           ...ctx,
         };
@@ -2500,7 +2500,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
             payload: {
               messages: [{ content: 'Hello', role: 'user' }],
               model: 'gpt-4',
-              provider: 'lobehub',
+              provider: 'orvilo',
             },
             type: 'call_llm' as const,
           },
@@ -2512,7 +2512,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         );
       });
 
-      it('should omit model knowledge cutoff for unknown non-LobeHub providers', async () => {
+      it('should omit model knowledge cutoff for unknown non-Orvilo providers', async () => {
         const ctxWithConfig: RuntimeExecutorContext = {
           ...ctx,
         };
@@ -2908,7 +2908,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         expect(engineSpy).toHaveBeenCalledWith(expect.objectContaining({ agentGroup }));
       });
 
-      it('should build capabilities from LOBE_DEFAULT_MODEL_LIST', async () => {
+      it('should build capabilities from ORVILO_DEFAULT_MODEL_LIST', async () => {
         const ctxWithConfig: RuntimeExecutorContext = {
           ...ctx,
         };
@@ -2943,13 +2943,13 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         expect(callArgs.capabilities.isCanUseVision('unknown', 'unknown')).toBe(false);
         expect(callArgs.capabilities.isCanUseVideo('unknown', 'unknown')).toBe(false);
 
-        // Aggregator (e.g. lobehub) routes a known model id under a different
+        // Aggregator (e.g. orvilo) routes a known model id under a different
         // provider — visual capability flags fall back to the upstream model card.
-        expect(callArgs.capabilities.isCanUseVision('gpt-4', 'lobehub')).toBe(true);
-        expect(
-          callArgs.capabilities.isCanUseVideo('gemini-3.1-flash-lite-preview', 'lobehub'),
-        ).toBe(true);
-        expect(callArgs.capabilities.isCanUseVision('no-tools-model', 'lobehub')).toBe(false);
+        expect(callArgs.capabilities.isCanUseVision('gpt-4', 'orvilo')).toBe(true);
+        expect(callArgs.capabilities.isCanUseVideo('gemini-3.1-flash-lite-preview', 'orvilo')).toBe(
+          true,
+        );
+        expect(callArgs.capabilities.isCanUseVision('no-tools-model', 'orvilo')).toBe(false);
       });
 
       it('should filter disabled files and knowledgeBases from agentConfig', async () => {
@@ -3065,7 +3065,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         const state = createMockState({
           world: {
             agent: {
-              plugins: ['lobe-web-onboarding'],
+              plugins: ['orvilo-web-onboarding'],
               slug: 'web-onboarding',
               systemRole: 'test',
             } as any,
@@ -3368,7 +3368,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
             apiName: 'createTask',
             arguments: '{"name":"A"}',
             id: 'tool-call-intent',
-            identifier: 'lobe-task',
+            identifier: 'orvilo-task',
             type: 'builtin' as const,
           },
         },
@@ -3408,7 +3408,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
             apiName: 'search',
             arguments: '{"query": "test"}',
             id: 'tool-call-1',
-            identifier: 'lobe-web-browsing',
+            identifier: 'orvilo-web-browsing',
             type: 'builtin' as const,
           },
         },
@@ -4099,14 +4099,14 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
               apiName: 'createTask',
               arguments: '{"name":"A"}',
               id: 'tool-call-1',
-              identifier: 'lobe-task',
+              identifier: 'orvilo-task',
               type: 'default' as const,
             },
             {
               apiName: 'updateTask',
               arguments: '{"name":"B"}',
               id: 'tool-call-2',
-              identifier: 'lobe-task',
+              identifier: 'orvilo-task',
               type: 'default' as const,
             },
           ],
@@ -4948,7 +4948,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
               apiName: 'createDocument',
               arguments: '{"title":"Test","content":"Hello"}',
               id: 'tool-call-1',
-              identifier: 'lobe-agent-documents',
+              identifier: 'orvilo-agent-documents',
               type: 'builtin' as const,
             },
           ],
@@ -4989,7 +4989,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
               apiName: 'generateImage',
               arguments: '{"prompt":"A lighthouse"}',
               id: 'tool-call-1',
-              identifier: 'lobe-image-generation',
+              identifier: 'orvilo-image-generation',
               type: 'builtin' as const,
             },
           ],
@@ -5026,7 +5026,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
               apiName: 'createDocument',
               arguments: '{"title":"Test","content":"Hello"}',
               id: 'tool-call-1',
-              identifier: 'lobe-agent-documents',
+              identifier: 'orvilo-agent-documents',
               type: 'builtin' as const,
             },
           ],
@@ -6314,7 +6314,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
               runAsTask: true,
             }),
             id: 'tool-call-1',
-            identifier: 'lobe-agent-management',
+            identifier: 'orvilo-agent-management',
             type: 'default' as const,
           },
         },
@@ -6375,7 +6375,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
               runAsTask: true,
             }),
             id: 'tool-call-1',
-            identifier: 'lobe-agent-management',
+            identifier: 'orvilo-agent-management',
             type: 'default' as const,
           },
         },
@@ -6389,7 +6389,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
           agentId: 'parent-agent-id',
           plugin: expect.objectContaining({
             apiName: 'callAgent',
-            identifier: 'lobe-agent-management',
+            identifier: 'orvilo-agent-management',
           }),
           pluginState: { status: 'pending' },
           parentId: 'assistant-msg-id',
@@ -6413,7 +6413,7 @@ describe('RuntimeExecutors', { timeout: 60_000 }, () => {
         expect.objectContaining({
           apiName: 'callAgent',
           id: 'tool-call-1',
-          identifier: 'lobe-agent-management',
+          identifier: 'orvilo-agent-management',
         }),
       ]);
       expect(result.events).toEqual([

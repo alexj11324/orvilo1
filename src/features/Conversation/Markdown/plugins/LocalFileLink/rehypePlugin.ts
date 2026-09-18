@@ -1,6 +1,6 @@
 import { SKIP, visit } from 'unist-util-visit';
 
-import { LOBE_LOCAL_FILE_LINK_TAG, parseLocalFileHref } from './parse';
+import { ORVILO_LOCAL_FILE_LINK_TAG, parseLocalFileHref } from './parse';
 
 const getNodeText = (node: any): string => {
   if (!node) return '';
@@ -20,7 +20,7 @@ export const rehypeLocalFileLink = () => (tree: any) => {
     const text = getNodeText(node).trim();
     const label = text || parsed.filePath.split(/[\\/]/).at(-1) || parsed.filePath;
 
-    node.tagName = LOBE_LOCAL_FILE_LINK_TAG;
+    node.tagName = ORVILO_LOCAL_FILE_LINK_TAG;
     node.children = [];
     node.properties = {
       linkHref: href,

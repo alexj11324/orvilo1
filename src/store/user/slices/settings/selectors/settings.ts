@@ -26,8 +26,6 @@ export const currentLLMSettings = (s: UserStore): UserModelProviderConfig =>
 export const getProviderConfigById = (provider: string) => (s: UserStore) =>
   currentLLMSettings(s)[provider as GlobalLLMProviderKey] as ProviderConfig | undefined;
 
-const currentImageSettings = (s: UserStore) => currentSettings(s).image;
-
 const currentMemorySettings = (s: UserStore) =>
   merge(DEFAULT_MEMORY_SETTINGS, currentSettings(s).memory);
 
@@ -49,7 +47,6 @@ const getHotkeyById = (id: HotkeyId) => (s: UserStore) =>
   merge(DEFAULT_HOTKEY_CONFIG, currentSettings(s).hotkey)[id];
 
 export const settingsSelectors = {
-  currentImageSettings,
   currentMemorySettings,
   currentSettings,
   currentSystemAgent,

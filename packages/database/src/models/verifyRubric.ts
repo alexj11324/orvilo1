@@ -2,7 +2,7 @@ import { and, asc, desc, eq } from 'drizzle-orm';
 
 import type { NewVerifyRubric, VerifyCriterionItem, VerifyRubricItem } from '../schemas/verify';
 import { verifyCriteria, verifyRubricCriteria, verifyRubrics } from '../schemas/verify';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export interface RubricCriterionInput {
@@ -11,11 +11,11 @@ export interface RubricCriterionInput {
 }
 
 export class VerifyRubricModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

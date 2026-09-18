@@ -13,7 +13,6 @@ const handler = (req: NextRequest) => {
 
   return fetchRequestHandler({
     // Avoid interference between requests
-    // https://github.com/lobehub/lobe-chat/discussions/7442#discussioncomment-13658563
     allowBatching: false,
 
     /**

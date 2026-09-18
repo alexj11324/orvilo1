@@ -4,14 +4,14 @@ import { ThreadStatus, ThreadType } from '@/types/index';
 
 import { getTestDB } from '../../../core/getTestDB';
 import { messages, sessions, threads, topics, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { MessageModel } from '../../message';
 
 const userId = 'message-task-user-test';
 const sessionId = 'message-task-session';
 const topicId = 'message-task-topic';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const messageModel = new MessageModel(serverDB, userId);
 
 describe('MessageModel - queryWithWhere with task messages', () => {

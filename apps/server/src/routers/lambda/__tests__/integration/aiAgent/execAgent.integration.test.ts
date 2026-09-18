@@ -5,7 +5,7 @@
  * Note: AgentStateManager and StreamEventManager will automatically use
  * InMemory implementations when Redis is not available (test environment).
  */
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { agents, chatGroups, messages, threads, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq } from 'drizzle-orm';
@@ -28,7 +28,7 @@ import {
 process.env.OPENAI_API_KEY = 'sk-test-fake-api-key-for-testing';
 
 // Mock getServerDB to return our test database instance
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -48,7 +48,7 @@ vi.mock('@/server/services/file', () => ({
 
 let mockResponsesCreate: any;
 
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 let userId: string;
 let testAgentId: string;
 
@@ -478,7 +478,7 @@ describe('execAgent', () => {
     });
   });
 
-  describe('Tool Calling Flow with lobe-web-browsing', () => {
+  describe('Tool Calling Flow with orvilo-web-browsing', () => {
     let testAgentWithToolsId: string;
 
     const createMockResponsesAPIStreamWithTools = () => {
@@ -522,7 +522,7 @@ describe('execAgent', () => {
           item: {
             type: 'function_call',
             call_id: toolCallId,
-            name: 'lobe-web-browsing____search',
+            name: 'orvilo-web-browsing____search',
             arguments: JSON.stringify({ query: '杭州天气' }),
           },
         },
@@ -545,7 +545,7 @@ describe('execAgent', () => {
               {
                 type: 'function_call',
                 call_id: toolCallId,
-                name: 'lobe-web-browsing____search',
+                name: 'orvilo-web-browsing____search',
                 arguments: JSON.stringify({ query: '杭州天气' }),
               },
             ],
@@ -705,7 +705,7 @@ describe('execAgent', () => {
       expect(firstCallArgs.tools.length).toBeGreaterThan(0);
 
       const toolNames = firstCallArgs.tools.map((t) => t.name || t.function?.name);
-      const hasWebBrowsingTools = toolNames.some((name) => name?.includes('lobe-web-browsing'));
+      const hasWebBrowsingTools = toolNames.some((name) => name?.includes('orvilo-web-browsing'));
       expect(hasWebBrowsingTools).toBe(true);
 
       const allMessages = await serverDB
@@ -727,7 +727,7 @@ describe('execAgent', () => {
 
       expect(mockExecuteTool).toHaveBeenCalled();
       const toolCallArgs = mockExecuteTool.mock.calls[0][0];
-      expect(toolCallArgs.identifier).toBe('lobe-web-browsing');
+      expect(toolCallArgs.identifier).toBe('orvilo-web-browsing');
       expect(toolCallArgs.apiName).toBe('search');
 
       mockExecuteTool.mockRestore();

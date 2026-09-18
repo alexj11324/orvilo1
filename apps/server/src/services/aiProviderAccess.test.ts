@@ -23,12 +23,12 @@ describe('getUserScopedAiProviderModelList', () => {
     const models = [{ id: 'hidden-model' }, { id: 'visible-model-1' }, { id: 'visible-model-2' }];
     const loadModelList = vi.fn().mockResolvedValue(models);
     mockGetHiddenBuiltinModelsForUser.mockResolvedValue([
-      { id: 'hidden-model', providerId: 'lobehub' },
+      { id: 'hidden-model', providerId: 'orvilo' },
     ]);
 
     const result = await getUserScopedAiProviderModelList(
       'user-1',
-      'lobehub',
+      'orvilo',
       { enabled: false, limit: 1, offset: 1, type: 'chat' },
       loadModelList,
     );
@@ -48,7 +48,7 @@ describe('getUserScopedAiProviderModelList', () => {
     const loadModelList = vi.fn().mockResolvedValue(models);
     const options = { enabled: true, limit: 20, offset: 10, type: 'image' };
     mockGetHiddenBuiltinModelsForUser.mockResolvedValue([
-      { id: 'hidden-model', providerId: 'lobehub' },
+      { id: 'hidden-model', providerId: 'orvilo' },
     ]);
 
     const result = await getUserScopedAiProviderModelList(
@@ -66,7 +66,7 @@ describe('getUserScopedAiProviderModelList', () => {
     const loadModelList = vi.fn();
     mockGetHiddenBuiltinModelsForUser.mockResolvedValue(undefined);
 
-    const result = await getUserScopedAiProviderModelList('user-1', 'lobehub', {}, loadModelList);
+    const result = await getUserScopedAiProviderModelList('user-1', 'orvilo', {}, loadModelList);
 
     expect(result).toEqual([]);
     expect(loadModelList).not.toHaveBeenCalled();
@@ -79,12 +79,12 @@ describe('getUserScopedAiProviderRuntimeState', () => {
   });
 
   it('filters hidden models and model-type providers for server consumers', async () => {
-    const lobehubProvider = { id: 'lobehub', source: 'builtin' as const };
+    const orviloProvider = { id: 'orvilo', source: 'builtin' as const };
     const openaiProvider = { id: 'openai', source: 'builtin' as const };
     const hiddenChatModel = {
       abilities: {},
       id: 'hidden-chat',
-      providerId: 'lobehub',
+      providerId: 'orvilo',
       type: 'chat' as const,
     };
     const visibleImageModel = {
@@ -95,14 +95,14 @@ describe('getUserScopedAiProviderRuntimeState', () => {
     };
     const runtimeState: AiProviderRuntimeState = {
       enabledAiModels: [hiddenChatModel, visibleImageModel],
-      enabledAiProviders: [lobehubProvider, openaiProvider],
-      enabledChatAiProviders: [lobehubProvider],
+      enabledAiProviders: [orviloProvider, openaiProvider],
+      enabledChatAiProviders: [orviloProvider],
       enabledImageAiProviders: [openaiProvider],
       enabledVideoAiProviders: [],
       runtimeConfig: {},
     };
     mockGetHiddenBuiltinModelsForUser.mockResolvedValue([
-      { id: 'hidden-chat', providerId: 'lobehub' },
+      { id: 'hidden-chat', providerId: 'orvilo' },
     ]);
 
     const result = await getUserScopedAiProviderRuntimeState('user-1', async () => runtimeState);
@@ -111,7 +111,7 @@ describe('getUserScopedAiProviderRuntimeState', () => {
       ...runtimeState,
       enabledAiModels: [visibleImageModel],
       enabledChatAiProviders: [],
-      hiddenBuiltinModels: [{ id: 'hidden-chat', providerId: 'lobehub' }],
+      hiddenBuiltinModels: [{ id: 'hidden-chat', providerId: 'orvilo' }],
       modelRedirects: {},
     });
   });
@@ -126,11 +126,11 @@ describe('getUserScopedAiProviderRuntimeState', () => {
       runtimeConfig: {},
     };
     mockGetHiddenBuiltinModelsForUser.mockResolvedValue([]);
-    mockGetModelRedirects.mockResolvedValue({ 'lobehub/old-model': 'new-model' });
+    mockGetModelRedirects.mockResolvedValue({ 'orvilo/old-model': 'new-model' });
 
     const result = await getUserScopedAiProviderRuntimeState('user-1', async () => runtimeState);
 
-    expect(result.modelRedirects).toEqual({ 'lobehub/old-model': 'new-model' });
+    expect(result.modelRedirects).toEqual({ 'orvilo/old-model': 'new-model' });
   });
 
   it('drops redirect entries whose successor is hidden from the user', async () => {
@@ -143,16 +143,16 @@ describe('getUserScopedAiProviderRuntimeState', () => {
       runtimeConfig: {},
     };
     mockGetHiddenBuiltinModelsForUser.mockResolvedValue([
-      { id: 'beta-successor', providerId: 'lobehub' },
+      { id: 'beta-successor', providerId: 'orvilo' },
     ]);
     mockGetModelRedirects.mockResolvedValue({
-      'lobehub/old-beta': 'beta-successor',
-      'lobehub/old-model': 'new-model',
+      'orvilo/old-beta': 'beta-successor',
+      'orvilo/old-model': 'new-model',
     });
 
     const result = await getUserScopedAiProviderRuntimeState('user-1', async () => runtimeState);
 
-    expect(result.modelRedirects).toEqual({ 'lobehub/old-model': 'new-model' });
+    expect(result.modelRedirects).toEqual({ 'orvilo/old-model': 'new-model' });
   });
 
   it('withholds redirects when model access cannot be resolved', async () => {
@@ -165,7 +165,7 @@ describe('getUserScopedAiProviderRuntimeState', () => {
       runtimeConfig: {},
     };
     mockGetHiddenBuiltinModelsForUser.mockResolvedValue(undefined);
-    mockGetModelRedirects.mockResolvedValue({ 'lobehub/old-model': 'new-model' });
+    mockGetModelRedirects.mockResolvedValue({ 'orvilo/old-model': 'new-model' });
 
     const result = await getUserScopedAiProviderRuntimeState('user-1', async () => runtimeState);
 
@@ -173,13 +173,13 @@ describe('getUserScopedAiProviderRuntimeState', () => {
   });
 
   it('fails closed when model access cannot be resolved', async () => {
-    const provider = { id: 'lobehub', source: 'builtin' as const };
+    const provider = { id: 'orvilo', source: 'builtin' as const };
     const runtimeState: AiProviderRuntimeState = {
       enabledAiModels: [
         {
           abilities: {},
           id: 'possibly-hidden-chat',
-          providerId: 'lobehub',
+          providerId: 'orvilo',
           type: 'chat',
         },
       ],
@@ -216,7 +216,7 @@ describe('getUserScopedAiProviderRuntimeState', () => {
           enabledChatAiProviders: [],
           enabledImageAiProviders: [],
           enabledVideoAiProviders: [],
-          runtimeConfig: { lobehub: {} as never },
+          runtimeConfig: { orvilo: {} as never },
         }),
         { throwOnUnresolvedAccess: true },
       ),

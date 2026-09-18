@@ -28,7 +28,7 @@ type TelegramLinkCandidate = Pick<SafeMessengerAccountLink, 'createdAt' | 'platf
  * Telegram bots are env/DB-backed singletons — they never get a row in
  * `messenger_installations` (see `installations/telegram.ts`). Without this
  * synthesis every "which messengers am I connected to?" surface (the Message
- * tool's `listMessengers`, `lobehub bot messengers`) sees Telegram nowhere and
+ * tool's `listMessengers`, `orvilo bot messengers`) sees Telegram nowhere and
  * falsely concludes the platform is unconfigured, even while `sendMessengerPush`
  * delivers through the account link just fine.
  *

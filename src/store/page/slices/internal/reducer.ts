@@ -1,11 +1,11 @@
 import { produce } from 'immer';
 
-import { type LobeDocument } from '@/types/document';
+import { type OrviloDocument } from '@/types/document';
 
 // ============ Action Types ============
 
 type AddDocumentAction = {
-  document: LobeDocument;
+  document: OrviloDocument;
   type: 'addDocument';
 };
 
@@ -15,24 +15,24 @@ type RemoveDocumentAction = {
 };
 
 type UpdateDocumentAction = {
-  document: LobeDocument;
+  document: OrviloDocument;
   id: string;
   type: 'updateDocument';
 };
 
 type ReplaceDocumentAction = {
-  document: LobeDocument;
+  document: OrviloDocument;
   oldId: string;
   type: 'replaceDocument';
 };
 
 type SetDocumentsAction = {
-  documents: LobeDocument[];
+  documents: OrviloDocument[];
   type: 'setDocuments';
 };
 
 type AppendDocumentsAction = {
-  documents: LobeDocument[];
+  documents: OrviloDocument[];
   type: 'appendDocuments';
 };
 
@@ -47,9 +47,9 @@ export type DocumentsDispatch =
 // ============ Reducer ============
 
 export const documentsReducer = (
-  state: LobeDocument[] | undefined,
+  state: OrviloDocument[] | undefined,
   payload: DocumentsDispatch,
-): LobeDocument[] | undefined => {
+): OrviloDocument[] | undefined => {
   switch (payload.type) {
     case 'addDocument': {
       return produce(state ?? [], (draft) => {

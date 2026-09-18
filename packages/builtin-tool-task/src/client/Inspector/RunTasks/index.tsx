@@ -77,7 +77,7 @@ export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunT
         <div className={inspectorTextStyles.root}>
           <Icon icon={Play} size={12} style={{ color: cssVar.colorWarning }} />
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-task.apiName.runTasks')}
+            {t('builtins.orvilo-task.apiName.runTasks')}
           </span>
         </div>
       );
@@ -87,11 +87,11 @@ export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunT
       <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
         <Icon icon={Play} size={12} style={{ color: cssVar.colorWarning }} />
         <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-task.apiName.runTasks')}
+          {t('builtins.orvilo-task.apiName.runTasks')}
         </span>
         {count > 0 && (
           <span className={styles.countBadge}>
-            {t('builtins.lobe-task.runTasks.count', { count })}
+            {t('builtins.orvilo-task.runTasks.count', { count })}
           </span>
         )}
         {previewId && (
@@ -100,14 +100,14 @@ export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunT
             <span className={styles.identifierChip}>{previewId}</span>
             {remaining > 0 && (
               <span className={styles.moreBadge}>
-                {t('builtins.lobe-task.runTasks.more', { count: remaining })}
+                {t('builtins.orvilo-task.runTasks.more', { count: remaining })}
               </span>
             )}
           </>
         )}
         {failed > 0 && (
           <span className={styles.failedBadge}>
-            {t('builtins.lobe-task.runTasks.failedCount', { count: failed })}
+            {t('builtins.orvilo-task.runTasks.failedCount', { count: failed })}
           </span>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { INBOX_SESSION_ID } from '@orvilo/const';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { getServerFeatureFlagsStateFromRuntimeConfig } from '@/server/featureFlags';
 
 /**
@@ -18,7 +18,7 @@ export interface AgentSelfIterationCapabilityInput {
   /**
    * Whether the agent is the product-owned Orvilo AI agent.
    */
-  isLobeAiAgent: boolean;
+  isOrviloAiAgent: boolean;
 }
 
 /**
@@ -34,7 +34,7 @@ export interface AgentSelfIterationCapabilityInput {
  * Returns:
  * - `true` only for the builtin inbox agent slug
  */
-export const isLobeAiAgentSlug = (slug?: string | null) => slug === INBOX_SESSION_ID;
+export const isOrviloAiAgentSlug = (slug?: string | null) => slug === INBOX_SESSION_ID;
 
 /**
  * Resolves whether one agent may run Agent Signal self-iteration.
@@ -53,7 +53,7 @@ export const isLobeAiAgentSlug = (slug?: string | null) => slug === INBOX_SESSIO
 export const resolveAgentSelfIterationCapability = (input: AgentSelfIterationCapabilityInput) => {
   if (!input.isAgentSelfIterationFeatureEnabled) return false;
 
-  if (input.isLobeAiAgent) return true;
+  if (input.isOrviloAiAgent) return true;
 
   return input.agentSelfIterationEnabled === true;
 };
@@ -90,7 +90,7 @@ export const isAgentSelfIterationFeatureEnabledForUser = async (userId: string) 
  * Returns:
  * - `true` only when the Agent Self-iteration feature flag is enabled for the user
  */
-export const isAgentSignalEnabledForUser = async (_db: LobeChatDatabase, userId: string) => {
+export const isAgentSignalEnabledForUser = async (_db: OrviloDatabase, userId: string) => {
   try {
     return await isAgentSelfIterationFeatureEnabledForUser(userId);
   } catch {

@@ -16,11 +16,11 @@ const mocks = vi.hoisted(() => ({
     signIn: vi.fn(),
   },
   toolState: {
-    checkLobehubSkillStatus: vi.fn(),
+    checkOrviloSkillStatus: vi.fn(),
     composioServers: [],
     createComposioConnection: vi.fn(),
-    getLobehubSkillAuthorizeUrl: vi.fn(),
-    lobehubSkillServers: [],
+    getOrviloSkillAuthorizeUrl: vi.fn(),
+    orviloSkillServers: [],
     refreshComposioConnectionStatus: vi.fn(),
   },
 }));
@@ -39,7 +39,7 @@ vi.mock('@/store/user', () => ({
   },
 }));
 
-const lobehubSpec: TaskTemplateConnectorReference = { identifier: 'linear', source: 'lobehub' };
+const orviloSpec: TaskTemplateConnectorReference = { identifier: 'linear', source: 'orvilo' };
 
 describe('useConnectorConnection', () => {
   beforeEach(() => {
@@ -47,8 +47,8 @@ describe('useConnectorConnection', () => {
     mocks.marketAuth.isAuthenticated = false;
     mocks.marketAuth.signIn.mockResolvedValue(null);
     mocks.toolState.composioServers = [];
-    mocks.toolState.lobehubSkillServers = [];
-    mocks.toolState.getLobehubSkillAuthorizeUrl.mockResolvedValue({
+    mocks.toolState.orviloSkillServers = [];
+    mocks.toolState.getOrviloSkillAuthorizeUrl.mockResolvedValue({
       authorizeUrl: 'https://market.example.com/oauth/authorize',
       code: 'code',
       expiresIn: 600,
@@ -63,8 +63,8 @@ describe('useConnectorConnection', () => {
     vi.restoreAllMocks();
   });
 
-  it('asks the user to sign in to Market before requesting LobeHub connector OAuth', async () => {
-    const { result } = renderHook(() => useConnectorConnection([lobehubSpec]));
+  it('asks the user to sign in to Market before requesting Orvilo connector OAuth', async () => {
+    const { result } = renderHook(() => useConnectorConnection([orviloSpec]));
 
     let error: unknown;
     await act(async () => {
@@ -77,20 +77,20 @@ describe('useConnectorConnection', () => {
 
     expect(error).toBeInstanceOf(ConnectorConnectionMarketAuthRequiredError);
     expect(mocks.marketAuth.signIn).toHaveBeenCalledWith('connector');
-    expect(mocks.toolState.getLobehubSkillAuthorizeUrl).not.toHaveBeenCalled();
+    expect(mocks.toolState.getOrviloSkillAuthorizeUrl).not.toHaveBeenCalled();
     expect(window.open).not.toHaveBeenCalled();
   });
 
   it('opens provider OAuth directly when Market is authenticated', async () => {
     mocks.marketAuth.isAuthenticated = true;
-    const { result, unmount } = renderHook(() => useConnectorConnection([lobehubSpec]));
+    const { result, unmount } = renderHook(() => useConnectorConnection([orviloSpec]));
 
     await act(async () => {
       await result.current.connect();
     });
 
     expect(mocks.marketAuth.signIn).not.toHaveBeenCalled();
-    expect(mocks.toolState.getLobehubSkillAuthorizeUrl).toHaveBeenCalledWith('linear', {
+    expect(mocks.toolState.getOrviloSkillAuthorizeUrl).toHaveBeenCalledWith('linear', {
       redirectUri: expect.stringContaining('/oauth/callback/success?provider=linear'),
     });
     expect(window.open).toHaveBeenCalledWith(
@@ -104,10 +104,10 @@ describe('useConnectorConnection', () => {
 
   it('turns Market 401 from the authorize URL request into a silent auth interruption', async () => {
     mocks.marketAuth.isAuthenticated = true;
-    mocks.toolState.getLobehubSkillAuthorizeUrl.mockRejectedValue({
+    mocks.toolState.getOrviloSkillAuthorizeUrl.mockRejectedValue({
       data: { code: 'UNAUTHORIZED', httpStatus: 401 },
     });
-    const { result } = renderHook(() => useConnectorConnection([lobehubSpec]));
+    const { result } = renderHook(() => useConnectorConnection([orviloSpec]));
 
     let error: unknown;
     await act(async () => {

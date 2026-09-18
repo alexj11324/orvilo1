@@ -7,7 +7,7 @@ export interface VerifierPromptEvidence {
 }
 
 export interface VerifierTaskDocument {
-  /** Agent-scoped row id accepted by lobe-agent-documents.readDocument. */
+  /** Agent-scoped row id accepted by orvilo-agent-documents.readDocument. */
   agentDocumentId: string;
   /** Backing documents-table id, included only to disambiguate the two identities. */
   documentId: string;
@@ -45,7 +45,7 @@ const describeTaskDocuments = (documents: VerifierTaskDocument[] | undefined): s
 
   return `
 ## Task documents
-Use \`lobe-agent-documents.readDocument\` with the \`agentDocumentId\` below. Do not pass the backing \`documentId\` as \`id\`.${items}`;
+Use \`orvilo-agent-documents.readDocument\` with the \`agentDocumentId\` below. Do not pass the backing \`documentId\` as \`id\`.${items}`;
 };
 
 export const buildVerifierPrompt = ({

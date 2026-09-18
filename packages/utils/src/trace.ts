@@ -1,9 +1,9 @@
 import type { TracePayload } from '@orvilo/const';
-import { LOBE_CHAT_TRACE_HEADER, LOBE_CHAT_TRACE_ID } from '@orvilo/const';
+import { ORVILO_TRACE_HEADER, ORVILO_TRACE_ID } from '@orvilo/const';
 import { Buffer } from 'buffer.js';
 
 export const getTracePayload = (req: Request): TracePayload | undefined => {
-  const header = req.headers.get(LOBE_CHAT_TRACE_HEADER);
+  const header = req.headers.get(ORVILO_TRACE_HEADER);
   if (!header) return;
 
   try {
@@ -14,7 +14,7 @@ export const getTracePayload = (req: Request): TracePayload | undefined => {
   }
 };
 
-export const getTraceId = (res: Response) => res.headers.get(LOBE_CHAT_TRACE_ID);
+export const getTraceId = (res: Response) => res.headers.get(ORVILO_TRACE_ID);
 
 const createTracePayload = (data: TracePayload) => {
   const buffer = new TextEncoder().encode(JSON.stringify(data));
@@ -23,5 +23,5 @@ const createTracePayload = (data: TracePayload) => {
 };
 
 export const createTraceHeader = (data: TracePayload) => {
-  return { [LOBE_CHAT_TRACE_HEADER]: createTracePayload(data) };
+  return { [ORVILO_TRACE_HEADER]: createTracePayload(data) };
 };

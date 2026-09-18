@@ -13,7 +13,7 @@ export const cloudWorkspaceAuth = trpc.middleware(async (opts) =>
   }),
 );
 
-export const lobeWorkspaceAuth = trpc.middleware(async (opts) => opts.next());
+export const orviloWorkspaceAuth = trpc.middleware(async (opts) => opts.next());
 
 export const requireWorkspaceRole = (_minRole: WorkspaceRole) =>
   trpc.middleware(async (opts) => opts.next());

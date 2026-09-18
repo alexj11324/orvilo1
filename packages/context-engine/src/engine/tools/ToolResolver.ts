@@ -1,8 +1,8 @@
 import { ToolNameResolver } from './ToolNameResolver';
 import type {
   ActivatedStepTool,
-  LobeToolManifest,
   OperationToolSet,
+  OrviloToolManifest,
   ResolvedToolSet,
   StepToolDelta,
   ToolExecutor,
@@ -40,7 +40,7 @@ export class ToolResolver {
 
     // Only include manifests for enabled tools to prevent injecting
     // systemRole for disabled tools (e.g. web-browsing when search is off)
-    const manifestMap: Record<string, LobeToolManifest> = {};
+    const manifestMap: Record<string, OrviloToolManifest> = {};
     for (const id of enabledToolIds) {
       if (operationToolSet.manifestMap[id]) {
         manifestMap[id] = operationToolSet.manifestMap[id];
@@ -120,9 +120,9 @@ export class ToolResolver {
   }
 
   private applyActivation(
-    activation: { id: string; manifest?: LobeToolManifest; source?: string },
+    activation: { id: string; manifest?: OrviloToolManifest; source?: string },
     tools: UniformTool[],
-    manifestMap: Record<string, LobeToolManifest>,
+    manifestMap: Record<string, OrviloToolManifest>,
     sourceMap: Record<string, ToolSource>,
     enabledToolIds: string[],
   ): void {
@@ -136,7 +136,7 @@ export class ToolResolver {
       enabledToolIds.push(activation.id);
 
       // Only set source if not already present — the operation-level sourceMap
-      // may already have the correct routing source (e.g., 'lobehubSkill', 'composio')
+      // may already have the correct routing source (e.g., 'orviloSkill', 'composio')
       // and the activation source ('discovery') should not overwrite it.
       if (activation.source && !sourceMap[activation.id]) {
         sourceMap[activation.id] = this.mapSource(activation.source);

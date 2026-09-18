@@ -11,7 +11,7 @@ const ReactRenderer = dynamic(() => import('./React'), { ssr: false });
 const Renderer = memo<{ animated?: boolean; content: string; type?: string }>(
   ({ animated, content, type }) => {
     switch (type) {
-      case 'application/lobe.artifacts.react': {
+      case 'application/orvilo.artifacts.react': {
         return <ReactRenderer code={content} />;
       }
 
@@ -19,7 +19,7 @@ const Renderer = memo<{ animated?: boolean; content: string; type?: string }>(
         return <SVGRender content={content} />;
       }
 
-      case 'application/lobe.artifacts.mermaid': {
+      case 'application/orvilo.artifacts.mermaid': {
         return <Mermaid variant={'borderless'}>{content}</Mermaid>;
       }
 

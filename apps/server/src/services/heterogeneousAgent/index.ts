@@ -1,6 +1,6 @@
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { type ISnapshotStore, parseOperationId } from '@orvilo/agent-tracing';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import {
   classifyHeteroProcessFailure,
   getNativeHeteroSessionBindingKey,
@@ -27,7 +27,7 @@ import {
 } from './HeterogeneousPersistenceHandler';
 import { HeteroTraceRecorder } from './HeteroTraceRecorder';
 
-const log = debug('lobe-server:hetero-agent-service');
+const log = debug('orvilo-server:hetero-agent-service');
 
 export type HeterogeneousAgentType = LocalHeterogeneousAgentType;
 
@@ -35,7 +35,7 @@ export type HeterogeneousFinishResult = 'success' | 'error' | 'cancelled';
 
 export interface HeterogeneousIngestParams {
   agentType: HeterogeneousAgentType;
-  /** Forwarded from the sandbox LOBEHUB_ASSISTANT_MESSAGE_ID env var.
+  /** Forwarded from the sandbox ORVILO_ASSISTANT_MESSAGE_ID env var.
    * Passed through to the persistence handler so loadOrCreateState can skip
    * the topic.metadata DB read on cold Lambda instances. */
   assistantMessageId?: string;
@@ -134,7 +134,7 @@ export interface HeterogeneousAgentServiceOptions {
  */
 export class HeterogeneousAgentService {
   private readonly agentOperationModel: AgentOperationModel;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly messageModel: MessageModel;
   private readonly persistenceHandler: HeterogeneousPersistenceHandler;
   private readonly streamEventManager: IStreamEventManager;
@@ -144,7 +144,7 @@ export class HeterogeneousAgentService {
   private readonly workspaceId?: string;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     options: HeterogeneousAgentServiceOptions = {},
   ) {

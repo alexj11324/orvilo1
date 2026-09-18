@@ -1,7 +1,7 @@
 import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 
 import { agentAccountBindings, agentProviderAccounts } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 interface AgentQuotaHandoverParams {
   agentIds: string[];
@@ -9,7 +9,7 @@ interface AgentQuotaHandoverParams {
   recipientId: string;
 }
 
-type Db = LobeChatDatabase | Transaction;
+type Db = OrviloDatabase | Transaction;
 
 /**
  * Quota policy for an ownership handover. Both tables cascade on user

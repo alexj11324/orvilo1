@@ -110,7 +110,7 @@ export const GetImageModelParametersRender = memo<
       <Alert
         showIcon
         description={pluginError.message}
-        title={t('builtins.lobe-image-generation.render.parameterList.failed')}
+        title={t('builtins.orvilo-image-generation.render.parameterList.failed')}
         type={'error'}
       />
     );
@@ -140,7 +140,7 @@ export const GetImageModelParametersRender = memo<
             </span>
           </Flexbox>
           <span className={styles.count}>
-            {t('builtins.lobe-image-generation.render.parameterList.parameters', {
+            {t('builtins.orvilo-image-generation.render.parameterList.parameters', {
               count: parameters.length,
             })}
           </span>
@@ -148,7 +148,7 @@ export const GetImageModelParametersRender = memo<
 
         {parameters.length === 0 ? (
           <Text as={'div'} className={styles.empty}>
-            {t('builtins.lobe-image-generation.render.parameterList.empty')}
+            {t('builtins.orvilo-image-generation.render.parameterList.empty')}
           </Text>
         ) : (
           <div>

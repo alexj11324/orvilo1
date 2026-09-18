@@ -77,40 +77,81 @@ describe('TabBar storage', () => {
     expect(window.localStorage.getItem(tabPagesStorageKey(acmeScope))).toContain('workspace-tab');
   });
 
-  it('drops retired product tabs and clears a retired active tab', () => {
-    window.localStorage.setItem(
-      tabPagesStorageKey(personalScope),
-      JSON.stringify({
-        activeTabId: 'page-tab',
-        tabs: [
-          { id: 'community-tab', lastVisited: 3, url: '/community' },
-          { id: 'page-tab', lastVisited: 2, url: '/page/document-id' },
-          { id: 'agent-tab', lastVisited: 1, url: '/agent/agent-id' },
+  describe('restoring a tab pinned to a retired product', () => {
+    it('drops it and moves the selection onto a tab that still resolves', () => {
+      saveTabPages(
+        personalScope,
+        [
+          { id: 'image-tab', lastVisited: 2, url: '/image' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/tasks' },
         ],
-      }),
-    );
+        'image-tab',
+      );
 
-    expect(getTabPages(personalScope)).toEqual({
-      activeTabId: null,
-      tabs: [{ id: 'agent-tab', lastVisited: 1, url: '/agent/agent-id' }],
+      expect(getTabPages(personalScope)).toEqual({
+        activeTabId: 'tasks-tab',
+        tabs: [{ id: 'tasks-tab', lastVisited: 1, url: '/tasks' }],
+      });
     });
-  });
 
-  it('drops retired product tabs from workspace buckets', () => {
-    window.localStorage.setItem(
-      tabPagesStorageKey(acmeScope),
-      JSON.stringify({
-        activeTabId: 'agent-tab',
-        tabs: [
-          { id: 'page-tab', lastVisited: 2, url: '/acme/page/document-id' },
-          { id: 'agent-tab', lastVisited: 1, url: '/acme/agent/agent-id' },
+    it('drops it under a workspace too, where the same segment sits one level deeper', () => {
+      saveTabPages(
+        acmeScope,
+        [
+          { id: 'community-tab', lastVisited: 2, url: '/acme/community' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/acme/tasks' },
         ],
-      }),
-    );
+        'tasks-tab',
+      );
 
-    expect(getTabPages(acmeScope)).toEqual({
-      activeTabId: 'agent-tab',
-      tabs: [{ id: 'agent-tab', lastVisited: 1, url: '/acme/agent/agent-id' }],
+      expect(getTabPages(acmeScope).tabs.map((tab) => tab.id)).toEqual(['tasks-tab']);
+    });
+
+    it('keeps tabs on retired-but-resolving prefixes like /memory and /apps', () => {
+      // `/memory` no longer appears in navigation, but `/memory/preferences`
+      // still hosts the manager; `/apps` redirects to Settings > About.
+      // Purging either would strand a tab the user pinned on purpose.
+      saveTabPages(
+        personalScope,
+        [
+          { id: 'memory-tab', lastVisited: 3, url: '/memory/preferences' },
+          { id: 'apps-tab', lastVisited: 2, url: '/apps' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/tasks' },
+        ],
+        'memory-tab',
+      );
+
+      expect(getTabPages(personalScope)).toEqual({
+        activeTabId: 'memory-tab',
+        tabs: [
+          { id: 'memory-tab', lastVisited: 3, url: '/memory/preferences' },
+          { id: 'apps-tab', lastVisited: 2, url: '/apps' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/tasks' },
+        ],
+      });
+    });
+
+    it('keeps a workspace-scoped memory tab too', () => {
+      saveTabPages(
+        acmeScope,
+        [
+          { id: 'memory-tab', lastVisited: 2, url: '/acme/memory/preferences' },
+          { id: 'tasks-tab', lastVisited: 1, url: '/acme/tasks' },
+        ],
+        'memory-tab',
+      );
+
+      expect(getTabPages(acmeScope).tabs.map((tab) => tab.id)).toEqual(['memory-tab', 'tasks-tab']);
+    });
+
+    it('reports no selection when every stored tab was retired', () => {
+      saveTabPages(
+        acmeScope,
+        [{ id: 'video-tab', lastVisited: 1, url: '/acme/video' }],
+        'video-tab',
+      );
+
+      expect(getTabPages(acmeScope)).toEqual({ activeTabId: null, tabs: [] });
     });
   });
 });

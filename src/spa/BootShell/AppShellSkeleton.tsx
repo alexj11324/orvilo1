@@ -16,11 +16,11 @@ import { electronStylish } from '@/styles/electron';
 
 import { readBootShellGeometry } from './geometry';
 
-// antd emits its design tokens as `.lobe-vars{--ant-*: …}` — a plain global
+// antd emits its design tokens as `.orvilo-vars{--ant-*: …}` — a plain global
 // class rule, not a `:root` one. The shell renders outside `AppTheme`, so it has
 // to opt into that class itself or every `var(--ant-*)` below resolves to its
 // fallback.
-const CSS_VAR_CLASS = 'lobe-vars';
+const CSS_VAR_CLASS = 'orvilo-vars';
 
 export const APP_SHELL_FALLBACK_ID = 'app-shell-fallback';
 

@@ -3,7 +3,7 @@ import type { Content, GenerateContentResponse } from '@google/genai';
 import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LOBE_ERROR_KEY } from '../../core/streams';
+import { ORVILO_ERROR_KEY } from '../../core/streams';
 import { AgentRuntimeErrorType } from '../../types/error';
 import * as debugStreamModule from '../../utils/debugStream';
 import {
@@ -11,7 +11,7 @@ import {
   createSignatureScope,
   serializeScopedSignature,
 } from '../../utils/signatureScope';
-import { LobeGoogleAI } from './index';
+import { OrviloGoogleAI } from './index';
 
 const provider = 'google';
 const defaultBaseURL = 'https://generativelanguage.googleapis.com';
@@ -50,12 +50,12 @@ const createGoogleThoughtSignatureScope = async ({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeGoogleAI;
+let instance: OrviloGoogleAI;
 
 beforeEach(() => {
   getModelPricingMock.mockReset();
   getModelPricingMock.mockResolvedValue(undefined);
-  instance = new LobeGoogleAI({ apiKey: 'test' });
+  instance = new OrviloGoogleAI({ apiKey: 'test' });
 
   // Use vi.spyOn to mock the chat.completions.create method
   const mockStreamData = createEmptyAsyncGenerator<GenerateContentResponse>();
@@ -66,11 +66,11 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeGoogleAI', () => {
+describe('OrviloGoogleAI', () => {
   describe('init', () => {
     it('should correctly initialize with an API key', async () => {
-      const instance = new LobeGoogleAI({ apiKey: 'test_api_key' });
-      expect(instance).toBeInstanceOf(LobeGoogleAI);
+      const instance = new OrviloGoogleAI({ apiKey: 'test_api_key' });
+      expect(instance).toBeInstanceOf(OrviloGoogleAI);
 
       // expect(instance.baseURL).toEqual(defaultBaseURL);
     });
@@ -89,7 +89,7 @@ describe('LobeGoogleAI', () => {
     });
 
     it('should use mapped model id for upstream chat requests while keeping pricing on logical model', async () => {
-      const mappedInstance = new LobeGoogleAI({
+      const mappedInstance = new OrviloGoogleAI({
         apiKey: 'test',
         modelIdMapping: { 'gemini-logical': 'gemini-upstream' },
       });
@@ -134,7 +134,7 @@ describe('LobeGoogleAI', () => {
       { apiKey: 'another-key', baseURL: defaultBaseURL, label: 'credential' },
       { apiKey: 'test', baseURL: 'https://another.example.com', label: 'endpoint' },
     ])('should reject a thought signature from another direct $label', async (source) => {
-      const directInstance = new LobeGoogleAI({ apiKey: 'test' });
+      const directInstance = new OrviloGoogleAI({ apiKey: 'test' });
       const generateContentStream = vi
         .spyOn(directInstance['client'].models, 'generateContentStream')
         .mockResolvedValue(createEmptyAsyncGenerator<GenerateContentResponse>());
@@ -171,7 +171,7 @@ describe('LobeGoogleAI', () => {
       const generateContentStream = vi
         .fn()
         .mockResolvedValue(createEmptyAsyncGenerator<GenerateContentResponse>());
-      const vertexInstance = new LobeGoogleAI({
+      const vertexInstance = new OrviloGoogleAI({
         apiKey: 'avoid-error',
         client: { models: { generateContentStream } } as any,
         isVertexAi: true,
@@ -215,7 +215,7 @@ describe('LobeGoogleAI', () => {
     });
 
     it('should apply upstream model compatibility after model mapping', async () => {
-      const mappedInstance = new LobeGoogleAI({
+      const mappedInstance = new OrviloGoogleAI({
         apiKey: 'test',
         modelIdMapping: { 'gemini-logical': 'gemini-3.6-flash' },
       });
@@ -611,7 +611,7 @@ describe('LobeGoogleAI', () => {
 
       it('should throw AgentRuntimeError with NoOpenAIAPIKey if no apiKey is provided', async () => {
         try {
-          new LobeGoogleAI({});
+          new OrviloGoogleAI({});
         } catch (e) {
           expect(e).toEqual({ errorType: invalidErrorType });
         }
@@ -703,7 +703,7 @@ describe('LobeGoogleAI', () => {
         expect(chunks).toEqual([
           { text: 'Hello' },
           {
-            [LOBE_ERROR_KEY]: {
+            [ORVILO_ERROR_KEY]: {
               body: { name: 'Stream cancelled', provider, reason: 'aborted' },
               message: 'Stream cancelled',
               name: 'Stream cancelled',
@@ -752,7 +752,7 @@ describe('LobeGoogleAI', () => {
         expect(chunks).toEqual([
           { text: 'Hello' },
           {
-            [LOBE_ERROR_KEY]: {
+            [ORVILO_ERROR_KEY]: {
               body: { name: 'Stream cancelled', provider, reason: 'aborted' },
               message: 'Stream cancelled',
               name: 'Stream cancelled',
@@ -780,7 +780,7 @@ describe('LobeGoogleAI', () => {
         const chunk2 = await reader.read();
         expect(chunk2.done).toBe(true);
 
-        expect(chunk1.value[LOBE_ERROR_KEY]).toEqual({
+        expect(chunk1.value[ORVILO_ERROR_KEY]).toEqual({
           body: {
             message: 'aborted',
             name: 'AbortError',
@@ -815,7 +815,7 @@ describe('LobeGoogleAI', () => {
         expect(chunks).toEqual([
           { text: 'Hello' },
           {
-            [LOBE_ERROR_KEY]: {
+            [ORVILO_ERROR_KEY]: {
               body: { message: 'Network error', provider },
               message: 'Network error',
               name: 'Stream parsing error',
@@ -1430,7 +1430,7 @@ describe('buildGoogleToolsWithSearch', () => {
   });
 
   it('should not set includeServerSideToolInvocations for Vertex AI', async () => {
-    const vertexInstance = new LobeGoogleAI({ apiKey: 'test', isVertexAi: true });
+    const vertexInstance = new OrviloGoogleAI({ apiKey: 'test', isVertexAi: true });
     const mockStream = new ReadableStream({
       start(controller) {
         controller.enqueue({
@@ -1541,7 +1541,7 @@ describe('buildGoogleToolsWithSearch', () => {
 
 describe('modelIdMapping', () => {
   it('should use mapped model id for upstream chat-image requests while keeping logical model usage pricing', async () => {
-    const mappedInstance = new LobeGoogleAI({
+    const mappedInstance = new OrviloGoogleAI({
       apiKey: 'test',
       modelIdMapping: { 'gemini-logical:image': 'gemini-upstream-image' },
     });
@@ -1573,7 +1573,7 @@ describe('modelIdMapping', () => {
   });
 
   it('should use mapped model id for upstream generateObject requests while keeping pricing on logical model', async () => {
-    const mappedInstance = new LobeGoogleAI({
+    const mappedInstance = new OrviloGoogleAI({
       apiKey: 'test',
       modelIdMapping: { 'gemini-logical': 'gemini-upstream' },
     });
@@ -1612,7 +1612,7 @@ describe('models', () => {
     global.fetch = mockFetch;
 
     const apiKey = 'test-google-key';
-    const localInstance = new LobeGoogleAI({ apiKey });
+    const localInstance = new OrviloGoogleAI({ apiKey });
 
     await localInstance.models();
     const [url, options] = mockFetch.mock.calls[0];

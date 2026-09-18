@@ -17,9 +17,9 @@ describe('app URLs', () => {
       buildAppUrl({
         pathname: '/goal/goal-1',
         serverUrl: 'https://app.example.com',
-        workspaceSlug: 'Lobe Hub',
+        workspaceSlug: 'Orvilo Hub',
       }),
-    ).toBe('https://app.example.com/Lobe%20Hub/goal/goal-1');
+    ).toBe('https://app.example.com/Orvilo%20Hub/goal/goal-1');
   });
 
   it('does not fetch workspace context in personal mode', async () => {
@@ -34,10 +34,10 @@ describe('app URLs', () => {
 
   it('uses the server-resolved slug in workspace mode', async () => {
     vi.mocked(resolveWorkspaceId).mockReturnValue('ws-1');
-    const query = vi.fn().mockResolvedValue({ id: 'ws-1', slug: 'lobehub' });
+    const query = vi.fn().mockResolvedValue({ id: 'ws-1', slug: 'orvilo' });
 
     await expect(
       resolveAppUrl({ workspace: { getById: { query } } } as never, '/agent/agt-1'),
-    ).resolves.toBe('https://app.example.com/lobehub/agent/agt-1');
+    ).resolves.toBe('https://app.example.com/orvilo/agent/agt-1');
   });
 });

@@ -85,7 +85,7 @@
               "type": "builtin",
               "apiName": "callSubAgent",
               "arguments": "{\"description\":\"Write 400-word story and save to Notebook\",\"inheritMessages\":true,\"instruction\":\"Write a ~400 word short story, then save it to Notebook.\",\"timeout\":1800000}",
-              "identifier": "lobe-agent",
+              "identifier": "orvilo-agent",
               "result": {
                 "content": "🚀 Triggered async task for execution:\n- Write 400-word story and save to Notebook",
                 "id": "msg-tool-1",
@@ -171,7 +171,7 @@
               "type": "builtin",
               "apiName": "createDocument",
               "arguments": "{\"content\":\"Once upon a time in a small village...\",\"description\":\"A short story about time and farewell.\",\"title\":\"Eleven Oh Seven\",\"type\":\"article\"}",
-              "identifier": "lobe-notebook",
+              "identifier": "orvilo-notebook",
               "result": {
                 "content": "📝 Document \"Eleven Oh Seven\" created successfully",
                 "id": "msg-tool-2",
@@ -249,7 +249,7 @@
           "type": "builtin",
           "apiName": "callSubAgent",
           "arguments": "{\"description\":\"Write 400-word story and save to Notebook\",\"inheritMessages\":true,\"instruction\":\"Write a ~400 word short story, then save it to Notebook.\",\"timeout\":1800000}",
-          "identifier": "lobe-agent"
+          "identifier": "orvilo-agent"
         }
       ],
       "metadata": {
@@ -274,7 +274,7 @@
       "plugin": {
         "apiName": "callSubAgent",
         "arguments": "{\"description\":\"Write 400-word story and save to Notebook\",\"inheritMessages\":true,\"instruction\":\"Write a ~400 word short story, then save it to Notebook.\",\"timeout\":1800000}",
-        "identifier": "lobe-agent",
+        "identifier": "orvilo-agent",
         "type": "builtin"
       },
       "pluginState": {
@@ -325,7 +325,7 @@
           "type": "builtin",
           "apiName": "createDocument",
           "arguments": "{\"content\":\"Once upon a time in a small village...\",\"description\":\"A short story about time and farewell.\",\"title\":\"Eleven Oh Seven\",\"type\":\"article\"}",
-          "identifier": "lobe-notebook"
+          "identifier": "orvilo-notebook"
         }
       ],
       "metadata": {
@@ -350,7 +350,7 @@
       "plugin": {
         "apiName": "createDocument",
         "arguments": "{\"content\":\"Once upon a time in a small village...\",\"description\":\"A short story about time and farewell.\",\"title\":\"Eleven Oh Seven\",\"type\":\"article\"}",
-        "identifier": "lobe-notebook",
+        "identifier": "orvilo-notebook",
         "type": "builtin"
       },
       "pluginState": {

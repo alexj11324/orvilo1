@@ -12,12 +12,20 @@ import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { SettingsTabs } from '@/store/global/initialState';
 import { isModifierClick } from '@/utils/navigation';
 
-import { SettingsGroupKey, useCategory } from '../../hooks/useCategory';
+import { useCategory } from '../../hooks/useCategory';
 
 const Body = memo(() => {
   const categoryGroups = useCategory();
   const navigate = useWorkspaceAwareNavigate();
   const location = useActiveLocation();
+
+  // Every group starts expanded. Derived from the groups themselves rather than listed
+  // by hand: a hand-written list silently collapses each group added later, which is
+  // how the capability groups would have arrived hidden behind their triggers.
+  const defaultOpenGroups = useMemo(
+    () => categoryGroups.map((group) => group.key),
+    [categoryGroups],
+  );
 
   // Extract current tab from pathname: /settings/profile -> profile
   const activeTab = useMemo(() => {
@@ -33,17 +41,10 @@ const Body = memo(() => {
     <Flexbox gap={4} paddingInline={4}>
       <SearchSection>
         <Accordion
+          defaultValue={defaultOpenGroups}
           gap={8}
           indicatorPlacement="inline"
           styles={{ trigger: { paddingBlock: 4, paddingInline: '8px 4px' } }}
-          defaultValue={[
-            SettingsGroupKey.Account,
-            SettingsGroupKey.General,
-            SettingsGroupKey.Subscription,
-            SettingsGroupKey.Agent,
-            SettingsGroupKey.System,
-            SettingsGroupKey.Developer,
-          ]}
           items={categoryGroups.map((group) => ({
             key: group.key,
             title: (

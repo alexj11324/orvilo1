@@ -2,7 +2,7 @@ name: Business Overlay
 description: >-
   Clone the private business-overlay repository and overlay it around this
   checkout so the workspace parent becomes the overlay root with this repo as
-  its `lobehub/` submodule. Same layout as desktop-build-setup's overlay,
+  its `aspectlylabs/` submodule. Same layout as desktop-build-setup's overlay,
   extracted so non-desktop workflows (share verify) can build with the business
   overlay without desktop's install steps.
 
@@ -61,7 +61,7 @@ runs:
 
         const source = process.env.OVERLAY_CHECKOUT;
         const target = process.env.OVERLAY_ROOT;
-        const skip = new Set(['.git', 'lobehub', 'node_modules']);
+        const skip = new Set(['.git', 'orvilo', 'node_modules']);
 
         const copy = (from, to) => {
           const stat = fs.lstatSync(from);

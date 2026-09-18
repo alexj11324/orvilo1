@@ -222,7 +222,7 @@ describe('skillRouter.getSkillList error mapping', () => {
   /**
    * `UNAUTHORIZED` drives re-authentication UI: `createResponseMeta` tags it
    * with `X-Auth-Required` (unless it carries the Market sentinel message) and
-   * the desktop proxy opens the LobeHub re-login prompt on that header. These
+   * the desktop proxy opens the Orvilo re-login prompt on that header. These
    * are `publicProcedure`s authenticated by the server's trusted-client token,
    * so an upstream 401 is our misconfiguration — it must never ask the user to
    * sign in again.

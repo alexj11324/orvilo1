@@ -29,4 +29,4 @@ export const params = {
   provider: ModelProvider.Qiniu,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeQiniuAI = createOpenAICompatibleRuntime(params);
+export const OrviloQiniuAI = createOpenAICompatibleRuntime(params);

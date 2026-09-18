@@ -250,7 +250,6 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
         <AnimatedNumber
           duration={1500}
           // Force remount when switching between token/credit to prevent unwanted animation
-          // See: https://github.com/lobehub/lobe-chat/pull/10098
           key={isShowCredit ? 'credit' : 'token'}
           value={totalCount}
           formatter={(value) => {

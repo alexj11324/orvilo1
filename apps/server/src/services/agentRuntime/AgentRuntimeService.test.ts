@@ -156,7 +156,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         id: 'gpt-4o-mini',
         providerId: 'openai',
@@ -568,13 +568,13 @@ describe('AgentRuntimeService', () => {
     });
 
     it('should restore tools activated in a previous operation into initial state', async () => {
-      const taskManifest = { identifier: 'lobe-task' } as any;
+      const taskManifest = { identifier: 'orvilo-task' } as any;
       const initialMessages = [
         {
-          content: 'Successfully activated tools: lobe-task',
+          content: 'Successfully activated tools: orvilo-task',
           id: 'tool-message-1',
-          plugin: { apiName: 'activateTools', identifier: 'lobe-activator' },
-          pluginState: { activatedTools: [{ identifier: 'lobe-task' }] },
+          plugin: { apiName: 'activateTools', identifier: 'orvilo-activator' },
+          pluginState: { activatedTools: [{ identifier: 'orvilo-task' }] },
           role: 'tool',
         },
       ] as any;
@@ -586,8 +586,8 @@ describe('AgentRuntimeService', () => {
         initialStepCount: 3,
         toolSet: {
           ...mockParams.toolSet,
-          activatableToolIds: ['lobe-task'],
-          manifestMap: { 'lobe-task': taskManifest },
+          activatableToolIds: ['orvilo-task'],
+          manifestMap: { 'orvilo-task': taskManifest },
         },
       });
 
@@ -597,7 +597,7 @@ describe('AgentRuntimeService', () => {
           activatedStepTools: [
             {
               activatedAtStep: 3,
-              id: 'lobe-task',
+              id: 'orvilo-task',
               manifest: taskManifest,
               source: 'discovery',
             },
@@ -612,10 +612,10 @@ describe('AgentRuntimeService', () => {
         autoStart: false,
         initialMessages: [
           {
-            content: 'Successfully activated tools: lobe-task',
+            content: 'Successfully activated tools: orvilo-task',
             id: 'tool-message-1',
-            plugin: { apiName: 'activateTools', identifier: 'lobe-activator' },
-            pluginState: { activatedTools: [{ identifier: 'lobe-task' }] },
+            plugin: { apiName: 'activateTools', identifier: 'orvilo-activator' },
+            pluginState: { activatedTools: [{ identifier: 'orvilo-task' }] },
             role: 'tool',
           },
         ] as any,
@@ -624,7 +624,7 @@ describe('AgentRuntimeService', () => {
           // The broad discovery map may still contain the manifest in chat/custom
           // mode or for a model without function calling support.
           activatableToolIds: [],
-          manifestMap: { 'lobe-task': { identifier: 'lobe-task' } as any },
+          manifestMap: { 'orvilo-task': { identifier: 'orvilo-task' } as any },
         },
       });
 
@@ -1308,7 +1308,7 @@ describe('AgentRuntimeService', () => {
             data: 'Search found 3 results for "weather"',
             executionTime: 120,
             isSuccess: true,
-            toolCall: { identifier: 'lobe-web-browsing', apiName: 'search', id: 'tc-1' },
+            toolCall: { identifier: 'orvilo-web-browsing', apiName: 'search', id: 'tc-1' },
             toolCallId: 'tc-1',
           },
           session: {
@@ -1333,7 +1333,7 @@ describe('AgentRuntimeService', () => {
           toolsResult: [
             expect.objectContaining({
               apiName: 'search',
-              identifier: 'lobe-web-browsing',
+              identifier: 'orvilo-web-browsing',
               output: 'Search found 3 results for "weather"',
             }),
           ],
@@ -1366,7 +1366,7 @@ describe('AgentRuntimeService', () => {
                 data: { items: [1, 2, 3] },
                 executionTime: 200,
                 isSuccess: true,
-                toolCall: { identifier: 'lobe-skills', apiName: 'activateSkill', id: 'tc-2' },
+                toolCall: { identifier: 'orvilo-skills', apiName: 'activateSkill', id: 'tc-2' },
                 toolCallId: 'tc-2',
               },
             ],
@@ -1398,7 +1398,7 @@ describe('AgentRuntimeService', () => {
             }),
             expect.objectContaining({
               apiName: 'activateSkill',
-              identifier: 'lobe-skills',
+              identifier: 'orvilo-skills',
               output: JSON.stringify({ items: [1, 2, 3] }),
             }),
           ],

@@ -1,8 +1,8 @@
 /**
  * @vitest-environment happy-dom
  */
-import type * as LobechatConstModule from '@orvilo/const';
-import type { LobeAgentAgencyConfig } from '@orvilo/types';
+import type * as OrvilochatConstModule from '@orvilo/const';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,12 +14,12 @@ import { resolveWorkspaceSurface, useWorkspaceSurface } from '../useWorkspaceSur
 // as `useTopicAgencyConfig` would resolve it. The raw shared row lives in
 // the real agent store so store-derived selectors see what they see in prod.
 const effective = vi.hoisted(() => ({
-  agencyConfig: undefined as LobeAgentAgencyConfig | undefined,
+  agencyConfig: undefined as OrviloAgentAgencyConfig | undefined,
   workspaceScoped: false,
 }));
 
 vi.mock('@orvilo/const', async (importOriginal) => ({
-  ...(await importOriginal<typeof LobechatConstModule>()),
+  ...(await importOriginal<typeof OrvilochatConstModule>()),
   isDesktop: true,
 }));
 
@@ -37,7 +37,10 @@ vi.mock('@/hooks/useTopicAgencyConfig', () => ({
 
 const AGENT_ID = 'agent-1';
 
-const setSharedAgent = (agent: { agencyConfig?: LobeAgentAgencyConfig; workspaceId?: string }) => {
+const setSharedAgent = (agent: {
+  agencyConfig?: OrviloAgentAgencyConfig;
+  workspaceId?: string;
+}) => {
   useAgentStore.setState({
     agentMap: { [AGENT_ID]: { id: AGENT_ID, visibility: 'public', ...agent } },
   });
@@ -56,7 +59,7 @@ describe('useWorkspaceSurface (desktop)', () => {
   // for a workspace agent, which hid the directory picker.
   it.each([
     ['no target yet', undefined],
-    ['cloud sandbox', { executionTarget: 'sandbox' } as LobeAgentAgencyConfig],
+    ['cloud sandbox', { executionTarget: 'sandbox' } as OrviloAgentAgencyConfig],
   ])(
     'shows the working directory picker when a workspace member overrides a shared row (%s) with local',
     (_, sharedAgencyConfig) => {
@@ -75,7 +78,7 @@ describe('useWorkspaceSurface (desktop)', () => {
   );
 
   it('keeps the device-scoped picker for a workspace-scoped shared local target bound to a workspace device', () => {
-    const shared: LobeAgentAgencyConfig = {
+    const shared: OrviloAgentAgencyConfig = {
       boundDeviceId: 'workspace-device',
       executionTarget: 'local',
     };
@@ -102,7 +105,7 @@ describe('useWorkspaceSurface (desktop)', () => {
   });
 
   it('shows the picker for a personal agent running locally', () => {
-    const shared: LobeAgentAgencyConfig = { executionTarget: 'local' };
+    const shared: OrviloAgentAgencyConfig = { executionTarget: 'local' };
     setSharedAgent({ agencyConfig: shared });
     effective.agencyConfig = shared;
 
@@ -112,7 +115,7 @@ describe('useWorkspaceSurface (desktop)', () => {
   });
 
   it('always shows the picker for a heterogeneous agent, even on a sandbox target', () => {
-    const shared: LobeAgentAgencyConfig = {
+    const shared: OrviloAgentAgencyConfig = {
       executionTarget: 'sandbox',
       heterogeneousProvider: { command: 'claude', type: 'claude-code' },
     };

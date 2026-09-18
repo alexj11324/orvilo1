@@ -47,7 +47,7 @@ export const GetImageGenerationStatusRender = memo<
       <Alert
         showIcon
         description={pluginError.message}
-        title={t('builtins.lobe-image-generation.render.statusCheckFailed')}
+        title={t('builtins.orvilo-image-generation.render.statusCheckFailed')}
         type={'error'}
       />
     );
@@ -63,7 +63,7 @@ export const GetImageGenerationStatusRender = memo<
         </Text>
         {url && (
           <img
-            alt={t('builtins.lobe-image-generation.render.imageAlt', { index: 1 })}
+            alt={t('builtins.orvilo-image-generation.render.imageAlt', { index: 1 })}
             className={styles.image}
             src={url}
           />

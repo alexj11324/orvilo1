@@ -2,7 +2,7 @@ import { and, count, desc, eq, inArray, isNull, lt, or, type SQL, sql } from 'dr
 
 import type { NewNotification, NewNotificationDelivery } from '../schemas/notification';
 import { notificationDeliveries, notifications } from '../schemas/notification';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 export interface NotificationModelOptions {
   /**
@@ -16,10 +16,10 @@ export interface NotificationModelOptions {
 
 export class NotificationModel {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly workspaceId?: string | null;
 
-  constructor(db: LobeChatDatabase, userId: string, options?: NotificationModelOptions) {
+  constructor(db: OrviloDatabase, userId: string, options?: NotificationModelOptions) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = options?.workspaceId;

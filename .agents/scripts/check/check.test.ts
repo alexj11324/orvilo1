@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { findNewComponentTestAdvisories } from './advisories';
 import { diffStat, renderDiffsForStdout } from './autofix';
-import { lobehubPipelines } from './pipelines';
+import { orviloPipelines } from './pipelines';
 import {
   findVitestConfigDir,
   isTestFile,
@@ -21,7 +21,7 @@ import { compactVitestOutput } from './vitest';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
 describe('resolveMount', () => {
-  const root: RepoMount = { dir: '', pipelines: lobehubPipelines };
+  const root: RepoMount = { dir: '', pipelines: orviloPipelines };
   const sub: RepoMount = { dir: 'vendor/sub', pipelines: [] };
   const repos = [root, sub];
 
@@ -46,28 +46,28 @@ describe('resolveMount', () => {
 
 describe('pipelineFor', () => {
   it('maps ts/tsx to the stylelint+eslint+prettier pipeline', () => {
-    const pipeline = pipelineFor(lobehubPipelines, 'src/auth.ts');
+    const pipeline = pipelineFor(orviloPipelines, 'src/auth.ts');
     expect(pipeline?.tools.map(([tool]) => tool)).toEqual(['stylelint', 'eslint', 'prettier']);
   });
 
   it('maps md to remark+prettier and json to prettier only', () => {
-    expect(pipelineFor(lobehubPipelines, 'AGENTS.md')?.tools.map(([tool]) => tool)).toEqual([
+    expect(pipelineFor(orviloPipelines, 'AGENTS.md')?.tools.map(([tool]) => tool)).toEqual([
       'remark',
       'prettier',
     ]);
-    expect(pipelineFor(lobehubPipelines, 'package.json')?.tools.map(([tool]) => tool)).toEqual([
+    expect(pipelineFor(orviloPipelines, 'package.json')?.tools.map(([tool]) => tool)).toEqual([
       'prettier',
     ]);
   });
 
   it('returns null for extensions with no pipeline', () => {
-    expect(pipelineFor(lobehubPipelines, '.github/workflows/ci.yml')).not.toBeNull();
-    expect(pipelineFor(lobehubPipelines, 'image.png')).toBeNull();
+    expect(pipelineFor(orviloPipelines, '.github/workflows/ci.yml')).not.toBeNull();
+    expect(pipelineFor(orviloPipelines, 'image.png')).toBeNull();
     expect(pipelineFor([], 'a.ts')).toBeNull();
   });
 });
 
-describe('lobehubPipelines drift', () => {
+describe('orviloPipelines drift', () => {
   /**
    * Guards the handwritten mirror in pipelines.ts against drifting from the
    * real lint-staged config in package.json. Compares tool-name sequences
@@ -91,7 +91,7 @@ describe('lobehubPipelines drift', () => {
       const expected = commands.map((command) => command.split(' ')[0]);
       for (const ext of globExts(glob)) {
         expect(
-          pipelineFor(lobehubPipelines, `sample${ext}`)?.tools.map(([tool]) => tool),
+          pipelineFor(orviloPipelines, `sample${ext}`)?.tools.map(([tool]) => tool),
           `lint-staged "${glob}" (${ext})`,
         ).toEqual(expected);
       }

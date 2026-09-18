@@ -1,7 +1,7 @@
 import { setCookie } from '@orvilo/utils';
 import { changeLanguage } from 'i18next';
 
-import { LOBE_LOCALE_COOKIE } from '@/const/locale';
+import { ORVILO_LOCALE_COOKIE } from '@/const/locale';
 import { type LocaleMode } from '@/types/locale';
 import { getSystemLanguage } from '@/utils/client/systemLanguage';
 
@@ -14,5 +14,5 @@ export const switchLang = (locale: LocaleMode) => {
   changeLanguage(lang);
   document.documentElement.lang = lang;
 
-  setCookie(LOBE_LOCALE_COOKIE, locale === 'auto' ? undefined : locale, 365);
+  setCookie(ORVILO_LOCALE_COOKIE, locale === 'auto' ? undefined : locale, 365);
 };

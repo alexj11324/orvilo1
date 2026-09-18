@@ -234,9 +234,9 @@ const styles = createStaticStyles(({ css }) => ({
     height: 10px;
     border-radius: 5px;
     background: ${cssVar.colorFillSecondary};
-    animation: lobe-connect-agent-pulse 1.4s ease-in-out infinite;
+    animation: orvilo-connect-agent-pulse 1.4s ease-in-out infinite;
 
-    @keyframes lobe-connect-agent-pulse {
+    @keyframes orvilo-connect-agent-pulse {
       50% {
         opacity: 0.45;
       }
@@ -251,7 +251,7 @@ const styles = createStaticStyles(({ css }) => ({
 
     background: ${cssVar.colorFillSecondary};
 
-    animation: lobe-connect-agent-pulse 1.4s ease-in-out infinite;
+    animation: orvilo-connect-agent-pulse 1.4s ease-in-out infinite;
   `,
   skeletonSquare: css`
     width: 36px;

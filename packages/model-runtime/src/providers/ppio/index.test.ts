@@ -3,16 +3,16 @@ import { ModelProvider } from 'model-bank';
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
 import models from './fixtures/models.json';
-import { LobePPIOAI } from './index';
+import { OrviloPPIOAI } from './index';
 
 const provider = ModelProvider.PPIO;
 const defaultBaseURL = 'https://api.ppinfra.com/v3/openai';
 
 testProvider({
-  Runtime: LobePPIOAI,
+  Runtime: OrviloPPIOAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_PPIO_CHAT_COMPLETION',
@@ -22,10 +22,10 @@ testProvider({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobePPIOAI({ apiKey: 'test' });
+  instance = new OrviloPPIOAI({ apiKey: 'test' });
 
   // Use vi.spyOn to mock the chat.completions.create method
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(

@@ -13,7 +13,7 @@ import { ChunkModel } from '@/database/models/chunk';
 import { EmbeddingModel } from '@/database/models/embedding';
 import { FileModel } from '@/database/models/file';
 import { type NewChunkItem, type NewEmbeddingsItem } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { fileEnv } from '@/envs/file';
 import { asyncAuthedProcedure, asyncRouter as router } from '@/libs/trpc/async';
 import { getServerDefaultFilesConfig } from '@/server/globalConfig';
@@ -43,7 +43,7 @@ const fileProcedure = asyncAuthedProcedure.use(async (opts) => {
 });
 
 const resolveWorkspaceIdFromFile = async (
-  serverDB: LobeChatDatabase,
+  serverDB: OrviloDatabase,
   userId: string,
   fileId: string,
   workspaceId?: string,

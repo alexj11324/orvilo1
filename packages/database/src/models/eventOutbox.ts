@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 
 import type { EventOutboxItem } from '../schemas/eventOutbox';
 import { eventOutbox } from '../schemas/eventOutbox';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 /** Default ceiling before a pending event is parked as terminally 'failed'. */
 const DEFAULT_MAX_ATTEMPTS = 10;
@@ -30,15 +30,15 @@ export interface NewOutboxEvent {
  * as 'failed' for inspection.
  */
 export class EventOutboxModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
   }
 
   /** Insert inside the enclosing transaction — pass the tx, never this.db from outside it. */
   insertOutboxEvent = async (
-    executor: Transaction | LobeChatDatabase,
+    executor: Transaction | OrviloDatabase,
     params: NewOutboxEvent,
   ): Promise<EventOutboxItem> => {
     const [row] = await executor

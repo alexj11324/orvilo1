@@ -4,21 +4,21 @@ import { describe, expect, it } from 'vitest';
 import { findNextUnconnectedSpec, getProviderMeta } from './providerMeta';
 
 describe('getProviderMeta', () => {
-  it('resolves lobehub source via LOBEHUB_SKILL_PROVIDERS', () => {
-    const meta = getProviderMeta({ identifier: 'github', source: 'lobehub' });
-    expect(meta).toMatchObject({ identifier: 'github', label: 'GitHub', source: 'lobehub' });
+  it('resolves orvilo source via ORVILO_SKILL_PROVIDERS', () => {
+    const meta = getProviderMeta({ identifier: 'github', source: 'orvilo' });
+    expect(meta).toMatchObject({ identifier: 'github', label: 'GitHub', source: 'orvilo' });
     expect(meta?.icon).toBeDefined();
   });
 
-  it('resolves notion as a lobehub source provider', () => {
-    const meta = getProviderMeta({ identifier: 'notion', source: 'lobehub' });
-    expect(meta).toMatchObject({ identifier: 'notion', label: 'Notion', source: 'lobehub' });
+  it('resolves notion as a orvilo source provider', () => {
+    const meta = getProviderMeta({ identifier: 'notion', source: 'orvilo' });
+    expect(meta).toMatchObject({ identifier: 'notion', label: 'Notion', source: 'orvilo' });
     expect(meta?.icon).toBeDefined();
   });
 
-  it('resolves posthog as a lobehub source provider', () => {
-    const meta = getProviderMeta({ identifier: 'posthog', source: 'lobehub' });
-    expect(meta).toMatchObject({ identifier: 'posthog', label: 'PostHog', source: 'lobehub' });
+  it('resolves posthog as a orvilo source provider', () => {
+    const meta = getProviderMeta({ identifier: 'posthog', source: 'orvilo' });
+    expect(meta).toMatchObject({ identifier: 'posthog', label: 'PostHog', source: 'orvilo' });
     expect(meta?.icon).toBeDefined();
   });
 
@@ -29,12 +29,12 @@ describe('getProviderMeta', () => {
   });
 
   it('returns undefined for unknown provider', () => {
-    expect(getProviderMeta({ identifier: 'nonexistent-x', source: 'lobehub' })).toBeUndefined();
+    expect(getProviderMeta({ identifier: 'nonexistent-x', source: 'orvilo' })).toBeUndefined();
     expect(getProviderMeta({ identifier: 'nonexistent-x', source: 'composio' })).toBeUndefined();
   });
 
-  it('does not cross namespaces (lobehub id under composio source returns undefined)', () => {
-    // 'posthog' is a lobehub provider id, not a composio identifier.
+  it('does not cross namespaces (orvilo id under composio source returns undefined)', () => {
+    // 'posthog' is a orvilo provider id, not a composio identifier.
     expect(getProviderMeta({ identifier: 'posthog', source: 'composio' })).toBeUndefined();
   });
 });
@@ -50,16 +50,16 @@ describe('findNextUnconnectedSpec', () => {
 
   it('returns undefined when all specs are connected', () => {
     const specs: TaskTemplateConnectorReference[] = [
-      { identifier: 'github', source: 'lobehub' },
-      { identifier: 'notion', source: 'lobehub' },
+      { identifier: 'github', source: 'orvilo' },
+      { identifier: 'notion', source: 'orvilo' },
     ];
     expect(findNextUnconnectedSpec(specs, allConnected)).toBeUndefined();
   });
 
   it('returns the first spec when none are connected', () => {
     const specs: TaskTemplateConnectorReference[] = [
-      { identifier: 'github', source: 'lobehub' },
-      { identifier: 'notion', source: 'lobehub' },
+      { identifier: 'github', source: 'orvilo' },
+      { identifier: 'notion', source: 'orvilo' },
     ];
     const result = findNextUnconnectedSpec(specs, noneConnected);
     expect(result?.identifier).toBe('github');
@@ -68,21 +68,21 @@ describe('findNextUnconnectedSpec', () => {
 
   it('skips already-connected specs and returns the next missing one in order', () => {
     const specs: TaskTemplateConnectorReference[] = [
-      { identifier: 'github', source: 'lobehub' },
-      { identifier: 'linear', source: 'lobehub' },
-      { identifier: 'notion', source: 'lobehub' },
+      { identifier: 'github', source: 'orvilo' },
+      { identifier: 'linear', source: 'orvilo' },
+      { identifier: 'notion', source: 'orvilo' },
     ];
     const isConnected = (s: TaskTemplateConnectorReference) =>
       s.identifier === 'github' || s.identifier === 'linear';
     const result = findNextUnconnectedSpec(specs, isConnected);
     expect(result?.identifier).toBe('notion');
-    expect(result?.source).toBe('lobehub');
+    expect(result?.source).toBe('orvilo');
   });
 
   it('skips specs with unknown providers (no meta) and continues searching', () => {
     const specs: TaskTemplateConnectorReference[] = [
-      { identifier: 'nonexistent-x', source: 'lobehub' },
-      { identifier: 'notion', source: 'lobehub' },
+      { identifier: 'nonexistent-x', source: 'orvilo' },
+      { identifier: 'notion', source: 'orvilo' },
     ];
     const result = findNextUnconnectedSpec(specs, noneConnected);
     expect(result?.identifier).toBe('notion');

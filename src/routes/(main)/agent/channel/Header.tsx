@@ -31,7 +31,7 @@ interface HeaderProps {
   agentId: string;
   currentConfig?: BotProviderItem;
   disabled?: boolean;
-  platformDef?: SerializedPlatformDefinition & { comingSoon?: boolean };
+  platformDef?: SerializedPlatformDefinition;
   providers?: BotProviderItem[];
   runtimeStatus?: BotRuntimeStatus;
 }
@@ -86,7 +86,7 @@ const Header = memo<HeaderProps>(
         // The cached providers carry masked credentials, so the file has to be
         // built from a fresh authorized read or it would export placeholders.
         const exportData = await exportBotProviders(agentId);
-        exportJSONFile(exportData, `lobehub-channels-${agentId}.json`);
+        exportJSONFile(exportData, `orvilo-channels-${agentId}.json`);
         // The file holds real tokens — say so rather than let it look inert.
         toast.warning(t('channel.exportContainsCredentials'));
       } catch (error) {
@@ -276,7 +276,6 @@ const Header = memo<HeaderProps>(
           style={{ position: 'relative' }}
           right={
             <Flexbox horizontal align="center" gap={8}>
-              {platformDef?.comingSoon && <Tag size={'small'}>{t('channel.comingSoon')}</Tag>}
               {platformDef?.access?.requiredPlan === 'paid' && (
                 <Tag color="gold" size={'small'}>
                   {platformDef.access.rolloutMode === 'notice'

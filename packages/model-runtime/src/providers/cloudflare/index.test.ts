@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ChatCompletionTool } from '../../types/chat';
 import * as debugStreamModule from '../../utils/debugStream';
-import { LobeCloudflareAI } from './index';
+import { OrviloCloudflareAI } from './index';
 
 const provider = 'cloudflare';
 
@@ -14,22 +14,22 @@ const invalidErrorType = 'InvalidProviderAPIKey';
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeCloudflareAI;
+let instance: OrviloCloudflareAI;
 const textEncoder = new TextEncoder();
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('LobeCloudflareAI', () => {
+describe('OrviloCloudflareAI', () => {
   const accountID = '80009000a000b000c000d000e000f000';
   describe('init', () => {
     it('should correctly initialize with API key and Account ID', async () => {
-      const instance = new LobeCloudflareAI({
+      const instance = new OrviloCloudflareAI({
         apiKey: 'test_api_key',
         baseURLOrAccountID: accountID,
       });
-      expect(instance).toBeInstanceOf(LobeCloudflareAI);
+      expect(instance).toBeInstanceOf(OrviloCloudflareAI);
       expect(instance.baseURL).toBe(
         `https://api.cloudflare.com/client/v4/accounts/${accountID}/ai/run/`,
       );
@@ -38,11 +38,11 @@ describe('LobeCloudflareAI', () => {
 
     it('should correctly initialize with API key and Gateway URL', async () => {
       const baseURL = `https://gateway.ai.cloudflare.com/v1/${accountID}/test-gateway/workers-ai`;
-      const instance = new LobeCloudflareAI({
+      const instance = new OrviloCloudflareAI({
         apiKey: 'test_api_key',
         baseURLOrAccountID: baseURL,
       });
-      expect(instance).toBeInstanceOf(LobeCloudflareAI);
+      expect(instance).toBeInstanceOf(OrviloCloudflareAI);
       expect(instance.baseURL).toBe(baseURL + '/'); // baseURL MUST end with '/'.
       expect(instance.accountID).toBe(accountID);
     });
@@ -50,7 +50,7 @@ describe('LobeCloudflareAI', () => {
 
   describe('chat', () => {
     beforeEach(() => {
-      instance = new LobeCloudflareAI({
+      instance = new OrviloCloudflareAI({
         apiKey: 'test_api_key',
         baseURLOrAccountID: accountID,
       });
@@ -363,7 +363,7 @@ describe('LobeCloudflareAI', () => {
 
       it('should throw InvalidProviderAPIKey if no accountID is provided', async () => {
         try {
-          new LobeCloudflareAI({
+          new OrviloCloudflareAI({
             apiKey: 'test',
           });
         } catch (e) {
@@ -373,7 +373,7 @@ describe('LobeCloudflareAI', () => {
 
       it('should throw InvalidProviderAPIKey if no apiKey is provided', async () => {
         try {
-          new LobeCloudflareAI({
+          new OrviloCloudflareAI({
             baseURLOrAccountID: accountID,
           });
         } catch (e) {
@@ -382,10 +382,10 @@ describe('LobeCloudflareAI', () => {
       });
 
       it('should not throw Error when apiKey is not provided but baseURL is provided', async () => {
-        const customInstance = new LobeCloudflareAI({
+        const customInstance = new OrviloCloudflareAI({
           baseURLOrAccountID: 'https://custom.cloudflare.url/',
         });
-        expect(customInstance).toBeInstanceOf(LobeCloudflareAI);
+        expect(customInstance).toBeInstanceOf(OrviloCloudflareAI);
         expect(customInstance.apiKey).toBeUndefined();
         expect(customInstance.baseURL).toBe('https://custom.cloudflare.url/');
       });
@@ -416,7 +416,7 @@ describe('LobeCloudflareAI', () => {
       it('should desensitize accountID in error message', async () => {
         // Arrange
         const apiError = { status: 400 };
-        const customInstance = new LobeCloudflareAI({
+        const customInstance = new OrviloCloudflareAI({
           apiKey: 'test',
           baseURLOrAccountID: accountID,
         });
@@ -518,7 +518,7 @@ describe('LobeCloudflareAI', () => {
     it('should send request', async () => {
       // Arrange
       const apiKey = 'test_api_key';
-      const instance = new LobeCloudflareAI({ apiKey, baseURLOrAccountID: accountID });
+      const instance = new OrviloCloudflareAI({ apiKey, baseURLOrAccountID: accountID });
 
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
         new Response(
@@ -560,7 +560,7 @@ describe('LobeCloudflareAI', () => {
     });
 
     it('should throw regular Error when API returns null result', async () => {
-      const instance = new LobeCloudflareAI({
+      const instance = new OrviloCloudflareAI({
         apiKey: 'test_api_key',
         baseURLOrAccountID: accountID,
       });

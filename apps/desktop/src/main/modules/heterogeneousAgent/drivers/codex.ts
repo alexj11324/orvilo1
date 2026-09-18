@@ -17,9 +17,9 @@ import type { HeterogeneousAgentBuildPlanParams, HeterogeneousAgentDriver } from
 const hasAnyFlag = (args: string[], flags: readonly string[]) =>
   args.some((arg) => flags.includes(arg as (typeof flags)[number]));
 
-const HOST_PROVIDER_ID = 'lobehub';
-const HOST_API_KEY_ENV = 'LOBEHUB_CODEX_API_KEY';
-const SERVER_TOKEN_ENV = 'LOBEHUB_HETERO_TOKEN';
+const HOST_PROVIDER_ID = 'orvilo';
+const HOST_API_KEY_ENV = 'ORVILO_CODEX_API_KEY';
+const SERVER_TOKEN_ENV = 'ORVILO_HETERO_TOKEN';
 const SERVER_DEFAULT_MODEL_CATALOG_FILE = 'models.json';
 
 interface CodexServerDefaultModelMetadata {
@@ -218,7 +218,7 @@ export const codexDriver: HeterogeneousAgentDriver = {
       `model_provider = ${tomlString(HOST_PROVIDER_ID)}`,
       '',
       `[model_providers.${HOST_PROVIDER_ID}]`,
-      `name = ${tomlString('LobeHub Provider')}`,
+      `name = ${tomlString('Orvilo Provider')}`,
       `base_url = ${tomlString(resolution.endpoint)}`,
       `env_key = ${tomlString(HOST_API_KEY_ENV)}`,
       'wire_api = "responses"',
@@ -248,7 +248,7 @@ export const codexDriver: HeterogeneousAgentDriver = {
       ...(modelCatalogPath ? [`model_catalog_json = ${tomlString(modelCatalogPath)}`] : []),
       '',
       `[model_providers.${HOST_PROVIDER_ID}]`,
-      `name = ${tomlString('LobeHub Server Default')}`,
+      `name = ${tomlString('Orvilo Server Default')}`,
       `base_url = ${tomlString(`${endpoint}/api/v1/openai/v1`)}`,
       `env_key = ${tomlString(SERVER_TOKEN_ENV)}`,
       'wire_api = "responses"',

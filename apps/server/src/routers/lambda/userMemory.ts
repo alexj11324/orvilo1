@@ -4,7 +4,6 @@ import {
   AsyncTaskStatus,
   AsyncTaskType,
   CreateUserMemoryIdentitySchema,
-  MemorySourceType,
   UpdateUserMemoryIdentitySchema,
   type UserMemoryExtractionMetadata,
 } from '@orvilo/types';
@@ -14,7 +13,6 @@ import { z } from 'zod';
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AsyncTaskModel, initUserMemoryExtractionMetadata } from '@/database/models/asyncTask';
-import { TopicModel } from '@/database/models/topic';
 import {
   UserMemoryActivityModel,
   UserMemoryContextModel,
@@ -28,15 +26,10 @@ import {
   UserPersonaVersionNotFoundError,
   UserPersonaVersionSnapshotMissingError,
 } from '@/database/models/userMemory/persona';
-import { appEnv } from '@/envs/app';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { parseMemoryExtractionConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
-import {
-  buildWorkflowPayloadInput,
-  MemoryExtractionWorkflowService,
-  normalizeMemoryExtractionPayload,
-} from '@/server/services/memory/userMemory/extract';
+import { cancelHatchetWorkflow } from '@/server/services/hatchet/workflows';
+import { disableUserMemoryExtraction } from '@/server/services/memory/userMemory/gate';
 
 const userMemoryProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -51,7 +44,6 @@ const userMemoryProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
       identityModel: new UserMemoryIdentityModel(ctx.serverDB, ctx.userId),
       personaModel: new UserPersonaModel(ctx.serverDB, ctx.userId),
       preferenceModel: new UserMemoryPreferenceModel(ctx.serverDB, ctx.userId),
-      topicModel: new TopicModel(ctx.serverDB, ctx.userId, wsId),
       userMemoryModel: new UserMemoryModel(ctx.serverDB, ctx.userId),
     },
   });
@@ -69,29 +61,6 @@ const personalUserMemoryProcedure = userMemoryProcedure.use(async ({ ctx, next }
 const personalUserMemoryWriteProcedure = personalUserMemoryProcedure.use(
   withScopedPermission('message:create'),
 );
-
-const userMemoryExtractionInputSchema = z.object({
-  fromDate: z.coerce.date().optional(),
-  toDate: z.coerce.date().optional(),
-});
-
-const userMemoryExtractionTaskInputSchema = z
-  .object({
-    taskId: z.string().uuid().optional(),
-  })
-  .optional();
-
-// NOTICE(@nekomeowww): Memory extraction time scales with topic count. We estimate
-// an average of ~5 minutes per topic to derive a dynamic timeout budget.
-const USER_MEMORY_EXTRACTION_TIMEOUT_PER_TOPIC_MS = 5 * 60 * 1000;
-
-const getUserMemoryExtractionTimeoutMs = (metadata: UserMemoryExtractionMetadata) => {
-  const totalTopics = metadata.progress.totalTopics;
-
-  if (!Number.isFinite(totalTopics) || !totalTopics || totalTopics <= 0) return null;
-
-  return totalTopics * USER_MEMORY_EXTRACTION_TIMEOUT_PER_TOPIC_MS;
-};
 
 export const userMemoryRouter = router({
   // ============ Identity CRUD ============
@@ -122,11 +91,59 @@ export const userMemoryRouter = router({
     await ctx.userMemoryModel.deleteAll();
     await ctx.personaModel.deletePersona();
 
-    // Reset all topics' userMemoryExtractStatus so they can be re-extracted
-    // after memories are purged. Without this, isTopicExtracted() skips them
-    // forever because the status remains 'completed' even though the memories
-    // no longer exist. Fixes #18498
-    await ctx.topicModel.resetMemoryExtractStatus();
+    // Purging while production stays enabled would let an already-fanned-out
+    // hourly step (processTopic / personaUpdate runs owned by the service user,
+    // invisible to the ownership-scoped task lookup below) re-materialize the
+    // profile after this returns. Opt the user out of production instead: every
+    // stage checks the same flag, so in-flight and future work both stop. The
+    // settings toggle is the deliberate path back on.
+    await disableUserMemoryExtraction(ctx.userId, ctx.serverDB);
+
+    // NOTICE: Do NOT reset topic extraction markers here. Re-opening every
+    // historical chat for re-extraction would silently rebuild the profile the
+    // user just purged (the former resetMemoryExtractStatus loophole). Topics
+    // keep their 'completed' markers, so only genuinely new conversations are
+    // extracted going forward — and only while the user keeps memory enabled.
+    //
+    // An in-flight user-initiated extraction task must not keep writing after
+    // the purge either, so request its cooperative cancellation and cancel the
+    // recorded workflow runs — the same teardown as the cancel webhook.
+    const activeTask = await ctx.asyncTaskModel.findActiveByType(
+      AsyncTaskType.UserMemoryExtractionWithChatTopic,
+    );
+    if (activeTask) {
+      const metadata = initUserMemoryExtractionMetadata(
+        activeTask.metadata as UserMemoryExtractionMetadata | undefined,
+      );
+      const nextMetadata: UserMemoryExtractionMetadata = {
+        ...metadata,
+        control: {
+          ...metadata.control,
+          cancelRequestedAt: metadata.control?.cancelRequestedAt || new Date().toISOString(),
+          cancelledBy: 'user',
+        },
+      };
+
+      await ctx.asyncTaskModel.update(activeTask.id, {
+        error: new AsyncTaskError(
+          AsyncTaskErrorType.TaskCancelled,
+          'Memory extraction cancelled because all memories were purged',
+        ),
+        metadata: nextMetadata,
+        status: AsyncTaskStatus.Error,
+      });
+
+      const workflowRunIds = metadata.control?.hatchet?.workflowRunIds || [];
+      if (workflowRunIds.length > 0) {
+        try {
+          await Promise.allSettled(
+            workflowRunIds.map((workflowRunId) => cancelHatchetWorkflow(workflowRunId)),
+          );
+        } catch (error) {
+          console.error('[userMemory.deleteAll] failed to cancel extraction workflow runs', error);
+        }
+      }
+    }
 
     return { success: true };
   }),
@@ -174,59 +191,6 @@ export const userMemoryRouter = router({
     return ctx.userMemoryModel.getAllIdentities();
   }),
 
-  getMemoryExtractionTask: userMemoryProcedure
-    .input(userMemoryExtractionTaskInputSchema)
-    .query(async ({ ctx, input }) => {
-      const task = input?.taskId
-        ? await ctx.asyncTaskModel.findById(input.taskId)
-        : await ctx.asyncTaskModel.findActiveByType(
-            AsyncTaskType.UserMemoryExtractionWithChatTopic,
-          );
-
-      if (!task || task.userId !== ctx.userId) return null;
-
-      const metadata = initUserMemoryExtractionMetadata(
-        task.metadata as UserMemoryExtractionMetadata | undefined,
-      );
-
-      const timeoutMs = getUserMemoryExtractionTimeoutMs(metadata);
-      const taskCreatedAt = task.createdAt ? new Date(task.createdAt).getTime() : Number.NaN;
-      const isActiveTask =
-        task.status === AsyncTaskStatus.Pending || task.status === AsyncTaskStatus.Processing;
-
-      if (
-        isActiveTask &&
-        timeoutMs !== null &&
-        Number.isFinite(taskCreatedAt) &&
-        Date.now() - taskCreatedAt > timeoutMs
-      ) {
-        const timeoutMinutes = Math.ceil(timeoutMs / (60 * 1000));
-        const timeoutError = new AsyncTaskError(
-          AsyncTaskErrorType.Timeout,
-          `User memory extraction timed out after ${timeoutMinutes} minutes for ${metadata.progress.totalTopics} topics (estimated at 5 minutes per topic). Please retry.`,
-        );
-
-        await ctx.asyncTaskModel.update(task.id, {
-          error: timeoutError,
-          status: AsyncTaskStatus.Error,
-        });
-
-        return {
-          error: timeoutError,
-          id: task.id,
-          metadata,
-          status: AsyncTaskStatus.Error,
-        };
-      }
-
-      return {
-        error: task.error,
-        id: task.id,
-        metadata,
-        status: task.status as AsyncTaskStatus,
-      };
-    }),
-
   // ============ Persona ============
   getPersona: userMemoryProcedure.query(async ({ ctx }) => {
     const latest = await ctx.personaModel.getLatestPersonaDocument();
@@ -246,116 +210,6 @@ export const userMemoryRouter = router({
   getPreferences: userMemoryProcedure.query(async ({ ctx }) => {
     return ctx.userMemoryModel.searchPreferences({});
   }),
-
-  requestMemoryFromChatTopic: userMemoryWriteProcedure
-    .input(userMemoryExtractionInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      if (input.fromDate && input.toDate && input.fromDate > input.toDate) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: '`fromDate` cannot be later than `toDate`',
-        });
-      }
-
-      const existingTask = await ctx.asyncTaskModel.findActiveByType(
-        AsyncTaskType.UserMemoryExtractionWithChatTopic,
-      );
-      if (existingTask) {
-        return {
-          deduped: true,
-          id: existingTask.id,
-          metadata: existingTask.metadata as UserMemoryExtractionMetadata,
-          status: existingTask.status as AsyncTaskStatus,
-        };
-      }
-
-      const totalTopics = await ctx.topicModel.countTopicsForMemoryExtractor({
-        endDate: input.toDate,
-        ignoreExtracted: false,
-        startDate: input.fromDate,
-      });
-      const metadata = initUserMemoryExtractionMetadata({
-        progress: {
-          completedTopics: 0,
-          totalTopics,
-        },
-        range: {
-          from: input.fromDate?.toISOString(),
-          to: input.toDate?.toISOString(),
-        },
-        source: 'chat_topic',
-      });
-
-      const initialStatus = totalTopics === 0 ? AsyncTaskStatus.Success : AsyncTaskStatus.Pending;
-      const taskId = await ctx.asyncTaskModel.create({
-        metadata,
-        status: initialStatus,
-        type: AsyncTaskType.UserMemoryExtractionWithChatTopic,
-      });
-
-      if (totalTopics === 0) {
-        return {
-          deduped: false,
-          id: taskId,
-          metadata: metadata as UserMemoryExtractionMetadata,
-          status: initialStatus as AsyncTaskStatus,
-        };
-      }
-
-      const { webhook, workflowExtraHeaders } = parseMemoryExtractionConfig();
-      const baseUrl = webhook.baseUrl || appEnv.INTERNAL_APP_URL || appEnv.APP_URL;
-
-      try {
-        const { workflowRunId } = await MemoryExtractionWorkflowService.triggerProcessUsers(
-          buildWorkflowPayloadInput(
-            normalizeMemoryExtractionPayload({
-              asyncTaskId: taskId,
-              baseUrl,
-              forceAll: false,
-              forceTopics: false,
-              fromDate: input.fromDate,
-              mode: 'workflow',
-              sources: [MemorySourceType.ChatTopic],
-              toDate: input.toDate,
-              userIds: [ctx.userId],
-              userInitiated: true,
-            }),
-          ),
-          { extraHeaders: workflowExtraHeaders },
-        );
-
-        await ctx.asyncTaskModel.update(taskId, {
-          metadata: {
-            ...metadata,
-            control: {
-              hatchet: {
-                workflowRunIds: workflowRunId ? [workflowRunId] : [],
-              },
-            },
-          } as UserMemoryExtractionMetadata,
-        });
-      } catch (error) {
-        await ctx.asyncTaskModel.update(taskId, {
-          error: new AsyncTaskError(
-            AsyncTaskErrorType.TaskTriggerError,
-            'Failed to schedule memory extraction workflow',
-          ),
-          status: AsyncTaskStatus.Error,
-        });
-        throw new TRPCError({
-          cause: error,
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to trigger user memory extraction',
-        });
-      }
-
-      return {
-        deduped: false,
-        id: taskId,
-        metadata: metadata as UserMemoryExtractionMetadata,
-        status: AsyncTaskStatus.Pending,
-      };
-    }),
 
   restorePersonaVersion: personalUserMemoryWriteProcedure
     .input(z.object({ historyId: z.string().trim().min(1).max(255) }).strict())

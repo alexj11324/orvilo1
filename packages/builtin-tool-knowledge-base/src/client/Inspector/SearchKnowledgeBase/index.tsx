@@ -26,7 +26,7 @@ export const SearchKnowledgeBaseInspector = memo<
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-knowledge-base.apiName.searchKnowledgeBase')}
+            {t('builtins.orvilo-knowledge-base.apiName.searchKnowledgeBase')}
           </span>
         </div>
       );
@@ -34,7 +34,7 @@ export const SearchKnowledgeBaseInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-knowledge-base.apiName.searchKnowledgeBase')}:{' '}
+          {t('builtins.orvilo-knowledge-base.apiName.searchKnowledgeBase')}:{' '}
         </span>
         <span className={highlightTextStyles.gold}>{query}</span>
       </div>
@@ -45,7 +45,7 @@ export const SearchKnowledgeBaseInspector = memo<
     <div className={inspectorTextStyles.root}>
       <span style={{ marginInlineStart: 2 }}>
         <span className={cx(isLoading && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-knowledge-base.apiName.searchKnowledgeBase')}:{' '}
+          {t('builtins.orvilo-knowledge-base.apiName.searchKnowledgeBase')}:{' '}
         </span>
         {query && <span className={highlightTextStyles.gold}>{query}</span>}
         {!isLoading &&
@@ -59,7 +59,7 @@ export const SearchKnowledgeBaseInspector = memo<
               fontSize={12}
               style={{ marginInlineStart: 4 }}
             >
-              ({t('builtins.lobe-knowledge-base.inspector.noResults')})
+              ({t('builtins.orvilo-knowledge-base.inspector.noResults')})
             </Text>
           ))}
       </span>

@@ -1,5 +1,5 @@
 import { TopicReferenceIdentifier } from '@orvilo/builtin-tool-topic-reference';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { BuiltinServerRuntimeOutput } from '@orvilo/types';
 
 import { MessageModel } from '@/database/models/message';
@@ -14,11 +14,11 @@ interface GetTopicContextParams {
 }
 
 class TopicReferenceExecutionRuntime {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

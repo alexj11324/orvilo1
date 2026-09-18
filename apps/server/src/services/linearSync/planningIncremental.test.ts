@@ -17,7 +17,7 @@ import {
   users,
   workspaces,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import {
   LinearPlanningWorker,
@@ -25,7 +25,7 @@ import {
   type TaskPlanningSnapshot,
 } from './planning';
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 const userId = 'planning-incremental-user';
 const workspaceId = 'planning-incremental-workspace';
 let projectSequence = 0;

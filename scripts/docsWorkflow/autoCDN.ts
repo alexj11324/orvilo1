@@ -16,7 +16,7 @@ import {
 } from './utils';
 
 // Define constants
-const GITHUB_CDN = 'https://github.com/lobehub/lobe-chat/assets/';
+const GITHUB_CDN = 'https://github.com/alexj11324/orvilo1/assets/';
 const CHECK_CDN = [
   'https://cdn.nlark.com/yuque/0/',
   'https://s.imtccdn.com/',

@@ -43,7 +43,7 @@ afterEach(() => {
 describe('issueOAuthState', () => {
   it('issues a hex-only state token with TTL and stores the payload as JSON', async () => {
     const before = Date.now();
-    const state = await issueOAuthState({ lobeUserId: 'lobe-1', returnTo: '/settings' });
+    const state = await issueOAuthState({ orviloUserId: 'orvilo-1', returnTo: '/settings' });
     const after = Date.now();
 
     expect(state).toMatch(/^[\da-f]+$/i);
@@ -56,7 +56,7 @@ describe('issueOAuthState', () => {
     expect(setCall[3]).toBe(600);
 
     const stored = JSON.parse(setCall[1]);
-    expect(stored.lobeUserId).toBe('lobe-1');
+    expect(stored.orviloUserId).toBe('orvilo-1');
     expect(stored.returnTo).toBe('/settings');
     expect(stored.ts).toBeGreaterThanOrEqual(before);
     expect(stored.ts).toBeLessThanOrEqual(after);
@@ -64,15 +64,17 @@ describe('issueOAuthState', () => {
 
   it('throws when redis is unavailable', async () => {
     vi.mocked(getAgentRuntimeRedisClient).mockReturnValueOnce(null as any);
-    await expect(issueOAuthState({ lobeUserId: 'lobe-1' })).rejects.toThrow('Redis is required');
+    await expect(issueOAuthState({ orviloUserId: 'orvilo-1' })).rejects.toThrow(
+      'Redis is required',
+    );
   });
 });
 
 describe('consumeOAuthState', () => {
   it('round-trips the payload and atomically deletes the key', async () => {
-    const state = await issueOAuthState({ lobeUserId: 'lobe-1', returnTo: '/x' });
+    const state = await issueOAuthState({ orviloUserId: 'orvilo-1', returnTo: '/x' });
     const payload = await consumeOAuthState(state);
-    expect(payload).toMatchObject({ lobeUserId: 'lobe-1', returnTo: '/x' });
+    expect(payload).toMatchObject({ orviloUserId: 'orvilo-1', returnTo: '/x' });
     // Replay must fail.
     expect(await consumeOAuthState(state)).toBeNull();
   });

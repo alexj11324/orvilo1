@@ -1,19 +1,30 @@
 'use client';
 
 import { Empty, Flexbox } from '@lobehub/ui';
-import { TabsIndicator, TabsList, TabsRoot, TabsTab, Text } from '@lobehub/ui/base-ui';
+import {
+  Button,
+  TabsIndicator,
+  TabsList,
+  TabsRoot,
+  TabsTab,
+  Text,
+  toast,
+} from '@lobehub/ui/base-ui';
 import type { MyWorkMode } from '@orvilo/types';
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
-import { useClientDataSWR } from '@/libs/swr';
+import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
+
+import { isMyWorkSaveableMode, myWorkSaveAsQuery } from './myWorkSaveAs';
 
 const PRIMARY_TABS: MyWorkMode[] = ['assigned', 'delegated', 'review'];
 const SECONDARY_TABS: MyWorkMode[] = ['created', 'subscribed'];
@@ -28,6 +39,7 @@ const resolveMode = (value: string | null): MyWorkMode => {
 const MyWorkPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
+  const navigate = useWorkspaceAwareNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = resolveMode(searchParams.get('tab'));
 
@@ -35,6 +47,7 @@ const MyWorkPage = memo(() => {
     workAttentionService.myWork({ mode }),
   );
   const tasks = data?.data.tasks ?? [];
+  const canSaveAs = isMyWorkSaveableMode(mode);
 
   const tabs = useMemo(
     () =>
@@ -45,6 +58,22 @@ const MyWorkPage = memo(() => {
     [t],
   );
 
+  const saveCopy = useCallback(async () => {
+    if (!isMyWorkSaveableMode(mode)) return;
+    try {
+      const created = await workAttentionService.savedViewCreate({
+        entityType: 'task',
+        name: t(`myWork.${mode}`),
+        query: myWorkSaveAsQuery(mode),
+        visibility: 'private',
+      });
+      await mutate(workAttentionKeys.savedViews(workspaceId));
+      navigate(`/views/${created.data.id}`);
+    } catch {
+      toast.error(t('myWork.saveAsFailed'));
+    }
+  }, [mode, navigate, t, workspaceId]);
+
   return (
     <Flexbox flex={1} height="100%">
       <NavHeader
@@ -52,6 +81,13 @@ const MyWorkPage = memo(() => {
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
             {t('tab.myWork')}
           </Text>
+        }
+        right={
+          canSaveAs ? (
+            <Button size="small" onClick={() => void saveCopy()}>
+              {t('myWork.saveAs')}
+            </Button>
+          ) : null
         }
       />
       <Flexbox gap={16} padding={16} style={{ overflow: 'auto' }}>

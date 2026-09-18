@@ -31,6 +31,15 @@ const isKnownRepair = (error: WorkQueryError): SavedViewNeedsRepairReason | unde
   return 'unknown_field';
 };
 
+export class SavedViewConflictError extends Error {
+  readonly code = 'SAVED_VIEW_VERSION_CONFLICT' as const;
+
+  constructor() {
+    super('SAVED_VIEW_VERSION_CONFLICT');
+    this.name = 'SavedViewConflictError';
+  }
+}
+
 /**
  * Saved views store query configuration, not a copy of tasks. Evaluation always
  * runs as the visitor, so a shared "assigned to me" view is per-viewer.
@@ -106,14 +115,15 @@ export class SavedViewModel {
 
   update = async (
     id: string,
-    patch: Partial<{
-      displayOptions: Record<string, unknown>;
-      layout: WorkQueryLayout;
-      name: string;
-      query: WorkQuery;
-      teamId: string | null;
-      visibility: SavedViewVisibility;
-    }>,
+    patch: {
+      displayOptions?: Record<string, unknown>;
+      expectedDefinitionVersion: number;
+      layout?: WorkQueryLayout;
+      name?: string;
+      query?: WorkQuery;
+      teamId?: string | null;
+      visibility?: SavedViewVisibility;
+    },
   ): Promise<SavedViewItem | undefined> => {
     if (patch.query) validateWorkQuery(patch.query);
     const [row] = await this.db
@@ -124,14 +134,27 @@ export class SavedViewModel {
         ...(patch.displayOptions !== undefined ? { displayOptions: patch.displayOptions } : {}),
         ...(patch.visibility !== undefined ? { visibility: patch.visibility } : {}),
         ...(patch.teamId !== undefined ? { teamId: patch.teamId } : {}),
-        ...(patch.query !== undefined
-          ? { definitionVersion: sql`${savedViews.definitionVersion} + 1`, queryAst: patch.query }
-          : {}),
+        ...(patch.query !== undefined ? { queryAst: patch.query } : {}),
+        definitionVersion: sql`${savedViews.definitionVersion} + 1`,
         updatedAt: new Date(),
       })
-      .where(and(eq(savedViews.id, id), eq(savedViews.ownerUserId, this.userId)))
+      .where(
+        and(
+          eq(savedViews.id, id),
+          eq(savedViews.ownerUserId, this.userId),
+          eq(savedViews.definitionVersion, patch.expectedDefinitionVersion),
+        ),
+      )
       .returning();
-    return row;
+    if (row) return row;
+
+    const [owned] = await this.db
+      .select({ id: savedViews.id })
+      .from(savedViews)
+      .where(and(eq(savedViews.id, id), eq(savedViews.ownerUserId, this.userId)))
+      .limit(1);
+    if (!owned) return undefined;
+    throw new SavedViewConflictError();
   };
 
   delete = async (id: string): Promise<boolean> => {

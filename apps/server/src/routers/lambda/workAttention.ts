@@ -12,7 +12,7 @@ import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPer
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { NavigationFavoriteModel } from '@/database/models/navigationFavorite';
 import { NotificationModel } from '@/database/models/notification';
-import { SavedViewModel } from '@/database/models/savedView';
+import { SavedViewConflictError, SavedViewModel } from '@/database/models/savedView';
 import { TaskModel } from '@/database/models/task';
 import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TeamModel } from '@/database/models/team';
@@ -326,6 +326,7 @@ export const workAttentionRouter = router({
     .input(
       z.object({
         displayOptions: z.record(z.string(), z.unknown()).optional(),
+        expectedDefinitionVersion: z.number().int().min(1),
         id: z.string().min(1),
         layout: z.enum(['board', 'list']).optional(),
         name: z.string().trim().min(1).max(255).optional(),
@@ -336,11 +337,20 @@ export const workAttentionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...patch } = input;
+      if (patch.visibility === 'team' && !patch.teamId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'team visibility requires teamId' });
+      }
       try {
-        const row = await ctx.savedViewModel.update(id, patch);
+        const row = await ctx.savedViewModel.update(id, {
+          ...patch,
+          ...(patch.visibility && patch.visibility !== 'team' ? { teamId: null } : {}),
+        });
         if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'View not found' });
         return { data: row, message: 'View updated', success: true };
       } catch (error) {
+        if (error instanceof SavedViewConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
         return mapQueryError(error);
       }
     }),

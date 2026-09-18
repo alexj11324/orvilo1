@@ -6,6 +6,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { myWorkSaveAsQuery } from '@/features/MyWork/myWorkSaveAs';
 import NavHeader from '@/features/NavHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -26,11 +27,8 @@ const SavedViewsPage = memo(() => {
     const created = await workAttentionService.savedViewCreate({
       entityType: 'task',
       name: t('savedViews.assignedDefaultName'),
-      query: {
-        entityType: 'task',
-        filter: { all: [{ field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } }] },
-        schemaVersion: 1,
-      },
+      query: myWorkSaveAsQuery('assigned'),
+      visibility: 'private',
     });
     await mutate(workAttentionKeys.savedViews(workspaceId));
     navigate(`/views/${created.data.id}`);

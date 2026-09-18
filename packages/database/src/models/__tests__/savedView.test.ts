@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import { users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
-import { SavedViewModel } from '../savedView';
+import { SavedViewConflictError, SavedViewModel } from '../savedView';
 import { TaskModel } from '../task';
 
 const serverDB: OrviloDatabase = await getTestDB();
@@ -81,5 +81,45 @@ describe('SavedViewModel', () => {
     expect(result.needsRepair).toBe(true);
     expect(result.tasks).toEqual([]);
     expect(result.total).toBe(0);
+  });
+
+  it('rejects a stale definitionVersion instead of last-write-wins', async () => {
+    const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
+    const view = await ownerViews.create({
+      entityType: 'task',
+      name: 'Original',
+      query: { entityType: 'task', schemaVersion: 1 },
+    });
+    expect(view.definitionVersion).toBe(1);
+
+    const saved = await ownerViews.update(view.id, {
+      expectedDefinitionVersion: 1,
+      name: 'Renamed',
+    });
+    expect(saved?.name).toBe('Renamed');
+    expect(saved?.definitionVersion).toBe(2);
+
+    await expect(
+      ownerViews.update(view.id, { expectedDefinitionVersion: 1, name: 'Stale write' }),
+    ).rejects.toBeInstanceOf(SavedViewConflictError);
+
+    const current = await ownerViews.findById(view.id);
+    expect(current?.name).toBe('Renamed');
+    expect(current?.definitionVersion).toBe(2);
+  });
+
+  it('does not let a visitor update another owners view', async () => {
+    const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
+    const view = await ownerViews.create({
+      entityType: 'task',
+      name: 'Owner view',
+      query: { entityType: 'task', schemaVersion: 1 },
+      visibility: 'workspace',
+    });
+    const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
+    await expect(
+      visitorViews.update(view.id, { expectedDefinitionVersion: 1, name: 'Hijacked' }),
+    ).resolves.toBeUndefined();
+    expect((await ownerViews.findById(view.id))?.name).toBe('Owner view');
   });
 });

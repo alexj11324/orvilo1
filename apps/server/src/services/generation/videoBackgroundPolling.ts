@@ -5,7 +5,7 @@ import { getProviderContentPolicyErrorMessage } from '@/business/server/getProvi
 import { trackProviderContentPolicyViolation } from '@/business/server/trackProviderContentPolicyViolation';
 import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { GenerationModel } from '@/database/models/generation';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { VideoGenerationService } from '@/server/services/generation/video';
 import { buildVideoGenerationFilePayload } from '@/server/services/generation/videoFile';
@@ -13,7 +13,7 @@ import { AsyncTaskError, AsyncTaskErrorType, AsyncTaskStatus } from '@/types/asy
 import { FileSource } from '@/types/files';
 import type { VideoGenerationAsset } from '@/types/generation';
 
-const log = debug('lobe-video:background-polling');
+const log = debug('orvilo-video:background-polling');
 
 interface BackgroundPollingParams {
   asyncTaskCreatedAt: Date;
@@ -30,7 +30,7 @@ interface BackgroundPollingParams {
 }
 
 export async function processBackgroundVideoPolling(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: BackgroundPollingParams,
 ): Promise<void> {
   const {

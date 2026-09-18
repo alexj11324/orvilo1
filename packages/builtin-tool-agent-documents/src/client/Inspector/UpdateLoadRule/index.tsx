@@ -23,7 +23,7 @@ export const UpdateLoadRuleInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-documents.apiName.updateLoadRule')}
+          {t('builtins.orvilo-agent-documents.apiName.updateLoadRule')}
         </span>
       </div>
     );
@@ -32,7 +32,7 @@ export const UpdateLoadRuleInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-documents.apiName.updateLoadRule')}
+        {t('builtins.orvilo-agent-documents.apiName.updateLoadRule')}
       </span>
       {id && <span className={styles.idChip}>{formatDocumentId(id)}</span>}
       {ruleType && (

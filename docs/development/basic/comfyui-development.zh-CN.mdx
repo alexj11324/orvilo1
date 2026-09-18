@@ -1,6 +1,6 @@
 ---
 title: ComfyUI 扩展开发指南
-description: 学习如何为 LobeHub ComfyUI 集成添加新模型、工作流和功能扩展
+description: 学习如何为 Orvilo ComfyUI 集成添加新模型、工作流和功能扩展
 tags:
   - ComfyUI
   - 开发指南
@@ -10,15 +10,15 @@ tags:
 
 # ComfyUI 扩展开发指南
 
-本指南基于实际代码实现，帮助开发者扩展 LobeHub 的 ComfyUI 集成功能。
+本指南基于实际代码实现，帮助开发者扩展 Orvilo 的 ComfyUI 集成功能。
 
 ## 架构概览
 
-LobeHub ComfyUI 集成采用四层服务架构，围绕 `LobeComfyUI` 主类构建：
+Orvilo ComfyUI 集成采用四层服务架构，围绕 `OrviloComfyUI` 主类构建：
 
 ```plaintext
 packages/model-runtime/src/providers/comfyui/
-├── index.ts                      # LobeComfyUI 主类入口
+├── index.ts                      # OrviloComfyUI 主类入口
 ├── services/                     # 四大核心服务
 │   ├── comfyuiClient.ts         # ComfyUIClientService - 客户端和认证
 │   ├── modelResolver.ts         # ModelResolverService - 模型解析
@@ -95,11 +95,11 @@ packages/model-runtime/src/utils/  # 共享工具
 
 ### 核心服务架构
 
-`LobeComfyUI` 主类初始化四个核心服务：
+`OrviloComfyUI` 主类初始化四个核心服务：
 
 ```typescript
 // packages/model-runtime/src/providers/comfyui/index.ts
-export class LobeComfyUI implements LobeRuntimeAI, AuthenticatedImageRuntime {
+export class OrviloComfyUI implements OrviloRuntimeAI, AuthenticatedImageRuntime {
   constructor(options: ComfyUIKeyVault = {}) {
     // 1. 客户端服务 - 处理认证和API调用
     this.clientService = new ComfyUIClientService(options);
@@ -147,13 +147,13 @@ interface ComfyUIKeyVault {
 
 ```typescript
 // 无认证
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'http://localhost:8000',
   authType: 'none'
 });
 
 // 基础认证
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'https://your-comfyui-server.com',
   authType: 'basic',
   username: 'your-username',
@@ -161,14 +161,14 @@ const comfyUI = new LobeComfyUI({
 });
 
 // Bearer Token
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'https://your-comfyui-server.com',
   authType: 'bearer',
   apiKey: 'your-api-key'
 });
 
 // 自定义头部
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'https://your-comfyui-server.com',
   authType: 'custom',
   customHeaders: {
@@ -883,7 +883,7 @@ bunx vitest run 'src/comfyui/__tests__/integration/parameterMapping.test.ts'
 
 ```bash
 # 启动ComfyUI调试模式
-DEBUG=lobe-image:* pnpm dev
+DEBUG=orvilo-image:* pnpm dev
 ```
 
 ### 2. 测试新功能
@@ -931,9 +931,9 @@ describe('Model Registry', () => {
 ### 基础图像生成
 
 ```typescript
-import { LobeComfyUI } from '@orvilo/model-runtime';
+import { OrviloComfyUI } from '@orvilo/model-runtime';
 
-const comfyUI = new LobeComfyUI({
+const comfyUI = new OrviloComfyUI({
   baseURL: 'http://localhost:8000',
   authType: 'none'
 });
@@ -995,4 +995,4 @@ const optimizedResult = await comfyUI.createImage({
 - 添加新模型时，请遵循测试架构指南确保测试完整性
 - 在提交代码前务必运行相关测试确保覆盖率达标
 
-通过遵循这些指南，开发者可以有效地在 LobeHub 中使用和扩展 ComfyUI 功能，为用户提供强大的图像生成和处理能力。
+通过遵循这些指南，开发者可以有效地在 Orvilo 中使用和扩展 ComfyUI 功能，为用户提供强大的图像生成和处理能力。

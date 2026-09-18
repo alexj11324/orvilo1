@@ -5,7 +5,7 @@ import { resolveParameters } from '../../core/parameterResolver';
 import { QwenAIStream } from '../../core/streams';
 import { processMultiProviderModelList } from '../../utils/modelParse';
 
-export const LobeBailianCodingPlanAI = createOpenAICompatibleRuntime({
+export const OrviloBailianCodingPlanAI = createOpenAICompatibleRuntime({
   baseURL: 'https://coding.dashscope.aliyuncs.com/v1',
   chatCompletion: {
     handlePayload: (payload) => {

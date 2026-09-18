@@ -81,7 +81,7 @@ describe('imageGenerationRuntime', () => {
       agentShareVisitor: {
         agentId: 'agent-1',
         allowReadMemory: true,
-        toolGrants: [{ identifier: 'lobe-image-generation' }],
+        toolGrants: [{ identifier: 'orvilo-image-generation' }],
         shareId: 'share-1',
         visitorUserId: 'visitor-1',
       },
@@ -203,8 +203,8 @@ describe('imageGenerationRuntime', () => {
   it('does not list models hidden for the current user', async () => {
     callerMocks.aiProvider.mockReturnValue({
       getAiProviderRuntimeState: vi.fn().mockResolvedValue({
-        enabledImageAiProviders: [{ id: 'lobehub', name: 'LobeHub' }],
-        hiddenBuiltinModels: [{ id: 'hidden-image', providerId: 'lobehub' }],
+        enabledImageAiProviders: [{ id: 'orvilo', name: 'Orvilo' }],
+        hiddenBuiltinModels: [{ id: 'hidden-image', providerId: 'orvilo' }],
       }),
     });
     callerMocks.aiModel.mockReturnValue({
@@ -220,11 +220,11 @@ describe('imageGenerationRuntime', () => {
       workspaceId: 'workspace-1',
     });
 
-    const result = await runtime.listImageModels({ limit: 1, provider: 'lobehub' });
+    const result = await runtime.listImageModels({ limit: 1, provider: 'orvilo' });
 
     expect(result).toMatchObject({
       state: {
-        providers: [{ id: 'lobehub', models: [{ id: 'visible-image' }] }],
+        providers: [{ id: 'orvilo', models: [{ id: 'visible-image' }] }],
         totalModels: 1,
       },
       success: true,

@@ -59,7 +59,7 @@ import {
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { LinearSyncModel } from './linearSync';
 import { TaskDependencyError } from './taskDependency';
@@ -366,12 +366,12 @@ interface TaskSubtaskProgressRow extends Record<string, unknown> {
 
 export class TaskModel {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly workspaceId?: string;
   private readonly managedSubject: boolean;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     options: { managedSubject?: boolean } = {},
@@ -501,7 +501,7 @@ export class TaskModel {
   private async withDependencyLock<T>(work: (model: TaskModel) => Promise<T>): Promise<T> {
     if (this.dependencyLockHeld) return work(this);
     return this.db.transaction(async (tx) => {
-      const model = new TaskModel(tx as LobeChatDatabase, this.userId, this.workspaceId);
+      const model = new TaskModel(tx as OrviloDatabase, this.userId, this.workspaceId);
       await model.lockDependencyGraph();
       model.dependencyLockHeld = true;
       return work(model);
@@ -538,7 +538,7 @@ export class TaskModel {
   ): Promise<TaskItem> {
     const { identifierPrefix = 'T', ...rest } = data;
 
-    const createInDatabase = async (runner: LobeChatDatabase): Promise<TaskItem> => {
+    const createInDatabase = async (runner: OrviloDatabase): Promise<TaskItem> => {
       // Seq is allocated per ownership scope: workspace-wide in team mode,
       // user-private in personal mode. This keeps `T-N` identifiers stable
       // within the surface the user actually sees.
@@ -597,7 +597,7 @@ export class TaskModel {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         return this.workspaceId
-          ? await this.db.transaction((tx) => createInDatabase(tx as LobeChatDatabase))
+          ? await this.db.transaction((tx) => createInDatabase(tx as OrviloDatabase))
           : await createInDatabase(this.db);
       } catch (error: any) {
         // Retry on unique constraint violation (concurrent seq conflict)
@@ -715,7 +715,7 @@ export class TaskModel {
     const changesPolicy = touchedColumns(data, TASK_POLICY_COLUMNS).length > 0;
 
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const [task] = await runner
         .update(tasks)
         .set({
@@ -771,7 +771,7 @@ export class TaskModel {
    * to render as "resource deleted" from its version snapshot. See.
    */
   private async recordTaskDeleted(
-    runner: LobeChatDatabase,
+    runner: OrviloDatabase,
     task: TaskItem,
     mutation: TaskMutationContext,
   ) {
@@ -983,9 +983,9 @@ export class TaskModel {
       }
 
       if (this.workspaceId && updated) {
-        const model = new LinearSyncModel(tx as LobeChatDatabase, this.workspaceId);
+        const model = new LinearSyncModel(tx as OrviloDatabase, this.workspaceId);
         for (const task of [updated, ...updatedDescendants]) {
-          await model.recordTaskChangeInTransaction(tx as LobeChatDatabase, {
+          await model.recordTaskChangeInTransaction(tx as OrviloDatabase, {
             changedFields: ['visibility'],
             eventId: mutation.eventId,
             eventType: 'task.requirement.changed',
@@ -1081,7 +1081,7 @@ export class TaskModel {
     await this.assertCanDeleteTasks(taskIds);
 
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const doomed = await runner
         .select()
         .from(tasks)
@@ -2218,7 +2218,7 @@ export class TaskModel {
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const [task] = await runner
         .update(tasks)
         .set({
@@ -2587,7 +2587,7 @@ export class TaskModel {
   // Tasks eligible for cron-based dispatch.
   // Excludes terminal/paused/running — `paused` requires user attention,
   // `running` is already in flight (and `runTask` would CONFLICT anyway).
-  static async getScheduledTasks(db: LobeChatDatabase): Promise<TaskItem[]> {
+  static async getScheduledTasks(db: OrviloDatabase): Promise<TaskItem[]> {
     return db
       .select()
       .from(tasks)
@@ -2607,7 +2607,7 @@ export class TaskModel {
   // dead generation. API callers may additionally restrict the sweep to one
   // task creator and workspace.
   static async findStuckTasks(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     options: { createdByUserId?: string; workspaceId?: string } = {},
   ): Promise<TaskItem[]> {
     return db
@@ -3070,10 +3070,20 @@ export class TaskModel {
       SELECT td.*, tt.id as source_task_id, tt.identifier as source_task_identifier,
              d.id as document_ref_id,
              d.title as document_title, d.file_type as document_file_type, d.parent_id as document_parent_id,
-             d.total_char_count as document_char_count, d.updated_at as document_updated_at
+             d.total_char_count as document_char_count, d.updated_at as document_updated_at,
+             w.origin_topic_id as source_topic_id, wt.title as source_topic_title
       FROM task_documents td
       JOIN task_tree tt ON td.task_id = tt.id
       LEFT JOIN documents d ON td.document_id = d.id AND ${documentVisibility}
+      -- The run that produced the document, read off the Work it registered: a
+      -- document Work keys its resource by the document id, and (resourceType,
+      -- resourceId, userId) is unique, so this cannot duplicate a document row.
+      -- A hand-pinned document has no Work and joins as NULL.
+      -- No backticks in these comments: they would close the template literal.
+      LEFT JOIN works w ON w.resource_id = td.document_id
+                       AND w.type = 'document'
+                       AND w.user_id = ${this.userId}
+      LEFT JOIN topics wt ON wt.id = w.origin_topic_id
       WHERE ${docsOwnership}
       ORDER BY td.created_at
     `);
@@ -3099,6 +3109,8 @@ export class TaskModel {
         pinnedBy: row.pinned_by,
         sourceTaskId: row.source_task_id,
         sourceTaskIdentifier: row.source_task_id !== rootTaskId ? row.source_task_identifier : null,
+        sourceTopicId: row.source_topic_id ?? null,
+        sourceTopicTitle: row.source_topic_title ?? null,
         title: inaccessible ? '' : row.document_title || 'Untitled',
         updatedAt: inaccessible ? null : row.document_updated_at,
       };
@@ -3156,7 +3168,7 @@ export class TaskModel {
     });
 
   private async recordCommentMutation(
-    runner: LobeChatDatabase,
+    runner: OrviloDatabase,
     input: {
       action: 'created' | 'deleted' | 'updated';
       comment?: { content: string; editorData?: unknown } | null;
@@ -3218,7 +3230,7 @@ export class TaskModel {
     // if the task is somehow not visible (defensive — the caller should
     // already have validated the task via `resolveOrThrow`).
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const visibility = await new TaskModel(
         runner,
         this.userId,
@@ -3259,7 +3271,7 @@ export class TaskModel {
 
   async deleteComment(id: string, mutation: TaskMutationContext = {}): Promise<boolean> {
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const externalMapping = this.workspaceId
         ? await new LinearSyncModel(runner, this.workspaceId).findExternalCommentByLocalId(id)
         : null;
@@ -3287,7 +3299,7 @@ export class TaskModel {
     opts?: { editorData?: unknown; mutation?: TaskMutationContext },
   ): Promise<TaskCommentItem | undefined> {
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const [comment] = await runner
         .update(taskComments)
         .set({
@@ -3409,7 +3421,7 @@ export class TaskModel {
     if (!touched) return this.update(id, data);
 
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const scoped = new TaskModel(runner, this.userId, this.workspaceId);
       await scoped.lockDependencyGraph();
       scoped.dependencyLockHeld = true;
@@ -3522,7 +3534,7 @@ export class TaskModel {
    * Collect a task and all its descendants (parentTaskId-linked) via BFS.
    * Honors the current ownership scope.
    */
-  private async collectTaskSubtree(rootId: string, runner: LobeChatDatabase): Promise<TaskItem[]> {
+  private async collectTaskSubtree(rootId: string, runner: OrviloDatabase): Promise<TaskItem[]> {
     const [root] = await runner
       .select()
       .from(tasks)
@@ -3551,7 +3563,7 @@ export class TaskModel {
    * scope. Returns the next available seq baseline.
    */
   private async nextSeqIn(
-    runner: LobeChatDatabase,
+    runner: OrviloDatabase,
     targetWorkspaceId: string | null,
     targetUserId: string,
   ): Promise<number> {
@@ -3598,8 +3610,8 @@ export class TaskModel {
     targetVisibility?: 'private' | 'public',
   ): Promise<{ taskIds: string[] }> {
     return this.db.transaction(async (trx) => {
-      const scoped = new TaskModel(trx as LobeChatDatabase, this.userId, this.workspaceId);
-      const subtree = await scoped.collectTaskSubtree(taskId, trx as LobeChatDatabase);
+      const scoped = new TaskModel(trx as OrviloDatabase, this.userId, this.workspaceId);
+      const subtree = await scoped.collectTaskSubtree(taskId, trx as OrviloDatabase);
       if (subtree.length === 0) throw new Error('Task not found');
 
       const ids = subtree.map((t) => t.id);
@@ -3611,7 +3623,7 @@ export class TaskModel {
 
       // Reallocate identifier + seq in target scope to avoid collisions.
       const baseSeq = await this.nextSeqIn(
-        trx as LobeChatDatabase,
+        trx as OrviloDatabase,
         targetWorkspaceId,
         targetUserId,
       );
@@ -3619,7 +3631,7 @@ export class TaskModel {
       for (const [idx, task] of subtree.entries()) {
         const seq = baseSeq + idx;
         const identifier = `T-${seq}`;
-        await (trx as LobeChatDatabase)
+        await (trx as OrviloDatabase)
           .update(tasks)
           .set({
             // Clear cross-scope refs: agent / topic may be invalid in new scope.
@@ -3639,19 +3651,19 @@ export class TaskModel {
       // task's visibility (see schema comments on task_deps / task_docs /
       // task_comments) so cascade the new visibility here too.
       const ownershipUpdate = { userId: targetUserId, workspaceId: targetWorkspaceId };
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(taskDependencies)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskDependencies.taskId, ids));
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(taskDocuments)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskDocuments.taskId, ids));
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(taskComments)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskComments.taskId, ids));
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(taskActivities)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskActivities.taskId, ids));
@@ -3673,8 +3685,8 @@ export class TaskModel {
     targetVisibility?: 'private' | 'public',
   ): Promise<{ rootId: string }> {
     return this.db.transaction(async (trx) => {
-      const scoped = new TaskModel(trx as LobeChatDatabase, this.userId, this.workspaceId);
-      const subtree = await scoped.collectTaskSubtree(taskId, trx as LobeChatDatabase);
+      const scoped = new TaskModel(trx as OrviloDatabase, this.userId, this.workspaceId);
+      const subtree = await scoped.collectTaskSubtree(taskId, trx as OrviloDatabase);
       if (subtree.length === 0) throw new Error('Task not found');
 
       // Visibility only applies when landing in a workspace.
@@ -3688,7 +3700,7 @@ export class TaskModel {
       const queue: string[] = [taskId];
       const seen = new Set<string>();
 
-      let seq = await this.nextSeqIn(trx as LobeChatDatabase, targetWorkspaceId, targetUserId);
+      let seq = await this.nextSeqIn(trx as OrviloDatabase, targetWorkspaceId, targetUserId);
 
       while (queue.length > 0) {
         const currentId = queue.shift()!;
@@ -3701,7 +3713,7 @@ export class TaskModel {
           currentId === taskId ? null : (idMap.get(original.parentTaskId!) ?? null);
 
         const identifier = `T-${seq}`;
-        const inserted = (await (trx as LobeChatDatabase)
+        const inserted = (await (trx as OrviloDatabase)
           .insert(tasks)
           .values({
             assigneeAgentId: null,

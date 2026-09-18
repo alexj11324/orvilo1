@@ -5,7 +5,7 @@ description: 'Use for product search: FtsSearchRepo, pg_search/Elasticsearch, ma
 
 # Product Full-Text Search
 
-This skill covers search over LobeHub-owned product data such as agents, topics, messages, files,
+This skill covers search over Orvilo-owned product data such as agents, topics, messages, files,
 knowledge bases, documents, chat groups, and memories. It does not cover the agent's external web
 search providers under `apps/server/src/services/search/` or builtin web-browsing tools.
 
@@ -29,7 +29,7 @@ router/service -> createFtsSearchRepo -> FtsSearchRepo -> selected backend -> ex
   `packages/database/src/repositories/ftsSearchSyncOutbox/` own durable change capture, claims,
   retries, dead letters, leases, revision fences, and capture-definition validation.
 - `scripts/elasticsearchReindex/` owns the resumable full-backfill command and its operational
-  runtime. Shared database source queries and document construction remain in
+  runtime. Shared database source queries and document construction remain
   `packages/database/src/repositories/ftsSearchDocument/`. `apps/server/src/services/ftsSearchSync/` and
   `scripts/elasticsearchSync/` own continuous incremental draining.
 - `packages/env/src/ftsSearch.ts` owns generic Elasticsearch environment variables.
@@ -41,7 +41,7 @@ router/service -> createFtsSearchRepo -> FtsSearchRepo -> selected backend -> ex
   provider is implemented end to end.
 - Elasticsearch errors, missing configuration, and unsupported candidate behavior must remain
   visible. Never silently retry through PostgreSQL or add an `ilike` fallback.
-- Before selecting Elasticsearch, require coverage tests proving that it supports every entity in
+- Before selecting Elasticsearch, require coverage tests proving that it supports every entity
   the provider-neutral backend contract. Do not add per-entity routing between providers.
 - Preserve `userId`, `workspaceId`, and caller-agent visibility throughout every provider. Candidate
   retrieval must not broaden the caller's scope.
@@ -177,7 +177,7 @@ adding manual or deferred release steps.
 - Server provider metrics and traces live in `apps/server/src/services/ftsSearch/observability.ts`.
   Keep labels bounded: entity, provider, operation, outcome, and coarse error type are acceptable;
   raw queries, user IDs, document IDs, and index contents are not.
-- User-perceived search behavior lives with the open-source Command Menu in
+- User-perceived search behavior lives with the open-source Command Menu
   `src/features/CommandMenu/analytics.ts`. Product analytics may cover end-to-end duration, rendered
   result counts, empty results, result clicks, and abandonment without a Cloud business slot.
 - Measurement or analytics failures must never alter the selected provider's result or error.

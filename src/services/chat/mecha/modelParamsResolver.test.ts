@@ -1,4 +1,4 @@
-import type { LobeAgentChatConfig } from '@orvilo/types';
+import type { OrviloAgentChatConfig } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as aiInfraStore from '@/store/aiInfra';
@@ -21,7 +21,9 @@ beforeEach(() => {
 
 describe('resolveModelExtendParams', () => {
   const mockAiInfraStoreState = { someState: true };
-  const createChatConfig = (config: Partial<LobeAgentChatConfig> = {}): LobeAgentChatConfig => ({
+  const createChatConfig = (
+    config: Partial<OrviloAgentChatConfig> = {},
+  ): OrviloAgentChatConfig => ({
     ...config,
   });
 

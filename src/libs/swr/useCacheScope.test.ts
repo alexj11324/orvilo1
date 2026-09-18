@@ -78,13 +78,13 @@ describe('activeScopeKey + optimistic scope', () => {
   });
 
   it('getCacheScope returns the persisted activeScopeKey optimistically when userId is unresolved', () => {
-    localStorage.setItem('lobehub:active-scope', 'user_abc:w1');
+    localStorage.setItem('orvilo:active-scope', 'user_abc:w1');
     // userId still unresolved — but we hydrate the last-known user partition
     expect(getCacheScope()).toBe('user_abc:w1');
   });
 
   it('getCacheScope prefers the real resolved scope over the persisted one', () => {
-    localStorage.setItem('lobehub:active-scope', 'user_abc:w1');
+    localStorage.setItem('orvilo:active-scope', 'user_abc:w1');
     mockUserId = 'user_real';
     mockWorkspaceId = 'w2';
     expect(getCacheScope()).toBe('user_real:w2');
@@ -92,13 +92,13 @@ describe('activeScopeKey + optimistic scope', () => {
 
   it('getCacheScope ignores the persisted scope once the session resolves signed-out', () => {
     // expired cookie / sign-out in another tab: session settled, but no user
-    localStorage.setItem('lobehub:active-scope', 'user_abc:w1');
+    localStorage.setItem('orvilo:active-scope', 'user_abc:w1');
     mockIsAuthLoaded = true;
     expect(getCacheScope()).toBe('anon:personal');
   });
 
   it('getCacheScope keeps the persisted scope on desktop until bootstrap identity resolves', () => {
-    localStorage.setItem('lobehub:active-scope', 'user_abc:w1');
+    localStorage.setItem('orvilo:active-scope', 'user_abc:w1');
     mockIsDesktop = true;
     mockIsAuthLoaded = true;
     mockIsIdentityResolved = false;
@@ -106,7 +106,7 @@ describe('activeScopeKey + optimistic scope', () => {
   });
 
   it('getCacheScope uses the bootstrap user before full user-state initialization', () => {
-    localStorage.setItem('lobehub:active-scope', 'stale_user:w1');
+    localStorage.setItem('orvilo:active-scope', 'stale_user:w1');
     mockIsDesktop = true;
     mockIsIdentityResolved = true;
     mockUserId = 'bootstrap_user';
@@ -114,9 +114,9 @@ describe('activeScopeKey + optimistic scope', () => {
   });
 
   it('clearActiveScopeKey removes the persisted scope (logout)', () => {
-    localStorage.setItem('lobehub:active-scope', 'user_abc:personal');
+    localStorage.setItem('orvilo:active-scope', 'user_abc:personal');
     clearActiveScopeKey();
-    expect(localStorage.getItem('lobehub:active-scope')).toBeNull();
+    expect(localStorage.getItem('orvilo:active-scope')).toBeNull();
     // → next getCacheScope (userId unresolved) falls back to anon
     expect(getCacheScope()).toBe('anon:personal');
   });

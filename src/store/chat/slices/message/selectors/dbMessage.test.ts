@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { selectCurrentTurnTodosFromMessages, selectTodosFromMessages } from './dbMessage';
 
 describe('selectTodosFromMessages', () => {
-  const createLobeAgentToolMessage = (todos: {
+  const createOrviloAgentToolMessage = (todos: {
     items: Array<{ text: string; status: 'todo' | 'processing' | 'completed' }>;
     updatedAt: string;
   }): UIChatMessage =>
@@ -13,7 +13,7 @@ describe('selectTodosFromMessages', () => {
       role: 'tool',
       content: 'Todos updated',
       plugin: {
-        identifier: 'lobe-agent',
+        identifier: 'orvilo-agent',
         apiName: 'createTodos',
         arguments: '{}',
       },
@@ -22,14 +22,14 @@ describe('selectTodosFromMessages', () => {
       },
     }) as unknown as UIChatMessage;
 
-  it('should extract todos from the latest lobe-agent tool message', () => {
+  it('should extract todos from the latest orvilo-agent tool message', () => {
     const messages: UIChatMessage[] = [
       {
         id: 'msg-1',
         role: 'user',
         content: 'Create a todo list',
       } as UIChatMessage,
-      createLobeAgentToolMessage({
+      createOrviloAgentToolMessage({
         items: [{ text: 'Buy milk', status: 'todo' }],
         updatedAt: '2024-06-01T00:00:00.000Z',
       }),
@@ -43,9 +43,9 @@ describe('selectTodosFromMessages', () => {
     expect(result?.items[0].status).toBe('todo');
   });
 
-  it('should return the most recent todos when multiple lobe-agent messages exist', () => {
+  it('should return the most recent todos when multiple orvilo-agent messages exist', () => {
     const messages: UIChatMessage[] = [
-      createLobeAgentToolMessage({
+      createOrviloAgentToolMessage({
         items: [{ text: 'Old task', status: 'todo' }],
         updatedAt: '2024-01-01T00:00:00.000Z',
       }),
@@ -54,7 +54,7 @@ describe('selectTodosFromMessages', () => {
         role: 'assistant',
         content: 'Task added',
       } as UIChatMessage,
-      createLobeAgentToolMessage({
+      createOrviloAgentToolMessage({
         items: [
           { text: 'Old task', status: 'completed' },
           { text: 'New task', status: 'todo' },
@@ -73,7 +73,7 @@ describe('selectTodosFromMessages', () => {
     expect(result?.items[1].text).toBe('New task');
   });
 
-  it('should return undefined when no lobe-agent messages exist', () => {
+  it('should return undefined when no orvilo-agent messages exist', () => {
     const messages: UIChatMessage[] = [
       {
         id: 'msg-1',
@@ -98,14 +98,14 @@ describe('selectTodosFromMessages', () => {
     expect(result).toBeUndefined();
   });
 
-  it('should ignore non-lobe-agent tool messages', () => {
+  it('should ignore non-orvilo-agent tool messages', () => {
     const messages: UIChatMessage[] = [
       {
         id: 'msg-1',
         role: 'tool',
         content: 'Search results',
         plugin: {
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           arguments: '{}',
         },
@@ -120,14 +120,14 @@ describe('selectTodosFromMessages', () => {
     expect(result).toBeUndefined();
   });
 
-  it('should handle lobe-agent message without pluginState.todos', () => {
+  it('should handle orvilo-agent message without pluginState.todos', () => {
     const messages: UIChatMessage[] = [
       {
         id: 'msg-1',
         role: 'tool',
         content: 'Something',
         plugin: {
-          identifier: 'lobe-agent',
+          identifier: 'orvilo-agent',
           apiName: 'someOtherApi',
           arguments: '{}',
         },
@@ -149,7 +149,7 @@ describe('selectTodosFromMessages', () => {
         role: 'tool',
         content: 'Todos',
         plugin: {
-          identifier: 'lobe-agent',
+          identifier: 'orvilo-agent',
           apiName: 'createTodos',
           arguments: '{}',
         },
@@ -170,7 +170,7 @@ describe('selectTodosFromMessages', () => {
     expect(new Date(result!.updatedAt).toISOString()).toBe(result!.updatedAt);
   });
 
-  it('should pick up pluginState.todos from a non-lobe-agent tool message (CC TodoWrite)', () => {
+  it('should pick up pluginState.todos from a non-orvilo-agent tool message (CC TodoWrite)', () => {
     // Heterogeneous-agent tools (Claude Code TodoWrite, future ACP/Codex
     // equivalents) synthesize `pluginState.todos` with identifier
     // 'claude-code'. The selector is a shared contract on `pluginState.todos`
@@ -206,11 +206,11 @@ describe('selectTodosFromMessages', () => {
   });
 
   it('should prefer the most recent pluginState.todos across producers', () => {
-    // lobe-agent wrote first, then CC TodoWrite wrote later — the latest producer
+    // orvilo-agent wrote first, then CC TodoWrite wrote later — the latest producer
     // wins regardless of identifier.
     const messages: UIChatMessage[] = [
-      createLobeAgentToolMessage({
-        items: [{ text: 'old lobe-agent task', status: 'todo' }],
+      createOrviloAgentToolMessage({
+        items: [{ text: 'old orvilo-agent task', status: 'todo' }],
         updatedAt: '2026-04-01T00:00:00.000Z',
       }),
       {
@@ -242,7 +242,7 @@ describe('selectTodosFromMessages', () => {
         role: 'tool',
         content: 'Todos',
         plugin: {
-          identifier: 'lobe-agent',
+          identifier: 'orvilo-agent',
           apiName: 'createTodos',
           arguments: '{}',
         },
@@ -266,7 +266,7 @@ describe('selectTodosFromMessages', () => {
 });
 
 describe('selectCurrentTurnTodosFromMessages', () => {
-  const lobeAgentMessage = (
+  const orviloAgentMessage = (
     text: string,
     status: 'todo' | 'processing' | 'completed',
   ): UIChatMessage =>
@@ -274,7 +274,7 @@ describe('selectCurrentTurnTodosFromMessages', () => {
       id: `tool-${text}`,
       role: 'tool',
       content: 'Todos updated',
-      plugin: { identifier: 'lobe-agent', apiName: 'createTodos', arguments: '{}' },
+      plugin: { identifier: 'orvilo-agent', apiName: 'createTodos', arguments: '{}' },
       pluginState: {
         todos: { items: [{ text, status }], updatedAt: '2026-04-20T00:00:00.000Z' },
       },
@@ -286,9 +286,9 @@ describe('selectCurrentTurnTodosFromMessages', () => {
   it('returns todos from the current turn only', () => {
     const messages: UIChatMessage[] = [
       userMessage('u1'),
-      lobeAgentMessage('turn 1 task', 'completed'),
+      orviloAgentMessage('turn 1 task', 'completed'),
       userMessage('u2'),
-      lobeAgentMessage('turn 2 task', 'processing'),
+      orviloAgentMessage('turn 2 task', 'processing'),
     ];
 
     const result = selectCurrentTurnTodosFromMessages(messages);
@@ -300,7 +300,7 @@ describe('selectCurrentTurnTodosFromMessages', () => {
   it('returns undefined once a new user turn starts without its own todos', () => {
     const messages: UIChatMessage[] = [
       userMessage('u1'),
-      lobeAgentMessage('previous turn task', 'completed'),
+      orviloAgentMessage('previous turn task', 'completed'),
       userMessage('u2'),
     ];
 
@@ -310,7 +310,7 @@ describe('selectCurrentTurnTodosFromMessages', () => {
   });
 
   it('falls back to full history when no user message exists', () => {
-    const messages: UIChatMessage[] = [lobeAgentMessage('greeting task', 'todo')];
+    const messages: UIChatMessage[] = [orviloAgentMessage('greeting task', 'todo')];
 
     const result = selectCurrentTurnTodosFromMessages(messages);
 

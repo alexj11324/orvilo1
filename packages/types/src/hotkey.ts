@@ -22,7 +22,7 @@ export type HotkeyId =
 
 export type HotkeyGroupId = 'conversation' | 'essential';
 
-export type HotkeyScopeId = 'chat' | 'files' | 'global' | 'image';
+export type HotkeyScopeId = 'chat' | 'files' | 'global';
 
 export interface HotkeyItem {
   group: HotkeyGroupId;

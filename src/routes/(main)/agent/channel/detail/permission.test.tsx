@@ -359,7 +359,7 @@ describe('Agent channel permission gates', () => {
           ...platformDef,
           documentation: {
             portalUrl: 'https://discord.com/developers/applications',
-            setupGuideUrl: 'https://lobehub.com/docs/usage/channels/discord',
+            setupGuideUrl: 'https://orvilo.aspectlylabs.com/docs/usage/channels/discord',
           },
         }}
       />,
@@ -370,7 +370,7 @@ describe('Agent channel permission gates', () => {
     expect(documentationButton).toHaveAttribute('aria-label', 'channel.documentation');
     fireEvent.click(documentationButton);
     expect(open).toHaveBeenCalledWith(
-      'https://lobehub.com/docs/usage/channels/discord',
+      'https://orvilo.aspectlylabs.com/docs/usage/channels/discord',
       '_blank',
       'noopener,noreferrer',
     );

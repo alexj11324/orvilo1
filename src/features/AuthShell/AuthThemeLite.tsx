@@ -39,7 +39,7 @@ const AuthThemeLite = memo<AuthThemeLiteProps>(({ children, globalCDN }) => {
         defaultThemeMode={currentAppearance}
         style={{ height: '100%' }}
         theme={{
-          cssVar: { key: 'lobe-vars' },
+          cssVar: { key: 'orvilo-vars' },
         }}
       >
         <App style={{ height: '100%' }}>

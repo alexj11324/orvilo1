@@ -719,7 +719,7 @@ const HETEROGENEOUS_CLI_AGENT_OPTIONS = {
   'trae': {
     // The official binary and the unrelated open-source trajectory runner both
     // identify themselves as `trae-cli`. Distinguish them by the ACP runtime
-    // LobeHub actually needs rather than by executable name or version banner.
+    // Orvilo actually needs rather than by executable name or version banner.
     validateHelpArgs: ['acp', 'serve', '--help'],
     validateHelpKeywords: ['Start the ACP server', '--yolo'],
     validateKeywords: ['trae', 'traecode'],

@@ -1,4 +1,4 @@
-import type { AgentModelSelectionPolicy, LobeAgentAgencyConfig } from './agencyConfig';
+import type { AgentModelSelectionPolicy, OrviloAgentAgencyConfig } from './agencyConfig';
 
 /** A workspace member's personal model choice for one shared agent. */
 export interface AgentModelOverride {
@@ -7,7 +7,7 @@ export interface AgentModelOverride {
 }
 
 export interface AgentModelConfig {
-  agencyConfig?: Pick<LobeAgentAgencyConfig, 'modelSelectionPolicy'>;
+  agencyConfig?: Pick<OrviloAgentAgencyConfig, 'modelSelectionPolicy'>;
   /** Author/admin callers use the shared model and ignore member overrides. */
   canManage?: boolean;
   model: string;

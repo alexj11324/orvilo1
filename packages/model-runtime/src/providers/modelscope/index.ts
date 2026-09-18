@@ -25,4 +25,4 @@ export const params = {
   provider: ModelProvider.ModelScope,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeModelScopeAI = createOpenAICompatibleRuntime(params);
+export const OrviloModelScopeAI = createOpenAICompatibleRuntime(params);

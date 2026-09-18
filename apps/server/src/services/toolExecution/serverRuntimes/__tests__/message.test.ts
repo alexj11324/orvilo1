@@ -424,7 +424,7 @@ describe('messageRuntime', () => {
       const runtime = await messageRuntime.factory(validContext);
       const result = await runtime.readDocument({
         platform: 'feishu',
-        url: 'https://lobe-hub.feishu.cn/docx/DocTok?from=chat',
+        url: 'https://orvilo-hub.feishu.cn/docx/DocTok?from=chat',
       });
 
       expect(result.success).toBe(true);
@@ -493,7 +493,7 @@ describe('messageRuntime', () => {
       mockQuery.mockResolvedValue([]);
       mockGetMessengerTelegramConfig.mockResolvedValueOnce({
         botToken: 'tg-env-token',
-        botUsername: 'lobehub_bot',
+        botUsername: 'orvilo_bot',
       });
       mockTelegramSendMessage.mockResolvedValue({ message_id: 99 });
 
@@ -678,7 +678,7 @@ describe('messageRuntime', () => {
       mockListByInstallerUserId.mockResolvedValueOnce([]);
       mockGetMessengerTelegramConfig.mockResolvedValueOnce({
         botToken: 'tg-env-token',
-        botUsername: 'lobehub_bot',
+        botUsername: 'orvilo_bot',
       });
       mockLinkList.mockResolvedValueOnce([
         {
@@ -727,7 +727,7 @@ describe('messageRuntime', () => {
       mockListByInstallerUserId.mockResolvedValueOnce([]);
       mockGetMessengerTelegramConfig.mockResolvedValueOnce({
         botToken: 'tg-env-token',
-        botUsername: 'lobehub_bot',
+        botUsername: 'orvilo_bot',
       });
       mockLinkList.mockResolvedValueOnce([]);
 
@@ -752,7 +752,7 @@ describe('messageRuntime', () => {
       ]);
       mockGetMessengerTelegramConfig.mockResolvedValueOnce({
         botToken: 'tg-env-token',
-        botUsername: 'lobehub_bot',
+        botUsername: 'orvilo_bot',
       });
       mockLinkList.mockResolvedValueOnce([
         {
@@ -845,7 +845,7 @@ describe('messageRuntime', () => {
     it('synthesizes detail for the telegram singleton id', async () => {
       mockGetMessengerTelegramConfig.mockResolvedValueOnce({
         botToken: 'tg-env-token',
-        botUsername: 'lobehub_bot',
+        botUsername: 'orvilo_bot',
       });
       mockLinkList.mockResolvedValueOnce([
         {
@@ -869,7 +869,7 @@ describe('messageRuntime', () => {
     it('returns null for telegram singleton when user has no link', async () => {
       mockGetMessengerTelegramConfig.mockResolvedValueOnce({
         botToken: 'tg-env-token',
-        botUsername: 'lobehub_bot',
+        botUsername: 'orvilo_bot',
       });
       mockLinkList.mockResolvedValueOnce([]);
 
@@ -981,7 +981,7 @@ describe('messageRuntime', () => {
         { id: 'discord', name: 'Discord' },
       ]);
       mockGetMessengerSlackConfig.mockResolvedValueOnce({ appId: 'A123' });
-      mockGetMessengerTelegramConfig.mockResolvedValueOnce({ botUsername: 'lobehub_bot' });
+      mockGetMessengerTelegramConfig.mockResolvedValueOnce({ botUsername: 'orvilo_bot' });
 
       const runtime = await messageRuntime.factory(validContext);
       const result = await runtime.listMessengerPlatforms({});
@@ -991,7 +991,7 @@ describe('messageRuntime', () => {
       expect(result.state.platforms).toHaveLength(2);
       expect(result.content).toContain('slack');
       expect(result.content).toContain('A123');
-      expect(result.content).toContain('lobehub_bot');
+      expect(result.content).toContain('orvilo_bot');
     });
   });
 
@@ -1241,7 +1241,7 @@ describe('messageRuntime', () => {
 
       expect(result.success).toBe(true);
       expect(result.state.status).toBe('queued');
-      expect(result.content).toContain('send any message to the LobeHub WeChat bot');
+      expect(result.content).toContain('send any message to the Orvilo WeChat bot');
     });
 
     it('directs the user to Settings → Messenger when the platform is unlinked', async () => {

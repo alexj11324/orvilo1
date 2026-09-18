@@ -30,7 +30,7 @@ import { aiModelSelectors, getAiInfraStoreState } from '@/store/aiInfra';
 import { getToolStoreState } from '@/store/tool';
 import {
   composioStoreSelectors,
-  lobehubSkillStoreSelectors,
+  orviloSkillStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
 import { connectorSelectors } from '@/store/tool/slices/connector';
@@ -72,7 +72,7 @@ export interface ToolsEngineConfig {
  * A manifest is usable by ToolsEngine only if it has a non-empty `api` array.
  * ToolsEngine.convertManifestsToTools calls `manifest.api.map(...)` unconditionally,
  * so any entry with `api` missing / non-array will crash the whole tools build.
- * Sources that populate manifests (installed plugins, Composio, LobeHub skills, MCP)
+ * Sources that populate manifests (installed plugins, Composio, Orvilo skills, MCP)
  * have no shared schema validation, so we guard defensively at the merge point.
  */
 const isValidToolManifest = (m: ToolManifest | undefined): m is ToolManifest =>
@@ -159,7 +159,7 @@ export const createToolsEngine = (config: ToolsEngineConfig = {}): ToolsEngine =
 
   // Get all builtin tool manifests. When a manifest context is supplied (agent
   // runtime path), context-aware tools resolve their manifest for it — trimming
-  // APIs (e.g. lobe-agent hides callSubAgent in groups) or opting out via `null`.
+  // APIs (e.g. orvilo-agent hides callSubAgent in groups) or opting out via `null`.
   // Context-free callers fall back to the full static manifest.
   const builtinManifests = toolStoreState.builtinTools
     .map((tool) =>
@@ -170,14 +170,14 @@ export const createToolsEngine = (config: ToolsEngineConfig = {}): ToolsEngine =
     .filter((m): m is BuiltinToolManifest => !!m) as ToolManifest[];
 
   // Get Composio tool manifests
-  const composioTools = composioStoreSelectors.composioAsLobeTools(toolStoreState);
+  const composioTools = composioStoreSelectors.composioAsOrviloTools(toolStoreState);
   const composioManifests = composioTools
     .map((tool) => tool.manifest as ToolManifest)
     .filter(Boolean);
 
-  // Get LobeHub Skill tool manifests
-  const lobehubSkillTools = lobehubSkillStoreSelectors.lobehubSkillAsLobeTools(toolStoreState);
-  const lobehubSkillManifests = lobehubSkillTools
+  // Get Orvilo Skill tool manifests
+  const orviloSkillTools = orviloSkillStoreSelectors.orviloSkillAsOrviloTools(toolStoreState);
+  const orviloSkillManifests = orviloSkillTools
     .map((tool) => tool.manifest as ToolManifest)
     .filter(Boolean);
 
@@ -187,7 +187,7 @@ export const createToolsEngine = (config: ToolsEngineConfig = {}): ToolsEngine =
     ...dropInvalidManifests(pluginManifests, 'installedPlugins'),
     ...dropInvalidManifests(builtinManifests, 'builtinTools'),
     ...dropInvalidManifests(composioManifests, 'composio'),
-    ...dropInvalidManifests(lobehubSkillManifests, 'lobehubSkills'),
+    ...dropInvalidManifests(orviloSkillManifests, 'orviloSkills'),
     ...dropInvalidManifests(connectorManifests, 'connectors'),
     ...dropInvalidManifests(additionalManifests, 'additionalManifests'),
   ];
@@ -239,7 +239,7 @@ export const createAgentToolsEngine = (
     settingsSelectors.memoryEnabled(useUserStore.getState());
   const webBrowsingEnabled = searchConfig.useApplicationBuiltinSearchTool;
   // Chat mode no longer auto-injects image generation (token cost + unwanted
-  // tool calls). Users opt in by pinning `lobe-image-generation`. Models with
+  // tool calls). Users opt in by pinning `orvilo-image-generation`. Models with
   // native imageOutput still skip the fallback tool entirely.
   const imageGenerationCapable =
     isCanUseFC(workingModel.model, workingModel.provider) &&

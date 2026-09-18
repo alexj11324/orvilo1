@@ -1,11 +1,11 @@
-import { type LobeTool } from '@orvilo/types';
+import { type OrviloTool } from '@orvilo/types';
 
 import { type PluginInstallError } from '@/types/tool/plugin';
 
 export type PluginsSettings = Record<string, any>;
 
 export interface PluginState {
-  installedPlugins: LobeTool[];
+  installedPlugins: OrviloTool[];
   loadingInstallPlugins: boolean;
   pluginInstallErrors: Record<string, PluginInstallError | undefined>;
   pluginInstallLoading: Record<string, boolean | undefined>;

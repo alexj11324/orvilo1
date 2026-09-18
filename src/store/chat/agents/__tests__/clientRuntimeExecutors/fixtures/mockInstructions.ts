@@ -43,7 +43,7 @@ export const createCallToolInstruction = (
     apiName: 'search',
     arguments: JSON.stringify({ query: 'test' }),
     id: `tool_call_${nanoid()}`,
-    identifier: 'lobe-web-browsing',
+    identifier: 'orvilo-web-browsing',
     type: 'default',
     ...toolCall,
   };
@@ -76,7 +76,7 @@ export const createRequestHumanApproveInstruction = (
           apiName: 'search',
           arguments: JSON.stringify({ query: 'test' }),
           id: `tool_call_${nanoid()}`,
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           type: 'default',
         },
       ];
@@ -107,7 +107,7 @@ export const createResolveAbortedToolsInstruction = (
               apiName: 'search',
               arguments: JSON.stringify({ query: 'test' }),
               id: `tool_call_${nanoid()}`,
-              identifier: 'lobe-web-browsing',
+              identifier: 'orvilo-web-browsing',
               type: 'default',
             },
           ],

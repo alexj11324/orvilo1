@@ -87,7 +87,7 @@ describe('credsRuntime', () => {
     );
   });
 
-  // `lobe-creds` is already absent from `AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS`,
+  // `orvilo-creds` is already absent from `AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS`,
   // so this runtime should never even be constructed for a share visitor —
   // this is the belt-and-braces backstop in case that allowlist gate is ever
   // bypassed: the sandbox write path must refuse on its own too, since

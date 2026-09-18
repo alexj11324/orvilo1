@@ -7,11 +7,11 @@ import {
   workspaceMembers,
   workspaces,
 } from '../schemas/workspace';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { AGENT_TRANSFER_PENDING_OWNER_DELETE, AgentTransferJobModel } from './agentTransferJob';
 
 export const getActiveWorkspaceMembershipRole = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { userId: string; workspaceId: string },
 ): Promise<string | null> => {
   const [row] = await db
@@ -40,7 +40,7 @@ export const getActiveWorkspaceMembershipRole = async (
  * and lambda TRPC surfaces.
  */
 export const hasWorkspaceOwnerAccess = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { userId: string; workspaceId: string },
 ): Promise<boolean> => {
   return (await getActiveWorkspaceMembershipRole(db, params)) === 'owner';
@@ -51,7 +51,7 @@ export const hasWorkspaceOwnerAccess = async (
  * and Admin pass; Member and Viewer do not.
  */
 export const hasWorkspaceAdminAccess = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { userId: string; workspaceId: string },
 ): Promise<boolean> => {
   const role = await getActiveWorkspaceMembershipRole(db, params);
@@ -59,7 +59,7 @@ export const hasWorkspaceAdminAccess = async (
 };
 
 export const hasActiveWorkspaceMembership = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { userId: string; workspaceId: string },
 ): Promise<boolean> => {
   return (await getActiveWorkspaceMembershipRole(db, params)) !== null;
@@ -79,10 +79,10 @@ export const getWorkspaceApiKeyMemberCreation = (
 };
 
 export class WorkspaceModel {
-  protected readonly db: LobeChatDatabase;
+  protected readonly db: OrviloDatabase;
   protected readonly userId: string;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }

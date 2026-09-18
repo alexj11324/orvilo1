@@ -488,13 +488,13 @@ describe('streamAgentEventsViaWebSocket', () => {
 
   it('should construct correct WebSocket URL from HTTPS gateway URL', async () => {
     const promise = streamAgentEventsViaWebSocket({
-      gatewayUrl: 'https://agent-gateway.lobehub.com',
+      gatewayUrl: 'https://agent-gateway.aspectlylabs.com',
       operationId: 'op-123',
       token: 'tok',
     });
 
     await flush();
-    expect(capturedWs!.url).toBe('wss://agent-gateway.lobehub.com/ws?operationId=op-123');
+    expect(capturedWs!.url).toBe('wss://agent-gateway.aspectlylabs.com/ws?operationId=op-123');
 
     capturedWs!.simulateMessage({ id: '1', type: 'session_complete' });
     await promise;

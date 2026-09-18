@@ -7,7 +7,7 @@ import type { ConnectorCredentials } from '@/database/schemas';
 
 import { refreshConnectorToken } from './oauth';
 
-const log = debug('lobe-server:connector:tokens');
+const log = debug('orvilo-server:connector:tokens');
 
 /** Refresh slightly before actual expiry to avoid races on the boundary. */
 const EXPIRY_SKEW_MS = 60_000;

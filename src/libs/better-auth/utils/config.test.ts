@@ -42,7 +42,7 @@ describe('getTrustedOrigins', () => {
 
     expect(getTrustedOrigins(['apple'])).toEqual([
       'https://app.example.com',
-      'com.lobehub.app://',
+      'com.orvilo.app://',
       'https://appleid.apple.com',
       'https://gateway.example.com',
     ]);

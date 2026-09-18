@@ -1,8 +1,8 @@
 import type { AgentState } from '@orvilo/agent-runtime';
 import * as agentRuntime from '@orvilo/agent-runtime';
 import { resolveLocalSystemManifest } from '@orvilo/builtin-tool-local-system';
-import type * as LobeChatConst from '@orvilo/const';
-import { type LobeChatPluginApi, type UIChatMessage } from '@orvilo/types';
+import type * as OrviloConst from '@orvilo/const';
+import { type OrviloPluginApi, type UIChatMessage } from '@orvilo/types';
 import { act, renderHook } from '@testing-library/react';
 import { type EnabledAiModel, ModelProvider } from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -109,7 +109,7 @@ const completionSoundMock = vi.hoisted(() => ({
   play: vi.fn(),
 }));
 vi.mock('@orvilo/const', async (importOriginal) => {
-  const actual = await importOriginal<typeof LobeChatConst>();
+  const actual = await importOriginal<typeof OrviloConst>();
   return {
     ...actual,
     get isDesktop() {
@@ -1234,12 +1234,12 @@ describe('StreamingExecutor actions', () => {
         agentConfig: createMockAgentConfig(),
         chatConfig: createMockChatConfig(),
         isBuiltinAgent: false,
-        plugins: ['lobe-page-agent'],
+        plugins: ['orvilo-page-agent'],
       });
       vi.spyOn(toolEngineering, 'createAgentToolsEngine').mockReturnValue({
         generateToolsDetailed: vi.fn().mockReturnValue({
           enabledManifests: [],
-          enabledToolIds: ['lobe-page-agent'],
+          enabledToolIds: ['orvilo-page-agent'],
           tools: [],
         }),
       } as any);
@@ -1268,7 +1268,7 @@ describe('StreamingExecutor actions', () => {
           phase: 'init',
           initialContext: {
             selectedSkills: [{ identifier: 'user_memory', name: 'User Memory' }],
-            selectedTools: [{ identifier: 'lobe-notebook', name: 'Notebook' }],
+            selectedTools: [{ identifier: 'orvilo-notebook', name: 'Notebook' }],
           },
         },
       });
@@ -1280,7 +1280,7 @@ describe('StreamingExecutor actions', () => {
           metadata: { title: 'Test Doc', charCount: 15, lineCount: 1 },
         },
         selectedSkills: [{ identifier: 'user_memory', name: 'User Memory' }],
-        selectedTools: [{ identifier: 'lobe-notebook', name: 'Notebook' }],
+        selectedTools: [{ identifier: 'orvilo-notebook', name: 'Notebook' }],
       });
     });
 
@@ -1321,12 +1321,12 @@ describe('StreamingExecutor actions', () => {
         undefined,
         expect.objectContaining({ executionEnv: 'local' }),
       );
-      const readFile = state.toolManifestMap['lobe-local-system']?.api.find(
-        (api: LobeChatPluginApi) => api.name === 'readFile',
+      const readFile = state.toolManifestMap['orvilo-local-system']?.api.find(
+        (api: OrviloPluginApi) => api.name === 'readFile',
       );
 
       expect(readFile?.description).toContain('base64');
-      expect(state.toolManifestMap['lobe-local-system']?.systemRole).toContain(
+      expect(state.toolManifestMap['orvilo-local-system']?.systemRole).toContain(
         'Image files are uploaded as visual tool results',
       );
     });
@@ -1349,12 +1349,12 @@ describe('StreamingExecutor actions', () => {
         agentConfig: createMockAgentConfig(),
         chatConfig: createMockChatConfig(),
         isBuiltinAgent: false,
-        plugins: ['lobe-page-agent'],
+        plugins: ['orvilo-page-agent'],
       });
       vi.spyOn(toolEngineering, 'createAgentToolsEngine').mockReturnValue({
         generateToolsDetailed: vi.fn().mockReturnValue({
           enabledManifests: [],
-          enabledToolIds: ['lobe-page-agent'],
+          enabledToolIds: ['orvilo-page-agent'],
           tools: [],
         }),
       } as any);
@@ -1396,7 +1396,7 @@ describe('StreamingExecutor actions', () => {
 
       const generateToolsDetailed = vi.fn().mockReturnValue({
         enabledManifests: [],
-        enabledToolIds: ['lobe-notebook'],
+        enabledToolIds: ['orvilo-notebook'],
         tools: [],
       });
 
@@ -1404,7 +1404,7 @@ describe('StreamingExecutor actions', () => {
         agentConfig: createMockAgentConfig(),
         chatConfig: createMockChatConfig(),
         isBuiltinAgent: false,
-        plugins: ['lobe-artifacts'],
+        plugins: ['orvilo-artifacts'],
       });
       vi.spyOn(toolEngineering, 'createAgentToolsEngine').mockReturnValue({
         generateToolsDetailed,
@@ -1418,7 +1418,7 @@ describe('StreamingExecutor actions', () => {
         initialContext: {
           phase: 'init',
           initialContext: {
-            selectedTools: [{ identifier: 'lobe-notebook', name: 'Notebook' }],
+            selectedTools: [{ identifier: 'orvilo-notebook', name: 'Notebook' }],
           },
         },
       });
@@ -1426,7 +1426,7 @@ describe('StreamingExecutor actions', () => {
       expect(generateToolsDetailed).toHaveBeenCalledWith(
         expect.objectContaining({
           skipDefaultTools: undefined,
-          toolIds: ['lobe-artifacts', 'lobe-notebook'],
+          toolIds: ['orvilo-artifacts', 'orvilo-notebook'],
         }),
       );
     });
@@ -1457,7 +1457,7 @@ describe('StreamingExecutor actions', () => {
 
       const generateToolsDetailed = vi.fn().mockReturnValue({
         enabledManifests: [],
-        enabledToolIds: ['lobe-agent'],
+        enabledToolIds: ['orvilo-agent'],
         tools: [],
       });
 
@@ -1480,12 +1480,12 @@ describe('StreamingExecutor actions', () => {
 
       expect(generateToolsDetailed).toHaveBeenCalledWith(
         expect.objectContaining({
-          toolIds: ['lobe-agent'],
+          toolIds: ['orvilo-agent'],
         }),
       );
     });
 
-    it('should not enable multimodal understanding when the active LobeHub model supports audio natively', () => {
+    it('should not enable multimodal understanding when the active Orvilo model supports audio natively', () => {
       act(() => {
         useChatStore.setState({ executeClientAgent: realExecAgentRuntime });
       });
@@ -1528,7 +1528,7 @@ describe('StreamingExecutor actions', () => {
       vi.spyOn(agentConfigResolver, 'resolveAgentConfig').mockReturnValue({
         agentConfig: createMockAgentConfig({
           model: 'gemini-3.1-flash-lite-preview',
-          provider: ModelProvider.LobeHub,
+          provider: ModelProvider.Orvilo,
         }),
         chatConfig: createMockChatConfig(),
         isBuiltinAgent: false,
@@ -1594,7 +1594,7 @@ describe('StreamingExecutor actions', () => {
           // Must NOT use skipDefaultTools for builtin agents in manual mode
           skipDefaultTools: undefined,
           // Must use excludeDefaultToolIds to only exclude discovery tools
-          excludeDefaultToolIds: expect.arrayContaining(['lobe-activator', 'lobe-skill-store']),
+          excludeDefaultToolIds: expect.arrayContaining(['orvilo-activator', 'orvilo-skill-store']),
         }),
       );
     });
@@ -1639,7 +1639,7 @@ describe('StreamingExecutor actions', () => {
       expect(generateToolsDetailed).toHaveBeenCalledWith(
         expect.objectContaining({
           skipDefaultTools: undefined,
-          excludeDefaultToolIds: expect.arrayContaining(['lobe-activator', 'lobe-skill-store']),
+          excludeDefaultToolIds: expect.arrayContaining(['orvilo-activator', 'orvilo-skill-store']),
         }),
       );
     });
@@ -1707,7 +1707,7 @@ describe('StreamingExecutor actions', () => {
       vi.spyOn(agentConfigResolver, 'resolveAgentConfig').mockReturnValue({
         agentConfig: createMockAgentConfig({
           model: 'claude-sonnet-4-6',
-          provider: 'lobehub',
+          provider: 'orvilo',
         }),
         chatConfig: createMockChatConfig(),
         isBuiltinAgent: false,
@@ -1729,7 +1729,7 @@ describe('StreamingExecutor actions', () => {
         initialContext: {
           phase: 'init',
           initialContext: {
-            selectedTools: [{ identifier: 'lobe-notebook', name: 'Notebook' }],
+            selectedTools: [{ identifier: 'orvilo-notebook', name: 'Notebook' }],
           },
         },
       });
@@ -1738,7 +1738,7 @@ describe('StreamingExecutor actions', () => {
         expect.objectContaining({
           model: 'claude-sonnet-4-6',
           parentMessageId: TEST_IDS.USER_MESSAGE_ID,
-          provider: 'lobehub',
+          provider: 'orvilo',
         }),
       );
     });
@@ -1761,19 +1761,19 @@ describe('StreamingExecutor actions', () => {
         agentConfig: createMockAgentConfig(),
         chatConfig: createMockChatConfig(),
         isBuiltinAgent: false,
-        plugins: ['lobe-artifacts'],
+        plugins: ['orvilo-artifacts'],
       });
       vi.spyOn(toolEngineering, 'createAgentToolsEngine').mockReturnValue({
         generateToolsDetailed: vi.fn().mockReturnValue({
-          enabledManifests: [{ identifier: 'lobe-artifacts' }, { identifier: 'lobe-notebook' }],
-          enabledToolIds: ['lobe-artifacts', 'lobe-notebook'],
+          enabledManifests: [{ identifier: 'orvilo-artifacts' }, { identifier: 'orvilo-notebook' }],
+          enabledToolIds: ['orvilo-artifacts', 'orvilo-notebook'],
           tools: [
             {
-              function: { name: 'lobe-artifacts____create' },
+              function: { name: 'orvilo-artifacts____create' },
               type: 'function',
             },
             {
-              function: { name: 'lobe-notebook____createDocument' },
+              function: { name: 'orvilo-notebook____createDocument' },
               type: 'function',
             },
           ],
@@ -1784,16 +1784,16 @@ describe('StreamingExecutor actions', () => {
 
       const streamSpy = spyOnClientLLMStream(async ({ onFinish, params }) => {
         expect(params.resolvedAgentConfig.enabledToolIds).toEqual([
-          'lobe-artifacts',
-          'lobe-notebook',
+          'orvilo-artifacts',
+          'orvilo-notebook',
         ]);
         expect(params.resolvedAgentConfig.tools).toEqual([
           {
-            function: { name: 'lobe-artifacts____create' },
+            function: { name: 'orvilo-artifacts____create' },
             type: 'function',
           },
           {
-            function: { name: 'lobe-notebook____createDocument' },
+            function: { name: 'orvilo-notebook____createDocument' },
             type: 'function',
           },
         ]);
@@ -1806,7 +1806,7 @@ describe('StreamingExecutor actions', () => {
           initialContext: {
             phase: 'init',
             initialContext: {
-              selectedTools: [{ identifier: 'lobe-notebook', name: 'Notebook' }],
+              selectedTools: [{ identifier: 'orvilo-notebook', name: 'Notebook' }],
             },
           },
           messages: [userMessage],
@@ -2586,18 +2586,18 @@ describe('StreamingExecutor actions', () => {
   });
 
   describe('isSubAgent filtering', () => {
-    it('should filter out lobe-agent tool when isSubAgent is true', async () => {
+    it('should filter out orvilo-agent tool when isSubAgent is true', async () => {
       const { result } = renderHook(() => useChatStore());
       const messages = [createMockMessage({ role: 'user' })];
 
-      // Mock resolveAgentConfig to return plugins including lobe-agent
+      // Mock resolveAgentConfig to return plugins including orvilo-agent
       const resolveAgentConfigSpy = vi
         .spyOn(agentConfigResolver, 'resolveAgentConfig')
         .mockReturnValue({
           agentConfig: createMockAgentConfig(),
           chatConfig: createMockChatConfig(),
           isBuiltinAgent: false,
-          plugins: ['lobe-agent', 'lobe-local-system', 'other-plugin'],
+          plugins: ['orvilo-agent', 'orvilo-local-system', 'other-plugin'],
         });
 
       // Create operation
@@ -2629,18 +2629,18 @@ describe('StreamingExecutor actions', () => {
       resolveAgentConfigSpy.mockRestore();
     });
 
-    it('should NOT filter out lobe-agent tool when isSubAgent is false or undefined', async () => {
+    it('should NOT filter out orvilo-agent tool when isSubAgent is false or undefined', async () => {
       const { result } = renderHook(() => useChatStore());
       const messages = [createMockMessage({ role: 'user' })];
 
-      // Mock resolveAgentConfig to return plugins including lobe-agent
+      // Mock resolveAgentConfig to return plugins including orvilo-agent
       const resolveAgentConfigSpy = vi
         .spyOn(agentConfigResolver, 'resolveAgentConfig')
         .mockReturnValue({
           agentConfig: createMockAgentConfig(),
           chatConfig: createMockChatConfig(),
           isBuiltinAgent: false,
-          plugins: ['lobe-agent', 'lobe-local-system', 'other-plugin'],
+          plugins: ['orvilo-agent', 'orvilo-local-system', 'other-plugin'],
         });
 
       // Create operation without isSubAgent (normal conversation)

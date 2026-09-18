@@ -2,7 +2,7 @@
 
 import { Flexbox, TextArea } from '@lobehub/ui';
 import { Alert, Button, Switch } from '@lobehub/ui/base-ui';
-import type { AgentGraph, LobeAgentChatConfig } from '@orvilo/types';
+import type { AgentGraph, OrviloAgentChatConfig } from '@orvilo/types';
 import { AgentGraphSchema } from '@orvilo/types/agent/graph';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -50,7 +50,7 @@ const AgentGraphRuntime = memo(() => {
   // editor must show the effective config — otherwise an actively-running graph
   // agent would render as disabled with an empty snapshot.
   const legacyChatConfig = config.chatConfig as
-    (LobeAgentChatConfig & { enableGraphMode?: boolean; graph?: AgentGraph | null }) | undefined;
+    (OrviloAgentChatConfig & { enableGraphMode?: boolean; graph?: AgentGraph | null }) | undefined;
   const initialEnabled =
     config.agencyConfig?.enableGraphMode === true || legacyChatConfig?.enableGraphMode === true;
   const initialGraphText = useMemo(

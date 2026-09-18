@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { messages, nextauthAccounts, tasks, topics, users, userSettings } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import type { ListUsersForMemoryExtractorCursor } from '../user';
 import { UserModel, UserNotFoundError } from '../user';
 
 const userId = 'user-model-test';
 const otherUserId = 'other-user-test';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const userModel = new UserModel(serverDB, userId);
 
 // Mock decryptor function
@@ -903,6 +903,24 @@ describe('UserModel', () => {
 
         // Empty whitelist should not filter (same as no whitelist)
         expect(result.map((u) => u.id)).toEqual(['user-1', 'user-2']);
+      });
+
+      it('should exclude users who disabled memory while keeping missing settings enabled', async () => {
+        await serverDB.delete(users);
+        await serverDB.insert(users).values([
+          { id: 'user-on', createdAt: new Date('2024-01-01T00:00:00Z') },
+          { id: 'user-off', createdAt: new Date('2024-01-02T00:00:00Z') },
+          { id: 'user-default', createdAt: new Date('2024-01-03T00:00:00Z') }, // no settings row
+        ]);
+
+        await serverDB.insert(userSettings).values([
+          { id: 'user-on', memory: { enabled: true } },
+          { id: 'user-off', memory: { enabled: false } },
+        ]);
+
+        const result = await UserModel.listUsersForMemoryExtractor(serverDB);
+
+        expect(result.map((u) => u.id)).toEqual(['user-on', 'user-default']);
       });
     });
 

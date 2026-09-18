@@ -74,7 +74,7 @@ describe('timing utilities', () => {
 
   describe('createTimingHelpers', () => {
     it('should expose markStageDone on the helper facade', () => {
-      const helpers = createTimingHelpers('lobe-server:test');
+      const helpers = createTimingHelpers('orvilo-server:test');
 
       expect(helpers.markStageDone).toBeTypeOf('function');
     });

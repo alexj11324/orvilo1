@@ -12,7 +12,7 @@ const appRoot = path.resolve(import.meta.dirname);
 const envFile = process.env.AUTH_ENV_FILE || path.resolve(appRoot, '../../.env');
 if (existsSync(envFile)) dotenv.config({ path: envFile });
 
-// A host repo that overlays this app (lobehub-cloud maps `@/business/*` and
+// A host repo that overlays this app (orvilo-cloud maps `@/business/*` and
 // friends onto its own implementations) points this at its root tsconfig.
 // Vite 8's native tsconfigPaths resolves against the tsconfig nearest each
 // importer, which for submodule files is this repo's — losing the overlay.

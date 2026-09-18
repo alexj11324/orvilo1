@@ -52,16 +52,16 @@ describe('precompileStaticStyles', () => {
     const output = precompileStaticStyles(PURE, evaluator)!;
     expect(output).not.toContain('createStaticStyles(');
     expect(output).toContain(
-      "import { insertPrecompiledStyle as __lobeStaticStyle } from 'virtual:lobe-static-styles-runtime';",
+      "import { insertPrecompiledStyle as __orviloStaticStyle } from 'virtual:orvilo-static-styles-runtime';",
     );
     expect(output).toMatch(
-      /"root": __lobeStaticStyle\("acss-[a-z0-9]+", \[".acss-[a-z0-9]+\{display:/,
+      /"root": __orviloStaticStyle\("acss-[a-z0-9]+", \[".acss-[a-z0-9]+\{display:/,
     );
     expect(output).toContain('color:var(--ant-color-text-secondary)');
     expect(output).toContain('@media (max-width: 479.98px){.acss-');
-    expect(output).toContain('"text-2": __lobeStaticStyle(');
+    expect(output).toContain('"text-2": __orviloStaticStyle(');
     expect(output).toMatch(
-      /__lobeStaticStyle\("acss-[a-z0-9]+", \["\.acss-[a-z0-9]+\{font-size:12px;\}"\], "font-size: 12px;"\)/,
+      /__orviloStaticStyle\("acss-[a-z0-9]+", \["\.acss-[a-z0-9]+\{font-size:12px;\}"\], "font-size: 12px;"\)/,
     );
   });
 
@@ -70,8 +70,8 @@ describe('precompileStaticStyles', () => {
 
     const callback = new Function('cssVar', `return ${CALLBACK};`)(evaluator.cssVar);
     const runtime = evaluator.createStaticStyles(callback);
-    expect(output).toContain(`"root": __lobeStaticStyle("${runtime.root}"`);
-    expect(output).toContain(`"text-2": __lobeStaticStyle("${runtime['text-2']}"`);
+    expect(output).toContain(`"root": __orviloStaticStyle("${runtime.root}"`);
+    expect(output).toContain(`"text-2": __orviloStaticStyle("${runtime['text-2']}"`);
   });
 
   it('drops legacy vendor prefixes but keeps the ones Safari still needs', () => {
@@ -131,7 +131,7 @@ export const a = createStaticStyles(({ css }) => ({ root: css\`color: \${cssVar.
 export const b = createStaticStyles(({ css }) => ({ root: css\`width: \${SIZE}px;\` }));
 `;
     const output = precompileStaticStyles(code, evaluator)!;
-    expect(output).toContain('export const a = ({ "root": __lobeStaticStyle(');
+    expect(output).toContain('export const a = ({ "root": __orviloStaticStyle(');
     expect(output).toContain('export const b = createStaticStyles(');
   });
 
@@ -141,7 +141,7 @@ import { createStaticStyles, cssVar } from 'antd-style';
 createStaticStyles(({ css }) => ({ root: css\`color: \${cssVar.colorText};\` }));
 `;
     const output = precompileStaticStyles(code, evaluator)!;
-    expect(output).toMatch(/\n\(\{ "root": __lobeStaticStyle\(/);
+    expect(output).toMatch(/\n\(\{ "root": __orviloStaticStyle\(/);
     expect(() => parseAst(output)).not.toThrow();
   });
 
@@ -214,7 +214,7 @@ describe('insertPrecompiledStyle', () => {
       const styles = createStaticStyles(({ css }) => ({ root: css(${JSON.stringify(base)}) }));`;
     const output = precompileStaticStyles(source, evaluator)!;
     const run = new Function(
-      '__lobeStaticStyle',
+      '__orviloStaticStyle',
       `${output.replaceAll(/^import .*;\n/gm, '')}\nreturn styles.root;`,
     );
     const precompiled = run(insertPrecompiledStyle);
@@ -235,14 +235,14 @@ describe('insertPrecompiledStyle', () => {
 });
 
 describe('viteStaticStylesPrecompile', () => {
-  const ENTRY_ID = '\0lobe-static-styles-fixture.mjs';
+  const ENTRY_ID = '\0orvilo-static-styles-fixture.mjs';
   const fixturePlugin: Plugin = {
     load(id) {
       if (id === ENTRY_ID) return PURE;
     },
-    name: 'lobe-static-styles-fixture',
+    name: 'orvilo-static-styles-fixture',
     resolveId(id) {
-      if (id === 'virtual:lobe-static-styles-fixture') return ENTRY_ID;
+      if (id === 'virtual:orvilo-static-styles-fixture') return ENTRY_ID;
     },
   };
 
@@ -252,7 +252,7 @@ describe('viteStaticStylesPrecompile', () => {
         minify: false,
         rolldownOptions: {
           external: ['antd-style'],
-          input: 'virtual:lobe-static-styles-fixture',
+          input: 'virtual:orvilo-static-styles-fixture',
         },
         write: false,
       },

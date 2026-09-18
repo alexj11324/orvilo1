@@ -11,7 +11,7 @@ const SKILL_MOUNT_PREFIXES = SKILL_NAMESPACES.map(
  * Resolves strict skill VFS paths into mount path parts.
  *
  * Use when:
- * - Skill mounts need to dispatch unified `./lobe/skills/...` paths to namespace providers
+ * - Skill mounts need to dispatch unified `./orvilo/skills/...` paths to namespace providers
  * - Routers need invalid skill VFS paths to surface as BAD_REQUEST instead of generic failures
  *
  * Expects:

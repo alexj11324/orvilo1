@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
 import { userPersonaDocumentHistories, userPersonaDocuments, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { UserPersonaModel } from '../persona';
 
 const userId = 'persona-user';
@@ -60,7 +60,7 @@ const metadataMergeCases: MetadataMergeCase[] = [
 ];
 
 let personaModel: UserPersonaModel;
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 beforeEach(async () => {
   await serverDB.delete(userPersonaDocumentHistories);

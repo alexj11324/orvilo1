@@ -3,5 +3,5 @@
 import { createListLocalFilesInspector } from '@orvilo/shared-tool-ui/inspectors';
 
 export const ListLocalFilesInspector = createListLocalFilesInspector(
-  'builtins.lobe-local-system.apiName.listLocalFiles',
+  'builtins.orvilo-local-system.apiName.listLocalFiles',
 );

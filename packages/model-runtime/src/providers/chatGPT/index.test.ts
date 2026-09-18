@@ -3,17 +3,17 @@ import { CURRENT_VERSION } from '@orvilo/const';
 import type { Mock } from 'vitest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LobeChatGPTAI } from './index';
+import { OrviloGPTAI } from './index';
 
 vi.mock('@orvilo/business-model-bank/model-config', () => ({
   loadModels: vi.fn().mockResolvedValue([]),
 }));
 
-describe('LobeChatGPTAI', () => {
-  let instance: InstanceType<typeof LobeChatGPTAI>;
+describe('OrviloGPTAI', () => {
+  let instance: InstanceType<typeof OrviloGPTAI>;
 
   beforeEach(() => {
-    instance = new LobeChatGPTAI({
+    instance = new OrviloGPTAI({
       apiKey: 'access-token',
       chatgptAccountId: 'account-id',
     });
@@ -33,8 +33,8 @@ describe('LobeChatGPTAI', () => {
     expect(headers).toEqual(
       expect.objectContaining({
         'ChatGPT-Account-Id': 'account-id',
-        'User-Agent': `LobeHub/${CURRENT_VERSION}`,
-        'originator': 'lobehub',
+        'User-Agent': `Orvilo/${CURRENT_VERSION}`,
+        'originator': 'orvilo',
         'session-id': expect.any(String),
         'version': CURRENT_VERSION,
       }),

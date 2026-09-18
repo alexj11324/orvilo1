@@ -36,7 +36,7 @@ export function transformSparkResponseToStream(data: OpenAI.ChatCompletion) {
               role: choice.message.role,
               tool_calls: toolCallsArray.map(
                 (tool, index): OpenAI.ChatCompletionChunk.Choice.Delta.ToolCall => {
-                  // OpenAI SDK v6 made tool calls a function|custom union; lobehub only emits function calls.
+                  // OpenAI SDK v6 made tool calls a function|custom union; orvilo only emits function calls.
                   const fnTool = tool as OpenAI.ChatCompletionMessageFunctionToolCall;
                   return {
                     function: fnTool.function,

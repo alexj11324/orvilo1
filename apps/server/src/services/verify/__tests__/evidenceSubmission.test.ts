@@ -102,7 +102,7 @@ describe('startEvidenceSubmission', () => {
 
     expect(execAgent).toHaveBeenCalledWith(
       expect.objectContaining({
-        exclusivePluginIds: ['lobe-acceptance-evidence'],
+        exclusivePluginIds: ['orvilo-acceptance-evidence'],
         agentId: 'builder-agent',
         appContext: { taskId: 'task-1', topicId: 'topic-1' },
         parentOperationId: 'work-op',

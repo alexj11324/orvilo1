@@ -10,7 +10,7 @@ import {
 } from '@/server/workflows/agentEvalRun';
 import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/utils';
 
-const log = debug('lobe-server:workflows:on-trajectory-complete');
+const log = debug('orvilo-server:workflows:on-trajectory-complete');
 
 /**
  * On-trajectory-complete webhook handler

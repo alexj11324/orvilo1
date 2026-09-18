@@ -9,14 +9,14 @@ const PPIO: ModelProviderCard = {
   id: 'ppio',
   modelList: { showModelFetcher: true },
   modelsUrl:
-    'https://ppinfra.com/llm-api?utm_source=github_lobe-chat&utm_medium=github_readme&utm_campaign=link',
+    'https://ppinfra.com/llm-api?utm_source=github_orvilo&utm_medium=github_readme&utm_campaign=link',
   name: 'PPIO',
   settings: {
     disableBrowserRequest: true,
     sdkType: 'openai',
     showModelFetcher: true,
   },
-  url: 'https://ppinfra.com/user/register?invited_by=RQIMOC&utm_source=github_lobechat',
+  url: 'https://ppinfra.com/user/register?invited_by=RQIMOC&utm_source=github_orvilo',
 };
 
 export default PPIO;

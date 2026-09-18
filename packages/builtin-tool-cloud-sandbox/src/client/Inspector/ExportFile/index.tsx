@@ -25,7 +25,7 @@ export const ExportFileInspector = memo<BuiltinInspectorProps<ExportFileArgs, Ex
     return (
       <div className={inspectorTextStyles.root}>
         <span className={cx(showShiny && shinyTextStyles.shinyText)} style={{ marginInlineEnd: 6 }}>
-          {t('builtins.lobe-cloud-sandbox.apiName.exportFile')}:
+          {t('builtins.orvilo-cloud-sandbox.apiName.exportFile')}:
         </span>
         {filePath && <FilePathDisplay filePath={filePath} />}
         {!isLoading && pluginState !== undefined && (

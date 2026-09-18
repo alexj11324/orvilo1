@@ -3,7 +3,7 @@ import type { BuiltinManifestResolver } from '@orvilo/types';
 import { MessageManifest } from './manifest';
 
 /**
- * Context-aware manifest for the `lobe-message` tool.
+ * Context-aware manifest for the `orvilo-message` tool.
  *
  * Some IM platforms only implement a subset of the message API surface — WeChat,
  * for instance, supports `sendMessage` but throws `PlatformUnsupportedError` for
@@ -14,7 +14,7 @@ import { MessageManifest } from './manifest';
  *
  * When the resolve context carries `botPlatform.unsupportedMessageApis`, this
  * trims those APIs from the tool list AND appends a capability note to the
- * systemRole — mirroring `resolveLobeAgentManifest`, which rewrites both halves
+ * systemRole — mirroring `resolveOrviloAgentManifest`, which rewrites both halves
  * so the prompt never instructs the model to call a tool it no longer has.
  */
 export const resolveMessageManifest: BuiltinManifestResolver = (context) => {

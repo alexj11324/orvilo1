@@ -96,10 +96,10 @@ const input = {
 };
 
 const copied = {
-  entryPath: '/project/.lobe-artifacts/copied/index.html',
+  entryPath: '/project/.orvilo-artifacts/copied/index.html',
   failed: [],
   htmlContent: '<html><img src="logo.png"></html>',
-  targetDirectory: '/project/.lobe-artifacts/copied',
+  targetDirectory: '/project/.orvilo-artifacts/copied',
 };
 
 describe('useBlockedWorkspaceHtmlPublish', () => {

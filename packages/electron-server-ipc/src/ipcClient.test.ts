@@ -13,7 +13,7 @@ vi.mock('node:net');
 vi.mock('node:os');
 vi.mock('node:path');
 
-const appId = 'lobehub';
+const appId = 'orvilo';
 describe('ElectronIpcClient', () => {
   // Swallow unhandledRejection during timeout tests to avoid Vitest global capture
   const onUnhandled = (/* reason, promise */) => {};
@@ -27,7 +27,7 @@ describe('ElectronIpcClient', () => {
   });
   // Mock data
   const mockTempDir = '/mock/temp/dir';
-  const mockSocketInfoPath = '/mock/temp/dir/lobehub-electron-ipc-info.json';
+  const mockSocketInfoPath = '/mock/temp/dir/orvilo-electron-ipc-info.json';
   const mockSocketInfo = { socketPath: '/mock/socket/path' };
 
   // Mock socket

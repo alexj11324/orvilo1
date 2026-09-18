@@ -22,7 +22,7 @@ import { resetTestEnvironment } from './helpers';
  * The model a `callSubAgent` sub-agent runs on is resolved at the *spawn site*
  * and handed to the run as an explicit override. It must not be re-derived from
  * `isSubAgent`: isolated group members carry that flag too (it disables the
- * lobe-agent tool) and have to keep the model configured on the member agent.
+ * orvilo-agent tool) and have to keep the model configured on the member agent.
  */
 describe('sub-agent model resolution', () => {
   const OWN = { model: 'gpt-5.4', provider: 'openai' };

@@ -87,16 +87,17 @@ vi.mock('@/server/services/agent', () => ({
 
 vi.mock('@/server/services/agentSignal/featureGate', () => ({
   isAgentSignalEnabledForUser: mockIsAgentSignalEnabledForUser,
-  isLobeAiAgentSlug: (slug?: string | null) => slug === 'inbox',
+  isOrviloAiAgentSlug: (slug?: string | null) => slug === 'inbox',
   resolveAgentSelfIterationCapability: ({
     agentSelfIterationEnabled,
     isAgentSelfIterationFeatureEnabled,
-    isLobeAiAgent,
+    isOrviloAiAgent,
   }: {
     agentSelfIterationEnabled?: boolean;
     isAgentSelfIterationFeatureEnabled: boolean;
-    isLobeAiAgent: boolean;
-  }) => isAgentSelfIterationFeatureEnabled && (isLobeAiAgent || agentSelfIterationEnabled === true),
+    isOrviloAiAgent: boolean;
+  }) =>
+    isAgentSelfIterationFeatureEnabled && (isOrviloAiAgent || agentSelfIterationEnabled === true),
 }));
 
 vi.mock('@/server/services/agentSignal', () => ({
@@ -137,6 +138,7 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -176,7 +178,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -219,7 +221,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         abilities: { audio: false, functionCall: true, video: false, vision: true },
         id: 'gpt-4',
@@ -414,7 +416,7 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     // Verify createOperation was called with agentConfig containing the runtime systemRole
     expect(mockCreateOperation).toHaveBeenCalledTimes(1);
     const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.systemRole).toContain('You are Lobe');
+    expect(callArgs.agentConfig.systemRole).toContain('You are Orvilo');
     // Model identity is injected by ModelInfoProvider now, not the `{{model}}`
     // template placeholder; `{{date}}` still proves the runtime template merged.
     expect(callArgs.agentConfig.systemRole).toContain('{{date}}');
@@ -613,7 +615,7 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       chatConfig: { enableHistoryCount: true },
       id: 'agent-custom',
       model: 'gpt-4',
-      plugins: ['lobe-agent-documents'],
+      plugins: ['orvilo-agent-documents'],
       provider: 'openai',
       systemRole: 'Custom role.',
     });
@@ -633,7 +635,7 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       documentId: 'docs-1',
       scope: 'page',
     });
-    expect(callArgs.agentConfig.plugins).toEqual([PageAgentIdentifier, 'lobe-agent-documents']);
+    expect(callArgs.agentConfig.plugins).toEqual([PageAgentIdentifier, 'orvilo-agent-documents']);
     expect(callArgs.agentConfig.chatConfig.enableHistoryCount).toBe(false);
     expect(callArgs.agentConfig.systemRole).toContain('Custom role.');
     expect(callArgs.agentConfig.systemRole).toContain(
@@ -644,7 +646,7 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       expect.anything(),
       expect.objectContaining({
         agentConfig: expect.objectContaining({
-          plugins: [PageAgentIdentifier, 'lobe-agent-documents'],
+          plugins: [PageAgentIdentifier, 'orvilo-agent-documents'],
         }),
       }),
     );
@@ -685,7 +687,7 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     );
   });
 
-  it('should inject lobe-agent when history has audio and model lacks native audio support', async () => {
+  it('should inject orvilo-agent when history has audio and model lacks native audio support', async () => {
     mockGetAgentConfig.mockResolvedValue({
       chatConfig: {},
       id: 'agent-custom',
@@ -712,19 +714,19 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       expect.anything(),
       expect.objectContaining({
         agentConfig: expect.objectContaining({
-          plugins: expect.arrayContaining(['lobe-agent']),
+          plugins: expect.arrayContaining(['orvilo-agent']),
         }),
       }),
     );
   });
 
-  it('should not inject lobe-agent when the LobeHub routed model supports audio natively', async () => {
+  it('should not inject orvilo-agent when the Orvilo routed model supports audio natively', async () => {
     mockGetAgentConfig.mockResolvedValue({
       chatConfig: {},
       id: 'agent-custom',
       model: 'gemini-3.1-flash-lite-preview',
       plugins: [],
-      provider: 'lobehub',
+      provider: 'orvilo',
       systemRole: '',
     });
     mockMessageQuery.mockResolvedValue([
@@ -742,10 +744,10 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     });
 
     const callArgs = vi.mocked(createServerAgentToolsEngine).mock.calls[0][1];
-    expect(callArgs.agentConfig.plugins).not.toContain('lobe-agent');
+    expect(callArgs.agentConfig.plugins).not.toContain('orvilo-agent');
   });
 
-  it('should not inject lobe-agent when user model abilities support images natively', async () => {
+  it('should not inject orvilo-agent when user model abilities support images natively', async () => {
     mockGetAgentConfig.mockResolvedValue({
       chatConfig: {},
       id: 'agent-custom',
@@ -770,10 +772,10 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     });
 
     const callArgs = vi.mocked(createServerAgentToolsEngine).mock.calls[0][1];
-    expect(callArgs.agentConfig.plugins).not.toContain('lobe-agent');
+    expect(callArgs.agentConfig.plugins).not.toContain('orvilo-agent');
   });
 
-  it('should inject lobe-agent when user model abilities disable builtin image support', async () => {
+  it('should inject orvilo-agent when user model abilities disable builtin image support', async () => {
     mockGetAgentConfig.mockResolvedValue({
       chatConfig: {},
       id: 'agent-custom',
@@ -801,7 +803,7 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       expect.anything(),
       expect.objectContaining({
         agentConfig: expect.objectContaining({
-          plugins: expect.arrayContaining(['lobe-agent']),
+          plugins: expect.arrayContaining(['orvilo-agent']),
         }),
       }),
     );

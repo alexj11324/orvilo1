@@ -7,7 +7,7 @@ import { Undo2Icon } from 'lucide-react';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import LobeMessage from '@/features/Onboarding/components/LobeMessage';
+import OrviloMessage from '@/features/Onboarding/components/OrviloMessage';
 
 import ComposioServerList from '../components/ComposioServerList';
 
@@ -38,7 +38,7 @@ const ProSettingsStep = memo<ProSettingsStepProps>(({ onBack, onNext }) => {
 
   return (
     <Flexbox gap={16}>
-      <LobeMessage sentences={[t('proSettings.connectors.title')]} />
+      <OrviloMessage sentences={[t('proSettings.connectors.title')]} />
 
       <ComposioServerList />
 

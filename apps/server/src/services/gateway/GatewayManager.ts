@@ -19,7 +19,7 @@ import {
 
 import { BOT_RUNTIME_STATUSES, updateBotRuntimeStatus } from './runtimeStatus';
 
-const log = debug('lobe-server:bot-gateway');
+const log = debug('orvilo-server:bot-gateway');
 
 export interface GatewayManagerConfig {
   definitions: PlatformDefinition[];

@@ -2,7 +2,7 @@ import { setCookie } from '@orvilo/utils';
 import { changeLanguage } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 
-import { LOBE_LOCALE_COOKIE } from '@/const/locale';
+import { ORVILO_LOCALE_COOKIE } from '@/const/locale';
 import { type LocaleMode } from '@/types/locale';
 
 import { switchLang } from './switchLang';
@@ -26,7 +26,7 @@ describe('switchLang', () => {
 
     expect(changeLanguage).toHaveBeenCalledWith(locale);
     expect(document.documentElement.lang).toBe(locale);
-    expect(setCookie).toHaveBeenCalledWith(LOBE_LOCALE_COOKIE, locale, 365);
+    expect(setCookie).toHaveBeenCalledWith(ORVILO_LOCALE_COOKIE, locale, 365);
   });
 
   it('should change language based on navigator.language when locale is "auto"', () => {
@@ -37,12 +37,12 @@ describe('switchLang', () => {
 
     expect(changeLanguage).toHaveBeenCalledWith(navigatorLanguage);
     expect(document.documentElement.lang).toBe(navigatorLanguage);
-    expect(setCookie).toHaveBeenCalledWith(LOBE_LOCALE_COOKIE, undefined, 365);
+    expect(setCookie).toHaveBeenCalledWith(ORVILO_LOCALE_COOKIE, undefined, 365);
   });
 
   it('should prefer the desktop system language over a poisoned navigator.language', () => {
     vi.spyOn(navigator, 'language', 'get').mockReturnValue('en-US');
-    vi.stubGlobal('lobeEnv', { systemLanguage: 'zh-CN' });
+    vi.stubGlobal('orviloEnv', { systemLanguage: 'zh-CN' });
 
     switchLang('auto');
 

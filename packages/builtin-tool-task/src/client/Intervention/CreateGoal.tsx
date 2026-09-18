@@ -203,7 +203,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
         </Flexbox>
 
         <Section
-          label={t('builtins.lobe-task.goal.sectionInstruction')}
+          label={t('builtins.orvilo-task.goal.sectionInstruction')}
           open={openSections.instruction}
           onToggle={() => toggleSection('instruction')}
         >
@@ -226,7 +226,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
         </Section>
 
         <Section
-          label={t('builtins.lobe-task.goal.criteria')}
+          label={t('builtins.orvilo-task.goal.criteria')}
           open={openSections.criteria}
           extra={
             <Text as={'span'} className={styles.seq}>
@@ -251,7 +251,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
                       <ActionIcon
                         icon={Pencil}
                         size={'small'}
-                        title={t('builtins.lobe-task.goal.editCriterion')}
+                        title={t('builtins.orvilo-task.goal.editCriterion')}
                         onClick={(event) => {
                           event.stopPropagation();
                           openEditModal(index);
@@ -298,35 +298,35 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
                   })
                 }
               >
-                {t('builtins.lobe-task.goal.addCriterion')}
+                {t('builtins.orvilo-task.goal.addCriterion')}
               </Button>
             </Flexbox>
           </Flexbox>
         </Section>
 
         <Section
-          label={t('builtins.lobe-task.goal.sectionBudget')}
+          label={t('builtins.orvilo-task.goal.sectionBudget')}
           open={openSections.budget}
           onToggle={() => toggleSection('budget')}
         >
           <Flexbox horizontal gap={24}>
             <Flexbox gap={4}>
-              <Text className={styles.seq}>{t('builtins.lobe-task.goal.roundBudget')}</Text>
+              <Text className={styles.seq}>{t('builtins.orvilo-task.goal.roundBudget')}</Text>
               <InputNumber
                 min={2}
                 size={'small'}
                 style={{ width: 120 }}
-                suffix={t('builtins.lobe-task.goal.roundsUnit')}
+                suffix={t('builtins.orvilo-task.goal.roundsUnit')}
                 value={args.maxIterations ?? undefined}
                 variant={'filled'}
                 onChange={(value) => patch({ maxIterations: value })}
               />
             </Flexbox>
             <Flexbox gap={4}>
-              <Text className={styles.seq}>{t('builtins.lobe-task.goal.costBudget')}</Text>
+              <Text className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</Text>
               <InputNumber
                 min={0}
-                placeholder={t('builtins.lobe-task.goal.uncapped')}
+                placeholder={t('builtins.orvilo-task.goal.uncapped')}
                 prefix={'$'}
                 size={'small'}
                 style={{ width: 120 }}

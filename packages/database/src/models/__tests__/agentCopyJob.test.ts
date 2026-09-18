@@ -14,7 +14,7 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { idGenerator } from '../../utils/idGenerator';
 import { AGENT_COPY_IN_PROGRESS, AgentCopyJobModel } from '../agentCopyJob';
 import { processNextAgentHistoryJobTopic } from '../agentHistoryJob';
@@ -22,7 +22,7 @@ import { AgentTransferJobModel } from '../agentTransferJob';
 import { UserModel } from '../user';
 import { WorkspaceModel } from '../workspace';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'acj-test-user';
 const wsId = 'acj-test-ws';

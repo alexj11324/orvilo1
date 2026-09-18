@@ -69,6 +69,7 @@ const topicSettleRunningOperationMock = vi
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       settleRunningOperation: topicSettleRunningOperationMock,
     };
   }),
@@ -300,7 +301,7 @@ describe('AbandonOperationService', () => {
     const store = buildStore();
     store.loadPartial.mockResolvedValue({
       model: 'deepseek-v4-pro',
-      provider: 'lobehub',
+      provider: 'orvilo',
       startedAt: 1_777_991_958_128,
       steps: [
         { stepIndex: 0, stepType: 'call_llm' },

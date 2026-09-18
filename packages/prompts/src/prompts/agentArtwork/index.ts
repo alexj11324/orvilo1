@@ -3,15 +3,15 @@ import { escapeXmlAttr, escapeXmlContent } from '../search/xmlEscape';
 export type AgentArtworkKind = 'avatar' | 'background';
 export type AgentArtworkComposition = 'avatar' | 'fullBody';
 
-export const AGENT_ARTWORK_STYLES = ['lobe', 'anime', 'lineArt', 'pixel', 'painterly'] as const;
+export const AGENT_ARTWORK_STYLES = ['orvilo', 'anime', 'lineArt', 'pixel', 'painterly'] as const;
 
 export type AgentArtworkStyle = (typeof AGENT_ARTWORK_STYLES)[number];
 
-export const DEFAULT_AGENT_ARTWORK_STYLE: AgentArtworkStyle = 'lobe';
+export const DEFAULT_AGENT_ARTWORK_STYLE: AgentArtworkStyle = 'orvilo';
 
 /**
  * Wording here is A/B-tested against real Nano Banana output. Two phrasings
- * that measurably ruin the lobe style: "inflated" (produces a puffy relief
+ * that measurably ruin the orvilo style: "inflated" (produces a puffy relief
  * carving instead of a character) and letting the domain motif land ON the
  * character (maps / diagrams embossed on the body) — identity must flow
  * through outfit and accessories instead.
@@ -21,7 +21,8 @@ const STYLE_DIRECTIONS: Record<AgentArtworkStyle, string> = {
     'Render it in an expressive FLCL-inspired Japanese anime style. Choose an age and character archetype that fits the agent, such as a young boy, a playful young woman, a mature onee-san, or a handsome older man. Use a matching solid-color background with no decorations.',
   lineArt:
     "Render it as minimalist hand-drawn line art. Use the pose and styling to communicate the agent's professional traits. Use a pure white background.",
-  lobe: "Render it as a bold mascot-style 3D emoji character: skin in one friendly likeable color that people love — warm yellow, orange, peach, coral, or soft brown (not realistic human skin, and never odd tones like green, teal, or gray), graphic simplified facial features with an expression that matches the agent's personality (a knowing wink, a curious smile, a warm grin — lively, never blank or babyish), glossy candy-like materials with soft studio lighting, and one vivid contrasting solid background color. Express the identity through a hat and one or two small accessory props — do not draw scenes, maps, or diagrams on the character.",
+  orvilo:
+    "Render it as a bold mascot-style 3D emoji character: skin in one friendly likeable color that people love — warm yellow, orange, peach, coral, or soft brown (not realistic human skin, and never odd tones like green, teal, or gray), graphic simplified facial features with an expression that matches the agent's personality (a knowing wink, a curious smile, a warm grin — lively, never blank or babyish), glossy candy-like materials with soft studio lighting, and one vivid contrasting solid background color. Express the identity through a hat and one or two small accessory props — do not draw scenes, maps, or diagrams on the character.",
   painterly:
     'Render it with a cinematic 3D-to-2D hand-painted texture and dramatic stylization inspired by premium animated fantasy series, against a matching solid-color background.',
   pixel:
@@ -41,7 +42,7 @@ const FULL_BODY_STYLE_OVERRIDES: Record<AgentArtworkStyle, string> = {
     '',
   ),
   lineArt: STYLE_DIRECTIONS.lineArt.replace(' Use a pure white background.', ''),
-  lobe: STYLE_DIRECTIONS.lobe.replace(', and one vivid contrasting solid background color', ''),
+  orvilo: STYLE_DIRECTIONS.orvilo.replace(', and one vivid contrasting solid background color', ''),
   painterly: STYLE_DIRECTIONS.painterly.replace(', against a matching solid-color background', ''),
   pixel: STYLE_DIRECTIONS.pixel.replace(
     ', against a matching solid-color background with no decorations',
@@ -50,13 +51,14 @@ const FULL_BODY_STYLE_OVERRIDES: Record<AgentArtworkStyle, string> = {
 };
 
 /**
- * The avatar directions above are subject-shaped (the lobe one literally asks
+ * The avatar directions above are subject-shaped (the orvilo one literally asks
  * for a character), which contradicts the cover prompt's "abstract environment,
  * no person portrait" frame. Cover generation swaps in these style-only
  * variants where the avatar wording would fight the cover composition.
  */
 const BACKGROUND_STYLE_OVERRIDES: Partial<Record<AgentArtworkStyle, string>> = {
-  lobe: 'Render it as a soft 3D cartoon world with smooth rounded matte forms, playful proportions, and one vivid saturated dominant color filling the frame.',
+  orvilo:
+    'Render it as a soft 3D cartoon world with smooth rounded matte forms, playful proportions, and one vivid saturated dominant color filling the frame.',
 };
 
 /**
@@ -298,7 +300,7 @@ Translate the agent's identity, purpose, and personality into an abstract enviro
  * presets whose wording names the agent need an override.
  */
 const WORKSPACE_STYLE_OVERRIDES: Partial<Record<AgentArtworkStyle, string>> = {
-  lobe: STYLE_DIRECTIONS.lobe.replace("the agent's personality", "the team's character"),
+  orvilo: STYLE_DIRECTIONS.orvilo.replace("the agent's personality", "the team's character"),
 };
 
 const WORKSPACE_MOTIF_DIRECTION = `Ground the imagery in what this team actually works on. Avoid generic AI and technology clichés — starry space scenes, glowing particles, circuit boards, neural-network lines, holographic grids — unless the team's work is explicitly about them.`;

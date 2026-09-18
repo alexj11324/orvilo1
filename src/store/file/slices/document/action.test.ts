@@ -7,7 +7,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { documentService } from '@/services/document';
-import { DocumentSourceType, type LobeDocument } from '@/types/document';
+import { DocumentSourceType, type OrviloDocument } from '@/types/document';
 import { type ResourceItem } from '@/types/resource';
 
 import { useFileStore as useStore } from '../../store';
@@ -23,7 +23,7 @@ vi.mock('@/services/document', () => ({
   },
 }));
 
-const createDocumentFixture = (overrides: Partial<LobeDocument> = {}): LobeDocument => ({
+const createDocumentFixture = (overrides: Partial<OrviloDocument> = {}): OrviloDocument => ({
   content: 'Body',
   createdAt: new Date('2024-01-01T00:00:00.000Z'),
   editorData: {},

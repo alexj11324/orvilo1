@@ -12,7 +12,7 @@ import {
   isResourceAccessLevelAllowed,
   knowledgeBases,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   getWorkspaceScopedPermissionMatches,
   isWorkspacePrimaryOwner,
@@ -90,7 +90,7 @@ export const isAccessLevelAllowed = (
  * without caller scoping. Authorization is applied by the action evaluator.
  */
 export const getResourceMeta = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   resourceType: PermissionResourceType,
   resourceId: string,
 ): Promise<ResourceMeta | null> => {
@@ -134,7 +134,7 @@ export const getResourceMeta = async (
  * and never re-fetched.
  */
 const resolveAgentBuiltinMarkers = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   resourceId: string,
 ): Promise<{ slug: string | null; virtual: boolean | null }> => {
   const [row] = await db
@@ -212,7 +212,7 @@ const getRequiredAccessLevel = (
  */
 export const canPerformResourceAction = async (params: {
   action: ResourceAccessAction;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   /** A shared minimum level may skip duplicate reads only for the `view` action. */
   effectiveAccessLevel?: ResourceAccessLevel;
   grantedPermissions?: readonly string[];
@@ -381,7 +381,7 @@ export const assertCanPerformResourceAction = async (
  * client execution would resolve different models or bind the creator's device.
  */
 export const isResourceAuthorOrAdmin = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   grantedPermissions?: readonly string[];
   meta: ResourceMeta;
   resourceType: PermissionResourceType;
@@ -405,7 +405,7 @@ export const isResourceAuthorOrAdmin = async (params: {
 };
 
 export const canManageResourcePermission = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   grantedPermissions?: readonly string[];
   meta: ResourceMeta;
   resourceId: string;
@@ -416,7 +416,7 @@ export const canManageResourcePermission = async (params: {
 
 /** Backward-compatible helper for the first three edit call sites. */
 export const assertCanEditResource = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   resourceId: string;
   resourceType: PermissionResourceType;
   userId: string;

@@ -144,10 +144,10 @@ describe('userRouter', () => {
         userRouter.createCaller(scopedCtx).getSupportedUnderstandingProviders(),
       ).resolves.toEqual({
         connectionSources: {
-          github: 'lobehub',
+          github: 'orvilo',
           gmail: 'composio',
           notion: 'composio',
-          twitter: 'lobehub',
+          twitter: 'orvilo',
         },
         providerIds: ['github', 'gmail', 'notion', 'twitter'],
         sourceProviderIds: ['github'],

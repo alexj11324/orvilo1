@@ -1,9 +1,9 @@
-export type CompletionNotificationSound = 'lobehub' | 'system';
+export type CompletionNotificationSound = 'orvilo' | 'system';
 
-export type CompletionBuiltinSound = 'glassBell' | 'lobehub' | 'softTone' | 'xylophone';
+export type CompletionBuiltinSound = 'glassBell' | 'orvilo' | 'softTone' | 'xylophone';
 
 export const COMPLETION_BUILTIN_SOUNDS = [
-  'lobehub',
+  'orvilo',
   'glassBell',
   'softTone',
   'xylophone',

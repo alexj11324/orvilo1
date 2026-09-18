@@ -1,5 +1,5 @@
 {
-  "$schema": "https://github.com/lobehub/lobe-chat/blob/main/docs/changelog/schema.json",
+  "$schema": "https://github.com/alexj11324/orvilo1/blob/main/docs/changelog/schema.json",
   "cloud": [
     {
       "id": "2026-07-08-wechat-chat-adjustment",
@@ -79,7 +79,7 @@
       ]
     },
     {
-      "image": "https://hub-apac-1.lobeobjects.space/billboard/covers/1778838542538-MDEMAEav.png",
+      "image": "https://hub-apac-1.objects.aspectlylabs.com/billboard/covers/1778838542538-MDEMAEav.png",
       "id": "2026-05-19-chief-agent-operator",
       "date": "2026-05-19",
       "versionRange": [
@@ -155,7 +155,7 @@
       ]
     },
     {
-      "image": "https://hub-apac-1.lobeobjects.space/blog/assets/4a68a7644501cb513d08670b102a446e.webp",
+      "image": "https://hub-apac-1.objects.aspectlylabs.com/blog/assets/4a68a7644501cb513d08670b102a446e.webp",
       "id": "2026-03-16-search",
       "date": "2026-03-16",
       "versionRange": [
@@ -362,7 +362,7 @@
     },
     {
       "image": "/blog/assets/37d85fdfccff9ed56e9c6827faee01c7.webp",
-      "id": "2024-08-02-lobe-chat-database-docker",
+      "id": "2024-08-02-orvilo-database-docker",
       "date": "2024-08-02",
       "versionRange": [
         "1.6.1",
@@ -380,7 +380,7 @@
     },
     {
       "image": "/blog/assets/eb477e62217f4d1b644eff975c7ac168.webp",
-      "id": "2024-06-19-lobe-chat-v1",
+      "id": "2024-06-19-orvilo-v1",
       "date": "2024-06-19",
       "versionRange": [
         "0.147.0",

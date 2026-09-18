@@ -5,7 +5,7 @@ import { useClientDataSWRWithSync } from '@/libs/swr';
 import { documentService } from '@/services/document';
 import { documentSWRKeys } from '@/services/document/swrKeys';
 import { type StoreSetter } from '@/store/types';
-import { type LobeDocument } from '@/types/document';
+import { type OrviloDocument } from '@/types/document';
 import { DocumentSourceType } from '@/types/document';
 import { setNamespace } from '@/utils/storeDebug';
 
@@ -50,11 +50,11 @@ export class CrudActionImpl {
       // Create real page
       const newPage = await createPage({ content: '', title, visibility });
 
-      // Convert to LobeDocument. `visibility` and `workspaceId` MUST come from
+      // Convert to OrviloDocument. `visibility` and `workspaceId` MUST come from
       // the server response so the sidebar bucketing selector keeps the row in
       // the same accordion the user clicked "+" from — omitting them makes the
       // row silently fall back to the workspace bucket.
-      const realPage: LobeDocument = {
+      const realPage: OrviloDocument = {
         content: newPage.content || '',
         createdAt: newPage.createdAt ? new Date(newPage.createdAt) : new Date(),
         editorData:
@@ -101,7 +101,7 @@ export class CrudActionImpl {
     const tempId = `temp-page-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const now = new Date();
 
-    const newPage: LobeDocument = {
+    const newPage: OrviloDocument = {
       content: null,
       createdAt: now,
       editorData: null,
@@ -189,7 +189,7 @@ export class CrudActionImpl {
     });
 
     // Add the new page to documents array via internal dispatch
-    const editorPage: LobeDocument = {
+    const editorPage: OrviloDocument = {
       content: newPage.content || null,
       createdAt: newPage.createdAt ? new Date(newPage.createdAt) : new Date(),
       editorData:
@@ -267,7 +267,7 @@ export class CrudActionImpl {
     }
   };
 
-  replaceTempPageWithReal = (tempId: string, realPage: LobeDocument): void => {
+  replaceTempPageWithReal = (tempId: string, realPage: OrviloDocument): void => {
     this.#get().internal_dispatchDocuments({
       document: realPage,
       oldId: tempId,
@@ -275,7 +275,7 @@ export class CrudActionImpl {
     });
   };
 
-  updatePage = async (id: string, updates: Partial<LobeDocument>): Promise<void> => {
+  updatePage = async (id: string, updates: Partial<OrviloDocument>): Promise<void> => {
     await documentService.updateDocument({
       content: updates.content ?? undefined,
       editorData: updates.editorData
@@ -313,7 +313,7 @@ export class CrudActionImpl {
       Object.entries(updatedMetadata).filter(([, v]) => v !== undefined),
     );
 
-    const updatedPage: LobeDocument = {
+    const updatedPage: OrviloDocument = {
       ...existingPage,
       metadata: cleanedMetadata,
       title: updates.title ?? existingPage.title,
@@ -349,10 +349,10 @@ export class CrudActionImpl {
     }
   };
 
-  useFetchPageDetail = (pageId: string | undefined): SWRResponse<LobeDocument | null> => {
+  useFetchPageDetail = (pageId: string | undefined): SWRResponse<OrviloDocument | null> => {
     const swrKey = pageId ? documentSWRKeys.pageDetail(pageId) : null;
 
-    return useClientDataSWRWithSync<LobeDocument | null>(
+    return useClientDataSWRWithSync<OrviloDocument | null>(
       swrKey,
       async () => {
         if (!pageId) return null;
@@ -363,11 +363,11 @@ export class CrudActionImpl {
           return null;
         }
 
-        // Transform API response to LobeDocument format. `visibility` MUST be
+        // Transform API response to OrviloDocument format. `visibility` MUST be
         // carried through so the sidebar's Private / Workspace bucketing stays
         // stable when this hook's `onData` writes back into the shared docs
         // array (see the `internal_dispatchDocuments` call below).
-        const fullPage: LobeDocument = {
+        const fullPage: OrviloDocument = {
           content: document.content || null,
           createdAt: document.createdAt ? new Date(document.createdAt) : new Date(),
           editorData:

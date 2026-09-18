@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ToolExecutionContext } from '../../types';
@@ -79,7 +79,7 @@ const createContext = (): ToolExecutionContext => ({
         findFirst: vi.fn(async () => undefined),
       },
     },
-  } as unknown as LobeChatDatabase,
+  } as unknown as OrviloDatabase,
   toolManifestMap: {},
   userId: 'synthetic-user',
 });

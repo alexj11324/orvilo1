@@ -14,7 +14,7 @@ const { submitHeteroIntervention } = vi.hoisted(() => ({
 
 const metaMap: Record<string, { avatar?: string; title?: string }> = {
   'calculator': { title: 'Calculator' },
-  'lobe-activator': { avatar: '🛠', title: 'Tools & Skills Activator' },
+  'orvilo-activator': { avatar: '🛠', title: 'Tools & Skills Activator' },
   'search': { title: 'Web Search' },
 };
 
@@ -23,8 +23,8 @@ vi.mock('react-i18next', () => ({
     t: (key: string, options?: { count?: number; defaultValue?: string }) =>
       (
         ({
-          'builtins.lobe-activator.apiName.activateTools': 'Activate Tools',
-          'builtins.lobe-activator.title': 'Tools & Skills Activator',
+          'builtins.orvilo-activator.apiName.activateTools': 'Activate Tools',
+          'builtins.orvilo-activator.title': 'Tools & Skills Activator',
           'edit': 'Edit',
         }) as Record<string, string>
       )[key] ||
@@ -123,7 +123,7 @@ describe('FallbackIntervention', () => {
         apiName="activateTools"
         assistantGroupId="assistant-group-1"
         id="message-1"
-        identifier="lobe-activator"
+        identifier="orvilo-activator"
         requestArgs='{"identifiers":["search","calculator"]}'
         toolCallId="tool-call-1"
       />,
@@ -135,14 +135,14 @@ describe('FallbackIntervention', () => {
   });
 
   it('shows the activation reason for activateTools interventions', () => {
-    const reason = 'I need lobe-agent tools to create and manage the requested task list.';
+    const reason = 'I need orvilo-agent tools to create and manage the requested task list.';
 
     render(
       <FallbackIntervention
         apiName="activateTools"
         assistantGroupId="assistant-group-1"
         id="message-1"
-        identifier="lobe-activator"
+        identifier="orvilo-activator"
         requestArgs={JSON.stringify({ identifiers: ['search'], reason })}
         toolCallId="tool-call-1"
       />,

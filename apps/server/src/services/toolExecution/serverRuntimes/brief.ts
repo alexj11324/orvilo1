@@ -1,5 +1,5 @@
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { formatBriefCreated, formatCheckpointCreated } from '@orvilo/prompts';
 import { DEFAULT_BRIEF_ACTIONS } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
@@ -15,7 +15,7 @@ import { type ServerRuntimeRegistration } from './types';
 // runtime fires inside a task. Falls back to undefined (personal mode) when
 // there is no task association.
 const resolveWorkspaceId = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   taskId: string | undefined,
 ): Promise<string | undefined> => {
   if (!taskId) return undefined;

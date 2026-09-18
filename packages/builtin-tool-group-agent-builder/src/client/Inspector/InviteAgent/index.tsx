@@ -44,7 +44,7 @@ export const InviteAgentInspector = memo<
     return (
       <div className={styles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-group-agent-builder.apiName.inviteAgent')}
+          {t('builtins.orvilo-group-agent-builder.apiName.inviteAgent')}
         </span>
       </div>
     );
@@ -60,7 +60,7 @@ export const InviteAgentInspector = memo<
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
       >
-        {t('builtins.lobe-group-agent-builder.apiName.inviteAgent')}:
+        {t('builtins.orvilo-group-agent-builder.apiName.inviteAgent')}:
       </span>
       {avatar && (
         <Avatar avatar={avatar} shape={'square'} size={20} title={displayName || undefined} />

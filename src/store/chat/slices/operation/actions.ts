@@ -24,7 +24,7 @@ import {
 } from './types';
 
 const n = setNamespace('operation');
-const log = debug('lobe-store:operation');
+const log = debug('orvilo-store:operation');
 
 const isSameNullableContextValue = (left?: string | null, right?: string | null): boolean =>
   (left ?? null) === (right ?? null);

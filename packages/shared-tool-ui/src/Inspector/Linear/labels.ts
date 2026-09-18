@@ -1,5 +1,5 @@
 // Pure label utilities for Linear tool calls — consumed by both the CC
-// adapter (apiName='mcp__claude_ai_Linear__get_issue', …) and the LobeHub
+// adapter (apiName='mcp__claude_ai_Linear__get_issue', …) and the Orvilo
 // built-in Linear skill (bare apiName='get_issue', …).
 //
 // Kept free of React / antd-style imports so the workflow-summary path can
@@ -9,7 +9,7 @@
 export const LINEAR_MCP_PREFIX = 'mcp__claude_ai_Linear__';
 
 // Mirrors the wire names the claude.ai Linear MCP server emits. The same
-// suffixes are reused by the LobeHub built-in Linear skill.
+// suffixes are reused by the Orvilo built-in Linear skill.
 export const LINEAR_TOOL_NAMES = [
   'create_attachment',
   'create_attachment_from_upload',

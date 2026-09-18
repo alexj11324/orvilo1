@@ -7,7 +7,7 @@ import { BotCallbackService } from '@/server/services/bot/BotCallbackService';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { TaskResultCallbackRedisStore } from '@/server/services/taskResultBridge/redisStore';
 
-const log = debug('lobe-server:workflows:task:on-creator-complete');
+const log = debug('orvilo-server:workflows:task:on-creator-complete');
 
 interface OnCreatorCompletePayload extends Partial<BotCallbackBody> {
   agentId: string;

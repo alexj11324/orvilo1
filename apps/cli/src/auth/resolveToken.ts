@@ -35,16 +35,16 @@ export function parseJwtSub(token: string): string | undefined {
  * Exits the process if no token can be resolved.
  */
 export async function resolveToken(options: ResolveTokenOptions): Promise<ResolvedAuth> {
-  // LOBEHUB_JWT env var takes highest priority (used by server-side sandbox execution)
-  const envJwt = process.env.LOBEHUB_JWT;
+  // ORVILO_JWT env var takes highest priority (used by server-side sandbox execution)
+  const envJwt = process.env.ORVILO_JWT;
   if (envJwt) {
     const serverUrl = resolveServerUrl();
     const userId = parseJwtSub(envJwt);
     if (!userId) {
-      log.error('Could not extract userId from LOBEHUB_JWT.');
+      log.error('Could not extract userId from ORVILO_JWT.');
       process.exit(1);
     }
-    log.debug('Using LOBEHUB_JWT from environment');
+    log.debug('Using ORVILO_JWT from environment');
     return { serverUrl, token: envJwt, tokenType: 'jwt', userId };
   }
 

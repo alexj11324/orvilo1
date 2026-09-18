@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 import { processMultiProviderModelList } from '../../utils/modelParse';
 
-export const LobeGLMCodingPlanAI = createOpenAICompatibleRuntime({
+export const OrviloGLMCodingPlanAI = createOpenAICompatibleRuntime({
   baseURL: 'https://open.bigmodel.cn/api/coding/paas/v4',
   chatCompletion: {
     handlePayload: (payload) => {

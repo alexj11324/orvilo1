@@ -1,12 +1,12 @@
 import type { MigrationTableItem } from '@orvilo/types';
 import { sql } from 'drizzle-orm';
 
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 export class DrizzleMigrationModel {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
   }
 

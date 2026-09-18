@@ -1,7 +1,7 @@
 # Worked example — Agent Profile (助理档案) audit
 
 A real run of this skill against the **agent profile / character editor**
-(`/agent/:aid/profile` → `src/routes/(main)/agent/profile`), 2026-07 (LOBE-11215). Use it
+(`/agent/:aid/profile` → `src/routes/(main)/agent/profile`), 2026-07 (ORVILO-11215). Use it
 as a **template for the output shape**, not as current-state truth (the code moves;
 re-verify before citing). Surface = the nav header (breadcrumb + `AutoSaveHint` + status
 tags + More menu) → the profile editor (avatar / name / background, model + tool config, or
@@ -28,7 +28,7 @@ missing capability.
 | Breadcrumbs / Deep-linking     | `AgentBreadcrumb`, `/agent/:aid/profile` restores the surface                 | ✅     |                                                    |
 | Center Stage (layout)          | prompt editor dominates the canvas                                            | ✅     |                                                    |
 | Form / Titled Sections (input) | avatar+name header, model/tool panel, prompt editor                           | ✅     |                                                    |
-| Good / Smart Defaults (input)  | inbox → "Lobe AI" name + default avatar (`Content.tsx:77,82`)                 | ✅     |                                                    |
+| Good / Smart Defaults (input)  | inbox → "Orvilo AI" name + default avatar (`Content.tsx:77,82`)               | ✅     |                                                    |
 | Autosave (feedback)            | `AutoSaveHint` saving→saved, debounced writes (`store/action.ts:42`)          | ⚠️     | **no `failed` state** (gap ②)                      |
 | Collaborative lock (feedback)  | `EditLockDriver` peeked before render; read-only for others                   | ✅     | **亮点** — see §2                                  |
 | Streaming-aware editing        | saves suppressed mid-stream, flushed on end (`store/action.ts:76-112`)        | ✅     | **亮点** — see §2                                  |

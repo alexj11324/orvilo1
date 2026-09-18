@@ -12,7 +12,7 @@ const MobileContentLayout = ({
   withNav,
   style,
   header,
-  id = 'lobe-mobile-scroll-container',
+  id = 'orvilo-mobile-scroll-container',
   ...rest
 }: MobileContentLayoutProps) => {
   const content = (
@@ -41,7 +41,7 @@ const MobileContentLayout = ({
       {header}
       <Flexbox
         height="100%"
-        id={'lobe-mobile-scroll-container'}
+        id={'orvilo-mobile-scroll-container'}
         width="100%"
         style={{
           overflowX: 'hidden',

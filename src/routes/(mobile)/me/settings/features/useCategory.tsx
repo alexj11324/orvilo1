@@ -35,11 +35,13 @@ import { labPreferSelectors } from '@/store/user/selectors';
 import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors';
 
 export enum SettingsGroupKey {
+  Account = 'account',
   Agent = 'agent',
+  Data = 'data',
   Developer = 'developer',
-  General = 'general',
-  Subscription = 'subscription',
-  System = 'system',
+  Security = 'security',
+  Tools = 'tools',
+  UsageAndCost = 'usageAndCost',
 }
 
 export interface CategoryItem extends Omit<CellProps, 'type'> {
@@ -69,9 +71,8 @@ export const useCategory = (): CategoryGroup[] => {
       onClick: () => navigateTo(item.key),
     });
 
-    const general: CategoryItem[] = [
+    const account: CategoryItem[] = [
       makeItem({ icon: UserCircle, key: SettingsTabs.Profile, label: t('auth:profile.title') }),
-      makeItem({ icon: ChartColumnBigIcon, key: SettingsTabs.Stats, label: t('auth:tab.stats') }),
       makeItem({
         icon: PaletteIcon,
         key: SettingsTabs.Appearance,
@@ -79,35 +80,44 @@ export const useCategory = (): CategoryGroup[] => {
       }),
     ];
 
-    const subscription: CategoryItem[] = enableBusinessFeatures
-      ? [
-          makeItem({ icon: Map, key: SettingsTabs.Plans, label: t('subscription:tab.plans') }),
-          makeItem({
-            icon: ChartColumnBigIcon,
-            key: SettingsTabs.Usage,
-            label: t('setting:tab.usage'),
-          }),
-          makeItem({
-            icon: Coins,
-            key: SettingsTabs.Credits,
-            label: t('subscription:tab.credits'),
-          }),
-          makeItem({
-            icon: CreditCard,
-            key: SettingsTabs.Billing,
-            label: t('subscription:tab.billing'),
-          }),
-          makeItem({
-            icon: Gift,
-            key: SettingsTabs.Referral,
-            label: t('subscription:tab.referral'),
-          }),
-        ]
-      : [];
+    const usageAndCost: CategoryItem[] = [
+      // Stats is the ungated head of this group on every deployment — same as
+      // desktop: what it reports is usage and spend regardless of who reads it.
+      makeItem({
+        icon: ChartColumnBigIcon,
+        key: SettingsTabs.Stats,
+        label: t('auth:tab.stats'),
+      }),
+      ...(enableBusinessFeatures
+        ? [
+            makeItem({ icon: Map, key: SettingsTabs.Plans, label: t('subscription:tab.plans') }),
+            makeItem({
+              icon: ChartColumnBigIcon,
+              key: SettingsTabs.Usage,
+              label: t('setting:tab.usage'),
+            }),
+            makeItem({
+              icon: Coins,
+              key: SettingsTabs.Credits,
+              label: t('subscription:tab.credits'),
+            }),
+            makeItem({
+              icon: CreditCard,
+              key: SettingsTabs.Billing,
+              label: t('subscription:tab.billing'),
+            }),
+            makeItem({
+              icon: Gift,
+              key: SettingsTabs.Referral,
+              label: t('subscription:tab.referral'),
+            }),
+          ]
+        : []),
+    ];
 
     const agent: CategoryItem[] = [
       // Provider settings should not depend on Advanced tools: new users may need
-      // non-LobeHub providers, and desktop users often bring their own API keys.
+      // non-Orvilo providers, and desktop users often bring their own API keys.
       showProvider &&
         makeItem({ icon: Brain, key: SettingsTabs.Provider, label: t('setting:tab.provider') }),
       makeItem({
@@ -115,16 +125,13 @@ export const useCategory = (): CategoryGroup[] => {
         key: SettingsTabs.ServiceModel,
         label: t('setting:tab.serviceModel'),
       }),
+      makeItem({ icon: BrainCircuit, key: SettingsTabs.Memory, label: t('setting:tab.memory') }),
+    ].filter((item): item is CategoryItem => Boolean(item));
+
+    const tools: CategoryItem[] = [
       makeItem({ icon: SkillsIcon, key: SettingsTabs.Skill, label: t('setting:tab.skill') }),
       makeItem({ icon: TagIcon, key: SettingsTabs.Labels, label: t('setting:tab.labels') }),
       makeItem({ icon: Blocks, key: SettingsTabs.Connector, label: t('setting:tab.connector') }),
-      makeItem({ icon: BrainCircuit, key: SettingsTabs.Memory, label: t('setting:tab.memory') }),
-      makeItem({ icon: KeyRound, key: SettingsTabs.Creds, label: t('setting:tab.creds') }),
-      showApiKeyManage &&
-        makeItem({ icon: KeyIcon, key: SettingsTabs.APIKey, label: t('auth:tab.apikey') }),
-    ].filter((item): item is CategoryItem => Boolean(item));
-
-    const developer: CategoryItem[] = [
       enableOAuthApps &&
         makeItem({
           icon: AppWindowIcon,
@@ -133,10 +140,21 @@ export const useCategory = (): CategoryGroup[] => {
         }),
     ].filter((item): item is CategoryItem => Boolean(item));
 
-    const system: CategoryItem[] = [
-      makeItem({ icon: Database, key: SettingsTabs.Storage, label: t('setting:tab.storage') }),
-      isDevMode &&
+    // The API Key entry used to appear twice — once here under dev mode and once
+    // under `showApiKeyManage` — so a user who met both gates saw two rows for
+    // one page.
+    const security: CategoryItem[] = [
+      makeItem({ icon: KeyRound, key: SettingsTabs.Creds, label: t('setting:tab.creds') }),
+      (showApiKeyManage || isDevMode) &&
         makeItem({ icon: KeyIcon, key: SettingsTabs.APIKey, label: t('auth:tab.apikey') }),
+    ].filter((item): item is CategoryItem => Boolean(item));
+
+    const data: CategoryItem[] = [
+      makeItem({ icon: Database, key: SettingsTabs.Storage, label: t('setting:tab.storage') }),
+    ].filter((item): item is CategoryItem => Boolean(item));
+
+    // App-level settings that operate on the install rather than on a capability.
+    const developer: CategoryItem[] = [
       makeItem({
         icon: EllipsisIcon,
         key: SettingsTabs.Advanced,
@@ -146,14 +164,16 @@ export const useCategory = (): CategoryGroup[] => {
     ].filter((item): item is CategoryItem => Boolean(item));
 
     return [
-      { items: general, key: SettingsGroupKey.General, title: t('setting:group.common') },
+      { items: account, key: SettingsGroupKey.Account, title: t('setting:group.profile') },
       {
-        items: subscription,
-        key: SettingsGroupKey.Subscription,
-        title: t('setting:group.subscription'),
+        items: usageAndCost,
+        key: SettingsGroupKey.UsageAndCost,
+        title: t('setting:group.usageAndCost'),
       },
       { items: agent, key: SettingsGroupKey.Agent, title: t('setting:group.aiConfig') },
-      { items: system, key: SettingsGroupKey.System, title: t('setting:group.system') },
+      { items: tools, key: SettingsGroupKey.Tools, title: t('setting:group.tools') },
+      { items: security, key: SettingsGroupKey.Security, title: t('setting:group.security') },
+      { items: data, key: SettingsGroupKey.Data, title: t('setting:group.data') },
       {
         items: developer,
         key: SettingsGroupKey.Developer,

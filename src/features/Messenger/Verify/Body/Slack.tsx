@@ -16,7 +16,7 @@ import { isSingleAccountRebindBlocked, shouldShowSingleAccountSuccess } from './
 
 interface SlackBodyProps {
   existingLink?: ExistingLink | null;
-  lobeAccount: string;
+  orviloAccount: string;
   platformMeta?: PlatformMeta;
   randomId: string;
   signInUrl: string;
@@ -25,7 +25,7 @@ interface SlackBodyProps {
 }
 
 const SlackBody = memo<SlackBodyProps>(
-  ({ existingLink, lobeAccount, platformMeta, randomId, signInUrl, tokenData, userAvatar }) => {
+  ({ existingLink, orviloAccount, platformMeta, randomId, signInUrl, tokenData, userAvatar }) => {
     const { t } = useTranslation('messenger');
     const [done, setDone] = useState(false);
 
@@ -50,7 +50,7 @@ const SlackBody = memo<SlackBodyProps>(
 
     const handle = tokenData.platformUsername ?? `ID ${tokenData.platformUserId}`;
     const infoRows: InfoRow[] = [
-      { label: t('verify.confirm.fields.lobeHubAccount'), value: lobeAccount },
+      { label: t('verify.confirm.fields.orviloHubAccount'), value: orviloAccount },
       {
         label: t('verify.confirm.fields.platformAccount', { platform: platformLabel }),
         value: handle,

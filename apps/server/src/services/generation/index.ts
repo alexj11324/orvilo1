@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { parseDataUri } from '@orvilo/model-runtime';
 import { ssrfSafeFetch } from '@orvilo/ssrf-safe-fetch';
 import debug from 'debug';
@@ -13,7 +13,7 @@ import { calculateThumbnailDimensions } from '@/utils/number';
 import { getYYYYmmddHHMMss } from '@/utils/time';
 import { inferFileExtensionFromImageUrl } from '@/utils/url';
 
-const log = debug('lobe-image:generation-service');
+const log = debug('orvilo-image:generation-service');
 
 /**
  * Fetch image buffer and MIME type from URL or base64 data
@@ -87,7 +87,7 @@ interface ImageForGeneration {
 export class GenerationService {
   private fileService: FileService;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.fileService = new FileService(db, userId, workspaceId);
   }
 

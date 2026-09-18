@@ -31,7 +31,7 @@ gate that blocks first use. This is a **surface-class norm** for setup flows (No
 `file:line` to grep, so name it as an expected capability and check it as present / missing.
 
 > ✅ An onboarding wizard shows "Step 2 of 5" (or a progress bar) on every screen and lets the
-> user skip the name / interests / connectors steps. ❌ LobeHub onboarding runs up to 6 classic
+> user skip the name / interests / connectors steps. ❌ Orvilo onboarding runs up to 6 classic
 > / 4 desktop screens with **no progress indicator** (the only `<Steps>` are decorative feature
 > lists, `current={null}`), and the classic flow **hard-gates on a required name** with no skip
 > until the final step (`FullNameStep.tsx`, `_layout/index.tsx`) — see the onboarding audit.
@@ -84,7 +84,7 @@ runtime fact — confirm it at **L3** (press the key), not from the chip's styli
 
 > ✅ An option row rendered as a keycap (`⌘1`, or a mono `1` chip) responds to that key;
 > a purely ordinal marker is set in body text (not a bordered mono keycap) so it promises
-> nothing. ❌ The CC AskUserQuestion option cards render a mono `1`/`2`/`3` chip in
+> nothing. ❌ The CC AskUserQuestion option cards render a mono `1`/`2`/`3` chip
 > `fontFamilyCode` that reads as a keycap (`OptionCard.tsx` `optionIndex`), mirroring the
 > Claude Code CLI where those digits _are_ the selection keys — but **no keydown handler
 > exists** anywhere in the panel (`builtin-tool-claude-code/.../AskUserQuestion/*`; the

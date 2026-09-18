@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { ssrfSafeFetch } from '@orvilo/ssrf-safe-fetch';
 import {
   type CreateSkillInput,
@@ -21,7 +21,7 @@ import { SkillImportError, SkillManifestError } from './errors';
 import { SkillParser } from './parser';
 import { SkillResourceService } from './resource';
 
-const log = debug('lobe-chat:service:skill-importer');
+const log = debug('orvilo:service:skill-importer');
 
 export class SkillImporter {
   private skillModel: AgentSkillModel;
@@ -34,7 +34,7 @@ export class SkillImporter {
   private workspaceRole?: string;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     options?: { workspaceRole?: string },
@@ -43,7 +43,7 @@ export class SkillImporter {
     this.parser = new SkillParser();
     this.resourceService = new SkillResourceService(db, userId, workspaceId);
     this.fileService = new FileService(db, userId, workspaceId);
-    this.github = new GitHub({ userAgent: 'LobeHub-Skill-Importer' });
+    this.github = new GitHub({ userAgent: 'Orvilo-Skill-Importer' });
     this.userId = userId;
     this.workspaceId = workspaceId;
     this.workspaceRole = options?.workspaceRole;

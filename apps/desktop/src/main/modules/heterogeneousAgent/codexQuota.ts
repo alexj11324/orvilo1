@@ -247,7 +247,7 @@ const readCodexBackendAuth = async (
     'Authorization': `Bearer ${accessToken}`,
     'OpenAI-Beta': 'codex-1',
     'User-Agent': 'codex-cli',
-    'originator': 'LobeHub Desktop',
+    'originator': 'Orvilo Desktop',
   };
 
   if (auth.tokens?.account_id) {
@@ -548,7 +548,7 @@ const requestViaRpc = async <T>(
         child.on('error', listeners.error);
         child.on('close', listeners.close);
         initId = sendRpc(child, 'initialize', {
-          clientInfo: { name: 'lobehub', version: '1.0.0' },
+          clientInfo: { name: 'orvilo', version: '1.0.0' },
         });
       })
       .catch((error: unknown) => {

@@ -1,4 +1,8 @@
-import type { LobeAgentAgencyConfig, WorkingDirConfig, WorkingDirConfigValue } from '@orvilo/types';
+import type {
+  OrviloAgentAgencyConfig,
+  WorkingDirConfig,
+  WorkingDirConfigValue,
+} from '@orvilo/types';
 import { getWorkingDirEffectivePath, getWorkingDirSourcePath } from '@orvilo/types';
 
 interface ResolveTargetDeviceIdOptions {
@@ -12,7 +16,7 @@ interface ResolveTargetDeviceIdOptions {
  * remote share one resolution model.
  */
 export const resolveTargetDeviceId = (
-  agencyConfig: LobeAgentAgencyConfig | undefined,
+  agencyConfig: OrviloAgentAgencyConfig | undefined,
   currentDeviceId: string | undefined,
   { workspaceScoped = false }: ResolveTargetDeviceIdOptions = {},
 ): string | undefined => {
@@ -51,7 +55,7 @@ const toWorkingDirConfig = (
  * next pick a directory (which writes the new per-device map).
  */
 export const resolveAgentWorkingDirectoryConfig = (params: {
-  agencyConfig?: LobeAgentAgencyConfig;
+  agencyConfig?: OrviloAgentAgencyConfig;
   currentDeviceId?: string;
   deviceDefaultCwd?: string;
   fallback?: string;

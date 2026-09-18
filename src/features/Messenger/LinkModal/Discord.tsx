@@ -20,7 +20,7 @@ const DiscordLinkBody = memo<DiscordLinkBodyProps>(({ appId, disabled, name }) =
   const { t } = useTranslation('messenger');
   const installHref = useMessengerInstallHref('discord');
 
-  // Route Discord installs through the LobeHub install endpoint so the OAuth
+  // Route Discord installs through the Orvilo install endpoint so the OAuth
   // redirect lands at our callback — we read `guild_id` straight off the
   // redirect (Discord puts it in the URL for `scope=bot` flows) and fetch
   // guild metadata via the bot token, so no `client_secret` is needed.

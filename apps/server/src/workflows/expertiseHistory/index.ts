@@ -9,7 +9,7 @@ import type {
   ExpertiseHistoryWorkflowPayload,
 } from './types';
 
-const log = debug('lobe-server:workflows:expertise-history');
+const log = debug('orvilo-server:workflows:expertise-history');
 const localRuns = new Map<string, Promise<void>>();
 
 export class ExpertiseHistoryWorkflow {

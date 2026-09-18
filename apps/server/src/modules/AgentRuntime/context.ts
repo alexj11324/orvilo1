@@ -7,7 +7,7 @@ import {
 } from '@orvilo/types';
 
 import { type MessageModel } from '@/database/models/message';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import type { HookDispatcher } from '@/server/services/agentRuntime/hooks/HookDispatcher';
 import type {
   ExecGroupMemberParams,
@@ -43,7 +43,7 @@ export interface RuntimeExecutorContext {
   botContext?: unknown;
   /**
    * Callback to fork a group member ("call agent member") under a
-   * `lobe-group-management` tool call. Injected by AiAgentService; powers the
+   * `orvilo-group-management` tool call. Injected by AiAgentService; powers the
    * per-tool `agentMember` runner (in-group + isolated members, K=N barrier).
    */
   execGroupMember?: (params: ExecGroupMemberParams) => Promise<ExecGroupMemberResult>;
@@ -54,7 +54,7 @@ export interface RuntimeExecutorContext {
    */
   execSubAgent?: (params: ExecSubAgentParams) => Promise<ExecSubAgentResult>;
   /**
-   * Callback to fork a `lobe-agent.callSubAgent` virtual child run. Unlike
+   * Callback to fork a `orvilo-agent.callSubAgent` virtual child run. Unlike
    * execSubAgent, this path installs the async completion bridge and marks the
    * child operation as a sub-agent.
    */
@@ -64,7 +64,7 @@ export interface RuntimeExecutorContext {
   messageModel: MessageModel;
   modelRuntimeConfig?: AgentState['modelRuntimeConfig'];
   operationId: string;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   stepIndex: number;
   stream?: boolean;
   streamManager: IStreamEventManager;

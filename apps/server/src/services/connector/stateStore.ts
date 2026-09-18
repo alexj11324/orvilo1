@@ -4,7 +4,7 @@ import debug from 'debug';
 
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
 
-const log = debug('lobe-server:connector:oauth-state');
+const log = debug('orvilo-server:connector:oauth-state');
 
 const STATE_TTL_SECONDS = 600; // 10 minutes — interactive but quick
 
@@ -19,8 +19,8 @@ export interface ConnectorOAuthStatePayload {
   codeVerifier: string;
   /** The connector being connected. */
   connectorId: string;
-  /** LobeHub user who initiated the connect. */
-  lobeUserId: string;
+  /** Orvilo user who initiated the connect. */
+  orviloUserId: string;
   /** Where to send the user after the callback finishes (relative path). */
   returnTo?: string;
   /** Issuance timestamp (ms epoch) for diagnostics. */
@@ -49,7 +49,7 @@ export const saveConnectorOAuthState = async (
   await redis.set(stateKey(state), JSON.stringify(value), 'EX', STATE_TTL_SECONDS);
   log(
     'saved connector OAuth state for user=%s connector=%s',
-    payload.lobeUserId,
+    payload.orviloUserId,
     payload.connectorId,
   );
 };

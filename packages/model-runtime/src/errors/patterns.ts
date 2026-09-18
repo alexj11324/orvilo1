@@ -1,4 +1,4 @@
-import type { ILobeAgentRuntimeErrorType } from '@orvilo/types';
+import type { IOrviloAgentRuntimeErrorType } from '@orvilo/types';
 import { AgentRuntimeErrorType } from '@orvilo/types';
 
 /**
@@ -13,7 +13,7 @@ import { AgentRuntimeErrorType } from '@orvilo/types';
  */
 export interface ErrorPattern {
   /** Code produced when this pattern matches. */
-  code: ILobeAgentRuntimeErrorType;
+  code: IOrviloAgentRuntimeErrorType;
 
   /** Optional upstream errorType scope. When set, only matches errors carrying that errorType. */
   errorType?: string;
@@ -1146,7 +1146,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
   {
     code: AgentRuntimeErrorType.InvalidRequestFormat,
     match: sub('function_declarations'),
-    note: 'custom gemini proxies mangle tool schema; lobehub-native schema bug fixed in #14740',
+    note: 'custom gemini proxies mangle tool schema; orvilo-native schema bug fixed in #14740',
   },
   { code: AgentRuntimeErrorType.InvalidRequestFormat, match: sub('Request body too large for') },
   {

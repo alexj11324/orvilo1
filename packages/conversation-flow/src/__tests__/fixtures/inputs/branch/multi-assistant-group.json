@@ -28,7 +28,7 @@
         "type": "builtin",
         "apiName": "search",
         "arguments": "{\"query\":\"杭州 北京 天气 现在\"}",
-        "identifier": "lobe-web-browsing"
+        "identifier": "orvilo-web-browsing"
       }
     ]
   },
@@ -42,7 +42,7 @@
     "tool_call_id": "call-1",
     "plugin": {
       "apiName": "search",
-      "identifier": "lobe-web-browsing",
+      "identifier": "orvilo-web-browsing",
       "type": "builtin"
     },
     "pluginState": {
@@ -74,7 +74,7 @@
         "type": "builtin",
         "apiName": "search",
         "arguments": "{\"query\":\"杭州 天气 北京 天气\"}",
-        "identifier": "lobe-web-browsing"
+        "identifier": "orvilo-web-browsing"
       }
     ]
   },
@@ -88,7 +88,7 @@
     "tool_call_id": "call-2",
     "plugin": {
       "apiName": "search",
-      "identifier": "lobe-web-browsing",
+      "identifier": "orvilo-web-browsing",
       "type": "builtin"
     }
   },
@@ -126,14 +126,14 @@
         "type": "builtin",
         "apiName": "search",
         "arguments": "{\"query\":\"!google 杭州 天气\"}",
-        "identifier": "lobe-web-browsing"
+        "identifier": "orvilo-web-browsing"
       },
       {
         "id": "call-4",
         "type": "builtin",
         "apiName": "search",
         "arguments": "{\"query\":\"!google 北京 天气\"}",
-        "identifier": "lobe-web-browsing"
+        "identifier": "orvilo-web-browsing"
       }
     ]
   },
@@ -147,7 +147,7 @@
     "tool_call_id": "call-3",
     "plugin": {
       "apiName": "search",
-      "identifier": "lobe-web-browsing",
+      "identifier": "orvilo-web-browsing",
       "type": "builtin"
     },
     "pluginState": {
@@ -165,7 +165,7 @@
     "tool_call_id": "call-4",
     "plugin": {
       "apiName": "search",
-      "identifier": "lobe-web-browsing",
+      "identifier": "orvilo-web-browsing",
       "type": "builtin"
     },
     "pluginState": {
@@ -204,7 +204,7 @@
         "type": "builtin",
         "apiName": "search",
         "arguments": "{\"query\":\"杭州 天气 现在 北京 天气 现在\"}",
-        "identifier": "lobe-web-browsing"
+        "identifier": "orvilo-web-browsing"
       }
     ]
   },
@@ -218,7 +218,7 @@
     "tool_call_id": "call-5",
     "plugin": {
       "apiName": "search",
-      "identifier": "lobe-web-browsing",
+      "identifier": "orvilo-web-browsing",
       "type": "builtin"
     },
     "pluginState": {

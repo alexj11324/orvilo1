@@ -283,11 +283,11 @@ describe('contextEngineering', () => {
     const output = await contextEngineering({
       messages: [{ content: 'Hello', role: 'user' }] as UIChatMessage[],
       model: 'claude-fable-5',
-      provider: 'lobehub',
+      provider: 'orvilo',
       systemRole: 'You are a helpful assistant',
     });
 
-    expect(helpers.getRuntimeModelDisplayName).toHaveBeenCalledWith('claude-fable-5', 'lobehub');
+    expect(helpers.getRuntimeModelDisplayName).toHaveBeenCalledWith('claude-fable-5', 'orvilo');
     expect(output[0]).toEqual({
       content: expect.stringContaining('Current model: Fable 5 (claude-fable-5)'),
       role: 'system',
@@ -553,7 +553,7 @@ describe('contextEngineering', () => {
       {
         role: 'user',
         content:
-          '<skill name="grep" label="Grep" /> <tool name="lobe-notebook" label="Notebook" /> hi',
+          '<skill name="grep" label="Grep" /> <tool name="orvilo-notebook" label="Notebook" /> hi',
         createdAt: Date.now(),
         id: 'selected-skill-user',
         updatedAt: Date.now(),
@@ -573,7 +573,7 @@ describe('contextEngineering', () => {
     expect(result[1].role).toBe('user');
     expect(result[1].content).toContain('hi');
     expect(result[1].content).toContain('<skill name="grep" label="Grep" />');
-    expect(result[1].content).toContain('<tool name="lobe-notebook" label="Notebook" />');
+    expect(result[1].content).toContain('<tool name="orvilo-notebook" label="Notebook" />');
   });
 
   describe('getAssistantContent', () => {
@@ -828,13 +828,13 @@ describe('contextEngineering', () => {
             associatedSubjects: [],
             createdAt: new Date('2024-01-01T00:00:00.000Z'),
             currentStatus: 'active',
-            description: 'Weekly syncs for LobeHub',
+            description: 'Weekly syncs for Orvilo',
             id: 'ctx-1',
             metadata: {},
             scoreImpact: 0.8,
             scoreUrgency: 0.5,
             tags: ['project'],
-            title: 'LobeHub',
+            title: 'Orvilo',
             type: 'project',
             updatedAt: new Date('2024-01-02T00:00:00.000Z'),
             userMemoryIds: ['mem-1'],
@@ -868,7 +868,7 @@ describe('contextEngineering', () => {
       expect(injection!.role).toBe('user');
       expect(injection!.content).toContain('<user_memory>');
       expect(injection!.content).toContain('<contexts count="1">');
-      expect(injection!.content).toContain('<context id="ctx-1" title="LobeHub">');
+      expect(injection!.content).toContain('<context id="ctx-1" title="Orvilo">');
     });
 
     it('should handle missing placeholder variables gracefully', async () => {

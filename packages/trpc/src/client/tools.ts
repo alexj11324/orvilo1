@@ -30,7 +30,7 @@ const errorHandlingLink: TRPCLink<ToolsRouter> = () => {
           const is401 = status === 401 || code === 'UNAUTHORIZED';
           if (is401 && op.path.startsWith('market.')) {
             const { getUserStoreState } = await import('@/store/user/store');
-            // Without a LobeChat session a market.* 401 is not a Market auth
+            // Without a Orvilo session a market.* 401 is not a Market auth
             // issue — let it bubble instead of triggering the auth modal
             if (getUserStoreState().isSignedIn) {
               const now = Date.now();

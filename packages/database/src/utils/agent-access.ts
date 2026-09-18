@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 
 import { agents } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from './workspace';
 
 interface AgentAccessCtx {
@@ -24,7 +24,7 @@ interface AgentAccessCtx {
  * surface in sync with `buildWorkspaceWhere` semantics.
  */
 export async function assertAgentUsableBy(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   agentId: string,
   ctx: AgentAccessCtx,
 ): Promise<void> {

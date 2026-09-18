@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ToolArgumentsRepairer } from '../ToolArgumentsRepairer';
-import type { LobeToolManifest } from '../types';
+import type { OrviloToolManifest } from '../types';
 
 describe('ToolArgumentsRepairer', () => {
   describe('repair - basic functionality', () => {
@@ -102,8 +102,8 @@ describe('ToolArgumentsRepairer', () => {
 
   describe('parse - integrated parsing and repair', () => {
     it('should parse and repair arguments using manifest schema', () => {
-      const manifest: LobeToolManifest = {
-        identifier: 'lobe-agent',
+      const manifest: OrviloToolManifest = {
+        identifier: 'orvilo-agent',
         api: [
           {
             name: 'callSubAgent',
@@ -121,7 +121,7 @@ describe('ToolArgumentsRepairer', () => {
           },
         ],
         type: 'builtin',
-      } as unknown as LobeToolManifest;
+      } as unknown as OrviloToolManifest;
 
       const repairer = new ToolArgumentsRepairer(manifest);
 
@@ -140,7 +140,7 @@ describe('ToolArgumentsRepairer', () => {
     });
 
     it('should handle normal arguments without repair needed', () => {
-      const manifest: LobeToolManifest = {
+      const manifest: OrviloToolManifest = {
         identifier: 'test-tool',
         api: [
           {
@@ -156,7 +156,7 @@ describe('ToolArgumentsRepairer', () => {
           },
         ],
         type: 'default',
-      } as unknown as LobeToolManifest;
+      } as unknown as OrviloToolManifest;
 
       const repairer = new ToolArgumentsRepairer(manifest);
       const normalArguments = JSON.stringify({ name: 'test value' });
@@ -232,8 +232,8 @@ describe('ToolArgumentsRepairer', () => {
     });
 
     it('should recover partial JSON and still apply repair if needed', () => {
-      const manifest: LobeToolManifest = {
-        identifier: 'lobe-notebook',
+      const manifest: OrviloToolManifest = {
+        identifier: 'orvilo-notebook',
         api: [
           {
             name: 'createDocument',
@@ -250,7 +250,7 @@ describe('ToolArgumentsRepairer', () => {
           },
         ],
         type: 'builtin',
-      } as unknown as LobeToolManifest;
+      } as unknown as OrviloToolManifest;
 
       const repairer = new ToolArgumentsRepairer(manifest);
 

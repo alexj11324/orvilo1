@@ -62,12 +62,6 @@ const mockGlobalConfigDependencies = (
     fileEnv: {},
   }));
 
-  vi.doMock('@/envs/image', () => ({
-    imageEnv: {
-      AI_IMAGE_DEFAULT_IMAGE_NUM: undefined,
-    },
-  }));
-
   vi.doMock('@/envs/knowledge', () => ({
     knowledgeEnv: {
       DEFAULT_FILES_CONFIG: undefined,
@@ -144,15 +138,15 @@ describe('getServerGlobalConfig', () => {
     vi.restoreAllMocks();
   });
 
-  it('should only enable LobeHub by default in business feature mode', async () => {
+  it('should only enable Orvilo by default in business feature mode', async () => {
     const providerConfig = await loadCapturedProviderConfig(true);
 
-    expect(providerConfig[ModelProvider.LobeHub].enabled).toBe(true);
+    expect(providerConfig[ModelProvider.Orvilo].enabled).toBe(true);
     expect(providerConfig[ModelProvider.DeepSeek].enabled).toBe(false);
     expect(providerConfig[ModelProvider.Ollama].fetchOnClient).toBe(true);
 
     for (const provider of Object.values(ModelProvider)) {
-      if (provider === ModelProvider.LobeHub) continue;
+      if (provider === ModelProvider.Orvilo) continue;
 
       expect(providerConfig[provider].enabled).toBe(false);
     }
@@ -161,7 +155,7 @@ describe('getServerGlobalConfig', () => {
   it('should keep upstream defaults outside business feature mode', async () => {
     const providerConfig = await loadCapturedProviderConfig(false);
 
-    expect(providerConfig[ModelProvider.LobeHub]).toBeUndefined();
+    expect(providerConfig[ModelProvider.Orvilo]).toBeUndefined();
     expect(providerConfig[ModelProvider.OpenAI]).toBeUndefined();
     expect(providerConfig[ModelProvider.DeepSeek].enabled).toBe(true);
   });

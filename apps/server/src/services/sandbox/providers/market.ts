@@ -14,9 +14,9 @@ import type {
   SandboxServiceOptions,
 } from '../types';
 
-const log = debug('lobe-server:sandbox:market');
+const log = debug('orvilo-server:sandbox:market');
 const REDACTED_SANDBOX_PARAM = '[redacted]';
-const SANDBOX_AUTH_ENV_PATTERN = /\b(LOBEHUB_JWT|GITHUB_TOKEN)=("[^"]*"|'[^']*'|\S+)/g;
+const SANDBOX_AUTH_ENV_PATTERN = /\b(ORVILO_JWT|GITHUB_TOKEN)=("[^"]*"|'[^']*'|\S+)/g;
 /**
  * Any command that writes into `~/.creds/env` (the path documented to the
  * model as where `injectCredsToSandbox` places credentials) carries

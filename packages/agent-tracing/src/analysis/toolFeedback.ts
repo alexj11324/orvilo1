@@ -164,7 +164,7 @@ function percentile(sorted: number[], p: number): number {
   return sorted[idx];
 }
 
-/** Op-level rollup — the candidate shape for the `agent_operations` analytics column (lobehub side). */
+/** Op-level rollup — the candidate shape for the `agent_operations` analytics column (orvilo side). */
 export interface OpToolFeedbackRollup {
   errorResultCount: number;
   errorResultTokens: number;

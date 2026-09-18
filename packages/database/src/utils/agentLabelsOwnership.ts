@@ -1,7 +1,7 @@
 import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 
 import { agentLabelAssignments, agentLabels } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 interface AgentLabelsHandoverParams {
   agentIds: string[];
@@ -24,7 +24,7 @@ interface AgentLabelsHandoverParams {
  *   predates this transfer.
  */
 export const rehomeAgentLabelsForRecipient = async (
-  db: LobeChatDatabase | Transaction,
+  db: OrviloDatabase | Transaction,
   params: AgentLabelsHandoverParams,
 ): Promise<void> => {
   const { agentIds, fromUserId, recipientId } = params;

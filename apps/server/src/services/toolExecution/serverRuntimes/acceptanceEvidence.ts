@@ -10,7 +10,7 @@ import { FileModel } from '@/database/models/file';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import type { ServerRuntimeRegistration } from './types';
 
@@ -20,7 +20,7 @@ const PLAN_WAIT_INTERVAL_MS = 500;
 
 class AcceptanceEvidenceExecutionRuntime {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly operationId?: string,
     private readonly workspaceId?: string,

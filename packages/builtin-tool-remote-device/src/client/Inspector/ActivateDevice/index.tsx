@@ -41,7 +41,7 @@ export const ActivateDeviceInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-remote-device.apiName.activateDevice')}
+        {t('builtins.orvilo-remote-device.apiName.activateDevice')}
       </span>
       {deviceLabel && <span className={styles.device}>{deviceLabel}</span>}
     </div>

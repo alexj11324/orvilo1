@@ -41,7 +41,7 @@ const buildSwitchKeyboard = (
     },
   ]);
 
-const log = debug('lobe-server:messenger:telegram');
+const log = debug('orvilo-server:messenger:telegram');
 
 const buildVerifyImUrl = (params: {
   appUrl: string;
@@ -130,7 +130,7 @@ export class MessengerTelegramBinder implements MessengerPlatformBinder {
       return;
     }
 
-    // The verify-im button takes the user back into LobeHub for the auth /
+    // The verify-im button takes the user back into Orvilo for the auth /
     // session-bound binding flow, so it must use APP_URL — same as every other
     // app-side redirect — not the webhook tunnel URL. (Tunnel URLs are only
     // used for inbound platform → server webhooks.)
@@ -154,7 +154,7 @@ export class MessengerTelegramBinder implements MessengerPlatformBinder {
       });
     } catch (error) {
       log('handleUnlinkedMessage: failed to issue link token: %O', error);
-      await postUnlinked('LobeHub is temporarily unavailable. Please try again in a moment.');
+      await postUnlinked('Orvilo is temporarily unavailable. Please try again in a moment.');
       return;
     }
 
@@ -166,13 +166,13 @@ export class MessengerTelegramBinder implements MessengerPlatformBinder {
 
     if (isLocalhostUrl(verifyUrl)) {
       log('handleUnlinkedMessage: APP_URL is localhost, falling back to plain text link');
-      const text = `Welcome to LobeHub! 🤖\n\nTo continue, link your Telegram account to LobeHub. The link expires in 30 minutes:\n\n${verifyUrl}\n\nAfter linking, send /agents anytime to list your agents and tap one to switch the active agent.`;
+      const text = `Welcome to Orvilo! 🤖\n\nTo continue, link your Telegram account to Orvilo. The link expires in 30 minutes:\n\n${verifyUrl}\n\nAfter linking, send /agents anytime to list your agents and tap one to switch the active agent.`;
       await postUnlinked(text);
       return;
     }
 
     const text =
-      'Welcome to LobeHub! 🤖\n\nTo continue, link your Telegram account to LobeHub.\n\nTap the button below — the link expires in 30 minutes.\n\nAfter linking, send /agents anytime to list your agents and tap one to switch the active agent.';
+      'Welcome to Orvilo! 🤖\n\nTo continue, link your Telegram account to Orvilo.\n\nTap the button below — the link expires in 30 minutes.\n\nAfter linking, send /agents anytime to list your agents and tap one to switch the active agent.';
 
     await postUnlinked(text, {
       text: '🔗 Link Account',
@@ -202,7 +202,7 @@ export class MessengerTelegramBinder implements MessengerPlatformBinder {
     if (!config) return;
 
     const api = new TelegramApi(config.botToken);
-    const headline = '✅ Linked successfully! Your LobeHub account is now connected.';
+    const headline = '✅ Linked successfully! Your Orvilo account is now connected.';
     const tail = params.activeAgentName
       ? `\n\nActive agent: <b>${escapeHtml(params.activeAgentName)}</b>\n\nGo ahead and send your first message — send /agents any time to switch the active agent.`
       : '\n\nSend /agents to list your agents and tap one to set it as active.';

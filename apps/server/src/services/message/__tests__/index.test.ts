@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MessageModel } from '@/database/models/message';
@@ -11,13 +11,13 @@ vi.mock('@/server/services/file');
 
 describe('MessageService', () => {
   let messageService: MessageService;
-  let mockDB: LobeChatDatabase;
+  let mockDB: OrviloDatabase;
   let mockMessageModel: MessageModel;
   let mockFileService: FileService;
   const userId = 'test-user-id';
 
   beforeEach(() => {
-    mockDB = {} as LobeChatDatabase;
+    mockDB = {} as OrviloDatabase;
     mockMessageModel = {
       create: vi.fn(),
       deleteMessage: vi.fn(),

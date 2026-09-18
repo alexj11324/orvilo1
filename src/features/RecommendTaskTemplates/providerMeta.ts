@@ -1,12 +1,12 @@
 import type {
-  LobehubSkillProviderType,
+  OrviloSkillProviderType,
   TaskTemplateConnectorReference,
   TaskTemplateConnectorSource,
 } from '@orvilo/const';
-import { getComposioAppByIdentifier, getLobehubSkillProviderById } from '@orvilo/const';
+import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 
 export interface ConnectorProviderMeta {
-  icon: LobehubSkillProviderType['icon'];
+  icon: OrviloSkillProviderType['icon'];
   identifier: string;
   label: string;
   source: TaskTemplateConnectorSource;
@@ -15,10 +15,10 @@ export interface ConnectorProviderMeta {
 export const getProviderMeta = (
   spec: TaskTemplateConnectorReference,
 ): ConnectorProviderMeta | undefined => {
-  if (spec.source === 'lobehub') {
-    const p = getLobehubSkillProviderById(spec.identifier);
+  if (spec.source === 'orvilo') {
+    const p = getOrviloSkillProviderById(spec.identifier);
     if (!p) return undefined;
-    return { icon: p.icon, identifier: spec.identifier, label: p.label, source: 'lobehub' };
+    return { icon: p.icon, identifier: spec.identifier, label: p.label, source: 'orvilo' };
   }
   const p = getComposioAppByIdentifier(spec.identifier);
   if (!p) return undefined;

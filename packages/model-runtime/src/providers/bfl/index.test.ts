@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CreateImagePayload } from '../../types/image';
-import { LobeBflAI } from './index';
+import { OrviloBflAI } from './index';
 
 // Mock the createBflImage function
 vi.mock('./createImage', () => ({
@@ -15,42 +15,42 @@ vi.spyOn(console, 'error').mockImplementation(() => {});
 const bizErrorType = 'ProviderBizError';
 const invalidErrorType = 'InvalidProviderAPIKey';
 
-let instance: LobeBflAI;
+let instance: OrviloBflAI;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  instance = new LobeBflAI({ apiKey: 'test-api-key' });
+  instance = new OrviloBflAI({ apiKey: 'test-api-key' });
 });
 
 afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeBflAI', () => {
+describe('OrviloBflAI', () => {
   describe('init', () => {
     it('should correctly initialize with an API key', () => {
-      const instance = new LobeBflAI({ apiKey: 'test_api_key' });
-      expect(instance).toBeInstanceOf(LobeBflAI);
+      const instance = new OrviloBflAI({ apiKey: 'test_api_key' });
+      expect(instance).toBeInstanceOf(OrviloBflAI);
     });
 
     it('should initialize with custom baseURL', () => {
       const customBaseURL = 'https://custom-api.bfl.ai';
-      const instance = new LobeBflAI({
+      const instance = new OrviloBflAI({
         apiKey: 'test_api_key',
         baseURL: customBaseURL,
       });
-      expect(instance).toBeInstanceOf(LobeBflAI);
+      expect(instance).toBeInstanceOf(OrviloBflAI);
     });
 
     it('should throw InvalidProviderAPIKey if no apiKey is provided', () => {
       expect(() => {
-        new LobeBflAI({});
+        new OrviloBflAI({});
       }).toThrow();
     });
 
     it('should throw InvalidProviderAPIKey if apiKey is undefined', () => {
       expect(() => {
-        new LobeBflAI({ apiKey: undefined });
+        new OrviloBflAI({ apiKey: undefined });
       }).toThrow();
     });
   });
@@ -94,7 +94,7 @@ describe('LobeBflAI', () => {
     it('should pass custom baseURL to createBflImage', async () => {
       // Arrange
       const customBaseURL = 'https://custom-api.bfl.ai';
-      const customInstance = new LobeBflAI({
+      const customInstance = new OrviloBflAI({
         apiKey: 'test-api-key',
         baseURL: customBaseURL,
       });

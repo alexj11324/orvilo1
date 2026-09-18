@@ -318,8 +318,8 @@ export class QQGatewayConnection {
           d: {
             intents: this.intents,
             properties: {
-              $browser: 'lobehub-gateway',
-              $device: 'lobehub-gateway',
+              $browser: 'orvilo-gateway',
+              $device: 'orvilo-gateway',
               $os: 'linux',
             },
             shard: this.shard,

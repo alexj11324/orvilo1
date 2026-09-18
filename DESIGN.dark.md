@@ -1,7 +1,7 @@
 ---
 version: alpha
-name: LobeHub (Dark)
-description: LobeHub's design system — Dark theme. Same semantic token names as the Light theme (DESIGN.md) with dark values. Tokens are themeable (cssVar key `lobe-vars`); components must read the semantic tokens, never hard-code hex. Only colors change between themes — typography, spacing, radius, controls, motion, shapes, components, voice, and the design values are identical to DESIGN.md.
+name: Orvilo (Dark)
+description: Orvilo's design system — Dark theme. Same semantic token names as the Light theme (DESIGN.md) with dark values. Tokens are themeable (cssVar key `orvilo-vars`); components must read the semantic tokens, never hard-code hex. Only colors change between themes — typography, spacing, radius, controls, motion, shapes, components, voice, and the design values are identical to DESIGN.md.
 themeable:
   primaryColor:
     default: ~ # monochrome (near-white in dark) when unset — see colorPrimary
@@ -11,7 +11,7 @@ themeable:
     default: ~ # the built-in `gray` scale when unset
     options: [mauve, slate, sage, olive, sand]
 colors:
-  # Semantic tokens (lobe-ui token names). Dark-theme defaults shown.
+  # Semantic tokens (orvilo-ui token names). Dark-theme defaults shown.
   colorPrimary: '#eeeeee' # monochrome by default; becomes the chosen primaryColor[9]
   colorSuccess: '#c4f042' # lime (dark uses a brighter hue than light's green)
   colorWarning: '#ffb224' # gold
@@ -25,7 +25,7 @@ colors:
   # Surfaces — separate scale from text; never substitute one for the other
   colorBgLayout: '#000000' # page background (darkest)
   colorBgContainer: '#0d0d0d' # primary card / panel surface
-  colorBgContainerSecondary: '#070707' # subtle secondary surface (lobe-ui custom token)
+  colorBgContainerSecondary: '#070707' # subtle secondary surface (orvilo-ui custom token)
   colorBgElevated: '#1a1a1a' # popovers, menus, modals (lifts as it rises)
   colorBgSpotlight: '#2d2d2d' # tooltips
   # Borders & fills — translucent, layer over any background
@@ -75,9 +75,9 @@ controls:
   controlHeightLG: 40
 ---
 
-# LobeHub (Dark)
+# Orvilo (Dark)
 
-This is the Dark theme of LobeHub's design system. It is the companion to [DESIGN.md](./DESIGN.md) (Light) and shares everything but color: the same semantic token _names_, the same typography, spacing, radius, control, motion, shape, component, and voice rules, and the same four design values (Natural · Meaningful · Certainty · Growth).
+This is the Dark theme of Orvilo's design system. It is the companion to [DESIGN.md](./DESIGN.md) (Light) and shares everything but color: the same semantic token _names_, the same typography, spacing, radius, control, motion, shape, component, and voice rules, and the same four design values (Natural · Meaningful · Certainty · Growth).
 
 Read this file for the dark color values; read [DESIGN.md](./DESIGN.md) for all the guidance prose, which is theme-independent. As always: consume semantic tokens by name (`cssVar.colorText`, `cssVar.colorBgContainer`, …) so components follow the user's theme automatically — never hard-code the hex values below.
 

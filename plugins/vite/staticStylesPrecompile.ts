@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 import { parseAst, type Plugin } from 'vite';
 
-const RUNTIME_ID = 'virtual:lobe-static-styles-runtime';
+const RUNTIME_ID = 'virtual:orvilo-static-styles-runtime';
 const RESOLVED_RUNTIME_ID = `\0${RUNTIME_ID}`;
-const HELPER = '__lobeStaticStyle';
+const HELPER = '__orviloStaticStyle';
 
 interface AntdStyleEvaluator {
   cache: {
@@ -261,7 +261,7 @@ export function viteStaticStylesPrecompile(): Plugin {
         'utf8',
       );
     },
-    name: 'lobe-static-styles-precompile',
+    name: 'orvilo-static-styles-precompile',
     resolveId(id) {
       if (id === RUNTIME_ID) return RESOLVED_RUNTIME_ID;
     },

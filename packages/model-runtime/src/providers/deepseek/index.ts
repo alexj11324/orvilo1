@@ -59,7 +59,7 @@ export const anthropicParams = createAnthropicCompatibleParams({
   provider: ModelProvider.DeepSeek,
 });
 
-export const LobeDeepSeekAnthropicAI = createAnthropicCompatibleRuntime(anthropicParams);
+export const OrviloDeepSeekAnthropicAI = createAnthropicCompatibleRuntime(anthropicParams);
 
 export const openAIParams = {
   baseURL: DEFAULT_DEEPSEEK_BASE_URL,
@@ -83,12 +83,12 @@ export const openAIParams = {
   provider: ModelProvider.DeepSeek,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeDeepSeekOpenAI = createOpenAICompatibleRuntime(openAIParams);
+export const OrviloDeepSeekOpenAI = createOpenAICompatibleRuntime(openAIParams);
 
-type DeepSeekOpenAIRuntimeOptions = ConstructorParameters<typeof LobeDeepSeekOpenAI>[0];
+type DeepSeekOpenAIRuntimeOptions = ConstructorParameters<typeof OrviloDeepSeekOpenAI>[0];
 
 const fetchDeepSeekModelsWithOpenAI = ({ options }: { options?: DeepSeekOpenAIRuntimeOptions }) => {
-  const runtime = new LobeDeepSeekOpenAI({
+  const runtime = new OrviloDeepSeekOpenAI({
     ...options,
     baseURL: normalizeDeepSeekOpenAIModelBaseURL(options?.baseURL),
   });
@@ -101,7 +101,7 @@ const createOpenAIRouter = (baseURLPattern?: RegExp) => ({
   ...(baseURLPattern ? { baseURLPattern } : {}),
   id: 'openai-compatible',
   options: { remark: 'openai-compatible' },
-  runtime: LobeDeepSeekOpenAI,
+  runtime: OrviloDeepSeekOpenAI,
 });
 
 const createAnthropicRouter = ({
@@ -118,7 +118,7 @@ const createAnthropicRouter = ({
     ...(baseURL ? { baseURL } : {}),
     remark: 'anthropic-compatible',
   },
-  runtime: LobeDeepSeekAnthropicAI,
+  runtime: OrviloDeepSeekAnthropicAI,
 });
 
 export const params: CreateRouterRuntimeOptions = {
@@ -146,4 +146,4 @@ export const params: CreateRouterRuntimeOptions = {
   },
 };
 
-export const LobeDeepSeekAI = createRouterRuntime(params);
+export const OrviloDeepSeekAI = createRouterRuntime(params);

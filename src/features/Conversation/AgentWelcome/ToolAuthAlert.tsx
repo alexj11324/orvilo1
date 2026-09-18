@@ -22,14 +22,14 @@ import { agentByIdSelectors } from '@/store/agent/selectors';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
 import { ComposioServerStatus, composioStoreSelectors } from '@/store/tool/slices/composioStore';
-import { lobehubSkillStoreSelectors } from '@/store/tool/slices/lobehubSkillStore/selectors';
+import { orviloSkillStoreSelectors } from '@/store/tool/slices/orviloSkillStore/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import type {
   PendingComposioTool,
-  PendingLobehubTool,
   PendingMarketTool,
+  PendingOrviloTool,
 } from './resolvePendingAuthTools';
 import { resolvePendingAuthTools } from './resolvePendingAuthTools';
 
@@ -51,7 +51,7 @@ const MARKET_AUTH_TOOLS = [
   {
     authType: 'market',
     avatar: '💻',
-    identifier: 'lobe-cloud-sandbox',
+    identifier: 'orvilo-cloud-sandbox',
     label: 'Cloud Sandbox',
   },
 ] satisfies PendingMarketTool[];
@@ -267,16 +267,16 @@ const ComposioToolAuthItem = memo<ComposioToolAuthItemProps>(({ tool, onAuthComp
 
 ComposioToolAuthItem.displayName = 'ComposioToolAuthItem';
 
-interface LobehubToolAuthItemProps {
-  tool: PendingLobehubTool;
+interface OrviloToolAuthItemProps {
+  tool: PendingOrviloTool;
 }
 
-const LobehubToolAuthItem = ({ tool }: LobehubToolAuthItemProps) => {
+const OrviloToolAuthItem = ({ tool }: OrviloToolAuthItemProps) => {
   const { t } = useTranslation('chat');
   const { t: tCommon } = useTranslation('common');
   const removePlugin = useAgentStore((state) => state.removePlugin);
   const connectorSpecs = useMemo<TaskTemplateConnectorReference[]>(
-    () => [{ identifier: tool.id, source: 'lobehub' }],
+    () => [{ identifier: tool.id, source: 'orvilo' }],
     [tool.id],
   );
   const { connect, isConnecting } = useConnectorConnection(connectorSpecs);
@@ -426,29 +426,29 @@ const ToolAuthAlert = memo(() => {
   const agentId = useConversationStore(contextSelectors.agentId);
   const plugins = useAgentStore(agentByIdSelectors.getAgentPluginsById(agentId), isEqual);
   const isComposioEnabled = useServerConfigStore(serverConfigSelectors.enableComposio);
-  const isLobehubSkillEnabled = useServerConfigStore(serverConfigSelectors.enableLobehubSkill);
+  const isOrviloSkillEnabled = useServerConfigStore(serverConfigSelectors.enableOrviloSkill);
   const composioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
-  const lobehubServers = useToolStore(lobehubSkillStoreSelectors.getServers, isEqual);
+  const orviloServers = useToolStore(orviloSkillStoreSelectors.getServers, isEqual);
   // Connections load asynchronously via `useFetchUserComposioConnections` (fired by
   // ChatInput on the same page). Until they arrive, `composioServers` is the empty
   // fallback — don't treat a missing server as "needs auth" or the card flashes a
   // false unauthorized state on refresh before the real status loads.
   const isComposioServersInit = useToolStore((s) => s.isComposioServersInit);
-  const useFetchLobehubSkillConnections = useToolStore(
-    (state) => state.useFetchLobehubSkillConnections,
+  const useFetchOrviloSkillConnections = useToolStore(
+    (state) => state.useFetchOrviloSkillConnections,
   );
-  const lobehubConnections = useFetchLobehubSkillConnections(isLobehubSkillEnabled);
-  const isLobehubServersInit = !isLobehubSkillEnabled || !lobehubConnections.isLoading;
+  const orviloConnections = useFetchOrviloSkillConnections(isOrviloSkillEnabled);
+  const isOrviloServersInit = !isOrviloSkillEnabled || !orviloConnections.isLoading;
   const { isAuthenticated: isMarketAuthenticated } = useMarketAuth();
 
   const pendingAuthTools = useMemo(
     () =>
       resolvePendingAuthTools({
-        availability: { composio: isComposioEnabled, lobehub: isLobehubSkillEnabled },
+        availability: { composio: isComposioEnabled, orvilo: isOrviloSkillEnabled },
         composioInitialized: isComposioServersInit,
         composioServers,
-        lobehubInitialized: isLobehubServersInit,
-        lobehubServers,
+        orviloInitialized: isOrviloServersInit,
+        orviloServers,
         marketAuthenticated: isMarketAuthenticated,
         marketTools: MARKET_AUTH_TOOLS,
         plugins,
@@ -457,10 +457,10 @@ const ToolAuthAlert = memo(() => {
       composioServers,
       isComposioEnabled,
       isComposioServersInit,
-      isLobehubServersInit,
-      isLobehubSkillEnabled,
+      isOrviloServersInit,
+      isOrviloSkillEnabled,
       isMarketAuthenticated,
-      lobehubServers,
+      orviloServers,
       plugins,
     ],
   );
@@ -492,8 +492,8 @@ const ToolAuthAlert = memo(() => {
                   />
                 );
               }
-              if (tool.authType === 'lobehub') {
-                return <LobehubToolAuthItem key={tool.id} tool={tool} />;
+              if (tool.authType === 'orvilo') {
+                return <OrviloToolAuthItem key={tool.id} tool={tool} />;
               }
               return <MarketToolAuthItem key={tool.identifier} tool={tool} />;
             })}

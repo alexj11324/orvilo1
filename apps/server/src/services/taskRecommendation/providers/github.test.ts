@@ -13,7 +13,7 @@ describe('createGitHubTaskRecommendationProvider', () => {
         getGitHubClient: vi.fn(async () => ({
           listRecentContributions: vi.fn(async () => [
             {
-              repository: 'lobehub/lobehub',
+              repository: 'alexj11324/orvilo1',
               title: 'Reviewed pull request',
               type: 'pull_request_review' as const,
             },
@@ -25,6 +25,8 @@ describe('createGitHubTaskRecommendationProvider', () => {
     } as never);
 
     expect(result.signalCount).toBe(1);
-    expect(result.sources).toEqual([{ type: 'github', url: 'https://github.com/lobehub/lobehub' }]);
+    expect(result.sources).toEqual([
+      { type: 'github', url: 'https://github.com/alexj11324/orvilo1' },
+    ]);
   });
 });

@@ -156,7 +156,7 @@ describe('TaskTemplateService.listDailyRecommend', () => {
     const templateWithConnectors = {
       ...template,
       connectors: [
-        { identifier: 'github', required: true, source: 'lobehub' },
+        { identifier: 'github', required: true, source: 'orvilo' },
         { identifier: 'gmail', required: false, source: 'composio' },
       ],
       id: 102,
@@ -196,8 +196,8 @@ describe('TaskTemplateService.listDailyRecommend', () => {
         { ...template, cronPattern: '0 9 * 1 *' },
         { ...template, cronPattern: '0 9 * * 7' },
         { ...template, cronPattern: '0 9 * * 1,7' },
-        { ...template, connectors: [{ identifier: 101, required: true, source: 'lobehub' }] },
-        { ...template, connectors: [{ identifier: 'github', source: 'lobehub' }] },
+        { ...template, connectors: [{ identifier: 101, required: true, source: 'orvilo' }] },
+        { ...template, connectors: [{ identifier: 'github', source: 'orvilo' }] },
         { ...template, connectors: [{ identifier: 'github', required: true, source: 'unknown' }] },
       ],
     });
@@ -248,7 +248,7 @@ describe('TaskTemplateService.listDailyRecommend', () => {
     const validWithConnectors = {
       ...template,
       connectors: [
-        { identifier: 'github', required: true, source: 'lobehub' },
+        { identifier: 'github', required: true, source: 'orvilo' },
         { identifier: 'gmail', required: false, source: 'composio' },
       ],
       id: 102,
@@ -258,7 +258,7 @@ describe('TaskTemplateService.listDailyRecommend', () => {
         validWithConnectors,
         {
           ...template,
-          connectors: [{ identifier: 'unknown-required', required: true, source: 'lobehub' }],
+          connectors: [{ identifier: 'unknown-required', required: true, source: 'orvilo' }],
           id: 103,
         },
         {

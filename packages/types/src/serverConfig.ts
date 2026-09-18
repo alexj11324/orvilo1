@@ -4,7 +4,6 @@ import type { PartialDeep } from 'type-fest';
 import type {
   GlobalLLMProviderKey,
   UserDefaultAgent,
-  UserImageConfig,
   UserServiceModelConfig,
 } from './user/settings';
 
@@ -38,7 +37,6 @@ export type IFeatureFlagsState = {
   hideDocs: boolean | undefined;
   hideGitHub: boolean | undefined;
   isAgentEditable: boolean | undefined;
-  showAiImage: boolean | undefined;
   showApiKeyManage: boolean | undefined;
   showChangelog: boolean | undefined;
   showCloudPromotion: boolean | undefined;
@@ -111,12 +109,11 @@ export interface GlobalServerConfig {
    * Whether Gateway mode is available for app-level agent execution.
    */
   enableGatewayMode?: boolean;
-  enableLobehubSkill?: boolean;
   enableMagicLink?: boolean;
   enableMarketTrustedClient?: boolean;
   enableMultimodalUnderstanding?: boolean;
+  enableOrviloSkill?: boolean;
   enableUploadFileToServer?: boolean;
-  image?: PartialDeep<UserImageConfig>;
   memory?: GlobalMemoryConfig;
   multimodalUnderstanding?: MultimodalUnderstandingConfig;
   oAuthSSOProviders?: string[];

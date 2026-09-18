@@ -33,7 +33,7 @@ export const CrawlMultiPagesInspector = memo<BuiltinInspectorProps<CrawlMultiPag
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-web-browsing.apiName.crawlMultiPages')}
+            {t('builtins.orvilo-web-browsing.apiName.crawlMultiPages')}
           </span>
         </div>
       );
@@ -42,7 +42,7 @@ export const CrawlMultiPagesInspector = memo<BuiltinInspectorProps<CrawlMultiPag
     return (
       <div className={inspectorTextStyles.root}>
         <span className={cx(isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-web-browsing.apiName.crawlMultiPages')}:{'\u00A0'}
+          {t('builtins.orvilo-web-browsing.apiName.crawlMultiPages')}:{'\u00A0'}
         </span>
         {displayText && <span className={highlightTextStyles.gold}>{displayText}</span>}
       </div>

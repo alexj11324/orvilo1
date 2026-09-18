@@ -1,4 +1,4 @@
-import { type LobeAgentChatConfig } from '@orvilo/types';
+import { type OrviloAgentChatConfig } from '@orvilo/types';
 
 import { type AgentStoreState } from '@/store/agent/initialState';
 
@@ -6,7 +6,7 @@ import { chatConfigByIdSelectors } from './chatConfigByIdSelectors';
 
 // ============ Current Agent Selectors (reuses chatConfigByIdSelectors) ============ //
 
-const currentChatConfig = (s: AgentStoreState): LobeAgentChatConfig =>
+const currentChatConfig = (s: AgentStoreState): OrviloAgentChatConfig =>
   chatConfigByIdSelectors.getChatConfigById(s.activeAgentId || '')(s);
 
 const agentSearchMode = (s: AgentStoreState) =>

@@ -24,7 +24,7 @@ function resolveElectronBinary(): string {
  */
 export function resolveCliScript(): string {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'bin', 'lobe-cli.js');
+    return path.join(process.resourcesPath, 'bin', 'orvilo-cli.js');
   }
   // Dev mode: app.getAppPath() points to apps/desktop/, go up to apps/cli/
   return path.join(app.getAppPath(), '..', 'cli', 'dist', 'index.js');
@@ -57,11 +57,11 @@ export async function generateCliWrapper(): Promise<void> {
       `"${electronBin}" "${cliScript}" %*`,
     ].join('\r\n');
 
-    const cmdPath = path.join(wrapperDir, 'lobehub.cmd');
+    const cmdPath = path.join(wrapperDir, 'orvilo.cmd');
     await atomicWrite(cmdPath, content);
 
-    // Create short aliases: lh.cmd, lobe.cmd (copies on Windows, symlinks unreliable)
-    for (const alias of ['lh.cmd', 'lobe.cmd']) {
+    // Create short aliases: lh.cmd, orvilo.cmd (copies on Windows, symlinks unreliable)
+    for (const alias of ['lh.cmd', 'orvilo.cmd']) {
       await atomicWrite(path.join(wrapperDir, alias), content);
     }
 
@@ -72,15 +72,15 @@ export async function generateCliWrapper(): Promise<void> {
       `ELECTRON_RUN_AS_NODE=1 exec "${electronBin}" "${cliScript}" "$@"`,
     ].join('\n');
 
-    const wrapperPath = path.join(wrapperDir, 'lobehub');
+    const wrapperPath = path.join(wrapperDir, 'orvilo');
     await atomicWrite(wrapperPath, content);
     await chmod(wrapperPath, 0o755);
 
-    // Create short aliases: lh, lobe → lobehub
-    for (const alias of ['lh', 'lobe']) {
+    // Create short aliases: lh, orvilo → orvilo
+    for (const alias of ['lh', 'orvilo']) {
       const linkPath = path.join(wrapperDir, alias);
       await unlink(linkPath).catch(() => {});
-      await symlink('lobehub', linkPath);
+      await symlink('orvilo', linkPath);
     }
 
     logger.info(`CLI wrapper generated: ${wrapperPath}`);

@@ -36,7 +36,7 @@ describe('ResponsesService.extractOutputItems', () => {
             {
               function: {
                 arguments: '{"code":"import matplotlib.pyplot as plt\\nprint(1)"}',
-                name: 'lobe-cloud-sandbox____executeCode____builtin',
+                name: 'orvilo-cloud-sandbox____executeCode____builtin',
               },
               id: 'call_abc123',
             },
@@ -102,7 +102,7 @@ describe('ResponsesService.extractOutputItems', () => {
             {
               function: {
                 arguments: '{"code":"print(1)"}',
-                name: 'lobe-cloud-sandbox____executeCode____builtin',
+                name: 'orvilo-cloud-sandbox____executeCode____builtin',
               },
               id: 'call_abc123',
             },
@@ -113,17 +113,17 @@ describe('ResponsesService.extractOutputItems', () => {
       const { output } = callExtractOutputItems(messages, 'tpc_test');
 
       const fc = output.find((item: any) => item.type === 'function_call');
-      expect(fc.name).toBe('lobe-cloud-sandbox/executeCode');
+      expect(fc.name).toBe('orvilo-cloud-sandbox/executeCode');
     });
 
-    it('should strip lobe-client-fn prefix correctly', () => {
+    it('should strip orvilo-client-fn prefix correctly', () => {
       const messages = [
         {
           content: '',
           role: 'assistant',
           tool_calls: [
             {
-              function: { arguments: '{}', name: 'lobe-client-fn____get_weather' },
+              function: { arguments: '{}', name: 'orvilo-client-fn____get_weather' },
               id: 'call_xyz',
             },
           ],
@@ -179,7 +179,7 @@ describe('ResponsesService.extractOutputItems', () => {
             {
               function: {
                 arguments: '{"code":"1+1"}',
-                name: 'lobe-cloud-sandbox____executeCode____builtin',
+                name: 'orvilo-cloud-sandbox____executeCode____builtin',
               },
               id: 'call_abc',
             },

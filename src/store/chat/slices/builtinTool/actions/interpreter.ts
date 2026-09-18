@@ -19,7 +19,7 @@ import { type StoreSetter } from '@/store/types';
 import { setNamespace } from '@/utils/storeDebug';
 
 const n = setNamespace('codeInterpreter');
-const log = debug('lobe-store:builtin-tool');
+const log = debug('orvilo-store:builtin-tool');
 
 type Setter = StoreSetter<ChatStore>;
 export const codeInterpreterSlice = (set: Setter, get: () => ChatStore, _api?: unknown) =>

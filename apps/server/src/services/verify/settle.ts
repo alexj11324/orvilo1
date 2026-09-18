@@ -13,7 +13,7 @@ import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { scheduleGoalAdvance } from '@/server/services/goal/scheduler';
 import { TaskService } from '@/server/services/task';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
@@ -25,7 +25,7 @@ import { maybeAutoRepair } from './repairService';
 import { VerifyReporterService } from './reporter';
 import { VerifyStatusService } from './statusService';
 
-const log = debug('lobe-server:verify-settle');
+const log = debug('orvilo-server:verify-settle');
 
 const TERMINAL_TASK_STATUS = new Set(['canceled', 'completed', 'failed']);
 const MAX_OPERATION_ANCESTORS = 32;
@@ -85,7 +85,7 @@ interface ReportContext {
  * Idempotent via a run-metadata marker; best-effort (never throws into verify).
  */
 export const driveTaskFromVerify = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   operationId: string,
   workspaceId?: string,
@@ -530,7 +530,7 @@ export const driveTaskFromVerify = async (
  * location regardless of which path completed the last check.
  */
 export const finalizeVerifyRun = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   operationId: string,
   opts: { report?: ReportContext },

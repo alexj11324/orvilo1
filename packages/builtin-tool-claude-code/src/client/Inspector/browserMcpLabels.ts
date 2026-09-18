@@ -1,5 +1,5 @@
 // Label utilities for the in-app browser tools CC reaches through the desktop's
-// builtin MCP server (`mcp__lobe_cc__browser_*`, mounted by
+// builtin MCP server (`mcp__orvilo_cc__browser_*`, mounted by
 // `apps/desktop/.../browserMcpTools.ts`).
 //
 // Kept free of React / antd-style / lucide imports — same reason as
@@ -7,7 +7,7 @@
 // `formatBrowserMcpShortLabel` and must not drag the inspector component in.
 
 /** MCP server name the desktop registers; CC prefixes every tool with it. */
-export const BROWSER_MCP_PREFIX = 'mcp__lobe_cc__';
+export const BROWSER_MCP_PREFIX = 'mcp__orvilo_cc__';
 
 /**
  * Wire tool name (minus the prefix) → `BrowserManifest.api` name. The MCP tools
@@ -27,12 +27,12 @@ const TOOL_TO_API = {
 
 export type BrowserMcpApi = (typeof TOOL_TO_API)[keyof typeof TOOL_TO_API];
 
-/** Full CC-facing tool names, e.g. `mcp__lobe_cc__browser_navigate`. */
+/** Full CC-facing tool names, e.g. `mcp__orvilo_cc__browser_navigate`. */
 export const BROWSER_MCP_TOOL_NAMES: string[] = Object.keys(TOOL_TO_API).map(
   (tool) => `${BROWSER_MCP_PREFIX}${tool}`,
 );
 
-/** `mcp__lobe_cc__browser_navigate` → `navigate`; anything else → undefined. */
+/** `mcp__orvilo_cc__browser_navigate` → `navigate`; anything else → undefined. */
 export const parseBrowserMcpApi = (apiName: string): BrowserMcpApi | undefined => {
   if (!apiName.startsWith(BROWSER_MCP_PREFIX)) return undefined;
   const tool = apiName.slice(BROWSER_MCP_PREFIX.length);
@@ -44,7 +44,7 @@ export const isBrowserMcpApiName = (apiName: string): boolean => !!parseBrowserM
 /**
  * English source strings, doubling as the `defaultValue` for the `chat` locale
  * keys — so a locale that hasn't been filled in yet still reads as a sentence
- * instead of `mcp__lobe_cc__browser_read_page`.
+ * instead of `mcp__orvilo_cc__browser_read_page`.
  *
  * Past tense, because every surface these appear on reports what the agent has
  * already done: the inspector row of a finished call and the collapsed summary

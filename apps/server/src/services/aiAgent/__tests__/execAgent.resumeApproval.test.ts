@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type * as ModelBankModule from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -114,6 +114,7 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: mockTryReserveTaskCallback,
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       updateMetadata: mockUpdateTopicMetadata,
     };
   }),
@@ -168,7 +169,7 @@ vi.mock('@/database/models/agentOperation', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -206,7 +207,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         abilities: { functionCall: true, vision: true },
         id: 'gpt-4',
@@ -234,7 +235,7 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
   const pendingToolPlugin = {
     apiName: 'runCommand',
     arguments: '{"command":"echo"}',
-    identifier: 'lobe-local-system',
+    identifier: 'orvilo-local-system',
     intervention: { status: 'pending' },
     toolCallId: 'call_xyz',
     type: 'builtin',
@@ -266,8 +267,8 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
     mockUpdateToolMessage.mockResolvedValue(undefined);
     // `MessageModel` is fully mocked above, so the service never touches the
     // raw `db` arg — cast an empty stub through `unknown` to satisfy the
-    // `LobeChatDatabase` parameter type without dragging the real schema.
-    service = new AiAgentService({} as unknown as LobeChatDatabase, 'user-1');
+    // `OrviloDatabase` parameter type without dragging the real schema.
+    service = new AiAgentService({} as unknown as OrviloDatabase, 'user-1');
   });
 
   const baseParams = {
@@ -309,7 +310,7 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
                 apiName: 'runCommand',
                 arguments: '{"command":"echo"}',
                 id: 'call_xyz',
-                identifier: 'lobe-local-system',
+                identifier: 'orvilo-local-system',
               }),
               parentMessageId: 'tool-msg-1',
               skipCreateToolMessage: true,
@@ -1131,7 +1132,7 @@ describe('AiAgentService.stopPendingApproval', () => {
     });
     mockRecordCompletion.mockResolvedValue(undefined);
     mockInterruptOperation.mockResolvedValue(true);
-    service = new AiAgentService({} as unknown as LobeChatDatabase, 'user-1');
+    service = new AiAgentService({} as unknown as OrviloDatabase, 'user-1');
   });
 
   it('settles every pending row in place and retires the parked operation', async () => {

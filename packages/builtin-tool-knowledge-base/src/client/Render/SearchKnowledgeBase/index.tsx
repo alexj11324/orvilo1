@@ -15,7 +15,7 @@ const SearchKnowledgeBase = memo<
   const { fileResults } = pluginState || {};
 
   if (!fileResults || fileResults.length === 0) {
-    return <Empty description={t('builtins.lobe-knowledge-base.inspector.noResults')} />;
+    return <Empty description={t('builtins.orvilo-knowledge-base.inspector.noResults')} />;
   }
 
   return (

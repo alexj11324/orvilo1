@@ -3,7 +3,7 @@ name: agent-testing-bot
 description: 'Use for real bot-channel acceptance in Discord, Slack, Telegram, WeChat/Weixin, Lark/Feishu, QQ or iMessage on macOS. Extends acceptance with native chat apps.'
 ---
 
-# Agent Testing — Bot Channels (LobeHub project skill)
+# Agent Testing — Bot Channels (Orvilo project skill)
 
 This skill **extends** the generic `acceptance` skill (installed alongside at
 `../acceptance/`) to the bot-channel surfaces. It does NOT replace the core
@@ -18,7 +18,7 @@ PLAN (Steps 0–2) → EXECUTE (Steps 3–6) → FINISH (Step 7)
 `SKILL.md` for target grounding, the living logs, the Phase-1 approval gate, the
 report format, and teardown. This file only adds the bot-channel surface.
 
-For LobeHub environment/auth/probe specifics (dev server, seeded account, ports),
+For Orvilo environment/auth/probe specifics (dev server, seeded account, ports),
 the adapter is `.agents/acceptance/PROJECT.md`.
 
 ## When this surface applies

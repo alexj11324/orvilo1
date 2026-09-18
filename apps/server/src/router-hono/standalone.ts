@@ -5,7 +5,7 @@ import { Readable } from 'node:stream';
 import honoApp from './index';
 
 type HonoStandaloneGlobal = typeof globalThis & {
-  __lobeHonoStandaloneServer?: Server;
+  __orviloHonoStandaloneServer?: Server;
 };
 
 const DEFAULT_HOST = 'localhost';
@@ -96,10 +96,10 @@ const closePreviousServer = (previousServer: Server | undefined) =>
 const startServer = async () => {
   const standaloneGlobal = globalThis as HonoStandaloneGlobal;
 
-  await closePreviousServer(standaloneGlobal.__lobeHonoStandaloneServer);
-  standaloneGlobal.__lobeHonoStandaloneServer = server;
+  await closePreviousServer(standaloneGlobal.__orviloHonoStandaloneServer);
+  standaloneGlobal.__orviloHonoStandaloneServer = server;
 
-  process.title = `lobe-dev-hono-${port}`;
+  process.title = `orvilo-dev-hono-${port}`;
   server.listen(port, host, () => {
     console.info(`Hono runtime ready at http://${host}:${port}`);
   });

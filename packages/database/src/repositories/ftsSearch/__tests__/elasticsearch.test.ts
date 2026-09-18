@@ -18,7 +18,7 @@ import {
   users,
   workspaces,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { ElasticsearchFtsSearchBackend, type ElasticsearchFtsSearchClient } from '../elasticsearch';
 import type {
   FtsSearchBackendFilters,
@@ -26,13 +26,13 @@ import type {
   FtsSearchBackendScope,
 } from '../types';
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 
 const userId = 'es-search-user';
 const otherUserId = 'es-search-other-user';
 const workspaceId = 'es-search-workspace';
 const otherWorkspaceId = 'es-search-other-workspace';
-const indexNamespace = 'lobehub-dev';
+const indexNamespace = 'orvilo-dev';
 
 const request = (
   entity: FtsSearchBackendRequest['entity'],
@@ -292,7 +292,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
           },
         }),
         entity: 'userMemories',
-        index: 'lobehub-dev-user-memories',
+        index: 'orvilo-dev-user-memories',
         pagination: 'bounded',
       }),
     );
@@ -398,7 +398,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
       },
       entity: 'memoryContexts',
       executedQueryChars: 13,
-      index: 'lobehub-dev-memory-contexts',
+      index: 'orvilo-dev-memory-contexts',
       originalQueryChars: 13,
       pagination: 'bounded',
       queryFieldCount: 4,
@@ -554,7 +554,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
           },
         }),
         entity: 'topics',
-        index: 'lobehub-dev-topics',
+        index: 'orvilo-dev-topics',
         pagination: 'unbounded',
       }),
     );
@@ -618,7 +618,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
           },
         }),
         entity: 'messages',
-        index: 'lobehub-dev-messages',
+        index: 'orvilo-dev-messages',
         pagination: 'unbounded',
       }),
     );
@@ -824,7 +824,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
       },
       entity: 'agents',
       executedQueryChars: 13,
-      index: 'lobehub-dev-agents',
+      index: 'orvilo-dev-agents',
       originalQueryChars: 13,
       pagination: 'bounded',
       queryFieldCount: 5,
@@ -892,7 +892,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
           },
         }),
         entity: 'chatGroups',
-        index: 'lobehub-dev-chat-groups',
+        index: 'orvilo-dev-chat-groups',
         pagination: 'bounded',
       }),
     );
@@ -1348,7 +1348,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
           },
         }),
         entity: 'messages',
-        index: 'lobehub-dev-messages',
+        index: 'orvilo-dev-messages',
         pagination: 'bounded',
       }),
     );
@@ -1491,7 +1491,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
           },
         }),
         entity: 'files',
-        index: 'lobehub-dev-files',
+        index: 'orvilo-dev-files',
         pagination: 'bounded',
       }),
     );
@@ -1589,7 +1589,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
           },
         }),
         entity: 'documents',
-        index: 'lobehub-dev-documents',
+        index: 'orvilo-dev-documents',
         pagination: 'bounded',
       }),
     );
@@ -1926,7 +1926,7 @@ describe('ElasticsearchFtsSearchBackend', () => {
           },
         }),
         entity: 'knowledgeBases',
-        index: 'lobehub-dev-knowledge-bases',
+        index: 'orvilo-dev-knowledge-bases',
         pagination: 'bounded',
       }),
     );

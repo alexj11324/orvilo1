@@ -126,7 +126,7 @@ describe('setupRouteInterceptors', () => {
     it('should leave renderer-handled links alone so their onClick can run', async () => {
       setupRouteInterceptors();
 
-      // An absolute LobeHub URL: a different origin than `app://renderer`, but the
+      // An absolute Orvilo URL: a different origin than `app://renderer`, but the
       // renderer has claimed it and will open it in the portal itself.
       const link = document.createElement('a');
       link.href = 'https://orvilo.aspectlylabs.com/verify/run-1';

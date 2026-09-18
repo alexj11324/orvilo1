@@ -167,14 +167,14 @@ describe('configRouter', () => {
   describe('getDefaultAgentConfig', () => {
     it('should return the default agent config', async () => {
       process.env.DEFAULT_AGENT_CONFIG =
-        'plugins=search-engine,lobe-image-designer;enableHistoryCount=true;model=gemini-pro;provider=google;';
+        'plugins=search-engine,orvilo-image-designer;enableHistoryCount=true;model=gemini-pro;provider=google;';
 
       const response = await router.getDefaultAgentConfig();
 
       expect(response).toEqual({
         enableHistoryCount: true,
         model: 'gemini-pro',
-        plugins: ['search-engine', 'lobe-image-designer'],
+        plugins: ['search-engine', 'orvilo-image-designer'],
         provider: 'google',
       });
 

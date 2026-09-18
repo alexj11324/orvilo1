@@ -1,4 +1,4 @@
-// LobeHub gateway raw-event-stream probe.
+// Orvilo gateway raw-event-stream probe.
 //
 // Gateway-mode chats subscribe via WebSocket — NOT via the `/api/agent/stream`
 // SSE endpoint (that one belongs to the direct/client durable-agent runtime).
@@ -374,7 +374,7 @@ declare global {
 }
 
 try {
-  const chat = w.__LOBE_STORES?.chat?.();
+  const chat = w.__ORVILO_STORES?.chat?.();
   if (chat) {
     // First-time install: cache the originals. Re-install: restore from
     // the cached originals before wrapping again.
@@ -457,7 +457,7 @@ declare global {
 }
 
 try {
-  const chat = w.__LOBE_STORES?.chat?.();
+  const chat = w.__ORVILO_STORES?.chat?.();
   if (chat?.internal_dispatchMessage) {
     if (!w.__PROBE_ORIG_DISPATCH_MESSAGE)
       w.__PROBE_ORIG_DISPATCH_MESSAGE = chat.internal_dispatchMessage;
@@ -468,7 +468,7 @@ try {
       // Snapshot BEFORE — read the would-be target key + last message.
       const before = (() => {
         try {
-          const state = w.__LOBE_STORES?.chat?.();
+          const state = w.__ORVILO_STORES?.chat?.();
           if (!state) return null;
           // Replicate state.internal_getConversationContext logic enough to
           // resolve a key — but most callers pass operationId on ctx, and
@@ -497,7 +497,7 @@ try {
 
       // Snapshot AFTER — find which key(s) actually changed.
       try {
-        const state = w.__LOBE_STORES?.chat?.();
+        const state = w.__ORVILO_STORES?.chat?.();
         if (state && before) {
           const map = state.dbMessagesMap ?? {};
           for (const k of Object.keys(map)) {
@@ -564,7 +564,7 @@ try {
 
 function captureTimeline(): void {
   try {
-    const c = w.__LOBE_STORES?.chat?.();
+    const c = w.__ORVILO_STORES?.chat?.();
     if (!c) return;
     const msgsMap = (c.messagesMap ?? {}) as Record<string, any[]>;
     const dbMap = (c.dbMessagesMap ?? {}) as Record<string, any[]>;

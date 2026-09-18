@@ -12,11 +12,11 @@ const formatPrice = (price?: number) => {
   return Number((price / 10_000).toPrecision(5));
 };
 
-export const LobeNovitaAI = createOpenAICompatibleRuntime({
+export const OrviloNovitaAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.novita.ai/v3/openai',
   constructorOptions: {
     defaultHeaders: {
-      'X-Novita-Source': 'lobechat',
+      'X-Novita-Source': 'orvilo',
     },
   },
   debug: {

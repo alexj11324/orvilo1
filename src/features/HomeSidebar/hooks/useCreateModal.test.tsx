@@ -129,12 +129,12 @@ vi.mock('react-i18next', () => ({
           'chat:createModal.skillSuggestion.actions.install': 'Add Skill',
           'chat:createModal.skillSuggestion.actions.installing': 'Adding…',
           'chat:createModal.skillSuggestion.actions.openSkills': 'View in Skills',
-          'chat:createModal.skillSuggestion.actions.tryInLobeAI': 'Use in LobeAI',
+          'chat:createModal.skillSuggestion.actions.tryInOrviloAI': 'Use in OrviloAI',
           'chat:createModal.skillSuggestion.description':
             'This looks like a reusable workflow. Install the Skill once, then use it across Agents.',
           'chat:createModal.skillSuggestion.installed.description':
-            'You can use this Skill in LobeAI or add it to any Agent.',
-          'chat:createModal.skillSuggestion.installed.ready': 'Ready in LobeAI',
+            'You can use this Skill in OrviloAI or add it to any Agent.',
+          'chat:createModal.skillSuggestion.installed.ready': 'Ready in OrviloAI',
           'chat:createModal.skillSuggestion.installed.title': 'Skill added',
           'chat:createModal.skillSuggestion.installError':
             "Skill wasn't added. Retry, or create an Agent anyway.",
@@ -225,7 +225,7 @@ const renderModal = (type: 'agent' | 'group' = 'agent') => {
   const onCreateBlank = vi.fn().mockResolvedValue(undefined);
   const onOpenSkills = vi.fn();
   const onSubmit = vi.fn().mockResolvedValue(undefined);
-  const onTryInLobeAI = vi.fn();
+  const onTryInOrviloAI = vi.fn();
   const update = vi.fn();
   const modalRef = { current: { update } as unknown as ModalInstance };
 
@@ -238,11 +238,11 @@ const renderModal = (type: 'agent' | 'group' = 'agent') => {
       onCreateBlank={onCreateBlank}
       onOpenSkills={onOpenSkills}
       onSubmit={onSubmit}
-      onTryInLobeAI={onTryInLobeAI}
+      onTryInOrviloAI={onTryInOrviloAI}
     />,
   );
 
-  return { onClose, onCreateBlank, onOpenSkills, onSubmit, onTryInLobeAI, update };
+  return { onClose, onCreateBlank, onOpenSkills, onSubmit, onTryInOrviloAI, update };
 };
 
 const expectTrackedSkillSuggestionAction = async (
@@ -621,7 +621,7 @@ describe('CreateAgentModal analytics', () => {
       totalCount: 1,
       totalPages: 1,
     });
-    const { onClose, onOpenSkills, onSubmit, onTryInLobeAI, update } = renderModal();
+    const { onClose, onOpenSkills, onSubmit, onTryInOrviloAI, update } = renderModal();
 
     fireEvent.change(screen.getByLabelText('chat input'), {
       target: { value: '帮我做一个简历优化检查清单' },
@@ -645,14 +645,14 @@ describe('CreateAgentModal analytics', () => {
     expect(onSubmit).not.toHaveBeenCalled();
     expect(await screen.findByText('Skill added')).toBeInTheDocument();
     expect(screen.getByText('Resume Reviewer')).toBeInTheDocument();
-    expect(screen.getByText('Ready in LobeAI')).toBeInTheDocument();
+    expect(screen.getByText('Ready in OrviloAI')).toBeInTheDocument();
     expect(screen.queryByText('resume-reviewer')).not.toBeInTheDocument();
     expect(update).toHaveBeenCalledWith({ width: 'min(90vw, 560px)' });
     expect(screen.queryByText('Skill not a fit?')).not.toBeInTheDocument();
     expect(screen.queryByText('Create Agent Anyway')).not.toBeInTheDocument();
 
-    const tryInLobeAIButton = screen.getByText('Use in LobeAI');
-    expect(tryInLobeAIButton).toHaveAttribute('data-button-type', 'primary');
+    const tryInOrviloAIButton = screen.getByText('Use in OrviloAI');
+    expect(tryInOrviloAIButton).toHaveAttribute('data-button-type', 'primary');
     const openSkillsButton = screen.getByText('View in Skills');
     expect(openSkillsButton).not.toHaveAttribute('data-button-type', 'primary');
     fireEvent.click(openSkillsButton);
@@ -662,10 +662,10 @@ describe('CreateAgentModal analytics', () => {
       selected_skill_identifier: 'resume-reviewer',
     });
 
-    fireEvent.click(tryInLobeAIButton);
-    expect(onTryInLobeAI).toHaveBeenCalledTimes(1);
+    fireEvent.click(tryInOrviloAIButton);
+    expect(onTryInOrviloAI).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalled();
-    await expectTrackedSkillSuggestionAction('try_in_lobeai_clicked', {
+    await expectTrackedSkillSuggestionAction('try_in_orviloai_clicked', {
       selected_skill_identifier: 'resume-reviewer',
     });
   });

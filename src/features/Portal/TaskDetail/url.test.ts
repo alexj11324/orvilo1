@@ -9,9 +9,9 @@ describe('getTaskDetailPageUrl', () => {
         agentId: 'agt-owner',
         appOrigin: 'https://app.example.com',
         taskId: 'T-245',
-        workspaceSlug: 'lobehub',
+        workspaceSlug: 'orvilo',
       }),
-    ).toBe('https://app.example.com/lobehub/agent/agt-owner/task/T-245');
+    ).toBe('https://app.example.com/orvilo/agent/agt-owner/task/T-245');
   });
 
   it('falls back to the unscoped task route without an agent', () => {
@@ -26,9 +26,9 @@ describe('getTaskDetailPageUrl', () => {
         appOrigin: 'https://app.example.com',
         taskId: 'T-245',
         title: '飞书适配器支持 POST 图文消息',
-        workspaceSlug: 'lobehub',
+        workspaceSlug: 'orvilo',
       }),
-    ).toBe('https://app.example.com/lobehub/task/T-245/飞书适配器支持-post-图文消息');
+    ).toBe('https://app.example.com/orvilo/task/T-245/飞书适配器支持-post-图文消息');
   });
 
   it('returns undefined without a resolvable absolute URL', () => {

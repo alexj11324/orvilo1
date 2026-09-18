@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LobeStraicoAI } from './index';
+import { OrviloStraicoAI } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -11,7 +11,7 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 
 const mockFetch = vi.fn();
 
-describe('LobeStraicoAI', () => {
+describe('OrviloStraicoAI', () => {
   beforeEach(() => {
     mockFetch.mockReset();
     vi.stubGlobal('fetch', mockFetch);
@@ -25,7 +25,7 @@ describe('LobeStraicoAI', () => {
     it('should throw a regular Error when the API request fails', async () => {
       mockFetch.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }));
 
-      const instance = new LobeStraicoAI({ apiKey: 'test-api-key' });
+      const instance = new OrviloStraicoAI({ apiKey: 'test-api-key' });
 
       await expect(instance.models()).rejects.toThrow('HTTP 401');
     });

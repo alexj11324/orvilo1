@@ -59,7 +59,7 @@ export const buildGrokAcpArgs = (args: string[] = []): string[] => [
 const promptBlocks = (prompt: AgentPromptInput) =>
   typeof prompt === 'string' ? (prompt ? [{ text: prompt, type: 'text' as const }] : []) : prompt;
 
-/** Convert LobeHub prompt blocks to ACP v1 ContentBlocks without argv or temp-file payloads. */
+/** Convert Orvilo prompt blocks to ACP v1 ContentBlocks without argv or temp-file payloads. */
 export const buildGrokAcpPrompt = async (
   prompt: AgentPromptInput,
   options: NormalizeImageOptions = {},
@@ -108,7 +108,7 @@ export class GrokAcpSession extends AcpAgentSession<AcpInitializeResult, GrokAcp
   protected buildInitializeParams(): unknown {
     return {
       _meta: {
-        clientType: 'lobehub',
+        clientType: 'orvilo',
         clientVersion: this.options.clientVersion,
       },
       clientCapabilities: { fs: {}, terminal: false },

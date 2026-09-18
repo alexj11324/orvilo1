@@ -808,7 +808,7 @@
   {
     "children": {
       "improvements": [
-        "Refactor all @/types in model runtime to @lobechat/types."
+        "Refactor all @/types in model runtime to @orvilo/types."
       ]
     },
     "date": "2025-09-23",
@@ -1272,7 +1272,7 @@
   {
     "children": {
       "improvements": [
-        "Make LobeNextAuthDBAdapter Edge Compatible."
+        "Make OrviloNextAuthDBAdapter Edge Compatible."
       ]
     },
     "date": "2025-09-04",
@@ -1286,7 +1286,7 @@
   {
     "children": {
       "improvements": [
-        "Make LobeNextAuthDBAdapter Edge Compatible."
+        "Make OrviloNextAuthDBAdapter Edge Compatible."
       ]
     },
     "date": "2025-09-04",
@@ -1652,7 +1652,7 @@
   {
     "children": {
       "improvements": [
-        "Move chain into @lobechat/prompts."
+        "Move chain into @orvilo/prompts."
       ]
     },
     "date": "2025-08-21",
@@ -1699,7 +1699,7 @@
   {
     "children": {
       "improvements": [
-        "Refactor prompts folder to the @lobechat/prompts pacakge."
+        "Refactor prompts folder to the @orvilo/prompts pacakge."
       ]
     },
     "date": "2025-08-16",
@@ -2309,7 +2309,7 @@
   {
     "children": {
       "improvements": [
-        "Fix lobehub provider /chat in desktop."
+        "Fix orvilo provider /chat in desktop."
       ]
     },
     "date": "2025-07-21",
@@ -6573,7 +6573,7 @@
   {
     "children": {
       "improvements": [
-        "Refactor Minimax with LobeOpenAICompatibleFactory."
+        "Refactor Minimax with OrviloOpenAICompatibleFactory."
       ]
     },
     "date": "2025-01-15",
@@ -6883,7 +6883,7 @@
   {
     "children": {
       "features": [
-        "Add custom stream handle support for LobeOpenAICompatibleFactory."
+        "Add custom stream handle support for OrviloOpenAICompatibleFactory."
       ]
     },
     "date": "2024-12-29",
@@ -6958,7 +6958,7 @@
   {
     "children": {
       "improvements": [
-        "Refactor sensenova provider with LobeOpenAICompatibleFactory."
+        "Refactor sensenova provider with OrviloOpenAICompatibleFactory."
       ]
     },
     "date": "2024-12-25",
@@ -10922,11 +10922,11 @@
   {
     "children": {
       "features": [
-        "Release LobeChat 1.0."
+        "Release Orvilo 1.0."
       ],
       "improvements": [
         "Bump version.",
-        "Release LobeChat 1.0, closes #2897 (97bb377)",
+        "Release Orvilo 1.0, closes #2897 (97bb377)",
         "Bump version, closes #2896 (6e2d03b)",
         "Update LICENSE to Apache 2.0",
         "update to 1.0.0"

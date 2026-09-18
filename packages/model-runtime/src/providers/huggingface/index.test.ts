@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentRuntimeErrorType } from '../../types/error';
-import { LobeHuggingFaceAI, params } from './index';
+import { OrviloHuggingFaceAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -11,11 +11,11 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
   loadModels: loadModelsMock,
 }));
 
-describe('LobeHuggingFaceAI', () => {
+describe('OrviloHuggingFaceAI', () => {
   let instance: any;
 
   beforeEach(() => {
-    instance = new LobeHuggingFaceAI({ apiKey: 'test' });
+    instance = new OrviloHuggingFaceAI({ apiKey: 'test' });
 
     const mockAsyncIterable = {
       async *[Symbol.asyncIterator]() {
@@ -511,7 +511,7 @@ describe('LobeHuggingFaceAI', () => {
       expect(visionModels.length).toBeGreaterThan(0);
     });
 
-    it('should merge with LOBE_DEFAULT_MODEL_LIST when model is known', async () => {
+    it('should merge with ORVILO_DEFAULT_MODEL_LIST when model is known', async () => {
       const mockResponse = {
         object: 'list',
         data: [
@@ -545,7 +545,7 @@ describe('LobeHuggingFaceAI', () => {
 
       const model = models.find((m) => m.id === 'meta-llama/llama-3.3-70b-instruct');
       expect(model).toBeDefined();
-      // Should have properties from LOBE_DEFAULT_MODEL_LIST if the model exists there
+      // Should have properties from ORVILO_DEFAULT_MODEL_LIST if the model exists there
       if (model) {
         expect(model.enabled).toBeDefined();
         expect(typeof model.enabled).toBe('boolean');
@@ -769,7 +769,7 @@ describe('LobeHuggingFaceAI', () => {
       const model = models.find((m) => m.id === 'meta-llama/llama-3.3-70b-instruct');
 
       if (model) {
-        // displayName should be preserved from LOBE_DEFAULT_MODEL_LIST if available
+        // displayName should be preserved from ORVILO_DEFAULT_MODEL_LIST if available
         expect(model.displayName).toBeDefined();
       }
     });

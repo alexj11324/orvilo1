@@ -6,9 +6,9 @@
  */
 
 /** MCP server name as it appears in the tool name prefix. */
-export const ASK_USER_MCP_SERVER_NAME = 'lobe_cc';
+export const ASK_USER_MCP_SERVER_NAME = 'orvilo_cc';
 
-/** MCP tool name (without the `mcp__lobe_cc__` prefix). */
+/** MCP tool name (without the `mcp__orvilo_cc__` prefix). */
 export const ASK_USER_TOOL_NAME = 'ask_user_question';
 
 /** Full tool name as the CC model sees it on the wire. */

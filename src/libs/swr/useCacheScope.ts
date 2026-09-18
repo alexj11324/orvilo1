@@ -21,7 +21,7 @@ const PERSONAL = 'personal';
  * instant-from-cache first paint (the #10884 synchronous-cache behavior the
  * async IndexedDB tier in #15844 lost).
  */
-const ACTIVE_SCOPE_STORAGE_KEY = 'lobehub:active-scope';
+const ACTIVE_SCOPE_STORAGE_KEY = 'orvilo:active-scope';
 
 const isBrowser = () => typeof localStorage !== 'undefined';
 

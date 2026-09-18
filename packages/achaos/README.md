@@ -10,4 +10,4 @@ Agent-domain chaos engineering packages use the temporary `@achaos/*` namespace:
 - `@achaos/testing` — deterministic test targets and scenario helpers.
 
 Application incidents and fixtures belong under `.agents/chaos`; package code contains mechanisms,
-not LobeHub business models. Goal, Agent Evals, CI and self-improvement workflows are consumers.
+not Orvilo business models. Goal, Agent Evals, CI and self-improvement workflows are consumers.

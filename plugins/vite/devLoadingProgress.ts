@@ -1,6 +1,6 @@
 import type { Plugin, ViteDevServer } from 'vite';
 
-const EVENT = 'lobe:dev-loading-progress';
+const EVENT = 'orvilo:dev-loading-progress';
 const BROADCAST_INTERVAL_MS = 80;
 
 const resolveHmrUrl = (server: ViteDevServer) => {

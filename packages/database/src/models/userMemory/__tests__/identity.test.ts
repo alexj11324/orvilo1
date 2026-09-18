@@ -5,14 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTestDB } from '../../../core/getTestDB';
 import type { NewUserMemoryIdentity } from '../../../schemas';
 import { userMemories, userMemoriesIdentities, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { UserMemoryIdentityModel } from '../identity';
 
 const userId = 'identity-test-user';
 const otherUserId = 'other-identity-user';
 
 let identityModel: UserMemoryIdentityModel;
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 beforeEach(async () => {
   // Clean up

@@ -81,8 +81,8 @@ describe('buildServerVirtualSubAgentRunner sub-agent model resolution', () => {
 });
 
 // Fail-close regression for share-visitor runs: the child run spawned by
-// either runner does not inherit the parent's shareGate, so for a run with
-// `ctx.agentShareVisitor` set, no runner may be built at all.
+// either runner does not inherit the parent's share restrictions, so for a
+// run with `ctx.agentShareVisitor` set, no runner may be built at all.
 describe('runner builders fail closed for share-visitor runs', () => {
   const shareCtx = {
     agentShareVisitor: {

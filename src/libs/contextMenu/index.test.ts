@@ -27,16 +27,16 @@ vi.mock('@/services/electron/system', () => ({
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const stubDarwin = () => {
-  window.lobeEnv = { platform: 'darwin' };
+  window.orviloEnv = { platform: 'darwin' };
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  delete window.lobeEnv;
+  delete window.orviloEnv;
 });
 
 afterEach(() => {
-  delete window.lobeEnv;
+  delete window.orviloEnv;
 });
 
 describe('showContextMenu routing', () => {

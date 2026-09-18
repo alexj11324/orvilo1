@@ -1,5 +1,5 @@
 import { builtinTools } from '@orvilo/builtin-tools';
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   type ChatToolPayload,
   isWorkSkillProvider,
@@ -17,7 +17,7 @@ import { getServerRuntime, hasServerRuntime } from './serverRuntimes';
 import { type IToolExecutor, type ToolExecutionContext, type ToolExecutionResult } from './types';
 import { resolveBuiltinToolWorkIntent } from './workRegistration';
 
-const log = debug('lobe-server:builtin-tools-executor');
+const log = debug('orvilo-server:builtin-tools-executor');
 
 /**
  * Declared API names for a builtin tool, read from its manifest — the
@@ -51,11 +51,11 @@ const collectRuntimeApiNames = (runtime: Record<string, any>): string[] => {
 };
 
 export class BuiltinToolsExecutor implements IToolExecutor {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private userId: string;
   private _marketService?: MarketService;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }
@@ -117,15 +117,14 @@ export class BuiltinToolsExecutor implements IToolExecutor {
 
     const args = parsed || {};
 
-    // Share-visitor gate at the ACTUAL dispatch site. The assembly-time tool-set
-    // trim (`applyShareGateToToolSet`) only shapes what the model is offered —
-    // this executor runs whatever call reaches it, so a resume path, recovery
-    // hint, or future tool-discovery route that bypasses assembly must still
-    // clear the FULL gate here: master default-deny allowlist, the owner's
-    // `toolGrants` picker, humanIntervention policy (re-read from the
-    // unstripped manifest), and the per-API data-tool rules. Non-builtin
-    // identifiers pass through (governed by the share's `toolGrants` at
-    // assembly). Fail closed: block, never throw open.
+    // Share-visitor gate at the ACTUAL dispatch site — retained for the
+    // visitor operations persisted before visitor execution was retired
+    // (their `agentShareVisitor` marker is still threaded here). This
+    // executor runs whatever call reaches it, so every tool call from such a
+    // run must still clear the FULL gate: master default-deny allowlist, the
+    // owner's `toolGrants` picker, humanIntervention policy (re-read from the
+    // unstripped manifest), and the per-API data-tool rules. Fail closed:
+    // block, never throw open.
     if (
       context.agentShareVisitor &&
       isShareBlockedBuiltinDispatch(context.agentShareVisitor, identifier, apiName, args)
@@ -146,10 +145,10 @@ export class BuiltinToolsExecutor implements IToolExecutor {
       args,
     );
 
-    // Route LobeHub Skills to MarketService
-    if (source === 'lobehubSkill') {
+    // Route Orvilo Skills to MarketService
+    if (source === 'orviloSkill') {
       const marketService = await this.getMarketService();
-      const result = await marketService.executeLobehubSkill({
+      const result = await marketService.executeOrviloSkill({
         args,
         context: {
           topicId: context.topicId,

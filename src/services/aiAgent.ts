@@ -33,7 +33,7 @@ export interface ResumeApprovalParam {
 
 /**
  * Resume instruction for an operation that paused on a `humanIntervention:
- * 'always'` tool (e.g. lobe-agent `askUserQuestion`) during a GATEWAY/server
+ * 'always'` tool (e.g. orvilo-agent `askUserQuestion`) during a GATEWAY/server
  * run. When present, the new op writes the human-provided answer as the pending
  * tool message's result and resumes from `phase: 'tool_result'` — the tool is
  * NOT re-executed, so the server runtime never overwrites the answer with a

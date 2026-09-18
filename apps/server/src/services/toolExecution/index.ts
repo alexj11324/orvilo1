@@ -33,7 +33,7 @@ import {
   type ToolExecutionResultResponse,
 } from './types';
 
-const log = debug('lobe-server:tool-execution-service');
+const log = debug('orvilo-server:tool-execution-service');
 
 interface ToolExecutionServiceDeps {
   builtinToolsExecutor: BuiltinToolsExecutor;
@@ -109,7 +109,7 @@ export class ToolExecutionService {
 
     // ── Connector tool permission gate (covers ALL paths + qstash) ────────
     // Check before any execution so that disabled tools are blocked universally:
-    // Lobehub market skills, Composio, MCP connectors, and execAgent/qstash alike.
+    // Orvilo market skills, Composio, MCP connectors, and execAgent/qstash alike.
     // needs_approval is handled via humanIntervention in the manifest; we only
     // hard-block 'disabled' here (and needs_approval in headless/qstash context
     // since the manifest's humanIntervention auto-rejects them there already).
@@ -229,7 +229,7 @@ export class ToolExecutionService {
       };
     }
 
-    // Extract MCP params from manifest (stored in customParams.mcp in LobeTool)
+    // Extract MCP params from manifest (stored in customParams.mcp in OrviloTool)
     const mcpParams = (manifest as any).mcpParams;
     if (!mcpParams) {
       log('MCP configuration not found in manifest for: %s ', identifier);
@@ -275,7 +275,7 @@ export class ToolExecutionService {
           : undefined;
         if (!tunnelTarget) {
           log('Device-only MCP %s:%s has no reachable device — failing fast', identifier, apiName);
-          const message = `MCP server '${identifier}' only your own machine can reach (stdio or local network). No online device was found to run it — open the LobeHub desktop app on the machine that hosts this MCP server, then retry.`;
+          const message = `MCP server '${identifier}' only your own machine can reach (stdio or local network). No online device was found to run it — open the Orvilo desktop app on the machine that hosts this MCP server, then retry.`;
           return {
             content: message,
             error: { code: 'MCP_DEVICE_UNAVAILABLE', message },

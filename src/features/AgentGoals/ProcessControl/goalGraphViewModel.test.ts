@@ -391,7 +391,7 @@ describe('buildGoalGraphView', () => {
             relation: 'produced',
             work: {
               identifier: 'ENG-1',
-              resourceId: 'lobehub/lobehub#1',
+              resourceId: 'alexj11324/orvilo1#1',
               status: 'open',
               title: 'Issue',
               type: 'external',

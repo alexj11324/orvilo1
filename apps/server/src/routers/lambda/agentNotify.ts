@@ -26,7 +26,7 @@ const getStreamManager = () => {
   return _streamManager;
 };
 
-const log = debug('lobe-server:agent-notify-router');
+const log = debug('orvilo-server:agent-notify-router');
 
 const agentNotifyProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -84,7 +84,7 @@ const NotifySchema = z.object({
   messageId: z.string().optional(),
   /**
    * Server-assigned operation identity for this callback. Remote CLI/Desktop
-   * clients propagate it through LOBEHUB_OPERATION_ID; assistant callbacks
+   * clients propagate it through ORVILO_OPERATION_ID; assistant callbacks
    * need it to distinguish concurrent group members sharing one topic.
    */
   operationId: z.string().optional(),

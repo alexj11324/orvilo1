@@ -6,14 +6,14 @@ import { NotificationModel } from '../../models/notification';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
 import { users } from '../../schemas/user';
 import { workspaces } from '../../schemas/workspace';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 
 describe('NotificationModel', () => {
   const returning = vi.fn();
   const onConflictDoNothing = vi.fn(() => ({ returning }));
   const values = vi.fn((_payload?: unknown) => ({ onConflictDoNothing }));
   const insert = vi.fn(() => ({ values }));
-  const db = { insert } as unknown as LobeChatDatabase;
+  const db = { insert } as unknown as OrviloDatabase;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,7 +47,7 @@ describe('NotificationModel', () => {
 });
 
 // ─── Integration tests against a real PGlite database ─────────────
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'notification-user';
 const otherUserId = 'notification-other-user';

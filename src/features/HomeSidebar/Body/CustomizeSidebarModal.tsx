@@ -79,7 +79,15 @@ const ALL_SIDEBAR_ITEMS: SidebarItemConfig[] = [
 // would render an empty accordion no user can populate.
 export const getAvailableSidebarItems = (isWorkspaceMode: boolean): SidebarItemConfig[] =>
   ALL_SIDEBAR_ITEMS.filter((item) => {
-    if (isWorkspaceMode && item.id === 'memory') return false;
+    // Retired surfaces are dropped here for the same reason they are dropped
+    // from the sidebar itself — but with a sharper consequence. Confirming the
+    // dialog writes the selection back into `sidebarItems`, and the read path
+    // strips retired keys straight back out, so offering one produced a switch
+    // that visibly flipped and then silently reverted on the next open.
+    //
+    // Read from the registry rather than keeping a parallel list here: a second
+    // hardcoded roster is one more place that has to be edited in step.
+    if (item.routeId && getRouteById(item.routeId)?.tier === 'retired') return false;
     if (!isWorkspaceMode && item.id === 'private') return false;
     return true;
   });

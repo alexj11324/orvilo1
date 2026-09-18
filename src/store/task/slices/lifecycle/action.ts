@@ -14,7 +14,7 @@ import {
   buildOptimisticPropertyActivity,
 } from '../detail/optimisticActivity';
 
-const log = debug('lobe-store:task-lifecycle');
+const log = debug('orvilo-store:task-lifecycle');
 
 type Setter = StoreSetter<TaskStore>;
 

@@ -1,5 +1,5 @@
 import type { BlobRef, BlobStore } from '@orvilo/agent-runtime';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 
 import { FileService } from '@/server/services/file';
 
@@ -7,7 +7,7 @@ export class ServerBlobStore implements BlobStore {
   private fileService?: FileService;
 
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}

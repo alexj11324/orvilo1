@@ -21,7 +21,7 @@ import { electronSystemService } from '@/services/electron/system';
 import { useElectronStore } from '@/store/electron';
 import { setDesktopAutoOidcFirstOpenHandled } from '@/utils/electron/autoOidc';
 
-import LobeMessage from '../components/LobeMessage';
+import OrviloMessage from '../components/OrviloMessage';
 
 const LEGACY_LOCAL_DB_MIGRATION_GUIDE_URL = urlJoin(
   OFFICIAL_SITE,
@@ -321,7 +321,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
     return (
       <Center gap={32} style={{ height: '100%', minHeight: '100%' }}>
         <Flexbox align={'flex-start'} justify={'flex-start'} style={{ width: '100%' }}>
-          <LobeMessage sentences={title} />
+          <OrviloMessage sentences={title} />
           <Text as={'p'}>{description}</Text>
         </Flexbox>
 
@@ -544,7 +544,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
   return (
     <Center gap={32} style={{ height: '100%', minHeight: '100%' }}>
       <Flexbox align={'flex-start'} justify={'flex-start'} style={{ width: '100%' }}>
-        <LobeMessage sentences={[t('screen5.title'), t('screen5.title2'), t('screen5.title3')]} />
+        <OrviloMessage sentences={[t('screen5.title'), t('screen5.title2'), t('screen5.title3')]} />
         <Text as={'p'}>{t('screen5.description')}</Text>
       </Flexbox>
 

@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, ilike, inArray, lt, lte, or } from 'drizzle-orm';
 
 import { workspaceAuditLogs } from '../schemas/workspace';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 export type WorkspaceAuditAction =
   | 'workspace.created'
@@ -106,9 +106,9 @@ interface ListAuditLogParams {
 }
 
 export class WorkspaceAuditLogModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
   }
 

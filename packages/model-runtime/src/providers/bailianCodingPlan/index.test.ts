@@ -2,13 +2,13 @@
 import { ModelProvider } from 'model-bank';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeBailianCodingPlanAI } from './index';
+import { OrviloBailianCodingPlanAI } from './index';
 
 const provider = ModelProvider.BailianCodingPlan;
 const defaultBaseURL = 'https://coding.dashscope.aliyuncs.com/v1';
 
 testProvider({
-  Runtime: LobeBailianCodingPlanAI,
+  Runtime: OrviloBailianCodingPlanAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_BAILIAN_CODING_PLAN_CHAT_COMPLETION',

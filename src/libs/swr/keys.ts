@@ -347,9 +347,6 @@ export const isMyTaskListKey = (key: unknown): boolean =>
 export const isAutomationRunsKey = (key: unknown): boolean =>
   Array.isArray(key) && key[0] === 'task:automationRuns';
 
-export const isAutomationListKey = (key: unknown): boolean =>
-  Array.isArray(key) && key[0] === 'task:automationList';
-
 /**
  * Goal Graph reads. Keyed by the `goals` row id (not the carrier task's
  * identifier) because that is what every `goal.*` procedure takes.
@@ -360,21 +357,6 @@ export const goalKeys = {
 };
 
 export const taskKeys = {
-  /**
-   * The Automations list page: automated tasks still able to fire. Its own
-   * root like `scheduledList` — the extra scope/status slots keep the "mine"
-   * tab and the active/paused filter from sharing cache entries.
-   */
-  automationList: def(
-    'task:automationList',
-    (scope: 'created' | 'all', statuses: string, limit?: number, offset?: number) => [
-      'task:automationList',
-      scope,
-      statuses,
-      limit ?? 'all',
-      offset ?? 0,
-    ],
-  ),
   /**
    * The Automations "All runs" roll-up: every run whose task still carries an
    * automation mode, newest first, plus the 24h/7d outcome counts. Its own
@@ -487,6 +469,14 @@ export const taskKeys = {
       ...(limit === undefined && offset === undefined ? [] : [{ limit, offset }]),
     ],
   ),
+  /**
+   * The automated-task roll-up: Home's "Scheduled" section, the Tasks page's
+   * scheduled collection, and the Automations list.
+   *
+   * One root on purpose. `scope` / `statuses` used to live under a separate
+   * `automationList` root, which meant the same query — same agent scope, same
+   * limit, same offset, no filter — was cached and revalidated twice.
+   */
   scheduledList: def(
     'task:scheduledList',
     (
@@ -494,11 +484,17 @@ export const taskKeys = {
       visibility: 'all' | 'private' | 'workspace' = 'all',
       limit?: number,
       offset?: number,
+      scope: 'all' | 'created' = 'all',
+      statuses: string = 'all',
     ) => [
       'task:scheduledList',
       agentKey,
       visibility,
       ...(limit === undefined && offset === undefined ? [] : [{ limit, offset }]),
+      scope,
+      // Status narrowing is part of the identity, exactly as in `myList`:
+      // "active only" and "everything" are different server pages.
+      statuses,
     ],
   ),
   /**
@@ -620,7 +616,7 @@ export const serverConfigKeys = {
 };
 
 // ---- discover (marketplace) ---------------------------------------------
-// NOTE: discover/eval/ragEval/knowledgeBase/device/userMemory/agentKnowledge/
+// NOTE: discover/ragEval/knowledgeBase/device/userMemory/agentKnowledge/
 // agentBot/file/chatTool prefixes are deliberately kept OUT of `CACHE_TIERS`
 // (see localStorageProvider.ts) so this key-convergence introduces no new
 // persistence — they stay memory-only exactly as before.
@@ -642,28 +638,6 @@ export const discoverKeys = {
   assistantList: def('discover:assistantList', (locale: string, params: unknown) => [
     'discover:assistantList',
     locale,
-    params,
-  ]),
-  favoriteAgents: def('discover:favoriteAgents', (userId: number, params?: unknown) => [
-    'discover:favoriteAgents',
-    userId,
-    params,
-  ]),
-  favoritePlugins: def('discover:favoritePlugins', (userId: number, params?: unknown) => [
-    'discover:favoritePlugins',
-    userId,
-    params,
-  ]),
-  followCounts: def('discover:followCounts', (userId: number) => ['discover:followCounts', userId]),
-  followStatus: def('discover:followStatus', (userId: number) => ['discover:followStatus', userId]),
-  followers: def('discover:followers', (userId: number, params?: unknown) => [
-    'discover:followers',
-    userId,
-    params,
-  ]),
-  following: def('discover:following', (userId: number, params?: unknown) => [
-    'discover:following',
-    userId,
     params,
   ]),
   groupAgentCategories: def('discover:groupAgentCategories', (locale: string, params: unknown) => [
@@ -814,28 +788,6 @@ export const discoverKeys = {
   ),
 };
 
-// ---- agent eval ---------------------------------------------------------
-export const evalKeys = {
-  benchmarkDetail: def('eval:benchmarkDetail', (id: string) => ['eval:benchmarkDetail', id]),
-  benchmarks: def('eval:benchmarks', () => ['eval:benchmarks']),
-  datasetDetail: def('eval:datasetDetail', (id: string) => ['eval:datasetDetail', id]),
-  datasetRuns: def('eval:datasetRuns', (datasetId: string) => ['eval:datasetRuns', datasetId]),
-  datasetsAll: def('eval:datasetsAll', () => ['eval:datasetsAll']),
-  datasets: def('eval:datasets', (benchmarkId: string) => ['eval:datasets', benchmarkId]),
-  experimentDetail: def('eval:experimentDetail', (id: string) => ['eval:experimentDetail', id]),
-  experiments: def('eval:experiments', () => ['eval:experiments']),
-  runDetail: def('eval:runDetail', (id: string) => ['eval:runDetail', id]),
-  runResults: def('eval:runResults', (id: string) => ['eval:runResults', id]),
-  runs: def('eval:runs', (benchmarkId?: string) => ['eval:runs', benchmarkId]),
-  testCaseDetail: def('eval:testCaseDetail', (id: string) => ['eval:testCaseDetail', id]),
-  testCases: def('eval:testCases', (datasetId: string, limit?: number, offset?: number) => [
-    'eval:testCases',
-    datasetId,
-    limit,
-    offset,
-  ]),
-};
-
 // ---- RAG eval -----------------------------------------------------------
 export const ragEvalKeys = {
   datasetList: def('ragEval:datasetList', (knowledgeBaseId?: string) => [
@@ -928,10 +880,6 @@ export const deviceKeys = {
 // ---- user memory --------------------------------------------------------
 export const userMemoryKeys = {
   activities: def('userMemory:activities', (params: unknown) => ['userMemory:activities', params]),
-  analysisTask: def('userMemory:analysisTask', (taskId?: string) => [
-    'userMemory:analysisTask',
-    taskId,
-  ]),
   contexts: def('userMemory:contexts', (params: unknown) => ['userMemory:contexts', params]),
   experiences: def('userMemory:experiences', (params: unknown) => [
     'userMemory:experiences',
@@ -975,11 +923,9 @@ export const toolKeys = {
   ]),
   composioConnections: def('tool:composioConnections', () => ['tool:composioConnections']),
   installedPlugins: def('tool:installedPlugins', () => ['tool:installedPlugins']),
-  lobehubSkillConnections: def('tool:lobehubSkillConnections', () => [
-    'tool:lobehubSkillConnections',
-  ]),
-  lobehubSkillTools: def('tool:lobehubSkillTools', (provider: string) => [
-    'tool:lobehubSkillTools',
+  orviloSkillConnections: def('tool:orviloSkillConnections', () => ['tool:orviloSkillConnections']),
+  orviloSkillTools: def('tool:orviloSkillTools', (provider: string) => [
+    'tool:orviloSkillTools',
     provider,
   ]),
   mcpPluginList: def('tool:mcpPluginList', (locale: string, params: unknown) => [
@@ -1060,9 +1006,6 @@ export const statsKeys = {
   heatmaps: def('stats:heatmaps', (type: string) => ['stats:heatmaps', type]),
   maxTaskDuration: def('stats:maxTaskDuration', () => ['stats:maxTaskDuration']),
   messages: def('stats:messages', () => ['stats:messages']),
-  rankAgents: def('stats:rankAgents', () => ['stats:rankAgents']),
-  rankModels: def('stats:rankModels', () => ['stats:rankModels']),
-  rankTopics: def('stats:rankTopics', () => ['stats:rankTopics']),
   sessions: def('stats:sessions', () => ['stats:sessions']),
   topics: def('stats:topics', () => ['stats:topics']),
   usageLogs: def('stats:usageLogs', () => ['stats:usageLogs']),
@@ -1098,10 +1041,6 @@ export const messengerKeys = {
 // ---- verify (deliverable judging) ---------------------------------------
 export const expertiseKeys = {
   domain: def('expertise:domain', (domainId: string) => ['expertise:domain', domainId]),
-  historyCount: def('expertise:historyCount', (agentId: string) => [
-    'expertise:historyCount',
-    agentId,
-  ]),
   lesson: def('expertise:lesson', (lessonId: string) => ['expertise:lesson', lessonId]),
   overview: def('expertise:overview', (agentId: string) => ['expertise:overview', agentId]),
 };
@@ -1289,15 +1228,6 @@ export const localFileKeys = {
     'localFile:projectIndex',
     deviceId ?? 'local',
     dirPath,
-  ]),
-};
-
-// ---- favorite status (marketplace detail headers) -----------------------
-export const favoriteKeys = {
-  status: def('favorite:status', (targetType: string, identifier: string) => [
-    'favorite:status',
-    targetType,
-    identifier,
   ]),
 };
 
@@ -1495,9 +1425,7 @@ export const swrKeys = {
   discover: discoverKeys,
   document: documentSWRKeys,
   electron: electronKeys,
-  eval: evalKeys,
   expertise: expertiseKeys,
-  favorite: favoriteKeys,
   file: fileKeys,
   fork: forkKeys,
   gateway: gatewayKeys,

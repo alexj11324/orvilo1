@@ -2,7 +2,7 @@ import type {
   BuiltinToolResult,
   DeleteDocumentWorkParams,
   DeleteTaskWorkParams,
-  LobeBuiltinTool,
+  OrviloBuiltinTool,
   PluginApiWorkAction,
   PluginApiWorkConfig,
   PluginApiWorkResourceType,
@@ -77,7 +77,7 @@ type WorkRegistrationAdapterRegistry = {
  * tool/API declares no Work.
  */
 export const getApiWorkConfig = (
-  tools: LobeBuiltinTool[],
+  tools: OrviloBuiltinTool[],
   identifier: string,
   apiName: string,
 ): PluginApiWorkConfig | undefined =>
@@ -253,7 +253,7 @@ const resolveDocumentWorkIntent = ({
  * handed to the runtime.
  */
 export const resolveWorkRegistration = (
-  tools: LobeBuiltinTool[],
+  tools: OrviloBuiltinTool[],
   identifier: string,
   apiName: string,
   payload: { args: unknown; result: Pick<BuiltinToolResult, 'state' | 'success'> },

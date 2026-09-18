@@ -1,8 +1,8 @@
 import type { ToolManifest, ToolManifestType } from './manifest';
 import type { CustomPluginParams } from './plugin';
-import type { LobeToolType } from './tool';
+import type { OrviloToolType } from './tool';
 
-export interface LobeTool {
+export interface OrviloTool {
   customParams?: CustomPluginParams | null;
   identifier: string;
   manifest?: ToolManifest | null;
@@ -12,15 +12,15 @@ export interface LobeTool {
   runtimeType?: ToolManifestType;
   settings?: any;
   // TODO: remove type and then make it required
-  source?: LobeToolType;
+  source?: OrviloToolType;
   /**
    * need to be replaced with source
    * @deprecated
    */
-  type: LobeToolType;
+  type: OrviloToolType;
 }
 
-export type LobeToolRenderType = ToolManifestType;
+export type OrviloToolRenderType = ToolManifestType;
 
 export * from './builtin';
 export * from './crawler';

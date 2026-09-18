@@ -31,7 +31,7 @@ describe('shouldDedupeIssue', () => {
 
   it('skips remote MCP marketplace listing requests before Claude duplicate detection runs', () => {
     const decision = shouldDedupeIssue({
-      body: `Please add **DC Hub Intelligence** to the LobeHub MCP marketplace - a remote MCP server for real-time data-center & energy intelligence.
+      body: `Please add **DC Hub Intelligence** to the Orvilo MCP marketplace - a remote MCP server for real-time data-center & energy intelligence.
 
 - **Endpoint:** \`https://dchub.cloud/mcp\` (streamable-http; \`X-API-Key\` optional for the free tier)
 - **Repo:** https://github.com/azmartone67/dchub-mcp-server
@@ -68,7 +68,7 @@ describe('shouldDedupeIssue', () => {
 
   it('skips new MCP submissions that mention the market CLI discovery path', () => {
     const decision = shouldDedupeIssue({
-      body: `Please include Cookiy MCP in the LobeHub MCP marketplace.
+      body: `Please include Cookiy MCP in the Orvilo MCP marketplace.
 
 - Repository: https://github.com/cookiy-ai/cookiy-skill
 - Install: npx cookiy-mcp
@@ -76,7 +76,7 @@ describe('shouldDedupeIssue', () => {
 I checked @lobehub/market-cli but could not find the public MCP publish command. If there is a preferred self-service submission path, I can reformat the request.`,
       labels: [],
       state: 'open',
-      title: '[Request] Include Cookiy MCP in the LobeHub MCP marketplace',
+      title: '[Request] Include Cookiy MCP in the Orvilo MCP marketplace',
     });
 
     expect(decision).toMatchObject({

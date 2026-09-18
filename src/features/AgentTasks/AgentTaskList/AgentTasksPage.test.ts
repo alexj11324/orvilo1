@@ -5,7 +5,6 @@ import type { TaskListItem } from '@/store/task/slices/list/initialState';
 import {
   clampCollectionPage,
   getMyTaskViewOptions,
-  getScheduledTaskViewOptions,
   getTaskCreateActionBehavior,
   getTaskPageHeaderVisibility,
   PAGINATED_COLLECTION_PINNED_OPTIONS,
@@ -27,39 +26,21 @@ const taskUpdatedAt = (id: string, updatedAt: string): TaskListItem =>
 describe('AgentTasksPage', () => {
   describe('clampCollectionPage', () => {
     it('moves a stale last page back into range when the result total shrinks', () => {
-      expect(clampCollectionPage(2, 50)).toBe(1);
-      expect(clampCollectionPage(3, 51)).toBe(2);
+      expect(clampCollectionPage(2, 50, 50)).toBe(1);
+      expect(clampCollectionPage(3, 51, 50)).toBe(2);
     });
 
     it('keeps the first page valid for an empty result', () => {
-      expect(clampCollectionPage(1, 0)).toBe(1);
-    });
-  });
-
-  describe('getScheduledTaskViewOptions', () => {
-    it('keeps client sorting aligned with the updatedAt-desc server pagination and renders every fetched row', () => {
-      expect(
-        getScheduledTaskViewOptions({
-          ...DEFAULT_TASK_LIST_VIEW_OPTIONS,
-          orderBy: 'title',
-          orderDirection: 'asc',
-          showSubTasks: false,
-        }),
-      ).toEqual({
-        ...DEFAULT_TASK_LIST_VIEW_OPTIONS,
-        groupBy: 'automationMode',
-        hideCompleted: false,
-        orderBy: 'updatedAt',
-        orderDirection: 'asc',
-        showSubTasks: true,
-      });
+      expect(clampCollectionPage(1, 0, 50)).toBe(1);
     });
 
-    it('renders a page newest-first, like the server paginates it', () => {
-      const options = getScheduledTaskViewOptions(DEFAULT_TASK_LIST_VIEW_OPTIONS);
-      const newer = taskUpdatedAt('a', '2026-02-01');
-      const older = taskUpdatedAt('b', '2026-01-01');
-      expect(compareTaskItems(newer, older, options)).toBeLessThan(0);
+    it('clamps against the page size the collection actually pages by', () => {
+      // The bug this guards: the automations tab pages 25 at a time, so with 40
+      // automations page 2 exists. Clamping with "My tasks"' size of 50 would
+      // compute one page and snap the user straight back to page 1.
+      expect(clampCollectionPage(2, 40, 25)).toBe(2);
+      expect(clampCollectionPage(3, 40, 25)).toBe(2);
+      expect(clampCollectionPage(3, 40, 50)).toBe(1);
     });
   });
 

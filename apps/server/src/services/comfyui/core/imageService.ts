@@ -17,7 +17,7 @@ import { imageResizer } from '@/server/services/comfyui/utils/imageResizer';
 import { WorkflowDetector } from '@/server/services/comfyui/utils/workflowDetector';
 import { nanoid } from '@/utils/uuid';
 
-const log = debug('lobe-image:comfyui:image-service');
+const log = debug('orvilo-image:comfyui:image-service');
 
 /**
  * Image Service
@@ -216,7 +216,7 @@ export class ImageService {
       }
 
       // Upload to ComfyUI - use timestamp + 4-char random ID to prevent conflicts
-      const fileName = `LobeChat_img2img_${Date.now()}_${nanoid(4)}.png`;
+      const fileName = `Orvilo_img2img_${Date.now()}_${nanoid(4)}.png`;
       const uploadedFileName = await this.clientService.uploadImage(buffer, fileName);
 
       log('Uploaded to ComfyUI as:', uploadedFileName);

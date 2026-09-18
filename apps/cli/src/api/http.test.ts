@@ -13,26 +13,26 @@ vi.mock('../settings', () => ({
 }));
 
 describe('api/http auth helpers', () => {
-  const originalJwt = process.env.LOBEHUB_JWT;
-  const originalWorkspaceId = process.env.LOBEHUB_WORKSPACE_ID;
+  const originalJwt = process.env.ORVILO_JWT;
+  const originalWorkspaceId = process.env.ORVILO_WORKSPACE_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.LOBEHUB_JWT;
-    delete process.env.LOBEHUB_WORKSPACE_ID;
+    delete process.env.ORVILO_JWT;
+    delete process.env.ORVILO_WORKSPACE_ID;
   });
 
   afterEach(() => {
-    if (originalJwt === undefined) delete process.env.LOBEHUB_JWT;
-    else process.env.LOBEHUB_JWT = originalJwt;
+    if (originalJwt === undefined) delete process.env.ORVILO_JWT;
+    else process.env.ORVILO_JWT = originalJwt;
 
-    if (originalWorkspaceId === undefined) delete process.env.LOBEHUB_WORKSPACE_ID;
-    else process.env.LOBEHUB_WORKSPACE_ID = originalWorkspaceId;
+    if (originalWorkspaceId === undefined) delete process.env.ORVILO_WORKSPACE_ID;
+    else process.env.ORVILO_WORKSPACE_ID = originalWorkspaceId;
   });
 
   it('should use env JWT and workspace scope for webapi auth', async () => {
-    process.env.LOBEHUB_JWT = 'env-jwt';
-    process.env.LOBEHUB_WORKSPACE_ID = 'workspace-1';
+    process.env.ORVILO_JWT = 'env-jwt';
+    process.env.ORVILO_WORKSPACE_ID = 'workspace-1';
 
     const { getAuthInfo } = await import('./http');
     const result = await getAuthInfo();
@@ -50,7 +50,7 @@ describe('api/http auth helpers', () => {
   });
 
   it('should add workspace scope when using stored OIDC credentials for webapi auth', async () => {
-    process.env.LOBEHUB_WORKSPACE_ID = 'workspace-1';
+    process.env.ORVILO_WORKSPACE_ID = 'workspace-1';
     mockGetValidToken.mockResolvedValue({
       credentials: { accessToken: 'stored-jwt' },
     });
@@ -65,8 +65,8 @@ describe('api/http auth helpers', () => {
   });
 
   it('should add workspace scope to agent stream auth headers', async () => {
-    process.env.LOBEHUB_JWT = 'env-jwt';
-    process.env.LOBEHUB_WORKSPACE_ID = 'workspace-1';
+    process.env.ORVILO_JWT = 'env-jwt';
+    process.env.ORVILO_WORKSPACE_ID = 'workspace-1';
 
     const { getAgentStreamAuthInfo } = await import('./http');
     const result = await getAgentStreamAuthInfo();

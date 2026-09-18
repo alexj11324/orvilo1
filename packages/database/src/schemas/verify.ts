@@ -333,7 +333,7 @@ export const verifyEvidence = pgTable(
     /** Inline payload for small text evidence (dom snapshot / console log / transcript). */
     content: text('content'),
 
-    /** LobeHub document used as evidence. Agent-document binding ids are never stored here. */
+    /** Orvilo document used as evidence. Agent-document binding ids are never stored here. */
     documentId: text('document_id').references(() => documents.id, { onDelete: 'set null' }),
 
     /**

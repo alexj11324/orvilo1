@@ -99,10 +99,10 @@ export class App {
     logger.info(` lng: ${app.getLocale()}`);
     logger.info(` res: ${binDir}`);
     logger.info('----------------------------------------------');
-    logger.info('Starting LobeHub...');
+    logger.info('Starting Orvilo...');
 
     // Append the CLI wrapper directory to PATH so spawned shells can resolve
-    // `lobehub` / `lh` / `lobe`. Managed binary dirs (e.g. agent-browser) are
+    // `orvilo` / `lh` / `orvilo`. Managed binary dirs (e.g. agent-browser) are
     // augmented separately by `binaryManager.augmentPath()` during bootstrap.
     const pathSep = process.platform === 'win32' ? ';' : ':';
     process.env.PATH = `${process.env.PATH}${pathSep}${getCliWrapperDir()}`;
@@ -446,7 +446,6 @@ export class App {
       }),
     );
 
-    // refs: https://github.com/lobehub/lobe-chat/pull/7883
     // https://github.com/electron/electron/issues/46538#issuecomment-2808806722
     app.commandLine.appendSwitch('gtk-version', '3');
 
@@ -549,9 +548,9 @@ export class App {
     });
 
     // Socket path is derived from this id (`${id}-electron-ipc.sock`). Keep the
-    // package name by default; override with LOBE_IPC_ID so concurrent dev
+    // package name by default; override with ORVILO_IPC_ID so concurrent dev
     // instances get distinct sockets instead of the last one hijacking the path.
-    const ipcId = process.env.LOBE_IPC_ID || name;
+    const ipcId = process.env.ORVILO_IPC_ID || name;
     this.ipcServer = new ElectronIPCServer(ipcId, ipcServerEvents);
   }
 
@@ -566,7 +565,7 @@ export class App {
 
   private initializeBootProfileIpc() {
     ipcMain.on('desktop:boot-profile-ready', (_event, payload: DesktopBootProfilePayload) => {
-      if (process.env.LOBE_DESKTOP_BOOT_PROFILE !== '1') return;
+      if (process.env.ORVILO_DESKTOP_BOOT_PROFILE !== '1') return;
 
       const values = [
         payload?.navigationStartedAt,
@@ -584,7 +583,7 @@ export class App {
         payload.firstVisibleFrameMs - payload.loadingScreenRemovedMs;
 
       console.info(
-        `__LOBE_DESKTOP_BOOT_PROFILE__${JSON.stringify({
+        `__ORVILO_DESKTOP_BOOT_PROFILE__${JSON.stringify({
           domContentLoadedToLoadingRemovedMs,
           loadingRemovedToVisibleFrameMs,
           navigationToDomContentLoadedMs,

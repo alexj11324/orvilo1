@@ -17,14 +17,12 @@ import { statsKeys } from '@/libs/swr/keys';
 import { usageService } from '@/services/usage';
 
 import {
-  ShareButton,
   TotalAssistants,
   TotalMessages,
   TotalTokens,
   TotalTopics,
   Welcome,
 } from './features/overview';
-import { AssistantsRank, ModelsRank, TopicsRank } from './features/rankings';
 import { UsageCards, UsageTable, UsageTrends } from './features/usage';
 import { AiHeatmaps } from './features/visualization';
 import { GroupBy, type UserDisplayResolver } from './types';
@@ -39,8 +37,6 @@ interface StatsSettingProps {
   /**
    * Replace the personal Welcome banner (uses user nickname / registration
    * date) with a custom node. Pass `false` to drop the banner entirely.
-   * When set (non-undefined), the personal ShareButton is also hidden because
-   * the share link embeds user-identity context.
    */
   headerNode?: ReactNode | false;
   mobile?: boolean;
@@ -86,7 +82,6 @@ const StatsSetting = memo<StatsSettingProps>(
         {/* ========== Header Section ========== */}
         <FormGroup
           collapsible={false}
-          extra={headerNode === undefined ? <ShareButton /> : undefined}
           gap={16}
           variant={'filled'}
           title={
@@ -105,12 +100,6 @@ const StatsSetting = memo<StatsSettingProps>(
           </Grid>
           <Divider dashed />
           <AiHeatmaps mobile={mobile} />
-          <Divider dashed />
-          <Grid gap={16} rows={3} style={{ paddingBottom: 12 }}>
-            <ModelsRank />
-            <AssistantsRank mobile={mobile} />
-            <TopicsRank mobile={mobile} />
-          </Grid>
         </FormGroup>
         <FormGroup
           collapsible={false}

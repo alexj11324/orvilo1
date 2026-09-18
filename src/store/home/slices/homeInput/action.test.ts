@@ -19,13 +19,13 @@ const loadGroupsMock = vi.hoisted(() => vi.fn());
 
 const enabledModels = vi.hoisted(() => ({
   isInit: true,
-  list: [{ id: 'deepseek-v4-pro', provider: 'lobehub' }],
+  list: [{ id: 'deepseek-v4-pro', provider: 'orvilo' }],
 }));
 
 const agentState = vi.hoisted(() => ({
   agentConfigMap: {
-    agentBuilder: { model: 'deepseek-v4-pro', provider: 'lobehub' },
-    groupAgentBuilder: { model: 'deepseek-v4-pro', provider: 'lobehub' },
+    agentBuilder: { model: 'deepseek-v4-pro', provider: 'orvilo' },
+    groupAgentBuilder: { model: 'deepseek-v4-pro', provider: 'orvilo' },
     inbox: {
       model: 'gpt-4o-mini',
       provider: 'openai',
@@ -159,9 +159,9 @@ describe('HomeInputActionImpl', () => {
     });
     for (const key of ['agentBuilder', 'groupAgentBuilder'] as const) {
       delete agentState.agentMap[key].workspaceId;
-      agentState.agentConfigMap[key] = { model: 'deepseek-v4-pro', provider: 'lobehub' };
+      agentState.agentConfigMap[key] = { model: 'deepseek-v4-pro', provider: 'orvilo' };
     }
-    enabledModels.list = [{ id: 'deepseek-v4-pro', provider: 'lobehub' }];
+    enabledModels.list = [{ id: 'deepseek-v4-pro', provider: 'orvilo' }];
     enabledModels.isInit = true;
   });
 

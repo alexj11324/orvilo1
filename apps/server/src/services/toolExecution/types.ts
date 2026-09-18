@@ -1,5 +1,5 @@
-import { type LobeToolManifest } from '@orvilo/context-engine';
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloToolManifest } from '@orvilo/context-engine';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   type AgentShareVisitorContext,
   type ChatToolPayload,
@@ -152,7 +152,7 @@ export interface ToolExecutionContext {
   agentId?: string;
   /**
    * Server-side "call agent member" runner, injected per tool call by the agent
-   * runtime for group orchestration. The `lobe-group-management` server tool
+   * runtime for group orchestration. The `orvilo-group-management` server tool
    * calls `agentMember.run(...)` to fork member op(s) and returns a `deferred`
    * result; the member barrier backfills + resumes/finishes the parked supervisor.
    */
@@ -199,7 +199,7 @@ export interface ToolExecutionContext {
   /**
    * Todo items as of this tool call, reconstructed from the operation's message
    * history by the runtime executors — the tool-execution counterpart of what
-   * `serverCallLlmContextBuilder` feeds the prompt. The lobe-agent runtime needs
+   * `serverCallLlmContextBuilder` feeds the prompt. The orvilo-agent runtime needs
    * it because its own store (the topic's plan document) only exists after
    * `createPlan`, so an agent that only ever calls `createTodos` would otherwise
    * read back an empty list on every subsequent call.
@@ -232,7 +232,7 @@ export interface ToolExecutionContext {
   /**
    * Legacy agent invocation callback forwarded from RuntimeExecutorContext.
    * Kept for tool runtimes that still dispatch through exec_sub_agent style
-   * flows; `lobe-agent.callSubAgent` uses the per-call `subAgent` runner below.
+   * flows; `orvilo-agent.callSubAgent` uses the per-call `subAgent` runner below.
    */
   execSubAgent?: (params: ExecSubAgentParams) => Promise<unknown>;
   /** Per-call execution timeout resolved by the agent runtime. */
@@ -289,8 +289,8 @@ export interface ToolExecutionContext {
   rootOperationId?: string;
   /** Conversation scope captured when the operation was created */
   scope?: string | null;
-  /** Server database for LobeHub Skills execution */
-  serverDB?: LobeChatDatabase;
+  /** Server database for Orvilo Skills execution */
+  serverDB?: OrviloDatabase;
   /** Skip low-level result truncation so the AgentRuntime boundary can archive full content first. */
   skipResultTruncation?: boolean;
   /**
@@ -306,7 +306,7 @@ export interface ToolExecutionContext {
   threadId?: string | null;
   /** Stable LLM tool call ID for structured tool outcome identity. */
   toolCallId?: string;
-  toolManifestMap: Record<string, LobeToolManifest>;
+  toolManifestMap: Record<string, OrviloToolManifest>;
   /** Source tool result message ID, when it already exists. */
   toolMessageId?: string;
   /**

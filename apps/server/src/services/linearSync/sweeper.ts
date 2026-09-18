@@ -7,7 +7,7 @@ import {
   linearSyncOutbox,
   taskPlanningScopes,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 /** Keep a sweep small enough that one lost cron delivery cannot create a fan-out storm. */
 export const LINEAR_SYNC_SWEEP_DEFAULT_MAX_INSTALLATIONS = 100;
@@ -236,7 +236,7 @@ export const selectLinearSyncSweepInstallations = (input: {
  * the wakeup aggregate and cannot be rescheduled by this sweep.
  */
 export const discoverLinearSyncSweepInstallations = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   options: { maxInstallations?: number; now?: Date } = {},
 ): Promise<LinearSyncSweepDiscovery> => {
   const maxInstallations = normalizeLimit(

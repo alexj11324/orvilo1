@@ -1,7 +1,7 @@
 import {
   AgentRuntimeErrorType,
   ChatErrorType,
-  type ILobeAgentRuntimeErrorType,
+  type IOrviloAgentRuntimeErrorType,
 } from '@orvilo/types';
 
 import { matchErrorPattern } from './match';
@@ -46,7 +46,9 @@ const STATUS_REFINABLE_CODES = new Set<string>([AgentRuntimeErrorType.ProviderBi
  * `matchErrorPattern`, so this just buckets the context-less remainder by
  * status class.
  */
-const codeFromHttpStatus = (status: number | undefined): ILobeAgentRuntimeErrorType | undefined => {
+const codeFromHttpStatus = (
+  status: number | undefined,
+): IOrviloAgentRuntimeErrorType | undefined => {
   if (!status) return undefined;
   // 429 / 402 have unambiguous semantics worth special-casing.
   if (status === 429) return AgentRuntimeErrorType.RateLimitExceeded;
@@ -93,7 +95,7 @@ export interface RefineErrorInput {
  */
 export const refineErrorCode = (
   input: RefineErrorInput,
-): ILobeAgentRuntimeErrorType | undefined => {
+): IOrviloAgentRuntimeErrorType | undefined => {
   const { errorType, httpStatus, message, provider } = input;
   if (!errorType || !PATTERN_REFINABLE_CODES.has(errorType)) return undefined;
 

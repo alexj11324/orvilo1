@@ -16,7 +16,7 @@ import { HTML_THEME, KIND_LABEL, type LaneTone, type ThemeColors } from './conte
  * track (how much of this call the provider could reuse), the break marker (where reuse
  * stopped and why), and the segment colors (what the window is made of).
  *
- * Colors come from the LobeHub scales via CSS custom properties, so the light and dark
+ * Colors come from the Orvilo scales via CSS custom properties, so the light and dark
  * variants are the same document — the report follows the reader's system theme.
  */
 

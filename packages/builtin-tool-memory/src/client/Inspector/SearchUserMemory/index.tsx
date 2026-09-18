@@ -25,7 +25,7 @@ export const SearchUserMemoryInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-user-memory.apiName.searchUserMemory')}
+          {t('builtins.orvilo-user-memory.apiName.searchUserMemory')}
         </span>
       </div>
     );
@@ -44,7 +44,7 @@ export const SearchUserMemoryInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-user-memory.apiName.searchUserMemory')}:{' '}
+        {t('builtins.orvilo-user-memory.apiName.searchUserMemory')}:{' '}
       </span>
       {query && <span className={highlightTextStyles.primary}>{query}</span>}
       {!isLoading &&
@@ -59,7 +59,7 @@ export const SearchUserMemoryInspector = memo<
             fontSize={12}
             style={{ marginInlineStart: 4 }}
           >
-            ({t('builtins.lobe-user-memory.inspector.noResults')})
+            ({t('builtins.orvilo-user-memory.inspector.noResults')})
           </Text>
         ))}
     </div>

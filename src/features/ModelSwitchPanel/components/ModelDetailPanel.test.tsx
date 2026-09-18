@@ -98,9 +98,9 @@ const translations: Record<string, string> = {
   'ModelSwitchPanel.detail.rating.dimension.price': 'Price',
   'ModelSwitchPanel.detail.rating.dimension.speed': 'Speed',
   'ModelSwitchPanel.detail.rating.dimension.writing': 'Writing',
-  'lobehub.gemini-3-pro-image-preview:image.description':
-    'Localized LobeHub colon-id model description.',
-  'lobehub.test-model.description': 'Localized LobeHub model description.',
+  'orvilo.gemini-3-pro-image-preview:image.description':
+    'Localized Orvilo colon-id model description.',
+  'orvilo.test-model.description': 'Localized Orvilo model description.',
   'test-model.description': 'Localized model description.',
 };
 
@@ -186,23 +186,23 @@ const createEnabledList = (
 ];
 
 describe('ModelDetailPanel pricing', () => {
-  it('renders the LobeHub-scoped localized description for the LobeHub provider', () => {
+  it('renders the Orvilo-scoped localized description for the Orvilo provider', () => {
     const { container } = render(
       <ModelDetailPanel
         model="test-model"
-        provider="lobehub"
-        enabledList={createEnabledList('lobehub', textPricing, {
+        provider="orvilo"
+        enabledList={createEnabledList('orvilo', textPricing, {
           description: 'Fallback model description.',
         })}
       />,
     );
 
     expect(container.querySelector('.description')).toHaveTextContent(
-      'Localized LobeHub model description.',
+      'Localized Orvilo model description.',
     );
   });
 
-  it('renders the bare model-id description key for non-LobeHub providers', () => {
+  it('renders the bare model-id description key for non-Orvilo providers', () => {
     const { container } = render(
       <ModelDetailPanel
         model="test-model"
@@ -222,8 +222,8 @@ describe('ModelDetailPanel pricing', () => {
     const { container } = render(
       <ModelDetailPanel
         model="missing-locale-model"
-        provider="lobehub"
-        enabledList={createEnabledList('lobehub', textPricing, {
+        provider="orvilo"
+        enabledList={createEnabledList('orvilo', textPricing, {
           description: 'Fallback model description.',
           id: 'missing-locale-model',
         })}
@@ -235,12 +235,12 @@ describe('ModelDetailPanel pricing', () => {
     );
   });
 
-  it('resolves LobeHub descriptions when the model id contains a colon', () => {
+  it('resolves Orvilo descriptions when the model id contains a colon', () => {
     const { container } = render(
       <ModelDetailPanel
         model="gemini-3-pro-image-preview:image"
-        provider="lobehub"
-        enabledList={createEnabledList('lobehub', textPricing, {
+        provider="orvilo"
+        enabledList={createEnabledList('orvilo', textPricing, {
           description: 'Fallback image model description.',
           id: 'gemini-3-pro-image-preview:image',
         })}
@@ -248,7 +248,7 @@ describe('ModelDetailPanel pricing', () => {
     );
 
     expect(container.querySelector('.description')).toHaveTextContent(
-      'Localized LobeHub colon-id model description.',
+      'Localized Orvilo colon-id model description.',
     );
   });
 
@@ -355,9 +355,9 @@ describe('ModelDetailPanel rating', () => {
   it('hides the benchmarks section when the model has no rating', () => {
     const { container } = render(
       <ModelDetailPanel
-        enabledList={createEnabledList('lobehub', textPricing)}
+        enabledList={createEnabledList('orvilo', textPricing)}
         model="test-model"
-        provider="lobehub"
+        provider="orvilo"
       />,
     );
 
@@ -375,9 +375,9 @@ describe('ModelDetailPanel rating', () => {
 
     const { container } = render(
       <ModelDetailPanel
-        enabledList={createEnabledList('lobehub', textPricing)}
+        enabledList={createEnabledList('orvilo', textPricing)}
         model="test-model"
-        provider="lobehub"
+        provider="orvilo"
       />,
     );
 
@@ -398,9 +398,9 @@ describe('ModelDetailPanel rating', () => {
 
     const { container } = render(
       <ModelDetailPanel
-        enabledList={createEnabledList('lobehub', textPricing)}
+        enabledList={createEnabledList('orvilo', textPricing)}
         model="test-model"
-        provider="lobehub"
+        provider="orvilo"
       />,
     );
 

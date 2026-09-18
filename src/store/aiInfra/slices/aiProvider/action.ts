@@ -6,9 +6,9 @@ import type {
   AiFullModelCard,
   BuiltinModelIdentifier,
   EnabledAiModel,
-  LobeDefaultAiModelListItem,
   ModelAbilities,
   ModelParamsSchema,
+  OrviloDefaultAiModelListItem,
   Pricing,
 } from 'model-bank';
 import { isAiModelVisible } from 'model-bank/aiModel';
@@ -37,7 +37,7 @@ import { filterEnabledProvidersByModelType, filterHiddenBuiltinModels } from '@/
 export { filterEnabledProvidersByModelType, filterHiddenBuiltinModels } from '@/utils/aiProvider';
 
 interface UserScopedBuiltinModelState {
-  builtinAiModelList: LobeDefaultAiModelListItem[];
+  builtinAiModelList: OrviloDefaultAiModelListItem[];
   enabledAiModels: EnabledAiModel[];
   hiddenBuiltinModels?: BuiltinModelIdentifier[];
 }
@@ -48,7 +48,7 @@ interface UserScopedBuiltinModelState {
  * using the client default blocklist for backward compatibility.
  */
 export const resolveUserScopedBuiltinModelState = (
-  allBuiltinAiModels: LobeDefaultAiModelListItem[],
+  allBuiltinAiModels: OrviloDefaultAiModelListItem[],
   runtimeState: AiProviderRuntimeState,
   defaultHiddenBuiltinModels: BuiltinModelIdentifier[] | undefined,
 ): UserScopedBuiltinModelState => {
@@ -304,7 +304,7 @@ enum AiProviderSwrKey {
 }
 
 type AiProviderRuntimeStateWithBuiltinModels = AiProviderRuntimeState & {
-  builtinAiModelList: LobeDefaultAiModelListItem[];
+  builtinAiModelList: OrviloDefaultAiModelListItem[];
   enabledChatModelList?: EnabledProviderWithModels[];
   enabledEmbeddingModelList?: EnabledProviderWithModels[];
   enabledImageModelList?: EnabledProviderWithModels[];

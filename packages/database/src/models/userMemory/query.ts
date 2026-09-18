@@ -40,7 +40,7 @@ import {
   userMemoriesIdentities,
   userMemoriesPreferences,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { normalizeBm25MatchQuery, SAFE_BM25_QUERY_OPTIONS } from '../../utils/bm25';
 import { inJsonStringArray } from '../../utils/inJsonStringArray';
 
@@ -675,7 +675,7 @@ export const scoreHybridCandidates = <T extends { id: string; tags?: string[] | 
 
 export class UserMemoryQueryModel {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly ftsSearchCandidateSource?: FtsSearchCandidateSource,
   ) {}

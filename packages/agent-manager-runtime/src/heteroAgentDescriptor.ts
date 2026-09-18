@@ -1,7 +1,7 @@
 /**
  * Heterogeneous-agent descriptor.
  *
- * `getAgentDetail` is called by an orchestrator agent (e.g. LobeAI) to decide
+ * `getAgentDetail` is called by an orchestrator agent (e.g. OrviloAI) to decide
  * whether a target agent is fit for a job — typically "can this agent fix a bug
  * in a real codebase?". For a normal model-backed agent the answer lives in
  * `model` / `provider` / `plugins`. For a **heterogeneous** agent (an external
@@ -10,13 +10,13 @@
  * the plugin list, so we must instead
  * describe what the external runtime is and what it can do.
  *
- * This module maps a `LobeAgentAgencyConfig` into a compact, LLM-facing runtime
+ * This module maps a `OrviloAgentAgencyConfig` into a compact, LLM-facing runtime
  * descriptor plus a few human-readable lines for the tool `content`.
  */
 import type {
   DeviceExecutionTarget,
   HeterogeneousProviderConfig,
-  LobeAgentAgencyConfig,
+  OrviloAgentAgencyConfig,
 } from '@orvilo/types';
 
 type HeteroType = HeterogeneousProviderConfig['type'];
@@ -128,7 +128,7 @@ const HETERO_PROFILES: Record<HeteroType, HeteroTypeProfile> = {
   'orvilo': {
     capabilities: CODING_CAPABILITIES,
     description:
-      "Orvilo — LobeHub's builtin managed agent harness. It runs a managed local session through the configured engine (Claude Agent SDK by default, or the Codex app-server) with the app's builtin tools and MCP integrations: it can read, edit and write files, run shell commands, and complete multi-step software-engineering tasks autonomously. It does NOT use the chat `plugins`/`model` settings — the selected engine runs its own toolset and model.",
+      "Orvilo — Orvilo's builtin managed agent harness. It runs a managed local session through the configured engine (Claude Agent SDK by default, or the Codex app-server) with the app's builtin tools and MCP integrations: it can read, edit and write files, run shell commands, and complete multi-step software-engineering tasks autonomously. It does NOT use the chat `plugins`/`model` settings — the selected engine runs its own toolset and model.",
     displayName: 'Orvilo',
     kind: 'cli',
   },
@@ -189,7 +189,7 @@ export interface HeteroAgentRuntimeDescriptor {
  * agent is a normal model-backed chat agent (no `heterogeneousProvider`).
  */
 export const describeHeterogeneousAgent = (
-  agencyConfig: LobeAgentAgencyConfig | undefined,
+  agencyConfig: OrviloAgentAgencyConfig | undefined,
 ): HeteroAgentRuntimeDescriptor | undefined => {
   const provider = agencyConfig?.heterogeneousProvider;
   if (!provider?.type) return undefined;

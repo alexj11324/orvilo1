@@ -9,7 +9,7 @@ import { GoalModel } from '@/database/models/goal';
 import { MetricModel } from '@/database/models/metric';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
@@ -83,7 +83,7 @@ const notFound = () => new TRPCError({ code: 'NOT_FOUND', message: 'Metric serie
  * legitimate owner could never claim.
  */
 const assertSubjectVisible = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   ctx: { userId: string; workspaceId?: string | null },
   subjectType: MetricSubjectType,
   subjectId: string,
@@ -119,7 +119,7 @@ const assertSubjectVisible = async (
  * stops resolving instead of lingering as readable, writable telemetry.
  */
 const requireVisibleSeries = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   ctx: { metricModel: MetricModel; userId: string; workspaceId?: string | null },
   id: string,
 ) => {

@@ -29,7 +29,10 @@ import {
 } from '@orvilo/heterogeneous-agents';
 import type { AskUserBridgeOptions } from '@orvilo/heterogeneous-agents/askUser';
 import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
-import type { LobeBuiltinMcpServer, McpToolResult } from '@orvilo/heterogeneous-agents/builtinMcp';
+import type {
+  McpToolResult,
+  OrviloBuiltinMcpServer,
+} from '@orvilo/heterogeneous-agents/builtinMcp';
 import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
 import type {
   HeteroExecImageRef,
@@ -263,7 +266,7 @@ interface StartSessionParams {
    * `sendPromptWithCodexAppServer` — regardless of the Labs toggles.
    */
   orviloEngine?: OrviloEngineKind;
-  /** Credential-free LobeHub Provider reference. Desktop main resolves its secrets. */
+  /** Credential-free Orvilo Provider reference. Desktop main resolves its secrets. */
   providerBinding?: HeterogeneousProviderBindingReference;
   /** Session ID to resume (for multi-turn) */
   resumeSessionId?: string;
@@ -423,7 +426,7 @@ interface AgentSession {
   resolvedCommandSearchPath?: string;
   resumeSessionId?: string;
   sdkSession?: ClaudeAgentSdkSession;
-  /** Present iff the session runs on the server-default (LobeHub) binding. */
+  /** Present iff the session runs on the server-default (Orvilo) binding. */
   serverDefaultApiConfig?: HeterogeneousServerDefaultApiConfig;
   serverOperationToken?: string;
   sessionId: string;
@@ -514,8 +517,8 @@ export default class HeterogeneousAgentCtr {
    */
   private opIdToBrowserBinding = new Map<string, BrowserRunBinding>();
   /** Lazy single MCP server, started on first claude-code prompt. */
-  private builtinMcpServer?: LobeBuiltinMcpServer;
-  private builtinMcpStartPromise?: Promise<LobeBuiltinMcpServer>;
+  private builtinMcpServer?: OrviloBuiltinMcpServer;
+  private builtinMcpStartPromise?: Promise<OrviloBuiltinMcpServer>;
   /** One lazy, long-lived native Codex app-server connection shared by thread sessions. */
   private codexAppServerClient?: CodexAppServerClient;
   // Fresh window sits under the renderer's 2-minute auto-refresh so each
@@ -868,7 +871,7 @@ export default class HeterogeneousAgentCtr {
           agentType: session.agentType,
           code: 'cli_version_unsupported',
           command,
-          message: `Kimi Code 0.6.0 or newer is required to use a LobeHub provider. Installed version: ${status.version}.`,
+          message: `Kimi Code 0.6.0 or newer is required to use a Orvilo provider. Installed version: ${status.version}.`,
           workingDirectory,
         };
       }
@@ -882,7 +885,7 @@ export default class HeterogeneousAgentCtr {
           agentType: session.agentType,
           code: 'cli_version_unsupported',
           command,
-          message: `TRAE CLI 0.201.2 or newer is required to use a LobeHub provider. Installed version: ${status.version}.`,
+          message: `TRAE CLI 0.201.2 or newer is required to use a Orvilo provider. Installed version: ${status.version}.`,
           workingDirectory,
         };
       }
@@ -919,19 +922,19 @@ export default class HeterogeneousAgentCtr {
   }
 
   /**
-   * Global env override (`LOBE_CLAUDE_CODE_SDK`) for the SDK runtime; the
+   * Global env override (`ORVILO_CLAUDE_CODE_SDK`) for the SDK runtime; the
    * per-user Labs toggle arrives per session as `session.useClaudeCodeSdk`.
    */
   private get isClaudeCodeSdkLabEnabled(): boolean {
     return HETERO_RUNTIME_LAB_ENABLED_VALUES.has(
-      String(process.env.LOBE_CLAUDE_CODE_SDK ?? '').toLowerCase(),
+      String(process.env.ORVILO_CLAUDE_CODE_SDK ?? '').toLowerCase(),
     );
   }
 
   /** Environment override for development and automated app-server verification. */
   private get isCodexAppServerLabEnabled(): boolean {
     return HETERO_RUNTIME_LAB_ENABLED_VALUES.has(
-      String(process.env.LOBE_CODEX_APP_SERVER ?? '').toLowerCase(),
+      String(process.env.ORVILO_CODEX_APP_SERVER ?? '').toLowerCase(),
     );
   }
 
@@ -1221,15 +1224,15 @@ export default class HeterogeneousAgentCtr {
    * the same listener. Concurrent first-callers de-dupe via the in-flight
    * promise so we don't bind two ports.
    */
-  private async ensureBuiltinMcpServerStarted(): Promise<LobeBuiltinMcpServer> {
+  private async ensureBuiltinMcpServerStarted(): Promise<OrviloBuiltinMcpServer> {
     if (this.builtinMcpServer) return this.builtinMcpServer;
     if (!this.builtinMcpStartPromise) {
       this.builtinMcpStartPromise = (async () => {
-        const [{ LobeBuiltinMcpServer }, { buildBrowserMcpTools }] = await Promise.all([
+        const [{ OrviloBuiltinMcpServer }, { buildBrowserMcpTools }] = await Promise.all([
           import('@orvilo/heterogeneous-agents/builtinMcp'),
           import('@/modules/heterogeneousAgent/browserMcpTools'),
         ]);
-        const server = new LobeBuiltinMcpServer({
+        const server = new OrviloBuiltinMcpServer({
           // In-app browser control tools ride the same per-op MCP server so
           // CC can drive the browser sidebar ( M3, hetero path).
           extraTools: buildBrowserMcpTools((operationId, apiName, args) =>
@@ -1269,7 +1272,7 @@ export default class HeterogeneousAgentCtr {
     if (browserBinding?.agentId || browserBinding?.topicId) {
       this.opIdToBrowserBinding.set(operationId, browserBinding);
     }
-    const tmpConfigPath = path.join(os.tmpdir(), `lobe-cc-mcp-${operationId}.json`);
+    const tmpConfigPath = path.join(os.tmpdir(), `orvilo-cc-mcp-${operationId}.json`);
 
     // `alwaysLoad: true` is the undocumented CC flag that promotes our
     // server's tool out of the deferred set so the model calls it directly
@@ -1277,7 +1280,7 @@ export default class HeterogeneousAgentCtr {
     // 2-hop ToolSearch path if a future CC drops the flag, no breakage.
     const config = {
       mcpServers: {
-        lobe_cc: {
+        orvilo_cc: {
           alwaysLoad: true,
           type: 'http' as const,
           url: server.urlForOperation(operationId),
@@ -1556,7 +1559,7 @@ export default class HeterogeneousAgentCtr {
 
     // Revive a Claude Code session whose local transcript the CLI already
     // garbage-collected (`cleanupPeriodDays`, default 30 days). Rebuilding it
-    // from the turns LobeHub still holds turns a hard
+    // from the turns Orvilo still holds turns a hard
     // "No conversation found with session ID" into a normal `--resume` that
     // hydrates the native history. No-ops when the transcript still exists.
     // MUST run before the Claude SDK early return — both transports read the
@@ -1604,7 +1607,7 @@ export default class HeterogeneousAgentCtr {
     // starts with approvalPolicy 'never' (no AskUser/MCP intervention bridge,
     // unlike the Claude SDK path) and the exec fallback is one-shot. An Orvilo
     // agent on the codex engine therefore cannot ask the user mid-run or call
-    // the lobe_cc builtin tools — a known v1 asymmetry between the engines.
+    // the orvilo_cc builtin tools — a known v1 asymmetry between the engines.
     if (
       session.agentType === 'codex' &&
       !session.hostedProviderBinding &&
@@ -1847,7 +1850,7 @@ export default class HeterogeneousAgentCtr {
       return;
     }
 
-    // Builtin-Orvilo sessions mount the `lobe_cc` builtin MCP server through
+    // Builtin-Orvilo sessions mount the `orvilo_cc` builtin MCP server through
     // the SDK's `mcpServers` option — the CLI-spawn path wires the same server
     // via `--mcp-config`. The bridge's event pump has no child-process stdout
     // queue to share, so it starts here and is torn down with the run.
@@ -1878,7 +1881,7 @@ export default class HeterogeneousAgentCtr {
     const sdkMcpServers =
       sdkIntervention && this.builtinMcpServer
         ? {
-            lobe_cc: {
+            orvilo_cc: {
               alwaysLoad: true,
               type: 'http' as const,
               url: this.builtinMcpServer.urlForOperation(params.operationId),
@@ -3340,7 +3343,7 @@ export default class HeterogeneousAgentCtr {
   /**
    * Synchronously unlink every pending intervention's temp `mcp.json`. The
    * async exit-handler cleanup loses to Electron's main-process teardown
-   * often enough that we'd leak `lobe-cc-mcp-<opId>.json` files into
+   * often enough that we'd leak `orvilo-cc-mcp-<opId>.json` files into
    * `os.tmpdir()` on real shutdowns; sync unlink here is the only reliable
    * guarantee. Safe to call multiple times.
    */
@@ -3452,7 +3455,7 @@ export default class HeterogeneousAgentCtr {
     serverUrl: string;
     systemContext?: string;
     topicId: string;
-    /** Topic/run workspace — forwarded as `LOBEHUB_WORKSPACE_ID` for ingest. */
+    /** Topic/run workspace — forwarded as `ORVILO_WORKSPACE_ID` for ingest. */
     workspaceId?: string;
     /**
      * Called once the child process has spawned (pid available). The caller
@@ -3481,7 +3484,7 @@ export default class HeterogeneousAgentCtr {
     const workDir = cwd ?? process.cwd();
     // Let the embedded CLI classify a stale project path and finish the
     // operation through heteroFinish instead of failing this wrapper spawn as
-    // the misleading `spawn LobeHub.exe ENOENT`.
+    // the misleading `spawn Orvilo.exe ENOENT`.
     const workDirUsable = isSpawnableDirectory(workDir);
     const spawnCwd = resolveHeteroSpawnCwd(workDir);
 
@@ -3535,13 +3538,13 @@ export default class HeterogeneousAgentCtr {
       ...buildProxyEnv(this.app.storeManager.get('networkProxy')),
       ELECTRON_RUN_AS_NODE: '1',
       [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
-      LOBEHUB_JWT: jwt,
-      ...(assistantMessageId ? { LOBEHUB_ASSISTANT_MESSAGE_ID: assistantMessageId } : {}),
-      LOBEHUB_SERVER: serverUrl,
+      ORVILO_JWT: jwt,
+      ...(assistantMessageId ? { ORVILO_ASSISTANT_MESSAGE_ID: assistantMessageId } : {}),
+      ORVILO_SERVER: serverUrl,
       // Same reason `runHeteroTask` injects this for notify: without it the
       // CLI's heteroIngest/heteroFinish fall back to personal scope and the
       // workspace topic 404s (empty assistant, topic stuck `running`).
-      ...(workspaceId ? { LOBEHUB_WORKSPACE_ID: workspaceId } : {}),
+      ...(workspaceId ? { ORVILO_WORKSPACE_ID: workspaceId } : {}),
     };
 
     logger.info('spawnLhHeteroExec: type=%s op=%s topic=%s', agentType, operationId, topicId);

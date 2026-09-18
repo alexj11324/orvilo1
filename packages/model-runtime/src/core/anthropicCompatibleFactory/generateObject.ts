@@ -9,7 +9,7 @@ import { buildAnthropicMessages, buildAnthropicTools } from '../contextBuilders/
 import { buildAnthropicInitialUsage } from '../usageConverters/anthropic';
 import { withUsageCost } from '../usageConverters/utils/withUsageCost';
 
-const log = debug('lobe-model-runtime:anthropic:generate-object');
+const log = debug('orvilo-model-runtime:anthropic:generate-object');
 
 export interface AnthropicGenerateObjectConfig {
   maxTokens?: number;

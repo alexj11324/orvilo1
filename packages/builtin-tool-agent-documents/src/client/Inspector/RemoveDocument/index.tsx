@@ -41,7 +41,7 @@ export const RemoveDocumentInspector = memo<
         className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
         style={{ color: cssVar.colorError }}
       >
-        {t('builtins.lobe-agent-documents.apiName.removeDocument')}
+        {t('builtins.orvilo-agent-documents.apiName.removeDocument')}
       </span>
       {id && <span className={styles.removeChip}>{formatDocumentId(id)}</span>}
     </div>

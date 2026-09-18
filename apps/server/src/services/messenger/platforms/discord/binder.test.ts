@@ -14,7 +14,7 @@ vi.mock('@/config/messenger', () => ({
   getMessengerDiscordConfig: vi.fn(async () => ({
     applicationId: 'discord-app-id',
     botToken: 'discord-bot-token',
-    botUsername: 'lobehub-bot',
+    botUsername: 'orvilo-bot',
     publicKey: 'discord-public-key',
   })),
 }));

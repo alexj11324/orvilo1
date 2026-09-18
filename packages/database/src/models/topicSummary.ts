@@ -20,7 +20,7 @@ import {
 } from 'drizzle-orm';
 
 import { messages, topics, userSettings } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
 
 export interface TopicSummaryCandidateCursor {
@@ -64,7 +64,7 @@ const mergeAutoSummaryMetadata = (marker: NonNullable<ChatTopicMetadata['autoSum
 
 /** System-scoped queries used only by the authenticated background summary workflow. */
 export class TopicSummaryModel {
-  constructor(private readonly db: LobeChatDatabase) {}
+  constructor(private readonly db: OrviloDatabase) {}
 
   listCandidates = async ({
     cursor,

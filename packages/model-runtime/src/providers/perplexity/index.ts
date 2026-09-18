@@ -5,7 +5,7 @@ import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactor
 import { resolveParameters } from '../../core/parameterResolver';
 import type { ChatStreamPayload } from '../../types';
 
-export const LobePerplexityAI = createOpenAICompatibleRuntime({
+export const OrviloPerplexityAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.perplexity.ai',
   chatCompletion: {
     handlePayload: (payload: ChatStreamPayload) => {

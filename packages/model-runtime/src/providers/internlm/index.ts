@@ -34,4 +34,4 @@ export const params = {
   provider: ModelProvider.InternLM,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeInternLMAI = createOpenAICompatibleRuntime(params);
+export const OrviloInternLMAI = createOpenAICompatibleRuntime(params);

@@ -7,6 +7,8 @@ import { getServerDB } from '@/database/server';
 import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 
+import { workflowConcurrencyKeys } from './workflowConcurrency';
+
 export const HATCHET_WORKFLOW_PATHS = [
   '/api/agent/webhooks/bot-callback',
   '/api/agent/webhooks/group-member-callback',
@@ -67,7 +69,12 @@ export const triggerHatchetWorkflow = async (
   const requestId = options.workflowRunId ?? stableKey(JSON.stringify(payload));
   const proposedDispatchId = randomUUID();
   const deduplicationKey = stableKey(`${path}\0${requestId}`);
-  const laneKey = stableKey(options.concurrencyKey ?? requestId);
+  const { laneKey } = workflowConcurrencyKeys(
+    path,
+    proposedDispatchId,
+    payload,
+    stableKey(options.concurrencyKey ?? requestId),
+  );
   const db = await getServerDB();
   const values = {
     deduplicationKey,
@@ -122,6 +129,7 @@ export const triggerHatchetWorkflow = async (
 
   try {
     const providerRunId = await enqueueHatchetTask(HATCHET_TASK_NAMES.workflowDispatch, {
+      ...workflowConcurrencyKeys(path, dispatchId, payload, laneKey),
       deduplicationKey,
       dispatchId,
       laneKey,
@@ -175,8 +183,13 @@ export const triggerHatchetWorkflow = async (
   return { workflowRunId: `${DISPATCH_ID_PREFIX}${dispatchId}` };
 };
 
-export const cancelHatchetWorkflow = async (workflowRunId: string): Promise<boolean> => {
-  if (!workflowRunId.startsWith(DISPATCH_ID_PREFIX)) return false;
+export type HatchetCancellationResult =
+  { status: 'cancelled' } | { status: 'already-terminal' } | { status: 'not-found' };
+
+export const cancelHatchetWorkflow = async (
+  workflowRunId: string,
+): Promise<HatchetCancellationResult> => {
+  if (!workflowRunId.startsWith(DISPATCH_ID_PREFIX)) return { status: 'not-found' };
   const dispatchId = workflowRunId.slice(DISPATCH_ID_PREFIX.length);
   const db = await getServerDB();
   const [dispatch] = await db
@@ -184,7 +197,7 @@ export const cancelHatchetWorkflow = async (workflowRunId: string): Promise<bool
     .from(hatchetDispatches)
     .where(eq(hatchetDispatches.id, dispatchId))
     .limit(1);
-  if (!dispatch) return false;
+  if (!dispatch) return { status: 'not-found' };
 
   const [cancelled] = await db
     .update(hatchetDispatches)
@@ -197,17 +210,17 @@ export const cancelHatchetWorkflow = async (workflowRunId: string): Promise<bool
     )
     .returning({ providerRunId: hatchetDispatches.providerRunId });
 
-  if (cancelled?.providerRunId) {
-    await cancelHatchetTask(cancelled.providerRunId).catch((error) => {
-      console.error('[hatchet] provider cancellation failed', { dispatchId, error });
-    });
-  } else if (dispatch.status === 'cancelled' && dispatch.providerRunId) {
-    // A concurrent caller may have won the database transition. Keep provider
-    // cancellation idempotent for that case as well.
-    await cancelHatchetTask(dispatch.providerRunId).catch((error) => {
-      console.error('[hatchet] provider cancellation retry failed', { dispatchId, error });
-    });
+  const providerRunId =
+    cancelled?.providerRunId ?? (dispatch.status === 'cancelled' ? dispatch.providerRunId : null);
+  if (providerRunId) {
+    // Persist the cooperative stop first, but never report provider failure as
+    // success. A repeated request can retry the retained provider receipt.
+    await cancelHatchetTask(providerRunId);
   }
 
-  return Boolean(cancelled || dispatch.status === 'cancelled');
+  if (cancelled || (dispatch.status === 'cancelled' && providerRunId)) {
+    return { status: 'cancelled' };
+  }
+
+  return { status: 'already-terminal' };
 };

@@ -1,9 +1,13 @@
+import { createHash } from 'node:crypto';
+
 import type { Context } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 
 import { HATCHET_TASK_NAMES } from '../services/hatchet/taskNames';
 import {
   completeHatchetDispatch,
+  createWorkflowHatchetTasks,
+  enqueueStoredDispatch,
   invokeHonoHandler,
   recoverStaleHatchetDispatches,
   scheduleWorkflowCoordinationRetry,
@@ -11,12 +15,15 @@ import {
 
 const mocks = vi.hoisted(() => ({
   enqueueHatchetTask: vi.fn().mockResolvedValue('hatchet-schedule:retry'),
+  getServerDB: vi.fn(),
 }));
 
 vi.mock('@/libs/hatchet', () => ({
   cancelHatchetTask: vi.fn(),
   enqueueHatchetTask: mocks.enqueueHatchetTask,
 }));
+
+vi.mock('@/database/server', () => ({ getServerDB: mocks.getServerDB }));
 
 describe('invokeHonoHandler', () => {
   it('adapts a stored workflow payload to the Hono request contract', async () => {
@@ -32,7 +39,6 @@ describe('invokeHonoHandler', () => {
         workflowRunId: 'run-1',
       },
     );
-
     expect(result).toEqual({ body: { operationId: 'op-1' } });
   });
 
@@ -55,7 +61,6 @@ describe('invokeHonoHandler', () => {
       },
       5,
     );
-
     expect(mocks.enqueueHatchetTask).toHaveBeenCalledWith(
       HATCHET_TASK_NAMES.workflowDispatch,
       {
@@ -76,16 +81,10 @@ describe('completeHatchetDispatch', () => {
     const set = vi.fn().mockReturnValue({ where });
     const db = { update: vi.fn().mockReturnValue({ set }) };
     const clearStepResults = vi.fn().mockResolvedValue(undefined);
-
     await expect(
-      completeHatchetDispatch(
-        db as never,
-        '00000000-0000-4000-8000-000000000004',
-        clearStepResults,
-      ),
+      completeHatchetDispatch(db as never, '00000000-0000-4000-8000-000000000004', clearStepResults),
     ).resolves.toBe(false);
     expect(clearStepResults).not.toHaveBeenCalled();
-
     expect(set).toHaveBeenCalledWith({
       error: null,
       status: 'completed',
@@ -101,7 +100,6 @@ describe('recoverStaleHatchetDispatches', () => {
     const set = vi.fn().mockReturnValue({ where });
     const db = { update: vi.fn().mockReturnValue({ set }) };
     const now = new Date('2026-09-16T20:00:00.000Z');
-
     await expect(recoverStaleHatchetDispatches(db as never, now)).resolves.toEqual([
       { id: '00000000-0000-4000-8000-000000000005' },
     ]);
@@ -111,4 +109,103 @@ describe('recoverStaleHatchetDispatches', () => {
       updatedAt: now,
     });
   });
+});
+
+describe('workflow concurrency routing', () => {
+  it('registers the serial gate and the shared five-slot capacity together', () => {
+    const task = vi.fn((definition) => definition);
+    createWorkflowHatchetTasks({ task } as never);
+    const dispatch = task.mock.calls.find(
+      ([definition]) => definition.name === HATCHET_TASK_NAMES.workflowDispatch,
+    )![0];
+    expect(dispatch.concurrency).toEqual([
+      expect.objectContaining({
+        maxRuns: 1,
+        expression: 'has(input.serialKey) ? input.serialKey : input.laneKey',
+      }),
+      expect.objectContaining({ maxRuns: 5, expression: 'input.laneKey' }),
+    ]);
+    const input = {
+      deduplicationKey: 'key',
+      dispatchId: '00000000-0000-4000-8000-000000000010',
+      laneKey: 'a'.repeat(64),
+    };
+    expect(dispatch.inputValidator.parse(input)).toEqual(input);
+    expect(dispatch.inputValidator.parse({ ...input, serialKey: input.dispatchId }).serialKey).toBe(input.dispatchId);
+  });
+
+  it('preserves both gates when an exhausted coordination retry is requeued', async () => {
+    const id = '00000000-0000-4000-8000-000000000010';
+    await scheduleWorkflowCoordinationRetry({
+      deduplicationKey: 'topic-run', dispatchId: id, laneKey: 'a'.repeat(64), serialKey: id,
+    }, 5);
+    expect(mocks.enqueueHatchetTask).toHaveBeenLastCalledWith(HATCHET_TASK_NAMES.workflowDispatch, {
+      coordinationRetry: true, deduplicationKey: 'topic-run:coordination:5',
+      dispatchId: id, laneKey: 'a'.repeat(64), serialKey: id,
+    }, { delayMs: 30_000 });
+  });
+
+  it.each([
+    ['/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic', true],
+    ['/api/workflows/agent-signal/run', false],
+  ] as const)('restores the concurrency route for durable pending %s', async (path, memory) => {
+    const returning = vi.fn().mockResolvedValue([{ status: 'queued' }]);
+    const where = vi.fn().mockReturnValue({ returning });
+    mocks.getServerDB.mockResolvedValue({ update: vi.fn(() => ({ set: vi.fn(() => ({ where })) })) });
+    const id = '00000000-0000-4000-8000-000000000010';
+    await enqueueStoredDispatch({
+      id, laneKey: 'a'.repeat(64),
+      payload: { path, workflowRunId: 'run-1', body: { userIds: ['user-1'] } },
+    } as never);
+    const input = mocks.enqueueHatchetTask.mock.calls.at(-1)![1];
+    expect(input.laneKey).toBe(memory
+      ? createHash('sha256').update('memory-user-memory.process-topic.user-1').digest('hex')
+      : 'a'.repeat(64));
+    if (memory) expect(input.serialKey).toBe(id);
+    else expect(input).not.toHaveProperty('serialKey');
+  });
+});
+
+describe('legacy memory workflow routing', () => {
+  it.each([undefined, '00000000-0000-4000-8000-000000000010'])(
+    'normalizes an old topic lane before claiming any business work (serialKey=%s)',
+    async (serialKey) => {
+      mocks.enqueueHatchetTask.mockClear();
+      const id = '00000000-0000-4000-8000-000000000010';
+      const oldLane = 'a'.repeat(64);
+      const dispatch = {
+        id, laneKey: oldLane, status: 'queued',
+        payload: {
+          path: '/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic',
+          workflowRunId: 'legacy', body: { userIds: ['user-1'], topicIds: ['topic-a'] },
+        },
+      };
+      const set = vi.fn((_values: Record<string, unknown>) => ({
+        where: vi.fn(() => ({ returning: vi.fn().mockResolvedValue([]) })),
+      }));
+      const limit = vi.fn().mockResolvedValueOnce([dispatch]).mockResolvedValueOnce([{ status: 'queued' }]);
+      mocks.getServerDB.mockResolvedValue({
+        select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit })) })) })),
+        update: vi.fn(() => ({ set })),
+      });
+      const definitions: any[] = [];
+      createWorkflowHatchetTasks({
+        task: (definition: unknown) => { definitions.push(definition); return definition; },
+      } as never);
+      const definition = definitions.find(task => task.name === HATCHET_TASK_NAMES.workflowDispatch);
+      const result = await definition.fn({
+        deduplicationKey: 'legacy', dispatchId: id, laneKey: oldLane,
+        ...(serialKey ? { serialKey } : {}),
+      }, { retryCount: () => 0 });
+      expect(result).toEqual({ rerouted: true, success: true });
+      expect(mocks.enqueueHatchetTask).toHaveBeenCalledExactlyOnceWith(
+        HATCHET_TASK_NAMES.workflowDispatch,
+        expect.objectContaining({
+          dispatchId: id, serialKey: id,
+          laneKey: createHash('sha256').update('memory-user-memory.process-topic.user-1').digest('hex'),
+        }),
+      );
+      expect(set.mock.calls.some(([values]) => values.status === 'running')).toBe(false);
+    },
+  );
 });

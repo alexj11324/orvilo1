@@ -2927,7 +2927,7 @@ export class MemoryExtractionWorkflowService {
     }
 
     return triggerHatchetWorkflow(WORKFLOW_PATHS.topic, payload, {
-      concurrencyKey: `memory-user-memory.process-topic.${userId}.${payload.topicIds?.[0] ?? 'unknown'}`,
+      concurrencyKey: `memory-user-memory.process-topic.${userId}`,
       headers: options?.extraHeaders,
     });
   }

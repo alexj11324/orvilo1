@@ -909,6 +909,10 @@ export class AgentRuntimeService {
         sourceMessageId: appContext?.sourceMessageId,
       },
       chatGroupId: appContext?.groupId ?? null,
+      // Engine provenance: every operation created through this service ran on
+      // the in-process step loop, so a trace/audit can prove a run did NOT take
+      // the heterogeneous/ACP path without inferring it from model/provider.
+      executionEngine: 'native-runtime',
       maxSteps,
       // Persist the Agent Signal run marker on the operation row so server-side
       // self-iteration tools can read it back (operation.metadata.agentSignal) at tool-call

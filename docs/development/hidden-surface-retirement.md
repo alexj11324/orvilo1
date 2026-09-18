@@ -154,14 +154,83 @@ agent/:aid/docs/:docId       → 与主应用重复（见下）
 
 **结论**：只退役 acceptance /verify 路由与其专属文件；`agent/:aid/docs/:docId` 路由、应用本体与部署入口**保留**，并把 rewrite 从「无条件」改为**仅移动端命中**。
 
+## 交付记录
+
+提交：`929106de 🔥 refactor(product)!: retire standalone acceptance/verify and the platform skill chain`
+基线：`origin/canary@a90c4aea`　规模：**367 文件，+3,890 / −30,224 行（净 −26,334）**，其中 193 删除 / 12 重命名。
+
+| 工作包              | 内容                                                                                                                       | 规模                     | 验证                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ---------------------- |
+| 开发指令            | `AGENTS.md`、`.agents/skills/pr/SKILL.md`、`.github/PULL_REQUEST_TEMPLATE.md`、`testing-heterogeneous-agents`              | 5 文件                   | lint clean             |
+| G01 能力决策源      | `packages/app-config/src/routes/settings.ts`（34 tab 全覆盖）+ 三处侧栏 + 工作区别名派生                                   | 7 新 / 7 改              | 独立复核 18 tests      |
+| G02 Skill 全链      | Connector 解耦（`Settings/connector/**` 新 14 文件）+ 技能设置 / 商店 / 编辑 / 市场 / CLI / 内置工具包                     | 净删 11,669 行 / 94 文件 | 56 files · 474 tests   |
+| G03 Acceptance 全链 | 独立平台 + AcceptanceSkill 分发链                                                                                          | 91 文件 / 11,368 行      | 56 files · 474 tests   |
+| G04 隐形页面        | 自建 OAuth 应用控制台 + Referral 空壳页                                                                                    | 14 删 / 13 改            | 含 2 新回归门          |
+| G06 结构门禁        | 跨包**双向**门禁（退役面不得复活 / 保留面不得消失）                                                                        | 1 新                     | 10 passed，**已证伪**  |
+| C0 接线             | `componentMap{,.desktop}`、`lambda/index.ts`、CLI `program.ts`、三处侧栏、`WORKSPACE_SETTINGS_ALIASES`、`proxy.ts` matcher | 16 文件                  | lint clean · 71 passed |
+
+**提交后复跑**：16 个门禁文件 / **249 tests passed**（lint-staged 的格式化未破坏任何东西）。
+
+### G07 独立复核后的修正（第二轮）
+
+独立复核给出 `REQUEST CHANGES`，6 项缺陷。**共同形状**：删掉了页面 / 行为，但它的**入口**和**消费者**活了下来 —— 这正是本次要消灭的那类残留，只是发生在自己身上。
+
+| 编号 | 缺陷                                                                                           | 修法                                                                                            |
+| ---- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| D1   | 项目验收页删了 UI，`Sidebar.tsx` / `ProjectDashboard.tsx` 仍 `import getProjectAcceptancePath` | 连同已无用的 `ClipboardCheckIcon` / `TriangleAlertIcon` 一并删除（会直接编译失败）              |
+| D2   | `buildRepairPrompt` 仍在教用户跑已退役的 `lh acceptance feedback / run`                        | 改为指向应用内验收面板 + `orvilo-acceptance-evidence` 工具（`listCriteria` / `submitEvidence`） |
+| D3   | 命令面板与侧栏页脚仍能点进 `/settings/referral`                                                | 删条目；`Footer` 里随之失去唯一消费者的 `enableBusinessFeatures` 订阅与 memo 依赖一并清除       |
+| D4   | 技能门禁用 `existsSync`，跟随后解析符号链接，悬空 `.agents/skills` 链接读作「不存在」          | 改用 `lstatSync(..., { throwIfNoEntry: false })`                                                |
+| D5   | 设置搜索索引仍留着退役 tab 的 keyword 映射与 item                                              | 删 4 个映射 + 5 条 item，并把门禁扩到 `OAuthApps` / `Referral`（原先只覆盖 `Skill`）            |
+| D6   | workbench 的 description 仍从 `verify` i18n 命名空间读取，宣传已退役的平台                     | 改为静态文案（`noindex, nofollow` 标签，但过期文案仍不该发）                                    |
+
+**`enableOAuthApps`（D6 的另一半）判定为不做**：`packages/types` / `packages/const` 的偏好位保持不动，理由见「判定为不做」表的兼容性条目。
+
+**门禁在第二轮又抓到 1 处复核没发现的真缺陷**：
+`src/routes/(mobile)/me/settings/features/useCategory.tsx:102` 把 Referral 行**写在 `offered(SettingsTabs.Plans)` 分支内部**，而不是走自己的 `offered()` 门 —— 所以能力注册表把它标成 `retired` 也拦不住它。同一处的 `src/routes/(mobile)/settings/_layout/Header.tsx` 还给它留着标题映射。
+**移动端测试把坏状态写成了正向断言**（`arrayContaining([... SettingsTabs.Referral])`），等于把它固化。
+
+三处已删，并新增门禁「每个退役 tab 不得出现在任一设置侧栏（双壳层）」。
+**已证伪**：还原含 Referral 的移动端文件后，门禁转红并点名文件与 tab；改回后 10 passed。
+
+### 判定为「不做」并附理由
+
+| 项                                                           | 理由                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/workbench` 整包                                        | `@/features/AgentDocumentReader` 全仓**只有 workbench 在用**；主应用桌面路由用的是**另一个**组件 `AgentDocumentPage`；**`mobileRouter.config.tsx` 零 `docs` 路由**—— 移动端读 Agent 文档只有这一条路。迁移前置未满足，整包与部署入口保留，只退役其 acceptance/verify 路由并把 rewrite 改为设备门控。 |
+| `Plans` / `Credits` / `Billing` / `Usage` 及工作区同名插槽   | `NEEDS_TRACE`。10 多个工作区路由引用 `BusinessSettingPages`，那是**私有业务 overlay 的注入点**，本机验不了。不得以开源默认为空推定线上为空。                                                                                                                                                         |
+| `ragEval` 前端死链                                           | `NEEDS_TRACE`。`src/store/library/slices/ragEval/**` 无调用者，但它挂在 `library` store 上对外暴露，**下游私有 overlay 可能调用**。                                                                                                                                                                  |
+| `/memory` 外壳                                               | 实质部分已由上一轮完成（导航项 `tier: 'retired'`，`/memory/preferences` 作为 `stillResolves` 的数据管理入口保留）。「移走外壳」意味着给偏好管理器换路由 —— 用户可见的导航变更，且方案自己警告「不得删除用户唯一的数据管理路径」，本机无法做浏览器级验证。                                            |
+| `orvilo-browser`                                             | **未退役**，仍在发布包中。`feat/acp-P60-browser-use` 正在处理。                                                                                                                                                                                                                                      |
+| `verify` router 的 14 个零引用 procedure                     | `createRun`/`listRuns` 被 `agentEval` 用、`upsertReport` 被引擎 `reporter.ts` 用、`ingestResult` 被 hetero ingest 测试用。删它们会波及引擎与 eval 包。                                                                                                                                               |
+| `AcceptanceService.attachRun`、`filterManageableAcceptances` | router 包装删除后已无生产调用者，只剩测试。但两者都在共享门控引擎内，删除应走门控评审。                                                                                                                                                                                                              |
+
+### 已知的既有问题（非本次引入，已在基线验证）
+
+`src/libs/oidc-provider/provider.test.ts`（4 例）与 `src/features/Conversation/WorkingSidebar/__tests__/index.test.tsx`（3–4 例）
+在主仓库（代码 ≈ canary）上**本来就红**。
+
+本机 load 很高时，宽并行跑会出现**成批超时形状的假失败**。判定方法：用**同一命令跑两次**—— 两次得到**不同的失败集合**即证明非确定性。
+实测：第一次 11 failed / 2401 passed，第二次 2 failed / 2410 passed，两次唯一共同的失败是上面那个基线红文件。
+
+`src/features/HomeSidebar/Footer/index.test.tsx` 有 2 条 `@eslint-react/no-unnecessary-use-prefix` **警告**（非错误）。
+误报：`vi.doMock` 的工厂返回 `useBillboardMenuItems` / `useActiveNavKey`，这些名字**必须**保持 `use` 前缀才能被被测组件导入，但工厂本身不调用 hook。
+已用 `git stash` 取 HEAD 版本单独跑 eslint 核对：**基线同样两条**，非本次引入。
+
+### 一处需要在 PR 里显式声明的**不可逆**后果
+
+自建 OAuth 客户端记录进 `oidcClients` 表，而 `adapter.ts:294-297` 把 `enabled === false` 当作「client 不存在」。
+`setEnabled` 的唯一入口随控制台退役，因此**只有被用户显式停用过的自建 client 会永久无法复活**（只能直接改库）。
+静态第一方 client（desktop /mobile/cli/market）来自 provider 的 `defaultClients`，完全不受影响。
+
 ## 波次与状态
 
-| 波次 | 内容                                                | 状态   |
-| ---- | --------------------------------------------------- | ------ |
-| A    | G00 清点（本文件）+ G01 能力决策源 + 开发指令修正   | 进行中 |
-| B    | G02 Skill 全链 / G03 Acceptance 收敛 / G04 隐形页面 | 待办   |
-| C    | G05 后台停止与历史收尾 + G06 防复活 CI 门禁         | 待办   |
-| D    | G07 独立验证与整合                                  | 待办   |
+| 波次 | 内容                                                | 状态                                    |
+| ---- | --------------------------------------------------- | --------------------------------------- |
+| A    | G00 清点（本文件）+ G01 能力决策源 + 开发指令修正   | **完成**                                |
+| B    | G02 Skill 全链 / G03 Acceptance 收敛 / G04 隐形页面 | **完成**（与 A 合并为一次提交）         |
+| C    | G05 后台停止与历史收尾 + G06 防复活 CI 门禁         | **完成**（G05 的 `NEEDS_TRACE` 项见上） |
+| D    | G07 独立复核                                        | **完成**（`REQUEST CHANGES` → 已修正）  |
 
 ## 协调点
 

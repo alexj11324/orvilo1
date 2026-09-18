@@ -58,15 +58,8 @@ describe('the self-built OAuth app console (HS-50) stays retired', () => {
     expect(LAB_FEATURES.map((feature) => feature.flag)).not.toContain('enableOAuthApps');
   });
 
-  it('lists the tab in no settings sidebar', () => {
-    for (const file of [
-      'src/features/Settings/hooks/useCategory.tsx',
-      'src/features/WorkspaceSetting/hooks/useCategory.tsx',
-      'src/routes/(mobile)/me/settings/features/useCategory.tsx',
-    ]) {
-      expect(read(file), `${file} still links the console`).not.toContain('OAuthApps');
-    }
-  });
+  // The sidebar check lives in the shared describe below — it covers every
+  // retired tab on both shells, so it is not repeated here.
 });
 
 describe('the Referral shell settings page (HS-52) stays retired', () => {
@@ -92,6 +85,66 @@ describe('the Referral shell settings page (HS-52) stays retired', () => {
         exists(`src/business/client/BusinessSettingPages/${page}.tsx`),
         `${page} was removed with the Referral page`,
       ).toBe(true);
+    }
+  });
+});
+
+describe('a retired settings tab leaves no way to reach it', () => {
+  // Deleting the page is the easy half. Every *entry point* into it ships its
+  // own wiring, and each one survived the first pass independently: the search
+  // index kept its keywords, the command palette kept its destination, and the
+  // sidebar footer kept its link. A user could still click straight into a
+  // not-found — which is precisely what "retired" is supposed to prevent.
+  //
+  // These assert on the wiring files as text, because the failure mode is a
+  // *registration* coming back, not a behaviour changing.
+  const RETIRED_TABS = ['OAuthApps', 'Referral', 'Skill'] as const;
+
+  it('keeps no search-index wiring for a retired tab', () => {
+    const items = read('src/features/SettingsSearch/items.ts');
+
+    for (const tab of RETIRED_TABS) {
+      expect(items, `SettingsTabs.${tab} still has search-index wiring`).not.toContain(
+        `SettingsTabs.${tab}`,
+      );
+    }
+  });
+
+  it('keeps every retired tab out of every settings sidebar, on both shells', () => {
+    // The desktop and mobile trees spell their tab lists out separately, which
+    // is how the mobile Referral row outlived the page: it was listed *inside*
+    // the Plans gate rather than behind its own, so retiring the page left the
+    // row pointing at a not-found. `SettingsTabs.<tab>` is also a substring of
+    // `WorkspaceSettingsTabs.<tab>`, so this one pattern covers both enums.
+    for (const file of [
+      'src/features/Settings/hooks/useCategory.tsx',
+      'src/features/WorkspaceSetting/hooks/useCategory.tsx',
+      'src/routes/(mobile)/me/settings/features/useCategory.tsx',
+      'src/routes/(mobile)/settings/_layout/Header.tsx',
+    ]) {
+      const source = read(file);
+
+      for (const tab of RETIRED_TABS) {
+        expect(source, `${file} still lists SettingsTabs.${tab}`).not.toContain(
+          `SettingsTabs.${tab}`,
+        );
+      }
+    }
+  });
+
+  it('keeps no palette entry, footer link or path builder for a retired page', () => {
+    const retiredPaths = ['/settings/referral', 'projectAcceptancePath'];
+
+    for (const file of [
+      'src/features/CommandMenu/utils/contextCommands.ts',
+      'src/features/HomeSidebar/Footer/index.tsx',
+      'src/features/Projects/Layout/navigation.ts',
+      'src/features/Projects/Layout/Sidebar.tsx',
+      'src/features/Projects/Workspace/ProjectDashboard.tsx',
+    ]) {
+      for (const retired of retiredPaths) {
+        expect(read(file), `${file} still wires up ${retired}`).not.toContain(retired);
+      }
     }
   });
 });

@@ -135,9 +135,11 @@ describe('mobile settings useCategory', () => {
         SettingsTabs.Usage,
         SettingsTabs.Credits,
         SettingsTabs.Billing,
-        SettingsTabs.Referral,
       ]),
     );
+    // The Referral row rode along inside this gate, which is how it outlived the
+    // page it pointed at. It must stay out of the group on every deployment.
+    expect(keys).not.toContain(SettingsTabs.Referral);
   });
 
   // Regression: API Key was reachable from two gates — `showApiKeyManage` beside

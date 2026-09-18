@@ -6,7 +6,6 @@ import {
   CreditCard,
   Database,
   EllipsisIcon,
-  Gift,
   Info,
   KeyIcon,
   KeyRound,
@@ -97,11 +96,10 @@ export const useCategory = (): CategoryGroup[] => {
               key: SettingsTabs.Billing,
               label: t('subscription:tab.billing'),
             }),
-            makeItem({
-              icon: Gift,
-              key: SettingsTabs.Referral,
-              label: t('subscription:tab.referral'),
-            }),
+            // No Referral entry: that settings page was an empty shell and has
+            // been retired, so a row here would open a not-found. It used to be
+            // listed unconditionally inside the Plans gate, which is how it
+            // outlived the page on mobile.
           ]
         : []),
     ];

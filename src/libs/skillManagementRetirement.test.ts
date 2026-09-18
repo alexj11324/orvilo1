@@ -20,7 +20,7 @@
  *                  read-only skill APIs the agent runtime still resolves
  *                  through
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -28,7 +28,21 @@ import { describe, expect, it } from 'vitest';
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 
 const read = (relativePath: string) => readFileSync(path.join(repoRoot, relativePath), 'utf8');
-const exists = (relativePath: string) => existsSync(path.join(repoRoot, relativePath));
+
+/**
+ * `lstatSync`, not `existsSync`.
+ *
+ * This suite guards the `.agents/skills` ecosystem, where the repository keeps
+ * symlinks (`.claude/skills`, `.cursor/skills`, `.codex/skills` all point into
+ * `.agents/skills`). Retiring a symlinked surface leaves a *dangling* link
+ * behind, and `existsSync` follows links — it answers `false` for a link whose
+ * target is gone, which is indistinguishable from the path never existing.
+ * `lstatSync` stats the link itself, so a dangling entry is caught instead of
+ * passing the gate written to catch it. Verified by falsification: pointing
+ * `src/features/SkillStore` at a missing target must turn this suite red.
+ */
+const exists = (relativePath: string) =>
+  lstatSync(path.join(repoRoot, relativePath), { throwIfNoEntry: false }) !== undefined;
 
 describe('the platform Skill management chain stays retired', () => {
   describe('the skill management surfaces are gone', () => {

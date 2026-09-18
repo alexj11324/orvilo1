@@ -18,6 +18,30 @@ const migrationsFolder = join(__dirname, '../../migrations');
 
 const isServerDBMode = process.env.TEST_SERVER_DB === '1';
 
+const LOCAL_TEST_DB_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+
+/**
+ * Server-mode tests run the full migration set and destructive fixtures
+ * against `DATABASE_TEST_URL`. Refuse anything that is not a loopback or
+ * docker-internal host unless explicitly overridden — a shared or
+ * production URL must never be reachable from a test run (AC-41).
+ */
+export const assertTestDatabaseUrl = (connectionString: string) => {
+  const hostname = new URL(connectionString).hostname;
+  const isLocal =
+    LOCAL_TEST_DB_HOSTS.has(hostname) ||
+    hostname.endsWith('.local') ||
+    hostname.endsWith('.internal') ||
+    // Single-label docker-compose service names (e.g. `postgres`, `db`).
+    !hostname.includes('.');
+  if (!isLocal && process.env.ALLOW_NONLOCAL_TEST_DB !== '1') {
+    throw new Error(
+      `Refusing to run tests against non-local database host "${hostname}". ` +
+        'Point DATABASE_TEST_URL at a disposable local database, or set ALLOW_NONLOCAL_TEST_DB=1 to override.',
+    );
+  }
+};
+
 let testClientDB: ReturnType<typeof pgliteDrizzle<typeof schema>> | null = null;
 let testServerDB: ReturnType<typeof nodeDrizzle<typeof schema>> | null = null;
 
@@ -31,6 +55,8 @@ export const getTestDB = async (): Promise<OrviloDatabase> => {
     if (!connectionString) {
       throw new Error('DATABASE_TEST_URL is not set');
     }
+
+    assertTestDatabaseUrl(connectionString);
 
     const client = new NodePool({ connectionString });
     testServerDB = nodeDrizzle(client, { schema });

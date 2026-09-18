@@ -2120,7 +2120,8 @@ export class LinearSyncWorker {
     const teamModel = installer ? new TeamModel(this.db, installer, this.workspaceId) : null;
     let linked = 0;
     for (const remote of eligible) {
-      let localTeamId = (await this.model.findTeamLinkByLinearTeamId(remote.id))?.teamId;
+      const existingLink = await this.model.findTeamLinkByLinearTeamId(remote.id);
+      let localTeamId = existingLink?.teamId;
       if (!localTeamId && teamModel) {
         localTeamId =
           (await teamModel.findByKey(remote.key))?.id ??
@@ -2162,6 +2163,12 @@ export class LinearSyncWorker {
         syncState: 'synced',
         teamId: localTeamId,
       });
+      // A link coming back to 'synced' (re-approval after being unlinked,
+      // conflict resolution, …) revives the intents that were paused while it
+      // was out of scope.
+      if (existingLink && existingLink.syncState !== 'synced') {
+        await this.model.requeueTeamLinkOutbox(remote.id);
+      }
       linked += 1;
     }
 

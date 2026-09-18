@@ -1097,6 +1097,28 @@ export class LinearSyncModel {
       );
   }
 
+  /**
+   * Requeue outbox rows paused while a team link was unlinked. Called when the
+   * link returns to 'synced' so queued intents resume instead of staying
+   * paused forever. The lease fence bump prevents a stale in-flight worker
+   * from writing results into the revived row.
+   */
+  async requeueTeamLinkOutbox(linearTeamId: string) {
+    await this.db.execute(sql`
+      UPDATE linear_sync_outbox AS outbox
+      SET status = 'pending', available_at = now(), locked_until = NULL,
+          lease_owner = NULL, lease_fence = lease_fence + 1, updated_at = now()
+      WHERE outbox.workspace_id = ${this.workspaceId}
+        AND outbox.status = 'paused'
+        AND EXISTS (
+          SELECT 1 FROM linear_issue_links AS link
+          WHERE link.id = outbox.link_id
+            AND link.workspace_id = ${this.workspaceId}
+            AND link.linear_team_id = ${linearTeamId}
+        )
+    `);
+  }
+
   async transaction<T>(callback: (model: LinearSyncModel, db: LobeChatDatabase) => Promise<T>) {
     return this.db.transaction((tx) =>
       callback(

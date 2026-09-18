@@ -1418,7 +1418,7 @@ describe('LinearSyncModel', () => {
     };
 
     await link('lin-eng', 'ENG');
-    await link('lin-sec', 'SEC');
+    const secLink = await link('lin-sec', 'SEC');
     // A link under a different installation must not be touched.
     const otherInstallation = '00000000-0000-4000-8000-000000000099';
     await db.insert(linearInstallations).values({
@@ -1450,5 +1450,40 @@ describe('LinearSyncModel', () => {
       'lin-sec': 'unlinked',
       'lin-other': 'synced',
     });
+
+    // Outbox rows paused while the team link was unlinked revive when the
+    // link is re-approved — otherwise the queued write would be lost forever.
+    const taskModel = new TaskModel(db, userId, workspaceId);
+    const task = await taskModel.create({
+      instruction: 'team-scoped write intent',
+      name: 'SEC scoped task',
+      teamId: secLink.teamId,
+    });
+    const linkRow = await model.createIssueLink({
+      installationId,
+      linearIdentifier: 'SEC-9',
+      linearIssueId: 'linear-issue-sec-9',
+      linearTeamId: 'lin-sec',
+      organizationId: 'linear-org-1',
+      taskId: task.id,
+    });
+    await db.insert(linearSyncOutbox).values({
+      installationId,
+      linkId: linkRow.id,
+      operation: 'linear-issue:update:test-sec',
+      expectedLocalRevision: 1,
+      payload: { title: 'queued while unlinked' },
+      status: 'paused',
+      taskId: task.id,
+      workspaceId,
+    });
+
+    await model.requeueTeamLinkOutbox('lin-sec');
+
+    const [outboxRow] = await db
+      .select()
+      .from(linearSyncOutbox)
+      .where(eq(linearSyncOutbox.operation, 'linear-issue:update:test-sec'));
+    expect(outboxRow.status).toBe('pending');
   });
 });

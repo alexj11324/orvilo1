@@ -58,6 +58,12 @@ export function defineConfig() {
     '/oidc',
     '/oauth/connector',
     '/oauth/linear',
+    // The whole `(backend)/market` subtree is Bearer-token API, not SPA. The
+    // trailing slash matters: `/market-auth-callback` is an auth SPA page that
+    // shares the `/market` prefix and must still be rewritten. Needed because
+    // the proxy matcher's `/:workspaceSlug/agent(.*)` entry matches
+    // `/market/agent/**` (first segment `market` parses as the slug).
+    '/market/',
   ];
 
   const defaultMiddleware = (request: NextRequest) => {
@@ -254,6 +260,12 @@ export function defineConfig() {
     '/oidc/interaction/(.*)',
     // market
     '/market-auth-callback',
+    // `(backend)/market` API subtree — auth is Bearer/trusted-client-token in
+    // the handlers (`MarketService.createFromRequest`), never the better-auth
+    // session, so session-gating would 302 API clients to /signin. Previously
+    // unreachable by the matcher; `/:workspaceSlug/agent(.*)` now covers
+    // `/market/agent/**`, so the exemption must be explicit.
+    '/market/(.*)',
     // public share pages
     '/share(.*)',
     // standalone verification report viewer — the run id in the URL is the

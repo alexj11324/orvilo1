@@ -21,7 +21,6 @@ export const config = {
     '/apps(.*)',
     '/community',
     '/community(.*)',
-    '/:workspaceSlug/community(.*)',
     '/labs',
     '/eval',
     '/eval(.*)',
@@ -30,20 +29,34 @@ export const config = {
     '/a/(.*)',
     '/agent',
     '/agent(.*)',
+    // `/agents` and `/memory` were previously reachable only because the
+    // `/agent(.*)` and `/me(.*)` prefix wildcards happened to overlap them;
+    // the explicit entries make that coverage intentional.
+    '/agents',
+    '/agents(.*)',
+    '/automations',
+    '/automations(.*)',
     '/group',
     '/group(.*)',
     '/changelog(.*)',
     '/settings(.*)',
     '/image',
     '/video',
+    '/inbox',
+    '/inbox(.*)',
     '/invite',
     '/invite(.*)',
+    '/memory',
+    '/memory(.*)',
     '/resource',
     '/resource(.*)',
     '/profile(.*)',
     '/page',
     '/page(.*)',
-    '/:workspaceSlug/page(.*)',
+    '/project',
+    '/project(.*)',
+    '/projects',
+    '/projects(.*)',
     '/tasks',
     '/tasks(.*)',
     '/task',
@@ -70,6 +83,37 @@ export const config = {
     '/oauth(.*)',
     '/oidc(.*)',
     '/market-auth-callback(.*)',
+
+    // Workspace-scoped SPA mirrors — `/{workspaceSlug}/<segment>` for every
+    // segment the router mounts under `/:workspaceSlug` (the shared main-area
+    // children plus the workspace-only `settings` and `billing` trees).
+    // Segments must be enumerated explicitly: a bare `/:workspaceSlug` entry
+    // would also swallow single-segment files like `/manifest.json`, because
+    // Next appends an optional transport suffix `(\.json|\.rsc|…)?` to every
+    // matcher — `manifest` + `.json` would parse as slug + suffix. Workspace
+    // home `/{slug}` itself therefore stays unmatched on direct load — a known
+    // limitation. Backend subtrees stay safe even where a second segment does
+    // equal one of these literals (`/api/agent`, `/market/agent`): the
+    // middleware short-circuits them via `backendApiEndpoints`.
+    '/:workspaceSlug/agent(.*)',
+    '/:workspaceSlug/agents(.*)',
+    '/:workspaceSlug/automations(.*)',
+    '/:workspaceSlug/billing(.*)',
+    '/:workspaceSlug/community(.*)',
+    '/:workspaceSlug/eval(.*)',
+    '/:workspaceSlug/goal(.*)',
+    '/:workspaceSlug/group(.*)',
+    '/:workspaceSlug/image(.*)',
+    '/:workspaceSlug/inbox(.*)',
+    '/:workspaceSlug/memory(.*)',
+    '/:workspaceSlug/page(.*)',
+    '/:workspaceSlug/project(.*)',
+    '/:workspaceSlug/projects(.*)',
+    '/:workspaceSlug/resource(.*)',
+    '/:workspaceSlug/settings(.*)',
+    '/:workspaceSlug/task(.*)',
+    '/:workspaceSlug/tasks(.*)',
+    '/:workspaceSlug/video(.*)',
   ],
 };
 

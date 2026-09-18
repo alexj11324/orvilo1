@@ -81,7 +81,6 @@ import {
   ResolveAgentInterventionBySourceSchema,
   ResolveAgentInterventionSchema,
 } from '@/server/routers/lambda/_schema/agentIntervention';
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { AiChatService } from '@/server/services/aiChat';
 import { getFileProxyUrl } from '@/server/services/file';
@@ -1590,17 +1589,18 @@ const aiAgentProcedure = aiAgentBaseProcedure.use(async (opts) => {
     // non-fatal — MarketService will fall back to trustedClientToken
   }
 
+  const aiAgentService = new AiAgentService(ctx.serverDB, ctx.userId, {
+    marketAccessToken,
+    withholdGatewayToken: ctx.apiKeyScopes !== undefined && !isFullAccessApiKey(ctx.apiKeyScopes),
+    workspaceId: wsId,
+  });
+
   return opts.next({
     ctx: {
-      agentRuntimeService: new AgentRuntimeService(ctx.serverDB, ctx.userId, {
-        workspaceId: wsId,
-      }),
-      aiAgentService: new AiAgentService(ctx.serverDB, ctx.userId, {
-        marketAccessToken,
-        withholdGatewayToken:
-          ctx.apiKeyScopes !== undefined && !isFullAccessApiKey(ctx.apiKeyScopes),
-        workspaceId: wsId,
-      }),
+      // Isolated runtime via the service facade — keeps delegate wiring so any
+      // mid-step agent-invocation fork behaves like the execAgent pipeline.
+      agentRuntimeService: aiAgentService.createIsolatedRuntime(),
+      aiAgentService,
       aiChatService: new AiChatService(ctx.serverDB, ctx.userId, wsId),
       heterogeneousAgentService: new HeterogeneousAgentService(ctx.serverDB, ctx.userId, {
         workspaceId: wsId,

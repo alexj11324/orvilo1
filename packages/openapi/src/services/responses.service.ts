@@ -5,7 +5,6 @@ import type {
   StreamChunkData,
   StreamEvent,
 } from '@/server/modules/AgentExecution/StreamEventManager';
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { BaseService } from '../common/base.service';
@@ -313,10 +312,10 @@ export class ResponsesService extends BaseService {
       // Generate response ID encoding topicId for multi-turn support
       const responseId = this.generateResponseId(execResult.topicId);
 
-      // 2. Execute synchronously to completion
-      const agentRuntimeService = new AgentRuntimeService(this.db, this.userId, {
+      // 2. Execute synchronously to completion — via the service's isolated
+      // runtime so the delegate (callAgent/callSubAgent) survives mid-step.
+      const agentRuntimeService = aiAgentService.createIsolatedRuntime({
         queueService: null,
-        workspaceId: this.workspaceId,
       });
       const finalState = await agentRuntimeService.executeSync(execResult.operationId);
 
@@ -434,12 +433,12 @@ export class ResponsesService extends BaseService {
         type: 'response.in_progress' as const,
       };
 
-      // 2. Create AgentRuntimeService with custom stream manager for event subscription
+      // 2. Create an isolated runtime with a custom stream manager for event
+      // subscription — via the service facade so the delegate survives.
       const streamEventManager = new InMemoryStreamEventManager();
-      const agentRuntimeService = new AgentRuntimeService(this.db, this.userId, {
+      const agentRuntimeService = aiAgentService.createIsolatedRuntime({
         queueService: null,
         streamEventManager,
-        workspaceId: this.workspaceId,
       });
 
       // 3. Setup async event queue to bridge push events → pull-based generator

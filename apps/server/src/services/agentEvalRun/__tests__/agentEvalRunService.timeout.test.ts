@@ -292,8 +292,9 @@ describe('AgentEvalRunService', () => {
         config: { timeout: 1_200_000 },
       });
 
-      // Verify AgentRuntimeService was instantiated
-      expect(AgentRuntimeService).toHaveBeenCalledWith(serverDB, userId);
+      // Verify AgentRuntimeService was instantiated (via the AiAgentService
+      // isolated-runtime facade — options object carries delegate wiring)
+      expect(AgentRuntimeService).toHaveBeenCalledWith(serverDB, userId, expect.any(Object));
 
       // Verify interruptOperation was called for both operationIds
       const mockInstance = vi.mocked(AgentRuntimeService).mock.results[0].value;

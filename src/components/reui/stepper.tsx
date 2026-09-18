@@ -33,6 +33,7 @@ interface StepperContextValue {
   focusLast: () => void;
   focusNext: (currentIdx: number) => void;
   focusPrev: (currentIdx: number) => void;
+  idPrefix: string;
   indicators: StepIndicators;
   orientation: StepperOrientation;
   registerTrigger: (node: HTMLButtonElement | null) => void;
@@ -65,6 +66,7 @@ function useStepItem() {
 
 interface StepperProps extends HTMLAttributes<HTMLDivElement> {
   defaultValue?: number;
+  idPrefix?: string;
   indicators?: StepIndicators;
   onValueChange?: (value: number) => void;
   orientation?: StepperOrientation;
@@ -73,6 +75,7 @@ interface StepperProps extends HTMLAttributes<HTMLDivElement> {
 
 function Stepper({
   defaultValue = 1,
+  idPrefix = 'stepper',
   value,
   onValueChange,
   orientation = 'horizontal',
@@ -137,8 +140,17 @@ function Stepper({
       focusLast,
       triggerNodes,
       indicators,
+      idPrefix,
     }),
-    [currentStep, handleSetActiveStep, children, orientation, registerTrigger, triggerNodes],
+    [
+      currentStep,
+      handleSetActiveStep,
+      children,
+      idPrefix,
+      orientation,
+      registerTrigger,
+      triggerNodes,
+    ],
   );
 
   return (
@@ -148,7 +160,6 @@ function Stepper({
         className={cn('w-full', className)}
         data-orientation={orientation}
         data-slot="stepper"
-        role="tablist"
         {...props}
       >
         {children}
@@ -212,11 +223,11 @@ function StepperTrigger({ className, children, tabIndex, render, ...props }: Ste
     focusPrev,
     focusFirst,
     focusLast,
+    idPrefix,
   } = stepperCtx;
   const { step, isDisabled } = useStepItem();
   const isSelected = activeStep === step;
-  const id = `stepper-tab-${step}`;
-  const panelId = `stepper-panel-${step}`;
+  const id = `${idPrefix}-step-${step}`;
 
   // Register this trigger for keyboard navigation
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -266,10 +277,8 @@ function StepperTrigger({ className, children, tabIndex, render, ...props }: Ste
   };
 
   const defaultProps = {
-    'role': 'tab',
     id,
-    'aria-selected': isSelected,
-    'aria-controls': panelId,
+    'aria-current': isSelected ? 'step' : undefined,
     'tabIndex': typeof tabIndex === 'number' ? tabIndex : isSelected ? 0 : -1,
     'data-slot': 'stepper-trigger',
     'data-state': state,

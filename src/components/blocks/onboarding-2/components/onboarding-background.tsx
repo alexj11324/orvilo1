@@ -1,5 +1,6 @@
 'use client';
 
+import { useReducedMotion } from 'motion/react';
 import { useSyncExternalStore } from 'react';
 
 import { DitheringShader } from './dithering-shader';
@@ -88,6 +89,7 @@ function withColorAlpha(color: string, alpha: number) {
 export function OnboardingPageBackground() {
   const supportsWebGL2 = useSupportsWebGL2();
   const isDark = useIsDarkTheme();
+  const shouldReduceMotion = useReducedMotion();
   const colorBack = withColorAlpha(
     getThemeColorToken('--muted', isDark ? 'oklch(0.269 0 0)' : 'oklch(0.97 0 0)'),
     0.2,
@@ -97,7 +99,7 @@ export function OnboardingPageBackground() {
     isDark ? 0.24 : 0.22,
   );
 
-  if (!supportsWebGL2) {
+  if (!supportsWebGL2 || shouldReduceMotion) {
     return null;
   }
 

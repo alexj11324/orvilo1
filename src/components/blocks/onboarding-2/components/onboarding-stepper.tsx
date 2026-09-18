@@ -1,4 +1,5 @@
 import { CheckIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import {
   Stepper,
@@ -12,15 +13,6 @@ import {
 } from '@/components/reui/stepper';
 
 import type { OnboardingStep } from './data';
-
-const SIDEBAR_STEP_DESCRIPTIONS: Record<string, string> = {
-  profile: 'Basic profile details.',
-  role: 'Tune starter views.',
-  source: 'Optional discovery signal.',
-  workspace: 'Name the workspace.',
-  goals: 'Pick first workflows.',
-  invite: 'Add teammates.',
-};
 
 // Shared so the compact mobile rail and the vertical sidebar rail read as the
 // same component at every breakpoint.
@@ -48,11 +40,13 @@ export function OnboardingStepperCompact({
   onStepChange: (step: number) => void;
   steps: OnboardingStep[];
 }) {
+  const { t } = useTranslation('onboarding');
   const activeStep = steps.find((step) => step.value === currentStep);
 
   return (
     <Stepper
       className="flex w-full flex-col gap-2.5"
+      idPrefix="onboarding-compact"
       indicators={{ completed: COMPLETED_INDICATOR }}
       orientation="horizontal"
       value={currentStep}
@@ -60,16 +54,16 @@ export function OnboardingStepperCompact({
     >
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-foreground min-w-0 truncate text-[0.8125rem] leading-4 font-medium">
-          {isComplete ? 'Setup complete' : activeStep?.label}
+          {isComplete ? t('reui.action.setupComplete') : activeStep?.label}
         </p>
         <p className="text-muted-foreground shrink-0 text-xs leading-4 tabular-nums">
           {isComplete
-            ? `${steps.length} of ${steps.length}`
-            : `Step ${currentStep} of ${steps.length}`}
+            ? t('reui.stepper.counterComplete', { total: steps.length })
+            : t('reui.stepper.counter', { current: currentStep, total: steps.length })}
         </p>
       </div>
 
-      <StepperNav aria-label="Onboarding progress" className="w-full">
+      <StepperNav aria-label={t('reui.stepper.ariaLabel')} className="w-full">
         {steps.map((step) => (
           <StepperItem
             className="items-center"
@@ -80,8 +74,11 @@ export function OnboardingStepperCompact({
             {/* -my-2 py-2 keeps the row 20px tall while giving the dot a 36px
                 tap target. */}
             <StepperTrigger
-              aria-label={`Step ${step.value}: ${step.label}`}
               className="-my-2 shrink-0 py-2"
+              aria-label={t('reui.stepper.ariaStep', {
+                label: step.label,
+                step: step.value,
+              })}
             >
               <StepperIndicator className={INDICATOR_CLASSNAME}>{step.value}</StepperIndicator>
             </StepperTrigger>
@@ -106,17 +103,20 @@ export function OnboardingStepper({
   onStepChange: (step: number) => void;
   steps: OnboardingStep[];
 }) {
+  const { t } = useTranslation('onboarding');
+
   return (
     <Stepper
       className="flex w-full flex-col items-start justify-center gap-0"
+      idPrefix="onboarding-sidebar"
       indicators={{ completed: COMPLETED_INDICATOR }}
       orientation="vertical"
       value={currentStep}
       onValueChange={onStepChange}
     >
-      <StepperNav aria-label="Onboarding progress" className="w-full">
+      <StepperNav aria-label={t('reui.stepper.ariaLabel')} className="w-full">
         {steps.map((step) => {
-          const description = SIDEBAR_STEP_DESCRIPTIONS[step.id] ?? step.description;
+          const description = t(`reui.stepper.${step.id}`);
 
           return (
             <StepperItem

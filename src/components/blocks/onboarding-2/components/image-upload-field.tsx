@@ -1,6 +1,7 @@
 'use client';
 
 import { UserCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ interface ImageUploadFieldProps {
   defaultImage?: string;
   description?: string;
   inputId?: string;
+  onImageChange?: (file: File | null) => void;
   replaceLabel?: string;
   uploadLabel?: string;
 }
@@ -18,13 +20,24 @@ interface ImageUploadFieldProps {
 export function ImageUploadField({
   inputId,
   defaultImage,
-  alt = 'Uploaded image',
+  alt,
   description,
-  uploadLabel = 'Upload photo',
-  replaceLabel = 'Replace photo',
+  uploadLabel,
+  replaceLabel,
+  onImageChange,
 }: ImageUploadFieldProps) {
+  const { t } = useTranslation('onboarding');
+  const resolvedAlt = alt ?? t('reui.photo.alt');
+  const resolvedUploadLabel = uploadLabel ?? t('reui.photo.upload');
+  const resolvedReplaceLabel = replaceLabel ?? t('reui.photo.replace');
   const [{ files }, { removeFile, openFileDialog, getInputProps }] = useFileUpload({
     accept: 'image/*',
+    maxSize: 10 * 1024 * 1024,
+    minImageDimensions: { height: 400, width: 400 },
+    onFilesChange: (nextFiles) => {
+      const file = nextFiles[0]?.file;
+      onImageChange?.(file instanceof File ? file : null);
+    },
   });
 
   const currentFile = files[0] ?? null;
@@ -43,7 +56,7 @@ export function ImageUploadField({
   return (
     <div className="flex items-center gap-3">
       <Avatar className="size-12 border">
-        {previewUrl ? <AvatarImage alt={fileName ?? alt} src={previewUrl} /> : null}
+        {previewUrl ? <AvatarImage alt={fileName ?? resolvedAlt} src={previewUrl} /> : null}
         <AvatarFallback className="bg-muted text-muted-foreground">
           <UserCircle aria-hidden="true" className="size-5 opacity-60" />
         </AvatarFallback>
@@ -59,7 +72,7 @@ export function ImageUploadField({
               variant="outline"
               onClick={openFileDialog}
             >
-              {hasImage ? replaceLabel : uploadLabel}
+              {hasImage ? resolvedReplaceLabel : resolvedUploadLabel}
             </Button>
             <input
               {...getInputProps({ id: inputId })}

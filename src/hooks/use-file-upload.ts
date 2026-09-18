@@ -6,9 +6,12 @@ import {
   type DragEvent,
   type InputHTMLAttributes,
   useCallback,
+  useEffect,
   useRef,
   useState,
 } from 'react';
+
+import { useSingleton } from './useSingleton';
 
 export type FileMetadata = {
   name: string;
@@ -27,6 +30,7 @@ export type FileWithPreview = {
 export type FileUploadOptions = {
   maxFiles?: number; // Only used when multiple is true, defaults to Infinity
   maxSize?: number; // in bytes
+  minImageDimensions?: { height: number; width: number };
   accept?: string;
   multiple?: boolean; // Defaults to false
   initialFiles?: FileMetadata[];
@@ -42,7 +46,7 @@ export type FileUploadState = {
 };
 
 export type FileUploadActions = {
-  addFiles: (files: FileList | File[]) => void;
+  addFiles: (files: FileList | File[]) => Promise<void>;
   removeFile: (id: string) => void;
   clearFiles: () => void;
   clearErrors: () => void;
@@ -65,6 +69,7 @@ export const useFileUpload = (
   const {
     maxFiles = Number.POSITIVE_INFINITY,
     maxSize = Number.POSITIVE_INFINITY,
+    minImageDimensions,
     accept = '*',
     multiple = false,
     initialFiles = [],
@@ -84,6 +89,25 @@ export const useFileUpload = (
   });
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const previewUrls = useSingleton(() => new Set<string>());
+
+  const revokePreview = useCallback(
+    (preview: string | undefined) => {
+      if (!preview || !previewUrls.delete(preview)) return;
+      URL.revokeObjectURL(preview);
+    },
+    [previewUrls],
+  );
+
+  useEffect(
+    () => () => {
+      for (const preview of previewUrls) {
+        URL.revokeObjectURL(preview);
+      }
+      previewUrls.clear();
+    },
+    [previewUrls],
+  );
 
   const validateFile = useCallback(
     (file: File | FileMetadata): string | null => {
@@ -123,12 +147,45 @@ export const useFileUpload = (
     [accept, maxSize],
   );
 
-  const createPreview = useCallback((file: File | FileMetadata): string | undefined => {
-    if (file instanceof File) {
-      return URL.createObjectURL(file);
-    }
-    return file.url;
-  }, []);
+  const createPreview = useCallback(
+    (file: File | FileMetadata): string | undefined => {
+      if (file instanceof File) {
+        const preview = URL.createObjectURL(file);
+        previewUrls.add(preview);
+        return preview;
+      }
+      return file.url;
+    },
+    [previewUrls],
+  );
+
+  const validateImageDimensions = useCallback(
+    (file: File): Promise<string | null> => {
+      if (!minImageDimensions || !file.type.startsWith('image/') || typeof Image === 'undefined') {
+        return Promise.resolve(null);
+      }
+
+      const preview = URL.createObjectURL(file);
+      return new Promise((resolve) => {
+        const image = new Image();
+        image.onload = () => {
+          URL.revokeObjectURL(preview);
+          resolve(
+            image.naturalWidth >= minImageDimensions.width &&
+              image.naturalHeight >= minImageDimensions.height
+              ? null
+              : `Image must be at least ${minImageDimensions.width} x ${minImageDimensions.height} pixels.`,
+          );
+        };
+        image.onerror = () => {
+          URL.revokeObjectURL(preview);
+          resolve('The selected image could not be read.');
+        };
+        image.src = preview;
+      });
+    },
+    [minImageDimensions],
+  );
 
   const generateUniqueId = useCallback((file: File | FileMetadata): string => {
     if (file instanceof File) {
@@ -142,7 +199,7 @@ export const useFileUpload = (
       // Clean up object URLs
       for (const file of prev.files) {
         if (file.preview && file.file instanceof File && file.file.type.startsWith('image/')) {
-          URL.revokeObjectURL(file.preview);
+          revokePreview(file.preview);
         }
       }
 
@@ -159,10 +216,10 @@ export const useFileUpload = (
       onFilesChange?.(newState.files);
       return newState;
     });
-  }, [onFilesChange]);
+  }, [onFilesChange, revokePreview]);
 
   const addFiles = useCallback(
-    (newFiles: FileList | File[]) => {
+    async (newFiles: FileList | File[]) => {
       if (!newFiles || newFiles.length === 0) return;
 
       const newFilesArray = Array.from(newFiles);
@@ -218,6 +275,11 @@ export const useFileUpload = (
         if (error) {
           errors.push(error);
         } else {
+          const dimensionError = await validateImageDimensions(file);
+          if (dimensionError) {
+            errors.push(dimensionError);
+            continue;
+          }
           validFiles.push({
             file,
             id: generateUniqueId(file),
@@ -264,6 +326,7 @@ export const useFileUpload = (
       clearFiles,
       onFilesChange,
       onFilesAdded,
+      validateImageDimensions,
     ],
   );
 
@@ -277,7 +340,7 @@ export const useFileUpload = (
           fileToRemove.file instanceof File &&
           fileToRemove.file.type.startsWith('image/')
         ) {
-          URL.revokeObjectURL(fileToRemove.preview);
+          revokePreview(fileToRemove.preview);
         }
 
         const newFiles = prev.files.filter((file) => file.id !== id);
@@ -290,7 +353,7 @@ export const useFileUpload = (
         };
       });
     },
-    [onFilesChange],
+    [onFilesChange, revokePreview],
   );
 
   const clearErrors = useCallback(() => {
@@ -337,9 +400,9 @@ export const useFileUpload = (
         // In single file mode, only use the first file
         if (!multiple) {
           const file = e.dataTransfer.files[0];
-          addFiles([file]);
+          void addFiles([file]);
         } else {
-          addFiles(e.dataTransfer.files);
+          void addFiles(e.dataTransfer.files);
         }
       }
     },
@@ -349,7 +412,7 @@ export const useFileUpload = (
   const handleFileChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
-        addFiles(e.target.files);
+        void addFiles(e.target.files);
       }
     },
     [addFiles],

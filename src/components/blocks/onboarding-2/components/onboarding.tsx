@@ -3,7 +3,8 @@
 import { CheckIcon, CircleCheckIcon, PlusIcon, RocketIcon } from 'lucide-react';
 import { AnimatePresence, useReducedMotion } from 'motion/react';
 import * as m from 'motion/react-m';
-import { type CSSProperties, type FormEvent, useState } from 'react';
+import { type CSSProperties, type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Frame, FramePanel } from '@/components/reui/frame';
 import { IconStack } from '@/components/reui/icon-stack';
@@ -44,20 +45,21 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import {
+  trackOnboardingCompleted,
+  trackOnboardingStarted,
+  trackOnboardingStepCompleted,
+  trackOnboardingStepViewed,
+} from '@/services/onboardingMetrics';
 
 import {
+  createOnboardingData,
   DEFAULT_INVITES,
-  DISCOVERY_SOURCE_OPTIONS,
   type DiscoverySourceValue,
-  GOAL_OPTIONS,
   type GoalValue,
-  INVITE_ROLE_OPTIONS,
   type InviteRoleValue,
   type InviteRow,
-  ONBOARDING_STEPS,
-  ROLE_OPTIONS,
   type RoleValue,
-  TEAM_SIZE_OPTIONS,
   type TeamSizeValue,
 } from './data';
 import { ImageUploadField } from './image-upload-field';
@@ -65,45 +67,44 @@ import { OnboardingPageBackground } from './onboarding-background';
 import { OnboardingHeader } from './onboarding-header';
 import { OnboardingStepper, OnboardingStepperCompact } from './onboarding-stepper';
 
-const TOTAL_STEPS = ONBOARDING_STEPS.length;
-const TIMEZONE_GROUPS = [
-  {
-    value: 'Americas',
-    items: [
-      '(GMT-5) New York',
-      '(GMT-8) Los Angeles',
-      '(GMT-6) Chicago',
-      '(GMT-5) Toronto',
-      '(GMT-8) Vancouver',
-      '(GMT-3) Sao Paulo',
-    ],
-  },
-  {
-    value: 'Europe',
-    items: [
-      '(GMT+0) London',
-      '(GMT+1) Paris',
-      '(GMT+1) Berlin',
-      '(GMT+1) Rome',
-      '(GMT+1) Madrid',
-      '(GMT+1) Amsterdam',
-    ],
-  },
-  {
-    value: 'Asia/Pacific',
-    items: [
-      '(GMT+9) Tokyo',
-      '(GMT+8) Shanghai',
-      '(GMT+8) Singapore',
-      '(GMT+4) Dubai',
-      '(GMT+11) Sydney',
-      '(GMT+9) Seoul',
-    ],
-  },
-];
+type TimezoneGroup = { items: string[]; value: string };
 
-function getInviteRoleLabel(role: InviteRoleValue) {
-  return INVITE_ROLE_OPTIONS.find((option) => option.value === role)?.label ?? role;
+function createTimezoneGroups(t: ReturnType<typeof useTranslation>['t']): TimezoneGroup[] {
+  return [
+    {
+      value: t('reui.timezone.americas'),
+      items: [
+        t('reui.timezone.newYork'),
+        t('reui.timezone.losAngeles'),
+        t('reui.timezone.chicago'),
+        t('reui.timezone.toronto'),
+        t('reui.timezone.vancouver'),
+        t('reui.timezone.saoPaulo'),
+      ],
+    },
+    {
+      value: t('reui.timezone.europe'),
+      items: [
+        t('reui.timezone.london'),
+        t('reui.timezone.paris'),
+        t('reui.timezone.berlin'),
+        t('reui.timezone.rome'),
+        t('reui.timezone.madrid'),
+        t('reui.timezone.amsterdam'),
+      ],
+    },
+    {
+      value: t('reui.timezone.asiaPacific'),
+      items: [
+        t('reui.timezone.tokyo'),
+        t('reui.timezone.shanghai'),
+        t('reui.timezone.singapore'),
+        t('reui.timezone.dubai'),
+        t('reui.timezone.sydney'),
+        t('reui.timezone.seoul'),
+      ],
+    },
+  ];
 }
 
 function StepHeading({ title, description }: { title: string; description: string }) {
@@ -120,36 +121,42 @@ function StepHeading({ title, description }: { title: string; description: strin
 function ProfileStep({
   fullName,
   jobTitle,
-  marketingOptIn,
+  telemetryEnabled,
+  onAvatarChange,
   onFullNameChange,
   onJobTitleChange,
-  onMarketingOptInChange,
+  onTelemetryChange,
 }: {
   fullName: string;
   jobTitle: string;
-  marketingOptIn: boolean;
+  telemetryEnabled: boolean;
+  onAvatarChange: (file: File | null) => void;
   onFullNameChange: (name: string) => void;
   onJobTitleChange: (title: string) => void;
-  onMarketingOptInChange: (checked: boolean) => void;
+  onTelemetryChange: (checked: boolean) => void;
 }) {
+  const { t } = useTranslation('onboarding');
+  const timezoneGroups = useMemo(() => createTimezoneGroups(t), [t]);
+
   return (
     <FieldSet>
-      <FieldLegend className="sr-only">Profile details</FieldLegend>
+      <FieldLegend className="sr-only">{t('reui.profile.legend')}</FieldLegend>
       <FieldGroup className="gap-4">
         <Field>
           <ImageUploadField
-            alt="Sam Rivera"
-            description="PNG or JPG, at least 400 x 400 px, up to 10 MB."
+            alt={t('reui.photo.alt')}
+            description={t('reui.photo.description')}
             inputId="onboarding-2-profile-photo"
-            replaceLabel="Replace photo"
-            uploadLabel="Upload photo"
+            replaceLabel={t('reui.photo.replace')}
+            uploadLabel={t('reui.photo.upload')}
+            onImageChange={onAvatarChange}
           />
         </Field>
 
         <FieldGroup className="gap-4">
           <Field className="gap-2">
             <FieldLabel htmlFor="onboarding-2-name">
-              Full name <span className="text-destructive">*</span>
+              {t('reui.profile.fullName')} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
               autoComplete="name"
@@ -160,7 +167,7 @@ function ProfileStep({
           </Field>
 
           <Field className="gap-2">
-            <FieldLabel htmlFor="onboarding-2-title">Job title</FieldLabel>
+            <FieldLabel htmlFor="onboarding-2-title">{t('reui.profile.jobTitle')}</FieldLabel>
             <Input
               autoComplete="organization-title"
               id="onboarding-2-title"
@@ -170,15 +177,15 @@ function ProfileStep({
           </Field>
 
           <Field className="gap-2">
-            <FieldLabel htmlFor="onboarding-2-timezone">Timezone</FieldLabel>
-            <Combobox items={TIMEZONE_GROUPS}>
+            <FieldLabel htmlFor="onboarding-2-timezone">{t('reui.profile.timezone')}</FieldLabel>
+            <Combobox items={timezoneGroups}>
               <ComboboxInput
                 className="w-full"
                 id="onboarding-2-timezone"
-                placeholder="Select a timezone"
+                placeholder={t('reui.profile.timezonePlaceholder')}
               />
               <ComboboxContent className="w-(--anchor-width) min-w-(--anchor-width)">
-                <ComboboxEmpty>No timezones found.</ComboboxEmpty>
+                <ComboboxEmpty>{t('reui.profile.timezoneEmpty')}</ComboboxEmpty>
                 <ComboboxList>
                   {(group) => (
                     <ComboboxGroup items={group.items} key={group.value}>
@@ -200,17 +207,20 @@ function ProfileStep({
         </FieldGroup>
 
         <Field className="gap-2.5" orientation="horizontal">
-          <Checkbox
-            checked={marketingOptIn}
-            id="onboarding-2-marketing"
-            onCheckedChange={(checked) => onMarketingOptInChange(checked === true)}
+          <Switch
+            checked={telemetryEnabled}
+            id="onboarding-2-telemetry"
+            onCheckedChange={onTelemetryChange}
           />
-          <FieldLabel
-            className="text-muted-foreground font-normal"
-            htmlFor="onboarding-2-marketing"
-          >
-            Send me product updates and workspace tips.
-          </FieldLabel>
+          <FieldContent className="gap-0.5">
+            <FieldLabel
+              className="text-muted-foreground font-normal"
+              htmlFor="onboarding-2-telemetry"
+            >
+              {t('reui.profile.telemetryLabel')}
+            </FieldLabel>
+            <FieldDescription>{t('reui.profile.telemetryDescription')}</FieldDescription>
+          </FieldContent>
         </Field>
       </FieldGroup>
     </FieldSet>
@@ -224,16 +234,19 @@ function RoleStep({
   role: RoleValue;
   onRoleChange: (role: RoleValue) => void;
 }) {
+  const { t } = useTranslation('onboarding');
+  const { roleOptions } = createOnboardingData(t);
+
   return (
     <FieldSet className="gap-3">
-      <FieldLegend variant="label">Select one</FieldLegend>
+      <FieldLegend variant="label">{t('reui.role.selectOne')}</FieldLegend>
       <RadioGroup
-        aria-label="Select your role"
+        aria-label={t('reui.role.selectAria')}
         value={role}
         onValueChange={(value) => onRoleChange(value as RoleValue)}
       >
         <ItemGroup className="gap-2">
-          {ROLE_OPTIONS.map((option) => {
+          {roleOptions.map((option) => {
             const fieldId = `onboarding-2-role-${option.value}`;
 
             return (
@@ -264,11 +277,14 @@ function SourceStep({
   onSourceChange: (source: DiscoverySourceValue) => void;
   onOtherSourceChange: (source: string) => void;
 }) {
+  const { t } = useTranslation('onboarding');
+  const { discoverySourceOptions } = createOnboardingData(t);
+
   return (
     <FieldSet className="gap-4">
-      <FieldLegend className="sr-only">Discovery source</FieldLegend>
-      <FieldGroup aria-label="How did you hear about us?" className="flex-row flex-wrap gap-2">
-        {DISCOVERY_SOURCE_OPTIONS.map((option) => {
+      <FieldLegend className="sr-only">{t('reui.source.groupLabel')}</FieldLegend>
+      <FieldGroup aria-label={t('reui.source.groupLabel')} className="flex-row flex-wrap gap-2">
+        {discoverySourceOptions.map((option) => {
           const selected = option.value === source;
 
           return (
@@ -299,12 +315,12 @@ function SourceStep({
       {source === 'other' ? (
         <Field className="max-w-sm gap-2">
           <FieldLabel htmlFor="onboarding-2-source-other-text">
-            Where did you hear about Orvilo?
+            {t('reui.source.fieldLabel')}
           </FieldLabel>
           <Input
             autoComplete="off"
             id="onboarding-2-source-other-text"
-            placeholder="Type the source"
+            placeholder={t('reui.source.fieldPlaceholder')}
             value={otherSource}
             onChange={(event) => onOtherSourceChange(event.target.value)}
           />
@@ -329,14 +345,17 @@ function WorkspaceStep({
   onWorkspaceSlugChange: (value: string) => void;
   onTeamSizeChange: (value: TeamSizeValue) => void;
 }) {
+  const { t } = useTranslation('onboarding');
+  const { teamSizeOptions } = createOnboardingData(t);
+
   return (
     <FieldSet>
-      <FieldLegend className="sr-only">Workspace setup</FieldLegend>
+      <FieldLegend className="sr-only">{t('reui.workspace.legend')}</FieldLegend>
       <FieldGroup className="gap-5">
         <FieldGroup className="gap-4">
           <Field className="gap-2">
             <FieldLabel htmlFor="onboarding-2-workspace">
-              Workspace name <span className="text-destructive">*</span>
+              {t('reui.workspace.name')} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
               autoComplete="organization"
@@ -348,7 +367,7 @@ function WorkspaceStep({
 
           <Field className="gap-2">
             <FieldLabel htmlFor="onboarding-2-url">
-              Workspace URL <span className="text-destructive">*</span>
+              {t('reui.workspace.url')} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
               autoComplete="off"
@@ -357,18 +376,22 @@ function WorkspaceStep({
               onChange={(event) => onWorkspaceSlugChange(event.target.value)}
             />
             <FieldDescription>
-              Your workspace will open at orvilo.aspectlylabs.com/
-              {workspaceSlug.trim() || 'workspace'}.
+              {t('reui.workspace.urlDescription', {
+                slug: workspaceSlug.trim() || 'workspace',
+              })}
             </FieldDescription>
           </Field>
         </FieldGroup>
 
         <FieldSet className="gap-5">
           <FieldLegend className="mb-4" variant="label">
-            How many people will use this workspace?
+            {t('reui.workspace.teamSize')}
           </FieldLegend>
-          <FieldGroup aria-label="Workspace team size" className="flex-row flex-wrap gap-2">
-            {TEAM_SIZE_OPTIONS.map((option) => {
+          <FieldGroup
+            aria-label={t('reui.workspace.teamSize')}
+            className="flex-row flex-wrap gap-2"
+          >
+            {teamSizeOptions.map((option) => {
               const selected = option.value === teamSize;
 
               return (
@@ -411,11 +434,14 @@ function GoalsStep({
   goals: GoalValue[];
   onGoalToggle: (goal: GoalValue, checked: boolean) => void;
 }) {
+  const { t } = useTranslation('onboarding');
+  const { goalOptions } = createOnboardingData(t);
+
   return (
     <FieldSet className="gap-3">
-      <FieldLegend variant="label">Select one or more</FieldLegend>
+      <FieldLegend variant="label">{t('reui.goal.selectOneOrMore')}</FieldLegend>
       <ItemGroup className="gap-2">
-        {GOAL_OPTIONS.map((option) => {
+        {goalOptions.map((option) => {
           const selected = goals.includes(option.value);
           const fieldId = `onboarding-2-goal-${option.value}`;
 
@@ -448,13 +474,20 @@ function InviteRoleSelect({
   value: InviteRoleValue;
   onValueChange: (value: InviteRoleValue) => void;
 }) {
+  const { t } = useTranslation('onboarding');
+  const { inviteRoleOptions } = createOnboardingData(t);
+
   return (
     <Select
       value={value}
       onValueChange={(nextValue) => nextValue && onValueChange(nextValue as InviteRoleValue)}
     >
       <SelectTrigger className="w-full" id={id}>
-        <SelectValue>{(item: InviteRoleValue) => getInviteRoleLabel(item)}</SelectValue>
+        <SelectValue>
+          {(item: InviteRoleValue) =>
+            inviteRoleOptions.find((option) => option.value === item)?.label ?? item
+          }
+        </SelectValue>
       </SelectTrigger>
       <SelectContent
         align="start"
@@ -462,7 +495,7 @@ function InviteRoleSelect({
         className="w-64 min-w-(--anchor-width)"
       >
         <SelectGroup>
-          {INVITE_ROLE_OPTIONS.map((option) => (
+          {inviteRoleOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               <span className="flex min-w-0 flex-col items-start gap-px">
                 <span className="font-medium">{option.label}</span>
@@ -493,14 +526,16 @@ function InviteStep({
   onInviteRoleChange: (inviteId: string, role: InviteRoleValue) => void;
   onSendInviteDigestChange: (checked: boolean) => void;
 }) {
+  const { t } = useTranslation('onboarding');
+
   return (
     <FieldSet>
-      <FieldLegend className="sr-only">Invite teammates</FieldLegend>
+      <FieldLegend className="sr-only">{t('reui.invite.legend')}</FieldLegend>
       <FieldGroup className="gap-5">
         <div className="grid gap-3">
           <div className="text-muted-foreground hidden grid-cols-[minmax(0,1fr)_9rem] gap-3 px-1 text-xs font-medium sm:grid">
-            <span>Email</span>
-            <span>Role</span>
+            <span>{t('reui.invite.email')}</span>
+            <span>{t('reui.invite.role')}</span>
           </div>
           {invites.map((invite, index) => {
             const emailId = `onboarding-2-invite-email-${invite.id}`;
@@ -513,12 +548,12 @@ function InviteStep({
               >
                 <Field>
                   <FieldLabel className="sr-only" htmlFor={emailId}>
-                    Invitee {index + 1} email
+                    {t('reui.invite.emailLabel', { number: index + 1 })}
                   </FieldLabel>
                   <Input
                     autoComplete="email"
                     id={emailId}
-                    placeholder="teammate@company.com"
+                    placeholder={t('reui.invite.emailPlaceholder')}
                     type="email"
                     value={invite.email}
                     onChange={(event) => onInviteEmailChange(invite.id, event.target.value)}
@@ -526,7 +561,7 @@ function InviteStep({
                 </Field>
                 <Field>
                   <FieldLabel className="sr-only" htmlFor={roleId}>
-                    Invitee {index + 1} role
+                    {t('reui.invite.roleLabel', { number: index + 1 })}
                   </FieldLabel>
                   <InviteRoleSelect
                     id={roleId}
@@ -545,15 +580,17 @@ function InviteStep({
               onClick={onAddInvite}
             >
               <PlusIcon aria-hidden="true" data-icon="inline-start" />
-              Add another
+              {t('reui.invite.addAnother')}
             </Button>
           </div>
         </div>
 
         <Field className="gap-3" orientation="horizontal">
           <FieldContent className="gap-0.5">
-            <FieldLabel htmlFor="onboarding-2-send-digest">Send invitation summary</FieldLabel>
-            <FieldDescription>Include workspace details.</FieldDescription>
+            <FieldLabel htmlFor="onboarding-2-send-digest">
+              {t('reui.invite.digestLabel')}
+            </FieldLabel>
+            <FieldDescription>{t('reui.invite.digestDescription')}</FieldDescription>
           </FieldContent>
           <Switch
             checked={sendInviteDigest}
@@ -575,7 +612,8 @@ function SuccessStep({
   onOpen?: () => void;
   onReviewSetup: () => void;
 }) {
-  const displayName = workspaceName.trim() || 'Workspace';
+  const { t } = useTranslation('onboarding');
+  const displayName = workspaceName.trim() || t('reui.workspace.name');
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col">
@@ -596,20 +634,20 @@ function SuccessStep({
 
         <div className="mx-auto mt-3 max-w-sm text-center">
           <h1 className="text-foreground text-2xl leading-8 font-semibold tracking-tight">
-            {displayName} is ready
+            {t('reui.workspace.successTitle', { name: displayName })}
           </h1>
           <p className="text-muted-foreground mt-2 text-sm leading-6">
-            Your workspace is set up and ready for the first project.
+            {t('reui.workspace.successDescription')}
           </p>
         </div>
       </div>
 
       <div className="mt-auto flex flex-col gap-2 pt-8">
         <Button className="w-full" type="button" onClick={onOpen}>
-          Open {displayName}
+          {t('reui.action.openWorkspace', { name: displayName })}
         </Button>
         <Button className="w-full" type="button" variant="ghost" onClick={onReviewSetup}>
-          Review setup
+          {t('reui.action.reviewSetup')}
         </Button>
       </div>
     </div>
@@ -622,12 +660,14 @@ function OnboardingSidebar({
   canGoBack,
   onBack,
   onStepChange,
+  steps,
 }: {
   currentStep: number;
   isComplete: boolean;
   canGoBack: boolean;
   onBack: () => void;
   onStepChange: (step: number) => void;
+  steps: ReturnType<typeof createOnboardingData>['steps'];
 }) {
   return (
     <aside className="relative z-10 flex w-full shrink-0 border-b px-5 pt-5 pb-4 sm:px-8 sm:pt-6 sm:pb-5 lg:min-h-svh lg:w-[18rem] lg:border-b-0 lg:py-7 lg:pr-5 lg:pl-7">
@@ -638,7 +678,7 @@ function OnboardingSidebar({
           <OnboardingStepperCompact
             currentStep={currentStep}
             isComplete={isComplete}
-            steps={ONBOARDING_STEPS}
+            steps={steps}
             onStepChange={onStepChange}
           />
         </div>
@@ -647,7 +687,7 @@ function OnboardingSidebar({
           <OnboardingStepper
             currentStep={currentStep}
             isComplete={isComplete}
-            steps={ONBOARDING_STEPS}
+            steps={steps}
             onStepChange={onStepChange}
           />
         </div>
@@ -658,28 +698,83 @@ function OnboardingSidebar({
   );
 }
 
-export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
+export interface OnboardingFormValues {
+  avatarFile: File | null;
+  discoveryOther: string;
+  discoverySource: DiscoverySourceValue;
+  fullName: string;
+  goals: GoalValue[];
+  invites: InviteRow[];
+  jobTitle: string;
+  role: RoleValue;
+  sendInviteDigest: boolean;
+  teamSize: TeamSizeValue;
+  telemetryEnabled: boolean;
+  workspaceName: string;
+  workspaceSlug: string;
+}
+
+export interface OnboardingCompletion {
+  workspaceId: string;
+  workspaceSlug: string;
+}
+
+export const ONBOARDING_INVITES_FAILED = 'onboardingInvitesFailed';
+
+export function Onboarding({
+  initialFullName = '',
+  initialTelemetry = true,
+  onComplete,
+  onOpen,
+}: {
+  initialFullName?: string;
+  initialTelemetry?: boolean;
+  onComplete?: (values: OnboardingFormValues) => Promise<OnboardingCompletion | void>;
+  onOpen?: () => void;
+} = {}) {
+  const { t } = useTranslation('onboarding');
+  const onboardingData = useMemo(() => createOnboardingData(t), [t]);
+  const onboardingSteps = onboardingData.steps;
+  const totalSteps = onboardingSteps.length;
   const [currentStep, setCurrentStep] = useState(1);
-  const [fullName, setFullName] = useState('Sam Rivera');
-  const [jobTitle, setJobTitle] = useState('Product Lead');
-  const [marketingOptIn, setMarketingOptIn] = useState(true);
+  const [fullName, setFullName] = useState(initialFullName);
+  const [jobTitle, setJobTitle] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [role, setRole] = useState<RoleValue>('developer');
   const [discoverySource, setDiscoverySource] = useState<DiscoverySourceValue>('linkedin');
   const [discoveryOther, setDiscoveryOther] = useState('');
-  const [workspaceName, setWorkspaceName] = useState('Orvilo HQ');
-  const [workspaceSlug, setWorkspaceSlug] = useState('northstar');
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [workspaceSlug, setWorkspaceSlug] = useState('');
   const [teamSize, setTeamSize] = useState<TeamSizeValue>('team');
   const [goals, setGoals] = useState<GoalValue[]>(['roadmaps', 'sprints']);
   const [invites, setInvites] = useState<InviteRow[]>(DEFAULT_INVITES);
   const [sendInviteDigest, setSendInviteDigest] = useState(true);
+  const [telemetryEnabled, setTelemetryEnabled] = useState(initialTelemetry);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
   const [transitionDirection, setTransitionDirection] = useState<1 | -1>(1);
   const shouldReduceMotion = useReducedMotion();
+  const sessionIdRef = useRef<string | undefined>(undefined);
 
-  const currentStepMeta = ONBOARDING_STEPS[currentStep - 1];
-  const isFinalStep = currentStep === TOTAL_STEPS;
-  const canSkip = currentStep > 1 && currentStep < TOTAL_STEPS;
+  if (!sessionIdRef.current) {
+    sessionIdRef.current =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `onboarding-${Date.now()}`;
+  }
+
+  useEffect(() => {
+    trackOnboardingStarted({
+      flow: 'web',
+      onboarding_session_id: sessionIdRef.current!,
+      onboarding_version: 2,
+    });
+  }, []);
+
+  const currentStepMeta = onboardingSteps[currentStep - 1];
+  const isFinalStep = currentStep === totalSteps;
+  const canSkip = currentStep > 1 && currentStep < totalSteps;
   const canContinue =
     (currentStepMeta.id !== 'profile' || fullName.trim().length > 0) &&
     (currentStepMeta.id !== 'workspace' ||
@@ -687,12 +782,22 @@ export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
     (currentStepMeta.id !== 'goals' || goals.length > 0);
 
   function goToStep(step: number) {
-    const nextStep = Math.min(Math.max(step, 1), TOTAL_STEPS);
+    const nextStep = Math.min(Math.max(step, 1), totalSteps);
 
     setTransitionDirection(nextStep >= currentStep ? 1 : -1);
     setIsComplete(false);
     setCurrentStep(nextStep);
   }
+
+  useEffect(() => {
+    trackOnboardingStepViewed({
+      flow: 'web',
+      onboarding_session_id: sessionIdRef.current!,
+      onboarding_version: 2,
+      step: currentStepMeta.id as 'profile' | 'role' | 'source' | 'workspace' | 'goals' | 'invite',
+      stepIndex: currentStep,
+    });
+  }, [currentStep, currentStepMeta.id]);
 
   function handleGoalToggle(goal: GoalValue, checked: boolean) {
     setGoals((currentGoals) => {
@@ -729,18 +834,46 @@ export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
     );
   }
 
-  function completeOnboarding() {
+  async function completeOnboarding() {
     if (isSubmitting) {
       return;
     }
 
     setIsSubmitting(true);
     setTransitionDirection(1);
+    setCompletionError(null);
 
-    window.setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await onComplete?.({
+        avatarFile,
+        discoveryOther,
+        discoverySource,
+        fullName,
+        goals,
+        invites,
+        jobTitle,
+        role,
+        sendInviteDigest,
+        teamSize,
+        telemetryEnabled,
+        workspaceName,
+        workspaceSlug,
+      });
+      trackOnboardingCompleted({
+        flow: 'web',
+        onboarding_session_id: sessionIdRef.current,
+        onboarding_version: 2,
+      });
       setIsComplete(true);
-    }, 700);
+    } catch (error) {
+      setCompletionError(
+        error instanceof Error && error.message === ONBOARDING_INVITES_FAILED
+          ? t('reui.error.invites')
+          : t('reui.error.complete'),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleSkip() {
@@ -748,6 +881,14 @@ export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
       return;
     }
 
+    trackOnboardingStepCompleted({
+      flow: 'web',
+      onboarding_session_id: sessionIdRef.current,
+      onboarding_version: 2,
+      skipped: true,
+      step: currentStepMeta.id as 'profile' | 'role' | 'source' | 'workspace' | 'goals' | 'invite',
+      stepIndex: currentStep,
+    });
     goToStep(currentStep + 1);
   }
 
@@ -765,21 +906,30 @@ export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
     }
 
     if (!isFinalStep) {
+      trackOnboardingStepCompleted({
+        flow: 'web',
+        onboarding_session_id: sessionIdRef.current,
+        onboarding_version: 2,
+        step: currentStepMeta.id as
+          'profile' | 'role' | 'source' | 'workspace' | 'goals' | 'invite',
+        stepIndex: currentStep,
+      });
       goToStep(currentStep + 1);
       return;
     }
 
-    completeOnboarding();
+    void completeOnboarding();
   }
 
   return (
-    <main className="bg-muted/20 text-foreground relative isolate flex min-h-svh w-full flex-col lg:flex-row">
+    <main className="bg-muted/20 text-foreground relative isolate flex max-h-svh min-h-svh w-full flex-col overflow-y-auto lg:flex-row">
       <OnboardingPageBackground />
 
       <OnboardingSidebar
         canGoBack={!isComplete && currentStep > 1}
         currentStep={currentStep}
         isComplete={isComplete}
+        steps={onboardingSteps}
         onBack={() => goToStep(currentStep - 1)}
         onStepChange={handleStepNavigation}
       />
@@ -790,7 +940,7 @@ export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
           spacing="xs"
           variant="ghost"
         >
-          <FramePanel className="border-border/40 flex flex-1 flex-col px-5 py-8 sm:px-10 sm:py-14 md:py-16 lg:px-14 lg:py-20 xl:py-24">
+          <FramePanel className="border-border/40 flex min-h-0 flex-1 flex-col px-5 py-8 sm:px-10 sm:py-14 md:py-16 lg:px-14 lg:py-20 xl:py-24">
             <div className="flex flex-1">
               <AnimatePresence initial={false} mode="wait">
                 {isComplete ? (
@@ -829,11 +979,11 @@ export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
                   >
                     <SuccessStep
                       workspaceName={workspaceName}
-                      onOpen={onFinish}
+                      onOpen={onOpen}
                       onReviewSetup={() => {
                         setTransitionDirection(-1);
                         setIsComplete(false);
-                        setCurrentStep(TOTAL_STEPS);
+                        setCurrentStep(totalSteps);
                       }}
                     />
                   </m.div>
@@ -882,11 +1032,18 @@ export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
                         <ProfileStep
                           fullName={fullName}
                           jobTitle={jobTitle}
-                          marketingOptIn={marketingOptIn}
+                          telemetryEnabled={telemetryEnabled}
+                          onAvatarChange={setAvatarFile}
                           onFullNameChange={setFullName}
                           onJobTitleChange={setJobTitle}
-                          onMarketingOptInChange={setMarketingOptIn}
+                          onTelemetryChange={setTelemetryEnabled}
                         />
+                      ) : null}
+
+                      {completionError ? (
+                        <p className="text-destructive text-sm" role="alert">
+                          {completionError}
+                        </p>
                       ) : null}
 
                       {currentStepMeta.id === 'role' ? (
@@ -940,7 +1097,7 @@ export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
                         ) : isFinalStep ? (
                           <RocketIcon aria-hidden="true" data-icon="inline-start" />
                         ) : null}
-                        {isFinalStep ? 'Create workspace' : 'Continue'}
+                        {isFinalStep ? t('reui.action.createWorkspace') : t('reui.action.continue')}
                       </Button>
 
                       {canSkip ? (
@@ -951,7 +1108,7 @@ export function Onboarding({ onFinish }: { onFinish?: () => void } = {}) {
                           variant="ghost"
                           onClick={handleSkip}
                         >
-                          Skip
+                          {t('reui.action.skip')}
                         </Button>
                       ) : null}
                     </div>

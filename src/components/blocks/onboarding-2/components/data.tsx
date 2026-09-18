@@ -14,11 +14,13 @@ import {
   YoutubeIcon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
+import type { TFunction } from 'i18next';
 import {
   ArrowLeftRightIcon,
   CodeIcon,
   GitBranchIcon,
   LayersIcon,
+  type LucideIcon,
   PaletteIcon,
   RocketIcon,
   Settings2Icon,
@@ -26,7 +28,7 @@ import {
   TargetIcon,
   UsersIcon,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 
 export type OnboardingStep = {
   id: string;
@@ -76,278 +78,101 @@ export type InviteRow = {
   role: InviteRoleValue;
 };
 
-export const ONBOARDING_STEPS: OnboardingStep[] = [
-  {
-    id: 'profile',
-    value: 1,
-    label: 'Profile',
-    title: 'Set up your profile',
-    description: 'Add the details teammates will see across the workspace.',
-  },
-  {
-    id: 'role',
-    value: 2,
-    label: 'Role',
-    title: 'Choose your role',
-    description: 'Starter views will match your daily work.',
-  },
-  {
-    id: 'source',
-    value: 3,
-    label: 'Source',
-    title: 'How did you hear about us?',
-    description: 'Tell us where Orvilo first showed up for you. This step is optional.',
-    optional: true,
-  },
-  {
-    id: 'workspace',
-    value: 4,
-    label: 'Workspace',
-    title: 'Create your workspace',
-    description: 'Name the shared space your team will use first.',
-  },
-  {
-    id: 'goals',
-    value: 5,
-    label: 'Goals',
-    title: 'Choose your first goals',
-    description: 'Pick the workflows this workspace should support.',
-  },
-  {
-    id: 'invite',
-    value: 6,
-    label: 'Invite',
-    title: 'Invite teammates',
-    description: 'Add the people who should join this workspace.',
-    optional: true,
-  },
-];
+export type OnboardingTranslate = TFunction<'onboarding'>;
+type HugeIcon = ComponentProps<typeof HugeiconsIcon>['icon'];
 
-export const DISCOVERY_SOURCE_OPTIONS: OnboardingChoice<DiscoverySourceValue>[] = [
-  {
-    value: 'google',
-    label: 'Google',
-    description: 'Search or ads.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={GoogleIcon} />,
-  },
-  {
-    value: 'linkedin',
-    label: 'LinkedIn',
-    description: 'A professional post or share.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={Linkedin01Icon} />,
-  },
-  {
-    value: 'facebook',
-    label: 'Facebook',
-    description: 'A Facebook post or group mention.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={Facebook02Icon} />,
-  },
-  {
-    value: 'instagram',
-    label: 'Instagram',
-    description: 'A story, post, or creator share.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={InstagramIcon} />,
-  },
-  {
-    value: 'reddit',
-    label: 'Reddit',
-    description: 'A thread, review, or recommendation.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={RedditIcon} />,
-  },
-  {
-    value: 'x',
-    label: 'X.com',
-    description: 'A post or discussion on X.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={NewTwitterIcon} />,
-  },
-  {
-    value: 'youtube',
-    label: 'YouTube',
-    description: 'A demo, review, or walkthrough.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={YoutubeIcon} />,
-  },
-  {
-    value: 'podcast',
-    label: 'Podcast',
-    description: 'A show or interview.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={PodcastIcon} />,
-  },
-  {
-    value: 'newsletter',
-    label: 'Newsletter',
-    description: 'An email roundup.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={Mail01Icon} />,
-  },
-  {
-    value: 'friend',
-    label: 'Friend / coworker',
-    description: 'A teammate or peer recommended it.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={UserMultiple02Icon} />,
-  },
-  {
-    value: 'ai',
-    label: 'AI assistant',
-    description: 'Suggested during research.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={AiMagicIcon} />,
-  },
-  {
-    value: 'outside',
-    label: 'Billboard / outside',
-    description: 'Conference, billboard, or offline mention.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={AdvertisimentIcon} />,
-  },
-  {
-    value: 'other',
-    label: 'Other',
-    description: 'Something else.',
-    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={MoreHorizontalCircle01Icon} />,
-  },
-];
+export const createOnboardingData = (t: OnboardingTranslate) => ({
+  discoverySourceOptions: (
+    [
+      ['google', GoogleIcon],
+      ['linkedin', Linkedin01Icon],
+      ['facebook', Facebook02Icon],
+      ['instagram', InstagramIcon],
+      ['reddit', RedditIcon],
+      ['x', NewTwitterIcon],
+      ['youtube', YoutubeIcon],
+      ['podcast', PodcastIcon],
+      ['newsletter', Mail01Icon],
+      ['friend', UserMultiple02Icon],
+      ['ai', AiMagicIcon],
+      ['outside', AdvertisimentIcon],
+      ['other', MoreHorizontalCircle01Icon],
+    ] as Array<[DiscoverySourceValue, HugeIcon]>
+  ).map(([value, Icon]) => ({
+    value: value as DiscoverySourceValue,
+    label: t(`reui.source.${value}.label`),
+    description: t(`reui.source.${value}.description`),
+    icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={Icon} />,
+  })),
+  goalOptions: (
+    [
+      ['roadmaps', LayersIcon],
+      ['sprints', CodeIcon],
+      ['projects', UsersIcon],
+      ['migration', ArrowLeftRightIcon],
+      ['explore', SparklesIcon],
+    ] as Array<[GoalValue, LucideIcon]>
+  ).map(([value, Icon]) => ({
+    value: value as GoalValue,
+    label: t(`reui.goal.${value}.label`),
+    description: t(`reui.goal.${value}.description`),
+    icon: <Icon aria-hidden="true" />,
+  })),
+  inviteRoleOptions: (['guest', 'member', 'admin'] as InviteRoleValue[]).map((value) => ({
+    value,
+    label: t(`reui.inviteRole.${value}.label`),
+    description: t(`reui.inviteRole.${value}.description`),
+  })),
+  roleOptions: (
+    [
+      ['product', TargetIcon],
+      ['engineering', GitBranchIcon],
+      ['design', PaletteIcon],
+      ['developer', CodeIcon],
+      ['founder', RocketIcon],
+      ['operations', Settings2Icon],
+    ] as Array<[RoleValue, LucideIcon]>
+  ).map(([value, Icon]) => ({
+    value: value as RoleValue,
+    label: t(`reui.role.${value}.label`),
+    description: t(`reui.role.${value}.description`),
+    icon: <Icon aria-hidden="true" />,
+    ...(value === 'developer' ? { recommended: true } : {}),
+  })),
+  steps: [
+    ['profile', 1],
+    ['role', 2],
+    ['source', 3],
+    ['workspace', 4],
+    ['goals', 5],
+    ['invite', 6],
+  ].map(([id, value]) => ({
+    id: id as string,
+    value: value as number,
+    label: t(`reui.step.${id}.label`),
+    title: t(`reui.step.${id}.title`),
+    description: t(`reui.step.${id}.description`),
+    ...(['source', 'invite'].includes(id as string) ? { optional: true } : {}),
+  })),
+  teamSizeOptions: (
+    [
+      ['solo', 'solo'],
+      ['small', 'small'],
+      ['team', 'team'],
+      ['department', 'department'],
+      ['midmarket', 'midmarket'],
+      ['company', 'company'],
+      ['enterprise', 'enterprise'],
+      ['global', 'global'],
+    ] as Array<[TeamSizeValue, string]>
+  ).map(([value, key]) => ({
+    value: value as TeamSizeValue,
+    label: t(`reui.teamSize.${key}.label`),
+    description: t(`reui.teamSize.${key}.description`),
+    ...(value === 'team' ? { recommended: true } : {}),
+  })),
+});
 
-export const ROLE_OPTIONS: OnboardingChoice<RoleValue>[] = [
-  {
-    value: 'product',
-    label: 'Product Manager',
-    description: 'Plan roadmaps and align releases.',
-    icon: <TargetIcon aria-hidden="true" />,
-  },
-  {
-    value: 'engineering',
-    label: 'Engineering Manager',
-    description: 'Coordinate cycles, dependencies, and reviews.',
-    icon: <GitBranchIcon aria-hidden="true" />,
-  },
-  {
-    value: 'design',
-    label: 'Designer',
-    description: 'Shape specs, decisions, and handoff.',
-    icon: <PaletteIcon aria-hidden="true" />,
-  },
-  {
-    value: 'developer',
-    label: 'Developer',
-    description: 'Track issues, reviews, and implementation.',
-    icon: <CodeIcon aria-hidden="true" />,
-    recommended: true,
-  },
-  {
-    value: 'founder',
-    label: 'Founder or Executive',
-    description: 'Keep launches and priorities in view.',
-    icon: <RocketIcon aria-hidden="true" />,
-  },
-  {
-    value: 'operations',
-    label: 'Operations Manager',
-    description: 'Standardize ownership and handoffs.',
-    icon: <Settings2Icon aria-hidden="true" />,
-  },
-];
+export type OnboardingData = ReturnType<typeof createOnboardingData>;
 
-export const TEAM_SIZE_OPTIONS: OnboardingChoice<TeamSizeValue>[] = [
-  {
-    value: 'solo',
-    label: 'Just myself',
-    description: 'Personal setup.',
-  },
-  {
-    value: 'small',
-    label: '2-10',
-    description: 'Small team.',
-  },
-  {
-    value: 'team',
-    label: '11-50',
-    description: 'Growing team.',
-    recommended: true,
-  },
-  {
-    value: 'department',
-    label: '51-200',
-    description: 'Department.',
-  },
-  {
-    value: 'midmarket',
-    label: '201-500',
-    description: 'Mid-market team.',
-  },
-  {
-    value: 'company',
-    label: '501-1,000',
-    description: 'Company.',
-  },
-  {
-    value: 'enterprise',
-    label: '1,001-5,000',
-    description: 'Enterprise.',
-  },
-  {
-    value: 'global',
-    label: '5,000+',
-    description: 'Global organization.',
-  },
-];
-
-export const GOAL_OPTIONS: OnboardingChoice<GoalValue>[] = [
-  {
-    value: 'roadmaps',
-    label: 'Product roadmaps',
-    description: 'Connect goals, projects, and releases.',
-    icon: <LayersIcon aria-hidden="true" />,
-  },
-  {
-    value: 'sprints',
-    label: 'Engineering sprints',
-    description: 'Keep issues, cycles, and reviews moving.',
-    icon: <CodeIcon aria-hidden="true" />,
-  },
-  {
-    value: 'projects',
-    label: 'Cross-functional projects',
-    description: 'Give each team one source of truth.',
-    icon: <UsersIcon aria-hidden="true" />,
-  },
-  {
-    value: 'migration',
-    label: 'Replace our current tool',
-    description: 'Use familiar fields and migration defaults.',
-    icon: <ArrowLeftRightIcon aria-hidden="true" />,
-  },
-  {
-    value: 'explore',
-    label: 'Just exploring',
-    description: 'Start with sample data and lighter setup.',
-    icon: <SparklesIcon aria-hidden="true" />,
-  },
-];
-
-export const INVITE_ROLE_OPTIONS: OnboardingChoice<InviteRoleValue>[] = [
-  {
-    value: 'guest',
-    label: 'Guest',
-    description: 'Can view invited projects.',
-  },
-  {
-    value: 'member',
-    label: 'Member',
-    description: 'Can create and update work.',
-  },
-  {
-    value: 'admin',
-    label: 'Admin',
-    description: 'Can manage workspace settings.',
-  },
-];
-
-export const DEFAULT_INVITES: InviteRow[] = [
-  {
-    id: 'invite-1',
-    email: 'maya@northstar.dev',
-    role: 'admin',
-  },
-  {
-    id: 'invite-2',
-    email: 'kai@northstar.dev',
-    role: 'member',
-  },
-];
+export const DEFAULT_INVITES: InviteRow[] = [];

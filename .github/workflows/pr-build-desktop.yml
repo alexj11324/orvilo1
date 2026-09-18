@@ -132,7 +132,8 @@ jobs:
         env:
           # 设置更新通道，PR构建为nightly，否则为stable
           UPDATE_CHANNEL: 'nightly'
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           # 默认添加一个加密 SECRET
@@ -157,7 +158,8 @@ jobs:
         env:
           # 设置更新通道，PR构建为nightly，否则为stable
           UPDATE_CHANNEL: 'nightly'
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='
@@ -174,7 +176,8 @@ jobs:
         env:
           # 设置更新通道，PR构建为nightly，否则为stable
           UPDATE_CHANNEL: 'nightly'
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_SERVER_URL: ${{ secrets.RENDERER_OTA_SERVER_URL || secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='

@@ -31,75 +31,24 @@ GSM 备份：`orvilo-apple-developer-id-p12`、`orvilo-apple-developer-id-passwo
 
 ## 二、剩余工作
 
-### 任务 1（最高优先）—— 桌面通道：安装包走 GitHub Release，但 renderer OTA 仍需一个静态服务
+### 任务 1 —— 桌面安装包与 renderer OTA
 
-> ⚠️ **这一节初稿写错了，以下是更正后的版本。** 初稿说「删掉 S3 job 即可」，那是错的 ——
-> 它会连带杀掉 renderer OTA。动手前务必读完本节。
+接手后代码已拆分，仍需真实发布验收：
 
-**桌面有两套完全独立的更新机制，别把它们混为一谈。**
+- **安装包更新**：stable /beta/canary 官方构建不设置 `UPDATE_SERVER_URL`，
+  electron-builder 使用 `alexj11324/orvilo1` 的 GitHub Release provider。
+- **renderer OTA**：使用独立 `RENDERER_OTA_SERVER_URL`；运行时保留对旧
+  `UPDATE_SERVER_URL` 的回退。安装包不再上传 S3，但 renderer 基线和补丁仍上传。
+- **独立构建**：不配置 Cloud overlay 时使用本仓库；只配置 overlay token 或仓库之一时明确失败。
+- **公证**：受信的发布和手动构建支持 Team ASC API Key，临时私钥权限为 0600，构建后清理。
+  PR 自动构建不注入新增的公证私钥。
 
-|                             | 安装包更新                                                  | renderer OTA                                                                                 |
-| --------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| 实现                        | `electron-updater`                                          | **自定义**，`apps/desktop/src/main/core/infrastructure/rendererOta/RendererUpdateManager.ts` |
-| 选源方式                    | `electron-builder.mjs` 按 `UPDATE_SERVER_URL` 决定 provider | **硬依赖 `UPDATE_SERVER_URL`**                                                               |
-| 留空 `UPDATE_SERVER_URL` 时 | 回退到 **github provider**（= GitHub Release）✅            | `RendererUpdateManager.ts:92` → `missing-server-url`，**整个功能不可用** ❌                  |
+计划使用现有 Oracle RustFS 的独立 `orvilo-desktop-updates` 桶。
+`RENDERER_OTA_SERVER_URL` 计划为 `https://rustfs.aspectlylabs.com/orvilo-desktop-updates`。
+**该桶、发布用户和新 GitHub Secrets 尚未创建**，相关授权仍待维护者确认。
 
-证据：
-
-```ts
-// RendererUpdateManager.ts:381
-return `${UPDATE_SERVER_BASE_URL}/${channel}/${APP_VERSION}/renderer/v2`;
-
-// :92
-!UPDATE_SERVER_URL && 'missing-server-url',
-```
-
-`${channel}/${version}/renderer/v2` 这种路径结构 GitHub Release 提供不了，所以
-**「更新源改用 GitHub Release」这个决定只覆盖安装包，不覆盖 renderer OTA。**
-
-**所以真正要做的拆分**：
-
-1. **安装包更新** → 让它走 GitHub Release：**不配 `UPDATE_SERVER_URL` 即可**
-   （`electron-builder.mjs:88-118` 无该变量时回退 github provider）。这部分不用改代码。
-
-2. **renderer OTA** → 仍需要一个静态文件服务。选项：
-   - **Cloudflare R2**：S3 兼容，`desktop-publish-s3` action 的 `s3-endpoint` 输入描述里
-     本来就写着 "for R2/MinIO etc."，**代码零改动**，且 egress 免费
-   - 或保留现有 S3
-   - 或自建（Oracle + nginx）
-
-3. **如果暂时不做 renderer OTA**，才轮到「删 S3 job」—— 但要**连 renderer 相关的 job 一起禁**，
-   不能只删 `publish-s3`。
-
-**当前待修复的点和位置**：
-
-```yaml
-# release-desktop-stable.yml:421（canary 在 475 附近）
-publish-s3:
-  if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_s3_upload) }}
-```
-
-这个 `if` 只检查手动触发的 skip 开关。手动触发时 `skip_s3_upload` 默认 `true` 能跳过；
-但 `release: published` 触发时条件为真，**S3 步骤会执行**，而 `UPDATE_S3_*` 不存在 → 失败。
-
-**S3 相关 job 的实际分布（与初稿不同，已核实）**：
-
-| 文件                         | job                   | 行      | 说明                                                                       |
-| ---------------------------- | --------------------- | ------- | -------------------------------------------------------------------------- |
-| `release-desktop-stable.yml` | `publish-s3`          | **416** | 安装包 + 更新清单                                                          |
-| `release-desktop-stable.yml` | `renderer-ota`        | **140** | 复用 `release-desktop-renderer-ota.yml`，其 `if` 同样引用 `skip_s3_upload` |
-| `release-desktop-canary.yml` | `publish-s3`          | **475** | 另有第二组 S3 输入在 549-553                                               |
-| `release-desktop-beta.yml`   | **没有 `publish-s3`** | —       | 只有 `publish-renderer-base`（306），带 `upload-release-files: false`      |
-
-⚠️ **动手前先摸清依赖图**，别按 job 名猜：
-
-```bash
-grep -n "publish-s3\|renderer-ota\|publish-renderer-base\|skip_s3_upload" \
-  .github/workflows/release-desktop-*.yml
-```
-
-**验证**：改完跑 `actionlint`；再 `gh workflow run` 手动触发一次
-（`skip_s3_upload` 保持默认 `true`），确认 job 列表符合预期。
+已完成代码级验证：发布工作流 / 脚本 19 个定向测试，桌面 OTA 集成 21 个测试，
+以及作用域内 lint、格式和 actionlint。完整安装包构建、公证和真实 OTA 更新尚未验收。
 
 ### 任务 2 —— 桌面通道的 Umami 埋点（可选）
 
@@ -110,7 +59,7 @@ grep -n "publish-s3\|renderer-ota\|publish-renderer-base\|skip_s3_upload" \
 
 ### 任务 3 —— 启用 workflow
 
-**前提：任务 1 完成且 PR 已合并。** `gh workflow enable <file>` 启用的是**默认分支上的版本**，
+**前提：任务 1 完成，且修复代码已通过 release PR 进入默认分支 `main`。** `gh workflow enable <file>` 启用的是**默认分支上的版本**，
 在合并前启用等于启用旧代码。
 
 按凭据齐备度排序（用下面这条命令重新核对，**注意脚本要在 bash 下跑**，见「坑 4」）：
@@ -145,8 +94,9 @@ done'
 现状：`sync-main-to-canary` 通过 PR 同步。冲突时中止合并，将 main 的真实内容作为
 草稿 PR 分支；不能把冲突标记提交成一个看起来已完成的 merge commit。
 
-合并顺序还依赖 PR #82：当前 ruleset 已要求 `Required Quality Gate` 和独立批准，
-必须等该检查实现合入并更新 #78 基线。不得降低保护规则来完成发布任务。
+合并顺序还依赖 PR #82：当前 ruleset 要求 `Required Quality Gate`，
+必须等该检查实现合入并更新 #78 基线。维护者已授权取消无法满足的他人批准要求，
+必需 CI、最新基线和 review 线程解决要求仍保留。
 
 ## 三、必须知道的坑（都实际踩过）
 
@@ -205,6 +155,6 @@ gh secret list --repo alexj11324/orvilo1
 - 公证：本机现有 Team ASC API 私钥已通过 `notarytool history` 认证验证。
   将该私钥保存到 Orvilo CI 的 GSM / GitHub Secrets 待授权。该路径不需要 Apple 应用专用密码。
 - `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` 是另一种认证方式，可在不采用 API Key 时配置。
-- 合并仍需仓库保护要求的独立批准及 `Required Quality Gate`，不能由 PR 作者自我批准。
+- 合并仍需 `Required Quality Gate`、最新基线及所有 review 线程解决。
 
 只有完成真实 macOS 构建、Apple 公证、安装包与 OTA 下载验证后，才能把桌面发布标为完成。

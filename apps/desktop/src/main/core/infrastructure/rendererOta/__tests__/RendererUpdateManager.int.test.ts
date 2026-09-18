@@ -49,7 +49,8 @@ vi.mock('@/modules/updater/configs', () => ({
     return updaterConfigMock.buildChannel;
   },
   UPDATE_CHANNEL: 'stable',
-  UPDATE_SERVER_URL: 'https://updates.test/stable',
+  RENDERER_OTA_SERVER_URL: SERVER,
+  UPDATE_SERVER_URL: '',
   coerceStoredUpdateChannel: (channel?: string) => (channel === 'canary' ? 'canary' : 'stable'),
 }));
 const makeApp = () => ({

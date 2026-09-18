@@ -136,9 +136,8 @@ Release 的实际代价有三条，接受它们是因为省去了一整套对象
   `apps/`、`packages/`、`plugins/`、`src/`、`server/`、根目录的应用入口页及运行时配置，
   其中测试、fixture、mock 与 Markdown 文件不触发此要求。纯文档、CI、工具和测试改动可以
   单独合并。超出 GitHub 3,000 个文件 API 上限的 PR 会失败，直到拆分为可审计的改动。
-- **不设必需批准数**：仓库只有一个 maintainer，而 GitHub 不允许自我批准，
-  设成 1 会把所有人都锁死。必需 CI、严格的 `Required Quality Gate` 和 review
-  线程解决要求仍保留。
+- 2026-09-18 经维护者批准改为单维护者规则：必需批准数为 0，不要求最新推送的
+  他人批准；保留所有 review 线程解决和严格的 `Required Quality Gate`。
 
 > **为什么不给 GitHub Actions 开豁免**：个人账号的 repository ruleset
 > 不支持把 GitHub Actions 加入 bypass list —— API 直接拒绝：

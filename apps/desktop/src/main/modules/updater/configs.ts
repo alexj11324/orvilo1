@@ -13,10 +13,12 @@ export const BUILD_CHANNEL: string = rawChannel;
 export const UPDATE_CHANNEL: UpdateChannel =
   rawChannel === 'canary' || rawChannel === 'beta' ? 'canary' : 'stable';
 
-// S3 base URL for all channels
-// e.g., https://releases.aspectlylabs.com
-// Each channel resolves to {base}/{channel}/
+// Installer update URL. When unset, electron-updater uses the GitHub provider.
 export const UPDATE_SERVER_URL = getDesktopEnv().UPDATE_SERVER_URL;
+
+// Renderer OTA may remain on a static object store while installers use GitHub Releases.
+// Keep the old URL as a fallback for existing generic-provider deployments.
+export const RENDERER_OTA_SERVER_URL = getDesktopEnv().RENDERER_OTA_SERVER_URL || UPDATE_SERVER_URL;
 
 export const updaterConfig = {
   app: {

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { getTableName, SQL } from 'drizzle-orm';
+import { getTableName, Param, SQL } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { workspaceAgentRouter } from '@/business/server/lambda-routers/workspaceAgent';
@@ -65,6 +65,7 @@ const createCaller = (overrides: Record<string, unknown> = {}) =>
 /** Flatten a drizzle SQL tree into its leaf chunks (columns, params, strings). */
 const flattenSql = (node: unknown): unknown[] => {
   if (node instanceof SQL) return node.queryChunks.flatMap(flattenSql);
+  if (node instanceof Param) return [node.value];
   if (Array.isArray(node)) return node.flatMap(flattenSql);
   return [node];
 };

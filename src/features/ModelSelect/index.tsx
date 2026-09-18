@@ -1,8 +1,8 @@
 import { Flexbox, Tooltip, TooltipGroup } from '@lobehub/ui';
-import { Button, Select, type SelectProps, Switch, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { Button, Select, type SelectProps, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { type ReactNode } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelItemRender, ProviderItemRender, TAG_CLASSNAME } from '@/components/ModelSelect';
@@ -10,22 +10,22 @@ import { ModelIcon } from '@/components/OrviloIcons';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
 
-import { resolveEnableTargetProviderId, resolveStaleModelState } from './resolveStaleModelState';
+import { resolveStaleModelState } from './resolveStaleModelState';
 
 const prefixCls = 'ant';
 
 /**
  * Marks the stale-status Tag so the popup can hide it — inside the open list the
- * status is conveyed by the enable toggle (notEnabled) or the remedy row
- * (redirected), while the closed trigger keeps showing the Tag.
+ * status is conveyed by the hint text, while the closed trigger keeps showing
+ * the Tag.
  */
 const STALE_TAG_CLASSNAME = 'orvilo-model-select-stale-tag';
 
 /**
  * Marks the stale-model option row so the popup can hide the Select's built-in
  * selected-item check on it — the row already sits under the "Current selection"
- * group and (for notEnabled) renders an enable Switch, so the extra check reads
- * as contradictory and steals the row's right edge.
+ * group, so the extra check reads as contradictory and steals the row's right
+ * edge.
  */
 const STALE_OPTION_CLASSNAME = 'orvilo-model-select-stale-option';
 
@@ -128,7 +128,6 @@ const ModelSelect = memo<ModelSelectProps>(
     providerIds,
   }) => {
     const { t } = useTranslation('components');
-    const [enabling, setEnabling] = useState(false);
     const fullEnabledList = useAiInfraStore((s) =>
       modelType === 'embedding'
         ? aiProviderSelectors.enabledEmbeddingModelList(s)
@@ -141,10 +140,7 @@ const ModelSelect = memo<ModelSelectProps>(
     }, [fullEnabledList, providerIds]);
     const builtinAiModelList = useAiInfraStore((s) => s.builtinAiModelList);
     const modelRedirects = useAiInfraStore((s) => s.modelRedirects);
-    const enabledAiProviders = useAiInfraStore((s) => s.enabledAiProviders);
     const isInitAiProviderRuntimeState = useAiInfraStore((s) => s.isInitAiProviderRuntimeState);
-    const toggleProviderModelEnabled = useAiInfraStore((s) => s.toggleProviderModelEnabled);
-    const toggleProviderEnabled = useAiInfraStore((s) => s.toggleProviderEnabled);
 
     const options = useMemo<SelectProps['options']>(() => {
       const getChatModels = (provider: EnabledProviderWithModels) => {
@@ -211,61 +207,14 @@ const ModelSelect = memo<ModelSelectProps>(
       value,
     ]);
 
-    const handleEnable = useCallback(async () => {
-      // Prefer the provider the selection is persisted under so every surface
-      // referencing `${provider}/${model}` recovers at once; the builtin-bank
-      // provider is only a fallback for a persisted provider that no longer exists.
-      const providerId = resolveEnableTargetProviderId(value, {
-        enabledAiProviders,
-        enabledList,
-        metaProviderId: staleState?.meta?.providerId,
-      });
-      if (!providerId || !value) return;
-
-      setEnabling(true);
-      try {
-        // Enabling only the model row is a silent no-op when the owning provider is
-        // disabled — the picker keeps building options from enabled providers. Enable
-        // the provider first so the remedy actually makes the selection resolvable
-        // (idempotent when the provider is enabled but absent from this typed list).
-        if (!enabledList.some((provider) => provider.id === providerId)) {
-          await toggleProviderEnabled(providerId, true);
-        }
-        await toggleProviderModelEnabled({
-          enabled: true,
-          id: value.model,
-          providerId,
-          type: modelType,
-        });
-        // Realign the selection when it pointed at a different provider, so the now
-        // enabled model resolves as a valid option instead of staying stale.
-        if (providerId !== value.provider) onChange?.({ model: value.model, provider: providerId });
-      } catch {
-        toast.error(t('ModelSelect.staleModel.notEnabled.actionFailed'));
-      } finally {
-        setEnabling(false);
-      }
-    }, [
-      enabledAiProviders,
-      enabledList,
-      modelType,
-      onChange,
-      staleState,
-      t,
-      toggleProviderEnabled,
-      toggleProviderModelEnabled,
-      value,
-    ]);
-
     const finalOptions = useMemo<SelectProps['options']>(() => {
       if (!staleState || !value) return options;
 
       const { meta, status } = staleState;
       const successorName = staleState.successor?.displayName || staleState.successorId;
 
-      // The trigger renders the selected option's `label`, so the enable Switch and
-      // the hint stay out of it: a <button> inside the trigger <button> is invalid
-      // HTML. They live on `popupLabel`, which only `optionRender` reads.
+      // The trigger renders the selected option's `label`, so the hint stays out
+      // of it and lives on `popupLabel`, which only `optionRender` reads.
       const renderStaleLabel = (withPopupExtras: boolean) => (
         <Flexbox gap={4} style={{ width: '100%' }}>
           <Flexbox horizontal align={'center'} gap={8}>
@@ -283,35 +232,6 @@ const ModelSelect = memo<ModelSelectProps>(
                 {t(`ModelSelect.staleModel.${status}.tag`)}
               </Tag>
             </Tooltip>
-            {withPopupExtras && status === 'notEnabled' && (
-              <>
-                <span style={{ flex: 1 }} />
-                {/* The wrapper re-enables pointer events (the disabled option row
-                 * suppresses them) and stops propagation so toggling never counts
-                 * as selecting the row. */}
-                <span
-                  style={{ flex: 'none', pointerEvents: 'auto' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                  }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                  }}
-                >
-                  <Switch
-                    aria-label={t('ModelSelect.staleModel.notEnabled.action')}
-                    checked={false}
-                    loading={enabling}
-                    size={'small'}
-                    onChange={() => {
-                      void handleEnable();
-                    }}
-                  />
-                </span>
-              </>
-            )}
           </Flexbox>
           {withPopupExtras && (
             <span className={styles.staleHint}>
@@ -330,8 +250,9 @@ const ModelSelect = memo<ModelSelectProps>(
         value: `${value.provider}/${value.model}`,
       };
 
-      // notEnabled recovers via the inline toggle above; only the redirected
-      // remedy ("update to successor") still needs a dedicated action row.
+      // Only the redirected remedy ("update to successor") gets a dedicated
+      // action row; notEnabled/removed are informational — model management is
+      // retired, so the remedy is picking another model.
       const actionLabel =
         status === 'redirected'
           ? t('ModelSelect.staleModel.redirected.action', { successorName })
@@ -360,7 +281,7 @@ const ModelSelect = memo<ModelSelectProps>(
         },
         ...(options ?? []),
       ] as SelectProps['options'];
-    }, [enabling, handleEnable, options, staleState, t, value]);
+    }, [options, staleState, t, value]);
 
     return (
       <TooltipGroup>
@@ -371,7 +292,7 @@ const ModelSelect = memo<ModelSelectProps>(
           defaultValue={value ? `${value.provider}/${value.model}` : null}
           disabled={disabled}
           labelRender={labelRender}
-          loading={loading || enabling}
+          loading={loading}
           options={finalOptions}
           placeholder={placeholder}
           popupClassName={styles.popup}

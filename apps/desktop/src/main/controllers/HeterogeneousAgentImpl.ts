@@ -17,12 +17,10 @@ import type { HeterogeneousProviderBindingReference } from '@orvilo/heterogeneou
 import {
   buildHeterogeneousAgentAuthRequiredError,
   buildHeterogeneousAgentCliNotFoundError,
-  formatHeterogeneousProviderBindingError,
   getHeterogeneousAgentConfigOrThrow,
   isHeterogeneousAgentAuthRequired,
   isServerDefaultHeterogeneousAgentType,
   resolveHeterogeneousAgentCommand,
-  resolveHeterogeneousProviderBinding,
 } from '@orvilo/heterogeneous-agents';
 import type { AskUserBridgeOptions } from '@orvilo/heterogeneous-agents/askUser';
 import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
@@ -120,12 +118,10 @@ import {
 import type { HostedProviderBinding } from '@/modules/heterogeneousAgent/providerBindingHost';
 import {
   gcHostedProviderBindingProfiles,
-  prepareHostedProviderBinding,
   prepareHostedServerDefaultBinding,
 } from '@/modules/heterogeneousAgent/providerBindingHost';
 import {
   beginServerDefaultOperation,
-  getProviderBindingRuntime,
   getServerDefaultEndpoint,
   type ServerDefaultOperationSettlement,
   settleServerDefaultOperation,
@@ -1323,46 +1319,15 @@ export default class HeterogeneousAgentCtr {
     const driver = getHeterogeneousAgentDriver(agentType);
     let hostedProviderBinding: HostedProviderBinding | undefined;
 
+    // User-provider (BYOK) bindings are retired — the only supported binding
+    // is the deployment-owned server-default relay. A `kind: 'provider'`
+    // reference can only arrive from a mismatched client; fail loudly instead
+    // of silently running unbound.
     if (params.providerBinding && params.providerBinding.kind !== 'server-default') {
-      const bindingRuntime = await getProviderBindingRuntime(
-        this.remoteServerAuth,
-        params.providerBinding,
-      );
-      const bindingResult = resolveHeterogeneousProviderBinding({
-        agentType,
-        apiConfig: params.providerBinding.apiConfig,
-        checkCredentials: true,
-        // Server-resolved list — makes main authoritative on model
-        // availability even when the renderer's store state is stale.
-        enabledModels: bindingRuntime.enabledModels,
-        providerEnabled: bindingRuntime.enabled,
-        runtimeConfig: bindingRuntime.runtimeConfig,
-      });
-      if (bindingResult.error) {
-        throw new Error(formatHeterogeneousProviderBindingError(bindingResult.error));
-      }
+      throw new Error('Orvilo Provider bindings are no longer supported.');
+    }
 
-      hostedProviderBinding = await prepareHostedProviderBinding({
-        agentType,
-        appStoragePath: this.app.appStoragePath,
-        args: params.args || [],
-        driver,
-        env: params.env,
-        reference: params.providerBinding,
-        resolution: bindingResult.resolution,
-        sessionId,
-      });
-
-      // Opportunistic sweep of long-unused binding profiles (provider deleted,
-      // endpoint changed, identity version bumped). The profile in use was just
-      // touched by prepare, so it is never a candidate. Never blocks the run.
-      gcHostedProviderBindingProfiles(this.app.appStoragePath)
-        .then((removedProfiles) => {
-          if (removedProfiles.length > 0)
-            logger.info('Removed stale provider-binding profiles:', removedProfiles);
-        })
-        .catch((error) => logger.warn('Provider-binding profile GC failed:', error));
-    } else if (params.providerBinding?.kind === 'server-default') {
+    if (params.providerBinding?.kind === 'server-default') {
       hostedProviderBinding = await prepareHostedServerDefaultBinding({
         agentType,
         appStoragePath: this.app.appStoragePath,
@@ -1373,6 +1338,18 @@ export default class HeterogeneousAgentCtr {
         model: params.providerBinding.apiConfig.model,
         sessionId,
       });
+    }
+
+    if (hostedProviderBinding) {
+      // Opportunistic sweep of long-unused binding profiles (provider deleted,
+      // endpoint changed, identity version bumped). The profile in use was just
+      // touched by prepare, so it is never a candidate. Never blocks the run.
+      gcHostedProviderBindingProfiles(this.app.appStoragePath)
+        .then((removedProfiles) => {
+          if (removedProfiles.length > 0)
+            logger.info('Removed stale provider-binding profiles:', removedProfiles);
+        })
+        .catch((error) => logger.warn('Provider-binding profile GC failed:', error));
     }
 
     const resumeSessionId =

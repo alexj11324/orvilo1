@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, stat, utimes } from 'node:fs/promises';
+import { mkdtemp, stat, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   gcHostedProviderBindingProfiles,
-  prepareHostedProviderBinding,
   prepareHostedServerDefaultBinding,
 } from './providerBindingHost';
 import type { HeterogeneousAgentDriver } from './types';
@@ -18,210 +17,32 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
 });
 
-const makeParams = async (driver: HeterogeneousAgentDriver) => {
-  const appStoragePath = await mkdtemp(path.join(tmpdir(), 'provider-binding-host-'));
+// Mirrors claude-code: the plan writes no profileFiles, so the profile
+// directory itself is never touched after creation (transcripts land in
+// subdirectories, which do not update the root mtime).
+const claudeCodeLikeDriver: HeterogeneousAgentDriver = {
+  prepareServerDefaultBinding: ({ profileDir }) => ({
+    args: [],
+    env: { CLAUDE_CONFIG_DIR: profileDir },
+    operationTokenEnvKey: 'ANTHROPIC_AUTH_TOKEN',
+  }),
+};
+
+const makeServerDefaultParams = async (overrides: { model?: string; sessionId?: string } = {}) => {
+  const appStoragePath = await mkdtemp(path.join(tmpdir(), 'server-default-binding-host-'));
   roots.push(appStoragePath);
   return {
-    agentType: 'codex',
+    agentType: 'claude-code',
     appStoragePath,
     args: [],
-    driver,
-    reference: {
-      apiConfig: { model: 'gpt-test', providerId: 'provider-test' },
-      kind: 'provider' as const,
-    },
-    resolution: {
-      agentType: 'codex' as const,
-      apiConfig: { model: 'gpt-test', providerId: 'provider-test' },
-      endpoint: 'https://example.com/v1',
-      protocol: 'openai-responses' as const,
-      providerId: 'provider-test',
-      runtimeConfig: {
-        config: { enableResponseApi: true },
-        keyVaults: { apiKey: 'secret' },
-        settings: { sdkType: 'openai' as const, supportResponsesApi: true },
-      },
-    },
-    sessionId: 'session-test',
+    driver: claudeCodeLikeDriver,
+    endpoint: 'https://example.com',
+    model: overrides.model ?? 'orvilo-default',
+    sessionId: overrides.sessionId ?? 'session-test',
   };
 };
 
-describe('prepareHostedProviderBinding', () => {
-  it('creates private profile/run directories, keeps profile state, and cleans the run', async () => {
-    const cleanup = vi.fn().mockResolvedValue(undefined);
-    const driver: HeterogeneousAgentDriver = {
-      prepareProviderBinding: ({ profileDir }) => ({
-        args: ['--model', 'gpt-test'],
-        cleanup,
-        env: { CODEX_HOME: profileDir, SECRET_ENV: 'secret' },
-        profileFiles: [{ content: 'env_key = "SECRET_ENV"\n', path: 'config.toml' }],
-        runFiles: [{ content: 'temporary', path: 'request.tmp' }],
-      }),
-    };
-    const binding = await prepareHostedProviderBinding(await makeParams(driver));
-
-    expect(binding.bindingKey).toMatch(/^provider-binding:v1:/);
-    expect((await stat(binding.profileDir)).mode & 0o777).toBe(0o700);
-    expect((await stat(binding.runDir)).mode & 0o777).toBe(0o700);
-    expect((await stat(path.join(binding.profileDir, 'config.toml'))).mode & 0o777).toBe(0o600);
-    expect(await readFile(path.join(binding.profileDir, 'config.toml'), 'utf8')).not.toContain(
-      'secret',
-    );
-
-    await binding.cleanup();
-    expect(cleanup).toHaveBeenCalledOnce();
-    await expect(stat(binding.runDir)).rejects.toThrow();
-    await expect(stat(binding.profileDir)).resolves.toBeDefined();
-  });
-
-  it('rejects file traversal and cleans the partially created run directory', async () => {
-    const cleanup = vi.fn().mockResolvedValue(undefined);
-    const driver: HeterogeneousAgentDriver = {
-      prepareProviderBinding: () => ({
-        args: [],
-        cleanup,
-        env: {},
-        runFiles: [{ content: 'escape', path: '../escape' }],
-      }),
-    };
-    const params = await makeParams(driver);
-    await expect(prepareHostedProviderBinding(params)).rejects.toThrow(/managed directory/);
-    await expect(
-      stat(path.join(params.appStoragePath, 'heteroAgent', 'runs', params.sessionId)),
-    ).rejects.toThrow();
-    expect(cleanup).toHaveBeenCalledOnce();
-  });
-
-  it('releases driver resources synchronously during app shutdown', async () => {
-    const cleanupSync = vi.fn();
-    const driver: HeterogeneousAgentDriver = {
-      prepareProviderBinding: () => ({ args: [], cleanupSync, env: {} }),
-    };
-    const binding = await prepareHostedProviderBinding(await makeParams(driver));
-
-    binding.cleanupSync();
-
-    expect(cleanupSync).toHaveBeenCalledOnce();
-    await expect(stat(binding.runDir)).rejects.toThrow();
-  });
-
-  it('isolates Pi profiles by model while reusing an identity after API-key rotation', async () => {
-    const driver: HeterogeneousAgentDriver = {
-      prepareProviderBinding: ({ resolution }) => ({
-        args: [],
-        env: {},
-        profileFiles: [{ content: resolution.apiConfig.model, path: 'models.json' }],
-      }),
-    };
-    const base = await makeParams(driver);
-    const piParams = (model: string, sessionId: string, apiKey = 'secret') => ({
-      ...base,
-      agentType: 'pi',
-      reference: {
-        apiConfig: { model, providerId: 'provider-test' },
-        kind: 'provider' as const,
-      },
-      resolution: {
-        ...base.resolution,
-        agentType: 'pi' as const,
-        apiConfig: { model, providerId: 'provider-test' },
-        protocol: 'openai-chat-completions' as const,
-        runtimeConfig: {
-          ...base.resolution.runtimeConfig,
-          keyVaults: { apiKey, baseURL: 'https://example.com/v1' },
-        },
-      },
-      sessionId,
-    });
-
-    const [first, second] = await Promise.all([
-      prepareHostedProviderBinding(piParams('model-a', 'session-a')),
-      prepareHostedProviderBinding(piParams('model-b', 'session-b')),
-    ]);
-    const rotated = await prepareHostedProviderBinding(
-      piParams('model-a', 'session-c', 'rotated-secret'),
-    );
-
-    expect(first.bindingKey).toMatch(/^provider-binding:v2:/);
-    expect(first.profileDir).not.toBe(second.profileDir);
-    expect(first.bindingKey).not.toBe(second.bindingKey);
-    expect(rotated.profileDir).toBe(first.profileDir);
-    expect(rotated.bindingKey).toBe(first.bindingKey);
-    expect(await readFile(path.join(first.profileDir, 'models.json'), 'utf8')).toBe('model-a');
-    expect(await readFile(path.join(second.profileDir, 'models.json'), 'utf8')).toBe('model-b');
-  });
-
-  it.each(['grok-build', 'trae'] as const)(
-    'isolates %s profiles by model because the managed catalog is profile-scoped',
-    async (agentType) => {
-      const driver: HeterogeneousAgentDriver = {
-        prepareProviderBinding: ({ profileDir }) => ({
-          args: [],
-          env: { PROFILE_HOME: profileDir },
-        }),
-      };
-      const base = await makeParams(driver);
-      const firstParams = {
-        ...base,
-        agentType,
-        reference: {
-          ...base.reference,
-          apiConfig: { ...base.reference.apiConfig, model: 'model-a' },
-        },
-        resolution: {
-          ...base.resolution,
-          agentType,
-          apiConfig: { ...base.resolution.apiConfig, model: 'model-a' },
-        },
-      };
-      const secondParams = {
-        ...firstParams,
-        reference: {
-          ...firstParams.reference,
-          apiConfig: { ...firstParams.reference.apiConfig, model: 'model-b' },
-        },
-        resolution: {
-          ...firstParams.resolution,
-          apiConfig: { ...firstParams.resolution.apiConfig, model: 'model-b' },
-        },
-        sessionId: 'session-test-2',
-      };
-
-      const first = await prepareHostedProviderBinding(firstParams);
-      const second = await prepareHostedProviderBinding(secondParams);
-
-      expect(second.profileDir).not.toBe(first.profileDir);
-      expect(second.bindingKey).not.toBe(first.bindingKey);
-    },
-  );
-});
-
 describe('prepareHostedServerDefaultBinding', () => {
-  // Mirrors claude-code: the plan writes no profileFiles, so the profile
-  // directory itself is never touched after creation (transcripts land in
-  // subdirectories, which do not update the root mtime).
-  const claudeCodeLikeDriver: HeterogeneousAgentDriver = {
-    prepareServerDefaultBinding: ({ profileDir }) => ({
-      args: [],
-      env: { CLAUDE_CONFIG_DIR: profileDir },
-      operationTokenEnvKey: 'ANTHROPIC_AUTH_TOKEN',
-    }),
-  };
-
-  const makeServerDefaultParams = async () => {
-    const appStoragePath = await mkdtemp(path.join(tmpdir(), 'server-default-binding-host-'));
-    roots.push(appStoragePath);
-    return {
-      agentType: 'claude-code',
-      appStoragePath,
-      args: [],
-      driver: claudeCodeLikeDriver,
-      endpoint: 'https://example.com',
-      model: 'orvilo-default',
-      sessionId: 'session-test',
-    };
-  };
-
   it('creates private profile/run directories and cleans only the run', async () => {
     const binding = await prepareHostedServerDefaultBinding(await makeServerDefaultParams());
 
@@ -232,6 +53,38 @@ describe('prepareHostedServerDefaultBinding', () => {
     await binding.cleanup();
     await expect(stat(binding.runDir)).rejects.toThrow();
     await expect(stat(binding.profileDir)).resolves.toBeDefined();
+  });
+
+  it('rejects file traversal and cleans the partially created run directory', async () => {
+    const cleanup = vi.fn().mockResolvedValue(undefined);
+    const driver: HeterogeneousAgentDriver = {
+      prepareServerDefaultBinding: () => ({
+        args: [],
+        cleanup,
+        env: {},
+        runFiles: [{ content: 'escape', path: '../escape' }],
+      }),
+    };
+    const params = { ...(await makeServerDefaultParams()), driver };
+    await expect(prepareHostedServerDefaultBinding(params)).rejects.toThrow(/managed directory/);
+    await expect(
+      stat(path.join(params.appStoragePath, 'heteroAgent', 'runs', params.sessionId)),
+    ).rejects.toThrow();
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+
+  it('releases driver resources synchronously during app shutdown', async () => {
+    const cleanupSync = vi.fn();
+    const driver: HeterogeneousAgentDriver = {
+      prepareServerDefaultBinding: () => ({ args: [], cleanupSync, env: {} }),
+    };
+    const params = { ...(await makeServerDefaultParams()), driver };
+    const binding = await prepareHostedServerDefaultBinding(params);
+
+    binding.cleanupSync();
+
+    expect(cleanupSync).toHaveBeenCalledOnce();
+    await expect(stat(binding.runDir)).rejects.toThrow();
   });
 
   it('records last use on prepare so GC never collects an in-use profile', async () => {
@@ -257,17 +110,9 @@ describe('prepareHostedServerDefaultBinding', () => {
 });
 
 describe('gcHostedProviderBindingProfiles', () => {
-  const driver: HeterogeneousAgentDriver = {
-    prepareProviderBinding: ({ profileDir }) => ({
-      args: [],
-      env: { CODEX_HOME: profileDir },
-      profileFiles: [{ content: 'state', path: 'config.toml' }],
-    }),
-  };
-
   it('records last use on prepare and only removes profiles idle beyond the max age', async () => {
-    const params = await makeParams(driver);
-    const binding = await prepareHostedProviderBinding(params);
+    const params = await makeServerDefaultParams();
+    const binding = await prepareHostedServerDefaultBinding(params);
     const marker = path.join(binding.profileDir, '.orvilo-last-used');
     await expect(stat(marker)).resolves.toBeDefined();
 
@@ -285,8 +130,8 @@ describe('gcHostedProviderBindingProfiles', () => {
   });
 
   it('collects pre-marker profiles by directory mtime so legacy orphans are not immortal', async () => {
-    const params = await makeParams(driver);
-    const binding = await prepareHostedProviderBinding(params);
+    const params = await makeServerDefaultParams();
+    const binding = await prepareHostedServerDefaultBinding(params);
     const { rm } = await import('node:fs/promises');
     await rm(path.join(binding.profileDir, '.orvilo-last-used'), { force: true });
 

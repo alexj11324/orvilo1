@@ -3,11 +3,6 @@ import { rmSync } from 'node:fs';
 import { chmod, mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import type {
-  HeterogeneousProviderBindingReference,
-  HeterogeneousProviderBindingResolution,
-} from '@orvilo/heterogeneous-agents';
-
 import { HETERO_AGENT_BINDINGS_DIR, HETERO_AGENT_RUNS_DIR } from '@/const/heteroAgent';
 
 import type {
@@ -89,84 +84,6 @@ export interface HostedProviderBinding {
   runDir: string;
 }
 
-export const prepareHostedProviderBinding = async (params: {
-  agentType: string;
-  appStoragePath: string;
-  args: string[];
-  driver: HeterogeneousAgentDriver;
-  env?: Record<string, string>;
-  reference: Extract<HeterogeneousProviderBindingReference, { kind: 'provider' }>;
-  resolution: HeterogeneousProviderBindingResolution;
-  sessionId: string;
-}): Promise<HostedProviderBinding> => {
-  if (!params.driver.prepareProviderBinding) {
-    throw new Error(`${params.agentType} does not implement Orvilo Provider binding.`);
-  }
-
-  // Pi, Grok, and TRAE persist a custom model definition in the reusable profile.
-  // Include the selected upstream model so concurrent sessions cannot
-  // overwrite one another's model catalog or strand a resumable session
-  // without its model. Other drivers retain their v1 identity and resume keys.
-  const identityVersion = params.agentType === 'pi' ? 'v2' : 'v1';
-  const modelScopedProfile =
-    params.agentType === 'pi' || params.agentType === 'grok-build' || params.agentType === 'trae';
-  const identity = [
-    identityVersion,
-    params.agentType,
-    params.reference.apiConfig.providerId,
-    params.resolution.protocol,
-    params.resolution.endpoint ?? '',
-    ...(modelScopedProfile ? [params.resolution.apiConfig.model] : []),
-  ].join('\0');
-  const digest = hash(identity);
-  const bindingKey = `provider-binding:${identityVersion}:${digest}`;
-  const profileDir = path.join(
-    params.appStoragePath,
-    HETERO_AGENT_BINDINGS_DIR,
-    params.agentType,
-    digest,
-  );
-  const runDir = path.join(params.appStoragePath, HETERO_AGENT_RUNS_DIR, params.sessionId);
-
-  await mkdir(profileDir, { mode: DIRECTORY_MODE, recursive: true });
-  await mkdir(runDir, { mode: DIRECTORY_MODE, recursive: true });
-  await chmod(profileDir, DIRECTORY_MODE);
-  await chmod(runDir, DIRECTORY_MODE);
-  // Recorded before the driver plan so even a failed prepare counts as use.
-  await writeFile(path.join(profileDir, LAST_USED_MARKER), new Date().toISOString(), {
-    encoding: 'utf8',
-    mode: FILE_MODE,
-  });
-
-  let plan: ProviderBindingPlan | undefined;
-  try {
-    plan = await params.driver.prepareProviderBinding({
-      args: params.args,
-      env: params.env,
-      profileDir,
-      reference: params.reference,
-      resolution: params.resolution,
-      runDir,
-    });
-    await writeManagedFiles(profileDir, runDir, plan.profileFiles);
-    await writeManagedFiles(runDir, runDir, plan.runFiles);
-
-    return {
-      args: plan.args,
-      bindingKey,
-      cleanup: () => cleanupBindingRun(runDir, plan),
-      cleanupSync: () => cleanupBindingRunSync(runDir, plan),
-      env: plan.env,
-      operationTokenEnvKey: plan.operationTokenEnvKey,
-      profileDir,
-      runDir,
-    };
-  } catch (error) {
-    await cleanupBindingRun(runDir, plan);
-    throw error;
-  }
-};
-
 export const prepareHostedServerDefaultBinding = async (params: {
   agentType: string;
   appStoragePath: string;
@@ -245,10 +162,9 @@ const statMtimeMs = async (target: string): Promise<number | undefined> => {
  * changing its endpoint, or bumping the identity version would otherwise strand
  * them (with transcripts inside) forever.
  *
- * Profiles are considered used when `prepareHostedProviderBinding` or
- * `prepareHostedServerDefaultBinding` touches their marker at session start;
- * pre-marker profiles fall back to directory mtime. Best-effort: failures skip
- * the entry.
+ * Profiles are considered used when `prepareHostedServerDefaultBinding`
+ * touches their marker at session start; pre-marker profiles fall back to
+ * directory mtime. Best-effort: failures skip the entry.
  *
  * @returns absolute paths of the removed profile directories
  */

@@ -1,7 +1,6 @@
 import { type AiModelReasoningConfig, type OrviloDefaultAiModelListItem } from 'model-bank';
 
 export interface AIModelsState {
-  aiModelLoadingIds: string[];
   builtinAiModelList: OrviloDefaultAiModelListItem[];
   /**
    * The user's per-model-instance reasoning defaults, keyed by
@@ -15,7 +14,6 @@ export interface AIModelsState {
 }
 
 export const initialAIModelState: AIModelsState = {
-  aiModelLoadingIds: [],
   builtinAiModelList: [],
   modelReasoningConfigMap: {},
   modelReasoningConfigUpdatingKeys: [],

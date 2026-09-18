@@ -6,14 +6,10 @@ import { zValidator } from '../common/validator';
 import { ModelController } from '../controllers';
 import { requireAuth } from '../middleware';
 import { requireAnyPermission } from '../middleware/permission-check';
-import {
-  CreateModelRequestSchema,
-  ModelIdParamSchema,
-  ModelsListQuerySchema,
-  UpdateModelRequestSchema,
-} from '../types/model.type';
+import { ModelIdParamSchema, ModelsListQuerySchema } from '../types/model.type';
 
-// Models-related routes
+// Deployment-owned model catalog — provider/model management is retired, so
+// only the read endpoints remain for API consumers picking `model`/`provider`.
 const ModelRoutes = new Hono();
 
 // GET /api/v1/models - Get model list (supports pagination, filtering, and grouping)
@@ -31,21 +27,6 @@ ModelRoutes.get(
   },
 );
 
-// POST /api/v1/models - Create a model
-ModelRoutes.post(
-  '/',
-  requireAuth,
-  requireAnyPermission(
-    getAllScopePermissions('AI_MODEL_CREATE'),
-    'You do not have permission to create a model',
-  ),
-  zValidator('json', CreateModelRequestSchema),
-  (c) => {
-    const controller = new ModelController();
-    return controller.handleCreateModel(c);
-  },
-);
-
 // GET /api/v1/models/:providerId/:modelId - Get model details
 ModelRoutes.get(
   '/:providerId/:modelId',
@@ -58,22 +39,6 @@ ModelRoutes.get(
   (c) => {
     const controller = new ModelController();
     return controller.handleGetModel(c);
-  },
-);
-
-// PATCH /api/v1/models/:providerId/:modelId - Update a model
-ModelRoutes.patch(
-  '/:providerId/:modelId',
-  requireAuth,
-  requireAnyPermission(
-    getAllScopePermissions('AI_MODEL_UPDATE'),
-    'You do not have permission to update a model',
-  ),
-  zValidator('param', ModelIdParamSchema),
-  zValidator('json', UpdateModelRequestSchema),
-  (c) => {
-    const controller = new ModelController();
-    return controller.handleUpdateModel(c);
   },
 );
 

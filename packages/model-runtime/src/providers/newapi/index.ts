@@ -27,39 +27,32 @@ export interface NewAPIPricing {
   supported_endpoint_types?: string[];
 }
 
-const isBrowser = () => typeof window !== 'undefined' && typeof document !== 'undefined';
-
 const fetchPricing = async (
   pricingUrl: string,
   apiKey: string,
-  providerId = ModelProvider.NewAPI,
 ): Promise<NewAPIPricing[] | null> => {
   try {
-    let res: Response;
-    if (isBrowser()) {
-      res = await fetch(`/webapi/models/${encodeURIComponent(providerId)}/pricing`);
-    } else {
-      const fetchWithAuth = async (useAuth: boolean) => {
-        const headers: Record<string, string> = {
-          Accept: 'application/json; charset=utf-8',
-        };
-        if (useAuth && apiKey) {
-          headers.Authorization = `Bearer ${apiKey}`;
-        }
-        return fetch(pricingUrl, { headers });
+    const fetchWithAuth = async (useAuth: boolean) => {
+      const headers: Record<string, string> = {
+        Accept: 'application/json; charset=utf-8',
       };
-
-      let usedAuth = true;
-      try {
-        res = await fetchWithAuth(true);
-      } catch {
-        usedAuth = false;
-        res = await fetchWithAuth(false);
+      if (useAuth && apiKey) {
+        headers.Authorization = `Bearer ${apiKey}`;
       }
+      return fetch(pricingUrl, { headers });
+    };
 
-      if (!res.ok && usedAuth) {
-        res = await fetchWithAuth(false);
-      }
+    let res: Response;
+    let usedAuth = true;
+    try {
+      res = await fetchWithAuth(true);
+    } catch {
+      usedAuth = false;
+      res = await fetchWithAuth(false);
+    }
+
+    if (!res.ok && usedAuth) {
+      res = await fetchWithAuth(false);
     }
 
     if (!res.ok) return null;
@@ -79,10 +72,7 @@ export const params = {
     'X-Client': 'Orvilo',
   },
   id: ModelProvider.NewAPI,
-  models: async ({ client: openAIClient, options }) => {
-    const providerId =
-      typeof options?.providerId === 'string' ? options.providerId : ModelProvider.NewAPI;
-
+  models: async ({ client: openAIClient }) => {
     // Get base URL (remove trailing API version paths like /v1, /v1beta, etc.)
     const baseURL = openAIClient.baseURL.replace(/\/v\d+[a-z]*\/?$/, '');
 
@@ -95,11 +85,7 @@ export const params = {
     // Try to get pricing information to enrich model details
     const pricingMap: Map<string, NewAPIPricing> = new Map();
 
-    const pricingList = await fetchPricing(
-      `${baseURL}/api/pricing`,
-      openAIClient.apiKey || '',
-      providerId,
-    );
+    const pricingList = await fetchPricing(`${baseURL}/api/pricing`, openAIClient.apiKey || '');
     if (Array.isArray(pricingList)) {
       pricingList.forEach((pricing) => {
         pricingMap.set(pricing.model_name, pricing);

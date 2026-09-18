@@ -829,38 +829,32 @@ describe('userRouter', () => {
   });
 
   describe('updateSettings', () => {
-    it('should update settings with encrypted key vaults', async () => {
-      const mockSettings = {
+    it('ignores keyVaults writes and never persists credentials', async () => {
+      const updateSetting = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { updateSetting } as any;
+      });
+
+      await userRouter.createCaller({ ...mockCtx }).updateSettings({
         keyVaults: { openai: { key: 'test-key' } },
         general: { language: 'en-US' },
-      };
-
-      const mockEncryptedVaults = 'encrypted-data';
-      const mockGateKeeper = {
-        encrypt: vi.fn().mockResolvedValue(mockEncryptedVaults),
-      };
-
-      vi.mocked(KeyVaultsGateKeeper.initWithEnvKey).mockResolvedValue(mockGateKeeper as any);
-      vi.mocked(UserModel).mockImplementation(function () {
-        return {
-          updateSetting: vi.fn().mockResolvedValue({ rowCount: 1 }),
-        } as any;
       });
 
-      await userRouter.createCaller({ ...mockCtx }).updateSettings(mockSettings);
-
-      expect(mockGateKeeper.encrypt).toHaveBeenCalledWith(JSON.stringify(mockSettings.keyVaults));
+      expect(KeyVaultsGateKeeper.initWithEnvKey).not.toHaveBeenCalled();
+      expect(updateSetting).toHaveBeenCalledWith({ general: { language: 'en-US' } });
     });
 
-    it('rejects keyVaults updates from restricted keys without model:write', async () => {
-      await expect(
-        namespacedRouter
-          .createCaller({ ...mockCtx, apiKeyScopes: ['user:write'] })
-          .user.updateSettings({ keyVaults: { openai: { key: 'stolen' } } }),
-      ).rejects.toMatchObject({
-        code: 'FORBIDDEN',
-        message: expect.stringContaining('model:write'),
+    it('accepts but ignores keyVaults writes from restricted keys', async () => {
+      const updateSetting = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { updateSetting } as any;
       });
+
+      await namespacedRouter
+        .createCaller({ ...mockCtx, apiKeyScopes: ['user:write'] })
+        .user.updateSettings({ keyVaults: { openai: { key: 'stolen' } } });
+
+      expect(updateSetting).toHaveBeenCalledWith({});
     });
 
     it('rejects market token updates from restricted keys without model:write', async () => {
@@ -868,17 +862,6 @@ describe('userRouter', () => {
         namespacedRouter
           .createCaller({ ...mockCtx, apiKeyScopes: ['user:write'] })
           .user.updateSettings({ market: { accessToken: 'x' } } as any),
-      ).rejects.toMatchObject({
-        code: 'FORBIDDEN',
-        message: expect.stringContaining('model:write'),
-      });
-    });
-
-    it('rejects keyVaults clears (null) from restricted keys without model:write', async () => {
-      await expect(
-        namespacedRouter
-          .createCaller({ ...mockCtx, apiKeyScopes: ['user:write'] })
-          .user.updateSettings({ keyVaults: null } as any),
       ).rejects.toMatchObject({
         code: 'FORBIDDEN',
         message: expect.stringContaining('model:write'),
@@ -896,22 +879,6 @@ describe('userRouter', () => {
       } as any);
 
       expect(updateSetting.mock.calls[0][0]).not.toHaveProperty('keyVaults');
-    });
-
-    it('allows keyVaults updates from restricted keys holding model:write', async () => {
-      const mockGateKeeper = { encrypt: vi.fn().mockResolvedValue('encrypted') };
-      vi.mocked(KeyVaultsGateKeeper.initWithEnvKey).mockResolvedValue(mockGateKeeper as any);
-      vi.mocked(UserModel).mockImplementation(function () {
-        return {
-          updateSetting: vi.fn().mockResolvedValue({ rowCount: 1 }),
-        } as any;
-      });
-
-      await namespacedRouter
-        .createCaller({ ...mockCtx, apiKeyScopes: ['user:write', 'model:write'] })
-        .user.updateSettings({ keyVaults: { openai: { key: 'mine' } } });
-
-      expect(mockGateKeeper.encrypt).toHaveBeenCalled();
     });
 
     it('should update settings without key vaults', async () => {

@@ -13,7 +13,6 @@ import ModelsRoutes from './models.route';
 import OpenAIRoutes from './openai.route';
 import PermissionsRoutes from './permissions.route';
 import { PluginsRoutes } from './plugins.route';
-import ProvidersRoutes from './providers.route';
 import ResponsesRoutes from './responses.route';
 import RolesRoutes from './roles.route';
 import TopicsRoutes from './topics.route';
@@ -36,7 +35,6 @@ export default {
   'models': ModelsRoutes,
   'openai': OpenAIRoutes,
   'permissions': PermissionsRoutes,
-  'providers': ProvidersRoutes,
   'responses': ResponsesRoutes,
   'roles': RolesRoutes,
   'topics': TopicsRoutes,

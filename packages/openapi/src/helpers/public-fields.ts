@@ -7,7 +7,6 @@ import type {
   AgentEvalTestCaseItem,
   AgentItem,
   AiModelSelectItem,
-  AiProviderSelectItem,
   FileItem,
   KnowledgeBaseItem,
   MessageItem,
@@ -61,22 +60,6 @@ export const PUBLIC_USER_FIELDS = [
   'updatedAt',
   'username',
 ] as const satisfies readonly (keyof UserItem)[];
-
-export const PUBLIC_PROVIDER_FIELDS = [
-  'checkModel',
-  'config',
-  'createdAt',
-  'description',
-  'enabled',
-  'fetchOnClient',
-  'id',
-  'logo',
-  'name',
-  'settings',
-  'sort',
-  'source',
-  'updatedAt',
-] as const satisfies readonly (keyof AiProviderSelectItem)[];
 
 export const PUBLIC_MODEL_FIELDS = [
   'abilities',
@@ -282,7 +265,6 @@ export type PublicAgent = Pick<AgentItem, (typeof PUBLIC_AGENT_FIELDS)[number]> 
   plugins: ReturnType<typeof parsePluginEntry>[];
 };
 export type PublicUser = Pick<UserItem, (typeof PUBLIC_USER_FIELDS)[number]>;
-export type PublicProvider = Pick<AiProviderSelectItem, (typeof PUBLIC_PROVIDER_FIELDS)[number]>;
 export type PublicModel = Pick<AiModelSelectItem, (typeof PUBLIC_MODEL_FIELDS)[number]>;
 export type PublicFile = Pick<FileItem, (typeof PUBLIC_FILE_FIELDS)[number]>;
 export type PublicKnowledgeBase = Pick<
@@ -316,9 +298,6 @@ export const projectPublicAgent = (value: AgentItem): PublicAgent => ({
 
 export const projectPublicUser = (value: UserItem): PublicUser =>
   pickPublicFields(value, PUBLIC_USER_FIELDS);
-
-export const projectPublicProvider = (value: AiProviderSelectItem): PublicProvider =>
-  pickPublicFields(value, PUBLIC_PROVIDER_FIELDS);
 
 export const projectPublicModel = (value: AiModelSelectItem): PublicModel =>
   pickPublicFields(value, PUBLIC_MODEL_FIELDS);

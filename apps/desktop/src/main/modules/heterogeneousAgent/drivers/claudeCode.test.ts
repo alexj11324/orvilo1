@@ -24,40 +24,4 @@ describe('claudeCodeDriver', () => {
     expect(plan.operationTokenEnvKey).toBe('ANTHROPIC_AUTH_TOKEN');
     expect(plan.env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
   });
-
-  it('materializes a host-owned Anthropic binding and scrubs conflicting user config', async () => {
-    const plan = await claudeCodeDriver.prepareProviderBinding!({
-      args: ['--model', 'stale-model', '--effort', 'high'],
-      env: { ANTHROPIC_API_KEY: 'stale-key', KEEP_ME: 'yes' },
-      profileDir: '/managed/claude',
-      reference: {
-        apiConfig: { model: 'claude-primary', providerId: 'anthropic-custom' },
-        kind: 'provider',
-      },
-      resolution: {
-        agentType: 'claude-code',
-        apiConfig: { model: 'claude-primary', providerId: 'anthropic-custom' },
-        endpoint: 'https://gateway.example.com',
-        protocol: 'anthropic-messages',
-        providerId: 'anthropic-custom',
-        runtimeConfig: {
-          config: {},
-          keyVaults: { apiKey: 'bound-key', baseURL: 'https://gateway.example.com/v1' },
-          settings: { sdkType: 'anthropic' },
-        },
-      },
-      runDir: '/managed/run',
-    });
-
-    expect(plan).toMatchObject({
-      args: ['--effort', 'high', '--model', 'claude-primary'],
-      env: {
-        ANTHROPIC_AUTH_TOKEN: 'bound-key',
-        ANTHROPIC_BASE_URL: 'https://gateway.example.com',
-        CLAUDE_CONFIG_DIR: '/managed/claude',
-        KEEP_ME: 'yes',
-      },
-    });
-    expect(plan.env.ANTHROPIC_API_KEY).toBeUndefined();
-  });
 });

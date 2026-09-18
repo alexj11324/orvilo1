@@ -197,7 +197,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   aiAgent: rw('agent:read', 'agent:write'),
   aiChat: { any: 'model:invoke' },
   aiModel: rw('model:read', 'model:write'),
-  aiProvider: rw('model:read', 'model:write'),
+  // provider/model management is retired — only the deployment-owned catalog
+  // read (`getAiProviderRuntimeState`) remains
+  aiProvider: rw('model:read', null),
   // keys must not mint or manage keys
   apiKey: 'blocked',
   asr: { any: 'model:invoke' },
@@ -256,6 +258,8 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   notification: rw('user:read', 'user:write'),
   oauthApp: 'blocked',
   oauthDeviceFlow: 'blocked',
+  // user-provider OAuth device flow is retired with provider management;
+  // the entry stays blocked in case a stale deployment still mounts it
   pageShare: rw('chat:read', 'chat:write'),
   plugin: rw('agent:read', 'agent:write'),
   project: rw('agent:read', 'agent:write'),
@@ -358,8 +362,6 @@ export const TRPC_PROCEDURE_EXTRA_SCOPES: Record<string, ApiKeyScope[]> = {
   'aiChat.archiveToolResult': ['chat:write'],
   // creates user/assistant messages and topics alongside the model call
   'aiChat.sendMessageInServer': ['chat:write'],
-  // connectivity test sends a real (1-token) chat request to the provider
-  'aiProvider.checkProviderConnectivity': ['model:invoke'],
   // runs a ComfyUI image-generation workflow, not a config write
   'comfyui.createImage': ['model:invoke'],
   // extracts follow-up actions via `AiGenerationService.generateObject`

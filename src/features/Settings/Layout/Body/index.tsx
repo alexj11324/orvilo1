@@ -30,7 +30,7 @@ const Body = memo(() => {
   // Extract current tab from pathname: /settings/profile -> profile
   const activeTab = useMemo(() => {
     const pathParts = location.pathname.split('/');
-    // pathname is like /settings/profile or /settings/provider/xxx
+    // pathname is like /settings/profile or /settings/<tab>/xxx
     if (pathParts.length >= 3) {
       return pathParts[2] as SettingsTabs;
     }

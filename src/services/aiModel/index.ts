@@ -2,7 +2,6 @@ import {
   type AiModelReasoningConfig,
   type AiModelType,
   type AiProviderModelListItem,
-  type ToggleAiModelEnableParams,
 } from 'model-bank';
 import { isAiModelVisible } from 'model-bank/aiModel';
 
@@ -22,10 +21,6 @@ export class AiModelService {
   ): Promise<AiProviderModelListItem[]> => {
     const models = await lambdaClient.aiModel.getAiProviderModelList.query({ id, ...params });
     return models.filter(isAiModelVisible);
-  };
-
-  toggleModelEnabled = async (params: ToggleAiModelEnableParams) => {
-    return lambdaClient.aiModel.toggleModelEnabled.mutate(params);
   };
 
   getAiModelReasoningConfig = async (

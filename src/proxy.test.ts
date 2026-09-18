@@ -105,6 +105,39 @@ describe('SPA proxy route matching', () => {
     expect(doesMatch(pathname)).toBe(false);
   });
 
+  // The `/:workspaceSlug/<segment>` entries must not read backend, framework
+  // or asset namespaces as the slug — otherwise `/api/agent/**` invokes the
+  // middleware on hot API traffic and `/_next/image` gets intercepted.
+  it.each([
+    '/api/agent',
+    '/api/agent/abc',
+    '/market/agent',
+    '/market/agent/agent-1',
+    '/f/agent',
+    '/trpc/agent',
+    '/webapi/agent',
+    '/_next/image',
+    '/_next/image/anything',
+  ])('does not treat %s as a workspace slug', (pathname) => {
+    expect(doesMatch(pathname)).toBe(false);
+  });
+
+  // `(/.*)?` tails only accept a `/`-separated suffix, so asset filenames that
+  // merely *start with* a route segment can't attach mid-segment.
+  it.each([
+    '/avatars/agent-default.png',
+    '/avatars/agent-builder.png',
+    '/app-images/agent_gateway_light.webp',
+    '/app-images/agent-artwork-styles/style-anime.webp',
+    '/app-images/community_footer_dark.webp',
+    '/og/agent-og.webp',
+    '/images/docs/channels/feishu-agent-create.png',
+    '/e2e-ws/agent-builder',
+    '/e2e-ws/agentsX',
+  ])('does not match asset path %s via mid-segment attach', (pathname) => {
+    expect(doesMatch(pathname)).toBe(false);
+  });
+
   it('leaves workspace home unmatched on purpose', () => {
     // A bare `/:workspaceSlug` entry would cover `/e2e-ws` but also parse
     // `/manifest.json` as slug `manifest` + transport suffix `.json`, so

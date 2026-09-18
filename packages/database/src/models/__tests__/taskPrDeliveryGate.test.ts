@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { taskTopics, tasks, topics, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'task-pr-delivery-gate-user';
 
 beforeEach(async () => {

@@ -6,7 +6,7 @@ import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { tasks } from '@/database/schemas/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   createPullRequestForBranch,
   findBranchPr,
@@ -66,12 +66,13 @@ const allFeedbackIds = (snapshot: RemotePrReviewSnapshot): string[] => [
 ];
 
 const getCredentialKey = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
+  ownerId: string,
   task: TaskItem,
   workspaceId?: string,
 ): Promise<string> => {
   if (!task.assigneeAgentId) return 'github';
-  const agent = await new AgentModel(db, task.createdByUserId, workspaceId)
+  const agent = await new AgentModel(db, ownerId, workspaceId)
     .getAgentConfig(task.assigneeAgentId)
     .catch(() => null);
   return agent?.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY ?? 'github';
@@ -86,14 +87,15 @@ const persistReviewContext = async (
 };
 
 const markDeliveryMerged = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
+  ownerId: string;
   record: TaskTopicIntegration;
   snapshot: RemotePrReviewSnapshot;
   task: TaskItem;
   topicModel: TaskTopicModel;
   workspaceId?: string;
 }): Promise<void> => {
-  const { db, record, snapshot, task, topicModel, workspaceId } = params;
+  const { db, ownerId, record, snapshot, task, topicModel, workspaceId } = params;
   if (
     !snapshot.merged ||
     !snapshot.mergedAt ||
@@ -133,7 +135,7 @@ const markDeliveryMerged = async (params: {
   }
   if (updated === 0) throw new Error('No matching delivery row remains for merge confirmation');
 
-  await new TaskService(db, task.createdByUserId, workspaceId).updateStatus({
+  await new TaskService(db, ownerId, workspaceId).updateStatus({
     id: task.id,
     status: 'completed',
   });
@@ -175,14 +177,15 @@ const buildCorrectivePrompt = (params: {
 };
 
 const dispatchCorrective = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
+  ownerId: string;
   record: TaskTopicIntegration;
   row: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>[number];
   snapshot: RemotePrReviewSnapshot;
   task: TaskItem;
   workspaceId?: string;
 }): Promise<void> => {
-  const { db, record, row, snapshot, task, workspaceId } = params;
+  const { db, ownerId, record, row, snapshot, task, workspaceId } = params;
   if (!record.repo || !row.topicId)
     throw new Error('Review delivery is missing its repository/topic');
   if (record.attempts >= MAX_REVIEW_CORRECTIVE_ATTEMPTS) {
@@ -216,7 +219,7 @@ const dispatchCorrective = async (params: {
           },
         };
 
-  await new TaskRunnerService(db, task.createdByUserId, workspaceId).runTask({
+  await new TaskRunnerService(db, ownerId, workspaceId).runTask({
     extraPrompt: buildCorrectivePrompt({ record, snapshot, task }),
     integrationSeed: {
       ...record,
@@ -235,7 +238,8 @@ const dispatchCorrective = async (params: {
 };
 
 const ensureReviewTaskPaused = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
+  ownerId: string,
   task: TaskItem,
   rows: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>,
   workspaceId?: string,
@@ -244,7 +248,7 @@ const ensureReviewTaskPaused = async (
   if (rows.some((row) => row.status === 'running')) return false;
   if (task.status === 'paused') return true;
   if (task.status !== 'running') return false;
-  await new TaskService(db, task.createdByUserId, workspaceId).updateStatus({
+  await new TaskService(db, ownerId, workspaceId).updateStatus({
     id: task.id,
     status: 'paused',
   });
@@ -263,7 +267,7 @@ const ensureReviewTaskPaused = async (
  * failures.
  */
 export const runTaskDeliveryReviewSweep = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   options: TaskDeliveryReviewSweepOptions = {},
 ): Promise<TaskDeliveryReviewSweepResult> => {
   const filters = [
@@ -292,9 +296,13 @@ export const runTaskDeliveryReviewSweep = async (
   };
 
   for (const task of candidates) {
+    // Ownerless rows cannot hold a verifiable delivery — the credential
+    // lookup and every model below require a real user scope.
+    const ownerId = task.createdByUserId;
+    if (!ownerId) continue;
     const workspaceId = task.workspaceId ?? undefined;
-    const topicModel = new TaskTopicModel(db, task.createdByUserId, workspaceId);
-    const taskModel = new TaskModel(db, task.createdByUserId, workspaceId);
+    const topicModel = new TaskTopicModel(db, ownerId, workspaceId);
+    const taskModel = new TaskModel(db, ownerId, workspaceId);
     const rows = await topicModel.findByTaskId(task.id);
     const row = activeDeliveryRow(rows);
     if (!row?.topicId || !row.integration?.repo) continue;
@@ -310,11 +318,11 @@ export const runTaskDeliveryReviewSweep = async (
     }
 
     try {
-      const credKey = await getCredentialKey(db, task, workspaceId);
+      const credKey = await getCredentialKey(db, ownerId, task, workspaceId);
       const token = await resolveGithubAccessToken({
         credKey,
         db,
-        userId: task.createdByUserId,
+        userId: ownerId,
         workspaceId,
       });
 
@@ -421,7 +429,7 @@ export const runTaskDeliveryReviewSweep = async (
 
       // Only now does the task cross the user-visible Pending Review boundary.
       // If a run is still live, keep waiting rather than reviewing mutable code.
-      if (!(await ensureReviewTaskPaused(db, task, rows, workspaceId))) {
+      if (!(await ensureReviewTaskPaused(db, ownerId, task, rows, workspaceId))) {
         result.waiting.push(task.identifier);
         continue;
       }
@@ -429,6 +437,7 @@ export const runTaskDeliveryReviewSweep = async (
       if (snapshot.merged) {
         await markDeliveryMerged({
           db,
+          ownerId,
           record: { ...deliveryRecord, prNumber },
           snapshot,
           task,
@@ -467,7 +476,15 @@ export const runTaskDeliveryReviewSweep = async (
         // do we advance the dedupe cursor; otherwise a transient dispatch error
         // would permanently hide the CI failure/review comment.
         await taskModel.update(task.id, { error: null });
-        await dispatchCorrective({ db, record: deliveryRecord, row, snapshot, task, workspaceId });
+        await dispatchCorrective({
+          db,
+          ownerId,
+          record: deliveryRecord,
+          row,
+          snapshot,
+          task,
+          workspaceId,
+        });
         await persistReviewContext(taskModel, task.id, {
           ...context,
           handledFeedbackIds: [...new Set([...(context.handledFeedbackIds ?? []), ...newFeedback])],
@@ -526,6 +543,7 @@ export const runTaskDeliveryReviewSweep = async (
 
       await markDeliveryMerged({
         db,
+        ownerId,
         record: { ...deliveryRecord, expectedHeadSha: snapshot.headSha, prNumber: snapshot.number },
         snapshot: confirmed,
         task,

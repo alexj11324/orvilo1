@@ -53,6 +53,7 @@ describe('Preview database workflow', () => {
     );
 
     expect(grant?.run).toContain('PR_DB_HOST=$(DATABASE_URL="$PR_ADMIN_URL" node -e');
+    expect(grant?.run).toContain('ADMIN_URL="$ADMIN_URL" DB_NAME="$DB_NAME" node <<');
     expect(grant?.run).toContain('host=$PR_DB_HOST database=$DB_NAME');
     expect(grant?.run).not.toContain('process.env.PR_ADMIN_URL');
   });

@@ -259,6 +259,42 @@ describe('WorkQueryModel', () => {
     expect(second.tasks[0]!.id).not.toBe(first.tasks[1]!.id);
   });
 
+  it('pages past a null sort value instead of stopping the keyset', async () => {
+    const created = await Promise.all([
+      createTask(userId, { name: 'Loose A' }),
+      createTask(userId, { name: 'Loose B' }),
+      createTask(userId, { name: 'Loose C' }),
+    ]);
+    const query = {
+      entityType: 'task' as const,
+      filter: {
+        all: [{ field: 'id' as const, op: 'in' as const, value: created.map((row) => row.id) }],
+      },
+      schemaVersion: 1 as const,
+      sort: [
+        { direction: 'asc' as const, field: 'projectId' as const },
+        { direction: 'asc' as const, field: 'id' as const },
+      ],
+    };
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const first = await model.queryTasks({ limit: 2, query });
+    expect(first.total).toBe(3);
+    expect(first.tasks).toHaveLength(2);
+    expect(first.tasks.every((row) => row.projectId == null)).toBe(true);
+
+    const second = await model.queryTasks({
+      afterId: first.tasks[1]!.id,
+      limit: 2,
+      query,
+      queryHash: first.queryHash,
+    });
+    expect(second.total).toBe(3);
+    expect(second.tasks).toHaveLength(1);
+    expect([...first.tasks, ...second.tasks].map((row) => row.id).sort()).toEqual(
+      created.map((row) => row.id).sort(),
+    );
+  });
+
   it('filters by an existing cycle id and treats missing cycle as isNull', async () => {
     await serverDB.insert(teams).values({
       createdByUserId: userId,

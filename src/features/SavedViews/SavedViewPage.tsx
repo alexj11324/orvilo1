@@ -8,10 +8,15 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/workQueryPaging';
+import {
+  mergeWorkQueryGroups,
+  mergeWorkQueryPage,
+  workQueryHasMore,
+} from '@/features/MyWork/workQueryPaging';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -44,15 +49,19 @@ const SavedViewPage = memo(() => {
   const view = data?.data.view;
   const evaluation = data?.data.evaluation;
   const firstTasks = evaluation?.tasks ?? [];
+  const firstProjects = evaluation?.projects ?? [];
   const firstGroups = evaluation?.groups ?? [];
   const queryHash = evaluation?.queryHash;
   const [tail, setTail] = useState<typeof firstTasks>([]);
+  const [projectTail, setProjectTail] = useState<typeof firstProjects>([]);
   const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
   useEffect(() => {
     setTail([]);
+    setProjectTail([]);
     setGroupTail([]);
   }, [queryHash, viewId, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, tail);
+  const projectRows = mergeWorkQueryPage(firstProjects, projectTail);
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);
   const isOwner = Boolean(currentUserId && view && view.ownerUserId === currentUserId);
   const [name, setName] = useState('');
@@ -128,15 +137,27 @@ const SavedViewPage = memo(() => {
   }, [viewId, workspaceId]);
 
   const loadMore = useCallback(async () => {
+    if (!queryHash || !viewId) return;
+    if (view?.entityType === 'project') {
+      const last = projectRows.at(-1);
+      if (!last) return;
+      const next = await workAttentionService.savedViewEvaluate({
+        afterId: last.id,
+        id: viewId,
+        queryHash,
+      });
+      setProjectTail((current) => mergeWorkQueryPage(current, next.data.evaluation.projects ?? []));
+      return;
+    }
     const last = tasks.at(-1);
-    if (!last || !queryHash || !viewId) return;
+    if (!last) return;
     const next = await workAttentionService.savedViewEvaluate({
       afterId: last.id,
       id: viewId,
       queryHash,
     });
     setTail((current) => mergeWorkQueryPage(current, next.data.evaluation.tasks ?? []));
-  }, [queryHash, tasks, viewId]);
+  }, [projectRows, queryHash, tasks, view?.entityType, viewId]);
 
   const loadMoreGroup = useCallback(
     async (groupKey: string) => {
@@ -333,6 +354,25 @@ const SavedViewPage = memo(() => {
           ) : (
             <Empty description={t('savedViews.needsRepairEmpty')} />
           )
+        ) : view?.entityType === 'project' ? (
+          <Flexbox gap={16}>
+            {isLoading ? (
+              <Text type="secondary">{t('savedViews.loading')}</Text>
+            ) : projectRows.length === 0 ? (
+              <Empty description={t('savedViews.emptyResults')} />
+            ) : (
+              projectRows.map((project) => (
+                <WorkspaceLink key={project.id} to={`/project/${project.id}`}>
+                  <Text weight={500}>{project.name}</Text>
+                </WorkspaceLink>
+              ))
+            )}
+            {workQueryHasMore(projectRows.length, evaluation?.total) ? (
+              <Button size="small" onClick={() => void loadMore()}>
+                {t('savedViews.loadMore')}
+              </Button>
+            ) : null}
+          </Flexbox>
         ) : (
           <WorkQueryResults
             emptyLabel={t('savedViews.emptyResults')}

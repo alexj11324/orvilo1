@@ -486,22 +486,37 @@ const sortValue = (
 };
 
 /** Keyset: (c1, c2, …, id) compared with the cursor row using each column's direction. */
+const keysetEq = (field: WorkQuerySort['field'], value: Date | number | string | null): SQL =>
+  value == null ? isNull(sortColumn(field)) : eq(sortColumn(field), value as never);
+
+const keysetBeyond = (
+  field: WorkQuerySort['field'],
+  direction: WorkQuerySort['direction'],
+  value: Date | number | string | null,
+): SQL | undefined => {
+  const column = sortColumn(field);
+  if (direction === 'asc') {
+    if (value == null) return undefined;
+    return or(gt(column, value as never), isNull(column))!;
+  }
+  if (value == null) return isNotNull(column);
+  return lt(column, value as never);
+};
+
 const keysetAfter = (sort: WorkQuerySort[], cursor: typeof tasks.$inferSelect): SQL => {
   const parts: SQL[] = [];
   for (let index = 0; index < sort.length; index += 1) {
     const equalities: SQL[] = [];
     for (let prior = 0; prior < index; prior += 1) {
       const field = sort[prior]!.field;
-      equalities.push(eq(sortColumn(field), sortValue(cursor, field) as never));
+      equalities.push(keysetEq(field, sortValue(cursor, field)));
     }
     const current = sort[index]!;
-    const column = sortColumn(current.field);
-    const value = sortValue(cursor, current.field);
-    const cmp =
-      current.direction === 'desc' ? lt(column, value as never) : gt(column, value as never);
-    parts.push(equalities.length ? and(...equalities, cmp)! : cmp);
+    const beyond = keysetBeyond(current.field, current.direction, sortValue(cursor, current.field));
+    if (!beyond) continue;
+    parts.push(equalities.length ? and(...equalities, beyond)! : beyond);
   }
-  return or(...parts)!;
+  return parts.length ? or(...parts)! : sql`false`;
 };
 
 export class WorkQueryModel {
@@ -762,7 +777,12 @@ export class WorkQueryModel {
     });
   };
 
-  queryProjects = async (params: { limit?: number; query: WorkQuery }) => {
+  queryProjects = async (params: {
+    afterId?: string;
+    limit?: number;
+    query: WorkQuery;
+    queryHash?: string;
+  }) => {
     validateWorkQuery(params.query);
     if (params.query.entityType !== 'project') {
       throw new WorkQueryError('INVALID_QUERY', 'entityType must be project');
@@ -781,6 +801,26 @@ export class WorkQueryModel {
     );
     if (filterSql) conditions.push(filterSql);
 
+    const queryHash = hashQuery(params.query);
+    const listConditions = [...conditions];
+    if (params.afterId) {
+      if (!params.queryHash || params.queryHash !== queryHash) {
+        throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+      }
+      const [cursor] = await this.db
+        .select()
+        .from(projects)
+        .where(and(...conditions, eq(projects.id, params.afterId)))
+        .limit(1);
+      if (!cursor) throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+      listConditions.push(
+        or(
+          lt(projects.updatedAt, cursor.updatedAt),
+          and(eq(projects.updatedAt, cursor.updatedAt), gt(projects.id, cursor.id)),
+        )!,
+      );
+    }
+
     const [countRow] = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(projects)
@@ -789,12 +829,12 @@ export class WorkQueryModel {
     const rows = await this.db
       .select()
       .from(projects)
-      .where(and(...conditions))
+      .where(and(...listConditions))
       .orderBy(desc(projects.updatedAt), asc(projects.id))
       .limit(limit);
     return {
       projects: rows,
-      queryHash: hashQuery(params.query),
+      queryHash,
       total: Number(countRow?.count ?? 0),
     };
   };

@@ -291,7 +291,7 @@ function StepperTrigger({ className, children, tabIndex, render, ...props }: Ste
     'onClick': () => setActiveStep(step),
     'onKeyDown': handleKeyDown,
     'disabled': isDisabled,
-    children: children as ReactNode,
+    'children': children as ReactNode,
   };
 
   return useRender({

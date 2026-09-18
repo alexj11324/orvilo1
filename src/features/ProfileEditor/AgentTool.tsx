@@ -17,14 +17,11 @@ import ComposioServerItem from '@/features/ChatInput/ActionBar/Tools/ComposioSer
 import ComposioSkillIcon, {
   SKILL_ICON_SIZE,
 } from '@/features/ChatInput/ActionBar/Tools/ComposioSkillIcon';
-import MarketAgentSkillPopoverContent from '@/features/ChatInput/ActionBar/Tools/MarketAgentSkillPopoverContent';
-import MarketSkillIcon from '@/features/ChatInput/ActionBar/Tools/MarketSkillIcon';
 import OrviloSkillIcon from '@/features/ChatInput/ActionBar/Tools/OrviloSkillIcon';
 import OrviloSkillServerItem from '@/features/ChatInput/ActionBar/Tools/OrviloSkillServerItem';
 import ToolItem from '@/features/ChatInput/ActionBar/Tools/ToolItem';
 import ToolItemDetailPopover from '@/features/ChatInput/ActionBar/Tools/ToolItemDetailPopover';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
-import { createSkillStoreModal } from '@/features/SkillStore';
 import { useCheckPluginsIsInstalled } from '@/hooks/useCheckPluginsIsInstalled';
 import { useFetchInstalledPlugins } from '@/hooks/useFetchInstalledPlugins';
 import { usePermission } from '@/hooks/usePermission';
@@ -149,13 +146,16 @@ const AgentTool = memo<AgentToolProps>(
     // Orvilo Skill-related state
     const isOrviloSkillEnabled = useServerConfigStore(serverConfigSelectors.enableOrviloSkill);
 
-    // Agent Skills-related state
+    // Builtin Agent Skills-related state
     const installedBuiltinSkills = useToolStore(
       builtinToolSelectors.installedBuiltinSkills,
       isEqual,
     );
-    const marketAgentSkills = useToolStore(agentSkillsSelectors.getMarketAgentSkills, isEqual);
-    const userAgentSkills = useToolStore(agentSkillsSelectors.getUserAgentSkills, isEqual);
+
+    // Populates the identifier set below. Platform skills are no longer rendered
+    // as their own rows here, but they must still be kept off the builtin list so
+    // they cannot reappear as builtin rows.
+    const agentSkills = useToolStore(agentSkillsSelectors.getAgentSkills, isEqual);
 
     const [updating, setUpdating] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -270,14 +270,15 @@ const AgentTool = memo<AgentToolProps>(
       [connectorCatalog],
     );
 
-    // Get all skill identifiers (used to filter the builtin list)
+    // Every identifier the shared builtin meta list already carries as a skill.
+    // Platform skills get no rows of their own any more, so without this filter
+    // the ones still attached to the account would leak back in as builtin rows.
     const allSkillIdentifiers = useMemo(() => {
       const ids = new Set<string>();
       for (const s of installedBuiltinSkills) ids.add(s.identifier);
-      for (const s of marketAgentSkills) ids.add(s.identifier);
-      for (const s of userAgentSkills) ids.add(s.identifier);
+      for (const s of agentSkills) ids.add(s.identifier);
       return ids;
-    }, [installedBuiltinSkills, marketAgentSkills, userAgentSkills]);
+    }, [installedBuiltinSkills, agentSkills]);
 
     // Filter out Composio tools and skills from profileBuiltinList (they are displayed separately)
     // Optionally filter out tools with availableInWeb: false based on config (e.g., LocalSystem is desktop-only)
@@ -443,73 +444,6 @@ const AgentTool = memo<AgentToolProps>(
       [installedBuiltinSkills, isToolEnabled, handleToggleTool, t],
     );
 
-    // Market Agent Skills list items (grouped under Community)
-    const marketAgentSkillItems = useMemo(
-      () =>
-        marketAgentSkills.map((skill) => ({
-          icon: (
-            <MarketSkillIcon
-              identifier={skill.identifier}
-              name={skill.name}
-              size={SKILL_ICON_SIZE}
-            />
-          ),
-          key: skill.identifier,
-          label: (
-            <ToolItem
-              checked={isToolEnabled(skill.identifier)}
-              id={skill.identifier}
-              label={skill.name}
-              onUpdate={async () => {
-                setUpdating(true);
-                await handleToggleTool(skill.identifier);
-                setUpdating(false);
-              }}
-            />
-          ),
-          popoverContent: (
-            <MarketAgentSkillPopoverContent
-              description={skill.description}
-              identifier={skill.identifier}
-              name={skill.name}
-              sourceLabel={t('skillStore.tabs.community')}
-            />
-          ),
-        })),
-      [marketAgentSkills, isToolEnabled, handleToggleTool, t],
-    );
-
-    // User Agent Skills list items (grouped under Custom)
-    const userAgentSkillItems = useMemo(
-      () =>
-        userAgentSkills.map((skill) => ({
-          icon: <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />,
-          key: skill.identifier,
-          label: (
-            <ToolItem
-              checked={isToolEnabled(skill.identifier)}
-              id={skill.identifier}
-              label={skill.name}
-              onUpdate={async () => {
-                setUpdating(true);
-                await handleToggleTool(skill.identifier);
-                setUpdating(false);
-              }}
-            />
-          ),
-          popoverContent: (
-            <ToolItemDetailPopover
-              description={skill.description}
-              icon={<Icon icon={SkillsIcon} size={36} />}
-              identifier={skill.identifier}
-              sourceLabel={t('skillStore.tabs.custom')}
-              title={skill.name}
-            />
-          ),
-        })),
-      [userAgentSkills, isToolEnabled, handleToggleTool, t],
-    );
-
     // Merge Builtin Agent Skills, builtin tools, Orvilo Skill Providers, and Composio servers
     const builtinItems = useMemo(
       () => [
@@ -641,11 +575,8 @@ const AgentTool = memo<AgentToolProps>(
       [customPlugins, mapPluginToItem],
     );
 
-    // Community group children (Market Agent Skills + community plugins)
-    const communityGroupChildren = useMemo(
-      () => [...marketAgentSkillItems, ...communityPluginItems],
-      [marketAgentSkillItems, communityPluginItems],
-    );
+    // Community group children (community plugins)
+    const communityGroupChildren = useMemo(() => communityPluginItems, [communityPluginItems]);
 
     // Custom connector list items (user-added OAuth MCP servers)
     const customConnectorItems = useMemo(
@@ -680,10 +611,10 @@ const AgentTool = memo<AgentToolProps>(
       [customConnectors, plugins, togglePlugin, t],
     );
 
-    // Custom group children (User Agent Skills + custom plugins + custom connectors)
+    // Custom group children (custom plugins + custom connectors)
     const customGroupChildren = useMemo(
-      () => [...userAgentSkillItems, ...customPluginItems, ...customConnectorItems],
-      [userAgentSkillItems, customPluginItems, customConnectorItems],
+      () => [...customPluginItems, ...customConnectorItems],
+      [customPluginItems, customConnectorItems],
     );
 
     // All tab items (marketplace tab)
@@ -700,7 +631,7 @@ const AgentTool = memo<AgentToolProps>(
               },
             ]
           : []),
-        // Community group (Market Agent Skills + community plugins)
+        // Community group (community plugins)
         ...(communityGroupChildren.length > 0
           ? [
               {
@@ -711,7 +642,7 @@ const AgentTool = memo<AgentToolProps>(
               },
             ]
           : []),
-        // Custom group (User Agent Skills + custom plugins)
+        // Custom group (custom plugins)
         ...(customGroupChildren.length > 0
           ? [
               {
@@ -762,13 +693,7 @@ const AgentTool = memo<AgentToolProps>(
       // 5. Builtin skills
       for (const skill of installedBuiltinSkills) all.add(skill.identifier);
 
-      // 6. Market agent skills
-      for (const skill of marketAgentSkills) all.add(skill.identifier);
-
-      // 7. User agent skills
-      for (const skill of userAgentSkills) all.add(skill.identifier);
-
-      // 8. Custom connectors
+      // 6. Custom connectors
       for (const connector of customConnectors) all.add(connector.identifier);
 
       return all;
@@ -777,8 +702,6 @@ const AgentTool = memo<AgentToolProps>(
       installedPluginList,
       connectorCatalog,
       installedBuiltinSkills,
-      marketAgentSkills,
-      userAgentSkills,
       customConnectors,
     ]);
 
@@ -855,14 +778,7 @@ const AgentTool = memo<AgentToolProps>(
                 },
               }}
               popupRender={() => (
-                <PopoverContent
-                  items={allTabItems}
-                  onClose={() => setDropdownOpen(false)}
-                  onOpenStore={() => {
-                    setDropdownOpen(false);
-                    createSkillStoreModal();
-                  }}
-                />
+                <PopoverContent items={allTabItems} onClose={() => setDropdownOpen(false)} />
               )}
               positionerProps={{
                 collisionAvoidance: { align: 'flip', fallbackAxisSide: 'end', side: 'flip' },

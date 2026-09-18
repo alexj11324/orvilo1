@@ -39,7 +39,6 @@ import { remoteDeviceRuntime } from './remoteDevice';
 import { selfFeedbackIntentRuntime } from './selfFeedbackIntent';
 import { skillManagementRuntime } from './skillManagement';
 import { skillsRuntime } from './skills';
-import { skillStoreRuntime } from './skillStore';
 import { taskRuntime } from './task';
 import { topicReferenceRuntime } from './topicReference';
 import type { ServerRuntimeFactory, ServerRuntimeRegistration } from './types';
@@ -74,7 +73,6 @@ registerRuntimes([
   agentManagementRuntime,
   skillManagementRuntime,
   notebookRuntime,
-  skillStoreRuntime,
   skillsRuntime,
   memoryRuntime,
   activatorRuntime,

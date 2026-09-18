@@ -1714,6 +1714,8 @@ When I am ___, I need ___
   'tab.chatAppearance': 'Chat Appearance',
   'tab.common': 'Appearance',
   'tab.connector': 'Connectors',
+  'tab.connectorDesc': 'Manage the accounts your agents can act through',
+  'tab.connectorEmpty': 'No connectors available yet',
   'tab.creds': 'Credentials',
   'tab.devices': 'Devices',
   'tab.experiment': 'Experiment',
@@ -3785,7 +3787,6 @@ When I am ___, I need ___
   'workspaceSetting.tab.connector': 'Connectors',
   'workspaceSetting.tab.skill': 'Skills',
   'tools.add': 'Add Skill',
-  'tools.addSkillOrConnector': 'Add Skills / Connectors',
   'tools.noConfigurablePermissions': 'This skill does not expose configurable tool permissions.',
   'tools.legacyConnector.configure': 'Configure',
   'tools.legacyConnector.upgradeDesc':

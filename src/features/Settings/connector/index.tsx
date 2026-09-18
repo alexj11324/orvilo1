@@ -1,7 +1,7 @@
 'use client';
 
-import { ToolSettings } from '@/features/Settings/skill';
+import ConnectorSettings from './ConnectorSettings';
 
-const Page = () => <ToolSettings viewMode="connector" />;
+const Page = () => <ConnectorSettings />;
 
 export default Page;

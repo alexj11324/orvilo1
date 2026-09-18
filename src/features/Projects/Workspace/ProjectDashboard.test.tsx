@@ -54,7 +54,6 @@ vi.mock('@/features/NavPanel/components/NavItem', () => ({
 }));
 
 vi.mock('@/features/Projects/Layout/navigation', () => ({
-  getProjectAcceptancePath: () => '/project/prj_1/acceptance',
   getProjectGoalsPath: () => '/project/prj_1/goals',
   getProjectTasksPath: () => '/project/prj_1/tasks',
 }));

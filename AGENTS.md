@@ -90,15 +90,23 @@ Use `bun run check [changed-files...]`.
 - Lint autofixes files: review the emitted diff. Tests use the nearest owning Vitest config. `--type` checks the full repo — it is CI-only and fails fast outside GitHub Actions (`scripts/type-check.mjs`); the `Typecheck` job in `test.yml` runs it on every push/PR. For a scoped local check, run `pnpm type-check` inside the owning package (e.g. `apps/server`). Never run `bun run test`, which runs the full suite.
 - For a manual package test, run from the owning package: `cd packages/database && bunx vitest run --silent='passed-only' '[file-path]'`.
 
-### Acceptance
+### Verification Evidence
 
-Use the `acceptance` skill to decide whether the delivery needs product verification and whether existing evidence already covers it. Opening or marking a PR ready is a checkpoint for that decision, not a trigger to rerun verification.
+Product verification is still required. For new or changed product behavior, exercise the affected
+outcomes on the real product and capture evidence a reviewer can check against a specific revision.
+Opening or marking a PR ready is a checkpoint for that decision, not a trigger to rerun verification.
 
-- Documentation/instruction-only changes, pure refactors or tooling changes with no product behavior change, and gitlink-only syncs do not require a new acceptance run. State the reason in the PR; for a gitlink sync, link the upstream change and its existing acceptance when available.
-- Reuse a completed acceptance that covers the delivered behavior. If its report and evidence exist only locally, inspect and upload them with `lh acceptance run ingest`; if already published, reuse the link. Do not rerun the product merely to open a PR or obtain a report URL.
-- For new or changed product behavior not covered by valid evidence, verify the affected outcomes on the real product, capture the required evidence, and publish the result. The skill owns reuse criteria and the execution workflow.
+- Documentation/instruction-only changes, pure refactors or tooling changes with no product behavior
+  change, and gitlink-only syncs do not require a new verification run. State the reason in the PR.
+- Reuse evidence that already covers the delivered behavior; do not re-run the product merely to open
+  a PR.
+- Attach the evidence to the PR itself — screenshots, screen recordings, logs, or test output — or
+  publish it as a GitHub Actions artifact. Record the commit SHA the evidence was produced on, so a
+  reviewer can tell which revision it proves.
+- Do not publish verification to a separate acceptance site, and do not install a skill into an agent
+  harness to produce it. There is no standalone acceptance platform behind this requirement.
 
-When acceptance is required, put its published `https://orvilo.aspectlylabs.com/acceptance/<id>` link in the PR body. Tests, lint, and type-check remain separate quality gates; they do not replace product acceptance.
+Tests, lint, and type-check remain separate quality gates; they do not replace product verification.
 
 ### i18n
 

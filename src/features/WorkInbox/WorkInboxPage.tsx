@@ -25,6 +25,12 @@ import { inboxKeys } from '@/libs/swr/keys';
 import { notificationService } from '@/services/notification';
 import { workAttentionService } from '@/services/workAttention';
 
+import {
+  feedFilterForChip,
+  INBOX_FILTER_CHIPS,
+  type InboxFilterChip,
+  snoozeUntilIso,
+} from './inboxOrganize';
 import { inboxSurface, shouldMarkInboxCardRead } from './inboxSurface';
 import { useInboxListKeyboard } from './useInboxListKeyboard';
 
@@ -74,13 +80,15 @@ const WorkInboxPage = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
   const isMobile = useIsMobile();
   const [tab, setTab] = useState<'action' | 'activity'>('action');
+  const [filterChip, setFilterChip] = useState<InboxFilterChip>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const kind = tab === 'action' ? 'action' : 'update';
+  const filter = feedFilterForChip(filterChip);
   const { data: cards = [], isLoading } = useClientDataSWR(
-    inboxKeys.feed(workspaceId, kind, undefined, undefined),
-    () => notificationService.feed({ kind, limit: 50 }),
+    inboxKeys.feed(workspaceId, kind, filter, undefined),
+    () => notificationService.feed({ filter, kind, limit: 50 }),
   );
   const { data: summary } = useClientDataSWR(inboxKeys.feedSummary(workspaceId), () =>
     notificationService.feedSummary(),
@@ -116,11 +124,55 @@ const WorkInboxPage = memo(() => {
 
   const refresh = useCallback(async () => {
     await Promise.all([
-      mutate(inboxKeys.feed(workspaceId, kind, undefined, undefined)),
+      mutate(inboxKeys.feed(workspaceId, kind, filter, undefined)),
       mutate(inboxKeys.feedSummary(workspaceId)),
       mutate(inboxKeys.unreadCount(workspaceId)),
     ]);
-  }, [kind, workspaceId]);
+  }, [filter, kind, workspaceId]);
+
+  const organizeFailed = useCallback(() => {
+    toast.error(t('inbox.organizeFailed'));
+  }, [t]);
+
+  const archiveCard = useCallback(
+    async (card: NotificationFeedCard) => {
+      try {
+        await notificationService.archive(card.notificationId, card.activityVersion);
+        await refresh();
+      } catch {
+        organizeFailed();
+      }
+    },
+    [organizeFailed, refresh],
+  );
+
+  const snoozeCard = useCallback(
+    async (card: NotificationFeedCard) => {
+      try {
+        await notificationService.snooze(
+          card.notificationId,
+          snoozeUntilIso(),
+          card.activityVersion,
+        );
+        await refresh();
+      } catch {
+        organizeFailed();
+      }
+    },
+    [organizeFailed, refresh],
+  );
+
+  const markCardUnread = useCallback(
+    async (card: NotificationFeedCard) => {
+      try {
+        await notificationService.markUnread(card.notificationId, card.activityVersion);
+        await refresh();
+      } catch {
+        organizeFailed();
+      }
+    },
+    [organizeFailed, refresh],
+  );
 
   const decide = useCallback(
     async (card: NotificationFeedCard, decision: 'approve' | 'decline') => {
@@ -168,6 +220,32 @@ const WorkInboxPage = memo(() => {
     if (openDetail) setDetailOpen(true);
   }, []);
 
+  const markAllRead = useCallback(async () => {
+    try {
+      await notificationService.markAllAsRead();
+      await refresh();
+    } catch {
+      organizeFailed();
+    }
+  }, [organizeFailed, refresh]);
+
+  const archiveAll = useCallback(async () => {
+    try {
+      await notificationService.archiveAll();
+      await refresh();
+    } catch {
+      organizeFailed();
+    }
+  }, [organizeFailed, refresh]);
+
+  const filterLabel = (chip: InboxFilterChip) => {
+    if (chip === 'all') return t('inbox.allStatus');
+    if (chip === 'unread') return t('inbox.unread');
+    if (chip === 'mentions') return t('inbox.filterMentions');
+    if (chip === 'snoozed') return t('inbox.filterSnoozed');
+    return t('inbox.filterArchived');
+  };
+
   useInboxListKeyboard({
     ids: cardIds,
     onBack: surface === 'detail' ? () => setDetailOpen(false) : undefined,
@@ -206,6 +284,26 @@ const WorkInboxPage = memo(() => {
               </TabsTab>
             </TabsList>
           </TabsRoot>
+          <Flexbox horizontal gap={8} padding={8} style={{ flexWrap: 'wrap' }}>
+            {INBOX_FILTER_CHIPS.map((chip) => (
+              <Button
+                key={chip}
+                size="small"
+                type={filterChip === chip ? 'primary' : 'default'}
+                onClick={() => setFilterChip(chip)}
+              >
+                {filterLabel(chip)}
+              </Button>
+            ))}
+          </Flexbox>
+          <Flexbox horizontal gap={8} padding={8}>
+            <Button size="small" onClick={() => void markAllRead()}>
+              {t('inbox.markAllRead')}
+            </Button>
+            <Button size="small" onClick={() => void archiveAll()}>
+              {t('inbox.archiveAll')}
+            </Button>
+          </Flexbox>
           {isLoading ? (
             <Text style={{ padding: 16 }} type="secondary">
               {t('inbox.loading')}
@@ -237,7 +335,7 @@ const WorkInboxPage = memo(() => {
             <>
               <Text weight={600}>{selected.title}</Text>
               <Text>{selected.content}</Text>
-              <Flexbox horizontal gap={8}>
+              <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
                 {selected.availableActions.includes('decide') && selected.actionRef ? (
                   <>
                     <Button type="primary" onClick={() => void decide(selected, 'approve')}>
@@ -249,6 +347,17 @@ const WorkInboxPage = memo(() => {
                   </>
                 ) : null}
                 <Button onClick={() => openTarget(selected)}>{t('inbox.open')}</Button>
+                {selected.availableActions.includes('archive') ? (
+                  <Button onClick={() => void archiveCard(selected)}>{t('inbox.archive')}</Button>
+                ) : null}
+                {selected.availableActions.includes('snooze') ? (
+                  <Button onClick={() => void snoozeCard(selected)}>{t('inbox.snooze')}</Button>
+                ) : null}
+                {selected.read ? (
+                  <Button onClick={() => void markCardUnread(selected)}>
+                    {t('inbox.markUnread')}
+                  </Button>
+                ) : null}
               </Flexbox>
             </>
           )}

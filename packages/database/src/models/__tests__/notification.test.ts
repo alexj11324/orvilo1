@@ -598,6 +598,25 @@ describe('NotificationModel (integration)', () => {
       expect(read.readVersion).toBe(6);
     });
 
+    it('does not archive a newer version via archiveObserved', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({
+          activityVersion: 2,
+          dedupeKey: 'archive-cas',
+          title: 'Stay visible',
+        }),
+      );
+      expect(created).toBeDefined();
+      await model.archiveObserved(created!.id, 1);
+      const [row] = await model.list();
+      expect(row.isArchived).toBe(false);
+
+      await model.archiveObserved(created!.id, 2);
+      const archived = await model.listFeed({ filter: 'archived' });
+      expect(archived.map((item) => item.title)).toEqual(['Stay visible']);
+    });
+
     it('does not archive unresolved action cards in archiveAll', async () => {
       const model = new NotificationModel(serverDB, userId, { workspaceId: null });
       await model.create(

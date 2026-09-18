@@ -56,8 +56,8 @@ class NotificationService {
     return lambdaClient.notification.markAllAsRead.mutate();
   };
 
-  archive = (id: string) => {
-    return lambdaClient.notification.archive.mutate({ id });
+  archive = (id: string, expectedVersion?: number) => {
+    return lambdaClient.notification.archive.mutate({ expectedVersion, id });
   };
 
   archiveAll = () => {

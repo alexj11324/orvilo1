@@ -56,9 +56,17 @@ const listLiveTransferCards = async (ctx: {
 
 export const notificationRouter = router({
   archive: notificationWriteProcedure
-    .input(z.object({ id: z.string() }))
+    .input(
+      z.object({
+        expectedVersion: z.number().int().min(0).optional(),
+        id: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      return ctx.notificationModel.archive(input.id);
+      if (input.expectedVersion === undefined) {
+        return ctx.notificationModel.archive(input.id);
+      }
+      return ctx.notificationModel.archiveObserved(input.id, input.expectedVersion);
     }),
 
   archiveAll: notificationWriteProcedure.mutation(async ({ ctx }) => {

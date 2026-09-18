@@ -332,6 +332,23 @@ export class NotificationModel {
       .where(and(eq(notifications.id, id), ...this.scope()));
   }
 
+  /**
+   * Archive the version the caller actually displayed. A newer event that
+   * landed after the preview stays unarchived.
+   */
+  async archiveObserved(id: string, expectedVersion: number) {
+    return this.db
+      .update(notifications)
+      .set({ archivedAt: new Date(), isArchived: true, updatedAt: new Date() })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.id, id),
+          eq(notifications.activityVersion, expectedVersion),
+        ),
+      );
+  }
+
   async archiveAll() {
     return this.db
       .update(notifications)
@@ -514,6 +531,23 @@ export class NotificationModel {
       )
       .returning();
     return row;
+  }
+
+  /**
+   * Archive the version the caller actually displayed. A newer event that
+   * landed after the preview stays unarchived.
+   */
+  async archiveObserved(id: string, expectedVersion: number) {
+    return this.db
+      .update(notifications)
+      .set({ archivedAt: new Date(), isArchived: true, updatedAt: new Date() })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.id, id),
+          eq(notifications.activityVersion, expectedVersion),
+        ),
+      );
   }
 
   async resolveAction(requestId: string) {

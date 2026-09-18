@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import path from 'node:path';
 
 import { consola } from 'consola';
 import { readJsonSync, writeJSONSync } from 'fs-extra';
@@ -57,7 +57,7 @@ class BuildStaticChangelog {
 
       const entry: ChangelogStaticItem = {
         children: {},
-        date: date,
+        date,
         version: this.cleanVersion(versionNumber),
       };
 
@@ -91,7 +91,11 @@ class BuildStaticChangelog {
     return output;
   };
 
-  private mergeAndSortVersions = (oldVersions: any, newVersions: any) => {
+  private mergeAndSortVersions = (
+    oldVersions: ChangelogStaticItem[],
+    newVersions: ChangelogStaticItem[],
+    replaceVersion?: string,
+  ) => {
     const mergedVersions = [...oldVersions];
 
     for (const newVersion of newVersions) {
@@ -108,23 +112,25 @@ class BuildStaticChangelog {
         } else {
           mergedVersions.splice(insertIndex, 0, newVersion);
         }
+      } else if (replaceVersion === this.cleanVersion(newVersion.version)) {
+        mergedVersions[existingIndex] = newVersion;
       }
     }
 
     return mergedVersions;
   };
 
-  run() {
-    Object.entries(CHANGELOG_FILE).forEach(([version, path]) => {
-      const data = readFileSync(path, 'utf8');
+  run(replaceVersion?: string) {
+    Object.entries(CHANGELOG_FILE).forEach(([version, sourcePath]) => {
+      const data = readFileSync(sourcePath, 'utf8');
       const newFile = this.formatChangelog(data);
 
-      const filename = resolve(CHANGELOG_DIR, `${version}.json`);
+      const filename = path.resolve(CHANGELOG_DIR, `${version}.json`);
       let mergedFile = newFile;
 
       if (existsSync(filename)) {
         const oldFile = readJsonSync(filename, 'utf8');
-        mergedFile = this.mergeAndSortVersions(oldFile, newFile);
+        mergedFile = this.mergeAndSortVersions(oldFile, newFile, replaceVersion);
       }
 
       writeJSONSync(filename, mergedFile, { spaces: 2 });

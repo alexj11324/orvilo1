@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { consola } from 'consola';
 
+import { removeVersionEntry } from '../releaseWorkflow/releasePreparation';
+
 const REPO_URL = 'https://github.com/alexj11324/orvilo1';
 const CHANGELOG_TITLE = '<a name="readme-top"></a>\n\n# Changelog';
 const BACK_TO_TOP = `<div align="right">
@@ -200,8 +202,9 @@ const run = () => {
   const currentContent = currentFile.startsWith(CHANGELOG_TITLE)
     ? currentFile.slice(CHANGELOG_TITLE.length).trim()
     : currentFile;
+  const contentWithoutCurrentVersion = removeVersionEntry(currentContent, version);
 
-  const newContent = `${CHANGELOG_TITLE}\n\n${entry}\n\n${currentContent}\n`;
+  const newContent = `${CHANGELOG_TITLE}\n\n${entry}\n\n${contentWithoutCurrentVersion}\n`;
   writeFileSync(changelogPath, newContent);
   consola.success(`Changelog updated for v${version}`);
 };

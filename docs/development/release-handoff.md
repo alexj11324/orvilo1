@@ -5,8 +5,9 @@
 ## 一句话现状
 
 LobeHub 式发布体系在这个仓库里**代码齐全，但 39 个 workflow 中有 33 个是 `disabled_manually`**，
-停用原因是缺凭据。**发布链路本身（打标 / 回同步 / Docker）已经打通并适配了分支保护**；
-剩下的工作是**桌面通道**—— 去掉用不上的依赖，再补两个只有人能提供的 secret。
+停用原因包括缺凭据。**PR #78 正在修复打标 / 回同步 / Docker 的代码路径，尚未完成真实发布验证**。
+接手复核发现 hotfix 未提交版本、脏工作树可能被带入、内置 token 抑制下游发布、
+以及同步脚本提交冲突标记的问题；以修复后的测试和实际运行结果为准。
 
 ## 一、已完成（不要重做）
 
@@ -70,7 +71,7 @@ return `${UPDATE_SERVER_BASE_URL}/${channel}/${APP_VERSION}/renderer/v2`;
 3. **如果暂时不做 renderer OTA**，才轮到「删 S3 job」—— 但要**连 renderer 相关的 job 一起禁**，
    不能只删 `publish-s3`。
 
-**当前必然失败的点和位置**：
+**当前待修复的点和位置**：
 
 ```yaml
 # release-desktop-stable.yml:421（canary 在 475 附近）
@@ -126,20 +127,26 @@ for f in $(gh workflow list --all --limit 100 --json path,state --jq ".[] | sele
 done'
 ```
 
-当前 READY 的：`auto-tag-release`、`sync-main-to-canary`、`release-docker`、
-`fts-search-mapping-history`、`lock-closed-issues`。
+该扫描只检查 secret 名称，不能判定真实就绪。`auto-tag-release` 还需要能触发下游事件的
+`GH_TOKEN`；`sync-main-to-canary` 创建的 PR 仍需批准 CI、解决冲突并通过保护规则。
+`release-docker` 使用内置 token 登录 GHCR，但仍需实际构建和发布验证。
+`fts-search-mapping-history`、`lock-closed-issues` 不属于恢复发布链路的必要步骤。
 **注意** `lighthouse.yml` 会误报为 READY —— 它用 `secrets[env.TOKEN_NAME]` **动态索引**，
 静态 grep 抓不到，它实际需要 `GH_TOKEN`。
 
 ### 任务 4 —— canary ↔ main 冲突对账（大工程，需产品决策）
 
-两条线分叉：canary 领先 main 221 commit，main 领先 canary 29，
+2026-09-18 接手时实查两条线分叉：canary 领先 main 230 commit，main 领先 canary 29，
 `git merge-tree` 试算 **179 个冲突文件**。两边各自独立做了 branding 清除、S3 presign 修复等
 （canary 走 PR #52，main 走 PR #73）。
 
 **这不是机械合并**—— 需要判断「哪边的实现是想要的」。**不要**在没搞清语义前批量解冲突。
 
-现状：`sync-main-to-canary` 已改造为总是开 PR，所以这条债务不会被自动合并掩盖。
+现状：`sync-main-to-canary` 通过 PR 同步。冲突时中止合并，将 main 的真实内容作为
+草稿 PR 分支；不能把冲突标记提交成一个看起来已完成的 merge commit。
+
+合并顺序还依赖 PR #82：当前 ruleset 已要求 `Required Quality Gate` 和独立批准，
+必须等该检查实现合入并更新 #78 基线。不得降低保护规则来完成发布任务。
 
 ## 三、必须知道的坑（都实际踩过）
 
@@ -180,6 +187,10 @@ bunx vitest run tests/github-scripts/
 # release 脚本（不会改工作树状态，可安全跑到确认提示）
 bun run release:branch --patch
 
+# 评审新增提交后，在干净的对应分支重新生成并提交发布文件，然后 push
+bun run release:branch --prepare
+bun run hotfix:branch --prepare
+
 # 分支保护是否生效
 gh api repos/alexj11324/orvilo1/rules/branches/canary --jq '.[].type'
 
@@ -187,9 +198,13 @@ gh api repos/alexj11324/orvilo1/rules/branches/canary --jq '.[].type'
 gh secret list --repo alexj11324/orvilo1
 ```
 
-## 五、仍然需要人（不是 Codex 能代劳的）
+## 五、待授权与发布前提
 
-- `APPLE_ID` —— Apple 账号邮箱
-- `APPLE_APP_SPECIFIC_PASSWORD` —— 在 <https://appleid.apple.com> 生成，不是账号密码
+- OTA：准备复用 Oracle RustFS 的独立 `orvilo-desktop-updates` 桶，仅公开桌面更新文件。
+  新发布用户只获得该桶的权限；原有共享桶不变。建桶和将凭据保存到 GSM / GitHub Secrets 待授权。
+- 公证：本机现有 Team ASC API 私钥已通过 `notarytool history` 认证验证。
+  将该私钥保存到 Orvilo CI 的 GSM / GitHub Secrets 待授权。该路径不需要 Apple 应用专用密码。
+- `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` 是另一种认证方式，可在不采用 API Key 时配置。
+- 合并仍需仓库保护要求的独立批准及 `Required Quality Gate`，不能由 PR 作者自我批准。
 
-没有这两个，macOS 包能签名但**无法公证**，用户下载会看到「无法验证开发者」。
+只有完成真实 macOS 构建、Apple 公证、安装包与 OTA 下载验证后，才能把桌面发布标为完成。

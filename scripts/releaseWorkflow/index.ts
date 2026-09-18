@@ -1,14 +1,15 @@
 import { execFileSync, execSync } from 'node:child_process';
-import * as fs from 'node:fs';
-import path from 'node:path';
 
 import { confirm, select } from '@inquirer/prompts';
 import { consola } from 'consola';
 import * as semver from 'semver';
 
-// Where the new version gets written. Note the *current* version is read from
-// origin/canary (see getCurrentVersion); this path is only the destination.
-const PACKAGE_JSON_PATH = path.join(process.cwd(), 'package.json');
+import {
+  assertCleanWorkingTree,
+  getCurrentBranch,
+  getExpectedVersionFromBranch,
+  prepareRelease,
+} from './releasePreparation';
 
 // Version type
 type VersionType = 'patch' | 'minor' | 'major';
@@ -148,37 +149,41 @@ function createReleaseBranch(version: string): void {
   }
 }
 
-// Write the version bump and the changelog onto the release branch.
-//
-// This used to happen inside auto-tag-release.yml, which then pushed the
-// result straight to main. main is covered by the `trunk-branches` ruleset and
-// refuses direct pushes, so the commit has to be carried by the release PR
-// instead — which also means the version becomes reviewable before it ships.
 function prepareReleaseCommit(version: string): void {
   try {
-    consola.info('📝 Bumping version and generating changelog...');
-
-    const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, 'utf8')) as Record<string, unknown>;
-    fs.writeFileSync(PACKAGE_JSON_PATH, `${JSON.stringify({ ...pkg, version }, null, 2)}\n`);
-
-    execSync('bun run workflow:changelog:gen', { stdio: 'inherit' });
-    execSync('bun run workflow:changelog', { stdio: 'inherit' });
-
-    // execFileSync with an argv array rather than a shell string, matching
-    // createPullRequest below.
-    execFileSync('git', ['add', 'package.json', 'CHANGELOG.md', 'changelog/'], {
-      stdio: 'inherit',
-    });
-    execFileSync('git', ['commit', '-m', `🔖 chore(release): release version v${version}`], {
-      stdio: 'inherit',
-    });
-
-    consola.success(`✅ Release commit created for v${version}`);
+    prepareRelease(version);
   } catch (error) {
     consola.error('❌ Failed to prepare the release commit');
     consola.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
+}
+
+function requireCleanWorkingTree(): void {
+  try {
+    assertCleanWorkingTree();
+  } catch (error) {
+    consola.error('❌ Release requires a clean working tree');
+    consola.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
+function finalizeRelease(): void {
+  const branch = getCurrentBranch();
+  if (!branch.startsWith('release/')) {
+    consola.error(`❌ --prepare must run on a release branch, not "${branch}"`);
+    process.exit(1);
+  }
+
+  const version = getExpectedVersionFromBranch(branch);
+  if (!version) {
+    consola.error(`❌ Unable to read a valid version from release branch "${branch}"`);
+    process.exit(1);
+  }
+
+  prepareReleaseCommit(version);
+  consola.success(`✅ Release v${version} finalized on ${branch}`);
 }
 
 // Push branch to remote
@@ -211,6 +216,10 @@ This branch contains changes for the upcoming v${version} release.
 2. ✅ Pushed to remote
 3. 🔄 Waiting for PR review and merge
 4. ⏳ Release workflow triggered after merge
+
+### Finalize after review
+After review commits land, run \`bun run release:branch --prepare\` on this branch
+to regenerate the version and changelog before merging.
 
 ---
 Created by release script`;
@@ -279,6 +288,17 @@ async function main(): Promise<void> {
 
   // 1. Check Git repository
   checkGitRepo();
+
+  // `--prepare` finalizes an existing release branch after review commits.
+  // It intentionally does not fetch, switch branches, push, or create a PR.
+  if (process.argv.slice(2).includes('--prepare')) {
+    requireCleanWorkingTree();
+    finalizeRelease();
+    return;
+  }
+
+  // All subsequent release steps either update refs or change the checkout.
+  requireCleanWorkingTree();
 
   // 2. Fetch latest canary (ensure we have the latest version to bump from)
   fetchCanary();

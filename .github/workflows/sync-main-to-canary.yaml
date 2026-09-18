@@ -44,8 +44,8 @@ jobs:
 
       # NOTE: this uses the built-in GITHUB_TOKEN, which is enough to push the
       # sync branch (it is not protected) and to open the PR. The trade-off is
-      # that events raised by GITHUB_TOKEN do not start new workflow runs, so
-      # CI will NOT report on the PR this opens — review it by hand.
+      # that PR workflows require a maintainer to approve their runs. Review
+      # and pass those checks before merging; this workflow never auto-merges.
       - name: Open or refresh the sync pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -54,8 +54,8 @@ jobs:
 
           git fetch origin canary main
 
-          if [ "$(git rev-parse origin/main)" = "$(git rev-parse origin/canary)" ]; then
-            echo "canary already matches main — nothing to sync."
+          if git merge-base --is-ancestor origin/main origin/canary; then
+            echo "canary already contains main — nothing to sync."
             exit 0
           fi
 
@@ -73,35 +73,32 @@ jobs:
 
           SYNC_BRANCH="sync/main-to-canary-$(date +'%Y%m%d')-${GITHUB_RUN_ID}"
           git checkout -B "$SYNC_BRANCH" origin/canary
+          PR_OPTIONS=()
+          RESOLUTION_NOTE="The merge is clean. Review and pass CI before merging."
 
-          # A conflicting merge is still worth opening: the PR is where the
-          # conflict gets resolved, and it keeps the divergence visible instead
-          # of hiding it behind a failed run.
           if git merge origin/main --no-edit; then
             echo "Merge is clean."
           else
-            git add -A
-            git commit --no-edit -m "chore: merge main into canary (conflicts to resolve)"
-            echo "Merge has conflicts — opening the PR for manual resolution."
+            # Never commit conflict markers. Keep main's actual tree so GitHub
+            # can detect the conflicts against canary on a draft pull request.
+            git merge --abort
+            git checkout -B "$SYNC_BRANCH" origin/main
+            PR_OPTIONS=(--draft)
+            RESOLUTION_NOTE="This draft preserves main's tree because the merge conflicts. Merge origin/canary into this branch, resolve each conflict, commit, push, and pass CI before marking it ready."
+            echo "Merge has conflicts — opening a draft for manual resolution."
           fi
 
           git push origin "$SYNC_BRANCH"
 
           gh pr create \
+            "${PR_OPTIONS[@]}" \
             --base canary \
             --head "$SYNC_BRANCH" \
             --title "🔄 sync: main → canary" \
             --body "Automatic sync of \`main\` back into \`canary\`.
 
-          Resolve any conflicts on this branch. Always merge \`main\` INTO the canary-based branch — never the other way around — so the commit graph stays readable:
+          $RESOLUTION_NOTE
 
-          \`\`\`bash
-          git fetch origin
-          git checkout $SYNC_BRANCH
-          git merge origin/main
-          # resolve, then:
-          git add -A && git commit
-          git push
-          \`\`\`"
+          Workflows opened with GITHUB_TOKEN require a maintainer to approve their runs. Do not merge without passing CI."
 
           echo "✅ Opened sync PR from $SYNC_BRANCH"

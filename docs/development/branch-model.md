@@ -59,20 +59,21 @@ feat/xxx ──PR──▶ canary ───────────────�
    `--major`；不带参数则交互式选择）。它会 fetch `origin/canary`、算出下一个
    版本号、从 `origin/canary` 切出 `release/vX.Y.Z`，并向 `main` 开一个标题为
    `🚀 release: vX.Y.Z` 的 PR。
-2. **评审合并** —— 这个 PR 合并进 `main`。
-3. **自动打标** —— `auto-tag-release.yml` 检测到这个 PR，bump `package.json`
-   版本、生成 changelog、创建 tag `vX.Y.Z`、发布 GitHub Release。
-4. **自动回同步** —— 打标完成后自动触发 `sync-main-to-canary.yaml`，把
-   `main` 合回 `canary`，避免两条线长期分叉。
+2. **准备和评审** —— 脚本在 release 分支提交版本与 changelog。评审补充提交后，
+   在干净的 release 分支运行 `bun run release:branch --prepare` 并 push，
+   重新生成发布文件，再将 PR 合并进 `main`。
+3. **自动打标** —— `auto-tag-release.yml` 校验已提交的版本，在该 PR 的合并提交上
+   创建 tag `vX.Y.Z`、发布 GitHub Release。它不修改 `main`。
+4. **回同步 PR** —— 打标完成后触发 `sync-main-to-canary.yaml`，向 `canary`
+   开同步 PR。冲突时保留真实的 main 内容并开草稿，不提交冲突标记，不自动合并。
 
 > **为什么必须回同步**：`main` 上的版本 bump 和 changelog 提交如果回不到
 > `canary`，下一次 release 就会在旧版本号上再 bump 一次，且两条线会持续
 > 分叉到无法自动合并。
 
 > **当前状态：回同步尚未生效。** `sync-main-to-canary.yaml` 处于 disabled
-> 状态，而且它靠直接 push 写回分支，会被 `trunk-branches` ruleset 挡住。
-> 在这条链路打通之前，上面第 1–3 步能跑，第 4 步不会发生。启用前必须先把它
-> 改造成通过 PR 提交，详见「保护规则」。
+> 状态。PR #78 将写回改为走 PR；启用前仍需先合入相应代码并完成发布凭据配置。
+> 不能把脚本和语法检查通过当作已经完成一次真实发布。
 
 ## Hotfix 流程
 
@@ -80,14 +81,15 @@ feat/xxx ──PR──▶ canary ───────────────�
 
 1. 从 `main` 切 `hotfix/<描述>`。
 2. 修复并提交。
-3. 向 `main` 开 PR。合并后 `auto-tag-release.yml` 会走 **patch bump**
-   路径（不需要改版本号，也不需要 `🚀 release:` 标题），自动打补丁版本 tag。
-4. 回同步会自动把修复带回 `canary`。
+3. 运行 `bun run hotfix:branch`，在分支上提交 patch 版本与 changelog，再向 `main` 开 PR。
+   评审新增提交后运行 `bun run hotfix:branch --prepare` 并 push。
+   合并后 `auto-tag-release.yml` 读取版本并打标。
+4. 通过回同步 PR 将修复带回 `canary`。
 
 ## 版本号规则
 
 - 根 `package.json` 的 `version` 是**发布版本的唯一来源**。
-- `auto-tag-release.yml` 负责 bump 它，**不要手工改**。
+- release/hotfix 脚本在 PR 分支准备它；`auto-tag-release.yml` 只读取和校验，**不要手工改**。
 - 正式版本：`vX.Y.Z`。预发布版本带后缀，如 `vX.Y.Z-canary.N`。
 - 桌面应用版本由各 release workflow 从根版本派生，不单独维护。
 
@@ -102,11 +104,11 @@ feat/xxx ──PR──▶ canary ───────────────�
 | Test / E2E CI  | push + PR                                              | —                                     | ✅ 运行中 |
 | Desktop Canary | `push canary`                                          | GitHub Release（prerelease）          | ⚠️ 待打通 |
 | Desktop Stable | GitHub Release published                               | GitHub Release                        | ⚠️ 待打通 |
-| Docker 镜像    | GitHub Release published                               | Docker Hub                            | ⚠️ 待打通 |
+| Docker 镜像    | GitHub Release published                               | GHCR                                  | ⚠️ 待打通 |
 | npm 包         | `push canary`（`packages/sdk`、`packages/model-bank`） | npm                                   | ⚠️ 待打通 |
 
-桌面端的更新源已确定为 **GitHub Release**，不走自建对象存储。理由与代价
-见下节。
+桌面完整安装包的更新源为 **GitHub Release**。renderer OTA 使用独立的静态文件路径，
+仍需对象存储或静态服务；不能仅删除 S3 job 就宣称保留了 OTA。
 
 ### 为什么桌面更新源用 GitHub Release
 
@@ -135,17 +137,24 @@ Release 的实际代价有三条，接受它们是因为省去了一整套对象
   其中测试、fixture、mock 与 Markdown 文件不触发此要求。纯文档、CI、工具和测试改动可以
   单独合并。超出 GitHub 3,000 个文件 API 上限的 PR 会失败，直到拆分为可审计的改动。
 - **不设必需批准数**：仓库只有一个 maintainer，而 GitHub 不允许自我批准，
-  设成 1 会把所有人都锁死。
+  设成 1 会把所有人都锁死。必需 CI、严格的 `Required Quality Gate` 和 review
+  线程解决要求仍保留。
 
 > **为什么不给 GitHub Actions 开豁免**：个人账号的 repository ruleset
 > 不支持把 GitHub Actions 加入 bypass list —— API 直接拒绝：
 > `Actor GitHub Actions integration must be part of the ruleset source or
 owner organization`。该能力只对 organization 级 ruleset 开放。
 >
-> 后果：`auto-tag-release.yml` 与 `sync-main-to-canary.yaml` 都靠**直接
-> push** 写回分支，在本规则下会被挡。两者当前都是 disabled 状态，所以不影响
-> 现状；**启用前必须先改造成通过 PR 提交**。
+> 因此版本提交必须通过 release/hotfix PR 进入 main，回同步也必须通过 PR。
+> 两个 workflow 当前仍 disabled，启用必须以实查状态与已合入代码为准。
 
 `trunk-branches` 把 `Documentation Required` 设为必需状态检查。该检查使用
 `pull_request_target`，只读取 PR 的改动清单，并从受保护目标分支运行门禁脚本；
 PR 不能通过修改自身的 workflow 或脚本绕过它。
+
+`Required Quality Gate` 的实现由 PR #82 提供；在它合并前，已启用的保护规则会
+阻止没有该检查的 PR 合并。不要通过降级保护规则绕过这个依赖。
+
+发布 tag 与 GitHub Release 使用 `GH_TOKEN`（PAT 或 GitHub App token），以触发下游
+发布工作流。回同步可以使用内置 `GITHUB_TOKEN`，但它创建的 PR 工作流需要维护者
+批准运行；检查通过后才可合并。见 [GitHub 的触发规则](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。

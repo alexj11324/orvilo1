@@ -84,10 +84,14 @@ gh secret set APPLE_CERTIFICATE_PASSWORD --repo alexj11324/orvilo1 <<< "$PASS"
 | `APPLE_ID`                    | 你的 Apple 账号邮箱                       |
 | `APPLE_APP_SPECIFIC_PASSWORD` | 在 appleid.apple.com 生成（不是账号密码） |
 
-> 另一条路是 App Store Connect API Key（Issuer ID + Key ID + `.p8`）。
-> GSM 里的 `contextfocus-attune-mac-testflight-signing-env` 有 `ASC_ISSUER_ID` / `ASC_KEY_ID`，
-> 但那是 **App Store 分发**路线（`APP_DISTRIBUTION` / `APP_STORE_PROFILE`），且**不含 `.p8` 私钥**，
-> 对 Developer ID 分发不适用。所以走 Apple ID + app-specific password。
+另一条路是 **Team App Store Connect API Key**（Issuer ID + Key ID + `.p8`），
+它同样支持 Developer ID 公证。不要将证书分发类型与公证 API 的认证方式混为一谈。
+见 [Apple TN3147](https://developer.apple.com/documentation/technotes/tn3147-migrating-to-the-latest-notarization-tool)。
+
+2026-09-18 接手时已找到与现有 ASC Key ID 匹配的本地 `.p8`，并通过
+`notarytool history` 验证公证认证。GSM 中的原签名配置只包含 Key ID / Issuer ID，
+不含 `.p8`。将现有私钥保存到 Orvilo 的 GSM 与 GitHub Secrets 仍待明确授权；
+启用该路径后无需再配置 Apple ID 与应用专用密码。
 
 ### 2. npm 包发布
 
@@ -98,16 +102,19 @@ gh secret set APPLE_CERTIFICATE_PASSWORD --repo alexj11324/orvilo1 <<< "$PASS"
 影响 `release-sdk.yml` 与 `release-model-bank.yml`（`packages/sdk`、`packages/model-bank`）。
 **如果你不打算发布这两个包，可以保持停用** —— 它们与 Web/Desktop/Docker 发布无关。
 
-### 3. `GH_TOKEN`（可选）
+### 3. `GH_TOKEN`（自动发布必需）
 
 13 个 workflow 引用它，但**没有一个 active**。
 
-- `auto-tag-release.yml` 与 `sync-main-to-canary.yaml` **已改造为不再需要它**（用内置 `GITHUB_TOKEN`，
-  因为 tag 和非保护分支不受 ruleset 约束）
+- `auto-tag-release.yml` 的 tag push 和 Release 发布需要 PAT 或 GitHub App token，
+  否则内置 `GITHUB_TOKEN` 会抑制下游 push/release 触发器。缺失时在打标前失败。
+- `sync-main-to-canary.yaml` 可以使用内置 `GITHUB_TOKEN`，但创建的 PR 工作流需要
+  维护者批准运行。通过 CI 和 review 后再合并，不可用手工查看替代必需检查。
 - 仍然需要的是：`auto-i18n`、`claude-*` 系列、`issue-auto-*`、`mcp-submission-handler`、
   `release.yml`、`release-desktop-canary.yml`
 
-**建议**：等你确实要启用这些自动化时再创建，不必现在配。
+启用自动发布前配置具有相应仓库权限的事件 token。不要把缺少 token 当作可以
+静默退回内置 token 的情况。参考 [GitHub 触发规则](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。
 
 ### 4. 其他（仅当要启用对应通道）
 
@@ -147,10 +154,10 @@ openssl pkey -in private.pem -pubout -out public.pem
 > 当前安全：Orvilo 桌面版**从未发布过**（`release-desktop-*` 全部是 0 次运行），
 > 所以还没有客户端内置这把公钥。第一次正式发布后就必须妥善保管。
 
-## 四、不需要凭据的（已可工作）
+## 四、使用内置凭据的路径（仍需实际运行验证）
 
-| 项                  | 说明                                             |
-| ------------------- | ------------------------------------------------ |
-| Docker 发布         | 已从 Docker Hub 迁到 GHCR，用内置 `GITHUB_TOKEN` |
-| 打 tag / 建 Release | tag 不受 branch ruleset 约束，内置 token 足够    |
-| 回同步 PR           | 推的是非保护分支（`sync/main-to-canary-*`）      |
+| 项                  | 说明                                               |
+| ------------------- | -------------------------------------------------- |
+| Docker 发布         | 已从 Docker Hub 迁到 GHCR，用内置 `GITHUB_TOKEN`   |
+| 打 tag / 建 Release | 需要事件 token 才能启动下游发布，见上文 `GH_TOKEN` |
+| 回同步 PR           | 推的是非保护分支（`sync/main-to-canary-*`）        |

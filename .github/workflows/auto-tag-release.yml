@@ -8,8 +8,8 @@ name: Auto Tag Release
 # produced on the release/hotfix branch instead (bun run release:branch,
 # bun run hotfix:branch), so that merging the PR is the only write to main.
 #
-# This also means the workflow needs no personal access token: tags are not
-# covered by the branch ruleset, so the built-in GITHUB_TOKEN can create them.
+# GH_TOKEN must be an event-producing PAT or GitHub App token. The built-in
+# GITHUB_TOKEN can create tags/releases, but suppresses their downstream runs.
 
 permissions:
   contents: write
@@ -67,11 +67,22 @@ jobs:
           echo "should_tag=false" >> $GITHUB_OUTPUT
           echo "⏭️ Not a patch PR (not a hotfix/release branch)"
 
-      - name: Checkout main
+      - name: Require release event token
+        if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
+        env:
+          RELEASE_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_TOKEN" ]; then
+            echo "::error::Configure GH_TOKEN before releasing; GITHUB_TOKEN cannot trigger downstream releases." >&2
+            exit 1
+          fi
+
+      - name: Checkout merged release
         if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
         uses: actions/checkout@v6
         with:
-          ref: main
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          token: ${{ secrets.GH_TOKEN }}
           # Full history so the tag is created against a real ref and not a
           # shallow boundary.
           fetch-depth: 0
@@ -139,7 +150,7 @@ jobs:
             See the PR description: ${{ github.event.pull_request.html_url }}
           draft: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       # The step name is the contract with tests/github-scripts/releaseSyncWorkflow.test.ts,
       # which locates this step by name and asserts the dispatch carries --ref main.

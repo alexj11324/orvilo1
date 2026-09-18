@@ -8,12 +8,20 @@ import type {
   LinearIssueLinkSyncState,
   LinearIssueSnapshot,
   LinearProjectBindingSettings,
+  LinearProjectLinkSyncState,
+  LinearProjectSnapshot,
   LinearRelationKind,
   LinearRelationSnapshot,
   LinearSyncConflict,
+  LinearSyncImportPhase,
   LinearSyncInboxStatus,
   LinearSyncOutboxStatus,
+  LinearSyncScopeCursors,
+  LinearSyncScopeSettings,
+  LinearSyncScopeStatus,
   LinearSyncTombstone,
+  LinearTeamLinkSyncState,
+  LinearTeamSnapshot,
   LinearTombstoneKind,
   TaskDomainEventSource,
   TaskDomainEventType,
@@ -40,6 +48,7 @@ import { createdAt, timestamptz, updatedAt } from './_helpers';
 import { userConnectors } from './connector';
 import { projects } from './project';
 import { taskComments, tasks } from './task';
+import { teams } from './team';
 import { users } from './user';
 import { workspaces } from './workspace';
 
@@ -100,6 +109,50 @@ export const linearInstallations = pgTable(
   ],
 );
 
+/**
+ * Workspace-level sync scope (linear-workspace-v3): the single durable record
+ * of which Linear teams/projects/issues an installation may mirror, plus the
+ * resumable import run (per-phase cursors + counters). Closing the browser
+ * never interrupts the import — the worker resumes from `cursors`.
+ */
+export const linearSyncScopes = pgTable(
+  'linear_sync_scopes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' })
+      .notNull(),
+    installationId: uuid('installation_id')
+      .references(() => linearInstallations.id, { onDelete: 'cascade' })
+      .notNull(),
+    status: text('status').$type<LinearSyncScopeStatus>().notNull().default('active'),
+    /** Bumped on every scope-settings change; import runs capture one revision. */
+    scopeRevision: integer('scope_revision').notNull().default(1),
+    settings: jsonb('settings').$type<LinearSyncScopeSettings>().notNull().default({}),
+    /** Per-phase pagination cursors for the current import run. */
+    cursors: jsonb('cursors').$type<LinearSyncScopeCursors>().notNull().default({}),
+    importRunId: text('import_run_id'),
+    importPhase: text('import_phase').$type<LinearSyncImportPhase>(),
+    importStartedAt: timestamptz('import_started_at'),
+    importCompletedAt: timestamptz('import_completed_at'),
+    teamsLinked: integer('teams_linked').notNull().default(0),
+    projectsLinked: integer('projects_linked').notNull().default(0),
+    issuesImported: integer('issues_imported').notNull().default(0),
+    issuesFailed: integer('issues_failed').notNull().default(0),
+    lastError: text('last_error'),
+    /** Short-lived single-writer lease for the import worker. */
+    leaseOwner: text('lease_owner'),
+    lockedUntil: timestamptz('locked_until'),
+    leaseFence: integer('lease_fence').notNull().default(0),
+    ...createdAtColumns(),
+  },
+  (table) => [
+    uniqueIndex('linear_sync_scopes_installation_unique').on(table.installationId),
+    index('linear_sync_scopes_workspace_id_idx').on(table.workspaceId),
+    index('linear_sync_scopes_status_idx').on(table.status, table.lockedUntil),
+  ],
+);
+
 /** Project-level scope and policy for a Linear project. */
 export const linearProjectBindings = pgTable(
   'linear_project_bindings',
@@ -117,8 +170,18 @@ export const linearProjectBindings = pgTable(
     linearProjectId: text('linear_project_id').notNull(),
     defaultTeamId: text('default_team_id'),
     teamIds: text('team_ids').array().notNull().default([]),
+    /** Workspace sync scope this link operates under (null = legacy binding). */
+    scopeId: uuid('scope_id').references(() => linearSyncScopes.id, { onDelete: 'set null' }),
     settings: jsonb('settings').$type<LinearProjectBindingSettings>().notNull().default({}),
     syncEnabled: boolean('sync_enabled').notNull().default(true),
+    /** Link lifecycle — existing rows stay 'synced'. */
+    syncState: text('sync_state').$type<LinearProjectLinkSyncState>().notNull().default('synced'),
+    lastConfirmedSnapshot: jsonb('last_confirmed_snapshot').$type<LinearProjectSnapshot>(),
+    remoteSnapshot: jsonb('remote_snapshot').$type<LinearProjectSnapshot>(),
+    conflict: jsonb('conflict').$type<LinearSyncConflict>(),
+    tombstone: jsonb('tombstone').$type<LinearSyncTombstone>(),
+    lastInboundDeliveryId: text('last_inbound_delivery_id'),
+    lastOutboundRevision: bigint('last_outbound_revision', { mode: 'number' }).notNull().default(0),
     autoExecutionEnabled: boolean('auto_execution_enabled').notNull().default(false),
     replanningEnabled: boolean('replanning_enabled').notNull().default(false),
     version: integer('version').notNull().default(1),
@@ -193,6 +256,13 @@ export const linearIssueLinks = pgTable(
     organizationId: text('organization_id').notNull(),
     linearIssueId: text('linear_issue_id').notNull(),
     linearIdentifier: text('linear_identifier').notNull(),
+    /** Remote Linear team UUID owning the issue (may differ per issue). */
+    linearTeamId: text('linear_team_id'),
+    /**
+     * Prior display identifiers retained across renames/rekeys (e.g. ENG-4 →
+     * DES-9). Identity stays `linear_issue_id`; aliases only aid lookup.
+     */
+    aliasIdentifiers: text('alias_identifiers').array().notNull().default([]),
     lastConfirmedSnapshot: jsonb('last_confirmed_snapshot').$type<LinearIssueSnapshot>().notNull(),
     remoteSnapshot: jsonb('remote_snapshot').$type<LinearIssueSnapshot>(),
     conflict: jsonb('conflict').$type<LinearSyncConflict>(),
@@ -213,6 +283,47 @@ export const linearIssueLinks = pgTable(
     index('linear_issue_links_installation_id_idx').on(table.installationId),
     index('linear_issue_links_task_id_idx').on(table.taskId),
     index('linear_issue_links_sync_state_idx').on(table.workspaceId, table.syncState),
+    index('linear_issue_links_linear_team_idx').on(table.workspaceId, table.linearTeamId),
+  ],
+);
+
+/**
+ * Durable link between a local team and a remote Linear team — same
+ * confirmed/remote/conflict/tombstone shape as issue links.
+ */
+export const linearTeamLinks = pgTable(
+  'linear_team_links',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' })
+      .notNull(),
+    teamId: text('team_id')
+      .references(() => teams.id, { onDelete: 'cascade' })
+      .notNull(),
+    installationId: uuid('installation_id')
+      .references(() => linearInstallations.id, { onDelete: 'cascade' })
+      .notNull(),
+    scopeId: uuid('scope_id').references(() => linearSyncScopes.id, { onDelete: 'set null' }),
+    linearTeamId: text('linear_team_id').notNull(),
+    linearTeamKey: text('linear_team_key'),
+    lastConfirmedSnapshot: jsonb('last_confirmed_snapshot').$type<LinearTeamSnapshot>(),
+    remoteSnapshot: jsonb('remote_snapshot').$type<LinearTeamSnapshot>(),
+    conflict: jsonb('conflict').$type<LinearSyncConflict>(),
+    tombstone: jsonb('tombstone').$type<LinearSyncTombstone>(),
+    syncState: text('sync_state').$type<LinearTeamLinkSyncState>().notNull().default('synced'),
+    lastInboundDeliveryId: text('last_inbound_delivery_id'),
+    lastOutboundRevision: bigint('last_outbound_revision', { mode: 'number' }).notNull().default(0),
+    ...createdAtColumns(),
+  },
+  (table) => [
+    uniqueIndex('linear_team_links_workspace_team_unique').on(table.workspaceId, table.teamId),
+    uniqueIndex('linear_team_links_workspace_linear_team_unique').on(
+      table.workspaceId,
+      table.linearTeamId,
+    ),
+    index('linear_team_links_installation_id_idx').on(table.installationId),
+    index('linear_team_links_sync_state_idx').on(table.workspaceId, table.syncState),
   ],
 );
 
@@ -431,6 +542,8 @@ export const taskDomainEvents = pgTable(
       .references(() => workspaces.id, { onDelete: 'cascade' })
       .notNull(),
     projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    /** Team scope the event affects (linear-workspace-v3). */
+    teamId: text('team_id').references(() => teams.id, { onDelete: 'set null' }),
     taskId: text('task_id').references(() => tasks.id, { onDelete: 'set null' }),
     source: text('source').$type<TaskDomainEventSource>().notNull(),
     type: text('type').$type<TaskDomainEventType>().notNull(),
@@ -449,6 +562,11 @@ export const taskDomainEvents = pgTable(
     index('task_domain_events_scope_revision_idx').on(
       table.workspaceId,
       table.projectId,
+      table.revision,
+    ),
+    index('task_domain_events_team_revision_idx').on(
+      table.workspaceId,
+      table.teamId,
       table.revision,
     ),
     index('task_domain_events_task_id_idx').on(table.taskId),
@@ -521,6 +639,10 @@ export const taskPlanningRevisions = pgTable(
 
 export type LinearInstallationItem = typeof linearInstallations.$inferSelect;
 export type NewLinearInstallation = typeof linearInstallations.$inferInsert;
+export type LinearSyncScopeItem = typeof linearSyncScopes.$inferSelect;
+export type NewLinearSyncScope = typeof linearSyncScopes.$inferInsert;
+export type LinearTeamLinkItem = typeof linearTeamLinks.$inferSelect;
+export type NewLinearTeamLink = typeof linearTeamLinks.$inferInsert;
 export type LinearProjectBindingItem = typeof linearProjectBindings.$inferSelect;
 export type NewLinearProjectBinding = typeof linearProjectBindings.$inferInsert;
 export type LinearIssueLinkItem = typeof linearIssueLinks.$inferSelect;

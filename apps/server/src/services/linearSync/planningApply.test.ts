@@ -156,7 +156,7 @@ describe('LinearPlanningWorker.applyProposal', () => {
 
     await expect(
       new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, userId, true),
-    ).rejects.toThrow('requires a task in the active project scope');
+    ).rejects.toThrow('requires a task in the active scope');
     await expect(
       db.select().from(taskDispatches).where(eq(taskDispatches.taskId, task.id)),
     ).resolves.toHaveLength(0);

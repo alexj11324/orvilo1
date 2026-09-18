@@ -35,6 +35,8 @@ const prefixes = {
   metrics: 'mtr',
   plugins: 'plg',
   projects: 'prj',
+  repositories: 'repo',
+  teams: 'team',
   sessionGroups: 'sg',
   sessions: 'ssn',
   threads: 'thd',

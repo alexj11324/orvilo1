@@ -1,5 +1,10 @@
 import { createProjectCoordinatorAgentConfig } from '@orvilo/builtin-agents';
-import type { ProjectOrchestrationPolicy, ProjectStatus, ProjectVisibility } from '@orvilo/types';
+import type {
+  ProjectOrchestrationPolicy,
+  ProjectStatus,
+  ProjectVisibility,
+  TaskCreationSubjectSnapshot,
+} from '@orvilo/types';
 import { and, asc, desc, eq, exists, inArray, isNull, max, or, type SQL, sql } from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
@@ -20,6 +25,12 @@ import { AgentModel } from './agent';
 
 export interface CreateProjectInput {
   avatar?: string;
+  /** Managed creation audit for import/integration-created projects. */
+  creationSubject?: {
+    id?: string;
+    kind: 'integration' | 'system';
+    snapshot?: TaskCreationSubjectSnapshot;
+  };
   description?: string;
   identifier: string;
   name: string;
@@ -42,7 +53,7 @@ export interface ProjectOrchestrationPolicyUpdateInput {
 }
 
 export interface ProjectOrchestrationPolicyView {
-  coordinatorAgentId: string;
+  coordinatorAgentId: string | null;
   orchestrationPolicy: ProjectOrchestrationPolicy;
   orchestrationPolicyRevision: number;
   requireHumanReviewRequired: boolean;
@@ -223,6 +234,7 @@ export class ProjectModel {
     if (identifier.length < 3 || identifier.length > 6) {
       throw new Error('Project identifier must be between 3 and 6 characters');
     }
+    const { creationSubject, ...projectInput } = input;
 
     return this.db.transaction(async (tx) => {
       const coordinatorConfig = createProjectCoordinatorAgentConfig({
@@ -247,8 +259,11 @@ export class ProjectModel {
           buildWorkspacePayload(
             { userId: this.userId, workspaceId: this.workspaceId },
             {
-              ...input,
+              ...projectInput,
               coordinatorAgentId: coordinator.id,
+              createdBySnapshot: creationSubject?.snapshot ?? null,
+              createdBySubjectId: creationSubject?.id ?? this.userId,
+              createdBySubjectKind: creationSubject?.kind ?? 'user',
               identifier,
               orchestrationPolicy: DEFAULT_PROJECT_ORCHESTRATION_POLICY,
             },
@@ -282,9 +297,11 @@ export class ProjectModel {
         .delete(projects)
         .where(and(eq(projects.id, id), this.manageable()))
         .returning();
-      await new AgentModel(tx as OrviloDatabase, this.userId, this.workspaceId).delete(
-        project.coordinatorAgentId,
-      );
+      if (project.coordinatorAgentId) {
+        await new AgentModel(tx as OrviloDatabase, this.userId, this.workspaceId).delete(
+          project.coordinatorAgentId,
+        );
+      }
       return deleted ?? null;
     });
   }
@@ -386,7 +403,7 @@ export class ProjectModel {
             eq(projectAgents.workspaceId, project.workspaceId),
           )
         : and(
-            eq(agents.userId, project.userId),
+            project.userId ? eq(agents.userId, project.userId) : isNull(agents.userId),
             isNull(agents.workspaceId),
             isNull(projectAgents.workspaceId),
           );

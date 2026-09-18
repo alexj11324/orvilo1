@@ -22,8 +22,9 @@ export const taskPlanningActionSchema = z.discriminatedUnion('action', [
     name: z.string().trim().min(1).max(255),
     parentTaskId: z.string().nullable().optional(),
     priority: z.number().int().min(0).max(4).optional(),
-    projectId: z.string().min(1),
+    projectId: z.string().min(1).optional(),
     reason: z.string().trim().min(1).max(8_000),
+    teamId: z.string().min(1).optional(),
   }),
   z.object({
     action: z.literal('escalate'),
@@ -103,8 +104,9 @@ export const taskPlanningProposalJsonSchema = {
                 priority: { maximum: 4, minimum: 0, type: 'integer' },
                 projectId: { minLength: 1, type: 'string' },
                 reason: { maxLength: 8_000, minLength: 1, type: 'string' },
+                teamId: { minLength: 1, type: 'string' },
               },
-              required: ['action', 'name', 'description', 'instruction', 'projectId', 'reason'],
+              required: ['action', 'name', 'description', 'instruction', 'reason'],
               type: 'object',
             },
             {

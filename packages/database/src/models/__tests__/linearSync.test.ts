@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -11,11 +11,13 @@ import {
   linearProjectBindings,
   linearSyncInbox,
   linearSyncOutbox,
+  linearTeamLinks,
   projects,
   taskDomainEvents,
   taskPlanningRevisions,
   taskPlanningScopes,
   tasks,
+  teams,
   users,
   workspaces,
 } from '../../schemas';
@@ -1342,5 +1344,146 @@ describe('LinearSyncModel', () => {
     expect(await model.retryOutbox(firstCreate.id, firstCreate.updatedAt)).toMatchObject({
       id: firstCreate.id,
     });
+  });
+
+  it('does not echo a Linear-originated project move back to Linear', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const taskModel = new TaskModel(db, userId, workspaceId);
+    const projectA = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'MOVEA',
+      name: 'Origin project',
+    });
+    const projectB = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'MOVEB',
+      name: 'Destination project',
+    });
+    const binding = await model.upsertBinding({
+      installationId,
+      linearProjectId: 'linear-project-move',
+      projectId: projectB.id,
+      settings: { readEnabled: true, writeEnabled: true },
+    });
+    const task = await taskModel.create({
+      instruction: 'Track the remote move',
+      name: 'Track the remote move',
+      projectId: projectA.id,
+    });
+    await model.createIssueLink({
+      bindingId: binding.id,
+      installationId,
+      linearIdentifier: 'MV-1',
+      linearIssueId: 'linear-issue-move',
+      organizationId: 'linear-org-1',
+      taskId: task.id,
+    });
+    // Isolate the assertion from create-intent rows: only what the move writes
+    // may appear in the outbox.
+    await db.delete(linearSyncOutbox);
+
+    // TaskModel.update re-enters through the dependency lock when projectId
+    // changes; the mutation context must survive that hop so an inbound Linear
+    // move never writes back to Linear.
+    await taskModel.update(
+      task.id,
+      { projectId: projectB.id },
+      {
+        eventId: 'linear-delivery-move-1',
+        idempotencyKey: 'linear:issue:moved:1',
+        source: 'linear',
+        suppressLinearOutbox: true,
+      },
+    );
+
+    expect(await model.listOutbox()).toHaveLength(0);
+    const [event] = await db
+      .select()
+      .from(taskDomainEvents)
+      .where(eq(taskDomainEvents.taskId, task.id))
+      .orderBy(desc(taskDomainEvents.revision))
+      .limit(1);
+    expect(event.source).toBe('linear');
+  });
+
+  it('unlinks synced team links whose remote team fell out of scope approval', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    // (workspace_id, team_id) is unique — each link needs its own team row.
+    const link = async (linearTeamId: string, key: string) => {
+      const [team] = await db
+        .insert(teams)
+        .values({ createdByUserId: userId, key, name: key, workspaceId })
+        .returning();
+      return model.upsertTeamLink({ installationId, linearTeamId, teamId: team.id });
+    };
+
+    await link('lin-eng', 'ENG');
+    const secLink = await link('lin-sec', 'SEC');
+    // A link under a different installation must not be touched.
+    const otherInstallation = '00000000-0000-4000-8000-000000000099';
+    await db.insert(linearInstallations).values({
+      id: otherInstallation,
+      installedByUserId: userId,
+      organizationId: 'linear-org-2',
+      workspaceId,
+    });
+    const [otherTeam] = await db
+      .insert(teams)
+      .values({ createdByUserId: userId, key: 'OTH', name: 'Other', workspaceId })
+      .returning();
+    await model.upsertTeamLink({
+      installationId: otherInstallation,
+      linearTeamId: 'lin-other',
+      teamId: otherTeam.id,
+    });
+
+    await model.markTeamLinksUnlinkedOutsideScope({
+      installationId,
+      keepLinearTeamIds: ['lin-eng'],
+    });
+
+    const states = Object.fromEntries(
+      (await db.select().from(linearTeamLinks)).map((row) => [row.linearTeamId, row.syncState]),
+    );
+    expect(states).toMatchObject({
+      'lin-eng': 'synced',
+      'lin-sec': 'unlinked',
+      'lin-other': 'synced',
+    });
+
+    // Outbox rows paused while the team link was unlinked revive when the
+    // link is re-approved — otherwise the queued write would be lost forever.
+    const taskModel = new TaskModel(db, userId, workspaceId);
+    const task = await taskModel.create({
+      instruction: 'team-scoped write intent',
+      name: 'SEC scoped task',
+      teamId: secLink.teamId,
+    });
+    const linkRow = await model.createIssueLink({
+      installationId,
+      linearIdentifier: 'SEC-9',
+      linearIssueId: 'linear-issue-sec-9',
+      linearTeamId: 'lin-sec',
+      organizationId: 'linear-org-1',
+      taskId: task.id,
+    });
+    await db.insert(linearSyncOutbox).values({
+      installationId,
+      linkId: linkRow.id,
+      operation: 'linear-issue:update:test-sec',
+      expectedLocalRevision: 1,
+      payload: { title: 'queued while unlinked' },
+      status: 'paused',
+      taskId: task.id,
+      workspaceId,
+    });
+
+    await model.requeueTeamLinkOutbox('lin-sec');
+
+    const [outboxRow] = await db
+      .select()
+      .from(linearSyncOutbox)
+      .where(eq(linearSyncOutbox.operation, 'linear-issue:update:test-sec'));
+    expect(outboxRow.status).toBe('pending');
   });
 });

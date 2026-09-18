@@ -31,13 +31,15 @@ import {
 import type { ComponentProps, ReactNode } from 'react';
 
 export type OnboardingStep = {
-  id: string;
+  id: OnboardingStepId;
   value: number;
   label: string;
   title: string;
   description: string;
   optional?: boolean;
 };
+
+export type OnboardingStepId = 'profile' | 'role' | 'source' | 'workspace' | 'goals' | 'invite';
 
 export type OnboardingChoice<TValue extends string = string> = {
   value: TValue;
@@ -100,8 +102,8 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[DiscoverySourceValue, HugeIcon]>
   ).map(([value, Icon]) => ({
     value: value as DiscoverySourceValue,
-    label: t(`reui.source.${value}.label`),
-    description: t(`reui.source.${value}.description`),
+    label: t(`reui.source.${value}.label` as const),
+    description: t(`reui.source.${value}.description` as const),
     icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={Icon} />,
   })),
   goalOptions: (
@@ -114,14 +116,14 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[GoalValue, LucideIcon]>
   ).map(([value, Icon]) => ({
     value: value as GoalValue,
-    label: t(`reui.goal.${value}.label`),
-    description: t(`reui.goal.${value}.description`),
+    label: t(`reui.goal.${value}.label` as const),
+    description: t(`reui.goal.${value}.description` as const),
     icon: <Icon aria-hidden="true" />,
   })),
   inviteRoleOptions: (['guest', 'member', 'admin'] as InviteRoleValue[]).map((value) => ({
     value,
-    label: t(`reui.inviteRole.${value}.label`),
-    description: t(`reui.inviteRole.${value}.description`),
+    label: t(`reui.inviteRole.${value}.label` as const),
+    description: t(`reui.inviteRole.${value}.description` as const),
   })),
   roleOptions: (
     [
@@ -134,25 +136,27 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[RoleValue, LucideIcon]>
   ).map(([value, Icon]) => ({
     value: value as RoleValue,
-    label: t(`reui.role.${value}.label`),
-    description: t(`reui.role.${value}.description`),
+    label: t(`reui.role.${value}.label` as const),
+    description: t(`reui.role.${value}.description` as const),
     icon: <Icon aria-hidden="true" />,
     ...(value === 'developer' ? { recommended: true } : {}),
   })),
-  steps: [
-    ['profile', 1],
-    ['role', 2],
-    ['source', 3],
-    ['workspace', 4],
-    ['goals', 5],
-    ['invite', 6],
-  ].map(([id, value]) => ({
-    id: id as string,
+  steps: (
+    [
+      ['profile', 1],
+      ['role', 2],
+      ['source', 3],
+      ['workspace', 4],
+      ['goals', 5],
+      ['invite', 6],
+    ] as Array<[OnboardingStepId, number]>
+  ).map(([id, value]) => ({
+    id,
     value: value as number,
-    label: t(`reui.step.${id}.label`),
-    title: t(`reui.step.${id}.title`),
-    description: t(`reui.step.${id}.description`),
-    ...(['source', 'invite'].includes(id as string) ? { optional: true } : {}),
+    label: t(`reui.step.${id}.label` as const),
+    title: t(`reui.step.${id}.title` as const),
+    description: t(`reui.step.${id}.description` as const),
+    ...(['source', 'invite'].includes(id) ? { optional: true } : {}),
   })),
   teamSizeOptions: (
     [
@@ -164,11 +168,11 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
       ['company', 'company'],
       ['enterprise', 'enterprise'],
       ['global', 'global'],
-    ] as Array<[TeamSizeValue, string]>
+    ] as Array<[TeamSizeValue, TeamSizeValue]>
   ).map(([value, key]) => ({
     value: value as TeamSizeValue,
-    label: t(`reui.teamSize.${key}.label`),
-    description: t(`reui.teamSize.${key}.description`),
+    label: t(`reui.teamSize.${key}.label` as const),
+    description: t(`reui.teamSize.${key}.description` as const),
     ...(value === 'team' ? { recommended: true } : {}),
   })),
 });

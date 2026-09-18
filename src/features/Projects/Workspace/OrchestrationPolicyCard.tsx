@@ -78,7 +78,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 interface PolicyDraft {
-  coordinatorAgentId: string;
+  coordinatorAgentId: string | null;
   orchestrationPolicy: ProjectOrchestrationPolicy;
 }
 
@@ -175,6 +175,10 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
 
   const handleSave = async () => {
     if (!draft || !view || !isDirty || saving || stale) return;
+    if (!draft.coordinatorAgentId) {
+      setSaveError(t('orchestration.coordinatorRequired'));
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {

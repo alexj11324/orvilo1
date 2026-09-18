@@ -36,6 +36,7 @@ import { agents } from './agent';
 import { agentCronJobs } from './agentCronJob';
 import { documents } from './file';
 import { projects } from './project';
+import { teamCycles, teams, teamWorkflowStates } from './team';
 import { topics } from './topic';
 import { users } from './user';
 import { workspaces } from './workspace';
@@ -65,6 +66,13 @@ export const tasks = pgTable(
     createdBySnapshot: jsonb('created_by_snapshot').$type<TaskCreationSubjectSnapshot>(),
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    /**
+     * Business ownership team (linear-workspace-v3). Shared-mode tasks resolve
+     * to exactly one team at the application layer; personal-mode tasks
+     * (workspace_id IS NULL) keep this NULL. Optional at the schema level so
+     * legacy and personal rows stay valid.
+     */
+    teamId: text('team_id').references(() => teams.id, { onDelete: 'set null' }),
     createdByAgentId: text('created_by_agent_id').references(() => agents.id, {
       onDelete: 'set null',
     }),
@@ -94,7 +102,20 @@ export const tasks = pgTable(
     // Lifecycle (same state machine for user and agent)
     // 'backlog' | 'running' | 'paused' | 'completed' | 'failed' | 'canceled'
     status: text('status').notNull().default('backlog'),
+    /**
+     * External workflow-state projection (provider state UUID as received).
+     * Kept as plain text — legacy values are arbitrary external ids, so this
+     * column must never become a foreign key into `team_workflow_states`.
+     */
     workflowStateId: text('workflow_state_id'),
+    /** Local workflow-state pointer; resolved alongside the projection above. */
+    workflowStateRefId: uuid('workflow_state_ref_id').references(() => teamWorkflowStates.id, {
+      onDelete: 'set null',
+    }),
+    /** Local team-cycle pointer (`team_cycles`), when the task sits in a cycle. */
+    cycleRefId: uuid('cycle_ref_id').references(() => teamCycles.id, {
+      onDelete: 'set null',
+    }),
     workflowCategory: text('workflow_category')
       .$type<TaskWorkflowCategory>()
       .notNull()
@@ -191,6 +212,9 @@ export const tasks = pgTable(
     index('tasks_heartbeat_idx').on(t.status, t.lastHeartbeatAt),
     index('tasks_workspace_id_idx').on(t.workspaceId),
     index('tasks_project_id_status_idx').on(t.projectId, t.status),
+    index('tasks_team_id_status_idx').on(t.teamId, t.status),
+    index('tasks_workflow_state_ref_idx').on(t.workflowStateRefId),
+    index('tasks_cycle_ref_idx').on(t.cycleRefId),
     index('tasks_workspace_visibility_idx').on(t.workspaceId, t.visibility, t.createdByUserId),
     uniqueIndex('tasks_identifier_workspace_id_unique')
       .on(t.workspaceId, t.identifier)

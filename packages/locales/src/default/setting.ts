@@ -2736,7 +2736,8 @@ When I am ___, I need ___
     'This Agent will be copied. The original stays where it is.',
   'workspace.general.copyOrviloAI.modal.selectAgents':
     'Select Agents to copy. Originals stay where they are.',
-  'workspace.general.copyOrviloAI.modal.selectPlaceholder': 'Select workspace or personal account...',
+  'workspace.general.copyOrviloAI.modal.selectPlaceholder':
+    'Select workspace or personal account...',
   'workspace.general.copyOrviloAI.modal.selectTarget':
     'You can copy to personal or workspaces that have permission to create an agent.',
   'workspace.general.copyOrviloAI.modal.success': '{{count}} agent(s) copied',
@@ -3375,7 +3376,7 @@ When I am ___, I need ___
   'workspaceSetting.linear.description':
     'Connect one Linear organization to this workspace, map projects, and coordinate task changes with durable sync and replanning.',
   'workspaceSetting.linear.connectionTitle': 'Linear connection',
-  'workspaceSetting.linear.connectionDescription': 'Authorize Linear through your LobeHub account.',
+  'workspaceSetting.linear.connectionDescription': 'Authorize Linear through your Orvilo account.',
   'workspaceSetting.linear.connectedAs': 'Connected as {{name}}',
   'workspaceSetting.linear.connectedAccount': 'connected account',
   'workspaceSetting.linear.connect': 'Connect Linear',
@@ -3432,6 +3433,34 @@ When I am ___, I need ___
     'Saving the binding does not enable synchronization. Enable it in the next stage after reviewing the import.',
   'workspaceSetting.linear.scopeCatalogEmpty':
     'The verified installation returned no matching teams or projects for this scope.',
+  'workspaceSetting.linear.workspaceScopeTitle': 'Workspace import',
+  'workspaceSetting.linear.workspaceScopeDescription':
+    'Approve the Linear teams Orvilo mirrors. The import runs on the server — closing this page does not interrupt it — and covers projects, projectless issues, comments and relations.',
+  'workspaceSetting.linear.workspaceScopeLinked': 'Linked',
+  'workspaceSetting.linear.workspaceImportStart': 'Start workspace import',
+  'workspaceSetting.linear.workspaceImporting': 'Importing…',
+  'workspaceSetting.linear.workspaceReimport': 'Re-run workspace import',
+  'workspaceSetting.linear.includeProjectlessIssues': 'Include issues without a project',
+  'workspaceSetting.linear.privateTeamPolicy': 'Private teams',
+  'workspaceSetting.linear.privateTeamImportRestricted': 'Import as restricted',
+  'workspaceSetting.linear.privateTeamSkip': 'Skip',
+  'workspaceSetting.linear.scopeStatus.active': 'Active',
+  'workspaceSetting.linear.scopeStatus.failed': 'Failed',
+  'workspaceSetting.linear.scopeStatus.importing': 'Importing',
+  'workspaceSetting.linear.scopeStatus.paused': 'Paused',
+  'workspaceSetting.linear.scopeStatus.reconciling': 'Reconciling',
+  'workspaceSetting.linear.scopeStatus.revoked': 'Revoked',
+  'workspaceSetting.linear.scopePhase': 'Phase: {{phase}}',
+  'workspaceSetting.linear.scopePhaseName.teams': 'Teams',
+  'workspaceSetting.linear.scopePhaseName.workflow_states': 'Workflow states',
+  'workspaceSetting.linear.scopePhaseName.projects': 'Projects',
+  'workspaceSetting.linear.scopePhaseName.issues': 'Issues',
+  'workspaceSetting.linear.scopePhaseName.relations': 'Relations',
+  'workspaceSetting.linear.scopePhaseName.reconciliation': 'Reconciliation',
+  'workspaceSetting.linear.scopePhaseName.completed': 'Completed',
+  'workspaceSetting.linear.scopeCounters':
+    '{{teams}} teams · {{projects}} projects · {{issues}} issues imported · {{issuesFailed}} failed',
+  'workspaceSetting.linear.scopeCompletedAt': 'Import completed {{time}}',
   'workspaceSetting.linear.status.active': 'Active',
   'workspaceSetting.linear.status.error': 'Error',
   'workspaceSetting.linear.status.paused': 'Paused',

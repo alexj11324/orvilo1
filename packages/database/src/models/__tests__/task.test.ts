@@ -10,6 +10,7 @@ import {
   briefs,
   documents,
   tasks,
+  teams,
   topics,
   users,
   workspaces,
@@ -3655,6 +3656,27 @@ describe('TaskModel', () => {
       // private task, the seq allocator must still observe it and produce T-4.
       const bobT4 = await bob.create({ instruction: 'Bob next', visibility: 'public' });
       expect(bobT4.identifier).toBe('T-4');
+    });
+
+    it('should seed a new team sequence past existing workspace identifiers', async () => {
+      const model = new TaskModel(serverDB, userId, wsId);
+      await model.create({ identifierPrefix: 'ENG', instruction: 'Existing one' });
+      await model.create({ identifierPrefix: 'ENG', instruction: 'Existing two' });
+      await model.create({ identifierPrefix: 'ENG', instruction: 'Existing three' });
+      await serverDB.insert(teams).values({
+        id: 'task-sequence-team',
+        key: 'ENG',
+        name: 'Engineering',
+        workspaceId: wsId,
+      });
+
+      const imported = await model.create({
+        instruction: 'Team-owned issue',
+        teamId: 'task-sequence-team',
+      });
+
+      expect(imported.identifier).toBe('ENG-4');
+      expect(imported.seq).toBe(4);
     });
   });
 

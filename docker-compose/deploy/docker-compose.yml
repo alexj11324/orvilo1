@@ -24,6 +24,7 @@ services:
       - 'ES_REINDEX_STATE_DIR=/app/.elasticsearch-reindex'
       - 'INTERNAL_APP_URL=http://localhost:3210'
       - 'S3_ENDPOINT=${S3_ENDPOINT}'
+      - 'S3_PRESIGN_ENDPOINT=${S3_PRESIGN_ENDPOINT}'
       - 'S3_BUCKET=${RUSTFS_ORVILO_BUCKET}'
       - 'S3_ENABLE_PATH_STYLE=1'
       - 'S3_ACCESS_KEY=${RUSTFS_ACCESS_KEY}'
@@ -65,6 +66,7 @@ services:
     environment:
       - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${ORVILO_DB_NAME}'
       - 'S3_ENDPOINT=${S3_ENDPOINT}'
+      - 'S3_PRESIGN_ENDPOINT=${S3_PRESIGN_ENDPOINT}'
       - 'S3_BUCKET=${RUSTFS_ORVILO_BUCKET}'
       - 'S3_ENABLE_PATH_STYLE=1'
       - 'S3_ACCESS_KEY=${RUSTFS_ACCESS_KEY}'
@@ -135,7 +137,9 @@ services:
     # - You don't need external access to rustfs control panel
     # - The ports conflict with other services on your host
     # - RUSTFS_PORT is necessary only if you need to upload images to conversations. (avatar uploads are not affected)
-    # - Uploading images to conversations requires a browser-accessible S3_ENDPOINT.
+    # - Browser uploads use presigned URLs: when S3_ENDPOINT is internal-only
+    #   (e.g. http://rustfs:9000), set S3_PRESIGN_ENDPOINT to a browser-reachable
+    #   endpoint (e.g. http://<host>:${RUSTFS_PORT}) so signed URLs work.
     environment:
       - RUSTFS_CONSOLE_ENABLE=true
       - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY}

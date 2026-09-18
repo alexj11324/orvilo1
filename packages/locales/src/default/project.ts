@@ -112,6 +112,7 @@ export default {
   'orchestration.coordinatorHint': 'The coordinator plans work; it must be an enabled participant.',
   'orchestration.coordinatorLabel': 'Coordinator agent',
   'orchestration.coordinatorPlaceholder': 'Choose a coordinator',
+  'orchestration.coordinatorRequired': 'Choose a coordinator agent before saving.',
   'orchestration.description':
     'Bound who may run project work and how replanning reaches execution.',
   'orchestration.executionTitle': 'Execution budget',

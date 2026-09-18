@@ -1,8 +1,13 @@
 import type {
   LinearCommentSnapshot,
+  LinearIssuePage,
   LinearIssueSnapshot,
+  LinearMemberSnapshot,
+  LinearOrganizationSnapshot,
+  LinearProjectSnapshot,
   LinearRelationKind,
   LinearRelationSnapshot,
+  LinearTeamSnapshot,
 } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils';
 
@@ -10,6 +15,17 @@ import type { OrviloDatabase } from '@/database/type';
 
 import { createLinearInstallationAuth, type LinearInstallationAuthOptions } from './auth';
 import { LINEAR_GRAPHQL_URL } from './oauth';
+
+// Canonical snapshot shapes live in @orvilo/types (frozen WM-01 contract);
+// re-exported here so existing provider consumers keep working.
+export type {
+  LinearIssuePage,
+  LinearMemberSnapshot,
+  LinearOrganizationSnapshot,
+  LinearProjectSnapshot,
+  LinearTeamSnapshot,
+  LinearWorkflowStateSnapshot,
+} from '@orvilo/types';
 
 const ISSUE_FIELDS = `
   id
@@ -24,6 +40,7 @@ const ISSUE_FIELDS = `
   parent { id }
   project { id }
   team { id }
+  cycle { id }
   state { id type }
   assignee { id }
   labels { nodes { id } }
@@ -52,7 +69,7 @@ const ORGANIZATION_FIELDS = `id name urlKey`;
 const CATALOG_PAGE_SIZE = 100;
 const MEMBER_PAGE_SIZE = 250;
 const PROJECT_FIELDS = `id name state organization { id } teams(first: ${CATALOG_PAGE_SIZE}) { nodes { id visibility organization { id } } ${PAGE_INFO_FIELDS} }`;
-const TEAM_FIELDS = `id key name visibility organization { id } states(first: ${CATALOG_PAGE_SIZE}) { nodes { id name type position } ${PAGE_INFO_FIELDS} }`;
+const TEAM_FIELDS = `id key name visibility organization { id } states(first: ${CATALOG_PAGE_SIZE}) { nodes { id name type position } ${PAGE_INFO_FIELDS} } cycles(first: ${CATALOG_PAGE_SIZE}) { nodes { id name number startsAt endsAt } ${PAGE_INFO_FIELDS} }`;
 
 export interface LinearIssueCreateInput {
   description?: string | null;
@@ -88,48 +105,6 @@ export interface LinearRelationCreateInput {
   kind: Exclude<LinearRelationKind, 'parent'>;
   sourceIssueId: string;
   targetIssueId: string;
-}
-
-export interface LinearOrganizationSnapshot {
-  id: string;
-  name: string;
-  url?: string | null;
-}
-
-export interface LinearProjectSnapshot {
-  id: string;
-  name: string;
-  organizationId: string | null;
-  state?: string | null;
-  teamIds: string[];
-}
-
-export interface LinearTeamSnapshot {
-  id: string;
-  key: string;
-  name: string;
-  organizationId: string | null;
-  visibility: string | null;
-  workflowStates?: LinearWorkflowStateSnapshot[];
-}
-
-export interface LinearWorkflowStateSnapshot {
-  id: string;
-  name: string;
-  position: number | null;
-  teamId: string;
-  type: string | null;
-}
-
-export interface LinearMemberSnapshot {
-  id: string;
-  name: string;
-}
-
-export interface LinearIssuePage {
-  endCursor: string | null;
-  hasNextPage: boolean;
-  issues: LinearIssueSnapshot[];
 }
 
 export class LinearRemoteResourceError extends Error {
@@ -177,6 +152,12 @@ export interface LinearIssueProvider {
   listOrganizations: () => Promise<LinearOrganizationSnapshot[]>;
   listProjects: () => Promise<LinearProjectSnapshot[]>;
   listRelations: (issueId: string) => Promise<LinearRelationSnapshot[]>;
+  /** Team-scoped listing including issues with `project = null`. */
+  listTeamIssues: (
+    teamId: string,
+    first?: number,
+    after?: string | null,
+  ) => Promise<LinearIssuePage>;
   listTeams: () => Promise<LinearTeamSnapshot[]>;
   updateComment: (id: string, input: LinearCommentUpdateInput) => Promise<LinearCommentSnapshot>;
   updateIssue: (id: string, input: LinearIssueUpdateInput) => Promise<LinearIssueSnapshot>;
@@ -296,6 +277,7 @@ export const normalizeLinearIssue = (value: unknown): LinearIssueSnapshot => {
     archivedAt: typeof value.archivedAt === 'string' ? value.archivedAt : null,
     assigneeId: nestedId(value.assignee),
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : null,
+    cycleId: nestedId(value.cycle),
     description: typeof value.description === 'string' ? value.description : null,
     id,
     identifier,
@@ -651,6 +633,29 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
     };
   }
 
+  async listTeamIssues(
+    teamId: string,
+    first = 50,
+    after?: string | null,
+  ): Promise<LinearIssuePage> {
+    const data = await this.requestData<{
+      issues: { nodes: unknown[]; pageInfo: { endCursor?: string | null; hasNextPage?: boolean } };
+    }>({
+      query: `query ListTeamIssues($teamId: String!, $first: Int!, $after: String) {
+        issues(filter: { team: { id: { eq: $teamId } } }, first: $first, after: $after) {
+          nodes { ${ISSUE_FIELDS} }
+          ${PAGE_INFO_FIELDS}
+        }
+      }`,
+      variables: { after: after ?? null, first, teamId },
+    });
+    return {
+      endCursor: data.issues.pageInfo.endCursor ?? null,
+      hasNextPage: data.issues.pageInfo.hasNextPage === true,
+      issues: data.issues.nodes.map(normalizeLinearIssue),
+    };
+  }
+
   async listOrganizations(): Promise<LinearOrganizationSnapshot[]> {
     const data = await this.requestData<{ organizations: { nodes: unknown[] } }>({
       query: `query ListOrganizations { organizations { nodes { ${ORGANIZATION_FIELDS} } } }`,
@@ -736,14 +741,10 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
       const key = stringValue(value.key);
       const name = stringValue(value.name);
       const organizationId = nestedId(value.organization);
-      if (
-        !id ||
-        !key ||
-        !name ||
-        !this.isInstalledOrganization(organizationId) ||
-        value.visibility !== 'public'
-      )
-        continue;
+      // Private teams stay in the snapshot — the sync scope's
+      // `privateTeamPolicy` (import_restricted | skip) decides whether they
+      // are mirrored; the provider reports what the organization contains.
+      if (!id || !key || !name || !this.isInstalledOrganization(organizationId)) continue;
       const stateNodes = isRecord(value.states)
         ? await collectConnectionNodes(async (after) => {
             const data = await this.requestData<{ team: { states?: unknown } | null }>({
@@ -760,7 +761,39 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
             return data.team?.states;
           }, value.states)
         : [];
+      const cycleNodes = isRecord(value.cycles)
+        ? await collectConnectionNodes(async (after) => {
+            const data = await this.requestData<{ team: { cycles?: unknown } | null }>({
+              query: `query ListTeamCycles($teamId: String!, $after: String) {
+                  team(id: $teamId) {
+                    cycles(first: ${CATALOG_PAGE_SIZE}, after: $after) {
+                      nodes { id name number startsAt endsAt }
+                      ${PAGE_INFO_FIELDS}
+                    }
+                  }
+                }`,
+              variables: { after, teamId: id },
+            });
+            return data.team?.cycles;
+          }, value.cycles)
+        : [];
       teams.push({
+        cycles: cycleNodes.flatMap((cycle) => {
+          if (!isRecord(cycle)) return [];
+          const cycleId = stringValue(cycle.id);
+          const cycleName = stringValue(cycle.name);
+          if (!cycleId || !cycleName) return [];
+          return [
+            {
+              endsAt: stringValue(cycle.endsAt),
+              id: cycleId,
+              name: cycleName,
+              number: typeof cycle.number === 'number' ? cycle.number : null,
+              startsAt: stringValue(cycle.startsAt),
+              teamId: id,
+            },
+          ];
+        }),
         id,
         key,
         name,

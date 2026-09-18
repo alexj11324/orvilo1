@@ -32,6 +32,7 @@ describe('proposeLinearPlanningReview', () => {
           revision: 2,
           source: 'linear',
           taskId: 'task-1',
+          teamId: null,
           type: 'linear.issue.changed',
           workspaceId: 'workspace-1',
         },

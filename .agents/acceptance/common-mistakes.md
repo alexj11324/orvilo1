@@ -149,9 +149,11 @@ materially new delivery; reopen only on explicit user request.
 replace the Task provider or model, so the observed behavior belongs to a
 fallback.
 
-**Rule:** after every assignment or Task edit, verify the persisted
-provider/model and the first completed assistant message metadata; attach the
-runtime identity to the round.
+**Rule:** after every assignment or Task edit, verify the persisted runtime
+identity — for agent runs that is the ACP / heterogeneous provider the agent
+actually executes on; the LLM provider/model surface is retired (P50), so
+those fields no longer tell you what ran — and the first completed assistant
+message metadata; attach that identity to the round.
 
 ### L-E11 — Declaring an ingest done without reconciling its evidence count
 

@@ -70,6 +70,14 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 4px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
+  table: css`
+    /* Fixed columns + gaps floor at ~500px; below that the wrapper scrolls
+       horizontally instead of crushing cells or overflowing the page. */
+    min-width: 500px;
+  `,
+  tableScroll: css`
+    overflow-x: auto;
+  `,
 }));
 
 const displayName = (member: WorkspaceMemberSummary): string =>
@@ -271,26 +279,30 @@ export const MembersPanel = memo(() => {
 
   return (
     <Flexbox gap={8}>
-      <div className={styles.row}>
-        <span className={styles.headerCell}>{t('workspaceSetting.members.columnMember')}</span>
-        <span className={styles.headerCell}>{t('workspaceSetting.members.columnRole')}</span>
-        <span className={styles.headerCell}>{t('workspaceSetting.members.columnStatus')}</span>
-        <span />
+      <div className={styles.tableScroll}>
+        <div className={styles.table}>
+          <div className={styles.row}>
+            <span className={styles.headerCell}>{t('workspaceSetting.members.columnMember')}</span>
+            <span className={styles.headerCell}>{t('workspaceSetting.members.columnRole')}</span>
+            <span className={styles.headerCell}>{t('workspaceSetting.members.columnStatus')}</span>
+            <span />
+          </div>
+          <div className={styles.list}>
+            {rows.map((member) => (
+              <MemberRow
+                callerRole={capabilities.role}
+                callerUserId={callerUserId}
+                key={member.userId}
+                member={member}
+                onRemove={openRemoveModal}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-      <div className={styles.list}>
-        {rows.map((member) => (
-          <MemberRow
-            callerRole={capabilities.role}
-            callerUserId={callerUserId}
-            key={member.userId}
-            member={member}
-            onRemove={openRemoveModal}
-          />
-        ))}
-        {rows.length === 0 && (
-          <Empty description={t('workspaceSetting.members.empty')} style={{ paddingBlock: 32 }} />
-        )}
-      </div>
+      {rows.length === 0 && (
+        <Empty description={t('workspaceSetting.members.empty')} style={{ paddingBlock: 32 }} />
+      )}
     </Flexbox>
   );
 });

@@ -42,6 +42,14 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 4px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
+  table: css`
+    /* Fixed columns + gaps floor at ~640px; below that the wrapper scrolls
+       horizontally instead of crushing cells or overflowing the page. */
+    min-width: 640px;
+  `,
+  tableScroll: css`
+    overflow-x: auto;
+  `,
 }));
 
 const STATUS_COLOR: Record<string, string> = {
@@ -182,23 +190,33 @@ export const InvitationsPanel = memo(() => {
 
   return (
     <Flexbox gap={8}>
-      <div className={styles.row}>
-        <span className={styles.headerCell}>{t('workspaceSetting.invitations.columnEmail')}</span>
-        <span className={styles.headerCell}>{t('workspaceSetting.invitations.columnStatus')}</span>
-        <span className={styles.headerCell}>
-          {t('workspaceSetting.invitations.columnLastSent')}
-        </span>
-        <span className={styles.headerCell}>{t('workspaceSetting.invitations.columnExpires')}</span>
-        <span />
+      <div className={styles.tableScroll}>
+        <div className={styles.table}>
+          <div className={styles.row}>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.invitations.columnEmail')}
+            </span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.invitations.columnStatus')}
+            </span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.invitations.columnLastSent')}
+            </span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.invitations.columnExpires')}
+            </span>
+            <span />
+          </div>
+          {invitations.map((invitation) => (
+            <InvitationRow
+              canManage={capabilities.canInvite}
+              invitation={invitation}
+              key={invitation.id}
+              locale={i18n.language}
+            />
+          ))}
+        </div>
       </div>
-      {invitations.map((invitation) => (
-        <InvitationRow
-          canManage={capabilities.canInvite}
-          invitation={invitation}
-          key={invitation.id}
-          locale={i18n.language}
-        />
-      ))}
       {invitations.length === 0 && (
         <Empty description={t('workspaceSetting.invitations.empty')} style={{ paddingBlock: 32 }} />
       )}

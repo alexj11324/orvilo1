@@ -53,6 +53,14 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 4px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
+  table: css`
+    /* Six columns floor at ~720px; below that the wrapper scrolls
+       horizontally instead of crushing cells or overflowing the page. */
+    min-width: 720px;
+  `,
+  tableScroll: css`
+    overflow-x: auto;
+  `,
 }));
 
 const STATUS_COLOR = {
@@ -154,17 +162,33 @@ export const AgentsPanel = memo(() => {
 
   return (
     <Flexbox gap={8}>
-      <div className={styles.row}>
-        <span className={styles.headerCell}>{t('workspaceSetting.agents.columnAgent')}</span>
-        <span className={styles.headerCell}>{t('workspaceSetting.agents.columnMaintainer')}</span>
-        <span className={styles.headerCell}>{t('workspaceSetting.agents.columnProjects')}</span>
-        <span className={styles.headerCell}>{t('workspaceSetting.agents.columnStatus')}</span>
-        <span className={styles.headerCell}>{t('workspaceSetting.agents.columnCanUse')}</span>
-        <span className={styles.headerCell}>{t('workspaceSetting.agents.columnCanEdit')}</span>
+      <div className={styles.tableScroll}>
+        <div className={styles.table}>
+          <div className={styles.row}>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.agents.columnAgent')}
+            </span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.agents.columnMaintainer')}
+            </span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.agents.columnProjects')}
+            </span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.agents.columnStatus')}
+            </span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.agents.columnCanUse')}
+            </span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.agents.columnCanEdit')}
+            </span>
+          </div>
+          {agents.map((agent) => (
+            <AgentRow agent={agent} key={agent.id} />
+          ))}
+        </div>
       </div>
-      {agents.map((agent) => (
-        <AgentRow agent={agent} key={agent.id} />
-      ))}
       {agents.length === 0 && (
         <Empty description={t('workspaceSetting.agents.empty')} style={{ paddingBlock: 32 }} />
       )}

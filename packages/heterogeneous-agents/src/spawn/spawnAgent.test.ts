@@ -270,7 +270,10 @@ const createCursorAcpProc = () => {
   const send = (message: Record<string, unknown>) =>
     stdout.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
   Object.assign(proc, {
-    kill: vi.fn(() => true),
+    kill: vi.fn(() => {
+      queueMicrotask(() => child.emit('close', null, 'SIGTERM'));
+      return true;
+    }),
     killed: false,
     pid: 67_890,
     stderr,

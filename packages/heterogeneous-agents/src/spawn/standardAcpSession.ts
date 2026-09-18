@@ -163,9 +163,7 @@ const AUTO_PERMISSION_PREFERENCES = [
  * Both field spellings are accepted (`id` in protocol v1, `configId` in v2);
  * an entry with no enumerated `options` maps to `undefined` (unconstrained).
  */
-const parseAdvertisedConfigOptions = (
-  value: unknown,
-): Map<string, Set<string> | undefined> => {
+const parseAdvertisedConfigOptions = (value: unknown): Map<string, Set<string> | undefined> => {
   const advertised = new Map<string, Set<string> | undefined>();
   if (!Array.isArray(value)) return advertised;
   for (const entry of value) {
@@ -297,12 +295,14 @@ export class StandardAcpSession extends AcpAgentSession<
   }
 
   protected validateInitialized(initialized: StandardAcpInitializeResult): void {
+    // Bridges may report the version as a string ("1"); accept only the v1
+    // vocabulary in either representation, matching Cursor/Devin/Grok.
     if (
-      typeof initialized?.protocolVersion === 'number' &&
-      initialized.protocolVersion !== ACP_PROTOCOL_VERSION
+      initialized?.protocolVersion !== ACP_PROTOCOL_VERSION &&
+      initialized?.protocolVersion !== String(ACP_PROTOCOL_VERSION)
     ) {
       throw new Error(
-        `${this.sessionConfig.spec.label} returned unsupported protocol version: ${initialized.protocolVersion}`,
+        `${this.sessionConfig.spec.label} returned unsupported protocol version: ${String(initialized?.protocolVersion)}`,
       );
     }
   }

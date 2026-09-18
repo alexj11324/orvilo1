@@ -227,7 +227,7 @@ const createAcpSpawnBridge = () => {
 
     const kill = (signal: NodeJS.Signals = 'SIGINT'): void => {
       hostSignal = signal;
-      if (signal === 'SIGINT') session.interrupt();
+      if (signal === 'SIGINT') void session.interrupt();
       else session.close(signal);
     };
     return { exit, kill };
@@ -238,7 +238,7 @@ const createAcpSpawnBridge = () => {
 
 interface AcpSpawnSession {
   close: (signal?: NodeJS.Signals) => void;
-  interrupt: () => void;
+  interrupt: () => Promise<boolean>;
   pid?: number;
   run: () => Promise<void>;
   sessionId?: string;

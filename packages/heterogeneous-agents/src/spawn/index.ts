@@ -129,9 +129,11 @@ export {
   ACP_AGENT_RUNTIMES,
   ACP_RUNTIME_AGENT_TYPES,
   type AcpAgentRuntimeSpec,
+  type AcpBridgeRunnerTarget,
   type AcpBridgeSpec,
   buildAcpBridgeNotFoundError,
   detectAcpBridgeCommand,
+  detectAcpBridgeRunner,
   getAcpAgentRuntime,
   isAcpBridgeAgent,
 } from './acpRuntime';

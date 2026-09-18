@@ -43,6 +43,8 @@ export interface AcpBridgeSpec {
   nativeCommandEnv: string;
   /** Env var that overrides the bridge executable path. */
   overrideEnv: string;
+  /** npm package carrying the bridge binary (used by the runner fallback). */
+  package: string;
 }
 
 type AcpRuntimeAgentType = Extract<
@@ -55,6 +57,7 @@ export const ACP_AGENT_RUNTIMES = {
     bridge: {
       command: 'amp-acp',
       installCommand: 'npm install -g amp-acp',
+      package: 'amp-acp',
       nativeCommandEnv: 'AMP_CLI_PATH',
       overrideEnv: 'LOBE_AMP_ACP_COMMAND',
     },
@@ -67,6 +70,7 @@ export const ACP_AGENT_RUNTIMES = {
     bridge: {
       command: 'claude-agent-acp',
       installCommand: 'npm install -g @agentclientprotocol/claude-agent-acp',
+      package: '@agentclientprotocol/claude-agent-acp',
       nativeCommandEnv: 'CLAUDE_CODE_EXECUTABLE',
       overrideEnv: 'LOBE_CLAUDE_CODE_ACP_COMMAND',
     },
@@ -86,6 +90,7 @@ export const ACP_AGENT_RUNTIMES = {
     bridge: {
       command: 'codex-acp',
       installCommand: 'npm install -g @agentclientprotocol/codex-acp',
+      package: '@agentclientprotocol/codex-acp',
       nativeCommandEnv: 'CODEX_PATH',
       overrideEnv: 'LOBE_CODEX_ACP_COMMAND',
     },
@@ -112,6 +117,7 @@ export const ACP_AGENT_RUNTIMES = {
     bridge: {
       command: 'pi-acp',
       installCommand: 'npm install -g pi-acp',
+      package: 'pi-acp',
       nativeCommandEnv: 'PI_ACP_PI_COMMAND',
       overrideEnv: 'LOBE_PI_ACP_COMMAND',
     },
@@ -188,6 +194,56 @@ export const detectAcpBridgeCommand = async (
     { validateFlag: '--version', validatePattern: BRIDGE_VERSION_PATTERN },
     probeEnv,
   );
+};
+
+/**
+ * Package runners that can execute the bridge package on demand — the
+ * rollout-compatible path for installs that predate the bridge requirement
+ * (vendor CLI present, bridge absent): the runner fetches and caches the
+ * pinned bridge package instead of failing every launch.
+ */
+const ACP_BRIDGE_RUNNERS: ReadonlyArray<{
+  args: (spec: AcpBridgeSpec) => string[];
+  command: string;
+}> = [
+  { args: (spec) => [spec.package], command: 'bunx' },
+  { args: (spec) => ['--yes', '-p', spec.package, spec.command], command: 'npx' },
+];
+
+export interface AcpBridgeRunnerTarget {
+  /** Runner argv: package spec + (for npx) the bridge bin to invoke. */
+  args: string[];
+  /** Resolved runner executable (`bunx` / `npx`). */
+  commandPath: string;
+  /** Recovered login-shell PATH the child must inherit, when resolution used it. */
+  resolvedPathEnv?: string;
+}
+
+/**
+ * Resolve a package runner able to execute the bridge when no bridge binary
+ * is installed. Returns `undefined` when neither `bunx` nor `npx` is usable.
+ */
+export const detectAcpBridgeRunner = async (
+  spec: AcpBridgeSpec,
+  probeEnv?: NodeJS.ProcessEnv,
+): Promise<AcpBridgeRunnerTarget | undefined> => {
+  const { detectValidatedCommandCandidates } = await import('./resolveCliCommand');
+
+  for (const runner of ACP_BRIDGE_RUNNERS) {
+    const status = await detectValidatedCommandCandidates(
+      [runner.command, ...getWellKnownBridgeCommandPaths(runner.command)],
+      { validateFlag: '--version', validatePattern: BRIDGE_VERSION_PATTERN },
+      probeEnv,
+    );
+    if (status.available && status.path) {
+      return {
+        args: runner.args(spec),
+        commandPath: status.path,
+        resolvedPathEnv: status.resolvedPathEnv,
+      };
+    }
+  }
+  return undefined;
 };
 
 /** User-facing error when the ACP bridge binary cannot be located. */

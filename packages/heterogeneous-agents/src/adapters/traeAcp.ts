@@ -10,6 +10,7 @@ import type {
   ToolStateChunkData,
   UsageData,
 } from '../types';
+import { toTurnUsageFromCumulative } from '../utils/codexUsage';
 import { AcpStreamLifecycle } from './acpCommon';
 
 const DEFAULT_PROVIDER = 'trae';
@@ -116,11 +117,13 @@ export class TraeAcpAdapter implements AgentEventAdapter {
   private readonly eventPrefix: string;
   private readonly provider: string;
   private completedTools = new Set<string>();
+  private cumulativeBaseline?: UsageData;
   protected lastCostUsd?: number;
   protected lastUsage?: UsageData;
   private model?: string;
   private pendingTools = new Set<string>();
   private snapshotSeq = new Map<string, number>();
+  private toolPayloadById = new Map<string, ToolCallPayload>();
   protected readonly stream = new AcpStreamLifecycle((stepIndex) => ({
     ...(this.model ? { model: this.model } : {}),
     ...(stepIndex > 0 ? { newStep: true } : {}),
@@ -140,6 +143,12 @@ export class TraeAcpAdapter implements AgentEventAdapter {
     const raw = value as TraeAcpPayload;
     if (raw.type === 'session_configured') {
       if (typeof raw.model === 'string') this.model = raw.model;
+      // Resumed Codex threads report cumulative usage across the whole
+      // thread history; the host injects the prior totals so this adapter can
+      // emit per-turn deltas instead of double-counting the thread backlog.
+      if (isRecord(raw.initialCumulativeUsage)) {
+        this.cumulativeBaseline = raw.initialCumulativeUsage as UsageData;
+      }
       return [];
     }
     if (raw.type === `${this.eventPrefix}_session`) {
@@ -148,7 +157,7 @@ export class TraeAcpAdapter implements AgentEventAdapter {
       return [];
     }
     if (raw.type === `${this.eventPrefix}_prompt_completed`) {
-      const usage = this.toUsageData(raw.usage) ?? this.lastUsage;
+      const usage = this.applyCumulativeBaseline(this.toUsageData(raw.usage)) ?? this.lastUsage;
       const costUsd = this.toCostUsd(raw.cost) ?? this.lastCostUsd;
       return this.complete(raw.stopReason, usage, costUsd);
     }
@@ -158,7 +167,7 @@ export class TraeAcpAdapter implements AgentEventAdapter {
 
     switch (raw.sessionUpdate) {
       case 'usage_update': {
-        const usage = this.extractUsageFromUsageUpdate(raw);
+        const usage = this.applyCumulativeBaseline(this.extractUsageFromUsageUpdate(raw));
         if (usage) this.lastUsage = usage;
         const costUsd = this.toCostUsd(raw.cost);
         if (costUsd !== undefined) this.lastCostUsd = costUsd;
@@ -241,7 +250,7 @@ export class TraeAcpAdapter implements AgentEventAdapter {
         isError: !isSuccess,
         toolCallId: id,
       } satisfies ToolResultData),
-      this.stream.event('tool_end', { isSuccess, toolCallId: id }),
+      this.stream.event('tool_end', this.buildToolEndData(id, isSuccess, result)),
     ];
     if (this.pendingTools.size === 0) this.stream.pendingStepBoundary = true;
     return events;
@@ -266,6 +275,7 @@ export class TraeAcpAdapter implements AgentEventAdapter {
     };
     const streamEvents = this.stream.ensureStream(true);
     this.pendingTools.add(id);
+    this.toolPayloadById.set(id, payload);
     this.stream.stepTools.push(payload);
 
     return [
@@ -292,10 +302,30 @@ export class TraeAcpAdapter implements AgentEventAdapter {
 
   private closePending(): HeterogeneousAgentEvent[] {
     const events = [...this.pendingTools].map((toolCallId) =>
-      this.stream.event('tool_end', { isSuccess: false, toolCallId }),
+      this.stream.event('tool_end', this.buildToolEndData(toolCallId, false)),
     );
     this.pendingTools.clear();
     return events;
+  }
+
+  /**
+   * `tool_end` must carry the original call payload and terminal outcome —
+   * the gateway handler routes `data.payload.toolCalling` to executor
+   * `onAfterCall` hooks (git/worktree side effects) and merges `data.result`
+   * with `isSuccess`.
+   */
+  private buildToolEndData(
+    toolCallId: string,
+    isSuccess: boolean,
+    content = '',
+  ): Record<string, unknown> {
+    const toolCalling = this.toolPayloadById.get(toolCallId);
+    return {
+      isSuccess,
+      ...(toolCalling ? { payload: { toolCalling } } : {}),
+      result: { content, success: isSuccess },
+      toolCallId,
+    };
   }
 
   protected complete(
@@ -327,6 +357,19 @@ export class TraeAcpAdapter implements AgentEventAdapter {
 
     result.push(this.stream.event('agent_runtime_end', runtimeEndData));
     return result;
+  }
+
+  /**
+   * Convert a cumulative usage reading into a per-turn delta against the
+   * session baseline (seeded by `initialCumulativeUsage` on resume), then roll
+   * the baseline forward. Pass-through when no baseline was injected or the
+   * reading is not monotonic — matching the legacy Codex adapter's contract.
+   */
+  private applyCumulativeBaseline(usage: UsageData | undefined): UsageData | undefined {
+    if (!this.cumulativeBaseline) return usage;
+    const delta = toTurnUsageFromCumulative(usage, this.cumulativeBaseline);
+    if (usage) this.cumulativeBaseline = usage;
+    return delta;
   }
 
   /**

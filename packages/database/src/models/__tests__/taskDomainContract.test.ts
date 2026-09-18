@@ -8,11 +8,12 @@ import {
   taskDomainEvents,
   taskPlanningScopes,
   tasks,
+  teams,
   users,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
-import { TaskModel } from '../task';
+import { TaskModel, TaskRevisionConflictError } from '../task';
 
 const db: OrviloDatabase = await getTestDB();
 const userId = 'task-domain-user';
@@ -287,5 +288,53 @@ describe('task domain contract', () => {
       changedFields: ['deleted'],
       task: { identifier: task.identifier, visibility: task.visibility },
     });
+  });
+
+  it('rejects moveToTeam when the expected domain revision is stale', async () => {
+    await db.insert(teams).values([
+      { id: 'team-cas-a', key: 'CSA', name: 'CAS A', workspaceId },
+      { id: 'team-cas-b', key: 'CSB', name: 'CAS B', workspaceId },
+    ]);
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create({ instruction: 'Move with CAS', teamId: 'team-cas-a' });
+    expect(task.domainRevision).toBe(1);
+
+    const moved = await model.moveToTeam(task.id, 'team-cas-b', {
+      expectedDomainRevision: 1,
+      source: 'user',
+    });
+    expect(moved).toMatchObject({ domainRevision: 2, teamId: 'team-cas-b' });
+
+    await expect(
+      model.moveToTeam(task.id, 'team-cas-a', { expectedDomainRevision: 1, source: 'user' }),
+    ).rejects.toBeInstanceOf(TaskRevisionConflictError);
+
+    expect(await model.findById(task.id)).toMatchObject({
+      domainRevision: 2,
+      teamId: 'team-cas-b',
+    });
+
+    const lastWrite = await model.moveToTeam(task.id, 'team-cas-a', { source: 'system' });
+    expect(lastWrite).toMatchObject({ domainRevision: 3, teamId: 'team-cas-a' });
+  });
+
+  it('records a duplicate pointer without deleting either task', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const canonical = await model.create({ instruction: 'Canonical work' });
+    const copy = await model.create({ instruction: 'Looks the same' });
+
+    const marked = await model.update(copy.id, {
+      duplicateOfTaskId: canonical.id,
+      triageStatus: 'duplicate',
+    });
+    expect(marked).toMatchObject({
+      duplicateOfTaskId: canonical.id,
+      triageStatus: 'duplicate',
+    });
+    expect(await model.findById(copy.id)).not.toBeNull();
+    expect(await model.findById(canonical.id)).toMatchObject({ duplicateOfTaskId: null });
+
+    await expect(model.update(copy.id, { duplicateOfTaskId: copy.id })).rejects.toThrow();
+    expect(await model.findById(copy.id)).toMatchObject({ duplicateOfTaskId: canonical.id });
   });
 });

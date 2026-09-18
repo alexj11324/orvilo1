@@ -373,6 +373,7 @@ export const workAttentionRouter = router({
       z.object({
         action: z.enum(['accept', 'decline', 'duplicate', 'reassign']),
         assigneeUserId: z.string().min(1).optional(),
+        canonicalTaskId: z.string().min(1).optional(),
         taskId: z.string().min(1),
         teamId: z.string().min(1),
       }),
@@ -397,6 +398,27 @@ export const workAttentionRouter = router({
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'assignee must be a team member' });
         }
       }
+      if (input.action === 'duplicate') {
+        if (!input.canonicalTaskId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'duplicate requires canonicalTaskId',
+          });
+        }
+        if (input.canonicalTaskId === input.taskId) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'canonical task cannot be itself' });
+        }
+        const canonical = await ctx.taskModel.findById(input.canonicalTaskId);
+        if (!canonical) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Canonical task not found' });
+        }
+        if (canonical.duplicateOfTaskId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'canonical task is already a duplicate',
+          });
+        }
+      }
       const triageStatus =
         input.action === 'accept'
           ? 'accepted'
@@ -407,6 +429,9 @@ export const workAttentionRouter = router({
               : 'accepted';
       const updated = await ctx.taskModel.update(input.taskId, {
         triageStatus,
+        ...(input.action === 'duplicate' && input.canonicalTaskId
+          ? { duplicateOfTaskId: input.canonicalTaskId }
+          : {}),
         ...(input.action === 'reassign' && input.assigneeUserId
           ? { assigneeUserId: input.assigneeUserId }
           : {}),

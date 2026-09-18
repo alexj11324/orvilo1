@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { feedFilterForChip, snoozeUntilIso } from './inboxOrganize';
+import { feedFilterForChip, inboxBulkFingerprint } from './inboxOrganize';
 
 describe('feedFilterForChip', () => {
   it('omits a filter for the default All chip so Needs-you keeps unresolved cards', () => {
@@ -10,10 +10,9 @@ describe('feedFilterForChip', () => {
   });
 });
 
-describe('snoozeUntilIso', () => {
-  it('snoozes presentation only, by a bounded number of hours', () => {
-    expect(snoozeUntilIso(new Date('2026-09-18T12:00:00.000Z'), 4)).toBe(
-      '2026-09-18T16:00:00.000Z',
-    );
+describe('inboxBulkFingerprint', () => {
+  it('binds the snapshot to the visible chip so archive-all cannot widen later', () => {
+    expect(inboxBulkFingerprint('archive', 'unread')).toBe('archive:unread');
+    expect(inboxBulkFingerprint('mark_read', 'all')).toBe('mark_read:all');
   });
 });

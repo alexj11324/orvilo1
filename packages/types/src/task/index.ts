@@ -552,6 +552,11 @@ export interface TaskItem {
   deletedAt?: Date | null;
   description: string | null;
   domainRevision: number;
+  /**
+   * Canonical task this row duplicates. Null unless triage marked it duplicate.
+   * Never a hard-delete or merged execution history.
+   */
+  duplicateOfTaskId: string | null;
   editorData: unknown;
   error: string | null;
   executionGeneration: number;
@@ -668,6 +673,7 @@ export interface NewTask {
   deletedAt?: Date | null;
   description?: string | null;
   domainRevision?: number;
+  duplicateOfTaskId?: string | null;
   editorData?: unknown;
   error?: string | null;
   executionGeneration?: number;

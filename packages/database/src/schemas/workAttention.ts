@@ -1,6 +1,7 @@
 import type {
   EventConsumerName,
   NavigationFavoriteTargetType,
+  NotificationBulkAction,
   SavedViewVisibility,
   WorkQuery,
   WorkQueryEntityType,
@@ -75,6 +76,27 @@ export const notificationFeedState = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [uniqueIndex('notification_feed_state_user_scope_unique').on(t.userId, t.scopeKey)],
+);
+
+/** Snapshot token so bulk archive/read cannot clear events the caller never saw. */
+export const notificationBulkSnapshots = pgTable(
+  'notification_bulk_snapshots',
+  {
+    id: uuid('id').defaultRandom().primaryKey().notNull(),
+    userId: text('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    scopeKey: text('scope_key').notNull(),
+    action: text('action').$type<NotificationBulkAction>().notNull(),
+    queryFingerprint: text('query_fingerprint').notNull(),
+    cutoffRevision: integer('cutoff_revision').notNull(),
+    expiresAt: timestamptz('expires_at').notNull(),
+    consumedAt: timestamptz('consumed_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('notification_bulk_snapshots_user_scope_idx').on(t.userId, t.scopeKey, t.expiresAt),
+  ],
 );
 
 export const taskSubscriptions = pgTable(
@@ -154,6 +176,7 @@ export type EventConsumerReceiptItem = typeof eventConsumerReceipts.$inferSelect
 export type NewEventConsumerReceipt = typeof eventConsumerReceipts.$inferInsert;
 export type NotificationEventReceiptItem = typeof notificationEventReceipts.$inferSelect;
 export type NotificationFeedStateItem = typeof notificationFeedState.$inferSelect;
+export type NotificationBulkSnapshotItem = typeof notificationBulkSnapshots.$inferSelect;
 export type TaskSubscriptionItem = typeof taskSubscriptions.$inferSelect;
 export type SavedViewItem = typeof savedViews.$inferSelect;
 export type NewSavedView = typeof savedViews.$inferInsert;

@@ -4083,6 +4083,7 @@ table tasks {
   reviewer_user_id text
   triage_status text
   parent_task_id text
+  duplicate_of_task_id text
   name text
   description varchar(255)
   instruction text [not null]
@@ -4131,12 +4132,14 @@ table tasks {
 
   indexes {
     
+    
     (identifier, created_by_user_id) [name: 'tasks_identifier_idx', unique]
     created_by_user_id [name: 'tasks_created_by_user_id_idx']
     created_by_agent_id [name: 'tasks_created_by_agent_id_idx']
     assignee_user_id [name: 'tasks_assignee_user_id_idx']
     assignee_agent_id [name: 'tasks_assignee_agent_id_idx']
     parent_task_id [name: 'tasks_parent_task_id_idx']
+    duplicate_of_task_id [name: 'tasks_duplicate_of_task_id_idx']
     status [name: 'tasks_status_idx']
     workflow_category [name: 'tasks_workflow_category_idx']
     orchestration_owner [name: 'tasks_orchestration_owner_idx']
@@ -4152,6 +4155,7 @@ table tasks {
     (workspace_id, visibility, created_by_user_id) [name: 'tasks_workspace_visibility_idx']
     (workspace_id, identifier) [name: 'tasks_identifier_workspace_id_unique', unique]
     (id, workspace_id) [name: 'tasks_id_workspace_id_unique', unique]
+    
     
   }
 }
@@ -5122,6 +5126,22 @@ table navigation_favorites {
   indexes {
     (user_id, scope_key, target_type, target_id) [name: 'navigation_favorites_user_scope_target_unique', unique]
     (user_id, scope_key) [name: 'navigation_favorites_user_scope_idx']
+  }
+}
+
+table notification_bulk_snapshots {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  user_id text [not null]
+  scope_key text [not null]
+  action text [not null]
+  query_fingerprint text [not null]
+  cutoff_revision integer [not null]
+  expires_at "timestamp with time zone" [not null]
+  consumed_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (user_id, scope_key, expires_at) [name: 'notification_bulk_snapshots_user_scope_idx']
   }
 }
 

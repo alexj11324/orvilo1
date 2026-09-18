@@ -63,6 +63,14 @@ class NotificationService {
   archiveAll = () => {
     return lambdaClient.notification.archiveAll.mutate();
   };
+
+  prepareBulk = (input: { action: 'archive' | 'mark_read'; queryFingerprint: string }) => {
+    return lambdaClient.notification.prepareBulk.mutate(input);
+  };
+
+  applyBulk = (token: string) => {
+    return lambdaClient.notification.applyBulk.mutate({ token });
+  };
 }
 
 export const notificationService = new NotificationService();

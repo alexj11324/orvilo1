@@ -29,6 +29,7 @@ import { versionedDecisionFromCard, visibleDecisionVerbs } from './inboxDecide';
 import {
   feedFilterForChip,
   INBOX_FILTER_CHIPS,
+  inboxBulkFingerprint,
   type InboxFilterChip,
   snoozeUntilIso,
 } from './inboxOrganize';
@@ -233,21 +234,29 @@ const WorkInboxPage = memo(() => {
 
   const markAllRead = useCallback(async () => {
     try {
-      await notificationService.markAllAsRead();
+      const prepared = await notificationService.prepareBulk({
+        action: 'mark_read',
+        queryFingerprint: inboxBulkFingerprint('mark_read', filterChip),
+      });
+      await notificationService.applyBulk(prepared.data.token);
       await refresh();
     } catch {
       organizeFailed();
     }
-  }, [organizeFailed, refresh]);
+  }, [filterChip, organizeFailed, refresh]);
 
   const archiveAll = useCallback(async () => {
     try {
-      await notificationService.archiveAll();
+      const prepared = await notificationService.prepareBulk({
+        action: 'archive',
+        queryFingerprint: inboxBulkFingerprint('archive', filterChip),
+      });
+      await notificationService.applyBulk(prepared.data.token);
       await refresh();
     } catch {
       organizeFailed();
     }
-  }, [organizeFailed, refresh]);
+  }, [filterChip, organizeFailed, refresh]);
 
   const filterLabel = (chip: InboxFilterChip) => {
     if (chip === 'all') return t('inbox.allStatus');

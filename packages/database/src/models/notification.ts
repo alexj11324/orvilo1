@@ -1,18 +1,27 @@
 import type {
   ActionSourceKind,
+  NotificationBulkAction,
   NotificationFeedKind,
   NotificationPresentationFilter,
 } from '@orvilo/types';
-import { and, count, desc, eq, inArray, isNull, lt, or, type SQL, sql } from 'drizzle-orm';
+import { notificationScopeKey } from '@orvilo/types';
+import { and, count, desc, eq, gt, inArray, isNull, lt, or, type SQL, sql } from 'drizzle-orm';
 
 import type { NewNotification, NewNotificationDelivery } from '../schemas/notification';
 import { notificationDeliveries, notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
 import { tasks } from '../schemas/task';
-import { notificationEventReceipts } from '../schemas/workAttention';
+import { notificationBulkSnapshots, notificationEventReceipts } from '../schemas/workAttention';
 import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { allocateFeedRevision, currentFeedRevision } from './notificationFeed';
+
+export class NotificationBulkError extends Error {
+  constructor(readonly code: 'CONSUMED' | 'EXPIRED' | 'FORBIDDEN_ACTION' | 'NOT_FOUND') {
+    super(code);
+    this.name = 'NotificationBulkError';
+  }
+}
 
 export interface NotificationModelOptions {
   /**
@@ -349,7 +358,8 @@ export class NotificationModel {
       );
   }
 
-  async archiveAll() {
+  async archiveAll(cutoffRevision?: number) {
+    const cutoff = cutoffRevision ?? (await this.snapshotCutoff());
     return this.db
       .update(notifications)
       .set({ archivedAt: new Date(), isArchived: true, updatedAt: new Date() })
@@ -358,6 +368,108 @@ export class NotificationModel {
           ...this.scope(),
           eq(notifications.isArchived, false),
           or(eq(notifications.kind, 'update'), sql`${notifications.resolvedAt} is not null`)!,
+          sql`${notifications.latestFeedRevision} <= ${cutoff}`,
+        ),
+      );
+  }
+
+  /**
+   * Capture the feed revision the caller actually observed. applyBulk will
+   * only touch cards at or below this cutoff — never a later event.
+   */
+  async prepareBulk(params: { action: NotificationBulkAction; queryFingerprint: string }) {
+    if (params.action !== 'archive' && params.action !== 'mark_read') {
+      throw new NotificationBulkError('FORBIDDEN_ACTION');
+    }
+    const cutoffRevision = await this.snapshotCutoff();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    const [row] = await this.db
+      .insert(notificationBulkSnapshots)
+      .values({
+        action: params.action,
+        cutoffRevision,
+        expiresAt,
+        queryFingerprint: params.queryFingerprint,
+        scopeKey: notificationScopeKey(this.workspaceId),
+        userId: this.userId,
+      })
+      .returning();
+    return { cutoffRevision, expiresAt, token: row.id };
+  }
+
+  async applyBulk(token: string) {
+    const now = new Date();
+    const [claimed] = await this.db
+      .update(notificationBulkSnapshots)
+      .set({ consumedAt: now })
+      .where(
+        and(
+          eq(notificationBulkSnapshots.id, token),
+          eq(notificationBulkSnapshots.userId, this.userId),
+          eq(notificationBulkSnapshots.scopeKey, notificationScopeKey(this.workspaceId)),
+          isNull(notificationBulkSnapshots.consumedAt),
+          gt(notificationBulkSnapshots.expiresAt, now),
+        ),
+      )
+      .returning();
+    if (!claimed) {
+      const [snapshot] = await this.db
+        .select()
+        .from(notificationBulkSnapshots)
+        .where(
+          and(
+            eq(notificationBulkSnapshots.id, token),
+            eq(notificationBulkSnapshots.userId, this.userId),
+            eq(notificationBulkSnapshots.scopeKey, notificationScopeKey(this.workspaceId)),
+          ),
+        )
+        .limit(1);
+      if (!snapshot) throw new NotificationBulkError('NOT_FOUND');
+      if (snapshot.consumedAt) throw new NotificationBulkError('CONSUMED');
+      throw new NotificationBulkError('EXPIRED');
+    }
+
+    if (claimed.action === 'archive') {
+      await this.archiveAll(claimed.cutoffRevision);
+    } else if (claimed.action === 'mark_read') {
+      await this.markAllAsReadAt(claimed.cutoffRevision);
+    } else {
+      throw new NotificationBulkError('FORBIDDEN_ACTION');
+    }
+
+    return { cutoffRevision: claimed.cutoffRevision, success: true };
+  }
+
+  private async snapshotCutoff() {
+    const feedRevision = await currentFeedRevision(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    if (feedRevision > 0) return feedRevision;
+    const [row] = await this.db
+      .select({
+        max: sql<number>`coalesce(max(${notifications.latestFeedRevision}), 0)`,
+      })
+      .from(notifications)
+      .where(and(...this.scope()));
+    return Number(row?.max ?? 0);
+  }
+
+  private async markAllAsReadAt(cutoffRevision: number) {
+    const now = new Date();
+    return this.db
+      .update(notifications)
+      .set({
+        isRead: true,
+        readVersion: sql`${notifications.activityVersion}`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.isRead, false),
+          eq(notifications.isArchived, false),
+          sql`${notifications.latestFeedRevision} <= ${cutoffRevision}`,
         ),
       );
   }
@@ -389,34 +501,7 @@ export class NotificationModel {
    * that commit after this statement started are not cleared.
    */
   async markAllAsReadSnapshot() {
-    const now = new Date();
-    const feedRevision = await currentFeedRevision(this.db, {
-      userId: this.userId,
-      workspaceId: this.workspaceId,
-    });
-    const cutoff =
-      feedRevision > 0
-        ? sql`${feedRevision}`
-        : sql`(
-      SELECT COALESCE(MAX(${notifications.latestFeedRevision}), 0)
-      FROM ${notifications}
-      WHERE ${and(...this.scope())}
-    )`;
-    return this.db
-      .update(notifications)
-      .set({
-        isRead: true,
-        readVersion: sql`${notifications.activityVersion}`,
-        updatedAt: now,
-      })
-      .where(
-        and(
-          ...this.scope(),
-          eq(notifications.isRead, false),
-          eq(notifications.isArchived, false),
-          sql`${notifications.latestFeedRevision} <= ${cutoff}`,
-        ),
-      );
+    return this.markAllAsReadAt(await this.snapshotCutoff());
   }
 
   async snooze(id: string, until: Date, expectedVersion: number) {

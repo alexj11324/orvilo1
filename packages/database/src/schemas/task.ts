@@ -96,6 +96,11 @@ export const tasks = pgTable(
 
     // Tree structure (self-referencing, no depth limit)
     parentTaskId: text('parent_task_id'),
+    /**
+     * Canonical task this row duplicates. Mark-duplicate never hard-deletes
+     * or merges execution history; it only records the relationship.
+     */
+    duplicateOfTaskId: text('duplicate_of_task_id'),
 
     // Task definition
     name: text('name'),
@@ -203,6 +208,11 @@ export const tasks = pgTable(
       foreignColumns: [t.id],
       name: 'tasks_parent_task_id_tasks_id_fk',
     }).onDelete('set null'),
+    foreignKey({
+      columns: [t.duplicateOfTaskId],
+      foreignColumns: [t.id],
+      name: 'tasks_duplicate_of_task_id_tasks_id_fk',
+    }).onDelete('set null'),
     uniqueIndex('tasks_identifier_idx')
       .on(t.identifier, t.createdByUserId)
       .where(isNull(t.workspaceId)),
@@ -211,6 +221,7 @@ export const tasks = pgTable(
     index('tasks_assignee_user_id_idx').on(t.assigneeUserId),
     index('tasks_assignee_agent_id_idx').on(t.assigneeAgentId),
     index('tasks_parent_task_id_idx').on(t.parentTaskId),
+    index('tasks_duplicate_of_task_id_idx').on(t.duplicateOfTaskId),
     index('tasks_status_idx').on(t.status),
     index('tasks_workflow_category_idx').on(t.workflowCategory),
     index('tasks_orchestration_owner_idx').on(t.orchestrationOwner),
@@ -231,6 +242,10 @@ export const tasks = pgTable(
     check(
       'tasks_managed_creator_requires_workspace',
       sql`${t.createdBySubjectKind} NOT IN ('integration', 'system') OR ${t.workspaceId} IS NOT NULL`,
+    ),
+    check(
+      'tasks_duplicate_of_not_self',
+      sql`${t.duplicateOfTaskId} IS NULL OR ${t.duplicateOfTaskId} <> ${t.id}`,
     ),
   ],
 );

@@ -21,6 +21,10 @@ export const notificationScopeKey = (workspaceId: string | null | undefined): st
 
 export type NotificationFeedKind = 'action' | 'update';
 
+export const NOTIFICATION_BULK_ACTIONS = ['archive', 'mark_read'] as const;
+
+export type NotificationBulkAction = (typeof NOTIFICATION_BULK_ACTIONS)[number];
+
 export type NotificationFeedTab = 'action' | 'activity';
 
 export type NotificationPresentationFilter = 'all' | 'archived' | 'mentions' | 'snoozed' | 'unread';

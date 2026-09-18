@@ -16,28 +16,33 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
+import { duplicateCanonicalOptions } from './duplicateCanonicalOptions';
 import { otherTeamOptions } from './otherTeamOptions';
 import { reassignMemberOptions } from './reassignMemberOptions';
 
 type TeamTriageTask = {
   assigneeAgentId?: string | null;
   assigneeUserId?: string | null;
+  domainRevision?: number;
   id: string;
+  identifier?: string | null;
   instruction?: string | null;
   name?: string | null;
 };
 
 const TeamTriageRow = memo<{
+  canonicals: Array<{ label: string; value: string }>;
   destinations: Array<{ label: string; value: string }>;
   members: Array<{ userId: string }>;
   onAccept: (taskId: string) => void;
   onDecline: (taskId: string) => void;
-  onDuplicate: (taskId: string) => void;
+  onDuplicate: (taskId: string, canonicalTaskId: string) => void;
   onReassign: (taskId: string, assigneeUserId: string) => void;
   onTransferred: () => void;
   task: TeamTriageTask;
 }>(
   ({
+    canonicals,
     destinations,
     members,
     onAccept,
@@ -50,24 +55,32 @@ const TeamTriageRow = memo<{
     const { t } = useTranslation('common');
     const [destination, setDestination] = useState<string | undefined>();
     const [assigneeUserId, setAssigneeUserId] = useState<string | undefined>();
+    const [canonicalTaskId, setCanonicalTaskId] = useState<string | undefined>();
     const selected = destination ?? destinations[0]?.value;
     const memberOptions = reassignMemberOptions(members, task.assigneeUserId);
     const selectedAssignee = assigneeUserId ?? memberOptions[0]?.value;
+    const selectedCanonical = canonicalTaskId ?? canonicals[0]?.value;
 
     const transfer = useCallback(async () => {
-      if (!selected) return;
+      if (!selected || task.domainRevision === undefined) return;
       try {
-        await lambdaClient.team.moveTaskToTeam.mutate({ taskId: task.id, teamId: selected });
+        await lambdaClient.team.moveTaskToTeam.mutate({
+          expectedDomainRevision: task.domainRevision,
+          taskId: task.id,
+          teamId: selected,
+        });
         onTransferred();
         toast.success(t('teams.transferUpdated'));
       } catch (error) {
         toast.error(
-          isTrpcErrorCode(error, 'PRECONDITION_FAILED')
-            ? t('teams.transferLinear')
-            : t('teams.transferFailed'),
+          isTrpcErrorCode(error, 'CONFLICT')
+            ? t('teams.transferConflict')
+            : isTrpcErrorCode(error, 'PRECONDITION_FAILED')
+              ? t('teams.transferLinear')
+              : t('teams.transferFailed'),
         );
       }
-    }, [onTransferred, selected, t, task.id]);
+    }, [onTransferred, selected, t, task.domainRevision, task.id]);
 
     return (
       <Flexbox horizontal align="center" gap={8} wrap="wrap">
@@ -80,9 +93,29 @@ const TeamTriageRow = memo<{
         <Button size="small" onClick={() => onDecline(task.id)}>
           {t('teams.decline')}
         </Button>
-        <Button size="small" onClick={() => onDuplicate(task.id)}>
-          {t('teams.markDuplicate')}
-        </Button>
+        {canonicals.length > 0 ? (
+          <>
+            <Select
+              aria-label={t('teams.canonical')}
+              options={canonicals}
+              placeholder={t('teams.canonical')}
+              size="small"
+              style={{ minWidth: 160 }}
+              value={selectedCanonical}
+              onChange={(next) => {
+                if (typeof next === 'string') setCanonicalTaskId(next);
+              }}
+            />
+            <Button
+              size="small"
+              onClick={() => {
+                if (selectedCanonical) onDuplicate(task.id, selectedCanonical);
+              }}
+            >
+              {t('teams.markDuplicate')}
+            </Button>
+          </>
+        ) : null}
         {destinations.length > 0 ? (
           <>
             <Select
@@ -159,23 +192,40 @@ const TeamPage = memo(() => {
         },
       }),
   );
+  const { data: teamTasksData } = useClientDataSWR(
+    teamId && workspaceId ? ['team-tasks', workspaceId, teamId] : null,
+    () =>
+      workAttentionService.query({
+        query: {
+          entityType: 'task',
+          filter: { all: [{ field: 'teamId', op: 'eq', value: teamId }] },
+          schemaVersion: 1,
+        },
+      }),
+  );
   const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
+  const teamTasks =
+    teamTasksData?.data && 'tasks' in teamTasksData.data ? teamTasksData.data.tasks : [];
   const destinations = otherTeamOptions(teamsData?.data ?? [], teamId ?? '');
 
   const act = useCallback(
     async (
       taskId: string,
       action: 'accept' | 'decline' | 'duplicate' | 'reassign',
-      assigneeUserId?: string,
+      extra?: { assigneeUserId?: string; canonicalTaskId?: string },
     ) => {
       try {
         await workAttentionService.triage({
           action,
           taskId,
           teamId: teamId!,
-          ...(assigneeUserId ? { assigneeUserId } : {}),
+          ...(extra?.assigneeUserId ? { assigneeUserId: extra.assigneeUserId } : {}),
+          ...(extra?.canonicalTaskId ? { canonicalTaskId: extra.canonicalTaskId } : {}),
         });
-        await mutate(['team-triage', workspaceId, teamId]);
+        await Promise.all([
+          mutate(['team-triage', workspaceId, teamId]),
+          mutate(['team-tasks', workspaceId, teamId]),
+        ]);
         toast.success(t('teams.triageUpdated'));
       } catch {
         toast.error(t('teams.triageFailed'));
@@ -185,7 +235,10 @@ const TeamPage = memo(() => {
   );
 
   const refreshTriage = useCallback(() => {
-    void mutate(['team-triage', workspaceId, teamId]);
+    void Promise.all([
+      mutate(['team-triage', workspaceId, teamId]),
+      mutate(['team-tasks', workspaceId, teamId]),
+    ]);
   }, [teamId, workspaceId]);
 
   return (
@@ -206,14 +259,15 @@ const TeamPage = memo(() => {
         ) : (
           tasks.map((task) => (
             <TeamTriageRow
+              canonicals={duplicateCanonicalOptions(teamTasks, task.id)}
               destinations={destinations}
               key={task.id}
               members={teamData?.data.members ?? []}
               task={task}
               onAccept={(id) => void act(id, 'accept')}
               onDecline={(id) => void act(id, 'decline')}
-              onDuplicate={(id) => void act(id, 'duplicate')}
-              onReassign={(id, assigneeUserId) => void act(id, 'reassign', assigneeUserId)}
+              onDuplicate={(id, canonicalTaskId) => void act(id, 'duplicate', { canonicalTaskId })}
+              onReassign={(id, assigneeUserId) => void act(id, 'reassign', { assigneeUserId })}
               onTransferred={refreshTriage}
             />
           ))

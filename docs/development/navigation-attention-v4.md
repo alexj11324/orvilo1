@@ -34,7 +34,7 @@ High overlap — do not rewrite these files except through the frozen contract:
 
 Low overlap: branding #93, CI #78/#82, quota #80, reconcile #89.
 
-This branch's schema increment is **`0175_work_attention`**. Do not reuse `0174`.
+This branch's first schema increment is **`0175_work_attention`**. TRI02/TRI03/Inbox bulk follow as **`0176_work_attention_triage_bulk`** (`tasks.duplicate_of_task_id` + `notification_bulk_snapshots`). Do not reuse `0174`.
 
 ## Reuse inventory
 

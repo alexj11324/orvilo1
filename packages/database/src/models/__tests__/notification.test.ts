@@ -2,10 +2,10 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { NotificationModel } from '../../models/notification';
+import { NotificationBulkError, NotificationModel } from '../../models/notification';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
 import { users } from '../../schemas/user';
-import { notificationFeedState } from '../../schemas/workAttention';
+import { notificationBulkSnapshots, notificationFeedState } from '../../schemas/workAttention';
 import { workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 
@@ -722,6 +722,115 @@ describe('NotificationModel (integration)', () => {
       const rows = await model.list();
       expect(rows.find((row) => row.title === 'Old')?.isRead).toBe(true);
       expect(rows.find((row) => row.title === 'New')?.isRead).toBe(false);
+    });
+  });
+
+  describe('prepareBulk and applyBulk', () => {
+    it('does not archive a card that landed after the snapshot cutoff', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'seen-archive',
+          kind: 'update',
+          latestFeedRevision: 3,
+          title: 'Seen',
+        }),
+      );
+
+      const prepared = await model.prepareBulk({
+        action: 'archive',
+        queryFingerprint: 'archive:all',
+      });
+      expect(prepared.cutoffRevision).toBeGreaterThanOrEqual(3);
+
+      await model.create(
+        baseNotification({
+          dedupeKey: 'unseen-archive',
+          kind: 'update',
+          latestFeedRevision: prepared.cutoffRevision + 1,
+          title: 'Unseen',
+        }),
+      );
+
+      await model.applyBulk(prepared.token);
+      const remaining = await model.list();
+      expect(remaining.map((row) => row.title)).toEqual(['Unseen']);
+    });
+
+    it('does not mark-read a card that landed after the snapshot cutoff', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'seen-read',
+          isRead: false,
+          latestFeedRevision: 4,
+          title: 'Seen',
+        }),
+      );
+
+      const prepared = await model.prepareBulk({
+        action: 'mark_read',
+        queryFingerprint: 'mark_read:all',
+      });
+
+      await model.create(
+        baseNotification({
+          dedupeKey: 'unseen-read',
+          isRead: false,
+          latestFeedRevision: prepared.cutoffRevision + 1,
+          title: 'Unseen',
+        }),
+      );
+
+      await model.applyBulk(prepared.token);
+      const rows = await model.list();
+      expect(rows.find((row) => row.title === 'Seen')?.isRead).toBe(true);
+      expect(rows.find((row) => row.title === 'Unseen')?.isRead).toBe(false);
+    });
+
+    it('consumes a snapshot token only once', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(baseNotification({ dedupeKey: 'once', kind: 'update', title: 'Once' }));
+      const prepared = await model.prepareBulk({
+        action: 'archive',
+        queryFingerprint: 'archive:all',
+      });
+
+      await expect(model.applyBulk(prepared.token)).resolves.toMatchObject({ success: true });
+      await expect(model.applyBulk(prepared.token)).rejects.toBeInstanceOf(NotificationBulkError);
+      await expect(model.applyBulk(prepared.token)).rejects.toMatchObject({ code: 'CONSUMED' });
+    });
+
+    it('does not let another user consume a snapshot', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const other = new NotificationModel(serverDB, otherUserId, { workspaceId: null });
+      await model.create(baseNotification({ dedupeKey: 'mine', kind: 'update', title: 'Mine' }));
+      const prepared = await model.prepareBulk({
+        action: 'archive',
+        queryFingerprint: 'archive:all',
+      });
+
+      await expect(other.applyBulk(prepared.token)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect((await model.list()).map((row) => row.title)).toEqual(['Mine']);
+    });
+
+    it('rejects an expired snapshot without touching the feed', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(baseNotification({ dedupeKey: 'keep', kind: 'update', title: 'Keep' }));
+      const [snapshot] = await serverDB
+        .insert(notificationBulkSnapshots)
+        .values({
+          action: 'archive',
+          cutoffRevision: 99,
+          expiresAt: new Date(Date.now() - 1000),
+          queryFingerprint: 'archive:all',
+          scopeKey: 'personal',
+          userId,
+        })
+        .returning();
+
+      await expect(model.applyBulk(snapshot.id)).rejects.toMatchObject({ code: 'EXPIRED' });
+      expect((await model.list()).map((row) => row.title)).toEqual(['Keep']);
     });
   });
 

@@ -107,6 +107,7 @@ const TASK_DOMAIN_COLUMNS = [
   'config',
   'cycleRefId',
   'description',
+  'duplicateOfTaskId',
   'editorData',
   'heartbeatInterval',
   'heartbeatTimeout',
@@ -163,6 +164,11 @@ const TASK_POLICY_COLUMNS = [
 export interface TaskMutationContext {
   /** External event/delivery id carried into planner diagnostics. */
   eventId?: string;
+  /**
+   * When set, `moveToTeam` only writes if `domainRevision` still matches.
+   * Inbound Linear sync omits this; the Team UI must send it.
+   */
+  expectedDomainRevision?: number;
   /** Stable caller key when the write is a replayable command or delivery. */
   idempotencyKey?: string;
   source?: TaskDomainEventSource;
@@ -170,6 +176,15 @@ export interface TaskMutationContext {
   suppressDomainEvent?: boolean;
   /** Prevent a provider-originated reconciliation from echoing back out. */
   suppressLinearOutbox?: boolean;
+}
+
+export class TaskRevisionConflictError extends Error {
+  readonly code = 'TASK_REVISION_CONFLICT' as const;
+
+  constructor() {
+    super('TASK_REVISION_CONFLICT');
+    this.name = 'TaskRevisionConflictError';
+  }
 }
 
 const relationKey = (
@@ -835,6 +850,11 @@ export class TaskModel {
         .limit(1);
       if (!before || before.teamId === teamId) return before ?? null;
 
+      const moveWhere = [eq(tasks.id, id), this.ownership()];
+      if (mutation.expectedDomainRevision !== undefined) {
+        moveWhere.push(eq(tasks.domainRevision, mutation.expectedDomainRevision));
+      }
+
       const [task] = await runner
         .update(tasks)
         .set({
@@ -842,9 +862,19 @@ export class TaskModel {
           teamId,
           updatedAt: new Date(),
         })
-        .where(and(eq(tasks.id, id), this.ownership()))
+        .where(and(...moveWhere))
         .returning();
-      if (!task) return null;
+      if (!task) {
+        if (mutation.expectedDomainRevision !== undefined) {
+          const [current] = await runner
+            .select({ id: tasks.id })
+            .from(tasks)
+            .where(and(eq(tasks.id, id), this.ownership()))
+            .limit(1);
+          if (current) throw new TaskRevisionConflictError();
+        }
+        return null;
+      }
 
       if (this.workspaceId && !mutation.suppressDomainEvent) {
         const model = new LinearSyncModel(runner, this.workspaceId);

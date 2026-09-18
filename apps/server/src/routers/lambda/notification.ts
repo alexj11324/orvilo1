@@ -1,8 +1,9 @@
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
-import { NotificationModel } from '@/database/models/notification';
+import { NotificationBulkError, NotificationModel } from '@/database/models/notification';
 import { ResourceTransferRequestModel } from '@/database/models/resourceTransferRequest';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -72,6 +73,40 @@ export const notificationRouter = router({
   archiveAll: notificationWriteProcedure.mutation(async ({ ctx }) => {
     return ctx.notificationModel.archiveAll();
   }),
+
+  prepareBulk: notificationWriteProcedure
+    .input(
+      z.object({
+        action: z.enum(['archive', 'mark_read']),
+        queryFingerprint: z.string().min(1).max(200),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const data = await ctx.notificationModel.prepareBulk(input);
+      return { data, success: true };
+    }),
+
+  applyBulk: notificationWriteProcedure
+    .input(z.object({ token: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await ctx.notificationModel.applyBulk(input.token);
+        return { data, success: true };
+      } catch (error) {
+        if (error instanceof NotificationBulkError) {
+          throw new TRPCError({
+            code:
+              error.code === 'NOT_FOUND'
+                ? 'NOT_FOUND'
+                : error.code === 'FORBIDDEN_ACTION'
+                  ? 'BAD_REQUEST'
+                  : 'CONFLICT',
+            message: error.code,
+          });
+        }
+        throw error;
+      }
+    }),
 
   feed: notificationReadProcedure
     .input(

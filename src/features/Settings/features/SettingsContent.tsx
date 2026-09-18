@@ -4,27 +4,17 @@ import { Text } from '@lobehub/ui/base-ui';
 import { Fragment, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import NotFound from '@/components/404';
+import { isSettingsTabAvailable, resolveSettingsCapability } from '@/config/routes/settings';
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { useSettingsAnchorScroll } from '@/features/SettingsSearch/anchor';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { SettingsTabs } from '@/store/global/initialState';
-import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 
+import { useSettingsCapabilityContext } from '../hooks/useSettingsCapability';
 import { ManageMemoryButton } from '../memory/features/ManageMemoryButton';
 import { componentMap } from './componentMap';
-
-const REDIRECT_MAP: Record<string, string> = {
-  [SettingsTabs.Common]: SettingsTabs.Appearance,
-  [SettingsTabs.ChatAppearance]: SettingsTabs.Appearance,
-  // Retired LLM Provider / service-model surfaces and their legacy aliases
-  // (`agent`, `tts`, `image`) land on the settings root tab.
-  [SettingsTabs.Agent]: SettingsTabs.Profile,
-  [SettingsTabs.TTS]: SettingsTabs.Profile,
-  [SettingsTabs.Image]: SettingsTabs.Profile,
-  [SettingsTabs.Provider]: SettingsTabs.Profile,
-  [SettingsTabs.ServiceModel]: SettingsTabs.Profile,
-};
 
 const COMPACT_HEADER_TABS = [
   SettingsTabs.About,
@@ -41,10 +31,16 @@ const COMPACT_HEADER_TABS = [
   SettingsTabs.Notification,
   SettingsTabs.Plans,
   SettingsTabs.Profile,
-  SettingsTabs.Referral,
   SettingsTabs.Stats,
   SettingsTabs.Storage,
 ] as const;
+
+/** Tabs whose pages own their internal layout and must not be wrapped. */
+const FULL_WIDTH_TABS: readonly string[] = [
+  SettingsTabs.Connector,
+  SettingsTabs.Creds,
+  SettingsTabs.Usage,
+];
 
 interface SettingsContentProps {
   activeTab?: string;
@@ -53,8 +49,9 @@ interface SettingsContentProps {
 
 const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
   const { t } = useTranslation(['auth', 'labs', 'setting', 'subscription']);
-  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const navigate = useWorkspaceAwareNavigate();
+  const capabilityContext = useSettingsCapabilityContext();
+  const { enableBusinessFeatures } = capabilityContext;
 
   const compactHeaderTitles: Partial<Record<SettingsTabs, string>> = {
     [SettingsTabs.About]: t('setting:tab.about'),
@@ -72,25 +69,31 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     [SettingsTabs.Notification]: t('setting:tab.notification'),
     [SettingsTabs.Plans]: t('subscription:tab.plans'),
     [SettingsTabs.Profile]: t('auth:profile.title'),
-    [SettingsTabs.Referral]: t('subscription:tab.referral'),
     [SettingsTabs.Stats]: t('auth:tab.stats'),
     [SettingsTabs.Storage]: t('setting:tab.storage'),
   };
 
   useSettingsAnchorScroll();
 
+  // Retirement is handled here, apart from the render path below: a withdrawn
+  // tab that names a live equivalent moves there, and one that names none
+  // (`llm`) stays a dead end. `escape: true` keeps the user in personal context
+  // even when a workspace happens to be active.
+  const redirectTo = activeTab
+    ? resolveSettingsCapability(activeTab, capabilityContext).redirectTo
+    : undefined;
+
   useEffect(() => {
-    if (activeTab && REDIRECT_MAP[activeTab]) {
-      // Personal-only redirect: legacy URL aliases (common, agent, tts, image,
-      // chat-appearance) map to personal-settings tabs. `escape: true` keeps the
-      // user in personal context even when a workspace happens to be active.
-      navigate(`/settings/${REDIRECT_MAP[activeTab]}`, { escape: true, replace: true });
+    if (redirectTo) {
+      navigate(`/settings/${redirectTo}`, { escape: true, replace: true });
     }
-  }, [activeTab, navigate]);
+  }, [navigate, redirectTo]);
 
   const renderComponent = (tab: string) => {
-    const Component = componentMap[tab as keyof typeof componentMap] || componentMap.appearance;
-    if (!Component) return null;
+    const Component = componentMap[tab as keyof typeof componentMap];
+    // A tab the registry calls `enabled` without a component is a wiring bug,
+    // not a page — say so instead of rendering an empty pane.
+    if (!Component) return <NotFound />;
 
     const componentProps: { mobile?: boolean; showSettingHeader?: boolean } = {};
     if (COMPACT_HEADER_TABS.includes(tab as (typeof COMPACT_HEADER_TABS)[number])) {
@@ -105,7 +108,7 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
         SettingsTabs.Creds,
         SettingsTabs.Security,
         ...(enableBusinessFeatures
-          ? [SettingsTabs.Plans, SettingsTabs.Credits, SettingsTabs.Billing, SettingsTabs.Referral]
+          ? [SettingsTabs.Plans, SettingsTabs.Credits, SettingsTabs.Billing]
           : []),
       ].includes(tab as any)
     ) {
@@ -115,41 +118,40 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     return <Component {...componentProps} />;
   };
 
-  if (activeTab && REDIRECT_MAP[activeTab]) return null;
+  if (redirectTo) return null;
+
+  if (activeTab && !isSettingsTabAvailable(activeTab, capabilityContext)) {
+    // Unknown ids, withdrawn surfaces, and tabs whose gate is closed in this
+    // deployment all answer the same way. Substituting `appearance` here is what
+    // used to let `/settings/llm` (or a typo) open a page it does not own —
+    // mounting that page's component and firing its queries on the way.
+    return <NotFound />;
+  }
 
   if (mobile) {
     return activeTab ? renderComponent(activeTab) : renderComponent(SettingsTabs.Profile);
   }
 
+  if (!activeTab) return null;
+
+  const content = renderComponent(activeTab);
+  if (FULL_WIDTH_TABS.includes(activeTab)) return <Fragment key={activeTab}>{content}</Fragment>;
+
+  const compactHeaderTitle = compactHeaderTitles[activeTab as SettingsTabs];
+  const compactHeaderExtra = activeTab === SettingsTabs.Memory ? <ManageMemoryButton /> : undefined;
+
   return (
-    <>
-      {Object.keys(componentMap).map((tabKey) => {
-        const isFullWidth =
-          tabKey === SettingsTabs.Skill ||
-          tabKey === SettingsTabs.Connector ||
-          tabKey === SettingsTabs.Creds ||
-          tabKey === SettingsTabs.Usage;
-        if (activeTab !== tabKey) return null;
-        const content = renderComponent(tabKey);
-        if (isFullWidth) return <Fragment key={tabKey}>{content}</Fragment>;
-        const compactHeaderTitle = compactHeaderTitles[tabKey as SettingsTabs];
-        const compactHeaderExtra =
-          tabKey === SettingsTabs.Memory ? <ManageMemoryButton /> : undefined;
-        return (
-          <Fragment key={tabKey}>
-            <NavHeader
-              right={compactHeaderExtra}
-              styles={compactHeaderTitle ? { center: { alignItems: 'center' } } : undefined}
-            >
-              {compactHeaderTitle && <Text weight={500}>{compactHeaderTitle}</Text>}
-            </NavHeader>
-            <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
-              {content}
-            </SettingContainer>
-          </Fragment>
-        );
-      })}
-    </>
+    <Fragment key={activeTab}>
+      <NavHeader
+        right={compactHeaderExtra}
+        styles={compactHeaderTitle ? { center: { alignItems: 'center' } } : undefined}
+      >
+        {compactHeaderTitle && <Text weight={500}>{compactHeaderTitle}</Text>}
+      </NavHeader>
+      <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
+        {content}
+      </SettingContainer>
+    </Fragment>
   );
 };
 

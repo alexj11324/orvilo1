@@ -1,4 +1,3 @@
-import { AcceptanceSkill } from '@orvilo/builtin-skills';
 import {
   normalizeVerifySurface,
   verifyRunScenarios,
@@ -55,21 +54,6 @@ import {
 } from '@/server/services/verify';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
-
-/**
- * Skills that `verify.getSkillBundle` will materialize to a builder's disk via
- * `lh acceptance init`. Keyed by identifier; add future pullable skills here. The
- * portable acceptance skill lives in @orvilo/builtin-skills but is intentionally
- * NOT in its `builtinSkills` runtime array (kept out of the homogeneous agent
- * runtime / tool picker), so it is referenced directly here.
- *
- * The legacy `verify` identifier is kept as an alias so cached callers passing
- * `--skill verify` still resolve during the deprecation window.
- */
-const PULLABLE_SKILLS: Record<string, typeof AcceptanceSkill> = {
-  [AcceptanceSkill.identifier]: AcceptanceSkill,
-  verify: AcceptanceSkill,
-};
 
 const verifierTypeSchema = z.enum(['program', 'agent', 'llm']);
 const onFailSchema = z.enum(['manual', 'auto_repair']);
@@ -680,34 +664,6 @@ export const verifyRouter = router({
       };
     }),
 
-  /**
-   * Serve a pullable skill bundle (`SKILL.md` + inline resource files) by
-   * identifier so `lh verify init` can materialize it into a builder's working
-   * directory. Dynamic-by-design: the source is the server's deployed
-   * `@orvilo/builtin-skills`, so updating the skill + redeploying reaches every
-   * builder on the next pull — no CLI re-release. Auth-gated (verifyProcedure);
-   * returns NOT_FOUND for any identifier not in the pullable registry.
-   */
-  getSkillBundle: verifyProcedure.input(z.object({ identifier: z.string() })).query(({ input }) => {
-    const skill = PULLABLE_SKILLS[input.identifier];
-    if (!skill)
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: `No pullable skill with identifier "${input.identifier}"`,
-      });
-    return {
-      content: skill.content,
-      files: Object.fromEntries(
-        Object.entries(skill.resources ?? {}).map(([path, meta]) => [path, meta.content ?? '']),
-      ),
-      identifier: skill.identifier,
-      name: skill.name,
-      // The skill's own declared version, so an installer can compare a copy
-      // already on disk against the latest bundle.
-      version: skill.version,
-    };
-  }),
-
   getVerifyState: verifyProcedure
     .input(z.object({ operationId: z.string() }))
     .query(async ({ ctx, input }) => ctx.runModel.getStateByOperation(input.operationId)),
@@ -1196,8 +1152,10 @@ export const verifyRouter = router({
    * Flip who can read this round's report page beyond its creator. Creation
    * defaults are scope-dependent (personal → public, workspace → private) and
    * acceptance-attached rounds inherit their aggregate; this is the deliberate
-   * per-round override. Note `acceptance.setVisibility` cascades over rounds,
-   * so the aggregate flip wins over earlier per-round choices.
+   * per-round override. The acceptance-level flip (`acceptance.setVisibility`)
+   * used to cascade over rounds; it was retired with the standalone Acceptance
+   * platform, so this per-round override is now the only way to publish a
+   * report beyond its creator.
    */
   setRunVisibility: verifyWriteProcedure
     .input(z.object({ verifyRunId: z.string(), visibility: z.enum(verifyVisibilities) }))

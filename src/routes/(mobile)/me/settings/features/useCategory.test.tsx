@@ -80,7 +80,9 @@ describe('mobile settings useCategory', () => {
     expect(keys).not.toContain(SettingsTabs.OAuthApps);
   });
 
-  it('shows OAuth Apps in the tools group when the Labs preference is enabled', () => {
+  it('never lists OAuth Apps, even while the retired Labs preference is still set', () => {
+    // The self-built console is retired (hidden-surface-retirement HS-50); a
+    // stored `enableOAuthApps: true` must not put the row back in the tools group.
     useUserStore.setState({
       preference: {
         ...initialUserStoreState.preference,
@@ -95,7 +97,7 @@ describe('mobile settings useCategory', () => {
     const toolsGroup = result.current.find((group) => group.key === SettingsGroupKey.Tools);
     const developerGroup = result.current.find((group) => group.key === SettingsGroupKey.Developer);
 
-    expect(toolsGroup?.items.map((item) => item.key)).toContain(SettingsTabs.OAuthApps);
+    expect(toolsGroup?.items.map((item) => item.key)).not.toContain(SettingsTabs.OAuthApps);
     expect(developerGroup?.items.map((item) => item.key)).not.toContain(SettingsTabs.OAuthApps);
   });
 

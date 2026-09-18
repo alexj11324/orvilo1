@@ -15,8 +15,17 @@ export const config = {
     // /oauth stay matched below — their middleware pass is still load-bearing.)
     // include the /
     '/',
+    // Retired standalone Acceptance / Verify platform. The routes are gone but
+    // the roots have to keep resolving, because both routers register a
+    // reservation guard for them (`sharedMainAreaChildren`) — without the
+    // rewrite the guard never runs and the URL dies in the middleware instead.
+    // The sub-path variants matter as much as the bare root: a stored
+    // `/acceptance/<id>` link must reach the guard rather than fall into
+    // `/:workspaceSlug` and be parsed as a workspace id.
     '/acceptance',
     '/acceptance(.*)',
+    '/verify',
+    '/verify(.*)',
     '/apps',
     '/apps(.*)',
     '/community',
@@ -40,8 +49,19 @@ export const config = {
     '/group(.*)',
     '/changelog(.*)',
     '/settings(.*)',
+    // Retired workbenches. The sub-path variant matters as much as the bare
+    // root: the reservation guard is what keeps `/:workspaceSlug` from claiming
+    // these segments, and `/image/gallery` has to reach it too.
+    //
+    // These use `(/.*)?`, not the `(.*)` spelling `/community` and `/page` use.
+    // `(.*)` is unanchored enough to attach mid-segment, so it also swallowed
+    // `/app-images/**` — real asset paths under `public/app-images/` — and broke
+    // the "asset filenames never attach mid-segment" invariant in
+    // `src/proxy.test.ts`. `(/.*)?` only accepts a `/`-separated suffix.
     '/image',
+    '/image(/.*)?',
     '/video',
+    '/video(/.*)?',
     '/inbox',
     '/inbox(.*)',
     '/invite',
@@ -76,8 +96,6 @@ export const config = {
     '/signin(.*)',
     '/verify-email(.*)',
     '/verify-im(.*)',
-    '/verify',
-    '/verify/(.*)',
     '/reset-password(.*)',
     '/auth-error(.*)',
     '/oauth(.*)',

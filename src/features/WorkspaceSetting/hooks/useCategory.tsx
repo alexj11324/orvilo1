@@ -1,8 +1,6 @@
 import { Avatar } from '@lobehub/ui/base-ui';
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
-  AppWindowIcon,
   BellIcon,
   Blocks,
   Building2,
@@ -34,7 +32,7 @@ import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors';
+import { userProfileSelectors } from '@/store/user/selectors';
 import { WorkspaceSettingsTabs } from '@/types/workspaceSettings';
 
 export enum WorkspaceSettingsGroupKey {
@@ -71,7 +69,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
   // up, never to Viewer. Without this the tab leads to a list request that
   // immediately 403s.
   const { allowed: canCreateContent } = usePermission('create_content');
-  const enableOAuthApps = useUserStore(labPreferSelectors.enableOAuthApps);
   const { hideDocs } = useServerConfigStore(featureFlagsSelectors);
   const [avatar, username] = useUserStore((s) => [
     userProfileSelectors.userAvatar(s),
@@ -196,11 +193,9 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
         },
         {
           items: [
-            {
-              icon: SkillsIcon,
-              key: WorkspaceSettingsTabs.Skill,
-              label: t('workspaceSetting.tab.skill'),
-            },
+            // The workspace skill settings page was retired with the platform's
+            // skill marketplace; the route survives only as a redirect to this
+            // settings root (see `WORKSPACE_SETTINGS_ALIASES`).
             // Label registry is readable by everyone; the page itself keeps
             // management actions behind the admin gate (disabled, not hidden).
             {
@@ -260,8 +255,7 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
           title: t('group.system'),
         },
         // Developer group sits last, mirroring the personal sidebar: Advanced
-        // and Labs are user preferences (always shown), API Key / OAuth apps
-        // keep their gates.
+        // and Labs are user preferences (always shown), API Key keeps its gate.
         {
           items: [
             {
@@ -273,11 +267,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: KeyIcon,
               key: WorkspaceSettingsTabs.APIKey,
               label: tAuth('tab.apikey'),
-            },
-            enableOAuthApps && {
-              icon: AppWindowIcon,
-              key: WorkspaceSettingsTabs.OAuthApps,
-              label: tAuth('tab.oauthApps'),
             },
             {
               icon: FlaskConical,
@@ -294,7 +283,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
       tAuth,
       tLabs,
       tSubscription,
-      enableOAuthApps,
       canManageWorkspace,
       canViewBilling,
       canCreateContent,

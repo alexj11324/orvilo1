@@ -19,13 +19,6 @@ export const workbenchMetaDescription = (resources: unknown): string => {
   return typeof text === 'string' ? text : FALLBACK_DESCRIPTION;
 };
 
-export const truncateDescription = (text: string | null | undefined, max = 200) => {
-  if (!text) return undefined;
-  const clean = text.replaceAll(/\s+/g, ' ').trim();
-  if (!clean) return undefined;
-  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
-};
-
 interface BuildPageMetaOptions {
   description: string;
   locale?: string;

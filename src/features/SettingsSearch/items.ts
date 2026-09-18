@@ -102,7 +102,6 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
   ],
   [SettingsTabs.Proxy]: ['proxy', 'network', 'connection', 'proxy settings'],
   [SettingsTabs.Referral]: ['referral', 'invite', 'rewards', 'bonus'],
-  [SettingsTabs.Skill]: ['skill', 'skills', 'plugins', 'tools'],
   [SettingsTabs.Stats]: ['analytics', 'statistics', 'stats'],
   [SettingsTabs.Storage]: [
     'storage',
@@ -157,7 +156,6 @@ export const TAB_SEARCH_KEYWORDS_KEYS: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.Profile]: 'settingsSearch.tabKeywords.profile',
   [SettingsTabs.Proxy]: 'settingsSearch.tabKeywords.proxy',
   [SettingsTabs.Referral]: 'settingsSearch.tabKeywords.referral',
-  [SettingsTabs.Skill]: 'settingsSearch.tabKeywords.skill',
   [SettingsTabs.Stats]: 'settingsSearch.tabKeywords.stats',
   [SettingsTabs.Storage]: 'settingsSearch.tabKeywords.storage',
   [SettingsTabs.SystemTools]: 'settingsSearch.tabKeywords.systemTools',

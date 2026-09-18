@@ -1,7 +1,7 @@
 import { type ItemType } from '@lobehub/ui';
 import { Flexbox, Icon, SearchBar, stopPropagation, usePopoverContext } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Pin, Settings, Store, Zap } from 'lucide-react';
+import { Pin, Settings, Zap } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -61,33 +61,6 @@ const styles = createStaticStyles(({ css }) => ({
     line-height: 18px;
     color: ${cssVar.colorTextTertiary};
   `,
-  storeButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 8px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    transition:
-      color 0.2s,
-      background 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
 }));
 
 const filterItems = (items: ItemType[], keyword: string): ItemType[] => {
@@ -119,12 +92,11 @@ interface PopoverContentProps {
   autoCount: number;
   detailPopoverDisabled?: boolean;
   items: ItemType[];
-  onOpenStore: () => void;
   pinnedCount: number;
 }
 
 const PopoverContent = memo<PopoverContentProps>(
-  ({ autoCount, detailPopoverDisabled, items, onOpenStore, pinnedCount }) => {
+  ({ autoCount, detailPopoverDisabled, items, pinnedCount }) => {
     const { t } = useTranslation('setting');
     const navigate = useWorkspaceAwareNavigate();
     const [searchKeyword, setSearchKeyword] = useState('');
@@ -169,17 +141,6 @@ const PopoverContent = memo<PopoverContentProps>(
             {autoCount}
           </span>
           <Flexbox horizontal align="center" gap={2} style={{ marginInlineStart: 'auto' }}>
-            <button
-              className={styles.storeButton}
-              type="button"
-              onClick={() => {
-                closePopover();
-                onOpenStore();
-              }}
-            >
-              <Icon icon={Store} size={14} />
-              {t('tools.addSkillOrConnector')}
-            </button>
             <button
               aria-label={t('tools.plugins.management')}
               className={styles.iconButton}

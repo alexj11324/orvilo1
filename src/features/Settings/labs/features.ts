@@ -20,7 +20,6 @@ type LabFeatureI18nKey =
   | 'imessage'
   | 'inputMarkdown'
   | 'messageTextSelectionActions'
-  | 'oauthApps'
   | 'projects'
   | 'selfLearning'
   | 'topicAcceptance';
@@ -79,12 +78,6 @@ export const LAB_FEATURES: LabFeatureItem[] = [
     i18nKey: 'projects',
     searchKeywords: ['project', 'workspace'],
     stage: 'alpha',
-  },
-  {
-    flag: 'enableOAuthApps',
-    i18nKey: 'oauthApps',
-    searchKeywords: ['oauth', 'oauth apps'],
-    stage: 'beta',
   },
   {
     flag: 'enableArtifactDeployment',

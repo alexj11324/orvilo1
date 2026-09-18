@@ -1,5 +1,10 @@
 import { CURRENT_ONBOARDING_VERSION, INBOX_SESSION_ID } from '@orvilo/const';
-import { CLASSIC_ONBOARDING_MAX_STEP, getPluginMode, upsertPluginMode } from '@orvilo/types';
+import {
+  CLASSIC_ONBOARDING_MAX_STEP,
+  getPluginMode,
+  upsertPluginMode,
+  type UserOnboarding,
+} from '@orvilo/types';
 
 import { userService } from '@/services/user';
 import { type StoreSetter } from '@/store/types';
@@ -32,28 +37,36 @@ export class OnboardingActionImpl {
   finishOnboarding = async (): Promise<void> => {
     const currentStep = onboardingSelectors.currentStep(this.#get());
     const finishedAt = new Date().toISOString();
+    const onboarding = {
+      ...this.#get().onboarding,
+      currentStep,
+      finishedAt,
+      version: CURRENT_ONBOARDING_VERSION,
+    } satisfies UserOnboarding;
 
     this.#set(
       {
-        onboarding: {
-          ...this.#get().onboarding,
-          currentStep,
-          finishedAt,
-          version: CURRENT_ONBOARDING_VERSION,
-        },
+        onboarding,
       },
       false,
       'finishOnboarding/optimistic',
     );
 
-    await this.#enqueueOnboardingWrite(() =>
-      userService.updateOnboarding({
-        currentStep,
-        finishedAt,
-        version: CURRENT_ONBOARDING_VERSION,
-      }),
-    );
+    await this.#enqueueOnboardingWrite(() => userService.updateOnboarding(onboarding));
 
+    await this.#get().refreshUserState();
+  };
+
+  updateOnboarding = async (input: Partial<UserOnboarding>): Promise<void> => {
+    const onboarding = {
+      ...this.#get().onboarding,
+      ...input,
+      version: input.version ?? this.#get().onboarding?.version ?? CURRENT_ONBOARDING_VERSION,
+    } satisfies UserOnboarding;
+
+    this.#set({ onboarding }, false, 'updateOnboarding/optimistic');
+
+    await this.#enqueueOnboardingWrite(() => userService.updateOnboarding(onboarding));
     await this.#get().refreshUserState();
   };
 

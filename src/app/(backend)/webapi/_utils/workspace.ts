@@ -25,6 +25,7 @@ export const resolveValidWorkspaceIdFromRequest = async (params: {
       eq(workspaceMembers.workspaceId, workspaceId),
       eq(workspaceMembers.userId, params.userId),
       isNull(workspaceMembers.deletedAt),
+      isNull(workspaceMembers.suspendedAt),
     ),
   });
 

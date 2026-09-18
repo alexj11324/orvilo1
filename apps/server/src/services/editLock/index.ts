@@ -3,7 +3,7 @@ import type { Redis } from 'ioredis';
 
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
 
-const log = debug('lobe-server:edit-lock');
+const log = debug('orvilo-server:edit-lock');
 
 /** Lease lifetime in seconds; clients heartbeat well within this to keep it alive. */
 export const EDIT_LOCK_TTL_SECONDS = 30;

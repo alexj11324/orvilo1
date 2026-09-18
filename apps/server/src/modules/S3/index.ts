@@ -60,7 +60,7 @@ export class S3 {
     options?: {
       bucket?: string;
       forcePathStyle?: boolean;
-      publicEndpoint?: string;
+      presignEndpoint?: string;
       region?: string;
       setAcl?: boolean;
     },
@@ -79,19 +79,15 @@ export class S3 {
       },
       forcePathStyle: options?.forcePathStyle,
       region: options?.region || DEFAULT_S3_REGION,
-      // refs: https://github.com/lobehub/lobe-chat/pull/5479
       requestChecksumCalculation: 'WHEN_REQUIRED' as const,
       responseChecksumValidation: 'WHEN_REQUIRED' as const,
     };
 
     this.client = new S3Client({ ...clientConfig, endpoint });
-
-    // Presigned URLs are handed to browsers, which cannot reach an internal
-    // endpoint (e.g. rustfs:9000 inside a compose network). Sign against the
-    // public endpoint instead — the signature binds to the host the client
-    // will actually request.
-    this.presignClient = options?.publicEndpoint
-      ? new S3Client({ ...clientConfig, endpoint: options.publicEndpoint })
+    // Presigned URLs embed the endpoint host in the signature, so they must be
+    // signed against the client-reachable endpoint, not the internal one.
+    this.presignClient = options?.presignEndpoint
+      ? new S3Client({ ...clientConfig, endpoint: options.presignEndpoint })
       : this.client;
   }
 
@@ -382,7 +378,7 @@ export class FileS3 extends S3 {
     super(fileEnv.S3_ACCESS_KEY_ID, fileEnv.S3_SECRET_ACCESS_KEY, fileEnv.S3_ENDPOINT, {
       bucket: fileEnv.S3_BUCKET,
       forcePathStyle: fileEnv.S3_ENABLE_PATH_STYLE,
-      publicEndpoint: fileEnv.S3_PUBLIC_ENDPOINT,
+      presignEndpoint: fileEnv.S3_PRESIGN_ENDPOINT,
       region: fileEnv.S3_REGION,
       setAcl: fileEnv.S3_SET_ACL,
     });

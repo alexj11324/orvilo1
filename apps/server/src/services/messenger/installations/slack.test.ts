@@ -49,7 +49,7 @@ const buildRow = (overrides: Partial<any> = {}) => ({
   credentials: { botToken: 'xoxb-real', refreshToken: 'r-current' },
   id: 'install-id-1',
   installedByPlatformUserId: null,
-  installedByUserId: 'lobe-user-1',
+  installedByUserId: 'orvilo-user-1',
   metadata: { tenantName: 'Acme' },
   platform: 'slack',
   revokedAt: null,
@@ -86,7 +86,7 @@ const interactivityBody = (teamId: string) =>
 const slashCommandBody = (teamId: string) =>
   new URLSearchParams({
     api_app_id: 'A_APP',
-    command: '/lobehub',
+    command: '/orvilo',
     team_id: teamId,
     user_id: 'U_X',
   }).toString();

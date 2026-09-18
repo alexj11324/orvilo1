@@ -47,7 +47,7 @@ vi.mock('@/utils/platform', () => ({
 
 // Mock OFFICIAL_CLOUD_SERVER
 vi.mock('@/const/env', () => ({
-  OFFICIAL_CLOUD_SERVER: 'https://lobehub-cloud.com',
+  OFFICIAL_CLOUD_SERVER: 'https://orvilo-cloud.com',
   isMac: false,
   isWindows: false,
   isLinux: false,
@@ -80,7 +80,7 @@ const mockRemoteServerConfigCtr = {
     if (config?.storageMode === 'selfHost') {
       return config.remoteServerUrl || 'https://mock-server.com';
     }
-    return 'https://lobehub-cloud.com'; // OFFICIAL_CLOUD_SERVER
+    return 'https://orvilo-cloud.com'; // OFFICIAL_CLOUD_SERVER
   }),
   getTokenExpiresAt: vi.fn().mockReturnValue(Date.now() + 3600000),
   isNonRetryableError: vi.fn().mockReturnValue(false),
@@ -160,12 +160,12 @@ describe('AuthCtr', () => {
 
         // Verify shell.openExternal was called with correct URL
         expect(shell.openExternal).toHaveBeenCalledWith(
-          expect.stringContaining('https://lobehub-cloud.com/oidc/auth'),
+          expect.stringContaining('https://orvilo-cloud.com/oidc/auth'),
         );
 
         // Verify URL contains required parameters
         const authUrl = vi.mocked(shell.openExternal).mock.calls[0][0];
-        expect(authUrl).toContain('client_id=lobehub-desktop');
+        expect(authUrl).toContain('client_id=orvilo-desktop');
         expect(authUrl).toContain('response_type=code');
         expect(authUrl).toContain('code_challenge_method=S256');
         expect(authUrl).toContain('scope=profile%20email%20offline_access');
@@ -195,7 +195,7 @@ describe('AuthCtr', () => {
         expect(pollingCalls.length).toBeGreaterThan(0);
         expect(pollingCalls[0][1]).toEqual(
           expect.objectContaining({
-            headers: expect.objectContaining({ 'User-Agent': 'LobeHub Desktop/1.2.3' }),
+            headers: expect.objectContaining({ 'User-Agent': 'Orvilo Desktop/1.2.3' }),
           }),
         );
       });
@@ -723,7 +723,7 @@ describe('AuthCtr', () => {
     beforeEach(() => {
       vi.mocked(mockRemoteServerConfigCtr.getRemoteServerConfig).mockResolvedValue({
         active: true,
-        remoteServerUrl: 'https://lobehub-cloud.com',
+        remoteServerUrl: 'https://orvilo-cloud.com',
         storageMode: 'cloud',
       });
       vi.mocked(mockRemoteServerConfigCtr.isRemoteServerConfigured).mockResolvedValue(true);

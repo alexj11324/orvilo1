@@ -83,7 +83,9 @@ const AgentStreaming = memo<BuiltinStreamingProps<AgentArgs>>(({ args, toolCallI
             className={styles.labelRow}
             justify={'space-between'}
           >
-            <Text className={styles.label}>{t('builtins.lobe-claude-code.agent.instruction')}</Text>
+            <Text className={styles.label}>
+              {t('builtins.orvilo-claude-code.agent.instruction')}
+            </Text>
             {subagentThread && (
               <Button
                 className={styles.openThread}

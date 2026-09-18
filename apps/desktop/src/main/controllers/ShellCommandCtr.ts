@@ -40,8 +40,8 @@ const processManager = new ShellProcessManager();
  */
 const safeSegment = (value: string): string => value.replaceAll(/[^\w-]/g, '') || 'default';
 
-/** Prefix for a simple `lh`/`lobe`/`lobehub` invocation (keyword + boundary, args via slice). */
-const SIMPLE_LH_PREFIX = /^\s*(?:lh|lobe|lobehub)(?=\s|$)/;
+/** Prefix for a simple `lh`/`orvilo` invocation (keyword + boundary, args via slice). */
+const SIMPLE_LH_PREFIX = /^\s*(?:lh|orvilo)(?=\s|$)/;
 
 export default class ShellCommandCtr extends ControllerModule {
   static override readonly groupName = 'shellCommand';
@@ -197,7 +197,7 @@ export default class ShellCommandCtr extends ControllerModule {
   async ensureSandboxWorkspace({
     agentId,
   }: EnsureSandboxWorkspaceParams): Promise<EnsureSandboxWorkspaceResult> {
-    const target = path.join(os.homedir(), 'LobeHub', 'sandbox', safeSegment(agentId));
+    const target = path.join(os.homedir(), 'Orvilo', 'sandbox', safeSegment(agentId));
     try {
       fs.mkdirSync(target, { recursive: true });
       // Resolve symlinks now: this exact string becomes the fence root, and the
@@ -246,8 +246,8 @@ export default class ShellCommandCtr extends ControllerModule {
       const cliCtr = this.app.getController(CliCtr);
       if (cliCtr) {
         // Deliberate carve-out: `lh` keeps its in-app route even for a
-        // sandboxed run. It is LobeHub's own control-plane CLI — it needs the
-        // injected `LOBEHUB_JWT` and the server it talks to, both of which the
+        // sandboxed run. It is Orvilo's own control-plane CLI — it needs the
+        // injected `ORVILO_JWT` and the server it talks to, both of which the
         // sandbox strips (env allowlist) and blocks (no network). Sandboxing it
         // would not harden anything the model can reach through it; it would
         // just break agent self-management. The sandbox's promise is about

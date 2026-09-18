@@ -33,7 +33,6 @@ describe('deviceToolRegistry', () => {
   });
 
   describe('buildAllowedBuiltinTools', () => {
-    // https://github.com/lobehub/lobehub/pull/19051
     it('hides Computer Use when a device does not report support', () => {
       expect(
         buildAllowedBuiltinTools({ canUseDevice: true, supportedDeviceTools: [] }).map(

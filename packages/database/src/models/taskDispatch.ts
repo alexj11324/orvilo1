@@ -11,7 +11,7 @@ import type { TaskDispatchItem, TaskTopicItem } from '../schemas/task';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
 import { normalizeProjectOrchestrationPolicy } from './project';
@@ -108,7 +108,7 @@ export interface TaskPlanningDispatchCandidate {
  */
 export class TaskDispatchModel {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly workspaceId?: string,
   ) {}
 
@@ -127,7 +127,7 @@ export class TaskDispatchModel {
   }
 
   private async projectDispatchWaitingReason(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     task: TaskItem,
     trigger: TaskRunTrigger,
     excludeDispatchId?: string,
@@ -216,7 +216,7 @@ export class TaskDispatchModel {
    * one row with compare-and-set before doing any remote interruption.
    */
   static async findCancellationCandidates(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     input: { limit?: number; now?: Date } = {},
   ): Promise<TaskCancellationCandidate[]> {
     const now = input.now ?? new Date();
@@ -236,7 +236,7 @@ export class TaskDispatchModel {
 
   /** Discover expired execution leases that must be reconciled by stable operation identity. */
   static async findRecoveryCandidates(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     input: { limit?: number; now?: Date } = {},
   ): Promise<TaskDispatchRecoveryCandidate[]> {
     const now = input.now ?? new Date();
@@ -261,7 +261,7 @@ export class TaskDispatchModel {
 
   /** Discover committed planner dispatch intents whose post-commit wakeup was lost. */
   static async findPlanningStartCandidates(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     input: { limit?: number } = {},
   ): Promise<TaskPlanningDispatchCandidate[]> {
     const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
@@ -849,7 +849,7 @@ export class TaskDispatchModel {
     topicId: string | null;
   } | null> {
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const [dispatch] = await runner
         .select()
         .from(taskDispatches)
@@ -1155,9 +1155,9 @@ export class TaskDispatchModel {
           .returning();
         if (parked && this.workspaceId) {
           await new LinearSyncModel(
-            tx as LobeChatDatabase,
+            tx as OrviloDatabase,
             this.workspaceId,
-          ).recordTaskChangeInTransaction(tx as LobeChatDatabase, {
+          ).recordTaskChangeInTransaction(tx as OrviloDatabase, {
             changedFields: ['status'],
             eventType: 'task.status.changed',
             idempotencyKey: `task:${task.id}:dispatch:${dispatch.id}:stale-contract`,

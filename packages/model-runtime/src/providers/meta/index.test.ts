@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { OnFinishData } from '../../types';
-import { LobeMetaAI } from './index';
+import { OrviloMetaAI } from './index';
 
 vi.mock('@orvilo/business-model-bank/model-config', () => ({
   loadModels: vi.fn().mockResolvedValue([]),
@@ -15,7 +15,7 @@ const provider = ModelProvider.Meta;
 const defaultBaseURL = 'https://api.meta.ai/v1';
 
 testProvider({
-  Runtime: LobeMetaAI,
+  Runtime: OrviloMetaAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_META_CHAT_COMPLETION',
@@ -26,11 +26,11 @@ testProvider({
   },
 });
 
-describe('LobeMetaAI - custom features', () => {
-  let instance: InstanceType<typeof LobeMetaAI>;
+describe('OrviloMetaAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloMetaAI>;
 
   beforeEach(() => {
-    instance = new LobeMetaAI({ apiKey: 'test_api_key' });
+    instance = new OrviloMetaAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );
@@ -172,7 +172,7 @@ describe('LobeMetaAI - custom features', () => {
           object: 'list',
         }),
       );
-      const runtime = new LobeMetaAI({ apiKey: 'test_api_key', fetch });
+      const runtime = new OrviloMetaAI({ apiKey: 'test_api_key', fetch });
 
       const models = await runtime.models();
 

@@ -83,10 +83,10 @@ describe('desktopSkillRuntimeService', () => {
     });
 
     const result = await desktopSkillRuntimeService.resolveExecutionDirectory([
-      { id: 'lobe-skills-run-0', name: 'demo-skill' },
+      { id: 'orvilo-skills-run-0', name: 'demo-skill' },
     ]);
 
-    expect(getByIdMock).toHaveBeenCalledWith('lobe-skills-run-0');
+    expect(getByIdMock).toHaveBeenCalledWith('orvilo-skills-run-0');
     expect(getByNameMock).toHaveBeenCalledWith('demo-skill');
     expect(getZipUrlMock).toHaveBeenCalledWith('skill-1');
     expect(result).toBe('/tmp/demo-skill');

@@ -12,10 +12,10 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 import type { ActivateSkillParams, ActivateSkillSource, ActivateSkillState } from '../../../types';
 
 type SkillLabelKey =
-  | 'builtins.lobe-skills.apiName.activateAgentSkill'
-  | 'builtins.lobe-skills.apiName.activateDeviceSkill'
-  | 'builtins.lobe-skills.apiName.activateProjectSkill'
-  | 'builtins.lobe-skills.apiName.activateSkill';
+  | 'builtins.orvilo-skills.apiName.activateAgentSkill'
+  | 'builtins.orvilo-skills.apiName.activateDeviceSkill'
+  | 'builtins.orvilo-skills.apiName.activateProjectSkill'
+  | 'builtins.orvilo-skills.apiName.activateSkill';
 
 /**
  * Resolve the inspector label key. State-side `source` is the authority once the
@@ -33,16 +33,16 @@ const resolveLabelKey = (
 
   switch (effective) {
     case 'agent': {
-      return 'builtins.lobe-skills.apiName.activateAgentSkill';
+      return 'builtins.orvilo-skills.apiName.activateAgentSkill';
     }
     case 'device': {
-      return 'builtins.lobe-skills.apiName.activateDeviceSkill';
+      return 'builtins.orvilo-skills.apiName.activateDeviceSkill';
     }
     case 'project': {
-      return 'builtins.lobe-skills.apiName.activateProjectSkill';
+      return 'builtins.orvilo-skills.apiName.activateProjectSkill';
     }
     default: {
-      return 'builtins.lobe-skills.apiName.activateSkill';
+      return 'builtins.orvilo-skills.apiName.activateSkill';
     }
   }
 };

@@ -9,9 +9,9 @@ import type {
   FileContextConfig,
   GroupAgentBuilderContext,
   KnowledgeConfig,
-  LobeToolManifest,
   ModelCapabilityChecker,
   OnboardingContext,
+  OrviloToolManifest,
   PlanTodoConfig,
   ProjectInstructionFile,
   SkillMeta,
@@ -96,7 +96,7 @@ export interface ContextToolsSnapshot {
   disabledToolIdentifiers?: string[];
   enabledSkills?: SkillMeta[];
   enabledToolIds?: string[];
-  manifests?: LobeToolManifest[];
+  manifests?: OrviloToolManifest[];
   /** Skills the user pinned for this request. */
   selectedSkills?: RuntimeSelectedSkill[];
   /** Tools the user pinned for this request. */

@@ -2,7 +2,7 @@ import { Flexbox, SortableList } from '@lobehub/ui';
 import { type AiProviderModelListItem } from 'model-bank';
 import { memo } from 'react';
 
-import { ModelIcon } from '@/components/LobeIcons';
+import { ModelIcon } from '@/components/OrviloIcons';
 
 interface ListItemProps extends AiProviderModelListItem {
   disabled?: boolean;

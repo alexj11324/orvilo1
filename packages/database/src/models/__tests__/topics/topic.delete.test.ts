@@ -12,13 +12,13 @@ import {
   users,
   workspaces,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { TopicModel } from '../../topic';
 
 const userId = 'topic-delete-user';
 const userId2 = 'topic-delete-user-2';
 const sessionId = 'topic-delete-session';
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const topicModel = new TopicModel(serverDB, userId);
 
 describe('TopicModel - Delete', () => {

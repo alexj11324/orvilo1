@@ -37,7 +37,7 @@ export const QueryTaxonomyOptionsInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-user-memory.apiName.queryTaxonomyOptions')}
+          {t('builtins.orvilo-user-memory.apiName.queryTaxonomyOptions')}
         </span>
       </div>
     );
@@ -46,7 +46,7 @@ export const QueryTaxonomyOptionsInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-user-memory.apiName.queryTaxonomyOptions')}:{' '}
+        {t('builtins.orvilo-user-memory.apiName.queryTaxonomyOptions')}:{' '}
       </span>
       {query && <span className={highlightTextStyles.primary}>{query}</span>}
       {!isLoading &&
@@ -61,7 +61,7 @@ export const QueryTaxonomyOptionsInspector = memo<
             fontSize={12}
             style={{ marginInlineStart: 4 }}
           >
-            ({t('builtins.lobe-user-memory.inspector.noResults')})
+            ({t('builtins.orvilo-user-memory.inspector.noResults')})
           </Text>
         ))}
     </div>

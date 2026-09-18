@@ -22,19 +22,19 @@ describe('createWorkspaceHtmlPublishFileOps', () => {
     vi.mocked(projectFileService.writeProjectFile).mockResolvedValue({ success: true });
     const ops = createWorkspaceHtmlPublishFileOps({ deviceId: 'dev-1', workingDirectory: '/ws' });
 
-    await ops.copyFile('/outside/logo.png', '/ws/.lobe-artifacts/site/logo.png');
-    await ops.writeFile('/ws/.lobe-artifacts/site/index.html', '<html/>');
+    await ops.copyFile('/outside/logo.png', '/ws/.orvilo-artifacts/site/logo.png');
+    await ops.writeFile('/ws/.orvilo-artifacts/site/index.html', '<html/>');
 
     expect(projectFileService.copyAssetForPublish).toHaveBeenCalledWith({
       deviceId: 'dev-1',
       from: '/outside/logo.png',
-      to: '/ws/.lobe-artifacts/site/logo.png',
+      to: '/ws/.orvilo-artifacts/site/logo.png',
       workingDirectory: '/ws',
     });
     expect(projectFileService.writeProjectFile).toHaveBeenCalledWith({
       content: '<html/>',
       deviceId: 'dev-1',
-      path: '/ws/.lobe-artifacts/site/index.html',
+      path: '/ws/.orvilo-artifacts/site/index.html',
       workingDirectory: '/ws',
     });
   });
@@ -58,21 +58,25 @@ describe('createWorkspaceHtmlPublishFileOps', () => {
       workingDirectory: '/ws',
     });
 
-    await ops.copyFile("/outside/it's.png", '/ws/.lobe-artifacts/site/logo.png');
-    await ops.writeFile('/ws/.lobe-artifacts/site/index.html', '<html/>');
+    await ops.copyFile("/outside/it's.png", '/ws/.orvilo-artifacts/site/logo.png');
+    await ops.writeFile('/ws/.orvilo-artifacts/site/index.html', '<html/>');
 
     expect(cloudSandboxService.callTool).toHaveBeenNthCalledWith(
       1,
       'runCommand',
       expect.objectContaining({
-        command: `mkdir -p '/ws/.lobe-artifacts/site' && cp '/outside/it'\\''s.png' '/ws/.lobe-artifacts/site/logo.png'`,
+        command: `mkdir -p '/ws/.orvilo-artifacts/site' && cp '/outside/it'\\''s.png' '/ws/.orvilo-artifacts/site/logo.png'`,
       }),
       { topicId: 'topic-1' },
     );
     expect(cloudSandboxService.callTool).toHaveBeenNthCalledWith(
       2,
       'writeFile',
-      { content: '<html/>', createDirectories: true, path: '/ws/.lobe-artifacts/site/index.html' },
+      {
+        content: '<html/>',
+        createDirectories: true,
+        path: '/ws/.orvilo-artifacts/site/index.html',
+      },
       { topicId: 'topic-1' },
     );
   });

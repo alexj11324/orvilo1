@@ -110,17 +110,22 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
       </Block>
     ) : null;
 
-  const privacyBadge =
-    task.visibility === 'private' ? (
-      <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-        <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
-      </Tooltip>
-    ) : null;
+  const isPrivate = task.visibility === 'private';
+  const privacyBadge = isPrivate ? (
+    <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
+      <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
+    </Tooltip>
+  ) : null;
 
   const titleRow = (
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
-      <TaskStatusTag status={status} taskIdentifier={task.identifier} />
+      <span
+        data-collab-id={`task:${task.id}:status`}
+        data-collab-id-alt={`task:${task.identifier}:status`}
+      >
+        <TaskStatusTag status={status} taskIdentifier={task.identifier} />
+      </span>
       <LinearTaskSyncStatus taskId={task.id} />
       <TaskWorkflowBadge
         executionStatus={task.status}
@@ -154,7 +159,14 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
   );
 
   const assigneeNode = (
-    <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
+    <Flexbox
+      horizontal
+      align={'center'}
+      data-collab-id={`task:${task.id}:assignee`}
+      data-collab-id-alt={`task:${task.identifier}:assignee`}
+      flex={'none'}
+      gap={4}
+    >
       {status === 'paused'
         ? // Pending review: the member slot shows who owns the review — the
           // reviewer (auto-stamped as assignee → creator), not the executor.
@@ -255,7 +267,16 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
 
   return (
     <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
-      <Block clickable gap={4} padding={12} variant={'borderless'} onClick={handleClick}>
+      <Block
+        clickable
+        data-collab-id={`task:${task.id}`}
+        data-collab-id-alt={`task:${task.identifier}`}
+        data-collab-private={isPrivate || undefined}
+        gap={4}
+        padding={12}
+        variant={'borderless'}
+        onClick={handleClick}
+      >
         <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
           {titleRow}
           <Flexbox horizontal align={'center'} flex={'none'} gap={8}>

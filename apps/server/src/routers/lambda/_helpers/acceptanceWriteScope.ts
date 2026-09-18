@@ -1,9 +1,9 @@
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { AcceptanceItem } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 export interface AcceptanceScopeCtx {
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   userId?: string | null;
 }
 

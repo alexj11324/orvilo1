@@ -8,7 +8,7 @@ import { MarketService } from '@/server/services/market';
 
 import { type ServerRuntimeRegistration } from './types';
 
-const log = debug('lobe-server:creds-runtime');
+const log = debug('orvilo-server:creds-runtime');
 
 /**
  * Server-side Creds Service implementation
@@ -25,7 +25,7 @@ export class ServerCredsService implements ICredsService {
     workspaceId?: string,
     /**
      * Belt-and-braces guard: true for an Agent Share visitor's run
-     * (`context.agentShareVisitor` set). `lobe-creds` is already absent from
+     * (`context.agentShareVisitor` set). `orvilo-creds` is already absent from
      * `AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS`, so this runtime should never
      * be constructed for a visitor in the first place — but `injectCreds`
      * refuses again here too, so the guarantee that the creator's decrypted

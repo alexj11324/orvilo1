@@ -105,14 +105,14 @@ describe('createAsyncServerClient - INTERNAL_APP_URL Tests', () => {
 
     it('should use internal service name in Docker network', async () => {
       mockAppEnv.APP_URL = 'https://public.example.com';
-      mockAppEnv.INTERNAL_APP_URL = 'http://lobe-service:3210';
+      mockAppEnv.INTERNAL_APP_URL = 'http://orvilo-service:3210';
 
       await createAsyncServerClient('user-docker');
 
       const config = vi.mocked(createTRPCClient).mock.calls[0][0];
       const httpLinkOptions = config.links[0] as any;
 
-      expect(httpLinkOptions.url).toBe('http://lobe-service:3210/trpc/async');
+      expect(httpLinkOptions.url).toBe('http://orvilo-service:3210/trpc/async');
     });
 
     it('should handle INTERNAL_APP_URL with trailing slash', async () => {
@@ -150,7 +150,7 @@ describe('createAsyncServerClient - INTERNAL_APP_URL Tests', () => {
       expect(httpLinkOptions.headers.Authorization).toBe('mock-internal-jwt-token');
     });
 
-    it('should encrypt and include userId in x-lobe-chat-auth header', async () => {
+    it('should encrypt and include userId in x-orvilo-auth header', async () => {
       const mockEncrypt = vi.fn().mockResolvedValue('test-encrypted-auth-data');
       vi.mocked(KeyVaultsGateKeeper.initWithEnvKey).mockResolvedValueOnce({
         encrypt: mockEncrypt,
@@ -164,11 +164,11 @@ describe('createAsyncServerClient - INTERNAL_APP_URL Tests', () => {
       const config = vi.mocked(createTRPCClient).mock.calls[0][0];
       const httpLinkOptions = config.links[0] as any;
 
-      // The header name is from LOBE_CHAT_AUTH_HEADER constant
+      // The header name is from ORVILO_AUTH_HEADER constant
       expect(httpLinkOptions.headers).toHaveProperty('Authorization');
-      // The X-lobe-chat-auth header should be present
-      expect(Object.keys(httpLinkOptions.headers)).toContain('X-lobe-chat-auth');
-      expect(httpLinkOptions.headers['X-lobe-chat-auth']).toBe('test-encrypted-auth-data');
+      // The X-orvilo-auth header should be present
+      expect(Object.keys(httpLinkOptions.headers)).toContain('X-orvilo-auth');
+      expect(httpLinkOptions.headers['X-orvilo-auth']).toBe('test-encrypted-auth-data');
     });
 
     it('should include Vercel bypass secret when available', async () => {
@@ -293,7 +293,7 @@ describe('createAsyncServerClient - INTERNAL_APP_URL Tests', () => {
 
   describe('real-world scenarios', () => {
     it('should handle production deployment behind Cloudflare', async () => {
-      mockAppEnv.APP_URL = 'https://lobechat.example.com';
+      mockAppEnv.APP_URL = 'https://orvilo.example.com';
       mockAppEnv.INTERNAL_APP_URL = 'http://localhost:3210';
 
       await createAsyncServerClient('prod-user');
@@ -307,14 +307,14 @@ describe('createAsyncServerClient - INTERNAL_APP_URL Tests', () => {
 
     it('should handle Docker Compose deployment with service names', async () => {
       mockAppEnv.APP_URL = 'https://public.example.com';
-      mockAppEnv.INTERNAL_APP_URL = 'http://lobehub:3210';
+      mockAppEnv.INTERNAL_APP_URL = 'http://orvilo:3210';
 
       await createAsyncServerClient('docker-user');
 
       const config = vi.mocked(createTRPCClient).mock.calls[0][0];
       const httpLinkOptions = config.links[0] as any;
 
-      expect(httpLinkOptions.url).toBe('http://lobehub:3210/trpc/async');
+      expect(httpLinkOptions.url).toBe('http://orvilo:3210/trpc/async');
     });
 
     it('should handle deployment without CDN (INTERNAL_APP_URL not set)', async () => {

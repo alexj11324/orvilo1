@@ -21,7 +21,7 @@ import { WindowStateManager } from './WindowStateManager';
 import { WindowThemeManager } from './WindowThemeManager';
 
 const logger = createLogger('core:Browser');
-const BROWSER_WEBVIEW_PARTITION = 'persist:lobe-browser-app';
+const BROWSER_WEBVIEW_PARTITION = 'persist:orvilo-browser-app';
 
 const getExternalNavigationHosts = () =>
   DESKTOP_EXTERNAL_NAVIGATION_HOSTS.split(',')
@@ -723,7 +723,7 @@ export default class Browser {
    * Bind this window's session to the backend proxy. The `app://` request
    * interceptor (wired in `App.ts`) consumes this context to route
    * `/trpc`, `/webapi`, `/api/auth`, and `/market` requests to the remote
-   * LobeHub server.
+   * Orvilo server.
    */
   private setupRemoteServerRequestHook(browserWindow: BrowserWindow): void {
     const session = browserWindow.webContents.session;

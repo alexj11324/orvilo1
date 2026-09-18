@@ -21,7 +21,7 @@ import {
 } from '../protocol';
 import { GOOGLE_AI_BLOCK_REASON } from './const';
 
-export const LOBE_ERROR_KEY = '__lobe_error';
+export const ORVILO_ERROR_KEY = '__orvilo_error';
 
 const getBlockReasonMessage = (blockReason: string): string => {
   const blockReasonMessages = GOOGLE_AI_BLOCK_REASON;
@@ -50,9 +50,9 @@ const transformGoogleGenerativeAIStream = (
   payload?: ChatPayloadForTransformStream,
 ): StreamProtocolChunk | StreamProtocolChunk[] => {
   // Handle injected internal error marker to pass through detailed error info
-  if ((chunk as any)?.[LOBE_ERROR_KEY]) {
+  if ((chunk as any)?.[ORVILO_ERROR_KEY]) {
     return {
-      data: (chunk as any)[LOBE_ERROR_KEY],
+      data: (chunk as any)[ORVILO_ERROR_KEY],
       id: context?.id || 'error',
       type: 'error',
     };

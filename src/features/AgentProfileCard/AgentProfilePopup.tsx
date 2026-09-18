@@ -10,7 +10,7 @@ import { memo, type PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
-import { ModelIcon } from '@/components/LobeIcons';
+import { ModelIcon } from '@/components/OrviloIcons';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import ModelSelect from '@/features/ModelSelect';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';

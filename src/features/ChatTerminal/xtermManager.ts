@@ -13,7 +13,7 @@ import { electronTerminalService } from '@/services/electron/terminal';
 import { resolveTerminalKeyAction } from './keybindings';
 import { openTerminalLink } from './links';
 
-const log = debug('lobe-desktop:chat-terminal');
+const log = debug('orvilo-desktop:chat-terminal');
 
 interface TermInstance {
   container: HTMLDivElement;

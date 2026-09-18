@@ -1,5 +1,5 @@
 import type { ISandboxService, SandboxExportFileResult } from '@orvilo/builtin-tool-cloud-sandbox';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 
 import type { FileService } from '@/server/services/file';
 import type { MarketService } from '@/server/services/market';
@@ -15,7 +15,7 @@ export interface SandboxServiceOptions extends SandboxSessionContext {
   fileService?: FileService;
   marketService: MarketService;
   /** Used to look up topic/session files when bootstrapping the sandbox. */
-  serverDB?: LobeChatDatabase;
+  serverDB?: OrviloDatabase;
 }
 
 export interface SandboxProviderCapabilities {

@@ -29,6 +29,20 @@ export interface RouteSkeletonProps {
 
 export interface RouteMeta extends StaticRouteMeta {
   DynamicMeta?: ComponentType<DynamicRouteMetaProps>;
+  /**
+   * The matched route mounts a persistent portal column that renders
+   * `PortalContent` — the task workspace does, through `TaskWorkspaceLayout`.
+   *
+   * Declared so the app-wide `AcceptancePortalDrawer` can tell whether this route
+   * already has somewhere to show an acceptance view. Declared on the route rather
+   * than matched against a list of paths because the same wrapper carries `/tasks`,
+   * `/inbox`, `/task/*` and `/goal/*`, and the workspace mirror serves them all
+   * again under `/:workspaceSlug`.
+   *
+   * A parent handle carrying only this is safe for titles: title and icon
+   * resolution walk deepest-first, so leaf metas still win.
+   */
+  portalColumn?: true;
   Skeleton?: ComponentType<RouteSkeletonProps>;
 }
 

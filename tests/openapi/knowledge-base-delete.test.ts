@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { FileService } from '@/server/services/file';
 
 import { KnowledgeBaseService } from '../../packages/openapi/src/services/knowledge-base.service';
@@ -8,7 +8,7 @@ import { KnowledgeBaseService } from '../../packages/openapi/src/services/knowle
 vi.mock('@/server/services/file');
 
 describe('KnowledgeBaseService.deleteKnowledgeBase', () => {
-  let db: LobeChatDatabase;
+  let db: OrviloDatabase;
   let deleteFilesSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -18,7 +18,7 @@ describe('KnowledgeBaseService.deleteKnowledgeBase', () => {
           findFirst: vi.fn().mockResolvedValue({ id: 'kb-1', userId: 'user-1' }),
         },
       },
-    } as unknown as LobeChatDatabase;
+    } as unknown as OrviloDatabase;
 
     deleteFilesSpy = vi.fn().mockResolvedValue(undefined);
     vi.mocked(FileService).mockImplementation(function () {

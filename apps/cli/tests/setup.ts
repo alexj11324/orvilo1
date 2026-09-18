@@ -10,9 +10,9 @@ import type * as loggerModule from '../src/utils/logger';
 // CLI persists — settings, credentials, the connect daemon's state, execution
 // traces — resolves against `resolveCliDirName()` under `os.homedir()`, so
 // without this a suite that drives a command end to end writes into the
-// developer's real `~/.lobehub`.
-const testHomeDirName = `.lobehub-test-${process.pid}`;
-process.env.LOBEHUB_CLI_HOME = testHomeDirName;
+// developer's real `~/.orvilo`.
+const testHomeDirName = `.orvilo-test-${process.pid}`;
+process.env.ORVILO_CLI_HOME = testHomeDirName;
 
 afterAll(() => {
   fs.rmSync(path.join(os.homedir(), testHomeDirName), { force: true, recursive: true });

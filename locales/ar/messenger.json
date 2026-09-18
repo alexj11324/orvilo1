@@ -184,7 +184,7 @@
   "verify.confirm.defaultAgent": "الوكيل الافتراضي",
   "verify.confirm.defaultAgentHint": "سيتم توجيه رسائلك هنا أولاً. يمكنك التبديل في أي وقت عبر /agents في البوت أو من الإعدادات → المراسلة.",
   "verify.confirm.defaultAgentPlaceholder": "اختر وكيلًا",
-  "verify.confirm.fields.lobeHubAccount": "حساب Orvilo",
+  "verify.confirm.fields.orviloHubAccount": "حساب Orvilo",
   "verify.confirm.fields.platformAccount": "حساب {{platform}}",
   "verify.confirm.fields.workspace": "مساحة العمل",
   "verify.confirm.noAgents": "ليس لديك أي وكلاء بعد. قم بإنشاء واحد في Orvilo، ثم عد لإكمال الربط.",
@@ -203,7 +203,7 @@
   "verify.error.unlinkBeforeRelink": "تم ربط حساب Orvilo هذا بالفعل بحساب Telegram آخر. قم بفصله في الإعدادات → المراسلة قبل ربط حساب جديد.",
   "verify.signInCta": "تسجيل الدخول للمتابعة",
   "verify.signInRequired": "يرجى تسجيل الدخول إلى Orvilo لتأكيد الرابط.",
-  "verify.success.backToLobeHub": "العودة إلى Orvilo",
+  "verify.success.backToOrvilo": "العودة إلى Orvilo",
   "verify.success.description": "تم الآن ربط حسابك بـ {{platform}}. افتح {{platform}} وأرسل رسالتك الأولى.",
   "verify.success.openBot": "افتح في {{platform}}",
   "verify.success.title": "تم الربط بنجاح!"

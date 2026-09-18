@@ -9,7 +9,7 @@ import { goals } from '../schemas/goal';
 import { goalNodeDecisions, goalNodes } from '../schemas/goalGraph';
 import { tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 /** States after which a goal's loop no longer advances. */
@@ -27,11 +27,11 @@ const TERMINAL_NODE_STATUSES = new Set<GoalNodeStatus>(['resolved', 'rejected', 
  * cost, acceptance) is derived from those tasks at read time.
  */
 export class GoalModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -272,7 +272,7 @@ export class GoalModel {
    * carries each goal's own `userId` / `workspaceId` into its advance.
    */
   static async listStalled(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     options: { limit?: number; staleBefore: Date },
   ): Promise<GoalItem[]> {
     const { limit = 200, staleBefore } = options;

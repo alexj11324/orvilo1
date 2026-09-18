@@ -39,7 +39,7 @@ export const params = {
   },
   createImage: createStepfunImage,
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     // ref: https://platform.stepfun.com/docs/llm/modeloverview
     const functionCallKeywords = ['step-1-', 'step-1o-', 'step-1v-', 'step-2-'];
@@ -53,7 +53,7 @@ export const params = {
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 
@@ -81,4 +81,4 @@ export const params = {
   provider: ModelProvider.Stepfun,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeStepfunAI = createOpenAICompatibleRuntime(params);
+export const OrviloStepfunAI = createOpenAICompatibleRuntime(params);

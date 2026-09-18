@@ -19,7 +19,7 @@ const settingsSchema = z
   .object({
     builtin: z.enum(COMPLETION_BUILTIN_SOUNDS).optional(),
     enabled: z.boolean().optional(),
-    notificationSound: z.enum(['lobehub', 'system']).optional(),
+    notificationSound: z.enum(['orvilo', 'system']).optional(),
     volume: z.number().min(0).max(1).optional(),
   })
   .strict();
@@ -29,7 +29,7 @@ const settingsSchema = z
  * the app bundle is never searched, and a WAV there falls back to the system alert sound.
  * So the banner sound has to be installed into the user's own Sounds folder.
  */
-const BANNER_SOUND_FILE = 'lobehub-complete.aiff';
+const BANNER_SOUND_FILE = 'orvilo-complete.aiff';
 
 export default class CompletionSoundCtr extends ControllerModule {
   static override readonly groupName = 'completionSound';
@@ -97,7 +97,7 @@ export default class CompletionSoundCtr extends ControllerModule {
   /** Sound file the background banner carries; absent means the macOS default sound. */
   @IpcMethod()
   async getNotificationSoundFile(): Promise<string | undefined> {
-    if (!macOS() || this.readSettings().notificationSound !== 'lobehub') return undefined;
+    if (!macOS() || this.readSettings().notificationSound !== 'orvilo') return undefined;
     try {
       const source = pathUtils.join(resourcesDir, 'sounds', BANNER_SOUND_FILE);
       const target = pathUtils.join(app.getPath('home'), 'Library', 'Sounds', BANNER_SOUND_FILE);
@@ -141,7 +141,7 @@ export default class CompletionSoundCtr extends ControllerModule {
   private readSettings(): CompletionSoundSettings {
     const settings = this.app.storeManager.get('completionSound');
     return {
-      builtin: settings?.builtin ?? 'lobehub',
+      builtin: settings?.builtin ?? 'orvilo',
       enabled: settings?.enabled ?? false,
       name: settings?.name,
       notificationSound: settings?.notificationSound ?? 'system',

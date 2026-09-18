@@ -29,7 +29,7 @@ export const AddIdentityMemoryInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-user-memory.apiName.addIdentityMemory')}
+          {t('builtins.orvilo-user-memory.apiName.addIdentityMemory')}
         </span>
       </div>
     );
@@ -40,7 +40,7 @@ export const AddIdentityMemoryInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-user-memory.apiName.addIdentityMemory')}
+        {t('builtins.orvilo-user-memory.apiName.addIdentityMemory')}
       </span>
       {title && (
         <>

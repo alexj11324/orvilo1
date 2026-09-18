@@ -45,7 +45,7 @@ export interface GeneralAgentCallToolResultPayload {
   executionTime: number;
   isSuccess: boolean;
   parentMessageId: string;
-  /** Whether tool requested to stop execution (e.g., group management speak/delegate, lobe-agent async sub-agents) */
+  /** Whether tool requested to stop execution (e.g., group management speak/delegate, orvilo-agent async sub-agents) */
   stop?: boolean;
   toolCall: ChatToolPayload;
   toolCallId: string;

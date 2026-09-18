@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   type SkillResourceContent,
   type SkillResourceMeta,
@@ -12,7 +12,7 @@ import { FileService } from '@/server/services/file';
 
 import { SkillResourceError } from './errors';
 
-const log = debug('lobe-chat:service:skill-resource');
+const log = debug('orvilo:service:skill-resource');
 
 function isTextMimeType(mimeType: string): boolean {
   if (mimeType.startsWith('text/')) return true;
@@ -31,7 +31,7 @@ function isTextMimeType(mimeType: string): boolean {
 export class SkillResourceService {
   private fileService: FileService;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.fileService = new FileService(db, userId, workspaceId);
   }
 

@@ -86,7 +86,7 @@ apps/server/src/routers/lambda/__tests__/integration/
 
 ```typescript
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { messages, sessions, users } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
@@ -96,7 +96,7 @@ import { messageRouter } from '../../message';
 import { cleanupTestUser, createTestContext, createTestUser } from './setup';
 
 describe('Your Feature Integration Tests', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let userId: string;
 
   beforeEach(async () => {

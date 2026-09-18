@@ -1,8 +1,8 @@
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
-const BROWSER_PARTITION = 'persist:lobe-browser-app';
-const HIDDEN_HOST_ID = 'lobe-browser-retained-webviews';
-const PORTAL_ROOT_ID = 'lobe-ui-theme-app';
+const BROWSER_PARTITION = 'persist:orvilo-browser-app';
+const HIDDEN_HOST_ID = 'orvilo-browser-retained-webviews';
+const PORTAL_ROOT_ID = 'orvilo-ui-theme-app';
 export const MAX_RETAINED_BROWSER_WEBVIEWS = 10;
 const RETAINED_IN_USE_GRACE_MS = 60_000;
 const BOUNDS_POLL_INTERVAL_MS = 100;

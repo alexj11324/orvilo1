@@ -61,4 +61,4 @@ export const params = {
   provider: ModelProvider.Wenxin,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeWenxinAI = createOpenAICompatibleRuntime(params);
+export const OrviloWenxinAI = createOpenAICompatibleRuntime(params);

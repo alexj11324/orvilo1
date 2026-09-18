@@ -51,8 +51,8 @@ describe('ToolMessageReorder', () => {
           {
             function: {
               arguments:
-                '{"query":"LobeChat","searchEngines":["brave","google","duckduckgo","qwant"]}',
-              name: 'lobe-web-browsing____searchWithSearXNG',
+                '{"query":"Orvilo","searchEngines":["brave","google","duckduckgo","qwant"]}',
+              name: 'orvilo-web-browsing____searchWithSearXNG',
             },
             id: 'call_6xCmrOtFOyBAcqpqO1TGfw2B',
             type: 'function',
@@ -60,8 +60,8 @@ describe('ToolMessageReorder', () => {
           {
             function: {
               arguments:
-                '{"query":"LobeChat","searchEngines":["brave","google","duckduckgo","qwant"]}',
-              name: 'lobe-web-browsing____searchWithSearXNG',
+                '{"query":"Orvilo","searchEngines":["brave","google","duckduckgo","qwant"]}',
+              name: 'orvilo-web-browsing____searchWithSearXNG',
             },
             id: 'tool_call_nXxXHW8Z',
             type: 'function',
@@ -70,28 +70,28 @@ describe('ToolMessageReorder', () => {
       },
       {
         content: '[]',
-        name: 'lobe-web-browsing____searchWithSearXNG',
+        name: 'orvilo-web-browsing____searchWithSearXNG',
         role: 'tool',
         tool_call_id: 'call_6xCmrOtFOyBAcqpqO1TGfw2B',
       },
       {
-        content: 'LobeHub 是一个专注于设计和开发现代人工智能生成内容（AIGC）工具和组件的团队。',
+        content: 'Orvilo 是一个专注于设计和开发现代人工智能生成内容（AIGC）工具和组件的团队。',
         role: 'assistant',
       },
       {
         content: '[]',
-        name: 'lobe-web-browsing____searchWithSearXNG',
+        name: 'orvilo-web-browsing____searchWithSearXNG',
         role: 'tool',
         tool_call_id: 'tool_call_nXxXHW8Z',
       },
       {
         content: '[]',
-        name: 'lobe-web-browsing____searchWithSearXNG',
+        name: 'orvilo-web-browsing____searchWithSearXNG',
         role: 'tool',
         tool_call_id: 'tool_call_2f3CEKz9',
       },
       {
-        content: '### LobeHub 智能AI聚合神器\n\nLobeHub 是一个强大的AI聚合平台',
+        content: '### Orvilo 智能AI聚合神器\n\nOrvilo 是一个强大的AI聚合平台',
         role: 'assistant',
       },
     ];
@@ -112,8 +112,8 @@ describe('ToolMessageReorder', () => {
           {
             function: {
               arguments:
-                '{"query":"LobeChat","searchEngines":["brave","google","duckduckgo","qwant"]}',
-              name: 'lobe-web-browsing____searchWithSearXNG',
+                '{"query":"Orvilo","searchEngines":["brave","google","duckduckgo","qwant"]}',
+              name: 'orvilo-web-browsing____searchWithSearXNG',
             },
             id: 'call_6xCmrOtFOyBAcqpqO1TGfw2B',
             type: 'function',
@@ -121,8 +121,8 @@ describe('ToolMessageReorder', () => {
           {
             function: {
               arguments:
-                '{"query":"LobeChat","searchEngines":["brave","google","duckduckgo","qwant"]}',
-              name: 'lobe-web-browsing____searchWithSearXNG',
+                '{"query":"Orvilo","searchEngines":["brave","google","duckduckgo","qwant"]}',
+              name: 'orvilo-web-browsing____searchWithSearXNG',
             },
             id: 'tool_call_nXxXHW8Z',
             type: 'function',
@@ -131,22 +131,22 @@ describe('ToolMessageReorder', () => {
       },
       {
         content: '[]',
-        name: 'lobe-web-browsing____searchWithSearXNG',
+        name: 'orvilo-web-browsing____searchWithSearXNG',
         role: 'tool',
         tool_call_id: 'call_6xCmrOtFOyBAcqpqO1TGfw2B',
       },
       {
         content: '[]',
-        name: 'lobe-web-browsing____searchWithSearXNG',
+        name: 'orvilo-web-browsing____searchWithSearXNG',
         role: 'tool',
         tool_call_id: 'tool_call_nXxXHW8Z',
       },
       {
-        content: 'LobeHub 是一个专注于设计和开发现代人工智能生成内容（AIGC）工具和组件的团队。',
+        content: 'Orvilo 是一个专注于设计和开发现代人工智能生成内容（AIGC）工具和组件的团队。',
         role: 'assistant',
       },
       {
-        content: '### LobeHub 智能AI聚合神器\n\nLobeHub 是一个强大的AI聚合平台',
+        content: '### Orvilo 智能AI聚合神器\n\nOrvilo 是一个强大的AI聚合平台',
         role: 'assistant',
       },
     ]);
@@ -386,7 +386,7 @@ describe('ToolMessageReorder', () => {
         content: '',
         tool_calls: [
           {
-            function: { arguments: '{}', name: 'lobe-local-system____runCommand' },
+            function: { arguments: '{}', name: 'orvilo-local-system____runCommand' },
             id: 'call_1',
             type: 'function',
           },
@@ -408,7 +408,7 @@ describe('ToolMessageReorder', () => {
       reason: 'tool_result_missing',
       success: false,
       synthetic: true,
-      tool: 'lobe-local-system____runCommand',
+      tool: 'orvilo-local-system____runCommand',
     });
     // Structured fields must stay machine-readable, not flattened into prose.
     expect(parsed.reason).toBeDefined();

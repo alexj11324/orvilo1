@@ -6,20 +6,22 @@ import {
   agents,
   knowledgeBases,
   projectCompletionReviews,
+  projectMembers,
   projects,
   projectWorks,
   tasks,
   users,
   works,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 import type { CreateProjectInput } from '../project';
 import { ProjectModel } from '../project';
 import { TaskModel } from '../task';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'project-model-user';
 const otherUserId = 'project-model-other-user';
 let projectIdentifierSequence = 0;
@@ -100,12 +102,12 @@ describe('ProjectModel', () => {
   });
 
   it('normalizes identifiers and enforces uniqueness within their ownership scope', async () => {
-    const first = await model.create({ identifier: ' lobe ', name: 'First' });
-    expect(first.identifier).toBe('LOBE');
+    const first = await model.create({ identifier: ' orvilo ', name: 'First' });
+    expect(first.identifier).toBe('ORVILO');
 
-    await expect(model.create({ identifier: 'LOBE', name: 'Duplicate' })).rejects.toThrow();
-    await expect(otherModel.create({ identifier: 'LOBE', name: 'Other user' })).resolves.toEqual(
-      expect.objectContaining({ identifier: 'LOBE' }),
+    await expect(model.create({ identifier: 'ORVILO', name: 'Duplicate' })).rejects.toThrow();
+    await expect(otherModel.create({ identifier: 'ORVILO', name: 'Other user' })).resolves.toEqual(
+      expect.objectContaining({ identifier: 'ORVILO' }),
     );
 
     await serverDB.insert(workspaces).values({
@@ -174,6 +176,66 @@ describe('ProjectModel', () => {
     );
     expect(await member.findById(privateProject.id)).toBeNull();
     expect(await member.update(publicProject.id, { name: 'Nope' })).toBeNull();
+  });
+
+  it('lets an active project_members grant read a private workspace project', async () => {
+    const workspaceId = 'project-grant-read-workspace';
+    const granteeId = 'project-model-grantee';
+    await serverDB.insert(users).values({ id: granteeId });
+    await serverDB.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Grant Workspace',
+      primaryOwnerId: userId,
+      slug: workspaceId,
+    });
+    // project_members carries a composite FK to workspace_members.
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+      { role: 'member', userId: granteeId, workspaceId },
+    ]);
+    const owner = new ProjectModel(serverDB, userId, workspaceId);
+    const member = new ProjectModel(serverDB, otherUserId, workspaceId);
+    const outsider = new ProjectModel(serverDB, granteeId, workspaceId);
+    const privateProject = await createProject(owner, {
+      name: 'Private',
+      visibility: 'private',
+    });
+
+    // No grant → the private project stays invisible.
+    expect(await member.findById(privateProject.id)).toBeNull();
+    expect(await member.list()).toEqual([]);
+
+    await serverDB.insert(projectMembers).values({
+      projectId: privateProject.id,
+      role: 'contributor',
+      userId: otherUserId,
+      workspaceId,
+    });
+
+    expect(await member.findById(privateProject.id)).toEqual(
+      expect.objectContaining({ id: privateProject.id }),
+    );
+    expect(await member.findByIds([privateProject.id])).toEqual([
+      expect.objectContaining({ id: privateProject.id }),
+    ]);
+    expect(await member.findByIdOrSlug(privateProject.id)).toEqual(
+      expect.objectContaining({ id: privateProject.id }),
+    );
+    // A workspace member without a grant still cannot read it.
+    expect(await outsider.findById(privateProject.id)).toBeNull();
+
+    // A suspended grant no longer reads — only ACTIVE rows confer access.
+    await serverDB
+      .update(projectMembers)
+      .set({ suspendedAt: new Date() })
+      .where(
+        and(
+          eq(projectMembers.projectId, privateProject.id),
+          eq(projectMembers.userId, otherUserId),
+        ),
+      );
+    expect(await member.findById(privateProject.id)).toBeNull();
   });
 
   it('binds only accessible agents and knowledge bases', async () => {
@@ -399,7 +461,7 @@ describe('ProjectModel', () => {
     const [work] = await serverDB
       .insert(works)
       .values({
-        resourceId: 'lobehub/lobehub#1',
+        resourceId: 'alexj11324/orvilo1#1',
         resourceType: 'github_pull_request',
         toolIdentifier: 'github',
         toolName: 'create_pull_request',

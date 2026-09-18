@@ -9,7 +9,7 @@ import { EditorRuntime } from '@orvilo/editor-runtime';
 import type { SerializedEditorState, SerializedLexicalNode } from 'lexical';
 
 import { DocumentModel } from '@/database/models/document';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import { isValidEditorData } from '@/libs/editor/isValidEditorData';
 import { DocumentService } from '@/server/services/document';
 
@@ -279,7 +279,7 @@ const withEditor = async (
 };
 
 const buildService = (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   workspaceId?: string,
 ): PageAgentRuntimeService => {

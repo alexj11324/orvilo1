@@ -16,7 +16,7 @@ import {
   userSettings,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   AGENT_INTERVENTION_IDENTITY_CONFLICT,
   AGENT_INTERVENTION_INVALID_ACTION,
@@ -28,7 +28,7 @@ import {
   hashAgentInterventionRequestRevision,
 } from '../agentIntervention';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const ownerId = 'agent-intervention-owner';
 const actorId = 'agent-intervention-collaborator';

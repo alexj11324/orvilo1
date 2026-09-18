@@ -4,7 +4,7 @@ import type { CreateVideoOptions } from '../../core/openaiCompatibleFactory';
 import type { CreateVideoPayload, CreateVideoResponse } from '../../types/video';
 import { resolveMappedModelId } from '../../utils/modelIdMapping';
 
-const log = createDebug('lobe-video:minimax');
+const log = createDebug('orvilo-video:minimax');
 
 interface MiniMaxVideoCreateResponse {
   base_resp?: {

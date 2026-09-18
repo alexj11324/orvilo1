@@ -120,17 +120,17 @@ describe('UserToolsSection — Workspace/User tool count', () => {
   it('does not count Web Browsing even when a legacy plugin entry is pinned', () => {
     mocks.agentConfig = {
       plugins: [
-        { identifier: 'lobe-web-browsing', mode: 'pinned' },
+        { identifier: 'orvilo-web-browsing', mode: 'pinned' },
         { identifier: 'some-user-plugin', mode: 'pinned' },
       ],
     };
     mocks.toolState.builtinTools = [
       {
         hidden: true,
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         manifest: {
           api: [],
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           meta: { title: 'Web Browsing' },
           systemRole: '',
         },
@@ -146,15 +146,15 @@ describe('UserToolsSection — Workspace/User tool count', () => {
   it('does not count pinned Skill Store in auto activation mode', () => {
     mocks.agentConfig = {
       chatConfig: { skillActivateMode: 'auto' },
-      plugins: [{ identifier: 'lobe-skill-store', mode: 'pinned' }],
+      plugins: [{ identifier: 'orvilo-skill-store', mode: 'pinned' }],
     };
     mocks.toolState.builtinTools = [
       {
         hidden: true,
-        identifier: 'lobe-skill-store',
+        identifier: 'orvilo-skill-store',
         manifest: {
           api: [],
-          identifier: 'lobe-skill-store',
+          identifier: 'orvilo-skill-store',
           meta: { title: 'Skill Store' },
           systemRole: '',
         },
@@ -170,15 +170,15 @@ describe('UserToolsSection — Workspace/User tool count', () => {
   it('counts pinned Skill Store in manual activation mode', () => {
     mocks.agentConfig = {
       chatConfig: { skillActivateMode: 'manual' },
-      plugins: [{ identifier: 'lobe-skill-store', mode: 'pinned' }],
+      plugins: [{ identifier: 'orvilo-skill-store', mode: 'pinned' }],
     };
     mocks.toolState.builtinTools = [
       {
         hidden: true,
-        identifier: 'lobe-skill-store',
+        identifier: 'orvilo-skill-store',
         manifest: {
           api: [],
-          identifier: 'lobe-skill-store',
+          identifier: 'orvilo-skill-store',
           meta: { title: 'Skill Store' },
           systemRole: '',
         },

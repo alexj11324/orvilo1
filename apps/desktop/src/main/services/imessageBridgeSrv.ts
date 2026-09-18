@@ -375,9 +375,9 @@ export default class ImessageBridgeService extends ServiceModule {
       try {
         detail = await response.text();
       } catch (error) {
-        logger.warn('Failed to read LobeHub webhook error response:', error);
+        logger.warn('Failed to read Orvilo webhook error response:', error);
       }
-      throw new Error(detail || `LobeHub webhook failed with HTTP ${response.status}`);
+      throw new Error(detail || `Orvilo webhook failed with HTTP ${response.status}`);
     }
   }
 }

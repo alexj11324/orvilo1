@@ -13,8 +13,8 @@ export interface StoredSettings {
   serverUrl?: string;
 }
 
-const LOBEHUB_DIR_NAME = resolveCliDirName();
-const SETTINGS_DIR = path.join(os.homedir(), LOBEHUB_DIR_NAME);
+const ORVILO_DIR_NAME = resolveCliDirName();
+const SETTINGS_DIR = path.join(os.homedir(), ORVILO_DIR_NAME);
 const SETTINGS_FILE = path.join(SETTINGS_DIR, 'settings.json');
 // Kept in its own file rather than settings.json, which is unlinked whenever
 // all server/gateway URLs are default — the connectionId must persist regardless.
@@ -34,7 +34,7 @@ export function normalizeUrl(url: string | undefined): string | undefined {
 }
 
 export function resolveServerUrl(): string {
-  const envServerUrl = normalizeUrl(process.env.LOBEHUB_SERVER);
+  const envServerUrl = normalizeUrl(process.env.ORVILO_SERVER);
   const settingsServerUrl = normalizeUrl(loadSettings()?.serverUrl);
 
   return envServerUrl || settingsServerUrl || OFFICIAL_SERVER_URL;
@@ -75,7 +75,7 @@ export function saveSettings(settings: StoredSettings): void {
  * the (machine-derived, shared-across-clients) deviceId so the gateway only
  * replaces this install's own stale socket — a co-running desktop app on the
  * same machine keeps its connection. Persisted under the CLI home dir, so a
- * separate `LOBEHUB_CLI_HOME` (e.g. a dev build) naturally gets its own id.
+ * separate `ORVILO_CLI_HOME` (e.g. a dev build) naturally gets its own id.
  */
 export function loadOrCreateConnectionId(): string {
   try {

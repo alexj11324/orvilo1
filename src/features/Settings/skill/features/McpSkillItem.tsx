@@ -14,7 +14,7 @@ import NavItem from '@/features/NavPanel/components/NavItem';
 import { createPluginDetailModal } from '@/features/PluginDetailModal';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
-import { type LobeToolType } from '@/types/tool/tool';
+import { type OrviloToolType } from '@/types/tool/tool';
 
 import Actions from './Actions';
 import { styles } from './style';
@@ -27,7 +27,7 @@ interface McpSkillItemProps {
   onSelect?: () => void;
   runtimeType?: string;
   title: string;
-  type: LobeToolType;
+  type: OrviloToolType;
 }
 
 const McpSkillItem = memo<McpSkillItemProps>(

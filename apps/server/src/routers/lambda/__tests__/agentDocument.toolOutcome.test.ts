@@ -33,6 +33,7 @@ vi.mock('@/database/models/agentDocuments', async (importOriginal) => {
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       findOwnTopicById: agentDocumentMocks.findTopicById,
     };
   }),

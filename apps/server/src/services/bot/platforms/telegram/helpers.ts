@@ -14,7 +14,7 @@ export function extractBotId(botToken: string): string {
   return botToken.slice(0, colonIndex);
 }
 
-const TELEGRAM_WEBHOOK_SECRET_FALLBACK_KEY = 'lobehub-telegram-webhook-secret';
+const TELEGRAM_WEBHOOK_SECRET_FALLBACK_KEY = 'orvilo-telegram-webhook-secret';
 
 /**
  * Derive a deterministic webhook secret for a bot from its token.

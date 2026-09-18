@@ -5,9 +5,9 @@
  * plus any producer-mounted extra tools (e.g. in-app browser control).
  */
 export {
-  LobeBuiltinMcpServer,
-  type LobeBuiltinMcpServerOptions,
   type McpExtraTool,
   type McpToolResult,
+  OrviloBuiltinMcpServer,
+  type OrviloBuiltinMcpServerOptions,
   type StartedServer,
-} from './LobeBuiltinMcpServer';
+} from './OrviloBuiltinMcpServer';

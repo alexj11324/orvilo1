@@ -1,7 +1,15 @@
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { Command } from 'cmdk';
-import { Bot, FeatherIcon, LibraryBig, MessageSquarePlusIcon, Monitor, Star } from 'lucide-react';
+import {
+  Bot,
+  FeatherIcon,
+  LibraryBig,
+  ListTodo,
+  MessageSquarePlusIcon,
+  Monitor,
+  Star,
+} from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,6 +38,7 @@ const MainMenu = memo(() => {
     handleCreateSession,
     handleCreateTopic,
     handleCreateLibrary,
+    handleCreateTask,
     handleNavigate,
     handleExternalLink,
     handleCreateAgentTeam,
@@ -40,6 +49,19 @@ const MainMenu = memo(() => {
       <ContextCommands />
 
       <Command.Group>
+        {/* Creating a task leads the list: the product's default working surface
+            is the task board, so the palette's first command should be the one
+            that puts work into it. */}
+        <CommandItem
+          disabled={!canCreate}
+          icon={<ListTodo />}
+          keywords={['task', 'todo', 'create', 'new', 'kanban', 'board']}
+          value="create new task"
+          onSelect={handleCreateTask}
+        >
+          {t('cmdk.newTask')}
+        </CommandItem>
+
         <CommandItem
           disabled={!canCreate}
           icon={<Bot />}

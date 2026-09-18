@@ -44,7 +44,7 @@ export const GetAgentInfoInspector = memo<
     return (
       <div className={styles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-group-agent-builder.apiName.getAgentInfo')}
+          {t('builtins.orvilo-group-agent-builder.apiName.getAgentInfo')}
         </span>
       </div>
     );
@@ -63,7 +63,7 @@ export const GetAgentInfoInspector = memo<
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
       >
-        {t('builtins.lobe-group-agent-builder.apiName.getAgentInfo')}:
+        {t('builtins.orvilo-group-agent-builder.apiName.getAgentInfo')}:
       </span>
       {avatar && <Avatar avatar={avatar} shape={'square'} size={20} title={title || undefined} />}
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>

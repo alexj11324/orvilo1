@@ -31,7 +31,7 @@ describe('resolveTemplateIcon', () => {
   it('falls back to a required connector provider icon (component form)', () => {
     const spec = resolveTemplateIcon(
       make({
-        connectors: [{ identifier: 'github', required: true, source: 'lobehub' }],
+        connectors: [{ identifier: 'github', required: true, source: 'orvilo' }],
         interests: ['coding'],
       }),
       interestMap,
@@ -55,8 +55,8 @@ describe('resolveTemplateIcon', () => {
     const spec = resolveTemplateIcon(
       make({
         connectors: [
-          { identifier: 'notion', required: false, source: 'lobehub' },
-          { identifier: 'github', required: true, source: 'lobehub' },
+          { identifier: 'notion', required: false, source: 'orvilo' },
+          { identifier: 'github', required: true, source: 'orvilo' },
         ],
       }),
       interestMap,
@@ -67,7 +67,7 @@ describe('resolveTemplateIcon', () => {
   it('falls back to optional connector icon when required is absent', () => {
     const spec = resolveTemplateIcon(
       make({
-        connectors: [{ identifier: 'notion', required: false, source: 'lobehub' }],
+        connectors: [{ identifier: 'notion', required: false, source: 'orvilo' }],
         interests: ['coding'],
       }),
       interestMap,
@@ -80,8 +80,8 @@ describe('resolveTemplateIcon', () => {
     const spec = resolveTemplateIcon(
       make({
         connectors: [
-          { identifier: 'nonexistent-x', required: true, source: 'lobehub' },
-          { identifier: 'notion', required: false, source: 'lobehub' },
+          { identifier: 'nonexistent-x', required: true, source: 'orvilo' },
+          { identifier: 'notion', required: false, source: 'orvilo' },
         ],
       }),
       interestMap,

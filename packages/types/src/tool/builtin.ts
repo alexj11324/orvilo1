@@ -169,7 +169,7 @@ export const PluginApiWorkConfigSchema = z.object({
   resourceType: z.enum(['document', 'task']),
 });
 
-export interface LobeChatPluginApi {
+export interface OrviloPluginApi {
   /**
    * Default execution timeout in milliseconds for this API.
    *
@@ -229,7 +229,7 @@ export interface LobeChatPluginApi {
   work?: PluginApiWorkConfig;
 }
 
-export const LobeChatPluginApiSchema = z.object({
+export const OrviloPluginApiSchema = z.object({
   defaultTimeoutMs: z.number().int().positive().optional(),
   description: z.string(),
   humanIntervention: ExtendedHumanInterventionConfigSchema.optional(),
@@ -242,7 +242,7 @@ export const LobeChatPluginApiSchema = z.object({
 });
 
 export interface BuiltinToolManifest {
-  api: LobeChatPluginApi[];
+  api: OrviloPluginApi[];
 
   /**
    * Supported execution environments for this tool.
@@ -282,7 +282,7 @@ export interface BuiltinToolManifest {
 }
 
 export const BuiltinToolManifestSchema = z.object({
-  api: z.array(LobeChatPluginApiSchema),
+  api: z.array(OrviloPluginApiSchema),
   executors: z.array(z.enum(['client', 'server'])).optional(),
   humanIntervention: ExtendedHumanInterventionConfigSchema.optional(),
   identifier: z.string(),
@@ -303,7 +303,7 @@ export const BuiltinToolManifestSchema = z.object({
 export interface BuiltinToolResolveContext {
   /**
    * IM platform the run originates from (bot conversations only). Lets platform-
-   * aware tools trim APIs the platform can't fulfil — e.g. the `lobe-message`
+   * aware tools trim APIs the platform can't fulfil — e.g. the `orvilo-message`
    * tool drops `readMessages` on WeChat, which has no history-read API and would
    * otherwise throw `PlatformUnsupportedError` after the model dutifully calls it.
    */
@@ -311,7 +311,7 @@ export interface BuiltinToolResolveContext {
     /** Platform id (e.g. `wechat`, `discord`). */
     id: string;
     /**
-     * `lobe-message` API names this platform does not support. Sourced from the
+     * `orvilo-message` API names this platform does not support. Sourced from the
      * platform definition (`PlatformDefinition.unsupportedMessageApis`) so the
      * manifest trim stays in lock-step with the runtime that throws.
      */
@@ -320,7 +320,7 @@ export interface BuiltinToolResolveContext {
   /**
    * Where this run executes, derived from the resolved `ExecutionPlan`. The
    * routed desktop-local target stays `local`; other plans mirror their `kind`
-   * (`device` / `device-unrouted` / `sandbox` / `none`). Lets exec-capable tools (e.g. lobe-skills)
+   * (`device` / `device-unrouted` / `sandbox` / `none`). Lets exec-capable tools (e.g. orvilo-skills)
    * rewrite their API descriptions per environment — most notably
    * `device-unrouted`, where the user picked their local device but it is
    * offline and commands silently fall back to the cloud sandbox. Kept as a
@@ -358,7 +358,7 @@ export type BuiltinManifestResolver = (
   context: BuiltinToolResolveContext,
 ) => BuiltinToolManifest | null;
 
-export interface LobeBuiltinTool {
+export interface OrviloBuiltinTool {
   /** Identity (hoisted from `manifest.meta`): icon shown in UI lists. */
   avatar?: string;
   /** Identity (hoisted from `manifest.meta`): short description shown in UI. */
@@ -385,7 +385,7 @@ export interface LobeBuiltinTool {
   type: 'builtin';
 }
 
-export const LobeBuiltinToolSchema = z.object({
+export const OrviloBuiltinToolSchema = z.object({
   discoverable: z.boolean().optional(),
   hidden: z.boolean().optional(),
   identifier: z.string(),
@@ -700,14 +700,14 @@ export interface BuiltinToolContext {
 
   /**
    * Step context computed at the beginning of each step
-   * Contains dynamic state like lobe-agent todos that changes between steps
+   * Contains dynamic state like orvilo-agent todos that changes between steps
    * Computed by AgentRuntime and passed to Tool Executors
    */
   stepContext?: RuntimeStepContext;
 
   /**
    * Sub-agent execution callback injected by the client runtime.
-   * Lets a tool (e.g. lobe-agent.callSubAgent) recursively run a sub-agent in
+   * Lets a tool (e.g. orvilo-agent.callSubAgent) recursively run a sub-agent in
    * an isolated thread using the *current* runtime, then resume as a normal
    * tool result. Only present during client-mode tool execution.
    */
@@ -1010,7 +1010,7 @@ export interface IBuiltinToolExecutor {
   hasApi: (apiName: string) => boolean;
 
   /**
-   * The tool identifier (e.g., 'lobe-group-management')
+   * The tool identifier (e.g., 'orvilo-group-management')
    */
   readonly identifier: string;
 
@@ -1049,7 +1049,7 @@ export interface IBuiltinToolExecutor {
 export interface ToolHookContext {
   /** API name being invoked (e.g. `'deleteTask'`). */
   apiName: string;
-  /** Tool identifier (e.g. `'lobe-task'`). */
+  /** Tool identifier (e.g. `'orvilo-task'`). */
   identifier: string;
   /**
    * Parsed tool arguments. Arrives JSON-decoded when the event comes off the
@@ -1102,7 +1102,7 @@ export abstract class BaseExecutor<
   TApiEnum extends Record<string, string>,
 > implements IBuiltinToolExecutor {
   /**
-   * The tool identifier (e.g., 'lobe-group-management')
+   * The tool identifier (e.g., 'orvilo-group-management')
    */
   abstract readonly identifier: string;
 

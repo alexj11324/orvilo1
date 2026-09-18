@@ -1,5 +1,5 @@
 /** Builtin identifier used to route self-feedback intent declarations. */
-export const SELF_FEEDBACK_INTENT_IDENTIFIER = 'lobe-self-feedback-intent';
+export const SELF_FEEDBACK_INTENT_IDENTIFIER = 'orvilo-self-feedback-intent';
 
 /** Runtime API name used by the injected self-feedback intent tool. */
 export const SELF_FEEDBACK_INTENT_API_NAME = 'declareSelfFeedbackIntent';
@@ -133,19 +133,16 @@ export interface DeclareSelfFeedbackIntentResult {
 }
 
 export type DeclareSelfFeedbackIntentStateReason =
-  | DeclareSelfFeedbackIntentRejectionReason
-  | 'missing_context'
-  | 'runtime_error'
-  | null;
+  DeclareSelfFeedbackIntentRejectionReason | 'missing_context' | 'runtime_error' | null;
 
 /** State persisted for inspector display after one self-feedback declaration. */
 export interface DeclareSelfFeedbackIntentState {
   /** Whether the declaration crossed the Agent Signal enqueue boundary. */
   accepted: boolean;
-  /** Missing context keys when the runtime cannot emit the declaration. */
-  required?: string[];
   /** Rejection or runtime reason. */
   reason: DeclareSelfFeedbackIntentStateReason;
+  /** Missing context keys when the runtime cannot emit the declaration. */
+  required?: string[];
   /** Stable source id for accepted declarations. */
   sourceId?: null | string;
   /** Evidence strength assigned by the declaration service. */

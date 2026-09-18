@@ -35,7 +35,7 @@ export const SetTaskVerifyInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-task.apiName.setTaskVerify')}
+        {t('builtins.orvilo-task.apiName.setTaskVerify')}
       </span>
       {identifier && <span className={styles.identifierChip}>{identifier}</span>}
     </div>

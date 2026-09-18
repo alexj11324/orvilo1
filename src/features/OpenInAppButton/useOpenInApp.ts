@@ -40,7 +40,7 @@ export const useOpenInApp = (workingDirectory: string): UseOpenInAppResult => {
   const updatePreference = useUserStore((s) => s.updatePreference);
 
   const defaultApp = useMemo(
-    () => resolveDefaultApp(userDefault, installedIds, window.lobeEnv?.platform ?? 'darwin'),
+    () => resolveDefaultApp(userDefault, installedIds, window.orviloEnv?.platform ?? 'darwin'),
     [userDefault, installedIds],
   );
 

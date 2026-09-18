@@ -14,7 +14,7 @@ const run = async () => {
   if (options.mode === 'apply') assertElasticsearchCutover(process.env.FTS_SEARCH_PROVIDER);
 
   const client = new Client({
-    application_name: 'lobehub-pg-search-cleanup',
+    application_name: 'orvilo-pg-search-cleanup',
     connectionString: databaseUrl,
     connectionTimeoutMillis: 8000,
     statement_timeout: 600_000,

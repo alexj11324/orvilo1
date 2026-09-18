@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import type * as LobechatConstModule from '@orvilo/const';
+import type * as OrvilochatConstModule from '@orvilo/const';
 import type * as ElectronClientIpcModule from '@orvilo/electron-client-ipc';
 import type { HeterogeneousProviderConfig } from '@orvilo/types';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -31,7 +31,7 @@ const effectiveAgencyConfig = vi.hoisted(() => ({
 }));
 
 vi.mock('@orvilo/const', async (importOriginal) => ({
-  ...(await importOriginal<typeof LobechatConstModule>()),
+  ...(await importOriginal<typeof OrvilochatConstModule>()),
   isDesktop: true,
 }));
 

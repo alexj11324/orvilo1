@@ -9,7 +9,7 @@ export default defineFixtures({
       args: {
         base: 'canary',
         head: 'fix/codex-github-render',
-        repository_full_name: 'lobehub/lobehub',
+        repository_full_name: 'alexj11324/orvilo1',
         title: 'Render Codex GitHub MCP tool calls',
       },
       content: JSON.stringify({
@@ -20,19 +20,19 @@ export default defineFixtures({
         mergeable: true,
         merged: false,
         number: 16430,
-        repository_full_name: 'lobehub/lobehub',
+        repository_full_name: 'alexj11324/orvilo1',
         state: 'open',
         title: 'Render Codex GitHub MCP tool calls',
         updated_at: '2026-06-29T08:20:00Z',
-        url: 'https://github.com/lobehub/lobehub/pull/16430',
+        url: 'https://github.com/alexj11324/orvilo1/pull/16430',
       }),
     }),
     run_command: single({
       args: {
-        command: 'gh api /repos/lobehub/lobe-chat/issues?state=open',
+        command: 'gh api /repos/alexj11324/orvilo1/issues?state=open',
       },
       pluginState: {
-        command: 'gh api /repos/lobehub/lobe-chat/issues?state=open',
+        command: 'gh api /repos/alexj11324/orvilo1/issues?state=open',
         exitCode: 0,
         success: true,
       },

@@ -59,7 +59,7 @@ export const SetTaskVerifyRender = memo<
   const statusBadge = showStatus ? (
     <span className={enabled ? styles.onBadge : styles.offBadge}>
       <Icon icon={enabled ? Check : X} size={13} />
-      {t(enabled ? 'builtins.lobe-task.verify.on' : 'builtins.lobe-task.verify.off')}
+      {t(enabled ? 'builtins.orvilo-task.verify.on' : 'builtins.orvilo-task.verify.off')}
     </span>
   ) : undefined;
 
@@ -69,7 +69,7 @@ export const SetTaskVerifyRender = memo<
       icon={ShieldCheck}
       iconColor={enabled === false ? cssVar.colorTextTertiary : cssVar.colorSuccess}
       identifier={identifier}
-      title={t('builtins.lobe-task.apiName.setTaskVerify')}
+      title={t('builtins.orvilo-task.apiName.setTaskVerify')}
     >
       {requirement ? (
         <Markdown fontSize={12} variant={'chat'}>

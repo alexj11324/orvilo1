@@ -1,4 +1,4 @@
-export const LOBE_LOCAL_FILE_LINK_TAG = 'lobeLocalFileLink';
+export const ORVILO_LOCAL_FILE_LINK_TAG = 'orviloLocalFileLink';
 
 export interface ParsedLocalFileHref {
   column?: number;

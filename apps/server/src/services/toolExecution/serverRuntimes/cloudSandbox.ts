@@ -15,7 +15,7 @@ import {
 import { resolveContentWorkspaceId } from './resolveWorkspaceScope';
 import { type ServerRuntimeRegistration } from './types';
 
-const log = debug('lobe-server:cloud-sandbox');
+const log = debug('orvilo-server:cloud-sandbox');
 
 /** Sandbox tools whose `command` param can carry an `lh` invocation. */
 const SHELL_TOOL_NAMES = new Set(['execScript', 'runCommand']);
@@ -31,9 +31,9 @@ const SHELL_TOOL_NAMES = new Set(['execScript', 'runCommand']);
  *
  * `isShareVisitor` (set from `context.agentShareVisitor`, see the factory
  * below) disables the shim entirely: a share visitor's run executes under the
- * creator's identity, so the shim's `lh() { LOBEHUB_JWT=… }` prelude would
+ * creator's identity, so the shim's `lh() { ORVILO_JWT=… }` prelude would
  * otherwise hand a JWT scoped to the CREATOR's own account into a shell the
- * VISITOR fully controls. `lobe-cloud-sandbox` is allowlisted for share
+ * VISITOR fully controls. `orvilo-cloud-sandbox` is allowlisted for share
  * visitors specifically because this shim is skipped for them — see
  * `AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS` in `@orvilo/builtin-tools`.
  */

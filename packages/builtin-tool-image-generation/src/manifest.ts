@@ -21,7 +21,7 @@ export const ImageGenerationManifest: BuiltinToolManifest = {
           },
           provider: {
             description:
-              'Optional provider id to inspect, for example "lobehub", "openai", or "fal".',
+              'Optional provider id to inspect, for example "orvilo", "openai", or "fal".',
             type: 'string',
           },
         },
@@ -143,7 +143,7 @@ export const ImageGenerationManifest: BuiltinToolManifest = {
   meta: {
     avatar: '🎨',
     description:
-      'Generate images from chat through LobeHub image generation models, including models that are not native image-output chat models.',
+      'Generate images from chat through Orvilo image generation models, including models that are not native image-output chat models.',
     title: 'Image Generation',
   },
   systemRole: systemPrompt,

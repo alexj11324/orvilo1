@@ -19,7 +19,7 @@ export const GetPageContentInspector = memo<BuiltinInspectorProps>(({ isArgument
   return (
     <div className={oneLineEllipsis}>
       <span className={cx(isArgumentsStreaming ? shinyTextStyles.shinyText : styles.done)}>
-        {t('builtins.lobe-page-agent.apiName.getPageContent')}
+        {t('builtins.orvilo-page-agent.apiName.getPageContent')}
       </span>
     </div>
   );

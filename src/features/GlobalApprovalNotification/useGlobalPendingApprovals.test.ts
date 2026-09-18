@@ -10,7 +10,7 @@ import { collectGlobalApprovals } from './useGlobalPendingApprovals';
 const pendingToolMessage = (id: string, toolCallId: string): UIChatMessage =>
   ({
     id,
-    plugin: { apiName: 'runCommand', arguments: '{}', identifier: 'lobe-local-system' },
+    plugin: { apiName: 'runCommand', arguments: '{}', identifier: 'orvilo-local-system' },
     pluginIntervention: { status: 'pending' },
     role: 'tool',
     tool_call_id: toolCallId,
@@ -116,7 +116,7 @@ describe('collectGlobalApprovals', () => {
     const msg = {
       agentId: 'agt_a',
       id: 'msg_1',
-      plugin: { apiName: 'runCommand', arguments: '{}', identifier: 'lobe-local-system' },
+      plugin: { apiName: 'runCommand', arguments: '{}', identifier: 'orvilo-local-system' },
       pluginIntervention: { status: 'pending' },
       role: 'tool',
       tool_call_id: 'call_1',
@@ -134,7 +134,7 @@ describe('collectGlobalApprovals', () => {
     const key = messageMapKey(ctx);
     const resolved = {
       id: 'msg_1',
-      plugin: { apiName: 'runCommand', arguments: '{}', identifier: 'lobe-local-system' },
+      plugin: { apiName: 'runCommand', arguments: '{}', identifier: 'orvilo-local-system' },
       pluginIntervention: { status: 'approved' },
       role: 'tool',
       tool_call_id: 'call_1',

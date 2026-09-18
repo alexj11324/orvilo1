@@ -1,5 +1,5 @@
 import { LOADING_FLAT } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { idGenerator } from '@orvilo/database';
 import { evaluate } from '@orvilo/eval-rubric';
 import type {
@@ -88,7 +88,7 @@ const stableStringify = (value: unknown): string => {
   return `{${entries.join(',')}}`;
 };
 
-const log = debug('lobe-server:eval-run-service');
+const log = debug('orvilo-server:eval-run-service');
 
 interface ResumableCaseTarget {
   caseStatus?: string | null;
@@ -123,7 +123,7 @@ const resetResumedThreadResult = (thread: EvalThreadResult): EvalThreadResult =>
 });
 
 export class AgentEvalRunService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly runModel: AgentEvalRunModel;
   private readonly benchmarkModel: AgentEvalBenchmarkModel;
@@ -138,7 +138,7 @@ export class AgentEvalRunService {
 
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

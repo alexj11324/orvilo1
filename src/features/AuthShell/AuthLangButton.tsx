@@ -6,7 +6,7 @@ import { GlobeIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { LOBE_LOCALE_COOKIE } from '@/const/locale';
+import { ORVILO_LOCALE_COOKIE } from '@/const/locale';
 import { localeOptions, normalizeLocale } from '@/locales/resources';
 
 const setCookieSimple = (key: string, value: string, days: number) => {
@@ -35,7 +35,7 @@ const AuthLangButton = memo(() => {
           if (!checked) return;
           i18n.changeLanguage(item.value);
           document.documentElement.lang = item.value;
-          setCookieSimple(LOBE_LOCALE_COOKIE, item.value, 365);
+          setCookieSimple(ORVILO_LOCALE_COOKIE, item.value, 365);
         },
         type: 'checkbox',
       })),

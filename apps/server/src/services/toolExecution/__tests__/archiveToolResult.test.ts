@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TopicDocumentModel } from '@/database/models/topicDocument';
@@ -16,7 +16,7 @@ vi.mock('@/database/models/topicDocument', () => ({
 }));
 
 describe('archiveToolResultIfNeeded', () => {
-  const db = {} as LobeChatDatabase;
+  const db = {} as OrviloDatabase;
   const mockVfsService = {
     mkdir: vi.fn(),
     read: vi.fn(),
@@ -94,7 +94,7 @@ describe('archiveToolResultIfNeeded', () => {
     expect(result.archivePath).toBe('./.tool-results/topic-1_call_1.txt');
     expect(result.content).toContain('01234');
     expect(result.content).toContain('./.tool-results/topic-1_call_1.txt');
-    expect(result.content).toContain('lobe-agent-documents');
+    expect(result.content).toContain('orvilo-agent-documents');
     expect(result.content).toContain('readDocument');
     expect(result.content).toContain('agent-doc-1');
   });
@@ -152,11 +152,11 @@ describe('archiveToolResultIfNeeded', () => {
     expect(AgentDocumentVfsService).not.toHaveBeenCalled();
   });
 
-  it('bypasses archive entirely for lobe-agent-documents tool results', async () => {
+  it('bypasses archive entirely for orvilo-agent-documents tool results', async () => {
     const result = await archiveToolResultIfNeeded({
       agentId: 'agent-1',
       content: 'x'.repeat(1000),
-      identifier: 'lobe-agent-documents',
+      identifier: 'orvilo-agent-documents',
       limit: 5,
       serverDB: db,
       toolCallId: 'call_1',

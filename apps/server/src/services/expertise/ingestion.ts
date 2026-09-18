@@ -20,7 +20,7 @@ import { z } from 'zod';
 
 import { AgentSignalReviewContextModel } from '@/database/models/agentSignal/reviewContext';
 import { ExpertiseModel } from '@/database/models/expertise';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { notShareVisitorMessage, notShareVisitorTopic } from '@/database/utils/shareVisitor';
 import type { CompletionCallbackParams } from '@/server/services/agentSignal/policies/completionPolicy';
 import { AiGenerationService } from '@/server/services/aiGeneration';
@@ -99,7 +99,7 @@ interface ExpertiseCompletionInput {
  */
 export class ExpertiseIngestionService {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}

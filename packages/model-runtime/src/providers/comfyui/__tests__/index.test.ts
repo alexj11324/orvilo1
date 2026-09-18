@@ -4,15 +4,15 @@ import { createBasicAuthCredentials } from '@orvilo/utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CreateImagePayload } from '../../../types/image';
-import { LobeComfyUI } from '../index';
+import { OrviloComfyUI } from '../index';
 
 // Mock debug
 vi.mock('debug', () => ({
   default: vi.fn(() => vi.fn()),
 }));
 
-describe('LobeComfyUI Runtime', () => {
-  let runtime: LobeComfyUI;
+describe('OrviloComfyUI Runtime', () => {
+  let runtime: OrviloComfyUI;
   let mockFetch: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -30,7 +30,7 @@ describe('LobeComfyUI Runtime', () => {
 
   describe('constructor', () => {
     it('should initialize with default options', () => {
-      runtime = new LobeComfyUI();
+      runtime = new OrviloComfyUI();
 
       expect(runtime.baseURL).toBe('http://localhost:8188');
     });
@@ -40,7 +40,7 @@ describe('LobeComfyUI Runtime', () => {
         baseURL: 'https://custom.comfyui.com',
       };
 
-      runtime = new LobeComfyUI(options);
+      runtime = new OrviloComfyUI(options);
 
       expect(runtime.baseURL).toBe('https://custom.comfyui.com');
     });
@@ -49,7 +49,7 @@ describe('LobeComfyUI Runtime', () => {
       const originalEnv = process.env.COMFYUI_DEFAULT_URL;
       process.env.COMFYUI_DEFAULT_URL = 'https://env.comfyui.com';
 
-      runtime = new LobeComfyUI();
+      runtime = new OrviloComfyUI();
 
       expect(runtime.baseURL).toBe('https://env.comfyui.com');
 
@@ -64,7 +64,7 @@ describe('LobeComfyUI Runtime', () => {
 
   describe('getAuthHeaders', () => {
     it('should return undefined for no auth', () => {
-      runtime = new LobeComfyUI({ authType: 'none' });
+      runtime = new OrviloComfyUI({ authType: 'none' });
 
       const headers = runtime.getAuthHeaders();
 
@@ -72,7 +72,7 @@ describe('LobeComfyUI Runtime', () => {
     });
 
     it('should return undefined for default auth type', () => {
-      runtime = new LobeComfyUI();
+      runtime = new OrviloComfyUI();
 
       const headers = runtime.getAuthHeaders();
 
@@ -86,7 +86,7 @@ describe('LobeComfyUI Runtime', () => {
         password: 'testpass',
       };
 
-      runtime = new LobeComfyUI(options);
+      runtime = new OrviloComfyUI(options);
 
       const headers = runtime.getAuthHeaders();
 
@@ -100,7 +100,7 @@ describe('LobeComfyUI Runtime', () => {
         authType: 'basic',
       };
 
-      runtime = new LobeComfyUI(options);
+      runtime = new OrviloComfyUI(options);
 
       const headers = runtime.getAuthHeaders();
 
@@ -113,7 +113,7 @@ describe('LobeComfyUI Runtime', () => {
         apiKey: 'test-api-key',
       };
 
-      runtime = new LobeComfyUI(options);
+      runtime = new OrviloComfyUI(options);
 
       const headers = runtime.getAuthHeaders();
 
@@ -127,7 +127,7 @@ describe('LobeComfyUI Runtime', () => {
         authType: 'bearer',
       };
 
-      runtime = new LobeComfyUI(options);
+      runtime = new OrviloComfyUI(options);
 
       const headers = runtime.getAuthHeaders();
 
@@ -145,7 +145,7 @@ describe('LobeComfyUI Runtime', () => {
         customHeaders,
       };
 
-      runtime = new LobeComfyUI(options);
+      runtime = new OrviloComfyUI(options);
 
       const headers = runtime.getAuthHeaders();
 
@@ -157,7 +157,7 @@ describe('LobeComfyUI Runtime', () => {
         authType: 'custom',
       };
 
-      runtime = new LobeComfyUI(options);
+      runtime = new OrviloComfyUI(options);
 
       const headers = runtime.getAuthHeaders();
 
@@ -167,7 +167,7 @@ describe('LobeComfyUI Runtime', () => {
 
   describe('createImage', () => {
     beforeEach(() => {
-      runtime = new LobeComfyUI({
+      runtime = new OrviloComfyUI({
         baseURL: 'https://test.comfyui.com',
         authType: 'bearer',
         apiKey: 'test-key',
@@ -377,7 +377,7 @@ describe('LobeComfyUI Runtime', () => {
       };
 
       // Test with basic auth
-      runtime = new LobeComfyUI({
+      runtime = new OrviloComfyUI({
         baseURL: 'https://test.comfyui.com',
         authType: 'basic',
         username: 'testuser',
@@ -411,7 +411,7 @@ describe('LobeComfyUI Runtime', () => {
       };
 
       // Test with no auth
-      runtime = new LobeComfyUI({
+      runtime = new OrviloComfyUI({
         baseURL: 'https://test.comfyui.com',
         authType: 'none',
       });
@@ -558,15 +558,15 @@ describe('LobeComfyUI Runtime', () => {
   });
 
   describe('runtime interface compliance', () => {
-    it('should implement LobeRuntimeAI interface', () => {
-      runtime = new LobeComfyUI();
+    it('should implement OrviloRuntimeAI interface', () => {
+      runtime = new OrviloComfyUI();
 
       expect(runtime).toHaveProperty('baseURL');
       expect(typeof runtime.createImage).toBe('function');
     });
 
     it('should implement AuthenticatedImageRuntime interface', () => {
-      runtime = new LobeComfyUI();
+      runtime = new OrviloComfyUI();
 
       expect(typeof runtime.getAuthHeaders).toBe('function');
     });

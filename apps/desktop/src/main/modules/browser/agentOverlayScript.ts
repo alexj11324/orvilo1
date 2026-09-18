@@ -19,12 +19,12 @@ export interface AgentOverlayLabels {
   cursor: string;
 }
 
-const OVERLAY_HOST_ID = '__lobe-agent-overlay';
+const OVERLAY_HOST_ID = '__orvilo-agent-overlay';
 
 /** Idempotent: creates the overlay if the current document doesn't have one. */
 const ensureOverlay = (labels: AgentOverlayLabels) => `((labels) => {
-  if (window.__lobeAgentOverlay && document.documentElement.contains(window.__lobeAgentOverlay.host)) {
-    window.__lobeAgentOverlay.labels = labels;
+  if (window.__orviloAgentOverlay && document.documentElement.contains(window.__orviloAgentOverlay.host)) {
+    window.__orviloAgentOverlay.labels = labels;
     return;
   }
 
@@ -87,7 +87,7 @@ const ensureOverlay = (labels: AgentOverlayLabels) => `((labels) => {
     label: root.querySelector('.label'),
     ripple: root.querySelector('.ripple'),
   };
-  window.__lobeAgentOverlay = api;
+  window.__orviloAgentOverlay = api;
 })(${JSON.stringify(labels)})`;
 
 export const overlayCursorScript = (
@@ -97,7 +97,7 @@ export const overlayCursorScript = (
   click: boolean,
 ) => `${ensureOverlay(labels)};
 ((x, y, click) => {
-  const o = window.__lobeAgentOverlay;
+  const o = window.__orviloAgentOverlay;
   if (!o) return;
   o.label.textContent = o.labels.cursor;
   o.cursor.style.left = x + 'px';
@@ -115,7 +115,7 @@ export const overlayControllingScript = (
   active: boolean,
 ) => `${ensureOverlay(labels)};
 ((active) => {
-  const o = window.__lobeAgentOverlay;
+  const o = window.__orviloAgentOverlay;
   if (!o) return;
   o.chipText.textContent = o.labels.controlling;
   o.chip.classList.toggle('on', active);
@@ -126,5 +126,5 @@ export const overlayControllingScript = (
 export const OVERLAY_REMOVE_SCRIPT = `(() => {
   const host = document.getElementById(${JSON.stringify(OVERLAY_HOST_ID)});
   if (host) host.remove();
-  delete window.__lobeAgentOverlay;
+  delete window.__orviloAgentOverlay;
 })()`;

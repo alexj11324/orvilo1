@@ -6,12 +6,12 @@ import { timestamps } from './_helpers';
 /**
  * System-level (deployment-wide) bot provider credentials. Distinct from
  * `agent_bot_providers` (per-user-per-agent) — this table holds the App-level
- * credentials for the LobeHub-distributed messenger bots that any user can
+ * credentials for the Orvilo-distributed messenger bots that any user can
  * link their account to. Singleton per `platform` (one Discord App per
  * deployment, one Telegram bot, etc.).
  *
- * Replaces the env-var-based config (`LOBE_DISCORD_*`, `LOBE_TELEGRAM_*`,
- * `LOBE_SLACK_*`) so credentials become DB-backed and operations can be
+ * Replaces the env-var-based config (`ORVILO_DISCORD_*`, `ORVILO_TELEGRAM_*`,
+ * `ORVILO_SLACK_*`) so credentials become DB-backed and operations can be
  * managed from develop-center without redeploys.
  *
  * Per-tenant Slack workspace tokens still live in `messenger_installations`;
@@ -54,7 +54,7 @@ export const systemBotProviders = pgTable(
     /**
      * Per-platform tunable settings (e.g. Slack `connectionMode`). Plaintext
      * JSONB — the shape is owned by `PlatformDefinition.schema` in
-     * develop-center / lobehub-dev.
+     * develop-center / orvilo-dev.
      */
     settings: jsonb('settings').$type<Record<string, unknown>>().default({}).notNull(),
 

@@ -4,7 +4,7 @@ import { isDesktop } from './const';
 import { systemPrompt } from './systemRole';
 import { GroupManagementApiName } from './types';
 
-export const GroupManagementIdentifier = 'lobe-group-management';
+export const GroupManagementIdentifier = 'orvilo-group-management';
 
 export const GroupManagementManifest: BuiltinToolManifest = {
   api: [

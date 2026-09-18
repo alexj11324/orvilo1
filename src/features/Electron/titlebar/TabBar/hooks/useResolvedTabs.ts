@@ -45,7 +45,7 @@ export const resolveTab = (
     pickMeaningful(live?.title) ??
     pickMeaningful(tab.cached?.title) ??
     (titleKey ? t(titleKey, { ns: 'electron' }) : undefined) ??
-    t('navigation.lobehub', { ns: 'electron' });
+    t('navigation.orvilo', { ns: 'electron' });
 
   const avatar = pickMeaningful(live?.avatar) ?? pickMeaningful(tab.cached?.avatar);
   const backgroundColor =

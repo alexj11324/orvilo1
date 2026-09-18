@@ -115,7 +115,7 @@ const createRealBot = ({
     },
     ...(concurrency ? { concurrency } : {}),
     state: createMemoryState({ exclusiveLocks: !!concurrency }),
-    userName: 'lobehub',
+    userName: 'orvilo',
   } as any);
 
   patchSenderBatches(chatBot, isCommand);
@@ -166,7 +166,7 @@ describe('chat-sdk contract · adapter registry', () => {
 });
 
 describe('chat-sdk contract · Discord adapter members we reach into', () => {
-  // Every entry is a member some LobeHub code calls on the adapter instance
+  // Every entry is a member some Orvilo code calls on the adapter instance
   // rather than through the public Chat API. Removing or renaming any of them
   // upstream is a silent break, so they are pinned by name and arity.
   //
@@ -291,7 +291,7 @@ describe('chat-sdk contract · Discord thread recovery', () => {
       ),
     );
 
-  // LobeHub used to carry `patchDiscordThreadRecovery` for this: it caught the
+  // Orvilo used to carry `patchDiscordThreadRecovery` for this: it caught the
   // thrown 160004 and re-resolved the thread via `GET /channels/:id/messages/:id`.
   // `@chat-adapter/discord` adopted the same recovery in 4.24.0 — returning
   // `{ id: messageId }`, which is correct because a thread created from a

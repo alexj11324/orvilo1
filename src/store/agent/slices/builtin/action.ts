@@ -1,4 +1,4 @@
-import { type AgentItem, type LobeAgentConfig } from '@orvilo/types';
+import { type AgentItem, type OrviloAgentConfig } from '@orvilo/types';
 import { useLayoutEffect } from 'react';
 import { type SWRResponse } from 'swr';
 import { type PartialDeep } from 'type-fest';
@@ -42,7 +42,7 @@ export class BuiltinAgentSliceActionImpl {
     const scope = getCacheScope();
     const data = await agentService.getBuiltinAgent(slug);
     if (data?.id && scope === getCacheScope()) {
-      this.#get().internal_dispatchAgentMap(data.id, data as PartialDeep<LobeAgentConfig>);
+      this.#get().internal_dispatchAgentMap(data.id, data as PartialDeep<OrviloAgentConfig>);
       // Mirror useInitBuiltinAgent's hydration: keep builtinAgentIdMap in sync
       // so callers can rely on this as a real "ensure" path instead of just a
       // post-init refresh.
@@ -83,7 +83,7 @@ export class BuiltinAgentSliceActionImpl {
     useLayoutEffect(() => {
       if (context?.isLogin === false || !data?.id || scope !== getCacheScope()) return;
 
-      this.#get().internal_dispatchAgentMap(data.id, data as PartialDeep<LobeAgentConfig>);
+      this.#get().internal_dispatchAgentMap(data.id, data as PartialDeep<OrviloAgentConfig>);
       this.#set(
         { builtinAgentIdMap: { ...this.#get().builtinAgentIdMap, [slug]: data.id } },
         false,

@@ -1,5 +1,5 @@
 import { toast } from '@lobehub/ui/base-ui';
-import { LOBE_CHAT_CLOUD } from '@orvilo/business-const';
+import { ORVILO_CLOUD } from '@orvilo/business-const';
 import { t } from 'i18next';
 
 import { handleFileUploadError } from '@/business/client/handleFileUploadError';
@@ -194,7 +194,7 @@ export class FileUploadActionImpl {
             onStatusUpdate?.({ id: statusId, type: 'removeFile' });
             toast.info({
               description: t('upload.fileOnlySupportInServerMode', {
-                cloud: LOBE_CHAT_CLOUD,
+                cloud: ORVILO_CLOUD,
                 ext: normalizedFile.name.split('.').pop(),
                 ns: 'error',
               }),

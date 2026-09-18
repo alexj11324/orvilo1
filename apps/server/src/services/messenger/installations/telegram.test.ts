@@ -11,7 +11,7 @@ const { getMessengerTelegramConfig } = await import('@/config/messenger');
 
 const VALID_CONFIG = {
   botToken: 'tg-bot-token',
-  botUsername: 'lobehub_bot',
+  botUsername: 'orvilo_bot',
   webhookSecret: 'tg-secret',
 };
 
@@ -35,7 +35,7 @@ describe('TelegramInstallationStore.resolveByPayload', () => {
       tenantId: '',
     });
     expect(creds?.metadata).toEqual({
-      botUsername: 'lobehub_bot',
+      botUsername: 'orvilo_bot',
       webhookSecret: 'tg-secret',
     });
   });

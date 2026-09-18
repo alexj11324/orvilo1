@@ -2,7 +2,7 @@ import { Flexbox } from '@lobehub/ui';
 import React, { memo, useMemo, useState } from 'react';
 import { shallow } from 'zustand/shallow';
 
-import { ModelTag } from '@/components/LobeIcons';
+import { ModelTag } from '@/components/OrviloIcons';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { INBOX_SESSION_ID } from '@/const/session';
 import { isDesktop } from '@/const/version';
@@ -14,7 +14,7 @@ import { sessionHelpers } from '@/store/session/helpers';
 import { sessionMetaSelectors, sessionSelectors } from '@/store/session/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
-import { type LobeGroupSession } from '@/types/session';
+import { type OrviloGroupSession } from '@/types/session';
 
 import ListItem from '../../ListItem';
 import { openCreateGroupModal } from '../../Modals/CreateGroupModal';
@@ -45,7 +45,7 @@ const SessionItem = memo<SessionItemProps>(({ id }) => {
         sessionMetaSelectors.getAvatar(meta),
         meta.backgroundColor,
         session?.updatedAt,
-        (session as LobeGroupSession).members,
+        (session as OrviloGroupSession).members,
         session.type === 'agent' ? (session as any).model : undefined,
         session?.group,
         session.type,

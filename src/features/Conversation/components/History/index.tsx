@@ -5,7 +5,7 @@ import { ScrollText } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelTag } from '@/components/LobeIcons';
+import { ModelTag } from '@/components/OrviloIcons';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { useAgentStore } from '@/store/agent/store';
 

@@ -9,7 +9,7 @@ import type {
   UserPersonaDocumentHistoriesItem,
 } from '../../schemas';
 import { userPersonaDocumentHistories, userPersonaDocuments, users } from '../../schemas';
-import type { LobeChatDatabase, Transaction } from '../../type';
+import type { OrviloDatabase, Transaction } from '../../type';
 
 export interface UpsertUserPersonaParams {
   capturedAt?: Date;
@@ -178,10 +178,10 @@ export const upsertUserPersonaInTransaction = async (
 };
 
 export class UserPersonaModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }

@@ -3,7 +3,7 @@ import superjson from 'superjson';
 import urlJoin from 'url-join';
 
 import { appEnv } from '@/envs/app';
-import { LOBE_CHAT_AUTH_HEADER } from '@/envs/auth';
+import { ORVILO_AUTH_HEADER } from '@/envs/auth';
 import { createAsyncCallerFactory } from '@/libs/trpc/async';
 import { signInternalJWT } from '@/libs/trpc/utils/internalJwt';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
@@ -16,7 +16,7 @@ export const createAsyncServerClient = async (userId: string) => {
   const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
   const headers: Record<string, string> = {
     Authorization: token,
-    [LOBE_CHAT_AUTH_HEADER]: await gateKeeper.encrypt(JSON.stringify({ userId })),
+    [ORVILO_AUTH_HEADER]: await gateKeeper.encrypt(JSON.stringify({ userId })),
   };
 
   if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {

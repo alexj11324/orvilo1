@@ -10,7 +10,7 @@ import { agentsToSessions } from '../../schemas/relations';
 import { sessionGroups, sessions } from '../../schemas/session';
 import { users } from '../../schemas/user';
 import { workspaces } from '../../schemas/workspace';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { HomeRepository } from './index';
 
 const userId = 'home-test-user';
@@ -18,7 +18,7 @@ const otherUserId = 'other-home-user';
 
 let homeRepo: HomeRepository;
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 beforeEach(async () => {
   // Clean up

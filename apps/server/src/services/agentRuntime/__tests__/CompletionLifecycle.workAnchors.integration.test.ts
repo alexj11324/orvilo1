@@ -43,7 +43,7 @@ beforeEach(async () => {
           apiName: 'createDocument',
           arguments: '{}',
           id: 'create-document',
-          identifier: 'lobe-agent-documents',
+          identifier: 'orvilo-agent-documents',
           result_msg_id: 'tool',
           type: 'builtin',
         },
@@ -73,7 +73,7 @@ const registerDocument = async () => {
     changeType: 'created',
     rootOperationId: operationId,
     toolName: 'createDocument',
-    toolIdentifier: 'lobe-agent-documents',
+    toolIdentifier: 'orvilo-agent-documents',
     toolCallId: 'create-document',
     topicId,
   });

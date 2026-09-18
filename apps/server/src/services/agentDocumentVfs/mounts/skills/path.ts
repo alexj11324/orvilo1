@@ -9,7 +9,7 @@ export const SKILL_NAMESPACES = [
   'installed-all',
 ] as const satisfies readonly SkillNamespace[];
 
-const UNIFIED_SKILL_ROOT_PREFIX = './lobe/skills';
+const UNIFIED_SKILL_ROOT_PREFIX = './orvilo/skills';
 
 const SKILL_NAMESPACE_SEGMENTS = {
   'agent': ['agent', 'skills'],
@@ -29,7 +29,7 @@ const SKILL_NAMESPACE_SEGMENTS = {
  * - `namespace` is one registered skill namespace.
  *
  * Returns:
- * - A path such as `./lobe/skills/agent/skills`.
+ * - A path such as `./orvilo/skills/agent/skills`.
  */
 export const getUnifiedSkillNamespaceRootPath = (namespace: SkillNamespace) =>
   `${UNIFIED_SKILL_ROOT_PREFIX}/${SKILL_NAMESPACE_SEGMENTS[namespace].join('/')}`;
@@ -44,7 +44,7 @@ export const getUnifiedSkillNamespaceRootPath = (namespace: SkillNamespace) =>
  * - `namespace` is one registered skill namespace.
  *
  * Returns:
- * - A path such as `./lobe/skills/installed/active`.
+ * - A path such as `./orvilo/skills/installed/active`.
  */
 export const getUnifiedSkillNamespaceParentPath = (namespace: SkillNamespace) =>
   `${UNIFIED_SKILL_ROOT_PREFIX}/${SKILL_NAMESPACE_SEGMENTS[namespace].slice(0, -1).join('/')}`;

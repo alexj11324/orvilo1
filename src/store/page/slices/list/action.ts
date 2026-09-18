@@ -7,12 +7,12 @@ import { documentService } from '@/services/document';
 import { documentSWRKeys } from '@/services/document/swrKeys';
 import { useGlobalStore } from '@/store/global';
 import { type StoreSetter } from '@/store/types';
-import { DocumentSourceType, type LobeDocument } from '@/types/document';
+import { DocumentSourceType, type OrviloDocument } from '@/types/document';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { type PageStore } from '../../store';
 
-const documentItemToLobeDocument = (document: DocumentItem): LobeDocument => ({
+const documentItemToOrviloDocument = (document: DocumentItem): OrviloDocument => ({
   content: document.content || null,
   createdAt: document.createdAt ? new Date(document.createdAt) : new Date(),
   editorData:
@@ -70,7 +70,7 @@ export class ListActionImpl {
     try {
       const pageSize = useGlobalStore.getState().status.pagePageSize || 20;
 
-      const documents = (await documentService.getPageDocuments(pageSize)) as LobeDocument[];
+      const documents = (await documentService.getPageDocuments(pageSize)) as OrviloDocument[];
       const hasMore = documents.length >= pageSize;
 
       // Use internal dispatch to set documents
@@ -116,7 +116,7 @@ export class ListActionImpl {
       const newDocuments = result.items.filter(isAllowedPage).map((doc) => ({
         ...doc,
         filename: doc.filename ?? doc.title ?? 'Untitled',
-      })) as LobeDocument[];
+      })) as OrviloDocument[];
 
       const hasMore = result.items.length >= pageSize;
 
@@ -178,22 +178,22 @@ export class ListActionImpl {
   };
 
   upsertDocument = (document: DocumentItem): void => {
-    const lobeDoc = documentItemToLobeDocument(document);
+    const orviloDoc = documentItemToOrviloDocument(document);
     const { documents } = this.#get();
     const exists = documents?.some((doc) => doc.id === document.id);
     this.#get().internal_dispatchDocuments(
       exists
-        ? { document: lobeDoc, id: document.id, type: 'updateDocument' }
-        : { document: lobeDoc, type: 'addDocument' },
+        ? { document: orviloDoc, id: document.id, type: 'updateDocument' }
+        : { document: orviloDoc, type: 'addDocument' },
     );
   };
 
-  useFetchDocuments = (): SWRResponse<LobeDocument[]> => {
-    return useClientDataSWRWithSync<LobeDocument[]>(
+  useFetchDocuments = (): SWRResponse<OrviloDocument[]> => {
+    return useClientDataSWRWithSync<OrviloDocument[]>(
       documentSWRKeys.pageDocuments(),
       async () => {
         const pageSize = useGlobalStore.getState().status.pagePageSize || 20;
-        return (await documentService.getPageDocuments(pageSize)) as LobeDocument[];
+        return (await documentService.getPageDocuments(pageSize)) as OrviloDocument[];
       },
       {
         onData: (documents) => {

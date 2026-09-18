@@ -8,7 +8,7 @@ import type { IngestSink } from './BatchIngester';
  * `IngestSink` implementation that forwards batches to the server via tRPC
  * (`aiAgent.heteroIngest` / `aiAgent.heteroFinish`).
  *
- * The CLI authenticates using the `LOBEHUB_JWT` env var (operation-scoped JWT
+ * The CLI authenticates using the `ORVILO_JWT` env var (operation-scoped JWT
  * injected by the server before spawning the sandbox / desktop process).
  */
 export class TrpcIngestSink implements IngestSink {

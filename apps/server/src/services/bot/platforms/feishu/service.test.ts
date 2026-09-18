@@ -112,7 +112,7 @@ describe('FeishuMessageService.readMessages', () => {
               elements: [{ tag: 'div', text: { content: '会议纪要已生成', tag: 'lark_md' } }],
               header: { title: { content: '9/9 评审会', tag: 'plain_text' } },
               // The link lives on a button, not in any text — it must be appended.
-              link: { url: 'https://lobe-hub.feishu.cn/docx/CardTok' },
+              link: { url: 'https://orvilo-hub.feishu.cn/docx/CardTok' },
             }),
           },
           create_time: '1700000002000',
@@ -124,7 +124,7 @@ describe('FeishuMessageService.readMessages', () => {
           body: {
             content: JSON.stringify({
               content: [
-                [{ href: 'https://lobe-hub.feishu.cn/docx/PostTok', tag: 'a', text: '纪要' }],
+                [{ href: 'https://orvilo-hub.feishu.cn/docx/PostTok', tag: 'a', text: '纪要' }],
               ],
               title: '',
             }),
@@ -143,8 +143,8 @@ describe('FeishuMessageService.readMessages', () => {
     } as any);
 
     expect(result.messages?.map((m) => m.content)).toEqual([
-      '纪要 (https://lobe-hub.feishu.cn/docx/PostTok)',
-      '会议纪要已生成\n9/9 评审会\n[links: https://lobe-hub.feishu.cn/docx/CardTok]',
+      '纪要 (https://orvilo-hub.feishu.cn/docx/PostTok)',
+      '会议纪要已生成\n9/9 评审会\n[links: https://orvilo-hub.feishu.cn/docx/CardTok]',
     ]);
   });
 });
@@ -161,7 +161,7 @@ describe('FeishuMessageService.readDocument', () => {
 
     const result = await makeDocService({ getDocxDocument, getDocxRawContent }).readDocument({
       platform: 'feishu',
-      url: 'https://lobe-hub.feishu.cn/docx/DocTok?from=chat',
+      url: 'https://orvilo-hub.feishu.cn/docx/DocTok?from=chat',
     });
 
     expect(getDocxRawContent).toHaveBeenCalledWith('DocTok');
@@ -172,7 +172,7 @@ describe('FeishuMessageService.readDocument', () => {
       platform: 'feishu',
       title: '远程设备研讨会',
       truncated: false,
-      url: 'https://lobe-hub.feishu.cn/docx/DocTok',
+      url: 'https://orvilo-hub.feishu.cn/docx/DocTok',
     });
   });
 
@@ -203,7 +203,7 @@ describe('FeishuMessageService.readDocument', () => {
       getDocxDocument,
       getDocxRawContent,
       getWikiNode,
-    }).readDocument({ platform: 'feishu', url: 'https://lobe-hub.feishu.cn/wiki/WikiTok' });
+    }).readDocument({ platform: 'feishu', url: 'https://orvilo-hub.feishu.cn/wiki/WikiTok' });
 
     expect(getWikiNode).toHaveBeenCalledWith('WikiTok');
     expect(getDocxRawContent).toHaveBeenCalledWith('DocTok');
@@ -215,7 +215,7 @@ describe('FeishuMessageService.readDocument', () => {
     await expect(
       makeDocService({ getWikiNode }).readDocument({
         platform: 'feishu',
-        url: 'https://lobe-hub.feishu.cn/wiki/WikiTok',
+        url: 'https://orvilo-hub.feishu.cn/wiki/WikiTok',
       }),
     ).rejects.toThrow('wraps a "sheet" object');
   });
@@ -233,15 +233,15 @@ describe('FeishuMessageService.readDocument', () => {
     await expect(
       makeDocService({ getDocxRawContent }).readDocument({
         platform: 'feishu',
-        url: 'https://lobe-hub.feishu.cn/docx/x',
+        url: 'https://orvilo-hub.feishu.cn/docx/x',
       }),
     ).rejects.toThrow(expected);
   });
 
   it.each([
-    ['https://lobe-hub.feishu.cn/docs/legacy', 'legacy /docs/ document'],
-    ['https://lobe-hub.feishu.cn/minutes/obcn1', 'minutes:minutes'],
-    ['https://lobe-hub.feishu.cn/sheets/sht1', 'spreadsheet'],
+    ['https://orvilo-hub.feishu.cn/docs/legacy', 'legacy /docs/ document'],
+    ['https://orvilo-hub.feishu.cn/minutes/obcn1', 'minutes:minutes'],
+    ['https://orvilo-hub.feishu.cn/sheets/sht1', 'spreadsheet'],
   ])('explains why %s cannot be read instead of calling the API', async (url, expected) => {
     const getDocxRawContent = vi.fn();
     await expect(

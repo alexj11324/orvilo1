@@ -4,7 +4,7 @@ import Debug from 'debug';
 
 import type { ASROptions, ASRPayload, ASRResponse } from '../../types';
 
-const debug = Debug('lobe-model-runtime:google:transcribe');
+const debug = Debug('orvilo-model-runtime:google:transcribe');
 
 const DEFAULT_PROMPT =
   'Transcribe the speech in this audio verbatim. Output only the transcript text — no commentary, labels, speaker tags, or timestamps.';

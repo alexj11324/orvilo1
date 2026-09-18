@@ -77,7 +77,7 @@ describe('MessagesEngine golden payloads', () => {
       ],
       model: 'gpt-4',
       provider: 'openai',
-      systemRole: 'You are LobeHub assistant. Answer concisely in the user language.',
+      systemRole: 'You are Orvilo assistant. Answer concisely in the user language.',
     };
 
     const { messages } = await new MessagesEngine(params).process();
@@ -100,7 +100,7 @@ describe('MessagesEngine golden payloads', () => {
             {
               function: {
                 arguments: '{"pattern":"TODO","path":"src"}',
-                name: 'lobe-local-system____grepContent',
+                name: 'orvilo-local-system____grepContent',
               },
               id: 'call_1',
               type: 'function',
@@ -118,7 +118,7 @@ describe('MessagesEngine golden payloads', () => {
       ],
       model: 'gpt-4',
       provider: 'openai',
-      systemRole: 'You are LobeHub assistant.',
+      systemRole: 'You are Orvilo assistant.',
     };
 
     const { messages } = await new MessagesEngine(params).process();
@@ -142,7 +142,7 @@ describe('MessagesEngine golden payloads', () => {
       messages: [msg({ content: 'redis 怎么做持久化？', id: 'u1', role: 'user' })],
       model: 'gpt-4',
       provider: 'openai',
-      systemRole: 'You are LobeHub assistant.',
+      systemRole: 'You are Orvilo assistant.',
     };
 
     const { messages } = await new MessagesEngine(params).process();

@@ -6,7 +6,6 @@ import { ModelAssignmentsForm } from '@/features/ServiceModel';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
-import Image from '../image/features/Image';
 import OpenAI from '../tts/features/OpenAI';
 
 interface PageProps {
@@ -15,13 +14,12 @@ interface PageProps {
 
 const Page = ({ showSettingHeader = true }: PageProps) => {
   const { t } = useTranslation('setting');
-  const { enableSTT, showAiImage } = useServerConfigStore(featureFlagsSelectors);
+  const { enableSTT } = useServerConfigStore(featureFlagsSelectors);
   return (
     <>
       {showSettingHeader && <SettingHeader title={t('tab.serviceModel')} />}
       <ModelAssignmentsForm />
       {enableSTT && <OpenAI />}
-      {showAiImage && <Image />}
     </>
   );
 };

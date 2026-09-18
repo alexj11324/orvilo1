@@ -67,13 +67,13 @@
         }
 
         var hl = new URLSearchParams(location.search).get('hl');
-        var m = document.cookie.match(/(?:^|;\s*)LOBE_LOCALE=([^;]*)/);
+        var m = document.cookie.match(/(?:^|;\s*)ORVILO_LOCALE=([^;]*)/);
         var cookie = m ? decodeURIComponent(m[1]) : '';
         var locale = hl || cookie || navigator.language || 'en-US';
         if (locale === 'auto') locale = navigator.language || 'en-US';
         if (hl && !cookie) {
           document.cookie =
-            'LOBE_LOCALE=' + encodeURIComponent(hl) + ';path=/;max-age=7776000;SameSite=Lax';
+            'ORVILO_LOCALE=' + encodeURIComponent(hl) + ';path=/;max-age=7776000;SameSite=Lax';
         }
         document.documentElement.lang = locale;
         var rtl = ['ar', 'arc', 'dv', 'fa', 'ha', 'he', 'khw', 'ks', 'ku', 'ps', 'ur', 'yi'];

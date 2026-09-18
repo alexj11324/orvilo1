@@ -17,7 +17,7 @@ import {
   users,
   workspaces,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { LinearPlanningWorker } from './planning';
 
@@ -29,7 +29,7 @@ vi.mock('@/server/services/taskRunner', () => ({
   }),
 }));
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 const userId = 'planning-apply-user';
 const workspaceId = 'planning-apply-workspace';
 let projectSequence = 0;

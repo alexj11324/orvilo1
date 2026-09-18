@@ -5,7 +5,7 @@ import type {
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
 } from '@orvilo/types';
-import { and, asc, desc, eq, inArray, isNull, max, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, isNull, max, or, type SQL, sql } from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
 import { knowledgeBases } from '../schemas/file';
@@ -15,10 +15,11 @@ import {
   projectKnowledgeBases,
   projects,
 } from '../schemas/project';
+import { projectMembers } from '../schemas/projectMember';
 import { projectWorks } from '../schemas/projectWork';
 import { tasks } from '../schemas/task';
 import { works } from '../schemas/work';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
 
@@ -182,7 +183,7 @@ export class ProjectModel {
   private readonly canManageAll: boolean;
 
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
     options: ProjectModelOptions = {},
@@ -191,7 +192,31 @@ export class ProjectModel {
   }
 
   private readable() {
-    return buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, projects);
+    const base = buildWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      projects,
+    );
+    // Personal mode has no memberships — the ownership predicate is final.
+    if (!this.workspaceId) return base;
+
+    // Workspace mode adds one more read path: an ACTIVE project_members row
+    // grants read on the project it names. The grant — not creator ownership —
+    // is what an accepted invitation or explicit share confers, and it is the
+    // only way a member reads somebody else's private project.
+    const grantedRead = exists(
+      this.db
+        .select({ one: sql`1` })
+        .from(projectMembers)
+        .where(
+          and(
+            eq(projectMembers.projectId, projects.id),
+            eq(projectMembers.userId, this.userId),
+            isNull(projectMembers.deletedAt),
+            isNull(projectMembers.suspendedAt),
+          ),
+        ),
+    );
+    return or(base, and(eq(projects.workspaceId, this.workspaceId), grantedRead)) as SQL;
   }
 
   private manageable() {
@@ -219,7 +244,7 @@ export class ProjectModel {
         name: input.name,
       });
       const coordinator = await new AgentModel(
-        tx as LobeChatDatabase,
+        tx as OrviloDatabase,
         this.userId,
         this.workspaceId,
       ).create({
@@ -273,7 +298,7 @@ export class ProjectModel {
         .where(and(eq(projects.id, id), this.manageable()))
         .returning();
       if (project.coordinatorAgentId) {
-        await new AgentModel(tx as LobeChatDatabase, this.userId, this.workspaceId).delete(
+        await new AgentModel(tx as OrviloDatabase, this.userId, this.workspaceId).delete(
           project.coordinatorAgentId,
         );
       }

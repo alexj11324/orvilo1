@@ -1,4 +1,4 @@
-import type { LobeToolManifest } from './types';
+import type { OrviloToolManifest } from './types';
 
 /**
  * Interface for loading tool manifests on demand.
@@ -8,6 +8,6 @@ import type { LobeToolManifest } from './types';
  * from databases, market services, or other sources.
  */
 export interface ManifestLoader {
-  loadManifest: (toolId: string) => Promise<LobeToolManifest | undefined>;
-  loadManifests: (toolIds: string[]) => Promise<Record<string, LobeToolManifest>>;
+  loadManifest: (toolId: string) => Promise<OrviloToolManifest | undefined>;
+  loadManifests: (toolIds: string[]) => Promise<Record<string, OrviloToolManifest>>;
 }

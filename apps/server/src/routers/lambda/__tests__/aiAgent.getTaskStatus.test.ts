@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { agents, chatGroups, messages, sessions, threads, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { ThreadStatus, ThreadType } from '@orvilo/types';
@@ -10,7 +10,7 @@ import { aiAgentRouter } from '../aiAgent';
 import { cleanupTestUser, createTestUser } from './integration/setup';
 
 // Mock getServerDB to return our test database instance
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -42,7 +42,7 @@ vi.mock('@/server/services/aiChat', () => ({
 }));
 
 describe('aiAgentRouter.getSubAgentTaskStatus', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let userId: string;
   let testAgentId: string;
   let testGroupId: string;
@@ -248,8 +248,8 @@ describe('aiAgentRouter.getSubAgentTaskStatus', () => {
             tools: {
               totalCalls: 5,
               byTool: [
-                { name: 'lobe-web-browsing/search', calls: 3 },
-                { name: 'lobe-web-browsing/fetch', calls: 2 },
+                { name: 'orvilo-web-browsing/search', calls: 3 },
+                { name: 'orvilo-web-browsing/fetch', calls: 2 },
               ],
             },
           },
@@ -579,7 +579,7 @@ describe('aiAgentRouter.getSubAgentTaskStatus', () => {
         topicId: testTopicId,
         threadId: testThreadId,
         tools: [
-          { identifier: 'lobe-web-browsing', apiName: 'search', arguments: '{"query":"test"}' },
+          { identifier: 'orvilo-web-browsing', apiName: 'search', arguments: '{"query":"test"}' },
         ],
       });
 
@@ -592,7 +592,7 @@ describe('aiAgentRouter.getSubAgentTaskStatus', () => {
       expect(result.status).toBe('processing');
       expect(result.currentActivity).toEqual({
         type: 'tool_calling',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
       });
     });
@@ -608,7 +608,7 @@ describe('aiAgentRouter.getSubAgentTaskStatus', () => {
           agentId: testAgentId,
           topicId: testTopicId,
           threadId: testThreadId,
-          tools: [{ identifier: 'lobe-web-browsing', apiName: 'search' }],
+          tools: [{ identifier: 'orvilo-web-browsing', apiName: 'search' }],
           createdAt: new Date(now.getTime() - 1000),
         },
         {
@@ -634,7 +634,7 @@ describe('aiAgentRouter.getSubAgentTaskStatus', () => {
         await serverDB.insert(messagePlugins).values({
           id: toolMsg.id,
           userId,
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           type: 'default',
         });
@@ -648,7 +648,7 @@ describe('aiAgentRouter.getSubAgentTaskStatus', () => {
 
       expect(result.status).toBe('processing');
       expect(result.currentActivity?.type).toBe('tool_result');
-      expect(result.currentActivity?.identifier).toBe('lobe-web-browsing');
+      expect(result.currentActivity?.identifier).toBe('orvilo-web-browsing');
       expect(result.currentActivity?.apiName).toBe('search');
       expect(result.currentActivity?.contentPreview).toBe(
         'Search results: found 10 items matching your query...',

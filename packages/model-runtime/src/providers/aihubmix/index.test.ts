@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as modelParse from '../../utils/modelParse';
-import { LobeAiHubMixAI, params } from './index';
+import { OrviloAiHubMixAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -23,12 +23,12 @@ const resolveRouters = (model?: string) =>
     ? params.routers({ apiKey: 'test' }, { model })
     : params.routers) as RouterForTest[];
 
-describe('LobeAiHubMixAI', () => {
-  let instance: InstanceType<typeof LobeAiHubMixAI>;
+describe('OrviloAiHubMixAI', () => {
+  let instance: InstanceType<typeof OrviloAiHubMixAI>;
 
   beforeEach(() => {
     loadModelsMock.mockResolvedValue([]);
-    instance = new LobeAiHubMixAI({ apiKey: 'test_api_key' });
+    instance = new OrviloAiHubMixAI({ apiKey: 'test_api_key' });
   });
 
   afterEach(() => {
@@ -45,7 +45,7 @@ describe('LobeAiHubMixAI', () => {
     it('should set APP-Code header', () => {
       // The RouterRuntime-based providers have different structure
       // We just verify the instance is created correctly
-      expect(instance).toBeInstanceOf(LobeAiHubMixAI);
+      expect(instance).toBeInstanceOf(OrviloAiHubMixAI);
     });
   });
 
@@ -138,14 +138,14 @@ describe('LobeAiHubMixAI', () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             'Authorization': 'Bearer test_api_key',
-            'APP-Code': 'LobeHub',
+            'APP-Code': 'Orvilo',
           }),
         }),
       );
     });
 
     it('should fetch the model list from a custom base URL when configured', async () => {
-      const customInstance = new LobeAiHubMixAI({
+      const customInstance = new OrviloAiHubMixAI({
         apiKey: 'test_api_key',
         baseURL: 'https://my-aihubmix-mirror.com',
       });
@@ -162,7 +162,7 @@ describe('LobeAiHubMixAI', () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             'Authorization': 'Bearer test_api_key',
-            'APP-Code': 'LobeHub',
+            'APP-Code': 'Orvilo',
           }),
         }),
       );
@@ -183,7 +183,7 @@ describe('LobeAiHubMixAI', () => {
       expect(list.some((m) => m.id === 'some-model')).toBe(true);
     });
 
-    it('should map AiHubMix API fields to LobeHub model card fields', async () => {
+    it('should map AiHubMix API fields to Orvilo model card fields', async () => {
       const spy = vi.spyOn(modelParse, 'processMultiProviderModelList').mockResolvedValueOnce([]);
 
       mockFetch.mockResolvedValueOnce(

@@ -1,7 +1,7 @@
 /**
  * Landing → app correlation id.
  *
- * The marketing site (lobehub-landing) generates a fresh `lh_cid` for every
+ * The marketing site (orvilo-landing) generates a fresh `lh_cid` for every
  * "open app" click, appends it to the destination URL, and the app shell's
  * load-funnel beacon persists it to `sessionStorage` on arrival. Surfacing it on
  * auth events lets growth analytics chain a single landing click all the way to a

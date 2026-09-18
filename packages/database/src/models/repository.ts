@@ -21,7 +21,7 @@ import {
   teamRepoDefaults,
 } from '../schemas/repository';
 import { tasks } from '../schemas/task';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 const toRepositoryItem = (row: typeof repositories.$inferSelect): RepositoryItem =>
   row as RepositoryItem;
@@ -38,7 +38,7 @@ const toDecisionItem = (row: typeof associationDecisions.$inferSelect): Associat
  */
 export class RepositoryModel {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId: string,
   ) {}

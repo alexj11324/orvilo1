@@ -17,14 +17,14 @@ describe('parseAgentConfig', () => {
     });
 
     it('parses array values with commas correctly', () => {
-      const envStr = 'plugins=search-engine,lobe-image-designer';
-      const expected = { plugins: ['search-engine', 'lobe-image-designer'] };
+      const envStr = 'plugins=search-engine,orvilo-image-designer';
+      const expected = { plugins: ['search-engine', 'orvilo-image-designer'] };
       expect(parseAgentConfig(envStr)).toEqual(expected);
     });
 
     it('parses array values with Chinese commas correctly', () => {
-      const envStr = 'plugins=search-engine，lobe-image-designer';
-      const expected = { plugins: ['search-engine', 'lobe-image-designer'] };
+      const envStr = 'plugins=search-engine，orvilo-image-designer';
+      const expected = { plugins: ['search-engine', 'orvilo-image-designer'] };
       expect(parseAgentConfig(envStr)).toEqual(expected);
     });
 
@@ -89,11 +89,11 @@ describe('parseAgentConfig', () => {
   describe('complex environment', () => {
     it('parses environment variable string correctly', () => {
       const envStr =
-        'model=gpt-4-1106-preview;params.max_tokens=300;plugins=search-engine,lobe-image-designer';
+        'model=gpt-4-1106-preview;params.max_tokens=300;plugins=search-engine,orvilo-image-designer';
       const expected = {
         model: 'gpt-4-1106-preview',
         params: { max_tokens: 300 },
-        plugins: ['search-engine', 'lobe-image-designer'],
+        plugins: ['search-engine', 'orvilo-image-designer'],
       };
       expect(parseAgentConfig(envStr)).toEqual(expected);
     });
@@ -101,11 +101,11 @@ describe('parseAgentConfig', () => {
     // 测试当配置字符串包含所有可能字段时的行为
     it('parses a complex environment variable string correctly', () => {
       const envStr =
-        'model=gpt-4-1106-preview;params.max_tokens=300;params.temperature=0.7;plugins=search-engine,lobe-image-designer;tts.voice.openai=english-voice';
+        'model=gpt-4-1106-preview;params.max_tokens=300;params.temperature=0.7;plugins=search-engine,orvilo-image-designer;tts.voice.openai=english-voice';
       const expected = {
         model: 'gpt-4-1106-preview',
         params: { max_tokens: 300, temperature: 0.7 },
-        plugins: ['search-engine', 'lobe-image-designer'],
+        plugins: ['search-engine', 'orvilo-image-designer'],
         tts: { voice: { openai: 'english-voice' } },
       };
       expect(parseAgentConfig(envStr)).toEqual(expected);
@@ -113,12 +113,12 @@ describe('parseAgentConfig', () => {
 
     it('should parsers plugins correctly', () => {
       const envStr =
-        'enableHistoryCount=true;model=gemini-pro;provider=google;plugins=lobe-image-designer';
+        'enableHistoryCount=true;model=gemini-pro;provider=google;plugins=orvilo-image-designer';
 
       const expected = {
         enableHistoryCount: true,
         model: 'gemini-pro',
-        plugins: ['lobe-image-designer'],
+        plugins: ['orvilo-image-designer'],
         provider: 'google',
       };
 

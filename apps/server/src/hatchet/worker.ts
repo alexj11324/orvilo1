@@ -1,5 +1,6 @@
 import { getHatchetClient } from '@/libs/hatchet';
 
+import { createCollaborationHatchetTasks } from './collaborationOutbox';
 import { createCoreHatchetTasks } from './tasks';
 import { createWorkflowHatchetTasks } from './workflowTasks';
 
@@ -8,7 +9,11 @@ const startWorker = async () => {
   const worker = await hatchet.worker(process.env.HATCHET_WORKER_NAME || 'orvilo-core', {
     handleKill: true,
     slots: Number(process.env.HATCHET_WORKER_SLOTS || 20),
-    workflows: [...createCoreHatchetTasks(hatchet), ...createWorkflowHatchetTasks(hatchet)],
+    workflows: [
+      ...createCoreHatchetTasks(hatchet),
+      ...createCollaborationHatchetTasks(hatchet),
+      ...createWorkflowHatchetTasks(hatchet),
+    ],
   });
 
   await worker.start();

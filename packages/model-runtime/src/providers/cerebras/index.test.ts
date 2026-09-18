@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeCerebrasAI, params } from './index';
+import { OrviloCerebrasAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -12,7 +12,7 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 }));
 
 testProvider({
-  Runtime: LobeCerebrasAI,
+  Runtime: OrviloCerebrasAI,
   bizErrorType: 'ProviderBizError',
   chatDebugEnv: 'DEBUG_CEREBRAS_CHAT_COMPLETION',
   chatModel: 'llama3.1-8b',
@@ -25,11 +25,11 @@ testProvider({
   },
 });
 
-describe('LobeCerebrasAI - custom features', () => {
-  let instance: InstanceType<typeof LobeCerebrasAI>;
+describe('OrviloCerebrasAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloCerebrasAI>;
 
   beforeEach(() => {
-    instance = new LobeCerebrasAI({ apiKey: 'test_api_key' });
+    instance = new OrviloCerebrasAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

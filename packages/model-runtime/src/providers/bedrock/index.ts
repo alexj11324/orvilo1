@@ -15,7 +15,7 @@ import {
 import { resolveCacheTTL } from '../../core/anthropicCompatibleFactory/resolveCacheTTL';
 import { resolveMaxTokens } from '../../core/anthropicCompatibleFactory/resolveMaxTokens';
 import { resolveClaudeThinkingConfig } from '../../core/anthropicCompatibleFactory/resolveThinkingConfig';
-import type { LobeRuntimeAI } from '../../core/BaseAI';
+import type { OrviloRuntimeAI } from '../../core/BaseAI';
 import { buildAnthropicMessages, buildAnthropicTools } from '../../core/contextBuilders/anthropic';
 import { resolveModelSamplingParameters } from '../../core/parameterResolver';
 import {
@@ -74,7 +74,7 @@ export function experimental_buildLlama2Prompt(messages: { content: string; role
   return startPrompt + conversation.join('') + endPrompt;
 }
 
-export interface LobeBedrockAIParams {
+export interface OrviloBedrockAIParams {
   accessKeyId?: string;
   accessKeySecret?: string;
   apiKey?: string;
@@ -84,14 +84,14 @@ export interface LobeBedrockAIParams {
   sessionToken?: string;
 }
 
-export class LobeBedrockAI implements LobeRuntimeAI {
+export class OrviloBedrockAI implements OrviloRuntimeAI {
   private client: BedrockRuntimeClient;
   private id: string;
   private modelIdMapping: Record<string, string>;
 
   region: string;
 
-  constructor(options: LobeBedrockAIParams = {}) {
+  constructor(options: OrviloBedrockAIParams = {}) {
     const {
       id,
       modelIdMapping = {},
@@ -341,7 +341,7 @@ export class LobeBedrockAI implements LobeRuntimeAI {
       };
     } else {
       // Resolve temperature/top_p: Claude 4+ on Bedrock doesn't allow both simultaneously.
-      // normalizeTemperature divides by 2 to map LobeChat's 0-2 range to Anthropic's 0-1 range.
+      // normalizeTemperature divides by 2 to map Orvilo's 0-2 range to Anthropic's 0-1 range.
       const resolvedSamplingParams = resolveModelSamplingParameters(
         model,
         { temperature, top_p },
@@ -464,4 +464,4 @@ export class LobeBedrockAI implements LobeRuntimeAI {
   };
 }
 
-export default LobeBedrockAI;
+export default OrviloBedrockAI;

@@ -1,15 +1,15 @@
 import { type FC } from 'react';
 
 import { type MarkdownElement, type MarkdownElementProps } from '../type';
-import { LOBE_LINK_TAG } from './parse';
-import { rehypeLobeLink } from './rehypePlugin';
+import { ORVILO_LINK_TAG } from './parse';
+import { rehypeOrviloLink } from './rehypePlugin';
 import Render from './Render';
 
 const LinkElement: MarkdownElement = {
   Component: Render as FC<MarkdownElementProps>,
-  rehypePlugin: rehypeLobeLink,
+  rehypePlugin: rehypeOrviloLink,
   scope: 'all',
-  tag: LOBE_LINK_TAG,
+  tag: ORVILO_LINK_TAG,
 };
 
 export default LinkElement;

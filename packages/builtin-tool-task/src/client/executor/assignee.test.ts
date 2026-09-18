@@ -50,7 +50,7 @@ const members = [
   { role: 'owner', user: { fullName: 'Me', username: 'me' }, userId: 'usr_1' },
   {
     role: 'member',
-    user: { email: 'alice@lobehub.com', fullName: 'Alice Chen', username: 'alice' },
+    user: { email: 'alice@orvilo.aspectlylabs.com', fullName: 'Alice Chen', username: 'alice' },
     userId: 'usr_2',
   },
   { role: 'viewer', user: { fullName: 'Viewer', username: 'v' }, userId: 'usr_3' },
@@ -182,17 +182,19 @@ describe('TaskExecutor — human assignee (assigneeUserId)', () => {
       expect(result.state).toEqual({ count: 2, success: true, total: 2 });
       expect(result.content).toContain('- Me  @me  role=owner  (you)  id=usr_1');
       expect(result.content).toContain(
-        '- Alice Chen  @alice  alice@lobehub.com  role=member  id=usr_2',
+        '- Alice Chen  @alice  alice@orvilo.aspectlylabs.com  role=member  id=usr_2',
       );
       // Viewers cannot own tasks, so they are not offered as candidates.
       expect(result.content).not.toContain('usr_3');
     });
 
     it('narrows the directory with query and caps it with limit, same contract as the server', async () => {
-      const byEmail = await taskExecutor.listWorkspaceMembers({ query: 'ALICE@lobehub.com' });
+      const byEmail = await taskExecutor.listWorkspaceMembers({
+        query: 'ALICE@orvilo.aspectlylabs.com',
+      });
       expect(byEmail.state).toEqual({
         count: 1,
-        query: 'alice@lobehub.com',
+        query: 'alice@orvilo.aspectlylabs.com',
         success: true,
         total: 1,
       });

@@ -1,4 +1,4 @@
-import type { ILobeAgentRuntimeErrorType } from '@orvilo/types';
+import type { IOrviloAgentRuntimeErrorType } from '@orvilo/types';
 
 import { ERROR_PATTERNS, type ErrorPattern } from './patterns';
 import { getErrorCodeSpec } from './specs';
@@ -10,7 +10,7 @@ export interface MatchInput {
 }
 
 export interface MatchResult {
-  code: ILobeAgentRuntimeErrorType;
+  code: IOrviloAgentRuntimeErrorType;
   pattern: ErrorPattern;
 }
 

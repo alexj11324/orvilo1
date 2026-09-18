@@ -12,14 +12,17 @@ export const ManageMemoryButton = () => {
   const { t } = useTranslation('setting');
   const navigate = useWorkspaceAwareNavigate();
 
-  // The `/memory` manager route is registered in the desktop router only.
+  // Desktop-only, as it was before the browsing layers were retired. It now
+  // points straight at the preferences manager — the one layer that survived,
+  // and the one a user needs in order to read and delete what was remembered
+  // about them.
   if (!isDesktop) return null;
 
   return (
     <Button
       icon={<Icon icon={BrainCircuit} />}
       size={'small'}
-      onClick={() => navigate('/memory', { escape: true })}
+      onClick={() => navigate('/memory/preferences', { escape: true })}
     >
       {t('memory.manageEntry')}
     </Button>

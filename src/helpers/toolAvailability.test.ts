@@ -9,8 +9,10 @@ import {
 describe('toolAvailability', () => {
   it('should hide desktop-only builtin skills in web', () => {
     expect(
-      filterToolIdsByCurrentEnv(['lobe-agent-browser', 'lobe-web-browsing'], { isDesktop: false }),
-    ).toEqual(['lobe-web-browsing']);
+      filterToolIdsByCurrentEnv(['orvilo-agent-browser', 'orvilo-web-browsing'], {
+        isDesktop: false,
+      }),
+    ).toEqual(['orvilo-web-browsing']);
   });
 
   it('should hide stdio mcp plugins in web', () => {
@@ -44,11 +46,11 @@ describe('toolAvailability', () => {
 
   it('should mark desktop-only builtin tools as unavailable in web when injected', () => {
     expect(
-      isToolAvailableInCurrentEnv('lobe-agent-browser', {
+      isToolAvailableInCurrentEnv('orvilo-agent-browser', {
         installedPlugins: [],
         isDesktop: false,
       }),
     ).toBe(false);
-    expect(isToolAvailableInCurrentEnv('lobe-computer-use')).toBe(false);
+    expect(isToolAvailableInCurrentEnv('orvilo-computer-use')).toBe(false);
   });
 });

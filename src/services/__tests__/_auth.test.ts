@@ -38,7 +38,7 @@ describe('createHeaderWithAuth', () => {
   it('should preserve request headers without allowing a client version override', async () => {
     const headers = await createHeaderWithAuth({
       headers: {
-        'X-Lobe-Client-Version': 'spoofed',
+        'X-Orvilo-Client-Version': 'spoofed',
         'Content-Type': 'application/json',
       },
     });

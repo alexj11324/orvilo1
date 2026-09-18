@@ -1,5 +1,5 @@
 /**
- * Lobe Notebook Executor
+ * Orvilo Notebook Executor
  *
  * Handles notebook document operations.
  * The NotebookService is injected via constructor so both client and server can provide their own implementation.

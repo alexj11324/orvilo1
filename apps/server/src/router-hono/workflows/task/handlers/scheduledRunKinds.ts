@@ -1,5 +1,5 @@
 import { HETERO_CONTINUE_PROMPT, LOADING_FLAT } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { ExecAgentResult, TopicScheduledRun, TopicScheduledRunKind } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
 
@@ -11,7 +11,7 @@ import { AiAgentService } from '@/server/services/aiAgent';
 export interface ScheduledRunContext {
   /** The dispatcher's claim lease id — fences post-dispatch writes against stale attempts. */
   claimId: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   topic: TopicItem;
   workspaceId?: string;
 }
@@ -43,13 +43,10 @@ const runResumeAfterRateLimit: ScheduledRunHandlers['resume_after_rate_limit'] =
   { claimId, db, topic, workspaceId },
 ) => {
   // Scheduled runs execute under the creator (`topic.userId` is billing
-  // owner). When the topic is an agent-share visitor conversation this ends
-  // up mutating visitor rows, so opt into the visitor scope for reads too —
-  // the existing per-call `includeShareVisitor: true` on the delete already
-  // acknowledges this.
-  const messageModel = new MessageModel(db, topic.userId, workspaceId, undefined, {
-    includeShareVisitor: true,
-  });
+  // owner). Agent-share visitor topics never reach here — the dispatcher
+  // drops their schedules before claiming — so the default model scope is
+  // exactly right.
+  const messageModel = new MessageModel(db, topic.userId, workspaceId);
   const failedMessage = await messageModel.findById(run.failedAssistantMessageId);
 
   let parentMessageId = run.userMessageId;
@@ -62,9 +59,6 @@ const runResumeAfterRateLimit: ScheduledRunHandlers['resume_after_rate_limit'] =
       await messageModel.update(failedMessage.id, { error: null });
       parentMessageId = failedMessage.id;
     } else {
-      // Scheduled-run retry cleanup runs as the runtime, not as the creator.
-      // Instance already opts into visitor scope (see MessageModel above), so the
-      // per-call `includeShareVisitor` override is redundant here.
       await messageModel.deleteMessage(failedMessage.id);
       parentMessageId = failedMessage.parentId ?? run.userMessageId;
     }
@@ -113,13 +107,10 @@ const runDelayedStart: ScheduledRunHandlers['delayed_start'] = async (
   { db, topic, workspaceId },
 ) => {
   // Scheduled runs execute under the creator (`topic.userId` is billing
-  // owner). When the topic is an agent-share visitor conversation this ends
-  // up mutating visitor rows, so opt into the visitor scope for reads too —
-  // the existing per-call `includeShareVisitor: true` on the delete already
-  // acknowledges this.
-  const messageModel = new MessageModel(db, topic.userId, workspaceId, undefined, {
-    includeShareVisitor: true,
-  });
+  // owner). Agent-share visitor topics never reach here — the dispatcher
+  // drops their schedules before claiming — so the default model scope is
+  // exactly right.
+  const messageModel = new MessageModel(db, topic.userId, workspaceId);
   const userMessage = await messageModel.findById(run.userMessageId);
   if (!userMessage) throw new Error('Scheduled user message no longer exists');
 

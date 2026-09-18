@@ -837,7 +837,7 @@ describe('GatewayActionImpl', () => {
 
     it('should keep optimistic topic metadata when replacing the placeholder topic id', async () => {
       const { action, internalReplaceTopicId } = createExecuteTestAction();
-      const selectedRepo = 'https://github.com/lobehub/lobehub';
+      const selectedRepo = 'https://github.com/alexj11324/orvilo1';
 
       vi.mocked(aiAgentService.execAgentTask).mockResolvedValue({
         agentId: 'agent-1',
@@ -921,7 +921,7 @@ describe('GatewayActionImpl', () => {
     it('should forward current user intervention config to execAgentTask', async () => {
       const { action } = createExecuteTestAction();
       mockToolInterventionConfig.approvalMode = 'allow-list';
-      mockToolInterventionConfig.allowList = ['lobe-user-interaction/askUserQuestion'];
+      mockToolInterventionConfig.allowList = ['orvilo-user-interaction/askUserQuestion'];
 
       vi.mocked(aiAgentService.execAgentTask).mockResolvedValue({
         agentId: 'agent-1',
@@ -947,7 +947,7 @@ describe('GatewayActionImpl', () => {
         expect.objectContaining({
           prompt: 'Hello',
           userInterventionConfig: {
-            allowList: ['lobe-user-interaction/askUserQuestion'],
+            allowList: ['orvilo-user-interaction/askUserQuestion'],
             approvalMode: 'allow-list',
           },
         }),
@@ -1870,7 +1870,7 @@ describe('GatewayActionImpl', () => {
 
     // When the desktop runs against 本机 (effective runtime mode 'local'), the
     // client must forward this machine's own gateway deviceId so the server can
-    // preset activeDeviceId and inject lobe-local-system into the first LLM
+    // preset activeDeviceId and inject orvilo-local-system into the first LLM
     // payload — skipping the activateDevice round-trip. It must NOT do so for a
     // cloud/none run, otherwise that run would be wrongly routed to the device.
     describe('local device activation (本机)', () => {
@@ -1977,7 +1977,7 @@ describe('GatewayActionImpl', () => {
 
       // Regression guard (chat mode → no execution environment): chat mode must
       // not resolve this machine's deviceId even on a local target, otherwise
-      // the server presets activeDeviceId and re-injects lobe-local-system.
+      // the server presets activeDeviceId and re-injects orvilo-local-system.
       it('does not resolve a deviceId in chat mode, even when local mode is set', async () => {
         mockEnv.isDesktop = true;
         mockRuntime.isLocal = true;

@@ -11,11 +11,11 @@ describe('getAuthConfig', () => {
   });
 
   it('should expose a custom Better Auth cookie prefix', async () => {
-    vi.stubEnv('AUTH_COOKIE_PREFIX', 'lobehub-oss');
+    vi.stubEnv('AUTH_COOKIE_PREFIX', 'orvilo-oss');
 
     const { getAuthConfig } = await import('../auth');
 
-    expect(getAuthConfig().AUTH_COOKIE_PREFIX).toBe('lobehub-oss');
+    expect(getAuthConfig().AUTH_COOKIE_PREFIX).toBe('orvilo-oss');
   });
 
   it('should expose additional trusted origins', async () => {

@@ -1,16 +1,14 @@
 {
-  "name": "@lobehub/cli",
+  "name": "@orvilo/cli",
   "version": "0.0.54",
   "type": "module",
   "bin": {
     "lh": "./dist/index.js",
-    "lobe": "./dist/index.js",
-    "lobehub": "./dist/index.js"
+    "orvilo": "./dist/index.js"
   },
   "man": [
     "./man/man1/lh.1",
-    "./man/man1/lobe.1",
-    "./man/man1/lobehub.1"
+    "./man/man1/orvilo.1"
   ],
   "files": [
     "dist",
@@ -20,7 +18,7 @@
     "build": "bun scripts/ensureWorkspaceLinks.ts && tsdown",
     "cli:link": "bun link",
     "cli:unlink": "bun unlink",
-    "dev": "LOBEHUB_CLI_HOME=.lobehub-dev bun src/index.ts",
+    "dev": "ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts",
     "man:generate": "bun src/man/generate.ts",
     "prepublishOnly": "npm run build && npm run man:generate",
     "test": "bunx vitest run --config vitest.config.mts --silent='passed-only'",

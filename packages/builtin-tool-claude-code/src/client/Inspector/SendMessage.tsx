@@ -38,7 +38,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 export const SendMessageInspector = memo<BuiltinInspectorProps<SendMessageArgs>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading }) => {
     const { t } = useTranslation('plugin');
-    const label = t('builtins.lobe-claude-code.sendMessage.title');
+    const label = t('builtins.orvilo-claude-code.sendMessage.title');
     const source = args ?? partialArgs;
     const recap = (source?.summary ?? source?.message ?? source?.content)?.trim();
 

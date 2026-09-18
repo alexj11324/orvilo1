@@ -6,7 +6,7 @@ import type {
 } from '@orvilo/agent-templates';
 import { DocumentLoadPosition, getDocumentTemplate, PolicyLoad } from '@orvilo/agent-templates';
 import { buildAgentSkillIdentifier } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { DOCUMENT_FOLDER_TYPE } from '@orvilo/database/schemas';
 
 import type {
@@ -148,7 +148,7 @@ export class AgentDocumentsService {
   private topicDocumentModel: TopicDocumentModel;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     callerAgentVisibility?: 'private' | 'public' | null,
@@ -537,7 +537,7 @@ export class AgentDocumentsService {
     const metadata = options.hintIsSkill
       ? {
           agentSignal: {
-            hintedByTool: 'lobe-agent-documents.createDocument',
+            hintedByTool: 'orvilo-agent-documents.createDocument',
             hintIsSkill: true,
           },
         }

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import type { SelfFeedbackIntentSourceGuardInput } from '../handler';
 import { createServerSelfFeedbackIntentPolicyOptions } from '../server';
@@ -27,7 +27,7 @@ describe('createServerSelfFeedbackIntentPolicyOptions', () => {
   it('exposes dispatch-shaped handler deps (gate, guard, enricher, db) without legacy runtime/receipt wiring', () => {
     const options = createServerSelfFeedbackIntentPolicyOptions({
       agentId: 'agent-1',
-      db: {} as unknown as LobeChatDatabase,
+      db: {} as unknown as OrviloDatabase,
       selfIterationEnabled: true,
       userId: 'user-1',
     });
@@ -45,7 +45,7 @@ describe('createServerSelfFeedbackIntentPolicyOptions', () => {
   it('enriches with the scope evidence ref so it rides in the run prompt', async () => {
     const options = createServerSelfFeedbackIntentPolicyOptions({
       agentId: 'agent-1',
-      db: {} as unknown as LobeChatDatabase,
+      db: {} as unknown as OrviloDatabase,
       selfIterationEnabled: true,
       userId: 'user-1',
     });
@@ -67,7 +67,7 @@ describe('createServerSelfFeedbackIntentPolicyOptions', () => {
   it('rejects declarations whose payload user id does not match the policy owner', async () => {
     const options = createServerSelfFeedbackIntentPolicyOptions({
       agentId: 'agent-1',
-      db: {} as unknown as LobeChatDatabase,
+      db: {} as unknown as OrviloDatabase,
       selfIterationEnabled: true,
       userId: 'user-1',
     });

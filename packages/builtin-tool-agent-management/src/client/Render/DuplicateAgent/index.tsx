@@ -36,13 +36,13 @@ export const DuplicateAgentRender = memo<
       <Flexbox gap={8}>
         <Flexbox gap={2}>
           <span className={styles.label}>
-            {t('builtins.lobe-agent-management.render.duplicateAgent.sourceId')}
+            {t('builtins.orvilo-agent-management.render.duplicateAgent.sourceId')}
           </span>
           <span className={styles.value}>{pluginState.sourceAgentId}</span>
         </Flexbox>
         <Flexbox gap={2}>
           <span className={styles.label}>
-            {t('builtins.lobe-agent-management.render.duplicateAgent.newId')}
+            {t('builtins.orvilo-agent-management.render.duplicateAgent.newId')}
           </span>
           <span className={styles.value}>{pluginState.newAgentId}</span>
         </Flexbox>

@@ -296,7 +296,6 @@ export class TaskDetailSliceActionImpl {
     editorData?: unknown;
     /** Periodic-execution interval in seconds for `automationMode: 'heartbeat'`. */
     heartbeatInterval?: number;
-    /** Bind a goal entity (`goals` row) to the created task. */
     instruction: string;
     name?: string;
     parentTaskId?: string;

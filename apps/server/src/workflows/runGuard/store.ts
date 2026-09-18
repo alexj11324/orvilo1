@@ -16,7 +16,7 @@ import {
   WORKFLOW_RUN_GUARD_MAX_TTL_SECONDS,
 } from './types';
 
-const log = debug('lobe-server:workflows:run-guard');
+const log = debug('orvilo-server:workflows:run-guard');
 
 /**
  * Normalizes workflow run guard TTL seconds into the supported Redis range.

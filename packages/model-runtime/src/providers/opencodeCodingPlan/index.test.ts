@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LobeOpenCodeCodingPlanAI, sanitizeJsonSchema } from './index';
+import { OrviloOpenCodeCodingPlanAI, sanitizeJsonSchema } from './index';
 
 // The router pulls the cloud model-bank config for deepseek route resolution,
 // which transitively imports server-only modules (e.g. redis-client). Stub it
@@ -24,11 +24,11 @@ global.fetch = vi.fn().mockRejectedValue(new Error('no network in test')) as any
 // Silence the router's console.error on the mocked (never-resolving) fetch path.
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-describe('LobeOpenCodeCodingPlanAI', () => {
+describe('OrviloOpenCodeCodingPlanAI', () => {
   describe('init', () => {
     it('should correctly initialize with an API key', () => {
-      const instance = new LobeOpenCodeCodingPlanAI({ apiKey: 'test_api_key' });
-      expect(instance).toBeInstanceOf(LobeOpenCodeCodingPlanAI);
+      const instance = new OrviloOpenCodeCodingPlanAI({ apiKey: 'test_api_key' });
+      expect(instance).toBeInstanceOf(OrviloOpenCodeCodingPlanAI);
     });
   });
 });
@@ -173,7 +173,7 @@ describe('Muse Spark Responses API routing', () => {
   it.each(['muse-spark-1.2-contributor', 'muse-spark-1.3-contributor'])(
     'routes %s through Responses even when the provider-level default is Chat Completions',
     async (model) => {
-      const instance = new LobeOpenCodeCodingPlanAI({ apiKey: 'test' });
+      const instance = new OrviloOpenCodeCodingPlanAI({ apiKey: 'test' });
 
       await instance.chat({
         apiMode: 'chatCompletion',
@@ -191,7 +191,7 @@ describe('Muse Spark Responses API routing', () => {
     (model) => {
       it('generates JSON through Responses without an explicit API override', async () => {
         responsesCreateSpy.mockResolvedValue({ output_text: '{"answer":"Hello"}' });
-        const instance = new LobeOpenCodeCodingPlanAI({ apiKey: 'test' });
+        const instance = new OrviloOpenCodeCodingPlanAI({ apiKey: 'test' });
 
         const result = await instance.generateObject({
           messages: [{ content: 'Hello', role: 'user' }],
@@ -211,7 +211,7 @@ describe('Muse Spark Responses API routing', () => {
         responsesCreateSpy.mockResolvedValue({
           output: [{ arguments: '{"answer":"Hello"}', name: 'answer', type: 'function_call' }],
         });
-        const instance = new LobeOpenCodeCodingPlanAI({ apiKey: 'test' });
+        const instance = new OrviloOpenCodeCodingPlanAI({ apiKey: 'test' });
 
         const result = await instance.generateObject({
           messages: [{ content: 'Hello', role: 'user' }],
@@ -238,7 +238,7 @@ describe('Muse Spark Responses API routing', () => {
     chatCreateSpy.mockResolvedValue({
       choices: [{ message: { content: '{"answer":"Hello"}' } }],
     });
-    const instance = new LobeOpenCodeCodingPlanAI({ apiKey: 'test' });
+    const instance = new OrviloOpenCodeCodingPlanAI({ apiKey: 'test' });
 
     const result = await instance.generateObject({
       messages: [{ content: 'Hello', role: 'user' }],
@@ -256,7 +256,7 @@ describe('Muse Spark Responses API routing', () => {
 
   it('uses Responses models discovered after runtime initialization', async () => {
     vi.resetModules();
-    const { LobeOpenCodeCodingPlanAI: Runtime } = await import('./index');
+    const { OrviloOpenCodeCodingPlanAI: Runtime } = await import('./index');
     const model = 'discovered-responses-model';
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
       new Response(
@@ -286,7 +286,7 @@ describe('Muse Spark Responses API routing', () => {
 });
 
 describe('buildOpenAIPayload Kimi thinking semantics', () => {
-  let instance: InstanceType<typeof LobeOpenCodeCodingPlanAI>;
+  let instance: InstanceType<typeof OrviloOpenCodeCodingPlanAI>;
   let createSpy: Mock;
 
   const getLastRequestPayload = () => createSpy.mock.calls.at(-1)?.[0];
@@ -296,7 +296,7 @@ describe('buildOpenAIPayload Kimi thinking semantics', () => {
 
   beforeEach(() => {
     loadModelsMock.mockResolvedValue([]);
-    instance = new LobeOpenCodeCodingPlanAI({ apiKey: 'test' });
+    instance = new OrviloOpenCodeCodingPlanAI({ apiKey: 'test' });
     // Kimi models route to the OpenAI-compatible fallback runtime, whose client
     // is built lazily per request; spy on the shared SDK prototype to capture
     // the outgoing chat.completions.create params.

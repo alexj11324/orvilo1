@@ -18,16 +18,18 @@ describe('normalizeCrawlUrl', () => {
     expect(normalizeCrawlUrl('www.example.com/docs/intro')).toBe(
       'https://www.example.com/docs/intro',
     );
-    expect(normalizeCrawlUrl('lobe.zhouyu.li:8443/app')).toBe('https://lobe.zhouyu.li:8443/app');
+    expect(normalizeCrawlUrl('orvilo.zhouyu.li:8443/app')).toBe(
+      'https://orvilo.zhouyu.li:8443/app',
+    );
     expect(normalizeCrawlUrl('//cdn.example.com/x')).toBe('https://cdn.example.com/x');
   });
 
   it('should unwrap markdown links, angle brackets, quotes and trailing punctuation', () => {
-    expect(normalizeCrawlUrl('[LobeHub](https://lobehub.com/docs)')).toBe(
-      'https://lobehub.com/docs',
+    expect(normalizeCrawlUrl('[Orvilo](https://orvilo.aspectlylabs.com/docs)')).toBe(
+      'https://orvilo.aspectlylabs.com/docs',
     );
-    expect(normalizeCrawlUrl('[LobeHub](https://lobehub.com/docs "title")')).toBe(
-      'https://lobehub.com/docs',
+    expect(normalizeCrawlUrl('[Orvilo](https://orvilo.aspectlylabs.com/docs "title")')).toBe(
+      'https://orvilo.aspectlylabs.com/docs',
     );
     expect(normalizeCrawlUrl('<https://example.com/a>')).toBe('https://example.com/a');
     expect(normalizeCrawlUrl('"https://example.com/a"')).toBe('https://example.com/a');
@@ -47,7 +49,7 @@ describe('normalizeCrawlUrl', () => {
       '',
       '   ',
       'not a url at all',
-      'search for lobehub pricing',
+      'search for orvilo pricing',
       'ftp://example.com/file',
       'mailto:someone@example.com',
       'javascript:alert(1)',

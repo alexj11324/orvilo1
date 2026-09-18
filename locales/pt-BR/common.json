@@ -144,7 +144,7 @@
   "cmdk.askAIHeadingEmpty": "Escolha um recurso de IA",
   "cmdk.askAgentHeading": "Perguntar ao Agente",
   "cmdk.askAgentPlaceholder": "Pergunte algo ao {{agent}}...",
-  "cmdk.askLobeAI": "Perguntar ao Orvilo AI",
+  "cmdk.askOrviloAI": "Perguntar ao Orvilo AI",
   "cmdk.community": "Comunidade",
   "cmdk.communitySupport": "Suporte da Comunidade",
   "cmdk.contactUs": "Fale Conosco",

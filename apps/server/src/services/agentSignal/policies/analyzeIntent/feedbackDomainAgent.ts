@@ -9,7 +9,7 @@ import { RequestTrigger } from '@orvilo/types';
 import debug from 'debug';
 import { z } from 'zod';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 
 import type {
@@ -18,7 +18,7 @@ import type {
   AgentSignalFeedbackSatisfactionResult,
 } from '../types';
 
-const log = debug('lobe-server:agent-signal:feedback-domain:agent');
+const log = debug('orvilo-server:agent-signal:feedback-domain:agent');
 
 type FeedbackDomainJudgeTarget = AgentSignalFeedbackPhase1DomainTarget | 'none';
 
@@ -73,13 +73,13 @@ export interface JudgeFeedbackDomainsParams {
  * - One validated set of domain targets suitable for domain signal fan-out
  */
 export class FeedbackDomainJudgeAgentService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly modelConfig: FeedbackDomainJudgeAgentModelConfig;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     modelConfig: Partial<FeedbackDomainJudgeAgentModelConfig> = {},
     workspaceId?: string,

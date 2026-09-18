@@ -1,4 +1,4 @@
-import { getComposioAppByIdentifier, getLobehubSkillProviderById } from '@orvilo/const';
+import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import type { BuiltinToolContext, BuiltinToolResult } from '@orvilo/types';
 import { BaseExecutor } from '@orvilo/types';
 import debug from 'debug';
@@ -17,9 +17,9 @@ import type {
   InjectCredsToSandboxParams,
   SaveCredsParams,
 } from '../types';
-import { CredsApiName, LOBEHUB_OAUTH_PROVIDER_LIST } from '../types';
+import { CredsApiName, ORVILO_OAUTH_PROVIDER_LIST } from '../types';
 
-const log = debug('lobe-creds:executor');
+const log = debug('orvilo-creds:executor');
 
 class CredsExecutor extends BaseExecutor<typeof CredsApiName> {
   readonly identifier = CredsIdentifier;
@@ -144,11 +144,11 @@ class CredsExecutor extends BaseExecutor<typeof CredsApiName> {
       const { provider } = params;
 
       // Get provider config for display name
-      const providerConfig = getLobehubSkillProviderById(provider);
+      const providerConfig = getOrviloSkillProviderById(provider);
       if (!providerConfig) {
         return {
           error: {
-            message: `Unknown OAuth provider: ${provider}. Available providers: ${LOBEHUB_OAUTH_PROVIDER_LIST}`,
+            message: `Unknown OAuth provider: ${provider}. Available providers: ${ORVILO_OAUTH_PROVIDER_LIST}`,
             type: 'UnknownProvider',
           },
           success: false,
@@ -244,10 +244,7 @@ class CredsExecutor extends BaseExecutor<typeof CredsApiName> {
       const handleMessage = async (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return;
 
-        if (
-          event.data?.type === 'LOBEHUB_SKILL_AUTH_SUCCESS' &&
-          event.data?.provider === provider
-        ) {
+        if (event.data?.type === 'ORVILO_SKILL_AUTH_SUCCESS' && event.data?.provider === provider) {
           cleanup();
           resolve({ success: true });
         }

@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 
 import { S3StaticFileImpl } from './s3';
 import { type FileServiceImpl } from './type';
@@ -7,6 +7,6 @@ import { type FileServiceImpl } from './type';
  * Create file service module
  * Returns S3 file implementation for cloud storage
  */
-export const createFileServiceModule = (db: LobeChatDatabase): FileServiceImpl => {
+export const createFileServiceModule = (db: OrviloDatabase): FileServiceImpl => {
   return new S3StaticFileImpl(db);
 };

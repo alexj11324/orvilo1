@@ -168,8 +168,8 @@ jobs:
           VERSION="${{ env.VERSION }}"
 
           # Configure git
-          git config --global user.name "lobehubbot"
-          git config --global user.email "i@lobehub.com"
+          git config --global user.name "orvilobot"
+          git config --global user.email "i@orvilo.aspectlylabs.com"
 
           # Commit changes (if any) and push
           git add package.json CHANGELOG.md changelog/

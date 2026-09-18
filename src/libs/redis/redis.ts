@@ -15,7 +15,7 @@ import {
 } from './types';
 import { buildIORedisSetArgs, normalizeMsetValues } from './utils';
 
-const log = debug('lobe:redis');
+const log = debug('orvilo:redis');
 
 const REDIS_CONNECT_TIMEOUT_MS = 10_000;
 const REDIS_COMMAND_TIMEOUT_MS = 10_000;

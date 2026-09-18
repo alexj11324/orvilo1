@@ -1,7 +1,7 @@
 import type { TaskItem } from '@orvilo/types';
 
 import { TaskModel } from '@/database/models/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 export type SubtaskRunnableStatus = 'backlog' | 'paused' | 'failed';
 
@@ -223,7 +223,7 @@ const findCycleMembers = (unplaced: string[], downstream: Map<string, string[]>)
 export class TaskGraphService {
   private taskModel: TaskModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.taskModel = new TaskModel(db, userId, workspaceId);
   }
 

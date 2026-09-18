@@ -1,4 +1,4 @@
-import type * as LobechatConst from '@orvilo/const';
+import type * as OrvilochatConst from '@orvilo/const';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -61,7 +61,7 @@ const renderFooter = async ({
   };
 
   vi.doMock('@orvilo/const', async (importOriginal) => {
-    const actual = (await importOriginal()) as typeof LobechatConst;
+    const actual = (await importOriginal()) as typeof OrvilochatConst;
 
     return {
       ...actual,
@@ -187,7 +187,7 @@ describe('Footer help menu tracking', () => {
     const getApp = await screen.findByRole('link', { name: 'Get App' });
     const github = screen.getByRole('link', { name: 'GitHub' });
 
-    expect(getApp).toHaveAttribute('href', '/apps');
+    expect(getApp).toHaveAttribute('href', '/settings/about');
     expect(getApp.compareDocumentPosition(github) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   }, 20000);
 
@@ -197,7 +197,10 @@ describe('Footer help menu tracking', () => {
 
     await user.click(screen.getByRole('button', { name: 'Help' }));
 
-    expect(await screen.findByRole('link', { name: 'Get App' })).toHaveAttribute('href', '/apps');
+    expect(await screen.findByRole('link', { name: 'Get App' })).toHaveAttribute(
+      'href',
+      '/settings/about',
+    );
   }, 20000);
 
   it('tracks menu open with the visible item keys', async () => {

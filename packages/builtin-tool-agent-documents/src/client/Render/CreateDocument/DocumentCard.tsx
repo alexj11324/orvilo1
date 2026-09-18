@@ -90,13 +90,13 @@ const DocumentCard = memo<DocumentCardProps>(({ content, documentId, title }) =>
             <CopyButton
               content={content}
               size={'small'}
-              title={t('builtins.lobe-notebook.actions.copy')}
+              title={t('builtins.orvilo-notebook.actions.copy')}
             />
             {documentId && (
               <ActionIcon
                 icon={PencilLine}
                 size={'small'}
-                title={t('builtins.lobe-notebook.actions.edit')}
+                title={t('builtins.orvilo-notebook.actions.edit')}
                 onClick={handleToggle}
               />
             )}
@@ -118,8 +118,8 @@ const DocumentCard = memo<DocumentCardProps>(({ content, documentId, title }) =>
           onClick={handleToggle}
         >
           {isExpanded
-            ? t('builtins.lobe-notebook.actions.collapse')
-            : t('builtins.lobe-notebook.actions.expand')}
+            ? t('builtins.orvilo-notebook.actions.collapse')
+            : t('builtins.orvilo-notebook.actions.expand')}
         </Button>
       )}
     </Flexbox>

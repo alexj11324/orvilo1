@@ -7,7 +7,7 @@ import {
 } from '@orvilo/prompts';
 import { z } from 'zod';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { resolveGoalModelConfig } from './modelConfig';
@@ -44,7 +44,7 @@ export type GoalExplorationPlan = z.infer<typeof planSchema>;
 
 export class GoalExplorationPlanner {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}

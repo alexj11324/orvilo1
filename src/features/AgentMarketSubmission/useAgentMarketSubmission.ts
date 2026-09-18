@@ -1,5 +1,5 @@
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
-import { getActivePluginIds, type LobeAgentConfig } from '@orvilo/types';
+import { getActivePluginIds, type OrviloAgentConfig } from '@orvilo/types';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,7 +12,7 @@ import { agentSelectors } from '@/store/agent/selectors';
 interface Options {
   agentId?: string | null;
   canSubmit: boolean;
-  getPrompt: () => Pick<LobeAgentConfig, 'editorData' | 'systemRole'>;
+  getPrompt: () => Pick<OrviloAgentConfig, 'editorData' | 'systemRole'>;
 }
 
 /** Submit a snapshot for Market review; never call the manual publish endpoint. */

@@ -90,7 +90,7 @@ describe('Telegram Guest Mode message capabilities', () => {
     expect(resolveUnsupportedMessageApis(undefined, GUEST_THREAD_ID)).toBeUndefined();
   });
 
-  it('hides channel tools from the Guest Mode lobe-message manifest', () => {
+  it('hides channel tools from the Guest Mode orvilo-message manifest', () => {
     const result = resolveMessageManifest({
       botPlatform: {
         id: 'telegram',

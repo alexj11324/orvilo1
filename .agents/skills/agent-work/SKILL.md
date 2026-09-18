@@ -23,12 +23,12 @@ Two tables (`packages/database/src/schemas/work.ts`):
 
 Four write paths, two timing classes:
 
-| Path                                                                    | When                                | Where                                                                                                                                                               |
-| ----------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Skill structured tools + sandbox `runCommand` (github / linear)         | at tool execution                   | `WorkModel.handleSkillToolResult`, called from server `toolExecution` and the client executor (`registerClientWorkFromIntent.ts` on the legacy non-gateway runtime) |
-| Shell Work scan (hetero codex/claude-code + device `lobe-local-system`) | at operation completion             | `apps/server/src/services/workRegistration/shellWorkRegistration.ts` via `registerWorksForOperation`                                                                |
-| File Work scan (sandbox entity files)                                   | at operation completion             | `apps/server/src/services/workRegistration/registerWorksForOperation.ts`                                                                                            |
-| Task / document works                                                   | at creation by their owning feature | `WorkModel.registerTask` / `registerDocument`                                                                                                                       |
+| Path                                                                      | When                                | Where                                                                                                                                                               |
+| ------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill structured tools + sandbox `runCommand` (github / linear)           | at tool execution                   | `WorkModel.handleSkillToolResult`, called from server `toolExecution` and the client executor (`registerClientWorkFromIntent.ts` on the legacy non-gateway runtime) |
+| Shell Work scan (hetero codex/claude-code + device `orvilo-local-system`) | at operation completion             | `apps/server/src/services/workRegistration/shellWorkRegistration.ts` via `registerWorksForOperation`                                                                |
+| File Work scan (sandbox entity files)                                     | at operation completion             | `apps/server/src/services/workRegistration/registerWorksForOperation.ts`                                                                                            |
+| Task / document works                                                     | at creation by their owning feature | `WorkModel.registerTask` / `registerDocument`                                                                                                                       |
 
 ### Execution-time: skill providers
 
@@ -38,7 +38,7 @@ A normalizer turns one tool result into `ExternalToolWorkOperation | null` — n
 
 ### Completion-time: the shell Work scan framework
 
-Heterogeneous CLI agents (codex, claude-code) and the device `lobe-local-system` tool run CLIs like `gh` through their own shell surfaces, which never pass the skill-tool hook. `registerWorksForOperation` recovers their Works at completion from the persisted command text + stdout. Layering:
+Heterogeneous CLI agents (codex, claude-code) and the device `orvilo-local-system` tool run CLIs like `gh` through their own shell surfaces, which never pass the skill-tool hook. `registerWorksForOperation` recovers their Works at completion from the persisted command text + stdout. Layering:
 
 ```
 registerWorksForOperation (registerWorksForOperation.ts)
@@ -77,7 +77,7 @@ The whole scan returns `{attempted, failed}` and the completion backstop (`Compl
 
 ## Key decisions (from the Work PRs)
 
-- **Only successful create/edit results become Works** (LOBE-10967). Read-only queries, comments, merges/closes, and branch/repo operations are excluded — `gh pr view` printing an entity URL must NOT register.
+- **Only successful create/edit results become Works** (ORVILO-10967). Read-only queries, comments, merges/closes, and branch/repo operations are excluded — `gh pr view` printing an entity URL must NOT register.
 - **`owner/repo#number` is the canonical github identity**, not node\_id: the gh CLI surface never returns node\_id, and the same entity touched via REST tools and CLI must land on one Work row.
 - **stdout is the source of truth for identity** on the CLI path (`gh … create/edit` prints the entity URL); the command's edit target is the fallback. The LAST gh create/edit segment of a chained command owns the trailing URL.
 - **Persisted URLs are http(s)-allowlisted** (`sanitizeExternalUrl`): gh stdout / tool results are member-controlled and the URL reaches `shell.openExternal` on desktop.

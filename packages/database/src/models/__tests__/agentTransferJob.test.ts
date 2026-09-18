@@ -12,7 +12,7 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 import {
   AGENT_TRANSFER_IN_PROGRESS,
@@ -22,7 +22,7 @@ import {
 import { UserModel } from '../user';
 import { WorkspaceModel } from '../workspace';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'atj-test-user';
 const wsId = 'atj-test-ws';

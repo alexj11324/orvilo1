@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { ChatAudioItem, ChatFileItem, ChatImageItem, ChatVideoItem } from '@orvilo/types';
 import { readAudioDurationMs } from '@orvilo/utils/audio';
 import debug from 'debug';
@@ -7,7 +7,7 @@ import { FileModel } from '@/database/models/file';
 import { DocumentService } from '@/server/services/document';
 import { FileService, getFileProxyUrl } from '@/server/services/file';
 
-const log = debug('lobe-server:resolveAttachments');
+const log = debug('orvilo-server:resolveAttachments');
 
 export interface ResolvedAttachments {
   audioList: ChatAudioItem[];
@@ -24,7 +24,7 @@ export interface ResolvedAttachments {
 }
 
 interface ResolveArgs {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   fileIds: string[];
   userId: string;
   workspaceId?: string;

@@ -30,6 +30,6 @@ export const params = createAnthropicCompatibleParams({
   provider: ModelProvider.Anthropic,
 });
 
-export const LobeAnthropicAI = createAnthropicCompatibleRuntime(params);
+export const OrviloAnthropicAI = createAnthropicCompatibleRuntime(params);
 
-export default LobeAnthropicAI;
+export default OrviloAnthropicAI;

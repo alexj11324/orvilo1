@@ -12,13 +12,13 @@ import {
   verifyEvidence,
   verifyRuns,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentOperationModel } from '../agentOperation';
 import { VerifyCheckResultModel } from '../verifyCheckResult';
 import { VerifyEvidenceModel } from '../verifyEvidence';
 import { VerifyRunModel } from '../verifyRun';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'verify-evidence-test-user';
 const operationId = 'verify-evidence-test-op';

@@ -24,7 +24,7 @@ export const baseName = (dir: string) => dir.split('/').pop() ?? dir;
 
 /**
  * Derive the badge status of one session from the server-side import status:
- * - linked: the session originated from a LobeHub live run — importing would duplicate it
+ * - linked: the session originated from a Orvilo live run — importing would duplicate it
  * - syncable: imported before, and the local transcript grew since (endAt fingerprint)
  * - imported: imported and unchanged
  */

@@ -11,7 +11,7 @@ the decisions and landmines, not copies of the code:
 
 - **`apps/workbench`** (`/verify`, `/acceptance`) — all code in this repo, builds and deploys from OSS CI.
 - **`apps/share`** (`/share/t/:id`, `/share/page/:id`) — renders Cloud-only surfaces, so it
-  builds and deploys from **lobehub-cloud** CI. See §1b before touching it.
+  builds and deploys from **orvilo-cloud** CI. See §1b before touching it.
 - **`apps/auth`** (`/signin`, `/signup`, …) — the SSG variant: `ssr: false` + `prerender`, so
   the worker carries no React at all (7KB). 18 locales x 4 routes of prerendered documents.
   Also renders Cloud-only surfaces (§1b). See §3b.
@@ -32,7 +32,7 @@ Do not revive Cloud `SPA_TARGET=<name>` Vite builds or a `/spa-<name>` middlewar
 The Docker chain per app, all five links or the route is dead: root `build:docker` script →
 `copySpaBuildCore.ts` target entry (`dist/<name>` → `public/_spa-<name>`) → `spaHtmlPaths.ts`
 resolver + `generateSpaTemplates` block → `src/app/spa-<name>/[locale]/[[...path]]/route.ts` →
-middleware rewrite (`src/libs/next/<name>Routes.ts` + `define-config.ts`) plus the path in
+middleware rewrite (`src/libs/next/<name>Routes.ts` + `define-config.ts`) plus the path
 `src/proxy.ts`'s matcher and, for public pages, in `isPublicRoute`.
 
 **Self-hosted loses per-page SSR.** The Next shell serves the built SPA HTML with a brand OG
@@ -106,7 +106,7 @@ the deploy workflow diffs changed files against the manifest from the **last suc
 artifact** (carry-forward on skip), plus meta triggers (app dir, plugins/vite, lockfile,
 tsconfig, glob dirs). New `import.meta.glob` patterns in shared code need a new meta trigger —
 the one manual rule. See `apps/workbench/scripts/should-build.mjs` +
-`.github/workflows/deploy-workbench.yml`; the overlay-hosted variant is lobehub-cloud's
+`.github/workflows/deploy-workbench.yml`; the overlay-hosted variant is orvilo-cloud's
 `scripts/shouldBuildShare.ts` + `.github/workflows/deploy-share.yml` (§1b).
 
 **PR-time verify is a separate workflow per repo that can change the artifact** — deploy
@@ -121,12 +121,12 @@ deployed worker — OSS `verify-share.yml` + cloud `verify-share.yml`.
 back to the **100 most recently uploaded versions** of a script, and preview uploads count: at
 share's PR rate (10 uploads in under an hour on a busy day) every real deployment left the
 window within a day, which broke the gateway admin's (鳥居番) rollback list. So every verify
-passes `--name lobehub-<name>-preview`, and the production script's version list holds only
+passes `--name orvilo-<name>-preview`, and the production script's version list holds only
 deployments. Two consequences: the preview Worker must exist before the first upload
 (`wrangler versions upload` refuses a never-deployed script — bootstrap it once with
-`wrangler deploy --name lobehub-<name>-preview` from any stub; the next upload replaces it),
+`wrangler deploy --name orvilo-<name>-preview` from any stub; the next upload replaces it),
 and the preview API token must be allowed to edit the `-preview` name. Preview URLs are then
-`https://<alias>-lobehub-<name>-preview.lobeobjects-tg.workers.dev`, and `VITE_CDN_BASE` must
+`https://<alias>-orvilo-<name>-preview.orvilo-objects-tg.workers.dev`, and `VITE_CDN_BASE` must
 point at that same origin. Alias namespaces must not collide on the shared preview worker: OSS
 uses `pr<N>`, cloud uses `cloudpr<N>`. Manifest source
 differs by what the repo can read: cloud verify borrows the deploy's `share-deploy-state`
@@ -135,9 +135,9 @@ own last successful run's `share-build-inputs` (first run always builds).
 
 ## 1b. When the surface renders Cloud-only code
 
-`lobehub-cloud` includes this repo as a submodule at `lobehub/` and shadows it path-by-path
-through tsconfig `paths` (`@/business/*` → `./src/business/*` then `./lobehub/src/business/*`;
-`@/*` → `./src/*` then `./lobehub/src/*`). Split by **ownership**, not by which repo is handy:
+`orvilo-cloud` includes this repo as a submodule at `aspectlylabs/` and shadows it path-by-path
+through tsconfig `paths` (`@/business/*` → `./src/business/*` then `./orvilo/src/business/*`;
+`@/*` → `./src/*` then `./orvilo/src/*`). Split by **ownership**, not by which repo is handy:
 
 `apps/auth` is the cheap case: because `ssr: false` ships no render graph, the Cloud overlay
 (BusinessAuthProvider → Turnstile + referral) added **one chunk and 0 extra SSR stubs** —
@@ -167,29 +167,29 @@ the standalone build, plugin for the overlay build. Verify by grepping `build-in
 Cloud-only file.
 
 **Whoever's code must be inside the artifact owns the build.** Share deploys from
-lobehub-cloud (`.github/workflows/deploy-share.yml`), not OSS. Never add a deploy workflow to a
+orvilo-cloud (`.github/workflows/deploy-share.yml`), not OSS. Never add a deploy workflow to a
 repo that can only produce the fallback.
 
 **OSS PRs can still verify with the real overlay.** Same-repo OSS PRs clone the overlay repo @
 HEAD via `.github/actions/business-overlay` (the clone+overlay step extracted from
 `desktop-build-setup`: overlay files land in `$GITHUB_WORKSPACE/..`, which works because the
-repo is named `lobehub` so the checkout already sits at the submodule path), then
+repo is named `orvilo` so the checkout already sits at the submodule path), then
 `cd .. && pnpm install` and run the overlay repo's own `bun run build:share` — the tsconfig /
 stub knowledge stays over there. **The OSS workflow never hardcodes the private repo
 name**: it comes from the Actions repository variable `OVERLAY_REPOSITORY`; the token reuses
-the pre-existing `LOBEHUB_CLOUD_TOKEN` secret (deliberately not renamed — the desktop release
+the pre-existing `ORVILO_CLOUD_TOKEN` secret (deliberately not renamed — the desktop release
 workflows already reference it, and a rename would mean reconfiguring the org secret). When
 either is unset (fork PRs always), the workflow falls back to the
 OSS-stub build + wrangler dry-run as a pure compile/size guard. Keep new public-facing CI
 wording on the neutral "business overlay" vocabulary — the older desktop release workflows
 still leak the internal naming and are the known remaining exception. One trap: an overlay
 build's `build-inputs.txt` is overlay-root-relative (`repoRoot =
-dirname(SHARE_TSCONFIG_PROJECT)`), so OSS files appear as `lobehub/src/...` — strip that
-prefix before exact-matching against the OSS repo's own diff (`sed 's#^lobehub/##'` in the
+dirname(SHARE_TSCONFIG_PROJECT)`), so OSS files appear as `aspectlylabs/src/...` — strip that
+prefix before exact-matching against the OSS repo's own diff (`sed 's#^aspectlylabs/##'` in the
 verify workflow); the meta triggers already match both spellings.
 
-**Cloud affected-detection needs submodule history**: a bump is a single `lobehub` entry in the
-host diff, so the workflow runs `git -C lobehub fetch --unshallow` and compares the previous
+**Cloud affected-detection needs submodule history**: a bump is a single `orvilo` entry in the
+host diff, so the workflow runs `git -C orvilo fetch --unshallow` and compares the previous
 submodule SHA (carried in the state artifact) before diffing against `build-inputs.txt`.
 
 **Re-run the module trace in the Cloud build** — the overlay adds chains OSS never sees
@@ -202,12 +202,12 @@ from a local submodule mirror is not reproducible from any commit — say so whe
 ## 2. Deploy: CDN Assets + Worker
 
 Assets follow the cloud convention (`resolveViteBase`): **stable prefix, no version stamp** —
-`VITE_CDN_BASE=https://web-assets.lobehub.com/<name>/`; content-hashed filenames make uploads
+`VITE_CDN_BASE=https://web-assets.aspectlylabs.com/<name>/`; content-hashed filenames make uploads
 incremental and immutable. The prefix axis is the **app**, nothing else: do not invent
 `<name>-oss` / `<name>-cloud` variants to separate build origins — hashed filenames already make
 one prefix safe for all of them. `ASSET_S3_PUBLIC_DOMAIN` is an origin; any path segment belongs
 on `ASSET_BASE_URL` instead. `bun run deploy` (see `apps/workbench/scripts/deploy.ts`) =
-build with CDN base → upload `build/client/assets` to R2 (`web-assets` bucket, LobeHub
+build with CDN base → upload `build/client/assets` to R2 (`web-assets` bucket, Orvilo
 account) → `wrangler deploy`. R2 creds: 1Password Shared vault item "CI R2 - web-assets".
 CI injects repo secrets `ASSET_S3_*` (`ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `BUCKET`,
 `ENDPOINT`, `REGION`, `PUBLIC_DOMAIN`). Local `bun run deploy` can fall back to `MOBILE_S3_*`.
@@ -228,7 +228,7 @@ gateway routes API to `app` instead), and redirect `/` + unknown paths to `WORKB
 - **i18n**: narrow to the namespaces the app renders; root loader preloads locale resources,
   i18n inits sync (`initAsync: false`) with bundled resources; SSR env stubs the shared glob
   loader to only its namespaces (full glob = every locale × ns as worker chunks).
-- **CSS three layers**: lobe-ui `static-css` (antd probes + theme vars, hrefTemplate from the
+- **CSS three layers**: orvilo-ui `static-css` (antd probes + theme vars, hrefTemplate from the
   shared options file; emitted as hashed files, dev served by config middleware) →
   antd-style `extractStaticStyle(html, { includeAntd: false })` for emotion →
   `buildInlineAntdStyle(cache, { styleKeys })` fallback. Non-streaming render
@@ -238,7 +238,7 @@ gateway routes API to `app` instead), and redirect `/` + unknown paths to `WORKB
   server and client compute differently belong behind a `useHydrated()`
   (`useSyncExternalStore`) check, not in the SSR pass.
 - **Skeletons must not swallow SSR'd chrome — and must hold its position.** A list that flips
-  to a skeleton on mount blanks the server-rendered header with it: render the header slot in
+  to a skeleton on mount blanks the server-rendered header with it: render the header slot
   the skeleton branch too. Presence is not enough — every phase (no-JS SSR fallback,
   post-hydration skeleton, settled list) must put that chrome in the **same layout container**
   as the final render, or the page jumps sideways when JS lands. Share's hero shipped left-flush
@@ -267,7 +267,7 @@ and swaps a `window.__SERVER_CONFIG__` placeholder for the deployment's config.
   applies to the _whole_ injected object, so every value routed through it is a value missing
   from the prerendered HTML. In `apps/auth` the config carried 11 fields; the pages read 6, and
   the most visible one was in the wrong layer entirely: `enableBusinessFeatures` is a
-  **build-time constant** (`@orvilo/business-const`, `false` open-source / `true` in Cloud via
+  **build-time constant** (`@orvilo/business-const`, `false` open-source / `true` in Cloud
   a pnpm override) that was being round-tripped through the server, and with it the SSO provider
   list — itself a hardcoded array in the Cloud overlay. Reading the constant directly instead
   put Google/GitHub/Apple into the static document. `featureFlags`, `enableMarketTrustedClient`,
@@ -347,17 +347,17 @@ RR v8 gotchas (docs/templates still say v7):
 One shared builder (`app/lib/seo.ts` → `buildPageMeta`): title, description, robots,
 og:title/description/type/site\_name/locale (underscore form)/image(+alt), twitter card set.
 Rules: leaf `meta` **fully replaces** root meta — every leaf returns the whole set;
-`og:image` must be an **absolute URL** (reuse landing's `https://lobehub.com/assets/cao-og.webp`);
+`og:image` must be an **absolute URL** (reuse landing's `https://orvilo.aspectlylabs.com/assets/cao-og.webp`);
 dynamic title/description come from the route loader (subject title · BRANDING\_NAME,
 requirement text truncated \~200 chars).
 
-## 5. Gateway Routing (torii, `../lobehub-gateway`)
+## 5. Gateway Routing (torii, `../orvilo-gateway`)
 
-Config = KV `config:lobehub.com`, mirrored in `config/entrypoints/lobehub.com/<env>.json`.
+Config = KV `config:orvilo.aspectlylabs.com`, mirrored in `config/entrypoints/orvilo.aspectlylabs.com/<env>.json`.
 To add a micro app:
 
 1. `targets.<name>` = worker hostname (must be cross-zone, e.g. `*.workers.dev`; https).
-2. `targetPolicies.<name>` — `cookies` if SSR loaders need the `.lobehub.com` session
+2. `targetPolicies.<name>` — `cookies` if SSR loaders need the `.orvilo.aspectlylabs.com` session
    forwarded; `none` for public-only; `all` adds Authorization. Add `"locale": "query"` when the
    app reads `?hl=` (share does).
 3. `rules` — first-match path prefixes (`{ "match": "/acceptance", "target": "<name>" }`).
@@ -383,7 +383,7 @@ To add a micro app:
    history-recorded config write — no editor Save). Adding a micro app to `bindings.ts` is
    therefore part of wiring it into the gateway.
 
-Landmine (fixed 2026-08, stay aware): the lobehub-com `react-router-data` plugin owns `.data`
+Landmine (fixed 2026-08, stay aware): the orvilo-com `react-router-data` plugin owns `.data`
 protocol affinity for the landing pair; it consults `resolveRule` and lets other targets'
 `.data` fall through — if a future entrypoint clones that plugin, keep the fall-through.
 
@@ -396,7 +396,7 @@ protocol affinity for the landing pair; it consults `resolveRule` and lets other
    in the overlay repo too, if there is one.
 4. Wire CDN deploy (`deploy.ts`, stable `_<name>/` prefix) + wrangler vars + redirects, plus a
    PR-time verify workflow in **every repo whose changes reach the artifact** (§1 PR-time
-   verify — preview version on the bootstrapped `lobehub-<name>-preview` Worker, size guard,
+   verify — preview version on the bootstrapped `orvilo-<name>-preview` Worker, size guard,
    non-colliding alias namespace).
 5. Loader data + SWR fallback + meta builder + i18n narrowing (+ `error`); verify with
    `/trpc`-blocked browser run (content must survive) and view-source (SSR content + meta present).

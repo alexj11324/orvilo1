@@ -72,10 +72,10 @@ describe('completion sound and desktop banner', () => {
   });
 
   it('hands the picked banner sound to the main process', async () => {
-    getNotificationSoundFile.mockResolvedValue('lobehub-complete.wav');
+    getNotificationSoundFile.mockResolvedValue('orvilo-complete.wav');
     await notifyDesktopAgentCompleted(() => ({}) as ChatStore, { context: {} });
     expect(showNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ soundName: 'lobehub-complete.wav' }),
+      expect.objectContaining({ soundName: 'orvilo-complete.wav' }),
     );
   });
 

@@ -173,17 +173,17 @@ export function registerGoalCommand(program: Command) {
       'JSON plan: action tasks/verify/retry/escalate, reason and action fields',
     )
     .requiredOption('--token <token>', 'Current server-issued planning turn token')
-    .option('--operation <id>', 'Defaults to LOBEHUB_OPERATION_ID')
+    .option('--operation <id>', 'Defaults to ORVILO_OPERATION_ID')
     .option('--json', 'Output JSON')
     .action(
       async (
         id: string,
         options: { file: string; token: string; operation?: string; json?: boolean },
       ) => {
-        const operationId = options.operation ?? process.env.LOBEHUB_OPERATION_ID;
+        const operationId = options.operation ?? process.env.ORVILO_OPERATION_ID;
         if (!operationId) throw new Error('Current manager operation ID required');
         const client = await getTrpcClient();
-        const injectedJwt = process.env.LOBEHUB_JWT;
+        const injectedJwt = process.env.ORVILO_JWT;
         const isOperationToken =
           injectedJwt &&
           JSON.parse(Buffer.from(injectedJwt.split('.')[1], 'base64url').toString()).purpose ===
@@ -246,8 +246,8 @@ export function registerGoalCommand(program: Command) {
       const client = await getTrpcClient();
       const buildUrl = await resolveAppUrlBuilder(client);
       const result = await client.goal.create.mutate({
-        agentId: options.agent ?? process.env.LOBEHUB_AGENT_ID,
-        createdByAgentId: process.env.LOBEHUB_AGENT_ID,
+        agentId: options.agent ?? process.env.ORVILO_AGENT_ID,
+        createdByAgentId: process.env.ORVILO_AGENT_ID,
         config:
           options.maxManagerTurns ||
           options.explore ||

@@ -2,7 +2,7 @@ import type { ModelProviderCard } from '../types';
 
 // ref: https://platform.openai.com/docs/deprecations
 const OpenAI: ModelProviderCard = {
-  apiKeyUrl: 'https://platform.openai.com/api-keys?utm_source=lobehub',
+  apiKeyUrl: 'https://platform.openai.com/api-keys?utm_source=orvilo',
   chatModels: [],
   checkModel: 'gpt-5.2',
   description:

@@ -133,7 +133,7 @@ describe('fetchCodexQuota', () => {
 
     const resultPromise = fetchCodexQuota({
       command: '/custom/bin/codex',
-      env: { CODEX_HOME: '/tmp/codex-home', LOBE_TEST_ENV: '1' },
+      env: { CODEX_HOME: '/tmp/codex-home', ORVILO_TEST_ENV: '1' },
     });
     await vi.advanceTimersByTimeAsync(1);
     await vi.advanceTimersByTimeAsync(1);
@@ -187,7 +187,7 @@ describe('fetchCodexQuota', () => {
       expect.objectContaining({
         env: expect.objectContaining({
           CODEX_HOME: '/tmp/codex-home',
-          LOBE_TEST_ENV: '1',
+          ORVILO_TEST_ENV: '1',
         }),
       }),
     );

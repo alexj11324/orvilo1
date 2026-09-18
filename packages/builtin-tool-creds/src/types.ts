@@ -28,7 +28,7 @@ export const CredsApiName = {
 
 export type CredsApiNameType = (typeof CredsApiName)[keyof typeof CredsApiName];
 
-export const LOBEHUB_OAUTH_PROVIDER_IDS = [
+export const ORVILO_OAUTH_PROVIDER_IDS = [
   'github',
   'linear',
   'microsoft',
@@ -36,9 +36,9 @@ export const LOBEHUB_OAUTH_PROVIDER_IDS = [
   'twitter',
 ] as const;
 
-export const LOBEHUB_OAUTH_PROVIDER_LIST = LOBEHUB_OAUTH_PROVIDER_IDS.join(', ');
+export const ORVILO_OAUTH_PROVIDER_LIST = ORVILO_OAUTH_PROVIDER_IDS.join(', ');
 
-export type LobehubOAuthProviderId = (typeof LOBEHUB_OAUTH_PROVIDER_IDS)[number];
+export type OrviloOAuthProviderId = (typeof ORVILO_OAUTH_PROVIDER_IDS)[number];
 
 // ==================== Tool Parameter Types ====================
 
@@ -46,7 +46,7 @@ export interface InitiateOAuthConnectParams {
   /**
    * The OAuth provider ID (e.g., 'linear', 'microsoft', 'notion', 'twitter')
    */
-  provider: LobehubOAuthProviderId;
+  provider: OrviloOAuthProviderId;
 }
 
 export interface InitiateOAuthConnectState {

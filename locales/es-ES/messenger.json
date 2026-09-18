@@ -184,7 +184,7 @@
   "verify.confirm.defaultAgent": "Agente predeterminado",
   "verify.confirm.defaultAgentHint": "Tus mensajes se enviarán aquí primero. Puedes cambiar en cualquier momento mediante /agents en el bot o desde Configuración → Messenger.",
   "verify.confirm.defaultAgentPlaceholder": "Selecciona un agente",
-  "verify.confirm.fields.lobeHubAccount": "Cuenta de Orvilo",
+  "verify.confirm.fields.orviloHubAccount": "Cuenta de Orvilo",
   "verify.confirm.fields.platformAccount": "Cuenta de {{platform}}",
   "verify.confirm.fields.workspace": "Espacio de trabajo",
   "verify.confirm.noAgents": "Aún no tienes agentes. Crea uno en Orvilo y luego regresa para finalizar la vinculación.",
@@ -203,7 +203,7 @@
   "verify.error.unlinkBeforeRelink": "Esta cuenta de Orvilo ya está vinculada a otra cuenta de Telegram. Desconéctala en Configuración → Messenger antes de vincular una nueva.",
   "verify.signInCta": "Inicia sesión para continuar",
   "verify.signInRequired": "Por favor, inicia sesión en Orvilo para confirmar la vinculación.",
-  "verify.success.backToLobeHub": "Volver a Orvilo",
+  "verify.success.backToOrvilo": "Volver a Orvilo",
   "verify.success.description": "Tu cuenta ahora está conectada a {{platform}}. Abre {{platform}} y envía tu primer mensaje.",
   "verify.success.openBot": "Abrir en {{platform}}",
   "verify.success.title": "¡Vinculado con éxito!"

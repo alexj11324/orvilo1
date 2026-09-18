@@ -1,4 +1,4 @@
-import type { ILobeAgentRuntimeErrorType } from '@orvilo/types';
+import type { IOrviloAgentRuntimeErrorType } from '@orvilo/types';
 import { AgentRuntimeErrorType } from '@orvilo/types';
 
 export const AGENT_RUNTIME_ERROR_SET = new Set<string>(Object.values(AgentRuntimeErrorType));
@@ -27,8 +27,8 @@ export type ErrorType = (typeof StandardErrorType)[keyof typeof StandardErrorTyp
 export interface ChatMessageError {
   body?: any;
   message: string;
-  type: ErrorType | ILobeAgentRuntimeErrorType;
+  type: ErrorType | IOrviloAgentRuntimeErrorType;
 }
 
-export type { ILobeAgentRuntimeErrorType } from '@orvilo/types';
+export type { IOrviloAgentRuntimeErrorType } from '@orvilo/types';
 export { AgentRuntimeErrorType } from '@orvilo/types';

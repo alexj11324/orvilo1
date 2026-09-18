@@ -29,7 +29,7 @@ const getFileByChunkTargetId = (id?: string | null) => (s: FilesStoreState) => {
  *
  * File-backed knowledge resources can expose a coalesced `docs_*` id while chunk
  * operations expect the underlying `file_*` id, so prefer `fileId` when present.
- * @see https://github.com/lobehub/lobehub/issues/16267
+ * @see
  */
 export const getChunkTargetId = (item: { fileId?: string | null; id: string }): string =>
   item.fileId ?? item.id;

@@ -2,125 +2,38 @@ import {
   AgentDocumentsApiName,
   AgentDocumentsIdentifier,
 } from '@orvilo/builtin-tool-agent-documents';
-import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { KnowledgeBaseApiName, KnowledgeBaseIdentifier } from '@orvilo/builtin-tool-knowledge-base';
 import {
-  LobeAgentApiName,
-  LobeAgentIdentifier,
-  systemPromptWithoutSubAgent,
-} from '@orvilo/builtin-tool-lobe-agent';
+  OrviloAgentApiName,
+  OrviloAgentIdentifier,
+} from '@orvilo/builtin-tool-orvilo-agent';
 import { MEMORY_WRITE_API_NAMES, MemoryIdentifier } from '@orvilo/builtin-tool-memory';
 import {
   AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS,
   builtinTools,
   isBuiltinToolIdentifier,
 } from '@orvilo/builtin-tools';
-import {
-  hasShareToolGrant,
-  isShareToolApiGranted,
-  PLUGIN_SCHEMA_SEPARATOR,
-  resolveShareToolGrants,
-  type ShareToolGrant,
-} from '@orvilo/const';
-import type { LobeToolManifest, ToolExecutor, ToolSource } from '@orvilo/context-engine';
-import { ToolNameResolver } from '@orvilo/context-engine';
+import { isShareToolApiGranted, resolveShareToolGrants } from '@orvilo/const';
 import type { AgentShareToolGrant } from '@orvilo/types';
 
-import type { AgentShareConfig } from '@/database/schemas';
-
 /**
- * Single shared resolver instance for regenerating function-calling names
- * from a manifest's identifier/api/type — same class `ToolsEngine` used to
- * build `toolSet.tools` in the first place. Stateless (no per-call config),
- * so one instance is safe to reuse across every gate pass.
- */
-const toolNameResolver = new ToolNameResolver();
-
-/**
- * Server-side gate for shared-agent visitor conversations.
+ * Dispatch-time tool gate for shared-agent visitor runs — RETIRED STARTUP.
  *
- * Built exclusively by the shareChat router after the share access check —
- * never from client input. The gate is applied at operation-build time inside
- * `AiAgentService.execAgent`, so the restricted tool/memory/file surface is
- * snapshotted into the operation state and every later step inherits it
- * without the context engine knowing about shares.
- */
-export interface AgentShareGate {
-  agentId: string;
-  shareConfig: AgentShareConfig;
-  /**
-   * The `agentShares.id` this run was authorized against — read together with
-   * `shareConfig` in the SAME `AgentShareModel.findByShareIdWithAccessCheck`
-   * call.
-   *
-   * "The share row for this agent still exists AND its id still equals
-   * `shareId` AND its visibility is still `link`" is exactly the condition
-   * "this run's authorization has not been revoked". Every re-validation in
-   * the visitor chain (`shareVisitorAbuseGuards`, the per-step runtime
-   * re-check) is that one comparison.
-   *
-   * The visibility half carries the ordinary case: turning sharing off flips
-   * the row to `private` and keeps it, so the owner can resume the same link
-   * later (`AgentShareModel.updateVisibility`). The id half covers a row that
-   * genuinely went away and came back as a different instance — a hard delete
-   * (`AgentShareModel.deleteByAgentId`) or an agent delete + recreate.
-   */
-  shareId: string;
-  /**
-   * The signed-in visitor driving this run. Recorded on `topics.senderId` and
-   * spend-log metadata; the run itself executes as the creator.
-   */
-  visitorUserId: string;
-}
-
-/**
- * Intersect a run's candidate plugin/skill ids with the share whitelist.
- * The whitelist defaults to empty, so an unconfigured share exposes no tools.
+ * Visitor execution can no longer start (`shareChat.execAgent` refuses
+ * unconditionally), so the operation-build-time half of this module — the
+ * `AgentShareGate` plumbing, the assembled-tool-set strips, and the
+ * plugin/skill allowlist intersections — is gone with it.
  *
- * Identifier-level only: an entry granting just one API
- * (`{ identifier: 'lobe-agent', apis: ['analyzeMedia'] }`) still counts as
- * "this identifier is a
- * candidate" here — narrowing the offer down to that specific API happens
- * later, in {@link applyShareGateToToolSet}, once the real manifest is known.
+ * What remains is the unbypassable dispatch-time enforcement for the runs
+ * that ALREADY exist: an operation created before retirement persists its
+ * `agentShareVisitor` marker onto `state.principal.actor.shareVisitor`, and
+ * every later step re-presents that marker to `BuiltinToolsExecutor.execute`
+ * as `context.agentShareVisitor`. As long as one of those runs is still
+ * streaming, settling, or being resumed to finish, its tool calls must keep
+ * clearing the same gates they were authorized under — which is exactly what
+ * {@link isShareBlockedBuiltinDispatch} (and the data-tool rules it delegates
+ * to) enforces, re-reading the UNSTRIPPED manifests persisted on the op.
  */
-export const filterPluginsByShareGate = (pluginIds: string[], gate: AgentShareGate): string[] => {
-  const grants = resolveShareToolGrants(gate.shareConfig.toolGrants);
-
-  return pluginIds.filter((id) => hasShareToolGrant(grants, id));
-};
-
-/**
- * Whether the share grants `lobe-cloud-sandbox` (at any API scope). Drives
- * `resolveExecutionPlan`'s `sandboxFallback`: a visitor can never reach the
- * creator's device, so this grant is only meaningful if the plan resolves to
- * the sandbox instead of collapsing to `none`.
- */
-export const shareGateGrantsCloudSandbox = (gate: AgentShareGate): boolean =>
-  hasShareToolGrant(
-    resolveShareToolGrants(gate.shareConfig.toolGrants),
-    CloudSandboxManifest.identifier,
-  );
-
-/**
- * Strip agent files / knowledge bases from a share visitor's resolved agent
- * config. Mutates in place — `agentConfig` is threaded through the whole
- * orchestration by reference (tool discovery, knowledge flags, context builder
- * snapshot), so a filtered copy would silently diverge.
- *
- * ADAPTATION vs the original design: the share config no longer carries a
- * `filePermissionConfig` field, so there is no grant a creator could set that
- * would expose their agent files or knowledge bases to a visitor. The gate is
- * therefore unconditional rather than conditional — the fail-closed reading of
- * "no configured permission". Re-introducing a file grant means restoring the
- * config field AND relaxing this function together.
- */
-export const applyShareGateToAgentConfig = (agentConfig: {
-  files?: unknown[] | null;
-  knowledgeBases?: unknown[] | null;
-}): void => {
-  agentConfig.files = [];
-  agentConfig.knowledgeBases = [];
-};
 
 /**
  * Minimal shape a `DataToolAccessRule.grant` needs — either the full share
@@ -132,9 +45,9 @@ export interface ShareDataToolPermissions {
   allowReadMemory?: boolean;
   /**
    * Agent's own persisted, `enabled` knowledge-base ids (never
-   * visitor-supplied). Currently always empty for a share run — see
-   * {@link applyShareGateToAgentConfig} — but kept so the id-scoping rule
-   * below stays wired should a knowledge-base grant return.
+   * visitor-supplied). Always empty for a share run — a share visitor never
+   * saw the creator's files/knowledge bases — but kept so the id-scoping rule
+   * below stays wired should a knowledge-base grant ever return.
    */
   knowledgeBaseIds?: string[];
 }
@@ -151,9 +64,7 @@ const SHARE_VISITOR_ALLOWED_IDENTIFIERS = AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIER
  * real builtin tool registry (`@orvilo/builtin-tools`), the same source
  * `BuiltinToolsExecutor`/`hasServerRuntime` resolve against. MCP servers,
  * market plugins, and custom plugins never appear in this registry, so they
- * fall outside this allowlist's jurisdiction entirely and are left to
- * {@link filterPluginsByShareGate} / `shareConfig.toolGrants` — the
- * pre-existing (and unaffected) gate for that population.
+ * fall outside this allowlist's jurisdiction entirely.
  */
 const isGovernedByBuiltinAllowlist = isBuiltinToolIdentifier;
 
@@ -197,14 +108,9 @@ interface DataToolAccessRule {
 }
 
 /**
- * Registry of data-bearing builtin tools a share visitor can be whitelisted
+ * Registry of data-bearing builtin tools a share visitor could be whitelisted
  * into (`shareConfig.toolGrants`) without the whitelist itself implying
- * read OR write access to the underlying store. `filterPluginsByShareGate` /
- * `applyShareGateToToolSet`'s allowlist intersection only answers "is this
- * tool id enabled for the share" — it says nothing about `allowReadMemory`,
- * which is why a whitelisted memory/knowledge-base/agent-documents tool would
- * otherwise execute read-write under the creator's own permissions no matter
- * what the share granted.
+ * read OR write access to the underlying store.
  *
  * Adding a new write API to one of these packages must add it here too —
  * `shareGate.test.ts` asserts against the REAL exported manifests, so a rename
@@ -212,8 +118,7 @@ interface DataToolAccessRule {
  */
 const DATA_TOOL_ACCESS_RULES: Record<string, DataToolAccessRule> = {
   [AgentDocumentsIdentifier]: {
-    // No file grant exists in the current `AgentShareConfig` — see
-    // `applyShareGateToAgentConfig`'s adaptation note. Fail closed rather than
+    // No file grant exists in `AgentShareConfig` — fail closed rather than
     // silently defaulting the missing grant to `read`.
     grant: () => 'none',
     writeApiNames: [
@@ -244,8 +149,7 @@ const DATA_TOOL_ACCESS_RULES: Record<string, DataToolAccessRule> = {
       KnowledgeBaseApiName.listKnowledgeBases,
       KnowledgeBaseApiName.readKnowledge,
     ],
-    // Same adaptation as `AgentDocumentsIdentifier` above: no knowledge-base
-    // grant exists in the current `AgentShareConfig`.
+    // No knowledge-base grant exists in `AgentShareConfig`.
     grant: () => 'none',
     // `viewKnowledgeBase` DOES take an `id`, and the agent's own assignment
     // would be known (`ShareDataToolPermissions.knowledgeBaseIds`) — kept
@@ -276,8 +180,7 @@ const DATA_TOOL_ACCESS_RULES: Record<string, DataToolAccessRule> = {
 
 /**
  * Whether a specific `identifier`/`apiName` tool call must be blocked for a
- * share visitor run. This is the enforcement counterpart of
- * `applyShareGateToDataToolAccess` below, reusable from the actual dispatch
+ * share visitor run. This is the enforcement reusable from the actual dispatch
  * chokepoint (`BuiltinToolsExecutor.execute`, which invokes
  * `runtime[apiName](...)` directly and never re-consults the possibly
  * already-trimmed manifest — the trimmed manifest only changes what the model
@@ -290,8 +193,7 @@ const DATA_TOOL_ACCESS_RULES: Record<string, DataToolAccessRule> = {
  * `SHARE_VISITOR_ALLOWED_IDENTIFIERS` is blocked outright, with no
  * `apiName`-level distinction. A non-builtin identifier (MCP server, market
  * plugin, custom plugin) is NOT this function's concern at all — it falls
- * through to `false` untouched, left entirely to
- * {@link filterPluginsByShareGate} / `shareConfig.toolGrants`.
+ * through to `false` untouched.
  *
  * `args` is the tool call's parsed arguments, needed only for
  * `isArgsOutOfScope` rules. Omit it for call sites that only need the
@@ -326,6 +228,43 @@ export const isShareBlockedDataToolCall = (
 };
 
 /**
+ * Whether an API's own `humanIntervention` policy can ever HONESTLY complete
+ * for a share-visitor run. Every share run was forced onto `approvalMode:
+ * 'headless'` — the only mode with **no approver waited for**: an
+ * `'always'`-policy call becomes an immediate blocked tool result
+ * (`resolve_blocked_tools`), and a `'required'`-policy call would silently
+ * auto-run, granting itself the consent nobody was present to give. Blocking
+ * both classes at dispatch is the fail-closed reading: never run a function
+ * that either cannot run or would run without its declared consent step. A
+ * `dynamic` config might resolve to `'never'` for some argument, but this
+ * static check cannot prove it always will.
+ *
+ * `undefined` (no config at all) and the literal string `'never'` are the only
+ * two configs that execute with no intervention semantics attached.
+ */
+const isApiUsableForShareVisitor = (humanIntervention: unknown): boolean =>
+  humanIntervention === undefined || humanIntervention === 'never';
+
+/**
+ * Sub-agent dispatch is not available in shared visitor runs: the server
+ * sub-agent runner spawns the child via a plain `execAgent` call that does
+ * NOT re-derive the parent's share restrictions — the child would run with
+ * the creator's full, unrestricted tool surface. Blocked unconditionally at
+ * dispatch for any in-flight visitor op.
+ *
+ * `lobe-agent-management`'s dispatch API (`callAgent`) does NOT need an entry
+ * here: the whole tool — dispatch included — is simply absent from
+ * `SHARE_VISITOR_ALLOWED_IDENTIFIERS`, so it never survives that gate.
+ */
+const SUB_AGENT_DISPATCH_APIS: Record<string, string> = {
+  // Both identifiers are blocked: ops persisted before the lobe→orvilo rename
+  // carry the legacy `lobe-agent` identifier, anything newer carries
+  // `orvilo-agent` — a visitor run must not reach `callSubAgent` under either.
+  'lobe-agent': OrviloAgentApiName.callSubAgent,
+  [OrviloAgentIdentifier]: OrviloAgentApiName.callSubAgent,
+};
+
+/**
  * FULL dispatch-time gate for a share-visitor builtin tool call — the check
  * `BuiltinToolsExecutor.execute` runs on every call that reaches it. Strictly
  * wider than {@link isShareBlockedDataToolCall}: a call that bypassed
@@ -339,7 +278,7 @@ export const isShareBlockedDataToolCall = (
  *    this share (e.g. image generation spending the creator's quota) must not
  *    run just because a call reached the executor;
  * 3. `humanIntervention` policy, re-derived from the REAL manifest: the
- *    assembly strip removes intervention-gated APIs from the manifest the
+ *    assembly strip removed intervention-gated APIs from the manifest the
  *    runtime later consults, so at dispatch time such a call looks
  *    config-less and `headless` would silently auto-run it — the manifest in
  *    `@orvilo/builtin-tools` is the unstripped source of truth, so the
@@ -348,8 +287,7 @@ export const isShareBlockedDataToolCall = (
  *
  * Non-builtin identifiers (MCP/market/custom plugins, LobeHub skills) pass
  * through untouched: their id namespace does not reliably match
- * `toolGrants` identifiers, so they remain governed by the assembly-time
- * `filterPluginsByShareGate` intersection only.
+ * `toolGrants` identifiers.
  */
 export const isShareBlockedBuiltinDispatch = (
   agentShare: ShareDataToolPermissions & { toolGrants?: AgentShareToolGrant[] },
@@ -357,6 +295,14 @@ export const isShareBlockedBuiltinDispatch = (
   apiName: string,
   args?: any,
 ): boolean => {
+  // Sub-agent dispatch has no humanIntervention config to catch it, and the
+  // server sub-agent runner spawns the child via a plain `execAgent` call
+  // that does NOT re-derive the parent's share restrictions — the child would
+  // run with the creator's full, unrestricted tool surface. Checked before the
+  // builtin-allowlist gate so the legacy `lobe-agent` identifier (which no
+  // longer exists in the builtin registry post-rename) is still caught.
+  if (SUB_AGENT_DISPATCH_APIS[identifier] === apiName) return true;
+
   if (!isGovernedByBuiltinAllowlist(identifier)) return false;
 
   if (!SHARE_VISITOR_ALLOWED_IDENTIFIERS.has(identifier)) return true;
@@ -366,19 +312,10 @@ export const isShareBlockedBuiltinDispatch = (
   if (!isShareToolApiGranted(resolveShareToolGrants(agentShare.toolGrants), identifier, apiName))
     return true;
 
-  // Sub-agent dispatch has no humanIntervention config to catch it, and the
-  // server sub-agent runner spawns the child via a plain `execAgent` call
-  // that does NOT thread the parent's shareGate — the child would run with
-  // the creator's full, unrestricted tool surface. Assembly strips the API
-  // (`stripSubAgentDispatchApis`); this is its dispatch-time counterpart.
-  if (SUB_AGENT_DISPATCH_APIS[identifier]?.apiName === apiName) return true;
-
   const manifest = builtinTools.find((tool) => tool.identifier === identifier)?.manifest;
   const toolLevelHumanIntervention = (manifest as { humanIntervention?: unknown } | undefined)
     ?.humanIntervention;
-  // Match assembly's semantics exactly (`applyShareGateToInterventionRequiredApis`
-  // drops the WHOLE tool when the tool-level fallback is unusable): a
-  // tool-level 'required'/'always'/dynamic config blocks every API here too —
+  // A tool-level 'required'/'always'/dynamic config blocks every API here too —
   // an api-level 'never' must not override it at dispatch when it could not
   // have survived assembly either.
   if (!isApiUsableForShareVisitor(toolLevelHumanIntervention)) return true;
@@ -391,261 +328,14 @@ export const isShareBlockedBuiltinDispatch = (
 };
 
 /**
- * The assembled operation-level tool set, right before it is handed to
- * `AgentRuntimeService.createOperation` as `toolSet`.
- */
-export interface ShareGateToolSet {
-  activatableToolIds: string[];
-  enabledToolIds: string[];
-  executorMap: Record<string, ToolExecutor>;
-  manifestMap: Record<string, LobeToolManifest>;
-  sourceMap: Record<string, ToolSource>;
-  tools: any[] | undefined;
-}
-
-/**
- * Apply {@link DATA_TOOL_ACCESS_RULES} to the assembled tool set: drop a data
- * tool entirely when its grant is `none`, or strip its write APIs (from both
- * the manifest and the function-calling `tools` schema) when the grant is
- * `read`. Runs as part of {@link applyShareGateToToolSet} — after that pass's
- * allowlist intersection has already decided which identifiers survive at all
- * — so this only needs to further restrict, never re-add.
- *
- * This is UX/defense-in-depth (the model is never offered the disallowed
- * function); the actual unbypassable enforcement is
- * {@link isShareBlockedDataToolCall} at the `BuiltinToolsExecutor` dispatch
- * site.
- */
-const applyShareGateToDataToolAccess = (toolSet: ShareGateToolSet, gate: AgentShareGate): void => {
-  for (const [identifier, rule] of Object.entries(DATA_TOOL_ACCESS_RULES)) {
-    if (!toolSet.manifestMap[identifier]) continue;
-
-    const grant = rule.grant(gate.shareConfig);
-
-    if (grant === 'none') {
-      dropToolFromSet(toolSet, identifier);
-      continue;
-    }
-
-    // Under a `read` grant, strip both mutations (`writeApiNames`) AND the
-    // creator-wide reads that no grant can honestly scope to this agent
-    // (`alwaysBlockedApiNames`) — same treatment, since both are never offered
-    // to the model regardless of grant. `isArgsOutOfScope`-covered APIs are
-    // NOT stripped here: they stay offered because they CAN be in scope
-    // depending on the id the model picks, and that per-call id check only
-    // runs at dispatch time, not against a static manifest.
-    const blockedApiNames = new Set([...rule.writeApiNames, ...(rule.alwaysBlockedApiNames ?? [])]);
-
-    stripApisFromTool(toolSet, identifier, blockedApiNames);
-  }
-};
-
-/**
- * Final allowlist enforcement for a share visitor's fully-assembled tool set.
- *
- * `shareConfig.toolGrants` is the single source of truth for what a share
- * visitor can see or run. This pass mutates `toolSet` in place and must run
- * once, after every manifest/default/dynamic-activation source has been merged
- * in, immediately before the operation's `toolSet` is persisted. An
- * empty/missing whitelist collapses the set to nothing (no built-in tool is
- * exempted; a share with no configured tools is a plain-chat run).
- */
-export const applyShareGateToToolSet = (toolSet: ShareGateToolSet, gate: AgentShareGate): void => {
-  const grants = resolveShareToolGrants(gate.shareConfig.toolGrants);
-
-  // A tool must clear BOTH gates: the owner's own `toolGrants` picker
-  // (`grants` — toolset-level OR scoped to at least one API), AND — for
-  // builtin identifiers only — the default-deny master allowlist
-  // (`SHARE_VISITOR_ALLOWED_IDENTIFIERS`). Non-builtin identifiers (MCP/market/
-  // custom plugins) are outside `isGovernedByBuiltinAllowlist`'s population, so
-  // they pass straight through to the owner-picker check unaffected — this
-  // allowlist must never decide their fate, in either direction.
-  const isAllowed = (id: string) => {
-    if (!hasShareToolGrant(grants, id)) return false;
-    if (!isGovernedByBuiltinAllowlist(id)) return true;
-    return SHARE_VISITOR_ALLOWED_IDENTIFIERS.has(id);
-  };
-
-  // Prune arrays in place (`splice`, not reassignment) so this works whether
-  // the caller's binding for `enabledToolIds` / `activatableToolIds` / `tools`
-  // is a `const` array reference — callers only need to pass the array they
-  // already hold, not receive a new one back.
-  pruneArrayInPlace(toolSet.enabledToolIds, isAllowed);
-  pruneArrayInPlace(toolSet.activatableToolIds, isAllowed);
-
-  // Regenerate every allowed manifest's tool-call names BEFORE the manifests
-  // are pruned: `ToolNameResolver.generate` MD5-hashes an identifier segment
-  // that is non-ASCII or oversized, so the `tools[]` entry of such a tool does
-  // not start with its literal identifier and a prefix-only check would drop
-  // a granted MCP tool along with everything else (fail-closed, but breaks
-  // the grant). See `pruneToolsForIdentifier` for the mirror-image, fail-OPEN
-  // hazard on the per-API path.
-  const allowedToolNames = new Set<string>();
-  for (const [id, manifest] of Object.entries(toolSet.manifestMap)) {
-    if (!isAllowed(id)) continue;
-    for (const name of generateOwnedToolNames(id, manifest)) allowedToolNames.add(name);
-  }
-
-  for (const id of Object.keys(toolSet.manifestMap)) {
-    if (!isAllowed(id)) delete toolSet.manifestMap[id];
-  }
-  for (const id of Object.keys(toolSet.sourceMap)) {
-    if (!isAllowed(id)) delete toolSet.sourceMap[id];
-  }
-  for (const id of Object.keys(toolSet.executorMap)) {
-    if (!isAllowed(id)) delete toolSet.executorMap[id];
-  }
-
-  if (toolSet.tools) {
-    pruneArrayInPlace(toolSet.tools, (tool) => {
-      const name: string | undefined = tool?.function?.name;
-      if (!name) return false;
-      if (allowedToolNames.has(name)) return true;
-      // Fallback for an entry with no manifest to regenerate from — only its
-      // literal identifier prefix can vouch for it.
-      const identifier = name.split(PLUGIN_SCHEMA_SEPARATOR)[0];
-      return !!identifier && isAllowed(identifier);
-    });
-  }
-
-  stripSubAgentDispatchApis(toolSet);
-  applyShareGateToDataToolAccess(toolSet, gate);
-  applyShareGateToInterventionRequiredApis(toolSet);
-  applyShareGateToPerApiGrants(toolSet, grants);
-};
-
-/**
- * Narrow each surviving tool's offered APIs down to what the owner's picker
- * actually granted for it. Runs LAST in {@link applyShareGateToToolSet}, after
- * every other strip (data-tool write/always-blocked APIs, sub-agent dispatch,
- * humanIntervention) has already trimmed `manifest.api` — so a per-API grant
- * naming an API another rule already removed is simply a no-op here, never an
- * unstrip.
- *
- * A toolset-level entry (`grant === 'all'`) leaves the tool's remaining APIs
- * untouched. A per-API entry (`grant` is a `Set`) drops every remaining API
- * not named in it; if that empties the API list entirely, the tool is dropped
- * outright — the same treatment `applyShareGateToDataToolAccess` gives a
- * `'none'` grant, since an identifier with zero callable APIs offers a share
- * visitor's model nothing.
- *
- * Matches on the manifest's real `api[].name` list (via `stripApisFromTool`)
- * rather than parsing generated tool-call names directly:
- * `ToolNameResolver.generate` MD5-hashes an oversized or invalid-character API
- * segment, so the manifest is the only reliable source for which entries in
- * `toolSet.tools` belong to which granted API.
- */
-const applyShareGateToPerApiGrants = (
-  toolSet: ShareGateToolSet,
-  grants: Map<string, ShareToolGrant>,
-): void => {
-  for (const identifier of Object.keys(toolSet.manifestMap)) {
-    const grant = grants.get(identifier);
-    if (!grant || grant === 'all') continue;
-
-    const manifest = toolSet.manifestMap[identifier];
-    if (!Array.isArray(manifest.api) || manifest.api.length === 0) continue;
-
-    const blockedApiNames = new Set(
-      manifest.api.filter((api) => !grant.has(api.name)).map((api) => api.name),
-    );
-    if (blockedApiNames.size === 0) continue;
-
-    if (blockedApiNames.size === manifest.api.length) {
-      dropToolFromSet(toolSet, identifier);
-      continue;
-    }
-
-    stripApisFromTool(toolSet, identifier, blockedApiNames);
-  }
-};
-
-/**
- * Whether an API's own `humanIntervention` policy can ever HONESTLY complete
- * for a share-visitor run. Every share run is forced onto `approvalMode:
- * 'headless'` (see `AiAgentService.execAgent`'s unconditional override) — the
- * only mode with **no approver waited for**: an `'always'`-policy call becomes
- * an immediate blocked tool result (`resolve_blocked_tools`), and a
- * `'required'`-policy call would silently auto-run, granting itself the
- * consent nobody was present to give. Stripping both classes from the offer
- * is therefore the fail-closed reading: never offer a function that either
- * cannot run or would run without its declared consent step. A `dynamic`
- * config might resolve to `'never'` for some argument, but this static,
- * schema-assembly-time check cannot prove it always will.
- *
- * `undefined` (no config at all) and the literal string `'never'` are the only
- * two configs that execute with no intervention semantics attached.
- */
-const isApiUsableForShareVisitor = (humanIntervention: unknown): boolean =>
-  humanIntervention === undefined || humanIntervention === 'never';
-
-/**
- * Structural counterpart to `applyShareGateToDataToolAccess`: strip any tool's
- * API whose OWN `humanIntervention` policy cannot honestly complete under a
- * share visitor's forced `headless` approval mode. Reads the SAME `humanIntervention`
- * metadata every builtin tool already declares for the approval-UI feature, so
- * a future tool added to `AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS` with an
- * intervention-gated API is caught automatically instead of requiring a manual
- * audit.
- *
- * Applies to EVERY manifest still in `toolSet.manifestMap` at this point,
- * builtin or not — MCP/connector manifests (`buildConnectorManifests.ts`) map
- * a connector tool's `needs_approval` permission onto this SAME `humanIntervention:
- * 'required'` field, and `ToolExecutionService.executeTool`'s dispatch-time
- * connector-permission gate only hard-blocks `disabled`, deliberately leaving
- * `needs_approval` to this manifest strip — so a share run (always `headless`,
- * see {@link isApiUsableForShareVisitor}) would otherwise auto-run a
- * creator-configured "needs approval" connector call with no approver ever
- * present. `isGovernedByBuiltinAllowlist` is intentionally NOT consulted here:
- * that allowlist decides which BUILTIN tools may be exposed at all (still
- * enforced earlier in {@link applyShareGateToToolSet}), not which manifests
- * this intervention strip should look at.
- *
- * A tool whose TOOL-LEVEL `humanIntervention` (the fallback every API without
- * its own entry inherits) is itself unusable loses every API and is dropped
- * entirely, the same treatment `applyShareGateToDataToolAccess` gives a
- * `'none'` grant.
- *
- * Under `headless` this strip is MORE than UX for `'required'`-policy APIs:
- * headless auto-runs those, so removing them from the offer is the layer that
- * keeps a share visitor's model from invoking a consent-gated API without its
- * consent step ever happening. `'always'`-policy APIs stay unreachable either
- * way (headless converts them to blocked results); data-bearing BUILTIN APIs
- * are additionally re-blocked at dispatch by {@link isShareBlockedDataToolCall}
- * — non-builtin manifests have no such dispatch-time backstop, which is why
- * this assembly-time strip is their ONLY enforcement point.
- */
-const applyShareGateToInterventionRequiredApis = (toolSet: ShareGateToolSet): void => {
-  for (const identifier of Object.keys(toolSet.manifestMap)) {
-    const manifest = toolSet.manifestMap[identifier];
-    if (!Array.isArray(manifest.api) || manifest.api.length === 0) continue;
-
-    const toolLevelHumanIntervention = (manifest as { humanIntervention?: unknown })
-      .humanIntervention;
-
-    if (!isApiUsableForShareVisitor(toolLevelHumanIntervention)) {
-      dropToolFromSet(toolSet, identifier);
-      continue;
-    }
-
-    const blockedApiNames = new Set(
-      manifest.api
-        .filter((api) => !isApiUsableForShareVisitor(api.humanIntervention))
-        .map((api) => api.name),
-    );
-    if (blockedApiNames.size === 0) continue;
-
-    stripApisFromTool(toolSet, identifier, blockedApiNames);
-  }
-};
-
-/**
  * Rationale for every registered builtin identifier that is DENIED — i.e.
  * absent from `AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS`. Under a denylist an
  * identifier had to be explicitly proven dangerous to be blocked; under the
  * allowlist an identifier has to be explicitly proven safe to be exposed, so
  * this block exists purely to record the evidence trail for reviewers — the
- * denial itself needs no code beyond "not in the Set".
+ * denial itself needs no code beyond "not in the Set". The evidence stays
+ * relevant while any pre-retirement visitor op can still reach the dispatch
+ * gate above.
  *
  * Confirmed leak paths (a concrete visitor→creator-data route was found):
  *
@@ -740,17 +430,15 @@ const applyShareGateToInterventionRequiredApis = (toolSet: ShareGateToolSet): vo
  *   conversation can ever exercise.
  *
  * - `lobe-user-interaction` / `lobe-activator`: same "picker promises an
- *   unusable grant" class, not a data leak. Every share run is forced onto
+ *   unusable grant" class, not a data leak. Every share run was forced onto
  *   `approvalMode: 'headless'` with no approver ever present:
  *   `lobe-user-interaction`'s only entry point (`askUserQuestion`,
  *   `humanIntervention: 'always'`) is converted to a blocked tool result and
  *   never runs, and its other APIs all require a `requestId` only a
  *   successful `askUserQuestion` mints. `lobe-activator`'s only API
  *   (`activateTools`, `humanIntervention: 'required'`) would auto-run under
- *   headless but is stripped from the offer instead. See
- *   {@link applyShareGateToInterventionRequiredApis} for the structural fix
- *   that catches this failure mode generically on every ALLOWED tool's
- *   individual APIs.
+ *   headless but was stripped from the offer instead; at dispatch time the
+ *   `humanIntervention` check above blocks it for any persisted op.
  */
 
 /**
@@ -770,173 +458,3 @@ const applyShareGateToInterventionRequiredApis = (toolSet: ShareGateToolSet): vo
  *   into that session either. No creator credential or JWT is therefore
  *   reachable from inside a visitor's sandbox command.
  */
-
-/**
- * Sub-agent dispatch is not available in shared visitor runs. This strip runs
- * unconditionally on `lobe-agent`, independent of whether the manifest was
- * resolved through the normal context-aware path, so a whitelisted entry can
- * never surface `callSubAgent` — nor a `systemRole` that instructs the model
- * to call it — to a share visitor's model or the activator. `lobe-agent`
- * already ships a precise systemRole variant without the dispatch section
- * (`systemPromptWithoutSubAgent`, also used by its own context-aware
- * `resolveManifest`).
- *
- * `lobe-agent-management`'s dispatch API (`callAgent`) does NOT need an entry
- * here: the whole tool — dispatch included — is simply absent from
- * `SHARE_VISITOR_ALLOWED_IDENTIFIERS`, so it never survives that gate.
- */
-const SUB_AGENT_DISPATCH_APIS: Record<
-  string,
-  { apiName: string; systemRoleWithoutDispatch: string }
-> = {
-  [LobeAgentIdentifier]: {
-    apiName: LobeAgentApiName.callSubAgent,
-    systemRoleWithoutDispatch: systemPromptWithoutSubAgent,
-  },
-};
-
-const stripSubAgentDispatchApis = (toolSet: ShareGateToolSet): void => {
-  for (const [identifier, { apiName, systemRoleWithoutDispatch }] of Object.entries(
-    SUB_AGENT_DISPATCH_APIS,
-  )) {
-    const manifest = toolSet.manifestMap[identifier];
-    if (manifest) {
-      // Always pin the sanitized `systemRole`, not only when `api` still
-      // carries the dispatch entry — an already context-aware-trimmed manifest
-      // (api filtered upstream) could otherwise keep a stale `systemRole` that
-      // still instructs the model to call the removed tool.
-      toolSet.manifestMap[identifier] = {
-        ...manifest,
-        api: manifest.api.filter((api) => api.name !== apiName),
-        systemRole: systemRoleWithoutDispatch,
-      };
-    }
-
-    if (toolSet.tools) {
-      const dispatchToolName = `${identifier}${PLUGIN_SCHEMA_SEPARATOR}${apiName}`;
-      pruneArrayInPlace(toolSet.tools, (tool) => tool?.function?.name !== dispatchToolName);
-    }
-  }
-};
-
-/**
- * Regenerate the exact function-calling name `ToolsEngine` would have used
- * for each of `apiNames`, via the SAME `ToolNameResolver.generate` it used to
- * build `toolSet.tools` originally.
- *
- * A naive `` `${identifier}${SEP}${apiName}` `` string only matches what is
- * actually in `toolSet.tools` when neither segment needed normalizing.
- * `generate` (1) MD5-hashes an api/identifier segment that contains
- * characters strict providers reject or that pushes the name past the
- * provider length cap, and (2) appends a third `${SEP}<type>` segment for any
- * manifest whose `type` isn't `builtin`/`default` — MCP/connector manifests
- * are `type: 'mcp'` (see `buildConnectorManifests.ts`). Both are common for
- * MCP tools (server-controlled, often long/non-ASCII api names), so skipping
- * this and slicing the raw string instead silently fails OPEN: the manifest
- * loses the API but its generated tool-call name survives in `tools[]` and
- * stays callable.
- */
-const generateToolNames = (
-  identifier: string,
-  apiNames: Iterable<string>,
-  type: LobeToolManifest['type'],
-): Set<string> => {
-  const names = new Set<string>();
-  for (const apiName of apiNames) names.add(toolNameResolver.generate(identifier, apiName, type));
-  return names;
-};
-
-/**
- * Drop every `toolSet.tools` entry that belongs to `identifier` and is not in
- * `allowedNames`. Pass an empty `allowedNames` to drop every entry for the
- * identifier.
- *
- * "Belongs to `identifier`" is decided by `ownedNames` — the full set of
- * generated names for every API on the identifier's manifest, produced by
- * the SAME `ToolNameResolver.generate` that built `toolSet.tools`. A raw
- * first-segment comparison against `identifier` is NOT enough on its own:
- * `generate` MD5-hashes the identifier segment whenever it contains
- * characters strict providers reject (non-ASCII, punctuation) or whenever
- * the assembled name is still over the provider length cap after hashing
- * the api segment, so for such identifiers no entry ever starts with the
- * literal identifier text and a prefix-only match keeps everything —
- * silently failing OPEN. The prefix check is kept only as a fallback for
- * entries that survived without a manifest (nothing to regenerate from).
- */
-const pruneToolsForIdentifier = (
-  toolSet: ShareGateToolSet,
-  identifier: string,
-  ownedNames: ReadonlySet<string>,
-  allowedNames: ReadonlySet<string>,
-): void => {
-  if (!toolSet.tools) return;
-  pruneArrayInPlace(toolSet.tools, (tool) => {
-    const name: string | undefined = tool?.function?.name;
-    if (!name) return true;
-    const owned = ownedNames.has(name) || name.split(PLUGIN_SCHEMA_SEPARATOR)[0] === identifier;
-    if (!owned) return true;
-    return allowedNames.has(name);
-  });
-};
-
-/** Every generated tool-call name the manifest can currently produce. */
-const generateOwnedToolNames = (
-  identifier: string,
-  manifest: LobeToolManifest | undefined,
-): Set<string> =>
-  manifest
-    ? generateToolNames(
-        identifier,
-        manifest.api.map((api) => api.name),
-        manifest.type,
-      )
-    : new Set();
-
-const EMPTY_TOOL_NAME_SET: ReadonlySet<string> = new Set();
-
-/** Remove one tool identifier from every parallel structure of the tool set. */
-const dropToolFromSet = (toolSet: ShareGateToolSet, identifier: string): void => {
-  // Regenerate the owned names BEFORE the manifest is gone — it is the only
-  // source that can reproduce a hashed identifier segment.
-  const ownedNames = generateOwnedToolNames(identifier, toolSet.manifestMap[identifier]);
-  delete toolSet.manifestMap[identifier];
-  delete toolSet.sourceMap[identifier];
-  delete toolSet.executorMap[identifier];
-  pruneArrayInPlace(toolSet.enabledToolIds, (id) => id !== identifier);
-  pruneArrayInPlace(toolSet.activatableToolIds, (id) => id !== identifier);
-  pruneToolsForIdentifier(toolSet, identifier, ownedNames, EMPTY_TOOL_NAME_SET);
-};
-
-/** Drop `blockedApiNames` from one tool's manifest AND its function-calling schema. */
-const stripApisFromTool = (
-  toolSet: ShareGateToolSet,
-  identifier: string,
-  blockedApiNames: Set<string>,
-): void => {
-  const manifest = toolSet.manifestMap[identifier];
-  if (!manifest) return;
-
-  const survivingApi = manifest.api.filter((api) => !blockedApiNames.has(api.name));
-
-  toolSet.manifestMap[identifier] = { ...manifest, api: survivingApi };
-
-  // Fail-closed: only keep `tools[]` entries this file can PROVE still
-  // belong to a surviving API, by regenerating their exact names rather than
-  // reverse-parsing whatever is already in `tools[]`.
-  pruneToolsForIdentifier(
-    toolSet,
-    identifier,
-    generateOwnedToolNames(identifier, manifest),
-    generateToolNames(
-      identifier,
-      survivingApi.map((api) => api.name),
-      manifest.type,
-    ),
-  );
-};
-
-const pruneArrayInPlace = <T>(array: T[], keep: (item: T) => boolean): void => {
-  for (let i = array.length - 1; i >= 0; i -= 1) {
-    if (!keep(array[i])) array.splice(i, 1);
-  }
-};

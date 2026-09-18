@@ -16,7 +16,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@/features/Onboarding/components/LobeMessage', () => ({
+vi.mock('@/features/Onboarding/components/OrviloMessage', () => ({
   default: ({ sentences }: { sentences: string[] }) => <div>{sentences.join(' / ')}</div>,
 }));
 

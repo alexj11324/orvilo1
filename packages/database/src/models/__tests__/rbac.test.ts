@@ -18,10 +18,10 @@ import {
   workspaceMembers,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { RbacModel } from '../rbac';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'rbac-model-test-user-id';
 const otherUserId = 'rbac-model-test-other-user-id';
@@ -43,10 +43,12 @@ const addMembership = async (
   workspaceId: string,
   role: string,
   deletedAt?: Date,
+  suspendedAt?: Date,
 ) => {
   await serverDB.insert(workspaceMembers).values({
     deletedAt: deletedAt ?? null,
     role,
+    suspendedAt: suspendedAt ?? null,
     userId: memberUserId,
     workspaceId,
   });
@@ -155,6 +157,16 @@ describe('RbacModel — workspace mode (membership.role is the source of truth)'
 
       await addMembership(userId, workspaceBId, 'owner', new Date());
       expect(await rbac.hasPermission(readCode, { workspaceId: workspaceBId })).toBe(false);
+    });
+
+    it('suspended members hold no workspace permissions while their row exists', async () => {
+      const rbac = new RbacModel(serverDB, userId);
+      await addMembership(userId, workspaceAId, 'owner', undefined, new Date());
+
+      expect(await rbac.hasPermission(readCode, { workspaceId: workspaceAId })).toBe(false);
+      // Batch path shares the same predicate.
+      const perms = await rbac.getUserPermissions({ workspaceId: workspaceAId });
+      expect(perms).not.toContain(readCode);
     });
 
     it('does not leak permissions across workspaces', async () => {

@@ -10,7 +10,7 @@ const {
   mockCreateServerAgentToolsEngine,
   mockGetAgentConfig,
   mockGetComposioManifests,
-  mockGetLobehubSkillManifests,
+  mockGetOrviloSkillManifests,
   mockMessageCreate,
   mockPluginQuery,
 } = vi.hoisted(() => ({
@@ -23,7 +23,7 @@ const {
   }),
   mockGetAgentConfig: vi.fn(),
   mockGetComposioManifests: vi.fn().mockResolvedValue([]),
-  mockGetLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+  mockGetOrviloSkillManifests: vi.fn().mockResolvedValue([]),
   mockMessageCreate: vi.fn(),
   mockPluginQuery: vi.fn().mockResolvedValue([]),
 }));
@@ -99,6 +99,7 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -122,7 +123,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: mockGetLobehubSkillManifests,
+      getOrviloSkillManifests: mockGetOrviloSkillManifests,
     };
   }),
 }));
@@ -156,7 +157,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       { abilities: { functionCall: true }, id: 'gpt-4', providerId: 'openai' },
     ],
   };
@@ -287,7 +288,7 @@ describe('AiAgentService.execAgent - three-state plugin config (pinned/auto/disa
     });
   });
 
-  it('excludes a disabled composio/lobehub-skill manifest from the activator-discovery toolManifestMap', async () => {
+  it('excludes a disabled composio/orvilo-skill manifest from the activator-discovery toolManifestMap', async () => {
     mockGetAgentConfig.mockResolvedValue({
       chatConfig: {},
       id: 'agent-1',
@@ -300,7 +301,7 @@ describe('AiAgentService.execAgent - three-state plugin config (pinned/auto/disa
       systemRole: 'You are a helper',
     });
     mockGetComposioManifests.mockResolvedValue([toolManifest('composio-disabled')]);
-    mockGetLobehubSkillManifests.mockResolvedValue([toolManifest('skill-disabled')]);
+    mockGetOrviloSkillManifests.mockResolvedValue([toolManifest('skill-disabled')]);
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
@@ -317,13 +318,13 @@ describe('AiAgentService.execAgent - three-state plugin config (pinned/auto/disa
       chatConfig: {},
       id: 'agent-1',
       model: 'gpt-4',
-      plugins: [{ identifier: 'lobe-agent', mode: 'disabled' }],
+      plugins: [{ identifier: 'orvilo-agent', mode: 'disabled' }],
       provider: 'openai',
       systemRole: 'You are a helper',
     });
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    expect(toolManifestMapArg()).not.toHaveProperty('lobe-agent');
+    expect(toolManifestMapArg()).not.toHaveProperty('orvilo-agent');
   });
 });

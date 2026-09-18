@@ -1,7 +1,7 @@
 ---
 title: Configure Redis Cache Service
 description: >-
-  Learn how to configure Redis cache service to optimize LobeHub performance and
+  Learn how to configure Redis cache service to optimize Orvilo performance and
   session management.
 tags:
   - Redis
@@ -12,17 +12,17 @@ tags:
 
 # Configure Redis Cache Service
 
-LobeHub uses Redis as a high-performance cache and session storage service to optimize system performance and manage user authentication state.
+Orvilo uses Redis as a high-performance cache and session storage service to optimize system performance and manage user authentication state.
 
 <Callout type={'info'}>
-  LobeHub uses the standard Redis protocol (via ioredis library), supporting any Redis
+  Orvilo uses the standard Redis protocol (via ioredis library), supporting any Redis
   protocol-compatible service, including official Redis, self-hosted Redis, and cloud provider Redis
   services (such as AWS ElastiCache, Alibaba Cloud Redis, etc.).
 </Callout>
 
 ## Use Cases
 
-Redis is used in LobeHub for the following scenarios:
+Redis is used in Orvilo for the following scenarios:
 
 ### Authentication Session Storage
 
@@ -59,10 +59,10 @@ Caches Agent configuration data to reduce database queries and improve response 
 
   ### `REDIS_PREFIX`
 
-  The prefix for Redis keys, used to isolate LobeHub data in a shared Redis instance.
+  The prefix for Redis keys, used to isolate Orvilo data in a shared Redis instance.
 
-  - Default: `lobechat`
-  - Example: `REDIS_PREFIX=my-lobechat`
+  - Default: `orvilo`
+  - Example: `REDIS_PREFIX=my-orvilo`
 
   ### `REDIS_TLS`
 
@@ -98,7 +98,7 @@ Caches Agent configuration data to reduce database queries and improve response 
 
 ```shell
 REDIS_URL=redis://localhost:6379
-REDIS_PREFIX=lobechat-dev
+REDIS_PREFIX=orvilo-dev
 ```
 
 ### Production (with authentication)
@@ -106,7 +106,7 @@ REDIS_PREFIX=lobechat-dev
 ```shell
 REDIS_URL=redis://localhost:6379
 REDIS_PASSWORD=your-strong-password
-REDIS_PREFIX=lobechat
+REDIS_PREFIX=orvilo
 REDIS_TLS=true
 ```
 
@@ -115,13 +115,13 @@ REDIS_TLS=true
 ```shell
 REDIS_URL=redis://your-cluster.cache.amazonaws.com:6379
 REDIS_TLS=true
-REDIS_PREFIX=lobechat
+REDIS_PREFIX=orvilo
 ```
 
 ## Notes
 
 <Callout type={'warning'}>
-  Redis is an optional service. If `REDIS_URL` is not configured, LobeHub will still function
+  Redis is an optional service. If `REDIS_URL` is not configured, Orvilo will still function
   normally, but will lose the caching and session management optimizations mentioned above.
 </Callout>
 

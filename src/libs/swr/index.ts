@@ -24,7 +24,7 @@ export const useClientDataSWR: SWRHook = (key, fetch, config) => {
   const workspaceId = useActiveWorkspaceId();
   return useSWR(augmentKey(key, workspaceId) as any, fetch, {
     // default is 2000ms ,it makes the user's quick switch don't work correctly.
-    // Cause issue like this: https://github.com/lobehub/lobe-chat/issues/532
+    // Cause issue like this:
     // we need to set it to 0.
     dedupingInterval: 0,
     focusThrottleInterval: 5 * 60 * 1000,

@@ -2,7 +2,7 @@ import { type BuiltinRender } from '@orvilo/types';
 
 import CreateDocumentRender from './CreateDocumentRender';
 
-export const NotebookIdentifier = 'lobe-notebook';
+export const NotebookIdentifier = 'orvilo-notebook';
 
 export const NotebookApiName = {
   createDocument: 'createDocument',

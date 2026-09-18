@@ -4,14 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { JinaModelCard } from './index';
-import { LobeJinaAI, params } from './index';
+import { OrviloJinaAI, params } from './index';
 
 const provider = ModelProvider.Jina;
 const defaultBaseURL = 'https://deepsearch.jina.ai/v1';
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeJinaAI,
+  Runtime: OrviloJinaAI,
   bizErrorType: 'ProviderBizError',
   chatDebugEnv: 'DEBUG_JINA_CHAT_COMPLETION',
   chatModel: 'jina-embeddings-v3',
@@ -25,7 +25,7 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeJinaAI - custom features', () => {
+describe('OrviloJinaAI - custom features', () => {
   describe('params export', () => {
     it('should export params object', () => {
       expect(params).toBeDefined();
@@ -102,7 +102,7 @@ describe('LobeJinaAI - custom features', () => {
       expect(result[0].reasoning).toBe(true);
     });
 
-    it('should handle models not in LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should handle models not in ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockModels: JinaModelCard[] = [{ id: 'unknown-custom-model' }];
 
       mockClient.models.list.mockResolvedValue({ data: mockModels });
@@ -128,7 +128,7 @@ describe('LobeJinaAI - custom features', () => {
       expect(result).toEqual([]);
     });
 
-    it('should get abilities from knownModel in LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should get abilities from knownModel in ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockModels: JinaModelCard[] = [{ id: 'jina-embeddings-v3' }];
 
       mockClient.models.list.mockResolvedValue({ data: mockModels });

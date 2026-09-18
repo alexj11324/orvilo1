@@ -36,7 +36,7 @@ export const RenameLocalFileInspector = memo<
     >
       {oldName && newName ? (
         <>
-          {t('builtins.lobe-local-system.apiName.renameLocalFile')} {oldName} →{' '}
+          {t('builtins.orvilo-local-system.apiName.renameLocalFile')} {oldName} →{' '}
           <MaterialFileTypeIcon
             className={styles.icon}
             filename={newName}
@@ -47,7 +47,7 @@ export const RenameLocalFileInspector = memo<
           <span className={highlightTextStyles.primary}>{newName}</span>
         </>
       ) : (
-        <span>{t('builtins.lobe-local-system.apiName.renameLocalFile')}</span>
+        <span>{t('builtins.orvilo-local-system.apiName.renameLocalFile')}</span>
       )}
     </div>
   );

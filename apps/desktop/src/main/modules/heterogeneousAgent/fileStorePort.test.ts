@@ -5,7 +5,7 @@ import { createLambdaFileStorePort } from './fileStorePort';
 
 const auth = {
   getAccessToken: async () => 'token-123',
-  getServerUrl: async () => 'https://cloud.lobehub.com',
+  getServerUrl: async () => 'https://cloud.aspectlylabs.com',
 };
 
 /** A tRPC v11 success envelope: `result.data` is a superjson payload. */
@@ -71,11 +71,14 @@ describe('createLambdaFileStorePort', () => {
     const result = await port!.checkFileHash({ hash: 'abc' });
 
     expect(result).toEqual({ isExist: true, url: 'files/a/b.png' });
-    expect(fetch).toHaveBeenCalledWith('https://cloud.lobehub.com/trpc/lambda/file.checkFileHash', {
-      body: JSON.stringify(superjson.serialize({ hash: 'abc' })),
-      headers: { 'Content-Type': 'application/json', 'Oidc-Auth': 'token-123' },
-      method: 'POST',
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      'https://cloud.aspectlylabs.com/trpc/lambda/file.checkFileHash',
+      {
+        body: JSON.stringify(superjson.serialize({ hash: 'abc' })),
+        headers: { 'Content-Type': 'application/json', 'Oidc-Auth': 'token-123' },
+        method: 'POST',
+      },
+    );
   });
 
   it('strips a trailing slash from the server url', async () => {
@@ -83,12 +86,12 @@ describe('createLambdaFileStorePort', () => {
 
     const port = await createLambdaFileStorePort({
       ...auth,
-      getServerUrl: async () => 'https://cloud.lobehub.com/',
+      getServerUrl: async () => 'https://cloud.aspectlylabs.com/',
     });
     await port!.createS3PreSignedUrl({ pathname: 'files/a/b.png', size: 123 });
 
     expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
-      'https://cloud.lobehub.com/trpc/lambda/upload.createS3PreSignedUrl',
+      'https://cloud.aspectlylabs.com/trpc/lambda/upload.createS3PreSignedUrl',
     );
   });
 
@@ -99,7 +102,7 @@ describe('createLambdaFileStorePort', () => {
     await port!.abortS3Upload({ pathname: 'files/a/b.png' });
 
     expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
-      'https://cloud.lobehub.com/trpc/lambda/upload.abortS3Upload',
+      'https://cloud.aspectlylabs.com/trpc/lambda/upload.abortS3Upload',
     );
   });
 

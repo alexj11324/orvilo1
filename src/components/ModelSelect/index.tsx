@@ -1,5 +1,5 @@
 import { type IconAvatarProps } from '@lobehub/icons';
-import { LobeHub } from '@lobehub/icons';
+import { LobeHub as Orvilo } from '@lobehub/icons';
 import { type FlexboxProps } from '@lobehub/ui';
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
@@ -20,13 +20,13 @@ import { type CSSProperties, type FC } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelIcon, ProviderIcon } from '@/components/LobeIcons';
+import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
 import { type AiProviderSourceType } from '@/types/aiProvider';
 import { formatTokenNumber } from '@/utils/format';
 
 import NewModelBadgeI18n, { NewModelBadge as NewModelBadgeCore } from './NewModelBadge';
 
-export const TAG_CLASSNAME = 'lobe-model-info-tags';
+export const TAG_CLASSNAME = 'orvilo-model-info-tags';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   tag: css`
@@ -366,8 +366,8 @@ export const ProviderItemRender = memo<ProviderItemRenderProps>(
             style={isMono ? { filter: 'grayscale(1)' } : {}}
             title={name}
           />
-        ) : provider === 'lobehub' ? (
-          <LobeHub.Morden size={size} />
+        ) : provider === 'orvilo' ? (
+          <Orvilo.Morden size={size} />
         ) : (
           <ProviderIcon provider={provider} size={size} type={type} />
         )}

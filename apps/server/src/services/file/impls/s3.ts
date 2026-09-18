@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import debug from 'debug';
 import urlJoin from 'url-join';
 
@@ -10,7 +10,7 @@ import { FileS3 } from '@/server/modules/S3';
 
 import type { FileServiceImpl, PreSignedUpload } from './type';
 
-const log = debug('lobe-file:s3');
+const log = debug('orvilo-file:s3');
 
 const PRESIGNED_PREVIEW_CACHE_SAFETY_SECONDS = 60;
 const PRESIGNED_PREVIEW_CACHE_MAX_SECONDS = 3600;
@@ -37,9 +37,9 @@ const getPresignedPreviewCacheTtlSeconds = (expiresInSeconds: number) =>
  */
 export class S3StaticFileImpl implements FileServiceImpl {
   private readonly s3: FileS3;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
     this.s3 = new FileS3();
   }

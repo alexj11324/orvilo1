@@ -71,7 +71,7 @@ const parseProxyResponse = (value: unknown): MarketProxyResponse => {
  * - Existing GitHub loaders should run unchanged across REST and GraphQL
  *
  * Expects:
- * - The Market client is scoped to the authenticated LobeHub user
+ * - The Market client is scoped to the authenticated Orvilo user
  * - Market resolves relative endpoints against GitHub's API base URL
  *
  * Returns:
@@ -157,7 +157,7 @@ export const createGitHubMarketTransport = ({
  * Creates the Market-backed implementation of the shared GitHub connector interface.
  *
  * Use when:
- * - A caller needs structured GitHub data through a LobeHub-managed OAuth connection
+ * - A caller needs structured GitHub data through a Orvilo-managed OAuth connection
  *
  * Expects:
  * - An authenticated Market proxy client

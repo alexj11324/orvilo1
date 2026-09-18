@@ -55,7 +55,7 @@ export const AgentBuilderManifest: BuiltinToolManifest = {
     // ==================== Write Operations ====================
     {
       description:
-        'Install a plugin for the agent. This tool ALWAYS REQUIRES user approval before installation, even in auto-run mode. For MCP marketplace plugins, it will install and enable the plugin. For Composio tools and LobehubSkill providers that need OAuth, it will initiate the connection flow and wait for user to complete authorization.',
+        'Install a plugin for the agent. This tool ALWAYS REQUIRES user approval before installation, even in auto-run mode. For MCP marketplace plugins, it will install and enable the plugin. For Composio tools and OrviloSkill providers that need OAuth, it will initiate the connection flow and wait for user to complete authorization.',
       name: AgentBuilderApiName.installPlugin,
       parameters: {
         properties: {
@@ -66,7 +66,7 @@ export const AgentBuilderManifest: BuiltinToolManifest = {
           },
           source: {
             description:
-              'Plugin source type: "market" for MCP marketplace plugins, "official" for builtin/Composio/LobehubSkill tools',
+              'Plugin source type: "market" for MCP marketplace plugins, "official" for builtin/Composio/OrviloSkill tools',
             enum: ['market', 'official'],
             type: 'string',
           },
@@ -169,7 +169,7 @@ export const AgentBuilderManifest: BuiltinToolManifest = {
               },
               pluginId: {
                 description:
-                  'The identifier of the plugin to toggle (e.g., "lobe-web-browsing", "lobe-image-generation")',
+                  'The identifier of the plugin to toggle (e.g., "orvilo-web-browsing", "orvilo-image-generation")',
                 type: 'string',
               },
             },

@@ -15,11 +15,11 @@ import {
   users,
   workspaces,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { TaskDispatchService, TaskDispatchWaitingError } from './index';
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 const userId = 'task-dispatch-service-user';
 const workspaceId = 'task-dispatch-service-workspace';
 

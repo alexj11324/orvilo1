@@ -4,7 +4,7 @@ import {
 } from '@orvilo/builtin-tool-cloud-sandbox';
 
 /** Marker file written once the uploaded files have been synced for a session. */
-export const SANDBOX_FILES_INIT_MARKER = `${SANDBOX_UPLOADED_FILES_DIR}/.lobe-files-initialized`;
+export const SANDBOX_FILES_INIT_MARKER = `${SANDBOX_UPLOADED_FILES_DIR}/.orvilo-files-initialized`;
 
 /** Timeout (ms) for the bootstrap download command. */
 export const SANDBOX_INIT_TIMEOUT_MS = 120_000;

@@ -1,22 +1,22 @@
-import { type LobeOpenAICompatibleRuntime } from '@orvilo/model-runtime';
+import { type OrviloOpenAICompatibleRuntime } from '@orvilo/model-runtime';
 import {
-  LobeAnthropicAI,
-  LobeAzureOpenAI,
-  LobeBedrockAI,
-  LobeDeepSeekAI,
-  LobeGoogleAI,
-  LobeGroq,
-  LobeMistralAI,
-  LobeMoonshotAI,
-  LobeOllamaAI,
-  LobeOpenAI,
-  LobeOpenRouterAI,
-  LobePerplexityAI,
-  LobeQwenAI,
-  LobeTogetherAI,
-  LobeZeroOneAI,
-  LobeZhipuAI,
   ModelRuntime,
+  OrviloAnthropicAI,
+  OrviloAzureOpenAI,
+  OrviloBedrockAI,
+  OrviloDeepSeekAI,
+  OrviloGoogleAI,
+  OrviloGroq,
+  OrviloMistralAI,
+  OrviloMoonshotAI,
+  OrviloOllamaAI,
+  OrviloOpenAI,
+  OrviloOpenRouterAI,
+  OrviloPerplexityAI,
+  OrviloQwenAI,
+  OrviloTogetherAI,
+  OrviloZeroOneAI,
+  OrviloZhipuAI,
 } from '@orvilo/model-runtime';
 import { ModelProvider } from 'model-bank';
 import OpenAI from 'openai';
@@ -126,7 +126,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.OpenAI,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeOpenAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenAI);
         expect(runtime['_runtime'].baseURL).toBe('user-openai-endpoint');
       });
 
@@ -163,7 +163,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Azure,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeAzureOpenAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloAzureOpenAI);
         expect(runtime['_runtime'].baseURL).toBe('https://user-azure.openai.azure.com/openai/v1');
       });
 
@@ -177,7 +177,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Google,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeGoogleAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloGoogleAI);
       });
 
       it('Moonshot AI provider: with apiKey', async () => {
@@ -190,7 +190,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Moonshot,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeMoonshotAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloMoonshotAI);
       });
 
       it('Bedrock provider: with accessKeyId, region, secretAccessKey', async () => {
@@ -205,7 +205,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Bedrock,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeBedrockAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloBedrockAI);
       });
 
       it('Ollama provider: with endpoint', async () => {
@@ -218,7 +218,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Ollama,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeOllamaAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloOllamaAI);
       });
 
       it('Perplexity provider: with apiKey', async () => {
@@ -231,7 +231,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Perplexity,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobePerplexityAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloPerplexityAI);
       });
 
       it('Anthropic provider: with apiKey', async () => {
@@ -244,7 +244,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Anthropic,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeAnthropicAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloAnthropicAI);
       });
 
       it('Mistral provider: with apiKey', async () => {
@@ -257,7 +257,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Mistral,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeMistralAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloMistralAI);
       });
 
       it('OpenRouter provider: with apiKey', async () => {
@@ -270,7 +270,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.OpenRouter,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeOpenRouterAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenRouterAI);
       });
 
       it('TogetherAI provider: with apiKey', async () => {
@@ -283,7 +283,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.TogetherAI,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeTogetherAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloTogetherAI);
       });
 
       it('ZeroOneAI provider: with apiKey', async () => {
@@ -296,7 +296,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.ZeroOne,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeZeroOneAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloZeroOneAI);
       });
 
       it('Groq provider: with apiKey,endpoint', async () => {
@@ -310,11 +310,11 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Groq,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        const lobeOpenAICompatibleInstance = runtime['_runtime'] as LobeOpenAICompatibleRuntime;
-        expect(lobeOpenAICompatibleInstance).toBeInstanceOf(LobeGroq);
-        expect(lobeOpenAICompatibleInstance.baseURL).toBe('user-groq-endpoint');
-        expect(lobeOpenAICompatibleInstance.client).toBeInstanceOf(OpenAI);
-        expect(lobeOpenAICompatibleInstance.client.apiKey).toBe('user-groq-key');
+        const orviloOpenAICompatibleInstance = runtime['_runtime'] as OrviloOpenAICompatibleRuntime;
+        expect(orviloOpenAICompatibleInstance).toBeInstanceOf(OrviloGroq);
+        expect(orviloOpenAICompatibleInstance.baseURL).toBe('user-groq-endpoint');
+        expect(orviloOpenAICompatibleInstance.client).toBeInstanceOf(OpenAI);
+        expect(orviloOpenAICompatibleInstance.client.apiKey).toBe('user-groq-key');
       });
 
       it('DeepSeek provider: with apiKey', async () => {
@@ -327,7 +327,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.DeepSeek,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeDeepSeekAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloDeepSeekAI);
       });
 
       it('Qwen provider: with apiKey', async () => {
@@ -340,7 +340,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.Qwen,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeQwenAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloQwenAI);
       });
 
       /**
@@ -370,7 +370,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: 'unknown' as ModelProvider,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeOpenAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenAI);
       });
 
       /**
@@ -387,7 +387,7 @@ describe('ModelRuntimeOnClient', () => {
           provider: ModelProvider.ZhiPu,
         });
         expect(runtime).toBeInstanceOf(ModelRuntime);
-        expect(runtime['_runtime']).toBeInstanceOf(LobeZhipuAI);
+        expect(runtime['_runtime']).toBeInstanceOf(OrviloZhipuAI);
       });
     });
   });

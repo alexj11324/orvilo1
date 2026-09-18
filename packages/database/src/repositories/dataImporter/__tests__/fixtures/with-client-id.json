@@ -6,7 +6,7 @@
         "type": "plugin",
         "manifest": {
           "ui": {
-            "url": "https://midjourney.chat-plugin.lobehub.com/iframe",
+            "url": "https://midjourney.chat-plugin.aspectlylabs.com/iframe",
             "width": 360,
             "height": 420
           },
@@ -33,7 +33,7 @@
             "description": "Unleash creativity with Midjourney, effortlessly generating unique AI-driven images through simple prompts. Add visual flair to your conversations with Midjourney's artistic touch."
           },
           "type": "standalone",
-          "author": "LobeHub",
+          "author": "Orvilo",
           "$schema": "../node_modules/@lobehub/chat-plugin-sdk/schema.json",
           "version": "1",
           "settings": {
@@ -582,7 +582,7 @@
             "MIDJOURNEY_PROXY_URL": " https://api.302.ai",
             "MIDJOURNEY_PROXY_API_SECRET": "sk-1OEpTPKSExItmwmGyGn0F19XPt8Uy6aVrXZn8UPR7W6uUtwp"
           },
-          "inLobeChat": true,
+          "inOrvilo": true,
           "activeTaskId": "1742734217290387"
         },
         "error": null,

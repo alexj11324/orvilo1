@@ -6,7 +6,7 @@ import { buildDefaultAnthropicPayload } from '../../core/anthropicCompatibleFact
 import * as anthropicHelpers from '../../core/contextBuilders/anthropic';
 import type { ChatCompletionTool, ChatStreamPayload } from '../../types/chat';
 import * as debugStreamModule from '../../utils/debugStream';
-import { LobeAnthropicAI } from './index';
+import { OrviloAnthropicAI } from './index';
 
 const provider = 'anthropic';
 
@@ -16,10 +16,10 @@ const invalidErrorType = 'InvalidProviderAPIKey';
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: InstanceType<typeof LobeAnthropicAI>;
+let instance: InstanceType<typeof OrviloAnthropicAI>;
 
 beforeEach(() => {
-  instance = new LobeAnthropicAI({ apiKey: 'test' });
+  instance = new OrviloAnthropicAI({ apiKey: 'test' });
 
   // Use vi.spyOn to mock the Anthropic messages.create call.
   vi.spyOn(instance['client'].messages, 'create').mockResolvedValue(new ReadableStream() as any);
@@ -29,29 +29,29 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeAnthropicAI', () => {
+describe('OrviloAnthropicAI', () => {
   describe('init', () => {
     it('should correctly initialize with an API key', async () => {
-      const instance = new LobeAnthropicAI({ apiKey: 'test_api_key' });
-      expect(instance).toBeInstanceOf(LobeAnthropicAI);
+      const instance = new OrviloAnthropicAI({ apiKey: 'test_api_key' });
+      expect(instance).toBeInstanceOf(OrviloAnthropicAI);
       expect(instance.baseURL).toBe('https://api.anthropic.com');
     });
 
     it('should correctly initialize with a baseURL', async () => {
-      const instance = new LobeAnthropicAI({
+      const instance = new OrviloAnthropicAI({
         apiKey: 'test_api_key',
         baseURL: 'https://api.anthropic.proxy',
       });
-      expect(instance).toBeInstanceOf(LobeAnthropicAI);
+      expect(instance).toBeInstanceOf(OrviloAnthropicAI);
       expect(instance.baseURL).toBe('https://api.anthropic.proxy');
     });
 
     it('should correctly initialize with different id', async () => {
-      const instance = new LobeAnthropicAI({
+      const instance = new OrviloAnthropicAI({
         apiKey: 'test_api_key',
         id: 'abc',
       });
-      expect(instance).toBeInstanceOf(LobeAnthropicAI);
+      expect(instance).toBeInstanceOf(OrviloAnthropicAI);
       expect(instance['id']).toBe('abc');
     });
   });
@@ -342,7 +342,7 @@ describe('LobeAnthropicAI', () => {
           {
             content: 'Here is my response.',
             model: 'deepseek-v4-pro',
-            provider: 'lobehub',
+            provider: 'orvilo',
             reasoning: {
               content: 'DeepSeek reasoning',
               signature: '340acffe-0000-4000-8000-000000000000',
@@ -513,7 +513,7 @@ describe('LobeAnthropicAI', () => {
 
       it('should throw InvalidAnthropicAPIKey if no apiKey is provided', async () => {
         try {
-          new LobeAnthropicAI({});
+          new OrviloAnthropicAI({});
         } catch (e) {
           expect(e).toEqual({ errorType: invalidErrorType });
         }
@@ -564,7 +564,7 @@ describe('LobeAnthropicAI', () => {
       it('should desensitize custom baseURL in error message', async () => {
         // Arrange
         const apiError = { status: 401 };
-        const customInstance = new LobeAnthropicAI({
+        const customInstance = new OrviloAnthropicAI({
           apiKey: 'test',
           baseURL: 'https://api.custom.com/v1',
         });

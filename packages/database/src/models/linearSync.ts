@@ -77,7 +77,7 @@ import {
   tasks,
   teamWorkflowStates,
 } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 export interface RecordTaskDomainEventInput {
   action?: string;
@@ -206,10 +206,10 @@ const linearInstallationPublicSelection = {
 };
 
 export class LinearSyncModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly workspaceId: string;
 
-  constructor(db: LobeChatDatabase, workspaceId: string) {
+  constructor(db: OrviloDatabase, workspaceId: string) {
     this.db = db;
     this.workspaceId = workspaceId;
   }
@@ -1119,11 +1119,11 @@ export class LinearSyncModel {
     `);
   }
 
-  async transaction<T>(callback: (model: LinearSyncModel, db: LobeChatDatabase) => Promise<T>) {
+  async transaction<T>(callback: (model: LinearSyncModel, db: OrviloDatabase) => Promise<T>) {
     return this.db.transaction((tx) =>
       callback(
-        new LinearSyncModel(tx as unknown as LobeChatDatabase, this.workspaceId),
-        tx as unknown as LobeChatDatabase,
+        new LinearSyncModel(tx as unknown as OrviloDatabase, this.workspaceId),
+        tx as unknown as OrviloDatabase,
       ),
     );
   }
@@ -3046,19 +3046,16 @@ export class LinearSyncModel {
 
   async recordDomainEvent(input: RecordTaskDomainEventInput) {
     return this.db.transaction((tx) =>
-      this.recordDomainEventInDatabase(tx as unknown as LobeChatDatabase, input),
+      this.recordDomainEventInDatabase(tx as unknown as OrviloDatabase, input),
     );
   }
 
   /** Use when the caller already owns the transaction (for example TaskModel). */
-  async recordDomainEventInTransaction(db: LobeChatDatabase, input: RecordTaskDomainEventInput) {
+  async recordDomainEventInTransaction(db: OrviloDatabase, input: RecordTaskDomainEventInput) {
     return this.recordDomainEventInDatabase(db, input);
   }
 
-  private async recordDomainEventInDatabase(
-    db: LobeChatDatabase,
-    input: RecordTaskDomainEventInput,
-  ) {
+  private async recordDomainEventInDatabase(db: OrviloDatabase, input: RecordTaskDomainEventInput) {
     const [inserted] = await db
       .insert(taskDomainEvents)
       .values({
@@ -3145,7 +3142,7 @@ export class LinearSyncModel {
 
   /** Persist a local task change, its planner wakeup, and Linear outbox row together. */
   async recordTaskChangeInTransaction(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     input: {
       changedFields: string[];
       eventId?: string;

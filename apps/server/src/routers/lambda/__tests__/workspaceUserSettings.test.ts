@@ -10,6 +10,13 @@ vi.mock('@/database/core/db-adaptor', () => ({
 }));
 
 const mockUpdatePreference = vi.fn();
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
+
 vi.mock('@/database/models/workspaceUserSettings', () => ({
   WorkspaceUserSettingsModel: vi.fn(function () {
     return {

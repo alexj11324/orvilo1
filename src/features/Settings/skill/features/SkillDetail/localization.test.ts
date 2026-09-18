@@ -35,26 +35,26 @@ describe('SkillDetail localization helpers', () => {
 
   it('localizes builtin skill title and description', () => {
     const t = createTranslator({
-      'tools.builtins.lobe-agent-browser.description': '浏览器自动化命令行工具',
-      'tools.builtins.lobe-agent-browser.title': '助手浏览器',
+      'tools.builtins.orvilo-agent-browser.description': '浏览器自动化命令行工具',
+      'tools.builtins.orvilo-agent-browser.title': '助手浏览器',
     });
 
     const result = getLocalizedBuiltinSkillDetail(
       {
         description: 'Browser automation CLI for AI agents.',
-        identifier: 'lobe-agent-browser',
+        identifier: 'orvilo-agent-browser',
         name: 'Agent Browser',
         source: 'builtin',
       },
-      'lobe-agent-browser',
+      'orvilo-agent-browser',
       t,
     );
 
     expect(result).toEqual({ description: '浏览器自动化命令行工具', title: '助手浏览器' });
-    expect(t).toHaveBeenCalledWith('tools.builtins.lobe-agent-browser.title', {
+    expect(t).toHaveBeenCalledWith('tools.builtins.orvilo-agent-browser.title', {
       defaultValue: 'Agent Browser',
     });
-    expect(t).toHaveBeenCalledWith('tools.builtins.lobe-agent-browser.description', {
+    expect(t).toHaveBeenCalledWith('tools.builtins.orvilo-agent-browser.description', {
       defaultValue: 'Browser automation CLI for AI agents.',
     });
   });
@@ -88,9 +88,9 @@ describe('SkillDetail localization helpers', () => {
   });
 
   it('localizes the no-permissions title for builtin tools only', () => {
-    const t = createTranslator({ 'tools.builtins.lobe-calculator.title': '计算器' });
+    const t = createTranslator({ 'tools.builtins.orvilo-calculator.title': '计算器' });
 
-    expect(getNoPermissionsTitle('lobe-calculator', 'builtin', t)).toBe('计算器');
+    expect(getNoPermissionsTitle('orvilo-calculator', 'builtin', t)).toBe('计算器');
     expect(getNoPermissionsTitle('custom-http', 'mcp-connector', t)).toBe('custom-http');
     expect(t).toHaveBeenCalledTimes(1);
   });

@@ -37,7 +37,7 @@ import {
 } from './_helpers/shareVisitorTargetGuard';
 import { basicContextSchema } from './_schema/context';
 
-const { logTiming, runTimedStage } = createTimingHelpers('lobe-server:chat:lobehub:timing');
+const { logTiming, runTimedStage } = createTimingHelpers('orvilo-server:chat:orvilo:timing');
 
 /** Ctx slice consumed by the conversation General-access guards. */
 const guardCtx = (ctx: {

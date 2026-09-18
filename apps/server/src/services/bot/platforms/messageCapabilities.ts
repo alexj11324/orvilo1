@@ -3,7 +3,7 @@ import { MessageApiName } from '@orvilo/builtin-tool-message';
 import { isGuestTelegramThreadId } from './telegram/threadId';
 
 /**
- * Channel-scoped `lobe-message` APIs (as opposed to bot/messenger management).
+ * Channel-scoped `orvilo-message` APIs (as opposed to bot/messenger management).
  * Telegram Guest Mode cannot perform any of these: the bot is not a chat
  * member and only has a single guest reply delivered by the outbound transport.
  */
@@ -32,7 +32,7 @@ export const CHANNEL_MESSAGE_APIS = [
 export const TELEGRAM_GUEST_UNSUPPORTED_MESSAGE_APIS: string[] = [...CHANNEL_MESSAGE_APIS];
 
 /**
- * `lobe-message` channel APIs each platform's runtime does NOT support — either
+ * `orvilo-message` channel APIs each platform's runtime does NOT support — either
  * because its service throws `PlatformUnsupportedError`, or because the optional
  * method is absent and the execution runtime rejects it generically (e.g.
  * `sendDirectMessage` on every platform except Discord).

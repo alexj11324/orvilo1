@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, ilike, inArray, lt, lte, or } from 'drizzle-orm';
 
 import { workspaceAuditLogs } from '../schemas/workspace';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 export type WorkspaceAuditAction =
   | 'workspace.created'
@@ -21,10 +21,15 @@ export type WorkspaceAuditAction =
   | 'member.role_updated'
   | 'member.joined'
   | 'member.left'
+  | 'member.suspended'
+  | 'member.resumed'
   | 'member.promoted_to_owner'
   | 'member.demoted_from_owner'
   | 'invitation.revoked'
   | 'invitation.resent'
+  | 'project_member.added'
+  | 'project_member.removed'
+  | 'project_member.role_changed'
   | 'budget.default_member_limit_updated'
   | 'budget.member_limit_updated'
   | 'budget.member_override_created'
@@ -106,9 +111,9 @@ interface ListAuditLogParams {
 }
 
 export class WorkspaceAuditLogModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
   }
 

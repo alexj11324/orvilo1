@@ -45,22 +45,24 @@ export const RunTaskRender = memo<BuiltinRenderProps<RunTaskParams, RunTaskState
         icon={Play}
         iconColor={cssVar.colorWarning}
         identifier={identifier}
-        title={t('builtins.lobe-task.apiName.runTask')}
+        title={t('builtins.orvilo-task.apiName.runTask')}
       >
         {hasBody ? (
           <>
             {continueTopic && (
-              <span className={styles.topicChip}>{t('builtins.lobe-task.run.continueTopic')}</span>
+              <span className={styles.topicChip}>
+                {t('builtins.orvilo-task.run.continueTopic')}
+              </span>
             )}
             {prompt && (
-              <SectionField label={t('builtins.lobe-task.run.prompt')}>
+              <SectionField label={t('builtins.orvilo-task.run.prompt')}>
                 <Markdown fontSize={12} variant={'chat'}>
                   {prompt}
                 </Markdown>
               </SectionField>
             )}
             {topicId && (
-              <InlineField label={t('builtins.lobe-task.run.topic')}>
+              <InlineField label={t('builtins.orvilo-task.run.topic')}>
                 <span className={monoChipClassName}>{topicId}</span>
               </InlineField>
             )}

@@ -41,7 +41,7 @@ export const UpdatePromptInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-builder.apiName.updatePrompt')}
+          {t('builtins.orvilo-agent-builder.apiName.updatePrompt')}
         </span>
       </div>
     );
@@ -54,7 +54,7 @@ export const UpdatePromptInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-builder.apiName.updatePrompt')}
+        {t('builtins.orvilo-agent-builder.apiName.updatePrompt')}
       </span>
       {/* Show length diff when completed */}
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
@@ -67,7 +67,7 @@ export const UpdatePromptInspector = memo<
         >
           ({lengthDiff >= 0 ? '+' : ''}
           {lengthDiff}
-          {t('builtins.lobe-agent-builder.inspector.chars')})
+          {t('builtins.orvilo-agent-builder.inspector.chars')})
         </Text>
       )}
       {/* Show streaming length */}
@@ -80,7 +80,7 @@ export const UpdatePromptInspector = memo<
           style={{ marginInlineStart: 4 }}
         >
           ({streamingLength}
-          {t('builtins.lobe-agent-builder.inspector.chars')})
+          {t('builtins.orvilo-agent-builder.inspector.chars')})
         </Text>
       )}
       {!isLoading && !isArgumentsStreaming && isSuccess && (

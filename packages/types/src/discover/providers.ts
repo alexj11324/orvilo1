@@ -1,4 +1,4 @@
-import type { LobeDefaultAiModelListItem } from 'model-bank';
+import type { OrviloDefaultAiModelListItem } from 'model-bank';
 
 import type { ModelProviderCard } from '../llm';
 
@@ -37,7 +37,7 @@ export interface ProviderListResponse {
   totalPages: number;
 }
 
-export interface DiscoverProviderDetailModelItem extends LobeDefaultAiModelListItem {
+export interface DiscoverProviderDetailModelItem extends OrviloDefaultAiModelListItem {
   maxOutput?: number;
 }
 

@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { agents, taskDispatches, tasks, users, workspaces } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   TaskDispatchIdempotencyConflictError,
   TaskDispatchModel,
   TaskDispatchNotFoundError,
 } from '../taskDispatch';
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 const userId = 'task-dispatch-user';
 const workspaceId = 'task-dispatch-workspace';
 const otherUserId = 'task-dispatch-other-user';

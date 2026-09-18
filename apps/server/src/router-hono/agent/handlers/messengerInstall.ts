@@ -6,7 +6,7 @@ import { appEnv } from '@/envs/app';
 import { issueOAuthState } from '@/server/services/messenger/oauth/stateStore';
 import { messengerPlatformRegistry } from '@/server/services/messenger/platforms';
 
-const log = debug('lobe-server:messenger:install');
+const log = debug('orvilo-server:messenger:install');
 
 /**
  * Generic install entry point for any messenger platform whose definition
@@ -15,9 +15,9 @@ const log = debug('lobe-server:messenger:install');
  * deep-link target) lives behind the adapter at
  * `platforms/<id>/oauth.ts`.
  *
- * Always reached from the LobeHub web settings (the "Connect" modal does
+ * Always reached from the Orvilo web settings (the "Connect" modal does
  * `window.location.href`s here), so we require an authenticated session —
- * that's how we capture which LobeHub user owns this install
+ * that's how we capture which Orvilo user owns this install
  * (`messenger_installations.installed_by_user_id`).
  *
  * Manus's flow is the same shape: install starts on the product, NOT on a
@@ -60,7 +60,7 @@ export async function messengerInstall(c: Context): Promise<Response> {
   if (!config) {
     log('install: %s messenger not configured', platform);
     return new Response(
-      `${definition.name} messenger is not configured on this LobeHub deployment. ` +
+      `${definition.name} messenger is not configured on this Orvilo deployment. ` +
         `Ask the operator to add a ${definition.name} bot in dc-center → Agent → System Bots ` +
         `and enable it.`,
       { status: 503 },
@@ -74,7 +74,7 @@ export async function messengerInstall(c: Context): Promise<Response> {
 
   // 4. Mint an OAuth state, store the originating user → Redis (10-min TTL).
   const returnTo = url.searchParams.get('returnTo') || undefined;
-  const state = await issueOAuthState({ lobeUserId: session.user.id, returnTo });
+  const state = await issueOAuthState({ orviloUserId: session.user.id, returnTo });
 
   // 5. Build the platform's authorize URL and 302. The redirect_uri must
   // match exactly at the callback — we generate it the same way both sides.

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { chatGroupService } from '@/services/chatGroup';
 import { sessionService } from '@/services/session';
 import { useSessionStore } from '@/store/session';
-import { LobeSessionType } from '@/types/session';
+import { OrviloSessionType } from '@/types/session';
 
 import { sessionSelectors } from './selectors';
 
@@ -67,7 +67,7 @@ describe('SessionAction', () => {
       });
 
       const call = vi.mocked(sessionService.createSession).mock.calls[0];
-      expect(call[0]).toEqual(LobeSessionType.Agent);
+      expect(call[0]).toEqual(OrviloSessionType.Agent);
       expect(call[1]).toMatchObject({ config: { chatConfig: { enableHistoryCount: true } } });
 
       expect(createdSessionId).toBe(newSessionId);
@@ -88,7 +88,7 @@ describe('SessionAction', () => {
       });
 
       const call = vi.mocked(sessionService.createSession).mock.calls[0];
-      expect(call[0]).toEqual(LobeSessionType.Agent);
+      expect(call[0]).toEqual(OrviloSessionType.Agent);
       expect(call[1]).toMatchObject({ config: { chatConfig: { enableHistoryCount: true } } });
 
       expect(createdSessionId).toBe(newSessionId);

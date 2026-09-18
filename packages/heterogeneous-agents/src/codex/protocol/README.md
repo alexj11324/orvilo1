@@ -9,5 +9,5 @@ Generate the upstream files with:
 codex app-server generate-ts --out <directory>
 ```
 
-The vendored file is the transitive stable subset used by LobeHub's native app-server client. Keep
+The vendored file is the transitive stable subset used by Orvilo's native app-server client. Keep
 wire names and nullability identical to the generated files; do not hand-edit protocol types.

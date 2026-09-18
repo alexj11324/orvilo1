@@ -397,7 +397,7 @@ describe('AgentRuntime', () => {
           apiName: 'calculate',
           arguments: '{"expression": "2+2"}',
           id,
-          identifier: 'lobe-calculator',
+          identifier: 'orvilo-calculator',
           type: 'default' as const,
         }));
 

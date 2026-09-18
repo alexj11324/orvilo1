@@ -38,7 +38,7 @@ export default {
     'I like drilling into things all the way down — no detail escapes.',
   'flow.steps.chiefAgent.personas.latte.intro':
     "Take it slow — that's how things come out just right.",
-  'flow.steps.chiefAgent.personas.lobe.intro':
+  'flow.steps.chiefAgent.personas.orvilo.intro':
     "Whatever the task, I'm happy to start from scratch with you.",
   'flow.steps.chiefAgent.personas.maestro.intro':
     'Whatever lands on my desk, I want to give it grace and rhythm.',

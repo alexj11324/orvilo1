@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeOllamaCloudAI, params } from './index';
+import { OrviloOllamaCloudAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -13,7 +13,7 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeOllamaCloudAI,
+  Runtime: OrviloOllamaCloudAI,
   bizErrorType: 'ProviderBizError',
   chatDebugEnv: 'DEBUG_OLLAMA_CLOUD_CHAT_COMPLETION',
   chatModel: 'llama3.2',
@@ -27,7 +27,7 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeOllamaCloudAI - custom features', () => {
+describe('OrviloOllamaCloudAI - custom features', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -359,22 +359,22 @@ describe('LobeOllamaCloudAI - custom features', () => {
 
   describe('runtime instantiation', () => {
     it('should create instance with api key', () => {
-      const runtime = new LobeOllamaCloudAI({ apiKey: 'test_api_key' });
+      const runtime = new OrviloOllamaCloudAI({ apiKey: 'test_api_key' });
       expect(runtime).toBeDefined();
-      expect(runtime).toBeInstanceOf(LobeOllamaCloudAI);
+      expect(runtime).toBeInstanceOf(OrviloOllamaCloudAI);
     });
 
     it('should create instance with custom baseURL', () => {
-      const runtime = new LobeOllamaCloudAI({
+      const runtime = new OrviloOllamaCloudAI({
         apiKey: 'test_api_key',
         baseURL: 'https://custom.ollama.com/v1',
       });
       expect(runtime).toBeDefined();
-      expect(runtime).toBeInstanceOf(LobeOllamaCloudAI);
+      expect(runtime).toBeInstanceOf(OrviloOllamaCloudAI);
     });
 
     it('should create instance with additional options', () => {
-      const runtime = new LobeOllamaCloudAI({
+      const runtime = new OrviloOllamaCloudAI({
         apiKey: 'test_api_key',
         baseURL: 'https://ollama.com/v1',
       });

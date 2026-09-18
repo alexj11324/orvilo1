@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { projects } from '@/database/schemas/project';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { taskPlanningProposalJsonSchema, taskPlanningProposalSchema } from './contract';
@@ -58,7 +58,7 @@ const promptSnapshot = (snapshot: TaskPlanningSnapshot) => ({
  * receives direct database mutation authority.
  */
 export const createLinearCoordinatorPlanner =
-  (db: LobeChatDatabase, workspaceId: string): TaskPlanningPlanner =>
+  (db: OrviloDatabase, workspaceId: string): TaskPlanningPlanner =>
   async (snapshot) => {
     if (snapshot.scope.scopeType !== 'project') {
       return proposeLinearPlanningReview(snapshot);

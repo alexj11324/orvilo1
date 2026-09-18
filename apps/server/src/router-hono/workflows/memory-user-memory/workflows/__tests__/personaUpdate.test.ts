@@ -9,10 +9,15 @@ const mocks = vi.hoisted(() => ({
   ensureWorkflowStarted: vi.fn(),
   getServerDB: vi.fn(),
   isHourlyMemoryExtractionCancellationRequested: vi.fn(),
+  isUserMemoryExtractionEnabled: vi.fn(),
 }));
 
 vi.mock('@/database/server', () => ({
   getServerDB: mocks.getServerDB,
+}));
+
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  isUserMemoryExtractionEnabled: mocks.isUserMemoryExtractionEnabled,
 }));
 
 vi.mock('@/server/services/memory/userMemory/persona/service', () => ({
@@ -43,6 +48,8 @@ describe('personaUpdateHandler run guard', () => {
     mocks.ensureWorkflowStarted.mockResolvedValue({ started: true });
     mocks.getServerDB.mockResolvedValue({});
     mocks.isHourlyMemoryExtractionCancellationRequested.mockResolvedValue(false);
+    mocks.isUserMemoryExtractionEnabled.mockReset();
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(true);
   });
 
   it('starts the workflow before checking the run guard or parsing payload', async () => {
@@ -113,6 +120,30 @@ describe('personaUpdateHandler run guard', () => {
     expect(mocks.isHourlyMemoryExtractionCancellationRequested).toHaveBeenCalledWith(
       '00000000-0000-4000-8000-000000000001',
     );
+    expect(mocks.buildUserPersonaJobInput).not.toHaveBeenCalled();
+    expect(mocks.composeWriting).not.toHaveBeenCalled();
+  });
+
+  it('skips persona writing for a user who disabled memory', async () => {
+    /**
+     * @example
+     * await expect(personaUpdateHandler(context)).resolves.toMatchObject({ processedUsers: 0 });
+     */
+    mocks.checkGuard.mockResolvedValue({ result: true });
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(false);
+
+    const context = {
+      requestPayload: { userIds: ['user-1'] },
+      run: createStepRunner(),
+      workflowRunId: 'wfr_persona',
+    };
+
+    await expect(personaUpdateHandler(context as never)).resolves.toEqual({
+      message: 'User persona processed via workflow.',
+      processedUsers: 0,
+    });
+
+    expect(mocks.isUserMemoryExtractionEnabled).toHaveBeenCalledWith('user-1', {});
     expect(mocks.buildUserPersonaJobInput).not.toHaveBeenCalled();
     expect(mocks.composeWriting).not.toHaveBeenCalled();
   });

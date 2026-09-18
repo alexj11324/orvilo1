@@ -13,10 +13,10 @@ import { resolveAgentId } from './resolveAgentId';
 const SKILL_FILE_NAME = 'SKILL.md';
 
 const SKILL_NAMESPACE_PREFIXES = {
-  'agent': './lobe/skills/agent/skills',
-  'builtin': './lobe/skills/builtin/skills',
-  'installed-active': './lobe/skills/installed/active/skills',
-  'installed-all': './lobe/skills/installed/all/skills',
+  'agent': './orvilo/skills/agent/skills',
+  'builtin': './orvilo/skills/builtin/skills',
+  'installed-active': './orvilo/skills/installed/active/skills',
+  'installed-all': './orvilo/skills/installed/all/skills',
 } as const;
 
 const FS_PATH_ALIASES = {
@@ -175,7 +175,7 @@ function canonicalSkillFilePath(resolved: AgentFsResolvedPath) {
 
 function toDisplayPath(path: string) {
   if (path === './') return 'agent:/';
-  if (path.startsWith('./') && path !== './lobe' && !path.startsWith('./lobe/')) {
+  if (path.startsWith('./') && path !== './orvilo' && !path.startsWith('./orvilo/')) {
     return `agent:/${path.slice(2)}`;
   }
 

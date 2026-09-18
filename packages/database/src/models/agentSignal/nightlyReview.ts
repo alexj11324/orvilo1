@@ -15,7 +15,7 @@ import {
 import { alias } from 'drizzle-orm/pg-core';
 
 import { agents, messagePlugins, messages, topics, users, userSettings } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { normalizeInboxAgentTitle } from '../../utils/inboxAgent';
 import { notShareVisitorMessage } from '../../utils/shareVisitor';
 
@@ -118,9 +118,9 @@ export interface AgentSignalNightlyReviewTarget {
  * - Candidate users and active agent targets without emitting source events
  */
 export class AgentSignalNightlyReviewModel {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
   }
 

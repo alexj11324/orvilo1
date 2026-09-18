@@ -1,22 +1,23 @@
 name: Build and deploy orvilo1
 
-# 这个仓库是 Orvilo 的 fork。上游那一批 workflow 依赖 Orvilo 自己的
-# secrets（DOCKER_REGISTRY_*、ORVILO_CLOUD_TOKEN、Apple 证书等），在本仓库
-# 一律跑不通，需要单独清理。本文件是 orvilo1 自己的发布管线。
+# 生产部署管线。
 #
 # 构建与部署分开是有意的：
-#   - push 到 main 就构建并推镜像 —— 快，且能立刻发现构建坏了
+#   - push 到 canary 就构建并推镜像 —— 快，且能立刻发现构建坏了
 #   - 部署默认不自动跑，要手动 dispatch 时勾 deploy
 # 生产主机是共享的（同机还有 20+ 个其他产品的容器），而当前还没有测试门禁
 # 挡在构建前面，所以不该让每次提交都直接上生产。
+#
+# canary 是开发主干，同时也是生产代码线；main 是发布快照。
+# 完整模型见 docs/development/branch-model.md。
 
 on:
   push:
-    branches: [main]
+    branches: [canary]
   workflow_dispatch:
     inputs:
       build:
-        description: '手动触发时也构建镜像（用于部署非 main 分支，分支没有 push 构建产物）'
+        description: '手动触发时也构建镜像（用于部署非 canary 分支，分支没有 push 构建产物）'
         type: boolean
         default: false
       deploy:
@@ -24,7 +25,7 @@ on:
         type: boolean
         default: false
       retag_main_from:
-        description: '可选：把 :main 浮动标签指到这个已有 sha-* 镜像（不动构建/部署，用于修正污染的标签）'
+        description: '可选：把 :canary 浮动标签指到这个已有 sha-* 镜像（不动构建/部署，用于修正污染的标签）'
         required: false
 
 permissions:
@@ -49,13 +50,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Repoint :main to existing sha image
+      - name: Repoint the floating tag to an existing sha image
+        env:
+          # Passed through the environment rather than interpolated into the
+          # script body: this value comes from a workflow_dispatch input, and
+          # inlining it would let a crafted value break out of the quoting.
+          SOURCE_SHA: ${{ inputs.retag_main_from }}
         run: |
-          docker buildx imagetools inspect "${IMAGE}:sha-${{ inputs.retag_main_from }}"
+          docker buildx imagetools inspect "${IMAGE}:sha-${SOURCE_SHA}"
           docker buildx imagetools create \
+            -t "${IMAGE}:canary" \
             -t "${IMAGE}:main" \
-            "${IMAGE}:sha-${{ inputs.retag_main_from }}"
-          echo ":main -> sha-${{ inputs.retag_main_from }}"
+            "${IMAGE}:sha-${SOURCE_SHA}"
+          echo ":canary and :main -> sha-${SOURCE_SHA}"
 
   build:
     # push 才构建。手动部署不需要重建 —— 镜像按 commit 不可变，同一个 sha
@@ -80,15 +87,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # :main 只由 main 分支的 push 构建更新——分支 dispatch 构建不该抢这个
-      # 浮动标签，否则 :main 会指向并非 main 的镜像。
+      # 浮动标签只由 canary 分支的 push 构建更新——分支 dispatch 构建不该抢
+      # 这个标签，否则它会指向并非 canary 的镜像。
+      #
+      # 同时推 :main 是过渡期的兼容别名：生产主机上的 compose 仍引用
+      # ghcr.io/.../orvilo1:main。等主机侧切到 :canary 后可以删掉这一行。
       - name: Compute tags
         id: tags
         run: |
           {
             echo "tags<<EOF"
             echo "${IMAGE}:sha-${GITHUB_SHA}"
-            if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            if [ "${GITHUB_EVENT_NAME}" = "push" ] || [ "${GITHUB_REF}" = "refs/heads/canary" ]; then
+              echo "${IMAGE}:canary"
               echo "${IMAGE}:main"
             fi
             echo "EOF"
@@ -116,7 +127,7 @@ jobs:
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| 镜像 | \`${IMAGE}:main\` |"
+            echo "| 镜像 | \`${IMAGE}:canary\` |"
             echo "| 提交 | \`${SHA}\` |"
             echo "| digest | \`${DIGEST}\` |"
           } >> "$GITHUB_STEP_SUMMARY"

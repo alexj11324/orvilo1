@@ -1,8 +1,11 @@
 'use client';
 
+import { Alert, Button } from '@lobehub/ui/base-ui';
 import { type PropsWithChildren } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useInRouterContext } from 'react-router';
 
+import { useFetchWorkspaces } from '@/business/client/hooks/useFetchWorkspaces';
 import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoading';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
 import { useWorkspaceSyncPathname } from '@/features/Workspace/useWorkspaceSyncPathname';
@@ -20,8 +23,30 @@ const RouterBoundWorkspaceSync = ({ children }: PropsWithChildren) => {
   useWorkspaceUrlSync();
   const pathname = useWorkspaceSyncPathname();
   const isLoading = useIsWorkspaceLoading();
+  const { data, error, mutate } = useFetchWorkspaces();
+  const { t } = useTranslation(['setting', 'common']);
 
-  if (isLoading && isWorkspaceSlugCandidatePath(pathname)) return <RouteLoading />;
+  if (isWorkspaceSlugCandidatePath(pathname)) {
+    // A terminal list failure is not "still loading" — surface it with a retry
+    // instead of spinning forever or falling through to a false 404.
+    if (error !== undefined && data === undefined) {
+      return (
+        <Alert
+          message={t('workspace.loadFailedHint', { ns: 'setting' })}
+          showIcon
+          style={{ margin: 16 }}
+          title={t('workspace.loadFailed', { ns: 'setting' })}
+          type="error"
+          extra={
+            <Button onClick={() => void mutate()} size="small">
+              {t('retry', { ns: 'common' })}
+            </Button>
+          }
+        />
+      );
+    }
+    if (isLoading) return <RouteLoading />;
+  }
 
   return children;
 };

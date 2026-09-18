@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 
 import type { WorkspaceListItem } from '@/business/client/hooks/useActiveWorkspace';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -8,6 +8,7 @@ import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspa
 import { useFetchWorkspaces } from '@/business/client/hooks/useFetchWorkspaces';
 import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoading';
 import { useSilentSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
+import { getWorkspaceContextState } from '@/business/client/workspaceContextStore';
 
 import { useWorkspaceSyncPathname } from './useWorkspaceSyncPathname';
 
@@ -105,6 +106,17 @@ export const useWorkspaceUrlSync = (): void => {
   // variant so refreshing or following a `/{slug}` link is not treated as
   // a user-driven switch.
   const { switchWorkspace, switchToPersonal } = useSilentSwitchWorkspace();
+
+  // The store's lifetime is bound to this sync: when the slot that hosts it
+  // unmounts (leaving the layouts that provide workspace context), clear the
+  // selection so imperative readers — `X-Workspace-Id`, tool executors — stop
+  // addressing a workspace that is no longer on screen.
+  useEffect(
+    () => () => {
+      getWorkspaceContextState().setActiveWorkspace(null);
+    },
+    [],
+  );
 
   // `useLayoutEffect` (not `useEffect`) so the workspace switch is scheduled
   // before the browser paints. With `useEffect` there is one paintable frame

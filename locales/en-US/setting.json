@@ -1891,6 +1891,8 @@
   "workspace.auditLog.filters.startDate": "Start date",
   "workspace.auditLog.loadFailed": "Failed to load audit logs",
   "workspace.auditLog.loadMore": "Load more",
+  "workspace.loadFailed": "Failed to load workspaces",
+  "workspace.loadFailedHint": "Your workspace list could not be loaded. Check your connection and retry.",
   "workspace.auditLog.resourceTypes.agent": "Agent",
   "workspace.auditLog.resourceTypes.api_key": "API key",
   "workspace.auditLog.resourceTypes.auto_top_up": "Auto top-up",

@@ -217,23 +217,10 @@ export class NotificationModel {
   }
 
   async getUnreadCount(): Promise<number> {
-    const [result] = await this.db
-      .select({ count: count() })
-      .from(notifications)
-      .where(
-        and(
-          ...this.scope(),
-          this.resourceReadable(),
-          eq(notifications.isRead, false),
-          eq(notifications.isArchived, false),
-          or(
-            isNull(notifications.snoozedUntil),
-            sql`${notifications.snoozedUntil} <= ${new Date()}`,
-          )!,
-        ),
-      );
-
-    return result?.count ?? 0;
+    // Same union as the sidebar badge / Inbox header: unread updates plus
+    // unresolved actions, even after the row was marked read. Read ≠ decided.
+    const summary = await this.getFeedSummary();
+    return summary.unreadBadgeCount;
   }
 
   async getFeedSummary() {

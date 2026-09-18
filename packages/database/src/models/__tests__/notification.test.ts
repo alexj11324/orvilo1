@@ -260,6 +260,29 @@ describe('NotificationModel (integration)', () => {
       const model = new NotificationModel(serverDB, userId);
       expect(await model.getUnreadCount()).toBe(0);
     });
+
+    it('keeps a read but unresolved action on the badge with feedSummary', async () => {
+      const model = new NotificationModel(serverDB, userId);
+      const action = await model.create(
+        baseNotification({
+          actionRequestId: 'apr_badge',
+          category: 'pending',
+          dedupeKey: 'action-badge',
+          kind: 'action',
+          title: 'Approve this',
+          type: 'acp_permission',
+        }),
+      );
+
+      await model.markAsRead([action!.id]);
+
+      expect(await model.getUnreadCount()).toBe(1);
+      await expect(model.getFeedSummary()).resolves.toMatchObject({
+        pendingActionCount: 1,
+        unreadBadgeCount: 1,
+        unreadUpdateCount: 0,
+      });
+    });
   });
 
   describe('getNavigationCounts', () => {

@@ -18,10 +18,16 @@
  *   node .agents/acceptance/scripts/llm-stub.mjs                # :41100
  *   PORT=5xxxx STUB_TEXT="custom reply" STUB_DELAY_MS=200 node …
  *
- * Wire it in through the real store action so the key-vault round trip is
- * exercised too (clear at teardown):
+ * WIRING — RETIRED (P50). This header used to tell you to wire the stub in
+ * through the provider store action:
  *   aiInfra().updateAiProviderConfig("openai",
  *     { keyVaults: { apiKey: "sk-stub", baseURL: "http://localhost:41100/v1" } })
+ * That action no longer exists — the user-facing provider surface was retired,
+ * and **agent runs go through ACP (heterogeneous agents), not a configured
+ * provider**. An empty `aiInfra().enabledAiProviders` is therefore the expected
+ * state, not a broken environment; do not go hunting for a provider key.
+ * For the current harness see PROJECT.md §"Heterogeneous-agent compatibility"
+ * and the manual-only `testing-heterogeneous-agents` project skill.
  *
  * Failure injection (transport-level error mapping, deterministic):
  *   STUB_FAIL=429|500|529 node …          # every completion request fails

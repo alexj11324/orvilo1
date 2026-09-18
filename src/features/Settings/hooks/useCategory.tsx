@@ -1,8 +1,6 @@
 import { Avatar } from '@lobehub/ui/base-ui';
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
-  AppWindowIcon,
   BellIcon,
   Blocks,
   BrainCircuit,
@@ -13,7 +11,6 @@ import {
   EllipsisIcon,
   EthernetPort,
   FlaskConical,
-  Gift,
   Info,
   KeyboardIcon,
   KeyIcon,
@@ -28,18 +25,14 @@ import {
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { isSettingsTabOffered } from '@/config/routes/settings';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { SettingsTabs } from '@/store/global/initialState';
-import {
-  featureFlagsSelectors,
-  serverConfigSelectors,
-  useServerConfigStore,
-} from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
-import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors';
+
+import { useSettingsCapabilityContext } from './useSettingsCapability';
 
 export enum SettingsGroupKey {
   Account = 'account',
@@ -71,15 +64,12 @@ export const useCategory = () => {
   const { t: tAuth } = useTranslation('auth');
   const { t: tLabs } = useTranslation('labs');
   const { t: tSubscription } = useTranslation('subscription');
-  const mobile = useServerConfigStore((s) => s.isMobile);
-  const { hideDocs, showApiKeyManage } = useServerConfigStore(featureFlagsSelectors);
   const [avatar, username] = useUserStore((s) => [
     userProfileSelectors.userAvatar(s),
     userProfileSelectors.nickName(s),
   ]);
   const remoteServerUrl = useElectronStore(electronSyncSelectors.remoteServerUrl);
-  const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
-  const enableOAuthApps = useUserStore(labPreferSelectors.enableOAuthApps);
+  const capabilityContext = useSettingsCapabilityContext();
 
   const avatarUrl = useMemo(() => {
     if (!avatar) return undefined;
@@ -88,9 +78,14 @@ export const useCategory = () => {
     }
     return avatar;
   }, [avatar, remoteServerUrl]);
-  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
-  const categoryGroups = useMemo<CategoryGroup[]>(
-    () => [
+  const categoryGroups = useMemo<CategoryGroup[]>(() => {
+    // Which rows exist is decided by the settings capability registry, not here.
+    // The page renderer asks the same registry, so a row the sidebar withholds
+    // can no longer be opened by typing its URL — and `settings.test.ts` pins the
+    // other direction, that a row offered here always renders.
+    const offered = (tab: SettingsTabs) => isSettingsTabOffered(tab, capabilityContext);
+
+    return [
       // Capability groups (S70). The sidebar used to be ordered by audience —
       // personal / subscription / developer — which put a capability's settings in
       // two different places depending on who it was for. Grouping by what the
@@ -113,7 +108,7 @@ export const useCategory = () => {
             key: SettingsTabs.Appearance,
             label: t('tab.appearance'),
           },
-          !mobile && {
+          offered(SettingsTabs.Hotkey) && {
             icon: KeyboardIcon,
             key: SettingsTabs.Hotkey,
             label: t('tab.hotkey'),
@@ -133,7 +128,7 @@ export const useCategory = () => {
             key: SettingsTabs.Messenger,
             label: t('tab.messenger'),
           },
-          (enableBusinessFeatures || isDesktop) && {
+          offered(SettingsTabs.Notification) && {
             icon: BellIcon,
             key: SettingsTabs.Notification,
             label: t('tab.notification'),
@@ -151,12 +146,12 @@ export const useCategory = () => {
             key: SettingsTabs.Memory,
             label: t('tab.memory'),
           },
-          isDesktop && {
+          offered(SettingsTabs.Proxy) && {
             icon: EthernetPort,
             key: SettingsTabs.Proxy,
             label: t('tab.proxy'),
           },
-          isDesktop && {
+          offered(SettingsTabs.SystemTools) && {
             icon: TerminalSquare,
             key: SettingsTabs.SystemTools,
             label: t('tab.systemTools'),
@@ -166,14 +161,10 @@ export const useCategory = () => {
         title: t('group.aiConfig'),
       },
 
-      // 工具、技能与连接器
+      // 工具与连接器 — the platform's own skill marketplace was retired, so the
+      // group no longer carries a Skill row. Connector and Labels stay.
       {
         items: [
-          {
-            icon: SkillsIcon,
-            key: SettingsTabs.Skill,
-            label: t('tab.skill'),
-          },
           {
             icon: Blocks,
             key: SettingsTabs.Connector,
@@ -183,11 +174,6 @@ export const useCategory = () => {
             icon: TagIcon,
             key: SettingsTabs.Labels,
             label: t('tab.labels'),
-          },
-          enableOAuthApps && {
-            icon: AppWindowIcon,
-            key: SettingsTabs.OAuthApps,
-            label: tAuth('tab.oauthApps'),
           },
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Tools,
@@ -204,30 +190,25 @@ export const useCategory = () => {
             key: SettingsTabs.Stats,
             label: tAuth('tab.stats'),
           },
-          enableBusinessFeatures && {
+          offered(SettingsTabs.Usage) && {
             icon: ChartColumnBigIcon,
             key: SettingsTabs.Usage,
             label: t('tab.usage'),
           },
-          enableBusinessFeatures && {
+          offered(SettingsTabs.Plans) && {
             icon: Map,
             key: SettingsTabs.Plans,
             label: tSubscription('tab.plans'),
           },
-          enableBusinessFeatures && {
+          offered(SettingsTabs.Credits) && {
             icon: Coins,
             key: SettingsTabs.Credits,
             label: tSubscription('tab.credits'),
           },
-          enableBusinessFeatures && {
+          offered(SettingsTabs.Billing) && {
             icon: CreditCard,
             key: SettingsTabs.Billing,
             label: tSubscription('tab.billing'),
-          },
-          enableBusinessFeatures && {
-            icon: Gift,
-            key: SettingsTabs.Referral,
-            label: tSubscription('tab.referral'),
           },
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.UsageAndCost,
@@ -244,7 +225,7 @@ export const useCategory = () => {
             key: SettingsTabs.Creds,
             label: t('tab.creds'),
           },
-          (showApiKeyManage || isDevMode) && {
+          offered(SettingsTabs.APIKey) && {
             icon: KeyIcon,
             key: SettingsTabs.APIKey,
             label: tAuth('tab.apikey'),
@@ -287,7 +268,7 @@ export const useCategory = () => {
             key: SettingsTabs.Labs,
             label: tLabs('title'),
           },
-          !hideDocs && {
+          offered(SettingsTabs.About) && {
             icon: Info,
             key: SettingsTabs.About,
             label: t('tab.about'),
@@ -296,22 +277,8 @@ export const useCategory = () => {
         key: SettingsGroupKey.Developer,
         title: t('group.developer'),
       },
-    ],
-    [
-      t,
-      tAuth,
-      tLabs,
-      tSubscription,
-      enableBusinessFeatures,
-      hideDocs,
-      mobile,
-      showApiKeyManage,
-      isDevMode,
-      enableOAuthApps,
-      avatarUrl,
-      username,
-    ],
-  );
+    ];
+  }, [t, tAuth, tLabs, tSubscription, capabilityContext, avatarUrl, username]);
 
   return categoryGroups;
 };

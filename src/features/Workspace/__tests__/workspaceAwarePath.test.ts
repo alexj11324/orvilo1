@@ -81,7 +81,6 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/billing', 'acme')).toBe('/acme/settings/billing');
     expect(buildWorkspaceAwarePath('/settings/credits', 'acme')).toBe('/acme/settings/credits');
     expect(buildWorkspaceAwarePath('/settings/usage', 'acme')).toBe('/acme/settings/usage');
-    expect(buildWorkspaceAwarePath('/settings/skill', 'acme')).toBe('/acme/settings/skill');
     expect(buildWorkspaceAwarePath('/settings/connector', 'acme')).toBe('/acme/settings/connector');
     expect(buildWorkspaceAwarePath('/settings/devices', 'acme')).toBe('/acme/settings/devices');
     expect(buildWorkspaceAwarePath('/settings/labels', 'acme')).toBe('/acme/settings/labels');
@@ -97,14 +96,25 @@ describe('buildWorkspaceAwarePath', () => {
     );
     // Legacy alias — prefixed, then the router redirects to `statistics`.
     expect(buildWorkspaceAwarePath('/settings/stats', 'acme')).toBe('/acme/settings/stats');
-    expect(buildWorkspaceAwarePath('/settings/oauth-apps', 'acme')).toBe(
-      '/acme/settings/oauth-apps',
-    );
-    expect(buildWorkspaceAwarePath('/settings/oauth-apps/client-1', 'acme')).toBe(
-      '/acme/settings/oauth-apps/client-1',
-    );
     expect(buildWorkspaceAwarePath('/settings/provider/openai', 'acme')).toBe(
       '/acme/settings/provider/openai',
+    );
+  });
+
+  // The OAuth-app console and the skill marketplace both had a workspace
+  // mirror; with their pages and routes gone the sub-path is personal-only,
+  // like every other retired tab. Neither gets a redirect route the way
+  // `provider` / `service-model` did — those had a successor capability to land
+  // on, these have none, so the honest answer is the same not-found the
+  // personal settings render.
+  it('leaves the retired settings sub-paths unprefixed', () => {
+    expect(buildWorkspaceAwarePath('/settings/oauth-apps', 'acme')).toBe('/settings/oauth-apps');
+    expect(buildWorkspaceAwarePath('/settings/oauth-apps/client-1', 'acme')).toBe(
+      '/settings/oauth-apps/client-1',
+    );
+    expect(buildWorkspaceAwarePath('/settings/skill', 'acme')).toBe('/settings/skill');
+    expect(buildWorkspaceAwarePath('/settings/skill/anything', 'acme')).toBe(
+      '/settings/skill/anything',
     );
   });
 

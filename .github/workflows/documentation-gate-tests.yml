@@ -1,0 +1,22 @@
+name: Documentation gate tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/require-docs-for-functional-changes.mjs'
+      - '.github/scripts/require-docs-for-functional-changes.test.mjs'
+      - '.github/workflows/documentation-required.yml'
+      - '.github/workflows/documentation-gate-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  documentation-gate-tests:
+    name: Documentation Gate Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run documentation gate tests
+        run: node --test .github/scripts/require-docs-for-functional-changes.test.mjs

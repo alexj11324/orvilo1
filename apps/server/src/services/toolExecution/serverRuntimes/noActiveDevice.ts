@@ -8,7 +8,7 @@ import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
  * `context.activeDeviceId` can legitimately be empty:
  *
  * - Type 1 — never bound: a `device-unrouted` run advertises the device tools
- *   on purpose (mid-run activation via `lobe-remote-device` is a supported
+ *   on purpose (mid-run activation via `orvilo-remote-device` is a supported
  *   flow), so a call can arrive before any device was activated.
  * - Type 2 — lost mid-run: the device dropped offline between steps, the next
  *   operation re-resolves its plan to `device-unrouted`
@@ -39,7 +39,7 @@ export const buildNoActiveDeviceResult = (
   } = {},
 ): { content: string; error: { code: string; message: string }; success: false } => {
   const recovery = remoteDeviceToolAvailable
-    ? `Call lobe-remote-device.listOnlineDevices to refresh the device list, then activateDevice with an online device id. The activation takes effect on the NEXT step — after it succeeds, retry this call. If no device is online, tell the user to connect the desktop application or cli.`
+    ? `Call orvilo-remote-device.listOnlineDevices to refresh the device list, then activateDevice with an online device id. The activation takes effect on the NEXT step — after it succeeds, retry this call. If no device is online, tell the user to connect the desktop application or cli.`
     : `This conversation is locked to a specific device that is currently offline — the device picker is not available. Tell the user to reconnect the desktop application or cli, then retry.`;
 
   const message = `No active device for ${toolLabel} execution. ${recovery}`;

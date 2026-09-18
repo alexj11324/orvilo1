@@ -220,22 +220,22 @@ const ChatPanel = memo<ChatPanelProps>(
       if (!theme) return undefined;
 
       return {
-        '--lobe-overlay-bg-elevated': theme.colorBgElevated,
-        '--lobe-overlay-border-secondary': theme.colorBorderSecondary,
-        '--lobe-overlay-fill': theme.colorFill,
-        '--lobe-overlay-fill-quaternary': theme.colorFillQuaternary,
-        '--lobe-overlay-fill-secondary': theme.colorFillSecondary,
-        '--lobe-overlay-fill-tertiary': theme.colorFillTertiary,
-        '--lobe-overlay-panel-border': theme.panelBorder,
-        '--lobe-overlay-primary': theme.colorPrimary,
-        '--lobe-overlay-primary-active': theme.colorPrimaryActive,
-        '--lobe-overlay-primary-hover': theme.colorPrimaryHover,
-        '--lobe-overlay-shadow': theme.panelShadow,
-        '--lobe-overlay-text': theme.colorText,
-        '--lobe-overlay-text-light-solid': theme.colorTextLightSolid,
-        '--lobe-overlay-text-quaternary': theme.colorTextQuaternary,
-        '--lobe-overlay-text-secondary': theme.colorTextSecondary,
-        '--lobe-overlay-text-tertiary': theme.colorTextTertiary,
+        '--orvilo-overlay-bg-elevated': theme.colorBgElevated,
+        '--orvilo-overlay-border-secondary': theme.colorBorderSecondary,
+        '--orvilo-overlay-fill': theme.colorFill,
+        '--orvilo-overlay-fill-quaternary': theme.colorFillQuaternary,
+        '--orvilo-overlay-fill-secondary': theme.colorFillSecondary,
+        '--orvilo-overlay-fill-tertiary': theme.colorFillTertiary,
+        '--orvilo-overlay-panel-border': theme.panelBorder,
+        '--orvilo-overlay-primary': theme.colorPrimary,
+        '--orvilo-overlay-primary-active': theme.colorPrimaryActive,
+        '--orvilo-overlay-primary-hover': theme.colorPrimaryHover,
+        '--orvilo-overlay-shadow': theme.panelShadow,
+        '--orvilo-overlay-text': theme.colorText,
+        '--orvilo-overlay-text-light-solid': theme.colorTextLightSolid,
+        '--orvilo-overlay-text-quaternary': theme.colorTextQuaternary,
+        '--orvilo-overlay-text-secondary': theme.colorTextSecondary,
+        '--orvilo-overlay-text-tertiary': theme.colorTextTertiary,
       };
     }, [theme]);
 

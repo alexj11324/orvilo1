@@ -1,4 +1,3 @@
-export { default as AppsSkeleton } from './Apps';
 export { default as ArticleSkeleton } from './Article';
 export { default as SkeletonBar } from './Bar';
 export { default as ConversationLayoutSkeleton } from './Conversation/Layout';

@@ -14,10 +14,10 @@
  */
 
 /** Product name as it appears inside sentences. */
-export const CLI_PRODUCT_NAME = 'LobeHub';
+export const CLI_PRODUCT_NAME = 'Orvilo';
 
 /** The CLI's own name, e.g. in `--help` and the connect banner. */
-export const CLI_DISPLAY_NAME = 'LobeHub CLI';
+export const CLI_DISPLAY_NAME = 'Orvilo CLI';
 
 /**
  * The command users type. Also the man page's title (uppercased) and the name
@@ -26,7 +26,7 @@ export const CLI_DISPLAY_NAME = 'LobeHub CLI';
 export const CLI_PRIMARY_BIN = 'lh';
 
 /** Additional command names installed alongside the primary one. */
-export const CLI_BIN_ALIASES: readonly string[] = ['lobe', 'lobehub'];
+export const CLI_BIN_ALIASES: readonly string[] = ['orvilo'];
 
 /** Every installed command name — what shell completion has to bind to. */
 export const CLI_BIN_NAMES: readonly string[] = [CLI_PRIMARY_BIN, ...CLI_BIN_ALIASES];
@@ -37,10 +37,10 @@ export const CLI_BIN_NAMES: readonly string[] = [CLI_PRIMARY_BIN, ...CLI_BIN_ALI
  * A shell identifier, so it must stay `[A-Za-z_][A-Za-z0-9_]*` — a distribution
  * overriding this cannot use hyphens or spaces.
  */
-export const CLI_COMPLETION_FUNCTION = '_lobehub_completion';
+export const CLI_COMPLETION_FUNCTION = '_orvilo_completion';
 
 /** Directory under $HOME holding settings, credentials and daemon state. */
-export const CLI_CONFIG_DIR_NAME = '.lobehub';
+export const CLI_CONFIG_DIR_NAME = '.orvilo';
 
 /**
  * Env var the generated completion script uses to hand `__complete` the
@@ -55,10 +55,10 @@ export const CLI_CONFIG_DIR_NAME = '.lobehub';
  * this module's doc comment above promises are all in one place, and it was
  * the one that got missed the first time around.
  */
-export const CLI_COMPLETION_CWORD_ENV = 'LOBEHUB_COMP_CWORD';
+export const CLI_COMPLETION_CWORD_ENV = 'ORVILO_COMP_CWORD';
 
 /** systemd unit name for `connect service`. */
-export const CLI_CONNECT_SERVICE_NAME = 'lobehub-connect.service';
+export const CLI_CONNECT_SERVICE_NAME = 'orvilo-connect.service';
 
 /**
  * Environment variable names the user may set, most preferred first.
@@ -66,11 +66,11 @@ export const CLI_CONNECT_SERVICE_NAME = 'lobehub-connect.service';
  * A list rather than a single name so a rebranded distribution can introduce
  * its own prefix while still honouring anything already exported in a user's
  * shell or CI config. Only variables the USER sets belong here — the ones the
- * desktop app and the server inject (LOBEHUB_SERVER, LOBEHUB_JWT, the agent-run
+ * desktop app and the server inject (ORVILO_SERVER, ORVILO_JWT, the agent-run
  * ids) are a cross-process contract and must be renamed on both sides at once.
  */
-export const CLI_API_KEY_ENV_NAMES: readonly string[] = ['LOBEHUB_CLI_API_KEY'];
-export const CLI_HOME_ENV_NAMES: readonly string[] = ['LOBEHUB_CLI_HOME'];
+export const CLI_API_KEY_ENV_NAMES: readonly string[] = ['ORVILO_CLI_API_KEY'];
+export const CLI_HOME_ENV_NAMES: readonly string[] = ['ORVILO_CLI_HOME'];
 
 const firstEnvValue = (names: readonly string[]): string | undefined => {
   for (const name of names) {

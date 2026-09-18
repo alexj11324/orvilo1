@@ -49,7 +49,7 @@ describe('formatCommandResult', () => {
   it('should format still-running command with output file path', () => {
     const result = formatCommandResult({
       outputFiles: {
-        stdout: { path: '/tmp/lobehub-shell/stdout.log', size: 1536, truncated: false },
+        stdout: { path: '/tmp/orvilo-shell/stdout.log', size: 1536, truncated: false },
       },
       shellId: 'shell-123',
       success: true,
@@ -58,7 +58,7 @@ describe('formatCommandResult', () => {
       "Command is still running after the wait window.
       shell_id: shell-123
 
-      Full stdout saved to: /tmp/lobehub-shell/stdout.log (1.5KB)"
+      Full stdout saved to: /tmp/orvilo-shell/stdout.log (1.5KB)"
     `);
   });
 
@@ -80,7 +80,7 @@ describe('formatCommandResult', () => {
     const result = formatCommandResult({
       exitCode: 0,
       stdout:
-        'first lines\n... [omitted 12000 bytes; full output saved to: /tmp/lobehub-shell/output.log]\nlast lines',
+        'first lines\n... [omitted 12000 bytes; full output saved to: /tmp/orvilo-shell/output.log]\nlast lines',
       success: true,
     });
 
@@ -89,7 +89,7 @@ describe('formatCommandResult', () => {
 
       Stdout:
       first lines
-      ... [omitted 12000 bytes; full output saved to: /tmp/lobehub-shell/output.log]
+      ... [omitted 12000 bytes; full output saved to: /tmp/orvilo-shell/output.log]
       last lines"
     `);
   });
@@ -99,7 +99,7 @@ describe('formatCommandResult', () => {
       exitCode: 0,
       stdout: 'small output',
       outputFiles: {
-        stdout: { path: '/tmp/lobehub-shell/stdout.log', size: 1536, truncated: false },
+        stdout: { path: '/tmp/orvilo-shell/stdout.log', size: 1536, truncated: false },
       },
       success: true,
     });
@@ -107,7 +107,7 @@ describe('formatCommandResult', () => {
     expect(result).toMatchInlineSnapshot(`
       "Command completed successfully.
 
-      Full stdout saved to: /tmp/lobehub-shell/stdout.log (1.5KB)
+      Full stdout saved to: /tmp/orvilo-shell/stdout.log (1.5KB)
 
       Stdout:
       small output"
@@ -119,7 +119,7 @@ describe('formatCommandResult', () => {
       exitCode: 0,
       stdout: 'preview output',
       outputFiles: {
-        stdout: { path: '/tmp/lobehub-shell/stdout.log', size: 1536, truncated: true },
+        stdout: { path: '/tmp/orvilo-shell/stdout.log', size: 1536, truncated: true },
       },
       success: true,
     });
@@ -127,7 +127,7 @@ describe('formatCommandResult', () => {
     expect(result).toMatchInlineSnapshot(`
       "Command completed successfully.
 
-      Stdout too large (1.5KB). Full stdout saved to: /tmp/lobehub-shell/stdout.log
+      Stdout too large (1.5KB). Full stdout saved to: /tmp/orvilo-shell/stdout.log
 
       Stdout:
       preview output"

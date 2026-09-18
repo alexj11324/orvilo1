@@ -4,7 +4,7 @@ import debug from 'debug';
 import { defineAgentSignalHandlers, defineSourceHandler } from '../runtime/middleware';
 import type { SelfIterationCompletionPayload } from '../services/selfIteration/completion';
 
-const log = debug('lobe-server:completion-lifecycle');
+const log = debug('orvilo-server:completion-lifecycle');
 
 /**
  * Handles `agent.execution.completed` source events emitted after every execAgent

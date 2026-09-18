@@ -242,7 +242,7 @@ derive(item))`) captures the value at first render. When a persisted cache hydra
   though the command appears successful.
 - Compare `lh --version` with the skill marker before publishing. If the branch
   under test changes the CLI contract, run that branch's CLI; otherwise use
-  `npx @lobehub/cli@latest`. Confirm the returned acceptance id or inspect the
+  `npx @orvilo/cli@latest`. Confirm the returned acceptance id or inspect the
   acceptance page rather than treating a run id alone as proof.
 
 ---
@@ -371,9 +371,9 @@ unquoted vars` — stashing `S="--session x --cdp 9226"` then `agent-browser $S`
   you must not kill. Terminate the run, report the exact error, and ask the user to
   clean up other processes — do not change watch mode, fall back to a static build, or
   publish a report from a degraded surface.
-- **E7. The default `lobehub-dev` browser session is shared — a parallel run can steal your
+- **E7. The default `orvilo-dev` browser session is shared — a parallel run can steal your
   tab.** `agent-browser` sessions are keyed by name, not by workspace, so two runs both using
-  `--session lobehub-dev` drive the **same** browser. The other run navigates the tab to _its_
+  `--session orvilo-dev` drive the **same** browser. The other run navigates the tab to _its_
   dev server, after which your `eval` reads that page while `screenshot` may still show yours —
   a screenshot that renders your fixture next to a `document.body.innerText` from the same
   moment containing none of its strings, every assertion `false`. It reads like a product bug;

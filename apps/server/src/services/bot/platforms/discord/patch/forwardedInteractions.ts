@@ -5,7 +5,7 @@ const APPLICATION_COMMAND_INTERACTION = 2;
 const MESSAGE_COMPONENT_INTERACTION = 3;
 const DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE = 5;
 const DEFERRED_UPDATE_MESSAGE = 6;
-const PATCHED_FLAG = Symbol.for('lobe.discord.forwarded-interactions.patched');
+const PATCHED_FLAG = Symbol.for('orvilo.discord.forwarded-interactions.patched');
 
 interface ForwardedGatewayEvent {
   data?: Record<string, unknown>;

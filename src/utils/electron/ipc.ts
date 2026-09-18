@@ -1,4 +1,4 @@
-import { type DesktopIpcServices } from '@lobehub/desktop-ipc-typings';
+import { type DesktopIpcServices } from '@orvilo/desktop-ipc-typings';
 import { getElectronIpc } from '@orvilo/electron-client-ipc';
 
 export const ensureElectronIpc = (): DesktopIpcServices => {

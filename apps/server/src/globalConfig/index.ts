@@ -7,7 +7,6 @@ import { isDesktop } from '@/const/version';
 import { appEnv, getAppConfig } from '@/envs/app';
 import { authEnv } from '@/envs/auth';
 import { fileEnv } from '@/envs/file';
-import { imageEnv } from '@/envs/image';
 import { knowledgeEnv } from '@/envs/knowledge';
 import { langfuseEnv } from '@/envs/langfuse';
 import { toolsEnv } from '@/envs/tools';
@@ -95,7 +94,7 @@ export const getServerGlobalConfig = async () => {
     for (const provider of Object.values(ModelProvider)) {
       aiProviderSpecificConfig[provider] = {
         ...aiProviderSpecificConfig[provider],
-        enabled: provider === ModelProvider.LobeHub,
+        enabled: provider === ModelProvider.Orvilo,
       };
     }
   }
@@ -111,7 +110,7 @@ export const getServerGlobalConfig = async () => {
     enableComposio: !!composioEnv.COMPOSIO_API_KEY,
     enableGatewayMode:
       ENABLE_BUSINESS_FEATURES || (!!appEnv.ENABLE_AGENT_GATEWAY && !!appEnv.AGENT_GATEWAY_URL),
-    enableLobehubSkill: !!(appEnv.MARKET_TRUSTED_CLIENT_SECRET && appEnv.MARKET_TRUSTED_CLIENT_ID),
+    enableOrviloSkill: !!(appEnv.MARKET_TRUSTED_CLIENT_SECRET && appEnv.MARKET_TRUSTED_CLIENT_ID),
     enableMagicLink: authEnv.AUTH_ENABLE_MAGIC_LINK,
     enableMarketTrustedClient: !!(
       appEnv.MARKET_TRUSTED_CLIENT_SECRET && appEnv.MARKET_TRUSTED_CLIENT_ID
@@ -132,9 +131,6 @@ export const getServerGlobalConfig = async () => {
     // Expose Agent Gateway URL to client (used by hetero agents; also required for queue mode)
     ...(appEnv.AGENT_GATEWAY_URL ? { agentGatewayUrl: appEnv.AGENT_GATEWAY_URL } : undefined),
 
-    image: cleanObject({
-      defaultImageNum: imageEnv.AI_IMAGE_DEFAULT_IMAGE_NUM,
-    }),
     memory: {
       userMemory: cleanObject(getPublicMemoryExtractionConfig()),
     },

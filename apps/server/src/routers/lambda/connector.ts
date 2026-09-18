@@ -18,7 +18,7 @@ import {
   ConnectorStatus,
   ConnectorToolPermission,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { getComposioClient } from '@/libs/composio';
 import { inferCrudType } from '@/libs/mcp/utils';
 import { router } from '@/libs/trpc/lambda';
@@ -612,7 +612,7 @@ export const connectorRouter = router({
         authorizationServerUrl,
         codeVerifier,
         connectorId: input.id,
-        lobeUserId: ctx.userId,
+        orviloUserId: ctx.userId,
         returnTo: input.returnTo,
       });
 
@@ -801,7 +801,7 @@ export const connectorRouter = router({
     }),
 
   /**
-   * Sync tools from a client-provided list (for Lobehub OAuth skills, Composio, etc.
+   * Sync tools from a client-provided list (for Orvilo OAuth skills, Composio, etc.
    * that already have their tool list available on the client side).
    * Idempotent — safe to call whenever the detail panel opens.
    */
@@ -889,7 +889,7 @@ export const connectorRouter = router({
     }),
 
   /**
-   * Bootstrap a connector entry for a builtin tool (lobe-creds, lobe-local-system, etc.)
+   * Bootstrap a connector entry for a builtin tool (orvilo-creds, orvilo-local-system, etc.)
    * by reading its manifest from @orvilo/builtin-tools.
    * Idempotent — safe to call on every open of the detail panel.
    */
@@ -1016,7 +1016,7 @@ export const connectorRouter = router({
 async function upsertConnectorEntry(
   ctx: {
     connectorModel: ConnectorModel;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     userId: string;
     workspaceId?: string | null;
     workspaceRole?: string;

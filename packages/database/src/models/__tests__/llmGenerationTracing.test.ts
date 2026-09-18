@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { llmGenerationTracing, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { LlmGenerationTracingModel } from '../llmGenerationTracing';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'llm-gen-trace-test-user';
 const otherUserId = 'llm-gen-trace-other-user';

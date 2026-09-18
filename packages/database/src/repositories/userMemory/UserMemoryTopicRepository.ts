@@ -1,7 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 
 import { messages } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
 /**
@@ -14,10 +14,10 @@ const MAX_QUERY_LENGTH = 7000;
  */
 export class UserMemoryTopicRepository {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;

@@ -1,4 +1,4 @@
-import { type LobeDocument } from '@/types/document';
+import { type OrviloDocument } from '@/types/document';
 
 export interface DocumentQueryFilter {
   fileTypes?: string[];
@@ -17,7 +17,7 @@ export interface DocumentState {
   /**
    * Server documents fetched from document service
    */
-  documents: LobeDocument[];
+  documents: OrviloDocument[];
   /**
    * total count of documents
    */
@@ -37,7 +37,7 @@ export interface DocumentState {
   /**
    * Local optimistic document map for immediate UI updates
    */
-  localDocumentMap: Map<string, LobeDocument>;
+  localDocumentMap: Map<string, OrviloDocument>;
 }
 
 export const initialDocumentState: DocumentState = {

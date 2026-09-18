@@ -1,5 +1,5 @@
 import { type ModelUsage } from '@orvilo/types';
-import { type LobeDefaultAiModelListItem } from 'model-bank';
+import { type OrviloDefaultAiModelListItem } from 'model-bank';
 
 import { getAudioInputUnitRate, getAudioOutputUnitRate } from '@/utils/pricing';
 
@@ -11,7 +11,7 @@ const calcCredit = (token: number, pricing?: number) => {
   return parseInt((token * pricing).toFixed(0));
 };
 
-export const getDetailsToken = (usage: ModelUsage, modelCard?: LobeDefaultAiModelListItem) => {
+export const getDetailsToken = (usage: ModelUsage, modelCard?: OrviloDefaultAiModelListItem) => {
   const inputTextTokens = usage.inputTextTokens || (usage as any).inputTokens || 0;
   const totalInputTokens = usage.totalInputTokens || (usage as any).inputTokens || 0;
 

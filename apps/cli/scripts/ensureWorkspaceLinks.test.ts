@@ -20,7 +20,7 @@ const createWorkspace = (dependencies: Record<string, string>) => {
   fs.mkdirSync(path.join(cliDir, 'node_modules', '@orvilo'), { recursive: true });
   fs.writeFileSync(
     path.join(cliDir, 'package.json'),
-    JSON.stringify({ devDependencies: dependencies, name: '@lobehub/cli' }),
+    JSON.stringify({ devDependencies: dependencies, name: '@orvilo/cli' }),
   );
 
   return { cliDir, root };

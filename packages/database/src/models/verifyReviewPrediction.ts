@@ -3,7 +3,7 @@ import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 
 import type { NewVerifyReviewPrediction } from '../schemas/verify';
 import { verifyCheckResults, verifyReviewPredictions } from '../schemas/verify';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 /** Caller-supplied fields for one prediction (ownership is injected). */
@@ -19,11 +19,11 @@ export type VerifyReviewPredictionForRuns = typeof verifyReviewPredictions.$infe
 };
 
 export class VerifyReviewPredictionModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

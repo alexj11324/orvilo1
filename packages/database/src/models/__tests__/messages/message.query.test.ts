@@ -27,11 +27,11 @@ import {
   topics,
   users,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { MessageModel, toVisitorMessage } from '../../message';
 import { codeEmbedding } from '../fixtures/embedding';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'message-query-test';
 const otherUserId = 'message-query-test-other';
@@ -620,7 +620,7 @@ describe('MessageModel Query Tests', () => {
       };
 
       it('keeps the newest turns (final answer) instead of the oldest when truncated', async () => {
-        const topicId = 't-lobe12011-newest';
+        const topicId = 't-orvilo12011-newest';
         // 5 rounds x (1 user + 2 assistant) = 15 mainline messages; page size 4.
         const { lastId } = await seedRounds(topicId, 5, 2);
 
@@ -633,7 +633,7 @@ describe('MessageModel Query Tests', () => {
       });
 
       it('aligns the lower boundary to a round start (mainline user message)', async () => {
-        const topicId = 't-lobe12011-align';
+        const topicId = 't-orvilo12011-align';
         const { lastId } = await seedRounds(topicId, 5, 2); // page boundary lands mid-round
 
         const result = await messageModel.query({ topicId, current: 0, pageSize: 4 });
@@ -648,7 +648,7 @@ describe('MessageModel Query Tests', () => {
       });
 
       it('keeps an oversized single round whole rather than trimming to empty', async () => {
-        const topicId = 't-lobe12011-huge';
+        const topicId = 't-orvilo12011-huge';
         // One round of 1 user + 6 assistant steps = 7 messages; page size 4. The
         // newest page contains no user message, so the never-empty guard keeps it.
         const { lastId } = await seedRounds(topicId, 1, 6);
@@ -1585,11 +1585,11 @@ describe('MessageModel Query Tests', () => {
       expect(ownTranscript.items.map((item) => item.id)).toEqual(['creator-direct-msg']);
     });
 
-    it('keeps countByTopic working for the visitor turn cap when the runtime opts in', async () => {
-      // The per-topic turn cap depends on counting visitor messages, and after
-      // the ownership() flip the default scope excludes visitor rows. The
-      // share runtime (`reserveShareVisitorTurn` in
-      // `shareVisitorAbuseGuards.ts`) constructs `MessageModel` with
+    it('keeps countByTopic working when the runtime opts in', async () => {
+      // The share runtime historically counted visitor messages for the
+      // per-topic turn cap, and after the ownership() flip the default scope
+      // excludes visitor rows. Runtime paths that must still see a persisted
+      // visitor transcript construct `MessageModel` with
       // `includeShareVisitor: true`; mirror that opt-in here.
       const defaultCount = await messageModel.countByTopic({
         role: 'user',
@@ -1826,7 +1826,7 @@ describe('MessageModel Query Tests', () => {
     it('should include agent name/title for messages bound to an agent', async () => {
       await serverDB
         .insert(agents)
-        .values([{ id: 'q-agent', name: 'Lobe', title: 'Diary Agent', userId }]);
+        .values([{ id: 'q-agent', name: 'Orvilo', title: 'Diary Agent', userId }]);
       await serverDB.insert(messages).values([
         {
           agentId: 'q-agent',
@@ -1842,7 +1842,7 @@ describe('MessageModel Query Tests', () => {
       const withAgent = result.find((m) => m.id === 'q-with-agent');
       const withoutAgent = result.find((m) => m.id === 'q-without-agent');
 
-      expect(withAgent?.agentName).toBe('Lobe');
+      expect(withAgent?.agentName).toBe('Orvilo');
       expect(withAgent?.agentTitle).toBe('Diary Agent');
       expect(withoutAgent?.agentName).toBeNull();
       expect(withoutAgent?.agentTitle).toBeNull();

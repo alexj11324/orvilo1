@@ -3,12 +3,12 @@ import { ModelProvider } from 'model-bank';
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeBaichuanAI, params } from './index';
+import { OrviloBaichuanAI, params } from './index';
 
 testProvider({
-  Runtime: LobeBaichuanAI,
+  Runtime: OrviloBaichuanAI,
   provider: ModelProvider.Baichuan,
   defaultBaseURL: 'https://api.baichuan-ai.com/v1',
   chatDebugEnv: 'DEBUG_BAICHUAN_CHAT_COMPLETION',
@@ -24,10 +24,10 @@ testProvider({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeBaichuanAI({ apiKey: 'test' });
+  instance = new OrviloBaichuanAI({ apiKey: 'test' });
 
   // 使用 vi.spyOn 来模拟 chat.completions.create 方法
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -39,7 +39,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeBaichuanAI - custom features', () => {
+describe('OrviloBaichuanAI - custom features', () => {
   describe('Debug Configuration', () => {
     it('should disable debug by default', () => {
       delete process.env.DEBUG_BAICHUAN_CHAT_COMPLETION;

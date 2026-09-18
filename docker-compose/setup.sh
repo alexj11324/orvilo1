@@ -551,7 +551,7 @@ section_configurate_host() {
     # If run in local mode, skip this step
     if [[ "$DEPLOY_MODE" == "2" ]]; then
         HOST="localhost:3210"
-        LOBE_HOST="$HOST"
+        ORVILO_HOST="$HOST"
         return 0
     fi
 
@@ -590,7 +590,7 @@ section_configurate_host() {
             DEPLOY_MODE="domain"
             echo "Orvilo" $(show_message "ask_domain" "example.com")
             ask "(example.com)"
-            LOBE_HOST="$ask_result"
+            ORVILO_HOST="$ask_result"
             # If user use domain mode, ask for the domain of RustFS
             echo "RustFS S3 API" $(show_message "ask_domain" "s3.example.com")
             ask "(s3.example.com)"
@@ -599,11 +599,11 @@ section_configurate_host() {
         1)
             DEPLOY_MODE="ip"
             ask $(printf "%s%s" "Orvilo" $(show_message "ask_host")) "$HOST" $(printf "%s" $(show_message "tips_auto_detected"))
-            LOBE_HOST="$ask_result"
+            ORVILO_HOST="$ask_result"
             # If user use ip mode, use ask_result as the host
             HOST="$ask_result"
             # If user use ip mode, append the port to the host
-            LOBE_HOST="${HOST}:3210"
+            ORVILO_HOST="${HOST}:3210"
             RUSTFS_HOST="${HOST}:9000"
         ;;
         *)
@@ -612,8 +612,8 @@ section_configurate_host() {
         ;;
     esac
 
-    # lobe host
-    sed "${SED_INPLACE_ARGS[@]}" "s#^APP_URL=.*#APP_URL=$PROTOCOL://$LOBE_HOST#" .env
+    # orvilo host
+    sed "${SED_INPLACE_ARGS[@]}" "s#^APP_URL=.*#APP_URL=$PROTOCOL://$ORVILO_HOST#" .env
     # s3 related
     sed "${SED_INPLACE_ARGS[@]}" "s#^S3_ENDPOINT=.*#S3_ENDPOINT=$PROTOCOL://$RUSTFS_HOST#" .env
     
@@ -751,13 +751,13 @@ section_display_configurated_report() {
     # Display configuration reports
     echo $(show_message "security_secrect_regenerate_report")
 
-    echo -e "Orvilo: \n  - URL: $PROTOCOL://$LOBE_HOST"
+    echo -e "Orvilo: \n  - URL: $PROTOCOL://$ORVILO_HOST"
     echo -e "RustFS: \n  - URL: $PROTOCOL://$RUSTFS_HOST \n  - Username: admin\n  - Password: ${RUSTFS_SECRET_KEY}\n"
 
     # if user run in domain mode, diplay reverse proxy configuration
     if [[ "$DEPLOY_MODE" == "domain" ]]; then
         echo $(show_message "tips_add_reverse_proxy")
-        printf "\n%s\t->\t%s\n" "$LOBE_HOST" "127.0.0.1:3210"
+        printf "\n%s\t->\t%s\n" "$ORVILO_HOST" "127.0.0.1:3210"
         printf "%s\t->\t%s\n" "$RUSTFS_HOST" "127.0.0.1:9000"
     fi
 

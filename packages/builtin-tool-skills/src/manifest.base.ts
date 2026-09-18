@@ -1,8 +1,8 @@
-import type { LobeChatPluginApi } from '@orvilo/types';
+import type { OrviloPluginApi } from '@orvilo/types';
 
 import { SkillsApiName } from './types';
 
-export const activateSkillApi: LobeChatPluginApi = {
+export const activateSkillApi: OrviloPluginApi = {
   description:
     'Activate a skill by name to load its instructions. Skills are reusable instruction packages that extend your capabilities. Returns the skill content that you should follow to complete the task. If the skill is not found, returns a list of available skills.',
   name: SkillsApiName.activateSkill,
@@ -18,7 +18,7 @@ export const activateSkillApi: LobeChatPluginApi = {
   },
 };
 
-export const readReferenceApi: LobeChatPluginApi = {
+export const readReferenceApi: OrviloPluginApi = {
   description:
     "Read a reference file attached to a skill. Use this to load additional context files mentioned in a skill's content. Requires the id returned by activateSkill and the file path.",
   name: SkillsApiName.readReference,
@@ -39,7 +39,7 @@ export const readReferenceApi: LobeChatPluginApi = {
   },
 };
 
-export const exportFileApi: LobeChatPluginApi = {
+export const exportFileApi: OrviloPluginApi = {
   description:
     'Export a file generated during skill execution to cloud storage. Use this to save outputs, results, or generated files for the user to download. The file will be uploaded and a permanent download URL will be returned.',
   name: SkillsApiName.exportFile,
@@ -60,7 +60,7 @@ export const exportFileApi: LobeChatPluginApi = {
   },
 };
 
-export const runCommandApi: LobeChatPluginApi = {
+export const runCommandApi: OrviloPluginApi = {
   description:
     'Execute a shell command. Returns the command output, stderr, and exit code. Note: Default shell is /bin/sh (dash/ash), not bash. The `source` command may not work; use `bash -c "source file && cmd"` if needed.',
   humanIntervention: 'required',

@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 
 import { agentEvalDatasets, agentEvalTestCases, type NewAgentEvalDataset } from '../../schemas';
-import { type LobeChatDatabase } from '../../type';
+import { type OrviloDatabase } from '../../type';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
 interface QueryDatasetsFilters {
@@ -12,10 +12,10 @@ interface QueryDatasetsFilters {
 
 export class AgentEvalDatasetModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

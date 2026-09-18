@@ -1,4 +1,4 @@
-export const SkillStoreIdentifier = 'lobe-skill-store';
+export const SkillStoreIdentifier = 'orvilo-skill-store';
 
 export const SkillStoreApiName = {
   importFromMarket: 'importFromMarket',

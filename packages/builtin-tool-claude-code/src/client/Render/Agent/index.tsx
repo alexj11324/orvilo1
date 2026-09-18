@@ -100,7 +100,7 @@ const Agent = memo<BuiltinRenderProps<AgentArgs, unknown, string>>(
         {prompt && (
           <Flexbox>
             <Text className={styles.label} style={{ marginBlockEnd: 4 }}>
-              {t('builtins.lobe-claude-code.agent.instruction')}
+              {t('builtins.orvilo-claude-code.agent.instruction')}
             </Text>
             <Flexbox className={styles.promptBox}>
               <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
@@ -118,7 +118,7 @@ const Agent = memo<BuiltinRenderProps<AgentArgs, unknown, string>>(
               className={styles.labelRow}
               justify={'space-between'}
             >
-              <Text className={styles.label}>{t('builtins.lobe-claude-code.agent.result')}</Text>
+              <Text className={styles.label}>{t('builtins.orvilo-claude-code.agent.result')}</Text>
               {subagentThread && (
                 <Button
                   className={styles.openThread}

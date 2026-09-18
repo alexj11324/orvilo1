@@ -35,7 +35,7 @@ export const DuplicateAgentInspector = memo<BuiltinInspectorProps<DuplicateAgent
       return (
         <div className={styles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-agent-management.apiName.duplicateAgent')}
+            {t('builtins.orvilo-agent-management.apiName.duplicateAgent')}
           </span>
         </div>
       );
@@ -44,7 +44,7 @@ export const DuplicateAgentInspector = memo<BuiltinInspectorProps<DuplicateAgent
     return (
       <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-agent-management.inspector.duplicateAgent.title')}
+          {t('builtins.orvilo-agent-management.inspector.duplicateAgent.title')}
         </span>
         <span className={highlightTextStyles.primary}>{newTitle || agentId}</span>
       </Flexbox>

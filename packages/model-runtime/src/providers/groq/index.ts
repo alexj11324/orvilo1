@@ -80,7 +80,7 @@ export const params = {
     handlePayload: (payload) => {
       const {
         temperature,
-        // Lobe-internal fields to strip
+        // Orvilo-internal fields to strip
         thinking,
         reasoning,
         reasoning_effort,
@@ -116,7 +116,7 @@ export const params = {
         groqReasoningParams.reasoning_effort =
           isThinkingDisabled || effortVal === 'none' ? 'none' : 'default';
       } else if (isGptOssModel(model)) {
-        // Map Lobe effort values to Groq's low/medium/high
+        // Map Orvilo effort values to Groq's low/medium/high
         const effortMap: Record<string, string> = {
           low: 'low',
           minimal: 'low',
@@ -154,7 +154,7 @@ export const params = {
     handleSchema: filterAdvancedFields,
   },
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const functionCallKeywords = [
       'tool',
@@ -173,7 +173,7 @@ export const params = {
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 
@@ -199,4 +199,4 @@ export const params = {
   provider: ModelProvider.Groq,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeGroq = createOpenAICompatibleRuntime(params);
+export const OrviloGroq = createOpenAICompatibleRuntime(params);

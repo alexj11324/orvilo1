@@ -5,10 +5,10 @@ import { getVisibleProfileToolIds } from './profileToolVisibility';
 describe('getVisibleProfileToolIds', () => {
   it('excludes runtime-managed builtins, internal skills, and agent connectors', () => {
     const result = getVisibleProfileToolIds(
-      ['lobe-web-browsing', 'task', 'agent-connector', 'workspace-plugin'],
+      ['orvilo-web-browsing', 'task', 'agent-connector', 'workspace-plugin'],
       {
         agentConnectorIdentifiers: new Set(['agent-connector']),
-        nonConfigurableBuiltinToolIdentifiers: new Set(['lobe-web-browsing']),
+        nonConfigurableBuiltinToolIdentifiers: new Set(['orvilo-web-browsing']),
       },
     );
 

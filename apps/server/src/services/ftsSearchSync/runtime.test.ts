@@ -37,7 +37,7 @@ vi.mock('../ftsSearch/elasticsearch', () => ({
 
 const config = {
   apiKey: 'test-api-key',
-  indexNamespace: 'lobehub-test',
+  indexNamespace: 'orvilo-test',
   url: 'https://elasticsearch.example.com',
 };
 
@@ -93,8 +93,8 @@ describe('full-text search sync runtime', () => {
     });
     expect(mocks.assertCaptureInfrastructure).toHaveBeenCalledOnce();
     expect(mocks.assertFtsSearchSyncAliases).toHaveBeenCalledWith([
-      'lobehub-test-agents',
-      'lobehub-test-messages',
+      'orvilo-test-agents',
+      'orvilo-test-messages',
     ]);
   });
 

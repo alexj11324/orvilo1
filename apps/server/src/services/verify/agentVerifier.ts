@@ -5,14 +5,14 @@ import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
 import { DocumentModel } from '@/database/models/document';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { AgentHook, AgentHookEvent } from '@/server/services/agentRuntime/hooks/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import type { VerifierAgentRunner } from './executor';
 import { settleVerifierCheckFromTerminal } from './verifierTerminal';
 
-const log = debug('lobe-server:verify-agent-verifier');
+const log = debug('orvilo-server:verify-agent-verifier');
 
 /**
  * Build the instruction for a verifier sub-agent investigating one check. The
@@ -38,10 +38,10 @@ const log = debug('lobe-server:verify-agent-verifier');
  * unset (or the pinned agent no longer exists) it falls back to the builtin
  * verify agent, which receives a verify-safe provider/model resolved by the
  * lifecycle layer. That resolver intentionally filters heterogeneous runtime
- * identifiers (e.g. claude-code / codex) that cannot run LobeHub LLM calls.
+ * identifiers (e.g. claude-code / codex) that cannot run Orvilo LLM calls.
  */
 export const createVerifierAgentRunner = (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   deliverable: string;
   /** Verify-safe model selected by the completion lifecycle. */
   model?: string | null;

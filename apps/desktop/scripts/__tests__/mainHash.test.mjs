@@ -104,7 +104,7 @@ describe('source main hash', () => {
       'apps/desktop/src/overlay/entry.tsx',
       'apps/desktop/src/main/__tests__/foo.test.ts',
       'apps/desktop/src/main/README.md',
-      'apps/desktop/resources/bin/lobe-cli.js',
+      'apps/desktop/resources/bin/orvilo-cli.js',
       'apps/desktop/resources/cli-package.json',
       'packages/native/build/Release/addon.node',
       'packages/native/dist/index.js',

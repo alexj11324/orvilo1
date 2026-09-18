@@ -80,7 +80,7 @@ export const AuvRunCommandInspector = ({
       {...props}
       args={{ command, description: reasoning }}
       icon={activityIcons[activity]}
-      translationKey={`builtins.lobe-computer-use.inspector.${activity}${loading ? '.loading' : ''}`}
+      translationKey={`builtins.orvilo-computer-use.inspector.${activity}${loading ? '.loading' : ''}`}
     />
   );
 };

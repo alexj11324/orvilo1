@@ -4,21 +4,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { XinferenceModelCard } from './index';
-import { LobeXinferenceAI } from './index';
+import { OrviloXinferenceAI } from './index';
 
 testProvider({
-  Runtime: LobeXinferenceAI,
+  Runtime: OrviloXinferenceAI,
   provider: ModelProvider.Xinference,
   defaultBaseURL: 'http://localhost:9997/v1',
   chatDebugEnv: 'DEBUG_XINFERENCE_CHAT_COMPLETION',
   chatModel: 'llama-2-7b-chat',
 });
 
-describe('LobeXinferenceAI - custom features', () => {
-  let instance: InstanceType<typeof LobeXinferenceAI>;
+describe('OrviloXinferenceAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloXinferenceAI>;
 
   beforeEach(() => {
-    instance = new LobeXinferenceAI({ apiKey: 'test_api_key' });
+    instance = new OrviloXinferenceAI({ apiKey: 'test_api_key' });
   });
 
   describe('models', () => {

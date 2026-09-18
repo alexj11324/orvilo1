@@ -3,7 +3,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { cleanupTestUser, createTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 import { uuid } from '@/utils/uuid';
 
@@ -11,7 +11,7 @@ import { agents, projects, tasks, workspaceMembers, workspaces } from '../contra
 import { assertRoomAccess } from '../roomAuthz';
 
 describe('assertRoomAccess (integration)', () => {
-  let db: LobeChatDatabase;
+  let db: OrviloDatabase;
   let memberId: string;
   let ownerId: string;
   let outsiderId: string;

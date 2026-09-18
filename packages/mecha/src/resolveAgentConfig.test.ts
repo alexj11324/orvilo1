@@ -41,7 +41,7 @@ describe('resolveAgentConfig without a host', () => {
   it('returns no plugins when the caller disables tools', () => {
     const resolved = resolveAgentConfig(
       { agentId: 'agt_1', disableTools: true },
-      snapshot({ agentConfig: { plugins: ['lobe-web-browsing'] } as never }),
+      snapshot({ agentConfig: { plugins: ['orvilo-web-browsing'] } as never }),
     );
 
     expect(resolved.plugins).toEqual([]);
@@ -50,19 +50,19 @@ describe('resolveAgentConfig without a host', () => {
   it('carries the agent config plugins through for a regular agent', () => {
     const resolved = resolveAgentConfig(
       { agentId: 'agt_1' },
-      snapshot({ agentConfig: { plugins: ['lobe-web-browsing'] } as never }),
+      snapshot({ agentConfig: { plugins: ['orvilo-web-browsing'] } as never }),
     );
 
-    expect(resolved.plugins).toContain('lobe-web-browsing');
+    expect(resolved.plugins).toContain('orvilo-web-browsing');
   });
 
   it('prefers the caller plugins over the stored ones', () => {
     const resolved = resolveAgentConfig(
-      { agentId: 'agt_1', plugins: ['lobe-local-system'] },
-      snapshot({ agentConfig: { plugins: ['lobe-web-browsing'] } as never }),
+      { agentId: 'agt_1', plugins: ['orvilo-local-system'] },
+      snapshot({ agentConfig: { plugins: ['orvilo-web-browsing'] } as never }),
     );
 
-    expect(resolved.plugins).toEqual(['lobe-local-system']);
+    expect(resolved.plugins).toEqual(['orvilo-local-system']);
   });
 
   it('applies a workspace member mode override onto the chat config', () => {

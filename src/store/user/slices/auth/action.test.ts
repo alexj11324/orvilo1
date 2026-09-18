@@ -56,7 +56,7 @@ describe('createAuthSlice', () => {
     it('clears the captured user snapshot after successful sign-out', async () => {
       writeUserDisplaySnapshot('user-a', { avatar: 'avatar-a' });
       writeUserDisplaySnapshot('user-b', { avatar: 'avatar-b' });
-      localStorage.setItem('lobehub:active-scope', 'user-a:personal');
+      localStorage.setItem('orvilo:active-scope', 'user-a:personal');
       useUserStore.setState({ user: { id: 'user-a' } });
 
       mockBetterAuthClient.signOut.mockImplementationOnce(async ({ fetchOptions }) => {
@@ -75,12 +75,12 @@ describe('createAuthSlice', () => {
       expect(mockBetterAuthClient.signOut).toHaveBeenCalled();
       expect(readUserDisplaySnapshot('user-a')).toBeUndefined();
       expect(readUserDisplaySnapshot('user-b')).toEqual({ avatar: 'avatar-b' });
-      expect(localStorage.getItem('lobehub:active-scope')).toBeNull();
+      expect(localStorage.getItem('orvilo:active-scope')).toBeNull();
     });
 
     it('preserves the signing-out user snapshot when sign-out fails', async () => {
       writeUserDisplaySnapshot('user-a', { avatar: 'avatar-a' });
-      localStorage.setItem('lobehub:active-scope', 'user-a:personal');
+      localStorage.setItem('orvilo:active-scope', 'user-a:personal');
       useUserStore.setState({ user: { id: 'user-a' } });
       mockBetterAuthClient.signOut.mockRejectedValueOnce(new Error('sign-out failed'));
 
@@ -90,7 +90,7 @@ describe('createAuthSlice', () => {
       await expect(logoutPromise).rejects.toThrow('sign-out failed');
 
       expect(readUserDisplaySnapshot('user-a')).toEqual({ avatar: 'avatar-a' });
-      expect(localStorage.getItem('lobehub:active-scope')).toBe('user-a:personal');
+      expect(localStorage.getItem('orvilo:active-scope')).toBe('user-a:personal');
     });
   });
 

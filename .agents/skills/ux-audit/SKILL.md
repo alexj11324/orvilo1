@@ -11,7 +11,7 @@ two things together:
 
 1. **Jenifer Tidwell, _Designing Interfaces_** — the pattern language for what a good
    interface is _made of_. See [`references/pattern-catalog.md`](references/pattern-catalog.md).
-2. **The [`ux`](../ux/SKILL.md) skill** — LobeHub's execution checklists for how a flow
+2. **The [`ux`](../ux/SKILL.md) skill** — Orvilo's execution checklists for how a flow
    should _behave_.
 
 The audit answers: **which patterns does the surface use** (and how well), and **where is
@@ -144,7 +144,7 @@ So a variant comparison must:
 
 When L1 spots two controls that seem to do the same thing, the reflex is **subtraction** —
 delete one, hide one, merge them, differentiate the copy. Resist it. Two controls that share
-an _intent_ often differ in **scope**, and the honest fix expresses that scope difference in
+an _intent_ often differ in **scope**, and the honest fix expresses that scope difference
 **layout** — promote the wider-scope one to a visible, titled **sibling** — not by removing
 it. Subtraction is a _behavior_-layer move; the better answer usually lives in the
 **composition** layer, which is precisely the half of the benchmark an audit drops when it
@@ -175,7 +175,7 @@ open-redirect guard, a smart default: these are the **good cases**. Name them, c
   example a `ux` checklist item cites, exactly as a gap becomes the ❌ one. An audit that
   reports no good cases can only ever sharpen the ❌ side of the checklists.
 - **They protect.** "Don't regress this" is a finding. The next refactor needs to know
-  which behaviors are load-bearing — the **Strengths worth preserving** block in
+  which behaviors are load-bearing — the **Strengths worth preserving** block
   [`example/task-detail.md`](references/example/task-detail.md) (the loading/not-found state
   machine, comment-draft-preserved-on-failure, the run-all preview → confirm flow) and the **✅ 亮点**
   rows in [`example/home.md`](references/example/home.md) (empty-send → day's-hint fallback,

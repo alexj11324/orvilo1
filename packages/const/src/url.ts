@@ -19,14 +19,14 @@ export const isOfficialCloudServer = (url?: string): boolean => {
   }
 };
 
-export const OFFICIAL_DEVICE_GATEWAY_URL = 'https://device-gateway.lobehub.com';
-export const OFFICIAL_AGENT_GATEWAY_URL = 'https://agent-gateway.lobehub.com';
+export const OFFICIAL_DEVICE_GATEWAY_URL = 'https://device-gateway.aspectlylabs.com';
+export const OFFICIAL_AGENT_GATEWAY_URL = 'https://agent-gateway.aspectlylabs.com';
 
 export const OG_URL = '/og/og.webp?v=1';
 
-export const LobeHubPath = {
+export const OrviloPath = {
   webapi: {
-    modelConfig: '/webapi/lobehub-model-config',
+    modelConfig: '/webapi/orvilo-model-config',
   },
 } as const;
 
@@ -53,15 +53,15 @@ export const FEEDBACK = urlJoin(GITHUB, 'issues/new/choose');
 export const PRIVACY_URL = urlJoin(OFFICIAL_SITE, '/privacy');
 export const TERMS_URL = urlJoin(OFFICIAL_SITE, '/terms');
 
-export const PLUGINS_INDEX_URL = 'https://chat-plugins.lobehub.com';
+export const PLUGINS_INDEX_URL = 'https://chat-plugins.aspectlylabs.com';
 
-export const OPS_ASSETS_BASE_URL = 'https://chat-cloud.lobeobjects.space/dc/ops-assets';
+export const OPS_ASSETS_BASE_URL = 'https://chat-cloud.objects.aspectlylabs.com/dc/ops-assets';
 
 export const MORE_MODEL_PROVIDER_REQUEST_URL = urlJoin(GITHUB, 'discussions');
 
 export const MORE_FILE_PREVIEW_REQUEST_URL = urlJoin(GITHUB, 'discussions');
 
-export const AGENTS_INDEX_GITHUB = 'https://github.com/lobehub/lobe-chat-agents';
+export const AGENTS_INDEX_GITHUB = 'https://github.com/alexj11324/orvilo1';
 export const AGENTS_INDEX_GITHUB_ISSUE = urlJoin(AGENTS_INDEX_GITHUB, 'issues/new');
 export const AGENTS_OFFICIAL_URL = urlJoin(OFFICIAL_SITE, 'agent');
 export const WORKSPACE_OFFICIAL_URL = urlJoin(OFFICIAL_SITE, 'workspace');
@@ -92,7 +92,7 @@ export const LIBRARY_URL = (id: string) => urlJoin('/resource/library', id);
 
 export const imageUrl = (filename: string) => `/app-images/${filename}`;
 
-export const LOBE_URL_IMPORT_NAME = 'settings';
+export const ORVILO_URL_IMPORT_NAME = 'settings';
 
 export const RELEASES_URL = urlJoin(GITHUB, 'releases');
 
@@ -103,7 +103,7 @@ export const BASE_PROVIDER_DOC_URL = urlJoin(DOCUMENTS, 'usage/providers');
 export const CHANGELOG_URL = urlJoin(OFFICIAL_SITE, 'changelog');
 
 export const DOWNLOAD_URL = {
-  android: 'https://play.google.com/store/apps/details?id=com.lobehub.app',
+  android: 'https://play.google.com/store/apps/details?id=com.orvilo.app',
   default: urlJoin(OFFICIAL_SITE, '/downloads'),
   mobile: urlJoin(OFFICIAL_SITE, '/mobile'),
   ios: 'https://testflight.apple.com/join/2ZbjX4Qp',

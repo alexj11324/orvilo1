@@ -6,7 +6,7 @@ import type { ToolExecutionContext } from '../types';
 
 const mocks = vi.hoisted(() => ({
   apiHandler: vi.fn(),
-  executeLobehubSkill: vi.fn(),
+  executeOrviloSkill: vi.fn(),
 }));
 const mockApiHandler = mocks.apiHandler;
 
@@ -26,7 +26,7 @@ vi.mock('@/server/services/composio', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      executeLobehubSkill: mocks.executeLobehubSkill,
+      executeOrviloSkill: mocks.executeOrviloSkill,
     };
   }),
 }));
@@ -37,19 +37,19 @@ vi.mock('@/server/services/market', () => ({
 //
 // The share-gate exports mirror the real module's semantics on this mock's
 // registry: both mocked identifiers are "builtin", neither is share-allowed —
-// except `lobe-user-memory`, granted so the memory-permission dispatch tests
+// except `orvilo-user-memory`, granted so the memory-permission dispatch tests
 // below can exercise the per-API data-tool rules.
 vi.mock('@orvilo/builtin-tools', () => ({
-  AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS: new Set(['lobe-user-memory', 'lobe-consent-tool']),
+  AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS: new Set(['orvilo-user-memory', 'orvilo-consent-tool']),
   isBuiltinToolIdentifier: (id: string) =>
-    ['lobe-notebook', 'lobe-task', 'lobe-user-memory', 'lobe-consent-tool'].includes(id),
+    ['orvilo-notebook', 'orvilo-task', 'orvilo-user-memory', 'orvilo-consent-tool'].includes(id),
   builtinTools: [
     {
-      identifier: 'lobe-notebook',
+      identifier: 'orvilo-notebook',
       manifest: { api: [{ name: 'createDocument' }, { name: 'listDocuments' }] },
     },
     {
-      identifier: 'lobe-user-memory',
+      identifier: 'orvilo-user-memory',
       manifest: {
         api: [
           { name: 'searchUserMemory' },
@@ -60,7 +60,7 @@ vi.mock('@orvilo/builtin-tools', () => ({
       },
     },
     {
-      identifier: 'lobe-consent-tool',
+      identifier: 'orvilo-consent-tool',
       // Tool-level 'required' with an api-level 'never': assembly drops the
       // WHOLE tool for such a config, so dispatch must too — the api-level
       // 'never' must not override the tool-level restriction.
@@ -70,7 +70,7 @@ vi.mock('@orvilo/builtin-tools', () => ({
       },
     },
     {
-      identifier: 'lobe-task',
+      identifier: 'orvilo-task',
       manifest: {
         api: [
           { name: 'createTask', work: { action: 'create', resourceType: 'task' } },
@@ -87,7 +87,7 @@ const buildPayload = (argsStr: string): ChatToolPayload => ({
   apiName: 'createDocument',
   arguments: argsStr,
   id: 't1',
-  identifier: 'lobe-notebook',
+  identifier: 'orvilo-notebook',
   type: 'default' as any,
 });
 
@@ -101,7 +101,7 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
 
   beforeEach(() => {
     mockApiHandler.mockReset();
-    mocks.executeLobehubSkill.mockReset();
+    mocks.executeOrviloSkill.mockReset();
   });
 
   it('short-circuits with TRUNCATED_ARGUMENTS when JSON is cut mid-object', async () => {
@@ -225,7 +225,7 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
     vi.mocked(getServerRuntime).mockResolvedValueOnce(new FooRuntime() as any);
 
     const result = await executor.execute(
-      { ...buildPayload('{}'), apiName: 'hallucinated', identifier: 'lobe-unknown-tool' },
+      { ...buildPayload('{}'), apiName: 'hallucinated', identifier: 'orvilo-unknown-tool' },
       context,
     );
 
@@ -233,13 +233,13 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
     expect(result.content).toContain('barApi');
   });
 
-  it('emits a Linear skill Work intent after a successful server-side LobeHub Skill tool call', async () => {
-    mocks.executeLobehubSkill.mockResolvedValueOnce({
+  it('emits a Linear skill Work intent after a successful server-side Orvilo Skill tool call', async () => {
+    mocks.executeOrviloSkill.mockResolvedValueOnce({
       content: JSON.stringify({
         id: 'LINEAR-10966',
         status: 'In Progress',
         title: 'Linear Work issue',
-        url: 'https://linear.app/lobehub/issue/LINEAR-10966/linear-work-issue',
+        url: 'https://linear.app/orvilo/issue/LINEAR-10966/linear-work-issue',
       }),
       success: true,
     });
@@ -250,14 +250,14 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
         arguments: '{"id":"LINEAR-10966","state":"In Progress"}',
         id: 'tool-call-linear',
         identifier: 'linear',
-        source: 'lobehubSkill',
+        source: 'orviloSkill',
         type: 'default' as any,
       },
       { ...context, executionTimeoutMs: 45_000, topicId: 'topic-1' },
     );
 
     expect(result.success).toBe(true);
-    expect(mocks.executeLobehubSkill).toHaveBeenCalledWith({
+    expect(mocks.executeOrviloSkill).toHaveBeenCalledWith({
       args: { id: 'LINEAR-10966', state: 'In Progress' },
       context: { topicId: 'topic-1' },
       provider: 'linear',
@@ -273,7 +273,7 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
         id: 'LINEAR-10966',
         status: 'In Progress',
         title: 'Linear Work issue',
-        url: 'https://linear.app/lobehub/issue/LINEAR-10966/linear-work-issue',
+        url: 'https://linear.app/orvilo/issue/LINEAR-10966/linear-work-issue',
       },
       provider: 'linear',
       toolName: 'save_issue',
@@ -281,10 +281,10 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
     });
   });
 
-  it('emits a GitHub skill Work intent after a successful server-side LobeHub Skill tool call', async () => {
-    mocks.executeLobehubSkill.mockResolvedValueOnce({
+  it('emits a GitHub skill Work intent after a successful server-side Orvilo Skill tool call', async () => {
+    mocks.executeOrviloSkill.mockResolvedValueOnce({
       content: JSON.stringify({
-        html_url: 'https://github.com/lobehub/lobehub/issues/123',
+        html_url: 'https://github.com/alexj11324/orvilo1/issues/123',
         node_id: 'I_kwDOJj1234',
         number: 123,
         state: 'open',
@@ -296,10 +296,10 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
     const result = await executor.execute(
       {
         apiName: 'create_issue',
-        arguments: '{"owner":"lobehub","repo":"lobehub","title":"GitHub Work issue"}',
+        arguments: '{"owner":"orvilo","repo":"orvilo","title":"GitHub Work issue"}',
         id: 'tool-call-github',
         identifier: 'github',
-        source: 'lobehubSkill',
+        source: 'orviloSkill',
         type: 'default' as any,
       },
       { ...context, topicId: 'topic-1' },
@@ -317,7 +317,7 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
   });
 
   it('emits no Work intent for non-adapted skill providers', async () => {
-    mocks.executeLobehubSkill.mockResolvedValueOnce({
+    mocks.executeOrviloSkill.mockResolvedValueOnce({
       content: JSON.stringify({ id: 'msg-1' }),
       success: true,
     });
@@ -328,7 +328,7 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
         arguments: '{}',
         id: 'tool-call-ms',
         identifier: 'microsoft',
-        source: 'lobehubSkill',
+        source: 'orviloSkill',
         type: 'default' as any,
       },
       { ...context, topicId: 'topic-1' },
@@ -360,7 +360,7 @@ describe('BuiltinToolsExecutor manifest-driven Work registration', () => {
     apiName,
     arguments: argsStr,
     id: 'tool-call-task',
-    identifier: 'lobe-task',
+    identifier: 'orvilo-task',
     type: 'default' as any,
   });
 
@@ -475,7 +475,7 @@ describe('BuiltinToolsExecutor share-visitor gate', () => {
     apiName,
     arguments: '{"query":"hi"}',
     id: 't-share',
-    identifier: 'lobe-user-memory',
+    identifier: 'orvilo-user-memory',
     type: 'default' as any,
   });
 
@@ -528,7 +528,7 @@ describe('BuiltinToolsExecutor share-visitor gate', () => {
       agentShareVisitor: {
         ...visitorIds,
         allowReadMemory: true,
-        toolGrants: [{ identifier: 'lobe-user-memory' }],
+        toolGrants: [{ identifier: 'orvilo-user-memory' }],
       },
     });
 
@@ -542,12 +542,12 @@ describe('BuiltinToolsExecutor share-visitor gate', () => {
         apiName: 'freeApi',
         arguments: '{}',
         id: 't-consent',
-        identifier: 'lobe-consent-tool',
+        identifier: 'orvilo-consent-tool',
         type: 'default' as any,
       },
       {
         ...context,
-        agentShareVisitor: { ...visitorIds, toolGrants: [{ identifier: 'lobe-consent-tool' }] },
+        agentShareVisitor: { ...visitorIds, toolGrants: [{ identifier: 'orvilo-consent-tool' }] },
       },
     );
 
@@ -558,7 +558,7 @@ describe('BuiltinToolsExecutor share-visitor gate', () => {
   it('blocks memory reads without allowReadMemory', async () => {
     const result = await executor.execute(memoryPayload('searchUserMemory'), {
       ...context,
-      agentShareVisitor: { ...visitorIds, toolGrants: [{ identifier: 'lobe-user-memory' }] },
+      agentShareVisitor: { ...visitorIds, toolGrants: [{ identifier: 'orvilo-user-memory' }] },
     });
 
     expect(result.error?.code).toBe('SHARE_GATE_BLOCKED');
@@ -571,7 +571,7 @@ describe('BuiltinToolsExecutor share-visitor gate', () => {
       agentShareVisitor: {
         ...visitorIds,
         allowReadMemory: true,
-        toolGrants: [{ identifier: 'lobe-user-memory' }],
+        toolGrants: [{ identifier: 'orvilo-user-memory' }],
       },
     });
     expect(read.error?.code).not.toBe('SHARE_GATE_BLOCKED');
@@ -582,7 +582,7 @@ describe('BuiltinToolsExecutor share-visitor gate', () => {
       agentShareVisitor: {
         ...visitorIds,
         allowReadMemory: true,
-        toolGrants: [{ identifier: 'lobe-user-memory' }],
+        toolGrants: [{ identifier: 'orvilo-user-memory' }],
       },
     });
     expect(write.error?.code).toBe('SHARE_GATE_BLOCKED');

@@ -8,7 +8,7 @@ import {
   oidcGrants,
   oidcRefreshTokens,
 } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { createNanoId } from '../utils/idGenerator';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
@@ -30,11 +30,11 @@ const DEFAULT_SCOPES = ['openid', 'profile', 'email', 'offline_access'];
 const generateClientId = () => `lca_${createNanoId(24)()}`;
 
 export class OidcClientModel {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

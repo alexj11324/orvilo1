@@ -300,8 +300,8 @@ export class CodexAppServerClient {
           requestAttestation: false,
         },
         clientInfo: {
-          name: 'lobehub-desktop',
-          title: 'LobeHub Desktop',
+          name: 'orvilo-desktop',
+          title: 'Orvilo Desktop',
           version: this.options.clientVersion,
         },
       };

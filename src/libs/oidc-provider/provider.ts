@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import debug from 'debug';
 import type { Configuration, KoaContextWithOIDC } from 'oidc-provider';
 import Provider, { errors } from 'oidc-provider';
@@ -15,9 +15,9 @@ import { defaultClaims, defaultClients, defaultScopes } from './config';
 import { getOIDCCookieKeys } from './cookies';
 import { createInteractionPolicy } from './interaction-policy';
 
-const logProvider = debug('lobe-oidc:provider');
+const logProvider = debug('orvilo-oidc:provider');
 
-export const API_AUDIENCE = 'urn:lobehub:chat';
+export const API_AUDIENCE = 'urn:orvilo:chat';
 
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = 60 * MINUTE_SECONDS;
@@ -44,7 +44,7 @@ export const oidcArtifactTTL = {
  * @param db - Database instance
  * @returns Configured OIDC Provider instance
  */
-export const createOIDCProvider = async (db: LobeChatDatabase): Promise<Provider> => {
+export const createOIDCProvider = async (db: OrviloDatabase): Promise<Provider> => {
   // Get JWKS
   const jwks = getJWKS();
 
@@ -286,10 +286,10 @@ export const createOIDCProvider = async (db: LobeChatDatabase): Promise<Provider
       ctx.body = `
         <html>
           <head>
-            <title>LobeHub OIDC Error</title>
+            <title>Orvilo OIDC Error</title>
           </head>
           <body>
-            <h1>LobeHub OIDC Error</h1>
+            <h1>Orvilo OIDC Error</h1>
             <p>${JSON.stringify(error, null, 2)}</p>
             <p>${JSON.stringify(out, null, 2)}</p>
           </body>

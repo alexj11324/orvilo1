@@ -40,7 +40,7 @@ export const DeleteTaskInspector = memo<BuiltinInspectorProps<DeleteTaskParams, 
           className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
           style={{ color: cssVar.colorError }}
         >
-          {t('builtins.lobe-task.apiName.deleteTask')}
+          {t('builtins.orvilo-task.apiName.deleteTask')}
         </span>
         {identifier && <span className={styles.identifierChip}>{identifier}</span>}
       </div>

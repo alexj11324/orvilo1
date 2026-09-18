@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { REQUEST_TOPIC_ID_HEADER } from '@orvilo/const';
-import { type LobeRuntimeAI } from '@orvilo/model-runtime';
+import { type OrviloRuntimeAI } from '@orvilo/model-runtime';
 import { ModelRuntime } from '@orvilo/model-runtime';
 import { ChatErrorType } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -54,7 +54,7 @@ describe('POST handler', () => {
       const mockChatResponse = new Response(JSON.stringify({ success: true }), {
         headers: { 'Content-Type': 'application/json' },
       });
-      const mockRuntime: LobeRuntimeAI = {
+      const mockRuntime: OrviloRuntimeAI = {
         baseURL: 'abc',
         chat: vi.fn().mockResolvedValue(mockChatResponse),
       };
@@ -95,7 +95,7 @@ describe('POST handler', () => {
         });
 
         const mockChatResponse: any = { success: true, message: 'Reply from agent' };
-        const mockRuntime: LobeRuntimeAI = {
+        const mockRuntime: OrviloRuntimeAI = {
           baseURL: 'abc',
           chat: vi.fn().mockResolvedValue(mockChatResponse),
         };
@@ -127,7 +127,7 @@ describe('POST handler', () => {
         errorMessage: 'Something went wrong',
       };
 
-      const mockRuntime: LobeRuntimeAI = {
+      const mockRuntime: OrviloRuntimeAI = {
         baseURL: 'abc',
         chat: vi.fn().mockRejectedValue(mockErrorResponse),
       };

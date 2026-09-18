@@ -11,7 +11,7 @@ import { marketSDK, marketUserInfo, serverDatabase } from '@/libs/trpc/lambda/mi
 import { type TrustedClientUserInfo } from '@/libs/trusted-client';
 import { generateTrustedClientToken } from '@/libs/trusted-client';
 
-const MARKET_BASE_URL = process.env.MARKET_BASE_URL || 'https://market.lobehub.com';
+const MARKET_BASE_URL = process.env.MARKET_BASE_URL || 'https://market.aspectlylabs.com';
 
 interface MarketUserInfo {
   accountId: number;
@@ -37,7 +37,7 @@ interface FetchMarketUserInfoOptions {
 
 /**
  * Fetch Market user info using either trustedClientToken or accessToken
- * Returns the Market accountId which is different from LobeChat userId
+ * Returns the Market accountId which is different from Orvilo userId
  */
 const fetchMarketUserInfo = async (
   options: FetchMarketUserInfoOptions,
@@ -45,7 +45,7 @@ const fetchMarketUserInfo = async (
   const { userInfo, accessToken } = options;
 
   try {
-    const userInfoUrl = `${MARKET_BASE_URL}/lobehub-oidc/userinfo`;
+    const userInfoUrl = `${MARKET_BASE_URL}/orvilo-oidc/userinfo`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -53,17 +53,17 @@ const fetchMarketUserInfo = async (
     if (userInfo) {
       const trustedClientToken = generateTrustedClientToken(userInfo);
       if (trustedClientToken) {
-        headers['x-lobe-trust-token'] = trustedClientToken;
+        headers['x-orvilo-trust-token'] = trustedClientToken;
         log('Using trustedClientToken for user info fetch');
       }
     }
 
-    if (!headers['x-lobe-trust-token'] && accessToken) {
+    if (!headers['x-orvilo-trust-token'] && accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
       log('Using accessToken for user info fetch');
     }
 
-    if (!headers['x-lobe-trust-token'] && !headers['Authorization']) {
+    if (!headers['x-orvilo-trust-token'] && !headers['Authorization']) {
       log('No authentication method available for fetching user info');
       return null;
     }
@@ -93,16 +93,16 @@ const withActingAccountHeader = async <T>(
   const headers = (marketSDK as { headers?: Record<string, string> }).headers;
   if (actAs === undefined || !headers) return operation();
 
-  const previous = headers['x-lobe-owner-account-id'];
-  headers['x-lobe-owner-account-id'] = String(actAs);
+  const previous = headers['x-orvilo-owner-account-id'];
+  headers['x-orvilo-owner-account-id'] = String(actAs);
 
   try {
     return await operation();
   } finally {
     if (previous === undefined) {
-      delete headers['x-lobe-owner-account-id'];
+      delete headers['x-orvilo-owner-account-id'];
     } else {
-      headers['x-lobe-owner-account-id'] = previous;
+      headers['x-orvilo-owner-account-id'] = previous;
     }
   }
 };
@@ -251,11 +251,11 @@ export const agentGroupRouter = router({
         if (userInfo) {
           const trustedClientToken = generateTrustedClientToken(userInfo);
           if (trustedClientToken) {
-            headers['x-lobe-trust-token'] = trustedClientToken;
+            headers['x-orvilo-trust-token'] = trustedClientToken;
           }
         }
 
-        if (!headers['x-lobe-trust-token'] && accessToken) {
+        if (!headers['x-orvilo-trust-token'] && accessToken) {
           headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
@@ -321,16 +321,16 @@ export const agentGroupRouter = router({
         if (userInfo) {
           const trustedClientToken = generateTrustedClientToken(userInfo);
           if (trustedClientToken) {
-            headers['x-lobe-trust-token'] = trustedClientToken;
+            headers['x-orvilo-trust-token'] = trustedClientToken;
           }
         }
 
-        if (!headers['x-lobe-trust-token'] && accessToken) {
+        if (!headers['x-orvilo-trust-token'] && accessToken) {
           headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
         if (input.actAs !== undefined) {
-          headers['x-lobe-owner-account-id'] = String(input.actAs);
+          headers['x-orvilo-owner-account-id'] = String(input.actAs);
         }
 
         const response = await fetch(forkUrl, {
@@ -413,11 +413,11 @@ export const agentGroupRouter = router({
         if (userInfo) {
           const trustedClientToken = generateTrustedClientToken(userInfo);
           if (trustedClientToken) {
-            headers['x-lobe-trust-token'] = trustedClientToken;
+            headers['x-orvilo-trust-token'] = trustedClientToken;
           }
         }
 
-        if (!headers['x-lobe-trust-token'] && accessToken) {
+        if (!headers['x-orvilo-trust-token'] && accessToken) {
           headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
@@ -471,11 +471,11 @@ export const agentGroupRouter = router({
         if (userInfo) {
           const trustedClientToken = generateTrustedClientToken(userInfo);
           if (trustedClientToken) {
-            headers['x-lobe-trust-token'] = trustedClientToken;
+            headers['x-orvilo-trust-token'] = trustedClientToken;
           }
         }
 
-        if (!headers['x-lobe-trust-token'] && accessToken) {
+        if (!headers['x-orvilo-trust-token'] && accessToken) {
           headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
@@ -554,11 +554,11 @@ export const agentGroupRouter = router({
         if (userInfo) {
           const trustedClientToken = generateTrustedClientToken(userInfo);
           if (trustedClientToken) {
-            headers['x-lobe-trust-token'] = trustedClientToken;
+            headers['x-orvilo-trust-token'] = trustedClientToken;
           }
         }
 
-        if (!headers['x-lobe-trust-token'] && accessToken) {
+        if (!headers['x-orvilo-trust-token'] && accessToken) {
           headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
@@ -641,11 +641,11 @@ export const agentGroupRouter = router({
         if (userInfo) {
           const trustedClientToken = generateTrustedClientToken(userInfo);
           if (trustedClientToken) {
-            headers['x-lobe-trust-token'] = trustedClientToken;
+            headers['x-orvilo-trust-token'] = trustedClientToken;
           }
         }
 
-        if (!headers['x-lobe-trust-token'] && accessToken) {
+        if (!headers['x-orvilo-trust-token'] && accessToken) {
           headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
@@ -799,11 +799,11 @@ export const agentGroupRouter = router({
         if (userInfo) {
           const trustedClientToken = generateTrustedClientToken(userInfo);
           if (trustedClientToken) {
-            headers['x-lobe-trust-token'] = trustedClientToken;
+            headers['x-orvilo-trust-token'] = trustedClientToken;
           }
         }
 
-        if (!headers['x-lobe-trust-token'] && accessToken) {
+        if (!headers['x-orvilo-trust-token'] && accessToken) {
           headers['Authorization'] = `Bearer ${accessToken}`;
         }
 

@@ -55,7 +55,7 @@ describe('goal plan authentication', () => {
     async (purpose) => {
       vi.clearAllMocks();
       vi.stubEnv(
-        'LOBEHUB_JWT',
+        'ORVILO_JWT',
         purpose
           ? `header.${Buffer.from(JSON.stringify({ purpose })).toString('base64url')}.signature`
           : undefined,
@@ -366,7 +366,7 @@ describe('goal create command', () => {
   it.each([undefined, 'task-worker'])(
     'inherits the calling Agent with Task assignee %s',
     async (worker) => {
-      vi.stubEnv('LOBEHUB_AGENT_ID', 'creating-agent');
+      vi.stubEnv('ORVILO_AGENT_ID', 'creating-agent');
       mockClient.goal.create.mutate.mockResolvedValue({ data: { goal: { id: 'goal-1' } } });
       await createProgram().parseAsync([
         'node',
@@ -390,7 +390,7 @@ describe('goal create command', () => {
   );
 
   it('allows a person to select an Agent without inventing Agent authorship', async () => {
-    vi.stubEnv('LOBEHUB_AGENT_ID', undefined);
+    vi.stubEnv('ORVILO_AGENT_ID', undefined);
     mockClient.goal.create.mutate.mockResolvedValue({ data: { goal: { id: 'goal-1' } } });
     await createProgram().parseAsync([
       'node',

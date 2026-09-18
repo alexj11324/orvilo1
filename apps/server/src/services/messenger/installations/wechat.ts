@@ -13,7 +13,7 @@ import { flushPendingWechatPushes } from '@/server/services/messenger/wechatPush
 
 import type { InstallationCredentials, MessengerInstallationStore } from './types';
 
-const log = debug('lobe-server:messenger:install-store:wechat');
+const log = debug('orvilo-server:messenger:install-store:wechat');
 
 interface WechatCredentialsBlob {
   baseUrl?: string;

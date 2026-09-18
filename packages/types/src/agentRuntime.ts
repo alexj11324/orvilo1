@@ -84,7 +84,7 @@ export interface AgentShareVisitorContext {
   /**
    * Mirrors `shareConfig.toolGrants` so tool runtimes that resolve their
    * target outside `toolManifestMap` (e.g. `activateSkill`,
-   * `lobe-topic-reference`) can apply the same allowlist the assembled tool set
+   * `orvilo-topic-reference`) can apply the same allowlist the assembled tool set
    * already enforces.
    */
   toolGrants?: AgentShareToolGrant[];
@@ -309,5 +309,5 @@ export const AgentRuntimeErrorType = {
    */
   NoOpenAIAPIKey: 'NoOpenAIAPIKey',
 } as const;
-export type ILobeAgentRuntimeErrorType =
+export type IOrviloAgentRuntimeErrorType =
   (typeof AgentRuntimeErrorType)[keyof typeof AgentRuntimeErrorType];

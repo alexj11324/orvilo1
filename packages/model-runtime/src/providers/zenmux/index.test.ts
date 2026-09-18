@@ -50,7 +50,7 @@ describe('ZenMux Runtime', () => {
     });
   });
 
-  describe('LobeZenMuxAI - custom features', () => {
+  describe('OrviloZenMuxAI - custom features', () => {
     describe('Params Export', () => {
       it('should export params object', () => {
         expect(params).toBeDefined();

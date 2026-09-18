@@ -41,7 +41,7 @@ export const getToolDisplayName = (apiName: string): string => {
   const linearLabel = formatLinearMcpShortLabel(apiName);
   if (linearLabel) return linearLabel;
 
-  // MCP wire names title-case into gibberish ("Mcp  lobe cc  browser navigate"),
+  // MCP wire names title-case into gibberish ("Mcp  orvilo cc  browser navigate"),
   // so the browser tools resolve to their own labels before the fallback.
   const browserLabel = formatBrowserMcpShortLabel(apiName, (key, defaultValue) =>
     t(key, { defaultValue, ns: 'chat' }),

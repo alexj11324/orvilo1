@@ -11,7 +11,7 @@ import { loadCredentials } from './credentials';
  * Only public claims are read. An API key carries no readable subject and the
  * only local way to derive one would be to digest the key itself, which would
  * put a secret-derived artifact on disk for no benefit — so API-key mode
- * returns `undefined` and scope has to come from `LOBEHUB_WORKSPACE_ID`.
+ * returns `undefined` and scope has to come from `ORVILO_WORKSPACE_ID`.
  *
  * Callers must treat `undefined` as "no identity to bind to", never as a match.
  */
@@ -19,7 +19,7 @@ export function resolveIdentityFingerprint(): string | undefined {
   // Must follow the same precedence `getAuthAndServer` uses to pick credentials.
   // Reading past an API key to the stored login would bind the scope to one
   // account while the request authenticates as another.
-  const envJwt = process.env.LOBEHUB_JWT;
+  const envJwt = process.env.ORVILO_JWT;
   if (envJwt) return userIdentity(envJwt);
 
   if (readCliApiKeyEnv()) return undefined;

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { topics, workspaceMembers, workspaces } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { LOCAL_HETEROGENEOUS_AGENT_TYPES } from '@orvilo/types';
@@ -11,7 +11,7 @@ import { aiAgentRouter } from '../aiAgent';
 import { cleanupTestUser, createTestUser } from './integration/setup';
 
 // Mock getServerDB to return our test database instance
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -54,7 +54,7 @@ const buildEvent = (type: AgentStreamEvent['type'], stepIndex: number): AgentStr
 });
 
 describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let userId: string;
 
   beforeEach(async () => {

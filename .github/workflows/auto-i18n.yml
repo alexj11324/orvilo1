@@ -18,8 +18,8 @@ jobs:
     steps:
       - name: Configure Git
         run: |
-          git config --global user.name "lobehubbot"
-          git config --global user.email "i@lobehub.com"
+          git config --global user.name "orvilobot"
+          git config --global user.email "i@orvilo.aspectlylabs.com"
 
       - uses: actions/checkout@v6
         with:

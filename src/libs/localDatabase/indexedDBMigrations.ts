@@ -1,4 +1,4 @@
-export const INDEXED_DB_NAME = 'lobehub-local-data';
+export const INDEXED_DB_NAME = 'orvilo-local-data';
 export const INDEXED_DB_RECORD_STORE = 'records';
 
 interface IndexedDBMigrationContext {

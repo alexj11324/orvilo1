@@ -89,7 +89,7 @@ export const fetchImageAsFile = async (url: string, width: number) => {
       githubToken && url.startsWith('https://github.com/')
         ? {
             'Authorization': `Bearer ${githubToken}`,
-            'User-Agent': 'lobe-chat-docs-cdn',
+            'User-Agent': 'orvilo-docs-cdn',
           }
         : undefined;
 

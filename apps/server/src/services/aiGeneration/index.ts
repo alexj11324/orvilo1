@@ -5,7 +5,7 @@ import type {
 } from '@orvilo/model-runtime';
 import type { OpenAIChatMessage } from '@orvilo/types';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 
 export interface AiGenerationObjectInput {
@@ -46,11 +46,11 @@ export interface AiGenerationObjectOptions {
  * Construct one per request — `db` and `userId` come from the request context.
  */
 export class AiGenerationService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

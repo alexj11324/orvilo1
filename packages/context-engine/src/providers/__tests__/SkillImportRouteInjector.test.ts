@@ -21,24 +21,26 @@ describe('extractSkillImportRoutes', () => {
   describe('marketplace URLs → importFromMarket', () => {
     it('extracts the identifier from a skill.md URL', () => {
       expect(
-        extractSkillImportRoutes('Read https://lobehub.com/skills/anthropics-skills-pptx/skill.md'),
+        extractSkillImportRoutes(
+          'Read https://orvilo.aspectlylabs.com/skills/anthropics-skills-pptx/skill.md',
+        ),
       ).toEqual([
         {
           identifier: 'anthropics-skills-pptx',
           method: 'importFromMarket',
-          url: 'https://lobehub.com/skills/anthropics-skills-pptx/skill.md',
+          url: 'https://orvilo.aspectlylabs.com/skills/anthropics-skills-pptx/skill.md',
         },
       ]);
     });
 
     it('extracts the identifier from a bare skill page URL', () => {
       expect(
-        extractSkillImportRoutes('https://lobehub.com/skills/openclaw-openclaw-github'),
+        extractSkillImportRoutes('https://orvilo.aspectlylabs.com/skills/openclaw-openclaw-github'),
       ).toEqual([
         {
           identifier: 'openclaw-openclaw-github',
           method: 'importFromMarket',
-          url: 'https://lobehub.com/skills/openclaw-openclaw-github',
+          url: 'https://orvilo.aspectlylabs.com/skills/openclaw-openclaw-github',
         },
       ]);
     });
@@ -46,19 +48,23 @@ describe('extractSkillImportRoutes', () => {
     it('handles locale-prefixed and subdomain/API URLs', () => {
       expect(
         extractSkillImportRoutes(
-          'https://lobehub.com/zh-CN/skills/a-b and https://market.lobehub.com/api/v1/skills/c.d/download',
+          'https://orvilo.aspectlylabs.com/zh-CN/skills/a-b and https://market.aspectlylabs.com/api/v1/skills/c.d/download',
         ).map((route) => route.identifier),
       ).toEqual(['a-b', 'c.d']);
     });
 
     it('ignores a skills index URL with no identifier', () => {
-      expect(extractSkillImportRoutes('https://lobehub.com/skills')).toEqual([]);
+      expect(extractSkillImportRoutes('https://orvilo.aspectlylabs.com/skills')).toEqual([]);
     });
 
     // No identifier to extract, but it is still a SKILL.md, which importSkill accepts.
     it('falls through to importSkill when the path has no identifier to extract', () => {
-      expect(extractSkillImportRoutes('https://lobehub.com/skills/skill.md')).toEqual([
-        { method: 'importSkill', type: 'url', url: 'https://lobehub.com/skills/skill.md' },
+      expect(extractSkillImportRoutes('https://orvilo.aspectlylabs.com/skills/skill.md')).toEqual([
+        {
+          method: 'importSkill',
+          type: 'url',
+          url: 'https://orvilo.aspectlylabs.com/skills/skill.md',
+        },
       ]);
     });
   });
@@ -117,7 +123,9 @@ describe('extractSkillImportRoutes', () => {
 
     it('ignores unrelated URLs even when install intent is present', () => {
       expect(
-        extractSkillImportRoutes('install deps then open https://lobehub.com/discover/assistants'),
+        extractSkillImportRoutes(
+          'install deps then open https://orvilo.aspectlylabs.com/discover/assistants',
+        ),
       ).toEqual([]);
     });
 
@@ -130,15 +138,15 @@ describe('extractSkillImportRoutes', () => {
     it('mixes marketplace and non-marketplace sources in one message', () => {
       expect(
         extractSkillImportRoutes(
-          'https://lobehub.com/skills/a-b/skill.md and https://example.com/x/SKILL.md',
+          'https://orvilo.aspectlylabs.com/skills/a-b/skill.md and https://example.com/x/SKILL.md',
         ).map((route) => route.method),
       ).toEqual(['importFromMarket', 'importSkill']);
     });
 
     it('strips trailing sentence punctuation from a URL', () => {
-      expect(extractSkillImportRoutes('装一下 https://lobehub.com/skills/a-b。')[0].url).toBe(
-        'https://lobehub.com/skills/a-b',
-      );
+      expect(
+        extractSkillImportRoutes('装一下 https://orvilo.aspectlylabs.com/skills/a-b。')[0].url,
+      ).toBe('https://orvilo.aspectlylabs.com/skills/a-b');
     });
 
     // Regression for the CodeQL polynomial-ReDoS finding: stripping the trailing punctuation
@@ -156,7 +164,7 @@ describe('extractSkillImportRoutes', () => {
     it('deduplicates repeated URLs', () => {
       expect(
         extractSkillImportRoutes(
-          'https://lobehub.com/skills/x-y then https://lobehub.com/skills/x-y',
+          'https://orvilo.aspectlylabs.com/skills/x-y then https://orvilo.aspectlylabs.com/skills/x-y',
         ),
       ).toHaveLength(1);
     });
@@ -164,7 +172,7 @@ describe('extractSkillImportRoutes', () => {
     it('caps the number of extracted routes', () => {
       const text = Array.from(
         { length: 8 },
-        (_, i) => `https://lobehub.com/skills/skill-${i}`,
+        (_, i) => `https://orvilo.aspectlylabs.com/skills/skill-${i}`,
       ).join(' ');
 
       expect(extractSkillImportRoutes(text)).toHaveLength(5);
@@ -173,7 +181,7 @@ describe('extractSkillImportRoutes', () => {
 });
 
 describe('SkillImportRouteInjector', () => {
-  // Regression: a `lobehub.com/skills/{id}/skill.md` URL used to reach the model with no
+  // Regression: a `orvilo.aspectlylabs.com/skills/{id}/skill.md` URL used to reach the model with no
   // turn-local guidance, so it crawled the page and followed the marketplace CLI steps
   // printed there instead of calling `importFromMarket`.
   it('injects the resolved call and forbids crawling when a skill URL is present', async () => {
@@ -183,7 +191,7 @@ describe('SkillImportRouteInjector', () => {
       createContext([
         {
           content:
-            'Read https://lobehub.com/skills/anthropics-skills-pptx/skill.md and install it as documented.',
+            'Read https://orvilo.aspectlylabs.com/skills/anthropics-skills-pptx/skill.md and install it as documented.',
           role: 'user',
         },
       ]),
@@ -197,7 +205,7 @@ describe('SkillImportRouteInjector', () => {
     expect(content).toContain('Do NOT crawl');
     expect(result.metadata.skillImportRoute).toEqual({
       injected: true,
-      urls: ['https://lobehub.com/skills/anthropics-skills-pptx/skill.md'],
+      urls: ['https://orvilo.aspectlylabs.com/skills/anthropics-skills-pptx/skill.md'],
     });
   });
 
@@ -229,7 +237,7 @@ describe('SkillImportRouteInjector', () => {
       createContext([
         {
           content:
-            'https://lobehub.com/skills/anthropics-skills-pptx/skill.md — install as documented',
+            'https://orvilo.aspectlylabs.com/skills/anthropics-skills-pptx/skill.md — install as documented',
           role: 'user',
         },
       ]),
@@ -251,13 +259,13 @@ describe('SkillImportRouteInjector', () => {
 
     const result = await injector.process(
       createContext([
-        { content: 'https://lobehub.com/skills/old-one', role: 'user' },
+        { content: 'https://orvilo.aspectlylabs.com/skills/old-one', role: 'user' },
         { content: 'ok', role: 'assistant' },
-        { content: 'now https://lobehub.com/skills/new-one', role: 'user' },
+        { content: 'now https://orvilo.aspectlylabs.com/skills/new-one', role: 'user' },
       ]),
     );
 
-    expect(result.messages[0].content).toBe('https://lobehub.com/skills/old-one');
+    expect(result.messages[0].content).toBe('https://orvilo.aspectlylabs.com/skills/old-one');
     expect(result.messages[2].content).toContain('identifier="new-one"');
     expect(result.messages[2].content).not.toContain('identifier="old-one"');
   });
@@ -270,7 +278,7 @@ describe('SkillImportRouteInjector', () => {
         {
           content: [
             { image_url: { url: 'https://example.com/a.png' }, type: 'image_url' },
-            { text: 'install https://lobehub.com/skills/a-b/skill.md', type: 'text' },
+            { text: 'install https://orvilo.aspectlylabs.com/skills/a-b/skill.md', type: 'text' },
           ],
           role: 'user',
         },
@@ -297,12 +305,15 @@ describe('SkillImportRouteInjector', () => {
 
     const result = await injector.process(
       createContext([
-        { content: 'https://lobehub.com/skills/anthropics-skills-pptx/skill.md', role: 'user' },
+        {
+          content: 'https://orvilo.aspectlylabs.com/skills/anthropics-skills-pptx/skill.md',
+          role: 'user',
+        },
       ]),
     );
 
     expect(result.messages[0].content).toBe(
-      'https://lobehub.com/skills/anthropics-skills-pptx/skill.md',
+      'https://orvilo.aspectlylabs.com/skills/anthropics-skills-pptx/skill.md',
     );
     expect(result.metadata.skillImportRoute).toBeUndefined();
   });
@@ -311,7 +322,7 @@ describe('SkillImportRouteInjector', () => {
     const injector = new SkillImportRouteInjector({ enabled: true });
 
     const result = await injector.process(
-      createContext([{ content: 'https://lobehub.com/skills/a-b', role: 'assistant' }]),
+      createContext([{ content: 'https://orvilo.aspectlylabs.com/skills/a-b', role: 'assistant' }]),
     );
 
     expect(result.metadata.skillImportRoute).toBeUndefined();

@@ -77,7 +77,7 @@ export const SearchAgentRender = memo<BuiltinRenderProps<SearchAgentParams, Sear
     if (agents.length === 0) {
       return (
         <div className={styles.noResults}>
-          {t('builtins.lobe-agent-builder.inspector.noResults')}
+          {t('builtins.orvilo-agent-builder.inspector.noResults')}
         </div>
       );
     }

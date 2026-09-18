@@ -4,7 +4,7 @@ import { buildCheckLabels, selectPricedRound } from './interactionCost';
 
 const cost = {
   activeSeconds: 4,
-  model: 'goms-klm@lobe-v1',
+  model: 'goms-klm@orvilo-v1',
   operators: { K: 1, M: 2, P: 1, R_ms: 7894 },
   phases: [
     {

@@ -212,7 +212,7 @@ Do NOT call \`sendMessage\` or \`sendDirectMessage\` to reply in the current cha
 </message_delivery>
 
 <current_conversation platform="lark" channelId="oc_84983ff6516d731e">
-These are the EXACT argument values for any \`lobe-message\` call that targets the conversation you are currently in:
+These are the EXACT argument values for any \`orvilo-message\` call that targets the conversation you are currently in:
 - \`platform\`: "lark"
 - \`channelId\`: "oc_84983ff6516d731e"
 

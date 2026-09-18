@@ -1,4 +1,4 @@
-import type { ILobeAgentRuntimeErrorType } from './agentRuntime';
+import type { IOrviloAgentRuntimeErrorType } from './agentRuntime';
 
 export const ChatErrorType = {
   // ******* Business Error Semantics ******* //
@@ -19,7 +19,7 @@ export const ChatErrorType = {
 
   InvalidUserKey: 'InvalidUserKey', // is not valid User key
   CreateMessageError: 'CreateMessageError',
-  LobeHubModelDeprecated: 'LobeHubModelDeprecated', // requested LobeHub model is no longer available
+  OrviloModelDeprecated: 'OrviloModelDeprecated', // requested Orvilo model is no longer available
   /**
    * @deprecated
    */
@@ -78,5 +78,5 @@ export const isRemoteServerNetworkError = (
 
 export interface ErrorResponse {
   body: any;
-  errorType: ErrorType | ILobeAgentRuntimeErrorType;
+  errorType: ErrorType | IOrviloAgentRuntimeErrorType;
 }

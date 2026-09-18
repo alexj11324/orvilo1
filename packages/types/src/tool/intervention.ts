@@ -167,8 +167,8 @@ const ASK_USER_QUESTION_IDENTIFIERS = new Set([
   'cursor',
   'devin',
   'droid',
-  'lobe-agent',
-  'lobe-user-interaction',
+  'orvilo-agent',
+  'orvilo-user-interaction',
   'qoder',
 ]);
 
@@ -188,7 +188,7 @@ export const classifyToolInterventionPresentation = (
     return { interactionKind: 'question', surface: 'form' };
   }
 
-  if (identifier === 'lobe-web-onboarding' && apiName === 'showAgentMarketplace') {
+  if (identifier === 'orvilo-web-onboarding' && apiName === 'showAgentMarketplace') {
     return { interactionKind: 'custom', surface: 'form' };
   }
 

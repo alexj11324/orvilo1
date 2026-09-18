@@ -21,7 +21,7 @@
  *
  * <subject-key> = task-<id> | topic-<id> | document-<id> (subject with ':'→'-'),
  * matching the report group dirs under the report root
- * (ACCEPTANCE_REPORT_ROOT, default ${TMPDIR:-/tmp}/lobe-acceptance/reports).
+ * (ACCEPTANCE_REPORT_ROOT, default ${TMPDIR:-/tmp}/orvilo-acceptance/reports).
  *
  * Usage:
  *   fixture.mjs init-check --subject topic:tpc_xxx <check-id>
@@ -48,7 +48,7 @@ const { basename, join } = path;
 const REPO_ROOT = process.cwd();
 const REPORT_ROOT =
   process.env.ACCEPTANCE_REPORT_ROOT ||
-  join(process.env.TMPDIR || '/tmp', 'lobe-acceptance/reports');
+  join(process.env.TMPDIR || '/tmp', 'orvilo-acceptance/reports');
 
 const fail = (msg) => {
   console.error(`fixture.mjs: ${msg}`);

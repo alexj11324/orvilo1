@@ -19,7 +19,7 @@
         "type": "builtin",
         "apiName": "executeAgentTasks",
         "arguments": "{\"tasks\":[{\"agentId\":\"agent-1\",\"title\":\"调研任务\"}]}",
-        "identifier": "lobe-group-management"
+        "identifier": "orvilo-group-management"
       }
     ],
     "createdAt": 1704067201000,

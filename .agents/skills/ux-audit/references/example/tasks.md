@@ -1,7 +1,7 @@
 # Worked example — Tasks list /kanban (任务列表) audit
 
 A real run of this skill against the **agent tasks list** — the cross-agent list/kanban board
-(`/tasks`) and its agent-scoped twin (`/agent/:aid/tasks`), 2026-07 (LOBE-11219). Use it as a
+(`/tasks`) and its agent-scoped twin (`/agent/:aid/tasks`), 2026-07 (ORVILO-11219). Use it as a
 template for the output shape, not as current-state truth (the code moves; re-verify before
 citing).
 
@@ -79,7 +79,7 @@ regress" list for the (mostly write-path) next refactor:
 
 **L① List / kanban fetch failure → permanent skeleton, no retry — Feedback §4.2** 🔴
 `isTaskListInit` / `isTaskGroupListInit` flip `true` **only** in the SWR `onSuccess`
-(`store/task/slices/list/action.ts:146-155`, `:110-116`); there is **no `onError`** anywhere in
+(`store/task/slices/list/action.ts:146-155`, `:110-116`); there is **no `onError`** anywhere
 `src/store/task`, and the hook's `error` / `isLoading` are **discarded at the call site** —
 `AgentTasksPage.tsx:62-63` calls `useFetchTaskList(...)` without assigning the return (kanban:
 `KanbanBoard.tsx:89-90`). `TaskList.tsx:203` renders the skeleton on `!isInit`. So once

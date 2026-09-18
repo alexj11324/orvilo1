@@ -60,7 +60,7 @@ export const UpdateTaskStatusInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-task.apiName.updateTaskStatus')}
+        {t('builtins.orvilo-task.apiName.updateTaskStatus')}
       </span>
       {identifier && <span className={styles.identifierChip}>{identifier}</span>}
       {status && (

@@ -6,7 +6,7 @@ import { BusinessGlobalService } from '@/business/client/services/BusinessGlobal
 import { lambdaClient } from '@/libs/trpc/client';
 import { getElectronStoreState } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
-import { type LobeAgentConfig } from '@/types/agent';
+import { type OrviloAgentConfig } from '@/types/agent';
 import { type GlobalRuntimeConfig } from '@/types/serverConfig';
 
 const VERSION_URL = 'https://registry.npmmirror.com/@lobehub/chat/latest';
@@ -69,7 +69,7 @@ class GlobalService extends BusinessGlobalService {
     return lambdaClient.config.getGlobalConfig.query();
   };
 
-  getDefaultAgentConfig = async (): Promise<PartialDeep<LobeAgentConfig>> => {
+  getDefaultAgentConfig = async (): Promise<PartialDeep<OrviloAgentConfig>> => {
     return lambdaClient.config.getDefaultAgentConfig.query();
   };
 }

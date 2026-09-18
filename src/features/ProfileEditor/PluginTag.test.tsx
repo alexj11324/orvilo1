@@ -68,11 +68,11 @@ vi.mock('@/store/tool/slices/connector/selectors', () => ({
 vi.mock('@/store/tool/selectors', () => ({
   builtinToolSelectors: { allMetaList: () => [], metaList: () => [] },
   composioStoreSelectors: { getServers: () => [] },
-  lobehubSkillStoreSelectors: { getServers: () => [] },
+  orviloSkillStoreSelectors: { getServers: () => [] },
   pluginSelectors: { installedPluginMetaList: () => [], isPluginInstalled: () => () => false },
 }));
 vi.mock('@/store/serverConfig', () => ({
-  serverConfigSelectors: { enableComposio: () => false, enableLobehubSkill: () => false },
+  serverConfigSelectors: { enableComposio: () => false, enableOrviloSkill: () => false },
   useServerConfigStore: (sel: (s: unknown) => unknown) => sel({}),
 }));
 vi.mock('@/store/discover', () => ({

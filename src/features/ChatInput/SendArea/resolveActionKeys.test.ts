@@ -11,7 +11,7 @@ describe('resolveSendAreaActionKeys', () => {
   });
 
   it('keeps contextWindow for composers without a ControlBar', () => {
-    // Regression for https://github.com/lobehub/lobehub/issues/17713: composers
+    // Regression for  composers
     // rendered with `showControlBar={false}` (floating panel, mobile) used to
     // drop the token indicator entirely because SendArea always filtered it.
     expect(

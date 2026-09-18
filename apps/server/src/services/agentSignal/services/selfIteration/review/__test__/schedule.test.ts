@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { AgentSignalSourceEventInput } from '@/server/services/agentSignal/emitter';
 
 import type {
@@ -286,7 +286,7 @@ describe('nightlyReviewScheduleService', () => {
         scopeKey: 'user-1:agent-1',
         workflowRunId: 'workflow-1',
       });
-      const db = {} as unknown as LobeChatDatabase;
+      const db = {} as unknown as OrviloDatabase;
       const service = createServerNightlyReviewScheduleService(db);
 
       const page = await service.listEligibleUsersPage({

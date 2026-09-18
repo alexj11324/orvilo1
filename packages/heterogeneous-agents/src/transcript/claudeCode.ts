@@ -73,7 +73,7 @@ const textOfContent = (content: any, img?: ImageStats): string => {
 };
 
 /**
- * Older LobeHub versions prepended an injected `## Workspace` preamble to the
+ * Older Orvilo versions prepended an injected `## Workspace` preamble to the
  * first user message; strip both historical variants when that message doubles
  * as the title / prompt preview.
  */

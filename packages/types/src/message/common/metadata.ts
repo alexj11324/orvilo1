@@ -12,7 +12,7 @@ const LocalSystemToolSnapshotSchema = z.object({
   capturedAt: z.string(),
   content: z.string().nullable(),
   error: z.unknown().optional(),
-  identifier: z.literal('lobe-local-system'),
+  identifier: z.literal('orvilo-local-system'),
   result: z.unknown().optional(),
   snapshotId: z.string(),
   state: z.unknown().optional(),
@@ -26,7 +26,7 @@ export interface LocalSystemToolSnapshot {
   capturedAt: string;
   content: string | null;
   error?: unknown;
-  identifier: 'lobe-local-system';
+  identifier: 'orvilo-local-system';
   result?: unknown;
   snapshotId: string;
   state?: unknown;

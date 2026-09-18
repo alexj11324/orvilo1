@@ -22,7 +22,7 @@
         "type": "builtin",
         "apiName": "callSubAgents",
         "arguments": "{\"tasks\": [{\"description\": \"Task 1\"}, {\"description\": \"Task 2\"}, {\"description\": \"Task 3\"}, {\"description\": \"Task 4\"}, {\"description\": \"Task 5\"}, {\"description\": \"Task 6\"}, {\"description\": \"Task 7\"}, {\"description\": \"Task 8\"}, {\"description\": \"Task 9\"}, {\"description\": \"Task 10\"}]}",
-        "identifier": "lobe-agent"
+        "identifier": "orvilo-agent"
       }
     ]
   },

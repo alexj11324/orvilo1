@@ -1,5 +1,5 @@
-import { lobeHubOnlineModelDescriptions } from '../lobehubOnlineModelDescriptions';
 import { modelDescriptionOverrides } from '../modelDescriptionOverrides';
+import { orviloHubOnlineModelDescriptions } from '../orviloOnlineModelDescriptions';
 
 /**
  * Vite SPA path: platform resolve rewrites `models.ts` → `models.vite.ts` so the
@@ -9,5 +9,5 @@ import { modelDescriptionOverrides } from '../modelDescriptionOverrides';
  */
 export default {
   ...modelDescriptionOverrides,
-  ...lobeHubOnlineModelDescriptions,
+  ...orviloHubOnlineModelDescriptions,
 };

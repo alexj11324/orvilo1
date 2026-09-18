@@ -1,7 +1,7 @@
 import type { AgentSignalScope } from '../base/types';
 
 /**
- * Bot-thread identity used to route source events that originate outside a LobeChat topic.
+ * Bot-thread identity used to route source events that originate outside a Orvilo topic.
  */
 export interface AgentSignalBotScopeKeyInput {
   /** Application identifier from the external bot platform. */
@@ -26,7 +26,7 @@ export interface AgentSignalProducerScopeInput {
   platformThreadId?: string;
   /** Optional task identifier. Used when no topic is available. */
   taskId?: string;
-  /** Optional LobeChat topic identifier. Takes precedence over task and bot-thread metadata. */
+  /** Optional Orvilo topic identifier. Takes precedence over task and bot-thread metadata. */
   topicId?: string;
   /** Optional user identifier for broad authenticated scopes. */
   userId?: string;
@@ -41,10 +41,10 @@ export interface AgentSignalTaskScopeKeyInput {
 }
 
 /**
- * Topic identity used when an AgentSignal chain is scoped to one LobeChat topic.
+ * Topic identity used when an AgentSignal chain is scoped to one Orvilo topic.
  */
 export interface AgentSignalTopicScopeKeyInput {
-  /** Stable LobeChat topic identifier. */
+  /** Stable Orvilo topic identifier. */
   topicId: string;
 }
 

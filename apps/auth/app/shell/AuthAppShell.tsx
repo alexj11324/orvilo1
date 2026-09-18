@@ -2,7 +2,7 @@ import { ModalHost } from '@lobehub/ui/base-ui';
 import { memo, type PropsWithChildren } from 'react';
 
 import BusinessAuthProvider from '@/business/client/BusinessAuthProvider';
-import { LobeAnalyticsProviderWrapper } from '@/components/Analytics/LobeAnalyticsProviderWrapper';
+import { OrviloAnalyticsProviderWrapper } from '@/components/Analytics/OrviloAnalyticsProviderWrapper';
 import type { IFeatureFlags } from '@/config/featureFlags';
 import { mapFeatureFlagsEnvToState } from '@/config/featureFlags';
 import AuthContainer from '@/features/AuthShell/AuthContainer';
@@ -61,13 +61,13 @@ const AuthAppShell = memo<AuthAppShellProps>(({ children, locale }) => {
               : undefined
           }
         >
-          <LobeAnalyticsProviderWrapper
+          <OrviloAnalyticsProviderWrapper
             analytics={serverConfig?.analyticsConfig ?? EMPTY_ANALYTICS}
           >
             <BusinessAuthProvider>
               <AuthContainer>{children}</AuthContainer>
             </BusinessAuthProvider>
-          </LobeAnalyticsProviderWrapper>
+          </OrviloAnalyticsProviderWrapper>
         </AuthServerConfigProvider>
         <ModalHost />
       </AuthThemeLite>

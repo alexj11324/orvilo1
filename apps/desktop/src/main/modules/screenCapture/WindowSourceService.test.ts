@@ -9,7 +9,7 @@ const originalResourcesPath = process.resourcesPath;
 
 vi.mock('electron', () => ({
   app: {
-    getName: vi.fn(() => 'LobeHub'),
+    getName: vi.fn(() => 'Orvilo'),
     get isPackaged() {
       return mockElectronApp.isPackaged;
     },
@@ -46,7 +46,7 @@ describe('WindowSourceService', () => {
     Object.defineProperty(process, 'platform', { value: 'darwin' });
     Object.defineProperty(process, 'resourcesPath', {
       configurable: true,
-      value: '/Applications/LobeHub.app/Contents/Resources',
+      value: '/Applications/Orvilo.app/Contents/Resources',
     });
     mockElectronApp.isPackaged = true;
     mockExecFileSync.mockReturnValue(JSON.stringify([{ owner: { processId: 42 } }]));
@@ -57,7 +57,7 @@ describe('WindowSourceService', () => {
     await enumerateWindows({ height: 1080, width: 1920, x: 0, y: 0 });
 
     expect(mockExecFileSync).toHaveBeenCalledWith(
-      '/Applications/LobeHub.app/Contents/Resources/app.asar.unpacked/node_modules/get-windows/main',
+      '/Applications/Orvilo.app/Contents/Resources/app.asar.unpacked/node_modules/get-windows/main',
       ['--no-accessibility-permission', '--no-screen-recording-permission', '--open-windows-list'],
       { encoding: 'utf8' },
     );

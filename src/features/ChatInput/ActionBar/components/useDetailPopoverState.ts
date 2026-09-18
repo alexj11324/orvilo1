@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export const CLOSE_TOOL_DETAIL_POPOVER_EVENT = 'lobe-chat-tool-detail-popover-close';
+export const CLOSE_TOOL_DETAIL_POPOVER_EVENT = 'orvilo-tool-detail-popover-close';
 
 const REOPEN_SUPPRESS_MS = 600;
 

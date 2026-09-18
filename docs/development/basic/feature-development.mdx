@@ -1,23 +1,23 @@
 ---
-title: LobeHub Feature Development Complete Guide
-description: A comprehensive guide for developers on implementing features in LobeHub.
+title: Orvilo Feature Development Complete Guide
+description: A comprehensive guide for developers on implementing features in Orvilo.
 tags:
-  - LobeHub
+  - Orvilo
   - Feature Development
   - Developer Guide
   - Postgres
   - Drizzle ORM
 ---
 
-# LobeHub Feature Development Complete Guide
+# Orvilo Feature Development Complete Guide
 
-This document aims to guide developers on how to develop a complete feature in LobeHub.
+This document aims to guide developers on how to develop a complete feature in Orvilo.
 
-We will use [RFC 021 - Custom Assistant Opening Guidance](https://github.com/lobehub/lobehub/discussions/891) as an example to illustrate the complete implementation process.
+We will use RFC 021 - Custom Assistant Opening Guidance as an example to illustrate the complete implementation process.
 
 ## 1. Update Schema
 
-LobeHub uses a PostgreSQL database, with [Drizzle ORM](https://orm.drizzle.team/) to operate the database.
+Orvilo uses a PostgreSQL database, with [Drizzle ORM](https://orm.drizzle.team/) to operate the database.
 
 All schemas are located in `packages/database/src/schemas/`. We need to adjust the `agents` table to add two fields corresponding to the configuration items:
 
@@ -34,7 +34,7 @@ export const agents = pgTable(
     backgroundColor: text('background_color'),
     plugins: jsonb('plugins').$type<string[]>().default([]),
     // ...
-    tts: jsonb('tts').$type<LobeAgentTTSConfig>(),
+    tts: jsonb('tts').$type<OrviloAgentTTSConfig>(),
 
 +   openingMessage: text('opening_message'),
 +   openingQuestions: text('opening_questions').array().default([]),
@@ -53,18 +53,18 @@ Note that sometimes we may also need to update the index, but for this feature, 
 
 ### Database Migration
 
-After adjusting the schema, you need to generate and optimize migration files. See the [Database Migration Guide](https://github.com/lobehub/lobehub/blob/main/.agents/skills/drizzle/references/db-migrations.md) for detailed steps.
+After adjusting the schema, you need to generate and optimize migration files. See the Database Migration Guide for detailed steps.
 
 ## 2. Update Data Model
 
 Data models are defined in `packages/types/src/`. We don't directly use the types exported from the Drizzle schema (e.g., `typeof agents.$inferInsert`), but instead define independent data models based on frontend requirements.
 
-Update the `LobeAgentConfig` type in `packages/types/src/agent/index.ts`:
+Update the `OrviloAgentConfig` type in `packages/types/src/agent/index.ts`:
 
 ```diff
-export interface LobeAgentConfig {
+export interface OrviloAgentConfig {
   // ...
-  chatConfig: LobeAgentChatConfig;
+  chatConfig: OrviloAgentChatConfig;
   /**
    * The language model used by the agent
    * @default gpt-4o-mini
@@ -110,7 +110,7 @@ The project is divided into multiple frontend and backend layers by responsibili
 
 ```typescript
 export class SessionService {
-  updateSessionConfig = (id: string, config: PartialDeep<LobeAgentConfig>, signal?: AbortSignal) => {
+  updateSessionConfig = (id: string, config: PartialDeep<OrviloAgentConfig>, signal?: AbortSignal) => {
     return lambdaClient.session.updateSessionConfig.mutate({ id, value: config }, { signal });
   };
 }
@@ -142,7 +142,7 @@ For this feature, `updateSessionConfig` simply merges config without field-level
 
 ### Data Flow Store Implementation
 
-LobeHub uses [zustand](https://zustand.docs.pmnd.rs/getting-started/introduction) as the global state management framework. For detailed practices on state management, refer to [State Management Best Practices](/docs/development/state-management/state-management-intro).
+Orvilo uses [zustand](https://zustand.docs.pmnd.rs/getting-started/introduction) as the global state management framework. For detailed practices on state management, refer to [State Management Best Practices](/docs/development/state-management/state-management-intro).
 
 There are two stores related to the agent:
 
@@ -156,7 +156,7 @@ The latter listens for and updates the current session's agent configuration thr
 First, we update the initialState. After reading `src/features/AgentSetting/store/initialState.ts`, we learn that the initial agent configuration is saved in `DEFAULT_AGENT_CONFIG` in `packages/const/src/settings/agent.ts`:
 
 ```diff
-export const DEFAULT_AGENT_CONFIG: LobeAgentConfig = {
+export const DEFAULT_AGENT_CONFIG: OrviloAgentConfig = {
   chatConfig: DEFAULT_AGENT_CHAT_CONFIG,
   model: DEFAULT_MODEL,
 + openingQuestions: [],
@@ -217,7 +217,7 @@ export const agentSelectors = {
 
 ### i18n Handling
 
-LobeHub is an internationalized project using [react-i18next](https://github.com/i18next/react-i18next). Newly added UI text needs to:
+Orvilo is an internationalized project using [react-i18next](https://github.com/i18next/react-i18next). Newly added UI text needs to:
 
 1. Add keys to the corresponding namespace file in `packages/locales/src/default/` (default language is English):
 
@@ -324,7 +324,7 @@ const AgentInfo = () => {
 
 ## 5. Testing
 
-The project uses Vitest for unit testing. See the [Testing Skill Guide](https://github.com/lobehub/lobehub/blob/main/.agents/skills/testing/SKILL.md) for details.
+The project uses Vitest for unit testing. See the Testing Skill Guide for details.
 
 **Running tests:**
 
@@ -356,4 +356,4 @@ If you just want to check whether existing tests pass without running locally, y
 
 ## Summary
 
-The above is the complete implementation process for the LobeHub opening settings feature, covering the full chain from database schema → data model → Service/Model → Store → i18n → UI → testing. Developers can refer to this document for developing related features.
+The above is the complete implementation process for the Orvilo opening settings feature, covering the full chain from database schema → data model → Service/Model → Store → i18n → UI → testing. Developers can refer to this document for developing related features.

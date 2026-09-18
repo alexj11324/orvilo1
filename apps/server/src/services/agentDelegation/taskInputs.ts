@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { insertOutboxEvent, newEventId, taskInputs, tasks } from './contractTables';
 import type { TaskInputIntentType, TaskInputStatus } from './types';
@@ -22,11 +22,11 @@ export interface SubmitTaskInputParams {
  * retries: a replay returns the original row instead of appending a twin.
  */
 export class TaskInputService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

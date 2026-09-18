@@ -9,7 +9,7 @@ import pg from 'pg';
 import { FtsSearchSyncOutboxRepository } from '../../packages/database/src/repositories/ftsSearchSyncOutbox';
 import { messages } from '../../packages/database/src/schemas';
 import * as schema from '../../packages/database/src/schemas';
-import type { LobeChatDatabase } from '../../packages/database/src/type';
+import type { OrviloDatabase } from '../../packages/database/src/type';
 import { searchableMessage } from '../../packages/database/src/utils/searchableMessage';
 
 const { Pool } = pg;
@@ -60,7 +60,7 @@ const positiveInteger = (argument: string) => {
 
 /** Enqueues current source IDs; the normal sync worker writes fenced soft tombstones. */
 export const runCleanupBatch = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   afterId: string | null,
   limit: number,
 ) => {

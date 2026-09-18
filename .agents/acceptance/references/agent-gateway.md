@@ -1,8 +1,8 @@
-# LobeHub gateway streaming + tab-switch test harness
+# Orvilo gateway streaming + tab-switch test harness
 
 Captures store + DOM state at 200ms intervals so we can prove or disprove
 claims like "切回 tab 后消息回到了很早以前". Built for gateway-mode chat but
-works for any LobeHub streaming session.
+works for any Orvilo streaming session.
 
 ## Running a LOCAL gateway for a real closed loop
 
@@ -12,10 +12,10 @@ works for any LobeHub streaming session.
 > section is how you get one locally.
 
 **Why the online gateway can't close the loop locally.** The online gateway
-(`agent-gateway.lobehub.com`) verifies the browser's user JWT against the
+(`agent-gateway.aspectlylabs.com`) verifies the browser's user JWT against the
 **production** app's JWKS. A local dev instance signs that JWT with its **own**
 `JWKS_KEY`, so the online gateway rejects the WS handshake with
-`{"type":"auth_failed","reason":"signature verification failed"}` → close
+`{"type":"auth_failed","reason":"signature verification failed"}` →
 `1008`. The server→gateway **push** still returns `200` (it uses the static
 `AGENT_GATEWAY_SERVICE_TOKEN`, not JWKS) — so events flow server-side but the
 browser never receives them. That's why client / SSE / online-gateway are all
@@ -23,7 +23,7 @@ browser never receives them. That's why client / SSE / online-gateway are all
 `WebSocket` in the page and reading the first frame after the `auth` send.
 
 **Fix — run the gateway yourself.** The gateway worker lives in a **sibling
-repo: look for `agent-gateway/` next to `lobehub/`** (same parent dir). It's a
+repo: look for `agent-gateway/` next to `aspectlylabs/`** (same parent dir). It's a
 Cloudflare Worker (`wrangler dev`, Durable Objects in local mode) whose
 `verifyToken` checks JWTs against a configurable `JWKS_PUBLIC_KEY` secret. Point
 that secret at **your local app's** public key and the local gateway trusts your
@@ -68,7 +68,7 @@ the WS URL by swapping `http(s)→ws(s)` and appending `/ws?operationId=…`, so
 AGENT_GATEWAY_SERVICE_TOKEN` are set (`AgentRuntime/factory.ts`), and it
 registers each op with the gateway via `POST /api/operations/init` carrying only
 `{operationId, userId}` — it does **not** upload a per-op public key, which is
-exactly why the gateway must already trust the signing key via
+exactly why the gateway must already trust the signing key
 `JWKS_PUBLIC_KEY`.
 
 ## Files
@@ -121,7 +121,7 @@ same topic — the symptom users describe.
 ## What the probe tracks (and why)
 
 `chat.messagesMap` only stores the top-level `assistantGroup` shell. The
-actual streamed content, reasoning, and tool calls live in
+actual streamed content, reasoning, and tool calls live
 `assistantGroup.children: AssistantContentBlock[]`. Any probe that only
 reads `m.content` / `m.reasoning` will see zeros throughout streaming and
 miss everything that matters. probe.js walks both levels and sums:
@@ -147,8 +147,8 @@ tell store-side regressions apart from render-side regressions.
   in tool-call labels change as results arrive. analyze.mjs only flags
   `domLen` drops greater than 100 chars to ignore that noise.
 - **Never identify tabs by innerText.** The active tab's text embeds a
-  ` · <agent name>` suffix, so a search like `'LobeHub Growth'` matches the
-  active tab when the active agent happens to be LobeHub Growth — and you
+  ` · <agent name>` suffix, so a search like `'Orvilo Growth'` matches the
+  active tab when the active agent happens to be Orvilo Growth — and you
   end up clicking the tab you're already on. probe.js uses the stable
   `data-contextmenu-trigger` attribute (a React `useId()` value that's set
   per-tab and survives focus changes) plus `data-active="true"` to mark

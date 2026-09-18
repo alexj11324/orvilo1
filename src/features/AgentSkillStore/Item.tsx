@@ -22,7 +22,7 @@ interface ItemProps {
 }
 
 /**
- * Agent-scoped Composio connector card — mirrors SkillStore's LobeHub Item but
+ * Agent-scoped Composio connector card — mirrors SkillStore's Orvilo Item but
  * its connected state + connect/disconnect are bound to the agent, not the user.
  */
 const Item = memo<ItemProps>(({ agentId, appSlug, description, icon, identifier, label }) => {
@@ -48,7 +48,7 @@ const Item = memo<ItemProps>(({ agentId, appSlug, description, icon, identifier,
       cancelText: t('cancel', { ns: 'common' }),
       content: t('settingAgent.agentTools.removeOwnedConfirm'),
       okButtonProps: { danger: true },
-      okText: t('tools.lobehubSkill.disconnect'),
+      okText: t('tools.orviloSkill.disconnect'),
       onOk: handleDisconnect,
     });
   };
@@ -71,7 +71,7 @@ const Item = memo<ItemProps>(({ agentId, appSlug, description, icon, identifier,
               disabled: !canEdit,
               icon: <Icon icon={Unplug} />,
               key: 'disconnect',
-              label: t('tools.lobehubSkill.disconnect'),
+              label: t('tools.orviloSkill.disconnect'),
               onClick: confirmDisconnect,
             },
           ]}
@@ -84,7 +84,7 @@ const Item = memo<ItemProps>(({ agentId, appSlug, description, icon, identifier,
       <ActionIcon
         disabled={!canCreate || !canEdit}
         icon={Plus}
-        title={t('tools.lobehubSkill.connect')}
+        title={t('tools.orviloSkill.connect')}
         onClick={() => {
           if (!canCreate || !canEdit) return;
           handleConnect();

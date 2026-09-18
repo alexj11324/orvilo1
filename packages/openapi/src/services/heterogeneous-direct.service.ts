@@ -379,7 +379,7 @@ interface AnthropicStreamUsage {
 }
 
 /**
- * Map a LobeHub protocol `usage` event onto Anthropic `message_delta.usage`.
+ * Map a Orvilo protocol `usage` event onto Anthropic `message_delta.usage`.
  * `message_start` is emitted before upstream usage exists, so Claude Code treats
  * this snapshot as the final turn total (input + cache + output).
  */

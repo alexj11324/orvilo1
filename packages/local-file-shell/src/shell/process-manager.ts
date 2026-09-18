@@ -52,7 +52,7 @@ export class ShellProcessManager {
     const date = new Date();
 
     this.outputRunDir = path.join(
-      path.resolve(outputRoot ?? path.join(os.tmpdir(), 'lobehub', 'shell')),
+      path.resolve(outputRoot ?? path.join(os.tmpdir(), 'orvilo', 'shell')),
       `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
       process.pid.toString(),
     );

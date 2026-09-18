@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import { agentHistoryJobs } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { AgentCopyJobModel } from './agentCopyJob';
 import { AgentTransferJobModel } from './agentTransferJob';
 
@@ -12,7 +12,7 @@ import { AgentTransferJobModel } from './agentTransferJob';
  * every job kind.
  */
 export const processNextAgentHistoryJobTopic = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   jobId: string,
 ): Promise<{ done: boolean; topicId?: string }> => {
   const [job] = await db
@@ -27,7 +27,10 @@ export const processNextAgentHistoryJobTopic = async (
 };
 
 /** Run any history job to completion, whatever its type. */
-export const drainAgentHistoryJob = async (db: LobeChatDatabase, jobId: string): Promise<void> => {
+export const drainAgentHistoryJob = async (
+  db: OrviloDatabase,
+  jobId: string,
+): Promise<void> => {
   while (true) {
     const { done } = await processNextAgentHistoryJobTopic(db, jobId);
     if (done) return;

@@ -160,7 +160,7 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
       segments.push({
         content: (
           <>
-            <span className={styles.label}>{t('builtins.lobe-task.edit.rename')}</span>
+            <span className={styles.label}>{t('builtins.orvilo-task.edit.rename')}</span>
             <span className={styles.chip}>{params.name}</span>
           </>
         ),
@@ -172,7 +172,7 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
       segments.push({
         content: (
           <>
-            <span className={styles.label}>{t('builtins.lobe-task.edit.priority')}</span>
+            <span className={styles.label}>{t('builtins.orvilo-task.edit.priority')}</span>
             <span className={styles.chip}>{priorityLabel(params.priority)}</span>
           </>
         ),
@@ -182,14 +182,14 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
 
     if (params.instruction !== undefined) {
       segments.push({
-        content: <span className={styles.chip}>{t('builtins.lobe-task.edit.instruction')}</span>,
+        content: <span className={styles.chip}>{t('builtins.orvilo-task.edit.instruction')}</span>,
         key: 'instruction',
       });
     }
 
     if (params.description !== undefined) {
       segments.push({
-        content: <span className={styles.chip}>{t('builtins.lobe-task.edit.description')}</span>,
+        content: <span className={styles.chip}>{t('builtins.orvilo-task.edit.description')}</span>,
         key: 'description',
       });
     }
@@ -198,10 +198,10 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
       segments.push({
         content:
           params.parentIdentifier === null ? (
-            <span className={styles.chip}>{t('builtins.lobe-task.edit.parentClear')}</span>
+            <span className={styles.chip}>{t('builtins.orvilo-task.edit.parentClear')}</span>
           ) : (
             <>
-              <span className={styles.label}>{t('builtins.lobe-task.edit.parent')}</span>
+              <span className={styles.label}>{t('builtins.orvilo-task.edit.parent')}</span>
               <span className={styles.chip}>{params.parentIdentifier}</span>
             </>
           ),
@@ -217,12 +217,12 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
       segments.push({
         content: hasAnyAssignee ? (
           <>
-            <span className={styles.label}>{t('builtins.lobe-task.edit.assign')}</span>
+            <span className={styles.label}>{t('builtins.orvilo-task.edit.assign')}</span>
             {params.assigneeAgentId && <AssigneeChip agentId={params.assigneeAgentId} />}
             {params.assigneeUserId && <MemberChip userId={params.assigneeUserId} />}
           </>
         ) : (
-          <span className={styles.chip}>{t('builtins.lobe-task.edit.unassign')}</span>
+          <span className={styles.chip}>{t('builtins.orvilo-task.edit.unassign')}</span>
         ),
         key: 'assignee',
       });
@@ -232,7 +232,7 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
       segments.push({
         content: (
           <>
-            <span className={styles.label}>{t('builtins.lobe-task.edit.blocksOn')}</span>
+            <span className={styles.label}>{t('builtins.orvilo-task.edit.blocksOn')}</span>
             {params.addDependencies.map((dep) => (
               <span className={styles.addChip} key={`add-${dep}`}>
                 {dep}
@@ -248,7 +248,7 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
       segments.push({
         content: (
           <>
-            <span className={styles.label}>{t('builtins.lobe-task.edit.unblocks')}</span>
+            <span className={styles.label}>{t('builtins.orvilo-task.edit.unblocks')}</span>
             {params.removeDependencies.map((dep) => (
               <span className={styles.removeChip} key={`remove-${dep}`}>
                 {dep}
@@ -263,7 +263,7 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
     return (
       <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
         <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-task.apiName.editTask')}
+          {t('builtins.orvilo-task.apiName.editTask')}
         </span>
         {identifier && <span className={styles.identifierChip}>{identifier}</span>}
         {segments.map((segment, index) => (

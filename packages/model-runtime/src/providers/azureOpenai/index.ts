@@ -11,7 +11,7 @@ import { AgentRuntimeError } from '../../utils/createError';
 import { sanitizeError } from '../../utils/sanitizeError';
 import { isResponsesAPIModel, responsesAPIModels, systemToUserModels } from '../openai/modelId';
 
-const azureImageLogger = debug('lobe-image:azure');
+const azureImageLogger = debug('orvilo-image:azure');
 const azureSearchContextSize = process.env.OPENAI_SEARCH_CONTEXT_SIZE;
 
 /**
@@ -194,7 +194,7 @@ const BaseAzureOpenAI = createOpenAICompatibleRuntime({
   },
 });
 
-export class LobeAzureOpenAI extends BaseAzureOpenAI {
+export class OrviloAzureOpenAI extends BaseAzureOpenAI {
   constructor(options: Record<string, any> = {}) {
     const { endpoint, ...rest } = options;
     const baseURL = normalizeAzureBaseURL(rest.baseURL ?? endpoint);

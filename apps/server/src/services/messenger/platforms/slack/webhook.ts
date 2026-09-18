@@ -6,7 +6,7 @@ import { getInstallationStore } from '../../installations';
 import { verifySignature as verifySlackSignature } from '../../oauth/slackOAuth';
 import type { MessengerPlatformWebhookGate } from '../types';
 
-const log = debug('lobe-server:messenger:slack:webhook-gate');
+const log = debug('orvilo-server:messenger:slack:webhook-gate');
 
 /**
  * Slack lifecycle events we treat specially before falling into normal

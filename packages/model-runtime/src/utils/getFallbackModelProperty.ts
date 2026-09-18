@@ -1,9 +1,9 @@
-import type { AiFullModelCard, AiModelType, LobeDefaultAiModelListItem } from 'model-bank';
+import type { AiFullModelCard, AiModelType, OrviloDefaultAiModelListItem } from 'model-bank';
 
 import { EMBEDDING_MODEL_KEYWORDS } from './modelTypeKeywords';
 
 interface BusinessModelConfigModule {
-  loadModels: () => Promise<LobeDefaultAiModelListItem[]>;
+  loadModels: () => Promise<OrviloDefaultAiModelListItem[]>;
 }
 
 const getDefaultModelType = (modelId: string): AiModelType => {

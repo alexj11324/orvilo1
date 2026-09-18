@@ -511,7 +511,7 @@ describe('GroupMessageFlattenProcessor', () => {
                   type: 'builtin',
                   apiName: 'broadcast',
                   arguments: '{"message":"Hello agents"}',
-                  identifier: 'lobe-group-management',
+                  identifier: 'orvilo-group-management',
                   result: {
                     id: 'msg-tool-1',
                     content: 'Broadcast sent',
@@ -631,7 +631,7 @@ describe('GroupMessageFlattenProcessor', () => {
                   apiName: 'search',
                   arguments:
                     '{"query":"杭州 天气","searchCategories":["general"],"searchEngines":["google","bing"],"searchTimeRange":"day"}',
-                  identifier: 'lobe-web-browsing',
+                  identifier: 'orvilo-web-browsing',
                   result: {
                     content: '<searchResults>...</searchResults>',
                     error: null,
@@ -669,7 +669,7 @@ describe('GroupMessageFlattenProcessor', () => {
       expect(assistantMsg.role).toBe('assistant');
       expect(assistantMsg.id).toBe('msg_LnIlOyMUnX1ylf');
       expect(assistantMsg.tools).toHaveLength(1);
-      expect(assistantMsg.tools[0].identifier).toBe('lobe-web-browsing');
+      expect(assistantMsg.tools[0].identifier).toBe('orvilo-web-browsing');
       expect(assistantMsg.tools[0].apiName).toBe('search');
       expect(assistantMsg.reasoning).toBeDefined();
       expect(assistantMsg.topicId).toBe('tpc_WQ1wRvxdDpLw');
@@ -681,7 +681,7 @@ describe('GroupMessageFlattenProcessor', () => {
       expect(toolMsg.id).toBe('msg_DS234ZZMju1NNO');
       expect(toolMsg.tool_call_id).toBe('call_kYZG2daTTfnkgNiN6oIR25YK');
       expect(toolMsg.plugin).toBeDefined();
-      expect(toolMsg.plugin.identifier).toBe('lobe-web-browsing');
+      expect(toolMsg.plugin.identifier).toBe('orvilo-web-browsing');
       expect(toolMsg.pluginState).toBeDefined();
       expect(toolMsg.pluginState.query).toBe('杭州 天气');
     });

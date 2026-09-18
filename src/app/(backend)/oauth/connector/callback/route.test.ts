@@ -49,7 +49,7 @@ beforeEach(() => {
     authorizationServerUrl: 'https://as',
     codeVerifier: 'v',
     connectorId: 'c1',
-    lobeUserId: 'u1',
+    orviloUserId: 'u1',
   });
   mockFindById.mockResolvedValue({
     id: 'c1',

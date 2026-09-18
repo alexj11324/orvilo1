@@ -10,7 +10,7 @@ const DEFAULT_MAX_RESULTS = 25;
 const MAX_QUERY_LENGTH = 512;
 const PROFILE_TOOL_NAME = 'get_me';
 const RECENT_SEARCH_TOOL_NAME = 'search_tweets';
-const log = debug('lobe-server:connector-data:twitter');
+const log = debug('orvilo-server:connector-data:twitter');
 
 interface TwitterMarketToolFailure {
   message: string;
@@ -59,10 +59,10 @@ const readEmbeddedToolFailure = (value: unknown): TwitterMarketToolFailure | und
 };
 
 /**
- * Creates a bounded, read-only X client over LobeHub Market tools.
+ * Creates a bounded, read-only X client over Orvilo Market tools.
  *
  * Use when:
- * - Understanding should reuse the user's existing LobeHub Market X authorization
+ * - Understanding should reuse the user's existing Orvilo Market X authorization
  * - Background workflows need X evidence through Trusted Client authentication
  *
  * Expects:

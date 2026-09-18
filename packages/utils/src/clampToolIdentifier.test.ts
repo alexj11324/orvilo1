@@ -4,7 +4,7 @@ import { clampToolIdentifier, MAX_TOOL_IDENTIFIER_LENGTH } from './clampToolIden
 
 describe('clampToolIdentifier', () => {
   it('passes through short values untouched', () => {
-    expect(clampToolIdentifier('lobe-agent')).toBe('lobe-agent');
+    expect(clampToolIdentifier('orvilo-agent')).toBe('orvilo-agent');
     expect(clampToolIdentifier('')).toBe('');
   });
 

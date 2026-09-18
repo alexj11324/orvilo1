@@ -1,6 +1,6 @@
 import { createGmailConnectorClient, hasGmailReadPermission } from '@orvilo/connector-data/gmail';
 import { getComposioAppByIdentifier } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { type ToolManifest } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -211,7 +211,7 @@ async function deleteComposioConnector(
  * agent can't attach their account to it.
  */
 async function assertCanEditAgent(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   agentId: string,
   workspaceId?: string,

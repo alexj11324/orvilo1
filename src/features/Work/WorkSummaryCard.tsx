@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, Flexbox, Icon as LobeIcon } from '@lobehub/ui';
+import { Center, Flexbox, Icon as OrviloIcon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatUsageValue } from '@orvilo/utils';
@@ -229,7 +229,7 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
           </Flexbox>
           {usage && (
             <Center horizontal className={styles.inlineCost} gap={2} title={usageTitle}>
-              <LobeIcon icon={usage.icon} />
+              <OrviloIcon icon={usage.icon} />
               {usage.value}
             </Center>
           )}
@@ -262,7 +262,7 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
             </Flexbox>
             {usage && (
               <Center horizontal className={styles.cost} gap={2} title={usageTitle}>
-                <LobeIcon icon={usage.icon} />
+                <OrviloIcon icon={usage.icon} />
                 {usage.value}
               </Center>
             )}

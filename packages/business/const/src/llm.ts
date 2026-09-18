@@ -18,7 +18,7 @@ export const DEFAULT_REVIEW_PREDICT_MODEL = 'gemini-3.6-flash';
 export const DEFAULT_REVIEW_PREDICT_PROVIDER = 'google';
 
 /**
- * The model the Verify LobeHub LLM calls judge a deliverable with when neither
+ * The model the Verify Orvilo LLM calls judge a deliverable with when neither
  * a pinned verifier agent nor a usable parent model is available. MUST be
  * vision-capable — agent-type checks attach screenshot evidence, and a
  * text-only verifier cannot read the frames it is judging (it has to detour

@@ -13,10 +13,10 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { DOCUMENT_TRANSFER_FOREIGN_ROWS, DocumentModel } from '../document';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'doc-transfer-test-user';
 const otherUserId = 'doc-transfer-test-other-user';

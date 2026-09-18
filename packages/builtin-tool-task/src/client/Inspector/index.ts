@@ -24,7 +24,7 @@ import { ViewTaskInspector } from './ViewTask';
  * Task tool Inspector components registry.
  *
  * Inspector components customize the title/header area of tool calls
- * in the conversation UI for the lobe-task built-in tool.
+ * in the conversation UI for the orvilo-task built-in tool.
  */
 export const TaskInspectors: Record<string, BuiltinInspector> = {
   [TaskApiName.addTaskComment]: AddTaskCommentInspector as BuiltinInspector,

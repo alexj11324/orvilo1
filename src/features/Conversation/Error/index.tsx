@@ -2,7 +2,7 @@ import { Block, Highlighter } from '@lobehub/ui';
 import { type AlertProps, Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
-import { type ILobeAgentRuntimeErrorType } from '@orvilo/model-runtime';
+import { type IOrviloAgentRuntimeErrorType } from '@orvilo/model-runtime';
 import { AgentRuntimeErrorType, getErrorCodeSpec } from '@orvilo/model-runtime';
 import { type ChatMessageError, type ErrorType, type IToolErrorType } from '@orvilo/types';
 import { ChatErrorType } from '@orvilo/types';
@@ -124,7 +124,7 @@ const LEGACY_LOCALIZED_ERROR_TYPES = new Set<string>(
  * `error:response.<X>` entries (ChatErrorType members and HTTP status codes).
  */
 const hasLocalizedErrorMessage = (
-  errorType?: IToolErrorType | ILobeAgentRuntimeErrorType | ErrorType,
+  errorType?: IToolErrorType | IOrviloAgentRuntimeErrorType | ErrorType,
 ): boolean => {
   if (errorType === undefined || errorType === null) return false;
   if (typeof errorType === 'number') return true;
@@ -173,7 +173,7 @@ const shouldShowTraceIdError = (
 
 // Config for the errorMessage display
 const getErrorAlertConfig = (
-  errorType?: IToolErrorType | ILobeAgentRuntimeErrorType | ErrorType,
+  errorType?: IToolErrorType | IOrviloAgentRuntimeErrorType | ErrorType,
 ): AlertProps | undefined => {
   // OpenAIBizError / ZhipuBizError / GoogleBizError / ...
   if (typeof errorType === 'string' && (errorType.includes('Biz') || errorType.includes('Invalid')))
@@ -465,7 +465,7 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
         break;
       }
 
-      case ChatErrorType.LobeHubModelDeprecated: {
+      case ChatErrorType.OrviloModelDeprecated: {
         if (enableBusinessFeatures)
           return <DeprecatedModelError requestedModel={error?.body?.requestedModel} />;
         break;

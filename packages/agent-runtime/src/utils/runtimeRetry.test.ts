@@ -10,12 +10,12 @@ import {
 
 describe('runtimeRetry', () => {
   it('resolves LLM retry policy from provider-level configuration only', () => {
-    const options = { noRetryProviders: ['lobehub'] };
+    const options = { noRetryProviders: ['orvilo'] };
 
     expect(resolveLLMRetryBudget('openai', options)).toBe(5);
-    expect(resolveLLMRetryBudget('lobehub', options)).toBe(0);
+    expect(resolveLLMRetryBudget('orvilo', options)).toBe(0);
     expect(resolveLLMMaxAttempts('openai', options)).toBe(6);
-    expect(resolveLLMMaxAttempts('lobehub', options)).toBe(1);
+    expect(resolveLLMMaxAttempts('orvilo', options)).toBe(1);
   });
 
   it('calculates exponential LLM retry delay with a cap', () => {

@@ -13,7 +13,7 @@ vi.mock('./refresh', () => ({
 vi.mock('../settings', () => ({
   loadSettings: vi.fn().mockReturnValue({ serverUrl: 'https://orvilo.aspectlylabs.com' }),
   resolveServerUrl: vi.fn(() =>
-    (process.env.LOBEHUB_SERVER || 'https://orvilo.aspectlylabs.com').replace(/\/$/, ''),
+    (process.env.ORVILO_SERVER || 'https://orvilo.aspectlylabs.com').replace(/\/$/, ''),
   ),
 }));
 // Helper to create a valid JWT with sub claim
@@ -25,23 +25,23 @@ function makeJwt(sub: string): string {
 
 describe('resolveToken', () => {
   let exitSpy: ReturnType<typeof vi.spyOn>;
-  const originalApiKey = process.env.LOBEHUB_CLI_API_KEY;
-  const originalJwt = process.env.LOBEHUB_JWT;
-  const originalServer = process.env.LOBEHUB_SERVER;
+  const originalApiKey = process.env.ORVILO_CLI_API_KEY;
+  const originalJwt = process.env.ORVILO_JWT;
+  const originalServer = process.env.ORVILO_SERVER;
 
   beforeEach(() => {
     exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit');
     });
-    delete process.env.LOBEHUB_CLI_API_KEY;
-    delete process.env.LOBEHUB_JWT;
-    delete process.env.LOBEHUB_SERVER;
+    delete process.env.ORVILO_CLI_API_KEY;
+    delete process.env.ORVILO_JWT;
+    delete process.env.ORVILO_SERVER;
   });
 
   afterEach(() => {
-    process.env.LOBEHUB_CLI_API_KEY = originalApiKey;
-    process.env.LOBEHUB_JWT = originalJwt;
-    process.env.LOBEHUB_SERVER = originalServer;
+    process.env.ORVILO_CLI_API_KEY = originalApiKey;
+    process.env.ORVILO_JWT = originalJwt;
+    process.env.ORVILO_SERVER = originalServer;
     exitSpy.mockRestore();
   });
 
@@ -97,32 +97,32 @@ describe('resolveToken', () => {
 
   describe('with environment api key', () => {
     it('should return API key from environment', async () => {
-      process.env.LOBEHUB_CLI_API_KEY = 'sk-lh-test';
+      process.env.ORVILO_CLI_API_KEY = 'sk-ov-test';
       vi.mocked(getUserIdFromApiKey).mockResolvedValue('user-789');
 
       const result = await resolveToken({});
 
       expect(getUserIdFromApiKey).toHaveBeenCalledWith(
-        'sk-lh-test',
+        'sk-ov-test',
         'https://orvilo.aspectlylabs.com',
       );
       expect(result).toEqual({
         serverUrl: 'https://orvilo.aspectlylabs.com',
-        token: 'sk-lh-test',
+        token: 'sk-ov-test',
         tokenType: 'apiKey',
         userId: 'user-789',
       });
     });
 
-    it('should prefer LOBEHUB_SERVER when validating the API key', async () => {
-      process.env.LOBEHUB_CLI_API_KEY = 'sk-lh-test';
-      process.env.LOBEHUB_SERVER = 'https://self-hosted.example.com/';
+    it('should prefer ORVILO_SERVER when validating the API key', async () => {
+      process.env.ORVILO_CLI_API_KEY = 'sk-ov-test';
+      process.env.ORVILO_SERVER = 'https://self-hosted.example.com/';
       vi.mocked(getUserIdFromApiKey).mockResolvedValue('user-789');
 
       const result = await resolveToken({});
 
       expect(getUserIdFromApiKey).toHaveBeenCalledWith(
-        'sk-lh-test',
+        'sk-ov-test',
         'https://self-hosted.example.com',
       );
       expect(result.serverUrl).toBe('https://self-hosted.example.com');

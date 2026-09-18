@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
 
-const log = debug('lobe-server:agent:tool-result');
+const log = debug('orvilo-server:agent:tool-result');
 
 const TOOL_RESULT_TTL_SECONDS = 120;
 

@@ -4,7 +4,7 @@ import type { BriefArtifactDocument, BriefMetadata } from '@orvilo/types';
 
 import { BriefModel } from '@/database/models/brief';
 import type { BriefItem, NewBrief } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import type { EvidenceRef, RunResult } from '../types';
 import { ActionStatus, ReviewRunStatus } from '../types';
@@ -558,7 +558,7 @@ export const createBriefSelfReviewService = () => ({
  * - A writer whose `writeDailyBrief` method creates or refreshes proposal briefs
  */
 export const createServerSelfReviewBriefWriter = (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   workspaceId?: string,
 ) => {

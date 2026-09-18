@@ -3,7 +3,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { eventOutbox } from '../contractTables';
 import { buildRoomSnapshot, decodeCursor, encodeCursor } from '../snapshot';
@@ -11,7 +11,7 @@ import { buildRoomSnapshot, decodeCursor, encodeCursor } from '../snapshot';
 const AGGREGATE_ID = 'task_snapshot_test';
 
 const seedEvents = (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   rows: { createdAt: Date; eventId: string; eventType?: string }[],
 ) =>
   db.insert(eventOutbox).values(
@@ -26,7 +26,7 @@ const seedEvents = (
   );
 
 describe('buildRoomSnapshot', () => {
-  let db: LobeChatDatabase;
+  let db: OrviloDatabase;
 
   beforeEach(async () => {
     db = await getTestDB();

@@ -1,4 +1,4 @@
-import type { LobeSessions } from './agentSession';
+import type { OrviloSessions } from './agentSession';
 
 export type SessionGroupId = string;
 
@@ -21,7 +21,7 @@ export interface SessionGroupItemBase {
 export type SessionGroups = SessionGroupItem[];
 
 export interface CustomSessionGroup extends SessionGroupItem {
-  children: LobeSessions;
+  children: OrviloSessions;
 }
 
-export type LobeSessionGroups = SessionGroupItem[];
+export type OrviloSessionGroups = SessionGroupItem[];

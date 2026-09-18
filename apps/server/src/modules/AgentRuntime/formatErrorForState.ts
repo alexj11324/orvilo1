@@ -135,7 +135,7 @@ const enrichWithSpec = (formatted: ChatMessageError): ChatMessageError => {
   });
   const type = (refined ?? formatted.type) as ChatMessageError['type'];
 
-  // `getErrorCodeSpec` is keyed by `ILobeAgentRuntimeErrorType` strings; coerce
+  // `getErrorCodeSpec` is keyed by `IOrviloAgentRuntimeErrorType` strings; coerce
   // because `ChatMessageError['type']` widens to include numeric `ChatErrorType`
   // values, which simply miss the lookup and pass through unenriched.
   const spec = getErrorCodeSpec(String(type));

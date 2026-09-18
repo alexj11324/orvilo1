@@ -2,16 +2,16 @@ import { and, asc, count, desc, eq } from 'drizzle-orm';
 
 import type { SessionGroupItem } from '../schemas';
 import { agents, chatGroups, sessionGroups } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export class SessionGroupModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;

@@ -25,10 +25,10 @@ const getProviderModelIds = (items: ReturnType<typeof buildListItems>) =>
 describe('buildListItems', () => {
   it('should stably move matching models after other models within a provider', () => {
     const items = buildListItems(
-      [provider('lobehub', [model('pro-a'), model('normal-a'), model('pro-b'), model('normal-b')])],
+      [provider('orvilo', [model('pro-a'), model('normal-a'), model('pro-b'), model('normal-b')])],
       'byProvider',
       '',
-      (modelId, providerId) => providerId === 'lobehub' && modelId.startsWith('pro-'),
+      (modelId, providerId) => providerId === 'orvilo' && modelId.startsWith('pro-'),
     );
 
     expect(getProviderModelIds(items)).toEqual(['normal-a', 'normal-b', 'pro-a', 'pro-b']);
@@ -37,12 +37,12 @@ describe('buildListItems', () => {
   it('should not move a by-model row when another provider remains available', () => {
     const items = buildListItems(
       [
-        provider('lobehub', [model('mixed-pro', 'Mixed'), model('lobehub-pro'), model('normal')]),
+        provider('orvilo', [model('mixed-pro', 'Mixed'), model('orvilo-pro'), model('normal')]),
         provider('openai', [model('mixed-pro', 'Mixed')]),
       ],
       'byModel',
       '',
-      (modelId, providerId) => providerId === 'lobehub' && modelId.includes('pro'),
+      (modelId, providerId) => providerId === 'orvilo' && modelId.includes('pro'),
     );
 
     expect(
@@ -51,13 +51,13 @@ describe('buildListItems', () => {
           ? [item.data.model.id]
           : [],
       ),
-    ).toEqual(['mixed-pro', 'normal', 'lobehub-pro']);
+    ).toEqual(['mixed-pro', 'normal', 'orvilo-pro']);
   });
 
   it('should order the pinned new models newest-first instead of by catalog order', () => {
     const items = buildListItems(
       [
-        provider('lobehub', [
+        provider('orvilo', [
           model('fable-5.1', 'Claude Fable 5.1', daysAgo(3)),
           model('gpt-6-astra', 'GPT-6 Astra', daysAgo(1)),
           model('glm-5.3-flash', 'GLM-5.3-Flash', daysAgo(9)),
@@ -79,7 +79,7 @@ describe('buildListItems', () => {
     const sameDay = daysAgo(2);
     const items = buildListItems(
       [
-        provider('lobehub', [
+        provider('orvilo', [
           model('gemini-3.8-flash', 'Gemini 3.8 Flash', sameDay),
           model('qwen3.8-max', 'Qwen3.8 Max', sameDay),
           model('legacy', 'Legacy', daysAgo(400)),
@@ -94,7 +94,7 @@ describe('buildListItems', () => {
   it('should order new models newest-first in byModel mode too', () => {
     const items = buildListItems(
       [
-        provider('lobehub', [
+        provider('orvilo', [
           model('fable-5.1', 'Claude Fable 5.1', daysAgo(3)),
           model('gpt-6-astra', 'GPT-6 Astra', daysAgo(1)),
         ]),

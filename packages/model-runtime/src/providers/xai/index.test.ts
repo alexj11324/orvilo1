@@ -4,16 +4,16 @@ import type { Mock } from 'vitest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeSuperGrokAI } from '../superGrok';
+import { OrviloSuperGrokAI } from '../superGrok';
 import type { XAIModelCard } from './index';
-import { LobeXAI } from './index';
+import { OrviloXAI } from './index';
 
 vi.mock('@orvilo/business-model-bank/model-config', () => ({
   loadModels: vi.fn().mockResolvedValue([]),
 }));
 
 testProvider({
-  Runtime: LobeXAI,
+  Runtime: OrviloXAI,
   provider: ModelProvider.XAI,
   defaultBaseURL: 'https://api.x.ai/v1',
   chatDebugEnv: 'DEBUG_XAI_CHAT_COMPLETION',
@@ -22,11 +22,11 @@ testProvider({
   test: { useResponsesAPI: true },
 });
 
-describe('LobeXAI - custom features', () => {
-  let instance: InstanceType<typeof LobeXAI>;
+describe('OrviloXAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloXAI>;
 
   beforeEach(() => {
-    instance = new LobeXAI({ apiKey: 'test_api_key' });
+    instance = new OrviloXAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );
@@ -45,11 +45,11 @@ describe('LobeXAI - custom features', () => {
 
       const createCall = (instance['client'].responses.create as Mock).mock.calls[0][0];
 
-      expect(createCall.prompt_cache_key).toBe('lobe:user-1:grok-4.5');
+      expect(createCall.prompt_cache_key).toBe('orvilo:user-1:grok-4.5');
     });
 
     it('should add a stable prompt cache key for SuperGrok requests with a user', async () => {
-      const superGrok = new LobeSuperGrokAI({ apiKey: 'test_api_key' });
+      const superGrok = new OrviloSuperGrokAI({ apiKey: 'test_api_key' });
       const create = vi
         .spyOn(superGrok['client'].responses, 'create')
         .mockResolvedValue(new ReadableStream() as any);
@@ -62,7 +62,7 @@ describe('LobeXAI - custom features', () => {
         { user: 'user-1' },
       );
 
-      expect(create.mock.calls[0][0].prompt_cache_key).toBe('lobe:user-1:grok-4.5');
+      expect(create.mock.calls[0][0].prompt_cache_key).toBe('orvilo:user-1:grok-4.5');
     });
 
     it('should ignore chatCompletion apiMode and remove camelCase penalty parameters', async () => {

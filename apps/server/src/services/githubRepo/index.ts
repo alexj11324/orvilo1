@@ -1,7 +1,7 @@
 import debug from 'debug';
 
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { MarketService } from '@/server/services/market';
 
 const log = debug('github-repo');
@@ -40,7 +40,7 @@ export const parseGithubRepo = (repo: string): GithubRepoCoordinate | undefined 
  */
 export const resolveGithubAccessToken = async (params: {
   credKey?: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   marketService?: MarketService;
   userId: string;
   workspaceId?: string;

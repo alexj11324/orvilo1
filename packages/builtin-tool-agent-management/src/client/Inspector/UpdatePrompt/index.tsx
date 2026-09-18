@@ -34,7 +34,7 @@ export const UpdatePromptInspector = memo<BuiltinInspectorProps<UpdatePromptPara
       return (
         <div className={styles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-agent-management.apiName.updatePrompt')}
+            {t('builtins.orvilo-agent-management.apiName.updatePrompt')}
           </span>
         </div>
       );
@@ -43,7 +43,7 @@ export const UpdatePromptInspector = memo<BuiltinInspectorProps<UpdatePromptPara
     return (
       <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-agent-management.inspector.updatePrompt.title')}
+          {t('builtins.orvilo-agent-management.inspector.updatePrompt.title')}
         </span>
         {agentId && <span className={highlightTextStyles.primary}>{agentId}</span>}
       </Flexbox>

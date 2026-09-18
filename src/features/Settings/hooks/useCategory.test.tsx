@@ -20,7 +20,7 @@ vi.hoisted(() => {
   });
 });
 
-const createWrapper = (showProvider: boolean) => {
+const createWrapper = (showProvider: boolean, extraFlags: Record<string, unknown> = {}) => {
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <Provider
       createStore={() =>
@@ -30,6 +30,7 @@ const createWrapper = (showProvider: boolean) => {
               provider_settings: true,
             }),
             showProvider,
+            ...extraFlags,
           },
         })
       }
@@ -57,30 +58,45 @@ afterEach(() => {
 });
 
 describe('settings useCategory', () => {
-  // Account-level settings (profile / appearance / hotkeys) form their own
-  // group so the workspace sidebar can mirror exactly this set; the General
-  // group keeps the personal-scoped data pages.
-  it('splits account-level tabs into a leading Account group', () => {
+  // S70 groups by capability rather than by audience, and Account leads because the
+  // settings in it follow the user everywhere; everything else is filed under what
+  // it configures.
+  it('leads with the account group', () => {
     const { result } = renderHook(() => useCategory(), {
       wrapper: createWrapper(true),
     });
     const accountGroup = result.current.find((group) => group.key === SettingsGroupKey.Account);
-    const generalGroup = result.current.find((group) => group.key === SettingsGroupKey.General);
 
     expect(result.current[0]?.key).toBe(SettingsGroupKey.Account);
     expect(accountGroup?.items.map((item) => item.key)).toEqual([
       SettingsTabs.Profile,
       SettingsTabs.Appearance,
       SettingsTabs.Hotkey,
-      SettingsTabs.Messenger,
     ]);
-    expect(generalGroup?.items.map((item) => item.key)).toEqual([
-      SettingsTabs.Stats,
-      SettingsTabs.Devices,
+  });
+
+  // The point of the regroup: a capability's settings sit together, wherever they
+  // used to live. Messenger is a channel, Stats is usage, Storage/Devices are data.
+  it('files each tab under the capability it configures', () => {
+    const { result } = renderHook(() => useCategory(), {
+      wrapper: createWrapper(true),
+    });
+    const keysOf = (key: SettingsGroupKey) =>
+      result.current.find((group) => group.key === key)?.items.map((item) => item.key);
+
+    expect(keysOf(SettingsGroupKey.Channels)).toContain(SettingsTabs.Messenger);
+    expect(keysOf(SettingsGroupKey.Agent)).not.toContain(SettingsTabs.Messenger);
+
+    expect(keysOf(SettingsGroupKey.UsageAndCost)).toContain(SettingsTabs.Stats);
+    expect(keysOf(SettingsGroupKey.Data)).toContain(SettingsTabs.Devices);
+
+    // OAuth Apps is Labs-gated (see the test below); with the gate closed the tools
+    // group is exactly the three that are always there.
+    expect(keysOf(SettingsGroupKey.Tools)).toEqual([
+      SettingsTabs.Skill,
+      SettingsTabs.Connector,
+      SettingsTabs.Labels,
     ]);
-    expect(
-      result.current.find((group) => group.key === SettingsGroupKey.Agent)?.items.map((i) => i.key),
-    ).not.toContain(SettingsTabs.Messenger);
   });
 
   it('keeps Provider visible when provider settings are enabled', () => {
@@ -101,7 +117,7 @@ describe('settings useCategory', () => {
     expect(getItemKeys()).not.toContain(SettingsTabs.OAuthApps);
   });
 
-  it('shows OAuth Apps when the Labs preference is enabled', () => {
+  it('shows OAuth Apps in the tools group when the Labs preference is enabled', () => {
     useUserStore.setState({
       preference: {
         ...initialUserStoreState.preference,
@@ -112,10 +128,27 @@ describe('settings useCategory', () => {
     const { result } = renderHook(() => useCategory(), {
       wrapper: createWrapper(true),
     });
+    const toolsGroup = result.current.find((group) => group.key === SettingsGroupKey.Tools);
     const developerGroup = result.current.find((group) => group.key === SettingsGroupKey.Developer);
-    const systemGroup = result.current.find((group) => group.key === SettingsGroupKey.System);
 
-    expect(developerGroup?.items.map((item) => item.key)).toContain(SettingsTabs.OAuthApps);
-    expect(systemGroup?.items.map((item) => item.key)).not.toContain(SettingsTabs.OAuthApps);
+    expect(toolsGroup?.items.map((item) => item.key)).toContain(SettingsTabs.OAuthApps);
+    expect(developerGroup?.items.map((item) => item.key)).not.toContain(SettingsTabs.OAuthApps);
+  });
+
+  // Regression: API Key was listed twice — once under `showApiKeyManage` and once
+  // under dev mode — so a user who met both gates saw two rows pointing at one page.
+  // Both gates now feed a single entry, so no tab may appear in two groups.
+  it('lists each settings tab at most once when both API Key gates are open', () => {
+    useUserStore.setState({
+      settings: { ...initialUserStoreState.settings, general: { isDevMode: true } },
+    });
+
+    const { result } = renderHook(() => useCategory(), {
+      wrapper: createWrapper(true, { showApiKeyManage: true }),
+    });
+    const keys = result.current.flatMap((group) => group.items.map((item) => item.key));
+
+    expect(keys).toContain(SettingsTabs.APIKey);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });

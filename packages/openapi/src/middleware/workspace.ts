@@ -6,7 +6,7 @@ import { canUseWorkspaceApiKeys } from '@/business/server/workspaceApiKey';
 import { getServerDB } from '@/database/core/db-adaptor';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
 
-const log = debug('lobe-hono:workspace-middleware');
+const log = debug('orvilo-hono:workspace-middleware');
 
 export const OPENAPI_WORKSPACE_HEADER = 'X-Workspace-Id';
 

@@ -24,7 +24,7 @@ const FILE_MODE = 0o600;
  * by a deleted provider, a changed endpoint, or an identity-version bump can
  * be garbage-collected by last use instead of accumulating forever.
  */
-const LAST_USED_MARKER = '.lobehub-last-used';
+const LAST_USED_MARKER = '.orvilo-last-used';
 
 /**
  * Matches Claude Code's own transcript retention default (`cleanupPeriodDays`,
@@ -100,7 +100,7 @@ export const prepareHostedProviderBinding = async (params: {
   sessionId: string;
 }): Promise<HostedProviderBinding> => {
   if (!params.driver.prepareProviderBinding) {
-    throw new Error(`${params.agentType} does not implement LobeHub Provider binding.`);
+    throw new Error(`${params.agentType} does not implement Orvilo Provider binding.`);
   }
 
   // Pi, Grok, and TRAE persist a custom model definition in the reusable profile.

@@ -7,7 +7,6 @@ import {
   CreditCard,
   EthernetPort,
   Gift,
-  Image as ImageIcon,
   Info,
   KeyboardIcon,
   KeyIcon,
@@ -90,8 +89,6 @@ const BUSINESS_SETTINGS_COMMANDS: ContextCommand[] = [
 export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
   agent: [],
   group: [],
-  painting: [],
-  video: [],
   resource: [],
   settings: [
     {
@@ -133,16 +130,6 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
       labelNamespace: 'setting',
       path: '/settings/hotkey',
       subPath: 'hotkey',
-    },
-    {
-      icon: ImageIcon,
-      keywords: ['image', 'picture', 'photo'],
-      keywordsKey: 'cmdk.keywords.image',
-      label: 'Image Settings',
-      labelKey: 'tab.image',
-      labelNamespace: 'setting',
-      path: '/settings/image',
-      subPath: 'image',
     },
     ...(isDesktop
       ? [

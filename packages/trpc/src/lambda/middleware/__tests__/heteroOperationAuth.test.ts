@@ -35,7 +35,7 @@ vi.mock('@/database/models/workspace', () => ({
 }));
 
 vi.mock('@/envs/auth', () => ({
-  LOBE_CHAT_OIDC_AUTH_HEADER: 'Oidc-Auth',
+  ORVILO_OIDC_AUTH_HEADER: 'Oidc-Auth',
   authEnv: mockAuthEnv,
 }));
 
@@ -89,7 +89,7 @@ describe('heteroOperationAuth middleware', () => {
       kind: 'operation',
       operation: expect.objectContaining({
         capabilities: ['model:invoke'],
-        iss: 'urn:lobehub:internal',
+        iss: 'urn:orvilo:internal',
         model: 'gpt-server',
         operation_id: 'op-1',
         provider_id: 'openai',

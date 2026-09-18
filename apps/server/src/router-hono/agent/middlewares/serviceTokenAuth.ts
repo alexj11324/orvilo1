@@ -3,7 +3,7 @@ import type { MiddlewareHandler } from 'hono';
 
 import { appEnv } from '@/envs/app';
 
-const log = debug('lobe-server:agent:service-token-auth');
+const log = debug('orvilo-server:agent:service-token-auth');
 
 /**
  * Hono middleware that authenticates requests against

@@ -1,7 +1,7 @@
 import type { DesktopBootstrapIdentity } from '@orvilo/electron-client-ipc';
 
 import { useUserStore } from '@/store/user';
-import type { LobeUser } from '@/types/user';
+import type { OrviloUser } from '@/types/user';
 
 export const applyDesktopBootstrapIdentity = (
   identity:
@@ -13,7 +13,7 @@ export const applyDesktopBootstrapIdentity = (
   const nextUser = identity.userId
     ? state.user?.id === identity.userId
       ? state.user
-      : ({ id: identity.userId } as LobeUser)
+      : ({ id: identity.userId } as OrviloUser)
     : identity.isIdentityResolved
       ? undefined
       : state.user;

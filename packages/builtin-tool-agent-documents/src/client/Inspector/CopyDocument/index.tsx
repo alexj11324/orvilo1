@@ -23,7 +23,7 @@ export const CopyDocumentInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-documents.apiName.copyDocument')}
+          {t('builtins.orvilo-agent-documents.apiName.copyDocument')}
         </span>
       </div>
     );
@@ -32,7 +32,7 @@ export const CopyDocumentInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-documents.apiName.copyDocument')}
+        {t('builtins.orvilo-agent-documents.apiName.copyDocument')}
       </span>
       {id && <span className={styles.idChip}>{formatDocumentId(id)}</span>}
       {newTitle && (

@@ -20,7 +20,7 @@ vi.mock('./core/App', () => ({
 
 vi.mock('./process-error-handlers', () => ({ installProcessErrorHandlers }));
 
-const bootstrapKey = '__LOBEHUB_DESKTOP_MAIN_BOOTSTRAPPED__';
+const bootstrapKey = '__ORVILO_DESKTOP_MAIN_BOOTSTRAPPED__';
 const mainProcessGlobal = globalThis as typeof globalThis & Record<string, boolean | undefined>;
 
 describe('main process entry', () => {

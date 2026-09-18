@@ -8,7 +8,7 @@ const snapshot = (steps: Partial<ExecutionSnapshot['steps'][number]>[]): Executi
     completedAt: 2,
     model: 'deepseek-v4-flash',
     operationId: 'op_1_agt_a_tpc_b_c',
-    provider: 'lobehub',
+    provider: 'orvilo',
     startedAt: 1,
     steps: steps.map((step, index) => ({
       completedAt: 2,

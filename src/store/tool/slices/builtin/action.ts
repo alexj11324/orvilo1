@@ -18,7 +18,7 @@ import { invokeExecutor } from './executors/index';
 import { type BuiltinToolContext, type BuiltinToolResult } from './types';
 
 const n = setNamespace('builtinTool');
-const log = debug('lobe-store:builtin-tool');
+const log = debug('orvilo-store:builtin-tool');
 
 /**
  * Minimal view of `settings.tool` covering just the builtin-tool install slots.

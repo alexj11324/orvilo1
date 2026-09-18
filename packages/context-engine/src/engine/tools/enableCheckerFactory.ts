@@ -1,4 +1,4 @@
-import type { LobeToolManifest, PluginEnableChecker, ToolsGenerationContext } from './types';
+import type { OrviloToolManifest, PluginEnableChecker, ToolsGenerationContext } from './types';
 
 export interface EnableCheckerConfig {
   /**
@@ -13,7 +13,7 @@ export interface EnableCheckerConfig {
    */
   platformFilter?: (params: {
     context?: ToolsGenerationContext;
-    manifest: LobeToolManifest;
+    manifest: OrviloToolManifest;
     pluginId: string;
   }) => boolean | undefined;
 
@@ -34,7 +34,7 @@ export interface EnableCheckerConfig {
  */
 export function createEnableChecker(config: EnableCheckerConfig): PluginEnableChecker {
   return ({ pluginId, context, manifest }) => {
-    // 1. Explicit activation bypass (e.g. tools activated via lobe-activator)
+    // 1. Explicit activation bypass (e.g. tools activated via orvilo-activator)
     if (config.allowExplicitActivation && context?.isExplicitActivation) return true;
 
     // 2. Platform-specific filter (return undefined = fall through)

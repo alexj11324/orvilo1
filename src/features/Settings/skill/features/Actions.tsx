@@ -12,14 +12,14 @@ import { agentSelectors } from '@/store/agent/selectors';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { pluginHelpers, useToolStore } from '@/store/tool';
 import { mcpStoreSelectors, pluginSelectors } from '@/store/tool/selectors';
-import { type LobeToolType } from '@/types/tool/tool';
+import { type OrviloToolType } from '@/types/tool/tool';
 
 import EditCustomPlugin from './EditCustomPlugin';
 
 interface ActionsProps {
   identifier: string;
   isMCP?: boolean;
-  type: LobeToolType;
+  type: OrviloToolType;
 }
 
 const Actions = memo<ActionsProps>(({ identifier, type, isMCP }) => {

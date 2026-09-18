@@ -47,7 +47,7 @@ export const dependencyOptions = {
  * First-party native addon packages are discovered instead of being listed by
  * hand: any `@orvilo/*` workspace package carrying a `binding.gyp` is one.
  * Per-platform gating comes from the package's own
- * `lobechat.nativeAddonPlatforms` field (absent = every platform), and its
+ * `orvilo.nativeAddonPlatforms` field (absent = every platform), and its
  * `build:native` script is what the packaging pipeline invokes — so renaming
  * or adding an addon package never requires touching this file.
  */
@@ -76,7 +76,7 @@ export function discoverFirstPartyNativeAddons() {
       continue;
     }
 
-    const platforms = packageJson.lobechat?.nativeAddonPlatforms;
+    const platforms = packageJson.orvilo?.nativeAddonPlatforms;
     if (Array.isArray(platforms) && !platforms.includes(targetPlatform)) continue;
 
     addons.push({

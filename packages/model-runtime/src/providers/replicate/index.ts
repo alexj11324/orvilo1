@@ -1,7 +1,7 @@
 import { Buffer } from 'buffer.js';
 import Replicate from 'replicate';
 
-import type { LobeRuntimeAI } from '../../core/BaseAI';
+import type { OrviloRuntimeAI } from '../../core/BaseAI';
 import type {
   ChatCompletionErrorPayload,
   ChatMethodOptions,
@@ -21,7 +21,7 @@ interface ReplicateAIParams {
   id?: string;
 }
 
-export class LobeReplicateAI implements LobeRuntimeAI {
+export class OrviloReplicateAI implements OrviloRuntimeAI {
   private client: Replicate;
 
   baseURL: string;
@@ -85,7 +85,7 @@ export class LobeReplicateAI implements LobeRuntimeAI {
   }
 
   /**
-   * Image generation support for LobeChat async image generation (FLUX, Stable Diffusion, etc.)
+   * Image generation support for Orvilo async image generation (FLUX, Stable Diffusion, etc.)
    */
   async createImage(payload: CreateImagePayload) {
     try {
@@ -200,7 +200,7 @@ export class LobeReplicateAI implements LobeRuntimeAI {
         this.debugLog('[Replicate createImage] No imageUrl provided');
       }
 
-      // Map LobeChat params to Replicate params
+      // Map Orvilo params to Replicate params
       if (width && height) {
         input.width = width;
         input.height = height;
@@ -423,4 +423,4 @@ export class LobeReplicateAI implements LobeRuntimeAI {
   }
 }
 
-export default LobeReplicateAI;
+export default OrviloReplicateAI;

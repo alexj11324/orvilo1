@@ -25,12 +25,12 @@ assert_contains() {
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
-mkdir -p "$tmp_dir/lobehub-cloud-1/.agents" "$tmp_dir/lobehub/.agents"
-ln -s "$SCRIPT_DIR/.." "$tmp_dir/lobehub-cloud-1/.agents/acceptance"
-ln -s "$SCRIPT_DIR/.." "$tmp_dir/lobehub/.agents/acceptance"
+mkdir -p "$tmp_dir/orvilo-cloud-1/.agents" "$tmp_dir/orvilo/.agents"
+ln -s "$SCRIPT_DIR/.." "$tmp_dir/orvilo-cloud-1/.agents/acceptance"
+ln -s "$SCRIPT_DIR/.." "$tmp_dir/orvilo/.agents/acceptance"
 
-cloud_script="$tmp_dir/lobehub-cloud-1/.agents/acceptance/scripts/test-env.sh"
-oss_script="$tmp_dir/lobehub/.agents/acceptance/scripts/test-env.sh"
+cloud_script="$tmp_dir/orvilo-cloud-1/.agents/acceptance/scripts/test-env.sh"
+oss_script="$tmp_dir/orvilo/.agents/acceptance/scripts/test-env.sh"
 
 assert_eq "$("$cloud_script" --value SERVER_URL)" "http://localhost:3021"
 assert_eq "$("$cloud_script" --value SPA_PORT)" "9801"
@@ -38,7 +38,7 @@ assert_eq "$("$cloud_script" --value MOBILE_SPA_PORT)" "3811"
 assert_eq "$("$cloud_script" --value DESKTOP_PORT)" "3031"
 assert_eq "$("$oss_script" --value SERVER_URL)" "http://localhost:3010"
 
-cat > "$tmp_dir/lobehub-cloud-1/.env" << 'EOF'
+cat > "$tmp_dir/orvilo-cloud-1/.env" << 'EOF'
 APP_URL=http://localhost:4123
 PORT=4123
 AUTH_TRUSTED_ORIGINS=http://localhost:4123,http://localhost:9823

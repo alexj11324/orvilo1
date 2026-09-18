@@ -52,14 +52,14 @@ describe('GET /oidc/interaction/[uid]', () => {
   it('returns interaction details for a consent prompt with a first-party client', async () => {
     mocks.getInteractionDetails.mockResolvedValue({
       params: {
-        client_id: 'lobehub-desktop',
+        client_id: 'orvilo-desktop',
         redirect_uri: 'https://example.com/callback',
         scope: 'openid profile email',
       },
       prompt: { name: 'consent' },
     });
     mocks.getConsentClientMetadata.mockResolvedValue({
-      clientName: 'LobeHub Desktop',
+      clientName: 'Orvilo Desktop',
       isFirstParty: true,
       logo: 'https://example.com/logo.png',
     });
@@ -68,9 +68,9 @@ describe('GET /oidc/interaction/[uid]', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      clientId: 'lobehub-desktop',
+      clientId: 'orvilo-desktop',
       clientMetadata: {
-        clientName: 'LobeHub Desktop',
+        clientName: 'Orvilo Desktop',
         isFirstParty: true,
         logo: 'https://example.com/logo.png',
       },
@@ -80,7 +80,7 @@ describe('GET /oidc/interaction/[uid]', () => {
       uid: 'uid-1',
     });
     expect(mocks.getInteractionDetails).toHaveBeenCalledWith('uid-1');
-    expect(mocks.getConsentClientMetadata).toHaveBeenCalledWith('lobehub-desktop');
+    expect(mocks.getConsentClientMetadata).toHaveBeenCalledWith('orvilo-desktop');
   });
 
   it('passes through third-party client metadata with developer info', async () => {
@@ -114,11 +114,11 @@ describe('GET /oidc/interaction/[uid]', () => {
 
   it('returns interaction details for a login prompt', async () => {
     mocks.getInteractionDetails.mockResolvedValue({
-      params: { client_id: 'lobehub-desktop' },
+      params: { client_id: 'orvilo-desktop' },
       prompt: { name: 'login' },
     });
     mocks.getConsentClientMetadata.mockResolvedValue({
-      clientName: 'LobeHub Desktop',
+      clientName: 'Orvilo Desktop',
       isFirstParty: true,
     });
 

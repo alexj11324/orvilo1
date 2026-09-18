@@ -1,11 +1,11 @@
 import { DEFAULT_AGENT_META } from '@/const/meta';
 import { DEFAULT_AGENT_CHAT_CONFIG, DEFAULT_AGENT_CONFIG } from '@/const/settings';
-import { type LobeAgentChatConfig } from '@/types/agent';
+import { type OrviloAgentChatConfig } from '@/types/agent';
 import { merge } from '@/utils/merge';
 
 import { type Store } from './action';
 
-const chatConfig = (s: Store): LobeAgentChatConfig =>
+const chatConfig = (s: Store): OrviloAgentChatConfig =>
   s.config.chatConfig || DEFAULT_AGENT_CHAT_CONFIG;
 
 const currentAgentConfig = (s: Store) => merge(DEFAULT_AGENT_CONFIG, s.config);

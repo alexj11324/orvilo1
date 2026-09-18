@@ -15,7 +15,7 @@ import { isDeviceCapablePlan } from '@/helpers/executionTarget';
  * `isDeviceCapablePlan`): the run-start id is derived strictly from the plan
  * (`aiAgent` sets it only for `kind === 'device'`), so an id appearing under
  * a `device-unrouted` plan can only come from a legitimate mid-run activation
- * — the model selecting a device with the `lobe-remote-device` tool, whose
+ * — the model selecting a device with the `orvilo-remote-device` tool, whose
  * pluginState `computeDeviceContext` folds back into `binding.device` at the
  * next step boundary while the plan still says unrouted. Tightening the gate to
  * `kind === 'device'` would swallow exactly that flow.

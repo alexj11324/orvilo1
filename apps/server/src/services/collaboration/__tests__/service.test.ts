@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { gatewayConnectUrl } from '../roomPublisher';
 import { CollaborationService } from '../service';
@@ -44,7 +44,7 @@ describe('CollaborationService.authorize', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('COLLABORATION_GATEWAY_PUBLIC_URL', '');
     vi.stubEnv('COLLABORATION_GATEWAY_URL', '');
-    const service = new CollaborationService({} as LobeChatDatabase, 'user-1', 'ws-1');
+    const service = new CollaborationService({} as OrviloDatabase, 'user-1', 'ws-1');
     await expect(service.authorize({ id: 'ws-1', scope: 'workspace' })).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
       message: 'collaboration gateway not configured',

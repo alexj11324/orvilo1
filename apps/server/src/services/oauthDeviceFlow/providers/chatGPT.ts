@@ -6,7 +6,7 @@ import { type DeviceCodeResponse, OAuthDeviceFlowService, type PollResult } from
 
 const DEVICE_CODE_TTL_SECONDS = 15 * 60;
 const POLLING_SAFETY_MARGIN_SECONDS = 3;
-const USER_AGENT = `LobeHub/${CURRENT_VERSION}`;
+const USER_AGENT = `Orvilo/${CURRENT_VERSION}`;
 
 interface ChatGPTDeviceState {
   deviceAuthId: string;

@@ -9,7 +9,7 @@ import {
 } from './listWorkspaceMembers';
 
 const alice = {
-  email: 'alice@lobehub.com',
+  email: 'alice@orvilo.aspectlylabs.com',
   id: 'usr_2',
   imAccounts: ['discord:@Neko(4521)', 'slack:U123'],
   name: 'Alice Chen',
@@ -38,7 +38,9 @@ describe('normalizeMemberQuery', () => {
     expect(normalizeMemberQuery('<@4521>')).toBe('4521');
     expect(normalizeMemberQuery('<@!4521>')).toBe('4521');
     expect(normalizeMemberQuery('  @Neko ')).toBe('neko');
-    expect(normalizeMemberQuery('alice@lobehub.com')).toBe('alice@lobehub.com');
+    expect(normalizeMemberQuery('alice@orvilo.aspectlylabs.com')).toBe(
+      'alice@orvilo.aspectlylabs.com',
+    );
     // Nothing usable left: blank, or a bare "@" / empty wrapper.
     expect(normalizeMemberQuery('')).toBeUndefined();
     expect(normalizeMemberQuery('@')).toBeUndefined();
@@ -51,7 +53,7 @@ describe('matchesMemberQuery', () => {
     expect(matchesMemberQuery(alice, 'usr_2')).toBe(true);
     expect(matchesMemberQuery(alice, 'chen')).toBe(true);
     expect(matchesMemberQuery(alice, 'alice')).toBe(true);
-    expect(matchesMemberQuery(alice, 'alice@lobehub.com')).toBe(true);
+    expect(matchesMemberQuery(alice, 'alice@orvilo.aspectlylabs.com')).toBe(true);
     expect(matchesMemberQuery(alice, 'neko')).toBe(true);
     expect(matchesMemberQuery(alice, '4521')).toBe(true);
     expect(matchesMemberQuery(alice, 'u123')).toBe(true);

@@ -95,7 +95,7 @@ export class LineApiClient {
   }
 
   /**
-   * Verify the access token + bot identity. Used both by the lobehub
+   * Verify the access token + bot identity. Used both by the orvilo
    * `validateCredentials` flow and by the platform client `start()` to
    * guard against a clearly-broken provider reaching the connected state.
    * @see https://developers.line.biz/en/reference/messaging-api/#get-bot-info

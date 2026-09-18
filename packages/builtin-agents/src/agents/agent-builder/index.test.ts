@@ -14,10 +14,10 @@ describe('AGENT_BUILDER runtime plugins', () => {
 
   it('strips conflicting agent-editing / orchestration tools', () => {
     const plugins = resolvePlugins([
-      'lobe-agent-management',
-      'lobe-group-management',
-      'lobe-group-agent-builder',
-      'lobe-agent',
+      'orvilo-agent-management',
+      'orvilo-group-management',
+      'orvilo-group-agent-builder',
+      'orvilo-agent',
     ]);
 
     expect(plugins).toEqual([AgentBuilderIdentifier]);
@@ -25,16 +25,16 @@ describe('AGENT_BUILDER runtime plugins', () => {
 
   it('keeps functional plugins (web browsing, Gmail/Composio, etc.)', () => {
     const plugins = resolvePlugins([
-      'lobe-web-browsing',
-      'lobe-image-generation',
+      'orvilo-web-browsing',
+      'orvilo-image-generation',
       'gmail',
-      'lobe-agent-management', // conflicting → removed
+      'orvilo-agent-management', // conflicting → removed
     ]);
 
     expect(plugins).toEqual([
       AgentBuilderIdentifier,
-      'lobe-web-browsing',
-      'lobe-image-generation',
+      'orvilo-web-browsing',
+      'orvilo-image-generation',
       'gmail',
     ]);
   });

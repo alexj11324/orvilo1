@@ -1,17 +1,17 @@
-# Install Acceptance for LobeHub
+# Install Acceptance for Orvilo
 
-Acceptance lets a coding agent verify a delivery and publish evidence for human review in LobeHub.
+Acceptance lets a coding agent verify a delivery and publish evidence for human review in Orvilo.
 Run the following setup from the root of the project the user wants to verify.
 
 ## 1. Install the CLI
 
-If `lh --version` is unavailable, install the LobeHub CLI:
+If `lh --version` is unavailable, install the Orvilo CLI:
 
 ```sh
-npm install -g @lobehub/cli
+npm install -g @orvilo/cli
 ```
 
-## 2. Connect to LobeHub
+## 2. Connect to Orvilo
 
 Check the current account with `lh whoami`. If authentication is needed, run:
 

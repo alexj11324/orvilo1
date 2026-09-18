@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import { goals } from '@/database/schemas/goal';
 import { goalNodes } from '@/database/schemas/goalGraph';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 export interface GoalTaskOwner {
   goalId: string;
@@ -18,7 +18,7 @@ export interface GoalTaskOwnershipAdapter {
  * importing or starting the Goal coordinator itself.
  */
 export const createGoalTaskOwnershipAdapter = (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
 ): GoalTaskOwnershipAdapter => ({
   findOwners: async (taskIds) => {

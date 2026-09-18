@@ -6,8 +6,6 @@ import {
   BusinessMobileRoutesWithMainLayout,
   BusinessMobileRoutesWithoutMainLayout,
 } from '@/business/client/BusinessMobileRoutes';
-import AppsSkeleton from '@/components/Skeleton/Apps';
-import { delayed } from '@/components/Skeleton/Delayed';
 import { acceptanceRouteMeta } from '@/features/Acceptance/routeMeta';
 import { mobileAgentSettingsRouteMeta } from '@/features/RouteMeta/mobileRouteMeta';
 import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
@@ -174,12 +172,10 @@ export const mobileRoutes: RouteObject[] = [
     children: [
       ...sharedMainAreaChildren,
 
-      // Apps page (personal-only — never mirrored under /:workspaceSlug)
+      // Retired: `/apps` folded into Settings > About (kept as a redirect so
+      // legacy deep-links still land somewhere honest).
       {
-        element: dynamicElement(() => import('@/routes/(main)/apps'), 'Mobile > Apps', {
-          fallback: delayed(<AppsSkeleton />),
-        }),
-        errorElement: <ErrorBoundary />,
+        element: redirectElement('/settings/about'),
         path: 'apps',
       },
 

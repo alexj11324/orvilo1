@@ -86,7 +86,7 @@ const isInternalHost = (url: URL, currentOrigin?: string) => {
  */
 export const isBareLinkLabel = (label: string, href: string) => label === href;
 
-/** Parse a LobeHub route into a semantic entity reference. */
+/** Parse a Orvilo route into a semantic entity reference. */
 export const parseInternalLink = (
   href: string | undefined,
   currentOrigin?: string,

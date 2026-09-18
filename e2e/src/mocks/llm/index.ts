@@ -34,7 +34,7 @@ interface LLMStreamPlan {
   streamDelay: number;
 }
 
-const LLM_MOCK_BINDING = '__lobehubE2ELLMMock';
+const LLM_MOCK_BINDING = '__orviloE2ELLMMock';
 
 // ============================================
 // Default Configuration
@@ -54,7 +54,7 @@ const defaultConfig: LLMMockConfig = {
 
 /**
  * Build SSE formatted response chunks
- * Follows LobeChat's actual streaming format
+ * Follows Orvilo's actual streaming format
  */
 export function buildSSEChunks(content: string, chunkSize: number): string[] {
   const chunks: string[] = [];
@@ -193,7 +193,7 @@ export class LLMMockManager {
     await page.addInitScript({
       content: `
         (() => {
-          if (window.__lobehubE2ELLMFetchInstalled) return;
+          if (window.__orviloE2ELLMFetchInstalled) return;
 
           const bindingName = ${JSON.stringify(LLM_MOCK_BINDING)};
           const originalFetch = window.fetch.bind(window);
@@ -275,7 +275,7 @@ export class LLMMockManager {
             });
           };
 
-          window.__lobehubE2ELLMFetchInstalled = true;
+          window.__orviloE2ELLMFetchInstalled = true;
         })();
       `,
     });

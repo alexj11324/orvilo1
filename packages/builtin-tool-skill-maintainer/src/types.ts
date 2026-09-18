@@ -1,5 +1,5 @@
 /** Stable identifier for the system-only skill maintainer builtin tool. */
-export const SkillMaintainerIdentifier = 'lobe-skill-maintainer';
+export const SkillMaintainerIdentifier = 'orvilo-skill-maintainer';
 
 /** API names exposed by the system-only skill maintainer builtin tool. */
 export const SkillMaintainerApiName = {

@@ -186,8 +186,8 @@ describe('buildServerCallLlmContext - workspace context', () => {
   it('injects the app origin and workspace slug when the run is workspace-scoped', async () => {
     workspaceFindByIdMock.mockResolvedValue({
       id: 'workspace-1',
-      name: 'LobeHub Team',
-      slug: 'lobehub',
+      name: 'Orvilo Team',
+      slug: 'orvilo',
     });
 
     await buildServerCallLlmContext({
@@ -204,7 +204,7 @@ describe('buildServerCallLlmContext - workspace context', () => {
       expect.objectContaining({
         workspaceContext: {
           appUrl: 'https://orvilo.aspectlylabs.com',
-          workspace: { slug: 'lobehub' },
+          workspace: { slug: 'orvilo' },
         },
       }),
     );

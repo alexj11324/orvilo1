@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useMentionStore } from '@/store/mention';
 import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
-import { type LobeGroupSession } from '@/types/session';
+import { type OrviloGroupSession } from '@/types/session';
 
 import { ChatInputAction } from '../components/ChatInputAction';
 
@@ -21,7 +21,7 @@ const Mention = memo(() => {
   };
 
   const useMentionItems = () => {
-    const currentSession = useSessionStore(sessionSelectors.currentSession) as LobeGroupSession;
+    const currentSession = useSessionStore(sessionSelectors.currentSession) as OrviloGroupSession;
 
     const items: ItemType[] = useMemo(() => {
       const memberItems: ItemType[] = [];

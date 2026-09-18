@@ -34,7 +34,7 @@ import { alias, type AnyPgColumn, unionAll } from 'drizzle-orm/pg-core';
 import { DocumentModel } from '../../models/document';
 import { FileModel } from '../../models/file';
 import { DOCUMENT_FOLDER_TYPE, documents, files, knowledgeBaseFiles, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { buildDocumentCategoryFilter, buildFileCategoryFilter } from '../../utils/fileTypeCategory';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
@@ -306,12 +306,12 @@ const toKnowledgeItem = (row: KnowledgeRow): KnowledgeItem => ({
  */
 export class KnowledgeRepo {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private fileModel: FileModel;
   private documentModel: DocumentModel;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;

@@ -2,13 +2,13 @@
 import { ModelProvider } from 'model-bank';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeSambaNovaAI } from './index';
+import { OrviloSambaNovaAI } from './index';
 
 const provider = ModelProvider.SambaNova;
 const defaultBaseURL = 'https://api.sambanova.ai/v1';
 
 testProvider({
-  Runtime: LobeSambaNovaAI,
+  Runtime: OrviloSambaNovaAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_SAMBANOVA_CHAT_COMPLETION',

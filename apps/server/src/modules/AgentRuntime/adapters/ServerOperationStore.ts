@@ -1,7 +1,7 @@
 import type { AgentState, OperationStore } from '@orvilo/agent-runtime';
 
 import { TopicModel } from '@/database/models/topic';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 
 /**
  * Server {@link OperationStore} adapter. `clearRunningMark` drops the topic's
@@ -11,7 +11,7 @@ import { type LobeChatDatabase } from '@/database/type';
  */
 export class ServerOperationStore implements OperationStore {
   constructor(
-    private readonly serverDB: LobeChatDatabase,
+    private readonly serverDB: OrviloDatabase,
     private readonly userId: string | undefined,
     private readonly workspaceId: string | undefined,
     private readonly topicId: string | undefined,

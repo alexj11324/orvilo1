@@ -6,10 +6,10 @@ import { testProvider } from '../../providerTestUtils';
 import { ContextExceededPreFlightError } from '../../utils/resolveSafeMaxTokens';
 import {
   anthropicParams,
-  LobeMinimaxAI,
-  LobeMinimaxAnthropicAI,
-  LobeMinimaxOpenAI,
   openAIParams,
+  OrviloMinimaxAI,
+  OrviloMinimaxAnthropicAI,
+  OrviloMinimaxOpenAI,
 } from './index';
 
 const loadModelsMock = vi.hoisted(() =>
@@ -35,7 +35,7 @@ const defaultOpenAIBaseURL = 'https://api.minimaxi.com/v1';
 const anthropicBaseURL = 'https://api.minimax.io/anthropic';
 
 testProvider({
-  Runtime: LobeMinimaxOpenAI,
+  Runtime: OrviloMinimaxOpenAI,
   provider,
   defaultBaseURL: defaultOpenAIBaseURL,
   chatDebugEnv: 'DEBUG_MINIMAX_CHAT_COMPLETION',
@@ -48,7 +48,7 @@ testProvider({
 const handlePayload = openAIParams.chatCompletion!.handlePayload!;
 const handleAnthropicPayload = anthropicParams.chatCompletion!.handlePayload!;
 
-describe('LobeMinimaxAI', () => {
+describe('OrviloMinimaxAI', () => {
   const createRuntime = ({
     baseURL,
     sdkType,
@@ -56,7 +56,7 @@ describe('LobeMinimaxAI', () => {
     baseURL?: string;
     sdkType?: string;
   } = {}) =>
-    new LobeMinimaxAI({
+    new OrviloMinimaxAI({
       apiKey: 'test',
       ...(baseURL ? { baseURL } : {}),
       ...(sdkType ? { sdkType } : {}),
@@ -85,7 +85,7 @@ describe('LobeMinimaxAI', () => {
 
       expect(router.apiType).toBe('openai');
       expect(router.id).toBe('openai-compatible');
-      expect(router.runtime).toBe(LobeMinimaxOpenAI);
+      expect(router.runtime).toBe(OrviloMinimaxOpenAI);
     });
 
     it('should route to OpenAI format when baseURL ends with /v1', async () => {
@@ -93,7 +93,7 @@ describe('LobeMinimaxAI', () => {
 
       expect(router.apiType).toBe('openai');
       expect(router.id).toBe('openai-compatible');
-      expect(router.runtime).toBe(LobeMinimaxOpenAI);
+      expect(router.runtime).toBe(OrviloMinimaxOpenAI);
     });
 
     it('should route to Anthropic format when baseURL ends with /anthropic', async () => {
@@ -101,7 +101,7 @@ describe('LobeMinimaxAI', () => {
 
       expect(router.apiType).toBe('anthropic');
       expect(router.id).toBe('anthropic-compatible');
-      expect(router.runtime).toBe(LobeMinimaxAnthropicAI);
+      expect(router.runtime).toBe(OrviloMinimaxAnthropicAI);
     });
 
     it('should route to Anthropic format when sdkType is anthropic', async () => {
@@ -112,7 +112,7 @@ describe('LobeMinimaxAI', () => {
 
       expect(router.apiType).toBe('anthropic');
       expect(router.id).toBe('anthropic-compatible');
-      expect(router.runtime).toBe(LobeMinimaxAnthropicAI);
+      expect(router.runtime).toBe(OrviloMinimaxAnthropicAI);
     });
 
     it('should normalize /v1/messages before creating an Anthropic SDK runtime', async () => {
@@ -120,10 +120,10 @@ describe('LobeMinimaxAI', () => {
         'https://api.minimax.io/anthropic/v1/messages',
         'anthropic',
       );
-      const runtime = new LobeMinimaxAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
+      const runtime = new OrviloMinimaxAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
 
       expect(option.baseURL).toBe(anthropicBaseURL);
-      expect(runtime).toBeInstanceOf(LobeMinimaxAnthropicAI);
+      expect(runtime).toBeInstanceOf(OrviloMinimaxAnthropicAI);
       expect((runtime as any).baseURL).toBe(anthropicBaseURL);
     });
 
@@ -132,7 +132,7 @@ describe('LobeMinimaxAI', () => {
 
       expect(router.apiType).toBe('openai');
       expect(router.id).toBe('openai-compatible');
-      expect(router.runtime).toBe(LobeMinimaxOpenAI);
+      expect(router.runtime).toBe(OrviloMinimaxOpenAI);
     });
 
     it('should reject unsupported sdkType values', async () => {
@@ -176,11 +176,11 @@ describe('LobeMinimaxAI', () => {
     it('should pass modelIdMapping to the OpenAI-compatible runtime', async () => {
       const modelIdMapping = { 'minimax-public': 'MiniMax-M3' };
       const chatSpy = vi
-        .spyOn(LobeMinimaxOpenAI.prototype as any, 'chat')
+        .spyOn(OrviloMinimaxOpenAI.prototype as any, 'chat')
         .mockResolvedValue(new Response());
 
       try {
-        const runtime = new LobeMinimaxAI({
+        const runtime = new OrviloMinimaxAI({
           apiKey: 'test',
           modelIdMapping,
           sdkType: 'openai',
@@ -202,11 +202,11 @@ describe('LobeMinimaxAI', () => {
     it('should pass modelIdMapping to the Anthropic-compatible runtime', async () => {
       const modelIdMapping = { 'minimax-public': 'MiniMax-M3' };
       const chatSpy = vi
-        .spyOn(LobeMinimaxAnthropicAI.prototype as any, 'chat')
+        .spyOn(OrviloMinimaxAnthropicAI.prototype as any, 'chat')
         .mockResolvedValue(new Response());
 
       try {
-        const runtime = new LobeMinimaxAI({
+        const runtime = new OrviloMinimaxAI({
           apiKey: 'test',
           modelIdMapping,
           sdkType: 'anthropic',
@@ -227,18 +227,18 @@ describe('LobeMinimaxAI', () => {
   });
 });
 
-describe('LobeMinimaxAnthropicAI', () => {
+describe('OrviloMinimaxAnthropicAI', () => {
   describe('init', () => {
     it('should correctly initialize with an API key', () => {
-      const runtime = new LobeMinimaxAnthropicAI({ apiKey: 'test_api_key' });
+      const runtime = new OrviloMinimaxAnthropicAI({ apiKey: 'test_api_key' });
 
-      expect(runtime).toBeInstanceOf(LobeMinimaxAnthropicAI);
+      expect(runtime).toBeInstanceOf(OrviloMinimaxAnthropicAI);
       expect((runtime as any).baseURL).toEqual(anthropicBaseURL);
     });
   });
 
   it('should derive Anthropic params from logical model while sending mapped model id', async () => {
-    const runtime = new LobeMinimaxAnthropicAI({
+    const runtime = new OrviloMinimaxAnthropicAI({
       apiKey: 'test',
       modelIdMapping: { 'MiniMax-M3': 'upstream-minimax-m3' },
     });
@@ -263,9 +263,9 @@ describe('LobeMinimaxAnthropicAI', () => {
   });
 });
 
-describe('LobeMinimaxOpenAI', () => {
+describe('OrviloMinimaxOpenAI', () => {
   it('should keep MiniMax-M3 payload handling on logical model while sending mapped model id', async () => {
-    const runtime = new LobeMinimaxOpenAI({
+    const runtime = new OrviloMinimaxOpenAI({
       apiKey: 'test',
       modelIdMapping: { 'MiniMax-M3': 'upstream-minimax-m3' },
     });
@@ -287,7 +287,7 @@ describe('LobeMinimaxOpenAI', () => {
   });
 });
 
-describe('LobeMinimaxAI - handlePayload', () => {
+describe('OrviloMinimaxAI - handlePayload', () => {
   it('respects an explicitly provided max_tokens', () => {
     const result = handlePayload({
       max_tokens: 4096,
@@ -499,7 +499,7 @@ describe('LobeMinimaxAI - handlePayload', () => {
   });
 });
 
-describe('LobeMinimaxAnthropicAI - handlePayload', () => {
+describe('OrviloMinimaxAnthropicAI - handlePayload', () => {
   it('normalizes MiniMax sampling params consistently with the OpenAI runtime', async () => {
     const result = await handleAnthropicPayload(
       {

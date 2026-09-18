@@ -6,11 +6,11 @@ import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
 import type { ApiKeyItem, NewApiKeyItem } from '../schemas';
 import { apiKeys, users } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export class ApiKeyModel {
-  static findByKey = async (db: LobeChatDatabase, key: string) => {
+  static findByKey = async (db: OrviloDatabase, key: string) => {
     if (!validateApiKeyFormat(key)) {
       return null;
     }
@@ -21,13 +21,13 @@ export class ApiKeyModel {
   };
 
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
   private canManageAll: boolean;
   private gateKeeperPromise: Promise<KeyVaultsGateKeeper> | null = null;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     options?: { canManageAll?: boolean },

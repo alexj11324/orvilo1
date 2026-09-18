@@ -17,7 +17,7 @@ import {
 import { llmGenerationTracing } from '@/database/schemas/llmGenerationTracing';
 import { getServerDB } from '@/database/server';
 
-const log = debug('lobe-server:llm-generation-tracing:service');
+const log = debug('orvilo-server:llm-generation-tracing:service');
 
 const INPUT_HINT_MAX = 200;
 

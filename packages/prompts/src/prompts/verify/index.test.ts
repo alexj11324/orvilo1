@@ -30,7 +30,9 @@ describe('buildVerifierPrompt', () => {
     expect(prompt).toContain(
       'agentDocumentId: agent-doc-manuscript (backing documentId: docs-manuscript)',
     );
-    expect(prompt).toContain('Use `lobe-agent-documents.readDocument` with the `agentDocumentId`');
+    expect(prompt).toContain(
+      'Use `orvilo-agent-documents.readDocument` with the `agentDocumentId`',
+    );
   });
 
   it('omits the task document section when no documents are available', () => {

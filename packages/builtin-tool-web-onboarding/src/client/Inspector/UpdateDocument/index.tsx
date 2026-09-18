@@ -25,7 +25,7 @@ export const UpdateDocumentInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-web-onboarding.apiName.updateDocument')}
+          {t('builtins.orvilo-web-onboarding.apiName.updateDocument')}
         </span>
       </div>
     );
@@ -34,16 +34,16 @@ export const UpdateDocumentInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-web-onboarding.apiName.updateDocument')}
+        {t('builtins.orvilo-web-onboarding.apiName.updateDocument')}
       </span>
       {type && (
         <span className={styles.chip}>
-          {t(`builtins.lobe-web-onboarding.docType.${type}` as const)}
+          {t(`builtins.orvilo-web-onboarding.docType.${type}` as const)}
         </span>
       )}
       {hunkCount > 0 && (
         <span className={styles.meta}>
-          {t('builtins.lobe-web-onboarding.inspector.hunkCount', { count: hunkCount })}
+          {t('builtins.orvilo-web-onboarding.inspector.hunkCount', { count: hunkCount })}
         </span>
       )}
     </div>

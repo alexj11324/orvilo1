@@ -114,11 +114,11 @@ function operationCaller(operationId: string, overrides: Record<string, unknown>
   return goalRouter.createCaller({
     oidcAuth: {
       payload: {},
-      aud: 'urn:lobehub:hetero-operation',
+      aud: 'urn:orvilo:hetero-operation',
       capabilities: ['hetero:ingest'],
       exp: Math.floor(Date.now() / 1000) + 3600,
       iat: Math.floor(Date.now() / 1000),
-      iss: 'urn:lobehub:internal',
+      iss: 'urn:orvilo:internal',
       jti: 'plan-test',
       operation_id: operationId,
       purpose: 'hetero-operation',

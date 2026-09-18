@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 
 import type { CollaborationRoom } from '@orvilo/types';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import {
   buildWorkspaceWhere,
@@ -26,7 +26,7 @@ const NOT_FOUND = () => new TRPCError({ code: 'NOT_FOUND', message: 'Room not fo
  *   `buildWorkspaceWhere` semantics (public or creator-private).
  */
 export const assertRoomAccess = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   ctx: { userId: string; workspaceId: string },
   room: CollaborationRoom,
 ): Promise<void> => {

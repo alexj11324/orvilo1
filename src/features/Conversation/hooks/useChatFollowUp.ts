@@ -1,4 +1,4 @@
-import { type LobeAgentChatConfig } from '@orvilo/types';
+import { type OrviloAgentChatConfig } from '@orvilo/types';
 import { useMemo } from 'react';
 
 import { useFollowUpActionStore } from '@/store/followUpAction';
@@ -8,7 +8,7 @@ import { systemAgentSelectors } from '@/store/user/slices/settings/selectors/sys
 import { type ConversationHooks } from '../types';
 
 interface UseChatFollowUpParams {
-  agentChatConfig: LobeAgentChatConfig | undefined;
+  agentChatConfig: OrviloAgentChatConfig | undefined;
   conversationKey: string | undefined;
   threadId?: string;
   topicId: string | undefined;

@@ -44,7 +44,7 @@ export const useAskCopilotItem = (
   return useMemo(() => {
     if (!editor || !composerTarget.writable) return [];
 
-    const label = t('cmdk.askLobeAI');
+    const label = t('cmdk.askOrviloAI');
 
     return [
       {

@@ -373,12 +373,12 @@ export const openAIParams = {
   provider: ModelProvider.Minimax,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeMinimaxOpenAI = createOpenAICompatibleRuntime(openAIParams);
+export const OrviloMinimaxOpenAI = createOpenAICompatibleRuntime(openAIParams);
 
-type MiniMaxOpenAIRuntimeOptions = ConstructorParameters<typeof LobeMinimaxOpenAI>[0];
+type MiniMaxOpenAIRuntimeOptions = ConstructorParameters<typeof OrviloMinimaxOpenAI>[0];
 
 const fetchMiniMaxModelsWithOpenAI = ({ options }: { options?: MiniMaxOpenAIRuntimeOptions }) => {
-  const runtime = new LobeMinimaxOpenAI({
+  const runtime = new OrviloMinimaxOpenAI({
     ...options,
     baseURL: normalizeMiniMaxOpenAIModelBaseURL(options?.baseURL),
   });
@@ -398,7 +398,7 @@ export const anthropicParams = createAnthropicCompatibleParams({
   provider: ModelProvider.Minimax,
 });
 
-export const LobeMinimaxAnthropicAI = createAnthropicCompatibleRuntime(anthropicParams);
+export const OrviloMinimaxAnthropicAI = createAnthropicCompatibleRuntime(anthropicParams);
 
 const createAnthropicRouter = ({
   baseURL,
@@ -414,14 +414,14 @@ const createAnthropicRouter = ({
     ...(baseURL ? { baseURL } : {}),
     remark: 'anthropic-compatible',
   },
-  runtime: LobeMinimaxAnthropicAI,
+  runtime: OrviloMinimaxAnthropicAI,
 });
 
 const createOpenAIRouter = () => ({
   apiType: 'openai' as const,
   id: 'openai-compatible',
   options: { remark: 'openai-compatible' },
-  runtime: LobeMinimaxOpenAI,
+  runtime: OrviloMinimaxOpenAI,
 });
 
 export const params: CreateRouterRuntimeOptions = {
@@ -449,4 +449,4 @@ export const params: CreateRouterRuntimeOptions = {
   },
 };
 
-export const LobeMinimaxAI = createRouterRuntime(params);
+export const OrviloMinimaxAI = createRouterRuntime(params);

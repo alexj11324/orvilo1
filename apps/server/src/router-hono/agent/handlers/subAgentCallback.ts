@@ -5,7 +5,7 @@ import { getServerDB } from '@/database/core/db-adaptor';
 import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime';
 import { AiAgentService } from '@/server/services/aiAgent';
 
-const log = debug('lobe-server:agent:subagent-callback');
+const log = debug('orvilo-server:agent:subagent-callback');
 
 /**
  * Sub-agent completion bridge webhook (queue mode).

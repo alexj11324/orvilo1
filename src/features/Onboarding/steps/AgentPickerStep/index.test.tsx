@@ -64,7 +64,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('../../components/LobeMessage', () => ({
+vi.mock('../../components/OrviloMessage', () => ({
   default: ({ sentences }: { sentences: string[] }) => <div>{sentences.join(' / ')}</div>,
 }));
 

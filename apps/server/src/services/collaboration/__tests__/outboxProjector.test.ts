@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { CollaborationOutboxProjector } from '../outboxProjector';
 import type { OutboxEventRow } from '../projection';
@@ -31,7 +31,7 @@ const row = (id: string): OutboxEventRow => ({
 });
 
 const projector = (publish = vi.fn().mockResolvedValue(undefined)) =>
-  new CollaborationOutboxProjector({} as LobeChatDatabase, {
+  new CollaborationOutboxProjector({} as OrviloDatabase, {
     publish,
   } as unknown as RoomPublisher);
 

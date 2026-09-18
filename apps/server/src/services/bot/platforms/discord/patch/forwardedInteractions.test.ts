@@ -313,7 +313,7 @@ describe('patchDiscordForwardedInteractions — real @chat-adapter/discord', () 
         }),
       },
       state: createMemoryState(),
-      userName: 'lobehub',
+      userName: 'orvilo',
     } as any);
 
     patchDiscordForwardedInteractions(chatBot);
@@ -362,7 +362,7 @@ describe('patchDiscordForwardedInteractions — real @chat-adapter/discord', () 
 
     const chatBot = createPatchedBot();
     chatBot.onSlashCommand('/start', async (event) => {
-      await event.channel.post('Your account is already linked to LobeHub.');
+      await event.channel.post('Your account is already linked to Orvilo.');
     });
     await chatBot.initialize();
 

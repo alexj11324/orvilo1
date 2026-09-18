@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { BaseService } from './base.service';
 
@@ -110,7 +110,7 @@ describe('BaseService workspace helpers', () => {
   });
 
   it('builds workspace where conditions from the current service context', () => {
-    const service = new TestService({} as LobeChatDatabase, 'user-1', 'workspace-1');
+    const service = new TestService({} as OrviloDatabase, 'user-1', 'workspace-1');
 
     expect(service.workspaceWhere(cols)).toBe('workspace-where');
     expect(mockBuildWorkspaceWhere).toHaveBeenCalledWith(
@@ -120,7 +120,7 @@ describe('BaseService workspace helpers', () => {
   });
 
   it('builds insert payloads with workspace ownership fields', () => {
-    const service = new TestService({} as LobeChatDatabase, 'user-1', 'workspace-1');
+    const service = new TestService({} as OrviloDatabase, 'user-1', 'workspace-1');
 
     expect(service.workspacePayload({ name: 'Provider' })).toEqual({
       name: 'Provider',
@@ -134,7 +134,7 @@ describe('BaseService workspace helpers', () => {
   });
 
   it('keeps permission checks scoped to the active workspace owner context', () => {
-    const service = new TestService({} as LobeChatDatabase, 'user-1', 'workspace-1');
+    const service = new TestService({} as OrviloDatabase, 'user-1', 'workspace-1');
 
     expect(service.permissionWhere(cols, { userId: 'other-user' })).toBe('workspace-where');
     expect(mockBuildWorkspaceWhere).toHaveBeenCalledWith(
@@ -144,21 +144,21 @@ describe('BaseService workspace helpers', () => {
   });
 
   it('uses the requested owner condition in personal context', () => {
-    const service = new TestService({} as LobeChatDatabase, 'user-1');
+    const service = new TestService({} as OrviloDatabase, 'user-1');
 
     expect(service.permissionWhere(cols, { userId: 'other-user' })).toBe('workspace-where');
     expect(mockBuildWorkspaceWhere).toHaveBeenCalledWith({ userId: 'other-user' }, cols);
   });
 
   it('does not add a permission where clause in personal context without an owner condition', () => {
-    const service = new TestService({} as LobeChatDatabase, 'user-1');
+    const service = new TestService({} as OrviloDatabase, 'user-1');
 
     expect(service.permissionWhere(cols)).toBeUndefined();
     expect(mockBuildWorkspaceWhere).not.toHaveBeenCalled();
   });
 
   it('passes workspace context into global and owner RBAC permission checks', async () => {
-    const service = new TestService({} as LobeChatDatabase, 'user-1', 'workspace-1');
+    const service = new TestService({} as OrviloDatabase, 'user-1', 'workspace-1');
 
     await expect(service.globalPermission('agents:create' as any)).resolves.toBe(true);
     await expect(service.ownerPermission('agents:update' as any)).resolves.toBe(true);
@@ -178,7 +178,7 @@ describe('BaseService workspace helpers', () => {
   it('scopes target provider ownership lookup to the active workspace', async () => {
     const findFirst = vi.fn().mockResolvedValue({ userId: 'user-1' });
     const service = new TestService(
-      { query: { aiProviders: { findFirst } } } as unknown as LobeChatDatabase,
+      { query: { aiProviders: { findFirst } } } as unknown as OrviloDatabase,
       'user-1',
       'workspace-1',
     );
@@ -198,7 +198,7 @@ describe('BaseService workspace helpers', () => {
   it('scopes target model ownership lookup to the active workspace', async () => {
     const findFirst = vi.fn().mockResolvedValue({ userId: 'user-1' });
     const service = new TestService(
-      { query: { aiModels: { findFirst } } } as unknown as LobeChatDatabase,
+      { query: { aiModels: { findFirst } } } as unknown as OrviloDatabase,
       'user-1',
       'workspace-1',
     );
@@ -237,7 +237,7 @@ describe('BaseService.resolveOperationPermission ownership resolution', () => {
               ),
           },
         },
-      } as unknown as LobeChatDatabase,
+      } as unknown as OrviloDatabase,
       'user-1',
     );
 

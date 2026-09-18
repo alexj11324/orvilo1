@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { TRPCError } from '@trpc/server';
 
 import { ProjectMemberModel } from '@/database/models/projectMember';
@@ -28,7 +28,7 @@ export interface ProjectMemberSummary {
 }
 
 const loadWorkspaceProject = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   projectId: string,
 ) => {
@@ -41,7 +41,7 @@ const loadWorkspaceProject = async (
 };
 
 const assertManageRights = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { actorUserId: string; projectId: string; workspaceRole: WorkspaceRoleName | null },
 ) => {
   const callerProjectRole = await new ProjectMemberModel(db, params.actorUserId).getRole(
@@ -62,7 +62,7 @@ const assertManageRights = async (
  * workspace viewer can never hold more than commenter.
  */
 const loadActiveTarget = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { targetUserId: string; workspaceId: string },
 ) => {
   const target = await new WorkspaceMemberModel(db, params.targetUserId).getMember(
@@ -79,7 +79,7 @@ const loadActiveTarget = async (
 };
 
 export const listProjectMembers = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { actorUserId: string; projectId: string; workspaceId: string },
 ): Promise<ProjectMemberSummary[]> => {
   const project = await loadWorkspaceProject(db, params.workspaceId, params.projectId);
@@ -123,7 +123,7 @@ export const listProjectMembers = async (
 };
 
 export const addProjectMember = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: {
     actorUserId: string;
     ipAddress?: string;
@@ -174,7 +174,7 @@ export const addProjectMember = async (
 };
 
 export const changeProjectMemberRole = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: {
     actorUserId: string;
     ipAddress?: string;
@@ -229,7 +229,7 @@ export const changeProjectMemberRole = async (
 };
 
 export const removeProjectMember = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: {
     actorUserId: string;
     ipAddress?: string;

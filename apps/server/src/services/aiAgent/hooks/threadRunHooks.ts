@@ -15,7 +15,7 @@ import type {
 
 import { formatErrorForMetadata } from '../helpers/groupContext';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 export function calculateTotalTokens(usage?: AgentState['usage']): number | undefined {
   if (!usage) return undefined;

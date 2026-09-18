@@ -10,7 +10,7 @@ import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { TaskTopicItem } from '@/database/schemas/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import {
   findBranchPr,
@@ -54,7 +54,7 @@ export type IntegrationOutcome = 'settled' | 'hold' | 'blocked' | 'stale';
  * blocks for human attention.
  */
 export class TaskIntegrationService {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private taskModel: TaskModel;
   private taskDispatchModel: TaskDispatchModel;
   private taskTopicModel: TaskTopicModel;
@@ -62,7 +62,7 @@ export class TaskIntegrationService {
   private workspaceId?: string;
   private workspaceService: TaskWorkspaceService;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

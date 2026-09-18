@@ -18,7 +18,7 @@ export const jina: CrawlImpl<{ apiKey?: string }> = async (url, params) => {
           headers: {
             'Accept': 'application/json',
             'Authorization': token ? `Bearer ${token}` : '',
-            'x-send-from': 'LobeChat Community',
+            'x-send-from': 'Orvilo Community',
           },
           signal,
         }),

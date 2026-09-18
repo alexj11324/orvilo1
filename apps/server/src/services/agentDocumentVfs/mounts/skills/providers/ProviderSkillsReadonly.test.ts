@@ -24,7 +24,7 @@ describe('readonly skill providers', () => {
 
       const result = await provider.list({
         agentId: 'agent-1',
-        path: './lobe/skills/builtin/skills',
+        path: './orvilo/skills/builtin/skills',
         resolvedPath: {
           namespace: 'builtin',
           relativePath: '',
@@ -35,7 +35,7 @@ describe('readonly skill providers', () => {
         result.some(
           (node) =>
             node.name === builtinSkill.identifier &&
-            node.path === `./lobe/skills/builtin/skills/${builtinSkill.identifier}` &&
+            node.path === `./orvilo/skills/builtin/skills/${builtinSkill.identifier}` &&
             node.type === 'directory',
         ),
       ).toBe(true);
@@ -46,7 +46,7 @@ describe('readonly skill providers', () => {
 
       const result = await provider.get({
         agentId: 'agent-1',
-        path: `./lobe/skills/builtin/skills/${builtinSkill.identifier}/SKILL.md`,
+        path: `./orvilo/skills/builtin/skills/${builtinSkill.identifier}/SKILL.md`,
         resolvedPath: {
           filePath: 'SKILL.md',
           namespace: 'builtin',
@@ -55,7 +55,9 @@ describe('readonly skill providers', () => {
         },
       });
 
-      expect(result.path).toBe(`./lobe/skills/builtin/skills/${builtinSkill.identifier}/SKILL.md`);
+      expect(result.path).toBe(
+        `./orvilo/skills/builtin/skills/${builtinSkill.identifier}/SKILL.md`,
+      );
       expect(result.content).toBe(builtinSkill.content);
       expect(result.readOnly).toBe(true);
       expect(result.size).toBe(builtinSkill.content.length);
@@ -70,7 +72,7 @@ describe('readonly skill providers', () => {
 
       const result = await provider.list({
         agentId: 'agent-1',
-        path: `./lobe/skills/builtin/skills/${builtinSkillWithResources!.identifier}`,
+        path: `./orvilo/skills/builtin/skills/${builtinSkillWithResources!.identifier}`,
         resolvedPath: {
           namespace: 'builtin',
           relativePath: builtinSkillWithResources!.identifier,
@@ -82,13 +84,13 @@ describe('readonly skill providers', () => {
         expect.arrayContaining([
           expect.objectContaining({
             name: 'SKILL.md',
-            path: `./lobe/skills/builtin/skills/${builtinSkillWithResources!.identifier}/SKILL.md`,
+            path: `./orvilo/skills/builtin/skills/${builtinSkillWithResources!.identifier}/SKILL.md`,
             size: builtinSkillWithResources!.content.length,
             type: 'file',
           }),
           expect.objectContaining({
             name: topLevelSegment,
-            path: `./lobe/skills/builtin/skills/${builtinSkillWithResources!.identifier}/${topLevelSegment}`,
+            path: `./orvilo/skills/builtin/skills/${builtinSkillWithResources!.identifier}/${topLevelSegment}`,
           }),
         ]),
       );
@@ -120,7 +122,7 @@ describe('readonly skill providers', () => {
       });
       const result = await provider.list({
         agentId: 'agent-1',
-        path: './lobe/skills/installed/all/skills',
+        path: './orvilo/skills/installed/all/skills',
         resolvedPath: {
           namespace: 'installed-all',
           relativePath: '',
@@ -131,7 +133,7 @@ describe('readonly skill providers', () => {
         expect.objectContaining({
           name: 'skill.one',
           namespace: 'installed-all',
-          path: './lobe/skills/installed/all/skills/skill.one',
+          path: './orvilo/skills/installed/all/skills/skill.one',
           type: 'directory',
         }),
       ]);
@@ -165,7 +167,7 @@ describe('readonly skill providers', () => {
       });
       const result = await provider.get({
         agentId: 'agent-1',
-        path: './lobe/skills/installed/all/skills/skill.one/docs/guide.md',
+        path: './orvilo/skills/installed/all/skills/skill.one/docs/guide.md',
         resolvedPath: {
           filePath: 'docs/guide.md',
           namespace: 'installed-all',
@@ -175,7 +177,7 @@ describe('readonly skill providers', () => {
       });
 
       expect(result.content).toBe('# Guide');
-      expect(result.path).toBe('./lobe/skills/installed/all/skills/skill.one/docs/guide.md');
+      expect(result.path).toBe('./orvilo/skills/installed/all/skills/skill.one/docs/guide.md');
       expect(skillResourceService.readResource).toHaveBeenCalledWith(
         {
           'docs/guide.md': {
@@ -207,7 +209,7 @@ describe('readonly skill providers', () => {
       });
       const result = await provider.get({
         agentId: 'agent-1',
-        path: './lobe/skills/installed/all/skills/skill.one/docs',
+        path: './orvilo/skills/installed/all/skills/skill.one/docs',
         resolvedPath: {
           filePath: 'docs',
           namespace: 'installed-all',
@@ -219,7 +221,7 @@ describe('readonly skill providers', () => {
       expect(result).toEqual(
         expect.objectContaining({
           name: 'docs',
-          path: './lobe/skills/installed/all/skills/skill.one/docs',
+          path: './orvilo/skills/installed/all/skills/skill.one/docs',
           type: 'directory',
         }),
       );
@@ -262,7 +264,7 @@ describe('readonly skill providers', () => {
       });
       const result = await provider.list({
         agentId: 'agent-1',
-        path: './lobe/skills/installed/active/skills',
+        path: './orvilo/skills/installed/active/skills',
         resolvedPath: {
           namespace: 'installed-active',
           relativePath: '',
@@ -273,7 +275,7 @@ describe('readonly skill providers', () => {
         expect.objectContaining({
           name: 'skill.one',
           namespace: 'installed-active',
-          path: './lobe/skills/installed/active/skills/skill.one',
+          path: './orvilo/skills/installed/active/skills/skill.one',
           type: 'directory',
         }),
       ]);
@@ -297,7 +299,7 @@ describe('readonly skill providers', () => {
       });
       const result = await provider.get({
         agentId: 'agent-1',
-        path: './lobe/skills/installed/active/skills/skill.one/SKILL.md',
+        path: './orvilo/skills/installed/active/skills/skill.one/SKILL.md',
         resolvedPath: {
           filePath: 'SKILL.md',
           namespace: 'installed-active',
@@ -334,7 +336,7 @@ describe('readonly skill providers', () => {
       });
       const result = await provider.get({
         agentId: 'agent-1',
-        path: './lobe/skills/installed/active/skills/skill.one/docs',
+        path: './orvilo/skills/installed/active/skills/skill.one/docs',
         resolvedPath: {
           filePath: 'docs',
           namespace: 'installed-active',
@@ -346,7 +348,7 @@ describe('readonly skill providers', () => {
       expect(result).toEqual(
         expect.objectContaining({
           name: 'docs',
-          path: './lobe/skills/installed/active/skills/skill.one/docs',
+          path: './orvilo/skills/installed/active/skills/skill.one/docs',
           type: 'directory',
         }),
       );

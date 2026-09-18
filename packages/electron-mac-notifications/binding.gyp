@@ -1,7 +1,7 @@
 {
   "targets": [
     {
-      "target_name": "lobehub_mac_notifications",
+      "target_name": "orvilo_mac_notifications",
       "sources": ["native/addon.mm"],
       "include_dirs": ["<!@(node -p \"require('node-addon-api').include\")"],
       "dependencies": ["<!(node -p \"require('node-addon-api').gyp\")"],

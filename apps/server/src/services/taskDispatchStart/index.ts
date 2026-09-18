@@ -3,7 +3,7 @@ import {
   TaskDispatchModel,
   type TaskPlanningDispatchCandidate,
 } from '@/database/models/taskDispatch';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { taskPlanningProposalSchema } from '@/server/services/linearSync/contract';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
@@ -19,7 +19,7 @@ export type TaskDispatchStartOutcome =
  */
 export const processPlanningTaskDispatchStart = async (input: {
   candidate: TaskPlanningDispatchCandidate;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
 }): Promise<TaskDispatchStartOutcome> => {
   const { candidate } = input;
   if (!candidate.workspaceId) return { dispatchId: candidate.dispatchId, outcome: 'skipped' };
@@ -75,7 +75,7 @@ export const processPlanningTaskDispatchStart = async (input: {
 
 /** Recover planner wakeups from the durable dispatch table after a crash or queue loss. */
 export const sweepPlanningTaskDispatchStarts = async (input: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   limit?: number;
 }): Promise<TaskDispatchStartOutcome[]> => {
   const candidates = await TaskDispatchModel.findPlanningStartCandidates(input.db, {

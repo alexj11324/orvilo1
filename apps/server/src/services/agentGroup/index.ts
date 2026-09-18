@@ -1,6 +1,6 @@
 import { DEFAULT_AGENT_CONFIG, DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@orvilo/const';
-import { type LobeChatDatabase } from '@orvilo/database';
-import { type LobeAgentConfig } from '@orvilo/types';
+import { type OrviloDatabase } from '@orvilo/database';
+import { type OrviloAgentConfig } from '@orvilo/types';
 import { cleanObject, merge } from '@orvilo/utils';
 import { type PartialDeep } from 'type-fest';
 
@@ -24,7 +24,7 @@ export class AgentGroupService {
   private readonly chatGroupModel: ChatGroupModel;
   private readonly agentGroupRepo: AgentGroupRepository;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.agentModel = new AgentModel(db, userId, workspaceId);
     this.chatGroupModel = new ChatGroupModel(db, userId, workspaceId);
     this.agentGroupRepo = new AgentGroupRepository(db, userId, workspaceId);
@@ -97,7 +97,7 @@ export class AgentGroupService {
     agents: T[],
   ) {
     const userDefaultAgentConfig =
-      (defaultAgentConfig as { config?: PartialDeep<LobeAgentConfig> })?.config || {};
+      (defaultAgentConfig as { config?: PartialDeep<OrviloAgentConfig> })?.config || {};
 
     const serverDefaultAgentConfig = getServerDefaultAgentConfig();
     const baseConfig = merge(DEFAULT_AGENT_CONFIG, serverDefaultAgentConfig);

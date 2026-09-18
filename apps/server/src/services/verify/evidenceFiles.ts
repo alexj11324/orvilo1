@@ -1,5 +1,5 @@
 import { FileModel } from '@/database/models/file';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { FileService } from '@/server/services/file';
 
 export interface EvidenceFileMeta {
@@ -24,7 +24,7 @@ const dimension = (value: unknown): number | null =>
  * bundle resolves dozens of artifacts.
  */
 export const createEvidenceFileResolver = (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   workspaceId?: string,
 ) => {

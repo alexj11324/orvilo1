@@ -13,7 +13,7 @@ import { agentService } from '@/services/agent';
 import { agentDocumentService } from '@/services/agentDocument';
 import { useGlobalStore } from '@/store/global';
 import { useUserStore } from '@/store/user';
-import { type LobeAgentConfig } from '@/types/agent';
+import { type OrviloAgentConfig } from '@/types/agent';
 import { withSWR } from '~test-utils';
 
 import { useAgentStore } from '../../store';
@@ -139,7 +139,7 @@ describe('AgentSlice Actions', () => {
         id: 'inbox-1',
         name: 'Renamed chief',
         profile: { fullBodyArtwork: '/custom-chief.webp' },
-      } as LobeAgentConfig;
+      } as OrviloAgentConfig;
       vi.mocked(agentService.updateAgentMeta).mockResolvedValue({
         agent: updatedAgent,
         success: true,
@@ -187,7 +187,7 @@ describe('AgentSlice Actions', () => {
       useAgentStore.setState({ agentMap: {}, builtinAgentIdMap: {} });
       await act(async () => {
         resolveUpdate({
-          agent: { id: 'inbox-1', name: 'Renamed chief' } as LobeAgentConfig,
+          agent: { id: 'inbox-1', name: 'Renamed chief' } as OrviloAgentConfig,
           success: true,
         });
         await save;
@@ -1105,7 +1105,7 @@ describe('AgentSlice Actions', () => {
           env: { CLAUDE_CODE_CRED_KEY: 'cred-key' },
           type: 'claude-code',
         },
-        workingDirByDevice: { 'current-device': '/repos/lobehub' },
+        workingDirByDevice: { 'current-device': '/repos/orvilo' },
       } as const;
       const nextAgencyConfig = {
         ...latestAgencyConfig,
@@ -1145,20 +1145,20 @@ describe('AgentSlice Actions', () => {
       setScopedMutate(scopedMutate as any);
 
       vi.mocked(agentService.updateAgentConfig).mockResolvedValue({
-        agent: { id: 'agent-1', model: 'model-b', provider: 'lobehub' } as any,
+        agent: { id: 'agent-1', model: 'model-b', provider: 'orvilo' } as any,
         success: true,
       });
 
       act(() => {
         useAgentStore.setState({
-          agentMap: { 'agent-1': { id: 'agent-1', model: 'model-a', provider: 'lobehub' } },
+          agentMap: { 'agent-1': { id: 'agent-1', model: 'model-a', provider: 'orvilo' } },
         });
       });
 
       await act(async () => {
         await result.current.updateAgentConfigById('agent-1', {
           model: 'model-b',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
@@ -1178,14 +1178,14 @@ describe('AgentSlice Actions', () => {
 
       act(() => {
         useAgentStore.setState({
-          agentMap: { 'agent-1': { id: 'agent-1', model: 'model-a', provider: 'lobehub' } },
+          agentMap: { 'agent-1': { id: 'agent-1', model: 'model-a', provider: 'orvilo' } },
         });
       });
 
       await act(async () => {
         await result.current.updateAgentConfigById('agent-1', {
           model: 'model-b',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
@@ -1274,7 +1274,7 @@ describe('AgentSlice Actions', () => {
         id: 'agent-1',
         model: 'gpt-4',
         systemRole: 'You are a helpful assistant',
-      } as LobeAgentConfig;
+      } as OrviloAgentConfig;
 
       vi.mocked(agentService.getAgentConfigById).mockResolvedValueOnce(mockAgentConfig as any);
 
@@ -1311,7 +1311,7 @@ describe('AgentSlice Actions', () => {
     it('should clear a stale fetch error once data arrives', async () => {
       useAgentStore.setState({ agentConfigErrorMap: { 'agent-1': 'boom' } });
 
-      const mockAgentConfig = { id: 'agent-1', model: 'gpt-4' } as LobeAgentConfig;
+      const mockAgentConfig = { id: 'agent-1', model: 'gpt-4' } as OrviloAgentConfig;
       vi.mocked(agentService.getAgentConfigById).mockResolvedValueOnce(mockAgentConfig as any);
 
       const { result } = renderHook(() => useAgentStore().useFetchAgentConfig(true, 'agent-1'), {
@@ -1360,7 +1360,7 @@ describe('AgentSlice Actions', () => {
     it('should clear agentNotFoundMap once a later fetch succeeds (agent made public again)', async () => {
       useAgentStore.setState({ agentNotFoundMap: { 'agent-1': true } });
 
-      const mockAgentConfig = { id: 'agent-1', model: 'gpt-4' } as LobeAgentConfig;
+      const mockAgentConfig = { id: 'agent-1', model: 'gpt-4' } as OrviloAgentConfig;
       vi.mocked(agentService.getAgentConfigById).mockResolvedValueOnce(mockAgentConfig as any);
 
       const { result } = renderHook(() => useAgentStore().useFetchAgentConfig(true, 'agent-1'), {
@@ -1379,7 +1379,7 @@ describe('AgentSlice Actions', () => {
         id: 'agent-1',
         model: 'gpt-4',
         systemRole: 'You are a helpful assistant',
-      } as LobeAgentConfig;
+      } as OrviloAgentConfig;
 
       useAgentStore.setState({ activeAgentId: 'agent-current' });
       vi.mocked(agentService.getAgentConfigById).mockResolvedValueOnce(mockAgentConfig as any);

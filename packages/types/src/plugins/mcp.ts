@@ -185,7 +185,7 @@ export interface MCPInstallProgress {
   // Structured error information, displayed when installation fails
   errorInfo?: MCPErrorInfo;
   manifest?: any;
-  // LobeChatPluginManifest
+  // OrviloPluginManifest
   needsConfig?: boolean;
   // 0-100
   progress: number;

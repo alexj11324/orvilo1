@@ -6,7 +6,7 @@ import path from 'node:path';
  * grants `BUILTIN\Users` read+execute — which is the entire point.
  */
 const stagingRoot = (): string =>
-  path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'LobeHub', 'sandbox');
+  path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Orvilo', 'sandbox');
 
 const ARCH_DIR: Partial<Record<string, string>> = { arm64: 'arm64', x64: 'x64' };
 
@@ -25,7 +25,7 @@ const ARCH_DIR: Partial<Record<string, string>> = { arm64: 'arm64', x64: 'x64' }
  * backend's own lookup.
  */
 export const resolveSrtWinSource = (packagedFallback?: () => string): string | undefined => {
-  const fromEnv = process.env.LOBE_SRT_WIN_PATH;
+  const fromEnv = process.env.ORVILO_SRT_WIN_PATH;
   if (fromEnv && fs.existsSync(fromEnv)) return fromEnv;
 
   const resourcesPath = (process as { resourcesPath?: string }).resourcesPath;

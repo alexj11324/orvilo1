@@ -70,7 +70,7 @@ export const WebBrowsingManifest: BuiltinToolManifest = {
       },
     },
   ],
-  identifier: 'lobe-web-browsing',
+  identifier: 'orvilo-web-browsing',
   meta: {
     avatar: '🌐',
     description:

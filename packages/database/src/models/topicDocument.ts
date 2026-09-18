@@ -2,7 +2,7 @@ import { and, desc, eq } from 'drizzle-orm';
 
 import type { DocumentItem, NewTopicDocument } from '../schemas';
 import { documents, topicDocuments } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 export interface TopicDocumentWithDetails extends DocumentItem {
@@ -11,10 +11,10 @@ export interface TopicDocumentWithDetails extends DocumentItem {
 
 export class TopicDocumentModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;

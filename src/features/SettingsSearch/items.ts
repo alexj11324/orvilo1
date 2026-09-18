@@ -14,7 +14,6 @@ export interface SettingsSearchContext {
   isLogin: boolean;
   /** Whether the app is running on Windows (for Windows-only settings) */
   isWindows: boolean;
-  showAiImage: boolean;
 }
 
 export interface SettingsSearchItem {
@@ -452,14 +451,6 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     labelKey: 'settingTTS.openai.ttsModel',
     tab: SettingsTabs.ServiceModel,
     visible: (ctx) => ctx.enableSTT,
-  },
-  {
-    anchor: 'service-model-image',
-    descKey: 'settingImage.defaultCount.desc',
-    keywords: ['image', 'image generation', 'ai image'],
-    labelKey: 'settingImage.defaultCount.title',
-    tab: SettingsTabs.ServiceModel,
-    visible: (ctx) => ctx.showAiImage,
   },
   // Storage
   {

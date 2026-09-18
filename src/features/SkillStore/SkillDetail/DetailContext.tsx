@@ -1,13 +1,13 @@
 'use client';
 
-import { type ComposioAppType, type LobehubSkillProviderType } from '@orvilo/const';
+import { type ComposioAppType, type OrviloSkillProviderType } from '@orvilo/const';
 import type React from 'react';
 import { createContext, use } from 'react';
 
 export interface DetailContextValue {
   author: string;
   authorUrl?: string;
-  config: ComposioAppType | LobehubSkillProviderType;
+  config: ComposioAppType | OrviloSkillProviderType;
   description: string;
   icon: string | React.ComponentType<any>;
   identifier: string;

@@ -101,10 +101,10 @@ describe('parseWorktreeAddPath', () => {
   it('expands a variable assigned earlier in the same command', () => {
     expect(
       parseWorktreeAddPath(
-        'cd /repo\nWT=/tmp/wt-lobe11099\nrm -rf "$WT"\ngit worktree add "$WT" feat/x 2>&1 | tail -2',
+        'cd /repo\nWT=/tmp/wt-orvilo11099\nrm -rf "$WT"\ngit worktree add "$WT" feat/x 2>&1 | tail -2',
         '/repo',
       ),
-    ).toBe('/tmp/wt-lobe11099');
+    ).toBe('/tmp/wt-orvilo11099');
   });
 
   it('expands ${VAR} and semicolon-separated assignments, resolving relative results', () => {
@@ -302,7 +302,7 @@ describe('recordGitCommandEffects', () => {
                   number: 1,
                   state: 'OPEN',
                   title: 'old',
-                  url: 'https://github.com/lobehub/lobehub/pull/1',
+                  url: 'https://github.com/alexj11324/orvilo1/pull/1',
                 },
                 pullRequestStatus: 'ok',
               },
@@ -363,7 +363,7 @@ describe('recordGitCommandEffects', () => {
                   number: 1,
                   state: 'OPEN',
                   title: 'old',
-                  url: 'https://github.com/lobehub/lobehub/pull/1',
+                  url: 'https://github.com/alexj11324/orvilo1/pull/1',
                 },
                 pullRequestStatus: 'ok',
               },
@@ -401,7 +401,7 @@ describe('recordGitCommandEffects', () => {
 
     await recordGitCommandEffects({
       command: 'gh pr create --title "Fix topic" --draft',
-      resultContent: 'https://github.com/lobehub/lobehub/pull/456',
+      resultContent: 'https://github.com/alexj11324/orvilo1/pull/456',
       topicId: 't1',
     });
 
@@ -415,7 +415,7 @@ describe('recordGitCommandEffects', () => {
               number: 456,
               state: 'OPEN',
               title: 'Fix topic',
-              url: 'https://github.com/lobehub/lobehub/pull/456',
+              url: 'https://github.com/alexj11324/orvilo1/pull/456',
             },
             pullRequestStatus: 'ok',
           },
@@ -469,7 +469,7 @@ describe('recordGitCommandEffects', () => {
 
     await recordGitCommandEffects({
       command: `/bin/zsh -lc "gh pr create --title 'Fix topic'"`,
-      resultContent: 'https://github.com/lobehub/lobehub/pull/456',
+      resultContent: 'https://github.com/alexj11324/orvilo1/pull/456',
       topicId: 't1',
     });
 
@@ -481,7 +481,7 @@ describe('recordGitCommandEffects', () => {
               number: 456,
               state: 'OPEN',
               title: 'Fix topic',
-              url: 'https://github.com/lobehub/lobehub/pull/456',
+              url: 'https://github.com/alexj11324/orvilo1/pull/456',
             },
             pullRequestStatus: 'ok',
           },
@@ -604,7 +604,7 @@ describe('recordGitCommandEffects', () => {
 
     await recordGitCommandEffects({
       command: 'gh pr create --head arvinxx:fix/head-branch --title "Head branch"',
-      resultContent: 'Created pull request: https://github.com/lobehub/lobehub/pull/789',
+      resultContent: 'Created pull request: https://github.com/alexj11324/orvilo1/pull/789',
       topicId: 't1',
     });
 
@@ -617,7 +617,7 @@ describe('recordGitCommandEffects', () => {
               number: 789,
               state: 'OPEN',
               title: 'Head branch',
-              url: 'https://github.com/lobehub/lobehub/pull/789',
+              url: 'https://github.com/alexj11324/orvilo1/pull/789',
             },
             pullRequestStatus: 'ok',
           },
@@ -844,7 +844,7 @@ describe('recordGitCommandEffects — git push', () => {
   };
 
   const pushOutput = (table: string) =>
-    ['Enumerating objects: 5, done.', 'To github.com:lobehub/lobehub.git', table].join('\n');
+    ['Enumerating objects: 5, done.', 'To github.com:alexj11324/orvilo1.git', table].join('\n');
 
   const upstreamOf = () =>
     chatMocks.updateTopicMetadata.mock.calls.at(-1)?.[1].workingDirectoryConfig.git.upstream;
@@ -996,7 +996,7 @@ describe('recordGitCommandEffects — git push', () => {
                   number: 1,
                   state: 'OPEN',
                   title: 'old',
-                  url: 'https://github.com/lobehub/lobehub/pull/1',
+                  url: 'https://github.com/alexj11324/orvilo1/pull/1',
                 },
                 pullRequestStatus: 'ok',
               },
@@ -1033,7 +1033,7 @@ describe('recordGitCommandEffects — git push', () => {
       number: 17_101,
       state: 'OPEN',
       title: 'feat: import sessions',
-      url: 'https://github.com/lobehub/lobehub/pull/17101',
+      url: 'https://github.com/alexj11324/orvilo1/pull/17101',
     };
     chatMocks.topics = {
       t1: {

@@ -25,7 +25,7 @@ import {
   verifyEvidence,
   verifyRuns,
 } from '../schemas/verify';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { VerifyCriterionModel } from './verifyCriterion';
 
@@ -98,11 +98,14 @@ function withSupersedes(
 
 export class AcceptanceFlowModel {
   constructor(
-    private db: LobeChatDatabase,
+    private db: OrviloDatabase,
     private userId: string,
   ) {}
 
-  private async owned(acceptanceId: string, database: Pick<LobeChatDatabase, 'select'> = this.db) {
+  private async owned(
+    acceptanceId: string,
+    database: Pick<OrviloDatabase, 'select'> = this.db,
+  ) {
     const [row] = await database
       .select()
       .from(acceptances)
@@ -358,7 +361,7 @@ export class AcceptanceFlowModel {
 
   private async graph(
     flowId: string,
-    database: LobeChatDatabase | Transaction = this.db,
+    database: OrviloDatabase | Transaction = this.db,
     ancestors: string[] = [],
   ): Promise<{ snapshot: VerifyFlowSnapshot; plan: VerifyCheckItem[]; hash: string }> {
     if (ancestors.includes(flowId)) throw new Error('Recursive subflow reference');

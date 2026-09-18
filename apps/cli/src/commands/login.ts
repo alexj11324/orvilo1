@@ -14,7 +14,7 @@ import { registerDevice, resolveDeviceIdentity } from '../device/register';
 import { loadSettings, normalizeUrl, saveSettings } from '../settings';
 import { log } from '../utils/logger';
 
-const CLIENT_ID = 'lobehub-cli';
+const CLIENT_ID = 'orvilo-cli';
 const SCOPES = 'openid profile email offline_access';
 
 interface LoginOptions {
@@ -101,7 +101,7 @@ export function registerLoginCommand(program: Command) {
         const res = await fetch(`${serverUrl}/oidc/device/auth`, {
           body: new URLSearchParams({
             client_id: CLIENT_ID,
-            resource: 'urn:lobehub:chat',
+            resource: 'urn:orvilo:chat',
             scope: SCOPES,
           }),
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

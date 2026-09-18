@@ -1268,7 +1268,7 @@ describe('agent command', () => {
           mode: 8,
           mount: { driver: 'synthetic', source: 'virtual' },
           name: 'writer',
-          path: './lobe',
+          path: './orvilo',
           type: 'directory',
         },
       ]);
@@ -1301,7 +1301,7 @@ describe('agent command', () => {
               mode: 8,
               mount: { driver: 'synthetic', source: 'virtual' },
               name: 'writer',
-              path: './lobe',
+              path: './orvilo',
               type: 'directory',
             },
           ],
@@ -1424,7 +1424,7 @@ describe('agent command', () => {
           {
             mode: 8,
             name: 'builtin',
-            path: './lobe/skills/builtin',
+            path: './orvilo/skills/builtin',
             type: 'directory',
           },
         ])
@@ -1440,20 +1440,22 @@ describe('agent command', () => {
         'tree',
         '--agent-id',
         'a1',
-        'agent:/lobe/skills',
+        'agent:/orvilo/skills',
       ]);
 
       expect(mockTrpcClient.agentDocument.listDocumentsByPath.query).toHaveBeenNthCalledWith(1, {
         agentId: 'a1',
-        path: './lobe/skills',
+        path: './orvilo/skills',
         topicId: undefined,
       });
       expect(mockTrpcClient.agentDocument.listDocumentsByPath.query).toHaveBeenNthCalledWith(2, {
         agentId: 'a1',
-        path: './lobe/skills/builtin',
+        path: './orvilo/skills/builtin',
         topicId: undefined,
       });
-      expect(log.warn).toHaveBeenCalledWith('./lobe/skills/builtin: Failed to list builtin skills');
+      expect(log.warn).toHaveBeenCalledWith(
+        './orvilo/skills/builtin: Failed to list builtin skills',
+      );
     });
 
     it('should read SKILL.md when cat targets a skill directory alias', async () => {
@@ -1463,13 +1465,13 @@ describe('agent command', () => {
         mode: 2,
         mount: { driver: 'skills', namespace: 'builtin', source: 'builtin' },
         name: 'SKILL.md',
-        path: './lobe/skills/builtin/skills/writer/SKILL.md',
+        path: './orvilo/skills/builtin/skills/writer/SKILL.md',
         type: 'file',
       });
       mockTrpcClient.agentDocument.readDocumentByPath.query.mockResolvedValue({
         content: '# Writer',
         contentType: 'text/markdown',
-        path: './lobe/skills/builtin/skills/writer/SKILL.md',
+        path: './orvilo/skills/builtin/skills/writer/SKILL.md',
       });
 
       const program = createProgram();
@@ -1487,12 +1489,12 @@ describe('agent command', () => {
 
       expect(mockTrpcClient.agentDocument.statDocumentByPath.query).toHaveBeenCalledWith({
         agentId: 'a1',
-        path: './lobe/skills/builtin/skills/writer/SKILL.md',
+        path: './orvilo/skills/builtin/skills/writer/SKILL.md',
         topicId: undefined,
       });
       expect(mockTrpcClient.agentDocument.readDocumentByPath.query).toHaveBeenCalledWith({
         agentId: 'a1',
-        path: './lobe/skills/builtin/skills/writer/SKILL.md',
+        path: './orvilo/skills/builtin/skills/writer/SKILL.md',
         topicId: undefined,
       });
       expect(stdoutSpy).toHaveBeenCalledWith('# Writer');
@@ -1504,7 +1506,7 @@ describe('agent command', () => {
         data: { code: 'NOT_FOUND' },
       });
       mockTrpcClient.agentDocument.writeDocumentByPath.mutate.mockResolvedValue({
-        path: './lobe/skills/agent/skills/writer/SKILL.md',
+        path: './orvilo/skills/agent/skills/writer/SKILL.md',
       });
 
       const program = createProgram();
@@ -1526,7 +1528,7 @@ describe('agent command', () => {
         agentId: 'a1',
         content: '# Writer',
         createMode: 'if-missing',
-        path: './lobe/skills/agent/skills/writer',
+        path: './orvilo/skills/agent/skills/writer',
         topicId: undefined,
       });
     });
@@ -1601,8 +1603,8 @@ describe('agent command', () => {
     it('should stat unified root paths', async () => {
       mockTrpcClient.agentDocument.statDocumentByPath.query.mockResolvedValue({
         mode: 8,
-        name: 'lobe',
-        path: './lobe',
+        name: 'orvilo',
+        path: './orvilo',
         type: 'directory',
       });
 
@@ -1616,13 +1618,13 @@ describe('agent command', () => {
         'stat',
         '--agent-id',
         'a1',
-        'agent:/lobe',
+        'agent:/orvilo',
         '--json',
       ]);
 
       expect(mockTrpcClient.agentDocument.statDocumentByPath.query).toHaveBeenCalledWith({
         agentId: 'a1',
-        path: './lobe',
+        path: './orvilo',
         topicId: undefined,
       });
     });

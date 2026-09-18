@@ -2,7 +2,7 @@ import type { ModelProviderCard } from '../types';
 
 // ref: https://302.ai/pricing/
 const Ai302: ModelProviderCard = {
-  apiKeyUrl: 'https://lobe.li/Oizw5sN',
+  apiKeyUrl: 'https://302.ai',
   chatModels: [],
   checkModel: 'gpt-4o',
   description:

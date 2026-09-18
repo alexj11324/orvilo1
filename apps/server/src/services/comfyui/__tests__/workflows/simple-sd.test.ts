@@ -64,7 +64,7 @@ const createSDMockContext = () => ({
       .mockResolvedValue([
         'vae-ft-mse-840000-ema-pruned.safetensors',
         'sdxl_vae_fp16fix.safetensors',
-        'custom_sd_lobe_vae.safetensors',
+        'custom_sd_orvilo_vae.safetensors',
       ]),
     getOptimalComponent: vi.fn().mockImplementation(function (type: string, modelFamily: string) {
       if (type === 'vae') {
@@ -208,7 +208,7 @@ describe('buildSimpleSDWorkflow - Universal SD Support', () => {
 
       // Mock custom VAE availability
       sdMockContext.modelResolverService.getAvailableVAEFiles.mockResolvedValue([
-        'custom_sd_lobe_vae.safetensors',
+        'custom_sd_orvilo_vae.safetensors',
         'vae-ft-mse-840000-ema-pruned.safetensors',
       ]);
 

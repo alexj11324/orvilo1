@@ -49,7 +49,7 @@ import sys
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/v1/users/me"):
-            if self.headers.get("authorization") != "Bearer sk-lh-agenttesting0001":
+            if self.headers.get("authorization") != "Bearer sk-ov-agenttesting0001":
                 self.send_response(401)
                 self.end_headers()
                 self.wfile.write(b'{"success":false}')
@@ -178,14 +178,14 @@ assert_contains "$tmp_dir/status.out" "web auth green"
 
 "$SCRIPT" cli-seed > "$tmp_dir/cli-seed.out"
 assert_contains "$tmp_dir/cli-seed.out" "CLI API-key auth valid"
-assert_contains "$tmp_dir/cli-seed.out" "settings saved at: $HOME/.lobehub-dev/settings.json"
+assert_contains "$tmp_dir/cli-seed.out" "settings saved at: $HOME/.orvilo-dev/settings.json"
 
 if "$SCRIPT" status --surface cli > "$tmp_dir/cli-no-env.out"; then
   fail "cli status without API key unexpectedly passed"
 fi
 assert_contains "$tmp_dir/cli-no-env.out" "CLI not logged in"
 
-LOBEHUB_CLI_API_KEY=sk-lh-agenttesting0001 "$SCRIPT" status --surface cli > "$tmp_dir/cli-status.out"
+ORVILO_CLI_API_KEY=sk-ov-agenttesting0001 "$SCRIPT" status --surface cli > "$tmp_dir/cli-status.out"
 assert_contains "$tmp_dir/cli-status.out" "CLI API-key auth valid"
 assert_contains "$tmp_dir/cli-status.out" "cli auth green"
 

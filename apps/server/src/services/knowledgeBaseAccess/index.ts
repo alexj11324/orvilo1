@@ -8,7 +8,7 @@ import {
   knowledgeBases,
   resourcePermissions,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   assertCanPerformResourceAction,
   type ResourceMeta,
@@ -16,7 +16,7 @@ import {
 import { getWorkspaceScopedPermissionMatches } from '@/server/services/workspacePermission';
 
 interface KnowledgeBaseAccessCtx {
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   userId: string;
   workspaceId?: string | null;
 }
@@ -54,7 +54,7 @@ export const assertKnowledgeBaseBrowsable = async (
  * derives the caller-relative subset for filtering.
  */
 export const getUseLevelKnowledgeBaseIds = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
 ): Promise<string[]> => {
   const rows = await db

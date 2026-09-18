@@ -10,7 +10,7 @@ import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyCriterionModel } from '@/database/models/verifyCriterion';
 import { VerifyRubricModel } from '@/database/models/verifyRubric';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { extractFileIdsFromEditorData } from '@/server/services/file/extractFileIdsFromEditorData';
 import { resolveAttachmentMetadata } from '@/server/services/file/resolveAttachments';
 import { resolveTaskAttemptBudget } from '@/server/services/goal/recoveryPolicy';
@@ -87,7 +87,7 @@ const resolveGoalLoopContext = async (
 
 export interface BuildTaskPromptDeps {
   briefModel: BriefModel;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   taskModel: TaskModel;
   taskTopicModel: TaskTopicModel;
   userId: string;

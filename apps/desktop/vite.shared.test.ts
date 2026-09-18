@@ -22,7 +22,7 @@ describe('applyDesktopViteConfigExtension', () => {
   });
 
   it('loads named exports from TypeScript extensions through the Vite module runner', async () => {
-    const directory = await mkdtemp(path.join(tmpdir(), 'lobe-desktop-vite-extension-'));
+    const directory = await mkdtemp(path.join(tmpdir(), 'orvilo-desktop-vite-extension-'));
     const extensionPath = path.join(directory, 'extension.mts');
     temporaryDirectories.push(directory);
 
@@ -34,7 +34,7 @@ describe('applyDesktopViteConfigExtension', () => {
 });
 `,
     );
-    vi.stubEnv('LOBE_DESKTOP_VITE_CONFIG_EXTENSION', extensionPath);
+    vi.stubEnv('ORVILO_DESKTOP_VITE_CONFIG_EXTENSION', extensionPath);
 
     const config = await applyDesktopViteConfigExtension(
       'main',
@@ -46,7 +46,7 @@ describe('applyDesktopViteConfigExtension', () => {
   });
 
   it('loads Cloud build tools from the locked Desktop installation', async () => {
-    const directory = await mkdtemp(path.join(tmpdir(), 'lobe-cloud-tools-'));
+    const directory = await mkdtemp(path.join(tmpdir(), 'orvilo-cloud-tools-'));
     temporaryDirectories.push(directory);
     for (const name of ['@sentry/vite-plugin', 'magic-string']) {
       const pkg = path.join(directory, 'node_modules', name);
@@ -68,7 +68,7 @@ describe('applyDesktopViteConfigExtension', () => {
       });
     `,
     );
-    vi.stubEnv('LOBE_DESKTOP_VITE_CONFIG_EXTENSION', extensionPath);
+    vi.stubEnv('ORVILO_DESKTOP_VITE_CONFIG_EXTENSION', extensionPath);
     const config = await applyDesktopViteConfigExtension(
       'main',
       {},

@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -12,7 +12,7 @@ vi.mock('./dispatchAuthorization', () => ({
 vi.mock('./index', () => ({ deviceGateway: { executeToolCall: mocks.executeToolCall } }));
 
 const { executeAuthorizedDeviceToolCall } = await import('./authorizedToolCall');
-const serverDB = {} as LobeChatDatabase;
+const serverDB = {} as OrviloDatabase;
 const params = { deviceId: 'device-1', userId: 'user-1', workspaceId: 'workspace-1' };
 const toolCall = { apiName: 'readFile', arguments: '{}', identifier: 'local-system' };
 

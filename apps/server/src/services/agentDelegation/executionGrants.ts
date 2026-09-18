@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, lt, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
-import type { LobeChatDatabase, Transaction } from '@/database/type';
+import type { OrviloDatabase, Transaction } from '@/database/type';
 
 import {
   executionGrants,
@@ -46,12 +46,12 @@ export interface ValidateGrantInput {
  * button) and the delegation subject (whose authority the run consumes).
  */
 export class AgentDelegationService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly memberModel: WorkspaceMemberModel;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -258,7 +258,7 @@ export class AgentDelegationService {
    */
   private markRevoked = async (
     grantId: string,
-    executor: LobeChatDatabase | Transaction = this.db,
+    executor: OrviloDatabase | Transaction = this.db,
   ) => {
     const now = new Date();
     const rows = await executor
@@ -303,7 +303,7 @@ export class AgentDelegationService {
    */
   claimExecutionEpoch = async (
     params: { grantId: string; taskId: string; topicId: string },
-    executor: LobeChatDatabase | Transaction = this.db,
+    executor: OrviloDatabase | Transaction = this.db,
   ) => {
     const [row] = await executor
       .update(taskTopics)

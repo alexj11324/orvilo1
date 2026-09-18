@@ -30,7 +30,7 @@ export const InstallPluginInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-builder.apiName.installPlugin')}
+          {t('builtins.orvilo-agent-builder.apiName.installPlugin')}
         </span>
       </div>
     );
@@ -43,7 +43,7 @@ export const InstallPluginInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-builder.apiName.installPlugin')}:{' '}
+        {t('builtins.orvilo-agent-builder.apiName.installPlugin')}:{' '}
       </span>
       {displayName && <span className={highlightTextStyles.primary}>{displayName}</span>}
       {!isLoading &&

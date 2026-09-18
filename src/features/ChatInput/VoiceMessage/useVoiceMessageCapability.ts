@@ -112,10 +112,10 @@ export const supportsRawAudioMessage = ({
 
   return (
     DIRECT_AUDIO_RUNTIMES.has(runtimeProvider) ||
-    // LobeHub's enabled model list is curated by the server. The OSS model bank
-    // intentionally has no LobeHub cards, so requiring a duplicate builtin card
+    // Orvilo's enabled model list is curated by the server. The OSS model bank
+    // intentionally has no Orvilo cards, so requiring a duplicate builtin card
     // would disable local Electron / Debug Proxy sessions connected to Cloud.
-    provider === ModelProvider.LobeHub ||
+    provider === ModelProvider.Orvilo ||
     (isCuratedModel && CURATED_AUDIO_ROUTERS.has(provider))
   );
 };
@@ -148,7 +148,7 @@ export const getVoiceMessageCapability = ({
   });
   if (supportsDirectAudio) return true;
 
-  // The fallback runs through lobe-agent.analyzeMedia, which Chat mode does not expose.
+  // The fallback runs through orvilo-agent.analyzeMedia, which Chat mode does not expose.
   if (!enableAgentMode || isAgentModePreferenceLoading) return false;
 
   const fallbackModelId = multimodalUnderstanding.model;

@@ -35,7 +35,7 @@ describe('sandbox service factory', () => {
   it('uses the onlyboxes provider when configured', async () => {
     vi.doMock('@/envs/app', () => ({
       appEnv: {
-        APP_URL: 'https://lobehub.example.com',
+        APP_URL: 'https://orvilo.example.com',
       },
     }));
     vi.doMock('@/envs/sandbox', () => ({

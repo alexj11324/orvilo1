@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import type { CreateVideoOptions } from '../../../core/openaiCompatibleFactory';
 import type { CreateVideoPayload, CreateVideoResponse } from '../../../types/video';
 
-const log = createDebug('lobe-video:volcengine');
+const log = createDebug('orvilo-video:volcengine');
 
 /**
  * Volcengine video generation implementation

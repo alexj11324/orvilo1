@@ -5,14 +5,14 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { VerifyRunItem } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { planItemToPendingResult } from './resultSnapshot';
 import { finalizeVerifyRun } from './settle';
 import { VERIFY_ABANDONED_MS, VERIFY_ROLLUP_GRACE_MS } from './staleness';
 import { VerifyStatusService } from './statusService';
 
-const log = debug('lobe-server:verify-sweep');
+const log = debug('orvilo-server:verify-sweep');
 
 /** An operation in any of these can still produce a verdict. */
 const LIVE_OPERATION_STATUSES = new Set([
@@ -66,7 +66,7 @@ export interface VerifySweepOutcome {
  * of the cron cannot both drive the same run's finalizer.
  */
 export const sweepStuckVerifyRuns = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   options?: { now?: Date; pageSize?: number },
 ): Promise<VerifySweepOutcome> => {
   const now = options?.now ?? new Date();
@@ -113,7 +113,7 @@ export const sweepStuckVerifyRuns = async (
 };
 
 const recoverRun = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   run: VerifyRunItem,
   now: Date,
 ): Promise<'abandoned' | 'settled' | 'skipped'> => {

@@ -1,4 +1,4 @@
-export const BrowserIdentifier = 'lobe-browser';
+export const BrowserIdentifier = 'orvilo-browser';
 
 export const BrowserApiName = {
   click: 'click',

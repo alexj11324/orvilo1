@@ -4,14 +4,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../../core/getTestDB';
 import type { NewUserMemoryPreference } from '../../../schemas';
 import { userMemories, userMemoriesPreferences, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { UserMemoryPreferenceModel } from '../preference';
 
 const userId = 'preference-test-user';
 const otherUserId = 'other-preference-user';
 
 let preferenceModel: UserMemoryPreferenceModel;
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 beforeEach(async () => {
   // Clean up

@@ -1,8 +1,8 @@
-# LobeHub - Contributing Guide 🌟
+# Orvilo - Contributing Guide 🌟
 
-We're thrilled that you want to contribute to LobeHub, the future of communication! 😄
+We're thrilled that you want to contribute to Orvilo, the future of communication! 😄
 
-LobeHub is an open-source project, and we welcome your collaboration. Before you jump in, let's make sure you're all set to contribute effectively and have loads of fun along the way!
+Orvilo is an open-source project, and we welcome your collaboration. Before you jump in, let's make sure you're all set to contribute effectively and have loads of fun along the way!
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ LobeHub is an open-source project, and we welcome your collaboration. Before you
 📦 Clone your forked repository to your local machine using the `git clone` command:
 
 ```bash
-git clone https://github.com/YourUsername/lobehub.git
+git clone https://github.com/YourUsername/orvilo.git
 ```
 
 ## Create a New Branch
@@ -64,16 +64,16 @@ Please keep your commits focused and clear. And remember to be kind to your fell
 ⚙️ Periodically, sync your forked repository with the original (upstream) repository to stay up-to-date with the latest changes.
 
 ```bash
-git remote add upstream https://github.com/lobehub/lobehub.git
+git remote add upstream https://github.com/alexj11324/orvilo1.git
 git fetch upstream
 git merge upstream/main
 ```
 
-This ensures you're working on the most current version of LobeHub. Stay fresh! 💨
+This ensures you're working on the most current version of Orvilo. Stay fresh! 💨
 
 ## Open a Pull Request
 
-🚀 Time to share your contribution! Head over to the original LobeHub repository and open a Pull Request (PR). Our maintainers will review your work.
+🚀 Time to share your contribution! Head over to the original Orvilo repository and open a Pull Request (PR). Our maintainers will review your work.
 
 ## Review and Collaboration
 
@@ -81,8 +81,8 @@ This ensures you're working on the most current version of LobeHub. Stay fresh! 
 
 ## Celebrate 🎉
 
-🎈 Congratulations! Your contribution is now part of LobeHub. 🥳
+🎈 Congratulations! Your contribution is now part of Orvilo. 🥳
 
-Thank you for making LobeHub even more magical. We can't wait to see what you create! 🌠
+Thank you for making Orvilo even more magical. We can't wait to see what you create! 🌠
 
 Happy Coding! 🚀🦄

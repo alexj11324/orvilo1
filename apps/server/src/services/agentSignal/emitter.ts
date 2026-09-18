@@ -14,7 +14,7 @@ import {
 import debug from 'debug';
 
 import { getServerDB } from '@/database/server';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { AgentSignalWorkflow } from '@/server/workflows/agentSignal';
 
@@ -22,11 +22,11 @@ import { isAgentSignalEnabledForUser } from './featureGate';
 import type { GeneratedAgentSignalEmissionResult } from './orchestrator';
 import type { CreateDefaultAgentSignalPoliciesOptions } from './policies';
 
-const log = debug('lobe-server:agent-signal:service');
+const log = debug('orvilo-server:agent-signal:service');
 
 export interface AgentSignalExecutionContext {
   agentId?: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   userId: string;
   /**
    * Workspace id when the originating producer ran inside a team workspace.

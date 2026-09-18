@@ -25,7 +25,7 @@ export const TaskGetInspector = memo<BuiltinInspectorProps<TaskGetArgs>>(
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
       >
-        {t('builtins.lobe-claude-code.task.getLabel', { taskId: taskId ?? '' })}
+        {t('builtins.orvilo-claude-code.task.getLabel', { taskId: taskId ?? '' })}
       </div>
     );
   },

@@ -21,8 +21,8 @@ import { log } from '../utils/logger';
 // Maps topicId → hermes session_id so multi-turn conversations can resume
 // the same session across separate `runHeteroTask` invocations.
 
-const LOBEHUB_DIR_NAME = resolveCliDirName();
-const HERMES_SESSIONS_FILE = path.join(os.homedir(), LOBEHUB_DIR_NAME, 'hermes-sessions.json');
+const ORVILO_DIR_NAME = resolveCliDirName();
+const HERMES_SESSIONS_FILE = path.join(os.homedir(), ORVILO_DIR_NAME, 'hermes-sessions.json');
 
 function parseHermesSessionId(stderr: string): string | undefined {
   for (const line of stderr.split(/\r?\n/).reverse()) {
@@ -79,7 +79,7 @@ export interface RunHeteroTaskParams {
   /**
    * Workspace id seeded by the server when the dispatched topic lives in a
    * workspace. Threaded into auto-notify calls (as `X-Workspace-Id`) and into
-   * the spawned child's `LOBEHUB_WORKSPACE_ID` env so its own `lh notify`
+   * the spawned child's `ORVILO_WORKSPACE_ID` env so its own `lh notify`
    * shells inherit the same scope.
    */
   workspaceId?: string;
@@ -161,7 +161,7 @@ async function sendTerminalSignal(
 
 /**
  * Build the notify protocol injected into the first message of a new hetero-agent session.
- * Tells the agent how to push updates back to the LobeHub user via `lh notify`.
+ * Tells the agent how to push updates back to the Orvilo user via `lh notify`.
  */
 function buildNotifyProtocol(lhPath: string, topicId: string): string {
   return (
@@ -211,8 +211,8 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
   // via getTrpcClient → resolveWorkspaceId.
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
-    LOBEHUB_OPERATION_ID: operationId,
-    ...(workspaceId && { LOBEHUB_WORKSPACE_ID: workspaceId }),
+    ORVILO_OPERATION_ID: operationId,
+    ...(workspaceId && { ORVILO_WORKSPACE_ID: workspaceId }),
   };
   const sessionKey = parentOperationId ? operationId : topicId;
 
@@ -227,7 +227,7 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
     const openclawAgent = platformAgentId?.trim() || process.env.OPENCLAW_AGENT_ID || 'main';
 
     // Always inject the notify protocol so openclaw knows how to report results
-    // back to the LobeHub UI — even if the previous turn failed and the session
+    // back to the Orvilo UI — even if the previous turn failed and the session
     // history was not cleanly committed.
     const enrichedPrompt = `${prompt}\n\n${buildNotifyProtocol(lhPath, topicId)}`;
     const openclawArgs = [

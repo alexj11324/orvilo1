@@ -68,7 +68,7 @@
       // --- 4. 注入 __SERVER_CONFIG__（从线上 SPA route 获取）---
       var locale =
         decodeURIComponent(
-          (document.cookie.match(/(?:^|;\s*)LOBE_LOCALE=([^;]*)/) || [])[1] || '',
+          (document.cookie.match(/(?:^|;\s*)ORVILO_LOCALE=([^;]*)/) || [])[1] || '',
         ) || 'en-US';
 
       var configReady = fetch('/spa/' + locale + '/chat')

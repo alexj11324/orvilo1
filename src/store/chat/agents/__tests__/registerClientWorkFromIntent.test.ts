@@ -40,7 +40,7 @@ const base = {
   rootOperationId: 'op-root',
   sourceMessageId: 'msg-tool-1',
   sourceToolCallId: 'tool-call-1',
-  sourceToolIdentifier: 'lobe-task',
+  sourceToolIdentifier: 'orvilo-task',
   sourceToolName: 'createTask',
   state,
   threadId: 'thread-1',

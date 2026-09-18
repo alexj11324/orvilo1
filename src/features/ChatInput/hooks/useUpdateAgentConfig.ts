@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { type PartialDeep } from 'type-fest';
 
 import { useAgentStore } from '@/store/agent';
-import { type LobeAgentChatConfig, type LobeAgentConfig } from '@/types/agent';
+import { type OrviloAgentChatConfig, type OrviloAgentConfig } from '@/types/agent';
 
 import { useAgentId } from './useAgentId';
 
@@ -18,7 +18,7 @@ export const useUpdateAgentConfig = () => {
   const updateAgentChatConfigById = useAgentStore((s) => s.updateAgentChatConfigById);
 
   const updateAgentConfig = useCallback(
-    (config: PartialDeep<LobeAgentConfig>) => {
+    (config: PartialDeep<OrviloAgentConfig>) => {
       return updateAgentConfigById(agentId, config);
     },
     [agentId, updateAgentConfigById],
@@ -26,7 +26,7 @@ export const useUpdateAgentConfig = () => {
 
   const updateAgentChatConfig = useCallback(
     (
-      config: Partial<LobeAgentChatConfig>,
+      config: Partial<OrviloAgentChatConfig>,
       options?: Parameters<typeof updateAgentChatConfigById>[2],
     ) => {
       return updateAgentChatConfigById(agentId, config, options);

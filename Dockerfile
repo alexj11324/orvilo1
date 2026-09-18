@@ -74,7 +74,8 @@ COPY apps/workbench/package.json ./apps/workbench/package.json
 # DATABASE_DRIVER=node selects the pg driver; without it the sync container crash-loops.
 # Keep the standalone native image dependency aligned with the app's direct sharp
 # dependency. An unpinned install can resolve a newer JS wrapper while Next's
-# traced tree still points at the older virtual-store directory.
+# traced tree still points at the older virtual-store directory. The standalone
+# dependency project is new, so explicitly allow its native install scripts.
 RUN set -e && \
     if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
         export SENTRYCLI_CDNURL="https://npmmirror.com/mirrors/sentry-cli"; \
@@ -89,7 +90,7 @@ RUN set -e && \
     mkdir -p /deps && \
     cd /deps && \
     echo '{"name":"deps","private":true}' > package.json && \
-    pnpm add pg drizzle-orm @neondatabase/serverless sharp@0.34.5
+    pnpm add --allow-build=sharp --allow-build=@hatchet-dev/typescript-sdk --allow-build=protobufjs pg drizzle-orm @neondatabase/serverless sharp@0.34.5 @hatchet-dev/typescript-sdk@1.33.1 @grpc/grpc-js@1.14.4
 
 COPY . .
 
@@ -105,7 +106,9 @@ RUN pnpm exec esbuild scripts/elasticsearchCleanupIneligibleMessages/cli.ts --bu
 RUN pnpm exec esbuild scripts/pgSearchCleanup/index.ts --bundle --platform=node --format=cjs --outfile=/app/fts-search-pg-search-cleanup.cjs --external:pg
 # Preserve ESM module boundaries so circular top-level-await initializers settle before the worker
 # starts. Native sharp stays external and is copied with its platform package into the runtime.
-RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker --entry-names=worker '--chunk-names=chunks/[name]-[hash]' --out-extension:.js=.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*' --external:sharp --banner:js='import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);'
+# Keep Hatchet external too: its CommonJS SDK resolves heartbeat and proto assets
+# relative to its installed package directory.
+RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker --entry-names=worker '--chunk-names=chunks/[name]-[hash]' --out-extension:.js=.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*' --external:sharp --external:@hatchet-dev/typescript-sdk --banner:js='import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);'
 
 # Preserve SWC helpers referenced through pnpm virtual-store symlinks by Next.js.
 RUN mkdir -p /runtime-deps && cp -a node_modules/.pnpm/@swc+helpers@* /runtime-deps/
@@ -140,6 +143,8 @@ COPY --from=builder /runtime-deps/ /app/node_modules/.pnpm/
 COPY --from=builder /deps/node_modules/drizzle-orm /app/node_modules/drizzle-orm
 COPY --from=builder /deps/node_modules/@neondatabase /app/node_modules/@neondatabase
 COPY --from=builder /deps/node_modules/sharp /app/node_modules/sharp
+COPY --from=builder /deps/node_modules/@hatchet-dev /app/node_modules/@hatchet-dev
+COPY --from=builder /deps/node_modules/@grpc /app/node_modules/@grpc
 
 # Copy server launcher and shared scripts
 COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.js
@@ -167,7 +172,6 @@ ENV NODE_ENV="production" \
     SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
 
 # Make the middleware rewrite through local as default
-# refs: https://github.com/lobehub/lobehub/issues/5876
 ENV MIDDLEWARE_REWRITE_THROUGH_LOCAL="1"
 
 # set hostname to localhost

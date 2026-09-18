@@ -6,7 +6,7 @@ user-invocable: false
 
 # UX — Design Values & Execution Checklists
 
-How LobeHub products should feel, and concrete rules to get there. Use this when
+How Orvilo products should feel, and concrete rules to get there. Use this when
 **building or reviewing** any user-facing flow.
 
 This file is the **index**: the design values and interaction principles below are the
@@ -31,7 +31,7 @@ component/styling choices see **react**; for imperative modal wiring see **modal
 
 ## Design values
 
-LobeHub follows four product design values — **Natural・Meaningful・Certainty・Growth**.
+Orvilo follows four product design values — **Natural・Meaningful・Certainty・Growth**.
 Read them before designing:
 **[references/design-values.md](references/design-values.md)** (definitions + conflict
 priority).

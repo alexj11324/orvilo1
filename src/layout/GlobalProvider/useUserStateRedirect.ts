@@ -20,6 +20,7 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'eval',
   'group',
   'image',
+  'invite',
   'me',
   'memory',
   'next-auth',

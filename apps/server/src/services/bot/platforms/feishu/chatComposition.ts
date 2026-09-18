@@ -1,7 +1,7 @@
 import type { LarkApiClient } from '@orvilo/chat-adapter-feishu';
 import debug from 'debug';
 
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 import { createBoundedMemoryCache } from './boundedMemoryCache';
 

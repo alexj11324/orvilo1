@@ -25,7 +25,7 @@ vi.mock('@orvilo/chat-adapter-feishu', async (importOriginal) => ({
 // Keep `./reactionTracker` real — the key layout and the read-before-write
 // ordering are exactly what the stacking fix depends on.
 const reactionStore = vi.hoisted(() => new Map<string, string>());
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => ({
     del: async (key: string) => reactionStore.delete(key),
     get: async (key: string) => reactionStore.get(key) ?? null,

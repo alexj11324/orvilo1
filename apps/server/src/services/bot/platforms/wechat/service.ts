@@ -37,7 +37,7 @@ import type {
 import type { WechatApiClient } from '@orvilo/chat-adapter-wechat';
 import { getWechatTextSendCount } from '@orvilo/chat-adapter-wechat';
 
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 import type { MessageRuntimeService } from '@/server/services/toolExecution/serverRuntimes/message/adapters/types';
 import { PlatformUnsupportedError } from '@/server/services/toolExecution/serverRuntimes/message/PlatformUnsupportedError';
 

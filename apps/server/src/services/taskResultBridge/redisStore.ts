@@ -1,6 +1,6 @@
 import type Redis from 'ioredis';
 
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 const PREFIX = 'task-result-callback:';
 const RECEIPT_TTL_SECONDS = 6 * 60 * 60;

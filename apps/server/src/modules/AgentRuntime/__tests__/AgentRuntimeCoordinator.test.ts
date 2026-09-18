@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { AgentRuntimeCoordinator } from '../AgentRuntimeCoordinator';
-import { createAgentStateManager, createStreamEventManager } from '../factory';
+import { createAgentStateManager, createStreamEventManager } from '../../AgentExecution/factory';
 import { VISIBLE_OUTPUT_END_PUBLISHED_STEP_INDEX_METADATA_KEY } from '../visibleOutputEnd';
 
 // Mock factory module to avoid Redis/env access
-vi.mock('../factory', () => ({
+vi.mock('../../AgentExecution/factory', () => ({
   createAgentStateManager: vi.fn(),
   createStreamEventManager: vi.fn(),
   isRedisAvailable: vi.fn(() => false),

@@ -46,7 +46,7 @@ const mockWindowRedis = vi.hoisted(() => ({
   hset: vi.fn().mockResolvedValue(1),
   pttl: vi.fn().mockResolvedValue(-1),
 }));
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => ({ get: mockRedisGet, ...mockWindowRedis }),
 }));
 

@@ -1,5 +1,5 @@
 import { appEnv } from '@/envs/app';
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 import type { PlatformClient } from '@/server/services/bot/platforms';
 import { WechatClientFactory } from '@/server/services/bot/platforms/wechat/client';
 

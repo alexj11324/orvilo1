@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   store: new Map<string, string>(),
 }));
 
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () =>
     mocks.redisAvailable
       ? {

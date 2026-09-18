@@ -13,7 +13,7 @@ const redisState = vi.hoisted(() => ({
   enabled: false,
 }));
 
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => (redisState.enabled ? redisState.client : null),
 }));
 

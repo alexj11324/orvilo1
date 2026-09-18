@@ -18,8 +18,8 @@ import { and, eq } from 'drizzle-orm';
 import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { inMemoryAgentStateManager } from '@/server/modules/AgentRuntime/InMemoryAgentStateManager';
-import { inMemoryStreamEventManager } from '@/server/modules/AgentRuntime/InMemoryStreamEventManager';
+import { inMemoryAgentStateManager } from '@/server/modules/AgentExecution/InMemoryAgentStateManager';
+import { inMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
 
 import { aiAgentRouter } from '../../../aiAgent';
 import { cleanupTestUser, createTestUser } from '../setup';

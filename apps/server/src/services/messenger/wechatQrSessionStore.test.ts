@@ -30,7 +30,7 @@ const redis = {
   }),
 };
 
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => redis,
 }));
 

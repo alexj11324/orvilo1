@@ -10,7 +10,7 @@ import { AgentBotProviderModel } from '@/database/models/agentBotProvider';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
-import { createAbortError, isAbortError } from '@/server/services/agentRuntime/abort';
+import { createAbortError, isAbortError } from '@/server/services/agentExecution/abort';
 import { AiAgentService } from '@/server/services/aiAgent';
 import type { AttachmentSource } from '@/server/services/aiAgent/ingestAttachment';
 import { GatewayService } from '@/server/services/gateway';

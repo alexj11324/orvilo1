@@ -53,7 +53,6 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
-    createMarketAgentMenuItem,
     isMutatingAgent,
     openCreateModal,
   } = useCreateMenuItems();
@@ -73,9 +72,8 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
 
   const dropdownItems = useMemo(() => {
     const connectItem = createConnectAgentMenuItem(menuOptions);
-    // Discovery entries stay available for the private bucket too — they only
-    // navigate (list / market), so the bucket merely decides which tab the
-    // agent-list page opens on.
+    // The list entry stays available for the private bucket too; the bucket
+    // decides which tab the agent-list page opens on.
     const showDiscoveryItems = !isCustomGroup;
     return [
       createAgentMenuItem(menuOptions),
@@ -85,7 +83,6 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
         ? [
             { type: 'divider' as const },
             createAgentListMenuItem(visibility ? { visibility } : undefined),
-            createMarketAgentMenuItem(),
           ]
         : []),
     ];
@@ -94,7 +91,6 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
-    createMarketAgentMenuItem,
     isCustomGroup,
     menuOptions,
     visibility,

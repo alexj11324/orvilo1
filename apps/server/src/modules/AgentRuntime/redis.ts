@@ -4,8 +4,8 @@ import Redis from 'ioredis';
 import { getRedisConfig, redisEnv } from '@/envs/redis';
 import { isRedisDisabledByEnv } from '@/libs/redis';
 
-const log = debug('lobe-server:agent-runtime:redis');
-const timing = debug('lobe-server:agent-runtime:timing');
+const log = debug('orvilo-server:agent-runtime:redis');
+const timing = debug('orvilo-server:agent-runtime:timing');
 
 /**
  * Get Redis URL from environment

@@ -133,9 +133,9 @@ export interface UserMemoryExtractionProgress {
 }
 
 /**
- * Provider metadata for Upstash workflow-backed async task runs.
+ * Provider metadata for Hatchet workflow-backed async task runs.
  */
-export interface UpstashWorkflowRunMetadata {
+export interface HatchetWorkflowRunMetadata {
   /**
    * Workflow run id of the wrapper run that created this async task.
    */
@@ -165,7 +165,7 @@ export interface MemoryExtractionControlMetadata {
   /**
    * Provider-specific cancellation metadata.
    */
-  upstash?: UpstashWorkflowRunMetadata;
+  hatchet?: HatchetWorkflowRunMetadata;
 }
 
 export interface UserMemoryExtractionMetadata {

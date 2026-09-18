@@ -4,9 +4,9 @@ import { expect } from '@playwright/test';
 import { TEST_USER } from '../../support/seedTestUser';
 import type { CustomWorld } from '../../support/world';
 
-const CLIENT_ID = 'lobehub-cli';
+const CLIENT_ID = 'orvilo-cli';
 const DEVICE_CODE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
-const RESOURCE = 'urn:lobehub:chat';
+const RESOURCE = 'urn:orvilo:chat';
 const SCOPES = 'openid profile email offline_access';
 
 interface DeviceAuthorizationResponse {

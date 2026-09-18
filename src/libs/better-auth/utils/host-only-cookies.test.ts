@@ -76,6 +76,6 @@ describe('expireLegacyHostOnlyCookies', () => {
   it('skips native clients that store cookies without a domain', () => {
     const setCookies = [`${SESSION_TOKEN}=token; Path=/; Domain=.example.com; Secure`];
 
-    expect(run(setCookies, { 'expo-origin': 'com.lobehub.app://' })).toEqual(setCookies);
+    expect(run(setCookies, { 'expo-origin': 'com.orvilo.app://' })).toEqual(setCookies);
   });
 });

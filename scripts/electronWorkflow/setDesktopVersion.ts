@@ -77,27 +77,27 @@ function updatePackageJson() {
     switch (releaseType) {
       case 'stable': {
         packageJson.productName = 'Orvilo';
-        packageJson.name = 'lobehub-desktop';
+        packageJson.name = 'orvilo-desktop';
         console.log('🌟 Setting as Stable version.');
         break;
       }
       case 'beta': {
         packageJson.productName = 'Orvilo-Beta';
-        packageJson.name = 'lobehub-desktop-beta'; // Or 'lobehub-desktop' if preferred
+        packageJson.name = 'orvilo-desktop-beta'; // Or 'orvilo-desktop' if preferred
         console.log('🧪 Setting as Beta version.');
         updateAppIcon('beta');
         break;
       }
       case 'nightly': {
         packageJson.productName = 'Orvilo-Nightly';
-        packageJson.name = 'lobehub-desktop-nightly'; // Or 'lobehub-desktop-nightly'
+        packageJson.name = 'orvilo-desktop-nightly'; // Or 'orvilo-desktop-nightly'
         console.log('🌙 Setting as Nightly version.');
         updateAppIcon('nightly');
         break;
       }
       case 'canary': {
         packageJson.productName = 'Orvilo';
-        packageJson.name = 'lobehub-desktop-canary';
+        packageJson.name = 'orvilo-desktop-canary';
         console.log('🐤 Setting as Canary version (same app name and icon as stable).');
         break;
       }

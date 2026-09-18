@@ -23,9 +23,8 @@ export const createVercelPreviewDeploymentPayload = (
   name: projectName,
   project: projectId,
   projectSettings: {
-    // Vercel proceeds with the build when the ignore command exits non-zero.
-    // The project-level command intentionally skips automatic Preview builds;
-    // this workflow creates the deployment after its branch database is ready.
+    // The repository disables Git auto-deploys for PR branches. This direct
+    // API deployment must explicitly continue through the build step.
     commandForIgnoringBuildStep: 'exit 1',
   },
 });
@@ -42,6 +41,7 @@ const main = () => {
     !Number.isSafeInteger(repositoryId) ||
     repositoryId <= 0 ||
     !branch ||
+    /[\r\n]/.test(branch) ||
     !/^[0-9a-f]{40}$/.test(sha ?? '') ||
     !Number.isSafeInteger(pullRequestNumber) ||
     pullRequestNumber <= 0

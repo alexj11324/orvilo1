@@ -23,7 +23,7 @@ const { getTrpcClient: mockGetTrpcClient } = vi.hoisted(() => ({
 }));
 
 vi.mock('../api/client', () => ({ getTrpcClient: mockGetTrpcClient }));
-vi.mock('../settings', () => ({ resolveServerUrl: () => 'https://app.lobehub.com' }));
+vi.mock('../settings', () => ({ resolveServerUrl: () => 'https://orvilo.aspectlylabs.com' }));
 
 describe('artifact publish', () => {
   let workingDirectory: string;
@@ -131,7 +131,7 @@ describe('artifact publish', () => {
     ).not.toHaveBeenCalled();
   });
 
-  const manifestPath = () => path.join(workingDirectory, '.lobehub', 'artifacts.json');
+  const manifestPath = () => path.join(workingDirectory, '.orvilo', 'artifacts.json');
 
   const readManifest = () => JSON.parse(fs.readFileSync(manifestPath(), 'utf8'));
 
@@ -163,7 +163,7 @@ describe('artifact publish', () => {
       await publish();
 
       const output = consoleSpy.mock.calls.flat().join('\n');
-      expect(output).toContain('https://app.lobehub.com/share/artifact/dep-1');
+      expect(output).toContain('https://orvilo.aspectlylabs.com/share/artifact/dep-1');
       expect(output).not.toContain('https://example.com/p');
     });
 
@@ -176,7 +176,7 @@ describe('artifact publish', () => {
           .filter((value): value is string => typeof value === 'string')
           .join('\n'),
       );
-      expect(payload.publicUrl).toBe('https://app.lobehub.com/share/artifact/dep-1');
+      expect(payload.publicUrl).toBe('https://orvilo.aspectlylabs.com/share/artifact/dep-1');
       expect(payload.id).toBe('dep-1');
     });
 

@@ -7,7 +7,7 @@ import { createLambdaContext } from '@/libs/trpc/lambda/context';
 import { createAgentStateManager, createStreamEventManager } from '@/server/modules/AgentRuntime';
 
 const log = debug('api-route:agent:stream');
-const timing = debug('lobe-server:agent-runtime:timing');
+const timing = debug('orvilo-server:agent-runtime:timing');
 
 /**
  * Server-Sent Events (SSE) endpoint

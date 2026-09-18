@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveAttachmentMetadata } from './resolveAttachments';
@@ -21,7 +21,7 @@ vi.mock('@/server/services/file', () => ({
   FileService: vi.fn().mockImplementation(function () {
     return { getFullFileUrl: mocks.getFullFileUrl };
   }),
-  getFileProxyUrl: (fileId: string) => `https://app.lobehub.com/f/${fileId}`,
+  getFileProxyUrl: (fileId: string) => `https://orvilo.aspectlylabs.com/f/${fileId}`,
 }));
 
 describe('resolveAttachmentMetadata', () => {
@@ -44,14 +44,14 @@ describe('resolveAttachmentMetadata', () => {
     );
 
     const result = await resolveAttachmentMetadata({
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       fileIds: ['file_historical'],
       userId: 'user-1',
     });
 
     expect(result).toEqual([
       {
-        downloadUrl: 'https://app.lobehub.com/f/file_historical',
+        downloadUrl: 'https://orvilo.aspectlylabs.com/f/file_historical',
         fileType: 'application/pdf',
         id: 'file_historical',
         name: 'report.pdf',

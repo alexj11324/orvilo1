@@ -25,7 +25,7 @@ export type DisplayedWorkspaceHtmlResource = GatheredWorkspaceHtmlResource & {
   source?: ResourceSource;
 };
 
-const log = debug('lobe-client:workspace-html-publish');
+const log = debug('orvilo-client:workspace-html-publish');
 
 export interface BlockedWorkspaceHtmlPublishInput {
   agentId?: string | null;

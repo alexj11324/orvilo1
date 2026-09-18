@@ -46,8 +46,8 @@ describe('Project working directory schema', () => {
       .values({
         deviceId: device.id,
         isPrimary: true,
-        name: 'lobehub',
-        path: '/Users/name/Code/lobehub',
+        name: 'orvilo',
+        path: '/Users/name/Code/orvilo',
         projectId: project.id,
       })
       .returning();
@@ -65,8 +65,8 @@ describe('Project working directory schema', () => {
     const values = {
       deviceId: device.id,
       isPrimary: true,
-      name: 'lobehub',
-      path: '/Users/name/Code/lobehub',
+      name: 'orvilo',
+      path: '/Users/name/Code/orvilo',
       projectId: project.id,
     };
 
@@ -75,8 +75,8 @@ describe('Project working directory schema', () => {
     await expect(
       serverDB.insert(projectWorkingDirectories).values({
         ...values,
-        name: 'lobehub-cloud',
-        path: '/Users/name/Code/lobehub-cloud',
+        name: 'orvilo-cloud',
+        path: '/Users/name/Code/orvilo-cloud',
       }),
     ).rejects.toThrow();
   });
@@ -87,8 +87,8 @@ describe('Project working directory schema', () => {
       .insert(projectWorkingDirectories)
       .values({
         deviceId: device.id,
-        name: 'lobehub',
-        path: '/Users/name/Code/lobehub',
+        name: 'orvilo',
+        path: '/Users/name/Code/orvilo',
         projectId: project.id,
       })
       .returning();
@@ -120,8 +120,8 @@ describe('Project working directory schema', () => {
       .insert(projectWorkingDirectories)
       .values({
         deviceId: device.id,
-        name: 'lobehub',
-        path: '/Users/name/Code/lobehub',
+        name: 'orvilo',
+        path: '/Users/name/Code/orvilo',
         projectId: project.id,
       })
       .returning();
@@ -132,6 +132,6 @@ describe('Project working directory schema', () => {
       .select()
       .from(projectWorkingDirectories)
       .where(eq(projectWorkingDirectories.id, directory.id));
-    expect(persisted).toMatchObject({ deviceId: null, path: '/Users/name/Code/lobehub' });
+    expect(persisted).toMatchObject({ deviceId: null, path: '/Users/name/Code/orvilo' });
   });
 });

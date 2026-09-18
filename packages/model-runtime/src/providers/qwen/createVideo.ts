@@ -4,7 +4,7 @@ import type { CreateVideoOptions } from '../../core/openaiCompatibleFactory';
 import type { CreateVideoPayload, CreateVideoResponse } from '../../types/video';
 import { AgentRuntimeError } from '../../utils/createError';
 
-const log = createDebug('lobe-video:qwen');
+const log = createDebug('orvilo-video:qwen');
 
 interface QwenVideoTaskResponse {
   output: {

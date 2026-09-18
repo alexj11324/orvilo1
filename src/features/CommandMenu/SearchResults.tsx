@@ -9,7 +9,6 @@ import { agentDisplayName } from '@orvilo/types';
 import { Command } from 'cmdk';
 import dayjs from 'dayjs';
 import {
-  Bot,
   Brain,
   ChevronRight,
   FileText,
@@ -17,8 +16,6 @@ import {
   Library,
   MessageCircle,
   MessageSquare,
-  Plug,
-  Puzzle,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -38,7 +35,6 @@ import { markdownToTxt } from '@/utils/markdownToTxt';
 import type { CommandMenuResultClick } from './analytics';
 import { CommandItem } from './components';
 import { styles } from './styles';
-import { shouldShowMarketplaceFallback } from './utils/marketplaceFallback';
 import { type ValidSearchType } from './utils/queryParser';
 import { createVisibleResultPositionMap } from './utils/visibleResultPosition';
 
@@ -134,6 +130,10 @@ const SearchResults = memo<SearchResultsProps>(
           navigate(fileUrl);
           break;
         }
+        case 'page': {
+          navigate(`/resource?file=${result.id}`);
+          break;
+        }
         case 'folder': {
           // Navigate to folder by slug
           if (result.knowledgeBaseId && result.slug) {
@@ -144,22 +144,6 @@ const SearchResults = memo<SearchResultsProps>(
             // Fallback to library root if no slug
             navigate(`/resource/library`);
           }
-          break;
-        }
-        case 'page': {
-          navigate(`/page/${result.id.split('_')[1]}`);
-          break;
-        }
-        case 'mcp': {
-          navigate(`/community/mcp/${result.identifier}`);
-          break;
-        }
-        case 'plugin': {
-          navigate(`/community/mcp/${result.identifier}`);
-          break;
-        }
-        case 'communityAgent': {
-          navigate(`/community/agent/${result.identifier}`);
           break;
         }
         case 'memory': {
@@ -191,20 +175,11 @@ const SearchResults = memo<SearchResultsProps>(
         case 'file': {
           return <FileText size={16} />;
         }
-        case 'folder': {
-          return <Folder size={16} />;
-        }
         case 'page': {
           return <FileText size={16} />;
         }
-        case 'mcp': {
-          return <Puzzle size={16} />;
-        }
-        case 'plugin': {
-          return <Plug size={16} />;
-        }
-        case 'communityAgent': {
-          return <Bot size={16} />;
+        case 'folder': {
+          return <Folder size={16} />;
         }
         case 'memory': {
           return <Brain size={16} />;
@@ -232,20 +207,11 @@ const SearchResults = memo<SearchResultsProps>(
         case 'file': {
           return t('cmdk.search.file');
         }
+        case 'page': {
+          return t('cmdk.search.file');
+        }
         case 'folder': {
           return t('cmdk.search.folder');
-        }
-        case 'page': {
-          return t('cmdk.search.page');
-        }
-        case 'mcp': {
-          return t('cmdk.search.mcp');
-        }
-        case 'plugin': {
-          return t('cmdk.search.plugin');
-        }
-        case 'communityAgent': {
-          return t('cmdk.search.assistant');
         }
         case 'memory': {
           return t('cmdk.search.memory');
@@ -366,23 +332,23 @@ const SearchResults = memo<SearchResultsProps>(
             }))
         : [];
 
-    const hasResults = results.length > 0;
+    const availableResults = results.filter(
+      (result) => !['mcp', 'plugin', 'communityAgent'].includes(result.type),
+    );
+    const hasResults = availableResults.length > 0;
     const hasLocalTopicResults =
       localImageTopicResults.length > 0 || localVideoTopicResults.length > 0;
 
     // Group results by type
-    const messageResults = results.filter((r) => r.type === 'message');
-    const chatGroupResults = results.filter((r) => r.type === 'chatGroup');
-    const agentResults = results.filter((r) => r.type === 'agent');
-    const topicResults = results.filter((r) => r.type === 'topic');
-    const fileResults = results.filter((r) => r.type === 'file');
-    const folderResults = results.filter((r) => r.type === 'folder');
-    const pageResults = results.filter((r) => r.type === 'page');
-    const memoryResults = results.filter((r) => r.type === 'memory');
-    const mcpResults = results.filter((r) => r.type === 'mcp');
-    const pluginResults = results.filter((r) => r.type === 'plugin');
-    const knowledgeBaseResults = results.filter((r) => r.type === 'knowledgeBase');
-    const assistantResults = results.filter((r) => r.type === 'communityAgent');
+    const messageResults = availableResults.filter((r) => r.type === 'message');
+    const chatGroupResults = availableResults.filter((r) => r.type === 'chatGroup');
+    const agentResults = availableResults.filter((r) => r.type === 'agent');
+    const topicResults = availableResults.filter((r) => r.type === 'topic');
+    const fileResults = availableResults.filter((r) => r.type === 'file');
+    const pageResults = availableResults.filter((r) => r.type === 'page');
+    const folderResults = availableResults.filter((r) => r.type === 'folder');
+    const memoryResults = availableResults.filter((r) => r.type === 'memory');
+    const knowledgeBaseResults = availableResults.filter((r) => r.type === 'knowledgeBase');
     const localResultCount = localImageTopicResults.length + localVideoTopicResults.length;
     const visibleResultPositions = createVisibleResultPositionMap<FtsSearchResult>(
       [
@@ -390,14 +356,11 @@ const SearchResults = memo<SearchResultsProps>(
         agentResults,
         chatGroupResults,
         topicResults,
-        pageResults,
         memoryResults,
         fileResults,
+        pageResults,
         folderResults,
         knowledgeBaseResults,
-        mcpResults,
-        pluginResults,
-        assistantResults,
       ],
       localResultCount,
     );
@@ -407,10 +370,7 @@ const SearchResults = memo<SearchResultsProps>(
       onVisibleResultCountChange(visibleResultCount);
     }, [onVisibleResultCountChange, visibleResultCount]);
 
-    // Don't render anything if no results and not loading — except in the
-    // unfiltered view, which always carries the permanent marketplace entries
-    // below (the aggregate response is DB-only, so a query whose matches live
-    // only in the marketplace would otherwise dead-end with no visible route).
+    // Don't render anything if no supported results and not loading.
     if (!hasResults && !hasLocalTopicResults && !isLoading && typeFilter) {
       return null;
     }
@@ -456,18 +416,12 @@ const SearchResults = memo<SearchResultsProps>(
       );
     };
 
-    // Marketplace types are absent from the aggregate response (it is DB-only),
-    // so their "Search More" entries must not depend on a non-zero result count.
-    const MARKETPLACE_TYPES: ValidSearchType[] = ['mcp', 'plugin', 'communityAgent'];
-
     // Helper to render "Search More" button
     const renderSearchMore = (type: ValidSearchType, count: number) => {
       // Don't show if already filtering by this type
       if (typeFilter) return null;
 
-      // Show if there are results (might have more); marketplace entries always
-      // show — they are the only visible route into the explicit marketplace search
-      if (count === 0 && !MARKETPLACE_TYPES.includes(type)) return null;
+      if (count === 0) return null;
 
       const typeLabel = getTypeLabel(type);
       const titleText = `${t('cmdk.search.searchMore', { type: typeLabel })} with "${searchQuery}"`;
@@ -600,13 +554,6 @@ const SearchResults = memo<SearchResultsProps>(
           </Command.Group>
         )}
 
-        {pageResults.length > 0 && (
-          <Command.Group forceMount>
-            {pageResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('page', pageResults.length)}
-          </Command.Group>
-        )}
-
         {memoryResults.length > 0 && (
           <Command.Group forceMount>
             {memoryResults.map((result) => renderResultItem(result))}
@@ -621,6 +568,12 @@ const SearchResults = memo<SearchResultsProps>(
           </Command.Group>
         )}
 
+        {pageResults.length > 0 && (
+          <Command.Group forceMount>
+            {pageResults.map((result) => renderResultItem(result))}
+          </Command.Group>
+        )}
+
         {folderResults.length > 0 && (
           <Command.Group forceMount>
             {folderResults.map((result) => renderResultItem(result))}
@@ -632,42 +585,6 @@ const SearchResults = memo<SearchResultsProps>(
           <Command.Group forceMount>
             {knowledgeBaseResults.map((result) => renderResultItem(result))}
             {renderSearchMore('knowledgeBase', knowledgeBaseResults.length)}
-          </Command.Group>
-        )}
-
-        {mcpResults.length > 0 && (
-          <Command.Group forceMount>
-            {mcpResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('mcp', mcpResults.length)}
-          </Command.Group>
-        )}
-
-        {pluginResults.length > 0 && (
-          <Command.Group forceMount>
-            {pluginResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('plugin', pluginResults.length)}
-          </Command.Group>
-        )}
-
-        {assistantResults.length > 0 && (
-          <Command.Group forceMount>
-            {assistantResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('communityAgent', assistantResults.length)}
-          </Command.Group>
-        )}
-
-        {/* Marketplace typed-search entries as the no-result fallback; see
-            shouldShowMarketplaceFallback for the rationale. */}
-        {shouldShowMarketplaceFallback({
-          hasLocalTopicResults,
-          hasResults,
-          isLoading,
-          typeFilter,
-        }) && (
-          <Command.Group forceMount>
-            {renderSearchMore('mcp', mcpResults.length)}
-            {renderSearchMore('plugin', pluginResults.length)}
-            {renderSearchMore('communityAgent', assistantResults.length)}
           </Command.Group>
         )}
 

@@ -12,7 +12,7 @@ import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPer
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentBotProviderModel } from '@/database/models/agentBotProvider';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
@@ -72,7 +72,7 @@ const BOT_NOT_FOUND_MESSAGE = 'Bot integration not found';
  * already settled it.
  */
 async function assertStrandedWorkspaceStillManageable(
-  ctx: { serverDB: LobeChatDatabase; userId: string },
+  ctx: { serverDB: OrviloDatabase; userId: string },
   workspaceId: string | null,
 ): Promise<void> {
   if (!workspaceId) return;
@@ -104,7 +104,7 @@ async function assertStrandedWorkspaceStillManageable(
  * naming the agent, the workspace or the owner.
  */
 async function describeApplicationIdConflict(
-  ctx: { serverDB: LobeChatDatabase; userId: string },
+  ctx: { serverDB: OrviloDatabase; userId: string },
   platform: string,
   applicationId: string,
 ): Promise<string> {

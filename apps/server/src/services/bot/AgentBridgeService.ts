@@ -9,7 +9,7 @@ import type { MessengerPlatform } from '@/config/messenger';
 import { AgentBotProviderModel } from '@/database/models/agentBotProvider';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { createAbortError, isAbortError } from '@/server/services/agentRuntime/abort';
 import { AiAgentService } from '@/server/services/aiAgent';
 import type { AttachmentSource } from '@/server/services/aiAgent/ingestAttachment';
@@ -46,7 +46,7 @@ import {
   splitMessage,
 } from './replyTemplate';
 
-const log = debug('lobe-server:bot:agent-bridge');
+const log = debug('orvilo-server:bot:agent-bridge');
 
 /**
  * `acquireTopicStartReservation` gives up with this message when the topic's
@@ -158,7 +158,7 @@ interface DiscordChannelContext {
 }
 
 /**
- * Resolve the `{ platform, channelId }` pair the `lobe-message` tool needs to
+ * Resolve the `{ platform, channelId }` pair the `orvilo-message` tool needs to
  * act on the conversation this run is replying in.
  *
  * `PlatformClient.extractChatId` is the decoder each platform already uses for
@@ -234,7 +234,7 @@ interface ActiveReaction {
  * Provides real-time feedback via emoji reactions and editable progress messages.
  */
 export class AgentBridgeService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
@@ -408,7 +408,7 @@ export class AgentBridgeService {
     }
   }
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -825,7 +825,7 @@ export class AgentBridgeService {
       opts.botContext?.platform,
       opts.botContext?.platformThreadId,
     )?.includes(MessageApiName.readMessages);
-    // The `channelId` the model must pass to `lobe-message` to act on THIS
+    // The `channelId` the model must pass to `orvilo-message` to act on THIS
     // conversation. `extractChatId` is the same decoder each platform client
     // already uses for its own outbound calls, so the injected value is exactly
     // what the message service expects (Feishu `oc_…`, Discord channel/thread
@@ -944,7 +944,7 @@ export class AgentBridgeService {
         const platform = platformFromThreadId(botContext.platformThreadId);
         try {
           if (botContext.messengerInstallationKey) {
-            // Messenger run: shard typing by `(platform, lobeUserId)` so each
+            // Messenger run: shard typing by `(platform, orviloUserId)` so each
             // user gets their own DO. Solves both the cross-conversation
             // TypingState overwrite bug (single shared DO) and the 200K-MAU
             // single-DO hot-spot. The connectionId is registered lazily and
@@ -1032,7 +1032,7 @@ export class AgentBridgeService {
         channelContext?.thread?.name && /^Thread \d/.test(channelContext.thread.name)
           ? undefined
           : channelContext?.thread?.name,
-      // Forward the lobe userId so messenger callbacks can rebuild the same
+      // Forward the orvilo userId so messenger callbacks can rebuild the same
       // per-user gateway connectionId (`messenger:<platform>[:<tenant>]:user-<userId>`)
       // that we used to start typing here. Without it, `BotCallbackService`
       // falls back to `connectionId: ''` and `stopGatewayTyping` becomes a
@@ -1166,7 +1166,7 @@ export class AgentBridgeService {
               type: 'afterStep',
               webhook: {
                 body: { ...webhookBody, type: 'step' },
-                delivery: 'qstash',
+                delivery: 'hatchet',
                 url: callbackUrl,
               },
             },
@@ -1185,7 +1185,7 @@ export class AgentBridgeService {
                   })
                 : {
                     body: { ...webhookBody, type: 'completion', userPrompt: prompt },
-                    delivery: 'qstash',
+                    delivery: 'hatchet',
                     fallback: 'none',
                     url: callbackUrl,
                   },
@@ -1422,7 +1422,7 @@ export class AgentBridgeService {
               type: 'afterStep' as const,
               webhook: {
                 body: { ...webhookBody, type: 'step' },
-                delivery: 'qstash' as const,
+                delivery: 'hatchet' as const,
                 url: callbackUrl,
               },
             },
@@ -1605,7 +1605,7 @@ export class AgentBridgeService {
                   })
                 : {
                     body: { ...webhookBody, type: 'completion', userPrompt: prompt },
-                    delivery: 'qstash' as const,
+                    delivery: 'hatchet' as const,
                     fallback: 'none' as const,
                     url: callbackUrl,
                   },

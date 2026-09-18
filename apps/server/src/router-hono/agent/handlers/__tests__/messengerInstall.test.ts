@@ -59,7 +59,7 @@ const buildContext = (platform: string, path: string): Context => {
 beforeEach(() => {
   vi.mocked(auth.api.getSession).mockResolvedValue({
     session: {} as any,
-    user: { id: 'lobe-user-1' } as any,
+    user: { id: 'orvilo-user-1' } as any,
   });
   vi.mocked(getMessengerSlackConfig).mockResolvedValue(VALID_SLACK_CONFIG);
   vi.mocked(getMessengerDiscordConfig).mockResolvedValue(VALID_DISCORD_CONFIG);
@@ -110,14 +110,14 @@ describe('GET /api/agent/messenger/:platform/install', () => {
       expect(await res.text()).toMatch(/Slack messenger is not configured/);
     });
 
-    it('issues a state token bound to the LobeHub user and 302s to Slack authorize', async () => {
+    it('issues a state token bound to the Orvilo user and 302s to Slack authorize', async () => {
       const res = await messengerInstall(
         buildContext('slack', '/api/agent/messenger/slack/install'),
       );
       expect(res.status).toBe(302);
 
       expect(issueOAuthState).toHaveBeenCalledWith({
-        lobeUserId: 'lobe-user-1',
+        orviloUserId: 'orvilo-user-1',
         returnTo: undefined,
       });
 
@@ -137,7 +137,7 @@ describe('GET /api/agent/messenger/:platform/install', () => {
         buildContext('slack', '/api/agent/messenger/slack/install?returnTo=/settings/messenger'),
       );
       expect(issueOAuthState).toHaveBeenCalledWith({
-        lobeUserId: 'lobe-user-1',
+        orviloUserId: 'orvilo-user-1',
         returnTo: '/settings/messenger',
       });
     });

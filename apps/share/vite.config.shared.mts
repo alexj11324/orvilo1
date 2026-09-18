@@ -6,9 +6,9 @@ import { lobeStaticCssPlugin } from '@lobehub/ui/static-css/vite';
 import { reactRouter } from '@react-router/dev/vite';
 import { defineConfig, type Plugin, type PluginOption } from 'vite';
 
-import { lobeIconImports } from '../../plugins/vite/lobeIconImports';
 import { viteMarkdownImport } from '../../plugins/vite/markdownImport';
 import { viteNodeModuleStub } from '../../plugins/vite/nodeModuleStub';
+import { orviloIconImports } from '../../plugins/vite/orviloIconImports';
 import { vitePlatformResolve } from '../../plugins/vite/platformResolve';
 import {
   sharedRendererDedupe,
@@ -198,7 +198,7 @@ export const createShareRrConfig = ({
     };
   };
 
-  const proxyTarget = process.env.SHARE_API_PROXY || 'https://app.lobehub.com';
+  const proxyTarget = process.env.SHARE_API_PROXY || 'https://orvilo.aspectlylabs.com';
   const backendProxy = Object.fromEntries(
     ['/api', '/oidc', '/trpc', '/webapi'].map((prefix) => [
       prefix,
@@ -227,7 +227,7 @@ export const createShareRrConfig = ({
       lobeStaticCssPlugin({ antd: staticCss.antd, themeVars: staticCss.themeVars }),
       staticCssDevServe(),
       reactRouter(),
-      ...lobeIconImports(),
+      ...orviloIconImports(),
       ...(resolvePlugins ?? []),
     ],
     resolve: {

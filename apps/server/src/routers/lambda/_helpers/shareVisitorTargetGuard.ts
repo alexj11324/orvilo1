@@ -2,10 +2,10 @@ import { TRPCError } from '@trpc/server';
 
 import { MessageModel } from '@/database/models/message';
 import { TopicModel } from '@/database/models/topic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 interface ShareVisitorGuardCtx {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   userId: string;
   workspaceId?: string | null;
 }

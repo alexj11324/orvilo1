@@ -10,7 +10,7 @@ import {
 } from '@/server/workflows/agentEvalRun';
 import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/utils';
 
-const log = debug('lobe-server:workflows:on-thread-complete');
+const log = debug('orvilo-server:workflows:on-thread-complete');
 
 /**
  * On-thread-complete webhook handler (for pass@k).

@@ -45,7 +45,7 @@ import type {
 } from '../../types';
 import { TaskApiName } from '../../types';
 
-const log = debug('lobe-task:executor');
+const log = debug('orvilo-task:executor');
 
 // In-app (SPA) deep-link base for tasks: a relative path so it resolves against
 // the current origin and stays durable. Workspace-scoped tasks live under

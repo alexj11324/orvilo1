@@ -149,14 +149,14 @@ describe('TRAE ACP helpers', () => {
       buildTraeAcpArgs([
         '--dangerously-bypass-hook-trust',
         '--profile',
-        'lobehub',
+        'orvilo',
         '-c',
         'model_reasoning_effort="high"',
         '--permission-mode=auto',
       ]),
     ).toEqual([
       '--profile',
-      'lobehub',
+      'orvilo',
       '-c',
       'model_reasoning_effort="high"',
       '--permission-mode=auto',
@@ -251,7 +251,7 @@ describe('TraeAcpSession', () => {
       method: 'initialize',
       params: {
         clientCapabilities: {},
-        clientInfo: { name: 'lobehub', title: 'LobeHub', version: '1.2.3' },
+        clientInfo: { name: 'orvilo', title: 'Orvilo', version: '1.2.3' },
         protocolVersion: 1,
       },
     });

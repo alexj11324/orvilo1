@@ -1,14 +1,14 @@
 import type {
   ComposioAppType,
   ConnectorCatalogAvailability,
-  LobehubSkillProviderType,
+  OrviloSkillProviderType,
 } from '@orvilo/const';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
 
 import type { ComposioServer } from '@/store/tool/slices/composioStore';
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
-import type { LobehubSkillServer } from '@/store/tool/slices/lobehubSkillStore/types';
-import { LobehubSkillStatus } from '@/store/tool/slices/lobehubSkillStore/types';
+import type { OrviloSkillServer } from '@/store/tool/slices/orviloSkillStore/types';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
 /** A Composio connector that still requires authorization. */
 export interface PendingComposioTool extends ComposioAppType {
@@ -18,12 +18,12 @@ export interface PendingComposioTool extends ComposioAppType {
   server?: ComposioServer;
 }
 
-/** A LobeHub Market connector that still requires provider authorization. */
-export interface PendingLobehubTool extends LobehubSkillProviderType {
+/** A Orvilo Market connector that still requires provider authorization. */
+export interface PendingOrviloTool extends OrviloSkillProviderType {
   /** Authorization system used by the alert row. */
-  authType: 'lobehub';
+  authType: 'orvilo';
   /** Current provider connection state, when it has already been checked. */
-  server?: LobehubSkillServer;
+  server?: OrviloSkillServer;
 }
 
 /** A built-in capability that requires the shared Market session. */
@@ -39,7 +39,7 @@ export interface PendingMarketTool {
 }
 
 /** One unresolved authorization requirement displayed by the agent welcome card. */
-export type PendingAuthTool = PendingComposioTool | PendingLobehubTool | PendingMarketTool;
+export type PendingAuthTool = PendingComposioTool | PendingOrviloTool | PendingMarketTool;
 
 /** Inputs needed to derive pending authorization rows without reading React stores. */
 export interface ResolvePendingAuthToolsInput {
@@ -49,14 +49,14 @@ export interface ResolvePendingAuthToolsInput {
   composioInitialized: boolean;
   /** Current Composio connection states. */
   composioServers: ComposioServer[];
-  /** Whether the first LobeHub Market connection request has settled. */
-  lobehubInitialized: boolean;
-  /** Current LobeHub Market connection states. */
-  lobehubServers: LobehubSkillServer[];
   /** Whether the shared Market session is authenticated. */
   marketAuthenticated: boolean;
   /** Built-in capabilities gated only by the shared Market session. */
   marketTools: PendingMarketTool[];
+  /** Whether the first Orvilo Market connection request has settled. */
+  orviloInitialized: boolean;
+  /** Current Orvilo Market connection states. */
+  orviloServers: OrviloSkillServer[];
   /** Active agent plugin identifiers. */
   plugins: string[];
 }
@@ -79,8 +79,8 @@ export const resolvePendingAuthTools = ({
   availability,
   composioInitialized,
   composioServers,
-  lobehubInitialized,
-  lobehubServers,
+  orviloInitialized,
+  orviloServers,
   marketAuthenticated,
   marketTools,
   plugins,
@@ -93,13 +93,13 @@ export const resolvePendingAuthTools = ({
     seenIdentifiers.add(identifier);
 
     const composioServer = composioServers.find((item) => item.identifier === identifier);
-    const lobehubServer = lobehubServers.find((item) => item.identifier === identifier);
+    const orviloServer = orviloServers.find((item) => item.identifier === identifier);
 
     const connector = resolveConnectorCatalogItem(identifier, availability);
-    if (connector?.type === 'lobehub') {
-      if (!lobehubInitialized) continue;
-      if (lobehubServer?.status !== LobehubSkillStatus.CONNECTED) {
-        pending.push({ ...connector.provider, authType: 'lobehub', server: lobehubServer });
+    if (connector?.type === 'orvilo') {
+      if (!orviloInitialized) continue;
+      if (orviloServer?.status !== OrviloSkillStatus.CONNECTED) {
+        pending.push({ ...connector.provider, authType: 'orvilo', server: orviloServer });
       }
       continue;
     }

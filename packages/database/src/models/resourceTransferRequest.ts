@@ -3,7 +3,7 @@ import { and, desc, eq, gt, inArray, isNotNull, lte, or, sql } from 'drizzle-orm
 
 import type { ResourceTransferRequestItem } from '../schemas';
 import { notifications, resourceTransferRequests } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 /** Create rejected: the resource already carries a live transfer request. */
 export const TRANSFER_REQUEST_ALREADY_PENDING = 'TRANSFER_REQUEST_ALREADY_PENDING';
@@ -17,7 +17,7 @@ export const TRANSFER_REQUEST_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Upper bound for a user's pending-transfer listing (inbox drawer renders all rows it gets). */
 export const PENDING_TRANSFER_LIST_LIMIT = 50;
 
-type Executor = Transaction | LobeChatDatabase;
+type Executor = Transaction | OrviloDatabase;
 
 const PG_UNIQUE_VIOLATION = '23505';
 
@@ -38,10 +38,10 @@ const isUniqueViolation = (error: unknown): boolean =>
  * treated as terminal either way.
  */
 export class ResourceTransferRequestModel {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId: string;
 
-  constructor(db: LobeChatDatabase, workspaceId: string) {
+  constructor(db: OrviloDatabase, workspaceId: string) {
     this.db = db;
     this.workspaceId = workspaceId;
   }

@@ -119,12 +119,12 @@ describe('parseSystemAgent', () => {
 
   it('should parse memory service model assignments explicitly', () => {
     const envValue =
-      'memoryAnalysisAgentConfig=lobehub/gpt-5.4-mini,userMemoryEmbedding=openai/text-embedding-3-large';
+      'memoryAnalysisAgentConfig=orvilo/gpt-5.4-mini,userMemoryEmbedding=openai/text-embedding-3-large';
 
     const result = parseSystemAgent(envValue);
 
     expect(result.memoryAnalysisAgentConfig).toEqual({
-      provider: 'lobehub',
+      provider: 'orvilo',
       model: 'gpt-5.4-mini',
     });
     expect(result.userMemoryEmbedding).toEqual({
@@ -136,13 +136,13 @@ describe('parseSystemAgent', () => {
   /** @example Onboarding generation tasks can select different providers and models. */
   it('should parse onboarding task model assignments independently', () => {
     const envValue =
-      'onboardingUnderstanding=lobehub/gpt-5.4-mini,onboardingTaskRecommender=anthropic/claude-sonnet-4-5';
+      'onboardingUnderstanding=orvilo/gpt-5.4-mini,onboardingTaskRecommender=anthropic/claude-sonnet-4-5';
 
     const result = parseSystemAgent(envValue);
 
     expect(result.onboardingUnderstanding).toEqual({
       model: 'gpt-5.4-mini',
-      provider: 'lobehub',
+      provider: 'orvilo',
     });
     expect(result.onboardingTaskRecommender).toEqual({
       model: 'claude-sonnet-4-5',

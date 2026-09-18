@@ -230,6 +230,9 @@ class TaskService {
   run = async (id: string, params?: { continueTopicId?: string; prompt?: string }) =>
     lambdaClient.task.run.mutate({ id, ...params });
 
+  retryIntegration = async (id: string, topicId: string) =>
+    lambdaClient.task.retryIntegration.mutate({ id, topicId });
+
   previewSubtaskLayers = async (id: string) => lambdaClient.task.previewSubtaskLayers.query({ id });
 
   runReadySubtasks = async (id: string) => lambdaClient.task.runReadySubtasks.mutate({ id });

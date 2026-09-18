@@ -42,4 +42,4 @@ export const params = {
   provider: ModelProvider.CometAPI,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeCometAPIAI = createOpenAICompatibleRuntime(params);
+export const OrviloCometAPIAI = createOpenAICompatibleRuntime(params);

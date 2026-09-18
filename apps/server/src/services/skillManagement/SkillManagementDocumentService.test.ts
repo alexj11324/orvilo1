@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase, Transaction } from '@orvilo/database';
+import type { OrviloDatabase, Transaction } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -274,7 +274,7 @@ const createService = () => {
     {
       transaction: async <T>(callback: (trx: Transaction) => Promise<T>) =>
         callback({} as Transaction),
-    } as LobeChatDatabase,
+    } as OrviloDatabase,
     'user-1',
     undefined,
     {

@@ -2,7 +2,7 @@
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LobeDeepSeekAnthropicAI } from '../index';
+import { OrviloDeepSeekAnthropicAI } from '../index';
 import {
   expectNoLoneSurrogateEscapes,
   loneHighSurrogate,
@@ -10,8 +10,8 @@ import {
   validEmoji,
 } from './testUtils';
 
-describe('LobeDeepSeekAnthropicAI handlePayload', () => {
-  let instance: InstanceType<typeof LobeDeepSeekAnthropicAI>;
+describe('OrviloDeepSeekAnthropicAI handlePayload', () => {
+  let instance: InstanceType<typeof OrviloDeepSeekAnthropicAI>;
 
   const getLastRequestPayload = () => {
     const calls = ((instance as any).client.messages.create as Mock).mock.calls;
@@ -19,7 +19,7 @@ describe('LobeDeepSeekAnthropicAI handlePayload', () => {
   };
 
   beforeEach(() => {
-    instance = new LobeDeepSeekAnthropicAI({ apiKey: 'test' });
+    instance = new OrviloDeepSeekAnthropicAI({ apiKey: 'test' });
 
     vi.spyOn((instance as any).client.messages, 'create').mockResolvedValue(
       new ReadableStream() as any,

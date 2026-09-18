@@ -6,6 +6,7 @@ import { MarketService } from '@/server/services/market';
 
 import {
   findBranchPr,
+  getRemoteBranchSha,
   getRepoDefaultBranch,
   isBranchMergedInto,
   parseGithubRepo,
@@ -104,20 +105,30 @@ describe('github api helpers', () => {
       fetchMock.mockResolvedValue(
         jsonResponse([
           {
+            base: { ref: 'main' },
             html_url: 'https://github.com/acme/widgets/pull/7',
+            head: { sha: 'head123' },
             merge_commit_sha: 'abc999',
             merged_at: '2026-01-01T00:00:00Z',
+            number: 7,
           },
         ]),
       );
 
-      expect(await findBranchPr('acme/widgets', 'task/T-1', 'tok')).toEqual({
+      expect(await findBranchPr('acme/widgets', 'task/T-1', 'main', 'tok')).toEqual({
+        baseBranch: 'main',
+        headSha: 'head123',
         merged: true,
+        number: 7,
         sha: 'abc999',
         url: 'https://github.com/acme/widgets/pull/7',
       });
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('head=acme%3Atask%2FT-1'),
+        expect.stringMatching(/head=acme%3Atask%2FT-1.*base=main/),
+        expect.anything(),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('base=main'),
         expect.anything(),
       );
     });
@@ -126,14 +137,20 @@ describe('github api helpers', () => {
       fetchMock.mockResolvedValue(
         jsonResponse([
           {
+            base: { ref: 'main' },
             html_url: 'https://github.com/acme/widgets/pull/7',
+            head: { sha: 'head123' },
             merge_commit_sha: null,
             merged_at: null,
+            number: 7,
           },
         ]),
       );
-      expect(await findBranchPr('acme/widgets', 'task/T-1')).toEqual({
+      expect(await findBranchPr('acme/widgets', 'task/T-1', 'main')).toEqual({
+        baseBranch: 'main',
+        headSha: 'head123',
         merged: false,
+        number: 7,
         sha: undefined,
         url: 'https://github.com/acme/widgets/pull/7',
       });
@@ -141,7 +158,19 @@ describe('github api helpers', () => {
 
     it('returns undefined when no PR exists for the branch', async () => {
       fetchMock.mockResolvedValue(jsonResponse([]));
-      expect(await findBranchPr('acme/widgets', 'task/T-1')).toBeUndefined();
+      expect(await findBranchPr('acme/widgets', 'task/T-1', 'main')).toBeUndefined();
+    });
+  });
+
+  describe('getRemoteBranchSha', () => {
+    it('returns the current branch commit', async () => {
+      fetchMock.mockResolvedValue(jsonResponse({ commit: { sha: 'head123' } }));
+      await expect(getRemoteBranchSha('acme/widgets', 'task/T-1')).resolves.toBe('head123');
+    });
+
+    it('returns undefined when the branch cannot be read', async () => {
+      fetchMock.mockResolvedValue(jsonResponse({ message: 'Not Found' }, 404));
+      await expect(getRemoteBranchSha('acme/widgets', 'task/T-1')).resolves.toBeUndefined();
     });
   });
 });

@@ -28,9 +28,9 @@ vi.mock('@/server/services/oidc', () => ({
 const createRequest = (fields: Record<string, string>) => {
   const body = new FormData();
   for (const [key, value] of Object.entries(fields)) body.set(key, value);
-  return new Request('https://lobehub-cloud-next-stable.vercel.app/oidc/consent', {
+  return new Request('https://orvilo-cloud-next-stable.vercel.app/oidc/consent', {
     body,
-    headers: { origin: 'https://lobehub.com' },
+    headers: { origin: 'https://orvilo.aspectlylabs.com' },
     method: 'POST',
   }) as unknown as NextRequest;
 };
@@ -40,11 +40,11 @@ describe('POST /oidc/consent', () => {
     vi.clearAllMocks();
     mocks.getUserAuth.mockResolvedValue({ userId: 'user-1' });
     mocks.getInteractionDetails.mockResolvedValue({
-      params: { client_id: 'lobehub-desktop' },
+      params: { client_id: 'orvilo-desktop' },
       prompt: { details: {}, name: 'login' },
     });
     mocks.getInteractionResult.mockResolvedValue(
-      'https://app.lobehub.com/oidc/auth/uid-1?resume=1',
+      'https://orvilo.aspectlylabs.com/oidc/auth/uid-1?resume=1',
     );
   });
 

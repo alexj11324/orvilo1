@@ -21,7 +21,7 @@ const minimalSnapshot = {
       executionTimeMs: 500,
       totalTokens: 0,
       totalCost: 0,
-      toolsCalling: [{ identifier: 'lobe-todo-write', apiName: 'addTodo', arguments: '{}' }],
+      toolsCalling: [{ identifier: 'orvilo-todo-write', apiName: 'addTodo', arguments: '{}' }],
     },
     {
       stepIndex: 1,
@@ -33,7 +33,7 @@ const minimalSnapshot = {
       totalCost: 0,
       toolsResult: [
         {
-          identifier: 'lobe-todo-write',
+          identifier: 'orvilo-todo-write',
           apiName: 'addTodo',
           state: { success: true },
         },

@@ -44,7 +44,7 @@ const { getTrpcClient: mockGetTrpcClient } = vi.hoisted(() => ({
 }));
 
 vi.mock('../api/client', () => ({ getTrpcClient: mockGetTrpcClient }));
-vi.mock('../settings', () => ({ resolveServerUrl: () => 'https://app.lobehub.com' }));
+vi.mock('../settings', () => ({ resolveServerUrl: () => 'https://orvilo.aspectlylabs.com' }));
 describe('verify rubric config commands', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>;
 
@@ -722,12 +722,12 @@ describe('verify ingest-report — every run is an immutable acceptance round', 
 
     dir = mkdtempSync(path.join(tmpdir(), 'lh-ingest-'));
     writeFileSync(path.join(dir, 'result.json'), JSON.stringify({ cases: [] }));
-    process.env.LOBEHUB_TOPIC_ID = 'topic-1';
+    process.env.ORVILO_TOPIC_ID = 'topic-1';
   });
 
   afterEach(() => {
     consoleSpy.mockRestore();
-    delete process.env.LOBEHUB_TOPIC_ID;
+    delete process.env.ORVILO_TOPIC_ID;
     rmSync(dir, { force: true, recursive: true });
   });
 
@@ -788,7 +788,7 @@ describe('verify ingest-report — every run is an immutable acceptance round', 
   });
 
   it('creates a standalone acceptance when an external project has no operation or subject', async () => {
-    delete process.env.LOBEHUB_TOPIC_ID;
+    delete process.env.ORVILO_TOPIC_ID;
     writeFileSync(
       path.join(dir, 'result.json'),
       JSON.stringify({ cases: [], title: 'External delivery verification' }),
@@ -894,7 +894,7 @@ describe('verify ingest-report — every run is an immutable acceptance round', 
       JSON.stringify({
         klm: { category: 'action', operators },
         phase: { id: 'login', label: 'Login' },
-        schema: 'lobehub.agentBrowserKlmTrace@1',
+        schema: 'orvilo.agentBrowserKlmTrace@1',
       });
     writeFileSync(
       path.join(dir, 'interaction-trace.jsonl'),
@@ -908,7 +908,7 @@ describe('verify ingest-report — every run is an immutable acceptance round', 
         metadata: expect.objectContaining({
           interactionCost: expect.objectContaining({
             activeSeconds: 1.3,
-            model: 'goms-klm@lobe-v1',
+            model: 'goms-klm@orvilo-v1',
             sourceTrace: 'interaction-trace.jsonl',
             totalSeconds: 3.3,
           }),
@@ -946,7 +946,7 @@ describe('verify ingest-report — every run is an immutable acceptance round', 
       path.join(dir, 'interaction-trace.jsonl'),
       `${JSON.stringify({
         klm: { category: 'action', operators: { P: 1 } },
-        schema: 'lobehub.agentBrowserKlmTrace@1',
+        schema: 'orvilo.agentBrowserKlmTrace@1',
       })}\n`,
     );
 
@@ -1191,9 +1191,9 @@ describe('originFromEnv — in-app provenance', () => {
   });
 
   it('reads the conversation the agent runtime echoed into the child env', () => {
-    process.env.LOBEHUB_AGENT_ID = 'agt_1';
-    process.env.LOBEHUB_TOPIC_ID = 'tpc_1';
-    process.env.LOBEHUB_OPERATION_ID = 'op_1';
+    process.env.ORVILO_AGENT_ID = 'agt_1';
+    process.env.ORVILO_TOPIC_ID = 'tpc_1';
+    process.env.ORVILO_OPERATION_ID = 'op_1';
 
     expect(originFromEnv()).toEqual({
       agentId: 'agt_1',
@@ -1206,17 +1206,17 @@ describe('originFromEnv — in-app provenance', () => {
     // `--operation` links the session to the Agent Run being verified; origin is
     // the run that AUTHORED the report. Conflating them attributes the report to
     // its own subject — exactly the provenance this is meant to preserve.
-    process.env.LOBEHUB_OPERATION_ID = 'op_authoring_run';
+    process.env.ORVILO_OPERATION_ID = 'op_authoring_run';
 
     expect(originFromEnv()?.operationId).toBe('op_authoring_run');
     // The flag is passed to `createRun` separately; it must not reach here at all.
     expect(originFromEnv).toHaveLength(0);
   });
 
-  it('is undefined outside a LobeHub-spawned agent — a plain terminal is not an error', () => {
-    delete process.env.LOBEHUB_AGENT_ID;
-    delete process.env.LOBEHUB_TOPIC_ID;
-    delete process.env.LOBEHUB_OPERATION_ID;
+  it('is undefined outside a Orvilo-spawned agent — a plain terminal is not an error', () => {
+    delete process.env.ORVILO_AGENT_ID;
+    delete process.env.ORVILO_TOPIC_ID;
+    delete process.env.ORVILO_OPERATION_ID;
 
     expect(originFromEnv()).toBeUndefined();
   });
@@ -1257,13 +1257,13 @@ describe('subjectFromEnv — default topic acceptance', () => {
   });
 
   it('binds an in-app run to its authoring topic', () => {
-    process.env.LOBEHUB_TOPIC_ID = 'tpc_1';
+    process.env.ORVILO_TOPIC_ID = 'tpc_1';
 
     expect(subjectFromEnv()).toEqual({ subjectId: 'tpc_1', subjectType: 'topic' });
   });
 
   it('requires an explicit subject outside a topic', () => {
-    delete process.env.LOBEHUB_TOPIC_ID;
+    delete process.env.ORVILO_TOPIC_ID;
 
     expect(subjectFromEnv()).toBeNull();
   });
@@ -1315,7 +1315,7 @@ describe('lh acceptance — canonical run tree', () => {
     ]);
 
     const lines = consoleSpy.mock.calls.map((call) => String(call[0]));
-    expect(lines).toContain('report: https://app.lobehub.com/verify/run_1');
+    expect(lines).toContain('report: https://orvilo.aspectlylabs.com/verify/run_1');
   });
 
   it('includes the verification report URL in JSON output', async () => {
@@ -1335,7 +1335,7 @@ describe('lh acceptance — canonical run tree', () => {
     ]);
 
     const output = JSON.parse(consoleSpy.mock.calls.map((call) => String(call[0])).join(''));
-    expect(output.url).toBe('https://app.lobehub.com/verify/run_1');
+    expect(output.url).toBe('https://orvilo.aspectlylabs.com/verify/run_1');
   });
 
   it('exposes `acceptance install` defaulting to the acceptance skill', async () => {

@@ -2,7 +2,7 @@ import { Flexbox } from '@lobehub/ui';
 import { Button, Drawer, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
-import { type LobeToolCustomPlugin } from '@orvilo/types';
+import { type OrviloToolCustomPlugin } from '@orvilo/types';
 import { Form, Popconfirm } from 'antd';
 import { useResponsive } from 'antd-style';
 import { memo, useEffect, useRef, useState } from 'react';
@@ -18,12 +18,12 @@ interface DevModalProps {
   onDelete?: () => void;
   onOpenChange: (open: boolean) => void;
   onSave?: (
-    value: LobeToolCustomPlugin,
+    value: OrviloToolCustomPlugin,
     ctx?: { oauthPopup?: Window | null },
   ) => Promise<void> | void;
-  onValueChange?: (value: Partial<LobeToolCustomPlugin>) => void;
+  onValueChange?: (value: Partial<OrviloToolCustomPlugin>) => void;
   open?: boolean;
-  value?: LobeToolCustomPlugin;
+  value?: OrviloToolCustomPlugin;
 }
 
 const DevModal = memo<DevModalProps>(
@@ -60,7 +60,7 @@ const DevModal = memo<DevModalProps>(
       }
     }, [open, value]);
 
-    const doSave = async (values: LobeToolCustomPlugin, ctx?: { oauthPopup?: Window | null }) => {
+    const doSave = async (values: OrviloToolCustomPlugin, ctx?: { oauthPopup?: Window | null }) => {
       if (!onSave) {
         toast.success(t(isEditMode ? 'dev.updateSuccess' : 'dev.saveSuccess'));
         onOpenChange(false);
@@ -92,9 +92,9 @@ const DevModal = memo<DevModalProps>(
     // then hand it to onSave which navigates it to the authorize URL. Shared by
     // the footer save button and the in-form "Authorize" button.
     const runOAuthFlow = async () => {
-      const popup = window.open('about:blank', 'lobe-connector-oauth', 'width=600,height=720');
+      const popup = window.open('about:blank', 'orvilo-connector-oauth', 'width=600,height=720');
       try {
-        const values = (await form.validateFields()) as LobeToolCustomPlugin;
+        const values = (await form.validateFields()) as OrviloToolCustomPlugin;
         await doSave(values, { oauthPopup: popup });
       } catch {
         popup?.close();
@@ -164,7 +164,7 @@ const DevModal = memo<DevModalProps>(
           onValueChange?.(form.getFieldsValue());
         }}
         onFormFinish={async (_, info) => {
-          await doSave(info.values as LobeToolCustomPlugin);
+          await doSave(info.values as OrviloToolCustomPlugin);
         }}
       >
         <Drawer

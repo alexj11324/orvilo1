@@ -4,7 +4,7 @@ import { CHAT_GROUP_SESSION_ID_PREFIX } from '@orvilo/types';
 import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { getTestDB } from '../../core/getTestDB';
 import type { NewChatGroup } from '../../schemas';
@@ -21,7 +21,7 @@ const userId = 'test-user';
 const otherUserId = 'other-user';
 const workspaceId = 'chat-group-workspace';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 type RelationAgent = {
   agentId: string;

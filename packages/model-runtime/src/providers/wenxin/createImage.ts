@@ -4,7 +4,7 @@ import type { CreateImageOptions } from '../../core/openaiCompatibleFactory';
 import type { CreateImagePayload, CreateImageResponse } from '../../types/image';
 import { AgentRuntimeError } from '../../utils/createError';
 
-const log = createDebug('lobe-image:wenxin');
+const log = createDebug('orvilo-image:wenxin');
 
 interface WenxinImageResponse {
   created: number;

@@ -90,7 +90,6 @@ const BUSINESS_SETTINGS_COMMANDS: ContextCommand[] = [
 export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
   agent: [],
   group: [],
-  page: [],
   painting: [],
   video: [],
   resource: [],

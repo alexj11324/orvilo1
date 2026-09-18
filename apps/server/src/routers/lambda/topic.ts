@@ -31,7 +31,7 @@ import { AgentMigrationRepo } from '@/database/repositories/agentMigration';
 import { HeteroSessionImporterRepo } from '@/database/repositories/heteroSessionImporter';
 import { TopicImporterRepo } from '@/database/repositories/topicImporter';
 import { chatGroups } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { FileService } from '@/server/services/file';
@@ -62,7 +62,7 @@ import { basicContextSchema } from './_schema/context';
 
 /** Ctx slice consumed by the conversation General-access guards. */
 const guardCtx = (ctx: {
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   userId: string;
   workspaceId?: string | null;
 }) => ({ db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId });
@@ -109,7 +109,7 @@ const topicBulkDeleteScopeSchema = z.enum(['own', 'workspace']).default('own');
 interface TopicShareCtx {
   agentModel: AgentModel;
   chatGroupModel: ChatGroupModel;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   topicModel: TopicModel;
   userId: string;
   workspaceId?: string | null;
@@ -635,7 +635,7 @@ export const topicRouter = router({
         /**
          * When true, returns extra card-detail columns (firstUserMessage,
          * messageCount, cost, tokenUsage, description, trigger). Default false
-         * so the sidebar list stays cheap — only the management page opts in.
+         * so the sidebar list stays cheap.
          */
         withDetails: z.boolean().optional(),
       }),

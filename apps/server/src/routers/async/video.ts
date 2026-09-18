@@ -24,7 +24,7 @@ import { VideoGenerationService } from '@/server/services/generation/video';
 import { buildVideoGenerationFilePayload } from '@/server/services/generation/videoFile';
 import { FileSource } from '@/types/files';
 
-const log = debug('lobe-video:async');
+const log = debug('orvilo-video:async');
 
 const videoProcedure = asyncAuthedProcedure.use(async (opts) => {
   const { ctx } = opts;

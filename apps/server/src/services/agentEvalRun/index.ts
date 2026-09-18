@@ -1,5 +1,5 @@
 import { LOADING_FLAT } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { idGenerator } from '@orvilo/database';
 import { evaluate } from '@orvilo/eval-rubric';
 import type {
@@ -47,8 +47,8 @@ import { evaluateAndFinalizeRun } from './aggregate';
 
 /** Round cost to at most 6 decimal places to avoid floating-point noise */
 const roundCost = (v: number): number => Math.round(v * 1e6) / 1e6;
-const EVAL_AGENT_RUNTIME_QSTASH_RETRIES = 5;
-const EVAL_AGENT_RUNTIME_QSTASH_RETRY_DELAY = '10000 * (1 + retried)';
+const EVAL_AGENT_RUNTIME_QUEUE_RETRIES = 5;
+const EVAL_AGENT_RUNTIME_QUEUE_RETRY_DELAY = '10000 * (1 + retried)';
 const EVAL_HISTORY_MESSAGE_BATCH_SIZE = 500;
 const EVAL_HISTORY_TAIL_METADATA_KEY = 'evalHistoryTailMessageId';
 const RESUMABLE_THREAD_STATUSES = new Set(['error', 'timeout']);
@@ -88,7 +88,7 @@ const stableStringify = (value: unknown): string => {
   return `{${entries.join(',')}}`;
 };
 
-const log = debug('lobe-server:eval-run-service');
+const log = debug('orvilo-server:eval-run-service');
 
 interface ResumableCaseTarget {
   caseStatus?: string | null;
@@ -123,7 +123,7 @@ const resetResumedThreadResult = (thread: EvalThreadResult): EvalThreadResult =>
 });
 
 export class AgentEvalRunService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly runModel: AgentEvalRunModel;
   private readonly benchmarkModel: AgentEvalBenchmarkModel;
@@ -138,7 +138,7 @@ export class AgentEvalRunService {
 
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -166,7 +166,7 @@ export class AgentEvalRunService {
     id?: string;
     /**
      * 'internal' (default): pre-create Topics/RunTopics for every test case and
-     * leave the run `idle` until `startRun` triggers the QStash workflow.
+     * leave the run `idle` until `startRun` triggers the Hatchet workflow.
      * 'external': create no Topics/RunTopics and set the run `pending` so an
      * external worker can claim it; no workflow is triggered.
      */
@@ -366,28 +366,26 @@ export class AgentEvalRunService {
           };
         });
 
-        const messageRows = preparedMessages.map(
-          ({ createdAt, id, message, updatedAt }, index) => ({
-            agentId: null,
-            content: message.content,
-            createdAt: new Date(createdAt),
-            error: message.error ?? null,
-            id,
-            metadata: message.metadata ?? null,
-            model: message.model ?? null,
-            parentId: null,
-            provider: message.provider ?? null,
-            reasoning: message.reasoning ?? null,
-            role: message.role,
-            search: message.search ?? null,
-            tools: message.tools ?? null,
-            topicId,
-            traceId: message.traceId ?? null,
-            updatedAt: new Date(updatedAt),
-            userId: this.userId,
-            workspaceId: this.workspaceId ?? null,
-          }),
-        );
+        const messageRows = preparedMessages.map(({ createdAt, id, message, updatedAt }) => ({
+          agentId: null,
+          content: message.content,
+          createdAt: new Date(createdAt),
+          error: message.error ?? null,
+          id,
+          metadata: message.metadata ?? null,
+          model: message.model ?? null,
+          parentId: null,
+          provider: message.provider ?? null,
+          reasoning: message.reasoning ?? null,
+          role: message.role,
+          search: message.search ?? null,
+          tools: message.tools ?? null,
+          topicId,
+          traceId: message.traceId ?? null,
+          updatedAt: new Date(updatedAt),
+          userId: this.userId,
+          workspaceId: this.workspaceId ?? null,
+        }));
         const pluginRows = preparedMessages.flatMap(({ id, message }) => {
           if (
             !message.plugin &&
@@ -886,7 +884,7 @@ export class AgentEvalRunService {
             type: 'onComplete' as const,
             webhook: {
               body: { runId, testCaseId, userId },
-              delivery: 'qstash' as const,
+              delivery: 'hatchet' as const,
               url: webhookUrl,
             },
           },
@@ -1033,7 +1031,7 @@ export class AgentEvalRunService {
             type: 'onComplete' as const,
             webhook: {
               body: { runId, testCaseId, threadId, topicId, userId },
-              delivery: 'qstash' as const,
+              delivery: 'hatchet' as const,
               url: webhookUrl,
             },
           },
@@ -1353,7 +1351,7 @@ export class AgentEvalRunService {
             type: 'onComplete' as const,
             webhook: {
               body: { runId, testCaseId, userId },
-              delivery: 'qstash' as const,
+              delivery: 'hatchet' as const,
               url: webhookUrl,
             },
           },
@@ -1361,8 +1359,8 @@ export class AgentEvalRunService {
         ...getEvalContextParams(envPrompt, environment, caseId),
         maxSteps: run.config?.maxSteps,
         prompt: params.testCase.content.input || '',
-        queueRetries: EVAL_AGENT_RUNTIME_QSTASH_RETRIES,
-        queueRetryDelay: EVAL_AGENT_RUNTIME_QSTASH_RETRY_DELAY,
+        queueRetries: EVAL_AGENT_RUNTIME_QUEUE_RETRIES,
+        queueRetryDelay: EVAL_AGENT_RUNTIME_QUEUE_RETRY_DELAY,
         userInterventionConfig: { approvalMode: 'headless' },
       });
 
@@ -1632,7 +1630,7 @@ export class AgentEvalRunService {
             type: 'onComplete' as const,
             webhook: {
               body: { runId, testCaseId, threadId, topicId, userId },
-              delivery: 'qstash' as const,
+              delivery: 'hatchet' as const,
               url: webhookUrl,
             },
           },
@@ -1640,8 +1638,8 @@ export class AgentEvalRunService {
         ...getEvalContextParams(envPrompt, environment, caseId),
         maxSteps: run.config?.maxSteps,
         prompt: params.testCase.content.input || '',
-        queueRetries: EVAL_AGENT_RUNTIME_QSTASH_RETRIES,
-        queueRetryDelay: EVAL_AGENT_RUNTIME_QSTASH_RETRY_DELAY,
+        queueRetries: EVAL_AGENT_RUNTIME_QUEUE_RETRIES,
+        queueRetryDelay: EVAL_AGENT_RUNTIME_QUEUE_RETRY_DELAY,
         userInterventionConfig: { approvalMode: 'headless' },
       });
 

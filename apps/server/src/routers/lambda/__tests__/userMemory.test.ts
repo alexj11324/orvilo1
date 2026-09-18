@@ -93,7 +93,7 @@ vi.mock('@/server/globalConfig/parseMemoryExtractionConfig', () => ({
   parseMemoryExtractionConfig: vi.fn(function () {
     return {
       webhook: { baseUrl: 'https://internal.example.com' },
-      upstashWorkflowExtraHeaders: { 'x-test': 'ok' },
+      workflowExtraHeaders: { 'x-test': 'ok' },
     };
   }),
 }));
@@ -180,7 +180,7 @@ describe('userMemoryRouter.requestMemoryFromChatTopic', () => {
     expect(mockUpdate).toHaveBeenCalledWith('new-task', {
       metadata: expect.objectContaining({
         control: {
-          upstash: {
+          hatchet: {
             workflowRunIds: ['workflow-run-1'],
           },
         },

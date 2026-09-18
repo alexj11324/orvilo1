@@ -88,4 +88,19 @@ describe('platformWebhook handler', () => {
 
     expect(mockGetWebhookHandler).toHaveBeenCalledWith('discord', undefined);
   });
+
+  it('rejects removed internal callback paths before platform dispatch', async () => {
+    const { ctx, getCaptures } = buildContext({
+      params: { platform: 'bot-callback' },
+      url: 'http://x/api/agent/webhooks/bot-callback',
+    });
+
+    const res = await platformWebhook(ctx);
+
+    expect(res.status).toBe(410);
+    expect(getCaptures()[0].body).toEqual({
+      error: 'Internal webhook endpoint has been removed',
+    });
+    expect(mockGetWebhookHandler).not.toHaveBeenCalled();
+  });
 });

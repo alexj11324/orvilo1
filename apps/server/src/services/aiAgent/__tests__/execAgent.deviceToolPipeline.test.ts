@@ -12,7 +12,7 @@ const {
   mockGenerateToolsDetailed,
   mockGetAgentConfig,
   mockGetEnabledPluginManifests,
-  mockGetLobehubSkillManifests,
+  mockGetOrviloSkillManifests,
   mockMessageCreate,
   mockPluginQuery,
   mockQueryDeviceList,
@@ -25,7 +25,7 @@ const {
   mockGenerateToolsDetailed: vi.fn(),
   mockGetAgentConfig: vi.fn(),
   mockGetEnabledPluginManifests: vi.fn(),
-  mockGetLobehubSkillManifests: vi.fn(),
+  mockGetOrviloSkillManifests: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockPluginQuery: vi.fn(),
   mockQueryDeviceList: vi.fn(),
@@ -143,7 +143,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: mockGetLobehubSkillManifests,
+      getOrviloSkillManifests: mockGetOrviloSkillManifests,
     };
   }),
 }));
@@ -195,7 +195,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         abilities: { functionCall: true, video: false, vision: true },
         id: 'gpt-4',
@@ -236,7 +236,7 @@ describe('AiAgentService.execAgent - device tool pipeline ()', () => {
     mockPluginQuery.mockResolvedValue([]);
     mockGenerateToolsDetailed.mockReturnValue({ enabledToolIds: [], tools: [] });
     mockGetEnabledPluginManifests.mockReturnValue(new Map());
-    mockGetLobehubSkillManifests.mockResolvedValue([]);
+    mockGetOrviloSkillManifests.mockResolvedValue([]);
     service = new AiAgentService(mockDb, userId);
   });
 
@@ -263,7 +263,6 @@ describe('AiAgentService.execAgent - device tool pipeline ()', () => {
     });
   });
 
-  // https://github.com/lobehub/lobehub/pull/19051
   it('exposes Computer Use for Web activation through an online desktop', async () => {
     const { deviceGateway } = await import('@/server/services/deviceGateway');
     vi.spyOn(deviceGateway, 'isConfigured', 'get').mockReturnValue(true);
@@ -284,7 +283,7 @@ describe('AiAgentService.execAgent - device tool pipeline ()', () => {
     ).toBeDefined();
   });
 
-  it.each([undefined, ['lobe-computer-use']])(
+  it.each([undefined, ['orvilo-computer-use']])(
     'gates Computer Use discovery on reported support %j',
     async (supportedTools) => {
       const { deviceGateway } = await import('@/server/services/deviceGateway');
@@ -567,12 +566,12 @@ describe('AiAgentService.execAgent - device tool pipeline ()', () => {
 
   describe('device-locked runs block remote-device from every manifest source', () => {
     /**
-     * A Skill/Composio manifest claiming `identifier: 'lobe-remote-device'` is
+     * A Skill/Composio manifest claiming `identifier: 'orvilo-remote-device'` is
      * ingested AFTER the builtin seeding, so a point deletion cannot stop it —
      * the wall must live in `isManifestIngestAllowed`. Locked run: gateway
      * configured + executionTarget 'auto' + exactly one online device.
      */
-    it('should NOT ingest a skill manifest claiming lobe-remote-device on a locked run', async () => {
+    it('should NOT ingest a skill manifest claiming orvilo-remote-device on a locked run', async () => {
       const { deviceGateway } = await import('@/server/services/deviceGateway');
       vi.spyOn(deviceGateway, 'isConfigured', 'get').mockReturnValue(true);
       mockQueryDeviceList.mockResolvedValue([
@@ -589,7 +588,7 @@ describe('AiAgentService.execAgent - device tool pipeline ()', () => {
         identifier: 'my-normal-skill',
         meta: { title: 'Normal Skill' },
       };
-      mockGetLobehubSkillManifests.mockResolvedValue([spoofedSkillManifest, benignSkillManifest]);
+      mockGetOrviloSkillManifests.mockResolvedValue([spoofedSkillManifest, benignSkillManifest]);
 
       mockGetAgentConfig.mockResolvedValue(
         createBaseAgentConfig({ agencyConfig: { executionTarget: 'auto' } }),
@@ -611,7 +610,7 @@ describe('AiAgentService.execAgent - device tool pipeline ()', () => {
         { deviceId: 'dev-1', hostname: 'PC A', online: true, platform: 'win32' },
         { deviceId: 'dev-2', hostname: 'PC B', online: true, platform: 'darwin' },
       ]);
-      mockGetLobehubSkillManifests.mockResolvedValue([]);
+      mockGetOrviloSkillManifests.mockResolvedValue([]);
 
       mockGetAgentConfig.mockResolvedValue(
         createBaseAgentConfig({ agencyConfig: { executionTarget: 'auto' } }),

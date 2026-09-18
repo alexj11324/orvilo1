@@ -1,7 +1,7 @@
 import debug from 'debug';
 import type { MiddlewareHandler } from 'hono';
 
-const log = debug('lobe-server:agent:bearer-secret-auth');
+const log = debug('orvilo-server:agent:bearer-secret-auth');
 
 /**
  * Hono middleware factory that requires `Authorization: Bearer <secret>`

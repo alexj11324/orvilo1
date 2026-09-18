@@ -1,11 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { ReactElement } from 'react';
 import { matchRoutes } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
 import { mobileRoutes } from './mobileRouter.config';
-import { getRouteMetaFromHandle } from './routeMeta';
 
 describe('mobileRouter agent share route', () => {
   it('leaves the agent-share visitor surface to the business routes', () => {
@@ -21,6 +21,17 @@ describe('mobileRouter agent share route', () => {
 
     expect(matches?.some((match) => match.route.path === ':aid')).toBe(true);
     expect(matches?.at(-1)?.params).toMatchObject({ aid: 'my-agent' });
+  });
+
+  it('redirects legacy agent topics deep-links to the agent chat route', () => {
+    const matches = matchRoutes(mobileRoutes, '/agent/my-agent/topics');
+
+    // Without the literal `topics` redirect, the URL would match `:topicId`
+    // and mount chat on a phantom `topics` topic.
+    expect(matches?.at(-1)?.route.path).toBe('topics');
+    expect(
+      (matches?.at(-1)?.route.element as ReactElement<{ to: string }> | undefined)?.props.to,
+    ).toBe('..');
   });
 });
 
@@ -66,33 +77,30 @@ describe('mobileRouter workspace provider routes', () => {
   });
 });
 
-describe('mobile community route layouts', () => {
-  it('renders community list and detail pages without layout-level SWR suspense', async () => {
-    const readLayout = (layoutPath: string) =>
-      readFile(path.join(process.cwd(), layoutPath), 'utf8');
+describe('mobile retired product routes', () => {
+  it.each(['/community', '/community/agent/example', '/page', '/page/document-id'])(
+    'redirects retired route %s home',
+    (pathname) => {
+      const matches = matchRoutes(mobileRoutes, pathname);
+      const redirect = matches?.find(
+        ({ route }) =>
+          (route.element as { props?: { to?: string } } | undefined)?.props?.to === '..',
+      )?.route;
 
-    const [listLayout, detailLayout] = await Promise.all([
-      readLayout('src/routes/(mobile)/community/(list)/_layout/index.tsx'),
-      readLayout('src/routes/(mobile)/community/(detail)/_layout/index.tsx'),
-    ]);
+      expect(redirect).toBeDefined();
+      expect((redirect?.element as { props: { to: string } }).props.to).toBe('..');
+    },
+  );
 
-    for (const source of [listLayout, detailLayout]) {
-      expect(source).not.toContain('SWRConfig');
-      expect(source).not.toContain('SuspenseRouteBoundary');
-      expect(source).toContain('<RouteSkeletonChromeProvider>');
-      expect(source).toContain('<Outlet />');
-    }
-  });
+  it.each(['/acme/community/agent/example', '/acme/page/document-id'])(
+    'keeps retired route %s inside the active workspace',
+    (pathname) => {
+      const redirect = matchRoutes(mobileRoutes, pathname)?.find(
+        ({ route }) =>
+          (route.element as { props?: { to?: string } } | undefined)?.props?.to === '..',
+      )?.route;
 
-  it('declares a route skeleton for the community list and detail layouts', () => {
-    const listMatches = matchRoutes(mobileRoutes, '/community/agent');
-    const detailMatches = matchRoutes(mobileRoutes, '/community/agent/my-agent');
-
-    expect(listMatches?.some((match) => getRouteMetaFromHandle(match.route.handle)?.Skeleton)).toBe(
-      true,
-    );
-    expect(
-      detailMatches?.some((match) => getRouteMetaFromHandle(match.route.handle)?.Skeleton),
-    ).toBe(true);
-  });
+      expect((redirect?.element as { props: { to: string } }).props.to).toBe('..');
+    },
+  );
 });

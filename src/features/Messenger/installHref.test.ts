@@ -4,14 +4,14 @@ import { resolveMessengerInstallHref } from './installHref';
 
 describe('resolveMessengerInstallHref', () => {
   it('builds an absolute install URL against the app origin on web', () => {
-    expect(resolveMessengerInstallHref('discord', 'https://lobehub.com')).toBe(
-      'https://lobehub.com/api/agent/messenger/discord/install',
+    expect(resolveMessengerInstallHref('discord', 'https://orvilo.aspectlylabs.com')).toBe(
+      'https://orvilo.aspectlylabs.com/api/agent/messenger/discord/install',
     );
   });
 
   it('builds against the desktop remote server URL and tolerates trailing slashes', () => {
-    expect(resolveMessengerInstallHref('slack', 'https://app.lobehub.com/')).toBe(
-      'https://app.lobehub.com/api/agent/messenger/slack/install',
+    expect(resolveMessengerInstallHref('slack', 'https://orvilo.aspectlylabs.com/')).toBe(
+      'https://orvilo.aspectlylabs.com/api/agent/messenger/slack/install',
     );
   });
 

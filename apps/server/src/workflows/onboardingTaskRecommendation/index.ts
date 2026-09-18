@@ -1,6 +1,5 @@
-import { appEnv } from '@/envs/app';
 import { injectActiveTraceHeaders } from '@/libs/observability/traceparent';
-import { workflowClient } from '@/libs/qstash';
+import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
 
 import {
   type ProcessOnboardingTaskRecommendationPayload,
@@ -28,16 +27,16 @@ interface TriggerOptions {
  *
  * Expects:
  * - A validated immutable Understanding source fingerprint
- * - QStash credentials and an internal application URL
+ * - Hatchet credentials and a configured worker
  *
  * Returns:
- * - The QStash workflow trigger receipt
+ * - The Hatchet workflow trigger receipt
  *
  * Call stack:
  *
  * processUnderstandingProviders
  *   -> {@link OnboardingTaskRecommendationWorkflow.trigger}
- *     -> workflowClient.trigger
+ *     -> triggerHatchetWorkflow
  *       -> /api/workflows/onboarding/task-recommendations/process
  */
 export class OnboardingTaskRecommendationWorkflow {
@@ -51,25 +50,23 @@ export class OnboardingTaskRecommendationWorkflow {
    * - A payload owned by the authenticated onboarding user
    *
    * Returns:
-   * - The QStash trigger receipt for the durable workflow run
+   * - The Hatchet trigger receipt for the durable workflow run
    */
   static async trigger(
     input: ProcessOnboardingTaskRecommendationPayload,
     options: TriggerOptions = {},
   ) {
-    const baseUrl = appEnv.INTERNAL_APP_URL || appEnv.APP_URL;
-    if (!process.env.QSTASH_TOKEN || !baseUrl) {
+    if (!process.env.HATCHET_CLIENT_TOKEN) {
       throw new Error('Onboarding task recommendation workflow is unavailable');
     }
     const payload = ProcessOnboardingTaskRecommendationPayloadSchema.parse(input);
     const traceHeaders = new Headers();
     injectActiveTraceHeaders(traceHeaders);
-    return workflowClient.trigger({
-      body: payload,
+    return triggerHatchetWorkflow(PROCESS_PATH, payload, {
+      concurrencyKey:
+        options.flowControl?.key ?? `onboarding-task-recommendation.${payload.sessionId}`,
       headers: Object.fromEntries(traceHeaders.entries()),
-      url: new URL(PROCESS_PATH, baseUrl).toString(),
-      ...(options.flowControl ? { flowControl: options.flowControl } : {}),
-      ...(options.workflowRunId ? { workflowRunId: options.workflowRunId } : {}),
+      workflowRunId: options.workflowRunId,
     });
   }
 }

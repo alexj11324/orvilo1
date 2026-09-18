@@ -6,30 +6,24 @@ const mockAppEnv = {
   enableQueueAgentRuntime: false,
 };
 
-const qstashMocks = vi.hoisted(() => ({
-  client: vi.fn(),
-  publishJSON: vi.fn(),
+const hatchetMocks = vi.hoisted(() => ({
+  cancelHatchetTask: vi.fn(),
+  enqueueHatchetTask: vi.fn(),
 }));
 
 vi.mock('@/envs/app', () => ({
   appEnv: mockAppEnv,
 }));
 
-vi.mock('@/libs/qstash', () => ({
-  OtelQstashClient: qstashMocks.client.mockImplementation(function () {
-    return {
-      publishJSON: qstashMocks.publishJSON,
-    };
-  }),
-}));
+vi.mock('@/libs/hatchet', () => hatchetMocks);
 
 describe('QueueService', () => {
   beforeEach(() => {
     vi.resetModules();
     // Reset to default local mode
     mockAppEnv.enableQueueAgentRuntime = false;
-    qstashMocks.client.mockClear();
-    qstashMocks.publishJSON.mockReset();
+    hatchetMocks.cancelHatchetTask.mockReset();
+    hatchetMocks.enqueueHatchetTask.mockReset();
   });
 
   afterEach(() => {
@@ -151,34 +145,34 @@ describe('QueueService', () => {
   });
 
   describe('Queue Mode (AGENT_RUNTIME_MODE=queue)', () => {
-    it('should throw error when QSTASH_TOKEN is not set', async () => {
+    it('should throw error when HATCHET_CLIENT_TOKEN is not set', async () => {
       mockAppEnv.enableQueueAgentRuntime = true;
-      delete process.env.QSTASH_TOKEN;
+      delete process.env.HATCHET_CLIENT_TOKEN;
 
       const { createQueueServiceModule } = await import('../impls');
 
       expect(() => createQueueServiceModule()).toThrow(
-        'QSTASH_TOKEN is required when AGENT_RUNTIME_MODE=queue',
+        'HATCHET_CLIENT_TOKEN is required when AGENT_RUNTIME_MODE=queue',
       );
     });
 
-    it('should create QStashQueueServiceImpl when QSTASH_TOKEN is set', async () => {
+    it('should create HatchetQueueServiceImpl when HATCHET_CLIENT_TOKEN is set', async () => {
       mockAppEnv.enableQueueAgentRuntime = true;
-      process.env.QSTASH_TOKEN = 'test-qstash-token';
+      process.env.HATCHET_CLIENT_TOKEN = 'test-hatchet-token';
 
       const { createQueueServiceModule } = await import('../impls');
       const impl = createQueueServiceModule();
 
       expect(impl).not.toBeNull();
-      expect(impl?.constructor.name).toBe('QStashQueueServiceImpl');
+      expect(impl?.constructor.name).toBe('HatchetQueueServiceImpl');
 
       // Cleanup
-      delete process.env.QSTASH_TOKEN;
+      delete process.env.HATCHET_CLIENT_TOKEN;
     });
 
     it('should return false for isLocalExecution when in queue mode', async () => {
       mockAppEnv.enableQueueAgentRuntime = true;
-      process.env.QSTASH_TOKEN = 'test-qstash-token';
+      process.env.HATCHET_CLIENT_TOKEN = 'test-hatchet-token';
 
       const { QueueService } = await import('../QueueService');
       const service = new QueueService();
@@ -186,14 +180,14 @@ describe('QueueService', () => {
       expect(service.isLocalExecution()).toBe(false);
 
       // Cleanup
-      delete process.env.QSTASH_TOKEN;
+      delete process.env.HATCHET_CLIENT_TOKEN;
     });
 
-    it('should round sub-second delays up to 1s for QStash', async () => {
-      qstashMocks.publishJSON.mockResolvedValue({ messageId: 'msg-test' });
+    it('preserves sub-second delays for Hatchet schedules', async () => {
+      hatchetMocks.enqueueHatchetTask.mockResolvedValue('hatchet-schedule:schedule-1');
 
-      const { QStashQueueServiceImpl } = await import('../impls/qstash');
-      const impl = new QStashQueueServiceImpl({ qstashToken: 'test-qstash-token' });
+      const { HatchetQueueServiceImpl } = await import('../impls/hatchet');
+      const impl = new HatchetQueueServiceImpl();
       const result = impl.scheduleMessage({
         context: { phase: 'user_input' } as any,
         delay: 500,
@@ -203,18 +197,18 @@ describe('QueueService', () => {
         stepIndex: 0,
       });
 
-      await expect(result).resolves.toBe('msg-test');
+      await expect(result).resolves.toBe('hatchet-schedule:schedule-1');
 
-      const request = qstashMocks.publishJSON.mock.calls[0][0];
-      expect(request).toMatchObject({ delay: 1 });
-      expect(request.body.timestamp).toEqual(expect.any(Number));
+      const [, input, options] = hatchetMocks.enqueueHatchetTask.mock.calls[0];
+      expect(options).toMatchObject({ delayMs: 500 });
+      expect(input.timestamp).toEqual(expect.any(Number));
     });
 
-    it('should publish zero delay immediately without a QStash delay', async () => {
-      qstashMocks.publishJSON.mockResolvedValue({ messageId: 'msg-test' });
+    it('runs zero-delay Hatchet work immediately', async () => {
+      hatchetMocks.enqueueHatchetTask.mockResolvedValue('hatchet-run:run-1');
 
-      const { QStashQueueServiceImpl } = await import('../impls/qstash');
-      const impl = new QStashQueueServiceImpl({ qstashToken: 'test-qstash-token' });
+      const { HatchetQueueServiceImpl } = await import('../impls/hatchet');
+      const impl = new HatchetQueueServiceImpl();
       const result = impl.scheduleMessage({
         context: { phase: 'user_input' } as any,
         delay: 0,
@@ -224,17 +218,16 @@ describe('QueueService', () => {
         stepIndex: 0,
       });
 
-      await expect(result).resolves.toBe('msg-test');
+      await expect(result).resolves.toBe('hatchet-run:run-1');
 
-      const request = qstashMocks.publishJSON.mock.calls[0][0];
-      expect(request).not.toHaveProperty('delay');
+      expect(hatchetMocks.enqueueHatchetTask.mock.calls[0][2]).toMatchObject({ delayMs: 0 });
     });
 
-    it('should pass second-granularity delays through to QStash', async () => {
-      qstashMocks.publishJSON.mockResolvedValue({ messageId: 'msg-test' });
+    it('passes millisecond delays through to Hatchet', async () => {
+      hatchetMocks.enqueueHatchetTask.mockResolvedValue('hatchet-schedule:schedule-2');
 
-      const { QStashQueueServiceImpl } = await import('../impls/qstash');
-      const impl = new QStashQueueServiceImpl({ qstashToken: 'test-qstash-token' });
+      const { HatchetQueueServiceImpl } = await import('../impls/hatchet');
+      const impl = new HatchetQueueServiceImpl();
 
       await impl.scheduleMessage({
         context: { phase: 'user_input' } as any,
@@ -245,14 +238,14 @@ describe('QueueService', () => {
         stepIndex: 0,
       });
 
-      expect(qstashMocks.publishJSON.mock.calls[0][0]).toMatchObject({ delay: 2 });
+      expect(hatchetMocks.enqueueHatchetTask.mock.calls[0][2]).toMatchObject({ delayMs: 1500 });
     });
 
-    it('clamps an oversized body instead of letting the publish blow the QStash quota', async () => {
-      qstashMocks.publishJSON.mockResolvedValue({ messageId: 'msg-test' });
+    it('clamps an oversized body before publishing it to Hatchet', async () => {
+      hatchetMocks.enqueueHatchetTask.mockResolvedValue('hatchet-run:run-oversized');
 
-      const { QStashQueueServiceImpl } = await import('../impls/qstash');
-      const impl = new QStashQueueServiceImpl({ qstashToken: 'test-qstash-token' });
+      const { HatchetQueueServiceImpl } = await import('../impls/hatchet');
+      const impl = new HatchetQueueServiceImpl();
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // A tool that failed with ~12 MB of command output — the shape that used
@@ -271,13 +264,13 @@ describe('QueueService', () => {
         stepIndex: 7,
       });
 
-      const request = qstashMocks.publishJSON.mock.calls[0][0];
-      const clamped = request.body.context.payload.toolsResult[0].content;
+      const input = hatchetMocks.enqueueHatchetTask.mock.calls[0][1];
+      const clamped = input.context.payload.toolsResult[0].content;
       expect(clamped.length).toBeLessThan(runawayOutput.length);
       expect(clamped).toContain('characters omitted so the step could be scheduled');
-      expect(Buffer.byteLength(JSON.stringify(request.body), 'utf8')).toBeLessThan(9 * 1024 * 1024);
+      expect(Buffer.byteLength(JSON.stringify(input), 'utf8')).toBeLessThan(9 * 1024 * 1024);
       // Shape is preserved so the worker still reads the step it expects.
-      expect(request.body).toMatchObject({ operationId: 'op-oversized', stepIndex: 7 });
+      expect(input).toMatchObject({ operationId: 'op-oversized', stepIndex: 7 });
       expect(warn).toHaveBeenCalledWith(
         expect.stringContaining('agent.queue.oversized_message_clamped'),
       );
@@ -291,10 +284,10 @@ describe('QueueService', () => {
      * strings that a single generous clamp pass would leave untouched.
      */
     it('tightens the clamp until a fragmented oversized body actually fits', async () => {
-      qstashMocks.publishJSON.mockResolvedValue({ messageId: 'msg-test' });
+      hatchetMocks.enqueueHatchetTask.mockResolvedValue('hatchet-run:run-fragmented');
 
-      const { QStashQueueServiceImpl } = await import('../impls/qstash');
-      const impl = new QStashQueueServiceImpl({ qstashToken: 'test-qstash-token' });
+      const { HatchetQueueServiceImpl } = await import('../impls/hatchet');
+      const impl = new HatchetQueueServiceImpl();
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const blocks = Array.from({ length: 525 }, () => ({ text: 'y'.repeat(20_000) }));
@@ -308,10 +301,10 @@ describe('QueueService', () => {
         stepIndex: 3,
       });
 
-      const request = qstashMocks.publishJSON.mock.calls[0][0];
-      expect(Buffer.byteLength(JSON.stringify(request.body), 'utf8')).toBeLessThan(9 * 1024 * 1024);
-      expect(request.body.context.payload.state.content).toHaveLength(525);
-      expect(request.body.context.payload.state.content[0].text).toContain(
+      const input = hatchetMocks.enqueueHatchetTask.mock.calls[0][1];
+      expect(Buffer.byteLength(JSON.stringify(input), 'utf8')).toBeLessThan(9 * 1024 * 1024);
+      expect(input.context.payload.state.content).toHaveLength(525);
+      expect(input.context.payload.state.content[0].text).toContain(
         'characters omitted so the step could be scheduled',
       );
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('"stringKeep":4000'));
@@ -319,11 +312,11 @@ describe('QueueService', () => {
       warn.mockRestore();
     });
 
-    it('encodes logical deduplication keys as stable QStash-safe opaque IDs', async () => {
-      qstashMocks.publishJSON.mockResolvedValue({ messageId: 'msg-test' });
+    it('encodes logical deduplication keys as stable Hatchet idempotency keys', async () => {
+      hatchetMocks.enqueueHatchetTask.mockResolvedValue('hatchet-run:run-stable');
 
-      const { QStashQueueServiceImpl } = await import('../impls/qstash');
-      const impl = new QStashQueueServiceImpl({ qstashToken: 'test-qstash-token' });
+      const { HatchetQueueServiceImpl } = await import('../impls/hatchet');
+      const impl = new HatchetQueueServiceImpl();
 
       const publish = async (deduplicationId: string) => {
         await impl.scheduleMessage({
@@ -336,7 +329,7 @@ describe('QueueService', () => {
           stepIndex: 0,
         });
 
-        return qstashMocks.publishJSON.mock.calls.at(-1)![0].deduplicationId;
+        return hatchetMocks.enqueueHatchetTask.mock.calls.at(-1)![1].deduplicationKey;
       };
 
       const logicalId = 'agent-intervention:op_intervention_9979660c87f7db5cdac6836bc90e9038:0';

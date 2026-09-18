@@ -82,7 +82,7 @@ describe('WorkspaceCtr', () => {
         { content: '# Agents', source: 'AGENTS.md' },
         { content: '# Claude', source: 'CLAUDE.md' },
       ]);
-      // Approves the scanned root for the lobe-file:// preview protocol.
+      // Approves the scanned root for the orvilo-file:// preview protocol.
       expect(mockLocalFileProtocolManager.approveIndexedProjectRoot).toHaveBeenCalledWith('/proj');
     });
 
@@ -198,7 +198,7 @@ describe('WorkspaceCtr', () => {
           '---',
           'name: agent-testing',
           'description: >',
-          '  Agentic end-to-end testing for LobeHub: backend verification via the CLI,',
+          '  Agentic end-to-end testing for Orvilo: backend verification via the CLI,',
           '  frontend verification via agent-browser (Electron).',
           '---',
           'body',
@@ -209,7 +209,7 @@ describe('WorkspaceCtr', () => {
 
       expect(result.skills[0]).toMatchObject({
         description:
-          'Agentic end-to-end testing for LobeHub: backend verification via the CLI, frontend verification via agent-browser (Electron).',
+          'Agentic end-to-end testing for Orvilo: backend verification via the CLI, frontend verification via agent-browser (Electron).',
         name: 'agent-testing',
       });
     });

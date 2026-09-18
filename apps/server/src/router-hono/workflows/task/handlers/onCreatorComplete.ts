@@ -7,7 +7,7 @@ import { BotCallbackService } from '@/server/services/bot/BotCallbackService';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { TaskResultCallbackRedisStore } from '@/server/services/taskResultBridge/redisStore';
 
-const log = debug('lobe-server:workflows:task:on-creator-complete');
+const log = debug('orvilo-server:workflows:task:on-creator-complete');
 
 interface OnCreatorCompletePayload extends Partial<BotCallbackBody> {
   agentId: string;
@@ -42,8 +42,8 @@ export async function onCreatorComplete(c: Context) {
     }
     const deliveredChunkCount = await callbackStore.getDeliveredChunkCount(body.operationId);
     // Messenger delivery and receipt settlement intentionally share this
-    // retryable QStash handler. A platform failure returns 500, so the receipt
-    // stays processing and QStash retries instead of reporting a false success.
+    // retryable Hatchet handler. A platform failure returns 500, so the receipt
+    // stays processing and Hatchet retries instead of reporting a false success.
     if (body.platformThreadId && body.applicationId) {
       await new BotCallbackService(db).handleCallback(
         {

@@ -9,7 +9,7 @@ import {
   RedisKeys,
 } from '@/libs/redis';
 
-const log = debug('lobe-server:home-service');
+const log = debug('orvilo-server:home-service');
 
 export interface HomeBriefPair {
   hint: string;

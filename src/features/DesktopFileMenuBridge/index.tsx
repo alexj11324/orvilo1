@@ -12,10 +12,10 @@ import { useChatStore } from '@/store/chat';
 
 /**
  * Bridge component for handling File menu actions from Electron main process
- * Listens to broadcast events for creating new topics, agents, agent groups, and pages
+ * Listens to broadcast events for creating new topics, agents, and agent groups
  */
 const DesktopFileMenuBridge = () => {
-  const { createAgent, createEmptyGroup, createPage } = useCreateMenuItems();
+  const { createAgent, createEmptyGroup } = useCreateMenuItems();
   const navigate = useWorkspaceAwareNavigate();
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
@@ -43,15 +43,9 @@ const DesktopFileMenuBridge = () => {
     await createEmptyGroup();
   }, [createEmptyGroup]);
 
-  // Handle create new page from File menu
-  const handleCreateNewPage = useCallback(async () => {
-    await createPage();
-  }, [createPage]);
-
   useWatchBroadcast('createNewTopic', handleCreateNewTopic);
   useWatchBroadcast('createNewAgent', handleCreateNewAgent);
   useWatchBroadcast('createNewAgentGroup', handleCreateNewAgentGroup);
-  useWatchBroadcast('createNewPage', handleCreateNewPage);
 
   return null;
 };

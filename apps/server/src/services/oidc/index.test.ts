@@ -46,7 +46,7 @@ vi.mock('@orvilo/database/schemas', () => ({
 }));
 
 vi.mock('@/libs/oidc-provider/config', () => ({
-  defaultClients: [{ client_id: 'lobehub-desktop' }],
+  defaultClients: [{ client_id: 'orvilo-desktop' }],
 }));
 
 const createMockProvider = () => {
@@ -282,16 +282,16 @@ describe('OIDCService', () => {
     const provider = createMockProvider();
     provider.Client.find.mockResolvedValue({
       metadata: () => ({
-        client_name: 'LobeHub Desktop',
+        client_name: 'Orvilo Desktop',
         logo_uri: 'https://example.com/logo.png',
       }),
     });
 
     const service = new OIDCService(provider as any);
-    const metadata = await service.getConsentClientMetadata('lobehub-desktop');
+    const metadata = await service.getConsentClientMetadata('orvilo-desktop');
 
     expect(metadata).toEqual({
-      clientName: 'LobeHub Desktop',
+      clientName: 'Orvilo Desktop',
       isFirstParty: true,
       logo: 'https://example.com/logo.png',
       policyUri: undefined,

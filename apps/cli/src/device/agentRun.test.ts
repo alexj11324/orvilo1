@@ -47,7 +47,7 @@ const baseParams = {
   jwt: 'jwt',
   operationId: 'op',
   prompt: 'hi',
-  serverUrl: 'https://app.lobehub.com',
+  serverUrl: 'https://orvilo.aspectlylabs.com',
   topicId: 'tpc',
 };
 
@@ -103,13 +103,13 @@ describe('spawnHeteroAgentRun', () => {
       detached: true,
       env: expect.objectContaining({
         [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
-        LOBEHUB_ASSISTANT_MESSAGE_ID: 'asst',
-        LOBEHUB_JWT: 'jwt-token',
-        LOBEHUB_SERVER: 'https://app.lobehub.com',
+        ORVILO_ASSISTANT_MESSAGE_ID: 'asst',
+        ORVILO_JWT: 'jwt-token',
+        ORVILO_SERVER: 'https://orvilo.aspectlylabs.com',
       }),
       windowsHide: true,
     });
-    expect(opts.env).not.toHaveProperty('LOBEHUB_WORKSPACE_ID');
+    expect(opts.env).not.toHaveProperty('ORVILO_WORKSPACE_ID');
 
     // stdin is only written after the child actually spawns.
     expect(child.stdin.write).not.toHaveBeenCalled();
@@ -122,17 +122,17 @@ describe('spawnHeteroAgentRun', () => {
 
   it('replaces the launcher conversation context with the dispatched run', async () => {
     for (const key of ['AGENT', 'TASK', 'OPERATION', 'TOPIC', 'WORKSPACE', 'ASSISTANT_MESSAGE']) {
-      vi.stubEnv(`LOBEHUB_${key}_ID`, `launcher-${key}`);
+      vi.stubEnv(`ORVILO_${key}_ID`, `launcher-${key}`);
     }
     const child = makeFakeChild();
     spawnMock.mockReturnValue(child);
 
     const ack = spawnHeteroAgentRun({ ...baseParams, assistantMessageId: undefined });
     const env = spawnMock.mock.calls[0][2].env;
-    expect(env.LOBEHUB_OPERATION_ID).toBe('op');
-    expect(env.LOBEHUB_TOPIC_ID).toBe('tpc');
+    expect(env.ORVILO_OPERATION_ID).toBe('op');
+    expect(env.ORVILO_TOPIC_ID).toBe('tpc');
     for (const key of ['AGENT', 'TASK', 'WORKSPACE', 'ASSISTANT_MESSAGE']) {
-      expect(env).not.toHaveProperty(`LOBEHUB_${key}_ID`);
+      expect(env).not.toHaveProperty(`ORVILO_${key}_ID`);
     }
     child.emit('spawn');
     await expect(ack).resolves.toEqual({ status: 'accepted' });
@@ -169,13 +169,13 @@ describe('spawnHeteroAgentRun', () => {
     expect(child.stdin.write).not.toHaveBeenCalled();
   });
 
-  it('forwards the topic workspace as LOBEHUB_WORKSPACE_ID for ingest', async () => {
+  it('forwards the topic workspace as ORVILO_WORKSPACE_ID for ingest', async () => {
     const child = makeFakeChild();
     spawnMock.mockReturnValue(child);
 
     const ackPromise = spawnHeteroAgentRun({
       ...baseParams,
-      workspaceId: 'ws-lobehub',
+      workspaceId: 'ws-orvilo',
     });
     child.emit('spawn');
     await ackPromise;
@@ -183,7 +183,7 @@ describe('spawnHeteroAgentRun', () => {
     const [, , opts] = spawnMock.mock.calls[0];
     expect(opts.env).toEqual(
       expect.objectContaining({
-        LOBEHUB_WORKSPACE_ID: 'ws-lobehub',
+        ORVILO_WORKSPACE_ID: 'ws-orvilo',
       }),
     );
   });

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # local-gateway-setup.sh — wire up a LOCAL Agent Gateway for closed-loop E2E.
 #
-# Why: the ONLINE gateway (agent-gateway.lobehub.com) verifies the browser's
+# Why: the ONLINE gateway (agent-gateway.aspectlylabs.com) verifies the browser's
 # user JWT against the PRODUCTION app's JWKS. A local dev instance signs that
 # JWT with its OWN `JWKS_KEY`, so the online gateway rejects it with
 # `auth_failed: signature verification failed`. The server→gateway push still
@@ -18,7 +18,7 @@
 # reuses the app's AGENT_GATEWAY_SERVICE_TOKEN, and writes `agent-gateway/.dev.vars`.
 # It then prints the app-side env you must set + how to start the worker.
 #
-# Usage (from the lobehub repo root):
+# Usage (from the orvilo repo root):
 #   .agents/acceptance/scripts/agent-gateway/local-gateway-setup.sh
 
 set -euo pipefail
@@ -37,7 +37,7 @@ if [ -z "$APP_ENV" ]; then
   done
 fi
 
-[ -d "$GATEWAY_DIR" ] || { echo "❌ sibling agent-gateway repo not found at: $GATEWAY_DIR"; echo "   clone it next to lobehub (same parent dir)."; exit 1; }
+[ -d "$GATEWAY_DIR" ] || { echo "❌ sibling agent-gateway repo not found at: $GATEWAY_DIR"; echo "   clone it next to orvilo (same parent dir)."; exit 1; }
 [ -n "$APP_ENV" ] && [ -f "$APP_ENV" ] || { echo "❌ no env file with JWKS_KEY found (set JWKS_SOURCE=<file>, or create .records/env/gateway.env)"; exit 1; }
 echo "ℹ️  reading JWKS_KEY + AGENT_GATEWAY_SERVICE_TOKEN from: $APP_ENV"
 

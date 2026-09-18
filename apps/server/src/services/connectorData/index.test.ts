@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { ConnectorDataService } from './index';
 
@@ -80,7 +80,7 @@ const authDb = (
         }),
       };
     }),
-  }) as unknown as LobeChatDatabase;
+  }) as unknown as OrviloDatabase;
 
 describe('ConnectorDataService', () => {
   beforeEach(() => {

@@ -12,8 +12,8 @@ import { getScopedOnlineDevices } from '@/server/services/deviceGateway/scopedDe
 import { resolveRunWorkspaceId } from './resolveWorkspaceScope';
 import { type ServerRuntimeRegistration } from './types';
 
-// Enable with DEBUG=lobe-server:remote-device (works in prod via the env var).
-const log = debug('lobe-server:remote-device');
+// Enable with DEBUG=orvilo-server:remote-device (works in prod via the env var).
+const log = debug('orvilo-server:remote-device');
 
 /**
  * Registers remote-device discovery for a server-side agent tool execution.

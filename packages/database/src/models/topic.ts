@@ -48,7 +48,7 @@ import {
   topicDocuments,
   topics,
 } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { sanitizeBm25Query } from '../utils/bm25';
 import { COPIED_TOPIC_USAGE_RESET } from '../utils/copiedTranscript';
 import { markCopiedMessageMetadata } from '../utils/copyMessagesInDatabase';
@@ -271,12 +271,11 @@ interface QueryTopicParams {
    */
   triggers?: string[];
   /**
-   * When true, the SELECT also returns the heavier card-detail columns used
-   * by the per-agent Topics management page: `firstUserMessage` (subquery),
-   * `messageCount` (subquery), `description`, `trigger`. `cost` and
-   * `tokenUsage` are intentionally omitted until a dedicated schema migration
-   * adds real columns to back them. Defaults to false so sidebar paths stay
-   * cheap.
+   * When true, the SELECT also returns the heavier card-detail columns:
+   * `firstUserMessage` (subquery), `messageCount` (subquery), `description`,
+   * `trigger`. `cost` and `tokenUsage` are intentionally omitted until a
+   * dedicated schema migration adds real columns to back them. Defaults to
+   * false so sidebar paths stay cheap.
    */
   withDetails?: boolean;
 }
@@ -391,7 +390,7 @@ export interface TopicModelOptions {
 
 export class TopicModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private ftsSearchCandidateSource?: FtsSearchCandidateSource;
   private workspaceId?: string;
   /**
@@ -406,7 +405,7 @@ export class TopicModel {
   private includeShareVisitor: boolean;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     ftsSearchCandidateSource?: FtsSearchCandidateSource,
@@ -492,12 +491,11 @@ export class TopicModel {
     });
     const offset = current * pageSize;
 
-    // Heavier columns gated behind `withDetails` and used by the per-agent
-    // Topics management page: real aggregates from the `messages` table
-    // (firstUserMessage + messageCount), plus the `description` / `trigger`
-    // columns that sidebar paths don't consume. `cost` and `tokenUsage`
-    // intentionally stay undefined here — they need their own schema
-    // migration before they can be backed by real numbers.
+    // Heavier columns gated behind `withDetails`: real aggregates from the
+    // `messages` table (firstUserMessage + messageCount), plus the
+    // `description` / `trigger` columns that sidebar paths don't consume.
+    // `cost` and `tokenUsage` intentionally stay undefined here — they need
+    // their own schema migration before they can be backed by real numbers.
     //
     // The two correlated subqueries are built with Drizzle's query builder
     // (not a raw `sql` template) so the inner `eq(messages.topicId,
@@ -2238,7 +2236,7 @@ export class TopicModel {
    * proven live and must not keep an already-stuck topic stuck.
    */
   isRunningOperationAlive = async (
-    tx: Pick<LobeChatDatabase, 'select'>,
+    tx: Pick<OrviloDatabase, 'select'>,
     runningOperation: NonNullable<ChatTopicMetadata['runningOperation']>,
   ): Promise<boolean> => {
     const [operation] = await tx
@@ -2695,7 +2693,7 @@ export class TopicModel {
    * payload the dispatcher then reads.
    */
   static async getDueScheduledTopics(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     now: Date = new Date(),
   ): Promise<TopicItem[]> {
     const nowIso = now.toISOString();
@@ -2740,7 +2738,7 @@ export class TopicModel {
    * lease. Returns `true` when this caller won the claim.
    */
   static async claimScheduledTopic(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     id: string,
     claim: { claimedAt: string; expiresAt: string; id: string },
     now: Date = new Date(),
@@ -2780,7 +2778,7 @@ export class TopicModel {
    * a continuation is successfully dispatched/executed and when it is cancelled.
    */
   static async clearScheduledRun(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     id: string,
     nextStatus: ChatTopicStatus = 'active',
     expectedClaimId?: string,
@@ -2818,7 +2816,7 @@ export class TopicModel {
    * schedule was cleared or the claim no longer matches.
    */
   static async repointScheduledRunFailedMessage(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     id: string,
     failedAssistantMessageId: string,
     expectedClaimId: string,

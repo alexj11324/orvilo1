@@ -1,20 +1,22 @@
+import { randomUUID } from 'node:crypto';
+
 import type { BriefDecision, TaskTopicHandoff, TaskTopicIntegration } from '@orvilo/types';
-import { and, count, desc, eq, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, exists, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import type { TaskTopicItem } from '../schemas/task';
 import { tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 const TERMINAL_TOPIC_STATUSES = new Set(['canceled', 'completed', 'failed', 'timeout']);
 
 export class TaskTopicModel {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -27,6 +29,16 @@ export class TaskTopicModel {
         userId: taskTopics.userId,
         visibility: taskTopics.visibility,
         workspaceId: taskTopics.workspaceId,
+      },
+    );
+
+  private taskOwnership = () =>
+    buildWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      {
+        userId: tasks.createdByUserId,
+        visibility: tasks.visibility,
+        workspaceId: tasks.workspaceId,
       },
     );
 
@@ -95,20 +107,113 @@ export class TaskTopicModel {
   async updateIntegration(
     taskId: string,
     topicId: string,
-    patch: Partial<TaskTopicIntegration>,
-  ): Promise<void> {
-    const current = await this.db
-      .select({ integration: taskTopics.integration })
-      .from(taskTopics)
-      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()))
-      .limit(1);
-    const record = current[0]?.integration;
-    if (!record) return;
+    patch: { [K in keyof TaskTopicIntegration]?: TaskTopicIntegration[K] | null },
+  ): Promise<boolean> {
+    const updated = await this.db
+      .update(taskTopics)
+      .set({
+        integration: sql`jsonb_strip_nulls(${taskTopics.integration} || ${JSON.stringify(patch)}::jsonb)`,
+      })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, topicId),
+          isNotNull(taskTopics.integration),
+          this.ownership(),
+        ),
+      )
+      .returning({ id: taskTopics.id });
 
+    return updated.length > 0;
+  }
+
+  /** Atomically lease one integration-state transition across duplicate callbacks/retries. */
+  async claimIntegration(
+    taskId: string,
+    topicId: string,
+    expectedState: TaskTopicIntegration['state'],
+    token: string,
+    staleBefore: Date,
+    leaseTopicId = topicId,
+  ): Promise<boolean> {
+    const claimed = await this.db
+      .update(taskTopics)
+      .set({
+        integration: sql`coalesce(${taskTopics.integration}, '{}'::jsonb) || jsonb_build_object('integrationOwnerTopicId', ${leaseTopicId}::text, 'processingToken', ${token}::text, 'processingStartedAt', ${new Date().toISOString()}::text)`,
+      })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, leaseTopicId),
+          this.ownership(),
+          ...(leaseTopicId === topicId
+            ? [sql`${taskTopics.integration}->>'state' = ${expectedState}`]
+            : []),
+          or(
+            sql`not coalesce((${taskTopics.integration}->>'worktreeCleaned')::boolean, false)`,
+            and(
+              sql`not coalesce((${taskTopics.integration}->>'integrationWorktreeCleaned')::boolean, false)`,
+              sql`coalesce(${taskTopics.integration}->>'integrationWorktreePath', '') <> ''`,
+            ),
+          ),
+          or(
+            sql`not coalesce(jsonb_exists(${taskTopics.integration}, 'processingToken'), false)`,
+            sql`coalesce((${taskTopics.integration}->>'processingStartedAt')::timestamptz, '-infinity'::timestamptz) < ${staleBefore}`,
+          ),
+        ),
+      )
+      .returning({ id: taskTopics.id });
+    if (claimed.length === 0) return false;
+
+    // A corrective chain leases its original task-run row. Backfill the
+    // callback's owner with an atomic JSONB patch and require its state to
+    // remain processable after acquiring that shared lease.
+    if (leaseTopicId !== topicId) {
+      const current = await this.db
+        .update(taskTopics)
+        .set({
+          integration: sql`coalesce(${taskTopics.integration}, '{}'::jsonb) || jsonb_build_object('integrationOwnerTopicId', ${leaseTopicId}::text)`,
+        })
+        .where(
+          and(
+            eq(taskTopics.taskId, taskId),
+            eq(taskTopics.topicId, topicId),
+            this.ownership(),
+            sql`${taskTopics.integration}->>'state' = ${expectedState}`,
+            or(
+              sql`not coalesce((${taskTopics.integration}->>'worktreeCleaned')::boolean, false)`,
+              and(
+                sql`not coalesce((${taskTopics.integration}->>'integrationWorktreeCleaned')::boolean, false)`,
+                sql`coalesce(${taskTopics.integration}->>'integrationWorktreePath', '') <> ''`,
+              ),
+            ),
+          ),
+        )
+        .returning({ id: taskTopics.id });
+      if (current.length === 0) {
+        await this.releaseIntegration(taskId, leaseTopicId, token);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /** Release only the integration lease owned by this invocation. */
+  async releaseIntegration(taskId: string, topicId: string, token: string): Promise<void> {
     await this.db
       .update(taskTopics)
-      .set({ integration: { ...record, ...patch } })
-      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
+      .set({
+        integration: sql`coalesce(${taskTopics.integration}, '{}'::jsonb) - 'processingToken' - 'processingStartedAt'`,
+      })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, topicId),
+          this.ownership(),
+          sql`${taskTopics.integration}->>'processingToken' = ${token}`,
+        ),
+      );
   }
 
   async updateStatus(taskId: string, topicId: string, status: string): Promise<void> {
@@ -268,6 +373,145 @@ export class TaskTopicModel {
       .where(and(eq(taskTopics.topicId, topicId), this.ownership()))
       .limit(1);
     return result[0] || null;
+  }
+
+  async findByOperationId(operationId: string): Promise<TaskTopicItem | null> {
+    const result = await this.db
+      .select()
+      .from(taskTopics)
+      .where(and(eq(taskTopics.operationId, operationId), this.ownership()))
+      .limit(1);
+    return result[0] ?? null;
+  }
+
+  /**
+   * Atomically accept a terminal callback exactly once.
+   *
+   * Queue delivery is at-least-once. A plain read followed by `updateStatus`
+   * lets two copies both run the lifecycle side effects. Restricting the
+   * transition to the still-running row makes the status write the claim.
+   */
+  async settleIfRunning(
+    taskId: string,
+    topicId: string,
+    operationId: string,
+    status: 'completed' | 'failed',
+  ): Promise<string | null> {
+    const now = new Date();
+    const reservationPrefix = `completion:${operationId}:`;
+    const completionReservationId = `${reservationPrefix}${randomUUID()}`;
+    const leaseExpiresAt = new Date(now.getTime() + 30 * 60 * 1000);
+    const claimed = await this.db.transaction(async (tx) => {
+      const settled = await tx
+        .update(taskTopics)
+        .set({ status })
+        .where(
+          and(
+            eq(taskTopics.taskId, taskId),
+            eq(taskTopics.topicId, topicId),
+            eq(taskTopics.operationId, operationId),
+            eq(taskTopics.status, 'running'),
+            exists(
+              tx
+                .select({ id: tasks.id })
+                .from(tasks)
+                .where(
+                  and(
+                    eq(tasks.id, taskId),
+                    eq(tasks.currentTopicId, topicId),
+                    eq(tasks.status, 'running'),
+                  ),
+                ),
+            ),
+            this.ownership(),
+          ),
+        )
+        .returning({ id: taskTopics.id });
+
+      if (settled.length > 0) {
+        const taskClaim = await tx
+          .update(tasks)
+          .set({
+            lastHeartbeatAt: now,
+            runReservationExpiresAt: leaseExpiresAt,
+            runReservationId: completionReservationId,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(tasks.id, taskId),
+              eq(tasks.currentTopicId, topicId),
+              eq(tasks.status, 'running'),
+              this.taskOwnership(),
+            ),
+          )
+          .returning({ id: tasks.id });
+        if (taskClaim.length === 0) {
+          throw new Error('Task generation changed while claiming its completion callback');
+        }
+        return completionReservationId;
+      }
+
+      // The callback may have claimed task_topics and then crashed before its
+      // side effects finished. Reclaim only its expired completion lease; an
+      // active owner makes this delivery retryable instead of being mistaken
+      // for an already-settled duplicate.
+      const reclaimed = await tx
+        .update(tasks)
+        .set({
+          lastHeartbeatAt: now,
+          runReservationExpiresAt: leaseExpiresAt,
+          runReservationId: completionReservationId,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(tasks.id, taskId),
+            eq(tasks.currentTopicId, topicId),
+            inArray(tasks.status, ['running', 'scheduled']),
+            sql`${tasks.runReservationId} like ${`${reservationPrefix}%`}`,
+            sql`${tasks.runReservationExpiresAt} <= ${now}`,
+            this.taskOwnership(),
+            exists(
+              tx
+                .select({ id: taskTopics.id })
+                .from(taskTopics)
+                .where(
+                  and(
+                    eq(taskTopics.taskId, taskId),
+                    eq(taskTopics.topicId, topicId),
+                    eq(taskTopics.operationId, operationId),
+                    eq(taskTopics.status, status),
+                    this.ownership(),
+                  ),
+                ),
+            ),
+          ),
+        )
+        .returning({ id: tasks.id });
+      return reclaimed.length > 0 ? completionReservationId : null;
+    });
+
+    if (claimed) {
+      await this.markTopicEnded(topicId, status);
+      return claimed;
+    }
+
+    const [active] = await this.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.id, taskId),
+          eq(tasks.currentTopicId, topicId),
+          sql`${tasks.runReservationId} like ${`${reservationPrefix}%`}`,
+          sql`${tasks.runReservationExpiresAt} > ${now}`,
+          this.taskOwnership(),
+        ),
+      )
+      .limit(1);
+    if (active) throw new Error('Task completion callback is already being processed');
+    return null;
   }
 
   /**

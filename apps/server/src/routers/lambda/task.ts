@@ -12,10 +12,11 @@ import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceA
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
+import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -27,6 +28,7 @@ import { TaskIntentService } from '@/server/services/task/intent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskRunnerService } from '@/server/services/taskRunner';
+import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 import { AcceptanceService } from '@/server/services/verify/acceptanceService';
 import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
 import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
@@ -277,7 +279,7 @@ function isTaskHiddenFrom(
 }
 
 interface TaskNotificationCtx {
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   taskModel: TaskModel;
   workspaceId: string;
 }
@@ -366,7 +368,7 @@ function notifyAssignedBestEffort(
 }
 
 async function assertAssigneeAgentBelongsToUser(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   callerCtx: { userId: string; workspaceId?: string },
   assigneeAgentId?: string | null,
 ) {
@@ -401,7 +403,7 @@ async function assertAssigneeAgentBelongsToUser(
 async function resolveActivityActor(
   ctx: {
     actingAgentId?: string | null;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     userId: string;
     workspaceId?: string | null;
   },
@@ -562,6 +564,9 @@ export const taskRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:reorderSubtasks]', error);
         throw new TRPCError({
           cause: error,
@@ -637,6 +642,9 @@ export const taskRouter = router({
         return { data: comment, message: 'Comment added', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:addComment]', error);
         throw new TRPCError({
           cause: error,
@@ -657,6 +665,9 @@ export const taskRouter = router({
         return { message: 'Comment deleted', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:deleteComment]', error);
         throw new TRPCError({
           cause: error,
@@ -714,6 +725,9 @@ export const taskRouter = router({
         return { data: comment, message: 'Comment updated', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:updateComment]', error);
         throw new TRPCError({
           cause: error,
@@ -740,6 +754,9 @@ export const taskRouter = router({
         return { message: 'Dependency added', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:addDependency]', error);
         if (error instanceof Error && error.message.includes('project boundaries')) {
           throw new TRPCError({ cause: error, code: 'BAD_REQUEST', message: error.message });
@@ -760,6 +777,9 @@ export const taskRouter = router({
         return { message: 'Topic canceled', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:cancelTopic]', error);
         throw new TRPCError({
           cause: error,
@@ -791,6 +811,9 @@ export const taskRouter = router({
         return await ctx.taskService.steerTopic(input);
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:steer]', error);
         throw new TRPCError({
           cause: error,
@@ -808,6 +831,9 @@ export const taskRouter = router({
         return { message: 'Topic deleted', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:deleteTopic]', error);
         throw new TRPCError({
           cause: error,
@@ -874,18 +900,25 @@ export const taskRouter = router({
       // (per docs/usage/workspace-permissions: bulk actions only affect
       // caller-created content).
       const restrictToCreator = !!ctx.workspaceId;
-      // Worktree teardown must precede the delete: task_topics rows (and
-      // their integration records) cascade away with the task rows.
-      const { tasks: doomed } = await model.list({
-        createdByUserId: restrictToCreator ? ctx.userId : undefined,
-        limit: 10_000,
-      });
-      await Promise.allSettled(
-        doomed.map((task) => ctx.taskIntegration.cleanupTaskWorktrees(task.id)),
+      // Snapshot without side effects, then delete a frozen set under the graph
+      // lock. A rejected deletion must never remove a surviving task's worktree.
+      const ids = await model.getTaskIdsForDeletion(restrictToCreator);
+      const snapshots = new Map(
+        await Promise.all(
+          ids.map(async (id) => [id, await ctx.taskIntegration.snapshotTaskWorktrees(id)] as const),
+        ),
       );
-      const count = await model.deleteAll({ restrictToCreator });
+      const deletedIds = await model.deleteMany(ids);
+      await Promise.allSettled(
+        deletedIds.map((id) => ctx.taskIntegration.cleanupTaskWorktrees(id, snapshots.get(id)!)),
+      );
+      const count = deletedIds.length;
       return { count, message: `${count} tasks deleted`, success: true };
     } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      if (error instanceof TaskDependencyError) {
+        throw new TRPCError({ cause: error, code: error.code, message: error.message });
+      }
       console.error('[task:clearAll]', error);
       throw new TRPCError({
         cause: error,
@@ -900,13 +933,15 @@ export const taskRouter = router({
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
-      // Tear down provisioned run worktrees before the task_topics rows
-      // cascade away with the task. Best-effort — never blocks the delete.
-      await ctx.taskIntegration.cleanupTaskWorktrees(task.id);
-      await model.delete(task.id);
+      const snapshot = await ctx.taskIntegration.snapshotTaskWorktrees(task.id);
+      const deleted = await model.delete(task.id);
+      if (deleted) await ctx.taskIntegration.cleanupTaskWorktrees(task.id, snapshot);
       return { data: task, message: 'Task deleted', success: true };
     } catch (error) {
       if (error instanceof TRPCError) throw error;
+      if (error instanceof TaskDependencyError) {
+        throw new TRPCError({ cause: error, code: error.code, message: error.message });
+      }
       console.error('[task:delete]', error);
       throw new TRPCError({
         cause: error,
@@ -1098,40 +1133,17 @@ export const taskRouter = router({
 
   watchdog: taskProcedureWrite.mutation(async ({ ctx }) => {
     try {
-      const stuckTasks = await TaskModel.findStuckTasks(ctx.serverDB);
-      const failed: string[] = [];
-
-      for (const task of stuckTasks) {
-        const wsId = task.workspaceId ?? undefined;
-        const model = new TaskModel(ctx.serverDB, task.createdByUserId, wsId);
-        await model.updateStatus(task.id, 'failed', {
-          completedAt: new Date(),
-          error: 'Heartbeat timeout',
-        });
-
-        // Create error brief
-        const briefModel = new BriefModel(ctx.serverDB, task.createdByUserId, wsId);
-        await briefModel.create({
-          agentId: task.assigneeAgentId || undefined,
-          priority: 'urgent',
-          summary: `Task has been running without heartbeat update for more than ${task.heartbeatTimeout} seconds.`,
-          taskId: task.id,
-          title: `${task.identifier} heartbeat timeout`,
-          trigger: 'task',
-          type: 'error',
-        });
-
-        failed.push(task.identifier);
-      }
+      const result = await runTaskWatchdog(ctx.serverDB, {
+        createdByUserId: ctx.userId,
+        workspaceId: ctx.workspaceId ?? undefined,
+      });
 
       return {
-        checked: stuckTasks.length,
-        failed,
+        ...result,
         message:
-          failed.length > 0
-            ? `${failed.length} stuck tasks marked as failed`
+          result.failed.length > 0
+            ? `${result.failed.length} stuck tasks marked as failed`
             : 'No stuck tasks found',
-        success: true,
       };
     } catch (error) {
       console.error('[task:watchdog]', error);
@@ -1269,6 +1281,9 @@ export const taskRouter = router({
         });
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:run]', error);
         throw new TRPCError({
           cause: error,
@@ -1276,6 +1291,35 @@ export const taskRouter = router({
           message: 'Failed to run task',
         });
       }
+    }),
+
+  retryIntegration: taskProcedureWrite
+    .input(z.object({ id: z.string(), topicId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      const topic = await ctx.taskTopicModel.findByTopicId(input.topicId);
+      if (!topic || topic.taskId !== task.id || !topic.integration) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Integration run not found' });
+      }
+      if (
+        topic.integration.state !== 'publish_failed' &&
+        topic.integration.state !== 'verification_pending'
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `Integration is not retryable from ${topic.integration.state}`,
+        });
+      }
+
+      await ctx.taskLifecycle.onTopicComplete({
+        operationId: topic.operationId ?? `integration-retry:${input.topicId}`,
+        reason: 'done',
+        runTrigger: topic.trigger ?? 'manual',
+        taskId: task.id,
+        taskIdentifier: task.identifier,
+        topicId: input.topicId,
+      });
+      return { success: true };
     }),
 
   pinDocument: taskProcedureWrite
@@ -1294,6 +1338,9 @@ export const taskRouter = router({
         return { message: 'Document pinned', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:pinDocument]', error);
         throw new TRPCError({
           cause: error,
@@ -1309,11 +1356,18 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.taskId);
-        const dep = await resolveOrThrow(model, input.dependsOnId);
-        await model.removeDependency(task.id, dep.id);
+        // A known raw edge target may have become private/trashed. Authorize
+        // the dependent, not the upstream, so its owner can remove that blocker.
+        const depId = input.dependsOnId.startsWith('task_')
+          ? input.dependsOnId
+          : (await resolveOrThrow(model, input.dependsOnId)).id;
+        await model.removeDependency(task.id, depId);
         return { message: 'Dependency removed', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:removeDependency]', error);
         throw new TRPCError({
           cause: error,
@@ -1333,6 +1387,9 @@ export const taskRouter = router({
         return { message: 'Document unpinned', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:unpinDocument]', error);
         throw new TRPCError({
           cause: error,
@@ -1386,7 +1443,9 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateCheckpointConfig(resolved.id, checkpoint);
+        const task = await model.updateCheckpointConfig(resolved.id, checkpoint, {
+          invalidateRun: true,
+        });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return {
           data: model.getCheckpointConfig(task),
@@ -1395,6 +1454,9 @@ export const taskRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:updateCheckpoint]', error);
         throw new TRPCError({
           cause: error,
@@ -1454,7 +1516,7 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateReviewConfig(resolved.id, review);
+        const task = await model.updateReviewConfig(resolved.id, review, { invalidateRun: true });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return {
           data: model.getReviewConfig(task),
@@ -1463,6 +1525,9 @@ export const taskRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:updateReview]', error);
         throw new TRPCError({
           cause: error,
@@ -1552,6 +1617,9 @@ export const taskRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:updateVerifyConfig]', error);
         throw new TRPCError({
           cause: error,
@@ -1576,6 +1644,9 @@ export const taskRouter = router({
         return { data: result, success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:runReview]', error);
         throw new TRPCError({
           cause: error,
@@ -1710,6 +1781,9 @@ export const taskRouter = router({
         return { data: task, message: 'Task updated', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:update]', error);
         throw new TRPCError({
           cause: error,
@@ -1820,6 +1894,9 @@ export const taskRouter = router({
         return { data: updated, message: 'Task visibility updated', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:updateVisibility]', error);
         throw new TRPCError({
           cause: error,
@@ -1874,11 +1951,14 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateTaskConfig(resolved.id, config);
+        const task = await model.updateTaskConfig(resolved.id, config, { invalidateRun: true });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return { data: task, message: 'Config updated', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:updateConfig]', error);
         throw new TRPCError({
           cause: error,
@@ -1947,6 +2027,9 @@ export const taskRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:updateStatus]', error);
         throw new TRPCError({
           cause: error,
@@ -2004,6 +2087,9 @@ export const taskRouter = router({
         return { data: result, message: `Task family ${input.status}`, success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
         console.error('[task:updateStatusCascade]', error);
         throw new TRPCError({
           cause: error,

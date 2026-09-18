@@ -10,7 +10,7 @@ import { type Redis } from 'ioredis';
 import { hasNonPersistedMessage } from './messagePersistence';
 import { getAgentRuntimeRedisClient } from './redis';
 
-const log = debug('lobe-server:agent-runtime:agent-state-manager');
+const log = debug('orvilo-server:agent-runtime:agent-state-manager');
 
 const REFRESH_OWNED_LOCK_SCRIPT =
   "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('expire', KEYS[1], ARGV[2]) else return 0 end";

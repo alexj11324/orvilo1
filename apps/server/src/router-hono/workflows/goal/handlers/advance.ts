@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 
-const log = debug('lobe-server:workflows:goal:advance');
+const log = debug('orvilo-server:workflows:goal:advance');
 
 export interface GoalAdvancePayload {
   goalId?: string;
@@ -18,10 +18,9 @@ export interface GoalAdvancePayload {
  * created, a decision gate was resolved, a budget was raised, or one of its
  * Work Tasks settled.
  *
- * No per-user authentication: the payload carries the goal's own owner, and the
- * route is signature-verified by the `qstashAuth` middleware. The handler
- * re-reads the goal, so a message that lands after the user paused it, or after
- * it finished, is a no-op.
+ * The Hatchet task carries the goal owner and the handler re-reads the goal, so
+ * a delivery that lands after the user paused it, or after it finished, is a
+ * no-op.
  */
 export async function advance(c: Context) {
   try {

@@ -1,6 +1,6 @@
 import type { BuiltinSkill } from '@orvilo/types';
 
-import { readSkillVersion, toResourceMeta } from '../lobehub/helpers';
+import { readSkillVersion, toResourceMeta } from '../orvilo/helpers';
 import acceptanceChecker from './references/acceptance-checker.md';
 import agentBrowser from './references/agent-browser.md';
 import authWeb from './references/auth-web.md';
@@ -27,7 +27,7 @@ export const AcceptanceIdentifier = 'acceptance';
 /**
  * The single builder-side acceptance skill: discover or author the plan → pick a
  * surface → capture evidence per criterion → publish a round → self-check
- * coverage. It runs from any task's working directory, with or without a LobeHub
+ * coverage. It runs from any task's working directory, with or without a Orvilo
  * operation/topic, and depends on no repository-local script. Surface-specific
  * tools stay explicit: agent-browser for Web/Electron, shell-level native
  * automation for macOS, and an installed Simulator HID/Accessibility CLI plus
@@ -58,7 +58,7 @@ export const AcceptanceSkill: BuiltinSkill = {
   avatar: '✅',
   content,
   description:
-    'End-to-end verification and self-evidence for a delivery in any repository, with or without a LobeHub operation or verify plan — discover or author checks, drive CLI, web, desktop, or iOS Simulator on the correct surface, capture visually confirmed evidence, and publish a standalone or subject-linked acceptance round. Reads the repository’s own `.agents/acceptance/` project layer when one exists.',
+    'End-to-end verification and self-evidence for a delivery in any repository, with or without a Orvilo operation or verify plan — discover or author checks, drive CLI, web, desktop, or iOS Simulator on the correct surface, capture visually confirmed evidence, and publish a standalone or subject-linked acceptance round. Reads the repository’s own `.agents/acceptance/` project layer when one exists.',
   identifier: AcceptanceIdentifier,
   name: 'acceptance',
   resources: toResourceMeta({

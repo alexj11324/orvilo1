@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BriefModel } from '@/database/models/brief';
+import { TaskDependencyError } from '@/database/models/taskDependency';
 
 import { runHeartbeatTick } from './heartbeatTick';
 import { TaskRunnerService } from './index';
@@ -10,6 +11,17 @@ import { TaskRunnerService } from './index';
 const { mockSelectTask, mockSetTaskSchedulerExecutionCallback } = vi.hoisted(() => ({
   mockSelectTask: vi.fn(),
   mockSetTaskSchedulerExecutionCallback: vi.fn(),
+}));
+
+const { commitTick, scheduleTick, cancelTick } = vi.hoisted(() => ({
+  commitTick: vi.fn(),
+  scheduleTick: vi.fn(),
+  cancelTick: vi.fn(),
+}));
+vi.mock('@/database/models/task', () => ({
+  TaskModel: vi.fn(function () {
+    return { updateContextIfHeartbeatTick: commitTick };
+  }),
 }));
 
 vi.mock('@/database/server', () => ({
@@ -30,6 +42,10 @@ vi.mock('@/database/models/brief', () => ({
 
 vi.mock('@/server/services/taskScheduler', () => ({
   setTaskSchedulerExecutionCallback: mockSetTaskSchedulerExecutionCallback,
+  createTaskSchedulerModule: () => ({
+    scheduleNextTopic: scheduleTick,
+    cancelScheduled: cancelTick,
+  }),
 }));
 
 vi.mock('./index', () => ({
@@ -58,6 +74,10 @@ describe('runHeartbeatTick', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    commitTick.mockReset().mockResolvedValue(true);
+    scheduleTick.mockReset().mockResolvedValue('next-message');
+    cancelTick.mockReset().mockResolvedValue(undefined);
+    mockRunner.runTask.mockReset();
     mockSelectTask.mockResolvedValue([]);
     mockBriefModel.hasUnresolvedUrgentByTask.mockResolvedValue(false);
     (BriefModel as any).mockImplementation(function () {
@@ -66,6 +86,51 @@ describe('runHeartbeatTick', () => {
     (TaskRunnerService as any).mockImplementation(function () {
       return mockRunner;
     });
+  });
+
+  it('durably re-arms a blocked heartbeat without creating an execution', async () => {
+    mockSelectTask.mockResolvedValue([baseTask({ context: { scheduler: { tickToken: 'old' } } })]);
+    mockRunner.runTask.mockRejectedValue(new TaskDependencyError('Blocked', 'PRECONDITION_FAILED'));
+    expect(await runHeartbeatTick(taskId, userId, 'old')).toEqual({
+      ran: false,
+      reason: 'dependencies-blocked',
+    });
+    expect(scheduleTick).toHaveBeenCalledWith({
+      delay: 30,
+      taskId,
+      userId,
+      tickToken: expect.any(String),
+    });
+    expect(commitTick).toHaveBeenCalledWith(
+      taskId,
+      'old',
+      30,
+      expect.objectContaining({ tickMessageId: 'next-message' }),
+    );
+    expect(cancelTick).not.toHaveBeenCalled();
+  });
+
+  it('cancels the deferred message when pause or a newer tick wins the CAS', async () => {
+    mockSelectTask.mockResolvedValue([baseTask()]);
+    mockRunner.runTask.mockRejectedValue(new TaskDependencyError('Blocked', 'PRECONDITION_FAILED'));
+    commitTick.mockResolvedValue(false);
+    await runHeartbeatTick(taskId, userId);
+    expect(cancelTick).toHaveBeenCalledWith('next-message');
+  });
+
+  it('propagates queue failures instead of falsely claiming a deferred tick', async () => {
+    mockSelectTask.mockResolvedValue([baseTask()]);
+    mockRunner.runTask.mockRejectedValue(new TaskDependencyError('Blocked', 'PRECONDITION_FAILED'));
+    scheduleTick.mockRejectedValue(new Error('queue offline'));
+    await expect(runHeartbeatTick(taskId, userId)).rejects.toThrow('queue offline');
+    expect(commitTick).not.toHaveBeenCalled();
+  });
+
+  it('does not resume or re-arm an explicitly paused task', async () => {
+    mockSelectTask.mockResolvedValue([baseTask({ status: 'paused' })]);
+    expect(await runHeartbeatTick(taskId, userId)).toEqual({ ran: false, reason: 'paused' });
+    expect(mockRunner.runTask).not.toHaveBeenCalled();
+    expect(scheduleTick).not.toHaveBeenCalled();
   });
 
   it('runs the task and excludes transient error briefs from tick gating', async () => {

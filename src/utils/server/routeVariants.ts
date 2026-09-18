@@ -2,7 +2,7 @@ import { RouteVariants } from '@orvilo/desktop-bridge';
 
 import { type DynamicLayoutProps } from '@/types/next';
 
-export { LOBE_LOCALE_COOKIE } from '@/const/locale';
+export { ORVILO_LOCALE_COOKIE } from '@/const/locale';
 export {
   DEFAULT_LANG,
   DEFAULT_VARIANTS,

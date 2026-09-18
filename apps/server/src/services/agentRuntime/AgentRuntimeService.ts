@@ -52,7 +52,7 @@ import {
 } from '@/business/server/agent-run/agentInterventionIdentity';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import { appEnv } from '@/envs/app';
 import { type AgentRuntimeCoordinatorOptions } from '@/server/modules/AgentRuntime';
 import { AgentRuntimeCoordinator, createStreamEventManager } from '@/server/modules/AgentRuntime';
@@ -115,7 +115,7 @@ if (process.env.VERCEL) {
   debug.log = console.info.bind(console);
 }
 
-const log = debug('lobe-server:agent-runtime-service');
+const log = debug('orvilo-server:agent-runtime-service');
 
 /**
  * Base delay before the first `verifyAsyncToolBarrier` re-check fires after a
@@ -312,7 +312,7 @@ const toAgentSignalSnapshotEvents = (
  * The dependency arrow is one-way: AiAgentService → AgentRuntimeService. The
  * runtime is the low-level step executor — it cannot resolve agent configs,
  * build tool engines, manage threads, or run the full `execAgent` pipeline;
- * those live in the layer above it. Yet some tools (e.g. `lobe-agent.callSubAgent`)
+ * those live in the layer above it. Yet some tools (e.g. `orvilo-agent.callSubAgent`)
  * need exactly such a high-level action *mid-step*. Rather than import
  * AiAgentService (which would be a circular dependency), the runtime delegates
  * these operations back to its owner through callbacks injected here.
@@ -323,7 +323,7 @@ const toAgentSignalSnapshotEvents = (
  */
 export interface AgentRuntimeDelegate {
   /**
-   * Fork a group member ("call agent member") under a `lobe-group-management`
+   * Fork a group member ("call agent member") under a `orvilo-group-management`
    * tool call. Handles both in-group (non-isolated, shared group session) and
    * isolated members, installing the group-action member completion bridge that
    * enforces the K=N member barrier before resuming/finishing the supervisor.
@@ -336,7 +336,7 @@ export interface AgentRuntimeDelegate {
    */
   execSubAgent?: (params: ExecSubAgentParams) => Promise<ExecSubAgentResult>;
   /**
-   * Fork a `lobe-agent.callSubAgent` virtual child run. The child is marked as a
+   * Fork a `orvilo-agent.callSubAgent` virtual child run. The child is marked as a
    * sub-agent and owns the completion bridge that backfills the parent tool
    * placeholder before resuming the parked parent operation.
    */
@@ -445,7 +445,7 @@ export class AgentRuntimeService {
 
     return urlJoin(baseUrl, '/api/agent');
   }
-  private serverDB: LobeChatDatabase;
+  private serverDB: OrviloDatabase;
   private userId: string;
   private workspaceId?: string;
   private messageModel: MessageModel;
@@ -465,7 +465,7 @@ export class AgentRuntimeService {
     return this.messageServiceInstance;
   }
 
-  constructor(db: LobeChatDatabase, userId: string, options?: AgentRuntimeServiceOptions) {
+  constructor(db: OrviloDatabase, userId: string, options?: AgentRuntimeServiceOptions) {
     // Use factory function to auto-select Redis or InMemory implementation
     this.streamManager =
       options?.streamEventManager ??
@@ -888,6 +888,7 @@ export class AgentRuntimeService {
       operationSkillSet,
       parentOperationId,
       signal,
+      skipTaskVerification,
       userTimezone,
       initialStepCount = 0,
       workspaceId,
@@ -927,6 +928,7 @@ export class AgentRuntimeService {
       operationId,
       parentOperationId: parentOperationId ?? null,
       provider: modelRuntimeConfig?.provider,
+      skipTaskVerification,
       taskId: appContext?.taskId ?? null,
       threadId: appContext?.threadId ?? null,
       topicId: appContext?.topicId ?? null,
@@ -1180,7 +1182,7 @@ export class AgentRuntimeService {
           : undefined;
         // Both local and queue modes use scheduleMessage
         // LocalQueueServiceImpl uses setTimeout + callback mechanism
-        // QStashQueueServiceImpl schedules HTTP requests
+        // HatchetQueueServiceImpl schedules the durable worker task
         messageId = await this.queueService.scheduleMessage({
           context: initialContext,
           deduplicationId,
@@ -3389,7 +3391,7 @@ export class AgentRuntimeService {
 
   /**
    * Completion bridge for the group orchestration "call agent member" path
-   * (`lobe-group-management`: speak / broadcast / delegate / executeAgentTask(s)).
+   * (`orvilo-group-management`: speak / broadcast / delegate / executeAgentTask(s)).
    * Mirrors {@link completeSubAgentBridge} but enforces a K=N member barrier:
    *
    *   1. Backfill this member's anchor tool message (in_group → a short receipt,

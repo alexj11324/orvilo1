@@ -4,7 +4,14 @@ import type { Context } from 'hono';
 import { getBotMessageRouter } from '@/server/services/bot';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
-const log = debug('lobe-server:bot:webhook-route');
+const log = debug('orvilo-server:bot:webhook-route');
+
+const REMOVED_INTERNAL_WEBHOOK_PLATFORMS = new Set([
+  'bot-callback',
+  'bot-replay',
+  'group-member-callback',
+  'subagent-callback',
+]);
 
 /**
  * Unified webhook endpoint for Chat SDK bot platforms. Handles both:
@@ -21,6 +28,13 @@ export async function platformWebhook(c: Context): Promise<Response> {
 
   if (!platform) {
     return c.json({ error: 'platform is required' }, 400);
+  }
+
+  // These paths belonged to removed queue HTTP receivers. Keep them out
+  // of the public platform wildcard so a stale delivery cannot be interpreted
+  // as a bot platform webhook.
+  if (!appId && REMOVED_INTERNAL_WEBHOOK_PLATFORMS.has(platform)) {
+    return c.json({ error: 'Internal webhook endpoint has been removed' }, 410);
   }
 
   log('Received webhook: platform=%s, appId=%s, url=%s', platform, appId ?? '(none)', c.req.url);

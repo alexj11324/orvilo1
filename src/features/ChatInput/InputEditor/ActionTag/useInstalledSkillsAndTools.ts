@@ -6,7 +6,7 @@ import {
   agentSkillsSelectors,
   builtinToolSelectors,
   composioStoreSelectors,
-  lobehubSkillStoreSelectors,
+  orviloSkillStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
 import { connectorSelectors } from '@/store/tool/slices/connector';
@@ -15,7 +15,7 @@ import type { ActionTagData } from './types';
 
 /**
  * Collects all installed skills and tools, returning them as ActionTagData[].
- * Skills: builtinSkills, lobehubSkillServers, marketAgentSkills, userAgentSkills
+ * Skills: builtinSkills, orviloSkillServers, marketAgentSkills, userAgentSkills
  * Tools:  installedPlugins (excluding skill-type entries), composioServers
  */
 export const useInstalledSkillsAndTools = (): ActionTagData[] => {
@@ -23,7 +23,7 @@ export const useInstalledSkillsAndTools = (): ActionTagData[] => {
   const customConnectors = useToolStore(connectorSelectors.customConnectors, isEqual);
   const installedPlugins = useToolStore(pluginSelectors.installedPluginMetaList, isEqual);
   const composioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
-  const lobehubSkillServers = useToolStore(lobehubSkillStoreSelectors.getServers, isEqual);
+  const orviloSkillServers = useToolStore(orviloSkillStoreSelectors.getServers, isEqual);
   const marketAgentSkills = useToolStore(agentSkillsSelectors.getMarketAgentSkills, isEqual);
   const userAgentSkills = useToolStore(agentSkillsSelectors.getUserAgentSkills, isEqual);
 
@@ -40,7 +40,7 @@ export const useInstalledSkillsAndTools = (): ActionTagData[] => {
         label: item.title || item.name || item.identifier,
       });
     }
-    for (const item of lobehubSkillServers) {
+    for (const item of orviloSkillServers) {
       if (!skillMap.has(item.identifier)) {
         skillMap.set(item.identifier, { icon: item.icon, label: item.name || item.identifier });
       }
@@ -79,7 +79,7 @@ export const useInstalledSkillsAndTools = (): ActionTagData[] => {
     }
 
     for (const item of installedPlugins) {
-      // Skip entries that are actually skills (lobehub skill, agent skill, builtin skill)
+      // Skip entries that are actually skills (orvilo skill, agent skill, builtin skill)
       if (skillMap.has(item.identifier)) continue;
       if (!toolMap.has(item.identifier)) {
         toolMap.set(item.identifier, { icon: item.avatar, label: item.title || item.identifier });
@@ -109,7 +109,7 @@ export const useInstalledSkillsAndTools = (): ActionTagData[] => {
     customConnectors,
     installedPlugins,
     composioServers,
-    lobehubSkillServers,
+    orviloSkillServers,
     marketAgentSkills,
     userAgentSkills,
   ]);

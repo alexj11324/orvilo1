@@ -29,7 +29,7 @@ export interface HeterogeneousAgentBuildPlanParams {
   helpers: HeterogeneousAgentBuildPlanHelpers;
   /**
    * Optional path to an MCP config JSON written by the controller (e.g. for
-   * the local `lobe_cc` AskUserQuestion server). Drivers that recognize the
+   * the local `orvilo_cc` AskUserQuestion server). Drivers that recognize the
    * field append `--mcp-config <path>`; others ignore it.
    */
   mcpConfigPath?: string;

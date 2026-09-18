@@ -2,12 +2,10 @@ import { type LucideIcon } from 'lucide-react';
 import {
   AlarmClock,
   BrainCircuit,
-  FilePenIcon,
   Image,
   LibraryBigIcon,
   ListTodoIcon,
   Settings,
-  ShapesIcon,
   Video,
 } from 'lucide-react';
 
@@ -38,16 +36,6 @@ export interface NavigationRoute {
  */
 export const NAVIGATION_ROUTES: NavigationRoute[] = [
   {
-    cmdkKey: 'cmdk.community',
-    electronKey: 'navigation.discover',
-    icon: ShapesIcon,
-    id: 'community',
-    keywords: ['discover', 'market', 'assistant', 'model', 'provider', 'mcp'],
-    keywordsKey: 'cmdk.keywords.community',
-    path: '/community',
-    pathPrefix: '/community',
-  },
-  {
     cmdkKey: 'cmdk.video',
     electronKey: 'navigation.video',
     icon: Video,
@@ -76,17 +64,6 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
     keywordsKey: 'cmdk.keywords.resources',
     path: '/resource',
     pathPrefix: '/resource',
-  },
-  {
-    cmdkKey: 'cmdk.pages',
-    electronKey: 'navigation.pages',
-    icon: FilePenIcon,
-    id: 'page',
-    keywords: ['documents', 'write', 'notes'],
-    keywordsKey: 'cmdk.keywords.pages',
-    path: '/page',
-    pathPrefix: '/page',
-    useDynamicTitle: true,
   },
   {
     cmdkKey: 'cmdk.memory',
@@ -148,7 +125,7 @@ export const getRouteById = (id: string): NavigationRoute | undefined =>
  */
 export const getNavigableRoutes = (): NavigationRoute[] =>
   NAVIGATION_ROUTES.filter((r) =>
-    ['community', 'image', 'resource', 'page', 'memory', 'automations'].includes(r.id),
+    ['image', 'resource', 'memory', 'automations'].includes(r.id),
   ).map((r) =>
     r.id === 'image'
       ? {

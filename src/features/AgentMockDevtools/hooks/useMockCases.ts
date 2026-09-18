@@ -29,7 +29,7 @@ export function useMockCases() {
 
   const generated: MockCase[] = (() => {
     try {
-      const raw = localStorage.getItem('LOBE_AGENT_MOCK_GENERATED');
+      const raw = localStorage.getItem('ORVILO_AGENT_MOCK_GENERATED');
       return raw ? (JSON.parse(raw) as MockCase[]) : [];
     } catch {
       return [];

@@ -1,5 +1,5 @@
 import { toast } from '@lobehub/ui/base-ui';
-import type * as LobechatConst from '@orvilo/const';
+import type * as OrvilochatConst from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import type { BriefAction } from '@orvilo/types';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -15,7 +15,7 @@ import BriefCardActions from '../BriefCardActions';
 const renderWithRouter = (ui: ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 vi.mock('@orvilo/const', async (importOriginal) => ({
-  ...(await importOriginal<typeof LobechatConst>()),
+  ...(await importOriginal<typeof OrvilochatConst>()),
   isDesktop: true,
 }));
 

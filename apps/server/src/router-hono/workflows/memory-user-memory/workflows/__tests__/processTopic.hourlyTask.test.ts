@@ -8,11 +8,12 @@ import { processTopicHandler } from '../processTopic';
 const mocks = vi.hoisted(() => ({
   createExecutor: vi.fn(),
   extractTopic: vi.fn(),
+  incrementUserMemoryExtractionProgress: vi.fn(),
   isHourlyMemoryExtractionCancellationRequested: vi.fn(),
 }));
 
-vi.mock('@orvilo/observability-otel/modules/upstash-workflow', () => ({
-  buildUpstashWorkflowMetricAttributes: vi.fn(function () {
+vi.mock('@orvilo/observability-otel/modules/hatchet-workflow', () => ({
+  buildHatchetWorkflowMetricAttributes: vi.fn(function () {
     return {};
   }),
   tracer: {
@@ -47,6 +48,7 @@ vi.mock('@/server/services/memory/userMemory/extract', () => ({
 vi.mock('@/database/models/asyncTask', () => ({
   AsyncTaskModel: vi.fn(function () {
     return {
+      incrementUserMemoryExtractionProgress: mocks.incrementUserMemoryExtractionProgress,
       isHourlyMemoryExtractionCancellationRequested:
         mocks.isHourlyMemoryExtractionCancellationRequested,
     };
@@ -78,6 +80,7 @@ describe('processTopicHandler hourly task behavior', () => {
     vi.clearAllMocks();
     mocks.createExecutor.mockResolvedValue({ extractTopic: mocks.extractTopic });
     mocks.extractTopic.mockResolvedValue(undefined);
+    mocks.incrementUserMemoryExtractionProgress.mockResolvedValue(undefined);
     mocks.isHourlyMemoryExtractionCancellationRequested.mockResolvedValue(false);
   });
 
@@ -124,5 +127,23 @@ describe('processTopicHandler hourly task behavior', () => {
     });
     expect(mocks.createExecutor).not.toHaveBeenCalled();
     expect(mocks.extractTopic).not.toHaveBeenCalled();
+  });
+
+  it('records progress when the topic dispatch reaches terminal failure', async () => {
+    const { failMemoryExtractionTopic } = await import('../processTopic');
+
+    await expect(
+      failMemoryExtractionTopic({
+        asyncTaskId: '00000000-0000-4000-8000-000000000002',
+        baseUrl: 'https://app.example.com',
+        sources: [MemorySourceType.ChatTopic],
+        topicIds: ['t1'],
+        userIds: ['u1'],
+      }),
+    ).resolves.toBe('async-task-updated');
+
+    expect(mocks.incrementUserMemoryExtractionProgress).toHaveBeenCalledWith(
+      '00000000-0000-4000-8000-000000000002',
+    );
   });
 });

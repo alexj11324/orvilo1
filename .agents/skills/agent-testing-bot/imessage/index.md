@@ -4,7 +4,7 @@ The iMessage channel is different from the other bot platforms: there is **no
 native app to drive with osascript**. Instead the Desktop app runs a local
 **BlueBubbles bridge** — a small HTTP server in the Electron main process that
 registers a webhook on a local [BlueBubbles](https://bluebubbles.app/) server,
-receives iMessage events, and forwards them to LobeHub Cloud.
+receives iMessage events, and forwards them to Orvilo Cloud.
 
 So the test surface is three layers:
 
@@ -71,7 +71,7 @@ agent-browser --cdp 9222 eval --stdin << 'EVALEOF'
     });
     return JSON.stringify(r);            // { success: true }
   } catch (e) { return 'ERR: ' + (e.message || e); }
-})()
+})
 EVALEOF
 ```
 
@@ -92,14 +92,14 @@ agent-browser --cdp 9222 wait --load networkidle && agent-browser --cdp 9222 wai
 # confirm the remote backend lists imessage (it must be registered + deployed)
 agent-browser --cdp 9222 eval --stdin << 'EVALEOF'
 (async function(){
-  var url='lobe-backend://lobe/trpc/lambda/agentBotProvider.listPlatforms?input='+encodeURIComponent('{"json":null,"meta":{"values":["undefined"],"v":1}}');
+  var url='orvilo-backend://orvilo/trpc/lambda/agentBotProvider.listPlatforms?input='+encodeURIComponent('{"json":null,"meta":{"values":["undefined"],"v":1}}');
   var d=await (await fetch(url,{credentials:'include'})).json();
   var p=d.result?.data?.json||d;
   return JSON.stringify(p.map(function(x){return x.id;}));
-})()
+})
 EVALEOF
 
-# click the iMessage tile, then fill the form by ref
+# click the iMessage tile, then fill the form by
 agent-browser --cdp 9222 eval "(()=>{var b=[...document.querySelectorAll('aside button')].find(x=>/imessage/i.test(x.textContent));b&&b.click();})()"
 agent-browser --cdp 9222 wait 1500
 agent-browser --cdp 9222 snapshot -i | grep -iE "127.0.0.1:1234|Application ID|Webhook Secret|Test BlueBubbles|Save Bridge"
@@ -214,7 +214,7 @@ ignored; text replies still work.
   `GET /api/v1/webhook?url=<unregistered>` returns **HTTP 500**
   (`Cannot read properties of null (reading 'events')`). The bridge must list
   **all** webhooks and match client-side, never pass the `?url=` filter. If you
-  see `upsertConfig` fail with "An unhandled error has occurred!" originating in
+  see `upsertConfig` fail with "An unhandled error has occurred!" originating
   `listWebhooks`, this regressed.
 - **Save leaves a half-state on webhook failure.** `upsertConfig` writes the
   config + starts the HTTP server _before_ registering the webhook, so a webhook
@@ -224,7 +224,7 @@ ignored; text replies still work.
 - **Unknown appId / forward failure → 500.** Posting to the local bridge for an
   unknown appId, or when no cloud bot is bound, returns 500 (BlueBubbles retries
   on 5xx). Auth (wrong secret → 401) is enforced before that.
-- **Backend deploy lag.** Desktop dev proxies tRPC through `lobe-backend://` to
+- **Backend deploy lag.** Desktop dev proxies tRPC through `orvilo-backend://` to
   the _remote_ server. iMessage only appears in `listPlatforms` once the server
   registration is deployed there, regardless of local branch.
 - **Restart to load main-process fixes.** Editing `imessageBridgeSrv.ts` /

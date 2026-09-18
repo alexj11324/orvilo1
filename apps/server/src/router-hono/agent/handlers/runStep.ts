@@ -12,7 +12,7 @@ import {
   runWithScheduledWorkScope,
 } from '@/server/utils/scheduleAfterResponse';
 
-const log = debug('lobe-server:agent:run-step');
+const log = debug('orvilo-server:agent:run-step');
 
 /**
  * Latest point in an invocation at which a new step may START, in ms.
@@ -57,10 +57,7 @@ const toIsoString = (value: Date | string | null | undefined): null | string => 
   return value;
 };
 
-const getQStashMessageId = (c: Context): string | undefined =>
-  c.req.header('upstash-message-id') ??
-  c.req.header('upstash-messageid') ??
-  c.req.header('message-id');
+const getQueueMessageId = (c: Context): string | undefined => c.req.header('message-id');
 
 async function getOperationRowDiagnostic(operationId: string) {
   try {
@@ -95,10 +92,8 @@ async function getOperationRowDiagnostic(operationId: string) {
 }
 
 /**
- * Execute a single agent step. Invoked by QStash with the body
+ * Execute a single agent step. Invoked by the Hatchet worker with the body
  * `{ operationId, stepIndex, context, humanInput?, approvedToolCall?, ... }`.
- *
- * Auth: `qstashAuth` on the route — QStash signature required.
  */
 export async function runStep(c: Context): Promise<Response> {
   const startTime = Date.now();
@@ -110,14 +105,12 @@ export async function runStep(c: Context): Promise<Response> {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const externalRetryCount = Number(c.req.header('upstash-retried') ?? 0) || 0;
+  const externalRetryCount = Number(c.req.header('retry-count') ?? 0) || 0;
 
   try {
-    // QStash nests resume/intervention fields under `body.payload` (see
-    // QStashQueueServiceImpl.scheduleMessage), while `operationId`/`stepIndex`/
-    // `context` stay at the top level. Merge so both shapes work — without this
-    // the QStash path reads `resumeAsyncTool`/`approvedToolCall`/… as undefined
-    // and never resumes a parked op. (The local queue spreads payload itself.)
+    // HatchetQueueServiceImpl keeps queue metadata at the top level and places
+    // resume/intervention fields under `body.payload`. Merge both layers so a
+    // parked operation resumes with its complete continuation payload.
     const {
       operationId,
       stepIndex = 0,
@@ -153,9 +146,9 @@ export async function runStep(c: Context): Promise<Response> {
         metadataHasUserId: Boolean(metadata?.userId),
         metadataPresent: Boolean(metadata),
         operationId,
-        qstashMessageId: getQStashMessageId(c),
+        queueMessageId: getQueueMessageId(c),
         stepIndex,
-        upstashRetried: c.req.header('upstash-retried') ?? null,
+        retryCount: c.req.header('retry-count') ?? null,
       };
 
       log(`[${operationId}] Invalid operation or no userId found: %O`, diagnostic);
@@ -165,9 +158,9 @@ export async function runStep(c: Context): Promise<Response> {
 
     const serverDB = await getServerDB();
     // Step through AiAgentService so the runtime keeps its `execSubAgent`
-    // fork callback (needed by `lobe-agent.callSubAgent`). In QStash mode every
-    // step is a fresh HTTP request, and a bare AgentRuntimeService would lose the
-    // in-process callback → SUB_AGENT_UNAVAILABLE.
+    // fork callback (needed by `orvilo-agent.callSubAgent`). Every Hatchet step
+    // is a fresh worker invocation, and a bare AgentRuntimeService would lose
+    // the in-process callback → SUB_AGENT_UNAVAILABLE.
     //
     // Thread the operation's workspace through so the runtime's models stay
     // workspace-scoped. Without it the worker is personal-scoped and the
@@ -364,9 +357,8 @@ export async function runStep(c: Context): Promise<Response> {
     // stale-step guard would drop anyway.
     if (result.locked && inlinedSteps === 0) {
       // The runtime already re-queued this step on its own backoff, which can
-      // outlast a step that holds the lock for minutes. ACK so QStash doesn't
-      // retry on top of that and dead-letter the delivery once its (much
-      // shorter) retry budget runs out.
+      // outlast a step that holds the lock for minutes. ACK so Hatchet does not
+      // retry on top of that and exhaust the delivery's retry budget.
       if (result.lockRescheduled) {
         log(`[${operationId}] Step ${stepIndex} locked by another instance, re-queued`);
         return c.json({

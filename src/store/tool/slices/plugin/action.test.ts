@@ -1,4 +1,4 @@
-import { type LobeTool } from '@orvilo/types';
+import { type OrviloTool } from '@orvilo/types';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -57,7 +57,7 @@ describe('useToolStore:plugin', () => {
       const newSettings = { setting1: 'new-value' };
       const mergedSettings = merge(existingSettings, newSettings);
       useToolStore.setState({
-        installedPlugins: [{ identifier: pluginId, settings: existingSettings }] as LobeTool[],
+        installedPlugins: [{ identifier: pluginId, settings: existingSettings }] as OrviloTool[],
       });
 
       const { result } = renderHook(() => useToolStore());
@@ -94,7 +94,7 @@ describe('useToolStore:plugin', () => {
         settings: testSchema,
       },
       settings: testPluginSettings,
-    } as unknown as LobeTool;
+    } as unknown as OrviloTool;
 
     it('should validate settings against the schema and return valid result', async () => {
       const { result } = renderHook(() => useToolStore());

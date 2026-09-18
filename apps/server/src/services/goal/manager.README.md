@@ -9,14 +9,14 @@ normal Agent configuration selects the runtime; dispatch uses the same
 Manager mode is explicit: pass `--max-manager-turns` through the CLI or
 `config.manager` through the API after ensuring the Agent has a working CLI.
 The application tool supplies `createdByAgentId`; the CLI inherits
-`LOBEHUB_AGENT_ID`. A person creating a Goal uses the selected `--agent` instead.
+`ORVILO_AGENT_ID`. A person creating a Goal uses the selected `--agent` instead.
 No separate manager identity is accepted. Without explicit planning options,
 ordinary unseeded goals keep the coordinator planner. Seed/exploration/legacy
 supervision paths retain their existing planning behavior. Task assignees can
 differ, and changing them does not replace the configured main Agent.
 
 The main Agent reads `lh goal show`, `lh task view`, `lh topic view`, and document
-commands. It submits a JSON file through `lh goal plan <goal-id> --token <turn> --file plan.json`. The runtime supplies `LOBEHUB_OPERATION_ID`. Plan actions:
+commands. It submits a JSON file through `lh goal plan <goal-id> --token <turn> --file plan.json`. The runtime supplies `ORVILO_OPERATION_ID`. Plan actions:
 
 - `tasks`: reason and 1–10 objects with title/description. All existing work must
   first be settled. The coordinator creates and runs ordinary Tasks.

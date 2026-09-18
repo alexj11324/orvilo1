@@ -30,6 +30,8 @@ export * from './generation';
 export * from './goal';
 export * from './goalGraph';
 export * from './goalTrace';
+export * from './hatchetDispatch';
+export * from './hatchetWorkflowStep';
 export * from './llmGenerationTracing';
 export * from './message';
 export * from './messengerAccountLink';

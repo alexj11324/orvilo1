@@ -28,7 +28,7 @@ import { messagePlugins, messages } from '../schemas/message';
 import { topics } from '../schemas/topic';
 import type { TopicCommentAnchorPreview, TopicCommentItem } from '../schemas/topicComment';
 import { topicCommentMentions, topicComments } from '../schemas/topicComment';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 export const TOPIC_COMMENT_WORKSPACE_REQUIRED =
   'Topic comments are workspace-scoped; a workspaceId is required';
@@ -233,11 +233,11 @@ export interface TopicCommentThreadPage {
  * edited.
  */
 export class TopicCommentModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string | null;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string | null) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string | null) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -249,7 +249,7 @@ export class TopicCommentModel {
   };
 
   private resolveAnchorPreviewExcerpt = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     anchor: {
       content: string | null;
       groupId: string | null;
@@ -425,7 +425,7 @@ export class TopicCommentModel {
 
         anchorPreview = {
           excerpt: await this.resolveAnchorPreviewExcerpt(
-            tx as LobeChatDatabase,
+            tx as OrviloDatabase,
             message,
             params.topicId,
             workspaceId,
@@ -991,7 +991,7 @@ export class TopicCommentModel {
  * race the destructive transition.
  */
 export const purgeExpiredTopicCommentModeration = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   options: { limit?: number; now?: Date } = {},
 ): Promise<PurgeExpiredTopicCommentModerationResult> => {
   const { limit = 500, now = new Date() } = options;
@@ -1175,7 +1175,7 @@ export const syncTopicCommentsOnTopicTransfer = async (
  * silently skip it.
  */
 export const hasForeignTopicComments = async (
-  db: Pick<LobeChatDatabase, 'select'>,
+  db: Pick<OrviloDatabase, 'select'>,
   userId: string,
   topicWhere: SQL,
 ): Promise<boolean> => {

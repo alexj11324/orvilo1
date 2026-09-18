@@ -1,6 +1,6 @@
-import { type LobeAgentConfig } from '@/types/agent';
+import { type OrviloAgentConfig } from '@/types/agent';
 
 export interface UpdateAgentResult {
-  agent?: LobeAgentConfig;
+  agent?: OrviloAgentConfig;
   success: boolean;
 }

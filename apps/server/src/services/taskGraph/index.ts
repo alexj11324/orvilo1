@@ -1,7 +1,7 @@
 import type { TaskItem } from '@orvilo/types';
 
 import { TaskModel } from '@/database/models/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 export type SubtaskRunnableStatus = 'backlog' | 'paused' | 'failed';
 
@@ -10,7 +10,7 @@ const RUNNABLE_STATUSES: ReadonlySet<string> = new Set<SubtaskRunnableStatus>([
   'paused',
   'failed',
 ]);
-/** Statuses that satisfy a `blocks` dependency — the upstream is "done enough". */
+/** Terminal tasks are skipped, but only completed tasks satisfy dependency edges. */
 const TERMINAL_STATUSES: ReadonlySet<string> = new Set(['completed', 'canceled']);
 
 /** Sentinel status used when an upstream task referenced by a dependency edge
@@ -56,7 +56,7 @@ export interface SubtaskNode {
  * Group runnable subtasks into topological layers using Kahn's algorithm.
  *
  * Edge classification (per dependency):
- *   - upstream is `completed` / `canceled` → satisfied, edge dropped
+ *   - upstream is `completed` → satisfied, edge dropped
  *   - upstream is runnable AND in this batch → tracked as in-batch edge
  *   - anything else (in-flight descendant, out-of-scope task, unknown) →
  *     treated as an *external blocker*. The dependent is excluded from layers
@@ -94,7 +94,7 @@ export const planSubtaskLayers = (
   type EdgeKind = 'satisfied' | 'in-batch' | 'external';
   const classifyEdge = (depIdentifier: string): EdgeKind => {
     const status = resolveDepStatus(depIdentifier);
-    if (TERMINAL_STATUSES.has(status)) return 'satisfied';
+    if (status === 'completed') return 'satisfied';
     if (runnableSet.has(depIdentifier)) return 'in-batch';
     // Runnable status outside this batch, in-flight (running/scheduled), or
     // unknown — all block until something else completes them.
@@ -223,7 +223,7 @@ const findCycleMembers = (unplaced: string[], downstream: Map<string, string[]>)
 export class TaskGraphService {
   private taskModel: TaskModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.taskModel = new TaskModel(db, userId, workspaceId);
   }
 
@@ -233,7 +233,7 @@ export class TaskGraphService {
    *
    * Cross-scope dependencies (a descendant depending on a task outside this
    * subtree) are resolved by fetching the upstream's status; if it's not yet
-   * `completed`/`canceled` the dependent is recorded as `blockedExternally`
+   * `completed` the dependent is recorded as `blockedExternally`
    * rather than placed in a layer.
    */
   async planForParent(parentTaskId: string): Promise<{
@@ -272,6 +272,7 @@ export class TaskGraphService {
     const allIdToIdentifier = new Map(idToIdentifier);
     const externalStatusByIdentifier = new Map<string, string>();
     for (const upstream of externalUpstreams) {
+      if (upstream.deletedAt || upstream.isDeleted) continue;
       allIdToIdentifier.set(upstream.id, upstream.identifier);
       externalStatusByIdentifier.set(upstream.identifier, upstream.status);
     }
@@ -299,7 +300,7 @@ export class TaskGraphService {
     const nodes: SubtaskNode[] = descendants.map((d) => ({
       dependsOn: dependsOnByIdentifier.get(d.identifier) ?? [],
       identifier: d.identifier,
-      status: d.status,
+      status: d.deletedAt || d.isDeleted ? UNKNOWN_STATUS : d.status,
     }));
 
     return { descendants, plan: planSubtaskLayers(nodes, externalStatusByIdentifier) };

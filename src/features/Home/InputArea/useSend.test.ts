@@ -52,7 +52,6 @@ const homeState = vi.hoisted(() => ({
   sendAsAgent: vi.fn(),
   sendAsGroup: vi.fn(),
   sendAsResearch: vi.fn(),
-  sendAsWrite: vi.fn(),
   ungroupedAgents: [] as any[],
 }));
 

@@ -16,12 +16,12 @@ import {
   saveSettings,
 } from './index';
 
-const tmpDir = path.join(os.tmpdir(), 'lobehub-cli-test-settings');
-// The shared test setup redirects the CLI home via `LOBEHUB_CLI_HOME`, so the
-// directory under the stubbed homedir is not the default `.lobehub`.
+const tmpDir = path.join(os.tmpdir(), 'orvilo-cli-test-settings');
+// The shared test setup redirects the CLI home via `ORVILO_CLI_HOME`, so the
+// directory under the stubbed homedir is not the default `.orvilo`.
 const settingsDir = path.join(tmpDir, resolveCliDirName());
 const settingsFile = path.join(settingsDir, 'settings.json');
-const originalServer = process.env.LOBEHUB_SERVER;
+const originalServer = process.env.ORVILO_SERVER;
 
 vi.mock('node:os', async (importOriginal) => {
   const actual = await importOriginal<Record<string, any>>();
@@ -29,7 +29,7 @@ vi.mock('node:os', async (importOriginal) => {
     ...actual,
     default: {
       ...actual.default,
-      homedir: () => path.join(os.tmpdir(), 'lobehub-cli-test-settings'),
+      homedir: () => path.join(os.tmpdir(), 'orvilo-cli-test-settings'),
     },
   };
 });
@@ -37,12 +37,12 @@ vi.mock('node:os', async (importOriginal) => {
 describe('settings', () => {
   beforeEach(() => {
     fs.mkdirSync(tmpDir, { recursive: true });
-    delete process.env.LOBEHUB_SERVER;
+    delete process.env.ORVILO_SERVER;
   });
 
   afterEach(() => {
     fs.rmSync(tmpDir, { force: true, recursive: true });
-    process.env.LOBEHUB_SERVER = originalServer;
+    process.env.ORVILO_SERVER = originalServer;
     vi.clearAllMocks();
   });
 
@@ -59,7 +59,7 @@ describe('settings', () => {
   });
 
   it('should clear official server settings instead of persisting them', () => {
-    saveSettings({ serverUrl: 'https://app.lobehub.com/' });
+    saveSettings({ serverUrl: 'https://orvilo.aspectlylabs.com/' });
 
     expect(fs.existsSync(settingsFile)).toBe(false);
     expect(loadSettings()).toBeNull();
@@ -80,9 +80,9 @@ describe('settings', () => {
     expect(normalizeUrl(undefined)).toBeUndefined();
   });
 
-  it('should prefer LOBEHUB_SERVER over settings', () => {
+  it('should prefer ORVILO_SERVER over settings', () => {
     saveSettings({ serverUrl: 'https://settings.example.com/' });
-    process.env.LOBEHUB_SERVER = 'https://env.example.com/';
+    process.env.ORVILO_SERVER = 'https://env.example.com/';
 
     expect(resolveServerUrl()).toBe('https://env.example.com');
   });
@@ -94,13 +94,13 @@ describe('settings', () => {
 
     fs.unlinkSync(settingsFile);
 
-    expect(resolveServerUrl()).toBe('https://app.lobehub.com');
+    expect(resolveServerUrl()).toBe('https://orvilo.aspectlylabs.com');
   });
 
   it('should persist the active workspace and clear it back to personal', () => {
     const record = {
       identity: 'user:u1',
-      serverUrl: 'https://app.lobehub.com',
+      serverUrl: 'https://orvilo.aspectlylabs.com',
       workspaceId: 'ws_abc123',
     };
     saveActiveWorkspace(record);
@@ -125,7 +125,7 @@ describe('settings', () => {
   // A record without the account/server it was chosen under cannot be checked
   // for staleness, so it must not be trusted.
   it.each([
-    ['a missing identity', { serverUrl: 'https://app.lobehub.com', workspaceId: 'ws_1' }],
+    ['a missing identity', { serverUrl: 'https://orvilo.aspectlylabs.com', workspaceId: 'ws_1' }],
     ['a missing serverUrl', { identity: 'user:u1', workspaceId: 'ws_1' }],
     ['an id-shaped nothing', { identity: 'user:u1', serverUrl: 'https://x', workspaceId: 'a b' }],
   ])('should reject an active-workspace record with %s', (_label, record) => {
@@ -147,7 +147,7 @@ describe('settings', () => {
   it('should keep the connectionId even when settings.json is cleared', () => {
     const id = loadOrCreateConnectionId();
     // Clearing official-server settings unlinks settings.json — connectionId must survive.
-    saveSettings({ serverUrl: 'https://app.lobehub.com/' });
+    saveSettings({ serverUrl: 'https://orvilo.aspectlylabs.com/' });
 
     expect(fs.existsSync(settingsFile)).toBe(false);
     expect(loadOrCreateConnectionId()).toBe(id);

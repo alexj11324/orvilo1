@@ -23,7 +23,7 @@ vi.mock('debug', () => ({
 }));
 
 describe('OIDC Provider - Market Client Integration', () => {
-  const MARKET_CLIENT_ID = 'lobehub-market';
+  const MARKET_CLIENT_ID = 'orvilo-market';
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,14 +35,14 @@ describe('OIDC Provider - Market Client Integration', () => {
 
   describe('Market Client Logic', () => {
     it('should identify market client correctly', () => {
-      expect(MARKET_CLIENT_ID).toBe('lobehub-market');
+      expect(MARKET_CLIENT_ID).toBe('orvilo-market');
     });
 
     it('should have market client in default clients', async () => {
       vi.doMock('@/envs/app', () => ({
         appEnv: {
           APP_URL: 'https://example.com',
-          MARKET_BASE_URL: 'https://market.lobehub.com',
+          MARKET_BASE_URL: 'https://market.aspectlylabs.com',
         },
       }));
 
@@ -50,8 +50,8 @@ describe('OIDC Provider - Market Client Integration', () => {
       const marketClient = defaultClients.find((c) => c.client_id === MARKET_CLIENT_ID);
 
       expect(marketClient).toBeDefined();
-      expect(marketClient?.client_id).toBe('lobehub-market');
-      expect(marketClient?.client_name).toBe('LobeHub Marketplace');
+      expect(marketClient?.client_id).toBe('orvilo-market');
+      expect(marketClient?.client_name).toBe('Orvilo Marketplace');
 
       vi.doUnmock('@/envs/app');
     });
@@ -61,20 +61,22 @@ describe('OIDC Provider - Market Client Integration', () => {
     it('should accept both Cloud desktop callback origins during the apex migration', async () => {
       vi.doMock('@/envs/app', () => ({
         appEnv: {
-          APP_URL: 'https://app.lobehub.com',
+          APP_URL: 'https://orvilo.aspectlylabs.com',
           MARKET_BASE_URL: undefined,
         },
       }));
 
       const { default: Provider } = await import('oidc-provider');
       const { defaultClients } = await import('./config');
-      const provider = new Provider('https://app.lobehub.com/oidc', { clients: defaultClients });
-      const desktopClient = await provider.Client.find('lobehub-desktop');
+      const provider = new Provider('https://orvilo.aspectlylabs.com/oidc', {
+        clients: defaultClients,
+      });
+      const desktopClient = await provider.Client.find('orvilo-desktop');
 
       expect(
-        desktopClient?.redirectUriAllowed('https://app.lobehub.com/oidc/callback/desktop'),
+        desktopClient?.redirectUriAllowed('https://orvilo.aspectlylabs.com/oidc/callback/desktop'),
       ).toBe(true);
-      expect(desktopClient?.redirectUriAllowed('https://lobehub.com/oidc/callback/desktop')).toBe(
+      expect(desktopClient?.redirectUriAllowed('https://orvilo.aspectlylabs.com/oidc/callback/desktop')).toBe(
         true,
       );
       expect(desktopClient?.redirectUriAllowed('https://example.com/oidc/callback/desktop')).toBe(
@@ -93,7 +95,7 @@ describe('OIDC Provider - Market Client Integration', () => {
       }));
 
       const module = await import('./provider');
-      expect(module.API_AUDIENCE).toBe('urn:lobehub:chat');
+      expect(module.API_AUDIENCE).toBe('urn:orvilo:chat');
 
       vi.doUnmock('@/envs/app');
     }, 10000);
@@ -195,18 +197,18 @@ describe('OIDC Provider - Market Client Integration', () => {
   describe('Non-Market Client Logic (Default Path)', () => {
     it('should use UserModel for non-market clients (desktop client)', () => {
       // Desktop client should use the default user database lookup
-      const desktopClientId = 'lobehub-desktop';
+      const desktopClientId = 'orvilo-desktop';
       expect(desktopClientId).not.toBe(MARKET_CLIENT_ID);
     });
 
     it('should use UserModel for non-market clients (mobile client)', () => {
       // Mobile client should use the default user database lookup
-      const mobileClientId = 'lobehub-mobile';
+      const mobileClientId = 'orvilo-mobile';
       expect(mobileClientId).not.toBe(MARKET_CLIENT_ID);
     });
 
     it('should validate non-market client IDs are different from market client', () => {
-      const nonMarketClients = ['lobehub-desktop', 'lobehub-mobile'];
+      const nonMarketClients = ['orvilo-desktop', 'orvilo-mobile'];
 
       nonMarketClients.forEach((clientId) => {
         expect(clientId).not.toBe(MARKET_CLIENT_ID);
@@ -247,12 +249,12 @@ describe('OIDC Provider - Market Client Integration', () => {
       it('should use local UserModel for desktop client', () => {
         // Business: Desktop app uses local database for user management
         const scenario = {
-          client: 'lobehub-desktop',
+          client: 'orvilo-desktop',
           authProvider: 'UserModel (Local Database)',
           useCase: 'Desktop app with local/self-hosted user database',
         };
 
-        expect(scenario.client).toBe('lobehub-desktop');
+        expect(scenario.client).toBe('orvilo-desktop');
         expect(scenario.authProvider).toBe('UserModel (Local Database)');
       });
     });
@@ -261,12 +263,12 @@ describe('OIDC Provider - Market Client Integration', () => {
       it('should use local UserModel for mobile client', () => {
         // Business: Mobile app uses local database for user management
         const scenario = {
-          client: 'lobehub-mobile',
+          client: 'orvilo-mobile',
           authProvider: 'UserModel (Local Database)',
           useCase: 'Mobile app with local/self-hosted user database',
         };
 
-        expect(scenario.client).toBe('lobehub-mobile');
+        expect(scenario.client).toBe('orvilo-mobile');
         expect(scenario.authProvider).toBe('UserModel (Local Database)');
       });
     });

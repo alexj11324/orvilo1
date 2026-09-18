@@ -77,13 +77,13 @@ describe('supportsRawAudioMessage', () => {
     ).toBe(true);
   });
 
-  it('trusts the server-curated audio capability on the LobeHub router', () => {
+  it('trusts the server-curated audio capability on the Orvilo router', () => {
     expect(
       supportsRawAudioMessage({
         isCuratedModel: false,
         modelSupportsAudio: true,
-        provider: ModelProvider.LobeHub,
-        runtimeProvider: ModelProvider.LobeHub,
+        provider: ModelProvider.Orvilo,
+        runtimeProvider: ModelProvider.Orvilo,
       }),
     ).toBe(true);
   });
@@ -137,7 +137,7 @@ describe('useVoiceMessageCapability', () => {
       abilities: { functionCall: true },
       enabled: true,
       id: 'deepseek-v4-flash',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     useAiInfraStore.setState({ enabledAiModels: [model] });
@@ -164,7 +164,7 @@ describe('useVoiceMessageCapability', () => {
       abilities: { functionCall: true },
       enabled: true,
       id: 'deepseek-v4-pro',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     useAiInfraStore.setState({ enabledAiModels: [model] });
@@ -188,7 +188,7 @@ describe('useVoiceMessageCapability', () => {
       abilities: { functionCall: true },
       enabled: true,
       id: 'workspace-text-model',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     useAiInfraStore.setState({ enabledAiModels: [model] });
@@ -247,7 +247,7 @@ describe('useVoiceMessageCapability', () => {
       abilities: { functionCall: false },
       enabled: true,
       id: 'text-model-without-tools',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     useAiInfraStore.setState({ enabledAiModels: [model] });
@@ -316,24 +316,24 @@ describe('useVoiceMessageCapability', () => {
     expect(result.current).toBe(true);
   });
 
-  it('does not require the curated LobeHub card to duplicate the runtime audio capability', () => {
+  it('does not require the curated Orvilo card to duplicate the runtime audio capability', () => {
     const id = 'gemini-3.5-flash';
     useAiInfraStore.setState({
       builtinAiModelList: [],
-      enabledAiModels: [audioModel(id, ModelProvider.LobeHub)],
+      enabledAiModels: [audioModel(id, ModelProvider.Orvilo)],
     });
 
-    const { result } = renderHook(() => useVoiceMessageCapability(id, ModelProvider.LobeHub));
+    const { result } = renderHook(() => useVoiceMessageCapability(id, ModelProvider.Orvilo));
 
     expect(result.current).toBe(true);
   });
 
-  it('keeps a curated LobeHub model disabled when runtime audio support is absent', () => {
+  it('keeps a curated Orvilo model disabled when runtime audio support is absent', () => {
     const model = {
       abilities: { functionCall: true },
       enabled: true,
       id: 'text-only-model',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     useAiInfraStore.setState({
@@ -342,7 +342,7 @@ describe('useVoiceMessageCapability', () => {
     });
 
     const { result } = renderHook(() =>
-      useVoiceMessageCapability('text-only-model', ModelProvider.LobeHub),
+      useVoiceMessageCapability('text-only-model', ModelProvider.Orvilo),
     );
 
     expect(result.current).toBe(false);

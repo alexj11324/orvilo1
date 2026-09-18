@@ -1,4 +1,4 @@
-# Gitignore for LobeHub
+# Gitignore for Orvilo
 ################################################################
 
 # System files
@@ -136,7 +136,7 @@ scripts/clerk-to-betterauth/prod/*.csv
 scripts/clerk-to-betterauth/prod/*.json
 
 # Misc
-./packages/lobe-ui
+./packages/orvilo-ui
 *.ppt*
 *.doc*
 *.xls*
@@ -163,7 +163,7 @@ pnpm-lock.yaml
 spaHtmlTemplates.ts
 
 # Embedded CLI bundle (built at pack time)
-apps/desktop/resources/bin/lobe-cli.js
+apps/desktop/resources/bin/orvilo-cli.js
 apps/desktop/resources/cli-package.json
 
 # Superpowers plugin brainstorm/spec outputs (local only; do not commit)

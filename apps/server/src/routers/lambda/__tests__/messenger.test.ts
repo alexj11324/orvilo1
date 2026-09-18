@@ -234,16 +234,16 @@ const createCaller = createCallerFactory(messengerRouter);
 
 const buildSlackInstall = () => ({
   accountId: null,
-  applicationId: 'A_LOBE',
+  applicationId: 'A_ORVILO',
   createdAt: new Date('2026-05-06T00:00:00.000Z'),
   credentials: { botToken: 'xoxb-valid' },
   id: 'install-1',
   installedByPlatformUserId: 'U_INSTALLER',
   installedByUserId: 'user-1',
-  metadata: { scope: 'chat:write', tenantName: 'LobeHub' },
+  metadata: { scope: 'chat:write', tenantName: 'Orvilo' },
   platform: 'slack',
   revokedAt: null,
-  tenantId: 'T_LOBE',
+  tenantId: 'T_ORVILO',
   tokenExpiresAt: null,
   updatedAt: new Date('2026-05-06T00:00:00.000Z'),
 });
@@ -308,12 +308,12 @@ describe('messengerRouter.listMyInstallations', () => {
 
     expect(result).toEqual([
       expect.objectContaining({
-        applicationId: 'A_LOBE',
+        applicationId: 'A_ORVILO',
         id: 'install-1',
         platform: 'slack',
         scope: 'chat:write',
-        tenantId: 'T_LOBE',
-        tenantName: 'LobeHub',
+        tenantId: 'T_ORVILO',
+        tenantName: 'Orvilo',
       }),
     ]);
     expect(mockMarkRevoked).not.toHaveBeenCalled();
@@ -426,9 +426,9 @@ describe('messengerRouter.pollWechatQrSession', () => {
     mockConsumeWechatQrSession.mockResolvedValue(undefined);
   });
 
-  it('routes a first WeChat connection to the personal LobeAI agent', async () => {
+  it('routes a first WeChat connection to the personal OrviloAI agent', async () => {
     const selectBuilder = createSelectBuilder([
-      { id: 'agent-inbox', title: 'LobeAI', userId: 'user-1', workspaceId: null },
+      { id: 'agent-inbox', title: 'OrviloAI', userId: 'user-1', workspaceId: null },
     ]);
     const serverDB = {
       select: vi.fn(function () {
@@ -463,7 +463,7 @@ describe('messengerRouter.pollWechatQrSession', () => {
     );
   });
 
-  it('falls back to the personal LobeAI agent when a rescan preserves a stale agent', async () => {
+  it('falls back to the personal OrviloAI agent when a rescan preserves a stale agent', async () => {
     mockFindByPlatform.mockResolvedValueOnce({
       activeAgentId: 'agent-deleted',
       applicationId: 'wechat-bot-old',
@@ -483,7 +483,7 @@ describe('messengerRouter.pollWechatQrSession', () => {
     });
     const staleAgentBuilder = createSelectBuilder([]);
     const inboxAgentBuilder = createSelectBuilder([
-      { id: 'agent-inbox', title: 'LobeAI', userId: 'user-1', workspaceId: null },
+      { id: 'agent-inbox', title: 'OrviloAI', userId: 'user-1', workspaceId: null },
     ]);
     const serverDB = {
       select: vi.fn().mockReturnValueOnce(staleAgentBuilder).mockReturnValueOnce(inboxAgentBuilder),
@@ -510,7 +510,7 @@ describe('messengerRouter.pollWechatQrSession', () => {
 
   it('rolls back the persisted connection when the Message Gateway poller cannot start', async () => {
     const selectBuilder = createSelectBuilder([
-      { id: 'agent-inbox', title: 'LobeAI', userId: 'user-1', workspaceId: null },
+      { id: 'agent-inbox', title: 'OrviloAI', userId: 'user-1', workspaceId: null },
     ]);
     const serverDB = {
       select: vi.fn(function () {
@@ -558,7 +558,7 @@ describe('messengerRouter.pollWechatQrSession', () => {
       .mockResolvedValueOnce('restored-connection');
 
     const selectBuilder = createSelectBuilder([
-      { id: 'agent-inbox', title: 'LobeAI', userId: 'user-1', workspaceId: null },
+      { id: 'agent-inbox', title: 'OrviloAI', userId: 'user-1', workspaceId: null },
     ]);
     const serverDB = {
       select: vi.fn(function () {
@@ -641,8 +641,8 @@ describe('messengerRouter.peekLinkToken', () => {
       platform: 'slack',
       platformUserId: 'U_ALICE',
       platformUsername: 'alice',
-      tenantId: 'T_LOBE',
-      tenantName: 'LobeHub',
+      tenantId: 'T_ORVILO',
+      tenantName: 'Orvilo',
     });
     mockFindByPlatformUser.mockResolvedValue(undefined);
 
@@ -654,8 +654,8 @@ describe('messengerRouter.peekLinkToken', () => {
       platform: 'slack',
       platformUserId: 'U_ALICE',
       status: 'active',
-      tenantId: 'T_LOBE',
-      tenantName: 'LobeHub',
+      tenantId: 'T_ORVILO',
+      tenantName: 'Orvilo',
     });
     expect(mockPeekConsumedLinkToken).not.toHaveBeenCalled();
   });
@@ -666,7 +666,7 @@ describe('messengerRouter.peekLinkToken', () => {
     mockPeekConsumedLinkToken.mockResolvedValue({
       consumedAt: 1_700_000_000_000,
       platform: 'slack',
-      tenantId: 'T_LOBE',
+      tenantId: 'T_ORVILO',
     });
 
     const caller = createCaller(await createContextInner({}));
@@ -675,7 +675,7 @@ describe('messengerRouter.peekLinkToken', () => {
     expect(result).toEqual({
       platform: 'slack',
       status: 'consumed',
-      tenantId: 'T_LOBE',
+      tenantId: 'T_ORVILO',
     });
   });
 
@@ -778,13 +778,13 @@ describe('messengerRouter.confirmLink', () => {
     mockPeekLinkToken.mockResolvedValue({
       platform: 'slack',
       platformUserId: 'U_NEW',
-      tenantId: 'T_LOBE',
+      tenantId: 'T_ORVILO',
     });
     mockFindByPlatformUser.mockResolvedValue(undefined);
     mockFindByPlatform.mockResolvedValue({
       platform: 'slack',
       platformUserId: 'U_OLD',
-      tenantId: 'T_LOBE',
+      tenantId: 'T_ORVILO',
     });
 
     const caller = createCaller(await createContextInner({ userId: 'user-1' }));
@@ -938,7 +938,7 @@ describe('messengerRouter.sendMessengerPush', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSendMessengerPush.mockResolvedValue({ status: 'sent' });
-    mockGetFileAccessUrl.mockResolvedValue('https://app.lobehub.com/f/file-1');
+    mockGetFileAccessUrl.mockResolvedValue('https://orvilo.aspectlylabs.com/f/file-1');
     mockFindFileById.mockResolvedValue({
       fileType: 'application/pdf',
       id: 'file-1',
@@ -964,7 +964,7 @@ describe('messengerRouter.sendMessengerPush', () => {
       expect.objectContaining({
         attachments: [
           {
-            fetchUrl: 'https://app.lobehub.com/f/file-1',
+            fetchUrl: 'https://orvilo.aspectlylabs.com/f/file-1',
             mimeType: 'application/pdf',
             name: 'report.pdf',
             size: 123_456,

@@ -1,6 +1,6 @@
-# Probe Field Notes — LobeHub historical detail
+# Probe Field Notes — Orvilo historical detail
 
-> Historical, LobeHub-specific field notes preserved for mechanism detail and old
+> Historical, Orvilo-specific field notes preserved for mechanism detail and old
 > cross-references. Start from `../probe-mock-patterns.md`; use
 > `../scripts/app-probe.sh` for supported probes. Add new notes here only when the
 > finding cannot first be expressed as a script command or a concise index entry.
@@ -17,7 +17,7 @@
   needed — inject the error straight into the chat store, **in-memory, no DB write**:
   ```js
   // agent-browser --cdp <port> eval --stdin
-  var c = window.__LOBE_STORES.chat();
+  var c = window.__ORVILO_STORES.chat();
   var id = 'tmp_probe';
   // 1. create a temp assistant message (in the ACTIVE conversation)
   c.internal_dispatchMessage({
@@ -101,32 +101,30 @@
 - **Doesn't work**: scrolling any element to the bottom — with only 2 rows there is
   no scroll container (`scrollHeight <= clientHeight`), and virtua's sentinel never
   intersects.
-- **Works — two parts**:
-  1. **Force pagination with tiny seed data via HMR**: lower the component's page-size
-     const so a small dataset paginates. `AgentTopicManager` `PAGE_SIZE = 30` → `2`,
-     then an agent with 3 topics loads page-1 = 2, `hasMore = true`.
-  2. **Call the real store action directly** (bypasses the observer, but runs the real
-     fetch + real `catch`): `window.__LOBE_STORES.<store>` is a bound hook — CALL it to
+- **Works — two parts** (live target: `AllTopicsDrawer`, opened from the agent
+  sidebar's load-more entry; it pages through the generic `loadMoreTopics`):
+  1. **Force pagination with tiny seed data**: `loadMoreTopics` pages by
+     `useGlobalStore.getState().status.topicPageSize || 20` — set it to `2`
+     (`window.__ORVILO_STORES.global().status.topicPageSize = 2`), then an agent
+     with 3 topics loads page-1 = 2, `hasMore = true`.
+  2. **Call the real store action directly** (bypasses the scroll gate, but runs the real
+     fetch + real `catch`): `window.__ORVILO_STORES.<store>` is a bound hook — CALL it to
      get live state + actions (`.getState`/`.setState` are NOT exposed, C1).
      ```js
      // agent-browser --session <s> eval
-     var c = window.__LOBE_STORES.chat();
-     await c.loadMoreAgentTopicsView(); // hits the injected getTopics(current>0) throw
-     // → real catch sets agentTopicsViewMap[key].loadMoreError → inline AsyncError row renders
+     var c = window.__ORVILO_STORES.chat();
+     await c.loadMoreTopics(); // hits the injected getTopics(current>0) throw
+     // → real catch sets topicDataMap[key].loadMoreError → inline AsyncError row renders
      ```
   Pair the service injection (A4, throw only when `params.current > 0` so page-1 loads
-  and page-2 fails) with a **call counter** to prove the observer gate does NOT loop:
+  and page-2 fails) with a **call counter** to prove the scroll gate does NOT loop:
   `(globalThis).__loadMoreCalls = (…||0)+1` inside the throw; after the failure, wait a
   few seconds and assert `window.__loadMoreCalls` stays `1` (no runaway re-trigger).
 - **Caveat**: calling the action directly proves the render + the real error code path +
-  no-runaway, but NOT the observer's `!loadMoreError` gate under real scroll (the gate
-  lives in the component's IntersectionObserver callback). To exercise the gate live you
-  need a real scrollable list — seed `> PAGE_SIZE` visible-source topics on one agent.
-- **Gotcha — the manager view filters by source (`来源: 对话`) by default.** The store's default
-  filter is `triggers: ['chat']` (`src/features/AgentTopicManager/store.ts:49-51`; the code calls
-  it the **trigger** filter, the UI labels it 来源 /source), so topics with a non-chat trigger
-  show `0` even though the agent owns them in the DB; click **清空筛选 / Clear filters** (or
-  `setStatus('all')` + clear) to reveal them.
+  no-runaway, but NOT the drawer's `loadMoreError` / `fetchedCountRef` gate under real
+  scroll (the gate lives in `AllTopicsDrawer/Content.tsx`'s `VList.onScroll` handler).
+  To exercise the gate live you need a real scrollable list — seed `> topicPageSize`
+  visible-source topics on one agent.
 
 ---
 
@@ -147,13 +145,13 @@
   capture. Keep the report explicit that fixture hydration was test setup; validate the actual
   mutation and created entity through the database or network boundary.
 
-### C1. `window.__LOBE_STORES.<name>` has no `.getState` — CALL it instead
+### C1. `window.__ORVILO_STORES.<name>` has no `.getState` — CALL it instead
 
-- **Doesn't work**: `window.__LOBE_STORES.page.getState()`. The exposed value is neither the
+- **Doesn't work**: `window.__ORVILO_STORES.page.getState()`. The exposed value is neither the
   store nor the hook: `src/store/middleware/expose.ts:11` assigns
-  `window.__LOBE_STORES[name] = () => store.getState()`, a plain arrow function with no
+  `window.__ORVILO_STORES[name] = () => store.getState()`, a plain arrow function with no
   `.getState` property.
-- **Works**: call it — `window.__LOBE_STORES.page()` returns the state snapshot, actions
+- **Works**: call it — `window.__ORVILO_STORES.page()` returns the state snapshot, actions
   included. An earlier version of this note said "state isn't readable from it", which was
   wrong and contradicted C1b.
 
@@ -163,7 +161,7 @@
   `useCacheScope` = `${userId}:${workspaceId}`) on the ALREADY-LOADED app, without a
   real OAuth flow. Cold-boot repro is timing-flaky under machine load; the faithful,
   deterministic path is to flip `userId` on the live app.
-- **Doesn't work**: `window.__LOBE_STORES.user()` returns `getState()` (actions but no
+- **Doesn't work**: `window.__ORVILO_STORES.user()` returns `getState()` (actions but no
   `setState`); there is no public `setUserId` action to call.
 - **Works**: patch the dev-only exposer `src/store/middleware/expose.ts` (HMR) to also
   attach `setState`, then drive the store from `eval`:
@@ -171,12 +169,12 @@
   // expose.ts, temporary — REMOVE after: git checkout -- src/store/middleware/expose.ts
   const handle = () => store.getState();
   (handle as any).setState = (store as any).setState;
-  window.__LOBE_STORES[name] = handle as any;
+  window.__ORVILO_STORES[name] = handle as any;
   ```
   `expose()` only runs at store creation, so reload the renderer once after the edit so
   stores re-expose with the handle. Then:
   ```js
-  var u = window.__LOBE_STORES.user;
+  var u = window.__ORVILO_STORES.user;
   var c = u().user || {};
   u.setState({ user: Object.assign({}, c, { id: 'probe_scope_0705' }) }); // → scope flips
   ```
@@ -192,7 +190,7 @@ session:')` line. In development `createLogger().info` routes to the `debug` pac
   prints nothing unless its namespace is enabled (only `console.error` shows up unconditionally).
   Absence of the line is NOT evidence the branch didn't run.
 - **Works**: `export DEBUG='controllers:*'` before `electron-dev.sh start <id>`, then
-  `grep -oE "controllers:HeterogeneousAgentCtr INFO: [^']*" /tmp/lobe-electron-pool/instance-<id>.log`.
+  `grep -oE "controllers:HeterogeneousAgentCtr INFO: [^']*" /tmp/orvilo-electron-pool/instance-<id>.log`.
   Don't trust the hetero tracing dir for this — it is gated and the copied golden profile ships
   STALE trace sessions from months earlier that look like a fresh run.
 
@@ -203,7 +201,7 @@ session:')` line. In development `createLogger().info` routes to the `debug` pac
   value is a paginated view object (`{ items, total, hasMore, … }`), not a topic.
 - **Works** (verified while E2E-testing `git worktree add` side-effect recording):
   ```js
-  var c = window.__LOBE_STORES.chat();
+  var c = window.__ORVILO_STORES.chat();
   var view = c.topicDataMap['agent_' + agentId];
   var topic = (view.items || []).find(function (x) {
     return x.id === c.activeTopicId;
@@ -286,7 +284,7 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 - **Doesn't work**: reload or `internal_refreshAgentConfig`; IndexedDB/localStorage can retain the
   previous config and make a fixture issue look like a product regression.
 - **Works**: cold-load by clearing browser storage/caches, re-seed auth, reopen, and assert the
-  fixture in `__LOBE_STORES.agent().agentMap[id]` before testing downstream behavior.
+  fixture in `__ORVILO_STORES.agent().agentMap[id]` before testing downstream behavior.
 
 ---
 
@@ -326,7 +324,7 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
   appends a trailing text summary (which would give it a text last-block and a
   defined contentId). Poll-then-stop-atomically:
   ```bash
-  agent-browser $S eval '(function(){var c=window.__LOBE_STORES.chat();var t=c.activeTopicId;var a=c.messagesMap["main_"+c.activeAgentId+"_"+t]||[];var g=a.filter(m=>m.role==="assistantGroup").pop();var lc=g&&g.children&&g.children.at(-1);var running=Object.values(c.operations||{}).some(o=>o.status==="running");if(lc&&(lc.tools||[]).length&&running){c.stopGenerateMessage();return "STOPPED";}return "wait";})()'
+  agent-browser $S eval '(function(){var c=window.__ORVILO_STORES.chat();var t=c.activeTopicId;var a=c.messagesMap["main_"+c.activeAgentId+"_"+t]||[];var g=a.filter(m=>m.role==="assistantGroup").pop();var lc=g&&g.children&&g.children.at(-1);var running=Object.values(c.operations||{}).some(o=>o.status==="running");if(lc&&(lc.tools||[]).length&&running){c.stopGenerateMessage();return "STOPPED";}return "wait";})()'
   ```
 - **D11. ✅ WORKS — catch a BRIEF blank/transient frame (sub-second) that screencast misses.**
   Verifying a momentary full-screen blank (e.g. a React subtree unmounting to `null` for
@@ -461,14 +459,14 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 - **Still true and still useful**: `app-probe.sh auth` "false-negatives" here because it talks
   to the **Electron CDP endpoint on 9222**, not to your web browser session — it fails with
   `All CDP discovery methods failed for 127.0.0.1:9222`. Read the auth state out of the page
-  instead: `window.__LOBE_STORES.user()` → `{ isSignedIn, user.id }`.
+  instead: `window.__ORVILO_STORES.user()` → `{ isSignedIn, user.id }`.
 
 - **Works**: hard-load `/` (authed), confirm by screenshot (not the app-probe auth
   JSON — it false-negatives here, returns `isSignedIn:false` on an authed page),
   then **client-side soft-nav** with no server round-trip:
 
   ```bash
-  agent-browser eval "history.pushState({},'','/agent/<id>/docs'); window.dispatchEvent(new PopStateEvent('popstate')); 'nav'" --session lobehub-dev
+  agent-browser eval "history.pushState({},'','/agent/<id>/docs'); window.dispatchEvent(new PopStateEvent('popstate')); 'nav'" --session orvilo-dev
   ```
 
   react-router picks up the popstate and renders the route in-context with the
@@ -476,17 +474,17 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
   child route's `:param` via `useParams()` — read it from `location.pathname` if
   you need it.
 
-### E4. ✅ WORKS — keep Electron pool `LOBE_IPC_ID` short
+### E4. ✅ WORKS — keep Electron pool `ORVILO_IPC_ID` short
 
 - **Situation**: manually starting an isolated Electron dev instance with a
-  descriptive `LOBE_IPC_ID` such as `lobehub-desktop-dev-manual-selection-2`.
+  descriptive `ORVILO_IPC_ID` such as `orvilo-desktop-dev-manual-selection-2`.
   The main process builds a Unix socket path under `$TMPDIR`, and macOS rejects
   overlong socket paths.
 - **Doesn't work**: long IPC ids can crash Electron at bootstrap with
   `listen EINVAL ... <id>-electron-ipc.sock`, before any renderer/CDP evidence is
   available.
 - **Works**: use the numeric `electron-dev.sh start <id>` pool path, or keep
-  manual IPC ids very short, e.g. `LOBE_IPC_ID=lhmsel2`.
+  manual IPC ids very short, e.g. `ORVILO_IPC_ID=lhmsel2`.
 
 ### E5. ✅ WORKS — no-Docker fallback stack for the isolated no-.env env
 
@@ -559,7 +557,7 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 ### E9. Electron dev's FIRST cold boot sits on the splash with an empty `#root` for 1–3 minutes
 
 - **Situation**: after `electron-dev.sh start <id>`, `app-probe.sh auth` returns `isSignedIn:false`,
-  `#root` has providers but `innerText.length === 0`, and the screenshot is just the LobeHub splash. The
+  `#root` has providers but `innerText.length === 0`, and the screenshot is just the Orvilo splash. The
   main log shows `Proactive token refresh failed` / `invalid_grant`.
 - **Doesn't work**: concluding the copied login state expired. That refresh error is a red herring — the
   app recovers, and `RENDERER_WAIT_S` (60s) can expire while Vite is still on
@@ -594,9 +592,9 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 - The picker opens a native dialog, but the same write path is reachable from the store. With no active
   topic, `commit()` persists to `agencyConfig.workingDirByDevice[deviceId]`:
   ```js
-  const a = window.__LOBE_STORES.agent(),
-    d = window.__LOBE_STORES.device();
-  const did = window.__LOBE_STORES.electron().gatewayDeviceInfo.deviceId;
+  const a = window.__ORVILO_STORES.agent(),
+    d = window.__ORVILO_STORES.device();
+  const did = window.__ORVILO_STORES.electron().gatewayDeviceInfo.deviceId;
   const entry = { path: '/abs/repo', repoType: 'git' };
   await a.updateAgentConfigById(agentId, {
     agencyConfig: { workingDirByDevice: { [did]: entry } },
@@ -614,27 +612,27 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 ### E14. ✅ WORKS — Electron pool instance boots BLANK because the copied golden login is dead
 
 - **Situation**: `electron-dev.sh start <id>` seeds userData from the golden dev profile,
-  but the app renders an empty `#root` (innerText length 0, only the LobeHub watermark) and
+  but the app renders an empty `#root` (innerText length 0, only the Orvilo watermark) and
   `app-probe.sh auth` returns `isSignedIn:false`. The instance log shows
   `Refresh response missing access_token or refresh_token { error: 'invalid_grant' }`.
 - **Cause (measured, not guessed)**: OIDC refresh tokens are single-use. Every prior
   `start <id>` copied the same golden profile and consumed/rotated its refresh token, so the
   copy's token is already dead. A blank shell here is an AUTH failure, not a render bug —
   read the instance log before chasing the SPA.
-- **Doesn't work**: pointing `LOBE_GOLDEN_PROFILE` at the packaged app's profile
-  (`~/Library/Application Support/LobeHub`) — the pool instance's startup refresh will rotate
+- **Doesn't work**: pointing `ORVILO_GOLDEN_PROFILE` at the packaged app's profile
+  (`~/Library/Application Support/Orvilo`) — the pool instance's startup refresh will rotate
   that token too and log the user out of their real desktop app.
 - **Works — inject a valid credential the app already owns, no new OAuth grant**:
   the prod lambda accepts any of the user's valid OIDC access tokens via the `Oidc-Auth`
-  header, and the CLI keeps one in `~/.lobehub`. Extract it with the CLI's own
+  header, and the CLI keeps one in `~/.orvilo`. Extract it with the CLI's own
   `getValidToken()` (it auto-refreshes), then override the single main-process accessor:
   ```ts
   // apps/desktop/src/main/controllers/RemoteServerConfigCtr.ts — [AGENT-TEST] REMOVE
   async getAccessToken(): Promise<string | null> {
-    if (process.env.LOBE_TEST_ACCESS_TOKEN) return process.env.LOBE_TEST_ACCESS_TOKEN;
+    if (process.env.ORVILO_TEST_ACCESS_TOKEN) return process.env.ORVILO_TEST_ACCESS_TOKEN;
     ...
   ```
-  `export LOBE_TEST_ACCESS_TOKEN=...` before `electron-dev.sh start <id>` (the script forwards
+  `export ORVILO_TEST_ACCESS_TOKEN=...` before `electron-dev.sh start <id>` (the script forwards
   the shell env). This authenticates BOTH the renderer (BackendProxyProtocolManager injects the
   same token) and any main-process fetch, so the whole app comes up signed in. Revert with
   `git checkout --` + `grep -rn AGENT-TEST` afterwards, and never echo the token.
@@ -643,10 +641,10 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
   instead of hanging:
   ```bash
   mkdir -p /tmp/empty-golden
-  LOBE_GOLDEN_PROFILE=/tmp/empty-golden ./electron-dev.sh start <id>
+  ORVILO_GOLDEN_PROFILE=/tmp/empty-golden ./electron-dev.sh start <id>
   ```
-  Drive onboarding (`开始` → `下一步` ×2 → `登录 LobeHub Cloud`). The device-code flow opens the
-  browser and auto-approves against an existing app.lobehub.com session, giving the instance its
+  Drive onboarding (`开始` → `下一步` ×2 → `登录 Orvilo Cloud`). The device-code flow opens the
+  browser and auto-approves against an existing orvilo.aspectlylabs.com session, giving the instance its
   OWN token — so it never rotates the one the user's resident app holds.
 - **Why the blank shell has no login button**: the failed refresh leaves `isUserStateInit:false`
   (with `isLoaded:true, user:null`), and the desktop first-frame gate waits on it forever. Every
@@ -677,7 +675,7 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 
 - **Situation**: driving an Electron app over CDP while the app itself spawns a `<webview>`
   (in-app browser). After the guest mounts, `eval` on the SAME session suddenly returns the
-  guest page's DOM (`__LOBE_STORES` undefined, app selectors empty) — looks like the app broke.
+  guest page's DOM (`__ORVILO_STORES` undefined, app selectors empty) — looks like the app broke.
 - **Doesn't work**: assuming a session stays pinned to the app target; also assuming
   `document.querySelectorAll('webview').length === 0` means "no webview" (you may be evaluating
   INSIDE the guest).
@@ -699,7 +697,7 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 ### E18. Cloud-connected desktop routes even `local` agents to the SERVER runtime — force client with `disableGatewayMode`
 
 - **Situation**: verifying a **client-only** builtin tool (`executors: ['client']`) via a real agent turn on the desktop. The agent's `executionTarget` is `local` and the tool-enable gate (`isLocalSystemEnabled` = runtime `local`) passes, so it _looks_ like it will run client-side.
-- **Doesn't work**: sending the message as-is. On a cloud-connected desktop, gateway mode is on by default, so the run dispatches to `execServerAgentRuntime` (server/queue path) even for a `local` agent. The client-only tool isn't executable there — the model flails and returns a non-answer (e.g. "browser closed") with no real tool effect. Confirm the path by reading the running op's `type` in `window.__LOBE_STORES.chat().operations` (`execServerAgentRuntime` = server; `executeToolCall` = client).
+- **Doesn't work**: sending the message as-is. On a cloud-connected desktop, gateway mode is on by default, so the run dispatches to `execServerAgentRuntime` (server/queue path) even for a `local` agent. The client-only tool isn't executable there — the model flails and returns a non-answer (e.g. "browser closed") with no real tool effect. Confirm the path by reading the running op's `type` in `window.__ORVILO_STORES.chat().operations` (`execServerAgentRuntime` = server; `executeToolCall` = client).
 - **Works**: set the agent's `chatConfig.disableGatewayMode = true` (via `agentStore.updateAgentChatConfigById(id, { disableGatewayMode: true })`) before sending. The run then goes through `executeToolCall` (client runtime); the composer's runtime chip flips to "Local device" and the client executor runs. The gate (`isLocalSystemEnabled`) and the transport (`disableGatewayMode`) are INDEPENDENT — enabling the tool does not force client execution.
 
 ### E19. Desktop has no classic session store — reconfigure the existing agent, don't `createSession`
@@ -714,22 +712,12 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 - **Cause**: a corrupt Turbopack build in `.next/dev` — the route manifest is gone, so every path falls through to `GlobalNotFound`, whose redirect collides with the middleware's.
 - **Works**: `rm -rf .next` then restart. Diagnose it in one step: if `/signin` does not return 200, the routes are not compiled — stop debugging auth.
 
-### E21. ✅ WORKS — a QStash-protected workflow endpoint can't be curl'd; publish through local QStash to get a signed delivery
+### E21. ✅ WORKS — queue-backed workflow paths run through Hatchet, not HTTP receivers
 
-- **Situation**: driving a cron-style workflow handler under `/api/workflows/**` (e.g. a dispatcher you want to fire on demand instead of waiting for its schedule).
-- **Doesn't work**: `curl -X POST <app>/api/workflows/<...>` → `{"error":"Invalid signature"}` / HTTP 401. The `qstashAuth` middleware verifies the Upstash signature whenever `QSTASH_CURRENT_SIGNING_KEY` is set — and `init-dev-env.sh` exports it, so the local env DOES verify. (Do not "fix" this by unsetting the key: you would then be testing an unauthenticated path that production doesn't have.)
-- **Works**: start local QStash (`init-dev-env.sh qstash`) and publish to the endpoint with the QStash client — QStash signs the delivery, so the handler sees exactly the production shape:
-  ```ts
-  // must live INSIDE the repo (a script under /tmp cannot resolve @upstash/qstash)
-  import { Client } from '@upstash/qstash';
-  const client = new Client({ baseUrl: process.env.QSTASH_URL!, token: process.env.QSTASH_TOKEN! });
-  await client.publishJSON({
-    body: { dryRun: false },
-    url: `${process.env.APP_URL}/api/workflows/<path>`,
-  });
-  ```
-  Run it with `eval "$(init-dev-env.sh env)" && bunx tsx ./scripts/<probe>.mts`, then read the outcome from **DB side effects**, not the HTTP body — QStash swallows the response. (A claim/lease row, a status transition, or new message rows are all observable; the handler's JSON return is not.)
-- **Time-travel a schedule instead of waiting**: for a "runs at T" feature, `UPDATE ... SET metadata = jsonb_set(metadata, '{...,runAt}', '"<past ISO>"')` and then fire the dispatcher. Cheaper and more deterministic than sleeping until the real due time.
+- **Situation**: driving a cron-style or callback workflow that is now registered as a Hatchet task (for example, a dispatcher you want to fire on demand instead of waiting for its schedule).
+- **Doesn't work**: `curl -X POST <app>/api/workflows/<...>` — those legacy HTTP entrypoints were removed during the cutover and return a not-found response. Do not recreate an unauthenticated HTTP path for a worker task.
+- **Works**: configure `HATCHET_CLIENT_TOKEN` (plus endpoint/namespace when required), start the worker with `init-dev-env.sh hatchet`, and invoke the provider-neutral trigger or CLI command. Read the resulting `hatchet_dispatches` row and Hatchet worker log; those are the authoritative delivery and state-transition evidence.
+- **Time-travel a schedule instead of waiting**: for a "runs at T" feature, `UPDATE ... SET metadata = jsonb_set(metadata, '{...,runAt}', '"<past ISO>"')` and then fire the Hatchet dispatcher. Cheaper and more deterministic than sleeping until the real due time.
 
 ### E22. Local dev env has no `JWKS_KEY` — every hetero agent run dies at `signHeteroOperationJWT`
 
@@ -817,7 +805,7 @@ nodeintegration, plugins, disablewebsecurity, allowpopups, preload, …`). The h
   and disables send. A model id that was valid a while ago (e.g. `deepseek-chat`) can be retired from
   the model bank while the agent row still points at it.
 - **Works**: read the actually-enabled models out of the store before configuring a fixture agent —
-  `window.__LOBE_STORES.aiInfra().enabledChatModelList` → `[{id: provider, children: [{id: model}]}]` —
+  `window.__ORVILO_STORES.aiInfra().enabledChatModelList` → `[{id: provider, children: [{id: model}]}]` —
   and pick one from there. Also: a send that "resolves fine but creates no operation" is a UI-gate
   symptom; **screenshot the composer** instead of re-reading your store call.
 
@@ -865,7 +853,7 @@ nodeintegration, plugins, disablewebsecurity, allowpopups, preload, …`). The h
 
 - **E6. The persisted ports file may belong to ANOTHER worktree's live dev server.**
   Situation: `.records/env/agent-testing-ports.env` said 26938 and a server answered there — but it was `.claude/worktrees/<other>/`'s instance serving that worktree's code (check `ps` for the listener's `next dev` path). Testing main-repo changes against it silently tests the wrong code, and `init-dev-env.sh dev` reusing the file dies with EADDRINUSE.
-  Works: trace the listener's cwd first (`lsof -nP -iTCP:<port>`, then `ps -o command -p <pid>`); if it is another worktree's, leave it alone and start your own instance with `SERVER_PORT`/`SPA_PORT` env overrides (they do not rewrite the ports file). Remember `seed-user` rewrites `agent-testing-cli.env`'s `LOBEHUB_SERVER` — restore it in teardown if another session may still source it.
+  Works: trace the listener's cwd first (`lsof -nP -iTCP:<port>`, then `ps -o command -p <pid>`); if it is another worktree's, leave it alone and start your own instance with `SERVER_PORT`/`SPA_PORT` env overrides (they do not rewrite the ports file). Remember `seed-user` rewrites `agent-testing-cli.env`'s `ORVILO_SERVER` — restore it in teardown if another session may still source it.
 
 - **E7. The managed local Postgres kept its container but LOST all app data between two dev-server sessions in one day (cause not established).**
   Situation: round-1 fixtures (tasks, acceptances, verify runs/evidence) were verified present via psql; after `pnpm install` (which bumped workspace deps) and a dev-server restart, the same container answered with empty `tasks`/`acceptances` tables while `verify_runs` held only the new round's row. No `setup-db`/`clean-db` ran in between.
@@ -905,7 +893,7 @@ nodeintegration, plugins, disablewebsecurity, allowpopups, preload, …`). The h
 
 - **Situation**: E2E-testing the hetero server-ingest chain by running `lh hetero exec --topic <t> --operation-id <op>` manually (the exact command a device daemon spawns), against a local dev
   server, with the seeded CLI API key.
-- **Doesn't work**: the seeded `LOBE_API_KEY`. `heteroAuthedProcedure` requires `ctx.oidcAuth`
+- **Doesn't work**: the seeded `ORVILO_API_KEY`. `heteroAuthedProcedure` requires `ctx.oidcAuth`
   (`packages/trpc/src/lambda/middleware/heteroOperationAuth.ts`) — an API key never populates it, so
   `heteroFinish` 401s. Also note the local no-`.env` env has no `JWKS_KEY` (E22), so the server
   cannot even validate a JWT until restarted with one.
@@ -925,7 +913,7 @@ nodeintegration, plugins, disablewebsecurity, allowpopups, preload, …`). The h
      });
      ```
      The JWT's operation/user/workspace values must match the row from step 3. Then run the CLI with
-     `LOBEHUB_JWT=<token> LOBEHUB_SERVER=<app-url>` — the CLI forwards it as the `Oidc-Auth` header.
+     `ORVILO_JWT=<token> ORVILO_SERVER=<app-url>` — the CLI forwards it as the `Oidc-Auth` header.
      The fixture side needs `topics.metadata.runningOperation = { operationId, assistantMessageId }`
      seeded, and the operationId must embed real ids (`op_<ts>_agt_<id>_tpc_<id>_<suffix>`).
 - **Bonus trap**: under bun, a spawn failure reads `ENOENT: no such file or directory,
@@ -964,7 +952,7 @@ posix_spawn '<cmd>'` — NOT node's `spawn <cmd> ENOENT`. Any stderr-text patter
   WITHOUT it to exercise the no-deep-link fallback. Note the platform config is cached
   in-process for 30s (`packages/app-config/src/messenger.ts` CACHE\_TTL\_MS) — wait out the TTL
   after editing the row before reloading.
-- Locale for evidence shots: `window.__LOBE_STORES.global().switchLocale('zh-CN')` then reload.
+- Locale for evidence shots: `window.__ORVILO_STORES.global().switchLocale('zh-CN')` then reload.
 
 ### D21. ✅ WORKS — when `click @ref` reports Done but the React onClick never fires, click via `eval` `element.click()`
 
@@ -1028,7 +1016,7 @@ ingest-report <dir> --subject topic:<id> …` — and verify attachment in the D
 ### D22. ✅ WORKS — driving the manual-approval intervention chain (批准 / 提交 cards) in web chat
 
 - **Situation**: a real agent turn under the default manual-approval mode stops at an
-  intervention card (`lobe-activator → 激活工具`, `Task Tools → createTask`, …) after EVERY tool
+  intervention card (`orvilo-activator → 激活工具`, `Task Tools → createTask`, …) after EVERY tool
   call. `snapshot -i` does not reliably expose the card's option rows / submit button as refs,
   and one turn can chain 4–5 sequential interventions — a fixed approve-once script stalls.
 - **Doesn't work**: matching the option row by exact text `批准` (the row nests the label; the
@@ -1116,27 +1104,27 @@ ingest-report <dir> --subject topic:<id> …` — and verify attachment in the D
 - **Works**: re-run a plain `pnpm install` (no `--ignore-scripts`) inside `apps/desktop`, then follow
   E8b and re-run the ROOT install afterwards. Order: root → desktop (with scripts) → root again.
 
-### E40. `electron-dev.sh`: the saved snapshot beats `LOBE_GOLDEN_PROFILE`, and the seeded login targets LOCAL dev
+### E40. `electron-dev.sh`: the saved snapshot beats `ORVILO_GOLDEN_PROFILE`, and the seeded login targets LOCAL dev
 
 - **Situation**: wanting a pristine (signed-out) instance to log into PRODUCTION with the user's real
   account, per E14's "no source edit" path.
-- **Doesn't work**: setting only `LOBE_GOLDEN_PROFILE=/tmp/empty-golden`. The script seeds from the
-  saved snapshot first (`LOGIN_STATE_DIR`, default `~/.lobehub/agent-testing/electron-login`) and only
+- **Doesn't work**: setting only `ORVILO_GOLDEN_PROFILE=/tmp/empty-golden`. The script seeds from the
+  saved snapshot first (`LOGIN_STATE_DIR`, default `~/.orvilo/agent-testing/electron-login`) and only
   falls back to the golden profile when no snapshot exists — the log still says
   "Seeding userData from saved login state" and you get the old login back.
 - **Also worth knowing**: that seeded agent-testing login is bound to a LOCAL dev server —
-  `ud-<id>/lobehub-settings.json` has `dataSyncConfig.remoteServerUrl = http://localhost:3010`. With
+  `ud-<id>/orvilo-settings.json` has `dataSyncConfig.remoteServerUrl = http://localhost:3010`. With
   nothing on 3010 the app shows `Authentication failed: signature verification failed` plus
   `BackendProxy upstream fetch failed (net::ERR_CONNECTION_REFUSED)`, and the renderer sits at
   `isLoaded:true, isUserStateInit:false, isSignedIn:false` — an E14 lookalike that is really a
-  wrong-server problem. Read `ud-<id>/lobehub-settings.json` before blaming the token.
+  wrong-server problem. Read `ud-<id>/orvilo-settings.json` before blaming the token.
 - **Works** (pristine + production login): point BOTH at empty dirs and keep the real snapshot safe —
   ```bash
-  LOBE_GOLDEN_PROFILE=/tmp/empty-golden LOBE_LOGIN_STATE_DIR=/tmp/empty-loginstate \
+  ORVILO_GOLDEN_PROFILE=/tmp/empty-golden ORVILO_LOGIN_STATE_DIR=/tmp/empty-loginstate \
     SKIP_LOGIN_SAVE=1 .agents/acceptance/scripts/electron-dev.sh start <id>
   ```
-  The instance lands on `/desktop-onboarding`; drive 开始 → 下一步 ×2 → 登录 LobeHub Cloud and the
-  device-code flow auto-approves against the browser's existing app.lobehub.com session. A pristine
+  The instance lands on `/desktop-onboarding`; drive 开始 → 下一步 ×2 → 登录 Orvilo Cloud and the
+  device-code flow auto-approves against the browser's existing orvilo.aspectlylabs.com session. A pristine
   profile defaults to production, so `remoteServerUrl` stays unset. `SKIP_LOGIN_SAVE=1` keeps `stop`
   from overwriting the user's real snapshot.
 
@@ -1221,7 +1209,7 @@ does not provide an export named 'MAX_ANALYSIS_...'`.
 - **Situation**: recreated test DB (or fresh profile) → Electron signed out; the saved snapshot's
   refresh token fails `signature verification failed`; the app must log into `localhost:3010`.
 - **Doesn't work**: `requestAuthorization({ storageMode: 'cloud' })` — that targets production
-  app.lobehub.com. Also the plain dev server rejects `/oidc/auth` with "OIDC is not enabled".
+  orvilo.aspectlylabs.com. Also the plain dev server rejects `/oidc/auth` with "OIDC is not enabled".
 - **Works**, end to end:
   1. Dev server needs `JWKS_KEY` (that is what flips `ENABLE_OIDC`): generate once with
      `node scripts/generate-oidc-jwk.mjs`, export, restart dev.
@@ -1245,7 +1233,7 @@ active: true, remoteServerUrl: 'http://localhost:<port>', storageMode: 'selfHost
 
 ### C18. React 19 UI ignores bare `el.click()` from CDP — dispatch the full pointer sequence
 
-- **Situation**: driving LobeHub UI (ActionIcon, dropdown items) via `Runtime.evaluate`; `el.click()`
+- **Situation**: driving Orvilo UI (ActionIcon, dropdown items) via `Runtime.evaluate`; `el.click()`
   silently does nothing (no handler fires, no error).
 - **Works**: dispatch `pointerdown → mousedown → pointerup → mouseup → click` (all
   `{bubbles:true, cancelable:true, view:window}`, PointerEvent for pointer\*). This is what the
@@ -1257,7 +1245,7 @@ active: true, remoteServerUrl: 'http://localhost:<port>', storageMode: 'selfHost
   machine; or a run mutates login state that later turns out to belong to the user.
 - **What bites**:
   1. **Legacy (no-instance-id) `electron-dev.sh start` uses the default userData**
-     (`~/Library/Application Support/lobehub-desktop-dev`) — the user's own dev-app profile, not an
+     (`~/Library/Application Support/orvilo-desktop-dev`) — the user's own dev-app profile, not an
      isolated copy. Any selfHost re-auth you drive overwrites their `dataSyncConfig` and tokens.
      Prefer the pool form (`start <id>`), which copies login state into an isolated dir; if legacy
      mode was used, tell the user their dev-app login/server config was changed.

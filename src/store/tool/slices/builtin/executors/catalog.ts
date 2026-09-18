@@ -10,8 +10,8 @@ import { groupAgentBuilderExecutor } from '@orvilo/builtin-tool-group-agent-buil
 import { groupManagementExecutor } from '@orvilo/builtin-tool-group-management/executor';
 import { imageGenerationExecutor } from '@orvilo/builtin-tool-image-generation/executor';
 import { knowledgeBaseExecutor } from '@orvilo/builtin-tool-knowledge-base/client/executor';
-import { lobeAgentExecutor } from '@orvilo/builtin-tool-lobe-agent/client/executor';
 import { memoryExecutor } from '@orvilo/builtin-tool-memory/executor';
+import { orviloAgentExecutor } from '@orvilo/builtin-tool-orvilo-agent/client/executor';
 import { taskExecutor } from '@orvilo/builtin-tool-task/client/executor';
 
 import type { IBuiltinToolExecutor } from '../types';
@@ -30,18 +30,18 @@ import {
   qoderExecutor,
   traeExecutor,
 } from './heteroCli';
-import { activatorExecutor } from './lobe-activator';
-import { agentDocumentsExecutor } from './lobe-agent-documents';
-import { messageExecutor } from './lobe-message';
-import { notebookExecutor } from './lobe-notebook';
-import { pageAgentExecutor } from './lobe-page-agent';
-import { skillStoreExecutor } from './lobe-skill-store';
-import { skillsExecutor } from './lobe-skills';
-import { topicReferenceExecutor } from './lobe-topic-reference';
-import { userInteractionExecutor } from './lobe-user-interaction';
-import { webBrowsing } from './lobe-web-browsing';
-import { webOnboardingExecutor } from './lobe-web-onboarding';
 import { localSystemExecutorWithGitEffects } from './localSystem';
+import { activatorExecutor } from './orvilo-activator';
+import { agentDocumentsExecutor } from './orvilo-agent-documents';
+import { messageExecutor } from './orvilo-message';
+import { notebookExecutor } from './orvilo-notebook';
+import { pageAgentExecutor } from './orvilo-page-agent';
+import { skillStoreExecutor } from './orvilo-skill-store';
+import { skillsExecutor } from './orvilo-skills';
+import { topicReferenceExecutor } from './orvilo-topic-reference';
+import { userInteractionExecutor } from './orvilo-user-interaction';
+import { webBrowsing } from './orvilo-web-browsing';
+import { webOnboardingExecutor } from './orvilo-web-onboarding';
 
 export const builtinToolExecutors = [
   // Hook-only executors for heterogeneous CLI agents —
@@ -83,7 +83,7 @@ export const builtinToolExecutors = [
   activatorExecutor,
   topicReferenceExecutor,
   userInteractionExecutor,
-  lobeAgentExecutor,
+  orviloAgentExecutor,
   webOnboardingExecutor,
   webBrowsing,
 ] satisfies IBuiltinToolExecutor[];

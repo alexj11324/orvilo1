@@ -16,7 +16,7 @@ import type {
   NewAgentOperation,
 } from '../schemas/agentOperations';
 import { agentOperations } from '../schemas/agentOperations';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { notShareVisitorTopicRef } from '../utils/shareVisitor';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
@@ -43,6 +43,8 @@ export interface RecordOperationStartParams {
   operationId: string;
   parentOperationId?: string | null;
   provider?: string;
+  /** Do not instantiate a new task Verify plan for this internal operation. */
+  skipTaskVerification?: boolean;
   startedAt?: Date;
   taskId?: string | null;
   threadId?: string | null;
@@ -111,11 +113,11 @@ export interface RecordOperationCompletionParams {
 }
 
 export class AgentOperationModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

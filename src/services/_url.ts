@@ -20,10 +20,10 @@ export const MARKET_OIDC_ENDPOINTS = {
   // NOTE: `auth` is used to open a page in the system browser (desktop) / popup (web),
   // so it must always be an HTTP(S) path joined with `NEXT_PUBLIC_MARKET_BASE_URL`.
   // It MUST NOT be wrapped by the Electron backend protocol.
-  auth: '/lobehub-oidc/auth',
+  auth: '/orvilo-oidc/auth',
   token: '/market/oidc/token',
   userinfo: '/market/oidc/userinfo',
   handoff: '/market/oidc/handoff',
   // Same as `auth`: used as `redirect_uri` (must be a real web URL under market base).
-  desktopCallback: '/lobehub-oidc/callback/desktop',
+  desktopCallback: '/orvilo-oidc/callback/desktop',
 };

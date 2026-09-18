@@ -1,7 +1,7 @@
 import { type FormItemProps } from '@lobehub/ui';
 import { Flexbox, Form } from '@lobehub/ui';
 import { Switch } from '@lobehub/ui/base-ui';
-import type { LobeAgentChatConfig } from '@orvilo/types';
+import type { OrviloAgentChatConfig } from '@orvilo/types';
 import { Form as AntdForm } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { MODEL_REASONING_EXTEND_PARAMS } from 'model-bank/aiModel';
@@ -68,7 +68,7 @@ interface ControlsFormProps {
    * Override the config source. Defaults to the agent's own chatConfig; the
    * sub-agent params panel passes the sub-agent's effective (merged) config.
    */
-  chatConfig?: LobeAgentChatConfig;
+  chatConfig?: OrviloAgentChatConfig;
   disabled?: boolean;
   /**
    * Hide the reasoning-effort family + reasoningMode controls. The main-agent
@@ -83,7 +83,7 @@ interface ControlsFormProps {
    * Override the write sink. Defaults to updating the agent's chatConfig; the
    * sub-agent params panel redirects writes into `agencyConfig.subagent.chatConfig`.
    */
-  onChatConfigChange?: (patch: Partial<LobeAgentChatConfig>) => Promise<void>;
+  onChatConfigChange?: (patch: Partial<OrviloAgentChatConfig>) => Promise<void>;
   onUpdatingChange?: (updating: boolean) => void;
   provider?: string;
 }
@@ -93,7 +93,7 @@ interface ControlsFormProps {
  * Users may still have only `thinking: 'disabled'`; treating that as unset would
  * show the model default and could persist the opposite value on unrelated edits.
  */
-const resolveEnableReasoningInitialValue = (config: LobeAgentChatConfig) => {
+const resolveEnableReasoningInitialValue = (config: OrviloAgentChatConfig) => {
   if (Object.hasOwn(config, 'enableReasoning')) return config.enableReasoning;
 
   if (config.thinking === 'enabled') return true;
@@ -102,7 +102,10 @@ const resolveEnableReasoningInitialValue = (config: LobeAgentChatConfig) => {
   return undefined;
 };
 
-const resolveEnableAdaptiveThinkingInitialValue = (config: LobeAgentChatConfig, model?: string) => {
+const resolveEnableAdaptiveThinkingInitialValue = (
+  config: OrviloAgentChatConfig,
+  model?: string,
+) => {
   if (Object.hasOwn(config, 'enableAdaptiveThinking')) return config.enableAdaptiveThinking;
 
   return resolveDefaultEnableAdaptiveThinkingForModel(model);
@@ -178,7 +181,7 @@ const ControlsForm = memo<ControlsFormProps>(
           <Trans i18nKey={'extendParams.disableContextCaching.desc'} ns={'chat'}>
             单条对话生成成本最高可降低 90%，响应速度提升 4 倍（
             <a
-              href={'https://www.anthropic.com/news/prompt-caching?utm_source=lobechat'}
+              href={'https://www.anthropic.com/news/prompt-caching?utm_source=orvilo'}
               rel="noreferrer nofollow"
               target="_blank"
             >

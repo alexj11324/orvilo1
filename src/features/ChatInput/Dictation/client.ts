@@ -24,12 +24,12 @@ export interface RealtimeDictationTiming {
 }
 
 export const REALTIME_DICTATION_PERFORMANCE_MARKS = {
-  admission: 'lobe:voice-dictation:admission',
-  admission_refresh: 'lobe:voice-dictation:admission_refresh',
-  capture: 'lobe:voice-dictation:capture',
-  permission: 'lobe:voice-dictation:permission',
-  start: 'lobe:voice-dictation:start',
-  ws_ready: 'lobe:voice-dictation:ws_ready',
+  admission: 'orvilo:voice-dictation:admission',
+  admission_refresh: 'orvilo:voice-dictation:admission_refresh',
+  capture: 'orvilo:voice-dictation:capture',
+  permission: 'orvilo:voice-dictation:permission',
+  start: 'orvilo:voice-dictation:start',
+  ws_ready: 'orvilo:voice-dictation:ws_ready',
 } as const;
 
 export interface RealtimeAsrWebSocket {

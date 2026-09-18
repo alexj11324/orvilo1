@@ -6,7 +6,6 @@ import {
   type HourlyUserMemoryExtractionMetadata,
   type UserMemoryExtractionMetadata,
 } from '@orvilo/types';
-import { Client as WorkflowClient } from '@upstash/workflow';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { z } from 'zod';
@@ -18,6 +17,7 @@ import {
 } from '@/database/models/asyncTask';
 import { asyncTasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
+import { cancelHatchetWorkflow } from '@/server/services/hatchet/workflows';
 
 const cancelPayloadSchema = z.object({
   // Optional human-readable cancellation reason.
@@ -31,18 +31,6 @@ const cancelPayloadSchema = z.object({
   // Optional additional workflow run ids for bulk cancellation.
   workflowRunIds: z.array(z.string()).optional(),
 });
-
-const getWorkflowClient = () => {
-  const token = process.env.QSTASH_TOKEN;
-  if (!token) throw new Error('QSTASH_TOKEN is required to cancel workflow runs');
-
-  const config: ConstructorParameters<typeof WorkflowClient>[0] = { token };
-  if (process.env.QSTASH_URL) {
-    (config as Record<string, unknown>).url = process.env.QSTASH_URL;
-  }
-
-  return new WorkflowClient(config);
-};
 
 const supportedTaskTypes = [
   AsyncTaskType.UserMemoryExtractionHourly,
@@ -65,7 +53,7 @@ const initMemoryExtractionMetadata = (task: typeof asyncTasks.$inferSelect) => {
 };
 
 /**
- * Cancels an in-flight user-memory extraction task and its Upstash workflow runs.
+ * Cancels an in-flight user-memory extraction task and its Hatchet workflow runs.
  *
  * Header auth is applied by the `memoryWebhookAuth` middleware.
  */
@@ -93,7 +81,7 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
 
     const workflowRunIds = Array.from(
       new Set([
-        ...(metadata.control?.upstash?.workflowRunIds || []),
+        ...(metadata.control?.hatchet?.workflowRunIds || []),
         ...(payload.workflowRunId ? [payload.workflowRunId] : []),
         ...(payload.workflowRunIds || []),
       ]),
@@ -105,8 +93,8 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
         cancelReason: payload.reason || metadata.control?.cancelReason,
         cancelRequestedAt: metadata.control?.cancelRequestedAt || new Date().toISOString(),
         cancelledBy: 'webhook',
-        upstash: {
-          ...metadata.control?.upstash,
+        hatchet: {
+          ...metadata.control?.hatchet,
           workflowRunIds,
         },
       },
@@ -125,8 +113,12 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
     let cancelledWorkflowRuns = 0;
     if (workflowRunIds.length > 0) {
       try {
-        const result = await getWorkflowClient().cancel({ ids: workflowRunIds });
-        cancelledWorkflowRuns = result.cancelled || 0;
+        const results = await Promise.allSettled(
+          workflowRunIds.map((workflowRunId) => cancelHatchetWorkflow(workflowRunId)),
+        );
+        cancelledWorkflowRuns = results.filter(
+          (result) => result.status === 'fulfilled' && result.value,
+        ).length;
       } catch (error) {
         console.error(
           '[memory-user-memory/pipelines/extract/chat-topic/cancel] failed to cancel workflow runs',

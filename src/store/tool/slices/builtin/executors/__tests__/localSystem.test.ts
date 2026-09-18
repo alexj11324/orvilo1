@@ -105,13 +105,13 @@ describe('localSystemExecutorWithGitEffects', () => {
     await localSystemExecutorWithGitEffects.onAfterCall!(
       call({
         params: { command: 'gh pr create --title "fix thing"' },
-        result: runResult({ content: 'https://github.com/lobehub/lobehub/pull/19082' }),
+        result: runResult({ content: 'https://github.com/alexj11324/orvilo1/pull/19082' }),
       }),
     );
 
     expect(detectMocks.recordGitCommandEffects).toHaveBeenCalledWith({
       command: 'gh pr create --title "fix thing"',
-      resultContent: 'https://github.com/lobehub/lobehub/pull/19082',
+      resultContent: 'https://github.com/alexj11324/orvilo1/pull/19082',
       topicId: 't1',
     });
   });

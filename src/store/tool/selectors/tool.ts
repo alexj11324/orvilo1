@@ -1,5 +1,5 @@
 import { getBuiltinRenderDisplayControl } from '@orvilo/builtin-tools/displayControls';
-import { getComposioAppByIdentifier, getLobehubSkillProviderById } from '@orvilo/const';
+import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { type RenderDisplayControl, type ToolManifest } from '@orvilo/types';
 
 import {
@@ -7,20 +7,20 @@ import {
   isToolAvailableInCurrentEnv,
 } from '@/helpers/toolAvailability';
 import { type MetaData } from '@/types/meta';
-import { type LobeToolMeta } from '@/types/tool/tool';
+import { type OrviloToolMeta } from '@/types/tool/tool';
 
 import { type ToolStoreState } from '../initialState';
 import { builtinToolSelectors } from '../slices/builtin/selectors';
 import { ComposioServerStatus } from '../slices/composioStore';
-import { lobehubSkillStoreSelectors } from '../slices/lobehubSkillStore';
-import { LobehubSkillStatus } from '../slices/lobehubSkillStore/types';
+import { orviloSkillStoreSelectors } from '../slices/orviloSkillStore';
+import { OrviloSkillStatus } from '../slices/orviloSkillStore/types';
 import { pluginSelectors } from '../slices/plugin/selectors';
 
-const metaList = (s: ToolStoreState): LobeToolMeta[] => {
-  const pluginList = pluginSelectors.installedPluginMetaList(s) as LobeToolMeta[];
-  const lobehubSkillList = lobehubSkillStoreSelectors.metaList(s) as LobeToolMeta[];
+const metaList = (s: ToolStoreState): OrviloToolMeta[] => {
+  const pluginList = pluginSelectors.installedPluginMetaList(s) as OrviloToolMeta[];
+  const orviloSkillList = orviloSkillStoreSelectors.metaList(s) as OrviloToolMeta[];
 
-  return builtinToolSelectors.metaList(s).concat(pluginList).concat(lobehubSkillList);
+  return builtinToolSelectors.metaList(s).concat(pluginList).concat(orviloSkillList);
 };
 
 /**
@@ -29,11 +29,11 @@ const metaList = (s: ToolStoreState): LobeToolMeta[] => {
  * Includes hidden and runtime-managed builtins (web-browsing, memory, cloud-sandbox, etc.)
  * that `metaList` hides from the chat toolbar.
  */
-const discoverableMetaList = (s: ToolStoreState): LobeToolMeta[] => {
-  const pluginList = pluginSelectors.installedPluginMetaList(s) as LobeToolMeta[];
-  const lobehubSkillList = lobehubSkillStoreSelectors.metaList(s) as LobeToolMeta[];
+const discoverableMetaList = (s: ToolStoreState): OrviloToolMeta[] => {
+  const pluginList = pluginSelectors.installedPluginMetaList(s) as OrviloToolMeta[];
+  const orviloSkillList = orviloSkillStoreSelectors.metaList(s) as OrviloToolMeta[];
 
-  return builtinToolSelectors.discoverableMetaList(s).concat(pluginList).concat(lobehubSkillList);
+  return builtinToolSelectors.discoverableMetaList(s).concat(pluginList).concat(orviloSkillList);
 };
 
 const getMetaById =
@@ -108,7 +108,7 @@ const getRenderDisplayControl =
     )?.renderDisplayControl;
     if (manifestControl) return manifestControl;
 
-    // Fallback for packages that don't ship a LobeChat manifest (e.g. Claude Code —
+    // Fallback for packages that don't ship a Orvilo manifest (e.g. Claude Code —
     // its tools come from Anthropic tool_use blocks at runtime).
     return getBuiltinRenderDisplayControl(identifier, apiName, pluginState) ?? 'collapsed';
   };
@@ -125,16 +125,16 @@ export interface AvailableToolForDiscovery {
  *
  * Sources:
  * 1. Builtin tools (from s.builtinTools) — exclude non-discoverable, skills, platform-unavailable
- * 2. User-installed plugins (from s.installedPlugins) — exclude Composio/LobeHub Skill/agent skill overlap
+ * 2. User-installed plugins (from s.installedPlugins) — exclude Composio/Orvilo Skill/agent skill overlap
  * 3. Composio MCP servers (connected) — description from COMPOSIO_APP_TYPES
- * 4. LobeHub Skill servers (connected) — description from LOBEHUB_SKILL_PROVIDERS
+ * 4. Orvilo Skill servers (connected) — description from ORVILO_SKILL_PROVIDERS
  */
 const availableToolsForDiscovery = (s: ToolStoreState): AvailableToolForDiscovery[] => {
   // Build exclusion sets for deduplication
   const builtinSkillIds = new Set((s.builtinSkills || []).map((skill) => skill.identifier));
   const agentSkillIds = new Set((s.agentSkills || []).map((skill) => skill.identifier));
   const composioIds = new Set((s.composioServers || []).map((server) => server.identifier));
-  const lobehubSkillIds = new Set((s.lobehubSkillServers || []).map((server) => server.identifier));
+  const orviloSkillIds = new Set((s.orviloSkillServers || []).map((server) => server.identifier));
 
   // 1. Builtin tools — directly from s.builtinTools
   const builtinItems = s.builtinTools
@@ -148,10 +148,10 @@ const availableToolsForDiscovery = (s: ToolStoreState): AvailableToolForDiscover
     }));
 
   // 2. User-installed plugins — directly from s.installedPlugins
-  //    Exclude Composio, LobeHub Skill, and agent skill entries (they are handled in dedicated sources)
+  //    Exclude Composio, Orvilo Skill, and agent skill entries (they are handled in dedicated sources)
   const pluginItems = s.installedPlugins
     .filter((p) => !composioIds.has(p.identifier))
-    .filter((p) => !lobehubSkillIds.has(p.identifier))
+    .filter((p) => !orviloSkillIds.has(p.identifier))
     .filter((p) => !agentSkillIds.has(p.identifier))
     .filter((p) => !p.customParams?.composio) // extra safety for Composio plugins
     .filter((plugin) => isInstalledPluginAvailableInCurrentEnv(plugin))
@@ -167,14 +167,14 @@ const availableToolsForDiscovery = (s: ToolStoreState): AvailableToolForDiscover
   // 3. Composio MCP servers (connected only)
   const composioItems = (s.composioServers || [])
     .filter((server) => server.status === ComposioServerStatus.ACTIVE && server.tools?.length)
-    // A connector identifier can have legacy Composio and current LobeHub
+    // A connector identifier can have legacy Composio and current Orvilo
     // connections at the same time. Tool discovery is identifier-based, so the
-    // canonical LobeHub connection must own the single visible entry.
+    // canonical Orvilo connection must own the single visible entry.
     .filter(
       (server) =>
-        !s.lobehubSkillServers?.some(
+        !s.orviloSkillServers?.some(
           (item) =>
-            item.identifier === server.identifier && item.status === LobehubSkillStatus.CONNECTED,
+            item.identifier === server.identifier && item.status === OrviloSkillStatus.CONNECTED,
         ),
     )
     .map((server) => {
@@ -186,11 +186,11 @@ const availableToolsForDiscovery = (s: ToolStoreState): AvailableToolForDiscover
       };
     });
 
-  // 4. LobeHub Skill servers (connected only)
-  const lobehubSkillItems = (s.lobehubSkillServers || [])
-    .filter((server) => server.status === LobehubSkillStatus.CONNECTED)
+  // 4. Orvilo Skill servers (connected only)
+  const orviloSkillItems = (s.orviloSkillServers || [])
+    .filter((server) => server.status === OrviloSkillStatus.CONNECTED)
     .map((server) => {
-      const config = getLobehubSkillProviderById(server.identifier);
+      const config = getOrviloSkillProviderById(server.identifier);
       return {
         description: config?.description || '',
         identifier: server.identifier,
@@ -198,7 +198,7 @@ const availableToolsForDiscovery = (s: ToolStoreState): AvailableToolForDiscover
       };
     });
 
-  return [...builtinItems, ...pluginItems, ...composioItems, ...lobehubSkillItems];
+  return [...builtinItems, ...pluginItems, ...composioItems, ...orviloSkillItems];
 };
 
 export const toolSelectors = {

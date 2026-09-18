@@ -179,8 +179,8 @@ export const getWorkingDirEffectivePath = (
 
 /**
  * Derive the target directory for a new worktree: a sibling of the source repo
- * named `<repoName>-<branch>` (e.g. `/code/lobehub` + `feat/x` →
- * `/code/lobehub-feat-x`), matching the convention agents already use for their
+ * named `<repoName>-<branch>` (e.g. `/code/orvilo` + `feat/x` →
+ * `/code/orvilo-feat-x`), matching the convention agents already use for their
  * linked worktrees. Preserves the source path's separator so Windows paths stay
  * intact, and folds ref-illegal characters in the branch to `-` for the folder.
  *
@@ -531,6 +531,8 @@ export interface DeviceGitSyncResult {
   error?: string;
   /** True when git reported the branch was already up-to-date. */
   noop?: boolean;
+  /** Proves the device pushed the requested immutable source ref. */
+  pushedSourceRef?: string;
   success: boolean;
 }
 
@@ -648,6 +650,8 @@ export interface DeviceGitMergeResult {
   /** Repo-relative paths reported unmerged. Present for 'conflict'/'in-progress'. */
   conflicts?: string[];
   error?: string;
+  /** Immutable source commit the merge attempted to include. */
+  headSha?: string;
   /** Resulting HEAD sha when the merge committed. */
   sha?: string;
   /** 'merged' | 'conflict' | 'in-progress' (an existing merge was left untouched). */
@@ -663,6 +667,8 @@ export interface DeviceGitFinalizeMergeResult {
   /** 'integrated' — merge commit landed; 'conflict' — unmerged paths remain. */
   state: 'integrated' | 'conflict';
   success: boolean;
+  /** Proves this client understood and enforced the expected commit. */
+  validatedExpectedHead?: boolean;
 }
 
 /**

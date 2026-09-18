@@ -467,7 +467,6 @@ const AgentViewAllPage = memo(() => {
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
-    createMarketAgentMenuItem,
     isMutatingAgent,
   } = useCreateMenuItems();
 
@@ -480,7 +479,7 @@ const AgentViewAllPage = memo(() => {
   );
 
   // Same menu as the sidebar's create button: agent / group chat / external
-  // CLI agents / platform agent, all inheriting the segment's visibility. The
+  // CLI agents, all inheriting the segment's visibility. The
   // sidebar's "add from Agent list" entry is omitted — it navigates to this
   // very page.
   const createMenuItems = useMemo(() => {
@@ -489,16 +488,8 @@ const AgentViewAllPage = memo(() => {
       createAgentMenuItem(createOptions),
       createGroupChatMenuItem(createOptions),
       ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
-      { type: 'divider' as const },
-      createMarketAgentMenuItem(),
     ];
-  }, [
-    createAgentMenuItem,
-    createConnectAgentMenuItem,
-    createGroupChatMenuItem,
-    createMarketAgentMenuItem,
-    createOptions,
-  ]);
+  }, [createAgentMenuItem, createConnectAgentMenuItem, createGroupChatMenuItem, createOptions]);
 
   return (
     <Flexbox flex={1} height={'100%'}>

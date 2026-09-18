@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-const STORAGE_KEY = 'LOBE_DEV_DOCK_UNLOCKED';
+const STORAGE_KEY = 'ORVILO_DEV_DOCK_UNLOCKED';
 const REQUIRED_CLICKS = 5;
 const CLICK_TIMEOUT_MS = 1500;
 

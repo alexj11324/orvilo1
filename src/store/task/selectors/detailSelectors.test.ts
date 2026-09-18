@@ -9,7 +9,7 @@ const mockDetail: TaskDetailData = {
   agentId: 'agt_1',
   checkpoint: { onAgentRequest: true },
   config: { model: 'gpt-4o', provider: 'openai' },
-  dependencies: [{ dependsOn: 'T-2', type: 'blocks' }],
+  dependencies: [{ dependsOn: 'T-2', type: 'blocks', status: 'completed' }],
   description: 'A test task',
   error: null,
   heartbeat: { interval: 300, timeout: null },
@@ -129,6 +129,41 @@ describe('taskDetailSelectors', () => {
   });
 
   describe('canRunActiveTask', () => {
+    it.each(['backlog', 'running', 'paused', 'failed', 'canceled', null, undefined])(
+      'blocks when a prerequisite has status %s',
+      (status) => {
+        const state = createState({
+          activeTaskId: 'T-1',
+          taskDetailMap: {
+            'T-1': {
+              ...mockDetail,
+              status: 'backlog',
+              dependencies: [{ dependsOn: 'T-2', type: 'blocks', status }],
+            },
+          },
+        });
+        expect(taskDetailSelectors.isActiveTaskBlocked(state)).toBe(true);
+        expect(taskDetailSelectors.canRunActiveTask(state)).toBe(false);
+      },
+    );
+
+    it('ignores relates edges and unlocks only completed blocking edges', () => {
+      const state = createState({
+        activeTaskId: 'T-1',
+        taskDetailMap: {
+          'T-1': {
+            ...mockDetail,
+            status: 'backlog',
+            dependencies: [
+              { dependsOn: 'T-2', type: 'blocks', status: 'completed' },
+              { dependsOn: 'T-3', type: 'relates', status: 'failed' },
+            ],
+          },
+        },
+      });
+      expect(taskDetailSelectors.canRunActiveTask(state)).toBe(true);
+    });
+
     it('should return true for backlog task with agentId', () => {
       const state = createState({
         activeTaskId: 'T-1',

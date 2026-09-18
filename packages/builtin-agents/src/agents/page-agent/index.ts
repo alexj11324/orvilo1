@@ -23,7 +23,7 @@ export const PAGE_AGENT: BuiltinAgentDefinition = {
     chatConfig: {
       enableHistoryCount: false,
     },
-    plugins: ['lobe-page-agent', ...(ctx.plugins || [])],
+    plugins: ['orvilo-page-agent', ...(ctx.plugins || [])],
     systemRole: systemRoleTemplate,
   }),
 

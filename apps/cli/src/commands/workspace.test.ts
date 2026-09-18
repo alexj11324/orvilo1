@@ -41,7 +41,7 @@ vi.mock('../auth/identity', () => ({
   resolveIdentityFingerprint: mockResolveIdentityFingerprint,
 }));
 vi.mock('../settings', () => ({
-  resolveServerUrl: () => 'https://app.lobehub.com',
+  resolveServerUrl: () => 'https://orvilo.aspectlylabs.com',
   saveActiveWorkspace: mockSaveActiveWorkspace,
 }));
 
@@ -49,8 +49,8 @@ vi.mock('../settings', () => ({
 const scopedTo = (workspaceId?: string) =>
   mockResolveWorkspaceScope.mockImplementation((explicit?: string) => {
     if (explicit) return { source: 'explicit', workspaceId: explicit };
-    if (process.env.LOBEHUB_WORKSPACE_ID)
-      return { source: 'env', workspaceId: process.env.LOBEHUB_WORKSPACE_ID };
+    if (process.env.ORVILO_WORKSPACE_ID)
+      return { source: 'env', workspaceId: process.env.ORVILO_WORKSPACE_ID };
     return workspaceId ? { source: 'settings', workspaceId } : { source: 'personal' };
   });
 
@@ -65,11 +65,11 @@ const run = (...argv: string[]) => createProgram().parseAsync(['node', 'test', .
 
 describe('workspace command', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>;
-  const originalWorkspaceId = process.env.LOBEHUB_WORKSPACE_ID;
+  const originalWorkspaceId = process.env.ORVILO_WORKSPACE_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.LOBEHUB_WORKSPACE_ID;
+    delete process.env.ORVILO_WORKSPACE_ID;
     scopedTo(undefined);
     mockResolveIdentityFingerprint.mockReturnValue('user:u1');
     mockGetTrpcClient.mockResolvedValue(mockClient);
@@ -81,8 +81,8 @@ describe('workspace command', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    if (originalWorkspaceId === undefined) delete process.env.LOBEHUB_WORKSPACE_ID;
-    else process.env.LOBEHUB_WORKSPACE_ID = originalWorkspaceId;
+    if (originalWorkspaceId === undefined) delete process.env.ORVILO_WORKSPACE_ID;
+    else process.env.ORVILO_WORKSPACE_ID = originalWorkspaceId;
   });
 
   describe('list', () => {
@@ -103,7 +103,7 @@ describe('workspace command', () => {
 
     // The marker has to follow the same precedence every other command uses.
     it('marks the env-selected workspace over the persisted one', async () => {
-      process.env.LOBEHUB_WORKSPACE_ID = 'ws_1';
+      process.env.ORVILO_WORKSPACE_ID = 'ws_1';
       scopedTo('ws_2');
       mockClient.workspace.list.query.mockResolvedValue([
         { id: 'ws_1', name: 'Acme', role: 'owner', slug: 'acme' },
@@ -136,7 +136,7 @@ describe('workspace command', () => {
 
       expect(mockSaveActiveWorkspace).toHaveBeenCalledWith({
         identity: 'user:u1',
-        serverUrl: 'https://app.lobehub.com',
+        serverUrl: 'https://orvilo.aspectlylabs.com',
         workspaceId: 'ws_1',
       });
     });
@@ -153,15 +153,15 @@ describe('workspace command', () => {
 
     // The env var wins in `resolveWorkspaceScope`, so persisting silently would
     // leave the user staring at the old scope.
-    it('warns when LOBEHUB_WORKSPACE_ID would override the new scope', async () => {
-      process.env.LOBEHUB_WORKSPACE_ID = 'ws_env';
+    it('warns when ORVILO_WORKSPACE_ID would override the new scope', async () => {
+      process.env.ORVILO_WORKSPACE_ID = 'ws_env';
       mockClient.workspace.list.query.mockResolvedValue([
         { id: 'ws_1', name: 'Acme', role: 'owner', slug: 'acme' },
       ]);
 
       await run('workspace', 'use', 'ws_1');
 
-      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('LOBEHUB_WORKSPACE_ID'));
+      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('ORVILO_WORKSPACE_ID'));
     });
 
     // Without an identity the record cannot be bound, and an unbound scope is
@@ -186,8 +186,8 @@ describe('workspace command', () => {
 
     // Clearing the file does not clear the env var, so "Scope set to personal"
     // on its own would leave the next mutation pointed at a workspace.
-    it('warns that --personal does not beat LOBEHUB_WORKSPACE_ID', async () => {
-      process.env.LOBEHUB_WORKSPACE_ID = 'ws_env';
+    it('warns that --personal does not beat ORVILO_WORKSPACE_ID', async () => {
+      process.env.ORVILO_WORKSPACE_ID = 'ws_env';
 
       await run('workspace', 'use', '--personal');
 
@@ -275,8 +275,8 @@ describe('workspace command', () => {
       );
     });
 
-    it('warns that --use does not beat LOBEHUB_WORKSPACE_ID', async () => {
-      process.env.LOBEHUB_WORKSPACE_ID = 'ws_env';
+    it('warns that --use does not beat ORVILO_WORKSPACE_ID', async () => {
+      process.env.ORVILO_WORKSPACE_ID = 'ws_env';
       mockClient.workspace.create.mutate.mockResolvedValue({ id: 'ws_new', name: 'Acme' });
 
       await run('workspace', 'create', 'Acme', '--slug', 'acme', '--use');

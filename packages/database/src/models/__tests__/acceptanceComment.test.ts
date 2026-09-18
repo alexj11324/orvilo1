@@ -13,14 +13,14 @@ import {
   verifyEvidence,
   verifyRuns,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   ACCEPTANCE_COMMENT_PARENT_NOT_FOUND,
   AcceptanceCommentModel,
   acceptanceReactionClientId,
 } from '../acceptanceComment';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const owner = 'acceptance-comment-owner';
 const reviewer = 'acceptance-comment-reviewer';

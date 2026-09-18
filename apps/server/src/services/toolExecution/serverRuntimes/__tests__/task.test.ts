@@ -1,9 +1,15 @@
 import { normalizeListTasksParams, UNFINISHED_TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TaskDependencyError } from '@/database/models/taskDependency';
+
 import { createTaskRuntime, taskRuntime } from '../task';
 
 const verifyMocks = vi.hoisted(() => ({ createCriteriaFromDrafts: vi.fn() }));
+const deletionMocks = vi.hoisted(() => ({
+  cleanupTaskWorktrees: vi.fn(),
+  snapshotTaskWorktrees: vi.fn(),
+}));
 
 const memberMocks = vi.hoisted(() => ({
   findLinksByUserIds: vi.fn(),
@@ -56,7 +62,7 @@ vi.mock('@/server/routers/lambda/task', () => ({
 // reading `appEnv.APP_URL` would throw. Stub it — createTask embeds it as the
 // base URL for absolute task deep-links (so IM / mobile links are clickable).
 vi.mock('@/envs/app', () => ({
-  appEnv: { APP_URL: 'https://app.lobehub.com' },
+  appEnv: { APP_URL: 'https://orvilo.aspectlylabs.com' },
 }));
 
 // TaskService's transitive deps (taskReview → ModelRuntime) call getLLMConfig
@@ -70,7 +76,9 @@ vi.mock('@/server/services/task', () => ({
 // agentRuntime → toolExecution/builtin → serverRuntimes/index) cycle back
 // onto this module mid-load; a stubbed class keeps the graph shallow.
 vi.mock('@/server/services/taskIntegration', () => ({
-  TaskIntegrationService: vi.fn(() => ({ cleanupTaskWorktrees: vi.fn() })),
+  TaskIntegrationService: vi.fn(function () {
+    return deletionMocks;
+  }),
 }));
 
 vi.mock('@/server/services/verify/planGenerator', () => ({
@@ -251,7 +259,7 @@ describe('createTaskRuntime', () => {
       expect(result.success).toBe(true);
       // The identifier is an absolute markdown link so it stays clickable when
       // the tool result is delivered to an IM channel / mobile.
-      expect(result.content).toContain('[T-1](https://app.lobehub.com/task/T-1)');
+      expect(result.content).toContain('[T-1](https://orvilo.aspectlylabs.com/task/T-1)');
       expect(deps.taskService.createTask).toHaveBeenCalledWith(
         expect.objectContaining({
           assigneeAgentId: 'agt-xyz',
@@ -266,7 +274,7 @@ describe('createTaskRuntime', () => {
       const runtime = createTaskRuntime({
         agentModel: deps.agentModel as any,
         // The factory supplies this; for a workspace task it prefixes `/{slug}`.
-        resolveLinkBaseUrl: async () => 'https://app.lobehub.com/acme',
+        resolveLinkBaseUrl: async () => 'https://orvilo.aspectlylabs.com/acme',
         taskCaller: deps.taskCaller,
         taskModel: deps.taskModel as any,
         taskService: deps.taskService as any,
@@ -275,7 +283,7 @@ describe('createTaskRuntime', () => {
       const result = await runtime.createTask({ instruction: 'Do something', name: 'Test' });
 
       expect(result.success).toBe(true);
-      expect(result.content).toContain('[T-1](https://app.lobehub.com/acme/task/T-1)');
+      expect(result.content).toContain('[T-1](https://orvilo.aspectlylabs.com/acme/task/T-1)');
     });
 
     it('surfaces the created task identity in state (the dispatch-layer registration source)', async () => {
@@ -673,8 +681,8 @@ describe('createTaskRuntime', () => {
       expect(result.content).toContain('Created 2 tasks');
       // Identifiers are rendered as absolute markdown links so they stay
       // clickable when the message is delivered to IM / mobile.
-      expect(result.content).toContain('[T-A](https://app.lobehub.com/task/T-A)');
-      expect(result.content).toContain('[T-B](https://app.lobehub.com/task/T-B)');
+      expect(result.content).toContain('[T-A](https://orvilo.aspectlylabs.com/task/T-A)');
+      expect(result.content).toContain('[T-B](https://orvilo.aspectlylabs.com/task/T-B)');
       expect(result.content).toContain('T-A');
       expect(result.content).toContain('T-B');
       // State parity with the client executor: the dispatch-layer registration
@@ -1176,7 +1184,9 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
         total: 1,
       });
       memberMocks.getDisplayInfoByIds.mockResolvedValue([alice]);
-      memberMocks.getEmailsByIds.mockResolvedValue([{ email: 'alice@lobehub.com', id: 'usr_2' }]);
+      memberMocks.getEmailsByIds.mockResolvedValue([
+        { email: 'alice@orvilo.aspectlylabs.com', id: 'usr_2' },
+      ]);
       memberMocks.findLinksByUserIds.mockResolvedValue([
         {
           platform: 'discord',
@@ -1191,12 +1201,14 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
       const result = await runtime.listWorkspaceMembers();
 
       expect(result.content).toContain(
-        '- Alice  @alice  alice@lobehub.com  role=member  im=discord:@Neko(4521),slack:U123  id=usr_2',
+        '- Alice  @alice  alice@orvilo.aspectlylabs.com  role=member  im=discord:@Neko(4521),slack:U123  id=usr_2',
       );
     });
 
     it('passes the folded query and the cap to the directory lookup and announces the cut', async () => {
-      memberMocks.getEmailsByIds.mockResolvedValue([{ email: 'alice@lobehub.com', id: 'usr_2' }]);
+      memberMocks.getEmailsByIds.mockResolvedValue([
+        { email: 'alice@orvilo.aspectlylabs.com', id: 'usr_2' },
+      ]);
       memberMocks.findLinksByUserIds.mockResolvedValue([
         { platform: 'discord', platformUserId: '4521', platformUsername: 'Neko', userId: 'usr_2' },
       ]);
@@ -1260,5 +1272,53 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
       expect(result.success).toBe(false);
       expect(result.content).toContain('unavailable');
     });
+  });
+});
+
+describe('agent-tool deletion prerequisite guard', () => {
+  const task = { id: 'task-delete', identifier: 'T-99', name: 'Delete fixture' };
+  const fixture = (remove: ReturnType<typeof vi.fn>) =>
+    createTaskRuntime({
+      db: {} as never,
+      userId: 'owner',
+      workspaceId: 'workspace',
+      agentModel: {} as never,
+      taskModel: { resolve: vi.fn().mockResolvedValue(task), delete: remove } as never,
+      taskService: {} as never,
+      taskCaller: {} as never,
+    });
+
+  beforeEach(() => {
+    deletionMocks.snapshotTaskWorktrees.mockReset().mockResolvedValue([]);
+    deletionMocks.cleanupTaskWorktrees.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('preserves the worktree when an inbound dependency rejects deletion', async () => {
+    const remove = vi.fn().mockRejectedValue(new TaskDependencyError('Remove dependency links'));
+    await expect(fixture(remove).deleteTask({ identifier: task.identifier })).rejects.toThrow(
+      'dependency links',
+    );
+    expect(deletionMocks.cleanupTaskWorktrees).not.toHaveBeenCalled();
+  });
+
+  it('cleans up from the snapshot only after a successful guarded delete', async () => {
+    const remove = vi.fn().mockResolvedValue(true);
+    const result = await fixture(remove).deleteTask({ identifier: task.identifier });
+    expect(result.success).toBe(true);
+    expect(deletionMocks.cleanupTaskWorktrees).toHaveBeenCalledWith(task.id, []);
+    expect(deletionMocks.snapshotTaskWorktrees.mock.invocationCallOrder[0]).toBeLessThan(
+      remove.mock.invocationCallOrder[0],
+    );
+    expect(remove.mock.invocationCallOrder[0]).toBeLessThan(
+      deletionMocks.cleanupTaskWorktrees.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('does not report deletion or clean up if the row was not deleted', async () => {
+    const result = await fixture(vi.fn().mockResolvedValue(false)).deleteTask({
+      identifier: task.identifier,
+    });
+    expect(result.success).toBe(false);
+    expect(deletionMocks.cleanupTaskWorktrees).not.toHaveBeenCalled();
   });
 });

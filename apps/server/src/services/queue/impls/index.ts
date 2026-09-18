@@ -1,7 +1,7 @@
 import { appEnv } from '@/envs/app';
 
+import { HatchetQueueServiceImpl } from './hatchet';
 import { LocalQueueServiceImpl } from './local';
-import { QStashQueueServiceImpl } from './qstash';
 import { type QueueServiceImpl } from './type';
 
 /**
@@ -16,24 +16,23 @@ export const isQueueAgentRuntimeEnabled = (): boolean => {
  * Create queue service module
  *
  * When enableQueueAgentRuntime=true (AGENT_RUNTIME_MODE=queue):
- *   - QStashQueueServiceImpl (production, requires QSTASH_TOKEN)
+ *   - HatchetQueueServiceImpl (production, requires HATCHET_CLIENT_TOKEN)
  *
  * When enableQueueAgentRuntime=false (default):
  *   - LocalQueueServiceImpl (local development, uses setTimeout for async execution)
  */
 export const createQueueServiceModule = (): QueueServiceImpl => {
   if (isQueueAgentRuntimeEnabled()) {
-    const qstashToken = process.env.QSTASH_TOKEN;
-
-    if (!qstashToken) {
-      throw new Error('QSTASH_TOKEN is required when AGENT_RUNTIME_MODE=queue');
+    if (!process.env.HATCHET_CLIENT_TOKEN) {
+      throw new Error('HATCHET_CLIENT_TOKEN is required when AGENT_RUNTIME_MODE=queue');
     }
-    return new QStashQueueServiceImpl({ qstashToken });
+    return new HatchetQueueServiceImpl();
   }
 
   // Local mode (default): use LocalQueueServiceImpl with callback mechanism
   return new LocalQueueServiceImpl();
 };
 
+export { HatchetQueueServiceImpl } from './hatchet';
 export { LocalQueueServiceImpl } from './local';
 export type { QueueServiceImpl } from './type';

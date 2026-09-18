@@ -16,8 +16,8 @@ export default [
     extra: [
       {
         links: {
-          cn: 'https://github.com/lobehub/lobe-chat-agents/blob/main/README.zh-CN.md',
-          en: 'https://github.com/lobehub/lobe-chat-agents',
+          cn: 'https://chat-agents.aspectlylabs.com',
+          en: 'https://chat-agents.aspectlylabs.com',
         },
         titles: {
           cn: '助手索引与提交',
@@ -32,8 +32,8 @@ export default [
     extra: [
       {
         links: {
-          cn: 'https://chat-plugin-sdk.lobehub.com',
-          en: 'https://chat-plugin-sdk.lobehub.com',
+          cn: 'https://chat-plugin-sdk.aspectlylabs.com',
+          en: 'https://chat-plugin-sdk.aspectlylabs.com',
         },
         titles: {
           cn: '插件 SDK 文档',
@@ -42,8 +42,8 @@ export default [
       },
       {
         links: {
-          cn: 'https://github.com/lobehub/lobe-chat-plugins/blob/main/README.zh-CN.md',
-          en: 'https://github.com/lobehub/lobe-chat-plugins',
+          cn: 'https://chat-plugins.aspectlylabs.com',
+          en: 'https://chat-plugins.aspectlylabs.com',
         },
         titles: {
           cn: '插件索引与提交',

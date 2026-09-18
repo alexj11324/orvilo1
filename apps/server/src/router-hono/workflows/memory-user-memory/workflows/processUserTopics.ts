@@ -1,5 +1,4 @@
 import { MemorySourceType } from '@orvilo/types';
-import { type WorkflowContext } from '@upstash/workflow';
 import { chunk } from 'es-toolkit/compat';
 
 import { AsyncTaskModel } from '@/database/models/asyncTask';
@@ -13,6 +12,7 @@ import {
   MemoryExtractionWorkflowService,
   normalizeMemoryExtractionPayload,
 } from '@/server/services/memory/userMemory/extract';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 
 import { checkGuard, ensureWorkflowStarted } from './runGuard';
@@ -21,14 +21,11 @@ import { appendHourlyWorkflowRunId, isHourlyMemoryExtractionCancelled } from './
 const TOPIC_PAGE_SIZE = 50;
 const TOPIC_BATCH_SIZE = 20;
 const WORKFLOW_PATH = 'api/workflows/memory-user-memory/pipelines/chat-topic/process-user-topics';
-const PROCESS_USER_TOPICS_FLOW_CONTROL_KEY =
-  'memory-user-memory.pipelines.chat-topic.process-user-topics';
-
-const { upstashWorkflowExtraHeaders, workflow } = parseMemoryExtractionConfig();
+const { workflowExtraHeaders, workflow } = parseMemoryExtractionConfig();
 
 // NOTICE: Hard per-user, per-run fan-out ceiling. flowControl only bounds concurrency, not queue
 // depth, so this count cap is what actually prevents one heavy user from backing up a massive
-// QStash fan-out. Remaining un-extracted topics resume on later hourly runs, so it self-drains.
+// Hatchet fan-out. Remaining un-extracted topics resume on later hourly runs, so it self-drains.
 const MAX_TOPICS_PER_USER_PER_RUN = workflow?.maxTopicsPerUserPerRun ?? 100;
 
 export const processUserTopicsHandler = async (
@@ -38,7 +35,7 @@ export const processUserTopicsHandler = async (
 
   const params = normalizeMemoryExtractionPayload(context.requestPayload || {});
 
-  // NOTICE: Return (never throw) on a guard match — a throw before the first step makes Upstash
+  // NOTICE: Return (never throw) on a guard match — a throw before the first step makes the worker
   // re-enqueue the run, turning a "disable" guard into an infinite retry storm.
   const entryGuard = await checkGuard(context, WORKFLOW_PATH);
   if (!entryGuard.result) return entryGuard.response;
@@ -78,7 +75,7 @@ export const processUserTopicsHandler = async (
           userIds: [userId],
         }),
       },
-      { extraHeaders: upstashWorkflowExtraHeaders },
+      { extraHeaders: workflowExtraHeaders },
     );
   };
 
@@ -194,9 +191,8 @@ export const processUserTopicsHandler = async (
     const idsToProcess = topicsFromPayload ? ids : ids.slice(0, remainingBudget);
 
     for (const [batchIndex, topicIds] of chunk(idsToProcess, TOPIC_BATCH_SIZE).entries()) {
-      // NOTICE: We trigger via QStash instead of context.invoke because invoke only swaps the last
-      // path segment with the workflowId. If we invoked directly from /process-user-topics, child
-      // workflow URLs would inherit that base and lose the desired /process-topics prefix.
+      // Trigger the child through the Hatchet dispatch helper so it gets its own
+      // retry and concurrency identity.
       const stepName = `memory:user-memory:extract:users:${userId}:process-topics-batch:${batchIndex}`;
       const guard = await checkGuard(context, WORKFLOW_PATH, { stepName });
       if (!guard.result) return guard.response;
@@ -211,7 +207,7 @@ export const processUserTopicsHandler = async (
             userId,
             userIds: [userId],
           },
-          { extraHeaders: upstashWorkflowExtraHeaders },
+          { extraHeaders: workflowExtraHeaders },
         ),
       );
       await appendHourlyWorkflowRunId(params.hourlyTaskId, result.workflowRunId);
@@ -264,27 +260,4 @@ export const processUserTopicsHandler = async (
   }
 
   return { processedUsers: params.userIds.length };
-};
-
-/**
- * Shared flow-control settings for active user-topic workers.
- *
- * Use when:
- * - Serving process-user-topics workflow runs through Upstash Workflow
- * - Keeping memory extraction bounded to the configured active user worker limit
- *
- * Expects:
- * - Trigger-side calls use the same key to throttle initial workflow delivery
- *
- * Returns:
- * - Upstash Workflow serve options that limit process-user-topics executions
- */
-export const processUserTopicsWorkflowOptions = {
-  // NOTICE: This key intentionally omits userId. Adding userId would create one independent
-  // bucket per user and would not cap total database pressure; the global key keeps at most
-  // the configured number of user-topic workers active across all users.
-  flowControl: {
-    key: PROCESS_USER_TOPICS_FLOW_CONTROL_KEY,
-    parallelism: workflow?.processUserTopicsParallelism ?? 25,
-  },
 };

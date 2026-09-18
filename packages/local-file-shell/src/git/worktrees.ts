@@ -143,10 +143,11 @@ const findListedWorktree = async (
 };
 
 export const removeGitWorktree = async (payload: {
+  force?: boolean;
   path: string;
   worktreePath: string;
 }): Promise<GitRemoveWorktreeResult> => {
-  const { path: dirPath, worktreePath } = payload;
+  const { force, path: dirPath, worktreePath } = payload;
   if (!dirPath?.trim()) return { error: 'Working directory is required', success: false };
   if (!worktreePath?.trim()) return { error: 'Worktree path is required', success: false };
 
@@ -156,10 +157,14 @@ export const removeGitWorktree = async (payload: {
   if (worktree.bare) return { error: 'Cannot remove the bare worktree', success: false };
 
   try {
-    await execFileAsync('git', ['worktree', 'remove', worktree.path], {
-      cwd: dirPath,
-      timeout: 30_000,
-    });
+    await execFileAsync(
+      'git',
+      ['worktree', 'remove', ...(force ? ['--force'] : []), worktree.path],
+      {
+        cwd: dirPath,
+        timeout: 30_000,
+      },
+    );
     return { success: true };
   } catch (error: any) {
     const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();

@@ -26,6 +26,10 @@ env:
   S3_SECRET_ACCESS_KEY: e2e-mock-secret-key
   S3_BUCKET: e2e-mock-bucket
   S3_ENDPOINT: https://e2e-mock-s3.localhost
+  # The self-hosted market endpoint (market.aspectlylabs.com) is not deployed yet;
+  # until it ships, E2E keeps serving home rail recommendations from the upstream
+  # market service. The @lobehub/market-sdk contract is unchanged by the rebrand.
+  MARKET_BASE_URL: https://market.lobehub.com
 
 jobs:
   # Check for duplicate runs
@@ -225,15 +229,15 @@ jobs:
 
       - name: Start E2E server
         run: |
-          bunx next start -p 3006 > /tmp/lobehub-e2e-server.log 2>&1 &
-          echo $! > /tmp/lobehub-e2e-server.pid
+          bunx next start -p 3006 > /tmp/orvilo-e2e-server.log 2>&1 &
+          echo $! > /tmp/orvilo-e2e-server.pid
           for i in {1..60}; do
             if curl -fsS http://localhost:3006 > /dev/null; then
               exit 0
             fi
             sleep 1
           done
-          cat /tmp/lobehub-e2e-server.log
+          cat /tmp/orvilo-e2e-server.log
           exit 1
 
       - name: Run E2E tests
@@ -244,8 +248,8 @@ jobs:
           E2E_REPORTS: '0'
           HEADLESS: 'true'
 
-      - name: Upload E2E test artifacts (on failure)
-        if: failure()
+      - name: Upload E2E test artifacts
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: e2e-artifacts

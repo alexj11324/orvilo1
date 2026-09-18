@@ -169,7 +169,7 @@ export const messengerContentText = (input: MessengerContent): string =>
 // --------------- Platform Messenger ---------------
 
 /**
- * LobeHub-specific outbound capabilities used by callback and bridge services.
+ * Orvilo-specific outbound capabilities used by callback and bridge services.
  */
 export interface PlatformMessenger {
   /**
@@ -478,7 +478,7 @@ export interface ValidationResult {
 export interface PlatformDocumentation {
   /** URL to the platform's developer portal / open platform console */
   portalUrl?: string;
-  /** URL to the usage documentation (e.g. LobeHub docs for this platform) */
+  /** URL to the usage documentation (e.g. Orvilo docs for this platform) */
   setupGuideUrl?: string;
 }
 
@@ -591,7 +591,7 @@ export interface PlatformDefinition {
   supportsMessageEdit?: boolean;
 
   /**
-   * `lobe-message` channel API names this platform does NOT support — either the
+   * `orvilo-message` channel API names this platform does NOT support — either the
    * service throws `PlatformUnsupportedError`, or the optional method is absent
    * and the execution runtime rejects it generically (e.g. `sendDirectMessage`).
    * Sourced from `PLATFORM_UNSUPPORTED_MESSAGE_APIS` and surfaced into the agent

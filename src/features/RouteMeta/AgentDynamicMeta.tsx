@@ -55,7 +55,7 @@ const AgentDynamicMeta = ({ onResolve, params }: DynamicRouteMetaProps) => {
 };
 
 /**
- * Agent sub-pages (topics / profile / channel / stats) share the same title
+ * Agent sub-pages (profile / channel / stats) share the same title
  * shape: `<section label> · <agent name>`. The factory keeps them in sync.
  */
 const createAgentSectionDynamicMeta = (titleKey: string) => {
@@ -90,7 +90,6 @@ const createAgentSectionDynamicMeta = (titleKey: string) => {
   return AgentSectionDynamicMeta;
 };
 
-export const TopicsDynamicMeta = createAgentSectionDynamicMeta('navigation.topics');
 export const ProfileDynamicMeta = createAgentSectionDynamicMeta('navigation.profile');
 export const ChannelDynamicMeta = createAgentSectionDynamicMeta('navigation.channels');
 export const StatisticsDynamicMeta = createAgentSectionDynamicMeta('navigation.stats');

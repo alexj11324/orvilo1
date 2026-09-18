@@ -8,7 +8,7 @@ import urlJoin from 'url-join';
 
 import { appEnv } from '@/envs/app';
 
-const log = debug('lobe-oidc:http-adapter');
+const log = debug('orvilo-oidc:http-adapter');
 
 const methodsWithBody = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const OIDC_MOUNT_PATH = '/oidc';

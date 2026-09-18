@@ -49,7 +49,7 @@ describe('browserWebviewRegistry', () => {
   it('keeps the retained webview in its stable host while projecting visible bounds', async () => {
     const { browserWebviewRegistry } = await import('./browserWebviewRegistry');
     const portalRoot = document.createElement('div');
-    portalRoot.id = 'lobe-ui-theme-app';
+    portalRoot.id = 'orvilo-ui-theme-app';
     const appSurface = document.createElement('div');
     portalRoot.append(appSurface);
     document.body.append(portalRoot);
@@ -68,7 +68,7 @@ describe('browserWebviewRegistry', () => {
     document.body.append(viewport);
 
     const attaching = browserWebviewRegistry.attach('topic-1', viewport);
-    const retainedHost = document.querySelector('#lobe-browser-retained-webviews');
+    const retainedHost = document.querySelector('#orvilo-browser-retained-webviews');
     const webview = retainedHost?.querySelector<HTMLElement>('webview');
     webview?.dispatchEvent(new Event('dom-ready'));
     await attaching;
@@ -194,7 +194,7 @@ describe('browserWebviewRegistry', () => {
   it('forwards edge drags to the panel resize handle without shrinking the webview', async () => {
     const { browserWebviewRegistry } = await import('./browserWebviewRegistry');
     const portalRoot = document.createElement('div');
-    portalRoot.id = 'lobe-ui-theme-app';
+    portalRoot.id = 'orvilo-ui-theme-app';
     document.body.append(portalRoot);
     const draggablePanel = document.createElement('aside');
     draggablePanel.className = 'ant-draggable-panel';

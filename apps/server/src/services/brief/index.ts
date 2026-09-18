@@ -4,7 +4,7 @@ import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import type { BriefItem } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
 export interface AgentAvatarInfo {
@@ -38,12 +38,12 @@ export interface BriefResolveOptions {
 export class BriefService {
   private agentModel: AgentModel;
   private briefModel: BriefModel;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private taskModel: TaskModel;
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

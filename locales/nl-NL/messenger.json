@@ -184,7 +184,7 @@
   "verify.confirm.defaultAgent": "Standaardagent",
   "verify.confirm.defaultAgentHint": "Je berichten worden hier eerst naartoe gestuurd. Je kunt op elk moment wisselen via /agents in de bot of via Instellingen → Messenger.",
   "verify.confirm.defaultAgentPlaceholder": "Selecteer een agent",
-  "verify.confirm.fields.lobeHubAccount": "Orvilo-account",
+  "verify.confirm.fields.orviloHubAccount": "Orvilo-account",
   "verify.confirm.fields.platformAccount": "{{platform}}-account",
   "verify.confirm.fields.workspace": "Werkruimte",
   "verify.confirm.noAgents": "Je hebt nog geen agenten. Maak er een aan in Orvilo en kom terug om de koppeling te voltooien.",
@@ -203,7 +203,7 @@
   "verify.error.unlinkBeforeRelink": "Dit Orvilo-account is al gekoppeld aan een ander Telegram-account. Ontkoppel het in Instellingen → Messenger voordat je een nieuw account koppelt.",
   "verify.signInCta": "Log in om door te gaan",
   "verify.signInRequired": "Log in bij Orvilo om de koppeling te bevestigen.",
-  "verify.success.backToLobeHub": "Terug naar Orvilo",
+  "verify.success.backToOrvilo": "Terug naar Orvilo",
   "verify.success.description": "Je account is nu verbonden met {{platform}}. Open {{platform}} en stuur je eerste bericht.",
   "verify.success.openBot": "Open in {{platform}}",
   "verify.success.title": "Succesvol gekoppeld!"

@@ -1,6 +1,6 @@
 ---
-title: 将 LobeHub 连接到 Lark
-description: 了解如何创建 Lark 自定义应用并将其连接到您的 LobeHub 代理作为消息渠道，使您的 AI 助手能够在 Lark 聊天中与团队成员互动。
+title: 将 Orvilo 连接到 Lark
+description: 了解如何创建 Lark 自定义应用并将其连接到您的 Orvilo 代理作为消息渠道，使您的 AI 助手能够在 Lark 聊天中与团队成员互动。
 tags:
   - Lark
   - 消息渠道
@@ -8,20 +8,20 @@ tags:
   - 集成
 ---
 
-# 将 LobeHub 连接到 Lark
+# 将 Orvilo 连接到 Lark
 
-通过将 Lark 渠道连接到您的 LobeHub 代理，团队成员可以直接在 Lark 的私聊和群组对话中与 AI 助手互动。
+通过将 Lark 渠道连接到您的 Orvilo 代理，团队成员可以直接在 Lark 的私聊和群组对话中与 AI 助手互动。
 
 > 如果您使用的是中国版（飞书），请参阅[飞书设置指南](/docs/usage/channels/feishu)。
 
 ## 前置条件
 
-- 一个拥有有效订阅的 LobeHub 账户
+- 一个拥有有效订阅的 Orvilo 账户
 - 一个拥有创建企业应用权限的 Lark 账户
 
 ## 连接模式
 
-LobeHub 支持两种 Lark 机器人连接模式：
+Orvilo 支持两种 Lark 机器人连接模式：
 
 - **WebSocket（推荐）** — 使用 Lark 官方的长连接客户端建立持久连接。事件实时推送，无需配置公网可访问的 Webhook 地址，即使没有公网服务器也能开箱即用。这是新机器人的默认模式。
 - **Webhook** — 基于事件订阅 URL 的 HTTP 回调。如果您倾向于无状态的回调方式，或应用已在 Lark 开放平台配置了事件订阅 URL，可使用此模式。
@@ -30,41 +30,41 @@ LobeHub 支持两种 Lark 机器人连接模式：
 
 ## 快捷创建 Lark 智能体应用（推荐）
 
-新建机器人时，可以使用 Lark 开放平台的智能体应用快捷入口，自动预置权限与事件。这里创建的是 Lark 应用，仍需在 LobeHub 中选择要连接的智能体。
+新建机器人时，可以使用 Lark 开放平台的智能体应用快捷入口，自动预置权限与事件。这里创建的是 Lark 应用，仍需在 Orvilo 中选择要连接的智能体。
 
 <Steps>
   ### 打开快捷创建入口
 
   登录 [Lark 开放平台](https://open.larksuite.com/app)，在应用列表顶部找到 **Built for agents. Ready to connect.**，点击 **Create**。
 
-  ![Lark 开放平台顶部智能体应用入口与 Create 按钮](https://app.lobehub.com/f/file_bJQtafLrKIjL)
+  ![Lark 开放平台顶部智能体应用入口与 Create 按钮](/images/docs/channels/lark-agent-entry.png)
 
   ### 选择头像和名称
 
-  在 **Create a Lark app for your agent** 页面选择 **Avatar**（头像），填写 **Name**（名称），例如「Lobehub Weekly Helper」。点击 **Create**，等待自动配置完成。
+  在 **Create a Lark app for your agent** 页面选择 **Avatar**（头像），填写 **Name**（名称），例如「Orvilo Weekly Helper」。点击 **Create**，等待自动配置完成。
 
-  ![Lark 智能体应用创建表单，已选择头像并填写 Lobehub Weekly Helper](https://app.lobehub.com/f/file_5nzE06PzNsqi)
+  ![Lark 智能体应用创建表单，已选择头像并填写 Orvilo Weekly Helper](/images/docs/channels/lark-agent-create.png)
 
   ### 复制应用凭证
 
   在 **App created** 页面复制 **App ID** 和 **App Secret**。请妥善保管 App Secret，不要发送到群聊或出现在公开截图中。
 
-  ![Lark 创建成功页面，展示 App ID，App Secret 已隐藏](https://app.lobehub.com/f/file_5P7dVZyinqXa)
+  ![Lark 创建成功页面，展示 App ID，App Secret 已隐藏](/images/docs/channels/lark-agent-created.png)
 
-  ### 连接到 LobeHub
+  ### 连接到 Orvilo
 
-  在 LobeHub 中打开要连接的智能体，进入 **设置** → **渠道** → **Lark**，填入刚才复制的 **App ID** 和 **App Secret**。在 **高级设置** 中保留默认的 **WebSocket** 连接模式，点击 **保存配置**。
+  在 Orvilo 中打开要连接的智能体，进入 **设置** → **渠道** → **Lark**，填入刚才复制的 **App ID** 和 **App Secret**。在 **高级设置** 中保留默认的 **WebSocket** 连接模式，点击 **保存配置**。
 
   WebSocket 模式无需填写事件订阅 URL、Verification Token 或 Encrypt Key，也无需重复添加已有的预置权限与事件。如果后续使用工具时提示缺少权限，再按提示补充对应权限。
 
   ### 打开应用并测试
 
-  根据 Lark 页面提示确认应用已发布并可用；如果企业要求管理员审批，请先完成审批。点击 **Open App**，向机器人发送消息，确认 LobeHub 智能体能够回复。
+  根据 Lark 页面提示确认应用已发布并可用；如果企业要求管理员审批，请先完成审批。点击 **Open App**，向机器人发送消息，确认 Orvilo 智能体能够回复。
 
-  如果没有回复，请检查机器人功能是否已启用、事件订阅是否使用长连接、是否包含 `im.message.receive_v1`，以及 LobeHub 中的渠道配置是否已保存。更多检查项见下方「故障排除」。
+  如果没有回复，请检查机器人功能是否已启用、事件订阅是否使用长连接、是否包含 `im.message.receive_v1`，以及 Orvilo 中的渠道配置是否已保存。更多检查项见下方「故障排除」。
 </Steps>
 
-截图来自 open.larksuite.com 的 Lark 国际版英文界面，以「Lobehub Weekly Helper」为例，你可以使用自己的应用名称。
+截图来自 open.larksuite.com 的 Lark 国际版英文界面，以「Orvilo Weekly Helper」为例，你可以使用自己的应用名称。
 
 连接成功后，无需重复执行下方的手动创建流程，可继续查看「第七步：设置平台身份」和「访问策略」。如果没有快捷入口、需要配置已有应用，或选择 Webhook 模式，请参考下方手动配置。
 
@@ -81,7 +81,7 @@ LobeHub 支持两种 Lark 机器人连接模式：
 
   ### 创建企业应用
 
-  点击 **Create Enterprise App**。填写应用名称（例如 "LobeHub Assistant"）、描述和图标，然后提交表单。
+  点击 **Create Enterprise App**。填写应用名称（例如 "Orvilo Assistant"）、描述和图标，然后提交表单。
 
   ![](/blog/assetsa8003533498461272ea15a19407db9f4.webp)
 
@@ -141,12 +141,12 @@ LobeHub 支持两种 Lark 机器人连接模式：
   进入 **App Capability** → **Bot**。开启机器人功能并设置您喜欢的机器人名称。
 </Steps>
 
-## 第三步：在 LobeHub 中配置 Lark
+## 第三步：在 Orvilo 中配置 Lark
 
 <Steps>
   ### 打开渠道设置
 
-  在 LobeHub 中，导航到您的代理设置，然后选择 **渠道** 标签。点击平台列表中的 **Lark**。
+  在 Orvilo 中，导航到您的代理设置，然后选择 **渠道** 标签。点击平台列表中的 **Lark**。
 
   ### 填写应用凭证
 
@@ -182,10 +182,10 @@ LobeHub 支持两种 Lark 机器人连接模式：
 
   ### 选择订阅方式
 
-  根据您在 LobeHub 中选择的连接模式完成配置：
+  根据您在 Orvilo 中选择的连接模式完成配置：
 
-  - **WebSocket（推荐）** — 选择 **Use long connection to receive events** 并保存。请确保 LobeHub 中的渠道配置已保存且机器人保持连接；此模式不需要公网 Request URL。
-  - **Webhook** — 选择 **Send events to developer server**，将从 LobeHub 复制的 **Event Subscription URL** 粘贴到 **Request URL** 字段。平台会自动验证端点。
+  - **WebSocket（推荐）** — 选择 **Use long connection to receive events** 并保存。请确保 Orvilo 中的渠道配置已保存且机器人保持连接；此模式不需要公网 Request URL。
+  - **Webhook** — 选择 **Send events to developer server**，将从 Orvilo 复制的 **Event Subscription URL** 粘贴到 **Request URL** 字段。平台会自动验证端点。
 
   ### 添加消息事件
 
@@ -193,7 +193,7 @@ LobeHub 支持两种 Lark 机器人连接模式：
 
   - `im.message.receive_v1` — 当收到消息时触发
 
-  这将使您的应用能够接收消息并将其转发到 LobeHub。
+  这将使您的应用能够接收消息并将其转发到 Orvilo。
 
   ![](/blog/assets313dfd5108d6fade542c846a87e2aa5a.webp)
 
@@ -201,7 +201,7 @@ LobeHub 支持两种 Lark 机器人连接模式：
 
   如果使用 Webhook 模式，您可以在事件订阅页面顶部的 **Encryption Strategy** 中找到 **Verification Token** 和 **Encrypt Key**。WebSocket 模式无需配置这两个字段。
 
-  返回 LobeHub 的渠道设置，填写：
+  返回 Orvilo 的渠道设置，填写：
 
   - **Verification Token** — 用于验证 webhook 事件是否来自 Lark
   - **Encrypt Key**（可选）— 用于解密加密事件负载
@@ -227,7 +227,7 @@ LobeHub 支持两种 Lark 机器人连接模式：
 
 ## 第六步：测试连接
 
-回到 LobeHub 的渠道设置，点击 **Test Connection** 以验证凭证。然后在 Lark 中搜索您的机器人名称并发送消息，确认其是否响应。
+回到 Orvilo 的渠道设置，点击 **Test Connection** 以验证凭证。然后在 Lark 中搜索您的机器人名称并发送消息，确认其是否响应。
 
 ## 第七步：填写你的平台身份（推荐）
 
@@ -241,7 +241,7 @@ LobeHub 支持两种 Lark 机器人连接模式：
 - **AI 工具主动推送** — 让 Agent 能主动联系你（提醒、通知），把内部用户引用映射到你的 Lark 账号。
 - **防自锁** — 自动被 **允许的用户** 信任，给同事收紧 bot 时不会把自己挡在外面。
 
-获取方式：先用任意消息私信 bot 一次，查看入站事件 payload 中发送方的 `open_id` 字段，那就是你的。Lark 开发者后台也提供 **User ID 查询** 工具，用手机号 / 邮箱反查 `open_id`。粘贴到 LobeHub 高级设置的 **你的平台用户 ID** 字段。
+获取方式：先用任意消息私信 bot 一次，查看入站事件 payload 中发送方的 `open_id` 字段，那就是你的。Lark 开发者后台也提供 **User ID 查询** 工具，用手机号 / 邮箱反查 `open_id`。粘贴到 Orvilo 高级设置的 **你的平台用户 ID** 字段。
 
 > Lark 没有一个 AI 工具能默认指向的 "默认服务器" 概念（bot 通过凭证按租户运行），因此 Lark 渠道不展示 **默认服务器** 字段。
 
@@ -287,10 +287,10 @@ LobeHub 支持两种 Lark 机器人连接模式：
 
 ## 故障排除
 
-- **机器人无法连接（WebSocket 模式）：** 验证 App ID 和 App Secret 是否正确，并确认 LobeHub 服务可以访问 Lark 开放平台。
+- **机器人无法连接（WebSocket 模式）：** 验证 App ID 和 App Secret 是否正确，并确认 Orvilo 服务可以访问 Lark 开放平台。
 - **连接成功但收不到消息（WebSocket 模式）：** 确认 Lark 开放平台的订阅方式为 **Use long connection to receive events**，已添加 `im.message.receive_v1`，并已发布包含这些变更的应用版本。
-- **Event Subscription URL 验证失败（Webhook 模式）：** 确保您已在 LobeHub 中保存配置，并正确复制了 URL。
+- **Event Subscription URL 验证失败（Webhook 模式）：** 确保您已在 Orvilo 中保存配置，并正确复制了 URL。
 - **机器人未响应：** 验证应用已发布并获得批准，机器人功能已启用，并订阅了 `im.message.receive_v1` 事件。
-- **机器人不回私信：** 在 LobeHub 的 **高级设置** 检查 **私信策略**。如果是 `Disabled`，改成 `Open` 或 `Allowlist`；如果是 `Allowlist`，确认发起方的 `open_id` 已加入 **允许的用户 ID**。
+- **机器人不回私信：** 在 Orvilo 的 **高级设置** 检查 **私信策略**。如果是 `Disabled`，改成 `Open` 或 `Allowlist`；如果是 `Allowlist`，确认发起方的 `open_id` 已加入 **允许的用户 ID**。
 - **权限错误：** 确保所有所需权限已在开发者门户中添加并获得批准。
-- **测试连接失败：** 仔细检查 App ID 和 App Secret。确保您在 LobeHub 的渠道设置中选择了 "Lark"（而不是 "飞书"）。
+- **测试连接失败：** 仔细检查 App ID 和 App Secret。确保您在 Orvilo 的渠道设置中选择了 "Lark"（而不是 "飞书"）。

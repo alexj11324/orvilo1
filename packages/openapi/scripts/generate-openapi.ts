@@ -21,7 +21,6 @@ import path from 'node:path';
 if (!process.env.NODE_ENV) Object.assign(process.env, { NODE_ENV: 'test' });
 process.env.KEY_VAULTS_SECRET ??= 'openapi-spec-generation';
 process.env.CLOUD_DATABASE_URL ??= 'postgresql://mock:mock@localhost:5432/mock';
-process.env.QSTASH_TOKEN ??= 'mock-qstash-token';
 
 const PKG_ROOT = path.join(import.meta.dirname, '..');
 const SPEC_PATH = path.join(PKG_ROOT, 'openapi.yml');
@@ -31,7 +30,7 @@ const HTTP_METHODS = new Set(['DELETE', 'GET', 'PATCH', 'POST', 'PUT']);
 // spec: the documentation routes themselves, plus the heterogeneous-agent
 // relays. The relays speak the Anthropic/OpenAI wire formats and are gated by
 // `requireHeteroModelInvocation` (operation JWT), so no API key holder can
-// call them and their schemas belong to the upstream vendors, not LobeHub.
+// call them and their schemas belong to the upstream vendors, not Orvilo.
 const SPEC_EXEMPT = new Set([
   'GET /api/v1/docs',
   'GET /api/v1/openapi.json',

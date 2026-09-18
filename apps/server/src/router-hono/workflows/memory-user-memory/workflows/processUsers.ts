@@ -1,4 +1,3 @@
-import { type WorkflowContext } from '@upstash/workflow';
 import { chunk } from 'es-toolkit/compat';
 
 import { AsyncTaskModel } from '@/database/models/asyncTask';
@@ -12,6 +11,7 @@ import {
   normalizeMemoryExtractionPayload,
   type UserPaginationResult,
 } from '@/server/services/memory/userMemory/extract';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 
 import { checkGuard, ensureWorkflowStarted } from './runGuard';
@@ -24,9 +24,7 @@ import {
 const USER_PAGE_SIZE = 50;
 const USER_BATCH_SIZE = 20;
 const WORKFLOW_PATH = 'api/workflows/memory-user-memory/pipelines/chat-topic/process-users';
-const PROCESS_USERS_FLOW_CONTROL_KEY = 'memory-user-memory.pipelines.chat-topic.process-users';
-
-const { upstashWorkflowExtraHeaders } = parseMemoryExtractionConfig();
+const { workflowExtraHeaders } = parseMemoryExtractionConfig();
 
 export const processUsersHandler = async (
   context: WorkflowContext<MemoryExtractionPayloadInput>,
@@ -35,7 +33,7 @@ export const processUsersHandler = async (
 
   const params = normalizeMemoryExtractionPayload(context.requestPayload || {});
 
-  // NOTICE: Return (never throw) on a guard match — a throw before the first step makes Upstash
+  // NOTICE: Return (never throw) on a guard match — a throw before the first step makes the worker
   // re-enqueue the run, turning a "disable" guard into an infinite retry storm.
   const entryGuard = await checkGuard(context, WORKFLOW_PATH);
   if (!entryGuard.result) return entryGuard.response;
@@ -82,7 +80,7 @@ export const processUsersHandler = async (
 
   const executor = await MemoryExtractionExecutor.create();
 
-  // NOTICE: Upstash Workflow only supports serializable data into plain JSON,
+  // Hatchet task inputs only support serializable data in plain JSON,
   // this causes the Date object to be converted into string when passed as parameter from
   // context to child workflow. So we need to convert it back to Date object here.
   const userCursor = params.userCursor
@@ -139,7 +137,7 @@ export const processUsersHandler = async (
           userId: userIds[0],
           userIds,
         },
-        { extraHeaders: upstashWorkflowExtraHeaders },
+        { extraHeaders: workflowExtraHeaders },
       ),
     );
     await appendHourlyWorkflowRunId(params.hourlyTaskId, result.workflowRunId);
@@ -180,7 +178,7 @@ export const processUsersHandler = async (
             ),
           }),
         },
-        { extraHeaders: upstashWorkflowExtraHeaders },
+        { extraHeaders: workflowExtraHeaders },
       ),
     );
     await appendHourlyWorkflowRunId(params.hourlyTaskId, result.workflowRunId);
@@ -191,28 +189,4 @@ export const processUsersHandler = async (
     nextCursor: cursor ? cursor.id : null,
     processedUsers: ids.length,
   };
-};
-
-/**
- * Shared flow-control settings for the process-users workflow.
- *
- * Use when:
- * - Serving process-users workflow runs through Upstash Workflow
- * - Keeping hourly/user-triggered process-users runs from executing unbounded work concurrently
- *
- * Expects:
- * - Trigger-side workflow calls use the same key to throttle initial workflow delivery
- *
- * Returns:
- * - Upstash Workflow serve options that limit follow-up workflow steps
- */
-export const processUsersWorkflowOptions = {
-  // NOTICE: Serve-side flow control only applies after a workflow run has entered Upstash
-  // Workflow execution. triggerProcessUsers must pass the same key so initial deliveries
-  // are throttled before many process-users runs can start at once.
-  flowControl: {
-    key: PROCESS_USERS_FLOW_CONTROL_KEY,
-    parallelism: 1,
-    ratePerSecond: 1,
-  },
 };

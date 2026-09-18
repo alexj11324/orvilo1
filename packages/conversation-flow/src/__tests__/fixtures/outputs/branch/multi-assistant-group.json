@@ -101,7 +101,7 @@
               "apiName": "search",
               "arguments": "{\"query\":\"杭州 天气 现在 北京 天气 现在\"}",
               "id": "call-5",
-              "identifier": "lobe-web-browsing",
+              "identifier": "orvilo-web-browsing",
               "type": "builtin",
               "result": {
                 "content": "<searchResults>\n  <item title=\"Weather Portal\" url=\"https://weather3.example.com/\">Weather data...</item>\n</searchResults>",
@@ -159,7 +159,7 @@
           "apiName": "search",
           "arguments": "{\"query\":\"杭州 北京 天气 现在\"}",
           "id": "call-1",
-          "identifier": "lobe-web-browsing",
+          "identifier": "orvilo-web-browsing",
           "type": "builtin"
         }
       ],
@@ -181,7 +181,7 @@
           "apiName": "search",
           "arguments": "{\"query\":\"杭州 天气 北京 天气\"}",
           "id": "call-2",
-          "identifier": "lobe-web-browsing",
+          "identifier": "orvilo-web-browsing",
           "type": "builtin"
         }
       ],
@@ -219,14 +219,14 @@
           "apiName": "search",
           "arguments": "{\"query\":\"!google 杭州 天气\"}",
           "id": "call-3",
-          "identifier": "lobe-web-browsing",
+          "identifier": "orvilo-web-browsing",
           "type": "builtin"
         },
         {
           "apiName": "search",
           "arguments": "{\"query\":\"!google 北京 天气\"}",
           "id": "call-4",
-          "identifier": "lobe-web-browsing",
+          "identifier": "orvilo-web-browsing",
           "type": "builtin"
         }
       ],
@@ -261,7 +261,7 @@
           "apiName": "search",
           "arguments": "{\"query\":\"杭州 天气 现在 北京 天气 现在\"}",
           "id": "call-5",
-          "identifier": "lobe-web-browsing",
+          "identifier": "orvilo-web-browsing",
           "type": "builtin"
         }
       ],
@@ -287,7 +287,7 @@
       "parentId": "msg-assistant-1",
       "plugin": {
         "apiName": "search",
-        "identifier": "lobe-web-browsing",
+        "identifier": "orvilo-web-browsing",
         "type": "builtin"
       },
       "pluginState": {
@@ -311,7 +311,7 @@
       "parentId": "msg-assistant-2",
       "plugin": {
         "apiName": "search",
-        "identifier": "lobe-web-browsing",
+        "identifier": "orvilo-web-browsing",
         "type": "builtin"
       },
       "role": "tool",
@@ -325,7 +325,7 @@
       "parentId": "msg-assistant-4",
       "plugin": {
         "apiName": "search",
-        "identifier": "lobe-web-browsing",
+        "identifier": "orvilo-web-browsing",
         "type": "builtin"
       },
       "pluginState": {
@@ -343,7 +343,7 @@
       "parentId": "msg-assistant-4",
       "plugin": {
         "apiName": "search",
-        "identifier": "lobe-web-browsing",
+        "identifier": "orvilo-web-browsing",
         "type": "builtin"
       },
       "pluginState": {
@@ -361,7 +361,7 @@
       "parentId": "msg-assistant-6",
       "plugin": {
         "apiName": "search",
-        "identifier": "lobe-web-browsing",
+        "identifier": "orvilo-web-browsing",
         "type": "builtin"
       },
       "pluginState": {

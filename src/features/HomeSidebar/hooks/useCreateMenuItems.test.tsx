@@ -12,7 +12,6 @@ const addGroupMock = vi.hoisted(() => vi.fn());
 const switchToGroupMock = vi.hoisted(() => vi.fn());
 const createGroupMock = vi.hoisted(() => vi.fn());
 const loadGroupsMock = vi.hoisted(() => vi.fn());
-const createNewPageMock = vi.hoisted(() => vi.fn());
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const navigateMock = vi.hoisted(() => vi.fn());
 const openConnectAgentModalMock = vi.hoisted(() => vi.fn());
@@ -88,13 +87,6 @@ vi.mock('@/store/home', () => ({
     }),
 }));
 
-vi.mock('@/store/page', () => ({
-  usePageStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      createNewPage: createNewPageMock,
-    }),
-}));
-
 const isActionItem = (
   item: unknown,
 ): item is {
@@ -109,7 +101,7 @@ describe('useCreateMenuItems', () => {
     agentModalMock.current = undefined;
   });
 
-  it('adds Agent-list and Market entries while omitting Page creation', async () => {
+  it('keeps the Agent-list entry without retired marketplace or Page actions', async () => {
     const { result } = renderHook(() => useCreateMenuItems());
 
     const items = result.current.createTopLevelMenuItems();
@@ -128,7 +120,6 @@ describe('useCreateMenuItems', () => {
       'newPlatformAgent',
       'divider',
       'addAgentFromList',
-      'addAgentFromMarket',
     ]);
 
     const listItem = items.find((item) => isActionItem(item) && item.key === 'addAgentFromList');
@@ -146,25 +137,10 @@ describe('useCreateMenuItems', () => {
 
     expect(listStopPropagation).toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith('/agents');
-
-    const marketItem = items.find(
-      (item) => isActionItem(item) && item.key === 'addAgentFromMarket',
+    expect(items.some((item) => isActionItem(item) && item.key === 'addAgentFromMarket')).toBe(
+      false,
     );
-
-    if (!isActionItem(marketItem)) {
-      throw new Error('Expected market agent menu item');
-    }
-
-    expect(marketItem.label).toBe('addAgentFromMarket');
-
-    const stopPropagation = vi.fn();
-    navigateMock.mockClear();
-    await act(async () => {
-      await marketItem.onClick?.({ domEvent: { stopPropagation } });
-    });
-
-    expect(stopPropagation).toHaveBeenCalled();
-    expect(navigateMock).toHaveBeenCalledWith('/community/agent');
+    expect(items.some((item) => isActionItem(item) && item.key === 'newPage')).toBe(false);
   });
 
   it('opens the agent list on the Private tab for the private bucket', async () => {

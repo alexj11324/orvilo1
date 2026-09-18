@@ -234,7 +234,7 @@ export class FileActionImpl {
     // Code / Codex, etc.) the agent can parse any file via scripts/terminal, so the
     // whitelist must not apply there. We key off the conversation's own agent id rather
     // than the global current agent, because the chat input can be scoped to a different
-    // agent than activeAgentId (e.g. another desktop tab). See lobehub/lobehub#15770.
+    // agent than activeAgentId (e.g. another desktop tab). See alexj11324/orvilo1#15770.
     const agentState = getAgentStoreState();
     const enforceFileTypeWhitelist =
       !agentByIdSelectors.getAgentEnableModeById(agentId)(agentState) &&

@@ -11,7 +11,7 @@ import { getAgentRuntimeRedisClient } from './redis';
 import { StreamEventManager } from './StreamEventManager';
 import { type IAgentStateManager, type IStreamEventManager } from './types';
 
-const log = debug('lobe-server:agent-runtime:factory');
+const log = debug('orvilo-server:agent-runtime:factory');
 
 /**
  * Check if Redis is available for Agent Runtime
@@ -75,7 +75,7 @@ export const createStreamEventManager = (): IStreamEventManager => {
   // Wrap with Gateway notifier when configured
   if (appEnv.AGENT_GATEWAY_URL && appEnv.AGENT_GATEWAY_SERVICE_TOKEN) {
     log('Wrapping with GatewayStreamNotifier (%s)', appEnv.AGENT_GATEWAY_URL);
-    // Resolver lets a queue worker (which never ran the member op's init) mirror
+    // Resolver lets a Hatchet worker (which never ran the member op's init) mirror
     // its stream events onto the supervisor channel by reading the persisted
     // `mirrorToOperationId` from op metadata. Shares the same state manager
     // backing the runtime (in-memory singleton locally, Redis in queue mode).

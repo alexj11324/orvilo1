@@ -6,7 +6,7 @@ describe('buildReadFileState', () => {
   it('keeps the card for a successful builtin read of an empty file', () => {
     const state = buildReadFileState({
       args: { path: '/repo/empty.txt' },
-      identifier: 'lobe-local-system',
+      identifier: 'orvilo-local-system',
       parsedContent: { content: '' },
       pluginState: { charCount: 0, content: '', fileType: 'txt', path: '/repo/empty.txt' },
     });
@@ -53,7 +53,7 @@ describe('buildReadFileState', () => {
     });
     const fromBuiltin = buildReadFileState({
       args: { path: '/repo/file.ts' },
-      identifier: 'lobe-local-system',
+      identifier: 'orvilo-local-system',
       parsedContent: { content: 'const a = 1;' },
     });
 

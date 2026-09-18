@@ -1,5 +1,5 @@
 import { LOADING_FLAT } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
   getNativeHeteroSessionBindingKey,
@@ -12,7 +12,7 @@ import type {
   ErrorType,
   ExecAgentResult,
   HeterogeneousTopicPin,
-  LobeAgentAgencyConfig,
+  OrviloAgentAgencyConfig,
   RequestTrigger,
   WorkingDirConfig,
 } from '@orvilo/types';
@@ -58,7 +58,7 @@ import {
 import { resolveDeviceWorkingDirectoryConfig } from '../resolveDeviceWorkingDirectory';
 import type { ExecRunContext } from '../types';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 export interface HeteroDispatchDeps {
   bindTopicWorkingDirectory: (params: {
@@ -66,7 +66,7 @@ export interface HeteroDispatchDeps {
     currentWorkingDirectory?: string;
     topicId: string;
   }) => Promise<void>;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   getMarketService: () => Promise<MarketService>;
   messageModel: MessageModel;
   resolveDeviceWorkspaceId: (deviceId: string | undefined) => Promise<string | undefined>;
@@ -254,13 +254,13 @@ const hasHeteroRunStarted = async (
 export interface HeteroDispatchInput {
   canManageAgent: boolean;
   effectiveRequestedDeviceId?: string;
-  heterogeneousProvider?: LobeAgentAgencyConfig['heterogeneousProvider'];
+  heterogeneousProvider?: OrviloAgentAgencyConfig['heterogeneousProvider'];
   heteroType: HeterogeneousAgentType;
   hooks?: AgentHook[];
   isPublicWorkspaceAgent: boolean;
   localDeviceId?: string;
   maxSteps?: number;
-  memberDeviceOverride?: Pick<LobeAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
+  memberDeviceOverride?: Pick<OrviloAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
   operationTaskId?: string;
   parentOperationId?: string;
   pinnedHeterogeneousTopicModel?: HeterogeneousTopicPin;
@@ -269,6 +269,7 @@ export interface HeteroDispatchInput {
   runAttachments: { imageList?: Array<{ alt: string; id: string; url: string }> };
   /** Ids of the rows THIS turn just persisted (excluded from recovery history). */
   selfMessageIds: Set<string>;
+  skipTaskVerification?: boolean;
   topicStartOwnerOperationId?: string;
 }
 
@@ -320,6 +321,7 @@ export const dispatchHeteroAgent = async (
     requestedDeviceId,
     runAttachments,
     selfMessageIds,
+    skipTaskVerification,
     topicStartOwnerOperationId,
   } = input;
 
@@ -366,6 +368,7 @@ export const dispatchHeteroAgent = async (
     operationId,
     parentOperationId,
     provider: heteroType,
+    skipTaskVerification,
     taskId: operationTaskId ?? null,
     threadId: appContext?.threadId ?? null,
     topicId,
@@ -405,7 +408,7 @@ export const dispatchHeteroAgent = async (
 
   // Resolve GitHub OAuth token for the sandbox. Always attempt so CC can use
   // git / gh CLI even when no repos are pre-selected. Falls back to the
-  // standard 'github' key (LobeHub OAuth connector default); agent config can
+  // standard 'github' key (Orvilo OAuth connector default); agent config can
   // override via GITHUB_CRED_KEY.
   const githubToken = await resolveGithubAccessToken({
     credKey: agentConfig.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY ?? 'github',

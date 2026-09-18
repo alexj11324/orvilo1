@@ -72,7 +72,7 @@ describe('agentByIdSelectors', () => {
         agentMap: {
           'agent-1': {
             model: 'gpt-4o',
-            plugins: ['search', { identifier: 'lobe-web-browsing', mode: 'disabled' }],
+            plugins: ['search', { identifier: 'orvilo-web-browsing', mode: 'disabled' }],
             provider: 'openai',
             systemRole: 'You are a helper',
           } as any,
@@ -107,7 +107,7 @@ describe('agentByIdSelectors', () => {
           'agent-1': {
             chatConfig: { enableAgentMode: true },
             model: 'claude-opus-4-8',
-            provider: 'lobehub',
+            provider: 'orvilo',
           },
         },
       });

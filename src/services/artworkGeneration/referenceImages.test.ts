@@ -16,7 +16,7 @@ describe('resolveArtworkReferenceImageUrl', () => {
   });
 
   it.each([
-    ['/avatars/lobe-ai.png', 'https://app.example.com/avatars/lobe-ai.png'],
+    ['/avatars/orvilo-ai.png', 'https://app.example.com/avatars/orvilo-ai.png'],
     ['/avatars/agent-default.png', 'https://app.example.com/avatars/agent-default.png'],
   ])('resolves the app-relative image source %s', (source, expected) => {
     expect(resolveArtworkReferenceImageUrl(source, 'https://app.example.com')).toBe(expected);
@@ -30,7 +30,7 @@ describe('resolveArtworkReferenceImageUrl', () => {
   );
 
   it('does not resolve an app-relative image source without an app origin', () => {
-    expect(resolveArtworkReferenceImageUrl('/avatars/lobe-ai.png')).toBeUndefined();
+    expect(resolveArtworkReferenceImageUrl('/avatars/orvilo-ai.png')).toBeUndefined();
   });
 });
 
@@ -94,7 +94,7 @@ describe('resolveArtworkReferences', () => {
         imageInputLimit: 1,
         referenceImageUrl: 'https://example.com/avatar.webp',
         styleReferenceImageUrls: [
-          '/avatars/lobe-ai.png',
+          '/avatars/orvilo-ai.png',
           'https://example.com/style-a.webp',
           'data:image/png;base64,style-b',
         ],

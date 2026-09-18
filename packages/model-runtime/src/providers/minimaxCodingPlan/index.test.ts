@@ -2,13 +2,13 @@
 import { ModelProvider } from 'model-bank';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeMinimaxCodingPlanAI } from './index';
+import { OrviloMinimaxCodingPlanAI } from './index';
 
 const provider = ModelProvider.MinimaxCodingPlan;
 const defaultBaseURL = 'https://api.minimaxi.com/v1';
 
 testProvider({
-  Runtime: LobeMinimaxCodingPlanAI,
+  Runtime: OrviloMinimaxCodingPlanAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_MINIMAX_CODING_PLAN_CHAT_COMPLETION',

@@ -19,7 +19,6 @@ import ResourceHomeSkeleton from '@/components/Skeleton/ResourceHome';
 import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
 import SettingsPageSkeleton from '@/components/Skeleton/Settings/Page';
 import TasksSkeleton from '@/components/Skeleton/Tasks';
-import TopicsSkeleton from '@/components/Skeleton/Topics';
 import TaskDetailSkeleton from '@/features/AgentTasks/AgentTaskDetail/TaskDetailSkeleton';
 import { WORKSPACE_SETTINGS_TABS } from '@/features/Workspace/workspaceAwarePath';
 import AppShellSkeleton from '@/spa/BootShell/AppShellSkeleton';
@@ -131,6 +130,18 @@ describe('desktop router shared definition', () => {
   });
 
   it.each(mainAreaVariants)(
+    '%s redirects legacy agent topics deep-links to the agent chat route',
+    (_, factory) => {
+      const matches = matchRoutes(createMainAreaRoutes(factory), '/agent/agent-1/topics');
+
+      expect(matches?.at(-1)?.route.path).toBe('topics');
+      expect(
+        (matches?.at(-1)?.route.element as ReactElement<{ to: string }> | undefined)?.props.to,
+      ).toBe('..');
+    },
+  );
+
+  it.each(mainAreaVariants)(
     '%s serves the self-learning experience list and redirects legacy /rules links to it',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
@@ -212,6 +223,49 @@ describe('desktop router shared definition', () => {
     expect(workspaceMatches?.at(-1)?.route.index).toBe(true);
     expect(workspaceMatches?.at(-1)?.route.handle).toMatchObject({ meta: expect.any(Object) });
   });
+
+  it.each(mainAreaVariants)(
+    '%s registers only redirect tombstones for the retired Community and Pages routes',
+    (_, factory) => {
+      const routes = factory();
+
+      for (const path of ['community', 'page']) {
+        const route = routes.find((candidate) => candidate.path === path);
+
+        expect(route?.element).toBeDefined();
+        expect(route?.children).toBeUndefined();
+      }
+    },
+  );
+
+  it.each(mainAreaVariants)(
+    '%s keeps retired product redirects inside the active workspace',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+
+      for (const pathname of [
+        '/community',
+        '/community/agent/example',
+        '/community/workspace/settings',
+        '/page',
+        '/page/docs_example',
+        '/page/docs_example/permission',
+        '/acme/community/agent/example',
+        '/acme/page/docs_example',
+      ]) {
+        const matches = matchRoutes(routes, pathname);
+        const redirect = matches?.find(
+          ({ route }) =>
+            (route.element as ReactElement<{ to?: string }> | undefined)?.props.to === '..',
+        );
+
+        expect(
+          (redirect?.route.element as ReactElement<{ to: string }> | undefined)?.props.to,
+          pathname,
+        ).toBe('..');
+      }
+    },
+  );
 
   it.each(mainAreaVariants)(
     '%s personal memory settings are not shadowed by workspace memory routes',
@@ -413,7 +467,6 @@ describe('desktop router shared definition', () => {
     ['Electron', (pathname: string) => createTabRouter(pathname).routes],
   ])('%s resolves specialized skeletons from the deepest route meta', (_, getRoutes) => {
     for (const [pathname, expectedSkeleton] of [
-      ['/agent/agent-1/topics', TopicsSkeleton],
       ['/agent/agent-1/tasks', TasksSkeleton],
       ['/agent/agent-1/task/task-1', TaskDetailSkeleton],
       ['/agent/agent-1/goals', GoalSkeleton],
@@ -507,14 +560,14 @@ describe('desktop router shared definition', () => {
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
       const listMatches = matchRoutes(routes, '/acme/settings/provider');
-      const detailMatches = matchRoutes(routes, '/acme/settings/provider/lobehub');
+      const detailMatches = matchRoutes(routes, '/acme/settings/provider/orvilo');
 
       expect(listMatches?.at(-1)?.route.path).toBe('provider');
       // Before the redirect route existed, the detail path fell through to the
       // root catch-all (`*`) and kicked the user out of the workspace.
       expect(detailMatches?.at(-1)?.route.path).toBe('provider/:providerId');
       expect(detailMatches?.at(-1)?.params).toMatchObject({
-        providerId: 'lobehub',
+        providerId: 'orvilo',
         workspaceSlug: 'acme',
       });
     },

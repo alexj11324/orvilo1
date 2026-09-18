@@ -42,7 +42,7 @@ describe('loadFile', () => {
 
   it('rejects unsupported binary-like file types before text parsing', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const tempDir = await mkdtemp(path.join(tmpdir(), 'lobe-file-loaders-'));
+    const tempDir = await mkdtemp(path.join(tmpdir(), 'orvilo-file-loaders-'));
 
     try {
       const file = path.join(tempDir, 'archive.zip');
@@ -63,7 +63,7 @@ describe('loadFile', () => {
 
   it('surfaces a binary .ipynb rejection at the document level', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const tempDir = await mkdtemp(path.join(tmpdir(), 'lobe-file-loaders-'));
+    const tempDir = await mkdtemp(path.join(tmpdir(), 'orvilo-file-loaders-'));
 
     try {
       const file = path.join(tempDir, 'renamed.ipynb');

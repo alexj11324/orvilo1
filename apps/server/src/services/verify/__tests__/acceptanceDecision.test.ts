@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   listByAcceptance: vi.fn(),
   setDecision: vi.fn(),
   taskResolve: vi.fn(),
+  taskTopicFindByOperationId: vi.fn(),
   updateStatus: vi.fn(),
   updatePolicyStatus: vi.fn(),
 }));
@@ -53,6 +54,11 @@ vi.mock('@/database/models/task', () => ({
     return { resolve: mocks.taskResolve };
   }),
 }));
+vi.mock('@/database/models/taskTopic', () => ({
+  TaskTopicModel: vi.fn(function () {
+    return { findByOperationId: mocks.taskTopicFindByOperationId };
+  }),
+}));
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn(function () {
     return { findOwnTopicById: mocks.findOwnTopicById };
@@ -77,9 +83,10 @@ describe('AcceptanceService decision gating', () => {
       return mocks.findById(...args);
     });
     mocks.listByAcceptance.mockResolvedValue([{ id: 'run-1', roundIndex: 1 }]);
+    mocks.taskTopicFindByOperationId.mockResolvedValue(null);
   });
 
-  it('creates a standalone acceptance without resolving a LobeHub task, topic, or document', async () => {
+  it('creates a standalone acceptance without resolving a Orvilo task, topic, or document', async () => {
     mocks.ensureForSubject.mockResolvedValue({ id: 'acc-standalone' });
 
     await service().ensureForSubject('standalone', 'external-delivery-1', {
@@ -213,6 +220,28 @@ describe('AcceptanceService decision gating', () => {
       expect.objectContaining({ comment: 'looks good', decidedBy: 'user-1' }),
     );
     expect(mocks.updateStatus).toHaveBeenCalledWith('acc-1', 'accepted');
+  });
+
+  it('keeps task acceptance undecided while workspace integration is unresolved', async () => {
+    mocks.findById.mockResolvedValue({
+      id: 'acc-task',
+      status: 'delivered',
+      subjectId: 'task-1',
+      subjectType: 'task',
+    });
+    mocks.listByAcceptance.mockResolvedValue([
+      { id: 'run-task', operationId: 'op-task', roundIndex: 1 },
+    ]);
+    mocks.taskTopicFindByOperationId.mockResolvedValue({
+      integration: { role: 'task', state: 'publish_failed' },
+    });
+
+    await expect(service().accept('acc-task')).rejects.toThrow(
+      'retry acceptance after delivery completes',
+    );
+
+    expect(mocks.setDecision).not.toHaveBeenCalled();
+    expect(mocks.updateStatus).not.toHaveBeenCalled();
   });
 
   it('rejects a settled delivery with the re-tasking comment', async () => {

@@ -1,7 +1,7 @@
 name: Build and deploy orvilo1
 
-# 这个仓库是 LobeHub 的 fork。上游那一批 workflow 依赖 LobeHub 自己的
-# secrets（DOCKER_REGISTRY_*、LOBEHUB_CLOUD_TOKEN、Apple 证书等），在本仓库
+# 这个仓库是 Orvilo 的 fork。上游那一批 workflow 依赖 Orvilo 自己的
+# secrets（DOCKER_REGISTRY_*、ORVILO_CLOUD_TOKEN、Apple 证书等），在本仓库
 # 一律跑不通，需要单独清理。本文件是 orvilo1 自己的发布管线。
 #
 # 构建与部署分开是有意的：
@@ -135,9 +135,13 @@ jobs:
             }
           "
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            'sudo docker stop orvilo-hatchet-worker 2>/dev/null || true'
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             "cd $COMPOSE_DIR && \
-             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull lobe && \
-             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d"
+             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull orvilo hatchet-worker"
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            "cd $COMPOSE_DIR && \
+             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d orvilo"
 
       - name: Verify
         env:
@@ -152,6 +156,21 @@ jobs:
               break
             fi
             [ "$i" = 30 ] && { echo "超时：未看到 migration pass"; exit 1; }
+            sleep 6
+          done
+          # Start the worker only after the app container has completed its
+          # database migrations. This prevents Hatchet cron/sweep tasks from
+          # reaching new dispatch tables before they exist.
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            "cd $COMPOSE_DIR && \
+             sudo ORVILO_IMAGE_TAG='ghcr.io/${{ github.repository }}:sha-${{ github.sha }}' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d hatchet-worker"
+          for i in $(seq 1 30); do
+            if ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+                 'sudo docker logs orvilo-hatchet-worker 2>&1 | tail -80' | grep -Eiq 'worker .* listening for actions'; then
+              echo "Hatchet worker 已注册"
+              break
+            fi
+            [ "$i" = 30 ] && { echo "超时：Hatchet worker 未注册"; exit 1; }
             sleep 6
           done
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \

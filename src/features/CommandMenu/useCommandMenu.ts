@@ -51,7 +51,7 @@ export const useCommandMenu = () => {
   const refreshAgentList = useHomeStore((s) => s.refreshAgentList);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const { openGroupWizard } = useGroupWizard();
-  const { createGroupWithMembers, createGroupFromTemplate, createPage } = useCreateMenuItems();
+  const { createGroupWithMembers, createGroupFromTemplate } = useCreateMenuItems();
   const { open: openCreateLibraryModal } = useCreateNewModal();
 
   // Debounce search input to reduce API calls
@@ -132,7 +132,7 @@ export const useCommandMenu = () => {
     [setTheme, onClose],
   );
 
-  const handleAskLobeAI = useCallback(() => {
+  const handleAskOrviloAI = useCallback(() => {
     // Navigate to inbox agent with the message query parameter
     if (inboxAgentId && search.trim()) {
       const message = encodeURIComponent(search.trim());
@@ -201,13 +201,6 @@ export const useCommandMenu = () => {
     });
   }, [canCreate, onClose, openCreateLibraryModal, navigate]);
 
-  const handleCreatePage = useCallback(async () => {
-    if (!canCreate) return;
-
-    await createPage();
-    onClose();
-  }, [canCreate, createPage, onClose]);
-
   const handleCreateAgentTeam = useCallback(() => {
     if (!canCreate) return;
 
@@ -225,11 +218,10 @@ export const useCommandMenu = () => {
   return {
     closeCommandMenu,
     handleAIPainting,
-    handleAskLobeAI,
+    handleAskOrviloAI,
     handleBack,
     handleCreateAgentTeam,
     handleCreateLibrary,
-    handleCreatePage,
     handleCreateSession,
     handleCreateTopic,
     handleExternalLink,

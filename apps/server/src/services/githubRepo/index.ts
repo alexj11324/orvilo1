@@ -1,7 +1,7 @@
 import debug from 'debug';
 
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { MarketService } from '@/server/services/market';
 
 const log = debug('github-repo');
@@ -40,7 +40,7 @@ export const parseGithubRepo = (repo: string): GithubRepoCoordinate | undefined 
  */
 export const resolveGithubAccessToken = async (params: {
   credKey?: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   marketService?: MarketService;
   userId: string;
   workspaceId?: string;
@@ -107,7 +107,12 @@ export const getRepoDefaultBranch = async (
 };
 
 export interface RemotePrInfo {
+  /** Target branch recorded on the pull request. */
+  baseBranch: string;
+  /** Source commit recorded on the pull request. */
+  headSha: string;
   merged: boolean;
+  number: number;
   /** The merge commit SHA when the PR was merged. */
   sha?: string;
   url: string;
@@ -122,24 +127,72 @@ export interface RemotePrInfo {
 export const findBranchPr = async (
   repo: string,
   headBranch: string,
+  baseBranch: string,
   token?: string,
 ): Promise<RemotePrInfo | undefined> => {
   const coordinate = parseGithubRepo(repo);
   if (!coordinate) return undefined;
   const res = await githubFetch(
-    `/repos/${coordinate.owner}/${coordinate.name}/pulls?state=all&head=${encodeURIComponent(`${coordinate.owner}:${headBranch}`)}&per_page=1`,
+    `/repos/${coordinate.owner}/${coordinate.name}/pulls?state=all&head=${encodeURIComponent(`${coordinate.owner}:${headBranch}`)}&base=${encodeURIComponent(baseBranch)}&per_page=1`,
     token,
   );
   const pr = Array.isArray(res.json) ? res.json[0] : undefined;
-  if (!pr?.html_url) return undefined;
+  if (
+    !pr?.html_url ||
+    typeof pr.number !== 'number' ||
+    typeof pr.head?.sha !== 'string' ||
+    typeof pr.base?.ref !== 'string'
+  )
+    return undefined;
   return {
+    baseBranch: pr.base.ref,
+    headSha: pr.head.sha,
     merged: Boolean(pr.merged_at),
+    number: pr.number,
     sha: typeof pr.merge_commit_sha === 'string' ? pr.merge_commit_sha : undefined,
     url: pr.html_url,
   };
 };
 
+/** Resolve the current commit of one remote branch. */
+export const getRemoteBranchSha = async (
+  repo: string,
+  branch: string,
+  token?: string,
+): Promise<string | undefined> => {
+  const coordinate = parseGithubRepo(repo);
+  if (!coordinate) return undefined;
+  const res = await githubFetch(
+    `/repos/${coordinate.owner}/${coordinate.name}/branches/${encodeURIComponent(branch)}`,
+    token,
+  );
+  return res.ok && typeof res.json?.commit?.sha === 'string' ? res.json.commit.sha : undefined;
+};
+
 export type RemoteMergeState = 'merged' | 'unmerged' | 'unknown';
+
+export interface RemoteBranchHead {
+  sha?: string;
+  state: 'found' | 'missing' | 'unknown';
+}
+
+/** Resolve the current remote branch tip while preserving 404 vs API failure. */
+export const getBranchHead = async (
+  repo: string,
+  branch: string,
+  token?: string,
+): Promise<RemoteBranchHead> => {
+  const coordinate = parseGithubRepo(repo);
+  if (!coordinate) return { state: 'unknown' };
+  const res = await githubFetch(
+    `/repos/${coordinate.owner}/${coordinate.name}/branches/${encodeURIComponent(branch)}`,
+    token,
+  );
+  if (res.status === 404) return { state: 'missing' };
+  if (!res.ok) return { state: 'unknown' };
+  const sha = res.json?.commit?.sha;
+  return typeof sha === 'string' && sha ? { sha, state: 'found' } : { state: 'unknown' };
+};
 
 /**
  * Whether `head` (a task branch) is fully contained in `base` on the remote —

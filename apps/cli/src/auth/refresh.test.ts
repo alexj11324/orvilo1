@@ -10,7 +10,7 @@ vi.mock('./credentials', () => ({
   saveCredentials: vi.fn(),
 }));
 vi.mock('../settings', () => ({
-  loadSettings: vi.fn().mockReturnValue({ serverUrl: 'https://app.lobehub.com' }),
+  loadSettings: vi.fn().mockReturnValue({ serverUrl: 'https://orvilo.aspectlylabs.com' }),
 }));
 
 describe('getValidToken', () => {
@@ -219,6 +219,6 @@ describe('getValidToken', () => {
     const body = vi.mocked(fetch).mock.calls[0][1]?.body as URLSearchParams;
     expect(body.get('grant_type')).toBe('refresh_token');
     expect(body.get('refresh_token')).toBe('my-refresh-token');
-    expect(body.get('client_id')).toBe('lobehub-cli');
+    expect(body.get('client_id')).toBe('orvilo-cli');
   });
 });

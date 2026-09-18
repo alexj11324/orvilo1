@@ -7,12 +7,12 @@
 > Wrong approach / Why it's wrong / What it breaks / Correct approach. The
 > generic, product-independent mistake catalogue lives in the
 > installed skill's `references/common-mistakes.md` (read-only in this repo,
-> updated by PR to `@lobehub/cli`) — read BOTH layers before a run. When an entry
-> here turns out to be product-independent, genericize it (drop the LobeHub
+> updated by PR to `@orvilo/cli`) — read BOTH layers before a run. When an entry
+> here turns out to be product-independent, genericize it (drop the Orvilo
 > nouns) and PR it upstream.
 >
 > Most of the historically accumulated cases were promoted to the generic layer;
-> what remains here is the LobeHub-platform-specific residue (the verify /
+> what remains here is the Orvilo-platform-specific residue (the verify /
 > Acceptance page mechanics, permission-surface framing). Cases keep their
 > original numbers so older cross-references still resolve; a reference to a case
 > not in this file now lives in the generic layer.
@@ -62,8 +62,8 @@ prevented; trust that "对齐" means aligned.
 **Correct approach**: before building a twin surface, enumerate the sibling's implementation —
 grep its component for every rendered affordance (search, empty states, comparison views, hover
 behaviors, drawer wiring) and its data conventions (which fields the author must supply) — and
-turn that list into the build checklist. After building, diff the two surfaces side by side in
-screenshots before publishing. For authored artifacts (result.json), re-read the field spec in
+turn that list into the build checklist. After building, diff the two surfaces side by side
+screenshots before publishing. For authored artifacts (result.json), re-read the field spec
 the report reference instead of writing from memory: `title` and `summary.verdict` are identity
 fields, and comparison pairs need per-side `label`s.
 
@@ -84,7 +84,7 @@ contract.
 **What it breaks**: superseded wording remains as a duplicate row, UI changes have no inspectable proof,
 and a green report can visibly cover its own content.
 
-**Correct approach**: when a new check replaces an older semantic requirement, put the prior stable id in
+**Correct approach**: when a new check replaces an older semantic requirement, put the prior stable id
 the new plan item's `supersedes` array. Every user-visible UI case must require its own screenshot, open
 that image before passing, and assert the complete spatial outcome (right attachment plus zero overlap),
 not an isolated computed-style value. Never reuse one screenshot as evidence for unrelated UI cases.
@@ -94,8 +94,8 @@ not an isolated computed-style value. Never reuse one screenshot as evidence for
 ## Case 20 (b) — Calling a server-side permission change "no UI surface" and shipping an API-transcript-only report
 
 > The generic layer covers the broad rule (a UI-touching change needs visual evidence); this entry
-> keeps the LobeHub-specific framing of an authorization/permission change as a UI surface. Candidate
-> to genericize + upstream if it stops being LobeHub-specific.
+> keeps the Orvilo-specific framing of an authorization/permission change as a UI surface. Candidate
+> to genericize + upstream if it stops being Orvilo-specific.
 
 **Wrong approach**: for a change that only edits TRPC routers (tightening who may
 mutate a shared resource), classifying the run as backend-only and publishing a
@@ -192,7 +192,7 @@ item to satisfy the requirement that screenshot checks disclose multimodal revie
 ingest validator rejects outside those values, so the whole payload fails. The
 disclosure is not expressible in that field.
 
-**Correct approach:** set `"verifier": "llm"` and carry the multimodal disclosure in
+**Correct approach:** set `"verifier": "llm"` and carry the multimodal disclosure
 the plan item's `method` prose alongside `"requiredEvidence": ["screenshot"]`.
 
 ### Feature-spec facts — belong in the feature spec or a regression test
@@ -235,7 +235,7 @@ recognizes, while every screenshot of the insertion itself still looks correct.
 Verifying the payload through a different entry point hides it completely: the path
 with the defect is never the path that gets sent.
 
-**Correct approach:** for every insertion affordance, continue the user's action in
+**Correct approach:** for every insertion affordance, continue the user's action
 the same case — type after inserting — and assert the resulting node order, not just
 the node's presence. Drive the payload check through the _same_ entry point the case
 under test uses; if an affordance has several entries (slash menu, `+` menu), the one
@@ -396,17 +396,17 @@ scroll as one column, or the footer paints over the last rows. Callers cannot pa
 content styles to change that.
 
 **Correct approach:** for any confirm body that can exceed a few lines, use
-`createModal` with a height-capped `ScrollArea` as `content` and put the actions in
+`createModal` with a height-capped `ScrollArea` as `content` and put the actions
 the modal `footer` slot. Assert `footer.top === scroller.bottom` at both ends of the
 list, not just that the dialog opened.
 
 #### L-D13 — Picking `cssVar` color-scale steps by antd-palette intuition
 
 **Wrong approach:** choose antd-style palette steps (`cssVar.blue1` for a tint,
-`cssVar.blue6` for the primary line) from the standard antd 10-step palette in
+`cssVar.blue6` for the primary line) from the standard antd 10-step palette
 your head, and judge the result from the code alone.
 
-**Why it fails:** LobeHub's theme overrides the color scales with an 11-step
+**Why it fails:** Orvilo's theme overrides the color scales with an 11-step
 palette whose primary-strength band sits at x9–x10 — light-mode `blue-6`
 resolves to `#acd4ff` and `blue-7` to `#93c8ff`, both near-pastel, nothing like
 antd's `blue-6` `#1677ff`. The UI then renders washed out while every token
@@ -417,7 +417,7 @@ almost nothing.
 value in the running app (`getComputedStyle` on the element, or resolve
 `--ant-<color>-<n>` from the element's scope — the variables are scoped, not on
 `:root`). For a tinted-tile + line pairing, the working band is around x3 for
-the tint and x9–x10 for the line, verified in both themes: the scale flips in
+the tint and x9–x10 for the line, verified in both themes: the scale flips
 dark mode, so a step that is a tint in light is a deep fill in dark.
 
 ## Environment safety
@@ -450,7 +450,7 @@ broken topology too.
 
 **Wrong approach:** refresh a shared dependency by running `pnpm install --filter .`
 at the repo root — or by bumping only the root range and running a full install —
-then read the new version out of `package.json` and treat a type-check failure in
+then read the new version out of `package.json` and treat a type-check failure
 untouched files as pre-existing.
 
 **Why it fails:** the filter installs only the root workspace, and even an unfiltered

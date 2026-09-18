@@ -1,4 +1,4 @@
-import { type LobeTool } from '@orvilo/types';
+import { type OrviloTool } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -74,11 +74,13 @@ export const pluginRouter = router({
       return data.identifier;
     }),
 
-  getPlugins: wsCompatProcedure.use(serverDatabase).query(async ({ ctx }): Promise<LobeTool[]> => {
-    const pluginModel = new PluginModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
+  getPlugins: wsCompatProcedure
+    .use(serverDatabase)
+    .query(async ({ ctx }): Promise<OrviloTool[]> => {
+      const pluginModel = new PluginModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
 
-    return pluginModel.query();
-  }),
+      return pluginModel.query();
+    }),
 
   removePlugin: pluginProcedure
     .use(withScopedPermission('agent:update'))

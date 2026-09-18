@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { searchElasticsearchCandidates } from './elasticsearch/candidates';
 import {
   hydrateAgents,
@@ -73,7 +73,7 @@ export class ElasticsearchFtsSearchBackend implements FtsSearchBackend {
   private readonly observer?: ElasticsearchFtsSearchObserver;
 
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     { client, indexNamespace, observer }: ElasticsearchFtsSearchBackendOptions,
   ) {
     const namespace = indexNamespace.trim();

@@ -1,13 +1,13 @@
-import type { WorkflowContext } from '@upstash/workflow';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { NightlyReviewScheduleService } from '@/server/services/agentSignal/services';
 import type {
   AgentSignalNightlyReviewWorkflow,
   ExecuteNightlyReviewUserPayload,
   PaginateNightlyReviewUsersPayload,
 } from '@/server/workflows/agentSignal/nightlyReview';
+import type { WorkflowContext } from '@/server/workflows/context';
 
 import type { NightlyReviewWorkflowDependencies } from '../nightlyReview';
 import { executeNightlyReviewUser, paginateNightlyReviewUsers } from '../nightlyReview';
@@ -42,7 +42,7 @@ const createDependencies = (service: NightlyReviewScheduleService) => {
     .mockResolvedValue({ workflowRunId: 'paginate-run' });
   const dependencies: NightlyReviewWorkflowDependencies = {
     createScheduleService: () => service,
-    getDb: async () => ({}) as unknown as LobeChatDatabase,
+    getDb: async () => ({}) as unknown as OrviloDatabase,
     triggerExecuteUser,
     triggerPaginateUsers,
   };

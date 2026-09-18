@@ -1,4 +1,3 @@
-import { type WorkflowContext } from '@upstash/workflow';
 import debug from 'debug';
 import { chunk } from 'es-toolkit/compat';
 
@@ -9,12 +8,13 @@ import {
   type PaginateTestCasesPayload,
 } from '@/server/workflows/agentEvalRun';
 import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/utils';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 const CHUNK_SIZE = 20; // Max items to process directly
 const PAGE_SIZE = 50; // Items per page
 
-const log = debug('lobe-server:workflows:paginate-test-cases');
+const log = debug('orvilo-server:workflows:paginate-test-cases');
 
 /**
  * Paginate test cases workflow - handles pagination, filtering, and fanout
@@ -165,8 +165,4 @@ export const paginateTestCasesHandler = async (
     skippedTestCases: batchTestCaseIds.length - testCaseIds.length,
     success: true,
   };
-};
-
-export const paginateTestCasesWorkflowOptions = {
-  flowControl: { key: 'agent-eval-run.paginate-test-cases', parallelism: 200, rate: 5 },
 };

@@ -1,4 +1,4 @@
-import { type LobeToolCustomPlugin } from '@orvilo/types';
+import { type OrviloToolCustomPlugin } from '@orvilo/types';
 import {
   afterEach,
   beforeEach,
@@ -22,13 +22,13 @@ import {
  * `memory/project_legacy_mcp_shapes.md` for the full distribution.
  */
 
-const plugin = (overrides: Partial<LobeToolCustomPlugin> = {}): LobeToolCustomPlugin =>
+const plugin = (overrides: Partial<OrviloToolCustomPlugin> = {}): OrviloToolCustomPlugin =>
   ({
     customParams: { mcp: { type: 'http', url: 'https://mcp.example.com' } },
     identifier: 'my-mcp',
     type: 'customPlugin',
     ...overrides,
-  }) as LobeToolCustomPlugin;
+  }) as OrviloToolCustomPlugin;
 
 describe('buildConnectorPayloadFromLegacy', () => {
   describe('Shape #1 — stdio with command/args/env (1159 prod rows)', () => {
@@ -389,12 +389,12 @@ describe('buildConnectorPayloadFromLegacy', () => {
 });
 
 describe('executeLegacyMigrationSave', () => {
-  const legacy = (id = 'my-mcp'): LobeToolCustomPlugin =>
+  const legacy = (id = 'my-mcp'): OrviloToolCustomPlugin =>
     ({
       customParams: { mcp: { type: 'http', url: 'https://mcp.example.com' } },
       identifier: id,
       type: 'customPlugin',
-    }) as LobeToolCustomPlugin;
+    }) as OrviloToolCustomPlugin;
 
   let createConnector: Mock<MigrationSaveDeps['createConnector']>;
   let deleteConnector: Mock<MigrationSaveDeps['deleteConnector']>;
@@ -447,7 +447,7 @@ describe('executeLegacyMigrationSave', () => {
       },
       identifier: 'agent-x',
       type: 'customPlugin',
-    } as LobeToolCustomPlugin;
+    } as OrviloToolCustomPlugin;
 
     await executeLegacyMigrationSave(legacy('agent-x'), value, {
       createConnector,
@@ -490,7 +490,7 @@ describe('executeLegacyMigrationSave', () => {
       customParams: { mcp: {} as any },
       identifier: 'broken',
       type: 'customPlugin',
-    } as LobeToolCustomPlugin;
+    } as OrviloToolCustomPlugin;
     const result = await executeLegacyMigrationSave(broken, broken, {
       createConnector,
       deleteConnector,

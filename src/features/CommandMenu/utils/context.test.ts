@@ -13,10 +13,6 @@ describe('detectContext', () => {
     expect(detectContext('/agent/agt_123/tpc_456/page/doc_789')).toBe('agent');
   });
 
-  it('preserves page context for standalone page routes', () => {
-    expect(detectContext('/page/doc_789')).toBe('page');
-  });
-
   it('falls back to general for unknown routes', () => {
     expect(detectContext('/unknown')).toBe('general');
   });

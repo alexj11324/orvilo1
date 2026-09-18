@@ -1,6 +1,6 @@
 import debug from 'debug';
 
-const log = debug('lobe-client:electron:local-file-path');
+const log = debug('orvilo-client:electron:local-file-path');
 
 export const getElectronLocalFilePath = (file: File): string | null => {
   const webUtils = (

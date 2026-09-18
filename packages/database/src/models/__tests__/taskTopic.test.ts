@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { agents, tasks, taskTopics, topics, users, workspaces } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskTopicModel } from '../taskTopic';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'task-topic-test-user-id';
 const userId2 = 'task-topic-test-user-id-2';
@@ -87,6 +87,232 @@ describe('TaskTopicModel', () => {
     });
   });
 
+  describe('integration claim', () => {
+    const integration = {
+      attempts: 0,
+      baseBranch: 'main',
+      branch: 'task/T-1',
+      role: 'task' as const,
+      state: 'publish_failed' as const,
+    };
+
+    it('allows only one concurrent owner and releases only for that owner', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Claim integration' });
+      await createTopic('tpc_integration_claim');
+      await topicModel.add(task.id, 'tpc_integration_claim', { integration, seq: 1 });
+      const staleBefore = new Date(Date.now() - 60_000);
+
+      const results = await Promise.all([
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_claim',
+          'publish_failed',
+          'owner-a',
+          staleBefore,
+        ),
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_claim',
+          'publish_failed',
+          'owner-b',
+          staleBefore,
+        ),
+      ]);
+
+      expect(results.filter(Boolean)).toHaveLength(1);
+      await expect(topicModel.findByTopicId('tpc_integration_claim')).resolves.toMatchObject({
+        integration: { integrationOwnerTopicId: 'tpc_integration_claim' },
+      });
+      const owner = results[0] ? 'owner-a' : 'owner-b';
+      const other = owner === 'owner-a' ? 'owner-b' : 'owner-a';
+
+      await topicModel.releaseIntegration(task.id, 'tpc_integration_claim', other);
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_claim',
+          'publish_failed',
+          'owner-c',
+          staleBefore,
+        ),
+      ).resolves.toBe(false);
+
+      await topicModel.releaseIntegration(task.id, 'tpc_integration_claim', owner);
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_claim',
+          'publish_failed',
+          'owner-c',
+          staleBefore,
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('reclaims a stale integration owner', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Reclaim integration' });
+      await createTopic('tpc_integration_stale');
+      await topicModel.add(task.id, 'tpc_integration_stale', { integration, seq: 1 });
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_stale',
+          'publish_failed',
+          'stale-owner',
+          new Date(Date.now() - 60_000),
+        ),
+      ).resolves.toBe(true);
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_stale',
+          'publish_failed',
+          'new-owner',
+          new Date(Date.now() + 60_000),
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('does not claim integration after every applicable checkout is cleaned', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Cleaned integration' });
+      const topicId = 'tpc_integration_cleaned';
+      await createTopic(topicId);
+      await topicModel.add(task.id, topicId, { integration, seq: 1 });
+      await topicModel.updateIntegration(task.id, topicId, { worktreeCleaned: true });
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          topicId,
+          'publish_failed',
+          'late-owner',
+          new Date(Date.now() - 60_000),
+        ),
+      ).resolves.toBe(false);
+    });
+
+    it('allows cleanup retry while the task checkout remains', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Partially cleaned integration' });
+      const topicId = 'tpc_integration_partially_cleaned';
+      await createTopic(topicId);
+      await topicModel.add(task.id, topicId, {
+        integration: {
+          ...integration,
+          integrationOwnerTopicId: topicId,
+          integrationWorktreeCleaned: true,
+          integrationWorktreePath: '/repo/integration-topic',
+          worktreeCleaned: false,
+        },
+        seq: 1,
+      });
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          topicId,
+          'publish_failed',
+          'cleanup-retry-owner',
+          new Date(Date.now() - 60_000),
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('allows publish retry through a surviving integration worktree', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Retry cleaned task checkout' });
+      const topicId = 'tpc_integration_publish_retry';
+      await createTopic(topicId);
+      await topicModel.add(task.id, topicId, {
+        integration: {
+          ...integration,
+          integrationOwnerTopicId: topicId,
+          integrationWorktreePath: '/repo/integration-topic',
+          worktreeCleaned: true,
+        },
+        seq: 1,
+      });
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          topicId,
+          'publish_failed',
+          'retry-owner',
+          new Date(Date.now() - 60_000),
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('shares one lease across a corrective chain', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Lease integration chain' });
+      await createTopic('tpc_integration_owner');
+      await createTopic('tpc_integration_child');
+      await topicModel.add(task.id, 'tpc_integration_owner', {
+        integration: { ...integration, state: 'conflict' },
+        seq: 1,
+      });
+      await topicModel.add(task.id, 'tpc_integration_child', {
+        integration: {
+          ...integration,
+          integrationOwnerTopicId: 'tpc_integration_owner',
+          role: 'integrate',
+          runTopicId: 'tpc_integration_owner',
+          state: 'verification_pending',
+        },
+        seq: 2,
+      });
+      const staleBefore = new Date(Date.now() - 60_000);
+
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_child',
+          'verification_pending',
+          'owner-a',
+          staleBefore,
+          'tpc_integration_owner',
+        ),
+      ).resolves.toBe(true);
+      await expect(topicModel.findByTopicId('tpc_integration_child')).resolves.toMatchObject({
+        integration: { integrationOwnerTopicId: 'tpc_integration_owner' },
+      });
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_child',
+          'verification_pending',
+          'owner-b',
+          staleBefore,
+          'tpc_integration_owner',
+        ),
+      ).resolves.toBe(false);
+
+      await topicModel.releaseIntegration(task.id, 'tpc_integration_owner', 'owner-a');
+      await expect(
+        topicModel.claimIntegration(
+          task.id,
+          'tpc_integration_child',
+          'verification_pending',
+          'owner-b',
+          staleBefore,
+          'tpc_integration_owner',
+        ),
+      ).resolves.toBe(true);
+    });
+  });
+
   describe('updateStatus', () => {
     it('should update topic status', async () => {
       const taskModel = new TaskModel(serverDB, userId);
@@ -99,6 +325,99 @@ describe('TaskTopicModel', () => {
 
       const topics = await topicModel.findByTaskId(task.id);
       expect(topics[0].status).toBe('completed');
+    });
+
+    it('claims one terminal callback when duplicate deliveries race', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Settle once' });
+      await createTopic('tpc_settle_once');
+      await topicModel.add(task.id, 'tpc_settle_once', { operationId: 'op-settle', seq: 1 });
+      await taskModel.updateCurrentTopic(task.id, 'tpc_settle_once');
+      await taskModel.updateStatus(task.id, 'running');
+
+      const results = await Promise.allSettled([
+        topicModel.settleIfRunning(task.id, 'tpc_settle_once', 'op-settle', 'completed'),
+        topicModel.settleIfRunning(task.id, 'tpc_settle_once', 'op-settle', 'completed'),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+      expect((await topicModel.findByTaskId(task.id))[0].status).toBe('completed');
+      expect((await getTopic('tpc_settle_once')).completedAt).toBeInstanceOf(Date);
+    });
+
+    it('reclaims a completion callback after its processing lease expires', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Recover completion' });
+      await createTopic('tpc_settle_reclaim');
+      await topicModel.add(task.id, 'tpc_settle_reclaim', {
+        operationId: 'op-reclaim',
+        seq: 1,
+      });
+      await taskModel.updateCurrentTopic(task.id, 'tpc_settle_reclaim');
+      await taskModel.updateStatus(task.id, 'running');
+
+      const first = await topicModel.settleIfRunning(
+        task.id,
+        'tpc_settle_reclaim',
+        'op-reclaim',
+        'completed',
+      );
+      await serverDB
+        .update(tasks)
+        .set({ runReservationExpiresAt: new Date(Date.now() - 1) })
+        .where(eq(tasks.id, task.id));
+      const reclaimed = await topicModel.settleIfRunning(
+        task.id,
+        'tpc_settle_reclaim',
+        'op-reclaim',
+        'completed',
+      );
+
+      expect(first).toMatch(/^completion:op-reclaim:/);
+      expect(reclaimed).toMatch(/^completion:op-reclaim:/);
+      expect(reclaimed).not.toBe(first);
+    });
+
+    it('does not reclaim an expired completion after the task was paused', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Pause completion' });
+      await createTopic('tpc_settle_paused');
+      await topicModel.add(task.id, 'tpc_settle_paused', {
+        operationId: 'op-paused',
+        seq: 1,
+      });
+      await taskModel.updateCurrentTopic(task.id, 'tpc_settle_paused');
+      await taskModel.updateStatus(task.id, 'running');
+      await topicModel.settleIfRunning(task.id, 'tpc_settle_paused', 'op-paused', 'completed');
+      await taskModel.updateStatus(task.id, 'paused');
+      await serverDB
+        .update(tasks)
+        .set({ runReservationExpiresAt: new Date(Date.now() - 1) })
+        .where(eq(tasks.id, task.id));
+
+      await expect(
+        topicModel.settleIfRunning(task.id, 'tpc_settle_paused', 'op-paused', 'completed'),
+      ).resolves.toBeNull();
+    });
+
+    it('rejects a terminal callback whose operation is not the active generation', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Fence generation' });
+      await createTopic('tpc_old_generation');
+      await createTopic('tpc_current_generation');
+      await topicModel.add(task.id, 'tpc_old_generation', { operationId: 'op-old', seq: 1 });
+      await taskModel.updateCurrentTopic(task.id, 'tpc_current_generation');
+      await taskModel.updateStatus(task.id, 'running');
+
+      await expect(
+        topicModel.settleIfRunning(task.id, 'tpc_old_generation', 'op-old', 'completed'),
+      ).resolves.toBeNull();
+      expect((await topicModel.findByTaskId(task.id))[0].status).toBe('running');
     });
 
     it('should mirror completed status to topics row', async () => {

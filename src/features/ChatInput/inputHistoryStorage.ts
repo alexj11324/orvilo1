@@ -1,7 +1,7 @@
 import type { UnknownRecord } from '@orvilo/utils/object';
 import { isRecord } from '@orvilo/utils/object';
 
-export const CHAT_INPUT_HISTORY_STORAGE_KEY = 'lobechat:chat-input-history:v2';
+export const CHAT_INPUT_HISTORY_STORAGE_KEY = 'orvilo:chat-input-history:v2';
 
 export const MAX_INPUT_HISTORY_ITEMS = 50;
 
@@ -23,7 +23,7 @@ interface AddInputHistoryParams extends ChatInputHistoryScope {
 
 const ANONYMOUS_INPUT_HISTORY_SCOPE = 'anonymous';
 const GLOBAL_AGENT_INPUT_HISTORY_SCOPE = 'global';
-const LEGACY_GLOBAL_INPUT_HISTORY_STORAGE_KEY = 'lobechat:chat-input-history:v1';
+const LEGACY_GLOBAL_INPUT_HISTORY_STORAGE_KEY = 'orvilo:chat-input-history:v1';
 
 /**
  * Example: user A's prompt must not appear when user B opens another agent and presses ArrowUp.

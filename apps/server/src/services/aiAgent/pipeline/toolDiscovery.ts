@@ -1,9 +1,9 @@
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { GoalIdentifier, isGoalPrompt } from '@orvilo/builtin-tool-goal';
-import { LobeAgentManifest } from '@orvilo/builtin-tool-lobe-agent';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MessageToolIdentifier } from '@orvilo/builtin-tool-message';
+import { OrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import type { DeviceAttachment } from '@orvilo/builtin-tool-remote-device';
 import { generateSystemPrompt, RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import {
@@ -13,12 +13,12 @@ import {
 import { manualModeExcludeToolIds } from '@orvilo/builtin-tools';
 import type {
   AgentGroupConfig,
-  LobeToolManifest,
+  OrviloToolManifest,
   ToolExecutor,
   ToolsEngine,
   ToolSource,
 } from '@orvilo/context-engine';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { DeviceUnavailableErrorData } from '@orvilo/device-gateway-client';
 import type { ChatTopicBotContext, RequestTrigger } from '@orvilo/types';
 import { getActivePluginIds } from '@orvilo/types';
@@ -53,7 +53,7 @@ import { createServerAgentToolsEngine } from '@/server/modules/Mecha';
 import type { AgentDocumentsService } from '@/server/services/agentDocuments';
 import {
   isAgentSignalEnabledForUser,
-  isLobeAiAgentSlug,
+  isOrviloAiAgentSlug,
   resolveAgentSelfIterationCapability,
 } from '@/server/services/agentSignal/featureGate';
 import { resolveUnsupportedMessageApis } from '@/server/services/bot/platforms/messageCapabilities';
@@ -86,14 +86,14 @@ import { resolveServerSearchDecision } from '../searchDecision';
 import { filterPluginsByShareGate, shareGateGrantsCloudSandbox } from '../shareGate';
 import type { ExecRunContext, InternalExecAgentParams } from '../types';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 export interface ToolDiscoveryDeps {
   agentDocumentsService: AgentDocumentsService;
   composioService: ComposioService;
   connectorModel: ConnectorModel;
   connectorToolModel: ConnectorToolModel;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   getMarketService: () => Promise<MarketService>;
   messageModel: MessageModel;
   pluginModel: PluginModel;
@@ -133,7 +133,7 @@ export interface ToolDiscoveryResult {
   activeDeviceScope?: 'personal' | 'workspace';
   agentPlugins: string[];
   builtinModels: Awaited<ReturnType<typeof loadModels>>;
-  composioManifests: LobeToolManifest[];
+  composioManifests: OrviloToolManifest[];
   connectorManifests: ReturnType<typeof buildConnectorManifests>;
   /**
    * Tells the model whose connected account each borrowed tool runs on. Run
@@ -143,10 +143,10 @@ export interface ToolDiscoveryResult {
   executionPlan?: ExecutionPlan;
   hasAgentDocuments: boolean;
   hasEnabledKnowledgeBases: boolean;
-  lobehubSkillManifests: LobeToolManifest[];
   modelMediaCapabilities: Pick<ModelAbilities, 'audio' | 'video' | 'vision'>;
   onlineDevices: DeviceAttachment[];
   operationAgentGroup?: AgentGroupConfig;
+  orviloSkillManifests: OrviloToolManifest[];
   searchDecision: ReturnType<typeof resolveServerSearchDecision>;
   toolExecutorMap: Record<string, ToolExecutor>;
   toolManifestMap: Record<string, any>;
@@ -160,7 +160,7 @@ export interface ToolDiscoveryResult {
  * Stage 5 (5a–5f) of {@link AiAgentService.execAgent}: tool discovery.
  *
  * Resolves the full tool surface for the run — installed plugins, connectors
- * (real-MCP replacement + permission patching), LobeHub Skills, Composio
+ * (real-MCP replacement + permission patching), Orvilo Skills, Composio
  * manifests, device pool + execution plan, group-orchestration authorization,
  * the tools-engine invocation pool, and the activator-discoverable manifest
  * map — plus the Response-API client function tools and the RemoteDevice
@@ -240,8 +240,8 @@ export const discoverTools = async (
   // systemRole injection below.
 
   // These are needed outside the tools block (for agent management context, skill engine, etc.)
-  let lobehubSkillManifests: LobeToolManifest[] = [];
-  let composioManifests: LobeToolManifest[] = [];
+  let orviloSkillManifests: OrviloToolManifest[] = [];
+  let composioManifests: OrviloToolManifest[] = [];
   let connectorManifests: ReturnType<typeof buildConnectorManifests> = [];
 
   // `selectedToolIds` are the user's @-mention picks for this turn; merged in
@@ -258,7 +258,7 @@ export const discoverTools = async (
             ...getActivePluginIds(agentConfig?.plugins),
             ...(additionalPluginIds || []),
             ...(selectedToolIds || []),
-            ...(hasMentionedAgents ? ['lobe-agent-management'] : []),
+            ...(hasMentionedAgents ? ['orvilo-agent-management'] : []),
           ]),
         ];
 
@@ -380,7 +380,7 @@ export const discoverTools = async (
     }
 
     // Only connectors WITH a real MCP endpoint (mcpServerUrl or stdio) can replace plugins in the
-    // manifest. Connectors WITHOUT an endpoint (e.g. Lobehub/Composio OAuth skills synced via
+    // manifest. Connectors WITHOUT an endpoint (e.g. Orvilo/Composio OAuth skills synced via
     // syncToolsFromClient) must continue using their original plugin executor path — otherwise
     // after humanIntervention approval the runtime tries to call mcpServerUrl='' and returns empty.
     const connectorsMcp = connectors.filter(
@@ -439,14 +439,14 @@ export const discoverTools = async (
       return info?.abilities?.functionCall ?? true;
     };
 
-    // 5c. Fetch LobeHub Skills manifests
+    // 5c. Fetch Orvilo Skills manifests
     try {
       const marketService = await deps.getMarketService();
-      lobehubSkillManifests = await marketService.getLobehubSkillManifests();
+      orviloSkillManifests = await marketService.getOrviloSkillManifests();
     } catch (error) {
-      log('execAgent: failed to fetch lobehub skill manifests: %O', error);
+      log('execAgent: failed to fetch orvilo skill manifests: %O', error);
     }
-    log('execAgent: got %d lobehub skill manifests', lobehubSkillManifests.length);
+    log('execAgent: got %d orvilo skill manifests', orviloSkillManifests.length);
 
     // 5d. Fetch Composio tool manifests from database
     try {
@@ -456,21 +456,21 @@ export const discoverTools = async (
     }
     log('execAgent: got %d composio manifests', composioManifests.length);
 
-    // 5d-1. Patch Lobehub/Composio manifests AND community-MCP plugin manifests
+    // 5d-1. Patch Orvilo/Composio manifests AND community-MCP plugin manifests
     // with connector tool permissions. This enables needs_approval (→
     // humanIntervention: 'required') and disabled (→ blocking description) for
     // any tool managed via the connector system but executed through a
-    // non-connector path (Lobehub/Composio skills, community MCP plugins).
+    // non-connector path (Orvilo/Composio skills, community MCP plugins).
     // The 'disabled' hard-block is already enforced universally in
     // ToolExecutionService; this surfaces the permission to the model too.
     if (
-      lobehubSkillManifests.length > 0 ||
+      orviloSkillManifests.length > 0 ||
       composioManifests.length > 0 ||
       pluginsWithoutConnectors.length > 0
     ) {
       try {
         const allIdentifiers = [
-          ...lobehubSkillManifests.map((m) => m.identifier),
+          ...orviloSkillManifests.map((m) => m.identifier),
           ...composioManifests.map((m) => m.identifier),
           ...pluginsWithoutConnectors.map((p) => p.identifier),
         ];
@@ -490,7 +490,7 @@ export const discoverTools = async (
             }),
           );
 
-          lobehubSkillManifests = lobehubSkillManifests.map((m) => {
+          orviloSkillManifests = orviloSkillManifests.map((m) => {
             const perms = connectorToolsMap.get(m.identifier);
             return perms && perms.size > 0
               ? (patchManifestWithPermissions(m as any, perms as any) as any)
@@ -632,9 +632,9 @@ export const discoverTools = async (
       (needsAudioUnderstanding || needsImageUnderstanding || needsVideoUnderstanding);
     agentPlugins = [
       ...agentPlugins,
-      ...(hasTopicReference ? ['lobe-topic-reference'] : []),
+      ...(hasTopicReference ? ['orvilo-topic-reference'] : []),
       ...(isBotConversation ? [MessageToolIdentifier] : []),
-      ...(shouldEnableMultimodalUnderstanding ? [LobeAgentManifest.identifier] : []),
+      ...(shouldEnableMultimodalUnderstanding ? [OrviloAgentManifest.identifier] : []),
     ];
 
     // Share allowlist filters the full candidate set (pinned + mentioned +
@@ -680,7 +680,7 @@ export const discoverTools = async (
     //
     // A share visitor never passes `canUseDevice`, so a creator agent that
     // targets `local`/`auto` would collapse to `none` and silently drop a
-    // `lobe-cloud-sandbox` grant (the sandbox manifest only materializes when
+    // `orvilo-cloud-sandbox` grant (the sandbox manifest only materializes when
     // the plan resolves to `sandbox`). `sandboxFallback` keeps that decision
     // inside the resolver instead of patching its result here.
     executionPlan = resolveExecutionPlan({
@@ -755,7 +755,7 @@ export const discoverTools = async (
       activeDeviceScope ?? 'none',
     );
     // A device-targeted run that could not be routed silently degrades exec
-    // (lobe-skills runCommand/execScript) to the cloud sandbox. Surface it as
+    // (orvilo-skills runCommand/execScript) to the cloud sandbox. Surface it as
     // a structured warn — `bound-device-offline` with a requestedDeviceId is
     // the desktop "local device" pick whose gateway connection dropped, and
     // this log is the breadcrumb for diagnosing WHY the device was judged
@@ -827,13 +827,13 @@ export const discoverTools = async (
       disabledPluginIdSet.size === 0
         ? manifests
         : manifests.filter((m) => !disabledPluginIdSet.has(m.identifier));
-    const activeLobehubSkillManifests = dropDisabledManifests(lobehubSkillManifests);
+    const activeOrviloSkillManifests = dropDisabledManifests(orviloSkillManifests);
     const activeComposioManifests = dropDisabledManifests(composioManifests);
     const activeConnectorManifests = dropDisabledManifests(connectorManifests);
 
     toolsEngine = createServerAgentToolsEngine(toolsContext, {
       additionalManifests: [
-        ...activeLobehubSkillManifests,
+        ...activeOrviloSkillManifests,
         ...activeComposioManifests,
         ...activeConnectorManifests,
       ],
@@ -862,7 +862,7 @@ export const discoverTools = async (
       isGroupSupervisor,
       modelAbilities,
       // Context-aware builtin manifests: inside a sub-agent (or group) run,
-      // lobe-agent drops `callSubAgent` so the model can't recurse into nested
+      // orvilo-agent drops `callSubAgent` so the model can't recurse into nested
       // sub-agents (which the runtime rejects, looping until the inactivity
       // watchdog kills the op). Mirrors the frontend `createAgentToolsEngine`.
       // `executionEnv` mirrors the resolved plan, while preserving the local
@@ -870,7 +870,7 @@ export const discoverTools = async (
       // return images. It also keeps the `device-unrouted` degradation, where
       // the user picked a local device that is offline and exec silently lands
       // in the sandbox.
-      // For bot conversations we also pass the IM platform so `lobe-message`
+      // For bot conversations we also pass the IM platform so `orvilo-message`
       // can drop APIs the platform can't fulfil (e.g. WeChat has no
       // `readMessages`). Telegram Guest Mode uses a stricter overlay —
       // the bot is not a chat member and has no regular channel tools.
@@ -903,8 +903,8 @@ export const discoverTools = async (
             ...agentPlugins,
             ...(disableLocalSystem ? [] : [LocalSystemManifest.identifier, AuvManifest.identifier]),
             RemoteDeviceManifest.identifier,
-            // Include LobeHub Skills and Composio tools so they are passed to generateToolsDetailed
-            ...activeLobehubSkillManifests.map((m) => m.identifier),
+            // Include Orvilo Skills and Composio tools so they are passed to generateToolsDetailed
+            ...activeOrviloSkillManifests.map((m) => m.identifier),
             ...activeComposioManifests.map((m) => m.identifier),
             // Connector manifests are also injected as additionalManifests
             ...activeConnectorManifests.map((m) => m.identifier),
@@ -927,8 +927,8 @@ export const discoverTools = async (
 
     // Single guard for every `toolManifestMap[id] = ...` ingest below.
     // Mirrors the post-merge filter in `createServerToolsEngine`: an
-    // installed plugin, a LobeHub Skill, or a Composio manifest declaring
-    // `identifier: 'lobe-remote-device'` would otherwise reach the
+    // installed plugin, a Orvilo Skill, or a Composio manifest declaring
+    // `identifier: 'orvilo-remote-device'` would otherwise reach the
     // activator-discovery map and let an external bot sender enable it
     // (). Centralising the check at the ingest layer means
     // every future manifest source automatically inherits the wall.
@@ -963,7 +963,7 @@ export const discoverTools = async (
 
     // Also include discoverable builtin tools that are not yet in the map,
     // so the activator can find their manifests when dynamically enabling them
-    // (e.g., lobe-creds, lobe-task). Exclude discoverable:false tools to prevent
+    // (e.g., orvilo-creds, orvilo-task). Exclude discoverable:false tools to prevent
     // internal infrastructure tools from being surfaced to the activator.
     const allowedBuiltinTools = buildAllowedBuiltinTools({
       canUseDevice,
@@ -978,7 +978,7 @@ export const discoverTools = async (
     // choose per call whether to run in the cloud sandbox or on the
     // auto-routed device, so Cloud Sandbox stays allowed there too.
     const cloudSandboxAllowed = agentRuntimeMode === 'cloud' || executionPlan.target === 'auto';
-    // When sandbox isn't reachable, remove lobe-cloud-sandbox from the
+    // When sandbox isn't reachable, remove orvilo-cloud-sandbox from the
     // manifest map. The initial seed via getEnabledPluginManifests (which includes
     // defaultToolIds) may have already placed it there, and the allowedBuiltinTools
     // loop below only guards the discoverable-builtin append path. Deleting here
@@ -1001,13 +1001,13 @@ export const discoverTools = async (
     }
     for (const tool of allowedBuiltinTools) {
       if (!isManifestIngestAllowed(tool.identifier)) continue;
-      // lobe-cloud-sandbox is only activator-discoverable when the sandbox is
+      // orvilo-cloud-sandbox is only activator-discoverable when the sandbox is
       // reachable (executionTarget='sandbox', or 'auto' — see cloudSandboxAllowed above).
       if (tool.identifier === CloudSandboxManifest.identifier && !cloudSandboxAllowed) continue;
       // device tools are only activator-discoverable in device-capable sessions
       if (stripDeviceTools && isDeviceToolIdentifier(tool.identifier)) continue;
       if (tool.discoverable !== false && !toolManifestMap[tool.identifier]) {
-        toolManifestMap[tool.identifier] = tool.manifest as LobeToolManifest;
+        toolManifestMap[tool.identifier] = tool.manifest as OrviloToolManifest;
       }
     }
 
@@ -1026,17 +1026,17 @@ export const discoverTools = async (
         agentRuntimeMode === 'local' &&
         !toolManifestMap[manifest.identifier]
       ) {
-        toolManifestMap[manifest.identifier] = manifest as LobeToolManifest;
+        toolManifestMap[manifest.identifier] = manifest as OrviloToolManifest;
       }
     }
 
-    // Include lobehub skill and composio manifests for activator discovery.
+    // Include orvilo skill and composio manifests for activator discovery.
     // Uses the disabled-filtered `active*Manifests` (not the raw
-    // lobehubSkillManifests/composioManifests) — otherwise a disabled
+    // orviloSkillManifests/composioManifests) — otherwise a disabled
     // skill/composio integration would be re-ingested here and shown to
     // the model as discoverable in <available_tools>, even though it was
     // correctly excluded from the actual invocation pool above.
-    for (const manifest of activeLobehubSkillManifests) {
+    for (const manifest of activeOrviloSkillManifests) {
       if (!isManifestIngestAllowed(manifest.identifier)) continue;
       if (!toolManifestMap[manifest.identifier]) {
         toolManifestMap[manifest.identifier] = manifest;
@@ -1049,9 +1049,9 @@ export const discoverTools = async (
       }
     }
 
-    for (const manifest of activeLobehubSkillManifests) {
+    for (const manifest of activeOrviloSkillManifests) {
       if (!isManifestIngestAllowed(manifest.identifier)) continue;
-      toolSourceMap[manifest.identifier] = 'lobehubSkill';
+      toolSourceMap[manifest.identifier] = 'orviloSkill';
     }
     for (const manifest of activeComposioManifests) {
       if (!isManifestIngestAllowed(manifest.identifier)) continue;
@@ -1087,14 +1087,14 @@ export const discoverTools = async (
     }
 
     log(
-      'execAgent: generated %d tools, %d lobehub skills, %d composio tools',
+      'execAgent: generated %d tools, %d orvilo skills, %d composio tools',
       tools?.length ?? 0,
-      lobehubSkillManifests.length,
+      orviloSkillManifests.length,
       composioManifests.length,
     );
 
     const agentSelfIterationEnabled = agentConfig.chatConfig?.selfIteration?.enabled === true;
-    const isLobeAiAgent = isLobeAiAgentSlug(agentSlug);
+    const isOrviloAiAgent = isOrviloAiAgentSlug(agentSlug);
     // Share-visitor fail-closed gate — never expose the
     // `declareSelfFeedbackIntent` tool to a share-visitor turn. This tool sits
     // outside the normal `toolManifestMap` / `applyShareGateToToolSet`
@@ -1107,13 +1107,15 @@ export const discoverTools = async (
     // gate in `turnSetup`; `allowReadMemory` is a read-only grant so this must
     // not be conditional on it either.
     const shouldCheckUserSelfIterationGate =
-      !shareGate && !disableSelfFeedbackIntentTool && (agentSelfIterationEnabled || isLobeAiAgent);
+      !shareGate &&
+      !disableSelfFeedbackIntentTool &&
+      (agentSelfIterationEnabled || isOrviloAiAgent);
     if (shouldCheckUserSelfIterationGate) {
       const featureUserEnabled = await isAgentSignalEnabledForUser(deps.db, deps.userId);
       const effectiveAgentSelfIterationEnabled = resolveAgentSelfIterationCapability({
         agentSelfIterationEnabled,
         isAgentSelfIterationFeatureEnabled: featureUserEnabled,
-        isLobeAiAgent,
+        isOrviloAiAgent,
       });
 
       if (
@@ -1136,7 +1138,7 @@ export const discoverTools = async (
   }
 
   // Inject client function tools from Response API
-  const CLIENT_FN_IDENTIFIER = 'lobe-client-fn';
+  const CLIENT_FN_IDENTIFIER = 'orvilo-client-fn';
   if (functionTools?.length) {
     for (const ft of functionTools) {
       tools?.push({
@@ -1187,7 +1189,7 @@ export const discoverTools = async (
     executionPlan,
     hasAgentDocuments,
     hasEnabledKnowledgeBases,
-    lobehubSkillManifests,
+    orviloSkillManifests,
     modelMediaCapabilities,
     onlineDevices,
     operationAgentGroup,

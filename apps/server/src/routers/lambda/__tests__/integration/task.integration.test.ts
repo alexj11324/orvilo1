@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,6 +7,7 @@ import { AcceptanceModel } from '@/database/models/acceptance';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TaskService } from '@/server/services/task';
+import { TaskIntegrationService } from '@/server/services/taskIntegration';
 
 import { taskRouter } from '../../task';
 import {
@@ -18,7 +19,7 @@ import {
 } from './setup';
 
 // Mock getServerDB
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -88,7 +89,7 @@ const flushAfterResponse = async () => {
 };
 
 describe('Task Router Integration', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let userId: string;
   let otherUserId: string | undefined;
   let testAgentId: string;
@@ -998,6 +999,43 @@ describe('Task Router Integration', () => {
     });
   });
 
+  describe('guarded deletion cleanup', () => {
+    it('rejects a blocked delete with an actionable error before touching worktrees', async () => {
+      const upstream = await caller.create({ instruction: 'Upstream' });
+      const dependent = await caller.create({ instruction: 'Dependent' });
+      await caller.addDependency({ taskId: dependent.data.id, dependsOnId: upstream.data.id });
+      const cleanup = vi
+        .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
+        .mockResolvedValue(true);
+      try {
+        await expect(caller.delete({ id: upstream.data.id })).rejects.toMatchObject({
+          code: 'BAD_REQUEST',
+        });
+        expect(cleanup).not.toHaveBeenCalled();
+        expect((await caller.find({ id: upstream.data.id })).data.id).toBe(upstream.data.id);
+      } finally {
+        cleanup.mockRestore();
+      }
+    });
+
+    it('uses a pre-delete snapshot but performs cleanup only after the deletion commits', async () => {
+      const task = await caller.create({ instruction: 'Removable' });
+      const cleanup = vi
+        .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
+        .mockImplementation(async (id, snapshot) => {
+          expect(await new TaskModel(serverDB, userId).findById(id)).toBeNull();
+          expect(Array.isArray(snapshot)).toBe(true);
+          return true;
+        });
+      try {
+        await caller.delete({ id: task.data.id });
+        expect(cleanup).toHaveBeenCalledTimes(1);
+      } finally {
+        cleanup.mockRestore();
+      }
+    });
+  });
+
   describe('clearAll', () => {
     it('should delete all tasks for user', async () => {
       await caller.create({ instruction: 'Task 1' });
@@ -1009,6 +1047,42 @@ describe('Task Router Integration', () => {
 
       const list = await caller.list({});
       expect(list.data).toHaveLength(0);
+    });
+
+    it('deletes every task even when one workspace cleanup is incomplete', async () => {
+      await caller.create({ instruction: 'Task 1' });
+      await caller.create({ instruction: 'Task 2' });
+      const cleanup = vi
+        .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      try {
+        const result = await caller.clearAll();
+        expect(result.count).toBe(2);
+        expect(cleanup).toHaveBeenCalledTimes(2);
+        expect((await caller.list({})).data).toHaveLength(0);
+      } finally {
+        cleanup.mockRestore();
+      }
+    });
+  });
+
+  describe('delete', () => {
+    it('commits the delete before reporting an incomplete workspace cleanup', async () => {
+      const task = await caller.create({ instruction: 'Task 1' });
+      const cleanup = vi
+        .spyOn(TaskIntegrationService.prototype, 'cleanupTaskWorktrees')
+        .mockResolvedValue(false);
+
+      try {
+        const result = await caller.delete({ id: task.data.id });
+        expect(result.success).toBe(true);
+        expect(cleanup).toHaveBeenCalledWith(task.data.id, expect.any(Array));
+        expect((await caller.list({})).data).toHaveLength(0);
+      } finally {
+        cleanup.mockRestore();
+      }
     });
   });
 
@@ -1180,7 +1254,7 @@ describe('Task Router Integration', () => {
       });
     });
 
-    it('does not start a dependent sibling while completing the whole family', async () => {
+    it('rejects bulk completion when a sibling prerequisite is unfinished', async () => {
       const parent = await caller.create({ instruction: 'Parent' });
       const first = await caller.create({
         assigneeAgentId: testAgentId,
@@ -1195,11 +1269,13 @@ describe('Task Router Integration', () => {
       await caller.addDependency({ dependsOnId: first.data.id, taskId: dependent.data.id });
       mockExecAgent.mockClear();
 
-      await caller.updateStatusCascade({ id: parent.data.id, status: 'completed' });
+      await expect(
+        caller.updateStatusCascade({ id: parent.data.id, status: 'completed' }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
 
       expect(mockExecAgent).not.toHaveBeenCalled();
-      expect((await caller.find({ id: first.data.id })).data.status).toBe('completed');
-      expect((await caller.find({ id: dependent.data.id })).data.status).toBe('completed');
+      expect((await caller.find({ id: first.data.id })).data.status).toBe('backlog');
+      expect((await caller.find({ id: dependent.data.id })).data.status).toBe('backlog');
     });
 
     it('starts an external dependent unlocked by the family completion', async () => {
@@ -1362,7 +1438,7 @@ describe('Task Router Integration', () => {
       expect(result.data.cycles).toEqual([]);
     });
 
-    it('previewSubtaskLayers reports cycles instead of layering them', async () => {
+    it('rejects cycle creation and preserves the valid execution layers', async () => {
       const parent = await caller.create({ instruction: 'Cyclic' });
       const a = await caller.create({
         instruction: 'A',
@@ -1373,11 +1449,13 @@ describe('Task Router Integration', () => {
         parentTaskId: parent.data.id,
       });
       await caller.addDependency({ dependsOnId: a.data.id, taskId: b.data.id });
-      await caller.addDependency({ dependsOnId: b.data.id, taskId: a.data.id });
+      await expect(
+        caller.addDependency({ dependsOnId: b.data.id, taskId: a.data.id }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
 
       const result = await caller.previewSubtaskLayers({ id: parent.data.id });
-      expect(result.data.layers).toEqual([]);
-      expect(result.data.cycles.sort()).toEqual([a.data.identifier, b.data.identifier]);
+      expect(result.data.layers).toEqual([[a.data.identifier], [b.data.identifier]]);
+      expect(result.data.cycles).toEqual([]);
     });
 
     it('runReadySubtasks kicks off the first layer only', async () => {

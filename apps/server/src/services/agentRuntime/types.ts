@@ -2,8 +2,8 @@ import { type AgentRuntimeContext, type AgentState } from '@orvilo/agent-runtime
 import type {
   AgentGroupConfig,
   BotPlatformContext,
-  LobeToolManifest,
   OperationSkillSet,
+  OrviloToolManifest,
   ProjectInstructionFile,
   ToolExecutor,
   ToolSource,
@@ -34,7 +34,7 @@ export interface OperationToolSet {
   activatableToolIds?: string[];
   enabledToolIds?: string[];
   executorMap?: Record<string, ToolExecutor>;
-  manifestMap: Record<string, LobeToolManifest>;
+  manifestMap: Record<string, OrviloToolManifest>;
   sourceMap?: Record<string, ToolSource>;
   tools?: any[];
 }
@@ -549,6 +549,8 @@ export interface OperationCreationParams {
   searchDecision?: SearchDecision;
   /** Abort startup before the first step is scheduled */
   signal?: AbortSignal;
+  /** Server-authored: keep a corrective task run bound to the original Verify plan. */
+  skipTaskVerification?: boolean;
   /**
    * Whether the LLM call should use streaming.
    * Defaults to true. Set to false for non-streaming scenarios (e.g., bot integrations).

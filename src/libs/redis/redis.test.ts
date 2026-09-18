@@ -13,7 +13,7 @@ const buildRedisConfig = (): RedisConfig | null => {
     database: Number.isNaN(database) ? undefined : database,
     enabled: true,
     password: process.env.REDIS_PASSWORD,
-    prefix: process.env.REDIS_PREFIX ?? 'lobe-chat-test',
+    prefix: process.env.REDIS_PREFIX ?? 'orvilo-test',
     tls: process.env.REDIS_TLS === 'true',
     tlsCA: process.env.REDIS_TLS_CA,
     url,

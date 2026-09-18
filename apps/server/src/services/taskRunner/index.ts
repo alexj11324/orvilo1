@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { TaskIdentifier as TaskSkillIdentifier } from '@orvilo/builtin-skills';
 import { AcceptanceEvidenceIdentifier } from '@orvilo/builtin-tool-acceptance-evidence';
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
@@ -17,15 +19,17 @@ import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
+import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
-import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
+import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 import { buildTaskPrompt } from './buildTaskPrompt';
 
 const log = debug('task-runner');
+const RUN_KICKOFF_CLAIM_TTL_MS = 15 * 60 * 1000;
 
 export interface RunTaskParams {
   /**
@@ -45,6 +49,12 @@ export interface RunTaskParams {
   integrationSeed?: TaskTopicIntegration;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
+  /** Parent delivery operation for internal corrective runs. */
+  parentOperationId?: string;
+  /** Atomically transfer a completion lease into this continuation dispatch. */
+  replaceReservationId?: string;
+  /** Internal corrective runs stay bound to the original task Verify plan. */
+  skipTaskVerification?: boolean;
   taskId: string;
   /**
    * What triggered this run. Defaults to `'manual'` — the ad-hoc "run now"
@@ -84,7 +94,7 @@ export interface RunTaskResult extends ExecAgentResult {
 export class TaskRunnerService {
   private agentModel: AgentModel;
   private briefModel: BriefModel;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private taskLifecycle: TaskLifecycleService;
   private taskModel: TaskModel;
   private taskTopicModel: TaskTopicModel;
@@ -93,7 +103,7 @@ export class TaskRunnerService {
 
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -113,6 +123,9 @@ export class TaskRunnerService {
       extraPrompt,
       integrationSeed,
       maxSteps,
+      parentOperationId,
+      replaceReservationId,
+      skipTaskVerification,
       trigger = 'manual',
       workspaceOverride,
     } = params;
@@ -122,11 +135,29 @@ export class TaskRunnerService {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
     }
 
-    // Track whether *this* invocation transitioned the task to 'running'. The
-    // catch-block rollback must only fire when we own the running state —
-    // otherwise an early failure (e.g. CONFLICT thrown because a concurrent
-    // run is in flight) would clobber the in-flight run's status to 'paused'.
-    let weSetRunning = false;
+    // Preflight before assignment/provisioning; reserveRun repeats this check
+    // under the dependency graph lock so a concurrent edit cannot bypass it.
+    if (!(await this.taskModel.areAllDependenciesCompleted(task.id))) {
+      throw new TaskDependencyError(
+        'Complete all prerequisite tasks before starting this task.',
+        'PRECONDITION_FAILED',
+      );
+    }
+
+    // The token is the only authority to release or roll back this dispatch.
+    // A later generation replaces it, so a slow failure cannot pause that run.
+    const reservationId = randomUUID();
+    let ownsReservation = false;
+    let dispatchedOperationId: string | undefined;
+    let dispatchedTopicId: string | undefined;
+    let dispatchService: AiAgentService | undefined;
+    let provisioned: ProvisionedWorkspace | undefined;
+    let provisionedRegistered = false;
+    // Keep the legacy kickoff claim until the task-row reservation and topic
+    // registration both settle; the two fences protect different rollout
+    // generations during the watchdog transition.
+    const kickoffClaimToken = randomUUID();
+    let ownsKickoffClaim = false;
 
     try {
       if (!task.assigneeAgentId) {
@@ -150,7 +181,60 @@ export class TaskRunnerService {
         task.assigneeAgentId = inboxAgent.id;
       }
 
-      const existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+      ownsKickoffClaim = await this.taskModel.claimRunKickoff(
+        task.id,
+        kickoffClaimToken,
+        new Date(Date.now() - RUN_KICKOFF_CLAIM_TTL_MS),
+      );
+      if (!ownsKickoffClaim) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Another run is already starting for this task.',
+        });
+      }
+
+      let existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+
+      // Recover expired runs before deciding whether another run conflicts.
+      // The previous ordering rejected every stale `running` topic first, so
+      // the timeout cleanup below was unreachable for the case it existed to
+      // repair. Re-read after the conditional update so concurrent callers all
+      // make their decision from the persisted state.
+      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
+        const elapsed = (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000;
+        if (elapsed > task.heartbeatTimeout) {
+          await this.taskTopicModel.timeoutRunning(task.id);
+          existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+        }
+      }
+
+      // Recover a dead generation before checking for an in-flight topic. The
+      // old ordering rejected on the stale running row first, so timeout
+      // cleanup below was unreachable precisely when it was needed.
+      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
+        const now = Date.now();
+        const elapsed = (now - new Date(task.lastHeartbeatAt).getTime()) / 1000;
+        const hasRunningTopic = existingTopics.some((topic) => topic.status === 'running');
+        const hasActiveReservation =
+          Boolean(task.runReservationId) &&
+          !!task.runReservationExpiresAt &&
+          new Date(task.runReservationExpiresAt).getTime() > now;
+        if (
+          task.status === 'running' &&
+          (hasRunningTopic || hasActiveReservation) &&
+          elapsed > task.heartbeatTimeout
+        ) {
+          // A stale heartbeat is evidence that the run needs attention, not
+          // proof that its external writer has stopped. Starting a replacement
+          // here can put two agents in the same delivery pipeline. Keep the
+          // durable generation authoritative until its operation is explicitly
+          // cancelled and confirmed stopped.
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'The previous run timed out and must be stopped before retrying.',
+          });
+        }
+      }
 
       // A `continueFromMessageId` continuation answers a user row that is
       // already persisted in the target topic — validate the anchor before
@@ -193,14 +277,23 @@ export class TaskRunnerService {
         }
       }
 
-      // Auto-detect and clean up timed-out topics
-      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
-        const elapsed = (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000;
-        if (elapsed > task.heartbeatTimeout) {
-          await this.taskTopicModel.timeoutRunning(task.id);
-        }
+      // The task row is the single run reservation. This conditional update is
+      // the concurrency boundary: only one invocation may provision a
+      // worktree or dispatch an agent for a non-running task.
+      const reserved = await this.taskModel.reserveRun(
+        task.id,
+        reservationId,
+        new Date(),
+        undefined,
+        replaceReservationId,
+      );
+      if (!reserved) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task already has a run being prepared or in flight.',
+        });
       }
-
+      ownsReservation = true;
       // Workspace provisioning (CAID isolation): a fresh run on a
       // workspace-bound task gets its own git worktree on the bound device —
       // or, when no device exists and the run resolves to the cloud sandbox,
@@ -208,7 +301,6 @@ export class TaskRunnerService {
       // `workspaceOverride` (corrective merge runs) skips provisioning — the
       // caller already owns the workspace description. Runs before prompt
       // building so the contract can ride into the prompt via extraPrompt.
-      let provisioned;
       if (!workspaceOverride && !continueTopicId) {
         try {
           provisioned = await this.taskWorkspace.provision({
@@ -217,7 +309,6 @@ export class TaskRunnerService {
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Workspace provisioning failed';
-          await this.taskModel.updateStatus(task.id, 'paused', { error: message });
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message });
         }
       }
@@ -239,26 +330,41 @@ export class TaskRunnerService {
         [extraPrompt, provisioned?.prompt].filter(Boolean).join('\n\n') || undefined,
       );
 
-      if (task.status !== 'running') {
-        await this.taskModel.updateStatus(task.id, 'running', {
-          error: null,
-          startedAt: new Date(),
-        });
-        weSetRunning = true;
-      } else if (task.error) {
-        await this.taskModel.update(task.id, { error: null });
-      }
-
       const agentRef = task.assigneeAgentId!;
       const isSlug = !agentRef.startsWith('agt_');
 
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
+      dispatchService = aiAgentService;
       const taskId = task.id;
       const taskIdentifier = task.identifier;
       const taskLifecycle = this.taskLifecycle;
       const userId = this.userId;
+      let registrationComplete = false;
+      let earlyCompletion:
+        | {
+            errorCode?: string;
+            errorMessage?: string;
+            lastAssistantContent?: string;
+            operationId: string;
+            reason: string;
+            topicId?: string;
+          }
+        | undefined;
+      const handleCompletion = async (event: NonNullable<typeof earlyCompletion>) => {
+        await taskLifecycle.onTopicComplete({
+          errorCode: event.errorCode,
+          errorMessage: event.errorMessage,
+          lastAssistantContent: event.lastAssistantContent,
+          operationId: event.operationId,
+          reason: event.reason,
+          runTrigger: trigger,
+          taskId,
+          taskIdentifier,
+          topicId: event.topicId,
+        });
+      };
 
       const checkpoint = this.taskModel.getCheckpointConfig(task);
       const reviewConfig = this.taskModel.getReviewConfig(task);
@@ -306,6 +412,13 @@ export class TaskRunnerService {
 
       log('runTask: %s (continue=%s)', taskIdentifier, continueTopicId);
 
+      if (!(await this.taskModel.renewRunReservation(task.id, reservationId))) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task run reservation expired before dispatch.',
+        });
+      }
+
       const result = await aiAgentService.execAgent({
         ...(isSlug ? { slug: agentRef } : { agentId: agentRef }),
         additionalPluginIds: pluginIds,
@@ -317,20 +430,26 @@ export class TaskRunnerService {
         }),
         ...(typeof taskConfig.model === 'string' && { model: taskConfig.model }),
         ...(typeof taskConfig.provider === 'string' && { provider: taskConfig.provider }),
+        skipTaskVerification,
         hooks: [
           {
             handler: async (event) => {
-              await taskLifecycle.onTopicComplete({
+              const completion = {
                 errorCode: event.errorType,
                 errorMessage: event.errorMessage,
                 lastAssistantContent: event.lastAssistantContent,
                 operationId: event.operationId,
-                reason: event.reason || 'done',
-                runTrigger: trigger,
-                taskId,
-                taskIdentifier,
+                reason:
+                  event.reason === 'max_steps' || event.reason === 'cost_limit'
+                    ? 'done'
+                    : event.reason || 'done',
                 topicId: event.topicId,
-              });
+              };
+              if (!registrationComplete) {
+                earlyCompletion = completion;
+                return;
+              }
+              await handleCompletion(completion);
             },
             id: 'task-on-complete',
             type: 'onComplete' as const,
@@ -339,7 +458,7 @@ export class TaskRunnerService {
               // callback (which reconstructs onTopicComplete params server-side)
               // knows whether this was a manual run or an automation tick.
               body: { runTrigger: trigger, taskId, taskIdentifier, userId },
-              delivery: 'qstash' as const,
+              delivery: 'hatchet' as const,
               fallback: 'none' as const,
               url: '/api/workflows/task/on-topic-complete',
             },
@@ -347,6 +466,7 @@ export class TaskRunnerService {
         ],
         ...(attachmentFileIds.length > 0 ? { fileIds: attachmentFileIds } : {}),
         ...(maxSteps ? { maxSteps } : {}),
+        ...(parentOperationId ? { parentOperationId } : {}),
         prompt: continueFromMessageId ? continueAnchorContent! : prompt,
         taskId: task.id,
         title: continueFromMessageId
@@ -374,6 +494,14 @@ export class TaskRunnerService {
             }
           : {}),
       });
+      dispatchedOperationId = result.operationId;
+      dispatchedTopicId = result.topicId;
+      if (!(await this.taskModel.renewRunReservation(task.id, reservationId))) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task run reservation was lost during dispatch.',
+        });
+      }
 
       if (!result.success) {
         // execAgent reports a dispatch or startup failure as a result rather
@@ -392,6 +520,7 @@ export class TaskRunnerService {
             seq: (task.totalTopics || 0) + 1,
             trigger,
           });
+          provisionedRegistered = true;
         }
         if (result.topicId) {
           await this.taskTopicModel.updateStatus(task.id, result.topicId, 'failed');
@@ -413,10 +542,23 @@ export class TaskRunnerService {
             seq: (task.totalTopics || 0) + 1,
             trigger,
           });
+          provisionedRegistered = true;
         }
+      } else {
+        throw new Error('Agent run started without a topic id');
       }
 
       await this.taskModel.updateHeartbeat(task.id);
+      registrationComplete = true;
+      if (earlyCompletion) await handleCompletion(earlyCompletion);
+      await this.taskModel.releaseRunReservation(task.id, reservationId);
+      ownsReservation = false;
+      await this.taskModel
+        .releaseRunKickoff(task.id, kickoffClaimToken)
+        .catch((releaseError) =>
+          log('runTask: failed to release kickoff claim for %s — %O', task.id, releaseError),
+        );
+      ownsKickoffClaim = false;
 
       return {
         ...result,
@@ -424,23 +566,63 @@ export class TaskRunnerService {
         taskIdentifier: task.identifier,
       };
     } catch (error) {
-      if (weSetRunning) {
+      if (ownsKickoffClaim) {
+        await this.taskModel
+          .releaseRunKickoff(task.id, kickoffClaimToken)
+          .catch((releaseError) =>
+            log('runTask: failed to release kickoff claim for %s — %O', task.id, releaseError),
+          );
+      }
+      // A dispatch can succeed before the task-topic registration write. Keep
+      // that provisioned worktree until the operation has physically stopped;
+      // deleting it first lets a still-running device command write into (or
+      // recreate) a path that is no longer owned by the task.
+      const requiresPhysicalExitConfirmation = Boolean(provisioned?.integration.deviceId);
+      let orphanInterruptionConfirmed = !dispatchedOperationId;
+      if (dispatchedOperationId && dispatchService) {
         try {
-          const failedTask = await this.taskModel.resolve(idOrIdentifier);
-          if (failedTask && failedTask.status === 'running') {
-            const errorText = error instanceof Error ? error.message : 'Unknown error';
-            // A failed kickoff must not kill an automation task's schedule: the
-            // scheduling state is not a per-run health signal. Restore the
-            // resting 'scheduled' state so the next tick still fires (this is
-            // the sync mirror of the async onTopicComplete error handling —
-            //). Non-automation (ad-hoc / dependency) tasks keep
-            // the legacy pause-for-attention behavior.
-            if (failedTask.automationMode) {
-              await this.taskModel.updateStatus(failedTask.id, 'scheduled', { error: errorText });
-            } else {
-              await this.taskModel.updateStatus(failedTask.id, 'paused', { error: errorText });
-            }
+          const interruption = await dispatchService.interruptTask({
+            operationId: dispatchedOperationId,
+            topicId: dispatchedTopicId,
+          });
+          orphanInterruptionConfirmed =
+            interruption.success &&
+            (requiresPhysicalExitConfirmation
+              ? interruption.deviceCancellationConfirmed === true
+              : interruption.deviceCancellationConfirmed !== false);
+          if (!orphanInterruptionConfirmed) {
+            log(
+              'runTask: orphaned operation %s did not confirm interruption; preserving worktree',
+              dispatchedOperationId,
+            );
           }
+        } catch (interruptError) {
+          log(
+            'runTask: failed to interrupt orphaned operation %s — %O',
+            dispatchedOperationId,
+            interruptError,
+          );
+        }
+      }
+
+      if (provisioned && !provisionedRegistered && orphanInterruptionConfirmed) {
+        await this.taskWorkspace
+          .discardUnregistered(provisioned)
+          .catch((cleanupError) =>
+            log('runTask: failed to remove unregistered task worktree — %O', cleanupError),
+          );
+      }
+      if (ownsReservation) {
+        try {
+          const errorText = error instanceof Error ? error.message : 'Unknown error';
+          // A failed kickoff must not kill an automation task's schedule. The
+          // token-fenced update is a no-op if another generation took over.
+          await this.taskModel.failRunReservation(
+            task.id,
+            reservationId,
+            task.automationMode ? 'scheduled' : 'paused',
+            errorText,
+          );
         } catch {
           // Rollback itself failed, ignore
         }
@@ -488,21 +670,35 @@ export class TaskRunnerService {
     const result: CascadeResult = { failed: [], paused: [], started: [] };
 
     for (const task of unlocked) {
-      if (await this.shouldHoldForCheckpoint(task)) {
-        await this.taskModel.updateStatus(task.id, 'paused');
+      const runner =
+        task.createdByUserId && task.createdByUserId !== this.userId
+          ? new TaskRunnerService(this.db, task.createdByUserId, this.workspaceId)
+          : this;
+      if (await runner.shouldHoldForCheckpoint(task)) {
+        await runner.taskModel.updateStatusIfCurrent(task.id, 'backlog', 'paused');
         result.paused.push(task.identifier);
         continue;
       }
 
       try {
-        await this.runTask({ taskId: task.id });
+        await runner.runTask({ taskId: task.id });
         result.started.push(task.identifier);
       } catch (error) {
+        // Readiness can change after discovery. No execution happened: leave
+        // backlog intact so the next upstream completion can discover it again.
+        if (isTaskDependencyBlocked(error)) continue;
+        if (error instanceof TRPCError && error.code === 'CONFLICT') {
+          // Another cascade/manual request won the atomic run reservation.
+          // Its task is live; the loser must not pause or relabel it.
+          continue;
+        }
         const message = error instanceof Error ? error.message : 'Failed to start task';
         log('cascadeOnCompletion: runTask failed for %s: %s', task.identifier, message);
         // Best-effort: mark as paused so the user can see why it didn't run.
         try {
-          await this.taskModel.updateStatus(task.id, 'paused', { error: message });
+          await runner.taskModel.updateStatusIfCurrent(task.id, 'backlog', 'paused', {
+            error: message,
+          });
         } catch {
           /* ignore — surfaced via failed list */
         }

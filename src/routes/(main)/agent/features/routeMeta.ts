@@ -3,7 +3,6 @@ import {
   FileUserIcon,
   GraduationCapIcon,
   MessageSquare,
-  MessagesSquareIcon,
   RadioTowerIcon,
   Share2Icon,
   UsersIcon,
@@ -14,15 +13,9 @@ import AgentShareSkeleton from '@/components/Skeleton/AgentShare';
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
 import ProfileSkeleton from '@/components/Skeleton/Profile';
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
-import TopicsSkeleton from '@/components/Skeleton/Topics';
 import { routeMeta } from '@/spa/router/routeMeta';
 
 const AgentDynamicMeta = lazy(() => import('@/features/RouteMeta/AgentDynamicMeta'));
-const TopicsDynamicMeta = lazy(() =>
-  import('@/features/RouteMeta/AgentDynamicMeta').then((module) => ({
-    default: module.TopicsDynamicMeta,
-  })),
-);
 const ProfileDynamicMeta = lazy(() =>
   import('@/features/RouteMeta/AgentDynamicMeta').then((module) => ({
     default: module.ProfileDynamicMeta,
@@ -59,13 +52,6 @@ export const agentRouteMeta = routeMeta({
   icon: MessageSquare,
   Skeleton: ConversationLayoutSkeleton,
   titleKey: 'navigation.chat',
-});
-
-export const topicsRouteMeta = routeMeta({
-  DynamicMeta: TopicsDynamicMeta,
-  icon: MessagesSquareIcon,
-  Skeleton: TopicsSkeleton,
-  titleKey: 'navigation.topics',
 });
 
 export const agentProfileRouteMeta = routeMeta({

@@ -23,7 +23,7 @@ const testState = vi.hoisted(() => ({
     isInitAiProviderRuntimeState: false,
   },
   // Mirrors the buggy default: falls back to the Google provider even when Google
-  // is disabled (lobehub/lobehub#17400).
+  // is disabled (alexj11324/orvilo1#17400).
   image: { model: 'gemini-3.1-flash-image-preview:image', provider: 'google' },
   video: { model: 'veo-3.1', provider: 'google' },
 }));

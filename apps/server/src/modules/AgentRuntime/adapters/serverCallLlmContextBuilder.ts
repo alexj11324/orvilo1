@@ -199,7 +199,7 @@ export const buildServerCallLlmContext = async ({
   let onboardingContext: OnboardingContext | undefined;
   const isOnboardingAgent =
     agentConfig?.slug === 'web-onboarding' ||
-    resolved.enabledToolIds.includes('lobe-web-onboarding');
+    resolved.enabledToolIds.includes('orvilo-web-onboarding');
   const alreadyHasOnboardingContext = (
     messagesForContext as Array<{ content: string | unknown }>
   ).some((message) => {
@@ -216,7 +216,7 @@ export const buildServerCallLlmContext = async ({
   // user info — personal profile data with no share permission that could ever
   // grant it, so a share visitor run never builds it. Two paths reach here: the
   // builtin `web-onboarding` agent, and any shared agent whose enabled tools
-  // include `lobe-web-onboarding`. Gating on `ctx.agentShareVisitor` closes both.
+  // include `orvilo-web-onboarding`. Gating on `ctx.agentShareVisitor` closes both.
   const onboardingContextAllowedForShare = !ctx.agentShareVisitor;
 
   if (
@@ -272,32 +272,32 @@ export const buildServerCallLlmContext = async ({
     }
   }
 
-  // Build additional placeholder variables for the lobehub builtin skill
-  // (`packages/builtin-skills/src/lobehub/content.ts`) so it can render
+  // Build additional placeholder variables for the orvilo builtin skill
+  // (`packages/builtin-skills/src/orvilo/content.ts`) so it can render
   // `{{agent_id}}` / `{{agent_title}}` / `{{topic_id}}` etc. into the
   // model's prompt without needing a separate context injector.
-  const lobehubSkillAgentId = state.origin?.agentId;
-  const lobehubSkillTopicId = ctx.topicId ?? state.origin?.topicId;
-  const lobehubSkillAgentMeta = state.world?.agent as
+  const orviloSkillAgentId = state.origin?.agentId;
+  const orviloSkillTopicId = ctx.topicId ?? state.origin?.topicId;
+  const orviloSkillAgentMeta = state.world?.agent as
     { description?: string | null; title?: string | null } | undefined;
 
-  let lobehubSkillTopicTitle = '';
-  if (lobehubSkillTopicId && ctx.serverDB && ctx.userId) {
+  let orviloSkillTopicTitle = '';
+  if (orviloSkillTopicId && ctx.serverDB && ctx.userId) {
     try {
-      const topicModelForLobehub = new TopicModel(ctx.serverDB, ctx.userId, ctx.workspaceId);
-      const topicRecord = await topicModelForLobehub.findById(lobehubSkillTopicId);
-      lobehubSkillTopicTitle = topicRecord?.title ?? '';
+      const topicModelForOrvilo = new TopicModel(ctx.serverDB, ctx.userId, ctx.workspaceId);
+      const topicRecord = await topicModelForOrvilo.findById(orviloSkillTopicId);
+      orviloSkillTopicTitle = topicRecord?.title ?? '';
     } catch (error) {
-      log('Failed to load topic title for lobehub skill placeholders: %O', error);
+      log('Failed to load topic title for orvilo skill placeholders: %O', error);
     }
   }
 
-  const lobehubSkillVariables: Record<string, string> = {
-    agent_description: lobehubSkillAgentMeta?.description ?? '',
-    agent_id: lobehubSkillAgentId ?? '',
-    agent_title: lobehubSkillAgentMeta?.title ?? '',
-    topic_id: lobehubSkillTopicId ?? '',
-    topic_title: lobehubSkillTopicTitle,
+  const orviloSkillVariables: Record<string, string> = {
+    agent_description: orviloSkillAgentMeta?.description ?? '',
+    agent_id: orviloSkillAgentId ?? '',
+    agent_title: orviloSkillAgentMeta?.title ?? '',
+    topic_id: orviloSkillTopicId ?? '',
+    topic_title: orviloSkillTopicTitle,
   };
 
   // Tool-specific template variable resolution. The client-side
@@ -330,12 +330,12 @@ export const buildServerCallLlmContext = async ({
   // never blocks the LLM call.
   const workspaceContext = await resolveWorkspaceContext(ctx, state);
 
-  const sandboxEnabled = String(resolved.enabledToolIds.includes('lobe-cloud-sandbox'));
+  const sandboxEnabled = String(resolved.enabledToolIds.includes('orvilo-cloud-sandbox'));
   // `sandbox_enabled` tracks whether the dedicated Cloud Sandbox tool is
   // offered — true for target 'sandbox', and (so the model can choose sandbox
   // vs. an auto-routed device per call) for 'auto' too, regardless of whether
   // a device ended up routed. It's still not the full answer for
-  // `injectCredsToSandbox` reachability: `lobe-skills`' `runCommand`/
+  // `injectCredsToSandbox` reachability: `orvilo-skills`' `runCommand`/
   // `execScript` ALSO silently fall back to that same cloud sandbox session
   // whenever no device is actively routed, for targets where the dedicated
   // tool isn't offered at all (e.g. the common no-device 'none' web/agent
@@ -344,11 +344,11 @@ export const buildServerCallLlmContext = async ({
   // or no device is routed (independent of target).
   const credsSandboxReachable = String(!activeDeviceId || executionTarget === 'auto');
   let sandboxUploadedFiles = '';
-  if (sandboxEnabled === 'true' && ctx.serverDB && ctx.userId && lobehubSkillTopicId) {
+  if (sandboxEnabled === 'true' && ctx.serverDB && ctx.userId && orviloSkillTopicId) {
     try {
       const { formatUploadedFilesPrompt } = await import('@orvilo/builtin-tool-cloud-sandbox');
       const fileModel = new FileModel(ctx.serverDB, ctx.userId);
-      const uploadedFiles = await fileModel.findFilesToInitInSandbox(lobehubSkillTopicId);
+      const uploadedFiles = await fileModel.findFilesToInitInSandbox(orviloSkillTopicId);
       sandboxUploadedFiles = formatUploadedFilesPrompt(uploadedFiles);
     } catch (error) {
       log('Failed to resolve files for {{sandbox_uploaded_files}} substitution: %O', error);
@@ -371,8 +371,8 @@ export const buildServerCallLlmContext = async ({
 
   if (
     messageTodos === undefined &&
-    resolved.enabledToolIds.includes('lobe-agent') &&
-    lobehubSkillTopicId &&
+    resolved.enabledToolIds.includes('orvilo-agent') &&
+    orviloSkillTopicId &&
     ctx.serverDB &&
     ctx.userId
   ) {
@@ -382,7 +382,7 @@ export const buildServerCallLlmContext = async ({
         ctx.userId,
         state.origin?.workspaceId ?? ctx.workspaceId,
       );
-      const [planDocument] = await topicDocumentModel.findByTopicId(lobehubSkillTopicId, {
+      const [planDocument] = await topicDocumentModel.findByTopicId(orviloSkillTopicId, {
         type: AGENT_PLAN_FILE_TYPE,
       });
       if (planDocument) {
@@ -393,7 +393,7 @@ export const buildServerCallLlmContext = async ({
         if (todos !== undefined) planTodo = { enabled: true, todos };
       }
     } catch (error) {
-      log('Failed to resolve plan TODO context for topic %s: %O', lobehubSkillTopicId, error);
+      log('Failed to resolve plan TODO context for topic %s: %O', orviloSkillTopicId, error);
     }
   }
 
@@ -524,7 +524,7 @@ export const buildServerCallLlmContext = async ({
             );
             for (const tool of COMPOSIO_APP_TYPES) {
               officialTools.push({
-                description: `LobeHub Mcp Server: ${tool.label}`,
+                description: `Orvilo Mcp Server: ${tool.label}`,
                 enabled: enabledPlugins.includes(tool.identifier),
                 identifier: tool.identifier,
                 installed: connectedComposioIds.has(tool.identifier),
@@ -626,7 +626,7 @@ export const buildServerCallLlmContext = async ({
             );
             for (const tool of COMPOSIO_APP_TYPES) {
               groupOfficialTools.push({
-                description: `LobeHub Mcp Server: ${tool.label}`,
+                description: `Orvilo Mcp Server: ${tool.label}`,
                 enabled: enabledPlugins.includes(tool.identifier),
                 identifier: tool.identifier,
                 installed: connectedComposioIds.has(tool.identifier),
@@ -677,7 +677,7 @@ export const buildServerCallLlmContext = async ({
       : undefined,
     additionalVariables: {
       ...state.binding?.device?.systemInfo,
-      ...lobehubSkillVariables,
+      ...orviloSkillVariables,
       COMPOSIO_SERVICES_LIST: composioServicesListStr,
       CREDS_LIST: credsListStr,
       creds_sandbox_reachable: credsSandboxReachable,
@@ -775,7 +775,7 @@ export const buildServerCallLlmContext = async ({
     async (ceSpan) => {
       try {
         const result = await serverMessagesEngine(contextEngineInput);
-        ceSpan.setAttribute('lobehub.context.message_count', result.length);
+        ceSpan.setAttribute('orvilo.context.message_count', result.length);
         return result;
       } catch (error) {
         ceSpan.recordException(error as Error);

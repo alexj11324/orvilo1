@@ -23,7 +23,7 @@ vi.mock('../auth/identity', () => ({
   resolveIdentityFingerprint: mockResolveIdentityFingerprint,
 }));
 
-const SERVER = 'https://app.lobehub.com';
+const SERVER = 'https://orvilo.aspectlylabs.com';
 const stored = (overrides: Record<string, string> = {}) => ({
   identity: 'user:u1',
   serverUrl: SERVER,
@@ -32,8 +32,8 @@ const stored = (overrides: Record<string, string> = {}) => ({
 });
 
 describe('api/workspace scope resolution', () => {
-  const originalWorkspaceId = process.env.LOBEHUB_WORKSPACE_ID;
-  const originalJwt = process.env.LOBEHUB_JWT;
+  const originalWorkspaceId = process.env.ORVILO_WORKSPACE_ID;
+  const originalJwt = process.env.ORVILO_JWT;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,17 +41,17 @@ describe('api/workspace scope resolution', () => {
     mockLoadActiveWorkspace.mockReturnValue(undefined);
     mockResolveIdentityFingerprint.mockReturnValue('user:u1');
     mockResolveServerUrl.mockReturnValue(SERVER);
-    delete process.env.LOBEHUB_WORKSPACE_ID;
+    delete process.env.ORVILO_WORKSPACE_ID;
     // A JWT exported in the invoking shell would flip every case onto the
     // dispatched-run branch; scope resolution reads it, so isolate it too.
-    delete process.env.LOBEHUB_JWT;
+    delete process.env.ORVILO_JWT;
   });
 
   afterEach(() => {
-    if (originalWorkspaceId === undefined) delete process.env.LOBEHUB_WORKSPACE_ID;
-    else process.env.LOBEHUB_WORKSPACE_ID = originalWorkspaceId;
-    if (originalJwt === undefined) delete process.env.LOBEHUB_JWT;
-    else process.env.LOBEHUB_JWT = originalJwt;
+    if (originalWorkspaceId === undefined) delete process.env.ORVILO_WORKSPACE_ID;
+    else process.env.ORVILO_WORKSPACE_ID = originalWorkspaceId;
+    if (originalJwt === undefined) delete process.env.ORVILO_JWT;
+    else process.env.ORVILO_JWT = originalJwt;
   });
 
   it('reports personal scope when nothing is configured', () => {
@@ -68,28 +68,28 @@ describe('api/workspace scope resolution', () => {
   // A one-off invocation has to be able to override the machine-wide default
   // without rewriting it, so the env var wins over the persisted scope.
   it('prefers the env var over the persisted workspace', () => {
-    process.env.LOBEHUB_WORKSPACE_ID = 'ws_env';
+    process.env.ORVILO_WORKSPACE_ID = 'ws_env';
     mockLoadActiveWorkspace.mockReturnValue(stored());
 
     expect(resolveWorkspaceScope()).toEqual({ source: 'env', workspaceId: 'ws_env' });
   });
 
   // A goal/task dispatch spawns `hetero exec` with an operation-scoped
-  // LOBEHUB_JWT and states its scope solely through LOBEHUB_WORKSPACE_ID. The
+  // ORVILO_JWT and states its scope solely through ORVILO_WORKSPACE_ID. The
   // machine's `workspace use` scope must not leak into that run: it FORBIDDENs
   // every ingest call of a personal-scope topic.
-  it('ignores the persisted workspace when running under an injected LOBEHUB_JWT', () => {
-    process.env.LOBEHUB_JWT = 'jwt-from-dispatch';
+  it('ignores the persisted workspace when running under an injected ORVILO_JWT', () => {
+    process.env.ORVILO_JWT = 'jwt-from-dispatch';
     mockLoadActiveWorkspace.mockReturnValue(stored());
 
     expect(resolveWorkspaceScope()).toEqual({ source: 'personal' });
 
-    process.env.LOBEHUB_WORKSPACE_ID = 'ws_env';
+    process.env.ORVILO_WORKSPACE_ID = 'ws_env';
     expect(resolveWorkspaceScope()).toEqual({ source: 'env', workspaceId: 'ws_env' });
   });
 
   it('prefers an explicit argument over everything else', () => {
-    process.env.LOBEHUB_WORKSPACE_ID = 'ws_env';
+    process.env.ORVILO_WORKSPACE_ID = 'ws_env';
     mockLoadActiveWorkspace.mockReturnValue(stored());
 
     expect(resolveWorkspaceScope('ws_explicit')).toEqual({
@@ -128,12 +128,12 @@ describe('api/workspace scope resolution', () => {
       [
         'points API-key callers at the env var',
         () => mockResolveIdentityFingerprint.mockReturnValue(undefined),
-        'LOBEHUB_WORKSPACE_ID',
+        'ORVILO_WORKSPACE_ID',
       ],
       [
         'names the other server',
         () => mockResolveServerUrl.mockReturnValue('https://self-hosted.example.com'),
-        'https://app.lobehub.com',
+        'https://orvilo.aspectlylabs.com',
       ],
     ])('%s', (_label, arrange, expected) => {
       mockLoadActiveWorkspace.mockReturnValue(stored());

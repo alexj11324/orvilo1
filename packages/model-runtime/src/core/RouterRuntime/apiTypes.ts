@@ -1,4 +1,4 @@
-import type { LobeRuntimeAI } from '../BaseAI';
+import type { OrviloRuntimeAI } from '../BaseAI';
 
 export type ApiType =
   | 'anthropic'
@@ -20,4 +20,4 @@ export type ApiType =
   | 'xiaomimimo'
   | 'zhipu';
 
-export type RuntimeClass = new (options?: any) => LobeRuntimeAI;
+export type RuntimeClass = new (options?: any) => OrviloRuntimeAI;

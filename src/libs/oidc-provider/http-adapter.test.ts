@@ -75,7 +75,7 @@ describe('OIDC HTTP adapter', () => {
 
     it('keeps token endpoint form parameters parseable by oidc-provider', async () => {
       const body = new URLSearchParams({
-        client_id: 'lobehub-desktop',
+        client_id: 'orvilo-desktop',
         code: 'test-code',
         code_verifier: 'test-verifier',
         grant_type: 'authorization_code',
@@ -106,7 +106,7 @@ describe('OIDC HTTP adapter', () => {
       await urlencoded(ctx, async () => {});
 
       expect(ctx.oidc.body).toMatchObject({
-        client_id: 'lobehub-desktop',
+        client_id: 'orvilo-desktop',
         code: 'test-code',
         code_verifier: 'test-verifier',
         grant_type: 'authorization_code',

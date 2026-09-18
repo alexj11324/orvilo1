@@ -5,7 +5,7 @@ surfaces (CLI, Electron, Web) hit.
 
 ## Resolve ports first
 
-Run `test-env.sh` as described in
+Run `test-env.sh` as described
 [PROCESS.md Step 2](../PROCESS.md#step-2--environment-and-auth)
 before starting or probing any local test surface.
 
@@ -17,16 +17,16 @@ before starting or probing any local test surface.
 | `bun run dev`       | Full-stack (Next.js + Vite SPA, via `devStartupSequence`) | `PORT` + `SPA_PORT` |
 | `bun run dev:spa`   | Vite SPA only, proxies API to `PORT`                      | `SPA_PORT`          |
 
-In the **cloud repo** (where this repo is the `lobehub/` submodule), local
+In the **cloud repo** (where this repo is the `aspectlylabs/` submodule), local
 worktree names map to fallback defaults only when `.env` and shell env do not
 provide values:
 
 | Workspace directory | Default `SERVER_URL`             |
 | ------------------- | -------------------------------- |
-| `lobehub`           | `http://localhost:3010`          |
-| `lobehub-cloud`     | `http://localhost:3020`          |
-| `lobehub-cloud-1`   | `http://localhost:3021`          |
-| `lobehub-cloud-N`   | `http://localhost:$((3020 + N))` |
+| `orvilo`            | `http://localhost:3010`          |
+| `orvilo-cloud`      | `http://localhost:3020`          |
+| `orvilo-cloud-1`    | `http://localhost:3021`          |
+| `orvilo-cloud-N`    | `http://localhost:$((3020 + N))` |
 
 `test-env.sh` and `setup-auth.sh` both use the resolved env first and these
 worktree defaults only as fallback. Treat the dev-server terminal output as the
@@ -61,8 +61,9 @@ AGENT_RUNTIME_MODE=queue bun run dev
 # Without root .env:
 .agents/acceptance/scripts/init-dev-env.sh dev
 
-# Local QStash. Run in a separate terminal only when testing workflow paths.
-.agents/acceptance/scripts/init-dev-env.sh qstash
+# Hatchet worker. Configure HATCHET_CLIENT_TOKEN and run this in a separate
+# terminal when testing queue-mode workflow paths.
+.agents/acceptance/scripts/init-dev-env.sh hatchet
 
 # Restart — required to pick up server-side code changes.
 # For a no-.env server started by init-dev-env.sh, stop only its owned process tree:
@@ -86,14 +87,14 @@ in doubt.
 
 ## Troubleshooting
 
-| Issue                     | Solution                                                                                        |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| `ECONNREFUSED`            | Server not running — start it                                                                   |
-| `EADDRINUSE` on the port  | Inspect the listener; stop it only if this run owns it. Never kill an unknown PID by port alone |
-| Stale data / old behavior | Server needs a restart to pick up code changes                                                  |
-| Agent call runs inline    | Set `AGENT_RUNTIME_MODE=queue`, make sure `REDIS_URL` is configured, then restart the server    |
-| Queue mode needs Redis    | Run `init-dev-env.sh setup-db`, or provide `REDIS_URL=redis://...` for an existing Redis        |
-| QStash workflow failures  | Start `init-dev-env.sh qstash` and make sure dev server inherited the script's `QSTASH_*` env   |
+| Issue                     | Solution                                                                                              |
+| ------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `ECONNREFUSED`            | Server not running — start it                                                                         |
+| `EADDRINUSE` on the port  | Inspect the listener; stop it only if this run owns it. Never kill an unknown PID by port alone       |
+| Stale data / old behavior | Server needs a restart to pick up code changes                                                        |
+| Agent call runs inline    | Set `AGENT_RUNTIME_MODE=queue`, make sure `REDIS_URL` is configured, then restart the server          |
+| Queue mode needs Redis    | Run `init-dev-env.sh setup-db`, or provide `REDIS_URL=redis://...` for an existing Redis              |
+| Hatchet workflow failures | Start `init-dev-env.sh hatchet`, verify `HATCHET_CLIENT_TOKEN`, and make sure the worker is connected |
 
 Marketplace/community endpoints are not part of the local agent-testing auth
 gate. Do not block local product-chain verification on marketplace API auth

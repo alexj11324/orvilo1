@@ -52,12 +52,6 @@ const CONTEXT_CONFIGS: ContextConfig[] = [
     name: 'Resource',
     type: 'resource',
   },
-  {
-    captureSubPath: true,
-    matcher: /^\/page(?:\/([^/]+))?/,
-    name: 'Page',
-    type: 'page',
-  },
 ];
 
 /**

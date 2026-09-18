@@ -34,7 +34,7 @@ vi.mock('@orvilo/business-const', async () => {
     ...actual,
     BRANDING_PROVIDER: 'orvilo',
     ENABLE_BUSINESS_FEATURES: true,
-    isOfficialProvider: (id: string) => id === 'lobehub',
+    isOfficialProvider: (id: string) => id === 'orvilo',
   };
 });
 
@@ -182,7 +182,7 @@ describe('aiProviderRouter', () => {
 
     it('should append user-scoped hidden builtin models without changing runtime state loading', async () => {
       const mockGetState = vi.fn().mockResolvedValue(mockRuntimeState);
-      const hiddenBuiltinModels = [{ id: 'hidden-model', providerId: 'lobehub' }];
+      const hiddenBuiltinModels = [{ id: 'hidden-model', providerId: 'orvilo' }];
       vi.mocked(AiInfraRepos).prototype.getAiProviderRuntimeState = mockGetState;
       mockGetHiddenBuiltinModelsForUser.mockResolvedValue(hiddenBuiltinModels);
 
@@ -234,20 +234,20 @@ describe('aiProviderRouter', () => {
     });
 
     it('should remove hidden models and providers from the runtime state', async () => {
-      const lobehubProvider = { id: 'lobehub', source: 'builtin' as const };
+      const orviloProvider = { id: 'orvilo', source: 'builtin' as const };
       const openaiProvider = { id: 'openai', source: 'builtin' as const };
       const hiddenImageModel = {
         abilities: {},
         enabled: true,
         id: 'hidden-image',
-        providerId: 'lobehub',
+        providerId: 'orvilo',
         type: 'image' as const,
       };
       const visibleChatModel = {
         abilities: {},
         enabled: true,
         id: 'visible-chat',
-        providerId: 'lobehub',
+        providerId: 'orvilo',
         type: 'chat' as const,
       };
       const visibleImageModel = {
@@ -259,9 +259,9 @@ describe('aiProviderRouter', () => {
       };
       const runtimeState: AiProviderRuntimeState = {
         enabledAiModels: [hiddenImageModel, visibleChatModel, visibleImageModel],
-        enabledAiProviders: [lobehubProvider, openaiProvider],
-        enabledChatAiProviders: [lobehubProvider],
-        enabledImageAiProviders: [lobehubProvider, openaiProvider],
+        enabledAiProviders: [orviloProvider, openaiProvider],
+        enabledChatAiProviders: [orviloProvider],
+        enabledImageAiProviders: [orviloProvider, openaiProvider],
         enabledVideoAiProviders: [],
         runtimeConfig: {},
       };
@@ -269,14 +269,14 @@ describe('aiProviderRouter', () => {
         .fn()
         .mockResolvedValue(runtimeState);
       mockGetHiddenBuiltinModelsForUser.mockResolvedValue([
-        { id: 'hidden-image', providerId: 'lobehub' },
+        { id: 'hidden-image', providerId: 'orvilo' },
       ]);
 
       const caller = aiProviderRouter.createCaller(createMockContext());
       const result = await caller.getAiProviderRuntimeState({});
 
       expect(result.enabledAiModels).toEqual([visibleChatModel, visibleImageModel]);
-      expect(result.enabledChatAiProviders).toEqual([lobehubProvider]);
+      expect(result.enabledChatAiProviders).toEqual([orviloProvider]);
       expect(result.enabledImageAiProviders).toEqual([openaiProvider]);
     });
   });
@@ -396,7 +396,7 @@ describe('aiProviderRouter', () => {
       await expect(
         caller.toggleProviderEnabled({
           enabled: false,
-          id: 'lobehub',
+          id: 'orvilo',
         }),
       ).rejects.toMatchObject({
         code: 'BAD_REQUEST',

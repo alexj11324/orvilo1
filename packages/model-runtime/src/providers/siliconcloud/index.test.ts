@@ -6,10 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { testProvider } from '../../providerTestUtils';
 import { AgentRuntimeErrorType } from '../../types/error';
 import type { SiliconCloudModelCard } from './index';
-import { LobeSiliconCloudAI } from './index';
+import { OrviloSiliconCloudAI } from './index';
 
 testProvider({
-  Runtime: LobeSiliconCloudAI,
+  Runtime: OrviloSiliconCloudAI,
   provider: ModelProvider.SiliconCloud,
   defaultBaseURL: 'https://api.siliconflow.cn/v1',
   chatDebugEnv: 'DEBUG_SILICONCLOUD_CHAT_COMPLETION',
@@ -22,11 +22,11 @@ testProvider({
   },
 });
 
-describe('LobeSiliconCloudAI - custom features', () => {
-  let instance: InstanceType<typeof LobeSiliconCloudAI>;
+describe('OrviloSiliconCloudAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloSiliconCloudAI>;
 
   beforeEach(() => {
-    instance = new LobeSiliconCloudAI({ apiKey: 'test_api_key' });
+    instance = new OrviloSiliconCloudAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

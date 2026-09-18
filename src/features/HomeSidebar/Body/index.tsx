@@ -32,8 +32,6 @@ import { useSyncWorkspaceSidebarPreference } from './useSyncWorkspaceSidebarPref
 
 export enum GroupKey {
   Agent = 'agent',
-  Community = 'community',
-  Pages = 'pages',
   Private = 'private',
   Project = 'project',
   Recents = 'recents',

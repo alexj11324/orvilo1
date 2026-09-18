@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 import { processMultiProviderModelList } from '../../utils/modelParse';
 
-export const LobeVolcengineCodingPlanAI = createOpenAICompatibleRuntime({
+export const OrviloVolcengineCodingPlanAI = createOpenAICompatibleRuntime({
   baseURL: 'https://ark.cn-beijing.volces.com/api/coding/v3',
   chatCompletion: {
     handlePayload: (payload) => {

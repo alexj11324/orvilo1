@@ -1,13 +1,13 @@
-import { type WorkflowContext } from '@upstash/workflow';
 import debug from 'debug';
 
 import { AgentEvalRunModel } from '@/database/models/agentEval';
 import { getServerDB } from '@/database/server';
 import { AgentEvalRunWorkflow, type ExecuteTestCasePayload } from '@/server/workflows/agentEvalRun';
 import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/utils';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
-const log = debug('lobe-server:workflows:execute-test-case');
+const log = debug('orvilo-server:workflows:execute-test-case');
 
 /**
  * Execute test case workflow - manages K executions of a single test case
@@ -56,12 +56,4 @@ export const executeTestCaseHandler = async (context: WorkflowContext<ExecuteTes
   log('Completed: runId=%s testCaseId=%s k=%d', runId, testCaseId, k);
 
   return { k, success: true, testCaseId };
-};
-
-export const executeTestCaseWorkflowOptions = {
-  flowControl: {
-    key: 'agent-eval-run.execute-test-case',
-    parallelism: 200,
-    ratePerSecond: 5,
-  },
 };

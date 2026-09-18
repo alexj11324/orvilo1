@@ -306,10 +306,14 @@ export class TaskDetailSliceActionImpl {
     this.#set({ isCreatingTask: true }, false, 'createTask/start');
     try {
       const result = await taskService.create(params);
-      await this.#get().refreshTaskList();
-      if (params.parentTaskId) {
-        await this.internal_refreshTaskDetail(params.parentTaskId);
-      }
+      // The server creation is the durable boundary. Cache refresh failures
+      // must not turn a successful insert into a rejected create call: callers
+      // would otherwise retry and create a duplicate task because they never
+      // received the identifier that was already committed.
+      await Promise.allSettled([
+        this.#get().refreshTaskList(),
+        ...(params.parentTaskId ? [this.internal_refreshTaskDetail(params.parentTaskId)] : []),
+      ]);
       return result.data ?? null;
     } finally {
       this.#set({ isCreatingTask: false }, false, 'createTask/end');
@@ -598,13 +602,18 @@ export class TaskDetailSliceActionImpl {
     // polling never starts — even once real data arrives.
     const shouldPoll = useTaskStore((s) => {
       const detail = taskId ? s.taskDetailMap[taskId] : undefined;
-      return hasInFlightActivity(detail);
+      // Busy/linked tasks refresh faster. Idle mounted details still refresh at
+      // 15s below, including a teammate adding the very first prerequisite.
+      return (
+        hasInFlightActivity(detail) ||
+        detail?.dependencies?.some((dep) => dep.type === 'blocks') === true
+      );
     });
 
     return useClientDataSWR(
       taskId ? taskKeys.detail(taskId) : null,
       async ([, id]: [string, string]) => this.fetchTaskDetail(id),
-      { refreshInterval: shouldPoll ? TASK_DETAIL_POLL_INTERVAL : 0 },
+      { refreshInterval: shouldPoll ? TASK_DETAIL_POLL_INTERVAL : taskId ? 15_000 : 0 },
     );
   };
 

@@ -12,12 +12,12 @@ const linearIssueResult = {
   links: [
     {
       title: 'PR #15766: refactor(chat): unify agent run lifecycle',
-      url: 'https://github.com/lobehub/lobehub/pull/15766',
+      url: 'https://github.com/alexj11324/orvilo1/pull/15766',
     },
   ],
   state: { name: 'In Review' },
   title: '统一三种客户端 Agent Runtime 的 run 生命周期 hooks',
-  url: 'https://linear.app/lobehub/issue/TEST-0000',
+  url: 'https://linear.app/orvilo/issue/TEST-0000',
 };
 
 export default defineFixtures({
@@ -442,7 +442,7 @@ export default defineFixtures({
     TaskOutput: single({
       args: { block: false, task_id: 'task-build-2025-04-25', timeout_ms: 8000 },
       content:
-        '✅  Vite: compile and bundle finished (200) http://localhost:9876/\nDebug Proxy: https://app.lobehub.com/_dangerous_local_dev_proxy?debug-host=http://localhost:9876',
+        '✅  Vite: compile and bundle finished (200) http://localhost:9876/\nDebug Proxy: https://orvilo.aspectlylabs.com/_dangerous_local_dev_proxy?debug-host=http://localhost:9876',
     }),
     TaskStop: single({
       args: { task_id: 'task-build-2025-04-25' },
@@ -636,10 +636,10 @@ export default defineFixtures({
     WebFetch: single({
       args: {
         prompt: 'Summarize the key changes in the latest release.',
-        url: 'https://github.com/lobehub/lobe-chat/releases/latest',
+        url: 'https://github.com/alexj11324/orvilo1/releases/latest',
       },
       content:
-        '## LobeChat v1.0\n\n- New agent runtime with tool streaming\n- Faster cold start\n- Fixed a memory leak in the chat store',
+        '## Orvilo v1.0\n\n- New agent runtime with tool streaming\n- Faster cold start\n- Fixed a memory leak in the chat store',
     }),
     WebSearch: single({
       args: {

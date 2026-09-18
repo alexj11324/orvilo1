@@ -10,11 +10,9 @@ describe('toNotificationPreview', () => {
   });
 
   it('strips headings, bold and link syntax', () => {
-    expect(
-      toNotificationPreview(
-        '## ✅ 每日 LOBE 注释清理完成\n\n**PR**: [#17689](https://github.com/lobehub/lobehub/pull/17689)',
-      ),
-    ).toBe('✅ 每日 LOBE 注释清理完成 PR: #17689');
+    expect(toNotificationPreview('## ✅ 每日 ORVILO 注释清理完成\n\n**PR**: #17689')).toBe(
+      '✅ 每日 ORVILO 注释清理完成 PR: #17689',
+    );
   });
 
   it('flattens markdown tables and drops divider rows', () => {

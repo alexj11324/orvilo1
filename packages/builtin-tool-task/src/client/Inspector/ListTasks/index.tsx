@@ -28,7 +28,7 @@ export const ListTasksInspector = memo<BuiltinInspectorProps<ListTasksParams, Li
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-task.apiName.listTasks')}
+            {t('builtins.orvilo-task.apiName.listTasks')}
           </span>
         </div>
       );
@@ -37,7 +37,7 @@ export const ListTasksInspector = memo<BuiltinInspectorProps<ListTasksParams, Li
     return (
       <div className={inspectorTextStyles.root}>
         <span className={cx(isLoading && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-task.apiName.listTasks')}
+          {t('builtins.orvilo-task.apiName.listTasks')}
         </span>
         {filterText && (
           <Text as={'span'} color={cssVar.colorTextTertiary} fontSize={12}>

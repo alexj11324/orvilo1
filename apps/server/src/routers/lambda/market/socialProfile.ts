@@ -7,7 +7,7 @@ import { marketSDK, marketUserInfo, serverDatabase } from '@/libs/trpc/lambda/mi
 
 const log = debug('lambda-router:market:socialProfile');
 
-const MARKET_BASE_URL = process.env.MARKET_BASE_URL || 'https://market.lobehub.com';
+const MARKET_BASE_URL = process.env.MARKET_BASE_URL || 'https://market.aspectlylabs.com';
 
 // Authenticated procedure for social profile operations
 const socialProfileAuthProcedure = authedProcedure
@@ -203,7 +203,7 @@ export const socialProfileRouter = router({
             'Content-Type': 'application/json',
             ...(input.actAs === undefined
               ? {}
-              : { 'x-lobe-owner-account-id': String(input.actAs) }),
+              : { 'x-orvilo-owner-account-id': String(input.actAs) }),
           },
           method: 'POST',
         });

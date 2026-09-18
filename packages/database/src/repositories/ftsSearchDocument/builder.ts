@@ -17,7 +17,7 @@ import {
   userMemoriesPreferences,
   userPersonaDocuments,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { searchableMessage } from '../../utils/searchableMessage';
 import type {
   FtsSearchBuiltDocument,
@@ -101,7 +101,7 @@ const dedupeKeys = (keys: FtsSearchDocumentKey[]) =>
  * whose provider hydration reapplies authorization.
  */
 export class FtsSearchDocumentBuilder {
-  constructor(private db: LobeChatDatabase) {}
+  constructor(private db: OrviloDatabase) {}
 
   async buildBatch(
     entity: FtsSearchDocumentEntity,

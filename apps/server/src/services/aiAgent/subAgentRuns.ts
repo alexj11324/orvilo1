@@ -3,7 +3,7 @@ import type {
   ExecSubAgentParams,
   ExecSubAgentResult,
   ExecVirtualSubAgentParams,
-  LobeAgentChatConfig,
+  OrviloAgentChatConfig,
 } from '@orvilo/types';
 import { ThreadStatus, ThreadType } from '@orvilo/types';
 import debug from 'debug';
@@ -26,7 +26,7 @@ import {
 } from './hooks/threadRunHooks';
 import type { InternalExecAgentParams } from './types';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 export interface SubAgentRunDeps {
   agentOperationModel: AgentOperationModel;
@@ -36,6 +36,7 @@ export interface SubAgentRunDeps {
   messageModel: MessageModel;
   threadModel: ThreadModel;
   userId: string;
+  workspaceId?: string;
 }
 
 export interface ExecAgentThreadRunOptions {
@@ -51,7 +52,7 @@ export interface ExecAgentThreadRunOptions {
    * the spawned run, merged over the executing agent's own chatConfig.
    * Only set by the callSubAgent path.
    */
-  chatConfig?: Partial<LobeAgentChatConfig> | null;
+  chatConfig?: Partial<OrviloAgentChatConfig> | null;
   isSubAgent: boolean;
   logScope: 'execSubAgent' | 'execVirtualSubAgent';
   /**
@@ -141,6 +142,7 @@ export const execAgentThreadRun = async (
     startedAt,
     parentMessageId,
     options.logScope,
+    { userId: deps.userId, workspaceId: deps.workspaceId },
   );
   // For the virtual sub-agent path, also register the completion bridge that
   // backfills the parent's placeholder tool message and resumes the parked

@@ -5,12 +5,12 @@ import { initializeRedis, isRedisEnabled } from '@/libs/redis';
 import { isDev } from '@/utils/env';
 
 const APPLE_TRUSTED_ORIGIN = 'https://appleid.apple.com';
-const MOBILE_APP_SCHEME = 'com.lobehub.app://';
+const MOBILE_APP_SCHEME = 'com.orvilo.app://';
 const EXPO_DEV_SCHEME = 'exp://*/*';
 
 /**
  * Normalize a URL-like string to an origin with https fallback.
- * Returns the original string if it's a custom scheme (e.g., com.lobehub.app://).
+ * Returns the original string if it's a custom scheme (e.g., com.orvilo.app://).
  */
 export const normalizeOrigin = (url?: string) => {
   if (!url) return undefined;

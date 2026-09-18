@@ -53,7 +53,7 @@ import debug from 'debug';
 
 import { gatewayEnv } from '@/envs/gateway';
 
-const log = debug('lobe-server:device-gateway');
+const log = debug('orvilo-server:device-gateway');
 
 /**
  * Is `target` the same as, or nested inside, `root`?
@@ -723,20 +723,21 @@ export class DeviceGateway {
    */
   async removeGitWorktree(params: {
     deviceId: string;
+    force?: boolean;
     path: string;
     timeout?: number;
     userId: string;
     workspaceId?: string;
     worktreePath: string;
   }): Promise<DeviceGitRemoveWorktreeResult> {
-    const { userId, deviceId, path, worktreePath, workspaceId, timeout = 30_000 } = params;
+    const { userId, deviceId, force, path, worktreePath, workspaceId, timeout = 30_000 } = params;
     const client = this.getClient();
     if (!client) return { error: 'Device gateway not configured', success: false };
 
     try {
       const result = await client.invokeRpc<DeviceGitRemoveWorktreeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'removeGitWorktree', params: { path, worktreePath } },
+        { method: 'removeGitWorktree', params: { force, path, worktreePath } },
       );
 
       if (!result.success || !result.data) {
@@ -883,12 +884,13 @@ export class DeviceGateway {
    */
   async finalizeGitMerge(params: {
     deviceId: string;
+    expectedHead?: string;
     path: string;
     timeout?: number;
     userId: string;
     workspaceId?: string;
   }): Promise<DeviceGitFinalizeMergeResult> {
-    const { userId, deviceId, path, timeout = 30_000, workspaceId } = params;
+    const { userId, deviceId, expectedHead, path, timeout = 30_000, workspaceId } = params;
     const client = this.getClient();
     if (!client) {
       return { error: 'Device gateway not configured', state: 'conflict', success: false };
@@ -897,7 +899,7 @@ export class DeviceGateway {
     try {
       const result = await client.invokeRpc<DeviceGitFinalizeMergeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'finalizeGitMerge', params: { path } },
+        { method: 'finalizeGitMerge', params: { expectedHead, path } },
       );
 
       if (!result.success || !result.data) {
@@ -926,20 +928,31 @@ export class DeviceGateway {
    */
   async pushGitBranch(params: {
     deviceId: string;
+    expectedSha?: string;
     path: string;
     remoteBranch?: string;
+    sourceRef?: string;
     timeout?: number;
     userId: string;
     workspaceId?: string;
   }): Promise<DeviceGitSyncResult> {
-    const { userId, deviceId, path, remoteBranch, timeout = 65_000, workspaceId } = params;
+    const {
+      userId,
+      deviceId,
+      expectedSha,
+      path,
+      remoteBranch,
+      sourceRef,
+      timeout = 65_000,
+      workspaceId,
+    } = params;
     const client = this.getClient();
     if (!client) return { error: 'Device gateway not configured', success: false };
 
     try {
       const result = await client.invokeRpc<DeviceGitSyncResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'pushGitBranch', params: { path, remoteBranch } },
+        { method: 'pushGitBranch', params: { expectedSha, path, remoteBranch, sourceRef } },
       );
 
       if (!result.success || !result.data) {

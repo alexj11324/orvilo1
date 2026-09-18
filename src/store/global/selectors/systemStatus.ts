@@ -186,10 +186,10 @@ export const DEFAULT_SIDEBAR_ITEMS: string[] = [
   'agent',
   SIDEBAR_SPACER_ID,
   'image',
-  'community',
-  'pages',
   'memory',
 ];
+
+const RETIRED_SIDEBAR_KEYS = new Set(['community', 'pages']);
 
 /** Items that must stay contiguous in the sidebar list (accordion block).
  * `private` sits above `agent` so workspace users see their personal items
@@ -235,13 +235,14 @@ const normalizeSpacerPosition = (order: string[]): string[] => {
 // default added in a future version would silently appear in the bottom group
 // for existing users.
 const withAllKnownKeys = (order: string[]): string[] => {
-  let nextOrder = order;
-  if (!order.includes('project')) {
-    const recentsIndex = order.indexOf('recents');
-    const firstAgentIndex = order.findIndex((key) => key === 'private' || key === 'agent');
+  const activeOrder = order.filter((key) => !RETIRED_SIDEBAR_KEYS.has(key));
+  let nextOrder = activeOrder;
+  if (!activeOrder.includes('project')) {
+    const recentsIndex = activeOrder.indexOf('recents');
+    const firstAgentIndex = activeOrder.findIndex((key) => key === 'private' || key === 'agent');
     const insertAt =
       recentsIndex >= 0 ? recentsIndex + 1 : firstAgentIndex >= 0 ? firstAgentIndex : 0;
-    nextOrder = [...order.slice(0, insertAt), 'project', ...order.slice(insertAt)];
+    nextOrder = [...activeOrder.slice(0, insertAt), 'project', ...activeOrder.slice(insertAt)];
   }
 
   const present = new Set(nextOrder);

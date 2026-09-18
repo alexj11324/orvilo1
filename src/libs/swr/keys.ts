@@ -123,11 +123,6 @@ export const isMessageListKey = (
 
 // ---- topic --------------------------------------------------------------
 export const topicKeys = {
-  agentView: def('topic:agentView', (containerKey: string, opts: Record<string, unknown>) => [
-    'topic:agentView',
-    containerKey,
-    opts,
-  ]),
   detail: def('topic:detail', (topicId: string) => ['topic:detail', topicId]),
   list: def('topic:list', (containerKey: string, opts: Record<string, unknown>) => [
     'topic:list',
@@ -980,11 +975,9 @@ export const toolKeys = {
   ]),
   composioConnections: def('tool:composioConnections', () => ['tool:composioConnections']),
   installedPlugins: def('tool:installedPlugins', () => ['tool:installedPlugins']),
-  lobehubSkillConnections: def('tool:lobehubSkillConnections', () => [
-    'tool:lobehubSkillConnections',
-  ]),
-  lobehubSkillTools: def('tool:lobehubSkillTools', (provider: string) => [
-    'tool:lobehubSkillTools',
+  orviloSkillConnections: def('tool:orviloSkillConnections', () => ['tool:orviloSkillConnections']),
+  orviloSkillTools: def('tool:orviloSkillTools', (provider: string) => [
+    'tool:orviloSkillTools',
     provider,
   ]),
   mcpPluginList: def('tool:mcpPluginList', (locale: string, params: unknown) => [

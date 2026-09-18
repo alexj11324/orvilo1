@@ -9,9 +9,9 @@ import {
   sortItemsByPriority,
 } from '@/features/MCP/calculateScore';
 import { useScoreList } from '@/features/MCP/useScoreList';
-import Title from '@/routes/(main)/community/features/Title';
 
 import { useDetailContext } from '../DetailProvider';
+import Title from '../Title';
 import GithubBadge from './GithubBadge';
 import ScoreList from './ScoreList';
 import TotalScore from './TotalScore';

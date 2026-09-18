@@ -1,7 +1,7 @@
 export enum RecommendedSkillType {
   Builtin = 'builtin',
   Composio = 'composio',
-  Lobehub = 'lobehub',
+  Orvilo = 'orvilo',
 }
 
 export interface RecommendedSkillItem {
@@ -11,18 +11,18 @@ export interface RecommendedSkillItem {
 
 export const RECOMMENDED_SKILLS: RecommendedSkillItem[] = [
   // Builtin skills
-  { id: 'lobe-artifacts', type: RecommendedSkillType.Builtin },
-  { id: 'lobe-user-memory', type: RecommendedSkillType.Builtin },
-  { id: 'lobe-cloud-sandbox', type: RecommendedSkillType.Builtin },
-  { id: 'lobe-task', type: RecommendedSkillType.Builtin },
-  { id: 'lobe-agent-documents', type: RecommendedSkillType.Builtin },
-  { id: 'lobe-message', type: RecommendedSkillType.Builtin },
+  { id: 'orvilo-artifacts', type: RecommendedSkillType.Builtin },
+  { id: 'orvilo-user-memory', type: RecommendedSkillType.Builtin },
+  { id: 'orvilo-cloud-sandbox', type: RecommendedSkillType.Builtin },
+  { id: 'orvilo-task', type: RecommendedSkillType.Builtin },
+  { id: 'orvilo-agent-documents', type: RecommendedSkillType.Builtin },
+  { id: 'orvilo-message', type: RecommendedSkillType.Builtin },
   // Opt-in chat image generation: default-installed so Tools can pin it without Skill Store first.
-  { id: 'lobe-image-generation', type: RecommendedSkillType.Builtin },
-  // LobeHub skills
-  { id: 'notion', type: RecommendedSkillType.Lobehub },
-  { id: 'posthog', type: RecommendedSkillType.Lobehub },
-  { id: 'twitter', type: RecommendedSkillType.Lobehub },
+  { id: 'orvilo-image-generation', type: RecommendedSkillType.Builtin },
+  // Orvilo skills
+  { id: 'notion', type: RecommendedSkillType.Orvilo },
+  { id: 'posthog', type: RecommendedSkillType.Orvilo },
+  { id: 'twitter', type: RecommendedSkillType.Orvilo },
   // Composio skills
   { id: 'gmail', type: RecommendedSkillType.Composio },
   { id: 'google-drive', type: RecommendedSkillType.Composio },

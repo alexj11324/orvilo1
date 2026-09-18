@@ -1,6 +1,6 @@
 ---
 name: add-model-provider
-description: Add an AI model provider to LobeHub, including runtime integration, model cards, configuration, branding, documentation, and acceptance. Also use for provider documentation updates; adding models to an existing provider does not require a new provider integration.
+description: Add an AI model provider to Orvilo, including runtime integration, model cards, configuration, branding, documentation, and acceptance. Also use for provider documentation updates; adding models to an existing provider does not require a new provider integration.
 disable-model-invocation: true
 argument-hint: '[provider-name]'
 ---
@@ -9,7 +9,7 @@ argument-hint: '[provider-name]'
 
 Deliver a provider that users can configure, recognize, and use through the supported API paths. This skill includes the documentation workflow formerly maintained in `add-provider-doc`.
 
-Paths below are relative to the open-source repository root. In a Cloud checkout, prefix them with `lobehub/` and follow the parent repository's install and Git rules. Hosted model configuration is a separate workflow: use the deployment operator's model-onboarding process when that is the requested target. Do not copy private deployment settings or routing information into this skill or an OSS change.
+Paths below are relative to the open-source repository root. In a Cloud checkout, prefix them with `aspectlylabs/` and follow the parent repository's install and Git rules. Hosted model configuration is a separate workflow: use the deployment operator's model-onboarding process when that is the requested target. Do not copy private deployment settings or routing information into this skill or an OSS change.
 
 For a documentation-only request, inspect the implemented configuration and follow [Provider documentation](references/documentation.md); do not add runtime code merely to satisfy this checklist.
 

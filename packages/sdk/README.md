@@ -1,31 +1,31 @@
-# @lobehub/sdk
+# @orvilo/sdk
 
-Official TypeScript SDK for the [LobeHub REST API](https://app.lobehub.com/api/v1/docs), generated from the OpenAPI spec in [`packages/openapi`](../openapi) via [@hey-api/openapi-ts](https://heyapi.dev).
+Official TypeScript SDK for the [Orvilo REST API](https://orvilo.aspectlylabs.com/api/v1/docs), generated from the OpenAPI spec in [`packages/openapi`](../openapi) via [@hey-api/openapi-ts](https://heyapi.dev).
 
 Resource-style methods with full typing — every path, parameter, request body, and response comes from `openapi.yml`, and the HTTP runtime is inlined (zero dependencies).
 
 ## Installation
 
 ```bash
-npm install @lobehub/sdk
+npm install @orvilo/sdk
 ```
 
 ## Usage
 
 ```ts
-import { createLobeHub } from '@lobehub/sdk';
+import { createOrvilo } from '@orvilo/sdk';
 
-const lobehub = createLobeHub({
-  // LobeHub API Key (`sk-lh-...`) or an OIDC JWT
-  apiKey: process.env.LOBEHUB_API_KEY!,
+const orvilo = createOrvilo({
+  // Orvilo API Key (`sk-ov-...`) or an OIDC JWT
+  apiKey: process.env.ORVILO_API_KEY!,
 });
 
-const me = await lobehub.users.me();
-const { data, error } = await lobehub.agents.list();
-const agent = await lobehub.agents.get({ path: { id: 'agt_...' } });
+const me = await orvilo.users.me();
+const { data, error } = await orvilo.agents.list();
+const agent = await orvilo.agents.get({ path: { id: 'agt_...' } });
 
-await lobehub.agentGroups.create({ body: { name: 'My group' } });
-await lobehub.files.uploadBatch({ body: { files: [/* … */] } });
+await orvilo.agentGroups.create({ body: { name: 'My group' } });
+await orvilo.files.uploadBatch({ body: { files: [/* … */] } });
 ```
 
 Resources map to the API's top-level path segments: `health`, `agentGroups`, `agents`, `files`, `knowledgeBases`, `messageTranslations`, `messages`, `models`, `permissions`, `providers`, `responses`, `roles`, `topics`, `users`. Method names follow a fixed rule — `list` / `get` / `create` / `update` / `delete` plus PascalCase sub-segments (`files.listChunks`, `roles.updatePermissions`) — with a few curated names (`files.uploadBatch`, `files.query`, `knowledgeBases.addFiles`, `users.me`).
@@ -33,20 +33,20 @@ Resources map to the API's top-level path segments: `health`, `agentGroups`, `ag
 Point the client at another deployment with `baseURL`, and pass any other client option (custom `fetch`, `headers`, …):
 
 ```ts
-const lobehub = createLobeHub({
-  apiKey: 'sk-lh-...',
+const orvilo = createOrvilo({
+  apiKey: 'sk-ov-...',
   baseURL: 'http://localhost:3010',
 });
 ```
 
-Raw spec types are exported from `@lobehub/sdk/types`.
+Raw spec types are exported from `@orvilo/sdk/types`.
 
 ### Streaming responses
 
 `responses.create` returns Server-Sent Events when `body.stream: true`. Opt out of JSON parsing with `parseAs: 'stream'` and read the raw stream from `response.body`:
 
 ```ts
-const { response } = await lobehub.responses.create({
+const { response } = await orvilo.responses.create({
   body: { input: '…', model: '…', stream: true },
   parseAs: 'stream',
 });

@@ -105,7 +105,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -257,7 +257,7 @@ describe('AiAgentService.execSubAgent', () => {
       });
     });
 
-    it('should run deferred lobe-agent children through execVirtualSubAgent', async () => {
+    it('should run deferred orvilo-agent children through execVirtualSubAgent', async () => {
       const execAgentSpy = vi.spyOn(service, 'execAgent').mockResolvedValue({
         agentId: 'agent-1',
         assistantMessageId: 'assistant-msg-1',
@@ -542,6 +542,24 @@ describe('AiAgentService.execSubAgent', () => {
 
       expect(onCompleteHook).toBeDefined();
       expect(onCompleteHook!.handler).toBeInstanceOf(Function);
+      expect(onCompleteHook!.webhook).toMatchObject({
+        body: {
+          callbackType: 'completion',
+          sourceMessageId: 'parent-msg-1',
+          threadId: 'thread-123',
+        },
+        delivery: 'hatchet',
+        fallback: 'none',
+        url: '/api/agent/webhooks/thread-run-callback',
+      });
+
+      const afterStepHook = callArgs.hooks?.find((h: any) => h.id === 'thread-metadata-update');
+      expect(afterStepHook!.webhook).toMatchObject({
+        body: { callbackType: 'step', threadId: 'thread-123' },
+        delivery: 'hatchet',
+        fallback: 'none',
+        url: '/api/agent/webhooks/thread-run-callback',
+      });
     });
   });
 });

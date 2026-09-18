@@ -25,6 +25,7 @@ import {
   isNull,
   lt,
   ne,
+  notExists,
   notInArray,
   or,
   type SQL,
@@ -34,6 +35,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { merge } from '@/utils/merge';
 
+import { agentOperations } from '../schemas/agentOperations';
 import { documents } from '../schemas/file';
 import type {
   NewTaskActivity,
@@ -52,8 +54,9 @@ import {
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { TaskDependencyError } from './taskDependency';
 
 /** Columns whose change is worth a line in the task activity feed. */
 const TRACKED_TASK_COLUMNS = [
@@ -241,10 +244,10 @@ interface TaskSubtaskProgressRow extends Record<string, unknown> {
 
 export class TaskModel {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -349,6 +352,43 @@ export class TaskModel {
       .where(and(eq(tasks.id, taskId), this.ownership()))
       .limit(1);
     return row[0]?.visibility ?? 'public';
+  }
+
+  /** Only transaction-scoped models may hold this flag. Never set it on a shared model. */
+  private dependencyLockHeld = false;
+
+  /**
+   * Graph edits and status writes share one short transaction lock per workspace
+   * (or personal owner). This serializes cycle checks and closes add-vs-start
+   * races. Acquire it BEFORE task row locks to keep lock ordering consistent.
+   */
+  private async lockDependencyGraph(): Promise<void> {
+    const scope = this.workspaceId ? `workspace:${this.workspaceId}` : `user:${this.userId}`;
+    await this.db.execute(
+      sql`select pg_advisory_xact_lock(hashtext('task-prerequisites'), hashtext(${scope}))`,
+    );
+  }
+
+  private async withDependencyLock<T>(work: (model: TaskModel) => Promise<T>): Promise<T> {
+    if (this.dependencyLockHeld) return work(this);
+    return this.db.transaction(async (tx) => {
+      const model = new TaskModel(tx as OrviloDatabase, this.userId, this.workspaceId);
+      await model.lockDependencyGraph();
+      model.dependencyLockHeld = true;
+      return work(model);
+    });
+  }
+
+  /** Guard every advancing writer; cancellation/pause remain available for recovery. */
+  private async assertDependenciesForStatus(ids: string[], status?: string): Promise<void> {
+    if (status !== 'running' && status !== 'completed') return;
+    const blocked = await this.findBlockedTaskIds(ids);
+    if (blocked.length > 0) {
+      throw new TaskDependencyError(
+        'Complete all prerequisite tasks before starting or completing this task.',
+        'PRECONDITION_FAILED',
+      );
+    }
   }
 
   // ========== CRUD ==========
@@ -479,6 +519,17 @@ export class TaskModel {
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
   ): Promise<TaskItem | null> {
     if (Object.keys(data).length === 0) return this.findById(id);
+    if (
+      !this.dependencyLockHeld &&
+      (data.status !== undefined ||
+        data.deletedAt !== undefined ||
+        data.isDeleted !== undefined ||
+        data.projectId !== undefined ||
+        data.visibility !== undefined)
+    ) {
+      return this.withDependencyLock((model) => model.update(id, data));
+    }
+    await this.assertDependenciesForStatus([id], data.status);
 
     const updated = await this.db
       .update(tasks)
@@ -500,12 +551,54 @@ export class TaskModel {
    * to render as "resource deleted" from its version snapshot. See.
    */
   async delete(id: string): Promise<boolean> {
+    return (await this.deleteMany([id])).length > 0;
+  }
+
+  /** Validate the entire frozen deletion set before any rows disappear. */
+  private async assertCanDeleteTasks(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const inbound = await this.db
+      .select({ id: taskDependencies.id })
+      .from(taskDependencies)
+      .where(
+        and(
+          inArray(taskDependencies.dependsOnId, ids),
+          notInArray(taskDependencies.taskId, ids),
+          eq(taskDependencies.type, 'blocks'),
+        ),
+      )
+      .limit(1);
+    if (inbound.length > 0) {
+      throw new TaskDependencyError('Remove blocking dependency links before deleting this task.');
+    }
+  }
+
+  /** Full, unpaginated candidate set; callers can snapshot cleanup before deletion. */
+  async getTaskIdsForDeletion(restrictToCreator = false): Promise<string[]> {
+    const rows = await this.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(
+        and(
+          this.ownership(),
+          restrictToCreator ? eq(tasks.createdByUserId, this.userId) : undefined,
+        ),
+      );
+    return rows.map(({ id }) => id);
+  }
+
+  /** Delete exactly these accessible tasks; return only ids actually deleted. */
+  async deleteMany(ids: string[]): Promise<string[]> {
+    if (!this.dependencyLockHeld) return this.withDependencyLock((model) => model.deleteMany(ids));
+    const accessible = await this.findByIds(ids);
+    const liveIds = accessible.map(({ id }) => id);
+    if (liveIds.length === 0) return [];
+    await this.assertCanDeleteTasks(liveIds);
     const deleted = await this.db
       .delete(tasks)
-      .where(and(eq(tasks.id, id), this.ownership()))
+      .where(and(inArray(tasks.id, liveIds), this.ownership()))
       .returning({ id: tasks.id });
-
-    return deleted.length > 0;
+    return deleted.map(({ id }) => id);
   }
 
   /**
@@ -533,6 +626,9 @@ export class TaskModel {
    * gate authorization (creator-only / admin) before invoking this.
    */
   async updateVisibility(id: string, visibility: 'private' | 'public'): Promise<TaskItem | null> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.updateVisibility(id, visibility));
+    }
     const root = await this.findById(id);
     if (!root) return null;
     if (root.visibility === visibility) return root;
@@ -672,20 +768,20 @@ export class TaskModel {
 
   /** See {@link delete}: bulk task deletion likewise leaves Work artifacts intact. */
   async deleteAll(options?: { restrictToCreator?: boolean }): Promise<number> {
-    // `restrictToCreator` narrows the workspace-wide sweep to rows the caller
-    // created (non-owner members); owners/personal mode keep the full scope.
-    const where = options?.restrictToCreator
-      ? and(this.ownership(), eq(tasks.createdByUserId, this.userId))
-      : this.ownership();
-
-    const result = await this.db.delete(tasks).where(where).returning({ id: tasks.id });
-    return result.length;
+    if (!this.dependencyLockHeld)
+      return this.withDependencyLock((model) => model.deleteAll(options));
+    const ids = await this.getTaskIdsForDeletion(options?.restrictToCreator);
+    return (await this.deleteMany(ids)).length;
   }
 
   /** Delete a task and every descendant in one transaction. */
   async deleteSubtree(rootTaskId: string): Promise<number> {
+    if (!this.dependencyLockHeld)
+      return this.withDependencyLock((model) => model.deleteSubtree(rootTaskId));
+    if (!(await this.findById(rootTaskId))) return 0;
     const descendants = await this.findAllDescendants(rootTaskId);
     const taskIds = [rootTaskId, ...descendants.map(({ id }) => id)];
+    await this.assertCanDeleteTasks(taskIds);
 
     return this.db.transaction(async (tx) => {
       await tx
@@ -1421,12 +1517,14 @@ export class TaskModel {
   // Recursive query to get full task tree
   async getTaskTree(rootTaskId: string): Promise<TaskItem[]> {
     const ownership = this.ownershipSql();
+    const childOwnership = this.ownershipSql('t');
     const result = await this.db.execute(sql`
       WITH RECURSIVE task_tree AS (
         SELECT * FROM tasks WHERE id = ${rootTaskId} AND ${ownership}
         UNION ALL
         SELECT t.* FROM tasks t
         JOIN task_tree tt ON t.parent_task_id = tt.id
+        WHERE ${childOwnership}
       )
       SELECT * FROM task_tree
     `);
@@ -1497,7 +1595,13 @@ export class TaskModel {
   async updateStatus(
     id: string,
     status: string,
-    extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
+    extra?: {
+      completedAt?: Date;
+      error?: string | null;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    },
   ): Promise<TaskItem | null> {
     return this.update(id, { status, ...extra });
   }
@@ -1509,6 +1613,14 @@ export class TaskModel {
     status: string,
     extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
   ): Promise<TaskItem | null> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) =>
+        model.updateStatusIfCurrent(id, currentStatus, status, extra),
+      );
+    }
+    const current = await this.findById(id);
+    if (!current || current.status !== currentStatus) return null;
+    await this.assertDependenciesForStatus([id], status);
     const [task] = await this.db
       .update(tasks)
       .set({
@@ -1523,7 +1635,215 @@ export class TaskModel {
     return task ?? null;
   }
 
+  /**
+   * Transition only while the caller still owns the active run/completion
+   * generation. User status changes clear this token, fencing any lifecycle
+   * work that was already in progress.
+   */
+  async updateStatusIfReservation(
+    id: string,
+    reservationId: string,
+    currentStatus: string,
+    status: string,
+    extra?: {
+      completedAt?: Date;
+      error?: string | null;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    },
+  ): Promise<TaskItem | null> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) =>
+        model.updateStatusIfReservation(id, reservationId, currentStatus, status, extra),
+      );
+    }
+    const current = await this.findById(id);
+    if (
+      !current ||
+      current.status !== currentStatus ||
+      current.runReservationId !== reservationId
+    ) {
+      return null;
+    }
+    await this.assertDependenciesForStatus([id], status);
+    const [task] = await this.db
+      .update(tasks)
+      .set({
+        status,
+        updatedAt: new Date(),
+        ...extra,
+        ...TaskModel.reviewerBackfillSet(status),
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          eq(tasks.runReservationId, reservationId),
+          eq(tasks.status, currentStatus),
+          this.ownership(),
+        ),
+      )
+      .returning();
+
+    return task ?? null;
+  }
+
+  /** Merge task context only while the caller still owns the run generation. */
+  async updateContextIfReservation(
+    id: string,
+    reservationId: string,
+    partial: Record<string, unknown>,
+  ): Promise<boolean> {
+    const task = await this.findById(id);
+    if (!task || task.runReservationId !== reservationId) return false;
+
+    const current = (task.context as Record<string, unknown>) || {};
+    const [updated] = await this.db
+      .update(tasks)
+      .set({ context: merge(current, partial), updatedAt: new Date() })
+      .where(and(eq(tasks.id, id), eq(tasks.runReservationId, reservationId), this.ownership()))
+      .returning({ id: tasks.id });
+    return Boolean(updated);
+  }
+
+  /** Merge context only while the task remains in the expected lifecycle state. */
+  async updateContextIfStatus(
+    id: string,
+    status: string,
+    partial: Record<string, unknown>,
+  ): Promise<boolean> {
+    const task = await this.findById(id);
+    if (!task || task.status !== status) return false;
+
+    const current = (task.context as Record<string, unknown>) || {};
+    const [updated] = await this.db
+      .update(tasks)
+      .set({ context: merge(current, partial), updatedAt: new Date() })
+      .where(and(eq(tasks.id, id), eq(tasks.status, status), this.ownership()))
+      .returning({ id: tasks.id });
+    return Boolean(updated);
+  }
+
+  /**
+   * Atomically reserve the single dispatch slot for a task.
+   *
+   * The durable lease closes both races around the pre-dispatch gap: a second
+   * caller cannot provision while this caller has not written its topic yet,
+   * and a crashed caller becomes reclaimable after the deadline. The topic
+   * subquery keeps an already-dispatched generation authoritative after the
+   * short reservation is released.
+   */
+  async reserveRun(
+    id: string,
+    reservationId: string,
+    now: Date = new Date(),
+    leaseMs = 30 * 60 * 1000,
+    replaceReservationId?: string,
+  ): Promise<boolean> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) =>
+        model.reserveRun(id, reservationId, now, leaseMs, replaceReservationId),
+      );
+    }
+    await this.assertDependenciesForStatus([id], 'running');
+    const reserved = await this.db
+      .update(tasks)
+      .set({
+        error: null,
+        runReservationExpiresAt: new Date(now.getTime() + leaseMs),
+        runReservationId: reservationId,
+        startedAt: now,
+        status: 'running',
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          or(
+            isNull(tasks.runReservationId),
+            lt(tasks.runReservationExpiresAt, now),
+            replaceReservationId ? eq(tasks.runReservationId, replaceReservationId) : undefined,
+          ),
+          notExists(
+            this.db
+              .select({ id: taskTopics.id })
+              .from(taskTopics)
+              .where(and(eq(taskTopics.taskId, id), eq(taskTopics.status, 'running'))),
+          ),
+          notExists(
+            this.db
+              .select({ id: agentOperations.id })
+              .from(agentOperations)
+              .where(
+                and(
+                  eq(agentOperations.taskId, id),
+                  notInArray(agentOperations.status, ['abandoned', 'done', 'error', 'interrupted']),
+                ),
+              ),
+          ),
+          this.ownership(),
+        ),
+      )
+      .returning({ id: tasks.id });
+
+    return reserved.length > 0;
+  }
+
+  /** Extend a dispatch lease only while the caller still owns it. */
+  async renewRunReservation(
+    id: string,
+    reservationId: string,
+    now: Date = new Date(),
+    leaseMs = 30 * 60 * 1000,
+  ): Promise<boolean> {
+    const renewed = await this.db
+      .update(tasks)
+      .set({ runReservationExpiresAt: new Date(now.getTime() + leaseMs), updatedAt: now })
+      .where(and(eq(tasks.id, id), eq(tasks.runReservationId, reservationId), this.ownership()))
+      .returning({ id: tasks.id });
+
+    return renewed.length > 0;
+  }
+
+  /** Release a dispatch reservation without changing the task lifecycle. */
+  async releaseRunReservation(id: string, reservationId: string): Promise<boolean> {
+    const released = await this.db
+      .update(tasks)
+      .set({ runReservationExpiresAt: null, runReservationId: null, updatedAt: new Date() })
+      .where(and(eq(tasks.id, id), eq(tasks.runReservationId, reservationId), this.ownership()))
+      .returning({ id: tasks.id });
+
+    return released.length > 0;
+  }
+
+  /** Roll back only the dispatch generation owned by `reservationId`. */
+  async failRunReservation(
+    id: string,
+    reservationId: string,
+    status: 'paused' | 'scheduled',
+    error: string,
+  ): Promise<boolean> {
+    const released = await this.db
+      .update(tasks)
+      .set({
+        error,
+        runReservationExpiresAt: null,
+        runReservationId: null,
+        status,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tasks.id, id), eq(tasks.runReservationId, reservationId), this.ownership()))
+      .returning({ id: tasks.id });
+
+    return released.length > 0;
+  }
+
   async batchUpdateStatus(ids: string[], status: string): Promise<number> {
+    if (ids.length === 0) return 0;
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.batchUpdateStatus(ids, status));
+    }
+    await this.assertDependenciesForStatus(ids, status);
     const result = await this.db
       .update(tasks)
       .set({ status, updatedAt: new Date(), ...TaskModel.reviewerBackfillSet(status) })
@@ -1542,9 +1862,19 @@ export class TaskModel {
   async updateStatusForIds(
     ids: string[],
     status: string,
-    extra?: { completedAt?: Date; error?: string | null; startedAt?: Date },
+    extra?: {
+      completedAt?: Date;
+      error?: string | null;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    },
   ): Promise<TaskItem[]> {
     if (ids.length === 0) return [];
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.updateStatusForIds(ids, status, extra));
+    }
+    await this.assertDependenciesForStatus(ids, status);
     return this.db
       .update(tasks)
       .set({
@@ -1563,16 +1893,66 @@ export class TaskModel {
    * Safely merge-update the task's config object.
    * Reads the current config, shallow-merges the incoming partial, and writes back.
    */
-  async updateTaskConfig(id: string, partial: Record<string, unknown>): Promise<TaskItem | null> {
+  async updateTaskConfig(
+    id: string,
+    partial: Record<string, unknown>,
+    options: { invalidateRun?: boolean } = {},
+  ): Promise<TaskItem | null> {
     const task = await this.findById(id);
     if (!task) return null;
 
     const current = (task.config as Record<string, unknown>) || {};
     const config = merge(current, partial);
-    return this.update(id, { config });
+    return this.update(id, {
+      config,
+      ...(options.invalidateRun
+        ? { runReservationExpiresAt: null, runReservationId: null }
+        : undefined),
+    });
   }
 
   // ========== Context (runtime state) ==========
+
+  /**
+   * Atomically claim the short task-run kickoff window. The claim only spans
+   * stale-run recovery, workspace provisioning, and agent dispatch; once the
+   * new task_topics row exists, that row is the durable in-flight guard.
+   */
+  async claimRunKickoff(id: string, token: string, staleBefore: Date): Promise<boolean> {
+    const claim = JSON.stringify({ claimedAt: new Date().toISOString(), token });
+    const claimed = await this.db
+      .update(tasks)
+      .set({
+        context: sql`jsonb_set(coalesce(${tasks.context}, '{}'::jsonb), '{runKickoffClaim}', ${claim}::jsonb, true)`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          this.ownership(),
+          or(
+            sql`not coalesce(jsonb_exists(${tasks.context}, 'runKickoffClaim'), false)`,
+            sql`coalesce((${tasks.context}->'runKickoffClaim'->>'claimedAt')::timestamptz, '-infinity'::timestamptz) < ${staleBefore}`,
+          ),
+        ),
+      )
+      .returning({ id: tasks.id });
+    return claimed.length > 0;
+  }
+
+  /** Release a kickoff claim only when it is still owned by this invocation. */
+  async releaseRunKickoff(id: string, token: string): Promise<void> {
+    await this.db
+      .update(tasks)
+      .set({ context: sql`coalesce(${tasks.context}, '{}'::jsonb) - 'runKickoffClaim'` })
+      .where(
+        and(
+          eq(tasks.id, id),
+          this.ownership(),
+          sql`${tasks.context}->'runKickoffClaim'->>'token' = ${token}`,
+        ),
+      );
+  }
 
   /**
    * Deep-merge into the task's context JSONB. Used by the heartbeat scheduler
@@ -1588,14 +1968,46 @@ export class TaskModel {
     return this.update(id, { context });
   }
 
+  /** Commit a deferred heartbeat only if its original tick and schedule still own it. */
+  async updateContextIfHeartbeatTick(
+    id: string,
+    tickToken: string | undefined,
+    interval: number,
+    scheduler: { scheduledAt: string; tickMessageId: string; tickToken: string },
+  ): Promise<boolean> {
+    const updated = await this.db
+      .update(tasks)
+      .set({
+        context: sql`jsonb_set(coalesce(${tasks.context}, '{}'::jsonb), '{scheduler}',
+        coalesce(${tasks.context}->'scheduler', '{}'::jsonb) || ${JSON.stringify(scheduler)}::jsonb)`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          this.ownership(),
+          eq(tasks.status, 'scheduled'),
+          eq(tasks.automationMode, 'heartbeat'),
+          eq(tasks.heartbeatInterval, interval),
+          sql`${tasks.context} #>> '{scheduler,tickToken}' IS NOT DISTINCT FROM ${tickToken ?? null}`,
+        ),
+      )
+      .returning({ id: tasks.id });
+    return updated.length > 0;
+  }
+
   // ========== Checkpoint ==========
 
   getCheckpointConfig(task: TaskItem): CheckpointConfig {
     return (task.config as Record<string, any>)?.checkpoint || {};
   }
 
-  async updateCheckpointConfig(id: string, checkpoint: CheckpointConfig): Promise<TaskItem | null> {
-    return this.updateTaskConfig(id, { checkpoint });
+  async updateCheckpointConfig(
+    id: string,
+    checkpoint: CheckpointConfig,
+    options?: { invalidateRun?: boolean },
+  ): Promise<TaskItem | null> {
+    return this.updateTaskConfig(id, { checkpoint }, options);
   }
 
   // ========== Review Config ==========
@@ -1604,8 +2016,12 @@ export class TaskModel {
     return (task.config as Record<string, any>)?.review;
   }
 
-  async updateReviewConfig(id: string, review: Record<string, any>): Promise<TaskItem | null> {
-    return this.updateTaskConfig(id, { review });
+  async updateReviewConfig(
+    id: string,
+    review: Record<string, any>,
+    options?: { invalidateRun?: boolean },
+  ): Promise<TaskItem | null> {
+    return this.updateTaskConfig(id, { review }, options);
   }
 
   // ========== Verify Config ==========
@@ -1710,10 +2126,31 @@ export class TaskModel {
       .where(and(eq(tasks.id, id), this.ownership()));
   }
 
+  /**
+   * Touch a callback only while it still belongs to the task's active topic.
+   * `NULL` is accepted for legacy tasks created before currentTopicId was
+   * recorded; once a task has a generation, an older topic cannot claim it.
+   */
+  async updateHeartbeatIfCurrentTopic(id: string, topicId: string): Promise<boolean> {
+    const updated = await this.db
+      .update(tasks)
+      .set({ lastHeartbeatAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(tasks.id, id),
+          or(isNull(tasks.currentTopicId), eq(tasks.currentTopicId, topicId)),
+          this.ownership(),
+        ),
+      )
+      .returning({ id: tasks.id });
+
+    return updated.length > 0;
+  }
+
   // Tasks eligible for cron-based dispatch.
   // Excludes terminal/paused/running — `paused` requires user attention,
   // `running` is already in flight (and `runTask` would CONFLICT anyway).
-  static async getScheduledTasks(db: LobeChatDatabase): Promise<TaskItem[]> {
+  static async getScheduledTasks(db: OrviloDatabase): Promise<TaskItem[]> {
     return db
       .select()
       .from(tasks)
@@ -1727,29 +2164,41 @@ export class TaskModel {
   }
 
   // Find stuck tasks (running but heartbeat timed out)
-  // Only checks tasks that have both lastHeartbeatAt and heartbeatTimeout set
-  static async findStuckTasks(db: LobeChatDatabase): Promise<TaskItem[]> {
+  // Only checks tasks that have both lastHeartbeatAt and heartbeatTimeout set.
+  // A completion callback owns a long-lived lease while verify/settlement
+  // side effects are running; its heartbeat is deliberately not treated as a
+  // dead generation. API callers may additionally restrict the sweep to one
+  // task creator and workspace.
+  static async findStuckTasks(
+    db: OrviloDatabase,
+    options: { createdByUserId?: string; workspaceId?: string } = {},
+  ): Promise<TaskItem[]> {
     return db
       .select()
       .from(tasks)
       .where(
         and(
           eq(tasks.status, 'running'),
+          options.createdByUserId ? eq(tasks.createdByUserId, options.createdByUserId) : undefined,
+          options.workspaceId ? eq(tasks.workspaceId, options.workspaceId) : undefined,
+          options.createdByUserId && !options.workspaceId ? isNull(tasks.workspaceId) : undefined,
           isNotNull(tasks.lastHeartbeatAt),
           isNotNull(tasks.heartbeatTimeout),
           sql`${tasks.lastHeartbeatAt} < now() - make_interval(secs => ${tasks.heartbeatTimeout})`,
+          sql`NOT (coalesce(${tasks.runReservationId}, '') LIKE 'completion:%' AND ${tasks.runReservationExpiresAt} > now())`,
         ),
       );
   }
 
   // ========== Dependencies ==========
 
-  private depsOwnership = () =>
-    this.childOwnership({
-      userId: taskDependencies.userId,
-      visibility: taskDependencies.visibility,
-      workspaceId: taskDependencies.workspaceId,
-    });
+  // Authorize through the dependent, not the member who originally added the
+  // edge. This also repairs reads of legacy edges after public -> private.
+  private depsOwnership = () => sql`exists (
+    select 1 from tasks dependency_owner
+    where dependency_owner.id = ${taskDependencies.taskId}
+      and ${this.ownershipSql('dependency_owner')}
+  )`;
 
   /** Only used by the demotion cascade in {@link updateVisibility} — regular
    *  taskTopics reads/writes live in `TaskTopicModel`. */
@@ -1761,29 +2210,79 @@ export class TaskModel {
     });
 
   async addDependency(taskId: string, dependsOnId: string, type: string = 'blocks'): Promise<void> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.addDependency(taskId, dependsOnId, type));
+    }
+    if (taskId === dependsOnId) throw new TaskDependencyError('A task cannot depend on itself.');
+    if (type !== 'blocks' && type !== 'relates')
+      throw new TaskDependencyError('Invalid dependency type.');
     const dependencyTasks = await this.findByIds([taskId, dependsOnId]);
     const task = dependencyTasks.find(({ id }) => id === taskId);
     const dependsOn = dependencyTasks.find(({ id }) => id === dependsOnId);
-    if (!task || !dependsOn) throw new Error('Task not found');
+    if (
+      !task ||
+      !dependsOn ||
+      task.deletedAt ||
+      task.isDeleted ||
+      dependsOn.deletedAt ||
+      dependsOn.isDeleted
+    ) {
+      throw new TaskDependencyError('Task not found or unavailable.');
+    }
     if (task.projectId !== dependsOn.projectId && (task.projectId || dependsOn.projectId)) {
-      throw new Error('Task dependencies cannot cross project boundaries');
+      throw new TaskDependencyError('Task dependencies cannot cross project boundaries.');
     }
 
-    const visibility = await this.getTaskVisibility(taskId);
+    const existing = (await this.getDependencies(taskId)).find(
+      (dep) => dep.dependsOnId === dependsOnId,
+    );
+    if (existing?.type === type) return;
+    if (type === 'blocks') {
+      // UNION (not UNION ALL) terminates even on a corrupt legacy graph. The
+      // graph walk is scope-wide, including hidden intermediate nodes, but its
+      // only observable output is a generic cycle rejection.
+      const scope = this.workspaceId
+        ? sql`d.workspace_id = ${this.workspaceId}`
+        : sql`d.workspace_id IS NULL AND d.user_id = ${this.userId}`;
+      const cycle = await this.db.execute(sql`
+        WITH RECURSIVE upstream(id) AS (
+          SELECT ${dependsOnId}::text
+          UNION
+          SELECT d.depends_on_id FROM task_dependencies d
+          JOIN upstream u ON d.task_id = u.id
+          WHERE d.type = 'blocks' AND ${scope}
+        ) SELECT id FROM upstream WHERE id = ${taskId} LIMIT 1
+      `);
+      if (cycle.rows.length > 0)
+        throw new TaskDependencyError('This dependency would create a cycle.');
+      if (['running', 'completed'].includes(task.status) && dependsOn.status !== 'completed') {
+        throw new TaskDependencyError(
+          'Pause or reopen this task before adding an unfinished prerequisite.',
+          'PRECONDITION_FAILED',
+        );
+      }
+    }
     await this.db
       .insert(taskDependencies)
       .values({
         dependsOnId,
         taskId,
         type,
-        userId: this.userId,
-        visibility,
+        userId: task.createdByUserId,
+        visibility: task.visibility,
         workspaceId: this.workspaceId ?? null,
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        set: { type, userId: task.createdByUserId, visibility: task.visibility },
+        target: [taskDependencies.taskId, taskDependencies.dependsOnId],
+      });
   }
 
   async removeDependency(taskId: string, dependsOnId: string): Promise<void> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) => model.removeDependency(taskId, dependsOnId));
+    }
+    if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
     await this.db
       .delete(taskDependencies)
       .where(
@@ -1817,36 +2316,48 @@ export class TaskModel {
       .where(and(eq(taskDependencies.dependsOnId, taskId), this.depsOwnership()));
   }
 
-  // Check if all dependencies of a task are completed
-  async areAllDependenciesCompleted(taskId: string): Promise<boolean> {
-    const result = await this.db
-      .select({ count: sql<number>`count(*)` })
+  /** Missing, trashed, inaccessible, canceled and failed prerequisites all block. */
+  async findBlockedTaskIds(taskIds: string[]): Promise<string[]> {
+    if (taskIds.length === 0) return [];
+    const blocked = await this.db
+      .selectDistinct({ taskId: taskDependencies.taskId })
       .from(taskDependencies)
-      .innerJoin(tasks, eq(taskDependencies.dependsOnId, tasks.id))
+      .leftJoin(
+        tasks,
+        and(
+          eq(taskDependencies.dependsOnId, tasks.id),
+          this.ownership(),
+          isNull(tasks.deletedAt),
+          sql`${tasks.isDeleted} IS NOT TRUE`,
+        ),
+      )
       .where(
         and(
-          eq(taskDependencies.taskId, taskId),
+          inArray(taskDependencies.taskId, taskIds),
           eq(taskDependencies.type, 'blocks'),
-          ne(tasks.status, 'completed'),
+          or(isNull(tasks.id), ne(tasks.status, 'completed')),
           this.depsOwnership(),
         ),
       );
-
-    return Number(result[0].count) === 0;
+    return blocked.map(({ taskId }) => taskId);
   }
 
-  // Find tasks that are now unblocked after a dependency completes
-  async getUnlockedTasks(completedTaskId: string): Promise<TaskItem[]> {
-    return this.getUnlockedTasksForMany([completedTaskId]);
+  async areAllDependenciesCompleted(taskId: string): Promise<boolean> {
+    return (await this.findBlockedTaskIds([taskId])).length === 0;
+  }
+
+  // Find tasks that are now unblocked after a dependency settles.
+  async getUnlockedTasks(settledTaskId: string): Promise<TaskItem[]> {
+    return this.getUnlockedTasksForMany([settledTaskId]);
   }
 
   /**
    * Batched variant of {@link getUnlockedTasks}: discover every task unblocked
-   * by any of `completedTaskIds` with a constant number of queries instead of
-   * one dependency walk per completed task.
+   * by any of `settledTaskIds`, batching readiness checks per dependent owner
+   * instead of walking the graph once per settled task.
    */
-  async getUnlockedTasksForMany(completedTaskIds: string[]): Promise<TaskItem[]> {
-    if (completedTaskIds.length === 0) return [];
+  async getUnlockedTasksForMany(settledTaskIds: string[]): Promise<TaskItem[]> {
+    if (settledTaskIds.length === 0) return [];
 
     // All tasks that depend on any of the completed tasks
     const dependents = await this.db
@@ -1854,7 +2365,7 @@ export class TaskModel {
       .from(taskDependencies)
       .where(
         and(
-          inArray(taskDependencies.dependsOnId, completedTaskIds),
+          inArray(taskDependencies.dependsOnId, settledTaskIds),
           eq(taskDependencies.type, 'blocks'),
           this.depsOwnership(),
         ),
@@ -1862,28 +2373,28 @@ export class TaskModel {
     const dependentIds = [...new Set(dependents.map(({ taskId }) => taskId))];
     if (dependentIds.length === 0) return [];
 
-    // Of those, which still have at least one incomplete blocking dependency
-    const blocked = await this.db
-      .selectDistinct({ taskId: taskDependencies.taskId })
-      .from(taskDependencies)
-      .innerJoin(tasks, eq(taskDependencies.dependsOnId, tasks.id))
-      .where(
-        and(
-          inArray(taskDependencies.taskId, dependentIds),
-          eq(taskDependencies.type, 'blocks'),
-          ne(tasks.status, 'completed'),
-          this.depsOwnership(),
-        ),
-      );
-    const blockedIds = new Set(blocked.map(({ taskId }) => taskId));
-    const unlockedIds = dependentIds.filter((id) => !blockedIds.has(id));
-    if (unlockedIds.length === 0) return [];
-
-    // Only unlock tasks still waiting in backlog
-    return this.db
+    // Discovery remains caller-visible. Evaluate each candidate in its owner's
+    // scope: the last completing member need not see every private prerequisite.
+    const candidates = await this.db
       .select()
       .from(tasks)
-      .where(and(inArray(tasks.id, unlockedIds), eq(tasks.status, 'backlog'), this.ownership()));
+      .where(and(inArray(tasks.id, dependentIds), eq(tasks.status, 'backlog'), this.ownership()));
+    const byOwner = new Map<string, string[]>();
+    for (const task of candidates) {
+      const ids = byOwner.get(task.createdByUserId) ?? [];
+      ids.push(task.id);
+      byOwner.set(task.createdByUserId, ids);
+    }
+    const blockedIds = new Set(
+      (
+        await Promise.all(
+          [...byOwner].map(([ownerId, ids]) =>
+            new TaskModel(this.db, ownerId, this.workspaceId).findBlockedTaskIds(ids),
+          ),
+        )
+      ).flat(),
+    );
+    return candidates.filter(({ id }) => !blockedIds.has(id));
   }
 
   // Check if all subtasks of a parent task are completed
@@ -2211,6 +2722,7 @@ export class TaskModel {
     ids: string[],
   ): Promise<{ id: string; status: string; visibility: 'private' | 'public' }[]> {
     if (ids.length === 0) return [];
+    await this.lockDependencyGraph();
     return this.db
       .select({ id: tasks.id, status: tasks.status, visibility: tasks.visibility })
       .from(tasks)
@@ -2247,7 +2759,10 @@ export class TaskModel {
     if (!touched) return this.update(id, data);
 
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
+      const scoped = new TaskModel(runner, this.userId, this.workspaceId);
+      await scoped.lockDependencyGraph();
+      scoped.dependencyLockHeld = true;
       const [before] = await runner
         .select({
           assigneeAgentId: tasks.assigneeAgentId,
@@ -2267,7 +2782,6 @@ export class TaskModel {
         .limit(1);
       if (!before) return null;
 
-      const scoped = new TaskModel(runner, this.userId, this.workspaceId);
       const updated = await scoped.update(id, data);
       if (!updated) return null;
 
@@ -2354,7 +2868,7 @@ export class TaskModel {
    * Collect a task and all its descendants (parentTaskId-linked) via BFS.
    * Honors the current ownership scope.
    */
-  private async collectTaskSubtree(rootId: string, runner: LobeChatDatabase): Promise<TaskItem[]> {
+  private async collectTaskSubtree(rootId: string, runner: OrviloDatabase): Promise<TaskItem[]> {
     const [root] = await runner
       .select()
       .from(tasks)
@@ -2383,7 +2897,7 @@ export class TaskModel {
    * scope. Returns the next available seq baseline.
    */
   private async nextSeqIn(
-    runner: LobeChatDatabase,
+    runner: OrviloDatabase,
     targetWorkspaceId: string | null,
     targetUserId: string,
   ): Promise<number> {
@@ -2430,8 +2944,8 @@ export class TaskModel {
     targetVisibility?: 'private' | 'public',
   ): Promise<{ taskIds: string[] }> {
     return this.db.transaction(async (trx) => {
-      const scoped = new TaskModel(trx as LobeChatDatabase, this.userId, this.workspaceId);
-      const subtree = await scoped.collectTaskSubtree(taskId, trx as LobeChatDatabase);
+      const scoped = new TaskModel(trx as OrviloDatabase, this.userId, this.workspaceId);
+      const subtree = await scoped.collectTaskSubtree(taskId, trx as OrviloDatabase);
       if (subtree.length === 0) throw new Error('Task not found');
 
       const ids = subtree.map((t) => t.id);
@@ -2443,7 +2957,7 @@ export class TaskModel {
 
       // Reallocate identifier + seq in target scope to avoid collisions.
       const baseSeq = await this.nextSeqIn(
-        trx as LobeChatDatabase,
+        trx as OrviloDatabase,
         targetWorkspaceId,
         targetUserId,
       );
@@ -2451,7 +2965,7 @@ export class TaskModel {
       for (const [idx, task] of subtree.entries()) {
         const seq = baseSeq + idx;
         const identifier = `T-${seq}`;
-        await (trx as LobeChatDatabase)
+        await (trx as OrviloDatabase)
           .update(tasks)
           .set({
             // Clear cross-scope refs: agent / topic may be invalid in new scope.
@@ -2471,19 +2985,19 @@ export class TaskModel {
       // task's visibility (see schema comments on task_deps / task_docs /
       // task_comments) so cascade the new visibility here too.
       const ownershipUpdate = { userId: targetUserId, workspaceId: targetWorkspaceId };
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(taskDependencies)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskDependencies.taskId, ids));
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(taskDocuments)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskDocuments.taskId, ids));
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(taskComments)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskComments.taskId, ids));
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(taskActivities)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskActivities.taskId, ids));
@@ -2505,8 +3019,8 @@ export class TaskModel {
     targetVisibility?: 'private' | 'public',
   ): Promise<{ rootId: string }> {
     return this.db.transaction(async (trx) => {
-      const scoped = new TaskModel(trx as LobeChatDatabase, this.userId, this.workspaceId);
-      const subtree = await scoped.collectTaskSubtree(taskId, trx as LobeChatDatabase);
+      const scoped = new TaskModel(trx as OrviloDatabase, this.userId, this.workspaceId);
+      const subtree = await scoped.collectTaskSubtree(taskId, trx as OrviloDatabase);
       if (subtree.length === 0) throw new Error('Task not found');
 
       // Visibility only applies when landing in a workspace.
@@ -2520,7 +3034,7 @@ export class TaskModel {
       const queue: string[] = [taskId];
       const seen = new Set<string>();
 
-      let seq = await this.nextSeqIn(trx as LobeChatDatabase, targetWorkspaceId, targetUserId);
+      let seq = await this.nextSeqIn(trx as OrviloDatabase, targetWorkspaceId, targetUserId);
 
       while (queue.length > 0) {
         const currentId = queue.shift()!;
@@ -2533,7 +3047,7 @@ export class TaskModel {
           currentId === taskId ? null : (idMap.get(original.parentTaskId!) ?? null);
 
         const identifier = `T-${seq}`;
-        const inserted = (await (trx as LobeChatDatabase)
+        const inserted = (await (trx as OrviloDatabase)
           .insert(tasks)
           .values({
             assigneeAgentId: null,

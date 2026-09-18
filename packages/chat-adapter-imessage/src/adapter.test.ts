@@ -32,7 +32,7 @@ function makeAdapter(overrides: Partial<typeof baseConfig> = {}) {
 
 function makeRequest(body: BlueBubblesWebhookEvent, secret = baseConfig.webhookSecret): Request {
   return new Request(
-    `https://lobehub.example.com/api/agent/webhooks/imessage/mac?secret=${secret}`,
+    `https://orvilo.example.com/api/agent/webhooks/imessage/mac?secret=${secret}`,
     {
       body: JSON.stringify(body),
       method: 'POST',

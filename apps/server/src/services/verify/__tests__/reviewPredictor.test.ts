@@ -104,7 +104,7 @@ describe('isCurrentReviewPrediction', () => {
         {
           model: 'deepseek-v4-pro',
           promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
-          provider: 'lobehub',
+          provider: 'orvilo',
         },
         current,
       ),

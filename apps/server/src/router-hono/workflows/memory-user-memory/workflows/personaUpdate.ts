@@ -1,4 +1,3 @@
-import { type WorkflowContext } from '@upstash/workflow';
 import { z } from 'zod';
 
 import { getServerDB } from '@/database/server';
@@ -6,6 +5,7 @@ import {
   buildUserPersonaJobInput,
   UserPersonaService,
 } from '@/server/services/memory/userMemory/persona/service';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
 import { checkGuard, ensureWorkflowStarted } from './runGuard';
@@ -85,16 +85,4 @@ export const personaUpdateHandler = async (context: WorkflowContext) => {
     message: 'User persona processed via workflow.',
     processedUsers,
   };
-};
-
-// NOTICE: Serve-side flow control governs this workflow's own step-continuation messages so they
-// carry a flow-control key instead of falling into the shared "$" (unbound) bucket, which floods
-// when steps retry. `triggerPersonaUpdate` sets a per-user key for the *initial* delivery; this
-// static global key bounds concurrent step execution across users. Parallelism is a conservative
-// global cap.
-export const personaUpdateWorkflowOptions = {
-  flowControl: {
-    key: 'memory-user-memory.pipelines.persona.update-write',
-    parallelism: 4,
-  },
 };

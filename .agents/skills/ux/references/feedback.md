@@ -308,7 +308,8 @@ retries a failing endpoint** with zero user feedback. A pagination failure owes 
 terminal state as an initial one: an inline **"couldn't load more — Retry"** row at the list
 tail, kept distinct from the genuine end-of-list.
 
-> ❌ **Agent topics** (`/agent/:aid/topics`) hits both shapes. The initial fetch reads only
+> ❌ **Agent topics** (`/agent/:aid/topics`, page since removed — the citations below refer to
+> pre-removal code) hits both shapes. The initial fetch reads only
 > `{ isLoading }` and **never `error`** (`AgentTopicManager/index.tsx:76`); the view map is
 > populated only in the SWR success `onData`, so a failed load leaves it empty and the page
 > renders the **first-run "no topics yet — start a chat" empty** (`EmptyState.tsx:35`) — a

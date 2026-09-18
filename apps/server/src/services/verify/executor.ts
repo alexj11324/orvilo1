@@ -24,7 +24,7 @@ import { FileModel } from '@/database/models/file';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 import { FileService } from '@/server/services/file';
 
@@ -35,7 +35,7 @@ import { planItemToPendingResult } from './resultSnapshot';
 import { BatchVerdictSchema, type SingleVerdict, SingleVerdictSchema } from './schema';
 import { VerifyStatusService } from './statusService';
 
-const log = debug('lobe-server:verify-executor');
+const log = debug('orvilo-server:verify-executor');
 
 /**
  * Runs a verifier sub-agent (its own agent operation in an isolated thread) to
@@ -86,7 +86,7 @@ const toToulmin = (v: SingleVerdict): ToulminVerdict => ({
 });
 
 export class VerifyExecutorService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly runModel: VerifyRunModel;
   private readonly resultModel: VerifyCheckResultModel;
@@ -97,7 +97,7 @@ export class VerifyExecutorService {
   private readonly fileService: FileService;
   private readonly aiModelModel: AiModelModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.runModel = new VerifyRunModel(db, userId, workspaceId);

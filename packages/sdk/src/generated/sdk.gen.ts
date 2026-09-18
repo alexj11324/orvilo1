@@ -51,7 +51,7 @@ class HeyApiRegistry<T> {
     get(key?: string): T {
         const instance = this.instances.get(key ?? this.defaultKey);
         if (!instance) {
-            throw new Error(`No SDK client found. Create one with "new LobeHub()" to fix this error.`);
+            throw new Error(`No SDK client found. Create one with "new Orvilo()" to fix this error.`);
         }
         return instance;
     }
@@ -268,7 +268,7 @@ export class Eval extends HeyApiClient {
     /**
      * Create an eval run
      *
-     * Queues an asynchronous QStash-backed evaluation run and returns immediately.
+     * Queues an asynchronous Hatchet-backed evaluation run and returns immediately.
      */
     public createRuns<ThrowOnError extends boolean = false>(options: Options<PostApiV1EvalRunsData, ThrowOnError>): RequestResult<PostApiV1EvalRunsResponses, PostApiV1EvalRunsErrors, ThrowOnError> {
         return (options.client ?? this.client).post<PostApiV1EvalRunsResponses, PostApiV1EvalRunsErrors, ThrowOnError>({
@@ -1281,15 +1281,15 @@ export class Usage extends HeyApiClient {
     }
 }
 
-export class LobeHub extends HeyApiClient {
-    public static readonly __registry: HeyApiRegistry<LobeHub> = new HeyApiRegistry<LobeHub>();
+export class Orvilo extends HeyApiClient {
+    public static readonly __registry: HeyApiRegistry<Orvilo> = new HeyApiRegistry<Orvilo>();
     
     constructor(args?: {
         client?: Client;
         key?: string;
     }) {
         super(args);
-        LobeHub.__registry.set(this, args?.key);
+        Orvilo.__registry.set(this, args?.key);
     }
     
     private _health?: Health;

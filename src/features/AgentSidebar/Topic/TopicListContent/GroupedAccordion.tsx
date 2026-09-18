@@ -20,7 +20,6 @@ import { type GroupedTopic } from '@/types/topic';
 
 import { useAgentTopicGroupMode } from '../hooks/useAgentTopicGroupMode';
 import { useScrollActiveTopicIntoView } from '../hooks/useScrollActiveTopicIntoView';
-import { useNavigateToAgentTopics } from '../hooks/useTopicNavigation';
 
 export interface GroupItemComponentProps {
   expanded: boolean;
@@ -32,18 +31,17 @@ interface GroupedAccordionProps {
 }
 
 const GroupedAccordion = memo<GroupedAccordionProps>(({ GroupItem }) => {
-  const { t } = useTranslation('chat');
-  const navigateToAgentTopics = useNavigateToAgentTopics();
+  const { t } = useTranslation('topic');
   const topicPageSize = useGlobalStore(systemStatusSelectors.topicPageSize);
   const topicSortBy = useUserStore(preferenceSelectors.topicSortBy);
   const topicIncludeCompleted = useUserStore(preferenceSelectors.topicIncludeCompleted);
   const { topicGroupMode } = useAgentTopicGroupMode();
 
-  const [hasMore, isExpandingPageSize, activeAgentId, activeTopicId] = useChatStore((s) => [
-    topicSelectors.hasMoreTopicsForSidebar(s),
+  const [isExpandingPageSize, activeTopicId, hasMore, openAllTopicsDrawer] = useChatStore((s) => [
     topicSelectors.isExpandingPageSize(s),
-    s.activeAgentId,
     s.activeTopicId,
+    topicSelectors.hasMoreTopicsForSidebar(s),
+    s.openAllTopicsDrawer,
   ]);
 
   const groupSelector = useMemo(
@@ -101,12 +99,8 @@ const GroupedAccordion = memo<GroupedAccordionProps>(({ GroupItem }) => {
         ))}
       </AccordionRoot>
       {isExpandingPageSize && <SkeletonList rows={3} />}
-      {hasMore && !isExpandingPageSize && activeAgentId && (
-        <NavItem
-          icon={MoreHorizontal}
-          title={t('topic.viewAll')}
-          onClick={() => navigateToAgentTopics(activeAgentId)}
-        />
+      {hasMore && !isExpandingPageSize && (
+        <NavItem icon={MoreHorizontal} title={t('loadMore')} onClick={openAllTopicsDrawer} />
       )}
     </Flexbox>
   );

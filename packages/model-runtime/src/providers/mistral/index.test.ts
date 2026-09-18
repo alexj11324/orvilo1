@@ -1,15 +1,15 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeMistralAI, params } from './index';
+import { OrviloMistralAI, params } from './index';
 
 testProvider({
   provider: 'mistral',
   defaultBaseURL: 'https://api.mistral.ai/v1',
   chatModel: 'open-mistral-7b',
-  Runtime: LobeMistralAI,
+  Runtime: OrviloMistralAI,
   chatDebugEnv: 'DEBUG_MISTRAL_CHAT_COMPLETION',
   test: {
     skipAPICall: true, // Mistral has custom payload handling (excludeUsage, temperature normalization)
@@ -19,10 +19,10 @@ testProvider({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeMistralAI({ apiKey: 'test' });
+  instance = new OrviloMistralAI({ apiKey: 'test' });
 
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
     new ReadableStream() as any,
@@ -33,7 +33,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeMistralAI - custom features', () => {
+describe('OrviloMistralAI - custom features', () => {
   describe('Debug Configuration', () => {
     it('should disable debug by default', () => {
       delete process.env.DEBUG_MISTRAL_CHAT_COMPLETION;
@@ -368,7 +368,7 @@ describe('LobeMistralAI - custom features', () => {
       const models = await params.models({ client: mockClient as any });
 
       expect(models).toHaveLength(1);
-      // Should have displayName and enabled from LOBE_DEFAULT_MODEL_LIST
+      // Should have displayName and enabled from ORVILO_DEFAULT_MODEL_LIST
       expect(models[0].displayName).toBeDefined();
     });
 
@@ -420,7 +420,7 @@ describe('LobeMistralAI - custom features', () => {
 
       expect(models).toHaveLength(1);
       expect(models[0].id).toBe('MISTRAL-LARGE-LATEST');
-      // Should match with lowercase in LOBE_DEFAULT_MODEL_LIST
+      // Should match with lowercase in ORVILO_DEFAULT_MODEL_LIST
       expect(models[0].displayName).toBeDefined();
     });
 
@@ -443,7 +443,7 @@ describe('LobeMistralAI - custom features', () => {
 
       expect(models).toHaveLength(1);
       expect(models[0]).toHaveProperty('reasoning');
-      // reasoning should be false unless specified in LOBE_DEFAULT_MODEL_LIST
+      // reasoning should be false unless specified in ORVILO_DEFAULT_MODEL_LIST
       expect(models[0].reasoning).toBe(false);
     });
 

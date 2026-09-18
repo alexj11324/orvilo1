@@ -6,7 +6,7 @@ import { StyleProvider } from 'antd-style';
 import { domMax, LazyMotion } from 'motion/react';
 import { Component, type CSSProperties, lazy, memo, type PropsWithChildren, Suspense } from 'react';
 
-import { LobeAnalyticsProviderWrapper } from '@/components/Analytics/LobeAnalyticsProviderWrapper';
+import { OrviloAnalyticsProviderWrapper } from '@/components/Analytics/OrviloAnalyticsProviderWrapper';
 import { DragUploadProvider } from '@/components/DragUploadZone/DragUploadProvider';
 import { isDesktop } from '@/const/version';
 import { useDevDockMounted } from '@/hooks/useDevDockMounted';
@@ -99,12 +99,12 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
               <LazyMotion features={domMax}>
                 <TooltipGroup layoutAnimation={false}>
                   <StyleProvider speedy={import.meta.env.PROD}>
-                    <LobeAnalyticsProviderWrapper>
+                    <OrviloAnalyticsProviderWrapper>
                       <CacheHydrationGate>
                         <BuiltinAgentInitialization />
                         <DevDockLayout>{children}</DevDockLayout>
                       </CacheHydrationGate>
-                    </LobeAnalyticsProviderWrapper>
+                    </OrviloAnalyticsProviderWrapper>
                   </StyleProvider>
                 </TooltipGroup>
                 <ModalHost />

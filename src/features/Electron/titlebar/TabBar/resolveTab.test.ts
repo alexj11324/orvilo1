@@ -107,7 +107,7 @@ describe('resolveTab', () => {
 
   it('uses the generic fallback when neither snapshot nor static meta exists', () => {
     const resolved = resolveTab(fixtureRoutes, tab('/group/g1'), false, t);
-    expect(resolved.meta.title).toBe('navigation.lobehub');
+    expect(resolved.meta.title).toBe('navigation.orvilo');
     expect(resolved.meta.icon).toBe(Circle);
   });
 

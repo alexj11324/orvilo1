@@ -1,18 +1,18 @@
 ---
 name: cli
-description: LobeHub CLI (@lobehub/cli) development guide — commands, subcommands, architecture.
+description: Orvilo CLI (@orvilo/cli) development guide — commands, subcommands, architecture.
 disable-model-invocation: true
 ---
 
-# LobeHub CLI Development Guide
+# Orvilo CLI Development Guide
 
 ## Overview
 
-LobeHub CLI (`@lobehub/cli`) is a command-line tool for managing and interacting with LobeHub services. Built with Commander.js + TypeScript.
+Orvilo CLI (`@orvilo/cli`) is a command-line tool for managing and interacting with Orvilo services. Built with Commander.js + TypeScript.
 
 - **Package**: `apps/cli/`
 - **Entry**: `apps/cli/src/index.ts`
-- **Binaries**: `lh`, `lobe`, `lobehub` (all aliases for the same CLI)
+- **Binaries**: `lh`, `orvilo`, `orvilo` (all aliases for the same CLI)
 - **Build**: tsup
 - **Runtime**: Node.js / Bun
 
@@ -55,7 +55,7 @@ apps/cli/src/
 │   ├── shell.ts              # Shell command execution (for gateway)
 │   └── file.ts               # File operations (for gateway)
 ├── settings/
-│   └── index.ts              # Persistent settings (~/.lobehub/)
+│   └── index.ts              # Persistent settings (~/.orvilo/)
 ├── utils/
 │   ├── logger.ts             # Logging (verbose mode)
 │   ├── format.ts             # Table output, JSON, timeAgo/timeUntil, truncate
@@ -94,7 +94,7 @@ apps/cli/src/
 Every command runs against one scope, resolved in this order:
 
 1. an explicit `--workspace <id>` on the commands that take it
-2. the `LOBEHUB_WORKSPACE_ID` env var
+2. the `ORVILO_WORKSPACE_ID` env var
 3. the scope persisted by `lh workspace use <id|slug>`
 4. personal content (no workspace)
 
@@ -105,7 +105,7 @@ no membership in. `lh logout` clears it. `lh whoami` and `lh workspace current`
 both print which of the four sources is in effect.
 
 API-key auth carries no local account identity, so there is nothing to bind a
-saved scope to — those callers pass `LOBEHUB_WORKSPACE_ID` instead.
+saved scope to — those callers pass `ORVILO_WORKSPACE_ID` instead.
 
 ## Adding a New Command
 
@@ -198,16 +198,16 @@ if (!options.yes) {
 
 ## Storage Locations
 
-| File          | Path                          | Purpose                                          |
-| ------------- | ----------------------------- | ------------------------------------------------ |
-| Credentials   | `~/.lobehub/credentials.json` | Encrypted tokens (AES-256-GCM)                   |
-| Settings      | `~/.lobehub/settings.json`    | Custom server/gateway URLs                       |
-| Workspace     | `~/.lobehub/active-workspace` | Active scope + the account/server it is bound to |
-| Daemon PID    | `~/.lobehub/daemon.pid`       | Background process PID                           |
-| Daemon Status | `~/.lobehub/daemon.status`    | Connection status JSON                           |
-| Daemon Log    | `~/.lobehub/daemon.log`       | Daemon output log                                |
+| File          | Path                         | Purpose                                          |
+| ------------- | ---------------------------- | ------------------------------------------------ |
+| Credentials   | `~/.orvilo/credentials.json` | Encrypted tokens (AES-256-GCM)                   |
+| Settings      | `~/.orvilo/settings.json`    | Custom server/gateway URLs                       |
+| Workspace     | `~/.orvilo/active-workspace` | Active scope + the account/server it is bound to |
+| Daemon PID    | `~/.orvilo/daemon.pid`       | Background process PID                           |
+| Daemon Status | `~/.orvilo/daemon.status`    | Connection status JSON                           |
+| Daemon Log    | `~/.orvilo/daemon.log`       | Daemon output log                                |
 
-The base directory (`~/.lobehub/`) can be overridden with the `LOBEHUB_CLI_HOME` env var (e.g. `LOBEHUB_CLI_HOME=.lobehub-dev` for dev mode isolation).
+The base directory (`~/.orvilo/`) can be overridden with the `ORVILO_CLI_HOME` env var (e.g. `ORVILO_CLI_HOME=.orvilo-dev` for dev mode isolation).
 
 ## Key Dependencies
 
@@ -224,14 +224,14 @@ The base directory (`~/.lobehub/`) can be overridden with the `LOBEHUB_CLI_HOME`
 
 ### Running in Dev Mode
 
-Dev mode uses `LOBEHUB_CLI_HOME=.lobehub-dev` to isolate credentials from the global `~/.lobehub/` directory, so dev and production configs never conflict.
+Dev mode uses `ORVILO_CLI_HOME=.orvilo-dev` to isolate credentials from the global `~/.orvilo/` directory, so dev and production configs never conflict.
 
 ```bash
 # Run a command in dev mode (from apps/cli/)
 cd apps/cli && bun run dev -- <command>
 
 # This is equivalent to:
-LOBEHUB_CLI_HOME=.lobehub-dev bun src/index.ts <command>
+ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts <command>
 ```
 
 ### Connecting to Local Dev Server
@@ -257,8 +257,8 @@ This will:
 1. Call `POST http://localhost:3011/oidc/device/auth` to get a device code
 2. Print a URL like `http://localhost:3011/oidc/device?user_code=XXXX-YYYY`
 3. Open the URL in your browser — log in and authorize
-4. Save credentials to `apps/cli/.lobehub-dev/credentials.json`
-5. Save server URL to `apps/cli/.lobehub-dev/settings.json`
+4. Save credentials to `apps/cli/.orvilo-dev/credentials.json`
+5. Save server URL to `apps/cli/.orvilo-dev/settings.json`
 
 After login, all subsequent `bun run dev -- <command>` calls will use the local server.
 
@@ -274,15 +274,15 @@ cd apps/cli && bun run dev -- agent list
 
 - If login returns `invalid_grant`, make sure the local OIDC provider is properly configured (check `OIDC_*` env vars in `.env`)
 - If you get `UNAUTHORIZED` on API calls, your token may have expired — run `bun run dev -- login --server http://localhost:3011` again
-- Dev credentials are stored in `apps/cli/.lobehub-dev/` (gitignored), not in `~/.lobehub/`
+- Dev credentials are stored in `apps/cli/.orvilo-dev/` (gitignored), not in `~/.orvilo/`
 
 ### Switching Between Local and Production
 
 ```bash
-# Dev mode (local server) — uses .lobehub-dev/
+# Dev mode (local server) — uses .orvilo-dev/
 cd apps/cli && bun run dev -- <command>
 
-# Production (app.lobehub.com) — uses ~/.lobehub/
+# Production (orvilo.aspectlylabs.com) — uses ~/.orvilo/
 lh <command>
 ```
 
@@ -300,7 +300,7 @@ cd apps/cli && bun run test
 # E2E tests (requires authenticated CLI)
 cd apps/cli && bunx vitest run e2e/kb.e2e.test.ts
 
-# Link globally for testing (installs lh/lobe/lobehub commands)
+# Link globally for testing (installs lh/orvilo commands)
 cd apps/cli && bun run cli:link
 ```
 

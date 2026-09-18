@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 
 import type { AgentDocument } from '@/database/models/agentDocuments';
 import {
@@ -33,8 +33,8 @@ import type {
   AgentDocumentTrashEntry,
 } from './types';
 
-const LOBE_PATH = './lobe';
-const LOBE_SKILLS_PATH = './lobe/skills';
+const ORVILO_PATH = './orvilo';
+const ORVILO_SKILLS_PATH = './orvilo/skills';
 /**
  * Default cap for VFS directory reads while the public API still returns arrays.
  * Keep this near path constants because it is part of the VFS surface, not storage policy.
@@ -105,7 +105,7 @@ export class AgentDocumentVfsService {
   private agentDocumentModel: AgentDocumentModel;
   private skillMount: SkillMount;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.agentDocumentModel = new AgentDocumentModel(db, userId, workspaceId);
     this.skillMount = createSkillMount(db, userId, workspaceId);
   }
@@ -136,12 +136,12 @@ export class AgentDocumentVfsService {
     const normalizedPath = normalizeAgentDocumentPath(path);
 
     if (normalizedPath === './') {
-      const [ordinaryNodes, lobeNode] = await Promise.all([
+      const [ordinaryNodes, orviloNode] = await Promise.all([
         this.listOrdinaryNodes(ctx.agentId, null, './', options),
-        Promise.resolve(this.createSyntheticDirectoryNode(LOBE_PATH, 'lobe')),
+        Promise.resolve(this.createSyntheticDirectoryNode(ORVILO_PATH, 'orvilo')),
       ]);
 
-      return [...ordinaryNodes, lobeNode];
+      return [...ordinaryNodes, orviloNode];
     }
 
     const syntheticChildren = this.listSyntheticChildren(normalizedPath);
@@ -315,8 +315,8 @@ export class AgentDocumentVfsService {
 
     if (
       normalizedPath === './' ||
-      normalizedPath === LOBE_PATH ||
-      normalizedPath.startsWith(`${LOBE_PATH}/`)
+      normalizedPath === ORVILO_PATH ||
+      normalizedPath.startsWith(`${ORVILO_PATH}/`)
     ) {
       throw new AgentDocumentVfsError(`Cannot create reserved path: ${path}`, 'BAD_REQUEST');
     }
@@ -797,7 +797,7 @@ export class AgentDocumentVfsService {
     createMode: NonNullable<AgentDocumentWriteOptions['createMode']>,
     contentFormat: NonNullable<AgentDocumentWriteOptions['contentFormat']>,
   ): Promise<AgentDocumentStats> {
-    if (path === './' || path === LOBE_PATH || path.startsWith(`${LOBE_PATH}/`)) {
+    if (path === './' || path === ORVILO_PATH || path.startsWith(`${ORVILO_PATH}/`)) {
       throw new AgentDocumentVfsError(`Cannot write reserved path: ${path}`, 'BAD_REQUEST');
     }
 
@@ -905,8 +905,8 @@ export class AgentDocumentVfsService {
   ): Promise<AgentDocumentStats> {
     if (
       destinationPath === './' ||
-      destinationPath === LOBE_PATH ||
-      destinationPath.startsWith(`${LOBE_PATH}/`)
+      destinationPath === ORVILO_PATH ||
+      destinationPath.startsWith(`${ORVILO_PATH}/`)
     ) {
       throw new AgentDocumentVfsError(
         `Cannot rename to reserved path: ${destinationPath}`,
@@ -1041,9 +1041,10 @@ export class AgentDocumentVfsService {
 
   private getSyntheticNode(path: string): AgentDocumentStats | undefined {
     if (path === './') return { ...this.createSyntheticDirectoryNode('./', '') };
-    if (path === LOBE_PATH) return { ...this.createSyntheticDirectoryNode(LOBE_PATH, 'lobe') };
-    if (path === LOBE_SKILLS_PATH) {
-      return { ...this.createSyntheticDirectoryNode(LOBE_SKILLS_PATH, 'skills') };
+    if (path === ORVILO_PATH)
+      return { ...this.createSyntheticDirectoryNode(ORVILO_PATH, 'orvilo') };
+    if (path === ORVILO_SKILLS_PATH) {
+      return { ...this.createSyntheticDirectoryNode(ORVILO_SKILLS_PATH, 'skills') };
     }
 
     const namespace = getSkillNamespaceDirectory(path);
@@ -1060,22 +1061,22 @@ export class AgentDocumentVfsService {
   }
 
   private listSyntheticChildren(path: string): AgentDocumentNode[] | undefined {
-    if (path === LOBE_PATH) {
-      return [this.createSyntheticDirectoryNode(LOBE_SKILLS_PATH, 'skills')];
+    if (path === ORVILO_PATH) {
+      return [this.createSyntheticDirectoryNode(ORVILO_SKILLS_PATH, 'skills')];
     }
 
-    if (path === LOBE_SKILLS_PATH) {
+    if (path === ORVILO_SKILLS_PATH) {
       return [
-        this.createSyntheticDirectoryNode('./lobe/skills/builtin', 'builtin'),
-        this.createSyntheticDirectoryNode('./lobe/skills/installed', 'installed'),
-        this.createSyntheticDirectoryNode('./lobe/skills/agent', 'agent'),
+        this.createSyntheticDirectoryNode('./orvilo/skills/builtin', 'builtin'),
+        this.createSyntheticDirectoryNode('./orvilo/skills/installed', 'installed'),
+        this.createSyntheticDirectoryNode('./orvilo/skills/agent', 'agent'),
       ];
     }
 
-    if (path === './lobe/skills/installed') {
+    if (path === './orvilo/skills/installed') {
       return [
-        this.createSyntheticDirectoryNode('./lobe/skills/installed/all', 'all'),
-        this.createSyntheticDirectoryNode('./lobe/skills/installed/active', 'active'),
+        this.createSyntheticDirectoryNode('./orvilo/skills/installed/all', 'all'),
+        this.createSyntheticDirectoryNode('./orvilo/skills/installed/active', 'active'),
       ];
     }
 

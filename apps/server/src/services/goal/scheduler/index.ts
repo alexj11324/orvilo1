@@ -27,4 +27,4 @@ export const scheduleGoalAdvance = async (params: ScheduleGoalAdvanceParams): Pr
 };
 
 export type { GoalSchedulerImpl, ScheduleGoalAdvanceParams } from './impls';
-export { createGoalSchedulerModule, GOAL_ADVANCE_PATH } from './impls';
+export { createGoalSchedulerModule, HatchetGoalScheduler } from './impls';

@@ -1,8 +1,8 @@
-# LobeHub Probe & Mock Guide
+# Orvilo Probe & Mock Guide
 
-This is the project-layer entry point for LobeHub acceptance probes. Read it
+This is the project-layer entry point for Orvilo acceptance probes. Read it
 together with the agent-testing skill's generic `references/probe-mock-patterns.md`.
-Product-independent rules belong upstream; LobeHub routes, stores, services, env
+Product-independent rules belong upstream; Orvilo routes, stores, services, env
 variables, and fixtures belong here.
 
 ## Index
@@ -22,11 +22,11 @@ drive / probe / capture / publish. Skip a row only when its surface AND runtime 
 
 | id  | surface       | runtime         | phase          | situation                                                                                                                                      |
 | --- | ------------- | --------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| P01 | any           | any             | probe          | `window.__LOBE_STORES.<name>()` returns state only; add a dev action instead of HMR `setState` patches                                         |
+| P01 | any           | any             | probe          | `window.__ORVILO_STORES.<name>()` returns state only; add a dev action instead of HMR `setState` patches                                         |
 | P02 | web, electron | any             | probe          | `goto` / `location.assign` full-reload wipes fetch wrappers; change route via `history.pushState` + `popstate`                                 |
 | P03 | any           | client, gateway | probe          | Prove which runtime ran with a server-only artifact (operation row, queue step, server log)                                                    |
 | P04 | web, electron | any             | probe          | A top-level `const` in a second `agent-browser eval` collides; wrap payloads in an IIFE                                                        |
-| P05 | web           | any             | drive          | `lobehub-dev` is shared across runs; use a run-specific session and check `location.origin` / script src first                                 |
+| P05 | web           | any             | drive          | `orvilo-dev` is shared across runs; use a run-specific session and check `location.origin` / script src first                                 |
 | P06 | electron      | any             | probe          | After adding or moving a module the renderer may keep the old graph; `goto`, then confirm a structural signal                                  |
 | P07 | web           | any             | env            | `_dangerous_local_dev_proxy` in a signed-out automation context sits on the loading shell; use the isolated local stack                        |
 | P08 | web           | any             | env            | Workspace `packages/*` dynamic imports fail cross-origin through the proxy; A/B at HEAD, use Electron for settled state                        |
@@ -58,10 +58,10 @@ drive / probe / capture / publish. Skip a row only when its surface AND runtime 
 | P34 | web, electron | any             | fixture        | Dispatch an assistant+tool pair into an empty conversation; truncate args to reach the Streaming render                                        |
 | P35 | web           | gateway         | probe          | Step-boundary `uiMessages` snapshots overwrite the bucket; record `replaceMessages` stacks, A/B with `disableGatewayMode`                      |
 | P36 | web           | gateway         | env            | Run the JWT handshake probe after every gateway restart; `/health` 200 proves nothing                                                          |
-| P37 | any           | gateway         | env            | QStash / s3rver on fixed ports may belong to a sibling session; read the start log before stopping anything                                    |
+| P37 | any           | gateway         | env            | Hatchet worker / s3rver may belong to a sibling session; read the start log before stopping anything                                           |
 | P38 | web           | any             | fixture        | Call the real load-more store action when the fixture is too short for the observer                                                            |
 | P39 | web, electron | any             | fixture        | Replace the react-query `mutationFn` with a rejection via HMR so no network call ever fires                                                    |
-| P40 | web, electron | any             | drive          | Remount the DevDock panel after a reload; pre-seed `LOBE_DEV_DOCK_UI` to land on it                                                            |
+| P40 | web, electron | any             | drive          | Remount the DevDock panel after a reload; pre-seed `ORVILO_DEV_DOCK_UI` to land on it                                                            |
 | P41 | web           | client          | fixture, drive | openai speaks `/v1/responses`; the model must be in `enabledAiModels`; set approval `auto-run`                                                 |
 | P42 | web           | hetero          | fixture, drive | In-page IPC mock feeding stream-json through the real `ClaudeCodeAdapter`, no Electron needed                                                  |
 | P43 | web, electron | any             | capture        | Focus and read in one eval, wait past the transition, assert an untransitioned property too                                                    |
@@ -101,8 +101,8 @@ drive / probe / capture / publish. Skip a row only when its surface AND runtime 
 | P77 | web, cli      | gateway         | probe          | Read `llm_generation_tracing.prompt_version` after one call; restart the server if stale                                                       |
 | P78 | web, cli      | gateway         | env            | `SSRF_ALLOW_PRIVATE_IP_ADDRESS=1` so the server can read local s3rver URLs                                                                     |
 | P79 | web, cli      | client, gateway | env            | Local SearXNG with `SEARCH_PROVIDERS=searxng`; the on-disk search1api keys are dead                                                            |
-| P84 | cli           | any             | auth           | Drive `lh` against the local lobehub-cloud runtime by seeding an API key row into its main database                                            |
-| P85 | cli           | any             | fixture        | Simulate a publish whose response was lost by restoring `pendingCreateKey` in `.lobehub/artifacts.json`                                        |
+| P84 | cli           | any             | auth           | Drive `lh` against the local orvilo-cloud runtime by seeding an API key row into its main database                                            |
+| P85 | cli           | any             | fixture        | Simulate a publish whose response was lost by restoring `pendingCreateKey` in `.orvilo/artifacts.json`                                        |
 | P82 | web           | any             | drive          | Acceptance flow canvas through the production debug proxy: anonymous shared link, one uninterrupted script, canvas controls for clipped groups |
 
 ## Choose the least invasive mechanism
@@ -141,7 +141,7 @@ $PROBE errors                     # read captured console errors
 Target Electron by default. For a web session:
 
 ```bash
-AB_TARGET="--session lobehub-dev" $PROBE ready
+AB_TARGET="--session orvilo-dev" $PROBE ready
 ```
 
 Prefer `server-auth` over `document.cookie`: Better Auth session cookies are
@@ -173,10 +173,10 @@ belongs to, above `Detailed references`.
 
 **applies-to:** surface=any · runtime=any · phase=probe
 
-`window.__LOBE_STORES.<name>` is a function returning the current state. Call it:
+`window.__ORVILO_STORES.<name>` is a function returning the current state. Call it:
 
 ```js
-window.__LOBE_STORES.chat();
+window.__ORVILO_STORES.chat();
 ```
 
 It intentionally does not expose Zustand's `getState` or `setState`. If a test
@@ -226,10 +226,10 @@ single namespaced `window.__X` object.
 
 **applies-to:** surface=web · runtime=any · phase=drive
 
-**Situation:** a Web acceptance run uses the adapter's default `lobehub-dev`
+**Situation:** a Web acceptance run uses the adapter's default `orvilo-dev`
 session while another local run is active against a different port.
 
-**Doesn't work:** reusing `lobehub-dev` and trusting the URL printed immediately
+**Doesn't work:** reusing `orvilo-dev` and trusting the URL printed immediately
 after `open`. Another process can steer the same session between commands, so a
 later click or screenshot lands on a different acceptance and port.
 
@@ -239,7 +239,7 @@ directly:
 ```bash
 RUN_SESSION=visualization-acceptance
 agent-browser --session "$RUN_SESSION" \
-  --state ~/.lobehub-agent-testing/web-state.json open "$SERVER_URL/acceptance"
+  --state ~/.orvilo-agent-testing/web-state.json open "$SERVER_URL/acceptance"
 ```
 
 Then assert `get url` and `app-probe.sh auth` on that exact session before
@@ -299,7 +299,7 @@ page + production login + local Vite modules), needing a screenshot of the app a
 has finished loading.
 
 **Doesn't work:** treating the resulting `ErrorBoundary` ("页面暂时不可用") as a defect in
-the change under test. The document origin is `https://app.lobehub.com`, and dynamic
+the change under test. The document origin is `https://orvilo.aspectlylabs.com`, and dynamic
 `import()` of workspace modules served from `http://localhost:9876` — `packages/builtin-tools/src/register.ts`,
 and intermittently `src/routes/**` — fails with `Failed to fetch dynamically imported module`.
 The same URLs return **200** to `curl` and to an in-page `fetch()`; only module scripts
@@ -451,13 +451,13 @@ not), so the next full reload drops it and the plain chat input comes back. Read
 documented exception where the write path does not carry the field):
 
 ```bash
-docker exec lobehub-agent-testing-postgres psql -U postgres -d postgres -tAc \
+docker exec orvilo-agent-testing-postgres psql -U postgres -d postgres -tAc \
   "update agents set agency_config = '{\"executionTarget\":\"local\",\"heterogeneousProvider\":{\"type\":\"claude-code\",\"command\":\"claude\"}}'::jsonb where id='<agentId>';"
 ```
 
 Then cold-load: a plain reload keeps serving the agent config from the tiered SWR
 cache, so the renderer still shows the pre-write value (generic M6). Clear
-`lobechat-swr-cache*` + `lobehub-local-data` through
+`orvilo-swr-cache*` + `orvilo-local-data` through
 `Page.addScriptToEvaluateOnNewDocument` and reload (see "Cold SWR cache" above),
 then assert `agentMap[id].agencyConfig` before drawing any conclusion.
 
@@ -488,8 +488,8 @@ timestamps before suspecting the query.
 **Situation:** forcing a first-load / skeleton state for anything backed by the
 tiered SWR cache (`recent:*`, `topic:*`, `message:*`, …).
 
-**Doesn't work:** clearing `localStorage['lobechat-swr-cache:<scope>']` (and the
-`lobehub-local-data` IndexedDB) in the current document, then reloading. The cache
+**Doesn't work:** clearing `localStorage['orvilo-swr-cache:<scope>']` (and the
+`orvilo-local-data` IndexedDB) in the current document, then reloading. The cache
 provider registers `flushAll()` on `visibilitychange` and `pagehide`, so the reload
 itself makes the outgoing page write its in-memory cache straight back. The next
 document hydrates from a repopulated tier and renders settled data — which reads as
@@ -506,9 +506,9 @@ hydrates:
 
 ```js
 Page.addScriptToEvaluateOnNewDocument({
-  source: `Object.keys(localStorage).filter(k=>k.startsWith('lobechat-swr-cache'))
+  source: `Object.keys(localStorage).filter(k=>k.startsWith('orvilo-swr-cache'))
              .forEach(k=>localStorage.removeItem(k));
-           indexedDB.deleteDatabase('lobehub-local-data');`,
+           indexedDB.deleteDatabase('orvilo-local-data');`,
 });
 ```
 
@@ -545,7 +545,7 @@ public store action (it persists to user preferences and applies for the whole
 session):
 
 ```js
-window.__LOBE_STORES.user().updateLab({ enableTopicAcceptance: true });
+window.__ORVILO_STORES.user().updateLab({ enableTopicAcceptance: true });
 ```
 
 Then open `/agent/<agentId>/goals`. In the create-Goal dialog, "start from blank"
@@ -630,16 +630,16 @@ await fetch('/api/auth/sign-in/email', {
 ```
 
 Reload and assert identity with `app-probe.sh auth` before capturing. Use a
-run-specific session name, never `lobehub-dev` (that one is the owner).
+run-specific session name, never `orvilo-dev` (that one is the owner).
 
-#### P20 · Ambient `LOBEHUB_TOPIC_ID` hijacks a local CLI ingest — strip it for fixture creation
+#### P20 · Ambient `ORVILO_TOPIC_ID` hijacks a local CLI ingest — strip it for fixture creation
 
 **applies-to:** surface=cli · runtime=any · phase=fixture
 
 **Situation:** creating a fixture acceptance on the LOCAL dev server with
-`bun src/index.ts acceptance run ingest` while running inside a LobeHub conversation
-(Claude Code sessions launched from a Topic export `LOBEHUB_TOPIC_ID` /
-`LOBEHUB_AGENT_ID` / `LOBEHUB_OPERATION_ID`).
+`bun src/index.ts acceptance run ingest` while running inside a Orvilo conversation
+(Claude Code sessions launched from a Topic export `ORVILO_TOPIC_ID` /
+`ORVILO_AGENT_ID` / `ORVILO_OPERATION_ID`).
 
 **Doesn't work:** plain ingest. The CLI auto-attaches to the ambient conversation, and
 that topic id belongs to PRODUCTION — the local server answers
@@ -647,7 +647,7 @@ that topic id belongs to PRODUCTION — the local server answers
 data rather than an env leak.
 
 **Works:** strip the ambient ids only for the local fixture ingest
-(`env -u LOBEHUB_TOPIC_ID -u LOBEHUB_AGENT_ID -u LOBEHUB_OPERATION_ID …`) so it lands
+(`env -u ORVILO_TOPIC_ID -u ORVILO_AGENT_ID -u ORVILO_OPERATION_ID …`) so it lands
 standalone. Keep them for the final PRODUCTION publish of the verification round —
 there the auto-attach to the current conversation is exactly what you want.
 
@@ -667,7 +667,7 @@ and nothing errors, which reads as "the upload never started".
 **Works:** open the header `Add` menu first (`find role button click --name "Add"`),
 then upload into the antd input it mounts:
 `agent-browser upload '.ant-upload input[type=file][multiple]' <file>`. Poll
-`window.__LOBE_STORES.file().dockUploadFileList` for `status` / `uploadState.progress`;
+`window.__ORVILO_STORES.file().dockUploadFileList` for `status` / `uploadState.progress`;
 the hash phase is `pending` with a climbing `progress`, upload is `uploading`, and the
 row auto-clears \~3 s after `success`, so screenshot on the first `success` sample.
 Note the `eval` output is a JSON-encoded string — `\"status\":\"success\"` — so a
@@ -726,7 +726,7 @@ from `@lobehub/ui`: refresh, calendar, more, …).
 does not exist" rather than as a driving error:
 
 - `pop.querySelectorAll('button')` misses it. `ActionIcon` renders a `div`/`span`
-  wrapper (`class="lobe-flex …"` around `span.anticon`), so a button-only sweep of a
+  wrapper (`class="orvilo-flex …"` around `span.anticon`), so a button-only sweep of a
   popover reports zero controls and invites the wrong conclusion that the entry was
   never rendered.
 - `el.click()` on that wrapper `div` resolves and returns, but no handler runs — the
@@ -821,7 +821,7 @@ does this against an `agent-browser` session:
 
 ```bash
 node .agents/acceptance/scripts/park-request.cjs \
-  "$(agent-browser --session lobehub-dev get cdp-url)" '*trpc/lambda/aiProvider*' 25000
+  "$(agent-browser --session orvilo-dev get cdp-url)" '*trpc/lambda/aiProvider*' 25000
 ```
 
 Name the route's **own** query in the pattern (`aiProvider*` for the provider page).
@@ -1043,7 +1043,7 @@ real rendered card, and delete the temporary message afterward.
 
 **applies-to:** surface=web, electron · runtime=any · phase=fixture
 
-**Situation:** verifying a builtin-tool Render/Inspector (lobe-agent todos, plans —
+**Situation:** verifying a builtin-tool Render/Inspector (orvilo-agent todos, plans —
 anything reading `message.pluginState`) with DevDock → Agent Mock case playback as
 the deterministic driver (no LLM).
 
@@ -1059,7 +1059,7 @@ may never mount.
 result JSON, at the layer the Render actually reads:
 
 ```js
-const c = window.__LOBE_STORES.chat();
+const c = window.__ORVILO_STORES.chat();
 const msgs = c.dbMessagesMap['main_<agentId>_<topicId>'];
 for (const m of msgs.filter((m) => m.role === 'tool' && m.plugin)) {
   const parsed = JSON.parse(m.content);
@@ -1080,7 +1080,7 @@ is what selects the Render component) and the tool message (`updateMessagePlugin
 
 - `replaceMessagePluginState`). Dispatching brand-new messages at the end of the
   list may never mount. Claude Code builtin payloads use `identifier: 'claude-code'`
-  (NOT `lobe-claude-code`) and PascalCase `apiName` (`TodoWrite`). All of this is
+  (NOT `orvilo-claude-code`) and PascalCase `apiName` (`TodoWrite`). All of this is
   in-memory only — a reload clears it; delete the temp topic at teardown.
 
 #### P34 · Verifying a builtin-tool Render with no provider key — dispatch a fresh assistant+tool pair
@@ -1103,7 +1103,7 @@ from `safeParseJSON(plugin.arguments)` — so those three fields are the whole
 contract:
 
 ```js
-const c = window.__LOBE_STORES.chat();
+const c = window.__ORVILO_STORES.chat();
 c.internal_dispatchMessage({
   type: 'createMessage',
   id: aId,
@@ -1238,18 +1238,16 @@ when in doubt.
 
 **applies-to:** surface=any · runtime=gateway · phase=env
 
-**Situation:** starting QStash / s3rver for a run through `init-dev-env.sh` in a
+**Situation:** starting the Hatchet worker / s3rver for a run through `init-dev-env.sh` in a
 worktree while another agent-testing session is already active on the machine.
 
-**Doesn't work:** trusting that a backgrounded `init-dev-env.sh qstash` (or `s3`)
-came up because `preflight` then reports the service reachable. Both use fixed ports
-(8080 / 29000), so the second starter dies immediately with
-`address already in use` while the sibling session's process keeps answering — and
-`preflight` is a reachability check, so it passes. The run works, but on services it
-does not own.
+**Doesn't work:** trusting that a backgrounded `init-dev-env.sh hatchet` (or `s3`)
+came up because `preflight` then reports the service configured. The worker and
+S3 emulator may belong to a sibling session, so the second starter can fail while
+the sibling process keeps answering. The run works, but on services it does not own.
 
 **Works:** read the start log before assuming ownership
-(`.records/logs/qstash.log`, `.records/logs/s3.log`), and treat "already in use" as
+(`.records/logs/hatchet.log`, `.records/logs/s3.log`), and treat startup errors as
 "this is not mine". It matters at teardown: stopping a service you did not start
 kills the other session's run. Only the dev server (`stop-dev`, which verifies PID
 ownership) and anything you launched on a port you chose yourself are yours to stop.
@@ -1296,9 +1294,9 @@ through it:
 
 ```js
 localStorage.setItem(
-  'LOBE_DEV_DOCK_UI',
+  'ORVILO_DEV_DOCK_UI',
   JSON.stringify({
-    ...JSON.parse(localStorage.getItem('LOBE_DEV_DOCK_UI') || '{}'),
+    ...JSON.parse(localStorage.getItem('ORVILO_DEV_DOCK_UI') || '{}'),
     activePanelId: 'render-gallery',
     expanded: true,
     maximized: true,
@@ -1334,10 +1332,10 @@ second message AND ends on a tool round, so the first turn renders as an
   (`agent-browser click` refuses; use `eval` `el.focus()` + `keyboard type` instead).
 
 **Works:** `updateAgentConfig({ model: 'gpt-5.6-luna', provider: 'openai' })` (any
-`enabledAiModels` entry with `functionCall: true`), `setPluginMode('lobe-calculator',
+`enabledAiModels` entry with `functionCall: true`), `setPluginMode('orvilo-calculator',
 'pinned')`, `user().updateHumanIntervention({ approvalMode: 'auto-run' })`, and a stub
 that speaks Responses SSE: `response.output_item.added` (`type: 'function_call'`,
-`call_id`, `name: 'lobe-calculator____calculate'`) → `response.function_call_arguments.delta`
+`call_id`, `name: 'orvilo-calculator____calculate'`) → `response.function_call_arguments.delta`
 → `response.output_item.done` → `response.completed`; on the next request the tool
 result arrives as a `function_call_output` input item, so stream the final text then.
 Detect the conversation turn by `payload.stream === true`, not by `payload.tools`.
@@ -1441,7 +1439,7 @@ screenshotting. React Scan re-creates it on the next render pass, so a probe tha
 reports `0 canvases` a few seconds later is only measuring that nothing
 re-rendered in that window — the outlines return the moment the app updates.
 `localStorage` is also not a reliable read: `react-scan-options.enabled` and
-`LOBE_DEV_DOCK_UI.reactScan` can both say `false` while the instrumentation is
+`ORVILO_DEV_DOCK_UI.reactScan` can both say `false` while the instrumentation is
 live, because it was enabled at runtime and never written back.
 
 **Works:** inject a capture-time style rule instead of removing nodes —
@@ -1518,7 +1516,7 @@ to get right in the phase predicate: scope any `[role="status"][aria-label="Load
 check with `.closest('#loading-screen')` so the **static HTML shell's own logo** is not
 counted as the React `BrandTextLoading` (they share the same role/label, and conflating
 them turns a clean boot into a false "the logo flashed"); and record the max gap between
-consecutive ticks — LobeHub's boot routinely shows a single 0.6–1.1s blocking task, so a
+consecutive ticks — Orvilo's boot routinely shows a single 0.6–1.1s blocking task, so a
 phase with no sample inside it is a blocked window, not a missing state.
 
 #### P47 · Asserting a modal's exit window: `data-ending-style` is never set, and `record-gif.sh` is far too slow
@@ -1579,8 +1577,8 @@ the server does not own it).
 same session:
 
 ```bash
-agent-browser --session lobehub-dev eval "localStorage.setItem('theme','dark')"
-agent-browser --session lobehub-dev open "$SERVER_URL/<route>" # re-render applies html[data-theme]
+agent-browser --session orvilo-dev eval "localStorage.setItem('theme','dark')"
+agent-browser --session orvilo-dev open "$SERVER_URL/<route>" # re-render applies html[data-theme]
 ```
 
 `'light'` / removal (`localStorage.removeItem('theme')` → back to system) work the
@@ -1712,7 +1710,7 @@ page target accepts only one websocket:
 
 ```bash
 agent-browser --cdp 9222 eval '(async () => {
-  await window.__LOBE_STORES.global().openTopicInNewWindow("inbox","verify-popup");
+  await window.__ORVILO_STORES.global().openTopicInNewWindow("inbox","verify-popup");
   return "requested"; })()'
 curl -s http://127.0.0.1:9222/json/list # pick the target whose url contains /popup/
 ```
@@ -1728,7 +1726,7 @@ tint in a screenshot while actually swallowing every click.
 **applies-to:** surface=electron · runtime=any · phase=drive
 
 **Situation:** benchmarking or driving a desktop tab switch from an `eval`
-payload, using `window.__LOBE_STORES.electron().activateTab(id)`.
+payload, using `window.__ORVILO_STORES.electron().activateTab(id)`.
 
 **Doesn't work:** on the single-router shell, `activateTab` only writes
 `activeTabId`; navigation is a second step performed by the TabBar
@@ -1777,8 +1775,8 @@ Symptom: the probe's final `location.pathname` is not the tab you clicked, with 
 measuring:
 
 ```js
-const st = window.__LOBE_STORES.electron();
-const chat = window.__LOBE_STORES.chat();
+const st = window.__ORVILO_STORES.electron();
+const chat = window.__ORVILO_STORES.chat();
 const tab = (st.tabs || []).find((t) => t.id === st.activeTabId);
 // tab.url, location.pathname and chat.activeTopicId must all point at the same topic
 ```
@@ -1819,7 +1817,7 @@ and use the intersection. Otherwise the action's own effect lands in the wrong b
 
 **Situation:** capturing dark-mode evidence for a desktop UI change.
 
-**Doesn't work:** `window.__LOBE_STORES.user().updateGeneralConfig({ themeMode: 'dark' })`.
+**Doesn't work:** `window.__ORVILO_STORES.user().updateGeneralConfig({ themeMode: 'dark' })`.
 The setting persists (reading it back returns `dark`, and it survives a restart),
 but `document.documentElement.dataset.theme` stays `light` and every token keeps its
 light value. Restarting the instance does not apply it either. Treating the stored
@@ -1840,14 +1838,14 @@ the account and affects other surfaces; restore it (`auto`) at teardown if you s
 `electron-dev.sh` instance — a label's text, or that a settings section rendered at all.
 
 **Doesn't work:** grepping the rendered text for the Chinese label while
-`window.__LOBE_STORES.global().status.language` reports `zh-CN`. The persisted language is
+`window.__ORVILO_STORES.global().status.language` reports `zh-CN`. The persisted language is
 restored into the store, but i18next is still on English until `switchLocale` runs once, so every
 Chinese-text assertion comes back false and reads as "the section never rendered". A full-reload
 `goto` puts it back into that state, so it recurs mid-run after each navigation.
 
 **Works:** never infer the rendered language from `status.language`. Decide from the DOM
 (test for both the Chinese and English label, or read a known-localized node), or normalize first
-by calling `window.__LOBE_STORES.global().switchLocale('<locale>')` — the same action the language
+by calling `window.__ORVILO_STORES.global().switchLocale('<locale>')` — the same action the language
 select calls — and only then assert. When the check under test IS the language, drive the real
 select, and re-read `status.language` plus the DOM copy after every switch: the two can disagree.
 
@@ -1867,7 +1865,7 @@ appears to work for `/tasks`, `/agents`, `/settings` and silently fails only for
 **Works:** create and activate a Home tab first, then navigate:
 
 ```js
-window.__LOBE_STORES.electron().addTab('/'); // addTab also activates it
+window.__ORVILO_STORES.electron().addTab('/'); // addTab also activates it
 ```
 
 ```bash
@@ -1885,7 +1883,7 @@ create or mutate product objects (labels, groups, agents, forwarded topics, save
 
 **Doesn't work:** assuming the instance talks to a local backend because the run also started one.
 The seeded login snapshot carries its own target, and `{"storageMode":"cloud","active":true}` means
-the renderer runs your working-tree code while every request goes to `app.lobehub.com` with the
+the renderer runs your working-tree code while every request goes to `orvilo.aspectlylabs.com` with the
 user's real account. `app-probe.sh server-auth` returns 200, which reads as "the local stack is
 wired up" and encourages exactly the writes that then land in production. The local dev server the
 run started sits unused.
@@ -1893,7 +1891,7 @@ run started sits unused.
 **Works:** read the target first and let it decide the test's write budget.
 
 ```bash
-agent-browser --cdp 9222 eval '(() => JSON.stringify(window.__LOBE_STORES.electron().dataSyncConfig))()'
+agent-browser --cdp 9222 eval '(() => JSON.stringify(window.__ORVILO_STORES.electron().dataSyncConfig))()'
 # {"storageMode":"cloud","active":true}   -> production account; keep the run read-only
 # {"storageMode":"selfHost","remoteServerUrl":"http://localhost:3111", ...} -> local backend
 ```
@@ -1955,7 +1953,7 @@ bad scan because the optimized dependency graph can remain poisoned.
 **applies-to:** surface=cli · runtime=gateway · phase=auth
 
 **Situation:** A local acceptance run is driven through `lh task run` with the
-seeded `LOBEHUB_CLI_API_KEY`, and the test needs to observe the asynchronous
+seeded `ORVILO_CLI_API_KEY`, and the test needs to observe the asynchronous
 repair lifecycle.
 
 **Doesn't work:** `lh task run <id> --follow` switches to `/webapi/*`, which
@@ -1983,7 +1981,7 @@ though ingest succeeded. Use the internal id in `--subject` (or fix the
 `bun run dev:spa`'s `_dangerous_local_dev_proxy` URL.
 
 **Doesn't work:** the adapter's Web evidence path (`agent-browser --session
-lobehub-dev` seeded by `setup-auth.sh web-seed`) authenticates against the LOCAL
+orvilo-dev` seeded by `setup-auth.sh web-seed`) authenticates against the LOCAL
 server. There is no sanctioned way to give that session a production login —
 `setup-auth.sh web`'s Chrome-cookie injection is explicitly forbidden against
 production.
@@ -2016,7 +2014,7 @@ matches, the snapshot's OAuth tokens are usually expired anyway — the app show
 **Works:** read the app's own target first, then start the server on that port:
 
 ```bash
-agent-browser --cdp 9222 eval '(() => JSON.stringify(window.__LOBE_STORES.electron().dataSyncConfig))()'
+agent-browser --cdp 9222 eval '(() => JSON.stringify(window.__ORVILO_STORES.electron().dataSyncConfig))()'
 # → {"storageMode":"selfHost","remoteServerUrl":"http://localhost:3111","active":true}
 SERVER_PORT=3111 .agents/acceptance/scripts/init-dev-env.sh dev-next
 ```
@@ -2035,7 +2033,7 @@ raw CDP:
 ```bash
 curl -c cookie.jar -H 'Content-Type: application/json' -X POST \
   "$SERVER_URL/api/auth/sign-in/email" \
-  --data '{"callbackURL":"/","email":"agent-testing@lobehub.com","password":"TestPassword123!"}'
+  --data '{"callbackURL":"/","email":"agent-testing@orvilo.aspectlylabs.com","password":"TestPassword123!"}'
 # then Network.setCookie better-auth.session_token / better-auth.session_data
 # for url http://localhost:<port>, domain localhost, httpOnly, on the renderer target
 ```
@@ -2052,7 +2050,7 @@ renderer ready and the seeded login is present on disk.
 
 **Doesn't work:** trusting `login-status`'s "refresh token PRESENT" as proof the
 instance will come up authenticated. The pool's copied userData can fail to decrypt
-its access token — `/tmp/lobe-electron-pool/instance-<id>.log` repeats
+its access token — `/tmp/orvilo-electron-pool/instance-<id>.log` repeats
 `Failed to decrypt access token: Error while decrypting the ciphertext provided to
 safeStorage.decryptString` — and the app boots signed out (`app-probe.sh auth` →
 `isSignedIn: false`) with a near-blank shell that reads like a broken route tree.
@@ -2105,7 +2103,7 @@ the data layer works: it does not take the same route as tRPC.
 
 **Works:** read
 `BackendProxy upstream fetch failed ... http://localhost:<port>/trpc/...` from
-`/tmp/lobe-electron-pool/instance-<id>.log`, start the dev server on that port
+`/tmp/orvilo-electron-pool/instance-<id>.log`, start the dev server on that port
 (`PORT=<port> APP_URL=http://localhost:<port> init-dev-env.sh dev`), then restart that
 pool instance. The criterion is that `topicDataMap` actually holds items, not the
 helper's Ready line. Beware that `init-dev-env.sh dev` / `stop-dev` can SIGTERM the
@@ -2292,9 +2290,9 @@ are gone before the next command can connect.
 with the same isolated userData, Vite port, IPC id, and CDP port:
 
 ```bash
-LOBE_DESKTOP_VITE_PORT=5175 \
-  LOBE_DESKTOP_USER_DATA_DIR=/tmp/lobe-electron-pool/ud-2 \
-  LOBE_IPC_ID=lobehub-desktop-dev-2 \
+ORVILO_DESKTOP_VITE_PORT=5175 \
+  ORVILO_DESKTOP_USER_DATA_DIR=/tmp/orvilo-electron-pool/ud-2 \
+  ORVILO_IPC_ID=orvilo-desktop-dev-2 \
   pnpm -C apps/desktop dev -- --remote-debugging-port=9224
 ```
 
@@ -2345,7 +2343,7 @@ is that the output should differ, so any difference confirms the hypothesis eith
 back:
 
 ```bash
-docker exec lobehub-agent-testing-postgres psql -U postgres -d postgres -tAc \
+docker exec orvilo-agent-testing-postgres psql -U postgres -d postgres -tAc \
   "select prompt_version, model, created_at from llm_generation_tracing \
    where scenario='<scenario>' order by created_at desc limit 1"
 ```
@@ -2369,7 +2367,7 @@ dep cache is gone for good and HMR cannot recover it.
 
 **Works:** leave the user's process alone and start an isolated SPA on a free port
 against the same backend — `PORT=3010 SPA_PORT=<free> bun run dev:spa` from the repo
-root. `localhost` cookies are port-agnostic, so the seeded `lobehub-dev` session is
+root. `localhost` cookies are port-agnostic, so the seeded `orvilo-dev` session is
 already signed in there. Prove identity before capturing (fetch the changed module from
 the new Vite origin and grep the change's marker), stop only that pid at teardown, and
 tell the user to restart their `dev:spa`.
@@ -2427,7 +2425,7 @@ switching to inline base64, which would verify a path the product never takes.
 **applies-to:** surface=web, cli · runtime=client, gateway · phase=env
 
 **Situation:** a check needs the product's real web-search pipeline (builtin
-`lobe-web-browsing____search` executing an actual HTTP search and rendering result
+`orvilo-web-browsing____search` executing an actual HTTP search and rendering result
 cards), e.g. "ask the agent a weather question".
 
 **Doesn't work:** `SEARCH_PROVIDERS=search1api` with any `SEARCH1API_SEARCH_API_KEY`
@@ -2452,7 +2450,7 @@ stub's answer-mode off the NAME of the last `function_call` instead.
 ## Detailed references
 
 - [Probe field notes](./references/probe-field-notes.md) — all historical
-  LobeHub findings, original identifiers, commands, and failure analysis.
+  Orvilo findings, original identifiers, commands, and failure analysis.
 - [Auth](./references/auth.md) — per-surface auth injection and recovery.
 - [Dev server](./references/dev-server.md) — local stack and restart behavior.
 - [Multi-instance Electron](./references/multi-instance.md) — pool, ports, CDP
@@ -2490,13 +2488,13 @@ ScreenshotTiles, and Highlighter's `styles.content` styles a container whose
 prove the visible edge or total inset changed. Measure the settled DOM, then
 inspect a screenshot before declaring the styling verified.
 
-#### P84 · Driving `lh` against the local lobehub-cloud runtime
+#### P84 · Driving `lh` against the local orvilo-cloud runtime
 
 **applies-to:** surface=cli · runtime=any · phase=auth
 
 **Situation:** a CLI command that only exists on cloud (`market.deployments.*`,
 which the OSS lambda router stubs out as an empty object) has to be exercised
-against `lobehub-cloud`'s own dev runtime, not this repo's `:3010` server. The
+against `orvilo-cloud`'s own dev runtime, not this repo's `:3010` server. The
 adapter's seeded CLI profile (§4 CLI) points at the wrong backend, and cloud's
 `bun run dev:runtime:auth` only writes **browser** cookies.
 
@@ -2504,27 +2502,27 @@ adapter's seeded CLI profile (§4 CLI) points at the wrong backend, and cloud's
 interactive device-code login (hijacks the user's browser and is forbidden).
 
 **Works:** insert an api\_keys row into the runtime's main database and use it as
-`LOBEHUB_CLI_API_KEY`. `key_hash` is `HMAC-SHA256(key, KEY_VAULTS_SECRET)`;
+`ORVILO_CLI_API_KEY`. `key_hash` is `HMAC-SHA256(key, KEY_VAULTS_SECRET)`;
 `key` is the same plaintext AES-GCM encrypted with that secret as
 `iv:authTag:ciphertext` hex — the shapes `init-dev-env.sh seed-user` uses. Read
 `keyVaultsSecret` and `seedEmail` from
-`~/.lobehub/runtime-dev/secrets/<checkout>.json`, resolve the user id by that
+`~/.orvilo/runtime-dev/secrets/<checkout>.json`, resolve the user id by that
 email, then:
 
 ```bash
-LOBEHUB_CLI_API_KEY=sk-lh-<16 lowercase alnum> \
-LOBEHUB_SERVER=http://localhost:<runtime app port> \
-LOBEHUB_CLI_HOME=<scratch dir> \
+ORVILO_CLI_API_KEY=sk-ov-<16 lowercase alnum> \
+ORVILO_SERVER=http://localhost:<runtime app port> \
+ORVILO_CLI_HOME=<scratch dir> \
   node apps/cli/dist/index.js <command>
 ```
 
-The key must match `^sk-lh-[\da-z]{16}$` or the server rejects it before any
-lookup. Give the run its own `LOBEHUB_CLI_HOME` so it cannot disturb the user's
+The key must match `^sk-ov-[\da-z]{16}$` or the server rejects it before any
+lookup. Give the run its own `ORVILO_CLI_HOME` so it cannot disturb the user's
 real login, and remember the publishing identity is now that seeded user — see
 `common-mistakes.md` L-S22 before blaming a quota error on the code.
 
 Cloud's runtime commands each re-read the container ports, so pass the same
-`LOBEHUB_RUNTIME_POSTGRES_PORT` / `LOBEHUB_RUNTIME_REDIS_PORT` overrides to
+`ORVILO_RUNTIME_POSTGRES_PORT` / `ORVILO_RUNTIME_REDIS_PORT` overrides to
 _every_ `bun run dev …` invocation. Omitting them on a later call silently
 targets the default 5433, which on a developer machine is usually a different
 project's Postgres and fails as `password authentication failed for user
@@ -2538,7 +2536,7 @@ project's Postgres and fails as `password authentication failed for user
 create a second site. The real failure — a dropped reply — cannot be produced by
 killing the process, because the manifest is what carries the recovery state.
 
-**Works:** the CLI writes `pendingCreateKey` into `.lobehub/artifacts.json`
+**Works:** the CLI writes `pendingCreateKey` into `.orvilo/artifacts.json`
 _before_ sending a create, and replaces it with `deploymentId` on success. So
 write the manifest by hand with only a known `pendingCreateKey`, publish (the
 CLI adopts that key), then restore the same one-key manifest and publish again.
@@ -2547,7 +2545,7 @@ the revision; a broken one mints a second site with its own URL.
 
 ```bash
 printf '{"artifacts":{"dist/index.html":{"pendingCreateKey":"%s"}},"version":1}' "$KEY" \
-  > .lobehub/artifacts.json
+  > .orvilo/artifacts.json
 ```
 
 Capture both publishes' `--json` output in one artifact with the restored

@@ -1,7 +1,7 @@
 import { toast } from '@lobehub/ui/base-ui';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from '@orvilo/business-const';
 import { TOPIC_TITLE_JSON_SCHEMA } from '@orvilo/prompts';
-import type { LobeUser, UIChatMessage } from '@orvilo/types';
+import type { OrviloUser, UIChatMessage } from '@orvilo/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { type Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -89,7 +89,6 @@ beforeEach(() => {
       activeAgentId: undefined,
       activeGroupId: undefined,
       activeTopicId: undefined,
-      agentTopicsViewMap: {},
       searchTopics: [],
       topicDataMap: {},
       topicDetailMap: {},
@@ -98,7 +97,7 @@ beforeEach(() => {
     false,
   );
   useAgentStore.setState({ agentDocumentsMap: {} });
-  useUserStore.setState({ user: { id: 'user-1' } as LobeUser });
+  useUserStore.setState({ user: { id: 'user-1' } as OrviloUser });
   useSessionStore.setState(
     {
       activeId: 'inbox',
@@ -331,7 +330,7 @@ describe('topic action', () => {
                 {
                   id: 'builder-topic',
                   model: 'glm-5.2',
-                  provider: 'lobehub',
+                  provider: 'orvilo',
                   title: 'Builder chat',
                 } as ChatTopic,
               ],
@@ -351,13 +350,13 @@ describe('topic action', () => {
       await act(async () => {
         await result.current.updateTopicModel('builder-topic', {
           model: 'deepseek-v4-flash',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
       expect(useChatStore.getState().topicDataMap[BUILDER_KEY].items[0]).toMatchObject({
         model: 'deepseek-v4-flash',
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
     });
 
@@ -370,7 +369,7 @@ describe('topic action', () => {
       await act(async () => {
         await result.current.updateTopicModel('builder-topic', {
           model: 'deepseek-v4-flash',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
@@ -394,14 +393,14 @@ describe('topic action', () => {
       await act(async () => {
         await result.current.updateTopicModel('builder-topic', {
           model: 'deepseek-v4-flash',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
       expect(spy).toHaveBeenCalledWith('builder-topic', {
         metadata: { reasoningConfig: { deepseekV4GAReasoningEffort: 'high' } },
         model: 'deepseek-v4-flash',
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
       expect(useChatStore.getState().topicDataMap[BUILDER_KEY].items[0]).toMatchObject({
         metadata: { reasoningConfig: { deepseekV4GAReasoningEffort: 'high' } },
@@ -438,14 +437,14 @@ describe('topic action', () => {
       await act(async () => {
         await result.current.updateTopicModel('builder-topic', {
           model: 'plain-model',
-          provider: 'lobehub',
+          provider: 'orvilo',
         });
       });
 
       expect(spy).toHaveBeenCalledWith('builder-topic', {
         metadata: undefined,
         model: 'plain-model',
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
       expect(useChatStore.getState().topicDataMap[BUILDER_KEY].items[0].metadata).toEqual({
         workingDirectory: '/w',
@@ -2063,11 +2062,10 @@ describe('topic action', () => {
       ];
 
       expect(options).toEqual({ revalidate: false });
-      // Only this container's list keys — the agent-view key and other
-      // containers keep their own cached pages.
+      // Only this container's list keys — other containers keep their own
+      // cached pages.
       expect(matcher(['topic:list', containerKey, { pageSize: 20 }])).toBe(true);
       expect(matcher(['topic:list', topicMapKey({ agentId: 'other-agent' }), {}])).toBe(false);
-      expect(matcher(['topic:agentView', containerKey, {}])).toBe(false);
 
       const cached = {
         items: [{ id: 'topic-1', status: 'running', title: 'Topic 1' }] as ChatTopic[],
@@ -2099,93 +2097,6 @@ describe('topic action', () => {
       expect(mutate).not.toHaveBeenCalled();
     });
   });
-  describe('loadMoreAgentTopicsView', () => {
-    it('records a pagination error without clearing existing topics or hasMore', async () => {
-      const { result } = renderHook(() => useChatStore());
-      const agentId = 'agent-1';
-      const key = topicMapKey({ agentId });
-      const topics = [
-        { id: 'topic-1', title: 'Topic 1' },
-        { id: 'topic-2', title: 'Topic 2' },
-      ] as ChatTopic[];
-      const error = new Error('load more failed');
-
-      act(() => {
-        useChatStore.setState({
-          activeAgentId: agentId,
-          agentTopicsViewMap: {
-            [key]: {
-              currentPage: 0,
-              hasMore: true,
-              isLoadingMore: false,
-              items: topics,
-              pageSize: 2,
-              total: 4,
-              withDetails: true,
-            },
-          },
-        });
-      });
-
-      (topicService.getTopics as Mock).mockRejectedValueOnce(error);
-
-      await act(async () => {
-        await result.current.loadMoreAgentTopicsView();
-      });
-
-      const topicData = useChatStore.getState().agentTopicsViewMap[key];
-      expect(topicService.getTopics).toHaveBeenCalledWith({
-        agentId,
-        current: 1,
-        pageSize: 2,
-        withDetails: true,
-      });
-      expect(topicData.items).toEqual(topics);
-      expect(topicData.hasMore).toBe(true);
-      expect(topicData.isLoadingMore).toBe(false);
-      expect(topicData.loadMoreError).toBe(error);
-    });
-
-    it('clears a stale pagination error after retry succeeds', async () => {
-      const { result } = renderHook(() => useChatStore());
-      const agentId = 'agent-1';
-      const key = topicMapKey({ agentId });
-
-      act(() => {
-        useChatStore.setState({
-          activeAgentId: agentId,
-          agentTopicsViewMap: {
-            [key]: {
-              currentPage: 0,
-              hasMore: true,
-              isLoadingMore: false,
-              items: [{ id: 'topic-1', title: 'Topic 1' } as ChatTopic],
-              loadMoreError: new Error('previous failure'),
-              pageSize: 1,
-              total: 2,
-            },
-          },
-        });
-      });
-
-      (topicService.getTopics as Mock).mockResolvedValueOnce({
-        items: [{ id: 'topic-2', title: 'Topic 2' }],
-        total: 2,
-      });
-
-      await act(async () => {
-        await result.current.loadMoreAgentTopicsView();
-      });
-
-      const topicData = useChatStore.getState().agentTopicsViewMap[key];
-      expect(topicData.items.map((item) => item.id)).toEqual(['topic-1', 'topic-2']);
-      expect(topicData.currentPage).toBe(1);
-      expect(topicData.hasMore).toBe(false);
-      expect(topicData.isLoadingMore).toBe(false);
-      expect(topicData.loadMoreError).toBeUndefined();
-    });
-  });
-
   describe('removeUnstarredTopic', () => {
     it('should remove unstarred topics and refresh the topic list', async () => {
       const { result } = renderHook(() => useChatStore());
@@ -2743,7 +2654,7 @@ describe('topic action', () => {
       number: 123,
       state: 'OPEN',
       title: 'fix: stop stale running topics',
-      url: 'https://github.com/lobehub/lobehub/pull/123',
+      url: 'https://github.com/alexj11324/orvilo1/pull/123',
     };
     const mergedPR = {
       ...stalePR,
@@ -2857,7 +2768,7 @@ describe('topic action', () => {
             pullRequest: {
               ...mergedPR,
               number: 456,
-              url: 'https://github.com/lobehub/lobehub/pull/456',
+              url: 'https://github.com/alexj11324/orvilo1/pull/456',
             },
             pullRequestStatus: 'ok',
           },

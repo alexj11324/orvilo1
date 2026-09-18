@@ -13,6 +13,7 @@ import {
   resolveRemotePlatformRuntime,
 } from '@orvilo/heterogeneous-agents/scanHost';
 import { type ILocalSystemService, LocalSystemExecutionRuntime } from '@orvilo/tool-runtime';
+import { sleep } from '@orvilo/utils/sleep';
 
 import AuvService, { type AuvRunCommandParams } from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
@@ -36,8 +37,11 @@ type AvailableRemotePlatformRuntime = Extract<RemotePlatformCommandRuntime, { av
 // Mirror of `BrowserManifest.identifier` from `@orvilo/builtin-tool-browser`.
 // Hardcoded (not imported) so the desktop main process keeps zero builtin-tool
 // package deps — importing one risks the @orvilo/types stub runtime leak.
-const BrowserIdentifier = 'lobe-browser';
-const AuvIdentifier = 'lobe-computer-use';
+const BrowserIdentifier = 'orvilo-browser';
+const AuvIdentifier = 'orvilo-computer-use';
+const PLATFORM_CANCEL_GRACE_MS = 2000;
+const PLATFORM_CANCEL_FORCE_MS = 3000;
+const PLATFORM_PROCESS_GROUP_POLL_MS = 50;
 
 function parseHermesSessionId(stderr: string): string | undefined {
   for (const line of stderr.split(/\r?\n/).reverse()) {
@@ -50,13 +54,13 @@ function parseHermesSessionId(stderr: string): string | undefined {
 
 /**
  * Inject the lh-notify protocol into the first turn of a new hetero-agent session.
- * Tells the agent binary how to push results back to the LobeHub chat UI via `lh notify`.
+ * Tells the agent binary how to push results back to the Orvilo chat UI via `lh notify`.
  * Ported directly from apps/cli/src/tools/heteroTask.ts so desktop and CLI stay in sync.
  */
 function buildNotifyProtocol(lhPath: string, topicId: string): string {
   return (
-    `## Context: This task was dispatched by LobeHub\n\n` +
-    `This conversation / task was sent to you by the **LobeHub platform** on behalf of a user. You are running as a background agent; the user is waiting for your response inside the LobeHub chat interface.\n\n` +
+    `## Context: This task was dispatched by Orvilo\n\n` +
+    `This conversation / task was sent to you by the **Orvilo platform** on behalf of a user. You are running as a background agent; the user is waiting for your response inside the Orvilo chat interface.\n\n` +
     `**When to call notify**: any time you have something meaningful to tell the user — a key finding, a decision you made, a result, a question, or your final answer.\n\n` +
     `**What to hide**: internal work details such as tool call sequences, file reads, intermediate command output, retries, or low-level reasoning steps.\n\n` +
     `## Sending messages back to the user\n\n` +
@@ -545,12 +549,12 @@ export default class GatewayConnectionCtr extends ControllerModule {
   }
 
   /**
-   * Executes the stable LobeHub CLI tool against the app-owned AUV daemon.
+   * Executes the stable Orvilo CLI tool against the app-owned AUV daemon.
    *
    * Triggering workflow:
    *
    * {@link GatewayConnectionCtr.executeToolCall}
-   *   -> `lobe-computer-use/runCommand`
+   *   -> `orvilo-computer-use/runCommand`
    *     -> {@link GatewayConnectionCtr.executeAuvToolCall}
    *
    * Upstream:
@@ -815,14 +819,14 @@ export default class GatewayConnectionCtr extends ControllerModule {
 
     // Inject auth + workspace scope into child env so `lh notify` can
     // authenticate AND target the same workspace as the dispatched topic
-    // (without LOBEHUB_WORKSPACE_ID, the CLI's notify falls back to personal
+    // (without ORVILO_WORKSPACE_ID, the CLI's notify falls back to personal
     // mode and the workspace topic 404s).
     const childEnv: NodeJS.ProcessEnv = {
       ...process.env,
-      ...(accessToken && { LOBEHUB_JWT: accessToken }),
-      LOBEHUB_OPERATION_ID: operationId,
-      ...(serverUrl && { LOBEHUB_SERVER: serverUrl }),
-      ...(workspaceId && { LOBEHUB_WORKSPACE_ID: workspaceId }),
+      ...(accessToken && { ORVILO_JWT: accessToken }),
+      ORVILO_OPERATION_ID: operationId,
+      ...(serverUrl && { ORVILO_SERVER: serverUrl }),
+      ...(workspaceId && { ORVILO_WORKSPACE_ID: workspaceId }),
     };
     const sessionKey = parentOperationId ? operationId : topicId;
 
@@ -835,7 +839,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
       const openclawAgent = platformAgentId?.trim() || process.env['OPENCLAW_AGENT_ID'] || 'main';
 
       // Always inject the notify protocol so openclaw knows how to report results
-      // back to the LobeHub UI — even if the previous turn failed and the session
+      // back to the Orvilo UI — even if the previous turn failed and the session
       // history was not cleanly committed.
       const enrichedPrompt = `${prompt}\n\n${buildNotifyProtocol(lhPath, topicId)}`;
 
@@ -1123,6 +1127,18 @@ export default class GatewayConnectionCtr extends ControllerModule {
     }
   }
 
+  /** Wait until the complete detached platform-agent process tree is gone. */
+  private async waitForPlatformProcessTreeExit(pid: number, timeoutMs: number): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    while (this.isPlatformProcessGroupAlive(pid)) {
+      if (Date.now() >= deadline) return false;
+      await sleep(PLATFORM_PROCESS_GROUP_POLL_MS);
+    }
+
+    this.clearPlatformTaskKillTimer(pid);
+    return true;
+  }
+
   private clearPlatformTaskKillTimer(pid: number): void {
     const timer = this.platformTaskKillTimers.get(pid);
     if (!timer) return;
@@ -1148,9 +1164,16 @@ export default class GatewayConnectionCtr extends ControllerModule {
     }
 
     // The close handler sends the terminal notify after the whole tree exits.
-    this.killPlatformProcessTree(entry.pid, signal as NodeJS.Signals);
+    const requestedSignal = signal as NodeJS.Signals;
+    this.killPlatformProcessTree(entry.pid, requestedSignal);
+    const exited = await this.waitForPlatformProcessTreeExit(
+      entry.pid,
+      requestedSignal === 'SIGKILL'
+        ? PLATFORM_CANCEL_FORCE_MS
+        : PLATFORM_CANCEL_GRACE_MS + PLATFORM_CANCEL_FORCE_MS,
+    );
 
-    return JSON.stringify({ pid: entry.pid, signal, taskId });
+    return JSON.stringify({ exited, pid: entry.pid, signal, taskId });
   }
 
   /**

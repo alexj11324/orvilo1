@@ -66,25 +66,12 @@ Before(async function (this: CustomWorld, { pickle }) {
 
   const testId = pickle.tags.find(
     (tag) =>
-      tag.name.startsWith('@COMMUNITY-') ||
       tag.name.startsWith('@AGENT-') ||
       tag.name.startsWith('@HOME-') ||
       tag.name.startsWith('@OIDC-') ||
-      tag.name.startsWith('@PAGE-') ||
       tag.name.startsWith('@ROUTES-'),
   );
   console.log(`\n📝 Running: ${pickle.name}${testId ? ` (${testId.name.replace('@', '')})` : ''}`);
-
-  // Setup Community API mocks before any page navigation. These PR E2E scenarios
-  // are the user-experience baseline for Community UI flows (list/search/filter/
-  // detail navigation), not a live marketplace availability check. The live
-  // marketplace rate-limits anonymous CI traffic, so Community scenarios use
-  // deterministic fixtures while the rest of the E2E suite keeps real app APIs.
-  // If we need to validate the real marketplace contract, cover that in a
-  // separate integration/nightly suite with dedicated credentials and SLA.
-  if (pickle.tags.some((tag) => tag.name === '@community')) {
-    await mockManager.setup(this.page);
-  }
 
   // Set cached session cookies to skip login
   if (sessionCookies.length > 0) {
@@ -97,11 +84,9 @@ After(async function (this: CustomWorld, { pickle, result }) {
   const testId = pickle.tags
     .find(
       (tag) =>
-        tag.name.startsWith('@COMMUNITY-') ||
         tag.name.startsWith('@AGENT-') ||
         tag.name.startsWith('@HOME-') ||
         tag.name.startsWith('@OIDC-') ||
-        tag.name.startsWith('@PAGE-') ||
         tag.name.startsWith('@ROUTES-'),
     )
     ?.name.replace('@', '');

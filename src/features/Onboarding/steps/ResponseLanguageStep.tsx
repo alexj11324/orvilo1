@@ -13,7 +13,7 @@ import { localeOptions, normalizeLocale } from '@/locales/resources';
 import { useGlobalStore } from '@/store/global';
 import { useUserStore } from '@/store/user';
 
-import LobeMessage from '../components/LobeMessage';
+import OrviloMessage from '../components/OrviloMessage';
 
 interface ResponseLanguageStepProps {
   onBack: () => void;
@@ -66,7 +66,7 @@ const ResponseLanguageStep = memo<ResponseLanguageStepProps>(({ onBack, onNext }
   const Message = useCallback(
     // eslint-disable-next-line @eslint-react/no-nested-component-definitions
     () => (
-      <LobeMessage
+      <OrviloMessage
         sentences={[
           t('responseLanguage.title'),
           t('responseLanguage.title2'),

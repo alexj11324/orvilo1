@@ -22,7 +22,7 @@ export interface BuildAgentDocumentUrlOptions {
  * `undefined` when no origin is available so callers can fall back to the bare
  * id.
  *
- * @param origin - App origin, e.g. `https://app.lobehub.com` (no trailing slash required)
+ * @param origin - App origin, e.g. `https://orvilo.aspectlylabs.com` (no trailing slash required)
  * @param agentId - Owning agent id, e.g. `agt_9GOn6nUgGw35`
  * @param documentId - The `documents` table id, e.g. `docs_MWkYMvbvzssoyWZ9`
  */

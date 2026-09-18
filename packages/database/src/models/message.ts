@@ -86,7 +86,7 @@ import {
   topics,
   users,
 } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { sanitizeBm25Query } from '../utils/bm25';
 import { notCopiedTranscript } from '../utils/copiedTranscript';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
@@ -632,7 +632,7 @@ const sanitizeVisitorTaskDetail = (taskDetail: TaskDetail | undefined): TaskDeta
  * data wherever they occur inside an unbounded per-tool blob
  * (`pluginState`/`pluginError`, live Gateway event payloads). A builtin tool's
  * server runtime writes whatever shape it wants into `state`/error payloads —
- * e.g. `lobe-agent`'s `analyzeMedia` writes `{ model, provider, usage }`
+ * e.g. `orvilo-agent`'s `analyzeMedia` writes `{ model, provider, usage }`
  * straight into it — so unlike a short, fully enumerable list of top-level
  * `UIChatMessage` fields there is no finite set of "every tool's state shape"
  * to allowlist by hand: a new tool, or a new field on an existing tool's
@@ -908,7 +908,7 @@ export const toVisitorMessage = (
 
 export class MessageModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private ftsSearchCandidateSource?: FtsSearchCandidateSource;
   private workspaceId?: string;
   /**
@@ -922,7 +922,7 @@ export class MessageModel {
   private includeShareVisitor: boolean;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     ftsSearchCandidateSource?: FtsSearchCandidateSource,
@@ -2582,6 +2582,14 @@ export class MessageModel {
     return this.db.query.messages.findFirst({
       where: and(eq(messages.id, id), this.ownership()),
     });
+  };
+
+  countByThreadId = async (threadId: string): Promise<number> => {
+    const [row] = await this.db
+      .select({ count: count(messages.id) })
+      .from(messages)
+      .where(and(eq(messages.threadId, threadId), this.ownership()));
+    return Number(row?.count ?? 0);
   };
 
   /**
@@ -4934,7 +4942,7 @@ export class MessageModel {
    * Check which user IDs from the given list have at least one message.
    */
   static checkUsersHaveMessages = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userIds: string[],
   ): Promise<Set<string>> => {
     if (userIds.length === 0) return new Set();

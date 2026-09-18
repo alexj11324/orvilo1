@@ -6,7 +6,7 @@ export const NEW_GLM_MODEL_NAME = 'GLM-5.2';
 export const NEW_KIMI_MODEL = 'kimi-k2.7-code';
 export const NEW_KIMI_MODEL_NAME = 'Kimi K2.7 Code';
 
-export const BUSINESS_CHAT_PROVIDER = 'lobehub';
+export const BUSINESS_CHAT_PROVIDER = 'orvilo';
 export const OSS_GLM_PROVIDER = 'zhipu';
 export const OSS_KIMI_PROVIDER = 'moonshot';
 

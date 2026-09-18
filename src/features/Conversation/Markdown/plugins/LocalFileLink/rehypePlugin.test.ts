@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { rehypeLobeLink } from '../Link/rehypePlugin';
-import { LOBE_LOCAL_FILE_LINK_TAG } from './parse';
+import { rehypeOrviloLink } from '../Link/rehypePlugin';
+import { ORVILO_LOCAL_FILE_LINK_TAG } from './parse';
 import { rehypeLocalFileLink } from './rehypePlugin';
 
 vi.mock('@orvilo/const', async (importOriginal) => ({
@@ -29,7 +29,7 @@ describe('rehypeLocalFileLink', () => {
         linkHref: '/Users/me/project/src/Group.tsx:265',
         linkLabel: 'Group.tsx',
       },
-      tagName: LOBE_LOCAL_FILE_LINK_TAG,
+      tagName: ORVILO_LOCAL_FILE_LINK_TAG,
       type: 'element',
     });
   });
@@ -41,9 +41,9 @@ describe('rehypeLocalFileLink', () => {
       const tree = { children: [anchor], type: 'root' };
 
       rehypeLocalFileLink()(tree);
-      rehypeLobeLink()(tree);
+      rehypeOrviloLink()(tree);
 
-      expect(anchor.tagName).toBe(LOBE_LOCAL_FILE_LINK_TAG);
+      expect(anchor.tagName).toBe(ORVILO_LOCAL_FILE_LINK_TAG);
       expect(anchor.properties).toEqual({ linkHref: href, linkLabel: 'client.ts' });
     },
   );

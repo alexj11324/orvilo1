@@ -1,4 +1,4 @@
-import { type AgentItem, type AgentRankItem, type LobeAgentConfig } from '@orvilo/types';
+import { type AgentItem, type AgentRankItem, type OrviloAgentConfig } from '@orvilo/types';
 import { type PartialDeep } from 'type-fest';
 
 import { lambdaClient } from '@/libs/trpc/client';
@@ -20,11 +20,11 @@ export interface AvailableAgentItem {
  * Market agent model can be either a string or an object with model details
  */
 type MarketAgentModel =
-  | LobeAgentConfig['model']
+  | OrviloAgentConfig['model']
   | {
-      model: LobeAgentConfig['model'];
-      parameters?: Partial<LobeAgentConfig['params']>;
-      provider?: LobeAgentConfig['provider'];
+      model: OrviloAgentConfig['model'];
+      parameters?: Partial<OrviloAgentConfig['params']>;
+      provider?: OrviloAgentConfig['provider'];
     };
 
 type AgentMetaUpdate = Partial<
@@ -158,7 +158,7 @@ class AgentService {
   /**
    * Bidirectional visibility switch. The server only allows the
    * agent's creator or a workspace owner to pull a published agent back to
-   * private, and rejects builtin agents (LobeAI etc.) outright.
+   * private, and rejects builtin agents (OrviloAI etc.) outright.
    */
   setAgentVisibility = async (id: string, visibility: 'private' | 'public'): Promise<void> => {
     await lambdaClient.agent.setAgentVisibility.mutate({ id, visibility });
@@ -239,7 +239,7 @@ class AgentService {
    */
   updateAgentConfig = async (
     agentId: string,
-    config: PartialDeep<LobeAgentConfig>,
+    config: PartialDeep<OrviloAgentConfig>,
     signal?: AbortSignal,
   ) => {
     return lambdaClient.agent.updateAgentConfig.mutate(

@@ -1,4 +1,4 @@
-export { LobeActivatorManifest } from '../manifest';
+export { OrviloActivatorManifest } from '../manifest';
 export * from '../types';
-export { LobeActivatorInspectors } from './Inspector';
-export { LobeActivatorRenders } from './Render';
+export { OrviloActivatorInspectors } from './Inspector';
+export { OrviloActivatorRenders } from './Render';

@@ -5,7 +5,7 @@ import {
   selectAssignableMembers,
   TaskIdentifier,
 } from '@orvilo/builtin-tool-task';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { TaskAssignableMember, TaskCreatedItem } from '@orvilo/prompts';
 import {
   formatDependencyAdded,
@@ -43,7 +43,7 @@ import { type ServerRuntimeRegistration } from './types';
 // task we derive the workspace from that task row; otherwise we fall back to
 // personal mode.
 const resolveWorkspaceId = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   taskId: string | undefined,
 ): Promise<string | undefined> => {
   if (!taskId) return undefined;
@@ -61,7 +61,7 @@ export interface TaskRuntimeDeps {
   // Assistant message that carried the createTask tool call — the tool-call
   // anchor, NOT the source user message. Recorded as `context.origin.messageId`.
   assistantMessageId?: string;
-  db?: LobeChatDatabase;
+  db?: OrviloDatabase;
   // Pointers to the conversation that invoked the createTask tool. Recorded into
   // `tasks.context.origin` so the task's handoff result can later be delivered
   // back to this session. All optional — a task can be created
@@ -346,16 +346,20 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       const task = await taskModel().resolve(args.identifier);
       if (!task) return { content: `Task not found: ${args.identifier}`, success: false };
 
-      // Tear down provisioned run worktrees before the task_topics rows
-      // cascade away with the task. Best-effort — never blocks the delete.
+      let integration: TaskIntegrationService | undefined;
+      let snapshot:
+        Awaited<ReturnType<TaskIntegrationService['snapshotTaskWorktrees']>> | undefined;
       if (deps.db && deps.userId) {
         const workspaceId = deps.workspaceId ?? (await resolveWorkspaceId(deps.db, task.id));
-        await new TaskIntegrationService(deps.db, deps.userId, workspaceId).cleanupTaskWorktrees(
-          task.id,
-        );
+        integration = new TaskIntegrationService(deps.db, deps.userId, workspaceId);
+        snapshot = await integration.snapshotTaskWorktrees(task.id);
       }
 
-      await taskModel().delete(task.id);
+      // The model checks dependencies atomically. Never destroy worktrees or
+      // report a successful deletion when that guard rejects or the row is gone.
+      const deleted = await taskModel().delete(task.id);
+      if (!deleted) return { content: `Task not found: ${args.identifier}`, success: false };
+      if (integration && snapshot) await integration.cleanupTaskWorktrees(task.id, snapshot);
 
       return {
         content: formatTaskDeleted(task.identifier, task.name),

@@ -207,19 +207,8 @@ describe('systemStatusSelectors', () => {
     });
 
     it('should re-anchor the spacer immediately after the accordion block', () => {
-      // Stored order has pages/tasks between the accordion and the first default-bottom item.
-      // The invariant moves them into the bottom group (after the spacer).
-      const stored = [
-        'private',
-        'agent',
-        'recents',
-        'pages',
-        'tasks',
-        'image',
-        'community',
-        'resource',
-        'memory',
-      ];
+      // Stored order has retired and active keys around the accordion.
+      const stored = ['private', 'agent', 'recents', 'tasks', 'image', 'resource', 'memory'];
       const s: GlobalState = merge(initialState, {
         status: { sidebarItems: stored },
       });
@@ -230,10 +219,8 @@ describe('systemStatusSelectors', () => {
         'recents',
         'project',
         SIDEBAR_SPACER_ID,
-        'pages',
         'tasks',
         'image',
-        'community',
         'resource',
         'memory',
       ]);
@@ -241,7 +228,6 @@ describe('systemStatusSelectors', () => {
 
     it('should preserve a canonically-positioned spacer', () => {
       const stored = [
-        'pages',
         'project',
         'recents',
         'private',
@@ -249,7 +235,6 @@ describe('systemStatusSelectors', () => {
         SIDEBAR_SPACER_ID,
         'image',
         'tasks',
-        'community',
         'resource',
         'memory',
       ];
@@ -259,7 +244,6 @@ describe('systemStatusSelectors', () => {
       // `automations` is a newer top-group default — backfilled immediately
       // before the accordion block.
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
-        'pages',
         'automations',
         'project',
         'recents',
@@ -268,7 +252,6 @@ describe('systemStatusSelectors', () => {
         SIDEBAR_SPACER_ID,
         'image',
         'tasks',
-        'community',
         'resource',
         'memory',
       ]);
@@ -294,7 +277,6 @@ describe('systemStatusSelectors', () => {
       });
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
         'tasks',
-        'pages',
         'automations',
         'recents',
         'project',
@@ -302,7 +284,6 @@ describe('systemStatusSelectors', () => {
         'agent',
         SIDEBAR_SPACER_ID,
         'image',
-        'community',
         'resource',
         'memory',
       ]);
@@ -314,12 +295,12 @@ describe('systemStatusSelectors', () => {
       });
       const items = systemStatusSelectors.sidebarItems(null)(s);
       const spacerIdx = items.indexOf(SIDEBAR_SPACER_ID);
-      // every known key is present
-      expect(items).toContain('pages');
+      // every active known key is present
       expect(items).toContain('tasks');
-      expect(items).toContain('community');
       expect(items).toContain('resource');
       expect(items).toContain('memory');
+      expect(items).not.toContain('pages');
+      expect(items).not.toContain('community');
       // accordion block is flush against the spacer, in stored order
       expect(items[spacerIdx - 3]).toBe('agent');
       expect(items[spacerIdx - 2]).toBe('recents');
@@ -329,7 +310,6 @@ describe('systemStatusSelectors', () => {
       expect(items.indexOf('resource')).toBeLessThan(spacerIdx - 3);
       // missing bottom-group defaults sit after the spacer
       expect(items.indexOf('image')).toBeGreaterThan(spacerIdx);
-      expect(items.indexOf('pages')).toBeGreaterThan(spacerIdx);
     });
 
     it('should migrate legacy `sidebarSectionOrder` accordion order into the default layout', () => {
@@ -349,8 +329,6 @@ describe('systemStatusSelectors', () => {
         'project',
         SIDEBAR_SPACER_ID,
         'image',
-        'community',
-        'pages',
         'memory',
       ]);
     });
@@ -372,8 +350,6 @@ describe('systemStatusSelectors', () => {
         'agent',
         SIDEBAR_SPACER_ID,
         'image',
-        'community',
-        'pages',
         'memory',
       ]);
     });
@@ -387,6 +363,8 @@ describe('systemStatusSelectors', () => {
       });
       const items = systemStatusSelectors.sidebarItems(null)(s);
       expect(items.indexOf('recents')).toBeLessThan(items.indexOf('agent'));
+      expect(items).not.toContain('pages');
+      expect(items).not.toContain('community');
     });
   });
 

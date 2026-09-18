@@ -1,27 +1,27 @@
 // @vitest-environment node
 import {
-  LobeAnthropicAI,
-  LobeAzureOpenAI,
-  LobeBedrockAI,
-  LobeComfyUI,
-  LobeDeepSeekAI,
-  LobeGoogleAI,
-  LobeGroq,
-  LobeMinimaxAI,
-  LobeMistralAI,
-  LobeMoonshotAI,
-  LobeOllamaAI,
-  LobeOpenAI,
-  LobeOpenRouterAI,
-  LobePerplexityAI,
-  LobeQwenAI,
-  LobeStepfunAI,
-  LobeTogetherAI,
-  LobeZeroOneAI,
-  LobeZhipuAI,
   ModelRuntime,
+  OrviloAnthropicAI,
+  OrviloAzureOpenAI,
+  OrviloBedrockAI,
+  OrviloComfyUI,
+  OrviloDeepSeekAI,
+  OrviloGoogleAI,
+  OrviloGroq,
+  OrviloMinimaxAI,
+  OrviloMistralAI,
+  OrviloMoonshotAI,
+  OrviloOllamaAI,
+  OrviloOpenAI,
+  OrviloOpenRouterAI,
+  OrviloPerplexityAI,
+  OrviloQwenAI,
+  OrviloStepfunAI,
+  OrviloTogetherAI,
+  OrviloZeroOneAI,
+  OrviloZhipuAI,
 } from '@orvilo/model-runtime';
-import { LobeVertexAI } from '@orvilo/model-runtime/vertexai';
+import { OrviloVertexAI } from '@orvilo/model-runtime/vertexai';
 import { ChatErrorType, type ClientSecretPayload } from '@orvilo/types';
 import { ModelProvider } from 'model-bank';
 import { describe, expect, it, vi } from 'vitest';
@@ -134,7 +134,7 @@ describe('resolveServerModel', () => {
 });
 
 describe('getServerDefaultHeterogeneousModels', () => {
-  it('returns only compatible V1 models from the LobeHub relay provider', async () => {
+  it('returns only compatible V1 models from the Orvilo relay provider', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
         anthropic: {
@@ -145,7 +145,7 @@ describe('getServerDefaultHeterogeneousModels', () => {
           enabled: true,
           serverModelLists: [{ enabled: true, id: 'gemini-server', type: 'chat' }],
         },
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: [
             { enabled: true, id: 'claude-sonnet-4-6', type: 'chat' },
@@ -176,21 +176,21 @@ describe('getServerDefaultHeterogeneousModels', () => {
   it('uses the model bank when the deployment has no explicit server model list', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: { enabled: true, serverModelLists: undefined },
+        orvilo: { enabled: true, serverModelLists: undefined },
       },
     });
     loadModels.mockResolvedValue([
       {
         enabled: true,
         id: 'claude-sonnet-4-6',
-        providerId: 'lobehub',
+        providerId: 'orvilo',
         source: 'builtin',
         type: 'chat',
       },
       {
         enabled: true,
         id: 'gpt-5.4',
-        providerId: 'lobehub',
+        providerId: 'orvilo',
         source: 'builtin',
         type: 'chat',
       },
@@ -216,7 +216,7 @@ describe('getServerDefaultHeterogeneousModels', () => {
   it('offers tool-capable relay models to compatible agents and keeps Codex narrow', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: [
             { abilities: { functionCall: true }, enabled: true, id: 'kimi-k2.6', type: 'chat' },
@@ -304,7 +304,7 @@ describe('getServerDefaultHeterogeneousModels', () => {
     ];
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: failedKimiModels.map((id) => ({
             abilities: { functionCall: true },
@@ -325,7 +325,7 @@ describe('getServerDefaultHeterogeneousModels', () => {
   it('uses deployment profile metadata as a replacement for the certified defaults', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: [
             {
@@ -366,14 +366,14 @@ describe('getServerDefaultHeterogeneousModels', () => {
   it('does not advertise hidden runtime-only models', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: [
             { abilities: { functionCall: true }, enabled: true, id: 'kimi-k3', type: 'chat' },
             {
               abilities: { functionCall: true },
               enabled: true,
-              id: 'lobehub-onboarding-v1',
+              id: 'orvilo-onboarding-v1',
               type: 'chat',
               visible: false,
             },
@@ -395,7 +395,7 @@ describe('getServerDefaultHeterogeneousModels', () => {
   it('keeps Claude ids eligible when the relay catalog declares no abilities', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: [
             { enabled: true, id: 'claude-sonnet-4-6', type: 'chat' },
@@ -417,14 +417,14 @@ describe('getServerDefaultHeterogeneousModels', () => {
 });
 
 describe('resolveServerDefaultHeterogeneousModel', () => {
-  it('accepts only protocol-compatible models from the LobeHub relay provider', async () => {
+  it('accepts only protocol-compatible models from the Orvilo relay provider', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
         anthropic: {
           enabled: true,
           serverModelLists: [{ enabled: true, id: 'claude-sonnet-4-6', type: 'chat' }],
         },
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: [
             { enabled: true, id: 'claude-sonnet-4-6', type: 'chat' },
@@ -441,9 +441,9 @@ describe('resolveServerDefaultHeterogeneousModel', () => {
 
     await expect(
       resolveServerDefaultHeterogeneousModel('claude-code', 'claude-sonnet-4-6'),
-    ).resolves.toMatchObject({ model: 'claude-sonnet-4-6', provider: 'lobehub' });
+    ).resolves.toMatchObject({ model: 'claude-sonnet-4-6', provider: 'orvilo' });
     await expect(resolveServerDefaultHeterogeneousModel('codex', 'gpt-5.4')).resolves.toMatchObject(
-      { model: 'gpt-5.4', provider: 'lobehub' },
+      { model: 'gpt-5.4', provider: 'orvilo' },
     );
 
     await expect(
@@ -463,14 +463,14 @@ describe('resolveServerDefaultHeterogeneousModel', () => {
   it('resolves a model-bank model when no explicit server model list exists', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: { enabled: true, serverModelLists: undefined },
+        orvilo: { enabled: true, serverModelLists: undefined },
       },
     });
     loadModels.mockResolvedValue([
       {
         enabled: true,
         id: 'claude-sonnet-4-6',
-        providerId: 'lobehub',
+        providerId: 'orvilo',
         settings: { extendParams: ['enableAdaptiveThinking'] },
         source: 'builtin',
         type: 'chat',
@@ -481,7 +481,7 @@ describe('resolveServerDefaultHeterogeneousModel', () => {
       resolveServerDefaultHeterogeneousModel('claude-code', 'claude-sonnet-4-6'),
     ).resolves.toEqual({
       model: 'claude-sonnet-4-6',
-      provider: 'lobehub',
+      provider: 'orvilo',
       supportsAdaptiveThinking: true,
     });
   });
@@ -489,7 +489,7 @@ describe('resolveServerDefaultHeterogeneousModel', () => {
   it('accepts an explicitly attested third-party relay model for Kimi', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: [
             {
@@ -511,22 +511,22 @@ describe('resolveServerDefaultHeterogeneousModel', () => {
       resolveServerDefaultHeterogeneousModel('claude-code', 'kimi-k2.6'),
     ).resolves.toEqual({
       model: 'kimi-k2.6',
-      provider: 'lobehub',
+      provider: 'orvilo',
       supportsAdaptiveThinking: false,
     });
     await expect(
       resolveServerDefaultHeterogeneousModel('kimi-code', 'kimi-k2.6'),
-    ).resolves.toMatchObject({ model: 'kimi-k2.6', provider: 'lobehub' });
+    ).resolves.toMatchObject({ model: 'kimi-k2.6', provider: 'orvilo' });
     await expect(resolveServerDefaultHeterogeneousModel('pi', 'kimi-k2.6')).resolves.toMatchObject({
       model: 'kimi-k2.6',
-      provider: 'lobehub',
+      provider: 'orvilo',
     });
     await expect(
       resolveServerDefaultHeterogeneousModel('grok-build', 'kimi-k2.6'),
-    ).resolves.toMatchObject({ model: 'kimi-k2.6', provider: 'lobehub' });
+    ).resolves.toMatchObject({ model: 'kimi-k2.6', provider: 'orvilo' });
     await expect(
       resolveServerDefaultHeterogeneousModel('trae', 'kimi-k2.6'),
-    ).resolves.toMatchObject({ model: 'kimi-k2.6', provider: 'lobehub' });
+    ).resolves.toMatchObject({ model: 'kimi-k2.6', provider: 'orvilo' });
 
     await expect(resolveServerDefaultHeterogeneousModel('codex', 'kimi-k2.6')).rejects.toThrow(
       'not compatible with this heterogeneous agent',
@@ -539,13 +539,13 @@ describe('resolveServerDefaultHeterogeneousModel', () => {
   it('keeps hidden runtime aliases resolvable but rejects them for heterogeneous agents', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: [
             {
               abilities: { functionCall: true },
               enabled: true,
-              id: 'lobehub-onboarding-v1',
+              id: 'orvilo-onboarding-v1',
               type: 'chat',
               visible: false,
             },
@@ -554,19 +554,19 @@ describe('resolveServerDefaultHeterogeneousModel', () => {
       },
     });
 
-    await expect(resolveServerModel('lobehub', 'lobehub-onboarding-v1')).resolves.toEqual({
-      model: 'lobehub-onboarding-v1',
-      provider: 'lobehub',
+    await expect(resolveServerModel('orvilo', 'orvilo-onboarding-v1')).resolves.toEqual({
+      model: 'orvilo-onboarding-v1',
+      provider: 'orvilo',
     });
     await expect(
-      resolveServerDefaultHeterogeneousModel('claude-code', 'lobehub-onboarding-v1'),
+      resolveServerDefaultHeterogeneousModel('claude-code', 'orvilo-onboarding-v1'),
     ).rejects.toThrow('not compatible with this heterogeneous agent');
   });
 
   it('preserves the deployment model mapping for a relay selection', async () => {
     getServerGlobalConfig.mockResolvedValue({
       aiProvider: {
-        lobehub: {
+        orvilo: {
           enabled: true,
           serverModelLists: [
             {
@@ -586,14 +586,14 @@ describe('resolveServerDefaultHeterogeneousModel', () => {
     ).resolves.toEqual({
       deploymentName: 'kimi-prod',
       model: 'kimi-k2.6',
-      provider: 'lobehub',
+      provider: 'orvilo',
       supportsAdaptiveThinking: false,
     });
   });
 });
 
 describe('initModelRuntimeFromServerConfig', () => {
-  it('initializes the LobeHub router directly without protocol-provider credentials', async () => {
+  it('initializes the Orvilo router directly without protocol-provider credentials', async () => {
     const runtime = {} as ModelRuntime;
     const initialize = vi.spyOn(ModelRuntime, 'initializeWithProvider').mockReturnValue(runtime);
 
@@ -602,7 +602,7 @@ describe('initModelRuntimeFromServerConfig', () => {
     ).resolves.toBe(runtime);
 
     expect(initialize).toHaveBeenCalledWith(
-      ModelProvider.LobeHub,
+      ModelProvider.Orvilo,
       { userId: 'user-1', workspaceId: 'workspace-1' },
       expect.anything(),
     );
@@ -625,7 +625,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.OpenAI, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeOpenAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenAI);
       expect(runtime['_runtime'].baseURL).toBe(jwtPayload.baseURL);
     });
 
@@ -655,7 +655,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Azure, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeAzureOpenAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloAzureOpenAI);
       expect(runtime['_runtime'].baseURL).toBe('https://user-azure.openai.azure.com/openai/v1');
     });
 
@@ -668,7 +668,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       const runtime = await initModelRuntimeWithUserPayload('custom-provider', jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeAzureOpenAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloAzureOpenAI);
       expect(runtime['_runtime'].baseURL).toBe('https://user-azure.openai.azure.com/openai/v1');
     });
 
@@ -676,28 +676,28 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'zhipu.user-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.ZhiPu, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeZhipuAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloZhipuAI);
     });
 
     it('Google provider: with apikey', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-google-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Google, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeGoogleAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloGoogleAI);
     });
 
     it('Moonshot AI provider: with apikey', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-moonshot-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Moonshot, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeMoonshotAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloMoonshotAI);
     });
 
     it('Qwen AI provider: with apikey', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-qwen-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Qwen, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeQwenAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloQwenAI);
     });
 
     it('Vertex AI provider: with service account json', async () => {
@@ -709,12 +709,12 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       const payload: ClientSecretPayload = { apiKey: JSON.stringify(credentials) };
       const initSpy = vi
-        .spyOn(LobeVertexAI, 'initFromVertexAI')
+        .spyOn(OrviloVertexAI, 'initFromVertexAI')
         .mockImplementation((options: any) => {
           expect(options.project).toBe('test-project');
           expect(options.googleAuthOptions?.credentials?.private_key).toContain('TEST');
 
-          return new LobeGoogleAI({
+          return new OrviloGoogleAI({
             apiKey: 'avoid-error',
             client: {} as any,
             isVertexAi: true,
@@ -725,7 +725,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
 
       expect(initSpy).toHaveBeenCalledTimes(1);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeGoogleAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloGoogleAI);
 
       initSpy.mockRestore();
     });
@@ -739,7 +739,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Bedrock, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeBedrockAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloBedrockAI);
     });
 
     it('Bedrock AI provider: with API key only', async () => {
@@ -750,7 +750,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Bedrock, jwtPayload);
 
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeBedrockAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloBedrockAI);
     });
 
     it('Bedrock AI provider: picks one API key with server key selection', async () => {
@@ -775,7 +775,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Bedrock, jwtPayload);
 
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeBedrockAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloBedrockAI);
     });
 
     it('Bedrock AI provider: falls back to env credentials when only region is provided', async () => {
@@ -785,7 +785,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Bedrock, jwtPayload);
 
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeBedrockAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloBedrockAI);
       expect((runtime['_runtime'] as unknown as InspectableBedrockRuntime).region).toBe(
         'custom-aws-region',
       );
@@ -795,7 +795,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const jwtPayload: ClientSecretPayload = { baseURL: 'http://user-ollama-url' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Ollama, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeOllamaAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloOllamaAI);
       expect(runtime['_runtime']['baseURL']).toEqual(jwtPayload.baseURL);
     });
 
@@ -803,70 +803,70 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-perplexity-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Perplexity, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobePerplexityAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloPerplexityAI);
     });
 
     it('Anthropic AI provider: with apikey', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-anthropic-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Anthropic, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeAnthropicAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloAnthropicAI);
     });
 
     it('Minimax AI provider: with apikey', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-minimax-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Minimax, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeMinimaxAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloMinimaxAI);
     });
 
     it('Mistral AI provider: with apikey', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-mistral-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Mistral, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeMistralAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloMistralAI);
     });
 
     it('OpenRouter AI provider: with apikey', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-openrouter-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.OpenRouter, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeOpenRouterAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenRouterAI);
     });
 
     it('DeepSeek AI provider: with apikey', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-deepseek-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.DeepSeek, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeDeepSeekAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloDeepSeekAI);
     });
 
     it('Together AI provider: with apikey', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-togetherai-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.TogetherAI, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeTogetherAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloTogetherAI);
     });
 
     it('ZeroOne AI provider: with apikey', async () => {
       const jwtPayload = { apiKey: 'user-zeroone-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.ZeroOne, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeZeroOneAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloZeroOneAI);
     });
 
     it('Groq AI provider: with apikey', async () => {
       const jwtPayload = { apiKey: 'user-zeroone-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Groq, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeGroq);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloGroq);
     });
 
     it('Stepfun AI provider: with apikey', async () => {
       const jwtPayload = { apiKey: 'user-stepfun-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Stepfun, jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeStepfunAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloStepfunAI);
     });
 
     it('ComfyUI provider: with multiple auth types', async () => {
@@ -879,7 +879,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       let runtime = await initModelRuntimeWithUserPayload(ModelProvider.ComfyUI, basicAuthPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeComfyUI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloComfyUI);
       expect(runtime['_runtime'].baseURL).toBe(basicAuthPayload.baseURL);
 
       // Test bearer auth
@@ -890,7 +890,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       runtime = await initModelRuntimeWithUserPayload(ModelProvider.ComfyUI, bearerAuthPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeComfyUI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloComfyUI);
 
       // Test custom auth
       const customAuthPayload: ClientSecretPayload = {
@@ -900,7 +900,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       runtime = await initModelRuntimeWithUserPayload(ModelProvider.ComfyUI, customAuthPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeComfyUI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloComfyUI);
 
       // Test none auth
       const noAuthPayload: ClientSecretPayload = {
@@ -909,7 +909,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       runtime = await initModelRuntimeWithUserPayload(ModelProvider.ComfyUI, noAuthPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeComfyUI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloComfyUI);
     });
 
     it('Unknown Provider: with apikey and endpoint, should initialize to OpenAi', async () => {
@@ -919,7 +919,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       const runtime = await initModelRuntimeWithUserPayload('unknown', jwtPayload);
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeOpenAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenAI);
       expect(runtime['_runtime'].baseURL).toBe(jwtPayload.baseURL);
     });
   });
@@ -928,7 +928,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
     it('OpenAI provider: without apikey', async () => {
       const jwtPayload: ClientSecretPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.OpenAI, jwtPayload);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeOpenAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenAI);
     });
 
     it('Azure AI Provider: without apikey', async () => {
@@ -937,46 +937,46 @@ describe('initModelRuntimeWithUserPayload method', () => {
       };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Azure, jwtPayload);
 
-      expect(runtime['_runtime']).toBeInstanceOf(LobeAzureOpenAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloAzureOpenAI);
     });
 
     it('ZhiPu AI provider: without apikey', async () => {
       const jwtPayload: ClientSecretPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.ZhiPu, jwtPayload);
 
-      // 假设 LobeZhipuAI 是 ZhiPu 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeZhipuAI);
+      // 假设 OrviloZhipuAI 是 ZhiPu 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloZhipuAI);
     });
 
     it('Google provider: without apikey', async () => {
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Google, {});
 
-      // 假设 LobeGoogleAI 是 Google 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeGoogleAI);
+      // 假设 OrviloGoogleAI 是 Google 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloGoogleAI);
     });
 
     it('Moonshot AI provider: without apikey', async () => {
       const jwtPayload: ClientSecretPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Moonshot, jwtPayload);
 
-      // 假设 LobeMoonshotAI 是 Moonshot 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeMoonshotAI);
+      // 假设 OrviloMoonshotAI 是 Moonshot 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloMoonshotAI);
     });
 
     it('Qwen AI provider: without apikey', async () => {
       const jwtPayload: ClientSecretPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Qwen, jwtPayload);
 
-      // 假设 LobeQwenAI 是 Qwen 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeQwenAI);
+      // 假设 OrviloQwenAI 是 Qwen 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloQwenAI);
     });
 
     it('Qwen AI provider: without endpoint', async () => {
       const jwtPayload: ClientSecretPayload = { apiKey: 'user-qwen-key' };
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Qwen, jwtPayload);
 
-      // 假设 LobeQwenAI 是 Qwen 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeQwenAI);
+      // 假设 OrviloQwenAI 是 Qwen 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloQwenAI);
       // endpoint 不存在，应返回 DEFAULT_BASE_URL
       expect(runtime['_runtime'].baseURL).toBe('https://dashscope.aliyuncs.com/compatible-mode/v1');
     });
@@ -985,80 +985,80 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Bedrock, jwtPayload);
 
-      // 假设 LobeBedrockAI 是 Bedrock 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeBedrockAI);
+      // 假设 OrviloBedrockAI 是 Bedrock 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloBedrockAI);
     });
 
     it('Ollama provider: without endpoint', async () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Ollama, jwtPayload);
 
-      // 假设 LobeOllamaAI 是 Ollama 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeOllamaAI);
+      // 假设 OrviloOllamaAI 是 Ollama 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloOllamaAI);
     });
 
     it('Perplexity AI provider: without apikey', async () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Perplexity, jwtPayload);
 
-      // 假设 LobePerplexityAI 是 Perplexity 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobePerplexityAI);
+      // 假设 OrviloPerplexityAI 是 Perplexity 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloPerplexityAI);
     });
 
     it('Anthropic AI provider: without apikey', async () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Anthropic, jwtPayload);
 
-      // 假设 LobeAnthropicAI 是 Anthropic 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeAnthropicAI);
+      // 假设 OrviloAnthropicAI 是 Anthropic 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloAnthropicAI);
     });
 
     it('Minimax AI provider: without apikey', async () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Minimax, jwtPayload);
 
-      // 假设 LobeMistralAI 是 Mistral 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeMinimaxAI);
+      // 假设 OrviloMistralAI 是 Mistral 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloMinimaxAI);
     });
 
     it('Mistral AI provider: without apikey', async () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Mistral, jwtPayload);
 
-      // 假设 LobeMistralAI 是 Mistral 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeMistralAI);
+      // 假设 OrviloMistralAI 是 Mistral 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloMistralAI);
     });
 
     it('OpenRouter AI provider: without apikey', async () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.OpenRouter, jwtPayload);
 
-      // 假设 LobeOpenRouterAI 是 OpenRouter 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeOpenRouterAI);
+      // 假设 OrviloOpenRouterAI 是 OpenRouter 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenRouterAI);
     });
 
     it('DeepSeek AI provider: without apikey', async () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.DeepSeek, jwtPayload);
 
-      // 假设 LobeDeepSeekAI 是 DeepSeek 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeDeepSeekAI);
+      // 假设 OrviloDeepSeekAI 是 DeepSeek 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloDeepSeekAI);
     });
 
     it('Stepfun AI provider: without apikey', async () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Stepfun, jwtPayload);
 
-      // 假设 LobeDeepSeekAI 是 DeepSeek 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeStepfunAI);
+      // 假设 OrviloDeepSeekAI 是 DeepSeek 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloStepfunAI);
     });
 
     it('Together AI provider: without apikey', async () => {
       const jwtPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.TogetherAI, jwtPayload);
 
-      // 假设 LobeTogetherAI 是 TogetherAI 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeTogetherAI);
+      // 假设 OrviloTogetherAI 是 TogetherAI 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloTogetherAI);
     });
 
     it('OpenAI provider: without apikey with OPENAI_PROXY_URL', async () => {
@@ -1066,7 +1066,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
 
       const jwtPayload: ClientSecretPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.OpenAI, jwtPayload);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeOpenAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenAI);
       // 应返回 OPENAI_PROXY_URL
       expect(runtime['_runtime'].baseURL).toBe('https://proxy.example.com/v1');
     });
@@ -1077,8 +1077,8 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const jwtPayload: ClientSecretPayload = {};
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.Qwen, jwtPayload);
 
-      // 假设 LobeQwenAI 是 Qwen 提供者的实现类
-      expect(runtime['_runtime']).toBeInstanceOf(LobeQwenAI);
+      // 假设 OrviloQwenAI 是 Qwen 提供者的实现类
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloQwenAI);
       // endpoint 不存在，应返回 DEFAULT_BASE_URL
       expect(runtime['_runtime'].baseURL).toBe('https://dashscope.aliyuncs.com/compatible-mode/v1');
     });
@@ -1088,7 +1088,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.ComfyUI, jwtPayload);
 
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeComfyUI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloComfyUI);
       // Should use environment variable defaults
       expect(runtime['_runtime'].baseURL).toBe('http://127.0.0.1:8000');
     });
@@ -1101,7 +1101,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
       const runtime = await initModelRuntimeWithUserPayload(ModelProvider.ComfyUI, jwtPayload);
 
       expect(runtime).toBeInstanceOf(ModelRuntime);
-      expect(runtime['_runtime']).toBeInstanceOf(LobeComfyUI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloComfyUI);
       expect(runtime['_runtime'].baseURL).toBe('http://custom-comfyui:8188');
     });
 
@@ -1111,7 +1111,7 @@ describe('initModelRuntimeWithUserPayload method', () => {
 
       // 根据实际实现，你可能需要检查是否返回了默认的 runtime 实例，或者是否抛出了异常
       // 例如，如果默认使用 OpenAI:
-      expect(runtime['_runtime']).toBeInstanceOf(LobeOpenAI);
+      expect(runtime['_runtime']).toBeInstanceOf(OrviloOpenAI);
     });
   });
 });

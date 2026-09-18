@@ -3,13 +3,13 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeXiaomiMiMoAI, params } from './index';
+import { OrviloXiaomiMiMoAI, params } from './index';
 
 const provider = ModelProvider.XiaomiMiMo;
 const defaultBaseURL = 'https://api.xiaomimimo.com/v1';
 
 testProvider({
-  Runtime: LobeXiaomiMiMoAI,
+  Runtime: OrviloXiaomiMiMoAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_XIAOMIMIMO_CHAT_COMPLETION',
@@ -19,7 +19,7 @@ testProvider({
   },
 });
 
-describe('LobeXiaomiMiMoAI - custom features', () => {
+describe('OrviloXiaomiMiMoAI - custom features', () => {
   describe('chatCompletion.handlePayload', () => {
     it('should map max_tokens to max_completion_tokens', () => {
       const payload = {

@@ -137,7 +137,7 @@ async function streamSSEResponse(body: ReadableStream<Uint8Array>, json?: boolea
           if (json) {
             console.log(JSON.stringify(parsed));
           } else if (typeof parsed === 'string' && parsed !== 'stop') {
-            // LobeHub SSE sends content as JSON strings: "Hello", "world"
+            // Orvilo SSE sends content as JSON strings: "Hello", "world"
             process.stdout.write(parsed);
           } else if (parsed?.choices?.[0]?.delta?.content) {
             // Standard OpenAI SSE format

@@ -30,7 +30,7 @@ Object.assign(process.env, loadEnv(mode, process.cwd(), ''));
 
 const isDev = process.env.NODE_ENV !== 'production';
 const platform = isAuth ? 'auth' : isMobile ? 'mobile' : 'web';
-const enableViteDevTools = process.env.LOBE_VITE_DEVTOOLS === 'true';
+const enableViteDevTools = process.env.ORVILO_VITE_DEVTOOLS === 'true';
 
 const resolveCommandExecutable = (cmd: string) => {
   const pathValue = process.env.PATH;
@@ -164,9 +164,9 @@ export default defineConfig({
     ...sharedRendererPlugins({ platform }),
 
     isDev && {
-      name: 'lobe-dev-proxy-print',
+      name: 'orvilo-dev-proxy-print',
       configureServer(server: ViteDevServer) {
-        const ONLINE_HOST = 'https://app.lobehub.com';
+        const ONLINE_HOST = 'https://orvilo.aspectlylabs.com';
         const c = {
           green: (s: string) => `\x1B[32m${s}\x1B[0m`,
           bold: (s: string) => `\x1B[1m${s}\x1B[0m`,

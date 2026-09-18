@@ -1,4 +1,4 @@
-import type { LobeAgentAgencyConfig } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { resolveAgentAgencyConfig } from '@orvilo/types';
 
 import { useAgentManagementAccess } from '@/features/ResourcePermission/useAgentManagementAccess';
@@ -9,7 +9,7 @@ import { useUserStore } from '@/store/user';
 
 export interface UseEffectiveAgencyConfigResult {
   /** Shared `agents.agencyConfig` merged with the caller's per-agent override. */
-  agencyConfig: LobeAgentAgencyConfig | undefined;
+  agencyConfig: OrviloAgentAgencyConfig | undefined;
   /** Whether the execution target is ready to be shown as an effective runtime summary. */
   canDisplayExecutionTarget: boolean;
   /** Whether this caller may open the execution-target selector. */

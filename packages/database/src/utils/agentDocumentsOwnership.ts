@@ -11,7 +11,7 @@ import {
   taskDocuments,
   topicDocuments,
 } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from './workspace';
 
 /**
@@ -104,7 +104,7 @@ interface AgentDocumentsHandoverParams {
   workspaceId: string;
 }
 
-type Db = LobeChatDatabase | Transaction;
+type Db = OrviloDatabase | Transaction;
 
 /**
  * Document policy for an ownership handover. Two kinds of rows hang off

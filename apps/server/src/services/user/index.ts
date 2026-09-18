@@ -1,5 +1,5 @@
 import { ENABLE_BUSINESS_FEATURES } from '@orvilo/business-const';
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 
 import { initNewUserForBusiness } from '@/business/server/user';
 import { UserModel } from '@/database/models/user';
@@ -18,9 +18,9 @@ type CreatedUser = {
 };
 
 export class UserService {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
   }
 

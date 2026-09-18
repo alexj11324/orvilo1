@@ -9,15 +9,15 @@ import { ResourcePermissionModel } from '@/database/models/resourcePermission';
 import { SessionModel } from '@/database/models/session';
 import { SessionGroupModel } from '@/database/models/sessionGroup';
 import { insertAgentSchema, insertSessionSchema } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 import { assertCanEditResource } from '@/server/services/resourcePermission';
 import { AgentChatConfigSchema } from '@/types/agent';
-import { LobeMetaDataSchema } from '@/types/meta';
+import { OrviloMetaDataSchema } from '@/types/meta';
 import { type BatchTaskResult } from '@/types/service';
-import { type ChatSessionList, type LobeGroupSession } from '@/types/session';
+import { type ChatSessionList, type OrviloGroupSession } from '@/types/session';
 import { TransferErrorCode } from '@/types/transferError';
 
 import {
@@ -33,7 +33,7 @@ import {
  */
 const assertCanEditSessionAgent = async (
   ctx: {
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     sessionModel: SessionModel;
     userId: string;
     workspaceId?: string | null;
@@ -100,7 +100,7 @@ export const sessionRouter = router({
             config: z.object({}).passthrough(),
             group: z.string().optional(),
             id: z.string(),
-            meta: LobeMetaDataSchema,
+            meta: OrviloMetaDataSchema,
             pinned: z.boolean().optional(),
             type: z.string(),
           })
@@ -181,7 +181,7 @@ export const sessionRouter = router({
         chatGroupModel.queryWithMemberDetails(),
       ]);
 
-      const groupSessions: LobeGroupSession[] = chatGroups.map((group) => {
+      const groupSessions: OrviloGroupSession[] = chatGroups.map((group) => {
         const { title, description, avatar, backgroundColor, groupId, ...rest } = group;
         return {
           ...rest,

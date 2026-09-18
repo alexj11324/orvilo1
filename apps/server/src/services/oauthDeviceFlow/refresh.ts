@@ -3,13 +3,13 @@ import { AgentRuntimeErrorType } from '@orvilo/types';
 import debug from 'debug';
 
 import { AiProviderModel } from '@/database/models/aiProvider';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { type OAuthDeviceFlowConfig } from '@/types/aiProvider';
 
 import { OAuthDeviceFlowService, OAuthInvalidGrantError, parseJwtExpiry } from './index';
 
-const log = debug('lobe-server:oauth-token-refresh');
+const log = debug('orvilo-server:oauth-token-refresh');
 
 /**
  * Refresh the access token this long before it actually expires, so a request
@@ -32,7 +32,7 @@ export interface OAuthTokenKeyVaults {
 
 interface EnsureFreshOAuthTokenParams {
   config: OAuthDeviceFlowConfig;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   keyVaults: OAuthTokenKeyVaults;
   providerId: string;
   userId: string;
@@ -66,7 +66,7 @@ const isExpiring = (keyVaults: OAuthTokenKeyVaults): boolean => {
 };
 
 const readStoredKeyVaults = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   providerId: string,
   workspaceId?: string,
@@ -81,7 +81,7 @@ const readStoredKeyVaults = async (
 };
 
 const persistKeyVaults = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   providerId: string,
   keyVaults: OAuthTokenKeyVaults,

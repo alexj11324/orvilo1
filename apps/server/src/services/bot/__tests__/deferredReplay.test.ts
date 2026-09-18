@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockRunBot = vi.hoisted(() => vi.fn());
 const mockRunMessenger = vi.hoisted(() => vi.fn());
-const mockPublish = vi.hoisted(() => vi.fn().mockResolvedValue({ messageId: 'queued' }));
+const mockEnqueueHatchetTask = vi.hoisted(() => vi.fn().mockResolvedValue('hatchet-run:queued'));
 const config = vi.hoisted(() => ({
   APP_URL: 'https://example.com',
   enableQueueAgentRuntime: false,
@@ -14,11 +14,7 @@ vi.mock('../BotMessageRouter', () => ({
 vi.mock('@/server/services/messenger/MessengerRouter', () => ({
   getMessengerRouter: () => ({ replayDeferredMessages: mockRunMessenger }),
 }));
-vi.mock('@/libs/qstash', () => ({
-  OtelQstashClient: class {
-    publishJSON = mockPublish;
-  },
-}));
+vi.mock('@/libs/hatchet', () => ({ enqueueHatchetTask: mockEnqueueHatchetTask }));
 
 const { scheduleDeferredReplay } = await import('../deferredReplay');
 const target = { applicationId: 'app', platform: 'wechat', platformThreadId: 'wechat:single:user' };
@@ -57,17 +53,23 @@ describe('independent deferred replay retries', () => {
 
   it('publishes a deduplicated replay-only job with bounded provider retries', async () => {
     config.enableQueueAgentRuntime = true;
-    vi.stubEnv('QSTASH_TOKEN', 'example-token');
+    vi.stubEnv('HATCHET_CLIENT_TOKEN', 'example-token');
     await scheduleDeferredReplay(target, 'op-1');
-    expect(mockPublish).toHaveBeenCalledWith(
+    expect(mockEnqueueHatchetTask).toHaveBeenCalledWith(
+      'orvilo-bot-replay',
       expect.objectContaining({
-        body: expect.objectContaining({ operationId: 'op-1', payload: target }),
-        deduplicationId: expect.stringMatching(/^[a-f\d]{64}$/),
+        deduplicationKey: expect.stringMatching(/^[a-f\d]{64}$/),
+        endpoint: 'https://example.com/api/agent/webhooks/bot-replay',
+        operationId: 'op-1',
+        payload: target,
         retries: 8,
         retryDelay: '60000',
-        url: 'https://example.com/api/agent/webhooks/bot-replay',
+        stepIndex: 0,
       }),
+      { delayMs: 1000, priority: 'normal' },
     );
-    expect(mockPublish.mock.calls[0][0].body.payload).not.toHaveProperty('lastAssistantContent');
+    expect(mockEnqueueHatchetTask.mock.calls[0][1].payload).not.toHaveProperty(
+      'lastAssistantContent',
+    );
   });
 });

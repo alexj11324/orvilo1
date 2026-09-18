@@ -47,7 +47,7 @@ const requireWrite = requireAnyPermissionWithApiKeyScope(
 app.post(
   '/runs',
   describeRoute({
-    description: 'Queues an asynchronous QStash-backed evaluation run and returns immediately.',
+    description: 'Queues an asynchronous Hatchet-backed evaluation run and returns immediately.',
     summary: 'Create an eval run',
     tags: ['eval'],
   }),

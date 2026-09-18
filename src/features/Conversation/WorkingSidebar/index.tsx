@@ -171,9 +171,9 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const REVIEW_TREE_STORAGE_KEY = 'lobechat-review-tree';
-const OPEN_TABS_STORAGE_KEY = 'lobechat-working-sidebar-open-tabs-v1';
-const PINNED_TABS_STORAGE_KEY = 'lobechat-working-sidebar-pinned-tabs-v1';
+const REVIEW_TREE_STORAGE_KEY = 'orvilo-review-tree';
+const OPEN_TABS_STORAGE_KEY = 'orvilo-working-sidebar-open-tabs-v1';
+const PINNED_TABS_STORAGE_KEY = 'orvilo-working-sidebar-pinned-tabs-v1';
 const OVERVIEW_PANEL_WIDTH = 340;
 const OVERVIEW_TRANSITION = { duration: 0.25, ease: [0.32, 0.72, 0, 1] } as const;
 const MIN_PANEL_WIDTH = 300;

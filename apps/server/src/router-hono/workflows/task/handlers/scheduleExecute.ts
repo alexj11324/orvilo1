@@ -3,7 +3,7 @@ import type { Context } from 'hono';
 
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
 
-const log = debug('lobe-server:workflows:task:schedule-execute');
+const log = debug('orvilo-server:workflows:task:schedule-execute');
 
 export interface ScheduleExecutePayload {
   taskId: string;
@@ -11,7 +11,7 @@ export interface ScheduleExecutePayload {
 }
 
 /**
- * Per-task executor — handler for QStash messages fanned out by
+ * Per-task executor — handler for Hatchet tasks fanned out by
  * `/schedule-dispatch`. Mirrors `heartbeatTick.ts`: thin transport adapter,
  * delegates to `runScheduleTick` which owns DB-state re-validation.
  */

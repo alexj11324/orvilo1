@@ -42,7 +42,7 @@ if (source.includes('getServerDefaultHeterogeneousCapability')) {
     capability: {
       agents: ['claude-code', 'codex'],
       enabled: true,
-      model: 'lobehub-default',
+      model: 'orvilo-default',
       models: {
         'claude-code': [{ model: 'claude-smoke-a' }, { model: 'claude-smoke-b' }],
         codex: [{ model: 'codex-smoke' }],
@@ -136,7 +136,7 @@ globalThis.window = {
         queueMicrotask(() => {
           ipc.emit('heteroAgentEvent', {
             event: {
-              data: { chunkType: 'text', content: marker, model, provider: 'lobehub' },
+              data: { chunkType: 'text', content: marker, model, provider: 'orvilo' },
               type: 'stream_chunk',
             },
             sessionId,
@@ -152,7 +152,7 @@ globalThis.window = {
                   ingress,
                   model,
                   operationId,
-                  provider: 'lobehub',
+                  provider: 'orvilo',
                 }
               : null,
           success: true,
@@ -172,7 +172,7 @@ globalThis.window = {
 const started = eval(source);
 let record;
 for (let attempt = 0; attempt < 100; attempt += 1) {
-  record = globalThis.window.__LOBE_HETERO_OFFICIAL_SMOKE_RUNS?.[operationId];
+  record = globalThis.window.__ORVILO_HETERO_OFFICIAL_SMOKE_RUNS?.[operationId];
   if (record?.state === 'done') break;
   await new Promise((resolve) => setTimeout(resolve, 1));
 }
@@ -285,7 +285,7 @@ const passed = result.cases.find((item) => item.status === 'pass');
 const passedEvidence = JSON.parse(
   fs.readFileSync(path.join(reportDir, passed.evidence[0]), 'utf8'),
 );
-if (!passedEvidence.relayVerified || passedEvidence.relayInvocation?.provider !== 'lobehub') {
+if (!passedEvidence.relayVerified || passedEvidence.relayInvocation?.provider !== 'orvilo') {
   throw new Error('matching durable relay attestation did not pass verification');
 }
 JS

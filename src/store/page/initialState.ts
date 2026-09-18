@@ -1,6 +1,4 @@
-import { type NavigateFunction } from 'react-router';
-
-import { type LobeDocument } from '@/types/document';
+import { type OrviloDocument } from '@/types/document';
 
 export interface PageQueryFilter {
   fileTypes?: string[];
@@ -22,7 +20,7 @@ export interface PageState {
    * Server documents fetched from document service
    * undefined means not yet loaded (loading state)
    */
-  documents?: LobeDocument[];
+  documents?: OrviloDocument[];
   /**
    * Total count of documents
    */
@@ -41,7 +39,6 @@ export interface PageState {
    */
   isLoadingMoreDocuments: boolean;
 
-  navigate?: NavigateFunction;
   /**
    * Filters used in the last query
    */

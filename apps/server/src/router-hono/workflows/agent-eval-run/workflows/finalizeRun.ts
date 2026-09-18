@@ -1,4 +1,3 @@
-import { type WorkflowContext } from '@upstash/workflow';
 import debug from 'debug';
 
 import { AgentEvalRunModel, AgentEvalRunTopicModel } from '@/database/models/agentEval';
@@ -6,9 +5,10 @@ import { getServerDB } from '@/database/server';
 import { AgentEvalRunService } from '@/server/services/agentEvalRun';
 import { type FinalizeRunPayload } from '@/server/workflows/agentEvalRun';
 import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/utils';
+import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
-const log = debug('lobe-server:workflows:finalize-run');
+const log = debug('orvilo-server:workflows:finalize-run');
 
 /**
  * Finalize run workflow - aggregates per-case evaluation results and updates run metrics
@@ -90,8 +90,4 @@ export const finalizeRunHandler = async (context: WorkflowContext<FinalizeRunPay
     runId,
     success: true,
   };
-};
-
-export const finalizeRunWorkflowOptions = {
-  flowControl: { key: 'agent-eval-run.finalize-run', parallelism: 10, rate: 1 },
 };

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { assertCanPerformResourceAction } from '@/server/services/resourcePermission';
 
 import { assertCanUseWorkspaceAgent } from './workspaceAgentGuard';
@@ -20,7 +20,7 @@ const createDB = (agent: { id: string } | undefined, linkedGroups: { groupId: st
   const findFirst = vi.fn().mockResolvedValue(agent);
 
   return {
-    db: { query: { agents: { findFirst } }, select } as unknown as LobeChatDatabase,
+    db: { query: { agents: { findFirst } }, select } as unknown as OrviloDatabase,
     findFirst,
     select,
   };

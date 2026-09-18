@@ -144,7 +144,7 @@
   "cmdk.askAIHeadingEmpty": "اختر ميزة ذكاء اصطناعي",
   "cmdk.askAgentHeading": "اسأل الوكيل",
   "cmdk.askAgentPlaceholder": "اسأل {{agent}} عن شيء ما...",
-  "cmdk.askLobeAI": "اسأل Orvilo AI",
+  "cmdk.askOrviloAI": "اسأل Orvilo AI",
   "cmdk.community": "المجتمع",
   "cmdk.communitySupport": "دعم المجتمع",
   "cmdk.contactUs": "اتصل بنا",

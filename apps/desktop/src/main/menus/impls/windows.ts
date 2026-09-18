@@ -97,15 +97,6 @@ export class WindowsMenu extends BaseMenuPlatform implements IMenuPlatform {
             },
             label: t('file.newAgentGroup'),
           },
-          {
-            accelerator: 'Alt+Ctrl+P',
-            click: () => {
-              const mainWindow = this.app.browserManager.getMainWindow();
-              mainWindow.show();
-              mainWindow.broadcast('createNewPage');
-            },
-            label: t('file.newPage'),
-          },
           { type: 'separator' },
           {
             click: async () => {

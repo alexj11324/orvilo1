@@ -1,5 +1,5 @@
 import type { AgentState } from '@orvilo/agent-runtime';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import {
   isBuiltinHeterogeneousType,
   isLocalHeterogeneousType,
@@ -23,12 +23,12 @@ import { deviceGateway } from '@/server/services/deviceGateway';
 
 import { STOPPED_TOOL_CONTENT } from '../helpers/agentFactory';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 interface InterventionControllerDeps {
   agentOperationModel: AgentOperationModel;
   agentRuntimeService: AgentRuntimeService;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   messageModel: MessageModel;
   resolveDeviceWorkspaceId: (deviceId: string | undefined) => Promise<string | undefined>;
   threadModel: ThreadModel;
@@ -103,10 +103,11 @@ export class InterventionController {
     // Not every cancellation entry point knows the topic (reconnect, task,
     // bot/messenger stop). Recover it from the owner-scoped operation row so
     // device cancellation is symmetric across every caller.
+    let durableOperation: Awaited<ReturnType<AgentOperationModel['findById']>>;
     let resolvedTopicId = topicId;
     if (!resolvedTopicId) {
-      const operation = await this.deps.agentOperationModel.findById(resolvedOperationId);
-      resolvedTopicId = operation?.topicId ?? undefined;
+      durableOperation = await this.deps.agentOperationModel.findById(resolvedOperationId);
+      resolvedTopicId = durableOperation?.topicId ?? undefined;
     }
 
     // 2. Cancel a device-hosted hetero process if applicable.
@@ -172,6 +173,7 @@ export class InterventionController {
         );
 
         if (
+          isRemoteHeterogeneousType(targetOperation.heteroType) ||
           isLocalHeterogeneousType(targetOperation.heteroType) ||
           isBuiltinHeterogeneousType(targetOperation.heteroType)
         ) {
@@ -226,11 +228,17 @@ export class InterventionController {
 
     if (!interrupted && deviceCancellationConfirmed !== true) {
       const alreadyCancelled = thread?.status === ThreadStatus.Cancel;
+      durableOperation ??= await this.deps.agentOperationModel.findById(resolvedOperationId);
+      const durableAlreadyTerminal =
+        durableOperation?.status === 'abandoned' ||
+        durableOperation?.status === 'done' ||
+        durableOperation?.status === 'error' ||
+        durableOperation?.status === 'interrupted';
 
       return {
         deviceCancellationConfirmed,
         operationId: resolvedOperationId,
-        success: alreadyCancelled,
+        success: alreadyCancelled || durableAlreadyTerminal,
         threadId: thread?.id,
       };
     }

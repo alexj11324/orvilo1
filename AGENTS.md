@@ -1,6 +1,6 @@
-# LobeHub Development Guidelines
+# Orvilo Development Guidelines
 
-Guidelines for using AI coding agents in this opensource LobeHub repository.
+Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 ## Tech Stack
 
@@ -49,10 +49,10 @@ pnpm --filter @orvilo/server dev
 After `dev:spa` starts, the terminal prints a **Debug Proxy** URL:
 
 ```plaintext
-Debug Proxy: https://app.lobehub.com/_dangerous_local_dev_proxy?debug-host=http%3A%2F%2Flocalhost%3A9876
+Debug Proxy: https://orvilo.aspectlylabs.com/_dangerous_local_dev_proxy?debug-host=http%3A%2F%2Flocalhost%3A9876
 ```
 
-Open this URL to develop locally against the production backend (app.lobehub.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.
+Open this URL to develop locally against the production backend (orvilo.aspectlylabs.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.
 
 ### Git Workflow
 
@@ -85,7 +85,7 @@ Use the `acceptance` skill to decide whether the delivery needs product verifica
 - Reuse a completed acceptance that covers the delivered behavior. If its report and evidence exist only locally, inspect and upload them with `lh acceptance run ingest`; if already published, reuse the link. Do not rerun the product merely to open a PR or obtain a report URL.
 - For new or changed product behavior not covered by valid evidence, verify the affected outcomes on the real product, capture the required evidence, and publish the result. The skill owns reuse criteria and the execution workflow.
 
-When acceptance is required, put its published `https://app.lobehub.com/acceptance/<id>` link in the PR body. Tests, lint, and type-check remain separate quality gates; they do not replace product acceptance.
+When acceptance is required, put its published `https://orvilo.aspectlylabs.com/acceptance/<id>` link in the PR body. Tests, lint, and type-check remain separate quality gates; they do not replace product acceptance.
 
 ### i18n
 
@@ -102,4 +102,4 @@ When acceptance is required, put its published `https://app.lobehub.com/acceptan
 
 Before reviewing a PR / diff / branch change, read the **deep-review** skill. Ordinary review requests use its light mode (one independent reviewer against the dimension quick checklists); the full multi-subagent deep mode runs only on explicit invocation.
 
-When designing or reviewing user-facing flows (empty/loading/error states, confirmations, async feedback, button hierarchy, lists at scale, pickers), follow LobeHub's design values in [`DESIGN.md`](./DESIGN.md) — Natural / Meaningful / Certainty / Growth (自然 / 意义感 / 确定性 / 成长).
+When designing or reviewing user-facing flows (empty/loading/error states, confirmations, async feedback, button hierarchy, lists at scale, pickers), follow Orvilo's design values in [`DESIGN.md`](./DESIGN.md) — Natural / Meaningful / Certainty / Growth (自然 / 意义感 / 确定性 / 成长).

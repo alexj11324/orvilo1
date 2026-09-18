@@ -1,4 +1,4 @@
-export const CalculatorIdentifier = 'lobe-calculator';
+export const CalculatorIdentifier = 'orvilo-calculator';
 
 export const CalculatorApiName = {
   base: 'base',

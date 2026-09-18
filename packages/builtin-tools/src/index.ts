@@ -1,5 +1,5 @@
 import { AcceptanceEvidenceManifest } from '@orvilo/builtin-tool-acceptance-evidence';
-import { LobeActivatorManifest } from '@orvilo/builtin-tool-activator';
+import { OrviloActivatorManifest } from '@orvilo/builtin-tool-activator';
 import { AgentBuilderManifest } from '@orvilo/builtin-tool-agent-builder';
 import { AgentDocumentsManifest } from '@orvilo/builtin-tool-agent-documents';
 import {
@@ -23,10 +23,10 @@ import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-buil
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
 import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
-import { LobeAgentManifest, resolveLobeAgentManifest } from '@orvilo/builtin-tool-lobe-agent';
 import { LocalSystemManifest, resolveLocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
 import { MessageManifest, resolveMessageManifest } from '@orvilo/builtin-tool-message';
+import { OrviloAgentManifest, resolveOrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration';
@@ -40,14 +40,14 @@ import { VerifyToolManifest } from '@orvilo/builtin-tool-verify';
 import { WebBrowsingManifest } from '@orvilo/builtin-tool-web-browsing';
 import { WebOnboardingManifest } from '@orvilo/builtin-tool-web-onboarding';
 import { isDesktop, RECOMMENDED_SKILLS, RecommendedSkillType } from '@orvilo/const';
-import { type LobeBuiltinTool } from '@orvilo/types';
+import { type OrviloBuiltinTool } from '@orvilo/types';
 
 /**
  * Default tool IDs that will always be added to the tools list.
  * Shared between frontend (createAgentToolsEngine) and server (createServerAgentToolsEngine).
  */
 export const defaultToolIds = [
-  LobeActivatorManifest.identifier,
+  OrviloActivatorManifest.identifier,
   SkillsManifest.identifier,
   SkillStoreManifest.identifier,
   WebBrowsingManifest.identifier,
@@ -59,14 +59,14 @@ export const defaultToolIds = [
   TopicReferenceManifest.identifier,
   AgentDocumentsManifest.identifier,
   TaskManifest.identifier,
-  LobeAgentManifest.identifier,
+  OrviloAgentManifest.identifier,
 ];
 
 /**
  * Tool IDs that are always enabled regardless of user selection.
  * These are core system tools that the agent needs to function properly.
  *
- * `lobe-agent` is listed first: its built-in capabilities (plan + todo management,
+ * `orvilo-agent` is listed first: its built-in capabilities (plan + todo management,
  * sub-agent dispatch, multimodal fallback) should be available on every agent-mode turn,
  * not gated behind explicit injection. NOTE: these rules only apply in agent mode — chat
  * mode (`enableAgentMode === false`) drops `alwaysOnToolIds` entirely. In manual
@@ -78,8 +78,8 @@ export const defaultToolIds = [
  * the activation mode control itself are excluded from that menu.
  */
 export const alwaysOnToolIds = [
-  LobeAgentManifest.identifier,
-  LobeActivatorManifest.identifier,
+  OrviloAgentManifest.identifier,
+  OrviloActivatorManifest.identifier,
   SkillsManifest.identifier,
   SkillStoreManifest.identifier,
 ];
@@ -88,7 +88,7 @@ export const alwaysOnToolIds = [
  * Runtime tools represented by the skill activation mode control itself. They remain part
  * of the engine defaults but should not appear as independently configurable tool rows.
  */
-export const activationModeControlledToolIds = [LobeActivatorManifest.identifier];
+export const activationModeControlledToolIds = [OrviloActivatorManifest.identifier];
 
 /**
  * Tool IDs to exclude from defaults when in manual skill-activate mode.
@@ -96,7 +96,7 @@ export const activationModeControlledToolIds = [LobeActivatorManifest.identifier
  * Other default tools (sandbox, web browsing, etc.) remain available if enabled externally.
  */
 export const manualModeExcludeToolIds = [
-  LobeActivatorManifest.identifier,
+  OrviloActivatorManifest.identifier,
   SkillStoreManifest.identifier,
 ];
 
@@ -133,10 +133,10 @@ export const chatModeAllowedToolIds = [
  * them. Without it the supervisor has no way to dispatch members and degrades
  * to a single-agent monologue.
  *
- * NOTE: `lobe-group-agent-builder` (member CRUD: searchAgent / inviteAgent /
+ * NOTE: `orvilo-group-agent-builder` (member CRUD: searchAgent / inviteAgent /
  * createAgent) is deliberately excluded — it has no server runtime registered
  * (`apps/server/.../serverRuntimes`), so advertising it on a server-side
- * supervisor run would throw `Builtin tool "lobe-group-agent-builder" is not
+ * supervisor run would throw `Builtin tool "orvilo-group-agent-builder" is not
  * implemented` the moment the model called it. Add it back here once a server
  * runtime exists.
  */
@@ -163,7 +163,7 @@ export const runtimeManagedToolIds = [
   LocalSystemManifest.identifier,
   MemoryManifest.identifier,
   RemoteDeviceManifest.identifier,
-  LobeAgentManifest.identifier,
+  OrviloAgentManifest.identifier,
   WebBrowsingManifest.identifier,
 ];
 
@@ -203,12 +203,12 @@ export const runtimeManagedToolIds = [
  * Every entry was verified against its actual server runtime
  * (`apps/server/src/services/toolExecution/serverRuntimes/*`), not just its
  * manifest. For the rationale behind every DENIED identifier
- * (`lobe-agent-management`, `lobe-task`, `lobe-creds`, `lobe-message`,
- * `lobe-skill-store`, `lobe-agent-builder`, `lobe-skills`,
- * `lobe-group-agent-builder`, `lobe-group-management`, `agent-signal-review`,
- * `lobe-user-interaction`, `lobe-activator`,
- * `lobe-local-system`, `lobe-browser`, `lobe-remote-device`,
- * `lobe-topic-reference`, and the hidden system-only self-iteration tools),
+ * (`orvilo-agent-management`, `orvilo-task`, `orvilo-creds`, `orvilo-message`,
+ * `orvilo-skill-store`, `orvilo-agent-builder`, `orvilo-skills`,
+ * `orvilo-group-agent-builder`, `orvilo-group-management`, `agent-signal-review`,
+ * `orvilo-user-interaction`, `orvilo-activator`,
+ * `orvilo-local-system`, `orvilo-browser`, `orvilo-remote-device`,
+ * `orvilo-topic-reference`, and the hidden system-only self-iteration tools),
  * see the denied-bucket doc block at the bottom of
  * `apps/server/src/services/aiAgent/shareGate.ts`.
  */
@@ -218,12 +218,12 @@ export const AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS = new Set<string>([
   ImageGenerationManifest.identifier,
   VerifyToolManifest.identifier,
   AcceptanceEvidenceManifest.identifier,
-  LobeAgentManifest.identifier,
-  // `lobe-cloud-sandbox`: allowed because a share-visitor run gets its own
+  OrviloAgentManifest.identifier,
+  // `orvilo-cloud-sandbox`: allowed because a share-visitor run gets its own
   // fresh per-topic sandbox session, not the creator's. The `lh` CLI JWT
   // shim that would otherwise mint a creator-scoped token inside the shell
   // is skipped for visitor runs (see `cloudSandbox.ts` /
-  // `preprocessLhCommand.ts`), and `lobe-creds` stays denied so
+  // `preprocessLhCommand.ts`), and `orvilo-creds` stays denied so
   // `~/.creds/env` is never written into that session either. See the
   // positive-evidence doc block in `shareGate.ts` for the full rationale.
   CloudSandboxManifest.identifier,
@@ -262,7 +262,7 @@ export const AGENT_SHARE_NO_DATA_GRANT_BUILTIN_IDENTIFIERS = new Set<string>([
   AgentDocumentsManifest.identifier,
 ]);
 
-const builtinToolRegistry: LobeBuiltinTool[] = [
+const builtinToolRegistry: OrviloBuiltinTool[] = [
   {
     discoverable: false,
     hidden: true,
@@ -280,8 +280,8 @@ const builtinToolRegistry: LobeBuiltinTool[] = [
   {
     discoverable: false,
     hidden: true,
-    identifier: LobeActivatorManifest.identifier,
-    manifest: LobeActivatorManifest,
+    identifier: OrviloActivatorManifest.identifier,
+    manifest: OrviloActivatorManifest,
     type: 'builtin',
   },
   {
@@ -510,10 +510,10 @@ const builtinToolRegistry: LobeBuiltinTool[] = [
   },
   {
     hidden: true,
-    identifier: LobeAgentManifest.identifier,
-    manifest: LobeAgentManifest,
+    identifier: OrviloAgentManifest.identifier,
+    manifest: OrviloAgentManifest,
     // Context-aware: hides the `callSubAgent` API inside group / sub-agent runs.
-    resolveManifest: resolveLobeAgentManifest,
+    resolveManifest: resolveOrviloAgentManifest,
     type: 'builtin',
   },
 ];
@@ -529,7 +529,7 @@ const builtinToolRegistry: LobeBuiltinTool[] = [
  * mock individual builtin-tool packages (a stubbed manifest may lack `meta`). In
  * production every builtin manifest has a `meta`, so the hoisted fields are real.
  */
-export const builtinTools: LobeBuiltinTool[] = builtinToolRegistry.map((tool) => ({
+export const builtinTools: OrviloBuiltinTool[] = builtinToolRegistry.map((tool) => ({
   ...tool,
   avatar: tool.manifest?.meta?.avatar,
   description: tool.manifest?.meta?.description,

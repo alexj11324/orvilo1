@@ -20,9 +20,9 @@ export const RedisKeyNamespace = {
    */
   AI_GENERATION: 'aiGeneration',
   /**
-   * Core LOBEHUB application keys (sessions, cache, etc.)
+   * Core ORVILO application keys (sessions, cache, etc.)
    */
-  LOBEHUB: 'lobechat',
+  ORVILO: 'orvilo',
 } as const;
 
 /**
@@ -56,9 +56,9 @@ export const RedisKeys = {
     homeBrief: (userId: string): string => `home_brief:${userId}`,
   },
   /**
-   * Lobechat core scope - for application-level caching
+   * Orvilochat core scope - for application-level caching
    */
-  lobechat: {
-    // Add lobechat scope keys here as needed
+  orvilo: {
+    // Add orvilo scope keys here as needed
   },
 } as const;

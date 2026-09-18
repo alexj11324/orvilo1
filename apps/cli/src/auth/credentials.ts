@@ -11,15 +11,15 @@ export interface StoredCredentials {
   refreshToken?: string;
 }
 
-const LOBEHUB_DIR_NAME = resolveCliDirName();
-const CREDENTIALS_DIR = path.join(os.homedir(), LOBEHUB_DIR_NAME);
+const ORVILO_DIR_NAME = resolveCliDirName();
+const CREDENTIALS_DIR = path.join(os.homedir(), ORVILO_DIR_NAME);
 const CREDENTIALS_FILE = path.join(CREDENTIALS_DIR, 'credentials.json');
 
 // Derive an encryption key from machine-specific info
 // Not bulletproof, but prevents casual reading of the credentials file
 function deriveKey(): Buffer {
-  const material = `lobehub-cli:${os.hostname()}:${os.userInfo().username}`;
-  return crypto.pbkdf2Sync(material, 'lobehub-cli-salt', 100_000, 32, 'sha256');
+  const material = `orvilo-cli:${os.hostname()}:${os.userInfo().username}`;
+  return crypto.pbkdf2Sync(material, 'orvilo-cli-salt', 100_000, 32, 'sha256');
 }
 
 function encrypt(plaintext: string): string {

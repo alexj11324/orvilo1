@@ -4,7 +4,7 @@ import {
   DEFAULT_USER_MEMORY_EMBEDDING_MODEL_ITEM,
   MEMORY_SEARCH_TOP_K_LIMITS,
 } from '@orvilo/const';
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   ActivityMemoryItemSchema,
   AddIdentityActionSchema,
@@ -91,7 +91,7 @@ const EMPTY_TAXONOMY_RESULT: QueryTaxonomyOptionsResult = {
 type MemorySearchContext = {
   memoryModel: UserMemoryModel;
   memoryEffort: MemoryEffort;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   userId: string;
 };
 
@@ -174,7 +174,7 @@ const searchUserMemories = async (
   ) as Promise<SearchMemoryResult>;
 };
 
-const getEmbeddingRuntime = async (serverDB: LobeChatDatabase, userId: string) => {
+const getEmbeddingRuntime = async (serverDB: OrviloDatabase, userId: string) => {
   const { provider, model: embeddingModel } =
     getServerDefaultFilesConfig().embeddingModel || DEFAULT_USER_MEMORY_EMBEDDING_MODEL_ITEM;
   // Read user's provider config from database

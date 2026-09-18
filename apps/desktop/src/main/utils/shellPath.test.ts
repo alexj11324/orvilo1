@@ -27,7 +27,7 @@ describe('refreshShellPath', () => {
     execFileMock.mockImplementation((_file, _args, _options, callback) => {
       callback(
         null,
-        'shell startup output\n__LOBE_SHELL_PATH__/opt/homebrew/bin:/usr/bin__LOBE_SHELL_PATH__',
+        'shell startup output\n__ORVILO_SHELL_PATH__/opt/homebrew/bin:/usr/bin__ORVILO_SHELL_PATH__',
         '',
       );
     });

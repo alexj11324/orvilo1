@@ -27,11 +27,11 @@ vi.mock('@/server/services/heterogeneousAgent/operationPrincipal', async (import
 }));
 
 const operationClaims = {
-  aud: 'urn:lobehub:hetero-operation',
+  aud: 'urn:orvilo:hetero-operation',
   capabilities: ['hetero:ingest', 'hetero:finish', 'hetero:intervention:read'],
   exp: 1_789_327_443,
   iat: 1_789_313_043,
-  iss: 'urn:lobehub:internal',
+  iss: 'urn:orvilo:internal',
   jti: 'jti-1',
   operation_id: 'op-1',
   purpose: 'hetero-operation',

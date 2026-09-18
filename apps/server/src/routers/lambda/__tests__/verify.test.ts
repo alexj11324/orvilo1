@@ -319,7 +319,7 @@ describe('verifyRouter', () => {
             pullRequest: {
               number: 42,
               title: 'Ship x',
-              url: 'https://github.com/lobehub/lobehub/pull/42',
+              url: 'https://github.com/alexj11324/orvilo1/pull/42',
             },
           },
           goal: 'ship x',
@@ -334,7 +334,7 @@ describe('verifyRouter', () => {
           pullRequest: {
             number: 42,
             title: 'Ship x',
-            url: 'https://github.com/lobehub/lobehub/pull/42',
+            url: 'https://github.com/alexj11324/orvilo1/pull/42',
           },
         },
         goal: 'ship x',

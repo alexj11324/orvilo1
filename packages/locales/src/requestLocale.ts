@@ -1,4 +1,4 @@
-import { DEFAULT_LANG, LOBE_LOCALE_COOKIE } from '@/const/locale';
+import { DEFAULT_LANG, ORVILO_LOCALE_COOKIE } from '@/const/locale';
 
 import { type Locales, matchLocale, normalizeLocale } from './resources';
 
@@ -55,12 +55,12 @@ const parseAcceptLanguage = (header: string | null): string[] =>
     .map((candidate) => candidate.tag);
 
 // An explicit choice naming no supported locale falls back to the default instead of
-// deferring to the browser, matching the lobehub gateway's `resolveOriginPathVars`: a
+// deferring to the browser, matching the orvilo gateway's `resolveOriginPathVars`: a
 // request routed through the gateway and one hitting a worker directly must agree.
 export const resolveRequestLocale = (request: Request): Locales => {
   const explicit =
     new URL(request.url).searchParams.get(LOCALE_QUERY) ||
-    readCookie(request.headers.get('cookie'), LOBE_LOCALE_COOKIE);
+    readCookie(request.headers.get('cookie'), ORVILO_LOCALE_COOKIE);
 
   if (explicit && explicit !== AUTO_LOCALE) return normalizeLocale(canonicalizeTag(explicit));
 

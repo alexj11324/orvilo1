@@ -5,7 +5,7 @@ import { UAParser } from 'ua-parser-js';
 import urlJoin from 'url-join';
 
 import { auth } from '@/auth';
-import { LOBE_LOCALE_COOKIE } from '@/const/locale';
+import { ORVILO_LOCALE_COOKIE } from '@/const/locale';
 import { appEnv } from '@/envs/app';
 import { authEnv } from '@/envs/auth';
 import { type Locales } from '@/locales/resources';
@@ -36,9 +36,9 @@ const persistLocaleCookie = (
   explicitlyLocale: Locales | undefined,
 ) => {
   if (!explicitlyLocale) return;
-  const existingLocale = request.cookies.get(LOBE_LOCALE_COOKIE)?.value as Locales | undefined;
+  const existingLocale = request.cookies.get(ORVILO_LOCALE_COOKIE)?.value as Locales | undefined;
   if (existingLocale) return;
-  response.cookies.set(LOBE_LOCALE_COOKIE, explicitlyLocale, {
+  response.cookies.set(ORVILO_LOCALE_COOKIE, explicitlyLocale, {
     // 90 days is a balanced persistence for locale preference
     maxAge: 60 * 60 * 24 * 90,
     path: '/',
@@ -79,7 +79,7 @@ export function defineConfig() {
 
     const locale =
       explicitlyLocale ||
-      ((request.cookies.get(LOBE_LOCALE_COOKIE)?.value || browserLanguage) as Locales);
+      ((request.cookies.get(ORVILO_LOCALE_COOKIE)?.value || browserLanguage) as Locales);
 
     const ua = request.headers.get('user-agent');
 
@@ -89,7 +89,7 @@ export function defineConfig() {
       browserLanguage,
       deviceType: device.type,
       hasCookies: {
-        locale: !!request.cookies.get(LOBE_LOCALE_COOKIE)?.value,
+        locale: !!request.cookies.get(ORVILO_LOCALE_COOKIE)?.value,
       },
       locale,
     });
@@ -105,7 +105,6 @@ export function defineConfig() {
     logDefault('Serialized route variant: %s', route);
 
     // if app is in docker, rewrite to self container
-    // https://github.com/lobehub/lobe-chat/issues/5876
     if (appEnv.MIDDLEWARE_REWRITE_THROUGH_LOCAL) {
       logDefault('Local container rewrite enabled: %O', {
         host: '127.0.0.1',
@@ -213,7 +212,6 @@ export function defineConfig() {
     '/api/v1(.*)', // OpenAPI routes should use OpenAPI auth (API Key/OIDC), not BetterAuth session
     '/api/auth(.*)',
     '/api/webhooks(.*)',
-    '/api/workflows(.*)',
     '/api/agent(.*)',
     '/api/dev(.*)',
     '/webapi(.*)',

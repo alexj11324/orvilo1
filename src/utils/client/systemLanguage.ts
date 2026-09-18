@@ -4,4 +4,4 @@
  * The main process reads the OS language directly and hands it to the preload.
  */
 export const getSystemLanguage = (): string =>
-  (typeof window !== 'undefined' && window.lobeEnv?.systemLanguage) || navigator.language;
+  (typeof window !== 'undefined' && window.orviloEnv?.systemLanguage) || navigator.language;

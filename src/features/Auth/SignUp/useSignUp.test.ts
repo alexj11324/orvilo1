@@ -25,8 +25,8 @@ vi.mock('@/libs/better-auth/auth-client', () => ({
 }));
 
 vi.mock('@orvilo/business-const', () => ({
-  BRANDING_NAME: 'LobeHub',
-  ORG_NAME: 'LobeHub',
+  BRANDING_NAME: 'Orvilo',
+  ORG_NAME: 'Orvilo',
 }));
 
 vi.mock('@/business/client/hooks/useBusinessSignup', () => ({

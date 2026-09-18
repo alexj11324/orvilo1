@@ -6,14 +6,14 @@ import { resolveStaleSnapshot } from '../staleSnapshot';
 // pointing at it. The live git probe then reads nothing, so everything the bar
 // can still show comes from this snapshot — including the way out of it.
 const deadWorktree = {
-  activeWorktree: '/tmp/lobehub-wt-subtask',
+  activeWorktree: '/tmp/orvilo-wt-subtask',
   branch: 'feat/task-list-subtask-nesting',
   github: {
     pullRequest: {
       number: 18_454,
       state: 'OPEN',
       title: 'PR #18454',
-      url: 'https://github.com/lobehub/lobehub/pull/18454',
+      url: 'https://github.com/alexj11324/orvilo1/pull/18454',
     },
     pullRequestStatus: 'ok' as const,
   },
@@ -22,33 +22,33 @@ const deadWorktree = {
 
 describe('resolveStaleSnapshot', () => {
   it('surfaces the recorded branch, worktree and linked PR', () => {
-    const view = resolveStaleSnapshot({ git: deadWorktree, path: '/tmp/lobehub-wt-subtask' });
+    const view = resolveStaleSnapshot({ git: deadWorktree, path: '/tmp/orvilo-wt-subtask' });
 
     expect(view.branch).toBe('feat/task-list-subtask-nesting');
-    expect(view.worktreePath).toBe('/tmp/lobehub-wt-subtask');
+    expect(view.worktreePath).toBe('/tmp/orvilo-wt-subtask');
     expect(view.isWorktree).toBe(true);
     expect(view.pullRequest?.number).toBe(18_454);
   });
 
   it('names the missing worktree in the explanation', () => {
-    const view = resolveStaleSnapshot({ git: deadWorktree, path: '/tmp/lobehub-wt-subtask' });
+    const view = resolveStaleSnapshot({ git: deadWorktree, path: '/tmp/orvilo-wt-subtask' });
 
     expect(view.explanation).toEqual({
       key: 'workingDirectory.staleWorktreeSnapshot',
-      values: { name: 'lobehub-wt-subtask' },
+      values: { name: 'orvilo-wt-subtask' },
     });
   });
 
   it('offers a way back to the source repo, named after it', () => {
     const view = resolveStaleSnapshot({
       git: deadWorktree,
-      path: '/tmp/lobehub-wt-subtask',
-      sourcePath: '/Users/me/code/lobehub',
+      path: '/tmp/orvilo-wt-subtask',
+      sourcePath: '/Users/me/code/orvilo',
     });
 
     // Committing the source path is what drops `git.activeWorktree`, so the
     // target must be the repo root itself — not the dead checkout.
-    expect(view.reset).toEqual({ name: 'lobehub', targetPath: '/Users/me/code/lobehub' });
+    expect(view.reset).toEqual({ name: 'orvilo', targetPath: '/Users/me/code/orvilo' });
   });
 
   it('offers no way back when the recorded source repo is itself the dead path', () => {
@@ -71,11 +71,11 @@ describe('resolveStaleSnapshot', () => {
     const view = resolveStaleSnapshot({
       git: { activeWorktree: '/tmp/wt-legacy', branch: 'fix/x' },
       path: '/tmp/wt-legacy',
-      sourcePath: '/Users/me/code/lobehub',
+      sourcePath: '/Users/me/code/orvilo',
     });
 
     expect(view.isWorktree).toBe(true);
     expect(view.explanation.values).toEqual({ name: 'wt-legacy' });
-    expect(view.reset?.targetPath).toBe('/Users/me/code/lobehub');
+    expect(view.reset?.targetPath).toBe('/Users/me/code/orvilo');
   });
 });

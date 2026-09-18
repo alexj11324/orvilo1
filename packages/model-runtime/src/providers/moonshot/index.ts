@@ -396,12 +396,12 @@ export const anthropicParams = createAnthropicCompatibleParams({
   provider: ModelProvider.Moonshot,
 });
 
-export const LobeMoonshotAnthropicAI = createAnthropicCompatibleRuntime(anthropicParams);
+export const OrviloMoonshotAnthropicAI = createAnthropicCompatibleRuntime(anthropicParams);
 
 /**
  * Moonshot OpenAI format runtime
  */
-export const LobeMoonshotOpenAI = createOpenAICompatibleRuntime({
+export const OrviloMoonshotOpenAI = createOpenAICompatibleRuntime({
   baseURL: DEFAULT_MOONSHOT_BASE_URL,
   chatCompletion: {
     forceImageBase64: true,
@@ -417,10 +417,10 @@ export const LobeMoonshotOpenAI = createOpenAICompatibleRuntime({
   provider: ModelProvider.Moonshot,
 });
 
-type MoonshotOpenAIRuntimeOptions = ConstructorParameters<typeof LobeMoonshotOpenAI>[0];
+type MoonshotOpenAIRuntimeOptions = ConstructorParameters<typeof OrviloMoonshotOpenAI>[0];
 
 const fetchMoonshotModelsWithOpenAI = ({ options }: { options?: MoonshotOpenAIRuntimeOptions }) => {
-  const runtime = new LobeMoonshotOpenAI({
+  const runtime = new OrviloMoonshotOpenAI({
     ...options,
     baseURL: normalizeMoonshotOpenAIModelBaseURL(options?.baseURL),
   });
@@ -446,13 +446,13 @@ const createAnthropicRouter = ({
   options: {
     ...(baseURL ? { baseURL } : {}),
   },
-  runtime: LobeMoonshotAnthropicAI,
+  runtime: OrviloMoonshotAnthropicAI,
 });
 
 const createOpenAIRouter = () => ({
   apiType: 'openai' as const,
   options: {},
-  runtime: LobeMoonshotOpenAI,
+  runtime: OrviloMoonshotOpenAI,
 });
 
 export const params: CreateRouterRuntimeOptions = {
@@ -480,4 +480,4 @@ export const params: CreateRouterRuntimeOptions = {
   },
 };
 
-export const LobeMoonshotAI = createRouterRuntime(params);
+export const OrviloMoonshotAI = createRouterRuntime(params);

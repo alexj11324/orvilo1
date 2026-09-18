@@ -11,18 +11,6 @@ const robots = (): MetadataRoute.Robots => {
     host: getCanonicalUrl(),
     rules: [
       {
-        allow: ['/community/*'],
-        userAgent: ['Facebot', 'facebookexternalhit'],
-      },
-      {
-        allow: ['/community/*'],
-        userAgent: 'LinkedInBot',
-      },
-      {
-        allow: ['/community/*'],
-        userAgent: 'Twitterbot',
-      },
-      {
         allow: ['/'],
         // `/a/*` is the Agent Share visitor page: link-visible, creator-owned
         // content that must never be indexed. `/agent/*` is the creator's own

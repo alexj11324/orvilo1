@@ -1,6 +1,6 @@
-import lobeOpenApi from '@orvilo/openapi';
+import orviloOpenApi from '@orvilo/openapi';
 
-const handler = (request: Request) => lobeOpenApi.fetch(request);
+const handler = (request: Request) => orviloOpenApi.fetch(request);
 
 // Export all required HTTP method handlers
 export const GET = handler;

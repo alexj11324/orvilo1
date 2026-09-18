@@ -136,12 +136,12 @@ describe('Home sidebar body', () => {
         { key: 'resource', title: 'Resource', url: '/resource' },
       ],
       topNavItems: [
-        { key: 'pages', title: 'Pages', url: '/page' },
+        { key: 'automations', title: 'Automations', url: '/automations' },
         { key: 'tasks', title: 'Tasks', url: '/tasks' },
       ],
     };
     mocks.globalState.status.sidebarItems = [
-      'pages',
+      'automations',
       'recents',
       'agent',
       '__spacer__',
@@ -158,7 +158,7 @@ describe('Home sidebar body', () => {
     );
 
     expect(spacerIndex).toBe(2);
-    expect(children[0]).toHaveTextContent('Pages');
+    expect(children[0]).toHaveTextContent('Automations');
     expect(children[1]).toHaveAttribute('data-testid', 'sidebar-accordion');
     expect(children[3]).toHaveTextContent('Image');
     expect(children[4]).toHaveTextContent('Tasks');

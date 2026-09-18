@@ -23,7 +23,7 @@ export function isChunkLoadError(error: unknown): boolean {
   return CHUNK_ERROR_PATTERNS.some((p) => combined.includes(p));
 }
 
-const RELOAD_KEY = 'lobe-chunk-reload';
+const RELOAD_KEY = 'orvilo-chunk-reload';
 
 const notifiedErrors = new WeakSet<object>();
 

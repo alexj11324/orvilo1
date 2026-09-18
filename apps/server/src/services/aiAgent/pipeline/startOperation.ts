@@ -12,7 +12,7 @@ import type { ApprovalClaimState } from './approvalResume';
 import type { OperationPrepResult } from './operationPrep';
 import type { ToolDiscoveryResult } from './toolDiscovery';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 export interface StartOperationDeps {
   agentRuntimeService: AgentRuntimeService;
@@ -50,6 +50,7 @@ export interface StartOperationInput {
   queueRetries?: number;
   queueRetryDelay?: string;
   signal?: AbortSignal;
+  skipTaskVerification?: boolean;
   stream?: boolean;
   topicStartOwnerOperationId?: string;
   updateAbortedAssistantMessage: (errorMessage: string) => Promise<void>;
@@ -112,6 +113,7 @@ export const startOperation = async (
     queueRetries,
     queueRetryDelay,
     signal,
+    skipTaskVerification,
     stream,
     topicStartOwnerOperationId,
     updateAbortedAssistantMessage,
@@ -154,7 +156,7 @@ export const startOperation = async (
             // (`agentConfig.knowledgeBases`, already blanked by
             // `applyShareGateToAgentConfig` in `execAgent`), never from visitor
             // input. Lets `isShareBlockedDataToolCall` scope
-            // `lobe-knowledge-base.viewKnowledgeBase`'s `id` argument to
+            // `orvilo-knowledge-base.viewKnowledgeBase`'s `id` argument to
             // knowledge bases actually mounted on this agent.
             knowledgeBaseIds: (agentConfig.knowledgeBases ?? [])
               .filter((kb: { enabled?: boolean | null; id?: string | null }) => kb.enabled && kb.id)
@@ -275,6 +277,7 @@ export const startOperation = async (
       operationId,
       parentOperationId,
       signal,
+      skipTaskVerification,
       queueRetries,
       queueRetryDelay,
       stream,

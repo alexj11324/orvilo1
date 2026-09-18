@@ -25,7 +25,7 @@ vi.mock('../auth/refresh', () => ({
 }));
 vi.mock('../auth/resolveToken', () => ({
   resolveToken: vi.fn().mockResolvedValue({
-    serverUrl: 'https://app.lobehub.com',
+    serverUrl: 'https://orvilo.aspectlylabs.com',
     token: 'test-token',
     tokenType: 'jwt',
     userId: 'test-user',
@@ -168,7 +168,7 @@ describe('connect command', () => {
     await program.parseAsync(['node', 'test', 'connect']);
 
     expect(connectCalled).toBe(true);
-    expect(log.info).toHaveBeenCalledWith(expect.stringContaining('LobeHub CLI'));
+    expect(log.info).toHaveBeenCalledWith(expect.stringContaining('Orvilo CLI'));
   });
 
   it('should require explicit gateway for custom login server', async () => {
@@ -204,7 +204,7 @@ describe('connect command', () => {
     const program = createProgram();
     await program.parseAsync(['node', 'test', 'connect']);
 
-    expect(clientOptions.serverUrl).toBe('https://app.lobehub.com');
+    expect(clientOptions.serverUrl).toBe('https://orvilo.aspectlylabs.com');
   });
 
   it('should handle tool call requests', async () => {
@@ -268,7 +268,7 @@ describe('connect command', () => {
     await program.parseAsync(['node', 'test', 'connect']);
 
     vi.mocked(resolveToken).mockResolvedValueOnce({
-      serverUrl: 'https://app.lobehub.com',
+      serverUrl: 'https://orvilo.aspectlylabs.com',
       token: 'refreshed-token',
       tokenType: 'jwt',
       userId: 'test-user',
@@ -288,7 +288,7 @@ describe('connect command', () => {
     await program.parseAsync(['node', 'test', 'connect']);
 
     vi.mocked(resolveToken).mockResolvedValueOnce({
-      serverUrl: 'https://app.lobehub.com',
+      serverUrl: 'https://orvilo.aspectlylabs.com',
       token: 'new-token',
       tokenType: 'jwt',
       userId: 'user',

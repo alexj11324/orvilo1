@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/const/url', () => ({
-  LOBE_URL_IMPORT_NAME: 'settings',
+  ORVILO_URL_IMPORT_NAME: 'settings',
 }));
 
 vi.mock('@/store/user', () => ({

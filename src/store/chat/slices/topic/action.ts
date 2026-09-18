@@ -1135,7 +1135,6 @@ export class ChatTopicActionImpl {
       pageSize: customPageSize,
       isInbox,
       sortBy,
-      withDetails,
     }: {
       agentId?: string;
       excludeStatuses?: string[];
@@ -1144,7 +1143,6 @@ export class ChatTopicActionImpl {
       isInbox?: boolean;
       pageSize?: number;
       sortBy?: TopicQuerySortBy;
-      withDetails?: boolean;
     } = {},
   ): SWRResponse<{ items: ChatTopic[]; total: number }> => {
     const pageSize = customPageSize || 20;
@@ -1164,7 +1162,6 @@ export class ChatTopicActionImpl {
             ...(effectiveExcludeTriggers ? { excludeTriggers: effectiveExcludeTriggers } : {}),
             ...(effectiveExcludeStatuses ? { excludeStatuses: effectiveExcludeStatuses } : {}),
             ...(sortBy ? { sortBy } : {}),
-            ...(withDetails ? { withDetails: true } : {}),
           })
         : null,
       async () => {
@@ -1192,7 +1189,6 @@ export class ChatTopicActionImpl {
           isInbox,
           pageSize,
           sortBy,
-          withDetails,
         });
 
         // Reset expanding state after fetch completes
@@ -1266,7 +1262,6 @@ export class ChatTopicActionImpl {
                   items: nextItems,
                   pageSize,
                   total: totalCount,
-                  withDetails,
                 },
               },
             },
@@ -1281,8 +1276,8 @@ export class ChatTopicActionImpl {
   /**
    * By-id topic detail fetch, used as a fallback when a topic the UI is
    * anchored on is missing from the loaded list bucket — e.g. an archived
-   * (`completed`) topic that the sidebar fetch excludes via `excludeStatuses`,
-   * or a topic deep-linked from the Topics management page. The result lands
+   * (`completed`) topic that the sidebar fetch excludes via `excludeStatuses`.
+   * The result lands
    * in `topicDetailMap`, which `currentActiveTopic` / `getTopicById` read as
    * a fallback. Pass `undefined` to disable the fetch.
    */
@@ -1305,184 +1300,6 @@ export class ChatTopicActionImpl {
         },
       },
     );
-
-  /**
-   * Topic fetch dedicated to the Agent Topics management page.
-   * Lives in its own SWR key + state bucket so the heavier `withDetails`
-   * payload doesn't collide with the sidebar's cheap fetch — sharing one
-   * bucket meant whichever response landed last clobbered the other.
-   */
-  useFetchAgentTopicsView = (
-    enable: boolean,
-    {
-      agentId,
-      pageSize: customPageSize,
-      withDetails,
-    }: {
-      agentId?: string;
-      pageSize?: number;
-      withDetails?: boolean;
-    } = {},
-  ): SWRResponse<{ items: ChatTopic[]; total: number }> => {
-    const pageSize = customPageSize || 30;
-    const containerKey = topicMapKey({ agentId });
-    const hasValidAgent = !!agentId;
-
-    return useClientDataSWRWithSync<{ items: ChatTopic[]; total: number }>(
-      enable && hasValidAgent
-        ? topicKeys.agentView(containerKey, {
-            pageSize,
-            ...(withDetails ? { withDetails: true } : {}),
-          })
-        : null,
-      async () => {
-        if (!agentId) return { items: [], total: 0 };
-
-        return topicService.getTopics({
-          agentId,
-          current: 0,
-          pageSize,
-          withDetails,
-        });
-      },
-      {
-        onData: (result) => {
-          if (!hasValidAgent) return;
-          const { total: totalCount } = result;
-
-          const currentData = this.#get().agentTopicsViewMap[containerKey];
-          const topics = this.#reconcileFetchedTopics(result.items, currentData?.items);
-
-          // Preserve appended pages on refresh — same convention as
-          // `useFetchTopics` so the user keeps their scroll position after
-          // an SWR revalidation.
-          const isRefreshingExpandedList =
-            !!currentData && currentData.currentPage > 0 && currentData.pageSize === pageSize;
-
-          const nextItems = isRefreshingExpandedList
-            ? (() => {
-                const visibleCount = Math.min(currentData.items.length, totalCount);
-                const topicIds = new Set(topics.map((item) => item.id));
-                return [
-                  ...topics,
-                  ...currentData.items.filter((topic) => !topicIds.has(topic.id)),
-                ].slice(0, visibleCount);
-              })()
-            : topics;
-
-          const hasMore = totalCount > nextItems.length;
-
-          if (
-            currentData &&
-            isEqual(nextItems, currentData.items) &&
-            currentData.total === totalCount
-          ) {
-            return;
-          }
-
-          this.#set(
-            {
-              agentTopicsViewMap: {
-                ...this.#get().agentTopicsViewMap,
-                [containerKey]: {
-                  currentPage: isRefreshingExpandedList ? currentData.currentPage : 0,
-                  hasMore,
-                  isExpandingPageSize: false,
-                  isLoadingMore: false,
-                  loadMoreError: undefined,
-                  items: nextItems,
-                  pageSize,
-                  total: totalCount,
-                  withDetails,
-                },
-              },
-            },
-            false,
-            n('useFetchAgentTopicsView(onData)', { containerKey }),
-          );
-        },
-      },
-    );
-  };
-
-  loadMoreAgentTopicsView = async (): Promise<void> => {
-    const { activeAgentId, agentTopicsViewMap } = this.#get();
-    if (!activeAgentId) return;
-
-    const key = topicMapKey({ agentId: activeAgentId });
-    const currentData = agentTopicsViewMap[key];
-    if (!currentData || currentData.isLoadingMore) return;
-
-    const nextPage = (currentData.currentPage || 0) + 1;
-    const pageSize = currentData.pageSize;
-    const withDetails = currentData.withDetails;
-
-    this.#set(
-      {
-        agentTopicsViewMap: {
-          ...agentTopicsViewMap,
-          [key]: { ...currentData, isLoadingMore: true, loadMoreError: undefined },
-        },
-      },
-      false,
-      n('loadMoreAgentTopicsView(start)'),
-    );
-
-    try {
-      const result = await topicService.getTopics({
-        agentId: activeAgentId,
-        current: nextPage,
-        pageSize,
-        withDetails,
-      });
-
-      const nextItems = [...currentData.items, ...result.items];
-      const hasMore = result.total > nextItems.length;
-
-      this.#set(
-        {
-          agentTopicsViewMap: {
-            ...this.#get().agentTopicsViewMap,
-            [key]: {
-              ...currentData,
-              currentPage: nextPage,
-              hasMore,
-              isLoadingMore: false,
-              loadMoreError: undefined,
-              items: nextItems,
-              total: result.total,
-            },
-          },
-        },
-        false,
-        n('loadMoreAgentTopicsView(success)'),
-      );
-    } catch (error) {
-      this.#set(
-        {
-          agentTopicsViewMap: {
-            ...this.#get().agentTopicsViewMap,
-            [key]: {
-              ...this.#get().agentTopicsViewMap[key]!,
-              isLoadingMore: false,
-              loadMoreError: error,
-            },
-          },
-        },
-        false,
-        n('loadMoreAgentTopicsView(error)'),
-      );
-    }
-  };
-
-  refreshAgentTopicsView = async (): Promise<void> => {
-    const { activeAgentId } = this.#get();
-    if (!activeAgentId) return;
-    const containerKey = topicMapKey({ agentId: activeAgentId });
-    await mutate(
-      (key) => Array.isArray(key) && key[0] === topicKeys.agentView.root && key[1] === containerKey,
-    );
-  };
 
   loadMoreTopics = async (): Promise<void> => {
     const { activeAgentId, activeGroupId, topicDataMap } = this.#get();
@@ -1509,10 +1326,6 @@ export class ChatTopicActionImpl {
       const pageSize = useGlobalStore.getState().status.topicPageSize || 20;
       const excludeTriggers = currentData?.excludeTriggers;
       const excludeStatuses = currentData?.excludeStatuses;
-      // Carry `withDetails` from the initial fetch so subsequent pages have
-      // the same column shape — otherwise the management page would mix
-      // detail-rich rows with bare rows after scrolling.
-      const withDetails = currentData?.withDetails;
       const result = await topicService.getTopics({
         agentId: activeAgentId,
         current: nextPage,
@@ -1520,7 +1333,6 @@ export class ChatTopicActionImpl {
         excludeTriggers,
         groupId: activeGroupId,
         pageSize,
-        withDetails,
       });
 
       const currentTopics = currentData?.items || [];
@@ -1542,7 +1354,6 @@ export class ChatTopicActionImpl {
               items: nextItems,
               pageSize,
               total: result.total,
-              withDetails,
             },
           },
         },
@@ -1783,17 +1594,12 @@ export class ChatTopicActionImpl {
     // Key format: topicKeys.list(containerKey, { isInbox, pageSize })
     const containerKey =
       ownerContainerKey ?? topicMapKey({ agentId: activeAgentId, groupId: activeGroupId });
-    const agentViewKey =
-      ownerContainerKey ?? (activeAgentId ? topicMapKey({ agentId: activeAgentId }) : null);
     await mutate(
       (key) =>
         Array.isArray(key) &&
-        ((key[0] === topicKeys.list.root &&
-          typeof key[1] === 'string' &&
-          key[1] === containerKey) ||
-          (key[0] === topicKeys.agentView.root &&
-            agentViewKey !== null &&
-            key[1] === agentViewKey)),
+        key[0] === topicKeys.list.root &&
+        typeof key[1] === 'string' &&
+        key[1] === containerKey,
     );
   };
 
@@ -1931,7 +1737,7 @@ export class ChatTopicActionImpl {
    * 'active') never reached the cache: the last FETCHED snapshot — taken while
    * the run was still `running` — stayed there, and a reload repainted a
    * finished topic with the running spinner until the revalidation corrected it
-   * a moment later (LOBE-14032). Same write-through idea as
+   * a moment later (ORVILO-14032). Same write-through idea as
    * `#writeThroughMessageCache` in the message slice.
    *
    * Only `updateTopic` is mirrored. It patches a row a fetch already produced,
@@ -2004,15 +1810,6 @@ export class ChatTopicActionImpl {
     const currentData = this.#get().topicDataMap[key];
     const nextItems = topicReducer(currentData?.items, payload);
 
-    // Mirror the optimistic update into the Agent Topics management page's
-    // bucket if it has been populated for the same key. Without this mirror,
-    // bulk actions (favorite/status/delete) on the management page would
-    // appear to do nothing until the SWR revalidation finished.
-    const viewMap = this.#get().agentTopicsViewMap;
-    const viewData = viewMap[key];
-    const nextViewItems = viewData ? topicReducer(viewData.items, payload) : undefined;
-    const viewChanged = viewData ? !isEqual(nextViewItems, viewData.items) : false;
-
     const detailMap = this.#get().topicDetailMap ?? {};
     const detailId = payload.type === 'addTopic' ? undefined : payload.id;
     const detailTopic = detailId ? detailMap[detailId] : undefined;
@@ -2044,7 +1841,7 @@ export class ChatTopicActionImpl {
     // no need to update if all maps are unchanged
     const mainChanged = !isEqual(nextItems, currentData?.items);
     const detailChanged = nextDetailMap !== detailMap;
-    if (!mainChanged && !viewChanged && !detailChanged) return;
+    if (!mainChanged && !detailChanged) return;
 
     const currentTotal = currentData?.total ?? currentData?.items?.length ?? 0;
     const total =
@@ -2068,25 +1865,6 @@ export class ChatTopicActionImpl {
           isInbox: currentData?.isInbox,
           items: nextItems,
           total,
-        },
-      };
-    }
-
-    if (viewChanged && viewData && nextViewItems) {
-      const viewTotal = viewData.total ?? viewData.items?.length ?? 0;
-      const viewNextTotal =
-        payload.type === 'addTopic'
-          ? viewTotal + 1
-          : payload.type === 'deleteTopic'
-            ? Math.max(nextViewItems.length, viewTotal - 1)
-            : viewTotal;
-      nextState.agentTopicsViewMap = {
-        ...viewMap,
-        [key]: {
-          ...viewData,
-          hasMore: viewNextTotal > nextViewItems.length,
-          items: nextViewItems,
-          total: viewNextTotal,
         },
       };
     }

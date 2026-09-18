@@ -19,7 +19,5 @@ app.get('/health', (c) =>
 
 app.all('/api/agent', (c) => fetchWith(c, () => import('./agent')));
 app.all('/api/agent/*', (c) => fetchWith(c, () => import('./agent')));
-app.all('/api/workflows', (c) => fetchWith(c, () => import('./workflows')));
-app.all('/api/workflows/*', (c) => fetchWith(c, () => import('./workflows')));
 
 export default app;

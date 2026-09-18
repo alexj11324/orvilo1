@@ -1,7 +1,7 @@
 import { resolveSubAgentChatConfig } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { type AgentConfigSnapshot, resolveAgentConfig } from '@orvilo/mecha';
-import type { AgentModelOverride, LobeAgentAgencyConfig, MessageMapScope } from '@orvilo/types';
+import type { AgentModelOverride, MessageMapScope, OrviloAgentAgencyConfig } from '@orvilo/types';
 import { getDisabledPluginIds, resolveAgentAgencyConfig } from '@orvilo/types';
 import debug from 'debug';
 
@@ -12,10 +12,10 @@ import { isResourceAuthorOrAdmin } from '@/server/services/resourcePermission';
 
 import type { InternalExecAgentParams } from '../types';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 export interface ResolveRunAgentConfigDeps {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   resolveAgentConfigOrThrow: (identifier: string) => Promise<AgentConfigWithId>;
   userId: string;
   workspaceId?: string;
@@ -55,7 +55,7 @@ export interface ResolvedRunAgentConfig {
   /** Tri-state disabled plugin identifiers, captured before pinned-id collapse. */
   disabledPluginIds: string[];
   isPublicWorkspaceAgent: boolean;
-  memberDeviceOverride?: Pick<LobeAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
+  memberDeviceOverride?: Pick<OrviloAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
   /** Persistence-attribution agent id (Agent Signal marker aware). */
   persistAgentId: string;
   /** The actual executing agent row id resolved from id/slug. */
@@ -63,7 +63,7 @@ export interface ResolvedRunAgentConfig {
 }
 
 interface WorkspaceMemberOverrides {
-  device?: Pick<LobeAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
+  device?: Pick<OrviloAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
   mode?: boolean;
   model?: AgentModelOverride;
 }

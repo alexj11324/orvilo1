@@ -13,7 +13,7 @@ describe('LocalDatabaseService', () => {
   let service: LocalDatabaseService;
 
   beforeEach(async () => {
-    storagePath = await mkdtemp(path.join(os.tmpdir(), 'lobehub-local-database-'));
+    storagePath = await mkdtemp(path.join(os.tmpdir(), 'orvilo-local-database-'));
     service = new LocalDatabaseService({ appStoragePath: storagePath } as App);
   });
 

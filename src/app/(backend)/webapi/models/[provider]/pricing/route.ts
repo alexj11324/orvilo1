@@ -8,7 +8,7 @@ import { AiProviderModel } from '@/database/models/aiProvider';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { createErrorResponse } from '@/utils/errorResponse';
 
-const log = debug('lobe-server:models:pricing');
+const log = debug('orvilo-server:models:pricing');
 
 interface NewApiPricingKeyVaults {
   apiKey?: string;

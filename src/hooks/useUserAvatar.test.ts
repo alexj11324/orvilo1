@@ -1,4 +1,4 @@
-import type * as LobechatConstModule from '@orvilo/const';
+import type * as OrvilochatConstModule from '@orvilo/const';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -10,14 +10,14 @@ import { useUserAvatar } from './useUserAvatar';
 const mockConstEnv = vi.hoisted(() => ({ isDesktop: false }));
 
 vi.mock('@orvilo/const', async (importOriginal) => {
-  const actual = await importOriginal<typeof LobechatConstModule>();
+  const actual = await importOriginal<typeof OrvilochatConstModule>();
   return {
     ...actual,
     get isDesktop() {
       return mockConstEnv.isDesktop;
     },
     DEFAULT_USER_AVATAR: 'default-avatar.png',
-    OFFICIAL_URL: 'https://app.lobehub.com',
+    OFFICIAL_URL: 'https://orvilo.aspectlylabs.com',
   };
 });
 
@@ -124,7 +124,7 @@ describe('useUserAvatar', () => {
     const { result } = renderHook(() => useUserAvatar());
 
     // In cloud mode, selector returns OFFICIAL_URL regardless of remoteServerUrl config
-    expect(result.current).toBe('https://app.lobehub.com/api/avatar.png');
+    expect(result.current).toBe('https://orvilo.aspectlylabs.com/api/avatar.png');
   });
 
   it('should return original avatar when storageMode is selfHost but no URL configured', () => {

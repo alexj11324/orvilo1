@@ -123,4 +123,4 @@ export const params = {
   provider: ModelProvider.Cerebras,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeCerebrasAI = createOpenAICompatibleRuntime(params);
+export const OrviloCerebrasAI = createOpenAICompatibleRuntime(params);

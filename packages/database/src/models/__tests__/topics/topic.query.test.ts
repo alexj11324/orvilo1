@@ -11,13 +11,13 @@ import {
   users,
   workspaces,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { TopicModel } from '../../topic';
 
 const userId = 'topic-query-user';
 const userId2 = 'topic-query-user-2';
 const sessionId = 'topic-query-session';
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const topicModel = new TopicModel(serverDB, userId);
 
 describe('TopicModel - Query', () => {

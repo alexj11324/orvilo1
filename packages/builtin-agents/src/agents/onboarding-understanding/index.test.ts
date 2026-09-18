@@ -15,7 +15,7 @@ describe('ONBOARDING_UNDERSTANDING', () => {
 
   it('has no tools, memory, search, or ambient agent mode', () => {
     const runtime = getAgentRuntimeConfig(BUILTIN_AGENT_SLUGS.onboardingUnderstanding, {
-      plugins: ['gmail', 'lobe-web-browsing'],
+      plugins: ['gmail', 'orvilo-web-browsing'],
     });
 
     expect(runtime).toMatchObject({

@@ -27,6 +27,7 @@ import { bootTiming } from '@/libs/bootTiming';
 
 import { buildLocalDataKey, localDataCache } from './localDataCache';
 import { migrateMessageListCache } from './migrations/messageListCache';
+import { purgeRetiredCacheKeys } from './migrations/retiredKeys';
 import { isScopeTrusted } from './useCacheScope';
 
 interface CacheEntry<T = unknown> {
@@ -118,7 +119,7 @@ const matchesPattern = (key: string, patterns: string[]): boolean =>
  * Partitioned per identity scope so different users / workspaces sharing the
  * same browser origin never read or overwrite each other's cached data.
  */
-export const getScopedCacheKey = (scope: string) => `lobechat-swr-cache:${scope}`;
+export const getScopedCacheKey = (scope: string) => `orvilo-swr-cache:${scope}`;
 
 /**
  * Create a unified tiered cache provider.
@@ -266,6 +267,11 @@ export function createCacheProvider(options: CacheProviderOptions = {}): ScopedS
         providerVersion: version,
         scope,
       });
+      const liveEntries = await purgeRetiredCacheKeys({
+        entries: migratedEntries,
+        onError,
+        scope,
+      });
       // The IndexedDB tier holds read-heavy / write-light business entities
       // (messages, topics, …): once written, a row rarely changes. We never drop
       // these by age — a stale row hydrates for an instant first paint and SWR's
@@ -274,7 +280,7 @@ export function createCacheProvider(options: CacheProviderOptions = {}): ScopedS
       // so legacy/unversioned rows (which the age check used to bound) are dropped
       // and a version bump still evicts everyone. TTL governs the localStorage
       // tier only (see `loadLocal`).
-      const valid = migratedEntries.filter((e) => e.version === version);
+      const valid = liveEntries.filter((e) => e.version === version);
       // Map may have changed scope while we awaited; only apply if still current.
       if (cacheMapInstance && getScope() === scope && hydrationEpoch === epoch) {
         cacheMapInstance.hydrate(valid.map((e) => [e.key, e.data]));
@@ -461,7 +467,7 @@ export function createCacheProvider(options: CacheProviderOptions = {}): ScopedS
 /**
  * Clear the localStorage cache tier for a scope (or the legacy key).
  */
-export function clearSWRCache(cacheKey = 'lobechat-swr-cache'): void {
+export function clearSWRCache(cacheKey = 'orvilo-swr-cache'): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(cacheKey);

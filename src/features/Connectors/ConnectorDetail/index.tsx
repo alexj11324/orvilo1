@@ -1,6 +1,6 @@
 import { Tooltip } from '@lobehub/ui';
 import { Button, confirmModal, toast } from '@lobehub/ui/base-ui';
-import { getComposioAppByIdentifier, getLobehubSkillProviderById } from '@orvilo/const';
+import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { PencilIcon, RefreshCwIcon, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
@@ -166,8 +166,8 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
 
     if (!connector) return null;
 
-    const lobehubProvider = isMarketplace
-      ? getLobehubSkillProviderById(connector.identifier)
+    const orviloProvider = isMarketplace
+      ? getOrviloSkillProviderById(connector.identifier)
       : undefined;
     const composioApp = isMarketplace
       ? getComposioAppByIdentifier(connector.identifier)
@@ -175,7 +175,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
     const { name: connectorName, description: connectorDescription } = getLocalizedConnectorDetail({
       composioApp,
       connector,
-      lobehubProvider,
+      orviloProvider,
       t: ts,
     });
 

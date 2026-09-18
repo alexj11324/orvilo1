@@ -45,10 +45,8 @@ export const WORKFLOW_RUN_GUARD_MAX_TTL_SECONDS = 24 * 60 * 60;
  * Policy attached to a workflow run guard value.
  */
 export interface WorkflowRunGuardPolicy {
-  /**
-   * Whether downstream QStash work should be canceled when this guard matches.
-   */
-  cancelQstash?: boolean;
+  /** Whether downstream durable work should be canceled when this guard matches. */
+  cancelQueuedWork?: boolean;
 }
 
 /**

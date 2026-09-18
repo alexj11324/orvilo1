@@ -34,7 +34,7 @@ export const GetAvailableModelsInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-builder.apiName.getAvailableModels')}
+          {t('builtins.orvilo-agent-builder.apiName.getAvailableModels')}
         </span>
         {providerId && (
           <>
@@ -48,12 +48,12 @@ export const GetAvailableModelsInspector = memo<
   // Loaded state with results
   return (
     <div className={inspectorTextStyles.root}>
-      <span>{t('builtins.lobe-agent-builder.apiName.getAvailableModels')}:</span>
+      <span>{t('builtins.orvilo-agent-builder.apiName.getAvailableModels')}:</span>
       {modelInfo && (
         <span className={highlightTextStyles.primary}>
           {modelInfo.displayModels.join(' / ')}
           {modelInfo.totalCount > 2 &&
-            t('builtins.lobe-agent-builder.inspector.modelsCount', {
+            t('builtins.orvilo-agent-builder.inspector.modelsCount', {
               count: modelInfo.totalCount,
             })}
         </span>

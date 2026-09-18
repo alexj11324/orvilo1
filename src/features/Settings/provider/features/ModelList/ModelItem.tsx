@@ -7,9 +7,9 @@ import { AiModelSourceEnum } from 'model-bank/aiModel';
 import React, { memo, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelIcon } from '@/components/LobeIcons';
 import { ModelInfoTags } from '@/components/ModelSelect';
 import NewModelBadge from '@/components/ModelSelect/NewModelBadge';
+import { ModelIcon } from '@/components/OrviloIcons';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';

@@ -159,7 +159,7 @@ describe('PushChannel', () => {
           agentAvatar: '🤖',
           agentAvatarBackgroundColor: '#ff0000',
           agentId: 'agt_1',
-          lobePushStyle: 'agent_message',
+          orviloPushStyle: 'agent_message',
           notificationId: 'spoofed-notification',
           type: 'spoofed_type',
           url: '/malicious-target',
@@ -175,7 +175,7 @@ describe('PushChannel', () => {
         agentAvatar: '🤖',
         agentAvatarBackgroundColor: '#ff0000',
         agentId: 'agt_1',
-        lobePushStyle: 'agent_message',
+        orviloPushStyle: 'agent_message',
         notificationId: 'notif-1',
         type: 'agent_run_completed',
         url: '/image?topic=t1',
@@ -187,7 +187,7 @@ describe('PushChannel', () => {
 
   it('preserves an absolute review URL without logging its credential', async () => {
     const reviewToken = 'A'.repeat(43);
-    const reviewUrl = `https://app.lobehub.com/agent-approval?reviewToken=${reviewToken}`;
+    const reviewUrl = `https://orvilo.aspectlylabs.com/agent-approval?reviewToken=${reviewToken}`;
     mockListByUserId.mockResolvedValueOnce([
       { deviceId: 'iphone', expoToken: 'ExponentPushToken[A]' },
     ]);

@@ -101,7 +101,7 @@ requestedDeviceId: config.deviceId }).kind === 'sandbox'`。
 2. **acceptance**：orchestrator 是行为变更，仓库约定要产品级验证。最低限度：
    起一个 repo-bound task（assignee=claude-code，workspace.repo = 某个测试 repo）
    → 看 sandbox 里 branch+push+PR → integrator run 合回 → run 卡片上的
-   integration chip。跑完把 `app.lobehub.com/acceptance/<id>` 链接补进 #5。
+   integration chip。跑完把 `orvilo.aspectlylabs.com/acceptance/<id>` 链接补进 #5。
 3. **D2 视觉检查**：RTL 测试已补（`RunIntegrationTag.test.tsx`，9 用例），
    但 chip 在 TopicCard / 抽屉上的实际渲染没看过截图。
 4. Phase E（下一个大块，见 plan 文档 non-goals 外沿）：

@@ -34,13 +34,13 @@ import type {
   VerifyCheckResultItem,
   VerifyRunItem,
 } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { TaskService } from '@/server/services/task';
 
 import { type AcceptanceMergeSummary, mergeAcceptanceRounds } from './acceptanceMerge';
 import { computeFalseFlags } from './feedbackService';
 
-const log = debug('lobe-server:verify-acceptance');
+const log = debug('orvilo-server:verify-acceptance');
 
 // ============================================
 // Union view — the cross-round check merge (P-14: the complete inventory of
@@ -434,7 +434,7 @@ const statusesForFilter = (filter: AcceptanceListFilter): AcceptanceStatus[] | u
 };
 
 export class AcceptanceService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
@@ -457,7 +457,7 @@ export class AcceptanceService {
   private readonly actorUserId: string;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     options?: { actorUserId?: string },
@@ -484,7 +484,7 @@ export class AcceptanceService {
   ): Promise<void> => {
     // Standalone acceptances are the subject themselves. They deliberately do
     // not require a Task/Topic/Document row, which keeps external repositories
-    // from having to manufacture a LobeHub task before publishing evidence.
+    // from having to manufacture a Orvilo task before publishing evidence.
     if (subjectType === 'standalone') return;
 
     const found = await this.findSubject(subjectType, subjectId);
@@ -839,10 +839,19 @@ export class AcceptanceService {
   accept = async (acceptanceId: string, comment?: string): Promise<AcceptanceItem> => {
     const acceptance = await this.requireDecidableAcceptance(acceptanceId);
 
+    let operationId: string | null | undefined;
+    if (acceptance.subjectType === 'task') {
+      const runs = await this.runModel.listByAcceptance(acceptanceId);
+      operationId = runs.at(-1)?.operationId;
+      await this.assertTaskIntegrationSettled(operationId);
+    }
+
     await this.stampDecision(acceptanceId, 'accept', comment);
     await this.acceptanceModel.updateStatus(acceptanceId, 'accepted');
 
-    if (acceptance.subjectType === 'task') await this.completeTaskSubject(acceptance.subjectId);
+    if (acceptance.subjectType === 'task') {
+      await this.completeTaskSubject(acceptance.subjectId, operationId);
+    }
 
     return (await this.acceptanceModel.findById(acceptanceId))!;
   };
@@ -1042,11 +1051,30 @@ export class AcceptanceService {
    * already (e.g. the round failed but the user accepted anyway). Best-effort:
    * a task error must not undo the recorded acceptance.
    */
-  private completeTaskSubject = async (subjectId: string): Promise<void> => {
+  private completeTaskSubject = async (
+    subjectId: string,
+    operationId?: string | null,
+  ): Promise<void> => {
     try {
       const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
       const task = await taskModel.resolve(subjectId);
       if (!task || ['canceled', 'completed', 'failed'].includes(task.status)) return;
+      if (operationId) {
+        const taskTopic = await new TaskTopicModel(
+          this.db,
+          this.userId,
+          this.workspaceId,
+        ).findByOperationId(operationId);
+        const integration = taskTopic?.integration;
+        if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
+          log(
+            'acceptance accepted for task %s but workspace integration is %s; task remains open',
+            task.id,
+            integration.state,
+          );
+          return;
+        }
+      }
 
       // TaskService cascades checkpoint / sibling rollup / downstream unlock —
       // the same completion path settle.ts drives on a passed verify.
@@ -1057,6 +1085,22 @@ export class AcceptanceService {
       log('acceptance accepted → task %s completed', task.id);
     } catch (error) {
       log('completeTaskSubject failed (non-fatal): %O', error);
+    }
+  };
+
+  /** Keep a manual acceptance retryable until its task branch is delivered. */
+  private assertTaskIntegrationSettled = async (operationId?: string | null): Promise<void> => {
+    if (!operationId) return;
+    const taskTopic = await new TaskTopicModel(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).findByOperationId(operationId);
+    const integration = taskTopic?.integration;
+    if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
+      throw new Error(
+        `Workspace integration is still ${integration.state}; retry acceptance after delivery completes`,
+      );
     }
   };
 

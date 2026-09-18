@@ -76,9 +76,9 @@ export default {
   'assistants.status.deprecated.subtitle': 'This Agent is currently unavailable. Possible reasons:',
   'assistants.status.deprecated.title': 'Agent unavailable',
   'assistants.status.support':
-    'For any questions, please copy the link and send it to <email>support@lobehub.com</email> for assistance.',
+    'For any questions, please copy the link and send it to <email>support@orvilo.aspectlylabs.com</email> for assistance.',
   'assistants.status.unpublished.subtitle':
-    'This Agent is under review. To confirm its status, copy the link and email <email>support@lobehub.com</email>.',
+    'This Agent is under review. To confirm its status, copy the link and email <email>support@orvilo.aspectlylabs.com</email>.',
   'assistants.status.unpublished.title': 'Agent Under Review',
   'assistants.suggestions': 'Similar Agents',
   'assistants.systemRole': 'Agent Profile',
@@ -347,7 +347,7 @@ export default {
   'mcp.details.deployment.platform.steps.cursor':
     '- Navigate to **Settings**, then select Cursor settings\n- Choose **MCP** on the left\n- Click **Add New Global MCP Server** at the top right\n- Copy and paste the server configuration into the existing file, then save',
 
-  'mcp.details.deployment.platform.steps.lobeChat':
+  'mcp.details.deployment.platform.steps.orvilo':
     '- Open the **Orvilo Desktop** app\n- Go to **Settings** - **Default Agent**\n- Then select **Skill Settings** - **Custom Skills**\n- Click **Quick Import JSON Configuration**\n- Copy and paste the server configuration into the text box, then install',
 
   'mcp.details.deployment.platform.steps.openai':
@@ -1081,7 +1081,7 @@ export default {
 
   'skills.details.sidebar.agent.title': 'Send this prompt to your Agent to install this Skill',
 
-  'skills.details.sidebar.agent.useOnLobeAI': 'Use on Orvilo AI',
+  'skills.details.sidebar.agent.useOnOrviloAI': 'Use on Orvilo AI',
 
   'skills.details.sidebar.directoryLayout': 'Directory Layout',
 
@@ -1089,7 +1089,7 @@ export default {
 
   'skills.details.sidebar.installCommand': 'Install Command',
 
-  'skills.details.sidebar.platform.layout.lobehub': 'Skills are managed by Orvilo automatically',
+  'skills.details.sidebar.platform.layout.orvilo': 'Skills are managed by Orvilo automatically',
 
   'skills.details.sidebar.platform.layout.resourcesHint': 'other resources',
 
@@ -1105,7 +1105,7 @@ export default {
   'skills.details.sidebar.platform.steps.cursor':
     'Run the install command in your terminal to download and configure this skill for Cursor.',
 
-  'skills.details.sidebar.platform.steps.lobehub':
+  'skills.details.sidebar.platform.steps.orvilo':
     'Install directly from the Orvilo marketplace with one click.',
 
   'skills.details.sidebar.platform.steps.vscode':

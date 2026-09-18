@@ -1,7 +1,7 @@
 'use client';
 
 import { Center, DropdownMenu, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Avatar, Button, Button as LobeButton, confirmModal } from '@lobehub/ui/base-ui';
+import { Avatar, Button, Button as OrviloButton, confirmModal } from '@lobehub/ui/base-ui';
 import { type ComposioAppType } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import {
@@ -197,13 +197,13 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
       if (!server) return;
       confirmModal({
         cancelText: t('cancel', { ns: 'common' }),
-        content: t('tools.lobehubSkill.disconnectConfirm.desc', { name: serverType.label }),
+        content: t('tools.orviloSkill.disconnectConfirm.desc', { name: serverType.label }),
         okButtonProps: { danger: true },
-        okText: t('tools.lobehubSkill.disconnect'),
+        okText: t('tools.orviloSkill.disconnect'),
         onOk: async () => {
           await removeComposioConnection(server.identifier);
         },
-        title: t('tools.lobehubSkill.disconnectConfirm.title', { name: serverType.label }),
+        title: t('tools.orviloSkill.disconnectConfirm.title', { name: serverType.label }),
       });
     };
 
@@ -297,7 +297,7 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
             ]}
           >
             <Tooltip title={editReason}>
-              <LobeButton disabled={!canEdit} icon={MoreHorizontalIcon} />
+              <OrviloButton disabled={!canEdit} icon={MoreHorizontalIcon} />
             </Tooltip>
           </DropdownMenu>
         );
@@ -319,7 +319,7 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
             ]}
           >
             <Tooltip title={editReason}>
-              <LobeButton disabled={!canEdit} icon={MoreHorizontalIcon} />
+              <OrviloButton disabled={!canEdit} icon={MoreHorizontalIcon} />
             </Tooltip>
           </DropdownMenu>
         );

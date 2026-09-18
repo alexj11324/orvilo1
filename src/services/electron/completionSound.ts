@@ -8,7 +8,7 @@ import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 const BUILTIN_FILES: Record<CompletionBuiltinSound, string> = {
   glassBell: '/sounds/glass-bell.wav',
-  lobehub: '/sounds/chat-complete.wav',
+  orvilo: '/sounds/chat-complete.wav',
   softTone: '/sounds/soft-tone.wav',
   xylophone: '/sounds/xylophone.wav',
 };
@@ -34,7 +34,7 @@ class CompletionSoundService {
       const playback: CompletionSoundPlayback =
         await ensureElectronIpc().completionSound.getPlayback(options ?? {});
       if (!playback.play) return;
-      this.audio = new Audio(playback.dataUrl ?? BUILTIN_FILES[playback.builtin ?? 'lobehub']);
+      this.audio = new Audio(playback.dataUrl ?? BUILTIN_FILES[playback.builtin ?? 'orvilo']);
       this.audio.volume = playback.volume;
       await this.audio.play();
     };

@@ -54,10 +54,7 @@ type DomainSignalInput<TTarget extends SupportedTask4DomainTarget> = {
   skillActionIntent?: 'consolidate' | 'create' | 'maintain' | 'noop' | 'refine';
   skillIntentConfidence?: number;
   skillIntentExplicitness?:
-    | 'explicit_action'
-    | 'implicit_strong_learning'
-    | 'non_skill_preference'
-    | 'weak_positive';
+    'explicit_action' | 'implicit_strong_learning' | 'non_skill_preference' | 'weak_positive';
   skillIntentReason?: string;
   skillRoute?: 'accumulate' | 'direct_decision' | 'non_skill';
   signalId: string;
@@ -559,7 +556,7 @@ describe('feedbackActionPlanner', () => {
         },
       ],
       scopeKey: 'topic:thread_1',
-      sourceId: 'tool-outcome:lobe-agent-documents:createDocument:succeeded:call_1',
+      sourceId: 'tool-outcome:orvilo-agent-documents:createDocument:succeeded:call_1',
       status: 'handled',
       summary: 'Agent documents created a hinted skill document.',
       updatedAt: 123,

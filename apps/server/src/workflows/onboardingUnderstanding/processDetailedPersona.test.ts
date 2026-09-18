@@ -54,7 +54,7 @@ describe('processDetailedUnderstandingPersona', () => {
     const steps: string[] = [];
     const context = {
       requestPayload: payload,
-      run: async <T>(stepName: string, action: () => Promise<T>) => {
+      run: async <T>(stepName: string, action: () => T | Promise<T>) => {
         steps.push(stepName);
         return serializeStepResult(await action());
       },

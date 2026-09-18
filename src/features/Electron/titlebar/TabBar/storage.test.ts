@@ -76,4 +76,41 @@ describe('TabBar storage', () => {
     expect(window.localStorage.getItem(tabPagesStorageKey(personalScope))).toBeNull();
     expect(window.localStorage.getItem(tabPagesStorageKey(acmeScope))).toContain('workspace-tab');
   });
+
+  it('drops retired product tabs and clears a retired active tab', () => {
+    window.localStorage.setItem(
+      tabPagesStorageKey(personalScope),
+      JSON.stringify({
+        activeTabId: 'page-tab',
+        tabs: [
+          { id: 'community-tab', lastVisited: 3, url: '/community' },
+          { id: 'page-tab', lastVisited: 2, url: '/page/document-id' },
+          { id: 'agent-tab', lastVisited: 1, url: '/agent/agent-id' },
+        ],
+      }),
+    );
+
+    expect(getTabPages(personalScope)).toEqual({
+      activeTabId: null,
+      tabs: [{ id: 'agent-tab', lastVisited: 1, url: '/agent/agent-id' }],
+    });
+  });
+
+  it('drops retired product tabs from workspace buckets', () => {
+    window.localStorage.setItem(
+      tabPagesStorageKey(acmeScope),
+      JSON.stringify({
+        activeTabId: 'agent-tab',
+        tabs: [
+          { id: 'page-tab', lastVisited: 2, url: '/acme/page/document-id' },
+          { id: 'agent-tab', lastVisited: 1, url: '/acme/agent/agent-id' },
+        ],
+      }),
+    );
+
+    expect(getTabPages(acmeScope)).toEqual({
+      activeTabId: 'agent-tab',
+      tabs: [{ id: 'agent-tab', lastVisited: 1, url: '/acme/agent/agent-id' }],
+    });
+  });
 });

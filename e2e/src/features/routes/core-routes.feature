@@ -19,7 +19,6 @@ Feature: Core Routes Accessibility
       | route      |
       | /          |
       | /chat      |
-      | /discover  |
 
   @ROUTES-002 @P0
   Scenario Outline: Access settings routes without errors

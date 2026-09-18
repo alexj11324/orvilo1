@@ -80,7 +80,7 @@ export default class NotificationCtr extends ControllerModule {
     }
 
     const notification = new Notification({
-      body: 'LobeHub can now send you notifications.',
+      body: 'Orvilo can now send you notifications.',
       title: 'Notification Permission',
     });
 

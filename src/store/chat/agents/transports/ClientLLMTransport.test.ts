@@ -103,7 +103,7 @@ const input = {
   events: [],
   maxAttempts: 3,
   model: 'gpt-5.6-sol',
-  provider: 'lobehub',
+  provider: 'orvilo',
   state: {},
 } as any;
 

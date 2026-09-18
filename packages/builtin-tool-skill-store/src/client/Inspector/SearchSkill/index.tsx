@@ -24,7 +24,7 @@ export const SearchSkillInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-skill-store.apiName.searchSkill')}
+          {t('builtins.orvilo-skill-store.apiName.searchSkill')}
         </span>
       </div>
     );
@@ -33,7 +33,7 @@ export const SearchSkillInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-skill-store.apiName.searchSkill')}:{'\u00A0'}
+        {t('builtins.orvilo-skill-store.apiName.searchSkill')}:{'\u00A0'}
       </span>
       {query && <span className={highlightTextStyles.primary}>{query}</span>}
       {!isLoading &&
@@ -48,7 +48,7 @@ export const SearchSkillInspector = memo<
             fontSize={12}
             style={{ marginInlineStart: 4 }}
           >
-            ({t('builtins.lobe-skill-store.inspector.noResults')})
+            ({t('builtins.orvilo-skill-store.inspector.noResults')})
           </Text>
         ))}
     </div>

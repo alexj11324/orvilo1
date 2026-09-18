@@ -8,6 +8,7 @@ import type { AutomationStatus } from './shared';
 
 const STATUS_COLOR: Record<AutomationStatus, string> = {
   active: cssVar.colorSuccess,
+  inactive: cssVar.colorTextQuaternary,
   paused: cssVar.colorTextDescription,
 };
 

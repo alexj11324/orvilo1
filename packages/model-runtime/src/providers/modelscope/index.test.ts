@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { ModelScopeModelCard } from './index';
-import { LobeModelScopeAI, params } from './index';
+import { OrviloModelScopeAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -17,7 +17,7 @@ const defaultBaseURL = 'https://api-inference.modelscope.cn/v1';
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeModelScopeAI,
+  Runtime: OrviloModelScopeAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_MODELSCOPE_CHAT_COMPLETION',
@@ -28,7 +28,7 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeModelScopeAI - custom features', () => {
+describe('OrviloModelScopeAI - custom features', () => {
   describe('params export', () => {
     it('should export params object', () => {
       expect(params).toBeDefined();
@@ -216,14 +216,14 @@ describe('LobeModelScopeAI - custom features', () => {
 
   describe('runtime instantiation', () => {
     it('should create runtime instance with default config', () => {
-      const instance = new LobeModelScopeAI({ apiKey: 'test_api_key' });
+      const instance = new OrviloModelScopeAI({ apiKey: 'test_api_key' });
       expect(instance).toBeDefined();
       expect(instance.baseURL).toBe(defaultBaseURL);
     });
 
     it('should create runtime instance with custom baseURL', () => {
       const customBaseURL = 'https://custom.modelscope.cn/v1';
-      const instance = new LobeModelScopeAI({
+      const instance = new OrviloModelScopeAI({
         apiKey: 'test_api_key',
         baseURL: customBaseURL,
       });

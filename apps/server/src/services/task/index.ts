@@ -35,7 +35,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { AiAgentService } from '../aiAgent';
 import { extractFileIdsFromEditorData } from '../file/extractFileIdsFromEditorData';
@@ -137,7 +137,7 @@ const VERIFY_SETTLED_STATUSES = new Set(['passed', 'failed', 'errored', 'deliver
 
 export class TaskService {
   private agentModel: AgentModel;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private taskModel: TaskModel;
   private projectModel: ProjectModel;
   private taskTopicModel: TaskTopicModel;
@@ -146,7 +146,7 @@ export class TaskService {
 
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -483,12 +483,27 @@ export class TaskService {
       });
       await this.interruptTaskOperation(aiAgentService, target.operationId);
     }
+    if (target.status === 'running') {
+      // The interrupt above is confirmed before this transition. Cleanup can
+      // now distinguish an abandoned integration checkout from a corrective
+      // run that is still actively writing to it.
+      await this.taskTopicModel.cancelIfRunning(target.taskId, topicId);
+    }
 
     // The task_topics row is about to go — tear down the run's provisioned
-    // worktrees while its integration record still exists (best-effort).
-    await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
-      target.taskId,
-    );
+    // worktrees while its integration record still exists. Keep the row when
+    // another topic or retry still owns the workspace.
+    const cleanupComplete = await new TaskIntegrationService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).cleanupTaskWorktrees(target.taskId);
+    if (!cleanupComplete) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Topic workspace cleanup is still active. Stop the run and try again.',
+      });
+    }
 
     await this.taskTopicModel.remove(target.taskId, topicId);
     await this.topicModel.delete(topicId);
@@ -569,7 +584,17 @@ export class TaskService {
      * activity feed.
      */
     actor?: { agentId?: string | null; userId?: string | null },
-  ): Promise<UpdateStatusResult> {
+  ): Promise<UpdateStatusResult>;
+  async updateStatus(
+    input: { error?: string; id: string; status: TaskStatus },
+    actor: undefined,
+    guard: { currentStatus: TaskStatus; reservationId: string },
+  ): Promise<UpdateStatusResult | null>;
+  async updateStatus(
+    input: { error?: string; id: string; status: TaskStatus },
+    actor?: { agentId?: string | null; userId?: string | null },
+    guard?: { currentStatus: TaskStatus; reservationId: string },
+  ): Promise<UpdateStatusResult | null> {
     const { id, status, error: errorMsg } = input;
 
     if (errorMsg && status !== 'failed') {
@@ -580,6 +605,15 @@ export class TaskService {
     }
 
     const resolved = await this.resolveOrThrow(id);
+    if (
+      (status === 'running' || status === 'completed') &&
+      !(await this.taskModel.areAllDependenciesCompleted(resolved.id))
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Complete all prerequisite tasks before starting or completing this task.',
+      });
+    }
 
     if (resolved.status === 'running' && status !== 'running') {
       const topics = await this.taskTopicModel.findByTaskId(resolved.id);
@@ -609,16 +643,41 @@ export class TaskService {
       }
     }
 
-    const extra: Record<string, unknown> = {};
+    const extra: {
+      completedAt?: Date;
+      error?: string;
+      runReservationExpiresAt?: Date | null;
+      runReservationId?: string | null;
+      startedAt?: Date;
+    } = {};
     if (status === 'running') extra.startedAt = new Date();
+    // A person changing state owns the generation boundary. Clear any dispatch
+    // or completion lease so a crashed callback cannot reclaim after their
+    // pause/restart. System-driven scheduled transitions keep the lease until
+    // lifecycle side effects (bridge/re-arm) finish.
+    if (status !== 'running' && (actor || status !== 'scheduled')) {
+      extra.runReservationExpiresAt = null;
+      extra.runReservationId = null;
+    }
     if (status === 'completed' || status === 'failed' || status === 'canceled')
       extra.completedAt = new Date();
     if (errorMsg) extra.error = errorMsg;
 
     const task = actor
       ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
-      : await this.taskModel.updateStatus(resolved.id, status, extra);
-    if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      : guard
+        ? await this.taskModel.updateStatusIfReservation(
+            resolved.id,
+            guard.reservationId,
+            guard.currentStatus,
+            status,
+            extra,
+          )
+        : await this.taskModel.updateStatus(resolved.id, status, extra);
+    if (!task) {
+      if (guard) return null;
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+    }
 
     // A terminal transition abandons the task's merge pipeline — tear down
     // any provisioned worktrees its runs left behind. Best-effort: cleanup
@@ -708,8 +767,8 @@ export class TaskService {
     let allSubtasksDone = false;
     let checkpointTriggered = false;
 
-    if (status === 'completed') {
-      if (task.parentTaskId) {
+    if (status === 'completed' || status === 'canceled') {
+      if (status === 'completed' && task.parentTaskId) {
         const parentTask = await this.taskModel.findById(task.parentTaskId);
         if (parentTask && this.taskModel.shouldPauseAfterComplete(parentTask, task.identifier)) {
           await this.taskModel.updateStatus(parentTask.id, 'paused');
@@ -735,7 +794,7 @@ export class TaskService {
   }
 
   /**
-   * Transition a parent and every currently unfinished direct subtask as one
+   * Transition a parent and every currently unfinished descendant as one
    * database transaction. Completion side effects run only after the whole
    * family has reached the target status, so dependency edges cannot start a
    * sibling in the middle of the cascade.
@@ -755,7 +814,7 @@ export class TaskService {
     actor?: { agentId?: string | null; userId?: string | null },
   ): Promise<UpdateStatusCascadeResult> {
     const resolved = await this.resolveOrThrow(input.id);
-    const subtasks = await this.taskModel.findSubtasks(resolved.id);
+    const subtasks = await this.taskModel.findAllDescendants(resolved.id);
     const unfinishedStatuses = new Set<string>(UNFINISHED_TASK_STATUSES);
     const openSubtasks = subtasks.filter((task) => unfinishedStatuses.has(task.status));
     // Freeze the cascade to this snapshot: both the interrupt pass and the
@@ -763,6 +822,15 @@ export class TaskService {
     // transitioned after the confirmation dialog is never rewritten.
     const targetTasks = [resolved, ...openSubtasks];
     const targetIds = targetTasks.map((task) => task.id);
+    if (
+      input.status === 'completed' &&
+      (await this.taskModel.findBlockedTaskIds(targetIds)).length > 0
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Complete prerequisite tasks first, then complete their dependents.',
+      });
+    }
 
     const aiAgentService = new AiAgentService(this.db, this.userId, {
       workspaceId: this.workspaceId,
@@ -806,7 +874,11 @@ export class TaskService {
       // is leaving is read under the lock, so a collaborator's edit between
       // the dialog and this write is logged as it really was.
       const locked = actor ? await taskModel.lockForStatusChange(targetIds) : [];
-      updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, { completedAt });
+      updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, {
+        completedAt,
+        runReservationExpiresAt: null,
+        runReservationId: null,
+      });
 
       // The board's drop slot for the parent, stamped in the same commit as
       // the family status — a cascade drop never lands its status without
@@ -854,7 +926,7 @@ export class TaskService {
 
     const unlocked: string[] = [];
     const paused: string[] = [];
-    if (input.status === 'completed') {
+    if (input.status === 'completed' || input.status === 'canceled') {
       const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
       const cascade = await runner.cascadeOnCompletionMany(updatedTasks.map(({ id }) => id));
       unlocked.push(...cascade.started);
@@ -866,7 +938,7 @@ export class TaskService {
       task,
       unlocked,
       updatedSubtasks: updatedTasks
-        .filter(({ parentTaskId }) => parentTaskId === resolved.id)
+        .filter(({ id }) => id !== resolved.id)
         .map(({ identifier }) => identifier),
     };
   }
@@ -953,7 +1025,7 @@ export class TaskService {
   }
 
   private async assertAssigneeUserAssignableWithDatabase(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     assigneeUserId?: string | null,
     lockMember = false,
   ): Promise<void> {
@@ -994,7 +1066,7 @@ export class TaskService {
 
   private async withAssigneeUserLock<T>(
     assigneeUserId: string | null | undefined,
-    write: (db: LobeChatDatabase) => Promise<T>,
+    write: (db: OrviloDatabase) => Promise<T>,
   ): Promise<T> {
     if (!assigneeUserId || !this.workspaceId) {
       await this.assertAssigneeUserAssignableWithDatabase(this.db, assigneeUserId);
@@ -1038,8 +1110,19 @@ export class TaskService {
     data: Parameters<TaskModel['update']>[1],
     actor: { agentId?: string | null; userId?: string | null } = {},
   ): Promise<TaskItem | null> {
+    const invalidatesActiveRun = [
+      'automationMode',
+      'config',
+      'heartbeatInterval',
+      'schedulePattern',
+      'scheduleTimezone',
+    ].some((key) => Object.hasOwn(data, key));
+    const guardedData = invalidatesActiveRun
+      ? { ...data, runReservationExpiresAt: null, runReservationId: null }
+      : data;
+
     return this.withAssigneeUserLock(data.assigneeUserId, (db) =>
-      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(taskId, data, actor),
+      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(taskId, guardedData, actor),
     );
   }
 
@@ -1238,7 +1321,16 @@ export class TaskService {
     const depTaskIds = [...new Set(dependencies.map((d) => d.dependsOnId))];
     const depTasks = await this.taskModel.findByIds(depTaskIds);
     const depIdToInfo = new Map(
-      depTasks.map((t) => [t.id, { identifier: t.identifier, name: t.name }]),
+      depTasks
+        .filter((t) => !t.deletedAt && !t.isDeleted)
+        .map((t) => [
+          t.id,
+          {
+            identifier: t.identifier,
+            name: t.name,
+            status: t.status,
+          },
+        ]),
     );
 
     // Resolve parent
@@ -1477,7 +1569,9 @@ export class TaskService {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
           dependsOn: info?.identifier ?? d.dependsOnId,
+          id: d.dependsOnId,
           name: info?.name,
+          status: info?.status ?? null,
           type: d.type,
         };
       }),

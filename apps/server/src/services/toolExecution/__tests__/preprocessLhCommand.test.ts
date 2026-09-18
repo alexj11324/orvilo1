@@ -9,16 +9,16 @@ vi.mock('@/libs/trpc/utils/internalJwt', () => ({
 }));
 
 vi.mock('@/envs/app', () => ({
-  appEnv: { APP_URL: 'https://app.lobehub.com' },
+  appEnv: { APP_URL: 'https://orvilo.aspectlylabs.com' },
 }));
 
 vi.mock('@/utils/env', () => ({
   isDev: false,
 }));
 
-const CREDS = "LOBEHUB_JWT='mock-jwt-token' LOBEHUB_SERVER='https://app.lobehub.com'";
+const CREDS = "ORVILO_JWT='mock-jwt-token' ORVILO_SERVER='https://orvilo.aspectlylabs.com'";
 /** The shim, with credentials scoped to the `npx` process rather than exported. */
-const shim = (extraEnv = '') => `lh() { ${CREDS}${extraEnv} npx -y @lobehub/cli "$@"; }`;
+const shim = (extraEnv = '') => `lh() { ${CREDS}${extraEnv} npx -y @orvilo/cli "$@"; }`;
 
 describe('preprocessLhCommand', () => {
   it('should return unchanged command for non-lh commands', async () => {
@@ -41,7 +41,7 @@ describe('preprocessLhCommand', () => {
     const result = await preprocessLhCommand('lh agent view agt_123', 'user-1', 'workspace-1');
 
     expect(result.command).toBe(
-      `${shim(" LOBEHUB_WORKSPACE_ID='workspace-1'")}\nlh agent view agt_123`,
+      `${shim(" ORVILO_WORKSPACE_ID='workspace-1'")}\nlh agent view agt_123`,
     );
   });
 
@@ -55,19 +55,19 @@ describe('preprocessLhCommand', () => {
 
   // Regression: the shim briefly used `export`, which put a full user auth
   // token in the environment of every command the model wrote — one
-  // `echo $LOBEHUB_JWT` or `curl` away from exfiltration, and handed out even
+  // `echo $ORVILO_JWT` or `curl` away from exfiltration, and handed out even
   // to a script that merely mentions `lh` in quoted text, since detection is
   // deliberately permissive. Credentials must stay assignment-prefixed to the
   // `npx` process inside the function body.
   it('should keep credentials out of the parent shell environment', async () => {
-    const result = await preprocessLhCommand('lh topic list && echo "$LOBEHUB_JWT"', 'user-1');
+    const result = await preprocessLhCommand('lh topic list && echo "$ORVILO_JWT"', 'user-1');
 
     expect(result.command).not.toContain('export ');
 
     const [shimLine] = result.command.split('\n');
     // The only occurrence of the token is inside the function body, prefixed to
     // `npx` — so it scopes to that one process and nothing else inherits it.
-    expect(shimLine).toMatch(/^lh\(\) \{ .*LOBEHUB_JWT='mock-jwt-token'.* npx -y @lobehub\/cli/);
+    expect(shimLine).toMatch(/^lh\(\) \{ .*ORVILO_JWT='mock-jwt-token'.* npx -y @orvilo\/cli/);
     expect(result.command.slice(shimLine.length)).not.toContain('mock-jwt-token');
   });
 
@@ -76,7 +76,7 @@ describe('preprocessLhCommand', () => {
 
     const result = await preprocessLhCommand('lh topic list', 'user-1');
 
-    expect(result.command).toContain(String.raw`LOBEHUB_JWT='jwt-with-'\''quote'`);
+    expect(result.command).toContain(String.raw`ORVILO_JWT='jwt-with-'\''quote'`);
   });
 
   it('should return error when JWT signing fails', async () => {
@@ -100,7 +100,7 @@ describe('preprocessLhCommand', () => {
     const result = await preprocessLhCommand('lh topic list', 'user-1', undefined, true);
 
     expect(result.isLhCommand).toBe(true);
-    expect(result.error).toBe('The LobeHub CLI is unavailable in shared conversations.');
+    expect(result.error).toBe('The Orvilo CLI is unavailable in shared conversations.');
     expect(result.command).toBe('lh topic list');
     expect(mockSignUserJWT).not.toHaveBeenCalled();
   });
@@ -135,7 +135,7 @@ describe('isLhCommand', () => {
     ['if condition', 'if lh agent view agt_1; then echo ok; fi'],
     ['same-line case arm', 'case "$scope" in workspace) lh whoami ;; esac'],
     ['multiple case arms', 'case $x in a) lh agent list ;; b) lh topic list ;; esac'],
-    ['inline env assignment', 'LOBEHUB_WORKSPACE_ID=ws lh agent list'],
+    ['inline env assignment', 'ORVILO_WORKSPACE_ID=ws lh agent list'],
     ['quoted inline assignment', 'FOO="a b" lh agent list'],
     // `!` and `time` are reserved words, so the shell still resolves `lh`
     // through the injected function — missing them left the command running as
@@ -166,11 +166,11 @@ describe('isLhCommand', () => {
 
 describe('buildDeviceLhEnv', () => {
   it('scopes the run to its workspace', () => {
-    expect(buildDeviceLhEnv('ws-1')).toEqual({ LOBEHUB_WORKSPACE_ID: 'ws-1' });
+    expect(buildDeviceLhEnv('ws-1')).toEqual({ ORVILO_WORKSPACE_ID: 'ws-1' });
   });
 
   it('never ships the caller JWT onto the device', () => {
-    expect(buildDeviceLhEnv('ws-1')).not.toHaveProperty('LOBEHUB_JWT');
+    expect(buildDeviceLhEnv('ws-1')).not.toHaveProperty('ORVILO_JWT');
   });
 
   it('returns undefined for personal runs', () => {
@@ -184,7 +184,7 @@ describe('buildDeviceLhEnv', () => {
   it('scopes commands that reach lh indirectly, which no detector could match', () => {
     for (const command of ["bash -lc 'lh whoami'", 'make deploy', './sync.sh', 'npm run sync']) {
       expect(isLhCommand(command)).toBe(false);
-      expect(buildDeviceLhEnv('ws-1')).toEqual({ LOBEHUB_WORKSPACE_ID: 'ws-1' });
+      expect(buildDeviceLhEnv('ws-1')).toEqual({ ORVILO_WORKSPACE_ID: 'ws-1' });
     }
   });
 });

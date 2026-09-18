@@ -1,26 +1,26 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
 import { AgentRuntimeErrorType } from '../../types/error';
-import { LobeGroq, params } from './index';
+import { OrviloGroq, params } from './index';
 
 testProvider({
   provider: 'groq',
   defaultBaseURL: 'https://api.groq.com/openai/v1',
   chatModel: 'mistralai/mistral-7b-instruct:free',
-  Runtime: LobeGroq,
+  Runtime: OrviloGroq,
   chatDebugEnv: 'DEBUG_GROQ_CHAT_COMPLETION',
 });
 
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeGroq({ apiKey: 'test' });
+  instance = new OrviloGroq({ apiKey: 'test' });
 
   // 使用 vi.spyOn 来模拟 chat.completions.create 方法
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -32,7 +32,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeGroq - custom features', () => {
+describe('OrviloGroq - custom features', () => {
   describe('filterAdvancedFields', () => {
     const filterAdvancedFields = params.generateObject!.handleSchema!;
 
@@ -602,7 +602,7 @@ describe('LobeGroq - custom features', () => {
       );
     });
 
-    it('should strip Lobe-internal fields to avoid API errors', async () => {
+    it('should strip Orvilo-internal fields to avoid API errors', async () => {
       await instance.chat({
         messages: [{ content: 'Hello', role: 'user' }],
         model: 'mistralai/mistral-7b-instruct:free',
@@ -960,7 +960,7 @@ describe('LobeGroq - custom features', () => {
       const models = await params.models({ client: mockClient as any });
 
       expect(models).toHaveLength(1);
-      // Should have displayName and enabled from LOBE_DEFAULT_MODEL_LIST
+      // Should have displayName and enabled from ORVILO_DEFAULT_MODEL_LIST
       expect(models[0].displayName).toBeDefined();
     });
 
@@ -992,7 +992,7 @@ describe('LobeGroq - custom features', () => {
 
       expect(models).toHaveLength(1);
       expect(models[0].id).toBe('LLAMA-3.1-70B-VERSATILE');
-      // Should match with lowercase in LOBE_DEFAULT_MODEL_LIST
+      // Should match with lowercase in ORVILO_DEFAULT_MODEL_LIST
       expect(models[0].displayName).toBeDefined();
     });
 
@@ -1037,7 +1037,7 @@ describe('LobeGroq - custom features', () => {
       const models = await params.models({ client: mockClient as any });
 
       expect(models.length).toBeGreaterThan(0);
-      // Models should inherit abilities from LOBE_DEFAULT_MODEL_LIST when available
+      // Models should inherit abilities from ORVILO_DEFAULT_MODEL_LIST when available
       models.forEach((model) => {
         expect(model).toHaveProperty('functionCall');
         expect(model).toHaveProperty('vision');

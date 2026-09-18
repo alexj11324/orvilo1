@@ -2,7 +2,7 @@ import { pickNonEmptyString, toRecord } from '@orvilo/utils/object';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import { workspaceMembers } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 /**
  * Collect the Workspace member ids referenced by `mention` nodes inside a
@@ -38,7 +38,7 @@ export const extractMentionedUserIds = (editorData: unknown): string[] => {
  * or assignee) that can outlive membership.
  */
 export const filterActiveWorkspaceMemberIds = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   userIds: string[],
 ): Promise<string[]> => {
@@ -65,7 +65,7 @@ export const filterActiveWorkspaceMemberIds = async (
  * arbitrary ids pasted into the editor never produce a notification.
  */
 export const validateMentionedUserIds = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   scope: { actorUserId: string; workspaceId: string },
   editorData: unknown,
 ): Promise<string[]> =>

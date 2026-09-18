@@ -1,6 +1,5 @@
 import { AGENT_CHAT_TOPIC_URL, AGENT_CHAT_URL } from '@orvilo/const';
 import { useCallback, useMemo } from 'react';
-import urlJoin from 'url-join';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useFocusTopicPopup } from '@/features/TopicPopupGuard/useTopicPopupsRegistry';
@@ -99,13 +98,4 @@ export const useTopicNavigation = () => {
     routeTopicId,
     urlTopicId,
   };
-};
-
-export const useNavigateToAgentTopics = () => {
-  const router = useQueryRoute();
-
-  return useCallback(
-    (agentId: string) => router.push(urlJoin('/agent', agentId, 'topics')),
-    [router],
-  );
 };

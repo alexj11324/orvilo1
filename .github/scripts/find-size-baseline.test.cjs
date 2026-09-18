@@ -29,7 +29,7 @@ test('selects the newest baseline in the target commit lineage', async () => {
 
   const result = await findSizeBaseline({
     artifactName: 'baseline',
-    context: { repo: { owner: 'lobehub', repo: 'lobehub' } },
+    context: { repo: { owner: 'alexj11324', repo: 'orvilo1' } },
     github,
     targetSha: 'head',
     workflowId: 'e2e.yml',

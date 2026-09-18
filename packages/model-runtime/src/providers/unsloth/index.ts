@@ -6,7 +6,7 @@ import { APIConnectionTimeoutError, APIError } from 'openai';
 import type { OpenAICompatibleFactoryOptions } from '../../core/openaiCompatibleFactory';
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 
-const log = debug('lobe-model-runtime:unsloth');
+const log = debug('orvilo-model-runtime:unsloth');
 
 export interface UnslothModelCard {
   context_length?: number;
@@ -33,7 +33,7 @@ export const params = {
     chatCompletion: () => process.env.DEBUG_UNSLOTH_CHAT_COMPLETION === '1',
   },
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const modelsPage = await client.models.list();
     const modelList: UnslothModelCard[] = modelsPage.data;
@@ -61,7 +61,7 @@ export const params = {
     }
 
     return modelList.map((model) => {
-      const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+      const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
         (m) => model.id.toLowerCase() === m.id.toLowerCase(),
       );
       const modelProps =
@@ -99,4 +99,4 @@ export const params = {
   provider: ModelProvider.Unsloth,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeUnslothAI = createOpenAICompatibleRuntime(params);
+export const OrviloUnslothAI = createOpenAICompatibleRuntime(params);

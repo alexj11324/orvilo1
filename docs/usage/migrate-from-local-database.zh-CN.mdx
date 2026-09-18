@@ -2,7 +2,7 @@
 title: 从 v1.x 本地数据库迁移到 v2.x
 description: 从 v1.x 导出数据并导入到 v2.x 云端或自托管。分步指南与故障排查。
 tags:
-  - LobeHub
+  - Orvilo
   - 迁移
   - v1.x
   - v2.x
@@ -12,7 +12,7 @@ tags:
 
 # 从 v1.x 本地数据库迁移到 v2.x
 
-LobeHub v1.x 桌面端曾提供 **本地数据库** 模式 —— 数据保存在你的设备上。自 v2.x 起，我们转向 **云端优先架构**，移除了本地数据库。带来的变化：客户端更轻量、迭代更快、在浏览器、桌面和手机间体验一致。
+Orvilo v1.x 桌面端曾提供 **本地数据库** 模式 —— 数据保存在你的设备上。自 v2.x 起，我们转向 **云端优先架构**，移除了本地数据库。带来的变化：客户端更轻量、迭代更快、在浏览器、桌面和手机间体验一致。
 
 <Callout type="info">
   **为什么要改？** v1.x 的本地数据库占用更多系统资源，而实际使用的用户占比较小。简化客户端、聚焦云端优先后，我们可以提升整体性能并更快交付新功能。
@@ -24,7 +24,7 @@ LobeHub v1.x 桌面端曾提供 **本地数据库** 模式 —— 数据保存�
 
 - **先不要卸载 v1.x** —— 确认迁移成功后再卸载。
 - **确保网络稳定** —— 对话记录较多时，导入可能需要更长时间。
-- **登录 v2.x** —— 云端版（[app.lobehub.com](https://app.lobehub.com)）或你的自托管实例。
+- **登录 v2.x** —— 云端版（[orvilo.aspectlylabs.com](https://orvilo.aspectlylabs.com)）或你的自托管实例。
 
 希望自托管？先按[自托管指南](/zh/docs/self-hosting/start)部署 v2.x，再将数据导入该实例。
 
@@ -32,7 +32,7 @@ LobeHub v1.x 桌面端曾提供 **本地数据库** 模式 —— 数据保存�
 
 依然可以完成迁移。升级到 v2.x **不会删除**本地数据库文件 —— 它们会保留在磁盘上，直到你手动删除。
 
-1. 从 [GitHub Releases](https://github.com/lobehub/lobehub/releases) 下载 **v1.x 版本**。
+1. 从 [GitHub Releases](https://github.com/alexj11324/orvilo1/releases) 下载 **v1.x 版本**。
 2. 安装并打开 v1.x，导出数据：**设置 → 数据存储 → 导出数据**。
 3. 在 v2.x 中进入 **设置 → 数据存储 → 导入数据**，上传导出的文件。
 
@@ -40,8 +40,8 @@ LobeHub v1.x 桌面端曾提供 **本地数据库** 模式 —— 数据保存�
 
 v1.x 本地数据库默认位于：
 
-- **Windows：** `%APPDATA%/lobehub-storage/lobehub-local-db`
-- **macOS：** `~/Library/Application Support/lobehub-storage/lobehub-local-db`
+- **Windows：** `%APPDATA%/orvilo-storage/orvilo-local-db`
+- **macOS：** `~/Library/Application Support/orvilo-storage/orvilo-local-db`
 
 如需手动恢复数据，这些路径可能有用。
 
@@ -73,7 +73,7 @@ v1.x 本地数据库默认位于：
 在 v1.x 桌面端：
 
 1. 进入 **设置 → 数据存储 → 导出数据**。
-2. 你会得到一个 JSON 文件（例如：`2026-01-22-10-02_LobeHub-data.json`）。
+2. 你会得到一个 JSON 文件（例如：`2026-01-22-10-02_Orvilo-data.json`）。
 3. 将文件保存到容易找到的位置 —— 桌面或专用文件夹。
 
 ![v1.x 导出数据](/blog/assets13656829368732a95940edeff9ddfca6.webp)
@@ -87,7 +87,7 @@ v1.x 本地数据库默认位于：
 
 在任意 v2.x 应用中（桌面端、网页端或自托管）：
 
-1. 登录你的 LobeHub 账号。
+1. 登录你的 Orvilo 账号。
 2. 进入 **设置 → 数据存储 → 导入数据**。
 3. 上传第一步导出的 JSON 文件。
 4. 等待导入完成。若界面未更新，可刷新页面或重启应用。
@@ -131,6 +131,6 @@ v1.x 本地数据库默认位于：
 若遇到问题：
 
 - [帮助与支持](/zh/docs/usage/help) —— 通用资源与社区链接
-- [GitHub Issues](https://github.com/lobehub/lobehub/issues/new/choose) —— 反馈 Bug 或请求迁移帮助
+- [GitHub Issues](https://github.com/alexj11324/orvilo1/issues/new/choose) —— 反馈 Bug 或请求迁移帮助
 
 反馈时请注明 v1.x 版本、v2.x 版本以及具体问题。如有可能，说明导出是否成功完成、导入在哪个环节失败。

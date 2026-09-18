@@ -1,45 +1,44 @@
 import type { AiFullModelCard, AiModelType } from 'model-bank';
 import { loadModels as loadModelBankModels, ModelProvider } from 'model-bank';
 
-interface LobeHubModelConfig {
+interface OrviloModelConfig {
   models: AiFullModelCard[];
   planCardModels: string[];
   updatedAt?: string;
   version: number;
 }
 
-export interface LobeHubModelPricingContext {
+export interface OrviloModelPricingContext {
   plan: string;
   scope: 'personal';
 }
 
-export interface LobeHubModelPricingOptions {
-  pricingContext?: LobeHubModelPricingContext;
+export interface OrviloModelPricingOptions {
+  pricingContext?: OrviloModelPricingContext;
 }
 
-const getDefaultLobeHubModelConfig = (): LobeHubModelConfig => ({
+const getDefaultOrviloModelConfig = (): OrviloModelConfig => ({
   models: [],
   planCardModels: [],
   version: 1,
 });
 
-const loadLobeHubModelConfig = async (): Promise<LobeHubModelConfig> =>
-  getDefaultLobeHubModelConfig();
+const loadOrviloModelConfig = async (): Promise<OrviloModelConfig> => getDefaultOrviloModelConfig();
 
-export const loadModels = async (_options?: LobeHubModelPricingOptions) =>
+export const loadModels = async (_options?: OrviloModelPricingOptions) =>
   loadModelBankModels({
     providerLoaders: {
-      [ModelProvider.LobeHub]: loadLobeHubModels,
+      [ModelProvider.Orvilo]: loadOrviloModels,
     },
   });
 
-const loadLobeHubModels = async (): Promise<AiFullModelCard[]> =>
-  (await loadLobeHubModelConfig()).models;
+const loadOrviloModels = async (): Promise<AiFullModelCard[]> =>
+  (await loadOrviloModelConfig()).models;
 
-export const loadLobeHubPlanCardModels = async (): Promise<string[]> =>
-  (await loadLobeHubModelConfig()).planCardModels;
+export const loadOrviloPlanCardModels = async (): Promise<string[]> =>
+  (await loadOrviloModelConfig()).planCardModels;
 
-export const isLobeHubModelAvailable = (
+export const isOrviloModelAvailable = (
   _id: string,
   _expectedType: AiModelType,
   _options?: {

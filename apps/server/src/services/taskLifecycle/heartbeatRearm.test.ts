@@ -1,6 +1,6 @@
 // @vitest-environment node
 import type { TaskItem, TaskSchedulerContext } from '@orvilo/types';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { TaskLifecycleService } from './index';
 
@@ -30,8 +30,9 @@ const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
 
 describe('TaskLifecycleService.maybeRearmHeartbeat', () => {
   let service: TaskLifecycleService;
-  let updateContext: ReturnType<typeof vi.fn>;
-  let hasUnresolvedUrgent: ReturnType<typeof vi.fn>;
+  type AnyMock = Mock<(...args: unknown[]) => unknown>;
+  let updateContext: AnyMock;
+  let hasUnresolvedUrgent: AnyMock;
 
   beforeEach(() => {
     fakeScheduler.scheduleNextTopic.mockClear().mockResolvedValue('msg-new');
@@ -42,7 +43,14 @@ describe('TaskLifecycleService.maybeRearmHeartbeat', () => {
     updateContext = vi.fn().mockResolvedValue(null);
     hasUnresolvedUrgent = vi.fn().mockResolvedValue(false);
 
-    (service as any).taskModel.updateContext = updateContext;
+    const taskModel = (service as any).taskModel;
+    taskModel.updateContext = updateContext;
+    taskModel.updateContextIfStatus = vi.fn(
+      async (_taskId: string, _status: string, patch: Record<string, unknown>) => {
+        await updateContext(_taskId, patch);
+        return true;
+      },
+    );
     (service as any).briefModel.hasUnresolvedUrgentByTask = hasUnresolvedUrgent;
   });
 

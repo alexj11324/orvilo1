@@ -30,23 +30,23 @@ export const UpdateGroupInspector = memo<
     const fields: string[] = [];
     // Config fields
     if (config?.openingMessage !== undefined) {
-      fields.push(t('builtins.lobe-group-agent-builder.inspector.openingMessage'));
+      fields.push(t('builtins.orvilo-group-agent-builder.inspector.openingMessage'));
     }
     if (config?.openingQuestions !== undefined) {
-      fields.push(t('builtins.lobe-group-agent-builder.inspector.openingQuestions'));
+      fields.push(t('builtins.orvilo-group-agent-builder.inspector.openingQuestions'));
     }
     // Meta fields
     if (meta?.title !== undefined) {
-      fields.push(t('builtins.lobe-group-agent-builder.inspector.title'));
+      fields.push(t('builtins.orvilo-group-agent-builder.inspector.title'));
     }
     if (meta?.description !== undefined) {
-      fields.push(t('builtins.lobe-group-agent-builder.inspector.description'));
+      fields.push(t('builtins.orvilo-group-agent-builder.inspector.description'));
     }
     if (meta?.avatar !== undefined) {
-      fields.push(t('builtins.lobe-group-agent-builder.inspector.avatar'));
+      fields.push(t('builtins.orvilo-group-agent-builder.inspector.avatar'));
     }
     if (meta?.backgroundColor !== undefined) {
-      fields.push(t('builtins.lobe-group-agent-builder.inspector.backgroundColor'));
+      fields.push(t('builtins.orvilo-group-agent-builder.inspector.backgroundColor'));
     }
     return fields.length > 0 ? fields.join(', ') : '';
   }, [config, meta, t]);
@@ -56,7 +56,7 @@ export const UpdateGroupInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-group-agent-builder.apiName.updateGroup')}
+          {t('builtins.orvilo-group-agent-builder.apiName.updateGroup')}
         </span>
       </div>
     );
@@ -67,7 +67,7 @@ export const UpdateGroupInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-group-agent-builder.apiName.updateGroup')}
+        {t('builtins.orvilo-group-agent-builder.apiName.updateGroup')}
       </span>
       {displayText && (
         <>

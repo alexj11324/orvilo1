@@ -5,8 +5,9 @@ import { getServerDB } from '@/database/core/db-adaptor';
 import { AbandonOperationService } from '@/server/services/agentRuntime';
 import { deliverWebhook } from '@/server/services/agentRuntime/hooks/HookDispatcher';
 import { AiAgentService } from '@/server/services/aiAgent';
+import { isQueueAgentRuntimeEnabled } from '@/server/services/queue/impls';
 
-const log = debug('lobe-server:agent:finalize-abandoned');
+const log = debug('orvilo-server:agent:finalize-abandoned');
 
 /**
  * Reverse-trigger finalization for an operation whose Vercel function was
@@ -43,8 +44,8 @@ export async function finalizeAbandoned(c: Context): Promise<Response> {
     // DB/Redis failure mid-bridge (the backfill in particular) cannot be
     // recovered by the parent's async-tool verify watchdog — that only re-reads
     // the barrier, it can't recreate the missing tool-message backfill. So in
-    // queue mode we hand off to the same QStash-backed `/subagent-callback` the
-    // normal completion path uses: QStash redelivers on non-2xx until the
+    // queue mode we hand off to the same Hatchet-backed `/subagent-callback` the
+    // normal completion path uses: the owning worker retries on failure until the
     // backfill + CAS-resume land (the callback re-resolves userId from the
     // coordinator metadata, which `finalizeAbandoned` deliberately keeps alive
     // for sub-agent ops). In local/dev (no queue) we run the bridge inline.
@@ -64,9 +65,9 @@ export async function finalizeAbandoned(c: Context): Promise<Response> {
         threadId,
         toolMessageId,
       };
-      if (process.env.QSTASH_TOKEN) {
+      if (isQueueAgentRuntimeEnabled()) {
         await deliverWebhook(
-          { delivery: 'qstash', fallback: 'none', url: '/api/agent/webhooks/subagent-callback' },
+          { delivery: 'hatchet', fallback: 'none', url: '/api/agent/webhooks/subagent-callback' },
           bridgeBody,
         );
         log('[%s] queued durable parent-resume for %s', operationId, parentOperationId);

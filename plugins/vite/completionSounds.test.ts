@@ -60,7 +60,7 @@ describe('completion sounds', () => {
       'soft-tone.wav',
       'xylophone.wav',
     ]);
-    const aiff = path.join(aiffDir, 'lobehub-complete.aiff');
+    const aiff = path.join(aiffDir, 'orvilo-complete.aiff');
     const before = (await stat(aiff)).mtimeMs;
     await new Promise((resolve) => setTimeout(resolve, 20));
     await writeCompletionSounds({ aiffDir, wavDir: path.join(publicDir, 'sounds') });

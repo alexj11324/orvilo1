@@ -73,7 +73,7 @@ fallback, move the id onto structured `topicId`.
 
 **② A deterministic cause offers only a futile Retry — ux §4.2 (Meaningful・Certainty)** 🟠
 "Workspace budget exceeded" is a **deterministic, user-actionable** cause — retrying the same
-run just re-hits the same wall — yet the card offers only `重试` / `忽略`, no path to the fix
+run just re-hits the same wall — yet the card offers only `重试` / `忽略`, no path to the
 (top-up / upgrade / billing). Evidence L1 (`BriefCardActions.tsx:238` bare Retry;
 `taskLifecycle` stores raw cause, no error-type → action mapping) + L2 (only 忽略 / 重试 render).
 **Remedy:** map known terminal error types (`InsufficientBudgetForModel` →
@@ -82,7 +82,7 @@ that leads the row; keep Retry as secondary only for transient causes. _(Done �
 completion event's structured `errorType` is threaded through both `onTopicComplete`
 callers into the brief; billing causes get an `upgrade` link action + `metadata.error.code`,
 and `BriefCardActions` was fixed so a link-type primary navigates. Verified via agent-testing
-T-220: budget card renders 忽略 + 升级方案 → app.lobehub.com/settings/plans, no 重试.)_
+T-220: budget card renders 忽略 + 升级方案 → orvilo.aspectlylabs.com/settings/plans, no 重试.)_
 
 **③ The card doesn't read AS an error — severity legibility (Certainty)** 🟠 The only status
 cue is the meta-row `StatusGlyph`, driven by **task status** — but on error the task is set to
@@ -112,7 +112,7 @@ the inbox. Low severity (the run is still in the task list), noted not landed.
   - **Feedback §4.5 — "Error copy is written for a human, not a log line"** (new subsection +
     4 checklist items + Quick-review mirror), citing the inbox error brief as the ❌ example and
     the fix as ✅. Covers: no internal id / no log framing / no meta-row duplication / localized.
-  - **Feedback §4.2 — deterministic-cause extension** (new checklist item): a failure whose fix
+  - **Feedback §4.2 — deterministic-cause extension** (new checklist item): a failure whose
     lives elsewhere (budget/quota/permission) leads with the **remedy action**, not a bare Retry.
     Mirrored into Quick review.
 - **Validated existing rules:** §4.2 "failed state names the failure + offers Retry" (the card

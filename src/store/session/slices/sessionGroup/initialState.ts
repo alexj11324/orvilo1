@@ -1,9 +1,9 @@
-import { type CustomSessionGroup, type LobeSessionGroups } from '@/types/session';
+import { type CustomSessionGroup, type OrviloSessionGroups } from '@/types/session';
 
 export interface SessionGroupState {
   customSessionGroups: CustomSessionGroup[];
   sessionGroupRenamingId: string | null;
-  sessionGroups: LobeSessionGroups;
+  sessionGroups: OrviloSessionGroups;
   /**
    * @title Group ID being updated
    * @description Used to display loading state when group is being updated

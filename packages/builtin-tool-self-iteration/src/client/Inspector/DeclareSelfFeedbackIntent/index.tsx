@@ -16,26 +16,26 @@ import type {
 
 const getIntentLabelKey = (data?: Partial<DeclareSelfFeedbackIntentParams>) => {
   if (data?.kind === 'memory' && data.action === 'write') {
-    return 'builtins.lobe-self-feedback-intent.inspector.memory.write';
+    return 'builtins.orvilo-self-feedback-intent.inspector.memory.write';
   }
 
   if (data?.kind === 'skill' && data.action === 'create') {
-    return 'builtins.lobe-self-feedback-intent.inspector.skill.create';
+    return 'builtins.orvilo-self-feedback-intent.inspector.skill.create';
   }
 
   if (data?.kind === 'skill' && data.action === 'refine') {
-    return 'builtins.lobe-self-feedback-intent.inspector.skill.refine';
+    return 'builtins.orvilo-self-feedback-intent.inspector.skill.refine';
   }
 
   if (data?.kind === 'skill' && data.action === 'consolidate') {
-    return 'builtins.lobe-self-feedback-intent.inspector.skill.consolidate';
+    return 'builtins.orvilo-self-feedback-intent.inspector.skill.consolidate';
   }
 
   if (data?.kind === 'gap' && data.action === 'proposal') {
-    return 'builtins.lobe-self-feedback-intent.inspector.gap.proposal';
+    return 'builtins.orvilo-self-feedback-intent.inspector.gap.proposal';
   }
 
-  return 'builtins.lobe-self-feedback-intent.apiName.declareSelfFeedbackIntent';
+  return 'builtins.orvilo-self-feedback-intent.apiName.declareSelfFeedbackIntent';
 };
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -99,7 +99,7 @@ export const DeclareSelfFeedbackIntentInspector = memo<
           <>
             <Icon className={styles.iconRejected} icon={CircleAlert} size={14} />
             <span className={styles.meta}>
-              {t('builtins.lobe-self-feedback-intent.inspector.rejected')}
+              {t('builtins.orvilo-self-feedback-intent.inspector.rejected')}
             </span>
           </>
         ))}

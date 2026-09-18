@@ -26,10 +26,10 @@ export const TASK_TEMPLATE_CATEGORIES = [
 
 export type TaskTemplateCategory = (typeof TASK_TEMPLATE_CATEGORIES)[number];
 
-export type TaskTemplateConnectorSource = 'composio' | 'lobehub';
+export type TaskTemplateConnectorSource = 'composio' | 'orvilo';
 
 export interface TaskTemplateConnectorReference {
-  /** Short identifier from `LOBEHUB_SKILL_PROVIDERS[i].id` or `COMPOSIO_APP_TYPES[i].identifier`. */
+  /** Short identifier from `ORVILO_SKILL_PROVIDERS[i].id` or `COMPOSIO_APP_TYPES[i].identifier`. */
   identifier: string;
   source: TaskTemplateConnectorSource;
 }

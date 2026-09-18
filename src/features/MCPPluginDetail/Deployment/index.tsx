@@ -19,13 +19,13 @@ import { useTranslation } from 'react-i18next';
 
 import Descriptions from '@/components/Descriptions';
 import InlineTable from '@/components/InlineTable';
-import Title from '@/routes/(main)/community/features/Title';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import InstallationIcon from '../../../components/MCPDepsIcon';
 import CollapseDesc from '../CollapseDesc';
 import CollapseLayout from '../CollapseLayout';
 import { useDetailContext } from '../DetailProvider';
+import Title from '../Title';
 import Platform from './Platform';
 
 const styles = createStaticStyles(({ css }) => {

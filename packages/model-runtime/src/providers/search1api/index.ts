@@ -38,7 +38,7 @@ export const params = {
     chatCompletion: () => process.env.DEBUG_SEARCH1API_CHAT_COMPLETION === '1',
   },
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const modelsPage = (await client.models.list()) as any;
     const modelList: Search1APIModelCard[] = modelsPage.data;
@@ -46,7 +46,7 @@ export const params = {
     return modelList
       .filter((model) => model && model.id)
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 
@@ -65,4 +65,4 @@ export const params = {
   provider: ModelProvider.Search1API,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeSearch1API = createOpenAICompatibleRuntime(params);
+export const OrviloSearch1API = createOpenAICompatibleRuntime(params);

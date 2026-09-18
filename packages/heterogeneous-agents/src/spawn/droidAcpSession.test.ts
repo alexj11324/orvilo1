@@ -109,7 +109,7 @@ const createAcpProcess = (
 const createSessionOptions = (
   overrides: Partial<DroidAcpSessionOptions> = {},
 ): DroidAcpSessionOptions => ({
-  args: ['--tag', 'lobe'],
+  args: ['--tag', 'orvilo'],
   clientVersion: '1.2.3',
   commandPath: 'droid',
   cwd: '/workspace',
@@ -140,12 +140,12 @@ afterEach(() => {
 
 describe('Factory Droid ACP helpers', () => {
   it('builds the fixed ACP argv and admits only safe value-bearing options', () => {
-    expect(buildDroidAcpArgs(['--tag', 'lobe', '--enabled-tools=read,write'])).toEqual([
+    expect(buildDroidAcpArgs(['--tag', 'orvilo', '--enabled-tools=read,write'])).toEqual([
       'exec',
       '--output-format',
       'acp',
       '--tag',
-      'lobe',
+      'orvilo',
       '--enabled-tools=read,write',
     ]);
   });
@@ -253,7 +253,7 @@ describe('DroidAcpSession', () => {
 
     expect(spawnMock).toHaveBeenCalledWith(
       'droid',
-      ['exec', '--output-format', 'acp', '--tag', 'lobe'],
+      ['exec', '--output-format', 'acp', '--tag', 'orvilo'],
       expect.objectContaining({ cwd: '/workspace', stdio: ['pipe', 'pipe', 'pipe'] }),
     );
     expect(fake.requests.slice(0, 3)).toEqual([
@@ -263,7 +263,7 @@ describe('DroidAcpSession', () => {
         method: 'initialize',
         params: {
           clientCapabilities: {},
-          clientInfo: { name: 'lobehub', title: 'LobeHub', version: '1.2.3' },
+          clientInfo: { name: 'orvilo', title: 'Orvilo', version: '1.2.3' },
           protocolVersion: 1,
         },
       },

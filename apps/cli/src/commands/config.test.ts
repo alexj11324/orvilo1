@@ -25,14 +25,14 @@ vi.mock('../api/client', () => ({ getTrpcClient: mockGetTrpcClient }));
 // must not leak the developer's own machine state into these assertions.
 vi.mock('../settings', () => ({
   loadActiveWorkspace: () => undefined,
-  resolveServerUrl: () => 'https://app.lobehub.com',
+  resolveServerUrl: () => 'https://orvilo.aspectlylabs.com',
 }));
 describe('config command', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>;
-  const originalWorkspaceId = process.env.LOBEHUB_WORKSPACE_ID;
+  const originalWorkspaceId = process.env.ORVILO_WORKSPACE_ID;
 
   beforeEach(() => {
-    delete process.env.LOBEHUB_WORKSPACE_ID;
+    delete process.env.ORVILO_WORKSPACE_ID;
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     mockGetTrpcClient.mockResolvedValue(mockTrpcClient);
     mockTrpcClient.user.getUserState.query.mockReset();
@@ -44,8 +44,8 @@ describe('config command', () => {
 
   afterEach(() => {
     consoleSpy.mockRestore();
-    if (originalWorkspaceId === undefined) delete process.env.LOBEHUB_WORKSPACE_ID;
-    else process.env.LOBEHUB_WORKSPACE_ID = originalWorkspaceId;
+    if (originalWorkspaceId === undefined) delete process.env.ORVILO_WORKSPACE_ID;
+    else process.env.ORVILO_WORKSPACE_ID = originalWorkspaceId;
   });
 
   function createProgram() {
@@ -91,7 +91,7 @@ describe('config command', () => {
     // what lets a caller — usually an agent editing its own config — tell a
     // real "not found" from "I'm looking in the wrong workspace".
     it('should report the active workspace scope', async () => {
-      process.env.LOBEHUB_WORKSPACE_ID = 'ws-42';
+      process.env.ORVILO_WORKSPACE_ID = 'ws-42';
       mockTrpcClient.user.getUserState.query.mockResolvedValue({ userId: 'u1' });
 
       const program = createProgram();
@@ -110,7 +110,7 @@ describe('config command', () => {
     });
 
     it('should carry the workspace scope into --json output', async () => {
-      process.env.LOBEHUB_WORKSPACE_ID = 'ws-42';
+      process.env.ORVILO_WORKSPACE_ID = 'ws-42';
       mockTrpcClient.user.getUserState.query.mockResolvedValue({ userId: 'u1' });
 
       const program = createProgram();

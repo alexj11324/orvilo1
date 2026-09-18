@@ -188,7 +188,7 @@ describe('agentShareRouter', () => {
     const config = {
       toolGrants: [
         { identifier: 'calculator' },
-        { apis: ['analyzeMedia'], identifier: 'lobe-agent' },
+        { apis: ['analyzeMedia'], identifier: 'orvilo-agent' },
       ],
     };
 
@@ -211,14 +211,14 @@ describe('agentShareRouter', () => {
     await expect(
       caller.updateShareConfig({
         agentId: 'agent-1',
-        config: { toolGrants: [{ apis: [], identifier: 'lobe-agent' }] },
+        config: { toolGrants: [{ apis: [], identifier: 'orvilo-agent' }] },
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     // Unknown key.
     await expect(
       caller.updateShareConfig({
         agentId: 'agent-1',
-        config: { toolGrants: [{ apiName: 'analyzeMedia', identifier: 'lobe-agent' } as any] },
+        config: { toolGrants: [{ apiName: 'analyzeMedia', identifier: 'orvilo-agent' } as any] },
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect(mockUpdateConfig).not.toHaveBeenCalled();
@@ -237,7 +237,7 @@ describe('agentShareRouter', () => {
       caller.updateShareConfig({
         agentId: 'agent-1',
         config: {
-          toolGrants: [{ apis: ['analyzeMedia', 'analyzeMedia'], identifier: 'lobe-agent' }],
+          toolGrants: [{ apis: ['analyzeMedia', 'analyzeMedia'], identifier: 'orvilo-agent' }],
         },
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });

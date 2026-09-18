@@ -20,7 +20,7 @@ vi.mock('../middleware/hetero-operation-auth', () => {
     async (c, next) => {
       c.set(
         'heteroOperationClaims' as never,
-        { model: relayContext.model, provider_id: 'lobehub' } as never,
+        { model: relayContext.model, provider_id: 'orvilo' } as never,
       );
       c.set(
         'heteroAgentType' as never,
@@ -67,7 +67,7 @@ describe('heterogeneous relay route failures', () => {
     const response = await app.request('/anthropic/v1/messages', {
       body: JSON.stringify({
         messages: [{ content: 'hello', role: 'user' }],
-        model: 'lobehub/deepseek-v4-pro',
+        model: 'aspectlylabs/deepseek-v4-pro',
         stream: true,
       }),
       headers: { 'content-type': 'application/json' },
@@ -96,7 +96,7 @@ describe('heterogeneous relay route failures', () => {
             role: 'user',
           },
         ],
-        model: 'lobehub/gpt-6-astra',
+        model: 'aspectlylabs/gpt-6-astra',
         stream: true,
       }),
       headers: { 'content-type': 'application/json' },
@@ -122,7 +122,7 @@ describe('heterogeneous relay route failures', () => {
     await app.request('/anthropic/v1/messages', {
       body: JSON.stringify({
         messages: [{ content, role: 'user' }],
-        model: 'lobehub/claude-fable-5-1',
+        model: 'aspectlylabs/claude-fable-5-1',
         stream: true,
       }),
       headers: { 'content-type': 'application/json' },
@@ -140,7 +140,7 @@ describe('heterogeneous relay route failures', () => {
     const response = await app.request('/openai/v1/responses', {
       body: JSON.stringify({
         input: 'hello',
-        model: 'lobehub/deepseek-v4-pro',
+        model: 'aspectlylabs/deepseek-v4-pro',
         stream: true,
       }),
       headers: { 'content-type': 'application/json' },

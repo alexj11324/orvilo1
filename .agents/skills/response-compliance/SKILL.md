@@ -11,24 +11,24 @@ Run the official OpenResponses compliance test suite against the local (or remot
 
 ```bash
 # From the openapi package directory
-cd lobehub/packages/openapi
+cd aspectlylabs/packages/openapi
 
 # Run all tests (dev mode, localhost:3010)
 APP_URL=http://localhost:3010 bun run test:response-compliance -- \
-  --auth-header "lobe-auth-dev-backend-api" --no-bearer --api-key 1
+  --auth-header "orvilo-auth-dev-backend-api" --no-bearer --api-key 1
 
 # Run specific tests only
 APP_URL=http://localhost:3010 bun run test:response-compliance -- \
-  --auth-header "lobe-auth-dev-backend-api" --no-bearer --api-key 1 \
+  --auth-header "orvilo-auth-dev-backend-api" --no-bearer --api-key 1 \
   --filter basic-response,streaming-response
 
 # Verbose mode (shows request/response details)
 APP_URL=http://localhost:3010 bun run test:response-compliance -- \
-  --auth-header "lobe-auth-dev-backend-api" --no-bearer --api-key 1 -v
+  --auth-header "orvilo-auth-dev-backend-api" --no-bearer --api-key 1 -v
 
 # JSON output (for CI)
 APP_URL=http://localhost:3010 bun run test:response-compliance -- \
-  --auth-header "lobe-auth-dev-backend-api" --no-bearer --api-key 1 --json
+  --auth-header "orvilo-auth-dev-backend-api" --no-bearer --api-key 1 --json
 ```
 
 ## Prerequisites
@@ -38,11 +38,11 @@ APP_URL=http://localhost:3010 bun run test:response-compliance -- \
 
 ## Auth Modes
 
-| Mode            | Flags                                                               |
-| --------------- | ------------------------------------------------------------------- |
-| Dev (mock user) | `--auth-header "lobe-auth-dev-backend-api" --no-bearer --api-key 1` |
-| API Key         | `--api-key lb-xxxxxxxxxxxxxxxx`                                     |
-| Custom          | `--auth-header <name> --api-key <value>`                            |
+| Mode            | Flags                                                                 |
+| --------------- | --------------------------------------------------------------------- |
+| Dev (mock user) | `--auth-header "orvilo-auth-dev-backend-api" --no-bearer --api-key 1` |
+| API Key         | `--api-key lb-xxxxxxxxxxxxxxxx`                                       |
+| Custom          | `--auth-header <name> --api-key <value>`                              |
 
 ## Test IDs
 
@@ -50,12 +50,12 @@ Available `--filter` values:
 
 | ID                   | Description                            | Related Issue |
 | -------------------- | -------------------------------------- | ------------- |
-| `basic-response`     | Simple text generation (non-streaming) | LOBE-5858     |
-| `streaming-response` | SSE streaming lifecycle + events       | LOBE-5859     |
-| `system-prompt`      | System role message handling           | LOBE-5858     |
-| `tool-calling`       | Function tool definition + call output | LOBE-5860     |
+| `basic-response`     | Simple text generation (non-streaming) | ORVILO-5858   |
+| `streaming-response` | SSE streaming lifecycle + events       | ORVILO-5859   |
+| `system-prompt`      | System role message handling           | ORVILO-5858   |
+| `tool-calling`       | Function tool definition + call output | ORVILO-5860   |
 | `image-input`        | Multimodal image URL content           | —             |
-| `multi-turn`         | Conversation history via input items   | LOBE-5861     |
+| `multi-turn`         | Conversation history via input items   | ORVILO-5861   |
 
 ## Environment Variables
 
@@ -66,7 +66,7 @@ Available `--filter` values:
 
 ## How It Works
 
-The script (`lobehub/packages/openapi/scripts/compliance-test.sh`) clones the official [openresponses/openresponses](https://github.com/openresponses/openresponses) repo into `scripts/openresponses-compliance/` (gitignored) and runs its CLI test runner. First run clones; subsequent runs update from upstream.
+The script (`aspectlylabs/packages/openapi/scripts/compliance-test.sh`) clones the official [openresponses/openresponses](https://github.com/openresponses/openresponses) repo into `scripts/openresponses-compliance/` (gitignored) and runs its CLI test runner. First run clones; subsequent runs update from upstream.
 
 ## Debugging Failures
 
@@ -79,9 +79,9 @@ The script (`lobehub/packages/openapi/scripts/compliance-test.sh`) clones the of
 
 ## Key Files
 
-- **Types**: `lobehub/packages/openapi/src/types/responses.type.ts`
-- **Service**: `lobehub/packages/openapi/src/services/responses.service.ts`
-- **Controller**: `lobehub/packages/openapi/src/controllers/responses.controller.ts`
-- **Route**: `lobehub/packages/openapi/src/routes/responses.route.ts`
-- **Test script**: `lobehub/packages/openapi/scripts/compliance-test.sh`
+- **Types**: `aspectlylabs/packages/openapi/src/types/responses.type.ts`
+- **Service**: `aspectlylabs/packages/openapi/src/services/responses.service.ts`
+- **Controller**: `aspectlylabs/packages/openapi/src/controllers/responses.controller.ts`
+- **Route**: `aspectlylabs/packages/openapi/src/routes/responses.route.ts`
+- **Test script**: `aspectlylabs/packages/openapi/scripts/compliance-test.sh`
 - **Cloud route**: `src/app/(backend)/api/v1/[[...route]]/route.ts`

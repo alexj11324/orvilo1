@@ -169,6 +169,25 @@ describe('removeGitWorktree', () => {
     );
   });
 
+  it('force-removes a dirty system-owned worktree', async () => {
+    const worktreeParent = await mkdtemp(path.join(tmpdir(), 'lfs-worktree-dirty-'));
+    cleanup.push(worktreeParent);
+    const linked = path.join(worktreeParent, 'dirty');
+    git(repo, 'worktree', 'add', '--detach', linked, 'HEAD');
+    const linkedRealPath = await realpath(linked);
+    await writeFile(path.join(linked, 'untracked.txt'), 'unfinished merge');
+
+    expect(await removeGitWorktree({ path: repo, worktreePath: linked })).toMatchObject({
+      success: false,
+    });
+    expect(existsSync(linkedRealPath)).toBe(true);
+
+    expect(await removeGitWorktree({ force: true, path: repo, worktreePath: linked })).toEqual({
+      success: true,
+    });
+    expect(existsSync(linkedRealPath)).toBe(false);
+  });
+
   it('refuses to remove the current worktree', async () => {
     expect(await removeGitWorktree({ path: repo, worktreePath: repo })).toEqual({
       error: 'Cannot remove the current worktree',
@@ -331,6 +350,26 @@ describe('remote operations (push / pull / ahead-behind)', () => {
     expect(git(bare, 'branch', '--list', 'main')).toContain('main');
   });
 
+  it('pushGitBranch publishes the accepted commit even when HEAD advanced', async () => {
+    const bare = await mkdtemp(path.join(tmpdir(), 'lfs-bare-'));
+    cleanup.push(bare);
+    execFileSync('git', ['init', '--bare', bare], { cwd: bare });
+    git(repo, 'remote', 'add', 'origin', bare);
+    const accepted = git(repo, 'rev-parse', 'HEAD');
+    await writeFile(path.join(repo, 'later.txt'), 'later\n');
+    git(repo, 'add', 'later.txt');
+    git(repo, 'commit', '-m', 'later');
+
+    const pushed = await pushGitBranch({
+      path: repo,
+      remoteBranch: 'main',
+      sourceRef: accepted,
+    });
+
+    expect(pushed).toMatchObject({ pushedSourceRef: accepted, success: true });
+    expect(git(bare, 'rev-parse', 'refs/heads/main')).toBe(accepted);
+  });
+
   it('pushGitBranch rejects an invalid remoteBranch without invoking git', async () => {
     const result = await pushGitBranch({ path: repo, remoteBranch: 'bad name' });
     expect(result).toEqual({ error: 'Invalid remote branch name: bad name', success: false });
@@ -467,6 +506,7 @@ describe('finalizeGitMerge', () => {
     git(repo, 'checkout', '-b', 'task/T-5');
     await writeFile(path.join(repo, 'a.txt'), 'task side\n');
     git(repo, 'commit', '-am', 'task side');
+    const taskHead = git(repo, 'rev-parse', 'HEAD');
     git(repo, 'checkout', 'main');
     await writeFile(path.join(repo, 'a.txt'), 'base side\n');
     git(repo, 'commit', '-am', 'base side');
@@ -480,7 +520,7 @@ describe('finalizeGitMerge', () => {
     await writeFile(path.join(repo, 'a.txt'), 'resolved\n');
     git(repo, 'add', 'a.txt');
 
-    const result = await finalizeGitMerge({ path: repo });
+    const result = await finalizeGitMerge({ expectedHead: taskHead, path: repo });
     expect(result.state).toBe('integrated');
     expect(result.sha).toBe(git(repo, 'rev-parse', 'HEAD'));
     expect(await readFile(path.join(repo, 'a.txt'), 'utf8')).toBe('resolved\n');
@@ -504,9 +544,53 @@ describe('finalizeGitMerge', () => {
     expect(result.conflicts).toEqual(['a.txt']);
   });
 
+  it('does not commit a resolved merge for a different task head', async () => {
+    git(repo, 'checkout', '-b', 'task/T-wrong-head');
+    await writeFile(path.join(repo, 'a.txt'), 'task side\n');
+    git(repo, 'commit', '-am', 'task side');
+    git(repo, 'checkout', 'main');
+    await writeFile(path.join(repo, 'a.txt'), 'base side\n');
+    git(repo, 'commit', '-am', 'base side');
+    const baseHead = git(repo, 'rev-parse', 'HEAD');
+    try {
+      git(repo, 'merge', 'task/T-wrong-head');
+    } catch {
+      /* conflict expected */
+    }
+    await writeFile(path.join(repo, 'a.txt'), 'resolved\n');
+    git(repo, 'add', 'a.txt');
+
+    const result = await finalizeGitMerge({ expectedHead: baseHead, path: repo });
+
+    expect(result).toMatchObject({ state: 'conflict', success: false });
+    expect(result.error).toContain('not expected task head');
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(baseHead);
+    expect(git(repo, 'rev-parse', 'MERGE_HEAD')).not.toBe(baseHead);
+  });
+
   it('reports integrated when no merge is in progress', async () => {
     const result = await finalizeGitMerge({ path: repo });
     expect(result.state).toBe('integrated');
     expect(result.sha).toBe(git(repo, 'rev-parse', 'HEAD'));
+  });
+
+  it('rejects an aborted merge that does not contain the expected task head', async () => {
+    git(repo, 'checkout', '-b', 'task/T-aborted');
+    await writeFile(path.join(repo, 'a.txt'), 'task side\n');
+    git(repo, 'commit', '-am', 'task side');
+    const taskHead = git(repo, 'rev-parse', 'HEAD');
+    git(repo, 'checkout', 'main');
+    await writeFile(path.join(repo, 'a.txt'), 'base side\n');
+    git(repo, 'commit', '-am', 'base side');
+    try {
+      git(repo, 'merge', 'task/T-aborted');
+    } catch {
+      /* conflict expected */
+    }
+    git(repo, 'merge', '--abort');
+
+    const result = await finalizeGitMerge({ expectedHead: taskHead, path: repo });
+    expect(result).toMatchObject({ state: 'conflict', success: false });
+    expect(result.error).toContain('does not contain expected task head');
   });
 });

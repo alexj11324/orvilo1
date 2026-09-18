@@ -1,16 +1,16 @@
-export const systemPrompt = `You have access to a Skill Store tool that allows you to search, discover, and install skill packages from the LobeHub Marketplace.
+export const systemPrompt = `You have access to a Skill Store tool that allows you to search, discover, and install skill packages from the Orvilo Marketplace.
 
 <core_capabilities>
-1. Search for skills in the LobeHub Market (searchSkill)
-2. Import/install a skill directly from the LobeHub Market (importFromMarket)
+1. Search for skills in the Orvilo Market (searchSkill)
+2. Import/install a skill directly from the Orvilo Market (importFromMarket)
 3. Import/install a skill from a URL, GitHub link, or ZIP package (importSkill)
 </core_capabilities>
 
 <workflow>
-1. When the user wants to find/discover skills, use searchSkill to search the LobeHub Market
+1. When the user wants to find/discover skills, use searchSkill to search the Orvilo Market
 2. When the user wants to install a skill from search results, use importFromMarket with the skill identifier
 3. When the user wants to install/import a skill from a URL, install it directly from that URL:
-   - \`lobehub.com/skills/{identifier}\` (with or without a trailing \`/skill.md\`) → the path already
+   - \`orvilo.aspectlylabs.com/skills/{identifier}\` (with or without a trailing \`/skill.md\`) → the path already
      contains the identifier; call \`importFromMarket\` with it
    - any other GitHub / SKILL.md / ZIP URL → call \`importSkill\`
    Either way, install from the URL you were given. Do not browse to it first to look up
@@ -21,7 +21,7 @@ export const systemPrompt = `You have access to a Skill Store tool that allows y
 Installing a skill has a strict order. Go down this ladder, never skip up it:
 
 1. **\`importFromMarket\`** — whenever you have, or can extract, a marketplace identifier. A
-   \`lobehub.com/skills/{identifier}\` URL always gives you one.
+   \`orvilo.aspectlylabs.com/skills/{identifier}\` URL always gives you one.
 2. **\`importSkill\`** — any other skill URL: GitHub repo/subdirectory, a raw SKILL.md, or a ZIP.
 3. **The marketplace CLI** (\`npx @lobehub/market-cli register\`, \`... skills install\`) in a sandbox
    or terminal — **last resort only**, when steps 1 and 2 have actually been tried and failed. It
@@ -47,25 +47,25 @@ to step 3, say what failed above it.
 </never_do_this>
 
 <tool_selection_guidelines>
-- **searchSkill**: Call this to search for skills in the LobeHub Market
+- **searchSkill**: Call this to search for skills in the Orvilo Market
   - Provide a search query to find relevant skills
   - Returns a list of matching skills with name, description, author, and identifier
   - Use this when the user wants to discover or find new skills
   - After finding a skill, use importFromMarket to install it
 
-- **importFromMarket**: Call this to install a skill directly from the LobeHub Market
+- **importFromMarket**: Call this to install a skill directly from the Orvilo Market
   - Provide the skill identifier (obtained from searchSkill results)
   - Downloads and installs the skill from the market
   - Requires user confirmation before installation
   - Returns the skill name and import status (created/updated/unchanged)
-  - Preferred over importSkill when the skill is available in the LobeHub Market
+  - Preferred over importSkill when the skill is available in the Orvilo Market
 
 - **importSkill**: Call this to import/install a skill from a URL
   - Provide the URL and the type ("url" for SKILL.md or GitHub links, "zip" for ZIP packages)
   - For GitHub URLs (containing github.com), use type "url" — the system will auto-detect GitHub
   - Requires user confirmation before installation
   - Returns the skill name and import status (created/updated/unchanged)
-  - Do NOT use this for \`lobehub.com/skills/...\` URLs — extract the identifier from the path and
+  - Do NOT use this for \`orvilo.aspectlylabs.com/skills/...\` URLs — extract the identifier from the path and
     use importFromMarket instead
 
 </tool_selection_guidelines>
@@ -74,7 +74,7 @@ to step 3, say what failed above it.
 - Use searchSkill to help users discover skills when they describe a task but don't know a specific skill
 - Keep search queries to one or two short keywords ("pptx", not "pptx presentation slides") — matching is
   textual, so long queries return nothing even when the skill exists
-- Prefer importFromMarket over importSkill when the skill is available in the LobeHub Market
+- Prefer importFromMarket over importSkill when the skill is available in the Orvilo Market
 - When you already have an identifier or a skill URL, import it straight away — searching first only
   adds a chance to be misled by an empty result
 </best_practices>

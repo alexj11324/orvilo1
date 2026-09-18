@@ -7,12 +7,12 @@ import {
   ActivityMemoryItemSchema,
   BenchmarkLocomoContextProvider,
   type BenchmarkLocomoPart,
-  LobeChatTopicContextProvider,
-  LobeChatTopicResultRecorder,
   type MemoryExtractionAgent,
   type MemoryExtractionJob,
   type MemoryExtractionResult,
   MemoryExtractionService,
+  OrviloTopicContextProvider,
+  OrviloTopicResultRecorder,
   type PersistedMemoryResult,
   RetrievalUserMemoryContextProvider,
   RetrievalUserMemoryIdentitiesProvider,
@@ -48,8 +48,6 @@ import type {
   UserServiceModelConfig,
 } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
-import { type FlowControl } from '@upstash/qstash';
-import type { Client } from '@upstash/workflow';
 import debug from 'debug';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { join } from 'pathe';
@@ -75,7 +73,6 @@ import { AiInfraRepos } from '@/database/repositories/aiInfra';
 import { asyncTasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
-import { OtelWorkflowClient } from '@/libs/qstash';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { type MemoryAgentConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 import { parseMemoryExtractionConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
@@ -84,6 +81,7 @@ import { S3 } from '@/server/modules/S3';
 import { getUserScopedAiProviderRuntimeState } from '@/server/services/aiProviderAccess';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 import { recordUserMemoryLexicalSearchDecision } from '@/server/services/ftsSearch/observability';
+import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
 import {
   AsyncTaskError,
   type AsyncTaskErrorBody,
@@ -149,7 +147,7 @@ export interface MemoryExtractionNormalizedPayload {
   identityCursor: number;
   layers: LayersEnum[];
   /**
-   * - `workflow` depends on Upstash Workflows to process the extraction asynchronously.
+   * - `workflow` depends on Hatchet to process the extraction asynchronously.
    * - `direct` processes the extraction within the webhook request itself.
    */
   mode: 'workflow' | 'direct';
@@ -530,7 +528,7 @@ export const resolveRuntimeAgentConfig = (
   );
 
   for (const provider of providerOrder) {
-    if (provider === 'lobehub') {
+    if (provider === 'orvilo') {
       debugRuntimeInit(agent, {
         provider,
         source: 'user-vault' as const,
@@ -579,7 +577,7 @@ export const resolveRuntimeAgentConfig = (
   });
 };
 
-const logRuntime = debug('lobe-server:memory:user-memory:runtime');
+const logRuntime = debug('orvilo-server:memory:user-memory:runtime');
 
 const debugRuntimeInit = (
   agent: MemoryAgentConfig,
@@ -1532,7 +1530,7 @@ export class MemoryExtractionExecutor {
         const startTime = Date.now();
         let extractionJob: MemoryExtractionJob | null = null;
         let extraction: MemoryExtractionResult | null = null;
-        let resultRecorder: LobeChatTopicResultRecorder | null = null;
+        let resultRecorder: OrviloTopicResultRecorder | null = null;
         let tracePayload: MemoryExtractionTracePayload<
           MemoryExtractionResult,
           MemoryExtractionJob | null,
@@ -1641,14 +1639,14 @@ export class MemoryExtractionExecutor {
 
           const messageIds = extractorConversations.map((item) => item.id);
 
-          const topicContextProvider = new LobeChatTopicContextProvider({
+          const topicContextProvider = new OrviloTopicContextProvider({
             conversations: extractorConversations,
             topic,
             topicId: topic.id,
           });
           const topicContext = await topicContextProvider.buildContext(extractionJob.userId);
 
-          resultRecorder = new LobeChatTopicResultRecorder({
+          resultRecorder = new OrviloTopicResultRecorder({
             currentMetadata: topic.metadata || {},
             database: db,
             lastMessageAt: (conversations?.at(-1)?.createdAt || topic.updatedAt).toISOString(),
@@ -2526,7 +2524,7 @@ export class MemoryExtractionExecutor {
       userId,
     };
 
-    const hooks = getBusinessModelRuntimeHooks(userId, 'lobehub');
+    const hooks = getBusinessModelRuntimeHooks(userId, 'orvilo');
 
     const runtimes: RuntimeBundle = {
       embeddings: await resolveRuntimeAgentConfig(
@@ -2755,57 +2753,10 @@ const WORKFLOW_PATHS = {
   users: '/api/workflows/memory-user-memory/pipelines/chat-topic/process-users',
 } as const;
 
-const PROCESS_USERS_FLOW_CONTROL = {
-  key: 'memory-user-memory.pipelines.chat-topic.process-users',
-  parallelism: 1,
-  ratePerSecond: 1,
-} satisfies FlowControl;
-
-const getProcessUserTopicsFlowControl = (): FlowControl => {
-  const { workflow } = parseMemoryExtractionConfig();
-
-  return {
-    key: 'memory-user-memory.pipelines.chat-topic.process-user-topics',
-    // NOTICE: Trigger-side flow control is required for initial workflow delivery.
-    // A serve() flowControl setting alone is applied after the run starts, so it cannot prevent
-    // many process-user-topics runs from entering execution at the same time.
-    parallelism: workflow?.processUserTopicsParallelism ?? 25,
-  };
-};
-
 const buildHourlyChildWorkflowRunId = (entryWorkflowRunId: string) =>
   `memory-user-memory-hourly-${entryWorkflowRunId.replaceAll(/[^\w-]/g, '_')}`;
 
-const getWorkflowUrl = (path: string, baseUrl: string) => {
-  const url = new URL(path, baseUrl);
-
-  return url.toString();
-};
-
-const getWorkflowClient = () => {
-  const token = process.env.QSTASH_TOKEN;
-  if (!token) throw new Error('QSTASH_TOKEN is required to trigger workflows');
-
-  const config: ConstructorParameters<typeof Client>[0] = { token };
-
-  if (process.env.QSTASH_URL) {
-    (config as Record<string, unknown>).url = process.env.QSTASH_URL;
-  }
-
-  return new OtelWorkflowClient(config);
-};
-
 export class MemoryExtractionWorkflowService {
-  private static client: Client;
-
-  private static getClient() {
-    if (!this.client) {
-      this.client = getWorkflowClient();
-    }
-
-    return this.client;
-  }
-
   static triggerProcessUsers(
     payload: MemoryExtractionPayloadInput,
     options?: { extraHeaders?: Record<string, string> },
@@ -2814,12 +2765,9 @@ export class MemoryExtractionWorkflowService {
       throw new Error('Missing baseUrl for workflow trigger');
     }
 
-    const url = getWorkflowUrl(WORKFLOW_PATHS.users, payload.baseUrl);
-    return this.getClient().trigger({
-      body: payload,
-      flowControl: PROCESS_USERS_FLOW_CONTROL,
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.users, payload, {
+      concurrencyKey: 'memory-user-memory.pipelines.chat-topic.process-users',
       headers: options?.extraHeaders,
-      url,
     });
   }
 
@@ -2831,11 +2779,9 @@ export class MemoryExtractionWorkflowService {
       throw new Error('Missing baseUrl for workflow trigger');
     }
 
-    const url = getWorkflowUrl(WORKFLOW_PATHS.hourly, payload.baseUrl);
-    return this.getClient().trigger({
-      body: payload,
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.hourly, payload, {
+      concurrencyKey: options?.workflowRunId ?? 'memory-user-memory.hourly',
       headers: options?.extraHeaders,
-      url,
       workflowRunId: options?.workflowRunId,
     });
   }
@@ -2852,7 +2798,7 @@ export class MemoryExtractionWorkflowService {
    * - `MEMORY_EXTRACTION_HOURLY_TASK_USER_ID` identifies the service-account task owner
    *
    * Returns:
-   * - The created async task id and root Upstash workflow run id
+   * - The created async task id and root Hatchet workflow run id
    */
   static async triggerHourlyTracked(
     payload: MemoryExtractionHourlyWorkflowPayload,
@@ -2879,7 +2825,7 @@ export class MemoryExtractionWorkflowService {
           where: and(
             eq(asyncTasks.type, AsyncTaskType.UserMemoryExtractionHourly),
             eq(asyncTasks.userId, userId),
-            sql`${asyncTasks.metadata} #>> '{control,upstash,entryWorkflowRunId}' = ${options.entryWorkflowRunId}`,
+            sql`${asyncTasks.metadata} #>> '{control,hatchet,entryWorkflowRunId}' = ${options.entryWorkflowRunId}`,
           ),
         })
       : undefined;
@@ -2890,7 +2836,7 @@ export class MemoryExtractionWorkflowService {
         metadata: initHourlyUserMemoryExtractionMetadata({
           control: options?.entryWorkflowRunId
             ? {
-                upstash: {
+                hatchet: {
                   entryWorkflowRunId: options.entryWorkflowRunId,
                   workflowRunIds: [
                     options.entryWorkflowRunId,
@@ -2948,12 +2894,9 @@ export class MemoryExtractionWorkflowService {
       throw new Error('Missing baseUrl for workflow trigger');
     }
 
-    const url = getWorkflowUrl(WORKFLOW_PATHS.userTopics, payload.baseUrl);
-    return this.getClient().trigger({
-      body: payload,
-      flowControl: getProcessUserTopicsFlowControl(),
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.userTopics, payload, {
+      concurrencyKey: `memory-user-memory.process-user-topics.${payload.userId ?? payload.userIds?.[0] ?? 'unknown'}`,
       headers: options?.extraHeaders,
-      url,
     });
   }
 
@@ -2966,19 +2909,11 @@ export class MemoryExtractionWorkflowService {
       throw new Error('Missing baseUrl for workflow trigger');
     }
 
-    const url = getWorkflowUrl(WORKFLOW_PATHS.topicBatch, payload.baseUrl);
-    return this.getClient().trigger({
-      body: payload,
-      flowControl: {
-        key: `memory-user-memory.pipelines.chat-topic.process-topics.user.${userId}`,
-        // NOTICE: Each process-topics workflow currently invokes topic workflows sequentially.
-        // Parallelism 20 therefore bounds each user's active topic extraction workflows to 20.
-        // If process-topics changes back to parallel per-topic invoke, divide this number by
-        // the per-batch topic concurrency to preserve the same per-user topic budget.
-        parallelism: 20,
-      },
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.topicBatch, payload, {
+      concurrencyKey: payload.topicIds?.[0]
+        ? `memory-user-memory.process-topics.${userId}.${payload.topicIds[0]}`
+        : undefined,
       headers: options?.extraHeaders,
-      url,
     });
   }
 
@@ -2991,19 +2926,9 @@ export class MemoryExtractionWorkflowService {
       throw new Error('Missing baseUrl for workflow trigger');
     }
 
-    const url = getWorkflowUrl(WORKFLOW_PATHS.topic, payload.baseUrl);
-    return this.getClient().trigger({
-      body: payload,
-      // NOTICE: fire-and-forget fan-out (replaces the old context.invoke). The per-user key bounds
-      // how many process-topic runs a single user can start concurrently, so one heavy user can't
-      // monopolize extraction. Serve-side flow control (processTopicWorkflowOptions) additionally
-      // keeps this workflow's own step-continuation messages out of the shared "$" (unbound) bucket.
-      flowControl: {
-        key: `memory-user-memory.pipelines.chat-topic.process-topic.user.${userId}`,
-        parallelism: 5,
-      } satisfies FlowControl,
+    return triggerHatchetWorkflow(WORKFLOW_PATHS.topic, payload, {
+      concurrencyKey: `memory-user-memory.process-topic.${userId}.${payload.topicIds?.[0] ?? 'unknown'}`,
       headers: options?.extraHeaders,
-      url,
     });
   }
 
@@ -3016,15 +2941,13 @@ export class MemoryExtractionWorkflowService {
       throw new Error('Missing baseUrl for workflow trigger');
     }
 
-    const url = getWorkflowUrl(WORKFLOW_PATHS.personaUpdate, baseUrl);
-    return this.getClient().trigger({
-      body: { hourlyTaskId: options?.hourlyTaskId, userIds: [userId] },
-      flowControl: {
-        key: `memory-user-memory.pipelines.persona.update-write.${userId}`,
-        parallelism: 1,
-      } satisfies FlowControl,
-      headers: options?.extraHeaders,
-      url,
-    });
+    return triggerHatchetWorkflow(
+      WORKFLOW_PATHS.personaUpdate,
+      { hourlyTaskId: options?.hourlyTaskId, userIds: [userId] },
+      {
+        concurrencyKey: `memory-user-memory.persona.${userId}`,
+        headers: options?.extraHeaders,
+      },
+    );
   }
 }

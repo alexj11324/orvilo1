@@ -177,17 +177,38 @@ export interface TaskTopicIntegration {
   /** Branch created for the run (`task/<identifier>`). */
   branch: string;
   /** Repo-relative paths reported unmerged at the last attempt. */
-  conflicts?: string[];
+  conflicts?: null | string[];
   /**
    * Device hosting the worktrees. Absent on sandbox-contract records — those
    * integrate through the remote (`repo`) rather than a device worktree.
    */
   deviceId?: string;
+  /** Immutable base commit observed when the delivery run completed. */
+  expectedBaseSha?: string;
+  /** Immutable source commit accepted for this delivery. */
+  expectedHeadSha?: string;
   /** Merge commit SHA once `state` reaches 'integrated'. */
   integratedSha?: string;
+  /** Topic that owns the integration worktree. */
+  integrationOwnerTopicId?: string;
+  /** True once the topic-owned integration worktree was removed. */
+  integrationWorktreeCleaned?: boolean;
   /** Path of the detached integration worktree on the device. */
   integrationWorktreePath?: string;
-  lastError?: string;
+  lastError?: null | string;
+  /** Machine-readable recovery reason used by the task UI. */
+  lastErrorCode?:
+    | 'authorization_required'
+    | 'merge_conflict'
+    | 'publish_failed'
+    | 'remote_verification_unavailable'
+    | 'workspace_unavailable'
+    | null;
+  /** Pull request number bound to this delivery, when known. */
+  prNumber?: number;
+  /** Short lease protecting completion/retry handling from duplicate delivery. */
+  processingStartedAt?: string | null;
+  processingToken?: string | null;
   /** URL of the pull request opened for {@link branch}, when known. */
   prUrl?: string;
   /** True once the merge result was pushed to `origin/<baseBranch>`. */
@@ -210,8 +231,22 @@ export interface TaskTopicIntegration {
    * record can be advanced once the merge lands.
    */
   runTopicId?: string;
-  /** pending → merging → integrated | conflict | blocked | skipped */
-  state: 'pending' | 'merging' | 'integrated' | 'conflict' | 'blocked' | 'skipped';
+  /** pending → merging → integrated | recoverable failure | blocked | skipped */
+  state:
+    | 'pending'
+    | 'merging'
+    | 'integrated'
+    | 'conflict'
+    | 'publish_failed'
+    | 'verification_pending'
+    | 'blocked'
+    | 'skipped';
+  /**
+   * Original verified delivery waiting for this corrective integration chain.
+   * Once the chain settles, the lifecycle re-drives that Verify run so task
+   * completion and the creator callback still use the accepted delivery.
+   */
+  verifyOperationId?: string;
   /** True once the provisioned worktree was removed after integration. */
   worktreeCleaned?: boolean;
   /**
@@ -334,8 +369,8 @@ export interface TaskSchedulerContext {
   consecutiveFailures?: number;
   // ISO timestamp when the latest tick was scheduled. Informational only.
   scheduledAt?: string;
-  // QStash messageId (or LocalScheduler scheduleId) for the next tick. Used to
-  // cancel when the user wants an interval change to take effect immediately.
+  // Provider message id (or LocalScheduler scheduleId) for the next tick. Used
+  // to cancel when the user wants an interval change to take effect immediately.
   tickMessageId?: string;
   // Generation token carried by the currently active tick. A delivered tick
   // must match this value so a failed best-effort cancellation cannot create
@@ -426,6 +461,7 @@ export interface TaskItem {
   createdByAgentId: string | null;
   createdByUserId: string;
   currentTopicId: string | null;
+  deletedAt?: Date | null;
   description: string | null;
   editorData: unknown;
   error: string | null;
@@ -434,6 +470,7 @@ export interface TaskItem {
   id: string;
   identifier: string;
   instruction: string;
+  isDeleted?: boolean | null;
   lastHeartbeatAt: Date | null;
   maxTopics: number | null;
   name: string | null;
@@ -452,6 +489,10 @@ export interface TaskItem {
    * Stamped when a run hands off for review; the assignees stay the executors.
    */
   reviewerUserId: string | null;
+  /** Expiry for the active run-generation fence, when one is present. */
+  runReservationExpiresAt: Date | null;
+  /** Active run-generation fence; null when no generation owns the task. */
+  runReservationId: string | null;
   schedulePattern: string | null;
   scheduleTimezone: string | null;
   seq: number;
@@ -502,6 +543,7 @@ export interface NewTask {
   createdByAgentId?: string | null;
   createdByUserId: string;
   currentTopicId?: string | null;
+  deletedAt?: Date | null;
   description?: string | null;
   editorData?: unknown;
   error?: string | null;
@@ -510,6 +552,7 @@ export interface NewTask {
   id?: string;
   identifier: string;
   instruction: string;
+  isDeleted?: boolean | null;
   lastHeartbeatAt?: Date | null;
   maxTopics?: number | null;
   name?: string | null;
@@ -729,7 +772,15 @@ export interface TaskDetailData {
   createdAt?: string;
   /** Creator of the task; used by the UI to gate creator-only actions (e.g. make private). */
   createdByUserId?: string | null;
-  dependencies?: Array<{ dependsOn: string; type: string }>;
+  dependencies?: Array<{
+    dependsOn: string;
+    /** Raw edge target, retained so an unavailable prerequisite can be removed. */
+    id?: string;
+    name?: string | null;
+    /** Null/omitted means unavailable, never implicitly completed. */
+    status?: string | null;
+    type: string;
+  }>;
   description?: string | null;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;

@@ -16,13 +16,13 @@ const performanceRestrictedImportPaths = [
     allowTypeImports: true,
     importNames: ['ModelIcon', 'ModelTag', 'ProviderCombine', 'ProviderIcon'],
     message:
-      'These features statically import every brand icon (~3 MB). Import them from "@/components/LobeIcons", which mounts them through lazy().',
+      'These features statically import every brand icon (~3 MB). Import them from "@/components/OrviloIcons", which mounts them through lazy().',
     name: '@lobehub/icons',
   },
   {
     allowTypeImports: true,
     message:
-      'Import ProviderIcon / ProviderCombine from "@/components/LobeIcons", which mounts them through lazy().',
+      'Import ProviderIcon / ProviderCombine from "@/components/OrviloIcons", which mounts them through lazy().',
     name: '@/libs/providerIcon',
   },
   {
@@ -162,7 +162,7 @@ export default eslint(
       // AI coding tools directories
       '.claude',
       '.serena',
-      '.i18nrc.js',
+      '**/.i18nrc.js',
       // vendored code (copied from @microsoft/fetch-event-source)
       'packages/utils/src/client/fetchEventSource/parse.ts',
       // generated files (regenerate with `bun generate:openapi` in packages/openapi)
@@ -570,7 +570,7 @@ export default eslint(
       'no-console': 0,
     },
   },
-  // lobehub-cli - console output is the primary interface
+  // orvilo-cli - console output is the primary interface
   {
     files: ['apps/cli/**/*'],
     rules: {

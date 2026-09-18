@@ -34,7 +34,7 @@ describe('FileService.getKnowledgeItem', () => {
       fileType: 'custom/document',
       filename: 'PDF title without extension',
       id: 'docs_pdf',
-      source: 'https://app.lobehub.com/f/file_pdf',
+      source: 'https://orvilo.aspectlylabs.com/f/file_pdf',
       sourceType: 'file',
       title: 'PDF title without extension',
       totalCharCount: 12_345,
@@ -48,7 +48,7 @@ describe('FileService.getKnowledgeItem', () => {
       size: 98_765,
       sourceType: 'file',
       updatedAt: new Date('2026-07-22T00:00:00.000Z'),
-      url: 'https://app.lobehub.com/f/file_pdf',
+      url: 'https://orvilo.aspectlylabs.com/f/file_pdf',
     });
 
     const result = await service.getKnowledgeItem('docs_pdf');
@@ -60,7 +60,7 @@ describe('FileService.getKnowledgeItem', () => {
       name: 'original.pdf',
       size: 98_765,
       sourceType: 'document',
-      url: 'https://app.lobehub.com/f/file_pdf',
+      url: 'https://orvilo.aspectlylabs.com/f/file_pdf',
     });
     expect(
       isPdfFile({ fileName: result?.name, fileType: result?.fileType, path: result?.url }),

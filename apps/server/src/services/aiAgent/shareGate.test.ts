@@ -6,12 +6,12 @@ import { AgentManagementIdentifier } from '@orvilo/builtin-tool-agent-management
 import { CalculatorIdentifier } from '@orvilo/builtin-tool-calculator';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { KnowledgeBaseApiName, KnowledgeBaseIdentifier } from '@orvilo/builtin-tool-knowledge-base';
-import {
-  LobeAgentApiName,
-  LobeAgentIdentifier,
-  systemPromptWithoutSubAgent,
-} from '@orvilo/builtin-tool-lobe-agent';
 import { MemoryApiName, MemoryIdentifier } from '@orvilo/builtin-tool-memory';
+import {
+  OrviloAgentApiName,
+  OrviloAgentIdentifier,
+  systemPromptWithoutSubAgent,
+} from '@orvilo/builtin-tool-orvilo-agent';
 import { TopicReferenceIdentifier } from '@orvilo/builtin-tool-topic-reference';
 import {
   AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS,
@@ -124,11 +124,11 @@ describe('filterPluginsByShareGate', () => {
     // `applyShareGateToToolSet`, once the real manifest is known — this pass
     // only decides whether the identifier is a candidate at all.
     const gate = buildGate({
-      toolGrants: [{ apis: [LobeAgentApiName.analyzeMedia], identifier: LobeAgentIdentifier }],
+      toolGrants: [{ apis: [OrviloAgentApiName.analyzeMedia], identifier: OrviloAgentIdentifier }],
     });
 
-    expect(filterPluginsByShareGate([LobeAgentIdentifier, 'mcp-github'], gate)).toEqual([
-      LobeAgentIdentifier,
+    expect(filterPluginsByShareGate([OrviloAgentIdentifier, 'mcp-github'], gate)).toEqual([
+      OrviloAgentIdentifier,
     ]);
   });
 });
@@ -159,22 +159,22 @@ describe('AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS', () => {
   it('does not allowlist the confirmed creator-data leak tools', () => {
     for (const identifier of [
       AgentManagementIdentifier,
-      'lobe-local-system',
-      'lobe-creds',
-      'lobe-task',
+      'orvilo-local-system',
+      'orvilo-creds',
+      'orvilo-task',
       TopicReferenceIdentifier,
     ]) {
       expect(AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS.has(identifier)).toBe(false);
     }
   });
 
-  // `lobe-cloud-sandbox` is allowlisted despite its general-purpose reach: a
+  // `orvilo-cloud-sandbox` is allowlisted despite its general-purpose reach: a
   // share visitor's run gets an isolated per-topic sandbox session with no
   // `lh` CLI JWT shim, so it cannot mint or exfiltrate the creator's
   // credentials — see the positive-evidence doc block above
   // `applyShareGateToInterventionRequiredApis` in `shareGate.ts`.
-  it('allowlists lobe-cloud-sandbox now that visitor runs get a credential-free sandbox session', () => {
-    expect(AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS.has('lobe-cloud-sandbox')).toBe(true);
+  it('allowlists orvilo-cloud-sandbox now that visitor runs get a credential-free sandbox session', () => {
+    expect(AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS.has('orvilo-cloud-sandbox')).toBe(true);
   });
 });
 
@@ -296,7 +296,7 @@ describe('applyShareGateToToolSet', () => {
     expect(toolSet.tools).toEqual([]);
   });
 
-  it('drops a stale lobe-topic-reference grant left over from before it was denied', () => {
+  it('drops a stale orvilo-topic-reference grant left over from before it was denied', () => {
     // `TopicReferenceExecutionRuntime.getTopicContext` resolves a free-form
     // topicId via `TopicModel.findOwnTopicById`, scoped only to the creator's
     // whole store — not to this share/agent. A share config saved while it was
@@ -338,33 +338,35 @@ describe('applyShareGateToToolSet', () => {
   it('narrows a per-API grant down to just the named API', () => {
     const toolSet = buildToolSet([
       {
-        apis: [{ name: LobeAgentApiName.analyzeMedia }, { name: LobeAgentApiName.updatePlan }],
-        identifier: LobeAgentIdentifier,
+        apis: [{ name: OrviloAgentApiName.analyzeMedia }, { name: OrviloAgentApiName.updatePlan }],
+        identifier: OrviloAgentIdentifier,
       },
     ]);
 
     applyShareGateToToolSet(
       toolSet,
       buildGate({
-        toolGrants: [{ apis: [LobeAgentApiName.analyzeMedia], identifier: LobeAgentIdentifier }],
+        toolGrants: [
+          { apis: [OrviloAgentApiName.analyzeMedia], identifier: OrviloAgentIdentifier },
+        ],
       }),
     );
 
     // The identifier itself stays enabled (it has a surviving API)...
-    expect(toolSet.enabledToolIds).toEqual([LobeAgentIdentifier]);
+    expect(toolSet.enabledToolIds).toEqual([OrviloAgentIdentifier]);
     // ...but only the granted API remains on the manifest and the
     // function-calling schema.
-    expect(toolSet.manifestMap[LobeAgentIdentifier].api.map((api) => api.name)).toEqual([
-      LobeAgentApiName.analyzeMedia,
+    expect(toolSet.manifestMap[OrviloAgentIdentifier].api.map((api) => api.name)).toEqual([
+      OrviloAgentApiName.analyzeMedia,
     ]);
     expect(toolSet.tools!.map((tool: any) => tool.function.name)).toEqual([
-      toolName(LobeAgentIdentifier, LobeAgentApiName.analyzeMedia),
+      toolName(OrviloAgentIdentifier, OrviloAgentApiName.analyzeMedia),
     ]);
   });
 
   it('drops the whole tool when a per-API grant names no surviving API', () => {
     const toolSet = buildToolSet([
-      { apis: [{ name: LobeAgentApiName.analyzeMedia }], identifier: LobeAgentIdentifier },
+      { apis: [{ name: OrviloAgentApiName.analyzeMedia }], identifier: OrviloAgentIdentifier },
     ]);
 
     // Granted API name does not exist on this manifest at all (e.g. stale
@@ -372,7 +374,7 @@ describe('applyShareGateToToolSet', () => {
     // dropped entirely rather than left offering nothing.
     applyShareGateToToolSet(
       toolSet,
-      buildGate({ toolGrants: [{ apis: ['noSuchApi'], identifier: LobeAgentIdentifier }] }),
+      buildGate({ toolGrants: [{ apis: ['noSuchApi'], identifier: OrviloAgentIdentifier }] }),
     );
 
     expect(toolSet.enabledToolIds).toEqual([]);
@@ -383,8 +385,8 @@ describe('applyShareGateToToolSet', () => {
   it('lets a toolset-level entry grant every surviving API, overriding a redundant per-API entry', () => {
     const toolSet = buildToolSet([
       {
-        apis: [{ name: LobeAgentApiName.analyzeMedia }, { name: LobeAgentApiName.updatePlan }],
-        identifier: LobeAgentIdentifier,
+        apis: [{ name: OrviloAgentApiName.analyzeMedia }, { name: OrviloAgentApiName.updatePlan }],
+        identifier: OrviloAgentIdentifier,
       },
     ]);
 
@@ -392,35 +394,38 @@ describe('applyShareGateToToolSet', () => {
       toolSet,
       buildGate({
         toolGrants: [
-          { identifier: LobeAgentIdentifier },
-          { apis: [LobeAgentApiName.analyzeMedia], identifier: LobeAgentIdentifier },
+          { identifier: OrviloAgentIdentifier },
+          { apis: [OrviloAgentApiName.analyzeMedia], identifier: OrviloAgentIdentifier },
         ],
       }),
     );
 
-    expect(toolSet.manifestMap[LobeAgentIdentifier].api.map((api) => api.name).sort()).toEqual(
-      [LobeAgentApiName.analyzeMedia, LobeAgentApiName.updatePlan].sort(),
+    expect(toolSet.manifestMap[OrviloAgentIdentifier].api.map((api) => api.name).sort()).toEqual(
+      [OrviloAgentApiName.analyzeMedia, OrviloAgentApiName.updatePlan].sort(),
     );
   });
 
   it('strips callSubAgent and pins the dispatch-free systemRole', () => {
     const toolSet = buildToolSet([
       {
-        apis: [{ name: LobeAgentApiName.callSubAgent }, { name: LobeAgentApiName.analyzeMedia }],
-        identifier: LobeAgentIdentifier,
+        apis: [
+          { name: OrviloAgentApiName.callSubAgent },
+          { name: OrviloAgentApiName.analyzeMedia },
+        ],
+        identifier: OrviloAgentIdentifier,
       },
     ]);
 
     applyShareGateToToolSet(
       toolSet,
-      buildGate({ toolGrants: [{ identifier: LobeAgentIdentifier }] }),
+      buildGate({ toolGrants: [{ identifier: OrviloAgentIdentifier }] }),
     );
 
-    const manifest = toolSet.manifestMap[LobeAgentIdentifier];
-    expect(manifest.api.map((api) => api.name)).not.toContain(LobeAgentApiName.callSubAgent);
+    const manifest = toolSet.manifestMap[OrviloAgentIdentifier];
+    expect(manifest.api.map((api) => api.name)).not.toContain(OrviloAgentApiName.callSubAgent);
     expect(manifest.systemRole).toBe(systemPromptWithoutSubAgent);
     expect(toolSet.tools!.map((tool: any) => tool.function.name)).not.toContain(
-      toolName(LobeAgentIdentifier, LobeAgentApiName.callSubAgent),
+      toolName(OrviloAgentIdentifier, OrviloAgentApiName.callSubAgent),
     );
   });
 
@@ -676,9 +681,9 @@ describe('isShareBlockedBuiltinDispatch', () => {
   it('passes an enabled builtin with no intervention semantics', () => {
     expect(
       isShareBlockedBuiltinDispatch(
-        { toolGrants: [{ identifier: LobeAgentIdentifier }] },
-        LobeAgentIdentifier,
-        LobeAgentApiName.analyzeMedia,
+        { toolGrants: [{ identifier: OrviloAgentIdentifier }] },
+        OrviloAgentIdentifier,
+        OrviloAgentApiName.analyzeMedia,
       ),
     ).toBe(false);
   });
@@ -688,11 +693,11 @@ describe('isShareBlockedBuiltinDispatch', () => {
     // assembly strip removes that config from the runtime-visible manifest,
     // so under headless it would auto-run without its consent step. The
     // dispatch gate re-reads the unstripped manifest and blocks.
-    for (const apiName of [LobeAgentApiName.createPlan, LobeAgentApiName.askUserQuestion]) {
+    for (const apiName of [OrviloAgentApiName.createPlan, OrviloAgentApiName.askUserQuestion]) {
       expect(
         isShareBlockedBuiltinDispatch(
-          { toolGrants: [{ identifier: LobeAgentIdentifier }] },
-          LobeAgentIdentifier,
+          { toolGrants: [{ identifier: OrviloAgentIdentifier }] },
+          OrviloAgentIdentifier,
           apiName,
         ),
       ).toBe(true);
@@ -706,9 +711,9 @@ describe('isShareBlockedBuiltinDispatch', () => {
     // dedicated dispatch rule.
     expect(
       isShareBlockedBuiltinDispatch(
-        { toolGrants: [{ identifier: LobeAgentIdentifier }] },
-        LobeAgentIdentifier,
-        LobeAgentApiName.callSubAgent,
+        { toolGrants: [{ identifier: OrviloAgentIdentifier }] },
+        OrviloAgentIdentifier,
+        OrviloAgentApiName.callSubAgent,
       ),
     ).toBe(true);
   });
@@ -751,22 +756,26 @@ describe('isShareBlockedBuiltinDispatch', () => {
 
   it('a per-API grant grants only the named API, not the whole identifier', () => {
     const enabled = {
-      toolGrants: [{ apis: [LobeAgentApiName.analyzeMedia], identifier: LobeAgentIdentifier }],
+      toolGrants: [{ apis: [OrviloAgentApiName.analyzeMedia], identifier: OrviloAgentIdentifier }],
     };
 
     expect(
-      isShareBlockedBuiltinDispatch(enabled, LobeAgentIdentifier, LobeAgentApiName.analyzeMedia),
+      isShareBlockedBuiltinDispatch(
+        enabled,
+        OrviloAgentIdentifier,
+        OrviloAgentApiName.analyzeMedia,
+      ),
     ).toBe(false);
     // updatePlan carries no intervention config either, so only the picker's
     // per-API scoping is what blocks it here.
     expect(
-      isShareBlockedBuiltinDispatch(enabled, LobeAgentIdentifier, LobeAgentApiName.updatePlan),
+      isShareBlockedBuiltinDispatch(enabled, OrviloAgentIdentifier, OrviloAgentApiName.updatePlan),
     ).toBe(true);
   });
 });
 
 describe('shareGateGrantsCloudSandbox', () => {
-  it('is false when the share does not grant lobe-cloud-sandbox', () => {
+  it('is false when the share does not grant orvilo-cloud-sandbox', () => {
     expect(shareGateGrantsCloudSandbox(buildGate())).toBe(false);
     expect(
       shareGateGrantsCloudSandbox(buildGate({ toolGrants: [{ identifier: 'web-search' }] })),

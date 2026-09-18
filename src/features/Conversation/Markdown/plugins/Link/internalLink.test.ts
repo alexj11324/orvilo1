@@ -68,11 +68,11 @@ describe('parseInternalLink', () => {
       runId: 'run-1',
       type: 'verify',
     });
-    expect(parseInternalLink('/lobe-team/verify/run-2', undefined, ['lobe-team'])).toEqual({
-      pathname: '/lobe-team/verify/run-2',
+    expect(parseInternalLink('/orvilo-team/verify/run-2', undefined, ['orvilo-team'])).toEqual({
+      pathname: '/orvilo-team/verify/run-2',
       runId: 'run-2',
       type: 'verify',
-      workspaceSlug: 'lobe-team',
+      workspaceSlug: 'orvilo-team',
     });
   });
 
@@ -83,12 +83,12 @@ describe('parseInternalLink', () => {
       type: 'acceptance',
     });
     expect(
-      parseInternalLink('/lobe-team/acceptance/acceptance-2', undefined, ['lobe-team']),
+      parseInternalLink('/orvilo-team/acceptance/acceptance-2', undefined, ['orvilo-team']),
     ).toEqual({
       acceptanceId: 'acceptance-2',
-      pathname: '/lobe-team/acceptance/acceptance-2',
+      pathname: '/orvilo-team/acceptance/acceptance-2',
       type: 'acceptance',
-      workspaceSlug: 'lobe-team',
+      workspaceSlug: 'orvilo-team',
     });
     // A link to the official site, read from the official app origin: both
     // hosts are official, so the link stays internal across the two origins.
@@ -101,13 +101,15 @@ describe('parseInternalLink', () => {
 
   it('parses workspace-prefixed entity paths', () => {
     expect(
-      parseInternalLink('/lobe-team/agent/agt_agent/docs/docs_document', undefined, ['lobe-team']),
+      parseInternalLink('/orvilo-team/agent/agt_agent/docs/docs_document', undefined, [
+        'orvilo-team',
+      ]),
     ).toEqual({
       agentId: 'agt_agent',
       documentId: 'docs_document',
-      pathname: '/lobe-team/agent/agt_agent/docs/docs_document',
+      pathname: '/orvilo-team/agent/agt_agent/docs/docs_document',
       type: 'document',
-      workspaceSlug: 'lobe-team',
+      workspaceSlug: 'orvilo-team',
     });
   });
 
@@ -140,10 +142,10 @@ describe('parseInternalLink', () => {
   });
 
   it('preserves workspace context for workspace-prefixed SPA routes', () => {
-    expect(parseInternalLink('/lobe-team/tasks', undefined, ['lobe-team'])).toEqual({
-      pathname: '/lobe-team/tasks',
+    expect(parseInternalLink('/orvilo-team/tasks', undefined, ['orvilo-team'])).toEqual({
+      pathname: '/orvilo-team/tasks',
       type: 'route',
-      workspaceSlug: 'lobe-team',
+      workspaceSlug: 'orvilo-team',
     });
   });
 

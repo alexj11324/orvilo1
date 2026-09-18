@@ -26,7 +26,7 @@ export const ReadDocumentInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-web-onboarding.apiName.readDocument')}
+          {t('builtins.orvilo-web-onboarding.apiName.readDocument')}
         </span>
       </div>
     );
@@ -35,11 +35,11 @@ export const ReadDocumentInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-web-onboarding.apiName.readDocument')}
+        {t('builtins.orvilo-web-onboarding.apiName.readDocument')}
       </span>
       {type && (
         <span className={styles.chip}>
-          {t(`builtins.lobe-web-onboarding.docType.${type}` as const)}
+          {t(`builtins.orvilo-web-onboarding.docType.${type}` as const)}
         </span>
       )}
     </div>

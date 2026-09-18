@@ -9,15 +9,15 @@ import { and, eq, inArray, lt, or, sql } from 'drizzle-orm';
 
 import type { AsyncTaskSelectItem, NewAsyncTaskItem } from '../schemas';
 import { asyncTasks } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export class AsyncTaskModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -52,7 +52,7 @@ export class AsyncTaskModel {
     });
   };
 
-  static findByInferenceId = async (db: LobeChatDatabase, inferenceId: string) => {
+  static findByInferenceId = async (db: OrviloDatabase, inferenceId: string) => {
     return db.query.asyncTasks.findFirst({
       where: eq(asyncTasks.inferenceId, inferenceId),
     });
@@ -155,7 +155,7 @@ export class AsyncTaskModel {
           SELECT value, MIN(ordinality) AS first_ordinal
           FROM jsonb_array_elements_text(
             COALESCE(
-              ${asyncTasks.metadata} #> '{control,upstash,workflowRunIds}',
+              ${asyncTasks.metadata} #> '{control,hatchet,workflowRunIds}',
               '[]'::jsonb
             ) || ${incomingIdsJson}::jsonb
           ) WITH ORDINALITY AS ids(value, ordinality)
@@ -176,11 +176,11 @@ export class AsyncTaskModel {
                 COALESCE(${asyncTasks.metadata} -> 'control', '{}'::jsonb),
                 true
               ),
-              '{control,upstash}',
-              COALESCE(${asyncTasks.metadata} #> '{control,upstash}', '{}'::jsonb),
+              '{control,hatchet}',
+              COALESCE(${asyncTasks.metadata} #> '{control,hatchet}', '{}'::jsonb),
               true
             ),
-            '{control,upstash,workflowRunIds}',
+            '{control,hatchet,workflowRunIds}',
             ${mergedIdsExpr},
             true
           )
@@ -292,10 +292,10 @@ export const initUserMemoryExtractionMetadata = (
         cancelReason: metadata.control.cancelReason,
         cancelRequestedAt: metadata.control.cancelRequestedAt,
         cancelledBy: metadata.control.cancelledBy,
-        upstash: metadata.control.upstash
+        hatchet: metadata.control.hatchet
           ? {
-              entryWorkflowRunId: metadata.control.upstash.entryWorkflowRunId,
-              workflowRunIds: metadata.control.upstash.workflowRunIds || [],
+              entryWorkflowRunId: metadata.control.hatchet.entryWorkflowRunId,
+              workflowRunIds: metadata.control.hatchet.workflowRunIds || [],
             }
           : undefined,
       }
@@ -329,10 +329,10 @@ export const initHourlyUserMemoryExtractionMetadata = (
         cancelReason: metadata.control.cancelReason,
         cancelRequestedAt: metadata.control.cancelRequestedAt,
         cancelledBy: metadata.control.cancelledBy,
-        upstash: metadata.control.upstash
+        hatchet: metadata.control.hatchet
           ? {
-              entryWorkflowRunId: metadata.control.upstash.entryWorkflowRunId,
-              workflowRunIds: metadata.control.upstash.workflowRunIds || [],
+              entryWorkflowRunId: metadata.control.hatchet.entryWorkflowRunId,
+              workflowRunIds: metadata.control.hatchet.workflowRunIds || [],
             }
           : undefined,
       }

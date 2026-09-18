@@ -4,13 +4,13 @@ import OpenAI from 'openai';
 import { describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeUnslothAI, params } from './index';
+import { OrviloUnslothAI, params } from './index';
 
 const provider = ModelProvider.Unsloth;
 const defaultBaseURL = 'http://127.0.0.1:8888/v1';
 
 testProvider({
-  Runtime: LobeUnslothAI,
+  Runtime: OrviloUnslothAI,
   chatDebugEnv: 'DEBUG_UNSLOTH_CHAT_COMPLETION',
   chatModel: 'unsloth/Qwen3-1.7B-GGUF',
   defaultBaseURL,
@@ -20,7 +20,7 @@ testProvider({
   },
 });
 
-describe('LobeUnslothAI - custom features', () => {
+describe('OrviloUnslothAI - custom features', () => {
   it('discovers loaded model abilities from server props without a catalog ID match', async () => {
     const client = new OpenAI({
       apiKey: 'test-key',
@@ -146,7 +146,7 @@ describe('LobeUnslothAI - custom features', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    it('should fetch and enrich known models from LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should fetch and enrich known models from ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockClient = {
         models: {
           list: vi.fn().mockResolvedValue({

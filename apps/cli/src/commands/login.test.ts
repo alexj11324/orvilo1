@@ -32,7 +32,7 @@ vi.mock('node:child_process', () => ({
 
 describe('login command', () => {
   let exitSpy: ReturnType<typeof vi.spyOn>;
-  const originalApiKey = process.env.LOBEHUB_CLI_API_KEY;
+  const originalApiKey = process.env.ORVILO_CLI_API_KEY;
   const originalPath = process.env.PATH;
   const originalPathext = process.env.PATHEXT;
   const originalSystemRoot = process.env.SystemRoot;
@@ -42,13 +42,13 @@ describe('login command', () => {
     vi.stubGlobal('fetch', vi.fn());
     exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
     vi.mocked(loadSettings).mockReturnValue(null);
-    delete process.env.LOBEHUB_CLI_API_KEY;
+    delete process.env.ORVILO_CLI_API_KEY;
   });
 
   afterEach(() => {
     vi.useRealTimers();
     exitSpy.mockRestore();
-    process.env.LOBEHUB_CLI_API_KEY = originalApiKey;
+    process.env.ORVILO_CLI_API_KEY = originalApiKey;
     process.env.PATH = originalPath;
     process.env.PATHEXT = originalPathext;
     process.env.SystemRoot = originalSystemRoot;
@@ -69,8 +69,8 @@ describe('login command', () => {
         expires_in: 600,
         interval: 1,
         user_code: 'USER-CODE',
-        verification_uri: 'https://app.lobehub.com/verify',
-        verification_uri_complete: 'https://app.lobehub.com/verify?code=USER-CODE',
+        verification_uri: 'https://orvilo.aspectlylabs.com/verify',
+        verification_uri_complete: 'https://orvilo.aspectlylabs.com/verify?code=USER-CODE',
         ...overrides,
       }),
       ok: true,
@@ -128,20 +128,23 @@ describe('login command', () => {
         refreshToken: 'refresh-tok',
       }),
     );
-    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://app.lobehub.com' });
+    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://orvilo.aspectlylabs.com' });
     expect(log.info).toHaveBeenCalledWith(expect.stringContaining('Login successful'));
   });
 
   it('should use environment api key without storing credentials', async () => {
-    process.env.LOBEHUB_CLI_API_KEY = 'sk-lh-env-test';
+    process.env.ORVILO_CLI_API_KEY = 'sk-ov-env-test';
     vi.mocked(getUserIdFromApiKey).mockResolvedValue('user-123');
 
     const program = createProgram();
     await runLogin(program);
 
-    expect(getUserIdFromApiKey).toHaveBeenCalledWith('sk-lh-env-test', 'https://app.lobehub.com');
+    expect(getUserIdFromApiKey).toHaveBeenCalledWith(
+      'sk-ov-env-test',
+      'https://orvilo.aspectlylabs.com',
+    );
     expect(saveCredentials).not.toHaveBeenCalled();
-    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://app.lobehub.com' });
+    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://orvilo.aspectlylabs.com' });
     expect(log.info).toHaveBeenCalledWith(expect.stringContaining('Login successful'));
   });
 
@@ -175,7 +178,7 @@ describe('login command', () => {
   });
 
   it('should preserve existing gateway for environment api key on the same server', async () => {
-    process.env.LOBEHUB_CLI_API_KEY = 'sk-lh-env-test';
+    process.env.ORVILO_CLI_API_KEY = 'sk-ov-env-test';
     vi.mocked(getUserIdFromApiKey).mockResolvedValue('user-123');
     vi.mocked(loadSettings).mockReturnValueOnce({
       gatewayUrl: 'https://gateway.example.com',

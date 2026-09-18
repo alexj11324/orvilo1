@@ -4,14 +4,13 @@ import type { Context } from 'hono';
 import { getServerDB } from '@/database/core/db-adaptor';
 import { BotCallbackService } from '@/server/services/bot/BotCallbackService';
 
-const log = debug('lobe-server:agent:bot-callback');
+const log = debug('orvilo-server:agent:bot-callback');
 
 /**
  * Bot callback endpoint for agent step/completion webhooks.
  *
- * In queue mode, AgentRuntimeService fires webhooks (via QStash) after each step
- * and on completion. This endpoint verifies the signature (via the `qstashAuth`
- * middleware on the route) and delegates to BotCallbackService.
+ * In queue mode, the Hatchet worker invokes this callback after each step and
+ * on completion. The handler delegates to BotCallbackService.
  */
 export async function botCallback(c: Context): Promise<Response> {
   let body: any;

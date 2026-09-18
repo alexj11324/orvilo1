@@ -5,7 +5,7 @@ import type {
 import { AGENT_SIGNAL_SOURCE_TYPES } from '@orvilo/agent-signal/source';
 
 import { MessageModel } from '@/database/models/message';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 /** Reason a `client.runtime.complete` event could not become a feedback source. */
 export type ClientRuntimeCompleteHydrationSkipReason =
@@ -78,7 +78,7 @@ const getTrustedScopeKey = (
  */
 export const resolveClientRuntimeCompleteFeedbackSource = async (
   sourceEvent: AgentSignalSourceEvent<typeof AGENT_SIGNAL_SOURCE_TYPES.clientRuntimeComplete>,
-  input: { db: LobeChatDatabase; userId: string; workspaceId?: string },
+  input: { db: OrviloDatabase; userId: string; workspaceId?: string },
 ): Promise<ClientRuntimeCompleteHydrationResult> => {
   if (sourceEvent.payload.status !== 'completed') {
     return skipped('non-completed-status');

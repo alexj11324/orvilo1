@@ -5,10 +5,10 @@ import { useActiveLocation } from '@/hooks/useActiveLocation';
 
 // Sub-routes that are agent-scoped views (not tied to a specific topic/task id),
 // safe to carry over when switching between agents from the sidebar switcher.
-const PRESERVED_AGENT_SUB_PATHS = new Set(['topics', 'profile', 'channel']);
+const PRESERVED_AGENT_SUB_PATHS = new Set(['profile', 'channel']);
 
 /**
- * When switching from an agent's sub-view (e.g. `/agent/A/topics`) to another
+ * When switching from an agent's sub-view (e.g. `/agent/A/profile`) to another
  * agent, preserve the sub-route on the destination so the user lands on the
  * same view. Topic / task ids belong to the previous agent and are
  * intentionally dropped.

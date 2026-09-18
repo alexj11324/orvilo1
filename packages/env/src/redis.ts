@@ -24,7 +24,7 @@ export const getRedisEnv = () => {
     runtimeEnv: {
       REDIS_DATABASE: parseNumber(process.env.REDIS_DATABASE),
       REDIS_PASSWORD: process.env.REDIS_PASSWORD,
-      REDIS_PREFIX: process.env.REDIS_PREFIX || 'lobechat',
+      REDIS_PREFIX: process.env.REDIS_PREFIX || 'orvilo',
       REDIS_TLS: parseRedisTls(process.env.REDIS_TLS),
       REDIS_TLS_CA: parseRedisTlsCA(process.env.REDIS_TLS_CA),
       REDIS_URL: process.env.REDIS_URL,

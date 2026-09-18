@@ -40,10 +40,10 @@ describe('DevDock unlock', () => {
 
   it('persists an explicit unlock and supports toggling it off', () => {
     expect(toggleDevDockUnlocked()).toBe(true);
-    expect(localStorage.getItem('LOBE_DEV_DOCK_UNLOCKED')).toBe('1');
+    expect(localStorage.getItem('ORVILO_DEV_DOCK_UNLOCKED')).toBe('1');
 
     expect(toggleDevDockUnlocked()).toBe(false);
-    expect(localStorage.getItem('LOBE_DEV_DOCK_UNLOCKED')).toBeNull();
+    expect(localStorage.getItem('ORVILO_DEV_DOCK_UNLOCKED')).toBeNull();
   });
 
   it('requires both server access and an unlock in production', () => {

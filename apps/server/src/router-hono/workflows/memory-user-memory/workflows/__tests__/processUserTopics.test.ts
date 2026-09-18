@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 // is fixed to 4 for the whole file to keep the fixtures small.
 vi.mock('@/server/globalConfig/parseMemoryExtractionConfig', () => ({
   parseMemoryExtractionConfig: () => ({
-    upstashWorkflowExtraHeaders: {},
+    workflowExtraHeaders: {},
     workflow: { maxTopicsPerUserPerRun: 4 },
   }),
 }));

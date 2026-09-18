@@ -414,6 +414,12 @@ const settleRemoteDispatchOutcome = async (
 export interface HeteroDispatchInput {
   canManageAgent: boolean;
   effectiveRequestedDeviceId?: string;
+  /**
+   * Extra caller-supplied context appended after the persona/provider system
+   * context (e.g. eval `envPrompt`). Replaces the legacy `evalContext` channel
+   * that the retired server-side loop consumed during operation prep.
+   */
+  extraSystemContext?: string;
   heterogeneousProvider?: OrviloAgentAgencyConfig['heterogeneousProvider'];
   heteroType: HeterogeneousAgentType;
   hooks?: AgentHook[];
@@ -467,6 +473,7 @@ export const dispatchHeteroAgent = async (
   const {
     canManageAgent,
     effectiveRequestedDeviceId,
+    extraSystemContext,
     heteroType,
     heterogeneousProvider,
     hooks,
@@ -620,10 +627,13 @@ export const dispatchHeteroAgent = async (
   // retry; successful same-session runs never consume the duplicate history.
   // For the builtin Orvilo harness the agent's `systemRole` persona leads the
   // injected context — external CLI harnesses keep their own identity.
-  const agentSystemContext = resolveHeteroAgentSystemContext(
-    heterogeneousProvider,
-    agentConfig.systemRole,
-  );
+  const agentSystemContext =
+    [
+      resolveHeteroAgentSystemContext(heterogeneousProvider, agentConfig.systemRole),
+      extraSystemContext?.trim(),
+    ]
+      .filter(Boolean)
+      .join('\n\n') || undefined;
   const systemContext = buildCloudHeteroContext({
     agentSystemContext,
     conversationHistory: resumeSessionId ? undefined : conversationHistory,

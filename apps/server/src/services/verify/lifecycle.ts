@@ -182,7 +182,11 @@ const executeVerifyLifecycle = async (
       ).claimEvidenceCollection(run.id);
       if (evidenceClaimed) {
         try {
-          if (isHeterogeneousAgentModelId(op.model) || isHeterogeneousAgentModelId(op.provider)) {
+          if (
+            op.provider === 'orvilo' ||
+            isHeterogeneousAgentModelId(op.model) ||
+            isHeterogeneousAgentModelId(op.provider)
+          ) {
             await recordHeterogeneousDeliverableEvidence({
               db,
               deliverable: params.deliverable,

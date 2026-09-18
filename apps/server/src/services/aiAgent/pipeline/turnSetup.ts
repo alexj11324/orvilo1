@@ -1,4 +1,4 @@
-import { isHeterogeneousAgentModelId, LOADING_FLAT } from '@orvilo/const';
+import { LOADING_FLAT } from '@orvilo/const';
 import type { OrviloDatabase } from '@orvilo/database';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import type {
@@ -18,13 +18,9 @@ import {
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
-import { AiModelModel } from '@/database/models/aiModel';
 import type { MessageModel } from '@/database/models/message';
 import type { TopicModel } from '@/database/models/topic';
-import { resolveModelExtendParamsForUser } from '@/server/modules/AgentRuntime/adapters/serverCallLlmContextHints';
 import type { AgentConfigWithId } from '@/server/services/agent';
-import { enqueueAgentSignalSourceEvent } from '@/server/services/agentSignal';
-import { shouldSuppressSignal } from '@/server/services/agentSignal/suppressSignal';
 import { DocumentService } from '@/server/services/document';
 import { FileService } from '@/server/services/file';
 import { resolveAttachmentsByFileIds } from '@/server/services/file/resolveAttachments';
@@ -33,6 +29,7 @@ import { markdownToTxt } from '@/utils/markdownToTxt';
 import type { DeviceAccessReason } from '../deviceAccessPolicy';
 import { resolveDeviceAccessPolicy } from '../deviceAccessPolicy';
 import { ingestAttachment } from '../ingestAttachment';
+import { resolveExecutionBinding } from './resolveExecutionBinding';
 import type { InternalExecAgentParams } from '../types';
 
 const log = debug('orvilo-server:ai-agent-service');
@@ -61,63 +58,30 @@ export interface RunAttachments {
  * so the caller leaves metadata untouched. Never throws: a failed lookup just
  * means the topic follows the user-level config until the user pins one.
  */
-const resolveTopicReasoningSnapshot = async ({
-  deps,
+const resolveTopicReasoningSnapshot = ({
   heterogeneousProvider,
-  isHeteroTopic,
-  model,
-  provider,
 }: {
-  deps: Pick<TurnSetupDeps, 'db' | 'userId' | 'workspaceId'>;
   heterogeneousProvider: HeterogeneousProviderConfig | undefined;
-  isHeteroTopic: boolean;
-  model: string;
-  provider: string;
-}): Promise<Pick<ChatTopicMetadata, 'heteroEffort' | 'reasoningConfig'> | undefined> => {
-  if (isHeteroTopic) {
-    const effort = heterogeneousProvider?.effort;
-    return effort === undefined ? undefined : { heteroEffort: effort };
-  }
-
-  try {
-    const aiModelModel = new AiModelModel(deps.db, deps.userId, deps.workspaceId);
-    const { modelHasReasoningExtendParams } = await resolveModelExtendParamsForUser({
-      aiModelModel,
-      model,
-      provider,
-    });
-    if (!modelHasReasoningExtendParams) return undefined;
-
-    const reasoningConfig = await aiModelModel.getModelReasoningConfig(model, provider);
-    return { reasoningConfig: reasoningConfig ?? {} };
-  } catch (error) {
-    log('execAgent: failed to snapshot topic reasoning config for %s: %O', model, error);
-    return undefined;
-  }
+}): Pick<ChatTopicMetadata, 'heteroEffort'> | undefined => {
+  const effort = heterogeneousProvider?.effort;
+  return effort === undefined ? undefined : { heteroEffort: effort };
 };
 
 /** Snapshot only newly created topics, including callers that pre-create before setupTurn. */
-export const resolveNewTopicSnapshot = async (
-  deps: Pick<TurnSetupDeps, 'db' | 'userId' | 'workspaceId'>,
+export const resolveNewTopicSnapshot = (
   agentConfig: AgentConfigWithId,
   overrides?: { model?: string; provider?: string },
 ) => {
   const model = overrides?.model ?? agentConfig.model!;
   const provider = overrides?.provider ?? agentConfig.provider!;
-  const heterogeneousProvider = agentConfig.agencyConfig?.heterogeneousProvider;
-  const heteroType =
-    heterogeneousProvider?.type ?? (isHeterogeneousAgentModelId(model) ? model : undefined);
+  // Every run resolves to an ACP execution binding — an explicit provider, a
+  // legacy hetero model id, or the builtin 'orvilo' harness default.
+  const { heteroType, heterogeneousProvider } = resolveExecutionBinding(agentConfig, model);
   const heteroModel = heterogeneousProvider
     ? resolveHeterogeneousProviderTopicModel(heterogeneousProvider)
     : undefined;
   return {
-    metadata: await resolveTopicReasoningSnapshot({
-      deps,
-      heterogeneousProvider,
-      isHeteroTopic: !!heteroType,
-      model,
-      provider,
-    }),
+    metadata: resolveTopicReasoningSnapshot({ heterogeneousProvider }),
     model: heteroModel?.model ?? (heteroType ? undefined : model),
     provider: heteroModel?.provider ?? heteroType ?? provider,
   };
@@ -348,7 +312,6 @@ export interface TurnSetupResult {
   heterogeneousProvider?: NonNullable<AgentConfigWithId['agencyConfig']>['heterogeneousProvider'];
   heteroType: HeterogeneousAgentType;
   isFixedDeviceTarget: boolean;
-  isHeteroAgent: boolean;
   /** Effective model/provider after the topic-pinned model is applied. */
   model: string;
   /** Topic-pinned model + reasoning effort for a heterogeneous run (reused topics only). */
@@ -431,7 +394,19 @@ export const setupTurn = async (
   // getTopicModelById).
   let model = agentConfig.model!;
   let provider = agentConfig.provider!;
-  const heterogeneousProvider = agentConfig.agencyConfig?.heterogeneousProvider;
+  // Execution binding: explicit `heterogeneousProvider` wins, a legacy hetero
+  // `model` id keeps raw CLI semantics, everything else defaults to the
+  // builtin 'orvilo' ACP harness. A synthesized binding is written back onto
+  // the run-scoped agentConfig so every downstream
+  // `agencyConfig.heterogeneousProvider` read (device/sandbox split, topic
+  // model pin, env credentials) observes the same resolved binding.
+  const executionBinding = resolveExecutionBinding(agentConfig, model);
+  if (executionBinding.synthesized)
+    agentConfig.agencyConfig = {
+      ...agentConfig.agencyConfig,
+      heterogeneousProvider: executionBinding.heterogeneousProvider,
+    };
+  const heterogeneousProvider = executionBinding.heterogeneousProvider;
   let pinnedHeterogeneousTopicModel: HeterogeneousTopicPin | undefined;
 
   if (!topicId) {
@@ -470,7 +445,7 @@ export const setupTurn = async (
     };
 
     const fallbackTitleSource = markdownToTxt(prompt);
-    const snapshot = await resolveNewTopicSnapshot(deps, agentConfig);
+    const snapshot = resolveNewTopicSnapshot(agentConfig);
     const metadataWithSnapshot: ChatTopicMetadata | undefined =
       metadata || snapshot.metadata ? { ...metadata, ...snapshot.metadata } : undefined;
     // Second argument: the id the client already rendered this topic under
@@ -605,12 +580,10 @@ export const setupTurn = async (
     !!botContext,
   );
 
-  // Hetero detection: prefer agencyConfig.heterogeneousProvider.type (set by
-  // the UI), fall back to the legacy `model` field for backwards compatibility
-  // (shared with the inbox write guard via `isHeterogeneousAgentModelId`).
-  const heteroProviderType = agentConfig.agencyConfig?.heterogeneousProvider?.type;
-  const isHeteroAgent = !!heteroProviderType || isHeterogeneousAgentModelId(model);
-  const heteroType = (heteroProviderType ?? model) as HeterogeneousAgentType;
+  // Every run is an ACP run — the execution binding was resolved above
+  // (explicit provider, legacy hetero model id, or the builtin 'orvilo'
+  // harness default).
+  const heteroType = executionBinding.heteroType;
 
   // ── Shared turn setup (runs for BOTH hetero and normal agents) ──────────
   const requestTriggerMetadata = {
@@ -746,14 +719,14 @@ export const setupTurn = async (
         // (MessageModel.query filters group chats by messages.groupId).
         groupId: appContext?.groupId ?? undefined,
         metadata: orchestrationMetadata,
-        model: isHeteroAgent ? undefined : model,
+        model: undefined,
         // Chain onto the user turn we just persisted; `parentMessageId` is the
         // anchor only on a resume, where no user message is created. A batch
         // approval overrides it with the assistant that emitted the batch — the
         // previous LLM call — so the spine stays one node per call and never
         // depends on which of the batch's tool rows the client sent as anchor.
         parentId: assistantParentId,
-        provider: isHeteroAgent ? heteroType : provider,
+        provider: heteroType,
         role: 'assistant',
         threadId: appContext?.threadId ?? undefined,
         topicId,
@@ -766,36 +739,10 @@ export const setupTurn = async (
   selfMessageIds.add(assistantMessageRecord.id);
   log('execAgent: created assistant message %s', assistantMessageRecord.id);
 
-  // Agent Signal is a governance side-channel (feedback / self-iteration). It
-  // only applies to the server-side LLM pipeline, so it is intentionally NOT
-  // enqueued for hetero runs (which hand off to an external CLI). Skip when this
-  // invocation is itself an Agent Signal background run to avoid recursion.
-  if (
-    userMessageRecord &&
-    !isHeteroAgent &&
-    !shouldSuppressSignal({ appContext, slug: agentSlug ?? undefined })
-  ) {
-    void enqueueAgentSignalSourceEvent(
-      {
-        payload: {
-          agentId: resolvedAgentId,
-          message: prompt,
-          messageId: userMessageRecord.id,
-          threadId: appContext?.threadId ?? undefined,
-          topicId,
-          trigger,
-        },
-        sourceId: userMessageRecord.id,
-        sourceType: 'agent.user.message',
-      },
-      {
-        agentId: resolvedAgentId,
-        userId: deps.userId,
-      },
-    ).catch((error) => {
-      log('execAgent: failed to enqueue user message Agent Signal source event: %O', error);
-    });
-  }
+  // Agent Signal's `agent.user.message` source event fed the retired
+  // server-side LLM pipeline; ACP runs emit their lifecycle through
+  // `services/agentExecution` instead, so no source event is enqueued here.
+  // The signal workflow consumes run events from the ACP lifecycle directly.
 
   return {
     assistantMessageId: assistantMessageRecord.id,
@@ -805,7 +752,6 @@ export const setupTurn = async (
     heteroType,
     heterogeneousProvider,
     isFixedDeviceTarget,
-    isHeteroAgent,
     model,
     pinnedHeterogeneousTopicModel,
     provider,

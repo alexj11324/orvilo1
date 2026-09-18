@@ -146,3 +146,13 @@ export const mapFeedWithLiveActions = (
     toFeedCard(row, row.actionRequestId ? live.get(row.actionRequestId) : undefined),
   );
 };
+
+export const overlayLiveTitles = (
+  cards: NotificationFeedCard[],
+  titles: Map<string, string>,
+): NotificationFeedCard[] =>
+  cards.map((card) => {
+    if (!card.resourceType || !card.resourceId) return card;
+    const live = titles.get(`${card.resourceType}:${card.resourceId}`);
+    return live ? { ...card, title: live } : card;
+  });

@@ -6,7 +6,7 @@ import type { AgentInterventionItem } from '@/database/schemas/agentIntervention
 import type { WorkspaceOwnershipTransferItem } from '@/database/schemas/workspace';
 import type { OrviloDatabase } from '@/database/type';
 
-import { ActionSourceRegistry } from '../actionSources';
+import { ActionSourceRegistry, settleSourceLoads } from '../actionSources';
 
 const { cancelOwnershipTransfer, resolveAgentInterventionBySource, respondOwnershipTransfer } =
   vi.hoisted(() => ({
@@ -238,5 +238,23 @@ describe('ActionSourceRegistry ACP intervention', () => {
         title: 'Review tool',
       }),
     ]);
+  });
+});
+
+describe('settleSourceLoads', () => {
+  it('keeps successful groups when one source throws instead of emptying the feed', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const settled = await settleSourceLoads([
+      { kinds: ['acp_permission', 'task_review'], load: async () => [{ id: 'ok' }] },
+      {
+        kinds: ['resource_transfer'],
+        load: async () => {
+          throw new Error('transfer source down');
+        },
+      },
+    ]);
+    error.mockRestore();
+    expect(settled.items).toEqual([{ id: 'ok' }]);
+    expect(settled.unavailable).toEqual(['resource_transfer']);
   });
 });

@@ -127,6 +127,20 @@ export interface NotificationFeedSummary {
   unreadUpdateCount: number;
 }
 
+/**
+ * Inbox page payload. `partial` means at least one live source failed to
+ * load — remaining cards are still authoritative, not an empty success.
+ */
+export interface NotificationFeedPage {
+  cards: NotificationFeedCard[];
+  lastReconciledAt: string;
+  partial: boolean;
+  sourceUnavailable: ActionSourceKind[];
+}
+
+/** CommandMenu / work search bound so 200 teams stay reachable. */
+export const WORK_SEARCH_MAX_PER_TYPE = 200;
+
 export type WorkQueryEntityType = 'project' | 'task';
 
 export type WorkQueryField =

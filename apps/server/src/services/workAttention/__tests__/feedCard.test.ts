@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { NotificationItem } from '@/database/schemas/notification';
 
-import { safeInboxActionUrl, toFeedCard } from '../feedCard';
+import { overlayLiveTitles, safeInboxActionUrl, toFeedCard } from '../feedCard';
 
 const row = (overrides: Partial<NotificationItem> = {}): NotificationItem =>
   ({
@@ -160,5 +160,20 @@ describe('toFeedCard', () => {
       }),
     );
     expect(card.safeNavigation).toEqual({ kind: 'inbox' });
+  });
+});
+
+describe('overlayLiveTitles', () => {
+  it('replaces a stored title when the live map has that resource', () => {
+    const cards = overlayLiveTitles(
+      [toFeedCard(row({ title: 'Old name' }))],
+      new Map([['task:t1', 'Live name']]),
+    );
+    expect(cards[0]?.title).toBe('Live name');
+  });
+
+  it('leaves the stored title when the live map has no match', () => {
+    const cards = overlayLiveTitles([toFeedCard(row({ title: 'Old name' }))], new Map());
+    expect(cards[0]?.title).toBe('Old name');
   });
 });

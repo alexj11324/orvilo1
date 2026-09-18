@@ -112,6 +112,22 @@ const mapInterventionAction = (
   return null;
 };
 
+export const settleSourceLoads = async <T>(
+  groups: Array<{ kinds: ActionSourceKind[]; load: () => Promise<T[]> }>,
+): Promise<{ items: T[]; unavailable: ActionSourceKind[] }> => {
+  const items: T[] = [];
+  const unavailable: ActionSourceKind[] = [];
+  for (const group of groups) {
+    try {
+      items.push(...(await group.load()));
+    } catch (error) {
+      console.error('[ActionSourceRegistry] source unavailable', group.kinds, error);
+      unavailable.push(...group.kinds);
+    }
+  }
+  return { items, unavailable };
+};
+
 /**
  * Inbox adapters over existing approval / input / transfer / intervention
  * services. There is no generic execute(notification.payload) endpoint.
@@ -142,11 +158,34 @@ export class ActionSourceRegistry {
   /**
    * Live source requests the actor can still decide, even when the
    * notification projection is missing or an old client archived the card.
+   * A down source is recorded in `unavailable` instead of emptying the feed.
    */
-  listPendingForActor = async (): Promise<PendingSourceCard[]> => {
-    const cards: PendingSourceCard[] = [];
+  listPendingForActorSettled = async (): Promise<{
+    pending: PendingSourceCard[];
+    unavailable: ActionSourceKind[];
+  }> => {
     const now = new Date();
+    const groups: Array<{ kinds: ActionSourceKind[]; load: () => Promise<PendingSourceCard[]> }> = [
+      { kinds: ['acp_permission', 'task_review'], load: () => this.loadApprovalCards() },
+    ];
+    if (this.workspaceId) {
+      groups.push({ kinds: ['resource_transfer'], load: () => this.loadTransferCards() });
+      groups.push({
+        kinds: ['workspace_ownership_transfer'],
+        load: () => this.loadOwnershipCards(now),
+      });
+    }
+    groups.push({ kinds: ['acp_intervention'], load: () => this.loadInterventionCards(now) });
+    const settled = await settleSourceLoads(groups);
+    return { pending: settled.items, unavailable: settled.unavailable };
+  };
 
+  listPendingForActor = async (): Promise<PendingSourceCard[]> => {
+    return (await this.listPendingForActorSettled()).pending;
+  };
+
+  private loadApprovalCards = async (): Promise<PendingSourceCard[]> => {
+    const cards: PendingSourceCard[] = [];
     for (const row of await this.listPendingApprovals()) {
       cards.push({
         actionKind: row.actionType === 'task_review' ? 'task_review' : 'acp_permission',
@@ -163,66 +202,69 @@ export class ActionSourceRegistry {
         title: 'Approval required',
       });
     }
+    return cards;
+  };
 
-    if (this.workspaceId) {
-      const transfers = await new ResourceTransferRequestModel(
-        this.db,
-        this.workspaceId,
-      ).listPendingForUser(this.userId);
-      for (const row of transfers) {
-        cards.push({
-          actionKind: 'resource_transfer',
-          content:
-            row.initiatorId === this.userId
-              ? 'Waiting for the recipient. You can withdraw this transfer.'
-              : 'Resource transfer request',
-          outgoing: row.initiatorId === this.userId,
-          requestId: row.id,
-          resourceId: row.resourceId,
-          resourceType: row.resourceType,
-          sourceRevision: row.id,
-          title:
-            row.initiatorId === this.userId
-              ? 'Outgoing resource transfer'
-              : 'Resource transfer request',
-        });
-      }
+  private loadTransferCards = async (): Promise<PendingSourceCard[]> => {
+    if (!this.workspaceId) return [];
+    const transfers = await new ResourceTransferRequestModel(
+      this.db,
+      this.workspaceId,
+    ).listPendingForUser(this.userId);
+    return transfers.map((row) => ({
+      actionKind: 'resource_transfer' as const,
+      content:
+        row.initiatorId === this.userId
+          ? 'Waiting for the recipient. You can withdraw this transfer.'
+          : 'Resource transfer request',
+      outgoing: row.initiatorId === this.userId,
+      requestId: row.id,
+      resourceId: row.resourceId,
+      resourceType: row.resourceType,
+      sourceRevision: row.id,
+      title:
+        row.initiatorId === this.userId
+          ? 'Outgoing resource transfer'
+          : 'Resource transfer request',
+    }));
+  };
 
-      const ownershipRows = await this.db
-        .select()
-        .from(workspaceOwnershipTransfers)
-        .where(
-          and(
-            eq(workspaceOwnershipTransfers.workspaceId, this.workspaceId),
-            eq(workspaceOwnershipTransfers.status, 'pending'),
-            gt(workspaceOwnershipTransfers.expiresAt, now),
-            or(
-              eq(workspaceOwnershipTransfers.fromUserId, this.userId),
-              eq(workspaceOwnershipTransfers.toUserId, this.userId),
-            ),
+  private loadOwnershipCards = async (now: Date): Promise<PendingSourceCard[]> => {
+    if (!this.workspaceId) return [];
+    const ownershipRows = await this.db
+      .select()
+      .from(workspaceOwnershipTransfers)
+      .where(
+        and(
+          eq(workspaceOwnershipTransfers.workspaceId, this.workspaceId),
+          eq(workspaceOwnershipTransfers.status, 'pending'),
+          gt(workspaceOwnershipTransfers.expiresAt, now),
+          or(
+            eq(workspaceOwnershipTransfers.fromUserId, this.userId),
+            eq(workspaceOwnershipTransfers.toUserId, this.userId),
           ),
-        )
-        .limit(PENDING_SOURCE_LIMIT);
-      for (const row of ownershipRows) {
-        cards.push({
-          actionKind: 'workspace_ownership_transfer',
-          content:
-            row.fromUserId === this.userId
-              ? 'Waiting for the invited member. You can cancel this transfer.'
-              : 'Workspace ownership transfer request',
-          outgoing: row.fromUserId === this.userId,
-          requestId: row.id,
-          resourceId: row.workspaceId,
-          resourceType: 'workspace',
-          sourceRevision: row.id,
-          title:
-            row.fromUserId === this.userId
-              ? 'Outgoing ownership transfer'
-              : 'Workspace ownership transfer request',
-        });
-      }
-    }
+        ),
+      )
+      .limit(PENDING_SOURCE_LIMIT);
+    return ownershipRows.map((row) => ({
+      actionKind: 'workspace_ownership_transfer' as const,
+      content:
+        row.fromUserId === this.userId
+          ? 'Waiting for the invited member. You can cancel this transfer.'
+          : 'Workspace ownership transfer request',
+      outgoing: row.fromUserId === this.userId,
+      requestId: row.id,
+      resourceId: row.workspaceId,
+      resourceType: 'workspace',
+      sourceRevision: row.id,
+      title:
+        row.fromUserId === this.userId
+          ? 'Outgoing ownership transfer'
+          : 'Workspace ownership transfer request',
+    }));
+  };
 
+  private loadInterventionCards = async (now: Date): Promise<PendingSourceCard[]> => {
     const interventionRows = await this.db
       .select()
       .from(agentInterventions)
@@ -237,18 +279,14 @@ export class ActionSourceRegistry {
         ),
       )
       .limit(PENDING_SOURCE_LIMIT);
-    for (const row of interventionRows) {
-      cards.push({
-        actionKind: 'acp_intervention',
-        content:
-          row.reviewContext.summary ?? row.sanitizedRequest.prompt ?? 'Agent needs your review',
-        requestId: row.id,
-        sourceRevision: row.version,
-        title: row.reviewContext.title || 'Agent needs your review',
-      });
-    }
-
-    return cards;
+    return interventionRows.map((row) => ({
+      actionKind: 'acp_intervention' as const,
+      content:
+        row.reviewContext.summary ?? row.sanitizedRequest.prompt ?? 'Agent needs your review',
+      requestId: row.id,
+      sourceRevision: row.version,
+      title: row.reviewContext.title || 'Agent needs your review',
+    }));
   };
 
   ensurePendingSourceCards = async (notificationModel: NotificationModel) => {
@@ -260,7 +298,7 @@ export class ActionSourceRegistry {
    * can only withdraw. Those cards still sit in `unreadBadgeCount`.
    */
   summarizeFeed = async (notificationModel: NotificationModel) => {
-    const pending = await this.listPendingForActor();
+    const { pending } = await this.listPendingForActorSettled();
     await notificationModel.ensureActionCards(pending);
     return notificationModel.getFeedSummary({
       excludePendingActionRequestIds: pending

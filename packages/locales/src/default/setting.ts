@@ -3698,7 +3698,7 @@ When I am ___, I need ___
   'workspaceSetting.members.inviteTitle': 'Invite teammates',
   'workspaceSetting.members.leave': 'Leave workspace',
   'workspaceSetting.members.leaveConfirmContent':
-    'You will lose access to {{name}} and its projects. Tasks assigned to you become unassigned. Rejoining requires a new invitation.',
+    'You will lose access to {{name}} and its projects. Tasks you were assigned or reviewing become unassigned. Rejoining requires a new invitation.',
   'workspaceSetting.members.leaveConfirmTitle': 'Leave {{name}}?',
   'workspaceSetting.members.leaveOwnerHint': 'Transfer ownership before leaving this workspace.',
   'workspaceSetting.members.leaveSuccess': 'You have left the workspace.',

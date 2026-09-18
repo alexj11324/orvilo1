@@ -3308,7 +3308,7 @@
   "workspaceSetting.members.inviteSent": "邀请已发送至 {{email}}",
   "workspaceSetting.members.inviteTitle": "邀请队友",
   "workspaceSetting.members.leave": "退出工作区",
-  "workspaceSetting.members.leaveConfirmContent": "退出后将无法再访问「{{name}}」及其项目，分配给你的任务将变为未分配。重新加入需要新的邀请。",
+  "workspaceSetting.members.leaveConfirmContent": "退出后将无法再访问「{{name}}」及其项目，分配给你或由你审核的任务将变为未分配。重新加入需要新的邀请。",
   "workspaceSetting.members.leaveConfirmTitle": "退出「{{name}}」？",
   "workspaceSetting.members.leaveOwnerHint": "请先转让所有权，再退出该工作区。",
   "workspaceSetting.members.leaveSuccess": "已退出工作区。",

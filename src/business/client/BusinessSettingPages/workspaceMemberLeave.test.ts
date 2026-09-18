@@ -1,10 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { runLeaveWorkspace } from './workspaceMemberLeave';
 
 const mocks = vi.hoisted(() => ({ mutate: vi.fn() }));
 
 vi.mock('@/libs/swr', () => ({ mutate: mocks.mutate }));
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('runLeaveWorkspace', () => {
   it('drops the cached workspace list before exiting to personal mode', async () => {

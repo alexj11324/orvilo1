@@ -469,15 +469,25 @@ jobs:
       - name: Verify every required job succeeded for this commit
         env:
           NEEDS: ${{ toJson(needs) }}
+          GH_TOKEN: ${{ github.token }}
+          # How long a duplicate-skipped gate waits for the owning run's
+          # verdict before failing closed. Must exceed the full test suite.
+          GATE_MIRROR_TIMEOUT: '2700'
+          # pull_request runs evaluate the merge ref — gate check runs for the
+          # owning push run live on the head SHA.
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           # Only `skip_after_successful_duplicate` may turn the gate green: it
           # means an identical tree already produced a genuinely-executed green
           # run, whose check run covers this SHA. Concurrent skips
-          # (`same_content*`/`outdated_*`) mean the real run is still in flight
-          # — recording a synthetic success here would let a later
-          # `skip_after_successful_duplicate` reuse it even if the real run
-          # then fails. Fail closed and let the newer run own the gate.
+          # (`same_content*`/`outdated_*`) mean a newer in-flight run owns the
+          # gate — failing here would leave a permanent red check run on this
+          # SHA that outlives the owner's green (required checks take the
+          # latest completed run per name), and a synthetic success would let a
+          # later `skip_after_successful_duplicate` reuse it even if the real
+          # run then fails. So wait for the owner's verdict and mirror it:
+          # green mirrors green, red mirrors red, no verdict in time fails.
           if [ "$(echo "$NEEDS" | jq -r '.["check-duplicate-run"].outputs.should_skip')" = "true" ]; then
             reason="$(echo "$NEEDS" | jq -r '.["check-duplicate-run"].outputs.skip_reason')"
             echo "Duplicate skip reason: ${reason:-unknown}"
@@ -485,8 +495,39 @@ jobs:
               echo "An identical run already executed green for this SHA's tree — reusing its gate."
               exit 0
             fi
-            echo "::error::Concurrent duplicate skip — the newer in-flight run owns the gate for this SHA."
-            exit 1
+            echo "Concurrent duplicate skip — waiting for the owning run's Required Quality Gate verdict."
+            deadline=$(( $(date +%s) + GATE_MIRROR_TIMEOUT ))
+            while :; do
+              # This job's own check run is still in_progress (conclusion null)
+              # and never matches the filter. A 'cancelled'/'neutral' verdict
+              # is not a verdict — it usually means an even newer run started,
+              # so keep waiting rather than mirroring a non-answer.
+              if ! verdict=$(gh api \
+                "repos/${{ github.repository }}/commits/${HEAD_SHA}/check-runs?per_page=100" \
+                --jq '[.check_runs[] | select(.name == "Required Quality Gate" and .conclusion != null)]
+                      | map(select(.conclusion == "success" or .conclusion == "failure"
+                          or .conclusion == "timed_out" or .conclusion == "action_required"))
+                      | sort_by(.completed_at) | last | .conclusion // ""' 2>&1); then
+                echo "Check-runs API call failed; retrying in 30s: $verdict"
+                verdict=''
+              fi
+              case "$verdict" in
+                success)
+                  echo "Owning run's gate succeeded — mirroring green."
+                  exit 0
+                  ;;
+                failure|timed_out|action_required)
+                  echo "::error::Owning run's gate concluded '${verdict}' — mirroring the failure."
+                  exit 1
+                  ;;
+              esac
+              if [ "$(date +%s)" -ge "$deadline" ]; then
+                echo "::error::Timed out waiting for the owning run's Required Quality Gate verdict — failing closed."
+                exit 1
+              fi
+              echo "Owning run's gate not concluded yet; waiting 30s…"
+              sleep 30
+            done
           fi
 
           required=(

@@ -32,6 +32,30 @@ const FALLBACK_STATE: MockLLMState = {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * `generateObject` callers (topic title, skill metadata, …) send OpenAI
+ * `response_format: {type:'json_schema'|'json_object'}`. Synthesize a minimal
+ * valid instance of the requested schema so structured-output parsing succeeds
+ * instead of every generateObject call erroring into a null fallback.
+ */
+const synthesizeJsonResponse = (responseFormat: unknown): string | undefined => {
+  const format = responseFormat as
+    { json_schema?: { schema?: Record<string, unknown> }; type?: string } | undefined;
+  if (!format || (format.type !== 'json_schema' && format.type !== 'json_object')) return undefined;
+
+  const schema = format.json_schema?.schema as
+    { properties?: Record<string, { type?: string }>; required?: string[] } | undefined;
+
+  const out: Record<string, string> = {};
+  const props = schema?.properties ?? {};
+  const required = schema?.required ?? Object.keys(props);
+  for (const key of required.length ? required : Object.keys(props)) {
+    if (props[key] || required.includes(key)) out[key] = `e2e-${key}`;
+  }
+  if (Object.keys(out).length === 0) out['title'] = 'e2e-title';
+  return JSON.stringify(out);
+};
+
 const openAiChunk = (id: string, model: string, delta: Record<string, unknown>) =>
   `data: ${JSON.stringify({
     choices: [{ delta, finish_reason: null, index: 0 }],
@@ -43,12 +67,18 @@ const openAiChunk = (id: string, model: string, delta: Record<string, unknown>) 
 
 const writeChatCompletions = async (
   res: http.ServerResponse,
-  body: { messages?: MockLLMChatMessage[]; model?: string; stream?: boolean },
+  body: {
+    messages?: MockLLMChatMessage[];
+    model?: string;
+    response_format?: unknown;
+    stream?: boolean;
+  },
 ): Promise<void> => {
   const state = readMockLLMState() ?? FALLBACK_STATE;
   const messages = body.messages ?? [];
   const model = body.model ?? 'deepseek-v4-flash';
-  const content = resolveMockResponse(messages, state);
+  const content =
+    synthesizeJsonResponse(body.response_format) ?? resolveMockResponse(messages, state);
   const id = `chatcmpl-e2e-${Date.now()}`;
 
   if (!state.config.enabled) {

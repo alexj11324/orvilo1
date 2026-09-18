@@ -39,6 +39,10 @@ env:
   AGENT_GATEWAY_SERVICE_TOKEN: e2e-mock-service-token
   DEEPSEEK_API_KEY: e2e-mock-key
   DEEPSEEK_PROXY_URL: http://localhost:3406/v1
+  # Mini-model calls (topic titles, summaries) resolve to the openai provider —
+  # same mock endpoint.
+  OPENAI_API_KEY: e2e-mock-key
+  OPENAI_PROXY_URL: http://localhost:3406/v1
   E2E_MOCK_LLM_PORT: '3406'
   E2E_MOCK_GATEWAY_PORT: '3407'
 

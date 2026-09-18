@@ -300,6 +300,9 @@ function getServerEnv(port: number): Record<string, string> {
     AGENT_GATEWAY_URL: 'http://localhost:3407',
     DEEPSEEK_API_KEY: 'e2e-mock-key',
     DEEPSEEK_PROXY_URL: 'http://localhost:3406/v1',
+    // Mini-model calls (topic titles, summaries) resolve to openai — same mock.
+    OPENAI_API_KEY: 'e2e-mock-key',
+    OPENAI_PROXY_URL: 'http://localhost:3406/v1',
     ENABLE_AGENT_GATEWAY: '1',
     E2E_MOCK_GATEWAY_PORT: '3407',
     E2E_MOCK_LLM_PORT: '3406',

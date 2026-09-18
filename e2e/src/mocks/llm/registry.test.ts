@@ -214,6 +214,34 @@ describe('mock LLM server', () => {
     }
   });
 
+  it('synthesizes a schema-valid JSON object for response_format requests', async () => {
+    const { startMockLLMServer } = await importServer();
+    const server = await startMockLLMServer(0);
+    const port = (server.address() as AddressInfo).port;
+
+    try {
+      const res = await requestJson(port, '/v1/chat/completions', {
+        messages: [{ content: 'title this', role: 'user' }],
+        model: 'gpt-5.6-luna',
+        response_format: {
+          json_schema: {
+            schema: {
+              properties: { summary: { type: 'string' }, title: { type: 'string' } },
+              required: ['title'],
+              type: 'object',
+            },
+          },
+          type: 'json_schema',
+        },
+      });
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(JSON.parse(json.choices[0].message.content)).toEqual({ title: 'e2e-title' });
+    } finally {
+      server.close();
+    }
+  });
+
   it('returns 503 when the mock is disabled', async () => {
     const registry = await importRegistry();
     registry.persistMockLLMConfig({

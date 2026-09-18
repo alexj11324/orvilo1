@@ -8,53 +8,76 @@
 
 ## 一、已配置
 
-| Secret                                                      | 用途              | 备注                                  |
-| ----------------------------------------------------------- | ----------------- | ------------------------------------- |
-| `APPLE_TEAM_ID`                                             | `72UN4PF4BL`      | 从证书的 OU 字段读出，两个证书一致    |
-| `RENDERER_OTA_PRIVATE_KEY`                                  | renderer OTA 签名 | **Ed25519 / PEM**，见下方「OTA 密钥」 |
-| `RENDERER_OTA_PUBLIC_KEY`                                   | 客户端验签        | 同一密钥对的公钥                      |
-| `ORACLE_HOST` / `ORACLE_SSH_KEY` / `ORACLE_SSH_KNOWN_HOSTS` | 生产部署          | 已验证可用（部署管线在跑）            |
-| `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID`      | Vercel preview    | 已验证可用                            |
-| `PREVIEW_*`                                                 | Preview 数据库    | 已验证可用                            |
-| `VERCEL_AUTOMATION_BYPASS_SECRET`                           | 绕过 Vercel 保护  | —                                     |
+| Secret                                                      | 用途                                      | 备注                                          |
+| ----------------------------------------------------------- | ----------------------------------------- | --------------------------------------------- |
+| `APPLE_TEAM_ID`                                             | `72UN4PF4BL`                              | 从证书的 OU 字段读出，两个证书一致            |
+| `RENDERER_OTA_PRIVATE_KEY`                                  | renderer OTA 签名                         | **Ed25519 / PEM**，见下方「OTA 密钥」         |
+| `RENDERER_OTA_PUBLIC_KEY`                                   | 客户端验签                                | 同一密钥对的公钥                              |
+| `ORACLE_HOST` / `ORACLE_SSH_KEY` / `ORACLE_SSH_KNOWN_HOSTS` | 生产部署                                  | 已验证可用（部署管线在跑）                    |
+| `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID`      | Vercel preview                            | 已验证可用                                    |
+| `PREVIEW_*`                                                 | Preview 数据库                            | 已验证可用                                    |
+| `VERCEL_AUTOMATION_BYPASS_SECRET`                           | 绕过 Vercel 保护                          | —                                             |
+| `APPLE_CERTIFICATE_BASE64`                                  | Developer ID Application `.p12`（base64） | **仅含该证书**，导出方法见下                  |
+| `APPLE_CERTIFICATE_PASSWORD`                                | 上述 `.p12` 的密码                        | GSM 备份 `orvilo-apple-developer-id-password` |
+
+### ⚠️ Apple 证书的导出方式（照抄网上常见写法会泄露私钥）
+
+**`security export -t identities` 不理会你传入的 certFile 参数** —— 它把 Keychain 里
+**所有**带私钥的身份一起打进同一个 `.p12`。实测导出的文件里有 **5 个身份**：
+
+```
+[0] ExpressVPN Client                                    ← 无关，含私钥
+[1] Apple Development: Alex Jiang (FW25BG3MY2)           ← 无关
+[2] Developer ID Application: Alex Jiang (72UN4PF4BL)    ← 要的是这个
+[3] Alex Jiang (zhixuanj@andrew.cmu.edu)                 ← 邮件证书，含私钥
+[4] Zhixuan Jiang (zhixuanj@andrew.cmu.edu)              ← 邮件证书，含私钥
+```
+
+直接把它 base64 上传到 GitHub Secrets，等于**把 ExpressVPN 客户端证书和邮件证书的私钥一并交出**。
+必须导出后按**公钥指纹**提取，只重新打包需要的那一对。
+
+另一个坑：`security export` 用 **RC2-40-CBC** 加密，**OpenSSL 3 默认不认**（报
+`Algorithm (RC2-40-CBC : 0) unsupported`）。校验要用系统的 `/usr/bin/openssl`（LibreSSL）。
+这不影响 CI —— 构建跑在 macOS runner 上，`security import` 原生支持该格式。
+
+```bash
+PASS='自己设一个强密码'
+
+# 1. 导出（会弹一次授权窗口，点「允许」）
+security find-certificate -c "Developer ID Application" -p > /tmp/ok-cert.pem
+security export -t identities -f pkcs12 -P "$PASS" -o /tmp/all.p12 /tmp/ok-cert.pem
+
+# 2. 解出所有私钥，按公钥指纹找出与目标证书配对的那一把
+/usr/bin/openssl pkcs12 -in /tmp/all.p12 -passin pass:"$PASS" -nodes -out /tmp/all.pem
+awk 'BEGIN{n=0;f=""} /-----BEGIN PRIVATE KEY-----/{n++; f="/tmp/k-"n".pem"} f{print > f} /-----END PRIVATE KEY-----/{f=""}' /tmp/all.pem
+CERT_FP=$(/usr/bin/openssl x509 -in /tmp/ok-cert.pem -noout -pubkey | /usr/bin/openssl pkey -pubin -outform der | shasum -a 256 | cut -d' ' -f1)
+for k in /tmp/k-*.pem; do
+  [ "$(/usr/bin/openssl pkey -in "$k" -pubout -outform der | shasum -a 256 | cut -d' ' -f1)" = "$CERT_FP" ] && MATCH="$k"
+done
+
+# 3. 只重新打包这一对
+/usr/bin/openssl pkcs12 -export -inkey "$MATCH" -in /tmp/ok-cert.pem -out /tmp/only.p12 -passout pass:"$PASS"
+
+# 4. 断言确实只有 1 证书 1 私钥 —— 这一步不能省
+/usr/bin/openssl pkcs12 -in /tmp/only.p12 -passin pass:"$PASS" -nokeys 2> /dev/null | grep -c 'BEGIN CERTIFICATE'         # 期望 1
+/usr/bin/openssl pkcs12 -in /tmp/only.p12 -passin pass:"$PASS" -nocerts -nodes 2> /dev/null | grep -c 'BEGIN PRIVATE KEY' # 期望 1
+
+# 5. 上传，然后立刻清理（中间文件含无关私钥）
+base64 -i /tmp/only.p12 | gh secret set APPLE_CERTIFICATE_BASE64 --repo alexj11324/orvilo1
+gh secret set APPLE_CERTIFICATE_PASSWORD --repo alexj11324/orvilo1 <<< "$PASS"
+/bin/rm -f /tmp/all.p12 /tmp/all.pem /tmp/k-*.pem /tmp/only.p12 /tmp/ok-cert.pem
+```
+
+> 交互式导出私钥必须有人的授权确认 —— 非交互环境会得到
+> `security: SecKeychainItemExport: User canceled the operation.`
 
 ## 二、仍需提供
 
 按「获取难度」排序。
 
-### 1. Apple 代码签名证书（解锁 macOS 分发）
-
-| Secret                       | 值                                                  |
-| ---------------------------- | --------------------------------------------------- |
-| `APPLE_CERTIFICATE_BASE64`   | Developer ID Application 证书的 `.p12`，base64 编码 |
-| `APPLE_CERTIFICATE_PASSWORD` | 导出 `.p12` 时你设置的密码                          |
-
-**为什么不能自动导出**：`security export` 需要 Keychain 的私钥授权，非交互环境拿不到 —— 实测报
-`security: SecKeychainItemExport: User canceled the operation.`（弹窗无法点击，系统记为「取消」）。
-这是正确设计：私钥导出本就该有人确认。
-
-**导出（命令行，会弹一次授权窗口）**：
-
-```bash
-security export -t identities -f pkcs12 \
-  -P '<你自己设的密码>' \
-  -o ~/Desktop/orvilo-devid.p12 \
-  <(security find-certificate -c "Developer ID Application" -p)
-```
-
-或者用 GUI：Keychain Access → 找到 `Developer ID Application: Alex Jiang (72UN4PF4BL)` → 右键 Export。
-
-**上传**：
-
-```bash
-base64 -i ~/Desktop/orvilo-devid.p12 | gh secret set APPLE_CERTIFICATE_BASE64 --repo alexj11324/orvilo1
-gh secret set APPLE_CERTIFICATE_PASSWORD --repo alexj11324/orvilo1
-/bin/rm ~/Desktop/orvilo-devid.p12
-```
-
 > 证书有效期到 **2031-08-29**，五年内无需轮换。
 
-### 2. Notarization（公证）
+### 1. Notarization（公证）
 
 | Secret                        | 值                                        |
 | ----------------------------- | ----------------------------------------- |
@@ -66,7 +89,7 @@ gh secret set APPLE_CERTIFICATE_PASSWORD --repo alexj11324/orvilo1
 > 但那是 **App Store 分发**路线（`APP_DISTRIBUTION` / `APP_STORE_PROFILE`），且**不含 `.p8` 私钥**，
 > 对 Developer ID 分发不适用。所以走 Apple ID + app-specific password。
 
-### 3. npm 包发布
+### 2. npm 包发布
 
 | Secret      | 值                          |
 | ----------- | --------------------------- |
@@ -75,7 +98,7 @@ gh secret set APPLE_CERTIFICATE_PASSWORD --repo alexj11324/orvilo1
 影响 `release-sdk.yml` 与 `release-model-bank.yml`（`packages/sdk`、`packages/model-bank`）。
 **如果你不打算发布这两个包，可以保持停用** —— 它们与 Web/Desktop/Docker 发布无关。
 
-### 4. `GH_TOKEN`（可选）
+### 3. `GH_TOKEN`（可选）
 
 13 个 workflow 引用它，但**没有一个 active**。
 
@@ -86,7 +109,7 @@ gh secret set APPLE_CERTIFICATE_PASSWORD --repo alexj11324/orvilo1
 
 **建议**：等你确实要启用这些自动化时再创建，不必现在配。
 
-### 5. 其他（仅当要启用对应通道）
+### 4. 其他（仅当要启用对应通道）
 
 | Secret                                                      | 影响的 workflow             |
 | ----------------------------------------------------------- | --------------------------- |

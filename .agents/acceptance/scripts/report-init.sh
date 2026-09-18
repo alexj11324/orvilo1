@@ -2,7 +2,9 @@
 # report-init.sh — scaffold a structured test report under the report root
 # ($ACCEPTANCE_REPORT_ROOT, default ${TMPDIR:-/tmp}/orvilo-acceptance/reports).
 #
-# Format spec and evidence rules: ../references/report.md
+# Format spec and evidence rules: ../PROCESS.md (Step 5). The skill document that
+# used to define them, `references/report.md`, was retired with the standalone
+# acceptance platform.
 #
 # Usage:
 #   report-init.sh [--subject <type:id>] <slug> [title]

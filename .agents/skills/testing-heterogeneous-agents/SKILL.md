@@ -127,10 +127,10 @@ artifact per cell, and a structured matrix table under:
 ```
 
 Unless `--report-dir` selects another location. Inspect the report and evidence;
-do not infer success from the process exit code alone. Publish it with the clean
-production `lh acceptance run ingest` environment required by
-`.agents/acceptance/PROCESS.md`. Confirm that every matrix cell has its required
-text evidence and return only the stable Acceptance URL.
+do not infer success from the process exit code alone. Confirm that every matrix
+cell has its required text evidence, then attach the report to the PR (or publish
+it as a CI artifact) and name the commit SHA it was produced on. There is no
+standalone acceptance platform to publish to.
 
 ### 7. Diagnose failures at the owning layer
 

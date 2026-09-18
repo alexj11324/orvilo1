@@ -1,4 +1,3 @@
-import type { WorkspaceMemberItem } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -6,6 +5,7 @@ import {
   changeMemberRole,
   leaveWorkspace,
   listMemberSummaries,
+  type MemberSummary,
   previewMemberRemoval,
   removeMember,
   resumeMember,
@@ -21,15 +21,8 @@ import { issueInvitations, listInvitations } from '@/business/server/workspaceIn
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
-/** A membership row joined with the public profile of the member. */
-export interface WorkspaceMemberSummary extends WorkspaceMemberItem {
-  user: {
-    avatar: string | null;
-    email: string | null;
-    fullName: string | null;
-    username: string | null;
-  } | null;
-}
+/** A membership row joined with the member's profile and workload counters. */
+export type WorkspaceMemberSummary = MemberSummary;
 
 const wrapInternal = (domain: string, error: unknown): never => {
   if (error instanceof TRPCError) throw error;

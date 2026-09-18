@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { getNavigableRoutes, getRouteById, NAVIGATION_ROUTES } from './index';
+import {
+  DEAD_ROUTE_PREFIXES,
+  getNavigableRoutes,
+  getRouteById,
+  NAVIGATION_ROUTES,
+  RESERVED_RETIRED_ROOTS,
+  RETIRED_ROUTE_PREFIXES,
+} from './index';
 
 describe('NAVIGATION_ROUTES', () => {
   it('assigns a tier to every route', () => {
@@ -36,6 +43,47 @@ describe('NAVIGATION_ROUTES', () => {
     // missing key would render an empty label.
     for (const route of getNavigableRoutes()) {
       expect(route.cmdkKey).toBeTruthy();
+    }
+  });
+});
+
+describe('retired root paths', () => {
+  it('accounts for every retired prefix as a reserved root or a live one', () => {
+    // A retired prefix is either a reserved word the routers guard, or a prefix
+    // whose URLs still land on live product (`memory`, `apps`) and therefore
+    // already own a route. Anything else would be swallowed by `/:workspaceSlug`
+    // as if it were a workspace id.
+    const resolved = new Set([...RESERVED_RETIRED_ROOTS, 'memory', 'apps']);
+
+    for (const prefix of RETIRED_ROUTE_PREFIXES) {
+      expect(
+        resolved.has(prefix.replace(/^\//, '')),
+        `${prefix} is neither reserved nor live`,
+      ).toBe(true);
+    }
+  });
+
+  it('reserves the retired roots that no longer have a route of their own', () => {
+    // `/video` and `/image` are the two the workbench retirement deleted
+    // outright: nothing registers them any more, so without a guard the slug
+    // segment claims them.
+    expect(RESERVED_RETIRED_ROOTS).toContain('video');
+    expect(RESERVED_RETIRED_ROOTS).toContain('image');
+    expect(RESERVED_RETIRED_ROOTS).toContain('community');
+    expect(RESERVED_RETIRED_ROOTS).toContain('page');
+  });
+
+  it('never reserves a path whose URLs still resolve to live product', () => {
+    for (const root of RESERVED_RETIRED_ROOTS) {
+      expect(DEAD_ROUTE_PREFIXES.has(`/${root}`)).toBe(true);
+    }
+  });
+
+  it('spells reserved roots as bare segments', () => {
+    for (const root of RESERVED_RETIRED_ROOTS) {
+      expect(root).toBe(root.replace(/^\//, ''));
+      expect(root).not.toContain('/');
+      expect(root.length).toBeGreaterThan(0);
     }
   });
 });

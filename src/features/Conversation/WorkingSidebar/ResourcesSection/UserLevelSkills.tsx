@@ -1,20 +1,18 @@
-import { confirmModal, createModal, toast } from '@lobehub/ui/base-ui';
+import { createModal } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { t as translate } from 'i18next';
-import { EyeIcon, PencilIcon, Trash2Icon } from 'lucide-react';
+import { EyeIcon } from 'lucide-react';
 import type React from 'react';
 import { lazy, memo, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { startSkillDrag } from '@/features/ChatInput/InputEditor/ActionTag/skillDragData';
 import {
-  openRenameSkillModal,
   type SkillListItem,
   type SkillRowAction,
   SkillSection,
   SkillsList,
 } from '@/features/SkillsList';
-import { usePermission } from '@/hooks/usePermission';
 import { useToolStore } from '@/store/tool';
 import { agentSkillsSelectors } from '@/store/tool/selectors';
 
@@ -44,10 +42,10 @@ const openSkillDetailModal = (skillId: string) =>
   });
 
 /**
- * Reads user-installed skills (entries in the `agent_skill` table — market
- * imports plus user-created customs) into the `SkillsList` row shape. Builtin
- * tools and Orvilo MCP servers are intentionally excluded — those belong in
- * the Tools popover, not in the per-user skill inventory.
+ * Reads the skills already attached to the account (entries in the
+ * `agent_skill` table) into the `SkillsList` row shape. Builtin tools and
+ * Orvilo MCP servers are intentionally excluded — those belong in the Tools
+ * popover, not in the per-user skill inventory.
  *
  * Also triggers the underlying SWR fetch so the working sidebar surfaces the
  * data even when the Tools popover hasn't been opened in this session. The key
@@ -84,22 +82,19 @@ interface UserLevelSkillsProps {
 
 const UserLevelSkills = memo<UserLevelSkillsProps>(({ hideHeader }) => {
   const { t } = useTranslation('chat');
-  const { t: tCommon } = useTranslation('common');
 
   const items = useUserSkills();
-  // The row shape keys off `identifier`, but the store mutations key off the DB
-  // id — resolve one from the other through the raw skill list.
   const agentSkills = useToolStore(agentSkillsSelectors.getAgentSkills, isEqual);
-  const updateAgentSkill = useToolStore((s) => s.updateAgentSkill);
-  const deleteAgentSkill = useToolStore((s) => s.deleteAgentSkill);
-  const { allowed: canEdit } = usePermission('edit_own_content');
 
+  // Read-only inventory. Renaming and deleting platform skills went with the
+  // retired Skill-management chain, so the only actions left are opening the
+  // skill and dragging it into the composer.
   const getRowActions = useCallback(
     (item: SkillListItem): SkillRowAction[] => {
       const skill = agentSkills.find((s) => s.identifier === item.id);
       if (!skill) return [];
 
-      const actions: SkillRowAction[] = [
+      return [
         {
           icon: EyeIcon,
           key: 'view',
@@ -108,65 +103,8 @@ const UserLevelSkills = memo<UserLevelSkillsProps>(({ hideHeader }) => {
           sfSymbol: 'eye',
         },
       ];
-
-      // Only user-authored skills carry an editable name; market imports are
-      // pinned to their source manifest.
-      if (skill.source === 'user') {
-        actions.push({
-          disabled: !canEdit,
-          icon: PencilIcon,
-          key: 'rename',
-          label: t('workingPanel.skills.actions.rename'),
-          onClick: () => {
-            openRenameSkillModal({
-              currentName: skill.name,
-              onSubmit: async (newName) => {
-                try {
-                  await updateAgentSkill({ id: skill.id, name: newName });
-                  return undefined;
-                } catch (error) {
-                  return error instanceof Error
-                    ? error.message
-                    : t('workingPanel.skills.rename.error');
-                }
-              },
-            });
-          },
-          sfSymbol: 'pencil',
-        });
-      }
-
-      actions.push({
-        danger: true,
-        disabled: !canEdit,
-        icon: Trash2Icon,
-        key: 'delete',
-        label: t('workingPanel.skills.actions.delete'),
-        onClick: () => {
-          confirmModal({
-            cancelText: tCommon('cancel'),
-            content: t('workingPanel.skills.delete.userConfirm', { name: skill.name }),
-            okButtonProps: { danger: true },
-            okText: tCommon('delete'),
-            onOk: async () => {
-              try {
-                await deleteAgentSkill(skill.id);
-                toast.success(t('workingPanel.skills.delete.success'));
-              } catch (error) {
-                toast.error(
-                  error instanceof Error ? error.message : t('workingPanel.skills.delete.error'),
-                );
-              }
-            },
-            title: t('workingPanel.skills.delete.title'),
-          });
-        },
-        sfSymbol: 'trash',
-      });
-
-      return actions;
     },
-    [agentSkills, canEdit, deleteAgentSkill, t, tCommon, updateAgentSkill],
+    [agentSkills, t],
   );
 
   const onOpenSkill = useCallback(

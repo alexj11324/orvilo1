@@ -1,8 +1,8 @@
 'use client';
 
-import { ToolSettings } from '@/features/Settings/skill';
+import ConnectorSettings from '@/features/Settings/connector/ConnectorSettings';
 
-const WorkspaceConnectorSetting = () => <ToolSettings viewMode="connector" />;
+const WorkspaceConnectorSetting = () => <ConnectorSettings />;
 
 WorkspaceConnectorSetting.displayName = 'WorkspaceConnectorSetting';
 

@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import {
   agentBuilderKeys,
   documentCommentKeys,
-  isAcceptanceListKey,
   isDocumentCommentKeyForEvent,
   recentKeys,
   resourceKeys,
@@ -64,22 +63,30 @@ describe('recentKeys', () => {
   });
 });
 
-describe('isAcceptanceListKey', () => {
-  it('matches every Acceptance list variant without matching detail keys', () => {
-    expect(isAcceptanceListKey(['verify:acceptances', '', '', 'active'])).toBe(true);
-    expect(isAcceptanceListKey(['verify:acceptances', '100', 'needle', 'all', 'workspace-1'])).toBe(
-      true,
-    );
-    expect(isAcceptanceListKey(['verify:acceptanceBundle', 'acceptance-1'])).toBe(false);
+describe('retired acceptance collection keys', () => {
+  // The Acceptance list / page / status feeds were the standalone workspace's
+  // cache. They are retired with it, so no key builder may reappear — the
+  // persisted rows are purged by `swr/migrations/retiredKeys`.
+  it('no longer builds a key for the retired collection reads', () => {
+    expect(verifyKeys).not.toHaveProperty('acceptances');
+    expect(verifyKeys).not.toHaveProperty('acceptancePage');
+    expect(verifyKeys).not.toHaveProperty('acceptanceStatuses');
   });
 
-  it('keeps project-scoped acceptance feeds in separate cache entries', () => {
-    expect(verifyKeys.acceptances(undefined, undefined, 'all', 'project-1')).not.toEqual(
-      verifyKeys.acceptances(undefined, undefined, 'all', 'project-2'),
-    );
-    expect(verifyKeys.acceptancePage('workspace-1', 'all', 'project-1')).not.toEqual(
-      verifyKeys.acceptancePage('workspace-1', 'all', 'project-2'),
-    );
+  it('keeps the bundle / subject / purge-preview keys the task panel reads', () => {
+    expect(verifyKeys.acceptanceBundle('acceptance-1')).toEqual([
+      'verify:acceptanceBundle',
+      'acceptance-1',
+    ]);
+    expect(verifyKeys.acceptanceBySubject('task', 'T-1')).toEqual([
+      'verify:acceptanceBySubject',
+      'task',
+      'T-1',
+    ]);
+    expect(verifyKeys.acceptancePurgePreview('acceptance-1')).toEqual([
+      'verify:acceptancePurgePreview',
+      'acceptance-1',
+    ]);
   });
 });
 

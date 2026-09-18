@@ -9,13 +9,33 @@ import { type DeviceExecutionTarget, type HeterogeneousProviderConfig } from '@o
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 
 /**
+ * Error thrown when no runtime can execute an agent: the agent has no
+ * heterogeneous (ACP) provider binding and gateway mode is not enabled.
+ * Surfaces as an explicit configuration failure — there is no in-browser
+ * LLM fallback anymore.
+ */
+export const AGENT_BINDING_REQUIRED_ERROR =
+  'AGENT_BINDING_REQUIRED: This agent has no execution binding. Bind an ACP/heterogeneous agent or enable gateway mode.';
+
+/**
+ * Error thrown when a group supervisor turn cannot find an orchestrating
+ * runtime. Group orchestration (speak / broadcast / delegate / task fan-out)
+ * is driven by the server's `agentMember` runner; the in-browser
+ * GroupOrchestrationRuntime was retired with the client LLM runtime, so a
+ * supervisor turn MUST execute through Gateway. Without it there is no
+ * callback that can schedule member runs — better to fail the send loudly
+ * than let the supervisor's orchestration tools report fake success.
+ */
+export const GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR =
+  'GROUP_SUPERVISOR_REQUIRES_GATEWAY: Group orchestration requires gateway mode. Enable gateway mode for this agent to run a supervisor turn.';
+
+/**
  * Which agent runtime should handle an operation.
  *
- * - `client`: in-browser AgentRuntime (default)
  * - `gateway`: cloud sandbox via Gateway WebSocket
  * - `hetero`: heterogeneous CLI agent (Claude Code, Codex, …) via desktop IPC or sandbox
  */
-export type AgentRuntimeType = 'client' | 'gateway' | 'hetero';
+export type AgentRuntimeType = 'gateway' | 'hetero';
 
 /**
  * Unified intent for a non-hetero, non-group sub-agent invocation.
@@ -33,9 +53,8 @@ export type AgentRuntimeType = 'client' | 'gateway' | 'hetero';
 export interface AgentInvocationIntent {
   /**
    * Instruction delivered to the sub-agent.
-   * In client mode it is injected as a virtual user message prepended to the
-   * existing message history. In gateway mode it becomes the `message` param
-   * of `executeGatewayAgent` (i.e. a real user message on the server).
+   * In gateway mode it becomes the `message` param of `executeGatewayAgent`
+   * (i.e. a real user message on the server).
    */
   instruction: string;
   /**
@@ -70,6 +89,13 @@ export interface RuntimeSelectionContext {
   heterogeneousProvider?: HeterogeneousProviderConfig;
   /** Result of `chatStore.isGatewayModeEnabled()`. */
   isGatewayMode: boolean;
+  /**
+   * The run is a group supervisor turn (`group.supervisorAgentId === agentId`).
+   * Supervisors orchestrate members through server-side group callbacks, so
+   * they must execute on Gateway — a local hetero spawn has no
+   * `groupOrchestration` surface to schedule member runs.
+   */
+  isGroupSupervisor?: boolean;
   /**
    * The agent is workspace-scoped (`agent.workspaceId` set), regardless of
    * authorship or per-member overrides. Unlike `workspaceScoped`, this stays
@@ -108,7 +134,9 @@ interface SelectRuntimeTypeOptions {
  * resume, continue, sub-agent dispatch, …) so adding a new entry point does
  * not require re-deriving the routing rules.
  *
- * Priority: `parentRuntime` > `hetero` (desktop only) > `gateway` > `client`.
+ * Priority: `parentRuntime` > `hetero` (desktop only) > `gateway`. When none
+ * apply, it throws {@link AGENT_BINDING_REQUIRED_ERROR} instead of falling
+ * back to an in-browser runtime (retired).
  */
 export const selectRuntimeType = (
   ctx: RuntimeSelectionContext,
@@ -149,6 +177,16 @@ export const selectRuntimeType = (
     }
   }
 
+  // Group supervisor turns orchestrate members via server-side callbacks
+  // (`ctx.agentMember` in the group-management server runtime). The retired
+  // client runtime used to supply `groupOrchestration` locally; a local hetero
+  // spawn has none, so the supervisor must run on Gateway — without it the
+  // orchestration tools could only pretend to schedule member work.
+  if (ctx.isGroupSupervisor) {
+    if (ctx.isGatewayMode) return 'gateway';
+    throw new Error(GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR);
+  }
+
   if (ctx.parentRuntime) return ctx.parentRuntime;
   // Notify-based platform agents (openclaw / hermes) use the gateway transport for both
   // targets: `local` presets this desktop's personal device ID on the request, while
@@ -180,5 +218,5 @@ export const selectRuntimeType = (
     return target === 'local' ? 'hetero' : 'gateway';
   }
   if (ctx.isGatewayMode) return 'gateway';
-  return 'client';
+  throw new Error(AGENT_BINDING_REQUIRED_ERROR);
 };

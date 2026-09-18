@@ -8,7 +8,6 @@ import {
 } from '@/business/client/BusinessMobileRoutes';
 import { acceptanceRouteMeta } from '@/features/Acceptance/routeMeta';
 import { mobileAgentSettingsRouteMeta } from '@/features/RouteMeta/mobileRouteMeta';
-import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
 import { agentRouteMeta } from '@/routes/(main)/agent/features/routeMeta';
 import { loadRouteWithBuiltinToolSurfaces } from '@/spa/initialize/toolSurfaces';
 import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@/utils/router';
@@ -190,27 +189,14 @@ export const mobileRoutes: RouteObject[] = [
             ),
             index: true,
           },
-          // Provider routes with nested structure
+          // Retired LLM Provider surface — legacy deep-links land on the settings root.
           {
-            children: [
-              {
-                element: redirectElement('/settings/provider/all'),
-                index: true,
-              },
-              {
-                element: dynamicElement(
-                  () =>
-                    import('@/routes/(main)/settings/provider').then((m) => m.ProviderDetailPage),
-                  'Mobile > Settings > Provider > Detail',
-                ),
-                path: ':providerId',
-              },
-            ],
-            element: dynamicLayout(
-              () => import('@/routes/(mobile)/settings/provider/_layout'),
-              'Mobile > Settings > Provider > Layout',
-            ),
+            element: redirectElement('/settings'),
             path: 'provider',
+          },
+          {
+            element: redirectElement('/settings'),
+            path: 'provider/:providerId',
           },
           {
             element: redirectElement('/settings/credential'),
@@ -425,13 +411,7 @@ export const mobileRoutes: RouteObject[] = [
                 path: 'labels',
               },
               {
-                element: dynamicElement(
-                  () =>
-                    import('@/routes/(main)/[workspaceSlug]/settings/provider').then(
-                      (m) => m.WorkspaceProviderSettingMobile,
-                    ),
-                  'Mobile > Workspace > Settings > Provider',
-                ),
+                element: redirectElement('..'),
                 path: 'provider',
               },
               {
@@ -441,14 +421,16 @@ export const mobileRoutes: RouteObject[] = [
                 ),
                 path: 'linear',
               },
-              // Path-shaped provider deep-links (`/:slug/settings/provider/:id`)
-              // redirect to the query form the workspace provider page uses, so
-              // they don't fall through to the catch-all and leave the workspace.
-              // Static element: the redirect is tiny and lazy-loading it would
-              // flash the generic brand loader before redirecting.
+              // Retired workspace LLM Provider surface — deep-links land on the
+              // workspace settings root.
               {
-                element: <WorkspaceProviderRedirect />,
+                element: redirectElement('..'),
                 path: 'provider/:providerId',
+              },
+              // Retired service-model assignment surface — same fallback.
+              {
+                element: redirectElement('..'),
+                path: 'service-model',
               },
               {
                 element: dynamicElement(

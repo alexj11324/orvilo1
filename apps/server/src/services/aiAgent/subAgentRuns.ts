@@ -11,9 +11,9 @@ import debug from 'debug';
 import type { AgentOperationModel } from '@/database/models/agentOperation';
 import type { MessageModel } from '@/database/models/message';
 import type { ThreadModel } from '@/database/models/thread';
-import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
+import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
@@ -125,6 +125,28 @@ export const execAgentThreadRun = async (
   }
 
   log('%s: created thread %s', options.logScope, thread.id);
+
+  // `inheritMessages`: seed the isolation thread with the parent conversation's
+  // transcript so the spawned run sees the context that produced the request —
+  // the semantics the retired client runtime gave `callSubAgent`. Row ids are
+  // remapped (PK), `parentId` re-pointed inside the copied set, and
+  // `message_plugins`/`messages_files` rows are copied along so call ↔ result
+  // pairing and attachments survive (see MessageModel.copyMessagesToThread).
+  if (params.inheritMessages) {
+    try {
+      const seeded = await deps.messageModel.copyMessagesToThread({
+        agentId,
+        threadId: thread.id,
+        topicId,
+      });
+      if (seeded > 0)
+        log('%s: seeded %d inherited messages into thread %s', options.logScope, seeded, thread.id);
+    } catch (error) {
+      // Inheritance is a context nicety, not a correctness requirement — a
+      // failed seed must not block the child run.
+      log('%s: inheritMessages seed failed for thread %s: %O', options.logScope, thread.id, error);
+    }
+  }
 
   // 2. Update Thread status to processing with startedAt timestamp
   const startedAt = new Date().toISOString();

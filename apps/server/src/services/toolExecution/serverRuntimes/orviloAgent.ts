@@ -231,13 +231,14 @@ class OrviloAgentExecutionRuntime {
       );
     }
 
-    const { description, instruction, timeout } = params;
+    const { description, inheritMessages, instruction, timeout } = params;
     if (!instruction || typeof instruction !== 'string') {
       return buildError('instruction is required.', 'INVALID_ARGUMENTS');
     }
 
     const { started, error, threadId, subOperationId, toolMessageId } = await ctx.subAgent.run({
       description,
+      inheritMessages,
       instruction,
       timeout,
     });

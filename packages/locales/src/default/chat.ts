@@ -45,6 +45,8 @@ export default {
   'audioPlayer.pause': 'Pause audio',
   'audioPlayer.play': 'Play audio',
   'audioPlayer.seek': 'Seek audio',
+  'agentBindingRequired':
+    'This agent has no execution binding. Bind an agent runtime in the agent profile to start sending messages.',
   'agentBuilder.installPlugin.authRequired': 'Cloud MCP requires sign-in to continue',
   'agentBuilder.installPlugin.cancel': 'Cancel',
   'agentBuilder.installPlugin.clickApproveToConnect':
@@ -93,6 +95,8 @@ export default {
   'groupNotFound.desc':
     'This group does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'groupNotFound.title': 'Group Unavailable',
+  'groupSupervisorRequiresGateway':
+    'Group orchestration requires Agent Gateway. Enable gateway mode for this agent, then try again.',
   'inaccessibleFile.desc': 'No access — it may have been set to private or deleted by its owner',
   'inaccessibleFile.name': 'Unavailable file',
   'internalLink.agent.open': 'Open agent',

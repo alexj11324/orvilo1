@@ -22,11 +22,11 @@ drive / probe / capture / publish. Skip a row only when its surface AND runtime 
 
 | id  | surface       | runtime         | phase          | situation                                                                                                                                      |
 | --- | ------------- | --------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| P01 | any           | any             | probe          | `window.__ORVILO_STORES.<name>()` returns state only; add a dev action instead of HMR `setState` patches                                         |
+| P01 | any           | any             | probe          | `window.__ORVILO_STORES.<name>()` returns state only; add a dev action instead of HMR `setState` patches                                       |
 | P02 | web, electron | any             | probe          | `goto` / `location.assign` full-reload wipes fetch wrappers; change route via `history.pushState` + `popstate`                                 |
 | P03 | any           | client, gateway | probe          | Prove which runtime ran with a server-only artifact (operation row, queue step, server log)                                                    |
 | P04 | web, electron | any             | probe          | A top-level `const` in a second `agent-browser eval` collides; wrap payloads in an IIFE                                                        |
-| P05 | web           | any             | drive          | `orvilo-dev` is shared across runs; use a run-specific session and check `location.origin` / script src first                                 |
+| P05 | web           | any             | drive          | `orvilo-dev` is shared across runs; use a run-specific session and check `location.origin` / script src first                                  |
 | P06 | electron      | any             | probe          | After adding or moving a module the renderer may keep the old graph; `goto`, then confirm a structural signal                                  |
 | P07 | web           | any             | env            | `_dangerous_local_dev_proxy` in a signed-out automation context sits on the loading shell; use the isolated local stack                        |
 | P08 | web           | any             | env            | Workspace `packages/*` dynamic imports fail cross-origin through the proxy; A/B at HEAD, use Electron for settled state                        |
@@ -56,12 +56,12 @@ drive / probe / capture / publish. Skip a row only when its surface AND runtime 
 | P32 | web, electron | hetero          | fixture        | Dispatch a temp assistant message and attach an `AgentRuntimeError` guide code                                                                 |
 | P33 | web, electron | any             | fixture        | Backfill `pluginState` from each tool message's result after Agent Mock playback                                                               |
 | P34 | web, electron | any             | fixture        | Dispatch an assistant+tool pair into an empty conversation; truncate args to reach the Streaming render                                        |
-| P35 | web           | gateway         | probe          | Step-boundary `uiMessages` snapshots overwrite the bucket; record `replaceMessages` stacks, A/B with `disableGatewayMode`                      |
+| P35 | web           | gateway         | probe          | Step-boundary `uiMessages` snapshots overwrite the bucket; record `replaceMessages` stacks, A/B against a hetero-bound agent                   |
 | P36 | web           | gateway         | env            | Run the JWT handshake probe after every gateway restart; `/health` 200 proves nothing                                                          |
 | P37 | any           | gateway         | env            | Hatchet worker / s3rver may belong to a sibling session; read the start log before stopping anything                                           |
 | P38 | web           | any             | fixture        | Call the real load-more store action when the fixture is too short for the observer                                                            |
 | P39 | web, electron | any             | fixture        | Replace the react-query `mutationFn` with a rejection via HMR so no network call ever fires                                                    |
-| P40 | web, electron | any             | drive          | Remount the DevDock panel after a reload; pre-seed `ORVILO_DEV_DOCK_UI` to land on it                                                            |
+| P40 | web, electron | any             | drive          | Remount the DevDock panel after a reload; pre-seed `ORVILO_DEV_DOCK_UI` to land on it                                                          |
 | P41 | web           | client          | fixture, drive | openai speaks `/v1/responses`; the model must be in `enabledAiModels`; set approval `auto-run`                                                 |
 | P42 | web           | hetero          | fixture, drive | In-page IPC mock feeding stream-json through the real `ClaudeCodeAdapter`, no Electron needed                                                  |
 | P43 | web, electron | any             | capture        | Focus and read in one eval, wait past the transition, assert an untransitioned property too                                                    |
@@ -101,8 +101,8 @@ drive / probe / capture / publish. Skip a row only when its surface AND runtime 
 | P77 | web, cli      | gateway         | probe          | Read `llm_generation_tracing.prompt_version` after one call; restart the server if stale                                                       |
 | P78 | web, cli      | gateway         | env            | `SSRF_ALLOW_PRIVATE_IP_ADDRESS=1` so the server can read local s3rver URLs                                                                     |
 | P79 | web, cli      | client, gateway | env            | Local SearXNG with `SEARCH_PROVIDERS=searxng`; the on-disk search1api keys are dead                                                            |
-| P84 | cli           | any             | auth           | Drive `lh` against the local orvilo-cloud runtime by seeding an API key row into its main database                                            |
-| P85 | cli           | any             | fixture        | Simulate a publish whose response was lost by restoring `pendingCreateKey` in `.orvilo/artifacts.json`                                        |
+| P84 | cli           | any             | auth           | Drive `lh` against the local orvilo-cloud runtime by seeding an API key row into its main database                                             |
+| P85 | cli           | any             | fixture        | Simulate a publish whose response was lost by restoring `pendingCreateKey` in `.orvilo/artifacts.json`                                         |
 | P82 | web           | any             | drive          | Acceptance flow canvas through the production debug proxy: anonymous shared link, one uninterrupted script, canvas controls for clipped groups |
 
 ## Choose the least invasive mechanism
@@ -1196,11 +1196,14 @@ buffer, run the flow once, and read `action` (`gateway/step_start`,
 culprit. Verified in this catalogue: a subtopic run whose snapshot lacked `threadId`
 kept replacing the thread's bucket with the topic's main spine.
 
-**Corollary — use the non-gateway path as the control.** The same UI action with
-`chatConfig.disableGatewayMode = true` runs through `sendMessageInServer` and never
-applies a pushed snapshot. If the behavior is correct there and wrong in gateway
-mode, the defect is in the gateway transport or in the server snapshot, and you have
-halved the search space before reading any code.
+**Corollary — A/B against the hetero path as the control.** The in-browser client
+runtime is retired: `chatConfig.disableGatewayMode = true` no longer switches the
+send to a client transport (it now fails with `AGENT_BINDING_REQUIRED` unless the
+agent has a heterogeneous binding). The remaining local control path is a
+hetero-bound agent (`agencyConfig.heterogeneousProvider`), which dispatches through
+`executeHeterogeneousAgent` and never applies a pushed snapshot. If the behavior is
+correct there and wrong in gateway mode, the defect is in the gateway transport or
+in the server snapshot, and you have halved the search space before reading any code.
 
 #### P36 · `curl /health` does not prove the local agent-gateway trusts your key — run the JWT probe
 
@@ -1304,7 +1307,13 @@ localStorage.setItem(
 );
 ```
 
-#### P41 · Driving a real queued-message (steer) run in client runtime: Responses-API stub, an enabled function-call model, and auto-run approval
+#### P41 · (RETIRED) Driving a real queued-message (steer) run in client runtime: Responses-API stub, an enabled function-call model, and auto-run approval
+
+> **Retired by the ACP migration (P30):** the in-browser client runtime no longer
+> exists — sends resolve to `gateway` or `hetero` only, and this recipe's fixture
+> path is unreachable. To drive an open turn that stays up long enough to enqueue
+> a steer message, use a gateway run with a slow/stubbed server model, or a
+> hetero-bound agent on desktop.
 
 **applies-to:** surface=web · runtime=client · phase=fixture, drive
 

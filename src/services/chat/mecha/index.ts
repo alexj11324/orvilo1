@@ -13,9 +13,6 @@ export { getTargetAgentId, resolveAgentConfig } from './agentConfigResolver';
 // Context engineering
 export { contextEngineering } from './contextEngineering';
 
-// Client model runtime
-export { initializeWithClientStore } from './clientModelRuntime';
-
 // Model parameters
 export type { ModelExtendParams, ModelParamsContext } from './modelParamsResolver';
 export { resolveModelExtendParams } from './modelParamsResolver';

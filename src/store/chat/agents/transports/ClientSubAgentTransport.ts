@@ -125,18 +125,27 @@ export class ClientSubAgentTransport implements SubAgentTransport {
           if (taskStatus.status === 'completed') {
             return {
               ...dispatchResult,
+              // Terminal task metrics: model/cost/token/tool-call totals ride
+              // back to the caller so the parent run's pluginState and usage
+              // tray can account for work done in the isolation thread.
+              cost: taskStatus.cost,
               result: taskStatus.result,
               status: 'completed',
               success: true,
+              totalToolCalls: taskStatus.taskDetail?.totalToolCalls,
+              usage: taskStatus.usage,
             };
           }
 
           if (taskStatus.status === 'failed') {
             return {
               ...dispatchResult,
+              cost: taskStatus.cost,
               error: taskStatus.error ?? 'Unknown error',
               status: 'failed',
               success: false,
+              totalToolCalls: taskStatus.taskDetail?.totalToolCalls,
+              usage: taskStatus.usage,
             };
           }
 

@@ -21,15 +21,9 @@ import { type StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 import {
-  type AiProviderDetailItem,
-  type AiProviderListItem,
   type AiProviderRuntimeState,
-  type AiProviderSortMap,
-  type CreateAiProviderParams,
   type EnabledProvider,
   type EnabledProviderWithModels,
-  type UpdateAiProviderConfigParams,
-  type UpdateAiProviderParams,
 } from '@/types/aiProvider';
 import { AiProviderSourceEnum } from '@/types/aiProvider';
 import { filterEnabledProvidersByModelType, filterHiddenBuiltinModels } from '@/utils/aiProvider';
@@ -298,8 +292,6 @@ const buildVideoProviderModelLists = async (
 ) => buildProviderModelLists(providers, enabledAiModels, getVideoModelList);
 
 enum AiProviderSwrKey {
-  fetchAiProviderItem = 'FETCH_AI_PROVIDER_ITEM',
-  fetchAiProviderList = 'FETCH_AI_PROVIDER',
   fetchAiProviderRuntimeState = 'FETCH_AI_PROVIDER_RUNTIME_STATE',
 }
 
@@ -324,54 +316,6 @@ export class AiProviderActionImpl {
     this.#set = set;
     this.#get = get;
   }
-
-  createNewAiProvider = async (params: CreateAiProviderParams): Promise<void> => {
-    await aiProviderService.createAiProvider({ ...params, source: AiProviderSourceEnum.Custom });
-    await this.#get().refreshAiProviderList();
-  };
-
-  deleteAiProvider = async (id: string): Promise<void> => {
-    await aiProviderService.deleteAiProvider(id);
-
-    await this.#get().refreshAiProviderList();
-  };
-
-  internal_toggleAiProviderConfigUpdating = (id: string, loading: boolean): void => {
-    this.#set(
-      (state) => {
-        if (loading)
-          return { aiProviderConfigUpdatingIds: [...state.aiProviderConfigUpdatingIds, id] };
-
-        return {
-          aiProviderConfigUpdatingIds: state.aiProviderConfigUpdatingIds.filter((i) => i !== id),
-        };
-      },
-      false,
-      'toggleAiProviderLoading',
-    );
-  };
-
-  internal_toggleAiProviderLoading = (id: string, loading: boolean): void => {
-    this.#set(
-      (state) => {
-        if (loading) return { aiProviderLoadingIds: [...state.aiProviderLoadingIds, id] };
-
-        return { aiProviderLoadingIds: state.aiProviderLoadingIds.filter((i) => i !== id) };
-      },
-      false,
-      'toggleAiProviderLoading',
-    );
-  };
-
-  refreshAiProviderDetail = async (): Promise<void> => {
-    await mutate([AiProviderSwrKey.fetchAiProviderItem, this.#get().activeAiProvider]);
-    await this.#get().refreshAiProviderRuntimeState();
-  };
-
-  refreshAiProviderList = async (): Promise<void> => {
-    await mutate(AiProviderSwrKey.fetchAiProviderList);
-    await this.#get().refreshAiProviderRuntimeState();
-  };
 
   refreshAiProviderRuntimeState = async (): Promise<void> => {
     await Promise.all([
@@ -403,152 +347,15 @@ export class AiProviderActionImpl {
     ]);
   };
 
-  removeAiProvider = async (id: string): Promise<void> => {
-    await aiProviderService.deleteAiProvider(id);
-    await this.#get().refreshAiProviderList();
-  };
-
+  /**
+   * Enable a provider from chat-facing surfaces (ModelSelect / ChatInput
+   * notice). Provider management UI is retired; this only flips the server-side
+   * enabled flag and refreshes the runtime state so the enabled model lists
+   * converge.
+   */
   toggleProviderEnabled = async (id: string, enabled: boolean): Promise<void> => {
-    this.#get().internal_toggleAiProviderLoading(id, true);
     await aiProviderService.toggleProviderEnabled(id, enabled);
-
-    // Immediately update local aiProviderList to reflect the change
-    // This ensures the switch displays correctly without waiting for SWR refresh
-    this.#set(
-      (state) => ({
-        aiProviderList: state.aiProviderList.map((item) =>
-          item.id === id ? { ...item, enabled } : item,
-        ),
-      }),
-      false,
-      'toggleProviderEnabled/syncEnabled',
-    );
-
-    await this.#get().refreshAiProviderList();
-
-    this.#get().internal_toggleAiProviderLoading(id, false);
-  };
-
-  updateAiProvider = async (id: string, value: UpdateAiProviderParams): Promise<void> => {
-    this.#get().internal_toggleAiProviderLoading(id, true);
-    await aiProviderService.updateAiProvider(id, value);
-    await this.#get().refreshAiProviderList();
-    await this.#get().refreshAiProviderDetail();
-
-    this.#get().internal_toggleAiProviderLoading(id, false);
-  };
-
-  updateAiProviderConfig = async (
-    id: string,
-    value: UpdateAiProviderConfigParams,
-  ): Promise<void> => {
-    this.#get().internal_toggleAiProviderConfigUpdating(id, true);
-    await aiProviderService.updateAiProviderConfig(id, value);
-
-    // Immediately update local state for instant UI feedback
-    this.#set(
-      (state) => {
-        const currentRuntimeConfig = state.aiProviderRuntimeConfig[id];
-        const currentDetailConfig = state.aiProviderDetailMap[id];
-
-        const updates: Partial<typeof currentRuntimeConfig> = {};
-        const detailUpdates: Partial<typeof currentDetailConfig> = {};
-
-        // Update fetchOnClient if changed
-        if (typeof value.fetchOnClient !== 'undefined') {
-          // Convert null to undefined to match the interface definition
-          const fetchOnClientValue = value.fetchOnClient === null ? undefined : value.fetchOnClient;
-          updates.fetchOnClient = fetchOnClientValue;
-          detailUpdates.fetchOnClient = fetchOnClientValue;
-        }
-
-        // Update config.enableResponseApi if changed
-        if (value.config?.enableResponseApi !== undefined && currentRuntimeConfig?.config) {
-          updates.config = {
-            ...currentRuntimeConfig.config,
-            enableResponseApi: value.config.enableResponseApi,
-          };
-        }
-
-        return {
-          // Update detail map for form display
-          aiProviderDetailMap:
-            currentDetailConfig && Object.keys(detailUpdates).length > 0
-              ? {
-                  ...state.aiProviderDetailMap,
-                  [id]: {
-                    ...currentDetailConfig,
-                    ...detailUpdates,
-                  },
-                }
-              : state.aiProviderDetailMap,
-          // Update runtime config for selectors
-          aiProviderRuntimeConfig:
-            currentRuntimeConfig && Object.keys(updates).length > 0
-              ? {
-                  ...state.aiProviderRuntimeConfig,
-                  [id]: {
-                    ...currentRuntimeConfig,
-                    ...updates,
-                  },
-                }
-              : state.aiProviderRuntimeConfig,
-        };
-      },
-      false,
-      'updateAiProviderConfig/syncChanges',
-    );
-
-    await this.#get().refreshAiProviderDetail();
-
-    this.#get().internal_toggleAiProviderConfigUpdating(id, false);
-  };
-
-  updateAiProviderSort = async (items: AiProviderSortMap[]): Promise<void> => {
-    await aiProviderService.updateAiProviderOrder(items);
-    await this.#get().refreshAiProviderList();
-  };
-
-  useFetchAiProviderItem = (id: string): SWRResponse<AiProviderDetailItem | undefined> => {
-    return useClientDataSWR<AiProviderDetailItem | undefined>(
-      [AiProviderSwrKey.fetchAiProviderItem, id],
-      () => aiProviderService.getAiProviderById(id),
-      {
-        onSuccess: (data) => {
-          if (!data) return;
-
-          this.#set(
-            (state) => ({
-              activeAiProvider: id,
-              aiProviderDetailMap: { ...state.aiProviderDetailMap, [id]: data },
-            }),
-            false,
-            'useFetchAiProviderItem',
-          );
-        },
-      },
-    );
-  };
-
-  useFetchAiProviderList = (opts?: { enabled?: boolean }): SWRResponse<AiProviderListItem[]> => {
-    return useClientDataSWR<AiProviderListItem[]>(
-      opts?.enabled === false ? null : AiProviderSwrKey.fetchAiProviderList,
-      () => aiProviderService.getAiProviderList(),
-      {
-        onSuccess: (data) => {
-          if (!this.#get().initAiProviderList) {
-            this.#set(
-              { aiProviderList: data, initAiProviderList: true },
-              false,
-              'useFetchAiProviderList/init',
-            );
-            return;
-          }
-
-          this.#set({ aiProviderList: data }, false, 'useFetchAiProviderList/refresh');
-        },
-      },
-    );
+    await this.#get().refreshAiProviderRuntimeState();
   };
 
   useFetchAiProviderRuntimeState = (

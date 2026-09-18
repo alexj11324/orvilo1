@@ -9,6 +9,9 @@ import { type UserGuide } from '@/types/user';
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
+  // The actions under test persist through the real userService; stub the
+  // network boundary so optimistic-update tests never hit a live backend.
+  vi.spyOn(userService, 'updatePreference').mockResolvedValue(undefined as any);
 });
 
 afterEach(() => {

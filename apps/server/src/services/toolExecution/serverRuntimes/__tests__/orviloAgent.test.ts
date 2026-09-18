@@ -846,12 +846,18 @@ describe('orviloAgentRuntime', () => {
         .mockResolvedValue({ started: true, subOperationId: 'sub-op-1', threadId: 'thread-1' });
 
       const result = await runtime.callSubAgent(
-        { description: 'Research', instruction: 'Find the answer', timeout: 1000 },
+        {
+          description: 'Research',
+          inheritMessages: true,
+          instruction: 'Find the answer',
+          timeout: 1000,
+        },
         { ...baseContext, subAgent: { run } } as ToolExecutionContext,
       );
 
       expect(run).toHaveBeenCalledWith({
         description: 'Research',
+        inheritMessages: true,
         instruction: 'Find the answer',
         timeout: 1000,
       });

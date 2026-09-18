@@ -89,11 +89,12 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
 
 // Standing in for SWR: recording the key is the point of the test (the card
 // must be cached per project), and invoking the fetcher makes the query the card
-// actually issues observable.
+// actually issues observable. Only the Works fetcher runs — the dashboard's
+// other cards resolve against real services, which must not hit the network.
 vi.mock('@/libs/swr', () => ({
   useClientDataSWR: (key: unknown, fetcher: () => unknown) => {
     mocks.requestedKeys.push(key);
-    void fetcher();
+    if (Array.isArray(key) && key[0] === 'work:workspace') void fetcher();
     return mocks.workSWR;
   },
 }));

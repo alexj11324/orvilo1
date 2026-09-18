@@ -20,10 +20,8 @@ import Messenger from '../messenger';
 import { DesktopNotificationSettings } from '../notification';
 import OAuthApps from '../oauth-apps';
 import Profile from '../profile';
-import Provider from '../provider';
 import Proxy from '../proxy';
 import Security from '../security';
-import ServiceModel from '../service-model';
 import Skill from '../skill';
 import Stats from '../stats';
 import Storage from '../storage';
@@ -33,8 +31,6 @@ export const componentMap = {
   [SettingsTabs.Advanced]: Advanced,
   [SettingsTabs.Labs]: Labs,
   [SettingsTabs.Appearance]: Appearance,
-  [SettingsTabs.Provider]: Provider,
-  [SettingsTabs.ServiceModel]: ServiceModel,
   [SettingsTabs.Memory]: Memory,
   [SettingsTabs.Messenger]: Messenger,
   [SettingsTabs.Notification]: DesktopNotificationSettings,

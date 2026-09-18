@@ -172,9 +172,16 @@ BASE_URL=http://localhost:3006 \
 
 ### 核心原理
 
-LLM Mock 通过 Playwright 的 `page.route()` 拦截对 `/webapi/chat/openai` 的请求，返回预设的 SSE 流式响应。
+浏览器侧 client runtime 已退役 ——web 发消息走 gateway mode：服务端进程内 agent runtime 真正调用 LLM（OpenAI 兼容协议），流式事件经 Agent Gateway 的 HTTP push 收进、再经 WS `/ws` 扇出给浏览器订阅者。因此 E2E 需要两个进程级 stand-in，由 `bun e2e/scripts/mockServices.ts` 启动（CI `e2e.yml` 与本地 `setup.ts --start` 已自动拉起）：
 
-### SSE 响应格式
+1. **Mock LLM**（`src/mocks/llm/server.ts`，默认 :3406）— OpenAI 兼容 `POST /v1/chat/completions`（SSE + JSON + `response_format` JSON schema 合成）。服务端经 `DEEPSEEK_API_KEY`/`DEEPSEEK_PROXY_URL`（mini model 走 `OPENAI_*`）env 回退指向它，无需 DB 播种 provider。
+2. **Fake Agent Gateway**（`src/mocks/gateway/server.ts`，默认 :3407）— `POST /api/operations/{init,push-event,tool-execute}` 收服务端推送 + WS `/ws` 实现 `auth`/`resume`（含缓冲事件重放与 `resume_complete` 权威状态）/`heartbeat`/`tool_result`/`interrupt`。
+
+`llmMockManager` 的 `setResponse`/`setResponseContaining`/`setTimingForFragment` 依旧注册确定性响应，只是会持久化到 `$TMPDIR/orvilo-e2e-llm-state.<CUCUMBER_WORKER_ID>.json` 供 mock server 合并读取 —— 按 worker 隔离，并行时互不污染。timing 用 `setTimingForFragment`（按 prompt 片段作用域）而非全局 `setConfig`，避免并行 worker 互相踩踏流式时序。
+
+残留的浏览器侧 `/webapi/chat/*` 拦截（`llmMockManager.setup`）仍保留给任何存量的 client 请求，但已不再是执行路径。
+
+### SSE 响应格式（浏览器拦截器，仅存量路径）
 
 Orvilo 使用特定的 SSE 格式，必须严格匹配：
 

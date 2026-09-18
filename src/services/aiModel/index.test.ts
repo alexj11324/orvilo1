@@ -11,17 +11,9 @@ import { AiModelService, aiModelService } from './index';
 
 const mockLambdaClient = vi.hoisted(() => ({
   aiModel: {
-    batchToggleAiModels: { mutate: vi.fn() },
-    batchUpdateAiModels: { mutate: vi.fn() },
-    clearModelsByProvider: { mutate: vi.fn() },
-    clearRemoteModels: { mutate: vi.fn() },
-    createAiModel: { mutate: vi.fn() },
-    getAiModelById: { query: vi.fn() },
-    getAiProviderModelList: { query: vi.fn() },
-    removeAiModel: { mutate: vi.fn() },
+    getAiModelReasoningConfig: { query: vi.fn() },
     toggleModelEnabled: { mutate: vi.fn() },
-    updateAiModel: { mutate: vi.fn() },
-    updateAiModelOrder: { mutate: vi.fn() },
+    updateAiModelReasoningConfig: { mutate: vi.fn() },
   },
 }));
 
@@ -36,30 +28,33 @@ beforeEach(() => {
 describe('AiModelService', () => {
   testService(AiModelService);
 
-  describe('getAiProviderModelList', () => {
-    it('filters hidden runtime-only models from frontend settings lists', async () => {
-      mockLambdaClient.aiModel.getAiProviderModelList.query.mockResolvedValueOnce([
-        {
-          displayName: 'DeepSeek V4 Pro',
-          enabled: true,
-          id: 'deepseek-v4-pro',
-          type: 'chat',
-        },
-        {
-          displayName: 'Orvilo Onboarding',
-          enabled: true,
-          id: 'orvilo-onboarding-v1',
-          type: 'chat',
-          visible: false,
-        },
-      ]);
+  describe('toggleModelEnabled', () => {
+    it('calls the toggleModelEnabled mutation', async () => {
+      const params = { enabled: true, id: 'gpt-5.2', providerId: 'openai' };
+      await aiModelService.toggleModelEnabled(params as any);
+      expect(mockLambdaClient.aiModel.toggleModelEnabled.mutate).toHaveBeenCalledWith(params);
+    });
+  });
 
-      const result = await aiModelService.getAiProviderModelList('orvilo');
-
-      expect(mockLambdaClient.aiModel.getAiProviderModelList.query).toHaveBeenCalledWith({
-        id: 'orvilo',
+  describe('getAiModelReasoningConfig', () => {
+    it('queries the reasoning config', async () => {
+      await aiModelService.getAiModelReasoningConfig('gpt-5.2', 'openai');
+      expect(mockLambdaClient.aiModel.getAiModelReasoningConfig.query).toHaveBeenCalledWith({
+        id: 'gpt-5.2',
+        providerId: 'openai',
       });
-      expect(result.map((model) => model.id)).toEqual(['deepseek-v4-pro']);
+    });
+  });
+
+  describe('updateAiModelReasoningConfig', () => {
+    it('calls the updateAiModelReasoningConfig mutation', async () => {
+      const value = { gpt5_2ReasoningEffort: 'high' };
+      await aiModelService.updateAiModelReasoningConfig('gpt-5.2', 'openai', value as any);
+      expect(mockLambdaClient.aiModel.updateAiModelReasoningConfig.mutate).toHaveBeenCalledWith({
+        id: 'gpt-5.2',
+        providerId: 'openai',
+        value,
+      });
     });
   });
 });

@@ -1,5 +1,4 @@
 import { toast } from '@lobehub/ui/base-ui';
-import { AgentManagementIdentifier } from '@orvilo/builtin-tool-agent-management';
 import { HETERO_CONTINUE_PROMPT, LOADING_FLAT } from '@orvilo/const';
 import { shouldDropUnsupportedClaudeAssistantPrefill } from '@orvilo/model-runtime/providers/anthropic/modelId';
 import type {
@@ -23,28 +22,31 @@ import {
 import { resolveAgentWorkingDirectory } from '@/helpers/agentWorkingDirectory';
 import { resolveWorkspaceScoped } from '@/helpers/executionTarget';
 import { globalAgentContextManager } from '@/helpers/GlobalAgentContextManager';
-import { getTopicAgencyConfig, getTopicWorkspaceScoped } from '@/helpers/topicExecutionConfig';
+import {
+  getTopicAgencyConfig,
+  getTopicWorkspaceScoped,
+  resolveIsGroupSupervisor,
+} from '@/helpers/topicExecutionConfig';
 import { messageService } from '@/services/message';
 import { getAgentStoreState } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
-import { selectRuntimeType } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
+import {
+  AGENT_BINDING_REQUIRED_ERROR,
+  type AgentRuntimeType,
+  selectRuntimeType,
+} from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
 import {
   parseMentionedAgentsFromEditorData,
-  parseSelectedSkillsFromEditorData,
   parseSelectedToolsFromEditorData,
-} from '@/store/chat/slices/agentRun/actions/entries/commandBus';
+} from '@/store/chat/slices/agentRun/actions/entries/commandBus/parseCommands';
 import {
   getHeteroProviderSessionBindingKey,
   resolveHeteroResume,
 } from '@/store/chat/slices/agentRun/actions/transports/hetero/heteroResume';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
 import { INPUT_LOADING_OPERATION_TYPES } from '@/store/chat/slices/operation/types';
-import {
-  mergeAgentRuntimeInitialContexts,
-  resolveActiveTopicDocumentInitialContext,
-} from '@/store/chat/utils/activeTopicDocumentContext';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { getElectronStoreState } from '@/store/electron';
 import { getUserStoreState } from '@/store/user';
@@ -52,35 +54,6 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import { type Store as ConversationStore } from '../../action';
 import { MAX_HETERO_AUTO_RETRIES } from './heteroRetryConfig';
-
-const buildRetryInitialContext = (editorData: Record<string, any> | null | undefined) => {
-  const normalizedEditorData = editorData ?? undefined;
-  const selectedSkills = parseSelectedSkillsFromEditorData(normalizedEditorData);
-  const selectedTools = parseSelectedToolsFromEditorData(normalizedEditorData);
-  const mentionedAgents = parseMentionedAgentsFromEditorData(normalizedEditorData);
-
-  const effectiveSelectedTools =
-    mentionedAgents.length > 0 &&
-    !selectedTools.some((tool) => tool.identifier === AgentManagementIdentifier)
-      ? [...selectedTools, { identifier: AgentManagementIdentifier, name: 'Agent Management' }]
-      : selectedTools;
-
-  const hasInitialContext =
-    effectiveSelectedTools.length > 0 || selectedSkills.length > 0 || mentionedAgents.length > 0;
-
-  if (!hasInitialContext) return undefined;
-
-  return {
-    initialContext: {
-      ...(selectedSkills.length > 0 ? { selectedSkills } : undefined),
-      ...(effectiveSelectedTools.length > 0
-        ? { selectedTools: effectiveSelectedTools }
-        : undefined),
-      ...(mentionedAgents.length > 0 ? { mentionedAgents } : undefined),
-    },
-    phase: 'init' as const,
-  };
-};
 
 /**
  * Settle a regenerate / continue entry's OUTER tracking operation and fire its
@@ -90,9 +63,9 @@ const buildRetryInitialContext = (editorData: Record<string, any> | null | undef
  * run op (`${messageKey}/${parentMessageId}`). The unified run lifecycle
  * (`buildRunLifecycle`, inside the executor) already drove the run-level terminal
  * side effects — title / queue drain / notification / complete signal — so the
- * entry only retires its own tracking op and broadcasts the UI hook. Five runtime
- * branches (regenerate × client/gateway/hetero, continue × client/gateway) shared
- * this identical two-line tail; centralized here so they converge on one adapter
+ * entry only retires its own tracking op and broadcasts the UI hook. The runtime
+ * branches (regenerate × gateway/hetero, continue × gateway) shared this
+ * identical two-line tail; centralized here so they converge on one adapter
  * instead of hand-rolling completion at each call site.
  */
 const settleGenerationEntry = (
@@ -380,11 +353,6 @@ const regenerateUserMessageFromSource = async (
   });
 
   try {
-    const initialContext = mergeAgentRuntimeInitialContexts(
-      await resolveActiveTopicDocumentInitialContext(context),
-      buildRetryInitialContext(item.editorData),
-    );
-
     // Get context messages up to and including the target message
     const contextMessages = displayMessages.slice(0, currentIndex + 1);
     if (contextMessages.length <= 0) {
@@ -410,6 +378,26 @@ const regenerateUserMessageFromSource = async (
     const preflightOp = operationSelectors.getOperationById(operationId)(useChatStore.getState());
     if (preflightOp && preflightOp.status !== 'running') return;
 
+    // Resolve the execution binding BEFORE switching branches: an unbound
+    // agent throws here, leaving `activeBranchIndex` untouched — switching
+    // first would persist one-past-the-end and hide the previous answer on a
+    // failed regenerate.
+    await ensureEffectiveAgencyAccess(context.agentId);
+    const { agencyConfig, isWorkspaceAgent, workspaceScoped } = getEffectiveAgencyConfig(
+      context.agentId,
+      context.topicId,
+    );
+    const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
+    const runtimeType = selectRuntimeType({
+      boundDeviceId: agencyConfig?.boundDeviceId,
+      executionTarget: agencyConfig?.executionTarget,
+      heterogeneousProvider,
+      isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
+      isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
+      isWorkspaceAgent,
+      workspaceScoped,
+    });
+
     // Read the database messages from the captured conversation. If the shared
     // ConversationStore has switched context, the source falls back to the old
     // context's ChatStore bucket instead of observing the new topic.
@@ -429,21 +417,6 @@ const regenerateUserMessageFromSource = async (
     const postSwitchOp = operationSelectors.getOperationById(operationId)(useChatStore.getState());
     if (postSwitchOp && postSwitchOp.status !== 'running') return;
 
-    await ensureEffectiveAgencyAccess(context.agentId);
-    const { agencyConfig, isWorkspaceAgent, workspaceScoped } = getEffectiveAgencyConfig(
-      context.agentId,
-      context.topicId,
-    );
-    const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
-    const runtimeType = selectRuntimeType({
-      boundDeviceId: agencyConfig?.boundDeviceId,
-      executionTarget: agencyConfig?.executionTarget,
-      heterogeneousProvider,
-      isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
-      isWorkspaceAgent,
-      workspaceScoped,
-    });
-
     // ── Gateway mode: trigger server-side regeneration ──
     if (runtimeType === 'gateway') {
       // Hand the wrapper op off at phase-1 (`executeGatewayAgent` completes
@@ -458,8 +431,23 @@ const regenerateUserMessageFromSource = async (
       // actually aborts the request instead of being swallowed.
       // `onComplete` still fires at session end for the UI hook; re-completing
       // the already-settled wrapper is an idempotent no-op.
+      // Re-derive @-mentions from the persisted user message and forward them:
+      // the retired client runtime rebuilt `initialContext` (mentionedAgents +
+      // selectedTools) from `editorData` on regenerate, and the server only
+      // reads mentions from exec params — it does not re-parse the anchored
+      // user message. Without this a regenerated @-mention turn silently loses
+      // its tool/agent routing.
+      const regenerateMentionedAgents = parseMentionedAgentsFromEditorData(
+        item.editorData ?? undefined,
+      );
+      const regenerateSelectedTools = parseSelectedToolsFromEditorData(
+        item.editorData ?? undefined,
+      );
+
       await chatStore.executeGatewayAgent({
         context,
+        mentionedAgents:
+          regenerateMentionedAgents.length > 0 ? regenerateMentionedAgents : undefined,
         message: item.content,
         onComplete: () =>
           settleGenerationEntry(chatStore, operationId, () =>
@@ -467,6 +455,10 @@ const regenerateUserMessageFromSource = async (
           ),
         parentMessageId: messageId,
         parentOperationId: operationId,
+        selectedToolIds:
+          regenerateSelectedTools.length > 0
+            ? regenerateSelectedTools.map((tool) => tool.identifier)
+            : undefined,
       });
 
       return;
@@ -494,17 +486,9 @@ const regenerateUserMessageFromSource = async (
       return;
     }
 
-    // ── Client mode: run agent locally ──
-    await chatStore.executeClientAgent({
-      context,
-      initialContext,
-      messages: contextMessages,
-      parentMessageId: messageId,
-      parentMessageType: 'user',
-      parentOperationId: operationId,
-    });
-
-    settleGenerationEntry(chatStore, operationId, () => hooks.onRegenerateComplete?.(messageId));
+    // Unreachable: `selectRuntimeType` only returns 'gateway' | 'hetero' (both
+    // handled above) and throws AGENT_BINDING_REQUIRED for unbound agents.
+    throw new Error(AGENT_BINDING_REQUIRED_ERROR);
   } catch (error) {
     chatStore.failOperation(operationId, {
       message: error instanceof Error ? error.message : String(error),
@@ -825,14 +809,24 @@ export const generationSlice: StateCreator<
       context.agentId,
       context.topicId,
     );
-    const runtimeType = selectRuntimeType({
-      boundDeviceId: agencyConfig?.boundDeviceId,
-      executionTarget: agencyConfig?.executionTarget,
-      heterogeneousProvider: agencyConfig?.heterogeneousProvider,
-      isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
-      isWorkspaceAgent,
-      workspaceScoped,
-    });
+    let runtimeType: AgentRuntimeType;
+    try {
+      runtimeType = selectRuntimeType({
+        boundDeviceId: agencyConfig?.boundDeviceId,
+        executionTarget: agencyConfig?.executionTarget,
+        heterogeneousProvider: agencyConfig?.heterogeneousProvider,
+        isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
+        isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
+        isWorkspaceAgent,
+        workspaceScoped,
+      });
+    } catch {
+      // No execution binding (no ACP/hetero binding and no gateway mode) is an
+      // explicit configuration error — the browser runtime is retired, so the
+      // continue must fail loudly instead of falling back to local inference.
+      toast.error(t('agentBindingRequired', { ns: 'chat' }));
+      return false;
+    }
 
     // Hetero CLIs (CC / Codex) have no "continue a cut-off response" primitive
     // — each prompt is a fresh user turn from their perspective. Bail out
@@ -876,20 +870,10 @@ export const generationSlice: StateCreator<
         return true;
       }
 
-      // ── Client mode: run agent locally ──
-      await chatStore.executeClientAgent({
-        context,
-        messages: displayMessages,
-        parentMessageId: dbMessageId,
-        parentMessageType: message.role as 'assistant' | 'tool' | 'user',
-        parentOperationId: operationId,
-      });
-
-      settleGenerationEntry(chatStore, operationId, () =>
-        hooks.onContinueComplete?.(displayMessageId),
-      );
-
-      return true;
+      // Unreachable: `selectRuntimeType` only returns 'gateway' | 'hetero'
+      // (both handled above) and throws AGENT_BINDING_REQUIRED for unbound
+      // agents. Fail explicitly rather than silently skipping the continue.
+      throw new Error(AGENT_BINDING_REQUIRED_ERROR);
     } catch (error) {
       chatStore.failOperation(operationId, {
         message: error instanceof Error ? error.message : String(error),
@@ -918,14 +902,23 @@ export const generationSlice: StateCreator<
       context.topicId,
     );
     const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
-    const runtimeType = selectRuntimeType({
-      boundDeviceId: agencyConfig?.boundDeviceId,
-      executionTarget: agencyConfig?.executionTarget,
-      heterogeneousProvider,
-      isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
-      isWorkspaceAgent,
-      workspaceScoped,
-    });
+    let runtimeType: AgentRuntimeType;
+    try {
+      runtimeType = selectRuntimeType({
+        boundDeviceId: agencyConfig?.boundDeviceId,
+        executionTarget: agencyConfig?.executionTarget,
+        heterogeneousProvider,
+        isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
+        isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
+        isWorkspaceAgent,
+        workspaceScoped,
+      });
+    } catch {
+      // Binding was removed after the hetero error was produced — nothing to
+      // resume or regenerate against.
+      toast.error(t('agentBindingRequired', { ns: 'chat' }));
+      return;
+    }
     const agentId = context.agentId;
 
     const resumeSessionId = agentId

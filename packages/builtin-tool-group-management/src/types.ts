@@ -1,4 +1,3 @@
-
 /**
  * API names for Group Management tool
  *
@@ -73,11 +72,6 @@ export interface ExecuteTaskParams {
   agentId: string;
   /** Clear instruction describing the task to perform */
   instruction: string;
-  /**
-   * Whether to run on the desktop client (for local file/shell access).
-   * MUST be true when task requires local-system tools. Default is false (server execution).
-   */
-  runInClient?: boolean;
   /**
    * If true, the orchestration will end after the task completes,
    * without calling the supervisor again.
@@ -159,12 +153,7 @@ export interface VoteResult {
 // ==================== State Types for UI Rendering ====================
 
 export type ExecuteTaskStatus =
-  | 'processing'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'timeout'
-  | 'interrupted';
+  'processing' | 'completed' | 'failed' | 'cancelled' | 'timeout' | 'interrupted';
 
 export interface ExecuteTaskState {
   cost?: { total: number };

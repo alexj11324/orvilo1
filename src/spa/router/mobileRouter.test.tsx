@@ -56,24 +56,21 @@ describe('mobileRouter task routes', () => {
   });
 });
 
-describe('mobileRouter workspace provider routes', () => {
-  it('registers workspace provider list and path-shaped deep-link redirect', async () => {
-    const source = await readFile(
-      path.join(process.cwd(), 'src/spa/router/mobileRouter.config.tsx'),
-      'utf8',
-    );
+describe('mobileRouter retired provider routes', () => {
+  it.each([
+    '/settings/provider',
+    '/settings/provider/openai',
+    '/acme/settings/provider',
+    '/acme/settings/provider/openai',
+    '/acme/settings/service-model',
+  ])('redirects retired provider route %s to the settings root', (pathname) => {
+    const matches = matchRoutes(mobileRoutes, pathname);
+    const redirect = matches?.find(
+      ({ route }) =>
+        (route.element as { props?: { to?: string } } | undefined)?.props?.to !== undefined,
+    )?.route;
 
-    // Without these, workspace-aware provider links (`/:slug/settings/provider/:id`)
-    // fall through to the mobile `*` route and kick the user out of the workspace.
-    expect(source).toContain("import('@/routes/(main)/[workspaceSlug]/settings/provider')");
-    // The mobile route must use the mobile variant, otherwise the page renders
-    // the desktop 280px provider menu layout on phones.
-    expect(source).toContain('m.WorkspaceProviderSettingMobile');
-    // The redirect is statically imported: lazy-loading it would flash the
-    // generic brand loader before redirecting.
-    expect(source).toContain("from '@/features/WorkspaceSetting/ProviderRedirect'");
-    expect(source).toContain("path: 'provider'");
-    expect(source).toContain("path: 'provider/:providerId'");
+    expect(redirect).toBeDefined();
   });
 });
 

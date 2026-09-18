@@ -1409,14 +1409,23 @@ export class AiAgentService {
   /**
    * Execute an agent in an isolated Thread context.
    *
-   * Group/callAgent paths use this entry. It does not mark the child as a
-   * virtual sub-agent and it does not install the async completion bridge.
+   * Group/callAgent, direct-mention, and client `callSubAgent` transports use
+   * this entry. It does not install the async completion bridge — callers poll
+   * `getSubAgentTaskStatus` — and only marks the child as a sub-agent when the
+   * caller passes `isSubAgent` (the `callSubAgent` transport does).
    */
   // Arrow field (not a method) so it stays bound when handed to AgentRuntimeService.
   execSubAgent = async (params: ExecSubAgentParams): Promise<ExecSubAgentResult> =>
     execAgentThreadRun(this.subAgentRunDeps, params, {
-      isSubAgent: false,
+      chatConfig: params.chatConfig,
+      // `callSubAgent` transports mark the child as a sub-agent so it cannot
+      // recursively spawn; direct-mention dispatch intentionally does not.
+      isSubAgent: params.isSubAgent === true,
       logScope: 'execSubAgent',
+      // Spawn-site resolved overrides (client `callSubAgent` / execSubAgentTask
+      // carry them; group members leave them undefined and keep their own).
+      model: params.model,
+      provider: params.provider,
     });
 
   /**

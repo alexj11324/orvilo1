@@ -5,7 +5,6 @@ import {
   AppWindowIcon,
   BellIcon,
   Blocks,
-  Brain,
   Building2,
   ChartColumnBigIcon,
   Coins,
@@ -24,7 +23,6 @@ import {
   MonitorSmartphoneIcon,
   PaletteIcon,
   ScrollText,
-  Sparkles,
   TagIcon,
   Users,
 } from 'lucide-react';
@@ -198,20 +196,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
         },
         {
           items: [
-            // AI provider config (keys/endpoints) is shared workspace infra —
-            // Admin-or-higher, hidden from members entirely.
-            canManageWorkspace && {
-              icon: Brain,
-              key: WorkspaceSettingsTabs.Provider,
-              label: t('tab.provider'),
-            },
-            // Service-model preferences steer the shared workspace model
-            // policy — Admin-or-higher, hidden from members like Provider.
-            canManageWorkspace && {
-              icon: Sparkles,
-              key: WorkspaceSettingsTabs.ServiceModel,
-              label: t('tab.serviceModel'),
-            },
             {
               icon: SkillsIcon,
               key: WorkspaceSettingsTabs.Skill,

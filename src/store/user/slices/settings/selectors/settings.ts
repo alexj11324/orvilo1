@@ -7,24 +7,14 @@ import {
   DEFAULT_SYSTEM_AGENT_CONFIG,
   DEFAULT_TTS_CONFIG,
 } from '@orvilo/const';
-import {
-  type GlobalLLMProviderKey,
-  type HotkeyId,
-  type ProviderConfig,
-  type UserModelProviderConfig,
-  type UserSettings,
-} from '@orvilo/types';
+import { type HotkeyId, type UserSettings } from '@orvilo/types';
 
 import { type UserStore } from '@/store/user';
 import { merge } from '@/utils/merge';
 
 export const currentSettings = (s: UserStore): UserSettings => merge(s.defaultSettings, s.settings);
 
-export const currentLLMSettings = (s: UserStore): UserModelProviderConfig =>
-  currentSettings(s).languageModel || {};
-
-export const getProviderConfigById = (provider: string) => (s: UserStore) =>
-  currentLLMSettings(s)[provider as GlobalLLMProviderKey] as ProviderConfig | undefined;
+const currentImageSettings = (s: UserStore) => currentSettings(s).image;
 
 const currentMemorySettings = (s: UserStore) =>
   merge(DEFAULT_MEMORY_SETTINGS, currentSettings(s).memory);
@@ -57,5 +47,4 @@ export const settingsSelectors = {
   exportSettings,
   getHotkeyById,
   memoryEnabled,
-  providerConfig: getProviderConfigById,
 };

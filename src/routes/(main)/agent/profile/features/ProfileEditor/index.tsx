@@ -5,7 +5,6 @@ import type { TabsItem } from '@lobehub/ui/base-ui';
 import { Tabs } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import {
-  isHeterogeneousProviderBindingSupported,
   isRemoteHeterogeneousType,
   isServerDefaultHeterogeneousAgentType,
 } from '@orvilo/heterogeneous-agents';
@@ -131,19 +130,12 @@ const ProfileEditor = memo(() => {
   const localDesktopAvailable =
     isDesktop &&
     !!heterogeneousProvider &&
-    isHeterogeneousProviderBindingSupported(heterogeneousProvider.type) &&
+    isServerDefaultHeterogeneousAgentType(heterogeneousProvider.type) &&
     resolveExecutionTarget(effectiveAgencyConfig, {
       clientExecutionAvailable: true,
       isHetero: true,
       workspaceScoped,
     }) === 'local';
-  // Workspace agents are excluded even when the author could spawn them
-  // locally: the binding UI would list workspace-scoped providers, but Desktop
-  // main resolves the reference in the personal scope only (see
-  // `selectRuntimeType`'s personal-scope guard). The deployment-default API
-  // source is not a user-provider binding, so it stays available whenever
-  // local Desktop execution is available.
-  const apiModeAvailable = localDesktopAvailable && !isWorkspaceAgent;
   const useFetchServerDefaultCapability = useAgentStore(
     (s) => s.useFetchServerDefaultHeterogeneousCapability,
   );
@@ -195,8 +187,6 @@ const ProfileEditor = memo(() => {
           disabled: !isDesktop,
           children: (
             <HeterogeneousAgentStatusCard
-              apiModeAvailable={apiModeAvailable}
-              apiModeWorkspaceBlocked={isWorkspaceAgent}
               provider={heterogeneousProvider}
               serverDefaultAvailable={serverDefaultAvailable}
               serverDefaultLoading={serverCapabilityEnabled && serverCapability.isLoading}

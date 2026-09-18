@@ -101,21 +101,15 @@ beforeEach(() => {
 });
 
 describe('buildRunLifecycle.completeRun — transport-driven disposition', () => {
-  it('client `runtimeStatus: done` completes the op, marks unread, and emits client.runtime.complete', async () => {
+  it('normalized `status: completed` completes the op and marks the topic unread', async () => {
     const { get, store } = makeStore();
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'done' }));
+    await lifecycle('gateway', get).completeRun(completeEvent('gateway', { status: 'completed' }));
 
     expect(store.completeOperation).toHaveBeenCalledWith(OP);
     expect(store.markTopicUnread).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: 'a1', topicId: 't1' }),
     );
     expect(store.failOperation).not.toHaveBeenCalled();
-    expect(agentSignalBridgeMock.emitClientAgentSignalSourceEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payload: expect.objectContaining({ operationId: OP, status: 'completed' }),
-        sourceType: 'client.runtime.complete',
-      }),
-    );
   });
 
   it('summarizes an audio-first topic before returning a queued follow-up', async () => {
@@ -138,8 +132,8 @@ describe('buildRunLifecycle.completeRun — transport-driven disposition', () =>
       },
     } as any;
 
-    const { requeued } = await lifecycle('client', get).completeRun(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    const { requeued } = await lifecycle('gateway', get).completeRun(
+      completeEvent('gateway', { status: 'completed' }),
     );
 
     expect(requeued).toBe(true);
@@ -177,10 +171,13 @@ describe('buildRunLifecycle.completeRun — transport-driven disposition', () =>
     expect(agentSignalBridgeMock.emitClientAgentSignalSourceEvent).not.toHaveBeenCalled();
   });
 
-  it('client `runtimeStatus: interrupted` does NOT complete the op (cancel already moved it out of band)', async () => {
+  it('a missing or unrecognized normalized `status` leaves the op untouched (no complete, no fail)', async () => {
     const { get, store } = makeStore();
-    await lifecycle('client', get).completeRun(
-      completeEvent('client', { runtimeStatus: 'interrupted' }),
+    // `runtimeStatus` is a dead compat field — only the normalized `status`
+    // drives the terminal disposition, so an event carrying only the legacy
+    // field must not resolve the op either way.
+    await lifecycle('gateway', get).completeRun(
+      completeEvent('gateway', { runtimeStatus: 'interrupted' }),
     );
 
     expect(store.completeOperation).not.toHaveBeenCalled();
@@ -196,22 +193,13 @@ describe('buildRunLifecycle.completeRun — transport-driven disposition', () =>
   });
 });
 
-// The client transport persists `status: 'running'` at run start; without a
-// terminal reset for the topic the user is viewing, both the sidebar spinner and
-// the home "running" card would stay stuck after the reply finished (the
-// `markTopicUnread` reset early-returns on the active topic). Mirrors gateway's
-// onSessionComplete `viewing || !succeeded → 'active'` rule.
-describe('buildRunLifecycle.completeRun — client resets a viewed topic out of `running`', () => {
-  it('client success while VIEWING the topic force-resets its status to `active`', async () => {
-    const { get, store } = makeStore(); // activeTopicId === 't1' (viewing)
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'done' }));
-
-    expect(store.updateTopicStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ agentId: 'a1', status: 'active', topicId: 't1' }),
-    );
-  });
-
-  it('does not reset a viewed topic after a newer client run starts', async () => {
+// The viewed-topic `running → active` reset belonged to the retired client
+// transport (it persisted `status: 'running'` at run start, so completion had
+// to clear the spinner for the topic on screen). Gateway owns its own reset on
+// the server boundary and hetero drives the spinner off `topic.status` writes
+// from the executor — the shared lifecycle must never write a status here.
+describe('buildRunLifecycle.completeRun — never resets topic status itself', () => {
+  it('does not reset a viewed topic after a newer run starts', async () => {
     const { get, store } = makeStore();
     Object.assign(store.operations, {
       op2: {
@@ -223,60 +211,18 @@ describe('buildRunLifecycle.completeRun — client resets a viewed topic out of 
       },
     });
 
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'done' }));
+    await lifecycle('gateway', get).completeRun(completeEvent('gateway', { status: 'completed' }));
 
     expect(store.updateTopicStatus).not.toHaveBeenCalled();
   });
 
-  it('client success on a VIEWED group topic routes the reset to the group bucket (scope: group)', async () => {
-    // A group run's start-write passes scope: 'group'; the reset must too, or the
-    // optimistic patch derives `group_agent` and misses the visible group row.
-    const { get, store } = makeStore();
-    const groupContext = {
-      agentId: 'a1',
-      groupId: 'g1',
-      scope: 'group',
-      topicId: 't1',
-    } as ConversationContext;
-    await buildRunLifecycle(get, {
-      context: groupContext,
-      parentMessageId: 'u1',
-      parentMessageType: 'user',
-      runId: OP,
-      runScope: 'top_level',
-      runtimeType: 'client',
-    }).completeRun({
-      context: groupContext,
-      operationId: OP,
-      runId: OP,
-      runScope: 'top_level',
-      runtimeStatus: 'done',
-      runtimeType: 'client',
-    });
-
-    expect(store.updateTopicStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ scope: 'group', status: 'active', topicId: 't1' }),
-    );
-  });
-
-  it('client success while NOT viewing leaves the reset to markTopicUnread (no `active` write)', async () => {
+  it('success while NOT viewing marks unread and still writes no status', async () => {
     const { get, store } = makeStore();
     store.activeTopicId = 'other-topic';
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'done' }));
+    await lifecycle('gateway', get).completeRun(completeEvent('gateway', { status: 'completed' }));
 
     expect(store.markTopicUnread).toHaveBeenCalled();
     expect(store.updateTopicStatus).not.toHaveBeenCalled();
-  });
-
-  it('client failure resets the topic to `active` even when not viewing (error is never left `running`)', async () => {
-    const { get, store } = makeStore();
-    store.activeTopicId = 'other-topic';
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'error' }));
-
-    expect(store.failOperation).toHaveBeenCalled();
-    expect(store.updateTopicStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'active', topicId: 't1' }),
-    );
   });
 
   it('gateway success while viewing does NOT reset via the shared lifecycle (gateway owns its own reset)', async () => {
@@ -286,10 +232,10 @@ describe('buildRunLifecycle.completeRun — client resets a viewed topic out of 
     expect(store.updateTopicStatus).not.toHaveBeenCalled();
   });
 
-  it('a client sub_agent success does NOT reset the shared topic (sub-agents never wrote `running`)', async () => {
+  it('a sub_agent success does NOT reset the shared topic (sub-agents never wrote `running`)', async () => {
     const { get, store } = makeStore();
-    await lifecycle('client', get, 'sub_agent').completeRun(
-      completeEvent('client', { runScope: 'sub_agent', runtimeStatus: 'done' }),
+    await lifecycle('gateway', get, 'sub_agent').completeRun(
+      completeEvent('gateway', { runScope: 'sub_agent', status: 'completed' }),
     );
 
     expect(store.updateTopicStatus).not.toHaveBeenCalled();
@@ -370,7 +316,7 @@ describe('buildRunLifecycle — sub-agent runs skip top-level effects', () => {
   });
 });
 
-describe('buildRunLifecycle.afterRunComplete — client desktop notification body', () => {
+describe('buildRunLifecycle.afterRunComplete — desktop notification body', () => {
   const KEY = messageMapKey(CONTEXT);
   // parentMessageId for the run under test is 'u1' (see `lifecycle` helper), so
   // the assistant this run produced is the child of 'u1'.
@@ -387,15 +333,34 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
     role: 'assistant',
   } as any;
 
-  it('anchors the body to THIS run reply even when messagesMap still ends on the previous turn', async () => {
+  it('prefers the executor-supplied notification content over the store fallback', async () => {
     const { get, store } = makeStore();
-    // messagesMap lags: its last assistant is the PREVIOUS turn. The current
-    // run's assistant has only settled into dbMessagesMap so far.
-    store.messagesMap = { [KEY]: [prevTurnAssistant] } as any;
+    store.messagesMap = { [KEY]: [prevTurnAssistant, thisTurnAssistant] } as any;
+
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', {
+        notification: { content: 'executor-resolved reply' },
+        status: 'completed',
+      }),
+    );
+
+    expect(desktopNotificationMock.notifyDesktopAgentCompleted).toHaveBeenCalledWith(
+      get,
+      expect.objectContaining({
+        content: 'executor-resolved reply',
+        context: expect.objectContaining({ workspaceSlug: 'team' }),
+      }),
+    );
+  });
+
+  it('falls back to dbMessagesMap when messagesMap has no settled assistant for this key', async () => {
+    const { get, store } = makeStore();
+    // messagesMap has not settled for this bucket yet — the fallback must read
+    // the persisted rows so the notification still carries this run's reply.
     store.dbMessagesMap = { [KEY]: [prevTurnAssistant, thisTurnAssistant] } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { status: 'completed' }),
     );
 
     expect(desktopNotificationMock.notifyDesktopAgentCompleted).toHaveBeenCalledTimes(1);
@@ -408,31 +373,18 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
     );
   });
 
-  it('uses this run reply when it is present in messagesMap (linear happy path)', async () => {
+  it('uses the last assistant reply when it is present in messagesMap (linear happy path)', async () => {
     const { get, store } = makeStore();
     store.messagesMap = { [KEY]: [prevTurnAssistant, thisTurnAssistant] } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { status: 'completed' }),
     );
 
     expect(desktopNotificationMock.notifyDesktopAgentCompleted).toHaveBeenCalledWith(
       get,
       expect.objectContaining({ content: 'second turn reply' }),
     );
-  });
-
-  it('suppresses the notification while this run assistant is still tool-calling', async () => {
-    const { get, store } = makeStore();
-    store.messagesMap = {
-      [KEY]: [{ ...thisTurnAssistant, content: 'partial', tools: [{ id: 'tool-1' }] }],
-    } as any;
-
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
-    );
-
-    expect(desktopNotificationMock.notifyDesktopAgentCompleted).not.toHaveBeenCalled();
   });
 
   it('summarizes an untitled topic after its audio-only first message receives a reply', async () => {
@@ -452,8 +404,8 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
       },
     } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { status: 'completed' }),
     );
 
     expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
@@ -490,16 +442,16 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
       },
     } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { status: 'completed' }),
     );
 
     expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
   });
 
-  it.each(['error', 'interrupted'] as const)(
-    'does not summarize partial audio replies when the client run ends as %s',
-    async (runtimeStatus) => {
+  it.each(['failed', 'cancelled'] as const)(
+    'does not summarize partial audio replies when the run ends as %s',
+    async (status) => {
       const { get, store } = makeStore();
       store.messagesMap = {
         [KEY]: [
@@ -521,7 +473,7 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
         },
       } as any;
 
-      await lifecycle('client', get).afterRunComplete(completeEvent('client', { runtimeStatus }));
+      await lifecycle('gateway', get).afterRunComplete(completeEvent('gateway', { status }));
 
       expect(store.summaryTopicTitle).not.toHaveBeenCalled();
       expect(desktopNotificationMock.notifyDesktopAgentCompleted).not.toHaveBeenCalled();
@@ -540,8 +492,8 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
       },
     } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { status: 'completed' }),
     );
 
     expect(store.summaryTopicTitle).not.toHaveBeenCalled();
@@ -575,7 +527,7 @@ describe('buildRunLifecycle.afterUserMessagePersisted — topic title (all runti
     expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
   });
 
-  it('dev-slice title update does not clear the client runtime loading owner', async () => {
+  it('dev-slice title update uses internal_updateTopic without a summary call', async () => {
     const previous = process.env.NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC;
     process.env.NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC = '1';
 
@@ -585,8 +537,8 @@ describe('buildRunLifecycle.afterUserMessagePersisted — topic title (all runti
         { content: '阅读下面的材料，根据要求写作。', id: 'm1', role: 'user' } as any,
       ];
 
-      await lifecycle('client', get, 'top_level').afterUserMessagePersisted(
-        persistedEvent('client', 'top_level', {
+      await lifecycle('gateway', get, 'top_level').afterUserMessagePersisted(
+        persistedEvent('gateway', 'top_level', {
           isCreateNewTopic: true,
           messages,
           topicId: 't1',
@@ -664,8 +616,8 @@ describe('buildRunLifecycle.afterUserMessagePersisted — topic title (all runti
   it('does NOT title for a sub_agent run', async () => {
     const { get, store } = makeStore();
 
-    await lifecycle('client', get, 'sub_agent').afterUserMessagePersisted(
-      persistedEvent('client', 'sub_agent', {
+    await lifecycle('gateway', get, 'sub_agent').afterUserMessagePersisted(
+      persistedEvent('gateway', 'sub_agent', {
         isCreateNewTopic: true,
         messages: [{ content: 'x', id: 'm1', role: 'user' } as any],
       }),
@@ -695,7 +647,7 @@ describe('buildRunLifecycle.onRunResumed — park → resume broadcast seam', ()
     runtimeType,
   });
 
-  it.each<AgentRuntimeType>(['client', 'gateway', 'hetero'])(
+  it.each<AgentRuntimeType>(['gateway', 'hetero'])(
     'is behavior-neutral for %s: fires NO terminal side effects and emits no completion signal',
     async (runtimeType) => {
       const { get, store } = makeStore();
@@ -718,7 +670,7 @@ describe('buildRunLifecycle.onRunResumed — park → resume broadcast seam', ()
     const { get, store } = makeStore();
 
     await expect(
-      lifecycle('client', get, 'sub_agent').onRunResumed(resumedEvent('client', 'sub_agent')),
+      lifecycle('gateway', get, 'sub_agent').onRunResumed(resumedEvent('gateway', 'sub_agent')),
     ).resolves.toBeUndefined();
 
     expect(store.completeOperation).not.toHaveBeenCalled();

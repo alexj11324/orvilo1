@@ -28,8 +28,10 @@ describe('selectRuntimeType', () => {
   describe('on web (isDesktop = false)', () => {
     const opts = { isDesktop: false };
 
-    it('returns client when no signal is set', () => {
-      expect(selectRuntimeType({ isGatewayMode: false }, opts)).toBe('client');
+    it('throws AGENT_BINDING_REQUIRED when no signal is set', () => {
+      expect(() => selectRuntimeType({ isGatewayMode: false }, opts)).toThrow(
+        /AGENT_BINDING_REQUIRED/,
+      );
     });
 
     it('returns gateway when gateway mode is enabled', () => {
@@ -89,9 +91,11 @@ describe('selectRuntimeType', () => {
       ).toBe('gateway');
     });
 
-    it('falls back to gateway/client when no hetero provider', () => {
+    it('falls back to gateway / throws AGENT_BINDING_REQUIRED when no hetero provider', () => {
       expect(selectRuntimeType({ isGatewayMode: true }, opts)).toBe('gateway');
-      expect(selectRuntimeType({ isGatewayMode: false }, opts)).toBe('client');
+      expect(() => selectRuntimeType({ isGatewayMode: false }, opts)).toThrow(
+        /AGENT_BINDING_REQUIRED/,
+      );
     });
   });
 
@@ -190,7 +194,7 @@ describe('selectRuntimeType', () => {
       ).toThrow(/Desktop local execution/);
     });
 
-    it.each(['client', 'gateway'] as const)(
+    it.each(['gateway'] as const)(
       'rejects API mode inherited from the %s parent runtime',
       (parentRuntime) => {
         expect(() =>
@@ -221,7 +225,7 @@ describe('selectRuntimeType', () => {
       ).toBe('hetero');
     });
 
-    it.each(['client', 'gateway', 'hetero'] as const)(
+    it.each(['gateway', 'hetero'] as const)(
       'rejects every %s parent runtime for API mode on web',
       (parentRuntime) => {
         expect(() =>
@@ -432,13 +436,13 @@ describe('selectRuntimeType', () => {
       expect(
         selectRuntimeType(
           {
-            parentRuntime: 'client',
             heterogeneousProvider: heteroProvider,
             isGatewayMode: true,
+            parentRuntime: 'gateway',
           },
           { isDesktop: true },
         ),
-      ).toBe('client');
+      ).toBe('gateway');
 
       expect(
         selectRuntimeType({ parentRuntime: 'gateway', isGatewayMode: false }, { isDesktop: false }),

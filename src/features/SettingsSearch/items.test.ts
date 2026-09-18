@@ -15,7 +15,6 @@ const webContext: SettingsSearchContext = {
   enableBusinessFeatures: true,
   enableComposio: true,
   enableGatewayMode: true,
-  enableSTT: true,
   hasEmail: true,
   hideDocs: false,
   isDesktop: false,
@@ -61,14 +60,8 @@ describe('settings search index', () => {
   });
 
   it('covers the high-volume zero-result phrases as tab keywords', () => {
-    expect(TAB_SEARCH_EN_KEYWORDS[SettingsTabs.Provider]).toEqual(
-      expect.arrayContaining(['api', 'model provider', 'language model', 'custom provider']),
-    );
     expect(TAB_SEARCH_EN_KEYWORDS[SettingsTabs.Messenger]).toEqual(
       expect.arrayContaining(['telegram', 'slack', 'discord', 'wechat']),
-    );
-    expect(TAB_SEARCH_EN_KEYWORDS[SettingsTabs.ServiceModel]).toEqual(
-      expect.arrayContaining(['search', 'tts settings']),
     );
     expect(TAB_SEARCH_EN_KEYWORDS[SettingsTabs.Storage]).toEqual(
       expect.arrayContaining(['knowledge base']),

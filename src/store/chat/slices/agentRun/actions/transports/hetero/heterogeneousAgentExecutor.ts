@@ -10,7 +10,6 @@ import {
   buildHeterogeneousAgentAuthRequiredError,
   createMainAgentRunState,
   isHeterogeneousAgentAuthRequired,
-  isHeterogeneousProviderBindingSupported,
   isLocalHeterogeneousType,
   isServerDefaultHeterogeneousAgentType,
   type MainAgentIntent,
@@ -1861,34 +1860,16 @@ export const executeHeterogeneousAgent = async (
     providerBindingActive && heterogeneousProvider.apiConfig?.source === 'server-default'
       ? heterogeneousProvider.apiConfig
       : undefined;
-  const providerApiConfig =
-    providerBindingActive &&
-    heterogeneousProvider.apiConfig &&
-    heterogeneousProvider.apiConfig.source !== 'server-default'
-      ? heterogeneousProvider.apiConfig
-      : undefined;
   const serverDefaultBindingActive = !!serverDefaultApiConfig;
-  const userProviderBindingActive = !!providerApiConfig;
-  if (providerBindingActive && !serverDefaultBindingActive && !userProviderBindingActive) {
+  // User-provider (BYOK) bindings are retired — only the server-default binding
+  // remains a supported `authMode: 'api'` source.
+  if (providerBindingActive && !serverDefaultBindingActive) {
     await persistTerminalError(
       toHeterogeneousAgentMessageError(
         new Error(t('heteroAgent.apiMode.configMissing', { ns: 'chat' })),
         adapterType,
       ),
     );
-    return;
-  }
-
-  if (
-    userProviderBindingActive &&
-    (!isHeterogeneousProviderBindingSupported(adapterType) ||
-      !providerApiConfig.providerId ||
-      !providerApiConfig.model.trim())
-  ) {
-    const message = !isHeterogeneousProviderBindingSupported(adapterType)
-      ? t('heteroAgent.apiMode.agentUnsupported', { name: adapterType, ns: 'chat' })
-      : t('heteroAgent.apiMode.configMissing', { ns: 'chat' });
-    await persistTerminalError(toHeterogeneousAgentMessageError(new Error(message), adapterType));
     return;
   }
 
@@ -1937,13 +1918,7 @@ export const executeHeterogeneousAgent = async (
           kind: 'server-default' as const,
           resumeBindingKey,
         }
-      : userProviderBindingActive
-        ? {
-            apiConfig: providerApiConfig,
-            kind: 'provider' as const,
-            resumeBindingKey,
-          }
-        : undefined;
+      : undefined;
 
     // Start session (pass resumeSessionId for multi-turn --resume)
     const result = await heterogeneousAgentService.startSession({

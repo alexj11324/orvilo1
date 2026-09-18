@@ -5,7 +5,6 @@ import {
   AppWindowIcon,
   BellIcon,
   Blocks,
-  Brain,
   BrainCircuit,
   ChartColumnBigIcon,
   Coins,
@@ -23,7 +22,6 @@ import {
   MessageCircleIcon,
   MonitorSmartphoneIcon,
   PaletteIcon,
-  Sparkles,
   TagIcon,
   TerminalSquare,
 } from 'lucide-react';
@@ -74,7 +72,7 @@ export const useCategory = () => {
   const { t: tLabs } = useTranslation('labs');
   const { t: tSubscription } = useTranslation('subscription');
   const mobile = useServerConfigStore((s) => s.isMobile);
-  const { hideDocs, showApiKeyManage, showProvider } = useServerConfigStore(featureFlagsSelectors);
+  const { hideDocs, showApiKeyManage } = useServerConfigStore(featureFlagsSelectors);
   const [avatar, username] = useUserStore((s) => [
     userProfileSelectors.userAvatar(s),
     userProfileSelectors.nickName(s),
@@ -148,18 +146,6 @@ export const useCategory = () => {
       // 执行环境与 Agent — the agent plus the runtime it executes in.
       {
         items: [
-          // Provider settings should not depend on Advanced tools: new users may need
-          // non-LobeHub providers, and desktop users often bring their own API keys.
-          showProvider && {
-            icon: Brain,
-            key: SettingsTabs.Provider,
-            label: t('tab.provider'),
-          },
-          {
-            icon: Sparkles,
-            key: SettingsTabs.ServiceModel,
-            label: t('tab.serviceModel'),
-          },
           {
             icon: BrainCircuit,
             key: SettingsTabs.Memory,
@@ -320,7 +306,6 @@ export const useCategory = () => {
       hideDocs,
       mobile,
       showApiKeyManage,
-      showProvider,
       isDevMode,
       enableOAuthApps,
       avatarUrl,

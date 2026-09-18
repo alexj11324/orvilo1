@@ -1250,14 +1250,30 @@ const ScheduleAgentRunSchema = z
 const ExecSubAgentTaskSchema = z.object({
   /** The SubAgent ID to execute the task */
   agentId: z.string(),
+  /**
+   * chatConfig overrides (thinking / reasoning-effort extend params) resolved
+   * by the spawn site from the parent agent's `agencyConfig.subagent`.
+   */
+  chatConfig: z.record(z.string(), z.any()).nullish(),
   /** The Group ID (optional, only for Group mode) */
   groupId: z.string().optional(),
+  /** Seed the isolation thread with the parent conversation transcript */
+  inheritMessages: z.boolean().optional(),
+  /**
+   * Mark the spawned run as a sub-agent (trims nested `callSubAgent`). Set by
+   * the client `callSubAgent` transport; direct-mention dispatch leaves it off.
+   */
+  isSubAgent: z.boolean().optional(),
   /** Task instruction/prompt for the SubAgent */
   instruction: z.string(),
+  /** Sub-agent model override resolved at the spawn site */
+  model: z.string().optional(),
   /** The parent message ID (Supervisor's tool call message or task message) */
   parentMessageId: z.string(),
   /** Parent operation ID for dispatching callAgent hooks */
   parentOperationId: z.string().optional(),
+  /** Provider for {@link model} */
+  provider: z.string().optional(),
   /** Timeout in milliseconds (optional) */
   timeout: z.number().optional(),
   /** Task title (shown in UI, used as thread title) */
@@ -1268,7 +1284,7 @@ const ExecSubAgentTaskSchema = z.object({
 
 /**
  * Schema for createClientTaskThread - create Thread for client-side task execution
- * This is used when runInClient=true on desktop client (single agent mode)
+ * Used by desktop-local heterogeneous dispatch (single agent mode)
  */
 const CreateClientTaskThreadSchema = z.object({
   /** The Agent ID to execute the task */
@@ -2009,8 +2025,8 @@ export const aiAgentRouter = router({
   /**
    * Create Thread for client-side task execution
    *
-   * This endpoint is called by desktop client when runInClient=true.
-   * It creates the Thread but does NOT execute the task - execution happens on client side.
+   * Called by the desktop-local heterogeneous dispatch path to materialize the
+   * isolated thread; execution happens in the local agent process.
    */
   createClientTaskThread: aiAgentWriteProcedure
     .input(CreateClientTaskThreadSchema)
@@ -2603,10 +2619,15 @@ export const aiAgentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const {
         agentId,
+        chatConfig,
         groupId,
+        inheritMessages,
         instruction,
+        isSubAgent,
+        model,
         parentMessageId,
         parentOperationId,
+        provider,
         title,
         topicId,
         timeout,
@@ -2633,10 +2654,15 @@ export const aiAgentRouter = router({
         // External procedure name stays `execSubAgentTask`; the service method is `execSubAgent`.
         return await ctx.aiAgentService.execSubAgent({
           agentId,
+          chatConfig,
           groupId,
+          inheritMessages,
           instruction,
+          isSubAgent,
+          model,
           parentMessageId,
           ...(parentOperationId && { parentOperationId }),
+          provider,
           timeout,
           title,
           topicId,
@@ -2962,11 +2988,22 @@ export const aiAgentRouter = router({
         status: updatedTaskStatus,
         stepCount: realtimeStatus?.currentState?.stepCount,
         taskDetail,
-        usage:
-          realtimeStatus?.currentState?.usage ??
-          (updatedMetadata?.totalTokens
+        usage: (() => {
+          // currentState.usage is the nested runtime shape
+          // ({llm:{tokens:{input,output,total}}, tools:{…}}); TaskStatusResult
+          // and every downstream consumer declare the flat token fields.
+          const tokens = realtimeStatus?.currentState?.usage?.llm?.tokens;
+          if (tokens) {
+            return {
+              completion_tokens: tokens.output,
+              prompt_tokens: tokens.input,
+              total_tokens: tokens.total,
+            };
+          }
+          return updatedMetadata?.totalTokens
             ? { total_tokens: updatedMetadata.totalTokens }
-            : undefined),
+            : undefined;
+        })(),
       };
 
       return result;

@@ -19,6 +19,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+import { clearAllMockLLMState } from '../src/mocks/llm/registry';
 import { createTestOidcJwks } from '../src/support/oidcTestKey';
 
 // ============================================================================
@@ -294,6 +295,18 @@ function getServerEnv(port: number): Record<string, string> {
     AUTH_SECRET: CONFIG.secrets.betterAuthSecret,
     DATABASE_DRIVER: CONFIG.databaseDriver,
     DATABASE_URL: CONFIG.databaseUrl,
+    // Agent sends run through the server-side runtime in gateway mode (the
+    // browser client runtime is retired) — point it at the local stand-ins.
+    AGENT_GATEWAY_SERVICE_TOKEN: 'e2e-mock-service-token',
+    AGENT_GATEWAY_URL: 'http://localhost:3407',
+    DEEPSEEK_API_KEY: 'e2e-mock-key',
+    DEEPSEEK_PROXY_URL: 'http://localhost:3406/v1',
+    // Mini-model calls (topic titles, summaries) resolve to openai — same mock.
+    OPENAI_API_KEY: 'e2e-mock-key',
+    OPENAI_PROXY_URL: 'http://localhost:3406/v1',
+    ENABLE_AGENT_GATEWAY: '1',
+    E2E_MOCK_GATEWAY_PORT: '3407',
+    E2E_MOCK_LLM_PORT: '3406',
     JWKS_KEY: CONFIG.secrets.oidcJwks,
     KEY_VAULTS_SECRET: CONFIG.secrets.keyVaultsSecret,
     NODE_OPTIONS: '--max-old-space-size=6144',
@@ -303,6 +316,54 @@ function getServerEnv(port: number): Record<string, string> {
     S3_ENDPOINT: CONFIG.s3Mock.endpoint,
     S3_SECRET_ACCESS_KEY: CONFIG.s3Mock.secretAccessKey,
   };
+}
+
+/**
+ * Start the fake Agent Gateway + mock LLM endpoint that gateway-mode runs
+ * need. Idempotent — skips the spawn when both ports already answer /health.
+ */
+async function startMockServices(): Promise<void> {
+  const llmPort = Number(process.env.E2E_MOCK_LLM_PORT || 3406);
+  const gatewayPort = Number(process.env.E2E_MOCK_GATEWAY_PORT || 3407);
+
+  const isHealthy = async (port: number) => {
+    try {
+      const res = await fetch(`http://localhost:${port}/health`, {
+        signal: AbortSignal.timeout(1500),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  if ((await isHealthy(llmPort)) && (await isHealthy(gatewayPort))) {
+    // Services already up (e.g. a long-lived local pair) — still wipe stale
+    // worker-state files so a previous run's responses can't shadow this one.
+    clearAllMockLLMState();
+    log('✅', `E2E mock services already running (LLM :${llmPort}, gateway :${gatewayPort})`);
+    return;
+  }
+
+  const scriptPath = path.join(CONFIG.projectRoot, 'e2e', 'scripts', 'mockServices.ts');
+  const child = spawn('bun', [scriptPath], {
+    cwd: CONFIG.projectRoot,
+    detached: true,
+    env: process.env,
+    stdio: 'ignore',
+  });
+  child.unref();
+
+  const isReady = await waitForCondition(
+    async () => (await isHealthy(llmPort)) && (await isHealthy(gatewayPort)),
+    15_000,
+    500,
+  );
+
+  if (!isReady) {
+    throw new Error(`E2E mock services (LLM :${llmPort}, gateway :${gatewayPort}) failed to start`);
+  }
+  log('✅', `E2E mock services started (LLM :${llmPort}, gateway :${gatewayPort})`);
 }
 
 async function startServer(port: number): Promise<void> {
@@ -503,9 +564,11 @@ ${'─'.repeat(50)}
       await buildApp(options.port);
     }
 
-    // Step 4: Start server (optional)
+    // Step 4: Start server (optional) — with the E2E mock services the
+    // gateway-mode runtime depends on (fake Agent Gateway + mock LLM).
     if (options.start) {
       logStep(++currentStep, totalSteps, 'Starting application server');
+      await startMockServices();
       await startServer(options.port);
     }
 

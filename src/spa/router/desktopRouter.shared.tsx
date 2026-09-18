@@ -9,7 +9,6 @@ import {
   LayoutPanelTopIcon,
   LibraryBigIcon,
   Mic2,
-  Settings,
   SquarePlay,
 } from 'lucide-react';
 import {
@@ -54,7 +53,6 @@ import {
 } from '@/features/Projects/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
 import { workspaceHomeRouteMeta } from '@/features/Workspace/routeMeta';
-import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
 import {
   agentChannelRouteMeta,
   agentPermissionRouteMeta,
@@ -822,32 +820,14 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
         element: redirectElement('/settings/profile'),
         index: true,
       },
-      // Provider routes with nested structure
+      // Retired LLM Provider surface — legacy deep-links land on the settings root.
       {
-        children: [
-          {
-            element: redirectElement('/settings/provider/all'),
-            index: true,
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderDetailPage),
-              'Desktop > Settings > Provider > Detail',
-            ),
-            handle: {
-              meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
-            },
-            path: ':providerId',
-          },
-        ],
-        element: dynamicElement(
-          () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderLayout),
-          'Desktop > Settings > Provider > Layout',
-        ),
-        handle: {
-          meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
-        },
+        element: redirectElement('/settings'),
         path: 'provider',
+      },
+      {
+        element: redirectElement('/settings'),
+        path: 'provider/:providerId',
       },
       {
         element: dynamicElement(
@@ -915,21 +895,14 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
           },
           // Full-bleed tabs render directly inside the workspace settings
           // shell (sidebar + outlet) — they own their internal layout.
+          // Retired workspace LLM Provider surface — deep-links land on the
+          // workspace settings root.
           {
-            element: dynamicElement(
-              () => import('@/routes/(main)/[workspaceSlug]/settings/provider'),
-              'Desktop > Workspace > Settings > Provider',
-            ),
-            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
+            element: redirectElement('..'),
             path: 'provider',
           },
-          // Path-shaped provider deep-links (`/:slug/settings/provider/:id`)
-          // redirect to the query form the workspace provider page uses, so
-          // they don't fall through to the catch-all and leave the workspace.
-          // Static element: the redirect is tiny and lazy-loading it would
-          // flash the generic brand loader before redirecting.
           {
-            element: <WorkspaceProviderRedirect />,
+            element: redirectElement('..'),
             path: 'provider/:providerId',
           },
           {
@@ -1049,12 +1022,10 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
                 handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('grid') }) },
                 path: 'usage',
               },
+              // Retired service-model assignment surface — legacy deep-links
+              // land on the workspace settings root.
               {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/service-model'),
-                  'Desktop > Workspace > Settings > Service Model',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
+                element: redirectElement('..'),
                 path: 'service-model',
               },
               {

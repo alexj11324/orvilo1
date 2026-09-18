@@ -30,6 +30,21 @@ env:
   # until it ships, E2E keeps serving home rail recommendations from the upstream
   # market service. The @lobehub/market-sdk contract is unchanged by the rebrand.
   MARKET_BASE_URL: https://market.lobehub.com
+  # Agent execution runs server-side in gateway mode (the browser client
+  # runtime is retired). Point the runtime at the E2E stand-ins started by the
+  # "Start E2E mock services" step: a fake Agent Gateway (WS fan-out + push
+  # ingest) and a mock OpenAI-compatible LLM endpoint.
+  ENABLE_AGENT_GATEWAY: '1'
+  AGENT_GATEWAY_URL: http://localhost:3407
+  AGENT_GATEWAY_SERVICE_TOKEN: e2e-mock-service-token
+  DEEPSEEK_API_KEY: e2e-mock-key
+  DEEPSEEK_PROXY_URL: http://localhost:3406/v1
+  # Mini-model calls (topic titles, summaries) resolve to the openai provider —
+  # same mock endpoint.
+  OPENAI_API_KEY: e2e-mock-key
+  OPENAI_PROXY_URL: http://localhost:3406/v1
+  E2E_MOCK_LLM_PORT: '3406'
+  E2E_MOCK_GATEWAY_PORT: '3407'
 
 jobs:
   # Check for duplicate runs
@@ -226,6 +241,18 @@ jobs:
               failed: ${{ steps.dist_size_check.outcome == 'failure' || steps.entry_graph_check.outcome == 'failure' }},
               identifier: 'web',
             });
+
+      - name: Start E2E mock services
+        run: |
+          bun e2e/scripts/mockServices.ts > /tmp/orvilo-e2e-mocks.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://localhost:3406/health > /dev/null && curl -fsS http://localhost:3407/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/orvilo-e2e-mocks.log
+          exit 1
 
       - name: Start E2E server
         run: |

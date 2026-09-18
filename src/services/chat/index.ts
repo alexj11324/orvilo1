@@ -8,11 +8,8 @@ import {
 import { type OfficialToolItem } from '@orvilo/context-engine';
 import { type FetchSSEOptions } from '@orvilo/fetch-sse';
 import { fetchSSE, standardizeAnimationStyle } from '@orvilo/fetch-sse';
-import type { ChatCompletionErrorPayload } from '@orvilo/model-runtime';
 import { isResponsesAPIModel } from '@orvilo/model-runtime/providers/openai/modelId';
-import { AgentRuntimeError } from '@orvilo/model-runtime/utils/createError';
 import {
-  ChatErrorType,
   getDisabledPluginIds,
   type RuntimeAdditionalContextFragment,
   type RuntimeInitialContext,
@@ -49,19 +46,13 @@ import {
   userProfileSelectors,
 } from '@/store/user/selectors';
 import { type ChatStreamPayload, type OpenAIChatMessage } from '@/types/openai/chat';
-import { createErrorResponse } from '@/utils/errorResponse';
 import { createTraceHeader } from '@/utils/trace';
 
 import { createHeaderWithAuth } from '../_auth';
 import { API_ENDPOINTS } from '../_url';
-import { findDeploymentName, isEnableFetchOnClient, resolveRuntimeProvider } from './helper';
+import { findDeploymentName } from './helper';
 import { type ResolvedAgentConfig } from './mecha';
-import {
-  contextEngineering,
-  getTargetAgentId,
-  initializeWithClientStore,
-  resolveModelExtendParams,
-} from './mecha';
+import { contextEngineering, getTargetAgentId, resolveModelExtendParams } from './mecha';
 import { type FetchOptions } from './types';
 
 const providersWithDeploymentName = new Set<string>([
@@ -472,47 +463,6 @@ class ChatService {
     if (payload.presence_penalty === null) payload.presence_penalty = undefined;
     if (payload.frequency_penalty === null) payload.frequency_penalty = undefined;
 
-    const sdkType = resolveRuntimeProvider(provider);
-
-    /**
-     * Use browser agent runtime
-     */
-    const enableFetchOnClient = isEnableFetchOnClient(provider);
-
-    let fetcher: typeof fetch | undefined = undefined;
-
-    if (enableFetchOnClient) {
-      /**
-       * Notes:
-       * 1. Browser agent runtime will skip auth check if a key and endpoint provided by
-       *    user which will cause abuse of plugins services
-       * 2. This feature will be disabled by default
-       */
-      fetcher = async () => {
-        try {
-          return await this.fetchOnClient({
-            payload,
-            provider,
-            runtimeProvider: sdkType,
-            signal,
-            topicId,
-          });
-        } catch (e) {
-          const {
-            errorType = ChatErrorType.BadRequest,
-            error: errorContent,
-            ...res
-          } = e as ChatCompletionErrorPayload;
-
-          const error = errorContent || e;
-          // track the error at server side
-          console.error(`Route: [${provider}] ${errorType}:`, error);
-
-          return createErrorResponse(errorType, { error, ...res, provider });
-        }
-      };
-    }
-
     const traceHeader = createTraceHeader({ ...options?.trace });
 
     const headers = await createHeaderWithAuth({
@@ -543,7 +493,6 @@ class ChatService {
 
     return fetchSSE(API_ENDPOINTS.chat(provider), {
       body: JSON.stringify(payload),
-      fetcher,
       headers,
       method: 'POST',
       onAbort: options?.onAbort,
@@ -552,7 +501,6 @@ class ChatService {
       onMessageHandle: options?.onMessageHandle,
       requestContext: {
         apiMode,
-        fetchOnClient: enableFetchOnClient,
         model,
         provider,
       },
@@ -620,38 +568,6 @@ class ChatService {
       tags: [tag, ...(trace?.tags || []), ...tags].filter(Boolean) as string[],
       userId: userProfileSelectors.userId(useUserStore.getState()),
     };
-  };
-
-  /**
-   * Fetch chat completion on the client side.
-
-   */
-  private fetchOnClient = async (params: {
-    payload: Partial<ChatStreamPayload>;
-    provider: string;
-    runtimeProvider: string;
-    signal?: AbortSignal;
-    topicId?: string;
-  }) => {
-    /**
-     * if enable login and not signed in, return unauthorized error
-     */
-    const userStore = useUserStore.getState();
-    if (!userStore.isSignedIn) {
-      throw AgentRuntimeError.createError(ChatErrorType.InvalidAccessCode);
-    }
-
-    const agentRuntime = await initializeWithClientStore({
-      payload: params.payload,
-      provider: params.provider,
-      runtimeProvider: params.runtimeProvider,
-    });
-    const data = params.payload as ChatStreamPayload;
-
-    return agentRuntime.chat(data, {
-      metadata: { topicId: params.topicId },
-      signal: params.signal,
-    });
   };
 }
 

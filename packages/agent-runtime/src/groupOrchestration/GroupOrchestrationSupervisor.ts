@@ -8,7 +8,6 @@ import type {
   SupervisorInstructionCallSupervisor,
   SupervisorInstructionDelegate,
   SupervisorInstructionExecAsyncTask,
-  SupervisorInstructionExecClientAsyncTask,
   SupervisorInstructionFinish,
   SupervisorInstructionParallelCallAgents,
 } from './types';
@@ -106,14 +105,6 @@ export class GroupOrchestrationSupervisor implements IGroupOrchestrationSupervis
               title: params.title as string | undefined,
               toolMessageId: params.toolMessageId as string,
             };
-
-            // Return different instruction type based on runInClient flag
-            if (params.runInClient) {
-              return {
-                payload: instructionPayload,
-                type: 'exec_client_async_task',
-              } as SupervisorInstructionExecClientAsyncTask;
-            }
 
             return {
               payload: instructionPayload,

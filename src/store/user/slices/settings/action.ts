@@ -8,10 +8,7 @@ import type { StoreSetter } from '@/store/types';
 import type { UserStore } from '@/store/user';
 import type { OrviloAgentSettings } from '@/types/session';
 import type {
-  SystemAgentItem,
   UserGeneralConfig,
-  UserKeyVaults,
-  UserServiceModelConfigKey,
   UserSettings,
   UserSystemAgentConfigKey,
 } from '@/types/user/settings';
@@ -275,18 +272,6 @@ export class UserSettingsActionImpl {
     await this.#get().refreshUserState();
   };
 
-  updateKeyVaults = async (keyVaults: Partial<UserKeyVaults>): Promise<void> => {
-    await this.#get().setSettings({ keyVaults });
-  };
-
-  updateSystemAgent = async (
-    key: UserServiceModelConfigKey,
-    value: Partial<SystemAgentItem>,
-  ): Promise<void> => {
-    await this.#get().setSettings({
-      systemAgent: { [key]: { ...value } },
-    });
-  };
 }
 
 export type UserSettingsAction = Pick<UserSettingsActionImpl, keyof UserSettingsActionImpl>;

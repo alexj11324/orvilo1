@@ -4,7 +4,7 @@ import { CopyButton, Flexbox, Icon, Input, Tooltip, TooltipGroup } from '@lobehu
 import { ActionIcon, Button, Segmented, Select, Tag, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { type BinaryStatus, type ClaudeAuthStatus } from '@orvilo/electron-client-ipc';
-import { isHeterogeneousProviderBindingSupported } from '@orvilo/heterogeneous-agents';
+import { isServerDefaultHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
   getHeterogeneousAgentClientConfig,
   isRemoteHeterogeneousType,
@@ -19,27 +19,22 @@ import { Loader2Icon, PencilLine, RefreshCw, XCircle } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ProviderItemRender } from '@/components/ModelSelect';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
 import {
   isBuiltinEngineType,
   resolveOrviloEngineCliType,
 } from '@/features/HeterogeneousAgent/engine';
-import { useProviderBindingCompatibleProviders } from '@/features/HeterogeneousAgent/hooks/useProviderBinding';
 import {
   buildServerDefaultModelOptions,
   MODEL_PICKER_STYLE,
   modelPickerStyles,
 } from '@/features/HeterogeneousAgent/modelPicker';
-import ModelSelect from '@/features/ModelSelect';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { binaryService } from '@/services/electron/binary';
 import { useAiInfraStore } from '@/store/aiInfra';
 
 const COMMAND_LINE_HEIGHT = 28;
-const SERVER_DEFAULT_PROVIDER_VALUE = 'server-default';
-const USER_PROVIDER_VALUE_PREFIX = 'provider:';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
@@ -234,13 +229,6 @@ interface ServerDefaultModel {
 }
 
 interface HeterogeneousAgentStatusCardProps {
-  apiModeAvailable?: boolean;
-  /**
-   * Provider binding is blocked because the agent is workspace-scoped: the
-   * binding UI would offer workspace providers while Desktop main resolves
-   * the reference in the personal scope only.
-   */
-  apiModeWorkspaceBlocked?: boolean;
   onApiConfigChange?: (apiConfig: HeterogeneousApiConfig | undefined) => Promise<void> | void;
   onAuthModeChange?: (
     authMode: HeterogeneousAuthMode,
@@ -257,8 +245,6 @@ interface HeterogeneousAgentStatusCardProps {
 
 const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
   ({
-    apiModeAvailable = false,
-    apiModeWorkspaceBlocked = false,
     provider,
     serverDefaultAvailable = false,
     serverDefaultLoading = false,
@@ -293,8 +279,6 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     const commandInputRef = useRef<HTMLInputElement | null>(null);
     const authMode = provider.authMode ?? 'subscription';
     const serverDefaultSelected = provider.apiConfig?.source === 'server-default';
-    const providerApiConfig =
-      provider.apiConfig?.source !== 'server-default' ? provider.apiConfig : undefined;
     const builtinAiModelList = useAiInfraStore((s) => s.builtinAiModelList);
     const serverDefaultModelOptions = useMemo(
       () => buildServerDefaultModelOptions(serverDefaultModels, builtinAiModelList),
@@ -304,37 +288,16 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     const selectedServerDefaultModel =
       serverDefaultModels.find(({ model }) => model === provider.apiConfig?.model) ??
       firstServerDefaultModel;
-    const providerBindingSupported = isHeterogeneousProviderBindingSupported(provider.type);
-    const { modelsByProvider, providers: compatibleProviders } =
-      useProviderBindingCompatibleProviders(provider.type);
-    const providerOptions = useMemo(
-      () => [
-        {
-          disabled: !serverDefaultAvailable,
-          label: (
-            <ProviderItemRender
-              name={t('heterogeneousStatus.apiMode.defaultProvider')}
-              provider="orvilo"
-            />
-          ),
-          value: SERVER_DEFAULT_PROVIDER_VALUE,
-        },
-        ...compatibleProviders.map(({ id, logo, name, source }) => ({
-          disabled: !apiModeAvailable,
-          label: <ProviderItemRender logo={logo} name={name || id} provider={id} source={source} />,
-          value: `${USER_PROVIDER_VALUE_PREFIX}${id}`,
-        })),
-      ],
-      [apiModeAvailable, compatibleProviders, serverDefaultAvailable, t],
-    );
+    // API auth mode is now only the deployment-provided server-default binding;
+    // user-provider (BYOK) bindings are retired.
+    const apiModeSupported = isServerDefaultHeterogeneousAgentType(provider.type);
 
+    // Heal stale configs: a missing or legacy user-provider apiConfig under
+    // `authMode: 'api'` is rewritten to the server-default model as soon as the
+    // capability list resolves.
     useEffect(() => {
-      if (
-        authMode !== 'api' ||
-        !serverDefaultSelected ||
-        !selectedServerDefaultModel ||
-        selectedServerDefaultModel.model === provider.apiConfig?.model
-      )
+      if (authMode !== 'api' || !selectedServerDefaultModel) return;
+      if (serverDefaultSelected && selectedServerDefaultModel.model === provider.apiConfig?.model)
         return;
 
       void onApiConfigChange?.({
@@ -371,51 +334,25 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     const handleAuthModeChange = useCallback(
       async (nextAuthMode: HeterogeneousAuthMode) => {
         if (!canEdit || nextAuthMode === authMode) return;
-        const localProviderApiAvailable = apiModeAvailable;
-        if (nextAuthMode === 'api' && !serverDefaultAvailable && !localProviderApiAvailable) return;
+        if (nextAuthMode === 'api' && !serverDefaultAvailable) return;
 
-        const firstProvider = compatibleProviders[0];
-        const firstApiModel = firstProvider && modelsByProvider[firstProvider.id]?.[0];
         const nextApiConfig =
-          nextAuthMode === 'api' && !provider.apiConfig
+          nextAuthMode === 'api' && !serverDefaultSelected
             ? firstServerDefaultModel
               ? { model: firstServerDefaultModel.model, source: 'server-default' as const }
-              : firstProvider && firstApiModel
-                ? { model: firstApiModel.id, providerId: firstProvider.id }
-                : undefined
+              : undefined
             : provider.apiConfig;
         await onAuthModeChange?.(nextAuthMode, nextApiConfig);
       },
       [
-        apiModeAvailable,
         authMode,
         canEdit,
-        compatibleProviders,
-        modelsByProvider,
         onAuthModeChange,
         provider.apiConfig,
         firstServerDefaultModel,
         serverDefaultAvailable,
+        serverDefaultSelected,
       ],
-    );
-
-    const handleApiProviderChange = useCallback(
-      async (value: string) => {
-        if (!canEdit) return;
-        if (value === SERVER_DEFAULT_PROVIDER_VALUE && firstServerDefaultModel) {
-          await onApiConfigChange?.({
-            model: firstServerDefaultModel.model,
-            source: 'server-default',
-          });
-          return;
-        }
-
-        if (!value.startsWith(USER_PROVIDER_VALUE_PREFIX)) return;
-        const providerId = value.slice(USER_PROVIDER_VALUE_PREFIX.length);
-        const model = modelsByProvider[providerId]?.[0];
-        if (model) await onApiConfigChange?.({ model: model.id, providerId, source: 'provider' });
-      },
-      [canEdit, firstServerDefaultModel, modelsByProvider, onApiConfigChange],
     );
 
     const handleServerDefaultModelChange = useCallback(
@@ -424,26 +361,6 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
         await onApiConfigChange?.({ model, source: 'server-default' });
       },
       [canEdit, onApiConfigChange],
-    );
-
-    const handlePrimaryModelChange = useCallback(
-      async ({ model, provider: providerId }: { model: string; provider: string }) => {
-        if (!canEdit) return;
-        const smallFastModel =
-          providerApiConfig?.providerId === providerId
-            ? providerApiConfig.smallFastModel
-            : undefined;
-        await onApiConfigChange?.({ model, providerId, smallFastModel });
-      },
-      [canEdit, onApiConfigChange, providerApiConfig],
-    );
-
-    const handleSmallFastModelChange = useCallback(
-      async (smallFastModel: string | null) => {
-        if (!canEdit || !providerApiConfig) return;
-        await onApiConfigChange?.({ ...providerApiConfig, smallFastModel });
-      },
-      [canEdit, onApiConfigChange, providerApiConfig],
     );
 
     const detect = useCallback(async () => {
@@ -677,12 +594,8 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     };
 
     const renderAuthMode = () => {
-      if (!providerBindingSupported || detecting || !status?.available) return null;
-      const localProviderApiAvailable = apiModeAvailable;
-      const runnableApiAvailable = serverDefaultAvailable || localProviderApiAvailable;
-      const showLocalProviderUnavailable =
-        (!serverDefaultAvailable && !serverDefaultLoading && !localProviderApiAvailable) ||
-        (authMode === 'api' && !!providerApiConfig && !localProviderApiAvailable);
+      if (!apiModeSupported || detecting || !status?.available) return null;
+      const runnableApiAvailable = serverDefaultAvailable;
 
       return (
         <div className={styles.detailRow}>
@@ -720,14 +633,6 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                   </Button>
                 )}
               </>
-            ) : showLocalProviderUnavailable && !apiModeAvailable ? (
-              <Text className={styles.unavailableText}>
-                {t(
-                  apiModeWorkspaceBlocked
-                    ? 'heterogeneousStatus.apiMode.workspaceUnsupported'
-                    : 'heterogeneousStatus.apiMode.localOnly',
-                )}
-              </Text>
             ) : null}
           </Flexbox>
         </div>
@@ -769,143 +674,43 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     };
 
     const renderApiConfig = () => {
-      if (!providerBindingSupported || authMode !== 'api' || detecting || !status?.available)
-        return null;
-
-      const selectedProviderValue = serverDefaultSelected
-        ? SERVER_DEFAULT_PROVIDER_VALUE
-        : providerApiConfig
-          ? `${USER_PROVIDER_VALUE_PREFIX}${providerApiConfig.providerId}`
-          : undefined;
+      if (!apiModeSupported || authMode !== 'api' || detecting || !status?.available) return null;
 
       return (
-        <>
-          <div className={styles.detailRow}>
-            <Text className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.provider')}</Text>
+        <div className={styles.detailRow}>
+          <Text className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</Text>
+          {serverDefaultLoading ? (
+            <Text className={styles.unavailableText}>
+              {t('heterogeneousStatus.apiMode.serverDefault.checking')}
+            </Text>
+          ) : selectedServerDefaultModel ? (
             <TooltipGroup>
               <Select
                 popupMatchSelectWidth
                 className={modelPickerStyles.picker}
                 disabled={!canEdit}
-                options={providerOptions}
-                placeholder={t('heterogeneousStatus.apiMode.providerPlaceholder')}
+                options={serverDefaultModelOptions}
                 style={MODEL_PICKER_STYLE}
-                value={selectedProviderValue}
+                value={selectedServerDefaultModel.model}
                 onChange={(value) => {
-                  if (typeof value === 'string') void handleApiProviderChange(value);
+                  if (typeof value === 'string') void handleServerDefaultModelChange(value);
                 }}
               />
             </TooltipGroup>
-          </div>
-          {serverDefaultSelected ? (
-            <div className={styles.detailRow}>
-              <Text className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</Text>
-              {serverDefaultLoading ? (
-                <Text className={styles.unavailableText}>
-                  {t('heterogeneousStatus.apiMode.serverDefault.checking')}
-                </Text>
-              ) : selectedServerDefaultModel ? (
-                <TooltipGroup>
-                  <Select
-                    popupMatchSelectWidth
-                    className={modelPickerStyles.picker}
-                    disabled={!canEdit}
-                    options={serverDefaultModelOptions}
-                    style={MODEL_PICKER_STYLE}
-                    value={selectedServerDefaultModel.model}
-                    onChange={(value) => {
-                      if (typeof value === 'string') void handleServerDefaultModelChange(value);
-                    }}
-                  />
-                </TooltipGroup>
-              ) : (
-                <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
-                  <Text className={styles.unavailableText}>
-                    {serverDefaultUnavailableReason ||
-                      t('heterogeneousStatus.apiMode.serverDefault.noModels')}
-                  </Text>
-                  {onServerDefaultRetry && (
-                    <Button size="small" type="text" onClick={onServerDefaultRetry}>
-                      {t('heterogeneousStatus.apiMode.serverDefault.retry')}
-                    </Button>
-                  )}
-                </Flexbox>
-              )}
-            </div>
-          ) : providerApiConfig ? (
-            <div className={styles.detailRow}>
-              <Text className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</Text>
-              <ModelSelect
-                initialWidth
-                disabled={!canEdit || !apiModeAvailable}
-                placeholder={t('heterogeneousStatus.apiMode.modelPlaceholder')}
-                popupWidth={360}
-                providerIds={[providerApiConfig.providerId]}
-                value={{
-                  model: providerApiConfig.model,
-                  provider: providerApiConfig.providerId,
-                }}
-                onChange={(value) => {
-                  void handlePrimaryModelChange(value);
-                }}
-              />
-            </div>
           ) : (
-            <div className={styles.detailRow}>
-              <Text className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</Text>
-              <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
-                <Text className={styles.unavailableText}>
-                  {t(
-                    detectionType === 'codex'
-                      ? 'heterogeneousStatus.apiMode.noResponsesProviders'
-                      : 'heterogeneousStatus.apiMode.noProviders',
-                  )}
-                </Text>
-                <Text
-                  className={styles.metaText}
-                  style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                  onClick={() => navigate('/settings/provider')}
-                >
-                  {t('heterogeneousStatus.apiMode.configureProvider')}
-                </Text>
-              </Flexbox>
-            </div>
-          )}
-          {detectionType === 'claude-code' && providerApiConfig && (
-            <div className={styles.detailRow} style={{ alignItems: 'flex-start' }}>
-              <Text className={styles.detailLabel} style={{ paddingBlockStart: 14 }}>
-                {t('heterogeneousStatus.apiMode.smallFastModel')}
+            <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
+              <Text className={styles.unavailableText}>
+                {serverDefaultUnavailableReason ||
+                  t('heterogeneousStatus.apiMode.serverDefault.noModels')}
               </Text>
-              <Flexbox gap={4} style={{ flex: 1, minWidth: 0 }}>
-                <ModelSelect
-                  allowClear
-                  initialWidth
-                  disabled={!canEdit}
-                  placeholder={t('heterogeneousStatus.apiMode.smallFastModelPlaceholder')}
-                  popupWidth={360}
-                  providerIds={[providerApiConfig.providerId]}
-                  value={
-                    providerApiConfig.smallFastModel
-                      ? {
-                          model: providerApiConfig.smallFastModel,
-                          provider: providerApiConfig.providerId,
-                        }
-                      : undefined
-                  }
-                  onChange={({ model }) => {
-                    void handleSmallFastModelChange(model);
-                  }}
-                  onClear={() => {
-                    void handleSmallFastModelChange(null);
-                  }}
-                />
-                <Text className={styles.metaText}>
-                  {t('heterogeneousStatus.apiMode.smallFastModelDesc')}
-                </Text>
-              </Flexbox>
-            </div>
+              {onServerDefaultRetry && (
+                <Button size="small" type="text" onClick={onServerDefaultRetry}>
+                  {t('heterogeneousStatus.apiMode.serverDefault.retry')}
+                </Button>
+              )}
+            </Flexbox>
           )}
-        </>
+        </div>
       );
     };
 

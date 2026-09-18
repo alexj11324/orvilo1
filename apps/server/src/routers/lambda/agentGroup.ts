@@ -30,7 +30,7 @@ import {
   LEGACY_VIEWER_ACCESS_LEVELS,
   RESOURCE_ACCESS_LEVELS_BY_TYPE,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { type ChatGroupConfig } from '@/database/types/chatGroup';
 import { GROUP_MEMBER_ROLES } from '@/database/utils/groupMembership';
 import { router } from '@/libs/trpc/lambda';
@@ -195,7 +195,7 @@ const applyGroupAccessLevel = async ({
   workspaceId,
 }: {
   accessLevel: ResourceAccessLevel;
-  ctx: { serverDB: LobeChatDatabase; userId: string };
+  ctx: { serverDB: OrviloDatabase; userId: string };
   groupId: string;
   permissionModel: ResourcePermissionModel;
   workspaceId: string;

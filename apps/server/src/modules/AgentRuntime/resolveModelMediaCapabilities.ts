@@ -1,8 +1,8 @@
 import { isRecord } from '@orvilo/utils/object';
-import type { LobeDefaultAiModelListItem, ModelAbilities } from 'model-bank';
+import type { ModelAbilities, OrviloDefaultAiModelListItem } from 'model-bank';
 
 interface ResolveModelMediaCapabilitiesParams {
-  builtinModels: LobeDefaultAiModelListItem[];
+  builtinModels: OrviloDefaultAiModelListItem[];
   model: string;
   provider: string;
   /** The database stores abilities as an untyped JSON column. */

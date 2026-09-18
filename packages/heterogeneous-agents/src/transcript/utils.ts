@@ -58,7 +58,7 @@ export const truncateTitle = (text: string | undefined, max = 50): string | unde
 
 /**
  * Convert a raw Anthropic-shape usage object (Claude Code transcripts) into
- * the LobeHub `ModelUsage` shape stored in the messages `usage` column —
+ * the Orvilo `ModelUsage` shape stored in the messages `usage` column —
  * same mapping as the live adapter's `toUsageData`. Non-token extras
  * (`service_tier`, `speed`, `cache_creation`, …) must NOT land here; callers
  * relocate the meaningful ones into message metadata.
@@ -93,7 +93,7 @@ export const toModelUsageFromAnthropic = (
 
 /**
  * Convert a Codex `token_count` usage object (`info.last_token_usage`) into
- * the LobeHub `ModelUsage` shape. Codex `input_tokens` INCLUDES the cached
+ * the Orvilo `ModelUsage` shape. Codex `input_tokens` INCLUDES the cached
  * portion, unlike Anthropic's cache-miss-only `input_tokens`.
  */
 export const toModelUsageFromCodex = (

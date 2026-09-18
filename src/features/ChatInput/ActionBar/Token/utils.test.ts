@@ -54,7 +54,7 @@ describe('Token tool utils', () => {
   describe('getToolExcludeDefaultToolIds', () => {
     it('excludes discovery tools in manual skill mode', () => {
       expect(getToolExcludeDefaultToolIds('manual')).toEqual(
-        expect.arrayContaining(['lobe-activator', 'lobe-skill-store']),
+        expect.arrayContaining(['orvilo-activator', 'orvilo-skill-store']),
       );
     });
 

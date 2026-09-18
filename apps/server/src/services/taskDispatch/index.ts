@@ -12,7 +12,7 @@ import {
   TaskDispatchModel,
 } from '@/database/models/taskDispatch';
 import type { TaskDispatchItem } from '@/database/schemas/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 const DEFAULT_LEASE_MS = 5 * 60 * 1000;
 
@@ -55,7 +55,7 @@ export class TaskDispatchService {
   private readonly model: TaskDispatchModel;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     private readonly workspaceId?: string,
   ) {
     this.model = new TaskDispatchModel(db, workspaceId);

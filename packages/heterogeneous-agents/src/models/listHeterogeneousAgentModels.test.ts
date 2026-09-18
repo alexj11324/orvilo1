@@ -635,7 +635,7 @@ describe('heterogeneous agent model discovery', () => {
 
     await expect(
       listHeterogeneousAgentModels({
-        args: ['--tag', 'lobe'],
+        args: ['--tag', 'orvilo'],
         command: '/custom/droid',
         cwd: '/repo',
         env: { FACTORY_API_KEY: 'test-key' },
@@ -647,7 +647,7 @@ describe('heterogeneous agent model discovery', () => {
     });
     expect(listDroidAcpModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        args: ['--tag', 'lobe'],
+        args: ['--tag', 'orvilo'],
         commandPath: '/custom/droid',
         cwd: '/repo',
         env: { FACTORY_API_KEY: 'test-key' },

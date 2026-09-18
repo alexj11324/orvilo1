@@ -3,5 +3,5 @@
 import { createRunCommandInspector } from '@orvilo/shared-tool-ui/inspectors';
 
 export const RunCommandInspector = createRunCommandInspector(
-  'builtins.lobe-skills.apiName.runCommand',
+  'builtins.orvilo-skills.apiName.runCommand',
 );

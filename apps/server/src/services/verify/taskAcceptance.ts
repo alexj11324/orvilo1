@@ -3,7 +3,7 @@ import type { AcceptanceConfig, TaskVerifyConfig } from '@orvilo/types';
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { TaskModel } from '@/database/models/task';
 import type { AcceptanceItem } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 export interface ResolvedTaskAcceptance {
   acceptance: AcceptanceItem;
@@ -27,7 +27,7 @@ const toAcceptanceConfig = (verify: TaskVerifyConfig): AcceptanceConfig => ({
  * Acceptance directly.
  */
 export const resolveTaskAcceptance = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   taskId: string,
   workspaceId?: string,

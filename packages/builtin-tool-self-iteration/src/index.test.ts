@@ -1,4 +1,4 @@
-import type { LobeToolManifest, OperationToolSet, ToolSource } from '@orvilo/context-engine';
+import type { OperationToolSet, OrviloToolManifest, ToolSource } from '@orvilo/context-engine';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SelfFeedbackIntentExecutionRuntime } from './ExecutionRuntime';
@@ -13,7 +13,7 @@ import {
 
 interface ToolSetParts {
   enabledToolIds: string[];
-  manifestMap: Record<string, LobeToolManifest>;
+  manifestMap: Record<string, OrviloToolManifest>;
   sourceMap: Record<string, ToolSource>;
   tools: OperationToolSet['tools'];
 }

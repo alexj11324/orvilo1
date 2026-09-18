@@ -9,7 +9,7 @@ import {
   updateBotRuntimeStatus,
 } from '@/server/services/gateway/runtimeStatus';
 
-const log = debug('lobe-server:agent:gateway-callback');
+const log = debug('orvilo-server:agent:gateway-callback');
 
 const StateChangeSchema = z.object({
   applicationId: z.string().optional(),

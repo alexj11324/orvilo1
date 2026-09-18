@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto';
 
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   acceptances,
   files,
@@ -23,18 +23,18 @@ import { previewAcceptancePurge, purgeAcceptance, purgeVerifyRun } from '../acce
 const envMock = vi.hoisted(() => ({ serverDBEnv: { REMOVE_GLOBAL_FILE: true } }));
 vi.mock('@/config/db', () => envMock);
 
-const createTestUser = async (db: LobeChatDatabase) => {
+const createTestUser = async (db: OrviloDatabase) => {
   const id = randomUUID();
   await db.insert(users).values({ id });
   return id;
 };
 
-const cleanupTestUser = async (db: LobeChatDatabase, id: string) => {
+const cleanupTestUser = async (db: OrviloDatabase, id: string) => {
   await db.delete(users).where(eq(users.id, id));
 };
 
 describe('acceptancePurge', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let userId: string;
   let acceptanceId: string;
   let runIds: string[];

@@ -4,7 +4,7 @@
 #import <Intents/Intents.h>
 #import <UserNotifications/UserNotifications.h>
 
-static NSString *const kNotificationIdPrefix = @"lobehub-";
+static NSString *const kNotificationIdPrefix = @"orvilo-";
 
 static Napi::ThreadSafeFunction gEventTsfn;
 static bool gEventTsfnActive = false;
@@ -31,11 +31,11 @@ static bool IsOwnedIdentifier(NSString *identifier) {
   return identifier != nil && [identifier hasPrefix:kNotificationIdPrefix];
 }
 
-@interface LobeNotificationDelegate : NSObject <UNUserNotificationCenterDelegate>
+@interface OrviloNotificationDelegate : NSObject <UNUserNotificationCenterDelegate>
 @property (nonatomic, weak) id<UNUserNotificationCenterDelegate> previousDelegate;
 @end
 
-@implementation LobeNotificationDelegate
+@implementation OrviloNotificationDelegate
 
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
        willPresentNotification:(UNNotification *)notification
@@ -78,13 +78,13 @@ static bool IsOwnedIdentifier(NSString *identifier) {
 
 @end
 
-static LobeNotificationDelegate *gDelegate = nil;
+static OrviloNotificationDelegate *gDelegate = nil;
 
 static void EnsureDelegateInstalled() {
   dispatch_async(dispatch_get_main_queue(), ^{
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
     if (center.delegate == gDelegate && gDelegate != nil) return;
-    LobeNotificationDelegate *delegate = [LobeNotificationDelegate new];
+    OrviloNotificationDelegate *delegate = [OrviloNotificationDelegate new];
     delegate.previousDelegate = center.delegate;
     gDelegate = delegate;
     center.delegate = delegate;
@@ -95,7 +95,7 @@ static Napi::Value Setup(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (gEventTsfnActive) return Napi::Boolean::New(env, true);
   Napi::Function cb = info[0].As<Napi::Function>();
-  gEventTsfn = Napi::ThreadSafeFunction::New(env, cb, "lobehub-mac-notifications", 0, 1);
+  gEventTsfn = Napi::ThreadSafeFunction::New(env, cb, "orvilo-mac-notifications", 0, 1);
   gEventTsfn.Unref(env);
   gEventTsfnActive = true;
   EnsureDelegateInstalled();
@@ -218,7 +218,7 @@ static Napi::Value Show(const Napi::CallbackInfo &info) {
 static Napi::Value GetAuthorizationStatus(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   Napi::Function cb = info[0].As<Napi::Function>();
-  auto tsfn = Napi::ThreadSafeFunction::New(env, cb, "lobehub-mac-notifications-status", 0, 1);
+  auto tsfn = Napi::ThreadSafeFunction::New(env, cb, "orvilo-mac-notifications-status", 0, 1);
   UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
   [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings *settings) {
     long status = (long)settings.authorizationStatus;
@@ -234,7 +234,7 @@ static Napi::Value GetAuthorizationStatus(const Napi::CallbackInfo &info) {
 static Napi::Value RequestAuthorization(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   Napi::Function cb = info[0].As<Napi::Function>();
-  auto tsfn = Napi::ThreadSafeFunction::New(env, cb, "lobehub-mac-notifications-request", 0, 1);
+  auto tsfn = Napi::ThreadSafeFunction::New(env, cb, "orvilo-mac-notifications-request", 0, 1);
   UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
   [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionSound |
                                            UNAuthorizationOptionBadge)
@@ -255,4 +255,4 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   return exports;
 }
 
-NODE_API_MODULE(lobehub_mac_notifications, Init)
+NODE_API_MODULE(orvilo_mac_notifications, Init)

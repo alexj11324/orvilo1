@@ -27,13 +27,13 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const getSourceTitleKey = (source: SearchAgentSource = 'all') => {
   switch (source) {
     case 'user': {
-      return 'builtins.lobe-agent-management.inspector.searchAgent.user';
+      return 'builtins.orvilo-agent-management.inspector.searchAgent.user';
     }
     case 'market': {
-      return 'builtins.lobe-agent-management.inspector.searchAgent.market';
+      return 'builtins.orvilo-agent-management.inspector.searchAgent.market';
     }
     default: {
-      return 'builtins.lobe-agent-management.inspector.searchAgent.all';
+      return 'builtins.orvilo-agent-management.inspector.searchAgent.all';
     }
   }
 };
@@ -51,7 +51,7 @@ export const SearchAgentInspector = memo<BuiltinInspectorProps<SearchAgentParams
       return (
         <div className={styles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-agent-management.apiName.searchAgent')}
+            {t('builtins.orvilo-agent-management.apiName.searchAgent')}
           </span>
         </div>
       );

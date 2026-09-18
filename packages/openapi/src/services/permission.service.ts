@@ -1,7 +1,7 @@
 import { and, count, desc, eq, ilike, or } from 'drizzle-orm';
 
 import { permissions, rolePermissions } from '@/database/schemas/rbac';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { BaseService } from '../common/base.service';
 import { processPaginationConditions } from '../helpers/pagination';
@@ -15,7 +15,7 @@ import type {
 } from '../types/permission.type';
 
 export class PermissionService extends BaseService {
-  constructor(db: LobeChatDatabase, userId: string | null, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string | null, workspaceId?: string) {
     super(db, userId, workspaceId);
   }
 

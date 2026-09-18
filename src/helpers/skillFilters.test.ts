@@ -9,7 +9,7 @@ afterEach(() => {
 
 describe('skillFilters', () => {
   it('should disable agent-browser when the run cannot execute on a device', () => {
-    expect(shouldEnableBuiltinSkill('lobe-agent-browser', { canExecuteOnDevice: false })).toBe(
+    expect(shouldEnableBuiltinSkill('orvilo-agent-browser', { canExecuteOnDevice: false })).toBe(
       false,
     );
   });
@@ -20,7 +20,9 @@ describe('skillFilters', () => {
   });
 
   it('should enable agent-browser when the run can execute on a device', () => {
-    expect(shouldEnableBuiltinSkill('lobe-agent-browser', { canExecuteOnDevice: true })).toBe(true);
+    expect(shouldEnableBuiltinSkill('orvilo-agent-browser', { canExecuteOnDevice: true })).toBe(
+      true,
+    );
   });
 
   it('should not be affected by Windows platform detection when device execution is enabled', async () => {
@@ -29,11 +31,13 @@ describe('skillFilters', () => {
 
     const { shouldEnableBuiltinSkill } = await import('./skillFilters');
 
-    expect(shouldEnableBuiltinSkill('lobe-agent-browser', { canExecuteOnDevice: true })).toBe(true);
+    expect(shouldEnableBuiltinSkill('orvilo-agent-browser', { canExecuteOnDevice: true })).toBe(
+      true,
+    );
   });
 
   it('should keep non-device-only skills enabled', () => {
-    expect(shouldEnableBuiltinSkill('lobe-artifacts', { canExecuteOnDevice: false })).toBe(true);
+    expect(shouldEnableBuiltinSkill('orvilo-artifacts', { canExecuteOnDevice: false })).toBe(true);
   });
 
   it('should filter builtin skills by device execution context', () => {
@@ -41,14 +45,14 @@ describe('skillFilters', () => {
       {
         content: 'agent-browser',
         description: 'agent-browser',
-        identifier: 'lobe-agent-browser',
+        identifier: 'orvilo-agent-browser',
         name: 'Agent Browser',
         source: 'builtin' as const,
       },
       {
         content: 'artifacts',
         description: 'artifacts',
-        identifier: 'lobe-artifacts',
+        identifier: 'orvilo-artifacts',
         name: 'Artifacts',
         source: 'builtin' as const,
       },
@@ -64,6 +68,6 @@ describe('skillFilters', () => {
     const filtered = filterBuiltinSkills(skills, { canExecuteOnDevice: false });
 
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].identifier).toBe('lobe-artifacts');
+    expect(filtered[0].identifier).toBe('orvilo-artifacts');
   });
 });

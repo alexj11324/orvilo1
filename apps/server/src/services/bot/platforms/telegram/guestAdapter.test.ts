@@ -1,7 +1,7 @@
 import { Chat } from 'chat';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { LobeTelegramAdapter } from './guestAdapter';
+import { OrviloTelegramAdapter } from './guestAdapter';
 import {
   getTelegramGuestSession,
   resetTelegramGuestSessionsForTest,
@@ -26,15 +26,15 @@ const mockGetMe = () => {
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(GET_ME_RESPONSE());
 };
 
-const processUpdate = (adapter: LobeTelegramAdapter, update: unknown) => {
+const processUpdate = (adapter: OrviloTelegramAdapter, update: unknown) => {
   (adapter as unknown as { processUpdate: (value: unknown) => void }).processUpdate(update);
 };
 
 const createGuestAdapter = (
   sessionScope: string,
-  extra?: Partial<ConstructorParameters<typeof LobeTelegramAdapter>[0]>,
+  extra?: Partial<ConstructorParameters<typeof OrviloTelegramAdapter>[0]>,
 ) =>
-  new LobeTelegramAdapter(
+  new OrviloTelegramAdapter(
     {
       botToken: '1:token',
       secretToken: 'test-secret',
@@ -85,9 +85,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('LobeTelegramAdapter Guest Mode', () => {
+describe('OrviloTelegramAdapter Guest Mode', () => {
   it('exposes processUpdate so Guest Mode can subclass the Chat SDK adapter', () => {
-    expect('processUpdate' in LobeTelegramAdapter.prototype).toBe(true);
+    expect('processUpdate' in OrviloTelegramAdapter.prototype).toBe(true);
   });
 
   it('treats guest thread ids as non-DM', () => {

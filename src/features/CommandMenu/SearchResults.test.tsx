@@ -23,27 +23,6 @@ vi.mock('@/components/Avatar', () => ({ default: () => null }));
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => navigate,
 }));
-vi.mock('./CommandMenuContext', () => ({
-  useCommandMenuContext: () => ({ menuContext: 'general' }),
-}));
-vi.mock('@/store/image', () => ({
-  useImageStore: (selector: (state: object) => unknown) =>
-    selector({ activeGenerationTopicId: undefined, generationTopics: [] }),
-}));
-vi.mock('@/store/image/slices/generationTopic/selectors', () => ({
-  generationTopicSelectors: {
-    generationTopics: (state: { generationTopics: unknown[] }) => state.generationTopics,
-  },
-}));
-vi.mock('@/store/video', () => ({
-  useVideoStore: (selector: (state: object) => unknown) =>
-    selector({ activeGenerationTopicId: undefined, generationTopics: [] }),
-}));
-vi.mock('@/store/video/slices/generationTopic/selectors', () => ({
-  generationTopicSelectors: {
-    generationTopics: (state: { generationTopics: unknown[] }) => state.generationTopics,
-  },
-}));
 vi.mock('./components', () => ({
   CommandItem: ({ onSelect, title }: { onSelect: () => void; title: ReactNode }) => (
     <button type="button" onClick={onSelect}>
@@ -81,5 +60,40 @@ describe('SearchResults', () => {
     fireEvent.click(screen.getByRole('button', { name: /Resource note/ }));
 
     expect(navigate).toHaveBeenCalledWith('/resource?file=docs_resource-note');
+  });
+
+  it('routes memory results to the retained preferences manager, never a retired surface', () => {
+    const result = {
+      createdAt: new Date('2026-09-16T00:00:00Z'),
+      description: null,
+      id: 'pref_1',
+      relevance: 1,
+      title: 'Likes concise answers',
+      type: 'memory',
+      updatedAt: new Date('2026-09-16T00:00:00Z'),
+    } as FtsSearchResult;
+
+    render(
+      <SearchResults
+        isLoading={false}
+        results={[result]}
+        searchQuery="concise"
+        typeFilter={undefined}
+        onClose={vi.fn()}
+        onResultClick={vi.fn()}
+        onSetTypeFilter={vi.fn()}
+        onTypeFilterChange={vi.fn()}
+        onVisibleResultCountChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Likes concise answers/ }));
+
+    expect(navigate).toHaveBeenCalledWith('/memory/preferences?preferenceId=pref_1');
+    for (const [url] of navigate.mock.calls) {
+      expect(['/image', '/video', '/memory', '/memory-center', '/eval']).not.toContain(
+        new URL(url, 'http://localhost').pathname,
+      );
+    }
   });
 });

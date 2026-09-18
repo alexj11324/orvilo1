@@ -66,7 +66,7 @@ describe('ChatGPTOAuthService', () => {
         body: JSON.stringify({ client_id: config.clientId }),
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': `LobeHub/${CURRENT_VERSION}`,
+          'User-Agent': `Orvilo/${CURRENT_VERSION}`,
         },
         method: 'POST',
       }),

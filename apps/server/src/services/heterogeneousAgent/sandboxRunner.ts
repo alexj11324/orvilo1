@@ -13,7 +13,7 @@ import { appEnv } from '@/envs/app';
 import type { MarketService } from '@/server/services/market';
 import { createSandboxService } from '@/server/services/sandbox';
 
-const log = debug('lobe-server:hetero-sandbox-runner');
+const log = debug('orvilo-server:hetero-sandbox-runner');
 
 const shellQuote = (value: string): string => `'${value.replaceAll("'", "'\\''")}'`;
 
@@ -21,7 +21,7 @@ export interface SandboxRunParams {
   agentType: 'claude-code' | 'codex';
   /** Resolved `lh hetero exec` wrapper args. */
   args?: string[];
-  /** Initial assistant placeholder message id — injected as LOBEHUB_ASSISTANT_MESSAGE_ID so
+  /** Initial assistant placeholder message id — injected as ORVILO_ASSISTANT_MESSAGE_ID so
    * the CLI can pass it through the heteroIngest payload, removing the need for the server
    * to re-read topic.metadata.runningOperation on every cold Lambda start. */
   assistantMessageId: string;
@@ -34,7 +34,7 @@ export interface SandboxRunParams {
    * the CLI gets vision input.
    */
   imageList?: HeteroExecImageRef[];
-  /** Operation-scoped JWT injected as LOBEHUB_JWT env in the sandbox. */
+  /** Operation-scoped JWT injected as ORVILO_JWT env in the sandbox. */
   jwt: string;
   marketService: MarketService;
   operationId: string;
@@ -52,7 +52,7 @@ export interface SandboxRunParams {
   systemContext?: string;
   topicId: string;
   userId: string;
-  /** Topic/run workspace — injected as `LOBEHUB_WORKSPACE_ID` for ingest. */
+  /** Topic/run workspace — injected as `ORVILO_WORKSPACE_ID` for ingest. */
   workspaceId?: string;
 }
 
@@ -117,8 +117,8 @@ function buildRepoSetupScript(repos: string[], githubToken?: string): string | n
  * Uses the configured sandbox provider so cloud, third-party, and self-hosted
  * sandboxes share the same launch path.
  *
- * The sandbox container already has `lh` (the LobeHub CLI) installed.
- * The operation-scoped JWT is injected as `LOBEHUB_JWT` so the CLI can
+ * The sandbox container already has `lh` (the Orvilo CLI) installed.
+ * The operation-scoped JWT is injected as `ORVILO_JWT` so the CLI can
  * authenticate against `heteroIngest` / `heteroFinish` without user creds.
  *
  * Fire-and-forget: the caller does NOT await this — the sandbox pushes events
@@ -184,15 +184,15 @@ export async function spawnHeteroSandbox(params: SandboxRunParams): Promise<void
   });
   const base64Payload = Buffer.from(stdinPayload).toString('base64');
 
-  // LOBEHUB_HETERO_SERVER_URL overrides the server URL for local dev/testing
+  // ORVILO_HETERO_SERVER_URL overrides the server URL for local dev/testing
   // (e.g. a cloudflare tunnel). APP_URL is NOT used here because it's tied to
   // auth callbacks and must stay as localhost in dev.
-  const serverUrl = process.env.LOBEHUB_HETERO_SERVER_URL ?? appEnv.APP_URL;
+  const serverUrl = process.env.ORVILO_HETERO_SERVER_URL ?? appEnv.APP_URL;
   const envVars = [
-    `LOBEHUB_JWT=${shellQuote(jwt)}`,
-    `LOBEHUB_SERVER=${shellQuote(serverUrl)}`,
-    `LOBEHUB_ASSISTANT_MESSAGE_ID=${shellQuote(assistantMessageId)}`,
-    ...(workspaceId ? [`LOBEHUB_WORKSPACE_ID=${shellQuote(workspaceId)}`] : []),
+    `ORVILO_JWT=${shellQuote(jwt)}`,
+    `ORVILO_SERVER=${shellQuote(serverUrl)}`,
+    `ORVILO_ASSISTANT_MESSAGE_ID=${shellQuote(assistantMessageId)}`,
+    ...(workspaceId ? [`ORVILO_WORKSPACE_ID=${shellQuote(workspaceId)}`] : []),
     // Inject GitHub token so CC can authenticate git operations and GitHub API
     // calls inside the sandbox (e.g. gh CLI, git push, API requests).
     ...(githubToken ? [`GITHUB_TOKEN=${shellQuote(githubToken)}`] : []),

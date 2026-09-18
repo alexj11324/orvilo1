@@ -1,7 +1,7 @@
 import { and, count, eq, inArray, ne, or, sql } from 'drizzle-orm';
 
 import { userConnectors, userConnectorTools } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 interface AgentConnectorHandoverParams {
   agentIds: string[];
@@ -9,7 +9,7 @@ interface AgentConnectorHandoverParams {
   recipientId: string;
 }
 
-type Db = LobeChatDatabase | Transaction;
+type Db = OrviloDatabase | Transaction;
 
 /** Agent-OWNED connector rows on these agents attributed to someone other than the recipient. */
 const foreignAgentScopedRows = (params: AgentConnectorHandoverParams) =>

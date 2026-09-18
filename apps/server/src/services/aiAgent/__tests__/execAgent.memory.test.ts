@@ -5,7 +5,7 @@
  * Verifies that agent-level memory config takes priority over user-level setting,
  * and falls back to user setting when agent config is absent.
  */
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { agents, userSettings } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
@@ -27,7 +27,7 @@ import { aiAgentRouter } from '../../../routers/lambda/aiAgent';
 
 process.env.OPENAI_API_KEY = 'sk-test-fake-api-key-for-testing';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -43,7 +43,7 @@ vi.mock('@/server/services/file', () => ({
 }));
 
 let mockResponsesCreate: any;
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 let userId: string;
 
 const createTestContext = () => ({
@@ -52,7 +52,7 @@ const createTestContext = () => ({
 });
 
 const hasMemoryTools = (tools: Array<{ name?: string; function?: { name: string } }>) =>
-  tools?.some((t) => (t.name || t.function?.name)?.includes('lobe-user-memory'));
+  tools?.some((t) => (t.name || t.function?.name)?.includes('orvilo-user-memory'));
 
 const setUserMemorySettings = async (enabled: boolean) => {
   // Try update first, then insert if no row exists

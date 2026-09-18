@@ -5,7 +5,7 @@ import isEqual from 'fast-deep-equal';
 import { AgentEvalRunModel, AgentEvalRunTopicModel } from '@/database/models/agentEval';
 import { ThreadModel } from '@/database/models/thread';
 import { agentEvalRuns, agentEvalRunTopics, threads, topics } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { evaluateAndFinalizeRun } from '@/server/services/agentEvalRun/aggregate';
 import {
   applyReportResult,
@@ -19,7 +19,7 @@ import type { EvalBatchReport, EvalReport, EvalSetStatus } from '../types/eval.t
 import { EvalResourceService } from './eval-resource.service';
 
 export class EvalLifecycleService extends BaseService {
-  private reportContext(db: LobeChatDatabase) {
+  private reportContext(db: OrviloDatabase) {
     const resources = new EvalResourceService(db, this.userId, this.workspaceId);
     return {
       runModel: new AgentEvalRunModel(db, this.userId, this.workspaceId),

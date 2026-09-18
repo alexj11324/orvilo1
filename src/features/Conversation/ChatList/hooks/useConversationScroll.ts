@@ -13,7 +13,7 @@ import { type VListHandle } from 'virtua';
 
 import { dataSelectors, messageStateSelectors, useConversationStore } from '../../store';
 
-const log = debug('lobe:conversation:scroll');
+const log = debug('orvilo:conversation:scroll');
 
 export const CONVERSATION_SPACER_ID = '__conversation_spacer__';
 export const CONVERSATION_SPACER_TRANSITION_MS = 200;

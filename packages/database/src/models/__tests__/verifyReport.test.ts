@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { agentOperations, users, verifyReports, verifyRuns } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentOperationModel } from '../agentOperation';
 import { VerifyReportModel } from '../verifyReport';
 import { VerifyRunModel } from '../verifyRun';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'verify-report-test-user';
 const operationId = 'verify-report-test-op';

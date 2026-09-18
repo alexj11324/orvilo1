@@ -2,28 +2,28 @@ name: orvilo
 services:
   network-service:
     image: alpine
-    container_name: lobe-network
+    container_name: orvilo-network
     restart: always
     ports:
       - '${RUSTFS_PORT}:9000' # RustFS API
       - '9001:9001' # RustFS Console
-      - '${LOBE_PORT}:3210' # LobeChat
+      - '${ORVILO_PORT}:3210' # Orvilo
     command: tail -f /dev/null
     networks:
-      - lobe-network
+      - orvilo-network
     env_file:
       - .env
 
   postgresql:
     image: paradedb/paradedb:latest-pg17
-    container_name: lobe-postgres
+    container_name: orvilo-postgres
     ports:
       - '5432:5432'
     volumes:
       - './data:/var/lib/postgresql/data'
     command: ['postgres', '-c', 'shared_preload_libraries=pg_search']
     environment:
-      - 'POSTGRES_DB=${LOBE_DB_NAME}'
+      - 'POSTGRES_DB=${ORVILO_DB_NAME}'
       - 'POSTGRES_PASSWORD=${POSTGRES_PASSWORD}'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
@@ -32,13 +32,13 @@ services:
       retries: 5
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
     env_file:
       - .env
 
   redis:
     image: redis:7-alpine
-    container_name: lobe-redis
+    container_name: orvilo-redis
     ports:
       - '6379:6379'
     command: redis-server --save 60 1000 --appendonly yes
@@ -51,11 +51,11 @@ services:
       retries: 5
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
 
   rustfs:
     image: rustfs/rustfs:latest
-    container_name: lobe-rustfs
+    container_name: orvilo-rustfs
     network_mode: 'service:network-service'
     environment:
       - RUSTFS_CONSOLE_ENABLE=true
@@ -74,7 +74,7 @@ services:
 
   rustfs-init:
     image: minio/mc:latest
-    container_name: lobe-rustfs-init
+    container_name: orvilo-rustfs-init
     depends_on:
       rustfs:
         condition: service_healthy
@@ -87,19 +87,19 @@ services:
         mc --version;
         mc alias set rustfs "http://network-service:9000" "${RUSTFS_ACCESS_KEY}" "${RUSTFS_SECRET_KEY}";
         mc ls rustfs || true;
-        mc mb "rustfs/lobe" --ignore-existing;
+        mc mb "rustfs/orvilo" --ignore-existing;
         mc admin info rustfs || true;
-        mc anonymous set-json "/bucket.config.json" "rustfs/lobe";
+        mc anonymous set-json "/bucket.config.json" "rustfs/orvilo";
       '
     restart: 'no'
     networks:
-      - lobe-network
+      - orvilo-network
     env_file:
       - .env
 
   searxng:
     image: searxng/searxng
-    container_name: lobe-searxng
+    container_name: orvilo-searxng
     ports:
       - '8180:8080'
     volumes:
@@ -108,7 +108,7 @@ services:
       - 'SEARXNG_SETTINGS_FILE=/etc/searxng/settings.yml'
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
 
 volumes:
   data:
@@ -119,5 +119,5 @@ volumes:
     driver: local
 
 networks:
-  lobe-network:
+  orvilo-network:
     driver: bridge

@@ -12,10 +12,10 @@ import {
   workspaceInvitations,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { normalizeEmail, WorkspaceInvitationModel } from '../workspaceInvitation';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const inviterId = 'wi-inviter';
 const inviteeId = 'wi-invitee';

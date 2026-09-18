@@ -196,7 +196,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
               <span className={styles.label}>{t('apikey.list.columns.key')}</span>
               <span className={styles.value}>
                 {apiKey.isMine === false ? (
-                  <span style={{ opacity: 0.5 }}>{`sk-lh-${'*'.repeat(12)}`}</span>
+                  <span style={{ opacity: 0.5 }}>{`sk-ov-${'*'.repeat(12)}`}</span>
                 ) : apiKey.keyDecryptionFailed ? (
                   <span title={t('apikey.display.unavailableDescription')}>
                     {t('apikey.display.unavailable')}

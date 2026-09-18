@@ -108,34 +108,34 @@ describe('APP_URL fallback', () => {
     it('should use VERCEL_PROJECT_PRODUCTION_URL in production', async () => {
       process.env.VERCEL = '1';
       process.env.VERCEL_ENV = 'production';
-      process.env.VERCEL_PROJECT_PRODUCTION_URL = 'lobechat.vercel.app';
-      process.env.VERCEL_BRANCH_URL = 'lobechat-git-main-org.vercel.app';
-      process.env.VERCEL_URL = 'lobechat-abc123.vercel.app';
+      process.env.VERCEL_PROJECT_PRODUCTION_URL = 'orvilo.vercel.app';
+      process.env.VERCEL_BRANCH_URL = 'orvilo-git-main-org.vercel.app';
+      process.env.VERCEL_URL = 'orvilo-abc123.vercel.app';
 
       const { getAppConfig } = await import('../app');
       const config = getAppConfig();
-      expect(config.APP_URL).toBe('https://lobechat.vercel.app');
+      expect(config.APP_URL).toBe('https://orvilo.vercel.app');
     });
 
     it('should use VERCEL_URL in preview environment', async () => {
       process.env.VERCEL = '1';
       process.env.VERCEL_ENV = 'preview';
-      process.env.VERCEL_BRANCH_URL = 'lobechat-git-feature-org.vercel.app';
-      process.env.VERCEL_URL = 'lobechat-abc123.vercel.app';
+      process.env.VERCEL_BRANCH_URL = 'orvilo-git-feature-org.vercel.app';
+      process.env.VERCEL_URL = 'orvilo-abc123.vercel.app';
 
       const { getAppConfig } = await import('../app');
       const config = getAppConfig();
-      expect(config.APP_URL).toBe('https://lobechat-abc123.vercel.app');
+      expect(config.APP_URL).toBe('https://orvilo-abc123.vercel.app');
     });
 
     it('should fallback to VERCEL_BRANCH_URL when VERCEL_URL is not set', async () => {
       process.env.VERCEL = '1';
       process.env.VERCEL_ENV = 'preview';
-      process.env.VERCEL_BRANCH_URL = 'lobechat-git-feature-org.vercel.app';
+      process.env.VERCEL_BRANCH_URL = 'orvilo-git-feature-org.vercel.app';
 
       const { getAppConfig } = await import('../app');
       const config = getAppConfig();
-      expect(config.APP_URL).toBe('https://lobechat-git-feature-org.vercel.app');
+      expect(config.APP_URL).toBe('https://orvilo-git-feature-org.vercel.app');
     });
   });
 

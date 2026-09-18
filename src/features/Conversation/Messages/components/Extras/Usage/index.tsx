@@ -8,7 +8,7 @@ import { CircleDollarSignIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelIcon } from '@/components/LobeIcons';
+import { ModelIcon } from '@/components/OrviloIcons';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
@@ -72,8 +72,8 @@ const Usage = memo<UsageProps>(({ model, usage, performance, provider }) => {
   // Only remote platform agents (openclaw, hermes) replace the model name with
   // the brand label — they don't expose a real model id. Local CLI agents
   // (claude-code, codex) report their actual model on `turn_metadata` and
-  // should keep showing it. Server-default bindings report `lobehub/${id}`
-  // (or the legacy `lobehub-default` alias); unwrap to the catalog id so this
+  // should keep showing it. Server-default bindings report `aspectlylabs/${id}`
+  // (or the legacy `orvilo-default` alias); unwrap to the catalog id so this
   // footer matches what the user selected.
   const heteroName =
     provider && isRemoteHeterogeneousType(provider)

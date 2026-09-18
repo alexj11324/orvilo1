@@ -1,4 +1,4 @@
-# Worked example — Discover / Community **list surfaces** audit (Round 1 of LOBE-11148)
+# Worked example — Discover / Community **list surfaces** audit (Round 1 of ORVILO-11148)
 
 A real run of this skill against the Desktop **Discover / Community** area's **8 list
 surfaces**, 2026-07 — `home · agent · model · provider · skill · mcp · workspace ·
@@ -154,7 +154,7 @@ skill/mcp `MetaInfo.tsx` render `{installCount}` / `{stars}` / `{commentCount}` 
 `formatIntergerNumber` rather than the `formatUsageValue` ladder — while the shared
 `formatShortenNumber` is already imported one directory over in `features/LikeButton.tsx`.
 Registry install/star counts are exactly the "scan, don't account" case §1.5 names.
-_Remedy:_ wrap the counts in `formatShortenNumber` (one-line import); token usage in
+_Remedy:_ wrap the counts in `formatShortenNumber` (one-line import); token usage
 `formatUsageValue`. **(pending L2** for whether large values actually overflow the tag.)
 
 **⑦ Cross-surface inconsistency — provider diverges structurally; skill vs mcp cards disagree on trust & meta — Certainty / consistency-is-semantic (Read §1.1)** 🟠
@@ -171,7 +171,7 @@ registry-card contract** (verified badge, install count, star count, what's-insi
 apply it to both skill and mcp.
 
 **⑧ "Create" is a dead-end docs modal → GitHub, not an in-app submit — Grow §5.3 / Act §3.1** 🟠
-The header "Create" (`CreateButton`, shown on every non-custom-branding Discover page via
+The header "Create" (`CreateButton`, shown on every non-custom-branding Discover page
 `_layout/Header.tsx:29`) opens a modal whose only action opens **GitHub** in a new tab
 (`CreateButton/Inner.tsx:44-50` `window.open(AGENTS_INDEX_GITHUB)`). On a marketplace this is
 the primary "contribute" affordance and it hands the user to an external repo with no
@@ -214,7 +214,7 @@ profile, follow is a class norm. May be intentional for orgs; flag it. **(pendin
 
 **⑫ Robustness / polish minors — correctness / i18n / Meaningful** 🟡
 
-- provider card "view source" link hardcodes the **legacy `lobehub/lobe-chat`** path
+- provider card "view source" link hardcodes the **legacy `aspectlylabs/orvilo`** path
   (`provider/Item.tsx:92`) — very likely 404; config now lives in `model-bank`. _(confirm the
   404 at L3.)_
 - `ModelTypeIcon.tsx:32` `icon={icons?.[type]}` over a fixed 8-key map → an unknown/new model

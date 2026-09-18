@@ -42,7 +42,7 @@ const pendingTool = {
   apiName: 'askUserQuestion',
   arguments: '{}',
   id: 'call_ask_1',
-  identifier: 'lobe-agent',
+  identifier: 'orvilo-agent',
   type: 'builtin' as const,
 };
 

@@ -21,11 +21,11 @@ import {
   workspaces,
 } from '../../schemas';
 import { agentHistoryJobAgents, agentHistoryJobs } from '../../schemas/agentHistoryJob';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 import { AGENT_TRANSFER_IN_PROGRESS } from '../agentTransferJob';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'agent-model-test-user-id';
 const userId2 = 'agent-model-test-user-id-2';

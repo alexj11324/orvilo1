@@ -7,7 +7,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
 
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import debug from 'debug';
 import { nanoid } from 'nanoid';
 import sharp from 'sharp';
@@ -16,7 +16,7 @@ import { FileService } from '@/server/services/file';
 import { calculateThumbnailDimensions } from '@/utils/number';
 import { getYYYYmmddHHMMss } from '@/utils/time';
 
-const log = debug('lobe-video:generation-service');
+const log = debug('orvilo-video:generation-service');
 const execFileAsync = promisify(execFile);
 
 let _ffmpegPath: string | null = null;
@@ -48,7 +48,7 @@ export interface VideoProcessResult {
 export class VideoGenerationService {
   private fileService: FileService;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.fileService = new FileService(db, userId, workspaceId);
   }
 
@@ -174,7 +174,7 @@ export class VideoGenerationService {
     },
   ): Promise<string> {
     const ext = path.extname(new URL(url).pathname).toLowerCase() || '.mp4';
-    const tempVideoPath = path.join(os.tmpdir(), `lobe-video-${nanoid()}${ext}`);
+    const tempVideoPath = path.join(os.tmpdir(), `orvilo-video-${nanoid()}${ext}`);
     log('Downloading video to: %s', tempVideoPath);
 
     const response = await fetch(url, {
@@ -264,7 +264,7 @@ export class VideoGenerationService {
     height: number,
   ): Promise<string> {
     const ffmpegPath = getFfmpegPath();
-    const outputPath = path.join(os.tmpdir(), `lobe-cover-${nanoid()}.jpg`);
+    const outputPath = path.join(os.tmpdir(), `orvilo-cover-${nanoid()}.jpg`);
 
     log('Generating screenshot from video');
 

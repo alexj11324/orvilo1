@@ -41,7 +41,7 @@ const bindingContext = (
   ],
   env: {
     KEEP_ME: 'yes',
-    LOBEHUB_PI_API_KEY: 'stale-key',
+    ORVILO_PI_API_KEY: 'stale-key',
     PI_CODING_AGENT_DIR: '/user/pi',
     PI_CODING_AGENT_SESSION_DIR: '/user/sessions',
   },
@@ -79,32 +79,32 @@ describe('piDriver', () => {
     const plan = await piDriver.prepareServerDefaultBinding!({
       args: ['--provider', 'stale', '--thinking', 'high'],
       endpoint: 'https://app.example.com',
-      env: { LOBEHUB_PI_API_KEY: 'stale-token' },
+      env: { ORVILO_PI_API_KEY: 'stale-token' },
       model: 'kimi-k2.6',
       profileDir: '/managed/pi',
     });
     const content = plan.profileFiles?.[0]?.content ?? '';
     const config = JSON.parse(content);
-    const provider = config.providers['lobehub-server-default'];
+    const provider = config.providers['orvilo-server-default'];
 
     expect(plan.args).toEqual([
       '--provider',
-      'lobehub-server-default',
+      'orvilo-server-default',
       '--model',
-      'lobehub/kimi-k2.6',
+      'aspectlylabs/kimi-k2.6',
       '--thinking',
       'high',
     ]);
     expect(plan.env).toEqual({ PI_CODING_AGENT_DIR: '/managed/pi' });
-    expect(plan.operationTokenEnvKey).toBe('LOBEHUB_PI_API_KEY');
+    expect(plan.operationTokenEnvKey).toBe('ORVILO_PI_API_KEY');
     expect(provider).toMatchObject({
       api: 'openai-responses',
-      apiKey: '$LOBEHUB_PI_API_KEY',
+      apiKey: '$ORVILO_PI_API_KEY',
       baseUrl: 'https://app.example.com/api/v1/openai/v1',
       models: [
         {
           contextWindow: 128_000,
-          id: 'lobehub/kimi-k2.6',
+          id: 'aspectlylabs/kimi-k2.6',
           maxTokens: 16_384,
         },
       ],
@@ -143,18 +143,18 @@ describe('piDriver', () => {
     const plan = await piDriver.prepareProviderBinding!(bindingContext(protocol));
     const config = JSON.parse(plan.profileFiles?.[0]?.content ?? '{}');
 
-    expect(config.providers['lobehub-profile-digest'].api).toBe(expectedApi);
+    expect(config.providers['orvilo-profile-digest'].api).toBe(expectedApi);
   });
 
   it('writes a secret-free managed profile and forces its provider/model through env and argv', async () => {
     const plan = await piDriver.prepareProviderBinding!(bindingContext());
     const content = plan.profileFiles?.[0]?.content ?? '';
     const config = JSON.parse(content);
-    const provider = config.providers['lobehub-profile-digest'];
+    const provider = config.providers['orvilo-profile-digest'];
 
     expect(plan.args).toEqual([
       '--provider',
-      'lobehub-profile-digest',
+      'orvilo-profile-digest',
       '--model',
       'vendor/model-test',
       '--thinking',
@@ -162,13 +162,13 @@ describe('piDriver', () => {
     ]);
     expect(plan.env).toEqual({
       KEEP_ME: 'yes',
-      LOBEHUB_PI_API_KEY: 'bound-key',
+      ORVILO_PI_API_KEY: 'bound-key',
       PI_CODING_AGENT_DIR: '/managed/pi/profile-digest',
     });
     expect(plan.profileFiles?.[0]?.path).toBe('models.json');
     expect(provider).toMatchObject({
       api: 'openai-completions',
-      apiKey: '$LOBEHUB_PI_API_KEY',
+      apiKey: '$ORVILO_PI_API_KEY',
       baseUrl: 'https://gateway.example.com/v1',
       models: [
         {
@@ -180,7 +180,7 @@ describe('piDriver', () => {
           reasoning: true,
         },
       ],
-      name: 'LobeHub Provider',
+      name: 'Orvilo Provider',
     });
     expect(content).not.toContain('bound-key');
     expect(content).not.toContain('argv-secret');
@@ -194,7 +194,7 @@ describe('piDriver', () => {
       '--session-id',
       'pi-session-exact',
       '--provider',
-      'lobehub-profile-digest',
+      'orvilo-profile-digest',
       '--model',
       'vendor/model-test',
       '--thinking',
@@ -208,7 +208,7 @@ describe('piDriver', () => {
     context.resolution.modelMetadata = undefined;
     const plan = await piDriver.prepareProviderBinding!(context);
     const config = JSON.parse(plan.profileFiles?.[0]?.content ?? '{}');
-    const model = config.providers['lobehub-profile-digest'].models[0];
+    const model = config.providers['orvilo-profile-digest'].models[0];
 
     expect(model).toMatchObject({
       contextWindow: 128_000,
@@ -254,7 +254,7 @@ describe('piDriver', () => {
       '--mode',
       'json',
       '--provider',
-      'lobehub-profile-digest',
+      'orvilo-profile-digest',
       '--model',
       'vendor/model-test',
       '--',

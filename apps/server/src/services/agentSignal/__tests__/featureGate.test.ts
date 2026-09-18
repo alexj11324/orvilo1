@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   isAgentSignalEnabledForUser,
-  isLobeAiAgentSlug,
+  isOrviloAiAgentSlug,
   resolveAgentSelfIterationCapability,
 } from '../featureGate';
 
@@ -37,12 +37,12 @@ describe('isAgentSignalEnabledForUser', () => {
 
 describe('agentSignal feature gates', () => {
   it('recognizes only the inbox builtin slug as Orvilo AI', () => {
-    expect(isLobeAiAgentSlug('inbox')).toBe(true);
-    expect(isLobeAiAgentSlug('task-agent')).toBe(false);
-    expect(isLobeAiAgentSlug('page-agent')).toBe(false);
-    expect(isLobeAiAgentSlug(undefined)).toBe(false);
-    expect(isLobeAiAgentSlug(null)).toBe(false);
-    expect(isLobeAiAgentSlug('')).toBe(false);
+    expect(isOrviloAiAgentSlug('inbox')).toBe(true);
+    expect(isOrviloAiAgentSlug('task-agent')).toBe(false);
+    expect(isOrviloAiAgentSlug('page-agent')).toBe(false);
+    expect(isOrviloAiAgentSlug(undefined)).toBe(false);
+    expect(isOrviloAiAgentSlug(null)).toBe(false);
+    expect(isOrviloAiAgentSlug('')).toBe(false);
   });
 
   it('disables self-iteration when the feature flag is disabled', () => {
@@ -50,7 +50,7 @@ describe('agentSignal feature gates', () => {
       resolveAgentSelfIterationCapability({
         agentSelfIterationEnabled: true,
         isAgentSelfIterationFeatureEnabled: false,
-        isLobeAiAgent: true,
+        isOrviloAiAgent: true,
       }),
     ).toBe(false);
   });
@@ -59,7 +59,7 @@ describe('agentSignal feature gates', () => {
     expect(
       resolveAgentSelfIterationCapability({
         isAgentSelfIterationFeatureEnabled: true,
-        isLobeAiAgent: true,
+        isOrviloAiAgent: true,
       }),
     ).toBe(true);
   });
@@ -69,7 +69,7 @@ describe('agentSignal feature gates', () => {
       resolveAgentSelfIterationCapability({
         agentSelfIterationEnabled: true,
         isAgentSelfIterationFeatureEnabled: true,
-        isLobeAiAgent: false,
+        isOrviloAiAgent: false,
       }),
     ).toBe(true);
 
@@ -77,14 +77,14 @@ describe('agentSignal feature gates', () => {
       resolveAgentSelfIterationCapability({
         agentSelfIterationEnabled: false,
         isAgentSelfIterationFeatureEnabled: true,
-        isLobeAiAgent: false,
+        isOrviloAiAgent: false,
       }),
     ).toBe(false);
 
     expect(
       resolveAgentSelfIterationCapability({
         isAgentSelfIterationFeatureEnabled: true,
-        isLobeAiAgent: false,
+        isOrviloAiAgent: false,
       }),
     ).toBe(false);
   });

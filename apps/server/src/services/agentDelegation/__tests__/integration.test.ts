@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { insertOutboxEvent } from '@/database/models/eventOutbox';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { cleanupTestUser, createTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 import { outboxRowToActivityEvent } from '@/server/services/collaboration/projection';
 import { uuid } from '@/utils/uuid';
@@ -31,7 +31,7 @@ vi.mock('@/database/models/eventOutbox', async (importOriginal) => {
   return { ...mod, insertOutboxEvent: vi.fn(mod.insertOutboxEvent) };
 });
 
-const createWorkspace = async (db: LobeChatDatabase, ownerId: string) => {
+const createWorkspace = async (db: OrviloDatabase, ownerId: string) => {
   const [workspace] = await db
     .insert(workspaces)
     .values({ name: 'Delegation test', primaryOwnerId: ownerId, slug: `dlg-${uuid()}` })
@@ -40,7 +40,7 @@ const createWorkspace = async (db: LobeChatDatabase, ownerId: string) => {
 };
 
 const createTask = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { creatorId: string; seq?: number; workspaceId: string },
 ) => {
   const [task] = await db
@@ -57,7 +57,7 @@ const createTask = async (
 };
 
 describe('agentDelegation services (integration)', () => {
-  let db: LobeChatDatabase;
+  let db: OrviloDatabase;
   let memberId: string;
   let ownerId: string;
   let outsiderId: string;

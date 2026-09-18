@@ -71,12 +71,6 @@ export const LAB_FEATURES: LabFeatureItem[] = [
     stage: 'alpha',
   },
   {
-    flag: 'enableEvalCapture',
-    i18nKey: 'evalCapture',
-    searchKeywords: ['eval', 'test case', 'capture', 'regression', 'benchmark'],
-    stage: 'alpha',
-  },
-  {
     flag: 'enableTopicAcceptance',
     i18nKey: 'topicAcceptance',
     searchKeywords: ['acceptance', 'checklist'],

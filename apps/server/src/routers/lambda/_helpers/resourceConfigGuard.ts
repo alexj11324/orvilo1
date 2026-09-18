@@ -1,5 +1,5 @@
 import type { PermissionResourceType } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   canPerformResourceAction,
   getResourceMeta,
@@ -10,7 +10,7 @@ import {
 import { getWorkspaceAgentParentGroupIds } from './workspaceAgentGuard';
 
 interface ResourceConfigGuardCtx {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   grantedPermissions?: readonly string[];
   userId: string;
   workspaceId?: string | null;

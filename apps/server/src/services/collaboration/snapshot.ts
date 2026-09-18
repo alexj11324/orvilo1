@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 
 import type { RoomSnapshotResult, ServerActivityEvent } from '@orvilo/types';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { eventOutbox } from './contractTables';
 import { outboxRowToActivityEvent } from './projection';
@@ -59,7 +59,7 @@ export const decodeCursor = (raw: string | undefined): SnapshotCursor | null => 
  * continue without gaps.
  */
 export const buildRoomSnapshot = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { aggregateId: string; aggregateType: string; cursor?: string; room: string },
 ): Promise<RoomSnapshotResult> => {
   const cursor = decodeCursor(params.cursor);

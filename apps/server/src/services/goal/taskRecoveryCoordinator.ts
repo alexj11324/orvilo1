@@ -3,7 +3,7 @@ import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { TaskModel } from '@/database/models/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 
@@ -11,7 +11,7 @@ import { resolveTaskAttemptBudget, resolveTaskMaxSteps } from './recoveryPolicy'
 import { statusAuthoredByActor } from './supervisor/policy';
 import { claimGoalTask } from './taskClaim';
 
-const log = debug('lobe-server:goal-task-recovery');
+const log = debug('orvilo-server:goal-task-recovery');
 
 export type TaskRecoveryOutcome =
   /** This call spawned the retry, and `operationId` is its run. */
@@ -39,7 +39,7 @@ export interface TaskRecoveryResult {
 /** Retry budget and spawn boundary for a Goal Graph Task. */
 export class TaskRecoveryCoordinator {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}

@@ -3,10 +3,10 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeInfiniAI } from './index';
+import { OrviloInfiniAI } from './index';
 
 testProvider({
-  Runtime: LobeInfiniAI,
+  Runtime: OrviloInfiniAI,
   provider: ModelProvider.InfiniAI,
   defaultBaseURL: 'https://cloud.infini-ai.com/maas/v1',
   chatDebugEnv: 'DEBUG_INFINIAI_CHAT_COMPLETION',
@@ -19,11 +19,11 @@ testProvider({
   },
 });
 
-describe('LobeInfiniAI - custom features', () => {
-  let instance: InstanceType<typeof LobeInfiniAI>;
+describe('OrviloInfiniAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloInfiniAI>;
 
   beforeEach(() => {
-    instance = new LobeInfiniAI({ apiKey: 'test_api_key' });
+    instance = new OrviloInfiniAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

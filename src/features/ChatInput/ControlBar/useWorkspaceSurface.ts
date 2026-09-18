@@ -1,5 +1,5 @@
 import { isDesktop } from '@orvilo/const';
-import type { LobeAgentAgencyConfig } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { useIsGatewayModeEnabled } from '@/helpers/gatewayMode';
@@ -19,7 +19,7 @@ export type WorkspaceSurface = 'cloudRepo' | 'workingDirectory' | undefined;
 
 export interface ResolveWorkspaceSurfaceParams {
   /** The EFFECTIVE config — shared row merged with this member's device override. */
-  agencyConfig: LobeAgentAgencyConfig | undefined;
+  agencyConfig: OrviloAgentAgencyConfig | undefined;
   /** Heterogeneous agents always run inside a working directory. */
   alwaysShowWorkspace: boolean;
   /** See `ResolveExecutionTargetOptions.clientExecutionAvailable` (`isDesktop` in the UI). */

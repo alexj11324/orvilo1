@@ -1,16 +1,5 @@
 export default {
-  'assistant.favorite': 'Save',
-  'assistant.favoriteFailed': 'Failed to save',
-  'assistant.favoriteSuccess': 'Saved',
-  'assistant.like': 'Like',
-  'assistant.likeFailed': 'Failed to like',
-  'assistant.likeSuccess': 'Liked',
   'assistant.underReview': 'Under Review',
-  'assistant.unfavorite': 'Unsave',
-  'assistant.unfavoriteFailed': 'Failed to unsave',
-  'assistant.unfavoriteSuccess': 'Unsaved',
-  'assistant.unlike': 'Unlike',
-  'assistant.unlikeSuccess': 'Unliked',
   'assistants.addAgent': 'Add Agent',
   'assistants.addAgentAndConverse': 'Add Agent & Chat',
   'assistants.addAgentSuccess': 'Added',
@@ -76,9 +65,9 @@ export default {
   'assistants.status.deprecated.subtitle': 'This Agent is currently unavailable. Possible reasons:',
   'assistants.status.deprecated.title': 'Agent unavailable',
   'assistants.status.support':
-    'For any questions, please copy the link and send it to <email>support@lobehub.com</email> for assistance.',
+    'For any questions, please copy the link and send it to <email>support@orvilo.aspectlylabs.com</email> for assistance.',
   'assistants.status.unpublished.subtitle':
-    'This Agent is under review. To confirm its status, copy the link and email <email>support@lobehub.com</email>.',
+    'This Agent is under review. To confirm its status, copy the link and email <email>support@orvilo.aspectlylabs.com</email>.',
   'assistants.status.unpublished.title': 'Agent Under Review',
   'assistants.suggestions': 'Similar Agents',
   'assistants.systemRole': 'Agent Profile',
@@ -128,7 +117,6 @@ export default {
   'dislike': 'Dislike',
   'filter': 'Filter',
   'filterBy.authorRange.everyone': 'All Authors',
-  'filterBy.authorRange.followed': 'Followed Authors',
   'filterBy.authorRange.title': 'Author Range',
   'filterBy.contentLength': 'Minimum Context Length',
   'filterBy.maxToken.title': 'Set Maximum Length (Token)',
@@ -347,7 +335,7 @@ export default {
   'mcp.details.deployment.platform.steps.cursor':
     '- Navigate to **Settings**, then select Cursor settings\n- Choose **MCP** on the left\n- Click **Add New Global MCP Server** at the top right\n- Copy and paste the server configuration into the existing file, then save',
 
-  'mcp.details.deployment.platform.steps.lobeChat':
+  'mcp.details.deployment.platform.steps.orvilo':
     '- Open the **Orvilo Desktop** app\n- Go to **Settings** - **Default Agent**\n- Then select **Skill Settings** - **Custom Skills**\n- Click **Quick Import JSON Configuration**\n- Copy and paste the server configuration into the text box, then install',
 
   'mcp.details.deployment.platform.steps.openai':
@@ -1081,7 +1069,7 @@ export default {
 
   'skills.details.sidebar.agent.title': 'Send this prompt to your Agent to install this Skill',
 
-  'skills.details.sidebar.agent.useOnLobeAI': 'Use on Orvilo AI',
+  'skills.details.sidebar.agent.useOnOrviloAI': 'Use on Orvilo AI',
 
   'skills.details.sidebar.directoryLayout': 'Directory Layout',
 
@@ -1089,7 +1077,7 @@ export default {
 
   'skills.details.sidebar.installCommand': 'Install Command',
 
-  'skills.details.sidebar.platform.layout.lobehub': 'Skills are managed by Orvilo automatically',
+  'skills.details.sidebar.platform.layout.orvilo': 'Skills are managed by Orvilo automatically',
 
   'skills.details.sidebar.platform.layout.resourcesHint': 'other resources',
 
@@ -1105,7 +1093,7 @@ export default {
   'skills.details.sidebar.platform.steps.cursor':
     'Run the install command in your terminal to download and configure this skill for Cursor.',
 
-  'skills.details.sidebar.platform.steps.lobehub':
+  'skills.details.sidebar.platform.steps.orvilo':
     'Install directly from the Orvilo marketplace with one click.',
 
   'skills.details.sidebar.platform.steps.vscode':
@@ -1149,16 +1137,6 @@ export default {
 
   'user.editProfile': 'Edit Profile',
   'user.editWorkspaceProfile': 'Settings',
-
-  'user.favoriteAgents': 'Saved Agents',
-
-  'user.favoritePlugins': 'Saved Skills',
-
-  'user.follow': 'Follow',
-
-  'user.followers': 'Followers',
-
-  'user.following': 'Following',
 
   'user.forkedAgentGroups': 'Forked Agent Groups',
 
@@ -1277,10 +1255,6 @@ export default {
 
   'user.workspace.noAgents': 'This organization has not published any Agents to Community yet.',
 
-  'user.noFavoriteAgents': 'No saved Agents yet',
-
-  'user.noFavoritePlugins': 'No saved Skills yet',
-
   'user.noGroups.title': 'No Agent Groups yet',
 
   'user.workspace.noGroups':
@@ -1307,34 +1281,16 @@ export default {
   'user.statusFilter.all': 'All',
   'user.statusFilter.archived': 'Archived',
   'user.statusFilter.deprecated': 'Deprecated',
-  'user.statusFilter.favorite': 'Favorite',
   'user.statusFilter.forked': 'Forked',
   'user.statusFilter.published': 'Published',
   'user.statusFilter.unpublished': 'Under Review',
-
-  'user.tabs.favorites': 'Favorites',
 
   'user.tabs.forkedAgents': 'Forked',
 
   'user.tabs.publishedAgents': 'Created',
 
-  'user.unfavorite': 'Unsave',
-
-  'user.unfavoriteFailed': 'Failed to unsave',
-  'user.unfavoriteSuccess': 'Unsaved',
-  'user.unfollow': 'Unfollow',
   'user.website': 'Website',
 
   'user.cancel': 'Cancel',
-  'user.githubUrl': 'GitHub Repository URL',
-  'user.githubUrlInvalid': 'Please enter a valid GitHub repository URL',
-  'user.githubUrlRequired': 'Please enter a GitHub repository URL',
   'user.submit': 'Submit',
-  'user.submitRepo': 'Submit Repo',
-  'user.submitRepoDescription':
-    'Submit your GitHub repository to import your Skills or MCPs to the community.',
-  'user.submitRepoError': 'Failed to submit repository. Please try again.',
-  'user.submitRepoHint': 'The repository will be reviewed before being published.',
-  'user.submitRepoSuccess': 'Repository submitted successfully! It will be reviewed shortly.',
-  'user.submitRepoTitle': 'Submit Your Repository',
 };

@@ -18,7 +18,7 @@ import {
   expertiseRuns,
   topics,
 } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
@@ -29,11 +29,11 @@ const CORE_CUT_MIN = 2;
 export type ExpertiseTier = 'core' | 'niche' | 'unused';
 
 export class ExpertiseModel {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

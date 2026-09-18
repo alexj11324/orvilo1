@@ -1,10 +1,10 @@
 import type { UserSystemAgentConfig } from '@orvilo/types';
 
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { resolveSystemAgentModelConfig } from '@/server/services/systemAgent/modelConfig';
 
-export const resolveExpertiseModelConfig = async (db: LobeChatDatabase, userId: string) => {
+export const resolveExpertiseModelConfig = async (db: OrviloDatabase, userId: string) => {
   const settings = await new UserModel(db, userId).getUserSettings();
   const systemAgent = settings?.systemAgent as Partial<UserSystemAgentConfig> | undefined;
 

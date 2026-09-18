@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { BriefService } from './index';
 
@@ -30,7 +30,7 @@ vi.mock('@/server/services/taskRunner', () => ({
 }));
 
 describe('BriefService', () => {
-  const db = {} as LobeChatDatabase;
+  const db = {} as OrviloDatabase;
   const userId = 'user-1';
 
   const mockAgentModel = {

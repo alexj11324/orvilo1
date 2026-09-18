@@ -12,21 +12,21 @@ const jwtWithSub = (sub: string) =>
   `header.${Buffer.from(JSON.stringify({ sub })).toString('base64url')}.signature`;
 
 describe('resolveIdentityFingerprint', () => {
-  const originalJwt = process.env.LOBEHUB_JWT;
-  const originalApiKey = process.env.LOBEHUB_CLI_API_KEY;
+  const originalJwt = process.env.ORVILO_JWT;
+  const originalApiKey = process.env.ORVILO_CLI_API_KEY;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.LOBEHUB_JWT;
+    delete process.env.ORVILO_JWT;
     mockLoadCredentials.mockReturnValue(null);
-    delete process.env.LOBEHUB_CLI_API_KEY;
+    delete process.env.ORVILO_CLI_API_KEY;
   });
 
   afterEach(() => {
-    if (originalJwt === undefined) delete process.env.LOBEHUB_JWT;
-    else process.env.LOBEHUB_JWT = originalJwt;
-    if (originalApiKey === undefined) delete process.env.LOBEHUB_CLI_API_KEY;
-    else process.env.LOBEHUB_CLI_API_KEY = originalApiKey;
+    if (originalJwt === undefined) delete process.env.ORVILO_JWT;
+    else process.env.ORVILO_JWT = originalJwt;
+    if (originalApiKey === undefined) delete process.env.ORVILO_CLI_API_KEY;
+    else process.env.ORVILO_CLI_API_KEY = originalApiKey;
   });
 
   it('returns undefined when there is nothing to authenticate with', () => {
@@ -49,7 +49,7 @@ describe('resolveIdentityFingerprint', () => {
   });
 
   it('prefers the env JWT over stored credentials', () => {
-    process.env.LOBEHUB_JWT = jwtWithSub('user_env');
+    process.env.ORVILO_JWT = jwtWithSub('user_env');
     mockLoadCredentials.mockReturnValue({ accessToken: jwtWithSub('user_stored') });
 
     expect(resolveIdentityFingerprint()).toBe('user:user_env');
@@ -58,7 +58,7 @@ describe('resolveIdentityFingerprint', () => {
   // An API key has no readable subject. Digesting the key to make one would put
   // a secret-derived artifact on disk, so this mode has no identity at all.
   it('has no identity for API-key credentials', () => {
-    process.env.LOBEHUB_CLI_API_KEY = 'sk-lh-secret';
+    process.env.ORVILO_CLI_API_KEY = 'sk-ov-secret';
 
     expect(resolveIdentityFingerprint()).toBeUndefined();
   });
@@ -66,7 +66,7 @@ describe('resolveIdentityFingerprint', () => {
   // The request authenticates as the API key's owner, so reading past it to the
   // stored login would bind the scope to a different account than the caller.
   it('does not fall back to the stored login when an API key is set', () => {
-    process.env.LOBEHUB_CLI_API_KEY = 'sk-lh-secret';
+    process.env.ORVILO_CLI_API_KEY = 'sk-ov-secret';
     mockLoadCredentials.mockReturnValue({ accessToken: jwtWithSub('user_1') });
 
     expect(resolveIdentityFingerprint()).toBeUndefined();

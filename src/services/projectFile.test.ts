@@ -192,7 +192,7 @@ describe('projectFileService', () => {
     const { projectFileService } = await import('./projectFile');
     const params = {
       from: '/outside/logo.png',
-      to: '/repo/.lobe-artifacts/site/logo.png',
+      to: '/repo/.orvilo-artifacts/site/logo.png',
       workingDirectory: '/repo',
     };
     mockDeviceClient.copyAssetForPublish.mutate.mockResolvedValue({ success: true });

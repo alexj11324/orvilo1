@@ -26,7 +26,7 @@ const createRenderProps = (
   node: {
     properties,
   },
-  tagName: 'lobeLocalFileLink',
+  tagName: 'orviloLocalFileLink',
   type: 'element',
 });
 

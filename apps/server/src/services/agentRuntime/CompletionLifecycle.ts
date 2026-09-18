@@ -15,7 +15,7 @@ import { MessageModel } from '@/database/models/message';
 import { recomputeTopicUsage } from '@/database/models/topicUsage';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { WorkModel } from '@/database/models/work';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import {
   formatErrorForState,
   readErrorBudgetContext,
@@ -32,7 +32,7 @@ import { after } from '@/server/utils/scheduleAfterResponse';
 import { buildRuntimeInterventionNotification } from './agentInterventionNotification';
 import { CriticalHookDeliveryError, hookDispatcher, type SerializedHook } from './hooks';
 
-const log = debug('lobe-server:completion-lifecycle');
+const log = debug('orvilo-server:completion-lifecycle');
 
 /**
  * Terminal reasons this lifecycle treats as a successful completion: the run
@@ -185,7 +185,7 @@ export class CompletionLifecycle {
   private readonly verifyPlanInstantiations = new Map<string, Promise<void>>();
 
   constructor(
-    private readonly serverDB: LobeChatDatabase,
+    private readonly serverDB: OrviloDatabase,
     private readonly userId: string,
     workspaceId?: string,
     options?: {
@@ -761,7 +761,7 @@ export class CompletionLifecycle {
    * Register the operation's Works: entity files edited this round
    * (pptx/xlsx/docx/pdf, …) as `file` Works — one version per operation,
    * exported from the sandbox — plus github issue/PR Works recovered from
-   * hetero / device shell records (codex / claude-code / lobe-local-system
+   * hetero / device shell records (codex / claude-code / orvilo-local-system
    * `gh` runs), which never pass the skill-tool registration hook.
    *
    * Idempotent per state object: only when EVERY candidate registered (the

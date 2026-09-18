@@ -69,7 +69,7 @@ export const works = pgTable(
 
     /** Concrete tool that produced the current version, e.g. `createTask`. */
     toolName: text('tool_name').notNull(),
-    /** Tool/plugin identifier that produced the current version, e.g. `lobe-task`. */
+    /** Tool/plugin identifier that produced the current version, e.g. `orvilo-task`. */
     toolIdentifier: text('tool_identifier').notNull(),
 
     /**
@@ -176,7 +176,7 @@ export const workVersions = pgTable(
     changeType: text('change_type').$type<WorkVersionChangeType>().notNull(),
     /** Concrete tool that produced this version, e.g. `createTask`. */
     toolName: text('tool_name').notNull(),
-    /** Tool/plugin identifier that produced this version, e.g. `lobe-task`. */
+    /** Tool/plugin identifier that produced this version, e.g. `orvilo-task`. */
     toolIdentifier: text('tool_identifier').notNull(),
 
     /** Conversation where the mutation happened; set-null keeps history after topic deletion. */

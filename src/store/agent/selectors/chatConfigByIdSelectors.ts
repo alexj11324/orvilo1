@@ -1,5 +1,5 @@
 import { DEFAULT_AGENT_CHAT_CONFIG, DEFAULT_AGENT_SEARCH_FC_MODEL, isDesktop } from '@orvilo/const';
-import { type LobeAgentChatConfig, type RuntimeEnvMode } from '@orvilo/types';
+import { type OrviloAgentChatConfig, type RuntimeEnvMode } from '@orvilo/types';
 
 import { resolveRuntimeMode, resolveToolMode } from '@/helpers/executionTarget';
 import { resolveGatewayModeEnabled } from '@/helpers/gatewayMode';
@@ -14,12 +14,12 @@ import { agentSelectors } from './selectors';
 
 const getStoredChatConfigById =
   (agentId: string) =>
-  (s: AgentStoreState): LobeAgentChatConfig =>
+  (s: AgentStoreState): OrviloAgentChatConfig =>
     agentSelectors.getAgentConfigById(agentId)(s)?.chatConfig || {};
 
 const getChatConfigById =
   (agentId: string) =>
-  (s: AgentStoreState): LobeAgentChatConfig =>
+  (s: AgentStoreState): OrviloAgentChatConfig =>
     getStoredChatConfigById(agentId)(s);
 
 const getEnableHistoryCountById = (agentId: string) => (s: AgentStoreState) =>

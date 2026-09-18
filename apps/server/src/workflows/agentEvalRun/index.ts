@@ -2,10 +2,10 @@ import type { EvalCaseEnvironment } from '@orvilo/types';
 import debug from 'debug';
 
 import { AgentEvalRunTopicModel } from '@/database/models/agentEval';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
 
-const log = debug('lobe-server:workflows:agent-eval-run');
+const log = debug('orvilo-server:workflows:agent-eval-run');
 
 // Workflow paths
 export const WORKFLOW_PATHS = {
@@ -226,7 +226,7 @@ export class AgentEvalRunWorkflow {
    * @returns Test case IDs that need execution
    */
   static async filterTestCasesNeedingExecution(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     params: { runId: string; testCaseIds: string[]; userId: string; workspaceId?: string },
   ): Promise<string[]> {
     const { runId, testCaseIds, userId, workspaceId } = params;

@@ -3,8 +3,8 @@ import type {
   VentParams,
   VentSeverity,
   VentState,
-} from '@orvilo/builtin-tool-lobe-agent';
-import { VENT_CATEGORIES, VENT_SEVERITIES } from '@orvilo/builtin-tool-lobe-agent';
+} from '@orvilo/builtin-tool-orvilo-agent';
+import { VENT_CATEGORIES, VENT_SEVERITIES } from '@orvilo/builtin-tool-orvilo-agent';
 
 /** Input used by the vent service to record one report. */
 export interface VentRecordInput {
@@ -34,7 +34,7 @@ export interface VentResult {
   ventId?: string;
 }
 
-/** Vent recording service API consumed by the LobeAgent server runtime. */
+/** Vent recording service API consumed by the OrviloAgent server runtime. */
 export interface VentRuntimeService {
   recordVent: (input: VentRecordInput) => Promise<VentResult>;
 }
@@ -70,7 +70,7 @@ const buildVentId = (params: {
  * Creates a pure vent recording service.
  *
  * Use when:
- * - The LobeAgent server runtime needs a DI-friendly vent boundary
+ * - The OrviloAgent server runtime needs a DI-friendly vent boundary
  * - Tests need deterministic tool-call ids and rate-limit state
  *
  * Expects:

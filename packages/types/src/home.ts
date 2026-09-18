@@ -63,7 +63,7 @@ export interface SidebarAgentItem {
   groupAvatar?: string | null;
   /**
    * Heterogeneous agent runtime type (e.g. `claude-code`) when the agent is
-   * driven by an external CLI. `null` / absent means it's a regular LobeHub
+   * driven by an external CLI. `null` / absent means it's a regular Orvilo
    * agent. Present so sidebar / list items can render an "External" tag
    * without per-item agent config lookups.
    */
@@ -81,7 +81,7 @@ export interface SidebarAgentItem {
   name?: string | null;
   pinned: boolean;
   /**
-   * Agent slug. Builtin agents (LobeAI / agent-builder / …) are identified by
+   * Agent slug. Builtin agents (OrviloAI / agent-builder / …) are identified by
    * slug, letting the sidebar hide creator-only actions on official agents.
    * Absent for chat groups.
    */

@@ -18,7 +18,7 @@ const log = debug('context-engine:provider:SkillImportRouteInjector');
  * Identifier of the Skill Store builtin tool. Duplicated as a literal rather than
  * imported so `@orvilo/context-engine` keeps no dependency on builtin-tool packages.
  */
-export const SKILL_STORE_TOOL_ID = 'lobe-skill-store';
+export const SKILL_STORE_TOOL_ID = 'orvilo-skill-store';
 
 /**
  * A skill source found in a user message, and the Skill Store call that installs it.
@@ -55,12 +55,12 @@ const stripTrailingPunctuation = (url: string): string => {
 };
 
 /**
- * LobeHub marketplace skill page, capturing its identifier:
- * `lobehub.com/skills/<id>`, `.../skills/<id>/skill.md`, `lobehub.com/zh-CN/skills/<id>`,
- * `market.lobehub.com/api/v1/skills/<id>/download`.
+ * Orvilo marketplace skill page, capturing its identifier:
+ * `orvilo.aspectlylabs.com/skills/<id>`, `.../skills/<id>/skill.md`, `orvilo.aspectlylabs.com/zh-CN/skills/<id>`,
+ * `market.aspectlylabs.com/api/v1/skills/<id>/download`.
  */
-const LOBEHUB_SKILL_URL =
-  /^https?:\/\/(?:[\w-]+\.)*lobehub\.com\/(?:[a-z]{2}-[a-z]{2,4}\/)?(?:api\/v\d+\/)?skills\/([\w.-]+)/i;
+const ORVILO_SKILL_URL =
+  /^https?:\/\/(?:[\w-]+\.)*(?:orvilo|market)\.aspectlylabs\.com\/(?:[a-z]{2}-[a-z]{2,4}\/)?(?:api\/v\d+\/)?skills\/([\w.-]+)/i;
 
 /** A SKILL.md on any host — by definition a skill manifest. */
 const SKILL_MD_URL = /\/skill\.md(?:[#?]|$)/i;
@@ -86,7 +86,7 @@ const MAX_ROUTES = 5;
 const classify = (url: string, hasInstallIntent: boolean): SkillImportRoute | null => {
   // A marketplace URL carries the identifier in its path, so it never needs importSkill.
   // Checked first: these URLs often end in `/skill.md` too.
-  const market = LOBEHUB_SKILL_URL.exec(url);
+  const market = ORVILO_SKILL_URL.exec(url);
   if (market && market[1].toLowerCase() !== 'skill.md') {
     return { identifier: market[1], method: 'importFromMarket', url };
   }
@@ -110,7 +110,7 @@ const classify = (url: string, hasInstallIntent: boolean): SkillImportRoute | nu
  *
  * Covers everything `importSkill` accepts, not just the marketplace: a SKILL.md on any
  * host, a GitHub repo or subdirectory, a ZIP package. Where the URL determines the call —
- * a `lobehub.com/skills/{identifier}` path, a `SKILL.md` filename — it is resolved here
+ * a `orvilo.aspectlylabs.com/skills/{identifier}` path, a `SKILL.md` filename — it is resolved here
  * rather than left to model judgement. Returns an empty array when nothing qualifies.
  */
 export const extractSkillImportRoutes = (text: string): SkillImportRoute[] => {
@@ -156,7 +156,7 @@ export const formatSkillImportRoutes = (routes: SkillImportRoute[]): string | nu
     '</detected_skills>',
     '',
     'Install priority — go down this ladder, never skip up it:',
-    '1. Activate `lobe-skill-store` if it is not active yet, then make the `install` call named for',
+    '1. Activate `orvilo-skill-store` if it is not active yet, then make the `install` call named for',
     '   each entry above: `importFromMarket` with its identifier, or `importSkill` with its url and',
     '   type. Do this before anything else in this turn.',
     '2. If an `importFromMarket` call fails, retry that skill with `importSkill` and its url.',

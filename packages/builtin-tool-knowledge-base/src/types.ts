@@ -1,6 +1,6 @@
 import type { ChatSemanticSearchChunk, FileSearchResult } from '@orvilo/types';
 
-export const KnowledgeBaseIdentifier = 'lobe-knowledge-base';
+export const KnowledgeBaseIdentifier = 'orvilo-knowledge-base';
 
 export const KnowledgeBaseApiName = {
   addFiles: 'addFiles',

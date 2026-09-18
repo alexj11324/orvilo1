@@ -1,4 +1,4 @@
-export const LobeActivatorIdentifier = 'lobe-activator';
+export const OrviloActivatorIdentifier = 'orvilo-activator';
 
 export const ActivatorApiName = {
   activateSkill: 'activateSkill',

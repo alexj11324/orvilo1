@@ -13,7 +13,7 @@ const binaryTool = {
   apiName: 'editFile',
   arguments: '{"path":"/tmp/a"}',
   id: 'call-1',
-  identifier: 'lobe-local-system',
+  identifier: 'orvilo-local-system',
   type: 'builtin' as const,
 };
 
@@ -36,9 +36,9 @@ const buildState = (overrides: Record<string, unknown> = {}) => ({
   pendingToolsCalling: [binaryTool],
   status: 'waiting_for_human',
   toolManifestMap: {
-    'lobe-local-system': {
+    'orvilo-local-system': {
       api: [{ name: 'editFile' }],
-      identifier: 'lobe-local-system',
+      identifier: 'orvilo-local-system',
     },
   },
   userInterventionConfig: { approvalMode: 'manual' },
@@ -57,7 +57,7 @@ describe('buildRuntimeInterventionNotification', () => {
     expect(result).toMatchObject({
       approvalMode: 'manual',
       batch: {
-        activityKey: '4369e854-719f-5301-bfa4-1f0742eec6ac',
+        activityKey: '0cd189c6-dfae-53ed-ba32-cea5b6deaccb',
         allowedActions: ['approve_tool', 'reject_continue', 'stop'],
         id: 'batch-1',
         kind: 'single',
@@ -76,7 +76,7 @@ describe('buildRuntimeInterventionNotification', () => {
       items: [
         {
           allowedActions: ['approve_tool', 'edit_arguments', 'reject_continue', 'stop'],
-          canonicalToolKey: 'lobe-local-system/editFile',
+          canonicalToolKey: 'orvilo-local-system/editFile',
           interactionKind: 'tool_approval',
           requestRevision: {
             hash: '15df809ad5fadb66f0b31bafc206dcfe620d8da8767fb76e41d3603a45dc870d',
@@ -124,9 +124,9 @@ describe('buildRuntimeInterventionNotification', () => {
       operationId: 'operation-1',
       state: buildState({
         toolManifestMap: {
-          'lobe-local-system': {
+          'orvilo-local-system': {
             api: [{ name: 'readFile' }],
-            identifier: 'lobe-local-system',
+            identifier: 'orvilo-local-system',
           },
         },
       }),
@@ -151,7 +151,7 @@ describe('buildRuntimeInterventionNotification', () => {
         title: 'Choose storage',
       }),
       id: 'call-2',
-      identifier: 'lobe-agent',
+      identifier: 'orvilo-agent',
       type: 'builtin' as const,
     };
     const state = buildState({
@@ -193,7 +193,7 @@ describe('buildRuntimeInterventionNotification', () => {
       apiName: 'showAgentMarketplace',
       arguments: '{"requestId":"request-1","categoryHints":["coding"]}',
       id: 'call-marketplace',
-      identifier: 'lobe-web-onboarding',
+      identifier: 'orvilo-web-onboarding',
       type: 'builtin' as const,
     };
     const result = await buildRuntimeInterventionNotification({
@@ -202,9 +202,9 @@ describe('buildRuntimeInterventionNotification', () => {
         pendingToolMessageIds: { 'call-marketplace': 'tool-marketplace' },
         pendingToolsCalling: [marketplace],
         toolManifestMap: {
-          'lobe-web-onboarding': {
+          'orvilo-web-onboarding': {
             api: [{ name: 'showAgentMarketplace' }],
-            identifier: 'lobe-web-onboarding',
+            identifier: 'orvilo-web-onboarding',
           },
         },
       }),

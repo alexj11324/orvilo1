@@ -12,7 +12,7 @@ export type {
   RunCommandState,
 } from '@orvilo/tool-runtime';
 
-export const LocalSystemIdentifier = 'lobe-local-system';
+export const LocalSystemIdentifier = 'orvilo-local-system';
 
 export const LocalSystemApiName = {
   editFile: 'editFile',

@@ -5,7 +5,7 @@ import type {
   AiModelSettings,
   AiModelType,
   ExtendParamsType,
-  LobeDefaultAiModelListItem,
+  OrviloDefaultAiModelListItem,
 } from 'model-bank';
 import { AiModelTypeSchema, ModelProvider } from 'model-bank';
 
@@ -226,7 +226,7 @@ export const IMAGE_MODEL_KEYWORDS = [
 const AI_MODEL_TYPE_SET = new Set<AiModelType>(AiModelTypeSchema.options);
 
 interface BusinessModelConfigModule {
-  loadModels: () => Promise<LobeDefaultAiModelListItem[]>;
+  loadModels: () => Promise<OrviloDefaultAiModelListItem[]>;
 }
 
 const normalizeModelType = (value: unknown): AiModelType | undefined => {
@@ -487,11 +487,11 @@ const getProviderLocalConfig = async (
 ): Promise<AiFullModelCard[] | null> => {
   if (!provider) return null;
 
-  if (provider === ModelProvider.LobeHub) {
+  if (provider === ModelProvider.Orvilo) {
     const { loadModels } =
       (await import('@orvilo/business-model-bank/model-config')) as BusinessModelConfigModule;
     const models = await loadModels();
-    return models.filter((model) => model.providerId === ModelProvider.LobeHub);
+    return models.filter((model) => model.providerId === ModelProvider.Orvilo);
   }
 
   try {

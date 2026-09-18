@@ -12,7 +12,7 @@ import {
   knowledgeBaseFiles,
   works,
 } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export interface QueryDocumentParams {
@@ -33,7 +33,7 @@ export const DOCUMENT_TRANSFER_FOREIGN_ROWS =
 
 export class DocumentModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
   /**
    * Visibility of the agent that owns the calling tool execution, when this
@@ -47,7 +47,7 @@ export class DocumentModel {
   private callerAgentVisibility?: 'private' | 'public' | null;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     callerAgentVisibility?: 'private' | 'public' | null,
@@ -315,7 +315,7 @@ export class DocumentModel {
     visibility: 'private' | 'public',
   ): Promise<{ documentIds: string[] }> => {
     return this.db.transaction(async (trx) => {
-      const result = await (trx as LobeChatDatabase)
+      const result = await (trx as OrviloDatabase)
         .update(documents)
         .set({ updatedAt: new Date(), visibility })
         .where(and(eq(documents.id, rootId), this.ownership(), eq(documents.userId, this.userId)))
@@ -341,7 +341,7 @@ export class DocumentModel {
       // The paired row this mirrors is always the caller's own.
       const fileId = result[0].fileId;
       if (fileId) {
-        await (trx as LobeChatDatabase)
+        await (trx as OrviloDatabase)
           .update(files)
           .set({ visibility })
           .where(
@@ -359,7 +359,7 @@ export class DocumentModel {
       // Mirror visibility onto existing Work projections in the same
       // transaction. Scope without works.visibility so a promotion can
       // update rows that are currently private.
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(works)
         .set({ visibility })
         .where(
@@ -383,7 +383,7 @@ export class DocumentModel {
    */
   private collectSubtree = async (
     rootId: string,
-    runner: LobeChatDatabase = this.db,
+    runner: OrviloDatabase = this.db,
   ): Promise<DocumentItem[]> => {
     const root = await runner.query.documents.findFirst({
       where: and(this.ownership(), eq(documents.id, rootId)),
@@ -407,7 +407,7 @@ export class DocumentModel {
 
   countFileUsageInSubtree = async (
     rootId: string,
-    runner: LobeChatDatabase = this.db,
+    runner: OrviloDatabase = this.db,
   ): Promise<number> => {
     const subtree = await this.collectSubtree(rootId, runner);
     if (subtree.length === 0) return 0;
@@ -451,7 +451,7 @@ export class DocumentModel {
    */
   private hasForeignRows = async (
     subtree: { id: string; userId: string }[],
-    runner: LobeChatDatabase,
+    runner: OrviloDatabase,
   ): Promise<boolean> => {
     if (subtree.some((doc) => doc.userId !== this.userId)) return true;
 
@@ -500,8 +500,8 @@ export class DocumentModel {
     },
   ): Promise<{ documentIds: string[] }> => {
     return this.db.transaction(async (trx) => {
-      const scopedTrx = new DocumentModel(trx as LobeChatDatabase, this.userId, this.workspaceId);
-      const subtree = await scopedTrx.collectSubtree(documentId, trx as LobeChatDatabase);
+      const scopedTrx = new DocumentModel(trx as OrviloDatabase, this.userId, this.workspaceId);
+      const subtree = await scopedTrx.collectSubtree(documentId, trx as OrviloDatabase);
       if (subtree.length === 0) throw new Error('Document not found');
 
       const ids = subtree.map((d) => d.id);
@@ -510,7 +510,7 @@ export class DocumentModel {
       // take FOR UPDATE on the document row before stamping a workspace, so
       // they either commit before this point (and are seen by the recheck
       // below) or block until this transfer commits and then re-validate.
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .select({ id: documents.id })
         .from(documents)
         .where(inArray(documents.id, ids))
@@ -518,7 +518,7 @@ export class DocumentModel {
 
       if (
         options?.forbidForeignRows &&
-        (await scopedTrx.hasForeignRows(subtree, trx as LobeChatDatabase))
+        (await scopedTrx.hasForeignRows(subtree, trx as OrviloDatabase))
       ) {
         throw new Error(DOCUMENT_TRANSFER_FOREIGN_ROWS);
       }
@@ -533,66 +533,66 @@ export class DocumentModel {
       for (const doc of subtree) {
         if (!doc.slug) continue;
         const slug = await this.findAvailableSlug(
-          trx as LobeChatDatabase,
+          trx as OrviloDatabase,
           doc.slug,
           targetWorkspaceId,
           targetUserId,
           doc.id,
         );
         if (slug !== doc.slug) {
-          await (trx as LobeChatDatabase)
+          await (trx as OrviloDatabase)
             .update(documents)
             .set({ slug })
             .where(eq(documents.id, doc.id));
         }
       }
 
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(documents)
         .set({ ...ownershipUpdate, ...visibilityUpdate, updatedAt: new Date() })
         .where(inArray(documents.id, ids));
 
       if (targetWorkspaceId) {
-        await (trx as LobeChatDatabase)
+        await (trx as OrviloDatabase)
           .update(documentComments)
           // A scope transfer is not an author edit. Preserve updatedAt to bypass
           // the schema's Drizzle $onUpdate hook.
           .set({ updatedAt: documentComments.updatedAt, workspaceId: targetWorkspaceId })
           .where(inArray(documentComments.documentId, ids));
 
-        await (trx as LobeChatDatabase)
+        await (trx as OrviloDatabase)
           .update(documentCommentMentions)
           .set({ workspaceId: targetWorkspaceId })
           .where(
             inArray(
               documentCommentMentions.commentId,
-              (trx as LobeChatDatabase)
+              (trx as OrviloDatabase)
                 .select({ id: documentComments.id })
                 .from(documentComments)
                 .where(inArray(documentComments.documentId, ids)),
             ),
           );
 
-        await (trx as LobeChatDatabase)
+        await (trx as OrviloDatabase)
           .update(documentLikes)
           .set({ workspaceId: targetWorkspaceId })
           .where(inArray(documentLikes.documentId, ids));
       } else {
         // Comments are Workspace assets and cannot follow a document into personal scope.
         // Mention rows are removed by the comment FK cascade.
-        await (trx as LobeChatDatabase)
+        await (trx as OrviloDatabase)
           .delete(documentComments)
           .where(inArray(documentComments.documentId, ids));
 
         // Likes are Workspace reactions too; a personal document has no like surface.
-        await (trx as LobeChatDatabase)
+        await (trx as OrviloDatabase)
           .delete(documentLikes)
           .where(inArray(documentLikes.documentId, ids));
       }
 
       // Move files anchored to these documents; their visibility mirrors the
       // document subtree in workspace scope.
-      await (trx as LobeChatDatabase)
+      await (trx as OrviloDatabase)
         .update(files)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(files.parentId, ids));
@@ -612,8 +612,8 @@ export class DocumentModel {
     targetVisibility?: 'private' | 'public',
   ): Promise<{ rootId: string }> => {
     return this.db.transaction(async (trx) => {
-      const scopedTrx = new DocumentModel(trx as LobeChatDatabase, this.userId, this.workspaceId);
-      const subtree = await scopedTrx.collectSubtree(documentId, trx as LobeChatDatabase);
+      const scopedTrx = new DocumentModel(trx as OrviloDatabase, this.userId, this.workspaceId);
+      const subtree = await scopedTrx.collectSubtree(documentId, trx as OrviloDatabase);
       if (subtree.length === 0) throw new Error('Document not found');
 
       // Visibility only applies when landing in a workspace.
@@ -640,14 +640,14 @@ export class DocumentModel {
         let newSlug = original.slug;
         if (newSlug) {
           newSlug = await this.findAvailableSlug(
-            trx as LobeChatDatabase,
+            trx as OrviloDatabase,
             newSlug,
             targetWorkspaceId,
             targetUserId,
           );
         }
 
-        const inserted = (await (trx as LobeChatDatabase)
+        const inserted = (await (trx as OrviloDatabase)
           .insert(documents)
           .values({
             accessedAt: original.accessedAt,
@@ -689,7 +689,7 @@ export class DocumentModel {
    * Tries `slug`, `slug-1`, …, `slug-99`. Mirrors the agent transfer behavior.
    */
   private findAvailableSlug = async (
-    runner: LobeChatDatabase,
+    runner: OrviloDatabase,
     baseSlug: string,
     targetWorkspaceId: string | null,
     targetUserId: string,

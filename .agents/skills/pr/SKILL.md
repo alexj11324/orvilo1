@@ -21,7 +21,7 @@ user-invocable: true
 - `git log --oneline origin/canary..HEAD` — unpushed commits
 - `gh pr list --head "$(git branch --show-current)" --json number,title,state,url` — existing PR
 - `git diff --stat --stat-count=20 origin/canary..HEAD` — change summary
-- `env -u LOBE_API_KEY -u LOBEHUB_CLI_API_KEY -u LOBEHUB_CLI_HOME LOBEHUB_SERVER=https://orvilo.aspectlylabs.com lh acceptance run list --json` — the published acceptance round for this branch (match on `branch`); pin the Orvilo production origin instead of relying on a CLI fallback
+- `env -u ORVILO_API_KEY -u ORVILO_CLI_API_KEY -u ORVILO_CLI_HOME ORVILO_SERVER=https://orvilo.aspectlylabs.com lh acceptance run list --json` — the published acceptance round for this branch (match on `branch`); pin the Orvilo production origin instead of relying on a CLI fallback
 
 ### 2. Handle uncommitted changes on default branch
 
@@ -56,7 +56,7 @@ A feature or fix needs a published acceptance round before the PR is opened (AGE
 - Title: `<gitmoji> <type>(<scope>): <description>`
 - Body: based on PR template (`.github/PULL_REQUEST_TEMPLATE.md`), fill checkboxes
 - Link related GitHub issues using magic keywords (`Fixes #123`, `Closes #123`)
-- Link Linear issues if applicable (`Fixes LOBE-xxx`)
+- Link Linear issues if applicable (`Fixes ORVILO-xxx`)
 - Put the acceptance link (or the explicit skip reason) under **Test**
 - Use HEREDOC for body to preserve formatting
 
@@ -146,8 +146,8 @@ Filter to your touched files — this repo's standalone type-check emits pre-exi
 
 ## PR + Linear bookkeeping
 
-- **Each PR closes only its own layer's issues.** Server PR: `Closes LOBE-<server>`. Client PR: `Closes LOBE-<pkg> / <desktop> / <cli>`. Don't let one PR's body claim another layer's issue.
-- Both PRs are `Part of LOBE-<parent>`.
+- **Each PR closes only its own layer's issues.** Server PR: `Closes ORVILO-<server>`. Client PR: `Closes ORVILO-<pkg> / <desktop> / <cli>`. Don't let one PR's body claim another layer's issue.
+- Both PRs are `Part of ORVILO-<parent>`.
 - On PR creation, move each closed sub-issue to **In Review** (not Done) and add a completion comment — see the `linear` skill.
 
 ## Gotchas

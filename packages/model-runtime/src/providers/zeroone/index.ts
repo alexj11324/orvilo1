@@ -26,4 +26,4 @@ export const params = {
   provider: ModelProvider.ZeroOne,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeZeroOneAI = createOpenAICompatibleRuntime(params);
+export const OrviloZeroOneAI = createOpenAICompatibleRuntime(params);

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 import type { Plugin } from 'vite';
 
-const MARKDOWN_IMPORT_QUERY = 'lobe-md-import';
+const MARKDOWN_IMPORT_QUERY = 'orvilo-md-import';
 
 function hasQuery(id: string) {
   return id.includes('?');

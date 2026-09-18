@@ -22,7 +22,7 @@ import type {
   SandboxServiceOptions,
 } from './types';
 
-const log = debug('lobe-server:sandbox:service');
+const log = debug('orvilo-server:sandbox:service');
 
 export class SandboxMiddlewareService implements SandboxService {
   readonly capabilities: SandboxProviderCapabilities;

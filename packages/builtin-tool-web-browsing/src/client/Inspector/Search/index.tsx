@@ -20,7 +20,7 @@ export const SearchInspector = memo<BuiltinInspectorProps<SearchQuery, UniformSe
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-web-browsing.apiName.search')}
+            {t('builtins.orvilo-web-browsing.apiName.search')}
           </span>
         </div>
       );
@@ -29,7 +29,7 @@ export const SearchInspector = memo<BuiltinInspectorProps<SearchQuery, UniformSe
     return (
       <div className={inspectorTextStyles.root}>
         <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-web-browsing.apiName.search')}:{'\u00A0'}
+          {t('builtins.orvilo-web-browsing.apiName.search')}:{'\u00A0'}
         </span>
         {query && <span className={highlightTextStyles.primary}>{query}</span>}
         {!isLoading &&
@@ -44,7 +44,7 @@ export const SearchInspector = memo<BuiltinInspectorProps<SearchQuery, UniformSe
               fontSize={12}
               style={{ marginInlineStart: 4 }}
             >
-              ({t('builtins.lobe-web-browsing.inspector.noResults')})
+              ({t('builtins.orvilo-web-browsing.inspector.noResults')})
             </Text>
           ))}
       </div>

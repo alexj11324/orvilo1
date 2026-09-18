@@ -8,7 +8,7 @@ import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import type { HealthCheckResult, QueueMessage, QueueStats } from '../types';
 import type { QueueServiceImpl } from './type';
 
-const log = debug('lobe-server:service:queue:hatchet');
+const log = debug('orvilo-server:service:queue:hatchet');
 const HATCHET_MESSAGE_BUDGET_BYTES = 9 * 1024 * 1024;
 const OVERSIZED_STRING_KEEP_LADDER = [25_000, 4000, 512, 0];
 

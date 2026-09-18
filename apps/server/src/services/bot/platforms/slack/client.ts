@@ -318,7 +318,7 @@ class SlackSocketModeClient implements PlatformClient {
 
       const chatConfig: any = {
         adapters: { slack: adapter },
-        userName: `lobehub-gateway-${this.applicationId}`,
+        userName: `orvilo-gateway-${this.applicationId}`,
       };
 
       if (this.context.redisClient) {

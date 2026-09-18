@@ -16,7 +16,7 @@ import { isSingleAccountRebindBlocked, shouldShowSingleAccountSuccess } from './
 
 interface DiscordBodyProps {
   existingLink?: ExistingLink | null;
-  lobeAccount: string;
+  orviloAccount: string;
   platformMeta?: PlatformMeta;
   randomId: string;
   signInUrl: string;
@@ -25,7 +25,7 @@ interface DiscordBodyProps {
 }
 
 const DiscordBody = memo<DiscordBodyProps>(
-  ({ existingLink, lobeAccount, platformMeta, randomId, signInUrl, tokenData, userAvatar }) => {
+  ({ existingLink, orviloAccount, platformMeta, randomId, signInUrl, tokenData, userAvatar }) => {
     const { t } = useTranslation('messenger');
     const [done, setDone] = useState(false);
 
@@ -47,7 +47,7 @@ const DiscordBody = memo<DiscordBodyProps>(
 
     const handle = tokenData.platformUsername ?? `ID ${tokenData.platformUserId}`;
     const infoRows: InfoRow[] = [
-      { label: t('verify.confirm.fields.lobeHubAccount'), value: lobeAccount },
+      { label: t('verify.confirm.fields.orviloHubAccount'), value: orviloAccount },
       {
         label: t('verify.confirm.fields.platformAccount', { platform: platformLabel }),
         value: handle,

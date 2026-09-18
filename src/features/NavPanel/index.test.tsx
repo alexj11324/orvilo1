@@ -14,7 +14,7 @@ import SideBarLayout from './SideBarLayout';
 
 const panelRender = vi.fn();
 
-let pathname = '/lobe-team/settings/general';
+let pathname = '/orvilo-team/settings/general';
 
 interface WorkspaceMock {
   activeWorkspaceId: string;
@@ -31,7 +31,7 @@ interface NavPanelDraggableMockProps {
 
 const workspaceState: WorkspaceMock = {
   activeWorkspaceId: 'workspace-1',
-  workspaces: [{ id: 'workspace-1', slug: 'lobe-team' }],
+  workspaces: [{ id: 'workspace-1', slug: 'orvilo-team' }],
 };
 
 vi.mock('react-router', () => ({
@@ -61,7 +61,7 @@ vi.mock('@/features/HomeSidebar/Content', () => ({
 
 describe('NavPanel', () => {
   beforeEach(() => {
-    pathname = '/lobe-team/settings/general';
+    pathname = '/orvilo-team/settings/general';
     clearNavPanelRegistry();
   });
 
@@ -122,7 +122,7 @@ describe('NavPanel', () => {
   });
 
   it('uses the Home entry for routes without a dedicated navigation panel', async () => {
-    pathname = '/lobe-team/tasks';
+    pathname = '/orvilo-team/tasks';
 
     render(
       <>
@@ -140,7 +140,7 @@ describe('NavPanel', () => {
   });
 
   it('shows a route-keyed fallback instead of stale Home content while a dedicated portal loads', async () => {
-    pathname = '/lobe-team/memory';
+    pathname = '/orvilo-team/memory';
 
     render(
       <>
@@ -171,7 +171,7 @@ describe('NavPanel', () => {
   });
 
   it('drops the search placeholder for the searchless workspace settings sidebar', async () => {
-    pathname = '/lobe-team/settings/general';
+    pathname = '/orvilo-team/settings/general';
 
     render(<NavPanel />);
 

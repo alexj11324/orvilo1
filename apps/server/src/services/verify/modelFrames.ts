@@ -2,7 +2,7 @@ import debug from 'debug';
 
 import type { FileService } from '@/server/services/file';
 
-const log = debug('lobe-server:verify-model-frames');
+const log = debug('orvilo-server:verify-model-frames');
 
 /**
  * Ceiling on a frame sent inline. Evidence screenshots sit far below it; past it

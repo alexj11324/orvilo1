@@ -3,15 +3,15 @@ import type { ClientSecretPayload } from '@orvilo/types';
 import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LobeOpenAI } from '../providers/openai';
+import { OrviloOpenAI } from '../providers/openai';
 import { providerRuntimeMap } from '../runtimeMap';
 import type { ChatStreamCallbacks, ChatStreamPayload } from '../types';
 import type { CreateImagePayload } from '../types/image';
 import type { CreateVideoPayload } from '../types/video';
 import { ModelRuntime, type ModelRuntimeHooks } from './ModelRuntime';
 
-vi.mock('../providers/lobehub', () => ({
-  LobeHubAI: class LobeHubAI {},
+vi.mock('../providers/orvilo', () => ({
+  OrviloAI: class OrviloAI {},
 }));
 
 /**
@@ -88,7 +88,7 @@ beforeEach(async () => {
 
 describe('ModelRuntime', () => {
   describe('should initialize with various providers', () => {
-    const providers = Object.values(ModelProvider).filter((i) => i !== 'lobehub');
+    const providers = Object.values(ModelProvider).filter((i) => i !== 'orvilo');
     const specialProviderIds = [ModelProvider.VertexAI, ...specialProviders.map((p) => p.id)];
 
     const generalTestProviders = providers.filter(
@@ -112,7 +112,7 @@ describe('ModelRuntime', () => {
         temperature: 0,
       };
 
-      vi.spyOn(LobeOpenAI.prototype, 'chat').mockResolvedValue(new Response(''));
+      vi.spyOn(OrviloOpenAI.prototype, 'chat').mockResolvedValue(new Response(''));
 
       await mockModelRuntime.chat(payload);
     });
@@ -123,7 +123,7 @@ describe('ModelRuntime', () => {
         temperature: 0,
       };
 
-      vi.spyOn(LobeOpenAI.prototype, 'chat').mockResolvedValue(new Response(''));
+      vi.spyOn(OrviloOpenAI.prototype, 'chat').mockResolvedValue(new Response(''));
 
       await mockModelRuntime.chat(payload, createMockTraceOptions());
     });
@@ -138,7 +138,7 @@ describe('ModelRuntime', () => {
       it('should call onToolsCalling correctly', async () => {
         const onToolsCallingMock = vi.fn();
 
-        vi.spyOn(LobeOpenAI.prototype, 'chat').mockImplementation(
+        vi.spyOn(OrviloOpenAI.prototype, 'chat').mockImplementation(
           async (_payload, { callback }: any) => {
             if (callback?.onToolsCalling) {
               await callback.onToolsCalling();
@@ -158,7 +158,7 @@ describe('ModelRuntime', () => {
       it('should call onStart correctly', async () => {
         const onStartMock = vi.fn();
 
-        vi.spyOn(LobeOpenAI.prototype, 'chat').mockImplementation(
+        vi.spyOn(OrviloOpenAI.prototype, 'chat').mockImplementation(
           async (_payload, { callback }: any) => {
             if (callback?.onStart) {
               callback.onStart();
@@ -175,7 +175,7 @@ describe('ModelRuntime', () => {
       it('should call onCompletion correctly', async () => {
         const onCompletionMock = vi.fn();
 
-        vi.spyOn(LobeOpenAI.prototype, 'chat').mockImplementation(
+        vi.spyOn(OrviloOpenAI.prototype, 'chat').mockImplementation(
           async (_payload, { callback }: any) => {
             if (callback?.onCompletion) {
               await callback.onCompletion({ text: 'Test completion' });
@@ -195,7 +195,7 @@ describe('ModelRuntime', () => {
       it('should call onFinal correctly', async () => {
         const onFinalMock = vi.fn();
 
-        vi.spyOn(LobeOpenAI.prototype, 'chat').mockImplementation(
+        vi.spyOn(OrviloOpenAI.prototype, 'chat').mockImplementation(
           async (_payload, { callback }: any) => {
             if (callback?.onFinal) {
               await callback.onFinal('Test completion');
@@ -227,11 +227,11 @@ describe('ModelRuntime', () => {
 
       const mockResponse = { name: 'John Doe' };
 
-      vi.spyOn(LobeOpenAI.prototype, 'generateObject').mockResolvedValue(mockResponse);
+      vi.spyOn(OrviloOpenAI.prototype, 'generateObject').mockResolvedValue(mockResponse);
 
       const result = await mockModelRuntime.generateObject(payload);
 
-      expect(LobeOpenAI.prototype.generateObject).toHaveBeenCalledWith(payload, undefined);
+      expect(OrviloOpenAI.prototype.generateObject).toHaveBeenCalledWith(payload, undefined);
       expect(result).toBe(mockResponse);
     });
   });
@@ -253,11 +253,11 @@ describe('ModelRuntime', () => {
         height: 1024,
       };
 
-      vi.spyOn(LobeOpenAI.prototype, 'createImage').mockResolvedValue(mockResponse);
+      vi.spyOn(OrviloOpenAI.prototype, 'createImage').mockResolvedValue(mockResponse);
 
       const result = await mockModelRuntime.createImage(payload);
 
-      expect(LobeOpenAI.prototype.createImage).toHaveBeenCalledWith(payload, undefined);
+      expect(OrviloOpenAI.prototype.createImage).toHaveBeenCalledWith(payload, undefined);
       expect(result).toBe(mockResponse);
     });
 
@@ -344,11 +344,11 @@ describe('ModelRuntime', () => {
         { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
       ];
 
-      vi.spyOn(LobeOpenAI.prototype, 'models').mockResolvedValue(mockModels);
+      vi.spyOn(OrviloOpenAI.prototype, 'models').mockResolvedValue(mockModels);
 
       const result = await mockModelRuntime.models();
 
-      expect(LobeOpenAI.prototype.models).toHaveBeenCalled();
+      expect(OrviloOpenAI.prototype.models).toHaveBeenCalled();
       expect(result).toBe(mockModels);
     });
 
@@ -376,11 +376,11 @@ describe('ModelRuntime', () => {
 
       const mockEmbeddings = [[0.1, 0.2, 0.3]];
 
-      vi.spyOn(LobeOpenAI.prototype, 'embeddings').mockResolvedValue(mockEmbeddings);
+      vi.spyOn(OrviloOpenAI.prototype, 'embeddings').mockResolvedValue(mockEmbeddings);
 
       const result = await mockModelRuntime.embeddings(payload);
 
-      expect(LobeOpenAI.prototype.embeddings).toHaveBeenCalledWith(payload, undefined);
+      expect(OrviloOpenAI.prototype.embeddings).toHaveBeenCalledWith(payload, undefined);
       expect(result).toBe(mockEmbeddings);
     });
 
@@ -394,11 +394,11 @@ describe('ModelRuntime', () => {
 
       const mockEmbeddings = [[0.1, 0.2, 0.3]];
 
-      vi.spyOn(LobeOpenAI.prototype, 'embeddings').mockResolvedValue(mockEmbeddings);
+      vi.spyOn(OrviloOpenAI.prototype, 'embeddings').mockResolvedValue(mockEmbeddings);
 
       const result = await mockModelRuntime.embeddings(payload, options);
 
-      expect(LobeOpenAI.prototype.embeddings).toHaveBeenCalledWith(payload, options);
+      expect(OrviloOpenAI.prototype.embeddings).toHaveBeenCalledWith(payload, options);
       expect(result).toBe(mockEmbeddings);
     });
 
@@ -432,11 +432,11 @@ describe('ModelRuntime', () => {
 
       const mockResponse = new ArrayBuffer(8);
 
-      vi.spyOn(LobeOpenAI.prototype, 'textToSpeech').mockResolvedValue(mockResponse);
+      vi.spyOn(OrviloOpenAI.prototype, 'textToSpeech').mockResolvedValue(mockResponse);
 
       const result = await mockModelRuntime.textToSpeech(payload);
 
-      expect(LobeOpenAI.prototype.textToSpeech).toHaveBeenCalledWith(payload, undefined);
+      expect(OrviloOpenAI.prototype.textToSpeech).toHaveBeenCalledWith(payload, undefined);
       expect(result).toBe(mockResponse);
     });
 
@@ -451,11 +451,11 @@ describe('ModelRuntime', () => {
 
       const mockResponse = new ArrayBuffer(8);
 
-      vi.spyOn(LobeOpenAI.prototype, 'textToSpeech').mockResolvedValue(mockResponse);
+      vi.spyOn(OrviloOpenAI.prototype, 'textToSpeech').mockResolvedValue(mockResponse);
 
       const result = await mockModelRuntime.textToSpeech(payload, options);
 
-      expect(LobeOpenAI.prototype.textToSpeech).toHaveBeenCalledWith(payload, options);
+      expect(OrviloOpenAI.prototype.textToSpeech).toHaveBeenCalledWith(payload, options);
       expect(result).toBe(mockResponse);
     });
 

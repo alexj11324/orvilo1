@@ -16,7 +16,7 @@ const loadBusinessResources = async (locale: string): Promise<UILocaleResources 
   }
 };
 
-const loadLobeUIBuiltinResources = async (locale: string): Promise<UILocaleResources | null> => {
+const loadOrviloUIBuiltinResources = async (locale: string): Promise<UILocaleResources | null> => {
   try {
     const { en, zhCn } = await import('@lobehub/ui/es/i18n/resources/index');
 
@@ -34,11 +34,11 @@ export const getUILocaleAndResources = async (
 
   const resources =
     mergeUILocaleResources(
-      await loadLobeUIBuiltinResources(normalizedLocale),
+      await loadOrviloUIBuiltinResources(normalizedLocale),
       await loadBusinessResources(normalizedLocale),
     ) ??
     mergeUILocaleResources(
-      await loadLobeUIBuiltinResources('en-US'),
+      await loadOrviloUIBuiltinResources('en-US'),
       await loadBusinessResources('en-US'),
     );
 

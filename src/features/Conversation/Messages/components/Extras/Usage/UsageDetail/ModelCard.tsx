@@ -3,11 +3,11 @@ import { Tabs } from '@lobehub/ui/base-ui';
 import { getCachedTextInputUnitRate, getWriteCacheInputUnitRate } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
 import { ArrowDownToDot, ArrowUpFromDot, BookUp2Icon, CircleFadingArrowUp } from 'lucide-react';
-import { type LobeDefaultAiModelListItem } from 'model-bank';
+import { type OrviloDefaultAiModelListItem } from 'model-bank';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelIcon } from '@/components/LobeIcons';
+import { ModelIcon } from '@/components/OrviloIcons';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
@@ -29,7 +29,7 @@ export const styles = createStaticStyles(({ css, cssVar }) => {
   };
 });
 
-interface ModelCardProps extends LobeDefaultAiModelListItem {
+interface ModelCardProps extends OrviloDefaultAiModelListItem {
   provider: string;
 }
 

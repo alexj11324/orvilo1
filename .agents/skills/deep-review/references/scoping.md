@@ -59,7 +59,7 @@ One change often spans the main repo and submodules — review them together by 
 
 1. Detect from the same command §2 selected — append `--submodule=log` to it (`git diff <base>...HEAD --submodule=log`, `git show <sha> --submodule=log`, `git diff <a>..<b> --submodule=log`, ...). `git status` showing `modified: <path> (new commits)` is an extra signal only when the scope includes the worktree (§2 rules 3–4); for a named commit/range the gitlink pair comes from that object, never from current branch/worktree state.
 2. Changed submodules join the review: the old/new gitlink pair from that output yields the submodule diff command (`git -C <path> diff <old>..<new>`), which merges into `{changes}` alongside the main-repo command; sizes add up for the small/large judgment.
-3. Prefix finding locations with the submodule path (`lobehub/src/x.ts:42`).
+3. Prefix finding locations with the submodule path (`aspectlylabs/src/x.ts:42`).
 4. Note "main repo + submodule: <names>" in the scope summary. Skip a submodule only when the user explicitly says so.
 
 ## 5. Background (stop at the first source that answers)

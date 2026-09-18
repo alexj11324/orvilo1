@@ -5,7 +5,7 @@ import type {
 import { AGENT_SIGNAL_SOURCE_TYPES } from '@orvilo/agent-signal/source';
 
 import { MessageModel } from '@/database/models/message';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 /** Reason a `client.runtime.start` event could not become a feedback source. */
 export type ClientRuntimeStartHydrationSkipReason =
@@ -51,7 +51,7 @@ const getTrustedScopeKey = (
  */
 export const resolveClientRuntimeStartFeedbackSource = async (
   sourceEvent: SourceEventClientRuntimeStart,
-  input: { db: LobeChatDatabase; userId: string; workspaceId?: string },
+  input: { db: OrviloDatabase; userId: string; workspaceId?: string },
 ): Promise<ClientRuntimeStartHydrationResult> => {
   if (sourceEvent.payload.parentMessageType !== 'user') {
     return { diagnostic: { reason: 'non-user-parent', status: 'skipped' } };

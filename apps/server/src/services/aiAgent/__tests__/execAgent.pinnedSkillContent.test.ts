@@ -16,7 +16,7 @@ const {
   mockGetAgentConfig,
   mockGetAgentSkills,
   mockGetComposioManifests,
-  mockGetLobehubSkillManifests,
+  mockGetOrviloSkillManifests,
   mockHasDocuments,
   mockMessageCreate,
   mockPluginQuery,
@@ -33,7 +33,7 @@ const {
   mockGetAgentConfig: vi.fn(),
   mockGetAgentSkills: vi.fn().mockResolvedValue([]),
   mockGetComposioManifests: vi.fn().mockResolvedValue([]),
-  mockGetLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+  mockGetOrviloSkillManifests: vi.fn().mockResolvedValue([]),
   mockHasDocuments: vi.fn().mockResolvedValue(false),
   mockMessageCreate: vi.fn(),
   mockPluginQuery: vi.fn().mockResolvedValue([]),
@@ -126,6 +126,7 @@ vi.mock('@/database/models/connectorTool', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
@@ -152,7 +153,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: mockGetLobehubSkillManifests,
+      getOrviloSkillManifests: mockGetOrviloSkillManifests,
     };
   }),
 }));
@@ -186,7 +187,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       { abilities: { functionCall: true }, id: 'gpt-4', providerId: 'openai' },
     ],
   };
@@ -349,11 +350,11 @@ describe('AiAgentService.execAgent - pinned skill content injection', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: '/goal ship it' } as any);
 
-    expect(operationSkillSetArg()?.enabledPluginIds).toContain('lobe-goal');
-    expect(operationSkillSetArg()?.enabledPluginIds).not.toContain('lobe-task');
+    expect(operationSkillSetArg()?.enabledPluginIds).toContain('orvilo-goal');
+    expect(operationSkillSetArg()?.enabledPluginIds).not.toContain('orvilo-task');
     expect(toolsEngineConfigArg()?.agentConfig).toEqual({
       chatConfig: { toolMode: 'custom' },
-      plugins: ['lobe-goal'],
+      plugins: ['orvilo-goal'],
     });
   });
 
@@ -362,7 +363,7 @@ describe('AiAgentService.execAgent - pinned skill content injection', () => {
       chatConfig: { toolMode: 'agent' },
       id: 'agent-1',
       model: 'gpt-4',
-      plugins: ['lobe-agent', 'pinned-tool'],
+      plugins: ['orvilo-agent', 'pinned-tool'],
       provider: 'openai',
       systemRole: 'You are a helper',
     });
@@ -373,10 +374,10 @@ describe('AiAgentService.execAgent - pinned skill content injection', () => {
       selectedToolIds: ['selected-tool'],
     } as any);
 
-    expect(operationSkillSetArg()?.enabledPluginIds).toEqual(['lobe-goal']);
+    expect(operationSkillSetArg()?.enabledPluginIds).toEqual(['orvilo-goal']);
     expect(toolsEngineConfigArg()?.agentConfig).toEqual({
       chatConfig: { toolMode: 'custom' },
-      plugins: ['lobe-goal'],
+      plugins: ['orvilo-goal'],
     });
   });
 

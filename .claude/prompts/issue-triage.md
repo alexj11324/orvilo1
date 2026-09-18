@@ -32,11 +32,11 @@ Only apply labels from these THREE categories:
 
 The runtime environment or technology wrapper where the issue occurs:
 
-| Label | When to apply |
-|-------|--------------|
+| Label      | When to apply                                                                                                               |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `electron` | Desktop/Electron-specific issues. This REPLACES `platform:desktop`, `os:*`, `deployment:*`, `hosting:*` — do NOT add those. |
-| `pwa` | PWA/mobile-app-specific issues |
-| `docker` | Docker-specific deployment issues |
+| `pwa`      | PWA/mobile-app-specific issues                                                                                              |
+| `docker`   | Docker-specific deployment issues                                                                                           |
 
 **Rule**: If `electron` is applied, do NOT add `platform:desktop`, `os:*`, `deployment:*`, or `hosting:*`. The `electron` label already implies all of these.
 
@@ -53,7 +53,7 @@ Core Features:
 
 Content & Knowledge:
 
-- `feature:editor` - Lobe Editor / rich text / markdown rendering
+- `feature:editor` - Orvilo Editor / rich text / markdown rendering
 - `feature:markdown` - Markdown rendering (if separate from editor)
 - `feature:files` - File upload/management
 - `feature:knowledge-base` - Knowledge base and RAG
@@ -140,16 +140,16 @@ For each issue, provide a brief reasoning (1-2 sentences) explaining why each la
 
 These categories are INTENTIONALLY OMITTED — do NOT apply them:
 
-| Do NOT apply | Reason |
-|-------------|--------|
-| `platform:web`, `platform:desktop`, `platform:mobile` | Inferred from `electron`/`pwa` or issue context |
-| `os:windows`, `os:macos`, `os:linux`, `os:ios`, `os:android` | Low triage value; inferred from `electron` |
-| `device:pc`, `device:mobile` | Redundant with platform |
-| `hosting:cloud`, `hosting:self-host`, `hosting:vercel`, etc. | Low triage value unless deployment-specific |
-| `deployment:server`, `deployment:client`, `deployment:pglite` | Low triage value; inferred from `electron` |
-| `priority:high`, `priority:medium`, `priority:low` | Maintainers judge priority themselves |
-| `🐛 Bug`, `💄 Design`, `📝 Documentation`, `⚡️ Performance` | Issue type is already indicated by GitHub issue template |
-| `Inactive` | Handled separately; do NOT add during triage |
+| Do NOT apply                                                  | Reason                                                   |
+| ------------------------------------------------------------- | -------------------------------------------------------- |
+| `platform:web`, `platform:desktop`, `platform:mobile`         | Inferred from `electron`/`pwa` or issue context          |
+| `os:windows`, `os:macos`, `os:linux`, `os:ios`, `os:android`  | Low triage value; inferred from `electron`               |
+| `device:pc`, `device:mobile`                                  | Redundant with platform                                  |
+| `hosting:cloud`, `hosting:self-host`, `hosting:vercel`, etc.  | Low triage value unless deployment-specific              |
+| `deployment:server`, `deployment:client`, `deployment:pglite` | Low triage value; inferred from `electron`               |
+| `priority:high`, `priority:medium`, `priority:low`            | Maintainers judge priority themselves                    |
+| `🐛 Bug`, `💄 Design`, `📝 Documentation`, `⚡️ Performance`   | Issue type is already indicated by GitHub issue template |
+| `Inactive`                                                    | Handled separately; do NOT add during triage             |
 
 ## Examples
 

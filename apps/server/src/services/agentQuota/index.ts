@@ -25,7 +25,7 @@ import {
   AgentQuotaUsageLedgerModel,
   AgentQuotaWindowModel,
 } from '@/database/models/agentQuota';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   type QuotaAccountCredentialRef,
   QuotaBindingRole,
@@ -64,7 +64,7 @@ export class AgentQuotaService {
   private windows: AgentQuotaWindowModel;
   private calibrations: AgentQuotaCalibrationModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.accounts = new AgentProviderAccountModel(db, userId, workspaceId);
     this.bindings = new AgentAccountBindingModel(db, userId, workspaceId);
     this.snapshots = new AgentQuotaSnapshotModel(db, userId, workspaceId);

@@ -57,11 +57,11 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeXxxAI, params } from './index';
+import { OrviloXxxAI, params } from './index';
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeXxxAI,
+  Runtime: OrviloXxxAI,
   provider: ModelProvider.Xxx,
   defaultBaseURL: 'https://api.xxx.com/v1',
   chatDebugEnv: 'DEBUG_XXX_CHAT_COMPLETION',
@@ -75,11 +75,11 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeXxxAI - custom features', () => {
-  let instance: InstanceType<typeof LobeXxxAI>;
+describe('OrviloXxxAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloXxxAI>;
 
   beforeEach(() => {
-    instance = new LobeXxxAI({ apiKey: 'test_api_key' });
+    instance = new OrviloXxxAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );
@@ -133,7 +133,7 @@ export const params = {
   provider: ModelProvider.Xxx,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeXxxAI = createOpenAICompatibleRuntime(params);
+export const OrviloXxxAI = createOpenAICompatibleRuntime(params);
 ```
 
 #### 2.2 Router Provider Pattern
@@ -162,12 +162,12 @@ export const params = {
   routers: [
     {
       apiType: 'anthropic',
-      models: LOBE_DEFAULT_MODEL_LIST.filter((m) => detectModelProvider(m.id) === 'anthropic'),
+      models: ORVILO_DEFAULT_MODEL_LIST.filter((m) => detectModelProvider(m.id) === 'anthropic'),
       options: { baseURL: 'https://api.xxx.com' },
     },
     {
       apiType: 'google',
-      models: LOBE_DEFAULT_MODEL_LIST.filter((m) => detectModelProvider(m.id) === 'google'),
+      models: ORVILO_DEFAULT_MODEL_LIST.filter((m) => detectModelProvider(m.id) === 'google'),
       options: { baseURL: 'https://api.xxx.com/gemini' },
     },
     {
@@ -185,7 +185,7 @@ export const params = {
   ],
 } satisfies CreateRouterRuntimeOptions;
 
-export const LobeXxxAI = createRouterRuntime(params);
+export const OrviloXxxAI = createRouterRuntime(params);
 ```
 
 **Key Differences for Router Providers:**
@@ -253,12 +253,12 @@ Reference: `newapi/index.test.ts`
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { LobeXxxAI, params } from './index';
+import { OrviloXxxAI, params } from './index';
 
 describe('Xxx Router Runtime', () => {
   describe('Runtime Instantiation', () => {
     it('should create runtime instance', () => {
-      const instance = new LobeXxxAI({ apiKey: 'test' });
+      const instance = new OrviloXxxAI({ apiKey: 'test' });
       expect(instance).toBeDefined();
     });
   });
@@ -396,7 +396,7 @@ cd ../../../ && bun run type-check
 bunx tsc --noEmit
 
 # Fix any linting issues
-bunx eslint src/providers/{provider}/ --fix
+bunx eslint src/providers/{provider}/ --
 ```
 
 **Common Type Errors to Watch For:**
@@ -487,8 +487,7 @@ bunx vitest run --silent='passed-only' 'src/providers/example/index.test.ts'
 
 # 2. Type/Lint Phase (REQUIRED)
 cd ../../../ && bun run type-check # Must pass!
-bunx eslint src/providers/example/ --fix
-
+bunx eslint src/providers/example/ --
 # 3. Coverage Phase
 cd packages/model-runtime
 bunx vitest run --coverage --silent='passed-only'
@@ -552,11 +551,9 @@ bunx tsc --noEmit --watch
 
 ```bash
 # Lint specific provider
-bunx eslint src/providers/{provider}/ --fix
-
+bunx eslint src/providers/{provider}/ --
 # Lint all providers
-bunx eslint src/providers/ --fix
-
+bunx eslint src/providers/ --
 # Lint without auto-fix (check only)
 bunx eslint src/providers/{provider}/
 ```
@@ -574,6 +571,7 @@ bunx eslint src/providers/{provider}/
 - Enhanced 14 files with significant test improvements:
 
   **Core Modules (6 files, +96 tests):**
+
   - **responsesStream.ts** (50.6% → 91.56%) - 19 tests, response events, function calls, reasoning, citations
   - **createImage.ts** (54.76% → 100%) - 24 tests, chat model mode, image mode, routing logic
   - **computeImageCost.ts** (64.47% → 100%) - 12 tests, lookup/fixed/tiered pricing strategies
@@ -582,6 +580,7 @@ bunx eslint src/providers/{provider}/
   - **computeChatCost.ts** (79.78% → 95.74%) - 10 tests, tiered pricing, error handling
 
   **Providers (8 providers, +102 tests):**
+
   - **deepseek** (77.77% → 100%) - 9 tests, models function, generateObject config
   - **nvidia** (78.12% → 100%) - 14 tests, thinking mode handling, chat template kwargs
   - **qiniu** (75% → 100%) - 24 tests, multi-provider model detection
@@ -610,7 +609,7 @@ bunx eslint src/providers/{provider}/
   - **search1api** (52.08% → 100%) - 86 tests, complex payload and models logic
   - **openrouter** (52.83% → \~95%) - 69 tests, pricing and thinking features
   - **sensenova** (53.01% → 100%) - 104 tests, vision model message conversion
-  - **zhipu** (55.83% → 100%) - 55 tests, tool_calls index fixing, thinking modes
+  - **zhipu** (55.83% → 100%) - 55 tests, tool\_calls index fixing, thinking modes
   - **ollama** (56.03% → \~95%) - 56 tests, embeddings and pull model features
   - **ai360** (56.14% → 100%) - 79 tests, web search and reasoning models
   - **mistral** (57.14% → 100%) - 53 tests, temperature normalization

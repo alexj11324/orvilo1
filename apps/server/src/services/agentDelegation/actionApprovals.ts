@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, isNull } from 'drizzle-orm';
 
 import type { ServerActivityEvent } from '@orvilo/types';
-import type { LobeChatDatabase, Transaction } from '@/database/type';
+import type { OrviloDatabase, Transaction } from '@/database/type';
 
 import { actionApprovals, insertOutboxEvent, newEventId, tasks } from './contractTables';
 import type { ApprovalDecision } from './types';
@@ -40,11 +40,11 @@ const taskProjectId = async (tx: Transaction, taskId: string): Promise<string> =
  * approval land on new state.
  */
 export class ActionApprovalService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

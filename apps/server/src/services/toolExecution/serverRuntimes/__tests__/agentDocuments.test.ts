@@ -22,7 +22,7 @@ vi.mock('@/envs/app', () => ({
 
 describe('agentDocumentsRuntime', () => {
   it('should have correct identifier', () => {
-    expect(agentDocumentsRuntime.identifier).toBe('lobe-agent-documents');
+    expect(agentDocumentsRuntime.identifier).toBe('orvilo-agent-documents');
   });
 
   it('should throw if userId is missing', () => {
@@ -66,7 +66,7 @@ describe('agentDocumentsRuntime auto-pin to task', () => {
       renameDocumentById: vi.fn().mockResolvedValue(newDoc),
     };
     pinDocument = vi.fn().mockResolvedValue(undefined);
-    findWorkspaceById = vi.fn().mockResolvedValue({ slug: 'lobe-team' });
+    findWorkspaceById = vi.fn().mockResolvedValue({ slug: 'orvilo-team' });
 
     vi.mocked(AgentDocumentsService).mockImplementation(function () {
       return serviceImpl as any;
@@ -214,7 +214,7 @@ describe('agentDocumentsRuntime auto-pin to task', () => {
 
     expect(findWorkspaceById).toHaveBeenCalledWith('workspace-1');
     expect(result.content).toContain(
-      'https://app.example.com/lobe-team/agent/agent-1/docs/documents-row-id',
+      'https://app.example.com/orvilo-team/agent/agent-1/docs/documents-row-id',
     );
   });
 
@@ -263,7 +263,7 @@ describe('agentDocumentsRuntime Work registration state', () => {
       return { pinDocument: vi.fn() } as any;
     });
     vi.mocked(WorkspaceModel).mockImplementation(function () {
-      return { findById: vi.fn().mockResolvedValue({ slug: 'lobe-team' }) } as any;
+      return { findById: vi.fn().mockResolvedValue({ slug: 'orvilo-team' }) } as any;
     });
   });
 

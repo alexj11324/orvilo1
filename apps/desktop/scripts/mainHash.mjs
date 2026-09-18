@@ -8,7 +8,7 @@ import { createModuleRecord, moduleRequests, parseModule, walkGraph } from './ma
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultRoot = path.resolve(path.dirname(scriptPath), '../../..');
 const collectEnv = 'RENDERER_OTA_COLLECT_INPUTS';
-export const MAIN_HASH_PLACEHOLDER = '__LOBEMAINHASH_SOURCE_GRAPH__';
+export const MAIN_HASH_PLACEHOLDER = '__ORVILOMAINHASH_SOURCE_GRAPH__';
 export const MAIN_HASH_ALGORITHM = 'graph-v2';
 
 // A workspace with platform-dependent imports can opt into whole-source hashing.

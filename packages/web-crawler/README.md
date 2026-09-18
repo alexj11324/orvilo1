@@ -1,10 +1,10 @@
 # @orvilo/web-crawler
 
-LobeHub's built-in web crawling module for intelligent extraction of web content and conversion to Markdown format.
+Orvilo's built-in web crawling module for intelligent extraction of web content and conversion to Markdown format.
 
 ## 📝 Introduction
 
-`@orvilo/web-crawler` is a core component of LobeHub responsible for intelligent web content crawling and processing. It extracts valuable content from various webpages, filters out distracting elements, and generates structured Markdown text.
+`@orvilo/web-crawler` is a core component of Orvilo responsible for intelligent web content crawling and processing. It extracts valuable content from various webpages, filters out distracting elements, and generates structured Markdown text.
 
 ## 🛠️ Core Features
 
@@ -18,7 +18,7 @@ Web structures are diverse and complex. We welcome community contributions for s
 
 ### How to Contribute URL Rules
 
-1. Add new rules to the [urlRules.ts](https://github.com/lobehub/lobe-chat/blob/main/packages/web-crawler/src/urlRules.ts) file
+1. Add new rules to the [urlRules.ts](https://github.com/alexj11324/orvilo1/blob/main/packages/web-crawler/src/urlRules.ts) file
 2. Rule example:
 
 ```typescript
@@ -48,7 +48,7 @@ const url = [
 
 ### Rule Submission Process
 
-1. Fork the [LobeHub repository](https://github.com/lobehub/lobe-chat)
+1. Fork the [Orvilo repository](https://github.com/alexj11324/orvilo1)
 2. Add or modify URL rules
 3. Submit a Pull Request describing:
 
@@ -58,4 +58,4 @@ const url = [
 
 ## 📌 Note
 
-This is an internal module of LobeHub (`"private": true`), designed specifically for LobeHub and not published as a standalone package.
+This is an internal module of Orvilo (`"private": true`), designed specifically for Orvilo and not published as a standalone package.

@@ -12,19 +12,19 @@ export interface DataItem {
   meta: { avatar: string; description: string; tags: string[]; title: string };
 }
 
-export const AGENT_URL = 'https://chat-agents.lobehub.com/index.json';
+export const AGENT_URL = 'https://chat-agents.aspectlylabs.com/index.json';
 export const AGENT_I18N_URL = (lang: string) =>
-  `https://chat-agents.lobehub.com/index.${lang}.json`;
-export const PLUGIN_URL = 'https://chat-plugins.lobehub.com/index.json';
+  `https://chat-agents.aspectlylabs.com/index.${lang}.json`;
+export const PLUGIN_URL = 'https://chat-plugins.aspectlylabs.com/index.json';
 export const PLUGIN_I18N_URL = (lang: string) =>
-  `https://chat-plugins.lobehub.com/index.${lang}.json`;
+  `https://chat-plugins.aspectlylabs.com/index.${lang}.json`;
 
 export const AGENT_SPLIT = '<!-- AGENT LIST -->';
 export const PLUGIN_SPLIT = '<!-- PLUGIN LIST -->';
 export const PROVIDER_SPLIT = '<!-- PROVIDER LIST -->';
 
 export const PROVIDER_LIST = DEFAULT_MODEL_PROVIDER_LIST.filter(
-  (item) => item.chatModels.length > 0 && item.id !== 'lobehub',
+  (item) => item.chatModels.length > 0 && item.id !== 'orvilo',
 ).map((item) => {
   return {
     id: item.id,

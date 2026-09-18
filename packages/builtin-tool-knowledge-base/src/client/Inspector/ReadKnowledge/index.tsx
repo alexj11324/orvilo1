@@ -33,7 +33,7 @@ export const ReadKnowledgeInspector = memo<
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-knowledge-base.apiName.readKnowledge')}
+            {t('builtins.orvilo-knowledge-base.apiName.readKnowledge')}
           </span>
         </div>
       );
@@ -41,7 +41,7 @@ export const ReadKnowledgeInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-knowledge-base.apiName.readKnowledge')}:{' '}
+          {t('builtins.orvilo-knowledge-base.apiName.readKnowledge')}:{' '}
         </span>
         <span className={highlightTextStyles.gold}>
           {fileCount} {fileCount === 1 ? 'file' : 'files'}
@@ -59,7 +59,9 @@ export const ReadKnowledgeInspector = memo<
           <span className={highlightTextStyles.gold}>{firstFilename}</span>
           {remainingCount > 0 && (
             <span className={styles.moreFiles}>
-              {t('builtins.lobe-knowledge-base.inspector.andMoreFiles', { count: remainingCount })}
+              {t('builtins.orvilo-knowledge-base.inspector.andMoreFiles', {
+                count: remainingCount,
+              })}
             </span>
           )}
         </>
@@ -80,7 +82,7 @@ export const ReadKnowledgeInspector = memo<
     <div className={inspectorTextStyles.root}>
       <span style={{ marginInlineStart: 2 }}>
         <span className={cx(isLoading && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-knowledge-base.apiName.readKnowledge')}:{' '}
+          {t('builtins.orvilo-knowledge-base.apiName.readKnowledge')}:{' '}
         </span>
         {renderFileInfo()}
       </span>

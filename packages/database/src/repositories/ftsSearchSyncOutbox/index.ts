@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import type { FtsSearchDocumentEntity } from '../ftsSearchDocument';
 import { FTS_SEARCH_DOCUMENT_ENTITIES } from '../ftsSearchDocument';
 import captureHistory from './captureHistory.json';
@@ -57,8 +57,8 @@ const FTS_SEARCH_SYNC_CAPTURE_SOURCE_TABLE_IDENTIFIERS = sql.join(
   sql`, `,
 );
 
-type FtsSearchSyncExecutor = Pick<LobeChatDatabase, 'execute'>;
-type FtsSearchSyncDatabase = Pick<LobeChatDatabase, 'execute' | 'transaction'>;
+type FtsSearchSyncExecutor = Pick<OrviloDatabase, 'execute'>;
+type FtsSearchSyncDatabase = Pick<OrviloDatabase, 'execute' | 'transaction'>;
 
 interface FtsSearchSyncRow {
   document_id: string;
@@ -333,7 +333,7 @@ export class FtsSearchSyncOutboxRepository {
       await transaction.execute(sql`SET LOCAL lock_timeout = '60s'`);
       /** Serialize installers before inspecting state so two deployments cannot both create DDL. */
       await transaction.execute(
-        sql`SELECT pg_advisory_xact_lock(hashtext('lobehub.fts_search_sync_capture'))`,
+        sql`SELECT pg_advisory_xact_lock(hashtext('orvilo.fts_search_sync_capture'))`,
       );
       await assertCaptureGinIndex(transaction);
 

@@ -15,7 +15,7 @@ import {
   sessions,
   topics,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { getScopePermissions } from '@/utils/rbac';
 
 import { getActionType, getResourceType } from '../helpers/permission';
@@ -34,10 +34,10 @@ const isNilOrEmptyObject = (value: unknown): boolean => {
 export abstract class BaseService implements IBaseService {
   protected userId: string;
   protected workspaceId?: string;
-  public db: LobeChatDatabase;
+  public db: OrviloDatabase;
   private rbacModel: RbacModel;
 
-  constructor(db: LobeChatDatabase, userId: string | null, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string | null, workspaceId?: string) {
     this.db = db;
     this.userId = userId || '';
     this.workspaceId = workspaceId;

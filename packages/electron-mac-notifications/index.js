@@ -4,7 +4,7 @@
 const { loadNativeBinding } = require('@orvilo/napi-loader');
 const { randomUUID } = require('node:crypto');
 
-const ID_PREFIX = 'lobehub-';
+const ID_PREFIX = 'orvilo-';
 const SHOW_TIMEOUT_MS = 5000;
 
 const binding =

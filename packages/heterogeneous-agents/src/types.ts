@@ -2,7 +2,7 @@
  * Heterogeneous Agent Adapter Types
  *
  * Adapters convert external agent protocol events into a unified
- * HeterogeneousAgentEvent format, which maps 1:1 to LobeHub's
+ * HeterogeneousAgentEvent format, which maps 1:1 to Orvilo's
  * AgentStreamEvent and can be fed directly into createGatewayEventHandler().
  *
  * Architecture:
@@ -291,7 +291,7 @@ export interface ToolCallPayload {
 }
 
 /**
- * Normalized token usage for a single LLM call. Field names mirror LobeHub's
+ * Normalized token usage for a single LLM call. Field names mirror Orvilo's
  * `MessageMetadata.usage` so the executor can write this shape straight to
  * `metadata.usage` with no further conversion.
  *

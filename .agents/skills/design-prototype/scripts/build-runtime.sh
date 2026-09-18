@@ -22,7 +22,7 @@ cd "$REPO_ROOT"
   --platform=browser --define:process.env.NODE_ENV='"production"' --minify \
   --loader:.css=empty --loader:.woff=dataurl --loader:.woff2=dataurl \
   --loader:.svg=dataurl --loader:.png=dataurl \
-  --outfile="$OUT_DIR/lobe-prototype-runtime.js"
+  --outfile="$OUT_DIR/orvilo-prototype-runtime.js"
 
 # Vendor babel-standalone (pinned) for offline JSX compilation.
 BABEL="$OUT_DIR/babel.min.js"
@@ -30,5 +30,5 @@ if [ ! -s "$BABEL" ]; then
   curl -fsSL "https://unpkg.com/@babel/standalone@7.26.4/babel.min.js" -o "$BABEL"
 fi
 
-ls -lh "$OUT_DIR/lobe-prototype-runtime.js" "$BABEL" | awk '{print $5, $NF}'
+ls -lh "$OUT_DIR/orvilo-prototype-runtime.js" "$BABEL" | awk '{print $5, $NF}'
 echo "done → $OUT_DIR"

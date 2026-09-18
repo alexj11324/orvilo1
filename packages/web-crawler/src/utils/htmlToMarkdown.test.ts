@@ -14,7 +14,7 @@ interface TestItem {
 const list: TestItem[] = [
   {
     file: 'terms.html',
-    url: 'https://lobehub.com/terms',
+    url: 'https://orvilo.aspectlylabs.com/terms',
   },
   {
     file: 'yingchao.html',

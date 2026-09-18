@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { notifications, resourceTransferRequests, users, workspaces } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   PENDING_TRANSFER_LIST_LIMIT,
   ResourceTransferRequestModel,
@@ -14,7 +14,7 @@ import {
   TRANSFER_REQUEST_TTL_MS,
 } from '../resourceTransferRequest';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const initiatorId = 'rtr-initiator';
 const recipientId = 'rtr-recipient';

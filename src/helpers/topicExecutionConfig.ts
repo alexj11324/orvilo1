@@ -1,6 +1,6 @@
 import {
   applyTopicExecutionConfig,
-  type LobeAgentAgencyConfig,
+  type OrviloAgentAgencyConfig,
   type TopicExecutionConfig,
 } from '@orvilo/types';
 
@@ -8,7 +8,7 @@ import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 
 export const getTopicAgencyConfig = (
-  defaults: LobeAgentAgencyConfig | undefined,
+  defaults: OrviloAgentAgencyConfig | undefined,
   topicId?: string | null,
 ) =>
   applyTopicExecutionConfig(
@@ -19,7 +19,7 @@ export const getTopicAgencyConfig = (
   );
 
 export const getTopicWorkspaceScoped = (
-  defaults: LobeAgentAgencyConfig | undefined,
+  defaults: OrviloAgentAgencyConfig | undefined,
   topicId: string | null | undefined,
   fallback: boolean,
 ) => {
@@ -31,7 +31,7 @@ export const getTopicWorkspaceScoped = (
 
 /** Keep the UI and dispatch interpretation of a Topic selection identical. */
 export const resolveTopicAgencyConfig = (
-  defaults: LobeAgentAgencyConfig | undefined,
+  defaults: OrviloAgentAgencyConfig | undefined,
   execution: TopicExecutionConfig | undefined,
   workspaceScoped: boolean,
 ) => ({

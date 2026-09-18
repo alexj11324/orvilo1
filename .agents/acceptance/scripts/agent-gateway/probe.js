@@ -1,4 +1,4 @@
-// LobeHub chat streaming time-series probe.
+// Orvilo chat streaming time-series probe.
 //
 // Inject into the renderer (via agent-browser eval) to record store + DOM
 // snapshots every 200ms during a streaming session. Designed to surface
@@ -35,7 +35,7 @@
 
   function snapshot() {
     try {
-      const chat = window.__LOBE_STORES.chat();
+      const chat = window.__ORVILO_STORES.chat();
       const topicId = chat.activeTopicId;
       const idTail = topicId ? topicId.replace('tpc_', '') : null;
       const keys = Object.keys(chat.messagesMap || {});

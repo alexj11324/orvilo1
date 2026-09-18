@@ -1,7 +1,7 @@
 # Worked example — Task detail /run-monitor (任务详情) audit
 
 A real run of this skill against the **single-task detail** — the cross-agent `/task/:taskId`
-and its agent-scoped twin `/agent/:aid/task/:taskId`, 2026-07 (LOBE-11220). The detail doubles as
+and its agent-scoped twin `/agent/:aid/task/:taskId`, 2026-07 (ORVILO-11220). The detail doubles as
 an **async agent-run monitor**: a live activity feed, subtasks, comments, artifacts, and
 schedule / verify / model config. Use it as a template for the output shape, not as current-state
 truth (the code moves; re-verify before citing).
@@ -55,7 +55,7 @@ as deletion (D②), config autosave that structurally can't report failure (D③
 
 ## 2 — Strengths / good cases (don't regress)
 
-The read/monitor spine is the model half of this surface — these already landed as ✅ examples in
+The read/monitor spine is the model half of this surface — these already landed as ✅ examples
 `ux` (the combined run), and are the "don't regress" list for the write-path refactor:
 
 - **✅ 亮点 — Loading /not-found state machine (landed as ux Feedback §4.2 ✅).**

@@ -5,7 +5,7 @@ import { parseClaudeCodeSession } from './claudeCode';
 import { buildClaudeCodeTranscript, encodeClaudeProjectDir } from './rebuildClaudeCode';
 
 const SESSION_ID = '72f65fa9-0355-45d3-b903-8f41027ed5f2';
-const CWD = '/Users/arvinxx/CodeProjects/LobeHub/lobehub-cloud-cc';
+const CWD = '/Users/arvinxx/CodeProjects/Orvilo/orvilo-cloud-cc';
 
 const parseLines = (jsonl: string) =>
   jsonl
@@ -165,8 +165,8 @@ describe('buildClaudeCodeTranscript', () => {
 
 describe('encodeClaudeProjectDir', () => {
   it('replaces every non-alphanumeric char with a dash (matches the CLI)', () => {
-    expect(encodeClaudeProjectDir('/Users/arvinxx/CodeProjects/LobeHub/lobehub-cloud-cc')).toBe(
-      '-Users-arvinxx-CodeProjects-LobeHub-lobehub-cloud-cc',
+    expect(encodeClaudeProjectDir('/Users/arvinxx/CodeProjects/Orvilo/orvilo-cloud-cc')).toBe(
+      '-Users-arvinxx-CodeProjects-Orvilo-orvilo-cloud-cc',
     );
     expect(encodeClaudeProjectDir('/private/tmp/cc-resurrect-lab')).toBe(
       '-private-tmp-cc-resurrect-lab',

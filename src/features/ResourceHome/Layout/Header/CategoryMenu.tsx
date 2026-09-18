@@ -43,7 +43,7 @@ const CategoryMenu = memo(() => {
   const worksActive = location.pathname.endsWith('/resource/works');
 
   // Two groups below the fixed Home entry: file-based categories (uploaded
-  // files by type) and LobeHub business entities (pages, works, webpages),
+  // files by type) and Orvilo business entities (pages, works, webpages),
   // separated by a gap. The flat everything-list stays reachable at
   // /resource/all (the home page's "view all" target) but is not a nav entry —
   // browsing starts from a category, not from an undifferentiated pile.
@@ -90,7 +90,7 @@ const CategoryMenu = memo(() => {
           url: '/resource/files',
         },
       ],
-      // LobeHub business entities
+      // Orvilo business entities
       [
         {
           icon: ClipboardListIcon,

@@ -3,8 +3,8 @@ import { swrKeys } from '@/libs/swr/keys';
 import { expertiseService } from '@/services/expertise';
 
 /**
- * The portrait query. `refreshInterval` is only set while a history warm-up is running so
- * newly learned habits stream in without a manual reload.
+ * The agent's rules, in one query. `refreshInterval` is left unused since S60 removed the
+ * history warm-up that used to drive it; the parameter stays for a caller that needs to poll.
  */
 export const useExpertiseOverview = (agentId?: string, refreshInterval?: number) =>
   useClientDataSWR(
@@ -21,9 +21,4 @@ export const useExpertiseDomain = (domainId?: string) =>
 export const useExpertiseLesson = (lessonId?: string) =>
   useClientDataSWR(lessonId ? swrKeys.expertise.lesson(lessonId) : null, () =>
     expertiseService.getLesson(lessonId!),
-  );
-
-export const useHistoryCount = (agentId?: string) =>
-  useClientDataSWR(agentId ? swrKeys.expertise.historyCount(agentId) : null, () =>
-    expertiseService.countHistory(agentId!),
   );

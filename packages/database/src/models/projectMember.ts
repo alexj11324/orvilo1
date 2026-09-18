@@ -3,7 +3,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { projects } from '../schemas/project';
 import type { ProjectMemberItem, ProjectMemberRole } from '../schemas/projectMember';
 import { projectMembers } from '../schemas/projectMember';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 /**
  * Explicit project membership. Lifecycle mirrors `workspace_members`: soft
@@ -13,10 +13,10 @@ import type { LobeChatDatabase, Transaction } from '../type';
  * permission-checking read — honors both.
  */
 export class ProjectMemberModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }

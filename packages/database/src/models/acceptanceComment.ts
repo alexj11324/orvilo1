@@ -8,7 +8,7 @@ import { and, count, desc, eq, gte, isNull, ne, sql } from 'drizzle-orm';
 
 import type { AcceptanceCommentRow } from '../schemas/acceptanceComment';
 import { acceptanceComments } from '../schemas/acceptanceComment';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 export const ACCEPTANCE_COMMENT_PARENT_NOT_FOUND = 'Parent comment not found in this acceptance';
 export const ACCEPTANCE_COMMENT_RATE_LIMITED = 'Too many comments in the window';
@@ -68,9 +68,9 @@ export interface CreateAcceptanceCommentResult {
  * inside one acceptance, tombstones keep replies readable).
  */
 export class AcceptanceCommentModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
   }
 

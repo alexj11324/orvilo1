@@ -25,11 +25,11 @@ describe('viteMarkdownImport', () => {
     );
 
     expect(resolved).toEqual({
-      id: `${markdownPath}?lobe-md-import`,
+      id: `${markdownPath}?orvilo-md-import`,
       moduleSideEffects: false,
     });
 
-    const loaded = await plugin.load?.call({} as never, `${markdownPath}?lobe-md-import`);
+    const loaded = await plugin.load?.call({} as never, `${markdownPath}?orvilo-md-import`);
 
     expect(loaded).toBe(`export default ${JSON.stringify(markdownContent)};`);
 

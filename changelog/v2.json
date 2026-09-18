@@ -64,7 +64,7 @@
         "add Gemini 3.1 Flash-Lite provider cards.",
         "home daily brief with linkable welcome + paired input hint.",
         "add signOperationJwt with 4h expiry for hetero-agent operations.",
-        "migrate Notion to LobeHub Market.",
+        "migrate Notion to Orvilo Market.",
         "Cloud Claude Code V3 — repo picker, GitHub token, sandbox context."
       ],
       "fixes": [
@@ -76,7 +76,7 @@
         "drop unreachable aihubmix empty-apiKey test.",
         "consume visual content parts in server runtime.",
         "store onboarding interests as keys.",
-        "remove the old cron job from lobehub.",
+        "remove the old cron job from orvilo.",
         "refresh content baseline from DB on every ingest call.",
         "gateway client-tool pluginState + drop redundant Exit code: 0 tail.",
         "first inject the cloudecc runtime session should use the existingStatus.",
@@ -255,7 +255,7 @@
   },
   {
     "children": {
-      "fixes": ["Fixed in community pluings tab the lobehub skills not display."]
+      "fixes": ["Fixed in community pluings tab the orvilo skills not display."]
     },
     "date": "2026-02-06",
     "version": "2.1.19"

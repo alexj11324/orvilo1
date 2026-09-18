@@ -1,16 +1,16 @@
 ---
-title: 在 LobeHub 中使用 Unsloth
-description: 学习如何配置并使用 Unsloth 运行本地 AI 模型（包括你自己微调的模型），在 LobeHub 中进行对话。
+title: 在 Orvilo 中使用 Unsloth
+description: 学习如何配置并使用 Unsloth 运行本地 AI 模型（包括你自己微调的模型），在 Orvilo 中进行对话。
 tags:
-  - LobeHub
+  - Orvilo
   - Unsloth
   - 开源模型
   - 微调
 ---
 
-# 在 LobeHub 中使用 Unsloth
+# 在 Orvilo 中使用 Unsloth
 
-[Unsloth](https://unsloth.ai/) 可运行本地模型，并通过 Unsloth Studio 提供 OpenAI 兼容 API。LobeHub 连接到你已经启动的实例，不提供托管推理账号，也不会代你下载模型。下载前请检查模型许可证和硬件要求。
+[Unsloth](https://unsloth.ai/) 可运行本地模型，并通过 Unsloth Studio 提供 OpenAI 兼容 API。Orvilo 连接到你已经启动的实例，不提供托管推理账号，也不会代你下载模型。下载前请检查模型许可证和硬件要求。
 
 <Steps>
   ### 第一步：启动 Unsloth Studio
@@ -21,12 +21,12 @@ tags:
 
   ### 第二步：选择连接方式
 
-  - 服务端请求要求 LobeHub 服务器能够访问 Studio。`127.0.0.1` 指服务器自身；在 Docker 中则指容器自身。如果 Studio 运行在其他位置，请使用服务器或容器可访问的地址。
-  - 客户端请求模式由浏览器直接请求。Studio 必须通过 CORS 允许 LobeHub 页面来源，来自其他浏览器来源的请求还需要该 Studio 实例的真实 API 密钥。终端无密钥请求成功不代表浏览器也能访问，不要填写虚构密钥。
+  - 服务端请求要求 Orvilo 服务器能够访问 Studio。`127.0.0.1` 指服务器自身；在 Docker 中则指容器自身。如果 Studio 运行在其他位置，请使用服务器或容器可访问的地址。
+  - 客户端请求模式由浏览器直接请求。Studio 必须通过 CORS 允许 Orvilo 页面来源，来自其他浏览器来源的请求还需要该 Studio 实例的真实 API 密钥。终端无密钥请求成功不代表浏览器也能访问，不要填写虚构密钥。
 
   ### 第三步：配置并检查连接
 
-  - 打开 LobeHub 的 `应用设置`，进入 `AI 服务商` 板块
+  - 打开 Orvilo 的 `应用设置`，进入 `AI 服务商` 板块
   - 在列表中找到并选择 `Unsloth` 服务商
   - 开启服务商，填写 API 基础地址，并在需要认证时填写真实的 Studio API 密钥。只有端点支持浏览器访问时才开启客户端请求模式。
   - 点击「获取模型列表」，选择当前 Studio 实例返回的模型。如果手动添加模型，请使用本地 API 返回的准确模型 ID。内置的两个示例模型默认不启用，也不保证已在本地安装；已有的模型选择会保留。

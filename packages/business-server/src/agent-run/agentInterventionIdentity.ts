@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 
-const AGENT_INTERVENTION_ACTIVITY_KEY_DOMAIN = 'lobehub:agent-intervention:activity-key:v2';
+const AGENT_INTERVENTION_ACTIVITY_KEY_DOMAIN = 'orvilo:agent-intervention:activity-key:v2';
 const AGENT_INTERVENTION_CONTINUATION_OPERATION_DOMAIN =
-  'lobehub:agent-intervention:continuation-operation:v1';
+  'orvilo:agent-intervention:continuation-operation:v1';
 
 export interface AgentInterventionContinuationProvenance {
   resolutionRequestId: string;

@@ -18,15 +18,15 @@ Electron 桌面客户端，以及 CLI。
 
 ## 仓库结构
 
-| 路径 | 内容 |
-| --- | --- |
-| `src/` | React SPA —— 产品主界面 |
-| `apps/server/` | 后端运行时、路由与服务 |
-| `apps/desktop/` | Electron 桌面客户端 |
-| `apps/cli/` | 命令行客户端 |
-| `apps/share/`、`apps/workbench/`、`apps/auth/` | 辅助 Web 应用 |
-| `packages/` | 共享 workspace 包 |
-| `e2e/` | 端到端测试（Cucumber + Playwright） |
+| 路径                                           | 内容                                |
+| ---------------------------------------------- | ----------------------------------- |
+| `src/`                                         | React SPA —— 产品主界面             |
+| `apps/server/`                                 | 后端运行时、路由与服务              |
+| `apps/desktop/`                                | Electron 桌面客户端                 |
+| `apps/cli/`                                    | 命令行客户端                        |
+| `apps/share/`、`apps/workbench/`、`apps/auth/` | 辅助 Web 应用                       |
+| `packages/`                                    | 共享 workspace 包                   |
+| `e2e/`                                         | 端到端测试（Cucumber + Playwright） |
 
 智能体可以接入聊天平台（Slack、Discord、Telegram、微信等）、Git 托管服务，
 以及你自己配置的模型供应商。
@@ -54,9 +54,9 @@ pnpm --filter @orvilo/server dev
 ### 质量检查
 
 ```bash
-pnpm run type-check     # tsgo --noEmit
-pnpm run test-app       # vitest run
-pnpm run lint           # eslint + stylelint + 类型检查 + 循环依赖
+pnpm run type-check # tsgo --noEmit
+pnpm run test-app   # vitest run
+pnpm run lint       # eslint + stylelint + 类型检查 + 循环依赖
 
 # 只检查改动的文件
 bun run check [changed-files...]
@@ -71,7 +71,7 @@ Orvilo 依赖 PostgreSQL。完整配置项见 [`.env.example`](./.env.example)�
 部署方案见 [`docker-compose/`](./docker-compose)。
 
 ```bash
-cp .env.example .env    # 然后填入数据库与模型供应商凭据
+cp .env.example .env # 然后填入数据库与模型供应商凭据
 pnpm run build
 ```
 

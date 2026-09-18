@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -29,7 +30,6 @@ export default defineConfig({
     },
     coverage: {
       exclude: [
-        // https://github.com/lobehub/lobe-chat/pull/7265
         // Vitest 4+ ships an empty `coverageConfigDefaults.exclude`; keep the previous
         // default exclusions explicitly so the coverage set does not silently grow.
         '**/node_modules/**',

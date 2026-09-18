@@ -3,8 +3,8 @@ import type {
   AgentDeviceOverride,
   DeviceExecutionTarget,
   ExecutionPlan,
-  LobeAgentAgencyConfig,
-  LobeAgentChatConfig,
+  OrviloAgentAgencyConfig,
+  OrviloAgentChatConfig,
   RuntimeEnvMode,
 } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
@@ -28,7 +28,7 @@ export const resolveWorkspaceScoped = (
  * `resolveExecutionPlan` all agree on what counts as chat mode.
  */
 export const resolveToolMode = (
-  chatConfig: LobeAgentChatConfig | undefined,
+  chatConfig: OrviloAgentChatConfig | undefined,
 ): 'agent' | 'chat' | 'custom' =>
   chatConfig?.toolMode ?? (chatConfig?.enableAgentMode === false ? 'chat' : 'agent');
 
@@ -113,7 +113,7 @@ export interface ResolveExecutionTargetOptions {
   workspaceScoped?: boolean;
 }
 
-/** Whether a heterogeneous provider can run in LobeHub's cloud sandbox. */
+/** Whether a heterogeneous provider can run in Orvilo's cloud sandbox. */
 export const isHeterogeneousSandboxExecutionAvailable = (type: string | undefined): boolean =>
   type !== 'amp' &&
   type !== 'codebuddy' &&
@@ -173,7 +173,7 @@ export const isHeterogeneousSandboxExecutionAvailable = (type: string | undefine
  * are explicit opt-outs and stay.
  */
 export const resolveExecutionTarget = (
-  agencyConfig: LobeAgentAgencyConfig | undefined,
+  agencyConfig: OrviloAgentAgencyConfig | undefined,
   {
     clientExecutionAvailable,
     deviceRoutingAvailable,
@@ -247,7 +247,7 @@ export const resolveExecutionTarget = (
  * fenced.
  */
 export const isLocalSandboxEnabled = (
-  agencyConfig: LobeAgentAgencyConfig | undefined,
+  agencyConfig: OrviloAgentAgencyConfig | undefined,
   effectiveTarget: DeviceExecutionTarget,
 ): boolean => effectiveTarget === 'local' && agencyConfig?.localSandbox === true;
 
@@ -263,7 +263,7 @@ export const isLocalSandboxEnabled = (
  */
 export const canExecutionTargetReadLocalPaths = (
   target: DeviceExecutionTarget,
-  agencyConfig: LobeAgentAgencyConfig | undefined,
+  agencyConfig: OrviloAgentAgencyConfig | undefined,
   currentDeviceId: string | undefined,
 ): boolean =>
   target === 'local' ||
@@ -295,7 +295,7 @@ export const executionTargetToRuntimeMode = (target: DeviceExecutionTarget): Run
  * target.
  */
 export const resolveRuntimeMode = (
-  agencyConfig: LobeAgentAgencyConfig | undefined,
+  agencyConfig: OrviloAgentAgencyConfig | undefined,
   clientExecutionAvailable: boolean,
   deviceRoutingAvailable?: boolean,
   workspaceScoped?: boolean,
@@ -347,7 +347,7 @@ export const isDeviceLockedPlan = (plan: ExecutionPlan): boolean =>
   (plan.kind === 'device-unrouted' && plan.reason === 'bound-device-offline');
 
 export interface ResolveExecutionPlanParams {
-  agencyConfig: LobeAgentAgencyConfig | undefined;
+  agencyConfig: OrviloAgentAgencyConfig | undefined;
   /**
    * Verdict of `resolveDeviceAccessPolicy` — `false` (e.g. an external bot
    * sender) kills device routing entirely but does NOT block the sandbox.
@@ -363,7 +363,7 @@ export interface ResolveExecutionPlanParams {
    * mode at the source (degraded to `none`) — except for hetero agents, which
    * always need a runtime.
    */
-  chatConfig?: LobeAgentChatConfig;
+  chatConfig?: OrviloAgentChatConfig;
   /** See {@link ResolveExecutionTargetOptions.clientExecutionAvailable}. */
   clientExecutionAvailable: boolean;
   isHetero?: boolean;
@@ -388,7 +388,7 @@ export interface ResolveExecutionPlanParams {
    * Resolve to the cloud sandbox instead of `none` whenever the run cannot
    * route to a device (a device-capable target denied by `canUseDevice`, or a
    * stored `none` target). Set by the aiAgent caller for Agent Share visitor
-   * runs the creator granted `lobe-cloud-sandbox`: a visitor can never reach
+   * runs the creator granted `orvilo-cloud-sandbox`: a visitor can never reach
    * the creator's device, so the sandbox is the only surface that grant can
    * mean, and it only materializes when the plan resolves to `sandbox`. Chat
    * mode still wins — it means "no tools", not "no device".

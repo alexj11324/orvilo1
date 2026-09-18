@@ -23,12 +23,12 @@ export const EditTitleInspector = memo<BuiltinInspectorProps<EditTitleArgs, Edit
         {title ? (
           <Trans
             components={{ title: <span className={highlightTextStyles.gold} /> }}
-            i18nKey="builtins.lobe-page-agent.apiName.editTitle.result"
+            i18nKey="builtins.orvilo-page-agent.apiName.editTitle.result"
             ns="plugin"
             values={{ title }}
           />
         ) : (
-          <span>{t('builtins.lobe-page-agent.apiName.editTitle')}</span>
+          <span>{t('builtins.orvilo-page-agent.apiName.editTitle')}</span>
         )}
       </div>
     );

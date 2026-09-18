@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { HatchetClient, IdempotencyCollisionError } from '@hatchet-dev/typescript-sdk/v1';
+import { HatchetClient, IdempotencyCollisionError } from '@hatchet-dev/typescript-sdk/v1/index.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { enqueueHatchetTask, resetHatchetClientForTests } from './index';

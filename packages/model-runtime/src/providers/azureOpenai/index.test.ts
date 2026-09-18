@@ -7,7 +7,7 @@ import * as nonStreamToStreamModule from '../../core/openaiCompatibleFactory/non
 import * as streamsModule from '../../core/streams';
 import * as debugStreamModule from '../../utils/debugStream';
 import * as getModelPricingModule from '../../utils/getModelPricing';
-import { LobeAzureOpenAI } from './index';
+import { OrviloAzureOpenAI } from './index';
 
 const bizErrorType = 'ProviderBizError';
 const invalidErrorType = 'InvalidProviderAPIKey';
@@ -15,11 +15,11 @@ const invalidErrorType = 'InvalidProviderAPIKey';
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-describe('LobeAzureOpenAI', () => {
-  let instance: LobeAzureOpenAI;
+describe('OrviloAzureOpenAI', () => {
+  let instance: OrviloAzureOpenAI;
 
   beforeEach(() => {
-    instance = new LobeAzureOpenAI({
+    instance = new OrviloAzureOpenAI({
       baseURL: 'https://test.openai.azure.com/',
       apiKey: 'test_key',
     });
@@ -38,7 +38,7 @@ describe('LobeAzureOpenAI', () => {
   describe('constructor', () => {
     it('should throw InvalidAzureAPIKey error when apikey or endpoint is missing', () => {
       try {
-        new LobeAzureOpenAI();
+        new OrviloAzureOpenAI();
       } catch (e) {
         expect(e).toEqual({ errorType: invalidErrorType });
       }
@@ -48,7 +48,7 @@ describe('LobeAzureOpenAI', () => {
       const baseURL = 'https://test.openai.azure.com/';
       const apiKey = 'test_key';
 
-      const instance = new LobeAzureOpenAI({ baseURL, apiKey });
+      const instance = new OrviloAzureOpenAI({ baseURL, apiKey });
 
       expect(instance.client).toBeInstanceOf(OpenAI);
       expect(instance.baseURL).toBe('https://test.openai.azure.com/openai/v1');
@@ -80,10 +80,10 @@ describe('LobeAzureOpenAI', () => {
         const mockStream = new ReadableStream() as any;
         const mockPricing = { units: [] };
 
-        instance = new LobeAzureOpenAI({
+        instance = new OrviloAzureOpenAI({
           apiKey: 'test_key',
           baseURL: 'https://test.openai.azure.com/',
-          id: 'lobehub',
+          id: 'orvilo',
         });
 
         vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -126,7 +126,7 @@ describe('LobeAzureOpenAI', () => {
               apiMode: 'responses',
               model: 'gpt-5.4',
               pricing: mockPricing,
-              provider: 'lobehub',
+              provider: 'orvilo',
             }),
           }),
         );
@@ -185,10 +185,10 @@ describe('LobeAzureOpenAI', () => {
         const mockStream = new ReadableStream() as any;
         const mockPricing = { units: [] };
 
-        instance = new LobeAzureOpenAI({
+        instance = new OrviloAzureOpenAI({
           apiKey: 'test_key',
           baseURL: 'https://test.openai.azure.com/',
-          id: 'lobehub',
+          id: 'orvilo',
         });
 
         vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -220,7 +220,7 @@ describe('LobeAzureOpenAI', () => {
               apiMode: 'responses',
               model: 'gpt-5.4',
               pricing: mockPricing,
-              provider: 'lobehub',
+              provider: 'orvilo',
             }),
           }),
         );
@@ -230,10 +230,10 @@ describe('LobeAzureOpenAI', () => {
         const mockStream = new ReadableStream() as any;
         const mockPricing = { units: [] };
 
-        instance = new LobeAzureOpenAI({
+        instance = new OrviloAzureOpenAI({
           apiKey: 'test_key',
           baseURL: 'https://test.openai.azure.com/',
-          id: 'lobehub',
+          id: 'orvilo',
         });
 
         vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(mockStream);
@@ -271,7 +271,7 @@ describe('LobeAzureOpenAI', () => {
 
         expect(getModelPricingModule.getModelPricing).toHaveBeenCalledWith(
           'o3',
-          'lobehub',
+          'orvilo',
           undefined,
         );
         expect(streamsModule.OpenAIStream).toHaveBeenCalledWith(
@@ -283,7 +283,7 @@ describe('LobeAzureOpenAI', () => {
               includeUsageRequested: true,
               model: 'o3',
               pricing: mockPricing,
-              provider: 'lobehub',
+              provider: 'orvilo',
             }),
           }),
         );
@@ -492,7 +492,7 @@ describe('LobeAzureOpenAI', () => {
     });
 
     it('should use mapped model id for image generation requests', async () => {
-      instance = new LobeAzureOpenAI({
+      instance = new OrviloAzureOpenAI({
         apiKey: 'test_key',
         baseURL: 'https://test.openai.azure.com/',
         modelIdMapping: { 'gpt-image-1': 'azure-image-deployment' },

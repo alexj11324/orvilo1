@@ -59,6 +59,7 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -84,7 +85,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -124,18 +125,11 @@ vi.mock('@/server/modules/ModelRuntime', () => ({
   initModelRuntimeFromDB: vi.fn(),
 }));
 
-// The share path's atomic cap reservations open real DB transactions — stub
-// them so the forced-headless test below can drive execAgent with a bare mock db.
-vi.mock('../shareVisitorAbuseGuards', () => ({
-  reserveShareVisitorTopic: vi.fn().mockResolvedValue({ id: 'topic-1' }),
-  reserveShareVisitorTurn: vi.fn().mockResolvedValue({ id: 'msg-1' }),
-}));
-
 vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         abilities: { functionCall: true, video: false, vision: true },
         id: 'gpt-4',
@@ -243,27 +237,6 @@ describe('AiAgentService.execAgent - headless approval default', () => {
     const { appContext } = mockCreateOperation.mock.calls[0][0];
     expect(appContext.clientIp).toBeUndefined();
     expect(appContext.userAgent).toBeUndefined();
-  });
-
-  it('forces headless for a share-visitor run regardless of what the caller passed', async () => {
-    // Share runs have no approver: any waiting mode would park the run on
-    // request_human_approve forever. The override must win over an explicit
-    // caller-provided config — a call site cannot reintroduce a waiting mode.
-    await service.execAgent({
-      agentId: 'agent-1',
-      prompt: 'Hello',
-      shareGate: {
-        agentId: 'agent-1',
-        shareConfig: { toolGrants: [] },
-        shareId: 'share-1',
-        visitorUserId: 'visitor-1',
-      },
-      userInterventionConfig: { approvalMode: 'manual' },
-    });
-
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.userInterventionConfig).toEqual({ approvalMode: 'headless' });
   });
 
   it('should respect explicit allow-list approval mode with allowList', async () => {

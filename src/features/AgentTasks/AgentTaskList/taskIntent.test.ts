@@ -100,20 +100,20 @@ describe('buildConfirmedDraft', () => {
     const reviewed = lexicalDoc([paragraphOf('fix the readme typo')]);
     const result = buildConfirmedDraft({
       analysis: withQuestions,
-      answers: { 0: 'lobehub/lobe-chat', 1: '   ' },
+      answers: { 0: 'aspectlylabs/orvilo', 1: '   ' },
       editorJson: reviewed,
       heading: 'Clarifications',
       instruction: 'fix the readme typo',
     });
 
     expect(result.instruction).toBe(
-      'fix the readme typo\n\n## Clarifications\n- Which repo? lobehub/lobe-chat',
+      'fix the readme typo\n\n## Clarifications\n- Which repo? aspectlylabs/orvilo',
     );
     expect(result.instruction).not.toContain('By when?');
     expect(textOf(result.editorData)).toEqual([
       'fix the readme typo',
       '## Clarifications',
-      '- Which repo? lobehub/lobe-chat',
+      '- Which repo? aspectlylabs/orvilo',
     ]);
   });
 

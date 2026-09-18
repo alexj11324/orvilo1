@@ -29,11 +29,11 @@ import { groupAgentBuilderRuntime } from './groupAgentBuilder';
 import { groupManagementRuntime } from './groupManagement';
 import { imageGenerationRuntime } from './imageGeneration';
 import { knowledgeBaseRuntime } from './knowledgeBase';
-import { lobeAgentRuntime } from './lobeAgent';
 import { localSystemRuntime } from './localSystem';
 import { memoryRuntime } from './memory';
 import { messageRuntime } from './message';
 import { notebookRuntime } from './notebook';
+import { orviloAgentRuntime } from './orviloAgent';
 import { pageAgentRuntime } from './pageAgent';
 import { remoteDeviceRuntime } from './remoteDevice';
 import { selfFeedbackIntentRuntime } from './selfFeedbackIntent';
@@ -94,7 +94,7 @@ registerRuntimes([
   imageGenerationRuntime,
   knowledgeBaseRuntime,
   webOnboardingRuntime,
-  lobeAgentRuntime,
+  orviloAgentRuntime,
   selfFeedbackIntentRuntime,
   agentSignalSkillManagementRuntime,
   agentSignalReviewRuntime,

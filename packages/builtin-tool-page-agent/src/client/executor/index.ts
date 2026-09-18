@@ -19,7 +19,7 @@ import type {
 } from '../../types';
 import { PageAgentIdentifier } from '../../types';
 
-const log = debug('lobe-page-agent:executor');
+const log = debug('orvilo-page-agent:executor');
 
 /**
  * API enum for Page Agent executor
@@ -65,7 +65,7 @@ const getRuntimeDebugSnapshot = (runtime: EditorRuntime) => {
 const PAGE_EDITOR_NOT_MOUNTED_MESSAGE =
   'Page editor is not currently mounted. This topic was started in the page editor, but the editor is not active in the current view. ' +
   'Do not retry initPage / editTitle / modifyNodes / replaceText / getPageContent here — they require a mounted editor. ' +
-  'To read or modify the topic document, use lobe-agent-documents (readDocument / replaceDocumentContent / modifyNodes).';
+  'To read or modify the topic document, use orvilo-agent-documents (readDocument / replaceDocumentContent / modifyNodes).';
 
 const buildEditorNotMountedResult = (
   runtime: EditorRuntime,

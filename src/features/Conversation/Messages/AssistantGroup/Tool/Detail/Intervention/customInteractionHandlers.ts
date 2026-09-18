@@ -1,5 +1,5 @@
 import { ClaudeCodeIdentifier } from '@orvilo/builtin-tool-claude-code';
-import { LobeAgentApiName, LobeAgentIdentifier } from '@orvilo/builtin-tool-lobe-agent';
+import { OrviloAgentApiName, OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import {
   UserInteractionApiName,
   UserInteractionIdentifier,
@@ -43,13 +43,13 @@ type CustomInteractionSubmitHandler = (
 export const isAgentMarketplaceCall = (identifier: string, apiName?: string) =>
   identifier === WebOnboardingIdentifier && apiName === WebOnboardingApiName.showAgentMarketplace;
 
-const isLobeAgentAskUserQuestion = (identifier: string, apiName?: string) =>
-  identifier === LobeAgentIdentifier && apiName === LobeAgentApiName.askUserQuestion;
+const isOrviloAgentAskUserQuestion = (identifier: string, apiName?: string) =>
+  identifier === OrviloAgentIdentifier && apiName === OrviloAgentApiName.askUserQuestion;
 
 const isAskUserQuestionCall = (identifier: string, apiName?: string) =>
   (identifier === UserInteractionIdentifier &&
     apiName === UserInteractionApiName.askUserQuestion) ||
-  isLobeAgentAskUserQuestion(identifier, apiName);
+  isOrviloAgentAskUserQuestion(identifier, apiName);
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === 'string');
@@ -175,14 +175,14 @@ export const isHeteroInteractionIdentifier = (identifier: string) =>
   HETERO_CUSTOM_INTERACTION_IDENTIFIERS.has(identifier);
 
 /**
- * lobe-agent reuses the user-interaction `askUserQuestion` card. Unlike the
- * standalone tool (whose whole identifier is a custom interaction), lobe-agent
+ * orvilo-agent reuses the user-interaction `askUserQuestion` card. Unlike the
+ * standalone tool (whose whole identifier is a custom interaction), orvilo-agent
  * has other APIs (createPlan / clearTodos …) that must keep the default
  * approve/reject UI — so only its `askUserQuestion` API is a custom interaction.
  */
 export const isCustomInteractionIdentifier = (identifier: string, apiName?: string) =>
   identifier === UserInteractionIdentifier ||
-  isLobeAgentAskUserQuestion(identifier, apiName) ||
+  isOrviloAgentAskUserQuestion(identifier, apiName) ||
   isHeteroInteractionIdentifier(identifier) ||
   Boolean(findCustomInteractionSubmitHandler(identifier, apiName));
 

@@ -1,8 +1,8 @@
 ---
-title: LobeHub 模型服务商相关环境变量配置指南
-description: 了解如何配置各个模型服务商的环境变量以在 LobeHub 中使用不同的AI模型服务。
+title: Orvilo 模型服务商相关环境变量配置指南
+description: 了解如何配置各个模型服务商的环境变量以在 Orvilo 中使用不同的AI模型服务。
 tags:
-  - LobeHub
+  - Orvilo
   - 模型服务商
   - 环境变量
   - AI模型
@@ -11,7 +11,7 @@ tags:
 
 # 模型服务商
 
-LobeHub 在部署时提供了丰富的模型服务商相关的环境变量，你可以使用这些环境变量轻松定义需要在 LobeHub 中开启的模型服务商。
+Orvilo 在部署时提供了丰富的模型服务商相关的环境变量，你可以使用这些环境变量轻松定义需要在 Orvilo 中开启的模型服务商。
 
 ## OpenAI
 
@@ -49,9 +49,9 @@ LobeHub 在部署时提供了丰富的模型服务商相关的环境变量，你
 
 相关讨论：
 
-- [Docker 安装，配置好环境变量后，为何返回值是空白？](https://github.com/lobehub/lobehub/discussions/623)
-- [使用第三方接口报错的原因](https://github.com/lobehub/lobehub/discussions/734)
-- [代理服务器地址填了聊天没任何反应](https://github.com/lobehub/lobehub/discussions/1065)
+- Docker 安装，配置好环境变量后，为何返回值是空白？
+-
+- 代理服务器地址填了聊天没任何反应
 
 ### `OPENAI_MODEL_LIST`
 
@@ -62,16 +62,16 @@ LobeHub 在部署时提供了丰富的模型服务商相关的环境变量，你
 
 上面示例表示增加 `qwen-7b-chat` 和 `glm-6b` 到模型列表，而从列表中删除 `gpt-3.5-turbo`，并将 `gpt-4-turbo` 模型名字展示为 `gpt-4o`。如果你想先禁用所有模型，再启用指定模型，可以使用 `-all,+gpt-3.5-turbo`，则表示仅启用 `gpt-3.5-turbo`。
 
-你可以在 [modelProviders](https://github.com/lobehub/lobehub/tree/main/src/config/modelProviders) 查找到当前的所有模型名。
+你可以在 [modelProviders](https://github.com/alexj11324/orvilo1/tree/main/packages/model-bank/src/modelProviders) 查找到当前的所有模型名。
 
 ## Meta
 
-连接官方 [Meta Model API](https://dev.meta.ai/)，设置步骤见[在 LobeHub 中使用 Meta](/zh/docs/usage/providers/meta)。
+连接官方 [Meta Model API](https://dev.meta.ai/)，设置步骤见[在 Orvilo 中使用 Meta](/zh/docs/usage/providers/meta)。
 
 ### `META_API_KEY`
 
 - 类型：部署时可选；提供共享服务端密钥时必填。用户也可以在 Meta 服务商设置中填写自己的密钥。
-- 描述：在 [Model API 控制台](https://dev.meta.ai/) 创建的密钥。设置非空密钥后，服务端配置会自动启用 Meta。`ENABLED_META` 由此密钥派生，不是独立的环境变量开关。LobeHub 使用 `META_API_KEY`，与 Meta SDK 示例中的 `MODEL_API_KEY` 名称不同。
+- 描述：在 [Model API 控制台](https://dev.meta.ai/) 创建的密钥。设置非空密钥后，服务端配置会自动启用 Meta。`ENABLED_META` 由此密钥派生，不是独立的环境变量开关。Orvilo 使用 `META_API_KEY`，与 Meta SDK 示例中的 `MODEL_API_KEY` 名称不同。
 - 默认值：未设置，不提供共享服务端密钥。
 - 示例：`your-meta-model-api-key`
 
@@ -887,7 +887,7 @@ LobeHub 在部署时提供了丰富的模型服务商相关的环境变量，你
 
 ## Unsloth
 
-连接你自己的 Unsloth Studio 实例。浏览器认证和桌面版 CORS 限制请参阅[在 LobeHub 中使用 Unsloth](/zh/docs/usage/providers/unsloth)。
+连接你自己的 Unsloth Studio 实例。浏览器认证和桌面版 CORS 限制请参阅[在 Orvilo 中使用 Unsloth](/zh/docs/usage/providers/unsloth)。
 
 ### `UNSLOTH_API_KEY`
 
@@ -899,7 +899,7 @@ LobeHub 在部署时提供了丰富的模型服务商相关的环境变量，你
 ### `UNSLOTH_PROXY_URL`
 
 - 类型：可选
-- 描述：覆盖 OpenAI 兼容 API 的基础地址。请填写 LobeHub 服务器可访问的地址。在 Docker 内，`127.0.0.1` 指容器自身，不是运行 Studio 的宿主机。若启动 Studio 时明确指定端口，请使用该端口替代默认的 `8888`。
+- 描述：覆盖 OpenAI 兼容 API 的基础地址。请填写 Orvilo 服务器可访问的地址。在 Docker 内，`127.0.0.1` 指容器自身，不是运行 Studio 的宿主机。若启动 Studio 时明确指定端口，请使用该端口替代默认的 `8888`。
 - 默认值：`http://127.0.0.1:8888/v1`
 - 示例：`http://studio.example.com:8888/v1`
 

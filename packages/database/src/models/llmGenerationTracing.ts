@@ -6,7 +6,7 @@ import type {
   NewLlmGenerationTracing,
 } from '../schemas/llmGenerationTracing';
 import { llmGenerationTracing } from '../schemas/llmGenerationTracing';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 export interface RecordLlmGenerationParams {
@@ -51,11 +51,11 @@ export interface UpdateLlmGenerationFeedbackParams {
 }
 
 export class LlmGenerationTracingModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

@@ -40,7 +40,7 @@ export const GetAgentDetailInspector = memo<
     return (
       <div className={styles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-management.apiName.getAgentDetail')}
+          {t('builtins.orvilo-agent-management.apiName.getAgentDetail')}
         </span>
       </div>
     );
@@ -49,7 +49,7 @@ export const GetAgentDetailInspector = memo<
   return (
     <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
       <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-management.inspector.getAgentDetail.title')}
+        {t('builtins.orvilo-agent-management.inspector.getAgentDetail.title')}
       </span>
       {title ? (
         <Tooltip title={agentId}>

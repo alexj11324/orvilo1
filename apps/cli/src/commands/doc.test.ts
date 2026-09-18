@@ -558,8 +558,8 @@ describe('doc command', () => {
     });
 
     it('carries the dispatched operation only for its own topic', async () => {
-      vi.stubEnv('LOBEHUB_OPERATION_ID', 'op-current');
-      vi.stubEnv('LOBEHUB_TOPIC_ID', 'topic_123');
+      vi.stubEnv('ORVILO_OPERATION_ID', 'op-current');
+      vi.stubEnv('ORVILO_TOPIC_ID', 'topic_123');
       mockTrpcClient.document.getDocumentById.query.mockResolvedValue({ title: 'Report' });
       mockTrpcClient.notebook.createDocument.mutate.mockResolvedValue({ id: 'linked' });
       await createProgram().parseAsync(['node', 'test', 'doc', 'link-topic', 'doc1', 'topic_123']);

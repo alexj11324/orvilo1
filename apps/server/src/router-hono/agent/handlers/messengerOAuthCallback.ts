@@ -8,7 +8,7 @@ import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { consumeOAuthState } from '@/server/services/messenger/oauth/stateStore';
 import { messengerPlatformRegistry } from '@/server/services/messenger/platforms';
 
-const log = debug('lobe-server:messenger:oauth-callback');
+const log = debug('orvilo-server:messenger:oauth-callback');
 
 const SETTINGS_PATH = '/settings/messenger';
 
@@ -34,10 +34,10 @@ const errorRedirect = (origin: string, platform: string, code: string, extra?: U
  * `oauth` adapter at `platforms/<id>/oauth.ts`.
  *
  * Success path:
- *   1. Validate single-use state → recover the LobeHub user who initiated
+ *   1. Validate single-use state → recover the Orvilo user who initiated
  *   2. Exchange the code via the platform adapter, normalised into
  *      `NormalizedInstallation`
- *   3. Detect tenant takeover (another LobeHub user already owns this row)
+ *   3. Detect tenant takeover (another Orvilo user already owns this row)
  *   4. Encrypt + upsert into `messenger_installations`
  *   5. Hand off to the platform's deep-link redirect (Slack
  *      `slack.com/app/open`) or fall back to the settings page.
@@ -75,7 +75,7 @@ export async function messengerOAuthCallback(c: Context): Promise<Response> {
   if (!config) {
     log('callback[%s]: messenger env not configured', platform);
     return new Response(
-      `${definition.name} messenger is not configured on this LobeHub deployment.`,
+      `${definition.name} messenger is not configured on this Orvilo deployment.`,
       { status: 503 },
     );
   }
@@ -107,7 +107,7 @@ export async function messengerOAuthCallback(c: Context): Promise<Response> {
     return errorRedirect(url.origin, platform, 'exchange_failed');
   }
 
-  // 3. Detect takeover by another LobeHub user. The tenant install is shared
+  // 3. Detect takeover by another Orvilo user. The tenant install is shared
   // infrastructure: whoever connected first owns the row. OAuth doesn't let
   // us refuse the install (the token has already been minted by the time we
   // get here), and revoking would uninstall the App from the tenant —
@@ -130,7 +130,7 @@ export async function messengerOAuthCallback(c: Context): Promise<Response> {
   const isTakeoverAttempt =
     !!existing &&
     !!existing.installedByUserId &&
-    existing.installedByUserId !== statePayload.lobeUserId;
+    existing.installedByUserId !== statePayload.orviloUserId;
 
   // 4. Encrypt + upsert.
   let gateKeeper: KeyVaultsGateKeeper | undefined;
@@ -160,7 +160,7 @@ export async function messengerOAuthCallback(c: Context): Promise<Response> {
           : install.installedByPlatformUserId,
         installedByUserId: isTakeoverAttempt
           ? existing!.installedByUserId
-          : statePayload.lobeUserId,
+          : statePayload.orviloUserId,
         metadata: install.metadata,
         platform,
         tenantId: install.tenantId,
@@ -182,7 +182,7 @@ export async function messengerOAuthCallback(c: Context): Promise<Response> {
       platform,
       install.tenantId,
       existing!.installedByUserId,
-      statePayload.lobeUserId,
+      statePayload.orviloUserId,
     );
     const extra = new URLSearchParams();
     if (install.tenantName) extra.set('workspace', install.tenantName);

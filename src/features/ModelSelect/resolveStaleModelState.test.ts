@@ -1,4 +1,4 @@
-import { type LobeDefaultAiModelListItem } from 'model-bank';
+import { type OrviloDefaultAiModelListItem } from 'model-bank';
 import { describe, expect, it } from 'vitest';
 
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
@@ -8,8 +8,8 @@ import { resolveEnableTargetProviderId, resolveStaleModelState } from './resolve
 const enabledList = [
   {
     children: [{ abilities: {}, displayName: 'Claude Opus 4.6', id: 'claude-opus-4-6' }],
-    id: 'lobehub',
-    name: 'LobeHub',
+    id: 'orvilo',
+    name: 'Orvilo',
     source: 'builtin',
   },
 ] as unknown as EnabledProviderWithModels[];
@@ -20,17 +20,17 @@ const builtinAiModelList = [
     displayName: 'GPT-5.4 nano',
     enabled: false,
     id: 'gpt-5.4-nano',
-    providerId: 'lobehub',
+    providerId: 'orvilo',
     type: 'chat',
   },
-] as unknown as LobeDefaultAiModelListItem[];
+] as unknown as OrviloDefaultAiModelListItem[];
 
 const context = { builtinAiModelList, enabledList, modelType: 'chat' as const };
 
 describe('resolveStaleModelState', () => {
   it('returns undefined for a value present in the enabled list', () => {
     expect(
-      resolveStaleModelState({ model: 'claude-opus-4-6', provider: 'lobehub' }, context),
+      resolveStaleModelState({ model: 'claude-opus-4-6', provider: 'orvilo' }, context),
     ).toBeUndefined();
   });
 
@@ -39,7 +39,7 @@ describe('resolveStaleModelState', () => {
   });
 
   it('resolves a disabled builtin model as notEnabled with its metadata', () => {
-    const state = resolveStaleModelState({ model: 'gpt-5.4-nano', provider: 'lobehub' }, context);
+    const state = resolveStaleModelState({ model: 'gpt-5.4-nano', provider: 'orvilo' }, context);
 
     expect(state?.status).toBe('notEnabled');
     expect(state?.meta?.displayName).toBe('GPT-5.4 nano');
@@ -70,7 +70,7 @@ describe('resolveStaleModelState', () => {
 
   it('ignores builtin models of a different type', () => {
     const state = resolveStaleModelState(
-      { model: 'gpt-5.4-nano', provider: 'lobehub' },
+      { model: 'gpt-5.4-nano', provider: 'orvilo' },
       { ...context, modelType: 'embedding' },
     );
 
@@ -81,30 +81,30 @@ describe('resolveStaleModelState', () => {
     it('prefers the persisted provider when it has enabled models of this type', () => {
       expect(
         resolveEnableTargetProviderId(
-          { model: 'gpt-5.4-nano', provider: 'lobehub' },
+          { model: 'gpt-5.4-nano', provider: 'orvilo' },
           { enabledList, metaProviderId: 'openai' },
         ),
-      ).toBe('lobehub');
+      ).toBe('orvilo');
     });
 
     it('prefers the persisted provider when it is enabled without models of this type', () => {
       expect(
         resolveEnableTargetProviderId(
-          { model: 'gpt-5.4-nano', provider: 'lobehub' },
+          { model: 'gpt-5.4-nano', provider: 'orvilo' },
           {
-            enabledAiProviders: [{ id: 'lobehub' }],
+            enabledAiProviders: [{ id: 'orvilo' }],
             enabledList: [],
             metaProviderId: 'openai',
           },
         ),
-      ).toBe('lobehub');
+      ).toBe('orvilo');
     });
 
     it('falls back to the builtin provider when the persisted provider is unknown', () => {
       expect(
         resolveEnableTargetProviderId(
           { model: 'gpt-5.4-nano', provider: 'legacy-provider' },
-          { enabledAiProviders: [{ id: 'lobehub' }], enabledList, metaProviderId: 'openai' },
+          { enabledAiProviders: [{ id: 'orvilo' }], enabledList, metaProviderId: 'openai' },
         ),
       ).toBe('openai');
     });
@@ -120,21 +120,23 @@ describe('resolveStaleModelState', () => {
   });
 
   describe('redirected', () => {
-    const modelRedirects = { 'lobehub/gemini-3.1-flash-lite-preview': 'gemini-3.1-flash-lite' };
+    const modelRedirects = {
+      'orvilo/gemini-3.1-flash-lite-preview': 'gemini-3.1-flash-lite',
+    };
     const withSuccessorMeta = [
       ...builtinAiModelList,
       {
         abilities: {},
         displayName: 'Gemini 3.1 Flash Lite',
         id: 'gemini-3.1-flash-lite',
-        providerId: 'lobehub',
+        providerId: 'orvilo',
         type: 'chat',
       },
-    ] as unknown as LobeDefaultAiModelListItem[];
+    ] as unknown as OrviloDefaultAiModelListItem[];
 
     it('resolves a redirect-mapped id as redirected with successor metadata', () => {
       const state = resolveStaleModelState(
-        { model: 'gemini-3.1-flash-lite-preview', provider: 'lobehub' },
+        { model: 'gemini-3.1-flash-lite-preview', provider: 'orvilo' },
         { ...context, builtinAiModelList: withSuccessorMeta, modelRedirects },
       );
 
@@ -145,7 +147,7 @@ describe('resolveStaleModelState', () => {
 
     it('keeps successorId even when the successor has no builtin metadata', () => {
       const state = resolveStaleModelState(
-        { model: 'gemini-3.1-flash-lite-preview', provider: 'lobehub' },
+        { model: 'gemini-3.1-flash-lite-preview', provider: 'orvilo' },
         { ...context, modelRedirects },
       );
 
@@ -156,8 +158,8 @@ describe('resolveStaleModelState', () => {
 
     it('prefers the notEnabled state when the id still exists in the builtin bank', () => {
       const state = resolveStaleModelState(
-        { model: 'gpt-5.4-nano', provider: 'lobehub' },
-        { ...context, modelRedirects: { 'lobehub/gpt-5.4-nano': 'gpt-5.5-nano' } },
+        { model: 'gpt-5.4-nano', provider: 'orvilo' },
+        { ...context, modelRedirects: { 'orvilo/gpt-5.4-nano': 'gpt-5.5-nano' } },
       );
 
       expect(state?.status).toBe('notEnabled');

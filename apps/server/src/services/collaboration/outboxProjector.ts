@@ -1,7 +1,7 @@
 import debug from 'debug';
 
 import { EventOutboxModel } from '@/database/models/eventOutbox';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { projectOutboxEvent } from './projection';
 import { getRoomPublisher, type RoomPublisher } from './roomPublisher';
@@ -29,11 +29,11 @@ const VISIBILITY_TIMEOUT_MS = 5 * 60 * 1000;
  * converge through `snapshot`, not the stream).
  */
 export class CollaborationOutboxProjector {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly outbox: EventOutboxModel;
   private readonly publisher: RoomPublisher;
 
-  constructor(db: LobeChatDatabase, publisher: RoomPublisher = getRoomPublisher()) {
+  constructor(db: OrviloDatabase, publisher: RoomPublisher = getRoomPublisher()) {
     this.db = db;
     this.outbox = new EventOutboxModel(db);
     this.publisher = publisher;

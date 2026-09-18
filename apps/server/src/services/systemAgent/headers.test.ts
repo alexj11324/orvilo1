@@ -3,7 +3,7 @@ import { ModelRuntime } from '@orvilo/model-runtime';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import * as ModelRuntimeModule from '@/server/modules/ModelRuntime';
 
 import { SystemAgentService } from './index';
@@ -24,7 +24,7 @@ describe('SystemAgentService.generateTopicTitle', () => {
           }),
         },
       },
-    } as unknown as LobeChatDatabase;
+    } as unknown as OrviloDatabase;
     vi.spyOn(UserModel, 'getInfoForAIGeneration').mockResolvedValue({
       responseLanguage: 'en-US',
       userName: 'User',

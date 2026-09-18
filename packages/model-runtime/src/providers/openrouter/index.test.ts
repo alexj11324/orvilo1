@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeOpenRouterAI, params } from './index';
+import { OrviloOpenRouterAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -18,7 +18,7 @@ testProvider({
   provider,
   defaultBaseURL,
   chatModel: 'mistralai/mistral-7b-instruct:free',
-  Runtime: LobeOpenRouterAI,
+  Runtime: OrviloOpenRouterAI,
   chatDebugEnv: 'DEBUG_OPENROUTER_CHAT_COMPLETION',
   test: {
     skipAPICall: true,
@@ -28,10 +28,10 @@ testProvider({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeOpenRouterAI({ apiKey: 'test' });
+  instance = new OrviloOpenRouterAI({ apiKey: 'test' });
 
   // 使用 vi.spyOn 来模拟 chat.completions.create 方法
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -44,7 +44,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeOpenRouterAI - custom features', () => {
+describe('OrviloOpenRouterAI - custom features', () => {
   describe('Params Export', () => {
     it('should export params object', () => {
       expect(params).toBeDefined();
@@ -60,8 +60,10 @@ describe('LobeOpenRouterAI - custom features', () => {
     it('should have constructorOptions with headers', () => {
       expect(params.constructorOptions).toBeDefined();
       expect(params.constructorOptions.defaultHeaders).toBeDefined();
-      expect(params.constructorOptions.defaultHeaders['HTTP-Referer']).toBe('https://lobehub.com');
-      expect(params.constructorOptions.defaultHeaders['X-Title']).toBe('LobeHub');
+      expect(params.constructorOptions.defaultHeaders['HTTP-Referer']).toBe(
+        'https://orvilo.aspectlylabs.com',
+      );
+      expect(params.constructorOptions.defaultHeaders['X-Title']).toBe('Orvilo');
     });
 
     it('should have debug configuration', () => {
@@ -92,7 +94,7 @@ describe('LobeOpenRouterAI - custom features', () => {
 
   describe('Constructor Options', () => {
     it('should set default headers', () => {
-      const instance = new LobeOpenRouterAI({ apiKey: 'test' });
+      const instance = new OrviloOpenRouterAI({ apiKey: 'test' });
       expect(instance).toBeDefined();
       // Headers are set in constructorOptions but not directly accessible
       // We can verify by checking that the instance was created successfully
@@ -100,7 +102,7 @@ describe('LobeOpenRouterAI - custom features', () => {
 
     it('should use custom base URL when provided', () => {
       const customBaseURL = 'https://custom.openrouter.ai/api/v1';
-      const instance = new LobeOpenRouterAI({ apiKey: 'test', baseURL: customBaseURL });
+      const instance = new OrviloOpenRouterAI({ apiKey: 'test', baseURL: customBaseURL });
       expect(instance.baseURL).toBe(customBaseURL);
     });
   });

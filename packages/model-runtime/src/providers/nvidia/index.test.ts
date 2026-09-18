@@ -3,13 +3,13 @@ import { ModelProvider } from 'model-bank';
 import { describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeNvidiaAI, params } from './index';
+import { OrviloNvidiaAI, params } from './index';
 
 const provider = ModelProvider.Nvidia;
 const defaultBaseURL = 'https://integrate.api.nvidia.com/v1';
 
 testProvider({
-  Runtime: LobeNvidiaAI,
+  Runtime: OrviloNvidiaAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_NVIDIA_CHAT_COMPLETION',
@@ -19,7 +19,7 @@ testProvider({
   },
 });
 
-describe('LobeNvidiaAI - custom features', () => {
+describe('OrviloNvidiaAI - custom features', () => {
   describe('handlePayload', () => {
     // thinking parameter conversion
     it('should add chat_template_kwargs with thinking: true when thinking.type is enabled', () => {

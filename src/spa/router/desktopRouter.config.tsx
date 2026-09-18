@@ -5,11 +5,23 @@ import type { RouteObject } from 'react-router';
 import { acceptanceRouteMeta } from '@/features/Acceptance/routeMeta';
 import { dynamicElement, ErrorBoundary } from '@/utils/router';
 
-import { createMainAreaRouteFactory, createSharedDesktopRoutes } from './desktopRouter.shared';
+import {
+  createMainAreaRouteFactory,
+  createSharedDesktopRoutes,
+  type MainAreaRouteOptions,
+} from './desktopRouter.shared';
+import WebHomeRedirect from './WebHomeRedirect';
 
 export { sharedMainAreaChildren } from './desktopRouter.shared';
 
-export const createMainAreaChildren = createMainAreaRouteFactory();
+// Task-first: Web's index slot points at the task list. It has to be an element
+// rather than a redirect in the shared tree because Electron fills the same
+// slot with its own per-tab Home.
+const mainAreaRouteOptions: MainAreaRouteOptions = {
+  createHomeElement: () => <WebHomeRedirect />,
+};
+
+export const createMainAreaChildren = createMainAreaRouteFactory(mainAreaRouteOptions);
 
 // Electron consumers resolve tab metadata against the same complete content
 // tree. The Web root also renders this tree directly.

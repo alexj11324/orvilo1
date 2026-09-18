@@ -75,7 +75,7 @@ describe('parseCommandsFromEditorData', () => {
               {
                 actionCategory: 'tool',
                 actionLabel: 'Notebook',
-                actionType: 'lobe-notebook',
+                actionType: 'orvilo-notebook',
                 type: 'action-tag',
               },
             ],
@@ -90,7 +90,7 @@ describe('parseCommandsFromEditorData', () => {
     expect(result).toHaveLength(3);
     expect(result[0].type).toBe('newTopic');
     expect(result[1].type).toBe('translate');
-    expect(result[2].type).toBe('lobe-notebook');
+    expect(result[2].type).toBe('orvilo-notebook');
   });
 });
 
@@ -173,7 +173,7 @@ describe('parseSelectedSkillsFromEditorData', () => {
               {
                 actionCategory: 'tool',
                 actionLabel: 'Notebook',
-                actionType: 'lobe-notebook',
+                actionType: 'orvilo-notebook',
                 type: 'action-tag',
               },
               {
@@ -212,13 +212,13 @@ describe('parseSelectedToolsFromEditorData', () => {
               {
                 actionCategory: 'tool',
                 actionLabel: 'Notebook',
-                actionType: 'lobe-notebook',
+                actionType: 'orvilo-notebook',
                 type: 'action-tag',
               },
               {
                 actionCategory: 'tool',
                 actionLabel: 'Artifacts',
-                actionType: 'lobe-artifacts',
+                actionType: 'orvilo-artifacts',
                 type: 'action-tag',
               },
             ],
@@ -230,8 +230,8 @@ describe('parseSelectedToolsFromEditorData', () => {
     };
 
     expect(parseSelectedToolsFromEditorData(editorData)).toEqual([
-      { identifier: 'lobe-notebook', name: 'Notebook' },
-      { identifier: 'lobe-artifacts', name: 'Artifacts' },
+      { identifier: 'orvilo-notebook', name: 'Notebook' },
+      { identifier: 'orvilo-artifacts', name: 'Artifacts' },
     ]);
   });
 
@@ -244,13 +244,13 @@ describe('parseSelectedToolsFromEditorData', () => {
               {
                 actionCategory: 'tool',
                 actionLabel: 'Notebook',
-                actionType: 'lobe-notebook',
+                actionType: 'orvilo-notebook',
                 type: 'action-tag',
               },
               {
                 actionCategory: 'tool',
                 actionLabel: 'Notebook Duplicate',
-                actionType: 'lobe-notebook',
+                actionType: 'orvilo-notebook',
                 type: 'action-tag',
               },
             ],
@@ -262,7 +262,7 @@ describe('parseSelectedToolsFromEditorData', () => {
     };
 
     expect(parseSelectedToolsFromEditorData(editorData)).toEqual([
-      { identifier: 'lobe-notebook', name: 'Notebook' },
+      { identifier: 'orvilo-notebook', name: 'Notebook' },
     ]);
   });
 });

@@ -66,7 +66,9 @@ describe('extractToolKeyword', () => {
 
   describe('url args', () => {
     it('returns the hostname', () => {
-      expect(extractToolKeyword({ url: 'https://lobehub.com/docs/changelog' })).toBe('lobehub.com');
+      expect(extractToolKeyword({ url: 'https://orvilo.aspectlylabs.com/docs/changelog' })).toBe(
+        'orvilo.aspectlylabs.com',
+      );
     });
 
     it('takes the first entry of a url array', () => {

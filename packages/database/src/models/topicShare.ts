@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { and, asc, eq, sql } from 'drizzle-orm';
 
 import { agents, chatGroups, chatGroupsAgents, topics, topicShares } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import {
   normalizeInboxAgentAvatar,
   normalizeInboxAgentMeta,
@@ -17,10 +17,10 @@ export type TopicShareData = NonNullable<
 
 export class TopicShareModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -119,7 +119,7 @@ export class TopicShareModel {
    * Find shared topic by share ID.
    * Returns share info including ownerId for permission checking by caller.
    */
-  static findByShareId = async (db: LobeChatDatabase, shareId: string) => {
+  static findByShareId = async (db: OrviloDatabase, shareId: string) => {
     const result = await db
       .select({
         agentAvatar: agents.avatar,
@@ -200,7 +200,7 @@ export class TopicShareModel {
    * Increment page view count for a share.
    * Should be called after permission check passes.
    */
-  static incrementPageViewCount = async (db: LobeChatDatabase, shareId: string) => {
+  static incrementPageViewCount = async (db: OrviloDatabase, shareId: string) => {
     await db
       .update(topicShares)
       .set({ pageViewCount: sql`${topicShares.pageViewCount} + 1` })
@@ -212,7 +212,7 @@ export class TopicShareModel {
    * Throws TRPCError if access is denied.
    */
   static findByShareIdWithAccessCheck = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     shareId: string,
     accessUserId?: string,
   ): Promise<TopicShareData> => {

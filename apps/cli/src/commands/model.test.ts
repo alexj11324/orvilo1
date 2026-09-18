@@ -84,14 +84,14 @@ describe('model command', () => {
       mockTrpcClient.aiModel.getAiProviderModelList.query.mockResolvedValue([
         ...visibleModels,
         {
-          displayName: 'LobeHub Onboarding',
-          id: 'lobehub-onboarding-v1',
+          displayName: 'Orvilo Onboarding',
+          id: 'orvilo-onboarding-v1',
           visible: false,
         },
       ]);
 
       const program = createProgram();
-      await program.parseAsync(['node', 'test', 'model', 'list', 'lobehub', '--json']);
+      await program.parseAsync(['node', 'test', 'model', 'list', 'orvilo', '--json']);
 
       expect(consoleSpy).toHaveBeenCalledWith(JSON.stringify(visibleModels, null, 2));
     });

@@ -31,7 +31,7 @@ import { MessengerInstallationModel } from '@/database/models/messengerInstallat
 import { RbacModel } from '@/database/models/rbac';
 import { WorkspaceModel } from '@/database/models/workspace';
 import { agents, users } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { authedProcedure, publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerFeatureFlagsStateFromRuntimeConfig } from '@/server/featureFlags';
@@ -107,7 +107,7 @@ const assertWorkspaceFeatureEnabledForUser = async (userId: string): Promise<voi
 };
 
 const reconcileSlackInstallation = async (
-  serverDB: LobeChatDatabase,
+  serverDB: OrviloDatabase,
   row: DecryptedMessengerInstallation,
 ): Promise<DecryptedMessengerInstallation | null> => {
   if (row.platform !== 'slack') return row;
@@ -193,7 +193,7 @@ const messengerWriteProcedure = messengerProcedure.use(withScopedPermission('age
 /**
  * Resolve the workspace scope of an agent the user wants to route the System
  * Bot to, authorizing access along the way. Because the bot is shared and
- * which LobeHub context a conversation runs in is derived from the *active
+ * which Orvilo context a conversation runs in is derived from the *active
  * agent*, every place that sets the active agent must re-authorize against
  * that agent's own workspace:
  *
@@ -205,7 +205,7 @@ const messengerWriteProcedure = messengerProcedure.use(withScopedPermission('age
  * Throws `NOT_FOUND` / `FORBIDDEN`.
  */
 const resolveAuthorizedAgentScope = async (
-  serverDB: LobeChatDatabase,
+  serverDB: OrviloDatabase,
   userId: string,
   agentId: string,
 ): Promise<{ title: string | null; workspaceId: string | null }> => {
@@ -418,7 +418,7 @@ export const messengerRouter = router({
         }
 
         // A first scan should be immediately usable, so route it to the user's
-        // personal inbox (LobeAI). A rescan preserves an authorized Agent
+        // personal inbox (OrviloAI). A rescan preserves an authorized Agent
         // choice, but repairs stale/deauthorized links with the same fallback.
         const inboxAgentId =
           (await ctx.getAgentModel().getBuiltinAgent(INBOX_SESSION_ID))?.id ?? null;
@@ -452,7 +452,7 @@ export const messengerRouter = router({
             )
           : undefined;
         const link = await ctx.serverDB.transaction(async (tx) => {
-          const txDB = tx as LobeChatDatabase;
+          const txDB = tx as OrviloDatabase;
           return new MessengerAccountLinkModel(txDB, ctx.userId).upsertForPlatform(
             {
               activeAgentId,
@@ -483,7 +483,7 @@ export const messengerRouter = router({
           const previousApplicationId = previousWechatLink?.applicationId;
           if (previousWechatLink && previousApplicationId) {
             await ctx.serverDB.transaction(async (tx) => {
-              const txDB = tx as LobeChatDatabase;
+              const txDB = tx as OrviloDatabase;
               await new MessengerAccountLinkModel(txDB, ctx.userId).upsertForPlatform(
                 {
                   activeAgentId: previousWechatLink.activeAgentId,
@@ -505,7 +505,7 @@ export const messengerRouter = router({
             });
           } else {
             await ctx.serverDB.transaction(async (tx) => {
-              const txDB = tx as LobeChatDatabase;
+              const txDB = tx as OrviloDatabase;
               await new MessengerAccountLinkModel(txDB, ctx.userId).deleteByPlatform(
                 'wechat',
                 platformUserId,
@@ -557,7 +557,7 @@ export const messengerRouter = router({
    * before the user confirms. Does NOT consume the token.
    *
    * Also surfaces `linkedToEmail` when the IM identity is already bound to
-   * a LobeHub account — the page uses it to warn the user before they create
+   * a Orvilo account — the page uses it to warn the user before they create
    * a duplicate that would either fail the unique index or shadow another
    * account's binding. Email is partially masked for privacy.
    *
@@ -608,7 +608,7 @@ export const messengerRouter = router({
       }
 
       return {
-        // Set when the IM identity is already linked to some LobeHub account.
+        // Set when the IM identity is already linked to some Orvilo account.
         // The verify-im page compares against the current session email and
         // shows a warning when they don't match.
         linkedToEmail,
@@ -650,7 +650,7 @@ export const messengerRouter = router({
       }
 
       // Cross-user conflict: the (platform, tenant, platformUserId) tuple is
-      // already bound to a different LobeHub account. The DB unique index
+      // already bound to a different Orvilo account. The DB unique index
       // would surface this as an opaque "duplicate key" — replace with a
       // user-facing 409 carrying the masked email of the existing owner.
       const existingLink = await MessengerAccountLinkModel.findByPlatformUser(
@@ -716,7 +716,7 @@ export const messengerRouter = router({
           workspaceId: agentScope.workspaceId,
         });
       } catch (error) {
-        // Race backstop: the IM identity got bound to another LobeHub user
+        // Race backstop: the IM identity got bound to another Orvilo user
         // between the pre-check above and the upsert. Re-surface as the same
         // friendly 409 the verify-im UI already knows how to render.
         if (error instanceof MessengerAccountLinkConflictError) {
@@ -748,13 +748,13 @@ export const messengerRouter = router({
    * Agent list for the verify-im UI's "pick an initial agent" dropdown.
    *
    * Excludes virtual agents (page-copilot, etc.) but explicitly keeps the
-   * inbox/LobeAI agent — historical inbox sessions get migrated with
-   * `virtual=true`, so a plain virtual filter would hide LobeAI even though
+   * inbox/OrviloAI agent — historical inbox sessions get migrated with
+   * `virtual=true`, so a plain virtual filter would hide OrviloAI even though
    * the home sidebar shows it (sidebar fetches it separately via
    * `agent.getBuiltinAgent`).
    *
    * Order matches the home sidebar (`updatedAt DESC`). Title fallback for the
-   * inbox agent resolves to `"LobeAI"` + default avatar; everything else falls
+   * inbox agent resolves to `"OrviloAI"` + default avatar; everything else falls
    * back on the client via `common.defaultSession`.
    */
   listAgentsForBinding: messengerProcedure
@@ -1094,7 +1094,7 @@ export const messengerRouter = router({
         });
       }
       // Authorization: only the user who initiated the install can disconnect
-      // it. Workspace admins who installed via a different LobeHub account
+      // it. Workspace admins who installed via a different Orvilo account
       // can disconnect through their own settings page.
       if (row.installedByUserId !== ctx.userId) {
         throw new TRPCError({

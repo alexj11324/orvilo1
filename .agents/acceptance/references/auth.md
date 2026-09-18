@@ -31,12 +31,12 @@ not `127.0.0.1`.
 
 ## Per-surface overview
 
-| Surface  | Mechanism                                | Persistence                                                       | Human interaction                              |
-| -------- | ---------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------- |
-| CLI      | Seeded API key or OIDC Device Code Flow  | `.records/env/agent-testing-cli.env` + `$HOME/.lobehub-dev`       | No for seed path; yes for device-code fallback |
-| Web      | Seeded better-auth login or cookie copy  | `~/.lobehub-agent-testing/web-state.json` + agent-browser session | No for seed path; copy cookie only as fallback |
-| Electron | App's own login state                    | `~/.lobehub/agent-testing/electron-login` (snapshot on `stop`)    | No — the agent drives the sign-in itself       |
-| Bot      | Native apps (Discord/WeChat/…) logged in | Each app's own session                                            | Once per app                                   |
+| Surface  | Mechanism                                | Persistence                                                      | Human interaction                              |
+| -------- | ---------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------- |
+| CLI      | Seeded API key or OIDC Device Code Flow  | `.records/env/agent-testing-cli.env` + `$HOME/.orvilo-dev`       | No for seed path; yes for device-code fallback |
+| Web      | Seeded better-auth login or cookie copy  | `~/.orvilo-agent-testing/web-state.json` + agent-browser session | No for seed path; copy cookie only as fallback |
+| Electron | App's own login state                    | `~/.orvilo/agent-testing/electron-login` (snapshot on `stop`)    | No — the agent drives the sign-in itself       |
+| Bot      | Native apps (Discord/WeChat/…) logged in | Each app's own session                                           | Once per app                                   |
 
 ## CLI — Seeded API key
 
@@ -49,8 +49,8 @@ source .records/env/agent-testing-cli.env
 .agents/acceptance/scripts/setup-auth.sh cli-seed
 ```
 
-The seed step writes `LOBE_API_KEY` for humans and maps it to the CLI's current
-auth variable, `LOBEHUB_CLI_API_KEY`. It also sets `LOBEHUB_SERVER` so CLI
+The seed step writes `ORVILO_API_KEY` for humans and maps it to the CLI's current
+auth variable, `ORVILO_CLI_API_KEY`. It also sets `ORVILO_SERVER` so CLI
 commands hit the local server without needing a stored device-code token.
 
 Use this for automated CLI verification:
@@ -64,23 +64,23 @@ bun src/index.ts <command>
 ## CLI — Device Code Flow fallback
 
 Use device-code login only when testing against a non-seeded environment.
-Credentials are isolated from the user's real CLI config via
-`LOBEHUB_CLI_HOME=.lobehub-dev`, which the current CLI stores under
-`$HOME/.lobehub-dev`.
+Credentials are isolated from the user's real CLI config
+`ORVILO_CLI_HOME=.orvilo-dev`, which the current CLI stores under
+`$HOME/.orvilo-dev`.
 
 ```bash
-cd apps/cli && LOBEHUB_CLI_HOME=.lobehub-dev bun src/index.ts login --server http://localhost:3010
+cd apps/cli && ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts login --server http://localhost:3010
 ```
 
 - The `--server` flag is required — an env var does NOT work and login will hit
   the wrong server without it.
 - Check state without logging in: `setup-auth.sh status` (verifies
-  `LOBEHUB_CLI_API_KEY` when present, otherwise checks the stored server URL).
+  `ORVILO_CLI_API_KEY` when present, otherwise checks the stored server URL).
 - `UNAUTHORIZED` on API calls means the token expired — re-run login.
 
 ## Web — seeded better-auth login
 
-The Web test surface is `agent-browser --session lobehub-dev`. The user's
+The Web test surface is `agent-browser --session orvilo-dev`. The user's
 ordinary Chrome is only a cookie source; Chrome screenshots, Chrome Network
 records, and Chrome logged-in state do not prove the agent-browser test session
 is authenticated.
@@ -94,7 +94,7 @@ For the seeded local dev environment, use the automatic path:
 
 `web-seed` posts the seeded email/password to
 `/api/auth/sign-in/email`, stores the returned cookie jar under
-`~/.lobehub-agent-testing/`, converts it to Playwright `storageState`, loads it
+`~/.orvilo-agent-testing/`, converts it to Playwright `storageState`, loads it
 into the `agent-browser` session, and verifies the session does not land on
 `/signin`.
 
@@ -115,7 +115,7 @@ secret: don't paste it into shared logs, PRs, or commit it anywhere.
 3. If repo-root `.env` exists and `web-seed` fails, do **not** seed or modify the current DB; treat it as an existing local environment and use Cookie injection.
 4. Still not green or not using the seed env → `$SCRIPT open-chrome` opens Chrome at `SERVER_URL` with DevTools.
 5. User copies the `Cookie:` header from Network tab → any same-origin request → Request Headers → right-click `Cookie:` → **Copy value**. Must be from Network, NOT `document.cookie` (HttpOnly cookies are invisible to `document.cookie`).
-6. `pbpaste | $SCRIPT web` — filters to better-auth cookies (`session_token`, `session_data`, `state`), builds Playwright `storageState`, loads it into the `agent-browser` session (`lobehub-dev`), opens `SERVER_URL`, and asserts the URL is not `/signin`.
+6. `pbpaste | $SCRIPT web` — filters to better-auth cookies (`session_token`, `session_data`, `state`), builds Playwright `storageState`, loads it into the `agent-browser` session (`orvilo-dev`), opens `SERVER_URL`, and asserts the URL is not `/signin`.
 
 `ENABLE_MOCK_DEV_USER` is not Web auth. It only affects server-side API context
 and does not satisfy Better Auth or stop the SPA from redirecting to `/signin`.
@@ -124,8 +124,8 @@ Do not use it as a substitute for `status --surface web` or Cookie injection.
 ### Using the authenticated session
 
 ```bash
-agent-browser --session lobehub-dev open "$SERVER_URL/"
-agent-browser --session lobehub-dev snapshot -i | head -20
+agent-browser --session orvilo-dev open "$SERVER_URL/"
+agent-browser --session orvilo-dev snapshot -i | head -20
 ```
 
 ### Notes
@@ -133,7 +133,7 @@ agent-browser --session lobehub-dev snapshot -i | head -20
 - `storageState` doesn't enforce the HttpOnly flag on load — the script stores
   cookies with `httpOnly: false`, which is fine for local dev and sidesteps a
   CDP-context quirk where HttpOnly cookies sometimes fail to attach.
-- The state file is kept at `~/.lobehub-agent-testing/web-state.json` so
+- The state file is kept at `~/.orvilo-agent-testing/web-state.json` so
   `setup-auth.sh status` can report web-auth readiness across sessions.
 
 ### Common failure modes
@@ -149,7 +149,7 @@ agent-browser --session lobehub-dev snapshot -i | head -20
 
 The desktop app keeps its login in its user-data directory. Pool instances get a
 throwaway userData, so `electron-dev.sh` persists the login **for you**: `stop`
-snapshots it into `~/.lobehub/agent-testing/electron-login` before wiping the dir,
+snapshots it into `~/.orvilo/agent-testing/electron-login` before wiping the dir,
 and `start` seeds every new instance from that snapshot. Sign in once, not once
 per run.
 
@@ -182,7 +182,7 @@ never complete. This recipe used to live here; it was a mistake.
 Login state must be **injected directly**, never acquired through a login page:
 
 1. **Restore the login snapshot** — `$EDEV login-status` to inspect
-   `~/.lobehub/agent-testing/electron-login`, and let `start` seed the instance
+   `~/.orvilo/agent-testing/electron-login`, and let `start` seed the instance
    from it. A signed-out boot usually means the snapshot is stale because a
    previous instance was killed instead of stopped (see the traps below) — a
    `save-login <id>` from any still-live signed-in instance repairs it.
@@ -201,7 +201,7 @@ Three traps behind a signed-out instance:
   _killed_ instead (crash, command timeout) its rotated token dies with it —
   `save-login <id>` before anything risky.
 - **`encryptedTokens.expiresAt` is the ACCESS token's expiry, not the refresh
-  token's.** It is `Date.now() + data.expires_in * 1000` in
+  token's.** It is `Date.now() + data.expires_in * 1000`
   `RemoteServerConfigCtr.saveTokens`, so it goes stale on a perfectly refreshable
   login and must never gate whether a profile is kept. The signal that _does_ mean
   signed out is a **missing `refreshToken`**: the app calls `clearTokens()` (deleting
@@ -215,7 +215,7 @@ Three traps behind a signed-out instance:
 
 These recipes only cover **local dev** authentication. They do not:
 
-- Work for production — production cookies are `Secure; HttpOnly; Domain=.lobehub.com`
+- Work for production — production cookies are `Secure; HttpOnly; Domain=.aspectlylabs.com`
   and must be delivered over HTTPS.
 - Replace real OAuth flows — tests that must exercise the login UI itself need a
   real Chromium with `--remote-debugging-port` or a bot account.

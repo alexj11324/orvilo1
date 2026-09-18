@@ -20,10 +20,10 @@ import {
   userSettings,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { DATA_EXPORT_CONFIG, DataExporterRepos } from './index';
 
-let db: LobeChatDatabase;
+let db: OrviloDatabase;
 
 // Set up test data
 describe('DataExporterRepos', () => {

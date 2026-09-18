@@ -7,7 +7,7 @@ import { TaskModel, type TaskMutationContext } from '@/database/models/task';
 import { agents } from '@/database/schemas/agent';
 import { projects } from '@/database/schemas/project';
 import { workspaceMembers } from '@/database/schemas/workspace';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 const LINEAR_INTEGRATION_SUBJECT_PREFIX = 'linear-installation:';
 
@@ -41,7 +41,7 @@ export class LinearIntegrationTaskService {
   private readonly taskModel: TaskModel;
 
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly workspaceId: string,
     installationId: string,
   ) {

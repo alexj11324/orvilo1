@@ -6,7 +6,7 @@ import type {
 } from '@orvilo/agent-signal';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { AgentSignalOperationMarker } from '@/server/services/agentSignal/operationMarker';
 
 import type { RuntimeProcessorContext } from '../../../runtime/context';
@@ -18,7 +18,7 @@ import type { ActionSkillManagementHandle } from '../../types';
 import { AGENT_SIGNAL_POLICY_ACTION_TYPES } from '../../types';
 
 export interface SkillManagementActionHandlerOptions {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   /**
    * Test seam: dispatch the async skill-management run. Defaults to the shared
    * `enqueueSelfIterationRun` (execAgent queue under the skill-management slug).

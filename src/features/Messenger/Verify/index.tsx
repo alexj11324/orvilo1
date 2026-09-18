@@ -115,7 +115,7 @@ const MessengerVerifyPage = memo(() => {
   // - `consumed`: a previous confirmLink succeeded and burned the token.
   //   If the current account has the matching link, fall through to the
   //   body's success state (refresh-after-link). Otherwise the user is
-  //   signed into a different LobeHub account than the one they linked
+  //   signed into a different Orvilo account than the one they linked
   //   with — surface the dedicated "alreadyConsumed" copy so they know
   //   the link did succeed (and they need to switch accounts).
   // - `expired`: TTL ran out before binding. Show the existing copy.
@@ -157,13 +157,13 @@ const MessengerVerifyPage = memo(() => {
         consumedToken?.platform ??
         platform),
   );
-  const lobeAccount = session?.user?.email ?? session?.user?.name ?? '';
+  const orviloAccount = session?.user?.email ?? session?.user?.name ?? '';
   const userAvatar = session?.user?.image ?? undefined;
 
   return (
     <Body
       existingLink={existingLinkSWR.data ?? null}
-      lobeAccount={lobeAccount}
+      orviloAccount={orviloAccount}
       platform={platform}
       platformMeta={platformMeta}
       randomId={randomId}

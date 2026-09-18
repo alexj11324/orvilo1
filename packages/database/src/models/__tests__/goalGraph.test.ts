@@ -5,13 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { agents, goalNodes, goals, users, workspaces } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { GoalModel } from '../goal';
 import { GoalGraphModel } from '../goalGraph';
 import { TaskModel } from '../task';
 import { WorkModel } from '../work';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'goal-graph-test-user';
 const otherUserId = 'goal-graph-other-user';
 
@@ -250,12 +250,12 @@ describe('GoalGraphModel', () => {
 
     const work = await new WorkModel(serverDB, userId, workspaceId).registerExternal({
       changeType: 'created',
-      resourceId: 'lobehub/lobehub#1',
+      resourceId: 'alexj11324/orvilo1#1',
       resourceType: 'github_issue',
       title: 'Private follow-up issue',
       toolIdentifier: 'goal-test',
       toolName: 'createIssue',
-      url: 'https://github.com/lobehub/lobehub/issues/1',
+      url: 'https://github.com/alexj11324/orvilo1/issues/1',
     });
     await ownerGraph.attachWorkVersion(goal.id, node!.id, work!.currentVersionId!, 'produced');
 

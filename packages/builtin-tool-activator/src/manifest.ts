@@ -1,9 +1,9 @@
 import type { BuiltinToolManifest } from '@orvilo/types';
 
 import { systemPrompt } from './systemRole';
-import { ActivatorApiName, LobeActivatorIdentifier } from './types';
+import { ActivatorApiName, OrviloActivatorIdentifier } from './types';
 
-export const LobeActivatorManifest: BuiltinToolManifest = {
+export const OrviloActivatorManifest: BuiltinToolManifest = {
   api: [
     {
       description:
@@ -31,7 +31,7 @@ export const LobeActivatorManifest: BuiltinToolManifest = {
       },
     },
   ],
-  identifier: LobeActivatorIdentifier,
+  identifier: OrviloActivatorIdentifier,
   meta: {
     avatar: '🔧',
     description: 'Discover and activate tools',

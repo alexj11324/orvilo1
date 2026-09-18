@@ -23,8 +23,8 @@ export const parseToolNameMaxLength = (raw: string | undefined): number | undefi
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 };
 
-export const ARTIFACT_TAG = 'lobeArtifact';
-export const ARTIFACT_THINKING_TAG = 'lobeThinking';
+export const ARTIFACT_TAG = 'orviloArtifact';
+export const ARTIFACT_THINKING_TAG = 'orviloThinking';
 export const MENTION_TAG = 'mention';
 export const THINKING_TAG = 'think';
 export const LOCAL_FILE_TAG = 'localFile';
@@ -33,17 +33,19 @@ export const TASK_TAG = 'task';
 export const TOOL_TAG = 'tool';
 export const USER_FEEDBACK_TAG = 'user_feedback';
 // https://regex101.com/r/TwzTkf/2
-export const ARTIFACT_TAG_REGEX = /<lobeArtifact\b[^>]*>(?<content>[\S\s]*?)(?:<\/lobeArtifact>|$)/;
+export const ARTIFACT_TAG_REGEX =
+  /<orviloArtifact\b[^>]*>(?<content>[\S\s]*?)(?:<\/orviloArtifact>|$)/;
 
 // https://regex101.com/r/r9gqGg/1
-export const ARTIFACT_TAG_CLOSED_REGEX = /<lobeArtifact\b[^>]*>([\S\s]*?)<\/lobeArtifact>/;
+export const ARTIFACT_TAG_CLOSED_REGEX = /<orviloArtifact\b[^>]*>([\S\s]*?)<\/orviloArtifact>/;
 
 // https://regex101.com/r/AvPA2g/1
-export const ARTIFACT_THINKING_TAG_REGEX = /<lobeThinking\b[^>]*>([\S\s]*?)(?:<\/lobeThinking>|$)/;
+export const ARTIFACT_THINKING_TAG_REGEX =
+  /<orviloThinking\b[^>]*>([\S\s]*?)(?:<\/orviloThinking>|$)/;
 
 export const THINKING_TAG_REGEX = /<think\b[^>]*>([\S\s]*?)(?:<\/think>|$)/;
 
 export const MENTION_TAG_REGEX = /<mention\b[^>]*>([\S\s]*?)(?:<\/mention>|$)/;
 
-export const AGENTS_TAG = 'lobeAgents';
-export const AGENTS_TAG_REGEX = /<lobeAgents\b[^>]*(?:\/>|>([\S\s]*?)(?:<\/lobeAgents>|$))/;
+export const AGENTS_TAG = 'orviloAgents';
+export const AGENTS_TAG_REGEX = /<orviloAgents\b[^>]*(?:\/>|>([\S\s]*?)(?:<\/orviloAgents>|$))/;

@@ -79,4 +79,4 @@ export const params = {
   provider: ModelProvider.Nebius,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeNebiusAI = createOpenAICompatibleRuntime(params);
+export const OrviloNebiusAI = createOpenAICompatibleRuntime(params);

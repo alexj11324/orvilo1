@@ -138,7 +138,7 @@ export const cloudWorkspaceAuth = trpc.middleware(async (opts) => {
 
 // Same enforcement under the other historical name — in this repo there is no
 // separate cloud implementation, so both entry points verify membership.
-export const lobeWorkspaceAuth = cloudWorkspaceAuth;
+export const orviloWorkspaceAuth = cloudWorkspaceAuth;
 
 /**
  * Require at least `minRole` when a workspace is in scope; personal-mode

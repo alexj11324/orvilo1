@@ -8,6 +8,7 @@ import { processUsersHandler } from '../processUsers';
 const mocks = vi.hoisted(() => ({
   appendUserMemoryWorkflowRunIds: vi.fn(),
   createExecutor: vi.fn(),
+  filterMemoryExtractionEnabledUsers: vi.fn(),
   getUsers: vi.fn(),
   isHourlyMemoryExtractionCancellationRequested: vi.fn(),
   triggerProcessUsers: vi.fn(),
@@ -60,6 +61,10 @@ vi.mock('@/database/server', () => ({
   })),
 }));
 
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  filterMemoryExtractionEnabledUsers: mocks.filterMemoryExtractionEnabledUsers,
+}));
+
 vi.mock('../runGuard', () => ({
   checkGuard: vi.fn().mockResolvedValue({ result: true }),
   ensureWorkflowStarted: vi.fn().mockResolvedValue({ started: true }),
@@ -78,6 +83,10 @@ describe('processUsersHandler hourly task behavior', () => {
     mocks.isHourlyMemoryExtractionCancellationRequested.mockResolvedValue(false);
     mocks.triggerProcessUsers.mockResolvedValue({ workflowRunId: 'next-process-users-run' });
     mocks.triggerProcessUserTopics.mockResolvedValue({ workflowRunId: 'process-user-topics-run' });
+    mocks.filterMemoryExtractionEnabledUsers.mockImplementation(async (userIds: string[]) => ({
+      enabledUserIds: userIds,
+      skippedUserIds: [],
+    }));
   });
 
   it('propagates hourlyTaskId and records process-user-topics workflow run ids', async () => {

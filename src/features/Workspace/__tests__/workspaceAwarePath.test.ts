@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildWorkspaceAwarePath } from '../workspaceAwarePath';
+import { buildWorkspaceAwarePath, stripWorkspaceSlug } from '../workspaceAwarePath';
 
 describe('buildWorkspaceAwarePath', () => {
   it('returns the path unchanged when no active workspace slug exists', () => {
@@ -138,5 +138,25 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings', 'acme')).toBe('/acme/settings');
     expect(buildWorkspaceAwarePath('/settings/', 'acme')).toBe('/acme/settings/');
     expect(buildWorkspaceAwarePath('/settings?foo=bar', 'acme')).toBe('/acme/settings?foo=bar');
+  });
+});
+
+describe('stripWorkspaceSlug', () => {
+  it('returns the path unchanged when no active workspace slug exists', () => {
+    expect(stripWorkspaceSlug('/acme/tasks', null)).toBe('/acme/tasks');
+    expect(stripWorkspaceSlug('/acme/tasks', undefined)).toBe('/acme/tasks');
+  });
+
+  it('drops a leading `/{slug}` so scope-mirrored paths read as personal paths', () => {
+    expect(stripWorkspaceSlug('/acme/tasks', 'acme')).toBe('/tasks');
+    expect(stripWorkspaceSlug('/acme/agent/inbox', 'acme')).toBe('/agent/inbox');
+    expect(stripWorkspaceSlug('/acme', 'acme')).toBe('/');
+  });
+
+  it('leaves personal paths and other slugs untouched', () => {
+    expect(stripWorkspaceSlug('/tasks', 'acme')).toBe('/tasks');
+    expect(stripWorkspaceSlug('/other/tasks', 'acme')).toBe('/other/tasks');
+    // A segment that merely starts with the slug is not a workspace prefix.
+    expect(stripWorkspaceSlug('/acme-legacy/tasks', 'acme')).toBe('/acme-legacy/tasks');
   });
 });

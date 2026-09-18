@@ -119,8 +119,8 @@ const fullRating = (base: number): ModelRating => ({
   agentic: score(base - 5),
   design: score(base - 10, 'design-arena'),
   intelligence: score(base),
-  price: score(base - 20, 'lobehub'),
-  speed: score(base - 15, 'lobehub'),
+  price: score(base - 20, 'orvilo'),
+  speed: score(base - 15, 'orvilo'),
   writing: score(base - 2, 'lmarena'),
 });
 
@@ -149,8 +149,8 @@ vi.mock('@/hooks/useEnabledChatModels', () => ({
         id,
         type: 'chat',
       })),
-      id: 'lobehub',
-      name: 'LobeHub',
+      id: 'orvilo',
+      name: 'Orvilo',
       source: 'builtin',
     },
   ],
@@ -158,9 +158,7 @@ vi.mock('@/hooks/useEnabledChatModels', () => ({
 
 describe('BenchmarkModalContent', () => {
   it('renders the current model details with source, raw value and rules by default', () => {
-    const { container } = render(
-      <BenchmarkModalContent modelId={'model-a'} provider={'lobehub'} />,
-    );
+    const { container } = render(<BenchmarkModalContent modelId={'model-a'} provider={'orvilo'} />);
 
     expect(container.querySelector('svg')).toBeInTheDocument();
     expect(screen.getByText('MODEL-A')).toBeInTheDocument();
@@ -183,9 +181,7 @@ describe('BenchmarkModalContent', () => {
   });
 
   it('marks missing dimensions with a dash in the detail table', () => {
-    const { container } = render(
-      <BenchmarkModalContent modelId={'model-e'} provider={'lobehub'} />,
-    );
+    const { container } = render(<BenchmarkModalContent modelId={'model-e'} provider={'orvilo'} />);
 
     // model-e only has intelligence — the other five dimension rows are dashed
     expect(container.querySelectorAll('.cellMissing').length).toBeGreaterThan(0);
@@ -194,9 +190,7 @@ describe('BenchmarkModalContent', () => {
   });
 
   it('switches to a compare matrix when another model is added', () => {
-    const { container } = render(
-      <BenchmarkModalContent modelId={'model-a'} provider={'lobehub'} />,
-    );
+    const { container } = render(<BenchmarkModalContent modelId={'model-a'} provider={'orvilo'} />);
 
     fireEvent.click(screen.getByText('MODEL-B'));
 
@@ -210,7 +204,7 @@ describe('BenchmarkModalContent', () => {
   });
 
   it('caps the selection at four models', () => {
-    render(<BenchmarkModalContent modelId={'model-a'} provider={'lobehub'} />);
+    render(<BenchmarkModalContent modelId={'model-a'} provider={'orvilo'} />);
 
     fireEvent.click(screen.getByText('MODEL-B'));
     fireEvent.click(screen.getByText('MODEL-C'));
@@ -222,7 +216,7 @@ describe('BenchmarkModalContent', () => {
   });
 
   it('removes a compared model via its chip', () => {
-    render(<BenchmarkModalContent modelId={'model-a'} provider={'lobehub'} />);
+    render(<BenchmarkModalContent modelId={'model-a'} provider={'orvilo'} />);
 
     fireEvent.click(screen.getByText('MODEL-B'));
     expect(screen.queryByText('Raw value')).not.toBeInTheDocument();

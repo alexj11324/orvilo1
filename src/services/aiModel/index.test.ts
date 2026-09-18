@@ -1,7 +1,7 @@
 import { DEFAULT_PROVIDER } from '@orvilo/business-const';
 import { DEFAULT_SETTINGS } from '@orvilo/config';
 import { DEFAULT_MINI_MODEL, DEFAULT_MODEL } from '@orvilo/const';
-import { LOBE_DEFAULT_MODEL_LIST } from 'model-bank';
+import { ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -46,18 +46,18 @@ describe('AiModelService', () => {
           type: 'chat',
         },
         {
-          displayName: 'LobeHub Onboarding',
+          displayName: 'Orvilo Onboarding',
           enabled: true,
-          id: 'lobehub-onboarding-v1',
+          id: 'orvilo-onboarding-v1',
           type: 'chat',
           visible: false,
         },
       ]);
 
-      const result = await aiModelService.getAiProviderModelList('lobehub');
+      const result = await aiModelService.getAiProviderModelList('orvilo');
 
       expect(mockLambdaClient.aiModel.getAiProviderModelList.query).toHaveBeenCalledWith({
-        id: 'lobehub',
+        id: 'orvilo',
       });
       expect(result.map((model) => model.id)).toEqual(['deepseek-v4-pro']);
     });
@@ -83,13 +83,13 @@ describe('Default model configuration', () => {
     expect(match!.enabled, `DEFAULT_PROVIDER "${DEFAULT_PROVIDER}" is not enabled`).toBe(true);
   });
 
-  it('DEFAULT_MODEL should be enabled in LOBE_DEFAULT_MODEL_LIST', () => {
-    const match = LOBE_DEFAULT_MODEL_LIST.find(
+  it('DEFAULT_MODEL should be enabled in ORVILO_DEFAULT_MODEL_LIST', () => {
+    const match = ORVILO_DEFAULT_MODEL_LIST.find(
       (m) => m.id === DEFAULT_MODEL && m.providerId === DEFAULT_PROVIDER,
     );
     expect(
       match,
-      `DEFAULT_MODEL "${DEFAULT_PROVIDER}/${DEFAULT_MODEL}" not found in LOBE_DEFAULT_MODEL_LIST`,
+      `DEFAULT_MODEL "${DEFAULT_PROVIDER}/${DEFAULT_MODEL}" not found in ORVILO_DEFAULT_MODEL_LIST`,
     ).toBeDefined();
     expect(
       match!.enabled,
@@ -97,11 +97,11 @@ describe('Default model configuration', () => {
     ).toBe(true);
   });
 
-  it('DEFAULT_MINI_MODEL should be enabled in LOBE_DEFAULT_MODEL_LIST', () => {
-    const match = LOBE_DEFAULT_MODEL_LIST.find((m) => m.id === DEFAULT_MINI_MODEL);
+  it('DEFAULT_MINI_MODEL should be enabled in ORVILO_DEFAULT_MODEL_LIST', () => {
+    const match = ORVILO_DEFAULT_MODEL_LIST.find((m) => m.id === DEFAULT_MINI_MODEL);
     expect(
       match,
-      `DEFAULT_MINI_MODEL "${DEFAULT_MINI_MODEL}" not found in LOBE_DEFAULT_MODEL_LIST`,
+      `DEFAULT_MINI_MODEL "${DEFAULT_MINI_MODEL}" not found in ORVILO_DEFAULT_MODEL_LIST`,
     ).toBeDefined();
     expect(match!.enabled, `DEFAULT_MINI_MODEL "${DEFAULT_MINI_MODEL}" is not enabled`).toBe(true);
   });

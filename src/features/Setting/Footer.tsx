@@ -36,7 +36,7 @@ const Footer = memo<PropsWithChildren>(() => {
       cover: (
         <GuideVideo
           height={269}
-          src={`https://hub-apac-1.lobeobjects.space/assets/star.mp4`}
+          src={`https://hub-apac-1.objects.aspectlylabs.com/assets/star.mp4`}
           width={358}
         />
       ),
@@ -55,7 +55,9 @@ const Footer = memo<PropsWithChildren>(() => {
       cover: (
         <GuideVideo
           height={269}
-          src={'<@985522149420855317> https://hub-apac-1.lobeobjects.space/assets/feedback.mp4'}
+          src={
+            '<@985522149420855317> https://hub-apac-1.objects.aspectlylabs.com/assets/feedback.mp4'
+          }
           width={358}
         />
       ),

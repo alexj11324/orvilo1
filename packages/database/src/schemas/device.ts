@@ -10,7 +10,7 @@ import { workspaces } from './workspace';
  * Stable device identity anchor — one row per physical machine per user.
  *
  * `deviceId` is derived from a machine-level identifier
- * (`sha256(machineUUID + userId + salt)`), so it survives LobeHub reinstalls
+ * (`sha256(machineUUID + userId + salt)`), so it survives Orvilo reinstalls
  * and desktop upgrades. Online status is NOT stored here — it belongs to the
  * device gateway's live connection state; this table only records "ever seen"
  * so offline devices stay visible and bindable.

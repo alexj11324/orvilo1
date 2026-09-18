@@ -115,4 +115,4 @@ export const params = {
   provider: ModelProvider.XiaomiMiMo,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeXiaomiMiMoAI = createOpenAICompatibleRuntime(params);
+export const OrviloXiaomiMiMoAI = createOpenAICompatibleRuntime(params);

@@ -14,7 +14,7 @@ export const params = {
     chatCompletion: () => process.env.DEBUG_TENCENT_CLOUD_CHAT_COMPLETION === '1',
   },
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const reasoningKeywords = ['deepseek-r1'];
 
@@ -23,7 +23,7 @@ export const params = {
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 
@@ -45,4 +45,4 @@ export const params = {
   provider: ModelProvider.TencentCloud,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeTencentCloudAI = createOpenAICompatibleRuntime(params);
+export const OrviloTencentCloudAI = createOpenAICompatibleRuntime(params);

@@ -102,7 +102,7 @@ const listFiles = (dir: string, base = dir): string[] =>
 process.chdir(PKG_ROOT);
 
 if (process.argv.includes('--check')) {
-  const tempDir = mkdtempSync(path.join(tmpdir(), 'lobehub-sdk-check-'));
+  const tempDir = mkdtempSync(path.join(tmpdir(), 'orvilo-sdk-check-'));
   try {
     await createClient({ ...config, logs: { level: 'silent' }, output: tempDir });
     rewriteHeaderSpreads(tempDir);

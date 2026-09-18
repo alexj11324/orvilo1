@@ -23,7 +23,7 @@ export const ReplaceDocumentContentInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-documents.apiName.replaceDocumentContent')}
+          {t('builtins.orvilo-agent-documents.apiName.replaceDocumentContent')}
         </span>
       </div>
     );
@@ -32,14 +32,14 @@ export const ReplaceDocumentContentInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-documents.apiName.replaceDocumentContent')}
+        {t('builtins.orvilo-agent-documents.apiName.replaceDocumentContent')}
       </span>
       {id && <span className={styles.idChip}>{formatDocumentId(id)}</span>}
       {typeof content === 'string' && content.length > 0 && (
         <>
           <span className={styles.separator}>·</span>
           <span className={styles.subdued}>
-            {t('builtins.lobe-agent-documents.inspector.chars', { count: content.length })}
+            {t('builtins.orvilo-agent-documents.inspector.chars', { count: content.length })}
           </span>
         </>
       )}

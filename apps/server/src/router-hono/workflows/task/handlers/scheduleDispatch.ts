@@ -9,7 +9,7 @@ import { enqueueHatchetTask } from '@/libs/hatchet';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
 
-const log = debug('lobe-server:workflows:task:schedule-dispatch');
+const log = debug('orvilo-server:workflows:task:schedule-dispatch');
 
 export interface ScheduleDispatchPayload {
   /** When true, only return what would be dispatched without firing executes. */

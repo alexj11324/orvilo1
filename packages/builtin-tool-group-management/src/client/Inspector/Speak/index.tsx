@@ -47,7 +47,7 @@ export const SpeakInspector = memo<BuiltinInspectorProps<SpeakParams>>(
       return (
         <div className={styles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-group-management.apiName.speak')}
+            {t('builtins.orvilo-group-management.apiName.speak')}
           </span>
         </div>
       );
@@ -58,7 +58,7 @@ export const SpeakInspector = memo<BuiltinInspectorProps<SpeakParams>>(
     return (
       <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-group-management.inspector.speak.title')}
+          {t('builtins.orvilo-group-management.inspector.speak.title')}
         </span>
         {agent && (
           <Avatar

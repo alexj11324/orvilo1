@@ -15,7 +15,7 @@ permissions:
   pull-requests: write
 
 env:
-  REGISTRY_IMAGE: lobehub/lobehub
+  REGISTRY_IMAGE: alexj11324/orvilo1
   PR_TAG_PREFIX: pr-
 
 jobs:

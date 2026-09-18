@@ -32,9 +32,9 @@ export const isMacOS = () => getPlatform() === 'Mac OS';
 export const getDarwinMajorVersion = (): number => {
   if (isOnServerSide || typeof window === 'undefined') return 0;
 
-  // In Electron environment, use window.lobeEnv.darwinMajorVersion if available
-  if (typeof (window as any)?.lobeEnv?.darwinMajorVersion === 'number') {
-    return (window as any).lobeEnv.darwinMajorVersion;
+  // In Electron environment, use window.orviloEnv.darwinMajorVersion if available
+  if (typeof (window as any)?.orviloEnv?.darwinMajorVersion === 'number') {
+    return (window as any).orviloEnv.darwinMajorVersion;
   }
 
   // In web environment, try to parse from userAgent
@@ -60,7 +60,7 @@ export const isMacOSWithLargeWindowBorders = () => {
   const isElectron =
     /Electron\//.test(navigator.userAgent) || Boolean((window as any)?.process?.type);
 
-  // In Electron environment, check darwinMajorVersion from window.lobeEnv
+  // In Electron environment, check darwinMajorVersion from window.orviloEnv
   if (isElectron) {
     const darwinMajorVersion = getDarwinMajorVersion();
     // macOS 25+ has large window borders

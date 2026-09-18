@@ -9,7 +9,7 @@
     "processor",
     "chat",
     "ai",
-    "lobe"
+    "orvilo"
   ],
   "exports": {
     ".": "./src/index.ts",

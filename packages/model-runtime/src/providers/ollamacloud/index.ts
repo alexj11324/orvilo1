@@ -32,4 +32,4 @@ export const params = {
   provider: ModelProvider.OllamaCloud,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeOllamaCloudAI = createOpenAICompatibleRuntime(params);
+export const OrviloOllamaCloudAI = createOpenAICompatibleRuntime(params);

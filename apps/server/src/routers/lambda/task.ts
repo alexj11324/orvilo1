@@ -23,7 +23,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -294,7 +294,7 @@ async function resolveOrThrow(model: TaskModel, id: string) {
  */
 async function assertTaskSteeringCapability(
   ctx: {
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     userId: string;
     workspaceId?: string;
   },
@@ -365,7 +365,7 @@ function isTaskHiddenFrom(
 }
 
 interface TaskNotificationCtx {
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   taskModel: TaskModel;
   workspaceId: string;
 }
@@ -454,7 +454,7 @@ function notifyAssignedBestEffort(
 }
 
 async function assertAssigneeAgentBelongsToUser(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   callerCtx: { userId: string; workspaceId?: string },
   assigneeAgentId?: string | null,
 ) {
@@ -489,7 +489,7 @@ async function assertAssigneeAgentBelongsToUser(
 async function resolveActivityActor(
   ctx: {
     actingAgentId?: string | null;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     userId: string;
     workspaceId?: string | null;
   },

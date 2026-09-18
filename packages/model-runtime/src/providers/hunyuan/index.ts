@@ -71,4 +71,4 @@ export const params = {
   provider: ModelProvider.Hunyuan,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeHunyuanAI = createOpenAICompatibleRuntime(params);
+export const OrviloHunyuanAI = createOpenAICompatibleRuntime(params);

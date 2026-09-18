@@ -2,7 +2,7 @@ import type { WorkRegistrationIntent } from '@orvilo/types';
 import debug from 'debug';
 import type { Redis } from 'ioredis';
 
-const log = debug('lobe-server:agent-runtime:tool-result-waiter');
+const log = debug('orvilo-server:agent-runtime:tool-result-waiter');
 
 export interface ToolResultPayload {
   content: string | null;

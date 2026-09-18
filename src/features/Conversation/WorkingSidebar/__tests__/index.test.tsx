@@ -254,9 +254,9 @@ vi.mock('@/hooks/useLocalStorageState', async () => {
   return {
     useLocalStorageState: (key: string) =>
       useState(
-        key === 'lobechat-review-tree'
+        key === 'orvilo-review-tree'
           ? reviewState.showTree
-          : key === 'lobechat-working-sidebar-pinned-tabs-v1'
+          : key === 'orvilo-working-sidebar-pinned-tabs-v1'
             ? localStorageState.pinnedTabsByAgent
             : localStorageState.openTabsByContext,
       ),

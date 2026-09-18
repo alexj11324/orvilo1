@@ -6,8 +6,8 @@ import { type Redis } from 'ioredis';
 import { getAgentRuntimeRedisClient } from './redis';
 import { type PublishAgentRuntimeEndParams } from './types';
 
-const log = debug('lobe-server:agent-runtime:stream-event-manager');
-const timing = debug('lobe-server:agent-runtime:timing');
+const log = debug('orvilo-server:agent-runtime:stream-event-manager');
+const timing = debug('orvilo-server:agent-runtime:timing');
 
 const extractReasonFromError = (error: any): string | undefined => {
   if (!error) return undefined;

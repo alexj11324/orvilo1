@@ -1,6 +1,6 @@
 import type { BuiltinToolManifest } from '@orvilo/types';
 
-export const GoalSupervisorIdentifier = 'lobe-goal-supervisor';
+export const GoalSupervisorIdentifier = 'orvilo-goal-supervisor';
 export const GoalSupervisorApiName = {
   inspectGoal: 'inspectGoal',
   inspectTask: 'inspectTask',

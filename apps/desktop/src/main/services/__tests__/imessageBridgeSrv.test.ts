@@ -59,7 +59,7 @@ function createService() {
   const service = new ImessageBridgeService(app);
   service.setRemoteServerProvider({
     getAccessToken: vi.fn().mockResolvedValue('access-token'),
-    getServerUrl: vi.fn().mockResolvedValue('https://lobehub.example.com'),
+    getServerUrl: vi.fn().mockResolvedValue('https://orvilo.example.com'),
   });
 
   return { app, service, store };
@@ -173,7 +173,7 @@ describe('ImessageBridgeService', () => {
     await service.stop();
   });
 
-  it('receives BlueBubbles webhook locally and forwards the enriched event to LobeHub', async () => {
+  it('receives BlueBubbles webhook locally and forwards the enriched event to Orvilo', async () => {
     const { service } = createService();
     await service.upsertConfig(config);
 
@@ -184,7 +184,7 @@ describe('ImessageBridgeService', () => {
 
     expect(response.status).toBe(200);
     expect(String(fetchSpy.mock.calls[0][0])).toBe(
-      'https://lobehub.example.com/api/agent/webhooks/imessage/home-mac-mini?secret=shared-secret',
+      'https://orvilo.example.com/api/agent/webhooks/imessage/home-mac-mini?secret=shared-secret',
     );
     expect(fetchSpy.mock.calls[0][1]).toMatchObject({
       headers: {

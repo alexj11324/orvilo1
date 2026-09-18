@@ -19,7 +19,7 @@
 export const mergeJsonPatch = (
   existing: unknown,
   // `object`, not `Record<string, unknown>`: the callers pass interface-typed
-  // payloads (`LobeAgentChatConfig`), and a bare interface carries no implicit
+  // payloads (`OrviloAgentChatConfig`), and a bare interface carries no implicit
   // index signature, so it would not be assignable.
   patch: object | null | undefined,
 ): Record<string, unknown> => {

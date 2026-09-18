@@ -4,7 +4,7 @@ import {
   type InputType,
   type JsonObject,
   NonRetryableError,
-} from '@hatchet-dev/typescript-sdk/v1';
+} from '@hatchet-dev/typescript-sdk/v1/index.js';
 import type { GoalAdvanceTrigger } from '@orvilo/agent-tracing';
 import type { Context as HonoContext } from 'hono';
 import { z } from 'zod';

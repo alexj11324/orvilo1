@@ -84,7 +84,7 @@ describe('startBootMetricsFinalize', () => {
       writable: true,
     });
 
-    Object.defineProperty(window, '__LOBE_BOOT_T_HTML__', {
+    Object.defineProperty(window, '__ORVILO_BOOT_T_HTML__', {
       configurable: true,
       value: undefined,
       writable: true,
@@ -231,14 +231,14 @@ describe('startBootMetricsFinalize', () => {
     });
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
 
-    expect(localStorage.getItem('lobe:boot:seen')).toBeNull();
+    expect(localStorage.getItem('orvilo:boot:seen')).toBeNull();
 
     const { startBootMetricsFinalize } = await import('./finalize');
     startBootMetricsFinalize();
     await vi.runAllTimersAsync();
 
     expect(sendBeaconSpy).not.toHaveBeenCalled();
-    expect(localStorage.getItem('lobe:boot:seen')).toBe('1');
+    expect(localStorage.getItem('orvilo:boot:seen')).toBe('1');
   });
 
   it('reports cold=true on first boot and cold=false on the next boot', async () => {

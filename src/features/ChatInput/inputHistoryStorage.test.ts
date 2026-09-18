@@ -113,7 +113,7 @@ describe('inputHistoryStorage', () => {
   });
 
   it('drops the legacy global key instead of reading it', () => {
-    const legacyStorageKey = 'lobechat:chat-input-history:v1';
+    const legacyStorageKey = 'orvilo:chat-input-history:v1';
 
     localStorage.setItem(
       legacyStorageKey,

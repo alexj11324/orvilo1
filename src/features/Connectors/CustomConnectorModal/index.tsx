@@ -1,4 +1,4 @@
-import { type LobeToolCustomPlugin } from '@orvilo/types';
+import { type OrviloToolCustomPlugin } from '@orvilo/types';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ConnectorCredentials, OIDCConfig } from '@/database/schemas';
@@ -21,7 +21,7 @@ interface CustomConnectorModalProps {
    * so a transient failure (MCP server unreachable, etc.) leaves the user with
    * their working legacy plugin and a "retry" path on the next save.
    */
-  legacyPlugin?: LobeToolCustomPlugin;
+  legacyPlugin?: OrviloToolCustomPlugin;
   onClose: () => void;
   onEditSuccess?: () => void;
   open: boolean;
@@ -50,7 +50,7 @@ const waitForOAuthPopup = (popup: Window, connectorId: string): Promise<OAuthPop
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       const data = event.data;
-      if (!data || data.type !== 'lobe-connector-oauth') return;
+      if (!data || data.type !== 'orvilo-connector-oauth') return;
       if (data.connectorId && data.connectorId !== connectorId) return;
       cleanup();
       resolve(
@@ -150,7 +150,7 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
     //
     // Migration mode skips the fetch — the legacy `customParams.mcp` blob is
     // already in the shape DevModal expects, so we hand it through unchanged.
-    const editValue = useMemo((): LobeToolCustomPlugin | undefined => {
+    const editValue = useMemo((): OrviloToolCustomPlugin | undefined => {
       if (isMigrationMode) return legacyPlugin;
       if (!isEditMode || !connector || editFetchedData === null) return undefined;
 
@@ -202,7 +202,7 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
     }, [isEditMode, isMigrationMode, legacyPlugin, connector, editFetchedData]);
 
     const handleSave = async (
-      value: LobeToolCustomPlugin,
+      value: OrviloToolCustomPlugin,
       ctx?: { oauthPopup?: Window | null },
     ) => {
       // ── Migration mode ────────────────────────────────────────────────────

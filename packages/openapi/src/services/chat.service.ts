@@ -1,7 +1,11 @@
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from '@orvilo/business-const';
 import type { ChatStreamPayload } from '@orvilo/model-runtime';
 import { mergeModelRuntimeHooks } from '@orvilo/model-runtime';
-import type { LobeAgentChatConfig, LobeAgentConfig, UserSystemAgentConfig } from '@orvilo/types';
+import type {
+  OrviloAgentChatConfig,
+  OrviloAgentConfig,
+  UserSystemAgentConfig,
+} from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
 import { and, eq } from 'drizzle-orm';
 
@@ -9,7 +13,7 @@ import { getBusinessModelRuntimeHooks } from '@/business/server/model-runtime';
 import { DEFAULT_AGENT_CHAT_CONFIG, DEFAULT_SYSTEM_AGENT_CONFIG } from '@/const/settings';
 import { UserModel } from '@/database/models/user';
 import { agents, agentsToSessions, aiModels, aiProviders } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { initModelRuntimeWithUserPayload } from '@/server/modules/ModelRuntime';
 import { createLLMGenerationTracingHook } from '@/server/services/llmGenerationTracing/hook';
@@ -33,7 +37,7 @@ export class ChatService extends BaseService {
   private config: ChatServiceConfig;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string | null,
     workspaceIdOrConfig?: string | ChatServiceConfig,
     config?: ChatServiceConfig,
@@ -141,7 +145,7 @@ export class ChatService extends BaseService {
    * @param agentId Agent ID
    * @returns Agent configuration
    */
-  private async getAgentConfig(agentId: string): Promise<LobeAgentChatConfig | null> {
+  private async getAgentConfig(agentId: string): Promise<OrviloAgentChatConfig | null> {
     try {
       const agent = await this.db.query.agents.findFirst({
         where: and(eq(agents.id, agentId), this.buildWorkspaceWhere(agents)),
@@ -165,9 +169,9 @@ export class ChatService extends BaseService {
    * @returns Merged configuration
    */
   private mergeChatConfig(
-    agentConfig: LobeAgentChatConfig | null,
-    userConfig?: Partial<LobeAgentChatConfig>,
-  ): LobeAgentChatConfig {
+    agentConfig: OrviloAgentChatConfig | null,
+    userConfig?: Partial<OrviloAgentChatConfig>,
+  ): OrviloAgentChatConfig {
     // Merge by priority: user config > Agent config > default config
     return {
       ...DEFAULT_AGENT_CHAT_CONFIG,
@@ -181,7 +185,7 @@ export class ChatService extends BaseService {
    * @param chatConfig Chat configuration
    * @returns Search parameters
    */
-  private buildSearchParams(chatConfig: LobeAgentChatConfig) {
+  private buildSearchParams(chatConfig: OrviloAgentChatConfig) {
     const enabledSearch = chatConfig.searchMode !== 'off';
     const { useModelBuiltinSearch } = chatConfig;
 
@@ -576,7 +580,7 @@ export class ChatService extends BaseService {
       });
 
       // 2. Get Agent configuration (if agentId is provided)
-      let agentConfig: LobeAgentChatConfig | null = null;
+      let agentConfig: OrviloAgentChatConfig | null = null;
       if (params.agentId) {
         agentConfig = await this.getAgentConfig(params.agentId);
       }
@@ -652,7 +656,7 @@ export class ChatService extends BaseService {
     model?: string;
     provider?: string;
     sessionId?: string | null;
-  }): Promise<{ agent?: LobeAgentConfig; model?: string; provider?: string }> {
+  }): Promise<{ agent?: OrviloAgentConfig; model?: string; provider?: string }> {
     // If the user has already specified provider and model, use them directly
     if (params.provider && params.model) {
       return { model: params.model, provider: params.provider };
@@ -716,7 +720,7 @@ export class ChatService extends BaseService {
 
         // Return final config (user-specified > session config > default)
         return {
-          agent: agent as LobeAgentConfig,
+          agent: agent as OrviloAgentConfig,
           model: model.id || params.model,
           provider: model.providerId || params.provider,
         };

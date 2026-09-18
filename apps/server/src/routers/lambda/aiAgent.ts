@@ -55,7 +55,7 @@ import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { agentOperations, topics, workspaceMembers } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -91,7 +91,7 @@ import {
   resolveActiveHeteroOperationPrincipal,
 } from '@/server/services/heterogeneousAgent/operationPrincipal';
 
-const log = debug('lobe-server:ai-agent-router');
+const log = debug('orvilo-server:ai-agent-router');
 
 type ClaimedAgentInterventionResolution = Extract<
   ResolveAgentInterventionResult,
@@ -100,7 +100,7 @@ type ClaimedAgentInterventionResolution = Extract<
 
 interface AgentInterventionDispatchContext {
   aiAgentService: AiAgentService;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   userId: string;
   workspaceId?: string | null;
 }
@@ -683,7 +683,7 @@ const dispatchClaimedAgentIntervention = async (
 };
 
 const resolveHeteroTopicWorkspace = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   requestedWorkspaceId?: string | null;
   topicId: string;
   userId: string;
@@ -732,7 +732,7 @@ const resolveHeteroTopicWorkspace = async (params: {
  * No-op in personal mode (no workspaceId).
  */
 const assertCanUseOperationAgent = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   operationId: string;
   userId: string;
   workspaceId?: string | null;
@@ -776,7 +776,7 @@ const assertCanUseOperationAgent = async (params: {
  * exist.
  */
 const assertOperationVisibleToCaller = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   operationId: string;
   userId: string;
   workspaceId?: string | null;
@@ -819,7 +819,7 @@ const assertOperationVisibleToCaller = async (params: {
  * workspace resource.
  */
 const assertCanUseAgentRunConversation = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   messageIds?: Array<string | null | undefined>;
   topicId?: string | null;
   userId: string;
@@ -1051,7 +1051,7 @@ const ExecAgentSchema = z
       .optional(),
     /**
      * Resume a previous op paused on a `humanIntervention: 'always'` tool (e.g.
-     * lobe-agent `askUserQuestion`). When set, the new op writes the
+     * orvilo-agent `askUserQuestion`). When set, the new op writes the
      * human-provided answer as the target tool message's result and resumes from
      * `phase: 'tool_result'` — the tool is NOT re-executed, so the runtime never
      * overwrites the answer with a fresh "pending" placeholder. Mutually
@@ -1602,7 +1602,7 @@ const authorizeOperationCallback = async (
     heteroOperation?: NonNullable<
       Parameters<typeof resolveActiveHeteroOperationPrincipal>[0]['claims']
     > | null;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
   },
   operationId: string,
   capability: 'hetero:finish' | 'hetero:ingest' | 'hetero:intervention:read',
@@ -1637,7 +1637,7 @@ const assertServerDefaultControlAuth = (oidcAuth: Record<string, unknown> | null
 
 export const resolveServerDefaultHeterogeneousCapability = async () => {
   const base = {
-    model: 'lobehub-default' as const,
+    model: 'orvilo-default' as const,
   };
   if (process.env.ENABLE_SERVER_DEFAULT_HETEROGENEOUS_AGENT === '0') {
     return { ...base, agents: [], enabled: false as const, reason: 'disabled' as const };
@@ -1670,7 +1670,7 @@ export const resolveServerDefaultHeterogeneousCapability = async () => {
 };
 
 const resolveServerDefaultControlOperation = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   operationId: string;
   userId: string;
 }) => {
@@ -1825,7 +1825,7 @@ export const aiAgentRouter = router({
       }
 
       return {
-        model: 'lobehub-default' as const,
+        model: 'orvilo-default' as const,
         token: await signHeteroOperationJWT({
           capabilities: ['model:invoke'],
           model: selection.model,
@@ -2233,7 +2233,7 @@ export const aiAgentRouter = router({
                   type: 'submit_answers',
                 };
               } else if (
-                plugins[0]?.identifier === 'lobe-web-onboarding' &&
+                plugins[0]?.identifier === 'orvilo-web-onboarding' &&
                 plugins[0]?.apiName === 'showAgentMarketplace' &&
                 Array.isArray(pluginState?.selectedAgentIds) &&
                 pluginState.selectedAgentIds.every((id) => typeof id === 'string')

@@ -8,7 +8,7 @@ import { ResourceTransferRequestModel } from '@/database/models/resourceTransfer
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { ResourceTransferRequestItem } from '@/database/schemas';
 import { workspaceMembers } from '@/database/schemas';
-import type { LobeChatDatabase, Transaction } from '@/database/type';
+import type { OrviloDatabase, Transaction } from '@/database/type';
 import { assertCanPerformResourceAction } from '@/server/services/resourcePermission';
 import { TransferErrorCode } from '@/types/transferError';
 
@@ -38,7 +38,7 @@ export const isMemberTransferSupported = (
  */
 export const assertTransferRecipientValid = async (params: {
   currentOwnerId: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   initiatorId: string;
   recipientId: string;
   workspaceId: string;
@@ -65,7 +65,7 @@ export const assertTransferRecipientValid = async (params: {
 export const assertRecipientCanOwn = async (params: {
   /** Whose model instance runs the lookup (initiator at create, recipient at accept). */
   actorId: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   recipientId: string;
   workspaceId: string;
 }): Promise<void> => {
@@ -103,7 +103,7 @@ const assertOwnableMemberRow = (member: { role: string } | undefined): void => {
  * transaction so a raced/stale accept rolls both back.
  */
 export const executeAcceptedTransfer = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   recipientId: string;
   request: ResourceTransferRequestItem;
   workspaceId: string;
@@ -161,9 +161,9 @@ export const executeAcceptedTransfer = async (params: {
           action: 'transfer',
           // Read through the transaction connection so the authorization sees
           // the same snapshot the handover commits against. (Transaction and
-          // LobeChatDatabase share the query surface these checks use; the
+          // OrviloDatabase share the query surface these checks use; the
           // param type is the narrower of the two.)
-          db: trx as unknown as LobeChatDatabase,
+          db: trx as unknown as OrviloDatabase,
           resourceId: request.resourceId,
           resourceType,
           userId: request.initiatorId,

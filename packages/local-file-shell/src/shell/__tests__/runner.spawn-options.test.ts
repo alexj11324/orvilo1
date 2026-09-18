@@ -22,7 +22,7 @@ describe('runCommand spawn options', () => {
 
   beforeEach(() => {
     spawnSpy.mockClear();
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lobehub-shell-spawn-options-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'orvilo-shell-spawn-options-'));
     processManager = new ShellProcessManager(tmpDir);
   });
 

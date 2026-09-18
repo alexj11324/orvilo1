@@ -18,11 +18,11 @@ import {
   users,
   workspaces,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { HumanApprovalAlreadyResolvedError, MessageModel } from '../../message';
 import { codeEmbedding } from '../fixtures/embedding';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'message-update-test';
 const otherUserId = 'message-update-test-other';
@@ -143,7 +143,7 @@ describe('MessageModel Update Tests', () => {
               apiName: 'searchWithSearXNG',
               arguments:
                 '{"query":"杭州洪水 2023","searchEngines":["google","bing","baidu","duckduckgo","brave"]}',
-              identifier: 'lobe-web-browsing',
+              identifier: 'orvilo-web-browsing',
             },
           ],
         },
@@ -157,7 +157,7 @@ describe('MessageModel Update Tests', () => {
             type: 'builtin',
             apiName: 'searchWithSearXNG',
             arguments: '{"query":"2024 杭州暴雨","searchEngines":["duckduckgo","google","brave"]}',
-            identifier: 'lobe-web-browsing',
+            identifier: 'orvilo-web-browsing',
           },
         ],
       });
@@ -634,7 +634,7 @@ describe('MessageModel Update Tests', () => {
           id: '1',
           apiName: 'runCommand',
           arguments: '{"command":"echo"}',
-          identifier: 'lobe-local-system',
+          identifier: 'orvilo-local-system',
           toolCallId: 'call_abc',
           type: 'builtin',
           userId,
@@ -648,7 +648,7 @@ describe('MessageModel Update Tests', () => {
           apiName: 'runCommand',
           arguments: '{"command":"echo"}',
           id: '1',
-          identifier: 'lobe-local-system',
+          identifier: 'orvilo-local-system',
           toolCallId: 'call_abc',
           type: 'builtin',
         }),
@@ -685,7 +685,7 @@ describe('MessageModel Update Tests', () => {
         apiName: 'editFile',
         arguments: '{"path":"/tmp/a"}',
         id,
-        identifier: 'lobe-local-system',
+        identifier: 'orvilo-local-system',
         intervention,
         state: { preserved: true },
         toolCallId: `call-${id}`,

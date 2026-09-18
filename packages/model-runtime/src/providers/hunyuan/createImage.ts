@@ -5,7 +5,7 @@ import type { CreateImagePayload, CreateImageResponse } from '../../types/image'
 import { asyncifyPolling } from '../../utils/asyncifyPolling';
 import { AgentRuntimeError } from '../../utils/createError';
 
-const log = createDebug('lobe-image:hunyuan');
+const log = createDebug('orvilo-image:hunyuan');
 
 interface HunyuanImageSubmitResponse {
   error?: {

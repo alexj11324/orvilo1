@@ -6,27 +6,27 @@ describe('workspaceContextPrompt', () => {
   it('describes the workspace scope with slug-prefixed link rules and routes', () => {
     const result = workspaceContextPrompt({
       appUrl: 'https://orvilo.aspectlylabs.com',
-      workspace: { slug: 'lobehub' },
+      workspace: { slug: 'orvilo' },
     });
 
     expect(result).toContain('<workspace_context>');
     expect(result).toContain('<scope>workspace</scope>');
-    expect(result).toContain('<workspace_slug>lobehub</workspace_slug>');
+    expect(result).toContain('<workspace_slug>orvilo</workspace_slug>');
     expect(result).toContain('<app_url>https://orvilo.aspectlylabs.com</app_url>');
-    expect(result).toContain('<link_base>https://orvilo.aspectlylabs.com/lobehub</link_base>');
+    expect(result).toContain('<link_base>https://orvilo.aspectlylabs.com/orvilo</link_base>');
     expect(result).toContain(
-      'MUST start with the workspace slug prefix "https://orvilo.aspectlylabs.com/lobehub/"',
+      'MUST start with the workspace slug prefix "https://orvilo.aspectlylabs.com/orvilo/"',
     );
     expect(result).toContain(
-      'agent task detail: https://orvilo.aspectlylabs.com/lobehub/agent/<agentId>/task/<T-123>',
+      'agent task detail: https://orvilo.aspectlylabs.com/orvilo/agent/<agentId>/task/<T-123>',
     );
     expect(result).toContain(
-      'knowledge base: https://orvilo.aspectlylabs.com/lobehub/resource/library/<knowledgeBaseId>',
+      'knowledge base: https://orvilo.aspectlylabs.com/orvilo/resource/library/<knowledgeBaseId>',
     );
     expect(result).toContain('reuse it verbatim');
-    expect(result).toContain('apply only to links into this LobeHub app');
-    expect(result).toContain('never place in-app resources under the marketing site lobehub.com');
-    expect(result).toContain('including the LobeHub homepage itself, are not affected');
+    expect(result).toContain('apply only to links into this Orvilo app');
+    expect(result).toContain('never place in-app resources under the marketing site orvilo.aspectlylabs.com');
+    expect(result).toContain('including the Orvilo homepage itself, are not affected');
   });
 
   it('trims trailing slashes from the app origin', () => {

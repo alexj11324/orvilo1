@@ -301,7 +301,7 @@ describe('GeneralChatAgent', () => {
     });
 
     // Regression: when the LLM emits tool_calls whose names can't be resolved
-    // (e.g. `activateTools` instead of `lobe-activator____activateTools`), the
+    // (e.g. `activateTools` instead of `orvilo-activator____activateTools`), the
     // agent used to finish with "completed without tool calls", writing an
     // empty assistant message while the requested work never ran. Reject the
     // calls instead so the model can retry with a real name.
@@ -324,7 +324,7 @@ describe('GeneralChatAgent', () => {
             {
               id: 't2',
               type: 'function',
-              function: { name: 'lobe-skills____activateSkill', arguments: '{"a":1}' },
+              function: { name: 'orvilo-skills____activateSkill', arguments: '{"a":1}' },
             },
           ],
         },
@@ -336,7 +336,7 @@ describe('GeneralChatAgent', () => {
         type: 'resolve_blocked_tools',
         payload: {
           blockedContent:
-            'Tool call rejected: no available tool is named activateTools, lobe-skills____activateSkill. Copy a name exactly as declared in the tools schema and call it again.',
+            'Tool call rejected: no available tool is named activateTools, orvilo-skills____activateSkill. Copy a name exactly as declared in the tools schema and call it again.',
           blockedReason: 'tool_name_unresolved',
           parentMessageId: 'msg-1',
           unresolvedToolNames: true,
@@ -352,7 +352,7 @@ describe('GeneralChatAgent', () => {
               apiName: 'activateSkill',
               arguments: '{"a":1}',
               id: 't2',
-              identifier: 'lobe-skills',
+              identifier: 'orvilo-skills',
               type: 'builtin',
             },
           ],
@@ -613,7 +613,7 @@ describe('GeneralChatAgent', () => {
         apiName: 'runCommand',
         arguments: '{}',
         id: 'call-1',
-        identifier: 'lobe-local-system',
+        identifier: 'orvilo-local-system',
         type: 'builtin',
       };
 
@@ -643,7 +643,7 @@ describe('GeneralChatAgent', () => {
     it('should return a recoverable result for a stale dynamic tool call', async () => {
       const agent = new GeneralChatAgent({
         agentConfig: { maxSteps: 100 },
-        allowedToolNames: ['lobe-activator____activateTools'],
+        allowedToolNames: ['orvilo-activator____activateTools'],
         operationId: 'test-session',
         modelRuntimeConfig: mockModelRuntimeConfig,
       });
@@ -651,7 +651,7 @@ describe('GeneralChatAgent', () => {
         apiName: 'listOnlineDevices',
         arguments: '{}',
         id: 'call-1',
-        identifier: 'lobe-remote-device',
+        identifier: 'orvilo-remote-device',
         type: 'builtin',
       };
 
@@ -681,7 +681,7 @@ describe('GeneralChatAgent', () => {
     it('should execute allowed tools, resolve denied tools, then pause for approval', async () => {
       const agent = new GeneralChatAgent({
         agentConfig: { maxSteps: 100 },
-        allowedToolNames: ['lobe-local-system____readFile', 'lobe-local-system____deleteFile'],
+        allowedToolNames: ['orvilo-local-system____readFile', 'orvilo-local-system____deleteFile'],
         operationId: 'test-session',
         modelRuntimeConfig: mockModelRuntimeConfig,
       });
@@ -689,21 +689,21 @@ describe('GeneralChatAgent', () => {
         apiName: 'readFile',
         arguments: '{}',
         id: 'call-read',
-        identifier: 'lobe-local-system',
+        identifier: 'orvilo-local-system',
         type: 'builtin',
       };
       const deleteFile: ChatToolPayload = {
         apiName: 'deleteFile',
         arguments: '{}',
         id: 'call-delete',
-        identifier: 'lobe-local-system',
+        identifier: 'orvilo-local-system',
         type: 'builtin',
       };
       const runCommand: ChatToolPayload = {
         apiName: 'runCommand',
         arguments: '{}',
         id: 'call-command',
-        identifier: 'lobe-local-system',
+        identifier: 'orvilo-local-system',
         type: 'builtin',
       };
 
@@ -715,13 +715,13 @@ describe('GeneralChatAgent', () => {
         }),
         createMockState({
           toolManifestMap: {
-            'lobe-local-system': {
+            'orvilo-local-system': {
               api: [
                 { name: 'readFile' },
                 { humanIntervention: 'require', name: 'deleteFile' },
                 { name: 'runCommand' },
               ],
-              identifier: 'lobe-local-system',
+              identifier: 'orvilo-local-system',
               type: 'builtin',
             },
           },
@@ -906,7 +906,7 @@ describe('GeneralChatAgent', () => {
   });
 
   describe('tool_result phase', () => {
-    describe('Lobe Agent sub-agents (execSubAgent state)', () => {
+    describe('Orvilo Agent sub-agents (execSubAgent state)', () => {
       it('should return exec_sub_agent for single sub-agent (execSubAgent)', async () => {
         const agent = new GeneralChatAgent({
           agentConfig: { maxSteps: 100 },
@@ -1788,7 +1788,7 @@ describe('GeneralChatAgent', () => {
           apiName: 'search',
           arguments: '{"query":"test"}',
           id: 'call-1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           type: 'default',
         },
       ];
@@ -1893,7 +1893,7 @@ describe('GeneralChatAgent', () => {
                     apiName: 'createPlan',
                     arguments: '{}',
                     id: 'call-alpha',
-                    identifier: 'lobe-agent',
+                    identifier: 'orvilo-agent',
                     intervention: { status: 'pending' },
                     result_msg_id: 'pending-msg-alpha',
                     type: 'builtin',
@@ -1902,7 +1902,7 @@ describe('GeneralChatAgent', () => {
                     apiName: 'createPlan',
                     arguments: '{}',
                     id: 'call-beta',
-                    identifier: 'lobe-agent',
+                    identifier: 'orvilo-agent',
                     intervention: { status: 'pending' },
                     result_msg_id: 'pending-msg-beta',
                     type: 'builtin',
@@ -1967,7 +1967,7 @@ describe('GeneralChatAgent', () => {
           apiName: 'search',
           arguments: '{"query":"test"}',
           id: 'call-1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           type: 'default',
         },
       ];
@@ -1975,7 +1975,7 @@ describe('GeneralChatAgent', () => {
       const state = createMockState({
         status: 'running', // Normal running state
         toolManifestMap: {
-          'lobe-web-browsing': { identifier: 'lobe-web-browsing' },
+          'orvilo-web-browsing': { identifier: 'orvilo-web-browsing' },
         },
       });
 
@@ -2013,7 +2013,7 @@ describe('GeneralChatAgent', () => {
           apiName: 'search',
           arguments: '{"query":"test"}',
           id: 'call-1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           type: 'default',
         },
       ];
@@ -2056,7 +2056,7 @@ describe('GeneralChatAgent', () => {
           apiName: 'search',
           arguments: '{"query":"test"}',
           id: 'call-1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           type: 'default',
         },
         {
@@ -3814,7 +3814,7 @@ describe('GeneralChatAgent', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'call-1',
-        identifier: 'lobe-local-system',
+        identifier: 'orvilo-local-system',
         apiName: 'runCommand',
         arguments: '{"command":"which R","description":"Locate the R executable"}',
         type: 'default',
@@ -3822,8 +3822,8 @@ describe('GeneralChatAgent', () => {
 
       const state = createMockState({
         toolManifestMap: {
-          'lobe-local-system': {
-            identifier: 'lobe-local-system',
+          'orvilo-local-system': {
+            identifier: 'orvilo-local-system',
             api: [
               {
                 name: 'runCommand',
@@ -4152,7 +4152,7 @@ describe('GeneralChatAgent', () => {
       apiName: 'calculate',
       arguments: `{"expression":"${id}"}`,
       id,
-      identifier: 'lobe-calculator',
+      identifier: 'orvilo-calculator',
       intervention: { status },
       result: { content: '', id: `tool-msg-${id}` },
       result_msg_id: `tool-msg-${id}`,
@@ -4216,14 +4216,14 @@ describe('GeneralChatAgent', () => {
           apiName: 'calculate',
           arguments: '{"expression":"call-b"}',
           id: 'call-b',
-          identifier: 'lobe-calculator',
+          identifier: 'orvilo-calculator',
           type: 'builtin',
         },
         {
           apiName: 'calculate',
           arguments: '{"expression":"call-c"}',
           id: 'call-c',
-          identifier: 'lobe-calculator',
+          identifier: 'orvilo-calculator',
           type: 'builtin',
         },
       ]);
@@ -4340,7 +4340,7 @@ describe('GeneralChatAgent', () => {
         apiName: 'calculate',
         arguments: '{"expression":"1+1"}',
         id: 'call-b',
-        identifier: 'lobe-calculator',
+        identifier: 'orvilo-calculator',
         type: 'builtin',
       };
 

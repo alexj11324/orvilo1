@@ -51,6 +51,7 @@ export const RESERVED_FIRST_SEGMENTS = new Set([
   'share',
   'devtools',
   'desktop-onboarding',
+  'invite',
 ]);
 
 const FIRST_SEGMENT_REGEX = /^\/([^/?#]+)/;

@@ -1218,6 +1218,13 @@
       "when": 1789703613449,
       "tag": "0173_flowery_doorman",
       "breakpoints": true
+    },
+    {
+      "idx": 174,
+      "version": "7",
+      "when": 1789615200000,
+      "tag": "0174_task_pr_delivery_gate",
+      "breakpoints": true
     }
   ],
   "version": "6"

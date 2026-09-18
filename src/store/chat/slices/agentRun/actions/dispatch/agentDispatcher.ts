@@ -18,6 +18,18 @@ export const AGENT_BINDING_REQUIRED_ERROR =
   'AGENT_BINDING_REQUIRED: This agent has no execution binding. Bind an ACP/heterogeneous agent or enable gateway mode.';
 
 /**
+ * Error thrown when a group supervisor turn cannot find an orchestrating
+ * runtime. Group orchestration (speak / broadcast / delegate / task fan-out)
+ * is driven by the server's `agentMember` runner; the in-browser
+ * GroupOrchestrationRuntime was retired with the client LLM runtime, so a
+ * supervisor turn MUST execute through Gateway. Without it there is no
+ * callback that can schedule member runs — better to fail the send loudly
+ * than let the supervisor's orchestration tools report fake success.
+ */
+export const GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR =
+  'GROUP_SUPERVISOR_REQUIRES_GATEWAY: Group orchestration requires gateway mode. Enable gateway mode for this agent to run a supervisor turn.';
+
+/**
  * Which agent runtime should handle an operation.
  *
  * - `gateway`: cloud sandbox via Gateway WebSocket
@@ -77,6 +89,13 @@ export interface RuntimeSelectionContext {
   heterogeneousProvider?: HeterogeneousProviderConfig;
   /** Result of `chatStore.isGatewayModeEnabled()`. */
   isGatewayMode: boolean;
+  /**
+   * The run is a group supervisor turn (`group.supervisorAgentId === agentId`).
+   * Supervisors orchestrate members through server-side group callbacks, so
+   * they must execute on Gateway — a local hetero spawn has no
+   * `groupOrchestration` surface to schedule member runs.
+   */
+  isGroupSupervisor?: boolean;
   /**
    * The agent is workspace-scoped (`agent.workspaceId` set), regardless of
    * authorship or per-member overrides. Unlike `workspaceScoped`, this stays
@@ -156,6 +175,16 @@ export const selectRuntimeType = (
     if (target !== 'local' || (ctx.parentRuntime && ctx.parentRuntime !== 'hetero')) {
       throw new Error(HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR);
     }
+  }
+
+  // Group supervisor turns orchestrate members via server-side callbacks
+  // (`ctx.agentMember` in the group-management server runtime). The retired
+  // client runtime used to supply `groupOrchestration` locally; a local hetero
+  // spawn has none, so the supervisor must run on Gateway — without it the
+  // orchestration tools could only pretend to schedule member work.
+  if (ctx.isGroupSupervisor) {
+    if (ctx.isGatewayMode) return 'gateway';
+    throw new Error(GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR);
   }
 
   if (ctx.parentRuntime) return ctx.parentRuntime;

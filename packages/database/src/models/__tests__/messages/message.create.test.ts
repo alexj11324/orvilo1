@@ -17,6 +17,7 @@ import {
   messages,
   messagesFiles,
   sessions,
+  threads,
   topics,
   users,
 } from '../../../schemas';
@@ -721,6 +722,136 @@ describe('MessageModel Create Tests', () => {
 
       expect(dbMsgWithGroup?.sessionId).toBeNull();
       expect(dbMsgWithGroup?.groupId).toBe('group1');
+    });
+
+    it('should copy the topic transcript into a thread preserving tool-call pairing', async () => {
+      await serverDB.insert(topics).values({ id: 'copy-src-topic', userId });
+      await serverDB
+        .insert(threads)
+        .values({ id: 'copy-thread-1', topicId: 'copy-src-topic', type: 'continuation', userId });
+
+      await serverDB.transaction(async (trx) => {
+        await trx.insert(messages).values([
+          {
+            agentId: 'agent-1',
+            content: 'hello',
+            id: 'copy-user',
+            role: 'user',
+            topicId: 'copy-src-topic',
+            userId,
+          },
+          {
+            agentId: 'agent-1',
+            content: '',
+            id: 'copy-assistant',
+            parentId: 'copy-user',
+            role: 'assistant',
+            topicId: 'copy-src-topic',
+            userId,
+          },
+          {
+            agentId: 'agent-1',
+            content: 'result text',
+            id: 'copy-tool',
+            parentId: 'copy-assistant',
+            role: 'tool',
+            topicId: 'copy-src-topic',
+            userId,
+          },
+        ]);
+        await trx.insert(messagePlugins).values([
+          {
+            apiName: 'search',
+            arguments: '{}',
+            id: 'copy-tool',
+            identifier: 'lobe-web-search',
+            toolCallId: 'call_1',
+            type: 'default',
+            userId,
+          },
+        ]);
+      });
+
+      const copied = await messageModel.copyMessagesToThread({
+        agentId: 'agent-1',
+        threadId: 'copy-thread-1',
+        topicId: 'copy-src-topic',
+      });
+      expect(copied).toBe(3);
+
+      const threadMsgs = await serverDB
+        .select()
+        .from(messages)
+        .where(eq(messages.threadId, 'copy-thread-1'));
+      expect(threadMsgs).toHaveLength(3);
+
+      // ids remapped; parentId re-pointed inside the copied set
+      const copiedTool = threadMsgs.find((m) => m.role === 'tool')!;
+      const copiedAssistant = threadMsgs.find((m) => m.role === 'assistant')!;
+      expect(copiedTool.id).not.toBe('copy-tool');
+      expect(copiedTool.parentId).toBe(copiedAssistant.id);
+
+      // plugin row copied onto the remapped message id, keeping call ↔ result pairing
+      const pluginRows = await serverDB
+        .select()
+        .from(messagePlugins)
+        .where(eq(messagePlugins.id, copiedTool.id));
+      expect(pluginRows).toHaveLength(1);
+      expect(pluginRows[0]).toMatchObject({
+        apiName: 'search',
+        identifier: 'lobe-web-search',
+        toolCallId: 'call_1',
+      });
+    });
+
+    it('should not copy other threads’ messages or task rows', async () => {
+      await serverDB.insert(topics).values({ id: 'copy-src-topic-2', userId });
+      await serverDB.insert(threads).values([
+        { id: 'copy-thread-2', topicId: 'copy-src-topic-2', type: 'continuation', userId },
+        { id: 'copy-src-inner-thread', topicId: 'copy-src-topic-2', type: 'continuation', userId },
+      ]);
+
+      await serverDB.insert(messages).values([
+        {
+          agentId: 'agent-1',
+          content: 'top level',
+          id: 'copy2-top',
+          role: 'user',
+          topicId: 'copy-src-topic-2',
+          userId,
+        },
+        {
+          agentId: 'agent-1',
+          content: 'inside another thread',
+          id: 'copy2-threaded',
+          role: 'assistant',
+          threadId: 'copy-src-inner-thread',
+          topicId: 'copy-src-topic-2',
+          userId,
+        },
+        {
+          agentId: 'agent-1',
+          content: 'task row',
+          id: 'copy2-task',
+          role: 'task',
+          topicId: 'copy-src-topic-2',
+          userId,
+        },
+      ]);
+
+      const copied = await messageModel.copyMessagesToThread({
+        agentId: 'agent-1',
+        threadId: 'copy-thread-2',
+        topicId: 'copy-src-topic-2',
+      });
+      expect(copied).toBe(1);
+
+      const threadMsgs = await serverDB
+        .select()
+        .from(messages)
+        .where(eq(messages.threadId, 'copy-thread-2'));
+      expect(threadMsgs).toHaveLength(1);
+      expect(threadMsgs[0].content).toBe('top level');
     });
   });
 

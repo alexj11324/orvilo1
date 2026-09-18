@@ -1,5 +1,4 @@
 import { Button } from '@lobehub/ui/base-ui';
-import { ModelProvider } from 'model-bank/modelProvider';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -22,20 +21,16 @@ const ChatInvalidAPIKey = memo<ChatInvalidAPIKeyProps>(({ id, provider }) => {
   return (
     <BaseErrorForm
       avatar={<ProviderIcon provider={provider} shape={'square'} size={40} />}
-      title={t(`unlock.apiKey.title`, { name: providerName, ns: 'error' })}
+      title={t(`unlock.credentialsUnavailable.title`, { name: providerName, ns: 'error' })}
       action={
         <Button type={'primary'} onClick={() => deleteMessage(id)}>
           {t('unlock.closeMessage', { ns: 'error' })}
         </Button>
       }
-      desc={
-        provider === ModelProvider.Bedrock
-          ? t('bedrock.unlock.description')
-          : t(`unlock.apiKey.description`, {
-              name: providerName,
-              ns: 'error',
-            })
-      }
+      desc={t(`unlock.credentialsUnavailable.description`, {
+        name: providerName,
+        ns: 'error',
+      })}
     />
   );
 });

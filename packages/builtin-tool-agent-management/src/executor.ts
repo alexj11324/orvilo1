@@ -160,7 +160,18 @@ class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName
     // Execute as synchronous speak
     // Two modes: Group vs Agents
 
-    // Mode 1: Group environment - use group orchestration
+    // Mode 1: Group environment - use group orchestration.
+    // A group context without `groupOrchestration` must NOT fall through to the
+    // non-group path: nothing would schedule the member run, so reporting
+    // success would be a lie. Fail loudly instead.
+    if (ctx.groupId && !(ctx.groupOrchestration && ctx.registerAfterCompletion)) {
+      return {
+        content:
+          'Group orchestration is not available in this runtime — the supervisor turn must execute through a runtime that provides member scheduling.',
+        success: false,
+      };
+    }
+
     if (ctx.groupId && ctx.groupOrchestration && ctx.agentId && ctx.registerAfterCompletion) {
       // Register afterCompletion callback to trigger group orchestration
       ctx.registerAfterCompletion(() =>
@@ -209,6 +220,17 @@ class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName
         }
       }
 
+      // Surface an unsupported binding SYNCHRONOUSLY: the in-browser client
+      // runtime is retired and the deferred afterCompletion callback's throw
+      // would only be logged by buildRunLifecycle — the model would still get
+      // `success: true` and the user would see no actionable failure.
+      if (!useChatStore.getState().isGatewayModeEnabled(agentId)) {
+        return {
+          content: `Cannot call agent "${agentId}": no execution binding is available. Enable gateway mode or bind a runtime for this agent, then retry.`,
+          success: false,
+        };
+      }
+
       // Register afterCompletion to execute the agent via the gateway runtime.
       // The in-browser client runtime is retired: without gateway mode there is
       // no execution path, so surface an explicit binding-required error instead
@@ -216,7 +238,7 @@ class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName
       ctx.registerAfterCompletion(async () => {
         const get = useChatStore.getState;
 
-        if (!get().isGatewayModeEnabled()) {
+        if (!get().isGatewayModeEnabled(agentId)) {
           throw new Error(AGENT_BINDING_REQUIRED_ERROR);
         }
 

@@ -151,12 +151,23 @@ export interface ExecAgentTaskParams {
  */
 export interface ExecSubAgentTaskParams {
   agentId: string;
+  /**
+   * chatConfig overrides (thinking / reasoning-effort extend params) resolved
+   * at the spawn site from the parent agent's `agencyConfig.subagent`.
+   */
+  chatConfig?: Record<string, any> | null;
   /** Optional for Single Agent mode, required for Group mode */
   groupId?: string;
+  /** Seed the isolation thread with the parent conversation transcript */
+  inheritMessages?: boolean;
   instruction: string;
+  /** Sub-agent model override resolved at the spawn site */
+  model?: string;
   parentMessageId: string;
   /** Parent operation ID for dispatching callAgent hooks */
   parentOperationId?: string;
+  /** Provider for {@link model} */
+  provider?: string;
   timeout?: number;
   /** Task title (shown in UI, used as thread title) */
   title?: string;

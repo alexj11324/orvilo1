@@ -262,7 +262,7 @@
   "artworkStudio.generateFailed": "暂时无法生成图片，请重试",
   "artworkStudio.generateTitle": "AI 一键生成",
   "artworkStudio.generatingHint": "通常需要约 60 秒，生成期间可以继续编辑其他内容",
-  "artworkStudio.noModel": "启用图像生成模型后即可一键生成",
+  "artworkStudio.noModel": "当前部署未配置图像生成模型。请联系管理员启用，或直接上传作品。",
   "artworkStudio.preview.fullBody": "全身形象预览",
   "artworkStudio.reference.remove": "移除参考图",
   "artworkStudio.reference.title": "参考图",

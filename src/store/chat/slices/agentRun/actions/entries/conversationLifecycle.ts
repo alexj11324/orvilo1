@@ -67,6 +67,7 @@ import {
 import {
   AGENT_BINDING_REQUIRED_ERROR,
   type AgentRuntimeType,
+  GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR,
   selectRuntimeType,
 } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
 import { executeDirectMention } from '@/store/chat/slices/agentRun/actions/dispatch/directMentionExecutor';
@@ -466,28 +467,6 @@ export class ConversationLifecycleActionImpl {
       (isDesktop && !isGatewayMode && isHeterogeneousAgentModelId(agentConfig?.model)
         ? { type: agentConfig.model }
         : undefined);
-    let runtimeType: AgentRuntimeType;
-    try {
-      runtimeType = selectRuntimeType({
-        boundDeviceId: agencyConfig?.boundDeviceId,
-        executionTarget: agencyConfig?.executionTarget,
-        heterogeneousProvider,
-        isGatewayMode,
-        isWorkspaceAgent: !!agent?.workspaceId,
-        // Callers that need to pin the runtime (e.g. task topics that were
-        // started server-side via runTask) pass `forceRuntime` to override
-        // the agent's local/cloud preference.
-        parentRuntime: forceRuntime,
-        workspaceScoped,
-      });
-    } catch (error) {
-      // No execution binding (no ACP/hetero binding and no gateway mode) is an
-      // explicit configuration error — the browser runtime is retired, so the
-      // send must fail loudly instead of falling back to local inference.
-      onPreflightFailure?.();
-      toast.error(t('agentBindingRequired', { ns: 'chat' }));
-      throw error;
-    }
 
     // ── Command Bus: extract and process built-in commands from editorData ──
     const commandOverrides: CommandSendOverrides = processCommands({
@@ -859,6 +838,40 @@ export class ConversationLifecycleActionImpl {
     let parentId: string | undefined = forceNewTopicFromExisting ? undefined : inputParentId;
     if (!parentId && lastMessage) {
       parentId = displayMessageSelectors.findLastMessageId(lastMessage.id)(this.#get());
+    }
+
+    // Runtime selection happens here — AFTER every non-executing early return
+    // (bare `/newTopic` navigation, `onlyAddUserMessage` persistence) — so an
+    // agent without an execution binding can still run command-only sends that
+    // never dispatch an agent.
+    let runtimeType: AgentRuntimeType;
+    try {
+      runtimeType = selectRuntimeType({
+        boundDeviceId: agencyConfig?.boundDeviceId,
+        executionTarget: agencyConfig?.executionTarget,
+        heterogeneousProvider,
+        isGatewayMode,
+        // Supervisor turns need server-side orchestration callbacks — coerce
+        // the runtime before any hetero preference picks a local spawn.
+        isGroupSupervisor,
+        isWorkspaceAgent: !!agent?.workspaceId,
+        // Callers that need to pin the runtime (e.g. task topics that were
+        // started server-side via runTask) pass `forceRuntime` to override
+        // the agent's local/cloud preference.
+        parentRuntime: forceRuntime,
+        workspaceScoped,
+      });
+    } catch (error) {
+      // No execution binding (no ACP/hetero binding and no gateway mode) is an
+      // explicit configuration error — the browser runtime is retired, so the
+      // send must fail loudly instead of falling back to local inference.
+      onPreflightFailure?.();
+      toast.error(
+        error instanceof Error && error.message === GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR
+          ? t('groupSupervisorRequiresGateway', { ns: 'chat' })
+          : t('agentBindingRequired', { ns: 'chat' }),
+      );
+      throw error;
     }
 
     // Mint the ids this turn will live under, up front. These are the FINAL

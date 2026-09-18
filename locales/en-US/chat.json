@@ -800,6 +800,7 @@
   "groupSidebar.tabs.host": "Orchestrator",
   "groupSidebar.tabs.members": "Members",
   "groupSidebar.tabs.role": "Profile",
+  "groupSupervisorRequiresGateway": "Group orchestration requires Agent Gateway. Enable gateway mode for this agent, then try again.",
   "groupWizard.chooseMembers": "Select existing agents...",
   "groupWizard.createGroup": "Create Group",
   "groupWizard.existingMembers": "Current Agents",

@@ -156,6 +156,8 @@
   "unlock.comfyui.modifyBaseUrl": "Edit ComfyUI service URL",
   "unlock.comfyui.title": "Verify your {{name}} credentials",
   "unlock.confirm": "Confirm and Retry",
+  "unlock.credentialsUnavailable.description": "Custom provider keys are managed by the deployment, not here. Ask your administrator to update the {{name}} credentials, or rebind an agent runtime in the agent profile.",
+  "unlock.credentialsUnavailable.title": "{{name}} credentials unavailable",
   "unlock.goToSettings": "Go to Settings",
   "unlock.oauth.description": "The administrator has enabled unified sign-in authentication. Click the button below to sign in and unlock the application.",
   "unlock.oauth.success": "Sign-in successful",

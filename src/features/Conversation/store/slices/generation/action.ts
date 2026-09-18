@@ -22,7 +22,11 @@ import {
 import { resolveAgentWorkingDirectory } from '@/helpers/agentWorkingDirectory';
 import { resolveWorkspaceScoped } from '@/helpers/executionTarget';
 import { globalAgentContextManager } from '@/helpers/GlobalAgentContextManager';
-import { getTopicAgencyConfig, getTopicWorkspaceScoped } from '@/helpers/topicExecutionConfig';
+import {
+  getTopicAgencyConfig,
+  getTopicWorkspaceScoped,
+  resolveIsGroupSupervisor,
+} from '@/helpers/topicExecutionConfig';
 import { messageService } from '@/services/message';
 import { getAgentStoreState } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
@@ -374,6 +378,26 @@ const regenerateUserMessageFromSource = async (
     const preflightOp = operationSelectors.getOperationById(operationId)(useChatStore.getState());
     if (preflightOp && preflightOp.status !== 'running') return;
 
+    // Resolve the execution binding BEFORE switching branches: an unbound
+    // agent throws here, leaving `activeBranchIndex` untouched — switching
+    // first would persist one-past-the-end and hide the previous answer on a
+    // failed regenerate.
+    await ensureEffectiveAgencyAccess(context.agentId);
+    const { agencyConfig, isWorkspaceAgent, workspaceScoped } = getEffectiveAgencyConfig(
+      context.agentId,
+      context.topicId,
+    );
+    const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
+    const runtimeType = selectRuntimeType({
+      boundDeviceId: agencyConfig?.boundDeviceId,
+      executionTarget: agencyConfig?.executionTarget,
+      heterogeneousProvider,
+      isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
+      isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
+      isWorkspaceAgent,
+      workspaceScoped,
+    });
+
     // Read the database messages from the captured conversation. If the shared
     // ConversationStore has switched context, the source falls back to the old
     // context's ChatStore bucket instead of observing the new topic.
@@ -392,21 +416,6 @@ const regenerateUserMessageFromSource = async (
     // already switched, which is harmless — no assistant turn has started yet.
     const postSwitchOp = operationSelectors.getOperationById(operationId)(useChatStore.getState());
     if (postSwitchOp && postSwitchOp.status !== 'running') return;
-
-    await ensureEffectiveAgencyAccess(context.agentId);
-    const { agencyConfig, isWorkspaceAgent, workspaceScoped } = getEffectiveAgencyConfig(
-      context.agentId,
-      context.topicId,
-    );
-    const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
-    const runtimeType = selectRuntimeType({
-      boundDeviceId: agencyConfig?.boundDeviceId,
-      executionTarget: agencyConfig?.executionTarget,
-      heterogeneousProvider,
-      isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
-      isWorkspaceAgent,
-      workspaceScoped,
-    });
 
     // ── Gateway mode: trigger server-side regeneration ──
     if (runtimeType === 'gateway') {
@@ -807,6 +816,7 @@ export const generationSlice: StateCreator<
         executionTarget: agencyConfig?.executionTarget,
         heterogeneousProvider: agencyConfig?.heterogeneousProvider,
         isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
+        isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
         isWorkspaceAgent,
         workspaceScoped,
       });
@@ -899,6 +909,7 @@ export const generationSlice: StateCreator<
         executionTarget: agencyConfig?.executionTarget,
         heterogeneousProvider,
         isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
+        isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
         isWorkspaceAgent,
         workspaceScoped,
       });

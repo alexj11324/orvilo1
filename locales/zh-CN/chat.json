@@ -800,6 +800,7 @@
   "groupSidebar.tabs.host": "主持人",
   "groupSidebar.tabs.members": "成员",
   "groupSidebar.tabs.role": "设定",
+  "groupSupervisorRequiresGateway": "群聊编排需要 Agent Gateway。请为该 Agent 启用网关模式后重试。",
   "groupWizard.chooseMembers": "选择现有助理…",
   "groupWizard.createGroup": "创建群组",
   "groupWizard.existingMembers": "已有助理",

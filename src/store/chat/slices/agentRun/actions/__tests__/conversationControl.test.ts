@@ -1,6 +1,5 @@
 import { type ConversationContext, RequestTrigger } from '@orvilo/types';
 import { act, renderHook } from '@testing-library/react';
-import { t } from 'i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { lambdaClient } from '@/libs/trpc/client';
@@ -9,7 +8,7 @@ import { messageService } from '@/services/message';
 
 import { useChatStore } from '../../../../store';
 import { messageMapKey } from '../../../../utils/messageMapKey';
-import { createMockMessage, createMockResolvedAgentConfig, TEST_IDS } from './fixtures';
+import { createMockMessage, TEST_IDS } from './fixtures';
 import { resetTestEnvironment } from './helpers';
 
 // Mock the tRPC client & agentRuntimeService so the import chain doesn't pull
@@ -543,7 +542,8 @@ describe('ConversationControl actions', () => {
         id: 'tool-msg-1',
         role: 'tool',
         plugin: { identifier: 'test-plugin', type: 'default', arguments: '{}', apiName: 'test' },
-      });
+        tool_call_id: 'call_builder',
+      } as any);
 
       // Setup store with global context and builder context messages
       const globalKey = messageMapKey({ agentId: globalAgentId, topicId: null });
@@ -573,16 +573,12 @@ describe('ConversationControl actions', () => {
       const updateTopicStatusSpy = vi
         .spyOn(result.current, 'updateTopicStatus')
         .mockResolvedValue(undefined as any);
-      const internal_createAgentStateSpy = vi
-        .spyOn(result.current, 'internal_createAgentState')
-        .mockReturnValue({
-          state: {} as any,
-          context: { phase: 'init' } as any,
-          agentConfig: createMockResolvedAgentConfig(),
-        });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      const isGatewayModeEnabledSpy = vi
+        .spyOn(result.current, 'isGatewayModeEnabled')
+        .mockReturnValue(true);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       // Call with builder context
       const context: ConversationContext = {
@@ -595,22 +591,23 @@ describe('ConversationControl actions', () => {
         await result.current.approveToolCalling('tool-msg-1', 'group-1', context);
       });
 
-      // Verify internal_createAgentState was called with builder context
-      expect(internal_createAgentStateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          agentId: builderAgentId,
-          topicId: builderTopicId,
-        }),
-      );
+      // The Gateway-resume decision is scoped to the provided context agent,
+      // not the globally active one.
+      expect(isGatewayModeEnabledSpy).toHaveBeenCalledWith(builderAgentId);
 
-      // Verify executeClientAgent was called with builder context (now wrapped in context object)
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
+      // Verify the Gateway resume runs under the builder context
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           context: expect.objectContaining({
             agentId: builderAgentId,
             topicId: builderTopicId,
             scope: 'agent_builder',
           }),
+          resumeApproval: {
+            decision: 'approved',
+            parentMessageId: 'tool-msg-1',
+            toolCallId: 'call_builder',
+          },
         }),
       );
       expect(updateTopicStatusSpy).toHaveBeenCalledWith(
@@ -633,7 +630,8 @@ describe('ConversationControl actions', () => {
         id: 'tool-msg-1',
         role: 'tool',
         plugin: { identifier: 'test-plugin', type: 'default', arguments: '{}', apiName: 'test' },
-      });
+        tool_call_id: 'call_global',
+      } as any);
 
       const globalKey = messageMapKey({ agentId: globalAgentId, topicId: globalTopicId });
 
@@ -653,37 +651,28 @@ describe('ConversationControl actions', () => {
 
       // Mock internal methods
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
-      const internal_createAgentStateSpy = vi
-        .spyOn(result.current, 'internal_createAgentState')
-        .mockReturnValue({
-          state: {} as any,
-          context: { phase: 'init' } as any,
-          agentConfig: createMockResolvedAgentConfig(),
-        });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       // Call without context (should use global state)
       await act(async () => {
         await result.current.approveToolCalling('tool-msg-1', 'group-1');
       });
 
-      // Verify internal_createAgentState was called with global context
-      expect(internal_createAgentStateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          agentId: globalAgentId,
-          topicId: globalTopicId,
-        }),
-      );
-
-      // Verify executeClientAgent was called with global context (now wrapped in context object)
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
+      // Verify the Gateway resume runs under the global context
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           context: expect.objectContaining({
             agentId: globalAgentId,
             topicId: globalTopicId,
           }),
+          resumeApproval: {
+            decision: 'approved',
+            parentMessageId: 'tool-msg-1',
+            toolCallId: 'call_global',
+          },
         }),
       );
     });
@@ -700,19 +689,22 @@ describe('ConversationControl actions', () => {
         });
       });
 
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
+      const startOperationSpy = vi.spyOn(result.current, 'startOperation');
 
       await act(async () => {
         await result.current.approveToolCalling('non-existent-msg', 'group-1');
       });
 
-      // Should not call executeClientAgent when tool message not found
-      expect(executeClientAgentSpy).not.toHaveBeenCalled();
+      // Nothing starts when the tool message does not exist — no interim op,
+      // no resume dispatch.
+      expect(startOperationSpy).not.toHaveBeenCalled();
+      expect(executeGatewayAgentSpy).not.toHaveBeenCalled();
     });
 
-    it('completes the approval even if a Stop lands mid optimistic write (best-effort Stop)', async () => {
+    it('completes the approval even if a Stop lands mid durable-claim await (best-effort Stop)', async () => {
       const { result } = renderHook(() => useChatStore());
 
       const agentId = 'global-agent';
@@ -722,7 +714,13 @@ describe('ConversationControl actions', () => {
         id: 'tool-msg-1',
         role: 'tool',
         plugin: { identifier: 'test-plugin', type: 'default', arguments: '{}', apiName: 'test' },
-      });
+        pluginIntervention: {
+          batchId: 'batch-stop-mid-flight',
+          operationId: 'operation-stop-mid-flight',
+          status: 'pending',
+        },
+        tool_call_id: 'call_stop_mid_flight',
+      } as any);
 
       const globalKey = messageMapKey({ agentId, topicId });
 
@@ -736,36 +734,44 @@ describe('ConversationControl actions', () => {
         });
       });
 
-      // Simulate a Stop pressed while the optimistic update is in flight: cancel
-      // the just-created interim op from inside the awaited optimistic write.
-      // `intervention: approved` is already persisted, so bailing here would
-      // leave the tool approved-but-never-executed (stuck). The approval must
-      // complete atomically — Stop is best-effort in this sub-second window.
-      vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockImplementation(
-        async (_id, _value, ctx) => {
-          if (ctx?.operationId) result.current.cancelOperation(ctx.operationId);
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
+
+      // Simulate a Stop pressed while the durable intervention claim is in
+      // flight: cancel the just-created interim op from inside the awaited
+      // claim call. Bailing here would leave the tool pending-but-never-
+      // executed (stuck). The approval must complete atomically — Stop is
+      // best-effort in this sub-second window.
+      vi.mocked(lambdaClient.aiAgent.resolveAgentInterventionBySource.mutate).mockImplementation(
+        async () => {
+          const interimOp = Object.values(result.current.operations).find(
+            (op) => op.type === 'approveToolCalling',
+          );
+          if (interimOp) result.current.cancelOperation(interimOp.id);
+          return { contractVersion: 2, status: 'unavailable', success: false } as any;
         },
       );
-      // Stub the runtime setup so the assertion targets "did we reach the run?",
-      // not the full agent-config resolution.
-      vi.spyOn(result.current, 'internal_createAgentState').mockReturnValue({
-        state: {},
-        context: {},
-      } as any);
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       await act(async () => {
         await result.current.approveToolCalling('tool-msg-1', 'group-1');
       });
 
-      // The run proceeds despite the cancelled op — no stuck approval.
-      expect(executeClientAgentSpy).toHaveBeenCalled();
+      // The resume proceeds despite the cancelled op — no stuck approval.
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resumeApproval: {
+            decision: 'approved',
+            parentMessageId: 'tool-msg-1',
+            toolCallId: 'call_stop_mid_flight',
+          },
+        }),
+      );
     });
 
     describe('server-mode branch', () => {
-      it('should start a new Gateway op with resumeApproval.decision=approved and NOT run local runtime', async () => {
+      it('should start a new Gateway op with resumeApproval.decision=approved', async () => {
         const { result } = renderHook(() => useChatStore());
 
         const agentId = 'server-agent';
@@ -823,9 +829,6 @@ describe('ConversationControl actions', () => {
         const executeGatewayAgentSpy = vi
           .spyOn(result.current, 'executeGatewayAgent')
           .mockResolvedValue({} as any);
-        const executeClientAgentSpy = vi
-          .spyOn(result.current, 'executeClientAgent')
-          .mockResolvedValue(undefined);
         const updateTopicStatusMock = vi.mocked(result.current.updateTopicStatus);
         updateTopicStatusMock.mockClear();
 
@@ -845,7 +848,6 @@ describe('ConversationControl actions', () => {
             metadata: { trigger: RequestTrigger.Onboarding },
           }),
         );
-        expect(executeClientAgentSpy).not.toHaveBeenCalled();
         expect(updateTopicStatusMock).toHaveBeenCalledWith(
           expect.objectContaining({ agentId, status: 'active', topicId }),
         );
@@ -1209,18 +1211,17 @@ describe('ConversationControl actions', () => {
         const executeGatewayAgentSpy = vi
           .spyOn(result.current, 'executeGatewayAgent')
           .mockResolvedValue({} as any);
-        const executeClientAgentSpy = vi
-          .spyOn(result.current, 'executeClientAgent')
-          .mockResolvedValue(undefined);
 
         await act(async () => {
           await result.current.approveToolCalling('tool-msg-1', 'group-1');
         });
 
-        // Critical regression guard: with `#hasRunningServerOp` the branch
-        // was missed here (no running op → fell through to client-mode).
-        // The combined `isGatewayModeEnabled() + any execServerAgentRuntime`
-        // check keeps us on the Gateway path.
+        // Critical regression guard: scanning for a *living* server op misses
+        // this state entirely — the paused op is already `completed` (and is
+        // typically pruned by `cleanupCompletedOperations` before the user
+        // clicks approve). `#shouldUseGatewayResume` routes purely via
+        // `selectRuntimeType` (gateway flag + bindings), keeping us on the
+        // Gateway path regardless of whether the paused op still exists.
         expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
           expect.objectContaining({
             resumeApproval: expect.objectContaining({
@@ -1229,7 +1230,6 @@ describe('ConversationControl actions', () => {
             }),
           }),
         );
-        expect(executeClientAgentSpy).not.toHaveBeenCalled();
 
         executeGatewayAgentSpy.mockRestore();
       });
@@ -1297,7 +1297,7 @@ describe('ConversationControl actions', () => {
         executeGatewayAgentSpy.mockRestore();
       });
 
-      it('should fall through to client-mode runtime when no server operation is running', async () => {
+      it('fails the interim op with GATEWAY_RESUME_REQUIRED when the agent has no gateway binding', async () => {
         const { result } = renderHook(() => useChatStore());
 
         const agentId = 'local-agent';
@@ -1320,25 +1320,32 @@ describe('ConversationControl actions', () => {
           });
         });
 
+        // No gateway mode, no hetero/ACP binding — the retired browser runtime
+        // no longer exists, so there is no local resume path to fall through to.
+        vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(false);
         vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
-        vi.spyOn(result.current, 'internal_createAgentState').mockReturnValue({
-          state: {} as any,
-          context: { phase: 'init' } as any,
-          agentConfig: createMockResolvedAgentConfig(),
-        });
         const executeGatewayAgentSpy = vi
           .spyOn(result.current, 'executeGatewayAgent')
           .mockResolvedValue({} as any);
-        const executeClientAgentSpy = vi
-          .spyOn(result.current, 'executeClientAgent')
-          .mockResolvedValue(undefined);
 
         await act(async () => {
           await result.current.approveToolCalling('tool-msg-1', 'group-1');
         });
 
         expect(executeGatewayAgentSpy).not.toHaveBeenCalled();
-        expect(executeClientAgentSpy).toHaveBeenCalled();
+        expect(
+          Object.values(result.current.operations).find(
+            (operation) => operation.type === 'approveToolCalling',
+          ),
+        ).toMatchObject({
+          metadata: {
+            error: {
+              message:
+                'AGENT_RUNTIME_UNSUPPORTED: This interaction can only be resumed by a gateway-bound run.',
+            },
+          },
+          status: 'failed',
+        });
 
         executeGatewayAgentSpy.mockRestore();
       });
@@ -1386,9 +1393,6 @@ describe('ConversationControl actions', () => {
         const executeGatewayAgentSpy = vi
           .spyOn(result.current, 'executeGatewayAgent')
           .mockResolvedValue({} as any);
-        const executeClientAgentSpy = vi
-          .spyOn(result.current, 'executeClientAgent')
-          .mockResolvedValue(undefined);
 
         await act(async () => {
           await result.current.approveToolCalling('tool-msg-1', 'group-1', {
@@ -1405,7 +1409,6 @@ describe('ConversationControl actions', () => {
             resumeApproval: expect.objectContaining({ decision: 'approved' }),
           }),
         );
-        expect(executeClientAgentSpy).not.toHaveBeenCalled();
 
         executeGatewayAgentSpy.mockRestore();
       });
@@ -1605,7 +1608,7 @@ describe('ConversationControl actions', () => {
   });
 
   describe('rejectAndContinueToolCalling server-mode branch', () => {
-    it('starts a new Gateway op with resumeApproval.decision=rejected_continue and skips both local runtime and client rejectToolCalling', async () => {
+    it('starts a new Gateway op with resumeApproval.decision=rejected_continue and skips the halting rejectToolCalling', async () => {
       const { result } = renderHook(() => useChatStore());
 
       const agentId = 'server-agent';
@@ -1639,12 +1642,9 @@ describe('ConversationControl actions', () => {
       const executeGatewayAgentSpy = vi
         .spyOn(result.current, 'executeGatewayAgent')
         .mockResolvedValue({} as any);
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
-      // Ensure client rejectToolCalling is NOT invoked in server-mode path —
-      // otherwise the server would see a duplicate halting `reject` before
-      // this continue signal lands.
+      // Ensure the halting rejectToolCalling is NOT invoked in server-mode
+      // path — otherwise the server would see a duplicate halting `reject`
+      // before this continue signal lands.
       const rejectToolCallingSpy = vi
         .spyOn(result.current, 'rejectToolCalling')
         .mockResolvedValue(undefined);
@@ -1665,7 +1665,6 @@ describe('ConversationControl actions', () => {
           },
         }),
       );
-      expect(executeClientAgentSpy).not.toHaveBeenCalled();
       expect(rejectToolCallingSpy).not.toHaveBeenCalled();
 
       executeGatewayAgentSpy.mockRestore();
@@ -1673,7 +1672,7 @@ describe('ConversationControl actions', () => {
   });
 
   describe('submitToolInteraction', () => {
-    it('should create a user message and resume runtime from that user message', async () => {
+    it('resumes through Gateway with the tool result and preserves the request trigger', async () => {
       const { result } = renderHook(() => useChatStore());
 
       const agentId = 'global-agent';
@@ -1705,7 +1704,8 @@ describe('ConversationControl actions', () => {
           type: 'default',
         },
         role: 'tool',
-      });
+        tool_call_id: 'call_ask',
+      } as any);
 
       act(() => {
         useChatStore.setState({
@@ -1721,91 +1721,34 @@ describe('ConversationControl actions', () => {
         });
       });
 
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
-
-      const userMessageId = 'submitted-user-msg';
       const optimisticCreateMessageSpy = vi
         .spyOn(result.current, 'optimisticCreateMessage')
-        .mockImplementation(async (message) => {
-          const userMessage = createMockMessage({
-            content: message.content,
-            groupId: message.groupId,
-            id: userMessageId,
-            role: 'user',
-            topicId,
-          });
-
-          useChatStore.setState({
-            dbMessagesMap: {
-              [chatKey]: [
-                onboardingUserMessage,
-                onboardingAssistantMessage,
-                toolMessage,
-                userMessage,
-              ],
-            },
-            messagesMap: {
-              [chatKey]: [
-                onboardingUserMessage,
-                onboardingAssistantMessage,
-                toolMessage,
-                userMessage,
-              ],
-            },
-          });
-
-          return {
-            id: userMessageId,
-            messages: [onboardingUserMessage, onboardingAssistantMessage, toolMessage, userMessage],
-          };
-        });
-
-      const initialContext = { phase: 'init' } as any;
-      const internal_createAgentStateSpy = vi
-        .spyOn(result.current, 'internal_createAgentState')
-        .mockReturnValue({
-          agentConfig: createMockResolvedAgentConfig(),
-          context: initialContext,
-          state: {} as any,
-        });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+        .mockResolvedValue({ id: 'unused', messages: [] } as any);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       await act(async () => {
         await result.current.submitToolInteraction('tool-msg-1', response);
       });
 
-      expect(optimisticCreateMessageSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: 'Writing documents, Professional',
-          groupId: 'group-1',
-          metadata: { trigger: RequestTrigger.Onboarding },
-          // Anchored on the assistant that asked, not left null — a null parent
-          // would make this turn a second root of the topic (`segment-split`).
-          parentId: onboardingAssistantMessage.id,
-          role: 'user',
-        }),
-        expect.objectContaining({ operationId: expect.any(String) }),
-      );
+      // The Gateway resume path never forges a synthetic user message — the
+      // server writes the answer as the pending tool message's content.
+      expect(optimisticCreateMessageSpy).not.toHaveBeenCalled();
 
-      expect(internal_createAgentStateSpy).toHaveBeenCalledWith(
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({ id: 'tool-msg-1', role: 'tool' }),
-            expect.objectContaining({ id: userMessageId, role: 'user' }),
-          ]),
-          parentMessageId: userMessageId,
-        }),
-      );
-
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          initialContext,
           metadata: { trigger: RequestTrigger.Onboarding },
-          parentMessageId: userMessageId,
-          parentMessageType: 'user',
+          parentMessageId: 'tool-msg-1',
+          resumeToolResult: {
+            content: `User submitted: ${JSON.stringify(response)}`,
+            outcome: 'submitted',
+            parentMessageId: 'tool-msg-1',
+            toolCallId: 'call_ask',
+          },
         }),
       );
     });
@@ -1841,7 +1784,8 @@ describe('ConversationControl actions', () => {
           type: 'default',
         },
         role: 'tool',
-      });
+        tool_call_id: 'call_template',
+      } as any);
 
       act(() => {
         useChatStore.setState({
@@ -1857,36 +1801,31 @@ describe('ConversationControl actions', () => {
         });
       });
 
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticCreateMessage');
-
-      const initialContext = { phase: 'init' } as any;
-      vi.spyOn(result.current, 'internal_createAgentState').mockReturnValue({
-        agentConfig: createMockResolvedAgentConfig(),
-        context: initialContext,
-        state: {} as any,
-      });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       await act(async () => {
         await result.current.submitToolInteraction('tool-msg-1', response, undefined, {
-          createUserMessage: false,
           toolResultContent: 'Selected onboarding template',
         });
       });
 
       expect(result.current.optimisticCreateMessage).not.toHaveBeenCalled();
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          initialContext: expect.objectContaining({
-            phase: 'tool_result',
-          }),
           metadata: { trigger: RequestTrigger.Onboarding },
           parentMessageId: 'tool-msg-1',
-          parentMessageType: 'tool',
+          resumeToolResult: {
+            content: 'Selected onboarding template',
+            outcome: 'submitted',
+            parentMessageId: 'tool-msg-1',
+            toolCallId: 'call_template',
+          },
         }),
       );
     });
@@ -1922,7 +1861,8 @@ describe('ConversationControl actions', () => {
           type: 'default',
         },
         role: 'tool',
-      });
+        tool_call_id: 'call_normal_template',
+      } as any);
 
       act(() => {
         useChatStore.setState({
@@ -1948,16 +1888,12 @@ describe('ConversationControl actions', () => {
         });
       });
 
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
-      vi.spyOn(result.current, 'internal_createAgentState').mockReturnValue({
-        agentConfig: createMockResolvedAgentConfig(),
-        context: { phase: 'init' } as any,
-        state: {} as any,
-      });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       await act(async () => {
         await result.current.submitToolInteraction(
@@ -1965,23 +1901,27 @@ describe('ConversationControl actions', () => {
           { templateId: 'normal-template' },
           undefined,
           {
-            createUserMessage: false,
             toolResultContent: 'Selected normal template',
           },
         );
       });
 
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
+      // The old onboarding trigger lives in a different message chain — the
+      // resume must carry no request metadata rather than inherit it.
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          metadata: undefined,
           parentMessageId: normalToolMessage.id,
-          parentMessageType: 'tool',
+          resumeToolResult: expect.objectContaining({
+            outcome: 'submitted',
+            toolCallId: 'call_normal_template',
+          }),
         }),
       );
+      expect(executeGatewayAgentSpy.mock.calls[0]?.[0].metadata).toBeUndefined();
     });
 
     describe('server-mode branch', () => {
-      it('starts a new Gateway op with resumeToolResult carrying the answer and does NOT run local runtime', async () => {
+      it('starts a new Gateway op with resumeToolResult carrying the answer', async () => {
         const { result } = renderHook(() => useChatStore());
 
         const agentId = 'server-agent';
@@ -2038,9 +1978,6 @@ describe('ConversationControl actions', () => {
         const executeGatewayAgentSpy = vi
           .spyOn(result.current, 'executeGatewayAgent')
           .mockResolvedValue({} as any);
-        const executeClientAgentSpy = vi
-          .spyOn(result.current, 'executeClientAgent')
-          .mockResolvedValue(undefined);
 
         await act(async () => {
           await result.current.submitToolInteraction('tool-msg-1', { answer: 'blue' }, undefined, {
@@ -2060,7 +1997,6 @@ describe('ConversationControl actions', () => {
             },
           }),
         );
-        expect(executeClientAgentSpy).not.toHaveBeenCalled();
 
         // Fallback guard: the paused `execServerAgentRuntime` op is completed.
         const pausedServerOps = Object.values(result.current.operations).filter(
@@ -2188,7 +2124,7 @@ describe('ConversationControl actions', () => {
         );
       });
 
-      it('takes the client path (executeClientAgent) when gateway mode is disabled', async () => {
+      it('fails the interim op with GATEWAY_RESUME_REQUIRED when the agent has no gateway binding', async () => {
         const { result } = renderHook(() => useChatStore());
 
         const agentId = 'client-agent';
@@ -2218,42 +2154,42 @@ describe('ConversationControl actions', () => {
           });
         });
 
+        // No gateway mode and no hetero/ACP binding — the retired browser
+        // runtime had the only local resume path, so the submission fails
+        // explicitly instead of silently dropping.
         vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(false);
         vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
         vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
-        vi.spyOn(result.current, 'internal_createAgentState').mockReturnValue({
-          agentConfig: createMockResolvedAgentConfig(),
-          context: { phase: 'init' } as any,
-          state: {} as any,
-        });
         const executeGatewayAgentSpy = vi
           .spyOn(result.current, 'executeGatewayAgent')
           .mockResolvedValue({} as any);
-        const executeClientAgentSpy = vi
-          .spyOn(result.current, 'executeClientAgent')
-          .mockResolvedValue(undefined);
 
         await act(async () => {
           await result.current.submitToolInteraction('tool-msg-1', { answer: 'blue' }, undefined, {
-            createUserMessage: false,
             toolResultContent: 'blue',
           });
         });
 
         expect(executeGatewayAgentSpy).not.toHaveBeenCalled();
-        expect(executeClientAgentSpy).toHaveBeenCalledWith(
-          expect.objectContaining({
-            initialContext: expect.objectContaining({ phase: 'tool_result' }),
-            parentMessageId: 'tool-msg-1',
-            parentMessageType: 'tool',
-          }),
-        );
+        expect(
+          Object.values(result.current.operations).find(
+            (operation) => operation.type === 'submitToolInteraction',
+          ),
+        ).toMatchObject({
+          metadata: {
+            error: {
+              message:
+                'AGENT_RUNTIME_UNSUPPORTED: This interaction can only be resumed by a gateway-bound run.',
+            },
+          },
+          status: 'failed',
+        });
 
         executeGatewayAgentSpy.mockRestore();
       });
     });
 
-    it('should bail before running if a Stop cancels the interim op during synthetic message creation', async () => {
+    it('still resumes through Gateway if a Stop cancels the interim op mid durable-claim await', async () => {
       const { result } = renderHook(() => useChatStore());
       const agentId = 'global-agent';
       const topicId = 'global-topic';
@@ -2261,7 +2197,13 @@ describe('ConversationControl actions', () => {
         id: 'tool-msg-1',
         role: 'tool',
         plugin: { identifier: 'test-plugin', type: 'default', arguments: '{}', apiName: 'test' },
-      });
+        pluginIntervention: {
+          batchId: 'batch-submit-stop',
+          operationId: 'operation-submit-stop',
+          status: 'pending',
+        },
+        tool_call_id: 'call_submit_stop',
+      } as any);
       const globalKey = messageMapKey({ agentId, topicId });
       act(() => {
         useChatStore.setState({
@@ -2273,30 +2215,43 @@ describe('ConversationControl actions', () => {
         });
       });
 
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
-      // Stop lands while the synthetic user message is being created — a later
-      // await than the guard before it.
-      vi.spyOn(result.current, 'optimisticCreateMessage').mockImplementation(async (_msg, ctx) => {
-        if (ctx?.operationId) result.current.cancelOperation(ctx.operationId);
-        return { id: 'submitted-user-msg', messages: [] } as any;
-      });
-      const internal_createAgentStateSpy = vi.spyOn(result.current, 'internal_createAgentState');
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      // Stop lands while the durable intervention claim is in flight. In
+      // Gateway mode the claim+resume is the indivisible action — the
+      // implementation intentionally does NOT bail on Stop here.
+      vi.mocked(lambdaClient.aiAgent.resolveAgentInterventionBySource.mutate).mockImplementation(
+        async () => {
+          const interimOp = Object.values(result.current.operations).find(
+            (op) => op.type === 'submitToolInteraction',
+          );
+          if (interimOp) result.current.cancelOperation(interimOp.id);
+          return { contractVersion: 2, status: 'unavailable', success: false } as any;
+        },
+      );
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       await act(async () => {
         await result.current.submitToolInteraction('tool-msg-1', { answer: 'blue' });
       });
 
-      expect(internal_createAgentStateSpy).not.toHaveBeenCalled();
-      expect(executeClientAgentSpy).not.toHaveBeenCalled();
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resumeToolResult: expect.objectContaining({
+            outcome: 'submitted',
+            parentMessageId: 'tool-msg-1',
+            toolCallId: 'call_submit_stop',
+          }),
+        }),
+      );
     });
   });
 
   describe('skipToolInteraction', () => {
-    it('should create a user message and resume runtime from that user message', async () => {
+    it('resumes through Gateway with a skipped tool result and preserves the request trigger', async () => {
       const { result } = renderHook(() => useChatStore());
 
       const agentId = 'global-agent';
@@ -2325,7 +2280,8 @@ describe('ConversationControl actions', () => {
           type: 'default',
         },
         role: 'tool',
-      });
+        tool_call_id: 'call_ask',
+      } as any);
 
       act(() => {
         useChatStore.setState({
@@ -2341,91 +2297,34 @@ describe('ConversationControl actions', () => {
         });
       });
 
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
-
-      const userMessageId = 'skipped-user-msg';
       const optimisticCreateMessageSpy = vi
         .spyOn(result.current, 'optimisticCreateMessage')
-        .mockImplementation(async (message) => {
-          const userMessage = createMockMessage({
-            content: message.content,
-            groupId: message.groupId,
-            id: userMessageId,
-            role: 'user',
-            topicId,
-          });
-
-          useChatStore.setState({
-            dbMessagesMap: {
-              [chatKey]: [
-                onboardingUserMessage,
-                onboardingAssistantMessage,
-                toolMessage,
-                userMessage,
-              ],
-            },
-            messagesMap: {
-              [chatKey]: [
-                onboardingUserMessage,
-                onboardingAssistantMessage,
-                toolMessage,
-                userMessage,
-              ],
-            },
-          });
-
-          return {
-            id: userMessageId,
-            messages: [onboardingUserMessage, onboardingAssistantMessage, toolMessage, userMessage],
-          };
-        });
-
-      const initialContext = { phase: 'init' } as any;
-      const internal_createAgentStateSpy = vi
-        .spyOn(result.current, 'internal_createAgentState')
-        .mockReturnValue({
-          agentConfig: createMockResolvedAgentConfig(),
-          context: initialContext,
-          state: {} as any,
-        });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+        .mockResolvedValue({ id: 'unused', messages: [] } as any);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       await act(async () => {
         await result.current.skipToolInteraction('tool-msg-1', reason);
       });
 
-      expect(optimisticCreateMessageSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: t('tool.intervention.skipMessageWithReason', { ns: 'chat', reason }),
-          groupId: 'group-1',
-          metadata: { trigger: RequestTrigger.Onboarding },
-          // Anchored on the assistant that asked, not left null — a null parent
-          // would make this turn a second root of the topic (`segment-split`).
-          parentId: onboardingAssistantMessage.id,
-          role: 'user',
-        }),
-        expect.objectContaining({ operationId: expect.any(String) }),
-      );
+      // No synthetic user message — the server settles the pending tool row.
+      expect(optimisticCreateMessageSpy).not.toHaveBeenCalled();
 
-      expect(internal_createAgentStateSpy).toHaveBeenCalledWith(
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({ id: 'tool-msg-1', role: 'tool' }),
-            expect.objectContaining({ id: userMessageId, role: 'user' }),
-          ]),
-          parentMessageId: userMessageId,
-        }),
-      );
-
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          initialContext,
           metadata: { trigger: RequestTrigger.Onboarding },
-          parentMessageId: userMessageId,
-          parentMessageType: 'user',
+          parentMessageId: 'tool-msg-1',
+          resumeToolResult: {
+            content: `User skipped: ${reason}`,
+            outcome: 'skipped',
+            parentMessageId: 'tool-msg-1',
+            rejectionReason: reason,
+            toolCallId: 'call_ask',
+          },
         }),
       );
     });
@@ -2458,7 +2357,8 @@ describe('ConversationControl actions', () => {
           type: 'default',
         },
         role: 'tool',
-      });
+        tool_call_id: 'call_marketplace',
+      } as any);
 
       act(() => {
         useChatStore.setState({
@@ -2474,71 +2374,35 @@ describe('ConversationControl actions', () => {
         });
       });
 
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
-
-      const userMessageId = 'skipped-user-msg';
-      const optimisticCreateMessageSpy = vi
-        .spyOn(result.current, 'optimisticCreateMessage')
-        .mockImplementation(async (message) => {
-          const userMessage = createMockMessage({
-            content: message.content,
-            groupId: message.groupId,
-            id: userMessageId,
-            metadata: message.metadata,
-            role: 'user',
-            topicId,
-          });
-
-          useChatStore.setState({
-            dbMessagesMap: {
-              [chatKey]: [
-                onboardingUserMessage,
-                onboardingAssistantMessage,
-                toolMessage,
-                userMessage,
-              ],
-            },
-            messagesMap: {
-              [chatKey]: [toolMessage, userMessage],
-            },
-          });
-
-          return {
-            id: userMessageId,
-            messages: [onboardingUserMessage, onboardingAssistantMessage, toolMessage, userMessage],
-          };
-        });
-
-      vi.spyOn(result.current, 'internal_createAgentState').mockReturnValue({
-        agentConfig: createMockResolvedAgentConfig(),
-        context: { phase: 'init' } as any,
-        state: {} as any,
-      });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       await act(async () => {
         await result.current.skipToolInteraction('tool-msg-1');
       });
 
-      expect(optimisticCreateMessageSpy).toHaveBeenCalledWith(
+      // The trigger walk uses the raw db messages, so the onboarding trigger
+      // survives even when the display list only contains the tool row.
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: { trigger: RequestTrigger.Onboarding },
-        }),
-        expect.objectContaining({ operationId: expect.any(String) }),
-      );
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          metadata: { trigger: RequestTrigger.Onboarding },
-          parentMessageId: userMessageId,
-          parentMessageType: 'user',
+          parentMessageId: 'tool-msg-1',
+          resumeToolResult: {
+            content: 'User skipped this question.',
+            outcome: 'skipped',
+            parentMessageId: 'tool-msg-1',
+            rejectionReason: undefined,
+            toolCallId: 'call_marketplace',
+          },
         }),
       );
     });
 
-    it('should bail before running if a Stop cancels the interim op during synthetic message creation', async () => {
+    it('still resumes through Gateway if a Stop cancels the interim op mid durable-claim await', async () => {
       const { result } = renderHook(() => useChatStore());
       const agentId = 'global-agent';
       const topicId = 'global-topic';
@@ -2546,7 +2410,13 @@ describe('ConversationControl actions', () => {
         id: 'tool-msg-1',
         role: 'tool',
         plugin: { identifier: 'test-plugin', type: 'default', arguments: '{}', apiName: 'test' },
-      });
+        pluginIntervention: {
+          batchId: 'batch-skip-stop',
+          operationId: 'operation-skip-stop',
+          status: 'pending',
+        },
+        tool_call_id: 'call_skip_stop',
+      } as any);
       const globalKey = messageMapKey({ agentId, topicId });
       act(() => {
         useChatStore.setState({
@@ -2558,25 +2428,38 @@ describe('ConversationControl actions', () => {
         });
       });
 
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
-      // Stop lands while the synthetic user message is being created — a later
-      // await than the guard before it.
-      vi.spyOn(result.current, 'optimisticCreateMessage').mockImplementation(async (_msg, ctx) => {
-        if (ctx?.operationId) result.current.cancelOperation(ctx.operationId);
-        return { id: 'skipped-user-msg', messages: [] } as any;
-      });
-      const internal_createAgentStateSpy = vi.spyOn(result.current, 'internal_createAgentState');
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      // Stop lands while the durable intervention claim is in flight — the
+      // claim+resume is indivisible, so the implementation does NOT bail.
+      vi.mocked(lambdaClient.aiAgent.resolveAgentInterventionBySource.mutate).mockImplementation(
+        async () => {
+          const interimOp = Object.values(result.current.operations).find(
+            (op) => op.type === 'skipToolInteraction',
+          );
+          if (interimOp) result.current.cancelOperation(interimOp.id);
+          return { contractVersion: 2, status: 'unavailable', success: false } as any;
+        },
+      );
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       await act(async () => {
         await result.current.skipToolInteraction('tool-msg-1', 'not needed');
       });
 
-      expect(internal_createAgentStateSpy).not.toHaveBeenCalled();
-      expect(executeClientAgentSpy).not.toHaveBeenCalled();
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resumeToolResult: expect.objectContaining({
+            outcome: 'skipped',
+            parentMessageId: 'tool-msg-1',
+            rejectionReason: 'not needed',
+            toolCallId: 'call_skip_stop',
+          }),
+        }),
+      );
     });
   });
 
@@ -2593,7 +2476,8 @@ describe('ConversationControl actions', () => {
         id: 'tool-msg-1',
         role: 'tool',
         plugin: { identifier: 'test-plugin', type: 'default', arguments: '{}', apiName: 'test' },
-      });
+        tool_call_id: 'call_builder',
+      } as any);
 
       const globalKey = messageMapKey({ agentId: globalAgentId, topicId: null });
       const builderKey = messageMapKey({
@@ -2620,16 +2504,12 @@ describe('ConversationControl actions', () => {
       // Mock internal methods
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
-      const internal_createAgentStateSpy = vi
-        .spyOn(result.current, 'internal_createAgentState')
-        .mockReturnValue({
-          state: {} as any,
-          context: { phase: 'init' } as any,
-          agentConfig: createMockResolvedAgentConfig(),
-        });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      const isGatewayModeEnabledSpy = vi
+        .spyOn(result.current, 'isGatewayModeEnabled')
+        .mockReturnValue(true);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       // Call with builder context
       const context: ConversationContext = {
@@ -2642,22 +2522,23 @@ describe('ConversationControl actions', () => {
         await result.current.rejectAndContinueToolCalling('tool-msg-1', 'User rejected', context);
       });
 
-      // Verify internal_createAgentState was called with builder context
-      expect(internal_createAgentStateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          agentId: builderAgentId,
-          topicId: builderTopicId,
-        }),
-      );
+      // The Gateway-resume decision is scoped to the provided context agent.
+      expect(isGatewayModeEnabledSpy).toHaveBeenCalledWith(builderAgentId);
 
-      // Verify executeClientAgent was called with builder context (now wrapped in context object)
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
+      // Verify the Gateway resume runs under the builder context
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           context: expect.objectContaining({
             agentId: builderAgentId,
             topicId: builderTopicId,
             scope: 'agent_builder',
           }),
+          resumeApproval: {
+            decision: 'rejected_continue',
+            parentMessageId: 'tool-msg-1',
+            rejectionReason: 'User rejected',
+            toolCallId: 'call_builder',
+          },
         }),
       );
     });
@@ -2673,7 +2554,8 @@ describe('ConversationControl actions', () => {
         id: 'tool-msg-1',
         role: 'tool',
         plugin: { identifier: 'test-plugin', type: 'default', arguments: '{}', apiName: 'test' },
-      });
+        tool_call_id: 'call_global',
+      } as any);
 
       const globalKey = messageMapKey({ agentId: globalAgentId, topicId: globalTopicId });
 
@@ -2694,37 +2576,29 @@ describe('ConversationControl actions', () => {
       // Mock internal methods
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
-      const internal_createAgentStateSpy = vi
-        .spyOn(result.current, 'internal_createAgentState')
-        .mockReturnValue({
-          state: {} as any,
-          context: { phase: 'init' } as any,
-          agentConfig: createMockResolvedAgentConfig(),
-        });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       // Call without context
       await act(async () => {
         await result.current.rejectAndContinueToolCalling('tool-msg-1', 'User rejected');
       });
 
-      // Verify internal_createAgentState was called with global context
-      expect(internal_createAgentStateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          agentId: globalAgentId,
-          topicId: globalTopicId,
-        }),
-      );
-
-      // Verify executeClientAgent was called with global context
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
+      // Verify the Gateway resume runs under the global context
+      expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           context: expect.objectContaining({
             agentId: globalAgentId,
             topicId: globalTopicId,
           }),
+          resumeApproval: {
+            decision: 'rejected_continue',
+            parentMessageId: 'tool-msg-1',
+            rejectionReason: 'User rejected',
+            toolCallId: 'call_global',
+          },
         }),
       );
     });
@@ -2737,8 +2611,8 @@ describe('ConversationControl actions', () => {
   // upcoming lifecycle refactor cannot silently change them. They assert what
   // the code does NOW.
   // ===========================================================================
-  describe('rejectAndContinueToolCalling client characterization (lifecycle refactor regression net)', () => {
-    it('runs rejectToolCalling (one op completes) then starts a NEW op and executes client agent with phase=user_input', async () => {
+  describe('rejectAndContinueToolCalling non-gateway characterization (lifecycle refactor regression net)', () => {
+    it('runs rejectToolCalling (one op completes) then fails a NEW op with GATEWAY_RESUME_REQUIRED', async () => {
       const { result } = renderHook(() => useChatStore());
 
       const agentId = 'client-agent';
@@ -2762,21 +2636,15 @@ describe('ConversationControl actions', () => {
         });
       });
 
-      // Client-mode (no Gateway resume): let the real rejectToolCalling chain
-      // run so we can observe the dual-op sequence. Only stub the persistence
-      // primitives and the runtime executor.
+      // Non-gateway (no Gateway resume, no hetero binding): the halting reject
+      // still persists — only the "continue" half has no runtime to run on.
       vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(false);
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
       const rejectToolCallingSpy = vi.spyOn(result.current, 'rejectToolCalling');
-      vi.spyOn(result.current, 'internal_createAgentState').mockReturnValue({
-        agentConfig: createMockResolvedAgentConfig(),
-        context: { phase: 'init' } as any,
-        state: {} as any,
-      });
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
+      const executeGatewayAgentSpy = vi
+        .spyOn(result.current, 'executeGatewayAgent')
+        .mockResolvedValue({} as any);
 
       await act(async () => {
         await result.current.rejectAndContinueToolCalling('tool-msg-1', 'not safe');
@@ -2785,23 +2653,20 @@ describe('ConversationControl actions', () => {
       // 1) The halting reject runs first (it creates + completes its own op).
       expect(rejectToolCallingSpy).toHaveBeenCalledWith('tool-msg-1', 'not safe', undefined);
 
-      // 2) Then a SECOND op is created and the client runtime continues with
-      //    phase overridden to 'user_input', resuming from the tool message.
-      expect(executeClientAgentSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          initialContext: expect.objectContaining({ phase: 'user_input' }),
-          parentMessageId: 'tool-msg-1',
-          parentMessageType: 'tool',
-        }),
-      );
+      // 2) No runtime executes — there is no local resume path any more.
+      expect(executeGatewayAgentSpy).not.toHaveBeenCalled();
 
-      // Two 'rejectToolCalling' ops exist (the halting reject's own op + the
-      // continue op). Both reach 'completed' on the happy path.
+      // Two 'rejectToolCalling' ops exist: the halting reject's own op
+      // completes, while the continue op fails explicitly with the gateway
+      // requirement error.
       const rejectOps = Object.values(result.current.operations).filter(
         (op: any) => op.type === 'rejectToolCalling',
       );
       expect(rejectOps).toHaveLength(2);
-      expect(rejectOps.every((op: any) => op.status === 'completed')).toBe(true);
+      expect(rejectOps.map((op: any) => op.status)).toEqual(['completed', 'failed']);
+      expect(rejectOps[1]!.metadata.error?.message).toBe(
+        'AGENT_RUNTIME_UNSUPPORTED: This interaction can only be resumed by a gateway-bound run.',
+      );
     });
   });
 
@@ -3653,9 +3518,6 @@ describe('ConversationControl actions', () => {
       const executeGatewayAgentSpy = vi
         .spyOn(result.current, 'executeGatewayAgent')
         .mockResolvedValue({} as any);
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
 
       await act(async () => {
         await result.current.approveAllToolCalls(['tool-msg-a', 'tool-msg-b', 'tool-msg-c']);
@@ -3673,7 +3535,6 @@ describe('ConversationControl actions', () => {
           ],
         }),
       );
-      expect(executeClientAgentSpy).not.toHaveBeenCalled();
 
       executeGatewayAgentSpy.mockRestore();
     });
@@ -3723,38 +3584,42 @@ describe('ConversationControl actions', () => {
       executeGatewayAgentSpy.mockRestore();
     });
 
-    // Client mode has no batch resume; its local runtime re-parks on the
-    // remaining pending tools after each approval, so sequential is correct.
-    it('falls back to sequential approvals in client mode', async () => {
+    // There is no local resume path any more — the retired browser runtime had
+    // the only sequential path, so each per-message approval now fails its
+    // interim op explicitly.
+    it('fails each approval with GATEWAY_RESUME_REQUIRED when the agent has no gateway binding', async () => {
       const { result } = renderHook(() => useChatStore());
       seedPendingBatch(result);
       vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(false);
 
-      vi.spyOn(result.current, 'internal_createAgentState').mockReturnValue({
-        agentConfig: createMockResolvedAgentConfig(),
-        context: { phase: 'init' } as any,
-        state: {} as any,
-      });
       const executeGatewayAgentSpy = vi
         .spyOn(result.current, 'executeGatewayAgent')
         .mockResolvedValue({} as any);
-      const executeClientAgentSpy = vi
-        .spyOn(result.current, 'executeClientAgent')
-        .mockResolvedValue(undefined);
 
       await act(async () => {
         await result.current.approveAllToolCalls(['tool-msg-a', 'tool-msg-b']);
       });
 
       expect(executeGatewayAgentSpy).not.toHaveBeenCalled();
-      // One local resume per tool, in order — the runtime re-parks on the
-      // remaining pending tools between them.
-      expect(executeClientAgentSpy).toHaveBeenCalledTimes(2);
+      // One interim op per tool, each failed explicitly — sequential order is
+      // preserved by the per-message loop.
+      const approvalOps = Object.values(result.current.operations).filter(
+        (op: any) => op.type === 'approveToolCalling',
+      );
+      expect(approvalOps).toHaveLength(2);
+      expect(approvalOps.map((op: any) => op.context?.messageId)).toEqual([
+        'tool-msg-a',
+        'tool-msg-b',
+      ]);
       expect(
-        executeClientAgentSpy.mock.calls.map((call) => (call[0] as any).parentMessageId),
-      ).toEqual(['tool-msg-a', 'tool-msg-b']);
+        approvalOps.every(
+          (op: any) =>
+            op.status === 'failed' &&
+            op.metadata.error?.message ===
+              'AGENT_RUNTIME_UNSUPPORTED: This interaction can only be resumed by a gateway-bound run.',
+        ),
+      ).toBe(true);
 
-      executeClientAgentSpy.mockRestore();
       executeGatewayAgentSpy.mockRestore();
     });
 

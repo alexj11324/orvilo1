@@ -1250,14 +1250,25 @@ const ScheduleAgentRunSchema = z
 const ExecSubAgentTaskSchema = z.object({
   /** The SubAgent ID to execute the task */
   agentId: z.string(),
+  /**
+   * chatConfig overrides (thinking / reasoning-effort extend params) resolved
+   * by the spawn site from the parent agent's `agencyConfig.subagent`.
+   */
+  chatConfig: z.record(z.string(), z.any()).nullish(),
   /** The Group ID (optional, only for Group mode) */
   groupId: z.string().optional(),
+  /** Seed the isolation thread with the parent conversation transcript */
+  inheritMessages: z.boolean().optional(),
   /** Task instruction/prompt for the SubAgent */
   instruction: z.string(),
+  /** Sub-agent model override resolved at the spawn site */
+  model: z.string().optional(),
   /** The parent message ID (Supervisor's tool call message or task message) */
   parentMessageId: z.string(),
   /** Parent operation ID for dispatching callAgent hooks */
   parentOperationId: z.string().optional(),
+  /** Provider for {@link model} */
+  provider: z.string().optional(),
   /** Timeout in milliseconds (optional) */
   timeout: z.number().optional(),
   /** Task title (shown in UI, used as thread title) */
@@ -2597,10 +2608,14 @@ export const aiAgentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const {
         agentId,
+        chatConfig,
         groupId,
+        inheritMessages,
         instruction,
+        model,
         parentMessageId,
         parentOperationId,
+        provider,
         title,
         topicId,
         timeout,
@@ -2627,10 +2642,14 @@ export const aiAgentRouter = router({
         // External procedure name stays `execSubAgentTask`; the service method is `execSubAgent`.
         return await ctx.aiAgentService.execSubAgent({
           agentId,
+          chatConfig,
           groupId,
+          inheritMessages,
           instruction,
+          model,
           parentMessageId,
           ...(parentOperationId && { parentOperationId }),
+          provider,
           timeout,
           title,
           topicId,

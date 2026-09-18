@@ -3487,6 +3487,113 @@ export class MessageModel {
     });
   };
 
+  /**
+   * Copy a topic's top-level transcript into an isolation thread.
+   * Sub-agent `inheritMessages` seeding uses this so the spawned run sees the
+   * conversation that produced the request. Row ids are remapped (PK) and
+   * `parentId` is re-pointed inside the copied set; `message_plugins` rows
+   * (minus `intervention` — approval state belongs to the live run) and
+   * `messages_files` links are copied so call ↔ result pairing and file
+   * attachments survive into the child's context. `createdAt` is preserved so
+   * the transcript orders before the instruction row written next.
+   *
+   * Per-row runtime/attribution fields (clientId, favorite, observationId,
+   * quotaId, sessionId, traceId, usage) do NOT carry over.
+   */
+  copyMessagesToThread = async (params: {
+    agentId: string;
+    threadId: string;
+    topicId: string;
+  }): Promise<number> => {
+    const { agentId, threadId, topicId } = params;
+    const agentCondition = await this.buildAgentCondition(agentId);
+
+    const rows = await this.db
+      .select()
+      .from(messages)
+      .where(
+        and(
+          this.ownership(),
+          agentCondition,
+          eq(messages.topicId, topicId),
+          isNull(messages.threadId),
+          isNull(messages.messageGroupId),
+          ne(messages.role, 'task'),
+        ),
+      )
+      .orderBy(asc(messages.createdAt), asc(messages.id));
+
+    if (rows.length === 0) return 0;
+
+    const idMap = new Map(rows.map((m) => [m.id, idGenerator('messages')]));
+    const sourceIds = rows.map((m) => m.id);
+
+    return this.db.transaction(async (trx) => {
+      await trx.insert(messages).values(
+        rows.map((m) =>
+          buildWorkspacePayload(
+            { userId: this.userId, workspaceId: this.workspaceId },
+            {
+              ...m,
+              clientId: null,
+              favorite: null,
+              id: idMap.get(m.id)!,
+              observationId: null,
+              parentId: m.parentId ? (idMap.get(m.parentId) ?? null) : null,
+              quotaId: null,
+              sessionId: null,
+              threadId,
+              traceId: null,
+              usage: null,
+            },
+          ),
+        ),
+      );
+
+      const sourcePluginRows = await trx
+        .select()
+        .from(messagePlugins)
+        .where(
+          and(
+            inArray(messagePlugins.id, sourceIds),
+            buildWorkspaceWhere(
+              { userId: this.userId, workspaceId: this.workspaceId },
+              messagePlugins,
+            ),
+          ),
+        );
+
+      if (sourcePluginRows.length > 0) {
+        await trx.insert(messagePlugins).values(
+          // `clientId` stays unset — the (clientId, userId) unique index must
+          // not collide with the source rows.
+          sourcePluginRows.map(({ clientId: _clientId, id, intervention: _i, ...p }) => ({
+            ...p,
+            id: idMap.get(id)!,
+          })),
+        );
+      }
+
+      const sourceFileLinks = await trx
+        .select()
+        .from(messagesFiles)
+        .where(inArray(messagesFiles.messageId, sourceIds));
+
+      if (sourceFileLinks.length > 0) {
+        await trx.insert(messagesFiles).values(
+          sourceFileLinks.map((f) => ({
+            fileId: f.fileId,
+            messageId: idMap.get(f.messageId)!,
+            userId: this.userId,
+            workspaceId: this.workspaceId ?? null,
+          })),
+        );
+      }
+
+      return rows.length;
+    });
+  };
+
   createMessageQuery = async (params: NewMessageQueryParams) => {
     const result = await this.db
       .insert(messageQueries)

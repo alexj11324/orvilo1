@@ -35,6 +35,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { AgentService } from '@/server/services/agent';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
+import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
 import type {
   AgentExecutionParams,
   AgentExecutionResult,
@@ -43,7 +44,6 @@ import type {
   SubAgentBridgeParams,
 } from '@/server/services/agentRuntime';
 import { AgentRuntimeService } from '@/server/services/agentRuntime';
-import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
@@ -1409,8 +1409,13 @@ export class AiAgentService {
   // Arrow field (not a method) so it stays bound when handed to AgentRuntimeService.
   execSubAgent = async (params: ExecSubAgentParams): Promise<ExecSubAgentResult> =>
     execAgentThreadRun(this.subAgentRunDeps, params, {
+      chatConfig: params.chatConfig,
       isSubAgent: false,
       logScope: 'execSubAgent',
+      // Spawn-site resolved overrides (client `callSubAgent` / execSubAgentTask
+      // carry them; group members leave them undefined and keep their own).
+      model: params.model,
+      provider: params.provider,
     });
 
   /**

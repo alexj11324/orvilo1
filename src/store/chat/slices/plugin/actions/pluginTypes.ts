@@ -1,3 +1,4 @@
+import { getSubAgentChatConfigOverride, resolveSubAgentModel } from '@orvilo/const';
 import {
   type ChatToolPayload,
   type RuntimeStepContext,
@@ -11,8 +12,11 @@ import { type MCPToolCallResult } from '@/libs/mcp';
 import { mcpService } from '@/services/mcp';
 import { messageService } from '@/services/message';
 import { archiveToolResultViaServer } from '@/services/toolResultArchive';
+import { getAgentStoreState } from '@/store/agent';
+import { agentSelectors } from '@/store/agent/selectors';
 import { ClientSubAgentTransport } from '@/store/chat/agents/transports/ClientSubAgentTransport';
 import { operationSelectors } from '@/store/chat/slices/operation';
+import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 import { type ChatStore } from '@/store/chat/store';
 import { useToolStore } from '@/store/tool';
 import { composioStoreSelectors, orviloSkillStoreSelectors } from '@/store/tool/selectors';
@@ -136,6 +140,12 @@ export class PluginTypesActionImpl {
       // (orvilo-agent.callSubAgent). Dispatches a server-backed sub-agent task and
       // polls for completion via `ClientSubAgentTransport`, so the tool returns
       // a normal tool result. The local browser runtime is retired.
+      //
+      // The spawn-site contract the client runtime kept still applies here:
+      // `inheritMessages` forwards to the server (which seeds the isolation
+      // thread), and the child is an anonymous clone of the parent — the
+      // parent's `agencyConfig.subagent` model/provider/chatConfig overrides
+      // resolve here, not inside the transport.
       const subAgentParentOperationId = rootRuntimeOperationId ?? operationId;
       const subAgent: SubAgentCallbacks = {
         run: async (runParams) => {
@@ -147,23 +157,45 @@ export class PluginTypesActionImpl {
               threadId: '',
             };
           }
+
+          const parentAgentConfig =
+            agentSelectors.getAgentConfigById(agentId)(getAgentStoreState());
+          const parentEffectiveModel =
+            topicSelectors.getTopicModelById(topicId)(this.#get()) ?? parentAgentConfig;
+          const subAgentModel = resolveSubAgentModel(
+            parentAgentConfig?.agencyConfig?.subagent,
+            parentEffectiveModel,
+          );
+
           const result = await new ClientSubAgentTransport(
             this.#get,
             subAgentParentOperationId,
           ).execSubAgent({
             agentId,
+            chatConfig: getSubAgentChatConfigOverride(parentAgentConfig?.agencyConfig?.subagent),
+            inheritMessages: runParams.inheritMessages,
             instruction: runParams.instruction,
+            model: subAgentModel.model,
             parentMessageId: runParams.toolMessageId,
             parentOperationId: subAgentParentOperationId,
+            provider: subAgentModel.provider,
             timeout: runParams.timeout,
             title: runParams.description,
             topicId,
           });
           return {
             error: result.error,
+            model: subAgentModel.model,
             result: result.result ?? '',
             success: result.success,
             threadId: result.threadId,
+            // Terminal task metrics ride back so the parent's usage tray and
+            // the tool message's pluginState account for the isolated work.
+            totalCost: result.cost?.total,
+            totalInputTokens: result.usage?.prompt_tokens,
+            totalOutputTokens: result.usage?.completion_tokens,
+            totalTokens: result.usage?.total_tokens,
+            totalToolCalls: result.totalToolCalls,
           };
         },
       };

@@ -5,75 +5,16 @@ import {
   resolveSubAgentChatConfig,
   resolveSubAgentModel,
 } from '@orvilo/const';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import * as agentConfigResolver from '@/services/chat/mecha/agentConfigResolver';
-
-import { useChatStore } from '../../../../store';
-import {
-  createMockAgentConfig,
-  createMockChatConfig,
-  createMockMessage,
-  TEST_IDS,
-} from './fixtures';
-import { resetTestEnvironment } from './helpers';
+import { describe, expect, it } from 'vitest';
 
 /**
  * The model a `callSubAgent` sub-agent runs on is resolved at the *spawn site*
- * and handed to the run as an explicit override. It must not be re-derived from
- * `isSubAgent`: isolated group members carry that flag too (it disables the
- * orvilo-agent tool) and have to keep the model configured on the member agent.
+ * (`pluginTypes.ts` → `resolveSubAgentModel`) and handed to the run as an
+ * explicit override via `ClientSubAgentTransport.execSubAgent`. The browser
+ * runtime's `internal_createAgentState` — which used to apply that override —
+ * is retired, so the resolution semantics are pinned here at the pure-function
+ * seam instead.
  */
-describe('sub-agent model resolution', () => {
-  const OWN = { model: 'gpt-5.4', provider: 'openai' };
-
-  const createAgentState = (params: {
-    isSubAgent?: boolean;
-    modelOverride?: { model: string; provider: string };
-  }) =>
-    useChatStore.getState().internal_createAgentState({
-      agentId: TEST_IDS.SESSION_ID,
-      messages: [createMockMessage()],
-      parentMessageId: TEST_IDS.USER_MESSAGE_ID,
-      topicId: TEST_IDS.TOPIC_ID,
-      ...params,
-    });
-
-  beforeEach(() => {
-    resetTestEnvironment();
-    vi.spyOn(agentConfigResolver, 'resolveAgentConfig').mockReturnValue({
-      agentConfig: createMockAgentConfig(OWN),
-      chatConfig: createMockChatConfig(),
-      isBuiltinAgent: false,
-      plugins: [],
-    });
-  });
-
-  it('runs a spawned sub-agent on the model the spawn site resolved', () => {
-    const { agentConfig } = createAgentState({
-      isSubAgent: true,
-      modelOverride: { model: DEFAULT_SUB_AGENT_MODEL, provider: 'deepseek' },
-    });
-
-    expect(agentConfig.agentConfig).toMatchObject({
-      model: DEFAULT_SUB_AGENT_MODEL,
-      provider: 'deepseek',
-    });
-  });
-
-  it('keeps a group member on its own model — isSubAgent alone must not override it', () => {
-    const { agentConfig } = createAgentState({ isSubAgent: true });
-
-    expect(agentConfig.agentConfig).toMatchObject(OWN);
-  });
-
-  it('keeps an ordinary run on its own model', () => {
-    const { agentConfig } = createAgentState({});
-
-    expect(agentConfig.agentConfig).toMatchObject(OWN);
-  });
-});
-
 describe('resolveSubAgentModel', () => {
   const PARENT = { model: 'claude-sonnet-5', provider: 'anthropic' };
 

@@ -8,7 +8,7 @@ import {
 } from '@orvilo/types';
 
 import { type ChatInputEditor } from '@/features/ChatInput';
-import { getTopicAgencyConfig } from '@/helpers/topicExecutionConfig';
+import { getTopicAgencyConfig, resolveIsGroupSupervisor } from '@/helpers/topicExecutionConfig';
 import { lambdaClient } from '@/libs/trpc/client';
 import {
   type AgentInterventionSourceAction,
@@ -217,6 +217,7 @@ export class ConversationControlActionImpl {
           executionTarget: agencyConfig?.executionTarget,
           heterogeneousProvider: agencyConfig?.heterogeneousProvider,
           isGatewayMode: this.#get().isGatewayModeEnabled(context.agentId),
+          isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
         }) === 'gateway'
       );
     } catch {

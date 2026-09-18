@@ -438,14 +438,33 @@ export interface ExecGroupAgentResponse {
 export interface ExecSubAgentParams {
   /** The agent ID to execute */
   agentId: string;
+  /**
+   * chatConfig overrides (thinking / reasoning-effort extend params) for the
+   * spawned run, from the parent agent's `agencyConfig.subagent.chatConfig`.
+   * Merged over the executing agent's own chatConfig, skipping nulled keys.
+   */
+  chatConfig?: Partial<OrviloAgentChatConfig> | null;
   /** The Group ID (optional, only for Group mode) */
   groupId?: string;
+  /**
+   * Seed the isolation thread with the parent conversation's transcript so the
+   * spawned run sees the context that produced the request.
+   */
+  inheritMessages?: boolean;
   /** Instruction/prompt for the agent */
   instruction: string;
+  /**
+   * Model the spawned run should use, resolved by the spawn site from the
+   * parent agent's `agencyConfig.subagent`. Passed explicitly so the execution
+   * side never re-reads the parent config.
+   */
+  model?: string;
   /** The parent message ID that anchors the isolated thread */
   parentMessageId: string;
   /** Parent operation ID for dispatching callAgent hooks */
   parentOperationId?: string;
+  /** Provider for {@link model}. */
+  provider?: string;
   /** Timeout in milliseconds (optional) */
   timeout?: number;
   /** Thread title shown in UI */
@@ -474,6 +493,11 @@ export interface ExecVirtualSubAgentParams {
   chatConfig?: Partial<OrviloAgentChatConfig> | null;
   /** The Group ID inherited from the parent operation, when present */
   groupId?: string;
+  /**
+   * Seed the isolation thread with the parent conversation's transcript so the
+   * spawned run sees the context that produced the request.
+   */
+  inheritMessages?: boolean;
   /** Instruction/prompt for the virtual sub-agent */
   instruction: string;
   /**

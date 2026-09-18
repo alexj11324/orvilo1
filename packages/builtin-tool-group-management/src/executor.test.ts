@@ -45,9 +45,25 @@ describe('GroupManagementExecutor', () => {
     registerAfterCompletion,
   });
 
+  // Orchestration tools only succeed when the runtime supplies member
+  // scheduling — bare contexts get the full callback set here so success-path
+  // tests exercise the real contract.
+  const createOrchestratedContext = (): BuiltinToolContext =>
+    createMockContext(
+      {
+        triggerBroadcast: vi.fn(),
+        triggerDelegate: vi.fn(),
+        triggerExecuteTask: vi.fn(),
+        triggerExecuteTasks: vi.fn(),
+        triggerSpeak: vi.fn(),
+      },
+      'supervisor-agent',
+      vi.fn(),
+    );
+
   describe('speak', () => {
     it('should return stop=true to terminate supervisor execution', async () => {
-      const ctx = createMockContext();
+      const ctx = createOrchestratedContext();
 
       const result = await groupManagementExecutor.speak(
         { agentId: 'agent-1', instruction: 'Please respond' },
@@ -102,13 +118,14 @@ describe('GroupManagementExecutor', () => {
       });
     });
 
-    it('should not fail when groupOrchestration is not available', async () => {
+    it('should fail when groupOrchestration is not available', async () => {
       const ctx = createMockContext(); // No groupOrchestration
 
       const result = await groupManagementExecutor.speak({ agentId: 'agent-1' }, ctx);
 
-      expect(result.success).toBe(true);
-      expect(result.stop).toBe(true);
+      expect(result.success).toBe(false);
+      expect(result.stop).toBeUndefined();
+      expect(result.content).toContain('Group orchestration is not available');
     });
 
     it('should handle undefined instruction in afterCompletion callback', async () => {
@@ -145,7 +162,7 @@ describe('GroupManagementExecutor', () => {
 
   describe('broadcast', () => {
     it('should return stop=true to terminate supervisor execution', async () => {
-      const ctx = createMockContext();
+      const ctx = createOrchestratedContext();
 
       const result = await groupManagementExecutor.broadcast(
         { agentIds: ['agent-1', 'agent-2'], instruction: 'Discuss' },
@@ -201,19 +218,18 @@ describe('GroupManagementExecutor', () => {
       });
     });
 
-    it('should not fail when groupOrchestration is not available', async () => {
+    it('should fail when groupOrchestration is not available', async () => {
       const ctx = createMockContext();
 
       const result = await groupManagementExecutor.broadcast({ agentIds: ['agent-1'] }, ctx);
 
-      expect(result.success).toBe(true);
-      expect(result.stop).toBe(true);
+      expect(result.success).toBe(false);
     });
   });
 
   describe('delegate', () => {
     it('should return stop=true to terminate supervisor execution', async () => {
-      const ctx = createMockContext();
+      const ctx = createOrchestratedContext();
 
       const result = await groupManagementExecutor.delegate(
         { agentId: 'agent-1', reason: 'User requested' },
@@ -265,13 +281,12 @@ describe('GroupManagementExecutor', () => {
       });
     });
 
-    it('should not fail when groupOrchestration is not available', async () => {
+    it('should fail when groupOrchestration is not available', async () => {
       const ctx = createMockContext();
 
       const result = await groupManagementExecutor.delegate({ agentId: 'agent-1' }, ctx);
 
-      expect(result.success).toBe(true);
-      expect(result.stop).toBe(true);
+      expect(result.success).toBe(false);
     });
   });
 
@@ -281,7 +296,7 @@ describe('GroupManagementExecutor', () => {
     });
 
     it('should return stop=true to terminate supervisor execution', async () => {
-      const ctx = createMockContext();
+      const ctx = createOrchestratedContext();
 
       const result = await groupManagementExecutor.executeAgentTask(
         { agentId: 'agent-1', instruction: 'Do something', title: 'Test Task' },
@@ -340,7 +355,7 @@ describe('GroupManagementExecutor', () => {
       });
     });
 
-    it('should not fail when groupOrchestration is not available', async () => {
+    it('should fail when groupOrchestration is not available', async () => {
       const ctx = createMockContext();
 
       const result = await groupManagementExecutor.executeAgentTask(
@@ -348,12 +363,11 @@ describe('GroupManagementExecutor', () => {
         ctx,
       );
 
-      expect(result.success).toBe(true);
-      expect(result.stop).toBe(true);
+      expect(result.success).toBe(false);
     });
 
     it('should include timeout in state when provided', async () => {
-      const ctx = createMockContext();
+      const ctx = createOrchestratedContext();
 
       const result = await groupManagementExecutor.executeAgentTask(
         { agentId: 'agent-1', instruction: 'Do something', timeout: 60000, title: 'Test Task' },

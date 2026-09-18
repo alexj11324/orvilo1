@@ -27,21 +27,37 @@ class GroupManagementExecutor extends BaseExecutor<typeof GroupManagementApiName
   readonly identifier = GroupManagementIdentifier;
   protected readonly apiEnum = GroupManagementApiName;
 
+  /**
+   * Orchestration tools must never report success while scheduling nothing:
+   * without `groupOrchestration` (retired client runtime) there is no driver
+   * that can run member turns, so the only honest result is a failure the
+   * supervisor model can read and relay.
+   */
+  #requireOrchestration = (ctx: BuiltinToolContext): BuiltinToolResult | undefined => {
+    if (ctx.groupOrchestration && ctx.agentId && ctx.registerAfterCompletion) return undefined;
+    return {
+      content:
+        'Group orchestration is not available in this runtime — the supervisor turn must execute through a runtime that provides member scheduling.',
+      success: false,
+    };
+  };
+
   // ==================== Communication Coordination ====================
 
   speak = async (params: SpeakParams, ctx: BuiltinToolContext): Promise<BuiltinToolResult> => {
     // Register afterCompletion callback to trigger orchestration after AgentRuntime completes
     // This avoids race conditions with message updates
-    if (ctx.groupOrchestration && ctx.agentId && ctx.registerAfterCompletion) {
-      ctx.registerAfterCompletion(() =>
-        ctx.groupOrchestration!.triggerSpeak({
-          agentId: params.agentId,
-          instruction: params.instruction,
-          skipCallSupervisor: params.skipCallSupervisor,
-          supervisorAgentId: ctx.agentId!,
-        }),
-      );
-    }
+    const unavailable = this.#requireOrchestration(ctx);
+    if (unavailable) return unavailable;
+
+    ctx.registerAfterCompletion!(() =>
+      ctx.groupOrchestration!.triggerSpeak({
+        agentId: params.agentId,
+        instruction: params.instruction,
+        skipCallSupervisor: params.skipCallSupervisor,
+        supervisorAgentId: ctx.agentId!,
+      }),
+    );
 
     // Returns stop: true to indicate the supervisor should stop and let agent respond
     return {
@@ -63,17 +79,18 @@ class GroupManagementExecutor extends BaseExecutor<typeof GroupManagementApiName
   ): Promise<BuiltinToolResult> => {
     // Register afterCompletion callback to trigger orchestration after AgentRuntime completes
     // This avoids race conditions with message updates
-    if (ctx.groupOrchestration && ctx.agentId && ctx.registerAfterCompletion) {
-      ctx.registerAfterCompletion(() =>
-        ctx.groupOrchestration!.triggerBroadcast({
-          agentIds: params.agentIds,
-          instruction: params.instruction,
-          skipCallSupervisor: params.skipCallSupervisor,
-          supervisorAgentId: ctx.agentId!,
-          toolMessageId: ctx.messageId, // Pass tool message ID for correct parent-child relationship
-        }),
-      );
-    }
+    const unavailable = this.#requireOrchestration(ctx);
+    if (unavailable) return unavailable;
+
+    ctx.registerAfterCompletion!(() =>
+      ctx.groupOrchestration!.triggerBroadcast({
+        agentIds: params.agentIds,
+        instruction: params.instruction,
+        skipCallSupervisor: params.skipCallSupervisor,
+        supervisorAgentId: ctx.agentId!,
+        toolMessageId: ctx.messageId, // Pass tool message ID for correct parent-child relationship
+      }),
+    );
 
     // Returns stop: true to trigger multiple agents to respond in parallel
     // metadata.agentCouncil marks this tool message for parallel display in conversation-flow
@@ -97,15 +114,16 @@ class GroupManagementExecutor extends BaseExecutor<typeof GroupManagementApiName
   ): Promise<BuiltinToolResult> => {
     // Register afterCompletion callback to trigger orchestration after AgentRuntime completes
     // This avoids race conditions with message updates
-    if (ctx.groupOrchestration && ctx.agentId && ctx.registerAfterCompletion) {
-      ctx.registerAfterCompletion(() =>
-        ctx.groupOrchestration!.triggerDelegate({
-          agentId: params.agentId,
-          reason: params.reason,
-          supervisorAgentId: ctx.agentId!,
-        }),
-      );
-    }
+    const unavailable = this.#requireOrchestration(ctx);
+    if (unavailable) return unavailable;
+
+    ctx.registerAfterCompletion!(() =>
+      ctx.groupOrchestration!.triggerDelegate({
+        agentId: params.agentId,
+        reason: params.reason,
+        supervisorAgentId: ctx.agentId!,
+      }),
+    );
 
     // The supervisor exits and delegated agent takes control
     return {
@@ -130,19 +148,20 @@ class GroupManagementExecutor extends BaseExecutor<typeof GroupManagementApiName
 
     // Register afterCompletion callback to trigger async task execution after AgentRuntime completes
     // This follows the same pattern as speak/broadcast - trigger mode, not blocking
-    if (ctx.groupOrchestration && ctx.agentId && ctx.registerAfterCompletion) {
-      ctx.registerAfterCompletion(() =>
-        ctx.groupOrchestration!.triggerExecuteTask({
-          agentId,
-          instruction,
-          runInClient,
-          skipCallSupervisor,
-          supervisorAgentId: ctx.agentId!,
-          timeout,
-          toolMessageId: ctx.messageId,
-        }),
-      );
-    }
+    const unavailable = this.#requireOrchestration(ctx);
+    if (unavailable) return unavailable;
+
+    ctx.registerAfterCompletion!(() =>
+      ctx.groupOrchestration!.triggerExecuteTask({
+        agentId,
+        instruction,
+        runInClient,
+        skipCallSupervisor,
+        supervisorAgentId: ctx.agentId!,
+        timeout,
+        toolMessageId: ctx.messageId,
+      }),
+    );
 
     // Returns stop: true to indicate the supervisor should stop and let the task execute
     return {
@@ -166,16 +185,17 @@ class GroupManagementExecutor extends BaseExecutor<typeof GroupManagementApiName
   ): Promise<BuiltinToolResult> => {
     // Register afterCompletion callback to trigger parallel task execution after AgentRuntime completes
     // This follows the same pattern as executeAgentTask - trigger mode, not blocking
-    if (ctx.groupOrchestration && ctx.agentId && ctx.registerAfterCompletion) {
-      ctx.registerAfterCompletion(() =>
-        ctx.groupOrchestration!.triggerExecuteTasks({
-          skipCallSupervisor: params.skipCallSupervisor,
-          supervisorAgentId: ctx.agentId!,
-          tasks: params.tasks,
-          toolMessageId: ctx.messageId,
-        }),
-      );
-    }
+    const unavailable = this.#requireOrchestration(ctx);
+    if (unavailable) return unavailable;
+
+    ctx.registerAfterCompletion!(() =>
+      ctx.groupOrchestration!.triggerExecuteTasks({
+        skipCallSupervisor: params.skipCallSupervisor,
+        supervisorAgentId: ctx.agentId!,
+        tasks: params.tasks,
+        toolMessageId: ctx.messageId,
+      }),
+    );
 
     const agentIds = params.tasks.map((t) => t.agentId).join(', ');
 

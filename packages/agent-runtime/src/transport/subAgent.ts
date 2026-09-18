@@ -13,8 +13,18 @@ export type SubAgentExecutionStatus = 'cancelled' | 'completed' | 'failed' | 'ti
  * polling concerns into the package.
  */
 export interface SubAgentExecutionResult extends ExecSubAgentResult {
+  /** Terminal cost of the child run (when the transport can observe it). */
+  cost?: { total?: number };
   result?: string;
   status?: SubAgentExecutionStatus;
+  /** Terminal tool-call count of the child run. */
+  totalToolCalls?: number;
+  /** Terminal token usage of the child run. */
+  usage?: {
+    completion_tokens?: number;
+    prompt_tokens?: number;
+    total_tokens?: number;
+  };
 }
 
 /**

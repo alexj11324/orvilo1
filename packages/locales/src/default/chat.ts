@@ -95,6 +95,8 @@ export default {
   'groupNotFound.desc':
     'This group does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'groupNotFound.title': 'Group Unavailable',
+  'groupSupervisorRequiresGateway':
+    'Group orchestration requires Agent Gateway. Enable gateway mode for this agent, then try again.',
   'inaccessibleFile.desc': 'No access — it may have been set to private or deleted by its owner',
   'inaccessibleFile.name': 'Unavailable file',
   'internalLink.agent.open': 'Open agent',

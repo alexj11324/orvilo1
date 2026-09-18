@@ -129,7 +129,8 @@ export default {
   'artworkStudio.generateTitle': 'Generate with AI',
   'artworkStudio.generatingHint':
     'This usually takes about 60 seconds. You can keep editing while it finishes.',
-  'artworkStudio.noModel': 'Enable an image generation model to use one-click generation.',
+  'artworkStudio.noModel':
+    'Image generation is not configured for this deployment. Ask your administrator to enable an image generation model, or upload artwork manually.',
   'artworkStudio.reference.remove': 'Remove reference',
   'artworkStudio.reference.title': 'Reference',
   'artworkStudio.remove': 'Remove',

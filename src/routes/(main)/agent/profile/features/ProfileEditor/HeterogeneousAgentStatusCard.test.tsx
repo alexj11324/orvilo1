@@ -543,7 +543,9 @@ describe('HeterogeneousAgentStatusCard', () => {
     );
 
     expect(await screen.findByText('Auth Method')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'claude-sonnet-4-6' })).toBeEnabled();
+    // The option label is a rich ModelItemRender (provider icon + name), so the
+    // accessible name includes the icon's aria-label — match on the model id.
+    expect(screen.getByRole('option', { name: /claude-sonnet-4-6/ })).toBeEnabled();
   });
 
   it('rewrites a legacy user-provider binding to the deployment default', async () => {
@@ -620,7 +622,7 @@ describe('HeterogeneousAgentStatusCard', () => {
       </MemoryRouter>,
     );
 
-    const modelOption = await screen.findByRole('option', { name: 'claude-sonnet-4-6' });
+    const modelOption = await screen.findByRole('option', { name: /claude-sonnet-4-6/ });
     expect(screen.queryByText('gpt-5.4')).not.toBeInTheDocument();
     fireEvent.change(modelOption.closest('select')!, { target: { value: 'claude-haiku-4-5' } });
     expect(onApiConfigChange).toHaveBeenCalledWith({
@@ -650,7 +652,7 @@ describe('HeterogeneousAgentStatusCard', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('option', { name: 'gpt-5.4' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: /gpt-5\.4/ })).toBeInTheDocument();
     expect(screen.queryByText('claude-server')).not.toBeInTheDocument();
     await waitFor(() => {
       expect(onApiConfigChange).toHaveBeenCalledWith({

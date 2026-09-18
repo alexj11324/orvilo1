@@ -132,11 +132,14 @@ describe('TaskRunnerService delegated runs', () => {
     expect(agentModel.getBuiltinAgent).not.toHaveBeenCalled();
     // The run row is claimed for the grant and the epoch asserted before the
     // registration commits.
-    expect(delegationService.claimExecutionEpoch).toHaveBeenCalledWith({
-      grantId: 'grant-1',
-      taskId: 'task-1',
-      topicId: 'tpc_1',
-    });
+    expect(delegationService.claimExecutionEpoch).toHaveBeenCalledWith(
+      {
+        grantId: 'grant-1',
+        taskId: 'task-1',
+        topicId: 'tpc_1',
+      },
+      expect.anything(),
+    );
     expect(delegationService.assertExecutionEpoch).toHaveBeenCalledWith({
       epoch: 7,
       grantId: 'grant-1',

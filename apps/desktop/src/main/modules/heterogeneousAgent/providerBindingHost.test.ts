@@ -50,7 +50,6 @@ describe('prepareHostedProviderBinding', () => {
   it('creates private profile/run directories, keeps profile state, and cleans the run', async () => {
     const cleanup = vi.fn().mockResolvedValue(undefined);
     const driver: HeterogeneousAgentDriver = {
-      buildSpawnPlan: async () => ({ args: [] }),
       prepareProviderBinding: ({ profileDir }) => ({
         args: ['--model', 'gpt-test'],
         cleanup,
@@ -78,7 +77,6 @@ describe('prepareHostedProviderBinding', () => {
   it('rejects file traversal and cleans the partially created run directory', async () => {
     const cleanup = vi.fn().mockResolvedValue(undefined);
     const driver: HeterogeneousAgentDriver = {
-      buildSpawnPlan: async () => ({ args: [] }),
       prepareProviderBinding: () => ({
         args: [],
         cleanup,
@@ -97,7 +95,6 @@ describe('prepareHostedProviderBinding', () => {
   it('releases driver resources synchronously during app shutdown', async () => {
     const cleanupSync = vi.fn();
     const driver: HeterogeneousAgentDriver = {
-      buildSpawnPlan: async () => ({ args: [] }),
       prepareProviderBinding: () => ({ args: [], cleanupSync, env: {} }),
     };
     const binding = await prepareHostedProviderBinding(await makeParams(driver));
@@ -110,7 +107,6 @@ describe('prepareHostedProviderBinding', () => {
 
   it('isolates Pi profiles by model while reusing an identity after API-key rotation', async () => {
     const driver: HeterogeneousAgentDriver = {
-      buildSpawnPlan: async () => ({ args: [] }),
       prepareProviderBinding: ({ resolution }) => ({
         args: [],
         env: {},
@@ -159,7 +155,6 @@ describe('prepareHostedProviderBinding', () => {
     'isolates %s profiles by model because the managed catalog is profile-scoped',
     async (agentType) => {
       const driver: HeterogeneousAgentDriver = {
-        buildSpawnPlan: async () => ({ args: [] }),
         prepareProviderBinding: ({ profileDir }) => ({
           args: [],
           env: { PROFILE_HOME: profileDir },
@@ -206,7 +201,6 @@ describe('prepareHostedServerDefaultBinding', () => {
   // directory itself is never touched after creation (transcripts land in
   // subdirectories, which do not update the root mtime).
   const claudeCodeLikeDriver: HeterogeneousAgentDriver = {
-    buildSpawnPlan: async () => ({ args: [] }),
     prepareServerDefaultBinding: ({ profileDir }) => ({
       args: [],
       env: { CLAUDE_CONFIG_DIR: profileDir },
@@ -264,7 +258,6 @@ describe('prepareHostedServerDefaultBinding', () => {
 
 describe('gcHostedProviderBindingProfiles', () => {
   const driver: HeterogeneousAgentDriver = {
-    buildSpawnPlan: async () => ({ args: [] }),
     prepareProviderBinding: ({ profileDir }) => ({
       args: [],
       env: { CODEX_HOME: profileDir },

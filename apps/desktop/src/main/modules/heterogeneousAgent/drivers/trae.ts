@@ -1,4 +1,3 @@
-import { buildTraeAcpArgs } from '@orvilo/heterogeneous-agents/spawn';
 import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
 import type { HeterogeneousAgentDriver } from '../types';
@@ -72,14 +71,10 @@ const buildTraeProviderArgs = (params: { baseURL: string; model: string }): stri
   ].flatMap(([key, value]) => ['-c', `${key}=${value}`]);
 
 /**
- * TRAE uses a bidirectional ACP session rather than the ordinary one-way JSONL
- * process path. This driver keeps type registration consistent; the desktop
- * controller hands the resulting arguments to `TraeAcpSession` directly.
+ * TRAE executes through `TraeAcpSession`; the provider binding's config args
+ * (`-c key=value`) are appended to the ACP-mode argv by the controller.
  */
 export const traeDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan({ args }) {
-    return { args: buildTraeAcpArgs(args) };
-  },
   prepareProviderBinding({ args, env, resolution }) {
     if (resolution.protocol !== 'openai-responses' || !resolution.endpoint) {
       throw new Error('TRAE provider binding requires a Responses API endpoint.');

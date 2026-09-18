@@ -3,45 +3,11 @@ import {
   sanitizeClaudeCodeDirectArgs,
   sanitizeClaudeCodeDirectEnv,
 } from '@orvilo/heterogeneous-agents';
-import { CLAUDE_CODE_BASE_ARGS } from '@orvilo/heterogeneous-agents/spawn';
 import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
-import type { HeterogeneousAgentBuildPlanParams, HeterogeneousAgentDriver } from '../types';
-
-// Desktop runs CC as the user (never root, so bypassPermissions is fine) and
-// renders the chat bubble live, so it always wants partial deltas. Compose
-// the shared invariant base args (`@orvilo/heterogeneous-agents/spawn`)
-// with those caller-specific flags.
-const DESKTOP_CLAUDE_CODE_ARGS = [
-  ...CLAUDE_CODE_BASE_ARGS,
-  '--include-partial-messages',
-  '--permission-mode',
-  'bypassPermissions',
-] as const;
+import type { HeterogeneousAgentDriver } from '../types';
 
 export const claudeCodeDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan({
-    args,
-    helpers,
-    mcpConfigPath,
-    promptInput,
-    resumeSessionId,
-  }: HeterogeneousAgentBuildPlanParams) {
-    const { stdin: stdinPayload } = await helpers.buildAgentInput('claude-code', promptInput);
-
-    return {
-      args: [
-        ...DESKTOP_CLAUDE_CODE_ARGS,
-        // Wire the controller-managed temp mcp.json (AskUserQuestion server,
-        // see ) when present. Path-based config is required — CC
-        // does not accept inline JSON for `--mcp-config`.
-        ...(mcpConfigPath ? ['--mcp-config', mcpConfigPath] : []),
-        ...(resumeSessionId ? ['--resume', resumeSessionId] : []),
-        ...args,
-      ],
-      stdinPayload,
-    };
-  },
   prepareProviderBinding({ args, env, profileDir, resolution }) {
     if (resolution.protocol !== 'anthropic-messages') {
       throw new Error(`Claude Code cannot use ${resolution.protocol}.`);

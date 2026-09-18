@@ -26,6 +26,13 @@ export type UploadHeterogeneousImage = (image: {
 }) => Promise<{ fileId: string; url: string } | undefined>;
 
 export interface AgentStreamPipelineOptions {
+  /**
+   * Explicit adapter instance. When omitted the pipeline resolves one from the
+   * live registry by `agentType` — which is always an ACP adapter for migrated
+   * agents. Inject an archived vendor adapter only when replaying historical
+   * stream-json payloads (tests / trace tooling).
+   */
+  adapter?: AgentEventAdapter;
   /** Agent type key (e.g. `claude-code`, `codex`). */
   agentType: string;
   /** Working directory used to resolve relative file paths emitted by CLI tools. */
@@ -65,7 +72,7 @@ export class AgentStreamPipeline {
   private queuedEvents: AgentStreamEvent[] = [];
 
   constructor(options: AgentStreamPipelineOptions) {
-    this.adapter = createAdapter(options.agentType);
+    this.adapter = options.adapter ?? createAdapter(options.agentType);
     this.operationId = options.operationId;
     this.uploadImage = options.uploadImage;
     this.codexTracker =

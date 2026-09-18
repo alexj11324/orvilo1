@@ -1,10 +1,5 @@
 import path from 'node:path';
 
-import {
-  CODEX_DEFAULT_EXECUTION_ARGS,
-  CODEX_EXECUTION_MODE_FLAGS,
-  CODEX_REQUIRED_ARGS,
-} from '@orvilo/heterogeneous-agents/spawn';
 import type { CodexReasoningEffort, CodexServerDefaultCustomModel } from '@orvilo/types';
 import {
   formatServerDefaultHeterogeneousModel,
@@ -12,10 +7,7 @@ import {
   isCodexServerDefaultCustomModel,
 } from '@orvilo/types';
 
-import type { HeterogeneousAgentBuildPlanParams, HeterogeneousAgentDriver } from '../types';
-
-const hasAnyFlag = (args: string[], flags: readonly string[]) =>
-  args.some((arg) => flags.includes(arg as (typeof flags)[number]));
+import type { HeterogeneousAgentDriver } from '../types';
 
 const HOST_PROVIDER_ID = 'orvilo';
 const HOST_API_KEY_ENV = 'ORVILO_CODEX_API_KEY';
@@ -170,42 +162,7 @@ const buildServerDefaultModelCatalog = (
   )}\n`;
 };
 
-const buildCodexOptionArgs = async ({
-  args,
-  helpers,
-  promptInput,
-}: Pick<HeterogeneousAgentBuildPlanParams, 'args' | 'helpers' | 'promptInput'>) => {
-  const inputPlan = await helpers.buildAgentInput('codex', promptInput);
-  const executionModeArgs = hasAnyFlag(args, CODEX_EXECUTION_MODE_FLAGS)
-    ? []
-    : [...CODEX_DEFAULT_EXECUTION_ARGS];
-
-  return {
-    args: [...CODEX_REQUIRED_ARGS, ...executionModeArgs, ...args, ...inputPlan.args],
-    stdinPayload: inputPlan.stdin,
-  };
-};
-
 export const codexDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan({
-    args,
-    helpers,
-    promptInput,
-    resumeSessionId,
-  }: HeterogeneousAgentBuildPlanParams) {
-    const { args: optionArgs, stdinPayload } = await buildCodexOptionArgs({
-      args,
-      helpers,
-      promptInput,
-    });
-
-    return {
-      args: resumeSessionId
-        ? ['exec', 'resume', ...optionArgs, resumeSessionId, '-']
-        : ['exec', ...optionArgs],
-      stdinPayload,
-    };
-  },
   prepareProviderBinding({ args, env, profileDir, resolution }) {
     if (resolution.protocol !== 'openai-responses' || !resolution.endpoint) {
       throw new Error('Codex provider binding requires a Responses API endpoint.');

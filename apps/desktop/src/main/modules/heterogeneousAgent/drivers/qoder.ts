@@ -1,24 +1,5 @@
-import { buildQoderArgs } from '@orvilo/heterogeneous-agents/spawn';
+import type { HeterogeneousAgentDriver } from '../types';
 
-import type { HeterogeneousAgentBuildPlanParams, HeterogeneousAgentDriver } from '../types';
-
-export const qoderDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan({
-    args,
-    helpers,
-    mcpConfigPath,
-    promptInput,
-    resumeSessionId,
-  }: HeterogeneousAgentBuildPlanParams) {
-    const inputPlan = await helpers.buildAgentInput('qoder', promptInput);
-
-    return {
-      args: buildQoderArgs({
-        extraArgs: [...(mcpConfigPath ? ['--mcp-config', mcpConfigPath] : []), ...args],
-        inputArgs: inputPlan.args,
-        resumeSessionId,
-      }),
-      stdinPayload: inputPlan.stdin,
-    };
-  },
-};
+// Qoder executes through its native `qoder --acp` mode and exposes no LobeHub
+// provider/server-default binding, so the driver is intentionally empty.
+export const qoderDriver: HeterogeneousAgentDriver = {};

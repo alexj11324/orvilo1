@@ -1,6 +1,8 @@
+import type { AgentState } from '@orvilo/agent-runtime';
 import type { ConversationContext, UIChatMessage } from '@orvilo/types';
 
 import type { AgentRuntimeType } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
+import type { OperationStatus } from '@/store/chat/slices/operation/types';
 
 /**
  * Whether a run is the user-facing top-level run or a nested sub-agent run.
@@ -71,6 +73,13 @@ export interface RunCompleteEvent extends RunLifecycleEventBase {
    * instead of deriving from `messagesMap`.
    */
   notification?: { content?: string };
+  operationStatus?: OperationStatus;
+  /**
+   * Raw runtime terminal/parked status (`AgentState['status']`), used to
+   * reproduce the exact per-status completion branch. Optional — adapters that
+   * don't expose it rely on `status` instead.
+   */
+  runtimeStatus?: AgentState['status'];
   /**
    * Normalized cross-runtime terminal disposition supplied by gateway/hetero
    * adapters at their terminal boundary.

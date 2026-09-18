@@ -17,7 +17,6 @@ import { agentSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useChatStore } from '@/store/chat';
 import { useToolStore } from '@/store/tool';
-import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/selectors';
 
 import { chatService } from './index';

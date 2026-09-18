@@ -1,8 +1,29 @@
-import { type AiModelReasoningConfig, type ToggleAiModelEnableParams } from 'model-bank';
+import {
+  type AiModelReasoningConfig,
+  type AiModelType,
+  type AiProviderModelListItem,
+  type ToggleAiModelEnableParams,
+} from 'model-bank';
+import { isAiModelVisible } from 'model-bank/aiModel';
 
 import { lambdaClient } from '@/libs/trpc/client';
 
+export interface GetAiProviderModelListParams {
+  enabled?: boolean;
+  limit?: number;
+  offset?: number;
+  type?: AiModelType;
+}
+
 export class AiModelService {
+  getAiProviderModelList = async (
+    id: string,
+    params?: GetAiProviderModelListParams,
+  ): Promise<AiProviderModelListItem[]> => {
+    const models = await lambdaClient.aiModel.getAiProviderModelList.query({ id, ...params });
+    return models.filter(isAiModelVisible);
+  };
+
   toggleModelEnabled = async (params: ToggleAiModelEnableParams) => {
     return lambdaClient.aiModel.toggleModelEnabled.mutate(params);
   };

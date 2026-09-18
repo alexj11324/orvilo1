@@ -9,7 +9,6 @@ import {
   LayoutPanelTopIcon,
   LibraryBigIcon,
   Mic2,
-  Settings,
   SquarePlay,
 } from 'lucide-react';
 import {

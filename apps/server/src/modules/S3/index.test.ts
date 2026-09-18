@@ -138,11 +138,11 @@ describe('S3', () => {
       );
     });
 
-    it('should sign presigned URLs against the public endpoint when configured', async () => {
+    it('should sign presigned URLs against the presign endpoint when configured', async () => {
       const s3 = new S3('test-access-key', 'test-secret-key', 'http://internal-s3:9000', {
         bucket: 'test-bucket',
         forcePathStyle: true,
-        publicEndpoint: 'https://files.example.com',
+        presignEndpoint: 'https://files.example.com',
       });
 
       await s3.createPreSignedUrlForPreview('files/a.png');

@@ -101,6 +101,31 @@ describe('the platform Skill management chain stays retired', () => {
 
       expect(items).not.toContain('SettingsTabs.Skill');
     });
+
+    it('no longer points the model at a skill store that this repo does not ship', () => {
+      // The activator prompt carried a `<skill_store_discovery>` block whose
+      // first instruction was "CRITICAL: Always activate `orvilo-skill-store`
+      // FIRST". It was static text, so it kept ordering the model to call a tool
+      // that no longer exists — the call could only ever come back "not found".
+      // The dynamic twin was `SkillImportRouteInjector`, which gated itself on
+      // the tool appearing in the run's manifests; with the tool gone that gate
+      // was permanently false, i.e. dead code wearing the shape of a safeguard.
+      //
+      // Asserted on the identifier rather than on the surrounding prose: the
+      // wording is free to change, but the retired identifier may not come back
+      // through a rebase, a cherry-pick or an upstream sync.
+      const activatorPrompt = read('packages/builtin-tool-activator/src/systemRole.ts');
+      expect(activatorPrompt).not.toContain('orvilo-skill-store');
+      expect(activatorPrompt).not.toContain('skill_store_discovery');
+
+      expect(exists('packages/context-engine/src/providers/SkillImportRouteInjector.ts')).toBe(
+        false,
+      );
+
+      const messagesEngine = read('packages/context-engine/src/engine/messages/MessagesEngine.ts');
+      expect(messagesEngine).not.toContain('SkillImportRouteInjector');
+      expect(messagesEngine).not.toContain('SKILL_STORE_TOOL_ID');
+    });
   });
 
   describe('the skill write APIs are gone', () => {

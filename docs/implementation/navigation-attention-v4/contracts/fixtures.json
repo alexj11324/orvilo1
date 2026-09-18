@@ -1,52 +1,6 @@
 {
-  "decision": {
-    "actionRef": {
-      "kind": "acp_permission",
-      "requestId": "req-example"
-    },
-    "expectedSourceRevision": 3,
-    "expectedExecutionGeneration": 2,
-    "decision": "reject",
-    "idempotencyKey": "client-operation-example"
-  },
-  "decisionReceipt": {
-    "status": "source_confirmed",
-    "sourceState": "rejected",
-    "executionStarted": false
-  },
-  "feedCard": {
-    "notificationId": "n-example",
-    "activityVersion": 6,
-    "readVersion": 5,
-    "kind": "action",
-    "actionRef": {
-      "kind": "acp_permission",
-      "requestId": "req-example",
-      "sourceRevision": 3,
-      "executionGeneration": 2
-    },
-    "availableActions": ["open", "decide"],
-    "safeNavigation": {
-      "kind": "task",
-      "taskId": "task-example",
-      "workspaceId": "w-test-a"
-    },
-    "read": false
-  },
-  "invalidQueries": [
-    {
-      "field": "raw_sql",
-      "op": "execute",
-      "value": "REJECT THIS INPUT"
-    },
-    {
-      "field": "projectId",
-      "op": "unknown",
-      "value": "anything"
-    }
-  ],
-  "notice": "Artificial contract examples, not real users, approvals, remote IDs or deployed responses. S/D freeze actual names in N01.",
   "schemaVersion": 1,
+  "notice": "Artificial contract examples, not real users, approvals, remote IDs or deployed responses. S/D freeze actual names in N01.",
   "scopeExamples": [
     {
       "kind": "workspace",
@@ -78,5 +32,54 @@
     },
     "layout": "board",
     "groupBy": "workflowCategory"
-  }
+  },
+  "feedCard": {
+    "notificationId": "n-example",
+    "activityVersion": 6,
+    "readVersion": 5,
+    "kind": "action",
+    "actionRef": {
+      "kind": "acp_permission",
+      "requestId": "req-example",
+      "sourceRevision": 3,
+      "executionGeneration": 2
+    },
+    "availableActions": [
+      "open",
+      "decide"
+    ],
+    "safeNavigation": {
+      "kind": "task",
+      "taskId": "task-example",
+      "workspaceId": "w-test-a"
+    },
+    "read": false
+  },
+  "decision": {
+    "actionRef": {
+      "kind": "acp_permission",
+      "requestId": "req-example"
+    },
+    "expectedSourceRevision": 3,
+    "expectedExecutionGeneration": 2,
+    "decision": "reject",
+    "idempotencyKey": "client-operation-example"
+  },
+  "decisionReceipt": {
+    "status": "source_confirmed",
+    "sourceState": "rejected",
+    "executionStarted": false
+  },
+  "invalidQueries": [
+    {
+      "field": "raw_sql",
+      "op": "execute",
+      "value": "REJECT THIS INPUT"
+    },
+    {
+      "field": "projectId",
+      "op": "unknown",
+      "value": "anything"
+    }
+  ]
 }

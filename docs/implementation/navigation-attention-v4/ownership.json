@@ -1,4 +1,8 @@
 {
+  "schema_version": 1,
+  "rule": "Exactly one current writer per file. This is a scope contract, not a filesystem security boundary. Runtime concrete leases from N00 take precedence over patterns.",
+  "shared_tests": "Colocated tests are written by the file owner; T submits added tests via explicit lease or a separate test file.",
+  "unlisted_paths": "Request from S before editing; do not assume permission.",
   "ownership": [
     {
       "owner": "S",
@@ -220,9 +224,5 @@
       "pattern": "e2e/steps/navigation-attention/**",
       "status": "PROPOSED_VERIFY_LAYOUT"
     }
-  ],
-  "rule": "Exactly one current writer per file. This is a scope contract, not a filesystem security boundary. Runtime concrete leases from N00 take precedence over patterns.",
-  "schema_version": 1,
-  "shared_tests": "Colocated tests are written by the file owner; T submits added tests via explicit lease or a separate test file.",
-  "unlisted_paths": "Request from S before editing; do not assume permission."
+  ]
 }

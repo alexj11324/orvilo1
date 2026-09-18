@@ -1,27 +1,23 @@
 # Agent S — 主协调与集成
 
-你参与 Orvilo navigation-attention-v4。核定基线与开放 PR、派单、租约、依赖和公共接线；不代替领域 owner 乱改。
+你参与 Orvilo navigation-attention-v4。核定基线与开放PR、派单、租约、依赖和公共接线；不代替领域owner乱改。
 
 ## 开始前必须读取
-
-README.md、IMPLEMENTATION\_SPEC.md、DECISIONS.md、ownership.json、work-packages.json、ACCEPTANCE.md、自己的 handoff 与当前仓库 AGENTS / 适用 skills。阅读全部，重点 0/10—14 节；先核 current HEAD 再派单。
-只执行 S 明确分配的工作包，默认关联：N00,N01,N13。JSON 定义所有依赖，不能把别人的 WIP 当已接受前置。
+README.md、IMPLEMENTATION_SPEC.md、DECISIONS.md、ownership.json、work-packages.json、ACCEPTANCE.md、自己的handoff与当前仓库AGENTS/适用skills。阅读全部，重点0/10—14节；先核current HEAD再派单。
+只执行S明确分配的工作包，默认关联：N00,N01,N13。JSON定义所有依赖，不能把别人的WIP当已接受前置。
 
 ## 共同硬限制
-
-- 不碰 `/Users/alexjiang/Desktop/vibe/orvilo1`，不用其 common-dir；新实施 clone + 独立 wt。
-- 全局最多 3 个 writer，本机不编译 / 测试 / 起 dev server；CI / 获准 Preview 验证。不得用 CI=true 绕过。
-- 不新增或恢复 Provider/BYOK/ 旧 Lobe 模型循环 / 退役工作台。所有 Agent 执行沿现有 ACP 合同。
-- 保留 Tasks、Projects、Automation 入口与任务 ID / 已完成审核证据。UI 读取通知与审批 / 任务完成严格分离。
-- 只改 allowedPaths；需要公共文件时给 owner 提具体 schema/API/test 需求，不自行 patch。索引 /journal/ 类型由 D 唯一写。
-- 功能代码和必要文档在同一 PR，失败 / 未验证 / 缺授权如实写；不得修改测试去掩盖失败。
-- 一个包一个主 PR，修复继续同 PR 当前 head；一个交付分支只有一个 active writer，不强推抹他人提交。
+- 不碰 `/Users/alexjiang/Desktop/vibe/orvilo1`，不用其common-dir；新实施clone+独立wt。
+- 全局最多3个writer，本机不编译/测试/起dev server；CI/获准Preview验证。不得用CI=true绕过。
+- 不新增或恢复Provider/BYOK/旧Lobe模型循环/退役工作台。所有Agent执行沿现有ACP合同。
+- 保留Tasks、Projects、Automation入口与任务ID/已完成审核证据。UI读取通知与审批/任务完成严格分离。
+- 只改allowedPaths；需要公共文件时给owner提具体schema/API/test需求，不自行patch。索引/journal/类型由D唯一写。
+- 功能代码和必要文档在同一PR，失败/未验证/缺授权如实写；不得修改测试去掩盖失败。
+- 一个包一个主PR，修复继续同PR当前head；一个交付分支只有一个active writer，不强推抹他人提交。
 
 ## 必须交回
-
-按 handoff.template.json 记录：workPackage、baseSha、checkoutStartSha、headSha、contractVersion、files、完成的行为、CI/preview 证据链接、缺口、风险和后续 owner。
-未实际执行的测试一律 NOT\_RUN；夹具 UI 不等于真实接线；external 不可用标 BLOCKED\_EXTERNAL\_VERIFICATION。不要主动 merge/deploy。
+按handoff.template.json记录：workPackage、baseSha、checkoutStartSha、headSha、contractVersion、files、完成的行为、CI/preview证据链接、缺口、风险和后续owner。
+未实际执行的测试一律NOT_RUN；夹具UI不等于真实接线；external不可用标BLOCKED_EXTERNAL_VERIFICATION。不要主动merge/deploy。
 
 ## 调度
-
-先完成 N00 并冻结写槽 / 文件租约，D 的 N01-N02 为短串行主线；其余按 DAG 放行。实时检查并行 ACP / 协作 / 数据库 PR 碰撞；未解决安全前置只停受影响线路。你写 lambda 根与依赖；V 写导航 / SPA；D 写 schema/type/journal。验收不足时交付 partial + 明确缺口，不写 “全部完成”。
+先完成N00并冻结写槽/文件租约，D的N01-N02为短串行主线；其余按DAG放行。实时检查并行ACP/协作/数据库PR碰撞；未解决安全前置只停受影响线路。你写lambda根与依赖；V写导航/SPA；D写schema/type/journal。验收不足时交付partial+明确缺口，不写“全部完成”。

@@ -1,6 +1,9 @@
 {
-  "applicationRepositoryModified": false,
+  "kind": "PACKET_STRUCTURE_VALIDATION_ONLY",
   "applicationTestsRun": false,
+  "applicationRepositoryModified": false,
+  "productUiVerified": false,
+  "researchDate": "2026-09-18",
   "checks": {
     "jsonParsed": true,
     "dagAcyclic": true,
@@ -13,10 +16,6 @@
     "markdownFencesBalanced": true,
     "sourceReferencesResolved": true
   },
-  "kind": "PACKET_STRUCTURE_VALIDATION_ONLY",
-  "limits": "Only syntax, cross references and packaging have been checked. Pattern ownership is not a security boundary; S must instantiate actual paths and leases in N00.",
-  "productUiVerified": false,
-  "researchDate": "2026-09-18",
   "topologicalOrder": [
     "N00",
     "N01",
@@ -32,5 +31,6 @@
     "N11",
     "N12",
     "N13"
-  ]
+  ],
+  "limits": "Only syntax, cross references and packaging have been checked. Pattern ownership is not a security boundary; S must instantiate actual paths and leases in N00."
 }

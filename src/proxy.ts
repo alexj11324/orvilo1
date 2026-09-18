@@ -97,34 +97,36 @@ export const config = {
     //    Workspace home `/{slug}` itself therefore stays unmatched on direct
     //    load — a known limitation.
     // 2. The slug carries a negative lookahead (the same exclusion idiom Next
-    //    documents for matchers) so first segments that can never be a
-    //    workspace don't get intercepted: backend namespaces (`/api/agent` is
-    //    a real Hono route, `/market/agent` is the Bearer-token Market API —
-    //    matching them would invoke the middleware on hot API traffic),
-    //    framework internals (`/_next/image` is the image optimizer), SPA
-    //    rewrite targets (`/spa*`), and `public/` asset dirs.
-    // 3. The `(/.*)?` tail only accepts a `/`-separated suffix, so it can't
-    //    attach mid-segment — `/avatars/agent-default.png` and
-    //    `/app-images/agent_gateway_light.webp` are files, not workspace URLs.
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/agent(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/agents(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/automations(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/billing(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/community(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/eval(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/goal(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/group(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/image(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/inbox(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/memory(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/page(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/project(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/projects(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/resource(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/settings(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/task(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/tasks(/.*)?',
-    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|acceptance|app-icons|app-images|avatars|images|og|screenshots|videos|\\.well-known)/)[^/]+)/video(/.*)?',
+    //    documents for matchers) so namespaces that hard-own their paths are
+    //    never intercepted: backend routes (`/api/agent` is a real Hono route,
+    //    `/market/agent` is the Bearer-token Market API — matching them would
+    //    invoke the middleware on hot API traffic), framework internals
+    //    (`/_next/image` is the image optimizer), and the `spa*` rewrite
+    //    targets. Names like `avatars` or `images` stay matchable on purpose —
+    //    they're legal workspace slugs, so `/{slug}/...` coverage must hold.
+    // 3. The `(/.*)?` tail only accepts a `/`-separated suffix, which is what
+    //    keeps `public/` assets out: `/avatars/agent-default.png`,
+    //    `/app-images/agent_gateway_light.webp` and `/og/agent-og.webp` are
+    //    files whose names merely *start with* a segment, not workspace URLs.
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/agent(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/agents(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/automations(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/billing(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/community(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/eval(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/goal(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/group(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/image(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/inbox(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/memory(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/page(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/project(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/projects(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/resource(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/settings(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/task(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/tasks(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/video(/.*)?',
   ],
 };
 

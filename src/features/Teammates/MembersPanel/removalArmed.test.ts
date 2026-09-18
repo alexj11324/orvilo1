@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import type { RemovalPreview } from '../api/contract';
-
 import { removalArmed } from './removalArmed';
 
 const preview: RemovalPreview = {
@@ -12,7 +11,12 @@ const preview: RemovalPreview = {
   sharedDeviceCount: 0,
 };
 
-const base = { error: undefined, isLoading: false, mutating: false, preview };
+const base: Parameters<typeof removalArmed>[0] = {
+  error: undefined,
+  isLoading: false,
+  mutating: false,
+  preview,
+};
 
 describe('removalArmed', () => {
   it('arms only once the removal preview has landed', () => {

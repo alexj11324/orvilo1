@@ -7,6 +7,15 @@ import { navigationFavorites } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { SavedViewModel } from './savedView';
 
+export class NavigationFavoriteConflictError extends Error {
+  readonly code = 'FAVORITE_REVISION_CONFLICT' as const;
+
+  constructor() {
+    super('FAVORITE_REVISION_CONFLICT');
+    this.name = 'NavigationFavoriteConflictError';
+  }
+}
+
 export class NavigationFavoriteModel {
   constructor(
     private readonly db: OrviloDatabase,
@@ -88,5 +97,39 @@ export class NavigationFavoriteModel {
       )
       .returning({ id: navigationFavorites.id });
     return deleted.length > 0;
+  };
+
+  reorder = async (params: {
+    items: Array<{
+      expectedVersion: number;
+      rank: number;
+      targetId: string;
+      targetType: NavigationFavoriteTargetType;
+    }>;
+  }): Promise<NavigationFavoriteItem[]> => {
+    return this.db.transaction(async (tx) => {
+      const rows: NavigationFavoriteItem[] = [];
+      for (const item of params.items) {
+        const [row] = await tx
+          .update(navigationFavorites)
+          .set({
+            rank: item.rank,
+            version: sql`${navigationFavorites.version} + 1`,
+          })
+          .where(
+            and(
+              eq(navigationFavorites.userId, this.userId),
+              eq(navigationFavorites.scopeKey, this.scopeKey()),
+              eq(navigationFavorites.targetType, item.targetType),
+              eq(navigationFavorites.targetId, item.targetId),
+              eq(navigationFavorites.version, item.expectedVersion),
+            ),
+          )
+          .returning();
+        if (!row) throw new NavigationFavoriteConflictError();
+        rows.push(row);
+      }
+      return rows;
+    });
   };
 }

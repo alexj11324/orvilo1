@@ -1,3 +1,4 @@
+import { NOTIFICATION_BULK_PREPARE_LIMIT } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -904,6 +905,23 @@ describe('NotificationModel (integration)', () => {
 
       await expect(model.applyBulk(snapshot.id)).rejects.toMatchObject({ code: 'EXPIRED' });
       expect((await model.list()).map((row) => row.title)).toEqual(['Keep']);
+    });
+
+    it('rate-limits prepareBulk in a sliding window', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await serverDB.insert(notificationBulkSnapshots).values(
+        Array.from({ length: NOTIFICATION_BULK_PREPARE_LIMIT }, (_, index) => ({
+          action: 'archive' as const,
+          cutoffRevision: index + 1,
+          expiresAt: new Date(Date.now() + 60_000),
+          queryFingerprint: `archive:${index}`,
+          scopeKey: 'personal',
+          userId,
+        })),
+      );
+      await expect(
+        model.prepareBulk({ action: 'archive', queryFingerprint: 'archive:overflow' }),
+      ).rejects.toMatchObject({ code: 'RATE_LIMITED' });
     });
   });
 

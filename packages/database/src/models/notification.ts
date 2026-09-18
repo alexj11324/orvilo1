@@ -4,7 +4,11 @@ import type {
   NotificationFeedKind,
   NotificationPresentationFilter,
 } from '@orvilo/types';
-import { notificationScopeKey } from '@orvilo/types';
+import {
+  NOTIFICATION_BULK_PREPARE_LIMIT,
+  NOTIFICATION_BULK_PREPARE_WINDOW_MS,
+  notificationScopeKey,
+} from '@orvilo/types';
 import {
   and,
   count,
@@ -30,7 +34,9 @@ import { buildWorkspaceWhere } from '../utils/workspace';
 import { allocateFeedRevision, currentFeedRevision } from './notificationFeed';
 
 export class NotificationBulkError extends Error {
-  constructor(readonly code: 'CONSUMED' | 'EXPIRED' | 'FORBIDDEN_ACTION' | 'NOT_FOUND') {
+  constructor(
+    readonly code: 'CONSUMED' | 'EXPIRED' | 'FORBIDDEN_ACTION' | 'NOT_FOUND' | 'RATE_LIMITED',
+  ) {
     super(code);
     this.name = 'NotificationBulkError';
   }
@@ -399,6 +405,20 @@ export class NotificationModel {
   async prepareBulk(params: { action: NotificationBulkAction; queryFingerprint: string }) {
     if (params.action !== 'archive' && params.action !== 'mark_read') {
       throw new NotificationBulkError('FORBIDDEN_ACTION');
+    }
+    const windowStart = new Date(Date.now() - NOTIFICATION_BULK_PREPARE_WINDOW_MS);
+    const [recent] = await this.db
+      .select({ total: count() })
+      .from(notificationBulkSnapshots)
+      .where(
+        and(
+          eq(notificationBulkSnapshots.userId, this.userId),
+          eq(notificationBulkSnapshots.scopeKey, notificationScopeKey(this.workspaceId)),
+          gt(notificationBulkSnapshots.createdAt, windowStart),
+        ),
+      );
+    if (Number(recent?.total ?? 0) >= NOTIFICATION_BULK_PREPARE_LIMIT) {
+      throw new NotificationBulkError('RATE_LIMITED');
     }
     const cutoffRevision = await this.snapshotCutoff();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);

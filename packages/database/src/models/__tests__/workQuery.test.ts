@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { applyNoProjectFilter } from '@orvilo/types';
+import { applyNoProjectFilter, WORK_QUERY_MAX_IN_VALUES } from '@orvilo/types';
 import { inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -51,6 +51,28 @@ describe('validateWorkQuery', () => {
         },
       }),
     ).rejects.toBeInstanceOf(WorkQueryError);
+  });
+
+  it('rejects oversized in arrays instead of compiling unbounded SQL', async () => {
+    const error = await new WorkQueryModel(serverDB, userId, workspaceId)
+      .queryTasks({
+        query: {
+          entityType: 'task',
+          filter: {
+            all: [
+              {
+                field: 'id',
+                op: 'in',
+                value: Array.from({ length: WORK_QUERY_MAX_IN_VALUES + 1 }, (_, i) => `id-${i}`),
+              },
+            ],
+          },
+          schemaVersion: 1,
+        },
+      })
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(WorkQueryError);
+    expect(error).toMatchObject({ code: 'QUERY_TOO_COMPLEX' });
   });
 });
 

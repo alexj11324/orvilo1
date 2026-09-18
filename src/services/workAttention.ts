@@ -15,6 +15,10 @@ class WorkAttentionService {
   favoriteUnpin = (input: Parameters<typeof lambdaClient.workAttention.favoriteUnpin.mutate>[0]) =>
     lambdaClient.workAttention.favoriteUnpin.mutate(input);
 
+  favoriteReorder = (
+    input: Parameters<typeof lambdaClient.workAttention.favoriteReorder.mutate>[0],
+  ) => lambdaClient.workAttention.favoriteReorder.mutate(input);
+
   feed = (input: Parameters<typeof lambdaClient.workAttention.feed.query>[0]) =>
     lambdaClient.workAttention.feed.query(input);
 

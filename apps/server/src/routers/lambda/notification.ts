@@ -82,8 +82,18 @@ export const notificationRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const data = await ctx.notificationModel.prepareBulk(input);
-      return { data, success: true };
+      try {
+        const data = await ctx.notificationModel.prepareBulk(input);
+        return { data, success: true };
+      } catch (error) {
+        if (error instanceof NotificationBulkError) {
+          throw new TRPCError({
+            code: error.code === 'RATE_LIMITED' ? 'TOO_MANY_REQUESTS' : 'BAD_REQUEST',
+            message: error.code,
+          });
+        }
+        throw error;
+      }
     }),
 
   applyBulk: notificationWriteProcedure

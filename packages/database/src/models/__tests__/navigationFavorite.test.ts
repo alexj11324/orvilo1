@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import { users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
-import { NavigationFavoriteModel } from '../navigationFavorite';
+import { NavigationFavoriteConflictError, NavigationFavoriteModel } from '../navigationFavorite';
 import { SavedViewModel } from '../savedView';
 
 const serverDB: OrviloDatabase = await getTestDB();
@@ -65,5 +65,44 @@ describe('NavigationFavoriteModel', () => {
     expect(listed.find((row) => row.targetId === readable.id)?.title).toBe('Assigned to me');
     expect(listed.find((row) => row.targetId === 'view_lost')?.title).toBeNull();
     expect(listed.find((row) => row.targetId === 'task_secret')?.title).toBeNull();
+  });
+
+  it('rejects a stale reorder instead of last-write-wins ranks', async () => {
+    const mine = new NavigationFavoriteModel(serverDB, userId, workspaceId);
+    const first = await mine.pin({ rank: 0, targetId: 'task_a', targetType: 'task' });
+    const second = await mine.pin({ rank: 1, targetId: 'task_b', targetType: 'task' });
+
+    const reordered = await mine.reorder({
+      items: [
+        {
+          expectedVersion: first.version,
+          rank: 1,
+          targetId: 'task_a',
+          targetType: 'task',
+        },
+        {
+          expectedVersion: second.version,
+          rank: 0,
+          targetId: 'task_b',
+          targetType: 'task',
+        },
+      ],
+    });
+    expect(reordered.map((row) => row.targetId)).toEqual(['task_a', 'task_b']);
+    expect((await mine.list()).map((row) => row.targetId)).toEqual(['task_b', 'task_a']);
+
+    await expect(
+      mine.reorder({
+        items: [
+          {
+            expectedVersion: first.version,
+            rank: 0,
+            targetId: 'task_a',
+            targetType: 'task',
+          },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(NavigationFavoriteConflictError);
+    expect((await mine.list()).map((row) => row.targetId)).toEqual(['task_b', 'task_a']);
   });
 });

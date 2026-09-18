@@ -18,6 +18,7 @@ import type {
 import {
   WORK_QUERY_FACET_FIELDS,
   WORK_QUERY_MAX_DEPTH,
+  WORK_QUERY_MAX_IN_VALUES,
   WORK_QUERY_MAX_PREDICATES,
   WORK_QUERY_STATUS_COLUMNS,
   WORK_QUERY_WORKFLOW_COLUMNS,
@@ -104,6 +105,16 @@ type CompileCtx = {
   readableTeamIds: ReadonlySet<string>;
 };
 
+const assertInValues = (resolved: unknown, op: 'in' | 'notIn'): string[] => {
+  if (!Array.isArray(resolved) || resolved.length === 0) {
+    throw new WorkQueryError('INVALID_QUERY', `${op} requires a non-empty array`);
+  }
+  if (resolved.length > WORK_QUERY_MAX_IN_VALUES) {
+    throw new WorkQueryError('QUERY_TOO_COMPLEX', `${op} exceeded maximum values`);
+  }
+  return resolved as string[];
+};
+
 const compileTeamIdColumnPredicate = (
   column: AnyPgColumn,
   op: WorkQueryOp,
@@ -123,10 +134,7 @@ const compileTeamIdColumnPredicate = (
       return eq(column, resolved as never);
     }
     case 'in': {
-      if (!Array.isArray(resolved) || resolved.length === 0) {
-        throw new WorkQueryError('INVALID_QUERY', 'in requires a non-empty array');
-      }
-      const kept = resolved.filter(
+      const kept = assertInValues(resolved, 'in').filter(
         (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
       );
       return kept.length ? inArray(column, kept) : FALSE_SQL;
@@ -136,10 +144,7 @@ const compileTeamIdColumnPredicate = (
       return ne(column, resolved as never);
     }
     case 'notIn': {
-      if (!Array.isArray(resolved) || resolved.length === 0) {
-        throw new WorkQueryError('INVALID_QUERY', 'notIn requires a non-empty array');
-      }
-      const kept = resolved.filter(
+      const kept = assertInValues(resolved, 'notIn').filter(
         (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
       );
       return kept.length ? notInArray(column, kept) : TRUE_SQL;
@@ -239,16 +244,10 @@ const compileColumnPredicate = (
       return ne(column, resolved as never);
     }
     case 'in': {
-      if (!Array.isArray(resolved) || resolved.length === 0) {
-        throw new WorkQueryError('INVALID_QUERY', 'in requires a non-empty array');
-      }
-      return inArray(column, resolved as never[]);
+      return inArray(column, assertInValues(resolved, 'in') as never[]);
     }
     case 'notIn': {
-      if (!Array.isArray(resolved) || resolved.length === 0) {
-        throw new WorkQueryError('INVALID_QUERY', 'notIn requires a non-empty array');
-      }
-      return notInArray(column, resolved as never[]);
+      return notInArray(column, assertInValues(resolved, 'notIn') as never[]);
     }
     default: {
       throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);

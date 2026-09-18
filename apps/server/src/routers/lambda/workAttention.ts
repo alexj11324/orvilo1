@@ -5,6 +5,7 @@ import {
   type TaskStatus,
   type TaskWorkflowCategory,
   WORK_QUERY_FACET_FIELDS,
+  WORK_QUERY_MAX_IN_VALUES,
   WORK_QUERY_STATUS_COLUMNS,
   WORK_QUERY_WORKFLOW_COLUMNS,
   type WorkQuery,
@@ -16,7 +17,10 @@ import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
-import { NavigationFavoriteModel } from '@/database/models/navigationFavorite';
+import {
+  NavigationFavoriteConflictError,
+  NavigationFavoriteModel,
+} from '@/database/models/navigationFavorite';
 import { NotificationModel } from '@/database/models/notification';
 import {
   SavedViewBuiltinError,
@@ -56,7 +60,7 @@ const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.object({
   value: z
     .union([
       z.object({ ref: z.literal('currentUser') }),
-      z.array(z.string()),
+      z.array(z.string().min(1)).min(1).max(WORK_QUERY_MAX_IN_VALUES),
       z.boolean(),
       z.null(),
       z.number(),
@@ -218,6 +222,34 @@ export const workAttentionRouter = router({
     .mutation(async ({ ctx, input }) => {
       await ctx.favoriteModel.unpin(input);
       return { message: 'Unpinned', success: true };
+    }),
+
+  favoriteReorder: organizeProcedure
+    .input(
+      z.object({
+        items: z
+          .array(
+            z.object({
+              expectedVersion: z.number().int().min(1),
+              rank: z.number().int(),
+              targetId: z.string().min(1),
+              targetType: z.enum(['project', 'savedView', 'task', 'team']),
+            }),
+          )
+          .min(1)
+          .max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const rows = await ctx.favoriteModel.reorder(input);
+        return { data: rows, message: 'Reordered', success: true };
+      } catch (error) {
+        if (error instanceof NavigationFavoriteConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        throw error;
+      }
     }),
 
   feed: workAttentionProcedure

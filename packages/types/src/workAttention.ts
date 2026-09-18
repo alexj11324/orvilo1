@@ -265,6 +265,12 @@ export interface WorkQueryExternalReview {
 
 export const WORK_QUERY_MAX_DEPTH = 3;
 export const WORK_QUERY_MAX_PREDICATES = 20;
+/** Bound `in` / `notIn` value arrays so callers cannot build unbounded SQL. */
+export const WORK_QUERY_MAX_IN_VALUES = 100;
+
+/** Consume-once bulk archive/read tokens per user/scope in a sliding window. */
+export const NOTIFICATION_BULK_PREPARE_LIMIT = 20;
+export const NOTIFICATION_BULK_PREPARE_WINDOW_MS = 60_000;
 
 export type MyWorkMode = 'assigned' | 'created' | 'delegated' | 'review' | 'subscribed';
 

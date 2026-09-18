@@ -142,12 +142,13 @@ describe('Acceptance installation guide', () => {
   });
 });
 
-describe('defineConfig backend subtrees reached by the workspace matcher', () => {
-  // `/:workspaceSlug/agent(.*)` in `config.matcher` parses the first segment as
-  // the slug, so it also matches `/market/agent/**` and `/api/agent/**`. Those
-  // are Bearer-token APIs (`MarketService`, Hono) whose auth lives in the route
-  // handlers — the middleware must hand them through untouched, and an
-  // unauthenticated API client must never see a 302 to /signin.
+describe('defineConfig backend subtree pass-through', () => {
+  // The matcher's workspace-slug lookahead keeps `/market/agent/**` and
+  // `/api/agent/**` unmatched today — this locks the middleware-level contract
+  // as a safety net: those are Bearer-token APIs (`MarketService`, Hono) whose
+  // auth lives in the route handlers, so the middleware must hand them through
+  // untouched and an unauthenticated API client must never see a 302 to
+  // /signin.
   it('passes /market/agent and /api/agent through without rewrite or session gate', async () => {
     const { auth } = await import('@/auth');
     vi.mocked(auth.api.getSession).mockClear();

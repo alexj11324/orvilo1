@@ -298,6 +298,8 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   webBrowsing: { any: 'model:invoke' },
   work: rw('agent:read', 'agent:write'),
   workspace: rw('workspace:read', 'workspace:write'),
+  // Agent roster is a read-only listing inside the caller's membership
+  workspaceAgent: rw('workspace:read', null),
   workspaceAuditLog: rw('workspace:read', null),
   workspaceCredits: 'blocked',
   workspaceCreds: 'blocked',

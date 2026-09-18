@@ -22,14 +22,20 @@ const { memberModel, queries, audit, workspaceModel } = vi.hoisted(() => ({
     bumpAuthzVersion: vi.fn(),
     countActiveDelegations: vi.fn(),
     countMemberBoundDevices: vi.fn(),
+    countMemberWorkload: vi.fn(async () => new Map()),
     countOpenTasksAssignedTo: vi.fn(),
     countOpenTasksReviewedBy: vi.fn(),
+    decideOwnershipTransfer: vi.fn(),
+    findPendingOwnershipTransfer: vi.fn(),
     findProjectsByIds: vi.fn(),
     findUserById: vi.fn(),
+    findUserProfiles: vi.fn(async () => []),
     findUsersByNormalizedEmail: vi.fn(),
+    insertOwnershipTransfer: vi.fn(),
     listMembersWithProfiles: vi.fn(),
     listOpenAssignedTaskTitles: vi.fn(),
     lockMembershipForUpdate: vi.fn(),
+    lockPendingOwnershipTransferForUpdate: vi.fn(),
     lockWorkspaceForUpdate: vi.fn(),
     reassignOpenAssignedTasks: vi.fn(),
   },
@@ -159,22 +165,31 @@ describe('workspaceRouter', () => {
     });
   });
 
-  it('transfers ownership to an active admin member', async () => {
+  it('creates a pending transfer request to an active admin member', async () => {
+    queries.lockWorkspaceForUpdate.mockResolvedValue({ primaryOwnerId: 'u-owner' });
+    queries.insertOwnershipTransfer.mockResolvedValue({ id: 'tr-1' });
+
     const result = await createCaller().transferOwnership({ newOwnerUserId: 'u-admin' });
 
-    expect(workspaceModel.transferPrimaryOwnership).toHaveBeenCalledWith('ws-1', 'u-admin');
-    expect(result).toEqual({ transferred: true });
+    expect(queries.insertOwnershipTransfer).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({ fromUserId: 'u-owner', toUserId: 'u-admin', workspaceId: 'ws-1' }),
+    );
+    expect(result.requested).toBe(true);
+    // Nothing moves until the recipient accepts.
+    expect(workspaceModel.transferPrimaryOwnership).not.toHaveBeenCalled();
     expect(audit.recordAudit).toHaveBeenCalledWith(
       fakeDb,
-      expect.objectContaining({ action: 'workspace.primary_ownership_transferred' }),
+      expect.objectContaining({ action: 'workspace.ownership_transfer_requested' }),
     );
     expect(audit.emitWorkspaceEvent).toHaveBeenCalledWith(
       fakeDb,
-      expect.objectContaining({ eventType: 'workspace.ownership.transferred' }),
+      expect.objectContaining({ eventType: 'workspace.ownership_transfer.requested' }),
     );
   });
 
   it('rejects transferring to a non-member or to yourself', async () => {
+    queries.lockWorkspaceForUpdate.mockResolvedValue({ primaryOwnerId: 'u-owner' });
     memberModel.getMember.mockResolvedValue(undefined);
     await expect(
       createCaller().transferOwnership({ newOwnerUserId: 'u-stranger' }),
@@ -183,6 +198,135 @@ describe('workspaceRouter', () => {
     await expect(
       createCaller().transferOwnership({ newOwnerUserId: 'u-owner' }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(queries.insertOwnershipTransfer).not.toHaveBeenCalled();
+  });
+
+  it('rejects a request while one is still pending', async () => {
+    queries.lockWorkspaceForUpdate.mockResolvedValue({ primaryOwnerId: 'u-owner' });
+    queries.findPendingOwnershipTransfer.mockResolvedValue({ id: 'tr-open' });
+
+    await expect(
+      createCaller().transferOwnership({ newOwnerUserId: 'u-admin' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(queries.insertOwnershipTransfer).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-admin recipient up front', async () => {
+    queries.lockWorkspaceForUpdate.mockResolvedValue({ primaryOwnerId: 'u-owner' });
+    memberModel.getMember.mockResolvedValue({ role: 'member' });
+
+    await expect(
+      createCaller().transferOwnership({ newOwnerUserId: 'u-member' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
+  it('recipient acceptance runs the atomic swap and consumes the request', async () => {
+    queries.lockWorkspaceForUpdate.mockResolvedValue({ primaryOwnerId: 'u-owner' });
+    queries.lockPendingOwnershipTransferForUpdate.mockResolvedValue({
+      expiresAt: new Date(Date.now() + 60_000),
+      fromUserId: 'u-owner',
+      id: 'tr-1',
+      toUserId: 'u-admin',
+    });
+    const caller = createCaller({ userId: 'u-admin' });
+
+    const result = await caller.respondOwnershipTransfer({ accept: true });
+
+    expect(workspaceModel.transferPrimaryOwnership).toHaveBeenCalledWith('ws-1', 'u-admin');
+    expect(queries.decideOwnershipTransfer).toHaveBeenCalledWith(fakeDb, 'tr-1', 'accepted');
+    expect(result).toEqual({ accepted: true });
+    expect(audit.emitWorkspaceEvent).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({ eventType: 'workspace.ownership.transferred' }),
+    );
+  });
+
+  it('recipient decline closes the request without moving ownership', async () => {
+    queries.lockWorkspaceForUpdate.mockResolvedValue({ primaryOwnerId: 'u-owner' });
+    queries.lockPendingOwnershipTransferForUpdate.mockResolvedValue({
+      expiresAt: new Date(Date.now() + 60_000),
+      fromUserId: 'u-owner',
+      id: 'tr-1',
+      toUserId: 'u-admin',
+    });
+    const caller = createCaller({ userId: 'u-admin' });
+
+    await caller.respondOwnershipTransfer({ accept: false });
+
     expect(workspaceModel.transferPrimaryOwnership).not.toHaveBeenCalled();
+    expect(queries.decideOwnershipTransfer).toHaveBeenCalledWith(fakeDb, 'tr-1', 'declined');
+  });
+
+  it('only the invited member can respond', async () => {
+    queries.lockWorkspaceForUpdate.mockResolvedValue({ primaryOwnerId: 'u-owner' });
+    queries.lockPendingOwnershipTransferForUpdate.mockResolvedValue({
+      expiresAt: new Date(Date.now() + 60_000),
+      fromUserId: 'u-owner',
+      id: 'tr-1',
+      toUserId: 'u-admin',
+    });
+    const caller = createCaller({ userId: 'u-bystander' });
+
+    await expect(caller.respondOwnershipTransfer({ accept: true })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(workspaceModel.transferPrimaryOwnership).not.toHaveBeenCalled();
+  });
+
+  it('an expired request is marked expired and rejected', async () => {
+    queries.lockWorkspaceForUpdate.mockResolvedValue({ primaryOwnerId: 'u-owner' });
+    queries.lockPendingOwnershipTransferForUpdate.mockResolvedValue({
+      expiresAt: new Date(Date.now() - 60_000),
+      fromUserId: 'u-owner',
+      id: 'tr-1',
+      toUserId: 'u-admin',
+    });
+    const caller = createCaller({ userId: 'u-admin' });
+
+    await expect(caller.respondOwnershipTransfer({ accept: true })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    expect(queries.decideOwnershipTransfer).toHaveBeenCalledWith(fakeDb, 'tr-1', 'expired');
+  });
+
+  it('owner can cancel a pending request; nobody else can', async () => {
+    queries.lockWorkspaceForUpdate.mockResolvedValue({ primaryOwnerId: 'u-owner' });
+    queries.lockPendingOwnershipTransferForUpdate.mockResolvedValue({
+      expiresAt: new Date(Date.now() + 60_000),
+      fromUserId: 'u-owner',
+      id: 'tr-1',
+      toUserId: 'u-admin',
+    });
+
+    await expect(
+      createCaller({ userId: 'u-admin' }).cancelOwnershipTransfer(),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+
+    const result = await createCaller().cancelOwnershipTransfer();
+    expect(result).toEqual({ cancelled: true });
+    expect(queries.decideOwnershipTransfer).toHaveBeenCalledWith(fakeDb, 'tr-1', 'cancelled');
+    expect(audit.recordAudit).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({ action: 'workspace.ownership_transfer_cancelled' }),
+    );
+  });
+
+  it('pendingOwnershipTransfer hides the request from uninvolved members', async () => {
+    queries.findPendingOwnershipTransfer.mockResolvedValue({
+      expiresAt: new Date(Date.now() + 60_000),
+      fromUserId: 'u-owner',
+      id: 'tr-1',
+      toUserId: 'u-admin',
+    });
+
+    expect(await createCaller({ userId: 'u-bystander' }).pendingOwnershipTransfer()).toBeNull();
+
+    queries.findUserProfiles.mockResolvedValue([
+      { avatar: null, fullName: 'Owner', id: 'u-owner', username: 'owner' },
+      { avatar: null, fullName: 'Admin', id: 'u-admin', username: 'admin' },
+    ]);
+    const state = await createCaller({ userId: 'u-admin' }).pendingOwnershipTransfer();
+    expect(state?.transfer.id).toBe('tr-1');
+    expect(state?.toUser).toMatchObject({ fullName: 'Admin' });
   });
 });

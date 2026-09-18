@@ -3,7 +3,6 @@ import type { OrviloDatabase } from '@orvilo/database';
 import type { WorkspaceMemberItem } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
 
-import { WorkspaceModel } from '@/database/models/workspace';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 
 import { emitWorkspaceEvent, recordAudit } from './audit';
@@ -11,6 +10,7 @@ import {
   bumpAuthzVersion,
   countActiveDelegations,
   countMemberBoundDevices,
+  countMemberWorkload,
   countOpenTasksAssignedTo,
   countOpenTasksReviewedBy,
   findMembershipRow,
@@ -23,6 +23,12 @@ import {
 import { canGrantWorkspaceRole, canManageMember, type WorkspaceRoleName } from './roles';
 
 export interface MemberSummary extends WorkspaceMemberItem {
+  /** Open tasks the member currently owns — drives the roster's work column. */
+  openAssignedCount: number;
+  /** Open tasks awaiting the member's review. */
+  openReviewingCount: number;
+  /** Project memberships the member holds inside this workspace. */
+  projectCount: number;
   user: {
     avatar: string | null;
     email: string | null;
@@ -50,9 +56,15 @@ export const listMemberSummaries = async (
   db: OrviloDatabase,
   params: { includeDeleted: boolean; viewerIsAdmin: boolean; workspaceId: string },
 ): Promise<MemberSummary[]> => {
-  const rows = await listMembersWithProfiles(db, params.workspaceId, params.includeDeleted);
+  const [rows, workload] = await Promise.all([
+    listMembersWithProfiles(db, params.workspaceId, params.includeDeleted),
+    countMemberWorkload(db, params.workspaceId),
+  ]);
   return rows.map(({ member, user }) => ({
     ...member,
+    openAssignedCount: workload.get(member.userId)?.openAssignedCount ?? 0,
+    openReviewingCount: workload.get(member.userId)?.openReviewingCount ?? 0,
+    projectCount: workload.get(member.userId)?.projectCount ?? 0,
     user: user
       ? {
           avatar: user.avatar,
@@ -380,79 +392,4 @@ export const leaveWorkspace = async (
     });
     return { left: true as const };
   });
-};
-
-export const transferWorkspaceOwnership = async (
-  db: OrviloDatabase,
-  params: {
-    actorUserId: string;
-    ipAddress?: string;
-    newOwnerUserId: string;
-    workspaceId: string;
-  },
-) => {
-  if (params.newOwnerUserId === params.actorUserId) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'You already own this workspace' });
-  }
-  const target = await new WorkspaceMemberModel(db, params.actorUserId).getMember(
-    params.workspaceId,
-    params.newOwnerUserId,
-  );
-  if (!target || target.role === 'owner') {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'The new owner must be an active non-owner member',
-    });
-  }
-
-  try {
-    await db.transaction(async (tx) => {
-      const result = await new WorkspaceModel(tx, params.actorUserId).transferPrimaryOwnership(
-        params.workspaceId,
-        params.newOwnerUserId,
-      );
-      await recordAudit(tx, {
-        action: 'workspace.primary_ownership_transferred',
-        ipAddress: params.ipAddress,
-        metadata: {
-          newOwnerUserId: result.newPrimaryOwnerUserId,
-          previousOwnerUserId: result.previousPrimaryOwnerUserId,
-        },
-        resourceId: params.workspaceId,
-        resourceType: 'workspace',
-        userId: params.actorUserId,
-        workspaceId: params.workspaceId,
-      });
-      await emitWorkspaceEvent(tx, {
-        aggregateId: params.workspaceId,
-        aggregateType: 'workspace',
-        eventType: 'workspace.ownership.transferred',
-        payload: {
-          newOwnerUserId: result.newPrimaryOwnerUserId,
-          previousOwnerUserId: result.previousPrimaryOwnerUserId,
-        },
-        workspaceId: params.workspaceId,
-      });
-      return result;
-    });
-  } catch (error) {
-    if (error instanceof TRPCError) throw error;
-    const message = error instanceof Error ? error.message : '';
-    if (message.includes('Only the workspace owner')) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'Only the workspace owner can transfer ownership',
-      });
-    }
-    if (message.includes('must already be')) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message });
-    }
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to transfer ownership',
-    });
-  }
-
-  return { transferred: true as const };
 };

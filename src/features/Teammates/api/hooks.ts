@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { WORKSPACE_LIST_KEY } from '@/business/client/hooks/useFetchWorkspaces';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 
 import { type InviteInput, teammatesClient } from './client';
@@ -11,6 +12,16 @@ import { teammatesKeys } from './keys';
 
 const REFRESH_MEMBERS_AND_INVITATIONS = async () => {
   await Promise.all([mutate(teammatesKeys.members(false)), mutate(teammatesKeys.invitations())]);
+};
+
+const REFRESH_MEMBERS_AND_OWNERSHIP = async () => {
+  // Accepting a transfer changes the caller's own workspace role — the
+  // workspace list carries that role, so it must revalidate too.
+  await Promise.all([
+    mutate(teammatesKeys.members(false)),
+    mutate(teammatesKeys.ownershipTransfer()),
+    mutate(WORKSPACE_LIST_KEY),
+  ]);
 };
 
 /**
@@ -45,6 +56,21 @@ export const useWorkspaceInvitationsQuery = (options?: { enabled?: boolean }) =>
 
   return useClientDataSWR(workspaceId && enabled ? teammatesKeys.invitations() : null, () =>
     teammatesClient.workspaceMember.listInvitations.query(),
+  );
+};
+
+/**
+ * In-flight ownership hand-off visible to the caller — `null` for everyone
+ * who is not the initiator or the invited member.
+ */
+export const usePendingOwnershipTransferQuery = (options?: { enabled?: boolean }) => {
+  const workspaceId = useActiveWorkspaceId();
+  const enabled = options?.enabled ?? true;
+
+  return useClientDataSWR(
+    workspaceId && enabled ? teammatesKeys.ownershipTransfer() : null,
+    () => teammatesClient.workspace.pendingOwnershipTransfer.query(),
+    { refreshInterval: 30_000 },
   );
 };
 
@@ -161,6 +187,37 @@ export const useTeammateActions = () => {
     [report],
   );
 
+  const refreshOwnershipTransfer = useCallback(() => mutate(teammatesKeys.ownershipTransfer()), []);
+
+  const requestOwnershipTransfer = useCallback(
+    (newOwnerUserId: string) =>
+      report(
+        () => teammatesClient.workspace.transferOwnership.mutate({ newOwnerUserId }),
+        refreshOwnershipTransfer,
+      ),
+    [report, refreshOwnershipTransfer],
+  );
+
+  const respondOwnershipTransfer = useCallback(
+    (accept: boolean) =>
+      report(
+        () => teammatesClient.workspace.respondOwnershipTransfer.mutate({ accept }),
+        // Accepting changes the caller's own role — the members roster must
+        // refresh alongside the cleared pending state.
+        REFRESH_MEMBERS_AND_OWNERSHIP,
+      ),
+    [report],
+  );
+
+  const cancelOwnershipTransfer = useCallback(
+    () =>
+      report(
+        () => teammatesClient.workspace.cancelOwnershipTransfer.mutate(),
+        refreshOwnershipTransfer,
+      ),
+    [report, refreshOwnershipTransfer],
+  );
+
   const resendInvitation = useCallback(
     (invitationId: string) =>
       report(() => teammatesClient.invitation.resend.mutate({ invitationId }), refreshInvitations),
@@ -202,6 +259,7 @@ export const useTeammateActions = () => {
 
   return {
     addProjectMember,
+    cancelOwnershipTransfer,
     changeProjectMemberRole,
     changeRole,
     invite,
@@ -209,7 +267,9 @@ export const useTeammateActions = () => {
     mutating,
     remove,
     removeProjectMember,
+    requestOwnershipTransfer,
     resendInvitation,
+    respondOwnershipTransfer,
     resume,
     revokeInvitation,
     suspend,

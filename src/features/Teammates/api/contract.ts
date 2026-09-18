@@ -22,6 +22,12 @@ export interface WorkspaceMemberSummary {
   authzVersion?: number;
   deletedAt?: Date | null;
   joinedAt?: Date | string;
+  /** Open tasks the member owns (server-computed workload). */
+  openAssignedCount?: number;
+  /** Open tasks awaiting the member's review. */
+  openReviewingCount?: number;
+  /** Project memberships held inside this workspace. */
+  projectCount?: number;
   role: WorkspaceRole;
   suspendedAt?: Date | null;
   user: {
@@ -72,6 +78,30 @@ export interface WorkspaceInvitationSummary {
   }[];
   role: WorkspaceRole;
   status: 'accepted' | 'expired' | 'pending' | 'revoked';
+}
+
+/** `workspace.transferOwnership` → the pending hand-off request it created. */
+export interface OwnershipTransferRequestResult {
+  requested: boolean;
+  transfer: {
+    expiresAt: Date | string;
+    id: string;
+    status: string;
+  };
+}
+
+/** `workspace.pendingOwnershipTransfer` → in-flight hand-off visible to its parties. */
+export interface OwnershipTransferState {
+  fromUser: { avatar: string | null; fullName: string | null; username: string | null } | null;
+  toUser: { avatar: string | null; fullName: string | null; username: string | null } | null;
+  transfer: {
+    expiresAt: Date | string;
+    fromUserId: string;
+    id: string;
+    status: string;
+    toUserId: string;
+    workspaceId: string;
+  };
 }
 
 /** `workspaceMember.removalPreview` → what removing this member disturbs. */

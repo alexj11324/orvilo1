@@ -1,9 +1,18 @@
 'use client';
 
 import { DropdownMenu, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Alert, Button, createModal, Select, SkeletonText, Tag } from '@lobehub/ui/base-ui';
+import {
+  Alert,
+  Button,
+  confirmModal,
+  createModal,
+  Select,
+  SkeletonText,
+  Tag,
+  toast,
+} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Crown, PauseCircle, PlayCircle, UserMinus } from 'lucide-react';
+import { Crown, PauseCircle, PlayCircle, Repeat, UserMinus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { lazy, memo, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,9 +23,14 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import type { WorkspaceMemberSummary } from '../api/contract';
-import { useTeammateActions, useWorkspaceMembersQuery } from '../api/hooks';
+import {
+  usePendingOwnershipTransferQuery,
+  useTeammateActions,
+  useWorkspaceMembersQuery,
+} from '../api/hooks';
 import {
   canManageMember,
+  canRequestOwnershipTransfer,
   changeableRolesFor,
   type MemberStatus,
   memberStatus,
@@ -60,9 +74,13 @@ const styles = createStaticStyles(({ css }) => ({
     text-overflow: ellipsis;
     white-space: nowrap;
   `,
+  numeric: css`
+    font-size: 13px;
+    color: ${cssVar.colorTextSecondary};
+  `,
   row: css`
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 140px 110px 40px;
+    grid-template-columns: minmax(0, 1fr) 140px 76px 76px 86px 110px 110px 40px;
     gap: 12px;
     align-items: center;
 
@@ -71,9 +89,26 @@ const styles = createStaticStyles(({ css }) => ({
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
   table: css`
-    /* Fixed columns + gaps floor at ~500px; below that the wrapper scrolls
+    /* Fixed columns + gaps floor at ~840px; below that the wrapper scrolls
        horizontally instead of crushing cells or overflowing the page. */
-    min-width: 500px;
+    min-width: 840px;
+  `,
+  transferBanner: css`
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+
+    padding-block: 10px;
+    padding-inline: 12px;
+    border: 1px solid ${cssVar.colorWarningBorder};
+    border-radius: 8px;
+
+    background: ${cssVar.colorWarningBg};
+  `,
+  transferBannerText: css`
+    font-size: 13px;
+    color: ${cssVar.colorText};
   `,
   tableScroll: css`
     overflow-x: auto;
@@ -101,118 +136,139 @@ interface MemberRowProps {
   callerUserId?: string;
   member: WorkspaceMemberSummary;
   onRemove: (member: WorkspaceMemberSummary) => void;
+  onTransfer: (member: WorkspaceMemberSummary) => void;
+  transferEligible: boolean;
 }
 
-const MemberRow = memo<MemberRowProps>(({ callerRole, callerUserId, member, onRemove }) => {
-  const { t } = useTranslation('setting');
-  const { changeRole, mutating, resume, suspend } = useTeammateActions();
+const MemberRow = memo<MemberRowProps>(
+  ({ callerRole, callerUserId, member, onRemove, onTransfer, transferEligible }) => {
+    const { t } = useTranslation('setting');
+    const { changeRole, mutating, resume, suspend } = useTeammateActions();
 
-  const status = memberStatus(member);
-  const manageable = canManageMember(callerRole, member, callerUserId);
-  const roleChoices = changeableRolesFor(callerRole, member.role);
+    const status = memberStatus(member);
+    const manageable = canManageMember(callerRole, member, callerUserId);
+    const roleChoices = changeableRolesFor(callerRole, member.role);
+    const joinedAt = member.joinedAt ? new Date(member.joinedAt) : null;
 
-  const menuItems = useMemo(() => {
-    if (!manageable) return [];
-    const items: {
-      danger?: boolean;
-      icon: ReactNode;
-      key: string;
-      label: string;
-      onClick: () => void;
-    }[] = [];
-    if (status === 'active') {
+    const menuItems = useMemo(() => {
+      if (!manageable) return [];
+      const items: {
+        danger?: boolean;
+        icon: ReactNode;
+        key: string;
+        label: string;
+        onClick: () => void;
+      }[] = [];
+      if (transferEligible) {
+        items.push({
+          icon: <Icon icon={Repeat} />,
+          key: 'transfer',
+          label: t('workspaceSetting.members.transferOwnership'),
+          onClick: () => onTransfer(member),
+        });
+      }
+      if (status === 'active') {
+        items.push({
+          icon: <Icon icon={PauseCircle} />,
+          key: 'suspend',
+          label: t('workspaceSetting.members.suspend'),
+          onClick: () => void suspend(member.userId),
+        });
+      }
+      if (status === 'suspended') {
+        items.push({
+          icon: <Icon icon={PlayCircle} />,
+          key: 'resume',
+          label: t('workspaceSetting.members.resume'),
+          onClick: () => void resume(member.userId),
+        });
+      }
       items.push({
-        icon: <Icon icon={PauseCircle} />,
-        key: 'suspend',
-        label: t('workspaceSetting.members.suspend'),
-        onClick: () => void suspend(member.userId),
+        danger: true,
+        icon: <Icon icon={UserMinus} />,
+        key: 'remove',
+        label: t('workspaceSetting.members.remove'),
+        onClick: () => onRemove(member),
       });
-    }
-    if (status === 'suspended') {
-      items.push({
-        icon: <Icon icon={PlayCircle} />,
-        key: 'resume',
-        label: t('workspaceSetting.members.resume'),
-        onClick: () => void resume(member.userId),
-      });
-    }
-    items.push({
-      danger: true,
-      icon: <Icon icon={UserMinus} />,
-      key: 'remove',
-      label: t('workspaceSetting.members.remove'),
-      onClick: () => onRemove(member),
-    });
-    return items;
-  }, [manageable, status, t, suspend, resume, member, onRemove]);
+      return items;
+    }, [manageable, transferEligible, status, t, suspend, resume, member, onRemove, onTransfer]);
 
-  return (
-    <div className={styles.row}>
-      <div className={styles.memberCell}>
-        <Avatar
-          avatar={member.user?.avatar}
-          name={displayName(member)}
-          size={32}
-          title={member.user?.email ?? displayName(member)}
-        />
-        <Flexbox flex={1} gap={0} style={{ minWidth: 0 }}>
-          <span className={styles.name}>
-            {displayName(member)}
-            {member.role === 'owner' && (
-              <Icon
-                icon={Crown}
-                size={12}
-                style={{ color: cssVar.colorWarning, marginInlineStart: 6 }}
-              />
-            )}
-          </span>
-          {member.user?.email && <span className={styles.email}>{member.user.email}</span>}
-        </Flexbox>
-      </div>
-
-      <div>
-        {manageable && roleChoices.length > 0 ? (
-          <Select
-            disabled={mutating}
-            size="small"
-            style={{ width: 128 }}
-            value={member.role}
-            // Current role first so the select renders its label, not the raw value.
-            options={[member.role, ...roleChoices].map((role) => ({
-              label: t(`workspaceSetting.members.role.${role}`),
-              value: role,
-            }))}
-            onChange={(value) =>
-              void changeRole(member.userId, value as typeof member.role, member.authzVersion)
-            }
+    return (
+      <div className={styles.row}>
+        <div className={styles.memberCell}>
+          <Avatar
+            avatar={member.user?.avatar}
+            name={displayName(member)}
+            size={32}
+            title={member.user?.email ?? displayName(member)}
           />
-        ) : (
-          <Tag color={ROLE_TAG_COLOR[member.role] ?? 'default'}>
-            {t(`workspaceSetting.members.role.${member.role}`, {
-              defaultValue: member.role,
-            })}
+          <Flexbox flex={1} gap={0} style={{ minWidth: 0 }}>
+            <span className={styles.name}>
+              {displayName(member)}
+              {member.role === 'owner' && (
+                <Icon
+                  icon={Crown}
+                  size={12}
+                  style={{ color: cssVar.colorWarning, marginInlineStart: 6 }}
+                />
+              )}
+            </span>
+            {member.user?.email && <span className={styles.email}>{member.user.email}</span>}
+          </Flexbox>
+        </div>
+
+        <div>
+          {manageable && roleChoices.length > 0 ? (
+            <Select
+              disabled={mutating}
+              size="small"
+              style={{ width: 128 }}
+              value={member.role}
+              // Current role first so the select renders its label, not the raw value.
+              options={[member.role, ...roleChoices].map((role) => ({
+                label: t(`workspaceSetting.members.role.${role}`),
+                value: role,
+              }))}
+              onChange={(value) =>
+                void changeRole(member.userId, value as typeof member.role, member.authzVersion)
+              }
+            />
+          ) : (
+            <Tag color={ROLE_TAG_COLOR[member.role] ?? 'default'}>
+              {t(`workspaceSetting.members.role.${member.role}`, {
+                defaultValue: member.role,
+              })}
+            </Tag>
+          )}
+        </div>
+
+        <div className={styles.numeric}>{member.projectCount ?? 0}</div>
+        <div className={styles.numeric}>{member.openAssignedCount ?? 0}</div>
+        <div className={styles.numeric}>{member.openReviewingCount ?? 0}</div>
+
+        <div>
+          <Tag
+            color={status === 'active' ? 'green' : status === 'suspended' ? 'orange' : 'default'}
+          >
+            {t(STATUS_LABEL[status])}
           </Tag>
-        )}
-      </div>
+        </div>
 
-      <div>
-        <Tag color={status === 'active' ? 'green' : status === 'suspended' ? 'orange' : 'default'}>
-          {t(STATUS_LABEL[status])}
-        </Tag>
-      </div>
+        <div className={styles.numeric}>{joinedAt ? joinedAt.toLocaleDateString() : '—'}</div>
 
-      <div>
-        {manageable && menuItems.length > 0 && (
-          <DropdownMenu items={menuItems}>
-            <Button disabled={mutating} size="small" type="text">
-              ⋯
-            </Button>
-          </DropdownMenu>
-        )}
+        <div>
+          {manageable && menuItems.length > 0 && (
+            <DropdownMenu items={menuItems}>
+              <Button disabled={mutating} size="small" type="text">
+                ⋯
+              </Button>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 MemberRow.displayName = 'MemberRow';
 
@@ -227,6 +283,9 @@ export const MembersPanel = memo(() => {
   const capabilities = useWorkspaceCapabilities();
   const callerUserId = useUserStore(userProfileSelectors.userId);
   const { data: members, error, isLoading, mutate } = useWorkspaceMembersQuery();
+  const { data: pendingTransfer } = usePendingOwnershipTransferQuery();
+  const { cancelOwnershipTransfer, mutating, requestOwnershipTransfer, respondOwnershipTransfer } =
+    useTeammateActions();
 
   const openRemoveModal = useCallback(
     (member: WorkspaceMemberSummary) => {
@@ -248,11 +307,49 @@ export const MembersPanel = memo(() => {
     [members, t],
   );
 
+  const openTransferConfirm = useCallback(
+    (member: WorkspaceMemberSummary) => {
+      const name = displayName(member);
+      confirmModal({
+        cancelText: t('cancel', { ns: 'common' }),
+        content: t('workspaceSetting.members.transferConfirmContent', { name }),
+        okText: t('workspaceSetting.members.transferOwnership'),
+        onOk: async () => {
+          const ok = await requestOwnershipTransfer(member.userId);
+          if (ok) toast.success(t('workspaceSetting.members.transferRequested'));
+        },
+        title: t('workspaceSetting.members.transferConfirmTitle', { name }),
+      });
+    },
+    [requestOwnershipTransfer, t],
+  );
+
+  const handleTransferRespond = useCallback(
+    async (accept: boolean) => {
+      const ok = await respondOwnershipTransfer(accept);
+      if (ok) {
+        toast.success(
+          t(
+            accept
+              ? 'workspaceSetting.members.transferAccepted'
+              : 'workspaceSetting.members.transferDeclined',
+          ),
+        );
+      }
+    },
+    [respondOwnershipTransfer, t],
+  );
+
+  const handleTransferCancel = useCallback(async () => {
+    const ok = await cancelOwnershipTransfer();
+    if (ok) toast.success(t('workspaceSetting.members.transferCancelled'));
+  }, [cancelOwnershipTransfer, t]);
+
   if (isLoading) {
     return (
       <Flexbox gap={16} style={{ paddingBlock: 8 }}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <Flexbox align="center" gap={10} horizontal key={i}>
+          <Flexbox horizontal align="center" gap={10} key={i}>
             <SkeletonText style={{ marginBottom: 0, width: '40%' }} />
             <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
             <SkeletonText style={{ marginBottom: 0, width: '20%' }} />
@@ -277,14 +374,75 @@ export const MembersPanel = memo(() => {
 
   const rows = (members ?? []).filter((member) => !member.deletedAt);
 
+  // A pending hand-off only exists between the owner and one invitee —
+  // `pendingTransfer` is null for everyone else, so the banner is private
+  // to its parties by construction.
+  const isTransferInitiator =
+    !!pendingTransfer && pendingTransfer.transfer.fromUserId === callerUserId;
+  const isTransferRecipient =
+    !!pendingTransfer && pendingTransfer.transfer.toUserId === callerUserId;
+  const counterpartName = isTransferInitiator
+    ? (pendingTransfer?.toUser?.fullName ??
+      pendingTransfer?.toUser?.username ??
+      pendingTransfer?.transfer.toUserId)
+    : (pendingTransfer?.fromUser?.fullName ??
+      pendingTransfer?.fromUser?.username ??
+      pendingTransfer?.transfer.fromUserId);
+
   return (
     <Flexbox gap={8}>
+      {pendingTransfer && (isTransferInitiator || isTransferRecipient) && (
+        <div className={styles.transferBanner}>
+          <span className={styles.transferBannerText}>
+            {t(
+              isTransferRecipient
+                ? 'workspaceSetting.members.transferBannerIncoming'
+                : 'workspaceSetting.members.transferBannerOutgoing',
+              { name: counterpartName },
+            )}
+          </span>
+          <Flexbox horizontal gap={8}>
+            {isTransferRecipient && (
+              <>
+                <Button
+                  disabled={mutating}
+                  size="small"
+                  type="primary"
+                  onClick={() => void handleTransferRespond(true)}
+                >
+                  {t('workspaceSetting.members.transferAccept')}
+                </Button>
+                <Button
+                  disabled={mutating}
+                  size="small"
+                  onClick={() => void handleTransferRespond(false)}
+                >
+                  {t('workspaceSetting.members.transferDecline')}
+                </Button>
+              </>
+            )}
+            {isTransferInitiator && (
+              <Button disabled={mutating} size="small" onClick={() => void handleTransferCancel()}>
+                {t('workspaceSetting.members.transferCancel')}
+              </Button>
+            )}
+          </Flexbox>
+        </div>
+      )}
       <div className={styles.tableScroll}>
         <div className={styles.table}>
           <div className={styles.row}>
             <span className={styles.headerCell}>{t('workspaceSetting.members.columnMember')}</span>
             <span className={styles.headerCell}>{t('workspaceSetting.members.columnRole')}</span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.members.columnProjects')}
+            </span>
+            <span className={styles.headerCell}>{t('workspaceSetting.members.columnTasks')}</span>
+            <span className={styles.headerCell}>
+              {t('workspaceSetting.members.columnReviewing')}
+            </span>
             <span className={styles.headerCell}>{t('workspaceSetting.members.columnStatus')}</span>
+            <span className={styles.headerCell}>{t('workspaceSetting.members.columnJoined')}</span>
             <span />
           </div>
           <div className={styles.list}>
@@ -294,7 +452,14 @@ export const MembersPanel = memo(() => {
                 callerUserId={callerUserId}
                 key={member.userId}
                 member={member}
+                transferEligible={canRequestOwnershipTransfer(
+                  capabilities.role,
+                  member,
+                  callerUserId,
+                  !!pendingTransfer,
+                )}
                 onRemove={openRemoveModal}
+                onTransfer={openTransferConfirm}
               />
             ))}
           </div>

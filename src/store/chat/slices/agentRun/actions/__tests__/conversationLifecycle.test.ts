@@ -1,4 +1,5 @@
 import type * as OrvilochatConstModule from '@orvilo/const';
+import type { ExecAgentResult } from '@orvilo/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { TRPCClientError } from '@trpc/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -119,6 +120,25 @@ const createTestContext = (agentId: string = TEST_IDS.SESSION_ID) => ({
   topicId: null,
   threadId: null,
 });
+
+// The store types `executeGatewayAgent` as returning `Promise<ExecAgentResult>`,
+// so gateway spies must resolve the full contract — not just the fields a given
+// test happens to read.
+const makeGatewayResult = (overrides: Partial<ExecAgentResult> = {}): ExecAgentResult =>
+  ({
+    agentId: TEST_IDS.SESSION_ID,
+    assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
+    autoStarted: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    message: 'ok',
+    operationId: 'op-gateway',
+    status: 'processing',
+    success: true,
+    timestamp: '2026-01-01T00:00:00.000Z',
+    topicId: TEST_IDS.TOPIC_ID,
+    userMessageId: TEST_IDS.USER_MESSAGE_ID,
+    ...overrides,
+  }) as ExecAgentResult;
 
 /**
  * Give the default mock agent a desktop-local heterogeneous binding so sends
@@ -1664,12 +1684,10 @@ describe('ConversationLifecycle actions', () => {
             previousId: params.optimisticTopic.id,
           });
           useChatStore.getState().completeOperation(params.parentOperationId);
-          return {
-            assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
+          return makeGatewayResult({
             operationId: 'gateway-op-model-snapshot',
             topicId: newTopicId,
-            userMessageId: TEST_IDS.USER_MESSAGE_ID,
-          };
+          });
         });
         const sendMessageInServerSpy = vi.spyOn(aiChatService, 'sendMessageInServer');
 
@@ -1724,12 +1742,12 @@ describe('ConversationLifecycle actions', () => {
                   previousId: params.optimisticTopic.id,
                 });
                 useChatStore.getState().completeOperation(params.parentOperationId);
-                resolve({
-                  assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
-                  operationId: 'gateway-op-release',
-                  topicId: newTopicId,
-                  userMessageId: TEST_IDS.USER_MESSAGE_ID,
-                });
+                resolve(
+                  makeGatewayResult({
+                    operationId: 'gateway-op-release',
+                    topicId: newTopicId,
+                  }),
+                );
               };
             }),
         );
@@ -1807,12 +1825,14 @@ describe('ConversationLifecycle actions', () => {
             new Promise<any>((resolve) => {
               gatewayParams = params;
               resolveGateway = () =>
-                resolve({
-                  assistantMessageId: gatewayParams.clientIds.assistantMessageId,
-                  operationId: 'gateway-op-cancelled-after-persistence',
-                  topicId: TEST_IDS.TOPIC_ID,
-                  userMessageId: gatewayParams.clientIds.userMessageId,
-                });
+                resolve(
+                  makeGatewayResult({
+                    assistantMessageId: gatewayParams.clientIds.assistantMessageId,
+                    operationId: 'gateway-op-cancelled-after-persistence',
+                    topicId: TEST_IDS.TOPIC_ID,
+                    userMessageId: gatewayParams.clientIds.userMessageId,
+                  }),
+                );
             }),
         );
         const internalDispatchMessageSpy = vi.spyOn(result.current, 'internal_dispatchMessage');
@@ -2464,12 +2484,10 @@ describe('ConversationLifecycle actions', () => {
         // branch in the gateway transport tail).
         const executeGatewayAgentSpy = vi.fn(async (params: any) => {
           useChatStore.getState().completeOperation(params.parentOperationId);
-          return {
-            assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
+          return makeGatewayResult({
             operationId: 'gateway-op-rollback',
             topicId: undefined,
-            userMessageId: TEST_IDS.USER_MESSAGE_ID,
-          };
+          });
         });
 
         act(() => {
@@ -2525,12 +2543,12 @@ describe('ConversationLifecycle actions', () => {
                   value: { title: params.optimisticTopic.title },
                 });
                 useChatStore.getState().completeOperation(params.parentOperationId);
-                resolve({
-                  assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
-                  operationId: 'gateway-op-group',
-                  topicId: TEST_IDS.NEW_TOPIC_ID,
-                  userMessageId: TEST_IDS.USER_MESSAGE_ID,
-                });
+                resolve(
+                  makeGatewayResult({
+                    operationId: 'gateway-op-group',
+                    topicId: TEST_IDS.NEW_TOPIC_ID,
+                  }),
+                );
               };
             }),
         );
@@ -2619,12 +2637,12 @@ describe('ConversationLifecycle actions', () => {
             new Promise<any>((resolve) => {
               resolveGateway = () => {
                 useChatStore.getState().completeOperation(params.parentOperationId);
-                resolve({
-                  assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
-                  operationId: 'gateway-op-rollback-active',
-                  topicId: undefined,
-                  userMessageId: TEST_IDS.USER_MESSAGE_ID,
-                });
+                resolve(
+                  makeGatewayResult({
+                    operationId: 'gateway-op-rollback-active',
+                    topicId: undefined,
+                  }),
+                );
               };
             }),
         );
@@ -2691,12 +2709,12 @@ describe('ConversationLifecycle actions', () => {
             new Promise<any>((resolve) => {
               resolveGateway = () => {
                 useChatStore.getState().completeOperation(params.parentOperationId);
-                resolve({
-                  assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
-                  operationId: 'gateway-op-rollback-selections',
-                  topicId: undefined,
-                  userMessageId: TEST_IDS.USER_MESSAGE_ID,
-                });
+                resolve(
+                  makeGatewayResult({
+                    operationId: 'gateway-op-rollback-selections',
+                    topicId: undefined,
+                  }),
+                );
               };
             }),
         );
@@ -4468,13 +4486,11 @@ describe('ConversationLifecycle actions', () => {
             type: 'execServerAgentRuntime',
           });
           useChatStore.getState().completeOperation(params.parentOperationId);
-          return {
-            assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
+          return makeGatewayResult({
             createdThreadId,
             operationId: 'gateway-op-thread',
             topicId,
-            userMessageId: TEST_IDS.USER_MESSAGE_ID,
-          };
+          });
         });
         act(() => {
           useChatStore.setState({
@@ -4813,11 +4829,7 @@ describe('ConversationLifecycle actions', () => {
         // so the server supervisor can delegate via callAgent.
         const executeGatewayAgentSpy = vi.fn(async (params: any) => {
           useChatStore.getState().completeOperation(params.parentOperationId);
-          return {
-            assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
-            operationId: 'op-gw-mention',
-            userMessageId: TEST_IDS.USER_MESSAGE_ID,
-          };
+          return makeGatewayResult({ operationId: 'op-gw-mention' });
         });
         act(() => {
           useChatStore.setState({
@@ -5909,12 +5921,7 @@ describe('ConversationLifecycle actions', () => {
       const summaryTopicTitleSpy = vi.fn().mockResolvedValue(undefined);
       const executeGatewayAgentSpy = vi.fn(async (params: any) => {
         useChatStore.getState().completeOperation(params.parentOperationId);
-        return {
-          assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
-          operationId: 'op-gateway',
-          topicId: newTopicId,
-          userMessageId: TEST_IDS.USER_MESSAGE_ID,
-        };
+        return makeGatewayResult({ operationId: 'op-gateway', topicId: newTopicId });
       });
 
       act(() => {
